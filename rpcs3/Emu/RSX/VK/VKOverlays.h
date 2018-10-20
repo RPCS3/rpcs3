@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
@@ -26,8 +26,8 @@ namespace vk
 		std::unordered_map<VkRenderPass, std::unique_ptr<vk::glsl::program>> m_program_cache;
 		std::unique_ptr<vk::sampler> m_sampler;
 		std::unique_ptr<vk::framebuffer> m_draw_fbo;
-		vk_data_heap m_vao;
-		vk_data_heap m_ubo;
+		vk::data_heap m_vao;
+		vk::data_heap m_ubo;
 		vk::render_device* m_device = nullptr;
 
 		std::string vs_src;
@@ -574,7 +574,7 @@ namespace vk
 		}
 
 		vk::image_view* upload_simple_texture(vk::render_device &dev, vk::command_buffer &cmd,
-			vk::vk_data_heap& upload_heap, u64 key, int w, int h, bool font, bool temp, void *pixel_src, u32 owner_uid)
+			vk::data_heap& upload_heap, u64 key, int w, int h, bool font, bool temp, void *pixel_src, u32 owner_uid)
 		{
 			const VkFormat format = (font) ? VK_FORMAT_R8_UNORM : VK_FORMAT_B8G8R8A8_UNORM;
 			const u32 pitch = (font) ? w : w * 4;
@@ -627,7 +627,7 @@ namespace vk
 			return result;
 		}
 
-		void create(vk::command_buffer &cmd, vk::vk_data_heap &upload_heap)
+		void create(vk::command_buffer &cmd, vk::data_heap &upload_heap)
 		{
 			auto& dev = cmd.get_command_pool().get_owner();
 			overlay_pass::create(dev);
@@ -674,7 +674,7 @@ namespace vk
 			}
 		}
 
-		vk::image_view* find_font(rsx::overlays::font *font, vk::command_buffer &cmd, vk::vk_data_heap &upload_heap)
+		vk::image_view* find_font(rsx::overlays::font *font, vk::command_buffer &cmd, vk::data_heap &upload_heap)
 		{
 			u64 key = (u64)font;
 			auto found = view_cache.find(key);
@@ -686,7 +686,7 @@ namespace vk
 					true, false, font->glyph_data.data(), UINT32_MAX);
 		}
 
-		vk::image_view* find_temp_image(rsx::overlays::image_info *desc, vk::command_buffer &cmd, vk::vk_data_heap &upload_heap, u32 owner_uid)
+		vk::image_view* find_temp_image(rsx::overlays::image_info *desc, vk::command_buffer &cmd, vk::data_heap &upload_heap, u32 owner_uid)
 		{
 			u64 key = (u64)desc;
 			auto found = temp_view_cache.find(key);
@@ -735,7 +735,7 @@ namespace vk
 		}
 
 		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* target, VkRenderPass render_pass,
-				vk::vk_data_heap &upload_heap, rsx::overlays::overlay &ui)
+				vk::data_heap &upload_heap, rsx::overlays::overlay &ui)
 		{
 			m_scale_offset = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			m_time = (f32)(get_system_time() / 1000) * 0.005f;

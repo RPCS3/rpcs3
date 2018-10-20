@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "GLVertexProgram.h"
@@ -37,11 +37,15 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "	ivec4 user_clip_enabled[2];\n";
 	OS << "	vec4 user_clip_factor[2];\n";
 	OS << "	uint transform_branch_bits;\n";
-	OS << "	uint vertex_base_index;\n";
 	OS << "	float point_size;\n";
 	OS << "	float z_near;\n";
 	OS << "	float z_far;\n";
-	OS << "	ivec4 input_attributes[16];\n";
+	OS << "};\n\n";
+
+	OS << "layout(std140, binding = 1) uniform VertexLayoutBuffer\n";
+	OS << "{\n";
+	OS << "	uint vertex_base_index;\n";
+	OS << "	ivec2 input_attributes[16];\n";
 	OS << "};\n\n";
 }
 
@@ -53,7 +57,7 @@ void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
-	OS << "layout(std140, binding = 1) uniform VertexConstantsBuffer\n";
+	OS << "layout(std140, binding = 2) uniform VertexConstantsBuffer\n";
 	OS << "{\n";
 	OS << "	vec4 vc[468];\n";
 	OS << "};\n\n";

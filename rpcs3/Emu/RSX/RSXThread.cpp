@@ -419,6 +419,15 @@ namespace rsx
 			conditional_render_test_address = 0;
 		}
 
+		if (m_graphics_state & rsx::pipeline_state::fragment_program_dirty)
+		{
+			// Request for update of fragment constants if the program block is invalidated
+			m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+
+			// Request for update of texture parameters if the program is likely to have changed
+			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
+		}
+
 		in_begin_end = true;
 	}
 
@@ -545,7 +554,7 @@ namespace rsx
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 
-		//fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
+		fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
 		//fifo_ctrl->register_optimization_pass(new FIFO::reordering_pass()); // R&C2 - Not working if flattening is also enabled!!!
 		//fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
 
@@ -640,13 +649,20 @@ namespace rsx
 				while (external_interrupt_lock.load()) _mm_pause();
 			}
 
+			// Idle if emulation paused
+			if (Emu.IsPaused())
+			{
+				std::this_thread::sleep_for(1ms);
+				continue;
+			}
+
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
 
 			// Update sub-units
 			zcull_ctrl->update(this);
 
-			// Execite FIFO queue
+			// Execute FIFO queue
 			run_FIFO();
 		}
 	}
@@ -716,8 +732,9 @@ namespace rsx
 			rsx::method_registers.clip_plane_5_enabled(),
 		};
 
-		s32 clip_enabled_flags[8] = {};
-		f32 clip_distance_factors[8] = {};
+		u8 data_block[64];
+		s32* clip_enabled_flags = reinterpret_cast<s32*>(data_block);
+		f32* clip_distance_factors = reinterpret_cast<f32*>(data_block + 32);
 
 		for (int index = 0; index < 6; ++index)
 		{
@@ -743,8 +760,7 @@ namespace rsx
 			}
 		}
 
-		memcpy(buffer, clip_enabled_flags, 32);
-		memcpy((char*)buffer + 32, clip_distance_factors, 32);
+		memcpy(buffer, data_block, 2 * 8 * sizeof(u32));
 	}
 
 	/**
@@ -814,16 +830,11 @@ namespace rsx
 		u32 *dst = static_cast<u32*>(buffer);
 		stream_vector(dst, (u32&)fog0, (u32&)fog1, rop_control, (u32&)alpha_ref);
 		stream_vector(dst + 4, alpha_func, fog_mode, (u32&)wpos_scale, (u32&)wpos_bias);
+	}
 
-		size_t offset = 8;
-		for (int index = 0; index < 16; ++index)
-		{
-			stream_vector(&dst[offset],
-				(u32&)fragment_program.texture_scale[index][0], (u32&)fragment_program.texture_scale[index][1],
-				(u32&)fragment_program.texture_scale[index][2], (u32&)fragment_program.texture_scale[index][3]);
-
-			offset += 4;
-		}
+	void thread::fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program)
+	{
+		memcpy(buffer, fragment_program.texture_scale, 16 * 4 * sizeof(float));
 	}
 
 	void thread::write_inline_array_to_buffer(void *dst_buffer)
@@ -2020,15 +2031,23 @@ namespace rsx
 			}
 		}
 
-		//Fill the data
+		// Fill the data
+		// Each descriptor field is 64 bits wide
+		// [0-8] attribute stride\n"
+		// [8-20] attribute divisor\n"
+		// [20-21] swap bytes flag\n"
+		// [21-22] volatile flag\n"
+		// [22-24] frequency op\n"
+		// [24-27] attribute type\n"
+		// [27-30] attribute size\n"
+
 		memset(buffer, 0, 256);
 
-		const s32 swap_storage_mask = (1 << 8);
-		const s32 volatile_storage_mask = (1 << 9);
-		const s32 default_frequency_mask = (1 << 10);
-		const s32 repeating_frequency_mask = (3 << 10);
-		const s32 input_function_modulo_mask = (1 << 12);
-		const s32 input_divisor_mask = (0xFFFF << 13);
+		const s32 swap_storage_mask = (1 << 20);
+		const s32 volatile_storage_mask = (1 << 21);
+		const s32 default_frequency_mask = (1 << 22);
+		const s32 division_op_frequency_mask = (2 << 22);
+		const s32 modulo_op_frequency_mask = (3 << 22);
 
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 
@@ -2114,11 +2133,14 @@ namespace rsx
 					}
 					default:
 					{
-						if (modulo_mask & (1 << index))
-							attributes |= input_function_modulo_mask;
+						verify(HERE), frequency <= 4095u;
 
-						attributes |= repeating_frequency_mask;
-						attributes |= (frequency << 13) & input_divisor_mask;
+						if (modulo_mask & (1 << index))
+							attributes |= modulo_op_frequency_mask;
+						else
+							attributes |= division_op_frequency_mask;
+
+						attributes |= (frequency << 8);
 						break;
 					}
 					}
@@ -2144,10 +2166,11 @@ namespace rsx
 
 			if (to_swap_bytes) attributes |= swap_storage_mask;
 
-			buffer[index * 4 + 0] = static_cast<s32>(type);
-			buffer[index * 4 + 1] = size;
-			buffer[index * 4 + 2] = offset_in_block[index];
-			buffer[index * 4 + 3] = attributes;
+			attributes |= (static_cast<s32>(type) << 24);
+			attributes |= (size << 27);
+
+			buffer[index * 4 + 0] = attributes;
+			buffer[index * 4 + 1] = offset_in_block[index];
 		}
 	}
 
@@ -2325,6 +2348,9 @@ namespace rsx
 	void thread::sync()
 	{
 		zcull_ctrl->sync(this);
+
+		// Fragment constants may have been updated
+		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently

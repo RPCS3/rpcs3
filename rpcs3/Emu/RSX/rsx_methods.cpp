@@ -584,16 +584,46 @@ namespace rsx
 			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 		}
 
-		void set_surface_dirty_bit(thread* rsx, u32, u32)
+		void set_surface_dirty_bit(thread* rsx, u32 reg, u32 arg)
 		{
+			if (reg == NV4097_SET_SURFACE_CLIP_VERTICAL ||
+				reg == NV4097_SET_SURFACE_CLIP_HORIZONTAL)
+			{
+				if (arg != method_registers.register_previous_value)
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
+				}
+			}
+
 			rsx->m_rtts_dirty = true;
 			rsx->m_framebuffer_state_contested = false;
+		}
+
+		void set_surface_format(thread* rsx, u32 reg, u32 arg)
+		{
+			// Special consideration - antialiasing control can affect ROP state
+			const auto aa_mask = (0xF << 12);
+			if ((arg & aa_mask) != (method_registers.register_previous_value & aa_mask))
+			{
+				// Antialias control has changed, update ROP parameters
+				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+			}
+
+			set_surface_dirty_bit(rsx, reg, arg);
 		}
 
 		void set_surface_options_dirty_bit(thread* rsx, u32, u32)
 		{
 			if (rsx->m_framebuffer_state_contested)
 				rsx->m_rtts_dirty = true;
+		}
+
+		void set_ROP_state_dirty_bit(thread* rsx, u32, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				rsx->m_graphics_state |= rsx::fragment_state_dirty;
+			}
 		}
 
 		void set_vertex_base_offset(thread* rsx, u32 reg, u32 arg)
@@ -617,6 +647,22 @@ namespace rsx
 
 				// Insert base mofifier barrier
 				method_registers.current_draw_clause.insert_command_barrier(index_base_modifier_barrier, arg);
+			}
+		}
+
+		void set_vertex_env_dirty_bit(thread* rsx, u32 reg, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
+			}
+		}
+
+		void set_fragment_env_dirty_bit(thread* rsx, u32 reg, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
 			}
 		}
 
@@ -644,6 +690,18 @@ namespace rsx
 				if (rsx->current_vp_metadata.referenced_textures_mask & (1 << index))
 				{
 					rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				}
+			}
+		};
+
+		template<u32 index>
+		struct set_viewport_dirty_bit
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				if (arg != method_registers.register_previous_value)
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
 				}
 			}
 		};
@@ -2619,7 +2677,7 @@ namespace rsx
 		bind<NV4097_SET_CONTEXT_DMA_COLOR_C, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_format>();
 		bind<NV4097_SET_SURFACE_PITCH_A, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_B, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_C, nv4097::set_surface_dirty_bit>();
@@ -2660,6 +2718,20 @@ namespace rsx
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset>();
+		bind<NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::set_vertex_env_dirty_bit>();
+		bind<NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::set_vertex_env_dirty_bit>();
+		bind<NV4097_SET_CLIP_MIN, nv4097::set_vertex_env_dirty_bit>();
+		bind<NV4097_SET_CLIP_MAX, nv4097::set_vertex_env_dirty_bit>();
+		bind<NV4097_SET_ALPHA_FUNC, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_ALPHA_REF, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_ALPHA_TEST_ENABLE, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_SHADER_PACKER, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_SHADER_WINDOW, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_FOG_MODE, nv4097::set_ROP_state_dirty_bit>();
+		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
+		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
+		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

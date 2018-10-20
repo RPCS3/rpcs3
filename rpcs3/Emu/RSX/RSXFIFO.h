@@ -47,7 +47,7 @@ namespace rsx
 			u32 start_loc;
 			u32 length;
 			u32 num_draw_calls;
-			u32 draw_call_distance_weight;
+			u32 reserved;
 		};
 
 		struct branch_target_info_t
@@ -67,7 +67,13 @@ namespace rsx
 		struct flattening_pass : public optimization_pass
 		{
 		private:
-			std::array<bool, 0x10000 / 4> m_skippable_registers;
+			enum register_props : u8
+			{
+				skippable = 1,
+				ignorable = 2
+			};
+
+			std::array<u8, 0x10000 / 4> m_register_properties;
 
 		public:
 			flattening_pass();

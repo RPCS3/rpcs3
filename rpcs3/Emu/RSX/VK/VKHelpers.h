@@ -34,12 +34,17 @@
 #define DESCRIPTOR_MAX_DRAW_CALLS 4096
 #define OCCLUSION_MAX_POOL_SIZE 8192
 
-#define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
-#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
-#define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 1
-#define SCALE_OFFSET_BIND_SLOT 0
-#define TEXTURES_FIRST_BIND_SLOT 19
-#define VERTEX_TEXTURES_FIRST_BIND_SLOT 35 //19+16
+#define VERTEX_PARAMS_BIND_SLOT 0
+#define VERTEX_LAYOUT_BIND_SLOT 1
+#define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 2
+#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 3
+#define FRAGMENT_STATE_BIND_SLOT 4
+#define FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 5
+#define VERTEX_BUFFERS_FIRST_BIND_SLOT 6
+#define TEXTURES_FIRST_BIND_SLOT 8
+#define VERTEX_TEXTURES_FIRST_BIND_SLOT 24 //8+16
+
+#define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
 
 namespace rsx
 {
@@ -80,7 +85,7 @@ namespace vk
 	class command_buffer;
 	struct image;
 	struct buffer;
-	struct vk_data_heap;
+	struct data_heap;
 	class mem_allocator_base;
 	struct memory_type_mapping;
 	struct gpu_formats_support;
@@ -131,7 +136,7 @@ namespace vk
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap);
+		VkImageAspectFlags flags, vk::data_heap &upload_heap);
 
 	//Other texture management helpers
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
@@ -2723,12 +2728,14 @@ public:
 
 	namespace glsl
 	{
-		enum program_input_type
+		enum program_input_type : u32
 		{
 			input_type_uniform_buffer = 0,
 			input_type_texel_buffer = 1,
 			input_type_texture = 2,
-			input_type_storage_buffer = 3
+			input_type_storage_buffer = 3,
+
+			input_type_max_enum = 4
 		};
 
 		struct bound_sampler
@@ -2834,8 +2841,9 @@ public:
 
 		class program
 		{
-			std::vector<program_input> uniforms;
+			std::array<std::vector<program_input>, input_type_max_enum> uniforms;
 			VkDevice m_device;
+
 		public:
 			VkPipeline pipeline;
 			u64 attribute_location_mask;
@@ -2848,10 +2856,10 @@ public:
 
 			program& load_uniforms(::glsl::program_domain domain, const std::vector<program_input>& inputs);
 
-			bool has_uniform(std::string uniform_name);
-			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
+			bool has_uniform(program_input_type type, const std::string &uniform_name);
+			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
-			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 
 			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);
 
@@ -2859,7 +2867,7 @@ public:
 		};
 	}
 
-	struct vk_data_heap : public data_heap
+	struct data_heap : public ::data_heap
 	{
 		std::unique_ptr<buffer> heap;
 		bool mapped = false;
@@ -2874,7 +2882,7 @@ public:
 
 		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
 		{
-			data_heap::init(size, name, guard);
+			::data_heap::init(size, name, guard);
 
 			const auto device = get_current_renderer();
 			const auto memory_map = device->get_memory_mapping();

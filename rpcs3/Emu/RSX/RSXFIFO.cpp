@@ -129,7 +129,7 @@ namespace rsx
 								m_prefetcher_busy.store(true);
 
 								read_ahead(m_prefetcher_info, m_prefetched_queue, m_prefetch_get);
-								//optimize(m_prefetcher_info, m_prefetched_queue);
+								optimize(m_prefetcher_info, m_prefetched_queue);
 
 								m_prefetcher_busy.store(false);
 								m_prefetch_mutex.unlock();
@@ -206,7 +206,9 @@ namespace rsx
 
 			info.start_loc = get_pointer;
 			info.num_draw_calls = 0;
-			info.draw_call_distance_weight = 0;
+
+			u32 cmd;
+			u32 count;
 
 			while (true)
 			{
@@ -218,8 +220,6 @@ namespace rsx
 
 				// Validate put and get registers before reading the command
 				// TODO: Who should handle graphics exceptions??
-				u32 cmd;
-
 				if (u32 addr = RSXIOMem.RealAddr(get_pointer))
 				{
 					cmd = vm::read32(addr);
@@ -230,17 +230,19 @@ namespace rsx
 					break;
 				}
 
-				if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD ||
-					(cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD ||
-					(cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD ||
-					(cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
+				if (UNLIKELY(cmd & 0xe0030003))
 				{
-					// Flow control, stop read ahead
-					commands.push_back({ cmd, 0, get_pointer });
-					break;
+					if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD ||
+						(cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD ||
+						(cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD ||
+						(cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
+					{
+						// Flow control, stop read ahead
+						commands.push_back({ cmd, 0, get_pointer });
+						break;
+					}
 				}
-
-				if ((cmd & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD)
+				else if (UNLIKELY((cmd & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD))
 				{
 					if (commands.empty() || commands.back().reg != RSX_METHOD_NOP_CMD)
 					{
@@ -251,49 +253,50 @@ namespace rsx
 					get_pointer += 4;
 					continue;
 				}
-
-				if (cmd & 0x3)
+				else if (UNLIKELY(cmd & 0x3))
 				{
 					// Malformed command, optional recovery
 					break;
 				}
 
-				u32 count = (cmd >> 18) & 0x7ff;
-
 				//Validate the args ptr if the command attempts to read from it
 				auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(get_pointer + 4));
-
-				if (!args && count)
+				if (UNLIKELY(!args))
 				{
 					// Optional recovery
 					break;
 				}
 
-				// Stop command execution if put will be equal to get ptr during the execution itself
-				if (count * 4 + 4 > put - get_pointer)
-				{
-					count = (put - get_pointer) / 4 - 1;
-				}
-
+				count = (cmd >> 18) & 0x7ff;
 				if (count > 1)
 				{
+					// Stop command execution if put will be equal to get ptr during the execution itself
+					if (UNLIKELY(count * 4 + 4 > put - get_pointer))
+					{
+						count = (put - get_pointer) / 4 - 1;
+					}
+
 					// Queue packet header
 					commands.push_back({ FIFO_PACKET_BEGIN, count, get_pointer });
 
-					const bool no_increment = (cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD;
-					u32 reg = cmd & 0xfffc;
-					get_pointer += 4; // First executed command is at data[0]
+					// First executed command is at data[0]
+					get_pointer += 4;
 
-					for (u32 i = 0; i < count; i++, get_pointer += 4)
+					if (UNLIKELY((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD))
 					{
-						commands.push_back({ reg, args[i], get_pointer });
-
-						if (reg == (NV4097_SET_BEGIN_END << 2))
+						const u32 reg = cmd & 0xfffc;
+						for (u32 i = 0; i < count; i++, get_pointer += 4)
 						{
-							info.num_draw_calls++;
+							commands.push_back({ reg, args[i], get_pointer });
 						}
-
-						if (!no_increment) reg += 4;
+					}
+					else
+					{
+						u32 reg = cmd & 0xfffc;
+						for (u32 i = 0; i < count; i++, get_pointer += 4, reg += 4)
+						{
+							commands.push_back({ reg, args[i], get_pointer });
+						}
 					}
 				}
 				else
@@ -315,15 +318,14 @@ namespace rsx
 			}
 
 			info.length = get_pointer - info.start_loc;
-			if (!info.num_draw_calls)
+			if (info.num_draw_calls < 2)
 			{
 				return;
 			}
 
 			info.num_draw_calls /= 2; // Begin+End pairs
-			//info.draw_call_distance_weight = info.length / info.num_draw_calls;
 		}
-#pragma optimize("", on)
+
 		void FIFO_control::report_branch_hit(u32 source, u32 target)
 		{
 			const auto range = m_branch_prediction_table.equal_range(source);
@@ -507,7 +509,7 @@ namespace rsx
 
 			if (queue_size > 0)
 			{
-				if (m_internal_get != m_ctrl->get)
+				if (UNLIKELY(m_internal_get != m_ctrl->get))
 				{
 					// Control register changed
 					registers_changed = true;
@@ -545,7 +547,7 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), m_queue.empty();
+			//verify(HERE), m_queue.empty();
 
 			if (m_ctrl->put == m_ctrl->get)
 			{
@@ -573,7 +575,7 @@ namespace rsx
 			}
 
 			// Lock to disable the prefetcher
-			if (!m_prefetch_mutex.try_lock())
+			if (0)//!m_prefetch_mutex.try_lock())
 			{
 				return busy_cmd;
 			}
@@ -601,13 +603,13 @@ namespace rsx
 			{
 				m_internal_get = m_ctrl->get;
 				read_ahead(m_fifo_info, m_queue, m_internal_get);
-				//optimize(m_fifo_info, m_queue);
+				optimize(m_fifo_info, m_queue);
 
 				m_ctrl->get = m_internal_get;
 				m_ctrl_tag++;
 			}
 
-			m_prefetch_mutex.unlock();
+			//m_prefetch_mutex.unlock();
 
 			if (!m_queue.empty())
 			{
@@ -656,49 +658,58 @@ namespace rsx
 				// Vertex
 				{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 16 },
 				{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 16 },
-				// Raster
-				{ NV4097_SET_ALPHA_TEST_ENABLE, 1 },
-				{ NV4097_SET_ALPHA_FUNC, 1 },
-				{ NV4097_SET_ALPHA_REF, 1 },
-				{ NV4097_SET_FRONT_FACE, 1 },
 			};
 
-			for (u32 reg = 0; reg < m_skippable_registers.size(); ++reg)
+			const std::pair<u32, u32> ignorable_ranges[] =
 			{
-				bool _continue = false;
-				for (const auto &method : skippable_ranges)
-				{
-					if (reg < method.first)
-						break;
+				// General
+				{ NV4097_INVALIDATE_VERTEX_FILE, 3 }, // PSLight clears VERTEX_FILE[0-2]
+				{ NV4097_INVALIDATE_VERTEX_CACHE_FILE, 1 },
+				{ NV4097_INVALIDATE_L2, 1 },
+				{ NV4097_INVALIDATE_ZCULL, 1 },
+				// FIFO
+				{ (FIFO_DISABLED_COMMAND >> 2), 1},
+				{ (FIFO_PACKET_BEGIN >> 2), 1 },
+				{ (FIFO_DRAW_BARRIER >> 2), 1 },
+				// ROP
+				{ NV4097_SET_ALPHA_FUNC, 1 },
+				{ NV4097_SET_ALPHA_REF, 1 },
+				{ NV4097_SET_ALPHA_TEST_ENABLE, 1 },
+				{ NV4097_SET_ANTI_ALIASING_CONTROL, 1 },
+				// Program
+				{ NV4097_SET_SHADER_PACKER, 1 },
+				{ NV4097_SET_SHADER_WINDOW, 1 },
+				// Vertex data offsets
+				{ NV4097_SET_VERTEX_DATA_BASE_OFFSET, 1 },
+				{ NV4097_SET_VERTEX_DATA_BASE_INDEX, 1 }
+			};
 
-					if (reg - method.first < method.second)
-					{
-						// Safe to ignore if value has not changed
-						m_skippable_registers[reg] = true;
-						_continue = true;
-						break;
-					}
-				}
-
-				if (_continue)
-					continue;
-
-				m_skippable_registers[reg] = false;
-			}
+			std::fill(m_register_properties.begin(), m_register_properties.end(), 0u);
 
 			for (const auto &method : skippable_ranges)
 			{
-				for (int subreg = 0; subreg < method.second; ++subreg)
+				for (int i = 0; i < method.second; ++i)
 				{
-					// Safe to ignore if value has not changed
-					verify(HERE), m_skippable_registers[subreg] = true;
+					m_register_properties[method.first + i] = register_props::skippable;
+				}
+			}
+
+			for (const auto &method : ignorable_ranges)
+			{
+				for (int i = 0; i < method.second; ++i)
+				{
+					m_register_properties[method.first + i] |= register_props::ignorable;
 				}
 			}
 		}
 
 		void flattening_pass::optimize(const fifo_buffer_info_t& info, simple_array<register_pair>& commands, const u32* registers)
 		{
-			__unused(info);
+			if (info.num_draw_calls < 20)
+			{
+				// Not enough draw calls
+				return;
+			}
 
 #if (ENABLE_OPTIMIZATION_DEBUGGING)
 			auto copy = commands;
@@ -750,31 +761,14 @@ namespace rsx
 
 			for (auto &command : commands)
 			{
-				//LOG_ERROR(RSX, "[0x%x] %s(0x%x)", command.loc, _get_method_name(command.reg), command.value);
-
 				bool flush_commands_flag = has_deferred_call;
 				bool execute_method_flag = true;
 
 				const auto reg = command.reg >> 2;
 				const auto value = command.value;
+
 				switch (reg)
 				{
-				case NV4097_INVALIDATE_VERTEX_FILE: // PSLight clears VERTEX_FILE[0-2]
-				case NV4097_PIPE_NOP:
-				case NV4097_INVALIDATE_VERTEX_FILE + 2:
-				case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
-				case NV4097_INVALIDATE_L2:
-				case NV4097_INVALIDATE_ZCULL:
-				case (FIFO_DISABLED_COMMAND >> 2):
-				case (FIFO_PACKET_BEGIN >> 2):
-				case (FIFO_DRAW_BARRIER >> 2):
-				case (FIFO_EMPTY >> 2):
-				case (FIFO_BUSY >> 2):
-				{
-					// Ignore these completely
-					flush_commands_flag = false;
-					break;
-				}
 				case NV4097_SET_BEGIN_END:
 				{
 					if (value && value != deferred_primitive_type)
@@ -788,47 +782,50 @@ namespace rsx
 						has_deferred_call = true;
 						flush_commands_flag = false;
 						execute_method_flag = false;
-
-						// TODO: If END, insert draw barrier
 					}
-
 					break;
 				}
 				case NV4097_DRAW_ARRAYS:
 				{
-					const auto cmd = method_registers.current_draw_clause.command;
-					if (cmd != rsx::draw_command::array && cmd != rsx::draw_command::none)
-						break;
+					if (has_deferred_call)
+					{
+						const auto cmd = method_registers.current_draw_clause.command;
+						if (cmd != rsx::draw_command::array && cmd != rsx::draw_command::none)
+							break;
 
-					flush_commands_flag = false;
+						flush_commands_flag = false;
+					}
 					break;
 				}
 				case NV4097_DRAW_INDEX_ARRAY:
 				{
-					const auto cmd = method_registers.current_draw_clause.command;
-					if (cmd != rsx::draw_command::indexed && cmd != rsx::draw_command::none)
-						break;
+					if (has_deferred_call)
+					{
+						const auto cmd = method_registers.current_draw_clause.command;
+						if (cmd != rsx::draw_command::indexed && cmd != rsx::draw_command::none)
+							break;
 
-					flush_commands_flag = false;
-					break;
-				}
-				case NV4097_SET_VERTEX_DATA_BASE_INDEX:
-				case NV4097_SET_VERTEX_DATA_BASE_OFFSET:
-				{
-					// These can be executed when emitting geometry
-					flush_commands_flag = false;
+						flush_commands_flag = false;
+					}
 					break;
 				}
 				default:
 				{
-					// Hopefully this is skippable so the batch can keep growing
-					if (reg >= m_skippable_registers.size())
+					if (reg >= m_register_properties.size())
 					{
-						// Likely flow control, unskippable
+						// Flow control or special command
 						break;
 					}
 
-					if (m_skippable_registers[reg])
+					const auto properties = m_register_properties[reg];
+					if (properties & register_props::ignorable)
+					{
+						// These have no effect on rendering behavior or can be handled within begin/end
+						flush_commands_flag = false;
+						break;
+					}
+
+					if (properties & register_props::skippable)
 					{
 						if (has_deferred_call)
 						{
@@ -840,9 +837,10 @@ namespace rsx
 								break;
 							}
 						}
+
+						set_register(reg, value);
 					}
 
-					set_register(reg, value);
 					break;
 				}
 				}
@@ -1211,7 +1209,7 @@ namespace rsx
 			return;
 		}
 
-		if (cmd == FIFO::FIFO_EMPTY || !Emu.IsRunning())
+		if (cmd == FIFO::FIFO_EMPTY)
 		{
 			if (performance_counters.state == FIFO_state::running)
 			{
@@ -1219,7 +1217,6 @@ namespace rsx
 				performance_counters.state = FIFO_state::empty;
 			}
 
-			std::this_thread::yield();
 			return;
 		}
 
@@ -1227,7 +1224,7 @@ namespace rsx
 		// TODO: Who should handle graphics exceptions??
 		if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 		{
-			u32 offs = cmd & 0x1ffffffc;
+			const u32 offs = cmd & 0x1ffffffc;
 			if (offs == command.loc)
 			{
 				//Jump to self. Often preceded by NOP
@@ -1245,7 +1242,7 @@ namespace rsx
 		}
 		if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 		{
-			u32 offs = cmd & 0xfffffffc;
+			const u32 offs = cmd & 0xfffffffc;
 			if (offs == command.loc)
 			{
 				//Jump to self. Often preceded by NOP
@@ -1271,8 +1268,7 @@ namespace rsx
 				return;
 			}
 
-			u32 offs = cmd & 0xfffffffc;
-			//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
+			const u32 offs = cmd & 0xfffffffc;
 			m_return_addr = command.loc + 4;
 			fifo_ctrl->set_get(offs);
 			return;
@@ -1286,7 +1282,6 @@ namespace rsx
 				return;
 			}
 
-			//LOG_WARNING(RSX, "rsx return(0x%x)", get);
 			fifo_ctrl->set_get(m_return_addr);
 			m_return_addr = -1;
 			return;
