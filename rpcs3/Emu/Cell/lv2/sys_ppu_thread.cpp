@@ -293,7 +293,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	// Compute actual stack size and allocate
 	const u32 stack_size = _stacksz >= 4096 ? ::align(std::min<u32>(_stacksz, 0x100000), 4096) : 0x4000;
 
-	const vm::addr_t stack_base{vm::alloc(_stacksz, vm::stack, 4096)};
+	const vm::addr_t stack_base{vm::alloc(stack_size, vm::stack, 4096)};
 
 	if (!stack_base)
 	{
