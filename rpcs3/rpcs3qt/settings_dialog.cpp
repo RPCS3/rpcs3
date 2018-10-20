@@ -722,6 +722,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->downmix, emu_settings::DownmixStereo);
 	SubscribeTooltip(ui->downmix, json_audio["downmix"].toString());
 
+	// Sliders
+
+	xemu_settings->EnhanceSlider(ui->masterVolume, emu_settings::MasterVolume);
+	SubscribeTooltip(ui->masterVolume, json_audio["masterVolume"].toString());
+	ui->masterVolumeLabel->setText(tr("Master: %0%").arg(ui->masterVolume->value()));
+	connect(ui->masterVolume, &QSlider::valueChanged, [this](int value)
+	{
+		ui->masterVolumeLabel->setText(tr("Master: %0%").arg(value));
+	});
+
 	//    _____       __   ____    _______    _
 	//   |_   _|     / /  / __ \  |__   __|  | |
 	//     | |      / /  | |  | |    | | __ _| |__
