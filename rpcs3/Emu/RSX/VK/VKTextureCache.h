@@ -427,7 +427,7 @@ namespace vk
 		vk::memory_type_mapping m_memory_types;
 		vk::gpu_formats_support m_formats_support;
 		VkQueue m_submit_queue;
-		vk_data_heap* m_texture_upload_heap;
+		vk::data_heap* m_texture_upload_heap;
 
 		//Stuff that has been dereferenced goes into these
 		std::list<discarded_storage> m_discardable_storage;
@@ -956,7 +956,7 @@ namespace vk
 	public:
 		using baseclass::texture_cache;
 
-		void initialize(vk::render_device& device, VkQueue submit_queue, vk::vk_data_heap& upload_heap)
+		void initialize(vk::render_device& device, VkQueue submit_queue, vk::data_heap& upload_heap)
 		{
 			m_device = &device;
 			m_memory_types = device.get_memory_mapping();

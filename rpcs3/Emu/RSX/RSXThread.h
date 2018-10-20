@@ -88,18 +88,21 @@ namespace rsx
 		context_clear_all = context_clear_color | context_clear_depth
 	};
 
-	enum pipeline_state : u8
+	enum pipeline_state : u32
 	{
-		fragment_program_dirty = 1,
-		vertex_program_dirty = 2,
-		fragment_state_dirty = 4,
-		vertex_state_dirty = 8,
-		transform_constants_dirty = 16,
-		framebuffer_reads_dirty = 32,
+		fragment_program_dirty = 0x1,        // Fragment program changed
+		vertex_program_dirty = 0x2,          // Vertex program changed
+		fragment_state_dirty = 0x4,          // Fragment state changed (alpha test, etc)
+		vertex_state_dirty = 0x8,            // Vertex state changed (scale_offset, clip planes, etc)
+		transform_constants_dirty = 0x10,    // Transform constants changed
+		fragment_constants_dirty = 0x20,     // Fragment constants changed
+		framebuffer_reads_dirty = 0x40,      // Framebuffer contents changed
+		fragment_texture_state_dirty = 0x80, // Fragment texture parameters changed
+		vertex_texture_state_dirty = 0x80, // Fragment texture parameters changed
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
-		all_dirty = 255
+		all_dirty = -1u
 	};
 
 	enum FIFO_state : u8
@@ -640,6 +643,11 @@ namespace rsx
 		 * Fills current fog values, alpha test parameters and texture scaling parameters
 		 */
 		void fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program);
+
+		/**
+		 * Fill buffer with fragment texture parameter constants (texture matrix)
+		 */
+		void fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program);
 
 		/**
 		 * Write inlined array data to buffer.

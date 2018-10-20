@@ -624,7 +624,10 @@ void GLGSRender::end()
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
-	m_vertex_state_buffer->notify();
+	m_fragment_env_buffer->notify();
+	m_vertex_env_buffer->notify();
+	m_texture_parameters_buffer->notify();
+	m_vertex_layout_buffer->notify();
 	m_fragment_constants_buffer->notify();
 	m_transform_constants_buffer->notify();
 
@@ -795,7 +798,10 @@ void GLGSRender::on_init_thread()
 		m_attrib_ring_buffer.reset(new gl::legacy_ring_buffer());
 		m_transform_constants_buffer.reset(new gl::legacy_ring_buffer());
 		m_fragment_constants_buffer.reset(new gl::legacy_ring_buffer());
-		m_vertex_state_buffer.reset(new gl::legacy_ring_buffer());
+		m_fragment_env_buffer.reset(new gl::legacy_ring_buffer());
+		m_vertex_env_buffer.reset(new gl::legacy_ring_buffer());
+		m_texture_parameters_buffer.reset(new gl::legacy_ring_buffer());
+		m_vertex_layout_buffer.reset(new gl::legacy_ring_buffer());
 		m_index_ring_buffer.reset(new gl::legacy_ring_buffer());
 	}
 	else
@@ -803,7 +809,10 @@ void GLGSRender::on_init_thread()
 		m_attrib_ring_buffer.reset(new gl::ring_buffer());
 		m_transform_constants_buffer.reset(new gl::ring_buffer());
 		m_fragment_constants_buffer.reset(new gl::ring_buffer());
-		m_vertex_state_buffer.reset(new gl::ring_buffer());
+		m_fragment_env_buffer.reset(new gl::ring_buffer());
+		m_vertex_env_buffer.reset(new gl::ring_buffer());
+		m_texture_parameters_buffer.reset(new gl::ring_buffer());
+		m_vertex_layout_buffer.reset(new gl::ring_buffer());
 		m_index_ring_buffer.reset(new gl::ring_buffer());
 	}
 
@@ -811,7 +820,10 @@ void GLGSRender::on_init_thread()
 	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
 	m_transform_constants_buffer->create(gl::buffer::target::uniform, 64 * 0x100000);
 	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_fragment_env_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_vertex_env_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_texture_parameters_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_vertex_layout_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
 	if (gl_caps.vendor_AMD)
 	{
@@ -1013,9 +1025,24 @@ void GLGSRender::on_exit()
 		m_fragment_constants_buffer->remove();
 	}
 
-	if (m_vertex_state_buffer)
+	if (m_fragment_env_buffer)
 	{
-		m_vertex_state_buffer->remove();
+		m_fragment_env_buffer->remove();
+	}
+
+	if (m_vertex_env_buffer)
+	{
+		m_vertex_env_buffer->remove();
+	}
+
+	if (m_texture_parameters_buffer)
+	{
+		m_texture_parameters_buffer->remove();
+	}
+
+	if (m_vertex_layout_buffer)
+	{
+		m_vertex_layout_buffer->remove();
 	}
 
 	if (m_index_ring_buffer)
@@ -1224,78 +1251,113 @@ bool GLGSRender::load_program()
 
 void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
 {
-	u8 *buf;
-	u32 vertex_state_offset;
-	u32 vertex_constants_offset;
-	u32 fragment_constants_offset;
-
-	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
-	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
-	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
-
 	if (!m_program)
 	{
 		fmt::throw_exception("Unreachable right now" HERE);
 	}
 
+	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
+
+	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
+	const bool update_fragment_constants = !!(m_graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
+	const bool update_vertex_env = !!(m_graphics_state & rsx::pipeline_state::vertex_state_dirty);
+	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
+	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
+
 	m_program->use();
 
 	if (manually_flush_ring_buffers)
 	{
-		m_vertex_state_buffer->reserve_storage_on_heap(512);
-		m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_buffer_size, 256));
+		if (update_fragment_env) m_fragment_env_buffer->reserve_storage_on_heap(128);
+		if (update_vertex_env) m_vertex_env_buffer->reserve_storage_on_heap(256);
+		if (update_fragment_texture_env) m_texture_parameters_buffer->reserve_storage_on_heap(256);
+		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));		
 		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
+
+		m_vertex_layout_buffer->reserve_storage_on_heap(128 + 16);
 	}
 
-	// Vertex state
-	auto mapping = m_vertex_state_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
-	buf = static_cast<u8*>(mapping.first);
-	vertex_state_offset = mapping.second;
-	fill_scale_offset_data(buf, false);
-	fill_user_clip_data(buf + 64);
-	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-	*(reinterpret_cast<u32*>(buf + 132)) = upload_info.vertex_index_base;
-	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
-	*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
-	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
-	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160), upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+	if (update_vertex_env)
+	{
+		// Vertex state
+		auto mapping = m_vertex_env_buffer->alloc_from_heap(160, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
+		fill_scale_offset_data(buf, false);
+		fill_user_clip_data(buf + 64);
+		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
+		*(reinterpret_cast<u32*>(buf + 132)) = 0; // Reserved
+		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
+		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
+		*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
+
+		m_vertex_env_buffer->bind_range(0, mapping.second, 160);
+	}
+
+	{
+		// Vertex layout state
+		auto mapping = m_vertex_layout_buffer->alloc_from_heap(128 + 16, m_uniform_buffer_offset_align);
+		auto buf = static_cast<s32*>(mapping.first);
+		*buf = upload_info.vertex_index_base;
+		buf += 4;
+		fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+
+		m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
+	}
 
 	if (update_transform_constants)
 	{
 		// Vertex constants
-		mapping = m_transform_constants_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
-		buf = static_cast<u8*>(mapping.first);
-		vertex_constants_offset = mapping.second;
+		auto mapping = m_transform_constants_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
 		fill_vertex_program_constants_data(buf);
+
+		m_transform_constants_buffer->bind_range(2, mapping.second, 8192);
 	}
 
-	// Fragment constants
-	mapping = m_fragment_constants_buffer->alloc_from_heap(fragment_buffer_size, m_uniform_buffer_offset_align);
-	buf = static_cast<u8*>(mapping.first);
-	fragment_constants_offset = mapping.second;
-	if (fragment_constants_size)
+	if (update_fragment_constants)
 	{
+		// Fragment constants
+		auto mapping = m_fragment_constants_buffer->alloc_from_heap(fragment_constants_size, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
+
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) },
 			current_fragment_program, gl::get_driver_caps().vendor_NVIDIA);
+
+		m_fragment_constants_buffer->bind_range(3, mapping.second, fragment_constants_size);
 	}
 
-	// Fragment state
-	fill_fragment_state_buffer(buf + fragment_constants_size, current_fragment_program);
+	if (update_fragment_env)
+	{
+		// Fragment state
+		auto mapping = m_fragment_env_buffer->alloc_from_heap(32, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
+		fill_fragment_state_buffer(buf, current_fragment_program);
 
-	m_vertex_state_buffer->bind_range(0, vertex_state_offset, 512);
-	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
+		m_fragment_env_buffer->bind_range(4, mapping.second, 32);
+	}
 
-	if (update_transform_constants) m_transform_constants_buffer->bind_range(1, vertex_constants_offset, 8192);
+	if (update_fragment_texture_env)
+	{
+		// Fragment texture parameters
+		auto mapping = m_texture_parameters_buffer->alloc_from_heap(256, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
+		fill_fragment_texture_parameters(buf, current_fragment_program);
+
+		m_texture_parameters_buffer->bind_range(5, mapping.second, 256);
+	}
 
 	if (manually_flush_ring_buffers)
 	{
-		m_vertex_state_buffer->unmap();
-		m_fragment_constants_buffer->unmap();
-
+		if (update_fragment_env) m_fragment_env_buffer->unmap();
+		if (update_vertex_env) m_vertex_env_buffer->unmap();
+		if (update_fragment_texture_env) m_texture_parameters_buffer->unmap();
+		if (update_fragment_constants) m_fragment_constants_buffer->unmap();
 		if (update_transform_constants) m_transform_constants_buffer->unmap();
+
+		m_vertex_layout_buffer->unmap();
 	}
 
-	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty);
+	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty | rsx::pipeline_state::fragment_constants_dirty | rsx::pipeline_state::fragment_texture_state_dirty);
 	m_graphics_state &= ~handled_flags;
 }
 

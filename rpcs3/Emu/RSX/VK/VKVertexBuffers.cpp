@@ -63,7 +63,7 @@ namespace
 
 	std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType>> generate_emulating_index_buffer(
 		const rsx::draw_clause& clause, u32 vertex_count,
-		vk::vk_data_heap& m_index_buffer_ring_info)
+		vk::data_heap& m_index_buffer_ring_info)
 	{
 		u32 index_count = get_index_count(clause.primitive, vertex_count);
 		u32 upload_size = index_count * sizeof(u16);
@@ -91,7 +91,7 @@ namespace
 
 	struct draw_command_visitor
 	{
-		draw_command_visitor(vk::vk_data_heap& index_buffer_ring_info, rsx::vertex_input_layout& layout)
+		draw_command_visitor(vk::data_heap& index_buffer_ring_info, rsx::vertex_input_layout& layout)
 			: m_index_buffer_ring_info(index_buffer_ring_info)
 			, m_vertex_layout(layout)
 		{
@@ -226,7 +226,7 @@ namespace
 		}
 
 	private:
-		vk::vk_data_heap& m_index_buffer_ring_info;
+		vk::data_heap& m_index_buffer_ring_info;
 		rsx::vertex_input_layout& m_vertex_layout;
 	};
 }

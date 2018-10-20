@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "VKFragmentProgram.h"
@@ -144,9 +144,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
-	OS << "layout(std140, set = 0, binding = 2) uniform FragmentConstantsBuffer\n";
-	OS << "{\n";
-
+	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type == "sampler1D" ||
@@ -156,9 +154,21 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			continue;
 
 		for (const ParamItem& PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";\n";
+		{
+			constants_block += "	" + PT.type + " " + PI.name + ";\n";
+		}
 	}
 
+	if (!constants_block.empty())
+	{
+		OS << "layout(std140, set = 0, binding = 3) uniform FragmentConstantsBuffer\n";
+		OS << "{\n";
+		OS << constants_block;
+		OS << "};\n\n";
+	}
+
+	OS << "layout(std140, set = 0, binding = 4) uniform FragmentStateBuffer\n";
+	OS << "{\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
 	OS << "	uint rop_control;\n";
@@ -167,15 +177,26 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	uint fog_mode;\n";
 	OS << "	float wpos_scale;\n";
 	OS << "	float wpos_bias;\n";
+	OS << "};\n\n";
+
+	OS << "layout(std140, set = 0, binding = 5) uniform TextureParametersBuffer\n";
+	OS << "{\n";
 	OS << "	vec4 texture_parameters[16];\n";
-	OS << "};\n";
+	OS << "};\n\n";
 
 	vk::glsl::program_input in;
 	in.location = FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT;
 	in.domain = glsl::glsl_fragment_program;
 	in.name = "FragmentConstantsBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
+	inputs.push_back(in);
 
+	in.location = FRAGMENT_STATE_BIND_SLOT;
+	in.name = "FragmentStateBuffer";
+	inputs.push_back(in);
+
+	in.location = FRAGMENT_TEXTURE_PARAMS_BIND_SLOT;
+	in.name = "TextureParametersBuffer";
 	inputs.push_back(in);
 }
 

@@ -433,11 +433,12 @@ namespace
 
 	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
 	{
-		std::array<VkDescriptorSetLayoutBinding, 39> bindings = {};
+		std::array<VkDescriptorSetLayoutBinding, VK_NUM_DESCRIPTOR_BINDINGS> bindings = {};
 
 		size_t idx = 0;
-		// Vertex buffer
-		for (int i = 0; i < 16; i++)
+
+		// Vertex stream, one stream for cacheable data, one stream for transient data
+		for (int i = 0; i < 2; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 			bindings[idx].descriptorCount = 1;
@@ -455,12 +456,40 @@ namespace
 
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		bindings[idx].binding = FRAGMENT_STATE_BIND_SLOT;
+
+		idx++;
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		bindings[idx].binding = FRAGMENT_TEXTURE_PARAMS_BIND_SLOT;
+
+		idx++;
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 		bindings[idx].binding = VERTEX_CONSTANT_BUFFERS_BIND_SLOT;
 
 		idx++;
 
-		for (int i = 0; i < 16; i++)
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+		bindings[idx].binding = VERTEX_LAYOUT_BIND_SLOT;
+
+		idx++;
+
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+		bindings[idx].binding = VERTEX_PARAMS_BIND_SLOT;
+
+		idx++;
+
+		for (int i = 0; i < rsx::limits::fragment_textures_count; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			bindings[idx].descriptorCount = 1;
@@ -469,7 +498,7 @@ namespace
 			idx++;
 		}
 
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < rsx::limits::vertex_textures_count; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 			bindings[idx].descriptorCount = 1;
@@ -478,10 +507,7 @@ namespace
 			idx++;
 		}
 
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
-		bindings[idx].binding = SCALE_OFFSET_BIND_SLOT;
+		verify(HERE), idx == VK_NUM_DESCRIPTOR_BINDINGS;
 
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -619,7 +645,11 @@ VKGSRender::VKGSRender() : GSRender()
 
 	//VRAM allocation
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000);
-	m_uniform_buffer_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "uniform buffer");
+	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment env buffer");
+	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
+	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
+	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer");
+	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
@@ -719,10 +749,14 @@ VKGSRender::~VKGSRender()
 	vk::destroy_global_resources();
 
 	//Heaps
-	m_index_buffer_ring_info.destroy();
-	m_uniform_buffer_ring_info.destroy();
-	m_transform_constants_ring_info.destroy();
 	m_attrib_ring_info.destroy();
+	m_fragment_env_ring_info.destroy();
+	m_vertex_env_ring_info.destroy();
+	m_fragment_texture_params_ring_info.destroy();
+	m_vertex_layout_ring_info.destroy();
+	m_fragment_constants_ring_info.destroy();
+	m_transform_constants_ring_info.destroy();
+	m_index_buffer_ring_info.destroy();
 	m_texture_upload_buffer_ring_info.destroy();
 
 	//Fallback bindables
@@ -938,7 +972,11 @@ void VKGSRender::check_heap_status()
 {
 	if (m_attrib_ring_info.is_critical() ||
 		m_texture_upload_buffer_ring_info.is_critical() ||
-		m_uniform_buffer_ring_info.is_critical() ||
+		m_fragment_env_ring_info.is_critical() ||
+		m_vertex_env_ring_info.is_critical() ||
+		m_fragment_texture_params_ring_info.is_critical() ||
+		m_vertex_layout_ring_info.is_critical() ||
+		m_fragment_constants_ring_info.is_critical() ||
 		m_transform_constants_ring_info.is_critical() ||
 		m_index_buffer_ring_info.is_critical())
 	{
@@ -963,7 +1001,11 @@ void VKGSRender::check_heap_status()
 			m_vertex_cache->purge();
 
 			m_index_buffer_ring_info.reset_allocation_stats();
-			m_uniform_buffer_ring_info.reset_allocation_stats();
+			m_fragment_env_ring_info.reset_allocation_stats();
+			m_vertex_env_ring_info.reset_allocation_stats();
+			m_fragment_texture_params_ring_info.reset_allocation_stats();
+			m_vertex_layout_ring_info.reset_allocation_stats();
+			m_fragment_constants_ring_info.reset_allocation_stats();
 			m_transform_constants_ring_info.reset_allocation_stats();
 			m_attrib_ring_info.reset_allocation_stats();
 			m_texture_upload_buffer_ring_info.reset_allocation_stats();
@@ -1161,15 +1203,10 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (sub_index == 0)
 	{
-		// Load program execution environment
-		load_program_env(upload_info);
 		update_descriptors = true;
 	}
 	else
 	{
-		// Update vertex fetch environment
-		update_vertex_env(upload_info);
-
 		if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
 		{
 /*			VkDescriptorSetAllocateInfo alloc_info = {};
@@ -1192,18 +1229,19 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		}
 	}
 
+	// Update vertex fetch parameters
+	update_vertex_env(upload_info);
+
 	if (update_descriptors)
 	{
-		m_program->bind_uniform(persistent_buffer, "persistent_input_stream", m_current_frame->descriptor_set);
-		m_program->bind_uniform(volatile_buffer, "volatile_input_stream", m_current_frame->descriptor_set);
+		m_program->bind_uniform(persistent_buffer, vk::glsl::program_input_type::input_type_texel_buffer, "persistent_input_stream", m_current_frame->descriptor_set);
+		m_program->bind_uniform(volatile_buffer, vk::glsl::program_input_type::input_type_texel_buffer, "volatile_input_stream", m_current_frame->descriptor_set);
 
 		vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
 	}
 
 	//std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 	//m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_start - vertex_end).count();
-
-	begin_render_pass();
 
 	if (!upload_info.index_info)
 	{
@@ -1246,8 +1284,6 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			}
 		}
 	}
-
-	close_render_pass();
 
 	//std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	//m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
@@ -1503,6 +1539,9 @@ void VKGSRender::end()
 		return;
 	}
 
+	// Load program execution environment
+	load_program_env();
+
 	std::chrono::time_point<steady_clock> program_end = steady_clock::now();
 	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_end - program_start).count();
 
@@ -1608,6 +1647,7 @@ void VKGSRender::end()
 
 	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 	update_draw_state();
+	begin_render_pass();
 
 	u32 sub_index = 0;
 	rsx::method_registers.current_draw_clause.begin();
@@ -1617,6 +1657,7 @@ void VKGSRender::end()
 	}
 	while (rsx::method_registers.current_draw_clause.next());
 
+	close_render_pass();
 	vk::leave_uninterruptible();
 
 	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
@@ -2022,7 +2063,11 @@ void VKGSRender::advance_queued_frames()
 
 	m_vertex_cache->purge();
 	m_current_frame->tag_frame_end(m_attrib_ring_info.get_current_put_pos_minus_one(),
-		m_uniform_buffer_ring_info.get_current_put_pos_minus_one(),
+		m_vertex_env_ring_info.get_current_put_pos_minus_one(),
+		m_fragment_env_ring_info.get_current_put_pos_minus_one(),
+		m_vertex_layout_ring_info.get_current_put_pos_minus_one(),
+		m_fragment_texture_params_ring_info.get_current_put_pos_minus_one(),
+		m_fragment_constants_ring_info.get_current_put_pos_minus_one(),
 		m_transform_constants_ring_info.get_current_put_pos_minus_one(),
 		m_index_buffer_ring_info.get_current_put_pos_minus_one(),
 		m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one());
@@ -2148,14 +2193,22 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 			//Heap cleanup; deallocates memory consumed by the frame if it is still held
 			m_attrib_ring_info.m_get_pos = ctx->attrib_heap_ptr;
-			m_uniform_buffer_ring_info.m_get_pos = ctx->ubo_heap_ptr;
-			m_transform_constants_ring_info.m_get_pos = ctx->vtxconst_heap_ptr;
+			m_vertex_env_ring_info.m_get_pos = ctx->vtx_env_heap_ptr;
+			m_fragment_env_ring_info.m_get_pos = ctx->frag_env_heap_ptr;
+			m_fragment_constants_ring_info.m_get_pos = ctx->frag_const_heap_ptr;
+			m_transform_constants_ring_info.m_get_pos = ctx->vtx_const_heap_ptr;
+			m_vertex_layout_ring_info.m_get_pos = ctx->vtx_layout_heap_ptr;
+			m_fragment_texture_params_ring_info.m_get_pos = ctx->frag_texparam_heap_ptr;
 			m_index_buffer_ring_info.m_get_pos = ctx->index_heap_ptr;
 			m_texture_upload_buffer_ring_info.m_get_pos = ctx->texture_upload_heap_ptr;
 
 			m_attrib_ring_info.notify();
-			m_uniform_buffer_ring_info.notify();
+			m_vertex_env_ring_info.notify();
+			m_fragment_env_ring_info.notify();
+			m_fragment_constants_ring_info.notify();
 			m_transform_constants_ring_info.notify();
+			m_vertex_layout_ring_info.notify();
+			m_fragment_texture_params_ring_info.notify();
 			m_index_buffer_ring_info.notify();
 			m_texture_upload_buffer_ring_info.notify();
 		}
@@ -2482,107 +2535,119 @@ bool VKGSRender::load_program()
 	return m_program != nullptr;
 }
 
-void VKGSRender::load_program_env(const vk::vertex_upload_info& vertex_info)
+void VKGSRender::load_program_env()
 {
 	if (!m_program)
 	{
 		fmt::throw_exception("Unreachable right now" HERE);
 	}
 
-	if (1)//m_graphics_state & (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty))
+	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
+
+	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
+	const bool update_fragment_constants = !!(m_graphics_state & rsx::pipeline_state::fragment_constants_dirty);
+	const bool update_vertex_env = !!(m_graphics_state & rsx::pipeline_state::vertex_state_dirty);
+	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
+	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
+
+	if (update_vertex_env)
 	{
-		const size_t fragment_constants_sz = current_fp_metadata.program_constants_buffer_length;
-		const size_t fragment_buffer_sz = fragment_constants_sz + (18 * 4 * sizeof(float));
-		const size_t required_mem = 512 + fragment_buffer_sz;
+		// Vertex state
+		const auto mem = m_vertex_env_ring_info.alloc<256>(256);
+		auto buf = (u8*)m_vertex_env_ring_info.map(mem, 160);
 
-		const size_t vertex_state_offset = m_uniform_buffer_ring_info.alloc<256>(required_mem);
-		const size_t fragment_constants_offset = vertex_state_offset + 512;
-
-		//We do this in one go
-		u8 *buf = (u8*)m_uniform_buffer_ring_info.map(vertex_state_offset, required_mem);
-
-		//Vertex state
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<u32*>(buf + 132)) = vertex_info.vertex_index_base;
+		*(reinterpret_cast<u32*>(buf + 132)) = 0; // Reserved
 		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
 		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
 		*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
 
-		fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160),
-			vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
-
-		//Fragment constants
-		buf = buf + 512;
-		if (fragment_constants_sz)
-		{
-			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_sz) },
-				current_fragment_program, vk::sanitize_fp_values());
-		}
-
-		fill_fragment_state_buffer(buf + fragment_constants_sz, current_fragment_program);
-
-		m_uniform_buffer_ring_info.unmap();
-
-		m_vertex_state_buffer_info = { m_uniform_buffer_ring_info.heap->value, vertex_state_offset, 512 };
-		m_fragment_state_buffer_info = { m_uniform_buffer_ring_info.heap->value, fragment_constants_offset, fragment_buffer_sz };
+		m_vertex_env_ring_info.unmap();
+		m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, mem, 160 };
 	}
 
-	if (m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
+	if (update_transform_constants)
 	{
-		//Vertex constants
-		const size_t vertex_constants_offset = m_transform_constants_ring_info.alloc<256>(8192);
-		auto buf = m_transform_constants_ring_info.map(vertex_constants_offset, 8192);
+		// Transform constants
+		auto mem = m_transform_constants_ring_info.alloc<256>(8192);
+		auto buf = m_transform_constants_ring_info.map(mem, 8192);
 
 		fill_vertex_program_constants_data(buf);
 		m_transform_constants_ring_info.unmap();
-		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, vertex_constants_offset, 8192 };
+		m_vertex_constants_buffer_info = { m_transform_constants_ring_info.heap->value, mem, 8192 };
 	}
 
-	if (1)//m_graphics_state || old_program != m_program)
+	if (update_fragment_constants)
 	{
-		m_program->bind_uniform(m_vertex_state_buffer_info, SCALE_OFFSET_BIND_SLOT, m_current_frame->descriptor_set);
+		// Fragment constants
+		if (fragment_constants_size)
+		{
+			auto mem = m_fragment_constants_ring_info.alloc<256>(fragment_constants_size);
+			auto buf = m_fragment_constants_ring_info.map(mem, fragment_constants_size);
+
+			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_size) },
+				current_fragment_program, vk::sanitize_fp_values());
+
+			m_fragment_constants_ring_info.unmap();
+			m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, mem, fragment_constants_size };
+		}
+		else
+		{
+			m_fragment_constants_buffer_info = { m_fragment_constants_ring_info.heap->value, 0, VK_WHOLE_SIZE };
+		}
+	}
+
+	if (update_fragment_env)
+	{
+		auto mem = m_fragment_env_ring_info.alloc<256>(256);
+		auto buf = m_fragment_env_ring_info.map(mem, 32);
+
+		fill_fragment_state_buffer(buf, current_fragment_program);
+		m_fragment_env_ring_info.unmap();
+		m_fragment_env_buffer_info = { m_fragment_env_ring_info.heap->value, mem, 32 };
+	}
+
+	if (update_fragment_texture_env)
+	{
+		auto mem = m_fragment_texture_params_ring_info.alloc<256>(256);
+		auto buf = m_fragment_texture_params_ring_info.map(mem, 256);
+
+		fill_fragment_texture_parameters(buf, current_fragment_program);
+		m_fragment_texture_params_ring_info.unmap();
+		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 256 };
+	}
+
+	//if (1)
+	{
+		m_program->bind_uniform(m_vertex_env_buffer_info, VERTEX_PARAMS_BIND_SLOT, m_current_frame->descriptor_set);
 		m_program->bind_uniform(m_vertex_constants_buffer_info, VERTEX_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
-		m_program->bind_uniform(m_fragment_state_buffer_info, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_fragment_constants_buffer_info, FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_fragment_env_buffer_info, FRAGMENT_STATE_BIND_SLOT, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_fragment_texture_params_buffer_info, FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, m_current_frame->descriptor_set);
 	}
 
 	//Clear flags
-	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty);
+	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty | rsx::pipeline_state::fragment_constants_dirty | rsx::pipeline_state::fragment_texture_state_dirty);
 	m_graphics_state &= ~handled_flags;
 }
 
 void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
 {
-	// Vertex base index = vertex_offset + 132
-	// Vertex layout = vertex_offset + 160
+	auto mem = m_vertex_layout_ring_info.alloc<256>(256);
+	auto buf = (u32*)m_vertex_layout_ring_info.map(mem, 128 + 16);
 
-	std::array<s32, 16 * 4> vertex_layout;
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, vertex_layout.data(),
+	*buf = vertex_info.vertex_index_base;
+	buf += 4;
+
+	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, (s32*)buf,
 		vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
 
-	vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_uniform_buffer_ring_info.heap->value, m_vertex_state_buffer_info.offset, 512,
-		VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_HOST_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+	m_vertex_layout_ring_info.unmap();
+	m_vertex_layout_buffer_info = { m_vertex_layout_ring_info.heap->value, mem, 128 + 16 };
 
-	vkCmdUpdateBuffer(*m_current_command_buffer, m_uniform_buffer_ring_info.heap->value, m_vertex_state_buffer_info.offset + 132, 4, &vertex_info.vertex_index_base);
-
-	u32 write_offset = m_vertex_state_buffer_info.offset + 160;
-	s32 *src_ptr = vertex_layout.data();
-
-	for (const auto& placement : m_vertex_layout.attribute_placement)
-	{
-		constexpr u32 data_len = 4 * sizeof(s32);
-		if (placement != rsx::attribute_buffer_placement::none)
-		{
-			vkCmdUpdateBuffer(*m_current_command_buffer, m_uniform_buffer_ring_info.heap->value, write_offset, data_len, src_ptr);
-		}
-
-		write_offset += data_len;
-		src_ptr += 4;
-	}
-
-	vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_uniform_buffer_ring_info.heap->value, m_vertex_state_buffer_info.offset, 512,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_UNIFORM_READ_BIT);
+	m_program->bind_uniform(m_vertex_layout_buffer_info, VERTEX_LAYOUT_BIND_SLOT, m_current_frame->descriptor_set);
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
@@ -2633,7 +2698,11 @@ void VKGSRender::write_buffers()
 void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
 {
 	if (m_attrib_ring_info.dirty() ||
-		m_uniform_buffer_ring_info.dirty() ||
+		m_fragment_env_ring_info.dirty() ||
+		m_vertex_env_ring_info.dirty() ||
+		m_fragment_texture_params_ring_info.dirty() ||
+		m_vertex_layout_ring_info.dirty() ||
+		m_fragment_constants_ring_info.dirty() ||
 		m_index_buffer_ring_info.dirty() ||
 		m_transform_constants_ring_info.dirty() ||
 		m_texture_upload_buffer_ring_info.dirty())
@@ -2642,7 +2711,11 @@ void VKGSRender::close_and_submit_command_buffer(const std::vector<VkSemaphore> 
 		m_secondary_command_buffer.begin();
 
 		m_attrib_ring_info.sync(m_secondary_command_buffer);
-		m_uniform_buffer_ring_info.sync(m_secondary_command_buffer);
+		m_fragment_env_ring_info.sync(m_secondary_command_buffer);
+		m_vertex_env_ring_info.sync(m_secondary_command_buffer);
+		m_fragment_texture_params_ring_info.sync(m_secondary_command_buffer);
+		m_vertex_layout_ring_info.sync(m_secondary_command_buffer);
+		m_fragment_constants_ring_info.sync(m_secondary_command_buffer);
 		m_index_buffer_ring_info.sync(m_secondary_command_buffer);
 		m_transform_constants_ring_info.sync(m_secondary_command_buffer);
 		m_texture_upload_buffer_ring_info.sync(m_secondary_command_buffer);
