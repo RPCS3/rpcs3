@@ -905,6 +905,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->perfOverlayOpacity->setEnabled(enabled);
 		ui->perfOverlayMarginX->setEnabled(enabled);
 		ui->perfOverlayMarginY->setEnabled(enabled);
+		ui->perfOverlayCenterX->setEnabled(enabled);
+		ui->perfOverlayCenterY->setEnabled(enabled);
 	};
 	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
 	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);
