@@ -1266,7 +1266,7 @@ void VKGSRender::end()
 
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
-	std::vector<VkClearAttachment> buffers_to_clear;
+	rsx::simple_array<VkClearAttachment> buffers_to_clear;
 	buffers_to_clear.reserve(4);
 
 	//Check for memory clears
@@ -1510,7 +1510,7 @@ void VKGSRender::end()
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		if (m_program->has_uniform(rsx::constants::fragment_texture_names[i]))
+		if (current_fp_metadata.referenced_textures_mask & (1 << i))
 		{
 			if (!rsx::method_registers.fragment_textures[i].enabled())
 			{
@@ -1540,7 +1540,7 @@ void VKGSRender::end()
 
 	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
-		if (m_program->has_uniform(rsx::constants::vertex_texture_names[i]))
+		if (current_vp_metadata.referenced_textures_mask & (1 << i))
 		{
 			if (!rsx::method_registers.vertex_textures[i].enabled())
 			{
