@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>703</width>
-    <height>499</height>
+    <width>752</width>
+    <height>576</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -783,7 +783,7 @@
       <attribute name="title">
        <string>Audio</string>
       </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_26">
+      <layout class="QVBoxLayout" name="verticalLayout_26" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_9" stretch="1,1,1">
          <item>
@@ -836,15 +836,49 @@
           </layout>
          </item>
          <item>
-          <widget class="QWidget" name="widget_8" native="true"/>
+          <layout class="QVBoxLayout" name="verticalLayout_37">
+           <item>
+            <widget class="QGroupBox" name="groupBox_6">
+             <property name="title">
+              <string>Volume</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_74">
+              <item>
+               <widget class="QLabel" name="masterVolumeLabel">
+                <property name="text">
+                 <string>Master: 0%</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="masterVolume">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="verticalSpacer_4">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
          </item>
          <item>
-          <widget class="QWidget" name="widget_2" native="true"/>
+          <layout class="QVBoxLayout" name="verticalLayout_71"/>
          </item>
         </layout>
        </item>
        <item>
-        <spacer name="verticalSpacer_6">
+        <spacer name="verticalSpacer_19">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
