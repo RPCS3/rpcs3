@@ -142,7 +142,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 struct occlusion_data
 {
-	std::vector<u32> indices;
+	rsx::simple_array<u32> indices;
 	command_buffer_chunk* command_buffer_to_wait = nullptr;
 };
 

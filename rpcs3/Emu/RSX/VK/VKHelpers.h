@@ -2505,7 +2505,8 @@ public:
 			}
 		}
 
-		void reset_queries(vk::command_buffer &cmd, std::vector<u32> &list)
+		template<template<class> class _List>
+		void reset_queries(vk::command_buffer &cmd, _List<u32> &list)
 		{
 			for (const auto index : list)
 				reset_query(cmd, index);
