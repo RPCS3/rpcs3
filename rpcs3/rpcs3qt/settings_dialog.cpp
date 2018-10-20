@@ -358,7 +358,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		// List found unselected modules
 		if (prxf.is_directory || (prxf.name.substr(std::max<size_t>(size_t(3), prxf.name.length()) - 4)) != "sprx")
+		{
 			continue;
+		}
 		if (verify_npdrm_self_headers(fs::file(lle_dir + prxf.name)) && !set.count(prxf.name))
 		{
 			lle_module_list_unselected.push_back(prxf.name);
@@ -535,7 +537,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	int resolutionScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
 	auto ScaledResolution = [resolutionScaleDef](int percentage)
 	{
-		if (percentage == resolutionScaleDef) return QString(tr("100% (Default)"));
+		if (percentage == resolutionScaleDef)
+		{
+			return QString(tr("100% (Default)"));
+		}
 		return QString("%1% (%2x%3)").arg(percentage).arg(1280 * percentage / 100).arg(720 * percentage / 100);
 	};
 	ui->resolutionScale->setPageStep(50);
@@ -560,7 +565,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	int minimumScalableDimensionDef = stoi(xemu_settings->GetSettingDefault(emu_settings::MinimumScalableDimension));
 	auto MinScalableDimension = [minimumScalableDimensionDef](int dim)
 	{
-		if (dim == minimumScalableDimensionDef) return tr("%1x%1 (Default)").arg(dim);
+		if (dim == minimumScalableDimensionDef)
+		{
+			return tr("%1x%1 (Default)").arg(dim);
+		}
 		return QString("%1x%1").arg(dim);
 	};
 	ui->minimumScalableDimension->setPageStep(64);
@@ -604,7 +612,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	auto setRenderer = [=](QString text)
 	{
-		if (text.isEmpty()) return;
+		if (text.isEmpty())
+		{
+			return;
+		}
 
 		auto switchTo = [=](emu_settings::Render_Info renderer)
 		{
@@ -659,7 +670,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	auto setAdapter = [=](QString text)
 	{
-		if (text.isEmpty()) return;
+		if (text.isEmpty())
+		{
+			return;
+		}
 
 		// don't set adapter if signal was created by switching render
 		QString newRender = ui->renderBox->currentText();
@@ -724,13 +738,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Sliders
 
-	xemu_settings->EnhanceSlider(ui->masterVolume, emu_settings::MasterVolume);
+	EnhanceSlider(emu_settings::MasterVolume, ui->masterVolume, ui->masterVolumeLabel, tr("Master: %0 %"));
 	SubscribeTooltip(ui->masterVolume, json_audio["masterVolume"].toString());
-	ui->masterVolumeLabel->setText(tr("Master: %0%").arg(ui->masterVolume->value()));
-	connect(ui->masterVolume, &QSlider::valueChanged, [this](int value)
-	{
-		ui->masterVolumeLabel->setText(tr("Master: %0%").arg(value));
-	});
 
 	//    _____       __   ____    _______    _
 	//   |_   _|     / /  / __ \  |__   __|  | |
@@ -914,45 +923,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Sliders
 
-	xemu_settings->EnhanceSlider(ui->perfOverlayUpdateInterval, emu_settings::PerfOverlayUpdateInterval);
+	EnhanceSlider(emu_settings::PerfOverlayUpdateInterval, ui->perfOverlayUpdateInterval, ui->label_update_interval, tr("Update Interval: %0 ms"));
 	SubscribeTooltip(ui->perfOverlayUpdateInterval, json_emu_overlay["perfOverlayUpdateInterval"].toString());
-	ui->label_update_interval->setText(tr("Update Interval: %0 ms").arg(ui->perfOverlayUpdateInterval->value()));
-	connect(ui->perfOverlayUpdateInterval, &QSlider::valueChanged, [this](int value)
-	{
-		ui->label_update_interval->setText(tr("Update Interval: %0 ms").arg(value));
-	});
 
-	xemu_settings->EnhanceSlider(ui->perfOverlayFontSize, emu_settings::PerfOverlayFontSize);
+	EnhanceSlider(emu_settings::PerfOverlayFontSize, ui->perfOverlayFontSize, ui->label_font_size, tr("Font Size: %0 px"));
 	SubscribeTooltip(ui->perfOverlayFontSize, json_emu_overlay["perfOverlayFontSize"].toString());
-	ui->label_font_size->setText(tr("Font Size: %0 px").arg(ui->perfOverlayFontSize->value()));
-	connect(ui->perfOverlayFontSize, &QSlider::valueChanged, [this](int value)
-	{
-		ui->label_font_size->setText(tr("Font Size: %0 px").arg(value));
-	});
 
-	xemu_settings->EnhanceSlider(ui->perfOverlayOpacity, emu_settings::PerfOverlayOpacity);
+	EnhanceSlider(emu_settings::PerfOverlayOpacity, ui->perfOverlayOpacity, ui->label_opacity, tr("Opacity: %0 %"));
 	SubscribeTooltip(ui->perfOverlayOpacity, json_emu_overlay["perfOverlayOpacity"].toString());
-	ui->label_opacity->setText(tr("Opacity: %0 %").arg(ui->perfOverlayOpacity->value()));
-	connect(ui->perfOverlayOpacity, &QSlider::valueChanged, [this](int value)
-	{
-		ui->label_opacity->setText(tr("Opacity: %0 %").arg(value));
-	});
 
-	xemu_settings->EnhanceSlider(ui->shaderLoadBgDarkening, emu_settings::ShaderLoadBgDarkening);
+	EnhanceSlider(emu_settings::ShaderLoadBgDarkening, ui->shaderLoadBgDarkening, ui->label_shaderLoadBgDarkening, tr("Background darkening: %0 %"));
 	SubscribeTooltip(ui->shaderLoadBgDarkening, json_emu_shaders["shaderLoadBgDarkening"].toString());
-	ui->label_shaderLoadBgDarkening->setText(tr("Background darkening: %0 %").arg(ui->shaderLoadBgDarkening->value()));
-	connect(ui->shaderLoadBgDarkening, &QSlider::valueChanged, [this](int value)
-	{
-		ui->label_shaderLoadBgDarkening->setText(tr("Background darkening: %0 %").arg(value));
-	});
 
-	xemu_settings->EnhanceSlider(ui->shaderLoadBgBlur, emu_settings::ShaderLoadBgBlur);
+	EnhanceSlider(emu_settings::ShaderLoadBgBlur, ui->shaderLoadBgBlur, ui->label_shaderLoadBgBlur, tr("Background blur: %0 %"));
 	SubscribeTooltip(ui->shaderLoadBgBlur, json_emu_shaders["shaderLoadBgBlur"].toString());
-	ui->label_shaderLoadBgBlur->setText(tr("Background blur: %0 %").arg(ui->shaderLoadBgBlur->value()));
-	connect(ui->shaderLoadBgBlur, &QSlider::valueChanged, [this](int value)
-	{
-		ui->label_shaderLoadBgBlur->setText(tr("Background blur: %0 %").arg(value));
-	});
 
 	// SpinBoxes
 
@@ -1248,6 +1232,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 settings_dialog::~settings_dialog()
 {
 	delete ui;
+}
+
+void settings_dialog::EnhanceSlider(emu_settings::SettingsType settings_type, QSlider* slider, QLabel* label, const QString& label_text)
+{
+	xemu_settings->EnhanceSlider(slider, settings_type);
+
+	if (slider && label)
+	{
+		label->setText(label_text.arg(slider->value()));
+		connect(slider, &QSlider::valueChanged, [label, label_text](int value)
+		{
+			label->setText(label_text.arg(value));
+		});
+	}
 }
 
 void settings_dialog::AddConfigs()
