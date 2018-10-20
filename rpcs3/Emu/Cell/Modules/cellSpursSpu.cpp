@@ -26,57 +26,57 @@ extern logs::channel cellSpurs;
 // SPURS utility functions
 //
 static void cellSpursModulePutTrace(CellSpursTracePacket* packet, u32 dmaTagId);
-static u32 cellSpursModulePollStatus(SPUThread& spu, u32* status);
-static void cellSpursModuleExit(SPUThread& spu);
+static u32 cellSpursModulePollStatus(spu_thread& spu, u32* status);
+static void cellSpursModuleExit(spu_thread& spu);
 
-static bool spursDma(SPUThread& spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag);
-static u32 spursDmaGetCompletionStatus(SPUThread& spu, u32 tagMask);
-static u32 spursDmaWaitForCompletion(SPUThread& spu, u32 tagMask, bool waitForAll = true);
-static void spursHalt(SPUThread& spu);
+static bool spursDma(spu_thread& spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag);
+static u32 spursDmaGetCompletionStatus(spu_thread& spu, u32 tagMask);
+static u32 spursDmaWaitForCompletion(spu_thread& spu, u32 tagMask, bool waitForAll = true);
+static void spursHalt(spu_thread& spu);
 
 //
 // SPURS kernel functions
 //
-static bool spursKernel1SelectWorkload(SPUThread& spu);
-static bool spursKernel2SelectWorkload(SPUThread& spu);
-static void spursKernelDispatchWorkload(SPUThread& spu, u64 widAndPollStatus);
-static bool spursKernelWorkloadExit(SPUThread& spu);
-bool spursKernelEntry(SPUThread& spu);
+static bool spursKernel1SelectWorkload(spu_thread& spu);
+static bool spursKernel2SelectWorkload(spu_thread& spu);
+static void spursKernelDispatchWorkload(spu_thread& spu, u64 widAndPollStatus);
+static bool spursKernelWorkloadExit(spu_thread& spu);
+bool spursKernelEntry(spu_thread& spu);
 
 //
 // SPURS system workload functions
 //
-static bool spursSysServiceEntry(SPUThread& spu);
+static bool spursSysServiceEntry(spu_thread& spu);
 // TODO: Exit
-static void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt);
-static void spursSysServiceMain(SPUThread& spu, u32 pollStatus);
-static void spursSysServiceProcessRequests(SPUThread& spu, SpursKernelContext* ctxt);
-static void spursSysServiceActivateWorkload(SPUThread& spu, SpursKernelContext* ctxt);
+static void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt);
+static void spursSysServiceMain(spu_thread& spu, u32 pollStatus);
+static void spursSysServiceProcessRequests(spu_thread& spu, SpursKernelContext* ctxt);
+static void spursSysServiceActivateWorkload(spu_thread& spu, SpursKernelContext* ctxt);
 // TODO: Deactivate workload
-static void spursSysServiceUpdateShutdownCompletionEvents(SPUThread& spu, SpursKernelContext* ctxt, u32 wklShutdownBitSet);
-static void spursSysServiceTraceSaveCount(SPUThread& spu, SpursKernelContext* ctxt);
-static void spursSysServiceTraceUpdate(SPUThread& spu, SpursKernelContext* ctxt, u32 arg2, u32 arg3, u32 forceNotify);
+static void spursSysServiceUpdateShutdownCompletionEvents(spu_thread& spu, SpursKernelContext* ctxt, u32 wklShutdownBitSet);
+static void spursSysServiceTraceSaveCount(spu_thread& spu, SpursKernelContext* ctxt);
+static void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 arg2, u32 arg3, u32 forceNotify);
 // TODO: Deactivate trace
 // TODO: System workload entry
-static void spursSysServiceCleanupAfterSystemWorkload(SPUThread& spu, SpursKernelContext* ctxt);
+static void spursSysServiceCleanupAfterSystemWorkload(spu_thread& spu, SpursKernelContext* ctxt);
 
 //
 // SPURS taskset policy module functions
 //
-static bool spursTasksetEntry(SPUThread& spu);
-static bool spursTasksetSyscallEntry(SPUThread& spu);
-static void spursTasksetResumeTask(SPUThread& spu);
-static void spursTasksetStartTask(SPUThread& spu, CellSpursTaskArgument& taskArgs);
-static s32 spursTasksetProcessRequest(SPUThread& spu, s32 request, u32* taskId, u32* isWaiting);
-static void spursTasksetProcessPollStatus(SPUThread& spu, u32 pollStatus);
-static bool spursTasksetPollStatus(SPUThread& spu);
-static void spursTasksetExit(SPUThread& spu);
-static void spursTasksetOnTaskExit(SPUThread& spu, u64 addr, u32 taskId, s32 exitCode, u64 args);
-static s32 spursTasketSaveTaskContext(SPUThread& spu);
-static void spursTasksetDispatch(SPUThread& spu);
-static s32 spursTasksetProcessSyscall(SPUThread& spu, u32 syscallNum, u32 args);
-static void spursTasksetInit(SPUThread& spu, u32 pollStatus);
-static s32 spursTasksetLoadElf(SPUThread& spu, u32* entryPoint, u32* lowestLoadAddr, u64 elfAddr, bool skipWriteableSegments);
+static bool spursTasksetEntry(spu_thread& spu);
+static bool spursTasksetSyscallEntry(spu_thread& spu);
+static void spursTasksetResumeTask(spu_thread& spu);
+static void spursTasksetStartTask(spu_thread& spu, CellSpursTaskArgument& taskArgs);
+static s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* isWaiting);
+static void spursTasksetProcessPollStatus(spu_thread& spu, u32 pollStatus);
+static bool spursTasksetPollStatus(spu_thread& spu);
+static void spursTasksetExit(spu_thread& spu);
+static void spursTasksetOnTaskExit(spu_thread& spu, u64 addr, u32 taskId, s32 exitCode, u64 args);
+static s32 spursTasketSaveTaskContext(spu_thread& spu);
+static void spursTasksetDispatch(spu_thread& spu);
+static s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args);
+static void spursTasksetInit(spu_thread& spu, u32 pollStatus);
+static s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u64 elfAddr, bool skipWriteableSegments);
 
 //----------------------------------------------------------------------------
 // SPURS utility functions
@@ -89,7 +89,7 @@ void cellSpursModulePutTrace(CellSpursTracePacket* packet, u32 dmaTagId)
 }
 
 // Check for execution right requests
-u32 cellSpursModulePollStatus(SPUThread& spu, u32* status)
+u32 cellSpursModulePollStatus(spu_thread& spu, u32* status)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 
@@ -114,7 +114,7 @@ u32 cellSpursModulePollStatus(SPUThread& spu, u32* status)
 }
 
 // Exit current workload
-void cellSpursModuleExit(SPUThread& spu)
+void cellSpursModuleExit(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 	spu.pc = ctxt->exitToKernelAddr;
@@ -122,7 +122,7 @@ void cellSpursModuleExit(SPUThread& spu)
 }
 
 // Execute a DMA operation
-bool spursDma(SPUThread& spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag)
+bool spursDma(spu_thread& spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag)
 {
 	spu.set_ch_value(MFC_LSA, lsa);
 	spu.set_ch_value(MFC_EAH, (u32)(ea >> 32));
@@ -141,7 +141,7 @@ bool spursDma(SPUThread& spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag)
 }
 
 // Get the status of DMA operations
-u32 spursDmaGetCompletionStatus(SPUThread& spu, u32 tagMask)
+u32 spursDmaGetCompletionStatus(spu_thread& spu, u32 tagMask)
 {
 	spu.set_ch_value(MFC_WrTagMask, tagMask);
 	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_IMMEDIATE);
@@ -149,7 +149,7 @@ u32 spursDmaGetCompletionStatus(SPUThread& spu, u32 tagMask)
 }
 
 // Wait for DMA operations to complete
-u32 spursDmaWaitForCompletion(SPUThread& spu, u32 tagMask, bool waitForAll)
+u32 spursDmaWaitForCompletion(spu_thread& spu, u32 tagMask, bool waitForAll)
 {
 	spu.set_ch_value(MFC_WrTagMask, tagMask);
 	spu.set_ch_value(MFC_WrTagUpdate, waitForAll ? MFC_TAG_UPDATE_ALL : MFC_TAG_UPDATE_ANY);
@@ -157,12 +157,12 @@ u32 spursDmaWaitForCompletion(SPUThread& spu, u32 tagMask, bool waitForAll)
 }
 
 // Halt the SPU
-void spursHalt(SPUThread& spu)
+void spursHalt(spu_thread& spu)
 {
 	spu.halt();
 }
 
-void sys_spu_thread_exit(SPUThread& spu, s32 status)
+void sys_spu_thread_exit(spu_thread& spu, s32 status)
 {
 	// Cancel any pending status update requests
 	spu.set_ch_value(MFC_WrTagUpdate, 0);
@@ -178,7 +178,7 @@ void sys_spu_thread_exit(SPUThread& spu, s32 status)
 	spu.stop_and_signal(0x102);
 }
 
-void sys_spu_thread_group_exit(SPUThread& spu, s32 status)
+void sys_spu_thread_group_exit(spu_thread& spu, s32 status)
 {
 	// Cancel any pending status update requests
 	spu.set_ch_value(MFC_WrTagUpdate, 0);
@@ -194,7 +194,7 @@ void sys_spu_thread_group_exit(SPUThread& spu, s32 status)
 	spu.stop_and_signal(0x101);
 }
 
-s32 sys_spu_thread_send_event(SPUThread& spu, u8 spup, u32 data0, u32 data1)
+s32 sys_spu_thread_send_event(spu_thread& spu, u8 spup, u32 data0, u32 data1)
 {
 	if (spup > 0x3F)
 	{
@@ -211,7 +211,7 @@ s32 sys_spu_thread_send_event(SPUThread& spu, u8 spup, u32 data0, u32 data1)
 	return static_cast<u32>(spu.get_ch_value(SPU_RdInMbox));
 }
 
-s32 sys_spu_thread_switch_system_module(SPUThread& spu, u32 status)
+s32 sys_spu_thread_switch_system_module(spu_thread& spu, u32 status)
 {
 	if (spu.get_ch_count(SPU_RdInMbox))
 	{
@@ -246,7 +246,7 @@ s32 sys_spu_thread_switch_system_module(SPUThread& spu, u32 status)
 //----------------------------------------------------------------------------
 
 // Select a workload to run
-bool spursKernel1SelectWorkload(SPUThread& spu)
+bool spursKernel1SelectWorkload(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 
@@ -430,7 +430,7 @@ bool spursKernel1SelectWorkload(SPUThread& spu)
 }
 
 // Select a workload to run
-bool spursKernel2SelectWorkload(SPUThread& spu)
+bool spursKernel2SelectWorkload(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 
@@ -603,7 +603,7 @@ bool spursKernel2SelectWorkload(SPUThread& spu)
 }
 
 // SPURS kernel dispatch workload
-void spursKernelDispatchWorkload(SPUThread& spu, u64 widAndPollStatus)
+void spursKernelDispatchWorkload(spu_thread& spu, u64 widAndPollStatus)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 	auto isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
@@ -655,7 +655,7 @@ void spursKernelDispatchWorkload(SPUThread& spu, u64 widAndPollStatus)
 }
 
 // SPURS kernel workload exit
-bool spursKernelWorkloadExit(SPUThread& spu)
+bool spursKernelWorkloadExit(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 	auto isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
@@ -676,10 +676,8 @@ bool spursKernelWorkloadExit(SPUThread& spu)
 }
 
 // SPURS kernel entry point
-bool spursKernelEntry(SPUThread& spu)
+bool spursKernelEntry(spu_thread& spu)
 {
-	thread_ctrl::eternalize();
-
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 	memset(ctxt, 0, sizeof(SpursKernelContext));
 
@@ -728,7 +726,7 @@ bool spursKernelEntry(SPUThread& spu)
 //----------------------------------------------------------------------------
 
 // Entry point of the system service
-bool spursSysServiceEntry(SPUThread& spu)
+bool spursSysServiceEntry(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + spu.gpr[3]._u32[3]);
 	auto arg = spu.gpr[4]._u64[1];
@@ -757,7 +755,7 @@ bool spursSysServiceEntry(SPUThread& spu)
 }
 
 // Wait for an external event or exit the SPURS thread group if no workloads can be scheduled
-void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
+void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 {
 	bool shouldExit;
 
@@ -865,7 +863,7 @@ void spursSysServiceIdleHandler(SPUThread& spu, SpursKernelContext* ctxt)
 }
 
 // Main function for the system service
-void spursSysServiceMain(SPUThread& spu, u32 pollStatus)
+void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 {
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 
@@ -970,7 +968,7 @@ void spursSysServiceMain(SPUThread& spu, u32 pollStatus)
 }
 
 // Process any requests
-void spursSysServiceProcessRequests(SPUThread& spu, SpursKernelContext* ctxt)
+void spursSysServiceProcessRequests(spu_thread& spu, SpursKernelContext* ctxt)
 {
 	bool updateTrace = false;
 	bool updateWorkload = false;
@@ -1023,7 +1021,7 @@ void spursSysServiceProcessRequests(SPUThread& spu, SpursKernelContext* ctxt)
 }
 
 // Activate a workload
-void spursSysServiceActivateWorkload(SPUThread& spu, SpursKernelContext* ctxt)
+void spursSysServiceActivateWorkload(spu_thread& spu, SpursKernelContext* ctxt)
 {
 	auto spurs = vm::_ptr<CellSpurs>(spu.offset + 0x100);
 	std::memcpy(vm::base(spu.offset + 0x30000), ctxt->spurs->wklInfo1, 0x200);
@@ -1121,7 +1119,7 @@ void spursSysServiceActivateWorkload(SPUThread& spu, SpursKernelContext* ctxt)
 }
 
 // Update shutdown completion events
-void spursSysServiceUpdateShutdownCompletionEvents(SPUThread& spu, SpursKernelContext* ctxt, u32 wklShutdownBitSet)
+void spursSysServiceUpdateShutdownCompletionEvents(spu_thread& spu, SpursKernelContext* ctxt, u32 wklShutdownBitSet)
 {
 	// Mark the workloads in wklShutdownBitSet as completed and also generate a bit set of the completed
 	// workloads that have a shutdown completion hook registered
@@ -1164,7 +1162,7 @@ void spursSysServiceUpdateShutdownCompletionEvents(SPUThread& spu, SpursKernelCo
 }
 
 // Update the trace count for this SPU
-void spursSysServiceTraceSaveCount(SPUThread& spu, SpursKernelContext* ctxt)
+void spursSysServiceTraceSaveCount(spu_thread& spu, SpursKernelContext* ctxt)
 {
 	if (ctxt->traceBuffer)
 	{
@@ -1174,7 +1172,7 @@ void spursSysServiceTraceSaveCount(SPUThread& spu, SpursKernelContext* ctxt)
 }
 
 // Update trace control
-void spursSysServiceTraceUpdate(SPUThread& spu, SpursKernelContext* ctxt, u32 arg2, u32 arg3, u32 forceNotify)
+void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 arg2, u32 arg3, u32 forceNotify)
 {
 	bool notify;
 
@@ -1238,7 +1236,7 @@ void spursSysServiceTraceUpdate(SPUThread& spu, SpursKernelContext* ctxt, u32 ar
 }
 
 // Restore state after executing the system workload
-void spursSysServiceCleanupAfterSystemWorkload(SPUThread& spu, SpursKernelContext* ctxt)
+void spursSysServiceCleanupAfterSystemWorkload(spu_thread& spu, SpursKernelContext* ctxt)
 {
 	u8 wklId;
 
@@ -1314,7 +1312,7 @@ enum SpursTasksetRequest
 };
 
 // Taskset PM entry point
-bool spursTasksetEntry(SPUThread& spu)
+bool spursTasksetEntry(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 	auto kernelCtxt = vm::_ptr<SpursKernelContext>(spu.offset + spu.gpr[3]._u32[3]);
@@ -1353,7 +1351,7 @@ bool spursTasksetEntry(SPUThread& spu)
 }
 
 // Entry point into the Taskset PM for task syscalls
-bool spursTasksetSyscallEntry(SPUThread& spu)
+bool spursTasksetSyscallEntry(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 
@@ -1384,7 +1382,7 @@ bool spursTasksetSyscallEntry(SPUThread& spu)
 }
 
 // Resume a task
-void spursTasksetResumeTask(SPUThread& spu)
+void spursTasksetResumeTask(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 
@@ -1400,7 +1398,7 @@ void spursTasksetResumeTask(SPUThread& spu)
 }
 
 // Start a task
-void spursTasksetStartTask(SPUThread& spu, CellSpursTaskArgument& taskArgs)
+void spursTasksetStartTask(spu_thread& spu, CellSpursTaskArgument& taskArgs)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 	auto taskset = vm::_ptr<CellSpursTaskset>(spu.offset + 0x2700);
@@ -1418,7 +1416,7 @@ void spursTasksetStartTask(SPUThread& spu, CellSpursTaskArgument& taskArgs)
 }
 
 // Process a request and update the state of the taskset
-s32 spursTasksetProcessRequest(SPUThread& spu, s32 request, u32* taskId, u32* isWaiting)
+s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* isWaiting)
 {
 	auto kernelCtxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
@@ -1611,7 +1609,7 @@ s32 spursTasksetProcessRequest(SPUThread& spu, s32 request, u32* taskId, u32* is
 }
 
 // Process pollStatus received from the SPURS kernel
-void spursTasksetProcessPollStatus(SPUThread& spu, u32 pollStatus)
+void spursTasksetProcessPollStatus(spu_thread& spu, u32 pollStatus)
 {
 	if (pollStatus & CELL_SPURS_MODULE_POLL_STATUS_FLAG)
 	{
@@ -1620,7 +1618,7 @@ void spursTasksetProcessPollStatus(SPUThread& spu, u32 pollStatus)
 }
 
 // Check execution rights
-bool spursTasksetPollStatus(SPUThread& spu)
+bool spursTasksetPollStatus(spu_thread& spu)
 {
 	u32 pollStatus;
 
@@ -1634,7 +1632,7 @@ bool spursTasksetPollStatus(SPUThread& spu)
 }
 
 // Exit the Taskset PM
-void spursTasksetExit(SPUThread& spu)
+void spursTasksetExit(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 
@@ -1656,7 +1654,7 @@ void spursTasksetExit(SPUThread& spu)
 }
 
 // Invoked when a task exits
-void spursTasksetOnTaskExit(SPUThread& spu, u64 addr, u32 taskId, s32 exitCode, u64 args)
+void spursTasksetOnTaskExit(spu_thread& spu, u64 addr, u32 taskId, s32 exitCode, u64 args)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 
@@ -1670,7 +1668,7 @@ void spursTasksetOnTaskExit(SPUThread& spu, u64 addr, u32 taskId, s32 exitCode, 
 }
 
 // Save the context of a task
-s32 spursTasketSaveTaskContext(SPUThread& spu)
+s32 spursTasketSaveTaskContext(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 	auto taskInfo = vm::_ptr<CellSpursTaskset::TaskInfo>(spu.offset + 0x2780);
@@ -1733,7 +1731,7 @@ s32 spursTasketSaveTaskContext(SPUThread& spu)
 }
 
 // Taskset dispatcher
-void spursTasksetDispatch(SPUThread& spu)
+void spursTasksetDispatch(spu_thread& spu)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 	auto taskset = vm::_ptr<CellSpursTaskset>(spu.offset + 0x2700);
@@ -1864,7 +1862,7 @@ void spursTasksetDispatch(SPUThread& spu)
 }
 
 // Process a syscall request
-s32 spursTasksetProcessSyscall(SPUThread& spu, u32 syscallNum, u32 args)
+s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 	auto taskset = vm::_ptr<CellSpursTaskset>(spu.offset + 0x2700);
@@ -1974,7 +1972,7 @@ s32 spursTasksetProcessSyscall(SPUThread& spu, u32 syscallNum, u32 args)
 }
 
 // Initialise the Taskset PM
-void spursTasksetInit(SPUThread& spu, u32 pollStatus)
+void spursTasksetInit(spu_thread& spu, u32 pollStatus)
 {
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 	auto kernelCtxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
@@ -1995,7 +1993,7 @@ void spursTasksetInit(SPUThread& spu, u32 pollStatus)
 }
 
 // Load an ELF
-s32 spursTasksetLoadElf(SPUThread& spu, u32* entryPoint, u32* lowestLoadAddr, u64 elfAddr, bool skipWriteableSegments)
+s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u64 elfAddr, bool skipWriteableSegments)
 {
 	if (elfAddr == 0 || (elfAddr & 0x0F) != 0)
 	{

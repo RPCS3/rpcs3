@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "IdManager.h"
+#include "Utilities/Thread.h"
 
 shared_mutex id_manager::g_mutex;
 
@@ -23,7 +24,7 @@ id_manager::id_map::pointer idm::allocate_id(const id_manager::id_key& info, u32
 		if (_next >= base && _next < base + step * count)
 		{
 			g_id = _next;
-			vec.emplace_back(id_manager::id_key(_next, info.type(), info.on_stop()), nullptr);
+			vec.emplace_back(id_manager::id_key(_next, info.type()), nullptr);
 			return &vec.back();
 		}
 	}
@@ -37,7 +38,7 @@ id_manager::id_map::pointer idm::allocate_id(const id_manager::id_key& info, u32
 		if (!ptr->second)
 		{
 			g_id = next;
-			ptr->first = id_manager::id_key(next, info.type(), info.on_stop());
+			ptr->first = id_manager::id_key(next, info.type());
 			return ptr;
 		}
 	}
@@ -60,12 +61,8 @@ void idm::clear()
 	{
 		for (auto& pair : map)
 		{
-			if (auto ptr = pair.second.get())
-			{
-				pair.first.on_stop()(ptr);
-				pair.second.reset();
-				pair.first = {};
-			}
+			pair.second.reset();
+			pair.first = {};
 		}
 
 		map.clear();
@@ -82,13 +79,8 @@ void fxm::init()
 void fxm::clear()
 {
 	// Call recorded finalization functions for all IDs
-	for (auto& pair : g_vec)
+	for (auto& val : g_vec)
 	{
-		if (auto ptr = pair.second.get())
-		{
-			pair.first(ptr);
-			pair.second.reset();
-			pair.first = nullptr;
-		}
+		val.reset();
 	}
 }

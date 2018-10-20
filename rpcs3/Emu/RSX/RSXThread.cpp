@@ -23,6 +23,7 @@
 #include <sstream>
 #include <thread>
 #include <unordered_set>
+#include <exception>
 #include <fenv.h>
 
 class GSRender;
@@ -367,13 +368,36 @@ namespace rsx
 		}
 	}
 
-	void thread::on_spawn()
+	void thread::operator()()
 	{
-		m_rsx_thread = std::this_thread::get_id();
+		try
+		{
+			// Wait for startup (TODO)
+			while (m_rsx_thread_exiting)
+			{
+				thread_ctrl::wait_for(1000);
+
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+			}
+
+			on_task();
+		}
+		catch (const std::exception& e)
+		{
+			LOG_FATAL(RSX, "%s thrown: %s", typeid(e).name(), e.what());
+			Emu.Pause();
+		}
+
+		on_exit();
 	}
 
 	void thread::on_task()
 	{
+		m_rsx_thread = std::this_thread::get_id();
+
 		if (supports_native_ui)
 		{
 			m_overlay_manager = fxm::make_always<rsx::overlays::display_manager>();
@@ -406,7 +430,7 @@ namespace rsx
 
 		last_flip_time = get_system_time() - 1000000;
 
-		thread_ctrl::spawn(m_vblank_thread, "VBlank Thread", [this]()
+		named_thread vblank_thread("VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
 
@@ -428,7 +452,7 @@ namespace rsx
 							{ ppu_cmd::sleep, 0 }
 						});
 
-						intr_thread->notify();
+						thread_ctrl::notify(*intr_thread);
 					}
 
 					continue;
@@ -441,7 +465,7 @@ namespace rsx
 			}
 		});
 
-		thread_ctrl::spawn(m_decompiler_thread, "RSX Decompiler Thread", [this]
+		named_thread decompiler_thread ("RSX Decompiler Thread", [this]
 		{
 			if (g_cfg.video.disable_asynchronous_shader_compiler)
 			{
@@ -1000,22 +1024,6 @@ namespace rsx
 	void thread::on_exit()
 	{
 		m_rsx_thread_exiting = true;
-		if (m_vblank_thread)
-		{
-			m_vblank_thread->join();
-			m_vblank_thread.reset();
-		}
-
-		if (m_decompiler_thread)
-		{
-			m_decompiler_thread->join();
-			m_decompiler_thread.reset();
-		}
-	}
-
-	std::string thread::get_name() const
-	{
-		return "rsx::thread";
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -2188,10 +2196,8 @@ namespace rsx
 
 		memset(display_buffers, 0, sizeof(display_buffers));
 
-		m_rsx_thread_exiting = false;
-
 		on_init_rsx();
-		start_thread(fxm::get<GSRender>());
+		m_rsx_thread_exiting = false;
 	}
 
 	GcmTileInfo *thread::find_tile(u32 offset, u32 location)
@@ -2936,7 +2942,7 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			intr_thread->notify();
+			thread_ctrl::notify(*intr_thread);
 		}
 
 		sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);

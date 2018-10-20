@@ -22,6 +22,11 @@ namespace
 	}
 }
 
+u64 GLGSRender::get_cycles()
+{
+	return thread_ctrl::get_cycles(static_cast<named_thread<GLGSRender>&>(*this));
+}
+
 GLGSRender::GLGSRender() : GSRender()
 {
 	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.6"));

@@ -1133,7 +1133,7 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			rsx->intr_thread->notify();
+			thread_ctrl::notify(*rsx->intr_thread);
 		}
 	}
 

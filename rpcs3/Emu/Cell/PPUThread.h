@@ -14,6 +14,7 @@ enum class ppu_cmd : u32
 	set_args, // Set general-purpose args (+arg cmd)
 	lle_call, // Load addr and rtoc at *arg or *gpr[arg] and execute
 	hle_call, // Execute function by index (arg)
+	ptr_call, // Execute function by pointer
 	initialize, // ppu_initialize()
 	sleep,
 	reset_stack, // resets stack address
@@ -24,6 +25,17 @@ enum class ppu_syscall_code : u64
 {
 };
 
+// ppu_thread constructor argument
+struct ppu_thread_params
+{
+	vm::addr_t stack_addr;
+	u32 stack_size;
+	u32 tls_addr;
+	u32 entry;
+	u64 arg0;
+	u64 arg1;
+};
+
 class ppu_thread : public cpu_thread
 {
 public:
@@ -31,17 +43,17 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
-	virtual void on_spawn() override;
-	virtual void on_init(const std::shared_ptr<void>&) override;
+	static void on_cleanup(named_thread<ppu_thread>*);
+
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
-	virtual void cpu_task() override;
+	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
 	virtual void cpu_mem() override;
 	virtual void cpu_unmem() override;
 	virtual ~ppu_thread() override;
 
-	ppu_thread(const std::string& name, u32 prio = 0, u32 stack = 0x10000);
+	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
 
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers
@@ -153,7 +165,7 @@ public:
 	u64 start_time{0}; // Sleep start timepoint
 	const char* last_function{}; // Last function name for diagnosis, optimized for speed.
 
-	const std::string m_name; // Thread name
+	lf_value<std::string> ppu_name; // Thread name
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();

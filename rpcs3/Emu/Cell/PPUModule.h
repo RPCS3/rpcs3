@@ -77,9 +77,6 @@ class ppu_static_module final
 public:
 	const std::string name;
 
-	task_stack on_load;
-	task_stack on_unload;
-
 	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions;
 	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables;
 
@@ -112,7 +109,7 @@ class ppu_module_manager final
 	static ppu_static_variable& access_static_variable(const char* module, u32 vnid);
 
 	// Global variable for each registered function
-	template <typename T, T Func>
+	template <auto* Func>
 	struct registered
 	{
 		static ppu_static_function* info;
@@ -121,40 +118,42 @@ class ppu_module_manager final
 public:
 	static const ppu_static_module* get_module(const std::string& name);
 
-	template <typename T, T Func>
+	template <auto* Func>
 	static auto& register_static_function(const char* module, const char* name, ppu_function_t func, u32 fnid)
 	{
 		auto& info = access_static_function(module, fnid);
 
 		info.name  = name;
-		info.index = ppu_function_manager::register_function<T, Func>(func);
+		info.index = ppu_function_manager::register_function<decltype(Func), Func>(func);
 		info.flags = 0;
-		info.type  = typeid(T).name();
+		info.type  = typeid(*Func).name();
 
-		registered<T, Func>::info = &info;
+		registered<Func>::info = &info;
 
 		return info;
 	}
 
-	template <typename T, T Func>
+	template <auto* Func>
 	static auto& find_static_function()
 	{
-		return *registered<T, Func>::info;
+		return *registered<Func>::info;
 	}
 
-	template <typename T, T* Var>
+	template <auto* Var>
 	static auto& register_static_variable(const char* module, const char* name, u32 vnid)
 	{
-		static_assert(std::is_same<u32, std::decay_t<typename T::addr_type>>::value, "Static variable registration: vm::gvar<T> expected");
+		using gvar = std::decay_t<decltype(*Var)>;
+
+		static_assert(std::is_same<u32, typename gvar::addr_type>::value, "Static variable registration: vm::gvar<T> expected");
 
 		auto& info = access_static_variable(module, vnid);
 
 		info.name  = name;
 		info.var   = reinterpret_cast<vm::gvar<void>*>(Var);
 		info.init  = [] {};
-		info.size  = sizeof(typename T::type);
-		info.align = alignof(typename T::type);
-		info.type  = typeid(T).name();
+		info.size  = sizeof(typename gvar::type);
+		info.align = alignof(typename gvar::type);
+		info.type  = typeid(*Var).name();
 		info.flags = 0;
 		info.addr  = 0;
 
@@ -267,24 +266,22 @@ public:
 	static const ppu_static_module sys_lv2dbg;
 };
 
-template<typename T, T Func>
-ppu_static_function* ppu_module_manager::registered<T, Func>::info = nullptr;
+template <auto* Func>
+ppu_static_function* ppu_module_manager::registered<Func>::info = nullptr;
 
 // Call specified function directly if LLE is not available, call LLE equivalent in callback style otherwise
-template<typename T, T Func, typename... Args, typename RT = std::invoke_result_t<T, Args...>>
-inline RT ppu_execute_function_or_callback(ppu_thread& ppu, Args&&... args)
+template <auto* Func, typename... Args, typename RT = std::invoke_result_t<decltype(Func), ppu_thread&, Args...>>
+inline RT ppu_execute(ppu_thread& ppu, Args... args)
 {
-	vm::ptr<RT(Args...)> func = vm::cast(*ppu_module_manager::find_static_function<T, Func>().export_addr);
-	return func(ppu, std::forward<Args>(args)...);
+	vm::ptr<RT(Args...)> func = vm::cast(*ppu_module_manager::find_static_function<Func>().export_addr);
+	return func(ppu, args...);
 }
 
-#define CALL_FUNC(ppu, func, ...) ppu_execute_function_or_callback<decltype(&func), &func>(ppu, __VA_ARGS__)
-
-#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<decltype(&func), &func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = (u32)ppu.lr & ~3), ppu_generate_id(nid))
+#define REG_FNID(module, nid, func) ppu_module_manager::register_static_function<&func>(#module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = (u32)ppu.lr & ~3), ppu_generate_id(nid))
 
 #define REG_FUNC(module, func) REG_FNID(module, #func, func)
 
-#define REG_VNID(module, nid, var) ppu_module_manager::register_static_variable<decltype(var), &var>(#module, ppu_select_name(#var, nid), ppu_generate_id(nid))
+#define REG_VNID(module, nid, var) ppu_module_manager::register_static_variable<&var>(#module, ppu_select_name(#var, nid), ppu_generate_id(nid))
 
 #define REG_VAR(module, var) REG_VNID(module, #var, var)
 

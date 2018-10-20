@@ -360,7 +360,7 @@ private:
 	s64 m_flip_time = 0;
 
 	std::vector<u8> m_draw_buffers;
-	
+
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
 
@@ -377,6 +377,7 @@ private:
 #endif
 
 public:
+	u64 get_cycles() override final;
 	VKGSRender();
 	~VKGSRender();
 

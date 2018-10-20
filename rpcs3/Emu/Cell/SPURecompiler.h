@@ -76,10 +76,10 @@ public:
 	virtual spu_function_t compile(std::vector<u32>&&) = 0;
 
 	// Default dispatch function fallback (second arg is unused)
-	static void dispatch(SPUThread&, void*, u8* rip);
+	static void dispatch(spu_thread&, void*, u8* rip);
 
 	// Target for the unresolved patch point (second arg is unused)
-	static void branch(SPUThread&, void*, u8* rip);
+	static void branch(spu_thread&, void*, u8* rip);
 
 	// Get the block at specified address
 	std::vector<u32> block(const be_t<u32>* ls, u32 lsa);

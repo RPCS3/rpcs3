@@ -15,11 +15,11 @@ struct lv2_int_serv final : lv2_obj
 {
 	static const u32 id_base = 0x0b000000;
 
-	const std::shared_ptr<ppu_thread> thread;
+	const std::shared_ptr<named_thread<ppu_thread>> thread;
 	const u64 arg1;
 	const u64 arg2;
 
-	lv2_int_serv(const std::shared_ptr<ppu_thread>& thread, u64 arg1, u64 arg2)
+	lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thread, u64 arg1, u64 arg2)
 		: thread(thread)
 		, arg1(arg1)
 		, arg2(arg2)

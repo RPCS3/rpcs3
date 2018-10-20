@@ -112,7 +112,7 @@ static void network_clear_queue(ppu_thread& ppu)
 
 extern void network_thread_init()
 {
-	thread_ctrl::make_shared("Network Thread", []()
+	thread_ctrl::spawn("Network Thread", []()
 	{
 		std::vector<std::shared_ptr<lv2_socket>> socklist;
 		socklist.reserve(lv2_socket::id_count);
@@ -241,7 +241,7 @@ extern void network_thread_init()
 		CloseHandle(_eventh);
 		WSACleanup();
 #endif
-	})->detach();
+	});
 }
 
 lv2_socket::lv2_socket(lv2_socket::socket_type s)
@@ -338,6 +338,11 @@ s32 sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, 
 	{
 		while (!ppu.state.test_and_reset(cpu_flag::signal))
 		{
+			if (ppu.is_stopped())
+			{
+				return 0;
+			}
+
 			thread_ctrl::wait();
 		}
 
@@ -546,6 +551,11 @@ s32 sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr,
 	{
 		while (!ppu.state.test_and_reset(cpu_flag::signal))
 		{
+			if (ppu.is_stopped())
+			{
+				return 0;
+			}
+
 			thread_ctrl::wait();
 		}
 
@@ -946,6 +956,11 @@ s32 sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 len, s3
 	{
 		while (!ppu.state.test_and_reset(cpu_flag::signal))
 		{
+			if (ppu.is_stopped())
+			{
+				return 0;
+			}
+
 			thread_ctrl::wait();
 		}
 
@@ -1099,6 +1114,11 @@ s32 sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32
 	{
 		while (!ppu.state.test_and_reset(cpu_flag::signal))
 		{
+			if (ppu.is_stopped())
+			{
+				return 0;
+			}
+
 			thread_ctrl::wait();
 		}
 
@@ -1546,6 +1566,11 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - ppu.start_time;
@@ -1740,6 +1765,11 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - ppu.start_time;
