@@ -1,5 +1,5 @@
 // Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
-// by Sacha Refshauge
+// by Sacha Refshauge, Megamouse and flash-fire
 
 #include <QApplication>
 #include <QCommandLineParser>
@@ -17,6 +17,8 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #endif
+
+#include "rpcs3_version.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -99,13 +101,25 @@ int main(int argc, char** argv)
 	s_qt_mutex.lock();
 	rpcs3_app app(argc, argv);
 
+	app.setApplicationVersion(qstr(rpcs3::version.to_string()));
+	app.setApplicationName("RPCS3");
+
 	// Command line args
 	QCommandLineParser parser;
 	parser.setApplicationDescription("Welcome to RPCS3 command line.");
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
-	parser.addHelpOption();
+
+	const QCommandLineOption helpOption = parser.addHelpOption();
+	const QCommandLineOption versionOption = parser.addVersionOption();
 	parser.parse(QCoreApplication::arguments());
+	parser.process(app);
+
+	// Don't start up the full rpcs3 gui if we just want the version or help.
+	if (parser.isSet(versionOption))
+		return true;
+	if (parser.isSet(helpOption))
+		return true;
 
 	app.Init();
 
