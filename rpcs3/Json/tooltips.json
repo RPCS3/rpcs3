@@ -5,7 +5,7 @@
 		"audioDump": "Saves all audio as a raw wave file. If unsure, leave this unchecked.",
 		"convert": "Uses 16-bit audio samples instead of default 32-bit floating point.\nUse with buggy audio drivers if you have no sound or completely broken sound.",
 		"downmix": "Uses stereo audio output instead of default 7.1 surround sound.\nUse with stereo audio devices. Disable it only if you are using a surround sound audio system.",
-		"masterVolume": "Controls the overall volume of the emulation."
+		"masterVolume": "Controls the overall volume of the emulation.\nValues above 100% might reduce the audio quality."
 	},
 	"cpu": {
 		"PPU": {
