@@ -15,6 +15,7 @@
 #include <iterator>
 #include <memory>
 #include <set>
+#include <regex>
 
 #include <QDesktopServices>
 #include <QHeaderView>
@@ -390,9 +391,25 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
-				if (entry.is_directory)
+				const std::string entry_path = path + entry.name;
+				if (fs::is_file(entry_path + "/PS3_DISC.SFB"))
 				{
-					path_list.emplace_back(path + entry.name);
+					for (const auto& sub_entry : fs::dir(entry_path))
+					{
+						if (!sub_entry.is_directory)
+						{
+							continue;
+						}
+
+						if (sub_entry.name == "PS3_GAME" || std::regex_match(sub_entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+						{
+							path_list.emplace_back(entry_path + "/" + sub_entry.name);
+						}
+					}
+				}
+				else if (entry.is_directory)
+				{
+					path_list.emplace_back(entry_path);
 				}
 			}
 		};

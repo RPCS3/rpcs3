@@ -188,11 +188,15 @@ QIcon main_window::GetAppIcon()
 void main_window::SetAppIconFromPath(const std::string& path)
 {
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
-	QString qpath = qstr(path);
-	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
-	for (std::string pth : path_list)
+	const QString qpath = qstr(path);
+	const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
+
+	for (const std::string& pth : path_list)
 	{
-		if (!fs::is_dir(pth)) continue;
+		if (!fs::is_dir(pth))
+		{
+			continue;
+		}
 
 		const std::string sfo_dir = Emu.GetSfoDirFromGamePath(pth, Emu.GetUsr());
 		const std::string ico     = sfo_dir + "/ICON0.PNG";

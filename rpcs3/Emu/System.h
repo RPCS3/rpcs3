@@ -220,6 +220,7 @@ class Emulator final
 	std::string m_cat;
 	std::string m_dir;
 	std::string m_sfo_dir;
+	std::string m_game_dir{"PS3_GAME"};
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
 
