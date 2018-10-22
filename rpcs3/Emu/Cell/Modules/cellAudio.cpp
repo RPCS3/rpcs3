@@ -326,9 +326,6 @@ void audio_thread::operator()()
 		cellAudio.trace("Audio perf: (access=%d, AddData=%d, events=%d, dump=%d)",
 			stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 	}
-
-	vm::dealloc(m_buffer.addr());
-	vm::dealloc(m_indexes.addr());
 }
 
 error_code cellAudioInit()
@@ -352,7 +349,7 @@ error_code cellAudioInit()
 	return CELL_OK;
 }
 
-error_code cellAudioQuit()
+error_code cellAudioQuit(ppu_thread& ppu)
 {
 	cellAudio.warning("cellAudioQuit()");
 
@@ -370,13 +367,23 @@ error_code cellAudioQuit()
 
 	while (true)
 	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
 		thread_ctrl::wait_for(1000);
 
 		auto g_audio = g_idm->lock<named_thread<audio_thread>>(0);
 
 		if (*g_audio.get() == thread_state::finished)
 		{
+			const auto buf = g_audio->ports[0].addr;
+			const auto ind = g_audio->ports[0].index;
 			g_audio.destroy();
+			g_audio.unlock();
+			vm::dealloc(buf.addr());
+			vm::dealloc(ind.addr());
 			break;
 		}
 	}
@@ -471,11 +478,11 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 
 	if (attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 	{
-		port->level = audioParam->level;
+		port->level = audioParam->level * g_cfg.audio.volume / 100.0f;
 	}
 	else
 	{
-		port->level = 1.0f;
+		port->level = g_cfg.audio.volume / 100.0f;
 	}
 
 	port->level_set.store({ port->level, 0.0f });
@@ -689,6 +696,8 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 	{
 		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	}
+
+	level *= g_cfg.audio.volume / 100.0f;
 
 	if (level >= 0.0f)
 	{

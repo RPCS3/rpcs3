@@ -6,6 +6,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 #include "cellGcmSys.h"
+#include "sysPrxForUser.h"
 
 #include <thread>
 
@@ -346,7 +347,7 @@ void _cellGcmFunc15(vm::ptr<CellGcmContextData> context)
 u32 g_defaultCommandBufferBegin, g_defaultCommandBufferFragmentCount;
 
 // Called by cellGcmInit
-s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
+s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
 {
 	cellGcmSys.warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
 
@@ -429,8 +430,10 @@ s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSi
 	ctrl.get = 0;
 	ctrl.ref = 0; // Set later to -1 at RSX initialization
 
-	render->intr_thread = idm::make_ptr<ppu_thread>("_gcm_intr_thread", 1, 0x4000);
-	render->intr_thread->run();
+	vm::var<u64> _tid;
+	vm::var<char[]> _name = vm::make_str("_gcm_intr_thread");
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 128, 0, 1, 0x4000, 0, +_name);
+	render->intr_thread = idm::get<named_thread<ppu_thread>>(*_tid);
 	render->main_mem_addr = 0;
 	render->isHLE = true;
 	render->label_addr = m_config->gcm_info.label_addr;
@@ -1380,7 +1383,11 @@ s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 co
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
 
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
+
 		busy_wait();
 	}
 

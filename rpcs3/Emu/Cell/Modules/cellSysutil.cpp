@@ -232,20 +232,23 @@ s32 cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> buf, u3
 	return CELL_OK;
 }
 
-s32 cellSysutilCheckCallback(ppu_thread& ppu)
+error_code cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	while (auto&& func = cbm->get_cb())
+	while (auto func = cbm->get_cb())
 	{
 		if (s32 res = func(ppu))
 		{
-			return res;
+			return not_an_error(res);
 		}
 
-		thread_ctrl::test();
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
 	}
 
 	return CELL_OK;

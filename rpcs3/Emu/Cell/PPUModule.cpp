@@ -983,7 +983,11 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	if (Emu.IsReady() && fxm::import<ppu_module>([&] { return prx; }))
 	{
 		// Special loading mode
-		auto ppu = idm::make_ptr<ppu_thread>("test_thread", 0, 0x100000);
+		ppu_thread_params p{};
+		p.stack_addr = vm::cast(vm::alloc(0x100000, vm::stack, 4096));
+		p.stack_size = 0x100000;
+
+		auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] Thread (test_thread)", p, "test_thread", 0);
 
 		ppu->cmd_push({ppu_cmd::initialize, 0});
 	}
@@ -1463,7 +1467,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Fix primary stack size
-	switch (primary_stacksize)
+	switch (u32 sz = primary_stacksize)
 	{
 	case 0x10: primary_stacksize = 32 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_32K
 	case 0x20: primary_stacksize = 64 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_64K
@@ -1472,10 +1476,19 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	case 0x50: primary_stacksize = 256 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_256K
 	case 0x60: primary_stacksize = 512 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_512K
 	case 0x70: primary_stacksize = 1024 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_1M
+	default:
+	{
+		primary_stacksize = sz >= 4096 ? ::align(std::min<u32>(sz, 0x100000), 4096) : 0x4000;
+		break;
+	}
 	}
 
 	// Initialize main thread
-	auto ppu = idm::make_ptr<ppu_thread>("main_thread", primary_prio, primary_stacksize);
+	ppu_thread_params p{};
+	p.stack_addr = vm::cast(vm::alloc(primary_stacksize, vm::stack, 4096));
+	p.stack_size = primary_stacksize;
+
+	auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] Thread (main_thread)", p, "main_thread", primary_prio);
 
 	// Write initial data (exitspawn)
 	if (Emu.data.size())

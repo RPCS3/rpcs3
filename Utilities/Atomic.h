@@ -1023,7 +1023,7 @@ public:
 	}
 
 	// Conditionally decrement
-	simple_type fetch_dec_sat(simple_type greater_than = std::numeric_limits<simple_type>::min(), simple_type amount = 1)
+	bool try_dec(simple_type greater_than = std::numeric_limits<simple_type>::min())
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
@@ -1031,17 +1031,39 @@ public:
 		{
 			_new = old;
 
-			if (_new <= greater_than)
+			if (!(_new > greater_than))
 			{
-				// Early exit
-				return old;
+				return false;
 			}
 
-			_new -= amount;
+			_new -= 1;
 
 			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 			{
-				return old;
+				return true;
+			}
+		}
+	}
+
+	// Conditionally increment
+	bool try_inc(simple_type less_than = std::numeric_limits<simple_type>::max())
+	{
+		type _new, old = atomic_storage<type>::load(m_data);
+
+		while (true)
+		{
+			_new = old;
+
+			if (!(_new < less_than))
+			{
+				return false;
+			}
+
+			_new += 1;
+
+			if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
+			{
+				return true;
 			}
 		}
 	}

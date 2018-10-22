@@ -21,20 +21,21 @@ enum class cpu_flag : u32
 	__bitset_enum_max
 };
 
-// Flag set for pause state
-constexpr bs_t<cpu_flag> cpu_state_pause = cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause;
-
-class cpu_thread : public old_thread
+class cpu_thread
 {
-	void on_task() override final;
+	// PPU cache backward compatibility hack
+	char dummy[sizeof(std::shared_ptr<void>)];
+
+protected:
+	cpu_thread(u32 id);
 
 public:
-	virtual void on_stop() override;
-	virtual ~cpu_thread() override;
+	virtual ~cpu_thread();
+	void operator()();
+	void on_abort();
 
+	// Self identifier
 	const u32 id;
-
-	cpu_thread(u32 id);
 
 	// Public thread state
 	atomic_bs_t<cpu_flag> state{+cpu_flag::stop};
@@ -42,11 +43,31 @@ public:
 	// Process thread state, return true if the checker must return
 	bool check_state();
 
-	// Process thread state
-	void test_state();
+	// Process thread state (pause)
+	[[nodiscard]] bool test_stopped()
+	{
+		if (UNLIKELY(state))
+		{
+			if (check_state())
+			{
+				return true;
+			}
+		}
 
-	// Run thread
-	void run();
+		return false;
+	}
+
+	// Test stopped state
+	bool is_stopped()
+	{
+		return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::dbg_global_stop));
+	}
+
+	// Test paused state
+	bool is_paused()
+	{
+		return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
+	}
 
 	// Check thread type
 	u32 id_type()
@@ -54,10 +75,16 @@ public:
 		return id >> 24;
 	}
 
+	// Upcast and notify
+	void notify();
+
 	// Thread stats for external observation
 	static atomic_t<u64> g_threads_created, g_threads_deleted;
 
-	// Print CPU state
+	// Get thread name
+	virtual std::string get_name() const = 0;
+
+	// Get CPU state dump
 	virtual std::string dump() const;
 
 	// Thread entry point function
@@ -79,3 +106,6 @@ inline cpu_thread* get_current_cpu_thread() noexcept
 
 	return g_tls_current_cpu_thread;
 }
+
+class ppu_thread;
+class spu_thread;

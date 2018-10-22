@@ -23,6 +23,7 @@
 #include <sstream>
 #include <thread>
 #include <unordered_set>
+#include <exception>
 #include <fenv.h>
 
 class GSRender;
@@ -367,13 +368,36 @@ namespace rsx
 		}
 	}
 
-	void thread::on_spawn()
+	void thread::operator()()
 	{
-		m_rsx_thread = std::this_thread::get_id();
+		try
+		{
+			// Wait for startup (TODO)
+			while (m_rsx_thread_exiting)
+			{
+				thread_ctrl::wait_for(1000);
+
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+			}
+
+			on_task();
+		}
+		catch (const std::exception& e)
+		{
+			LOG_FATAL(RSX, "%s thrown: %s", typeid(e).name(), e.what());
+			Emu.Pause();
+		}
+
+		on_exit();
 	}
 
 	void thread::on_task()
 	{
+		m_rsx_thread = std::this_thread::get_id();
+
 		if (supports_native_ui)
 		{
 			m_overlay_manager = fxm::make_always<rsx::overlays::display_manager>();
@@ -406,7 +430,7 @@ namespace rsx
 
 		last_flip_time = get_system_time() - 1000000;
 
-		thread_ctrl::spawn(m_vblank_thread, "VBlank Thread", [this]()
+		named_thread vblank_thread("VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
 
@@ -428,7 +452,7 @@ namespace rsx
 							{ ppu_cmd::sleep, 0 }
 						});
 
-						intr_thread->notify();
+						thread_ctrl::notify(*intr_thread);
 					}
 
 					continue;
@@ -441,7 +465,7 @@ namespace rsx
 			}
 		});
 
-		thread_ctrl::spawn(m_decompiler_thread, "RSX Decompiler Thread", [this]
+		named_thread decompiler_thread ("RSX Decompiler Thread", [this]
 		{
 			if (g_cfg.video.disable_asynchronous_shader_compiler)
 			{
@@ -1000,22 +1024,6 @@ namespace rsx
 	void thread::on_exit()
 	{
 		m_rsx_thread_exiting = true;
-		if (m_vblank_thread)
-		{
-			m_vblank_thread->join();
-			m_vblank_thread.reset();
-		}
-
-		if (m_decompiler_thread)
-		{
-			m_decompiler_thread->join();
-			m_decompiler_thread.reset();
-		}
-	}
-
-	std::string thread::get_name() const
-	{
-		return "rsx::thread";
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -1781,11 +1789,20 @@ namespace rsx
 			{
 				auto &vinfo = state.vertex_arrays_info[index];
 
+				if (input_mask & (1u << index)) 
+				{
+					result.attribute_placement[index] = attribute_buffer_placement::transient;
+				}
+
 				if (vinfo.size() > 0)
 				{
 					info.locations.push_back(index);
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
-					result.attribute_placement[index] = attribute_buffer_placement::transient;
+				}
+				else if (state.register_vertex_info[index].size > 0)
+				{
+					//Reads from register
+					result.referenced_registers.push_back(index);
 				}
 			}
 
@@ -2179,10 +2196,8 @@ namespace rsx
 
 		memset(display_buffers, 0, sizeof(display_buffers));
 
-		m_rsx_thread_exiting = false;
-
 		on_init_rsx();
-		start_thread(fxm::get<GSRender>());
+		m_rsx_thread_exiting = false;
 	}
 
 	GcmTileInfo *thread::find_tile(u32 offset, u32 location)
@@ -2320,7 +2335,7 @@ namespace rsx
 		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			const auto &block = layout.interleaved_blocks[0];
-			u32 inline_data_offset = volatile_offset_base;
+			u32 inline_data_offset = volatile_offset;
 			for (const u8 index : block.locations)
 			{
 				auto &info = rsx::method_registers.vertex_arrays_info[index];
@@ -2392,9 +2407,22 @@ namespace rsx
 					auto &info = rsx::method_registers.vertex_arrays_info[index];
 					type = info.type();
 					size = info.size();
+	
+					if (!size)
+					{
+						// Register
+						const auto& reginfo = rsx::method_registers.register_vertex_info[index];
+						type = reginfo.type;
+						size = reginfo.size;
 
-					attributes = layout.interleaved_blocks[0].attribute_stride;
-					attributes |= default_frequency_mask | volatile_storage_mask;
+						attributes = rsx::get_vertex_type_size_on_host(type, size);
+						attributes |= volatile_storage_mask;
+					}
+					else
+					{
+						attributes = layout.interleaved_blocks[0].attribute_stride;
+						attributes |= default_frequency_mask | volatile_storage_mask;
+					}
 				}
 				else
 				{
@@ -2493,6 +2521,12 @@ namespace rsx
 		{
 			if (draw_call.command == rsx::draw_command::inlined_array)
 			{
+				for (const u8 index : layout.referenced_registers)
+				{
+					memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+					transient += 16;
+				}
+
 				memcpy(transient, draw_call.inline_vertex_array.data(), draw_call.inline_vertex_array.size() * sizeof(u32));
 				//Is it possible to reference data outside of the inlined array?
 				return;
@@ -2908,7 +2942,7 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			intr_thread->notify();
+			thread_ctrl::notify(*intr_thread);
 		}
 
 		sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);

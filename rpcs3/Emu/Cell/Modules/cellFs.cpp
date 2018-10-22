@@ -869,7 +869,7 @@ struct fs_aio_thread : ppu_thread
 {
 	using ppu_thread::ppu_thread;
 
-	virtual void cpu_task() override
+	void non_task()
 	{
 		while (cmd64 cmd = cmd_wait())
 		{
@@ -920,11 +920,7 @@ s32 cellFsAioInit(vm::cptr<char> mount_point)
 	// TODO: create AIO thread (if not exists) for specified mount point
 	const auto m = fxm::make<fs_aio_manager>();
 
-	if (m)
-	{
-		m->thread = idm::make_ptr<ppu_thread, fs_aio_thread>("FS AIO Thread", 500);
-		m->thread->run();
-	}
+	fmt::throw_exception("cellFsAio disabled, use LLE.");
 
 	return CELL_OK;
 }
@@ -961,8 +957,6 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 		{ aio, func },
 	});
 
-	m->thread->notify();
-
 	return CELL_OK;
 }
 
@@ -986,8 +980,6 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 		{ 2, xid },
 		{ aio, func },
 	});
-
-	m->thread->notify();
 
 	return CELL_OK;
 }

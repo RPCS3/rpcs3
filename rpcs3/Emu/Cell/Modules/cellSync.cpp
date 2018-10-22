@@ -79,7 +79,10 @@ error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
 	// Wait until rel value is equal to old acq value
 	while (mutex->ctrl.load().rel != order)
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	_mm_mfence();
@@ -169,7 +172,10 @@ error_code cellSyncBarrierNotify(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barri
 
 	while (!barrier->ctrl.atomic_op<&CellSyncBarrier::try_notify>())
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	return CELL_OK;
@@ -217,7 +223,10 @@ error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier
 
 	while (!barrier->ctrl.atomic_op<&CellSyncBarrier::try_wait>())
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	return CELL_OK;
@@ -293,7 +302,10 @@ error_code cellSyncRwmRead(ppu_thread& ppu, vm::ptr<CellSyncRwm> rwm, vm::ptr<vo
 	// wait until `writers` is zero, increase `readers`
 	while (!rwm->ctrl.atomic_op<&CellSyncRwm::try_read_begin>())
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	// copy data to buffer
@@ -357,13 +369,19 @@ error_code cellSyncRwmWrite(ppu_thread& ppu, vm::ptr<CellSyncRwm> rwm, vm::cptr<
 	// wait until `writers` is zero, set to 1
 	while (!rwm->ctrl.atomic_op<&CellSyncRwm::try_write_begin>())
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	// wait until `readers` is zero
 	while (rwm->ctrl.load().readers != 0)
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	// copy data from buffer
@@ -462,7 +480,10 @@ error_code cellSyncQueuePush(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::
 		return CellSyncQueue::try_push_begin(ctrl, depth, &position);
 	}))
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	// copy data from the buffer at the position
@@ -530,7 +551,10 @@ error_code cellSyncQueuePop(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::p
 		return CellSyncQueue::try_pop_begin(ctrl, depth, &position);
 	}))
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	// copy data at the position to the buffer
@@ -598,7 +622,10 @@ error_code cellSyncQueuePeek(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::
 		return CellSyncQueue::try_peek_begin(ctrl, depth, &position);
 	}))
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	// copy data at the position to the buffer
@@ -680,12 +707,18 @@ error_code cellSyncQueueClear(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue)
 
 	while (!queue->ctrl.atomic_op<&CellSyncQueue::try_clear_begin_1>())
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	while (!queue->ctrl.atomic_op<&CellSyncQueue::try_clear_begin_2>())
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	queue->ctrl.exchange({ 0, 0 });
@@ -1120,7 +1153,10 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 			break;
 		}
 
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	const s32 depth = queue->m_depth;
@@ -1415,7 +1451,10 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 			break;
 		}
 
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
 
 	const s32 depth = queue->m_depth;

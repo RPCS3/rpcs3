@@ -113,6 +113,20 @@ bool evdev_joystick_handler::Init()
 	return true;
 }
 
+std::string evdev_joystick_handler::get_device_name(const libevdev* dev)
+{
+	std::string name = libevdev_get_name(dev);
+	const auto unique = libevdev_get_uniq(dev);
+
+	if (name == "" && unique != nullptr)
+		name = unique;
+
+	if (name == "")
+		name = "Unknown Device";
+
+	return name;
+}
+
 bool evdev_joystick_handler::update_device(EvdevDevice& device)
 {
 	std::shared_ptr<Pad> pad = device.pad;
@@ -153,7 +167,7 @@ bool evdev_joystick_handler::update_device(EvdevDevice& device)
 		return false;
 	}
 
-	LOG_NOTICE(GENERAL, "Opened joystick: '%s' at %s (fd %d)", libevdev_get_name(dev), path, fd);
+	LOG_NOTICE(GENERAL, "Opened joystick: '%s' at %s (fd %d)", get_device_name(dev), path, fd);
 	return true;
 }
 
@@ -571,6 +585,8 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const EvdevDev
 std::vector<std::string> evdev_joystick_handler::ListDevices()
 {
 	Init();
+
+	std::unordered_map<std::string, u32> unique_names;
 	std::vector<std::string> evdev_joystick_list;
 	fs::dir devdir{"/dev/input/"};
 	fs::dir_entry et;
@@ -597,7 +613,14 @@ std::vector<std::string> evdev_joystick_handler::ListDevices()
 				libevdev_has_event_code(dev, EV_ABS, ABS_Y))
 			{
 				// It's a joystick.
-				evdev_joystick_list.push_back(et.name + ": " + libevdev_get_name(dev));
+				std::string name = get_device_name(dev);
+
+				if (unique_names.find(name) == unique_names.end())
+					unique_names.emplace(name, 1);
+				else
+					name = fmt::format("%d. %s", ++unique_names[name], name);
+
+				evdev_joystick_list.push_back(name);
 			}
 			libevdev_free(dev);
 			close(fd);
@@ -612,6 +635,7 @@ int evdev_joystick_handler::add_device(const std::string& device, bool in_settin
 		return m_pad_index;
 
 	// Now we need to find the device with the same name, and make sure not to grab any duplicates.
+	std::unordered_map<std::string, u32> unique_names;
 	fs::dir devdir{ "/dev/input/" };
 	fs::dir_entry et;
 	while (devdir.read(et))
@@ -632,7 +656,14 @@ int evdev_joystick_handler::add_device(const std::string& device, bool in_settin
 				close(fd);
 				continue;
 			}
-			const std::string name = et.name + ": " + libevdev_get_name(dev);
+
+			std::string name = get_device_name(dev);
+
+			if (unique_names.find(name) == unique_names.end())
+				unique_names.emplace(name, 1);
+			else
+				name = fmt::format("%d. %s", ++unique_names[name], name);
+
 			if (libevdev_has_event_type(dev, EV_KEY) &&
 				libevdev_has_event_code(dev, EV_ABS, ABS_X) &&
 				libevdev_has_event_code(dev, EV_ABS, ABS_Y) &&
