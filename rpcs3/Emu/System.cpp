@@ -486,7 +486,8 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	GetCallbacks().on_run();
 	m_state = system_state::running;
 
-	fxm::make<rsx::rsx_replay_thread>(std::move(frame));
+	fxm::make<named_thread<rsx::rsx_replay_thread>>("RSX Replay", std::move(frame));
+
 	return true;
 }
 
