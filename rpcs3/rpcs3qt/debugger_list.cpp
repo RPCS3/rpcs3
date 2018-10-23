@@ -76,7 +76,7 @@ void debugger_list::ShowAddress(u32 addr)
 		const u32 cpu_offset = is_spu ? static_cast<spu_thread&>(*cpu).offset : 0;
 		const u32 address_limits = is_spu ? 0x3ffff : ~0;
 		m_pc &= address_limits;
-		m_disasm->offset = (u8*)vm::base(cpu_offset);
+		m_disasm->offset = vm::get_super_ptr(cpu_offset);
 		for (uint i = 0, count = 4; i<m_item_count; ++i, m_pc = (m_pc + count) & address_limits)
 		{
 			if (!vm::check_addr(cpu_offset + m_pc, 4))

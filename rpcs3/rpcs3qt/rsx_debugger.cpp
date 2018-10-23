@@ -633,7 +633,7 @@ void rsx_debugger::GetMemory()
 
 		if (vm::check_addr(RSXIOMem.RealAddr(addr)))
 		{
-			u32 cmd = vm::read32(RSXIOMem.RealAddr(addr));
+			u32 cmd = *vm::get_super_ptr<u32>(RSXIOMem.RealAddr(addr));
 			u32 count = (cmd >> 18) & 0x7ff;
 			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
@@ -690,7 +690,7 @@ void rsx_debugger::GetBuffers()
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
 
-		auto RSXbuffer = vm::_ptr<u8>(RSXbuffer_addr);
+		auto RSXbuffer = vm::get_super_ptr<u8>(RSXbuffer_addr);
 
 		u32 width  = buffers[bufferId].width;
 		u32 height = buffers[bufferId].height;
@@ -739,7 +739,7 @@ void rsx_debugger::GetBuffers()
 	if(!vm::check_addr(TexBuffer_addr))
 		return;
 
-	unsigned char* TexBuffer = vm::_ptr<u8>(TexBuffer_addr);
+	unsigned char* TexBuffer = vm::get_super_ptr<u8>(TexBuffer_addr);
 
 	u32 width  = render->textures[m_cur_texture].width();
 	u32 height = render->textures[m_cur_texture].height();

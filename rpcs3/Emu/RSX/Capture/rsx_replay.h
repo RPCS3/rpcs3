@@ -214,6 +214,7 @@ namespace rsx
 	{
 		struct rsx_context
 		{
+			be_t<u64> dev_addr;
 			be_t<u32> mem_handle;
 			be_t<u32> context_id;
 			be_t<u64> mem_addr;
