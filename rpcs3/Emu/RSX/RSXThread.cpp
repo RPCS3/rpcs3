@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -2874,10 +2874,10 @@ namespace rsx
 			capture_current_frame = false;
 			std::stringstream os;
 			cereal::BinaryOutputArchive archive(os);
-			const std::string& filePath = fs::get_config_dir() + "capture.rrc";
+			const std::string& filePath = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
 			archive(frame_capture);
 			{
-				// todo: 'dynamicly' create capture filename, also may want to compress this data?
+				// todo: may want to compress this data?
 				fs::file f(filePath, fs::rewrite);
 				f.write(os.str());
 			}
