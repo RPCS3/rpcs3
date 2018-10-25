@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -2847,13 +2847,7 @@ namespace rsx
 
 	void thread::handle_emu_flip(u32 buffer)
 	{
-		if (user_asked_for_frame_capture && !g_cfg.video.strict_rendering_mode)
-		{
-			// not dealing with non-strict rendering capture for now
-			user_asked_for_frame_capture = false;
-			LOG_FATAL(RSX, "RSX Capture: Capture only supported when ran with strict rendering mode.");
-		}
-		else if (user_asked_for_frame_capture && !capture_current_frame)
+		if (user_asked_for_frame_capture && !capture_current_frame)
 		{
 			capture_current_frame = true;
 			user_asked_for_frame_capture = false;
