@@ -10,6 +10,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	ls ./appdir/usr/lib/
 	rm -r ./appdir/usr/share/doc
 	rm ./appdir/usr/lib/libxcb*
+	cp $(readlink -f /lib/x86_64-linux-gnu/libnsl.so.1) ./appdir/usr/lib/libnsl.so.1
 	export PATH=/rpcs3/build/squashfs-root/usr/bin/:${PATH}
 
 	# Embed newer libstdc++ for distros that don't come with it (ubuntu 14.04, 16.04)
@@ -25,7 +26,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	ls
 	COMM_TAG="$(git describe --tags $(git rev-list --tags --max-count=1))"
 	COMM_COUNT="$(git rev-list --count HEAD)"
-	curl "${UPLOAD_URL}${TRAVIS_COMMIT:0:8}&t=${COMM_TAG}&a=${COMM_COUNT}" --upload-file ./RPCS3*.AppImage
+	echo $(curl "${UPLOAD_URL}${TRAVIS_COMMIT:0:8}&t=${COMM_TAG}&a=${COMM_COUNT}" --upload-file ./RPCS3*.AppImage)
 fi
 if [ "$DEPLOY_PPA" = "true" ]; then
 	export DEBFULLNAME="RPCS3 Build Bot"
