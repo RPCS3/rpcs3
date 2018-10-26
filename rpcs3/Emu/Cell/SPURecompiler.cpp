@@ -1692,6 +1692,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto cblock = m_ir->GetInsertBlock();
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
+			check_state(m_pos);
 			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
 			tail(add_function(target));
 			m_ir->SetInsertPoint(cblock);
@@ -1708,6 +1709,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto cblock = m_ir->GetInsertBlock();
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
+			check_state(m_pos);
 			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
 			const auto addr = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&spu_thread::jit_dispatcher) + target * 2));
 			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
@@ -5456,6 +5458,8 @@ public:
 		const auto cblock = m_ir->GetInsertBlock();
 		const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 		m_ir->SetInsertPoint(result);
+
+		check_state(m_pos);
 
 		if (op.e)
 		{
