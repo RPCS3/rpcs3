@@ -169,6 +169,8 @@
     <addaction name="bootGameAct"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
+    <addaction name="addGamesAct"/>
+    <addaction name="separator"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
     <addaction name="separator"/>
@@ -911,6 +913,11 @@
   <action name="actionopen_rsx_capture">
    <property name="text">
     <string>Open RSX Capture</string>
+   </property>
+  </action>
+  <action name="addGamesAct">
+   <property name="text">
+    <string>Add Games</string>
    </property>
   </action>
  </widget>
