@@ -5,6 +5,7 @@
 
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
+#include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "cellGcmSys.h"
 #include "sysPrxForUser.h"
 
@@ -432,8 +433,9 @@ s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 
 
 	vm::var<u64> _tid;
 	vm::var<char[]> _name = vm::make_str("_gcm_intr_thread");
-	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 128, 0, 1, 0x4000, 0, +_name);
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 128, 0, 1, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	render->intr_thread = idm::get<named_thread<ppu_thread>>(*_tid);
+	render->intr_thread->state -= cpu_flag::stop;
 	render->main_mem_addr = 0;
 	render->isHLE = true;
 	render->label_addr = m_config->gcm_info.label_addr;
