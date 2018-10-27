@@ -1163,6 +1163,22 @@ void main_window::CreateConnects()
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, [this](){ BootRsxCapture(); });
 
+	connect(ui->addGamesAct, &QAction::triggered, [this]() {
+		QStringList paths;
+
+		// Only select one folder for now
+		paths << QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly);
+
+		if (!paths.isEmpty())
+		{
+			for (const QString& path : paths)
+			{
+				AddGamesFromDir(path);
+			}
+			m_gameListFrame->Refresh(true);
+		}
+	});
+
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]
 	{
 		// Enable/Disable Recent Games List
