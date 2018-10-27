@@ -639,10 +639,7 @@ void rsx_debugger::GetMemory()
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
 			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
 
-			if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
-				&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
-				&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
-				&& cmd != RSX_METHOD_RETURN_CMD)
+			if(!(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
 			{
 				addr += 4 * count;
 			}
@@ -1104,10 +1101,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 	{
 		DISASM("NOP");
 	}
-	else if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
-		&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
-		&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
-		&& cmd != RSX_METHOD_RETURN_CMD)
+	else if (!(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
 	{
 		auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(ioAddr + 4));
 
@@ -1174,10 +1168,7 @@ void rsx_debugger::PerformJump(u32 address)
 		return;
 
 	u32 cmd = vm::read32(address);
-	u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-		|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-		|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
-		|| cmd == RSX_METHOD_RETURN_CMD ? 0 : (cmd >> 18) & 0x7ff;
+	u32 count = cmd & RSX_METHOD_NON_METHOD_CMD_MASK ? 0 : (cmd >> 18) & 0x7ff;
 
 	if (count == 0)
 		return;
