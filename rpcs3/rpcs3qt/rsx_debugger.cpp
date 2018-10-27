@@ -1111,7 +1111,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 	}
 	else if (!(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
 	{
-		auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(ioAddr + 4));
+		auto args = vm::get_super_ptr<u32>(RSXIOMem.RealAddr(ioAddr + 4));
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)
@@ -1175,7 +1175,7 @@ void rsx_debugger::PerformJump(u32 address)
 	if (!vm::check_addr(address, 4))
 		return;
 
-	u32 cmd = vm::read32(address);
+	u32 cmd = *vm::get_super_ptr<u32>(address);
 	u32 count = cmd & RSX_METHOD_NON_METHOD_CMD_MASK ? 0 : (cmd >> 18) & 0x7ff;
 
 	if (count == 0)
