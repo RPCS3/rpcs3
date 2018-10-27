@@ -1092,12 +1092,12 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		u32 callAddr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
 		DISASM("CALL: %08x -> %08x", ioAddr, callAddr);
 	}
-	if(cmd == RSX_METHOD_RETURN_CMD)
+	if((cmd & ~0xfffc) == RSX_METHOD_RETURN_CMD)
 	{
 		DISASM("RETURN");
 	}
 
-	if(cmd == 0)
+	if((cmd & ~(RSX_METHOD_NON_INCREMENT_CMD | 0xfffc)) == 0)
 	{
 		DISASM("NOP");
 	}
