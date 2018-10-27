@@ -120,6 +120,14 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 		return table;
 	};
 
+	if (const auto render = rsx::get_current_renderer())
+	{
+		if (RSXIOMem.RealAddr(render->ctrl->get.load()))
+		{
+			m_addr = render->ctrl->get.load();
+		}
+	}
+
 	m_list_commands = l_addRSXTab(m_list_commands, tr("RSX Commands"), 4);
 	m_list_captured_frame = l_addRSXTab(m_list_captured_frame, tr("Captured Frame"), 1);
 	m_list_captured_draw_calls = l_addRSXTab(m_list_captured_draw_calls, tr("Captured Draw Calls"), 1);
