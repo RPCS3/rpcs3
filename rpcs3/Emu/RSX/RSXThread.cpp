@@ -2847,13 +2847,7 @@ namespace rsx
 
 	void thread::handle_emu_flip(u32 buffer)
 	{
-		if (user_asked_for_frame_capture && !g_cfg.video.strict_rendering_mode)
-		{
-			// not dealing with non-strict rendering capture for now
-			user_asked_for_frame_capture = false;
-			LOG_FATAL(RSX, "RSX Capture: Capture only supported when ran with strict rendering mode.");
-		}
-		else if (user_asked_for_frame_capture && !capture_current_frame)
+		if (user_asked_for_frame_capture && !capture_current_frame)
 		{
 			capture_current_frame = true;
 			user_asked_for_frame_capture = false;
@@ -2874,10 +2868,10 @@ namespace rsx
 			capture_current_frame = false;
 			std::stringstream os;
 			cereal::BinaryOutputArchive archive(os);
-			const std::string& filePath = fs::get_config_dir() + "capture.rrc";
+			const std::string& filePath = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
 			archive(frame_capture);
 			{
-				// todo: 'dynamicly' create capture filename, also may want to compress this data?
+				// todo: may want to compress this data?
 				fs::file f(filePath, fs::rewrite);
 				f.write(os.str());
 			}
