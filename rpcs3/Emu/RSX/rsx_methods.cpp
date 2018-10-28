@@ -1248,6 +1248,14 @@ namespace rsx
 	{
 		void draw_barrier(thread* rsx, u32, u32)
 		{
+			if (rsx->in_begin_end)
+			{
+				if (!method_registers.current_draw_clause.is_disjoint_primitive)
+				{
+					// Enable primitive barrier request
+					method_registers.current_draw_clause.primitive_barrier_enable = true;
+				}
+			}
 		}
 	}
 
@@ -2762,7 +2770,7 @@ namespace rsx
 		bind<GCM_FLIP_COMMAND, flip_command>();
 
 		// FIFO
-		bind<FIFO::FIFO_DRAW_BARRIER, fifo::draw_barrier>();
+		bind<(FIFO::FIFO_DRAW_BARRIER >> 2), fifo::draw_barrier>();
 
 		return true;
 	}();
