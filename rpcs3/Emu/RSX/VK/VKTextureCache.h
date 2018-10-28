@@ -13,9 +13,25 @@ extern u64 get_system_time();
 
 namespace vk
 {
-	class cached_texture_section : public rsx::cached_texture_section<vk::cached_texture_section>
+	class cached_texture_section;
+	class texture_cache;
+
+	struct texture_cache_traits
 	{
-		using baseclass = typename rsx::cached_texture_section<vk::cached_texture_section>;
+		using commandbuffer_type      = vk::command_buffer;
+		using section_storage_type    = vk::cached_texture_section;
+		using texture_cache_type      = vk::texture_cache;
+		using texture_cache_base_type = rsx::texture_cache<texture_cache_type, texture_cache_traits>;
+		using image_resource_type     = vk::image*;
+		using image_view_type         = vk::image_view*;
+		using image_storage_type      = vk::image;
+		using texture_format          = VkFormat;
+	};
+
+	class cached_texture_section : public rsx::cached_texture_section<vk::cached_texture_section, vk::texture_cache_traits>
+	{
+		using baseclass = typename rsx::cached_texture_section<vk::cached_texture_section, vk::texture_cache_traits>;
+		friend baseclass;
 
 		std::unique_ptr<vk::viewable_image> managed_texture = nullptr;
 
@@ -83,6 +99,7 @@ namespace vk
 				return;
 
 			m_tex_cache->on_section_destroyed(*this);
+
 			vram_texture = nullptr;
 			ASSERT(managed_texture.get() == nullptr);
 			release_dma_resources();
@@ -102,11 +119,13 @@ namespace vk
 
 		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
+			ASSERT(vram_texture != nullptr);
 			return vram_texture->get_view(remap_encoding, remap);
 		}
 
 		vk::image_view* get_raw_view()
 		{
+			ASSERT(vram_texture != nullptr);
 			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
 		}
 
@@ -115,13 +134,14 @@ namespace vk
 			return managed_texture.get();
 		}
 
-		std::unique_ptr<vk::viewable_image>& get_texture()
+		std::unique_ptr<vk::viewable_image>& get_texture() 
 		{
 			return managed_texture;
 		}
 
-		VkFormat get_format()
+		VkFormat get_format() const
 		{
+			ASSERT(vram_texture != nullptr);
 			return vram_texture->info.format;
 		}
 
@@ -134,6 +154,11 @@ namespace vk
 		void copy_texture(bool manage_cb_lifetime, vk::command_buffer& cmd, VkQueue submit_queue)
 		{
 			ASSERT(exists());
+
+			if (!manage_cb_lifetime)
+			{
+				baseclass::on_speculative_flush();
+			}
 
 			if (m_device == nullptr)
 			{
@@ -342,7 +367,7 @@ namespace vk
 			}
 
 			dma_buffer->unmap();
-			reset_write_statistics();
+			baseclass::on_flush(!result);
 
 			//Its highly likely that this surface will be reused, so we just leave resources in place
 			return result;
@@ -417,10 +442,14 @@ namespace vk
 		}
 	};
 
-	class texture_cache : public rsx::texture_cache<vk::command_buffer, vk::cached_texture_section, vk::image*, vk::image_view*, vk::image, VkFormat>
+	class texture_cache : public rsx::texture_cache<vk::texture_cache, vk::texture_cache_traits>
 	{
+	private:
+		using baseclass = rsx::texture_cache<vk::texture_cache, vk::texture_cache_traits>;
+		friend baseclass;
+
 	public:
-		virtual void on_section_destroyed(cached_texture_section& tex)
+		void on_section_destroyed(cached_texture_section& tex) override
 		{
 			if (tex.is_managed())
 			{
@@ -430,7 +459,6 @@ namespace vk
 		}
 
 	private:
-		using baseclass = rsx::texture_cache<vk::command_buffer, vk::cached_texture_section, vk::image*, vk::image_view*, vk::image, VkFormat>;
 
 		//Vulkan internals
 		vk::render_device* m_device;
@@ -1036,6 +1064,8 @@ namespace vk
 
 			m_temporary_subresource_cache.clear();
 			reset_frame_statistics();
+
+			baseclass::on_frame_end();
 		}
 
 		template<typename RsxTextureType>
@@ -1229,7 +1259,7 @@ namespace vk
 			{
 				if (reply.real_dst_size)
 				{
-					flush_if_cache_miss_likely(helper.format, reply.to_address_range(), cmd, m_submit_queue);
+					flush_if_cache_miss_likely(reply.to_address_range(), cmd, m_submit_queue);
 				}
 
 				return true;
@@ -1240,12 +1270,7 @@ namespace vk
 
 		const u32 get_unreleased_textures_count() const override
 		{
-			return m_storage.m_unreleased_texture_objects + (u32)m_discardable_storage.size();
-		}
-
-		const u64 get_texture_memory_in_use() const override
-		{
-			return m_storage.m_texture_memory_in_use;
+			return baseclass::get_unreleased_textures_count() + (u32)m_discardable_storage.size();
 		}
 
 		const u32 get_temporary_memory_in_use()

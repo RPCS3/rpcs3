@@ -530,6 +530,7 @@
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_checker.h" />
+    <ClInclude Include="Emu\RSX\Common\texture_cache_predictor.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_utils.h" />
     <ClInclude Include="Emu\RSX\gcm_enums.h" />
     <ClInclude Include="Emu\RSX\gcm_printing.h" />
