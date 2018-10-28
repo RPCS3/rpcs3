@@ -390,6 +390,9 @@ void GLGSRender::end()
 		return;
 	}
 
+	// Load program execution environment
+	load_program_env();
+
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
 
@@ -518,7 +521,7 @@ void GLGSRender::end()
 			continue;
 		}
 
-		load_program_env(upload_info);
+		update_vertex_env(upload_info);
 
 		if (!upload_info.index_info)
 		{
@@ -1269,7 +1272,7 @@ bool GLGSRender::load_program()
 	return m_program != nullptr;
 }
 
-void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
+void GLGSRender::load_program_env()
 {
 	if (!m_program)
 	{
@@ -1293,8 +1296,6 @@ void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
 		if (update_fragment_texture_env) m_texture_parameters_buffer->reserve_storage_on_heap(256);
 		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));		
 		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
-
-		m_vertex_layout_buffer->reserve_storage_on_heap(128 + 16);
 	}
 
 	if (update_vertex_env)
@@ -1311,17 +1312,6 @@ void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
 		*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
 
 		m_vertex_env_buffer->bind_range(0, mapping.second, 160);
-	}
-
-	{
-		// Vertex layout state
-		auto mapping = m_vertex_layout_buffer->alloc_from_heap(128 + 16, m_uniform_buffer_offset_align);
-		auto buf = static_cast<s32*>(mapping.first);
-		*buf = upload_info.vertex_index_base;
-		buf += 4;
-		fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
-
-		m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
 	}
 
 	if (update_transform_constants)
@@ -1373,12 +1363,32 @@ void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
 		if (update_fragment_texture_env) m_texture_parameters_buffer->unmap();
 		if (update_fragment_constants) m_fragment_constants_buffer->unmap();
 		if (update_transform_constants) m_transform_constants_buffer->unmap();
-
-		m_vertex_layout_buffer->unmap();
 	}
 
 	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty | rsx::pipeline_state::fragment_constants_dirty | rsx::pipeline_state::fragment_texture_state_dirty);
 	m_graphics_state &= ~handled_flags;
+}
+
+void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
+{
+	if (manually_flush_ring_buffers)
+	{
+		m_vertex_layout_buffer->reserve_storage_on_heap(128 + 16);
+	}
+
+	// Vertex layout state
+	auto mapping = m_vertex_layout_buffer->alloc_from_heap(128 + 16, m_uniform_buffer_offset_align);
+	auto buf = static_cast<s32*>(mapping.first);
+	*buf = upload_info.vertex_index_base;
+	buf += 4;
+	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+
+	m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
+
+	if (manually_flush_ring_buffers)
+	{
+		m_vertex_layout_buffer->unmap();
+	}
 }
 
 void GLGSRender::update_draw_state()

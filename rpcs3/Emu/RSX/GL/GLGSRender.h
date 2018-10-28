@@ -364,7 +364,8 @@ private:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool load_program();
-	void load_program_env(const gl::vertex_upload_info& upload_info);
+	void load_program_env();
+	void update_vertex_env(const gl::vertex_upload_info& upload_info);
 
 	void update_draw_state();
 
