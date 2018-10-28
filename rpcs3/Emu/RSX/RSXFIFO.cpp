@@ -603,7 +603,7 @@ namespace rsx
 			{
 				m_internal_get = m_ctrl->get;
 				read_ahead(m_fifo_info, m_queue, m_internal_get);
-				optimize(m_fifo_info, m_queue);
+				//optimize(m_fifo_info, m_queue);
 
 				m_ctrl->get = m_internal_get;
 				m_ctrl_tag++;
@@ -854,6 +854,7 @@ namespace rsx
 						if (command.value)
 						{
 							last_begin = &command;
+							command.reg = FIFO_DRAW_BARRIER;
 						}
 						else
 						{

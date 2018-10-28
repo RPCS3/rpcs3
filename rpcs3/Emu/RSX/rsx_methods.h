@@ -115,8 +115,9 @@ namespace rsx
 		primitive_type primitive;
 		draw_command command;
 
-		bool is_immediate_draw;
-		bool is_disjoint_primitive;
+		bool is_immediate_draw;          // Set if part of the draw is submitted via push registers
+		bool is_disjoint_primitive;      // Set if primitive type does not rely on adjacency information
+		bool primitive_barrier_enable;   // Set once to signal that a primitive restart barrier can be inserted
 
 		simple_array<u32> inline_vertex_array;
 
@@ -158,6 +159,9 @@ namespace rsx
 
 		void append(u32 first, u32 count)
 		{
+			const bool barrier_enable_flag = primitive_barrier_enable;
+			primitive_barrier_enable = false;
+
 			if (!draw_command_ranges.empty())
 			{
 				auto& last = draw_command_ranges.back();
@@ -172,7 +176,7 @@ namespace rsx
 
 				if (last.first + last.count == first)
 				{
-					if (!is_disjoint_primitive)
+					if (!is_disjoint_primitive && barrier_enable_flag)
 					{
 						// Insert barrier
 						insert_command_barrier(primitive_restart_barrier, 0);
@@ -260,6 +264,7 @@ namespace rsx
 
 			command = draw_command::none;
 			primitive = type;
+			primitive_barrier_enable = false;
 
 			draw_command_ranges.clear();
 			draw_command_barriers.clear();
