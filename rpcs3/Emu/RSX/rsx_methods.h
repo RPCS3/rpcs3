@@ -207,11 +207,23 @@ namespace rsx
 		 */
 		u32 get_elements_count() const
 		{
+			if (draw_command_ranges.empty())
+			{
+				verify(HERE), command == rsx::draw_command::inlined_array;
+				return 0;
+			}
+
 			return get_range().count;
 		}
 
 		u32 min_index() const
 		{
+			if (draw_command_ranges.empty())
+			{
+				verify(HERE), command == rsx::draw_command::inlined_array;
+				return 0;
+			}
+
 			return get_range().first;
 		}
 
