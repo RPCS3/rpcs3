@@ -98,7 +98,10 @@ namespace rsx
 		fragment_constants_dirty = 0x20,     // Fragment constants changed
 		framebuffer_reads_dirty = 0x40,      // Framebuffer contents changed
 		fragment_texture_state_dirty = 0x80, // Fragment texture parameters changed
-		vertex_texture_state_dirty = 0x80, // Fragment texture parameters changed
+		vertex_texture_state_dirty = 0x100,  // Fragment texture parameters changed
+		scissor_config_state_dirty = 0x200,  // Scissor region changed
+
+		scissor_setup_invalid = 0x400,       // Scissor configuration is broken
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,

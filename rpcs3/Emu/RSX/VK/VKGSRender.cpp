@@ -1121,7 +1121,7 @@ void VKGSRender::update_draw_state()
 		vkCmdSetDepthBounds(*m_current_command_buffer, 0.f, 1.f);
 	}
 
-	set_viewport();
+	bind_viewport();
 
 	//TODO: Set up other render-state parameters into the program pipeline
 
@@ -1678,38 +1678,56 @@ void VKGSRender::set_viewport()
 {
 	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
 	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+
+	//NOTE: The scale_offset matrix already has viewport matrix factored in
+	m_viewport.x = 0;
+	m_viewport.y = 0;
+	m_viewport.width = clip_width;
+	m_viewport.height = clip_height;
+	m_viewport.minDepth = 0.f;
+	m_viewport.maxDepth = 1.f;
+}
+
+void VKGSRender::set_scissor()
+{
+	if (m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty)
+	{
+		// Optimistic that the new config will allow us to render
+		framebuffer_status_valid = true;
+	}
+	else if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
+	{
+		// Nothing to do
+		return;
+	}
+
+	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_config_state_dirty);
+
 	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
 	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
 	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
 	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
 
-	//NOTE: The scale_offset matrix already has viewport matrix factored in
-	VkViewport viewport = {};
-	viewport.x = 0;
-	viewport.y = 0;
-	viewport.width = clip_width;
-	viewport.height = clip_height;
-	viewport.minDepth = 0.f;
-	viewport.maxDepth = 1.f;
+	m_scissor.extent.height = scissor_h;
+	m_scissor.extent.width = scissor_w;
+	m_scissor.offset.x = scissor_x;
+	m_scissor.offset.y = scissor_y;
 
-	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &viewport);
-
-	VkRect2D scissor = {};
-	scissor.extent.height = scissor_h;
-	scissor.extent.width = scissor_w;
-	scissor.offset.x = scissor_x;
-	scissor.offset.y = scissor_y;
-
-	vkCmdSetScissor(*m_current_command_buffer, 0, 1, &scissor);
-
-	if (scissor_x >= viewport.width || scissor_y >= viewport.height || scissor_w == 0 || scissor_h == 0)
+	if (scissor_x >= m_viewport.width || scissor_y >= m_viewport.height || scissor_w == 0 || scissor_h == 0)
 	{
 		if (!g_cfg.video.strict_rendering_mode)
 		{
+			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
 			framebuffer_status_valid = false;
 			return;
 		}
 	}
+}
+
+void VKGSRender::bind_viewport()
+{
+	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
+	vkCmdSetScissor(*m_current_command_buffer, 0, 1, &m_scissor);
 }
 
 void VKGSRender::on_init_thread()
@@ -2743,7 +2761,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	}
 
 	if (m_draw_fbo && !m_rtts_dirty)
+	{
+		set_scissor();
 		return;
+	}
 
 	m_rtts_dirty = false;
 	framebuffer_status_valid = false;
@@ -2945,6 +2966,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, fbo_width, fbo_height, std::move(fbo_images)));
 	}
+
+	set_viewport();
+	set_scissor();
 
 	check_zcull_status(true);
 }

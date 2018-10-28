@@ -640,29 +640,49 @@ void GLGSRender::end()
 
 void GLGSRender::set_viewport()
 {
-	//NOTE: scale offset matrix already contains the viewport transformation
+	// NOTE: scale offset matrix already contains the viewport transformation
 	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
 	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
 	glViewport(0, 0, clip_width, clip_height);
+}
+
+void GLGSRender::set_scissor()
+{
+	if (m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty)
+	{
+		// Optimistic that the new config will allow us to render
+		framebuffer_status_valid = true;
+	}
+	else if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
+	{
+		// Nothing to do
+		return;
+	}
+
+	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_config_state_dirty);
+
+	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
+	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
 
 	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
 	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
 	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
 	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
 
-	//Do not bother drawing anything if output is zero sized
-	//TODO: Clip scissor region
+	// Do not bother drawing anything if output is zero sized
+	// TODO: Clip scissor region
 	if (scissor_x >= clip_width || scissor_y >= clip_height || scissor_w == 0 || scissor_h == 0)
 	{
 		if (!g_cfg.video.strict_rendering_mode)
 		{
+			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
 			framebuffer_status_valid = false;
 			return;
 		}
 	}
 
-	//NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
-	//See LIMBO [NPUB-30373] which uses shader window origin = top
+	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
+	// See LIMBO [NPUB-30373] which uses shader window origin = top
 	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
 	glEnable(GL_SCISSOR_TEST);
 }

@@ -371,6 +371,7 @@ private:
 public:
 	void read_buffers();
 	void set_viewport();
+	void set_scissor();
 
 	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 

@@ -369,6 +369,9 @@ private:
 	u32 m_client_width = 0;
 	u32 m_client_height = 0;
 
+	VkViewport m_viewport{};
+	VkRect2D m_scissor{};
+
 	// Draw call stats
 	u32 m_draw_calls = 0;
 
@@ -432,6 +435,8 @@ public:
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
+	void set_scissor();
+	void bind_viewport();
 
 	void sync_hint(rsx::FIFO_hint hint) override;
 

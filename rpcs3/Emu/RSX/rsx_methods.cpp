@@ -650,7 +650,7 @@ namespace rsx
 			}
 		}
 
-		void set_vertex_env_dirty_bit(thread* rsx, u32 reg, u32 arg)
+		void set_vertex_env_dirty_bit(thread* rsx, u32, u32 arg)
 		{
 			if (arg != method_registers.register_previous_value)
 			{
@@ -658,11 +658,19 @@ namespace rsx
 			}
 		}
 
-		void set_fragment_env_dirty_bit(thread* rsx, u32 reg, u32 arg)
+		void set_fragment_env_dirty_bit(thread* rsx, u32, u32 arg)
 		{
 			if (arg != method_registers.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+			}
+		}
+
+		void set_scissor_dirty_bit(thread* rsx, u32 reg, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				rsx->m_graphics_state |= rsx::pipeline_state::scissor_config_state_dirty;
 			}
 		}
 
@@ -2729,6 +2737,8 @@ namespace rsx
 		bind<NV4097_SET_SHADER_PACKER, nv4097::set_ROP_state_dirty_bit>();
 		bind<NV4097_SET_SHADER_WINDOW, nv4097::set_ROP_state_dirty_bit>();
 		bind<NV4097_SET_FOG_MODE, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
+		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::set_scissor_dirty_bit>();
 		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();

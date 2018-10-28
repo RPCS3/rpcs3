@@ -181,7 +181,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (m_draw_fbo && !m_rtts_dirty)
 	{
-		set_viewport();
+		set_scissor();
 		return;
 	}
 
@@ -371,6 +371,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	check_zcull_status(true);
 	set_viewport();
+	set_scissor();
 
 	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
 
