@@ -141,11 +141,27 @@ namespace gl
 		}
 	};
 
-	class cached_texture_section : public rsx::cached_texture_section<gl::cached_texture_section>
-	{
-		using baseclass = rsx::cached_texture_section<gl::cached_texture_section>;
 
-	private:
+	class cached_texture_section;
+	class texture_cache;
+
+	struct texture_cache_traits
+	{
+		using commandbuffer_type      = void*;
+		using section_storage_type    = gl::cached_texture_section;
+		using texture_cache_type      = gl::texture_cache;
+		using texture_cache_base_type = rsx::texture_cache<texture_cache_type, texture_cache_traits>;
+		using image_resource_type     = gl::texture*;
+		using image_view_type         = gl::texture_view*;
+		using image_storage_type      = gl::texture;
+		using texture_format          = gl::texture::format;
+	};
+
+	class cached_texture_section : public rsx::cached_texture_section<gl::cached_texture_section, gl::texture_cache_traits>
+	{
+		using baseclass = rsx::cached_texture_section<gl::cached_texture_section, gl::texture_cache_traits>;
+		friend baseclass;
+
 		fence m_fence;
 		u32 pbo_id = 0;
 		u32 pbo_size = 0;
@@ -348,9 +364,14 @@ namespace gl
 			}
 		}
 
-		void copy_texture(bool=false)
+		void copy_texture(bool manage_lifetime)
 		{
 			ASSERT(exists());
+
+			if (!manage_lifetime)
+			{
+				baseclass::on_speculative_flush();
+			}
 
 			if (!pbo_id)
 			{
@@ -474,7 +495,7 @@ namespace gl
 			if (!synchronized)
 			{
 				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
-				copy_texture();
+				copy_texture(true);
 
 				if (!synchronized)
 				{
@@ -592,35 +613,33 @@ namespace gl
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
-			reset_write_statistics();
+			baseclass::on_flush(!result);
 
 			return result;
 		}
 
 		void destroy()
 		{
-			if (!is_locked() && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty())
+			if (!is_locked() && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty() && managed_texture.get() == nullptr)
 				//Already destroyed
 				return;
 
-			if (pbo_id == 0)
-			{
-				//Read-only texture, destroy texture memory
-				managed_texture.reset();
-			}
-			else
+			if (pbo_id != 0)
 			{
 				//Destroy pbo cache since vram texture is managed elsewhere
 				glDeleteBuffers(1, &pbo_id);
 				scaled_texture.reset();
 			}
+			managed_texture.reset();
 
 			vram_texture = nullptr;
 			pbo_id = 0;
 			pbo_size = 0;
 
 			if (!m_fence.is_empty())
+			{
 				m_fence.destroy();
+			}
 
 			baseclass::on_section_resources_destroyed();
 		}
@@ -695,11 +714,13 @@ namespace gl
 		}
 	};
 
-	class texture_cache : public rsx::texture_cache<void*, gl::cached_texture_section, gl::texture*, gl::texture_view*, gl::texture, gl::texture::format>
+	class texture_cache : public rsx::texture_cache<gl::texture_cache, gl::texture_cache_traits>
 	{
 	private:
-		using baseclass = rsx::texture_cache<void*, gl::cached_texture_section, gl::texture*, gl::texture_view*, gl::texture, gl::texture::format>;
+		using baseclass = rsx::texture_cache<gl::texture_cache, gl::texture_cache_traits>;
+		friend baseclass;
 
+	private:
 		struct discardable_storage
 		{
 			std::unique_ptr<gl::texture> image;
@@ -942,7 +963,7 @@ namespace gl
 			const auto swizzle = get_component_mapping(gcm_format, flags);
 			image->set_native_component_layout(swizzle);
 
-			auto& cached = *find_cached_texture(rsx_range, true, true, width, width, depth, mipmaps);
+			auto& cached = *find_cached_texture(rsx_range, true, true, width, height, depth, mipmaps);
 			ASSERT(!cached.is_locked());
 
 			// Prepare section
@@ -1126,8 +1147,8 @@ namespace gl
 			}
 
 			clear_temporary_subresources();
-			m_temporary_subresource_cache.clear();
-			reset_frame_statistics();
+
+			baseclass::on_frame_end();
 		}
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
@@ -1151,7 +1172,7 @@ namespace gl
 							gl::texture::format::depth_stencil : gl::texture::format::depth;
 					}
 
-					flush_if_cache_miss_likely(fmt, result.to_address_range());
+					flush_if_cache_miss_likely(result.to_address_range());
 				}
 
 				return true;

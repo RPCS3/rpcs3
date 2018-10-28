@@ -1739,10 +1739,12 @@ void GLGSRender::flip(int buffer)
 		const auto num_flushes = m_gl_texture_cache.get_num_flush_requests();
 		const auto num_mispredict = m_gl_texture_cache.get_num_cache_mispredictions();
 		const auto num_speculate = m_gl_texture_cache.get_num_cache_speculative_writes();
+		const auto num_misses = m_gl_texture_cache.get_num_cache_misses();
+		const auto num_unavoidable = m_gl_texture_cache.get_num_unavoidable_hard_faults();
 		const auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
 		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), fmt::format("Unreleased textures: %7d", num_dirty_textures));
 		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), fmt::format("Texture memory: %12dM", texture_memory_size));
-		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %12d  = %3d%% hard faults, %2d misprediction(s), %2d speculation(s)", num_flushes, cache_miss_ratio, num_mispredict, num_speculate));
+		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
 	}
 
 	m_frame->flip(m_context);

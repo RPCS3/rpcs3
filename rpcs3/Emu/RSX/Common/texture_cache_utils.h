@@ -2,6 +2,7 @@
 
 #include "../rsx_cache.h"
 #include "../rsx_utils.h"
+#include "texture_cache_predictor.h"
 #include "TextureUtils.h"
 
 #include <list>
@@ -303,19 +304,9 @@ namespace rsx
 	};
 
 
-
 	/**
 	 * Ranged storage
 	 */
-	template <typename section_storage_type>
-	class texture_cache_base
-	{
-	public:
-		virtual void on_memory_read_flags_changed(section_storage_type &section, rsx::memory_read_flags flags) = 0;
-		virtual void on_section_destroyed(section_storage_type & /*section*/) {};
-	};
-
-
 	template <typename _ranged_storage_type>
 	class ranged_storage_block
 	{
@@ -566,7 +557,7 @@ namespace rsx
 	};
 
 
-	template <typename _section_storage_type>
+	template <typename traits>
 	class ranged_storage
 	{
 	public:
@@ -575,9 +566,9 @@ namespace rsx
 		static constexpr u32 num_blocks = u32{0x1'0000'0000ull / block_size};
 		static_assert((num_blocks > 0) && (u64{num_blocks} *block_size == 0x1'0000'0000ull), "Invalid block_size/num_blocks");
 
-		using section_storage_type = _section_storage_type;
-		using texture_cache_type = texture_cache_base<section_storage_type>;
-		using block_type = ranged_storage_block<ranged_storage>;
+		using section_storage_type = typename traits::section_storage_type;
+		using texture_cache_type   = typename traits::texture_cache_base_type;
+		using block_type           = ranged_storage_block<ranged_storage>;
 
 	private:
 		block_type blocks[num_blocks];
@@ -956,13 +947,16 @@ namespace rsx
 	/**
 	 * Cached Texture Section
 	 */
-	template <typename derived_type>
+	template <typename derived_type, typename traits>
 	class cached_texture_section : public rsx::buffered_section
 	{
 	public:
-		using ranged_storage_type = ranged_storage<derived_type>;
+		using ranged_storage_type       = ranged_storage<traits>;
 		using ranged_storage_block_type = ranged_storage_block<ranged_storage_type>;
-		using texture_cache_type = typename ranged_storage_type::texture_cache_type;
+		using texture_cache_type        = typename traits::texture_cache_base_type;
+		using predictor_type            = texture_cache_predictor<traits>;
+		using predictor_key_type        = typename predictor_type::key_type;
+		using predictor_entry_type      = typename predictor_type::mapped_type;
 
 	protected:
 		ranged_storage_type *m_storage = nullptr;
@@ -1000,14 +994,16 @@ namespace rsx
 		u64 sync_timestamp = 0;
 		bool synchronized = false;
 		bool flushed = false;
-
-		u32 num_writes = 0;
-		std::deque<u32> read_history;
+		bool speculatively_flushed = false;
 
 		rsx::memory_read_flags readback_behaviour = rsx::memory_read_flags::flush_once;
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = rsx::texture_dimension_extended::texture_dimension_2d;
+
+		predictor_type *m_predictor = nullptr;
+		size_t m_predictor_key_hash = 0;
+		predictor_entry_type *m_predictor_entry = nullptr;
 
 	public:
 		u64 cache_tag = 0;
@@ -1019,7 +1015,7 @@ namespace rsx
 		}
 
 		cached_texture_section() = default;
-		cached_texture_section(ranged_storage_block_type *block) : m_block(block), m_storage(&block->get_storage()), m_tex_cache(&block->get_texture_cache())
+		cached_texture_section(ranged_storage_block_type *block) : m_block(block), m_storage(&block->get_storage()), m_tex_cache(&block->get_texture_cache()), m_predictor(&m_tex_cache->get_predictor())
 		{
 			update_unreleased();
 		}
@@ -1030,6 +1026,7 @@ namespace rsx
 			m_block = block;
 			m_storage = &block->get_storage();
 			m_tex_cache = &block->get_texture_cache();
+			m_predictor = &m_tex_cache->get_predictor();
 
 			update_unreleased();
 		}
@@ -1064,12 +1061,12 @@ namespace rsx
 			sync_timestamp = 0ull;
 			synchronized = false;
 			flushed = false;
+			speculatively_flushed = false;
 
 			cache_tag = 0ull;
 			last_write_tag = 0ull;
 
-			num_writes = 0;
-			read_history.clear();
+			m_predictor_entry = nullptr;
 
 			readback_behaviour = rsx::memory_read_flags::flush_once;
 			view_flags = rsx::texture_create_flags::default_component_order;
@@ -1196,6 +1193,8 @@ namespace rsx
 			m_block->on_section_range_invalid(*derived());
 			//m_storage->on_section_range_invalid(*derived());
 
+			m_predictor_entry = nullptr;
+			speculatively_flushed = false;
 			buffered_section::invalidate_range();
 		}
 
@@ -1302,25 +1301,65 @@ namespace rsx
 			protect(prot, range);
 		}
 
+		/**
+		 * Prediction
+		 */
+		bool tracked_by_predictor() const
+		{
+			// We do not update the predictor statistics for flush_always sections
+			return get_context() != texture_upload_context::shader_read && get_memory_read_flags() != memory_read_flags::flush_always;
+		}
+
+		void on_flush(bool miss)
+		{
+			speculatively_flushed = false;
+
+			if (miss)
+			{
+				m_tex_cache->on_miss(*derived());
+			}
+			m_tex_cache->on_flush();
+
+			if (tracked_by_predictor())
+			{
+				get_predictor_entry().on_flush();
+			}
+		}
+
+		void on_speculative_flush()
+		{
+			speculatively_flushed = true;
+
+			m_tex_cache->on_speculative_flush();
+		}
+
+		void touch(u64 tag)
+		{
+			last_write_tag = tag;
+
+			if (tracked_by_predictor())
+			{
+				get_predictor_entry().on_write(speculatively_flushed);
+			}
+
+			if (speculatively_flushed)
+			{
+				m_tex_cache->on_misprediction();
+			}
+		}
+
 
 		/**
 		 * Misc
 		 */
-		void touch(u64 tag)
+		predictor_entry_type& get_predictor_entry()
 		{
-			num_writes++;
-			last_write_tag = tag;
-		}
-
-		void reset_write_statistics()
-		{
-			if (read_history.size() == 16)
+			// If we don't have a predictor entry, or the key has changed
+			if (m_predictor_entry == nullptr || !m_predictor_entry->key_matches(*derived()))
 			{
-				read_history.pop_back();
+				m_predictor_entry = &((*m_predictor)[*derived()]);
 			}
-
-			read_history.push_front(num_writes);
-			num_writes = 0;
+			return *m_predictor_entry;
 		}
 
 		void set_view_flags(rsx::texture_create_flags flags)
@@ -1414,52 +1453,6 @@ namespace rsx
 		memory_read_flags get_memory_read_flags() const
 		{
 			return readback_behaviour;
-		}
-
-		bool writes_likely_completed() const
-		{
-			// TODO: Move this to the miss statistics block
-			const auto num_records = read_history.size();
-
-			if (num_records == 0)
-			{
-				return false;
-			}
-			else if (num_records == 1)
-			{
-				return num_writes >= read_history.front();
-			}
-			else
-			{
-				const u32 last = read_history.front();
-				const u32 prev_last = read_history[1];
-
-				if (last == prev_last && num_records <= 3)
-				{
-					return num_writes >= last;
-				}
-
-				u32 compare = UINT32_MAX;
-				for (u32 n = 1; n < num_records; n++)
-				{
-					if (read_history[n] == last)
-					{
-						// Uncertain, but possible
-						compare = read_history[n - 1];
-
-						if (num_records > (n + 1))
-						{
-							if (read_history[n + 1] == prev_last)
-							{
-								// Confirmed with 2 values
-								break;
-							}
-						}
-					}
-				}
-
-				return num_writes >= compare;
-			}
 		}
 
 		u64 get_sync_timestamp() const
