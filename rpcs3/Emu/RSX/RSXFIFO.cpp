@@ -242,7 +242,8 @@ namespace rsx
 						break;
 					}
 				}
-				else if (UNLIKELY((cmd & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD))
+
+				if (UNLIKELY((cmd & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD))
 				{
 					if (commands.empty() || commands.back().reg != RSX_METHOD_NOP_CMD)
 					{
