@@ -655,7 +655,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_texture_upload_buffer_ring_info.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_TEXTURE_UPLOAD_RING_BUFFER_SIZE_M * 0x100000, "texture upload buffer", 32 * 0x100000);
 
 	const auto limits = m_device->gpu().get_limits();
-	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, 0x4000000u);
+	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
 
 	if (m_texbuffer_view_size < 0x800000)
 	{
@@ -1029,6 +1029,38 @@ void VKGSRender::check_heap_status()
 	}
 }
 
+void VKGSRender::check_descriptors()
+{
+	// Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
+	const auto required_descriptors = rsx::method_registers.current_draw_clause.pass_count();
+	verify(HERE), required_descriptors < DESCRIPTOR_MAX_DRAW_CALLS;
+	if ((required_descriptors + m_current_frame->used_descriptors) > DESCRIPTOR_MAX_DRAW_CALLS)
+	{
+		//No need to stall if we have more than one frame queue anyway
+		flush_command_queue();
+
+		CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
+		m_current_frame->used_descriptors = 0;
+	}
+}
+
+VkDescriptorSet VKGSRender::allocate_descriptor_set()
+{
+	verify(HERE), m_current_frame->used_descriptors < DESCRIPTOR_MAX_DRAW_CALLS;
+
+	VkDescriptorSetAllocateInfo alloc_info = {};
+	alloc_info.descriptorPool = m_current_frame->descriptor_pool;
+	alloc_info.descriptorSetCount = 1;
+	alloc_info.pSetLayouts = &descriptor_layouts;
+	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+
+	VkDescriptorSet new_descriptor_set;
+	CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
+	m_current_frame->used_descriptors++;
+
+	return new_descriptor_set;
+}
+
 void VKGSRender::begin()
 {
 	rsx::thread::begin();
@@ -1042,29 +1074,7 @@ void VKGSRender::begin()
 	if (!framebuffer_status_valid)
 		return;
 
-	//Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
-	if (m_current_frame->used_descriptors >= DESCRIPTOR_MAX_DRAW_CALLS)
-	{
-		//No need to stall if we have more than one frame queue anyway
-		flush_command_queue();
-
-		CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
-		m_current_frame->used_descriptors = 0;
-	}
-
 	check_heap_status();
-
-	VkDescriptorSetAllocateInfo alloc_info = {};
-	alloc_info.descriptorPool = m_current_frame->descriptor_pool;
-	alloc_info.descriptorSetCount = 1;
-	alloc_info.pSetLayouts = &descriptor_layouts;
-	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-	VkDescriptorSet new_descriptor_set;
-	CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
-
-	m_current_frame->descriptor_set = new_descriptor_set;
-	m_current_frame->used_descriptors++;
 }
 
 void VKGSRender::update_draw_state()
@@ -1207,25 +1217,36 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	}
 	else
 	{
+		// Vertex env update will change information in the descriptor set
+		// Make a copy for the next draw call
+		// TODO: Restructure program to allow use of push constants when possible
+		// NOTE: AMD has insuffecient push constants buffer memory which is unfortunate
+		VkDescriptorSet new_descriptor_set = allocate_descriptor_set();
+		std::array<VkCopyDescriptorSet, VK_NUM_DESCRIPTOR_BINDINGS> copy_set;
+
+		for (u32 n = 0; n < VK_NUM_DESCRIPTOR_BINDINGS; ++n)
+		{
+			copy_set[n] =
+			{
+				VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,   // sType
+				nullptr,                                 // pNext
+				m_current_frame->descriptor_set,         // srcSet
+				n,                                       // srcBinding
+				0u,                                      // srcArrayElement
+				new_descriptor_set,                      // dstSet
+				n,                                       // dstBinding
+				0u,                                      // dstArrayElement
+				1u                                       // descriptorCount
+			};
+		}
+
+		vkUpdateDescriptorSets(*m_device, 0, 0, VK_NUM_DESCRIPTOR_BINDINGS, copy_set.data());
+		m_current_frame->descriptor_set = new_descriptor_set;
+
 		if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
 		{
-/*			VkDescriptorSetAllocateInfo alloc_info = {};
-			alloc_info.descriptorPool = m_current_frame->descriptor_pool;
-			alloc_info.descriptorSetCount = 1;
-			alloc_info.pSetLayouts = &descriptor_layouts;
-			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-			VkDescriptorSet new_descriptor_set;
-			CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
-
-			VkCopyDescriptorSet copy = {};
-			copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
-			copy
-
-			m_current_frame->descriptor_set = new_descriptor_set;
-			m_current_frame->used_descriptors++;
-
-			update_descriptors = true;*/
+			// Rare event, we need to actually change the descriptors
+			update_descriptors = true;
 		}
 	}
 
@@ -1236,9 +1257,10 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	{
 		m_program->bind_uniform(persistent_buffer, vk::glsl::program_input_type::input_type_texel_buffer, "persistent_input_stream", m_current_frame->descriptor_set);
 		m_program->bind_uniform(volatile_buffer, vk::glsl::program_input_type::input_type_texel_buffer, "volatile_input_stream", m_current_frame->descriptor_set);
-
-		vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
 	}
+
+	// Bind the new set of descriptors for use with this draw call
+	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
 
 	//std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 	//m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_start - vertex_end).count();
@@ -1538,6 +1560,10 @@ void VKGSRender::end()
 		rsx::thread::end();
 		return;
 	}
+
+	// Allocate descriptor set
+	check_descriptors();
+	m_current_frame->descriptor_set = allocate_descriptor_set();
 
 	// Load program execution environment
 	load_program_env();

@@ -257,6 +257,17 @@ namespace rsx
 			return (draw_command_ranges.empty() && inline_vertex_array.empty());
 		}
 
+		u32 pass_count() const
+		{
+			if (draw_command_ranges.empty())
+			{
+				verify(HERE), !inline_vertex_array.empty();
+				return 1u;
+			}
+
+			return (u32)draw_command_ranges.size();
+		}
+
 		void reset(rsx::primitive_type type)
 		{
 			current_range_index = -1u;

@@ -424,6 +424,9 @@ private:
 
 	void check_heap_status();
 
+	void check_descriptors();
+	VkDescriptorSet allocate_descriptor_set();
+
 	vk::vertex_upload_info upload_vertex_data();
 
 	bool load_program();
