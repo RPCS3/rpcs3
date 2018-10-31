@@ -398,11 +398,7 @@ s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 
 	m_config->current_config.coreFrequency = 500000000;
 
 	// Create contexts
-	auto ctx_area = vm::find_map(0x10000000, 0x10000000, 0x403);
-	u32 rsx_ctxaddr = ctx_area ? ctx_area->addr : 0;
-
-	if (!rsx_ctxaddr || vm::falloc(rsx_ctxaddr, 0x400000) != rsx_ctxaddr)
-		fmt::throw_exception("Failed to alloc rsx context.");
+	u32 rsx_ctxaddr = verify(HERE, vm::alloc(0x400000, vm::rsx_context));
 
 	g_defaultCommandBufferBegin = ioAddress;
 	g_defaultCommandBufferFragmentCount = cmdSize / (32 * 1024);
@@ -436,11 +432,10 @@ s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 
 	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 128, 0, 1, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	render->intr_thread = idm::get<named_thread<ppu_thread>>(*_tid);
 	render->intr_thread->state -= cpu_flag::stop;
-	render->main_mem_addr = 0;
 	render->isHLE = true;
 	render->label_addr = m_config->gcm_info.label_addr;
-	render->ctxt_addr = m_config->gcm_info.context_addr;
-	render->init(ioAddress, ioSize, m_config->gcm_info.control_addr - 0x40, local_addr);
+	render->device_addr = m_config->gcm_info.context_addr;
+	render->init(m_config->gcm_info.control_addr - 0x40, local_addr);
 
 	return CELL_OK;
 }

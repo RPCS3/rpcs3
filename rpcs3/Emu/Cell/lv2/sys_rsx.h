@@ -101,9 +101,10 @@ struct RsxDisplayInfo
 
 struct SysRsxConfig
 {
-	u32 rsx_event_port{ 0 };
-	u32 driverInfo{ 0 };
-	u32 rsx_context_addr{ 0 }; 
+	u32 rsx_event_port{};
+	u32 context_base{};
+	u32 device_addr{};
+	u32 driver_info{};
 };
 
 // SysCalls

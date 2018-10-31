@@ -23,6 +23,7 @@ namespace vm
 		main,
 		user64k,
 		user1m,
+		rsx_context,
 		video,
 		stack,
 		spu,

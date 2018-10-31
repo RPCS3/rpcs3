@@ -91,10 +91,10 @@ namespace rsx
 			return get_current_renderer()->label_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-			return get_current_renderer()->ctxt_addr + offset;
+			return get_current_renderer()->device_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-			return get_current_renderer()->ctxt_addr + offset;
+			return get_current_renderer()->device_addr + offset;
 
 		default:
 			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
@@ -2186,11 +2186,9 @@ namespace rsx
 		rsx::method_registers.reset();
 	}
 
-	void thread::init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress)
+	void thread::init(u32 ctrlAddress, u32 localAddress)
 	{
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
-		this->ioAddress = ioAddress;
-		this->ioSize = ioSize;
 		local_mem_addr = localAddress;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 

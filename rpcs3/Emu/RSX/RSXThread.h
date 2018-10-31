@@ -436,7 +436,6 @@ namespace rsx
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
 
-		u32 ioAddress, ioSize;
 		u32 flip_status;
 		int debug_level;
 
@@ -446,10 +445,10 @@ namespace rsx
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{0};
 		u32 current_display_buffer{0};
-		u32 ctxt_addr;
+		u32 device_addr;
 		u32 label_addr;
 
-		u32 local_mem_addr, main_mem_addr, main_mem_size{0};
+		u32 local_mem_addr, main_mem_size{0};
 
 		bool m_rtts_dirty;
 		bool m_textures_dirty[16];
@@ -687,7 +686,7 @@ namespace rsx
 
 	public:
 		void reset();
-		void init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress);
+		void init(u32 ctrlAddress, u32 localAddress);
 
 		tiled_region get_tiled_address(u32 offset, u32 location);
 		GcmTileInfo *find_tile(u32 offset, u32 location);

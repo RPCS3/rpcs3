@@ -65,13 +65,13 @@ namespace rsx
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 			if (vm::read32(addr) == arg) return;
 
+			// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
+			if (addr == rsx->device_addr + 0x30)
+				return;
+
 			u64 start = get_system_time();
 			while (vm::read32(addr) != arg)
 			{
-				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
-				if (addr == get_current_renderer()->ctxt_addr + 0x30)
-					return;
-
 				if (Emu.IsStopped())
 					return;
 

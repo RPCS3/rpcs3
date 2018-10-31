@@ -937,14 +937,14 @@ namespace vm
 
 				if (!loc)
 				{
-					if (location == vm::user64k || location == vm::user1m)
+					if (location == vm::user1m || location == vm::rsx_context)
 					{
 						lock.upgrade();
 
 						if (!loc)
 						{
 							// Deferred allocation
-							loc = _find_map(0x10000000, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
+							loc = _find_map(0x10000000, 0x10000000, location == vm::user1m ? 0x401 : 0x200);
 						}
 					}
 				}
@@ -976,6 +976,7 @@ namespace vm
 				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x200), // main
 				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
+				nullptr, // rsx context
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000, 0x111), // stack
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
