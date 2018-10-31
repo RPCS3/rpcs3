@@ -456,6 +456,10 @@ namespace rsx
 				rsx::method_registers.current_draw_clause.compile();
 				rsxthr->end();
 			}
+			else
+			{
+				rsxthr->in_begin_end = false;
+			}
 		}
 
 		vm::addr_t get_report_data_impl(u32 offset)
@@ -2229,8 +2233,11 @@ namespace rsx
 	{
 		u32 result = 0;
 
-		for (const auto &barrier : draw_command_barriers[current_range_index])
+		for (const auto &barrier : draw_command_barriers)
 		{
+			if (barrier.draw_id != current_range_index)
+				continue;
+
 			switch (barrier.type)
 			{
 			case primitive_restart_barrier:

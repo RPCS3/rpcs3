@@ -43,6 +43,7 @@ namespace rsx
 
 	struct barrier_t
 	{
+		u32 draw_id;
 		u64 timestamp;
 
 		u32 address;
@@ -74,7 +75,7 @@ namespace rsx
 		simple_array<draw_range_t> draw_command_ranges;
 
 		// Stores rasterization barriers for primitive types sensitive to adjacency
-		std::vector<std::set<barrier_t>> draw_command_barriers;
+		simple_array<barrier_t> draw_command_barriers;
 
 		// Counter used to parse the commands in order
 		u32 current_range_index;
@@ -87,28 +88,27 @@ namespace rsx
 		void append_draw_command(const draw_range_t& range)
 		{
 			draw_command_ranges.push_back(range);
-			draw_command_barriers.push_back({});
 		}
 
 		// Insert a new draw command within the others
 		void insert_draw_command(int index, const draw_range_t& range)
 		{
 			auto range_It = draw_command_ranges.begin();
-			auto barrier_It = draw_command_barriers.begin();
-
-			// Because deque::insert fails with initializer list on MSVC
-			const std::set<barrier_t> new_barrier;
-
 			while (index--)
 			{
 				++range_It;
-				++barrier_It;
 			}
 
 			draw_command_ranges.insert(range_It, range);
-			draw_command_barriers.insert(barrier_It, new_barrier);
 
-			verify(HERE), draw_command_ranges.size() == draw_command_barriers.size();
+			// Update all barrier draw ids after this one
+			for (auto &barrier : draw_command_barriers)
+			{
+				if (barrier.draw_id >= index)
+				{
+					barrier.draw_id++;
+				}
+			}
 		}
 
 	public:
@@ -125,6 +125,26 @@ namespace rsx
 		{
 			verify(HERE), !draw_command_ranges.empty();
 
+			auto _do_barrier_insert = [this](barrier_t&& val)
+			{
+				if (draw_command_barriers.empty() || draw_command_barriers.back() < val)
+				{
+					draw_command_barriers.push_back(val);
+					return;
+				}
+
+				for (auto it = draw_command_barriers.begin(); it != draw_command_barriers.end(); it++)
+				{
+					if (*it < val)
+					{
+						continue;
+					}
+
+					draw_command_barriers.insert(it, val);
+					break;
+				}
+			};
+
 			if (type == primitive_restart_barrier)
 			{
 				// Rasterization flow barrier
@@ -132,7 +152,7 @@ namespace rsx
 				const auto address = last.first + last.count;
 
 				const auto command_index = draw_command_ranges.size() - 1;
-				draw_command_barriers[command_index].insert({ 0, address, arg, 0, type });
+				_do_barrier_insert({ command_index, 0, address, arg, 0, type });
 			}
 			else
 			{
@@ -140,7 +160,7 @@ namespace rsx
 				append_draw_command({});
 				const auto command_index = draw_command_ranges.size() - 1;
 
-				draw_command_barriers[command_index].insert({ get_system_time(), -1u, arg, 0, type });
+				_do_barrier_insert({ command_index, get_system_time(), -1u, arg, 0, type });
 				last_execution_barrier_index = command_index;
 			}
 		}
@@ -243,8 +263,11 @@ namespace rsx
 			}
 
 			verify(HERE), current_range_index != -1u;
-			for (const auto &barrier : draw_command_barriers[current_range_index])
+			for (const auto &barrier : draw_command_barriers)
 			{
+				if (barrier.draw_id != current_range_index)
+					continue;
+
 				if (barrier.type == primitive_restart_barrier)
 					return false;
 			}
@@ -342,8 +365,11 @@ namespace rsx
 			u32 previous_barrier = range.first;
 			u32 vertex_counter = 0;
 
-			for (const auto &barrier : draw_command_barriers[current_range_index])
+			for (const auto &barrier : draw_command_barriers)
 			{
+				if (barrier.draw_id != current_range_index)
+					continue;
+
 				if (barrier.type != primitive_restart_barrier)
 					continue;
 

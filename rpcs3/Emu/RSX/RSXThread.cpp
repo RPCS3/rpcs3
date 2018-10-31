@@ -554,10 +554,6 @@ namespace rsx
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 
-		fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
-		//fifo_ctrl->register_optimization_pass(new FIFO::reordering_pass()); // R&C2 - Not working if flattening is also enabled!!!
-		//fifo_ctrl->register_optimization_pass(new FIFO::flattening_pass());
-
 		last_flip_time = get_system_time() - 1000000;
 
 		named_thread vblank_thread("VBlank Thread", [this]()
@@ -681,11 +677,6 @@ namespace rsx
 		{
 			m_decompiler_thread->join();
 			m_decompiler_thread.reset();
-		}
-
-		if (fifo_ctrl)
-		{
-			fifo_ctrl->finalize();
 		}
 	}
 
