@@ -91,10 +91,10 @@ namespace rsx
 			return get_current_renderer()->label_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-			return get_current_renderer()->ctxt_addr + offset;
+			return get_current_renderer()->device_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-			return get_current_renderer()->ctxt_addr + offset;
+			return get_current_renderer()->device_addr + offset;
 
 		default:
 		{

@@ -564,7 +564,7 @@ namespace rsx
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{0};
 		u32 current_display_buffer{0};
-		u32 ctxt_addr;
+		u32 device_addr;
 		u32 label_addr;
 
 		u32 main_mem_size{0};
