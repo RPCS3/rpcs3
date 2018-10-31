@@ -695,9 +695,6 @@ namespace rsx
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		void request_emu_flip(u32 buffer);
 
-		u32 ReadIO32(u32 addr);
-		void WriteIO32(u32 addr, u32 value);
-
 		void pause();
 		void unpause();
 
