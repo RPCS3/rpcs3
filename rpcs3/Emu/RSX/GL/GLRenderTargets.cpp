@@ -247,7 +247,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
 			color_targets[i] = rtt->id();
 
-			rtt->set_rsx_pitch(layout.color_pitch[i]);
+			rtt->set_rsx_pitch(layout.actual_color_pitch[i]);
 			m_surface_info[i] = { layout.color_addresses[i], layout.actual_color_pitch[i], false, layout.color_format, layout.depth_format, layout.width, layout.height };
 
 			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
@@ -277,7 +277,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
 
-		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(rsx::method_registers.surface_z_pitch());
+		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(layout.actual_zeta_pitch);
 		m_depth_surface_info = { layout.zeta_address, layout.actual_zeta_pitch, true, layout.color_format, layout.depth_format, layout.width, layout.height };
 
 		ds->write_aa_mode = layout.aa_mode;

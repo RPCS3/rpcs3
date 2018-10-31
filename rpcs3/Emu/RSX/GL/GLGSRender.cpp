@@ -1301,17 +1301,16 @@ void GLGSRender::load_program_env()
 	if (update_vertex_env)
 	{
 		// Vertex state
-		auto mapping = m_vertex_env_buffer->alloc_from_heap(160, m_uniform_buffer_offset_align);
+		auto mapping = m_vertex_env_buffer->alloc_from_heap(144, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<u32*>(buf + 132)) = 0; // Reserved
-		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
-		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
-		*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
+		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size();
+		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
+		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
 
-		m_vertex_env_buffer->bind_range(0, mapping.second, 160);
+		m_vertex_env_buffer->bind_range(0, mapping.second, 144);
 	}
 
 	if (update_transform_constants)

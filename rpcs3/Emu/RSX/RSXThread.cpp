@@ -2024,21 +2024,20 @@ namespace rsx
 
 		// Fill the data
 		// Each descriptor field is 64 bits wide
-		// [0-8] attribute stride\n"
-		// [8-20] attribute divisor\n"
-		// [20-21] swap bytes flag\n"
-		// [21-22] volatile flag\n"
-		// [22-24] frequency op\n"
-		// [24-27] attribute type\n"
-		// [27-30] attribute size\n"
+		// [0-8] attribute stride
+		// [8-24] attribute divisor
+		// [24-27] attribute type
+		// [27-30] attribute size
+		// [30-31] reserved
+		// [31-60] starting offset
+		// [60-21] swap bytes flag
+		// [61-22] volatile flag
+		// [62-63] modulo enable flag
 
-		memset(buffer, 0, 256);
-
-		const s32 swap_storage_mask = (1 << 20);
-		const s32 volatile_storage_mask = (1 << 21);
-		const s32 default_frequency_mask = (1 << 22);
-		const s32 division_op_frequency_mask = (2 << 22);
-		const s32 modulo_op_frequency_mask = (3 << 22);
+		const s32 default_frequency_mask = (1 << 8);
+		const s32 swap_storage_mask = (1 << 29);
+		const s32 volatile_storage_mask = (1 << 30);
+		const s32 modulo_op_frequency_mask = (1 << 31);
 
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 
@@ -2049,30 +2048,28 @@ namespace rsx
 
 			rsx::vertex_base_type type = {};
 			s32 size = 0;
-			s32 attributes = 0;
+			s32 attrib0 = 0;
+			s32 attrib1 = 0;
 
 			if (layout.attribute_placement[index] == attribute_buffer_placement::transient)
 			{
 				if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 				{
-					auto &info = rsx::method_registers.vertex_arrays_info[index];
-					type = info.type();
-					size = info.size();
-	
-					if (!size)
+					const auto &info = rsx::method_registers.vertex_arrays_info[index];
+
+					if (!info.size())
 					{
 						// Register
 						const auto& reginfo = rsx::method_registers.register_vertex_info[index];
 						type = reginfo.type;
 						size = reginfo.size;
 
-						attributes = rsx::get_vertex_type_size_on_host(type, size);
-						attributes |= volatile_storage_mask;
+						attrib0 = rsx::get_vertex_type_size_on_host(type, size);
 					}
 					else
 					{
-						attributes = layout.interleaved_blocks[0].attribute_stride;
-						attributes |= default_frequency_mask | volatile_storage_mask;
+						// Array
+						attrib0 = layout.interleaved_blocks[0].attribute_stride | default_frequency_mask;
 					}
 				}
 				else
@@ -2083,12 +2080,12 @@ namespace rsx
 					if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
 						vertex_push_buffers[index].vertex_count > 1)
 					{
+						// Push buffer
 						const auto &info = rsx::method_registers.register_vertex_info[index];
 						type = info.type;
 						size = info.size;
 
-						attributes = rsx::get_vertex_type_size_on_host(type, size);
-						attributes |= default_frequency_mask | volatile_storage_mask;
+						attrib0 = rsx::get_vertex_type_size_on_host(type, size) | default_frequency_mask;
 					}
 					else
 					{
@@ -2097,10 +2094,11 @@ namespace rsx
 						type = info.type;
 						size = info.size;
 
-						attributes = rsx::get_vertex_type_size_on_host(type, size);
-						attributes |= volatile_storage_mask;
+						attrib0 = rsx::get_vertex_type_size_on_host(type, size);
 					}
 				}
+
+				attrib1 |= volatile_storage_mask;
 			}
 			else
 			{
@@ -2109,7 +2107,7 @@ namespace rsx
 				size = info.size();
 
 				auto stride = info.stride();
-				attributes |= stride;
+				attrib0 = stride;
 
 				if (stride > 0) //when stride is 0, input is not an array but a single element
 				{
@@ -2119,19 +2117,15 @@ namespace rsx
 					case 0:
 					case 1:
 					{
-						attributes |= default_frequency_mask;
+						attrib0 |= default_frequency_mask;
 						break;
 					}
 					default:
 					{
-						verify(HERE), frequency <= 4095u;
-
 						if (modulo_mask & (1 << index))
-							attributes |= modulo_op_frequency_mask;
-						else
-							attributes |= division_op_frequency_mask;
+							attrib1 |= modulo_op_frequency_mask;
 
-						attributes |= (frequency << 8);
+						attrib0 |= (frequency << 8);
 						break;
 					}
 					}
@@ -2155,13 +2149,14 @@ namespace rsx
 				break;
 			}
 
-			if (to_swap_bytes) attributes |= swap_storage_mask;
+			if (to_swap_bytes) attrib1 |= swap_storage_mask;
 
-			attributes |= (static_cast<s32>(type) << 24);
-			attributes |= (size << 27);
+			attrib0 |= (static_cast<s32>(type) << 24);
+			attrib0 |= (size << 27);
+			attrib1 |= offset_in_block[index];
 
-			buffer[index * 4 + 0] = attributes;
-			buffer[index * 4 + 1] = offset_in_block[index];
+			buffer[index * 4 + 0] = attrib0;
+			buffer[index * 4 + 1] = attrib1;
 		}
 	}
 
