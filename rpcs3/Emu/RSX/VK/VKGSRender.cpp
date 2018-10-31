@@ -2598,18 +2598,17 @@ void VKGSRender::load_program_env()
 	{
 		// Vertex state
 		const auto mem = m_vertex_env_ring_info.alloc<256>(256);
-		auto buf = (u8*)m_vertex_env_ring_info.map(mem, 160);
+		auto buf = (u8*)m_vertex_env_ring_info.map(mem, 144);
 
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<u32*>(buf + 132)) = 0; // Reserved
-		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
-		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
-		*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
+		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size();
+		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
+		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
 
 		m_vertex_env_ring_info.unmap();
-		m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, mem, 160 };
+		m_vertex_env_buffer_info = { m_vertex_env_ring_info.heap->value, mem, 144 };
 	}
 
 	if (update_transform_constants)
@@ -2883,8 +2882,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			bound_images.push_back(surface);
 
 			m_surface_info[index].address = layout.color_addresses[index];
-			m_surface_info[index].pitch = layout.color_pitch[index];
-			surface->rsx_pitch = layout.color_pitch[index];
+			m_surface_info[index].pitch = layout.actual_color_pitch[index];
+			surface->rsx_pitch = layout.actual_color_pitch[index];
 
 			surface->write_aa_mode = layout.aa_mode;
 			m_texture_cache.notify_surface_changed(layout.color_addresses[index]);
@@ -2899,8 +2898,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		bound_images.push_back(ds);
 
 		m_depth_surface_info.address = layout.zeta_address;
-		m_depth_surface_info.pitch = layout.zeta_pitch;
-		ds->rsx_pitch = layout.zeta_pitch;
+		m_depth_surface_info.pitch = layout.actual_zeta_pitch;
+		ds->rsx_pitch = layout.actual_zeta_pitch;
 
 		ds->write_aa_mode = layout.aa_mode;
 		m_texture_cache.notify_surface_changed(layout.zeta_address);
