@@ -74,7 +74,7 @@ namespace rsx
 			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema == arg || addr == rsx->device_addr + 0x30) return;
 
 			rsx->flush_fifo();
 

@@ -1087,6 +1087,7 @@ namespace vm
 				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x200), // main
 				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
+				nullptr, // rsx context
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000, 0x111), // stack
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
