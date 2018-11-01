@@ -43,8 +43,8 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 
 	OS << "layout(std140, set = 0, binding = 1) uniform VertexLayoutBuffer\n";
 	OS << "{\n";
-	OS << "	uint vertex_base_index;\n";
-	OS << "	ivec2 input_attributes[16];\n";
+	OS << "	uint  vertex_base_index;\n";
+	OS << "	uvec4 input_attributes_blob[16 / 2];\n";
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
