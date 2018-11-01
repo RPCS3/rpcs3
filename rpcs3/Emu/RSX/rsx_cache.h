@@ -225,12 +225,22 @@ namespace rsx
 			return get_bounds(bounds).overlaps(other);
 		}
 
+		inline bool overlaps(const address_range_vector &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).overlaps(other);
+		}
+
 		inline bool overlaps(const buffered_section &other, section_bounds bounds) const
 		{
 			return get_bounds(bounds).overlaps(other.get_bounds(bounds));
 		}
 
 		inline bool inside(const address_range &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).inside(other);
+		}
+
+		inline bool inside(const address_range_vector &other, section_bounds bounds) const
 		{
 			return get_bounds(bounds).inside(other);
 		}
@@ -316,7 +326,7 @@ namespace rsx
 		 * Super Pointer
 		 */
 		template <typename T = void>
-		inline T* get_ptr(u32 address)
+		inline T* get_ptr(u32 address) const
 		{
 			return reinterpret_cast<T*>(vm::g_sudo_addr + address);
 		}

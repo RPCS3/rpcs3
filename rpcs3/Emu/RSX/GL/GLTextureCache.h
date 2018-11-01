@@ -484,46 +484,39 @@ namespace gl
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 		}
 
-		bool flush()
+
+		/**
+		 * Flush
+		 */
+		void synchronize(bool blocking)
 		{
-			ASSERT(exists());
+			if (synchronized)
+				return;
 
-			if (flushed) return true; //Already written, ignore
-			AUDIT(is_locked());
+			copy_texture(blocking);
 
-			bool result = true;
-			if (!synchronized)
+			if (blocking)
 			{
-				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
-				copy_texture(true);
-
-				if (!synchronized)
-				{
-					LOG_WARNING(RSX, "Nothing to copy; Setting section to readable and moving on...");
-					protect(utils::protection::ro);
-					return false;
-				}
-
-				result = false;
+				m_fence.wait_for_signal();
 			}
+		}
 
-			verify(HERE), real_pitch > 0;
+		void* map_synchronized(u32 offset, u32 size)
+		{
+			AUDIT(synchronized);
 
-			m_fence.wait_for_signal();
-			flushed = true;
-
-			const auto valid_range = get_confirmed_range_delta();
-			const u32 valid_offset = valid_range.first;
-			const u32 valid_length = valid_range.second;
-			AUDIT(valid_length > 0);
-
-			void *dst = get_ptr(get_section_base() + valid_offset);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-			void *src = glMapBufferRange(GL_PIXEL_PACK_BUFFER, valid_offset, valid_length, GL_MAP_READ_BIT);
+			return glMapBufferRange(GL_PIXEL_PACK_BUFFER, offset, size, GL_MAP_READ_BIT);
+		}
 
-			//throw if map failed since we'll segfault anyway
-			verify(HERE), src != nullptr;
+		void finish_flush()
+		{
+			// Free resources
+			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
+
+			// Shuffle
 			bool require_manual_shuffle = false;
 			if (pack_unpack_swap_bytes)
 			{
@@ -531,27 +524,10 @@ namespace gl
 					require_manual_shuffle = true;
 			}
 
-			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
-			{
-				memcpy(dst, src, valid_length);
-			}
-			else
-			{
-				if (valid_length % rsx_pitch)
-				{
-					fmt::throw_exception("Unreachable" HERE);
-				}
-
-				u8 *_src = (u8*)src;
-				u8 *_dst = (u8*)dst;
-				const auto num_rows = valid_length / rsx_pitch;
-				for (u32 row = 0; row < num_rows; ++row)
-				{
-					memcpy(_dst, _src, real_pitch);
-					_src += real_pitch;
-					_dst += rsx_pitch;
-				}
-			}
+			const auto valid_range = get_confirmed_range_delta();
+			const u32 valid_offset = valid_range.first;
+			const u32 valid_length = valid_range.second;
+			void *dst = get_ptr(get_section_base() + valid_offset);
 
 			if (require_manual_shuffle)
 			{
@@ -560,6 +536,7 @@ namespace gl
 			}
 			else if (pack_unpack_swap_bytes && ::gl::get_driver_caps().vendor_AMD)
 			{
+
 				//AMD driver bug - cannot use pack_swap_bytes
 				//Manually byteswap texel data
 				switch (type)
@@ -609,15 +586,13 @@ namespace gl
 				}
 				}
 			}
-
-			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
-
-			baseclass::on_flush(!result);
-
-			return result;
 		}
 
+
+
+		/**
+		 * Misc
+		 */
 		void destroy()
 		{
 			if (!is_locked() && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty() && managed_texture.get() == nullptr)
