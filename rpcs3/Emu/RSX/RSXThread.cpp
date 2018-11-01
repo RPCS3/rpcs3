@@ -1789,11 +1789,20 @@ namespace rsx
 			{
 				auto &vinfo = state.vertex_arrays_info[index];
 
+				if (input_mask & (1u << index)) 
+				{
+					result.attribute_placement[index] = attribute_buffer_placement::transient;
+				}
+
 				if (vinfo.size() > 0)
 				{
 					info.locations.push_back(index);
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
-					result.attribute_placement[index] = attribute_buffer_placement::transient;
+				}
+				else if (state.register_vertex_info[index].size > 0)
+				{
+					//Reads from register
+					result.referenced_registers.push_back(index);
 				}
 			}
 
@@ -2326,7 +2335,7 @@ namespace rsx
 		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			const auto &block = layout.interleaved_blocks[0];
-			u32 inline_data_offset = volatile_offset_base;
+			u32 inline_data_offset = volatile_offset;
 			for (const u8 index : block.locations)
 			{
 				auto &info = rsx::method_registers.vertex_arrays_info[index];
@@ -2398,9 +2407,22 @@ namespace rsx
 					auto &info = rsx::method_registers.vertex_arrays_info[index];
 					type = info.type();
 					size = info.size();
+	
+					if (!size)
+					{
+						// Register
+						const auto& reginfo = rsx::method_registers.register_vertex_info[index];
+						type = reginfo.type;
+						size = reginfo.size;
 
-					attributes = layout.interleaved_blocks[0].attribute_stride;
-					attributes |= default_frequency_mask | volatile_storage_mask;
+						attributes = rsx::get_vertex_type_size_on_host(type, size);
+						attributes |= volatile_storage_mask;
+					}
+					else
+					{
+						attributes = layout.interleaved_blocks[0].attribute_stride;
+						attributes |= default_frequency_mask | volatile_storage_mask;
+					}
 				}
 				else
 				{
@@ -2499,6 +2521,12 @@ namespace rsx
 		{
 			if (draw_call.command == rsx::draw_command::inlined_array)
 			{
+				for (const u8 index : layout.referenced_registers)
+				{
+					memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+					transient += 16;
+				}
+
 				memcpy(transient, draw_call.inline_vertex_array.data(), draw_call.inline_vertex_array.size() * sizeof(u32));
 				//Is it possible to reference data outside of the inlined array?
 				return;
@@ -2819,13 +2847,7 @@ namespace rsx
 
 	void thread::handle_emu_flip(u32 buffer)
 	{
-		if (user_asked_for_frame_capture && !g_cfg.video.strict_rendering_mode)
-		{
-			// not dealing with non-strict rendering capture for now
-			user_asked_for_frame_capture = false;
-			LOG_FATAL(RSX, "RSX Capture: Capture only supported when ran with strict rendering mode.");
-		}
-		else if (user_asked_for_frame_capture && !capture_current_frame)
+		if (user_asked_for_frame_capture && !capture_current_frame)
 		{
 			capture_current_frame = true;
 			user_asked_for_frame_capture = false;
@@ -2846,10 +2868,10 @@ namespace rsx
 			capture_current_frame = false;
 			std::stringstream os;
 			cereal::BinaryOutputArchive archive(os);
-			const std::string& filePath = fs::get_config_dir() + "capture.rrc";
+			const std::string& filePath = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
 			archive(frame_capture);
 			{
-				// todo: 'dynamicly' create capture filename, also may want to compress this data?
+				// todo: may want to compress this data?
 				fs::file f(filePath, fs::rewrite);
 				f.write(os.str());
 			}

@@ -478,11 +478,11 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 
 	if (attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 	{
-		port->level = audioParam->level;
+		port->level = audioParam->level * g_cfg.audio.volume / 100.0f;
 	}
 	else
 	{
-		port->level = 1.0f;
+		port->level = g_cfg.audio.volume / 100.0f;
 	}
 
 	port->level_set.store({ port->level, 0.0f });
@@ -696,6 +696,8 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 	{
 		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	}
+
+	level *= g_cfg.audio.volume / 100.0f;
 
 	if (level >= 0.0f)
 	{
