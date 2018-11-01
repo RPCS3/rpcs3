@@ -89,7 +89,7 @@ struct vdec_context final
 
 	atomic_t<u32> au_count{0};
 
-	notifier in_cv;
+	cond_one in_cv;
 	lf_queue<std::variant<vdec_start_seq_t, vdec_close_t, vdec_cmd, CellVdecFrameRate>> in_cmd;
 
 	vdec_context(s32 type, u32 profile, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
@@ -160,13 +160,13 @@ struct vdec_context final
 	{
 		ppu_tid = ppu.id;
 
-		std::shared_lock no_lock(in_cv, std::try_to_lock);
+		std::unique_lock cv_lock(in_cv);
 
 		for (auto cmds = in_cmd.pop_all(); !Emu.IsStopped(); cmds ? cmds = cmds->pop_all() : cmds = in_cmd.pop_all())
 		{
 			if (!cmds)
 			{
-				in_cv.wait(1000);
+				in_cv.wait(cv_lock, 1000);
 				continue;
 			}
 
@@ -378,7 +378,7 @@ struct vdec_context final
 
 				while (!Emu.IsStopped() && out_max && (std::lock_guard{mutex}, out.size() > out_max))
 				{
-					in_cv.wait(1000);
+					in_cv.wait(cv_lock, 1000);
 				}
 			}
 			else if (auto* frc = std::get_if<CellVdecFrameRate>(&cmds->get()))
@@ -486,7 +486,7 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 	lv2_obj::sleep(ppu);
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
-	vdec->in_cv.notify_all();
+	vdec->in_cv.notify();
 	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu_tid);
 	return CELL_OK;
 }
@@ -503,7 +503,7 @@ s32 cellVdecStartSeq(u32 handle)
 	}
 
 	vdec->in_cmd.push(vdec_start_seq);
-	vdec->in_cv.notify_all();
+	vdec->in_cv.notify();
 	return CELL_OK;
 }
 
@@ -519,7 +519,7 @@ s32 cellVdecEndSeq(u32 handle)
 	}
 
 	vdec->in_cmd.push(vdec_cmd{-1});
-	vdec->in_cv.notify_all();
+	vdec->in_cv.notify();
 	return CELL_OK;
 }
 
@@ -541,7 +541,7 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 
 	// TODO: check info
 	vdec->in_cmd.push(vdec_cmd{mode, *auInfo});
-	vdec->in_cv.notify_all();
+	vdec->in_cv.notify();
 	return CELL_OK;
 }
 
@@ -574,7 +574,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	}
 
 	if (notify)
-		vdec->in_cv.notify_all();
+		vdec->in_cv.notify();
 
 	if (outBuff)
 	{
@@ -878,7 +878,7 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 	// TODO: check frc value
 	vdec->in_cmd.push(frc);
-	vdec->in_cv.notify_all();
+	vdec->in_cv.notify();
 	return CELL_OK;
 }
 
