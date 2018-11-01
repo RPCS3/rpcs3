@@ -2155,8 +2155,8 @@ namespace rsx
 			attrib0 |= (size << 27);
 			attrib1 |= offset_in_block[index];
 
-			buffer[index * 4 + 0] = attrib0;
-			buffer[index * 4 + 1] = attrib1;
+			buffer[index * 2 + 0] = attrib0;
+			buffer[index * 2 + 1] = attrib1;
 		}
 	}
 
