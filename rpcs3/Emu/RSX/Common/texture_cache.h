@@ -55,6 +55,7 @@ namespace rsx
 			std::vector<section_storage_type*> sections_to_exclude; // These sections are do be excluded from protection manipulation (subtracted from other sections)
 			u32 num_flushable = 0;
 			u64 cache_tag = 0;
+
 			address_range fault_range;
 			address_range invalidate_range;
 
@@ -300,7 +301,7 @@ namespace rsx
 	public:
 		virtual void destroy() = 0;
 		virtual bool is_depth_texture(u32, u32) = 0;
-		virtual void on_section_destroyed(section_storage_type& section)
+		virtual void on_section_destroyed(section_storage_type& /*section*/)
 		{}
 
 
@@ -405,6 +406,24 @@ namespace rsx
 				}
 
 				surface->flush(std::forward<Args>(extras)...);
+
+				// Exclude this region when flushing other sections that should not trample it
+				// If we overlap an excluded RO, set it as dirty
+				for (auto &other : data.sections_to_exclude)
+				{
+					AUDIT(other != surface);
+					if (!other->is_flushable())
+					{
+						if (other->overlaps(*surface, section_bounds::full_range))
+						{
+							other->set_dirty(true);
+						}
+					}
+					else if(surface->last_write_tag > other->last_write_tag)
+					{
+						other->add_flush_exclusion(surface->get_confirmed_range());
+					}
+				}
 			}
 
 			data.flushed = true;
@@ -483,7 +502,7 @@ namespace rsx
 
 					// Sanity checks
 					AUDIT(exclusion_range.is_page_range());
-					AUDIT(!exclusion_range.overlaps(data.fault_range));
+					AUDIT(data.cause.is_read() && !excluded->is_flushable() || !exclusion_range.overlaps(data.fault_range));
 
 					// Apply exclusion
 					ranges_to_unprotect.exclude(exclusion_range);
@@ -590,10 +609,6 @@ namespace rsx
 						const auto new_range = tex.get_min_max(invalidate_range, bounds).to_page_range();
 						AUDIT(new_range.is_page_range() && invalidate_range.inside(new_range));
 
-						const s32 signed_distance = tex.signed_distance(fault_range, section_bounds::locked_range);
-						const s32 distance = signed_distance < 0 ? -signed_distance : signed_distance;
-						const bool is_after_fault = (signed_distance >= 0);
-
 						// The various chaining policies behave differently
 						bool extend_invalidate_range = tex.overlaps(fault_range, bounds);
 
@@ -662,7 +677,7 @@ namespace rsx
 			AUDIT(fault_range_in.valid());
 			address_range fault_range = fault_range_in.to_page_range();
 
-			auto trampled_set = std::move(get_intersecting_set(fault_range));
+			intersecting_set trampled_set = std::move(get_intersecting_set(fault_range));
 
 			thrashed_set result = {};
 			result.cause = cause;
@@ -685,11 +700,12 @@ namespace rsx
 					{
 						if (g_cfg.video.strict_texture_flushing && tex.is_flushable())
 						{
-							// TODO: Flush only the part outside the fault_range
-							LOG_TODO(RSX, "Flushable section data may have been lost");
+							tex.add_flush_exclusion(fault_range);
 						}
-
-						tex.set_dirty(true);
+						else
+						{
+							tex.set_dirty(true);
+						}
 					}
 				}
 
@@ -729,8 +745,7 @@ namespace rsx
 
 					if (
 						// RO sections during a read invalidation can be ignored (unless there are flushables in trampled_set, since those could overwrite RO data)
-						// TODO: Also exclude RO sections even if there are flushables
-						(invalidation_keep_ro_during_read && !trampled_set.has_flushables && cause.is_read() && tex.get_protection() == utils::protection::ro) ||
+						(invalidation_keep_ro_during_read && !trampled_set.has_flushables && cause.is_read() && !tex.is_flushable()) ||
 						// Sections that are not fully contained in invalidate_range can be ignored
 						!tex.inside(trampled_set.invalidate_range, bounds) ||
 						// Unsynchronized sections (or any flushable when skipping flushes) that do not overlap the fault range directly can also be ignored
@@ -1080,36 +1095,25 @@ namespace rsx
 		template <typename ...FlushArgs, typename ...Args>
 		void lock_memory_region(image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, const std::tuple<FlushArgs...>& flush_extras, Args&&... extras)
 		{
-			AUDIT(g_cfg.video.write_color_buffers); // this method is only called when WCB is enabled
+			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
 			std::lock_guard lock(m_cache_mutex);
 
 			// Find a cached section to use
-			section_storage_type& region = *find_cached_texture(rsx_range, true, false);
-
-			if (!region.is_locked())
-			{
-				// Invalidate sections from surface cache occupying same address range
-				std::apply(&texture_cache::invalidate_range_impl_base<FlushArgs...>, std::tuple_cat(std::make_tuple(this, rsx_range, invalidation_cause::superseded_by_fbo), flush_extras));
-			}
+			section_storage_type& region = *find_cached_texture(rsx_range, true, true, width, height);
 
 			// Prepare and initialize fbo region
 			if (region.exists() && region.get_context() != texture_upload_context::framebuffer_storage)
 			{
-				AUDIT(region.matches(rsx_range));
-
 				//This space was being used for other purposes other than framebuffer storage
 				//Delete used resources before attaching it to framebuffer memory
 				read_only_tex_invalidate = true;
+			}
 
-				// We are going to reprotect this section in a second, so discard it here
-				if (region.is_locked())
-				{
-					region.discard();
-				}
-
-				// Destroy the resources
-				region.destroy();
+			if (!region.is_locked() || region.get_context() != texture_upload_context::framebuffer_storage)
+			{
+				// Invalidate sections from surface cache occupying same address range
+				std::apply(&texture_cache::invalidate_range_impl_base<FlushArgs...>, std::tuple_cat(std::make_tuple(this, rsx_range, invalidation_cause::superseded_by_fbo), flush_extras));
 			}
 
 			if (!region.is_locked() || region.can_be_reused())
@@ -1129,6 +1133,9 @@ namespace rsx
 			}
 
 			region.create(width, height, 1, 1, image, pitch, false, std::forward<Args>(extras)...);
+			region.reprotect(utils::protection::no, { 0, rsx_range.length() });
+			tag_framebuffer(region.get_section_base());
+
 			region.set_dirty(false);
 			region.touch(m_cache_update_tag);
 
@@ -1143,8 +1150,6 @@ namespace rsx
 				AUDIT(m_flush_always_cache.find(region.get_section_range()) != m_flush_always_cache.end());
 			}
 
-			// Delay protection until here in case the invalidation block above has unprotected pages in this range
-			region.reprotect(utils::protection::no, { 0, rsx_range.length() });
 			update_cache_tag();
 
 #ifdef TEXTURE_CACHE_DEBUG

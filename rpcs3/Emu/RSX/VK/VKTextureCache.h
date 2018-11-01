@@ -310,69 +310,38 @@ namespace vk
 			sync_timestamp = get_system_time();
 		}
 
-		bool flush(vk::command_buffer& cmd, VkQueue submit_queue)
+		/**
+		 * Flush
+		 */
+		void synchronize(bool blocking, vk::command_buffer& cmd, VkQueue submit_queue)
 		{
-			ASSERT(exists());
-
-			if (flushed) return true;
-			AUDIT(is_locked());
+			if (synchronized)
+				return;
 
 			if (m_device == nullptr)
 			{
 				m_device = &cmd.get_command_pool().get_owner();
 			}
 
-			// Return false if a flush occured 'late', i.e we had a miss
-			bool result = true;
-
-			if (!synchronized)
-			{
-				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
-				copy_texture(true, cmd, submit_queue);
-				result = false;
-			}
-
-			verify(HERE), real_pitch > 0;
-			flushed = true;
-
-			const auto valid_range = get_confirmed_range_delta();
-			const u32 valid_offset = valid_range.first;
-			const u32 valid_length = valid_range.second;
-			AUDIT(valid_length > 0);
-
-			void* pixels_src = dma_buffer->map(valid_offset, valid_length);
-			void* pixels_dst = get_ptr(get_section_base() + valid_offset);
-
-			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
-			{
-				memcpy(pixels_dst, pixels_src, valid_length);
-			}
-			else
-			{
-				if (valid_length % rsx_pitch)
-				{
-					fmt::throw_exception("Unreachable" HERE);
-				}
-
-				const u32 num_rows = valid_length / rsx_pitch;
-				auto _src = (u8*)pixels_src;
-				auto _dst = (u8*)pixels_dst;
-
-				for (u32 y = 0; y < num_rows; ++y)
-				{
-					memcpy(_dst, _src, real_pitch);
-					_src += real_pitch;
-					_dst += real_pitch;
-				}
-			}
-
-			dma_buffer->unmap();
-			baseclass::on_flush(!result);
-
-			//Its highly likely that this surface will be reused, so we just leave resources in place
-			return result;
+			copy_texture(blocking, cmd, submit_queue);
 		}
 
+		void* map_synchronized(u32 offset, u32 size)
+		{
+			AUDIT(synchronized);
+
+			return dma_buffer->map(offset, size);
+		}
+
+		void finish_flush()
+		{
+			dma_buffer->unmap();
+		}
+
+
+		/**
+		 * Misc
+		 */
 		void set_unpack_swap_bytes(bool swap_bytes)
 		{
 			pack_unpack_swap_bytes = swap_bytes;

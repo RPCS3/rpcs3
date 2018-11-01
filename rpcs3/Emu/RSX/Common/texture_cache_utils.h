@@ -1001,6 +1001,8 @@ namespace rsx
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = rsx::texture_dimension_extended::texture_dimension_2d;
 
+		address_range_vector flush_exclusions; // Address ranges that will be skipped during flush
+
 		predictor_type *m_predictor = nullptr;
 		size_t m_predictor_key_hash = 0;
 		predictor_entry_type *m_predictor_entry = nullptr;
@@ -1015,9 +1017,9 @@ namespace rsx
 		}
 
 		cached_texture_section() = default;
-		cached_texture_section(ranged_storage_block_type *block) : m_block(block), m_storage(&block->get_storage()), m_tex_cache(&block->get_texture_cache()), m_predictor(&m_tex_cache->get_predictor())
+		cached_texture_section(ranged_storage_block_type *block)
 		{
-			update_unreleased();
+			initialize(block);
 		}
 
 		void initialize(ranged_storage_block_type *block)
@@ -1072,6 +1074,8 @@ namespace rsx
 			view_flags = rsx::texture_create_flags::default_component_order;
 			context = rsx::texture_upload_context::shader_read;
 			image_type = rsx::texture_dimension_extended::texture_dimension_2d;
+
+			flush_exclusions.clear();
 
 			// Set to dirty
 			set_dirty(true);
@@ -1324,6 +1328,8 @@ namespace rsx
 			{
 				get_predictor_entry().on_flush();
 			}
+
+			flush_exclusions.clear();
 		}
 
 		void on_speculative_flush()
@@ -1346,12 +1352,144 @@ namespace rsx
 			{
 				m_tex_cache->on_misprediction();
 			}
+
+			flush_exclusions.clear();
 		}
 
 
 		/**
+		 * Flush
+		 */
+	private:
+		void imp_flush_memcpy(u32 vm_dst, u8* src, u32 len) const
+		{
+			u8 *dst = get_ptr<u8>(vm_dst);
+			address_range copy_range = address_range::start_length(vm_dst, len);
+
+			if (flush_exclusions.empty() || !copy_range.overlaps(flush_exclusions))
+			{
+				// Normal case = no flush exclusions, or no overlap
+				memcpy(dst, src, len);
+				return;
+			}
+			else if (copy_range.inside(flush_exclusions))
+			{
+				// Nothing to copy
+				return;
+			}
+
+			// Otherwise, we need to filter the memcpy with our flush exclusions
+			// Should be relatively rare
+			address_range_vector vec;
+			vec.merge(copy_range);
+			vec.exclude(flush_exclusions);
+
+			for (const auto& rng : vec)
+			{
+				if (!rng.valid())
+					continue;
+
+				AUDIT(rng.inside(copy_range));
+				u32 offset = rng.start - vm_dst;
+				memcpy(dst + offset, src + offset, rng.length());
+			}
+		}
+
+		void imp_flush()
+		{
+			AUDIT(synchronized);
+
+			ASSERT(real_pitch > 0);
+
+			// Calculate valid range
+			const auto valid_range  = get_confirmed_range();
+			AUDIT(valid_range.valid());
+			const auto valid_length = valid_range.length();
+			const auto valid_offset = valid_range.start - get_section_base();
+			AUDIT(valid_length > 0);
+
+			// Obtain pointers to the source and destination memory regions
+			u8 *src = static_cast<u8*>(derived()->map_synchronized(valid_offset, valid_length));
+			u32 dst = valid_range.start;
+			ASSERT(src != nullptr);
+
+			// Copy from src to dst
+			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
+			{
+				imp_flush_memcpy(dst, src, valid_length);
+			}
+			else
+			{
+				ASSERT(valid_length % rsx_pitch == 0);
+
+				u8 *_src = src;
+				u32 _dst = dst;
+				const auto num_rows = valid_length / rsx_pitch;
+				for (u32 row = 0; row < num_rows; ++row)
+				{
+					imp_flush_memcpy(_dst, _src, real_pitch);
+					_src += real_pitch;
+					_dst += rsx_pitch;
+				}
+			}
+		}
+
+
+	public:
+		// Returns false if there was a cache miss
+		template <typename ...Args>
+		bool flush(Args&&... extras)
+		{
+			if (flushed) return true;
+			bool miss = false;
+
+			// Sanity checks
+			ASSERT(exists());
+			AUDIT(is_locked());
+
+			// If we are fully inside the flush exclusions regions, we just mark ourselves as flushed and return
+			if (get_confirmed_range().inside(flush_exclusions))
+			{
+				flushed = true;
+				flush_exclusions.clear();
+				on_flush(miss);
+				return !miss;
+			}
+
+			// If we are not synchronized, we must synchronize before proceeding (hard fault)
+			if (!synchronized)
+			{
+				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
+				derived()->synchronize(true, std::forward<Args>(extras)...);
+				miss = true;
+
+				ASSERT(synchronized); // TODO ruipin: This might be possible in OGL. Revisit
+			}
+
+			// Copy flush result to guest memory
+			imp_flush();
+
+			// Finish up
+			// Its highly likely that this surface will be reused, so we just leave resources in place
+			flushed = true;
+			derived()->finish_flush();
+			flush_exclusions.clear();
+			on_flush(miss);
+
+			return !miss;
+		}
+
+		void add_flush_exclusion(const address_range& rng)
+		{
+			AUDIT(exists() && is_locked() && is_flushable());
+			const auto _rng = rng.get_intersect(get_section_range());
+			flush_exclusions.merge(_rng);
+		}
+
+		/**
 		 * Misc
 		 */
+	public:
 		predictor_entry_type& get_predictor_entry()
 		{
 			// If we don't have a predictor entry, or the key has changed
