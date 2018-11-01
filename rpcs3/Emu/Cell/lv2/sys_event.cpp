@@ -57,7 +57,7 @@ bool lv2_event_queue::send(lv2_event event)
 	else
 	{
 		// Store event in In_MBox
-		auto& spu = static_cast<SPUThread&>(*sq.front());
+		auto& spu = static_cast<spu_thread&>(*sq.front());
 
 		// TODO: use protocol?
 		sq.pop_front();
@@ -180,7 +180,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			}
 			else
 			{
-				static_cast<SPUThread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
+				static_cast<spu_thread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
 				cpu->state += cpu_flag::signal;
 				cpu->notify();
 			}
@@ -271,6 +271,11 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	// If cancelled, gpr[3] will be non-zero. Other registers must contain event data.
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - ppu.start_time;

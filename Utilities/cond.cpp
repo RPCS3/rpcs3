@@ -21,7 +21,7 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 		verify(HERE), rc == WAIT_TIMEOUT;
 
 		// Retire
-		while (!m_value.fetch_dec_sat())
+		while (!m_value.try_dec())
 		{
 			timeout.QuadPart = 0;
 

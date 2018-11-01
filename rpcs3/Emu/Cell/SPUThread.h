@@ -11,10 +11,8 @@ struct lv2_event_queue;
 struct lv2_spu_group;
 struct lv2_int_tag;
 
-class SPUThread;
-
 // JIT Block
-using spu_function_t = void(*)(SPUThread&, void*, u8*);
+using spu_function_t = void(*)(spu_thread&, void*, u8*);
 
 // SPU Channels
 enum : u32
@@ -500,24 +498,22 @@ public:
 	}
 };
 
-class SPUThread : public cpu_thread
+class spu_thread : public cpu_thread
 {
 public:
-	virtual void on_spawn() override;
-	virtual void on_init(const std::shared_ptr<void>&) override;
 	virtual std::string get_name() const override;
 	virtual std::string dump() const override;
-	virtual void cpu_task() override;
+	virtual void cpu_task() override final;
 	virtual void cpu_mem() override;
 	virtual void cpu_unmem() override;
-	virtual ~SPUThread() override;
+	virtual ~spu_thread() override;
 	void cpu_init();
 
 	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
-	SPUThread(const std::string& name, u32 index, lv2_spu_group* group);
+	spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name);
 
 	u32 pc = 0;
 
@@ -578,7 +574,7 @@ public:
 	const u32 offset; // SPU LS offset
 	lv2_spu_group* const group; // SPU Thread Group
 
-	const std::string m_name; // Thread name
+	lf_value<std::string> spu_name; // Thread name
 
 	std::unique_ptr<class spu_recompiler_base> jit; // Recompiler instance
 
@@ -622,5 +618,21 @@ public:
 	inline to_be_t<T>& _ref(u32 lsa)
 	{
 		return *_ptr<T>(lsa);
+	}
+
+	bool read_reg(const u32 addr, u32& value);
+	bool write_reg(const u32 addr, const u32 value);
+
+	static atomic_t<u32> g_raw_spu_ctr;
+	static atomic_t<u32> g_raw_spu_id[5];
+
+	static u32 find_raw_spu(u32 id)
+	{
+		if (LIKELY(id < std::size(g_raw_spu_id)))
+		{
+			return g_raw_spu_id[id];
+		}
+
+		return -1;
 	}
 };

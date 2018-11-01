@@ -121,6 +121,7 @@ private:
 	ComPtr<ID3D12DescriptorHeap> m_current_sampler_descriptors;
 
 public:
+	u64 get_cycles() override final;
 	D3D12GSRender();
 	virtual ~D3D12GSRender();
 

@@ -16,15 +16,20 @@ void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 	}
 }
 
-void sys_spinlock_lock(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> lock)
+error_code sys_spinlock_lock(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_lock(lock=*0x%x)", lock);
 
 	// Try to exchange with 0xabadcafe, repeat until exchanged with 0
 	while (*lock || lock->exchange(0xabadcafe))
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
+
+	return not_an_error(ppu.gpr[3]);
 }
 
 s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)

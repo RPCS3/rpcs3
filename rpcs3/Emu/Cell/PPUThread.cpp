@@ -334,37 +334,6 @@ extern void ppu_breakpoint(u32 addr, bool isAdding)
 	}
 }
 
-void ppu_thread::on_spawn()
-{
-	if (g_cfg.core.thread_scheduler_enabled)
-	{
-		// Bind to primary set
-		thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::ppu));
-	}
-}
-
-void ppu_thread::on_init(const std::shared_ptr<void>& _this)
-{
-	if (!stack_addr)
-	{
-		// Allocate stack + gap between stacks
-		auto new_stack_base = vm::alloc(stack_size + 4096, vm::stack, 4096);
-		if (!new_stack_base)
-		{
-			fmt::throw_exception("Out of stack memory (size=0x%x)" HERE, stack_size);
-		}
-
-		const_cast<u32&>(stack_addr) = new_stack_base + 4096;
-
-		// Make the gap inaccessible
-		vm::page_protect(new_stack_base, 4096, 0, 0, vm::page_readable + vm::page_writable);
-
-		gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
-
-		cpu_thread::on_init(_this);
-	}
-}
-
 //sets breakpoint, does nothing if there is a breakpoint there already
 extern void ppu_set_breakpoint(u32 addr)
 {
@@ -427,9 +396,15 @@ extern bool ppu_patch(u32 addr, u32 value)
 	return true;
 }
 
+void ppu_thread::on_cleanup(named_thread<ppu_thread>* _this)
+{
+	// Remove thread id
+	idm::remove<named_thread<ppu_thread>>(_this->id);
+}
+
 std::string ppu_thread::get_name() const
 {
-	return fmt::format("PPU[0x%x] Thread (%s)", id, m_name);
+	return fmt::format("PPU[0x%x] Thread (%s)", id, ppu_name.get());
 }
 
 std::string ppu_thread::dump() const
@@ -564,6 +539,12 @@ void ppu_thread::cpu_task()
 			cmd_pop(), ppu_function_manager::get().at(arg)(*this);
 			break;
 		}
+		case ppu_cmd::ptr_call:
+		{
+			const ppu_function_t func = cmd_get(1).as<ppu_function_t>();
+			cmd_pop(1), func(*this);
+			break;
+		}
 		case ppu_cmd::initialize:
 		{
 			cmd_pop(), ppu_initialize();
@@ -576,7 +557,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::reset_stack:
 		{
-			cmd_pop(), gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
+			cmd_pop(), gpr[1] = stack_addr + stack_size - 0x70;
 			break;
 		}
 		default:
@@ -697,20 +678,38 @@ void ppu_thread::exec_task()
 
 ppu_thread::~ppu_thread()
 {
-	if (stack_addr)
-	{
-		vm::dealloc_verbose_nothrow(stack_addr - 4096, vm::stack);
-	}
+	// Deallocate Stack Area
+	vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
 }
 
-ppu_thread::ppu_thread(const std::string& name, u32 prio, u32 stack)
+ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 prio, int detached)
 	: cpu_thread(idm::last_id())
 	, prio(prio)
-	, stack_size(stack >= 0x1000 ? ::align(std::min<u32>(stack, 0x100000), 0x1000) : 0x4000)
-	, stack_addr(0)
+	, stack_size(param.stack_size)
+	, stack_addr(param.stack_addr)
 	, start_time(get_system_time())
-	, m_name(name)
+	, joiner(-!!detached)
+	, ppu_name(name)
 {
+	gpr[1] = stack_addr + stack_size - 0x70;
+
+	gpr[13] = param.tls_addr;
+
+	if (detached >= 0 && id != id_base)
+	{
+		// Initialize thread entry point
+		cmd_list
+		({
+		    {ppu_cmd::set_args, 2}, param.arg0, param.arg1,
+		    {ppu_cmd::lle_call, param.entry},
+		});
+	}
+	else
+	{
+		// Save entry for further use (interrupt handler workaround)
+		gpr[2] = param.entry;
+	}
+
 	// Trigger the scheduler
 	state += cpu_flag::suspend;
 
@@ -765,7 +764,7 @@ cmd64 ppu_thread::cmd_wait()
 	{
 		if (UNLIKELY(state))
 		{
-			if (state & (cpu_flag::stop + cpu_flag::exit))
+			if (is_stopped())
 			{
 				return cmd64{};
 			}
@@ -802,8 +801,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	g_tls_log_prefix = []
 	{
 		const auto _this = static_cast<ppu_thread*>(get_current_cpu_thread());
-
-		return fmt::format("%s [0x%08x]", _this->get_name(), _this->cia);
+		return fmt::format("%s [0x%08x]", thread_ctrl::get_name(), _this->cia);
 	};
 
 	auto at_ret = gsl::finally([&]()
@@ -930,7 +928,11 @@ extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a);
 static void ppu_check(ppu_thread& ppu, u64 addr)
 {
 	ppu.cia = ::narrow<u32>(addr);
-	ppu.test_state();
+
+	if (ppu.test_stopped())
+	{
+		return;
+	}
 }
 
 static void ppu_trace(u64 addr)

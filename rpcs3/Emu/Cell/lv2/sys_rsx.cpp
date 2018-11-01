@@ -132,18 +132,15 @@ s32 sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_dma_cont
 	else
 		rsx::get_current_renderer()->main_mem_size = 0x10000000; //256MB
 
-	vm::var<sys_event_queue_attribute_t> attr;
+	vm::var<sys_event_queue_attribute_t, vm::page_allocator<>> attr;
 	attr->protocol = SYS_SYNC_PRIORITY;
 	attr->type = SYS_PPU_QUEUE;
 	attr->name_u64 = 0;
-	vm::var<u32> queueId(0);
-	sys_event_queue_create(queueId, attr, 0, 0x20);
-	driverInfo.handler_queue = queueId->value();
 
-	sys_event_port_create(queueId, SYS_EVENT_PORT_LOCAL, 0);
-	sys_event_port_connect_local(queueId->value(), driverInfo.handler_queue);
-
-	m_sysrsx->rsx_event_port = queueId->value();
+	sys_event_port_create(vm::get_addr(&driverInfo.handler_queue), SYS_EVENT_PORT_LOCAL, 0);
+	m_sysrsx->rsx_event_port = driverInfo.handler_queue;
+	sys_event_queue_create(vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
+	sys_event_port_connect_local(m_sysrsx->rsx_event_port, driverInfo.handler_queue);
 
 	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
@@ -386,7 +383,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 			render->notify_tile_unbound(a3);
 
 		tile.location = ((a4 >> 32) & 0xF) - 1;
-		tile.offset = ((((a4 >> 32) & 0xFFFFFFFF) >> 16) * 0x10000);
+		tile.offset = ((((a4 >> 32) & 0x7FFFFFFF) >> 16) * 0x10000);
 		tile.size = ((((a4 & 0x7FFFFFFF) >> 16) + 1) * 0x10000) - tile.offset;
 		tile.pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
 		tile.comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;

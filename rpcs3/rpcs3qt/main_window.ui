@@ -169,6 +169,8 @@
     <addaction name="bootGameAct"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
+    <addaction name="addGamesAct"/>
+    <addaction name="separator"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
     <addaction name="separator"/>
@@ -263,6 +265,8 @@
     <addaction name="showGameListAct"/>
     <addaction name="separator"/>
     <addaction name="showHiddenEntriesAct"/>
+    <addaction name="separator"/>
+    <addaction name="showCompatibilityInGridAct"/>
     <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
     <addaction name="menuGame_List_Mode"/>
@@ -592,6 +596,14 @@
     <string>Show Tool Bar</string>
    </property>
   </action>
+  <action name="showCompatibilityInGridAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Game Compatibility in Grid Mode</string>
+   </property>
+  </action>
   <action name="refreshGameListAct">
    <property name="text">
     <string>Game List Refresh</string>
@@ -901,6 +913,11 @@
   <action name="actionopen_rsx_capture">
    <property name="text">
     <string>Open RSX Capture</string>
+   </property>
+  </action>
+  <action name="addGamesAct">
+   <property name="text">
+    <string>Add Games</string>
    </property>
   </action>
  </widget>

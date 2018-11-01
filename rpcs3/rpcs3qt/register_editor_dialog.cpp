@@ -111,7 +111,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 	}
 	else
 	{
-		auto& spu = *static_cast<SPUThread*>(cpu.get());
+		auto& spu = *static_cast<spu_thread*>(cpu.get());
 
 		std::string::size_type first_brk = reg.find('[');
 		if (first_brk != std::string::npos)
@@ -179,7 +179,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 	}
 	else
 	{
-		auto& spu = *static_cast<SPUThread*>(cpu);
+		auto& spu = *static_cast<spu_thread*>(cpu);
 
 		while (value.length() < 32) value = "0" + value;
 		const auto first_brk = reg.find('[');

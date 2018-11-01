@@ -71,7 +71,7 @@ public:
 	bool use_ats_headers;
 
 	AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
-		: ppu_thread("HLE Audio Decoder")
+		: ppu_thread({}, "", 0)
 		, type(type)
 		, memAddr(addr)
 		, memSize(size)
@@ -159,7 +159,7 @@ public:
 		}
 	}
 
-	virtual void cpu_task() override
+	void non_task()
 	{
 		while (true)
 		{
@@ -564,13 +564,7 @@ s32 cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	auto&& adec = idm::make_ptr<ppu_thread, AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
-
-	*handle = adec->id;
-
-	adec->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellAdec disabled, use LLE.");
 }
 
 s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
@@ -582,13 +576,7 @@ s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	auto&& adec = idm::make_ptr<ppu_thread, AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
-
-	*handle = adec->id;
-
-	adec->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellAdec disabled, use LLE.");
 }
 
 s32 cellAdecOpenExt(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)

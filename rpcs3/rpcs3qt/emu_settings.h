@@ -100,6 +100,7 @@ public:
 		DumpToFile,
 		ConvertTo16Bit,
 		DownmixStereo,
+		MasterVolume,
 
 		// Input / Output
 		PadHandler,
@@ -300,6 +301,7 @@ private:
 		{ DumpToFile,     { "Audio", "Dump to file"}},
 		{ ConvertTo16Bit, { "Audio", "Convert to 16 bit"}},
 		{ DownmixStereo,  { "Audio", "Downmix to Stereo"}},
+		{ MasterVolume,   { "Audio", "Master Volume"}},
 
 		// Input / Output
 		{ PadHandler,      { "Input/Output", "Pad"}},
