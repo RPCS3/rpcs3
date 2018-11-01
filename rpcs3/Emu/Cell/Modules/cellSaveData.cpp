@@ -467,10 +467,12 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		save_entry.dirName = dirName.get_ptr();
 	}
 
-	std::string dir_path = base_dir + save_entry.dirName + "/";
-	std::string sfo_path = dir_path + "PARAM.SFO";
+	const std::string dir_path = base_dir + save_entry.dirName + "/";
+	const std::string old_path = base_dir + "../.backup_" + save_entry.dirName + "/";
+	const std::string new_path = base_dir + "../.working_" + save_entry.dirName + "/";
 
-	psf::registry psf = psf::load_object(fs::file(sfo_path));
+	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
+	bool has_modified = false;
 
 	// Get save stats
 	{
@@ -598,6 +600,8 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				{ "SUB_TITLE", psf::string(128, statSet->setParam->subTitle) },
 				{ "TITLE", psf::string(128, statSet->setParam->title) },
 			});
+
+			has_modified = true;
 		}
 		//else if (psf.empty())
 		//{
@@ -669,6 +673,17 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	}
 
 	// Enter the loop where the save files are read/created/deleted
+	std::map<std::string, fs::file> all_files;
+
+	// First, preload all files (TODO: beware of possible lag, although it should be insignificant)
+	for (auto&& entry : fs::dir(dir_path))
+	{
+		if (!entry.is_directory)
+		{
+			// Read file into a vector and make a memory file
+			all_files.emplace(std::move(entry.name), fs::make_stream(fs::file(dir_path + entry.name).to_vector<uchar>()));
+		}
+	}
 
 	fileGet->excSize = 0;
 	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
@@ -750,11 +765,14 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 
 		psf.emplace("*" + file_path, fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE);
 
+		const u32 access_size = std::min<u32>(fileSet->fileSize, fileSet->fileBufSize);
+
 		switch (const u32 op = fileSet->fileOperation)
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
 		{
-			fs::file file(dir_path + file_path, fs::read);
+			fs::file& file = all_files[file_path];
+
 			if (!file)
 			{
 				// ****** sysutil savedata parameter error : 22 ******
@@ -776,50 +794,55 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				return CELL_SAVEDATA_ERROR_PARAM;
 			}
 
-			file.seek(fileSet->fileOffset);
-			std::vector<uchar> buf;
-			buf.resize(std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
-			buf.resize(file.read(buf.data(), buf.size()));
-			std::memcpy(fileSet->fileBuf.get_ptr(), buf.data(), buf.size());
-			fileGet->excSize = ::size32(buf);
+			// Read from memory file to vm
+			const u64 sr = file.seek(fileSet->fileOffset);
+			const u64 rr = file.read(fileSet->fileBuf.get_ptr(), access_size);
+			fileGet->excSize = ::narrow<u32>(rr);
 			break;
 		}
 
 		case CELL_SAVEDATA_FILEOP_WRITE:
 		{
-			fs::file file(dir_path + file_path, fs::write + fs::create);
+			fs::file& file = all_files[file_path];
+
 			if (!file)
 			{
-				fmt::throw_exception("Failed to open file. The file might be read-only: %s%s" HERE, dir_path, file_path);
+				file = fs::make_stream<std::vector<uchar>>();
 			}
 
-			file.seek(fileSet->fileOffset);
-			const auto start = static_cast<uchar*>(fileSet->fileBuf.get_ptr());
-			std::vector<uchar> buf(start, start + std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
-			fileGet->excSize = ::narrow<u32>(file.write(buf.data(), buf.size()));
-			file.trunc(file.pos()); // truncate
+			// Write to memory file and truncate
+			const u64 sr = file.seek(fileSet->fileOffset);
+			const u64 wr = file.write(fileSet->fileBuf.get_ptr(), access_size);
+			file.trunc(wr);
+			fileGet->excSize = ::narrow<u32>(wr);
+			has_modified = true;
 			break;
 		}
 
 		case CELL_SAVEDATA_FILEOP_DELETE:
 		{
-			fs::remove_file(dir_path + file_path);
+			// Delete memory file
+			all_files[file_path].close();
+			psf.erase("*" + file_path);
 			fileGet->excSize = 0;
+			has_modified = true;
 			break;
 		}
 
 		case CELL_SAVEDATA_FILEOP_WRITE_NOTRUNC:
 		{
-			fs::file file(dir_path + file_path, fs::write + fs::create);
+			fs::file& file = all_files[file_path];
+
 			if (!file)
 			{
-				fmt::throw_exception("Failed to open file. The file might be read-only: %s%s" HERE, dir_path, file_path);
+				file = fs::make_stream<std::vector<uchar>>();
 			}
 
-			file.seek(fileSet->fileOffset);
-			const auto start = static_cast<uchar*>(fileSet->fileBuf.get_ptr());
-			std::vector<uchar> buf(start, start + std::min<u32>(fileSet->fileSize, fileSet->fileBufSize));
-			fileGet->excSize = ::narrow<u32>(file.write(buf.data(), buf.size()));
+			// Write to memory file normally
+			const u64 sr = file.seek(fileSet->fileOffset);
+			const u64 wr = file.write(fileSet->fileBuf.get_ptr(), access_size);
+			fileGet->excSize = ::narrow<u32>(wr);
+			has_modified = true;
 			break;
 		}
 
@@ -831,10 +854,50 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		}
 	}
 
-	// Write PARAM.SFO
-	if (psf.size())
+	// Write PARAM.SFO and savedata
+	if (!psf.empty() && has_modified)
 	{
-		psf::save_object(fs::file(sfo_path, fs::rewrite), psf);
+		// First, create temporary directory
+		if (fs::create_dir(new_path))
+		{
+			fs::remove_all(new_path, false);
+		}
+		else
+		{
+			fmt::throw_exception("Failed to create directory %s (%s)", new_path, fs::g_tls_error);
+		}
+
+		// Write all files in temporary directory
+		auto& fsfo = all_files["PARAM.SFO"];
+		fsfo = fs::make_stream<std::vector<uchar>>();
+		psf::save_object(fsfo, psf);
+
+		for (auto&& pair : all_files)
+		{
+			if (auto file = pair.second.release())
+			{
+				auto fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
+				fs::file(new_path + pair.first, fs::rewrite).write(fvec.obj);
+			}
+		}
+
+		// Remove old backup
+		fs::remove_all(old_path, false);
+
+		// Backup old savedata
+		if (!fs::rename(dir_path, old_path, true))
+		{
+			fmt::throw_exception("Failed to move directory %s", dir_path);
+		}
+
+		// Commit new savedata
+		if (!fs::rename(new_path, dir_path, false))
+		{
+			fmt::throw_exception("Failed to move directory %s", new_path);
+		}
+
+		// Remove backup again (TODO: may be changed to persistent backup implementation)
+		fs::remove_all(old_path);
 	}
 
 	return CELL_OK;
