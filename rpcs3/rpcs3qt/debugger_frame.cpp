@@ -258,7 +258,7 @@ u32 debugger_frame::GetPc() const
 		return 0;
 	}
 
-	return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<SPUThread*>(cpu.get())->pc;
+	return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<spu_thread*>(cpu.get())->pc;
 }
 
 void debugger_frame::UpdateUI()
@@ -340,9 +340,8 @@ void debugger_frame::UpdateUnitList()
 	{
 		const QSignalBlocker blocker(m_choice_units);
 
-		idm::select<ppu_thread>(on_select);
-		idm::select<RawSPUThread>(on_select);
-		idm::select<SPUThread>(on_select);
+		idm::select<named_thread<ppu_thread>>(on_select);
+		idm::select<named_thread<spu_thread>>(on_select);
 	}
 
 	OnSelectUnit();
@@ -369,20 +368,15 @@ void debugger_frame::OnSelectUnit()
 			return data == &cpu;
 		};
 
-		if (auto ppu = idm::select<ppu_thread>(on_select))
+		if (auto ppu = idm::select<named_thread<ppu_thread>>(on_select))
 		{
 			m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
 			cpu = ppu.ptr;
 		}
-		else if (auto spu1 = idm::select<SPUThread>(on_select))
+		else if (auto spu1 = idm::select<named_thread<spu_thread>>(on_select))
 		{
 			m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
 			cpu = spu1.ptr;
-		}
-		else if (auto rspu = idm::select<RawSPUThread>(on_select))
-		{
-			m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
-			cpu = rspu.ptr;
 		}
 	}
 
@@ -540,7 +534,7 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 	}
 	else
 	{
-		auto spu = static_cast<SPUThread*>(thread.get());
+		auto spu = static_cast<spu_thread*>(thread.get());
 
 		for (int i = 0; i < 128; ++i)
 		{

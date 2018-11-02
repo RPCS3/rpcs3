@@ -234,13 +234,13 @@ void rpcs3_app::InitializeCallbacks()
 	{
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
-		case video_renderer::null: return std::make_shared<NullGSRender>();
-		case video_renderer::opengl: return std::make_shared<GLGSRender>();
+		case video_renderer::null: return std::make_shared<named_thread<NullGSRender>>("rsx::thread");
+		case video_renderer::opengl: return std::make_shared<named_thread<GLGSRender>>("rsx::thread");
 #if defined(_WIN32) || defined(HAVE_VULKAN)
-		case video_renderer::vulkan: return std::make_shared<VKGSRender>();
+		case video_renderer::vulkan: return std::make_shared<named_thread<VKGSRender>>("rsx::thread");
 #endif
 #ifdef _MSC_VER
-		case video_renderer::dx12: return std::make_shared<D3D12GSRender>();
+		case video_renderer::dx12: return std::make_shared<named_thread<D3D12GSRender>>("rsx::thread");
 #endif
 		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}

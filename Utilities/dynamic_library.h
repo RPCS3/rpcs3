@@ -89,4 +89,4 @@ namespace utils
 	};
 }
 
-#define DYNAMIC_IMPORT(lib, name, ...) static utils::dynamic_import<__VA_ARGS__> name(lib, #name);
+#define DYNAMIC_IMPORT(lib, name, ...) inline utils::dynamic_import<__VA_ARGS__> name(lib, #name);

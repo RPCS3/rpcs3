@@ -34,6 +34,8 @@ private Q_SLOTS:
 	void OnApplyConfig();
 	void OnApplyStylesheet();
 private:
+	void EnhanceSlider(emu_settings::SettingsType settings_type, QSlider* slider, QLabel* label, const QString& label_text);
+
 	//emulator tab
 	void AddConfigs();
 	void AddStylesheets();

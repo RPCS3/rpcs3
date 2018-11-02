@@ -361,11 +361,8 @@ namespace rsx
 
 	struct sampled_image_descriptor_base;
 
-	class thread : public old_thread
+	class thread
 	{
-		std::shared_ptr<thread_base> m_vblank_thread;
-		std::shared_ptr<thread_base> m_decompiler_thread;
-
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
 
@@ -434,7 +431,7 @@ namespace rsx
 		void capture_frame(const std::string &name);
 
 	public:
-		std::shared_ptr<class ppu_thread> intr_thread;
+		std::shared_ptr<named_thread<class ppu_thread>> intr_thread;
 
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
@@ -516,13 +513,14 @@ namespace rsx
 		bool zcull_rendering_enabled = false;
 		bool zcull_pixel_cnt_enabled = false;
 
+		void operator()();
+		virtual u64 get_cycles() = 0;
+
 	protected:
 		thread();
 		virtual ~thread();
-
-		virtual void on_spawn() override;
-		virtual void on_task() override;
-		virtual void on_exit() override;
+		virtual void on_task();
+		virtual void on_exit();
 
 		/**
 		 * Execute a backend local task queue
@@ -534,11 +532,6 @@ namespace rsx
 		virtual bool on_decompiler_task() { return false; }
 
 	public:
-		virtual std::string get_name() const override;
-
-		virtual void on_init(const std::shared_ptr<void>&) override {} // disable start() (TODO)
-		virtual void on_stop() override {} // disable join()
-
 		virtual void begin();
 		virtual void end();
 

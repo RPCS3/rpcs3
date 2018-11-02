@@ -502,6 +502,11 @@ namespace
 	}
 }
 
+u64 VKGSRender::get_cycles()
+{
+	return thread_ctrl::get_cycles(static_cast<named_thread<VKGSRender>&>(*this));
+}
+
 VKGSRender::VKGSRender() : GSRender()
 {
 	u32 instance_handle = m_thread_context.createInstance("RPCS3");

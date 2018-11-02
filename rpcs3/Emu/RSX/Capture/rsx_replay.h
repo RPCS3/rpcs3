@@ -210,10 +210,11 @@ namespace rsx
 	};
 
 
-	class rsx_replay_thread : public ppu_thread
+	class rsx_replay_thread
 	{
 		struct rsx_context
 		{
+			be_t<u64> dev_addr;
 			be_t<u32> mem_handle;
 			be_t<u32> context_id;
 			be_t<u64> mem_addr;
@@ -236,9 +237,12 @@ namespace rsx
 
 	public:
 		rsx_replay_thread(std::unique_ptr<frame_capture_data>&& frame_data)
-			: ppu_thread("Rsx Capture Replay Thread"), frame(std::move(frame_data)) {};
+			:frame(std::move(frame_data))
+		{
+		}
 
-		virtual void cpu_task() override;
+		void on_task();
+		void operator()();
 	private:
 		be_t<u32> allocate_context();
 		std::vector<u32> alloc_write_fifo(be_t<u32> context_id);

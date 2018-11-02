@@ -486,8 +486,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	GetCallbacks().on_run();
 	m_state = system_state::running;
 
-	auto&& rsxcapture = idm::make_ptr<ppu_thread, rsx::rsx_replay_thread>(std::move(frame));
-	rsxcapture->run();
+	fxm::make<named_thread<rsx::rsx_replay_thread>>("RSX Replay", std::move(frame));
 
 	return true;
 }
@@ -736,7 +735,7 @@ void Emulator::Load(bool add_only)
 			// Workaround for analyser glitches
 			vm::falloc(0x10000, 0xf0000, vm::main);
 
-			return thread_ctrl::make_shared("SPRX Loader", [this]
+			return thread_ctrl::spawn("SPRX Loader", [this]
 			{
 				std::vector<std::string> dir_queue;
 				dir_queue.emplace_back(m_path + '/');
@@ -744,7 +743,7 @@ void Emulator::Load(bool add_only)
 				std::vector<std::pair<std::string, u64>> file_queue;
 				file_queue.reserve(2000);
 
-				std::queue<std::shared_ptr<thread_base>> thread_queue;
+				std::queue<named_thread<std::function<void()>>> thread_queue;
 				const uint max_threads = std::thread::hardware_concurrency();
 
 				// Initialize progress dialog
@@ -820,12 +819,12 @@ void Emulator::Load(bool add_only)
 								std::this_thread::sleep_for(10ms);
 							}
 
-							thread_queue.emplace(thread_ctrl::make_shared("Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
+							thread_queue.emplace("Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
 							{
 								ppu_initialize(*_prx);
 								ppu_unload_prx(*_prx);
 								g_progr_fdone++;
-							}));
+							});
 
 							continue;
 						}
@@ -846,7 +845,7 @@ void Emulator::Load(bool add_only)
 				{
 					Emu.Stop();
 				});
-			})->detach();
+			});
 		}
 
 		// Detect boot location
@@ -1237,12 +1236,12 @@ void Emulator::Run()
 
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
-		cpu.run();
+		cpu.state -= cpu_flag::stop;
+		cpu.notify();
 	};
 
-	idm::select<ppu_thread>(on_select);
-	idm::select<RawSPUThread>(on_select);
-	idm::select<SPUThread>(on_select);
+	idm::select<named_thread<ppu_thread>>(on_select);
+	idm::select<named_thread<spu_thread>>(on_select);
 
 #ifdef WITH_GDB_DEBUGGER
 	// Initialize debug server at the end of emu run sequence
@@ -1273,9 +1272,8 @@ bool Emulator::Pause()
 		cpu.state += cpu_flag::dbg_global_pause;
 	};
 
-	idm::select<ppu_thread>(on_select);
-	idm::select<RawSPUThread>(on_select);
-	idm::select<SPUThread>(on_select);
+	idm::select<named_thread<ppu_thread>>(on_select);
+	idm::select<named_thread<spu_thread>>(on_select);
 	return true;
 }
 
@@ -1338,9 +1336,8 @@ void Emulator::Resume()
 		cpu.notify();
 	};
 
-	idm::select<ppu_thread>(on_select);
-	idm::select<RawSPUThread>(on_select);
-	idm::select<SPUThread>(on_select);
+	idm::select<named_thread<ppu_thread>>(on_select);
+	idm::select<named_thread<spu_thread>>(on_select);
 	GetCallbacks().on_resume();
 }
 
@@ -1369,23 +1366,14 @@ void Emulator::Stop(bool restart)
 	fxm::remove<GDBDebugServer>();
 #endif
 
-	auto e_stop = std::make_exception_ptr(cpu_flag::dbg_global_stop);
-
 	auto on_select = [&](u32, cpu_thread& cpu)
 	{
 		cpu.state += cpu_flag::dbg_global_stop;
-
-		// Can't normally be null.
-		// Hack for a possible vm deadlock on thread creation.
-		if (auto thread = cpu.get())
-		{
-			thread->set_exception(e_stop);
-		}
+		cpu.notify();
 	};
 
-	idm::select<ppu_thread>(on_select);
-	idm::select<RawSPUThread>(on_select);
-	idm::select<SPUThread>(on_select);
+	idm::select<named_thread<ppu_thread>>(on_select);
+	idm::select<named_thread<spu_thread>>(on_select);
 
 	LOG_NOTICE(GENERAL, "All threads signaled...");
 

@@ -57,6 +57,12 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, b
 
 	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
 
+#ifdef __APPLE__
+	// Needed for MoltenVK to work properly on MacOS
+	if (g_cfg.video.renderer == video_renderer::vulkan)
+		setSurfaceType(QSurface::VulkanSurface);
+#endif
+
 	setGeometry(geometry);
 	setTitle(m_windowTitle);
 	setVisibility(Hidden);

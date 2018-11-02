@@ -9,39 +9,7 @@
 // Originally, SPU MFC registers are accessed externally in a concurrent manner (don't mix with channels, SPU MFC channels are isolated)
 thread_local spu_mfc_cmd g_tls_mfc[8] = {};
 
-void RawSPUThread::cpu_task()
-{
-	// get next PC and SPU Interrupt status
-	pc = npc.exchange(0);
-
-	set_interrupt_status((pc & 1) != 0);
-
-	pc &= 0x3fffc;
-
-	SPUThread::cpu_task();
-
-	// save next PC and current SPU Interrupt status
-	npc = pc | (interrupts_enabled);
-}
-
-void RawSPUThread::on_init(const std::shared_ptr<void>& _this)
-{
-	if (!offset)
-	{
-		// Install correct SPU index and LS address
-		const_cast<u32&>(index) = id;
-		const_cast<u32&>(offset) = verify(HERE, vm::falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, 0x40000));
-
-		cpu_thread::on_init(_this);
-	}
-}
-
-RawSPUThread::RawSPUThread(const std::string& name)
-	: SPUThread(name, 0, nullptr)
-{
-}
-
-bool RawSPUThread::read_reg(const u32 addr, u32& value)
+bool spu_thread::read_reg(const u32 addr, u32& value)
 {
 	const u32 offset = addr - RAW_SPU_BASE_ADDR - index * RAW_SPU_OFFSET - RAW_SPU_PROB_OFFSET;
 
@@ -101,7 +69,7 @@ bool RawSPUThread::read_reg(const u32 addr, u32& value)
 	return false;
 }
 
-bool RawSPUThread::write_reg(const u32 addr, const u32 value)
+bool spu_thread::write_reg(const u32 addr, const u32 value)
 {
 	auto try_start = [this]()
 	{
@@ -116,7 +84,8 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 			return true;
 		}))
 		{
-			run();
+			state -= cpu_flag::stop;
+			thread_ctrl::notify(static_cast<named_thread<spu_thread>&>(*this));
 		}
 	};
 
@@ -291,7 +260,11 @@ bool RawSPUThread::write_reg(const u32 addr, const u32 value)
 
 void spu_load_exec(const spu_exec_object& elf)
 {
-	auto spu = idm::make_ptr<RawSPUThread>("TEST_SPU");
+	auto ls0 = vm::cast(vm::falloc(RAW_SPU_BASE_ADDR, 0x40000, vm::spu));
+	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", ls0, nullptr, 0, "");
+
+	spu_thread::g_raw_spu_ctr++;
+	spu_thread::g_raw_spu_id[0] = spu->id;
 
 	for (const auto& prog : elf.progs)
 	{
@@ -301,6 +274,5 @@ void spu_load_exec(const spu_exec_object& elf)
 		}
 	}
 
-	spu->cpu_init();
 	spu->npc = elf.header.e_entry;
 }
