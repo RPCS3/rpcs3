@@ -557,7 +557,7 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::reset_stack:
 		{
-			cmd_pop(), gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
+			cmd_pop(), gpr[1] = stack_addr + stack_size - 0x70;
 			break;
 		}
 		default:
@@ -691,7 +691,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, joiner(-!!detached)
 	, ppu_name(name)
 {
-	gpr[1] = ::align(stack_addr + stack_size, 0x200) - 0x200;
+	gpr[1] = stack_addr + stack_size - 0x70;
 
 	gpr[13] = param.tls_addr;
 
