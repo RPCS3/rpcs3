@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/types.h"
 #include "Utilities/Config.h"
@@ -199,6 +199,9 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ BTN_TRIGGER_HAPPY38 , "Happy 38"    },
 		{ BTN_TRIGGER_HAPPY39 , "Happy 39"    },
 		{ BTN_TRIGGER_HAPPY40 , "Happy 40"    },
+		// Xbox One S Controller returns some buttons as key when connected through bluetooth
+		{ KEY_BACK            , "Back Key"    },
+		{ KEY_HOMEPAGE        , "Homepage Key"},
 	};
 
 	// Unique positive axis names for the config files and our pad settings dialog
