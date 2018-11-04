@@ -467,7 +467,6 @@ void spu_thread::cpu_init()
 
 	run_ctrl = 0;
 	status = 0;
-	npc = 0;
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -480,13 +479,6 @@ extern thread_local std::string(*g_tls_log_prefix)();
 
 void spu_thread::cpu_task()
 {
-	// Get next PC and SPU Interrupt status
-	pc = npc.exchange(0);
-
-	set_interrupt_status((pc & 1) != 0);
-
-	pc &= 0x3fffc;
-
 	std::fesetround(FE_TOWARDZERO);
 
 	if (g_cfg.core.set_daz_and_ftz && g_cfg.core.spu_decoder != spu_decoder_type::precise)
@@ -507,9 +499,6 @@ void spu_thread::cpu_task()
 		{
 			jit_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
 		}
-
-		// save next PC and current SPU Interrupt status
-		npc = pc | (interrupts_enabled);
 
 		// Print some stats
 		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
@@ -593,9 +582,6 @@ void spu_thread::cpu_task()
 			break;
 		}
 	}
-
-	// save next PC and current SPU Interrupt status
-	npc = pc | (interrupts_enabled);
 }
 
 void spu_thread::cpu_mem()

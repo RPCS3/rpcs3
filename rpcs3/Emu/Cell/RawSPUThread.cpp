@@ -53,8 +53,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 
 	case SPU_NPC_offs:
 	{
-		//npc = pc | ((ch_event_stat & SPU_EVENT_INTR_ENABLED) != 0);
-		value = npc;
+		value = pc | (interrupts_enabled);
 		return true;
 	}
 
@@ -237,7 +236,8 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 			break;
 		}
 
-		npc = value;
+		pc = value & 0x3fffc;
+		interrupts_enabled = (value & 1) != 0;
 		return true;
 	}
 
@@ -274,5 +274,7 @@ void spu_load_exec(const spu_exec_object& elf)
 		}
 	}
 
-	spu->npc = elf.header.e_entry;
+	const u32 npc = elf.header.e_entry;
+	spu->pc = npc & 0x3fffc;
+	spu->interrupts_enabled = (npc & 1) != 0;
 }

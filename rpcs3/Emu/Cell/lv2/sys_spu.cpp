@@ -397,13 +397,13 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			sys_spu_image::deploy(thread->offset, img.second.data(), img.first.nsegs);
 
 			thread->cpu_init();
-			thread->npc = img.first.entry_point;
 			thread->gpr[3] = v128::from64(0, args[0]);
 			thread->gpr[4] = v128::from64(0, args[1]);
 			thread->gpr[5] = v128::from64(0, args[2]);
 			thread->gpr[6] = v128::from64(0, args[3]);
 
 			thread->status.exchange(SPU_STATUS_RUNNING);
+			atomic_storage<u32>::store(thread->pc, img.first.entry_point);
 		}
 	}
 
