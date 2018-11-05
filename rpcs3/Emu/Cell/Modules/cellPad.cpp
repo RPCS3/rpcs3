@@ -237,27 +237,30 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		}
 	}
 
-	for (const AnalogSensor& sensor : pad->m_sensors)
+	if (pad->m_port_setting & CELL_PAD_SETTING_SENSOR_ON)
 	{
-		switch (sensor.m_offset)
+		for (const AnalogSensor& sensor : pad->m_sensors)
 		{
-		case CELL_PAD_BTN_OFFSET_SENSOR_X:
-			if (pad->m_sensor_x != sensor.m_value) btnChanged = true;
-			pad->m_sensor_x = sensor.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_SENSOR_Y:
-			if (pad->m_sensor_y != sensor.m_value) btnChanged = true;
-			pad->m_sensor_y = sensor.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_SENSOR_Z:
-			if (pad->m_sensor_z != sensor.m_value) btnChanged = true;
-			pad->m_sensor_z = sensor.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_SENSOR_G:
-			if (pad->m_sensor_g != sensor.m_value) btnChanged = true;
-			pad->m_sensor_g = sensor.m_value;
-			break;
-		default: break;
+			switch (sensor.m_offset)
+			{
+			case CELL_PAD_BTN_OFFSET_SENSOR_X:
+				if (pad->m_sensor_x != sensor.m_value) btnChanged = true;
+				pad->m_sensor_x = sensor.m_value;
+				break;
+			case CELL_PAD_BTN_OFFSET_SENSOR_Y:
+				if (pad->m_sensor_y != sensor.m_value) btnChanged = true;
+				pad->m_sensor_y = sensor.m_value;
+				break;
+			case CELL_PAD_BTN_OFFSET_SENSOR_Z:
+				if (pad->m_sensor_z != sensor.m_value) btnChanged = true;
+				pad->m_sensor_z = sensor.m_value;
+				break;
+			case CELL_PAD_BTN_OFFSET_SENSOR_G:
+				if (pad->m_sensor_g != sensor.m_value) btnChanged = true;
+				pad->m_sensor_g = sensor.m_value;
+				break;
+			default: break;
+			}
 		}
 	}
 
@@ -266,7 +269,6 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		btnChanged = true;
 	}
 
-	// the real hardware only fills the buffer up to "len" elements (16 bit each)
 	if (pad->m_port_setting & CELL_PAD_SETTING_SENSOR_ON)
 	{
 		// report back new data every ~10 ms even if the input doesn't change
@@ -300,8 +302,6 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	// only update parts of the output struct depending on the controller setting
 	if (data->len > CELL_PAD_LEN_NO_CHANGE)
 	{
-		memset(data->button, 0, sizeof(data->button));
-
 		data->button[0] = 0x0; // always 0
 		// bits 15-8 reserved, 7-4 = 0x7, 3-0: data->len/2;
 		data->button[1] = (0x7 << 4) | std::min(data->len / 2, 15);
@@ -312,30 +312,36 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		data->button[CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y] = pad->m_analog_right_y;
 		data->button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X] = pad->m_analog_left_x;
 		data->button[CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y] = pad->m_analog_left_y;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_RIGHT] = pad->m_press_right;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_LEFT] = pad->m_press_left;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_UP] = pad->m_press_up;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_DOWN] = pad->m_press_down;
-	}
 
-	if (data->len >= CELL_PAD_LEN_CHANGE_PRESS_ON)
-	{
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_TRIANGLE] = pad->m_press_triangle;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_CIRCLE] = pad->m_press_circle;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_CROSS] = pad->m_press_cross;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_SQUARE] = pad->m_press_square;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_L1] = pad->m_press_L1;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_L2] = pad->m_press_L2;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_R1] = pad->m_press_R1;
-		data->button[CELL_PAD_BTN_OFFSET_PRESS_R2] = pad->m_press_R2;
-	}
+		if (pad->m_port_setting & CELL_PAD_SETTING_PRESS_ON)
+		{
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_RIGHT] = pad->m_press_right;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_LEFT] = pad->m_press_left;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_UP] = pad->m_press_up;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_DOWN] = pad->m_press_down;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_TRIANGLE] = pad->m_press_triangle;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_CIRCLE] = pad->m_press_circle;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_CROSS] = pad->m_press_cross;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_SQUARE] = pad->m_press_square;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_L1] = pad->m_press_L1;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_L2] = pad->m_press_L2;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_R1] = pad->m_press_R1;
+			data->button[CELL_PAD_BTN_OFFSET_PRESS_R2] = pad->m_press_R2;
+		}
+		else
+		{
+			// Clear area if setting is not used
+			constexpr u32 area_lengh = (CELL_PAD_LEN_CHANGE_PRESS_ON - CELL_PAD_LEN_CHANGE_DEFAULT) * sizeof(u16);
+			std::memset(&data->button[CELL_PAD_LEN_CHANGE_DEFAULT], 0, area_lengh);
+		}
 
-	if (data->len == CELL_PAD_LEN_CHANGE_SENSOR_ON)
-	{
-		data->button[CELL_PAD_BTN_OFFSET_SENSOR_X] = pad->m_sensor_x;
-		data->button[CELL_PAD_BTN_OFFSET_SENSOR_Y] = pad->m_sensor_y;
-		data->button[CELL_PAD_BTN_OFFSET_SENSOR_Z] = pad->m_sensor_z;
-		data->button[CELL_PAD_BTN_OFFSET_SENSOR_G] = pad->m_sensor_g;
+		if (data->len == CELL_PAD_LEN_CHANGE_SENSOR_ON)
+		{
+			data->button[CELL_PAD_BTN_OFFSET_SENSOR_X] = pad->m_sensor_x;
+			data->button[CELL_PAD_BTN_OFFSET_SENSOR_Y] = pad->m_sensor_y;
+			data->button[CELL_PAD_BTN_OFFSET_SENSOR_Z] = pad->m_sensor_z;
+			data->button[CELL_PAD_BTN_OFFSET_SENSOR_G] = pad->m_sensor_g;
+		}
 	}
 
 	return CELL_OK;
