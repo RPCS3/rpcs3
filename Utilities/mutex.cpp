@@ -66,7 +66,7 @@ void shared_mutex::imp_wait()
 			return;
 		}
 
-		futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAIT_BITSET_PRIVATE, value, nullptr, nullptr, c_sig);
+		futex(&m_value, FUTEX_WAIT_BITSET_PRIVATE, value, nullptr, c_sig);
 	}
 #endif
 }
@@ -77,8 +77,8 @@ void shared_mutex::imp_signal()
 	NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
 #else
 	m_value += c_sig;
-	futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, nullptr, c_sig);
-	//futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAKE_BITSET_PRIVATE, c_one, nullptr, nullptr, c_sig - 1);
+	futex(&m_value, FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, c_sig);
+	//futex(&m_value, FUTEX_WAKE_BITSET_PRIVATE, c_one, nullptr, c_sig - 1);
 #endif
 }
 
@@ -185,7 +185,7 @@ void shared_mutex::imp_lock_unlock()
 		_max = val / c_one;
 
 		// Monitor all bits except c_sig
-		futex(reinterpret_cast<int*>(&m_value.raw()), FUTEX_WAIT_BITSET_PRIVATE, val, nullptr, nullptr, c_sig - 1);
+		futex(&m_value, FUTEX_WAIT_BITSET_PRIVATE, val, nullptr, c_sig - 1);
 	}
 #endif
 

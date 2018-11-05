@@ -117,7 +117,18 @@ void spu_interpreter::set_interrupt_status(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::STOP(spu_thread& spu, spu_opcode_t op)
 {
-	return spu.stop_and_signal(op.opcode & 0x3fff);
+	if (!spu.stop_and_signal(op.opcode & 0x3fff))
+	{
+		return false;
+	}
+
+	if (spu.state)
+	{
+		spu.pc += 4;
+		return false;
+	}
+
+	return true;
 }
 
 bool spu_interpreter::LNOP(spu_thread& spu, spu_opcode_t op)

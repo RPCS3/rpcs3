@@ -3056,6 +3056,10 @@ public:
 			m_ir->CreateStore(m_ir->getInt32(m_pos + 4), spu_ptr<u32>(&spu_thread::pc));
 			m_ir->CreateRetVoid();
 		}
+		else
+		{
+			check_state(m_pos + 4);
+		}
 	}
 
 	void STOPD(spu_opcode_t op) //

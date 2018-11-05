@@ -120,6 +120,14 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 		return table;
 	};
 
+	if (const auto render = rsx::get_current_renderer())
+	{
+		if (RSXIOMem.RealAddr(render->ctrl->get.load()))
+		{
+			m_addr = render->ctrl->get.load();
+		}
+	}
+
 	m_list_commands = l_addRSXTab(m_list_commands, tr("RSX Commands"), 4);
 	m_list_captured_frame = l_addRSXTab(m_list_captured_frame, tr("Captured Frame"), 1);
 	m_list_captured_draw_calls = l_addRSXTab(m_list_captured_draw_calls, tr("Captured Draw Calls"), 1);
@@ -639,10 +647,7 @@ void rsx_debugger::GetMemory()
 			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
 			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
 
-			if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
-				&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
-				&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
-				&& cmd != RSX_METHOD_RETURN_CMD)
+			if(!(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
 			{
 				addr += 4 * count;
 			}
@@ -1095,21 +1100,18 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		u32 callAddr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
 		DISASM("CALL: %08x -> %08x", ioAddr, callAddr);
 	}
-	if(cmd == RSX_METHOD_RETURN_CMD)
+	if((cmd & ~0xfffc) == RSX_METHOD_RETURN_CMD)
 	{
 		DISASM("RETURN");
 	}
 
-	if(cmd == 0)
+	if((cmd & ~(RSX_METHOD_NON_INCREMENT_CMD | 0xfffc)) == 0)
 	{
 		DISASM("NOP");
 	}
-	else if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) != RSX_METHOD_OLD_JUMP_CMD
-		&& (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) != RSX_METHOD_NEW_JUMP_CMD
-		&& (cmd & RSX_METHOD_CALL_CMD_MASK) != RSX_METHOD_CALL_CMD
-		&& cmd != RSX_METHOD_RETURN_CMD)
+	else if (!(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
 	{
-		auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(ioAddr + 4));
+		auto args = vm::get_super_ptr<u32>(RSXIOMem.RealAddr(ioAddr + 4));
 
 		u32 index = 0;
 		switch((cmd & 0x3ffff) >> 2)
@@ -1173,11 +1175,8 @@ void rsx_debugger::PerformJump(u32 address)
 	if (!vm::check_addr(address, 4))
 		return;
 
-	u32 cmd = vm::read32(address);
-	u32 count = ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-		|| ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-		|| ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
-		|| cmd == RSX_METHOD_RETURN_CMD ? 0 : (cmd >> 18) & 0x7ff;
+	u32 cmd = *vm::get_super_ptr<u32>(address);
+	u32 count = cmd & RSX_METHOD_NON_METHOD_CMD_MASK ? 0 : (cmd >> 18) & 0x7ff;
 
 	if (count == 0)
 		return;

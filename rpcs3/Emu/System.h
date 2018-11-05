@@ -394,6 +394,7 @@ struct cfg_root : cfg::node
 		}
 
 		cfg::_bool host_root{this, "Enable /host_root/"};
+		cfg::_bool init_dirs{this, "Initialize Directories", true};
 
 	} vfs{this};
 

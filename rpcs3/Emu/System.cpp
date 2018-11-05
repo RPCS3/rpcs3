@@ -290,12 +290,14 @@ void Emulator::Init()
 	// Reload global configuration
 	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
 
-	// Create directories
+	// Create directories (can be disabled if necessary)
 	const std::string emu_dir = GetEmuDir();
 	const std::string dev_hdd0 = GetHddDir();
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
+	if (g_cfg.vfs.init_dirs)
+	{
 	fs::create_path(dev_hdd0);
 	fs::create_path(dev_hdd1);
 	fs::create_path(dev_usb);
@@ -314,6 +316,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd0 + "savedata/vmc/");
 	fs::create_dir(dev_hdd1 + "cache/");
 	fs::create_dir(dev_hdd1 + "game/");
+	}
 
 	fs::create_path(fs::get_config_dir() + "shaderlog/");
 	fs::create_path(fs::get_config_dir() + "captures/");
