@@ -404,6 +404,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 
 			thread->status.exchange(SPU_STATUS_RUNNING);
 			atomic_storage<u32>::store(thread->pc, img.first.entry_point);
+			_mm_mfence();
 		}
 	}
 
