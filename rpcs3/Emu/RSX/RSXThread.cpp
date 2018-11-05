@@ -1789,20 +1789,22 @@ namespace rsx
 			{
 				auto &vinfo = state.vertex_arrays_info[index];
 
-				if (input_mask & (1u << index)) 
-				{
-					result.attribute_placement[index] = attribute_buffer_placement::transient;
-				}
-
 				if (vinfo.size() > 0)
 				{
-					info.locations.push_back(index);
+					// Attribute stride must be updated even if the stream is disabled
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
+
+					if (input_mask & (1u << index)) 
+					{
+						result.attribute_placement[index] = attribute_buffer_placement::transient;
+						info.locations.push_back(index);
+					}
 				}
-				else if (state.register_vertex_info[index].size > 0)
+				else if (state.register_vertex_info[index].size > 0 && input_mask & (1u << index))
 				{
 					//Reads from register
 					result.referenced_registers.push_back(index);
+					result.attribute_placement[index] = attribute_buffer_placement::transient;
 				}
 			}
 

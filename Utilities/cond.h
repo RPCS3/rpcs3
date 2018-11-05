@@ -127,3 +127,55 @@ public:
 
 	static constexpr u32 max_readers = 0x7f;
 };
+
+class cond_one
+{
+	enum : u32
+	{
+		c_wait = 1,
+		c_lock = 2,
+		c_sig  = 3,
+	};
+
+	atomic_t<u32> m_value{0};
+
+	bool imp_wait(u32 _old, u64 _timeout) noexcept;
+	void imp_notify() noexcept;
+
+public:
+	constexpr cond_one() = default;
+
+	void lock() noexcept
+	{
+		// Shouldn't be locked by more than one thread concurrently
+		while (UNLIKELY(!m_value.compare_and_swap_test(0, c_lock)))
+			;
+	}
+
+	void unlock() noexcept
+	{
+		m_value = 0;
+	}
+
+	bool wait(std::unique_lock<cond_one>& lock, u64 usec_timeout = -1) noexcept
+	{
+		AUDIT(lock.owns_lock());
+		AUDIT(lock.mutex() == this);
+
+		// State transition: c_sig -> c_lock, c_lock -> c_wait
+		const u32 _old = m_value.fetch_sub(1);
+		if (LIKELY(_old == c_sig))
+			return true;
+
+		return imp_wait(_old, usec_timeout);
+	}
+
+	void notify() noexcept
+	{
+		// Early exit if notification is not required
+		if (LIKELY(!m_value))
+			return;
+
+		imp_notify();
+	}
+};

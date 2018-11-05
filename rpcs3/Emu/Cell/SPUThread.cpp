@@ -509,7 +509,10 @@ void spu_thread::cpu_task()
 		}
 
 		// save next PC and current SPU Interrupt status
-		npc = pc | (interrupts_enabled);
+		if (!group && offset >= RAW_SPU_BASE_ADDR)
+		{
+			npc = pc | (interrupts_enabled);
+		}
 
 		// Print some stats
 		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
@@ -595,7 +598,10 @@ void spu_thread::cpu_task()
 	}
 
 	// save next PC and current SPU Interrupt status
-	npc = pc | (interrupts_enabled);
+	if (!group && offset >= RAW_SPU_BASE_ADDR)
+	{
+		npc = pc | (interrupts_enabled);
+	}
 }
 
 void spu_thread::cpu_mem()
@@ -2060,7 +2066,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		state += cpu_flag::stop;
-		return true; // ???
+		return true;
 	}
 
 	switch (code)
