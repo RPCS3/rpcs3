@@ -509,7 +509,10 @@ void spu_thread::cpu_task()
 		}
 
 		// save next PC and current SPU Interrupt status
-		npc = pc | (interrupts_enabled);
+		if (!group && offset >= RAW_SPU_BASE_ADDR)
+		{
+			npc = pc | (interrupts_enabled);
+		}
 
 		// Print some stats
 		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
@@ -595,7 +598,10 @@ void spu_thread::cpu_task()
 	}
 
 	// save next PC and current SPU Interrupt status
-	npc = pc | (interrupts_enabled);
+	if (!group && offset >= RAW_SPU_BASE_ADDR)
+	{
+		npc = pc | (interrupts_enabled);
+	}
 }
 
 void spu_thread::cpu_mem()
