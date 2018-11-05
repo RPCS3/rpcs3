@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -547,7 +547,7 @@ error_code sys_spu_thread_group_yield(u32 id)
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_group_terminate(u32 id, s32 value)
+error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 {
 	sys_spu.warning("sys_spu_thread_group_terminate(id=0x%x, value=0x%x)", id, value);
 
@@ -598,10 +598,33 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 		}
 	}
 
+	while (!ppu.is_stopped())
+	{
+		bool stopped = true;
+
+		for (auto& t : group->threads)
+		{
+			if (t)
+			{
+				if ((t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
+				{
+					stopped = false;
+					break;
+				}
+			}
+		}
+
+		if (stopped) break;
+
+		// TODO
+		group->cv.wait(group->mutex, 1000);
+	}
+
+	if (ppu.is_stopped()) return 0;
+
 	group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	group->exit_status = value;
 	group->join_state |= SPU_TGJSF_TERMINATED;
-	group->cv.notify_one();
 
 	return CELL_OK;
 }
@@ -638,13 +661,8 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 		lv2_obj::sleep(ppu);
 
-		while ((group->join_state & ~SPU_TGJSF_IS_JOINING) == 0)
+		while (!ppu.is_stopped())
 		{
-			if (ppu.is_stopped())
-			{
-				return 0;
-			}
-
 			bool stopped = true;
 
 			for (auto& t : group->threads)
@@ -659,10 +677,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 				}
 			}
 
-			if (stopped)
-			{
-				break;
-			}
+			if (stopped) break;
 
 			// TODO
 			group->cv.wait(group->mutex, 1000);
@@ -674,10 +689,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
 	}
 
-	if (ppu.test_stopped())
-	{
-		return 0;
-	}
+	if (ppu.test_stopped()) return 0;
 
 	switch (join_state & ~SPU_TGJSF_IS_JOINING)
 	{
