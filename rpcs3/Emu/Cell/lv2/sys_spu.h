@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_event.h"
 #include "Emu/Cell/SPUThread.h"
@@ -300,7 +300,7 @@ error_code sys_spu_thread_group_start(ppu_thread&, u32 id);
 error_code sys_spu_thread_group_suspend(u32 id);
 error_code sys_spu_thread_group_resume(u32 id);
 error_code sys_spu_thread_group_yield(u32 id);
-error_code sys_spu_thread_group_terminate(u32 id, s32 value);
+error_code sys_spu_thread_group_terminate(ppu_thread&, u32 id, s32 value);
 error_code sys_spu_thread_group_join(ppu_thread&, u32 id, vm::ptr<u32> cause, vm::ptr<u32> status);
 error_code sys_spu_thread_group_set_priority(u32 id, s32 priority);
 error_code sys_spu_thread_group_get_priority(u32 id, vm::ptr<s32> priority);
