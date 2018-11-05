@@ -2066,7 +2066,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		state += cpu_flag::stop;
-		return true; // ???
+		return true;
 	}
 
 	switch (code)

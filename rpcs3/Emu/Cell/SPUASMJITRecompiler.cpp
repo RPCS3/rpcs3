@@ -1580,11 +1580,25 @@ void spu_recompiler::STOP(spu_opcode_t op)
 	c->align(kAlignCode, 16);
 	c->bind(ret);
 
+	c->mov(SPU_OFF_32(pc), m_pos + 4);
+
 	if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 	{
-		c->mov(SPU_OFF_32(pc), m_pos + 4);
 		c->ret();
 		m_pos = -1;
+	}
+	else
+	{
+		Label label_next = c->newLabel();
+		Label label_check = c->newLabel();
+		c->cmp(SPU_OFF_32(state), 0);
+		c->jnz(label_check);
+		c->jmp(label_next);
+		c->bind(label_check);
+		c->lea(*ls, x86::qword_ptr(label_next));
+		c->jmp(imm_ptr(&check_state));
+		c->align(kAlignCode, 16);
+		c->bind(label_next);
 	}
 }
 
