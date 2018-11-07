@@ -1322,10 +1322,9 @@ void VKGSRender::end()
 
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
-	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-	//Clear any 'dirty' surfaces - possible is a recycled cache surface is used
+	// Clear any 'dirty' surfaces - possible is a recycled cache surface is used
 	rsx::simple_array<VkClearAttachment> buffers_to_clear;
-	buffers_to_clear.reserve(4);
+	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 
 	//Check for memory clears
 	if (ds && ds->dirty)
@@ -1347,7 +1346,7 @@ void VKGSRender::end()
 		}
 	}
 
-	if (buffers_to_clear.size() > 0)
+	if (UNLIKELY(!buffers_to_clear.empty()))
 	{
 		begin_render_pass();
 
@@ -1361,7 +1360,7 @@ void VKGSRender::end()
 	//Check for data casts
 	if (ds && ds->old_contents)
 	{
-		if (ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM)
+		if (UNLIKELY(ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM))
 		{
 			// TODO: Partial memory transfer
 			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
@@ -1380,7 +1379,7 @@ void VKGSRender::end()
 	{
 		auto copy_rtt_contents = [&](vk::render_target* surface, bool is_depth)
 		{
-			if (surface->info.format == surface->old_contents->info.format)
+			if (LIKELY(surface->info.format == surface->old_contents->info.format))
 			{
 				const auto region = rsx::get_transferable_region(surface);
 				const auto src_w = std::get<0>(region);
@@ -1694,8 +1693,6 @@ void VKGSRender::end()
 
 	m_current_command_buffer->num_draws++;
 	m_rtts.on_write();
-
-	m_draw_calls++;
 
 	rsx::thread::end();
 }
@@ -3092,7 +3089,6 @@ void VKGSRender::flip(int buffer)
 
 		if (!skip_frame)
 		{
-			m_draw_calls = 0;
 			m_draw_time = 0;
 			m_setup_time = 0;
 			m_vertex_upload_time = 0;
@@ -3406,7 +3402,6 @@ void VKGSRender::flip(int buffer)
 	//Do not reset perf counters if we are skipping the next frame
 	if (skip_frame) return;
 
-	m_draw_calls = 0;
 	m_draw_time = 0;
 	m_setup_time = 0;
 	m_vertex_upload_time = 0;

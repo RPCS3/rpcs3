@@ -467,6 +467,7 @@ namespace rsx
 			capture::capture_draw_memory(this);
 
 		in_begin_end = false;
+		m_draw_calls++;
 
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		ROP_sync_timestamp = get_system_time();
@@ -2237,6 +2238,19 @@ namespace rsx
 	void thread::flip(int buffer)
 	{
 		async_flip_requested.clear();
+
+		if (!g_cfg.video.disable_FIFO_reordering)
+		{
+			// Try to enable FIFO optimizations
+			// Only rarely useful for some games like RE4
+			m_flattener.evaluate_performance(m_draw_calls);
+		}
+
+		if (!skip_frame)
+		{
+			// Reset counter
+			m_draw_calls = 0;
+		}
 
 		if (g_cfg.video.frame_skip_enabled)
 		{

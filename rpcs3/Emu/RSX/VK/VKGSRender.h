@@ -372,9 +372,6 @@ private:
 	VkViewport m_viewport{};
 	VkRect2D m_scissor{};
 
-	// Draw call stats
-	u32 m_draw_calls = 0;
-
 	// Timers
 	s64 m_setup_time = 0;
 	s64 m_vertex_upload_time = 0;

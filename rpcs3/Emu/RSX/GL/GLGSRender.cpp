@@ -636,7 +636,6 @@ void GLGSRender::end()
 
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
-	m_draw_calls++;
 
 	rsx::thread::end();
 }
@@ -1542,7 +1541,6 @@ void GLGSRender::flip(int buffer)
 
 		if (!skip_frame)
 		{
-			m_draw_calls = 0;
 			m_begin_time = 0;
 			m_draw_time = 0;
 			m_vertex_upload_time = 0;
@@ -1753,7 +1751,6 @@ void GLGSRender::flip(int buffer)
 	//If we are skipping the next frame, do not reset perf counters
 	if (skip_frame) return;
 
-	m_draw_calls = 0;
 	m_begin_time = 0;
 	m_draw_time = 0;
 	m_vertex_upload_time = 0;

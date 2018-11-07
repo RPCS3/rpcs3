@@ -16,83 +16,6 @@ namespace rsx
 		FIFO_control::FIFO_control(::rsx::thread* pctrl)
 		{
 			m_ctrl = pctrl->ctrl;
-
-			const std::pair<u32, u32> skippable_ranges[] =
-			{
-				// Texture configuration
-				{ NV4097_SET_TEXTURE_OFFSET, 8 * 16 },
-				{ NV4097_SET_TEXTURE_CONTROL2, 16 },
-				{ NV4097_SET_TEXTURE_CONTROL3, 16 },
-				{ NV4097_SET_VERTEX_TEXTURE_OFFSET, 8 * 4 },
-				// Surface configuration
-				{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, 1 },
-				{ NV4097_SET_SURFACE_CLIP_VERTICAL, 1 },
-				{ NV4097_SET_SURFACE_COLOR_AOFFSET, 1 },
-				{ NV4097_SET_SURFACE_COLOR_BOFFSET, 1 },
-				{ NV4097_SET_SURFACE_COLOR_COFFSET, 1 },
-				{ NV4097_SET_SURFACE_COLOR_DOFFSET, 1 },
-				{ NV4097_SET_SURFACE_ZETA_OFFSET, 1 },
-				{ NV4097_SET_CONTEXT_DMA_COLOR_A, 1 },
-				{ NV4097_SET_CONTEXT_DMA_COLOR_B, 1 },
-				{ NV4097_SET_CONTEXT_DMA_COLOR_C, 1 },
-				{ NV4097_SET_CONTEXT_DMA_COLOR_D, 1 },
-				{ NV4097_SET_CONTEXT_DMA_ZETA, 1 },
-				{ NV4097_SET_SURFACE_FORMAT, 1 },
-				{ NV4097_SET_SURFACE_PITCH_A, 1 },
-				{ NV4097_SET_SURFACE_PITCH_B, 1 },
-				{ NV4097_SET_SURFACE_PITCH_C, 1 },
-				{ NV4097_SET_SURFACE_PITCH_D, 1 },
-				{ NV4097_SET_SURFACE_PITCH_Z, 1 },
-				// Program configuration
-				{ NV4097_SET_TRANSFORM_PROGRAM_START, 1 },
-				{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, 1 },
-				{ NV4097_SET_TRANSFORM_PROGRAM, 512 },
-				// Vertex
-				{ NV4097_SET_VERTEX_DATA_ARRAY_FORMAT, 16 },
-				{ NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 16 },
-			};
-
-			const std::pair<u32, u32> ignorable_ranges[] =
-			{
-				// General
-				{ NV4097_INVALIDATE_VERTEX_FILE, 3 }, // PSLight clears VERTEX_FILE[0-2]
-				{ NV4097_INVALIDATE_VERTEX_CACHE_FILE, 1 },
-				{ NV4097_INVALIDATE_L2, 1 },
-				{ NV4097_INVALIDATE_ZCULL, 1 },
-				// FIFO
-				{ (FIFO_DISABLED_COMMAND >> 2), 1},
-				{ (FIFO_PACKET_BEGIN >> 2), 1 },
-				{ (FIFO_DRAW_BARRIER >> 2), 1 },
-				// ROP
-				{ NV4097_SET_ALPHA_FUNC, 1 },
-				{ NV4097_SET_ALPHA_REF, 1 },
-				{ NV4097_SET_ALPHA_TEST_ENABLE, 1 },
-				{ NV4097_SET_ANTI_ALIASING_CONTROL, 1 },
-				// Program
-				{ NV4097_SET_SHADER_PACKER, 1 },
-				{ NV4097_SET_SHADER_WINDOW, 1 },
-				// Vertex data offsets
-				{ NV4097_SET_VERTEX_DATA_BASE_OFFSET, 1 },
-				{ NV4097_SET_VERTEX_DATA_BASE_INDEX, 1 }
-			};
-
-			std::fill(m_register_properties.begin(), m_register_properties.end(), 0u);
-
-			for (const auto &method : skippable_ranges)
-			{
-				for (int i = 0; i < method.second; ++i)
-				{
-					m_register_properties[method.first + i] = register_props::skip_on_match;
-				}
-			}
-
-			for (const auto &method : ignorable_ranges)
-			{
-				for (int i = 0; i < method.second; ++i)
-				{
-					m_register_properties[method.first + i] |= register_props::always_ignore;
-				}
-			}
 		}
 
 		void FIFO_control::set_put(u32 put)
@@ -133,22 +56,22 @@ namespace rsx
 			m_memwatch_addr = 0;
 		}
 
-		bool FIFO_control::has_next() const
-		{
-			return (m_remaining_commands > 0);
-		}
-
 		void FIFO_control::read_unsafe(register_pair& data)
 		{
 			// Fast read with no processing, only safe inside a PACKET_BEGIN+count block
-			//verify(HERE), m_remaining_commands;
+			if (m_remaining_commands)
+			{
+				m_command_reg += m_command_inc;
+				m_args_ptr += 4;
+				m_remaining_commands--;
 
-			m_command_reg += m_command_inc;
-			m_args_ptr += 4;
-			m_remaining_commands--;
-
-			data.reg = m_command_reg;
-			data.value = vm::read32(m_args_ptr);
+				data.reg = m_command_reg;
+				data.value = vm::read32(m_args_ptr);
+			}
+			else
+			{
+				data.reg = FIFO_EMPTY;
+			}
 		}
 
 		void FIFO_control::read(register_pair& data)
@@ -254,6 +177,164 @@ namespace rsx
 				m_ctrl->get.store(m_internal_get + 8);
 				data = { cmd & 0xfffc, vm::read32(m_args_ptr), m_internal_get };
 			}
+		}
+
+		flattening_helper::flattening_helper()
+		{
+			const std::pair<u32, u32> ignorable_ranges[] =
+			{
+				// General
+				{ NV4097_INVALIDATE_VERTEX_FILE, 3 }, // PSLight clears VERTEX_FILE[0-2]
+				{ NV4097_INVALIDATE_VERTEX_CACHE_FILE, 1 },
+				{ NV4097_INVALIDATE_L2, 1 },
+				{ NV4097_INVALIDATE_ZCULL, 1 }
+			};
+
+			std::fill(m_register_properties.begin(), m_register_properties.end(), 0u);
+
+			for (const auto &method : ignorable_ranges)
+			{
+				for (int i = 0; i < method.second; ++i)
+				{
+					m_register_properties[method.first + i] |= register_props::always_ignore;
+				}
+			}
+		}
+
+		void flattening_helper::evaluate_performance(u32 total_draw_count)
+		{
+			if (!enabled)
+			{
+				if (total_draw_count <= 2000)
+				{
+					// Low draw call pressure
+					fifo_hint = optimization_hint::load_low;
+					return;
+				}
+
+				if (fifo_hint == optimization_hint::load_unoptimizable)
+				{
+					// Nope, wait for stats to change
+					return;
+				}
+			}
+
+			if (enabled)
+			{
+				// Currently activated. Check if there is any benefit
+				if (num_collapsed < 500)
+				{
+					// Not worth it, disable
+					enabled = false;
+					fifo_hint = load_unoptimizable;
+				}
+
+				u32 real_total = total_draw_count + num_collapsed;
+				if (real_total <= 2000)
+				{
+					// Low total number of draws submitted, no need to keep trying for now
+					enabled = false;
+					fifo_hint = load_low;
+				}
+
+				num_collapsed = 0;
+			}
+			else
+			{
+				// Not enabled, check if we should try enabling
+				verify(HERE), total_draw_count > 2000;
+				if (fifo_hint != load_unoptimizable)
+				{
+					// If its set to unoptimizable, we already tried and it did not work
+					// If it resets to load low (usually after some kind of loading screen) we can try again
+					enabled = true;
+				}
+			}
+		}
+
+		flatten_op flattening_helper::test(register_pair& command)
+		{
+			u32 flush_cmd = -1u;
+			switch (const u32 reg = (command.reg >> 2))
+			{
+			case NV4097_SET_BEGIN_END:
+			{
+				begin_end_ctr ^= 1;
+
+				if (command.value)
+				{
+					// This is a BEGIN call
+					if (LIKELY(!deferred_primitive))
+					{
+						// New primitive block
+						deferred_primitive = command.value;
+					}
+					else if (deferred_primitive == command.value)
+					{
+						// Same primitive can be chanined; do nothing
+						command.reg = FIFO_DISABLED_COMMAND;
+					}
+					else
+					{
+						// Primitive command has changed!
+						// Flush
+						flush_cmd = command.value;
+					}
+				}
+				else if (deferred_primitive)
+				{
+					command.reg = FIFO_DRAW_BARRIER;
+					draw_count++;
+				}
+				else
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
+
+				break;
+			}
+			case NV4097_DRAW_ARRAYS:
+			case NV4097_DRAW_INDEX_ARRAY:
+			{
+				// TODO: Check type
+				break;
+			}
+			default:
+			{
+				if (UNLIKELY(draw_count))
+				{
+					const auto props = m_register_properties[reg];
+					if (UNLIKELY(props & register_props::always_ignore))
+					{
+						// Always ignore
+						command.reg = FIFO_DISABLED_COMMAND;
+					}
+					else
+					{
+						// Flush
+						flush_cmd = (begin_end_ctr) ? deferred_primitive : 0u;
+					}
+				}
+				else
+				{
+					// Nothing to do
+					return NOTHING;
+				}
+
+				break;
+			}
+			}
+
+			if (flush_cmd != -1u)
+			{
+				num_collapsed += draw_count? (draw_count - 1) : 0;
+				draw_count = 0;
+				deferred_primitive = flush_cmd;
+
+				return (begin_end_ctr == 1)? EMIT_BARRIER : EMIT_END;
+			}
+
+			return NOTHING;
 		}
 	}
 
@@ -382,13 +463,13 @@ namespace rsx
 			performance_counters.state = FIFO_state::running;
 		}
 
-		for (int i = 0; ; i++, fifo_ctrl->read_unsafe(command))
+		for (int i = 0; command.reg != FIFO::FIFO_EMPTY; i++, fifo_ctrl->read_unsafe(command))
 		{
-			const u32 reg = command.reg >> 2;
-			const u32 value = command.value;
-
-			if (capture_current_frame)
+			if (UNLIKELY(capture_current_frame))
 			{
+				const u32 reg = command.reg >> 2;
+				const u32 value = command.value;
+
 				frame_debug.command_queue.push_back(std::make_pair(reg, value));
 
 				if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
@@ -424,16 +505,49 @@ namespace rsx
 				}
 			}
 
+			if (UNLIKELY(m_flattener.is_enabled()))
+			{
+				switch(m_flattener.test(command))
+				{
+				case FIFO::NOTHING:
+				{
+					break;
+				}
+				case FIFO::EMIT_END:
+				{
+					// Emit end command to close existing scope
+					//verify(HERE), in_begin_end;
+					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
+					break;
+				}
+				case FIFO::EMIT_BARRIER:
+				{
+					//verify(HERE), in_begin_end;
+					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
+					methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, m_flattener.get_primitive());
+					break;
+				}
+				default:
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
+				}
+
+				if (command.reg == FIFO::FIFO_DISABLED_COMMAND)
+				{
+					// Optimized away
+					continue;
+				}
+			}
+
+			const u32 reg = command.reg >> 2;
+			const u32 value = command.value;
+
 			method_registers.decode(reg, value);
 
 			if (auto method = methods[reg])
 			{
 				method(this, reg, value);
-			}
-
-			if (!fifo_ctrl->has_next())
-			{
-				break;
 			}
 		}
 	}
