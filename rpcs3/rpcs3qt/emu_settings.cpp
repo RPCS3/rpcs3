@@ -1,4 +1,4 @@
-#include "emu_settings.h"
+﻿#include "emu_settings.h"
 
 #include "stdafx.h"
 #include "Emu/System.h"
@@ -494,8 +494,9 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 		for (const auto& type : m_broken_types)
 		{
 			std::string def = GetSettingDefault(type);
+			std::string old = GetSetting(type);
 			SetSetting(type, def);
-			LOG_SUCCESS(GENERAL, "The config entry '%s' was corrected from '%s' to '%s'", GetSettingName(type), GetSetting(type), def);
+			LOG_SUCCESS(GENERAL, "The config entry '%s' was corrected from '%s' to '%s'", GetSettingName(type), old, def);
 		}
 
 		m_broken_types.clear();
