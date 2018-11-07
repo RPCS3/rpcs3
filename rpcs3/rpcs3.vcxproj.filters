@@ -662,6 +662,18 @@
     <ClCompile Include="keyboard_pad_handler.cpp">
       <Filter>Io\Keyboard</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_trophy_manager_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_trophy_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_trophy_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_trophy_manager_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -720,9 +732,6 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\instruction_editor_dialog.h">
       <Filter>Gui\debugger</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\trophy_manager_dialog.h">
-      <Filter>Gui\trophy</Filter>
     </ClInclude>
     <ClInclude Include="evdev_joystick_handler.h">
       <Filter>Io\evdev</Filter>
@@ -881,6 +890,9 @@
     </CustomBuild>
     <CustomBuild Include="windows.qrc">
       <Filter>Resource Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\trophy_manager_dialog.h">
+      <Filter>Generated Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
