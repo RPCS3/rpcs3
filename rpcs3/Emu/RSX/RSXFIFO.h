@@ -35,6 +35,13 @@ namespace rsx
 			FIFO_DRAW_BARRIER = 0xF1F8,
 		};
 
+		enum flatten_op : u32
+		{
+			NOTHING = 0,
+			EMIT_END = 1,
+			EMIT_BARRIER = 2
+		};
+
 		struct register_pair
 		{
 			u32 reg;
@@ -43,9 +50,8 @@ namespace rsx
 			u32 reserved;
 		};
 
-		class FIFO_control
+		class flattening_helper
 		{
-		private:
 			enum register_props : u8
 			{
 				none = 0,
@@ -53,6 +59,35 @@ namespace rsx
 				always_ignore = 2
 			};
 
+			enum optimization_hint : u8
+			{
+				unknown,
+				load_low,
+				load_unoptimizable
+			};
+
+			std::array<u8, 0x10000 / 4> m_register_properties;
+			u32 deferred_primitive = 0;
+			u32 draw_count = 0;
+			u32 begin_end_ctr = 0;
+
+			bool enabled = false;
+			u32  num_collapsed = 0;
+			optimization_hint fifo_hint = unknown;
+
+		public:
+			flattening_helper();
+			~flattening_helper() {}
+
+			u32 get_primitive() const { return deferred_primitive; }
+			bool is_enabled() const { return enabled; }
+
+			void evaluate_performance(u32 total_draw_count);
+			inline flatten_op test(register_pair& command);
+		};
+
+		class FIFO_control
+		{
 		private:
 			RsxDmaControl* m_ctrl = nullptr;
 			u32 m_internal_get = 0;
@@ -65,9 +100,6 @@ namespace rsx
 			u32 m_remaining_commands = 0;
 			u32 m_args_ptr = 0;
 
-			std::array<u8, 0x10000 / 4> m_register_properties;
-			bool has_deferred_draw = false;
-
 		public:
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() {}
@@ -77,11 +109,6 @@ namespace rsx
 
 			void read(register_pair& data);
 			inline void read_unsafe(register_pair& data);
-			inline bool has_next() const;
-
-		public:
-			static bool is_blocking_cmd(u32 cmd);
-			static bool is_sync_cmd(u32 cmd);
 		};
 	}
 }

@@ -380,8 +380,8 @@ namespace rsx
 		bool supports_native_ui = false;
 
 		// FIFO
-		friend class FIFO::FIFO_control;
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+		FIFO::flattening_helper m_flattener;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -397,6 +397,9 @@ namespace rsx
 
 		// Invalidated memory range
 		address_range m_invalidated_memory_range;
+
+		// Draw call stats
+		u32 m_draw_calls = 0;
 
 	public:
 		RsxDmaControl* ctrl = nullptr;

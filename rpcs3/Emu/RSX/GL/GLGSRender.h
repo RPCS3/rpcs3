@@ -303,7 +303,6 @@ private:
 	// Identity buffer used to fix broken gl_VertexID on ATI stack
 	std::unique_ptr<gl::buffer> m_identity_index_buffer;
 
-	u32 m_draw_calls = 0;
 	s64 m_begin_time = 0;
 	s64 m_draw_time = 0;
 	s64 m_vertex_upload_time = 0;
