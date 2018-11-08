@@ -50,7 +50,7 @@ QString gui_settings::GetSettingsDir()
 
 QString gui_settings::ComputeSettingsDir()
 {
-	return QString::fromStdString(fs::get_config_dir()) + "/GuiConfigs/";
+	return qstr(fs::get_resolved_config_path("GuiConfigs/"));
 }
 
 bool gui_settings::ChangeToConfig(const QString& friendly_name)

@@ -265,12 +265,12 @@ bool PadHandlerBase::has_deadzones()
 
 std::string PadHandlerBase::get_config_dir(pad_handler type)
 {
-	return fs::get_config_dir() + "/InputConfigs/" + fmt::format("%s", type) + "/";
+	return fs::get_resolved_config_path("InputConfigs/") + fmt::format("%s", type) + "/";
 }
 
 std::string PadHandlerBase::get_config_filename(int i)
 {
-	return fs::get_config_dir() + "/InputConfigs/" + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
+	return fs::get_resolved_config_path("InputConfigs/") + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
 }
 
 void PadHandlerBase::init_configs()

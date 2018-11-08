@@ -27,7 +27,8 @@ constexpr auto qstr = QString::fromStdString;
 
 inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
-	QString input_dir = qstr(fs::get_config_dir()) + "/InputConfigs/";
+	const QString input_dir = qstr(fs::get_resolved_config_path("InputConfigs/"));
+
 	if (!QDir().mkdir(input_dir) && !QDir().exists(input_dir))
 	{
 		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(input_dir));

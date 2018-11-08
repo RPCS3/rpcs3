@@ -1425,6 +1425,28 @@ const std::string& fs::get_config_dir()
 	return s_dir;
 }
 
+std::string fs::get_resolved_config_path(const std::string& entry, const std::string& dir, bool* path_resolved)
+{
+	const std::string config_dir = get_config_dir();
+	std::string path = config_dir + entry;
+#ifdef _WIN32
+	if (entry.empty())
+	{
+		path = config_dir + dir;
+	}
+	else if (!fs::exists(path))
+	{
+		path = config_dir + dir + entry;
+
+		if (path_resolved)
+		{
+			*path_resolved = true;
+		}
+	}
+#endif
+	return path;
+}
+
 const std::string& fs::get_cache_dir()
 {
 	static const std::string s_dir = []

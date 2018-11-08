@@ -505,10 +505,12 @@ namespace rsx
 
 			void load_files()
 			{
+				const std::string icons_dir = fs::get_resolved_config_path("Icons/");
+
 				for (const auto &res : texture_resource_files)
 				{
-					// First check the global config dir
-					auto info = std::make_unique<image_info>((fs::get_config_dir() + "Icons/ui/" + res).c_str());
+					//First check the global config dir
+					auto info = std::make_unique<image_info>((icons_dir + "ui/" + res).c_str());
 
 					if (info->data == nullptr)
 					{
@@ -566,15 +568,15 @@ namespace rsx
 #endif
 						if (info->data != nullptr)
 						{
-							// Install the image to config dir
-							auto dst_dir = fs::get_config_dir() + "Icons/ui/";
+							//Install the image to config dir
+							auto dst_dir = icons_dir + "ui/";
+							auto src = "Icons/ui/" + res;
 							auto dst = dst_dir + res;
 
 							if (!fs::is_dir(dst_dir))
 							{
-								auto root_folder = fs::get_config_dir() + "Icons/";
-								if (!fs::is_dir(root_folder))
-									fs::create_dir(root_folder);
+								if (!fs::is_dir(icons_dir))
+									fs::create_dir(icons_dir);
 
 								fs::create_dir(dst_dir);
 							}

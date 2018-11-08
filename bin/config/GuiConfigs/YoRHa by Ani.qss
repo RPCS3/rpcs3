@@ -88,7 +88,7 @@ QWidget#cg_disasm {
 
 /* Main Window, Dialogs and Trophy Manager which isn't a dialog */
 QDialog, QWidget#trophy_manager, QMainWindow#main_window {
-	border-image: url("GuiConfigs/YoRHa-background.jpg");
+	border-image: url("config/GuiConfigs/YoRHa-background.jpg");
 }
 
 

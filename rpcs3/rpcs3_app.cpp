@@ -451,20 +451,19 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
-		QString config_dir = qstr(fs::get_config_dir());
-
 		// Add PS3 fonts
 		QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 		while (ps3_font_it.hasNext())
 			QFontDatabase::addApplicationFont(ps3_font_it.next());
 
 		// Add custom fonts
-		QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+		QDirIterator custom_font_it(qstr(fs::get_resolved_config_path("fonts/")), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 		while (custom_font_it.hasNext())
 			QFontDatabase::addApplicationFont(custom_font_it.next());
 
 		// Set root for stylesheets
-		QDir::setCurrent(config_dir);
+		const std::string config_dir = fs::get_config_dir() + "config/";
+		QDir::setCurrent(fs::exists(config_dir) ? qstr(config_dir) : qstr(fs::get_config_dir()));
 		setStyleSheet(file.readAll());
 		file.close();
 	}

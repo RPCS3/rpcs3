@@ -189,22 +189,24 @@ void emu_settings::LoadSettings(const std::string& path)
 {
 	m_path = path;
 
+	const std::string game_path = fs::get_config_dir() + path;
+
 	// Create config path if necessary
-	fs::create_path(fs::get_config_dir() + path);
+	fs::create_path(game_path);
 
 	// Load default config
 	m_defaultSettings = YAML::Load(g_cfg_defaults);
 	m_currentSettings = YAML::Load(g_cfg_defaults);
 
 	// Add global config
-	fs::file config(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+	fs::file config = fs::file(fs::get_resolved_config_path("config.yml"), fs::read + fs::write + fs::create);
 	m_currentSettings += YAML::Load(config.to_string());
 	config.close();
 
 	// Add game config
-	if (!path.empty() && fs::is_file(fs::get_config_dir() + path + "/config.yml"))
+	if (!path.empty() && fs::is_file(game_path + "/config.yml"))
 	{
-		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
+		config = fs::file(game_path + "/config.yml", fs::read + fs::write);
 		m_currentSettings += YAML::Load(config.to_string());
 		config.close();
 	}
@@ -222,7 +224,7 @@ void emu_settings::SaveSettings()
 	}
 	else
 	{
-		config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+		config = fs::file(fs::get_resolved_config_path("config.yml"), fs::read + fs::write + fs::create);
 	}
 
 	// Save config

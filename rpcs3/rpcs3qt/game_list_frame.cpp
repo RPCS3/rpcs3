@@ -382,7 +382,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		add_dir(_hdd + "game/");
 		add_dir(_hdd + "disc/");
 
-		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
+		for (auto pair : YAML::Load(fs::file{fs::get_resolved_config_path("games.yml"), fs::read + fs::create}.to_string()))
 		{
 			path_list.push_back(pair.second.Scalar());
 			path_list.back().resize(path_list.back().find_last_not_of('/') + 1);

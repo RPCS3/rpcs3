@@ -44,11 +44,13 @@
 /bin/*
 
 # Themes
-!/bin/GuiConfigs/
-/bin/GuiConfigs/*.ini
-/bin/GuiConfigs/*.ini.*
-/bin/GuiConfigs/*.dat
-/bin/GuiConfigs/*.dat.*
+!/bin/config/
+/bin/config/*
+!/bin/config/GuiConfigs/
+/bin/config/GuiConfigs/*.ini
+/bin/config/GuiConfigs/*.ini.*
+/bin/config/GuiConfigs/*.dat
+/bin/config/GuiConfigs/*.dat.*
 
 # Visual Studio Files
 .vs/*

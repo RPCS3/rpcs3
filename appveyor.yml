@@ -102,7 +102,7 @@ after_build:
     if ($db -and $db.return_code -eq 0) {
       $db | convertto-json -compress | out-file compat_database.dat -encoding utf8
     }
-    copy-item compat_database.dat .\bin\GuiConfigs\compat_database.dat
+    copy-item compat_database.dat .\bin\config\GuiConfigs\compat_database.dat
 
 - ps: | # package artifacts
     7z a -m0=LZMA2 -mx9 $env:BUILD .\bin\*

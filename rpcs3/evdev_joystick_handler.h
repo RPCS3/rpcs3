@@ -11,7 +11,7 @@
 
 struct positive_axis : cfg::node
 {
-	const std::string cfg_name = fs::get_config_dir() + "/evdev_positive_axis.yml";
+	const std::string cfg_name = fs::get_resolved_config_path("evdev_positive_axis.yml", "config/InputConfigs/");
 
 	cfg::_bool abs_x{ this, "ABS_X", false };
 	cfg::_bool abs_y{ this, "ABS_Y", false };

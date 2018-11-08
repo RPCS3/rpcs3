@@ -484,6 +484,9 @@ namespace fs
 	// Get configuration directory
 	const std::string& get_config_dir();
 
+	// Get resolved config directory (for backwards compatibility)
+	std::string get_resolved_config_path(const std::string& entry, const std::string& dir = "config/", bool* path_resolved = nullptr);
+
 	// Get common cache directory
 	const std::string& get_cache_dir();
 

@@ -266,7 +266,7 @@ struct cfg_player final : cfg::node
 
 struct cfg_input final : cfg::node
 {
-	const std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
+	const std::string cfg_name = fs::get_resolved_config_path("/config_input.yml");
 
 	cfg_player player1{ this, "Player 1 Input", pad_handler::keyboard };
 	cfg_player player2{ this, "Player 2 Input", pad_handler::null };

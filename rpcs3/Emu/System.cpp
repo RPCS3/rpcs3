@@ -288,7 +288,7 @@ void Emulator::Init()
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Reload global configuration
-	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
+	g_cfg.from_string(fs::file(fs::get_resolved_config_path("config.yml"), fs::read + fs::create).to_string());
 
 	// Create directories (can be disabled if necessary)
 	const std::string emu_dir = GetEmuDir();
@@ -711,7 +711,7 @@ void Emulator::Load(bool add_only)
 		Init();
 
 		// Load game list (maps ABCD12345 IDs to /dev_bdvd/ locations)
-		YAML::Node games = YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string());
+		YAML::Node games = YAML::Load(fs::file{fs::get_resolved_config_path("games.yml"), fs::read + fs::create}.to_string());
 
 		if (!games.IsMap())
 		{
@@ -1026,7 +1026,7 @@ void Emulator::Load(bool add_only)
 			games[m_title_id] = bdvd_dir;
 			YAML::Emitter out;
 			out << games;
-			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
+			fs::file(fs::get_resolved_config_path("games.yml"), fs::rewrite).write(out.c_str(), out.size());
 		}
 		else if (m_cat == "1P" && from_hdd0_game)
 		{
