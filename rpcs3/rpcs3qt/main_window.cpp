@@ -1,4 +1,4 @@
-
+﻿
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -532,6 +532,13 @@ void main_window::InstallPup(const QString& dropPath)
 	const std::string path = sstr(filePath);
 
 	fs::file pup_f(path);
+	if (!pup_f)
+	{
+		LOG_ERROR(GENERAL, "Error opening PUP file %s", path);
+		QMessageBox::critical(this, tr("Failure!"), tr("The selected firmware file couldn't be opened."));
+		return;
+	}
+
 	pup_object pup(pup_f);
 	if (!pup)
 	{
