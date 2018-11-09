@@ -1160,13 +1160,15 @@ void camera_context::operator()()
 {
 	while (fxm::check<camera_thread>() == this && !Emu.IsStopped())
 	{
-		const u64 frame_start = get_system_time();
+		const s32 fps = info.framerate;
 
-		if (Emu.IsPaused())
+		if (!fps || Emu.IsPaused())
 		{
 			thread_ctrl::wait_for(1000); // hack
 			continue;
 		}
+
+		const u64 frame_start = get_system_time();
 
 		std::unique_lock lock(mutex_notify_data_map);
 
@@ -1176,9 +1178,7 @@ void camera_context::operator()()
 			const auto& evt_data = notify_data_entry.second;
 
 			// handle FRAME_UPDATE
-			if (is_streaming &&
-				evt_data.flag & CELL_CAMERA_EFLAG_FRAME_UPDATE &&
-				info.framerate != 0)
+			if (is_streaming && evt_data.flag & CELL_CAMERA_EFLAG_FRAME_UPDATE)
 			{
 				if (auto queue = lv2_event_queue::find(key))
 				{
@@ -1211,7 +1211,7 @@ void camera_context::operator()()
 
 		lock.unlock();
 
-		for (const u64 frame_target_time = 1000000u / info.framerate;;)
+		for (const u64 frame_target_time = 1000000u / fps;;)
 		{
 			const u64 time_passed = get_system_time() - frame_start;
 			if (time_passed >= frame_target_time)
