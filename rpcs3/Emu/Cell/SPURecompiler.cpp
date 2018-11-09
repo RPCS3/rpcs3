@@ -2634,6 +2634,12 @@ public:
 					}
 				}
 
+				// State check at the beginning of the chunk
+				if (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+				{
+					check_state(baddr);
+				}
+
 				// Emit instructions
 				for (m_pos = baddr; m_pos >= start && m_pos < end && !m_ir->GetInsertBlock()->getTerminator(); m_pos += 4)
 				{
