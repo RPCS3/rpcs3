@@ -9,7 +9,7 @@ class shared_mutex final
 {
 	enum : u32
 	{
-		c_one = 1u << 7, // Fixed-point 1.0 value (one writer, 1.0/(max_readers+1) is 1)
+		c_one = 1u << 14, // Fixed-point 1.0 value (one writer, max_readers = c_one - 1)
 		c_sig = 1u << 30,
 		c_err = 1u << 31,
 	};
