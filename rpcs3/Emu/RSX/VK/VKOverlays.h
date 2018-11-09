@@ -123,7 +123,7 @@ namespace vk
 
 			for (u32 n = 1; n <= m_num_usable_samplers; ++n)
 			{
-				fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, s32(n), "fs" + std::to_string(n-1) });
+				fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, n, "fs" + std::to_string(n-1) });
 			}
 
 			return fs_inputs;

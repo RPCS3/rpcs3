@@ -118,7 +118,7 @@ namespace rsx
 				return;
 			}
 
-			if (UNLIKELY(cmd & 0xe0030003))
+			if (UNLIKELY(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
 			{
 				if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD ||
 					(cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD ||
@@ -344,31 +344,41 @@ namespace rsx
 		fifo_ctrl->read(command);
 		const auto cmd = command.reg;
 
-		if (cmd == FIFO::FIFO_BUSY)
+		if (UNLIKELY(cmd & (0xffff0000 | RSX_METHOD_NON_METHOD_CMD_MASK)))
 		{
-			// Do something else
-			return;
-		}
-
-		if (cmd == FIFO::FIFO_EMPTY)
-		{
-			if (performance_counters.state == FIFO_state::running)
+			// Check for special FIFO commands
+			switch (cmd)
 			{
-				performance_counters.FIFO_idle_timestamp = get_system_time();
-				performance_counters.state = FIFO_state::empty;
-			}
-			else
+			case FIFO::FIFO_EMPTY:
 			{
-				std::this_thread::yield();
+				if (performance_counters.state == FIFO_state::running)
+				{
+					performance_counters.FIFO_idle_timestamp = get_system_time();
+					performance_counters.state = FIFO_state::empty;
+				}
+				else
+				{
+					std::this_thread::yield();
+				}
+
+				return;
+			}
+			case FIFO::FIFO_BUSY:
+			{
+				// Do something else
+				return;
+			}
+			case FIFO::FIFO_ERROR:
+			{
+				// Error. Should reset the queue
+				// TODO
+				LOG_ERROR(RSX, "FIFO error: possible desync event");
+				std::this_thread::sleep_for(1ms);
+				return;
+			}
 			}
 
-			return;
-		}
-
-		// Validate put and get registers before reading the command
-		// TODO: Who should handle graphics exceptions??
-		if (UNLIKELY(cmd & 0xe0030003))
-		{
+			// Check for flow control
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 			{
 				const u32 offs = cmd & 0x1ffffffc;
@@ -434,7 +444,8 @@ namespace rsx
 				return;
 			}
 
-			fmt::throw_exception("Unreachable" HERE);
+			// If we reached here, this is likely an error
+			fmt::throw_exception("Unexpected command 0x%x" HERE, cmd);
 		}
 		else if (cmd == RSX_METHOD_NOP_CMD)
 		{
