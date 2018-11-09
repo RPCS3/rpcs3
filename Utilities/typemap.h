@@ -396,7 +396,10 @@ namespace utils
 
 		void release()
 		{
-			if constexpr (type_const())
+			if constexpr (type_const() && type_volatile())
+			{
+			}
+			else if constexpr (type_const() || type_volatile())
 			{
 				m_block->m_mutex.unlock_shared();
 			}
@@ -484,6 +487,7 @@ namespace utils
 		ullong create(Args&&... args)
 		{
 			static_assert(!type_const());
+			static_assert(!type_volatile());
 
 			const ullong result = ++m_head->m_create_count;
 
@@ -592,6 +596,11 @@ namespace utils
 		static constexpr bool type_const()
 		{
 			return std::is_const_v<std::remove_reference_t<T>>;
+		}
+
+		static constexpr bool type_volatile()
+		{
+			return std::is_volatile_v<std::remove_reference_t<T>>;
 		}
 	};
 
@@ -772,7 +781,9 @@ namespace utils
 				if constexpr (constexpr uint last = typeinfo_count<Type>::max_count - 1)
 				{
 					// If max_count > 1 only id_new is supported
-					static_assert(std::is_same_v<id_tag, id_new_t> && !std::is_const_v<std::remove_reference_t<Type>>);
+					static_assert(std::is_same_v<id_tag, id_new_t>);
+					static_assert(!std::is_const_v<std::remove_reference_t<Type>>);
+					static_assert(!std::is_volatile_v<std::remove_reference_t<Type>>);
 
 					// Try to acquire the semaphore
 					if (UNLIKELY(!head->m_sema.try_inc(last + 1)))
@@ -806,6 +817,7 @@ namespace utils
 					if constexpr (std::is_same_v<id_tag, id_new_t>)
 					{
 						static_assert(!std::is_const_v<std::remove_reference_t<Type>>);
+						static_assert(!std::is_volatile_v<std::remove_reference_t<Type>>);
 
 						if (block->m_type != 0 || !block->m_mutex.try_lock())
 						{
@@ -940,6 +952,7 @@ namespace utils
 				{
 					// Initialize object if necessary
 					static_assert(!std::is_const_v<std::remove_reference_t<Type>>);
+					static_assert(!std::is_volatile_v<std::remove_reference_t<Type>>);
 
 					if constexpr (std::is_lvalue_reference_v<Type>)
 					{
@@ -1008,8 +1021,9 @@ namespace utils
 		{
 			// Use reader lock for const access
 			constexpr bool is_const = std::is_const_v<std::remove_reference_t<Type>>;
+			constexpr bool is_volatile = std::is_volatile_v<std::remove_reference_t<Type>>;
 
-			// Already locked
+			// Already locked or lock is unnecessary
 			if constexpr (!Lock)
 			{
 				return true;
@@ -1024,7 +1038,7 @@ namespace utils
 
 				if constexpr (Try)
 				{
-					if constexpr (is_const)
+					if constexpr (is_const || is_volatile)
 					{
 						return block->m_mutex.try_lock_shared();
 					}
@@ -1033,7 +1047,7 @@ namespace utils
 						return block->m_mutex.try_lock();
 					}
 				}
-				else if constexpr (is_const)
+				else if constexpr (is_const || is_volatile)
 				{
 					if (LIKELY(block->m_mutex.is_lockable()))
 					{
@@ -1075,7 +1089,7 @@ namespace utils
 					{
 						if (array[I].m_block)
 						{
-							if constexpr (std::is_const_v<std::remove_reference_t<Type>>)
+							if constexpr (std::is_const_v<std::remove_reference_t<Type>> || std::is_volatile_v<std::remove_reference_t<Type>>)
 							{
 								array[I].m_block->m_mutex.unlock_shared();
 							}
@@ -1117,6 +1131,22 @@ namespace utils
 			return {array[I]...};
 		}
 
+		template <typename T, typename Arg>
+		static constexpr bool does_need_lock()
+		{
+			if constexpr (std::is_same_v<std::decay_t<Arg>, id_new_t>)
+			{
+				return false;
+			}
+
+			if constexpr (std::is_const_v<std::remove_reference_t<T>> && std::is_volatile_v<std::remove_reference_t<T>>)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
 	public:
 		// Lock any objects by their identifiers, special tags id_new/id_any/id_always, or search predicates
 		template <typename... Types, typename... Args, typename = std::enable_if_t<sizeof...(Types) == sizeof...(Args)>>
@@ -1131,7 +1161,7 @@ namespace utils
 			std::array<typeptr_base, sizeof...(Types)> result{this->init_ptr<Types>(std::forward<Args>(ids))...};
 
 			// Whether requires locking after init_ptr
-			using locks_t = std::integer_sequence<bool, !std::is_same_v<std::decay_t<Args>, id_new_t>...>;
+			using locks_t = std::integer_sequence<bool, does_need_lock<Types, Args>()...>;
 
 			// Array index helper
 			using seq_t = std::index_sequence_for<Types...>;
