@@ -2761,7 +2761,7 @@ public:
 			bound_buffer as_buffer;
 			bound_sampler as_sampler;
 
-			int location;
+			u32 location;
 			std::string name;
 		};
 

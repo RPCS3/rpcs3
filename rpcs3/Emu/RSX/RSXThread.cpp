@@ -667,24 +667,6 @@ namespace rsx
 	void thread::on_exit()
 	{
 		m_rsx_thread_exiting = true;
-
-		if (m_vblank_thread)
-		{
-			m_vblank_thread->join();
-			m_vblank_thread.reset();
-		}
-
-		if (m_decompiler_thread)
-		{
-			m_decompiler_thread->join();
-			m_decompiler_thread.reset();
-		}
-	}
-
-	std::string thread::get_name() const
-	{
-		return "rsx::thread";
->>>>>>> rsx: Fixups
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -2070,6 +2052,9 @@ namespace rsx
 					else
 					{
 						// Array
+						type = info.type();
+						size = info.size();
+
 						attrib0 = layout.interleaved_blocks[0].attribute_stride | default_frequency_mask;
 					}
 				}

@@ -105,7 +105,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 {
-	int location = TEXTURES_FIRST_BIND_SLOT;
+	u32 location = TEXTURES_FIRST_BIND_SLOT;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type != "sampler1D" &&

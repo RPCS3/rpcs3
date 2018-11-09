@@ -94,7 +94,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	inputs.push_back(in);
 
 
-	int location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
+	u32 location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)

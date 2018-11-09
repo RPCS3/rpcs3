@@ -3,7 +3,7 @@
 #include <Utilities/types.h>
 #include <Utilities/Atomic.h>
 #include <Utilities/mutex.h>
-#include <Utilities/thread.h>
+#include <Utilities/Thread.h>
 
 #include "rsx_utils.h"
 
