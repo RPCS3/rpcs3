@@ -93,3 +93,7 @@ CMakeLists.txt.user
 # CLion
 /.idea/*
 /cmake-build-*/
+
+# macOS
+.DS_Store
+
