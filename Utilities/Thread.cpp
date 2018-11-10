@@ -1783,6 +1783,15 @@ u64 thread_base::get_cycles()
 #ifdef _WIN32
 	if (QueryThreadCycleTime((HANDLE)m_thread.load(), &cycles))
 	{
+#elif __APPLE__
+	mach_port_name_t port = pthread_mach_thread_np((pthread_t)m_thread.load());
+	mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
+	thread_basic_info_data_t info;
+	kern_return_t ret = thread_info(port, THREAD_BASIC_INFO, (thread_info_t)&info, &count);
+	if (ret == KERN_SUCCESS)
+	{
+		cycles = static_cast<u64>(info.user_time.seconds + info.system_time.seconds) * 1'000'000'000 +
+			static_cast<u64>(info.user_time.microseconds + info.system_time.microseconds) * 1'000;
 #else
 	clockid_t _clock;
 	struct timespec thread_time;

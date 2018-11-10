@@ -24,9 +24,6 @@ matrix:
           osx_image: xcode10
           script: "/bin/bash -ex .travis/build-mac.bash"
           cache: ccache
-    # Unfortunately Requires MacOS 10.14 Mojave for latest c++ features, which Travis doesn't use yet
-    allow_failures:
-        - os: osx
         
 git:
   depth: false # Unshallow clone to obtain proper GIT_VERSION
