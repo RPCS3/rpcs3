@@ -2027,7 +2027,10 @@ namespace rsx
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			if (layout.attribute_placement[index] == attribute_buffer_placement::none)
+			{
+				((u64*)buffer)[index] = 0ull;
 				continue;
+			}
 
 			rsx::vertex_base_type type = {};
 			s32 size = 0;
