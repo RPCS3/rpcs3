@@ -403,7 +403,7 @@ namespace rsx
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
-		atomic_t<u32> restore_point{ 0 };
+		u32 restore_point = 0;
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
 
