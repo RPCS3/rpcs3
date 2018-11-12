@@ -2262,6 +2262,61 @@ bool spu_thread::stop_and_signal(u32 code)
 		return true;
 	}
 
+	case 0x111:
+	{
+		/* ===== sys_spu_thread_tryreceive_event ===== */
+
+		u32 spuq;
+
+		if (!ch_out_mbox.try_pop(spuq))
+		{
+			fmt::throw_exception("sys_spu_thread_tryreceive_event(): Out_MBox is empty" HERE);
+		}
+
+		if (u32 count = ch_in_mbox.get_count())
+		{
+			LOG_ERROR(SPU, "sys_spu_thread_tryreceive_event(): In_MBox is not empty (%d)", count);
+			return ch_in_mbox.set_values(1, CELL_EBUSY), true;
+		}
+
+		LOG_TRACE(SPU, "sys_spu_thread_tryreceive_event(spuq=0x%x)", spuq);
+
+		std::lock_guard lock(group->mutex);
+
+		std::shared_ptr<lv2_event_queue> queue;
+
+		for (auto& v : this->spuq)
+		{
+			if (spuq == v.first)
+			{
+				if (queue = v.second.lock())
+				{
+					break;
+				}
+			}
+		}
+
+		if (!queue)
+		{
+			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
+		}
+
+		std::lock_guard qlock(queue->mutex);
+
+		if (queue->events.empty())
+		{
+			return ch_in_mbox.set_values(1, CELL_EBUSY), true;
+		}
+
+		const auto event = queue->events.front();
+		const auto data1 = static_cast<u32>(std::get<1>(event));
+		const auto data2 = static_cast<u32>(std::get<2>(event));
+		const auto data3 = static_cast<u32>(std::get<3>(event));
+		ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
+		queue->events.pop_front();
+		return true;
+	}
+
 	case 0x100:
 	{
 		if (ch_out_mbox.get_count())
