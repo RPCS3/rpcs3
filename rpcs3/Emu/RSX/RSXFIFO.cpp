@@ -371,8 +371,8 @@ namespace rsx
 			case FIFO::FIFO_ERROR:
 			{
 				// Error. Should reset the queue
-				// TODO
 				LOG_ERROR(RSX, "FIFO error: possible desync event");
+				fifo_ctrl->set_get(restore_point);
 				std::this_thread::sleep_for(1ms);
 				return;
 			}

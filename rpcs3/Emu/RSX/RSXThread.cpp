@@ -653,6 +653,13 @@ namespace rsx
 				continue;
 			}
 
+			// Note a possible rollback address
+			if (sync_point_request)
+			{
+				restore_point = ctrl->get;
+				sync_point_request = false;
+			}
+
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
 
