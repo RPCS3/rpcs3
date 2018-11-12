@@ -120,6 +120,8 @@ namespace logs
 
 	struct file_listener : public file_writer, public listener
 	{
+		level enabled = level::trace;
+
 		file_listener(const std::string& name);
 
 		virtual ~file_listener() = default;
@@ -132,6 +134,11 @@ namespace logs
 
 		// Messages for delayed listener initialization
 		std::vector<stored_message> messages;
+
+		void set_level(level value)
+		{
+			enabled = value;
+		}
 	};
 
 	static file_listener* get_logger()
@@ -192,6 +199,8 @@ namespace logs
 	{
 		std::lock_guard lock(g_mutex);
 
+		get_logger()->set_level(level::trace);
+
 		for (auto&& pair : get_logger()->channels)
 		{
 			pair.second.set_level(level::notice);
@@ -202,7 +211,14 @@ namespace logs
 	{
 		std::lock_guard lock(g_mutex);
 
-		get_logger()->channels[ch_name].set_level(value);
+		if (ch_name == "File")
+		{
+			get_logger()->set_level(value);
+		}
+		else
+		{
+			get_logger()->channels[ch_name].set_level(value);
+		}
 	}
 
 	// Must be called in main() to stop accumulating messages in g_messages
@@ -607,6 +623,11 @@ logs::file_listener::file_listener(const std::string& name)
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
 {
+	if (enabled < msg.sev)
+	{
+		return;
+	}
+
 	thread_local std::string text;
 
 	// Used character: U+00B7 (Middle Dot)
