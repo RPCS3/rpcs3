@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
 #include "Emu/IdManager.h"
 #include "sys_memory.h"
@@ -13,6 +13,8 @@ lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::
 	, shm(std::make_shared<utils::shm>(size))
 {
 }
+
+// Todo: fix order of error checks
 
 error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
@@ -41,6 +43,12 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	if (!dct->take(size))
 	{
 		return CELL_ENOMEM;
+	}
+
+	if (!alloc_addr)
+	{
+		dct->used -= size;
+		return CELL_EFAULT;
 	}
 
 	// Allocate memory, write back the start address of the allocated area
@@ -88,6 +96,12 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 	if (ct.ret)
 	{
 		return ct.ret;
+	}
+
+	if (!alloc_addr)
+	{
+		ct->used -= size;
+		return CELL_EFAULT;
 	}
 
 	// Create phantom memory object
