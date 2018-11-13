@@ -277,7 +277,7 @@ namespace rsx
 
 		bool empty() const
 		{
-			return (draw_command_ranges.empty() && inline_vertex_array.empty());
+			return (command == rsx::draw_command::inlined_array) ? inline_vertex_array.empty() : draw_command_ranges.empty();
 		}
 
 		u32 pass_count() const
@@ -288,7 +288,15 @@ namespace rsx
 				return 1u;
 			}
 
-			return (u32)draw_command_ranges.size();
+			u32 count = (u32)draw_command_ranges.size();
+			if (draw_command_ranges.back().count == 0)
+			{
+				// Dangling barrier
+				verify(HERE), count > 1;
+				count--;
+			}
+
+			return count;
 		}
 
 		void reset(rsx::primitive_type type)
@@ -339,8 +347,34 @@ namespace rsx
 				return false;
 			}
 
-			verify(HERE), draw_command_ranges[current_range_index].count != 0;
+			if (draw_command_ranges[current_range_index].count == 0)
+			{
+				// Dangling execution barrier
+				verify(HERE), current_range_index > 0 && (current_range_index + 1) == draw_command_ranges.size();
+				current_range_index = 0;
+				return false;
+			}
+
 			return true;
+		}
+
+		/**
+		 * Only call this once after the draw clause has been fully consumed to reconcile any conflicts
+		 */
+		void post_execute_cleanup()
+		{
+			verify(HERE), current_range_index == 0;
+
+			if (draw_command_ranges.size() > 1)
+			{
+				if (draw_command_ranges.back().count == 0)
+				{
+					// Dangling execution barrier
+					current_range_index = draw_command_ranges.size() - 1;
+					execute_pipeline_dependencies();
+					current_range_index = 0;
+				}
+			}
 		}
 
 		/**
