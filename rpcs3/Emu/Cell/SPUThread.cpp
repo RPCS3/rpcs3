@@ -476,25 +476,28 @@ void spu_thread::cpu_init()
 	gpr[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 }
 
+void spu_thread::cpu_stop()
+{
+	if (!group && offset >= RAW_SPU_BASE_ADDR)
+	{
+		// Save next PC and current SPU Interrupt Status
+		npc = pc | (interrupts_enabled);
+	}
+	else if (group && is_stopped())
+	{
+		if (verify(HERE, group->running--) == 1)
+		{
+			// Notify on last thread stopped
+			group->mutex.lock_unlock();
+			group->cond.notify_all();
+		}
+	}
+}
+
 extern thread_local std::string(*g_tls_log_prefix)();
 
 void spu_thread::cpu_task()
 {
-	auto end_cpu_task = [&]()
-	{
-		// save next PC and current SPU Interrupt status
-		if (!group && offset >= RAW_SPU_BASE_ADDR)
-		{
-			npc = pc | (interrupts_enabled);
-		}
-
-		if (state & cpu_flag::stop)
-		{
-			status |= SPU_STATUS_STOPPED_BY_STOP;
-			if (group) group->cv.notify_all();
-		}
-	};
-
 	// Get next PC and SPU Interrupt status
 	pc = npc.exchange(0);
 
@@ -525,8 +528,7 @@ void spu_thread::cpu_task()
 
 		// Print some stats
 		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
-
-		end_cpu_task();
+		cpu_stop();
 		return;
 	}
 
@@ -608,7 +610,7 @@ void spu_thread::cpu_task()
 		}
 	}
 
-	end_cpu_task();
+	cpu_stop();
 }
 
 void spu_thread::cpu_mem()
@@ -2067,6 +2069,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		status.atomic_op([code](u32& status)
 		{
 			status = (status & 0xffff) | (code << 16);
+			status |= SPU_STATUS_STOPPED_BY_STOP;
 			status &= ~SPU_STATUS_RUNNING;
 		});
 
@@ -2358,26 +2361,6 @@ bool spu_thread::stop_and_signal(u32 code)
 			}
 		}
 
-		while (!Emu.IsStopped())
-		{
-			bool stopped = true;
-			for (auto& thread : group->threads)
-			{
-				if (thread && thread.get() != this)
-				{
-					if ((thread->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
-					{
-						stopped = false;
-						break;
-					}
-				}
-			}
-
-			if (stopped) break;
-
-			group->cv.wait(group->mutex, 1000);
-		}
-
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 		group->exit_status = value;
 		group->join_state |= SPU_TGJSF_GROUP_EXIT;
@@ -2396,9 +2379,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		LOG_TRACE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
-
-		std::lock_guard lock(group->mutex);
-
+		status |= SPU_STATUS_STOPPED_BY_STOP;
 		state += cpu_flag::stop;
 		return true;
 	}

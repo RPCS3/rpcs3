@@ -329,6 +329,12 @@ error_code sys_spu_thread_group_destroy(u32 id)
 
 	const auto group = idm::withdraw<lv2_spu_group>(id, [](lv2_spu_group& group) -> CellError
 	{
+		if (group.running)
+		{
+			// Cannot destroy while threads are running
+			return CELL_EBUSY;
+		}
+
 		const auto _old = group.run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED);
 
 		if (_old > SPU_THREAD_GROUP_STATUS_INITIALIZED)
@@ -365,10 +371,16 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 {
 	vm::temporary_unlock(ppu);
 
-	sys_spu.warning("sys_spu_thread_group_start(id=0x%x)", id);
+	sys_spu.trace("sys_spu_thread_group_start(id=0x%x)", id);
 
 	const auto group = idm::get<lv2_spu_group>(id, [](lv2_spu_group& group)
 	{
+		if (group.running)
+		{
+			// Can't start while threads are (still) running
+			return false;
+		}
+
 		// SPU_THREAD_GROUP_STATUS_READY state is not used
 		return group.run_state.compare_and_swap_test(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_RUNNING);
 	});
@@ -386,6 +398,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 	std::lock_guard lock(group->mutex);
 
 	group->join_state = 0;
+	group->running = +group->init;
 
 	for (auto& thread : group->threads)
 	{
@@ -547,9 +560,9 @@ error_code sys_spu_thread_group_yield(u32 id)
 	return CELL_OK;
 }
 
-error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
+error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 {
-	sys_spu.warning("sys_spu_thread_group_terminate(id=0x%x, value=0x%x)", id, value);
+	sys_spu.trace("sys_spu_thread_group_terminate(id=0x%x, value=0x%x)", id, value);
 
 	// The id can be either SPU Thread Group or SPU Thread
 	const auto thread = idm::get<named_thread<spu_thread>>(id);
@@ -580,7 +593,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 		}
 	}
 
-	std::lock_guard lock(group->mutex);
+	std::unique_lock lock(group->mutex);
 
 	if (group->run_state <= SPU_THREAD_GROUP_STATUS_INITIALIZED ||
 		group->run_state == SPU_THREAD_GROUP_STATUS_WAITING ||
@@ -594,37 +607,26 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 		if (thread)
 		{
 			thread->state += cpu_flag::stop;
+		}
+	}
+
+	for (auto& thread : group->threads)
+	{
+		if (thread && group->running)
+		{
 			thread_ctrl::notify(*thread);
 		}
 	}
 
-	while (!ppu.is_stopped())
-	{
-		bool stopped = true;
-
-		for (auto& t : group->threads)
-		{
-			if (t)
-			{
-				if ((t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
-				{
-					stopped = false;
-					break;
-				}
-			}
-		}
-
-		if (stopped) break;
-
-		// TODO
-		group->cv.wait(group->mutex, 1000);
-	}
-
-	if (ppu.is_stopped()) return 0;
-
 	group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	group->exit_status = value;
 	group->join_state |= SPU_TGJSF_TERMINATED;
+
+	// Wait until the threads are actually stopped
+	while (group->running)
+	{
+		group->cond.wait(lock);
+	}
 
 	return CELL_OK;
 }
@@ -633,7 +635,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 {
 	vm::temporary_unlock(ppu);
 
-	sys_spu.warning("sys_spu_thread_group_join(id=0x%x, cause=*0x%x, status=*0x%x)", id, cause, status);
+	sys_spu.trace("sys_spu_thread_group_join(id=0x%x, cause=*0x%x, status=*0x%x)", id, cause, status);
 
 	const auto group = idm::get<lv2_spu_group>(id);
 
@@ -646,7 +648,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 	s32 exit_value = 0;
 
 	{
-		std::lock_guard lock(group->mutex);
+		std::unique_lock lock(group->mutex);
 
 		if (group->run_state < SPU_THREAD_GROUP_STATUS_INITIALIZED)
 		{
@@ -661,26 +663,14 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 		lv2_obj::sleep(ppu);
 
-		while (!ppu.is_stopped())
+		while (group->running)
 		{
-			bool stopped = true;
-
-			for (auto& t : group->threads)
+			if (ppu.is_stopped())
 			{
-				if (t)
-				{
-					if ((t->status & SPU_STATUS_STOPPED_BY_STOP) == 0)
-					{
-						stopped = false;
-						break;
-					}
-				}
+				return 0;
 			}
 
-			if (stopped) break;
-
-			// TODO
-			group->cv.wait(group->mutex, 1000);
+			group->cond.wait(lock);
 		}
 
 		join_state = group->join_state;
@@ -689,7 +679,10 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
 	}
 
-	if (ppu.test_stopped()) return 0;
+	if (ppu.test_stopped())
+	{
+		return 0;
+	}
 
 	switch (join_state & ~SPU_TGJSF_IS_JOINING)
 	{
