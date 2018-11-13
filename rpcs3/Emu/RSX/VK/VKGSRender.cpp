@@ -1682,6 +1682,8 @@ void VKGSRender::end()
 	}
 	while (rsx::method_registers.current_draw_clause.next());
 
+	rsx::method_registers.current_draw_clause.post_execute_cleanup();
+
 	close_render_pass();
 	vk::leave_uninterruptible();
 

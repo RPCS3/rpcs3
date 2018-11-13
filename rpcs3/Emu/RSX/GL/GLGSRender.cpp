@@ -623,6 +623,8 @@ void GLGSRender::end()
 		}
 	} while (rsx::method_registers.current_draw_clause.next());
 
+	rsx::method_registers.current_draw_clause.post_execute_cleanup();
+
 	m_rtts.on_write();
 
 	m_attrib_ring_buffer->notify();

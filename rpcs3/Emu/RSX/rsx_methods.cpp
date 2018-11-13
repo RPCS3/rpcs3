@@ -632,7 +632,9 @@ namespace rsx
 
 		void set_vertex_base_offset(thread* rsx, u32 reg, u32 arg)
 		{
-			if (rsx->in_begin_end)
+			if (rsx->in_begin_end &&
+				!rsx::method_registers.current_draw_clause.empty() &&
+				reg != method_registers.register_previous_value)
 			{
 				// Revert change to queue later
 				method_registers.decode(reg, method_registers.register_previous_value);
@@ -644,7 +646,9 @@ namespace rsx
 
 		void set_index_base_offset(thread* rsx, u32 reg, u32 arg)
 		{
-			if (rsx->in_begin_end)
+			if (rsx->in_begin_end &&
+				!rsx::method_registers.current_draw_clause.empty() &&
+				reg != method_registers.register_previous_value)
 			{
 				// Revert change to queue later
 				method_registers.decode(reg, method_registers.register_previous_value);
