@@ -329,12 +329,6 @@ error_code sys_spu_thread_group_destroy(u32 id)
 
 	const auto group = idm::withdraw<lv2_spu_group>(id, [](lv2_spu_group& group) -> CellError
 	{
-		if (group.running)
-		{
-			// Cannot destroy while threads are running
-			return CELL_EBUSY;
-		}
-
 		const auto _old = group.run_state.compare_and_swap(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED);
 
 		if (_old > SPU_THREAD_GROUP_STATUS_INITIALIZED)
@@ -375,12 +369,6 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 
 	const auto group = idm::get<lv2_spu_group>(id, [](lv2_spu_group& group)
 	{
-		if (group.running)
-		{
-			// Can't start while threads are (still) running
-			return false;
-		}
-
 		// SPU_THREAD_GROUP_STATUS_READY state is not used
 		return group.run_state.compare_and_swap_test(SPU_THREAD_GROUP_STATUS_INITIALIZED, SPU_THREAD_GROUP_STATUS_RUNNING);
 	});
@@ -618,7 +606,6 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 		}
 	}
 
-	group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	group->exit_status = value;
 	group->join_state |= SPU_TGJSF_TERMINATED;
 
@@ -680,7 +667,6 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		join_state = group->join_state;
 		exit_value = group->exit_status;
 		group->join_state &= ~SPU_TGJSF_IS_JOINING;
-		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED; // hack
 	}
 
 	if (ppu.test_stopped())

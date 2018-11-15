@@ -486,9 +486,13 @@ void spu_thread::cpu_stop()
 	{
 		if (verify(HERE, group->running--) == 1)
 		{
+			{
+				group->stop_count++;
+				std::lock_guard lock(group->mutex);
+				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+			}
+
 			// Notify on last thread stopped
-			group->stop_count++;
-			group->mutex.lock_unlock();
 			group->cond.notify_all();
 		}
 	}
@@ -2359,7 +2363,6 @@ bool spu_thread::stop_and_signal(u32 code)
 			}
 		}
 
-		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 		group->exit_status = value;
 		group->join_state |= SPU_TGJSF_GROUP_EXIT;
 
