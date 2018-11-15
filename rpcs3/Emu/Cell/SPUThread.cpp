@@ -1523,16 +1523,87 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 
 bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 {
+	// Amount of elements to fetch in one go
+	constexpr u32 fetch_size = 6;
+
 	struct list_element
 	{
 		be_t<u16> sb; // Stall-and-Notify bit (0x8000)
 		be_t<u16> ts; // List Transfer Size
 		be_t<u32> ea; // External Address Low
-	} item{};
+	};
 
-	while (args.size)
+	union
 	{
-		if (UNLIKELY(item.sb & 0x8000))
+		list_element items[fetch_size];
+		u64 items_u64[sizeof(items) / sizeof(u64)];
+		u128 items_u128[sizeof(items) / sizeof(u128)];
+	};
+
+	spu_mfc_cmd transfer;
+	transfer.eah  = 0;
+	transfer.tag  = args.tag;
+	transfer.cmd  = MFC(args.cmd & ~MFC_LIST_MASK);
+
+	args.lsa &= 0x3fff0;
+
+	u32 index = fetch_size;
+
+	// Assume called with size greater than 0
+	while (true)
+	{
+		// Check if fetching is needed
+		if (index == fetch_size)
+		{
+			const auto src = _ptr<void>(args.eal & 0x3fff8);
+			if ((uptr)src % 0x10)
+			{
+				// Unaligned
+				items_u64[0] = ((u64*)src)[0];
+				items_u64[1] = ((u64*)src)[1];
+				items_u64[2] = ((u64*)src)[2];
+				items_u64[3] = ((u64*)src)[3];
+				items_u64[4] = ((u64*)src)[4];	
+				items_u64[5] = ((u64*)src)[5];				
+			}
+			else
+			{
+				items_u128[0] = ((u128*)src)[0];
+				items_u128[1] = ((u128*)src)[1];
+				items_u128[2] = ((u128*)src)[2];
+			}
+
+			// Reset to elements array head
+			index = 0; 
+		}
+
+		const u32 size = items[index].ts & 0x7fff;
+		const u32 addr = items[index].ea;
+
+		LOG_TRACE(SPU, "LIST: addr=0x%x, size=0x%x, lsa=0x%05x, sb=0x%x", addr, size, args.lsa | (addr & 0xf), items[index].sb);
+
+		if (size)
+		{
+			transfer.eal  = addr;
+			transfer.lsa  = args.lsa | (addr & 0xf);
+			transfer.size = size;
+
+			do_dma_transfer(transfer);
+			const u32 add_size = std::max<u32>(size, 16);
+			args.lsa += add_size;
+		}
+
+		args.size -= 8;
+
+		if (!args.size)
+		{
+			// No more elements
+			break;
+		}
+
+		args.eal += 8;
+
+		if (UNLIKELY(items[index].sb & 0x8000))
 		{
 			ch_stall_mask |= utils::rol32(1, args.tag);
 
@@ -1547,31 +1618,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 			return false;
 		}
 
-		args.lsa &= 0x3fff0;
-		item = _ref<list_element>(args.eal & 0x3fff8);
-
-		const u32 size = item.ts & 0x7fff;
-		const u32 addr = item.ea;
-
-		LOG_TRACE(SPU, "LIST: addr=0x%x, size=0x%x, lsa=0x%05x, sb=0x%x", addr, size, args.lsa | (addr & 0xf), item.sb);
-
-		if (size)
-		{
-			spu_mfc_cmd transfer;
-			transfer.eal  = addr;
-			transfer.eah  = 0;
-			transfer.lsa  = args.lsa | (addr & 0xf);
-			transfer.tag  = args.tag;
-			transfer.cmd  = MFC(args.cmd & ~MFC_LIST_MASK);
-			transfer.size = size;
-
-			do_dma_transfer(transfer);
-			const u32 add_size = std::max<u32>(size, 16);
-			args.lsa += add_size;
-		}
-
-		args.eal += 8;
-		args.size -= 8;
+		index++;
 	}
 
 	return true;
@@ -2063,7 +2110,7 @@ bool spu_thread::process_mfc_cmd()
 
 			if (LIKELY(do_dma_check(cmd)))
 			{
-				if (LIKELY(do_list_transfer(cmd)))
+				if (LIKELY(!cmd.size || do_list_transfer(cmd)))
 				{
 					return true;
 				}
