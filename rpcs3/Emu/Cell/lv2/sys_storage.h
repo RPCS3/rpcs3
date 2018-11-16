@@ -54,8 +54,6 @@ struct StorageDeviceInfo
 #define USB_MASS_STORAGE_1(n) (USB_MASS_STORAGE_1_BASE + n)       /* For 0-5 */
 #define USB_MASS_STORAGE_2(n) (USB_MASS_STORAGE_2_BASE + (n - 6)) /* For 6-127 */
 
-u32 asyncequeue;
-
 // SysCalls
 
 error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags);

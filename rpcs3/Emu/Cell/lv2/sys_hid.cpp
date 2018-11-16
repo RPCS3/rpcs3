@@ -1,10 +1,11 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/System.h"
+#include "Emu/Cell/PPUThread.h"
 
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/Cell/Modules/cellPad.h"
 #include "Emu/Io/PadHandler.h"
+#include "Emu/Cell/Modules/cellPad.h"
 
 #include "sys_process.h"
 #include "sys_hid.h"

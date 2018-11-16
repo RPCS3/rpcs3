@@ -281,7 +281,7 @@ public:
 			}
 		}
 
-		if (!test(opts, elf_opt::no_data) && !test(opts, elf_opt::no_sections))
+		if (!(opts & elf_opt::no_data) && !(opts & elf_opt::no_sections))
 		{
 			// load symtable
 			for (const auto& s : shdrs)

@@ -39,7 +39,7 @@
 #include "sys_btsetting.h"
 #include "sys_console.h"
 #include "sys_hid.h"
-#include "sys_io.h"
+#include "Emu/Cell/lv2/sys_io.h"
 #include "sys_rsxaudio.h"
 #include "sys_sm.h"
 #include "sys_storage.h"

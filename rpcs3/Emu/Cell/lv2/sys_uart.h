@@ -71,9 +71,6 @@ struct uart_payload
 	std::vector<u32> data;
 };
 
-std::deque<uart_payload> payloads;
-semaphore<> mutex;
-
 // helper header for reply commands
 struct ps3av_reply_cmd_hdr
 {

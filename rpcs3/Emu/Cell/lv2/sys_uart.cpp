@@ -3,8 +3,8 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_timer.h"
-#include "Emu/Cell/lv2/sys_semaphore.h"
 
 #include "sys_uart.h"
 
@@ -12,6 +12,9 @@
 
 
 LOG_CHANNEL(sys_uart);
+
+std::deque<uart_payload> payloads;
+semaphore<> mutex;
 
 error_code sys_uart_initialize()
 {

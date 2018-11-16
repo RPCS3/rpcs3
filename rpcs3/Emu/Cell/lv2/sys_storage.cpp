@@ -11,6 +11,8 @@
 
 LOG_CHANNEL(sys_storage);
 
+u32 asyncequeue;
+
 error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 {
 	sys_storage.todo("sys_storage_open(device=0x%x, mode=0x%x, fd=*0x%x, flags=0x%x)", device, mode, fd, flags);
@@ -25,7 +27,7 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 
 	if (device == 0x100000200000004)
 	{
-		file = fs::file("G:/Emulation/RPCS3/GitHub/rpcs3/bin/imagedump/extnorarea.dat", fs::read);
+		file = fs::file(fs::get_config_dir() + "imagedump/extnorarea.dat", fs::read);
 		if (!file)
 		{
 			sys_storage.fatal("couldnt find nor region file");

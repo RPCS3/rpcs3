@@ -235,7 +235,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 	// TODO: other checks for path
 	if (strcmp(path.get_ptr(), "/dev_hdd0") == 0)
 	{
-		local_path = "G:/Emulation/RPCS3/GitHub/rpcs3/bin/imagedump/hdd0.dsk";
+		local_path = fs::get_config_dir() + "imagedump/hdd0.dsk";
 	}
 
 	if (fs::is_dir(local_path))
