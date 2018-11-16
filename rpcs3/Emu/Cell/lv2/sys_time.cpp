@@ -280,5 +280,7 @@ error_code sys_time_get_rtc(vm::ptr<u64> rtc)
 {
 	sys_time.todo("sys_time_get_rtc(rtc=*0x%x)", rtc);
 
+	*rtc = get_timebased_time();
+
 	return CELL_OK;
 }

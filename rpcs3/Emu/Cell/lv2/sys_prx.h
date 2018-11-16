@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
 
@@ -117,6 +117,46 @@ struct sys_prx_get_module_list_option_t
 	be_t<u32> unk; // 0
 };
 
+struct sys_prx_register_module_0x20_t
+{
+	be_t<u64> size;
+	be_t<u32> toc;
+	be_t<u32> toc_size;
+	be_t<u32> stubs_ea;
+	be_t<u32> stubs_size;
+	vm::bptr<void> error_handler_opd;
+};
+
+struct sys_prx_register_module_0x30_t
+{
+	be_t<u64> size;
+	be_t<u64> unk2;
+	be_t<u32> unk3;
+	be_t<u32> unk4;
+	vm::bptr<u32> lib_entries_ea;
+	be_t<u32> lib_entries_size;
+	vm::bptr<u32> lib_stub_ea;
+	be_t<u32> lib_stub_size;
+	vm::bptr<void> error_handler_opd;
+};
+
+struct sys_prx_register_library_t
+{
+	u8 size;
+	u8 pad;
+	be_t<u16> ver;
+	be_t<u16> attr;
+	be_t<u16> num_func;
+	be_t<u16> num_var;
+	be_t<u16> num_tlsvar;
+	u8 info_hash;
+	u8 info_tlshash;
+	be_t<u16> pad2;
+	be_t<u32> name_ea;
+	be_t<u32> fnid_ea;
+	be_t<u32> fstub_ea;
+};
+
 enum : u32
 {
 	SYS_PRX_RESIDENT = 0,
@@ -171,9 +211,9 @@ error_code _sys_prx_load_module(vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_
 error_code _sys_prx_start_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_module_option_t> pOpt);
 error_code _sys_prx_stop_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_module_option_t> pOpt);
 error_code _sys_prx_unload_module(u32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt);
-error_code _sys_prx_register_module();
+error_code _sys_prx_register_module(vm::cptr<char> name, vm::ptr<void> opt);
 error_code _sys_prx_query_module();
-error_code _sys_prx_register_library(vm::ptr<void> library);
+error_code _sys_prx_register_library(vm::ptr<sys_prx_register_library_t> library);
 error_code _sys_prx_unregister_library(vm::ptr<void> library);
 error_code _sys_prx_link_library();
 error_code _sys_prx_unlink_library();

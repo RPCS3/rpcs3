@@ -198,3 +198,7 @@ struct pad_info
 	atomic_t<u32> max_connect = 0;
 	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting{ 0 };
 };
+
+s32 cellPadGetData(u32 port_no, vm::ptr<CellPadData> data);
+s32 cellPadInit(u32 max_connect);
+s32 cellPadSetPortSetting(u32 port_no, u32 port_setting);

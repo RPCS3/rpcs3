@@ -10,6 +10,7 @@ error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
 {
 	sys_rsxaudio.todo("sys_rsxaudio_initialize(handle=*0x%x)", handle);
 
+	*handle = 0xcacad0d0;
 	return CELL_OK;
 }
 
@@ -24,6 +25,7 @@ error_code sys_rsxaudio_import_shared_memory(u32 handle, vm::ptr<u64> addr)
 {
 	sys_rsxaudio.todo("sys_rsxaudio_import_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
 
+	*addr = vm::alloc(0x40000, vm::main);
 	return CELL_OK;
 }
 

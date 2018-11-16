@@ -2,6 +2,40 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
+
+// set sensor mode? also getinfo?
+struct sys_hid_info_5
+{
+	le_t<u16> vid;
+	le_t<u16> pid;
+	u8 status;
+	// todo: more in this, not sure what tho
+};
+
+struct sys_hid_info_2
+{
+	be_t<u32> unk1;
+	be_t<u32> unk2;
+	be_t<u32> unk3;
+	be_t<u32> unk4;
+	be_t<u32> unk5;
+	u8 unk6;
+};
+
+struct sys_hid_ioctl_68
+{
+	u8 unk;
+	u8 unk2;
+};
+
+// unk
+struct sys_hid_manager_514_pkg_d
+{
+	be_t<u32> unk1;
+	u8 unk2;
+};
+
+
 // SysCalls
 
 error_code sys_hid_manager_open(u64 device_type, u64 port_no, vm::ptr<u32> handle);

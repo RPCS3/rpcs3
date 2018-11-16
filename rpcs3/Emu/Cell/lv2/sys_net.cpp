@@ -3459,6 +3459,26 @@ error_code sys_net_bnet_ioctl(ppu_thread& ppu, s32 arg1, u32 arg2, u32 arg3)
 	ppu.state += cpu_flag::wait;
 
 	sys_net.todo("sys_net_bnet_ioctl(%d, 0x%x, 0x%x)", arg1, arg2, arg3);
+
+	// todo: arg1 is socket number?
+
+	if (arg2 == 0xc0206911)
+	{
+		// arg3 is str name of interface
+		auto inf = vm::cptr<char>::make(arg3);
+		sys_net.todo("arg3 %s", inf);
+	}
+	else if (arg2 == 0x80206910)
+	{
+		auto inf = vm::cptr<char>::make(arg3);
+		sys_net.todo("arg3 %s", inf);
+	}
+	else if (arg2 == 0xc020698c)
+	{
+		// get info of inf
+		memset(vm::base(arg3), 0xff, 0x2e);
+	}
+
 	return CELL_OK;
 }
 
