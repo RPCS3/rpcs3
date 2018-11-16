@@ -301,6 +301,9 @@ bool fs::stat(const std::string& path, stat_t& info)
 	info.ctime = info.mtime;
 #endif
 
+	if (info.atime < info.mtime)
+		info.atime = info.mtime;
+
 	return true;
 }
 
@@ -888,6 +891,9 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			info.mtime = to_time(basic_info.ChangeTime);
 			info.ctime = info.mtime;
 
+			if (info.atime < info.mtime)
+				info.atime = info.mtime;
+
 			return info;
 		}
 
@@ -1034,6 +1040,9 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			info.atime = file_info.st_atime;
 			info.mtime = file_info.st_mtime;
 			info.ctime = info.mtime;
+
+			if (info.atime < info.mtime)
+				info.atime = info.mtime;
 
 			return info;
 		}
@@ -1242,6 +1251,9 @@ bool fs::dir::open(const std::string& path)
 			info.mtime = to_time(found.ftLastWriteTime);
 			info.ctime = info.mtime;
 
+			if (info.atime < info.mtime)
+				info.atime = info.mtime;
+
 			m_entries.emplace_back(std::move(info));
 		}
 
@@ -1324,6 +1336,9 @@ bool fs::dir::open(const std::string& path)
 			info.atime = file_info.st_atime;
 			info.mtime = file_info.st_mtime;
 			info.ctime = info.mtime;
+
+			if (info.atime < info.mtime)
+				info.atime = info.mtime;
 
 			return true;
 		}
