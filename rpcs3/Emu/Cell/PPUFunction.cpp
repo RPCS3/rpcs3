@@ -327,7 +327,6 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 510: return "sys_hid_manager_check_focus";
 	case 511: return "sys_hid_manager_set_master_process";
 	case 512: return "sys_hid_manager_is_process_permission_root";
-	case 514: return "sys_hid_manager_514";
 	case 516: return "sys_config_open";
 	case 517: return "sys_config_close";
 	case 518: return "sys_config_get_service_event";

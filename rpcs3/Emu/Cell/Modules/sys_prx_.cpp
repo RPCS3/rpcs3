@@ -168,7 +168,7 @@ error_code sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> lib_entry)
 
 	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_register_library(lib_entry);
+	return _sys_prx_register_library(vm::static_ptr_cast<sys_prx_register_library_t>(lib_entry));
 }
 
 error_code sys_prx_unregister_library(ppu_thread& ppu, vm::ptr<void> lib_entry)

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../../Utilities/types.h"
 #include "../../Utilities/File.h"
@@ -188,6 +188,10 @@ public:
 	std::vector<prog_t> progs;
 	std::vector<shdr_t> shdrs;
 
+	std::vector<uchar> symtable;
+	std::vector<uchar> secstrtable;
+	std::vector<uchar> strtable;
+
 public:
 	elf_object() = default;
 
@@ -274,6 +278,53 @@ public:
 				stream.seek(offset + hdr.p_offset);
 				if (!stream.read(progs.back().bin))
 					return set_error(elf_error::stream_data);
+			}
+		}
+
+		if (!test(opts, elf_opt::no_data) && !test(opts, elf_opt::no_sections))
+		{
+			// load symtable
+			for (const auto& s : shdrs)
+			{
+				if (s.sh_type == 2 /*SHT_SYMTAB*/)
+				{
+					symtable.resize(s.sh_size);
+					stream.seek(offset + s.sh_offset);
+					if (!stream.read(symtable))
+					{
+						symtable.clear();
+					}
+					break;
+				}
+			}
+
+			// load sec string table
+			if (header.e_shstrndx != 0 /*SHN_UNDEF*/)
+			{
+				const auto& strtab = shdrs.at(header.e_shstrndx);
+				if (strtab.sh_type == 3 /*SHT_STRTAB*/)
+				{
+					secstrtable.resize(strtab.sh_size);
+					stream.seek(offset + strtab.sh_offset);
+					if (!stream.read(secstrtable))
+					{
+						secstrtable.clear();
+					}
+				}
+			}
+
+			for (const auto& s : shdrs)
+			{
+				if (strcmp((char*)&secstrtable.at(s.sh_name), ".strtab") == 0)
+				{
+					strtable.resize(s.sh_size);
+					stream.seek(offset + s.sh_offset);
+					if (!stream.read(strtable))
+					{
+						strtable.clear();
+					}
+					break;
+				}
 			}
 		}
 

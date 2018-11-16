@@ -72,6 +72,19 @@ struct ppu_static_variable
 	}
 };
 
+struct GlobalSymbolTable {
+	std::unordered_map<std::string, u32> symmap;
+};
+
+struct elf64_sym {
+	be_t<u32> name;
+	u8 info;
+	u8 other;
+	be_t<u16> shndx;
+	be_t<u64> value;
+	be_t<u64> size;
+};
+
 // HLE module information
 class ppu_static_module final
 {
