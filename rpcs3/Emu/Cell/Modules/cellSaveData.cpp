@@ -673,6 +673,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	}
 
 	// Enter the loop where the save files are read/created/deleted
+	std::map<std::string, std::pair<s64, s64>> all_times;
 	std::map<std::string, fs::file> all_files;
 
 	// First, preload all files (TODO: beware of possible lag, although it should be insignificant)
@@ -681,6 +682,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		if (!entry.is_directory)
 		{
 			// Read file into a vector and make a memory file
+			all_times.emplace(entry.name, std::make_pair(entry.atime, entry.mtime));
 			all_files.emplace(std::move(entry.name), fs::make_stream(fs::file(dir_path + entry.name).to_vector<uchar>()));
 		}
 	}
@@ -815,6 +817,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			const u64 wr = file.write(fileSet->fileBuf.get_ptr(), access_size);
 			file.trunc(wr);
 			fileGet->excSize = ::narrow<u32>(wr);
+			all_times.erase(file_path);
 			has_modified = true;
 			break;
 		}
@@ -825,6 +828,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			all_files[file_path].close();
 			psf.erase("*" + file_path);
 			fileGet->excSize = 0;
+			all_times.erase(file_path);
 			has_modified = true;
 			break;
 		}
@@ -842,6 +846,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			const u64 sr = file.seek(fileSet->fileOffset);
 			const u64 wr = file.write(fileSet->fileBuf.get_ptr(), access_size);
 			fileGet->excSize = ::narrow<u32>(wr);
+			all_times.erase(file_path);
 			has_modified = true;
 			break;
 		}
@@ -879,6 +884,12 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 				auto fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
 				fs::file(new_path + pair.first, fs::rewrite).write(fvec.obj);
 			}
+		}
+
+		for (auto&& pair : all_times)
+		{
+			// Restore atime/mtime for files which have not been modified
+			fs::utime(new_path + pair.first, pair.second.first, pair.second.second);
 		}
 
 		// Remove old backup
