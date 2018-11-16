@@ -284,7 +284,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 	info.size = (u64)attrs.nFileSizeLow | ((u64)attrs.nFileSizeHigh << 32);
 	info.atime = to_time(attrs.ftLastAccessTime);
 	info.mtime = to_time(attrs.ftLastWriteTime);
-	info.ctime = to_time(attrs.ftCreationTime);
+	info.ctime = info.mtime;
 #else
 	struct ::stat file_info;
 	if (::stat(path.c_str(), &file_info) != 0)
@@ -298,7 +298,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 	info.size = file_info.st_size;
 	info.atime = file_info.st_atime;
 	info.mtime = file_info.st_mtime;
-	info.ctime = file_info.st_ctime;
+	info.ctime = info.mtime;
 #endif
 
 	return true;
@@ -886,7 +886,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			info.size = this->size();
 			info.atime = to_time(basic_info.LastAccessTime);
 			info.mtime = to_time(basic_info.ChangeTime);
-			info.ctime = to_time(basic_info.CreationTime);
+			info.ctime = info.mtime;
 
 			return info;
 		}
@@ -1033,7 +1033,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			info.size = file_info.st_size;
 			info.atime = file_info.st_atime;
 			info.mtime = file_info.st_mtime;
-			info.ctime = file_info.st_ctime;
+			info.ctime = info.mtime;
 
 			return info;
 		}
@@ -1240,7 +1240,7 @@ bool fs::dir::open(const std::string& path)
 			info.size = ((u64)found.nFileSizeHigh << 32) | (u64)found.nFileSizeLow;
 			info.atime = to_time(found.ftLastAccessTime);
 			info.mtime = to_time(found.ftLastWriteTime);
-			info.ctime = to_time(found.ftCreationTime);
+			info.ctime = info.mtime;
 
 			m_entries.emplace_back(std::move(info));
 		}
@@ -1323,7 +1323,7 @@ bool fs::dir::open(const std::string& path)
 			info.size = file_info.st_size;
 			info.atime = file_info.st_atime;
 			info.mtime = file_info.st_mtime;
-			info.ctime = file_info.st_ctime;
+			info.ctime = info.mtime;
 
 			return true;
 		}
