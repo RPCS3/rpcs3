@@ -815,7 +815,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			// Write to memory file and truncate
 			const u64 sr = file.seek(fileSet->fileOffset);
 			const u64 wr = file.write(fileSet->fileBuf.get_ptr(), access_size);
-			file.trunc(wr);
+			file.trunc(sr + wr);
 			fileGet->excSize = ::narrow<u32>(wr);
 			all_times.erase(file_path);
 			has_modified = true;
