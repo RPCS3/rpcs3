@@ -257,22 +257,22 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 			return;
 		case Qt::Key_K:
 			m_multi_y = std::min(m_multi_y + 0.1, 5.0);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %.2f", m_multi_y);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", (int)(m_multi_y * 100));
 			event->ignore();
 			return;
 		case Qt::Key_J:
 			m_multi_y = std::max(0.0, m_multi_y - 0.1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %.2f", m_multi_y);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier y = %d", (int)(m_multi_y * 100));
 			event->ignore();
 			return;
 		case Qt::Key_H:
 			m_multi_x = std::min(m_multi_x + 0.1, 5.0);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %.2f", m_multi_x);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", (int)(m_multi_x * 100));
 			event->ignore();
 			return;
 		case Qt::Key_G:
 			m_multi_x = std::max(0.0, m_multi_x - 0.1);
-			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %.2f", m_multi_x);
+			LOG_SUCCESS(GENERAL, "mouse move adjustment: multiplier x = %d", (int)(m_multi_x * 100));
 			event->ignore();
 			return;
 		default:
@@ -512,6 +512,11 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	pad_config* p_profile = &m_pad_configs[index];
 	if (p_profile == nullptr)
 		return false;
+
+	m_deadzone_x = p_profile->mouse_deadzone_x;
+	m_deadzone_y = p_profile->mouse_deadzone_y;
+	m_multi_x = p_profile->mouse_acceleration_x / 100;
+	m_multi_y = p_profile->mouse_acceleration_y / 100;
 
 	auto find_key = [&](const cfg::string& name)
 	{
