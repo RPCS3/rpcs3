@@ -324,7 +324,7 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id);
 error_code sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag);
 error_code sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask);
 error_code sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask);
-error_code sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat);
+error_code sys_raw_spu_set_int_stat(ppu_thread& ppu, u32 id, u32 class_id, u64 stat);
 error_code sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat);
 error_code sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value);
 error_code sys_raw_spu_set_spu_cfg(u32 id, u32 value);

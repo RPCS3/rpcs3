@@ -600,24 +600,27 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.ret();
 });
 
-void spu_int_ctrl_t::set(u64 ints)
+bool spu_int_ctrl_t::set(u64 ints)
 {
 	// leave only enabled interrupts
 	ints &= mask;
 
+	std::lock_guard lock(id_manager::g_mutex);
+
 	// notify if at least 1 bit was set
 	if (ints && ~stat.fetch_or(ints) & ints && tag)
 	{
-		reader_lock rlock(id_manager::g_mutex);
-
-		if (tag)
+		if (auto handler = tag->handler.lock())
 		{
-			if (auto handler = tag->handler.lock())
-			{
-				handler->exec();
-			}
+			handler->thread->intr_ctrl.release(this);
+			handler->exec();
 		}
+
+		// Does not need an actual handler to wait for mailbox read (potential deadlock)
+		return true;
 	}
+
+	return false;
 }
 
 const spu_imm_table_t g_spu_imm;
@@ -2072,7 +2075,19 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				thread_ctrl::wait();
 			}
 
-			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
+			if (int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT))
+			{
+				while (ch_out_intr_mbox.get_count())
+				{
+					if (is_stopped())
+					{
+						return false;
+					}
+
+					thread_ctrl::wait();
+				}
+			}
+
 			return true;
 		}
 

@@ -230,12 +230,12 @@ public:
 	}
 
 	// Pop unconditionally (loading last value), may require notification
-	u32 pop(cpu_thread& spu)
+	u32 pop(cpu_thread& spu, bool use_count = false)
 	{
 		// Value is not cleared and may be read again
 		const u64 old = data.fetch_and(~(bit_count | bit_wait));
 
-		if (old & bit_wait)
+		if (old & (use_count ? bit_count : bit_wait))
 		{
 			spu.notify();
 		}
@@ -355,11 +355,11 @@ struct spu_int_ctrl_t
 
 	std::shared_ptr<struct lv2_int_tag> tag;
 
-	void set(u64 ints);
+	bool set(u64 ints);
 
-	void clear(u64 ints)
+	bool clear(u64 ints)
 	{
-		stat &= ~ints;
+		return stat.fetch_and(~ints) & ints;
 	}
 
 	void clear()

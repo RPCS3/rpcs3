@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -155,4 +155,33 @@ void sys_interrupt_thread_eoi(ppu_thread& ppu)
 	sys_interrupt.trace("sys_interrupt_thread_eoi()");
 
 	ppu.state += cpu_flag::ret;
+
+	// SPU uses this mutex, so let's reuse it here as well
+	std::lock_guard lock(id_manager::g_mutex);
+
+	if (auto ctrl = ppu.intr_ctrl.load())
+	{
+		// Reinvoke interrupt if the interrupt stat hasnt been cleared
+		if (!ppu.intr_cleared)
+		{
+			auto handler = ctrl->tag->handler.lock();
+
+			ppu.cmd_list
+			({
+				{ ppu_cmd::reset_stack, 0 },
+				{ ppu_cmd::set_args, 2 }, handler->arg1, handler->arg2,
+				{ ppu_cmd::lle_call, 2 },
+				{ ppu_cmd::sleep, 0 }
+			});
+
+			return;
+		}
+
+		ppu.intr_cleared.release(false);
+		//ppu.intr_ctrl.release(nullptr);
+	}
+	else
+	{
+		sys_interrupt.error("sys_interrupt_thread_eoi() wasnt executed from an interrupt thread!");
+	}
 }

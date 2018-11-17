@@ -4,6 +4,7 @@
 #include "../CPU/CPUThread.h"
 #include "../Memory/vm.h"
 #include "Utilities/lockless.h"
+#include "SPUThread.h"
 
 enum class ppu_cmd : u32
 {
@@ -170,6 +171,8 @@ public:
 	const u32 stack_addr; // Stack address
 
 	atomic_t<u32> joiner{~0u}; // Joining thread (-1 if detached)
+	atomic_t<spu_int_ctrl_t*> intr_ctrl{}; // Bound SPU thread interrupt entry
+	atomic_t<bool> intr_cleared{false}; // Set if the interrupt has been ack
 
 	lf_fifo<atomic_t<cmd64>, 127> cmd_queue; // Command queue for asynchronous operations.
 
