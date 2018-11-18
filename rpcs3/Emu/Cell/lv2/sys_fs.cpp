@@ -232,10 +232,30 @@ error_code sys_fs_test(ppu_thread& ppu, u32 arg1, u32 arg2, vm::ptr<u32> arg3, u
 
 lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s32 flags, s32 mode, lv2_file_type type, const lv2_fs_mount_point* mp)
 {
+	if (vpath.empty())
+	{
+		return {CELL_ENOENT};
+	}
+
+	std::string path;
+	std::string local_path = vfs::get(vpath, nullptr, &path);
+
 	// TODO: other checks for path
-	if (strcmp(path.get_ptr(), "/dev_hdd0") == 0)
+	if (strcmp(path.data(), "/dev_hdd0") == 0)
 	{
 		local_path = fs::get_config_dir() + "imagedump/hdd0.dsk";
+	}
+
+	const auto mp = lv2_fs_object::get_mp(path);
+
+	if (vpath.find_first_not_of('/') == umax)
+	{
+		return {CELL_EISDIR, path};
+	}
+
+	if (local_path.empty())
+	{
+		return {CELL_ENOTMOUNTED, path};
 	}
 
 	if (fs::is_dir(local_path))
