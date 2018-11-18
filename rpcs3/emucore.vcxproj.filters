@@ -898,6 +898,9 @@
     <ClCompile Include="Emu\Io\usb_device.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>

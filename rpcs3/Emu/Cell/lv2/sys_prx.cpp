@@ -25,6 +25,7 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 {
 	{ "/dev_flash/sys/external/libaudio.sprx", 0 },
 	{ "/dev_flash/sys/external/libcamera.sprx", 0 },
+	{ "/dev_flash/sys/internal/libfs_utility_init.sprx", 0 },
 	{ "/dev_flash/sys/external/libgem.sprx", 0 },
 	{ "/dev_flash/sys/external/libio.sprx", 0 },
 	{ "/dev_flash/sys/external/libmedi.sprx", 0 },

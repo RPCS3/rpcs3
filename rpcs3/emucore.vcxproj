@@ -194,6 +194,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_sm.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_storage.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_uart.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp" />
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
