@@ -5766,6 +5766,11 @@ public:
 
 		if (target != m_pos + 4)
 		{
+			if (target == m_pos)
+			{
+				check_state(m_pos);
+			}
+
 			m_block->block_end = m_ir->GetInsertBlock();
 			m_ir->CreateBr(add_block(target));
 		}
