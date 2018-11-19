@@ -1055,8 +1055,6 @@ void spu_thread::cpu_init()
 	ch_out_mbox.data.raw() = {};
 	ch_out_intr_mbox.data.raw() = {};
 
-	snr_config = 0;
-
 	ch_snr1.data.raw() = {};
 	ch_snr2.data.raw() = {};
 
@@ -1067,6 +1065,11 @@ void spu_thread::cpu_init()
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
+
+	if (offset >= RAW_SPU_BASE_ADDR)
+	{
+		snr_config = 0;
+	}
 
 	run_ctrl.raw() = 0;
 	status.raw() = 0;
