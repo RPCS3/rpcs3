@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
 #include "Emu/Memory/vm.h"
@@ -476,6 +476,24 @@ void spu_thread::cpu_init()
 	gpr[1]._u32[3] = 0x3FFF0; // initial stack frame pointer
 }
 
+void spu_thread::cpu_stop()
+{
+	if (!group && offset >= RAW_SPU_BASE_ADDR)
+	{
+		// Save next PC and current SPU Interrupt Status
+		npc = pc | (interrupts_enabled);
+	}
+	else if (group && is_stopped())
+	{
+		if (verify(HERE, group->running--) == 1)
+		{
+			// Notify on last thread stopped
+			group->mutex.lock_unlock();
+			group->cond.notify_all();
+		}
+	}
+}
+
 extern thread_local std::string(*g_tls_log_prefix)();
 
 void spu_thread::cpu_task()
@@ -508,14 +526,9 @@ void spu_thread::cpu_task()
 			jit_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
 		}
 
-		// save next PC and current SPU Interrupt status
-		if (!group && offset >= RAW_SPU_BASE_ADDR)
-		{
-			npc = pc | (interrupts_enabled);
-		}
-
 		// Print some stats
 		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
+		cpu_stop();
 		return;
 	}
 
@@ -597,11 +610,7 @@ void spu_thread::cpu_task()
 		}
 	}
 
-	// save next PC and current SPU Interrupt status
-	if (!group && offset >= RAW_SPU_BASE_ADDR)
-	{
-		npc = pc | (interrupts_enabled);
-	}
+	cpu_stop();
 }
 
 void spu_thread::cpu_mem()
@@ -2262,6 +2271,61 @@ bool spu_thread::stop_and_signal(u32 code)
 		return true;
 	}
 
+	case 0x111:
+	{
+		/* ===== sys_spu_thread_tryreceive_event ===== */
+
+		u32 spuq;
+
+		if (!ch_out_mbox.try_pop(spuq))
+		{
+			fmt::throw_exception("sys_spu_thread_tryreceive_event(): Out_MBox is empty" HERE);
+		}
+
+		if (u32 count = ch_in_mbox.get_count())
+		{
+			LOG_ERROR(SPU, "sys_spu_thread_tryreceive_event(): In_MBox is not empty (%d)", count);
+			return ch_in_mbox.set_values(1, CELL_EBUSY), true;
+		}
+
+		LOG_TRACE(SPU, "sys_spu_thread_tryreceive_event(spuq=0x%x)", spuq);
+
+		std::lock_guard lock(group->mutex);
+
+		std::shared_ptr<lv2_event_queue> queue;
+
+		for (auto& v : this->spuq)
+		{
+			if (spuq == v.first)
+			{
+				if (queue = v.second.lock())
+				{
+					break;
+				}
+			}
+		}
+
+		if (!queue)
+		{
+			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
+		}
+
+		std::lock_guard qlock(queue->mutex);
+
+		if (queue->events.empty())
+		{
+			return ch_in_mbox.set_values(1, CELL_EBUSY), true;
+		}
+
+		const auto event = queue->events.front();
+		const auto data1 = static_cast<u32>(std::get<1>(event));
+		const auto data2 = static_cast<u32>(std::get<2>(event));
+		const auto data3 = static_cast<u32>(std::get<3>(event));
+		ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
+		queue->events.pop_front();
+		return true;
+	}
+
 	case 0x100:
 	{
 		if (ch_out_mbox.get_count())
@@ -2300,7 +2364,6 @@ bool spu_thread::stop_and_signal(u32 code)
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 		group->exit_status = value;
 		group->join_state |= SPU_TGJSF_GROUP_EXIT;
-		group->cv.notify_one();
 
 		state += cpu_flag::stop;
 		return true;
@@ -2316,12 +2379,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		LOG_TRACE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
-
-		std::lock_guard lock(group->mutex);
-
 		status |= SPU_STATUS_STOPPED_BY_STOP;
-		group->cv.notify_one();
-
 		state += cpu_flag::stop;
 		return true;
 	}

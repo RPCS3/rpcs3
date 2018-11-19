@@ -1791,13 +1791,13 @@ namespace rsx
 
 				if (vinfo.size() > 0)
 				{
-					// Attribute stride must be updated even if the stream is disabled
+					// Stride must be updated even if the stream is disabled
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
+					info.locations.push_back(index);
 
 					if (input_mask & (1u << index)) 
 					{
 						result.attribute_placement[index] = attribute_buffer_placement::transient;
-						info.locations.push_back(index);
 					}
 				}
 				else if (state.register_vertex_info[index].size > 0 && input_mask & (1u << index))

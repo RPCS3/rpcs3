@@ -49,6 +49,11 @@ if(WIN32)
 	add_definitions(-D_WIN32_WINNT=0x0602)
 endif()
 
+if(APPLE)
+	include_directories(/opt/local/include)
+	link_directories(/opt/local/lib)
+endif()
+
 add_subdirectory(Vulkan EXCLUDE_FROM_ALL)
 add_subdirectory(asmjitsrc EXCLUDE_FROM_ALL)
 add_subdirectory(3rdparty)

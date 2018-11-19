@@ -178,6 +178,9 @@ if (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE)
 		find_library(DISCORD_RPC_LIB discord-rpc-mac PATHS discord-rpc/lib/ NO_DEFAULT_PATH)
 	endif()
 	target_link_libraries(3rdparty_discord-rpc INTERFACE ${DISCORD_RPC_LIB})
+	if(APPLE)
+		target_link_libraries(3rdparty_discord-rpc INTERFACE "objc" "-framework Foundation" "-framework CoreServices")
+	endif()
 endif()
 
 
@@ -231,7 +234,7 @@ endif()
 
 # Vulkan
 set(VULKAN_TARGET 3rdparty_dummy_lib)
-if(NOT APPLE AND USE_VULKAN)
+if(USE_VULKAN)
 	find_package(Vulkan)
 	if(VULKAN_FOUND)
 		add_library(3rdparty_vulkan INTERFACE)

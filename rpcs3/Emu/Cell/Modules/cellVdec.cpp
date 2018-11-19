@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -551,7 +551,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 	const auto vdec = idm::get<vdec_context>(handle);
 
-	if (!format || !vdec)
+	if (!format || !vdec || format->formatType > 4 || (format->formatType <= CELL_VDEC_PICFMT_RGBA32_ILV && format->colorMatrixType > CELL_VDEC_COLOR_MATRIX_TYPE_BT709))
 	{
 		return CELL_VDEC_ERROR_ARG;
 	}
@@ -599,10 +599,6 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 		}
 
 		// TODO: color matrix
-		if (format->colorMatrixType & ~1)
-		{
-			fmt::throw_exception("Unknown colorMatrixType (%d)" HERE, format->colorMatrixType);
-		}
 
 		if (alpha_plane)
 		{

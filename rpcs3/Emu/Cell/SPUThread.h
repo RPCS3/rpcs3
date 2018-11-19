@@ -508,6 +508,7 @@ public:
 	virtual void cpu_unmem() override;
 	virtual ~spu_thread() override;
 	void cpu_init();
+	void cpu_stop();
 
 	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Cell/PPUThread.h"
 
@@ -167,9 +167,9 @@ namespace ppu_cb_detail
 		FORCE_INLINE static void call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
 		{
 			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
-			CPU.gpr[1] -= stack ? FIXED_STACK_FRAME_SIZE : 0x30; // create reserved area
+			CPU.gpr[1] -= stack ? FIXED_STACK_FRAME_SIZE : 0x70; // create reserved area
 			CPU.fast_call(pc, rtoc);
-			CPU.gpr[1] += stack ? FIXED_STACK_FRAME_SIZE : 0x30;
+			CPU.gpr[1] += stack ? FIXED_STACK_FRAME_SIZE : 0x70;
 		}
 	};
 }
