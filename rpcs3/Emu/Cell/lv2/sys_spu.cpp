@@ -963,16 +963,16 @@ error_code sys_spu_thread_set_spu_cfg(ppu_thread& ppu, u32 id, u64 value)
 
 	sys_spu.warning("sys_spu_thread_set_spu_cfg(id=0x%x, value=0x%x)", id, value);
 
+	if (value > 3)
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto thread = idm::get<named_thread<spu_thread>>(id);
 
 	if (UNLIKELY(!thread || !thread->group))
 	{
 		return CELL_ESRCH;
-	}
-
-	if (value > 3)
-	{
-		return CELL_EINVAL;
 	}
 
 	thread->snr_config = value;
