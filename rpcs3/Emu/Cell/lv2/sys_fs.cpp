@@ -744,7 +744,7 @@ error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (!fs::create_path(local_path))
+	if (!fs::create_dir(local_path))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
