@@ -546,7 +546,7 @@ public:
 	spu_channel ch_out_mbox;
 	spu_channel ch_out_intr_mbox;
 
-	u64 snr_config; // SPU SNR Config Register
+	u64 snr_config = 0; // SPU SNR Config Register
 
 	spu_channel ch_snr1; // SPU Signal Notification Register 1
 	spu_channel ch_snr2; // SPU Signal Notification Register 2

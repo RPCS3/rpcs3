@@ -728,8 +728,6 @@ void spu_thread::cpu_init()
 	ch_out_mbox.data.release({});
 	ch_out_intr_mbox.data.release({});
 
-	snr_config = 0;
-
 	ch_snr1.data.release({});
 	ch_snr2.data.release({});
 
