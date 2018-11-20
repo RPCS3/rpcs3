@@ -3247,6 +3247,12 @@ void VKGSRender::flip(int buffer)
 					image_to_flip = render_target_texture;
 				}
 			}
+
+			if (image_to_flip)
+			{
+				buffer_width = rsx::apply_resolution_scale(buffer_width, true);
+				buffer_height = rsx::apply_resolution_scale(buffer_height, true);
+			}
 		}
 		else if (auto surface = m_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
 		{
@@ -3300,7 +3306,7 @@ void VKGSRender::flip(int buffer)
 		}
 
 		vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
-			0, 0, image_to_flip->width(), image_to_flip->height(), aspect_ratio.x, aspect_ratio.y, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
+			0, 0, buffer_width, buffer_height, aspect_ratio.x, aspect_ratio.y, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
 
 		if (target_layout != present_layout)
 		{
