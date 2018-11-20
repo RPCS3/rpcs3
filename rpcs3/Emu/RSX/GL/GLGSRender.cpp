@@ -1627,8 +1627,8 @@ void GLGSRender::flip(int buffer)
 
 			if (image)
 			{
-				buffer_width = render_target_texture->width();
-				buffer_height = render_target_texture->height();
+				buffer_width = rsx::apply_resolution_scale(buffer_width, true);
+				buffer_height = rsx::apply_resolution_scale(buffer_height, true);
 			}
 		}
 		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
