@@ -970,7 +970,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->select).code,   CELL_PAD_CTRL_SELECT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->l3).code,       CELL_PAD_CTRL_L3);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->r3).code,       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->ps).code,       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->ps).code,       CELL_PAD_CTRL_PS);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->up).code,       CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->down).code,     CELL_PAD_CTRL_DOWN);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->left).code,     CELL_PAD_CTRL_LEFT);
