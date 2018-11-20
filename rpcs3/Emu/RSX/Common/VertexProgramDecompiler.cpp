@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "VertexProgramDecompiler.h"
@@ -240,18 +240,8 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 	return fmt::replace_all(code, repl_list);
 }
 
-std::string VertexProgramDecompiler::GetCond()
+std::string VertexProgramDecompiler::GetRawCond()
 {
-	enum
-	{
-		lt = 0x1,
-		eq = 0x2,
-		gt = 0x4,
-	};
-
-	if (d0.cond == 0) return "false";
-	if (d0.cond == (lt | gt | eq)) return "true";
-
 	static const COMPARE cond_string_table[(lt | gt | eq) + 1] =
 	{
 		COMPARE::FUNCTION_SLT, // "error"
@@ -272,7 +262,15 @@ std::string VertexProgramDecompiler::GetCond()
 	swizzle += f[d0.mask_w];
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-	return "any(" + compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
+	return compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle);
+}
+
+std::string VertexProgramDecompiler::GetCond()
+{
+	if (d0.cond == 0) return "false";
+	if (d0.cond == (lt | gt | eq)) return "true";
+
+	return "any(" + GetRawCond() + ")";
 }
 
 std::string VertexProgramDecompiler::GetOptionalBranchCond()
@@ -292,7 +290,6 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 		gt = 0x4,
 	};
 
-
 	if (!d0.cond_test_enable || d0.cond == (lt | gt | eq))
 	{
 		AddCode(dst + " = " + src + ";");
@@ -305,58 +302,9 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 		return;
 	}
 
-	static const COMPARE cond_string_table[(lt | gt | eq) + 1] =
-	{
-		COMPARE::FUNCTION_SLT, // "error"
-		COMPARE::FUNCTION_SLT,
-		COMPARE::FUNCTION_SEQ,
-		COMPARE::FUNCTION_SLE,
-		COMPARE::FUNCTION_SGT,
-		COMPARE::FUNCTION_SNE,
-		COMPARE::FUNCTION_SGE,
-	};
-
-	ShaderVariable dst_var(dst);
-	dst_var.simplify();
-
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-	const u32 mask_index[4] = { d0.mask_x, d0.mask_y, d0.mask_z, d0.mask_w };
-
-	auto get_masked_dst = [](const std::string& dest, const char mask)
-	{
-		const auto selector = std::string(".") + mask;
-		const auto pos = dest.find('=');
-
-		std::string result = dest + selector;
-
-		if (pos != std::string::npos)
-		{
-			result.insert(pos - 1, selector);
-		}
-
-		return result;
-	};
-
-	auto get_cond_func = [this, &mask_index](COMPARE op, int index)
-	{
-		// Condition reg check for single element (x,y,z,w)
-		const auto cond_mask = f[mask_index[index]];
-		return compareFunction(op, AddCondReg() + "." + cond_mask, "0.", true);
-	};
-
-	if (dst_var.swizzles[0].length() == 1)
-	{
-		const std::string cond = get_cond_func(cond_string_table[d0.cond], 0);
-		AddCode("if (" + cond + ") " + dst + " = " + src + ";");
-	}
-	else
-	{
-		for (int i = 0; i < dst_var.swizzles[0].length(); ++i)
-		{
-			const std::string cond = get_cond_func(cond_string_table[d0.cond], i);
-			AddCode("if (" + cond + ") " + get_masked_dst(dst, f[i]) + " = " + src + "." + f[i] + ";");
-		}
-	}
+	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
+	const auto cond = ShaderVariable(dst).match_size(GetRawCond());
+	AddCode(dst + " = _select(" + dst + ", " + src + ", " + cond + ");");
 }
 
 std::string VertexProgramDecompiler::AddAddrReg()

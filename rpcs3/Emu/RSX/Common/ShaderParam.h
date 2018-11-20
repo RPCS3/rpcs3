@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <vector>
@@ -179,22 +179,30 @@ public:
 	{
 		// Separate 'double destination' variables 'X=Y=SRC'
 		std::string simple_var;
-		const auto pos = var.find('=');
+		const auto eq_pos = var.find('=');
 
-		if (pos != std::string::npos)
+		if (eq_pos != std::string::npos)
 		{
-			simple_var = var.substr(0, pos - 1);
+			simple_var = var.substr(0, eq_pos - 1);
 		}
 		else
 		{
 			simple_var = var;
 		}
 
+		const auto brace_pos = var.find_last_of(")");
+		std::string prefix;
+		if (brace_pos != std::string::npos)
+		{
+			prefix = simple_var.substr(0, brace_pos);
+			simple_var = simple_var.substr(brace_pos);
+		}
+
 		auto var_blocks = fmt::split(simple_var, { "." });
 
 		verify(HERE), (var_blocks.size() != 0);
 
-		name = var_blocks[0];
+		name = prefix + var_blocks[0];
 
 		if (var_blocks.size() == 1)
 		{
@@ -262,6 +270,45 @@ public:
 		}
 
 		return name + "." + fmt::merge({ swizzles }, ".");
+	}
+
+	std::string match_size(const std::string& other_var) const
+	{
+		// Make other_var the same vector length as this var
+		ShaderVariable other(other_var);
+		const auto this_size = get_vector_size();
+		const auto other_size = other.get_vector_size();
+
+		if (LIKELY(this_size == other_size))
+		{
+			return other_var;
+		}
+
+		if (LIKELY(this_size < other_size))
+		{
+			switch (this_size)
+			{
+			case 0:
+			case 4:
+				return other_var;
+			case 1:
+				return other_var + ".x";
+			case 2:
+				return other_var + ".xy";
+			case 3:
+				return other_var + ".xyz";
+			default:
+				fmt::throw_exception("Unreachable" HERE);
+			}
+		}
+		else
+		{
+			auto remaining = this_size - other_size;
+			std::string result = other_var;
+
+			while (remaining--) result += "x";
+			return result;
+		}
 	}
 };
 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Emu/RSX/RSXVertexProgram.h"
 #include <vector>
 #include <set>
@@ -26,6 +26,13 @@ struct VertexProgramDecompiler
 	D2 d2;
 	D3 d3;
 	SRC src[3];
+
+	enum
+	{
+		lt = 0x1,
+		eq = 0x2,
+		gt = 0x4,
+	};
 
 	struct FuncInfo
 	{
@@ -66,9 +73,9 @@ struct VertexProgramDecompiler
 	std::string GetDST(bool is_sca = false);
 	std::string GetSRC(const u32 n);
 	std::string GetTex();
+	std::string GetRawCond();
 	std::string GetCond();
 	std::string GetOptionalBranchCond();	//Conditional branch expression modified externally at runtime
-	std::string AddAddrMask();
 	std::string AddAddrReg();
 	std::string AddCondReg();
 	u32 GetAddr();

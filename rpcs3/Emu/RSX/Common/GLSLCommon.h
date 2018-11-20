@@ -415,6 +415,8 @@ namespace glsl
 
 	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false, bool require_texture_ops = true)
 	{
+		OS << "#define _select mix\n\n";
+
 		if (require_lit_emulation)
 		{
 			OS <<
