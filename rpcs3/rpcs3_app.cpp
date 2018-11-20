@@ -142,9 +142,9 @@ void rpcs3_app::InitializeCallbacks()
 		RequestCallAfter(std::move(func));
 	};
 
-	callbacks.reset_pads = [this]()
+	callbacks.reset_pads = [this](const std::string& title_id = "")
 	{
-		pad::get_current_handler()->Reset();
+		pad::get_current_handler()->Reset(title_id);
 	};
 	callbacks.enable_pads = [this](bool enable)
 	{
@@ -183,9 +183,9 @@ void rpcs3_app::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_pad_handler = [this]() -> std::shared_ptr<pad_thread>
+	callbacks.get_pad_handler = [this](const std::string& title_id) -> std::shared_ptr<pad_thread>
 	{
-		return std::make_shared<pad_thread>(thread(), gameWindow);
+		return std::make_shared<pad_thread>(thread(), gameWindow, title_id);
 	};
 
 	callbacks.get_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>

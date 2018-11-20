@@ -1247,6 +1247,7 @@ void main_window::CreateConnects()
 	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveSPUCaches);
 	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveShaderCaches);
 	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveCustomConfigurations);
+	connect(ui->batchRemoveCustomPadConfigurationsAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveCustomPadConfigurations);
 
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
@@ -1282,20 +1283,19 @@ void main_window::CreateConnects()
 
 	auto openPadSettings = [this]
 	{
-		auto resetPadHandlers = [this](int/* result*/)
-		{
-			if (Emu.IsStopped())
-			{
-				return;
-			}
-			Emu.GetCallbacks().reset_pads();
-		};
 		if (!Emu.IsStopped())
 		{
 			Emu.GetCallbacks().enable_pads(false);
 		}
 		pad_settings_dialog dlg(this);
-		connect(&dlg, &QDialog::finished, resetPadHandlers);
+		connect(&dlg, &QDialog::finished, [this](int/* result*/)
+		{
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+			Emu.GetCallbacks().reset_pads(Emu.GetTitleID());
+		});
 		dlg.exec();
 		if (!Emu.IsStopped())
 		{

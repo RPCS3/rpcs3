@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -172,6 +172,7 @@
      <addaction name="batchCreatePPUCachesAct"/>
      <addaction name="separator"/>
      <addaction name="batchRemoveCustomConfigurationsAct"/>
+     <addaction name="batchRemoveCustomPadConfigurationsAct"/>
      <addaction name="batchRemovePPUCachesAct"/>
      <addaction name="batchRemoveSPUCachesAct"/>
      <addaction name="batchRemoveShaderCachesAct"/>
@@ -993,6 +994,11 @@
   <action name="batchRemoveShaderCachesAct">
    <property name="text">
     <string>Remove Shader Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveCustomPadConfigurationsAct">
+   <property name="text">
+    <string>Remove Custom Pad Configurations</string>
    </property>
   </action>
  </widget>
