@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
@@ -372,25 +372,9 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 		return;
 	}
 
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-	std::string cond = GetRawCond();
-
-	ShaderVariable dst_var(dst);
-	dst_var.simplify();
-
-	//const char *c_mask = f;
-
-	if (dst_var.swizzles[0].length() == 1)
-	{
-		AddCode("if (" + cond + ".x) " + dst + " = " + src + ";");
-	}
-	else
-	{
-		for (int i = 0; i < dst_var.swizzles[0].length(); ++i)
-		{
-			AddCode("if (" + cond + "." + f[i] + ") " + dst + "." + f[i] + " = " + src + "." + f[i] + ";");
-		}
-	}
+	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
+	const auto cond = ShaderVariable(dst).match_size(GetRawCond());
+	AddCode(dst + " = _select(" + dst + ", " + src + ", " + cond + ");");
 }
 
 template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
