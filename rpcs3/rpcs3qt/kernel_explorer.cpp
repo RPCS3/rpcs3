@@ -63,7 +63,7 @@ void kernel_explorer::Update()
 {
 	m_tree->clear();
 
-	const auto dct = fxm::get_always<lv2_memory_container>();
+	const auto dct = fxm::get<lv2_memory_container>();
 
 	if (!dct)
 	{
