@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "PadHandler.h"
+#include "pad_thread.h"
 
 cfg_input g_cfg_input;
 
@@ -268,13 +269,25 @@ bool PadHandlerBase::has_led()
 	return b_has_led;
 }
 
-std::string PadHandlerBase::get_config_dir(pad_handler type)
+std::string PadHandlerBase::get_config_dir(pad_handler type, const std::string& title_id)
 {
+	if (!title_id.empty())
+	{
+		return Emu.GetCustomInputConfigDir(title_id) + fmt::format("%s", type) + "/";
+	}
 	return fs::get_config_dir() + "/InputConfigs/" + fmt::format("%s", type) + "/";
 }
 
-std::string PadHandlerBase::get_config_filename(int i)
+std::string PadHandlerBase::get_config_filename(int i, const std::string& title_id)
 {
+	if (!title_id.empty() && fs::is_file(Emu.GetCustomInputConfigPath(title_id)))
+	{
+		const std::string path = Emu.GetCustomInputConfigDir(title_id) + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
+		if (fs::is_file(path))
+		{
+			return path;
+		}
+	}
 	return fs::get_config_dir() + "/InputConfigs/" + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
 }
 
@@ -286,7 +299,7 @@ void PadHandlerBase::init_configs()
 	{
 		if (g_cfg_input.player[i]->handler == m_type)
 		{
-			init_config(&m_pad_configs[index], get_config_filename(i));
+			init_config(&m_pad_configs[index], get_config_filename(i, pad::g_title_id));
 			index++;
 		}
 	}

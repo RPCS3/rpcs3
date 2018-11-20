@@ -31,6 +31,15 @@ enum Category
 	Others,
 };
 
+namespace config
+{
+	enum class type
+	{
+		emu,
+		pad
+	};
+}
+
 namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
 {
 	// PS3 bootable
@@ -171,6 +180,7 @@ struct gui_game_info
 	QImage icon;
 	QPixmap pxmap;
 	bool hasCustomConfig;
+	bool hasCustomPadConfig;
 };
 
 typedef std::shared_ptr<gui_game_info> game_info;
@@ -215,6 +225,7 @@ public Q_SLOTS:
 	void BatchRemovePPUCaches();
 	void BatchRemoveSPUCaches();
 	void BatchRemoveCustomConfigurations();
+	void BatchRemoveCustomPadConfigurations();
 	void BatchRemoveShaderCaches();
 	void SetListMode(const bool& isList);
 	void SetSearchText(const QString& text);
@@ -234,9 +245,9 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, const QColor& color = QColor());
+	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
 	QColor getGridCompatibilityColor(const QString& string);
-	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
+	void ShowCustomConfigIcon(QTableWidgetItem* item, config::type type);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
 	void SortGameList();
@@ -244,7 +255,8 @@ private:
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
 
-	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
+	bool RemoveCustomConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
+	bool RemoveCustomPadConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
 	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);

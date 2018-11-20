@@ -1,4 +1,4 @@
-#include <QCheckBox>
+﻿#include <QCheckBox>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -29,19 +29,13 @@ constexpr auto qstr = QString::fromStdString;
 
 inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
-	QString input_dir = qstr(fs::get_config_dir()) + "/InputConfigs/";
-	if (!QDir().mkdir(input_dir) && !QDir().exists(input_dir))
-	{
-		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(input_dir));
-		return false;
-	}
-	if (!QDir().mkdir(dir) && !QDir().exists(dir))
+	if (!QDir().mkpath(dir))
 	{
 		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(dir));
 		return false;
 	}
 
-	QString filename = dir + name + ".yml";
+	const QString filename = dir + name + ".yml";
 	QFile new_file(filename);
 
 	if (!new_file.open(QIODevice::WriteOnly))
@@ -54,16 +48,25 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	return true;
 };
 
-pad_settings_dialog::pad_settings_dialog(QWidget *parent)
+pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	: QDialog(parent), ui(new Ui::pad_settings_dialog)
 {
 	ui->setupUi(this);
 
-	setWindowTitle(tr("Gamepads Settings"));
-
 	// load input config
 	g_cfg_input.from_default();
-	g_cfg_input.load();
+	
+	if (game)
+	{
+		m_title_id = game->serial;
+		g_cfg_input.load(game->serial);
+		setWindowTitle(tr("Gamepads Settings: [%0] %1").arg(qstr(game->serial)).arg(qstr(game->name).simplified()));
+	}
+	else
+	{
+		g_cfg_input.load();
+		setWindowTitle(tr("Gamepads Settings"));
+	}
 
 	// Create tab widget for 7 players
 	m_tabs = new QTabWidget;
@@ -153,7 +156,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent)
 				QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 				continue;
 			}
-			if (CreateConfigFile(qstr(PadHandlerBase::get_config_dir(g_cfg_input.player[i]->handler)), friendlyName))
+			if (CreateConfigFile(qstr(PadHandlerBase::get_config_dir(g_cfg_input.player[i]->handler, m_title_id)), friendlyName))
 			{
 				ui->chooseProfile->addItem(friendlyName);
 				ui->chooseProfile->setCurrentText(friendlyName);
@@ -839,6 +842,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 
 void pad_settings_dialog::OnTabChanged(int index)
 {
+	// TODO: Do not save yet! But keep all profile changes until the dialog was saved.
 	// Save old profile
 	SaveProfile();
 
@@ -898,7 +902,7 @@ void pad_settings_dialog::ChangeInputType()
 	if (!g_cfg_input.player[player]->handler.from_string(handler))
 	{
 		// Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert input string:%s", handler);
+		LOG_ERROR(GENERAL, "Failed to convert input string: %s", handler);
 		return;
 	}
 
@@ -963,7 +967,7 @@ void pad_settings_dialog::ChangeInputType()
 			}
 		}
 
-		QString profile_dir = qstr(PadHandlerBase::get_config_dir(m_handler->m_type));
+		QString profile_dir = qstr(PadHandlerBase::get_config_dir(m_handler->m_type, m_title_id));
 		QStringList profiles = gui::utils::get_dir_entries(QDir(profile_dir), QStringList() << "*.yml");
 
 		if (profiles.isEmpty())
@@ -1021,7 +1025,7 @@ void pad_settings_dialog::ChangeProfile()
 	}
 
 	// Change handler
-	const std::string cfg_name = PadHandlerBase::get_config_dir(m_handler->m_type) + m_profile + ".yml";
+	const std::string cfg_name = PadHandlerBase::get_config_dir(m_handler->m_type, m_title_id) + m_profile + ".yml";
 
 	// Adjust to the different pad handlers
 	switch (m_handler->m_type)
@@ -1145,7 +1149,7 @@ void pad_settings_dialog::SaveExit()
 		g_cfg_input.player[i]->profile.from_default();
 	}
 
-	g_cfg_input.save();
+	g_cfg_input.save(m_title_id);
 
 	QDialog::accept();
 }

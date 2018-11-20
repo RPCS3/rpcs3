@@ -8,6 +8,7 @@
 #include <QTimer>
 
 #include "Emu/Io/PadHandler.h"
+#include "Emu/GameInfo.h"
 
 namespace Ui
 {
@@ -85,7 +86,7 @@ class pad_settings_dialog : public QDialog
 	const QString Disconnected_suffix = tr(" (disconnected)");
 
 public:
-	explicit pad_settings_dialog(QWidget *parent = nullptr);
+	explicit pad_settings_dialog(QWidget *parent = nullptr, const GameInfo *game = nullptr);
 	~pad_settings_dialog();
 
 private Q_SLOTS:
@@ -100,6 +101,7 @@ private Q_SLOTS:
 
 private:
 	Ui::pad_settings_dialog *ui;
+	std::string m_title_id;
 
 	// TabWidget
 	QTabWidget* m_tabs;

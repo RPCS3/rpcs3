@@ -1,6 +1,7 @@
 ﻿#include "game_list_frame.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
+#include "pad_settings_dialog.h"
 #include "table_item_delegate.h"
 #include "custom_table_widget_item.h"
 #include "input_dialog.h"
@@ -114,6 +115,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 		QMenu* configure = new QMenu(this);
 		configure->addActions(m_columnActs);
 		configure->exec(mapToGlobal(pos));
+
+		QMenu* pad_configure = new QMenu(this);
+		pad_configure->addActions(m_columnActs);
+		pad_configure->exec(mapToGlobal(pos));
 	});
 
 	connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
@@ -471,12 +476,14 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 
 			const auto compat = m_game_compat->GetCompatibility(game.serial);
+
 			const bool hasCustomConfig = fs::is_file(Emu.GetCustomConfigPath(game.serial)) || fs::is_file(Emu.GetCustomConfigPath(game.serial, true));
+			const bool hasCustomPadConfig = fs::is_file(Emu.GetCustomInputConfigPath(game.serial));
 
 			const QColor color = getGridCompatibilityColor(compat.color);
-			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, color);
+			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, hasCustomPadConfig, color);
 
-			m_game_data.push_back(game_info(new gui_game_info{ game, compat, img, pxmap, hasCustomConfig }));
+			m_game_data.push_back(game_info(new gui_game_info{game, compat, img, pxmap, hasCustomConfig, hasCustomPadConfig}));
 		}
 		catch (const std::exception& e)
 		{
@@ -695,6 +702,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 	myMenu.addAction(boot);
 	QAction* configure = myMenu.addAction(tr("&Configure"));
+	QAction* pad_configure = myMenu.addAction(tr("&Configure pads"));
 	QAction* createPPUCache = myMenu.addAction(tr("&Create PPU Cache"));
 	myMenu.addSeparator();
 	QAction* renameTitle = myMenu.addAction(tr("&Rename In Game List"));
@@ -709,9 +717,20 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* remove_custom_config = remove_menu->addAction(tr("&Remove Custom Configuration"));
 		connect(remove_custom_config, &QAction::triggered, [=]()
 		{
-			if (RemoveCustomConfiguration(currGame.serial, true))
+			if (RemoveCustomConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item, false);
+				ShowCustomConfigIcon(item, config::type::emu);
+			}
+		});
+	}
+	if (gameinfo->hasCustomPadConfig)
+	{
+		QAction* remove_custom_pad_config = remove_menu->addAction(tr("&Remove Custom Pad Configuration"));
+		connect(remove_custom_pad_config, &QAction::triggered, [=]()
+		{
+			if (RemoveCustomPadConfiguration(currGame.serial, gameinfo, true))
+			{
+				ShowCustomConfigIcon(item, config::type::pad);
 			}
 		});
 	}
@@ -775,7 +794,33 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, this, &currGame);
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomConfig)
 		{
-			ShowCustomConfigIcon(item, true);
+			gameinfo->hasCustomConfig = true;
+			ShowCustomConfigIcon(item, config::type::emu);
+		}
+	});
+	connect(pad_configure, &QAction::triggered, [=]
+	{
+		if (!Emu.IsStopped())
+		{
+			Emu.GetCallbacks().enable_pads(false);
+		}
+		pad_settings_dialog dlg(this, &currGame);
+		connect(&dlg, &QDialog::finished, [this](int/* result*/)
+		{
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+			Emu.GetCallbacks().reset_pads(Emu.GetTitleID());
+		});
+		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
+		{
+			gameinfo->hasCustomPadConfig = true;
+			ShowCustomConfigIcon(item, config::type::pad);
+		}
+		if (!Emu.IsStopped())
+		{
+			Emu.GetCallbacks().enable_pads(true);
 		}
 	});
 	connect(hide_serial, &QAction::triggered, [=](bool checked)
@@ -801,7 +846,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		}
 
 		QMessageBox* mb = new QMessageBox(QMessageBox::Question, tr("Confirm %1 Removal").arg(qstr(currGame.category)), tr("Permanently remove %0 from drive?\nPath: %1").arg(name).arg(qstr(currGame.path)), QMessageBox::Yes | QMessageBox::No, this);
-		mb->setCheckBox(new QCheckBox(tr("Remove caches and custom config")));
+		mb->setCheckBox(new QCheckBox(tr("Remove caches and custom configs")));
 		mb->deleteLater();
 		if (mb->exec() == QMessageBox::Yes)
 		{
@@ -811,6 +856,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				RemovePPUCache(cache_base_dir);
 				RemoveSPUCache(cache_base_dir);
 				RemoveCustomConfiguration(currGame.serial);
+				RemoveCustomPadConfiguration(currGame.serial);
 			}
 			fs::remove_all(currGame.path);
 			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
@@ -933,7 +979,7 @@ bool game_list_frame::CreatePPUCache(const std::string& path)
 	return success;
 }
 
-bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, bool is_interactive)
+bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, game_info game, bool is_interactive)
 {
 	const std::string config_path_new = Emu.GetCustomConfigPath(title_id);
 	const std::string config_path_old = Emu.GetCustomConfigPath(title_id, true);
@@ -954,6 +1000,10 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, boo
 		}
 		if (fs::remove_file(path))
 		{
+			if (game)
+			{
+				game->hasCustomConfig = false;
+			}
 			LOG_SUCCESS(GENERAL, "Removed configuration file: %s", path);
 		}
 		else
@@ -969,6 +1019,41 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, boo
 	}
 
 	return result;
+}
+
+bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, game_info game, bool is_interactive)
+{
+	const std::string config_dir = Emu.GetCustomInputConfigDir(title_id);
+
+	if (!fs::is_dir(config_dir))
+		return true;
+
+	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), (!Emu.IsStopped() && Emu.GetTitleID() == title_id)
+		? tr("Remove custom pad configuration?\nYour configuration will revert to the global pad settings.")
+		: tr("Remove custom pad configuration?")) != QMessageBox::Yes)
+		return true;
+
+	if (QDir(qstr(config_dir)).removeRecursively())
+	{
+		if (game)
+		{
+			game->hasCustomPadConfig = false;
+		}
+		if (!Emu.IsStopped() && Emu.GetTitleID() == title_id)
+		{
+			Emu.GetCallbacks().enable_pads(false);
+			Emu.GetCallbacks().reset_pads(title_id);
+			Emu.GetCallbacks().enable_pads(true);
+		}
+		LOG_NOTICE(GENERAL, "Removed pad configuration directory: %s", config_dir);
+		return true;
+	}
+	else if (is_interactive)
+	{
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to completely remove pad configuration directory!"));
+		LOG_FATAL(GENERAL, "Failed to completely remove pad configuration directory: %s\nError: %s", config_dir, fs::g_tls_error);
+	}
+	return false;
 }
 
 bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_interactive)
@@ -1260,6 +1345,52 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 	Refresh(true);
 }
 
+void game_list_frame::BatchRemoveCustomPadConfigurations()
+{
+	std::set<std::string> serials;
+	for (const auto& game : m_game_data)
+	{
+		if (game->hasCustomPadConfig && !serials.count(game->info.serial))
+		{
+			serials.emplace(game->info.serial);
+		}
+	}
+	const u32 total = serials.size();
+
+	if (total == 0)
+	{
+		QMessageBox::information(this, tr("Custom Pad Configuration Batch Removal"), tr("No files found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, this);
+	pdlg->setWindowTitle(tr("Custom Pad Configuration Batch Removal"));
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->show();
+
+	u32 removed = 0;
+	for (const auto& serial : serials)
+	{
+		if (pdlg->wasCanceled())
+		{
+			LOG_NOTICE(GENERAL, "Custom Pad Configuration Batch Removal was canceled. %d/%d custom pad configurations cleared", removed, total);
+			break;
+		}
+		QApplication::processEvents();
+
+		if (RemoveCustomPadConfiguration(serial))
+		{
+			pdlg->SetValue(++removed);
+		}
+	}
+
+	pdlg->setLabelText(tr("%0/%1 custom pad configurations cleared").arg(removed).arg(total));
+	pdlg->setCancelButtonText(tr("OK"));
+	QApplication::beep();
+	Refresh(true);
+}
+
 void game_list_frame::BatchRemoveShaderCaches()
 {
 	std::set<std::string> serials;
@@ -1302,7 +1433,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 	QApplication::beep();
 }
 
-QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon, const QColor& compatibility_color)
+QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
 	const int device_pixel_ratio = devicePixelRatio();
 	const QSize original_size = img.size();
@@ -1318,11 +1449,26 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 		painter.drawImage(QPoint(0, 0), img);
 	}
 
-	if (paint_config_icon && !m_isListLayout)
+	if (!m_isListLayout && (paint_config_icon || paint_pad_config_icon))
 	{
 		const int width = original_size.width() * 0.2;
 		const QPoint origin = QPoint(original_size.width() - width, 0);
-		QImage custom_config_icon(":/Icons/custom_config_2.png");
+		QString icon_path;
+
+		if (paint_config_icon && paint_pad_config_icon)
+		{
+			icon_path = ":/Icons/combo_config_bordered.png";
+		}
+		else if (paint_config_icon)
+		{
+			icon_path = ":/Icons/custom_config_2.png";
+		}
+		else if (paint_pad_config_icon)
+		{
+			icon_path = ":/Icons/controllers_2.png";
+		}
+
+		QImage custom_config_icon(icon_path);
 		custom_config_icon.setDevicePixelRatio(device_pixel_ratio);
 		painter.drawImage(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
@@ -1342,7 +1488,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 	return QPixmap::fromImage(image.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
-void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
+void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, config::type type)
 {
 	auto game = GetGameInfoFromItem(item);
 	if (game == nullptr)
@@ -1350,24 +1496,22 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
 		return;
 	}
 
-	game->hasCustomConfig = enabled;
-	const QColor color = getGridCompatibilityColor(game->compat.color);
-	game->pxmap = PaintedPixmap(game->icon, enabled, color);
-
 	if (!m_isListLayout)
 	{
+		const QColor color = getGridCompatibilityColor(game->compat.color);
+		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 		int r = m_xgrid->currentItem()->row(), c = m_xgrid->currentItem()->column();
 		m_xgrid->addItem(game->pxmap, qstr(game->info.name).simplified(), r, c);
 		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(game));
 	}
-	else if (enabled)
-	{
+	else if (game->hasCustomConfig && game->hasCustomPadConfig)
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/combo_config_bordered.png"));
+	else if (game->hasCustomConfig)
 		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/custom_config.png"));
-	}
+	else if (game->hasCustomPadConfig)
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/controllers.png"));
 	else
-	{
 		m_gameList->setItem(item->row(), gui::column_name, new custom_table_widget_item(game->info.name));
-	}
 }
 
 void game_list_frame::ResizeIcons(const int& sliderPos)
@@ -1395,7 +1539,7 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 	for (auto& game : m_game_data)
 	{
 		QColor color = getGridCompatibilityColor(game->compat.color);
-		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, color);
+		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 	}
 
 	Refresh();
@@ -1560,9 +1704,17 @@ int game_list_frame::PopulateGameList()
 
 		// Title
 		custom_table_widget_item* title_item = new custom_table_widget_item(title);
-		if (game->hasCustomConfig)
+		if (game->hasCustomConfig && game->hasCustomPadConfig)
+		{
+			title_item->setIcon(QIcon(":/Icons/combo_config_bordered.png"));
+		}
+		else if (game->hasCustomConfig)
 		{
 			title_item->setIcon(QIcon(":/Icons/custom_config.png"));
+		}
+		else if (game->hasCustomPadConfig)
+		{
+			title_item->setIcon(QIcon(":/Icons/controllers.png"));
 		}
 
 		// Serial
