@@ -1,4 +1,4 @@
-#include <QCheckBox>
+﻿#include <QCheckBox>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -52,16 +52,25 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	return true;
 };
 
-pad_settings_dialog::pad_settings_dialog(QWidget *parent)
+pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	: QDialog(parent), ui(new Ui::pad_settings_dialog)
 {
 	ui->setupUi(this);
 
-	setWindowTitle(tr("Gamepads Settings"));
-
 	// load input config
 	g_cfg_input.from_default();
-	g_cfg_input.load();
+	
+	if (game)
+	{
+		g_cfg_input.load("data/" + game->serial);
+		setWindowTitle(tr("Gamepads Settings: [") + qstr(game->serial) + "] " + qstr(game->name));
+	}
+	else
+	{
+		g_cfg_input.load();
+		setWindowTitle(tr("Gamepads Settings"));
+	}
+	
 
 	// Create tab widget for 7 players
 	m_tabs = new QTabWidget;

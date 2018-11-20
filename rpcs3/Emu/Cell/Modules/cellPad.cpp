@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -44,7 +44,7 @@ error_code cellPadInit(u32 max_connect)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	handler = fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler);
-	handler->Init(std::min(max_connect, (u32)CELL_PAD_MAX_PORT_NUM));
+	handler->Init(std::min(max_connect, (u32)CELL_PAD_MAX_PORT_NUM), fs::get_config_dir() + "data/" + Emu.GetTitleID());
 
 	return CELL_OK;
 }

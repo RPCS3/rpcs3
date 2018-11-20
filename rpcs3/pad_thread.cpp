@@ -1,4 +1,4 @@
-#include "pad_thread.h"
+﻿#include "pad_thread.h"
 #include "ds4_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
@@ -23,13 +23,13 @@ pad_thread::~pad_thread()
 	handlers.clear();
 }
 
-void pad_thread::Init(const u32 max_connect)
+void pad_thread::Init(const u32 max_connect, const std::string& pad_cfg_path)
 {
 	std::memset(&m_info, 0, sizeof(m_info));
 	m_info.max_connect = std::min(max_connect, (u32)7); // max 7 pads
 	m_info.now_connect = 0;
 
-	g_cfg_input.load();
+	g_cfg_input.load(pad_cfg_path);
 
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
@@ -167,6 +167,7 @@ struct gui_game_info
 	QImage icon;
 	QPixmap pxmap;
 	bool hasCustomConfig;
+	bool hasCustomPadConfig;
 };
 
 typedef std::shared_ptr<gui_game_info> game_info;
@@ -213,6 +214,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
+	bool RemoveCustomPadConfiguration(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
@@ -229,9 +231,10 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, const QColor& color = QColor());
+	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
 	QColor getGridCompatibilityColor(const QString& string);
 	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
+	void ShowCustomPadConfigIcon(QTableWidgetItem* item, bool enabled);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
 	void SortGameList();

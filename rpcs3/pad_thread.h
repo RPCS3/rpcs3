@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <map>
 #include <thread>
@@ -19,7 +19,7 @@ public:
 	pad_thread(void *_curthread, void *_curwindow); // void * instead of QThread * and QWindow * because of include in emucore
 	~pad_thread();
 
-	void Init(const u32 max_connect);
+	void Init(const u32 max_connect, const std::string& pad_cfg_path = "");
 	PadInfo& GetInfo() { return m_info; }
 	std::vector<std::shared_ptr<Pad>>& GetPads() { return m_pads; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);

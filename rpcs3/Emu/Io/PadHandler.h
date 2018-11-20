@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cmath>
 #include <vector>
@@ -7,6 +7,7 @@
 #include "Utilities/Config.h"
 #include "Utilities/types.h"
 #include "Emu/System.h"
+#include "Emu/GameInfo.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
@@ -264,7 +265,7 @@ struct cfg_player final : cfg::node
 
 struct cfg_input final : cfg::node
 {
-	const std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
+	std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
 
 	cfg_player player1{ this, "Player 1 Input", pad_handler::keyboard };
 	cfg_player player2{ this, "Player 2 Input", pad_handler::null };
@@ -276,13 +277,24 @@ struct cfg_input final : cfg::node
 
 	cfg_player *player[7]{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc! 
 
-	bool load()
+	bool load(const std::string& path = "")
 	{
-		if (fs::file cfg_file{ cfg_name, fs::read })
+		if (path.empty())
+		{
+			cfg_name = fs::get_config_dir() + "/config_input.yml";
+		}
+		else
+		{
+			// Create config path if necessary
+			fs::create_path(path);
+
+			cfg_name = path + "/config_input.yml";
+		}
+
+		if (fs::file cfg_file{cfg_name, fs::read})
 		{
 			return from_string(cfg_file.to_string());
 		}
-
 		return false;
 	};
 

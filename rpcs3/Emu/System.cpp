@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -38,7 +38,6 @@
 
 #include "Utilities/GDBDebugServer.h"
 
-#include "Utilities/sysinfo.h"
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"

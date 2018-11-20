@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QButtonGroup>
 #include <QDialog>
@@ -8,6 +8,7 @@
 #include <QTimer>
 
 #include "Emu/Io/PadHandler.h"
+#include "Emu/GameInfo.h"
 
 namespace Ui
 {
@@ -74,7 +75,7 @@ class pad_settings_dialog : public QDialog
 	};
 
 public:
-	explicit pad_settings_dialog(QWidget *parent = nullptr);
+	explicit pad_settings_dialog(QWidget *parent = nullptr, const GameInfo *game = nullptr);
 	~pad_settings_dialog();
 
 private Q_SLOTS:
