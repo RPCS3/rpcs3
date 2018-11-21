@@ -1526,6 +1526,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		mem_size = 0xC800000;
 	}
 
+	if (g_cfg.core.debug_console_mode)
+	{
+		// TODO: Check for all sdk versions
+		mem_size += 0xC000000;
+	}
+
 	fxm::make_always<lv2_memory_container>(mem_size);
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
