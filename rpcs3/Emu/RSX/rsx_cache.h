@@ -884,38 +884,11 @@ namespace rsx
 
 				for (auto &v : vertex_ranges[local_addr])
 				{
-					if (v.buffer_format == fmt && v.data_length >= data_length)
+					// NOTE: This has to match exactly. Using sized shortcuts such as >= comparison causes artifacting in some applications (UC1)
+					if (v.buffer_format == fmt && v.data_length == data_length)
 						return &v;
 				}
-#if 0
-				for (const auto &range : vertex_ranges)
-				{
-					if (range.first > local_addr)
-						continue;
 
-					for (const auto &v : range.second)
-					{
-						if (v.buffer_format == fmt)
-						{
-							const auto entry_end = v.local_address + v.data_length;
-							if (data_end <= entry_end)
-							{
-								const u32 offset = (local_addr - v.local_address);
-								if (offset % 16)
-									continue; // TexelBuffer alignment rules
-
-								storage_type e = v;
-								e.data_length = data_length;
-								e.local_address = local_addr;
-								e.offset_in_heap += offset;
-
-								auto& ret = vertex_ranges[local_addr].emplace_back(e);
-								return &ret;
-							}
-						}
-					}
-				}
-#endif
 				return nullptr;
 			}
 
