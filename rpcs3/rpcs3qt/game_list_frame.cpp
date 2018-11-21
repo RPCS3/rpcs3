@@ -675,7 +675,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			ShowCustomConfigIcon(item, true);
 		}
 	});
-	connect(pad_configure, &QAction::triggered, [=] {
+	connect(pad_configure, &QAction::triggered, [=]
+	{
 		pad_settings_dialog dlg(this, &currGame);
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
@@ -740,7 +741,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			ShowCustomConfigIcon(item, false);
 		}
 	});
-	connect(removePadConfig, &QAction::triggered, [=]() {
+	connect(removePadConfig, &QAction::triggered, [=]()
+	{
 		if (RemoveCustomPadConfiguration(config_base_dir, true))
 		{
 			ShowCustomPadConfigIcon(item, false);
@@ -981,7 +983,6 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 		const int width = original_size.width() * 0.2;
 		const QPoint origin = QPoint(original_size.width() - width, 0);
 		painter.drawImage(origin, QImage(":/Icons/combo_config_2.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
-
 	}
 	else if (paint_config_icon && !m_isListLayout)
 	{

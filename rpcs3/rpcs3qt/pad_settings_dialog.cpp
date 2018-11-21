@@ -62,8 +62,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	
 	if (game)
 	{
-		g_cfg_input.load("data/" + game->serial);
-		setWindowTitle(tr("Gamepads Settings: [") + qstr(game->serial) + "] " + qstr(game->name));
+		g_cfg_input.load(fs::get_config_dir() + "data/" + game->serial);
+		setWindowTitle(tr("Gamepads Settings: [%0] %1").arg(qstr(game->serial)).arg(qstr(game->name)));
 	}
 	else
 	{
