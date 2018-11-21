@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "Emu/System.h"
+
 #include "sys_tty.h"
 
 #include <deque>
@@ -15,7 +17,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 {
 	sys_tty.trace("sys_tty_read(ch=%d, buf=*0x%x, len=%d, preadlen=*0x%x)", ch, buf, len, preadlen);
 
-	if (false) // TODO: debug mode check
+	if (!g_cfg.core.debug_console_mode)
 	{
 		return CELL_EIO;
 	}

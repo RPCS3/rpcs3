@@ -380,6 +380,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_xfloat{this, "Accurate xfloat", false};
 		cfg::_bool spu_approx_xfloat{this, "Approximate xfloat", true};
 
+		cfg::_bool debug_console_mode{this, "Debug Console Mode", false}; // Debug console emulation, not recommended
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
 		cfg::set_entry load_libraries{this, "Load libraries"};
