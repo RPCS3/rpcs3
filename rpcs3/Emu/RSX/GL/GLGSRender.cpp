@@ -188,6 +188,7 @@ void GLGSRender::end()
 	if (skip_frame || !framebuffer_status_valid ||
 		(conditional_render_enabled && conditional_render_test_failed))
 	{
+		execute_nop_draw();
 		rsx::thread::end();
 		return;
 	}
@@ -386,6 +387,7 @@ void GLGSRender::end()
 	{
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
+		execute_nop_draw();
 		rsx::thread::end();
 		return;
 	}
@@ -482,6 +484,14 @@ void GLGSRender::end()
 			m_vertex_layout = analyse_inputs_interleaved();
 			if (!m_vertex_layout.validate())
 			{
+				// Execute remainining pipeline barriers with NOP draw
+				do
+				{
+					rsx::method_registers.current_draw_clause.execute_pipeline_dependencies();
+				}
+				while (rsx::method_registers.current_draw_clause.next());
+
+				rsx::method_registers.current_draw_clause.end();
 				break;
 			}
 		}
@@ -622,8 +632,6 @@ void GLGSRender::end()
 			}
 		}
 	} while (rsx::method_registers.current_draw_clause.next());
-
-	rsx::method_registers.current_draw_clause.post_execute_cleanup();
 
 	m_rtts.on_write();
 

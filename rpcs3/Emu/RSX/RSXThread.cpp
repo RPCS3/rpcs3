@@ -469,6 +469,8 @@ namespace rsx
 		in_begin_end = false;
 		m_draw_calls++;
 
+		method_registers.current_draw_clause.post_execute_cleanup();
+
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		ROP_sync_timestamp = get_system_time();
 
@@ -490,6 +492,16 @@ namespace rsx
 			u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			capture_frame("Draw " + rsx::to_string(rsx::method_registers.current_draw_clause.primitive) + std::to_string(element_count));
 		}
+	}
+
+	void thread::execute_nop_draw()
+	{
+		method_registers.current_draw_clause.begin();
+		do
+		{
+			method_registers.current_draw_clause.execute_pipeline_dependencies();
+		}
+		while (method_registers.current_draw_clause.next());
 	}
 
 	void thread::operator()()

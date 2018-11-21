@@ -1179,6 +1179,13 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	if (!m_vertex_layout.validate())
 	{
 		// No vertex inputs enabled
+		// Execute remainining pipeline barriers with NOP draw
+		do
+		{
+			draw_call.execute_pipeline_dependencies();
+		}
+		while (draw_call.next());
+
 		draw_call.end();
 		return;
 	}
@@ -1316,6 +1323,7 @@ void VKGSRender::end()
 	if (skip_frame || !framebuffer_status_valid || renderer_unavailable ||
 		(conditional_render_enabled && conditional_render_test_failed))
 	{
+		execute_nop_draw();
 		rsx::thread::end();
 		return;
 	}
@@ -1556,6 +1564,7 @@ void VKGSRender::end()
 	{
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
+		execute_nop_draw();
 		rsx::thread::end();
 		return;
 	}
@@ -1681,8 +1690,6 @@ void VKGSRender::end()
 		emit_geometry(sub_index++);
 	}
 	while (rsx::method_registers.current_draw_clause.next());
-
-	rsx::method_registers.current_draw_clause.post_execute_cleanup();
 
 	close_render_pass();
 	vk::leave_uninterruptible();

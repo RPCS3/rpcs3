@@ -544,6 +544,7 @@ namespace rsx
 	public:
 		virtual void begin();
 		virtual void end();
+		virtual void execute_nop_draw();
 
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
