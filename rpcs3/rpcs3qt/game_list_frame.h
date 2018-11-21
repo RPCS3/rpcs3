@@ -17,6 +17,12 @@
 
 #include <memory>
 
+enum class custom_config_type
+{
+	emu,
+	pad
+};
+
 enum Category
 {
 	Disc_Game,
@@ -233,8 +239,7 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
 	QColor getGridCompatibilityColor(const QString& string);
-	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
-	void ShowCustomPadConfigIcon(QTableWidgetItem* item, bool enabled);
+	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled, custom_config_type cc_type);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
 	void SortGameList();

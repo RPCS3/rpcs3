@@ -672,7 +672,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, this, &currGame);
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomConfig)
 		{
-			ShowCustomConfigIcon(item, true);
+			ShowCustomConfigIcon(item, true, custom_config_type::emu);
 		}
 	});
 	connect(pad_configure, &QAction::triggered, [=]
@@ -680,7 +680,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		pad_settings_dialog dlg(this, &currGame);
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
-			ShowCustomPadConfigIcon(item, true);
+			ShowCustomConfigIcon(item, true, custom_config_type::pad);
 		}
 	});
 	connect(hide_serial, &QAction::triggered, [=](bool checked)
@@ -738,14 +738,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		if (RemoveCustomConfiguration(config_base_dir, true))
 		{
-			ShowCustomConfigIcon(item, false);
+			ShowCustomConfigIcon(item, false, custom_config_type::emu);
 		}
 	});
 	connect(removePadConfig, &QAction::triggered, [=]()
 	{
 		if (RemoveCustomPadConfiguration(config_base_dir, true))
 		{
-			ShowCustomPadConfigIcon(item, false);
+			ShowCustomConfigIcon(item, false, custom_config_type::pad);
 		}
 	});
 	connect(removeShadersCache, &QAction::triggered, [=]()
@@ -1013,7 +1013,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 	return QPixmap::fromImage(image.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
-void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
+void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled, custom_config_type cc_type)
 {
 	auto game = GetGameInfoFromItem(item);
 	if (game == nullptr)
@@ -1021,64 +1021,32 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
 		return;
 	}
 
-	game->hasCustomConfig = enabled;
+	if (cc_type == custom_config_type::emu)
+	{
+		game->hasCustomConfig = enabled;
+	}
+	else if (cc_type == custom_config_type::pad)
+	{
+		game->hasCustomPadConfig = enabled;
+	}
+	
 
 	if (!m_isListLayout)
 	{
 		const QColor color = getGridCompatibilityColor(game->compat.color);
-		game->pxmap = PaintedPixmap(game->icon, enabled, game->hasCustomPadConfig, color);
+		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 		int r = m_xgrid->currentItem()->row(), c = m_xgrid->currentItem()->column();
 		m_xgrid->addItem(game->pxmap, qstr(game->info.name).simplified(), r, c);
 		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(game));
 	}
-	else if (enabled)
-	{
-		if (game->hasCustomPadConfig)
-			m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/combo_config.png"));
-		else
-			m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/custom_config.png"));
-	}
+	else if (game->hasCustomConfig && game->hasCustomPadConfig)
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/combo_config.png"));
+	else if (game->hasCustomConfig)
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/custom_config.png"));
+	else if (game->hasCustomPadConfig)
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/controllers.png"));
 	else
-	{
-		if (game->hasCustomPadConfig)
-			m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/controllers.png"));
-		else
-			m_gameList->setItem(item->row(), gui::column_name, new custom_table_widget_item(game->info.name));
-	}
-}
-
-void game_list_frame::ShowCustomPadConfigIcon(QTableWidgetItem* item, bool enabled)
-{
-	auto game = GetGameInfoFromItem(item);
-	if (game == nullptr)
-	{
-		return;
-	}
-
-	game->hasCustomPadConfig = enabled;
-
-	if (!m_isListLayout)
-	{
-		const QColor color = getGridCompatibilityColor(game->compat.color);
-		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, enabled, color);
-		int r = m_xgrid->currentItem()->row(), c = m_xgrid->currentItem()->column();
-		m_xgrid->addItem(game->pxmap, qstr(game->info.name).simplified(), r, c);
-		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(game));
-	}
-	else if (enabled)
-	{
-		if (game->hasCustomConfig)
-			m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/combo_config.png"));
-		else
-			m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/controllers.png"));
-	}
-	else
-	{
-		if (game->hasCustomConfig)
-			m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/custom_config.png"));
-		else
-			m_gameList->setItem(item->row(), gui::column_name, new custom_table_widget_item(game->info.name));
-	}
+		m_gameList->setItem(item->row(), gui::column_name, new custom_table_widget_item(game->info.name));
 }
 
 void game_list_frame::ResizeIcons(const int& sliderPos)
