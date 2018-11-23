@@ -267,22 +267,16 @@ void audio_thread::operator()()
 			// 2x CVTPS2DQ (converts float to s32)
 			// PACKSSDW (converts s32 to s16 with signed saturation)
 
-			__m128i buf_u16[BUFFER_SIZE];
-
 			for (size_t i = 0; i < 8 * BUFFER_SIZE; i += 8)
 			{
 				const auto scale = _mm_set1_ps(0x8000);
-				buf_u16[i / 8] = _mm_packs_epi32(
+				_mm_store_ps(out_buffer[out_pos].get() + i / 2, _mm_castsi128_ps(_mm_packs_epi32(
 					_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer[out_pos].get() + i), scale)),
-					_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer[out_pos].get() + i + 4), scale)));
+					_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer[out_pos].get() + i + 4), scale)))));
 			}
+		}
 
-			audio->AddData(buf_u16, buf_sz);
-		}
-		else
-		{
-			audio->AddData(out_buffer[out_pos].get(), buf_sz);
-		}
+		audio->AddData(out_buffer[out_pos].get(), buf_sz);
 
 		const u64 stamp2 = get_system_time();
 
