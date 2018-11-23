@@ -1772,12 +1772,12 @@ void PPUTranslator::BC(ppu_opcode_t op)
 		CompilationError("Branch with absolute address");
 	}
 
-	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
-
 	if (op.lk)
 	{
 		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
 	}
+
+	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
 
 	CallFunction(target);
 }
@@ -1842,12 +1842,12 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 {
 	const auto target = RegLoad(m_lr);
 
-	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
-
 	if (op.lk)
 	{
 		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
 	}
+
+	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
 
 	CallFunction(0, target);
 }
@@ -1905,12 +1905,12 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 {
 	const auto target = RegLoad(m_ctr);
 
-	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
-
 	if (op.lk)
 	{
 		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
 	}
+
+	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
 
 	CallFunction(0, target);
 }
