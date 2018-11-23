@@ -2903,15 +2903,14 @@ bool ppu_interpreter::BC(ppu_thread& ppu, ppu_opcode_t op)
 	const bool bo3 = (op.bo & 0x02) != 0;
 
 	ppu.ctr -= (bo2 ^ true);
+	if (op.lk) ppu.lr = ppu.cia + 4;
 
 	const bool ctr_ok = bo2 | ((ppu.ctr != 0) ^ bo3);
 	const bool cond_ok = bo0 | (ppu.cr[op.bi] ^ (bo1 ^ true));
 
 	if (ctr_ok && cond_ok)
 	{
-		const u32 link = ppu.cia + 4;
 		ppu.cia = (op.aa ? 0 : ppu.cia) + op.bt14;
-		if (op.lk) ppu.lr = link;
 		return false;
 	}
 	else
@@ -2958,11 +2957,12 @@ bool ppu_interpreter::BCLR(ppu_thread& ppu, ppu_opcode_t op)
 	const bool ctr_ok = bo2 | ((ppu.ctr != 0) ^ bo3);
 	const bool cond_ok = bo0 | (ppu.cr[op.bi] ^ (bo1 ^ true));
 
+	const u32 target = (u32)ppu.lr & ~3;
+	if (op.lk) ppu.lr = ppu.cia + 4;
+
 	if (ctr_ok && cond_ok)
 	{
-		const u32 link = ppu.cia + 4;
-		ppu.cia = (u32)ppu.lr & ~3;
-		if (op.lk) ppu.lr = link;
+		ppu.cia = target;
 		return false;
 	}
 	else
@@ -3027,11 +3027,11 @@ bool ppu_interpreter::CROR(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::BCCTR(ppu_thread& ppu, ppu_opcode_t op)
 {
+	if (op.lk) ppu.lr = ppu.cia + 4;
+
 	if (op.bo & 0x10 || ppu.cr[op.bi] == ((op.bo & 0x8) != 0))
 	{
-		const u32 link = ppu.cia + 4;
 		ppu.cia = (u32)ppu.ctr & ~3;
-		if (op.lk) ppu.lr = link;
 		return false;
 	}
 
