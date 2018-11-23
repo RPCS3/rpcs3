@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "Emu/RSX/GSRender.h"
@@ -36,10 +36,12 @@ private:
 	bool m_show_fps;
 	bool m_disable_mouse;
 
-	bool m_in_sizing_event = false; //a signal that the window is about to be resized was received
-	bool m_user_interaction_active = false; //a signal indicating the window is being manually moved/resized was received
-	bool m_interactive_resize = false; //resize signal received while dragging window
+	bool m_in_sizing_event = false;         // a signal that the window is about to be resized was received
+	bool m_user_interaction_active = false; // a signal indicating the window is being manually moved/resized was received
+	bool m_interactive_resize = false;      // resize signal received while dragging window
 	bool m_minimized = false;
+
+	bool m_use_5_11_1_workaround = false;   // QT ABI bug workaround
 
 public:
 	gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, bool disableMouse);
