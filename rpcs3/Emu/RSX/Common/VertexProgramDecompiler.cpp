@@ -225,7 +225,7 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		{ "$2", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 2) },
 		{ "$s", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 2) },
 		{ "$a", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrReg), this) },
-		{ "$t", std::bind(std::mem_fn(&VertexProgramDecompiler::GetTex), this) },
+		{ "$t", [this]() -> std::string { return "vtex" + std::to_string(d2.tex_num); } },
 		{ "$ifcond ", [this]() -> std::string
 			{
 				const std::string& cond = GetCond();
@@ -582,6 +582,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
 		case RSX_VEC_OPCODE_TXL:
 		{
+			GetTex();
 			switch (m_prog.get_texture_dimension(d2.tex_num))
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:

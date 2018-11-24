@@ -1,4 +1,4 @@
-#include "OpenGL.h"
+﻿#include "OpenGL.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 #include "GLHelpers.h"
@@ -56,5 +56,7 @@ namespace gl
 
 		void apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image);
 		void apply(const rsx::vertex_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image);
+
+		void apply_defaults();
 	};
 }

@@ -758,7 +758,7 @@ namespace gl
 				}
 			}
 
-			auto dst = std::make_unique<gl::texture>(dst_type, width, height, 1, 1, sized_internal_fmt);
+			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, 1, 1, sized_internal_fmt);
 
 			if (copy)
 			{
@@ -855,7 +855,7 @@ namespace gl
 		gl::texture_view* generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			auto dst_image = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, size, size, 1, 1, ifmt);
+			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_CUBE_MAP, size, size, 1, 1, ifmt);
 			auto view = std::make_unique<gl::texture_view>(dst_image.get(), GL_TEXTURE_CUBE_MAP, ifmt);
 
 			//Empty GL_ERROR
@@ -884,7 +884,7 @@ namespace gl
 		gl::texture_view* generate_3d_from_2d_images(void*&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
-			auto dst_image = std::make_unique<gl::texture>(GL_TEXTURE_3D, width, height, depth, 1, ifmt);
+			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_3D, width, height, depth, 1, ifmt);
 			auto view = std::make_unique<gl::texture_view>(dst_image.get(), GL_TEXTURE_3D, ifmt);
 
 			//Empty GL_ERROR

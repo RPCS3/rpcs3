@@ -13,6 +13,13 @@
 
 #include "Utilities/geometry.h"
 
+#define GL_FRAGMENT_TEXTURES_START 0
+#define GL_VERTEX_TEXTURES_START   GL_FRAGMENT_TEXTURES_START + 16
+#define GL_STENCIL_MIRRORS_START   GL_VERTEX_TEXTURES_START + 4
+#define GL_STREAM_BUFFER_START     GL_STENCIL_MIRRORS_START + 16
+
+inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
+
 namespace gl
 {
 #ifdef _DEBUG
@@ -1609,7 +1616,7 @@ namespace gl
 			m_component_layout = { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 		}
 
-		~texture()
+		virtual ~texture()
 		{
 			glDeleteTextures(1, &m_id);
 		}
@@ -1793,20 +1800,29 @@ namespace gl
 		}
 	};
 
+	enum image_aspect : u32
+	{
+		color = 1,
+		depth = 2,
+		stencil = 4
+	};
+
 	class texture_view
 	{
 		GLuint m_id = 0;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
+		GLenum m_aspect_flags = 0;
 		texture *m_image_data = nullptr;
 
 		GLenum component_swizzle[4];
 
-		void create(texture* data, GLenum target, GLenum sized_format, const GLenum* argb_swizzle = nullptr)
+		void create(texture* data, GLenum target, GLenum sized_format, GLenum aspect_flags, const GLenum* argb_swizzle = nullptr)
 		{
 			m_target = target;
 			m_format = sized_format;
 			m_image_data = data;
+			m_aspect_flags = aspect_flags;
 
 			const auto num_levels = data->levels();
 			const auto num_layers = (target != GL_TEXTURE_CUBE_MAP) ? 1 : 6;
@@ -1831,22 +1847,34 @@ namespace gl
 				component_swizzle[2] = GL_BLUE;
 				component_swizzle[3] = GL_ALPHA;
 			}
+
+			if (aspect_flags & image_aspect::stencil)
+			{
+				constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
+				verify("Invalid aspect mask combination" HERE), (aspect_flags & depth_stencil_mask) != depth_stencil_mask;
+
+				glBindTexture(m_target, m_id);
+				glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
+			}
 		}
 
 	public:
 		texture_view(const texture_view&) = delete;
 		texture_view(texture_view&&) = delete;
 
-		texture_view(texture* data, GLenum target, GLenum sized_format, const GLenum* argb_swizzle = nullptr)
+		texture_view(texture* data, GLenum target, GLenum sized_format,
+			const GLenum* argb_swizzle = nullptr,
+			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
-			create(data, target, sized_format, argb_swizzle);
+			create(data, target, sized_format, aspect_flags, argb_swizzle);
 		}
 
-		texture_view(texture* data, const GLenum* argb_swizzle = nullptr)
+		texture_view(texture* data, const GLenum* argb_swizzle = nullptr,
+			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
 			GLenum target = (GLenum)data->get_target();
 			GLenum sized_format = (GLenum)data->get_internal_format();
-			create(data, target, sized_format, argb_swizzle);
+			create(data, target, sized_format, aspect_flags, argb_swizzle);
 		}
 
 		~texture_view()
@@ -1867,6 +1895,11 @@ namespace gl
 		GLenum internal_format() const
 		{
 			return m_format;
+		}
+
+		GLenum aspect() const
+		{
+			return m_aspect_flags;
 		}
 
 		bool compare_swizzle(GLenum* argb_swizzle) const
@@ -1901,23 +1934,26 @@ namespace gl
 
 	class viewable_image : public texture
 	{
-		std::unordered_map<u32, std::unique_ptr<texture_view>> views;
+		std::unordered_multimap<u32, std::unique_ptr<texture_view>> views;
 
 public:
 		using texture::texture;
 
-		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
-			auto found = views.find(remap_encoding);
-			if (found != views.end())
+			auto found = views.equal_range(remap_encoding);
+			for (auto It = found.first; It != found.second; ++It)
 			{
-				return found->second.get();
+				if (It->second->aspect() & aspect_flags)
+				{
+					return It->second.get();
+				}
 			}
 
 			auto mapping = apply_swizzle_remap(get_native_component_layout(), remap);
-			auto view = std::make_unique<texture_view>(this, mapping.data());
+			auto view = std::make_unique<texture_view>(this, mapping.data(), aspect_flags);
 			auto result = view.get();
-			views[remap_encoding] = std::move(view);
+			views.emplace(remap_encoding, std::move(view));
 			return result;
 		}
 
