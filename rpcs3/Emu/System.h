@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "VFS.h"
 #include "Utilities/Atomic.h"
@@ -215,6 +215,7 @@ class Emulator final
 	std::string m_title;
 	std::string m_cat;
 	std::string m_dir;
+	std::string m_sfo_dir;
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
 
@@ -285,6 +286,11 @@ public:
 		return m_dir;
 	}
 
+	const std::string& GetSfoDir() const
+	{
+		return m_sfo_dir;
+	}
+
 	// String for GUI dialogs.
 	const std::string& GetUsr() const
 	{
@@ -312,6 +318,8 @@ private:
 	static std::string GetEmuDir();
 public:
 	static std::string GetHddDir();
+
+	std::string GetSfoDirFromGamePath(const std::string& game_path);
 
 	void SetForceBoot(bool force_boot);
 

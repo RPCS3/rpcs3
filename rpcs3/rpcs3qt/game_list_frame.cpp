@@ -1,4 +1,4 @@
-#include "game_list_frame.h"
+﻿#include "game_list_frame.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
@@ -393,10 +393,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		for (const auto& dir : path_list) { try
 		{
-			const std::string sfb = dir + "/PS3_DISC.SFB";
-			const std::string sfo = dir + (fs::is_file(sfb) ? "/PS3_GAME/PARAM.SFO" : "/PARAM.SFO");
-
-			const fs::file sfo_file(sfo);
+			const std::string sfo_dir = Emu.GetSfoDirFromGamePath(dir);
+			const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
 			if (!sfo_file)
 			{
 				continue;
@@ -430,29 +428,21 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			auto cat = category::cat_boot.find(game.category);
 			if (cat != category::cat_boot.end())
 			{
-				if (game.category == "DG")
-				{
-					game.icon_path = dir + "/PS3_GAME/ICON0.PNG";
-				}
-				else
-				{
-					game.icon_path = dir + "/ICON0.PNG";
-				}
-
+				game.icon_path = sfo_dir + "/ICON0.PNG";
 				game.category = sstr(cat->second);
 			}
 			else if ((cat = category::cat_data.find(game.category)) != category::cat_data.end())
 			{
-				game.icon_path = dir + "/ICON0.PNG";
+				game.icon_path = sfo_dir + "/ICON0.PNG";
 				game.category = sstr(cat->second);
 			}
 			else if (game.category == sstr(category::unknown))
 			{
-				game.icon_path = dir + "/ICON0.PNG";
+				game.icon_path = sfo_dir + "/ICON0.PNG";
 			}
 			else
 			{
-				game.icon_path = dir + "/ICON0.PNG";
+				game.icon_path = sfo_dir + "/ICON0.PNG";
 				game.category = sstr(category::other);
 			}
 
