@@ -1376,10 +1376,16 @@ const std::string& fs::get_config_dir()
 
 		dir.resize(dir.rfind('/') + 1);
 #else
+
+#ifdef __APPLE__
+		if (const char* home = ::getenv("HOME"))
+			dir = home + "/Library/Application Support"s;
+#else
 		if (const char* home = ::getenv("XDG_CONFIG_HOME"))
 			dir = home;
 		else if (const char* home = ::getenv("HOME"))
 			dir = home + "/.config"s;
+#endif
 		else // Just in case
 			dir = "./config";
 

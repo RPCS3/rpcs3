@@ -422,9 +422,13 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 
 	QFile file(path);
 
-#if !defined(_WIN32) && !defined(__APPLE__)
-	// If we can't open the file, try the /share folder
+	// If we can't open the file, try the /share or /Resources folder
+#if !defined(_WIN32)
+#ifdef __APPLE__
+	QString share_dir = QCoreApplication::applicationDirPath() + "/../Resources/";
+#else
 	QString share_dir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
+#endif
 	QFile share_file(share_dir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
 #endif
 
@@ -451,7 +455,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 		setStyleSheet(file.readAll());
 		file.close();
 	}
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(_WIN32)
 	else if (share_file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		QDir::setCurrent(share_dir);
