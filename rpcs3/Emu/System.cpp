@@ -587,7 +587,7 @@ std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path)
 	{
 		// This is a trial game. Check if the user has a RAP file to unlock it.
 		const std::string rap_path = Emu.GetHddDir() + "home/" + Emu.GetUsr() + "/exdata/" + content_id + ".rap";
-		if (fs::is_file(rap_path))
+		if (fs::is_file(rap_path) && fs::is_file(game_path + "/C00/PARAM.SFO"))
 		{
 			// Load full game data.
 			return game_path + "/C00";
