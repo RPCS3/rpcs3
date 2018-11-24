@@ -952,7 +952,7 @@ namespace rsx
 
 			if (vertex_push_buffers[index].vertex_count > 1)
 			{
-				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
+				const auto& info = vertex_push_buffers[index];
 				const u8 element_size = info.size * sizeof(u32);
 
 				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
@@ -1406,11 +1406,11 @@ namespace rsx
 				{
 					current_vertex_program.rsx_vertex_inputs.push_back(
 						{ index,
-							rsx::method_registers.register_vertex_info[index].size,
+							vertex_push_buffers[index].size,
 							1,
 							false,
 							true,
-							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+							is_int_type(vertex_push_buffers[index].type), 0 });
 				}
 				else if (rsx::method_registers.register_vertex_info[index].size > 0)
 				{
@@ -1479,18 +1479,27 @@ namespace rsx
 
 			//Check for interleaving
 			const auto &info = state.vertex_arrays_info[index];
-			if (rsx::method_registers.current_draw_clause.is_immediate_draw)
+			if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
+				rsx::method_registers.current_draw_clause.command != rsx::draw_command::indexed)
 			{
+				// NOTE: In immediate rendering mode, all vertex setup is ignored
+				// Observed with GT5, immediate render bypasses array pointers completely, even falling back to fixed-function register defaults
 				if (vertex_push_buffers[index].vertex_count > 1)
 				{
-					//Read temp buffer (register array)
+					// Read temp buffer (register array)
 					std::pair<u8, u32> volatile_range_info = std::make_pair(index, static_cast<u32>(vertex_push_buffers[index].data.size() * sizeof(u32)));
 					result.volatile_blocks.push_back(volatile_range_info);
 					result.attribute_placement[index] = attribute_buffer_placement::transient;
-					continue;
+				}
+				else if (state.register_vertex_info[index].size > 0)
+				{
+					// Reads from register
+					result.referenced_registers.push_back(index);
+					result.attribute_placement[index] = attribute_buffer_placement::transient;
 				}
 
-				//Might be an indexed immediate draw - real vertex arrays but glArrayElement style of IB declaration
+				// Fall back to the default register value if no source is specified via register
+				continue;
 			}
 
 			if (!info.size())
@@ -2100,7 +2109,7 @@ namespace rsx
 						vertex_push_buffers[index].vertex_count > 1)
 					{
 						// Push buffer
-						const auto &info = rsx::method_registers.register_vertex_info[index];
+						const auto &info = vertex_push_buffers[index];
 						type = info.type;
 						size = info.size;
 

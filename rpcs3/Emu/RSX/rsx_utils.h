@@ -747,6 +747,12 @@ namespace rsx
 			_capacity = size;
 		}
 
+		void resize(u32 size)
+		{
+			reserve(size);
+			_size = size;
+		}
+
 		void push_back(const Ty& val)
 		{
 			if (_size >= _capacity)
