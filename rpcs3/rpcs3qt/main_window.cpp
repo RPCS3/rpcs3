@@ -1819,6 +1819,9 @@ void main_window::dropEvent(QDropEvent* event)
 				LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
 			}
 		}
+
+		// Refresh game list since we probably unlocked some games now.
+		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 		for (const auto& path : dropPaths)
