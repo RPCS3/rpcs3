@@ -15,6 +15,10 @@
 #include <libgen.h>
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 // STB_IMAGE_IMPLEMENTATION and STB_TRUETYPE_IMPLEMENTATION defined externally
 #include <stb_image.h>
 #include <stb_truetype.h>
@@ -505,24 +509,37 @@ namespace rsx
 					if (info->data == nullptr)
 					{
 						// Resource was not found in config dir, try and grab from relative path (linux)
-						info = std::make_unique<image_info>(("Icons/ui/" + res).c_str());
+						auto src = "Icons/ui/" + res;
+						info = std::make_unique<image_info>(src.c_str());
 #ifndef _WIN32
-						// Check for Icons in ../share/rpcs3 for AppImages and /usr/bin/
+						// Check for Icons in ../share/rpcs3 for AppImages,
+						// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
 						if (info->data == nullptr)
 						{
 							char result[ PATH_MAX ];
-#ifdef __linux__
-							ssize_t count = readlink( "/proc/self/exe", result, PATH_MAX );
+#if defined(__APPLE__)
+							uint32_t bufsize = PATH_MAX;
+							bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
+#elif defined(__linux__)
+							bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
 #else
-							ssize_t count = readlink( "/proc/curproc/file", result, PATH_MAX );
+							bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
 #endif
-							std::string executablePath = dirname(result);
-							info = std::make_unique<image_info>((executablePath + "/../share/rpcs3/Icons/ui/" + res).c_str());
-
-							// Check if the icons are in the same directory as the executable (local builds)
-							if (info->data == nullptr)
+							if (success)
 							{
-								info = std::make_unique<image_info>((executablePath + "/Icons/ui/" + res).c_str());
+								std::string executablePath = dirname(result);
+#ifdef __APPLE__
+								src = executablePath + "/../Resources/Icons/ui/" + res;
+#else
+								src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
+#endif
+								info = std::make_unique<image_info>(src.c_str());
+								// Check if the icons are in the same directory as the executable (local builds)
+								if (info->data == nullptr)
+								{
+									src = executablePath + "/Icons/ui/" + res;
+									info = std::make_unique<image_info>(src.c_str());
+								}
 							}
 						}
 #endif
@@ -530,7 +547,6 @@ namespace rsx
 						{
 							// Install the image to config dir
 							auto dst_dir = fs::get_config_dir() + "Icons/ui/";
-							auto src = "Icons/ui/" + res;
 							auto dst = dst_dir + res;
 
 							if (!fs::is_dir(dst_dir))

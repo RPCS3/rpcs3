@@ -338,10 +338,14 @@ QStringList gui_settings::GetStylesheetEntries()
 {
 	QStringList nameFilter = QStringList("*.qss");
 	QStringList res = gui::utils::get_dir_entries(m_settingsDir, nameFilter);
-#if !defined(_WIN32) && !defined(__APPLE__)
-	// Makes stylesheets load if using AppImage or installed to /usr/bin
-	QDir linuxStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
-	res.append(gui::utils::get_dir_entries(linuxStylesheetDir, nameFilter));
+#if !defined(_WIN32)
+	// Makes stylesheets load if using AppImage (App Bundle) or installed to /usr/bin
+#ifdef __APPLE__
+	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
+#else
+	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+#endif
+	res.append(gui::utils::get_dir_entries(platformStylesheetDir, nameFilter));
 	res.removeDuplicates();
 #endif
 	res.sort(Qt::CaseInsensitive);

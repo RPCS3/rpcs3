@@ -18,6 +18,10 @@
 #include <sys/resource.h>
 #endif
 
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
+#endif
+
 #include "rpcs3_version.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -50,23 +54,38 @@ static semaphore<> s_qt_mutex{};
 		static QApplication app0{argc, argv};
 	}
 
-	QMessageBox msg;
-	msg.setWindowTitle(tr("RPCS3: Fatal Error"));
-	msg.setIcon(QMessageBox::Critical);
-	msg.setTextFormat(Qt::RichText);
-	msg.setText(QString(R"(
-		<p style="white-space: nowrap;">
-			%1<br>
-			%2<br>
-			<a href='https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support'>https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support</a><br>
-			%3<br>
-		</p>
-		)")
-		.arg(Qt::convertFromPlainText(QString::fromStdString(text)))
-		.arg(tr("HOW TO REPORT ERRORS:"))
-		.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
-	msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
-	msg.exec();
+	auto show_report = [](const std::string& text)
+	{
+		QMessageBox msg;
+		msg.setWindowTitle(tr("RPCS3: Fatal Error"));
+		msg.setIcon(QMessageBox::Critical);
+		msg.setTextFormat(Qt::RichText);
+		msg.setText(QString(R"(
+			<p style="white-space: nowrap;">
+				%1<br>
+				%2<br>
+				<a href='https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support'>https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support</a><br>
+				%3<br>
+			</p>
+			)")
+			.arg(Qt::convertFromPlainText(QString::fromStdString(text)))
+			.arg(tr("HOW TO REPORT ERRORS:"))
+			.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
+		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
+		msg.exec();
+	};
+
+#ifdef __APPLE__
+	// Cocoa access is not allowed outside of the main thread
+	if (!pthread_main_np())
+	{
+		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
+	}
+	else
+#endif
+	{
+		show_report(text);
+	}
 
 	std::abort();
 }
