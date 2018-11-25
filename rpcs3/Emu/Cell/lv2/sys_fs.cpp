@@ -230,6 +230,11 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 	if (flags & CELL_FS_O_CREAT)
 	{
 		open_mode += fs::create;
+
+		if (flags & CELL_FS_O_EXCL)
+		{
+			open_mode += fs::excl;
+		}
 	}
 
 	if (flags & CELL_FS_O_TRUNC)
@@ -240,18 +245,6 @@ error_code sys_fs_open(vm::cptr<char> path, s32 flags, vm::ptr<u32> fd, s32 mode
 	if (flags & CELL_FS_O_APPEND)
 	{
 		open_mode += fs::append;
-	}
-
-	if (flags & CELL_FS_O_EXCL)
-	{
-		if (flags & CELL_FS_O_CREAT)
-		{
-			open_mode += fs::excl;
-		}
-		else
-		{
-			open_mode = {}; // error
-		}
 	}
 
 	if (flags & CELL_FS_O_MSELF)
@@ -744,7 +737,7 @@ error_code sys_fs_mkdir(vm::cptr<char> path, s32 mode)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (!fs::create_path(local_path))
+	if (!fs::create_dir(local_path))
 	{
 		switch (auto error = fs::g_tls_error)
 		{

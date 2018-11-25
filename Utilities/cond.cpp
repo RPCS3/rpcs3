@@ -21,7 +21,7 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 		verify(HERE), rc == WAIT_TIMEOUT;
 
 		// Retire
-		while (!m_value.fetch_dec_sat())
+		while (!m_value.try_dec())
 		{
 			timeout.QuadPart = 0;
 
@@ -40,19 +40,13 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 
 	return true;
 #else
-	if (!_timeout)
-	{
-		verify(HERE), m_value--;
-		return false;
-	}
-
 	timespec timeout;
 	timeout.tv_sec  = _timeout / 1000000;
 	timeout.tv_nsec = (_timeout % 1000000) * 1000;
 
 	for (u32 value = _old + 1;; value = m_value)
 	{
-		const int err = futex((int*)&m_value.raw(), FUTEX_WAIT_PRIVATE, value, is_inf ? nullptr : &timeout, nullptr, 0) == 0
+		const int err = futex(&m_value, FUTEX_WAIT_PRIVATE, value, is_inf ? nullptr : &timeout) == 0
 			? 0
 			: errno;
 
@@ -106,7 +100,7 @@ void cond_variable::imp_wake(u32 _count) noexcept
 			return;
 		}
 
-		if (const int res = futex((int*)&m_value.raw(), FUTEX_WAKE_PRIVATE, i > INT_MAX ? INT_MAX : i, nullptr, nullptr, 0))
+		if (const int res = futex(&m_value, FUTEX_WAKE_PRIVATE, i > INT_MAX ? INT_MAX : i))
 		{
 			verify(HERE), res >= 0 && (u32)res <= i;
 			i -= res;
@@ -213,4 +207,89 @@ bool notifier::wait(u64 usec_timeout)
 	}
 
 	return res;
+}
+
+bool cond_one::imp_wait(u32 _old, u64 _timeout) noexcept
+{
+	verify(HERE), _old == c_lock;
+
+	const bool is_inf = _timeout > cond_variable::max_timeout;
+
+#ifdef _WIN32
+	LARGE_INTEGER timeout;
+	timeout.QuadPart = _timeout * -10;
+
+	if (HRESULT rc = _timeout ? NtWaitForKeyedEvent(nullptr, &m_value, false, is_inf ? nullptr : &timeout) : WAIT_TIMEOUT)
+	{
+		verify(HERE), rc == WAIT_TIMEOUT;
+
+		// Retire
+		const bool signaled = m_value.exchange(c_lock) == c_sig;
+		while (signaled)
+		{
+			timeout.QuadPart = 0;
+
+			if (HRESULT rc2 = NtWaitForKeyedEvent(nullptr, &m_value, false, &timeout))
+			{
+				verify(HERE), rc2 == WAIT_TIMEOUT;
+				SwitchToThread();
+				continue;
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+#else
+	timespec timeout;
+	timeout.tv_sec  = _timeout / 1000000;
+	timeout.tv_nsec = (_timeout % 1000000) * 1000;
+
+	for (u32 value = _old - 1; value != c_sig; value = m_value)
+	{
+		const int err = futex(&m_value, FUTEX_WAIT_PRIVATE, value, is_inf ? nullptr : &timeout) == 0
+			? 0
+			: errno;
+
+		// Normal or timeout wakeup
+		if (!err || (!is_inf && err == ETIMEDOUT))
+		{
+			return m_value.exchange(c_lock) == c_sig;
+		}
+
+		// Not a wakeup
+		verify(HERE), err == EAGAIN;
+	}
+#endif
+
+	verify(HERE), m_value.exchange(c_lock) == c_sig;
+	return true;
+}
+
+void cond_one::imp_notify() noexcept
+{
+	auto [old, ok] = m_value.fetch_op([](u32& v)
+	{
+		if (UNLIKELY(v > 0 && v < c_sig))
+		{
+			v = c_sig;
+			return true;
+		}
+
+		return false;
+	});
+
+	verify(HERE), old <= c_sig;
+
+	if (LIKELY(!ok || old == c_lock))
+	{
+		return;
+	}
+
+#ifdef _WIN32
+	NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
+#else
+	futex(&m_value, FUTEX_WAKE_PRIVATE, 1);
+#endif
 }

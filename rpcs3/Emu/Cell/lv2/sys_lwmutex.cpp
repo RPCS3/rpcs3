@@ -75,22 +75,16 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
-		if (u32 value = mutex.signaled)
+		if (mutex.signaled.try_dec())
 		{
-			if (mutex.signaled.compare_and_swap_test(value, value - 1))
-			{
-				return true;
-			}
+			return true;
 		}
 
 		std::lock_guard lock(mutex.mutex);
 
-		if (u32 value = mutex.signaled)
+		if (mutex.signaled.try_dec())
 		{
-			if (mutex.signaled.compare_and_swap_test(value, value - 1))
-			{
-				return true;
-			}
+			return true;
 		}
 
 		mutex.sq.emplace_back(&ppu);
@@ -112,6 +106,11 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
 		if (timeout)
 		{
 			const u64 passed = get_system_time() - ppu.start_time;
@@ -147,15 +146,7 @@ error_code _sys_lwmutex_trylock(u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
-		if (u32 value = mutex.signaled)
-		{
-			if (mutex.signaled.compare_and_swap_test(value, value - 1))
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return mutex.signaled.try_dec();
 	});
 
 	if (!mutex)
@@ -184,7 +175,7 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 			return cpu;
 		}
 
-		mutex.signaled++;
+		mutex.signaled = 1;
 		return nullptr;
 	});
 

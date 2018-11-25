@@ -641,15 +641,16 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 		return CELL_GAME_ERROR_ACCESS_ERROR; // ???
 	}
 
+	// cellGameContentPermit should then move files in non-temporary location and return their non-temporary displacement
+	if (tmp_contentInfoPath) strcpy_trunc(*tmp_contentInfoPath, tmp_contentInfo);
+
 	if (!fs::create_dir(vfs::get(tmp_usrdir)))
 	{
 		cellGame.error("cellGameCreateGameData(): failed to create directory '%s'", tmp_usrdir);
 		return CELL_GAME_ERROR_ACCESS_ERROR; // ???
 	}
 
-	// cellGameContentPermit should then move files in non-temporary location and return their non-temporary displacement
-	strcpy_trunc(*tmp_contentInfoPath, tmp_contentInfo);
-	strcpy_trunc(*tmp_usrdirPath, tmp_usrdir);
+	if (tmp_usrdirPath) strcpy_trunc(*tmp_usrdirPath, tmp_usrdir);
 
 	prm->temp = vfs::get(tmp_contentInfo);
 	cellGame.success("cellGameCreateGameData(): temporary directory '%s' has been created", tmp_contentInfo);

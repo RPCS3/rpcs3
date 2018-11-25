@@ -28,6 +28,9 @@
 DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE Handle, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE Handle, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtDelayExecution, NTSTATUS(BOOLEAN Alertable, PLARGE_INTEGER DelayInterval));
+inline utils::dynamic_import<BOOL(volatile VOID* Address, PVOID CompareAddress, SIZE_T AddressSize, DWORD dwMilliseconds)> OptWaitOnAddress("kernel32.dll", "WaitOnAddress");
+inline utils::dynamic_import<VOID(PVOID Address)> OptWakeByAddressSingle("kernel32.dll", "WakeByAddressSingle");
+inline utils::dynamic_import<VOID(PVOID Address)> OptWakeByAddressAll("kernel32.dll", "WakeByAddressAll");
 #endif
 
 #ifndef __linux__
@@ -46,24 +49,24 @@ enum
 };
 #endif
 
-inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int* uaddr2, int val3)
+inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* timeout = nullptr, uint mask = 0)
 {
 #ifdef __linux__
-	return syscall(SYS_futex, uaddr, futex_op, val, timeout, uaddr, val3);
+	return syscall(SYS_futex, uaddr, futex_op, static_cast<int>(val), timeout, nullptr, static_cast<int>(mask));
 #else
-	static struct futex_map
+	static struct futex_manager
 	{
 		struct waiter
 		{
-			 int val;
+			 uint val;
 			 uint mask;
 			 std::condition_variable cv;
 		};
 
 		std::mutex mutex;
-		std::unordered_multimap<int*, waiter*, pointer_hash<int>> map;
+		std::unordered_multimap<volatile void*, waiter*, pointer_hash<volatile void, alignof(int)>> map;
 
-		int operator()(int* uaddr, int futex_op, int val, const timespec* timeout, int*, uint val3)
+		int operator()(volatile void* uaddr, int futex_op, uint val, const timespec* timeout, uint mask)
 		{
 			std::unique_lock lock(mutex);
 
@@ -71,12 +74,12 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 			{
 			case FUTEX_WAIT:
 			{
-				val3 = -1;
-				// Fallthrough
+				mask = -1;
+				[[fallthrough]];
 			}
 			case FUTEX_WAIT_BITSET:
 			{
-				if (*(volatile int*)uaddr != val)
+				if (*reinterpret_cast<volatile uint*>(uaddr) != val)
 				{
 					errno = EAGAIN;
 					return -1;
@@ -84,7 +87,7 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 
 				waiter rec;
 				rec.val = val;
-				rec.mask = val3;
+				rec.mask = mask;
 				const auto& ref = *map.emplace(uaddr, &rec);
 
 				int res = 0;
@@ -114,8 +117,8 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 
 			case FUTEX_WAKE:
 			{
-				val3 = -1;
-				// Fallthrough
+				mask = -1;
+				[[fallthrough]];
 			}
 			case FUTEX_WAKE_BITSET:
 			{
@@ -125,7 +128,7 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 				{
 					auto& entry = *range.first->second;
 
-					if (entry.mask & val3)
+					if (entry.mask & mask)
 					{
 						entry.cv.notify_one();
 						entry.mask = 0;
@@ -143,6 +146,6 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 		}
 	} g_futex;
 
-	return g_futex(uaddr, futex_op, val, timeout, uaddr2, val3);
+	return g_futex(uaddr, futex_op, val, timeout, mask);
 #endif
 }

@@ -51,11 +51,11 @@ void semaphore_base::imp_wait()
 		if (value >= 0)
 		{
 			// Signal other waiter to wake up or to restore sign bit
-			futex(&m_value.raw(), FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
+			futex(&m_value, FUTEX_WAKE_PRIVATE, 1);
 			return;
 		}
 
-		futex(&m_value.raw(), FUTEX_WAIT_PRIVATE, value, nullptr, nullptr, 0);
+		futex(&m_value, FUTEX_WAIT_PRIVATE, value);
 	}
 #endif
 }
@@ -67,7 +67,7 @@ void semaphore_base::imp_post(s32 _old)
 #ifdef _WIN32
 	NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
 #else
-	futex(&m_value.raw(), FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
+	futex(&m_value, FUTEX_WAKE_PRIVATE, 1);
 #endif
 }
 

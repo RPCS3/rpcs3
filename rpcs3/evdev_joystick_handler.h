@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/types.h"
 #include "Utilities/Config.h"
@@ -199,6 +199,9 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ BTN_TRIGGER_HAPPY38 , "Happy 38"    },
 		{ BTN_TRIGGER_HAPPY39 , "Happy 39"    },
 		{ BTN_TRIGGER_HAPPY40 , "Happy 40"    },
+		// Xbox One S Controller returns some buttons as key when connected through bluetooth
+		{ KEY_BACK            , "Back Key"    },
+		{ KEY_HOMEPAGE        , "Homepage Key"},
 	};
 
 	// Unique positive axis names for the config files and our pad settings dialog
@@ -341,6 +344,7 @@ public:
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;
 	EvdevDevice* get_device(const std::string& device);
+	std::string get_device_name(const libevdev* dev);
 	bool update_device(EvdevDevice& device);
 	void update_devs();
 	int add_device(const std::string& device, bool in_settings = false);

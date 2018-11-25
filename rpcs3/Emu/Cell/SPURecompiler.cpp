@@ -211,7 +211,7 @@ spu_recompiler_base::~spu_recompiler_base()
 {
 }
 
-void spu_recompiler_base::dispatch(SPUThread& spu, void*, u8* rip)
+void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 {
 	// If code verification failed from a patched patchpoint, clear it with a single NOP
 	if (rip)
@@ -255,7 +255,7 @@ void spu_recompiler_base::dispatch(SPUThread& spu, void*, u8* rip)
 	}
 }
 
-void spu_recompiler_base::branch(SPUThread& spu, void*, u8* rip)
+void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
 	// Compile (TODO: optimize search of the existing functions)
 	const auto func = verify(HERE, spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), spu.pc)));
@@ -1692,7 +1692,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto cblock = m_ir->GetInsertBlock();
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
-			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&SPUThread::pc));
+			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
 			tail(add_function(target));
 			m_ir->SetInsertPoint(cblock);
 			return result;
@@ -1708,8 +1708,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto cblock = m_ir->GetInsertBlock();
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
-			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&SPUThread::pc));
-			const auto addr = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher) + target * 2));
+			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
+			const auto addr = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&spu_thread::jit_dispatcher) + target * 2));
 			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
 			tail(m_ir->CreateLoad(m_ir->CreateBitCast(addr, type)));
 			m_ir->SetInsertPoint(cblock);
@@ -1789,15 +1789,15 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		if (index < 128)
 		{
-			return ::offset32(&SPUThread::gpr, index);
+			return ::offset32(&spu_thread::gpr, index);
 		}
 
 		switch (index)
 		{
-		case s_reg_mfc_eal: return ::offset32(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::eal);
-		case s_reg_mfc_lsa: return ::offset32(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::lsa);
-		case s_reg_mfc_tag: return ::offset32(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::tag);
-		case s_reg_mfc_size: return ::offset32(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::size);
+		case s_reg_mfc_eal: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::eal);
+		case s_reg_mfc_lsa: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::lsa);
+		case s_reg_mfc_tag: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::tag);
+		case s_reg_mfc_size: return ::offset32(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::size);
 		default:
 			fmt::throw_exception("get_reg_offset(%u): invalid register index" HERE, index);
 		}
@@ -2183,19 +2183,19 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 	void update_pc()
 	{
-		m_ir->CreateStore(m_ir->getInt32(m_pos), spu_ptr<u32>(&SPUThread::pc))->setVolatile(true);
+		m_ir->CreateStore(m_ir->getInt32(m_pos), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
 	void check_state(u32 addr)
 	{
-		const auto pstate = spu_ptr<u32>(&SPUThread::state);
+		const auto pstate = spu_ptr<u32>(&spu_thread::state);
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto check = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto stop  = llvm::BasicBlock::Create(m_context, "", m_function);
 		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), _body, check);
 		m_ir->SetInsertPoint(check);
-		m_ir->CreateStore(m_ir->getInt32(addr), spu_ptr<u32>(&SPUThread::pc));
+		m_ir->CreateStore(m_ir->getInt32(addr), spu_ptr<u32>(&spu_thread::pc));
 		m_ir->CreateCondBr(call(&exec_check_state, m_thread), stop, _body);
 		m_ir->SetInsertPoint(stop);
 		m_ir->CreateRetVoid();
@@ -2386,7 +2386,7 @@ public:
 		const auto label_stop = BasicBlock::Create(m_context, "", m_function);
 
 		// Emit state check
-		const auto pstate = spu_ptr<u32>(&SPUThread::state);
+		const auto pstate = spu_ptr<u32>(&spu_thread::state);
 		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), label_stop, label_test);
 
 		// Emit code check
@@ -2482,7 +2482,7 @@ public:
 
 		// Increase block counter with statistics
 		m_ir->SetInsertPoint(label_body);
-		const auto pbcount = spu_ptr<u64>(&SPUThread::block_counter);
+		const auto pbcount = spu_ptr<u64>(&spu_thread::block_counter);
 		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbcount), m_ir->getInt64(check_iterations)), pbcount);
 
 		// Call the entry function chunk
@@ -2497,7 +2497,7 @@ public:
 
 		if (g_cfg.core.spu_verification)
 		{
-			const auto pbfail = spu_ptr<u64>(&SPUThread::block_failure);
+			const auto pbfail = spu_ptr<u64>(&spu_thread::block_failure);
 			m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
 			tail(&spu_recompiler_base::dispatch, m_thread, m_ir->getInt32(0), m_ir->getInt32(0));
 		}
@@ -2632,6 +2632,12 @@ public:
 							break;
 						}
 					}
+				}
+
+				// State check at the beginning of the chunk
+				if (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+				{
+					check_state(baddr);
 				}
 
 				// Emit instructions
@@ -3001,13 +3007,13 @@ public:
 		return fn;
 	}
 
-	static bool exec_check_state(SPUThread* _spu)
+	static bool exec_check_state(spu_thread* _spu)
 	{
 		return _spu->check_state();
 	}
 
 	template <spu_inter_func_t F>
-	static void exec_fall(SPUThread* _spu, spu_opcode_t op)
+	static void exec_fall(spu_thread* _spu, spu_opcode_t op)
 	{
 		if (F(*_spu, op))
 		{
@@ -3022,7 +3028,7 @@ public:
 		call(&exec_fall<F>, m_thread, m_ir->getInt32(op.opcode));
 	}
 
-	static void exec_unk(SPUThread* _spu, u32 op)
+	static void exec_unk(spu_thread* _spu, u32 op)
 	{
 		fmt::throw_exception("Unknown/Illegal instruction (0x%08x)" HERE, op);
 	}
@@ -3034,7 +3040,7 @@ public:
 		tail(&exec_unk, m_thread, m_ir->getInt32(op_unk.opcode));
 	}
 
-	static bool exec_stop(SPUThread* _spu, u32 code)
+	static bool exec_stop(spu_thread* _spu, u32 code)
 	{
 		return _spu->stop_and_signal(code);
 	}
@@ -3053,8 +3059,12 @@ public:
 		if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
-			m_ir->CreateStore(m_ir->getInt32(m_pos + 4), spu_ptr<u32>(&SPUThread::pc));
+			m_ir->CreateStore(m_ir->getInt32(m_pos + 4), spu_ptr<u32>(&spu_thread::pc));
 			m_ir->CreateRetVoid();
+		}
+		else
+		{
+			check_state(m_pos + 4);
 		}
 	}
 
@@ -3063,18 +3073,18 @@ public:
 		STOP(spu_opcode_t{0x3fff});
 	}
 
-	static s64 exec_rdch(SPUThread* _spu, u32 ch)
+	static s64 exec_rdch(spu_thread* _spu, u32 ch)
 	{
 		return _spu->get_ch_value(ch);
 	}
 
-	static s64 exec_read_in_mbox(SPUThread* _spu)
+	static s64 exec_read_in_mbox(spu_thread* _spu)
 	{
 		// TODO
 		return _spu->get_ch_value(SPU_RdInMbox);
 	}
 
-	static u32 exec_read_dec(SPUThread* _spu)
+	static u32 exec_read_dec(spu_thread* _spu)
 	{
 		const u32 res = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
 
@@ -3086,7 +3096,7 @@ public:
 		return res;
 	}
 
-	static s64 exec_read_events(SPUThread* _spu)
+	static s64 exec_read_events(spu_thread* _spu)
 	{
 		if (const u32 events = _spu->get_events())
 		{
@@ -3139,7 +3149,7 @@ public:
 		{
 		case SPU_RdSRR0:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::srr0));
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::srr0));
 			break;
 		}
 		case SPU_RdInMbox:
@@ -3157,32 +3167,32 @@ public:
 		}
 		case MFC_RdTagStat:
 		{
-			res.value = get_rdch(op, ::offset32(&SPUThread::ch_tag_stat), false);
+			res.value = get_rdch(op, ::offset32(&spu_thread::ch_tag_stat), false);
 			break;
 		}
 		case MFC_RdTagMask:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_tag_mask));
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_mask));
 			break;
 		}
 		case SPU_RdSigNotify1:
 		{
-			res.value = get_rdch(op, ::offset32(&SPUThread::ch_snr1), true);
+			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr1), true);
 			break;
 		}
 		case SPU_RdSigNotify2:
 		{
-			res.value = get_rdch(op, ::offset32(&SPUThread::ch_snr2), true);
+			res.value = get_rdch(op, ::offset32(&spu_thread::ch_snr2), true);
 			break;
 		}
 		case MFC_RdAtomicStat:
 		{
-			res.value = get_rdch(op, ::offset32(&SPUThread::ch_atomic_stat), false);
+			res.value = get_rdch(op, ::offset32(&spu_thread::ch_atomic_stat), false);
 			break;
 		}
 		case MFC_RdListStallStat:
 		{
-			res.value = get_rdch(op, ::offset32(&SPUThread::ch_stall_stat), false);
+			res.value = get_rdch(op, ::offset32(&spu_thread::ch_stall_stat), false);
 			break;
 		}
 		case SPU_RdDec:
@@ -3192,7 +3202,7 @@ public:
 		}
 		case SPU_RdEventMask:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_event_mask));
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_event_mask));
 			break;
 		}
 		case SPU_RdEventStat:
@@ -3210,7 +3220,7 @@ public:
 		}
 		case SPU_RdMachStat:
 		{
-			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&SPUThread::interrupts_enabled)), get_type<u32>());
+			res.value = m_ir->CreateZExt(m_ir->CreateLoad(spu_ptr<u8>(&spu_thread::interrupts_enabled)), get_type<u32>());
 			break;
 		}
 
@@ -3232,12 +3242,12 @@ public:
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, res));
 	}
 
-	static u32 exec_rchcnt(SPUThread* _spu, u32 ch)
+	static u32 exec_rchcnt(spu_thread* _spu, u32 ch)
 	{
 		return _spu->get_ch_count(ch);
 	}
 
-	static u32 exec_get_events(SPUThread* _spu)
+	static u32 exec_get_events(spu_thread* _spu)
 	{
 		return _spu->get_events();
 	}
@@ -3257,55 +3267,55 @@ public:
 		{
 		case SPU_WrOutMbox:
 		{
-			res.value = get_rchcnt(::offset32(&SPUThread::ch_out_mbox), true);
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_out_mbox), true);
 			break;
 		}
 		case SPU_WrOutIntrMbox:
 		{
-			res.value = get_rchcnt(::offset32(&SPUThread::ch_out_intr_mbox), true);
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_out_intr_mbox), true);
 			break;
 		}
 		case MFC_RdTagStat:
 		{
-			res.value = get_rchcnt(::offset32(&SPUThread::ch_tag_stat));
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_tag_stat));
 			break;
 		}
 		case MFC_RdListStallStat:
 		{
-			res.value = get_rchcnt(::offset32(&SPUThread::ch_stall_stat));
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_stall_stat));
 			break;
 		}
 		case SPU_RdSigNotify1:
 		{
-			res.value = get_rchcnt(::offset32(&SPUThread::ch_snr1));
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_snr1));
 			break;
 		}
 		case SPU_RdSigNotify2:
 		{
-			res.value = get_rchcnt(::offset32(&SPUThread::ch_snr2));
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_snr2));
 			break;
 		}
 		case MFC_RdAtomicStat:
 		{
-			res.value = get_rchcnt(::offset32(&SPUThread::ch_atomic_stat));
+			res.value = get_rchcnt(::offset32(&spu_thread::ch_atomic_stat));
 			break;
 		}
 		case MFC_WrTagUpdate:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_tag_upd), true);
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_upd), true);
 			res.value = m_ir->CreateICmpEQ(res.value, m_ir->getInt32(0));
 			res.value = m_ir->CreateZExt(res.value, get_type<u32>());
 			break;
 		}
 		case MFC_Cmd:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_size), true);
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_size), true);
 			res.value = m_ir->CreateSub(m_ir->getInt32(16), res.value);
 			break;
 		}
 		case SPU_RdInMbox:
 		{
-			res.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_in_mbox), true);
+			res.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_in_mbox), true);
 			res.value = m_ir->CreateLShr(res.value, 8);
 			res.value = m_ir->CreateAnd(res.value, 7);
 			break;
@@ -3328,17 +3338,17 @@ public:
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, res));
 	}
 
-	static bool exec_wrch(SPUThread* _spu, u32 ch, u32 value)
+	static bool exec_wrch(spu_thread* _spu, u32 ch, u32 value)
 	{
 		return _spu->set_ch_value(ch, value);
 	}
 
-	static void exec_mfc(SPUThread* _spu)
+	static void exec_mfc(spu_thread* _spu)
 	{
 		return _spu->do_mfc();
 	}
 
-	static bool exec_mfc_cmd(SPUThread* _spu)
+	static bool exec_mfc_cmd(spu_thread* _spu)
 	{
 		return _spu->process_mfc_cmd(_spu->ch_mfc_cmd);
 	}
@@ -3351,7 +3361,7 @@ public:
 		{
 		case SPU_WrSRR0:
 		{
-			m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::srr0));
+			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::srr0));
 			return;
 		}
 		case SPU_WrOutIntrMbox:
@@ -3367,7 +3377,7 @@ public:
 		case MFC_WrTagMask:
 		{
 			// TODO
-			m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::ch_tag_mask));
+			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_tag_mask));
 			return;
 		}
 		case MFC_WrTagUpdate:
@@ -3376,11 +3386,11 @@ public:
 			{
 				const u64 upd = ci->getZExtValue();
 
-				const auto tag_mask  = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::ch_tag_mask));
-				const auto mfc_fence = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_fence));
+				const auto tag_mask  = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_mask));
+				const auto mfc_fence = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_fence));
 				const auto completed = m_ir->CreateAnd(tag_mask, m_ir->CreateNot(mfc_fence));
-				const auto upd_ptr   = spu_ptr<u32>(&SPUThread::ch_tag_upd);
-				const auto stat_ptr  = spu_ptr<u64>(&SPUThread::ch_tag_stat);
+				const auto upd_ptr   = spu_ptr<u32>(&spu_thread::ch_tag_upd);
+				const auto stat_ptr  = spu_ptr<u64>(&spu_thread::ch_tag_stat);
 				const auto stat_val  = m_ir->CreateOr(m_ir->CreateZExt(completed, get_type<u64>()), INT64_MIN);
 
 				if (upd == 0)
@@ -3424,7 +3434,7 @@ public:
 			}
 
 			LOG_WARNING(SPU, "[0x%x] MFC_EAH: $%u is not a zero constant", m_pos, +op.rt);
-			//m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::eah));
+			//m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::eah));
 			return;
 		}
 		case MFC_EAL:
@@ -3468,8 +3478,8 @@ public:
 				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
 
-				const auto pf = spu_ptr<u32>(&SPUThread::mfc_fence);
-				const auto pb = spu_ptr<u32>(&SPUThread::mfc_barrier);
+				const auto pf = spu_ptr<u32>(&spu_thread::mfc_fence);
+				const auto pb = spu_ptr<u32>(&spu_thread::mfc_barrier);
 
 				switch (u64 cmd = ci->getZExtValue())
 				{
@@ -3494,7 +3504,7 @@ public:
 					m_ir->SetInsertPoint(fail);
 					m_ir->CreateUnreachable();
 					m_ir->SetInsertPoint(next);
-					m_ir->CreateStore(ci, spu_ptr<u8>(&SPUThread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
+					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					call(&exec_mfc_cmd, m_thread);
 					return;
 				}
@@ -3609,7 +3619,7 @@ public:
 				case MFC_EIEIO_CMD:
 				case MFC_SYNC_CMD:
 				{
-					const auto cond = m_ir->CreateIsNull(m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_size)));
+					const auto cond = m_ir->CreateIsNull(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_size)));
 					m_ir->CreateCondBr(cond, exec, fail);
 					m_ir->SetInsertPoint(exec);
 					m_ir->CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
@@ -3631,8 +3641,8 @@ public:
 				m_ir->SetInsertPoint(fail);
 
 				// Get MFC slot, redirect to invalid memory address
-				const auto slot = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::mfc_size));
-				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&SPUThread::mfc_queue)));
+				const auto slot = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_size));
+				const auto off0 = m_ir->CreateAdd(m_ir->CreateMul(slot, m_ir->getInt32(sizeof(spu_mfc_cmd))), m_ir->getInt32(::offset32(&spu_thread::mfc_queue)));
 				const auto ptr0 = m_ir->CreateGEP(m_thread, m_ir->CreateZExt(off0, get_type<u64>()));
 				const auto ptr1 = m_ir->CreateGEP(m_memptr, m_ir->getInt64(0xffdeadf0));
 				const auto pmfc = m_ir->CreateSelect(m_ir->CreateICmpULT(slot, m_ir->getInt32(16)), ptr0, ptr1);
@@ -3695,7 +3705,7 @@ public:
 				}
 				}
 
-				m_ir->CreateStore(m_ir->CreateAdd(slot, m_ir->getInt32(1)), spu_ptr<u32>(&SPUThread::mfc_size));
+				m_ir->CreateStore(m_ir->CreateAdd(slot, m_ir->getInt32(1)), spu_ptr<u32>(&spu_thread::mfc_size));
 				m_ir->CreateBr(next);
 				m_ir->SetInsertPoint(next);
 				return;
@@ -3708,7 +3718,7 @@ public:
 		case MFC_WrListStallAck:
 		{
 			const auto mask = eval(splat<u32>(1) << (val & 0x1f));
-			const auto _ptr = spu_ptr<u32>(&SPUThread::ch_stall_mask);
+			const auto _ptr = spu_ptr<u32>(&spu_thread::ch_stall_mask);
 			const auto _old = m_ir->CreateLoad(_ptr);
 			const auto _new = m_ir->CreateAnd(_old, m_ir->CreateNot(mask.value));
 			m_ir->CreateStore(_new, _ptr);
@@ -3723,18 +3733,18 @@ public:
 		}
 		case SPU_WrDec:
 		{
-			m_ir->CreateStore(call(&get_timebased_time), spu_ptr<u64>(&SPUThread::ch_dec_start_timestamp));
-			m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::ch_dec_value));
+			m_ir->CreateStore(call(&get_timebased_time), spu_ptr<u64>(&spu_thread::ch_dec_start_timestamp));
+			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_dec_value));
 			return;
 		}
 		case SPU_WrEventMask:
 		{
-			m_ir->CreateStore(val.value, spu_ptr<u32>(&SPUThread::ch_event_mask))->setVolatile(true);
+			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::ch_event_mask))->setVolatile(true);
 			return;
 		}
 		case SPU_WrEventAck:
 		{
-			m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::And, spu_ptr<u32>(&SPUThread::ch_event_stat), eval(~val).value, llvm::AtomicOrdering::Release);
+			m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::And, spu_ptr<u32>(&spu_thread::ch_event_stat), eval(~val).value, llvm::AtomicOrdering::Release);
 			return;
 		}
 		case 69:
@@ -3769,7 +3779,7 @@ public:
 		if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
-			m_ir->CreateStore(m_ir->getInt32(m_pos + 4), spu_ptr<u32>(&SPUThread::pc));
+			m_ir->CreateStore(m_ir->getInt32(m_pos + 4), spu_ptr<u32>(&spu_thread::pc));
 			m_ir->CreateRetVoid();
 		}
 	}
@@ -5330,7 +5340,7 @@ public:
 		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
 		m_ir->CreateCondBr(cond.value, halt, next);
 		m_ir->SetInsertPoint(halt);
-		const auto pstatus = spu_ptr<u32>(&SPUThread::status);
+		const auto pstatus = spu_ptr<u32>(&spu_thread::status);
 		const auto chalt = m_ir->getInt32(SPU_STATUS_STOPPED_BY_HALT);
 		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, pstatus, chalt, llvm::AtomicOrdering::Release)->setVolatile(true);
 		const auto ptr = _ptr<u32>(m_memptr, 0xffdead00);
@@ -5391,7 +5401,7 @@ public:
 	}
 
 	// TODO
-	static u32 exec_check_interrupts(SPUThread* _spu, u32 addr)
+	static u32 exec_check_interrupts(spu_thread* _spu, u32 addr)
 	{
 		_spu->set_interrupt_status(true);
 
@@ -5464,18 +5474,18 @@ public:
 
 		if (op.d)
 		{
-			m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&SPUThread::interrupts_enabled))->setVolatile(true);
+			m_ir->CreateStore(m_ir->getFalse(), spu_ptr<bool>(&spu_thread::interrupts_enabled))->setVolatile(true);
 		}
 
-		m_ir->CreateStore(addr.value, spu_ptr<u32>(&SPUThread::pc));
+		m_ir->CreateStore(addr.value, spu_ptr<u32>(&spu_thread::pc));
 		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
-		const auto disp = m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&SPUThread::jit_dispatcher))), type);
+		const auto disp = m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&spu_thread::jit_dispatcher))), type);
 		const auto ad64 = m_ir->CreateZExt(addr.value, get_type<u64>());
 
 		if (ret && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 		{
 			// Compare address stored in stack mirror with addr
-			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&SPUThread::stack_mirror));
+			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&spu_thread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
 			const auto _ret = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), type));
 			const auto link = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
@@ -5595,7 +5605,7 @@ public:
 
 			// Exit function on unexpected target
 			m_ir->SetInsertPoint(sw->getDefaultDest());
-			m_ir->CreateStore(addr.value, spu_ptr<u32>(&SPUThread::pc));
+			m_ir->CreateStore(addr.value, spu_ptr<u32>(&spu_thread::pc));
 			m_ir->CreateRetVoid();
 		}
 		else
@@ -5617,7 +5627,7 @@ public:
 	{
 		m_block->block_end = m_ir->GetInsertBlock();
 		value_t<u32> srr0;
-		srr0.value = m_ir->CreateLoad(spu_ptr<u32>(&SPUThread::srr0));
+		srr0.value = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::srr0));
 		m_ir->CreateBr(add_block_indirect(op, srr0));
 	}
 
@@ -5716,7 +5726,7 @@ public:
 		{
 			// Store the return function chunk address at the stack mirror
 			const auto func = add_function(m_pos + 4);
-			const auto stack0 = eval(zext<u64>(extract(get_vr(1), 3) & 0x3fff0) + ::offset32(&SPUThread::stack_mirror));
+			const auto stack0 = eval(zext<u64>(extract(get_vr(1), 3) & 0x3fff0) + ::offset32(&spu_thread::stack_mirror));
 			const auto stack1 = eval(stack0 + 8);
 			m_ir->CreateStore(func, m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack0.value), func->getType()->getPointerTo()));
 			m_ir->CreateStore(m_ir->getInt64(m_pos + 4), m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));

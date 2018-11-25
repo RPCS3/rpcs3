@@ -1,4 +1,4 @@
-
+﻿
 #include <QApplication>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -532,6 +532,13 @@ void main_window::InstallPup(const QString& dropPath)
 	const std::string path = sstr(filePath);
 
 	fs::file pup_f(path);
+	if (!pup_f)
+	{
+		LOG_ERROR(GENERAL, "Error opening PUP file %s", path);
+		QMessageBox::critical(this, tr("Failure!"), tr("The selected firmware file couldn't be opened."));
+		return;
+	}
+
 	pup_object pup(pup_f);
 	if (!pup)
 	{
@@ -551,7 +558,7 @@ void main_window::InstallPup(const QString& dropPath)
 	std::string version_string = pup.get_file(0x100).to_string();
 	version_string.erase(version_string.find('\n'));
 
-	const std::string cur_version = "4.82";
+	const std::string cur_version = "4.83";
 
 	if (version_string < cur_version &&
 		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
@@ -1162,6 +1169,22 @@ void main_window::CreateConnects()
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, [this](){ BootRsxCapture(); });
+
+	connect(ui->addGamesAct, &QAction::triggered, [this]() {
+		QStringList paths;
+
+		// Only select one folder for now
+		paths << QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), qstr(fs::get_config_dir()), QFileDialog::ShowDirsOnly);
+
+		if (!paths.isEmpty())
+		{
+			for (const QString& path : paths)
+			{
+				AddGamesFromDir(path);
+			}
+			m_gameListFrame->Refresh(true);
+		}
+	});
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, [=]
 	{

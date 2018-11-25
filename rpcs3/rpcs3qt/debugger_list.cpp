@@ -37,7 +37,7 @@ u32 debugger_list::GetPc() const
 		return 0;
 	}
 
-	return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<SPUThread*>(cpu.get())->pc;
+	return cpu->id_type() == 1 ? static_cast<ppu_thread*>(cpu.get())->cia : static_cast<spu_thread*>(cpu.get())->pc;
 }
 
 u32 debugger_list::GetCenteredAddress(u32 address) const
@@ -73,10 +73,10 @@ void debugger_list::ShowAddress(u32 addr)
 	else
 	{
 		const bool is_spu = cpu->id_type() != 1;
-		const u32 cpu_offset = is_spu ? static_cast<SPUThread&>(*cpu).offset : 0;
+		const u32 cpu_offset = is_spu ? static_cast<spu_thread&>(*cpu).offset : 0;
 		const u32 address_limits = is_spu ? 0x3ffff : ~0;
 		m_pc &= address_limits;
-		m_disasm->offset = (u8*)vm::base(cpu_offset);
+		m_disasm->offset = vm::get_super_ptr(cpu_offset);
 		for (uint i = 0, count = 4; i<m_item_count; ++i, m_pc = (m_pc + count) & address_limits)
 		{
 			if (!vm::check_addr(cpu_offset + m_pc, 4))
@@ -90,7 +90,7 @@ void debugger_list::ShowAddress(u32 addr)
 
 			item(i)->setText((IsBreakpoint(m_pc) ? ">>> " : "    ") + qstr(m_disasm->last_opcode));
 
-			if (cpu->state & cpu_state_pause && m_pc == GetPc())
+			if (cpu->is_paused() && m_pc == GetPc())
 			{
 				item(i)->setTextColor(m_text_color_pc);
 				item(i)->setBackgroundColor(m_color_pc);

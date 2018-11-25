@@ -17,7 +17,7 @@ breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) :
 	connect(this, &QListWidget::customContextMenuRequested, this, &breakpoint_list::OnBreakpointListRightClicked);
 }
 
-/** 
+/**
 * It's unfortunate I need a method like this to sync these.  Should ponder a cleaner way to do this.
 */
 void breakpoint_list::UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm)
@@ -60,7 +60,7 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 	m_breakpoint_handler->AddBreakpoint(pc);
 
 	const auto cpu = this->cpu.lock();
-	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
+	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).offset : 0;
 	m_disasm->offset = (u8*)vm::base(cpu_offset);
 
 	m_disasm->disasm(m_disasm->dump_pc = pc);

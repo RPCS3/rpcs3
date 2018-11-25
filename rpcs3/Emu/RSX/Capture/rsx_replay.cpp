@@ -7,6 +7,7 @@
 #include "Emu/RSX/GSRender.h"
 
 #include <map>
+#include <exception>
 
 namespace rsx
 {
@@ -22,7 +23,7 @@ namespace rsx
 			fmt::throw_exception("Capture Replay: context alloc failed");
 		const auto& contextInfo = vm::_ref<rsx_context>(contextAddr);
 
-		if (sys_rsx_device_map(vm::make_var<u64>(0), vm::null, 0x8) != CELL_OK)
+		if (sys_rsx_device_map(vm::get_addr(&contextInfo.dev_addr), vm::null, 0x8) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
 
 		if (sys_rsx_memory_allocate(vm::get_addr(&contextInfo.mem_handle), vm::get_addr(&contextInfo.mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
@@ -42,7 +43,7 @@ namespace rsx
 	{
 		u32 fifo_size = 4;
 
-		// run through replay commands to figure out how big command buffer needs to be 
+		// run through replay commands to figure out how big command buffer needs to be
 		for (const auto& rc : frame->replay_commands)
 		{
 			const u32 count = (rc.rsx_command.first >> 18) & 0x7ff;
@@ -203,7 +204,7 @@ namespace rsx
 		}
 	}
 
-	void rsx_replay_thread::cpu_task()
+	void rsx_replay_thread::on_task()
 	{
 		be_t<u32> context_id = allocate_context();
 
@@ -284,7 +285,18 @@ namespace rsx
 			// random pause to not destroy gpu
 			std::this_thread::sleep_for(10ms);
 		}
+	}
 
-		state += cpu_flag::exit;
+	void rsx_replay_thread::operator()()
+	{
+		try
+		{
+			on_task();
+		}
+		catch (const std::exception& e)
+		{
+			LOG_FATAL(RSX, "%s thrown: %s", typeid(e).name(), e.what());
+			Emu.Pause();
+		}
 	}
 }

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/PPUFunction.h"
@@ -1002,13 +1002,13 @@ DECLARE(lv2_obj::g_ppu);
 DECLARE(lv2_obj::g_pending);
 DECLARE(lv2_obj::g_waiting);
 
-void lv2_obj::sleep_timeout(old_thread& thread, u64 timeout)
+void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 {
 	std::lock_guard lock(g_mutex);
 
 	const u64 start_time = get_system_time();
 
-	if (auto ppu = dynamic_cast<ppu_thread*>(&thread))
+	if (auto ppu = static_cast<ppu_thread*>(thread.id_type() == 1 ? &thread : nullptr))
 	{
 		LOG_TRACE(PPU, "sleep() - waiting (%zu)", g_pending.size());
 
@@ -1063,7 +1063,15 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 
 	std::lock_guard lock(g_mutex);
 
-	if (prio == -4)
+	if (prio < INT32_MAX)
+	{
+        // Priority set
+        if (static_cast<ppu_thread&>(cpu).prio.exchange(prio) == prio || !unqueue(g_ppu, &cpu))
+        {
+            return;
+        }
+	}
+	else if (prio == -4)
 	{
 		// Yield command
 		const u64 start_time = get_system_time();
@@ -1085,12 +1093,6 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 		unqueue(g_pending, &cpu);
 
 		static_cast<ppu_thread&>(cpu).start_time = start_time;
-	}
-
-	if (prio < INT32_MAX && !unqueue(g_ppu, &cpu))
-	{
-		// Priority set
-		return;
 	}
 
 	// Emplace current thread
@@ -1123,7 +1125,7 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	}
 
 	// Remove pending if necessary
-	if (!g_pending.empty() && cpu.get() == thread_ctrl::get_current())
+	if (!g_pending.empty() && &cpu == get_current_cpu_thread())
 	{
 		unqueue(g_pending, &cpu);
 	}
@@ -1165,7 +1167,7 @@ void lv2_obj::schedule_all()
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
 				target->start_time = 0;
 
-				if (target->get() != thread_ctrl::get_current())
+				if (target != get_current_cpu_thread())
 				{
 					target->notify();
 				}

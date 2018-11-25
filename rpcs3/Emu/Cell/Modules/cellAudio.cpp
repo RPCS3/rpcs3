@@ -267,22 +267,16 @@ void audio_thread::operator()()
 			// 2x CVTPS2DQ (converts float to s32)
 			// PACKSSDW (converts s32 to s16 with signed saturation)
 
-			__m128i buf_u16[BUFFER_SIZE];
-
 			for (size_t i = 0; i < 8 * BUFFER_SIZE; i += 8)
 			{
 				const auto scale = _mm_set1_ps(0x8000);
-				buf_u16[i / 8] = _mm_packs_epi32(
+				_mm_store_ps(out_buffer[out_pos].get() + i / 2, _mm_castsi128_ps(_mm_packs_epi32(
 					_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer[out_pos].get() + i), scale)),
-					_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer[out_pos].get() + i + 4), scale)));
+					_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer[out_pos].get() + i + 4), scale)))));
 			}
+		}
 
-			audio->AddData(buf_u16, buf_sz);
-		}
-		else
-		{
-			audio->AddData(out_buffer[out_pos].get(), buf_sz);
-		}
+		audio->AddData(out_buffer[out_pos].get(), buf_sz);
 
 		const u64 stamp2 = get_system_time();
 
@@ -326,9 +320,6 @@ void audio_thread::operator()()
 		cellAudio.trace("Audio perf: (access=%d, AddData=%d, events=%d, dump=%d)",
 			stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
 	}
-
-	vm::dealloc(m_buffer.addr());
-	vm::dealloc(m_indexes.addr());
 }
 
 error_code cellAudioInit()
@@ -352,7 +343,7 @@ error_code cellAudioInit()
 	return CELL_OK;
 }
 
-error_code cellAudioQuit()
+error_code cellAudioQuit(ppu_thread& ppu)
 {
 	cellAudio.warning("cellAudioQuit()");
 
@@ -370,13 +361,23 @@ error_code cellAudioQuit()
 
 	while (true)
 	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
 		thread_ctrl::wait_for(1000);
 
 		auto g_audio = g_idm->lock<named_thread<audio_thread>>(0);
 
 		if (*g_audio.get() == thread_state::finished)
 		{
+			const auto buf = g_audio->ports[0].addr;
+			const auto ind = g_audio->ports[0].index;
 			g_audio.destroy();
+			g_audio.unlock();
+			vm::dealloc(buf.addr());
+			vm::dealloc(ind.addr());
 			break;
 		}
 	}
@@ -471,11 +472,11 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 
 	if (attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 	{
-		port->level = audioParam->level;
+		port->level = audioParam->level * g_cfg.audio.volume / 100.0f;
 	}
 	else
 	{
-		port->level = 1.0f;
+		port->level = g_cfg.audio.volume / 100.0f;
 	}
 
 	port->level_set.store({ port->level, 0.0f });
@@ -689,6 +690,8 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 	{
 		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	}
+
+	level *= g_cfg.audio.volume / 100.0f;
 
 	if (level >= 0.0f)
 	{

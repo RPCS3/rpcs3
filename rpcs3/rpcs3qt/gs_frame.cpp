@@ -1,4 +1,4 @@
-#include "gs_frame.h"
+﻿#include "gs_frame.h"
 
 #include "Utilities/Config.h"
 #include "Utilities/Timer.h"
@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <QTimer>
 #include <QThread>
+#include <QLibraryInfo>
 #include <string>
 
 #include "rpcs3_version.h"
@@ -28,6 +29,9 @@ constexpr auto qstr = QString::fromStdString;
 gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, bool disableMouse)
 	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
 {
+	// Workaround for a Qt bug affecting 5.11.1 binaries
+	m_use_5_11_1_workaround = QLibraryInfo::version() == QVersionNumber(5, 11, 1);
+
 	//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
 	std::string version = rpcs3::version.to_string();
 	version = version.substr(0 , version.find_last_of("-"));
@@ -56,6 +60,12 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, b
 	}
 
 	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
+
+#ifdef __APPLE__
+	// Needed for MoltenVK to work properly on MacOS
+	if (g_cfg.video.renderer == video_renderer::vulkan)
+		setSurfaceType(QSurface::VulkanSurface);
+#endif
 
 	setGeometry(geometry);
 	setTitle(m_windowTitle);
@@ -323,14 +333,18 @@ bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *res
 		while (wm_event_raised.load(std::memory_order_consume) && !Emu.IsStopped());
 
 		{
-			std::lock_guard lock(wm_event_lock);
+			MSG* msg;
+			if (m_use_5_11_1_workaround)
+			{
+				// https://bugreports.qt.io/browse/QTBUG-69074?focusedCommentId=409797&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-409797
+				msg = *reinterpret_cast<MSG**>(message);
+			}
+			else
+			{
+				msg = reinterpret_cast<MSG*>(message);
+			}
 
-			// https://bugreports.qt.io/browse/QTBUG-69074?focusedCommentId=409797&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-409797
-#if (QT_VERSION == QT_VERSION_CHECK(5, 11, 1))
-			MSG* msg = *reinterpret_cast<MSG**>(message);
-#else
-			MSG* msg = reinterpret_cast<MSG*>(message);
-#endif
+			std::lock_guard lock(wm_event_lock);
 
 			switch (msg->message)
 			{
