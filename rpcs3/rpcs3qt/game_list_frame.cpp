@@ -393,7 +393,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		for (const auto& dir : path_list) { try
 		{
-			const std::string sfo_dir = Emu.GetSfoDirFromGamePath(dir);
+			const std::string sfo_dir = Emu.GetSfoDirFromGamePath(dir, Emu.GetUsr());
 			const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
 			if (!sfo_file)
 			{

@@ -318,8 +318,7 @@ private:
 	static std::string GetEmuDir();
 public:
 	static std::string GetHddDir();
-
-	std::string GetSfoDirFromGamePath(const std::string& game_path);
+	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user);
 
 	void SetForceBoot(bool force_boot);
 

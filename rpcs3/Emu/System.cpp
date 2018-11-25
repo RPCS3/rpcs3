@@ -571,7 +571,7 @@ std::string Emulator::GetHddDir()
 	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir());
 }
 
-std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path)
+std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user)
 {
 	if (fs::is_file(game_path + "/PS3_DISC.SFB"))
 	{
@@ -586,7 +586,7 @@ std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path)
 	if (category == "HG" && !content_id.empty())
 	{
 		// This is a trial game. Check if the user has a RAP file to unlock it.
-		const std::string rap_path = Emu.GetHddDir() + "home/" + Emu.GetUsr() + "/exdata/" + content_id + ".rap";
+		const std::string rap_path = GetHddDir() + "home/" + user + "/exdata/" + content_id + ".rap";
 		if (fs::is_file(rap_path) && fs::is_file(game_path + "/C00/PARAM.SFO"))
 		{
 			// Load full game data.
@@ -637,7 +637,7 @@ void Emulator::Load(bool add_only)
 			if (fs::is_dir(m_path))
 			{
 				// Special case (directory scan)
-				m_sfo_dir = GetSfoDirFromGamePath(m_path);
+				m_sfo_dir = GetSfoDirFromGamePath(m_path, GetUsr());
 			}
 			else if (disc.size())
 			{
@@ -652,12 +652,12 @@ void Emulator::Load(bool add_only)
 				}
 				else
 				{
-					m_sfo_dir = GetSfoDirFromGamePath(disc);
+					m_sfo_dir = GetSfoDirFromGamePath(disc, GetUsr());
 				}
 			}
 			else
 			{
-				m_sfo_dir = GetSfoDirFromGamePath(fs::get_parent_dir(elf_dir));
+				m_sfo_dir = GetSfoDirFromGamePath(fs::get_parent_dir(elf_dir), GetUsr());
 			}
 
 			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
