@@ -3,6 +3,7 @@
 #include "types.h"
 #include "Atomic.h"
 #include <shared_mutex>
+#include "asm.h"
 
 // Lightweight condition variable
 class cond_variable
@@ -174,6 +175,140 @@ public:
 	{
 		// Early exit if notification is not required
 		if (LIKELY(!m_value))
+			return;
+
+		imp_notify();
+	}
+};
+
+// Packed version of cond_one, supports up to 16 readers.
+class cond_x16
+{
+	// For information, shouldn't modify
+	enum : u32
+	{
+		c_wait = 1,
+		c_lock = 1 << 16,
+		c_sig  = 1 << 16 | 1,
+	};
+
+	// Split in 16-bit parts for convenient bit combining
+	atomic_t<u32> m_cvx16{0};
+
+	// Effectively unused, only counts readers
+	atomic_t<u32> m_total{0};
+
+	class lock_x16
+	{
+		cond_x16* m_this;
+		u32 m_slot;
+
+		friend class cond_x16;
+
+	public:
+		lock_x16(cond_x16* _this) noexcept
+			: m_this(_this)
+		{
+			// Spin if the number of readers exceeds 16
+			while (UNLIKELY(m_this->m_total++ >= 16))
+				m_this->m_total--;
+
+			// Lock and remember obtained slot index
+			m_slot = m_this->m_cvx16.atomic_op([](u32& cvx16)
+			{
+				// Combine used bits and invert to find least significant bit unused
+				const u32 slot = utils::cnttz32(~((cvx16 & 0xffff) | (cvx16 >> 16)), true);
+
+				// Set lock bit
+				cvx16 |= c_lock << slot;
+
+				AUDIT(slot < 16);
+				return slot;
+			});
+		}
+
+		lock_x16(const lock_x16&) = delete;
+
+		lock_x16& operator=(const lock_x16&) = delete;
+
+		~lock_x16()
+		{
+			// Clear the slot
+			m_this->m_cvx16 &= ~((c_wait | c_lock) << m_slot);
+			m_this->m_total -= 1;
+		}
+
+		bool wait(u64 usec_timeout = -1) const noexcept
+		{
+			return m_this->wait(*this, usec_timeout);
+		}
+	};
+
+	bool imp_wait(u32 _new, u32 slot, u64 _timeout) noexcept;
+	void imp_notify() noexcept;
+
+	bool retire(u32 slot) noexcept
+	{
+		const u32 wait_bit = c_wait << slot;
+		const u32 lock_bit = c_lock << slot;
+
+		return m_cvx16.atomic_op([=](u32& cvx16)
+		{
+			if (cvx16 & lock_bit)
+			{
+				cvx16 &= ~wait_bit;
+				return true;
+			}
+
+			cvx16 |= lock_bit;
+			cvx16 &= ~wait_bit;
+			return false;
+		});
+	}
+
+public:
+	constexpr cond_x16() = default;
+
+	lock_x16 lock_one() noexcept
+	{
+		return lock_x16(this);
+	}
+
+	bool wait(lock_x16 const& lock, u64 usec_timeout = -1) noexcept
+	{
+		AUDIT(lock.m_this == this);
+
+		const u32 wait_bit = c_wait << lock.m_slot;
+		const u32 lock_bit = c_lock << lock.m_slot;
+
+		// Change state from c_lock to c_wait
+		const u32 new_ = m_cvx16.atomic_op([=](u32& cvx16)
+		{
+			if (cvx16 & wait_bit)
+			{
+				cvx16 &= ~wait_bit;
+			}
+			else
+			{
+				cvx16 |= wait_bit;
+				cvx16 &= ~lock_bit;
+			}
+
+			return cvx16;
+		});
+
+		if (new_ & lock_bit)
+		{
+			// Already signaled, return without waiting
+			return true;
+		}
+
+		return imp_wait(new_, lock.m_slot, usec_timeout);
+	}
+
+	void notify_all() noexcept
+	{
+		if (LIKELY(!m_cvx16))
 			return;
 
 		imp_notify();
