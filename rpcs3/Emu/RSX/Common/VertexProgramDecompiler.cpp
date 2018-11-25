@@ -40,42 +40,49 @@ std::string VertexProgramDecompiler::GetScaMask()
 std::string VertexProgramDecompiler::GetDST(bool isSca)
 {
 	std::string ret;
-	std::string mask = GetMask(isSca);
+	const std::string mask = GetMask(isSca);
 
 	// ARL writes to special integer registers
 	const bool is_address_reg = !isSca && (d1.vec_opcode == RSX_VEC_OPCODE_ARL);
+	const auto tmp_index = isSca ? d3.sca_dst_tmp : d0.dst_tmp;
+	const bool is_result = isSca ? (tmp_index == 0x3f) : d0.vec_result;
 
-	switch ((isSca && d3.sca_dst_tmp != 0x3f) ? 0x1f : d3.dst)
+	if (is_result)
 	{
-	case 0x1f:
+		// Write to output result register
+		// vec_result can mask out the VEC op from writing to o[] if SCA is writing to o[]
+
+		if (d3.dst != 0x1f)
+		{
+			if (d3.dst > 15)
+			{
+				LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
+			}
+
+			if (is_address_reg)
+			{
+				LOG_ERROR(RSX, "ARL opcode writing to output register!");
+			}
+
+			const auto reg_type = getFloatTypeName(4);
+			const auto reg_name = std::string("dst_reg") + std::to_string(d3.dst);
+			const auto default_value = (d3.dst == 0 ? reg_type + "(0.0f, 0.0f, 0.0f, 1.0f)" : reg_type + "(0.0, 0.0, 0.0, 0.0)");
+			ret += m_parr.AddParam(PF_PARAM_OUT, reg_type, reg_name, default_value) + mask;
+		}
+	}
+
+	if (tmp_index != 0x3f)
 	{
+		if (!ret.empty())
+		{
+			// Double assignment. Only possible for vector ops
+			verify(HERE), !isSca;
+			ret += " = ";
+		}
+
 		const std::string reg_type = (is_address_reg) ? getIntTypeName(4) : getFloatTypeName(4);
 		const std::string reg_sel = (is_address_reg) ? "a" : "tmp";
-		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp)) + mask;
-		break;
-	}
-	default:
-	{
-		if (is_address_reg)
-		{
-			LOG_ERROR(RSX, "ARL opcode writing to output register!");
-		}
-
-		if (d3.dst > 15)
-		{
-			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
-		}
-
-		ret += m_parr.AddParam(PF_PARAM_OUT, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)") + mask;
-
-		if (d0.dst_tmp != 0x3f)
-		{
-			// Handle double destination register as 'dst_reg = tmp'
-			ret += " = " + m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(d0.dst_tmp)) + mask;
-		}
-
-		break;
-	}
+		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(tmp_index)) + mask;
 	}
 
 	return ret;
