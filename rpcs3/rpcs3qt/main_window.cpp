@@ -1283,8 +1283,9 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Users, &QAction::triggered, [=]
 	{
-		user_manager_dialog* user_manager = new user_manager_dialog(guiSettings, this);
-		user_manager->show();
+		user_manager_dialog user_manager(guiSettings, this);
+		user_manager.exec();
+		m_gameListFrame->Refresh(true); // New user may have different games unlocked.
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]
