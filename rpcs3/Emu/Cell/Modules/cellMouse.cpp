@@ -5,8 +5,6 @@
 
 #include "Emu/Io/MouseHandler.h"
 
-#include "Utilities/sema.h"
-
 #include "cellMouse.h"
 
 extern logs::channel sys_io;

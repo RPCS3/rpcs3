@@ -75,7 +75,7 @@ namespace logs
 #endif
 		uchar* m_fptr{};
 		z_stream m_zs{};
-		semaphore<> m_m;
+		shared_mutex m_m;
 
 		alignas(128) atomic_t<u64> m_buf{0}; // MSB (40 bit): push begin, LSB (24 bis): push size
 		alignas(128) atomic_t<u64> m_out{0}; // Amount of bytes written to file
@@ -183,7 +183,7 @@ namespace logs
 	channel SPU("SPU");
 
 	// Channel registry mutex
-	semaphore<> g_mutex;
+	shared_mutex g_mutex;
 
 	// Must be set to true in main()
 	atomic_t<bool> g_init{false};

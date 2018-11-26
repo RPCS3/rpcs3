@@ -1,7 +1,7 @@
 #pragma once
 
 #include <list>
-#include "Utilities/sema.h"
+#include "Utilities/mutex.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
@@ -145,7 +145,7 @@ protected:
 	}
 
 public:
-	semaphore<> mutex;
+	shared_mutex mutex;
 
 	virtual void Init(const u32 max_connect) = 0;
 	virtual ~MouseHandlerBase() = default;

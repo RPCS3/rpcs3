@@ -57,7 +57,7 @@ struct lv2_lwmutex final : lv2_obj
 	const vm::ptr<sys_lwmutex_t> control;
 	const u64 name;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<u32> signaled{0};
 	std::deque<cpu_thread*> sq;
 

@@ -40,7 +40,7 @@ struct lv2_event_flag final : lv2_obj
 	const s32 type;
 	const u64 name;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<u32> waiters{0};
 	atomic_t<u64> pattern;
 	std::deque<cpu_thread*> sq;

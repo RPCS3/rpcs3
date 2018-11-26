@@ -215,7 +215,7 @@ struct lv2_obj
 
 private:
 	// Scheduler mutex
-	static semaphore<> g_mutex;
+	static shared_mutex g_mutex;
 
 	// Scheduler queue for active PPU threads
 	static std::deque<class ppu_thread*> g_ppu;

@@ -2,7 +2,6 @@
 
 #include "Utilities/Timer.h"
 #include "Emu/Cell/lv2/sys_memory.h"
-#include "Utilities/sema.h"
 #include "Utilities/Thread.h"
 
 #include <map>

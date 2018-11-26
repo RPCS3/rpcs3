@@ -28,7 +28,7 @@ struct lv2_sema final : lv2_obj
 	const s32 flags;
 	const s32 max;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<s32> val;
 	std::deque<cpu_thread*> sq;
 

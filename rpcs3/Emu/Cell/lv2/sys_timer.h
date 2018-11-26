@@ -24,7 +24,7 @@ struct lv2_timer_context : lv2_obj
 	void operator()();
 	void on_abort();
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<u32> state{SYS_TIMER_STATE_STOP};
 
 	std::weak_ptr<lv2_event_queue> port;

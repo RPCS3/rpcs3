@@ -57,7 +57,7 @@ public:
 	{
 		if (m_value)
 		{
-			imp_wake(-1);
+			imp_wake(65535);
 		}
 	}
 
@@ -140,7 +140,7 @@ class cond_one
 
 	atomic_t<u32> m_value{0};
 
-	bool imp_wait(u32 _old, u64 _timeout) noexcept;
+	bool imp_wait(u64 _timeout) noexcept;
 	void imp_notify() noexcept;
 
 public:
@@ -162,13 +162,7 @@ public:
 	{
 		AUDIT(lock.owns_lock());
 		AUDIT(lock.mutex() == this);
-
-		// State transition: c_sig -> c_lock, c_lock -> c_wait
-		const u32 _old = m_value.fetch_sub(1);
-		if (LIKELY(_old == c_sig))
-			return true;
-
-		return imp_wait(_old, usec_timeout);
+		return imp_wait(usec_timeout);
 	}
 
 	void notify() noexcept
@@ -244,27 +238,8 @@ class cond_x16
 		}
 	};
 
-	bool imp_wait(u32 _new, u32 slot, u64 _timeout) noexcept;
+	bool imp_wait(u32 slot, u64 _timeout) noexcept;
 	void imp_notify() noexcept;
-
-	bool retire(u32 slot) noexcept
-	{
-		const u32 wait_bit = c_wait << slot;
-		const u32 lock_bit = c_lock << slot;
-
-		return m_cvx16.atomic_op([=](u32& cvx16)
-		{
-			if (cvx16 & lock_bit)
-			{
-				cvx16 &= ~wait_bit;
-				return true;
-			}
-
-			cvx16 |= lock_bit;
-			cvx16 &= ~wait_bit;
-			return false;
-		});
-	}
 
 public:
 	constexpr cond_x16() = default;
@@ -277,33 +252,7 @@ public:
 	bool wait(lock_x16 const& lock, u64 usec_timeout = -1) noexcept
 	{
 		AUDIT(lock.m_this == this);
-
-		const u32 wait_bit = c_wait << lock.m_slot;
-		const u32 lock_bit = c_lock << lock.m_slot;
-
-		// Change state from c_lock to c_wait
-		const u32 new_ = m_cvx16.atomic_op([=](u32& cvx16)
-		{
-			if (cvx16 & wait_bit)
-			{
-				cvx16 &= ~wait_bit;
-			}
-			else
-			{
-				cvx16 |= wait_bit;
-				cvx16 &= ~lock_bit;
-			}
-
-			return cvx16;
-		});
-
-		if (new_ & lock_bit)
-		{
-			// Already signaled, return without waiting
-			return true;
-		}
-
-		return imp_wait(new_, lock.m_slot, usec_timeout);
+		return imp_wait(lock.m_slot, usec_timeout);
 	}
 
 	void notify_all() noexcept
