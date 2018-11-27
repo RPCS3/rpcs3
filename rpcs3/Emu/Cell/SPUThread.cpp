@@ -487,6 +487,7 @@ void spu_thread::cpu_stop()
 		if (verify(HERE, group->running--) == 1)
 		{
 			// Notify on last thread stopped
+			group->stop_count++;
 			group->mutex.lock_unlock();
 			group->cond.notify_all();
 		}
