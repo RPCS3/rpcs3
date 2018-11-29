@@ -1557,47 +1557,50 @@ namespace gl
 				m_depth = depth;
 				m_mipmaps = mipmaps;
 
-				GLenum query_target = (target == GL_TEXTURE_CUBE_MAP) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : target;
-				glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_COMPRESSED, (GLint*)&m_compressed);
-
-				if (m_compressed)
+				switch (sized_format)
 				{
-					GLint compressed_size;
-					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &compressed_size);
-					m_pitch = compressed_size / height;
+				case GL_DEPTH_COMPONENT16:
+				{
+					m_pitch = width * 2;
+					break;
 				}
-				else
+				case GL_DEPTH24_STENCIL8:
+				case GL_DEPTH32F_STENCIL8:
 				{
-					switch (sized_format)
-					{
-					case GL_DEPTH_COMPONENT16:
-					{
-						m_pitch = width * 2;
-						break;
-					}
-					case GL_DEPTH24_STENCIL8:
-					case GL_DEPTH32F_STENCIL8:
-					{
-						m_pitch = width * 4;
-						break;
-					}
-					default:
-					{
-						GLint r, g, b, a;
-						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_RED_SIZE, &r);
-						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_GREEN_SIZE, &g);
-						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_BLUE_SIZE, &b);
-						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_ALPHA_SIZE, &a);
+					m_pitch = width * 4;
+					break;
+				}
+				case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+				{
+					m_compressed = true;
+					m_pitch = width / 2;
+					break;
+				}
+				case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+				case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+				{
+					m_compressed = true;
+					m_pitch = width;
+					break;
+				}
+				default:
+				{
+					GLenum query_target = (target == GL_TEXTURE_CUBE_MAP) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : target;
+					GLint r, g, b, a;
 
-						m_pitch = width * (r + g + b + a) / 8;
-						break;
-					}
-					}
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_RED_SIZE, &r);
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_GREEN_SIZE, &g);
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_BLUE_SIZE, &b);
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_ALPHA_SIZE, &a);
 
-					if (!m_pitch)
-					{
-						fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
-					}
+					m_pitch = width * (r + g + b + a) / 8;
+					break;
+				}
+				}
+
+				if (!m_pitch)
+				{
+					fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
 				}
 			}
 
