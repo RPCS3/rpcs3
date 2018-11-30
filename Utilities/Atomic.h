@@ -620,11 +620,9 @@ public:
 	template <typename F, typename RT = std::invoke_result_t<F, T&>>
 	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op(F&& func)
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
-
 		while (true)
 		{
-			_new = old;
+			type old = atomic_storage<type>::load(m_data), _new = old;
 
 			if constexpr (std::is_void_v<RT>)
 			{
@@ -651,11 +649,9 @@ public:
 	template <auto F, typename RT = std::invoke_result_t<decltype(F), T&>>
 	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op()
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
-
 		while (true)
 		{
-			_new = old;
+			type old = atomic_storage<type>::load(m_data), _new = old;
 
 			if constexpr (std::is_void_v<RT>)
 			{
@@ -682,11 +678,9 @@ public:
 	template <typename F, typename RT = std::invoke_result_t<F, T&>>
 	RT atomic_op(F&& func)
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
-
 		while (true)
 		{
-			_new = old;
+			type old = atomic_storage<type>::load(m_data), _new = old;
 
 			if constexpr (std::is_void_v<RT>)
 			{
@@ -713,11 +707,9 @@ public:
 	template <auto F, typename RT = std::invoke_result_t<decltype(F), T&>>
 	RT atomic_op()
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
-
 		while (true)
 		{
-			_new = old;
+			type old = atomic_storage<type>::load(m_data), _new = old;
 
 			if constexpr (std::is_void_v<RT>)
 			{
@@ -1025,11 +1017,9 @@ public:
 	// Conditionally decrement
 	bool try_dec(simple_type greater_than = std::numeric_limits<simple_type>::min())
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
-
 		while (true)
 		{
-			_new = old;
+			type old = atomic_storage<type>::load(m_data), _new = old;
 
 			if (!(_new > greater_than))
 			{
@@ -1048,11 +1038,9 @@ public:
 	// Conditionally increment
 	bool try_inc(simple_type less_than = std::numeric_limits<simple_type>::max())
 	{
-		type _new, old = atomic_storage<type>::load(m_data);
-
 		while (true)
 		{
-			_new = old;
+			type old = atomic_storage<type>::load(m_data), _new = old;
 
 			if (!(_new < less_than))
 			{
