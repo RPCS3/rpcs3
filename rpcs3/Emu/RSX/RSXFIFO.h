@@ -82,6 +82,7 @@ namespace rsx
 			u32 get_primitive() const { return deferred_primitive; }
 			bool is_enabled() const { return enabled; }
 
+			void force_disable();
 			void evaluate_performance(u32 total_draw_count);
 			inline flatten_op test(register_pair& command);
 		};

@@ -201,6 +201,13 @@ namespace rsx
 			}
 		}
 
+		void flattening_helper::force_disable()
+		{
+			enabled = false;
+			num_collapsed = 0;
+			fifo_hint = optimization_hint::load_unoptimizable;
+		}
+
 		void flattening_helper::evaluate_performance(u32 total_draw_count)
 		{
 			if (!enabled)

@@ -2246,39 +2246,52 @@ namespace rsx
 
 	void thread::flip(int buffer)
 	{
-		async_flip_requested.clear();
-
-		if (!g_cfg.video.disable_FIFO_reordering)
+		if (!(async_flip_requested & flip_request::any))
 		{
-			// Try to enable FIFO optimizations
-			// Only rarely useful for some games like RE4
-			m_flattener.evaluate_performance(m_draw_calls);
+			// Flip is processed through inline FLIP command in the commandstream
+			// This is critical as it is a reliable end-of-frame marker
+
+			if (!g_cfg.video.disable_FIFO_reordering)
+			{
+				// Try to enable FIFO optimizations
+				// Only rarely useful for some games like RE4
+				m_flattener.evaluate_performance(m_draw_calls);
+			}
+
+			// Reset zcull ctrl
+			zcull_ctrl->set_active(this, false);
+			zcull_ctrl->clear(this);
+
+			if (zcull_ctrl->has_pending())
+			{
+				LOG_TRACE(RSX, "Dangling reports found, discarding...");
+				zcull_ctrl->sync(this);
+			}
+
+			if (g_cfg.video.frame_skip_enabled)
+			{
+				m_skip_frame_ctr++;
+
+				if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
+					m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
+
+				skip_frame = (m_skip_frame_ctr < 0);
+			}
+		}
+		else
+		{
+			if (async_flip_requested & flip_request::emu_requested)
+			{
+				m_flattener.force_disable();
+			}
+
+			async_flip_requested.clear();
 		}
 
 		if (!skip_frame)
 		{
 			// Reset counter
 			m_draw_calls = 0;
-		}
-
-		if (g_cfg.video.frame_skip_enabled)
-		{
-			m_skip_frame_ctr++;
-
-			if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
-				m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
-
-			skip_frame = (m_skip_frame_ctr < 0);
-		}
-
-		//Reset zcull ctrl
-		zcull_ctrl->set_active(this, false);
-		zcull_ctrl->clear(this);
-
-		if (zcull_ctrl->has_pending())
-		{
-			LOG_TRACE(RSX, "Dangling reports found, discarding...");
-			zcull_ctrl->sync(this);
 		}
 
 		performance_counters.sampled_frames++;
