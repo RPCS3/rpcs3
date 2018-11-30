@@ -1013,6 +1013,8 @@ namespace rsx
 	{
 		if (async_flip_requested & flip_request::emu_requested)
 		{
+			// NOTE: This has to be executed immediately
+			// Delaying this operation can cause desync due to the delay in firing the flip event
 			handle_emu_flip(async_flip_buffer);
 		}
 

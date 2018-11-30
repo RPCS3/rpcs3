@@ -1560,13 +1560,19 @@ void GLGSRender::flip(int buffer)
 		return;
 	}
 
-	gl::screen.clear(gl::buffers::color);
-
 	u32 buffer_width = display_buffers[buffer].width;
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
 	if (!buffer_pitch) buffer_pitch = buffer_width * 4;
+
+	// Disable scissor test (affects blit, clear, etc)
+	glDisable(GL_SCISSOR_TEST);
+
+	// Clear the window background to black
+	gl_state.clear_color(0, 0, 0, 0);
+	gl::screen.bind();
+	gl::screen.clear(gl::buffers::color);
 
 	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
 	{
@@ -1664,13 +1670,11 @@ void GLGSRender::flip(int buffer)
 		if (g_cfg.video.full_rgb_range_output && (!avconfig || avconfig->gamma == 1.f))
 		{
 			// Blit source image to the screen
-			// Disable scissor test (affects blit)
-			glDisable(GL_SCISSOR_TEST);
-
 			m_flip_fbo.recreate();
 			m_flip_fbo.bind();
 			m_flip_fbo.color = image;
 			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			m_flip_fbo.draw_buffer(m_flip_fbo.color);
 			m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 		}
 		else
@@ -1758,7 +1762,15 @@ void GLGSRender::flip(int buffer)
 		return false;
 	});
 
-	//If we are skipping the next frame, do not reset perf counters
+	if (m_draw_fbo && !m_rtts_dirty)
+	{
+		// Always restore the active framebuffer
+		m_draw_fbo->bind();
+		set_viewport();
+		set_scissor();
+	}
+
+	// If we are skipping the next frame, do not reset perf counters
 	if (skip_frame) return;
 
 	m_begin_time = 0;
