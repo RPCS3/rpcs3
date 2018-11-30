@@ -212,6 +212,10 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			ds->write_aa_mode = layout.aa_mode;
 		}
 
+		m_draw_fbo->bind();
+		set_viewport();
+		set_scissor();
+
 		return;
 	}
 
