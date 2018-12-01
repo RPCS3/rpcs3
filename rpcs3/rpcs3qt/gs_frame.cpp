@@ -367,6 +367,8 @@ bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *res
 				if (!m_in_sizing_event || m_user_interaction_active || flags == (SWP_NOSIZE | SWP_NOMOVE))
 					break;
 
+				m_in_sizing_event = false;
+
 				if (flags & SWP_NOSIZE)
 				{
 					m_raised_event = wm_event::window_moved;
@@ -387,12 +389,13 @@ bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *res
 					}
 					else
 					{
-						m_raised_event = wm_event::window_resized;
+						//Handle the resize in WM_SIZE message
+						m_raised_event = wm_event::window_moved;
+						m_in_sizing_event = true;
 					}
 				}
 
-				//Just finished resizing using maximize or SWP
-				m_in_sizing_event = false;
+				//Possibly finished resizing using maximize or SWP
 				wm_event_raised.store(true);
 				break;
 			}
