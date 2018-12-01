@@ -150,7 +150,7 @@ namespace rsx
 					{
 						const auto& range = method_registers.current_draw_clause.get_range();
 						const u32 vertCount = range.count;
-						const size_t bufferSize = vertCount * vertStride + vertSize;
+						const size_t bufferSize = (vertCount - 1) * vertStride + vertSize;
 
 						frame_capture_data::memory_block block;
 						block.offset = base_address + (range.first * vertStride);
@@ -306,11 +306,6 @@ namespace rsx
 
 			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
 
-			if (in_pitch == 0)
-			{
-				in_pitch = in_bpp * in_w;
-			}
-
 			const u32 src_size = in_pitch * (in_h - 1) + (in_w * in_bpp);
 			rsx->read_barrier(src_region.address, src_size);
 
@@ -328,11 +323,6 @@ namespace rsx
 			const u32 line_length = method_registers.nv0039_line_length();
 			const u32 line_count  = method_registers.nv0039_line_count();
 			const u8 in_format    = method_registers.nv0039_input_format();
-
-			if (!in_pitch)
-			{
-				in_pitch = line_length;
-			}
 
 			u32 src_offset = method_registers.nv0039_input_offset();
 			u32 src_dma    = method_registers.nv0039_input_location();
@@ -355,7 +345,6 @@ namespace rsx
 			}
 
 			insert_mem_block_in_map(replay_command.memory_state, std::move(block), std::move(block_data));
-
 			capture_display_tile_state(rsx, replay_command);
 		}
 

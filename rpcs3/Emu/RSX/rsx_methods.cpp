@@ -885,11 +885,6 @@ namespace rsx
 				out_pitch = out_bpp * out_w;
 			}
 
-			if (in_pitch == 0)
-			{
-				in_pitch = in_bpp * in_w;
-			}
-
 			const u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
 			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
@@ -1164,16 +1159,6 @@ namespace rsx
 
 			LOG_TRACE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
-
-			if (!in_pitch)
-			{
-				in_pitch = line_length;
-			}
-
-			if (!out_pitch)
-			{
-				out_pitch = line_length;
-			}
 
 			u32 src_offset = method_registers.nv0039_input_offset();
 			u32 src_dma = method_registers.nv0039_input_location();
