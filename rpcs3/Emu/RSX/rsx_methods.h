@@ -1469,12 +1469,12 @@ namespace rsx
 			return decode<NV309E_SET_FORMAT>().format();
 		}
 
-		u32 blit_engine_ds_dx() const
+		f32 blit_engine_ds_dx() const
 		{
 			return decode<NV3089_DS_DX>().ds_dx();
 		}
 
-		u32 blit_engine_dt_dy() const
+		f32 blit_engine_dt_dy() const
 		{
 			return decode<NV3089_DT_DY>().dt_dy();
 		}

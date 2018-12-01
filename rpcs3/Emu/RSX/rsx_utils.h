@@ -161,6 +161,17 @@ namespace rsx
 		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
 	}
 
+	// Copy memory in inverse direction from source
+	// Used to scale negatively x axis while transfering image data
+	template <typename Ts = u8, typename Td = Ts>
+	static void memcpy_r(void* dst, void* src, std::size_t size)
+	{
+		for (u32 i = 0; i < size; i++)
+		{
+			*((Td*)dst + i) = *((Ts*)src - i);
+		}
+	}
+
 	// Returns interleaved bits of X|Y|Z used as Z-order curve indices
 	static inline u32 calculate_z_index(u32 x, u32 y, u32 z)
 	{
