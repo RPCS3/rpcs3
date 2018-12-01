@@ -273,8 +273,8 @@ namespace rsx
 		{
 			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
-			const u16 out_w = method_registers.blit_engine_output_width();
-			const u16 out_h = method_registers.blit_engine_output_height();
+			const u16 clip_w = std::min(method_registers.blit_engine_output_width(), method_registers.blit_engine_clip_width());
+			const u16 clip_h = std::min(method_registers.blit_engine_output_height(), method_registers.blit_engine_clip_height());
 
 			const u16 in_w = method_registers.blit_engine_input_width();
 			const u16 in_h = method_registers.blit_engine_input_height();
@@ -288,7 +288,7 @@ namespace rsx
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
 
-			if (in_w == 0 || in_h == 0 || out_w == 0 || out_h == 0)
+			if (in_w == 0 || in_h == 0 || clip_w == 0 || clip_h == 0)
 			{
 				return;
 			}
