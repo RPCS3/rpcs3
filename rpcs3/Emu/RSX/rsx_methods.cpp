@@ -811,35 +811,30 @@ namespace rsx
 
 			//Clipping
 			//Validate that clipping rect will fit onto both src and dst regions
-			u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
-			u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
+			const u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+
+			// Check both clip dimensions and dst dimensions
+			if (clip_w == 0 || clip_h == 0)
+			{
+				LOG_WARNING(RSX, "NV3089_IMAGE_IN: Operation NOPed out due to empty regions");
+				return;
+			}
+
+			if (in_w == 0 || in_h == 0)
+			{
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed");
+				return;
+			}
 
 			u16 clip_x = method_registers.blit_engine_clip_x();
 			u16 clip_y = method_registers.blit_engine_clip_y();
-
-			if (clip_w == 0)
-			{
-				clip_x = 0;
-				clip_w = out_w;
-			}
-
-			if (clip_h == 0)
-			{
-				clip_y = 0;
-				clip_h = out_h;
-			}
 
 			//Fit onto dst
 			if (clip_x && (out_x + clip_x + clip_w) > out_w) clip_x = 0;
 			if (clip_y && (out_y + clip_y + clip_h) > out_h) clip_y = 0;
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
-
-			if (in_w == 0 || in_h == 0 || out_w == 0 || out_h == 0)
-			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed");
-				return;
-			}
 
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
