@@ -900,7 +900,7 @@ namespace rsx
 			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
 
 			const auto read_address = get_address(src_offset, src_dma);
-			rsx->read_barrier(read_address, in_pitch * in_h);
+			rsx->read_barrier(read_address, in_pitch * (in_h - 1) + (in_w * in_bpp));
 
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
@@ -1182,7 +1182,7 @@ namespace rsx
 			u32 dst_dma = method_registers.nv0039_output_location();
 
 			const auto read_address = get_address(src_offset, src_dma);
-			rsx->read_barrier(read_address, in_pitch * line_count);
+			rsx->read_barrier(read_address, in_pitch * (line_count - 1) + line_length);
 
 			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
 			const u8 *src = (u8*)vm::base(read_address);

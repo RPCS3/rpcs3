@@ -311,11 +311,12 @@ namespace rsx
 				in_pitch = in_bpp * in_w;
 			}
 
-			rsx->read_barrier(src_region.address, in_pitch * in_h);
+			const u32 src_size = in_pitch * (in_h - 1) + (in_w * in_bpp);
+			rsx->read_barrier(src_region.address, src_size);
 
 			frame_capture_data::memory_block_data block_data;
-			block_data.data.resize(in_pitch * in_h);
-			std::memcpy(block_data.data.data(), pixels_src, in_pitch * in_h);
+			block_data.data.resize(src_size);
+			std::memcpy(block_data.data.data(), pixels_src, src_size);
 			insert_mem_block_in_map(replay_command.memory_state, std::move(block), std::move(block_data));
 
 			capture_display_tile_state(rsx, replay_command);
@@ -337,7 +338,7 @@ namespace rsx
 			u32 src_dma    = method_registers.nv0039_input_location();
 			u32 src_addr   = get_address(src_offset, src_dma);
 
-			rsx->read_barrier(src_addr, in_pitch * line_count);
+			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length);
 
 			const u8* src = (u8*)vm::base(src_addr);
 
@@ -345,7 +346,7 @@ namespace rsx
 			block.offset = src_offset;
 			block.location = src_dma;
 			frame_capture_data::memory_block_data block_data;
-			block_data.data.resize(in_pitch * line_count);
+			block_data.data.resize(in_pitch * (line_count - 1) + line_length);
 
 			for (u32 i = 0; i < line_count; ++i)
 			{
