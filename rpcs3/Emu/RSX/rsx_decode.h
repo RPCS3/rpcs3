@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/types.h"
 #include "Utilities/BitField.h"
 #include "Utilities/StrFmt.h"
@@ -2243,9 +2243,22 @@ struct registers_decoder<NV3089_DS_DX>
 	public:
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-		u32 ds_dx() const
+		// Convert signed fixed point 32-bit format
+		f32 ds_dx() const
 		{
-			return m_data.raw_value;
+			const u32 val = m_data.raw_value;
+
+			if ((val & ~(1<<31)) == 0)
+			{
+				return 0;
+			}
+
+		    if ((s32)val < 0)
+			{
+		        return 1. / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
+		    }
+
+			return 1048576.f / val;
 		}
 	};
 
@@ -2268,9 +2281,22 @@ struct registers_decoder<NV3089_DT_DY>
 	public:
 		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
 
-		u32 dt_dy() const
+		// Convert signed fixed point 32-bit format
+		f32 dt_dy() const
 		{
-			return m_data.raw_value;
+		    const u32 val = m_data.raw_value;
+
+			if ((val & ~(1<<31)) == 0)
+			{
+				return 0;
+			}
+
+		    if ((s32)val < 0)
+			{
+		        return 1. / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
+		    }
+
+		    return 1048576.f / val;
 		}
 	};
 

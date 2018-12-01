@@ -908,15 +908,15 @@ namespace rsx
 				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, (u8)src_color_format);
 			}
 
-			f32 scale_x = 1048576.f / method_registers.blit_engine_ds_dx();
-			f32 scale_y = 1048576.f / method_registers.blit_engine_dt_dy();
+			f32 scale_x = method_registers.blit_engine_ds_dx();
+			f32 scale_y = method_registers.blit_engine_dt_dy();
 
-			u32 convert_w = (u32)(scale_x * in_w);
-			u32 convert_h = (u32)(scale_y * in_h);
+			u32 convert_w = (u32)(std::abs(scale_x) * in_w);
+			u32 convert_h = (u32)(std::abs(scale_y) * in_h);
 
 			if (convert_w == 0 || convert_h == 0)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%d, dt_dy=%d)",
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
 					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
 				return;
 			}
@@ -960,7 +960,7 @@ namespace rsx
 				dst_info.max_tile_h = static_cast<u16>((dst_region.tile->size - dst_region.base) / out_pitch);
 			}
 
-			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
+			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER) && scale_x > 0 && scale_y > 0)
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
@@ -996,7 +996,38 @@ namespace rsx
 					return;
 			}
 
-			std::unique_ptr<u8[]> temp1, temp2, sw_temp;
+			std::unique_ptr<u8[]> temp1, temp2, temp3, sw_temp;
+
+			if (scale_y < 0 || scale_x < 0)
+			{
+				temp1.reset(new u8[in_pitch * (in_h - 1) + (in_bpp * in_w)]);
+
+				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch; 
+
+				for (u32 y = 0; y < in_h; ++y)
+				{
+					u8 *dst = temp1.get() + (in_pitch * y);
+					u8 *src = pixels_src + (y * stride_y);
+
+					if (scale_x < 0)
+					{
+						if (in_bpp == 2)
+						{
+							rsx::memcpy_r<u16>(dst, src, in_w);
+						}
+						else
+						{
+							rsx::memcpy_r<u32>(dst, src, in_w);
+						}
+					}
+					else
+					{
+						std::memcpy(dst, src, in_bpp * in_w);
+					}
+				}
+
+				pixels_src = temp1.get();
+			}
 
 			const AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
 			const AVPixelFormat out_format = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
@@ -1007,7 +1038,7 @@ namespace rsx
 				clip_x > 0 || clip_y > 0 ||
 				convert_w != out_w || convert_h != out_h;
 
-			const bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
+			const bool need_convert = out_format != in_format || std::abs(scale_x) != 1.0 || std::abs(scale_y) != 1.0;
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
@@ -1017,10 +1048,10 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
+							convert_scale_image(temp2, out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(pixels_dst, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(pixels_dst, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
@@ -1059,23 +1090,23 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
+							convert_scale_image(temp2, out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(temp2, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(temp3, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
-							clip_image(temp2, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							clip_image(temp3, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
 						}
 					}
 					else
 					{
-						convert_scale_image(temp2, out_format, out_w, out_h, out_pitch,
+						convert_scale_image(temp3, out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 
-					pixels_src = temp2.get();
+					pixels_src = temp3.get();
 				}
 
 				// It looks like rsx may ignore the requested swizzle size and just always
@@ -1094,10 +1125,10 @@ namespace rsx
 				u32 sw_width = next_pow2(out_w);
 				u32 sw_height = next_pow2(out_h);
 
-				temp2.reset(new u8[out_bpp * sw_width * sw_height]);
+				temp3.reset(new u8[out_bpp * sw_width * sw_height]);
 
 				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = temp2.get();
+				u8* swizzled_pixels = temp3.get();
 
 				// Check and pad texture out if we are given non power of 2 output
 				if (sw_width != out_w || sw_height != out_h)
