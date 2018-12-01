@@ -73,12 +73,12 @@ struct CellGcmReportData
 
 struct CellGcmZcullInfo
 {
-	u32 region;
-	u32 size;
-	u32 start;
-	u32 offset;
-	u32 status0;
-	u32 status1;
+	be_t<u32> region;
+	be_t<u32> size;
+	be_t<u32> start;
+	be_t<u32> offset;
+	be_t<u32> status0;
+	be_t<u32> status1;
 };
 
 struct CellGcmDisplayInfo
