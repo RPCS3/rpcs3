@@ -251,6 +251,9 @@
      </property>
      <addaction name="showCatHDDGameAct"/>
      <addaction name="showCatDiscGameAct"/>
+     <addaction name="showCatPS1GamesAct"/>
+     <addaction name="showCatPS2GamesAct"/>
+     <addaction name="showCatPSPGamesAct"/>
      <addaction name="showCatHomeAct"/>
      <addaction name="showCatAudioVideoAct"/>
      <addaction name="showCatGameDataAct"/>
@@ -729,6 +732,39 @@
    </property>
    <property name="text">
     <string>Disc Games</string>
+   </property>
+  </action>
+  <action name="showCatPS1GamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PS1 Games</string>
+   </property>
+  </action>
+  <action name="showCatPS2GamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PS2 Games</string>
+   </property>
+  </action>
+  <action name="showCatPSPGamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PSP Games</string>
    </property>
   </action>
   <action name="showCatHomeAct">

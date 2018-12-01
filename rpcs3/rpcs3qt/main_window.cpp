@@ -1146,6 +1146,9 @@ void main_window::CreateActions()
 	m_categoryVisibleActGroup = new QActionGroup(this);
 	m_categoryVisibleActGroup->addAction(ui->showCatHDDGameAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatDiscGameAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatPS1GamesAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatPS2GamesAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatPSPGamesAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatHomeAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatAudioVideoAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatGameDataAct);
@@ -1367,8 +1370,11 @@ void main_window::CreateConnects()
 		int id;
 		const bool& checked = act->isChecked();
 
-		if      (act == ui->showCatHDDGameAct)    categories += category::non_disc_games, id = Category::Non_Disc_Game;
+		if      (act == ui->showCatHDDGameAct)    categories += category::hdd_game, id = Category::HDD_Game;
 		else if (act == ui->showCatDiscGameAct)   categories += category::disc_game, id = Category::Disc_Game;
+		else if (act == ui->showCatPS1GamesAct)   categories += category::ps1_game, id = Category::PS1_Game;
+		else if (act == ui->showCatPS2GamesAct)   categories += category::ps2_games, id = Category::PS2_Game;
+		else if (act == ui->showCatPSPGamesAct)   categories += category::psp_games, id = Category::PSP_Game;
 		else if (act == ui->showCatHomeAct)       categories += category::home, id = Category::Home;
 		else if (act == ui->showCatAudioVideoAct) categories += category::media, id = Category::Media;
 		else if (act == ui->showCatGameDataAct)   categories += category::data, id = Category::Data;
@@ -1584,8 +1590,11 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 
 	ui->showCompatibilityInGridAct->setChecked(guiSettings->GetValue(gui::gl_draw_compat).toBool());
 
-	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
+	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::HDD_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));
+	ui->showCatPS1GamesAct->setChecked(guiSettings->GetCategoryVisibility(Category::PS1_Game));
+	ui->showCatPS2GamesAct->setChecked(guiSettings->GetCategoryVisibility(Category::PS2_Game));
+	ui->showCatPSPGamesAct->setChecked(guiSettings->GetCategoryVisibility(Category::PSP_Game));
 	ui->showCatHomeAct->setChecked(guiSettings->GetCategoryVisibility(Category::Home));
 	ui->showCatAudioVideoAct->setChecked(guiSettings->GetCategoryVisibility(Category::Media));
 	ui->showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(Category::Data));
