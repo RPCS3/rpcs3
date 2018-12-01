@@ -820,8 +820,8 @@ namespace rsx
 
 			if (in_w == 0 || in_h == 0)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed");
-				return;
+				// Input cant be an empty region
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed (in_w=%d, in_h=%d)" HERE, in_w, in_h);
 			}
 
 			u16 clip_x = method_registers.blit_engine_clip_x();
@@ -841,7 +841,7 @@ namespace rsx
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown operation (%d)", (u8)operation);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)" HERE, (u8)operation);
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -856,19 +856,21 @@ namespace rsx
 			switch (method_registers.blit_engine_context_surface())
 			{
 			case blit_engine::context_surface::surface2d:
+			{
 				dst_dma = method_registers.blit_engine_output_location_nv3062();
 				dst_offset = method_registers.blit_engine_output_offset_nv3062();
 				dst_color_format = method_registers.blit_engine_nv3062_color_format();
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				break;
-
+			}
 			case blit_engine::context_surface::swizzle2d:
+			{
 				dst_dma = method_registers.blit_engine_nv309E_location();
 				dst_offset = method_registers.blit_engine_nv309E_offset();
 				dst_color_format = method_registers.blit_engine_output_format_nv309E();
 				break;
-
+			}
 			default:
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
 				return;
@@ -897,13 +899,13 @@ namespace rsx
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)", (u8)dst_color_format);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)" HERE, (u8)dst_color_format);
 			}
 
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
 				src_color_format != rsx::blit_engine::transfer_source_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", (u8)src_color_format);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, (u8)src_color_format);
 			}
 
 			f32 scale_x = 1048576.f / method_registers.blit_engine_ds_dx();
