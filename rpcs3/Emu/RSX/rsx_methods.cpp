@@ -172,38 +172,35 @@ namespace rsx
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
-
-			const u32 index = method_registers.semaphore_offset_4097() >> 4;
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
-
-			if (index > 63 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
+			const u32 offset = method_registers.semaphore_offset_4097() & -16u;
+			if (offset > 63 * 4 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
 			{
 				//
 			}
 
-			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
-			sema.semaphore[index].val = arg;
-			sema.semaphore[index].pad = 0;
-			sema.semaphore[index].timestamp = rsx->timestamp();
+			auto& sema = vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097()));
+			sema.val = arg;
+			sema.pad = 0;
+			sema.timestamp = rsx->timestamp();
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Full pipeline barrier
-
-			const u32 index = method_registers.semaphore_offset_4097() >> 4;
-			if (index > 63 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
+			const u32 offset = method_registers.semaphore_offset_4097() & -16u;
+			if (offset > 63 * 4 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
 			{
 				//
 			}
 
 			rsx->sync();
 			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
-			sema.semaphore[index].val = val;
-			sema.semaphore[index].pad = 0;
-			sema.semaphore[index].timestamp = rsx->timestamp();
+			auto& sema = vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097()));
+			sema.val = val;
+			sema.pad = 0;
+			sema.timestamp = rsx->timestamp();
 		}
 
 		/**
@@ -1261,6 +1258,9 @@ namespace rsx
 		{
 			registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_X32_FLOAT | CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_NR) << 8) | (2 << 4 /* 2D */) | CELL_GCM_LOCATION_LOCAL + 1;
 		}
+
+		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_R;
+		registers[NV4097_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
 
 		if (get_current_renderer()->isHLE)
 		{
