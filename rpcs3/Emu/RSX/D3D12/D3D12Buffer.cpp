@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 
@@ -39,14 +39,6 @@ namespace
 			return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		}
 		fmt::throw_exception("Wrong vector size %d" HERE, size);
-	}
-
-	u32 get_vertex_count(const std::vector<std::pair<u32, u32> >& first_count_commands)
-	{
-		u32 vertex_count = 0;
-		for (const auto &pair : first_count_commands)
-			vertex_count += pair.second;
-		return vertex_count;
 	}
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC get_vertex_attribute_srv(const rsx::data_array_format_info &info, UINT64 offset_in_vertex_buffers_buffer, UINT buffer_size)
@@ -219,12 +211,9 @@ namespace
 	};
 
 	std::tuple<D3D12_INDEX_BUFFER_VIEW, size_t> generate_index_buffer_for_emulated_primitives_array(
-		const std::vector<std::pair<u32, u32>>& vertex_ranges, d3d12_data_heap& m_buffer_data)
+		u32 vertex_count, d3d12_data_heap& m_buffer_data)
 	{
-		size_t index_count = std::accumulate(
-			vertex_ranges.begin(), vertex_ranges.end(), 0ll, [](size_t acc, const auto& pair) {
-				return acc + get_index_count(rsx::method_registers.current_draw_clause.primitive, pair.second);
-			});
+		size_t index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, vertex_count);
 
 		// Alloc
 		size_t buffer_size = align(index_count * sizeof(u16), 64);
@@ -233,10 +222,6 @@ namespace
 
 		void* mapped_buffer =
 			m_buffer_data.map<void>(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
-
-		u32 vertex_count = 0;
-		for (const auto& pair : vertex_ranges)
-			vertex_count += pair.second;
 
 		write_index_array_for_non_indexed_non_native_primitive_to_buffer((char *)mapped_buffer, rsx::method_registers.current_draw_clause.primitive, vertex_count);
 
@@ -257,9 +242,8 @@ namespace
 	* range, and whose second element is the number of vertex in this range.
 	*/
 	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> upload_vertex_attributes(
-		const std::vector<std::pair<u32, u32>>& vertex_ranges,
-		std::function<attribute_storage(rsx::rsx_state, std::vector<std::pair<u32, u32>>)>
-			get_vertex_buffers,
+		u32 vertex_count,
+		std::function<attribute_storage()> get_vertex_buffers,
 		ID3D12Resource* m_vertex_buffer_data, d3d12_data_heap& m_buffer_data,
 		ID3D12GraphicsCommandList* command_list)
 	{
@@ -267,11 +251,9 @@ namespace
 			&CD3DX12_RESOURCE_BARRIER::Transition(m_vertex_buffer_data,
 				D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST));
 
-		u32 vertex_count = get_vertex_count(vertex_ranges);
-
 		vertex_buffer_visitor visitor(
 			vertex_count, command_list, m_vertex_buffer_data, m_buffer_data);
-		const auto& vertex_buffers = get_vertex_buffers(rsx::method_registers, vertex_ranges);
+		const auto& vertex_buffers = get_vertex_buffers();
 
 		for (const auto& vbo : vertex_buffers) std::visit(visitor, vbo);
 
@@ -354,9 +336,7 @@ namespace
 	{
 		draw_command_visitor(ID3D12GraphicsCommandList* cmd_list, d3d12_data_heap& buffer_data,
 			ID3D12Resource* vertex_buffer_data,
-			std::function<attribute_storage(
-				const rsx::rsx_state&, const std::vector<std::pair<u32, u32>>&)>
-				get_vertex_info_lambda)
+			std::function<attribute_storage()> get_vertex_info_lambda)
 			: command_list(cmd_list), m_buffer_data(buffer_data),
 			  m_vertex_buffer_data(vertex_buffer_data), get_vertex_buffers(get_vertex_info_lambda)
 		{
@@ -365,10 +345,11 @@ namespace
 		std::tuple<bool, size_t, std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC>> operator()(
 			const rsx::draw_array_command& command)
 		{
+			const auto vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive)) {
-				size_t vertex_count = get_vertex_count(command.indexes_range);
 				return std::make_tuple(false, vertex_count,
-					upload_vertex_attributes(command.indexes_range, get_vertex_buffers,
+					upload_vertex_attributes(vertex_count,
+						get_vertex_buffers,
 						m_vertex_buffer_data, m_buffer_data, command_list));
 			}
 
@@ -376,10 +357,11 @@ namespace
 			size_t index_count;
 			std::tie(index_buffer_view, index_count) =
 				generate_index_buffer_for_emulated_primitives_array(
-					command.indexes_range, m_buffer_data);
+					vertex_count, m_buffer_data);
 			command_list->IASetIndexBuffer(&index_buffer_view);
 			return std::make_tuple(true, index_count,
-				upload_vertex_attributes(command.indexes_range, get_vertex_buffers,
+				upload_vertex_attributes(vertex_count,
+					get_vertex_buffers,
 					m_vertex_buffer_data, m_buffer_data, command_list));
 		}
 
@@ -389,7 +371,7 @@ namespace
 			// Index count
 			size_t index_count =
 				get_index_count(rsx::method_registers.current_draw_clause.primitive,
-					::narrow<int>(get_vertex_count(command.ranges_to_fetch_in_index_buffer)));
+					rsx::method_registers.current_draw_clause.get_elements_count());
 
 			rsx::index_array_type indexed_type = rsx::method_registers.current_draw_clause.is_immediate_draw?
 				rsx::index_array_type::u32:
@@ -412,7 +394,7 @@ namespace
 				write_index_array_data_to_buffer(dst, command.raw_index_buffer, indexed_type,
 					rsx::method_registers.current_draw_clause.primitive,
 					rsx::method_registers.restart_index_enabled(),
-					rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
+					rsx::method_registers.restart_index(),
 					rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !is_primitive_native(prim); });
 
 			m_buffer_data.unmap(CD3DX12_RANGE(heap_offset, heap_offset + buffer_size));
@@ -423,7 +405,7 @@ namespace
 			command_list->IASetIndexBuffer(&index_buffer_view);
 
 			return std::make_tuple(true, index_count,
-				upload_vertex_attributes({std::make_pair(0, max_index + 1)}, get_vertex_buffers,
+				upload_vertex_attributes(max_index + 1, get_vertex_buffers,
 					m_vertex_buffer_data, m_buffer_data, command_list));
 		}
 
@@ -434,8 +416,8 @@ namespace
 			std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> vertex_buffer_view;
 			std::tie(vertex_buffer_view, vertex_count) =
 				upload_inlined_vertex_array(rsx::method_registers.vertex_arrays_info,
-					{(const gsl::byte*)command.inline_vertex_array.data(),
-						::narrow<int>(command.inline_vertex_array.size() * sizeof(uint))},
+					{(const gsl::byte*)rsx::method_registers.current_draw_clause.inline_vertex_array.data(),
+						::narrow<int>(rsx::method_registers.current_draw_clause.inline_vertex_array.size() * sizeof(uint))},
 					m_buffer_data, m_vertex_buffer_data, command_list);
 
 			if (is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
@@ -445,7 +427,7 @@ namespace
 			size_t index_count;
 			std::tie(index_buffer_view, index_count) =
 				generate_index_buffer_for_emulated_primitives_array(
-					{{0, (u32)vertex_count}}, m_buffer_data);
+					vertex_count, m_buffer_data);
 			command_list->IASetIndexBuffer(&index_buffer_view);
 			return std::make_tuple(true, index_count, vertex_buffer_view);
 		}
@@ -453,9 +435,7 @@ namespace
 	private:
 		ID3D12GraphicsCommandList* command_list;
 		d3d12_data_heap& m_buffer_data;
-		std::function<attribute_storage(
-			const rsx::rsx_state&, const std::vector<std::pair<u32, u32>>&)>
-			get_vertex_buffers;
+		std::function<attribute_storage()> get_vertex_buffers;
 		ID3D12Resource* m_vertex_buffer_data;
 	};
 } // End anonymous namespace
@@ -465,8 +445,7 @@ D3D12GSRender::upload_and_set_vertex_index_data(ID3D12GraphicsCommandList* comma
 {
 	return std::visit(
 		draw_command_visitor(command_list, m_buffer_data, m_vertex_buffer_data.Get(),
-			[this](
-				const auto& state, const auto& list) { return get_vertex_buffers(state, list, 0); }),
+			[this]() { return get_vertex_buffers(rsx::method_registers, 0); }),
 		get_draw_command(rsx::method_registers));
 }
 

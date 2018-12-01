@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "VKVertexProgram.h"
@@ -28,33 +28,41 @@ std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
 	OS << "#version 450\n\n";
-	OS << "#extension GL_ARB_separate_shader_objects : enable\n";
+	OS << "#extension GL_ARB_separate_shader_objects : enable\n\n";
+
 	OS << "layout(std140, set = 0, binding = 0) uniform VertexContextBuffer\n";
 	OS << "{\n";
 	OS << "	mat4 scale_offset_mat;\n";
 	OS << "	ivec4 user_clip_enabled[2];\n";
 	OS << "	vec4 user_clip_factor[2];\n";
 	OS << "	uint transform_branch_bits;\n";
-	OS << "	uint vertex_base_index;\n";
 	OS << "	float point_size;\n";
 	OS << "	float z_near;\n";
 	OS << "	float z_far;\n";
-	OS << "	ivec4 input_attributes[16];\n";
-	OS << "};\n";
+	OS << "};\n\n";
+
+	OS << "layout(std140, set = 0, binding = 1) uniform VertexLayoutBuffer\n";
+	OS << "{\n";
+	OS << "	uint  vertex_base_index;\n";
+	OS << "	uvec4 input_attributes_blob[16 / 2];\n";
+	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = SCALE_OFFSET_BIND_SLOT;
+	in.location = VERTEX_PARAMS_BIND_SLOT;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "VertexContextBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
+	inputs.push_back(in);
 
+	in.location = VERTEX_LAYOUT_BIND_SLOT;
+	in.name = "VertexLayoutBuffer";
 	inputs.push_back(in);
 }
 
 void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
-	OS << "layout(set=0, binding=3) uniform usamplerBuffer persistent_input_stream;\n";    //Data stream with persistent vertex data (cacheable)
-	OS << "layout(set=0, binding=4) uniform usamplerBuffer volatile_input_stream;\n";      //Data stream with per-draw data (registers and immediate draw data)
+	OS << "layout(set=0, binding=6) uniform usamplerBuffer persistent_input_stream;\n";    //Data stream with persistent vertex data (cacheable)
+	OS << "layout(set=0, binding=7) uniform usamplerBuffer volatile_input_stream;\n";      //Data stream with per-draw data (registers and immediate draw data)
 
 	vk::glsl::program_input in;
 	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT;
@@ -72,7 +80,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 
 void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
-	OS << "layout(std140, set=0, binding = 1) uniform VertexConstantsBuffer\n";
+	OS << "layout(std140, set=0, binding = 2) uniform VertexConstantsBuffer\n";
 	OS << "{\n";
 	OS << "	vec4 vc[468];\n";
 	OS << "};\n\n";
@@ -86,7 +94,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	inputs.push_back(in);
 
 
-	int location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
+	u32 location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)

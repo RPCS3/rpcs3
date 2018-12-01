@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include <set>
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -132,9 +132,8 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	}
 
 	OS << "\n";
-	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer\n";
-	OS << "{\n";
 
+	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type == "sampler1D" ||
@@ -144,10 +143,21 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			continue;
 
 		for (const ParamItem& PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";\n";
+		{
+			constants_block += "	" + PT.type + " " + PI.name + ";\n";
+		}
 	}
 
-	// Fragment state parameters
+	if (!constants_block.empty())
+	{
+		OS << "layout(std140, binding = 3) uniform FragmentConstantsBuffer\n";
+		OS << "{\n";
+		OS << constants_block;
+		OS << "};\n\n";
+	}
+
+	OS << "layout(std140, binding = 4) uniform FragmentStateBuffer\n";
+	OS << "{\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
 	OS << "	uint rop_control;\n";
@@ -156,8 +166,12 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	uint fog_mode;\n";
 	OS << "	float wpos_scale;\n";
 	OS << "	float wpos_bias;\n";
+	OS << "};\n\n";
+
+	OS << "layout(std140, binding = 5) uniform TextureParametersBuffer\n";
+	OS << "{\n";
 	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
-	OS << "};\n";
+	OS << "};\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)

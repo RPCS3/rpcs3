@@ -340,8 +340,7 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
 			rsx::registers_decoder<NV4097_DRAW_ARRAYS>::decoded_type v(arg);
 
-			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(
-			    std::make_pair(v.start(), v.count()));
+			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
 		}
 
 		void draw_index_array(thread* rsx, u32 _reg, u32 arg)
@@ -349,8 +348,7 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
 			rsx::registers_decoder<NV4097_DRAW_INDEX_ARRAY>::decoded_type v(arg);
 
-			rsx::method_registers.current_draw_clause.first_count_commands.emplace_back(
-			    std::make_pair(v.start(), v.count()));
+			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
 		}
 
 		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
@@ -425,9 +423,7 @@ namespace rsx
 		{
 			if (arg)
 			{
-				rsx::method_registers.current_draw_clause.first_count_commands.resize(0);
-				rsx::method_registers.current_draw_clause.command = draw_command::none;
-				rsx::method_registers.current_draw_clause.primitive = to_primitive_type(arg);
+				rsx::method_registers.current_draw_clause.reset(to_primitive_type(arg));
 				rsxthr->begin();
 				return;
 			}
@@ -444,21 +440,25 @@ namespace rsx
 				if (push_buffer_index_count)
 				{
 					rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
-					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_index_count));
+					rsx::method_registers.current_draw_clause.append(0, push_buffer_index_count);
 				}
 				else if (push_buffer_vertices_count)
 				{
 					rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-					rsx::method_registers.current_draw_clause.first_count_commands.push_back(std::make_pair(0, push_buffer_vertices_count));
+					rsx::method_registers.current_draw_clause.append(0, push_buffer_vertices_count);
 				}
 			}
 			else
 				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
 
-			if (!(rsx::method_registers.current_draw_clause.first_count_commands.empty() &&
-			        rsx::method_registers.current_draw_clause.inline_vertex_array.empty()))
+			if (!rsx::method_registers.current_draw_clause.empty())
 			{
+				rsx::method_registers.current_draw_clause.compile();
 				rsxthr->end();
+			}
+			else
+			{
+				rsxthr->in_begin_end = false;
 			}
 		}
 
@@ -588,16 +588,98 @@ namespace rsx
 			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
 		}
 
-		void set_surface_dirty_bit(thread* rsx, u32, u32)
+		void set_surface_dirty_bit(thread* rsx, u32 reg, u32 arg)
 		{
+			if (reg == NV4097_SET_SURFACE_CLIP_VERTICAL ||
+				reg == NV4097_SET_SURFACE_CLIP_HORIZONTAL)
+			{
+				if (arg != method_registers.register_previous_value)
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
+				}
+			}
+
 			rsx->m_rtts_dirty = true;
 			rsx->m_framebuffer_state_contested = false;
+		}
+
+		void set_surface_format(thread* rsx, u32 reg, u32 arg)
+		{
+			// Special consideration - antialiasing control can affect ROP state
+			const auto aa_mask = (0xF << 12);
+			if ((arg & aa_mask) != (method_registers.register_previous_value & aa_mask))
+			{
+				// Antialias control has changed, update ROP parameters
+				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+			}
+
+			set_surface_dirty_bit(rsx, reg, arg);
 		}
 
 		void set_surface_options_dirty_bit(thread* rsx, u32, u32)
 		{
 			if (rsx->m_framebuffer_state_contested)
 				rsx->m_rtts_dirty = true;
+		}
+
+		void set_ROP_state_dirty_bit(thread* rsx, u32, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				rsx->m_graphics_state |= rsx::fragment_state_dirty;
+			}
+		}
+
+		void set_vertex_base_offset(thread* rsx, u32 reg, u32 arg)
+		{
+			if (rsx->in_begin_end &&
+				!rsx::method_registers.current_draw_clause.empty() &&
+				reg != method_registers.register_previous_value)
+			{
+				// Revert change to queue later
+				method_registers.decode(reg, method_registers.register_previous_value);
+
+				// Insert base mofifier barrier
+				method_registers.current_draw_clause.insert_command_barrier(vertex_base_modifier_barrier, arg);
+			}
+		}
+
+		void set_index_base_offset(thread* rsx, u32 reg, u32 arg)
+		{
+			if (rsx->in_begin_end &&
+				!rsx::method_registers.current_draw_clause.empty() &&
+				reg != method_registers.register_previous_value)
+			{
+				// Revert change to queue later
+				method_registers.decode(reg, method_registers.register_previous_value);
+
+				// Insert base mofifier barrier
+				method_registers.current_draw_clause.insert_command_barrier(index_base_modifier_barrier, arg);
+			}
+		}
+
+		void set_vertex_env_dirty_bit(thread* rsx, u32, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
+			}
+		}
+
+		void set_fragment_env_dirty_bit(thread* rsx, u32, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+			}
+		}
+
+		void set_scissor_dirty_bit(thread* rsx, u32 reg, u32 arg)
+		{
+			if (arg != method_registers.register_previous_value)
+			{
+				rsx->m_graphics_state |= rsx::pipeline_state::scissor_config_state_dirty;
+			}
 		}
 
 		template<u32 index>
@@ -624,6 +706,18 @@ namespace rsx
 				if (rsx->current_vp_metadata.referenced_textures_mask & (1 << index))
 				{
 					rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				}
+			}
+		};
+
+		template<u32 index>
+		struct set_viewport_dirty_bit
+		{
+			static void impl(thread* rsx, u32 _reg, u32 arg)
+			{
+				if (arg != method_registers.register_previous_value)
+				{
+					rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
 				}
 			}
 		};
@@ -1156,6 +1250,21 @@ namespace rsx
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
 		};
+	}
+
+	namespace fifo
+	{
+		void draw_barrier(thread* rsx, u32, u32)
+		{
+			if (rsx->in_begin_end)
+			{
+				if (!method_registers.current_draw_clause.is_disjoint_primitive)
+				{
+					// Enable primitive barrier request
+					method_registers.current_draw_clause.primitive_barrier_enable = true;
+				}
+			}
+		}
 	}
 
 	void rsx_state::init()
@@ -2124,6 +2233,37 @@ namespace rsx
 		return registers[reg] == value;
 	}
 
+	u32 draw_clause::execute_pipeline_dependencies() const
+	{
+		u32 result = 0;
+
+		for (const auto &barrier : draw_command_barriers)
+		{
+			if (barrier.draw_id != current_range_index)
+				continue;
+
+			switch (barrier.type)
+			{
+			case primitive_restart_barrier:
+				break;
+			case index_base_modifier_barrier:
+				// Change index base offset
+				method_registers.decode(NV4097_SET_VERTEX_DATA_BASE_INDEX, barrier.arg);
+				result |= index_base_changed;
+				break;
+			case vertex_base_modifier_barrier:
+				// Change vertex base offset
+				method_registers.decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg);
+				result |= vertex_base_changed;
+				break;
+			default:
+				fmt::throw_exception("Unreachable" HERE);
+			}
+		}
+
+		return result;
+	}
+
 	namespace method_detail
 	{
 		template<int Id, int Step, int Count, template<u32> class T, int Index = 0>
@@ -2496,6 +2636,7 @@ namespace rsx
 
 		//Some custom GCM methods
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
+		methods[FIFO::FIFO_DRAW_BARRIER]                  = nullptr;
 
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
@@ -2563,7 +2704,7 @@ namespace rsx
 		bind<NV4097_SET_CONTEXT_DMA_COLOR_C, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
-		bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_format>();
 		bind<NV4097_SET_SURFACE_PITCH_A, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_B, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_C, nv4097::set_surface_dirty_bit>();
@@ -2602,6 +2743,24 @@ namespace rsx
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
+		bind<NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset>();
+		bind<NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset>();
+		bind<NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::set_vertex_env_dirty_bit>();
+		bind<NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::set_vertex_env_dirty_bit>();
+		bind<NV4097_SET_CLIP_MIN, nv4097::set_vertex_env_dirty_bit>();
+		bind<NV4097_SET_CLIP_MAX, nv4097::set_vertex_env_dirty_bit>();
+		bind<NV4097_SET_ALPHA_FUNC, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_ALPHA_REF, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_ALPHA_TEST_ENABLE, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_ANTI_ALIASING_CONTROL, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_SHADER_PACKER, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_SHADER_WINDOW, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_FOG_MODE, nv4097::set_ROP_state_dirty_bit>();
+		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
+		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::set_scissor_dirty_bit>();
+		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
+		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
+		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();
@@ -2621,6 +2780,8 @@ namespace rsx
 		// custom methods
 		bind<GCM_FLIP_COMMAND, flip_command>();
 
+		// FIFO
+		bind<(FIFO::FIFO_DRAW_BARRIER >> 2), fifo::draw_barrier>();
 
 		return true;
 	}();

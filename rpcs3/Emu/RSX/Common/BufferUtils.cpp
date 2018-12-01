@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
 #include "Utilities/sysinfo.h"
@@ -796,13 +796,9 @@ namespace
 	template<typename T>
 	std::tuple<u32, u32, u32> write_index_array_data_to_buffer_impl(gsl::span<u32> dst,
 		gsl::span<const be_t<T>> src,
-		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
+		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
 		u32 base_index, std::function<bool(rsx::primitive_type)> expands)
 	{
-		u32 first;
-		u32 count;
-		std::tie(first, count) = get_first_count_from_draw_indexed_clause(first_count_arguments);
-
 		if (!expands(draw_mode)) return upload_untouched<T>(src, dst, restart_index_enabled, restart_index, base_index);
 
 		switch (draw_mode)
@@ -810,7 +806,8 @@ namespace
 		case rsx::primitive_type::line_loop:
 		{
 			const auto &returnvalue = upload_untouched<T>(src, dst, restart_index_enabled, restart_index, base_index);
-			dst[count] = src[0];
+			const auto index_count = dst.size_bytes() / sizeof(T);
+			dst[index_count] = src[0];
 			return returnvalue;
 		}
 		case rsx::primitive_type::polygon:
@@ -824,21 +821,26 @@ namespace
 	}
 }
 
-std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst,
-	gsl::span<const gsl::byte> src,
-	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
+std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst_ptr,
+	gsl::span<const gsl::byte> src_ptr,
+	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
 	u32 base_index, std::function<bool(rsx::primitive_type)> expands)
 {
-	switch (type)
-	{
-	case rsx::index_array_type::u16:
-		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u32>(dst),
-			as_const_span<const be_t<u16>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, base_index, expands);
-	case rsx::index_array_type::u32:
-		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst),
-			as_const_span<const be_t<u32>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, base_index, expands);
-	}
-	fmt::throw_exception("Unknown index type" HERE);
+		switch (type)
+		{
+		case rsx::index_array_type::u16:
+		{
+			return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u32>(dst_ptr),
+				as_const_span<const be_t<u16>>(src_ptr), draw_mode, restart_index_enabled, restart_index, base_index, expands);
+		}
+		case rsx::index_array_type::u32:
+		{
+			return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst_ptr),
+				as_const_span<const be_t<u32>>(src_ptr), draw_mode, restart_index_enabled, restart_index, base_index, expands);
+		}
+		default:
+			fmt::throw_exception("Unreachable" HERE);
+		}
 }
 
 void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
