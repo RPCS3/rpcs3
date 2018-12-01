@@ -2106,6 +2106,31 @@ struct registers_decoder<NV406E_SEMAPHORE_OFFSET>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_CONTEXT_DMA_SEMAPHORE>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 context_dma() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV4097 semaphore: context = " + std::to_string(decoded_values.context_dma());
+	}
+};
+
+template<>
 struct registers_decoder<NV4097_SET_SEMAPHORE_OFFSET>
 {
 	struct decoded_type
