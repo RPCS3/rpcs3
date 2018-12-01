@@ -523,21 +523,13 @@ namespace rsx
 
 					switch (reg)
 					{
-					case NV4097_GET_REPORT:
-						capture::capture_get_report(this, *it, value);
-						break;
 					case NV3089_IMAGE_IN:
 						capture::capture_image_in(this, *it);
 						break;
 					case NV0039_BUFFER_NOTIFY:
 						capture::capture_buffer_notify(this, *it);
 						break;
-					case NV4097_CLEAR_SURFACE:
-						capture::capture_surface_state(this, *it);
-						break;
 					default:
-						if (reg >= NV308A_COLOR && reg < NV3089_SET_OBJECT)
-							capture::capture_inline_transfer(this, *it, reg - NV308A_COLOR, value);
 						break;
 					}
 				}
