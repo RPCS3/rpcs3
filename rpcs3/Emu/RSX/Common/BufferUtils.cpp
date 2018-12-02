@@ -555,7 +555,7 @@ std::tuple<u32, u32, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl:
 			if (rsx::method_registers.current_draw_clause.is_disjoint_primitive)
 				continue;
 
-			dst[dst_idx++] = -1u;
+			dst[dst_idx++] = ~0u;
 		}
 		else
 		{
@@ -571,7 +571,7 @@ std::tuple<u32, u32, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl:
 template<typename T>
 std::tuple<u32, u32, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<u32> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
 {
-	const u32 invalid_index = -1u;
+	const u32 invalid_index = ~0u;
 
 	u32 min_index = invalid_index;
 	u32 max_index = 0;

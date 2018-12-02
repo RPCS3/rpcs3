@@ -194,7 +194,7 @@ namespace rsx
 
 			for (const auto &method : ignorable_ranges)
 			{
-				for (int i = 0; i < method.second; ++i)
+				for (u32 i = 0; i < method.second; ++i)
 				{
 					m_register_properties[method.first + i] |= register_props::always_ignore;
 				}
@@ -279,7 +279,7 @@ namespace rsx
 
 		flatten_op flattening_helper::test(register_pair& command)
 		{
-			u32 flush_cmd = -1u;
+			u32 flush_cmd = ~0u;
 			switch (const u32 reg = (command.reg >> 2))
 			{
 			case NV4097_SET_BEGIN_END:
@@ -352,7 +352,7 @@ namespace rsx
 			}
 			}
 
-			if (flush_cmd != -1u)
+			if (flush_cmd != ~0u)
 			{
 				num_collapsed += draw_count? (draw_count - 1) : 0;
 				draw_count = 0;
