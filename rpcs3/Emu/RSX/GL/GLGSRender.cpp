@@ -557,7 +557,7 @@ void GLGSRender::end()
 				{
 					firsts[dst_index] = first;
 					counts[dst_index] = range.count;
-					offsets[dst_index++] = (const GLvoid*)(first << 2);
+					offsets[dst_index++] = (const GLvoid*)(u64(first << 2));
 
 					if (driver_caps.vendor_AMD && (first + range.count) > (0x100000 >> 2))
 					{
@@ -572,7 +572,7 @@ void GLGSRender::end()
 				if (use_draw_arrays_fallback)
 				{
 					//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
-					for (int n = 0; n < draw_count; ++n)
+					for (u32 n = 0; n < draw_count; ++n)
 					{
 						glDrawArrays(draw_mode, firsts[n], counts[n]);
 					}

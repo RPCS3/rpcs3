@@ -2530,7 +2530,7 @@ public:
 		{
 			if (available_slots.empty())
 			{
-				return -1u;
+				return ~0u;
 			}
 
 			u32 result = available_slots.front();
