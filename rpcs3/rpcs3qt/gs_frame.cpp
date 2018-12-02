@@ -390,8 +390,8 @@ bool gs_frame::nativeEvent(const QByteArray &eventType, void *message, long *res
 					else
 					{
 						//Handle the resize in WM_SIZE message
-						m_raised_event = wm_event::window_moved;
 						m_in_sizing_event = true;
+						break;
 					}
 				}
 
