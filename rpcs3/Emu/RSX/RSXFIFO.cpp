@@ -201,17 +201,34 @@ namespace rsx
 			}
 		}
 
+		void flattening_helper::reset(bool _enabled)
+		{
+			enabled = _enabled;
+			num_collapsed = 0;
+			begin_end_ctr = 0;
+		}
+
 		void flattening_helper::force_disable()
 		{
-			enabled = false;
-			num_collapsed = 0;
-			fifo_hint = optimization_hint::load_unoptimizable;
+			if (enabled)
+			{
+				LOG_WARNING(RSX, "FIFO optimizations have been disabled as the application is not compatible with per-frame analysis");
+
+				reset(false);
+				fifo_hint = optimization_hint::application_not_compatible;
+			}
 		}
 
 		void flattening_helper::evaluate_performance(u32 total_draw_count)
 		{
 			if (!enabled)
 			{
+				if (fifo_hint == optimization_hint::application_not_compatible)
+				{
+					// Not compatible, do nothing
+					return;
+				}
+
 				if (total_draw_count <= 2000)
 				{
 					// Low draw call pressure
@@ -244,7 +261,7 @@ namespace rsx
 					fifo_hint = load_low;
 				}
 
-				num_collapsed = 0;
+				reset(enabled);
 			}
 			else
 			{
@@ -254,6 +271,7 @@ namespace rsx
 				{
 					// If its set to unoptimizable, we already tried and it did not work
 					// If it resets to load low (usually after some kind of loading screen) we can try again
+					verify("Incorrect initial state" HERE), begin_end_ctr == 0, num_collapsed == 0;
 					enabled = true;
 				}
 			}
@@ -295,7 +313,9 @@ namespace rsx
 				}
 				else
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					LOG_ERROR(RSX, "Fifo flattener misalignment, disable FIFO reordering and report to developers");
+					begin_end_ctr = 0;
+					flush_cmd = 0u;
 				}
 
 				break;
