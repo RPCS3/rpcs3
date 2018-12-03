@@ -308,15 +308,33 @@ s32 sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
 	sceNp.warning("sceNpBasicGetFriendListEntryCount(count=*0x%x)", count);
 
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	// TODO: Check if there are any friends
 	*count = 0;
 
 	return CELL_OK;
 }
 
-s32 sceNpBasicGetFriendListEntry()
+s32 sceNpBasicGetFriendListEntry(u32 index, vm::ptr<SceNpId> npid)
 {
-	UNIMPLEMENTED_FUNC(sceNp);
+	sceNp.todo("sceNpBasicGetFriendListEntry(index=%d, npid=*0x%x)", index, npid);
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	return CELL_OK;
 }
 
@@ -365,6 +383,12 @@ s32 sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	// TODO: Check if there are players histories
 	*count = 0;
 
@@ -374,6 +398,12 @@ s32 sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count)
 s32 sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceNpId> npid)
 {
 	sceNp.todo("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
 
 	return CELL_OK;
 }
@@ -394,6 +424,12 @@ s32 sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	// TODO: Check if there are block lists
 	*count = 0;
 
@@ -403,6 +439,12 @@ s32 sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 s32 sceNpBasicGetBlockListEntry(u32 index, vm::ptr<SceNpId> npid)
 {
 	sceNp.todo("sceNpBasicGetBlockListEntry(index=%d, npid=*0x%x)", index, npid);
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
 
 	return CELL_OK;
 }
@@ -416,6 +458,12 @@ s32 sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	// TODO: Check if there are message attachments
 	*count = 0;
 
@@ -425,6 +473,12 @@ s32 sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 s32 sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from=*0x%x)", index, from);
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
 
 	return CELL_OK;
 }
@@ -438,6 +492,12 @@ s32 sceNpBasicGetCustomInvitationEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	// TODO: Check if there are custom invitations
 	*count = 0;
 
@@ -447,6 +507,12 @@ s32 sceNpBasicGetCustomInvitationEntryCount(vm::ptr<u32> count)
 s32 sceNpBasicGetCustomInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.todo("sceNpBasicGetCustomInvitationEntry(index=%d, from=*0x%x)", index, from);
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
 
 	return CELL_OK;
 }
@@ -460,6 +526,12 @@ s32 sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	// TODO: Check if there are matching invitations
 	*count = 0;
 
@@ -469,6 +541,12 @@ s32 sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 s32 sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from=*0x%x)", index, from);
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
 
 	return CELL_OK;
 }
@@ -482,6 +560,12 @@ s32 sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	// TODO: Check if there are clan messages
 	*count = 0;
 
@@ -492,12 +576,29 @@ s32 sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.todo("sceNpBasicGetClanMessageEntry(index=%d, from=*0x%x)", index, from);
 
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
+
 	return CELL_OK;
 }
 
 s32 sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
 	sceNp.warning("sceNpBasicGetMessageEntryCount(type=%d, count=*0x%x)", type, count);
+
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
 
 	// TODO: Check if there are messages
 	*count = 0;
@@ -508,6 +609,12 @@ s32 sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 s32 sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from=*0x%x)", type, index, from);
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_ERROR_ID_NOT_FOUND;
+	}
 
 	return CELL_OK;
 }
