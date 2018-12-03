@@ -105,7 +105,7 @@ namespace rsx
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
-		all_dirty = -1u
+		all_dirty = ~0u
 	};
 
 	enum FIFO_state : u8

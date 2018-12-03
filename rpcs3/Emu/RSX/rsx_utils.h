@@ -676,9 +676,9 @@ namespace rsx
 		u32 _size = 0;
 		Ty* _data = nullptr;
 
-		inline u32 offset(const_iterator pos)
+		inline u64 offset(const_iterator pos)
 		{
-			return (_data) ? (pos - _data) : 0;
+			return (_data) ? u64(pos - _data) : 0ull;
 		}
 
 	public:
@@ -727,17 +727,16 @@ namespace rsx
 			if (_capacity > size)
 				return;
 
-			auto old_data = _data;
-			auto old_size = _size;
-
-			_data = (Ty*)malloc(sizeof(Ty) * size);
-			_capacity = size;
-
-			if (old_data)
+			if (_data)
 			{
-				memcpy(_data, old_data, sizeof(Ty) * old_size);
-				free(old_data);
+				_data = (Ty*)realloc(_data, sizeof(Ty) * size);
 			}
+			else
+			{
+				_data = (Ty*)malloc(sizeof(Ty) * size);
+			}
+
+			_capacity = size;
 		}
 
 		void push_back(const Ty& val)
@@ -779,7 +778,7 @@ namespace rsx
 
 			verify(HERE), _loc < _size;
 
-			const u32 remaining = (_size - _loc);
+			const auto remaining = (_size - _loc);
 			memmove(pos + 1, pos, remaining * sizeof(Ty));
 
 			*pos = val;
