@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "overlay_controls.h"
 
 #include "../../../Utilities/date_time.h"
@@ -813,14 +813,11 @@ namespace rsx
 
 				if (use_custom_background)
 				{
-					std::string root_path = Emu.GetBoot();
-					root_path = root_path.substr(0, root_path.find_last_of("/"));
-
-					auto icon_path = root_path + "/../PIC1.PNG";
+					auto icon_path = Emu.GetSfoDir() + "/PIC1.PNG";
 					if (!fs::exists(icon_path))
 					{
 						// Fallback path
-						icon_path = root_path + "/../ICON0.PNG";
+						icon_path = Emu.GetSfoDir() + "/ICON0.PNG";
 					}
 
 					if (fs::exists(icon_path))
