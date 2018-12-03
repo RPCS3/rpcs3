@@ -1048,7 +1048,9 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							convert_scale_image(temp2, out_format, convert_w, convert_h, out_pitch,
+							temp2.reset(new u8[out_pitch * (std::max(convert_h, (u32)clip_h) - 1) + (out_bpp * std::max(convert_w, (u32)clip_w))]);
+
+							convert_scale_image(temp2.get(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
 							clip_image(pixels_dst, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
@@ -1090,7 +1092,9 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							convert_scale_image(temp2, out_format, convert_w, convert_h, out_pitch,
+							temp2.reset(new u8[out_pitch * (std::max(convert_h, (u32)clip_h) - 1) + (out_bpp * std::max(convert_w, (u32)clip_w))]);
+
+							convert_scale_image(temp2.get(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
 							clip_image(temp3, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
@@ -1102,7 +1106,9 @@ namespace rsx
 					}
 					else
 					{
-						convert_scale_image(temp3, out_format, out_w, out_h, out_pitch,
+						temp3.reset(new u8[out_pitch * (out_h - 1) + (out_bpp * out_w)]);
+
+						convert_scale_image(temp3.get(), out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 
