@@ -892,7 +892,7 @@
       <Filter>Resource Files</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\trophy_manager_dialog.h">
-      <Filter>Generated Files</Filter>
+      <Filter>Gui\trophy</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
