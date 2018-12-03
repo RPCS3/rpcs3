@@ -814,13 +814,13 @@
   <action name="toolbar_start">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
+     <normaloff>:/Icons/play.png</normaloff>:/Icons/play.png</iconset>
    </property>
    <property name="text">
     <string>Start</string>
    </property>
    <property name="toolTip">
-    <string>Pause emulation</string>
+    <string>Start emulation</string>
    </property>
   </action>
   <action name="toolbar_stop">
