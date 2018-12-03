@@ -44,42 +44,24 @@ void shared_mutex::imp_unlock_shared(u32 old)
 
 void shared_mutex::imp_wait()
 {
-#ifdef _WIN32
-	NtWaitForKeyedEvent(nullptr, &m_value, false, nullptr);
-#else
-	while (true)
+	while (!balanced_wait_until(m_value, -1, [&](u32& value, auto...)
 	{
-		// Load new value, try to acquire c_sig
-		auto [value, ok] = m_value.fetch_op([](u32& value)
+		if (value >= c_sig)
 		{
-			if (value >= c_sig)
-			{
-				value -= c_sig;
-				return true;
-			}
-
-			return false;
-		});
-
-		if (ok)
-		{
-			return;
+			value -= c_sig;
+			return true;
 		}
 
-		futex(&m_value, FUTEX_WAIT_BITSET_PRIVATE, value, nullptr, c_sig);
+		return false;
+	}))
+	{
 	}
-#endif
 }
 
 void shared_mutex::imp_signal()
 {
-#ifdef _WIN32
-	NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
-#else
 	m_value += c_sig;
-	futex(&m_value, FUTEX_WAKE_BITSET_PRIVATE, 1, nullptr, c_sig);
-	//futex(&m_value, FUTEX_WAKE_BITSET_PRIVATE, c_one, nullptr, c_sig - 1);
-#endif
+	balanced_awaken(m_value, 1);
 }
 
 void shared_mutex::imp_lock(u32 val)
@@ -165,29 +147,6 @@ void shared_mutex::imp_lock_unlock()
 
 		busy_wait(1500);
 	}
-
-#ifndef _WIN32
-	while (false)
-	{
-		const u32 val = m_value;
-
-		if (val % c_one == 0 && (val / c_one < _max || val >= c_sig))
-		{
-			return;
-		}
-
-		if (val <= c_one)
-		{
-			// Can't expect a signal
-			break;
-		}
-
-		_max = val / c_one;
-
-		// Monitor all bits except c_sig
-		futex(&m_value, FUTEX_WAIT_BITSET_PRIVATE, val, nullptr, c_sig - 1);
-	}
-#endif
 
 	// Lock and unlock
 	if (!m_value.fetch_add(c_one))

@@ -22,7 +22,6 @@
 #include <cfenv>
 #include <atomic>
 #include <thread>
-#include <shared_mutex>
 
 const bool s_use_ssse3 =
 #ifdef _MSC_VER
@@ -488,6 +487,7 @@ void spu_thread::cpu_stop()
 		if (verify(HERE, group->running--) == 1)
 		{
 			// Notify on last thread stopped
+			group->stop_count++;
 			group->mutex.lock_unlock();
 			group->cond.notify_all();
 		}
@@ -1710,9 +1710,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 				fmt::throw_exception("Not supported: event mask 0x%x" HERE, mask1);
 			}
 
-			std::shared_lock pseudo_lock(vm::reservation_notifier(raddr, 128), std::try_to_lock);
-
-			verify(HERE), pseudo_lock;
+			const auto pseudo_lock = vm::reservation_notifier(raddr, 128).lock_one();
 
 			while (res = get_events(), !res)
 			{
@@ -1721,7 +1719,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					return -1;
 				}
 
-				pseudo_lock.mutex()->wait(100);
+				pseudo_lock.wait(100);
 			}
 
 			return res;

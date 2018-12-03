@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VKHelpers.h"
 
 namespace vk
@@ -23,23 +23,17 @@ namespace vk
 
 		program& program::load_uniforms(program_domain domain, const std::vector<program_input>& inputs)
 		{
-			std::vector<program_input> store = uniforms;
-			uniforms.resize(0);
-
-			for (auto &item : store)
-			{
-				uniforms.push_back(item);
-			}
-
 			for (auto &item : inputs)
-				uniforms.push_back(item);
+			{
+				uniforms[item.type].push_back(item);
+			}
 
 			return *this;
 		}
 
-		bool program::has_uniform(std::string uniform_name)
+		bool program::has_uniform(program_input_type type, const std::string &uniform_name)
 		{
-			for (auto &uniform : uniforms)
+			for (const auto &uniform : uniforms[type])
 			{
 				if (uniform.name == uniform_name)
 					return true;
@@ -48,20 +42,25 @@ namespace vk
 			return false;
 		}
 
-		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string& uniform_name, VkDescriptorSet &descriptor_set)
 		{
-			for (auto &uniform : uniforms)
+			for (const auto &uniform : uniforms[program_input_type::input_type_texture])
 			{
 				if (uniform.name == uniform_name)
 				{
-					VkWriteDescriptorSet descriptor_writer = {};
-					descriptor_writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					descriptor_writer.dstSet = descriptor_set;
-					descriptor_writer.descriptorCount = 1;
-					descriptor_writer.pImageInfo = &image_descriptor;
-					descriptor_writer.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-					descriptor_writer.dstArrayElement = 0;
-					descriptor_writer.dstBinding = uniform.location;
+					const VkWriteDescriptorSet descriptor_writer =
+					{
+						VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
+						nullptr,                                   // pNext
+						descriptor_set,                            // dstSet
+						uniform.location,                          // dstBinding
+						0,                                         // dstArrayElement
+						1,                                         // descriptorCount
+						VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // descriptorType
+						&image_descriptor,                         // pImageInfo
+						nullptr,                                   // pBufferInfo
+						nullptr                                    // pTexelBufferView
+					};
 
 					vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
 					attribute_location_mask |= (1ull << uniform.location);
@@ -77,20 +76,25 @@ namespace vk
 			bind_buffer(buffer_descriptor, binding_point, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptor_set);
 		}
 
-		void program::bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set)
 		{
-			for (auto &uniform : uniforms)
+			for (const auto &uniform : uniforms[type])
 			{
 				if (uniform.name == binding_name)
 				{
-					VkWriteDescriptorSet descriptor_writer = {};
-					descriptor_writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-					descriptor_writer.dstSet = descriptor_set;
-					descriptor_writer.descriptorCount = 1;
-					descriptor_writer.pTexelBufferView = &buffer_view;
-					descriptor_writer.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-					descriptor_writer.dstArrayElement = 0;
-					descriptor_writer.dstBinding = uniform.location;
+					const VkWriteDescriptorSet descriptor_writer =
+					{
+						VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
+						nullptr,                                // pNext
+						descriptor_set,                         // dstSet
+						uniform.location,                       // dstBinding
+						0,                                      // dstArrayElement
+						1,                                      // descriptorCount
+						VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,// descriptorType
+						nullptr,                                // pImageInfo
+						nullptr,                                // pBufferInfo
+						&buffer_view                            // pTexelBufferView
+					};
 
 					vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
 					attribute_location_mask |= (1ull << uniform.location);
@@ -103,14 +107,19 @@ namespace vk
 
 		void program::bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set)
 		{
-			VkWriteDescriptorSet descriptor_writer = {};
-			descriptor_writer.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptor_writer.dstSet = descriptor_set;
-			descriptor_writer.descriptorCount = 1;
-			descriptor_writer.pBufferInfo = &buffer_descriptor;
-			descriptor_writer.descriptorType = type;
-			descriptor_writer.dstArrayElement = 0;
-			descriptor_writer.dstBinding = binding_point;
+			const VkWriteDescriptorSet descriptor_writer =
+			{
+				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
+				nullptr,                                // pNext
+				descriptor_set,                         // dstSet
+				binding_point,                          // dstBinding
+				0,                                      // dstArrayElement
+				1,                                      // descriptorCount
+				type,                                   // descriptorType
+				nullptr,                                // pImageInfo
+				&buffer_descriptor,                     // pBufferInfo
+				nullptr                                 // pTexelBufferView
+			};
 
 			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
 			attribute_location_mask |= (1ull << binding_point);
@@ -121,10 +130,9 @@ namespace vk
 			if (vertex_attributes_mask)
 				return vertex_attributes_mask;
 
-			for (auto &uniform : uniforms)
+			for (const auto &uniform : uniforms[program_input_type::input_type_texel_buffer])
 			{
-				if (uniform.domain == program_domain::glsl_vertex_program &&
-					uniform.type == program_input_type::input_type_texel_buffer)
+				if (uniform.domain == program_domain::glsl_vertex_program)
 				{
 					vertex_attributes_mask |= (1ull << (uniform.location - VERTEX_BUFFERS_FIRST_BIND_SLOT));
 				}

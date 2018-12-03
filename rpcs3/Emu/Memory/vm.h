@@ -7,7 +7,7 @@
 
 class shared_mutex;
 class cpu_thread;
-class notifier;
+class cond_x16;
 
 namespace vm
 {
@@ -105,9 +105,9 @@ namespace vm
 	}
 
 	// Get reservation sync variable
-	inline notifier& reservation_notifier(u32 addr, u32 size)
+	inline cond_x16& reservation_notifier(u32 addr, u32 size)
 	{
-		return *reinterpret_cast<notifier*>(g_reservations2 + addr / 128 * 8);
+		return *reinterpret_cast<cond_x16*>(g_reservations2 + addr / 128 * 8);
 	}
 
 	void reservation_lock_internal(atomic_t<u64>&);

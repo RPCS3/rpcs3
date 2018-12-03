@@ -30,7 +30,7 @@ LOG_CHANNEL(sys_net);
 
 static std::vector<ppu_thread*> s_to_awake;
 
-static semaphore<> s_nw_mutex;
+static shared_mutex s_nw_mutex;
 
 extern u64 get_system_time();
 

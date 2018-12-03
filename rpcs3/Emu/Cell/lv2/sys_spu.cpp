@@ -623,7 +623,9 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 	group->join_state |= SPU_TGJSF_TERMINATED;
 
 	// Wait until the threads are actually stopped
-	while (group->running)
+	const u64 last_stop = group->stop_count - !group->running;
+
+	while (group->stop_count == last_stop)
 	{
 		group->cond.wait(lock);
 	}
@@ -661,9 +663,11 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			return CELL_EBUSY;
 		}
 
+		const u64 last_stop = group->stop_count - !group->running;
+
 		lv2_obj::sleep(ppu);
 
-		while (group->running)
+		while (group->stop_count == last_stop)
 		{
 			if (ppu.is_stopped())
 			{

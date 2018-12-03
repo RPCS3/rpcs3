@@ -236,6 +236,7 @@ struct lv2_spu_group
 	atomic_t<u32> join_state; // flags used to detect exit cause
 	atomic_t<u32> running; // Number of running threads
 	cond_variable cond; // used to signal waiting PPU thread
+	atomic_t<u64> stop_count;
 
 	std::array<std::shared_ptr<named_thread<spu_thread>>, 256> threads; // SPU Threads
 	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 256> imgs; // SPU Images
@@ -257,6 +258,7 @@ struct lv2_spu_group
 		, exit_status(0)
 		, join_state(0)
 		, running(0)
+		, stop_count(0)
 	{
 	}
 

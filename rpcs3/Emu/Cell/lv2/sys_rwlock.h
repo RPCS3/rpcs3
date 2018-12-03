@@ -27,7 +27,7 @@ struct lv2_rwlock final : lv2_obj
 	const u64 name;
 	const s32 flags;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<s64> owner{0};
 	std::deque<cpu_thread*> rq;
 	std::deque<cpu_thread*> wq;

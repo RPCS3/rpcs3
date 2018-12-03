@@ -31,7 +31,7 @@ struct lv2_mutex final : lv2_obj
 	const u64 name;
 	const s32 flags;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<u32> owner{0}; // Owner Thread ID
 	atomic_t<u32> lock_count{0}; // Recursive Locks
 	atomic_t<u32> cond_count{0}; // Condition Variables

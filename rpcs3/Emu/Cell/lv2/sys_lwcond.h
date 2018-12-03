@@ -27,7 +27,7 @@ struct lv2_lwcond final : lv2_obj
 	const u32 lwid;
 	vm::ptr<sys_lwcond_t> control;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 

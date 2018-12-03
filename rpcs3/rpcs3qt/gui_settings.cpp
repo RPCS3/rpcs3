@@ -153,8 +153,11 @@ void gui_settings::SetValue(const QString& key, const QString& name, const QVari
 QStringList gui_settings::GetGameListCategoryFilters()
 {
 	QStringList filterList;
-	if (GetCategoryVisibility(Category::Non_Disc_Game)) filterList.append(category::non_disc_games);
+	if (GetCategoryVisibility(Category::HDD_Game)) filterList.append(category::hdd_game);
 	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::disc_game);
+	if (GetCategoryVisibility(Category::PS1_Game)) filterList.append(category::ps1_game);
+	if (GetCategoryVisibility(Category::PS2_Game)) filterList.append(category::ps2_games);
+	if (GetCategoryVisibility(Category::PSP_Game)) filterList.append(category::psp_games);
 	if (GetCategoryVisibility(Category::Home)) filterList.append(category::home);
 	if (GetCategoryVisibility(Category::Media)) filterList.append(category::media);
 	if (GetCategoryVisibility(Category::Data)) filterList.append(category::data);
@@ -169,10 +172,16 @@ bool gui_settings::GetCategoryVisibility(int cat)
 
 	switch (cat)
 	{
-	case Category::Non_Disc_Game:
+	case Category::HDD_Game:
 		value = gui::cat_hdd_game; break;
 	case Category::Disc_Game:
 		value = gui::cat_disc_game; break;
+	case Category::PS1_Game:
+		value = gui::cat_ps1_game; break;
+	case Category::PS2_Game:
+		value = gui::cat_ps2_game; break;
+	case Category::PSP_Game:
+		value = gui::cat_psp_game; break;
 	case Category::Home:
 		value = gui::cat_home; break;
 	case Category::Media:
@@ -197,12 +206,18 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 
 	switch (cat)
 	{
-	case Category::Non_Disc_Game:
+	case Category::HDD_Game:
 		value = gui::cat_hdd_game; break;
 	case Category::Disc_Game:
 		value = gui::cat_disc_game; break;
 	case Category::Home:
 		value = gui::cat_home; break;
+	case Category::PS1_Game:
+		value = gui::cat_ps1_game; break;
+	case Category::PS2_Game:
+		value = gui::cat_ps2_game; break;
+	case Category::PSP_Game:
+		value = gui::cat_psp_game; break;
 	case Category::Media:
 		value = gui::cat_audio_video; break;
 	case Category::Data:

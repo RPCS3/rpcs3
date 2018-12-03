@@ -8,6 +8,7 @@
 #include <variant>
 #include "GCM.h"
 #include "rsx_cache.h"
+#include "RSXFIFO.h"
 #include "RSXTexture.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
@@ -87,18 +88,24 @@ namespace rsx
 		context_clear_all = context_clear_color | context_clear_depth
 	};
 
-	enum pipeline_state : u8
+	enum pipeline_state : u32
 	{
-		fragment_program_dirty = 1,
-		vertex_program_dirty = 2,
-		fragment_state_dirty = 4,
-		vertex_state_dirty = 8,
-		transform_constants_dirty = 16,
-		framebuffer_reads_dirty = 32,
+		fragment_program_dirty = 0x1,        // Fragment program changed
+		vertex_program_dirty = 0x2,          // Vertex program changed
+		fragment_state_dirty = 0x4,          // Fragment state changed (alpha test, etc)
+		vertex_state_dirty = 0x8,            // Vertex state changed (scale_offset, clip planes, etc)
+		transform_constants_dirty = 0x10,    // Transform constants changed
+		fragment_constants_dirty = 0x20,     // Fragment constants changed
+		framebuffer_reads_dirty = 0x40,      // Framebuffer contents changed
+		fragment_texture_state_dirty = 0x80, // Fragment texture parameters changed
+		vertex_texture_state_dirty = 0x100,  // Fragment texture parameters changed
+		scissor_config_state_dirty = 0x200,  // Scissor region changed
+
+		scissor_setup_invalid = 0x400,       // Scissor configuration is broken
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
-		all_dirty = 255
+		all_dirty = ~0u
 	};
 
 	enum FIFO_state : u8
@@ -155,25 +162,18 @@ namespace rsx
 
 	struct draw_array_command
 	{
-		/**
-		* First and count of index subranges.
-		*/
-		std::vector<std::pair<u32, u32>> indexes_range;
+		u32 __dummy;
 	};
 
 	struct draw_indexed_array_command
 	{
-		/**
-		* First and count of subranges to fetch in index buffer.
-		*/
-		std::vector<std::pair<u32, u32>> ranges_to_fetch_in_index_buffer;
-
 		gsl::span<const gsl::byte> raw_index_buffer;
 	};
 
 	struct draw_inlined_array
 	{
-		std::vector<u32> inline_vertex_array;
+		u32 __dummy;
+		u32 __dummy2;
 	};
 
 	struct interleaved_range_info
@@ -379,6 +379,10 @@ namespace rsx
 		bool supports_multidraw = false;
 		bool supports_native_ui = false;
 
+		// FIFO
+		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+		FIFO::flattening_helper m_flattener;
+
 		// Occlusion query
 		bool zcull_surface_active = false;
 		std::unique_ptr<reports::ZCULL_control> zcull_ctrl;
@@ -394,10 +398,12 @@ namespace rsx
 		// Invalidated memory range
 		address_range m_invalidated_memory_range;
 
+		// Draw call stats
+		u32 m_draw_calls = 0;
+
 	public:
 		RsxDmaControl* ctrl = nullptr;
-		atomic_t<u32> internal_get{ 0 };
-		atomic_t<u32> restore_point{ 0 };
+		u32 restore_point = 0;
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
 
@@ -531,9 +537,14 @@ namespace rsx
 		virtual void on_decompiler_exit() {}
 		virtual bool on_decompiler_task() { return false; }
 
+		virtual void emit_geometry(u32) {}
+
+		void run_FIFO();
+
 	public:
 		virtual void begin();
 		virtual void end();
+		virtual void execute_nop_draw();
 
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
@@ -555,11 +566,11 @@ namespace rsx
 		void read_barrier(u32 memory_address, u32 memory_range);
 		virtual void sync_hint(FIFO_hint hint) {}
 
-		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
-		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
+		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const;
+		get_vertex_buffers(const rsx::rsx_state& state, const u64 consumed_attrib_mask) const;
 
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
@@ -639,6 +650,11 @@ namespace rsx
 		 * Fills current fog values, alpha test parameters and texture scaling parameters
 		 */
 		void fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program);
+
+		/**
+		 * Fill buffer with fragment texture parameter constants (texture matrix)
+		 */
+		void fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program);
 
 		/**
 		 * Write inlined array data to buffer.

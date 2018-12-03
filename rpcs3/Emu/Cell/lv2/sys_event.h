@@ -83,7 +83,7 @@ struct lv2_event_queue final : public lv2_obj
 	const u64 key;
 	const s32 size;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	std::deque<lv2_event> events;
 	std::deque<cpu_thread*> sq;
 

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "rsx_capture.h"
 #include "Emu/RSX/Common/BufferUtils.h"
 #include "Emu/RSX/Common/TextureUtils.h"
@@ -175,20 +175,23 @@ namespace rsx
 					const u32 vertSize   = get_vertex_type_size_on_host(info.type(), info.size());
 					const u32 vertStride = info.stride();
 
-					for (const auto& count : method_registers.current_draw_clause.first_count_commands)
+					method_registers.current_draw_clause.begin();
+					do
 					{
-						const u32 vertCount     = count.second;
+						const auto& range = method_registers.current_draw_clause.get_range();
+						const u32 vertCount = range.count;
 						const size_t bufferSize = vertCount * vertStride + vertSize;
 
 						frame_capture_data::memory_block block;
 						block.ioOffset = base_address;
 						block.location = memory_location;
-						block.offset   = (count.first * vertStride);
+						block.offset = (range.first * vertStride);
 						frame_capture_data::memory_block_data block_data;
 						block_data.data.resize(bufferSize);
 						std::memcpy(block_data.data.data(), vm::base(addr + block.offset), bufferSize);
 						insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
 					}
+					while (method_registers.current_draw_clause.next());
 				}
 			}
 			// save index buffer if used
@@ -211,10 +214,12 @@ namespace rsx
 				const bool is_primitive_restart_enabled = method_registers.restart_index_enabled();
 				const u32 primitive_restart_index       = method_registers.restart_index();
 
-				for (const auto& count : method_registers.current_draw_clause.first_count_commands)
+				method_registers.current_draw_clause.begin();
+				do
 				{
-					const u32 idxFirst = count.first;
-					const u32 idxCount = count.second;
+					const auto& range = method_registers.current_draw_clause.get_range();
+					const u32 idxFirst = range.first;
+					const u32 idxCount = range.count;
 					const u32 idxAddr  = base_addr + (idxFirst * type_size);
 
 					const size_t bufferSize = idxCount * type_size;
@@ -261,6 +266,7 @@ namespace rsx
 					}
 					}
 				}
+				while (method_registers.current_draw_clause.next());
 
 				if (min_index > max_index)
 				{

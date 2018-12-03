@@ -1383,7 +1383,7 @@ extern void ppu_initialize(const ppu_module& info)
 	std::shared_ptr<jit_compiler> jit;
 
 	// Compiler mutex (global)
-	static semaphore<> jmutex;
+	static shared_mutex jmutex;
 
 	// Initialize global semaphore with the max number of threads
 	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);

@@ -13,7 +13,7 @@
 
 #include <deque>
 #include <mutex>
-#include "Utilities/sema.h"
+#include "Utilities/mutex.h"
 
 extern fs::file g_tty;
 extern atomic_t<s64> g_tty_size;

@@ -44,6 +44,20 @@ namespace utils
 #endif
 	}
 
+	inline u8 popcnt16(u16 arg)
+	{
+		const u32 a1 = arg & 0x5555;
+		const u32 a2 = (arg >> 1) & 0x5555;
+		const u32 a3 = a1 + a2;
+		const u32 b1 = a3 & 0x3333;
+		const u32 b2 = (a3 >> 2) & 0x3333;
+		const u32 b3 = b1 + b2;
+		const u32 c1 = b3 & 0x0f0f;
+		const u32 c2 = (b3 >> 4) & 0x0f0f;
+		const u32 c3 = c1 + c2;
+		return static_cast<u8>(c3 + (c3 >> 8));
+	}
+
 // Rotate helpers
 #if defined(__GNUG__)
 

@@ -188,23 +188,13 @@ void GLGSRender::end()
 	if (skip_frame || !framebuffer_status_valid ||
 		(conditional_render_enabled && conditional_render_test_failed))
 	{
+		execute_nop_draw();
 		rsx::thread::end();
 		return;
 	}
 
 	std::chrono::time_point<steady_clock> state_check_end = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(state_check_end - state_check_start).count();
-
-	if (manually_flush_ring_buffers)
-	{
-		//Use approximations to reserve space. This path is mostly for debug purposes anyway
-		u32 approx_vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-		u32 approx_working_buffer_size = approx_vertex_count * 256;
-
-		//Allocate 256K heap if we have no approximation at this time (inlined array)
-		m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
-		m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
-	}
 
 	const auto do_heap_cleanup = [this]()
 	{
@@ -219,17 +209,6 @@ void GLGSRender::end()
 			//glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
 		}
 	};
-
-	//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
-	auto upload_info = set_vertex_buffer();
-
-	if (upload_info.vertex_draw_count == 0)
-	{
-		// Malformed vertex setup; abort
-		do_heap_cleanup();
-		rsx::thread::end();
-		return;
-	}
 
 	//Check if depth buffer is bound and valid
 	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
@@ -407,14 +386,14 @@ void GLGSRender::end()
 	if (!load_program())
 	{
 		// Program is not ready, skip drawing this
-		do_heap_cleanup();
 		std::this_thread::yield();
+		execute_nop_draw();
 		rsx::thread::end();
 		return;
 	}
 
-	// Load program here since it is dependent on vertex state
-	load_program_env(upload_info);
+	// Load program execution environment
+	load_program_env();
 
 	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
@@ -426,7 +405,7 @@ void GLGSRender::end()
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location(rsx::constants::fragment_texture_names[i]))
+		if (current_fp_metadata.referenced_textures_mask & (1 << i))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 			auto &tex = rsx::method_registers.fragment_textures[i];
@@ -462,7 +441,7 @@ void GLGSRender::end()
 
 	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
-		if (m_program->uniforms.has_location(rsx::constants::vertex_texture_names[i]))
+		if (current_vp_metadata.referenced_textures_mask & (1 << i))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 			glActiveTexture(GL_TEXTURE0 + rsx::limits::fragment_textures_count + i);
@@ -490,158 +469,232 @@ void GLGSRender::end()
 
 	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
 
-	do_heap_cleanup();
-
 	if (g_cfg.video.debug_output)
 	{
 		m_program->validate();
 	}
 
 	const GLenum draw_mode = gl::draw_mode(rsx::method_registers.current_draw_clause.primitive);
-	const bool allow_multidraw = supports_multidraw && !g_cfg.video.disable_FIFO_reordering;
-	const bool single_draw = (!allow_multidraw ||
-		rsx::method_registers.current_draw_clause.first_count_commands.size() <= 1 ||
-		rsx::method_registers.current_draw_clause.is_disjoint_primitive);
-
-	if (upload_info.index_info)
+	rsx::method_registers.current_draw_clause.begin();
+	int subdraw = 0;
+	do
 	{
-		const GLenum index_type = std::get<0>(*upload_info.index_info);
-		const u32 index_offset = std::get<1>(*upload_info.index_info);
-		const bool restarts_valid = gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive) && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
-
-		if (gl_state.enable(restarts_valid && rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		if (!subdraw)
 		{
-			glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT)? 0xffff: 0xffffffff);
-		}
+			m_vertex_layout = analyse_inputs_interleaved();
+			if (!m_vertex_layout.validate())
+			{
+				// Execute remainining pipeline barriers with NOP draw
+				do
+				{
+					rsx::method_registers.current_draw_clause.execute_pipeline_dependencies();
+				}
+				while (rsx::method_registers.current_draw_clause.next());
 
-		m_index_ring_buffer->bind();
-
-		if (single_draw)
-		{
-			glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
+				rsx::method_registers.current_draw_clause.end();
+				break;
+			}
 		}
 		else
 		{
-			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
-			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
-			uintptr_t index_ptr = index_offset;
-			m_scratch_buffer.resize(draw_count * 16);
-
-			GLsizei *counts = (GLsizei*)m_scratch_buffer.data();
-			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
-			int dst_index = 0;
-
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
+			if (rsx::method_registers.current_draw_clause.execute_pipeline_dependencies() & rsx::vertex_base_changed)
 			{
-				const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.second);
-				counts[dst_index] = index_size;
-				offsets[dst_index++] = (const GLvoid*)index_ptr;
-
-				index_ptr += (index_size << type_scale);
-			}
-
-			glMultiDrawElements(draw_mode, counts, index_type, offsets, (GLsizei)draw_count);
-		}
-	}
-	else
-	{
-		if (single_draw)
-		{
-			glDrawArrays(draw_mode, 0, upload_info.vertex_draw_count);
-		}
-		else
-		{
-			const u32 base_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
-			bool use_draw_arrays_fallback = false;
-
-			const auto draw_count = rsx::method_registers.current_draw_clause.first_count_commands.size();
-			const auto driver_caps = gl::get_driver_caps();
-
-			m_scratch_buffer.resize(draw_count * 24);
-			GLint* firsts = (GLint*)m_scratch_buffer.data();
-			GLsizei* counts = (GLsizei*)(firsts + draw_count);
-			const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
-			int dst_index = 0;
-
-			for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
-			{
-				const GLint first = range.first - base_index;
-				const GLsizei count = range.second;
-
-				firsts[dst_index] = first;
-				counts[dst_index] = count;
-				offsets[dst_index++] = (const GLvoid*)(first << 2);
-
-				if (driver_caps.vendor_AMD && (first + count) > (0x100000 >> 2))
+				// Rebase vertex bases instead of 
+				for (auto &info : m_vertex_layout.interleaved_blocks)
 				{
-					//Unlikely, but added here in case the identity buffer is not large enough somehow
-					use_draw_arrays_fallback = true;
-					break;
+					const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
+					info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
 				}
 			}
+		}
 
-			if (use_draw_arrays_fallback)
+		++subdraw;
+
+		if (manually_flush_ring_buffers)
+		{
+			//Use approximations to reserve space. This path is mostly for debug purposes anyway
+			u32 approx_vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			u32 approx_working_buffer_size = approx_vertex_count * 256;
+
+			//Allocate 256K heap if we have no approximation at this time (inlined array)
+			m_attrib_ring_buffer->reserve_storage_on_heap(std::max(approx_working_buffer_size, 256 * 1024U));
+			m_index_ring_buffer->reserve_storage_on_heap(16 * 1024);
+		}
+
+		//Do vertex upload before RTT prep / texture lookups to give the driver time to push data
+		auto upload_info = set_vertex_buffer();
+		do_heap_cleanup();
+
+		if (upload_info.vertex_draw_count == 0)
+		{
+			// Malformed vertex setup; abort
+			continue;
+		}
+
+		update_vertex_env(upload_info);
+
+		if (!upload_info.index_info)
+		{
+			if (rsx::method_registers.current_draw_clause.is_single_draw())
 			{
-				//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
-				for (const auto &range : rsx::method_registers.current_draw_clause.first_count_commands)
-				{
-					glDrawArrays(draw_mode, range.first - base_index, range.second);
-				}
-			}
-			else if (driver_caps.vendor_AMD)
-			{
-				//Use identity index buffer to fix broken vertexID on AMD
-				m_identity_index_buffer->bind();
-				glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, (GLsizei)draw_count);
+				glDrawArrays(draw_mode, 0, upload_info.vertex_draw_count);
 			}
 			else
 			{
-				//Normal render
-				glMultiDrawArrays(draw_mode, firsts, counts, (GLsizei)draw_count);
+				const auto subranges = rsx::method_registers.current_draw_clause.get_subranges();
+				const auto draw_count = subranges.size();
+				const auto driver_caps = gl::get_driver_caps();
+				bool use_draw_arrays_fallback = false;
+
+				m_scratch_buffer.resize(draw_count * 24);
+				GLint* firsts = (GLint*)m_scratch_buffer.data();
+				GLsizei* counts = (GLsizei*)(firsts + draw_count);
+				const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+
+				u32 first = 0;
+				u32 dst_index = 0;
+				for (const auto &range : subranges)
+				{
+					firsts[dst_index] = first;
+					counts[dst_index] = range.count;
+					offsets[dst_index++] = (const GLvoid*)(u64(first << 2));
+
+					if (driver_caps.vendor_AMD && (first + range.count) > (0x100000 >> 2))
+					{
+						//Unlikely, but added here in case the identity buffer is not large enough somehow
+						use_draw_arrays_fallback = true;
+						break;
+					}
+
+					first += range.count;
+				}
+
+				if (use_draw_arrays_fallback)
+				{
+					//MultiDrawArrays is broken on some primitive types using AMD. One known type is GL_TRIANGLE_STRIP but there could be more
+					for (u32 n = 0; n < draw_count; ++n)
+					{
+						glDrawArrays(draw_mode, firsts[n], counts[n]);
+					}
+				}
+				else if (driver_caps.vendor_AMD)
+				{
+					//Use identity index buffer to fix broken vertexID on AMD
+					m_identity_index_buffer->bind();
+					glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, (GLsizei)draw_count);
+				}
+				else
+				{
+					//Normal render
+					glMultiDrawArrays(draw_mode, firsts, counts, (GLsizei)draw_count);
+				}
 			}
 		}
-	}
+		else
+		{
+			const GLenum index_type = std::get<0>(*upload_info.index_info);
+			const u32 index_offset = std::get<1>(*upload_info.index_info);
+			const bool restarts_valid = gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive) && !rsx::method_registers.current_draw_clause.is_disjoint_primitive;
+
+			if (gl_state.enable(restarts_valid && rsx::method_registers.restart_index_enabled(), GL_PRIMITIVE_RESTART))
+			{
+				glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT) ? 0xffff : 0xffffffff);
+			}
+
+			m_index_ring_buffer->bind();
+
+			if (rsx::method_registers.current_draw_clause.is_single_draw())
+			{
+				glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
+			}
+			else
+			{
+				const auto subranges = rsx::method_registers.current_draw_clause.get_subranges();
+				const auto draw_count = subranges.size();
+				const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
+				uintptr_t index_ptr = index_offset;
+				m_scratch_buffer.resize(draw_count * 16);
+
+				GLsizei *counts = (GLsizei*)m_scratch_buffer.data();
+				const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+				int dst_index = 0;
+
+				for (const auto &range : subranges)
+				{
+					const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.count);
+					counts[dst_index] = index_size;
+					offsets[dst_index++] = (const GLvoid*)index_ptr;
+
+					index_ptr += (index_size << type_scale);
+				}
+
+				glMultiDrawElements(draw_mode, counts, index_type, offsets, (GLsizei)draw_count);
+			}
+		}
+	} while (rsx::method_registers.current_draw_clause.next());
 
 	m_rtts.on_write();
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
-	m_vertex_state_buffer->notify();
+	m_fragment_env_buffer->notify();
+	m_vertex_env_buffer->notify();
+	m_texture_parameters_buffer->notify();
+	m_vertex_layout_buffer->notify();
 	m_fragment_constants_buffer->notify();
 	m_transform_constants_buffer->notify();
 
 	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
 	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
-	m_draw_calls++;
 
 	rsx::thread::end();
 }
 
 void GLGSRender::set_viewport()
 {
-	//NOTE: scale offset matrix already contains the viewport transformation
+	// NOTE: scale offset matrix already contains the viewport transformation
 	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
 	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
 	glViewport(0, 0, clip_width, clip_height);
+}
+
+void GLGSRender::set_scissor()
+{
+	if (m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty)
+	{
+		// Optimistic that the new config will allow us to render
+		framebuffer_status_valid = true;
+	}
+	else if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
+	{
+		// Nothing to do
+		return;
+	}
+
+	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_config_state_dirty);
+
+	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
+	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
 
 	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
 	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
 	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
 	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
 
-	//Do not bother drawing anything if output is zero sized
-	//TODO: Clip scissor region
+	// Do not bother drawing anything if output is zero sized
+	// TODO: Clip scissor region
 	if (scissor_x >= clip_width || scissor_y >= clip_height || scissor_w == 0 || scissor_h == 0)
 	{
 		if (!g_cfg.video.strict_rendering_mode)
 		{
+			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
 			framebuffer_status_valid = false;
 			return;
 		}
 	}
 
-	//NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
-	//See LIMBO [NPUB-30373] which uses shader window origin = top
+	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
+	// See LIMBO [NPUB-30373] which uses shader window origin = top
 	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
 	glEnable(GL_SCISSOR_TEST);
 }
@@ -777,7 +830,10 @@ void GLGSRender::on_init_thread()
 		m_attrib_ring_buffer.reset(new gl::legacy_ring_buffer());
 		m_transform_constants_buffer.reset(new gl::legacy_ring_buffer());
 		m_fragment_constants_buffer.reset(new gl::legacy_ring_buffer());
-		m_vertex_state_buffer.reset(new gl::legacy_ring_buffer());
+		m_fragment_env_buffer.reset(new gl::legacy_ring_buffer());
+		m_vertex_env_buffer.reset(new gl::legacy_ring_buffer());
+		m_texture_parameters_buffer.reset(new gl::legacy_ring_buffer());
+		m_vertex_layout_buffer.reset(new gl::legacy_ring_buffer());
 		m_index_ring_buffer.reset(new gl::legacy_ring_buffer());
 	}
 	else
@@ -785,7 +841,10 @@ void GLGSRender::on_init_thread()
 		m_attrib_ring_buffer.reset(new gl::ring_buffer());
 		m_transform_constants_buffer.reset(new gl::ring_buffer());
 		m_fragment_constants_buffer.reset(new gl::ring_buffer());
-		m_vertex_state_buffer.reset(new gl::ring_buffer());
+		m_fragment_env_buffer.reset(new gl::ring_buffer());
+		m_vertex_env_buffer.reset(new gl::ring_buffer());
+		m_texture_parameters_buffer.reset(new gl::ring_buffer());
+		m_vertex_layout_buffer.reset(new gl::ring_buffer());
 		m_index_ring_buffer.reset(new gl::ring_buffer());
 	}
 
@@ -793,7 +852,10 @@ void GLGSRender::on_init_thread()
 	m_index_ring_buffer->create(gl::buffer::target::element_array, 64 * 0x100000);
 	m_transform_constants_buffer->create(gl::buffer::target::uniform, 64 * 0x100000);
 	m_fragment_constants_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_vertex_state_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_fragment_env_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_vertex_env_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_texture_parameters_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
+	m_vertex_layout_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 
 	if (gl_caps.vendor_AMD)
 	{
@@ -995,9 +1057,24 @@ void GLGSRender::on_exit()
 		m_fragment_constants_buffer->remove();
 	}
 
-	if (m_vertex_state_buffer)
+	if (m_fragment_env_buffer)
 	{
-		m_vertex_state_buffer->remove();
+		m_fragment_env_buffer->remove();
+	}
+
+	if (m_vertex_env_buffer)
+	{
+		m_vertex_env_buffer->remove();
+	}
+
+	if (m_texture_parameters_buffer)
+	{
+		m_texture_parameters_buffer->remove();
+	}
+
+	if (m_vertex_layout_buffer)
+	{
+		m_vertex_layout_buffer->remove();
 	}
 
 	if (m_index_ring_buffer)
@@ -1204,81 +1281,122 @@ bool GLGSRender::load_program()
 	return m_program != nullptr;
 }
 
-void GLGSRender::load_program_env(const gl::vertex_upload_info& upload_info)
+void GLGSRender::load_program_env()
 {
-	u8 *buf;
-	u32 vertex_state_offset;
-	u32 vertex_constants_offset;
-	u32 fragment_constants_offset;
-
-	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
-	const u32 fragment_buffer_size = fragment_constants_size + (18 * 4 * sizeof(float));
-	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
-
 	if (!m_program)
 	{
 		fmt::throw_exception("Unreachable right now" HERE);
 	}
 
+	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
+
+	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
+	const bool update_fragment_constants = !!(m_graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
+	const bool update_vertex_env = !!(m_graphics_state & rsx::pipeline_state::vertex_state_dirty);
+	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
+	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
+
 	m_program->use();
 
 	if (manually_flush_ring_buffers)
 	{
-		m_vertex_state_buffer->reserve_storage_on_heap(512);
-		m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_buffer_size, 256));
+		if (update_fragment_env) m_fragment_env_buffer->reserve_storage_on_heap(128);
+		if (update_vertex_env) m_vertex_env_buffer->reserve_storage_on_heap(256);
+		if (update_fragment_texture_env) m_texture_parameters_buffer->reserve_storage_on_heap(256);
+		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));		
 		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
 	}
 
-	// Vertex state
-	auto mapping = m_vertex_state_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
-	buf = static_cast<u8*>(mapping.first);
-	vertex_state_offset = mapping.second;
-	fill_scale_offset_data(buf, false);
-	fill_user_clip_data(buf + 64);
-	*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-	*(reinterpret_cast<u32*>(buf + 132)) = upload_info.vertex_index_base;
-	*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.point_size();
-	*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_min();
-	*(reinterpret_cast<f32*>(buf + 144)) = rsx::method_registers.clip_max();
-	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, reinterpret_cast<s32*>(buf + 160), upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+	if (update_vertex_env)
+	{
+		// Vertex state
+		auto mapping = m_vertex_env_buffer->alloc_from_heap(144, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
+		fill_scale_offset_data(buf, false);
+		fill_user_clip_data(buf + 64);
+		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
+		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size();
+		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
+		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
+
+		m_vertex_env_buffer->bind_range(0, mapping.second, 144);
+	}
 
 	if (update_transform_constants)
 	{
 		// Vertex constants
-		mapping = m_transform_constants_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
-		buf = static_cast<u8*>(mapping.first);
-		vertex_constants_offset = mapping.second;
+		auto mapping = m_transform_constants_buffer->alloc_from_heap(8192, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
 		fill_vertex_program_constants_data(buf);
+
+		m_transform_constants_buffer->bind_range(2, mapping.second, 8192);
 	}
 
-	// Fragment constants
-	mapping = m_fragment_constants_buffer->alloc_from_heap(fragment_buffer_size, m_uniform_buffer_offset_align);
-	buf = static_cast<u8*>(mapping.first);
-	fragment_constants_offset = mapping.second;
-	if (fragment_constants_size)
+	if (update_fragment_constants)
 	{
+		// Fragment constants
+		auto mapping = m_fragment_constants_buffer->alloc_from_heap(fragment_constants_size, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
+
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) },
 			current_fragment_program, gl::get_driver_caps().vendor_NVIDIA);
+
+		m_fragment_constants_buffer->bind_range(3, mapping.second, fragment_constants_size);
 	}
 
-	// Fragment state
-	fill_fragment_state_buffer(buf + fragment_constants_size, current_fragment_program);
+	if (update_fragment_env)
+	{
+		// Fragment state
+		auto mapping = m_fragment_env_buffer->alloc_from_heap(32, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
+		fill_fragment_state_buffer(buf, current_fragment_program);
 
-	m_vertex_state_buffer->bind_range(0, vertex_state_offset, 512);
-	m_fragment_constants_buffer->bind_range(2, fragment_constants_offset, fragment_buffer_size);
+		m_fragment_env_buffer->bind_range(4, mapping.second, 32);
+	}
 
-	if (update_transform_constants) m_transform_constants_buffer->bind_range(1, vertex_constants_offset, 8192);
+	if (update_fragment_texture_env)
+	{
+		// Fragment texture parameters
+		auto mapping = m_texture_parameters_buffer->alloc_from_heap(256, m_uniform_buffer_offset_align);
+		auto buf = static_cast<u8*>(mapping.first);
+		fill_fragment_texture_parameters(buf, current_fragment_program);
+
+		m_texture_parameters_buffer->bind_range(5, mapping.second, 256);
+	}
 
 	if (manually_flush_ring_buffers)
 	{
-		m_vertex_state_buffer->unmap();
-		m_fragment_constants_buffer->unmap();
-
+		if (update_fragment_env) m_fragment_env_buffer->unmap();
+		if (update_vertex_env) m_vertex_env_buffer->unmap();
+		if (update_fragment_texture_env) m_texture_parameters_buffer->unmap();
+		if (update_fragment_constants) m_fragment_constants_buffer->unmap();
 		if (update_transform_constants) m_transform_constants_buffer->unmap();
 	}
 
-	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty);
+	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty | rsx::pipeline_state::fragment_constants_dirty | rsx::pipeline_state::fragment_texture_state_dirty);
 	m_graphics_state &= ~handled_flags;
+}
+
+void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
+{
+	if (manually_flush_ring_buffers)
+	{
+		m_vertex_layout_buffer->reserve_storage_on_heap(128 + 16);
+	}
+
+	// Vertex layout state
+	auto mapping = m_vertex_layout_buffer->alloc_from_heap(128 + 16, m_uniform_buffer_offset_align);
+	auto buf = static_cast<s32*>(mapping.first);
+	*buf = upload_info.vertex_index_base;
+	buf += 4;
+	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+
+	m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
+
+	if (manually_flush_ring_buffers)
+	{
+		m_vertex_layout_buffer->unmap();
+	}
 }
 
 void GLGSRender::update_draw_state()
@@ -1433,7 +1551,6 @@ void GLGSRender::flip(int buffer)
 
 		if (!skip_frame)
 		{
-			m_draw_calls = 0;
 			m_begin_time = 0;
 			m_draw_time = 0;
 			m_vertex_upload_time = 0;
@@ -1443,13 +1560,19 @@ void GLGSRender::flip(int buffer)
 		return;
 	}
 
-	gl::screen.clear(gl::buffers::color);
-
 	u32 buffer_width = display_buffers[buffer].width;
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
 	if (!buffer_pitch) buffer_pitch = buffer_width * 4;
+
+	// Disable scissor test (affects blit, clear, etc)
+	glDisable(GL_SCISSOR_TEST);
+
+	// Clear the window background to black
+	gl_state.clear_color(0, 0, 0, 0);
+	gl::screen.bind();
+	gl::screen.clear(gl::buffers::color);
 
 	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
 	{
@@ -1547,13 +1670,11 @@ void GLGSRender::flip(int buffer)
 		if (g_cfg.video.full_rgb_range_output && (!avconfig || avconfig->gamma == 1.f))
 		{
 			// Blit source image to the screen
-			// Disable scissor test (affects blit)
-			glDisable(GL_SCISSOR_TEST);
-
 			m_flip_fbo.recreate();
 			m_flip_fbo.bind();
 			m_flip_fbo.color = image;
 			m_flip_fbo.read_buffer(m_flip_fbo.color);
+			m_flip_fbo.draw_buffer(m_flip_fbo.color);
 			m_flip_fbo.blit(gl::screen, screen_area, areai(aspect_ratio).flipped_vertical(), gl::buffers::color, gl::filter::linear);
 		}
 		else
@@ -1641,10 +1762,17 @@ void GLGSRender::flip(int buffer)
 		return false;
 	});
 
-	//If we are skipping the next frame, do not reset perf counters
+	if (m_draw_fbo && !m_rtts_dirty)
+	{
+		// Always restore the active framebuffer
+		m_draw_fbo->bind();
+		set_viewport();
+		set_scissor();
+	}
+
+	// If we are skipping the next frame, do not reset perf counters
 	if (skip_frame) return;
 
-	m_draw_calls = 0;
 	m_begin_time = 0;
 	m_draw_time = 0;
 	m_vertex_upload_time = 0;
