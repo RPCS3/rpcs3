@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -571,6 +571,32 @@ std::string Emulator::GetHddDir()
 	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir());
 }
 
+std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user)
+{
+	if (fs::is_file(game_path + "/PS3_DISC.SFB"))
+	{
+		// This is a disc game.
+		return game_path + "/PS3_GAME";
+	}
+
+	const auto psf = psf::load_object(fs::file(game_path + "/PARAM.SFO"));
+
+	const std::string category   = get_string(psf, "CATEGORY");
+	const std::string content_id = get_string(psf, "CONTENT_ID");
+	if (category == "HG" && !content_id.empty())
+	{
+		// This is a trial game. Check if the user has a RAP file to unlock it.
+		const std::string rap_path = GetHddDir() + "home/" + user + "/exdata/" + content_id + ".rap";
+		if (fs::is_file(rap_path) && fs::is_file(game_path + "/C00/PARAM.SFO"))
+		{
+			// Load full game data.
+			return game_path + "/C00";
+		}
+	}
+
+	return game_path;
+}
+
 void Emulator::SetForceBoot(bool force_boot)
 {
 	m_force_boot = force_boot;
@@ -600,42 +626,43 @@ void Emulator::Load(bool add_only)
 		const std::string elf_dir = fs::get_parent_dir(m_path);
 
 		// Load PARAM.SFO (TODO)
-		const auto _psf = psf::load_object([&]() -> fs::file
+		psf::registry _psf;
+		if (fs::file sfov{elf_dir + "/sce_sys/param.sfo"})
 		{
-			if (fs::file sfov{elf_dir + "/sce_sys/param.sfo"})
-			{
-				return sfov;
-			}
-
+			m_sfo_dir = elf_dir;
+			_psf = psf::load_object(sfov);
+		}
+		else
+		{
 			if (fs::is_dir(m_path))
 			{
 				// Special case (directory scan)
-				if (fs::file sfo{m_path + "/PS3_GAME/PARAM.SFO"})
-				{
-					return sfo;
-				}
-
-				return fs::file{m_path + "/PARAM.SFO"};
+				m_sfo_dir = GetSfoDirFromGamePath(m_path, GetUsr());
 			}
-
-			if (disc.size())
+			else if (disc.size())
 			{
 				// Check previously used category before it's overwritten
 				if (m_cat == "DG")
 				{
-					return fs::file{disc + "/PS3_GAME/PARAM.SFO"};
+					m_sfo_dir = disc + "/PS3_GAME";
 				}
-
-				if (m_cat == "GD")
+				else if (m_cat == "GD")
 				{
-					return fs::file{GetHddDir() + "game/" + m_title_id + "/PARAM.SFO"};
+					m_sfo_dir = GetHddDir() + "game/" + m_title_id;
 				}
-
-				return fs::file{disc + "/PARAM.SFO"};
+				else
+				{
+					m_sfo_dir = GetSfoDirFromGamePath(disc, GetUsr());
+				}
+			}
+			else
+			{
+				m_sfo_dir = GetSfoDirFromGamePath(fs::get_parent_dir(elf_dir), GetUsr());
 			}
 
-			return fs::file{elf_dir + "/../PARAM.SFO"};
-		}());
+			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
+		}
+
 		m_title = psf::get_string(_psf, "TITLE", m_path.substr(m_path.find_last_of('/') + 1));
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
