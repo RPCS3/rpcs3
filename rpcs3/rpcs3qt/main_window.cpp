@@ -194,7 +194,7 @@ void main_window::SetAppIconFromPath(const std::string& path)
 	{
 		if (!fs::is_dir(pth)) continue;
 
-		const std::string sfo_dir = Emu.GetSfoDirFromGamePath(path, Emu.GetUsr());
+		const std::string sfo_dir = Emu.GetSfoDirFromGamePath(pth, Emu.GetUsr());
 		const std::string ico     = sfo_dir + "/ICON0.PNG";
 		if (fs::is_file(ico))
 		{

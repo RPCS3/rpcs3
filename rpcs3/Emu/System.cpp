@@ -657,7 +657,7 @@ void Emulator::Load(bool add_only)
 			}
 			else
 			{
-				m_sfo_dir = GetSfoDirFromGamePath(fs::get_parent_dir(elf_dir), GetUsr());
+				m_sfo_dir = GetSfoDirFromGamePath(elf_dir + "/../", GetUsr());
 			}
 
 			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
