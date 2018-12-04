@@ -1021,8 +1021,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		raddr = 0;
 	}
 
-	auto& data = vm::_ref<decltype(rdata)>(addr);
-	const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
+	const auto& to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
 	// Store unconditionally
 	if (LIKELY(g_use_rtm))
@@ -1042,6 +1041,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	}
 	else
 	{
+		auto& data = vm::_ref<decltype(rdata)>(addr);
 		auto& res = vm::reservation_lock(addr, 128);
 
 		vm::_ref<atomic_t<u32>>(addr) += 0;
@@ -1281,13 +1281,13 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	{
 		// Store conditionally
 		const u32 addr = args.eal & -128u;
-		auto& data = vm::_ref<decltype(rdata)>(addr);
-		const auto to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
 		bool result = false;
 
 		if (raddr == addr && rtime == vm::reservation_acquire(raddr, 128))
 		{
+			const auto& to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
+
 			if (LIKELY(g_use_rtm))
 			{
 				if (spu_putllc_tx(raddr, rtime, rdata.data(), to_write.data()))
@@ -1298,7 +1298,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 
 				// Don't fallback to heavyweight lock, just give up
 			}
-			else if (rdata == data)
+			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rdata == data)
 			{
 				auto& res = vm::reservation_lock(raddr, 128);
 
