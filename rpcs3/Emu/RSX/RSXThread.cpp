@@ -36,6 +36,7 @@ rsx::frame_capture_data frame_capture;
 RSXIOTable RSXIOMem;
 
 extern CellGcmOffsetTable offsetTable;
+extern thread_local std::string(*g_tls_log_prefix)();
 
 namespace rsx
 {
@@ -534,6 +535,12 @@ namespace rsx
 	{
 		m_rsx_thread = std::this_thread::get_id();
 		run_tests();
+
+		g_tls_log_prefix = []
+		{
+			const auto rsx = get_current_renderer();
+			return fmt::format("RSX [0x%07x]", +rsx->ctrl->get);
+		};
 
 		if (supports_native_ui)
 		{
