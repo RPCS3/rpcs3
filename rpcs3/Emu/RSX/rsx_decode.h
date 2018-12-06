@@ -3931,6 +3931,31 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_REPORT>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_CONTEXT_DMA_NOTIFIES>
+{
+	struct decoded_type
+	{
+	private:
+		union
+		{
+			u32 raw_value;
+		} m_data;
+	public:
+		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+
+		u32 context_dma_notify() const
+		{
+			return m_data.raw_value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return fmt::format("NOTIFY: context DMA = 0x%x, index=%d", decoded_values.context_dma_notify(), (decoded_values.context_dma_notify() & 7) ^ 7);
+	}
+};
+
+template<>
 struct registers_decoder<NV3089_IMAGE_IN_FORMAT>
 {
 	struct decoded_type

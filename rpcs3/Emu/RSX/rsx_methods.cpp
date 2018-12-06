@@ -169,6 +169,22 @@ namespace rsx
 			method_registers.registers[reg] = method_registers.register_previous_value;
 		}
 
+		void set_notify(thread* rsx, u32 _reg, u32 arg)
+		{
+			const u32 location = method_registers.context_dma_notify();
+			const u32 index = (location & 0x7) ^ 0x7;
+
+			if ((location & ~7) != (CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 & ~7))
+			{
+				// TODO: Gcm sets the default to CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0
+				fmt::throw_exception("NV4097_NOTIFY: Unimplemented/invalid context = 0x%x" HERE, method_registers.context_dma_notify());
+			}
+
+			auto& notify = vm::_ref<RsxNotify>(verify(HERE, RSXIOMem.RealAddr(0xf100000 + (index * 0x40))));
+			notify.zero = 0;
+			notify.timestamp = rsx->timestamp();
+		}
+
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
@@ -2723,6 +2739,7 @@ namespace rsx
 		bind<NV4097_SET_CONTEXT_DMA_COLOR_C, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_CONTEXT_DMA_COLOR_D, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_CONTEXT_DMA_ZETA, nv4097::set_surface_dirty_bit>();
+		bind<NV4097_NOTIFY, nv4097::set_notify>();
 		bind<NV4097_SET_SURFACE_FORMAT, nv4097::set_surface_format>();
 		bind<NV4097_SET_SURFACE_PITCH_A, nv4097::set_surface_dirty_bit>();
 		bind<NV4097_SET_SURFACE_PITCH_B, nv4097::set_surface_dirty_bit>();
