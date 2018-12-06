@@ -151,7 +151,7 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
 		return 0;
 	}
 
-	return (entry << 20) + (index * 0x20);
+	return (entry << 20) + (index * 0x40);
 }
 
 /*
