@@ -18,6 +18,23 @@ namespace rsx
 			m_ctrl = pctrl->ctrl;
 		}
 
+		void FIFO_control::inc_get()
+		{
+			m_internal_get += 4;
+
+			// Check if put allows to procceed execution
+			while (m_ctrl->put == m_internal_get)
+			{
+				if (Emu.IsStopped())
+				{
+					break;
+				}
+
+				sync_get();
+				std::this_thread::yield();
+			}
+		}
+
 		void FIFO_control::set_put(u32 put)
 		{
 			if (m_ctrl->put == put)
@@ -63,7 +80,15 @@ namespace rsx
 			{
 				m_command_reg += m_command_inc;
 				m_args_ptr += 4;
-				m_remaining_commands--;
+
+				if (--m_remaining_commands)
+				{
+					inc_get();
+				}
+				else
+				{
+					m_internal_get += 4;
+				}
 
 				data.reg = m_command_reg;
 				data.value = vm::read32(m_args_ptr);
@@ -129,16 +154,7 @@ namespace rsx
 					data = { cmd, 0, m_internal_get };
 					return;
 				}
-			}
 
-			if (UNLIKELY((cmd & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD))
-			{
-				m_ctrl->get.store(m_internal_get + 4);
-				data = { RSX_METHOD_NOP_CMD, 0, m_internal_get };
-				return;
-			}
-			else if (UNLIKELY(cmd & 0x3))
-			{
 				// Malformed command, optional recovery
 				data.reg = FIFO_ERROR;
 				return;
@@ -154,29 +170,27 @@ namespace rsx
 			}
 
 			verify(HERE), !m_remaining_commands;
-			u32 count = (cmd >> 18) & 0x7ff;
+			const u32 count = (cmd >> 18) & 0x7ff;
+
+			if (!count)
+			{
+				m_ctrl->get.store(m_internal_get + 4);
+				data.reg = FIFO_NOP;
+				return;
+			}
 
 			if (count > 1)
 			{
-				// Stop command execution if put will be equal to get ptr during the execution itself
-				if (UNLIKELY(count * 4 + 4 > put - m_internal_get))
-				{
-					count = (put - m_internal_get) / 4 - 1;
-				}
-
 				// Set up readback parameters
 				m_command_reg = cmd & 0xfffc;
 				m_command_inc = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
 				m_remaining_commands = count - 1;
+			}
 
-				m_ctrl->get.store(m_internal_get + (count * 4 + 4));
-				data = { m_command_reg, vm::read32(m_args_ptr), m_internal_get };
-			}
-			else
-			{
-				m_ctrl->get.store(m_internal_get + 8);
-				data = { cmd & 0xfffc, vm::read32(m_args_ptr), m_internal_get };
-			}
+			inc_get();
+			m_internal_get += 4;
+
+			data = { cmd & 0xfffc, vm::read32(m_args_ptr), m_internal_get };
 		}
 
 		flattening_helper::flattening_helper()
@@ -376,6 +390,16 @@ namespace rsx
 			// Check for special FIFO commands
 			switch (cmd)
 			{
+			case FIFO::FIFO_NOP:
+			{
+				if (performance_counters.state == FIFO_state::running)
+				{
+					performance_counters.FIFO_idle_timestamp = get_system_time();
+					performance_counters.state = FIFO_state::nop;
+				}
+
+				return;
+			}
 			case FIFO::FIFO_EMPTY:
 			{
 				if (performance_counters.state == FIFO_state::running)
@@ -400,6 +424,7 @@ namespace rsx
 				// Error. Should reset the queue
 				LOG_ERROR(RSX, "FIFO error: possible desync event");
 				fifo_ctrl->set_get(restore_point);
+				m_return_addr = restore_ret;
 				std::this_thread::sleep_for(1ms);
 				return;
 			}
@@ -415,6 +440,7 @@ namespace rsx
 					if (performance_counters.state == FIFO_state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
+						sync_point_request = true;
 					}
 
 					performance_counters.state = FIFO_state::spinning;
@@ -433,6 +459,7 @@ namespace rsx
 					if (performance_counters.state == FIFO_state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
+						sync_point_request = true;
 					}
 
 					performance_counters.state = FIFO_state::spinning;
@@ -473,16 +500,6 @@ namespace rsx
 
 			// If we reached here, this is likely an error
 			fmt::throw_exception("Unexpected command 0x%x" HERE, cmd);
-		}
-		else if (cmd == RSX_METHOD_NOP_CMD)
-		{
-			if (performance_counters.state == FIFO_state::running)
-			{
-				performance_counters.FIFO_idle_timestamp = get_system_time();
-				performance_counters.state = FIFO_state::nop;
-			}
-
-			return;
 		}
 
 		if (performance_counters.state != FIFO_state::running)
@@ -580,5 +597,7 @@ namespace rsx
 				method(this, reg, value);
 			}
 		}
+
+		fifo_ctrl->sync_get();
 	}
 }
