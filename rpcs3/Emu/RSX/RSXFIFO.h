@@ -6,6 +6,7 @@
 #include <Utilities/Thread.h>
 
 #include "rsx_utils.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
 
 #include <vector>
 #include <string>
@@ -26,7 +27,7 @@ namespace rsx
 	{
 		enum internal_commands : u32
 		{
-			NOP = 0,
+			FIFO_NOP = 0xBABEF1F4,
 			FIFO_EMPTY = 0xDEADF1F0,
 			FIFO_BUSY = 0xBABEF1F0,
 			FIFO_ERROR = 0xDEADBEEF,
@@ -108,6 +109,8 @@ namespace rsx
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() {}
 
+			void sync_get() { m_ctrl->get.store(m_internal_get); }
+			void inc_get();
 			void set_get(u32 get, bool spinning = false);
 			void set_put(u32 put);
 

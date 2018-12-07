@@ -369,7 +369,7 @@ namespace rsx
 	protected:
 		std::thread::id m_rsx_thread;
 		atomic_t<bool> m_rsx_thread_exiting{true};
-		s32 m_return_addr{-1}, restore_ret_addr{-1};
+		s32 m_return_addr{-1}, restore_ret{-1};
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
 
