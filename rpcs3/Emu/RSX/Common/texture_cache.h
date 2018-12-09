@@ -1093,7 +1093,7 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, const std::tuple<FlushArgs...>& flush_extras, Args&&... extras)
+		void lock_memory_region(image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, std::tuple<FlushArgs...>&& flush_extras, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
@@ -1113,7 +1113,10 @@ namespace rsx
 			if (!region.is_locked() || region.get_context() != texture_upload_context::framebuffer_storage)
 			{
 				// Invalidate sections from surface cache occupying same address range
-				std::apply(&texture_cache::invalidate_range_impl_base<FlushArgs...>, std::tuple_cat(std::make_tuple(this, rsx_range, invalidation_cause::superseded_by_fbo), flush_extras));
+				std::apply(&texture_cache::invalidate_range_impl_base<FlushArgs...>, std::tuple_cat(
+					std::make_tuple(this, rsx_range, invalidation_cause::superseded_by_fbo),
+					std::forward<std::tuple<FlushArgs...> >(flush_extras)
+				));
 			}
 
 			if (!region.is_locked() || region.can_be_reused())
