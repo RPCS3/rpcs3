@@ -46,21 +46,14 @@ namespace rsx
 			m_ctrl->put = put;
 		}
 
-		void FIFO_control::set_get(u32 get, bool spinning)
+		void FIFO_control::set_get(u32 get)
 		{
 			if (m_ctrl->get == get)
 			{
-				if (spinning)
+				if (const auto addr = RSXIOMem.RealAddr(m_memwatch_addr))
 				{
-					if (const auto addr = RSXIOMem.RealAddr(m_memwatch_addr))
-					{
-						m_memwatch_addr = get;
-						m_memwatch_cmp = vm::read32(addr);
-					}
-				}
-				else
-				{
-					LOG_ERROR(RSX, "Undetected spinning?");
+					m_memwatch_addr = get;
+					m_memwatch_cmp = vm::read32(addr);
 				}
 
 				return;
@@ -74,7 +67,7 @@ namespace rsx
 			m_memwatch_addr = 0;
 		}
 
-		void FIFO_control::read_unsafe(register_pair& data)
+		bool FIFO_control::read_unsafe(register_pair& data)
 		{
 			// Fast read with no processing, only safe inside a PACKET_BEGIN+count block
 			if (m_remaining_commands)
@@ -91,13 +84,11 @@ namespace rsx
 					m_internal_get += 4;
 				}
 
-				data.reg = m_command_reg;
-				data.value = vm::read32(m_args_ptr);
+				data.set(m_command_reg, vm::read32(m_args_ptr));
+				return true;
 			}
-			else
-			{
-				data.reg = FIFO_EMPTY;
-			}
+
+			return false;
 		}
 
 		void FIFO_control::read(register_pair& data)
@@ -152,7 +143,7 @@ namespace rsx
 					(cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
 				{
 					// Flow control, stop reading
-					data = { cmd, 0, m_internal_get };
+					data.reg = cmd;
 					return;
 				}
 
@@ -231,7 +222,7 @@ namespace rsx
 			inc_get();
 			m_internal_get += 4;
 
-			data = { cmd & 0xfffc, vm::read32(m_args_ptr), m_internal_get };
+			data.set(cmd & 0xfffc, vm::read32(m_args_ptr));
 		}
 
 		flattening_helper::flattening_helper()
@@ -475,7 +466,7 @@ namespace rsx
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 			{
 				const u32 offs = cmd & 0x1ffffffc;
-				if (offs == command.loc)
+				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
 					if (performance_counters.state == FIFO_state::running)
@@ -488,13 +479,13 @@ namespace rsx
 				}
 
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				fifo_ctrl->set_get(offs, offs == command.loc);
+				fifo_ctrl->set_get(offs);
 				return;
 			}
 			if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 			{
 				const u32 offs = cmd & 0xfffffffc;
-				if (offs == command.loc)
+				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
 					if (performance_counters.state == FIFO_state::running)
@@ -507,7 +498,7 @@ namespace rsx
 				}
 
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				fifo_ctrl->set_get(offs, offs == command.loc);
+				fifo_ctrl->set_get(offs);
 				return;
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
@@ -521,7 +512,7 @@ namespace rsx
 				}
 
 				const u32 offs = cmd & 0xfffffffc;
-				m_return_addr = command.loc + 4;
+				m_return_addr = fifo_ctrl->get_pos() + 4;
 				fifo_ctrl->set_get(offs);
 				return;
 			}
@@ -559,7 +550,7 @@ namespace rsx
 			performance_counters.state = FIFO_state::running;
 		}
 
-		for (int i = 0; command.reg != FIFO::FIFO_EMPTY; i++, fifo_ctrl->read_unsafe(command))
+		do
 		{
 			if (UNLIKELY(m_flattener.is_enabled()))
 			{
@@ -606,6 +597,7 @@ namespace rsx
 				method(this, reg, value);
 			}
 		}
+		while (fifo_ctrl->read_unsafe(command));
 
 		fifo_ctrl->sync_get();
 	}
