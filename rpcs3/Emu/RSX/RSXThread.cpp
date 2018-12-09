@@ -31,6 +31,7 @@ class GSRender;
 #define CMD_DEBUG 0
 
 bool user_asked_for_frame_capture = false;
+bool capture_current_frame = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
 RSXIOTable RSXIOMem;

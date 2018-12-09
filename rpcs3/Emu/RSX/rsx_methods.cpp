@@ -139,7 +139,7 @@ namespace rsx
 				//
 			}
 
-			if (rsx->capture_current_frame)
+			if (capture_current_frame)
 			{
 				rsx->capture_frame("clear");
 			}
@@ -149,7 +149,7 @@ namespace rsx
 		{
 			rsx->do_method(NV4097_CLEAR_ZCULL_SURFACE, arg);
 
-			if (rsx->capture_current_frame)
+			if (capture_current_frame)
 			{
 				rsx->capture_frame("clear zcull memory");
 			}

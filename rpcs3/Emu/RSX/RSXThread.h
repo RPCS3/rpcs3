@@ -46,6 +46,7 @@ struct RSXIOTable
 };
 
 extern bool user_asked_for_frame_capture;
+extern bool capture_current_frame;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
 extern RSXIOTable RSXIOMem;
@@ -433,7 +434,6 @@ namespace rsx
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
-		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
 
 	public:
