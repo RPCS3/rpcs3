@@ -23,6 +23,7 @@ game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color,
 
 	grid_item_delegate = new game_list_grid_delegate(item_size, m_margin_factor, m_text_factor, this);
 	setItemDelegate(grid_item_delegate);
+	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setSelectionBehavior(QAbstractItemView::SelectItems);
 	setSelectionMode(QAbstractItemView::SingleSelection);
 	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
