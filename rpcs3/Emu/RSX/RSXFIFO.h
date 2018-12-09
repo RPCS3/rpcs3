@@ -47,8 +47,12 @@ namespace rsx
 		{
 			u32 reg;
 			u32 value;
-			u32 loc;
-			u32 reserved;
+
+			void set(u32 reg, u32 val)
+			{
+				this->reg = reg;
+				this->value = val;
+			}
 		};
 
 		class flattening_helper
@@ -109,13 +113,14 @@ namespace rsx
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() {}
 
+			u32 get_pos() { return m_internal_get; }
 			void sync_get() { m_ctrl->get.store(m_internal_get); }
 			void inc_get();
-			void set_get(u32 get, bool spinning = false);
+			void set_get(u32 get);
 			void set_put(u32 put);
 
 			void read(register_pair& data);
-			inline void read_unsafe(register_pair& data);
+			inline bool read_unsafe(register_pair& data);
 		};
 	}
 }
