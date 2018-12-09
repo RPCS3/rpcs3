@@ -129,6 +129,7 @@ namespace gui
 	const QString savedata    = "SaveData";
 	const QString users       = "Users";
 	const QString notes       = "Notes";
+	const QString titles      = "Titles";
 
 	const QColor gl_icon_color = QColor(36, 36, 36, 255);
 
@@ -261,6 +262,9 @@ public:
 
 public Q_SLOTS:
 	void Reset(bool removeMeta = false);
+
+	/** Remove entry */
+	void RemoveValue(const QString& key, const QString& name);
 
 	/** Write value to entry */
 	void SetValue(const gui_save& entry, const QVariant& value);

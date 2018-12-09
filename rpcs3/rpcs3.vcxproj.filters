@@ -674,6 +674,21 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_trophy_manager_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\input_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_input_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_input_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_input_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_input_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -893,6 +908,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\trophy_manager_dialog.h">
       <Filter>Gui\trophy</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\input_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
