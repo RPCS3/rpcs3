@@ -262,6 +262,7 @@ private:
 	Qt::SortOrder m_colSortOrder;
 	int m_sortColumn;
 	QMap<QString, QString> m_notes;
+	QMap<QString, QString> m_titles;
 
 	// Categories
 	QStringList m_categoryFilters;

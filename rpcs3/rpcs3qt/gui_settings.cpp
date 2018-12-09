@@ -109,6 +109,13 @@ void gui_settings::Reset(bool removeMeta)
 	}
 }
 
+void gui_settings::RemoveValue(const QString& key, const QString& name)
+{
+	m_settings.beginGroup(key);
+	m_settings.remove(name);
+	m_settings.endGroup();
+}
+
 QVariant gui_settings::GetValue(const gui_save& entry)
 {
 	return m_settings.value(entry.key + "/" + entry.name, entry.def);

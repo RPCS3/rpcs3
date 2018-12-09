@@ -3,6 +3,7 @@
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
 #include "custom_table_widget_item.h"
+#include "input_dialog.h"
 
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -423,6 +424,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			QString serial = qstr(game.serial);
 			m_notes[serial] = m_gui_settings->GetValue(gui::notes, serial, "").toString();
+			m_titles[serial] = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
 			serials.insert(serial);
 
 			auto cat = category::cat_boot.find(game.category);
@@ -469,13 +471,15 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			// Blame MSVC for double }}
 		}}
 
-		auto op = [](const game_info& game1, const game_info& game2)
-		{
-			return qstr(game1->info.name).toLower() < qstr(game2->info.name).toLower();
-		};
-
 		// Sort by name at the very least.
-		std::sort(m_game_data.begin(), m_game_data.end(), op);
+		std::sort(m_game_data.begin(), m_game_data.end(), [&](const game_info& game1, const game_info& game2)
+		{
+			const QString custom_title1 = m_titles[qstr(game1->info.serial)];
+			const QString custom_title2 = m_titles[qstr(game2->info.serial)];
+			const QString title1 = custom_title1.isEmpty() ? qstr(game1->info.name) : custom_title1;
+			const QString title2 = custom_title2.isEmpty() ? qstr(game2->info.name) : custom_title2;
+			return title1.toLower() < title2.toLower();
+		});
 
 		// clean up hidden games list
 		m_hidden_list.intersect(serials);
@@ -618,6 +622,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* configure = myMenu.addAction(tr("&Configure"));
 	QAction* createPPUCache = myMenu.addAction(tr("&Create PPU Cache"));
 	myMenu.addSeparator();
+	QAction* renameTitle = myMenu.addAction(tr("&Rename In Game List"));
 	QAction* hide_serial = myMenu.addAction(tr("&Hide From Game List"));
 	hide_serial->setCheckable(true);
 	hide_serial->setChecked(m_hidden_list.contains(serial));
@@ -742,16 +747,52 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	{
 		m_game_compat->RequestCompatibility(true);
 	});
+	connect(renameTitle, &QAction::triggered, [=]
+	{
+		const QString custom_title = m_gui_settings->GetValue(gui::titles, serial, "").toString();
+		const QString old_title = custom_title.isEmpty() ? name : custom_title;
+		QString new_title;
+
+		input_dialog dlg(128, old_title, tr("Rename Title"), tr("%0\n%1\n\nYou can clear the line in order to use the original title.").arg(name).arg(serial), name, this);
+		dlg.move(globalPos);
+		connect(&dlg, &input_dialog::text_changed, this, [&new_title](const QString& text)
+		{
+			new_title = text.simplified();
+		});
+
+		if (dlg.exec() == QDialog::Accepted)
+		{
+			if (new_title.isEmpty() || new_title == name)
+			{
+				m_titles.remove(serial);
+				m_gui_settings->RemoveValue(gui::titles, serial);
+			}
+			else
+			{
+				m_titles[serial] = new_title;
+				m_gui_settings->SetValue(gui::titles, serial, new_title);
+			}
+			Refresh(true); // full refresh in order to reliably sort the list
+		}
+	});
 	connect(editNotes, &QAction::triggered, [=]
 	{
 		bool accepted;
 		const QString old_notes = m_gui_settings->GetValue(gui::notes, serial, "").toString();
-		const QString new_notes = QInputDialog::getMultiLineText(this, tr("Edit Tooltip Notes"), QString("%0\n%1").arg(name).arg(serial), old_notes, &accepted);
+		const QString new_notes = QInputDialog::getMultiLineText(this, tr("Edit Tooltip Notes"), tr("%0\n%1").arg(name).arg(serial), old_notes, &accepted);
 
 		if (accepted)
 		{
-			m_notes[serial] = new_notes;
-			m_gui_settings->SetValue(gui::notes, serial, new_notes);
+			if (new_notes.simplified().isEmpty())
+			{
+				m_notes.remove(serial);
+				m_gui_settings->RemoveValue(gui::notes, serial);
+			}
+			else
+			{
+				m_notes[serial] = new_notes;
+				m_gui_settings->SetValue(gui::notes, serial, new_notes);
+			}
 			Refresh();
 		}
 	});
@@ -1144,8 +1185,9 @@ int game_list_frame::PopulateGameList()
 		if (!IsEntryVisible(game))
 			continue;
 
-		const QString name = qstr(game->info.name).simplified();
 		const QString serial = qstr(game->info.serial);
+		const QString custom_title = m_titles[serial];
+		const QString title = custom_title.isEmpty() ? qstr(game->info.name) : custom_title;
 		const QString notes = m_notes[serial];
 
 		// Icon
@@ -1155,7 +1197,7 @@ int game_list_frame::PopulateGameList()
 		icon_item->setData(gui::game_role, QVariant::fromValue(game));
 
 		// Title
-		custom_table_widget_item* title_item = new custom_table_widget_item(game->info.name);
+		custom_table_widget_item* title_item = new custom_table_widget_item(title);
 		if (game->hasCustomConfig)
 		{
 			title_item->setIcon(QIcon(":/Icons/custom_config.png"));
@@ -1166,7 +1208,7 @@ int game_list_frame::PopulateGameList()
 
 		if (!notes.isEmpty())
 		{
-			const QString tool_tip = tr("%0 [%1]\n\nNotes:\n%2").arg(name).arg(serial).arg(notes);
+			const QString tool_tip = tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes);
 			title_item->setToolTip(tool_tip);
 			serial_item->setToolTip(tool_tip);
 		}
@@ -1245,7 +1287,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	// Edge cases!
 	if (entries == 0)
-	{ // For whatever reason, 0%x is division by zero.  Absolute nonsense by definition of modulus.  But, I'll acquiesce.
+	{ // For whatever reason, 0%x is division by zero. Absolute nonsense by definition of modulus. But, I'll acquiesce.
 		return;
 	}
 
@@ -1256,15 +1298,14 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	m_xgrid->setRowCount(maxRows);
 	m_xgrid->setColumnCount(maxCols);
 
-	QString title, serial, notes;
-
 	for (const auto& app : matching_apps)
 	{
-		title = qstr(app->info.name).simplified(); // simplified() forces single line text
-		serial = qstr(app->info.serial);
-		notes = m_notes[serial];
+		const QString serial = qstr(app->info.serial);
+		const QString custom_title = m_titles[serial];
+		const QString title = custom_title.isEmpty() ? qstr(app->info.name) : custom_title;
+		const QString notes = m_notes[serial];
 
-		m_xgrid->addItem(app->pxmap, title,  r, c);
+		m_xgrid->addItem(app->pxmap, title, r, c);
 		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(app));
 
 		if (!notes.isEmpty())
