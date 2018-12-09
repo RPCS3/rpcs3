@@ -42,7 +42,135 @@ namespace rsx
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 	thread* g_current_renderer = nullptr;
 
-	//TODO: Restore a working shaders cache
+#pragma optimize("", off)
+	void run_tests()
+	{
+#if 0
+		if (0)
+		{
+			auto _get_method_name = [](u32 reg) -> std::string
+			{
+				if (reg == FIFO::FIFO_DISABLED_COMMAND)
+				{
+					return "COMMAND DISABLED";
+				}
+
+				if (reg == FIFO::FIFO_PACKET_BEGIN)
+				{
+					return "PACKET BEGIN";
+				}
+
+				return rsx::get_method_name(reg >> 2);
+			};
+
+			auto _dump_commands = [&](const std::vector<FIFO::register_pair>& commands)
+			{
+				LOG_ERROR(RSX, "DUMP BEGINS--------------------------------");
+				for (const auto &cmd : commands)
+				{
+					LOG_ERROR(RSX, "%s (0x%x)", _get_method_name(cmd.reg), cmd.value);
+				}
+				LOG_ERROR(RSX, "DUMP ENDS--------------------------------");
+			};
+
+			// Test
+			std::vector<FIFO::register_pair> fake_commands =
+			{
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xdeadbeef },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff000000 },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xcafebabe },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0000ff },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xdeadbeef },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0001fe },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ 0xffffffff, 0 },
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xcafebabe },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0002fd },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xdeadbeef },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0003fc },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xcafebabe },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0004fb },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ NV4097_SET_TEXTURE_OFFSET << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 1) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 2) << 2, 0xdeadbeef },
+				{ (NV4097_SET_TEXTURE_OFFSET + 3) << 2, 0xdeadbeef },
+				{ NV4097_SET_TEXTURE_CONTROL3 << 2, 0x100000},
+				{ NV4097_INVALIDATE_VERTEX_FILE << 2, 0 },
+				{ NV4097_SET_BEGIN_END << 2, 5 },
+				{ NV4097_DRAW_ARRAYS << 2, 0xff0005fa },
+				{ NV4097_SET_BEGIN_END << 2, 0},
+
+				{ 0xffffffff, 0xdead },
+			};
+
+			std::vector<u32> fake_registers(16384);
+			std::fill(fake_registers.begin(), fake_registers.end(), 0u);
+
+			FIFO::flattening_pass flattening_pass;
+			FIFO::reordering_pass reordering_pass;
+
+			FIFO::fifo_buffer_info_t info{ 0, fake_commands.size() * 4, /*7*/18, 0 };
+			flattening_pass.optimize(info, fake_commands, fake_registers.data());
+
+			_dump_commands(fake_commands);
+
+			reordering_pass.optimize(info, fake_commands, fake_registers.data());
+
+			_dump_commands(fake_commands);
+
+			LOG_ERROR(RSX, "FINISHED TEST");
+		}
+#endif
+	}
+#pragma optimize("", on)
 
 	u32 get_address(u32 offset, u32 location)
 	{
@@ -97,7 +225,9 @@ namespace rsx
 			return get_current_renderer()->ctxt_addr + offset;
 
 		default:
+		{
 			fmt::throw_exception("Invalid location (offset=0x%x, location=0x%x)" HERE, offset, location);
+		}
 		}
 	}
 
@@ -289,23 +419,16 @@ namespace rsx
 			conditional_render_test_address = 0;
 		}
 
-		rsx::method_registers.current_draw_clause.inline_vertex_array.resize(0);
-		in_begin_end = true;
-
-		switch (rsx::method_registers.current_draw_clause.primitive)
+		if (m_graphics_state & rsx::pipeline_state::fragment_program_dirty)
 		{
-		case rsx::primitive_type::line_loop:
-		case rsx::primitive_type::line_strip:
-		case rsx::primitive_type::polygon:
-		case rsx::primitive_type::quad_strip:
-		case rsx::primitive_type::triangle_fan:
-		case rsx::primitive_type::triangle_strip:
-			// Adjacency matters for these types
-			rsx::method_registers.current_draw_clause.is_disjoint_primitive = false;
-			break;
-		default:
-			rsx::method_registers.current_draw_clause.is_disjoint_primitive = true;
+			// Request for update of fragment constants if the program block is invalidated
+			m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+
+			// Request for update of texture parameters if the program is likely to have changed
+			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 		}
+
+		in_begin_end = true;
 	}
 
 	void thread::append_to_push_buffer(u32 attribute, u32 size, u32 subreg_index, vertex_base_type type, u32 value)
@@ -344,19 +467,22 @@ namespace rsx
 			capture::capture_draw_memory(this);
 
 		in_begin_end = false;
+		m_draw_calls++;
+
+		method_registers.current_draw_clause.post_execute_cleanup();
 
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		ROP_sync_timestamp = get_system_time();
 
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		for (auto & push_buf : vertex_push_buffers)
 		{
 			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
 			//rsx::method_registers.register_vertex_info[index].size = 0;
 
-			vertex_push_buffers[index].clear();
+			push_buf.clear();
 		}
 
-		element_push_buffer.resize(0);
+		element_push_buffer.clear();
 
 		if (zcull_ctrl->active)
 			zcull_ctrl->on_draw();
@@ -366,6 +492,16 @@ namespace rsx
 			u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			capture_frame("Draw " + rsx::to_string(rsx::method_registers.current_draw_clause.primitive) + std::to_string(element_count));
 		}
+	}
+
+	void thread::execute_nop_draw()
+	{
+		method_registers.current_draw_clause.begin();
+		do
+		{
+			method_registers.current_draw_clause.execute_pipeline_dependencies();
+		}
+		while (method_registers.current_draw_clause.next());
 	}
 
 	void thread::operator()()
@@ -397,6 +533,7 @@ namespace rsx
 	void thread::on_task()
 	{
 		m_rsx_thread = std::this_thread::get_id();
+		run_tests();
 
 		if (supports_native_ui)
 		{
@@ -428,9 +565,11 @@ namespace rsx
 			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
 		}
 
+		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
+
 		last_flip_time = get_system_time() - 1000000;
 
-		named_thread vblank_thread("VBlank Thread", [this]()
+		thread_ctrl::spawn("VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
 
@@ -465,7 +604,7 @@ namespace rsx
 			}
 		});
 
-		named_thread decompiler_thread ("RSX Decompiler Thread", [this]
+		thread_ctrl::spawn("RSX Decompiler Thread", [this]
 		{
 			if (g_cfg.video.disable_asynchronous_shader_compiler)
 			{
@@ -509,515 +648,38 @@ namespace rsx
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);
 
-		// Deferred calls are used to batch draws together
-		u32 deferred_primitive_type = 0;
-		u32 deferred_call_size = 0;
-		s32 deferred_begin_end = 0;
-		std::vector<u32> deferred_stack;
-		bool has_deferred_call = false;
-
-		auto flush_command_queue = [&]()
-		{
-			const auto num_draws = (u32)method_registers.current_draw_clause.first_count_commands.size();
-			bool emit_begin = false;
-			bool emit_end = true;
-
-			if (num_draws > 1)
-			{
-				auto& first_counts = method_registers.current_draw_clause.first_count_commands;
-				deferred_stack.resize(0);
-
-				u32 last = first_counts.front().first;
-				u32 last_index = 0;
-
-				for (u32 draw = 0; draw < num_draws; draw++)
-				{
-					if (first_counts[draw].first != last)
-					{
-						//Disjoint
-						deferred_stack.push_back(draw);
-					}
-
-					last = first_counts[draw].first + first_counts[draw].second;
-				}
-
-				if (deferred_stack.size() > 0)
-				{
-					LOG_TRACE(RSX, "Disjoint draw range detected");
-
-					deferred_stack.push_back(num_draws); //Append last pair
-					std::vector<std::pair<u32, u32>> temp_range = first_counts;
-					auto current_command = rsx::method_registers.current_draw_clause.command;
-
-					u32 last_index = 0;
-
-					for (const u32 draw : deferred_stack)
-					{
-						if (emit_begin)
-							methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
-						else
-							emit_begin = true;
-
-						//NOTE: These values are reset if begin command is emitted
-						first_counts.resize(draw - last_index);
-						std::copy(temp_range.begin() + last_index, temp_range.begin() + draw, first_counts.begin());
-						rsx::method_registers.current_draw_clause.command = current_command;
-
-						methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
-						last_index = draw;
-					}
-
-					emit_end = false;
-				}
-			}
-
-			if (emit_end)
-				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, 0);
-
-			if (deferred_begin_end > 0) //Hanging draw call (useful for immediate rendering where the begin call needs to be noted)
-				methods[NV4097_SET_BEGIN_END](this, NV4097_SET_BEGIN_END, deferred_primitive_type);
-
-			deferred_begin_end = 0;
-			deferred_primitive_type = 0;
-			deferred_call_size = 0;
-			has_deferred_call = false;
-		};
-
 		// TODO: exit condition
 		while (!Emu.IsStopped())
 		{
-			//Wait for external pause events
+			// Wait for external pause events
 			if (external_interrupt_lock.load())
 			{
 				external_interrupt_ack.store(true);
 				while (external_interrupt_lock.load()) _mm_pause();
 			}
 
-			//Execute backend-local tasks first
-			do_local_task(performance_counters.state);
+			// Idle if emulation paused
+			if (Emu.IsPaused())
+			{
+				std::this_thread::sleep_for(1ms);
+				continue;
+			}
 
-			//Update sub-units
-			zcull_ctrl->update(this);
-
-			//Set up restore state if needed
+			// Note a possible rollback address
 			if (sync_point_request)
 			{
-				if (RSXIOMem.RealAddr(internal_get))
-				{
-					//New internal get is valid, use it
-					restore_point = internal_get.load();
-					restore_ret_addr = m_return_addr;
-				}
-				else
-				{
-					LOG_ERROR(RSX, "Could not update FIFO restore point");
-				}
-
+				restore_point = ctrl->get;
 				sync_point_request = false;
 			}
-			else if (performance_counters.state != FIFO_state::running)
-			{
-				if (performance_counters.state != FIFO_state::nop)
-				{
-					if (has_deferred_call)
-					{
-						//Flush if spinning or queue is empty
-						flush_command_queue();
-					}
-					else if (zcull_ctrl->has_pending())
-					{
-						//zcull_ctrl->sync(this);
-					}
-					else
-					{
-						//do_internal_task();
-					}
-				}
-			}
 
-			//Now load the FIFO ctrl registers
-			ctrl->get.store(internal_get.load());
-			const u32 put = ctrl->put;
+			// Execute backend-local tasks first
+			do_local_task(performance_counters.state);
 
-			if (put == internal_get || !Emu.IsRunning())
-			{
-				if (performance_counters.state == FIFO_state::running)
-				{
-					performance_counters.FIFO_idle_timestamp = get_system_time();
-					performance_counters.state = FIFO_state::empty;
-				}
+			// Update sub-units
+			zcull_ctrl->update(this);
 
-				continue;
-			}
-
-			// Validate put and get registers before reading the command
-			// TODO: Who should handle graphics exceptions??
-			u32 cmd;
-
-			if (u32 addr = RSXIOMem.RealAddr(internal_get))
-			{
-				cmd = vm::read32(addr);
-			}
-			else
-			{
-				std::this_thread::sleep_for(33ms);
-
-				if (!RSXIOMem.RealAddr(internal_get))
-				{
-					LOG_ERROR(RSX, "Invalid FIFO queue get/put registers found: get=0x%X, put=0x%X; Resetting...", +internal_get, put);
-					internal_get = restore_point.load();
-					m_return_addr = restore_ret_addr;
-				}
-
-				continue;
-			}
-
-			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-			{
-				u32 offs = cmd & 0x1ffffffc;
-				if (offs == internal_get.load())
-				{
-					//Jump to self. Often preceded by NOP
-					if (performance_counters.state == FIFO_state::running)
-					{
-						performance_counters.FIFO_idle_timestamp = get_system_time();
-					}
-
-					performance_counters.state = FIFO_state::spinning;
-				}
-
-				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				internal_get = offs;
-				continue;
-			}
-			if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-			{
-				u32 offs = cmd & 0xfffffffc;
-				if (offs == internal_get.load())
-				{
-					//Jump to self. Often preceded by NOP
-					if (performance_counters.state == FIFO_state::running)
-					{
-						performance_counters.FIFO_idle_timestamp = get_system_time();
-					}
-
-					performance_counters.state = FIFO_state::spinning;
-				}
-
-				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				internal_get = offs;
-				continue;
-			}
-			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
-			{
-				if (m_return_addr != -1)
-				{
-					// Only one layer is allowed in the call stack.
-					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
-					internal_get = std::exchange(m_return_addr, -1);
-					continue;
-				}
-				u32 offs = cmd & ~3;
-				//LOG_WARNING(RSX, "rsx call(0x%x) #0x%x - 0x%x", offs, cmd, get);
-				m_return_addr = std::exchange(internal_get.raw(), offs) + 4;
-				continue;
-			}
-
-			if (cmd & 0x3)
-			{
-				// TODO: Check for more invalid bits combinations
-				LOG_ERROR(RSX, "FIFO: Illegal command(0x%x) was executed. Resetting...", cmd);
-				internal_get = restore_point.load();
-				m_return_addr = restore_ret_addr;
-				continue;
-			}
-
-			if ((cmd & ~0xfffc) == RSX_METHOD_RETURN_CMD)
-			{
-				if (m_return_addr == -1)
-				{
-					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
-					internal_get = put;
-					continue;
-				}
-
-				u32 get = std::exchange(m_return_addr, -1);
-				//LOG_WARNING(RSX, "rsx return(0x%x)", get);
-				internal_get = get;
-				continue;
-			}
-
-			u32 count = (cmd >> 18) & 0x7ff;
-
-			if (count == 0) //nop
-			{
-				if (performance_counters.state == FIFO_state::running)
-				{
-					performance_counters.FIFO_idle_timestamp = get_system_time();
-					performance_counters.state = FIFO_state::nop;
-				}
-
-				internal_get += 4;
-				continue;
-			}
-
-			//Validate the args ptr if the command attempts to read from it
-			auto args = vm::ptr<u32>::make(RSXIOMem.RealAddr(internal_get + 4));
-
-			if (!args)
-			{
-				std::this_thread::sleep_for(33ms);
-
-				if (!RSXIOMem.RealAddr(internal_get + 4))
-				{
-					LOG_ERROR(RSX, "Invalid FIFO queue args ptr found: get=0x%X, put=0x%X, count=%d; Resetting...", +internal_get, put, count);
-					internal_get = restore_point.load();
-					m_return_addr = restore_ret_addr;
-				}
-
-				continue;
-			}
-
-			u32 first_cmd = (cmd & 0xfffc) >> 2;
-
-			// Stop command execution if put will be equal to get ptr during the execution itself
-			if (count * 4 + 4 > put - internal_get)
-			{
-				count = (put - internal_get) / 4 - 1;
-			}
-
-			if (performance_counters.state != FIFO_state::running)
-			{
-				//Update performance counters with time spent in idle mode
-				performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
-
-				if (performance_counters.state == FIFO_state::spinning)
-				{
-					//TODO: Properly simulate FIFO wake delay.
-					//NOTE: The typical spin setup is a NOP followed by a jump-to-self
-					//NOTE: There is a small delay when the jump address is dynamically edited by cell
-					busy_wait(3000);
-				}
-
-				performance_counters.state = FIFO_state::running;
-			}
-
-			for (u32 i = 0; i < count; i++)
-			{
-				u32 reg = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? first_cmd : first_cmd + i;
-				u32 value = args[i];
-
-				bool execute_method_call = true;
-
-				//TODO: Flatten draw calls when multidraw is not supported to simplify checking in the end() methods
-				if (supports_multidraw && !g_cfg.video.disable_FIFO_reordering && !capture_current_frame)
-				{
-					//TODO: Make this cleaner
-					bool flush_commands_flag = has_deferred_call;
-
-					switch (reg)
-					{
-					case NV4097_SET_BEGIN_END:
-					{
-						// Hook; Allows begin to go through, but ignores end
-						if (value)
-							deferred_begin_end++;
-						else
-							deferred_begin_end--;
-
-						if (value && value != deferred_primitive_type)
-							deferred_primitive_type = value;
-						else
-						{
-							has_deferred_call = true;
-							flush_commands_flag = false;
-							execute_method_call = false;
-
-							deferred_call_size++;
-
-							if (!method_registers.current_draw_clause.is_disjoint_primitive)
-							{
-								// Combine all calls since the last one
-								auto &first_count = method_registers.current_draw_clause.first_count_commands;
-								if (first_count.size() > deferred_call_size)
-								{
-									const auto &batch_first_count = first_count[deferred_call_size - 1];
-									u32 count = batch_first_count.second;
-									u32 next = batch_first_count.first + count;
-
-									for (int n = deferred_call_size; n < first_count.size(); n++)
-									{
-										if (first_count[n].first != next)
-										{
-											LOG_ERROR(RSX, "Non-continuous first-count range passed as one draw; will be split.");
-
-											first_count[deferred_call_size - 1].second = count;
-											deferred_call_size++;
-
-											count = first_count[deferred_call_size - 1].second;
-											next = first_count[deferred_call_size - 1].first + count;
-											continue;
-										}
-
-										count += first_count[n].second;
-										next += first_count[n].second;
-									}
-
-									first_count[deferred_call_size - 1].second = count;
-									first_count.resize(deferred_call_size);
-								}
-							}
-						}
-
-						break;
-					}
-					// These commands do not alter the pipeline state and deferred calls can still be active
-					// TODO: Add more commands here
-					case NV4097_INVALIDATE_VERTEX_FILE:
-						flush_commands_flag = false;
-						break;
-					case NV4097_DRAW_ARRAYS:
-					{
-						const auto cmd = method_registers.current_draw_clause.command;
-						if (cmd != rsx::draw_command::array && cmd != rsx::draw_command::none)
-							break;
-
-						flush_commands_flag = false;
-						break;
-					}
-					case NV4097_DRAW_INDEX_ARRAY:
-					{
-						const auto cmd = method_registers.current_draw_clause.command;
-						if (cmd != rsx::draw_command::indexed && cmd != rsx::draw_command::none)
-							break;
-
-						flush_commands_flag = false;
-						break;
-					}
-					default:
-					{
-						// TODO: Reorder draw commands between synchronization events to maximize batched sizes
-						static const std::pair<u32, u32> skippable_ranges[] =
-						{
-							// Texture configuration
-							{ NV4097_SET_TEXTURE_OFFSET, 8 * 16 },
-							{ NV4097_SET_TEXTURE_CONTROL2, 16 },
-							{ NV4097_SET_TEXTURE_CONTROL3, 16 },
-							{ NV4097_SET_VERTEX_TEXTURE_OFFSET, 8 * 4 },
-							// Surface configuration
-							{ NV4097_SET_SURFACE_CLIP_HORIZONTAL, 1 },
-							{ NV4097_SET_SURFACE_CLIP_VERTICAL, 1 },
-							{ NV4097_SET_SURFACE_COLOR_AOFFSET, 1 },
-							{ NV4097_SET_SURFACE_COLOR_BOFFSET, 1 },
-							{ NV4097_SET_SURFACE_COLOR_COFFSET, 1 },
-							{ NV4097_SET_SURFACE_COLOR_DOFFSET, 1 },
-							{ NV4097_SET_SURFACE_ZETA_OFFSET, 1 },
-							{ NV4097_SET_CONTEXT_DMA_COLOR_A, 1 },
-							{ NV4097_SET_CONTEXT_DMA_COLOR_B, 1 },
-							{ NV4097_SET_CONTEXT_DMA_COLOR_C, 1 },
-							{ NV4097_SET_CONTEXT_DMA_COLOR_D, 1 },
-							{ NV4097_SET_CONTEXT_DMA_ZETA, 1 },
-							{ NV4097_SET_SURFACE_FORMAT, 1 },
-							{ NV4097_SET_SURFACE_PITCH_A, 1 },
-							{ NV4097_SET_SURFACE_PITCH_B, 1 },
-							{ NV4097_SET_SURFACE_PITCH_C, 1 },
-							{ NV4097_SET_SURFACE_PITCH_D, 1 },
-							{ NV4097_SET_SURFACE_PITCH_Z, 1 },
-							// Program configuration
-							{ NV4097_SET_TRANSFORM_PROGRAM_START, 1 },
-							{ NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, 1 },
-							{ NV4097_SET_TRANSFORM_PROGRAM, 512 }
-						};
-
-						if (has_deferred_call)
-						{
-							//Hopefully this is skippable so the batch can keep growing
-							for (const auto &method : skippable_ranges)
-							{
-								if (reg < method.first)
-									continue;
-
-								if (reg - method.first < method.second)
-								{
-									//Safe to ignore if value has not changed
-									if (method_registers.test(reg, value))
-									{
-										execute_method_call = false;
-										flush_commands_flag = false;
-									}
-
-									break;
-								}
-							}
-						}
-
-						break;
-					}
-					}
-
-					if (flush_commands_flag)
-					{
-						flush_command_queue();
-					}
-				}
-
-				if (capture_current_frame)
-				{
-					frame_debug.command_queue.push_back(std::make_pair(reg, value));
-
-					if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
-					{
-						// todo: handle nv406e methods better?, do we care about call/jumps?
-						rsx::frame_capture_data::replay_command replay_cmd;
-						replay_cmd.rsx_command = std::make_pair(i == 0 ? cmd : 0, value);
-
-						frame_capture.replay_commands.push_back(replay_cmd);
-
-						// to make this easier, use the replay command 'i' positions back
-						auto it = std::prev(frame_capture.replay_commands.end(), i + 1);
-
-						switch (reg)
-						{
-						case NV4097_GET_REPORT:
-							capture::capture_get_report(this, *it, value);
-							break;
-						case NV3089_IMAGE_IN:
-							capture::capture_image_in(this, *it);
-							break;
-						case NV0039_BUFFER_NOTIFY:
-							capture::capture_buffer_notify(this, *it);
-							break;
-						case NV4097_CLEAR_SURFACE:
-							capture::capture_surface_state(this, *it);
-							break;
-						default:
-							if (reg >= NV308A_COLOR && reg < NV3089_SET_OBJECT)
-								capture::capture_inline_transfer(this, *it, reg - NV308A_COLOR, value);
-							break;
-						}
-					}
-				}
-
-				method_registers.decode(reg, value);
-
-				if (execute_method_call)
-				{
-					if (auto method = methods[reg])
-					{
-						method(this, reg, value);
-					}
-				}
-
-				if (invalid_command_interrupt_raised)
-				{
-					invalid_command_interrupt_raised = false;
-
-					//Skip the rest of this command
-					break;
-				}
-			}
-
-			internal_get += (count + 1) * 4;
+			// Execute FIFO queue
+			run_FIFO();
 		}
 	}
 
@@ -1063,8 +725,9 @@ namespace rsx
 			rsx::method_registers.clip_plane_5_enabled(),
 		};
 
-		s32 clip_enabled_flags[8] = {};
-		f32 clip_distance_factors[8] = {};
+		u8 data_block[64];
+		s32* clip_enabled_flags = reinterpret_cast<s32*>(data_block);
+		f32* clip_distance_factors = reinterpret_cast<f32*>(data_block + 32);
 
 		for (int index = 0; index < 6; ++index)
 		{
@@ -1090,8 +753,7 @@ namespace rsx
 			}
 		}
 
-		memcpy(buffer, clip_enabled_flags, 32);
-		memcpy((char*)buffer + 32, clip_distance_factors, 32);
+		memcpy(buffer, data_block, 2 * 8 * sizeof(u32));
 	}
 
 	/**
@@ -1161,16 +823,11 @@ namespace rsx
 		u32 *dst = static_cast<u32*>(buffer);
 		stream_vector(dst, (u32&)fog0, (u32&)fog1, rop_control, (u32&)alpha_ref);
 		stream_vector(dst + 4, alpha_func, fog_mode, (u32&)wpos_scale, (u32&)wpos_bias);
+	}
 
-		size_t offset = 8;
-		for (int index = 0; index < 16; ++index)
-		{
-			stream_vector(&dst[offset],
-				(u32&)fragment_program.texture_scale[index][0], (u32&)fragment_program.texture_scale[index][1],
-				(u32&)fragment_program.texture_scale[index][2], (u32&)fragment_program.texture_scale[index][3]);
-
-			offset += 4;
-		}
+	void thread::fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program)
+	{
+		memcpy(buffer, fragment_program.texture_scale, 16 * 4 * sizeof(float));
 	}
 
 	void thread::write_inline_array_to_buffer(void *dst_buffer)
@@ -1225,7 +882,7 @@ namespace rsx
 		return t + timestamp_subvalue;
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const
+	gsl::span<const gsl::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
 		if (element_push_buffer.size())
 		{
@@ -1240,43 +897,29 @@ namespace rsx
 		bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
 		u32 primitive_restart_index = rsx::method_registers.restart_index();
 
-		// Disjoint first_counts ranges not supported atm
-		for (int i = 0; i < draw_indexed_clause.size() - 1; i++)
-		{
-			const std::tuple<u32, u32> &range = draw_indexed_clause[i];
-			const std::tuple<u32, u32> &next_range = draw_indexed_clause[i + 1];
-			verify(HERE), (std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
-		}
-		u32 first = std::get<0>(draw_indexed_clause.front());
-		u32 count = std::get<0>(draw_indexed_clause.back()) + std::get<1>(draw_indexed_clause.back()) - first;
+		const u32 first = draw_indexed_clause.min_index();
+		const u32 count = draw_indexed_clause.get_elements_count();
 
 		const gsl::byte* ptr = static_cast<const gsl::byte*>(vm::base(address));
 		return{ ptr + first * type_size, count * type_size };
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const
+	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const draw_clause& draw_array_clause) const
 	{
 		u32 offset  = vertex_array_info.offset();
 		u32 address = rsx::get_address(rsx::get_vertex_offset_from_base(base_offset, offset & 0x7fffffff), offset >> 31);
 
 		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type(), vertex_array_info.size());
 
-		// Disjoint first_counts ranges not supported atm
-		for (int i = 0; i < vertex_ranges.size() - 1; i++)
-		{
-			const std::tuple<u32, u32>& range      = vertex_ranges[i];
-			const std::tuple<u32, u32>& next_range = vertex_ranges[i + 1];
-			verify(HERE), (std::get<0>(range) + std::get<1>(range) == std::get<0>(next_range));
-		}
-		u32 first = std::get<0>(vertex_ranges.front());
-		u32 count = std::get<0>(vertex_ranges.back()) + std::get<1>(vertex_ranges.back()) - first;
+		const u32 first = draw_array_clause.min_index();
+		const u32 count = draw_array_clause.get_elements_count();
 
 		const gsl::byte* ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
 		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
 	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-	thread::get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const
+	thread::get_vertex_buffers(const rsx::rsx_state& state, const u64 consumed_attrib_mask) const
 	{
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
 		result.reserve(rsx::limits::vertex_count);
@@ -1294,7 +937,7 @@ namespace rsx
 			{
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
 				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
-					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), vertex_ranges), index, true});
+					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), state.current_draw_clause), index, true});
 				continue;
 			}
 
@@ -1324,21 +967,22 @@ namespace rsx
 	std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 	thread::get_draw_command(const rsx::rsx_state& state) const
 	{
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array) {
-			return draw_array_command{
-				rsx::method_registers.current_draw_clause.first_count_commands};
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
+		{
+			return draw_array_command{};
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed) {
-			return draw_indexed_array_command{
-				rsx::method_registers.current_draw_clause.first_count_commands,
-				get_raw_index_array(
-					rsx::method_registers.current_draw_clause.first_count_commands)};
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
+		{
+			return draw_indexed_array_command
+			{
+				get_raw_index_array(state.current_draw_clause)
+			};
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array) {
-			return draw_inlined_array{
-				rsx::method_registers.current_draw_clause.inline_vertex_array};
+		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		{
+			return draw_inlined_array{};
 		}
 
 		fmt::throw_exception("ill-formed draw command" HERE);
@@ -1369,6 +1013,8 @@ namespace rsx
 	{
 		if (async_flip_requested & flip_request::emu_requested)
 		{
+			// NOTE: This has to be executed immediately
+			// Delaying this operation can cause desync due to the delay in firing the flip event
 			handle_emu_flip(async_flip_buffer);
 		}
 
@@ -1779,7 +1425,6 @@ namespace rsx
 		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			vertex_input_layout result = {};
-			result.interleaved_blocks.reserve(8);
 
 			interleaved_range_info info = {};
 			info.interleaved = true;
@@ -1795,7 +1440,7 @@ namespace rsx
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
 					info.locations.push_back(index);
 
-					if (input_mask & (1u << index)) 
+					if (input_mask & (1u << index))
 					{
 						result.attribute_placement[index] = attribute_buffer_placement::transient;
 					}
@@ -1814,8 +1459,8 @@ namespace rsx
 
 		const u32 frequency_divider_mask = rsx::method_registers.frequency_divider_operation_mask();
 		vertex_input_layout result = {};
-		result.interleaved_blocks.reserve(8);
-		result.referenced_registers.reserve(4);
+		result.interleaved_blocks.reserve(16);
+		result.referenced_registers.reserve(16);
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -1908,7 +1553,7 @@ namespace rsx
 					block.base_offset = base_address;
 					block.attribute_stride = info.stride();
 					block.memory_location = info.offset() >> 31;
-					block.locations.reserve(8);
+					block.locations.reserve(16);
 					block.locations.push_back(index);
 					block.min_divisor = info.frequency();
 					block.all_modulus = !!(frequency_divider_mask & (1 << index));
@@ -2381,49 +2026,60 @@ namespace rsx
 			}
 		}
 
-		//Fill the data
-		memset(buffer, 0, 256);
+		// Fill the data
+		// Each descriptor field is 64 bits wide
+		// [0-8] attribute stride
+		// [8-24] attribute divisor
+		// [24-27] attribute type
+		// [27-30] attribute size
+		// [30-31] reserved
+		// [31-60] starting offset
+		// [60-21] swap bytes flag
+		// [61-22] volatile flag
+		// [62-63] modulo enable flag
 
-		const s32 swap_storage_mask = (1 << 8);
-		const s32 volatile_storage_mask = (1 << 9);
-		const s32 default_frequency_mask = (1 << 10);
-		const s32 repeating_frequency_mask = (3 << 10);
-		const s32 input_function_modulo_mask = (1 << 12);
-		const s32 input_divisor_mask = (0xFFFF << 13);
+		const s32 default_frequency_mask = (1 << 8);
+		const s32 swap_storage_mask = (1 << 29);
+		const s32 volatile_storage_mask = (1 << 30);
+		const s32 modulo_op_frequency_mask = (1 << 31);
 
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
 			if (layout.attribute_placement[index] == attribute_buffer_placement::none)
+			{
+				((u64*)buffer)[index] = 0ull;
 				continue;
+			}
 
 			rsx::vertex_base_type type = {};
 			s32 size = 0;
-			s32 attributes = 0;
+			s32 attrib0 = 0;
+			s32 attrib1 = 0;
 
 			if (layout.attribute_placement[index] == attribute_buffer_placement::transient)
 			{
 				if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 				{
-					auto &info = rsx::method_registers.vertex_arrays_info[index];
-					type = info.type();
-					size = info.size();
-	
-					if (!size)
+					const auto &info = rsx::method_registers.vertex_arrays_info[index];
+
+					if (!info.size())
 					{
 						// Register
 						const auto& reginfo = rsx::method_registers.register_vertex_info[index];
 						type = reginfo.type;
 						size = reginfo.size;
 
-						attributes = rsx::get_vertex_type_size_on_host(type, size);
-						attributes |= volatile_storage_mask;
+						attrib0 = rsx::get_vertex_type_size_on_host(type, size);
 					}
 					else
 					{
-						attributes = layout.interleaved_blocks[0].attribute_stride;
-						attributes |= default_frequency_mask | volatile_storage_mask;
+						// Array
+						type = info.type();
+						size = info.size();
+
+						attrib0 = layout.interleaved_blocks[0].attribute_stride | default_frequency_mask;
 					}
 				}
 				else
@@ -2434,12 +2090,12 @@ namespace rsx
 					if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
 						vertex_push_buffers[index].vertex_count > 1)
 					{
+						// Push buffer
 						const auto &info = rsx::method_registers.register_vertex_info[index];
 						type = info.type;
 						size = info.size;
 
-						attributes = rsx::get_vertex_type_size_on_host(type, size);
-						attributes |= default_frequency_mask | volatile_storage_mask;
+						attrib0 = rsx::get_vertex_type_size_on_host(type, size) | default_frequency_mask;
 					}
 					else
 					{
@@ -2448,10 +2104,11 @@ namespace rsx
 						type = info.type;
 						size = info.size;
 
-						attributes = rsx::get_vertex_type_size_on_host(type, size);
-						attributes |= volatile_storage_mask;
+						attrib0 = rsx::get_vertex_type_size_on_host(type, size);
 					}
 				}
+
+				attrib1 |= volatile_storage_mask;
 			}
 			else
 			{
@@ -2460,7 +2117,7 @@ namespace rsx
 				size = info.size();
 
 				auto stride = info.stride();
-				attributes |= stride;
+				attrib0 = stride;
 
 				if (stride > 0) //when stride is 0, input is not an array but a single element
 				{
@@ -2470,16 +2127,15 @@ namespace rsx
 					case 0:
 					case 1:
 					{
-						attributes |= default_frequency_mask;
+						attrib0 |= default_frequency_mask;
 						break;
 					}
 					default:
 					{
 						if (modulo_mask & (1 << index))
-							attributes |= input_function_modulo_mask;
+							attrib1 |= modulo_op_frequency_mask;
 
-						attributes |= repeating_frequency_mask;
-						attributes |= (frequency << 13) & input_divisor_mask;
+						attrib0 |= (frequency << 8);
 						break;
 					}
 					}
@@ -2503,12 +2159,14 @@ namespace rsx
 				break;
 			}
 
-			if (to_swap_bytes) attributes |= swap_storage_mask;
+			if (to_swap_bytes) attrib1 |= swap_storage_mask;
 
-			buffer[index * 4 + 0] = static_cast<s32>(type);
-			buffer[index * 4 + 1] = size;
-			buffer[index * 4 + 2] = offset_in_block[index];
-			buffer[index * 4 + 3] = attributes;
+			attrib0 |= (static_cast<s32>(type) << 24);
+			attrib0 |= (size << 27);
+			attrib1 |= offset_in_block[index];
+
+			buffer[index * 2 + 0] = attrib0;
+			buffer[index * 2 + 1] = attrib1;
 		}
 	}
 
@@ -2588,26 +2246,52 @@ namespace rsx
 
 	void thread::flip(int buffer)
 	{
-		async_flip_requested.clear();
-
-		if (g_cfg.video.frame_skip_enabled)
+		if (!(async_flip_requested & flip_request::any))
 		{
-			m_skip_frame_ctr++;
+			// Flip is processed through inline FLIP command in the commandstream
+			// This is critical as it is a reliable end-of-frame marker
 
-			if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
-				m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
+			if (!g_cfg.video.disable_FIFO_reordering)
+			{
+				// Try to enable FIFO optimizations
+				// Only rarely useful for some games like RE4
+				m_flattener.evaluate_performance(m_draw_calls);
+			}
 
-			skip_frame = (m_skip_frame_ctr < 0);
+			// Reset zcull ctrl
+			zcull_ctrl->set_active(this, false);
+			zcull_ctrl->clear(this);
+
+			if (zcull_ctrl->has_pending())
+			{
+				LOG_TRACE(RSX, "Dangling reports found, discarding...");
+				zcull_ctrl->sync(this);
+			}
+
+			if (g_cfg.video.frame_skip_enabled)
+			{
+				m_skip_frame_ctr++;
+
+				if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
+					m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
+
+				skip_frame = (m_skip_frame_ctr < 0);
+			}
+		}
+		else
+		{
+			if (async_flip_requested & flip_request::emu_requested)
+			{
+				m_flattener.force_disable();
+			}
+
+			async_flip_requested.clear();
 		}
 
-		//Reset zcull ctrl
-		zcull_ctrl->set_active(this, false);
-		zcull_ctrl->clear(this);
-
-		if (zcull_ctrl->has_pending())
+		if (!skip_frame)
 		{
-			LOG_TRACE(RSX, "Dangling reports found, discarding...");
-			zcull_ctrl->sync(this);
+			// Reset counter
+			m_draw_calls = 0;
 		}
 
 		performance_counters.sampled_frames++;
@@ -2686,6 +2370,9 @@ namespace rsx
 	void thread::sync()
 	{
 		zcull_ctrl->sync(this);
+
+		// Fragment constants may have been updated
+		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
@@ -2799,6 +2486,7 @@ namespace rsx
 
 	void thread::unpause()
 	{
+		// TODO: Clean this shit up
 		external_interrupt_lock.store(false);
 	}
 

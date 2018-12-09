@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "GCM.h"
 #include "Utilities/types.h"
@@ -64,10 +64,13 @@ struct push_buffer_vertex_info
 
 	void clear()
 	{
-		data.resize(0);
-		attribute_mask = ~0;
-		vertex_count = 0;
-		size = 0;
+		if (size)
+		{
+			data.clear();
+			attribute_mask = ~0;
+			vertex_count = 0;
+			size = 0;
+		}
 	}
 
 	u8 get_vertex_size_in_dwords(vertex_base_type type)

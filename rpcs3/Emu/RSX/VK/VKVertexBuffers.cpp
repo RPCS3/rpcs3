@@ -63,7 +63,7 @@ namespace
 
 	std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType>> generate_emulating_index_buffer(
 		const rsx::draw_clause& clause, u32 vertex_count,
-		vk::vk_data_heap& m_index_buffer_ring_info)
+		vk::data_heap& m_index_buffer_ring_info)
 	{
 		u32 index_count = get_index_count(clause.primitive, vertex_count);
 		u32 upload_size = index_count * sizeof(u16);
@@ -91,7 +91,7 @@ namespace
 
 	struct draw_command_visitor
 	{
-		draw_command_visitor(vk::vk_data_heap& index_buffer_ring_info, rsx::vertex_input_layout& layout)
+		draw_command_visitor(vk::data_heap& index_buffer_ring_info, rsx::vertex_input_layout& layout)
 			: m_index_buffer_ring_info(index_buffer_ring_info)
 			, m_vertex_layout(layout)
 		{
@@ -104,7 +104,13 @@ namespace
 				rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
 
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-			const u32 min_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			const u32 min_index = rsx::method_registers.current_draw_clause.min_index();
+
+			//if (rsx::method_registers.current_draw_clause.draw_command_ranges.size() > 1)
+			//{
+				// TODO
+				//LOG_ERROR(RSX, "REEEEEEEEEEEEEEEEEEEEEEE (prims_emulated=%d)", primitives_emulated);
+			//}
 
 			if (primitives_emulated)
 			{
@@ -165,7 +171,7 @@ namespace
 				command.raw_index_buffer, index_type,
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
-				rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
+				rsx::method_registers.restart_index(),
 				rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !vk::is_primitive_native(prim); });
 
 			if (min_index >= max_index)
@@ -204,8 +210,9 @@ namespace
 			bool primitives_emulated = false;
 			auto &draw_clause = rsx::method_registers.current_draw_clause;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_clause.primitive, primitives_emulated);
-			
-			const u32 vertex_count = ((u32)command.inline_vertex_array.size() * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+
+			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
+			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
 
 			if (!primitives_emulated)
 			{
@@ -219,18 +226,13 @@ namespace
 		}
 
 	private:
-		vk::vk_data_heap& m_index_buffer_ring_info;
+		vk::data_heap& m_index_buffer_ring_info;
 		rsx::vertex_input_layout& m_vertex_layout;
 	};
 }
 
 vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
-	m_vertex_layout = analyse_inputs_interleaved();
-
-	if (!m_vertex_layout.validate())
-		return {};
-
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
 	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));
 
@@ -257,6 +259,8 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + vertex_base;
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{
+				verify(HERE), cached->local_address == storage_address;
+
 				in_cache = true;
 				persistent_range_base = cached->offset_in_heap;
 			}

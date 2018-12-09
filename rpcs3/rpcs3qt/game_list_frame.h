@@ -20,7 +20,10 @@
 enum Category
 {
 	Disc_Game,
-	Non_Disc_Game,
+	HDD_Game,
+	PS1_Game,
+	PS2_Game,
+	PSP_Game,
 	Home,
 	Media,
 	Data,
@@ -79,14 +82,14 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 		{ "HM", home      }, // home
 		{ "CB", network   }, // other
 		{ "SF", store_fe  }, // other
-		{ "DG", disc_game }, // disc_Game
-		{ "HG", hdd_game  }, // non_disc_games
-		{ "2P", ps2_game  }, // non_disc_games
-		{ "2G", ps2_inst  }, // non_disc_games
-		{ "1P", ps1_game  }, // non_disc_games
-		{ "PP", psp_game  }, // non_disc_games
-		{ "MN", psp_mini  }, // non_disc_games
-		{ "PE", psp_rema  }, // non_disc_games
+		{ "DG", disc_game }, // disc_game
+		{ "HG", hdd_game  }, // hdd_game
+		{ "2P", ps2_game  }, // ps2_games
+		{ "2G", ps2_inst  }, // ps2_games
+		{ "1P", ps1_game  }, // ps1_game
+		{ "PP", psp_game  }, // psp_games
+		{ "MN", psp_mini  }, // psp_games
+		{ "PE", psp_rema  }, // psp_games
 	};
 	const q_from_char cat_data =
 	{
@@ -96,7 +99,8 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 		{ "MS", psp_save }  // data
 	};
 
-	const QStringList non_disc_games = { hdd_game, ps2_game, ps2_inst, ps1_game, psp_game, psp_mini, psp_rema };
+	const QStringList ps2_games = { ps2_game, ps2_inst };
+	const QStringList psp_games = { psp_game, psp_mini, psp_rema };
 	const QStringList media = { app_photo, app_video, bc_video, app_music, app_tv, web_tv };
 	const QStringList data = { ps3_data, ps2_data, ps3_save, psp_save };
 	const QStringList others = { network, store_fe, trophy, other };

@@ -4,9 +4,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
-#include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "Emu/RSX/rsx_methods.h"
-#include "Emu/RSX/gcm_enums.h"
 
 #include <cereal/types/vector.hpp>
 #include <cereal/types/array.hpp>
@@ -17,10 +15,9 @@
 namespace rsx
 {
 	constexpr u32 FRAME_CAPTURE_MAGIC = 0x52524300; // ascii 'RRC/0'
-	constexpr u32 FRAME_CAPTURE_VERSION = 0x3;
+	constexpr u32 FRAME_CAPTURE_VERSION = 0x4;
 	struct frame_capture_data
 	{
-
 		struct memory_block_data
 		{
 			std::vector<u8> data;
@@ -34,17 +31,14 @@ namespace rsx
 		// simple block to hold ps3 address and data
 		struct memory_block
 		{
-			u32 ioOffset{0xFFFFFFFF}; // rsx ioOffset, -1 signifies unused
-			u32 offset{0};		// offset into addr/ioOffset to copy state into
-			u32 size{0}; // size of block needed
-			u32 location{0xFFFFFFFF}; // Location of the block in RSX memory space
-			u64 data_state{0};		  // this can be 0, in which case its just needed as an alloc
+			u32 offset; // Offset in rsx address space
+			u32 location; // rsx memory location of the block
+			u64 data_state;
+
 			template<typename Archive>
 			void serialize(Archive & ar)
 			{
-				ar(ioOffset);
 				ar(offset);
-				ar(size);
 				ar(location);
 				ar(data_state);
 			}
@@ -67,62 +61,41 @@ namespace rsx
 			}
 		};
 
-		// same thing as gcmtileinfo
 		struct tile_info
 		{
-			u32 location{0};
-			u32 offset{0};
-			u32 size{0};
-			u32 pitch{0};
-			u32 comp{0};
-			u32 base{0};
-			u32 bank{0};
-			bool binded{false};
+			u32 tile;
+			u32 limit;
+			u32 pitch;
+			u32 format;
 
 			template<typename Archive>
 			void serialize(Archive & ar)
 			{
-				ar(location);
-				ar(offset);
-				ar(size);
+				ar(tile);
+				ar(limit);
 				ar(pitch);
-				ar(comp);
-				ar(base);
-				ar(bank);
-				ar(binded);
+				ar(format);
 			}
 		};
 
-		// same thing as gcmzcullinfo
 		struct zcull_info
 		{
-			u32 offset{0};
-			u32 width{0};
-			u32 height{0};
-			u32 cullStart{0};
-			u32 zFormat{0};
-			u32 aaFormat{0};
-			u32 zcullDir{0};
-			u32 zcullFormat{0};
-			u32 sFunc{0};
-			u32 sRef{0};
-			u32 sMask{0};
-			bool binded{false};
+			u32 region;
+			u32 size;
+			u32 start;
+			u32 offset;
+			u32 status0;
+			u32 status1;
 
 			template<typename Archive>
 			void serialize(Archive & ar)
 			{
+				ar(region);
+				ar(size);
+				ar(start);
 				ar(offset);
-				ar(width);
-				ar(cullStart);
-				ar(zFormat);
-				ar(aaFormat);
-				ar(zcullDir);
-				ar(zcullFormat);
-				ar(sFunc);
-				ar(sRef);
-				ar(sMask);
-				ar(binded);
+				ar(status0);
+				ar(status1);
 			}
 		};
 

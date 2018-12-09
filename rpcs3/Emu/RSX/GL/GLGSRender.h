@@ -294,13 +294,15 @@ private:
 	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
 	std::unique_ptr<gl::ring_buffer> m_fragment_constants_buffer;
 	std::unique_ptr<gl::ring_buffer> m_transform_constants_buffer;
-	std::unique_ptr<gl::ring_buffer> m_vertex_state_buffer;
+	std::unique_ptr<gl::ring_buffer> m_fragment_env_buffer;
+	std::unique_ptr<gl::ring_buffer> m_vertex_env_buffer;
+	std::unique_ptr<gl::ring_buffer> m_texture_parameters_buffer;
+	std::unique_ptr<gl::ring_buffer> m_vertex_layout_buffer;
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
 
 	// Identity buffer used to fix broken gl_VertexID on ATI stack
 	std::unique_ptr<gl::buffer> m_identity_index_buffer;
 
-	u32 m_draw_calls = 0;
 	s64 m_begin_time = 0;
 	s64 m_draw_time = 0;
 	s64 m_vertex_upload_time = 0;
@@ -361,13 +363,15 @@ private:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool load_program();
-	void load_program_env(const gl::vertex_upload_info& upload_info);
+	void load_program_env();
+	void update_vertex_env(const gl::vertex_upload_info& upload_info);
 
 	void update_draw_state();
 
 public:
 	void read_buffers();
 	void set_viewport();
+	void set_scissor();
 
 	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 

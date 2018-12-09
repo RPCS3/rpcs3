@@ -161,6 +161,17 @@ namespace rsx
 		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
 	}
 
+	// Copy memory in inverse direction from source
+	// Used to scale negatively x axis while transfering image data
+	template <typename Ts = u8, typename Td = Ts>
+	static void memcpy_r(void* dst, void* src, std::size_t size)
+	{
+		for (u32 i = 0; i < size; i++)
+		{
+			*((Td*)dst + i) = *((Ts*)src - i);
+		}
+	}
+
 	// Returns interleaved bits of X|Y|Z used as Z-order curve indices
 	static inline u32 calculate_z_index(u32 x, u32 y, u32 z)
 	{
@@ -294,9 +305,6 @@ namespace rsx
 	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
 
 	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
-		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
-
-	void convert_scale_image(std::unique_ptr<u8[]>& dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
 
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
@@ -661,6 +669,238 @@ namespace rsx
 		void clear()
 		{
 			m_data.store(0);
+		}
+	};
+
+	template <typename Ty>
+	struct simple_array
+	{
+	public:
+		using iterator = Ty * ;
+		using const_iterator = Ty * const;
+
+	private:
+		u32 _capacity = 0;
+		u32 _size = 0;
+		Ty* _data = nullptr;
+
+		inline u64 offset(const_iterator pos)
+		{
+			return (_data) ? u64(pos - _data) : 0ull;
+		}
+
+	public:
+		simple_array() {}
+
+		simple_array(u32 initial_size, const Ty val = {})
+		{
+			reserve(initial_size);
+			_size = initial_size;
+
+			for (int n = 0; n < initial_size; ++n)
+			{
+				_data[n] = val;
+			}
+		}
+
+		simple_array(const std::initializer_list<Ty>& args)
+		{
+			reserve(args.size());
+
+			for (const auto& arg : args)
+			{
+				push_back(arg);
+			}
+		}
+
+		~simple_array()
+		{
+			if (_data)
+			{
+				free(_data);
+				_data = nullptr;
+				_size = _capacity = 0;
+			}
+		}
+
+		void swap(simple_array<Ty>& other) noexcept
+		{
+			std::swap(_capacity, other._capacity);
+			std::swap(_size, other._size);
+			std::swap(_data, other._data);
+		}
+
+		void reserve(u32 size)
+		{
+			if (_capacity > size)
+				return;
+
+			if (_data)
+			{
+				_data = (Ty*)realloc(_data, sizeof(Ty) * size);
+			}
+			else
+			{
+				_data = (Ty*)malloc(sizeof(Ty) * size);
+			}
+
+			_capacity = size;
+		}
+
+		void push_back(const Ty& val)
+		{
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+			}
+
+			_data[_size++] = val;
+		}
+
+		void push_back(Ty&& val)
+		{
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+			}
+
+			_data[_size++] = val;
+		}
+
+		iterator insert(iterator pos, const Ty& val)
+		{
+			verify(HERE), pos >= _data;
+			const auto _loc = offset(pos);
+
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+				pos = _data + _loc;
+			}
+
+			if (_loc >= _size)
+			{
+				_data[_size++] = val;
+				return pos;
+			}
+
+			verify(HERE), _loc < _size;
+
+			const auto remaining = (_size - _loc);
+			memmove(pos + 1, pos, remaining * sizeof(Ty));
+
+			*pos = val;
+			_size++;
+
+			return pos;
+		}
+
+		iterator insert(iterator pos, Ty&& val)
+		{
+			verify(HERE), pos >= _data;
+			const auto _loc = offset(pos);
+
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+				pos = _data + _loc;
+			}
+
+			if (_loc >= _size)
+			{
+				_data[_size++] = val;
+				return pos;
+			}
+
+			verify(HERE), _loc < _size;
+
+			const u32 remaining = (_size - _loc);
+			memmove(pos + 1, pos, remaining * sizeof(Ty));
+
+			*pos = val;
+			_size++;
+
+			return pos;
+		}
+
+		void clear()
+		{
+			_size = 0;
+		}
+
+		bool empty() const
+		{
+			return _size == 0;
+		}
+
+		u32 size() const
+		{
+			return _size;
+		}
+
+		u32 capacity() const
+		{
+			return _capacity;
+		}
+
+		Ty& operator[] (u32 index)
+		{
+			return _data[index];
+		}
+
+		const Ty& operator[] (u32 index) const
+		{
+			return _data[index];
+		}
+
+		Ty* data()
+		{
+			return _data;
+		}
+
+		const Ty* data() const
+		{
+			return _data;
+		}
+
+		Ty& back()
+		{
+			return _data[_size - 1];
+		}
+
+		const Ty& back() const
+		{
+			return _data[_size - 1];
+		}
+
+		Ty& front()
+		{
+			return _data[0];
+		}
+
+		const Ty& front() const
+		{
+			return _data[0];
+		}
+
+		iterator begin()
+		{
+			return _data;
+		}
+
+		iterator end()
+		{
+			return _data ? _data + _size : nullptr;
+		}
+
+		const_iterator begin() const
+		{
+			return _data;
+		}
+
+		const_iterator end() const
+		{
+			return _data ? _data + _size : nullptr;
 		}
 	};
 }

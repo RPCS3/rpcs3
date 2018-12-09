@@ -251,6 +251,9 @@
      </property>
      <addaction name="showCatHDDGameAct"/>
      <addaction name="showCatDiscGameAct"/>
+     <addaction name="showCatPS1GamesAct"/>
+     <addaction name="showCatPS2GamesAct"/>
+     <addaction name="showCatPSPGamesAct"/>
      <addaction name="showCatHomeAct"/>
      <addaction name="showCatAudioVideoAct"/>
      <addaction name="showCatGameDataAct"/>
@@ -731,6 +734,39 @@
     <string>Disc Games</string>
    </property>
   </action>
+  <action name="showCatPS1GamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PS1 Games</string>
+   </property>
+  </action>
+  <action name="showCatPS2GamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PS2 Games</string>
+   </property>
+  </action>
+  <action name="showCatPSPGamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PSP Games</string>
+   </property>
+  </action>
   <action name="showCatHomeAct">
    <property name="checkable">
     <bool>true</bool>
@@ -778,13 +814,13 @@
   <action name="toolbar_start">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
+     <normaloff>:/Icons/play.png</normaloff>:/Icons/play.png</iconset>
    </property>
    <property name="text">
     <string>Start</string>
    </property>
    <property name="toolTip">
-    <string>Pause emulation</string>
+    <string>Start emulation</string>
    </property>
   </action>
   <action name="toolbar_stop">

@@ -113,16 +113,13 @@ namespace rsx
 			if (it == frame->memory_map.end())
 				fmt::throw_exception("requested memory state for command not found in memory_map");
 
-			if (it->second.data_state != 0)
-			{
-				const auto& memblock = it->second;
-				auto it_data = frame->memory_data_map.find(it->second.data_state);
-				if (it_data == frame->memory_data_map.end())
-					fmt::throw_exception("requested memory data state for command not found in memory_data_map");
+			const auto& memblock = it->second;
+			auto it_data = frame->memory_data_map.find(it->second.data_state);
+			if (it_data == frame->memory_data_map.end())
+				fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
-				const auto& data_block = it_data->second;
-				std::memcpy(vm::base(get_address(memblock.ioOffset + memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
-			}
+			const auto& data_block = it_data->second;
+			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
 		}
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
@@ -154,50 +151,22 @@ namespace rsx
 			const auto& tstate = it->second;
 			for (u32 i = 0; i < limits::tiles_count; ++i)
 			{
-				const auto& tstile = tstate.tiles[i];
-				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.tiles[i], &tstile, sizeof(rsx::frame_capture_data::tile_info)) == 0)
+				const auto& ti = tstate.tiles[i];
+				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.tiles[i], &ti, sizeof(rsx::frame_capture_data::tile_info)) == 0)
 					continue;
 
-				cs.tile_state.tiles[i] = tstile;
-
-				GcmTileInfo t;
-				t.bank = tstile.bank;
-				t.base = tstile.base;
-				t.binded = tstile.binded;
-				t.comp = tstile.comp;
-				t.location = tstile.location;
-				t.offset = tstile.offset;
-				t.pitch = tstile.pitch;
-				t.size = tstile.size;
-
-				const auto& ti = t.pack();
-				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, t.binded ? (u64)ti.pitch << 32 | ti.format : 0, 0);
+				cs.tile_state.tiles[i] = ti;
+				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, (u64)ti.pitch << 32 | ti.format, 0);
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
 			{
-				const auto& zctile = tstate.zculls[i];
-				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.zculls[i], &zctile, sizeof(rsx::frame_capture_data::zcull_info)) == 0)
+				const auto& zci = tstate.zculls[i];
+				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.zculls[i], &zci, sizeof(rsx::frame_capture_data::zcull_info)) == 0)
 					continue;
 
-				cs.tile_state.zculls[i] = zctile;
-
-				GcmZcullInfo zc;
-				zc.aaFormat = zctile.aaFormat;
-				zc.binded = zctile.binded;
-				zc.cullStart = zctile.cullStart;
-				zc.height = zctile.height;
-				zc.offset = zctile.offset;
-				zc.sFunc = zctile.sFunc;
-				zc.sMask = zctile.sMask;
-				zc.sRef = zctile.sRef;
-				zc.width = zctile.width;
-				zc.zcullDir = zctile.zcullDir;
-				zc.zcullFormat = zctile.zcullFormat;
-				zc.zFormat = zctile.zFormat;
-
-				const auto& zci = zc.pack();
-				sys_rsx_context_attribute(context_id, 0x301, i, (u64)zci.region << 32 | zci.size, (u64)zci.start << 32 | zci.offset, zc.binded ? (u64)zci.status0 << 32 | zci.status1 : 0);
+				cs.tile_state.zculls[i] = zci;
+				sys_rsx_context_attribute(context_id, 0x301, i, (u64)zci.region << 32 | zci.size, (u64)zci.start << 32 | zci.offset, (u64)zci.status0 << 32 | zci.status1);
 			}
 
 			cs.tile_hash = replay_cmd.tile_state;
@@ -211,23 +180,8 @@ namespace rsx
 		auto fifo_stops = alloc_write_fifo(context_id);
 
 		// map game io
-		for (const auto it : frame->memory_map)
-		{
-			const auto& memblock = it.second;
-			if (memblock.location == CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN)
-			{
-				// Special area for reports
-				if (sys_rsx_context_iomap(context_id, (memblock.ioOffset & ~0xFFFFF) + 0x0e000000, (memblock.ioOffset & ~0xFFFFF) + user_mem_addr + 0x0e000000, 0x100000, 0) != CELL_OK)
-					fmt::throw_exception("rsx io map failed for block");
-				continue;
-			}
-
-			if (const u32 location = memblock.location; location != CELL_GCM_LOCATION_MAIN && location != CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER)
-				continue;
-
-			if (sys_rsx_context_iomap(context_id, memblock.ioOffset & ~0xFFFFF, user_mem_addr + (memblock.ioOffset & ~0xFFFFF), ::align<u32>(memblock.size + memblock.offset, 0x100000), 0) != CELL_OK)
-				fmt::throw_exception("rsx io map failed for block");
-		}
+		if (sys_rsx_context_iomap(context_id, 0x0, user_mem_addr, 0x10000000, 0) != CELL_OK)
+			fmt::throw_exception("rsx io map failed");
 
 		while (!Emu.IsStopped())
 		{

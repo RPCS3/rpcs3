@@ -880,8 +880,11 @@ namespace rsx
 
 			storage_type* find_vertex_range(uintptr_t local_addr, upload_format fmt, u32 data_length) override
 			{
+				const auto data_end = local_addr + data_length;
+
 				for (auto &v : vertex_ranges[local_addr])
 				{
+					// NOTE: This has to match exactly. Using sized shortcuts such as >= comparison causes artifacting in some applications (UC1)
 					if (v.buffer_format == fmt && v.data_length == data_length)
 						return &v;
 				}

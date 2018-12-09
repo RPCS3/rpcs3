@@ -156,6 +156,9 @@ namespace gui
 
 	const gui_save cat_hdd_game    = gui_save(game_list, "categoryVisibleHDDGame",    true);
 	const gui_save cat_disc_game   = gui_save(game_list, "categoryVisibleDiscGame",   true);
+	const gui_save cat_ps1_game    = gui_save(game_list, "categoryVisiblePS1Game",    true);
+	const gui_save cat_ps2_game    = gui_save(game_list, "categoryVisiblePS2Game",    true);
+	const gui_save cat_psp_game    = gui_save(game_list, "categoryVisiblePSPGame",    true);
 	const gui_save cat_home        = gui_save(game_list, "categoryVisibleHome",       true);
 	const gui_save cat_audio_video = gui_save(game_list, "categoryVisibleAudioVideo", true);
 	const gui_save cat_game_data   = gui_save(game_list, "categoryVisibleGameData",   false);

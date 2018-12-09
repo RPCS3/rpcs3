@@ -189,39 +189,35 @@ void main_window::SetAppIconFromPath(const std::string& path)
 {
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
 	QString qpath = qstr(path);
-	std::string icon_list[] = { "/ICON0.PNG", "/PS3_GAME/ICON0.PNG" };
 	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
 	for (std::string pth : path_list)
 	{
 		if (!fs::is_dir(pth)) continue;
 
-		for (std::string ico : icon_list)
+		const std::string sfo_dir = Emu.GetSfoDirFromGamePath(pth, Emu.GetUsr());
+		const std::string ico     = sfo_dir + "/ICON0.PNG";
+		if (fs::is_file(ico))
 		{
-			ico = pth + ico;
-			if (fs::is_file(ico))
-			{
-				// load the image from path. It will most likely be a rectangle
-				QImage source = QImage(qstr(ico));
-				int edgeMax = std::max(source.width(), source.height());
+			// load the image from path. It will most likely be a rectangle
+			QImage source = QImage(qstr(ico));
+			int edgeMax   = std::max(source.width(), source.height());
 
-				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
-				QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
-				QImage dest = QImage(edgeMax, edgeMax, format);
-				dest.fill(QColor("transparent"));
+			// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
+			QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
+			QImage dest           = QImage(edgeMax, edgeMax, format);
+			dest.fill(QColor("transparent"));
 
-				// get the location to draw the source image centered within the dest image.
-				QPoint destPos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2)
-				                                                  : QPoint((source.height() - source.width()) / 2, 0);
+			// get the location to draw the source image centered within the dest image.
+			QPoint destPos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2) : QPoint((source.height() - source.width()) / 2, 0);
 
-				// Paint the source into/over the dest
-				QPainter painter(&dest);
-				painter.drawImage(destPos, source);
-				painter.end();
+			// Paint the source into/over the dest
+			QPainter painter(&dest);
+			painter.drawImage(destPos, source);
+			painter.end();
 
-				// set Icon
-				m_appIcon = QIcon(QPixmap::fromImage(dest));
-				return;
-			}
+			// set Icon
+			m_appIcon = QIcon(QPixmap::fromImage(dest));
+			return;
 		}
 	}
 	// if nothing was found reset the icon to default
@@ -1146,6 +1142,9 @@ void main_window::CreateActions()
 	m_categoryVisibleActGroup = new QActionGroup(this);
 	m_categoryVisibleActGroup->addAction(ui->showCatHDDGameAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatDiscGameAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatPS1GamesAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatPS2GamesAct);
+	m_categoryVisibleActGroup->addAction(ui->showCatPSPGamesAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatHomeAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatAudioVideoAct);
 	m_categoryVisibleActGroup->addAction(ui->showCatGameDataAct);
@@ -1287,8 +1286,9 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Users, &QAction::triggered, [=]
 	{
-		user_manager_dialog* user_manager = new user_manager_dialog(guiSettings, this);
-		user_manager->show();
+		user_manager_dialog user_manager(guiSettings, this);
+		user_manager.exec();
+		m_gameListFrame->Refresh(true); // New user may have different games unlocked.
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]
@@ -1367,8 +1367,11 @@ void main_window::CreateConnects()
 		int id;
 		const bool& checked = act->isChecked();
 
-		if      (act == ui->showCatHDDGameAct)    categories += category::non_disc_games, id = Category::Non_Disc_Game;
+		if      (act == ui->showCatHDDGameAct)    categories += category::hdd_game, id = Category::HDD_Game;
 		else if (act == ui->showCatDiscGameAct)   categories += category::disc_game, id = Category::Disc_Game;
+		else if (act == ui->showCatPS1GamesAct)   categories += category::ps1_game, id = Category::PS1_Game;
+		else if (act == ui->showCatPS2GamesAct)   categories += category::ps2_games, id = Category::PS2_Game;
+		else if (act == ui->showCatPSPGamesAct)   categories += category::psp_games, id = Category::PSP_Game;
 		else if (act == ui->showCatHomeAct)       categories += category::home, id = Category::Home;
 		else if (act == ui->showCatAudioVideoAct) categories += category::media, id = Category::Media;
 		else if (act == ui->showCatGameDataAct)   categories += category::data, id = Category::Data;
@@ -1584,8 +1587,11 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 
 	ui->showCompatibilityInGridAct->setChecked(guiSettings->GetValue(gui::gl_draw_compat).toBool());
 
-	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Non_Disc_Game));
+	ui->showCatHDDGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::HDD_Game));
 	ui->showCatDiscGameAct->setChecked(guiSettings->GetCategoryVisibility(Category::Disc_Game));
+	ui->showCatPS1GamesAct->setChecked(guiSettings->GetCategoryVisibility(Category::PS1_Game));
+	ui->showCatPS2GamesAct->setChecked(guiSettings->GetCategoryVisibility(Category::PS2_Game));
+	ui->showCatPSPGamesAct->setChecked(guiSettings->GetCategoryVisibility(Category::PSP_Game));
 	ui->showCatHomeAct->setChecked(guiSettings->GetCategoryVisibility(Category::Home));
 	ui->showCatAudioVideoAct->setChecked(guiSettings->GetCategoryVisibility(Category::Media));
 	ui->showCatGameDataAct->setChecked(guiSettings->GetCategoryVisibility(Category::Data));
@@ -1823,6 +1829,9 @@ void main_window::dropEvent(QDropEvent* event)
 				LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
 			}
 		}
+
+		// Refresh game list since we probably unlocked some games now.
+		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 		for (const auto& path : dropPaths)
