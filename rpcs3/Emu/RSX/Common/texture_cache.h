@@ -272,7 +272,7 @@ namespace rsx
 		std::atomic<u32> m_misses_this_frame  = { 0 };
 		std::atomic<u32> m_speculations_this_frame = { 0 };
 		std::atomic<u32> m_unavoidable_hard_faults_this_frame = { 0 };
-		static const u32 m_predict_max_flushes_per_frame = 100; // Above this number the predictions are disabled
+		static const u32 m_predict_max_flushes_per_frame = 50; // Above this number the predictions are disabled
 
 		// Invalidation
 		static const bool invalidation_ignore_unsynchronized = true; // If true, unsynchronized sections don't get forcefully flushed unless they overlap the fault range
@@ -502,7 +502,7 @@ namespace rsx
 
 					// Sanity checks
 					AUDIT(exclusion_range.is_page_range());
-					AUDIT(data.cause.is_read() && !excluded->is_flushable() || !exclusion_range.overlaps(data.fault_range));
+					AUDIT(data.cause.is_read() && !excluded->is_flushable() || data.cause == invalidation_cause::superseded_by_fbo || !exclusion_range.overlaps(data.fault_range));
 
 					// Apply exclusion
 					ranges_to_unprotect.exclude(exclusion_range);
@@ -691,14 +691,21 @@ namespace rsx
 				for (auto &obj : trampled_set.sections)
 				{
 					auto &tex = *obj;
-					if (tex.inside(fault_range, section_bounds::locked_range))
+					if (tex.overlaps(fault_range, section_bounds::locked_range))
 					{
-						// Discard - this section won't be needed any more
-						tex.discard(/* set_dirty */ true);
-					}
-					else if (tex.overlaps(fault_range, section_bounds::locked_range))
-					{
-						if (g_cfg.video.strict_texture_flushing && tex.is_flushable())
+						if (cause == invalidation_cause::superseded_by_fbo &&
+							tex.get_context() == texture_upload_context::framebuffer_storage &&
+							tex.get_section_base() != fault_range_in.start)
+						{
+							// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
+							continue;
+						}
+						else if (tex.inside(fault_range, section_bounds::locked_range))
+						{
+							// Discard - this section won't be needed any more
+							tex.discard(/* set_dirty */ true);
+						}
+						else if (g_cfg.video.strict_texture_flushing && tex.is_flushable())
 						{
 							tex.add_flush_exclusion(fault_range);
 						}
@@ -742,6 +749,7 @@ namespace rsx
 						continue;
 
 					const rsx::section_bounds bounds = tex.get_overlap_test_bounds();
+					const bool overlaps_fault_range = tex.overlaps(fault_range, bounds);
 
 					if (
 						// RO sections during a read invalidation can be ignored (unless there are flushables in trampled_set, since those could overwrite RO data)
@@ -749,7 +757,9 @@ namespace rsx
 						// Sections that are not fully contained in invalidate_range can be ignored
 						!tex.inside(trampled_set.invalidate_range, bounds) ||
 						// Unsynchronized sections (or any flushable when skipping flushes) that do not overlap the fault range directly can also be ignored
-						(invalidation_ignore_unsynchronized && tex.is_flushable() && (cause.skip_flush() || !tex.is_synchronized()) && !tex.overlaps(fault_range, bounds))
+						(invalidation_ignore_unsynchronized && tex.is_flushable() && (cause.skip_flush() || !tex.is_synchronized()) && !overlaps_fault_range) ||
+						// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
+						(overlaps_fault_range && cause == invalidation_cause::superseded_by_fbo && tex.get_context() == texture_upload_context::framebuffer_storage && tex.get_section_base() != fault_range_in.start)
 					   )
 					{
 						// False positive
@@ -830,8 +840,8 @@ namespace rsx
 				}
 				else
 				{
-					// This is a read and all overlapping sections were RO and were excluded
-					AUDIT(cause.is_read() && !result.sections_to_exclude.empty());
+					// This is a read and all overlapping sections were RO and were excluded (except for cause == superseded_by_fbo)
+					AUDIT(cause == invalidation_cause::superseded_by_fbo || cause.is_read() && !result.sections_to_exclude.empty());
 
 					// We did not handle this violation
 					result.clear_sections();
