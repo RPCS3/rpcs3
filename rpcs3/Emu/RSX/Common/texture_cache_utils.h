@@ -1420,11 +1420,19 @@ namespace rsx
 			}
 			else
 			{
+
 				ASSERT(valid_length % rsx_pitch == 0);
 
 				u8 *_src = src;
 				u32 _dst = dst;
 				const auto num_rows = valid_length / rsx_pitch;
+
+				const auto num_exclusions = flush_exclusions.size();
+				if (num_exclusions > 0)
+				{
+					LOG_WARNING(RSX, "Slow imp_flush path triggered with non-empty flush_exclusions (%d exclusions, %d rows), performance might suffer", num_exclusions, num_rows);
+				}
+
 				for (u32 row = 0; row < num_rows; ++row)
 				{
 					imp_flush_memcpy(_dst, _src, real_pitch);
