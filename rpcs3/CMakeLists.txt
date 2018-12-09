@@ -31,7 +31,7 @@ endif()
 # finds Qt libraries and setups custom commands for MOC and UIC
 # Must be done here because generated MOC and UIC targets cant
 # be found otherwise
-include(../3rdparty/qt5.cmake)
+include(${CMAKE_SOURCE_DIR}/3rdparty/qt5.cmake)
 
 # subdirectories
 add_subdirectory(Emu)
