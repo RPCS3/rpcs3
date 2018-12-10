@@ -2088,6 +2088,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QCheckBox" name="strictTextureFlushing">
+              <property name="text">
+               <string>Strict Texture Flushing</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>
