@@ -53,7 +53,7 @@ namespace rsx
 
 		bool operator < (const barrier_t& other) const
 		{
-			if (address != -1u)
+			if (address != ~0u)
 			{
 				return address < other.address;
 			}
@@ -91,7 +91,7 @@ namespace rsx
 		}
 
 		// Insert a new draw command within the others
-		void insert_draw_command(int index, const draw_range_t& range)
+		void insert_draw_command(u32 index, const draw_range_t& range)
 		{
 			auto range_It = draw_command_ranges.begin();
 			while (index--)
@@ -160,7 +160,7 @@ namespace rsx
 				append_draw_command({});
 				const auto command_index = draw_command_ranges.size() - 1;
 
-				_do_barrier_insert({ command_index, get_system_time(), -1u, arg, 0, type });
+				_do_barrier_insert({ command_index, get_system_time(), ~0u, arg, 0, type });
 				last_execution_barrier_index = command_index;
 			}
 		}
@@ -206,7 +206,7 @@ namespace rsx
 					return;
 				}
 
-				for (int index = last_execution_barrier_index; index < draw_command_ranges.size(); ++index)
+				for (auto index = last_execution_barrier_index; index < draw_command_ranges.size(); ++index)
 				{
 					if (draw_command_ranges[index].first == first &&
 						draw_command_ranges[index].count == count)
@@ -262,7 +262,7 @@ namespace rsx
 				return true;
 			}
 
-			verify(HERE), current_range_index != -1u;
+			verify(HERE), current_range_index != ~0u;
 			for (const auto &barrier : draw_command_barriers)
 			{
 				if (barrier.draw_id != current_range_index)
@@ -301,7 +301,7 @@ namespace rsx
 
 		void reset(rsx::primitive_type type)
 		{
-			current_range_index = -1u;
+			current_range_index = ~0u;
 			last_execution_barrier_index = 0;
 
 			command = draw_command::none;
@@ -1310,6 +1310,11 @@ namespace rsx
 			return decode<NV406E_SEMAPHORE_OFFSET>().semaphore_offset();
 		}
 
+		u32 semaphore_context_dma_4097() const
+		{
+			return decode<NV4097_SET_CONTEXT_DMA_SEMAPHORE>().context_dma();
+		}
+
 		u32 semaphore_offset_4097() const
 		{
 			return decode<NV4097_SET_SEMAPHORE_OFFSET>().semaphore_offset();
@@ -1464,12 +1469,12 @@ namespace rsx
 			return decode<NV309E_SET_FORMAT>().format();
 		}
 
-		u32 blit_engine_ds_dx() const
+		f32 blit_engine_ds_dx() const
 		{
 			return decode<NV3089_DS_DX>().ds_dx();
 		}
 
-		u32 blit_engine_dt_dy() const
+		f32 blit_engine_dt_dy() const
 		{
 			return decode<NV3089_DT_DY>().dt_dy();
 		}

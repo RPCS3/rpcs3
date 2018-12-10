@@ -890,7 +890,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		}
 		else
 		{
-			LOG_ERROR(RSX, "Fault in uninterruptible code!");
+			//LOG_ERROR(RSX, "Fault in uninterruptible code!");
 		}
 
 		if (sync_timestamp > 0)

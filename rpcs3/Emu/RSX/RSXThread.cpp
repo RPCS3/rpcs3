@@ -569,7 +569,7 @@ namespace rsx
 
 		last_flip_time = get_system_time() - 1000000;
 
-		named_thread vblank_thread("VBlank Thread", [this]()
+		thread_ctrl::spawn("VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
 
@@ -604,7 +604,7 @@ namespace rsx
 			}
 		});
 
-		named_thread decompiler_thread ("RSX Decompiler Thread", [this]
+		thread_ctrl::spawn("RSX Decompiler Thread", [this]
 		{
 			if (g_cfg.video.disable_asynchronous_shader_compiler)
 			{
@@ -1440,7 +1440,7 @@ namespace rsx
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
 					info.locations.push_back(index);
 
-					if (input_mask & (1u << index)) 
+					if (input_mask & (1u << index))
 					{
 						result.attribute_placement[index] = attribute_buffer_placement::transient;
 					}

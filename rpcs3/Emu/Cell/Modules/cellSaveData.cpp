@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
@@ -479,7 +479,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		fs::stat_t dir_info{};
 		if (!fs::stat(dir_path, dir_info))
 		{
-			// error
+			// funcStat is called even if the directory doesn't exist.
 		}
 
 		statGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
@@ -576,9 +576,22 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 		{
 			cellSaveData.warning("savedata_op(): funcStat returned result=%d.", result->result);
 
+			// Skip and error
+			if (result->result >= CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM || result->result < CELL_SAVEDATA_CBRESULT_ERR_INVALID)
+			{
+				// ****** sysutil savedata parameter error : 22 ******
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+
 			if (result->result < CELL_SAVEDATA_CBRESULT_OK_NEXT)
 			{
 				return CELL_SAVEDATA_ERROR_CBRESULT;
+			}
+
+			// Skip and return without error
+			if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST)
+			{
+				return CELL_OK;
 			}
 		}
 
@@ -655,11 +668,6 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 			cellSaveData.error("savedata_op(): unknown statSet->reCreateMode (0x%x)", statSet->reCreateMode);
 			return CELL_SAVEDATA_ERROR_PARAM;
 		}
-		}
-
-		if (result->result != CELL_SAVEDATA_CBRESULT_OK_NEXT)
-		{
-			funcFile = vm::null;
 		}
 	}
 
@@ -863,7 +871,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	if (!psf.empty() && has_modified)
 	{
 		// First, create temporary directory
-		if (fs::create_dir(new_path))
+		if (fs::create_path(new_path))
 		{
 			fs::remove_all(new_path, false);
 		}

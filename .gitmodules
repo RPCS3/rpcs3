@@ -1,6 +1,7 @@
 [submodule "rpcs3-ffmpeg"]
 	path = 3rdparty/ffmpeg
 	url = https://github.com/hrydgard/ppsspp-ffmpeg
+	ignore = dirty
 [submodule "asmjit"]
 	path = asmjit
 	url = https://github.com/kobalicek/asmjit
@@ -9,18 +10,23 @@
 	path = llvm
 	url = https://github.com/RPCS3/llvm
 	branch = release_60
+	ignore = dirty
 [submodule "GSL"]
 	path = 3rdparty/GSL
 	url = https://github.com/Microsoft/GSL.git
+	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
 	url = https://github.com/KhronosGroup/glslang.git
+	ignore = dirty
 [submodule "3rdparty/cereal"]
 	path = 3rdparty/cereal
 	url = https://github.com/USCiLab/cereal.git
+	ignore = dirty
 [submodule "3rdparty/zlib"]
 	path = 3rdparty/zlib
 	url = https://github.com/madler/zlib
+	ignore = dirty
 [submodule "3rdparty/hidapi"]
 	path = 3rdparty/hidapi
 	url = https://github.com/RPCS3/hidapi
@@ -29,12 +35,15 @@
 [submodule "3rdparty/pugixml"]
 	path = 3rdparty/pugixml
 	url = https://github.com/zeux/pugixml
+	ignore = dirty
 [submodule "3rdparty/xxHash"]
 	path = 3rdparty/xxHash
 	url = https://github.com/Cyan4973/xxHash
+	ignore = dirty
 [submodule "3rdparty/yaml-cpp"]
 	path = 3rdparty/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git
+	ignore = dirty
 [submodule "3rdparty/libpng"]
 	path = 3rdparty/libpng
 	url = https://github.com/glennrp/libpng.git

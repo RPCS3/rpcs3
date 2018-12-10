@@ -172,38 +172,35 @@ namespace rsx
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
-
-			const u32 index = method_registers.semaphore_offset_4097() >> 4;
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
-
-			if (index > 63 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
+			const u32 offset = method_registers.semaphore_offset_4097() & -16u;
+			if (offset > 63 * 4 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
 			{
 				//
 			}
 
-			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
-			sema.semaphore[index].val = arg;
-			sema.semaphore[index].pad = 0;
-			sema.semaphore[index].timestamp = rsx->timestamp();
+			auto& sema = vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097()));
+			sema.val = arg;
+			sema.pad = 0;
+			sema.timestamp = rsx->timestamp();
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Full pipeline barrier
-
-			const u32 index = method_registers.semaphore_offset_4097() >> 4;
-			if (index > 63 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
+			const u32 offset = method_registers.semaphore_offset_4097() & -16u;
+			if (offset > 63 * 4 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
 			{
 				//
 			}
 
 			rsx->sync();
 			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			auto& sema = vm::_ref<RsxReports>(rsx->label_addr);
-			sema.semaphore[index].val = val;
-			sema.semaphore[index].pad = 0;
-			sema.semaphore[index].timestamp = rsx->timestamp();
+			auto& sema = vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097()));
+			sema.val = val;
+			sema.pad = 0;
+			sema.timestamp = rsx->timestamp();
 		}
 
 		/**
@@ -811,35 +808,30 @@ namespace rsx
 
 			//Clipping
 			//Validate that clipping rect will fit onto both src and dst regions
-			u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
-			u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
+			const u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+
+			// Check both clip dimensions and dst dimensions
+			if (clip_w == 0 || clip_h == 0)
+			{
+				LOG_WARNING(RSX, "NV3089_IMAGE_IN: Operation NOPed out due to empty regions");
+				return;
+			}
+
+			if (in_w == 0 || in_h == 0)
+			{
+				// Input cant be an empty region
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed (in_w=%d, in_h=%d)" HERE, in_w, in_h);
+			}
 
 			u16 clip_x = method_registers.blit_engine_clip_x();
 			u16 clip_y = method_registers.blit_engine_clip_y();
-
-			if (clip_w == 0)
-			{
-				clip_x = 0;
-				clip_w = out_w;
-			}
-
-			if (clip_h == 0)
-			{
-				clip_y = 0;
-				clip_h = out_h;
-			}
 
 			//Fit onto dst
 			if (clip_x && (out_x + clip_x + clip_w) > out_w) clip_x = 0;
 			if (clip_y && (out_y + clip_y + clip_h) > out_h) clip_y = 0;
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
-
-			if (in_w == 0 || in_h == 0 || out_w == 0 || out_h == 0)
-			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed");
-				return;
-			}
 
 			if (in_origin != blit_engine::transfer_origin::corner)
 			{
@@ -849,7 +841,7 @@ namespace rsx
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown operation (%d)", (u8)operation);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)" HERE, (u8)operation);
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -864,19 +856,21 @@ namespace rsx
 			switch (method_registers.blit_engine_context_surface())
 			{
 			case blit_engine::context_surface::surface2d:
+			{
 				dst_dma = method_registers.blit_engine_output_location_nv3062();
 				dst_offset = method_registers.blit_engine_output_offset_nv3062();
 				dst_color_format = method_registers.blit_engine_nv3062_color_format();
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				break;
-
+			}
 			case blit_engine::context_surface::swizzle2d:
+			{
 				dst_dma = method_registers.blit_engine_nv309E_location();
 				dst_offset = method_registers.blit_engine_nv309E_offset();
 				dst_color_format = method_registers.blit_engine_output_format_nv309E();
 				break;
-
+			}
 			default:
 				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
 				return;
@@ -890,11 +884,6 @@ namespace rsx
 				out_pitch = out_bpp * out_w;
 			}
 
-			if (in_pitch == 0)
-			{
-				in_pitch = in_bpp * in_w;
-			}
-
 			const u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
 			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
@@ -905,29 +894,29 @@ namespace rsx
 			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
 
 			const auto read_address = get_address(src_offset, src_dma);
-			rsx->read_barrier(read_address, in_pitch * in_h);
+			rsx->read_barrier(read_address, in_pitch * (in_h - 1) + (in_w * in_bpp));
 
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)", (u8)dst_color_format);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)" HERE, (u8)dst_color_format);
 			}
 
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
 				src_color_format != rsx::blit_engine::transfer_source_format::a8r8g8b8)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", (u8)src_color_format);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, (u8)src_color_format);
 			}
 
-			f32 scale_x = 1048576.f / method_registers.blit_engine_ds_dx();
-			f32 scale_y = 1048576.f / method_registers.blit_engine_dt_dy();
+			f32 scale_x = method_registers.blit_engine_ds_dx();
+			f32 scale_y = method_registers.blit_engine_dt_dy();
 
-			u32 convert_w = (u32)(scale_x * in_w);
-			u32 convert_h = (u32)(scale_y * in_h);
+			u32 convert_w = (u32)(std::abs(scale_x) * in_w);
+			u32 convert_h = (u32)(std::abs(scale_y) * in_h);
 
 			if (convert_w == 0 || convert_h == 0)
 			{
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%d, dt_dy=%d)",
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
 					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
 				return;
 			}
@@ -971,7 +960,7 @@ namespace rsx
 				dst_info.max_tile_h = static_cast<u16>((dst_region.tile->size - dst_region.base) / out_pitch);
 			}
 
-			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
+			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER) && scale_x > 0 && scale_y > 0)
 			{
 				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
 				//TODO: Figure out more instances where we can use this without problems
@@ -1007,7 +996,38 @@ namespace rsx
 					return;
 			}
 
-			std::unique_ptr<u8[]> temp1, temp2, sw_temp;
+			std::unique_ptr<u8[]> temp1, temp2, temp3, sw_temp;
+
+			if (scale_y < 0 || scale_x < 0)
+			{
+				temp1.reset(new u8[in_pitch * (in_h - 1) + (in_bpp * in_w)]);
+
+				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch; 
+
+				for (u32 y = 0; y < in_h; ++y)
+				{
+					u8 *dst = temp1.get() + (in_pitch * y);
+					u8 *src = pixels_src + (y * stride_y);
+
+					if (scale_x < 0)
+					{
+						if (in_bpp == 2)
+						{
+							rsx::memcpy_r<u16>(dst, src, in_w);
+						}
+						else
+						{
+							rsx::memcpy_r<u32>(dst, src, in_w);
+						}
+					}
+					else
+					{
+						std::memcpy(dst, src, in_bpp * in_w);
+					}
+				}
+
+				pixels_src = temp1.get();
+			}
 
 			const AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
 			const AVPixelFormat out_format = (dst_color_format == rsx::blit_engine::transfer_destination_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
@@ -1018,7 +1038,7 @@ namespace rsx
 				clip_x > 0 || clip_y > 0 ||
 				convert_w != out_w || convert_h != out_h;
 
-			const bool need_convert = out_format != in_format || scale_x != 1.0 || scale_y != 1.0;
+			const bool need_convert = out_format != in_format || std::abs(scale_x) != 1.0 || std::abs(scale_y) != 1.0;
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
@@ -1028,10 +1048,12 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
+							temp2.reset(new u8[out_pitch * (std::max(convert_h, (u32)clip_h) - 1) + (out_bpp * std::max(convert_w, (u32)clip_w))]);
+
+							convert_scale_image(temp2.get(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(pixels_dst, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(pixels_dst, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
@@ -1070,23 +1092,27 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							convert_scale_image(temp1, out_format, convert_w, convert_h, out_pitch,
+							temp2.reset(new u8[out_pitch * (std::max(convert_h, (u32)clip_h) - 1) + (out_bpp * std::max(convert_w, (u32)clip_w))]);
+
+							convert_scale_image(temp2.get(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(temp2, temp1.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(temp3, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
-							clip_image(temp2, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							clip_image(temp3, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
 						}
 					}
 					else
 					{
-						convert_scale_image(temp2, out_format, out_w, out_h, out_pitch,
+						temp3.reset(new u8[out_pitch * (out_h - 1) + (out_bpp * out_w)]);
+
+						convert_scale_image(temp3.get(), out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 
-					pixels_src = temp2.get();
+					pixels_src = temp3.get();
 				}
 
 				// It looks like rsx may ignore the requested swizzle size and just always
@@ -1105,10 +1131,10 @@ namespace rsx
 				u32 sw_width = next_pow2(out_w);
 				u32 sw_height = next_pow2(out_h);
 
-				temp2.reset(new u8[out_bpp * sw_width * sw_height]);
+				temp3.reset(new u8[out_bpp * sw_width * sw_height]);
 
 				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = temp2.get();
+				u8* swizzled_pixels = temp3.get();
 
 				// Check and pad texture out if we are given non power of 2 output
 				if (sw_width != out_w || sw_height != out_h)
@@ -1170,16 +1196,6 @@ namespace rsx
 			LOG_TRACE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 
-			if (!in_pitch)
-			{
-				in_pitch = line_length;
-			}
-
-			if (!out_pitch)
-			{
-				out_pitch = line_length;
-			}
-
 			u32 src_offset = method_registers.nv0039_input_offset();
 			u32 src_dma = method_registers.nv0039_input_location();
 
@@ -1187,7 +1203,7 @@ namespace rsx
 			u32 dst_dma = method_registers.nv0039_output_location();
 
 			const auto read_address = get_address(src_offset, src_dma);
-			rsx->read_barrier(read_address, in_pitch * line_count);
+			rsx->read_barrier(read_address, in_pitch * (line_count - 1) + line_length);
 
 			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
 			const u8 *src = (u8*)vm::base(read_address);
@@ -1281,6 +1297,9 @@ namespace rsx
 		{
 			registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_X32_FLOAT | CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_NR) << 8) | (2 << 4 /* 2D */) | CELL_GCM_LOCATION_LOCAL + 1;
 		}
+
+		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_R;
+		registers[NV4097_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
 
 		if (get_current_renderer()->isHLE)
 		{

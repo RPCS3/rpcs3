@@ -271,7 +271,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 
 	case 0x102: // Display flip
 	{
-		u32 flip_idx = -1u;
+		u32 flip_idx = ~0u;
 
 		// high bit signifys grabbing a queued buffer
 		// otherwise it contains a display buffer offset
@@ -301,7 +301,7 @@ s32 sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u6
 					break;
 				}
 			}
-			if (flip_idx == -1u)
+			if (flip_idx == ~0u)
 			{
 				LOG_ERROR(RSX, "Display Flip: Couldn't find display buffer offset, flipping 0. Offset: 0x%x", a4);
 				flip_idx = 0;

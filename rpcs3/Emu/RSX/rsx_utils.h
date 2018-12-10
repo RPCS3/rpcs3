@@ -161,6 +161,17 @@ namespace rsx
 		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
 	}
 
+	// Copy memory in inverse direction from source
+	// Used to scale negatively x axis while transfering image data
+	template <typename Ts = u8, typename Td = Ts>
+	static void memcpy_r(void* dst, void* src, std::size_t size)
+	{
+		for (u32 i = 0; i < size; i++)
+		{
+			*((Td*)dst + i) = *((Ts*)src - i);
+		}
+	}
+
 	// Returns interleaved bits of X|Y|Z used as Z-order curve indices
 	static inline u32 calculate_z_index(u32 x, u32 y, u32 z)
 	{
@@ -294,9 +305,6 @@ namespace rsx
 	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
 
 	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
-		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
-
-	void convert_scale_image(std::unique_ptr<u8[]>& dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
 
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
@@ -676,9 +684,9 @@ namespace rsx
 		u32 _size = 0;
 		Ty* _data = nullptr;
 
-		inline u32 offset(const_iterator pos)
+		inline u64 offset(const_iterator pos)
 		{
-			return (_data) ? (pos - _data) : 0;
+			return (_data) ? u64(pos - _data) : 0ull;
 		}
 
 	public:
@@ -727,17 +735,16 @@ namespace rsx
 			if (_capacity > size)
 				return;
 
-			auto old_data = _data;
-			auto old_size = _size;
-
-			_data = (Ty*)malloc(sizeof(Ty) * size);
-			_capacity = size;
-
-			if (old_data)
+			if (_data)
 			{
-				memcpy(_data, old_data, sizeof(Ty) * old_size);
-				free(old_data);
+				_data = (Ty*)realloc(_data, sizeof(Ty) * size);
 			}
+			else
+			{
+				_data = (Ty*)malloc(sizeof(Ty) * size);
+			}
+
+			_capacity = size;
 		}
 
 		void push_back(const Ty& val)
@@ -779,7 +786,7 @@ namespace rsx
 
 			verify(HERE), _loc < _size;
 
-			const u32 remaining = (_size - _loc);
+			const auto remaining = (_size - _loc);
 			memmove(pos + 1, pos, remaining * sizeof(Ty));
 
 			*pos = val;

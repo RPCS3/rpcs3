@@ -63,7 +63,8 @@ namespace rsx
 			{
 				unknown,
 				load_low,
-				load_unoptimizable
+				load_unoptimizable,
+				application_not_compatible
 			};
 
 			std::array<u8, 0x10000 / 4> m_register_properties;
@@ -74,6 +75,8 @@ namespace rsx
 			bool enabled = false;
 			u32  num_collapsed = 0;
 			optimization_hint fifo_hint = unknown;
+
+			void reset(bool _enabled);
 
 		public:
 			flattening_helper();

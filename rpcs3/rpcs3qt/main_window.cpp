@@ -189,39 +189,35 @@ void main_window::SetAppIconFromPath(const std::string& path)
 {
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
 	QString qpath = qstr(path);
-	std::string icon_list[] = { "/ICON0.PNG", "/PS3_GAME/ICON0.PNG" };
 	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
 	for (std::string pth : path_list)
 	{
 		if (!fs::is_dir(pth)) continue;
 
-		for (std::string ico : icon_list)
+		const std::string sfo_dir = Emu.GetSfoDirFromGamePath(pth, Emu.GetUsr());
+		const std::string ico     = sfo_dir + "/ICON0.PNG";
+		if (fs::is_file(ico))
 		{
-			ico = pth + ico;
-			if (fs::is_file(ico))
-			{
-				// load the image from path. It will most likely be a rectangle
-				QImage source = QImage(qstr(ico));
-				int edgeMax = std::max(source.width(), source.height());
+			// load the image from path. It will most likely be a rectangle
+			QImage source = QImage(qstr(ico));
+			int edgeMax   = std::max(source.width(), source.height());
 
-				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
-				QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
-				QImage dest = QImage(edgeMax, edgeMax, format);
-				dest.fill(QColor("transparent"));
+			// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
+			QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
+			QImage dest           = QImage(edgeMax, edgeMax, format);
+			dest.fill(QColor("transparent"));
 
-				// get the location to draw the source image centered within the dest image.
-				QPoint destPos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2)
-				                                                  : QPoint((source.height() - source.width()) / 2, 0);
+			// get the location to draw the source image centered within the dest image.
+			QPoint destPos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2) : QPoint((source.height() - source.width()) / 2, 0);
 
-				// Paint the source into/over the dest
-				QPainter painter(&dest);
-				painter.drawImage(destPos, source);
-				painter.end();
+			// Paint the source into/over the dest
+			QPainter painter(&dest);
+			painter.drawImage(destPos, source);
+			painter.end();
 
-				// set Icon
-				m_appIcon = QIcon(QPixmap::fromImage(dest));
-				return;
-			}
+			// set Icon
+			m_appIcon = QIcon(QPixmap::fromImage(dest));
+			return;
 		}
 	}
 	// if nothing was found reset the icon to default
@@ -1290,8 +1286,9 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Users, &QAction::triggered, [=]
 	{
-		user_manager_dialog* user_manager = new user_manager_dialog(guiSettings, this);
-		user_manager->show();
+		user_manager_dialog user_manager(guiSettings, this);
+		user_manager.exec();
+		m_gameListFrame->Refresh(true); // New user may have different games unlocked.
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, [=]
@@ -1832,6 +1829,9 @@ void main_window::dropEvent(QDropEvent* event)
 				LOG_SUCCESS(GENERAL, "Successfully copied rap file by drop: %s", rapname);
 			}
 		}
+
+		// Refresh game list since we probably unlocked some games now.
+		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 		for (const auto& path : dropPaths)

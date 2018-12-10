@@ -23,14 +23,6 @@ namespace rsx
 		sws_scale(sws.get(), &src, &src_pitch, 0, src_slice_h, &dst, &dst_pitch);
 	}
 
-	void convert_scale_image(std::unique_ptr<u8[]>& dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
-		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear)
-	{
-		dst.reset(new u8[dst_pitch * dst_height]);
-		convert_scale_image(dst.get(), dst_format, dst_width, dst_height, dst_pitch,
-			src, src_format, src_width, src_height, src_pitch, src_slice_h, bilinear);
-	}
-
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch)
 	{
 		u8 *pixels_src = (u8*)src + clip_y * src_pitch + clip_x * bpp;

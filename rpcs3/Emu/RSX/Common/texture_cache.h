@@ -1990,12 +1990,6 @@ namespace rsx
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
 
-			if (!src_w || !src_h || !dst_w || !dst_h)
-			{
-				LOG_ERROR(RSX, "Blit engine request failed because of empty region");
-				return true;
-			}
-
 			//Check if src/dst are parts of render targets
 			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, false, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
