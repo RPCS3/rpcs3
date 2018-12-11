@@ -1,0 +1,688 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>custom_pad_settings_dialog</class>
+ <widget class="QDialog" name="custom_pad_settings_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1044</width>
+    <height>651</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Configure Pads</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>:/rpcs3.ico</normaloff>:/rpcs3.ico</iconset>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <layout class="QHBoxLayout" name="top_layout_j0">
+       <item>
+        <widget class="QGroupBox" name="groupBox_j0">
+         <property name="title">
+          <string>Pad 1</string>
+         </property>
+         <layout class="QHBoxLayout" name="topLayout_j0">
+          <item>
+           <widget class="QGroupBox" name="gb_handlers_j0">
+            <property name="title">
+             <string>Handlers</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j0">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseHandler_j0"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_devices_j0">
+            <property name="title">
+             <string>Devices</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j0">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseDevice_j0"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_profiles_j0">
+            <property name="title">
+             <string>Profiles</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j0">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseProfile_j0"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="top_layout_j1">
+       <item>
+        <widget class="QGroupBox" name="groupBox_j1">
+         <property name="title">
+          <string>Pad 2</string>
+         </property>
+         <layout class="QHBoxLayout" name="topLayout_j1">
+          <item>
+           <widget class="QGroupBox" name="gb_handlers_j1">
+            <property name="title">
+             <string>Handlers</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j1">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseHandler_j1"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_devices_j1">
+            <property name="title">
+             <string>Devices</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j1">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseDevice_j1"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_profiles_j1">
+            <property name="title">
+             <string>Profiles</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j1">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseProfile_j1"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="top_layout_j2">
+       <item>
+        <widget class="QGroupBox" name="groupBox_j2">
+         <property name="title">
+          <string>Pad 3</string>
+         </property>
+         <layout class="QHBoxLayout" name="topLayout_j2">
+          <item>
+           <widget class="QGroupBox" name="gb_handlers_j2">
+            <property name="title">
+             <string>Handlers</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j2">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseHandler_j2"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_devices_j2">
+            <property name="title">
+             <string>Devices</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j2">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseDevice_j2"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_profiles_j2">
+            <property name="title">
+             <string>Profiles</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j2">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseProfile_j2"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="top_layout_j3">
+       <item>
+        <widget class="QGroupBox" name="groupBox_j3">
+         <property name="title">
+          <string>Pad 4</string>
+         </property>
+         <layout class="QHBoxLayout" name="topLayout_j3">
+          <item>
+           <widget class="QGroupBox" name="gb_handlers_j3">
+            <property name="title">
+             <string>Handlers</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j3">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseHandler_j3"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_devices_j3">
+            <property name="title">
+             <string>Devices</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j3">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseDevice_j3"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_profiles_j3">
+            <property name="title">
+             <string>Profiles</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j3">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseProfile_j3"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="top_layout_j4">
+       <item>
+        <widget class="QGroupBox" name="groupBox_j4">
+         <property name="title">
+          <string>Pad 5</string>
+         </property>
+         <layout class="QHBoxLayout" name="topLayout_j4">
+          <item>
+           <widget class="QGroupBox" name="gb_handlers_j4">
+            <property name="title">
+             <string>Handlers</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j4">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseHandler_j4"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_devices_j4">
+            <property name="title">
+             <string>Devices</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j4">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseDevice_j4"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_profiles_j4">
+            <property name="title">
+             <string>Profiles</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j4">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseProfile_j4"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="top_layout_j5">
+       <item>
+        <widget class="QGroupBox" name="groupBox_j5">
+         <property name="title">
+          <string>Pad 6</string>
+         </property>
+         <layout class="QHBoxLayout" name="topLayout_j5">
+          <item>
+           <widget class="QGroupBox" name="gb_handlers_j5">
+            <property name="title">
+             <string>Handlers</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j5">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseHandler_j5"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_devices_j5">
+            <property name="title">
+             <string>Devices</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j5">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseDevice_j5"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_profiles_j5">
+            <property name="title">
+             <string>Profiles</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j5">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseProfile_j5"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="top_layout_j6">
+       <item>
+        <widget class="QGroupBox" name="groupBox_j6">
+         <property name="title">
+          <string>Pad 7</string>
+         </property>
+         <layout class="QHBoxLayout" name="topLayout_j6">
+          <item>
+           <widget class="QGroupBox" name="gb_handlers_j6">
+            <property name="title">
+             <string>Handlers</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j6">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseHandler_j6"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_devices_j6">
+            <property name="title">
+             <string>Devices</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j6">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseDevice_j6"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_profiles_j6">
+            <property name="title">
+             <string>Profiles</string>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_j6">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QComboBox" name="chooseProfile_j6"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="bottomLayout">
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_left">
+       <property name="spacing">
+        <number>5</number>
+       </property>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout">
+         <item>
+          <widget class="QPushButton" name="b_refresh">
+           <property name="text">
+            <string>Refresh handlers</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="b_ok">
+           <property name="text">
+            <string>Save</string>
+           </property>
+           <property name="autoDefault">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="b_cancel">
+           <property name="text">
+            <string>Close</string>
+           </property>
+           <property name="default">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <spacer name="horizontalSpacer">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

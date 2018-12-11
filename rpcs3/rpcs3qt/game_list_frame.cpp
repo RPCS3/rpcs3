@@ -2,6 +2,7 @@
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "pad_settings_dialog.h"
+#include "custom_pad_settings_dialog.h"
 #include "table_item_delegate.h"
 #include "custom_table_widget_item.h"
 
@@ -632,7 +633,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	f.setBold(true);
 	boot->setFont(f);
 	QMenu* configurations_menu = myMenu.addMenu(tr("&Configurations"));
-	QAction* configure = configurations_menu->addAction(tr("&Configure"));
+	QAction* configure = configurations_menu->addAction(tr("&Configure settings"));
 	QAction* pad_configure = configurations_menu->addAction(tr("&Configure pads"));
 	QAction* createPPUCache = myMenu.addAction(tr("&Create PPU Cache"));
 	myMenu.addSeparator();
@@ -677,7 +678,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(pad_configure, &QAction::triggered, [=]
 	{
-		pad_settings_dialog dlg(this, &currGame);
+		custom_pad_settings_dialog dlg(this, &currGame);
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
 			ShowCustomConfigIcon(item, true, custom_config_type::pad);

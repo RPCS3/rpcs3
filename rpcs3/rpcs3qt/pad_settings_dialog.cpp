@@ -769,7 +769,7 @@ void pad_settings_dialog::ChangeInputType()
 	if (!g_cfg_input.player[player]->handler.from_string(handler))
 	{
 		// Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert input string:%s", handler);
+		LOG_ERROR(GENERAL, "Failed to convert input string: %s", handler);
 		return;
 	}
 
