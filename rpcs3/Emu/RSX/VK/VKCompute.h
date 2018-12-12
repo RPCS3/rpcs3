@@ -1,5 +1,7 @@
-#pragma once
+﻿#pragma once
 #include "VKHelpers.h"
+
+#define VK_MAX_COMPUTE_TASKS 1024   // Max number of jobs per frame
 
 namespace vk
 {
@@ -24,7 +26,7 @@ namespace vk
 		{
 			VkDescriptorPoolSize descriptor_pool_sizes[1] =
 			{
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 120 },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_MAX_COMPUTE_TASKS },
 			};
 
 			//Reserve descriptor pools
@@ -134,7 +136,7 @@ namespace vk
 				m_program = std::make_unique<vk::glsl::program>(*get_current_renderer(), pipeline, inputs, inputs);
 			}
 
-			verify(HERE), m_used_descriptors < 120;
+			verify(HERE), m_used_descriptors < VK_MAX_COMPUTE_TASKS;
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
