@@ -2831,14 +2831,10 @@ void VKGSRender::open_command_buffer()
 
 void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 {
-	if (m_framebuffer_state_contested && (m_framebuffer_contest_type != context))
+	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)
 	{
-		// Clear commands affect contested memory
-		m_rtts_dirty = true;
-	}
-
-	if (m_draw_fbo && !m_rtts_dirty)
-	{
+		// Fast path
+		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
 		set_scissor();
 		return;
 	}
@@ -2939,7 +2935,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 			surface->write_aa_mode = layout.aa_mode;
 			m_texture_cache.notify_surface_changed(layout.color_addresses[index]);
-			m_texture_cache.tag_framebuffer(layout.color_addresses[index]);
 			m_draw_buffers.push_back(index);
 		}
 	}
@@ -2955,7 +2950,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		ds->write_aa_mode = layout.aa_mode;
 		m_texture_cache.notify_surface_changed(layout.zeta_address);
-		m_texture_cache.tag_framebuffer(layout.zeta_address);
 	}
 
 	if (g_cfg.video.write_color_buffers)

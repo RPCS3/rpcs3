@@ -173,14 +173,10 @@ namespace
 
 void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
-	if (m_framebuffer_state_contested && (m_framebuffer_contest_type != context))
+	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)
 	{
-		// Clear commands affect contested memory
-		m_rtts_dirty = true;
-	}
-
-	if (m_draw_fbo && !m_rtts_dirty)
-	{
+		// Fast path
+		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
 		set_scissor();
 		return;
 	}
@@ -257,7 +253,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
 			rtt->write_aa_mode = layout.aa_mode;
 			m_gl_texture_cache.notify_surface_changed(m_surface_info[i].address);
-			m_gl_texture_cache.tag_framebuffer(m_surface_info[i].address);
 		}
 		else
 		{
@@ -286,7 +281,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 		ds->write_aa_mode = layout.aa_mode;
 		m_gl_texture_cache.notify_surface_changed(layout.zeta_address);
-		m_gl_texture_cache.tag_framebuffer(layout.zeta_address);
 	}
 	else
 	{

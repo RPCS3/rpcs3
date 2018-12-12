@@ -79,7 +79,7 @@ namespace rsx
 		using download_buffer_object = void*;
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
-			u32 /*address*/,
+			u32 address,
 			surface_color_format format,
 			size_t width, size_t height,
 			vk::render_target* old_surface,
@@ -106,6 +106,7 @@ namespace rsx
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
 			rtt->surface_width = (u16)width;
 			rtt->surface_height = (u16)height;
+			rtt->queue_tag(address);
 			rtt->dirty = true;
 
 			if (old_surface != nullptr && old_surface->info.format == requested_format)
@@ -115,7 +116,7 @@ namespace rsx
 		}
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
-			u32 /* address */,
+			u32 address,
 			surface_depth_format format,
 			size_t width, size_t height,
 			vk::render_target* old_surface,
@@ -151,6 +152,7 @@ namespace rsx
 			ds->attachment_aspect_flag = range.aspectMask;
 			ds->surface_width = (u16)width;
 			ds->surface_height = (u16)height;
+			ds->queue_tag(address);
 			ds->dirty = true;
 
 			if (old_surface != nullptr && old_surface->info.format == requested_format)
@@ -202,11 +204,12 @@ namespace rsx
 		}
 
 		static
-		void invalidate_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *surface, vk::render_target *old_surface)
+		void invalidate_surface_contents(u32 address, vk::command_buffer* /*pcmd*/, vk::render_target *surface, vk::render_target *old_surface)
 		{
 			surface->old_contents = old_surface;
-			surface->dirty = true;
 			surface->reset_aa_mode();
+			surface->queue_tag(address);
+			surface->dirty = true;
 		}
 
 		static
