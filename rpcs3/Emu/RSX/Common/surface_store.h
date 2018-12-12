@@ -132,8 +132,8 @@ namespace rsx
 			if (needs_tagging && dirty)
 			{
 				// TODO
-				LOG_ERROR(RSX, "Resource used before memory initialization");
-				return false;
+				// Should RCB or mem-sync (inherit previous mem) to init memory
+				LOG_TODO(RSX, "Resource used before memory initialization");
 			}
 
 			auto ptr = vm::get_super_ptr<atomic_t<u32>>(tag_address);
