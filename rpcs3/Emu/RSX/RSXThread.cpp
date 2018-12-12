@@ -1124,7 +1124,7 @@ namespace rsx
 
 		framebuffer_status_valid = false;
 		m_framebuffer_state_contested = false;
-		m_framebuffer_contest_type = context;
+		m_current_framebuffer_context = context;
 
 		if (layout.width == 0 || layout.height == 0)
 		{
@@ -1159,106 +1159,146 @@ namespace rsx
 		// Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
 		const auto required_zeta_pitch = std::max<u32>((u32)(layout.depth_format == rsx::surface_depth_format::z16 ? layout.width * 2 : layout.width * 4) * aa_factor_u, 64u);
 		const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(layout.color_format, layout.width) * aa_factor_u, 64u);
-		const bool color_write_enabled = (context & rsx::framebuffer_creation_context::context_clear_color) ? true : rsx::method_registers.color_write_enabled();
-		const bool depth_write_enabled = (context & rsx::framebuffer_creation_context::context_clear_depth) ? true : rsx::method_registers.depth_write_enabled();
-		const auto lg2w = rsx::method_registers.surface_log2_width();
-		const auto lg2h = rsx::method_registers.surface_log2_height();
-		const auto clipw_log2 = (u32)floor(log2(layout.width));
-		const auto cliph_log2 = (u32)floor(log2(layout.height));
-
+		const bool color_write_enabled = rsx::method_registers.color_write_enabled();
+		const bool depth_write_enabled = rsx::method_registers.depth_write_enabled();
 		const bool stencil_test_enabled = layout.depth_format == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 		const bool depth_test_enabled = rsx::method_registers.depth_test_enabled();
-		const bool ignore_depth = (context == rsx::framebuffer_creation_context::context_clear_color);
-		const bool ignore_color = (context == rsx::framebuffer_creation_context::context_clear_depth);
 
-		if (layout.zeta_address)
+		bool depth_buffer_unused = false, color_buffer_unused = false;
+
+		switch (context)
 		{
-			if (!depth_test_enabled &&
-				!stencil_test_enabled &&
-				layout.target != rsx::surface_target::none)
+		case rsx::framebuffer_creation_context::context_clear_all:
+			break;
+		case rsx::framebuffer_creation_context::context_clear_depth:
+			color_buffer_unused = true;
+			break;
+		case rsx::framebuffer_creation_context::context_clear_color:
+			depth_buffer_unused = true;
+			break;
+		case rsx::framebuffer_creation_context::context_draw:
+			// NOTE: As with all other hw, depth/stencil writes involve the corresponding depth/stencil test, i.e No test = No write
+			color_buffer_unused = !color_write_enabled || layout.target == rsx::surface_target::none;
+			depth_buffer_unused = !depth_test_enabled && !stencil_test_enabled;
+			m_framebuffer_state_contested = color_buffer_unused || depth_buffer_unused;
+			break;
+		default:
+			fmt::throw_exception("Unknown framebuffer context 0x%x" HERE, (u32)context);
+		}
+
+		auto check_swizzled_render = [&]()
+		{
+			// Packed rasterization with optimal memory layout
+			// Pitch has to be packed for all active render targets, i.e 64
+			// Formats also seemingly need matching depth and color pitch if both are active
+
+			if (color_buffer_unused)
 			{
-				// Disable depth buffer if depth testing is not enabled, unless a clear command is targeting the depth buffer
-				const bool is_depth_clear = !!(context & rsx::framebuffer_creation_context::context_clear_depth);
-				if (!is_depth_clear)
-				{
-					layout.zeta_address = 0;
-					m_framebuffer_state_contested = true;
-				}
+				// Check only depth
+				return (layout.zeta_pitch == 64);
 			}
-
-			if (layout.zeta_address && layout.zeta_pitch < required_zeta_pitch)
+			else if (depth_buffer_unused)
 			{
-				if (lg2w < clipw_log2 || lg2h < cliph_log2)
+				// Check only color
+				for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
 				{
-					// Cannot fit
-					layout.zeta_address = 0;
-
-					if (lg2w > 0 || lg2h > 0)
+					if (layout.color_pitch[index] != 64)
 					{
-						// Something was actually declared for the swizzle context dimensions
-						LOG_WARNING(RSX, "Invalid swizzled context depth surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, layout.width, layout.height);
+						return false;
 					}
 				}
-				else
-				{
-					LOG_TRACE(RSX, "Swizzled context depth surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, layout.width, layout.height);
-				}
+
+				return true;
 			}
 
-			if (layout.zeta_address)
+			if (required_color_pitch != required_zeta_pitch)
 			{
-				// Still exists? Unlikely to get discarded
-				layout.actual_zeta_pitch = std::max(layout.zeta_pitch, required_zeta_pitch);
+				// Both depth and color exist, but pixel size differs
+				return false;
 			}
+			else
+			{
+				// Qualifies, but only if all the pitch values are disabled (64)
+				// Both depth and color are assumed to exist in this case, unless proven otherwise
+				if (layout.zeta_pitch != 64)
+				{
+					return false;
+				}
+
+				for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
+				{
+					if (layout.color_pitch[index] != 64)
+					{
+						return false;
+					}
+				}
+
+				return true;
+			}
+		};
+
+		// Swizzled render does tight packing of bytes
+		const bool packed_render = check_swizzled_render();
+
+		if (depth_buffer_unused)
+		{
+			layout.zeta_address = 0;
+		}
+		else if (layout.zeta_pitch < required_zeta_pitch && !packed_render)
+		{
+			layout.zeta_address = 0;
+		}
+		else
+		{
+			// Still exists? Unlikely to get discarded
+			layout.actual_zeta_pitch = std::max(layout.zeta_pitch, required_zeta_pitch);
 		}
 
 		for (const auto &index : rsx::utility::get_rtt_indexes(layout.target))
 		{
-			if (layout.color_pitch[index] < required_color_pitch)
+			if (color_buffer_unused)
 			{
-				if (lg2w < clipw_log2 || lg2h < cliph_log2)
-				{
-					layout.color_addresses[index] = 0;
-
-					if (lg2w > 0 || lg2h > 0)
-					{
-						// Something was actually declared for the swizzle context dimensions
-						LOG_WARNING(RSX, "Invalid swizzled context color surface dims, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, layout.width, layout.height);
-					}
-				}
-				else
-				{
-					LOG_TRACE(RSX, "Swizzled context color surface, LG2W=%d, LG2H=%d, clip_w=%d, clip_h=%d", lg2w, lg2h, layout.width, layout.height);
-				}
+				layout.color_addresses[index] = 0;
+				continue;
 			}
 
-			if (layout.zeta_address && (layout.color_addresses[index] == layout.zeta_address))
+			if (layout.color_pitch[index] < required_color_pitch && !packed_render)
 			{
-				LOG_TRACE(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, color_index=%d, zeta_pitch = %d, color_pitch=%d, context=%d",
+				// Unlike the depth buffer, when given a color target we know it is intended to be rendered to
+				LOG_ERROR(RSX, "Framebuffer setup error: Color target failed pitch check, Pitch=[%d, %d, %d, %d] + %d, target=%d, context=%d",
+					layout.color_pitch[0], layout.color_pitch[1], layout.color_pitch[2], layout.color_pitch[3],
+					layout.zeta_pitch, (u32)layout.target, (u32)context);
+
+				// Do not remove this buffer for now as it implies something went horribly wrong anyway
+				break;
+			}
+
+			if (layout.color_addresses[index] == layout.zeta_address)
+			{
+				LOG_WARNING(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, color_index=%d, zeta_pitch = %d, color_pitch=%d, context=%d",
 					layout.zeta_address, index, layout.zeta_pitch, layout.color_pitch[index], (u32)context);
+
+				m_framebuffer_state_contested = true;
 
 				// TODO: Research clearing both depth AND color
 				// TODO: If context is creation_draw, deal with possibility of a lost buffer clear
-				if (!ignore_depth &&
-					(ignore_color || depth_test_enabled || stencil_test_enabled ||
-					(!color_write_enabled && depth_write_enabled)))
+				if (depth_test_enabled || stencil_test_enabled || (!color_write_enabled && depth_write_enabled))
 				{
 					// Use address for depth data
 					layout.color_addresses[index] = 0;
+					continue;
 				}
 				else
 				{
 					// Use address for color data
 					layout.zeta_address = 0;
-					m_framebuffer_state_contested = true;
 				}
 			}
 
-			if (layout.color_addresses[index])
-			{
-				layout.actual_color_pitch[index] = std::max(layout.color_pitch[index], required_color_pitch);
-				framebuffer_status_valid = true;
-			}
+			verify(HERE), layout.color_addresses[index];
+
+			layout.actual_color_pitch[index] = std::max(layout.color_pitch[index], required_color_pitch);
+			framebuffer_status_valid = true;
 		}
 
 		if (!framebuffer_status_valid && !layout.zeta_address)

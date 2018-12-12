@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/GSL.h"
+#include "Emu/Memory/vm.h"
 #include "../GCM.h"
 #include <list>
 
@@ -91,8 +92,10 @@ namespace rsx
 	struct render_target_descriptor
 	{
 		u64 last_use_tag = 0; // tag indicating when this block was last confirmed to have been written to
+		u32 tag_address = 0;
 
 		bool dirty = false;
+		bool needs_tagging = false;
 		image_storage_type old_contents = nullptr;
 		rsx::surface_antialiasing read_aa_mode = rsx::surface_antialiasing::center_1_sample;
 
@@ -116,12 +119,44 @@ namespace rsx
 			write_aa_mode = read_aa_mode = rsx::surface_antialiasing::center_1_sample;
 		}
 
+		void tag()
+		{
+			auto ptr = vm::get_super_ptr<atomic_t<u32>>(tag_address);
+			*ptr = tag_address;
+
+			needs_tagging = false;
+		}
+
+		bool test()
+		{
+			if (needs_tagging && dirty)
+			{
+				// TODO
+				LOG_ERROR(RSX, "Resource used before memory initialization");
+				return false;
+			}
+
+			auto ptr = vm::get_super_ptr<atomic_t<u32>>(tag_address);
+			return (*ptr == tag_address);
+		}
+
+		void queue_tag(u32 address)
+		{
+			tag_address = address;
+			needs_tagging = true;
+		}
+
 		void on_write(u64 write_tag = 0)
 		{
 			if (write_tag)
 			{
 				// Update use tag if requested
 				last_use_tag = write_tag;
+			}
+
+			if (needs_tagging)
+			{
+				tag();
 			}
 
 			read_aa_mode = write_aa_mode;
@@ -353,7 +388,7 @@ namespace rsx
 						invalidated_resources.erase(It);
 
 					new_surface = Traits::get(new_surface_storage);
-					Traits::invalidate_surface_contents(command_list, new_surface, contents_to_copy);
+					Traits::invalidate_surface_contents(address, command_list, new_surface, contents_to_copy);
 					Traits::prepare_rtt_for_drawing(command_list, new_surface);
 					break;
 				}
@@ -438,7 +473,7 @@ namespace rsx
 
 					new_surface = Traits::get(new_surface_storage);
 					Traits::prepare_ds_for_drawing(command_list, new_surface);
-					Traits::invalidate_surface_contents(command_list, new_surface, contents_to_copy);
+					Traits::invalidate_surface_contents(address, command_list, new_surface, contents_to_copy);
 					break;
 				}
 			}
@@ -1080,6 +1115,7 @@ namespace rsx
 
 					for (auto &entry : e.overlapping_set)
 					{
+						// GPU-side contents changed
 						entry._ref->dirty = true;
 					}
 				}

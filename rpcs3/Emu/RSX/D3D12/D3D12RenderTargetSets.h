@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <utility>
 #include <d3d12.h>
@@ -130,6 +130,7 @@ struct render_target_traits
 
 	static
 	void invalidate_surface_contents(
+		u32,
 		ID3D12GraphicsCommandList*,
 		ID3D12Resource*, ID3D12Resource*)
 	{}

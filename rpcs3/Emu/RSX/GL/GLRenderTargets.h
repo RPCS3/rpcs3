@@ -147,7 +147,7 @@ struct gl_render_target_traits
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
-		u32 /*address*/,
+		u32 address,
 		rsx::surface_color_format surface_color_format,
 		size_t width,
 		size_t height,
@@ -165,6 +165,7 @@ struct gl_render_target_traits
 		result->set_native_component_layout(native_layout);
 		result->old_contents = old_surface;
 
+		result->queue_tag(address);
 		result->set_cleared(false);
 		result->update_surface();
 		return result;
@@ -172,7 +173,7 @@ struct gl_render_target_traits
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
-			u32 /*address*/,
+			u32 address,
 		rsx::surface_depth_format surface_depth_format,
 			size_t width,
 			size_t height,
@@ -192,6 +193,7 @@ struct gl_render_target_traits
 		result->set_native_component_layout(native_layout);
 		result->old_contents = old_surface;
 
+		result->queue_tag(address);
 		result->set_cleared(false);
 		result->update_surface();
 		return result;
@@ -214,11 +216,12 @@ struct gl_render_target_traits
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
 	static
-	void invalidate_surface_contents(void *, gl::render_target *surface, gl::render_target* old_surface)
+	void invalidate_surface_contents(u32 address, void *, gl::render_target *surface, gl::render_target* old_surface)
 	{
-		surface->set_cleared(false);
 		surface->old_contents = old_surface;
 		surface->reset_aa_mode();
+		surface->queue_tag(address);
+		surface->set_cleared(false);
 	}
 
 	static
