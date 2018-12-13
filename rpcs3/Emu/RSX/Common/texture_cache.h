@@ -288,7 +288,7 @@ namespace rsx
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, texture_create_flags flags) = 0;
-		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
+		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
 			const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
@@ -1688,18 +1688,18 @@ namespace rsx
 		sampled_image_descriptor upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
 		{
 			const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
-			const u32 tex_size = (u32)get_placed_texture_storage_size(tex, 256, 512);
+			const u32 tex_size = (u32)get_texture_size(tex);
 			const address_range tex_range = address_range::start_length(texaddr, tex_size);
 			const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			const bool is_compressed_format = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT45);
 
 			const auto extended_dimension = tex.get_extended_texture_dimension();
-			u16 depth;
-			u16 tex_height = (u16)tex.height();
 			const u16 tex_width = tex.width();
-			u16 tex_pitch = is_compressed_format? (u16)(get_texture_size(tex) / tex_height) : tex.pitch(); //NOTE: Compressed textures dont have a real pitch (tex_size = (w*h)/6)
-			if (tex_pitch == 0) tex_pitch = tex_width * get_format_block_size_in_bytes(format);
+			u16 tex_height = tex.height();
+			u16 tex_pitch = (u16)tex.pitch();
+			if (tex_pitch == 0) tex_pitch = get_format_packed_pitch(format, tex_width);
 
+			u16 depth;
 			switch (extended_dimension)
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
@@ -1888,7 +1888,7 @@ namespace rsx
 				invalidate_range_impl_base(tex_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
 				//NOTE: SRGB correction is to be handled in the fragment shader; upload as linear RGB
-				return{ upload_image_from_cpu(cmd, texaddr, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
+				return{ upload_image_from_cpu(cmd, tex_range, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
 					texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled)->get_view(tex.remap(), tex.decoded_remap()),
 					texture_upload_context::shader_read, is_depth_format, scale_x, scale_y, extended_dimension };
 			}
@@ -2156,7 +2156,8 @@ namespace rsx
 				{
 					lock.upgrade();
 
-					invalidate_range_impl_base(address_range::start_length(src_address, src.pitch * src.slice_h), invalidation_cause::read, std::forward<Args>(extras)...);
+					const auto rsx_range = address_range::start_length(src_address, src.pitch * src.slice_h);
+					invalidate_range_impl_base(rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
 					const u16 pitch_in_block = src_is_argb8 ? src.pitch >> 2 : src.pitch >> 1;
 					std::vector<rsx_subresource_layout> subresource_layout;
@@ -2169,7 +2170,7 @@ namespace rsx
 					subresource_layout.push_back(subres);
 
 					const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-					vram_texture = upload_image_from_cpu(cmd, src_address, src.width, src.slice_h, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
+					vram_texture = upload_image_from_cpu(cmd, rsx_range, src.width, src.slice_h, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
 					typeless_info.src_context = texture_upload_context::blit_engine_src;
@@ -2296,7 +2297,9 @@ namespace rsx
 				dst_dimensions.height = section_length / dst.pitch;
 
 				lock.upgrade();
-				invalidate_range_impl_base(address_range::start_length(dst.rsx_address, section_length), invalidation_cause::write, std::forward<Args>(extras)...);
+
+				const auto rsx_range = address_range::start_length(dst.rsx_address, section_length);
+				invalidate_range_impl_base(rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
 
 				const u16 pitch_in_block = dst_is_argb8 ? dst.pitch >> 2 : dst.pitch >> 1;
 				std::vector<rsx_subresource_layout> subresource_layout;
@@ -2308,7 +2311,7 @@ namespace rsx
 				subres.data = { (const gsl::byte*)dst.pixels, dst.pitch * dst_dimensions.height };
 				subresource_layout.push_back(subres);
 
-				cached_dest = upload_image_from_cpu(cmd, dst.rsx_address, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
+				cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 					gcm_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
 					rsx::texture_dimension_extended::texture_dimension_2d, false);
 

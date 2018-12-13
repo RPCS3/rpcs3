@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "TextureUtils.h"
 #include "../RSXThread.h"
@@ -525,6 +525,31 @@ u8 get_format_block_size_in_bytes(rsx::surface_color_format format)
 	}
 }
 
+/**
+ * Returns number of texel lines decoded in one pitch-length number of bytes
+ */
+u8 get_format_texel_rows_per_line(u32 format)
+{
+	switch (format)
+	{
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		// Layout is 4x4 blocks, i.e one row of pitch bytes in length actually encodes 4 texel rows
+		return 4;
+	default:
+		return 1;
+	}
+}
+
+u32 get_format_packed_pitch(u32 format, u16 width)
+{
+	const auto texels_per_block = get_format_block_size_in_texel(format);
+	const auto bytes_per_block = get_format_block_size_in_bytes(format);
+
+	return ((width + texels_per_block - 1) / texels_per_block) * bytes_per_block;
+}
+
 size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment)
 {
 	format &= ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
@@ -559,89 +584,39 @@ size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_
 		row_pitch_alignment, mipmap_alignment);
 }
 
-
-static size_t get_texture_size(u32 w, u32 h, u8 format)
+static size_t get_texture_size(u32 format, u16 width, u16 height, u16 depth, u32 pitch, u16 mipmaps, u16 layers)
 {
-	format &= ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	const auto gcm_format = format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	const auto texel_rows_per_line = get_format_texel_rows_per_line(gcm_format);
 
-	// TODO: Take mipmaps into account
-	switch (format)
+	if (pitch == 0)
 	{
-	case CELL_GCM_TEXTURE_B8:
-		return w * h;
-	case CELL_GCM_TEXTURE_G8B8:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_R5G5B5A1:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_D8R8G8B8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_A8R8G8B8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_D1R5G5B5:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_A1R5G5B5:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_A4R4G4B4:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_R6G5B5:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_R5G6B5:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		w = align(w, 4);
-		h = align(h, 4);
-		return w * h / 6;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		w = align(w, 4);
-		h = align(h, 4);
-		return w * h / 4;
-	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		w = align(w, 4);
-		h = align(h, 4);
-		return w * h / 4;
-	case CELL_GCM_TEXTURE_DEPTH16:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_DEPTH24_D8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_X16:
-		return w * h * 2;
-	case CELL_GCM_TEXTURE_Y16_X16:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_X32_FLOAT:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return w * h * 8;
-	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		return w * h * 16;
-	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		return w * h * 4;
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-		return w * h;
-	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-		return w * h;
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		return w * h * 2;
-	default:
-		LOG_ERROR(RSX, "Unimplemented texture size for texture format: 0x%x", format);
-		return 0;
+		pitch = get_format_packed_pitch(gcm_format, width);
 	}
+
+	u32 size = 0;
+	for (u32 layer = 0; layer < layers; ++layer)
+	{
+		u32 mip_height = (height + texel_rows_per_line - 1) / texel_rows_per_line;  // Convert texels to blocks
+
+		for (u32 mipmap = 0; mipmap < mipmaps; ++mipmap)
+		{
+			size += pitch * mip_height;
+			mip_height = std::max(mip_height / 2u, 1u);
+		}
+	}
+
+	return size;
 }
 
 size_t get_texture_size(const rsx::fragment_texture &texture)
 {
-	return get_texture_size(texture.width(), texture.height(), texture.format());
+	return get_texture_size(texture.format(), texture.width(), texture.height(), texture.depth(),
+			texture.pitch(), texture.get_exact_mipmap_count(), texture.cubemap() ? 6 : 1);
 }
 
 size_t get_texture_size(const rsx::vertex_texture &texture)
 {
-	return get_texture_size(texture.width(), texture.height(), texture.format());
+	return get_texture_size(texture.format(), texture.width(), texture.height(), texture.depth(),
+		texture.pitch(), texture.get_exact_mipmap_count(), texture.cubemap() ? 6 : 1);
 }

@@ -573,7 +573,7 @@ namespace gl
 		return remap_values;
 	}
 
-	void upload_texture(GLuint id, u32 texaddr, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
+	void upload_texture(GLuint id, u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, bool is_swizzled, rsx::texture_dimension_extended type,
 			const std::vector<rsx_subresource_layout>& subresources_layout)
 	{
 		size_t texture_data_sz = get_placed_texture_storage_size(width, height, depth, gcm_format, mipmaps, type == rsx::texture_dimension_extended::texture_dimension_cubemap, 256, 512);

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../RSXTexture.h"
 
@@ -70,3 +70,8 @@ u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
 */
 size_t get_texture_size(const rsx::fragment_texture &texture);
 size_t get_texture_size(const rsx::vertex_texture &texture);
+
+/**
+* Get packed pitch
+*/
+u32 get_format_packed_pitch(u32 format, u16 width);
