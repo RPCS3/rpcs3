@@ -1,6 +1,7 @@
 #pragma once
 
-
+#include "Emu/Io/PadHandler.h"
+#include <array>
 
 enum CellPadError : u32
 {
@@ -92,4 +93,16 @@ struct CellPadActParam
 {
 	u8 motor[CELL_PAD_ACTUATOR_MAX];
 	u8 reserved[6];
+};
+
+struct pad_t
+{
+	u32 max_connect;
+	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting;
+
+	pad_t(u32 max_connect)
+		: max_connect(max_connect)
+	{
+		port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
+	}
 };

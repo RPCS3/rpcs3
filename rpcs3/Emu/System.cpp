@@ -1196,6 +1196,7 @@ void Emulator::Load(bool add_only)
 			ppu_load_exec(ppu_exec);
 
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
+			fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler);
 			network_thread_init();
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)

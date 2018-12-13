@@ -8,7 +8,6 @@
 
 struct PadInfo
 {
-	u32 max_connect;
 	u32 now_connect;
 	u32 system_info;
 };
@@ -19,7 +18,6 @@ public:
 	pad_thread(void *_curthread, void *_curwindow); // void * instead of QThread * and QWindow * because of include in emucore
 	~pad_thread();
 
-	void Init(const u32 max_connect);
 	PadInfo& GetInfo() { return m_info; }
 	std::vector<std::shared_ptr<Pad>>& GetPads() { return m_pads; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
@@ -40,3 +38,13 @@ protected:
 	bool active;
 	std::shared_ptr<std::thread> thread;
 };
+
+namespace pad
+{
+	extern atomic_t<pad_thread*> g_current;
+
+	static inline class pad_thread* get_current_handler()
+	{
+		return verify(HERE, g_current.load());
+	};
+}
