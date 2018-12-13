@@ -1,4 +1,4 @@
-#include "pad_thread.h"
+﻿#include "pad_thread.h"
 #include "ds4_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
@@ -9,24 +9,14 @@
 #include "keyboard_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 
+namespace pad
+{
+	atomic_t<pad_thread*> g_current = nullptr;
+}
 
 pad_thread::pad_thread(void *_curthread, void *_curwindow) : curthread(_curthread), curwindow(_curwindow)
 {
-
-}
-
-pad_thread::~pad_thread()
-{
-	active = false;
-	thread->join();
-
-	handlers.clear();
-}
-
-void pad_thread::Init(const u32 max_connect)
-{
 	std::memset(&m_info, 0, sizeof(m_info));
-	m_info.max_connect = std::min(max_connect, (u32)7); // max 7 pads
 	m_info.now_connect = 0;
 
 	g_cfg_input.load();
@@ -37,7 +27,7 @@ void pad_thread::Init(const u32 max_connect)
 	std::shared_ptr<NullPadHandler> nullpad = std::make_shared<NullPadHandler>();
 	handlers.emplace(pad_handler::null, nullpad);
 
-	for (u32 i = 0; i < m_info.max_connect; i++)
+	for (u32 i = 0; i < 7 /* Max 7 pads */; i++)
 	{
 		std::shared_ptr<PadHandlerBase> cur_pad_handler;
 
@@ -82,7 +72,6 @@ void pad_thread::Init(const u32 max_connect)
 
 		m_pads.push_back(std::make_shared<Pad>(
 			CELL_PAD_STATUS_DISCONNECTED,
-			CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 			CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR,
 			CELL_PAD_DEV_TYPE_STANDARD));
 
@@ -95,6 +84,16 @@ void pad_thread::Init(const u32 max_connect)
 	}
 
 	thread = std::make_shared<std::thread>(&pad_thread::ThreadFunc, this);
+	pad::g_current = this;
+}
+
+pad_thread::~pad_thread()
+{
+	pad::g_current = nullptr;
+	active = false;
+	thread->join();
+
+	handlers.clear();
 }
 
 void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
