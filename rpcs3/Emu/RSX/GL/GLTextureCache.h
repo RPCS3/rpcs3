@@ -998,15 +998,14 @@ namespace gl
 			return &cached;
 		}
 
-		cached_texture_section* upload_image_from_cpu(void*&, u32 rsx_address, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
+		cached_texture_section* upload_image_from_cpu(void*&, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
 			void* unused = nullptr;
-			const utils::address_range rsx_range = utils::address_range::start_length(rsx_address, pitch * height);
 			auto section = create_new_texture(unused, rsx_range, width, height, depth, mipmaps, gcm_format, context, type,
 				rsx::texture_create_flags::default_component_order);
 
-			gl::upload_texture(section->get_raw_texture()->id(), rsx_address, gcm_format, width, height, depth, mipmaps,
+			gl::upload_texture(section->get_raw_texture()->id(), gcm_format, width, height, depth, mipmaps,
 					input_swizzled, type, subresource_layout);
 
 			return section;
