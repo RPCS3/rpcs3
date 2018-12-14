@@ -465,7 +465,7 @@ namespace rsx
 			// Check for flow control
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 			{
-				const u32 offs = cmd & 0x1ffffffc;
+				const u32 offs = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
 				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
@@ -484,7 +484,7 @@ namespace rsx
 			}
 			if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 			{
-				const u32 offs = cmd & 0xfffffffc;
+				const u32 offs = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
 				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
@@ -511,7 +511,7 @@ namespace rsx
 					return;
 				}
 
-				const u32 offs = cmd & 0xfffffffc;
+				const u32 offs = cmd & RSX_METHOD_CALL_OFFSET_MASK;
 				m_return_addr = fifo_ctrl->get_pos() + 4;
 				fifo_ctrl->set_get(offs);
 				return;
