@@ -315,8 +315,9 @@ void xinput_pad_handler::Close()
 
 void xinput_pad_handler::ThreadProc()
 {
-	for (auto &bind : bindings)
+	for (int i = 0; i < static_cast<int>(bindings.size()); ++i)
 	{
+		auto& bind = bindings[i];
 		m_dev = bind.first;
 		auto padnum = m_dev->deviceNumber;
 		auto profile = m_dev->config;
@@ -327,23 +328,23 @@ void xinput_pad_handler::ThreadProc()
 		switch (result)
 		{
 		case ERROR_DEVICE_NOT_CONNECTED:
-			if (last_connection_status[padnum] == true)
+			if (last_connection_status[i] == true)
 			{
 				LOG_ERROR(HLE, "XInput device %d disconnected", padnum);
 				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-				last_connection_status[padnum] = false;
+				last_connection_status[i] = false;
 				connected--;
 			}
 			continue;
 
 		case ERROR_SUCCESS:
-			if (last_connection_status[padnum] == false)
+			if (last_connection_status[i] == false)
 			{
 				LOG_SUCCESS(HLE, "XInput device %d reconnected", padnum);
 				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-				last_connection_status[padnum] = true;
+				last_connection_status[i] = true;
 				connected++;
 			}
 
