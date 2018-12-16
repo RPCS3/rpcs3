@@ -8,7 +8,7 @@ public:
 	NullAudioBackend() {}
 	virtual ~NullAudioBackend() {}
 
-	virtual const char* GetName() const override { return "NullAudioBackend";  }
+	virtual const char* GetName() const override { return "Null";  }
 
 	static const u32 capabilities = NON_BLOCKING;
 	virtual u32 GetCapabilities() const override { return capabilities; };

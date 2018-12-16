@@ -16,6 +16,7 @@ class XAudio2Backend : public AudioBackend
 		bool(*is_playing)();
 		bool(*add)(const void*, int);
 		u64(*enqueued_samples)();
+		f32(*set_freq_ratio)(f32);
 	};
 
 	vtable m_funcs;
@@ -29,6 +30,7 @@ class XAudio2Backend : public AudioBackend
 	static bool xa27_is_playing();
 	static bool xa27_add(const void*, int);
 	static u64  xa27_enqueued_samples();
+	static f32  xa27_set_freq_ratio(f32);
 
 	static void xa28_init(void*);
 	static void xa28_destroy();
@@ -39,14 +41,15 @@ class XAudio2Backend : public AudioBackend
 	static bool xa28_is_playing();
 	static bool xa28_add(const void*, int);
 	static u64  xa28_enqueued_samples();
+	static f32  xa28_set_freq_ratio(f32);
 
 public:
 	XAudio2Backend();
 	virtual ~XAudio2Backend() override;
 
-	virtual const char* GetName() const override { return "XAudio2Backend"; };
+	virtual const char* GetName() const override { return "XAudio2"; };
 
-	static const u32 capabilities = NON_BLOCKING | IS_PLAYING | GET_NUM_ENQUEUED_SAMPLES;
+	static const u32 capabilities = NON_BLOCKING | IS_PLAYING | GET_NUM_ENQUEUED_SAMPLES | SET_FREQUENCY_RATIO;
 	virtual u32 GetCapabilities() const override { return capabilities;	};
 
 	virtual void Open() override;
@@ -60,6 +63,7 @@ public:
 	virtual void Flush() override;
 
 	virtual u64 GetNumEnqueuedSamples() override;
+	virtual f32 SetFrequencyRatio(f32 new_ratio) override;
 };
 
 #endif

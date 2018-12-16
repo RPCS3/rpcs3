@@ -60,18 +60,13 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 		m_dump.reset(new AudioDumper(cfg.audio_channels));
 	}
 
-	// Sanity check configuration vs. capabilities
-	backend_capabilities = backend->GetCapabilities();
-	if (cfg.buffering_enabled)
+	// Initialize backend
 	{
-		if (!(backend_capabilities & AudioBackend::NON_BLOCKING) || !(backend_capabilities & AudioBackend::IS_PLAYING))
-		{
-			// We need a non-blocking backend to be able to do buffering correctly
-			fmt::throw_exception("Audio backend %s does not support buffering.", backend->GetName());
-		}
+		std::string str;
+		backend->dump_capabilities(str);
+		cellAudio.error("cellAudio initializing. Backend: %s, Capabilities: %s", backend->GetName(), str.c_str());
 	}
 
-	// Initialize backend
 	backend->Open();
 	backend_open = true;
 
@@ -91,6 +86,21 @@ audio_ringbuffer::~audio_ringbuffer()
 	}
 
 	backend->Close();
+}
+
+f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
+{
+	if(!has_capability(AudioBackend::SET_FREQUENCY_RATIO))
+	{
+		ASSERT(new_ratio == 1.0f);
+		frequency_ratio = 1.0f;
+	}
+	else
+	{
+		frequency_ratio = backend->SetFrequencyRatio(new_ratio);
+		//cellAudio.error("set_frequency_ratio(%1.2f) -> %1.2f", new_ratio, frequency_ratio);
+	}
+	return frequency_ratio;
 }
 
 void audio_ringbuffer::enqueue(const float* in_buffer)
@@ -140,6 +150,11 @@ void audio_ringbuffer::play()
 	if (playing)
 		return;
 
+	if (frequency_ratio != 1.0f)
+	{
+		set_frequency_ratio(1.0f);
+	}
+
 	playing = true;
 
 	ASSERT(enqueued_samples > 0);
@@ -156,6 +171,12 @@ void audio_ringbuffer::flush()
 	playing = false;
 
 	backend->Flush();
+
+	if (frequency_ratio != 1.0f)
+	{
+		set_frequency_ratio(1.0f);
+	}
+
 	enqueued_samples = 0;
 }
 
@@ -184,7 +205,7 @@ u64 audio_ringbuffer::update()
 	// Calculate how many audio samples have played since last time
 	if (cfg.buffering_enabled && (playing || new_playing))
 	{
-		if (backend_capabilities & AudioBackend::GET_NUM_ENQUEUED_SAMPLES)
+		if (has_capability(AudioBackend::GET_NUM_ENQUEUED_SAMPLES))
 		{
 			// Backend supports querying for the remaining playtime, so just ask it
 			enqueued_samples = backend->GetNumEnqueuedSamples();
@@ -194,7 +215,7 @@ u64 audio_ringbuffer::update()
 			const u64 play_delta = timestamp - (play_timestamp > update_timestamp ? play_timestamp : update_timestamp);
 
 			// NOTE: Only works with a fixed sampling rate
-			const u64 delta_samples_tmp = (play_delta * cfg.audio_sampling_rate) + last_remainder;
+			const u64 delta_samples_tmp = play_delta * static_cast<u64>(cfg.audio_sampling_rate * frequency_ratio) + last_remainder;
 			last_remainder = delta_samples_tmp % 1'000'000;
 			const u64 delta_samples = delta_samples_tmp / 1'000'000;
 
@@ -390,6 +411,14 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 		m_indexes[port.number] = port.cur_pos;
 	}
 
+	if (cfg.buffering_enabled)
+	{
+		// Calculate rolling average of enqueued playtime
+		const u32 enqueued_playtime = ringbuffer->get_enqueued_playtime();
+		m_average_playtime = cfg.period_average_alpha * enqueued_playtime + (1.0f - cfg.period_average_alpha) * m_average_playtime;
+		//cellAudio.error("m_average_playtime=%4.2f, enqueued_playtime=%u", m_average_playtime, enqueued_playtime);
+	}
+
 	m_counter++;
 	m_last_period_end = timestamp;
 	m_dynamic_period = 0;
@@ -420,6 +449,23 @@ void cell_audio_thread::operator()()
 
 	// Allocate ringbuffer
 	ringbuffer.reset(new audio_ringbuffer(cfg));
+
+	// Check backend capabilities
+	if (cfg.buffering_enabled)
+	{
+		if (!has_capability(AudioBackend::NON_BLOCKING) || !has_capability(AudioBackend::IS_PLAYING))
+		{
+			// We need a non-blocking backend to be able to do buffering correctly
+			// We also need to be able to query the current playing state
+			fmt::throw_exception("Audio backend %s does not support buffering.", ringbuffer->get_backend_name());
+		}
+
+		if (cfg.time_stretching_enabled && !has_capability(AudioBackend::SET_FREQUENCY_RATIO))
+		{
+			// We need to be able to set a dynamic frequency ratio to be able to do time stretching
+			fmt::throw_exception("Audio backend %s does not support time stretching", ringbuffer->get_backend_name());
+		}
+	}
 
 	// Initialize loop variables
 	m_counter = 0;
@@ -459,8 +505,10 @@ void cell_audio_thread::operator()()
 		}
 		else
 		{
-			const u64 enqueued_playtime = ringbuffer->get_enqueued_samples() * 1'000'000 / cfg.audio_sampling_rate;
-			const u64 enqueued_buffers = (enqueued_playtime) / cfg.audio_block_period;
+			const u64 enqueued_samples = ringbuffer->get_enqueued_samples();
+			f32 frequency_ratio = ringbuffer->get_frequency_ratio();
+			u64 enqueued_playtime = ringbuffer->get_enqueued_playtime();
+			const u64 enqueued_buffers = enqueued_samples / AUDIO_BUFFER_SAMPLES;
 
 			const bool playing = ringbuffer->is_playing();
 
@@ -471,32 +519,70 @@ void cell_audio_thread::operator()()
 			const u32 incomplete   = std::get<3>(tag_info);
 
 			// Wait for a dynamic period - try to maintain an average as close as possible to 5.(3)ms
-			if (m_dynamic_period == 0)
+			if (!playing)
 			{
-				if (!playing)
+				// When the buffer is empty, always use the correct block period
+				m_dynamic_period = cfg.audio_block_period;
+			}
+			else
+			{
+				// Ratio between the rolling average of the audio period, and the desired audio period
+				const f32 average_playtime_ratio = m_average_playtime / cfg.audio_buffer_length;
+
+				// Use the above adjusted ratio to decide how much buffer we should be aiming for
+				f32 desired_duration_adjusted = cfg.desired_buffer_duration + (cfg.audio_block_period / 2.0f);
+				if (average_playtime_ratio < 1.0f)
 				{
-					// When the buffer is empty, always use the correct block period
-					m_dynamic_period = cfg.audio_block_period;
+					desired_duration_adjusted /= average_playtime_ratio;
 				}
-				else
+
+				if (cfg.time_stretching_enabled)
 				{
+					// Calculate what the playtime is without a frequency ratio
+					const u64 raw_enqueued_playtime = ringbuffer->get_enqueued_playtime(/* raw= */ true);
+
 					//  1.0 means exactly as desired
 					// <1.0 means not as full as desired
 					// >1.0 means more full than desired
-					const f32 desired_duration_rate = (enqueued_playtime) / static_cast<f32>(cfg.desired_buffer_duration);
+					const f32 desired_duration_rate = raw_enqueued_playtime / desired_duration_adjusted;
 
-					if (desired_duration_rate >= 1.0f)
+					// update frequency ratio if necessary
+					f32 new_ratio = frequency_ratio;
+					if (desired_duration_rate < cfg.time_stretching_threshold)
 					{
-						// more full than desired
-						const f32 multiplier = 1.0f / desired_duration_rate;
-						m_dynamic_period = cfg.maximum_block_period - static_cast<u64>((cfg.maximum_block_period - cfg.audio_block_period) * multiplier);
+						new_ratio = ringbuffer->set_frequency_ratio(desired_duration_rate * cfg.time_stretching_frequency_scale_factor);
 					}
-					else
+					else if (frequency_ratio != 1.0f)
 					{
-						// not as full as desired
-						const f32 multiplier = desired_duration_rate;
-						m_dynamic_period = cfg.minimum_block_period + static_cast<u64>((cfg.audio_block_period - cfg.minimum_block_period) * multiplier);
+						new_ratio = ringbuffer->set_frequency_ratio(1.0f);
 					}
+
+					if (new_ratio != frequency_ratio)
+					{
+						// ratio changed, calculate new dynamic period
+						frequency_ratio = new_ratio;
+						enqueued_playtime = ringbuffer->get_enqueued_playtime();
+						m_dynamic_period = 0;
+					}
+				}
+
+			
+				//  1.0 means exactly as desired
+				// <1.0 means not as full as desired
+				// >1.0 means more full than desired
+				const f32 desired_duration_rate = enqueued_playtime / desired_duration_adjusted;
+
+				if (desired_duration_rate >= 1.0f)
+				{
+					// more full than desired
+					const f32 multiplier = 1.0f / desired_duration_rate;
+					m_dynamic_period = cfg.maximum_block_period - static_cast<u64>((cfg.maximum_block_period - cfg.audio_block_period) * multiplier);
+				}
+				else
+				{
+					// not as full as desired
+					const f32 multiplier = desired_duration_rate * desired_duration_rate;
+					m_dynamic_period = cfg.minimum_block_period + static_cast<u64>((cfg.audio_block_period - cfg.minimum_block_period) * multiplier);
 				}
 			}
 
@@ -553,7 +639,9 @@ void cell_audio_thread::operator()()
 				continue;
 			}
 
-			//cellAudio.error("time_since_last=%llu, dynamic_period=%llu => %3.2f%%", time_since_last_period, m_dynamic_period, (((f32)m_dynamic_period) / audio_block_period) * 100);
+			/*cellAudio.error("time_since_last=%llu, dynamic_period=%llu => %3.2f%%, average_period=%4.2f => %3.2f%%", time_since_last_period,
+				m_dynamic_period, (((f32)m_dynamic_period) / cfg.audio_block_period) * 100.0f,
+				m_average_period, (m_average_period / cfg.audio_block_period) * 100.0f);*/
 			//cellAudio.error("active=%u, untouched=%u, in_progress=%d, incomplete=%d, enqueued_buffers=%u", active_ports, untouched, in_progress, incomplete, enqueued_buffers);
 
 			// Store number of untouched buffers for future reference
@@ -581,6 +669,7 @@ void cell_audio_thread::operator()()
 				ringbuffer->flush();
 				ringbuffer->enqueue_silence(cfg.desired_full_buffers);
 				finish_port_volume_stepping();
+				m_average_playtime = ringbuffer->get_enqueued_playtime();
 			}
 		}
 
