@@ -315,8 +315,9 @@ void xinput_pad_handler::Close()
 
 void xinput_pad_handler::ThreadProc()
 {
-	for (auto &bind : bindings)
+	for (int i = 0; i < static_cast<int>(bindings.size()); ++i)
 	{
+		auto& bind = bindings[i];
 		m_dev = bind.first;
 		auto padnum = m_dev->deviceNumber;
 		auto profile = m_dev->config;
@@ -327,23 +328,23 @@ void xinput_pad_handler::ThreadProc()
 		switch (result)
 		{
 		case ERROR_DEVICE_NOT_CONNECTED:
-			if (last_connection_status[padnum] == true)
+			if (last_connection_status[i] == true)
 			{
 				LOG_ERROR(HLE, "XInput device %d disconnected", padnum);
 				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-				last_connection_status[padnum] = false;
+				last_connection_status[i] = false;
 				connected--;
 			}
 			continue;
 
 		case ERROR_SUCCESS:
-			if (last_connection_status[padnum] == false)
+			if (last_connection_status[i] == false)
 			{
 				LOG_SUCCESS(HLE, "XInput device %d reconnected", padnum);
 				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-				last_connection_status[padnum] = true;
+				last_connection_status[i] = true;
 				connected++;
 			}
 
@@ -479,7 +480,6 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	pad->Init
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
-		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD
 	);

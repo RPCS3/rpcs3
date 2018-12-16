@@ -46,6 +46,7 @@ struct RSXIOTable
 };
 
 extern bool user_asked_for_frame_capture;
+extern bool capture_current_frame;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
 extern RSXIOTable RSXIOMem;
@@ -369,7 +370,7 @@ namespace rsx
 	protected:
 		std::thread::id m_rsx_thread;
 		atomic_t<bool> m_rsx_thread_exiting{true};
-		s32 m_return_addr{-1}, restore_ret_addr{-1};
+		s32 m_return_addr{-1}, restore_ret{-1};
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
 
@@ -433,7 +434,6 @@ namespace rsx
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
-		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
 
 	public:

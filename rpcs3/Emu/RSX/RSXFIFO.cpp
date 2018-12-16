@@ -6,6 +6,7 @@
 
 extern rsx::frame_capture_data frame_capture;
 extern bool user_asked_for_frame_capture;
+extern bool capture_current_frame;
 
 #define ENABLE_OPTIMIZATION_DEBUGGING 0
 
@@ -18,6 +19,23 @@ namespace rsx
 			m_ctrl = pctrl->ctrl;
 		}
 
+		void FIFO_control::inc_get()
+		{
+			m_internal_get += 4;
+
+			// Check if put allows to procceed execution
+			while (m_ctrl->put == m_internal_get)
+			{
+				if (Emu.IsStopped())
+				{
+					break;
+				}
+
+				sync_get();
+				std::this_thread::yield();
+			}
+		}
+
 		void FIFO_control::set_put(u32 put)
 		{
 			if (m_ctrl->put == put)
@@ -28,21 +46,14 @@ namespace rsx
 			m_ctrl->put = put;
 		}
 
-		void FIFO_control::set_get(u32 get, bool spinning)
+		void FIFO_control::set_get(u32 get)
 		{
 			if (m_ctrl->get == get)
 			{
-				if (spinning)
+				if (const auto addr = RSXIOMem.RealAddr(m_memwatch_addr))
 				{
-					if (const auto addr = RSXIOMem.RealAddr(m_memwatch_addr))
-					{
-						m_memwatch_addr = get;
-						m_memwatch_cmp = vm::read32(addr);
-					}
-				}
-				else
-				{
-					LOG_ERROR(RSX, "Undetected spinning?");
+					m_memwatch_addr = get;
+					m_memwatch_cmp = vm::read32(addr);
 				}
 
 				return;
@@ -56,22 +67,28 @@ namespace rsx
 			m_memwatch_addr = 0;
 		}
 
-		void FIFO_control::read_unsafe(register_pair& data)
+		bool FIFO_control::read_unsafe(register_pair& data)
 		{
 			// Fast read with no processing, only safe inside a PACKET_BEGIN+count block
 			if (m_remaining_commands)
 			{
 				m_command_reg += m_command_inc;
 				m_args_ptr += 4;
-				m_remaining_commands--;
 
-				data.reg = m_command_reg;
-				data.value = vm::read32(m_args_ptr);
+				if (--m_remaining_commands)
+				{
+					inc_get();
+				}
+				else
+				{
+					m_internal_get += 4;
+				}
+
+				data.set(m_command_reg, vm::read32(m_args_ptr));
+				return true;
 			}
-			else
-			{
-				data.reg = FIFO_EMPTY;
-			}
+
+			return false;
 		}
 
 		void FIFO_control::read(register_pair& data)
@@ -126,19 +143,10 @@ namespace rsx
 					(cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
 				{
 					// Flow control, stop reading
-					data = { cmd, 0, m_internal_get };
+					data.reg = cmd;
 					return;
 				}
-			}
 
-			if (UNLIKELY((cmd & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD))
-			{
-				m_ctrl->get.store(m_internal_get + 4);
-				data = { RSX_METHOD_NOP_CMD, 0, m_internal_get };
-				return;
-			}
-			else if (UNLIKELY(cmd & 0x3))
-			{
 				// Malformed command, optional recovery
 				data.reg = FIFO_ERROR;
 				return;
@@ -154,29 +162,67 @@ namespace rsx
 			}
 
 			verify(HERE), !m_remaining_commands;
-			u32 count = (cmd >> 18) & 0x7ff;
+			const u32 count = (cmd >> 18) & 0x7ff;
+
+			if (!count)
+			{
+				m_ctrl->get.store(m_internal_get + 4);
+				data.reg = FIFO_NOP;
+				return;
+			}
+
+			if (UNLIKELY(capture_current_frame))
+			{
+				u32 reg = (cmd & 0xfffc) >> 2;
+				auto args = vm::_ptr<u32>(m_args_ptr);
+
+				for (u32 i = 0; i < count; i++, args++)
+				{
+					frame_debug.command_queue.push_back(std::make_pair(reg, *args));
+
+					if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
+					{
+						// todo: handle nv406e methods better?, do we care about call/jumps?
+						rsx::frame_capture_data::replay_command replay_cmd;
+						replay_cmd.rsx_command = std::make_pair(i == 0 ? cmd : 0, *args);
+
+						frame_capture.replay_commands.push_back(replay_cmd);
+
+						// to make this easier, use the replay command 'i' positions back
+						auto it = std::prev(frame_capture.replay_commands.end(), i + 1);
+
+						switch (reg)
+						{
+						case NV3089_IMAGE_IN:
+							capture::capture_image_in(rsx::get_current_renderer(), *it);
+							break;
+						case NV0039_BUFFER_NOTIFY:
+							capture::capture_buffer_notify(rsx::get_current_renderer(), *it);
+							break;
+						default:
+							break;
+						}
+					}
+
+					if (!(cmd & RSX_METHOD_NON_INCREMENT_CMD))
+					{
+						reg++;
+					}
+				}
+			}
 
 			if (count > 1)
 			{
-				// Stop command execution if put will be equal to get ptr during the execution itself
-				if (UNLIKELY(count * 4 + 4 > put - m_internal_get))
-				{
-					count = (put - m_internal_get) / 4 - 1;
-				}
-
 				// Set up readback parameters
 				m_command_reg = cmd & 0xfffc;
 				m_command_inc = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
 				m_remaining_commands = count - 1;
+			}
 
-				m_ctrl->get.store(m_internal_get + (count * 4 + 4));
-				data = { m_command_reg, vm::read32(m_args_ptr), m_internal_get };
-			}
-			else
-			{
-				m_ctrl->get.store(m_internal_get + 8);
-				data = { cmd & 0xfffc, vm::read32(m_args_ptr), m_internal_get };
-			}
+			inc_get();
+			m_internal_get += 4;
+
+			data.set(cmd & 0xfffc, vm::read32(m_args_ptr));
 		}
 
 		flattening_helper::flattening_helper()
@@ -376,6 +422,16 @@ namespace rsx
 			// Check for special FIFO commands
 			switch (cmd)
 			{
+			case FIFO::FIFO_NOP:
+			{
+				if (performance_counters.state == FIFO_state::running)
+				{
+					performance_counters.FIFO_idle_timestamp = get_system_time();
+					performance_counters.state = FIFO_state::nop;
+				}
+
+				return;
+			}
 			case FIFO::FIFO_EMPTY:
 			{
 				if (performance_counters.state == FIFO_state::running)
@@ -400,6 +456,7 @@ namespace rsx
 				// Error. Should reset the queue
 				LOG_ERROR(RSX, "FIFO error: possible desync event");
 				fifo_ctrl->set_get(restore_point);
+				m_return_addr = restore_ret;
 				std::this_thread::sleep_for(1ms);
 				return;
 			}
@@ -408,38 +465,40 @@ namespace rsx
 			// Check for flow control
 			if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 			{
-				const u32 offs = cmd & 0x1ffffffc;
-				if (offs == command.loc)
+				const u32 offs = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
+				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
 					if (performance_counters.state == FIFO_state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
+						sync_point_request = true;
 					}
 
 					performance_counters.state = FIFO_state::spinning;
 				}
 
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				fifo_ctrl->set_get(offs, offs == command.loc);
+				fifo_ctrl->set_get(offs);
 				return;
 			}
 			if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 			{
-				const u32 offs = cmd & 0xfffffffc;
-				if (offs == command.loc)
+				const u32 offs = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
+				if (offs == fifo_ctrl->get_pos())
 				{
 					//Jump to self. Often preceded by NOP
 					if (performance_counters.state == FIFO_state::running)
 					{
 						performance_counters.FIFO_idle_timestamp = get_system_time();
+						sync_point_request = true;
 					}
 
 					performance_counters.state = FIFO_state::spinning;
 				}
 
 				//LOG_WARNING(RSX, "rsx jump(0x%x) #addr=0x%x, cmd=0x%x, get=0x%x, put=0x%x", offs, m_ioAddress + get, cmd, get, put);
-				fifo_ctrl->set_get(offs, offs == command.loc);
+				fifo_ctrl->set_get(offs);
 				return;
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
@@ -452,8 +511,8 @@ namespace rsx
 					return;
 				}
 
-				const u32 offs = cmd & 0xfffffffc;
-				m_return_addr = command.loc + 4;
+				const u32 offs = cmd & RSX_METHOD_CALL_OFFSET_MASK;
+				m_return_addr = fifo_ctrl->get_pos() + 4;
 				fifo_ctrl->set_get(offs);
 				return;
 			}
@@ -474,16 +533,6 @@ namespace rsx
 			// If we reached here, this is likely an error
 			fmt::throw_exception("Unexpected command 0x%x" HERE, cmd);
 		}
-		else if (cmd == RSX_METHOD_NOP_CMD)
-		{
-			if (performance_counters.state == FIFO_state::running)
-			{
-				performance_counters.FIFO_idle_timestamp = get_system_time();
-				performance_counters.state = FIFO_state::nop;
-			}
-
-			return;
-		}
 
 		if (performance_counters.state != FIFO_state::running)
 		{
@@ -501,40 +550,8 @@ namespace rsx
 			performance_counters.state = FIFO_state::running;
 		}
 
-		for (int i = 0; command.reg != FIFO::FIFO_EMPTY; i++, fifo_ctrl->read_unsafe(command))
+		do
 		{
-			if (UNLIKELY(capture_current_frame))
-			{
-				const u32 reg = command.reg >> 2;
-				const u32 value = command.value;
-
-				frame_debug.command_queue.push_back(std::make_pair(reg, value));
-
-				if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
-				{
-					// todo: handle nv406e methods better?, do we care about call/jumps?
-					rsx::frame_capture_data::replay_command replay_cmd;
-					replay_cmd.rsx_command = std::make_pair(i == 0 ? command.reg : 0, value);
-
-					frame_capture.replay_commands.push_back(replay_cmd);
-
-					// to make this easier, use the replay command 'i' positions back
-					auto it = std::prev(frame_capture.replay_commands.end(), i + 1);
-
-					switch (reg)
-					{
-					case NV3089_IMAGE_IN:
-						capture::capture_image_in(this, *it);
-						break;
-					case NV0039_BUFFER_NOTIFY:
-						capture::capture_buffer_notify(this, *it);
-						break;
-					default:
-						break;
-					}
-				}
-			}
-
 			if (UNLIKELY(m_flattener.is_enabled()))
 			{
 				switch(m_flattener.test(command))
@@ -580,5 +597,8 @@ namespace rsx
 				method(this, reg, value);
 			}
 		}
+		while (fifo_ctrl->read_unsafe(command));
+
+		fifo_ctrl->sync_get();
 	}
 }

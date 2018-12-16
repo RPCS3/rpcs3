@@ -82,7 +82,7 @@ namespace rsx
 
 			s32 run_input_loop()
 			{
-				const auto handler = fxm::get<pad_thread>();
+				const auto handler = pad::get_current_handler();
 				if (!handler)
 				{
 					LOG_ERROR(RSX, "Pad handler expected but none initialized!");
@@ -90,8 +90,6 @@ namespace rsx
 				}
 
 				const PadInfo& rinfo = handler->GetInfo();
-				if (rinfo.max_connect == 0)
-					return selection_code::error;
 
 				std::array<std::chrono::steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
 				timestamp.fill(std::chrono::steady_clock::now());

@@ -31,11 +31,13 @@ class GSRender;
 #define CMD_DEBUG 0
 
 bool user_asked_for_frame_capture = false;
+bool capture_current_frame = false;
 rsx::frame_trace_data frame_debug;
 rsx::frame_capture_data frame_capture;
 RSXIOTable RSXIOMem;
 
 extern CellGcmOffsetTable offsetTable;
+extern thread_local std::string(*g_tls_log_prefix)();
 
 namespace rsx
 {
@@ -535,6 +537,12 @@ namespace rsx
 		m_rsx_thread = std::this_thread::get_id();
 		run_tests();
 
+		g_tls_log_prefix = []
+		{
+			const auto rsx = get_current_renderer();
+			return fmt::format("RSX [0x%07x]", +rsx->ctrl->get);
+		};
+
 		if (supports_native_ui)
 		{
 			m_overlay_manager = fxm::make_always<rsx::overlays::display_manager>();
@@ -669,6 +677,7 @@ namespace rsx
 			if (sync_point_request)
 			{
 				restore_point = ctrl->get;
+				restore_ret = m_return_addr;
 				sync_point_request = false;
 			}
 

@@ -6,6 +6,7 @@
 #include <Utilities/Thread.h>
 
 #include "rsx_utils.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
 
 #include <vector>
 #include <string>
@@ -26,7 +27,7 @@ namespace rsx
 	{
 		enum internal_commands : u32
 		{
-			NOP = 0,
+			FIFO_NOP = 0xBABEF1F4,
 			FIFO_EMPTY = 0xDEADF1F0,
 			FIFO_BUSY = 0xBABEF1F0,
 			FIFO_ERROR = 0xDEADBEEF,
@@ -46,8 +47,12 @@ namespace rsx
 		{
 			u32 reg;
 			u32 value;
-			u32 loc;
-			u32 reserved;
+
+			void set(u32 reg, u32 val)
+			{
+				this->reg = reg;
+				this->value = val;
+			}
 		};
 
 		class flattening_helper
@@ -108,11 +113,14 @@ namespace rsx
 			FIFO_control(rsx::thread* pctrl);
 			~FIFO_control() {}
 
-			void set_get(u32 get, bool spinning = false);
+			u32 get_pos() { return m_internal_get; }
+			void sync_get() { m_ctrl->get.store(m_internal_get); }
+			void inc_get();
+			void set_get(u32 get);
 			void set_put(u32 put);
 
 			void read(register_pair& data);
-			inline void read_unsafe(register_pair& data);
+			inline bool read_unsafe(register_pair& data);
 		};
 	}
 }

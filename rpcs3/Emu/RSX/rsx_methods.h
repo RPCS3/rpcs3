@@ -1325,6 +1325,11 @@ namespace rsx
 			return decode<NV4097_SET_CONTEXT_DMA_REPORT>().context_dma_report();
 		}
 
+		u32 context_dma_notify() const
+		{
+			return decode<NV4097_SET_CONTEXT_DMA_NOTIFIES>().context_dma_notify();
+		}
+
 		blit_engine::transfer_operation blit_engine_operation() const
 		{
 			return decode<NV3089_SET_OPERATION>().transfer_op();
