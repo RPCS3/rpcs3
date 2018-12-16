@@ -29,3 +29,4 @@ BinPackParameters: true
 AlwaysBreakAfterReturnType: None
 KeepEmptyLinesAtTheStartOfBlocks: true
 IndentWrappedFunctionNames: false
+<veneno.ros.yellowclang.patch>
