@@ -2,7 +2,7 @@
 
 #include "Utilities/Thread.h"
 #include "Emu/Memory/vm.h"
-#include "Emu/Audio/AudioThread.h"
+#include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/AudioDumper.h"
 
 // Error codes
@@ -170,15 +170,34 @@ struct audio_port
 	void apply_tag_backups(s32 offset = 0);
 };
 
+struct cell_audio_config
+{
+	const s64 period_comparison_margin = 100; // When comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
+
+	const u32 audio_channels = AudioBackend::get_channels();
+	const u32 audio_sampling_rate = AudioBackend::get_sampling_rate();
+	const u64 audio_block_period = AUDIO_BUFFER_SAMPLES * 1000000 / audio_sampling_rate;
+	const u64 desired_buffer_duration = g_cfg.audio.enable_buffering ? g_cfg.audio.desired_buffer_duration : 0;
+
+	const u32 audio_buffer_length = AUDIO_BUFFER_SAMPLES * audio_channels;
+	const u32 audio_buffer_size = audio_buffer_length * sizeof(f32);
+	const bool buffering_enabled = g_cfg.audio.enable_buffering && (desired_buffer_duration >= audio_block_period);
+
+	const u64 minimum_block_period = audio_block_period / 2; // the block period will not be dynamically lowered below this value (usecs)
+	const u64 maximum_block_period = audio_block_period + (audio_block_period - minimum_block_period); // the block period will not be dynamically increased above this value (usecs)
+
+	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 1 : 1;
+	const u32 num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS; // number of ringbuffer buffers
+};
+
 class audio_ringbuffer
 {
 private:
-	const std::shared_ptr<AudioThread> backend;
+	const std::shared_ptr<AudioBackend> backend;
 
-	const u32 num_allocated_buffers;
+	const cell_audio_config& cfg;
+
 	const u32 buf_sz;
-	const u32 audio_sampling_rate;
-	const u32 channels;
 
 	std::unique_ptr<AudioDumper> m_dump;
 
@@ -189,16 +208,23 @@ private:
 	bool playing = false;
 	bool emu_paused = false;
 
+	u32 backend_capabilities;
+
 	u64 update_timestamp = 0;
 	u64 play_timestamp = 0;
 
 	u64 last_remainder = 0;
 	u64 enqueued_samples = 0;
 
-	u32 next_buf = 0;
+	u32 cur_pos = 0;
+
+	bool backend_is_playing() const
+	{
+		return (backend_capabilities & AudioBackend::IS_PLAYING) ? backend->IsPlaying() : playing;
+	}
 
 public:
-	audio_ringbuffer(u32 num_buffers, u32 audio_sampling_rate, u32 channels);
+	audio_ringbuffer(cell_audio_config &cfg);
 	~audio_ringbuffer();
 
 	void play();
@@ -209,14 +235,9 @@ public:
 
 	float* get_buffer(u32 num) const
 	{
-		AUDIT(num < num_allocated_buffers);
+		AUDIT(num < cfg.num_allocated_buffers);
 		AUDIT(buffer[num].get() != nullptr);
 		return buffer[num].get();
-	}
-
-	u32 get_buf_sz() const
-	{
-		return buf_sz;
 	}
 
 	u64 get_timestamp() const
@@ -226,17 +247,23 @@ public:
 
 	float* get_current_buffer() const
 	{
-		return get_buffer(next_buf);
+		return get_buffer(cur_pos);
 	}
 
 	u64 get_enqueued_samples() const
 	{
+		AUDIT(cfg.buffering_enabled);
 		return enqueued_samples;
 	}
 
 	bool is_playing() const
 	{
 		return playing;
+	}
+
+	u32 capabilities() const
+	{
+		return backend_capabilities;
 	}
 };
 
@@ -260,19 +287,7 @@ class cell_audio_thread
 	}
 
 public:
-	const s64 period_comparison_margin = 100; // When comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
-
-	const u32 audio_channels = AudioThread::get_channels();
-	const u32 audio_sampling_rate = AudioThread::get_sampling_rate();
-	const u64 audio_block_period = AUDIO_BUFFER_SAMPLES * 1000000 / audio_sampling_rate;
-	const u64 desired_buffer_duration = g_cfg.audio.enable_buffering ? g_cfg.audio.desired_buffer_duration : 0;
-	const bool buffering_enabled = g_cfg.audio.enable_buffering && (desired_buffer_duration >= audio_block_period);
-
-	const u64 minimum_block_period = audio_block_period / 2; // the block period will not be dynamically lowered below this value (usecs)
-	const u64 maximum_block_period = audio_block_period + (audio_block_period - minimum_block_period); // the block period will not be dynamically increased above this value (usecs)
-
-	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 1 : 1;
-	const u32 num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS; // number of ringbuffer buffers
+	cell_audio_config cfg;
 
 	std::vector<u64> keys;
 	std::array<audio_port, AUDIO_PORT_COUNT> ports;

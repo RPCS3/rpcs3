@@ -10,21 +10,41 @@ enum : u32
 	AUDIO_BUFFER_SAMPLES = 256
 };
 
-class AudioThread
+class AudioBackend
 {
 public:
-	virtual ~AudioThread() = default;
+	enum Capabilities : u32
+	{
+		NON_BLOCKING = 0x1,
+		IS_PLAYING = 0x2,
+		GET_NUM_ENQUEUED_SAMPLES = 0x4,
+	};
+
+	virtual ~AudioBackend() = default;
 
 	// Callbacks
+	virtual const char* GetName() const = 0;
+	virtual u32 GetCapabilities() const = 0;
+
 	virtual void Open() = 0;
 	virtual void Close() = 0;
 
 	virtual void Play() = 0;
 	virtual void Pause() = 0;
-	virtual bool IsPlaying() = 0;
+
+	virtual bool IsPlaying()
+	{
+		fmt::throw_exception("IsPlaying() not implemented");
+	};
 
 	virtual bool AddData(const void* src, int size) = 0;
 	virtual void Flush() = 0;
+
+	virtual u64 GetNumEnqueuedSamples()
+	{
+		fmt::throw_exception("GetNumEnqueuedSamples() not implemented");
+		return 0;
+	}
 
 	// Helper methods
 	static u32 get_sampling_rate()

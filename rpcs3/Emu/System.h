@@ -196,7 +196,7 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class pad_thread>()> get_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
-	std::function<std::shared_ptr<class AudioThread>()> get_audio;
+	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;

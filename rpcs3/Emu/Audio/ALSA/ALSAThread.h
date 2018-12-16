@@ -4,7 +4,7 @@
 
 #include "Emu/Audio/AudioThread.h"
 
-class ALSAThread : public AudioThread
+class ALSAThread : public AudioBackend
 {
 public:
 	ALSAThread();

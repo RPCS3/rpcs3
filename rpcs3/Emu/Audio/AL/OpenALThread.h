@@ -1,10 +1,10 @@
 ﻿#pragma once
 
-/*#include "Emu/Audio/AudioThread.h"
+/*#include "Emu/Audio/AudioBackend.h"
 #include "3rdparty/OpenAL/include/alext.h"
 #include <memory>
 
-class OpenALThread : public AudioThread
+class OpenALThread : public AudioBackend
 {
 private:
 	ALint m_format;

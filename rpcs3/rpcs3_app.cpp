@@ -36,7 +36,7 @@
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
-#include "Emu/Audio/Null/NullAudioThread.h"
+#include "Emu/Audio/Null/NullAudioBackend.h"
 //#include "Emu/Audio/AL/OpenALThread.h"
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
@@ -45,7 +45,7 @@
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 #ifdef _WIN32
-#include "Emu/Audio/XAudio2/XAudio2Thread.h"
+#include "Emu/Audio/XAudio2/XAudio2Backend.h"
 #endif
 #ifdef HAVE_ALSA
 #include "Emu/Audio/ALSA/ALSAThread.h"
@@ -254,13 +254,13 @@ void rpcs3_app::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_audio = []() -> std::shared_ptr<AudioThread>
+	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
 	{
 		switch (audio_renderer type = g_cfg.audio.renderer)
 		{
-		case audio_renderer::null: return std::make_shared<NullAudioThread>();
+		case audio_renderer::null: return std::make_shared<NullAudioBackend>();
 #ifdef _WIN32
-		case audio_renderer::xaudio: return std::make_shared<XAudio2Thread>();
+		case audio_renderer::xaudio: return std::make_shared<XAudio2Backend>();
 #endif
 #ifdef HAVE_ALSA
 		case audio_renderer::alsa: return std::make_shared<ALSAThread>();

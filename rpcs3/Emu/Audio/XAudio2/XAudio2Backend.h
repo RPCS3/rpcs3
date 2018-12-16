@@ -2,9 +2,9 @@
 
 #ifdef _WIN32
 
-#include "Emu/Audio/AudioThread.h"
+#include "Emu/Audio/AudioBackend.h"
 
-class XAudio2Thread : public AudioThread
+class XAudio2Backend : public AudioBackend
 {
 	struct vtable
 	{
@@ -15,6 +15,7 @@ class XAudio2Thread : public AudioThread
 		void(*open)();
 		bool(*is_playing)();
 		bool(*add)(const void*, int);
+		u64(*enqueued_samples)();
 	};
 
 	vtable m_funcs;
@@ -27,6 +28,7 @@ class XAudio2Thread : public AudioThread
 	static void xa27_open();
 	static bool xa27_is_playing();
 	static bool xa27_add(const void*, int);
+	static u64  xa27_enqueued_samples();
 
 	static void xa28_init(void*);
 	static void xa28_destroy();
@@ -36,10 +38,16 @@ class XAudio2Thread : public AudioThread
 	static void xa28_open();
 	static bool xa28_is_playing();
 	static bool xa28_add(const void*, int);
+	static u64  xa28_enqueued_samples();
 
 public:
-	XAudio2Thread();
-	virtual ~XAudio2Thread() override;
+	XAudio2Backend();
+	virtual ~XAudio2Backend() override;
+
+	virtual const char* GetName() const override { return "XAudio2Backend"; };
+
+	static const u32 capabilities = NON_BLOCKING | IS_PLAYING | GET_NUM_ENQUEUED_SAMPLES;
+	virtual u32 GetCapabilities() const override { return capabilities;	};
 
 	virtual void Open() override;
 	virtual void Close() override;
@@ -50,6 +58,8 @@ public:
 
 	virtual bool AddData(const void* src, int size) override;
 	virtual void Flush() override;
+
+	virtual u64 GetNumEnqueuedSamples() override;
 };
 
 #endif
