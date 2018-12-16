@@ -378,6 +378,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_cache{this, "SPU Cache", true};
 		cfg::_enum<tsx_usage> enable_TSX{this, "Enable TSX", tsx_usage::enabled}; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{this, "Accurate xfloat", false};
+		cfg::_bool spu_approx_xfloat{this, "Approximate xfloat", true};
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
