@@ -130,6 +130,8 @@ namespace gl
 			//Use forward scaling to account for rounding and clamping errors
 			return (rsx::apply_resolution_scale(_width, true) == internal_width) && (rsx::apply_resolution_scale(_height, true) == internal_height);
 		}
+
+		void memory_barrier(void* = nullptr);
 	};
 
 	struct framebuffer_holder : public gl::fbo, public rsx::ref_counted

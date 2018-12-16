@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "GLHelpers.h"
+#include "GLTexture.h"
 #include "Utilities/Log.h"
 
 namespace gl
@@ -359,5 +360,102 @@ namespace gl
 	attrib_t vao::operator[](u32 index) const noexcept
 	{
 		return attrib_t(index);
+	}
+
+	void blitter::scale_image(const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
+		bool is_depth_copy, const rsx::typeless_xfer& xfer_info)
+	{
+		std::unique_ptr<texture> typeless_src;
+		std::unique_ptr<texture> typeless_dst;
+		u32 src_id = src->id();
+		u32 dst_id = dst->id();
+
+		if (xfer_info.src_is_typeless)
+		{
+			const auto internal_width = (u16)(src->width() * xfer_info.src_scaling_hint);
+			const auto internal_fmt = xfer_info.src_native_format_override ?
+				GLenum(xfer_info.src_native_format_override) :
+				get_sized_internal_format(xfer_info.src_gcm_format);
+
+			typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
+			copy_typeless(typeless_src.get(), src);
+
+			src_id = typeless_src->id();
+			src_rect.x1 = (u16)(src_rect.x1 * xfer_info.src_scaling_hint);
+			src_rect.x2 = (u16)(src_rect.x2 * xfer_info.src_scaling_hint);
+		}
+
+		if (xfer_info.dst_is_typeless)
+		{
+			const auto internal_width = (u16)(dst->width() * xfer_info.dst_scaling_hint);
+			const auto internal_fmt = xfer_info.dst_native_format_override ?
+				GLenum(xfer_info.dst_native_format_override) :
+				get_sized_internal_format(xfer_info.dst_gcm_format);
+
+			typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
+			copy_typeless(typeless_dst.get(), dst);
+
+			dst_id = typeless_dst->id();
+			dst_rect.x1 = (u16)(dst_rect.x1 * xfer_info.dst_scaling_hint);
+			dst_rect.x2 = (u16)(dst_rect.x2 * xfer_info.dst_scaling_hint);
+		}
+
+		s32 old_fbo = 0;
+		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
+
+		filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
+		GLenum attachment;
+		gl::buffers target;
+
+		if (is_depth_copy)
+		{
+			if (src->get_internal_format() == gl::texture::internal_format::depth16 ||
+				dst->get_internal_format() == gl::texture::internal_format::depth16)
+			{
+				attachment = GL_DEPTH_ATTACHMENT;
+				target = gl::buffers::depth;
+			}
+			else
+			{
+				attachment = GL_DEPTH_STENCIL_ATTACHMENT;
+				target = gl::buffers::depth_stencil;
+			}
+		}
+		else
+		{
+			attachment = GL_COLOR_ATTACHMENT0;
+			target = gl::buffers::color;
+		}
+
+		blit_src.bind();
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src_id, 0);
+		blit_src.check();
+
+		blit_dst.bind();
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_id, 0);
+		blit_dst.check();
+
+		GLboolean scissor_test_enabled = glIsEnabled(GL_SCISSOR_TEST);
+		if (scissor_test_enabled)
+			glDisable(GL_SCISSOR_TEST);
+
+		blit_src.blit(blit_dst, src_rect, dst_rect, target, interp);
+
+		if (xfer_info.dst_is_typeless)
+		{
+			//Transfer contents from typeless dst back to original dst
+			copy_typeless(dst, typeless_dst.get());
+		}
+
+		blit_src.bind();
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+
+		blit_dst.bind();
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+
+		if (scissor_test_enabled)
+			glEnable(GL_SCISSOR_TEST);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
 	}
 }

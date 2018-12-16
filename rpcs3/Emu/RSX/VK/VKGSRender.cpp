@@ -1387,41 +1387,19 @@ void VKGSRender::end()
 
 	if (g_cfg.video.strict_rendering_mode)
 	{
-		auto copy_rtt_contents = [&](vk::render_target* surface, bool is_depth)
-		{
-			if (LIKELY(surface->info.format == surface->old_contents->info.format))
-			{
-				const auto region = rsx::get_transferable_region(surface);
-				const auto src_w = std::get<0>(region);
-				const auto src_h = std::get<1>(region);
-				const auto dst_w = std::get<2>(region);
-				const auto dst_h = std::get<3>(region);
-
-				const VkImageAspectFlags aspect = surface->attachment_aspect_flag;
-
-				vk::copy_scaled_image(*m_current_command_buffer, surface->old_contents->value, surface->value,
-					surface->old_contents->current_layout, surface->current_layout, 0, 0, src_w, src_h,
-					0, 0, dst_w, dst_h, 1, aspect, true, VK_FILTER_LINEAR, surface->info.format, surface->old_contents->info.format);
-
-				// Memory has been transferred, discard old contents and update memory flags
-				// TODO: Preserve memory outside surface clip region
-				surface->on_write();
-			}
-		};
-
 		//Prepare surfaces if needed
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
 			if (auto surface = std::get<1>(rtt))
 			{
 				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface, false);
+					surface->memory_barrier(*m_current_command_buffer);
 			}
 		}
 
 		if (ds && ds->old_contents)
 		{
-			copy_rtt_contents(ds, true);
+			ds->memory_barrier(*m_current_command_buffer);
 		}
 	}
 

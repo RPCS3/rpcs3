@@ -210,26 +210,6 @@ void GLGSRender::end()
 		}
 	};
 
-	//Check if depth buffer is bound and valid
-	//If ds is not initialized clear it; it seems new depth textures should have depth cleared
-	auto copy_rtt_contents = [this](gl::render_target *surface, bool is_depth)
-	{
-		if (surface->get_internal_format() == surface->old_contents->get_internal_format())
-		{
-			// Disable stencil test to avoid switching off and back on later
-			gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
-
-			// Copy data from old contents onto this one
-			const auto region = rsx::get_transferable_region(surface);
-			gl::g_hw_blitter->scale_image(surface->old_contents, surface, { 0, 0, std::get<0>(region), std::get<1>(region) }, { 0, 0, std::get<2>(region) , std::get<3>(region) }, !is_depth, is_depth, {});
-
-			// Memory has been transferred, discard old contents and update memory flags
-			// TODO: Preserve memory outside surface clip region
-			surface->on_write();
-		}
-		//TODO: download image contents and reupload them or do a memory cast to copy memory contents if not compatible
-	};
-
 	//Check if we have any 'recycled' surfaces in memory and if so, clear them
 	std::vector<int> buffers_to_clear;
 	bool clear_all_color = true;
@@ -290,24 +270,6 @@ void GLGSRender::end()
 		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
 		ds->on_write();
 	}
-
-	if (g_cfg.video.strict_rendering_mode)
-	{
-		if (ds && ds->old_contents != nullptr)
-			copy_rtt_contents(ds, true);
-
-		for (auto &rtt : m_rtts.m_bound_render_targets)
-		{
-			if (auto surface = std::get<1>(rtt))
-			{
-				if (surface->old_contents != nullptr)
-					copy_rtt_contents(surface, false);
-			}
-		}
-	}
-
-	// Unconditionally enable stencil test if it was disabled before
-	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 
 	// Load textures
 	{
@@ -473,9 +435,28 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
 	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
 
-	update_draw_state();
+	std::chrono::time_point<steady_clock> draw_start = textures_end;
 
-	std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
+	// Optionally do memory synchronization if the texture stage has not yet triggered this
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
+
+		if (ds) ds->memory_barrier();
+
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (auto surface = std::get<1>(rtt))
+			{
+				surface->memory_barrier();
+			}
+		}
+	}
+
+	// Unconditionally enable stencil test if it was disabled before
+	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
+
+	update_draw_state();
 
 	if (g_cfg.video.debug_output)
 	{
