@@ -633,7 +633,7 @@ s32 cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 
 	const auto g_audio = fxm::get<cell_audio>();
 
-	*stamp = g_audio->m_start_time + tag * AUDIO_BUFFER_SAMPLES * 1'000'000 / g_audio->audio_sampling_rate;
+	*stamp = g_audio->m_start_time + tag * AUDIO_BUFFER_SAMPLES * 1'000'000 / g_audio->cfg.audio_sampling_rate;
 
 	return CELL_OK;
 }

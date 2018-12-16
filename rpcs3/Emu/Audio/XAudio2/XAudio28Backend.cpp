@@ -4,32 +4,34 @@
 #include "Utilities/StrFmt.h"
 #include "Emu/System.h"
 
-#include "XAudio2Thread.h"
-#include "3rdparty/XAudio2_7/XAudio2.h"
+#include "XAudio2Backend.h"
+#include "3rdparty/minidx12/Include/xaudio2.h"
 
 static thread_local HMODULE s_tls_xaudio2_lib{};
 static thread_local IXAudio2* s_tls_xaudio2_instance{};
 static thread_local IXAudio2MasteringVoice* s_tls_master_voice{};
 static thread_local IXAudio2SourceVoice* s_tls_source_voice{};
 
-void XAudio2Thread::xa27_init(void* lib2_7)
+void XAudio2Backend::xa28_init(void* lib)
 {
-	s_tls_xaudio2_lib = (HMODULE)lib2_7;
+	s_tls_xaudio2_lib = (HMODULE)lib;
+
+	const auto create = (XAudio2Create)GetProcAddress(s_tls_xaudio2_lib, "XAudio2Create");
 
 	HRESULT hr = S_OK;
 
 	hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : CoInitializeEx() failed(0x%08x)", (u32)hr);
+		LOG_ERROR(GENERAL, "XAudio2Backend : CoInitializeEx() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 		return;
 	}	
 
-	hr = XAudio2Create(&s_tls_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
+	hr = create(&s_tls_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : XAudio2Create() failed(0x%08x)", (u32)hr);
+		LOG_ERROR(GENERAL, "XAudio2Backend : XAudio2Create() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 		return;
 	}
@@ -37,13 +39,13 @@ void XAudio2Thread::xa27_init(void* lib2_7)
 	hr = s_tls_xaudio2_instance->CreateMasteringVoice(&s_tls_master_voice, g_cfg.audio.downmix_to_2ch ? 2 : 8, 48000);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : CreateMasteringVoice() failed(0x%08x)", (u32)hr);
+		LOG_ERROR(GENERAL, "XAudio2Backend : CreateMasteringVoice() failed(0x%08x)", (u32)hr);
 		s_tls_xaudio2_instance->Release();
 		Emu.Pause();
 	}
 }
 
-void XAudio2Thread::xa27_destroy()
+void XAudio2Backend::xa28_destroy()
 {
 	if (s_tls_source_voice != nullptr)
 	{
@@ -67,45 +69,53 @@ void XAudio2Thread::xa27_destroy()
 	FreeLibrary(s_tls_xaudio2_lib);
 }
 
-void XAudio2Thread::xa27_play()
+void XAudio2Backend::xa28_play()
 {
+	AUDIT(s_tls_source_voice != nullptr);
+
 	HRESULT hr = s_tls_source_voice->Start();
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : Start() failed(0x%08x)", (u32)hr);
+		LOG_ERROR(GENERAL, "XAudio2Backend : Start() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 	}
 }
 
-void XAudio2Thread::xa27_flush()
+void XAudio2Backend::xa28_flush()
 {
+	AUDIT(s_tls_source_voice != nullptr);
+
 	HRESULT hr = s_tls_source_voice->FlushSourceBuffers();
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : FlushSourceBuffers() failed(0x%08x)", (u32)hr);
+		LOG_ERROR(GENERAL, "XAudio2Backend : FlushSourceBuffers() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 	}
 }
 
-void XAudio2Thread::xa27_stop()
+void XAudio2Backend::xa28_stop()
 {
+	AUDIT(s_tls_source_voice != nullptr);
+
 	HRESULT hr = s_tls_source_voice->Stop();
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : Stop() failed(0x%08x)", (u32)hr);
+		LOG_ERROR(GENERAL, "XAudio2Backend : Stop() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 	}
 }
 
-bool XAudio2Thread::xa27_is_playing()
+bool XAudio2Backend::xa28_is_playing()
 {
+	AUDIT(s_tls_source_voice != nullptr);
+
 	XAUDIO2_VOICE_STATE state;
-	s_tls_source_voice->GetState(&state);
+	s_tls_source_voice->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
 
 	return state.BuffersQueued > 0 || state.pCurrentBufferContext != nullptr;
 }
 
-void XAudio2Thread::xa27_open()
+void XAudio2Backend::xa28_open()
 {
 	HRESULT hr;
 
@@ -125,23 +135,25 @@ void XAudio2Thread::xa27_open()
 	hr = s_tls_xaudio2_instance->CreateSourceVoice(&s_tls_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : CreateSourceVoice() failed(0x%08x)", (u32)hr);
+		LOG_ERROR(GENERAL, "XAudio2Backend : CreateSourceVoice() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 		return;
 	}
 
-	s_tls_source_voice->SetVolume(channels == 2 ? 1.0f : 4.0f);
+	AUDIT(s_tls_source_voice != nullptr);
+	s_tls_source_voice->SetVolume(channels == 2 ? 1.0 : 4.0);
 }
 
-bool XAudio2Thread::xa27_add(const void* src, int size)
+bool XAudio2Backend::xa28_add(const void* src, int size)
 {
-	XAUDIO2_VOICE_STATE state;
-	s_tls_source_voice->GetState(&state);
+	AUDIT(s_tls_source_voice != nullptr);
 
-	// XAudio 2.7 bug workaround, when it says "SimpList: non-growable list ran out of room for new elements" and hits int 3
+	XAUDIO2_VOICE_STATE state;
+	s_tls_source_voice->GetState(&state, XAUDIO2_VOICE_NOSAMPLESPLAYED);
+
 	if (state.BuffersQueued >= MAX_AUDIO_BUFFERS)
 	{
-		LOG_WARNING(GENERAL, "XAudio2Thread : too many buffers enqueued (%d, pos=%u)", state.BuffersQueued, state.SamplesPlayed);
+		LOG_WARNING(GENERAL, "XAudio2Backend : too many buffers enqueued (%d, pos=%u)", state.BuffersQueued, state.SamplesPlayed);
 		return false;
 	}
 
@@ -160,11 +172,21 @@ bool XAudio2Thread::xa27_add(const void* src, int size)
 	HRESULT hr = s_tls_source_voice->SubmitSourceBuffer(&buffer);
 	if (FAILED(hr))
 	{
-		LOG_ERROR(GENERAL, "XAudio2Thread : AddData() failed(0x%08x)", (u32)hr);
+		LOG_ERROR(GENERAL, "XAudio2Backend : AddData() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
+		return false;
 	}
 
 	return true;
+}
+
+u64 XAudio2Backend::xa28_enqueued_samples()
+{
+	XAUDIO2_VOICE_STATE state;
+	s_tls_source_voice->GetState(&state);
+
+	// all buffers contain AUDIO_BUFFER_SAMPLES, so we can easily calculate how many samples there are remaining
+	return (AUDIO_BUFFER_SAMPLES - state.SamplesPlayed % AUDIO_BUFFER_SAMPLES) + (state.BuffersQueued * AUDIO_BUFFER_SAMPLES);
 }
 
 #endif

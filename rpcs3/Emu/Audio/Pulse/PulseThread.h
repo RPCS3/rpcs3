@@ -4,7 +4,7 @@
 #include <pulse/simple.h>
 #include "Emu/Audio/AudioThread.h"
 
-class PulseThread : public AudioThread
+class PulseThread : public AudioBackend
 {
 public:
 	PulseThread();

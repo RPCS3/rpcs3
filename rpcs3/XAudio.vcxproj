@@ -72,12 +72,12 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\rpcs3\Emu\Audio\XAudio2\XAudio2Thread.h" />
+    <ClInclude Include="Emu\Audio\XAudio2\XAudio2Backend.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\rpcs3\Emu\Audio\XAudio2\XAudio2Thread.cpp" />
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio27Thread.cpp" />
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio28Thread.cpp" />
+    <ClCompile Include="Emu\Audio\XAudio2\XAudio2Backend.cpp" />
+    <ClCompile Include="Emu\Audio\XAudio2\XAudio27Backend.cpp" />
+    <ClCompile Include="Emu\Audio\XAudio2\XAudio28Backend.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

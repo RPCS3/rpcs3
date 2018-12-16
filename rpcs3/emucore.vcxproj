@@ -406,8 +406,8 @@
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />
     <ClInclude Include="Emu\IPC.h" />
     <ClInclude Include="Emu\Audio\AudioDumper.h" />
-    <ClInclude Include="Emu\Audio\AudioThread.h" />
-    <ClInclude Include="Emu\Audio\Null\NullAudioThread.h" />
+    <ClInclude Include="Emu\Audio\AudioBackend.h" />
+    <ClInclude Include="Emu\Audio\Null\NullAudioBackend.h" />
     <ClInclude Include="Emu\Cell\Common.h" />
     <ClInclude Include="Emu\Cell\ErrorCodes.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_cond.h" />
