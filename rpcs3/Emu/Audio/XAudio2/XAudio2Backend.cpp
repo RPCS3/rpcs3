@@ -21,6 +21,7 @@ XAudio2Backend::XAudio2Backend()
 		m_funcs.is_playing = &xa28_is_playing;
 		m_funcs.add        = &xa28_add;
 		m_funcs.enqueued_samples = &xa28_enqueued_samples;
+		m_funcs.set_freq_ratio   = &xa28_set_freq_ratio;
 
 		LOG_SUCCESS(GENERAL, "XAudio 2.9 initialized");
 		return;
@@ -38,6 +39,7 @@ XAudio2Backend::XAudio2Backend()
 		m_funcs.is_playing = &xa28_is_playing;
 		m_funcs.add        = &xa28_add;
 		m_funcs.enqueued_samples = &xa28_enqueued_samples;
+		m_funcs.set_freq_ratio   = &xa28_set_freq_ratio;
 
 		LOG_SUCCESS(GENERAL, "XAudio 2.8 initialized");
 		return;
@@ -55,6 +57,7 @@ XAudio2Backend::XAudio2Backend()
 		m_funcs.is_playing = &xa27_is_playing;
 		m_funcs.add        = &xa27_add;
 		m_funcs.enqueued_samples = &xa27_enqueued_samples;
+		m_funcs.set_freq_ratio   = &xa27_set_freq_ratio;
 
 		LOG_SUCCESS(GENERAL, "XAudio 2.7 initialized");
 		return;
@@ -107,6 +110,11 @@ void XAudio2Backend::Flush()
 u64 XAudio2Backend::GetNumEnqueuedSamples()
 {
 	return m_funcs.enqueued_samples();
+}
+
+f32 XAudio2Backend::SetFrequencyRatio(f32 new_ratio)
+{
+	return m_funcs.set_freq_ratio(new_ratio);
 }
 
 #endif

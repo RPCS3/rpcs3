@@ -18,6 +18,7 @@ public:
 		NON_BLOCKING = 0x1,
 		IS_PLAYING = 0x2,
 		GET_NUM_ENQUEUED_SAMPLES = 0x4,
+		SET_FREQUENCY_RATIO = 0x8,
 	};
 
 	virtual ~AudioBackend() = default;
@@ -46,6 +47,12 @@ public:
 		return 0;
 	}
 
+	virtual f32 SetFrequencyRatio(f32 new_ratio) // returns the new ratio
+	{
+		fmt::throw_exception("SetFrequencyRatio() not implemented");
+		return 1.0f;
+	}
+
 	// Helper methods
 	static u32 get_sampling_rate()
 	{
@@ -67,5 +74,45 @@ public:
 	static u32 get_channels()
 	{
 		return g_cfg.audio.downmix_to_2ch ? 2 : 8;
+	}
+
+	bool has_capability(Capabilities cap) const
+	{
+		return (cap & GetCapabilities()) != 0;
+	}
+
+	void dump_capabilities(std::string& out) const
+	{
+		u32 count = 0;
+		u32 capabilities = GetCapabilities();
+
+		if (capabilities & NON_BLOCKING)
+		{
+			fmt::append(out, "NON_BLOCKING");
+			count++;
+		}
+
+		if (capabilities & IS_PLAYING)
+		{
+			fmt::append(out, "%sIS_PLAYING", count > 0 ? " | " : "");
+			count++;
+		}
+
+		if (capabilities & GET_NUM_ENQUEUED_SAMPLES)
+		{
+			fmt::append(out, "%sGET_NUM_ENQUEUED_SAMPLES", count > 0 ? " | " : "");
+			count++;
+		}
+
+		if (capabilities & SET_FREQUENCY_RATIO)
+		{
+			fmt::append(out, "%sSET_FREQUENCY_RATIO", count > 0 ? " | " : "");
+			count++;
+		}
+
+		if (count == 0)
+		{
+			fmt::append(out, "NONE");
+		}
 	}
 };

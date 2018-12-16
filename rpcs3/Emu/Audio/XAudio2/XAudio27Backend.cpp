@@ -177,4 +177,19 @@ u64 XAudio2Backend::xa27_enqueued_samples()
 	return (AUDIO_BUFFER_SAMPLES - state.SamplesPlayed % AUDIO_BUFFER_SAMPLES) + (state.BuffersQueued * AUDIO_BUFFER_SAMPLES);
 }
 
+f32 XAudio2Backend::xa27_set_freq_ratio(f32 new_ratio)
+{
+	new_ratio = std::clamp(new_ratio, XAUDIO2_MIN_FREQ_RATIO, XAUDIO2_DEFAULT_FREQ_RATIO);
+
+	HRESULT hr = s_tls_source_voice->SetFrequencyRatio(new_ratio);
+	if (FAILED(hr))
+	{
+		LOG_ERROR(GENERAL, "XAudio2Backend : SetFrequencyRatio() failed(0x%08x)", (u32)hr);
+		Emu.Pause();
+		return 1.0f;
+	}
+
+	return new_ratio;
+}
+
 #endif
