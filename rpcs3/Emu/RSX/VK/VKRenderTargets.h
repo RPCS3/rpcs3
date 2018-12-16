@@ -5,6 +5,7 @@
 #include "../GCM.h"
 #include "../Common/surface_store.h"
 #include "../Common/TextureUtils.h"
+#include "../Common/texture_cache_utils.h"
 #include "VKFormats.h"
 #include "../rsx_utils.h"
 
@@ -54,6 +55,54 @@ namespace vk
 		{
 			//Use forward scaling to account for rounding and clamping errors
 			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
+		}
+
+		void memory_barrier(vk::command_buffer& cmd)
+		{
+			if (!old_contents)
+			{
+				return;
+			}
+
+			auto src_texture = static_cast<vk::render_target*>(old_contents);
+			if (src_texture->get_rsx_pitch() != get_rsx_pitch())
+			{
+				LOG_TODO(RSX, "Pitch mismatch, could not transfer inherited memory");
+				return;
+			}
+
+			auto src_bpp = src_texture->get_native_pitch() / src_texture->width();
+			auto dst_bpp = get_native_pitch() / width();
+			rsx::typeless_xfer typeless_info{};
+
+			const auto region = rsx::get_transferable_region(this);
+
+			if (src_texture->info.format == info.format)
+			{
+				verify(HERE), src_bpp == dst_bpp;
+			}
+			else
+			{
+				const bool src_is_depth = !!(vk::get_aspect_flags(src_texture->info.format) & VK_IMAGE_ASPECT_DEPTH_BIT);
+				const bool dst_is_depth = !!(vk::get_aspect_flags(info.format) & VK_IMAGE_ASPECT_DEPTH_BIT);
+
+				if (src_bpp != dst_bpp || src_is_depth || dst_is_depth)
+				{
+					typeless_info.src_is_typeless = true;
+					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
+					typeless_info.src_native_format_override = (u32)info.format;
+					typeless_info.src_is_depth = src_is_depth;
+					typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
+				}
+			}
+
+			vk::blitter hw_blitter(&cmd);
+			hw_blitter.scale_image(old_contents, this,
+				{ 0, 0, std::get<0>(region), std::get<1>(region) },
+				{ 0, 0, std::get<2>(region) , std::get<3>(region) },
+				/*linear?*/false, /*depth?(unused)*/false, typeless_info);
+
+			on_write();
 		}
 	};
 

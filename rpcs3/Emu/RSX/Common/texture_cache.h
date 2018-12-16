@@ -1444,7 +1444,8 @@ namespace rsx
 		}
 
 		template<typename surface_store_type>
-		std::vector<copy_region_descriptor> gather_texture_slices_from_framebuffers(u32 texaddr, u16 slice_w, u16 slice_h, u16 pitch, u16 count, u8 bpp, surface_store_type& m_rtts)
+		std::vector<copy_region_descriptor> gather_texture_slices_from_framebuffers(commandbuffer_type& cmd,
+			u32 texaddr, u16 slice_w, u16 slice_h, u16 pitch, u16 count, u8 bpp, surface_store_type& m_rtts)
 		{
 			std::vector<copy_region_descriptor> surfaces;
 			u32 current_address = texaddr;
@@ -1465,6 +1466,8 @@ namespace rsx
 				{
 					for (auto &section : overlapping)
 					{
+						section.surface->memory_barrier(cmd);
+
 						surfaces.push_back
 						({
 							section.surface->get_surface(),
@@ -1501,6 +1504,8 @@ namespace rsx
 			u32 internal_height = tex_height;
 			get_native_dimensions(internal_width, internal_height, texptr);
 
+			texptr->memory_barrier(cmd);
+
 			if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
 				extended_dimension != rsx::texture_dimension_extended::texture_dimension_1d)
 			{
@@ -1521,7 +1526,7 @@ namespace rsx
 							rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 
 					auto bpp = get_format_block_size_in_bytes(format);
-					desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices_from_framebuffers(texaddr, tex_width, tex_height, tex_pitch, 6, bpp, m_rtts));
+					desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices_from_framebuffers(cmd, texaddr, tex_width, tex_height, tex_pitch, 6, bpp, m_rtts));
 					return desc;
 				}
 				else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && tex_depth > 1)
@@ -1543,7 +1548,7 @@ namespace rsx
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 
 					const auto bpp = get_format_block_size_in_bytes(format);
-					desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices_from_framebuffers(texaddr, tex_width, tex_height, tex_pitch, tex_depth, bpp, m_rtts));
+					desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices_from_framebuffers(cmd, texaddr, tex_width, tex_height, tex_pitch, tex_depth, bpp, m_rtts));
 					return desc;
 				}
 			}
@@ -1562,8 +1567,7 @@ namespace rsx
 			auto overlapping = m_rtts.get_merged_texture_memory_region(texaddr, tex_width, tex_height, tex_pitch, bpp);
 			bool requires_merging = false;
 
-			// TODO ruipin: This AUDIT fails due to a bug that kd will have to fix
-			//AUDIT( !overlapping.empty() );
+			AUDIT(!overlapping.empty());
 			if (overlapping.size() > 1)
 			{
 				// The returned values are sorted with oldest first and newest last
@@ -1593,6 +1597,8 @@ namespace rsx
 
 				for (auto &section : overlapping)
 				{
+					section.surface->memory_barrier(cmd);
+
 					result.external_subresource_desc.sections_to_copy.push_back
 					({
 						section.surface->get_surface(),

@@ -553,3 +553,68 @@ void GLGSRender::read_buffers()
 		std::get<1>(m_rtts.m_bound_depth_stencil)->copy_from(pbo_depth, depth_format.format, depth_format.type);
 	}
 }
+
+void gl::render_target::memory_barrier(void*)
+{
+	if (!old_contents)
+	{
+		// No memory to inherit
+		return;
+	}
+
+	auto src_texture = static_cast<gl::render_target*>(old_contents);
+	if (src_texture->get_rsx_pitch() != get_rsx_pitch())
+	{
+		LOG_TODO(RSX, "Pitch mismatch, could not transfer inherited memory");
+		return;
+	}
+
+	auto is_depth = [](gl::texture::internal_format format)
+	{
+		// TODO: Change this to image aspect semantics
+		switch (format)
+		{
+		case gl::texture::internal_format::depth16:
+		case gl::texture::internal_format::depth24_stencil8:
+		case gl::texture::internal_format::depth32f_stencil8:
+			return true;
+		default:
+			return false;
+		}
+	};
+
+	auto src_bpp = src_texture->get_native_pitch() / src_texture->width();
+	auto dst_bpp = get_native_pitch() / width();
+	rsx::typeless_xfer typeless_info{};
+
+	const bool dst_is_depth = is_depth(get_internal_format());
+	const auto region = rsx::get_transferable_region(this);
+
+	if (get_internal_format() == src_texture->get_internal_format())
+	{
+		// Copy data from old contents onto this one
+		verify(HERE), src_bpp == dst_bpp;
+	}
+	else
+	{
+		// Mem cast, generate typeless xfer info
+		const bool src_is_depth = is_depth(src_texture->get_internal_format());
+		if (src_bpp != dst_bpp || dst_is_depth || src_is_depth)
+		{
+			typeless_info.src_is_typeless = true;
+			typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
+			typeless_info.src_native_format_override = (u32)get_internal_format();
+			typeless_info.src_is_depth = src_is_depth;
+			typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
+		}
+	}
+
+	gl::g_hw_blitter->scale_image(old_contents, this,
+		{ 0, 0, std::get<0>(region), std::get<1>(region) },
+		{ 0, 0, std::get<2>(region) , std::get<3>(region) },
+		!dst_is_depth, dst_is_depth, typeless_info);
+
+	// Memory has been transferred, discard old contents and update memory flags
+	// TODO: Preserve memory outside surface clip region
+	on_write();
+}

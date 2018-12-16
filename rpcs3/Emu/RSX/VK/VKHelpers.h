@@ -2980,4 +2980,14 @@ public:
 			}
 		}
 	};
+
+	class blitter
+	{
+		vk::command_buffer* commands;
+
+	public:
+		blitter(vk::command_buffer *c) : commands(c) {}
+
+		void scale_image(vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, bool /*is_depth*/, const rsx::typeless_xfer& xfer_info);
+	};
 }

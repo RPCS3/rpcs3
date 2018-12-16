@@ -10,6 +10,7 @@
 
 #include "OpenGL.h"
 #include "../GCM.h"
+#include "../Common/TextureUtils.h"
 
 #include "Utilities/geometry.h"
 
@@ -2792,4 +2793,27 @@ public:
 			}
 		};
 	}
+
+	class blitter
+	{
+		fbo blit_src;
+		fbo blit_dst;
+
+	public:
+
+		void init()
+		{
+			blit_src.create();
+			blit_dst.create();
+		}
+
+		void destroy()
+		{
+			blit_dst.remove();
+			blit_src.remove();
+		}
+
+		void scale_image(const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
+			bool is_depth_copy, const rsx::typeless_xfer& xfer_info);
+	};
 }

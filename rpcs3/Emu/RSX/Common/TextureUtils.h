@@ -33,6 +33,38 @@ namespace rsx
 		virtual ~sampled_image_descriptor_base() {}
 		virtual u32 encoded_component_map() const = 0;
 	};
+
+	struct typeless_xfer
+	{
+		bool src_is_typeless = false;
+		bool dst_is_typeless = false;
+		bool src_is_depth = false;
+		bool dst_is_depth = false;
+		u32 src_gcm_format = 0;
+		u32 dst_gcm_format = 0;
+		u32 src_native_format_override = 0;
+		u32 dst_native_format_override = 0;
+		f32 src_scaling_hint = 1.f;
+		f32 dst_scaling_hint = 1.f;
+		texture_upload_context src_context = texture_upload_context::blit_engine_src;
+		texture_upload_context dst_context = texture_upload_context::blit_engine_dst;
+
+		void analyse()
+		{
+			if (src_is_typeless && dst_is_typeless)
+			{
+				if (src_scaling_hint == dst_scaling_hint &&
+					src_scaling_hint != 1.f)
+				{
+					if (src_is_depth == dst_is_depth)
+					{
+						src_is_typeless = dst_is_typeless = false;
+						src_scaling_hint = dst_scaling_hint = 1.f;
+					}
+				}
+			}
+		}
+	};
 }
 
 struct rsx_subresource_layout
