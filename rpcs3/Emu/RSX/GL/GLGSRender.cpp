@@ -1822,8 +1822,6 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 
 		vm::temporary_unlock();
 		task.producer_wait();
-
-		return true;
 	}
 
 	return true;
