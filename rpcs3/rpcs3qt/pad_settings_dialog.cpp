@@ -944,6 +944,16 @@ void pad_settings_dialog::SaveProfile()
 	m_handler_cfg.save();
 }
 
+void pad_settings_dialog::ResetPadHandler()
+{
+	if (Emu.IsStopped())
+	{
+		return;
+	}
+
+	Emu.GetCallbacks().reset_pads();
+}
+
 void pad_settings_dialog::SaveExit()
 {
 	SaveProfile();
@@ -959,6 +969,8 @@ void pad_settings_dialog::SaveExit()
 	}
 
 	g_cfg_input.save();
+
+	ResetPadHandler();
 
 	QDialog::accept();
 }

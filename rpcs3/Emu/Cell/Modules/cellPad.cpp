@@ -35,6 +35,8 @@ error_code cellPadInit(u32 max_connect)
 {
 	sys_io.warning("cellPadInit(max_connect=%d)", max_connect);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	if (fxm::check<pad_t>())
 		return CELL_PAD_ERROR_ALREADY_INITIALIZED;
 
@@ -50,6 +52,8 @@ error_code cellPadEnd()
 {
 	sys_io.notice("cellPadEnd()");
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	if (!fxm::remove<pad_t>())
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
@@ -59,6 +63,8 @@ error_code cellPadEnd()
 error_code cellPadClearBuf(u32 port_no)
 {
 	sys_io.trace("cellPadClearBuf(port_no=%d)", port_no);
+
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto config = fxm::get<pad_t>();
 
@@ -101,6 +107,8 @@ error_code cellPadClearBuf(u32 port_no)
 error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
 	sys_io.trace("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
+
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto config = fxm::get<pad_t>();
 
@@ -353,6 +361,8 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 {
 	sys_io.trace("cellPadPeriphGetInfo(info=*0x%x)", info);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -395,6 +405,8 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 {
 	sys_io.trace("cellPadPeriphGetData(port_no=%d, data=*0x%x)", port_no, data);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -427,6 +439,8 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 {
 	sys_io.todo("cellPadGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -455,6 +469,8 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadData> data)
 {
 	sys_io.trace("cellPadGetDataExtra(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
+
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto config = fxm::get<pad_t>();
 
@@ -495,6 +511,8 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 {
 	sys_io.trace("cellPadSetActDirect(port_no=%d, param=*0x%x)", port_no, param);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -533,6 +551,8 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 {
 	sys_io.trace("cellPadGetInfo(info=*0x%x)", info);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -569,6 +589,8 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 {
 	sys_io.trace("cellPadGetInfo2(info=*0x%x)", info);
+
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto config = fxm::get<pad_t>();
 
@@ -608,6 +630,8 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 {
 	sys_io.trace("cellPadGetCapabilityInfo(port_no=%d, data_addr:=0x%x)", port_no, info.addr());
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -638,6 +662,8 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 {
 	sys_io.trace("cellPadSetPortSetting(port_no=%d, port_setting=0x%x)", port_no, port_setting);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -662,6 +688,8 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 s32 cellPadInfoPressMode(u32 port_no)
 {
 	sys_io.trace("cellPadInfoPressMode(port_no=%d)", port_no);
+
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto config = fxm::get<pad_t>();
 
@@ -690,6 +718,8 @@ s32 cellPadInfoSensorMode(u32 port_no)
 {
 	sys_io.trace("cellPadInfoSensorMode(port_no=%d)", port_no);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -716,6 +746,8 @@ s32 cellPadInfoSensorMode(u32 port_no)
 error_code cellPadSetPressMode(u32 port_no, u32 mode)
 {
 	sys_io.trace("cellPadSetPressMode(port_no=%d, mode=%d)", port_no, mode);
+
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto config = fxm::get<pad_t>();
 
@@ -751,6 +783,8 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 {
 	sys_io.trace("cellPadSetSensorMode(port_no=%d, mode=%d)", port_no, mode);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	const auto config = fxm::get<pad_t>();
 
 	if (!config)
@@ -785,6 +819,8 @@ error_code cellPadLddRegisterController()
 {
 	sys_io.todo("cellPadLddRegisterController()");
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	if (!fxm::check<pad_t>())
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
@@ -798,6 +834,8 @@ error_code cellPadLddRegisterController()
 error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 {
 	sys_io.todo("cellPadLddDataInsert(handle=%d, data=*0x%x)", handle, data);
+
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	if (!fxm::check<pad_t>())
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -816,6 +854,8 @@ error_code cellPadLddGetPortNo(s32 handle)
 {
 	sys_io.todo("cellPadLddGetPortNo(handle=%d)", handle);
 
+	std::lock_guard lock(pad::g_pad_mutex);
+
 	if (!fxm::check<pad_t>())
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
@@ -830,6 +870,8 @@ error_code cellPadLddGetPortNo(s32 handle)
 error_code cellPadLddUnregisterController(s32 handle)
 {
 	sys_io.todo("cellPadLddUnregisterController(handle=%d)", handle);
+
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	if (!fxm::check<pad_t>())
 		return CELL_PAD_ERROR_UNINITIALIZED;
