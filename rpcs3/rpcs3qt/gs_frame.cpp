@@ -67,6 +67,8 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, b
 		setSurfaceType(QSurface::VulkanSurface);
 #endif
 
+	setMinimumWidth(160);
+	setMinimumHeight(90);
 	setGeometry(geometry);
 	setTitle(m_windowTitle);
 	setVisibility(Hidden);
