@@ -2253,10 +2253,10 @@ struct registers_decoder<NV3089_DS_DX>
 				return 0;
 			}
 
-		    if ((s32)val < 0)
+			if ((s32)val < 0)
 			{
-		        return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
-		    }
+				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
+			}
 
 			return 1048576.f / val;
 		}
@@ -2291,12 +2291,12 @@ struct registers_decoder<NV3089_DT_DY>
 				return 0;
 			}
 
-		    if ((s32)val < 0)
+			if ((s32)val < 0)
 			{
-		        return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
-		    }
+				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
+			}
 
-		    return 1048576.f / val;
+			return 1048576.f / val;
 		}
 	};
 
