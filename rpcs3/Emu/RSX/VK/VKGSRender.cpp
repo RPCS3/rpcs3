@@ -937,7 +937,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		}
 	}
 
-	return false;
+	return true;
 }
 
 void VKGSRender::on_invalidate_memory_range(const utils::address_range &range)
