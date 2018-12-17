@@ -443,7 +443,7 @@ namespace gl
 
 		if (xfer_info.dst_is_typeless)
 		{
-			//Transfer contents from typeless dst back to original dst
+			// Transfer contents from typeless dst back to original dst
 			copy_typeless(dst, typeless_dst.get());
 		}
 
