@@ -2,6 +2,7 @@
 
 #include <map>
 #include <thread>
+#include <mutex>
 
 #include "../Utilities/types.h"
 #include "Emu/Io/PadHandler.h"
@@ -21,6 +22,8 @@ public:
 	PadInfo& GetInfo() { return m_info; }
 	std::vector<std::shared_ptr<Pad>>& GetPads() { return m_pads; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
+	void Init();
+	void Reset();
 
 protected:
 	void ThreadFunc();
@@ -35,13 +38,15 @@ protected:
 	PadInfo m_info;
 	std::vector<std::shared_ptr<Pad>> m_pads;
 
-	bool active;
+	atomic_t<bool> active{ false };
+	atomic_t<bool> reset{ false };
 	std::shared_ptr<std::thread> thread;
 };
 
 namespace pad
 {
 	extern atomic_t<pad_thread*> g_current;
+	extern std::recursive_mutex g_pad_mutex;
 
 	static inline class pad_thread* get_current_handler()
 	{

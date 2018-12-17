@@ -142,6 +142,11 @@ void rpcs3_app::InitializeCallbacks()
 		RequestCallAfter(std::move(func));
 	};
 
+	callbacks.reset_pads = [this]()
+	{
+		pad::get_current_handler()->Reset();
+	};
+
 	callbacks.get_kb_handler = [=]() -> std::shared_ptr<KeyboardHandlerBase>
 	{
 		switch (keyboard_handler type = g_cfg.io.keyboard)

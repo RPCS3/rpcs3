@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "overlay_controls.h"
 
 #include "../../../Utilities/date_time.h"
@@ -82,15 +82,6 @@ namespace rsx
 
 			s32 run_input_loop()
 			{
-				const auto handler = pad::get_current_handler();
-				if (!handler)
-				{
-					LOG_ERROR(RSX, "Pad handler expected but none initialized!");
-					return selection_code::error;
-				}
-
-				const PadInfo& rinfo = handler->GetInfo();
-
 				std::array<std::chrono::steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
 				timestamp.fill(std::chrono::steady_clock::now());
 
@@ -106,6 +97,17 @@ namespace rsx
 				{
 					if (Emu.IsStopped())
 						return selection_code::canceled;
+
+					std::lock_guard lock(pad::g_pad_mutex);
+
+					const auto handler = pad::get_current_handler();
+					if (!handler)
+					{
+						LOG_ERROR(RSX, "Pad handler expected but none initialized!");
+						return selection_code::error;
+					}
+
+					const PadInfo& rinfo = handler->GetInfo();
 
 					if (Emu.IsPaused() || !rinfo.now_connect)
 					{

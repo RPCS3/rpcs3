@@ -141,6 +141,7 @@ private:
 	void ReloadButtons();
 
 	void ChangeProfile();
+	void ResetPadHandler();
 
 	/** Repaints a stick deadzone preview label */
 	void RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y);
