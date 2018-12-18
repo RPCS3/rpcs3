@@ -182,11 +182,9 @@ namespace gl
 			synchronized = false;
 			sync_timestamp = 0ull;
 
-			if (rsx_pitch > 0)
-				this->rsx_pitch = rsx_pitch;
-			else
-				this->rsx_pitch = get_section_size() / height;
+			verify(HERE), rsx_pitch;
 
+			this->rsx_pitch = rsx_pitch;
 			this->width = w;
 			this->height = h;
 			this->real_pitch = 0;
@@ -199,9 +197,11 @@ namespace gl
 			baseclass::on_section_resources_created();
 		}
 
-		void create_read_only(gl::viewable_image* image, u32 width, u32 height, u32 depth, u32 mipmaps)
+		void create_read_only(gl::viewable_image* image, u32 width, u32 height, u32 depth, u32 mipmaps, u16 pitch)
 		{
 			ASSERT(!exists() || !is_managed() || vram_texture == image);
+
+			verify(HERE), pitch;
 
 			//Only to be used for ro memory, we dont care about most members, just dimensions and the vram texture handle
 			this->width = width;
@@ -212,7 +212,7 @@ namespace gl
 			managed_texture.reset(image);
 			vram_texture = image;
 
-			rsx_pitch = 0;
+			rsx_pitch = pitch;
 			real_pitch = 0;
 
 			// Notify baseclass
@@ -818,8 +818,8 @@ namespace gl
 					dst->image()->id(), GL_TEXTURE_2D, 0, 0, 0, 0, width, height, 1);
 		}
 
-		cached_texture_section* create_new_texture(void*&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
-				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
+		cached_texture_section* create_new_texture(void*&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
+			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
 		{
 			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
 
@@ -836,7 +836,7 @@ namespace gl
 			cached.set_image_type(type);
 			cached.set_gcm_format(gcm_format);
 
-			cached.create_read_only(image, width, height, depth, mipmaps);
+			cached.create_read_only(image, width, height, depth, mipmaps, pitch);
 			cached.set_dirty(false);
 
 			if (context != rsx::texture_upload_context::blit_engine_dst)
@@ -890,7 +890,7 @@ namespace gl
 			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
 			void* unused = nullptr;
-			auto section = create_new_texture(unused, rsx_range, width, height, depth, mipmaps, gcm_format, context, type,
+			auto section = create_new_texture(unused, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type,
 				rsx::texture_create_flags::default_component_order);
 
 			gl::upload_texture(section->get_raw_texture()->id(), gcm_format, width, height, depth, mipmaps,

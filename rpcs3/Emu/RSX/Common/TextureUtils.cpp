@@ -587,22 +587,44 @@ size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_
 static size_t get_texture_size(u32 format, u16 width, u16 height, u16 depth, u32 pitch, u16 mipmaps, u16 layers)
 {
 	const auto gcm_format = format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+	const bool packed = !(format & CELL_GCM_TEXTURE_LN);
 	const auto texel_rows_per_line = get_format_texel_rows_per_line(gcm_format);
 
-	if (pitch == 0)
-	{
-		pitch = get_format_packed_pitch(gcm_format, width);
-	}
+	verify(HERE), packed || pitch;
 
 	u32 size = 0;
-	for (u32 layer = 0; layer < layers; ++layer)
+	if (!packed)
 	{
-		u32 mip_height = (height + texel_rows_per_line - 1) / texel_rows_per_line;  // Convert texels to blocks
-
-		for (u32 mipmap = 0; mipmap < mipmaps; ++mipmap)
+		// Constant pitch layout, simple scanning
+		const u32 internal_height = (height + texel_rows_per_line - 1) / texel_rows_per_line;  // Convert texels to blocks
+		for (u32 layer = 0; layer < layers; ++layer)
 		{
-			size += pitch * mip_height;
-			mip_height = std::max(mip_height / 2u, 1u);
+			u32 mip_height = internal_height;
+			for (u32 mipmap = 0; mipmap < mipmaps && mip_height > 0; ++mipmap)
+			{
+				size += pitch * mip_height * depth;
+				mip_height = std::max(mip_height / 2u, 1u);
+			}
+		}
+	}
+	else
+	{
+		// Variable pitch per mipmap level
+		const auto texels_per_block = get_format_block_size_in_texel(gcm_format);
+		const auto bytes_per_block = get_format_block_size_in_bytes(gcm_format);
+
+		const u32 internal_height = (height + texel_rows_per_line - 1) / texel_rows_per_line;  // Convert texels to blocks
+		const u32 internal_width = (width + texels_per_block - 1) / texels_per_block;          // Convert texels to blocks
+		for (u32 layer = 0; layer < layers; ++layer)
+		{
+			u32 mip_height = internal_height;
+			u32 mip_width = internal_width;
+			for (u32 mipmap = 0; mipmap < mipmaps && mip_height > 0; ++mipmap)
+			{
+				size += (mip_width * bytes_per_block * mip_height * depth);
+				mip_height = std::max(mip_height / 2u, 1u);
+				mip_width = std::max(mip_width / 2u, 1u);
+			}
 		}
 	}
 

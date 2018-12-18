@@ -50,10 +50,13 @@ namespace vk
 			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
 			vram_texture = new_texture;
 
+			verify(HERE), rsx_pitch;
+
 			width = w;
 			height = h;
 			this->depth = depth;
 			this->mipmaps = mipmaps;
+			this->rsx_pitch = rsx_pitch;
 
 			this->gcm_format = gcm_format;
 			this->pack_unpack_swap_bytes = pack_swap_bytes;
@@ -62,12 +65,6 @@ namespace vk
 			{
 				managed_texture.reset(vram_texture);
 			}
-
-			//TODO: Properly compute these values
-			if (rsx_pitch > 0)
-				this->rsx_pitch = rsx_pitch;
-			else
-				this->rsx_pitch = get_section_size() / height;
 
 			//Even if we are managing the same vram section, we cannot guarantee contents are static
 			//The create method is only invoked when a new managed session is required
@@ -770,8 +767,8 @@ namespace vk
 			vk::change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
 		}
 
-		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 gcm_format,
-				rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
+		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps,  u16 pitch,
+			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
 		{
 			const u16 section_depth = depth;
 			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
@@ -849,7 +846,7 @@ namespace vk
 			region.set_gcm_format(gcm_format);
 			region.set_image_type(type);
 
-			region.create(width, height, section_depth, mipmaps, image, 0, true, gcm_format);
+			region.create(width, height, section_depth, mipmaps, image, pitch, true, gcm_format);
 			region.set_dirty(false);
 
 			//Its not necessary to lock blit dst textures as they are just reused as necessary
@@ -873,7 +870,7 @@ namespace vk
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) override
 		{
-			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, gcm_format, context, type,
+			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type,
 					rsx::texture_create_flags::default_component_order);
 
 			auto image = section->get_raw_texture();
