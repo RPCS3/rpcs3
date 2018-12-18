@@ -216,7 +216,7 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm8);
 	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm9);
 #endif
-	c.add(x86::qword_ptr(x86::r10), 1);
+	c.add(x86::qword_ptr(x86::r10), 2);
 	c.xend();
 	c.vzeroupper();
 	c.mov(x86::eax, 1);
@@ -242,7 +242,7 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.ret();
 });
 
-const auto spu_getll_tx = build_function_asm<bool(*)(u32 raddr, void* rdata, u64* out_rtime)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -271,8 +271,6 @@ const auto spu_getll_tx = build_function_asm<bool(*)(u32 raddr, void* rdata, u64
 	c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
 	c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
 	c.vzeroupper();
-	c.mov(x86::qword_ptr(args[2]), x86::rax);
-	c.mov(x86::eax, 1);
 	c.ret();
 
 	// Touch memory after transaction failure
@@ -282,7 +280,7 @@ const auto spu_getll_tx = build_function_asm<bool(*)(u32 raddr, void* rdata, u64
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
 	c.sub(args[0], 1);
 	c.jnz(begin);
-	c.xor_(x86::eax, x86::eax);
+	c.mov(x86::eax, 1);
 	c.ret();
 });
 
@@ -314,7 +312,7 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm1);
 	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm2);
 	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm3);
-	c.add(x86::qword_ptr(x86::r10), 1);
+	c.add(x86::qword_ptr(x86::r10), 2);
 	c.xend();
 	c.vzeroupper();
 	c.mov(x86::eax, 1);
@@ -1030,7 +1028,12 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 
 	if (raddr && addr == raddr)
 	{
-		ch_event_stat |= SPU_EVENT_LR;
+		// Last check for event before we clear the reservation
+		if (vm::reservation_acquire(addr, 128) != rtime || rdata != vm::_ref<decltype(rdata)>(addr))
+		{
+			ch_event_stat |= SPU_EVENT_LR;
+		}
+
 		raddr = 0;
 	}
 
@@ -1206,21 +1209,16 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	{
 		const u32 addr = args.eal & -128u;
 		auto& data = vm::_ref<decltype(rdata)>(addr);
-
-		if (raddr && raddr != addr)
-		{
-			ch_event_stat |= SPU_EVENT_LR;
-		}
-
-		raddr = addr;
+		auto& dst = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
+		u64 ntime;
 
 		const bool is_polling = false; // TODO
 
 		if (is_polling)
 		{
-			rtime = vm::reservation_acquire(raddr, 128);
+			rtime = vm::reservation_acquire(addr, 128);
 
-			while (rdata == data && vm::reservation_acquire(raddr, 128) == rtime)
+			while (rdata == data && vm::reservation_acquire(addr, 128) == rtime)
 			{
 				if (is_stopped())
 				{
@@ -1235,20 +1233,22 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 		{
 			u64 count = 1;
 
-			while (g_cfg.core.spu_accurate_getllar && !spu_getll_tx(raddr, rdata.data(), &rtime))
+			if (g_cfg.core.spu_accurate_getllar)
 			{
-				std::this_thread::yield();
-				count += 2;
+			 	while ((ntime = spu_getll_tx(addr, dst.data())) & 1)
+				{
+					std::this_thread::yield();
+					count += 2;
+				}
 			}
-
-			if (!g_cfg.core.spu_accurate_getllar)
+			else
 			{
 				for (;; count++, busy_wait(300))
 				{
-					rtime = vm::reservation_acquire(raddr, 128);
-					rdata = data;
+					ntime = vm::reservation_acquire(addr, 128);
+					dst = data;
 
-					if (LIKELY(vm::reservation_acquire(raddr, 128) == rtime))
+					if (LIKELY(vm::reservation_acquire(addr, 128) == ntime))
 					{
 						break;
 					}
@@ -1262,30 +1262,49 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 		}
 		else
 		{
-			auto& res = vm::reservation_lock(raddr, 128);
+			auto& res = vm::reservation_lock(addr, 128);
 
 			if (g_cfg.core.spu_accurate_getllar)
 			{
-				vm::_ref<atomic_t<u32>>(raddr) += 0;
+				vm::_ref<atomic_t<u32>>(addr) += 0;
 
 				// Full lock (heavyweight)
 				// TODO: vm::check_addr
 				vm::writer_lock lock(1);
 
-				rtime = res & ~1ull;
-				rdata = data;
+				ntime = res & ~1ull;
+				dst = data;
 				res &= ~1ull;
 			}
 			else
 			{
-				rtime = res & ~1ull;
-				rdata = data;
+				ntime = res & ~1ull;
+				dst = data;
 				res &= ~1ull;
 			}
 		}
 
-		// Copy to LS
-		_ref<decltype(rdata)>(args.lsa & 0x3ff80) = rdata;
+		if (const u32 _addr = raddr)
+		{
+			// Last check for event before we replace the reservation with a new one
+			if (vm::reservation_acquire(_addr, 128) != rtime || rdata != vm::_ref<decltype(rdata)>(_addr))
+			{
+				ch_event_stat |= SPU_EVENT_LR;
+
+				if (_addr == addr)
+				{
+					// Lost current reservation
+					raddr = 0;
+					ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
+					return true;
+				}
+			}
+		}
+
+		raddr = addr;
+		rtime = ntime;
+		rdata = dst;
+
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 		return true;
 	}
@@ -1341,12 +1360,16 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 		}
 		else
 		{
-			ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
-		}
+			if (raddr)
+			{
+				// Last check for event before we clear the reservation
+				if (raddr == addr || rtime != vm::reservation_acquire(raddr, 128) || rdata != vm::_ref<decltype(rdata)>(raddr))
+				{
+					ch_event_stat |= SPU_EVENT_LR;
+				}
+			}
 
-		if (raddr && !result)
-		{
-			ch_event_stat |= SPU_EVENT_LR;
+			ch_atomic_stat.set_value(MFC_PUTLLC_FAILURE);
 		}
 
 		raddr = 0;
