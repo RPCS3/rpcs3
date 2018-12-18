@@ -316,12 +316,11 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// * Installed
 	// We will go with the easy path of Installed, and that's it.
 
-	auto statuses = {SCE_NP_TROPHY_STATUS_NOT_INSTALLED,
+	auto statuses = {SCE_NP_TROPHY_STATUS_INSTALLED,
 					 SCE_NP_TROPHY_STATUS_PROCESSING_SETUP,
 					 SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS,
 					 SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE,
-					 SCE_NP_TROPHY_STATUS_INSTALLED};
+					 SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE};
 
 	for (auto status : statuses)
 	{
