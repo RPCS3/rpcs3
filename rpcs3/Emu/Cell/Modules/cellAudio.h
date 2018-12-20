@@ -1,6 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/Thread.h"
+#include "Emu/Memory/vm.h"
+#include "Emu/Audio/AudioThread.h"
+#include "Emu/Audio/AudioDumper.h"
 
 // Error codes
 enum CellAudioError : u32
@@ -76,11 +79,26 @@ struct CellAudioPortConfig
 
 enum : u32
 {
-	BUFFER_NUM = 32,
-	BUFFER_SIZE = 256,
 	AUDIO_PORT_COUNT = 8,
-	AUDIO_PORT_OFFSET = 256 * 1024,
-	AUDIO_SAMPLES = CELL_AUDIO_BLOCK_SAMPLES,
+	AUDIO_MAX_BLOCK_COUNT = 32,
+	AUDIO_MAX_CHANNELS_COUNT = 8,
+
+	AUDIO_PORT_OFFSET = AUDIO_BUFFER_SAMPLES * AUDIO_MAX_BLOCK_COUNT * AUDIO_MAX_CHANNELS_COUNT * sizeof(f32),
+	EXTRA_AUDIO_BUFFERS = 8,
+	MAX_AUDIO_EVENT_QUEUES = 64,
+
+	AUDIO_BLOCK_SIZE_2CH = 2 * AUDIO_BUFFER_SAMPLES,
+	AUDIO_BLOCK_SIZE_8CH = 8 * AUDIO_BUFFER_SAMPLES,
+
+	PORT_BUFFER_TAG_COUNT = 4,
+
+	PORT_BUFFER_TAG_LAST_2CH = AUDIO_BLOCK_SIZE_2CH - 1,
+	PORT_BUFFER_TAG_DELTA_2CH = PORT_BUFFER_TAG_LAST_2CH / (PORT_BUFFER_TAG_COUNT - 1),
+	PORT_BUFFER_TAG_FIRST_2CH = PORT_BUFFER_TAG_LAST_2CH % (PORT_BUFFER_TAG_COUNT - 1),
+
+	PORT_BUFFER_TAG_LAST_8CH = AUDIO_BLOCK_SIZE_8CH - 1,
+	PORT_BUFFER_TAG_DELTA_8CH = PORT_BUFFER_TAG_LAST_8CH / (PORT_BUFFER_TAG_COUNT - 1),
+	PORT_BUFFER_TAG_FIRST_8CH = PORT_BUFFER_TAG_LAST_8CH % (PORT_BUFFER_TAG_COUNT - 1),
 };
 
 enum class audio_port_state : u32
@@ -98,12 +116,14 @@ struct audio_port
 	vm::ptr<char> addr{};
 	vm::ptr<u64> index{};
 
-	u32 channel;
-	u32 block;
+	u32 num_channels;
+	u32 num_blocks;
 	u64 attr;
-	u64 tag;
-	u64 counter; // copy of global counter
+	u64 cur_pos;
+	u64 global_counter; // copy of global counter
+	u64 active_counter;
 	u32 size;
+	u64 timestamp; // copy of global timestamp
 
 	struct alignas(8) level_set_t
 	{
@@ -113,25 +133,158 @@ struct audio_port
 
 	float level;
 	atomic_t<level_set_t> level_set;
+
+	u32 block_size() const
+	{
+		return num_channels * AUDIO_BUFFER_SAMPLES;
+	}
+
+	u32 buf_size() const
+	{
+		return block_size() * sizeof(float);
+	}
+
+	u32 position(s32 offset = 0) const
+	{
+		s32 ofs = (offset % num_blocks) + num_blocks;
+		return (cur_pos + ofs) % num_blocks;
+	}
+
+	u32 buf_addr(s32 offset = 0) const
+	{
+		return addr.addr() + position(offset) * buf_size();
+	}
+
+	to_be_t<float>* get_vm_ptr(s32 offset = 0) const
+	{
+		return vm::_ptr<f32>(buf_addr(offset));
+	}
+
+
+	// Tags
+	u32 prev_touched_tag_nr;
+	f32 tag_backup[AUDIO_MAX_BLOCK_COUNT][PORT_BUFFER_TAG_COUNT] = { 0 };
+
+	constexpr static bool is_tag(float val);
+	void tag(s32 offset = 0);
+	void apply_tag_backups(s32 offset = 0);
 };
 
-class audio_thread
+class audio_ringbuffer
+{
+private:
+	const std::shared_ptr<AudioThread> backend;
+
+	const u32 num_allocated_buffers;
+	const u32 buf_sz;
+	const u32 audio_sampling_rate;
+	const u32 channels;
+
+	std::unique_ptr<AudioDumper> m_dump;
+
+	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS];
+	const float silence_buffer[8 * AUDIO_BUFFER_SAMPLES] = { 0 };
+
+	bool backend_open = false;
+	bool playing = false;
+	bool emu_paused = false;
+
+	u64 update_timestamp = 0;
+	u64 play_timestamp = 0;
+
+	u64 last_remainder = 0;
+	u64 enqueued_samples = 0;
+
+	u32 next_buf = 0;
+
+public:
+	audio_ringbuffer(u32 num_buffers, u32 audio_sampling_rate, u32 channels);
+	~audio_ringbuffer();
+
+	void play();
+	void enqueue(const float* in_buffer = nullptr);
+	void flush();
+	u64 update();
+	void enqueue_silence(u32 buf_count = 1);
+
+	float* get_buffer(u32 num) const
+	{
+		AUDIT(num < num_allocated_buffers);
+		AUDIT(buffer[num].get() != nullptr);
+		return buffer[num].get();
+	}
+
+	u32 get_buf_sz() const
+	{
+		return buf_sz;
+	}
+
+	u64 get_timestamp() const
+	{
+		return get_system_time() - Emu.GetPauseTime();
+	}
+
+	float* get_current_buffer() const
+	{
+		return get_buffer(next_buf);
+	}
+
+	u64 get_enqueued_samples() const
+	{
+		return enqueued_samples;
+	}
+
+	bool is_playing() const
+	{
+		return playing;
+	}
+};
+
+
+class cell_audio_thread
 {
 	vm::ptr<char> m_buffer;
 	vm::ptr<u64> m_indexes;
 
-	u64 m_counter{};
+	std::unique_ptr<audio_ringbuffer> ringbuffer;
+
+	void reset_ports(s32 offset = 0);
+	void advance(u64 timestamp, bool reset = true);
+	std::tuple<u32, u32, u32, u32> count_port_buffer_tags();
+	template<bool downmix_to_2ch> void mix(float *out_buffer, s32 offset = 0);
+	void finish_port_volume_stepping();
+
+	constexpr static u64 get_thread_wait_delay(u64 time_left)
+	{
+		return (time_left > 1000) ? time_left - 750 : 100;
+	}
 
 public:
-	const u64 start_time = get_system_time();
+	const s64 period_comparison_margin = 100; // When comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
 
-	std::array<audio_port, AUDIO_PORT_COUNT> ports;
+	const u32 audio_channels = AudioThread::get_channels();
+	const u32 audio_sampling_rate = AudioThread::get_sampling_rate();
+	const u64 audio_block_period = AUDIO_BUFFER_SAMPLES * 1000000 / audio_sampling_rate;
+	const u64 desired_buffer_duration = g_cfg.audio.enable_buffering ? g_cfg.audio.desired_buffer_duration : 0;
+	const bool buffering_enabled = g_cfg.audio.enable_buffering && (desired_buffer_duration >= audio_block_period);
+
+	const u64 minimum_block_period = audio_block_period / 2; // the block period will not be dynamically lowered below this value (usecs)
+	const u64 maximum_block_period = audio_block_period + (audio_block_period - minimum_block_period); // the block period will not be dynamically increased above this value (usecs)
+
+	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 1 : 1;
+	const u32 num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS; // number of ringbuffer buffers
 
 	std::vector<u64> keys;
+	std::array<audio_port, AUDIO_PORT_COUNT> ports;
+
+	u64 m_last_period_end = 0;
+	u64 m_counter = 0;
+	u64 m_start_time = 0;
+	u64 m_dynamic_period = 0;
 
 	void operator()();
 
-	audio_thread(vm::ptr<char> buf, vm::ptr<u64> ind)
+	cell_audio_thread(vm::ptr<char> buf, vm::ptr<u64> ind)
 		: m_buffer(buf)
 		, m_indexes(ind)
 	{
@@ -157,4 +310,4 @@ public:
 	}
 };
 
-using audio_config = named_thread<audio_thread>;
+using cell_audio = named_thread<cell_audio_thread>;

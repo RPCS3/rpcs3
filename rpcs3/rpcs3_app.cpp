@@ -37,7 +37,7 @@
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
 #include "Emu/Audio/Null/NullAudioThread.h"
-#include "Emu/Audio/AL/OpenALThread.h"
+//#include "Emu/Audio/AL/OpenALThread.h"
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
@@ -269,7 +269,7 @@ void rpcs3_app::InitializeCallbacks()
 		case audio_renderer::pulse: return std::make_shared<PulseThread>();
 #endif
 
-		case audio_renderer::openal: return std::make_shared<OpenALThread>();
+		//case audio_renderer::openal: return std::make_shared<OpenALThread>();
 		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
 		}
 	};

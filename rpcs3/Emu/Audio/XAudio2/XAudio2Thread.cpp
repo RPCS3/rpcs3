@@ -1,4 +1,4 @@
-#ifdef _WIN32
+﻿#ifdef _WIN32
 
 #include "Utilities/Log.h"
 #include "Utilities/StrFmt.h"
@@ -18,12 +18,13 @@ XAudio2Thread::XAudio2Thread()
 		// xa28* implementation is fully compatible with library 2.9
 		xa28_init(lib2_9);
 
-		m_funcs.destroy = &xa28_destroy;
-		m_funcs.play    = &xa28_play;
-		m_funcs.flush   = &xa28_flush;
-		m_funcs.stop    = &xa28_stop;
-		m_funcs.open    = &xa28_open;
-		m_funcs.add     = &xa28_add;
+		m_funcs.destroy    = &xa28_destroy;
+		m_funcs.play       = &xa28_play;
+		m_funcs.flush      = &xa28_flush;
+		m_funcs.stop       = &xa28_stop;
+		m_funcs.open       = &xa28_open;
+		m_funcs.is_playing = &xa28_is_playing;
+		m_funcs.add        = &xa28_add;
 
 		LOG_SUCCESS(GENERAL, "XAudio 2.9 initialized");
 		return;
@@ -33,12 +34,13 @@ XAudio2Thread::XAudio2Thread()
 	{
 		xa27_init(lib2_7);
 
-		m_funcs.destroy = &xa27_destroy;
-		m_funcs.play    = &xa27_play;
-		m_funcs.flush   = &xa27_flush;
-		m_funcs.stop    = &xa27_stop;
-		m_funcs.open    = &xa27_open;
-		m_funcs.add     = &xa27_add;
+		m_funcs.destroy    = &xa27_destroy;
+		m_funcs.play       = &xa27_play;
+		m_funcs.flush      = &xa27_flush;
+		m_funcs.stop       = &xa27_stop;
+		m_funcs.open       = &xa27_open;
+		m_funcs.is_playing = &xa27_is_playing;
+		m_funcs.add        = &xa27_add;
 
 		LOG_SUCCESS(GENERAL, "XAudio 2.7 initialized");
 		return;
@@ -48,12 +50,13 @@ XAudio2Thread::XAudio2Thread()
 	{
 		xa28_init(lib2_8);
 
-		m_funcs.destroy = &xa28_destroy;
-		m_funcs.play    = &xa28_play;
-		m_funcs.flush   = &xa28_flush;
-		m_funcs.stop    = &xa28_stop;
-		m_funcs.open    = &xa28_open;
-		m_funcs.add     = &xa28_add;
+		m_funcs.destroy    = &xa28_destroy;
+		m_funcs.play       = &xa28_play;
+		m_funcs.flush      = &xa28_flush;
+		m_funcs.stop       = &xa28_stop;
+		m_funcs.open       = &xa28_open;
+		m_funcs.is_playing = &xa28_is_playing;
+		m_funcs.add        = &xa28_add;
 
 		LOG_SUCCESS(GENERAL, "XAudio 2.8 initialized");
 		return;
@@ -78,21 +81,29 @@ void XAudio2Thread::Close()
 	m_funcs.flush();
 }
 
-void XAudio2Thread::Stop()
+void XAudio2Thread::Pause()
 {
 	m_funcs.stop();
 }
 
-void XAudio2Thread::Open(const void* src, int size)
+void XAudio2Thread::Open()
 {
 	m_funcs.open();
-	m_funcs.add(src, size);
-	m_funcs.play();
 }
 
-void XAudio2Thread::AddData(const void* src, int size)
+bool XAudio2Thread::IsPlaying()
 {
-	m_funcs.add(src, size);
+	return m_funcs.is_playing();
+}
+
+bool XAudio2Thread::AddData(const void* src, int size)
+{
+	return m_funcs.add(src, size);
+}
+
+void XAudio2Thread::Flush()
+{
+	m_funcs.flush();
 }
 
 #endif
