@@ -318,6 +318,10 @@ void pad_settings_dialog::InitButtons()
 	// Enable Button Remapping
 	const auto& callback = [=](u16 val, std::string name, int preview_values[6])
 	{
+		if (!m_enable_buttons && !m_timer.isActive())
+		{
+			SwitchButtons(true);
+		}
 		if (m_handler->has_deadzones())
 		{
 			ui->preview_trigger_left->setValue(preview_values[0]);
@@ -349,8 +353,17 @@ void pad_settings_dialog::InitButtons()
 		}
 	};
 
+	// Disable Button Remapping
+	const auto& fail_callback = [this]()
+	{
+		if (m_enable_buttons)
+		{
+			SwitchButtons(false);
+		}
+	};
+
 	// Use timer to get button input
-	connect(&m_timer_input, &QTimer::timeout, [this, callback]()
+	connect(&m_timer_input, &QTimer::timeout, [this, callback, fail_callback]()
 	{
 		std::vector<std::string> buttons =
 		{
@@ -359,7 +372,7 @@ void pad_settings_dialog::InitButtons()
 			m_cfg_entries[button_ids::id_pad_rstick_left].key, m_cfg_entries[button_ids::id_pad_rstick_right].key, m_cfg_entries[button_ids::id_pad_rstick_down].key,
 			m_cfg_entries[button_ids::id_pad_rstick_up].key
 		};
-		m_handler->GetNextButtonPress(m_device_name, callback, false, buttons);
+		m_handler->GetNextButtonPress(m_device_name, callback, fail_callback, false, buttons);
 	});
 }
 
@@ -406,9 +419,6 @@ void pad_settings_dialog::ReloadButtons()
 	updateButton(button_ids::id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg.rs_right);
 	updateButton(button_ids::id_pad_rstick_up, ui->b_rstick_up, &m_handler_cfg.rs_up);
 
-	// Enable Vibration Checkboxes
-	ui->gb_vibration->setEnabled(m_handler->has_rumble());
-
 	ui->chb_vibration_large->setChecked((bool)m_handler_cfg.enable_vibration_motor_large);
 	ui->chb_vibration_small->setChecked((bool)m_handler_cfg.enable_vibration_motor_small);
 	ui->chb_vibration_switch->setChecked((bool)m_handler_cfg.switch_vibration_motors);
@@ -416,11 +426,11 @@ void pad_settings_dialog::ReloadButtons()
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
 
-	// Enable Deadzone Settings
-	const bool enable_deadzones = m_handler->has_deadzones();
+	// Enable Vibration Checkboxes
+	m_enable_rumble = m_handler->has_rumble();
 
-	ui->gb_sticks->setEnabled(enable_deadzones);
-	ui->gb_triggers->setEnabled(enable_deadzones);
+	// Enable Deadzone Settings
+	m_enable_deadzones = m_handler->has_deadzones();
 
 	// Enable Trigger Thresholds
 	ui->slider_trigger_left->setRange(0, m_handler->trigger_max);
@@ -652,6 +662,12 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 
 void pad_settings_dialog::SwitchButtons(bool is_enabled)
 {
+	m_enable_buttons = is_enabled;
+
+	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
+	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
+	ui->gb_triggers->setEnabled(is_enabled && m_enable_deadzones);
+
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
 		m_padButtons->button(i)->setEnabled(is_enabled);
@@ -675,7 +691,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		UpdateLabel(true);
 		return;
 	case button_ids::id_blacklist:
-		m_handler->GetNextButtonPress(m_device_name, nullptr, true);
+		m_handler->GetNextButtonPress(m_device_name, nullptr, nullptr, true);
 		return;
 	default:
 		break;
@@ -835,7 +851,7 @@ void pad_settings_dialog::ChangeInputType()
 	}
 
 	// enable configuration and profile list if possible
-	SwitchButtons(config_enabled);
+	SwitchButtons(false || config_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->b_addProfile->setEnabled(config_enabled);
 	ui->chooseProfile->setEnabled(config_enabled);
 }

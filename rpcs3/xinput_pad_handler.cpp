@@ -74,14 +74,14 @@ void xinput_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->from_default();
 }
 
-void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, const std::function<void()>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
 
 	int device_number = GetDeviceNumber(padId);
 	if (device_number < 0)
-		return;
+		return fail_callback();
 
 	DWORD dwResult;
 	XINPUT_STATE state;
@@ -90,7 +90,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	// Simply get the state of the controller from XInput.
 	dwResult = (*xinputGetState)(static_cast<u32>(device_number), &state);
 	if (dwResult != ERROR_SUCCESS)
-		return;
+		return fail_callback();
 
 	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
