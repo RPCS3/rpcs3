@@ -428,7 +428,7 @@ s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	std::lock_guard lock(g_camera->mutex);
 
-	if (info->read_mode == CELL_CAMERA_READ_FUNCCALL && !info->buffer)
+	if (info->read_mode != CELL_CAMERA_READ_DIRECT && !info->buffer)
 	{
 		info->buffer = vm::cast(vm::alloc(vbuf_size, vm::memory_location_t::main));
 		info->bytesize = vbuf_size;
