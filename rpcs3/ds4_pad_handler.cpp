@@ -96,7 +96,8 @@ ds4_pad_handler::ds4_pad_handler() : PadHandlerBase(pad_handler::ds4)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 
-	m_name_string = "Ds4 Pad #";
+	m_name_string = "DS4 Pad #";
+	m_max_devices = CELL_PAD_MAX_PORT_NUM;
 
 	m_trigger_threshold = trigger_max / 2;
 	m_thumb_threshold = thumb_max / 2;
@@ -261,9 +262,10 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std
 	std::string pad_serial = padId.substr(pos + 9);
 	std::shared_ptr<DS4Device> device = nullptr;
 
+	int i = 0;
 	for (auto& cur_control : controllers)
 	{
-		if (pad_serial == cur_control.first)
+		if (pad_serial == std::to_string(i++) || pad_serial == cur_control.first)
 		{
 			device = cur_control.second;
 			break;
@@ -768,9 +770,9 @@ std::vector<std::string> ds4_pad_handler::ListDevices()
 	if (!Init())
 		return ds4_pads_list;
 
-	for (auto& pad : controllers)
+	for (size_t i = 0; i < controllers.size(); ++i)
 	{
-		ds4_pads_list.emplace_back(m_name_string + pad.first);
+		ds4_pads_list.emplace_back(m_name_string + std::to_string(i));
 	}
 
 	return ds4_pads_list;
