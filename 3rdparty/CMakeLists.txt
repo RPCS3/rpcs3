@@ -152,7 +152,7 @@ target_include_directories(3rdparty_stblib INTERFACE stblib)
 add_library(3rdparty_discord-rpc INTERFACE)
 
 # We don't want Discord Rich Presence on the BSDs and other OSes
-if (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE)
+if (USE_DISCORD_RPC AND (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE))
 	if (WIN32 AND NOT MSVC)
 		ExternalProject_Add(discord-rpc
 				GIT_REPOSITORY https://github.com/discordapp/discord-rpc
