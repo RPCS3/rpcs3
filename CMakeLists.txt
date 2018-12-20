@@ -12,6 +12,8 @@ option(USE_ALSA "ALSA audio backend" ON)
 option(USE_PULSE "PulseAudio audio backend" ON)
 option(USE_LIBEVDEV "libevdev-based joystick support" ON)
 
+option(USE_DISCORD_RPC "Discord rich presence integration" ON)
+
 option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
 
 option(USE_VULKAN "Vulkan render backend" ON)
