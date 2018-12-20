@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "Emu/Audio/AudioThread.h"
+/*#include "Emu/Audio/AudioThread.h"
 #include "3rdparty/OpenAL/include/alext.h"
 #include <memory>
 
@@ -22,3 +22,4 @@ public:
 	virtual void Stop() override;
 	virtual void AddData(const void* src, int size) override;
 };
+*/
