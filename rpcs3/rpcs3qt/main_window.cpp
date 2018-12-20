@@ -1252,7 +1252,16 @@ void main_window::CreateConnects()
 
 	auto openPadSettings = [this]
 	{
+		auto resetPadHandlers = [this]
+		{
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+			Emu.GetCallbacks().reset_pads();
+		};
 		pad_settings_dialog dlg(this);
+		connect(&dlg, &QDialog::accepted, resetPadHandlers);
 		dlg.exec();
 	};
 

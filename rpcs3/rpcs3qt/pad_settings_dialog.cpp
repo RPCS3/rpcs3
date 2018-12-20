@@ -791,6 +791,7 @@ void pad_settings_dialog::ChangeInputType()
 	switch (m_handler->m_type)
 	{
 #ifdef _WIN32
+	case pad_handler::ds4:
 	case pad_handler::xinput:
 	{
 		const QString name_string = qstr(m_handler->name_string());
@@ -960,16 +961,6 @@ void pad_settings_dialog::SaveProfile()
 	m_handler_cfg.save();
 }
 
-void pad_settings_dialog::ResetPadHandler()
-{
-	if (Emu.IsStopped())
-	{
-		return;
-	}
-
-	Emu.GetCallbacks().reset_pads();
-}
-
 void pad_settings_dialog::SaveExit()
 {
 	SaveProfile();
@@ -985,8 +976,6 @@ void pad_settings_dialog::SaveExit()
 	}
 
 	g_cfg_input.save();
-
-	ResetPadHandler();
 
 	QDialog::accept();
 }
