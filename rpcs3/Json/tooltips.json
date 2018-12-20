@@ -9,7 +9,8 @@
 		"enableBuffering": "Enables audio buffering, which reduces crackle/stutter but increases audio latency (requires XAudio2 or OpenAL).",
 		"audioBufferDuration": "Target buffer duration in milliseconds.\nHigher values make the buffering algorithm's job easier, but may introduce noticeable audio latency.",
 		"enableTimeStretching": "Enables time stretching - requires buffering to be enabled.\nReduces crackle/stutter further, but may cause a very noticeable reduction in audio quality on slower CPUs.",
-		"timeStretchingThreshold": "Buffer fill level (in percentage) below which time stretching will start."
+		"timeStretchingThreshold": "Buffer fill level (in percentage) below which time stretching will start.",
+		"microphoneBox": "Standard should be used for most games.\nSingstar emulates a singstar device and should be used with Singstar games.\nReal Singstar should only be used with a REAL Singstar device with Singstar games.\nRocksmith should be used with a Rocksmith dongle."
 	},
 	"cpu": {
 		"PPU": {

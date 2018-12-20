@@ -9,6 +9,7 @@
 #include "Emu/System.h"
 #include "Utilities/Config.h"
 #include "Utilities/Thread.h"
+#include "Utilities/StrUtil.h"
 
 #include <QMessageBox>
 
@@ -23,6 +24,8 @@
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKHelpers.h"
 #endif
+
+#include "3rdparty/OpenAL/include/alext.h"
 
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
 
@@ -226,6 +229,58 @@ emu_settings::Render_Creator::Render_Creator()
 	NullRender = Render_Info(name_Null);
 
 	renderers = { &D3D12, &Vulkan, &OpenGL, &NullRender };
+}
+
+emu_settings::Microphone_Creator::Microphone_Creator()
+{
+	RefreshList();
+}
+
+void emu_settings::Microphone_Creator::RefreshList()
+{
+	microphones_list.clear();
+	microphones_list.append(mic_none);
+
+	if (alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT") == AL_TRUE)
+	{
+		const char *devices = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
+
+		while (*devices != 0)
+		{
+			microphones_list.append(qstr(devices));
+			devices += strlen(devices) + 1;
+		}
+	}
+	else
+	{
+		// Without enumeration we can only use one device
+		microphones_list.append(qstr(alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER)));
+	}
+}
+
+std::string emu_settings::Microphone_Creator::SetDevice(u32 num, QString& text)
+{
+	if (text == mic_none)
+		sel_list[num-1] = "";
+	else
+		sel_list[num-1] = text.toStdString();
+
+	const std::string final_list = sel_list[0] + "@@@" + sel_list[1] + "@@@" + sel_list[2] + "@@@" + sel_list[3] + "@@@";
+	return final_list;
+}
+
+void emu_settings::Microphone_Creator::ParseDevices(std::string list)
+{
+	for (u32 index = 0; index < 4; index++)
+	{
+		sel_list[index] = "";
+	}
+
+	const auto devices_list = fmt::split(list, { "@@@" });
+	for (u32 index = 0; index < std::min((u32)4, (u32)devices_list.size()); index++)
+	{
+		sel_list[index] = devices_list[index];
+	}
 }
 
 emu_settings::emu_settings() : QObject()
