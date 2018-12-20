@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿/*#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "OpenALThread.h"
@@ -157,3 +157,4 @@ void OpenALThread::AddData(const void* src, int size)
 
 	Play();
 }
+*/
