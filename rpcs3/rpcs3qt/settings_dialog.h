@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "gui_settings.h"
 #include "emu_settings.h"
@@ -36,13 +36,15 @@ private Q_SLOTS:
 private:
 	void EnhanceSlider(emu_settings::SettingsType settings_type, QSlider* slider, QLabel* label, const QString& label_text);
 
-	//emulator tab
+	// Emulator tab
 	void AddConfigs();
 	void AddStylesheets();
 	QString m_currentStylesheet;
 	QString m_currentConfig;
-	//gpu tab
+	// Gpu tab
 	QString m_oldRender = "";
+	// Audio tab
+	QComboBox *mics_combo[4];
 
 	int m_tab_Index;
 	Ui::settings_dialog *ui;
@@ -53,7 +55,7 @@ private:
 	bool m_use_discord;
 	QString m_discord_state;
 
-	// descriptions
+	// Descriptions
 	QList<QPair<QLabel*, QString>> m_description_labels;
 	QHash<QObject*, QString> m_descriptions;
 	void SubscribeDescription(QLabel* description);
