@@ -1494,7 +1494,7 @@ namespace rsx
 
 		template <typename render_target_type, typename surface_store_type>
 		sampled_image_descriptor process_framebuffer_resource(commandbuffer_type& cmd, render_target_type texptr, u32 texaddr, u32 gcm_format, surface_store_type& m_rtts,
-				u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch, rsx::texture_dimension_extended extended_dimension, bool is_depth, u32 encoded_remap, const texture_channel_remap_t& decoded_remap)
+				u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch, rsx::texture_dimension_extended extended_dimension, bool is_depth, bool is_bound, u32 encoded_remap, const texture_channel_remap_t& decoded_remap)
 		{
 			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
 			const auto surface_width = texptr->get_surface_width();
@@ -1628,43 +1628,18 @@ namespace rsx
 				if (internal_height > surface_height)
 					scale_y *= ((f32)internal_height / surface_height);
 
-				if (!is_depth)
+				if (is_bound)
 				{
-					for (const auto& tex : m_rtts.m_bound_render_targets)
+					if (g_cfg.video.strict_rendering_mode)
 					{
-						if (std::get<0>(tex) == texaddr)
-						{
-							if (g_cfg.video.strict_rendering_mode)
-							{
-								LOG_WARNING(RSX, "Attempting to sample a currently bound render target @ 0x%x", texaddr);
-								requires_processing = true;
-								update_subresource_cache = true;
-								break;
-							}
-							else
-							{
-								//issue a texture barrier to ensure previous writes are visible
-								insert_texture_barrier(cmd, texptr);
-								break;
-							}
-						}
+						LOG_TRACE(RSX, "Attempting to sample a currently bound %s target @ 0x%x", is_depth? "depth" : "color", texaddr);
+						requires_processing = true;
+						update_subresource_cache = true;
 					}
-				}
-				else
-				{
-					if (texaddr == std::get<0>(m_rtts.m_bound_depth_stencil))
+					else
 					{
-						if (g_cfg.video.strict_rendering_mode)
-						{
-							LOG_WARNING(RSX, "Attempting to sample a currently bound depth surface @ 0x%x", texaddr);
-							requires_processing = true;
-							update_subresource_cache = true;
-						}
-						else
-						{
-							//issue a texture barrier to ensure previous writes are visible
-							insert_texture_barrier(cmd, texptr);
-						}
+						// Issue a texture barrier to ensure previous writes are visible
+						insert_texture_barrier(cmd, texptr);
 					}
 				}
 			}
@@ -1724,15 +1699,16 @@ namespace rsx
 
 			if (!is_compressed_format)
 			{
-				//Check for sampleable rtts from previous render passes
-				//TODO: When framebuffer Y compression is properly handled, this section can be removed. A more accurate framebuffer storage check exists below this block
+				// Check for sampleable rtts from previous render passes
+				// TODO: When framebuffer Y compression is properly handled, this section can be removed. A more accurate framebuffer storage check exists below this block
 				if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 				{
-					if (texptr->test())
+					const bool is_active = m_rtts.address_is_bound(texaddr, false);
+					if (texptr->test() || is_active)
 					{
 						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
-								tex_width, tex_height, depth, tex_pitch, extended_dimension, false, tex.remap(),
-								tex.decoded_remap());
+								tex_width, tex_height, depth, tex_pitch, extended_dimension, false, is_active,
+								tex.remap(), tex.decoded_remap());
 					}
 					else
 					{
@@ -1743,11 +1719,12 @@ namespace rsx
 
 				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 				{
-					if (texptr->test())
+					const bool is_active = m_rtts.address_is_bound(texaddr, true);
+					if (texptr->test() || is_active)
 					{
 						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
-								tex_width, tex_height, depth, tex_pitch, extended_dimension, true, tex.remap(),
-								tex.decoded_remap());
+								tex_width, tex_height, depth, tex_pitch, extended_dimension, true, is_active,
+								tex.remap(), tex.decoded_remap());
 					}
 					else
 					{
@@ -1771,7 +1748,7 @@ namespace rsx
 				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, tex_width, tex_height, tex_pitch);
 				if (rsc.surface)
 				{
-					if (!rsc.surface->test())
+					if (!rsc.surface->test() && !m_rtts.address_is_bound(rsc.base_address, rsc.is_depth_surface))
 					{
 						m_rtts.invalidate_surface_address(rsc.base_address, rsc.is_depth_surface);
 						invalidate_address(rsc.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
@@ -1952,14 +1929,14 @@ namespace rsx
 					src_is_render_target = false;
 			}
 
-			if (src_is_render_target && !src_subres.surface->test())
+			if (src_is_render_target && !src_subres.surface->test() && !m_rtts.address_is_bound(src_subres.base_address, src_subres.is_depth_surface))
 			{
 				m_rtts.invalidate_surface_address(src_subres.base_address, src_subres.is_depth_surface);
 				invalidate_address(src_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
 				src_is_render_target = false;
 			}
 
-			if (dst_is_render_target && !dst_subres.surface->test())
+			if (dst_is_render_target && !dst_subres.surface->test() && !m_rtts.address_is_bound(dst_subres.base_address, dst_subres.is_depth_surface))
 			{
 				m_rtts.invalidate_surface_address(dst_subres.base_address, dst_subres.is_depth_surface);
 				invalidate_address(dst_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
