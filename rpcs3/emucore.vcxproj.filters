@@ -928,9 +928,6 @@
     <ClInclude Include="Emu\Audio\Null\NullAudioThread.h">
       <Filter>Emu\Audio\Null</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Audio\AudioThread.h">
-      <Filter>Emu\Audio</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\File.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1458,6 +1455,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache_predictor.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\AudioThread.h">
+      <Filter>Emu\Audio</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

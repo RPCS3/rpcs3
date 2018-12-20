@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef _WIN32
 
@@ -13,7 +13,8 @@ class XAudio2Thread : public AudioThread
 		void(*flush)();
 		void(*stop)();
 		void(*open)();
-		void(*add)(const void*, int);
+		bool(*is_playing)();
+		bool(*add)(const void*, int);
 	};
 
 	vtable m_funcs;
@@ -24,7 +25,8 @@ class XAudio2Thread : public AudioThread
 	static void xa27_flush();
 	static void xa27_stop();
 	static void xa27_open();
-	static void xa27_add(const void*, int);
+	static bool xa27_is_playing();
+	static bool xa27_add(const void*, int);
 
 	static void xa28_init(void*);
 	static void xa28_destroy();
@@ -32,17 +34,22 @@ class XAudio2Thread : public AudioThread
 	static void xa28_flush();
 	static void xa28_stop();
 	static void xa28_open();
-	static void xa28_add(const void*, int);
+	static bool xa28_is_playing();
+	static bool xa28_add(const void*, int);
 
 public:
 	XAudio2Thread();
 	virtual ~XAudio2Thread() override;
 
-	virtual void Play() override;
-	virtual void Open(const void* src, int size) override;
+	virtual void Open() override;
 	virtual void Close() override;
-	virtual void Stop() override;
-	virtual void AddData(const void* src, int size) override;
+
+	virtual void Play() override;
+	virtual void Pause() override;
+	virtual bool IsPlaying() override;
+
+	virtual bool AddData(const void* src, int size) override;
+	virtual void Flush() override;
 };
 
 #endif

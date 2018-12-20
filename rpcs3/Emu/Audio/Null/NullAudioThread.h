@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Audio/AudioThread.h"
 
@@ -8,11 +8,13 @@ public:
 	NullAudioThread() {}
 	virtual ~NullAudioThread() {}
 
-	virtual void Init() {}
-	virtual void Quit() {}
-	virtual void Play() {}
-	virtual void Open(const void* src, int size) {}
-	virtual void Close() {}
-	virtual void Stop() {}
-	virtual void AddData(const void* src, int size) {}
+	virtual void Open() {};
+	virtual void Close() {};
+
+	virtual void Play() {};
+	virtual void Pause() {};
+	virtual bool IsPlaying() { return true; };
+
+	virtual bool AddData(const void* src, int size) { return true; };
+	virtual void Flush() {};
 };

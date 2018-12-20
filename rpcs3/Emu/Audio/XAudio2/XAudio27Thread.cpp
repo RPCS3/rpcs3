@@ -1,4 +1,4 @@
-#ifdef _WIN32
+﻿#ifdef _WIN32
 
 #include "Utilities/Log.h"
 #include "Utilities/StrFmt.h"
@@ -97,18 +97,27 @@ void XAudio2Thread::xa27_stop()
 	}
 }
 
+bool XAudio2Thread::xa27_is_playing()
+{
+	XAUDIO2_VOICE_STATE state;
+	s_tls_source_voice->GetState(&state);
+
+	return state.BuffersQueued > 0 || state.pCurrentBufferContext != nullptr;
+}
+
 void XAudio2Thread::xa27_open()
 {
 	HRESULT hr;
 
-	WORD sample_size = g_cfg.audio.convert_to_u16 ? sizeof(u16) : sizeof(float);
-	WORD channels = g_cfg.audio.downmix_to_2ch ? 2 : 8;
+	const u32 sample_size = get_sample_size();
+	const u32 channels = get_channels();
+	const u32 sampling_rate = get_sampling_rate();
 
 	WAVEFORMATEX waveformatex;
 	waveformatex.wFormatTag = g_cfg.audio.convert_to_u16 ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
 	waveformatex.nChannels = channels;
-	waveformatex.nSamplesPerSec = 48000;
-	waveformatex.nAvgBytesPerSec = 48000 * (DWORD)channels * (DWORD)sample_size;
+	waveformatex.nSamplesPerSec = sampling_rate;
+	waveformatex.nAvgBytesPerSec = static_cast<DWORD>(sampling_rate * channels * sample_size);
 	waveformatex.nBlockAlign = channels * sample_size;
 	waveformatex.wBitsPerSample = sample_size * 8;
 	waveformatex.cbSize = 0;
@@ -121,25 +130,24 @@ void XAudio2Thread::xa27_open()
 		return;
 	}
 
-	s_tls_source_voice->SetVolume(g_cfg.audio.downmix_to_2ch ? 1.0f : 4.0f);
+	s_tls_source_voice->SetVolume(channels == 2 ? 1.0f : 4.0f);
 }
 
-void XAudio2Thread::xa27_add(const void* src, int size)
+bool XAudio2Thread::xa27_add(const void* src, int size)
 {
 	XAUDIO2_VOICE_STATE state;
 	s_tls_source_voice->GetState(&state);
 
 	// XAudio 2.7 bug workaround, when it says "SimpList: non-growable list ran out of room for new elements" and hits int 3
-	if (state.BuffersQueued > 32)
+	if (state.BuffersQueued >= MAX_AUDIO_BUFFERS)
 	{
 		LOG_WARNING(GENERAL, "XAudio2Thread : too many buffers enqueued (%d, pos=%u)", state.BuffersQueued, state.SamplesPlayed);
-
-		return xa27_flush();
+		return false;
 	}
 
 	XAUDIO2_BUFFER buffer;
 
-	buffer.AudioBytes = size;
+	buffer.AudioBytes = size * get_sample_size();
 	buffer.Flags = 0;
 	buffer.LoopBegin = XAUDIO2_NO_LOOP_REGION;
 	buffer.LoopCount = 0;
@@ -147,7 +155,7 @@ void XAudio2Thread::xa27_add(const void* src, int size)
 	buffer.pAudioData = (const BYTE*)src;
 	buffer.pContext = 0;
 	buffer.PlayBegin = 0;
-	buffer.PlayLength = 256;
+	buffer.PlayLength = AUDIO_BUFFER_SAMPLES;
 
 	HRESULT hr = s_tls_source_voice->SubmitSourceBuffer(&buffer);
 	if (FAILED(hr))
@@ -155,6 +163,8 @@ void XAudio2Thread::xa27_add(const void* src, int size)
 		LOG_ERROR(GENERAL, "XAudio2Thread : AddData() failed(0x%08x)", (u32)hr);
 		Emu.Pause();
 	}
+
+	return true;
 }
 
 #endif

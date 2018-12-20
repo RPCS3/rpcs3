@@ -526,9 +526,11 @@ struct cfg_root : cfg::node
 		cfg::_bool dump_to_file{this, "Dump to file"};
 		cfg::_bool convert_to_u16{this, "Convert to 16 bit"};
 		cfg::_bool downmix_to_2ch{this, "Downmix to Stereo", true};
-		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
 		cfg::_int<1, 128> startt{this, "Start Threshold", 1};
 		cfg::_int<0, 200> volume{this, "Master Volume", 100};
+		cfg::_bool enable_buffering{this, "Enable Buffering", true};
+		cfg::_int <0, 250'000> desired_buffer_duration{this, "Desired Audio Buffer Duration", 100'000};
+		cfg::_int<1, 1000> sampling_period_multiplier{this, "Sampling Period Multiplier", 100};
 
 	} audio{this};
 
