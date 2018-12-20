@@ -283,13 +283,13 @@ void mm_joystick_handler::ThreadProc()
 	}
 }
 
-void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, const std::function<void()>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
 
 	if (!Init())
-		return;
+		return fail_callback();
 
 	static std::string cur_pad = "";
 	static int id = -1;
@@ -301,7 +301,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 		if (id < 0)
 		{
 			LOG_ERROR(GENERAL, "MMJOY GetNextButtonPress for device [%s] failed with id = %d", padId, id);
-			return;
+			return fail_callback();
 		}
 	}
 
@@ -316,7 +316,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 	switch (status)
 	{
 	case JOYERR_UNPLUGGED:
-		break;
+		return fail_callback();
 
 	case JOYERR_NOERROR:
 		auto data = GetButtonValues(js_info, js_caps);

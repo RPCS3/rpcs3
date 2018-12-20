@@ -257,7 +257,7 @@ evdev_joystick_handler::EvdevDevice* evdev_joystick_handler::get_device(const st
 	return &dev;
 }
 
-void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, const std::function<void()>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -265,7 +265,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	// Get our evdev device
 	EvdevDevice* device = get_device(padId);
 	if (device == nullptr || device->device == nullptr)
-		return;
+		return fail_callback();
 	libevdev* dev = device->device;
 
 	// Try to query the latest event from the joystick.

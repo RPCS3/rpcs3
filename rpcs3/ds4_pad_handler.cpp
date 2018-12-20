@@ -150,14 +150,14 @@ void ds4_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->from_default();
 }
 
-void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, const std::function<void()>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
 
 	std::shared_ptr<DS4Device> device = GetDevice(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
-		return;
+		return fail_callback();
 
 	// Now that we have found a device, get its status
 	DS4DataStatus status = GetRawData(device);
@@ -167,7 +167,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
 		hid_close(device->hidDevice);
 		device->hidDevice = nullptr;
-		return;
+		return fail_callback();
 	}
 
 	// return if nothing new has happened. ignore this to get the current state for blacklist

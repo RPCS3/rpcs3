@@ -93,6 +93,11 @@ private:
 	// TabWidget
 	QTabWidget* m_tabs;
 
+	// Capabilities
+	bool m_enable_buttons{ false };
+	bool m_enable_rumble{ false };
+	bool m_enable_deadzones{ false };
+
 	// Button Mapping
 	QButtonGroup* m_padButtons;
 	u32 m_button_id = id_pad_begin;
