@@ -13,12 +13,12 @@ public:
 	static const u32 capabilities = NON_BLOCKING;
 	virtual u32 GetCapabilities() const override { return capabilities; };
 
-	virtual void Open() override {};
+	virtual void Open(u32) override {};
 	virtual void Close() override {};
 
 	virtual void Play() override {};
 	virtual void Pause() override {};
 
-	virtual bool AddData(const void* src, int size) override { return true; };
+	virtual bool AddData(const void*, u32) override { return true; };
 	virtual void Flush() override {};
 };
