@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "cellAudio.h"
 #include <atomic>
+#include <cmath>
 
 LOG_CHANNEL(cellAudio);
 
@@ -37,10 +38,25 @@ void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
 	});
 }
 
+
+cell_audio_config::cell_audio_config()
+{
+	// Warn if audio backend does not support all requested features
+	if (raw_buffering_enabled && !buffering_enabled)
+	{
+		cellAudio.error("Audio backend %s does not support buffering, this option will be ignored.", backend->GetName());
+	}
+	if (raw_time_stretching_enabled && !time_stretching_enabled)
+	{
+		cellAudio.error("Audio backend %s does not support time stretching, this option will be ignored.", backend->GetName());
+	}
+}
+
+
 audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 	: cfg(_cfg)
-	, backend(Emu.GetCallbacks().get_audio())
-	, buf_sz(AUDIO_BUFFER_SAMPLES * cfg.audio_channels)
+	, backend(_cfg.backend)
+	, buf_sz(AUDIO_BUFFER_SAMPLES * _cfg.audio_channels)
 	, emu_paused(Emu.IsPaused())
 {
 	// Initialize buffers
@@ -64,13 +80,13 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 	{
 		std::string str;
 		backend->dump_capabilities(str);
-		cellAudio.error("cellAudio initializing. Backend: %s, Capabilities: %s", backend->GetName(), str.c_str());
+		cellAudio.notice("cellAudio initializing. Backend: %s, Capabilities: %s", backend->GetName(), str.c_str());
 	}
 
 	backend->Open(cfg.num_allocated_buffers);
 	backend_open = true;
 
-	ASSERT(!backend_is_playing());
+	ASSERT(!get_backend_playing());
 }
 
 audio_ringbuffer::~audio_ringbuffer()
@@ -80,7 +96,7 @@ audio_ringbuffer::~audio_ringbuffer()
 		return;
 	}
 
-	if (backend_is_playing())
+	if (get_backend_playing() && has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
 	{
 		backend->Pause();
 	}
@@ -98,7 +114,7 @@ f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 	else
 	{
 		frequency_ratio = backend->SetFrequencyRatio(new_ratio);
-		//cellAudio.error("set_frequency_ratio(%1.2f) -> %1.2f", new_ratio, frequency_ratio);
+		//cellAudio.trace("set_frequency_ratio(%1.2f) -> %1.2f", new_ratio, frequency_ratio);
 	}
 	return frequency_ratio;
 }
@@ -119,11 +135,11 @@ void audio_ringbuffer::enqueue(const float* in_buffer)
 	// Dump audio if enabled
 	if (m_dump)
 	{
-		m_dump->WriteData(buf, buf_sz);
+		m_dump->WriteData(buf, cfg.audio_buffer_size);
 	}
 
 	// Enqueue audio
-	bool success = backend->AddData(buf, buf_sz);
+	bool success = backend->AddData(buf, AUDIO_BUFFER_SAMPLES * cfg.audio_channels);
 	if (!success)
 	{
 		cellAudio.error("Could not enqueue buffer onto audio backend. Attempting to recover...");
@@ -131,14 +147,19 @@ void audio_ringbuffer::enqueue(const float* in_buffer)
 		return;
 	}
 
-	enqueued_samples += AUDIO_BUFFER_SAMPLES;
+	if (has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
+	{
+		enqueued_samples += AUDIO_BUFFER_SAMPLES;
 
-	// Start playing audio
-	play();
+		// Start playing audio
+		play();
+	}
 }
 
 void audio_ringbuffer::enqueue_silence(u32 buf_count)
 {
+	AUDIT(has_capability(AudioBackend::PLAY_PAUSE_FLUSH));
+
 	for (u32 i = 0; i < buf_count; i++)
 	{
 		enqueue(silence_buffer);
@@ -147,8 +168,16 @@ void audio_ringbuffer::enqueue_silence(u32 buf_count)
 
 void audio_ringbuffer::play()
 {
-	if (has_capability(AudioBackend::IS_PLAYING) && playing)
+	if (!has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
+	{
+		playing = true;
 		return;
+	}
+
+	if (has_capability(AudioBackend::IS_PLAYING) && playing)
+	{
+		return;
+	}
 
 	if (frequency_ratio != 1.0f)
 	{
@@ -165,7 +194,13 @@ void audio_ringbuffer::play()
 
 void audio_ringbuffer::flush()
 {
-	cellAudio.trace("Flushing an estimated %llu enqueued samples", enqueued_samples);
+	if (!has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
+	{
+		playing = false;
+		return;
+	}
+
+	//cellAudio.trace("Flushing an estimated %llu enqueued samples", enqueued_samples);
 
 	backend->Pause();
 	playing = false;
@@ -186,7 +221,7 @@ u64 audio_ringbuffer::update()
 	if (Emu.IsPaused())
 	{
 		// Emulator paused
-		if (playing)
+		if (has_capability(AudioBackend::PLAY_PAUSE_FLUSH) && playing)
 		{
 			backend->Pause();
 		}
@@ -200,7 +235,7 @@ u64 audio_ringbuffer::update()
 	}
 
 	const u64 timestamp = get_timestamp();
-	const bool new_playing = !emu_paused && backend_is_playing();
+	const bool new_playing = !emu_paused && get_backend_playing();
 
 	// Calculate how many audio samples have played since last time
 	if (cfg.buffering_enabled && (playing || new_playing))
@@ -234,7 +269,7 @@ u64 audio_ringbuffer::update()
 
 				if (enqueued_samples == 0)
 				{
-					cellAudio.warning("Audio buffer about to underrun!");
+					cellAudio.trace("Audio buffer about to underrun!");
 				}
 			}
 		}
@@ -245,7 +280,7 @@ u64 audio_ringbuffer::update()
 	{
 		if (!new_playing)
 		{
-			cellAudio.error("Audio backend stopped unexpectedly, likely due to a buffer underrun");
+			cellAudio.warning("Audio backend stopped unexpectedly, likely due to a buffer underrun");
 
 			flush();
 			playing = false;
@@ -259,11 +294,6 @@ u64 audio_ringbuffer::update()
 	// Store and return timestamp
 	update_timestamp = timestamp;
 	return timestamp;
-}
-
-constexpr bool audio_port::is_tag(float val)
-{
-	return val == 0.0f && std::signbit(val);
 }
 
 void audio_port::tag(s32 offset)
@@ -281,24 +311,10 @@ void audio_port::tag(s32 offset)
 	for (u32 tag_pos = tag_first_pos, tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_pos += tag_delta, tag_nr++)
 	{
 		port_buf[tag_pos] = tag;
-		tag_backup[port_pos][tag_nr] = 0.0f;
+		last_tag_value[tag_nr] = -0.0f;
 	}
 
 	prev_touched_tag_nr = UINT32_MAX;
-}
-
-void audio_port::apply_tag_backups(s32 offset)
-{
-	auto port_pos = position(offset);
-	auto port_buf = get_vm_ptr(offset);
-
-	const u32 tag_first_pos = num_channels == 2 ? PORT_BUFFER_TAG_FIRST_2CH : PORT_BUFFER_TAG_FIRST_8CH;
-	const u32 tag_delta = num_channels == 2 ? PORT_BUFFER_TAG_DELTA_2CH : PORT_BUFFER_TAG_DELTA_8CH;
-
-	for (u32 tag_pos = tag_first_pos, tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_pos += tag_delta, tag_nr++)
-	{
-		port_buf[tag_pos] += tag_backup[port_pos][tag_nr];
-	}
 }
 
 std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
@@ -322,18 +338,17 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 		const u32 tag_first_pos = port.num_channels == 2 ? PORT_BUFFER_TAG_FIRST_2CH : PORT_BUFFER_TAG_FIRST_8CH;
 		const u32 tag_delta = port.num_channels == 2 ? PORT_BUFFER_TAG_DELTA_2CH : PORT_BUFFER_TAG_DELTA_8CH;
 
-		const f32 tag = -0.0f;
-
 		u32 last_touched_tag_nr = port.prev_touched_tag_nr;
 		bool retouched = false;
 		for (u32 tag_pos = tag_first_pos, tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_pos += tag_delta, tag_nr++)
 		{
 			// grab current value and re-tag atomically
-			f32 val = atomic_storage<to_be_t<float>, 4>::exchange(port_buf[tag_pos], tag);
+			const f32 val = port_buf[tag_pos];
+			f32& last_val = port.last_tag_value[tag_nr];
 
-			if (!audio_port::is_tag(val))
+			if (val != last_val || (last_val == -0.0f && std::signbit(last_val) && !std::signbit(val)))
 			{
-				port.tag_backup[port_pos][tag_nr] += val;
+				last_val = val;
 
 				retouched |= tag_nr < port.prev_touched_tag_nr && port.prev_touched_tag_nr != UINT32_MAX;
 				last_touched_tag_nr = tag_nr;
@@ -374,7 +389,7 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 
 void cell_audio_thread::reset_ports(s32 offset)
 {
-	// Memset previous buffer to 0
+	// Memset previous buffer to 0 and tag
 	for (auto& port : ports)
 	{
 		if (port.state != audio_port_state::started) continue;
@@ -383,7 +398,6 @@ void cell_audio_thread::reset_ports(s32 offset)
 
 		if (cfg.buffering_enabled)
 		{
-			//port.reset_tag_backups(offset);
 			port.tag(offset);
 		}
 	}
@@ -414,7 +428,7 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 	if (cfg.buffering_enabled)
 	{
 		// Calculate rolling average of enqueued playtime
-		const u64 enqueued_playtime = ringbuffer->get_enqueued_playtime();
+		const u64 enqueued_playtime = ringbuffer->get_enqueued_playtime(/* raw */ true);
 		m_average_playtime = cfg.period_average_alpha * enqueued_playtime + (1.0f - cfg.period_average_alpha) * m_average_playtime;
 		//cellAudio.error("m_average_playtime=%4.2f, enqueued_playtime=%u", m_average_playtime, enqueued_playtime);
 	}
@@ -450,23 +464,6 @@ void cell_audio_thread::operator()()
 	// Allocate ringbuffer
 	ringbuffer.reset(new audio_ringbuffer(cfg));
 
-	// Check backend capabilities
-	if (cfg.buffering_enabled)
-	{
-		if (!has_capability(AudioBackend::NON_BLOCKING) || !has_capability(AudioBackend::IS_PLAYING))
-		{
-			// We need a non-blocking backend to be able to do buffering correctly
-			// We also need to be able to query the current playing state
-			fmt::throw_exception("Audio backend %s does not support buffering.", ringbuffer->get_backend_name());
-		}
-
-		if (cfg.time_stretching_enabled && !has_capability(AudioBackend::SET_FREQUENCY_RATIO))
-		{
-			// We need to be able to set a dynamic frequency ratio to be able to do time stretching
-			fmt::throw_exception("Audio backend %s does not support time stretching", ringbuffer->get_backend_name());
-		}
-	}
-
 	// Initialize loop variables
 	m_counter = 0;
 	m_start_time = ringbuffer->get_timestamp();
@@ -490,7 +487,6 @@ void cell_audio_thread::operator()()
 		// TODO: send beforemix event (in ~2,6 ms before mixing)
 
 		const u64 time_since_last_period = timestamp - m_last_period_end;
-		const bool playing = !ringbuffer->is_playing();
 
 		if (!cfg.buffering_enabled)
 		{
@@ -533,7 +529,7 @@ void cell_audio_thread::operator()()
 				f32 desired_duration_adjusted = cfg.desired_buffer_duration + (cfg.audio_block_period / 2.0f);
 				if (average_playtime_ratio < 1.0f)
 				{
-					desired_duration_adjusted /= average_playtime_ratio;
+					desired_duration_adjusted /= std::max(average_playtime_ratio, 0.25f);
 				}
 
 				if (cfg.time_stretching_enabled)
@@ -548,13 +544,12 @@ void cell_audio_thread::operator()()
 
 					// update frequency ratio if necessary
 					f32 new_ratio = frequency_ratio;
-					if (desired_duration_rate < cfg.time_stretching_threshold)
+					if (
+						(desired_duration_rate < cfg.time_stretching_threshold && desired_duration_rate < frequency_ratio - cfg.time_stretching_step) || // Reduce frequency ratio below threshold in 0.1f steps
+						(desired_duration_rate > frequency_ratio + cfg.time_stretching_step) // Increase frequency ratio in 0.1f steps
+					   )
 					{
-						new_ratio = ringbuffer->set_frequency_ratio(desired_duration_rate * cfg.time_stretching_frequency_scale_factor);
-					}
-					else if (frequency_ratio != 1.0f)
-					{
-						new_ratio = ringbuffer->set_frequency_ratio(1.0f);
+						new_ratio = ringbuffer->set_frequency_ratio(std::min(desired_duration_rate, 1.0f));
 					}
 
 					if (new_ratio != frequency_ratio)
@@ -714,11 +709,6 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 	{
 		if (port.state != audio_port_state::started) continue;
 
-		if (cfg.buffering_enabled)
-		{
-			port.apply_tag_backups(offset);
-		}
-
 		auto buf = port.get_vm_ptr(offset);
 		static const float k = 1.0f;
 		float& m = port.level;
@@ -876,7 +866,6 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 		for (size_t i = 0; i < out_buffer_sz; i += 8)
 		{
-			// TODO ruipin: Revisit this
 			const auto scale = _mm_set1_ps(0x8000);
 			_mm_store_ps(out_buffer + i / 2, _mm_castsi128_ps(_mm_packs_epi32(
 				_mm_cvtps_epi32(_mm_mul_ps(_mm_load_ps(out_buffer + i), scale)),

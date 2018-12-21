@@ -15,45 +15,80 @@ class AudioBackend
 public:
 	enum Capabilities : u32
 	{
-		NON_BLOCKING = 0x1,
-		IS_PLAYING = 0x2,
-		GET_NUM_ENQUEUED_SAMPLES = 0x4,
-		SET_FREQUENCY_RATIO = 0x8,
+		PLAY_PAUSE_FLUSH = 0x1, // AddData implements Play, Pause, Flush
+		IS_PLAYING = 0x2, // Implements IsPlaying method
+		GET_NUM_ENQUEUED_SAMPLES = 0x4, // Supports GetNumEnqueuedSamples method
+		SET_FREQUENCY_RATIO = 0x8, // Implements SetFrequencyRatio method
 	};
 
 	virtual ~AudioBackend() = default;
 
-	// Callbacks
+	/*
+	 * Pure virtual methods
+	 */
 	virtual const char* GetName() const = 0;
 	virtual u32 GetCapabilities() const = 0;
 
 	virtual void Open(u32 num_buffers) = 0;
 	virtual void Close() = 0;
 
-	virtual void Play() = 0;
-	virtual void Pause() = 0;
+	virtual bool AddData(const void* src, u32 num_samples) = 0;
 
+
+	/*
+	 * Virtual methods - should be implemented depending on backend capabilities
+	 */
+
+	// Start playing enqueued data
+	// Should be implemented if capabilities & PLAY_PAUSE_FLUSH
+	virtual void Play()
+	{
+		fmt::throw_exception("Play() not implemented");
+	}
+
+	// Pause playing enqueued data
+	// Should be implemented if capabilities & PLAY_PAUSE_FLUSH
+	virtual void Pause()
+	{
+		fmt::throw_exception("Pause() not implemented");
+	}
+
+	// Pause audio, and unqueue all currently queued buffers
+	// Should be implemented if capabilities & PLAY_PAUSE_FLUSH
+	virtual void Flush()
+	{
+
+		fmt::throw_exception("Flush() not implemented");
+	}
+
+	// Returns true if audio is currently being played, false otherwise
+	// Should be implemented if capabilities & IS_PLAYING
 	virtual bool IsPlaying()
 	{
 		fmt::throw_exception("IsPlaying() not implemented");
-	};
+	}
 
-	virtual bool AddData(const void* src, u32 size) = 0;
-	virtual void Flush() = 0;
-
+	// Returns the number of currently enqueued samples
+	// Should be implemented if capabilities & GET_NUM_ENQUEUED_SAMPLES
 	virtual u64 GetNumEnqueuedSamples()
 	{
 		fmt::throw_exception("GetNumEnqueuedSamples() not implemented");
 		return 0;
 	}
 
+	// Sets a new frequency ratio. Backend is allowed to modify the ratio value, e.g. clamping it to the allowed range
+	// Returns the new frequency ratio set
+	// Should be implemented if capabilities & SET_FREQUENCY_RATIO
 	virtual f32 SetFrequencyRatio(f32 /* new_ratio */) // returns the new ratio
 	{
 		fmt::throw_exception("SetFrequencyRatio() not implemented");
 		return 1.0f;
 	}
 
-	// Helper methods
+
+	/*
+	 * Helper methods
+	 */
 	static u32 get_sampling_rate()
 	{
 		const u32 sampling_period_multiplier_u32 = g_cfg.audio.sampling_period_multiplier;
@@ -76,9 +111,9 @@ public:
 		return g_cfg.audio.downmix_to_2ch ? 2 : 8;
 	}
 
-	bool has_capability(Capabilities cap) const
+	bool has_capability(u32 cap) const
 	{
-		return (cap & GetCapabilities()) != 0;
+		return (cap & GetCapabilities()) == cap;
 	}
 
 	void dump_capabilities(std::string& out) const
@@ -86,9 +121,9 @@ public:
 		u32 count = 0;
 		u32 capabilities = GetCapabilities();
 
-		if (capabilities & NON_BLOCKING)
+		if (capabilities & PLAY_PAUSE_FLUSH)
 		{
-			fmt::append(out, "NON_BLOCKING");
+			fmt::append(out, "PLAY_PAUSE_FLUSH");
 			count++;
 		}
 

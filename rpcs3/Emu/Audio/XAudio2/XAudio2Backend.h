@@ -4,44 +4,28 @@
 
 #include "Emu/Audio/AudioBackend.h"
 
+
 class XAudio2Backend : public AudioBackend
 {
-	struct vtable
+public:
+	class XAudio2Library
 	{
-		void(*destroy)();
-		void(*play)();
-		void(*flush)();
-		void(*stop)();
-		void(*open)();
-		bool(*is_playing)();
-		bool(*add)(const void*, u32);
-		u64(*enqueued_samples)();
-		f32(*set_freq_ratio)(f32);
+	public:
+		virtual void play() = 0;
+		virtual void flush() = 0;
+		virtual void stop() = 0;
+		virtual void open() = 0;
+		virtual bool is_playing() = 0;
+		virtual bool add(const void*, u32) = 0;
+		virtual u64 enqueued_samples() = 0;
+		virtual f32 set_freq_ratio(f32) = 0;
 	};
 
-	vtable m_funcs;
+private:
+	static XAudio2Library* xa27_init(void*);
+	static XAudio2Library* xa28_init(void*);
 
-	static void xa27_init(void*);
-	static void xa27_destroy();
-	static void xa27_play();
-	static void xa27_flush();
-	static void xa27_stop();
-	static void xa27_open();
-	static bool xa27_is_playing();
-	static bool xa27_add(const void*, u32);
-	static u64  xa27_enqueued_samples();
-	static f32  xa27_set_freq_ratio(f32);
-
-	static void xa28_init(void*);
-	static void xa28_destroy();
-	static void xa28_play();
-	static void xa28_flush();
-	static void xa28_stop();
-	static void xa28_open();
-	static bool xa28_is_playing();
-	static bool xa28_add(const void*, u32);
-	static u64  xa28_enqueued_samples();
-	static f32  xa28_set_freq_ratio(f32);
+	std::unique_ptr<XAudio2Library> lib = nullptr;
 
 public:
 	XAudio2Backend();
@@ -49,7 +33,7 @@ public:
 
 	virtual const char* GetName() const override { return "XAudio2"; };
 
-	static const u32 capabilities = NON_BLOCKING | IS_PLAYING | GET_NUM_ENQUEUED_SAMPLES | SET_FREQUENCY_RATIO;
+	static const u32 capabilities = PLAY_PAUSE_FLUSH | IS_PLAYING | GET_NUM_ENQUEUED_SAMPLES | SET_FREQUENCY_RATIO;
 	virtual u32 GetCapabilities() const override { return capabilities;	};
 
 	virtual void Open(u32 /* num_buffers */) override;
@@ -59,7 +43,7 @@ public:
 	virtual void Pause() override;
 	virtual bool IsPlaying() override;
 
-	virtual bool AddData(const void* src, u32 size) override;
+	virtual bool AddData(const void* src, u32 num_samples) override;
 	virtual void Flush() override;
 
 	virtual u64 GetNumEnqueuedSamples() override;
