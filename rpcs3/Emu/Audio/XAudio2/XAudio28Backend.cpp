@@ -141,10 +141,10 @@ void XAudio2Backend::xa28_open()
 	}
 
 	AUDIT(s_tls_source_voice != nullptr);
-	s_tls_source_voice->SetVolume(channels == 2 ? 1.0 : 4.0);
+	s_tls_source_voice->SetVolume(channels == 2 ? 1.0f : 4.0f);
 }
 
-bool XAudio2Backend::xa28_add(const void* src, int size)
+bool XAudio2Backend::xa28_add(const void* src, u32 size)
 {
 	AUDIT(s_tls_source_voice != nullptr);
 
@@ -153,7 +153,7 @@ bool XAudio2Backend::xa28_add(const void* src, int size)
 
 	if (state.BuffersQueued >= MAX_AUDIO_BUFFERS)
 	{
-		LOG_WARNING(GENERAL, "XAudio2Backend : too many buffers enqueued (%d, pos=%u)", state.BuffersQueued, state.SamplesPlayed);
+		LOG_WARNING(GENERAL, "XAudio2Backend : too many buffers enqueued (%d)", state.BuffersQueued);
 		return false;
 	}
 

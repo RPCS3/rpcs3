@@ -87,7 +87,7 @@ void XAudio2Backend::Pause()
 	m_funcs.stop();
 }
 
-void XAudio2Backend::Open()
+void XAudio2Backend::Open(u32 /* num_buffers */)
 {
 	m_funcs.open();
 }
@@ -97,7 +97,7 @@ bool XAudio2Backend::IsPlaying()
 	return m_funcs.is_playing();
 }
 
-bool XAudio2Backend::AddData(const void* src, int size)
+bool XAudio2Backend::AddData(const void* src, u32 size)
 {
 	return m_funcs.add(src, size);
 }

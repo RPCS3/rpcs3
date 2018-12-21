@@ -133,7 +133,7 @@ void XAudio2Backend::xa27_open()
 	s_tls_source_voice->SetVolume(channels == 2 ? 1.0f : 4.0f);
 }
 
-bool XAudio2Backend::xa27_add(const void* src, int size)
+bool XAudio2Backend::xa27_add(const void* src, u32 size)
 {
 	XAUDIO2_VOICE_STATE state;
 	s_tls_source_voice->GetState(&state);

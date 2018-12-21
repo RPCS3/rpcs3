@@ -67,7 +67,7 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 		cellAudio.error("cellAudio initializing. Backend: %s, Capabilities: %s", backend->GetName(), str.c_str());
 	}
 
-	backend->Open();
+	backend->Open(cfg.num_allocated_buffers);
 	backend_open = true;
 
 	ASSERT(!backend_is_playing());
@@ -147,7 +147,7 @@ void audio_ringbuffer::enqueue_silence(u32 buf_count)
 
 void audio_ringbuffer::play()
 {
-	if (playing)
+	if (has_capability(AudioBackend::IS_PLAYING) && playing)
 		return;
 
 	if (frequency_ratio != 1.0f)
@@ -414,7 +414,7 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 	if (cfg.buffering_enabled)
 	{
 		// Calculate rolling average of enqueued playtime
-		const u32 enqueued_playtime = ringbuffer->get_enqueued_playtime();
+		const u64 enqueued_playtime = ringbuffer->get_enqueued_playtime();
 		m_average_playtime = cfg.period_average_alpha * enqueued_playtime + (1.0f - cfg.period_average_alpha) * m_average_playtime;
 		//cellAudio.error("m_average_playtime=%4.2f, enqueued_playtime=%u", m_average_playtime, enqueued_playtime);
 	}
@@ -669,7 +669,7 @@ void cell_audio_thread::operator()()
 				ringbuffer->flush();
 				ringbuffer->enqueue_silence(cfg.desired_full_buffers);
 				finish_port_volume_stepping();
-				m_average_playtime = ringbuffer->get_enqueued_playtime();
+				m_average_playtime = static_cast<f32>(ringbuffer->get_enqueued_playtime());
 			}
 		}
 

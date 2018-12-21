@@ -27,7 +27,7 @@ public:
 	virtual const char* GetName() const = 0;
 	virtual u32 GetCapabilities() const = 0;
 
-	virtual void Open() = 0;
+	virtual void Open(u32 num_buffers) = 0;
 	virtual void Close() = 0;
 
 	virtual void Play() = 0;
@@ -38,7 +38,7 @@ public:
 		fmt::throw_exception("IsPlaying() not implemented");
 	};
 
-	virtual bool AddData(const void* src, int size) = 0;
+	virtual bool AddData(const void* src, u32 size) = 0;
 	virtual void Flush() = 0;
 
 	virtual u64 GetNumEnqueuedSamples()
@@ -47,7 +47,7 @@ public:
 		return 0;
 	}
 
-	virtual f32 SetFrequencyRatio(f32 new_ratio) // returns the new ratio
+	virtual f32 SetFrequencyRatio(f32 /* new_ratio */) // returns the new ratio
 	{
 		fmt::throw_exception("SetFrequencyRatio() not implemented");
 		return 1.0f;
