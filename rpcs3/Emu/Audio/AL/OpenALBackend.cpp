@@ -118,7 +118,7 @@ void OpenALBackend::Close()
 	}
 }
 
-bool OpenALBackend::AddData(const void* src, u32 size)
+bool OpenALBackend::AddData(const void* src, u32 num_samples)
 {
 	AUDIT(alIsSource(m_source));
 
@@ -133,7 +133,7 @@ bool OpenALBackend::AddData(const void* src, u32 size)
 	}
 
 	// Copy data to the next available buffer
-	alBufferData(m_buffers[m_next_buffer], m_format, src, size * m_sample_size, m_sampling_rate);
+	alBufferData(m_buffers[m_next_buffer], m_format, src, num_samples * m_sample_size, m_sampling_rate);
 	checkForAlError("AddData->alBufferData");
 
 	// Enqueue buffer
@@ -186,7 +186,7 @@ u64 OpenALBackend::GetNumEnqueuedSamples()
 	ALint num_queued;
 	alGetSourcei(m_source, AL_BUFFERS_QUEUED, &num_queued);
 	checkForAlError("GetNumEnqueuedSamples->alGetSourcei(AL_BUFFERS_QUEUED)");
-	AUDIT(num_queued <= m_num_buffers - m_num_unqueued);
+	AUDIT(static_cast<u32>(num_queued) <= m_num_buffers - m_num_unqueued);
 
 	// Get sample position
 	ALint sample_pos;

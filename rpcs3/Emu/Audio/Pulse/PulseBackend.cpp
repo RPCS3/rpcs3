@@ -1,25 +1,21 @@
 #include "Emu/System.h"
-#include "PulseThread.h"
+#include "PulseBackend.h"
 
 #ifdef HAVE_PULSE
 
 #include <pulse/simple.h>
 #include <pulse/error.h>
 
-PulseThread::PulseThread()
+PulseBackend::PulseBackend()
 {
 }
 
-PulseThread::~PulseThread()
+PulseBackend::~PulseBackend()
 {
 	this->Close();
 }
 
-void PulseThread::Play()
-{
-}
-
-void PulseThread::Close()
+void PulseBackend::Close()
 {
 	if(this->connection) {
 		pa_simple_free(this->connection);
@@ -27,19 +23,15 @@ void PulseThread::Close()
 	}
 }
 
-void PulseThread::Stop()
-{
-}
-
-void PulseThread::Open(const void* src, int size)
+void PulseBackend::Open(u32 /* num_buffers */)
 {
 	pa_sample_spec ss;
-	ss.format = g_cfg.audio.convert_to_u16 ? PA_SAMPLE_S16LE : PA_SAMPLE_FLOAT32LE;
-	ss.rate = 48000;
+	ss.format = (get_sample_size() == 2) ? PA_SAMPLE_S16LE : PA_SAMPLE_FLOAT32LE;
+	ss.rate = get_sampling_rate();
 
 	pa_channel_map channel_map;
 
-	if (g_cfg.audio.downmix_to_2ch)
+	if (get_channels() == 2)
 	{
 		channel_map.channels =  2;
 		channel_map.map[0] = PA_CHANNEL_POSITION_FRONT_LEFT;
@@ -64,18 +56,19 @@ void PulseThread::Open(const void* src, int size)
 	if(!this->connection) {
 		fprintf(stderr, "PulseAudio: Failed to initialize audio: %s\n", pa_strerror(err));
 	}
-
-	this->AddData(src, size);
 }
 
-void PulseThread::AddData(const void* src, int size)
+bool PulseBackend::AddData(const void* src, u32 num_samples)
 {
-	if(this->connection) {
-		int err;
-		if(pa_simple_write(this->connection, src, size, &err) < 0) {
-			fprintf(stderr, "PulseAudio: Failed to write audio stream: %s\n", pa_strerror(err));
-		}
+	AUDIT(this->connection);
+
+	int err;
+	if(pa_simple_write(this->connection, src, num_samples * get_sample_size(), &err) < 0) {
+		fprintf(stderr, "PulseAudio: Failed to write audio stream: %s\n", pa_strerror(err));
+		return false;
 	}
+	
+	return true;
 }
 
 #endif

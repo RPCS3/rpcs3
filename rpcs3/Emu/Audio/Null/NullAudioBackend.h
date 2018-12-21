@@ -10,7 +10,7 @@ public:
 
 	virtual const char* GetName() const override { return "Null";  }
 
-	static const u32 capabilities = NON_BLOCKING;
+	static const u32 capabilities = PLAY_PAUSE_FLUSH;
 	virtual u32 GetCapabilities() const override { return capabilities; };
 
 	virtual void Open(u32) override {};

@@ -48,10 +48,10 @@
 #include "Emu/Audio/XAudio2/XAudio2Backend.h"
 #endif
 #ifdef HAVE_ALSA
-#include "Emu/Audio/ALSA/ALSAThread.h"
+#include "Emu/Audio/ALSA/ALSABackend.h"
 #endif
 #ifdef HAVE_PULSE
-#include "Emu/Audio/Pulse/PulseThread.h"
+#include "Emu/Audio/Pulse/PulseBackend.h"
 #endif
 
 #ifdef _WIN32
@@ -263,10 +263,10 @@ void rpcs3_app::InitializeCallbacks()
 		case audio_renderer::xaudio: return std::make_shared<XAudio2Backend>();
 #endif
 #ifdef HAVE_ALSA
-		case audio_renderer::alsa: return std::make_shared<ALSAThread>();
+		case audio_renderer::alsa: return std::make_shared<ALSABackend>();
 #endif
 #ifdef HAVE_PULSE
-		case audio_renderer::pulse: return std::make_shared<PulseThread>();
+		case audio_renderer::pulse: return std::make_shared<PulseBackend>();
 #endif
 
 		case audio_renderer::openal: return std::make_shared<OpenALBackend>();

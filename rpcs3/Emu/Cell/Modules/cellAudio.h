@@ -90,7 +90,7 @@ enum : u32
 	AUDIO_BLOCK_SIZE_2CH = 2 * AUDIO_BUFFER_SAMPLES,
 	AUDIO_BLOCK_SIZE_8CH = 8 * AUDIO_BUFFER_SAMPLES,
 
-	PORT_BUFFER_TAG_COUNT = 8,
+	PORT_BUFFER_TAG_COUNT = 6,
 
 	PORT_BUFFER_TAG_LAST_2CH = AUDIO_BLOCK_SIZE_2CH - 1,
 	PORT_BUFFER_TAG_DELTA_2CH = PORT_BUFFER_TAG_LAST_2CH / (PORT_BUFFER_TAG_COUNT - 1),
@@ -163,37 +163,59 @@ struct audio_port
 
 	// Tags
 	u32 prev_touched_tag_nr;
-	f32 tag_backup[AUDIO_MAX_BLOCK_COUNT][PORT_BUFFER_TAG_COUNT] = { 0 };
+	f32 last_tag_value[PORT_BUFFER_TAG_COUNT] = { 0 };
 
-	constexpr static bool is_tag(float val);
 	void tag(s32 offset = 0);
-	void apply_tag_backups(s32 offset = 0);
 };
 
 struct cell_audio_config
 {
-	const s64 period_comparison_margin = 100; // When comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
+	const std::shared_ptr<AudioBackend> backend = Emu.GetCallbacks().get_audio();
 
 	const u32 audio_channels = AudioBackend::get_channels();
 	const u32 audio_sampling_rate = AudioBackend::get_sampling_rate();
 	const u32 audio_block_period = AUDIO_BUFFER_SAMPLES * 1000000 / audio_sampling_rate;
-	const u64 desired_buffer_duration = g_cfg.audio.enable_buffering ? g_cfg.audio.desired_buffer_duration : 0;
 
 	const u32 audio_buffer_length = AUDIO_BUFFER_SAMPLES * audio_channels;
-	const u32 audio_buffer_size = audio_buffer_length * sizeof(f32);
-	const bool buffering_enabled = g_cfg.audio.enable_buffering && (desired_buffer_duration >= audio_block_period);
+	const u32 audio_buffer_size = audio_buffer_length * AudioBackend::get_sample_size();
+
+	/*
+	 * Buffering
+	 */
+	const u64 desired_buffer_duration = g_cfg.audio.enable_buffering ? g_cfg.audio.desired_buffer_duration : 0;
+private:
+	const bool raw_buffering_enabled = g_cfg.audio.enable_buffering && (desired_buffer_duration >= audio_block_period);
+public:
+	// We need a non-blocking backend (implementing play/pause/flush) to be able to do buffering correctly
+	// We also need to be able to query the current playing state
+	const bool buffering_enabled = raw_buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);
 
 	const u64 minimum_block_period = audio_block_period / 2; // the block period will not be dynamically lowered below this value (usecs)
 	const u64 maximum_block_period = (6 * audio_block_period) / 5; // the block period will not be dynamically increased above this value (usecs)
 
-	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 1 : 1;
+	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 1 : 2;
 	const u32 num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS; // number of ringbuffer buffers
 
 	const f32 period_average_alpha = 0.02f; // alpha factor for the m_average_period rolling average
 
-	const bool time_stretching_enabled = buffering_enabled && g_cfg.audio.enable_time_stretching && (g_cfg.audio.time_stretching_threshold > 0);
+	const s64 period_comparison_margin = 250; // when comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
+
+	/*
+	 * Time Stretching
+	 */
+private:
+	const bool raw_time_stretching_enabled = buffering_enabled && g_cfg.audio.enable_time_stretching && (g_cfg.audio.time_stretching_threshold > 0);
+public:
+	// We need to be able to set a dynamic frequency ratio to be able to do time stretching
+	const bool time_stretching_enabled = raw_time_stretching_enabled && backend->has_capability(AudioBackend::SET_FREQUENCY_RATIO);
+
 	const f32 time_stretching_threshold = g_cfg.audio.time_stretching_threshold / 100.0f; // we only apply time stretching below this buffer fill rate (adjusted for average period)
-	const f32 time_stretching_frequency_scale_factor = 1.0f / time_stretching_threshold;
+	const f32 time_stretching_step = 0.1f;
+
+	/*
+	 * Constructor
+	 */
+	cell_audio_config();
 };
 
 class audio_ringbuffer
@@ -224,9 +246,9 @@ private:
 
 	u32 cur_pos = 0;
 
-	bool backend_is_playing() const
+	bool get_backend_playing() const
 	{
-		return has_capability(AudioBackend::IS_PLAYING) ? backend->IsPlaying() : playing;
+		return has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING) ? backend->IsPlaying() : playing;
 	}
 
 public:
@@ -280,7 +302,7 @@ public:
 		return frequency_ratio;
 	}
 
-	u32 has_capability(AudioBackend::Capabilities cap) const
+	u32 has_capability(u32 cap) const
 	{
 		return backend->has_capability(cap);
 	}
@@ -307,7 +329,7 @@ class cell_audio_thread
 
 	constexpr static u64 get_thread_wait_delay(u64 time_left)
 	{
-		return (time_left > 1000) ? time_left - 750 : 100;
+		return (time_left > 350) ? time_left - 250 : 100;
 	}
 
 public:
@@ -349,7 +371,7 @@ public:
 		return nullptr;
 	}
 
-	bool has_capability(AudioBackend::Capabilities cap) const
+	bool has_capability(u32 cap) const
 	{
 		return ringbuffer->has_capability(cap);
 	}
