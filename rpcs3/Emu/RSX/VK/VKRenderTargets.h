@@ -155,11 +155,9 @@ namespace rsx
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
 			rtt->surface_width = (u16)width;
 			rtt->surface_height = (u16)height;
+			rtt->old_contents = old_surface;
 			rtt->queue_tag(address);
 			rtt->dirty = true;
-
-			if (old_surface != nullptr && old_surface->info.format == requested_format)
-				rtt->old_contents = old_surface;
 
 			return rtt;
 		}
@@ -201,11 +199,9 @@ namespace rsx
 			ds->attachment_aspect_flag = range.aspectMask;
 			ds->surface_width = (u16)width;
 			ds->surface_height = (u16)height;
+			ds->old_contents = old_surface;
 			ds->queue_tag(address);
 			ds->dirty = true;
-
-			if (old_surface != nullptr && old_surface->info.format == requested_format)
-				ds->old_contents = old_surface;
 
 			return ds;
 		}
