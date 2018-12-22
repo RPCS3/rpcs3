@@ -283,13 +283,13 @@ void mm_joystick_handler::ThreadProc()
 	}
 }
 
-void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, const std::function<void()>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
+void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
 
 	if (!Init())
-		return fail_callback();
+		return fail_callback(padId);
 
 	static std::string cur_pad = "";
 	static int id = -1;
@@ -301,7 +301,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 		if (id < 0)
 		{
 			LOG_ERROR(GENERAL, "MMJOY GetNextButtonPress for device [%s] failed with id = %d", padId, id);
-			return fail_callback();
+			return fail_callback(padId);
 		}
 	}
 
@@ -316,7 +316,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 	switch (status)
 	{
 	case JOYERR_UNPLUGGED:
-		return fail_callback();
+		return fail_callback(padId);
 
 	case JOYERR_NOERROR:
 		auto data = GetButtonValues(js_info, js_caps);
@@ -403,20 +403,21 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 			return static_cast<u64>(key);
 		};
 
-		int preview_values[6] = 
+		int preview_values[6] = { 0, 0, 0, 0, 0, 0 };
+		if (buttons.size() == 10)
 		{
-			data[find_key(buttons[0])],
-			data[find_key(buttons[1])],
-			data[find_key(buttons[3])] - data[find_key(buttons[2])],
-			data[find_key(buttons[5])] - data[find_key(buttons[4])],
-			data[find_key(buttons[7])] - data[find_key(buttons[6])],
-			data[find_key(buttons[9])] - data[find_key(buttons[8])],
-		};
+			preview_values[0] = data[find_key(buttons[0])];
+			preview_values[1] = data[find_key(buttons[1])];
+			preview_values[2] = data[find_key(buttons[3])] - data[find_key(buttons[2])];
+			preview_values[3] = data[find_key(buttons[5])] - data[find_key(buttons[4])];
+			preview_values[4] = data[find_key(buttons[7])] - data[find_key(buttons[6])];
+			preview_values[5] = data[find_key(buttons[9])] - data[find_key(buttons[8])];
+		}
 
 		if (pressed_button.first > 0)
-			return callback(pressed_button.first, pressed_button.second, preview_values);
+			return callback(pressed_button.first, pressed_button.second, padId, preview_values);
 		else
-			return callback(0, "", preview_values);
+			return callback(0, "", padId, preview_values);
 
 		break;
 	}
