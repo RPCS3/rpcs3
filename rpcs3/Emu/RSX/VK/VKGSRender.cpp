@@ -1332,42 +1332,8 @@ void VKGSRender::end()
 
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
-	// Clear any 'dirty' surfaces - possible is a recycled cache surface is used
-	rsx::simple_array<VkClearAttachment> buffers_to_clear;
+	// Check for data casts
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-
-	//Check for memory clears
-	if (ds && ds->dirty)
-	{
-		//Clear this surface before drawing on it
-		VkClearValue clear_value = {};
-		clear_value.depthStencil = { 1.f, 255 };
-		buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
-	}
-
-	for (u32 index = 0; index < m_draw_buffers.size(); ++index)
-	{
-		if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
-		{
-			if (rtt->dirty)
-			{
-				buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
-			}
-		}
-	}
-
-	if (UNLIKELY(!buffers_to_clear.empty()))
-	{
-		begin_render_pass();
-
-		VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
-		vkCmdClearAttachments(*m_current_command_buffer, (u32)buffers_to_clear.size(),
-			buffers_to_clear.data(), 1, &rect);
-
-		close_render_pass();
-	}
-
-	//Check for data casts
 	if (ds && ds->old_contents)
 	{
 		if (UNLIKELY(ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM))
@@ -1382,24 +1348,6 @@ void VKGSRender::end()
 				render_pass, m_framebuffers_to_clean);
 
 			ds->on_write();
-		}
-	}
-
-	if (g_cfg.video.strict_rendering_mode)
-	{
-		//Prepare surfaces if needed
-		for (auto &rtt : m_rtts.m_bound_render_targets)
-		{
-			if (auto surface = std::get<1>(rtt))
-			{
-				if (surface->old_contents != nullptr)
-					surface->memory_barrier(*m_current_command_buffer);
-			}
-		}
-
-		if (ds && ds->old_contents)
-		{
-			ds->memory_barrier(*m_current_command_buffer);
 		}
 	}
 
@@ -1699,6 +1647,20 @@ void VKGSRender::end()
 		m_current_command_buffer->flags |= cb_has_occlusion_task;
 	}
 
+	// Apply write memory barriers
+	if (g_cfg.video.strict_rendering_mode)
+	{
+		if (ds) ds->memory_barrier(*m_current_command_buffer);
+
+		for (auto &rtt : m_rtts.m_bound_render_targets)
+		{
+			if (auto surface = std::get<1>(rtt))
+			{
+				surface->memory_barrier(*m_current_command_buffer);
+			}
+		}
+	}
+
 	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
 	// Only textures are synchronized tightly with the GPU and they have been read back above
 	vk::enter_uninterruptible();
@@ -1706,6 +1668,35 @@ void VKGSRender::end()
 	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 	update_draw_state();
 	begin_render_pass();
+
+	// Clear any 'dirty' surfaces - possible is a recycled cache surface is used
+	rsx::simple_array<VkClearAttachment> buffers_to_clear;
+
+	if (ds && ds->dirty)
+	{
+		// Clear this surface before drawing on it
+		VkClearValue clear_value = {};
+		clear_value.depthStencil = { 1.f, 255 };
+		buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
+	}
+
+	for (u32 index = 0; index < m_draw_buffers.size(); ++index)
+	{
+		if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
+		{
+			if (rtt->dirty)
+			{
+				buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
+			}
+		}
+	}
+
+	if (UNLIKELY(!buffers_to_clear.empty()))
+	{
+		VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
+		vkCmdClearAttachments(*m_current_command_buffer, (u32)buffers_to_clear.size(),
+			buffers_to_clear.data(), 1, &rect);
+	}
 
 	u32 sub_index = 0;
 	rsx::method_registers.current_draw_clause.begin();
