@@ -579,7 +579,7 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 	LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", index, drv);
 
 	dev->device_id = index;
-	dev->device_name = m_name_string + std::to_string(index);
+	dev->device_name = m_name_string + std::to_string(index + 1); // Controllers 1-n in GUI
 	dev->device_info = js_info;
 	dev->device_caps = js_caps;
 

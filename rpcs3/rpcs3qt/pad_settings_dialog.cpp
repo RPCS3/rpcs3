@@ -795,7 +795,7 @@ void pad_settings_dialog::ChangeInputType()
 	case pad_handler::xinput:
 	{
 		const QString name_string = qstr(m_handler->name_string());
-		for (int i = 0; i < m_handler->max_devices(); i++)
+		for (int i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			ui->chooseDevice->addItem(name_string + QString::number(i), i);
 		}
