@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -11,6 +11,7 @@
 
 #include "sceNp.h"
 #include "sceNpTrophy.h"
+#include "cellSysutil.h"
 
 #include "Utilities/StrUtil.h"
 
@@ -316,18 +317,28 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// * Installed
 	// We will go with the easy path of Installed, and that's it.
 
-	auto statuses = {SCE_NP_TROPHY_STATUS_INSTALLED,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_SETUP,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE};
+	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
+	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
+	{
+		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+	}
+
+	// This emulates vsh sending the events and ensures that not 2 events are processed at once
+	auto statuses =
+	{
+		SCE_NP_TROPHY_STATUS_PROCESSING_SETUP,
+		SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS,
+		SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE,
+		SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE
+	};
 
 	for (auto status : statuses)
 	{
-		if (statusCb(ppu, context, status, 100, 100, arg) < 0)
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
 		{
-			return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
-		}
+			statusCb(cb_ppu, context, status, 100, 100, arg);
+			return 0;
+		});
 	}
 
 	return CELL_OK;

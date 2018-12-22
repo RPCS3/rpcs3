@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -232,6 +232,12 @@ s32 cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> buf, u3
 	return CELL_OK;
 }
 
+// Note: the way we do things here is inaccurate(but maybe sufficient)
+// The real function goes over a table of 0x20 entries[ event_code:u32 callback_addr:u32 ]
+// Those callbacks are registered through cellSysutilRegisterCallbackDispatcher(u32 event_code, vm::ptr<void> func_addr)
+// The function goes through all the callback looking for one callback associated with event 0x100, if any is found it is called with parameters r3=0x101 r4=0
+// This particular CB seems to be associated with sysutil itself
+// Then it checks for events on an event_queue associated with sysutil, checks if any cb is associated with that event and calls them with parameters that come from the event
 error_code cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
