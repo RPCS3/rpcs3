@@ -156,7 +156,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 	if (get_blacklist)
 		blacklist.clear();
 
-	std::shared_ptr<DS4Device> device = GetDevice(padId);
+	std::shared_ptr<DS4Device> device = GetDevice(padId, true);
 	if (device == nullptr || device->hidDevice == nullptr)
 		return fail_callback();
 
@@ -250,7 +250,7 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 	SendVibrateData(device);
 }
 
-std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std::string& padId)
+std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std::string& padId, bool try_reconnect)
 {
 	if (!Init())
 		return nullptr;
@@ -262,12 +262,22 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std
 	std::string pad_serial = padId.substr(pos + 9);
 	std::shared_ptr<DS4Device> device = nullptr;
 
-	int i = 1; // Controllers 1-n in GUI
+	int i = 0; // Controllers 1-n in GUI
 	for (auto& cur_control : controllers)
 	{
-		if (pad_serial == std::to_string(i++) || pad_serial == cur_control.first)
+		if (pad_serial == std::to_string(++i) || pad_serial == cur_control.first)
 		{
 			device = cur_control.second;
+
+			if (try_reconnect && device && !device->hidDevice)
+			{
+				device->hidDevice = hid_open_path(device->path.c_str());
+				if (device->hidDevice)
+				{
+					hid_set_nonblocking(device->hidDevice, 1);
+					LOG_NOTICE(HLE, "DS4 device %d reconnected", i);
+				}
+			}
 			break;
 		}
 	}
