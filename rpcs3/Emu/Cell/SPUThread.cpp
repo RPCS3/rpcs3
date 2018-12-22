@@ -776,35 +776,35 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 			auto& res = vm::reservation_lock(eal, 1);
 			*static_cast<u8*>(dst) = *static_cast<const u8*>(src);
-			res &= ~1ull;
+			res++;
 			break;
 		}
 		case 2:
 		{
 			auto& res = vm::reservation_lock(eal, 2);
 			*static_cast<u16*>(dst) = *static_cast<const u16*>(src);
-			res &= ~1ull;
+			res++;
 			break;
 		}
 		case 4:
 		{
 			auto& res = vm::reservation_lock(eal, 4);
 			*static_cast<u32*>(dst) = *static_cast<const u32*>(src);
-			res &= ~1ull;
+			res++;
 			break;
 		}
 		case 8:
 		{
 			auto& res = vm::reservation_lock(eal, 8);
 			*static_cast<u64*>(dst) = *static_cast<const u64*>(src);
-			res &= ~1ull;
+			res++;
 			break;
 		}
 		case 16:
 		{
 			auto& res = vm::reservation_lock(eal, 16);
 			_mm_store_si128(static_cast<__m128i*>(dst), _mm_load_si128(static_cast<const __m128i*>(src)));
-			res &= ~1ull;
+			res++;
 			break;
 		}
 		default:
@@ -829,11 +829,11 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					continue;
 				}
 
-				res->fetch_and(~1ull);
+				res->operator ++();
 				res = &vm::reservation_lock(addr, 16);
 			}
 
-			res->fetch_and(~1ull);
+			res->operator ++();
 			break;
 		}
 		}
