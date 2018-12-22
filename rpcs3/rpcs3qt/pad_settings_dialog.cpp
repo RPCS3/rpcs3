@@ -400,10 +400,18 @@ void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_con
 	for (int i = 0; i < ui->chooseDevice->count(); i++)
 	{
 		const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
-		if (info.name == pad_name && info.is_connected != is_connected)
+		if (info.name == pad_name)
 		{
-			ui->chooseDevice->setItemData(i, QVariant::fromValue(pad_info{ pad_name, is_connected }));
-			ui->chooseDevice->setItemText(i, is_connected ? qstr(pad_name) : (qstr(pad_name) + Disconnected_suffix));
+			if (info.is_connected != is_connected)
+			{
+				ui->chooseDevice->setItemData(i, QVariant::fromValue(pad_info{ pad_name, is_connected }));
+				ui->chooseDevice->setItemText(i, is_connected ? qstr(pad_name) : (qstr(pad_name) + Disconnected_suffix));
+			}
+
+			if (!is_connected && m_timer.isActive() && ui->chooseDevice->currentIndex() == i)
+			{
+				ReactivateButtons();
+			}
 			break;
 		}
 	}
@@ -831,7 +839,7 @@ void pad_settings_dialog::ChangeInputType()
 		for (int i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			const QString device_name = name_string + QString::number(i);
-			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_info{ sstr(device_name), false }));
+			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_info{ sstr(device_name), true }));
 		}
 		force_enable = true;
 		break;
