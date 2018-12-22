@@ -1,4 +1,4 @@
-if(NOT WITHOUT_LLVM)
+if(WITH_LLVM)
 	if(BUILD_LLVM_SUBMODULE)
 		message(STATUS "LLVM will be built from the submodule.")
 

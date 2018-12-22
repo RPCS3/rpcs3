@@ -23,5 +23,5 @@ export VULKAN_SDK=${PWD}/vulkan-sdk
 git submodule update --quiet --init asmjit 3rdparty/ffmpeg 3rdparty/pugixml 3rdparty/GSL 3rdparty/libpng 3rdparty/cereal 3rdparty/hidapi 3rdparty/xxHash 3rdparty/yaml-cpp Vulkan/glslang
 
 mkdir build; cd build
-cmake .. -DWITHOUT_LLVM=On -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja
+cmake .. -DWITH_LLVM=OFF -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja
 ninja
