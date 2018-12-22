@@ -197,7 +197,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	if (pos == std::string::npos)
 		return -1;
 
-	int device_number = std::stoul(padId.substr(pos + 12));
+	int device_number = std::stoul(padId.substr(pos + 12)) - 1; // Controllers 1-n in GUI
 	if (device_number >= XUSER_MAX_COUNT)
 		return -1;
 
@@ -455,7 +455,7 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 		XINPUT_STATE state;
 		DWORD result = (*xinputGetState)(i, &state);
 		if (result == ERROR_SUCCESS)
-			xinput_pads_list.push_back(m_name_string + std::to_string(i));
+			xinput_pads_list.push_back(m_name_string + std::to_string(i + 1)); // Controllers 1-n in GUI
 	}
 	return xinput_pads_list;
 }
