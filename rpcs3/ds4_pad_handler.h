@@ -142,7 +142,7 @@ public:
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& buttonCallback, const std::function<void()>& fail_callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) override;
+	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& buttonCallback, const std::function<void(std::string)>& fail_callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) override;
 	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
