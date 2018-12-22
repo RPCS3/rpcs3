@@ -1070,7 +1070,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	auto& data = vm::_ref<atomic_be_t<u32>>(addr & -4);
 	const u32 old_data = static_cast<u32>(ppu.rdata << ((addr & 7) * 8) >> 32);
 
-	if (ppu.raddr != addr || addr & 3 || old_data != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u32)))
+	if (ppu.raddr != addr || addr & 3 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & ~1ull))
 	{
 		ppu.raddr = 0;
 		return false;
@@ -1163,7 +1163,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
 	const u64 old_data = ppu.rdata << ((addr & 7) * 8);
 
-	if (ppu.raddr != addr || addr & 7 || old_data != data.load() || ppu.rtime != vm::reservation_acquire(addr, sizeof(u64)))
+	if (ppu.raddr != addr || addr & 7 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & ~1ull))
 	{
 		ppu.raddr = 0;
 		return false;

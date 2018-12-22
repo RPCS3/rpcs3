@@ -1029,7 +1029,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	if (raddr && addr == raddr)
 	{
 		// Last check for event before we clear the reservation
-		if (vm::reservation_acquire(addr, 128) != rtime || rdata != vm::_ref<decltype(rdata)>(addr))
+		if ((vm::reservation_acquire(addr, 128) & ~1ull) != rtime || rdata != vm::_ref<decltype(rdata)>(addr))
 		{
 			ch_event_stat |= SPU_EVENT_LR;
 		}
@@ -1287,7 +1287,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 		if (const u32 _addr = raddr)
 		{
 			// Last check for event before we replace the reservation with a new one
-			if (vm::reservation_acquire(_addr, 128) != rtime || rdata != vm::_ref<decltype(rdata)>(_addr))
+			if ((vm::reservation_acquire(_addr, 128) & ~1ull) != rtime || rdata != vm::_ref<decltype(rdata)>(_addr))
 			{
 				ch_event_stat |= SPU_EVENT_LR;
 
@@ -1316,7 +1316,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 
 		bool result = false;
 
-		if (raddr == addr && rtime == vm::reservation_acquire(raddr, 128))
+		if (raddr == addr && rtime == (vm::reservation_acquire(raddr, 128) & ~1ull))
 		{
 			const auto& to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
 
@@ -1363,7 +1363,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 			if (raddr)
 			{
 				// Last check for event before we clear the reservation
-				if (raddr == addr || rtime != vm::reservation_acquire(raddr, 128) || rdata != vm::_ref<decltype(rdata)>(raddr))
+				if (raddr == addr || rtime != (vm::reservation_acquire(raddr, 128) & ~1ull) || rdata != vm::_ref<decltype(rdata)>(raddr))
 				{
 					ch_event_stat |= SPU_EVENT_LR;
 				}
@@ -1509,7 +1509,7 @@ u32 spu_thread::get_events(bool waiting)
 	}
 
 	// Check reservation status and set SPU_EVENT_LR if lost
-	if (raddr && (vm::reservation_acquire(raddr, sizeof(rdata)) != rtime || rdata != vm::_ref<decltype(rdata)>(raddr)))
+	if (raddr && ((vm::reservation_acquire(raddr, sizeof(rdata)) & ~1ull) != rtime || rdata != vm::_ref<decltype(rdata)>(raddr)))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 		raddr = 0;
