@@ -289,7 +289,7 @@ namespace vk
 		else if ((aspect & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0)
 		{
 			//Most depth/stencil formats cannot be scaled using hw blit
-			if (src_format == VK_FORMAT_UNDEFINED || dst_width > 4096 || (src_height + dst_height) > 4096)
+			if (src_format == VK_FORMAT_UNDEFINED)
 			{
 				LOG_ERROR(RSX, "Could not blit depth/stencil image. src_fmt=0x%x, src=%dx%d, dst=%dx%d",
 					(u32)src_format, src_width, src_height, dst_width, dst_height);
@@ -359,21 +359,23 @@ namespace vk
 					vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst, preferred_dst_format, 1, &info);
 				};
 
-				areai src_rect = { (s32)src_x_offset, (s32)src_y_offset, s32(src_x_offset + src_width), s32(src_y_offset + src_height) };
-				areai dst_rect = { (s32)dst_x_offset, (s32)dst_y_offset, s32(dst_x_offset + dst_width), s32(dst_y_offset + dst_height) };
+				const areai src_rect = { (s32)src_x_offset, (s32)src_y_offset, s32(src_x_offset + src_width), s32(src_y_offset + src_height) };
+				const areai dst_rect = { (s32)dst_x_offset, (s32)dst_y_offset, s32(dst_x_offset + dst_width), s32(dst_y_offset + dst_height) };
+				const u32 typeless_w = dst_width;
+				const u32 typeless_h = src_height + dst_height;
 
 				switch (src_format)
 				{
 				case VK_FORMAT_D16_UNORM:
 				{
-					auto typeless = vk::get_typeless_helper(VK_FORMAT_R16_UNORM);
+					auto typeless = vk::get_typeless_helper(VK_FORMAT_R16_UNORM, typeless_w, typeless_h);
 					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
 					stretch_image_typeless_unsafe(src, dst, typeless->value, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT);
 					break;
 				}
 				case VK_FORMAT_D24_UNORM_S8_UINT:
 				{
-					auto typeless = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM);
+					auto typeless = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, typeless_w, typeless_h);
 					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
 					stretch_image_typeless_unsafe(src, dst, typeless->value, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 					break;
@@ -384,8 +386,8 @@ namespace vk
 					// Since the typeless transfer itself violates spec, the only way to make it work is to use a D32S8 intermediate
 					// Copy from src->intermediate then intermediate->dst for each aspect separately
 
-					auto typeless_depth = vk::get_typeless_helper(VK_FORMAT_R32_SFLOAT);
-					auto typeless_stencil = vk::get_typeless_helper(VK_FORMAT_R8_UINT);
+					auto typeless_depth = vk::get_typeless_helper(VK_FORMAT_R32_SFLOAT, typeless_w, typeless_h);
+					auto typeless_stencil = vk::get_typeless_helper(VK_FORMAT_R8_UINT, typeless_w, typeless_h);
 					change_image_layout(cmd, typeless_depth, VK_IMAGE_LAYOUT_GENERAL);
 					change_image_layout(cmd, typeless_stencil, VK_IMAGE_LAYOUT_GENERAL);
 
@@ -546,7 +548,7 @@ namespace vk
 				vk::get_compatible_sampler_format(vk::get_current_renderer()->get_formats_support(), xfer_info.src_gcm_format);
 
 			// Transfer bits from src to typeless src
-			real_src = vk::get_typeless_helper(format);
+			real_src = vk::get_typeless_helper(format, (u32)internal_width, src->height());
 			src_area.x1 = (u16)(src_area.x1 * xfer_info.src_scaling_hint);
 			src_area.x2 = (u16)(src_area.x2 * xfer_info.src_scaling_hint);
 
@@ -562,7 +564,7 @@ namespace vk
 				vk::get_compatible_sampler_format(vk::get_current_renderer()->get_formats_support(), xfer_info.dst_gcm_format);
 
 			// Transfer bits from dst to typeless dst
-			real_dst = vk::get_typeless_helper(format);
+			real_dst = vk::get_typeless_helper(format, (u32)internal_width, dst->height());
 			dst_area.x1 = (u16)(dst_area.x1 * xfer_info.dst_scaling_hint);
 			dst_area.x2 = (u16)(dst_area.x2 * xfer_info.dst_scaling_hint);
 
@@ -603,7 +605,7 @@ namespace vk
 						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-					real_src = vk::get_typeless_helper(src->info.format);
+					real_src = vk::get_typeless_helper(src->info.format, src->width(), src->height());
 					vk::change_image_layout(*commands, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
 					vkCmdCopyBufferToImage(*commands, scratch_buf->value, real_src->value, real_src->current_layout, 1, &copy);
