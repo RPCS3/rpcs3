@@ -113,7 +113,7 @@ namespace vk
 
 	VkSampler null_sampler();
 	VkImageView null_image_view(vk::command_buffer&);
-	image* get_typeless_helper(VkFormat format);
+	image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height);
 	buffer* get_scratch_buffer();
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VKHelpers.h"
 #include "VKCompute.h"
 #include "Utilities/mutex.h"
@@ -14,11 +14,14 @@ namespace vk
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 
+	// Garbage collection
+	std::vector<std::unique_ptr<image>> g_deleted_typeless_textures;
+
 	VkSampler g_null_sampler = nullptr;
 
 	atomic_t<bool> g_cb_no_interrupt_flag { false };
 
-	//Driver compatibility workarounds
+	// Driver compatibility workarounds
 	VkFlags g_heap_compatible_buffer_types = 0;
 	driver_vendor g_driver_vendor = driver_vendor::unknown;
 	bool g_drv_no_primitive_restart_flag = false;
@@ -28,7 +31,7 @@ namespace vk
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
 
-	//global submit guard to prevent race condition on queue submit
+	// global submit guard to prevent race condition on queue submit
 	shared_mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
@@ -172,20 +175,28 @@ namespace vk
 		return g_null_image_view->value;
 	}
 
-	vk::image* get_typeless_helper(VkFormat format)
+	vk::image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height)
 	{
 		auto create_texture = [&]()
 		{
+			u32 new_width = align(requested_width, 1024u);
+			u32 new_height = align(requested_height, 1024u);
+
 			return new vk::image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D, format, 4096, 4096, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 		};
 
 		auto &ptr = g_typeless_textures[(u32)format];
-		if (!ptr)
+		if (!ptr || ptr->width() < requested_width || ptr->height() < requested_height)
 		{
-			auto _img = create_texture();
-			ptr.reset(_img);
+			if (ptr)
+			{
+				// Safely move to deleted pile
+				g_deleted_typeless_textures.emplace_back(std::move(ptr));
+			}
+
+			ptr.reset(create_texture());
 		}
 
 		return ptr.get();
@@ -229,6 +240,7 @@ namespace vk
 		g_scratch_buffer.reset();
 
 		g_typeless_textures.clear();
+		g_deleted_typeless_textures.clear();
 
 		if (g_null_sampler)
 			vkDestroySampler(*g_current_renderer, g_null_sampler, nullptr);

@@ -213,7 +213,7 @@ namespace vk
 				if (transfer_width != vram_texture->width() || transfer_height != vram_texture->height())
 				{
 					// TODO: Synchronize access to typeles textures
-					target = vk::get_typeless_helper(vram_texture->info.format);
+					target = vk::get_typeless_helper(vram_texture->info.format, transfer_width, transfer_height);
 					change_image_layout(cmd, target, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 
 					// Allow bilinear filtering on color textures where compatibility is likely
