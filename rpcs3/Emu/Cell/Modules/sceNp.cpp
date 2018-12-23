@@ -1051,7 +1051,7 @@ s32 sceNpManagerGetStatus(vm::ptr<s32> status)
 
 s32 sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 {
-	sceNp.todo("sceNpManagerGetNetworkTime(pTick=*0x%x)", pTick);
+	sceNp.warning("sceNpManagerGetNetworkTime(pTick=*0x%x)", pTick);
 
 	if (!pTick)
 	{
@@ -1067,6 +1067,10 @@ s32 sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 	{
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
+
+	// FIXME: Get the network time
+	auto now = std::chrono::system_clock::now();
+	pTick->tick = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
 
 	return CELL_OK;
 }
