@@ -3196,6 +3196,13 @@ void VKGSRender::flip(int buffer)
 
 	if (!buffer_pitch) buffer_pitch = buffer_width * 4; // TODO: Check avconf
 
+	auto avconfig = fxm::get<rsx::avconf>();
+	if (avconfig)
+	{
+		buffer_width = std::min(buffer_width, avconfig->resolution_x);
+		buffer_height = std::min(buffer_height, avconfig->resolution_y);
+	}
+
 	coordi aspect_ratio;
 
 	sizei csize = { (s32)m_client_width, (s32)m_client_height };
@@ -3298,6 +3305,19 @@ void VKGSRender::flip(int buffer)
 			{
 				buffer_width = rsx::apply_resolution_scale(buffer_width, true);
 				buffer_height = rsx::apply_resolution_scale(buffer_height, true);
+
+				if (buffer_width < render_target_texture->width() ||
+					buffer_height < render_target_texture->height())
+				{
+					// TODO: Should emit only once to avoid flooding the log file
+					// TODO: Take AA scaling into account
+					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
+						display_buffers[buffer].width, display_buffers[buffer].height, avconfig? avconfig->resolution_x : 0, avconfig? avconfig->resolution_y : 0,
+						render_target_texture->get_surface_width(), render_target_texture->get_surface_height());
+
+					buffer_width = render_target_texture->width();
+					buffer_height = render_target_texture->height();
+				}
 			}
 		}
 		else if (auto surface = m_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
