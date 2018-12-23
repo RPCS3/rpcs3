@@ -592,7 +592,7 @@ void cell_audio_thread::operator()()
 			if (active_ports == 0)
 			{
 				// no need to mix, just enqueue silence and advance time
-				cellAudio.error("advancing time: no active ports, enqueued_buffers=%llu", enqueued_buffers);
+				cellAudio.trace("advancing time: no active ports, enqueued_buffers=%llu", enqueued_buffers);
 				if (playing)
 				{
 					ringbuffer->enqueue_silence(1);
@@ -613,13 +613,13 @@ void cell_audio_thread::operator()()
 				{
 					// We ran out of buffer, probably because we waited too long
 					// Don't enqueue anything, just advance time
-					cellAudio.error("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=0", untouched, active_ports, untouched_expected);
+					cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=0", untouched, active_ports, untouched_expected);
 					untouched_expected = untouched;
 					advance(timestamp);
 				}
 				else
 				{
-					cellAudio.error("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
+					cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
 					thread_ctrl::wait_for(1000);
 				}
 
@@ -629,7 +629,7 @@ void cell_audio_thread::operator()()
 			// Wait for buffer(s) to be completely filled
 			if (in_progress > 0)
 			{
-				cellAudio.error("waiting: in_progress=%u/%u, enqueued_buffers=%u", in_progress, active_ports, enqueued_buffers);
+				cellAudio.trace("waiting: in_progress=%u/%u, enqueued_buffers=%u", in_progress, active_ports, enqueued_buffers);
 				thread_ctrl::wait_for(500);
 				continue;
 			}
@@ -645,7 +645,7 @@ void cell_audio_thread::operator()()
 			// Warn if we enqueued untouched/incomplete buffers
 			if (untouched > 0 || incomplete > 0)
 			{
-				cellAudio.error("enqueueing: untouched=%u/%u (expected=%u), incomplete=%u/%u enqueued_buffers=%llu", untouched, active_ports, untouched_expected, incomplete, active_ports, enqueued_buffers);
+				cellAudio.trace("enqueueing: untouched=%u/%u (expected=%u), incomplete=%u/%u enqueued_buffers=%llu", untouched, active_ports, untouched_expected, incomplete, active_ports, enqueued_buffers);
 			}
 
 			// Handle audio restart
@@ -660,7 +660,7 @@ void cell_audio_thread::operator()()
 				}
 
 				// Flush, add silence, restart algorithm
-				cellAudio.error("play/resume audio: received first audio buffer");
+				cellAudio.trace("play/resume audio: received first audio buffer");
 				ringbuffer->flush();
 				ringbuffer->enqueue_silence(cfg.desired_full_buffers);
 				finish_port_volume_stepping();
