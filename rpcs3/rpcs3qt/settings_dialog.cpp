@@ -784,6 +784,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings::EnableHostRoot);
 	SubscribeTooltip(ui->enableHostRoot, json_sys["enableHostRoot"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->enableCacheClearing, emu_settings::LimitCacheSize);
+	SubscribeTooltip(ui->enableCacheClearing, json_sys["limitCacheSize"].toString());
+	connect(ui->enableCacheClearing, &QCheckBox::stateChanged, ui->maximumCacheSize, &QSlider::setEnabled);
+
+	// Sliders
+
+	EnhanceSlider(emu_settings::MaximumCacheSize, ui->maximumCacheSize, ui->maximumCacheSizeLabel, tr("Maximum size: %0 MB"));
+	SubscribeTooltip(ui->maximumCacheSize, json_sys["limitCacheSize"].toString());
+	ui->maximumCacheSize->setEnabled(ui->enableCacheClearing->isChecked());
+
 	// Radio Buttons
 
 	SubscribeTooltip(ui->gb_enterButtonAssignment, json_sys["enterButtonAssignment"].toString());
