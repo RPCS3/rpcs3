@@ -1060,7 +1060,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		auto& data = vm::_ref<decltype(rdata)>(addr);
 		auto& res = vm::reservation_lock(addr, 128);
 
-		vm::_ref<atomic_t<u32>>(addr) += 0;
+		*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
 		if (g_cfg.core.spu_accurate_putlluc)
 		{
@@ -1266,7 +1266,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 
 			if (g_cfg.core.spu_accurate_getllar)
 			{
-				vm::_ref<atomic_t<u32>>(addr) += 0;
+				*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
 				// Full lock (heavyweight)
 				// TODO: vm::check_addr
@@ -1324,7 +1324,6 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 			{
 				if (spu_putllc_tx(raddr, rtime, rdata.data(), to_write.data()))
 				{
-					vm::reservation_notifier(raddr, 128).notify_all();
 					result = true;
 				}
 
@@ -1334,18 +1333,24 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 			{
 				auto& res = vm::reservation_lock(raddr, 128);
 
-				vm::_ref<atomic_t<u32>>(raddr) += 0;
-
-				// Full lock (heavyweight)
-				// TODO: vm::check_addr
-				vm::writer_lock lock(1);
-
-				if (rtime == (res & ~1ull) && rdata == data)
+				if (rtime == (res & ~1ull))
 				{
-					data = to_write;
-					vm::reservation_update(raddr, 128);
-					vm::reservation_notifier(raddr, 128).notify_all();
-					result = true;
+					*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
+
+					// Full lock (heavyweight)
+					// TODO: vm::check_addr
+					vm::writer_lock lock(1);
+
+					if (rdata == data)
+					{
+						data = to_write;
+						vm::reservation_update(raddr, 128);
+						result = true;
+					}
+					else
+					{
+						res &= ~1ull;
+					}
 				}
 				else
 				{
@@ -1356,6 +1361,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 
 		if (result)
 		{
+			vm::reservation_notifier(addr, 128).notify_all();
 			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
 		}
 		else
