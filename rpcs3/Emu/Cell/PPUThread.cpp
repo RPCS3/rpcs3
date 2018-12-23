@@ -977,7 +977,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	vm::temporary_unlock(ppu);
+	vm::passive_unlock(ppu);
 
 	for (u64 i = 0;; i++)
 	{
@@ -1003,8 +1003,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	ppu.cpu_mem();
-
+	vm::passive_lock(ppu);
 	return static_cast<T>(ppu.rdata << data_off >> size_off);
 }
 
@@ -1090,7 +1089,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
-	vm::temporary_unlock(ppu);
+	vm::passive_unlock(ppu);
 
 	auto& res = vm::reservation_lock(addr, sizeof(u32));
 
@@ -1106,7 +1105,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		res &= ~1ull;
 	}
 
-	ppu.cpu_mem();
+	vm::passive_lock(ppu);
 	ppu.raddr = 0;
 	return result;
 }
@@ -1183,7 +1182,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}
 
-	vm::temporary_unlock(ppu);
+	vm::passive_unlock(ppu);
 
 	auto& res = vm::reservation_lock(addr, sizeof(u64));
 
@@ -1199,7 +1198,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		res &= ~1ull;
 	}
 
-	ppu.cpu_mem();
+	vm::passive_lock(ppu);
 	ppu.raddr = 0;
 	return result;
 }
