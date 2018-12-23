@@ -17,10 +17,17 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	mkdir -p appdir/usr/optional/ ; mkdir -p appdir/usr/optional/libstdc++/
 	cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./appdir/usr/optional/libstdc++/
 	rm ./appdir/AppRun
-	curl -sL https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous/AppRun-patched-x86_64 -o ./appdir/AppRun
+	curl -sL https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous2/AppRun-patched-x86_64 -o ./appdir/AppRun
 	chmod a+x ./appdir/AppRun
-	curl -sL https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous/exec-x86_64.so -o ./appdir/usr/optional/exec.so
-
+	curl -sL https://github.com/RPCS3/AppImageKit-checkrt/releases/download/continuous2/exec-x86_64.so -o ./appdir/usr/optional/exec.so
+	
+	# Compile checker binary for AppImageKit-checkrt
+	
+	# This may need updating if you update the compiler or rpcs3 uses newer c++ features
+	# See https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/config/abi/pre/gnu.ver
+	# for which definitions correlate to which CXXABI version.
+	printf "#include <memory>\nint main(){std::make_exception_ptr(0);}" | $CXX -x c++ -o ./appdir/usr/optional/checker -
+	
 	# Package it up and send it off
 	./squashfs-root/usr/bin/appimagetool /rpcs3/build/appdir
 	ls
