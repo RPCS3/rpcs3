@@ -24,6 +24,7 @@ public:
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
 	void Init();
 	void Reset();
+	void SetEnabled(bool enabled);
 
 protected:
 	void ThreadFunc();
@@ -40,6 +41,7 @@ protected:
 
 	atomic_t<bool> active{ false };
 	atomic_t<bool> reset{ false };
+	atomic_t<bool> is_enabled{ true };
 	std::shared_ptr<std::thread> thread;
 };
 

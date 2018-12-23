@@ -14,6 +14,14 @@ namespace Ui
 	class pad_settings_dialog;
 }
 
+struct pad_info
+{
+	std::string name;
+	bool is_connected;
+};
+
+Q_DECLARE_METATYPE(pad_info);
+
 class pad_settings_dialog : public QDialog
 {
 	Q_OBJECT
@@ -73,6 +81,8 @@ class pad_settings_dialog : public QDialog
 		QString text;
 	};
 
+	const QString Disconnected_suffix = tr(" (disconnected)");
+
 public:
 	explicit pad_settings_dialog(QWidget *parent = nullptr);
 	~pad_settings_dialog();
@@ -92,6 +102,11 @@ private:
 
 	// TabWidget
 	QTabWidget* m_tabs;
+
+	// Capabilities
+	bool m_enable_buttons{ false };
+	bool m_enable_rumble{ false };
+	bool m_enable_deadzones{ false };
 
 	// Button Mapping
 	QButtonGroup* m_padButtons;
@@ -116,6 +131,7 @@ private:
 	pad_config m_handler_cfg;
 	std::string m_device_name;
 	std::string m_profile;
+	QTimer m_timer_pad_refresh;
 
 	// Remap Timer
 	const int MAX_SECONDS = 5;
@@ -130,6 +146,7 @@ private:
 
 	/** Update all the Button Labels with current button mapping */
 	void UpdateLabel(bool is_reset = false);
+	void SwitchPadInfo(const std::string& name, bool is_connected);
 
 	/** Enable/Disable Buttons while trying to remap an other */
 	void SwitchButtons(bool is_enabled);
@@ -141,7 +158,6 @@ private:
 	void ReloadButtons();
 
 	void ChangeProfile();
-	void ResetPadHandler();
 
 	/** Repaints a stick deadzone preview label */
 	void RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y);

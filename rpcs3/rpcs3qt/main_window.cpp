@@ -1252,8 +1252,25 @@ void main_window::CreateConnects()
 
 	auto openPadSettings = [this]
 	{
+		auto resetPadHandlers = [this]
+		{
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+			Emu.GetCallbacks().reset_pads();
+		};
+		if (!Emu.IsStopped())
+		{
+			Emu.GetCallbacks().enable_pads(false);
+		}
 		pad_settings_dialog dlg(this);
+		connect(&dlg, &QDialog::accepted, resetPadHandlers);
 		dlg.exec();
+		if (!Emu.IsStopped())
+		{
+			Emu.GetCallbacks().enable_pads(true);
+		}
 	};
 
 	connect(ui->confPadsAct, &QAction::triggered, openPadSettings);

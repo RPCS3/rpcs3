@@ -90,13 +90,14 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent)
 	connect(ui->chooseHandler, &QComboBox::currentTextChanged, this, &pad_settings_dialog::ChangeInputType);
 
 	// Combobox: Devices
-	connect(ui->chooseDevice, &QComboBox::currentTextChanged, [this](const QString& dev)
+	connect(ui->chooseDevice, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
 	{
-		if (dev.isEmpty())
+		if (index < 0)
 		{
 			return;
 		}
-		m_device_name = sstr(dev);
+		const pad_info info = ui->chooseDevice->itemData(index).value<pad_info>();
+		m_device_name = info.name;
 		if (!g_cfg_input.player[m_tabs->currentIndex()]->device.from_string(m_device_name))
 		{
 			// Something went wrong
@@ -316,8 +317,14 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto& callback = [=](u16 val, std::string name, int preview_values[6])
+	const auto& callback = [=](u16 val, std::string name, std::string pad_name, int preview_values[6])
 	{
+		SwitchPadInfo(pad_name, true);
+
+		if (!m_enable_buttons && !m_timer.isActive())
+		{
+			SwitchButtons(true);
+		}
 		if (m_handler->has_deadzones())
 		{
 			ui->preview_trigger_left->setValue(preview_values[0]);
@@ -349,8 +356,18 @@ void pad_settings_dialog::InitButtons()
 		}
 	};
 
+	// Disable Button Remapping
+	const auto& fail_callback = [this](const std::string& pad_name)
+	{
+		SwitchPadInfo(pad_name, false);
+		if (m_enable_buttons)
+		{
+			SwitchButtons(false);
+		}
+	};
+
 	// Use timer to get button input
-	connect(&m_timer_input, &QTimer::timeout, [this, callback]()
+	connect(&m_timer_input, &QTimer::timeout, [this, callback, fail_callback]()
 	{
 		std::vector<std::string> buttons =
 		{
@@ -359,8 +376,45 @@ void pad_settings_dialog::InitButtons()
 			m_cfg_entries[button_ids::id_pad_rstick_left].key, m_cfg_entries[button_ids::id_pad_rstick_right].key, m_cfg_entries[button_ids::id_pad_rstick_down].key,
 			m_cfg_entries[button_ids::id_pad_rstick_up].key
 		};
-		m_handler->GetNextButtonPress(m_device_name, callback, false, buttons);
+		m_handler->GetNextButtonPress(m_device_name, callback, fail_callback, false, buttons);
 	});
+
+	// Use timer to refresh pad connection status
+	connect(&m_timer_pad_refresh, &QTimer::timeout, [this]()
+	{
+		for (int i = 0; i < ui->chooseDevice->count(); i++)
+		{
+			if (!ui->chooseDevice->itemData(i).canConvert<pad_info>())
+			{
+				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
+				continue;
+			}
+			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+			m_handler->GetNextButtonPress(info.name, [=](u16 val, std::string name, std::string pad_name, int preview_values[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+		}
+	});
+}
+
+void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_connected)
+{
+	for (int i = 0; i < ui->chooseDevice->count(); i++)
+	{
+		const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+		if (info.name == pad_name)
+		{
+			if (info.is_connected != is_connected)
+			{
+				ui->chooseDevice->setItemData(i, QVariant::fromValue(pad_info{ pad_name, is_connected }));
+				ui->chooseDevice->setItemText(i, is_connected ? qstr(pad_name) : (qstr(pad_name) + Disconnected_suffix));
+			}
+
+			if (!is_connected && m_timer.isActive() && ui->chooseDevice->currentIndex() == i)
+			{
+				ReactivateButtons();
+			}
+			break;
+		}
+	}
 }
 
 void pad_settings_dialog::ReloadButtons()
@@ -406,9 +460,6 @@ void pad_settings_dialog::ReloadButtons()
 	updateButton(button_ids::id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg.rs_right);
 	updateButton(button_ids::id_pad_rstick_up, ui->b_rstick_up, &m_handler_cfg.rs_up);
 
-	// Enable Vibration Checkboxes
-	ui->gb_vibration->setEnabled(m_handler->has_rumble());
-
 	ui->chb_vibration_large->setChecked((bool)m_handler_cfg.enable_vibration_motor_large);
 	ui->chb_vibration_small->setChecked((bool)m_handler_cfg.enable_vibration_motor_small);
 	ui->chb_vibration_switch->setChecked((bool)m_handler_cfg.switch_vibration_motors);
@@ -416,11 +467,11 @@ void pad_settings_dialog::ReloadButtons()
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
 
-	// Enable Deadzone Settings
-	const bool enable_deadzones = m_handler->has_deadzones();
+	// Enable Vibration Checkboxes
+	m_enable_rumble = m_handler->has_rumble();
 
-	ui->gb_sticks->setEnabled(enable_deadzones);
-	ui->gb_triggers->setEnabled(enable_deadzones);
+	// Enable Deadzone Settings
+	m_enable_deadzones = m_handler->has_deadzones();
 
 	// Enable Trigger Thresholds
 	ui->slider_trigger_left->setRange(0, m_handler->trigger_max);
@@ -652,6 +703,12 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 
 void pad_settings_dialog::SwitchButtons(bool is_enabled)
 {
+	m_enable_buttons = is_enabled;
+
+	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
+	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
+	ui->gb_triggers->setEnabled(is_enabled && m_enable_deadzones);
+
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
 		m_padButtons->button(i)->setEnabled(is_enabled);
@@ -675,7 +732,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		UpdateLabel(true);
 		return;
 	case button_ids::id_blacklist:
-		m_handler->GetNextButtonPress(m_device_name, nullptr, true);
+		m_handler->GetNextButtonPress(m_device_name, nullptr, nullptr, true);
 		return;
 	default:
 		break;
@@ -769,18 +826,20 @@ void pad_settings_dialog::ChangeInputType()
 
 	// Get this player's current handler and it's currently available devices
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
-	const std::vector<std::string> list_devices = m_handler->ListDevices();
+	const auto device_list = m_handler->ListDevices();
 
 	// Refill the device combobox with currently available devices
 	switch (m_handler->m_type)
 	{
 #ifdef _WIN32
+	case pad_handler::ds4:
 	case pad_handler::xinput:
 	{
 		const QString name_string = qstr(m_handler->name_string());
-		for (int i = 0; i < m_handler->max_devices(); i++)
+		for (int i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
-			ui->chooseDevice->addItem(name_string + QString::number(i), i);
+			const QString device_name = name_string + QString::number(i);
+			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_info{ sstr(device_name), true }));
 		}
 		force_enable = true;
 		break;
@@ -788,21 +847,34 @@ void pad_settings_dialog::ChangeInputType()
 #endif
 	default:
 	{
-		for (int i = 0; i < list_devices.size(); i++)
+		for (int i = 0; i < device_list.size(); i++)
 		{
-			ui->chooseDevice->addItem(qstr(list_devices[i]), i);
+			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_info{ device_list[i], true }));
 		}
 		break;
 	}
 	}
 
 	// Handle empty device list
-	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && list_devices.size() > 0);
+	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
 	ui->chooseDevice->setEnabled(config_enabled);
 
 	if (config_enabled)
 	{
-		ui->chooseDevice->setCurrentText(qstr(device));
+		for (int i = 0; i < ui->chooseDevice->count(); i++)
+		{
+			if (!ui->chooseDevice->itemData(i).canConvert<pad_info>())
+			{
+				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
+				continue;
+			}
+			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+			m_handler->GetNextButtonPress(info.name, [=](u16 val, std::string name, std::string pad_name, int preview_values[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			if (info.name == device)
+			{
+				ui->chooseDevice->setCurrentIndex(i);
+			}
+		}
 
 		QString profile_dir = qstr(PadHandlerBase::get_config_dir(m_handler->m_type));
 		QStringList profiles = gui::utils::get_dir_entries(QDir(profile_dir), QStringList() << "*.yml");
@@ -835,7 +907,7 @@ void pad_settings_dialog::ChangeInputType()
 	}
 
 	// enable configuration and profile list if possible
-	SwitchButtons(config_enabled);
+	SwitchButtons(config_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->b_addProfile->setEnabled(config_enabled);
 	ui->chooseProfile->setEnabled(config_enabled);
 }
@@ -855,6 +927,10 @@ void pad_settings_dialog::ChangeProfile()
 	if (m_timer_input.isActive())
 	{
 		m_timer_input.stop();
+	}
+	if (m_timer_pad_refresh.isActive())
+	{
+		m_timer_pad_refresh.stop();
 	}
 
 	// Change handler
@@ -900,6 +976,7 @@ void pad_settings_dialog::ChangeProfile()
 	if (ui->chooseDevice->isEnabled() && ui->chooseDevice->currentIndex() >= 0)
 	{
 		m_timer_input.start(1);
+		m_timer_pad_refresh.start(1000);
 	}
 }
 
@@ -944,16 +1021,6 @@ void pad_settings_dialog::SaveProfile()
 	m_handler_cfg.save();
 }
 
-void pad_settings_dialog::ResetPadHandler()
-{
-	if (Emu.IsStopped())
-	{
-		return;
-	}
-
-	Emu.GetCallbacks().reset_pads();
-}
-
 void pad_settings_dialog::SaveExit()
 {
 	SaveProfile();
@@ -969,8 +1036,6 @@ void pad_settings_dialog::SaveExit()
 	}
 
 	g_cfg_input.save();
-
-	ResetPadHandler();
 
 	QDialog::accept();
 }
