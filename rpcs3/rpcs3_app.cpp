@@ -146,6 +146,10 @@ void rpcs3_app::InitializeCallbacks()
 	{
 		pad::get_current_handler()->Reset();
 	};
+	callbacks.enable_pads = [this](bool enable)
+	{
+		pad::get_current_handler()->SetEnabled(enable);
+	};
 
 	callbacks.get_kb_handler = [=]() -> std::shared_ptr<KeyboardHandlerBase>
 	{
