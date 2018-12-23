@@ -257,7 +257,7 @@ evdev_joystick_handler::EvdevDevice* evdev_joystick_handler::get_device(const st
 	return &dev;
 }
 
-void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -265,7 +265,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	// Get our evdev device
 	EvdevDevice* device = get_device(padId);
 	if (device == nullptr || device->device == nullptr)
-		return;
+		return fail_callback(padId);
 	libevdev* dev = device->device;
 
 	// Try to query the latest event from the joystick.
@@ -381,20 +381,21 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		return it != data.end() && dir == it->second.second ? it->second.first : 0;
 	};
 
-	int preview_values[6] =
+	int preview_values[6] = { 0, 0, 0, 0, 0, 0 };
+	if (buttons.size() == 10)
 	{
-		find_value(buttons[0]),                          // Left Trigger
-		find_value(buttons[1]),                          // Right Trigger
-		find_value(buttons[3]) - find_value(buttons[2]), // Left Stick X
-		find_value(buttons[5]) - find_value(buttons[4]), // Left Stick Y
-		find_value(buttons[7]) - find_value(buttons[6]), // Right Stick X
-		find_value(buttons[9]) - find_value(buttons[8]), // Right Stick Y
-	};
+		preview_values[0] = find_value(buttons[0]);                          // Left Trigger
+		preview_values[1] = find_value(buttons[1]);                          // Right Trigger
+		preview_values[2] = find_value(buttons[3]) - find_value(buttons[2]); // Left Stick X
+		preview_values[3] = find_value(buttons[5]) - find_value(buttons[4]); // Left Stick Y
+		preview_values[4] = find_value(buttons[7]) - find_value(buttons[6]); // Right Stick X
+		preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
+	}
 
 	if (pressed_button.first > 0)
-		return callback(pressed_button.first, pressed_button.second, preview_values);
+		return callback(pressed_button.first, pressed_button.second, padId, preview_values);
 	else
-		return callback(0, "", preview_values);
+		return callback(0, "", padId, preview_values);
 }
 
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/ControllerInterface/evdev/evdev.cpp
