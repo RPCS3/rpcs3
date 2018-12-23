@@ -84,7 +84,7 @@ namespace vm
 
 		writer_lock(const writer_lock&) = delete;
 		writer_lock& operator=(const writer_lock&) = delete;
-		writer_lock(int full);
+		writer_lock(u32 addr = 0);
 		~writer_lock();
 
 		explicit operator bool() const { return locked; }

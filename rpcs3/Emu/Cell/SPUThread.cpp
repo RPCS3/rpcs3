@@ -800,40 +800,63 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			res++;
 			break;
 		}
-		case 16:
-		{
-			auto& res = vm::reservation_lock(eal, 16);
-			_mm_store_si128(static_cast<__m128i*>(dst), _mm_load_si128(static_cast<const __m128i*>(src)));
-			res++;
-			break;
-		}
 		default:
 		{
-			auto* res = &vm::reservation_lock(eal, 16);
 			auto vdst = static_cast<__m128i*>(dst);
 			auto vsrc = static_cast<const __m128i*>(src);
 
-			for (u32 addr = eal, end = eal + size;; vdst++, vsrc++)
+			if (((eal & 127) + size) <= 128)
 			{
-				_mm_store_si128(vdst, _mm_load_si128(vsrc));
+				// Lock one cache line
+				auto& res = vm::reservation_lock(eal, 128);
 
-				addr += 16;
-
-				if (addr == end)
+				while (size)
 				{
-					break;
+					size -= 16;
+					_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
 				}
 
-				if (addr % 128)
-				{
-					continue;
-				}
-
-				res->operator ++();
-				res = &vm::reservation_lock(addr, 16);
+				res++;
+				break;
 			}
 
-			res->operator ++();
+			vm::passive_lock(*this);
+
+			while (size >= 128)
+			{
+				const __m128i data[]
+				{
+					_mm_load_si128(vsrc + 0),
+					_mm_load_si128(vsrc + 1),
+					_mm_load_si128(vsrc + 2),
+					_mm_load_si128(vsrc + 3),
+					_mm_load_si128(vsrc + 4),
+					_mm_load_si128(vsrc + 5),
+					_mm_load_si128(vsrc + 6),
+					_mm_load_si128(vsrc + 7),
+				};
+
+				_mm_store_si128(vdst + 0, data[0]);
+				_mm_store_si128(vdst + 1, data[1]);
+				_mm_store_si128(vdst + 2, data[2]);
+				_mm_store_si128(vdst + 3, data[3]);
+				_mm_store_si128(vdst + 4, data[4]);
+				_mm_store_si128(vdst + 5, data[5]);
+				_mm_store_si128(vdst + 6, data[6]);
+				_mm_store_si128(vdst + 7, data[7]);
+
+				size -= 128;
+				vsrc += 8;
+				vdst += 8;
+			}
+
+			while (size)
+			{
+				size -= 16;
+				_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
+			}
+
+			vm::passive_unlock(*this);
 			break;
 		}
 		}
@@ -1066,7 +1089,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		{
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
-			vm::writer_lock lock(1);
+			vm::writer_lock lock(addr);
 			data = to_write;
 			vm::reservation_update(addr, 128);
 		}
@@ -1270,7 +1293,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 
 				// Full lock (heavyweight)
 				// TODO: vm::check_addr
-				vm::writer_lock lock(1);
+				vm::writer_lock lock(addr);
 
 				ntime = res & ~1ull;
 				dst = data;
@@ -1339,7 +1362,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 
 					// Full lock (heavyweight)
 					// TODO: vm::check_addr
-					vm::writer_lock lock(1);
+					vm::writer_lock lock(addr);
 
 					if (rdata == data)
 					{

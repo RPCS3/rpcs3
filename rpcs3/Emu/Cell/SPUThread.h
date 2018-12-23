@@ -3,6 +3,7 @@
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
+#include "Emu/Memory/vm.h"
 #include "MFC.h"
 
 #include <map>

@@ -6,6 +6,7 @@
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/asm.h"
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/GSRender.h"
 #include <atomic>
@@ -194,7 +195,7 @@ namespace vm
 		m_upgraded = true;
 	}
 
-	writer_lock::writer_lock(int full)
+	writer_lock::writer_lock(u32 addr)
 		: locked(true)
 	{
 		auto cpu = get_current_cpu_thread();
@@ -206,13 +207,16 @@ namespace vm
 
 		g_mutex.lock();
 
-		if (full)
+		if (addr)
 		{
 			for (auto& lock : g_locks)
 			{
 				if (cpu_thread* ptr = lock)
 				{
-					ptr->state.test_and_set(cpu_flag::memory);
+					if (LIKELY(ptr->id_type() == 1))
+					{
+						ptr->state.test_and_set(cpu_flag::memory);
+					}
 				}
 			}
 
@@ -223,6 +227,23 @@ namespace vm
 					if (ptr->is_stopped())
 					{
 						break;
+					}
+
+					if (UNLIKELY(ptr->id_type() == 2))
+					{
+						const u32 target = static_cast<spu_thread*>(ptr)->ch_mfc_cmd.eal & -128u;
+
+						if (target > addr)
+						{
+							break;
+						}
+
+						const u32 size = align(static_cast<spu_thread*>(ptr)->ch_mfc_cmd.size, 128);
+
+						if (target + size <= addr)
+						{
+							break;
+						}
 					}
 
 					busy_wait();
