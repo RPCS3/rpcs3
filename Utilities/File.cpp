@@ -1384,8 +1384,9 @@ const std::string& fs::get_config_dir()
 		std::string dir;
 
 #ifdef _WIN32
-		wchar_t buf[2048];
-		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
+		wchar_t buf[32768];
+		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, std::size(buf)) - 1 >= std::size(buf) - 1 &&
+			GetModuleFileName(NULL, buf, std::size(buf)) - 1 >= std::size(buf) - 1)
 		{
 			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 			return dir; // empty
