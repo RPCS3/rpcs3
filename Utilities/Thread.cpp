@@ -1926,6 +1926,7 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 		case native_core_arrangement::intel_ht:
 		{
+			/* This has been disabled as it seems to degrade performance instead of improving it.
 			if (thread_count <= 4)
 			{
 				//i3 or worse
@@ -1940,6 +1941,7 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 					return all_cores_mask;
 				}
 			}
+			*/
 
 			return all_cores_mask;
 		}
