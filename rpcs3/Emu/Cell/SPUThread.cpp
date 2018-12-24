@@ -1091,12 +1091,12 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			// TODO: vm::check_addr
 			vm::writer_lock lock(addr);
 			data = to_write;
-			vm::reservation_update(addr, 128);
+			res++;
 		}
 		else
 		{
 			data = to_write;
-			vm::reservation_update(addr, 128);
+			res++;
 		}
 	}
 
@@ -1367,7 +1367,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 					if (rdata == data)
 					{
 						data = to_write;
-						vm::reservation_update(raddr, 128);
+						res++;
 						result = true;
 					}
 					else

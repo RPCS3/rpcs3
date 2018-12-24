@@ -101,7 +101,7 @@ namespace vm
 	inline void reservation_update(u32 addr, u32 size, bool lsb = false)
 	{
 		// Update reservation info with new timestamp
-		reservation_acquire(addr, size) = (__rdtsc() << 1) | u64{lsb};
+		reservation_acquire(addr, size) += 2;
 	}
 
 	// Get reservation sync variable

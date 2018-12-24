@@ -1097,7 +1097,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	if (result)
 	{
-		vm::reservation_update(addr, sizeof(u32));
+		res++;
 		vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 	}
 	else
@@ -1190,7 +1190,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	if (result)
 	{
-		vm::reservation_update(addr, sizeof(u64));
+		res++;
 		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 	}
 	else
