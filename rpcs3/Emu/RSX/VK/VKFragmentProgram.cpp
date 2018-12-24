@@ -141,8 +141,23 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			inputs.push_back(in);
 
 			OS << "layout(set=0, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
+
+			if (m_prog.redirected_textures & mask)
+			{
+				// Insert stencil mirror declaration
+				in.name += "_stencil";
+				in.location = location;
+
+				inputs.push_back(in);
+
+				OS << "layout(set=0, binding=" << location++ << ") uniform u" << PT.type << " " << in.name << ";\n";
+			}
 		}
 	}
+
+	// Some drivers (macOS) do not support more than 16 texture descriptors per stage
+	// TODO: If any application requires more than this, the layout can be restructured a bit
+	verify("Too many sampler descriptors!" HERE), location <= VERTEX_TEXTURES_FIRST_BIND_SLOT;
 
 	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])

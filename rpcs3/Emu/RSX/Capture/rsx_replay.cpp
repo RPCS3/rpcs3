@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "rsx_replay.h"
 
 #include "Emu/System.h"
@@ -193,6 +193,7 @@ namespace rsx
 			sys_rsx_context_attribute(context_id, 0x001, 0x20000000, fifo_stops[0], 0, 0);
 
 			auto render = get_current_renderer();
+			auto last_flip = render->int_flip_index;
 
 			size_t stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
@@ -234,6 +235,13 @@ namespace rsx
 			{
 				while (Emu.IsPaused())
 					std::this_thread::sleep_for(10ms);
+			}
+
+			// Check if the captured application used syscall instead of a gcm command to flip
+			if (render->int_flip_index == last_flip)
+			{
+				// Capture did not include a display flip, flip manually
+				render->request_emu_flip(1u);
 			}
 
 			// random pause to not destroy gpu

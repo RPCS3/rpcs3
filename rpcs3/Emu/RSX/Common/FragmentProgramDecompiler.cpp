@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
@@ -278,10 +278,10 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 	const std::pair<std::string, std::function<std::string()>> repl_list[] =
 	{
 		{ "$$", []() -> std::string { return "$"; } },
-		{ "$0", [this]() -> std::string {return GetSRC<SRC0>(src0);} },//std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC0>), *this, src0) },
-		{ "$1", [this]() -> std::string {return GetSRC<SRC1>(src1);} },//std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC1>), this, src1) },
-		{ "$2", [this]() -> std::string {return GetSRC<SRC2>(src2);} },//std::bind(std::mem_fn(&GLFragmentDecompilerThread::GetSRC<SRC2>), this, src2) },
-		{ "$t", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddTex), this) },
+		{ "$0", [this]() -> std::string {return GetSRC<SRC0>(src0);} },
+		{ "$1", [this]() -> std::string {return GetSRC<SRC1>(src1);} },
+		{ "$2", [this]() -> std::string {return GetSRC<SRC2>(src2);} },
+		{ "$t", [this]() -> std::string { return "tex" + std::to_string(dst.tex_num);} },
 		{ "$_i", [this]() -> std::string {return std::to_string(dst.tex_num);} },
 		{ "$m", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetMask), this) },
 		{ "$ifcond ", [this]() -> std::string
@@ -372,25 +372,9 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 		return;
 	}
 
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-	std::string cond = GetRawCond();
-
-	ShaderVariable dst_var(dst);
-	dst_var.simplify();
-
-	//const char *c_mask = f;
-
-	if (dst_var.swizzles[0].length() == 1)
-	{
-		AddCode("if (" + cond + ".x) " + dst + " = " + src + ";");
-	}
-	else
-	{
-		for (int i = 0; i < dst_var.swizzles[0].length(); ++i)
-		{
-			AddCode("if (" + cond + "." + f[i] + ") " + dst + "." + f[i] + " = " + src + "." + f[i] + ";");
-		}
-	}
+	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
+	const auto cond = ShaderVariable(dst).match_size(GetRawCond());
+	AddCode(dst + " = _select(" + dst + ", " + src + ", " + cond + ");");
 }
 
 template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
@@ -640,6 +624,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		AddX2d();
 		AddCode(Format("x2d = $0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw;", true));
 	case RSX_FP_OPCODE_TEX:
+		AddTex();
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:
@@ -671,6 +656,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		AddX2d();
 		AddCode(Format("x2d = $0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw;", true));
 	case RSX_FP_OPCODE_TXP:
+		AddTex();
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:
@@ -695,6 +681,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 		return false;
 	case RSX_FP_OPCODE_TXD:
+		AddTex();
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:
@@ -713,6 +700,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 		return false;
 	case RSX_FP_OPCODE_TXB:
+		AddTex();
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:
@@ -731,6 +719,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 		return false;
 	case RSX_FP_OPCODE_TXL:
+		AddTex();
 		switch (m_prog.get_texture_dimension(dst.tex_num))
 		{
 		case rsx::texture_dimension_extended::texture_dimension_1d:

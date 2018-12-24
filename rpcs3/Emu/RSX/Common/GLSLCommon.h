@@ -415,6 +415,8 @@ namespace glsl
 
 	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false, bool require_texture_ops = true)
 	{
+		OS << "#define _select mix\n\n";
+
 		if (require_lit_emulation)
 		{
 			OS <<
@@ -479,9 +481,10 @@ namespace glsl
 			"	}\n"
 			"}\n\n"
 
-			"vec4 texture2DReconstruct(sampler2D tex, vec2 coord, float remap)\n"
+			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, vec2 coord, float remap)\n"
 			"{\n"
 			"	vec4 result = decodeLinearDepth(texture(tex, coord.xy).r);\n"
+			"	result.z = float(texture(stencil_tex, coord.xy).x) / 255.f;\n"
 			"	uint remap_vector = floatBitsToUint(remap) & 0xFF;\n"
 			"	if (remap_vector == 0xE4) return result;\n\n"
 			"	vec4 tmp;\n"
@@ -553,27 +556,30 @@ namespace glsl
 			"	return rgba;\n"
 			"}\n\n"
 
-			"#define TEX1D(index, tex, coord1) process_texel(texture(tex, coord1 * texture_parameters[index].x), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_BIAS(index, tex, coord1, bias) process_texel(texture(tex, coord1 * texture_parameters[index].x, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_LOD(index, tex, coord1, lod) process_texel(textureLod(tex, coord1 * texture_parameters[index].x, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_GRAD(index, tex, coord1, dpdx, dpdy) process_texel(textureGrad(tex, coord1 * texture_parameters[index].x, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_PROJ(index, tex, coord2) process_texel(textureProj(tex, coord2 * vec2(texture_parameters[index].x, 1.)), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX_NAME(index) tex##index\n"
+			"#define TEX_NAME_STENCIL(index) tex##index##_stencil\n\n"
 
-			"#define TEX2D(index, tex, coord2) process_texel(texture(tex, coord2 * texture_parameters[index].xy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_BIAS(index, tex, coord2, bias) process_texel(texture(tex, coord2 * texture_parameters[index].xy, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_LOD(index, tex, coord2, lod) process_texel(textureLod(tex, coord2 * texture_parameters[index].xy, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_GRAD(index, tex, coord2, dpdx, dpdy) process_texel(textureGrad(tex, coord2 * texture_parameters[index].xy, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4 * vec4(texture_parameters[index].xy, 1., 1.)), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].x), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].x, bias), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].x, lod), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].x, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].x, 1.)), floatBitsToUint(texture_parameters[index].w))\n"
 
-			"#define TEX2D_DEPTH_RGBA8(index, tex, coord2) process_texel(texture2DReconstruct(tex, coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_SHADOW(index, tex, coord3) texture(tex, coord3 * vec3(texture_parameters[index].xy, 1.))\n"
-			"#define TEX2D_SHADOWPROJ(index, tex, coord4) textureProj(tex, coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n"
+			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].xy), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].xy, bias), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].xy, lod), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].xy, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.)), floatBitsToUint(texture_parameters[index].w))\n"
 
-			"#define TEX3D(index, tex, coord3) process_texel(texture(tex, coord3), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_BIAS(index, tex, coord3, bias) process_texel(texture(tex, coord3, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_LOD(index, tex, coord3, lod) process_texel(textureLod(tex, coord3, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_GRAD(index, tex, coord3, dpdx, dpdy) process_texel(textureGrad(tex, coord3, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_PROJ(index, tex, coord4) process_texel(textureProj(tex, coord4), floatBitsToUint(texture_parameters[index].w))\n\n";
+			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.))\n"
+			"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n"
+
+			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), floatBitsToUint(texture_parameters[index].w))\n\n";
 		}
 
 		if (require_wpos)
@@ -617,49 +623,49 @@ namespace glsl
 		case FUNCTION::FUNCTION_REFL:
 			return "vec4($0 - 2.0 * (dot($0, $1)) * $1)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
-			return "TEX1D($_i, $t, $0.x)";
+			return "TEX1D($_i, $0.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:
-			return "TEX1D_BIAS($_i, $t, $0.x, $1.x)";
+			return "TEX1D_BIAS($_i, $0.x, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_PROJ:
-			return "TEX1D_PROJ($_i, $t, $0.xy)";
+			return "TEX1D_PROJ($_i, $0.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_LOD:
-			return "TEX1D_LOD($_i, $t, $0.x, $1.x)";
+			return "TEX1D_LOD($_i, $0.x, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_GRAD:
-			return "TEX1D_GRAD($_i, $t, $0.x, $1.x, $2.x)";
+			return "TEX1D_GRAD($_i, $0.x, $1.x, $2.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D:
-			return "TEX2D($_i, $t, $0.xy)";
+			return "TEX2D($_i, $0.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_BIAS:
-			return "TEX2D_BIAS($_i, $t, $0.xy, $1.x)";
+			return "TEX2D_BIAS($_i, $0.xy, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_PROJ:
-			return "TEX2D_PROJ($_i, $t, $0)";
+			return "TEX2D_PROJ($_i, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_LOD:
-			return "TEX2D_LOD($_i, $t, $0.xy, $1.x)";
+			return "TEX2D_LOD($_i, $0.xy, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_GRAD:
-			return "TEX2D_GRAD($_i, $t, $0.xy, $1.xy, $2.xy)";
+			return "TEX2D_GRAD($_i, $0.xy, $1.xy, $2.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D:
-			return "TEX2D_SHADOW($_i, $t, $0.xyz)";
+			return "TEX2D_SHADOW($_i, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ:
-			return "TEX2D_SHADOWPROJ($_i, $t, $0)";
+			return "TEX2D_SHADOWPROJ($_i, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:
-			return "TEX3D($_i, $t, $0.xyz)";
+			return "TEX3D($_i, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_BIAS:
-			return "TEX3D_BIAS($_i, $t, $0.xyz, $1.x)";
+			return "TEX3D_BIAS($_i, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_PROJ:
-			return "TEX3D($_i, $t, ($0.xyz / $0.w))";
+			return "TEX3D($_i, ($0.xyz / $0.w))";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_LOD:
-			return "TEX3D_LOD($_i, $t, $0.xyz, $1.x)";
+			return "TEX3D_LOD($_i, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE_GRAD:
-			return "TEX3D_GRAD($_i, $t, $0.xyz, $1.xyz, $2.xyz)";
+			return "TEX3D_GRAD($_i, $0.xyz, $1.xyz, $2.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D:
-			return "TEX3D($_i, $t, $0.xyz)";
+			return "TEX3D($_i, $0.xyz)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_BIAS:
-			return "TEX3D_BIAS($_i, $t, $0.xyz, $1.x)";
+			return "TEX3D_BIAS($_i, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_PROJ:
-			return "TEX3D_PROJ($_i, $t, $0)";
+			return "TEX3D_PROJ($_i, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_LOD:
-			return "TEX3D_LOD($_i, $t, $0.xyz, $1.x)";
+			return "TEX3D_LOD($_i, $0.xyz, $1.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE3D_GRAD:
-			return "TEX3D_GRAD($_i, $t, $0.xyz, $1.xyz, $2.xyz)";
+			return "TEX3D_GRAD($_i, $0.xyz, $1.xyz, $2.xyz)";
 		case FUNCTION::FUNCTION_DFDX:
 			return "dFdx($0)";
 		case FUNCTION::FUNCTION_DFDY:
@@ -672,7 +678,7 @@ namespace glsl
 		case FUNCTION::FUNCTION_VERTEX_TEXTURE_FETCHCUBE:
 			return "textureLod($t, $0.xyz, 0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
-			return "TEX2D_DEPTH_RGBA8($_i, $t, $0.xy)";
+			return "TEX2D_DEPTH_RGBA8($_i, $0.xy)";
 		}
 	}
 }

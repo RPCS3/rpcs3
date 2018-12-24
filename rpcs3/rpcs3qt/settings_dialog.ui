@@ -1150,6 +1150,55 @@
         </layout>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_18" stretch="1,1,1">
+         <item>
+          <widget class="QGroupBox" name="gb_DiskCacheClearing">
+           <property name="title">
+            <string>Disk cache</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_73">
+            <item>
+             <widget class="QCheckBox" name="enableCacheClearing">
+              <property name="text">
+               <string>Clear cache automatically</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="maximumCacheSizeLabel">
+              <property name="text">
+               <string>Cache size: 3072 MB</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSlider" name="maximumCacheSize">
+              <property name="pageStep">
+               <number>512</number>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="tickPosition">
+               <enum>QSlider::TicksBelow</enum>
+              </property>
+              <property name="tickInterval">
+               <number>1024</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_14" native="true"/>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_15" native="true"/>
+         </item>
+        </layout>
+       </item>
+       <item>
         <spacer name="verticalSpacer_8">
          <property name="orientation">
           <enum>Qt::Vertical</enum>

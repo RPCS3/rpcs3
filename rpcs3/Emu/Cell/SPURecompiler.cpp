@@ -4946,17 +4946,58 @@ public:
 	void FCGT(spu_opcode_t op) //
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb))));
+			return;
+		}
+
+		const auto a = get_vr<f32[4]>(op.ra);
+		const auto b = get_vr<f32[4]>(op.rb);
+
+		// See FCMGT.
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			const auto ia = bitcast<s32[4]>(fabs(a));
+			const auto ib = bitcast<s32[4]>(fabs(b));
+			const auto nz = eval((ia > 0x7fffff) | (ib > 0x7fffff));
+
+			// Use sign bits to invert abs values before comparison.
+			const auto ca = eval(ia ^ (bitcast<s32[4]>(a) >> 31));
+			const auto cb = eval(ib ^ (bitcast<s32[4]>(b) >> 31));
+			set_vr(op.rt, sext<u32[4]>((ca > cb) & nz));
+		}
 		else
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb))));
+		{
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(a, b)));
+		}
 	}
 
 	void FCMGT(spu_opcode_t op) //
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(fabs(get_vr<f64[4]>(op.ra)), fabs(get_vr<f64[4]>(op.rb)))));
+			return;
+		}
+
+		const auto a = get_vr<f32[4]>(op.ra);
+		const auto b = get_vr<f32[4]>(op.rb);
+		const auto abs_a = fabs(a);
+		const auto abs_b = fabs(b);
+
+		// Actually, it's accurate and can be used as an alternative path for accurate xfloat.
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			// Compare abs values as integers, but return false if both are denormals or zeros.
+			const auto ia = bitcast<s32[4]>(abs_a);
+			const auto ib = bitcast<s32[4]>(abs_b);
+			const auto nz = eval((ia > 0x7fffff) | (ib > 0x7fffff));
+			set_vr(op.rt, sext<u32[4]>((ia > ib) & nz));
+		}
 		else
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(fabs(get_vr<f32[4]>(op.ra)), fabs(get_vr<f32[4]>(op.rb)))));
+		{
+			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(abs_a, abs_b)));
+		}
 	}
 
 	void FA(spu_opcode_t op) //
@@ -4979,6 +5020,26 @@ public:
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
 			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
+		else if (g_cfg.core.spu_approx_xfloat)
+		{
+			const auto a = get_vr<f32[4]>(op.ra);
+			const auto b = get_vr<f32[4]>(op.rb);
+			const auto m = eval(a * b);
+			const auto abs_a = bitcast<s32[4]>(fabs(a));
+			const auto abs_b = bitcast<s32[4]>(fabs(b));
+			const auto abs_m = bitcast<s32[4]>(fabs(m));
+			const auto sign_a = eval(bitcast<s32[4]>(a) & 0x80000000);
+			const auto sign_b = eval(bitcast<s32[4]>(b) & 0x80000000);
+			const auto smod_m = eval(bitcast<s32[4]>(m) & 0x7fffffff);
+			const auto fmax_m = eval((sign_a ^ sign_b) | 0x7fffffff);
+			const auto nzero = eval((abs_a > 0x7fffff) & (abs_b > 0x7fffff) & (abs_m > 0x7fffff));
+
+			// If m produces Inf or NaN, flush it to max xfloat with appropriate sign
+			const auto clamp = select(smod_m > 0x7f7fffff, bitcast<f32[4]>(fmax_m), m);
+
+			// If a, b, or a * b is a denorm or zero, return zero
+			set_vr(op.rt, select(nzero, clamp, fsplat<f32[4]>(0.)));
+		}
 		else
 			set_vr(op.rt, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
 	}
@@ -5040,11 +5101,22 @@ public:
 			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(fabs(get_vr<f32[4]>(op.ra)), fabs(get_vr<f32[4]>(op.rb)))));
 	}
 
+	// Multiply and return zero if any of the arguments is in the xfloat range.
+	value_t<f32[4]> mzero_if_xtended(value_t<f32[4]> a, value_t<f32[4]> b)
+	{
+		// Compare absolute values with max positive float in normal range.
+		const auto aa = bitcast<s32[4]>(fabs(a));
+		const auto ab = bitcast<s32[4]>(fabs(b));
+		return select(eval(max(aa, ab) > 0x7f7fffff), fsplat<f32[4]>(0.), eval(a * b));
+	}
+
 	void FNMS(spu_opcode_t op) //
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
 			set_vr(op.rt4, -fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
+		else if (g_cfg.core.spu_approx_xfloat)
+			set_vr(op.rt4, get_vr<f32[4]>(op.rc) - mzero_if_xtended(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
 		else
 			set_vr(op.rt4, get_vr<f32[4]>(op.rc) - get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
 	}
@@ -5054,6 +5126,8 @@ public:
 		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
 		if (g_cfg.core.spu_accurate_xfloat)
 			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
+		else if (g_cfg.core.spu_approx_xfloat)
+			set_vr(op.rt4, mzero_if_xtended(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)) + get_vr<f32[4]>(op.rc));
 		else
 			set_vr(op.rt4, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb) + get_vr<f32[4]>(op.rc));
 	}
@@ -5063,6 +5137,8 @@ public:
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
 			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
+		else if (g_cfg.core.spu_approx_xfloat)
+			set_vr(op.rt4, mzero_if_xtended(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)) - get_vr<f32[4]>(op.rc));
 		else
 			set_vr(op.rt4, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb) - get_vr<f32[4]>(op.rc));
 	}

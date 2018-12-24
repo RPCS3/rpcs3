@@ -142,11 +142,21 @@ void pad_thread::Reset()
 	reset = active.load();
 }
 
+void pad_thread::SetEnabled(bool enabled)
+{
+	is_enabled = enabled;
+}
+
 void pad_thread::ThreadFunc()
 {
 	active = true;
 	while (active)
 	{
+		if (!is_enabled)
+		{
+			std::this_thread::sleep_for(1ms);
+			continue;
+		}
 		if (reset && reset.exchange(false))
 		{
 			Init();

@@ -982,23 +982,15 @@ error_code sys_fs_fcntl(u32 fd, u32 op, vm::ptr<void> _arg, u32 _size)
 		const auto arg = vm::static_ptr_cast<lv2_file_c0000002>(_arg);
 
 		const std::string_view vpath = arg->path.get_ptr();
+		const std::size_t non_slash = vpath.find_first_not_of('/');
 
-		if (vpath[0] != '/')
+		if (non_slash == -1)
 		{
 			return {CELL_EPERM, vpath};
 		}
 
 		// Extract device from path
-		std::size_t lastslash = vpath.find_first_not_of('/', 1);
-		if (lastslash != std::string_view::npos)
-		{
-			lastslash = vpath.find_first_of('/', lastslash + 1);
-		}
-
-		if (lastslash == std::string_view::npos) lastslash = vpath.length();
-		else lastslash++;
-
-		const std::string_view device_path = vpath.substr(0, lastslash);
+		const std::string_view device_path = vpath.substr(0, vpath.find_first_of('/', non_slash));
 		const std::string local_path = vfs::get(device_path);
 
 		if (local_path.empty())

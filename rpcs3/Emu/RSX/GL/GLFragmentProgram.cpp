@@ -116,7 +116,12 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (m_prog.shadow_textures & mask)
+			if (m_prog.redirected_textures & mask)
+			{
+				// Provide a stencil view of the main resource for the S channel
+				OS << "uniform u" << samplerType << " " << PI.name << "_stencil;\n";
+			}
+			else if (m_prog.shadow_textures & mask)
 			{
 				if (m_shadow_sampled_textures & mask)
 				{

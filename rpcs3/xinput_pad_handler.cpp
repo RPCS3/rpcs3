@@ -74,14 +74,14 @@ void xinput_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->from_default();
 }
 
-void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
 
 	int device_number = GetDeviceNumber(padId);
 	if (device_number < 0)
-		return;
+		return fail_callback(padId);
 
 	DWORD dwResult;
 	XINPUT_STATE state;
@@ -90,7 +90,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	// Simply get the state of the controller from XInput.
 	dwResult = (*xinputGetState)(static_cast<u32>(device_number), &state);
 	if (dwResult != ERROR_SUCCESS)
-		return;
+		return fail_callback(padId);
 
 	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
@@ -131,9 +131,9 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	int preview_values[6] = { data[LT], data[RT], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
 
 	if (pressed_button.first > 0)
-		return callback(pressed_button.first, pressed_button.second, preview_values);
+		return callback(pressed_button.first, pressed_button.second, padId, preview_values);
 	else
-		return callback(0, "", preview_values);
+		return callback(0, "", padId, preview_values);
 }
 
 void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
@@ -197,7 +197,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	if (pos == std::string::npos)
 		return -1;
 
-	int device_number = std::stoul(padId.substr(pos + 12));
+	int device_number = std::stoul(padId.substr(pos + 12)) - 1; // Controllers 1-n in GUI
 	if (device_number >= XUSER_MAX_COUNT)
 		return -1;
 
@@ -455,7 +455,7 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 		XINPUT_STATE state;
 		DWORD result = (*xinputGetState)(i, &state);
 		if (result == ERROR_SUCCESS)
-			xinput_pads_list.push_back(m_name_string + std::to_string(i));
+			xinput_pads_list.push_back(m_name_string + std::to_string(i + 1)); // Controllers 1-n in GUI
 	}
 	return xinput_pads_list;
 }

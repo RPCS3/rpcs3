@@ -692,7 +692,7 @@ namespace vk
 
 		// TODO: Ctor that uses a provided memory heap
 
-		~image()
+		virtual ~image()
 		{
 			vkDestroyImage(m_device, value, nullptr);
 		}
@@ -746,7 +746,7 @@ namespace vk
 		image_view(VkDevice dev, vk::image* resource,
 			const VkComponentMapping mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
 			const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1})
-			: m_device(dev)
+			: m_device(dev), m_resource(resource)
 		{
 			info.format = resource->info.format;
 			info.image = resource->value;
@@ -792,11 +792,17 @@ namespace vk
 #endif
 		}
 
+		vk::image* image() const
+		{
+			return m_resource;
+		}
+
 		image_view(const image_view&) = delete;
 		image_view(image_view&&) = delete;
 
 	private:
 		VkDevice m_device;
+		vk::image* m_resource = nullptr;
 
 		void create_impl()
 		{
@@ -2844,6 +2850,11 @@ public:
 			std::array<std::vector<program_input>, input_type_max_enum> uniforms;
 			VkDevice m_device;
 
+			std::array<u32, 16> fs_texture_bindings;
+			std::array<u32, 16> fs_texture_mirror_bindings;
+			std::array<u32, 4>  vs_texture_bindings;
+			bool linked;
+
 		public:
 			VkPipeline pipeline;
 			u64 attribute_location_mask;
@@ -2855,9 +2866,11 @@ public:
 			~program();
 
 			program& load_uniforms(::glsl::program_domain domain, const std::vector<program_input>& inputs);
+			program& link();
 
 			bool has_uniform(program_input_type type, const std::string &uniform_name);
 			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror = false);
 			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 

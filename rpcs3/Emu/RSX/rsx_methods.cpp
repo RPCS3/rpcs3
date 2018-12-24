@@ -247,8 +247,11 @@ namespace rsx
 
 			if (rsx->in_begin_end)
 			{
-				// Update to immediate mode register/array, aliasing with the register view
+				// Update to immediate mode register/array
 				rsx->append_to_push_buffer(attribute_index, count, vertex_subreg, vtype, arg);
+
+				// NOTE: one can update the register to update constant across primitive. Needs verification.
+				// Fall through
 			}
 
 			auto& info = rsx::method_registers.register_vertex_info[attribute_index];

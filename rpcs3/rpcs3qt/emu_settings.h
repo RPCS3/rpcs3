@@ -128,6 +128,8 @@ public:
 		Language,
 		EnterButtonAssignment,
 		EnableHostRoot,
+		LimitCacheSize,
+		MaximumCacheSize,
 
 		// Virtual File System
 		emulatorLocation,
@@ -330,6 +332,8 @@ private:
 		{ Language,              { "System", "Language"}},
 		{ EnterButtonAssignment, { "System", "Enter button assignment"}},
 		{ EnableHostRoot,        { "VFS", "Enable /host_root/"}},
+		{ LimitCacheSize,        { "VFS", "Limit disk cache size"}},
+		{ MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
 
 		// Virtual File System
 		{ emulatorLocation,   { "VFS", "$(EmulatorDir)"}},
