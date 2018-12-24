@@ -468,8 +468,8 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	}
 
 	const std::string dir_path = base_dir + save_entry.dirName + "/";
-	const std::string old_path = base_dir + "../.backup_" + save_entry.dirName + "/";
-	const std::string new_path = base_dir + "../.working_" + save_entry.dirName + "/";
+	const std::string old_path = base_dir + ".backup_" + save_entry.dirName + "/";
+	const std::string new_path = base_dir + ".working_" + save_entry.dirName + "/";
 
 	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
 	bool has_modified = false;
