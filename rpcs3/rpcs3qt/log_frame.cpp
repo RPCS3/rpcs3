@@ -155,7 +155,7 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	setWidget(m_tabWidget);
 
 	// Open or create TTY.log
-	m_tty_file.open(fs::get_config_dir() + "TTY.log", fs::read + fs::create);
+	m_tty_file.open(fs::get_cache_dir() + "TTY.log", fs::read + fs::create);
 
 	CreateAndConnectActions();
 

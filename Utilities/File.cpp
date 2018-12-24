@@ -1403,8 +1403,8 @@ const std::string& fs::get_config_dir()
 		if (const char* home = ::getenv("HOME"))
 			dir = home + "/Library/Application Support"s;
 #else
-		if (const char* home = ::getenv("XDG_CONFIG_HOME"))
-			dir = home;
+		if (const char* conf = ::getenv("XDG_CONFIG_HOME"))
+			dir = conf;
 		else if (const char* home = ::getenv("HOME"))
 			dir = home + "/.config"s;
 #endif
@@ -1425,15 +1425,53 @@ const std::string& fs::get_config_dir()
 	return s_dir;
 }
 
+const std::string& fs::get_cache_dir()
+{
+	static const std::string s_dir = []
+	{
+		std::string dir;
+
+#ifdef _WIN32
+		dir = get_config_dir();
+#else
+
+#ifdef __APPLE__
+		if (const char* home = ::getenv("HOME"))
+			dir = home + "/Library/Caches"s;
+#else
+		if (const char* cache = ::getenv("XDG_CACHE_HOME"))
+			dir = cache;
+		else if (const char* conf = ::getenv("XDG_CONFIG_HOME"))
+			dir = conf;
+		else if (const char* home = ::getenv("HOME"))
+			dir = home + "/.cache"s;
+#endif
+		else // Just in case
+			dir = "./cache";
+
+		dir += "/rpcs3/";
+
+		if (!create_path(dir))
+		{
+			std::printf("Failed to create configuration directory '%s' (%d).\n", dir.c_str(), errno);
+		}
+#endif
+
+		return dir;
+	}();
+
+	return s_dir;
+}
+
 std::string fs::get_data_dir(const std::string& prefix, const std::string& location, const std::string& suffix)
 {
 	static const std::string s_dir = []
 	{
-		const std::string dir = get_config_dir() + "data/";
+		const std::string dir = get_cache_dir() + "data/";
 
 		if (!create_path(dir))
 		{
-			return get_config_dir();
+			return get_cache_dir();
 		}
 
 		return dir;

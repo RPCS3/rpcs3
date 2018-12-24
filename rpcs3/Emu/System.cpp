@@ -276,7 +276,7 @@ void Emulator::Init()
 {
 	if (!g_tty)
 	{
-		g_tty.open(fs::get_config_dir() + "TTY.log", fs::rewrite + fs::append);
+		g_tty.open(fs::get_cache_dir() + "TTY.log", fs::rewrite + fs::append);
 	}
 
 	idm::init();
@@ -318,7 +318,7 @@ void Emulator::Init()
 	fs::create_dir(dev_hdd1 + "game/");
 	}
 
-	fs::create_path(fs::get_config_dir() + "shaderlog/");
+	fs::create_path(fs::get_cache_dir() + "shaderlog/");
 	fs::create_path(fs::get_config_dir() + "captures/");
 
 #ifdef WITH_GDB_DEBUGGER
@@ -771,7 +771,7 @@ void Emulator::Load(bool add_only)
 		// Initialize data/cache directory
 		if (fs::is_dir(m_path))
 		{
-			m_cache_path = fs::get_config_dir() + "data/" + GetTitleID() + '/';
+			m_cache_path = fs::get_cache_dir() + "data/" + GetTitleID() + '/';
 			LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
 		}
 		else

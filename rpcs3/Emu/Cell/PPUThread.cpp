@@ -1225,7 +1225,7 @@ extern void ppu_initialize()
 	}
 
 	// New PPU cache location
-	_main->cache = fs::get_config_dir() + "data/";
+	_main->cache = fs::get_cache_dir() + "data/";
 
 	if (!Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
 	{
