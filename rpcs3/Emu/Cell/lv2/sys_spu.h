@@ -210,7 +210,6 @@ enum : u32
 // SPU Thread Group Join State Flag
 enum : u32
 {
-	SPU_TGJSF_IS_JOINING = (1 << 0),
 	SPU_TGJSF_TERMINATED = (1 << 1), // set if SPU Thread Group is terminated by sys_spu_thread_group_terminate
 	SPU_TGJSF_GROUP_EXIT = (1 << 2), // set if SPU Thread Group is terminated by sys_spu_thread_group_exit
 };
@@ -237,6 +236,7 @@ struct lv2_spu_group
 	atomic_t<u32> running; // Number of running threads
 	cond_variable cond; // used to signal waiting PPU thread
 	atomic_t<u64> stop_count;
+	class ppu_thread* waiter = nullptr;
 
 	std::array<std::shared_ptr<named_thread<spu_thread>>, 256> threads; // SPU Threads
 	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 256> imgs; // SPU Images
