@@ -230,7 +230,10 @@ u64 audio_ringbuffer::update()
 	else if (emu_paused)
 	{
 		// Emulator unpaused
-		play();
+		if (has_capability(AudioBackend::PLAY_PAUSE_FLUSH) && enqueued_samples > 0)
+		{
+			play();
+		}
 		emu_paused = false;
 	}
 
