@@ -1278,7 +1278,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 				}
 			}
 
-			if (count > 9)
+			if (count > 15)
 			{
 				LOG_ERROR(SPU, "%s took too long: %u", args.cmd, count);
 			}
