@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "VKHelpers.h"
@@ -21,24 +21,9 @@ namespace vk
 		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
 		std::unordered_multimap<u32, std::unique_ptr<vk::image_view>> views;
 
-		u64 frame_tag = 0; //frame id when invalidated, 0 if not invalid
+		u64 frame_tag = 0; // frame id when invalidated, 0 if not invalid
 
-		render_target(vk::render_device &dev,
-			uint32_t memory_type_index,
-			uint32_t access_flags,
-			VkImageType image_type,
-			VkFormat format,
-			uint32_t width, uint32_t height, uint32_t depth,
-			uint32_t mipmaps, uint32_t layers,
-			VkSampleCountFlagBits samples,
-			VkImageLayout initial_layout,
-			VkImageTiling tiling,
-			VkImageUsageFlags usage,
-			VkImageCreateFlags image_flags)
-
-			: viewable_image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
-					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
-		{}
+		using viewable_image::viewable_image;
 
 		vk::image* get_surface() override
 		{

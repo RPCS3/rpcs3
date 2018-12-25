@@ -871,7 +871,7 @@ static NEVER_INLINE s32 savedata_op(ppu_thread& ppu, u32 operation, u32 version,
 	if (!psf.empty() && has_modified)
 	{
 		// First, create temporary directory
-		if (fs::create_path(new_path))
+		if (fs::create_dir(new_path) || fs::g_tls_error == fs::error::exist)
 		{
 			fs::remove_all(new_path, false);
 		}

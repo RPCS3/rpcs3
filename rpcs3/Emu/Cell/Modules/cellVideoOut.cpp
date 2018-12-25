@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
@@ -147,10 +147,15 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION;
 	}
 
+	verify(HERE), config->resolutionId > 0;
+	auto& res_info = g_video_out_resolution_map.at(static_cast<video_resolution>(config->resolutionId - 1));
+
 	auto conf = fxm::get_always<rsx::avconf>();
 	conf->aspect = config->aspect;
 	conf->format = config->format;
 	conf->scanline_pitch = config->pitch;
+	conf->resolution_x = u32(res_info.first);
+	conf->resolution_y = u32(res_info.second);
 
 	return CELL_OK;
 }

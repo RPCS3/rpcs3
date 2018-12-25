@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
+#include "GLHelpers.h"
 #include "../Common/ProgramStateCache.h"
 
 struct GLTraits
@@ -42,27 +43,36 @@ struct GLTraits
 			.bind_fragment_data_location("ocol3", 3)
 			.make();
 
-		//Progam locations are guaranteed to not change after linking
-		//Texture locations are simply bound to the TIUs so this can be done once
+		// Progam locations are guaranteed to not change after linking
+		// Texture locations are simply bound to the TIUs so this can be done once
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			int location;
 			if (result->uniforms.has_location(rsx::constants::fragment_texture_names[i], &location))
-				result->uniforms[location] = i;
+			{
+				// Assign location to TIU
+				result->uniforms[location] = GL_FRAGMENT_TEXTURES_START + i;
+
+				// Check for stencil mirror
+				const std::string mirror_name = std::string(rsx::constants::fragment_texture_names[i]) + "_stencil";
+				if (result->uniforms.has_location(mirror_name, &location))
+				{
+					// Assign mirror to TIU
+					result->uniforms[location] = GL_STENCIL_MIRRORS_START + i;
+				}
+			}
 		}
 
 		for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
 		{
 			int location;
 			if (result->uniforms.has_location(rsx::constants::vertex_texture_names[i], &location))
-				result->uniforms[location] = (i + rsx::limits::fragment_textures_count);
+				result->uniforms[location] = GL_VERTEX_TEXTURES_START + i;
 		}
 
-		const int stream_buffer_start = rsx::limits::fragment_textures_count + rsx::limits::vertex_textures_count;
-
-		//Bind locations 0 and 1 to the stream buffers
-		result->uniforms[0] = stream_buffer_start;
-		result->uniforms[1] = stream_buffer_start + 1;
+		// Bind locations 0 and 1 to the stream buffers
+		result->uniforms[0] = GL_STREAM_BUFFER_START + 0;
+		result->uniforms[1] = GL_STREAM_BUFFER_START + 1;
 
 		LOG_NOTICE(RSX, "*** prog id = %d", result->id());
 		LOG_NOTICE(RSX, "*** vp id = %d", vertexProgramData.id);

@@ -318,6 +318,9 @@ public:
 
 private:
 	static std::string GetEmuDir();
+	static std::string GetHdd1Dir();
+
+	void LimitCacheSize();
 public:
 	static std::string GetHddDir();
 	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user);
@@ -375,6 +378,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_cache{this, "SPU Cache", true};
 		cfg::_enum<tsx_usage> enable_TSX{this, "Enable TSX", tsx_usage::enabled}; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{this, "Accurate xfloat", false};
+		cfg::_bool spu_approx_xfloat{this, "Approximate xfloat", true};
 
 		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
 		cfg::_bool hook_functions{this, "Hook static functions"};
@@ -404,6 +408,9 @@ struct cfg_root : cfg::node
 
 		cfg::_bool host_root{this, "Enable /host_root/"};
 		cfg::_bool init_dirs{this, "Initialize Directories", true};
+
+		cfg::_bool limit_cache_size{this, "Limit disk cache size", false};
+		cfg::_int<0, 10240> cache_max_size{this, "Disk cache maximum size (MB)", 5120};
 
 	} vfs{this};
 

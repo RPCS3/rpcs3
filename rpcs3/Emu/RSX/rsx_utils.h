@@ -73,10 +73,12 @@ namespace rsx
 
 	struct avconf
 	{
-		u8 format = 0; //XRGB
-		u8 aspect = 0; //AUTO
-		u32 scanline_pitch = 0; //PACKED
-		f32 gamma = 1.f; //NO GAMMA CORRECTION
+		u8 format = 0;             // XRGB
+		u8 aspect = 0;             // AUTO
+		u32 scanline_pitch = 0;    // PACKED
+		f32 gamma = 1.f;           // NO GAMMA CORRECTION
+		u32 resolution_x = 1280;   // X RES
+		u32 resolution_y = 720;    // Y RES
 	};
 
 	struct blit_src_info
@@ -745,6 +747,12 @@ namespace rsx
 			}
 
 			_capacity = size;
+		}
+
+		void resize(u32 size)
+		{
+			reserve(size);
+			_size = size;
 		}
 
 		void push_back(const Ty& val)

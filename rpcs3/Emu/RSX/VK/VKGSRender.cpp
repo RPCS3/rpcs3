@@ -805,6 +805,8 @@ VKGSRender::~VKGSRender()
 	for (auto& handle : vs_sampler_handles)
 		handle.reset();
 
+	m_stencil_mirror_sampler.reset();
+
 	//Overlay text handler
 	m_text_writer.reset();
 
@@ -1585,29 +1587,66 @@ void VKGSRender::end()
 	{
 		if (current_fp_metadata.referenced_textures_mask & (1 << i))
 		{
-			if (!rsx::method_registers.fragment_textures[i].enabled())
+			vk::image_view* view = nullptr;
+			if (rsx::method_registers.fragment_textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::fragment_texture_names[i], m_current_frame->descriptor_set);
-				continue;
+				auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+				view = sampler_state->image_handle;
+
+				if (!view && sampler_state->external_subresource_desc.external_handle)
+				{
+					//Requires update, copy subresource
+					view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
+				}
 			}
 
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-			auto image_ptr = sampler_state->image_handle;
-
-			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
+			if (LIKELY(view))
 			{
-				//Requires update, copy subresource
-				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
-			}
+				m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					i,
+					::glsl::program_domain::glsl_fragment_program,
+					m_current_frame->descriptor_set);
 
-			if (!image_ptr)
+				if (current_fragment_program.redirected_textures & (1 << i))
+				{
+					// Stencil mirror required
+					auto root_image = static_cast<vk::viewable_image*>(view->image());
+					auto stencil_view = root_image->get_view(0xAAE4, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+
+					if (!m_stencil_mirror_sampler)
+					{
+						m_stencil_mirror_sampler = std::make_unique<vk::sampler>(*m_device,
+							VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+							VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+							VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+							VK_FALSE, 0.f, 1.f, 0.f, 0.f,
+							VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
+							VK_BORDER_COLOR_INT_OPAQUE_BLACK);
+					}
+
+					m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+						i,
+						::glsl::program_domain::glsl_fragment_program,
+						m_current_frame->descriptor_set,
+						true);
+				}
+			}
+			else
 			{
-				LOG_ERROR(RSX, "Texture upload failed to texture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::fragment_texture_names[i], m_current_frame->descriptor_set);
-				continue;
-			}
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					i,
+					::glsl::program_domain::glsl_fragment_program,
+					m_current_frame->descriptor_set);
 
-			m_program->bind_uniform({ fs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::fragment_texture_names[i], m_current_frame->descriptor_set);
+				if (current_fragment_program.redirected_textures & (1 << i))
+				{
+					m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+						i,
+						::glsl::program_domain::glsl_fragment_program,
+						m_current_frame->descriptor_set,
+						true);
+				}
+			}
 		}
 	}
 
@@ -1617,7 +1656,11 @@ void VKGSRender::end()
 		{
 			if (!rsx::method_registers.vertex_textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::vertex_texture_names[i], m_current_frame->descriptor_set);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					i,
+					::glsl::program_domain::glsl_vertex_program,
+					m_current_frame->descriptor_set);
+
 				continue;
 			}
 
@@ -1637,7 +1680,10 @@ void VKGSRender::end()
 				continue;
 			}
 
-			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::vertex_texture_names[i], m_current_frame->descriptor_set);
+			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				i,
+				::glsl::program_domain::glsl_vertex_program,
+				m_current_frame->descriptor_set);
 		}
 	}
 
@@ -3150,6 +3196,13 @@ void VKGSRender::flip(int buffer)
 
 	if (!buffer_pitch) buffer_pitch = buffer_width * 4; // TODO: Check avconf
 
+	auto avconfig = fxm::get<rsx::avconf>();
+	if (avconfig)
+	{
+		buffer_width = std::min(buffer_width, avconfig->resolution_x);
+		buffer_height = std::min(buffer_height, avconfig->resolution_y);
+	}
+
 	coordi aspect_ratio;
 
 	sizei csize = { (s32)m_client_width, (s32)m_client_height };
@@ -3247,6 +3300,25 @@ void VKGSRender::flip(int buffer)
 					image_to_flip = render_target_texture;
 				}
 			}
+
+			if (image_to_flip)
+			{
+				buffer_width = rsx::apply_resolution_scale(buffer_width, true);
+				buffer_height = rsx::apply_resolution_scale(buffer_height, true);
+
+				if (buffer_width < render_target_texture->width() ||
+					buffer_height < render_target_texture->height())
+				{
+					// TODO: Should emit only once to avoid flooding the log file
+					// TODO: Take AA scaling into account
+					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
+						display_buffers[buffer].width, display_buffers[buffer].height, avconfig? avconfig->resolution_x : 0, avconfig? avconfig->resolution_y : 0,
+						render_target_texture->get_surface_width(), render_target_texture->get_surface_height());
+
+					buffer_width = render_target_texture->width();
+					buffer_height = render_target_texture->height();
+				}
+			}
 		}
 		else if (auto surface = m_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
 		{
@@ -3300,7 +3372,7 @@ void VKGSRender::flip(int buffer)
 		}
 
 		vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
-			0, 0, image_to_flip->width(), image_to_flip->height(), aspect_ratio.x, aspect_ratio.y, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
+			0, 0, buffer_width, buffer_height, aspect_ratio.x, aspect_ratio.y, aspect_ratio.width, aspect_ratio.height, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
 
 		if (target_layout != present_layout)
 		{

@@ -494,8 +494,85 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	return true;
 }
 
+void Emulator::LimitCacheSize()
+{
+	const std::string cache_location = Emulator::GetHdd1Dir() + "/cache";
+	if (!fs::is_dir(cache_location))
+	{
+		LOG_WARNING(GENERAL, "Cache does not exist (%s)", cache_location);
+		return;
+	}
+
+	const u64 size = fs::get_dir_size(cache_location);
+	const u64 max_size = static_cast<u64>(g_cfg.vfs.cache_max_size) * 1024 * 1024;
+
+	if (max_size == 0) // Everything must go, so no need to do checks
+	{
+		fs::remove_all(cache_location, false);
+		LOG_SUCCESS(GENERAL, "Cleared disk cache");
+		return;
+	}
+
+	if (size <= max_size)
+	{
+		LOG_TRACE(GENERAL, "Cache size below limit: %llu/%llu", size, max_size);
+		return;
+	}
+
+	LOG_SUCCESS(GENERAL, "Cleaning disk cache...");
+	std::vector<fs::dir_entry> file_list{};
+	fs::dir cache_dir{};
+	if (!cache_dir.open(cache_location))
+	{
+		LOG_ERROR(GENERAL, "Could not open cache directory");
+		return;
+	}
+
+	// retrieve items to delete
+	for (const auto &item : cache_dir)
+	{
+		if (item.name != "." && item.name != "..")
+			file_list.push_back(item);
+	}
+	cache_dir.close();
+
+	// sort oldest first
+	std::sort(file_list.begin(), file_list.end(), [](auto left, auto right)
+	{
+		return left.mtime < right.mtime;
+	});
+
+	// keep removing until cache is empty or enough bytes have been cleared
+	// cache is cleared down to 80% of limit to increase interval between clears
+	const u64 to_remove = static_cast<u64>(size - max_size * 0.8);
+	u64 removed = 0;
+	for (const auto &item : file_list)
+	{
+		const std::string &name = cache_location + "/" + item.name;
+		const u64 item_size = fs::is_dir(name) ? fs::get_dir_size(name) : item.size;
+
+		if (fs::is_dir(name))
+		{
+			fs::remove_all(name, true);
+		}
+		else
+		{
+			fs::remove_file(name);
+		}
+
+		removed += item_size;
+		if (removed >= to_remove)
+			break;
+	}
+
+	LOG_SUCCESS(GENERAL, "Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
+}
+
 bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 {
+	if (g_cfg.vfs.limit_cache_size)
+		LimitCacheSize();
+
 	static const char* boot_list[] =
 	{
 		"/PS3_GAME/USRDIR/EBOOT.BIN",
@@ -569,6 +646,11 @@ std::string Emulator::GetEmuDir()
 std::string Emulator::GetHddDir()
 {
 	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir());
+}
+
+std::string Emulator::GetHdd1Dir()
+{
+	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
 }
 
 std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user)
