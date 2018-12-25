@@ -3362,7 +3362,7 @@ public:
 
 	static bool exec_mfc_cmd(spu_thread* _spu)
 	{
-		return _spu->process_mfc_cmd(_spu->ch_mfc_cmd);
+		return _spu->process_mfc_cmd();
 	}
 
 	void WRCH(spu_opcode_t op) //
@@ -3541,9 +3541,9 @@ public:
 						csize = ci->getZExtValue();
 					}
 
-					if (cmd >= MFC_SNDSIG_CMD)
+					if (cmd >= MFC_SNDSIG_CMD && csize != 4)
 					{
-						csize = 4;
+						csize = -1;
 					}
 
 					llvm::Value* src = m_ir->CreateGEP(m_lsptr, zext<u64>(lsa).value);

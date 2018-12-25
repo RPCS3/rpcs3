@@ -1166,11 +1166,7 @@ void spu_thread::do_mfc(bool wait)
 			return false;
 		}
 
-		if (args.size)
-		{
-			do_dma_transfer(args);
-		}
-		else if (args.cmd == MFC_PUTQLLUC_CMD)
+		if (args.cmd == MFC_PUTQLLUC_CMD)
 		{
 			if (fence & mask)
 			{
@@ -1178,6 +1174,10 @@ void spu_thread::do_mfc(bool wait)
 			}
 
 			do_putlluc(args);
+		}
+		else if (args.size)
+		{
+			do_dma_transfer(args);
 		}
 
 		removed++;
@@ -1210,7 +1210,7 @@ u32 spu_thread::get_mfc_completed()
 	return ch_tag_mask & ~mfc_fence;
 }
 
-bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
+bool spu_thread::process_mfc_cmd()
 {
 	// Stall infinitely if MFC queue is full
 	while (UNLIKELY(mfc_size >= 16))
@@ -1224,15 +1224,15 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	}
 
 	spu::scheduler::concurrent_execution_watchdog watchdog(*this);
-	LOG_TRACE(SPU, "DMAC: cmd=%s, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", args.cmd, args.lsa, args.eal, args.tag, args.size);
+	LOG_TRACE(SPU, "DMAC: cmd=%s, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x", ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 
-	switch (args.cmd)
+	switch (ch_mfc_cmd.cmd)
 	{
 	case MFC_GETLLAR_CMD:
 	{
-		const u32 addr = args.eal & -128u;
+		const u32 addr = ch_mfc_cmd.eal & -128u;
 		auto& data = vm::_ref<decltype(rdata)>(addr);
-		auto& dst = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
+		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 		u64 ntime;
 
 		const bool is_polling = false; // TODO
@@ -1280,7 +1280,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 
 			if (count > 15)
 			{
-				LOG_ERROR(SPU, "%s took too long: %u", args.cmd, count);
+				LOG_ERROR(SPU, "%s took too long: %u", ch_mfc_cmd.cmd, count);
 			}
 		}
 		else
@@ -1335,13 +1335,13 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_PUTLLC_CMD:
 	{
 		// Store conditionally
-		const u32 addr = args.eal & -128u;
+		const u32 addr = ch_mfc_cmd.eal & -128u;
 
 		bool result = false;
 
 		if (raddr == addr && rtime == (vm::reservation_acquire(raddr, 128) & ~1ull))
 		{
-			const auto& to_write = _ref<decltype(rdata)>(args.lsa & 0x3ff80);
+			const auto& to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 
 			if (LIKELY(g_use_rtm))
 			{
@@ -1406,23 +1406,22 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	}
 	case MFC_PUTLLUC_CMD:
 	{
-		do_putlluc(args);
+		do_putlluc(ch_mfc_cmd);
 		ch_atomic_stat.set_value(MFC_PUTLLUC_SUCCESS);
 		return true;
 	}
 	case MFC_PUTQLLUC_CMD:
 	{
-		const u32 mask = utils::rol32(1, args.tag);
+		const u32 mask = utils::rol32(1, ch_mfc_cmd.tag);
 
 		if (UNLIKELY((mfc_barrier | mfc_fence) & mask))
 		{
-			args.size = 0;
-			mfc_queue[mfc_size++] = args;
+			mfc_queue[mfc_size++] = ch_mfc_cmd;
 			mfc_fence |= mask;
 		}
 		else
 		{
-			do_putlluc(args);
+			do_putlluc(ch_mfc_cmd);
 		}
 
 		return true;
@@ -1431,7 +1430,11 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_SNDSIGB_CMD:
 	case MFC_SNDSIGF_CMD:
 	{
-		args.size = 4;
+		if (ch_mfc_cmd.size != 4)
+		{
+			break;
+		}
+
 		// Fallthrough
 	}
 	case MFC_PUT_CMD:
@@ -1444,24 +1447,24 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_GETB_CMD:
 	case MFC_GETF_CMD:
 	{
-		if (LIKELY(args.size <= 0x4000))
+		if (LIKELY(ch_mfc_cmd.size <= 0x4000))
 		{
-			if (LIKELY(do_dma_check(args)))
+			if (LIKELY(do_dma_check(ch_mfc_cmd)))
 			{
-				if (LIKELY(args.size))
+				if (ch_mfc_cmd.size)
 				{
-					do_dma_transfer(args);
+					do_dma_transfer(ch_mfc_cmd);
 				}
 
 				return true;
 			}
 
-			mfc_queue[mfc_size++] = args;
-			mfc_fence |= utils::rol32(1, args.tag);
+			mfc_queue[mfc_size++] = ch_mfc_cmd;
+			mfc_fence |= utils::rol32(1, ch_mfc_cmd.tag);
 
-			if (args.cmd & MFC_BARRIER_MASK)
+			if (ch_mfc_cmd.cmd & MFC_BARRIER_MASK)
 			{
-				mfc_barrier |= utils::rol32(1, args.tag);
+				mfc_barrier |= utils::rol32(1, ch_mfc_cmd.tag);
 			}
 
 			return true;
@@ -1479,22 +1482,25 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	case MFC_GETLB_CMD:
 	case MFC_GETLF_CMD:
 	{
-		if (LIKELY(args.size <= 0x4000))
+		if (LIKELY(ch_mfc_cmd.size <= 0x4000))
 		{
-			if (LIKELY(do_dma_check(args)))
+			auto& cmd = mfc_queue[mfc_size];
+			cmd = ch_mfc_cmd;
+
+			if (LIKELY(do_dma_check(cmd)))
 			{
-				if (LIKELY(do_list_transfer(args)))
+				if (LIKELY(do_list_transfer(cmd)))
 				{
 					return true;
 				}
 			}
 
-			mfc_queue[mfc_size++] = args;
-			mfc_fence |= utils::rol32(1, args.tag);
+			mfc_size++;
+			mfc_fence |= utils::rol32(1, cmd.tag);
 
-			if (args.cmd & MFC_BARRIER_MASK)
+			if (cmd.cmd & MFC_BARRIER_MASK)
 			{
-				mfc_barrier |= utils::rol32(1, args.tag);
+				mfc_barrier |= utils::rol32(1, cmd.tag);
 			}
 
 			return true;
@@ -1512,7 +1518,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 		}
 		else
 		{
-			mfc_queue[mfc_size++] = args;
+			mfc_queue[mfc_size++] = ch_mfc_cmd;
 			mfc_barrier |= -1;
 		}
 
@@ -1525,7 +1531,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	}
 
 	fmt::throw_exception("Unknown command (cmd=%s, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE,
-		args.cmd, args.lsa, args.eal, args.tag, args.size);
+		ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 }
 
 u32 spu_thread::get_events(bool waiting)
@@ -2078,7 +2084,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	case MFC_Cmd:
 	{
 		ch_mfc_cmd.cmd = MFC(value & 0xff);
-		return process_mfc_cmd(ch_mfc_cmd);
+		return process_mfc_cmd();
 	}
 
 	case MFC_WrListStallAck:

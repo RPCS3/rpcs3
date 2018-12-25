@@ -2597,7 +2597,7 @@ static void spu_wrch(spu_thread* _spu, u32 ch, u32 value, spu_function_t _ret)
 
 static void spu_wrch_mfc(spu_thread* _spu, spu_function_t _ret)
 {
-	if (!_spu->process_mfc_cmd(_spu->ch_mfc_cmd))
+	if (!_spu->process_mfc_cmd())
 	{
 		_ret = &spu_wrch_ret;
 	}
