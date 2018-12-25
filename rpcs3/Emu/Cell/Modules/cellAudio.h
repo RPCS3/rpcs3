@@ -200,6 +200,8 @@ public:
 
 	const s64 period_comparison_margin = 250; // when comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
 
+	const u64 untouched_timeout = 2 * audio_block_period;
+
 	/*
 	 * Time Stretching
 	 */

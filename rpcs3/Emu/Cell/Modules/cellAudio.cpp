@@ -604,10 +604,7 @@ void cell_audio_thread::operator()()
 
 			// Wait until buffers have been touched
 			//cellAudio.error("active=%u, in_progress=%u, untouched=%u, incomplete=%u", active_ports, in_progress, untouched, incomplete);
-			if (
-				(untouched == active_ports) || // wait for at least one touched buffer
-				(untouched > (untouched_expected > 0 ? active_ports - untouched_expected : 0)) // with multiple audio ports, wait for the expected number of buffers to be touched
-			   )
+			if (untouched > untouched_expected)
 			{
 				if (!playing)
 				{
@@ -616,14 +613,26 @@ void cell_audio_thread::operator()()
 					cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=0", untouched, active_ports, untouched_expected);
 					untouched_expected = untouched;
 					advance(timestamp);
+					continue;
 				}
-				else
+
+
+				// We allow untouched buffers to go through after a timeout
+				// While we should always wait for in-progress buffers, games may sometimes "skip" audio periods entirely if they're falling behind
+				if(time_since_last_period < cfg.untouched_timeout)
 				{
 					cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
 					thread_ctrl::wait_for(1000);
+					continue;
 				}
-
-				continue;
+				else if (untouched == active_ports)
+				{
+					// There's no audio in the buffers, simply advance time
+					cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
+					untouched_expected = untouched;
+					advance(timestamp);
+					continue;
+				}
 			}
 			
 			// Wait for buffer(s) to be completely filled
