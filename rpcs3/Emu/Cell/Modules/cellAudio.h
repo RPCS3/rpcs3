@@ -182,9 +182,9 @@ struct cell_audio_config
 	/*
 	 * Buffering
 	 */
-	const u64 desired_buffer_duration = g_cfg.audio.enable_buffering ? g_cfg.audio.desired_buffer_duration : 0;
+	const u64 desired_buffer_duration = g_cfg.audio.desired_buffer_duration * 1000llu;
 private:
-	const bool raw_buffering_enabled = g_cfg.audio.enable_buffering && (desired_buffer_duration >= audio_block_period);
+	const bool raw_buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering);
 public:
 	// We need a non-blocking backend (implementing play/pause/flush) to be able to do buffering correctly
 	// We also need to be able to query the current playing state

@@ -15,10 +15,10 @@ class AudioBackend
 public:
 	enum Capabilities : u32
 	{
-		PLAY_PAUSE_FLUSH = 0x1, // AddData implements Play, Pause, Flush
-		IS_PLAYING = 0x2, // Implements IsPlaying method
-		GET_NUM_ENQUEUED_SAMPLES = 0x4, // Supports GetNumEnqueuedSamples method
-		SET_FREQUENCY_RATIO = 0x8, // Implements SetFrequencyRatio method
+		PLAY_PAUSE_FLUSH = 0x1, // Implements Play, Pause, Flush
+		IS_PLAYING = 0x2, // Implements IsPlaying
+		GET_NUM_ENQUEUED_SAMPLES = 0x4, // Implements GetNumEnqueuedSamples
+		SET_FREQUENCY_RATIO = 0x8, // Implements SetFrequencyRatio
 	};
 
 	virtual ~AudioBackend() = default;
