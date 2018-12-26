@@ -529,7 +529,7 @@ struct cfg_root : cfg::node
 		cfg::_int<1, 128> startt{this, "Start Threshold", 1}; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
 		cfg::_int<0, 200> volume{this, "Master Volume", 100};
 		cfg::_bool enable_buffering{this, "Enable Buffering", true};
-		cfg::_int <0, 250'000> desired_buffer_duration{this, "Desired Audio Buffer Duration", 100'000};
+		cfg::_int <20, 250> desired_buffer_duration{this, "Desired Audio Buffer Duration", 100};
 		cfg::_int<1, 1000> sampling_period_multiplier{this, "Sampling Period Multiplier", 100};
 		cfg::_bool enable_time_stretching{this, "Enable Time Stretching", false};
 		cfg::_int<0, 100> time_stretching_threshold{this, "Time Stretching Threshold", 75};
