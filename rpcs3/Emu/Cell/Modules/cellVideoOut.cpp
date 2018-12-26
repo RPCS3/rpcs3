@@ -147,8 +147,26 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION;
 	}
 
-	verify(HERE), config->resolutionId > 0;
-	auto& res_info = g_video_out_resolution_map.at(static_cast<video_resolution>(config->resolutionId - 1));
+	bool found = false;
+	video_resolution res;
+
+	for (const auto& ares : g_video_out_resolution_id)
+	{
+		if (ares.second == config->resolutionId)
+		{
+			found = true;
+			res = ares.first;
+			break;
+		}
+	}
+
+	if (!found)
+	{
+		cellSysutil.error("Unusual resolution requested: 0x%x", config->resolutionId);
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_DISPLAY_MODE;
+	}
+
+	auto& res_info = g_video_out_resolution_map.at(res);
 
 	auto conf = fxm::get_always<rsx::avconf>();
 	conf->aspect = config->aspect;
