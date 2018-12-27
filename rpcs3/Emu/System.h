@@ -89,13 +89,13 @@ enum class audio_renderer
 #ifdef _WIN32
 	xaudio,
 #endif
-#ifdef HAVE_ALSA
-	alsa,
-#endif
+	openal,
 #ifdef HAVE_PULSE
 	pulse,
 #endif
-	openal,
+#ifdef HAVE_ALSA
+	alsa,
+#endif
 };
 
 enum class camera_handler
