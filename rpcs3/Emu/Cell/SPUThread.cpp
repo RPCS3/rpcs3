@@ -40,6 +40,34 @@ bool operator ==(const u128& lhs, const u128& rhs)
 }
 #endif
 
+static FORCE_INLINE void mov_rdata(u128* const dst, const u128* const src)
+{
+	{
+		const u128 data0 = src[0];
+		const u128 data1 = src[1];
+		const u128 data2 = src[2];
+		dst[0] = data0;
+		dst[1] = data1;
+		dst[2] = data2;
+	}
+
+	{
+		const u128 data0 = src[3];
+		const u128 data1 = src[4];
+		const u128 data2 = src[5];
+		dst[3] = data0;
+		dst[4] = data1;
+		dst[5] = data2;
+	}
+
+	{
+		const u128 data0 = src[6];
+		const u128 data1 = src[7];
+		dst[6] = data0;
+		dst[7] = data1;
+	}
+};
+
 extern u64 get_timebased_time();
 extern u64 get_system_time();
 
@@ -765,8 +793,8 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		}
 	}
 
-	void* dst = vm::base(eal);
-	void* src = vm::base(offset + lsa);
+	u8* dst = (u8*)vm::base(eal);
+	u8* src = (u8*)vm::base(offset + lsa);
 
 	if (UNLIKELY(!is_get && !g_use_rtm))
 	{
@@ -775,36 +803,33 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		case 1:
 		{
 			auto& res = vm::reservation_lock(eal, 1);
-			*static_cast<u8*>(dst) = *static_cast<const u8*>(src);
+			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
 			res++;
 			break;
 		}
 		case 2:
 		{
 			auto& res = vm::reservation_lock(eal, 2);
-			*static_cast<u16*>(dst) = *static_cast<const u16*>(src);
+			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
 			res++;
 			break;
 		}
 		case 4:
 		{
 			auto& res = vm::reservation_lock(eal, 4);
-			*static_cast<u32*>(dst) = *static_cast<const u32*>(src);
+			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
 			res++;
 			break;
 		}
 		case 8:
 		{
 			auto& res = vm::reservation_lock(eal, 8);
-			*static_cast<u64*>(dst) = *static_cast<const u64*>(src);
+			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
 			res++;
 			break;
 		}
 		default:
 		{
-			auto vdst = static_cast<__m128i*>(dst);
-			auto vsrc = static_cast<const __m128i*>(src);
-
 			if (((eal & 127) + size) <= 128)
 			{
 				// Lock one cache line
@@ -812,8 +837,11 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 				while (size)
 				{
+					*reinterpret_cast<u128*>(dst) = *reinterpret_cast<const u128*>(src);
+
+					dst += 16;
+					src += 16;
 					size -= 16;
-					_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
 				}
 
 				res++;
@@ -824,36 +852,20 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 			while (size >= 128)
 			{
-				const __m128i data[]
-				{
-					_mm_load_si128(vsrc + 0),
-					_mm_load_si128(vsrc + 1),
-					_mm_load_si128(vsrc + 2),
-					_mm_load_si128(vsrc + 3),
-					_mm_load_si128(vsrc + 4),
-					_mm_load_si128(vsrc + 5),
-					_mm_load_si128(vsrc + 6),
-					_mm_load_si128(vsrc + 7),
-				};
+				mov_rdata(reinterpret_cast<u128*>(dst), reinterpret_cast<const u128*>(src));
 
-				_mm_store_si128(vdst + 0, data[0]);
-				_mm_store_si128(vdst + 1, data[1]);
-				_mm_store_si128(vdst + 2, data[2]);
-				_mm_store_si128(vdst + 3, data[3]);
-				_mm_store_si128(vdst + 4, data[4]);
-				_mm_store_si128(vdst + 5, data[5]);
-				_mm_store_si128(vdst + 6, data[6]);
-				_mm_store_si128(vdst + 7, data[7]);
-
+				dst += 128;
+				src += 128;
 				size -= 128;
-				vsrc += 8;
-				vdst += 8;
 			}
 
 			while (size)
 			{
+				*reinterpret_cast<u128*>(dst) = *reinterpret_cast<const u128*>(src);
+
+				dst += 16;
+				src += 16;
 				size -= 16;
-				_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
 			}
 
 			vm::passive_unlock(*this);
@@ -873,67 +885,44 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	{
 	case 1:
 	{
-		*static_cast<u8*>(dst) = *static_cast<const u8*>(src);
+		*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
 		break;
 	}
 	case 2:
 	{
-		*static_cast<u16*>(dst) = *static_cast<const u16*>(src);
+		*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
 		break;
 	}
 	case 4:
 	{
-		*static_cast<u32*>(dst) = *static_cast<const u32*>(src);
+		*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
 		break;
 	}
 	case 8:
 	{
-		*static_cast<u64*>(dst) = *static_cast<const u64*>(src);
-		break;
-	}
-	case 16:
-	{
-		_mm_store_si128(static_cast<__m128i*>(dst), _mm_load_si128(static_cast<const __m128i*>(src)));
+		*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
 		break;
 	}
 	default:
 	{
-		auto vdst = static_cast<__m128i*>(dst);
-		auto vsrc = static_cast<const __m128i*>(src);
-		auto vcnt = size / sizeof(__m128i);
-
-		while (vcnt >= 8)
+		while (size >= 128)
 		{
-			const __m128i data[]
-			{
-				_mm_load_si128(vsrc + 0),
-				_mm_load_si128(vsrc + 1),
-				_mm_load_si128(vsrc + 2),
-				_mm_load_si128(vsrc + 3),
-				_mm_load_si128(vsrc + 4),
-				_mm_load_si128(vsrc + 5),
-				_mm_load_si128(vsrc + 6),
-				_mm_load_si128(vsrc + 7),
-			};
+			mov_rdata(reinterpret_cast<u128*>(dst), reinterpret_cast<const u128*>(src));
 
-			_mm_store_si128(vdst + 0, data[0]);
-			_mm_store_si128(vdst + 1, data[1]);
-			_mm_store_si128(vdst + 2, data[2]);
-			_mm_store_si128(vdst + 3, data[3]);
-			_mm_store_si128(vdst + 4, data[4]);
-			_mm_store_si128(vdst + 5, data[5]);
-			_mm_store_si128(vdst + 6, data[6]);
-			_mm_store_si128(vdst + 7, data[7]);
-
-			vcnt -= 8;
-			vsrc += 8;
-			vdst += 8;
+			dst += 128;
+			src += 128;
+			size -= 128;
 		}
 
-		while (vcnt--)
+		while (size)
 		{
-			_mm_store_si128(vdst++, _mm_load_si128(vsrc++));
+			*reinterpret_cast<u128*>(dst) = *reinterpret_cast<const u128*>(src);
+
+			dst += 16;
+			src += 16;
+			size -= 16;
 		}
+
 		break;
 	}
 	}
@@ -1090,12 +1079,12 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
 			vm::writer_lock lock(addr);
-			data = to_write;
+			mov_rdata(data.data(), to_write.data());
 			res++;
 		}
 		else
 		{
-			data = to_write;
+			mov_rdata(data.data(), to_write.data());
 			res++;
 		}
 	}
@@ -1296,13 +1285,13 @@ bool spu_thread::process_mfc_cmd()
 				vm::writer_lock lock(addr);
 
 				ntime = res & ~1ull;
-				dst = data;
+				mov_rdata(dst.data(), data.data());
 				res &= ~1ull;
 			}
 			else
 			{
 				ntime = res & ~1ull;
-				dst = data;
+				mov_rdata(dst.data(), data.data());
 				res &= ~1ull;
 			}
 		}
@@ -1326,7 +1315,7 @@ bool spu_thread::process_mfc_cmd()
 
 		raddr = addr;
 		rtime = ntime;
-		rdata = dst;
+		mov_rdata(rdata.data(), dst.data());
 
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 		return true;
@@ -1366,7 +1355,7 @@ bool spu_thread::process_mfc_cmd()
 
 					if (rdata == data)
 					{
-						data = to_write;
+						mov_rdata(data.data(), to_write.data());
 						res++;
 						result = true;
 					}

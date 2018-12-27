@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
