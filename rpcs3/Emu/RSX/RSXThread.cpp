@@ -1023,11 +1023,8 @@ namespace rsx
 		const u32 aa_factor_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
 		const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 
-		// NOTE: Its is possible that some renders are done on a swizzled context. Pitch is meaningless in that case
-		// Seen in Nier (color) and GT HD concept (z buffer)
-		// Restriction is that the dimensions are powers of 2. Also, dimensions are passed via log2w and log2h entries
-		const auto required_zeta_pitch = std::max<u32>((u32)(layout.depth_format == rsx::surface_depth_format::z16 ? layout.width * 2 : layout.width * 4) * aa_factor_u, 64u);
-		const auto required_color_pitch = std::max<u32>((u32)rsx::utility::get_packed_pitch(layout.color_format, layout.width) * aa_factor_u, 64u);
+		const auto depth_texel_size = (layout.depth_format == rsx::surface_depth_format::z16 ? 2 : 4) * aa_factor_u;
+		const auto color_texel_size = get_format_block_size_in_bytes(layout.color_format) * aa_factor_u;
 		const bool color_write_enabled = rsx::method_registers.color_write_enabled();
 		const bool depth_write_enabled = rsx::method_registers.depth_write_enabled();
 		const bool stencil_test_enabled = layout.depth_format == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
@@ -1080,7 +1077,7 @@ namespace rsx
 				return true;
 			}
 
-			if (required_color_pitch != required_zeta_pitch)
+			if (depth_texel_size != color_texel_size)
 			{
 				// Both depth and color exist, but pixel size differs
 				return false;
@@ -1108,19 +1105,31 @@ namespace rsx
 
 		// Swizzled render does tight packing of bytes
 		const bool packed_render = check_swizzled_render();
+		u32 minimum_color_pitch = 64u;
+		u32 minimum_zeta_pitch = 64u;
+
+		if (!packed_render)
+		{
+			// Well, this is a write operation either way (clearing or drawing)
+			// We can deduce a minimum pitch for which this operation is guaranteed to require by checking for the lesser of scissor or clip
+			const u32 write_limit_x = std::min<u32>(layout.width, rsx::method_registers.scissor_origin_x() + rsx::method_registers.scissor_width());
+
+			minimum_color_pitch = color_texel_size * write_limit_x;
+			minimum_zeta_pitch = depth_texel_size * write_limit_x;
+		}
 
 		if (depth_buffer_unused)
 		{
 			layout.zeta_address = 0;
 		}
-		else if (layout.zeta_pitch < required_zeta_pitch && !packed_render)
+		else if (layout.zeta_pitch < minimum_zeta_pitch)
 		{
 			layout.zeta_address = 0;
 		}
 		else
 		{
 			// Still exists? Unlikely to get discarded
-			layout.actual_zeta_pitch = std::max(layout.zeta_pitch, required_zeta_pitch);
+			layout.actual_zeta_pitch = packed_render? (layout.width * depth_texel_size) : layout.zeta_pitch;
 		}
 
 		for (const auto &index : rsx::utility::get_rtt_indexes(layout.target))
@@ -1131,7 +1140,7 @@ namespace rsx
 				continue;
 			}
 
-			if (layout.color_pitch[index] < required_color_pitch && !packed_render)
+			if (layout.color_pitch[index] < minimum_color_pitch)
 			{
 				// Unlike the depth buffer, when given a color target we know it is intended to be rendered to
 				LOG_ERROR(RSX, "Framebuffer setup error: Color target failed pitch check, Pitch=[%d, %d, %d, %d] + %d, target=%d, context=%d",
@@ -1166,7 +1175,7 @@ namespace rsx
 
 			verify(HERE), layout.color_addresses[index];
 
-			layout.actual_color_pitch[index] = std::max(layout.color_pitch[index], required_color_pitch);
+			layout.actual_color_pitch[index] = packed_render? (layout.width * color_texel_size) : layout.color_pitch[index];
 			framebuffer_status_valid = true;
 		}
 
@@ -1185,8 +1194,6 @@ namespace rsx
 		const auto window_clip_width = rsx::method_registers.window_clip_horizontal();
 		const auto window_clip_height = rsx::method_registers.window_clip_vertical();
 
-		const auto bpp = get_format_block_size_in_bytes(layout.color_format);
-
 		if (window_offset_x || window_offset_y)
 		{
 			// Window offset is what affects the raster position!
@@ -1199,15 +1206,14 @@ namespace rsx
 			{
 				if (layout.color_addresses[index])
 				{
-					const u32 window_offset_bytes = (std::max<u32>(layout.color_pitch[index], required_color_pitch) * window_offset_y) + ((aa_factor_u * bpp) * window_offset_x);
+					const u32 window_offset_bytes = (layout.actual_color_pitch[index] * window_offset_y) + (color_texel_size * window_offset_x);
 					layout.color_addresses[index] += window_offset_bytes;
 				}
 			}
 
 			if (layout.zeta_address)
 			{
-				const auto depth_bpp = (layout.depth_format == rsx::surface_depth_format::z16) ? 2 : 4;
-				layout.zeta_address += (std::max<u32>(layout.zeta_pitch, required_zeta_pitch) * window_offset_y) + ((aa_factor_u * depth_bpp) * window_offset_x);
+				layout.zeta_address += (layout.actual_zeta_pitch * window_offset_y) + (depth_texel_size * window_offset_x);
 			}
 		}
 
