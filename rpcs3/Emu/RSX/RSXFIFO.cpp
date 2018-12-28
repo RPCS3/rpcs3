@@ -171,46 +171,6 @@ namespace rsx
 				return;
 			}
 
-			if (UNLIKELY(capture_current_frame))
-			{
-				u32 reg = (cmd & 0xfffc) >> 2;
-				auto args = vm::_ptr<u32>(m_args_ptr);
-
-				for (u32 i = 0; i < count; i++, args++)
-				{
-					frame_debug.command_queue.push_back(std::make_pair(reg, *args));
-
-					if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
-					{
-						// todo: handle nv406e methods better?, do we care about call/jumps?
-						rsx::frame_capture_data::replay_command replay_cmd;
-						replay_cmd.rsx_command = std::make_pair(i == 0 ? cmd : 0, *args);
-
-						frame_capture.replay_commands.push_back(replay_cmd);
-
-						// to make this easier, use the replay command 'i' positions back
-						auto it = std::prev(frame_capture.replay_commands.end(), i + 1);
-
-						switch (reg)
-						{
-						case NV3089_IMAGE_IN:
-							capture::capture_image_in(rsx::get_current_renderer(), *it);
-							break;
-						case NV0039_BUFFER_NOTIFY:
-							capture::capture_buffer_notify(rsx::get_current_renderer(), *it);
-							break;
-						default:
-							break;
-						}
-					}
-
-					if (!(cmd & RSX_METHOD_NON_INCREMENT_CMD))
-					{
-						reg++;
-					}
-				}
-			}
-
 			if (count > 1)
 			{
 				// Set up readback parameters
@@ -552,6 +512,36 @@ namespace rsx
 
 		do
 		{
+			if (UNLIKELY(capture_current_frame))
+			{
+				const u32 reg = (command.reg & 0xfffc) >> 2;
+				const u32 value = command.value;
+
+				frame_debug.command_queue.push_back(std::make_pair(reg, value));
+
+				if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
+				{
+					// todo: handle nv406e methods better?, do we care about call/jumps?
+					rsx::frame_capture_data::replay_command replay_cmd;
+					replay_cmd.rsx_command = std::make_pair((reg << 2) | (1u << 18), value);
+
+					frame_capture.replay_commands.push_back(replay_cmd);
+					auto it = frame_capture.replay_commands.back();
+
+					switch (reg)
+					{
+					case NV3089_IMAGE_IN:
+						capture::capture_image_in(this, it);
+						break;
+					case NV0039_BUFFER_NOTIFY:
+						capture::capture_buffer_notify(this, it);
+						break;
+					default:
+						break;
+					}
+				}
+			}
+
 			if (UNLIKELY(m_flattener.is_enabled()))
 			{
 				switch(m_flattener.test(command))
