@@ -467,6 +467,24 @@ void pad_settings_dialog::ReloadButtons()
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
 
+	// Enable Mouse Deadzones
+	std::vector<std::string> mouse_dz_range_x = m_handler_cfg.mouse_deadzone_x.to_list();
+	ui->mouse_dz_x->setRange(std::stoi(mouse_dz_range_x.front()), std::stoi(mouse_dz_range_x.back()));
+	ui->mouse_dz_x->setValue(m_handler_cfg.mouse_deadzone_x);
+
+	std::vector<std::string> mouse_dz_range_y = m_handler_cfg.mouse_deadzone_y.to_list();
+	ui->mouse_dz_y->setRange(std::stoi(mouse_dz_range_y.front()), std::stoi(mouse_dz_range_y.back()));
+	ui->mouse_dz_y->setValue(m_handler_cfg.mouse_deadzone_y);
+
+	// Enable Mouse Acceleration
+	std::vector<std::string> mouse_accel_range_x = m_handler_cfg.mouse_acceleration_x.to_list();
+	ui->mouse_accel_x->setRange(std::stod(mouse_accel_range_x.front()) / (double)100, std::stod(mouse_accel_range_x.back()) / (double)100);
+	ui->mouse_accel_x->setValue((double)m_handler_cfg.mouse_acceleration_x / (double)100);
+
+	std::vector<std::string> mouse_accel_range_y = m_handler_cfg.mouse_acceleration_y.to_list();
+	ui->mouse_accel_y->setRange(std::stod(mouse_accel_range_y.front()) / (double)100, std::stod(mouse_accel_range_y.back()) / (double)100);
+	ui->mouse_accel_y->setValue((double)m_handler_cfg.mouse_acceleration_y / (double)100);
+
 	// Enable Vibration Checkboxes
 	m_enable_rumble = m_handler->has_rumble();
 
@@ -828,6 +846,9 @@ void pad_settings_dialog::ChangeInputType()
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	const auto device_list = m_handler->ListDevices();
 
+	// change our contextual widgets
+	ui->stackedWidget->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
+
 	// Refill the device combobox with currently available devices
 	switch (m_handler->m_type)
 	{
@@ -1016,6 +1037,14 @@ void pad_settings_dialog::SaveProfile()
 		m_handler_cfg.rtriggerthreshold.set(ui->slider_trigger_right->value());
 		m_handler_cfg.lstickdeadzone.set(ui->slider_stick_left->value());
 		m_handler_cfg.rstickdeadzone.set(ui->slider_stick_right->value());
+	}
+
+	if (m_handler->m_type == pad_handler::keyboard)
+	{
+		m_handler_cfg.mouse_acceleration_x.set(ui->mouse_accel_x->value() * 100);
+		m_handler_cfg.mouse_acceleration_y.set(ui->mouse_accel_y->value() * 100);
+		m_handler_cfg.mouse_deadzone_x.set(ui->mouse_dz_x->value());
+		m_handler_cfg.mouse_deadzone_y.set(ui->mouse_dz_y->value());
 	}
 
 	m_handler_cfg.save();
