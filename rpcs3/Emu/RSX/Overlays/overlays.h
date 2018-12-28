@@ -44,7 +44,7 @@ namespace rsx
 		// Interactable UI element
 		struct user_interface : overlay
 		{
-			//Move this somewhere to avoid duplication
+			// Move this somewhere to avoid duplication
 			enum selection_code
 			{
 				new_save = -1,
@@ -98,20 +98,16 @@ namespace rsx
 					if (Emu.IsStopped())
 						return selection_code::canceled;
 
+					std::this_thread::sleep_for(1ms);
+
 					std::lock_guard lock(pad::g_pad_mutex);
 
 					const auto handler = pad::get_current_handler();
-					if (!handler)
-					{
-						LOG_ERROR(RSX, "Pad handler expected but none initialized!");
-						return selection_code::error;
-					}
 
 					const PadInfo& rinfo = handler->GetInfo();
 
 					if (Emu.IsPaused() || !rinfo.now_connect)
 					{
-						std::this_thread::sleep_for(10ms);
 						continue;
 					}
 
@@ -444,7 +440,7 @@ namespace rsx
 			/*
 			   minimal - fps
 			   low - fps, total cpu usage
-			   medium  - fps, detailed cpu usage
+			   medium - fps, detailed cpu usage
 			   high - fps, frametime, detailed cpu usage, thread number, rsx load
 			 */
 			detail_level m_detail;
@@ -463,7 +459,7 @@ namespace rsx
 			u32 m_font_size;
 			u32 m_margin_x; // horizontal distance to the screen border relative to the screen_quadrant in px
 			u32 m_margin_y; // vertical distance to the screen border relative to the screen_quadrant in px
-			f32 m_opacity;	// 0..1
+			f32 m_opacity;  // 0..1
 
 			bool m_force_update;
 			bool m_is_initialised{ false };
@@ -513,7 +509,7 @@ namespace rsx
 				{
 					std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
 					image->set_size(160, 110);
-					image->set_padding(36, 36, 11, 11); //Square image, 88x88
+					image->set_padding(36, 36, 11, 11); // Square image, 88x88
 
 					if (resource_id != image_resource_id::raw_image)
 					{
@@ -521,7 +517,7 @@ namespace rsx
 					}
 					else if (icon_buf.size())
 					{
-						image->set_padding(0, 0, 11, 11); //Half sized icon, 320x176->160x88
+						image->set_padding(0, 0, 11, 11); // Half sized icon, 320x176->160x88
 						icon_data = std::make_unique<image_info>(icon_buf);
 						static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 					}
@@ -1148,8 +1144,8 @@ namespace rsx
 			u8 current_dot = 255;
 
 			u64 creation_time = 0;
-			u64 expire_time = 0; //Time to end the prompt
-			u64 urgency_ctr = 0; //How critical it is to show to the user
+			u64 expire_time = 0; // Time to end the prompt
+			u64 urgency_ctr = 0; // How critical it is to show to the user
 
 			shader_compile_notification()
 			{
