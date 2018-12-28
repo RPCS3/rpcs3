@@ -135,10 +135,10 @@ static fs::error to_error(DWORD e)
 #if defined(__APPLE__)
 #include <copyfile.h>
 #include <mach-o/dyld.h>
-#elif defined(__DragonFly__) || defined(__FreeBSD__)
-#include <sys/socket.h> // sendfile
 #elif defined(__linux__) || defined(__sun)
 #include <sys/sendfile.h>
+#else
+#include <fstream>
 #endif
 
 static fs::error to_error(int e)
@@ -633,7 +633,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	}
 
 	return true;
-#else
+#elif defined(__APPLE__) || defined(__linux__) || defined(__sun)
 	/* Source: http://stackoverflow.com/questions/2180079/how-can-i-copy-a-file-on-unix-using-c */
 
 	const int input = ::open(from.c_str(), O_RDONLY);
@@ -657,17 +657,13 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 #if defined(__APPLE__)
 	// fcopyfile works on OS X 10.5+
 	if (::fcopyfile(input, output, 0, COPYFILE_ALL))
-#elif defined(__DragonFly__) || defined(__FreeBSD__)
-	if (::sendfile(input, output, 0, 0, NULL, NULL, 0))
 #elif defined(__linux__) || defined(__sun)
 	// sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
 	off_t bytes_copied = 0;
 	struct ::stat fileinfo = { 0 };
 	if (::fstat(input, &fileinfo) || ::sendfile(output, input, &bytes_copied, fileinfo.st_size))
-#else // NetBSD, OpenBSD, etc.
-	fmt::throw_exception("fs::copy_file() isn't implemented for this platform.\nFrom: %s\nTo: %s", from, to);
-	errno = 0;
-	if (true)
+#else
+#error "Native file copy implementation is missing"
 #endif
 	{
 		const int err = errno;
@@ -680,6 +676,31 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 
 	::close(input);
 	::close(output);
+	return true;
+#else // fallback
+	{
+		std::ifstream out{to, std::ios::binary};
+		if (out.good() && !overwrite)
+		{
+			g_tls_error = to_error(EEXIST);
+			return false;
+		}
+	}
+
+	std::ifstream in{from, std::ios::binary};
+	std::ofstream out{to,  std::ios::binary};
+
+	if (!in.good() || !out.good())
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+
+	std::istreambuf_iterator<char> bin(in);
+	std::istreambuf_iterator<char> ein;
+	std::ostreambuf_iterator<char> bout(out);
+	std::copy(bin, ein, bout);
+
 	return true;
 #endif
 }
