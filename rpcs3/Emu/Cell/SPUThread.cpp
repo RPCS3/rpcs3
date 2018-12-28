@@ -186,12 +186,13 @@ namespace spu
 	}
 }
 
-const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, const void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
 	Label fall = c.newLabel();
 	Label fail = c.newLabel();
+	Label retry = c.newLabel();
 
 	// Prepare registers
 	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
@@ -252,10 +253,10 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 
 	// Touch memory after transaction failure
 	c.bind(fall);
-	c.sub(args[0].r32(), 1);
-	c.jz(fail);
 	c.sar(x86::eax, 24);
 	c.js(fail);
+	c.sub(args[0].r32(), 1);
+	c.jz(retry);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
 #ifdef _WIN32
@@ -267,6 +268,9 @@ const auto spu_putllc_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, cons
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
 	c.xor_(x86::eax, x86::eax);
+	c.ret();
+	c.bind(retry);
+	c.mov(x86::eax, 2);
 	c.ret();
 });
 
@@ -1325,8 +1329,7 @@ bool spu_thread::process_mfc_cmd()
 	{
 		// Store conditionally
 		const u32 addr = ch_mfc_cmd.eal & -128u;
-
-		bool result = false;
+		u32 result = 0;
 
 		if (raddr == addr && rtime == (vm::reservation_acquire(raddr, 128) & ~1ull))
 		{
@@ -1334,12 +1337,18 @@ bool spu_thread::process_mfc_cmd()
 
 			if (LIKELY(g_use_rtm))
 			{
-				if (spu_putllc_tx(raddr, rtime, rdata.data(), to_write.data()))
+				while (true)
 				{
-					result = true;
-				}
+					result = spu_putllc_tx(addr, rtime, rdata.data(), to_write.data());
+					
+					if (result < 2)
+					{
+						break;
+					}
 
-				// Don't fallback to heavyweight lock, just give up
+					// Retry
+					std::this_thread::yield();
+				}
 			}
 			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rdata == data)
 			{
@@ -1357,7 +1366,7 @@ bool spu_thread::process_mfc_cmd()
 					{
 						mov_rdata(data.data(), to_write.data());
 						res++;
-						result = true;
+						result = 1;
 					}
 					else
 					{
