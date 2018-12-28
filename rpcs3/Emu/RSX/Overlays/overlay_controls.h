@@ -19,6 +19,10 @@
 #include <mach-o/dyld.h>
 #endif
 
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/sysctl.h>
+#endif
+
 // STB_IMAGE_IMPLEMENTATION and STB_TRUETYPE_IMPLEMENTATION defined externally
 #include <stb_image.h>
 #include <stb_truetype.h>
@@ -520,8 +524,25 @@ namespace rsx
 #if defined(__APPLE__)
 							uint32_t bufsize = PATH_MAX;
 							bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
+#elif defined(KERN_PROC_PATHNAME)
+							size_t bufsize = PATH_MAX;
+							int mib[] = {
+								CTL_KERN,
+#if defined(__NetBSD__)
+								KERN_PROC_ARGS,
+								-1,
+								KERN_PROC_PATHNAME,
+#else
+								KERN_PROC,
+								KERN_PROC_PATHNAME,
+								-1,
+#endif
+							};
+							bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
 #elif defined(__linux__)
 							bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
+#elif defined(__sun)
+							bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
 #else
 							bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
 #endif
