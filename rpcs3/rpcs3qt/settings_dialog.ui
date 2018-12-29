@@ -270,7 +270,7 @@
          <item>
           <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="1,0">
            <item>
-            <widget class="QGroupBox" name="groupBox_28">
+            <widget class="QGroupBox" name="gb_libs">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -349,7 +349,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_41">
+        <widget class="QGroupBox" name="gb_description">
          <property name="title">
           <string>Description</string>
          </property>
@@ -388,7 +388,7 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_7">
            <item>
-            <widget class="QGroupBox" name="groupBox_26">
+            <widget class="QGroupBox" name="gb_renderer">
              <property name="title">
               <string>Renderer</string>
              </property>
@@ -400,7 +400,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox_42">
+            <widget class="QGroupBox" name="gb_graphicsAdapter">
              <property name="title">
               <string>Graphics Device</string>
              </property>
@@ -414,7 +414,7 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1">
              <item>
-              <widget class="QGroupBox" name="groupBox_44">
+              <widget class="QGroupBox" name="gb_aspectRatio">
                <property name="title">
                 <string>Aspect Ratio</string>
                </property>
@@ -426,7 +426,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox_45">
+              <widget class="QGroupBox" name="gb_frameLimit">
                <property name="title">
                 <string>Framelimit</string>
                </property>
@@ -1155,7 +1155,7 @@
            <property name="title">
             <string>Disk cache</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_73">
+           <layout class="QVBoxLayout" name="verticalLayout_75">
             <item>
              <widget class="QCheckBox" name="enableCacheClearing">
               <property name="text">
@@ -2275,7 +2275,7 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="buttonLayout">
      <item alignment="Qt::AlignLeft">
       <widget class="QPushButton" name="okButton">
        <property name="text">
