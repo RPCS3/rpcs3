@@ -210,6 +210,7 @@ void GLGSRender::end()
 		}
 	};
 
+	gl::command_context cmd{ gl_state };
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 
 	// Handle special memory barrier for ARGB8->D24S8 in an active DSV
@@ -227,7 +228,6 @@ void GLGSRender::end()
 		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
 		std::lock_guard lock(m_sampler_mutex);
-		void* unused = nullptr;
 		bool  update_framebuffer_sourced = false;
 
 		if (surface_store_tag != m_rtts.cache_tag)
@@ -248,7 +248,7 @@ void GLGSRender::end()
 
 				if (rsx::method_registers.fragment_textures[i].enabled())
 				{
-					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.fragment_textures[i], m_rtts);
+					*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.fragment_textures[i], m_rtts);
 
 					if (m_textures_dirty[i])
 						m_fs_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
@@ -274,7 +274,7 @@ void GLGSRender::end()
 
 				if (rsx::method_registers.vertex_textures[i].enabled())
 				{
-					*sampler_state = m_gl_texture_cache.upload_texture(unused, rsx::method_registers.vertex_textures[i], m_rtts);
+					*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
 
 					if (m_vertex_textures_dirty[i])
 						m_vs_sampler_states[i].apply(rsx::method_registers.vertex_textures[i], vs_sampler_state[i].get());
@@ -313,7 +313,6 @@ void GLGSRender::end()
 
 	//Bind textures and resolve external copy operations
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
-	void *unused = nullptr;
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -329,7 +328,7 @@ void GLGSRender::end()
 
 				if (!view && sampler_state->external_subresource_desc.external_handle)
 				{
-					view = m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc);
+					view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
 				}
 			}
 
@@ -373,8 +372,7 @@ void GLGSRender::end()
 			}
 			else if (sampler_state->external_subresource_desc.external_handle)
 			{
-				void *unused = nullptr;
-				m_gl_texture_cache.create_temporary_subresource(unused, sampler_state->external_subresource_desc)->bind();
+				m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc)->bind();
 			}
 			else
 			{
@@ -393,13 +391,13 @@ void GLGSRender::end()
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
-		if (ds) ds->memory_barrier();
+		if (ds) ds->write_barrier(cmd);
 
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
 			if (auto surface = std::get<1>(rtt))
 			{
-				surface->memory_barrier();
+				surface->write_barrier(cmd);
 			}
 		}
 	}
@@ -1140,7 +1138,7 @@ void GLGSRender::clear_surface(u32 arg)
 	{
 		u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 
-		gl_state.stencil_mask(rsx::method_registers.stencil_mask());
+		gl_state.stencil_mask(0xFF);
 		gl_state.clear_stencil(clear_stencil);
 
 		mask |= GLenum(gl::buffers::stencil);
@@ -1807,7 +1805,9 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	const rsx::invalidation_cause cause =
 		is_writing ? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		           : (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
-	auto result = m_gl_texture_cache.invalidate_address(address, cause);
+
+	gl::command_context null_cmd;
+	auto result = m_gl_texture_cache.invalidate_address(null_cmd, address, cause);
 
 	if (!result.violation_handled)
 		return false;
@@ -1831,7 +1831,8 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 void GLGSRender::on_invalidate_memory_range(const utils::address_range &range)
 {
 	//Discard all memory in that range without bothering with writeback (Force it for strict?)
-	auto data = std::move(m_gl_texture_cache.invalidate_range(range, rsx::invalidation_cause::unmap));
+	gl::command_context cmd{ gl_state };
+	auto data = std::move(m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::unmap));
 	AUDIT(data.empty());
 
 	if (data.violation_handled)
@@ -1856,7 +1857,8 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 		{
 			if (q.processed) continue;
 
-			q.result = m_gl_texture_cache.flush_all(q.section_data);
+			gl::command_context cmd{ gl_state };
+			q.result = m_gl_texture_cache.flush_all(cmd, q.section_data);
 			q.processed = true;
 		}
 	}
@@ -1902,7 +1904,8 @@ work_item& GLGSRender::post_flush_request(u32 address, gl::texture_cache::thrash
 
 bool GLGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
-	if (m_gl_texture_cache.blit(src, dst, interpolate, m_rtts))
+	gl::command_context cmd{ gl_state };
+	if (m_gl_texture_cache.blit(cmd, src, dst, interpolate, m_rtts))
 	{
 		m_samplers_dirty.store(true);
 		return true;

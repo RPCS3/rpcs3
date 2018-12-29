@@ -131,7 +131,9 @@ namespace gl
 			return (rsx::apply_resolution_scale(_width, true) == internal_width) && (rsx::apply_resolution_scale(_height, true) == internal_height);
 		}
 
-		void memory_barrier(void* = nullptr);
+		void memory_barrier(gl::command_context& cmd, bool force_init = false);
+		void read_barrier(gl::command_context& cmd) { memory_barrier(cmd, true); }
+		void write_barrier(gl::command_context& cmd) { memory_barrier(cmd, false); }
 	};
 
 	struct framebuffer_holder : public gl::fbo, public rsx::ref_counted

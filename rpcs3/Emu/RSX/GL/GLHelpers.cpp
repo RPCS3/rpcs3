@@ -362,7 +362,7 @@ namespace gl
 		return attrib_t(index);
 	}
 
-	void blitter::scale_image(const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
+	void blitter::scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
 		bool is_depth_copy, const rsx::typeless_xfer& xfer_info)
 	{
 		std::unique_ptr<texture> typeless_src;
@@ -400,9 +400,6 @@ namespace gl
 			dst_rect.x2 = (u16)(dst_rect.x2 * xfer_info.dst_scaling_hint);
 		}
 
-		s32 old_fbo = 0;
-		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &old_fbo);
-
 		filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
 		GLenum attachment;
 		gl::buffers target;
@@ -427,6 +424,10 @@ namespace gl
 			target = gl::buffers::color;
 		}
 
+		save_binding_state saved;
+
+		cmd.drv->enable(GL_FALSE, GL_STENCIL_TEST);
+
 		blit_src.bind();
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src_id, 0);
 		blit_src.check();
@@ -434,10 +435,6 @@ namespace gl
 		blit_dst.bind();
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_id, 0);
 		blit_dst.check();
-
-		GLboolean scissor_test_enabled = glIsEnabled(GL_SCISSOR_TEST);
-		if (scissor_test_enabled)
-			glDisable(GL_SCISSOR_TEST);
 
 		blit_src.blit(blit_dst, src_rect, dst_rect, target, interp);
 
@@ -452,10 +449,53 @@ namespace gl
 
 		blit_dst.bind();
 		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+	}
 
-		if (scissor_test_enabled)
-			glEnable(GL_SCISSOR_TEST);
+	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, const color4f& color)
+	{
+		save_binding_state saved;
 
-		glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
+		blit_dst.bind();
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst->id(), 0);
+		blit_dst.check();
+
+		cmd.drv->clear_color(color);
+		cmd.drv->color_mask(true, true, true, true);
+
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+
+	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil)
+	{
+		GLenum attachment;
+		GLbitfield clear_mask;
+
+		switch (const auto fmt = dst->get_internal_format())
+		{
+		case texture::internal_format::depth:
+		case texture::internal_format::depth16:
+			clear_mask = GL_DEPTH_BUFFER_BIT;
+			attachment = GL_DEPTH_ATTACHMENT;
+			break;
+		case texture::internal_format::depth_stencil:
+		case texture::internal_format::depth24_stencil8:
+		case texture::internal_format::depth32f_stencil8:
+			clear_mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+			attachment = GL_DEPTH_STENCIL_ATTACHMENT;
+			break;
+		default:
+			fmt::throw_exception("Invalid texture passed to clear depth function, format=0x%x", (u32)fmt);
+		}
+
+		save_binding_state saved;
+
+		blit_dst.bind();
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst->id(), 0);
+		blit_dst.check();
+
+		cmd.drv->depth_mask(GL_TRUE);
+		cmd.drv->stencil_mask(0xFF);
+
+		glClear(clear_mask);
 	}
 }

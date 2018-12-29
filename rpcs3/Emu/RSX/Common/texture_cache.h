@@ -389,7 +389,7 @@ namespace rsx
 		 */
 	private:
 		template <typename ...Args>
-		void flush_set(thrashed_set& data, Args&&... extras)
+		void flush_set(commandbuffer_type& cmd, thrashed_set& data, Args&&... extras)
 		{
 			AUDIT(!data.flushed);
 
@@ -411,11 +411,11 @@ namespace rsx
 					const auto ROP_timestamp = rsx::get_current_renderer()->ROP_sync_timestamp;
 					if (surface->is_synchronized() && ROP_timestamp > surface->get_sync_timestamp())
 					{
-						surface->copy_texture(true, std::forward<Args>(extras)...);
+						surface->copy_texture(cmd, true, std::forward<Args>(extras)...);
 					}
 				}
 
-				surface->flush(std::forward<Args>(extras)...);
+				surface->flush(cmd, std::forward<Args>(extras)...);
 
 				// Exclude this region when flushing other sections that should not trample it
 				// If we overlap an excluded RO, set it as dirty
@@ -676,7 +676,7 @@ namespace rsx
 
 		//Invalidate range base implementation
 		template <typename ...Args>
-		thrashed_set invalidate_range_impl_base(const address_range &fault_range_in, invalidation_cause cause, Args&&... extras)
+		thrashed_set invalidate_range_impl_base(commandbuffer_type& cmd, const address_range &fault_range_in, invalidation_cause cause, Args&&... extras)
 		{
 #ifdef TEXTURE_CACHE_DEBUG
 			// Check that the cache has the correct protections
@@ -840,7 +840,7 @@ namespace rsx
 					// or there is nothing to flush but we have something to unprotect
 					if (has_flushables && !cause.skip_flush())
 					{
-						flush_set(result, std::forward<Args>(extras)...);
+						flush_set(cmd, result, std::forward<Args>(extras)...);
 					}
 
 					unprotect_set(result);
@@ -1113,7 +1113,7 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, std::tuple<FlushArgs...>&& flush_extras, Args&&... extras)
+		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, std::tuple<FlushArgs...>&& flush_extras, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
@@ -1134,7 +1134,7 @@ namespace rsx
 			{
 				// Invalidate sections from surface cache occupying same address range
 				std::apply(&texture_cache::invalidate_range_impl_base<FlushArgs...>, std::tuple_cat(
-					std::make_tuple(this, rsx_range, invalidation_cause::superseded_by_fbo),
+					std::forward_as_tuple(this, cmd, rsx_range, invalidation_cause::superseded_by_fbo),
 					std::forward<std::tuple<FlushArgs...> >(flush_extras)
 				));
 			}
@@ -1261,7 +1261,7 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		thrashed_set invalidate_address(u32 address, invalidation_cause cause, Args&&... extras)
+		thrashed_set invalidate_address(commandbuffer_type& cmd, u32 address, invalidation_cause cause, Args&&... extras)
 		{
 			//Test before trying to acquire the lock
 			const auto range = page_for(address);
@@ -1269,22 +1269,22 @@ namespace rsx
 				return{};
 
 			std::lock_guard lock(m_cache_mutex);
-			return invalidate_range_impl_base(range, cause, std::forward<Args>(extras)...);
+			return invalidate_range_impl_base(cmd, range, cause, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
-		thrashed_set invalidate_range(const address_range &range, invalidation_cause cause, Args&&... extras)
+		thrashed_set invalidate_range(commandbuffer_type& cmd, const address_range &range, invalidation_cause cause, Args&&... extras)
 		{
 			//Test before trying to acquire the lock
 			if (!region_intersects_cache(range, !cause.is_read()))
 				return {};
 
 			std::lock_guard lock(m_cache_mutex);
-			return invalidate_range_impl_base(range, cause, std::forward<Args>(extras)...);
+			return invalidate_range_impl_base(cmd, range, cause, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
-		bool flush_all(thrashed_set& data, Args&&... extras)
+		bool flush_all(commandbuffer_type& cmd, thrashed_set& data, Args&&... extras)
 		{
 			std::lock_guard lock(m_cache_mutex);
 
@@ -1294,7 +1294,7 @@ namespace rsx
 			if (m_cache_update_tag.load(std::memory_order_consume) == data.cache_tag)
 			{
 				//1. Write memory to cpu side
-				flush_set(data, std::forward<Args>(extras)...);
+				flush_set(cmd, data, std::forward<Args>(extras)...);
 
 				//2. Release all obsolete sections
 				unprotect_set(data);
@@ -1302,14 +1302,14 @@ namespace rsx
 			else
 			{
 				// The cache contents have changed between the two readings. This means the data held is useless
-				invalidate_range_impl_base(data.fault_range, data.cause.undefer(), std::forward<Args>(extras)...);
+				invalidate_range_impl_base(cmd, data.fault_range, data.cause.undefer(), std::forward<Args>(extras)...);
 			}
 
 			return true;
 		}
 
 		template <typename ...Args>
-		bool flush_if_cache_miss_likely(const address_range &range, Args&&... extras)
+		bool flush_if_cache_miss_likely(commandbuffer_type& cmd, const address_range &range, Args&&... extras)
 		{
 			u32 cur_flushes_this_frame = (m_flushes_this_frame + m_speculations_this_frame);
 
@@ -1340,7 +1340,7 @@ namespace rsx
 
 				lock.upgrade();
 
-				region.copy_texture(false, std::forward<Args>(extras)...);
+				region.copy_texture(cmd, false, std::forward<Args>(extras)...);
 				result = true;
 
 				cur_flushes_this_frame++;
@@ -1466,7 +1466,7 @@ namespace rsx
 				{
 					for (auto &section : overlapping)
 					{
-						section.surface->memory_barrier(cmd);
+						section.surface->read_barrier(cmd);
 
 						surfaces.push_back
 						({
@@ -1504,7 +1504,7 @@ namespace rsx
 			u32 internal_height = tex_height;
 			get_native_dimensions(internal_width, internal_height, texptr);
 
-			texptr->memory_barrier(cmd);
+			texptr->read_barrier(cmd);
 
 			if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
 				extended_dimension != rsx::texture_dimension_extended::texture_dimension_1d)
@@ -1597,7 +1597,7 @@ namespace rsx
 
 				for (auto &section : overlapping)
 				{
-					section.surface->memory_barrier(cmd);
+					section.surface->read_barrier(cmd);
 
 					result.external_subresource_desc.sections_to_copy.push_back
 					({
@@ -1713,7 +1713,7 @@ namespace rsx
 					else
 					{
 						m_rtts.invalidate_surface_address(texaddr, false);
-						invalidate_address(texaddr, invalidation_cause::read, std::forward<Args>(extras)...);
+						invalidate_address(cmd, texaddr, invalidation_cause::read, std::forward<Args>(extras)...);
 					}
 				}
 
@@ -1729,7 +1729,7 @@ namespace rsx
 					else
 					{
 						m_rtts.invalidate_surface_address(texaddr, true);
-						invalidate_address(texaddr, invalidation_cause::read, std::forward<Args>(extras)...);
+						invalidate_address(cmd, texaddr, invalidation_cause::read, std::forward<Args>(extras)...);
 					}
 				}
 			}
@@ -1751,7 +1751,7 @@ namespace rsx
 					if (!rsc.surface->test() && !m_rtts.address_is_bound(rsc.base_address, rsc.is_depth_surface))
 					{
 						m_rtts.invalidate_surface_address(rsc.base_address, rsc.is_depth_surface);
-						invalidate_address(rsc.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
+						invalidate_address(cmd, rsc.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
 					}
 					else if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
 							 extended_dimension != rsx::texture_dimension_extended::texture_dimension_1d)
@@ -1868,7 +1868,7 @@ namespace rsx
 				lock.upgrade();
 
 				//Invalidate
-				invalidate_range_impl_base(tex_range, invalidation_cause::read, std::forward<Args>(extras)...);
+				invalidate_range_impl_base(cmd, tex_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
 				//NOTE: SRGB correction is to be handled in the fragment shader; upload as linear RGB
 				return{ upload_image_from_cpu(cmd, tex_range, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
@@ -1932,14 +1932,14 @@ namespace rsx
 			if (src_is_render_target && !src_subres.surface->test() && !m_rtts.address_is_bound(src_subres.base_address, src_subres.is_depth_surface))
 			{
 				m_rtts.invalidate_surface_address(src_subres.base_address, src_subres.is_depth_surface);
-				invalidate_address(src_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
+				invalidate_address(cmd, src_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
 				src_is_render_target = false;
 			}
 
 			if (dst_is_render_target && !dst_subres.surface->test() && !m_rtts.address_is_bound(dst_subres.base_address, dst_subres.is_depth_surface))
 			{
 				m_rtts.invalidate_surface_address(dst_subres.base_address, dst_subres.is_depth_surface);
-				invalidate_address(dst_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
+				invalidate_address(cmd, dst_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
 				dst_is_render_target = false;
 			}
 
@@ -2005,8 +2005,8 @@ namespace rsx
 					const u32 memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
 
 					lock.upgrade();
-					invalidate_range_impl_base(address_range::start_length(src_address, memcpy_bytes_length), invalidation_cause::read, std::forward<Args>(extras)...);
-					invalidate_range_impl_base(address_range::start_length(dst_address, memcpy_bytes_length), invalidation_cause::write, std::forward<Args>(extras)...);
+					invalidate_range_impl_base(cmd, address_range::start_length(src_address, memcpy_bytes_length), invalidation_cause::read, std::forward<Args>(extras)...);
+					invalidate_range_impl_base(cmd, address_range::start_length(dst_address, memcpy_bytes_length), invalidation_cause::write, std::forward<Args>(extras)...);
 					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
 					return true;
 				}
@@ -2140,7 +2140,7 @@ namespace rsx
 					lock.upgrade();
 
 					const auto rsx_range = address_range::start_length(src_address, src.pitch * src.slice_h);
-					invalidate_range_impl_base(rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
+					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
 					const u16 pitch_in_block = src_is_argb8 ? src.pitch >> 2 : src.pitch >> 1;
 					std::vector<rsx_subresource_layout> subresource_layout;
@@ -2228,7 +2228,7 @@ namespace rsx
 				lock.upgrade();
 
 				// Invalidate as the memory is not reusable now
-				invalidate_range_impl_base(cached_dest->get_section_range(), invalidation_cause::write, std::forward<Args>(extras)...);
+				invalidate_range_impl_base(cmd, cached_dest->get_section_range(), invalidation_cause::write, std::forward<Args>(extras)...);
 				AUDIT(!cached_dest->is_locked());
 
 				dest_texture = 0;
@@ -2282,7 +2282,7 @@ namespace rsx
 				lock.upgrade();
 
 				const auto rsx_range = address_range::start_length(dst.rsx_address, section_length);
-				invalidate_range_impl_base(rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
+				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
 
 				const u16 pitch_in_block = dst_is_argb8 ? dst.pitch >> 2 : dst.pitch >> 1;
 				std::vector<rsx_subresource_layout> subresource_layout;
@@ -2372,7 +2372,7 @@ namespace rsx
 			}
 
 			typeless_info.analyse();
-			blitter.scale_image(vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit, typeless_info);
+			blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit, typeless_info);
 			notify_surface_changed(dst.rsx_address);
 
 			blit_op_result result = true;

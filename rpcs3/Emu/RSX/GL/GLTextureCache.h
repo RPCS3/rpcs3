@@ -35,7 +35,7 @@ namespace gl
 
 	struct texture_cache_traits
 	{
-		using commandbuffer_type      = void*;
+		using commandbuffer_type      = gl::command_context;
 		using section_storage_type    = gl::cached_texture_section;
 		using texture_cache_type      = gl::texture_cache;
 		using texture_cache_base_type = rsx::texture_cache<texture_cache_type, texture_cache_traits>;
@@ -252,7 +252,7 @@ namespace gl
 			}
 		}
 
-		void copy_texture(bool manage_lifetime)
+		void copy_texture(gl::command_context& cmd, bool manage_lifetime)
 		{
 			ASSERT(exists());
 
@@ -314,7 +314,7 @@ namespace gl
 
 					const bool is_depth = is_depth_texture();
 					const bool linear_interp = is_depth? false : true;
-					g_hw_blitter->scale_image(vram_texture, scaled_texture.get(), src_area, dst_area, linear_interp, is_depth, {});
+					g_hw_blitter->scale_image(cmd, vram_texture, scaled_texture.get(), src_area, dst_area, linear_interp, is_depth, {});
 					target_texture = scaled_texture.get();
 				}
 			}
@@ -376,12 +376,12 @@ namespace gl
 		/**
 		 * Flush
 		 */
-		void synchronize(bool blocking)
+		void synchronize(bool blocking, gl::command_context& cmd)
 		{
 			if (synchronized)
 				return;
 
-			copy_texture(blocking);
+			copy_texture(cmd, blocking);
 
 			if (blocking)
 			{
@@ -475,8 +475,6 @@ namespace gl
 				}
 			}
 		}
-
-
 
 		/**
 		 * Misc
@@ -727,20 +725,20 @@ namespace gl
 
 	protected:
 
-		gl::texture_view* create_temporary_subresource_view(void*&, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
+		gl::texture_view* create_temporary_subresource_view(gl::command_context&, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const texture_channel_remap_t& remap_vector) override
 		{
 			return create_temporary_subresource_impl(*src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
 		}
 
-		gl::texture_view* create_temporary_subresource_view(void*&, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
+		gl::texture_view* create_temporary_subresource_view(gl::command_context&, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const texture_channel_remap_t& remap_vector) override
 		{
 			return create_temporary_subresource_impl(src, (GLenum)src->get_internal_format(),
 					GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
 		}
 
-		gl::texture_view* generate_cubemap_from_images(void*&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_cubemap_from_images(gl::command_context&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_CUBE_MAP, size, size, 1, 1, ifmt);
@@ -769,7 +767,7 @@ namespace gl
 			return result;
 		}
 
-		gl::texture_view* generate_3d_from_2d_images(void*&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_3d_from_2d_images(gl::command_context&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_3D, width, height, depth, 1, ifmt);
@@ -798,7 +796,7 @@ namespace gl
 			return result;
 		}
 
-		gl::texture_view* generate_atlas_from_images(void*&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
+		gl::texture_view* generate_atlas_from_images(gl::command_context&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
 				const texture_channel_remap_t& remap_vector) override
 		{
 			auto result = create_temporary_subresource_impl(nullptr, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
@@ -812,13 +810,13 @@ namespace gl
 			return result;
 		}
 
-		void update_image_contents(void*&, gl::texture_view* dst, gl::texture* src, u16 width, u16 height) override
+		void update_image_contents(gl::command_context&, gl::texture_view* dst, gl::texture* src, u16 width, u16 height) override
 		{
 			glCopyImageSubData(src->id(), GL_TEXTURE_2D, 0, 0, 0, 0,
 					dst->image()->id(), GL_TEXTURE_2D, 0, 0, 0, 0, width, height, 1);
 		}
 
-		cached_texture_section* create_new_texture(void*&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
+		cached_texture_section* create_new_texture(gl::command_context&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
 			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, rsx::texture_create_flags flags) override
 		{
 			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
@@ -886,11 +884,10 @@ namespace gl
 			return &cached;
 		}
 
-		cached_texture_section* upload_image_from_cpu(void*&, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
+		cached_texture_section* upload_image_from_cpu(gl::command_context &cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
-			void* unused = nullptr;
-			auto section = create_new_texture(unused, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type,
+			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type,
 				rsx::texture_create_flags::default_component_order);
 
 			gl::upload_texture(section->get_raw_texture()->id(), gcm_format, width, height, depth, mipmaps,
@@ -913,7 +910,7 @@ namespace gl
 			section.set_view_flags(flags);
 		}
 
-		void insert_texture_barrier(void*&, gl::texture*) override
+		void insert_texture_barrier(gl::command_context&, gl::texture*) override
 		{
 			auto &caps = gl::get_driver_caps();
 
@@ -1013,10 +1010,9 @@ namespace gl
 			baseclass::on_frame_end();
 		}
 
-		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
+		bool blit(gl::command_context &cmd, rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool linear_interpolate, gl_render_targets& m_rtts)
 		{
-			void* unused = nullptr;
-			auto result = upload_scaled_image(src, dst, linear_interpolate, unused, m_rtts, m_hw_blitter);
+			auto result = upload_scaled_image(src, dst, linear_interpolate, cmd, m_rtts, m_hw_blitter);
 
 			if (result.succeeded)
 			{
@@ -1034,7 +1030,7 @@ namespace gl
 							gl::texture::format::depth_stencil : gl::texture::format::depth;
 					}
 
-					flush_if_cache_miss_likely(result.to_address_range());
+					flush_if_cache_miss_likely(cmd, result.to_address_range());
 				}
 
 				return true;
