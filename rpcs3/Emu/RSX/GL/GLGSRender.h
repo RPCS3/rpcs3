@@ -354,7 +354,7 @@ public:
 
 private:
 
-	driver_state gl_state;
+	gl::driver_state gl_state;
 
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
 	gl::vertex_upload_info set_vertex_buffer();

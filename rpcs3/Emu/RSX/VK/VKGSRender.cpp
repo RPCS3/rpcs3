@@ -855,7 +855,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		std::lock_guard lock(m_secondary_cb_guard);
 
 		const rsx::invalidation_cause cause = is_writing ? rsx::invalidation_cause::deferred_write : rsx::invalidation_cause::deferred_read;
-		result = std::move(m_texture_cache.invalidate_address(address, cause, m_secondary_command_buffer, m_swapchain->get_graphics_queue()));
+		result = std::move(m_texture_cache.invalidate_address(m_secondary_command_buffer, address, cause, m_swapchain->get_graphics_queue()));
 	}
 
 	if (!result.violation_handled)
@@ -928,7 +928,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			m_flush_requests.producer_wait();
 		}
 
-		m_texture_cache.flush_all(result, m_secondary_command_buffer, m_swapchain->get_graphics_queue());
+		m_texture_cache.flush_all(m_secondary_command_buffer, result, m_swapchain->get_graphics_queue());
 
 		if (has_queue_ref)
 		{
@@ -944,7 +944,7 @@ void VKGSRender::on_invalidate_memory_range(const utils::address_range &range)
 {
 	std::lock_guard lock(m_secondary_cb_guard);
 
-	auto data = std::move(m_texture_cache.invalidate_range(range, rsx::invalidation_cause::unmap, m_secondary_command_buffer, m_swapchain->get_graphics_queue()));
+	auto data = std::move(m_texture_cache.invalidate_range(m_secondary_command_buffer, range, rsx::invalidation_cause::unmap, m_swapchain->get_graphics_queue()));
 	AUDIT(data.empty());
 
 	if (data.violation_handled)
@@ -1650,13 +1650,13 @@ void VKGSRender::end()
 	// Apply write memory barriers
 	if (g_cfg.video.strict_rendering_mode)
 	{
-		if (ds) ds->memory_barrier(*m_current_command_buffer);
+		if (ds) ds->write_barrier(*m_current_command_buffer);
 
 		for (auto &rtt : m_rtts.m_bound_render_targets)
 		{
 			if (auto surface = std::get<1>(rtt))
 			{
-				surface->memory_barrier(*m_current_command_buffer);
+				surface->write_barrier(*m_current_command_buffer);
 			}
 		}
 	}
@@ -1694,7 +1694,7 @@ void VKGSRender::end()
 	if (UNLIKELY(!buffers_to_clear.empty()))
 	{
 		VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
-		vkCmdClearAttachments(*m_current_command_buffer, (u32)buffers_to_clear.size(),
+		vkCmdClearAttachments(*m_current_command_buffer, buffers_to_clear.size(),
 			buffers_to_clear.data(), 1, &rect);
 	}
 
@@ -2860,7 +2860,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 			const utils::address_range rsx_range = m_surface_info[i].get_memory_range();
 			m_texture_cache.set_memory_read_flags(rsx_range, rsx::memory_read_flags::flush_once);
-			m_texture_cache.flush_if_cache_miss_likely(rsx_range, *m_current_command_buffer, m_swapchain->get_graphics_queue());
+			m_texture_cache.flush_if_cache_miss_likely(*m_current_command_buffer, rsx_range, m_swapchain->get_graphics_queue());
 		}
 
 		m_surface_info[i].address = m_surface_info[i].pitch = 0;
@@ -2876,7 +2876,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			auto old_format = vk::get_compatible_depth_surface_format(m_device->get_formats_support(), m_depth_surface_info.depth_format);
 			const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
 			m_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
-			m_texture_cache.flush_if_cache_miss_likely(surface_range, *m_current_command_buffer, m_swapchain->get_graphics_queue());
+			m_texture_cache.flush_if_cache_miss_likely(*m_current_command_buffer, surface_range, m_swapchain->get_graphics_queue());
 		}
 
 		m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
@@ -2929,8 +2929,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
 			const utils::address_range surface_range = m_surface_info[index].get_memory_range(layout.aa_factors[1]);
-			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[index]), surface_range,
-				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index], std::tuple<vk::command_buffer&, VkQueue>{ *m_current_command_buffer, m_swapchain->get_graphics_queue() }, color_fmt_info.first, color_fmt_info.second);
+			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_render_targets[index]), surface_range,
+				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index], std::tuple<VkQueue>{ m_swapchain->get_graphics_queue() }, color_fmt_info.first, color_fmt_info.second);
 		}
 	}
 
@@ -2940,8 +2940,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
-			m_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), surface_range,
-				m_depth_surface_info.width, m_depth_surface_info.height, layout.actual_zeta_pitch, std::tuple<vk::command_buffer&, VkQueue>{ *m_current_command_buffer, m_swapchain->get_graphics_queue() }, gcm_format, false);
+			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil), surface_range,
+				m_depth_surface_info.width, m_depth_surface_info.height, layout.actual_zeta_pitch, std::tuple<VkQueue>{ m_swapchain->get_graphics_queue() }, gcm_format, false);
 		}
 	}
 
@@ -3301,7 +3301,7 @@ void VKGSRender::flip(int buffer)
 			{
 				if (section->get_protection() == utils::protection::no)
 				{
-					section->copy_texture(false, *m_current_command_buffer, m_swapchain->get_graphics_queue());
+					section->copy_texture(*m_current_command_buffer, false, m_swapchain->get_graphics_queue());
 					flush_queue = true;
 				}
 			}
@@ -3312,7 +3312,7 @@ void VKGSRender::flip(int buffer)
 				flush_command_queue();
 			}
 
-			m_texture_cache.invalidate_range(range, rsx::invalidation_cause::read, *m_current_command_buffer, m_swapchain->get_graphics_queue());
+			m_texture_cache.invalidate_range(*m_current_command_buffer, range, rsx::invalidation_cause::read, m_swapchain->get_graphics_queue());
 			image_to_flip = m_texture_cache.upload_image_simple(*m_current_command_buffer, absolute_address, buffer_width, buffer_height);
 		}
 	}

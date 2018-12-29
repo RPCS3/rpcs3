@@ -532,7 +532,7 @@ namespace vk
 		return{ final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 	}
 
-	void blitter::scale_image(vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, bool /*is_depth*/, const rsx::typeless_xfer& xfer_info)
+	void blitter::scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, bool /*is_depth*/, const rsx::typeless_xfer& xfer_info)
 	{
 		const auto src_aspect = vk::get_aspect_flags(src->info.format);
 		const auto dst_aspect = vk::get_aspect_flags(dst->info.format);
@@ -552,7 +552,7 @@ namespace vk
 			src_area.x1 = (u16)(src_area.x1 * xfer_info.src_scaling_hint);
 			src_area.x2 = (u16)(src_area.x2 * xfer_info.src_scaling_hint);
 
-			vk::copy_image_typeless(*commands, src, real_src, { 0, 0, (s32)src->width(), (s32)src->height() }, { 0, 0, (s32)internal_width, (s32)src->height() }, 1,
+			vk::copy_image_typeless(cmd, src, real_src, { 0, 0, (s32)src->width(), (s32)src->height() }, { 0, 0, (s32)internal_width, (s32)src->height() }, 1,
 				vk::get_aspect_flags(src->info.format), vk::get_aspect_flags(format));
 		}
 
@@ -568,7 +568,7 @@ namespace vk
 			dst_area.x1 = (u16)(dst_area.x1 * xfer_info.dst_scaling_hint);
 			dst_area.x2 = (u16)(dst_area.x2 * xfer_info.dst_scaling_hint);
 
-			vk::copy_image_typeless(*commands, dst, real_dst, { 0, 0, (s32)dst->width(), (s32)dst->height() }, { 0, 0, (s32)internal_width, (s32)dst->height() }, 1,
+			vk::copy_image_typeless(cmd, dst, real_dst, { 0, 0, (s32)dst->width(), (s32)dst->height() }, { 0, 0, (s32)internal_width, (s32)dst->height() }, 1,
 				vk::get_aspect_flags(dst->info.format), vk::get_aspect_flags(format));
 		}
 		else if (xfer_info.dst_context == rsx::texture_upload_context::framebuffer_storage)
@@ -591,24 +591,24 @@ namespace vk
 					const auto data_length = src->info.extent.width * src->info.extent.height * 4;
 
 					const auto current_layout = src->current_layout;
-					vk::change_image_layout(*commands, real_src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
-					vkCmdCopyImageToBuffer(*commands, src->value, src->current_layout, scratch_buf->value, 1, &copy);
-					vk::change_image_layout(*commands, real_src, current_layout, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+					vk::change_image_layout(cmd, real_src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+					vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, scratch_buf->value, 1, &copy);
+					vk::change_image_layout(cmd, real_src, current_layout, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
-					vk::insert_buffer_memory_barrier(*commands, scratch_buf->value, 0, data_length,
+					vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, data_length,
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-					vk::get_compute_task<vk::cs_shuffle_32>()->run(*commands, scratch_buf, data_length);
+					vk::get_compute_task<vk::cs_shuffle_32>()->run(cmd, scratch_buf, data_length);
 
-					vk::insert_buffer_memory_barrier(*commands, scratch_buf->value, 0, data_length,
+					vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, data_length,
 						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 					real_src = vk::get_typeless_helper(src->info.format, src->width(), src->height());
-					vk::change_image_layout(*commands, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+					vk::change_image_layout(cmd, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
-					vkCmdCopyBufferToImage(*commands, scratch_buf->value, real_src->value, real_src->current_layout, 1, &copy);
+					vkCmdCopyBufferToImage(cmd, scratch_buf->value, real_src->value, real_src->current_layout, 1, &copy);
 				}
 			}
 		}
@@ -637,17 +637,17 @@ namespace vk
 		const auto dst_width = dst_area.x2 - dst_area.x1;
 		const auto dst_height = dst_area.y2 - dst_area.y1;
 
-		copy_scaled_image(*commands, real_src->value, real_dst->value, real_src->current_layout, real_dst->current_layout, src_area.x1, src_area.y1, src_width, src_height,
+		copy_scaled_image(cmd, real_src->value, real_dst->value, real_src->current_layout, real_dst->current_layout, src_area.x1, src_area.y1, src_width, src_height,
 			dst_area.x1, dst_area.y1, dst_width, dst_height, 1, dst_aspect, real_src->info.format == real_dst->info.format,
 			interpolate ? VK_FILTER_LINEAR : VK_FILTER_NEAREST, real_src->info.format, real_dst->info.format);
 
 		if (real_dst != dst)
 		{
 			auto internal_width = dst->width() * xfer_info.dst_scaling_hint;
-			vk::copy_image_typeless(*commands, real_dst, dst, { 0, 0, (s32)internal_width, (s32)dst->height() }, { 0, 0, (s32)dst->width(), (s32)dst->height() }, 1,
+			vk::copy_image_typeless(cmd, real_dst, dst, { 0, 0, (s32)internal_width, (s32)dst->height() }, { 0, 0, (s32)dst->width(), (s32)dst->height() }, 1,
 				vk::get_aspect_flags(real_dst->info.format), vk::get_aspect_flags(dst->info.format));
 		}
 
-		change_image_layout(*commands, dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, { (VkImageAspectFlags)dst_aspect, 0, dst->info.mipLevels, 0, dst->info.arrayLayers });
+		change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, { (VkImageAspectFlags)dst_aspect, 0, dst->info.mipLevels, 0, dst->info.arrayLayers });
 	}
 }

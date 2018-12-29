@@ -227,6 +227,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	const auto color_offsets = get_offsets();
 	const auto color_locations = get_locations();
 
+	gl::command_context cmd{ gl_state };
+
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
@@ -239,7 +241,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 			const utils::address_range surface_range = m_surface_info[i].get_memory_range();
 			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
-			m_gl_texture_cache.flush_if_cache_miss_likely(surface_range);
+			m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 		}
 
 		if (std::get<0>(m_rtts.m_bound_render_targets[i]))
@@ -270,7 +272,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 			const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
 			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
-			m_gl_texture_cache.flush_if_cache_miss_likely(surface_range);
+			m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
 		}
 
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
@@ -383,7 +385,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
 
 			const utils::address_range surface_range = m_surface_info[i].get_memory_range(layout.aa_factors[1]);
-			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_render_targets[i]), surface_range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
+			m_gl_texture_cache.lock_memory_region(cmd, std::get<1>(m_rtts.m_bound_render_targets[i]), surface_range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
 				std::tuple<>{}, color_format.format, color_format.type, color_format.swap_bytes);
 		}
 	}
@@ -394,7 +396,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		{
 			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(layout.depth_format);
 			const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
-			m_gl_texture_cache.lock_memory_region(std::get<1>(m_rtts.m_bound_depth_stencil), surface_range, m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
+			m_gl_texture_cache.lock_memory_region(cmd, std::get<1>(m_rtts.m_bound_depth_stencil), surface_range, m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
 				std::tuple<>{}, depth_format_gl.format, depth_format_gl.type, true);
 		}
 	}
@@ -464,8 +466,6 @@ void GLGSRender::read_buffers()
 					}
 					else
 					{
-						m_gl_texture_cache.invalidate_range(range, rsx::invalidation_cause::read);
-
 						std::unique_ptr<u8[]> buffer(new u8[pitch * height]);
 						color_buffer.read(buffer.get(), width, height, pitch);
 
@@ -554,21 +554,8 @@ void GLGSRender::read_buffers()
 	}
 }
 
-void gl::render_target::memory_barrier(void*)
+void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init)
 {
-	if (!old_contents)
-	{
-		// No memory to inherit
-		return;
-	}
-
-	auto src_texture = static_cast<gl::render_target*>(old_contents);
-	if (src_texture->get_rsx_pitch() != get_rsx_pitch())
-	{
-		LOG_TODO(RSX, "Pitch mismatch, could not transfer inherited memory");
-		return;
-	}
-
 	auto is_depth = [](gl::texture::internal_format format)
 	{
 		// TODO: Change this to image aspect semantics
@@ -582,6 +569,33 @@ void gl::render_target::memory_barrier(void*)
 			return false;
 		}
 	};
+
+	if (!old_contents)
+	{
+		// No memory to inherit
+		if (dirty && force_init)
+		{
+			// Initialize memory contents if we did not find anything usable
+			// TODO: Properly sync with Cell
+			if (is_depth(get_internal_format()))
+			{
+				gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
+			}
+			else
+			{
+				gl::g_hw_blitter->fast_clear_image(cmd, this, {});
+			}
+		}
+
+		return;
+	}
+
+	auto src_texture = static_cast<gl::render_target*>(old_contents);
+	if (src_texture->get_rsx_pitch() != get_rsx_pitch())
+	{
+		LOG_TODO(RSX, "Pitch mismatch, could not transfer inherited memory");
+		return;
+	}
 
 	auto src_bpp = src_texture->get_native_pitch() / src_texture->width();
 	auto dst_bpp = get_native_pitch() / width();
@@ -609,7 +623,7 @@ void gl::render_target::memory_barrier(void*)
 		}
 	}
 
-	gl::g_hw_blitter->scale_image(old_contents, this,
+	gl::g_hw_blitter->scale_image(cmd, old_contents, this,
 		{ 0, 0, std::get<0>(region), std::get<1>(region) },
 		{ 0, 0, std::get<2>(region) , std::get<3>(region) },
 		!dst_is_depth, dst_is_depth, typeless_info);

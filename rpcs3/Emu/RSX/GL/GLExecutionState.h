@@ -1,0 +1,246 @@
+﻿#pragma once
+#include "Utilities/types.h"
+#include "Utilities/geometry.h"
+#include "OpenGL.h"
+
+#include <unordered_map>
+
+namespace gl
+{
+	struct driver_state
+	{
+		const u32 DEPTH_BOUNDS_MIN = 0xFFFF0001;
+		const u32 DEPTH_BOUNDS_MAX = 0xFFFF0002;
+		const u32 DEPTH_RANGE_MIN = 0xFFFF0003;
+		const u32 DEPTH_RANGE_MAX = 0xFFFF0004;
+
+		std::unordered_map<GLenum, u32> properties = {};
+		std::unordered_map<GLenum, std::array<u32, 4>> indexed_properties = {};
+
+		bool enable(u32 test, GLenum cap)
+		{
+			auto found = properties.find(cap);
+			if (found != properties.end() && found->second == test)
+				return !!test;
+
+			properties[cap] = test;
+
+			if (test)
+				glEnable(cap);
+			else
+				glDisable(cap);
+
+			return !!test;
+		}
+
+		bool enablei(u32 test, GLenum cap, u32 index)
+		{
+			auto found = indexed_properties.find(cap);
+			const bool exists = found != indexed_properties.end();
+
+			if (!exists)
+			{
+				indexed_properties[cap] = {};
+				indexed_properties[cap][index] = test;
+			}
+			else
+			{
+				if (found->second[index] == test)
+					return !!test;
+
+				found->second[index] = test;
+			}
+
+			if (test)
+				glEnablei(cap, index);
+			else
+				glDisablei(cap, index);
+
+			return !!test;
+		}
+
+		inline bool test_property(GLenum property, u32 test) const
+		{
+			auto found = properties.find(property);
+			if (found == properties.end())
+				return false;
+
+			return (found->second == test);
+		}
+
+		void depth_func(GLenum func)
+		{
+			if (!test_property(GL_DEPTH_FUNC, func))
+			{
+				glDepthFunc(func);
+				properties[GL_DEPTH_FUNC] = func;
+			}
+		}
+
+		void depth_mask(GLboolean mask)
+		{
+			if (!test_property(GL_DEPTH_WRITEMASK, mask))
+			{
+				glDepthMask(mask);
+				properties[GL_DEPTH_WRITEMASK] = mask;
+			}
+		}
+
+		void clear_depth(GLfloat depth)
+		{
+			u32 value = (u32&)depth;
+			if (!test_property(GL_DEPTH_CLEAR_VALUE, value))
+			{
+				glClearDepth(depth);
+				properties[GL_DEPTH_CLEAR_VALUE] = value;
+			}
+		}
+
+		void stencil_mask(GLuint mask)
+		{
+			if (!test_property(GL_STENCIL_WRITEMASK, mask))
+			{
+				glStencilMask(mask);
+				properties[GL_STENCIL_WRITEMASK] = mask;
+			}
+		}
+
+		void clear_stencil(GLint stencil)
+		{
+			u32 value = (u32&)stencil;
+			if (!test_property(GL_STENCIL_CLEAR_VALUE, value))
+			{
+				glClearStencil(stencil);
+				properties[GL_STENCIL_CLEAR_VALUE] = value;
+			}
+		}
+
+		void color_mask(u32 mask)
+		{
+			if (!test_property(GL_COLOR_WRITEMASK, mask))
+			{
+				glColorMask(((mask & 0x10) ? 1 : 0), ((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0));
+				properties[GL_COLOR_WRITEMASK] = mask;
+			}
+		}
+
+		void color_mask(bool r, bool g, bool b, bool a)
+		{
+			u32 mask = 0;
+			if (r) mask |= 0x10;
+			if (g) mask |= 0x20;
+			if (b) mask |= 0x40;
+			if (a) mask |= 0x80;
+
+			color_mask(mask);
+		}
+
+		void clear_color(u8 r, u8 g, u8 b, u8 a)
+		{
+			u32 value = (u32)r | (u32)g << 8 | (u32)b << 16 | (u32)a << 24;
+			if (!test_property(GL_COLOR_CLEAR_VALUE, value))
+			{
+				glClearColor(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
+				properties[GL_COLOR_CLEAR_VALUE] = value;
+			}
+		}
+
+		void clear_color(const color4f& color)
+		{
+			clear_color(u8(color.r * 255), u8(color.g * 255), u8(color.b * 255), u8(color.a * 255));
+		}
+
+		void depth_bounds(float min, float max)
+		{
+			u32 depth_min = (u32&)min;
+			u32 depth_max = (u32&)max;
+
+			if (!test_property(DEPTH_BOUNDS_MIN, depth_min) || !test_property(DEPTH_BOUNDS_MAX, depth_max))
+			{
+				glDepthBoundsEXT(min, max);
+
+				properties[DEPTH_BOUNDS_MIN] = depth_min;
+				properties[DEPTH_BOUNDS_MAX] = depth_max;
+			}
+		}
+
+		void depth_range(float min, float max)
+		{
+			u32 depth_min = (u32&)min;
+			u32 depth_max = (u32&)max;
+
+			if (!test_property(DEPTH_RANGE_MIN, depth_min) || !test_property(DEPTH_RANGE_MAX, depth_max))
+			{
+				glDepthRange(min, max);
+
+				properties[DEPTH_RANGE_MIN] = depth_min;
+				properties[DEPTH_RANGE_MAX] = depth_max;
+			}
+		}
+
+		void logic_op(GLenum op)
+		{
+			if (!test_property(GL_COLOR_LOGIC_OP, op))
+			{
+				glLogicOp(op);
+				properties[GL_COLOR_LOGIC_OP] = op;
+			}
+		}
+
+		void line_width(GLfloat width)
+		{
+			u32 value = (u32&)width;
+
+			if (!test_property(GL_LINE_WIDTH, value))
+			{
+				glLineWidth(width);
+				properties[GL_LINE_WIDTH] = value;
+			}
+		}
+
+		void front_face(GLenum face)
+		{
+			if (!test_property(GL_FRONT_FACE, face))
+			{
+				glFrontFace(face);
+				properties[GL_FRONT_FACE] = face;
+			}
+		}
+
+		void cull_face(GLenum mode)
+		{
+			if (!test_property(GL_CULL_FACE_MODE, mode))
+			{
+				glCullFace(mode);
+				properties[GL_CULL_FACE_MODE] = mode;
+			}
+		}
+
+		void polygon_offset(float factor, float units)
+		{
+			u32 _units = (u32&)units;
+			u32 _factor = (u32&)factor;
+
+			if (!test_property(GL_POLYGON_OFFSET_UNITS, _units) || !test_property(GL_POLYGON_OFFSET_FACTOR, _factor))
+			{
+				glPolygonOffset(factor, units);
+
+				properties[GL_POLYGON_OFFSET_UNITS] = _units;
+				properties[GL_POLYGON_OFFSET_FACTOR] = _factor;
+			}
+		}
+	};
+
+	struct command_context
+	{
+		driver_state* drv;
+
+		command_context()
+			: drv(nullptr)
+		{}
+
+		command_context(driver_state& drv_)
+			: drv(&drv_)
+		{}
+	};
+}

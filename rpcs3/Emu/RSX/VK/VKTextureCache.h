@@ -148,7 +148,7 @@ namespace vk
 			return flushed;
 		}
 
-		void copy_texture(bool manage_cb_lifetime, vk::command_buffer& cmd, VkQueue submit_queue)
+		void copy_texture(vk::command_buffer& cmd, bool manage_cb_lifetime, VkQueue submit_queue)
 		{
 			ASSERT(exists());
 
@@ -320,7 +320,7 @@ namespace vk
 				m_device = &cmd.get_command_pool().get_owner();
 			}
 
-			copy_texture(blocking, cmd, submit_queue);
+			copy_texture(cmd, blocking, submit_queue);
 		}
 
 		void* map_synchronized(u32 offset, u32 size)
@@ -1036,7 +1036,7 @@ namespace vk
 		template<typename RsxTextureType>
 		sampled_image_descriptor _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
 		{
-			return upload_texture(cmd, tex, m_rtts, cmd, const_cast<const VkQueue>(m_submit_queue));
+			return upload_texture(cmd, tex, m_rtts, const_cast<const VkQueue>(m_submit_queue));
 		}
 
 		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height)
@@ -1094,14 +1094,14 @@ namespace vk
 
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
 		{
-			blitter helper(&cmd);
-			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, cmd, const_cast<const VkQueue>(m_submit_queue));
+			blitter helper;
+			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, const_cast<const VkQueue>(m_submit_queue));
 
 			if (reply.succeeded)
 			{
 				if (reply.real_dst_size)
 				{
-					flush_if_cache_miss_likely(reply.to_address_range(), cmd, m_submit_queue);
+					flush_if_cache_miss_likely(cmd, reply.to_address_range(), m_submit_queue);
 				}
 
 				return true;

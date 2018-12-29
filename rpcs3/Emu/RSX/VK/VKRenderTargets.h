@@ -57,10 +57,34 @@ namespace vk
 			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
 
-		void memory_barrier(vk::command_buffer& cmd)
+		void memory_barrier(vk::command_buffer& cmd, bool force_init = false)
 		{
 			if (!old_contents)
 			{
+				if (dirty && force_init)
+				{
+					// Initialize memory contents if we did not find anything usable
+					// TODO: Properly sync with Cell
+					VkImageSubresourceRange range{ attachment_aspect_flag, 0, 1, 0, 1 };
+					const auto old_layout = current_layout;
+
+					change_image_layout(cmd, this, VK_IMAGE_LAYOUT_GENERAL, range);
+
+					if (attachment_aspect_flag & VK_IMAGE_ASPECT_COLOR_BIT)
+					{
+						VkClearColorValue color{};
+						vkCmdClearColorImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &color, 1, &range);
+					}
+					else
+					{
+						VkClearDepthStencilValue clear{ 1.f, 255 };
+						vkCmdClearDepthStencilImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &clear, 1, &range);
+					}
+
+					change_image_layout(cmd, this, old_layout, range);
+					on_write();
+				}
+
 				return;
 			}
 
@@ -96,14 +120,17 @@ namespace vk
 				}
 			}
 
-			vk::blitter hw_blitter(&cmd);
-			hw_blitter.scale_image(old_contents, this,
+			vk::blitter hw_blitter;
+			hw_blitter.scale_image(cmd, old_contents, this,
 				{ 0, 0, std::get<0>(region), std::get<1>(region) },
 				{ 0, 0, std::get<2>(region) , std::get<3>(region) },
 				/*linear?*/false, /*depth?(unused)*/false, typeless_info);
 
 			on_write();
 		}
+
+		void read_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, true); }
+		void write_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, false); }
 	};
 
 	struct framebuffer_holder: public vk::framebuffer, public rsx::ref_counted
