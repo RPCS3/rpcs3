@@ -340,6 +340,9 @@ struct pad_config final : cfg::node
 	cfg::_int<0, 500> mouse_acceleration_x{ this, "Mouse Acceleration X Axis", 200 };
 	cfg::_int<0, 500> mouse_acceleration_y{ this, "Mouse Acceleration Y Axis", 250 };
 
+	cfg::_int<0, 100> l_stick_lerp_factor{ this, "Left Stick Lerp Factor", 100 };
+	cfg::_int<0, 100> r_stick_lerp_factor{ this, "Right Stick Lerp Factor", 100 };
+
 	bool load()
 	{
 		if (fs::file cfg_file{ cfg_name, fs::read })

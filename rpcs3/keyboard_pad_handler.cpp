@@ -89,7 +89,17 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 				m_stick_min[i] = pressed ? normalized_value : 0;
 
 			if (is_max || is_min)
-				pad->m_sticks[i].m_value = m_stick_max[i] - m_stick_min[i];
+			{
+				m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
+
+				const f32 stick_lerp_factor = (i < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
+
+				// to get the fastest response time possible we don't wanna use any lerp with factor 1
+				if (stick_lerp_factor >= 1.0f)
+				{
+					pad->m_sticks[i].m_value = m_stick_val[i];
+				}
+			}
 		}
 	}
 }
@@ -515,8 +525,10 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 
 	m_deadzone_x = p_profile->mouse_deadzone_x;
 	m_deadzone_y = p_profile->mouse_deadzone_y;
-	m_multi_x = p_profile->mouse_acceleration_x / 100;
-	m_multi_y = p_profile->mouse_acceleration_y / 100;
+	m_multi_x = (double)p_profile->mouse_acceleration_x / 100.0;
+	m_multi_y = (double)p_profile->mouse_acceleration_y / 100.0;
+	m_l_stick_lerp_factor = p_profile->l_stick_lerp_factor / 100.0f;
+	m_r_stick_lerp_factor = p_profile->r_stick_lerp_factor / 100.0f;
 
 	auto find_key = [&](const cfg::string& name)
 	{
@@ -579,7 +591,6 @@ void keyboard_pad_handler::ThreadProc()
 	{
 		if (last_connection_status[i] == false)
 		{
-			//QThread::msleep(100); // Hack Simpsons. It calls a seemingly useless cellPadGetInfo at boot that would swallow the first CELL_PAD_STATUS_ASSIGN_CHANGES otherwise
 			bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 			bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
@@ -590,31 +601,60 @@ void keyboard_pad_handler::ThreadProc()
 			static std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
 			now = std::chrono::steady_clock::now();
 
-			double elapsed_left  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
-			double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
-			double elapsed_up    = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
-			double elapsed_down  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
+			const double elapsed_left = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
+			const double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
+			const double elapsed_up = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
+			const double elapsed_down = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
+			const double elapsed_stick = std::chrono::duration_cast<std::chrono::microseconds>(now - m_stick_time).count() / 1000.0;
+
+			const double mouse_interval = 30.0;
+			const double stick_interval = 10.0;
 
 			// roughly 1-2 frames to process the next mouse move
-			if (elapsed_left > 30.0)
+			if (elapsed_left > mouse_interval)
 			{
 				Key(mouse::move_left, 0);
 				m_last_mouse_move_left = now;
 			}
-			if (elapsed_right > 30.0)
+			if (elapsed_right > mouse_interval)
 			{
 				Key(mouse::move_right, 0);
 				m_last_mouse_move_right = now;
 			}
-			if (elapsed_up> 30.0)
+			if (elapsed_up > mouse_interval)
 			{
 				Key(mouse::move_up, 0);
 				m_last_mouse_move_up = now;
 			}
-			if (elapsed_down > 30.0)
+			if (elapsed_down > mouse_interval)
 			{
 				Key(mouse::move_down, 0);
 				m_last_mouse_move_down = now;
+			}
+
+			if (elapsed_stick > stick_interval)
+			{
+				for (int j = 0; j < static_cast<int>(bindings[i]->m_sticks.size()); j++)
+				{
+					const f32 stick_lerp_factor = (j < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
+
+					// we already applied the following values on keypress if we used factor 1
+					if (stick_lerp_factor < 1.0f)
+					{
+						const f32 v0 = (f32)bindings[i]->m_sticks[j].m_value;
+						const f32 v1 = (f32)m_stick_val[j];
+
+						// linear interpolation from the current stick value v0 to the desired stick value v1
+						f32 res = lerp(v0, v1, stick_lerp_factor);
+
+						// round to the correct direction to prevent sticky sticks on small factors
+						res = (v0 <= v1) ? std::ceil(res) : std::floor(res);
+
+						bindings[i]->m_sticks[j].m_value = (u16)res;
+					}
+				}
+
+				m_stick_time = now;
 			}
 		}
 	}
