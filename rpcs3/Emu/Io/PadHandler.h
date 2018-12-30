@@ -10,6 +10,11 @@
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
+enum SystemInfo
+{
+	CELL_PAD_INFO_INTERCEPTED = 0x00000001
+};
+
 enum PortStatus
 {
 	CELL_PAD_STATUS_DISCONNECTED   = 0x00000000,

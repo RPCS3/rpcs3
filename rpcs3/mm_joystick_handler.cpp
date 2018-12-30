@@ -316,9 +316,11 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 	switch (status)
 	{
 	case JOYERR_UNPLUGGED:
+	{
 		return fail_callback(padId);
-
+	}
 	case JOYERR_NOERROR:
+	{
 		auto data = GetButtonValues(js_info, js_caps);
 
 		// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
@@ -419,6 +421,9 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 		else
 			return callback(0, "", padId, preview_values);
 
+		break;
+	}
+	default:
 		break;
 	}
 }

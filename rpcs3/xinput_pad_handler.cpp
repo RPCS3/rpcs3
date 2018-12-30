@@ -328,6 +328,7 @@ void xinput_pad_handler::ThreadProc()
 		switch (result)
 		{
 		case ERROR_DEVICE_NOT_CONNECTED:
+		{
 			if (last_connection_status[i] == true)
 			{
 				LOG_ERROR(HLE, "XInput device %d disconnected", padnum);
@@ -337,8 +338,9 @@ void xinput_pad_handler::ThreadProc()
 				connected--;
 			}
 			continue;
-
+		}
 		case ERROR_SUCCESS:
+		{
 			if (last_connection_status[i] == false)
 			{
 				LOG_SUCCESS(HLE, "XInput device %d reconnected", padnum);
@@ -437,7 +439,9 @@ void xinput_pad_handler::ThreadProc()
 					m_dev->last_vibration = clock();
 				}
 			}
-
+			break;
+		}
+		default:
 			break;
 		}
 	}

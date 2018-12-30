@@ -2,7 +2,7 @@
 
 
 
-//error codes
+// error codes
 enum
 {
 	CELL_OSKDIALOG_ERROR_IME_ALREADY_IN_USE = 0x8002b501,
@@ -11,7 +11,7 @@ enum
 	CELL_OSKDIALOG_ERROR_PARAM = 0x8002b504,
 };
 
-//OSK status for the callback
+// OSK status for the callback
 enum
 {
 	CELL_SYSUTIL_OSKDIALOG_LOADED = 0x0502,
@@ -94,7 +94,7 @@ enum CellOskDialogType
 
 enum
 {
-	CELL_OSKDIALOG_STRING_SIZE = 512, //Theroretical maxium for osk input, games can specify a lower limit
+	CELL_OSKDIALOG_STRING_SIZE = 512, // Theroretical maximum for osk input, games can specify a lower limit
 };
 
 struct CellOskDialogInputFieldInfo
@@ -118,10 +118,10 @@ struct CellOskDialogParam
 	be_t<s32> prohibitFlgs;
 };
 
-//Actual input data
+// Actual input data
 struct CellOskDialogCallbackReturnParam
 {
-	be_t<s32> result; //CellOskDialogInputFieldResult
+	be_t<s32> result; // CellOskDialogInputFieldResult
 	be_t<s32> numCharsResultString;
 	vm::bptr<u16> pResultString;
 };
