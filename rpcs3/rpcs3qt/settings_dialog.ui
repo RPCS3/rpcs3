@@ -100,7 +100,7 @@
               <item>
                <widget class="QRadioButton" name="spu_asmjit">
                 <property name="text">
-                 <string>ASMJIT Recompiler (fastest)</string>
+                 <string>ASMJIT Recompiler (faster)</string>
                 </property>
                </widget>
               </item>
@@ -489,7 +489,7 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_21">
            <item>
-            <widget class="QGroupBox" name="groupBox_29">
+            <widget class="QGroupBox" name="gb_default_resolution">
              <property name="title">
               <string>Default Resolution</string>
              </property>
@@ -667,13 +667,6 @@
              <widget class="QCheckBox" name="dumpColor">
               <property name="text">
                <string>Write Color Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="gpuTextureScaling">
-              <property name="text">
-               <string>Use GPU Texture Scaling</string>
               </property>
              </widget>
             </item>
@@ -870,6 +863,12 @@
                 </property>
                 <property name="sizeType">
                  <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
                 </property>
                </spacer>
               </item>
@@ -2032,7 +2031,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="1,1,1">
          <item>
-          <widget class="QGroupBox" name="groupBox_48">
+          <widget class="QGroupBox" name="gb_debug_gpu">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -2141,6 +2140,13 @@
              <widget class="QCheckBox" name="strictTextureFlushing">
               <property name="text">
                <string>Strict Texture Flushing</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="gpuTextureScaling">
+              <property name="text">
+               <string>Use GPU Texture Scaling</string>
               </property>
              </widget>
             </item>

@@ -21,7 +21,7 @@ error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy
 	}
 
 	// Look for unmapped space
-	if (const auto area = vm::find_map(vsize, vsize == 0x10000000 ? 0x10000000 : 0x1000000, 2 | (flag & SYS_MEMORY_PAGE_SIZE_MASK)))
+	if (const auto area = vm::find_map(0x10000000, 0x10000000, 2 | (flag & SYS_MEMORY_PAGE_SIZE_MASK)))
 	{
 		// Alloc all memory (shall not fail)
 		verify(HERE), area->alloc(vsize);
