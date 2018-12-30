@@ -160,7 +160,7 @@ public:
 		bool supportsVulkan = false;
 		QStringList D3D12Adapters;
 		QStringList vulkanAdapters;
-		QString name_Null = tr("Null");
+		QString name_Null = tr("Disable Video Output");
 		QString name_Vulkan = tr("Vulkan");
 		QString name_D3D12 = tr("D3D12[DO NOT USE]");
 		QString name_OpenGL = tr("OpenGL");
