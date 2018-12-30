@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -80,6 +80,8 @@ error_code sys_mutex_destroy(u32 mutex_id)
 
 	const auto mutex = idm::withdraw<lv2_obj, lv2_mutex>(mutex_id, [](lv2_mutex& mutex) -> CellError
 	{
+		std::lock_guard lock(mutex.mutex);
+
 		if (mutex.owner || mutex.lock_count)
 		{
 			return CELL_EBUSY;
