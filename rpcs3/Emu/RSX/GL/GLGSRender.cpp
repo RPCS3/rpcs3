@@ -1119,29 +1119,56 @@ void GLGSRender::clear_surface(u32 arg)
 
 	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
-	if (arg & 0x1)
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
 	{
-		u32 max_depth_value = get_max_depth_value(surface_depth_format);
-		u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
-
-		gl_state.depth_mask(GL_TRUE);
-		gl_state.clear_depth(f32(clear_depth) / max_depth_value);
-		mask |= GLenum(gl::buffers::depth);
-
-		if (const auto address = std::get<0>(m_rtts.m_bound_depth_stencil))
+		if (arg & 0x1)
 		{
-			m_rtts.on_write(address);
+			u32 max_depth_value = get_max_depth_value(surface_depth_format);
+			u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
+
+			gl_state.depth_mask(GL_TRUE);
+			gl_state.clear_depth(f32(clear_depth) / max_depth_value);
+			mask |= GLenum(gl::buffers::depth);
 		}
-	}
 
-	if (surface_depth_format == rsx::surface_depth_format::z24s8 && (arg & 0x2))
-	{
-		u8 clear_stencil = rsx::method_registers.stencil_clear_value();
+		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+		{
+			if (arg & 0x2)
+			{
+				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 
-		gl_state.stencil_mask(0xFF);
-		gl_state.clear_stencil(clear_stencil);
+				gl_state.stencil_mask(rsx::method_registers.stencil_mask());
+				gl_state.clear_stencil(clear_stencil);
+				mask |= GLenum(gl::buffers::stencil);
+			}
 
-		mask |= GLenum(gl::buffers::stencil);
+			if ((arg & 0x3) != 0x3 && ds->dirty)
+			{
+				verify(HERE), mask;
+
+				// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
+				if (arg == 1)
+				{
+					// Depth was cleared, initialize stencil
+					gl_state.stencil_mask(0xFF);
+					gl_state.clear_stencil(0xFF);
+					mask |= GLenum(gl::buffers::stencil);
+				}
+				else
+				{
+					// Stencil was cleared, initialize depth
+					gl_state.depth_mask(GL_TRUE);
+					gl_state.clear_depth(1.f);
+					mask |= GLenum(gl::buffers::depth);
+				}
+			}
+		}
+
+		if (mask)
+		{
+			// Memory has been initialized
+			m_rtts.on_write(std::get<0>(m_rtts.m_bound_depth_stencil));
+		}
 	}
 
 	if (auto colormask = (arg & 0xf0))

@@ -1901,28 +1901,49 @@ void VKGSRender::clear_surface(u32 mask)
 
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
-	if (mask & 0x1)
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & 0x3)
 	{
-		u32 max_depth_value = get_max_depth_value(surface_depth_format);
-
-		u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
-		float depth_clear = (float)clear_depth / max_depth_value;
-
-		depth_stencil_clear_values.depthStencil.depth = depth_clear;
-		depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
-
-		depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
-	}
-
-	if (mask & 0x2)
-	{
-		if (surface_depth_format == rsx::surface_depth_format::z24s8 &&
-			rsx::method_registers.stencil_mask() != 0)
+		if (mask & 0x1)
 		{
-			u8 clear_stencil = rsx::method_registers.stencil_clear_value();
-			depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
+			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
-			depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
+			float depth_clear = (float)clear_depth / max_depth_value;
+
+			depth_stencil_clear_values.depthStencil.depth = depth_clear;
+			depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
+
+			depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+		}
+
+		if (surface_depth_format == rsx::surface_depth_format::z24s8)
+		{
+			if (mask & 0x2 && rsx::method_registers.stencil_mask() != 0)
+			{
+				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
+				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
+
+				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			}
+
+			if ((mask & 0x3) != 0x3 && ds->dirty)
+			{
+				verify(HERE), depth_stencil_mask;
+
+				// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
+				if (mask == 1)
+				{
+					// Depth was cleared, initialize stencil
+					depth_stencil_clear_values.depthStencil.stencil = 0xFF;
+					depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				}
+				else
+				{
+					// Stencil was cleared, initialize depth
+					depth_stencil_clear_values.depthStencil.depth = 1.f;
+					depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+				}
+			}
 		}
 	}
 
@@ -2015,7 +2036,7 @@ void VKGSRender::clear_surface(u32 mask)
 		}
 	}
 
-	if (mask & 0x3)
+	if (depth_stencil_mask)
 	{
 		if (const auto address = std::get<0>(m_rtts.m_bound_depth_stencil))
 		{
