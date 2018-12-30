@@ -104,34 +104,35 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 lo
 {
 	cellGcmSys.warning("cellGcmGetReportDataAddressLocation(index=%d, location=%d)", index, location);
 
-	if (location == CELL_GCM_LOCATION_LOCAL) {
-		if (index >= 2048) {
-			cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
-			return vm::null;
-		}
-		return vm::ptr<CellGcmReportData>::make(fxm::get<CellGcmSysConfig>()->gcm_info.label_addr + 0x1400 + index * 0x10);
-	}
-
-	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024 * 1024) {
+	if (location == CELL_GCM_LOCATION_MAIN)
+	{
+		if (index >= 1024 * 1024)
+		{
 			cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong main index (%d)", index);
-			return vm::null;
 		}
-		return vm::ptr<CellGcmReportData>::make(RSXIOMem.RealAddr(index * 0x10));
+
+		return vm::ptr<CellGcmReportData>::make(RSXIOMem.RealAddr(0x0e000000 + index * 0x10));
 	}
 
-	cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong location (%d)", location);
-	return vm::null;
+	// Anything else is Local
+
+	if (index >= 2048)
+	{
+		cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
+	}
+
+	return vm::ptr<CellGcmReportData>::make(fxm::get<CellGcmSysConfig>()->gcm_info.label_addr + 0x1400 + index * 0x10);
 }
 
 u64 cellGcmGetTimeStamp(u32 index)
 {
 	cellGcmSys.trace("cellGcmGetTimeStamp(index=%d)", index);
 
-	if (index >= 2048) {
+	if (index >= 2048)
+	{
 		cellGcmSys.error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
-		return 0;
 	}
+
 	return vm::read64(fxm::get<CellGcmSysConfig>()->gcm_info.label_addr + 0x1400 + index * 0x10);
 }
 
@@ -166,9 +167,9 @@ u32 cellGcmGetReport(u32 type, u32 index)
 {
 	cellGcmSys.warning("cellGcmGetReport(type=%d, index=%d)", type, index);
 
-	if (index >= 2048) {
+	if (index >= 2048)
+	{
 		cellGcmSys.error("cellGcmGetReport: Wrong local index (%d)", index);
-		return -1;
 	}
 
 	if (type < 1 || type > 5) {
@@ -183,10 +184,11 @@ u32 cellGcmGetReportDataAddress(u32 index)
 {
 	cellGcmSys.warning("cellGcmGetReportDataAddress(index=%d)", index);
 
-	if (index >= 2048) {
+	if (index >= 2048)
+	{
 		cellGcmSys.error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
-		return 0;
 	}
+
 	return fxm::get<CellGcmSysConfig>()->gcm_info.label_addr + 0x1400 + index * 0x10;
 }
 
