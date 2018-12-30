@@ -16,8 +16,8 @@
 		"SPU": {
 			"precise": "This is extremely slow but may fix broken graphics in some games.",
 			"fast": "This is slower than the SPU Recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
-			"ASMJIT": "This is the fastest option with very good compatibility.\nIf unsure, use this option.",
-			"LLVM": "Experimental. May improve performance, but may also break games."
+			"ASMJIT": "This is the fast option with very good compatibility.\nIf unsure, use this option.",
+			"LLVM": "This is the fastest option with very good compatibility.\nRecompiles the game's SPU LLVM cache before running which adds extra start-up time.\nIf you experience issues, use the ASMJIT Recompiler."
 		},
 		"libraries": {
 			"auto": "Automatically selects the LLE libraries to load.\nWhile this option works fine in most cases, liblv2 is the preferred option.",
@@ -28,7 +28,7 @@
 		"checkboxes": {
 			"accurateXFloat": "Fixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU LLVM is active.",
 			"spuCache": "Should normally stay enabled.\nDisable this if the cache becomes too large.\nDisabling it does not remove the existing cache.",
-			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.",
+			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.\nNote: This function is only implemented for AMD Ryzen CPUs.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
 			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases."
 		},
@@ -59,6 +59,7 @@
 		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory.",
 		"disableVulkanMemAllocator": "Disables the custom Vulkan memory allocator and reverts to direct calls to VkAllocateMemory/VkFreeMemory.",
 		"disableFIFOReordering": "Disables RSX FIFO optimizations completely. Draws are processed as they are received by the DMA puller.",
+		"gpuTextureScaling": "Force all texture transfer, scaling and conversion operations on the GPU.\nMay cause texture corruption in some cases.",
 		"strictTextureFlushing": "Forces texture flushing even in situations where it is not necessary/correct. Known to cause visual artifacts, but useful for debugging certain texture cache issues."
 	},
 	"emulator": {
@@ -110,7 +111,6 @@
 		"main": {
 			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.",
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
-			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
 			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
 			"disableAsyncShaders": "Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces stuttering.\nDisable if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.",

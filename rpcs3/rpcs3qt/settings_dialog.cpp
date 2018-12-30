@@ -459,7 +459,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox_Linux"].toString());
 	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox_Linux"].toString());
 #endif
-	//Change D3D12 to D3D12[DO NOT USE]
+	// Change displayed renderer names
+	ui->renderBox->setItemText(ui->renderBox->findData("Null"), render_creator.name_Null);
 	ui->renderBox->setItemText(ui->renderBox->findData("D3D12"), render_creator.name_D3D12);
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
@@ -482,9 +483,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		case 0:
 			ui->anisotropicFilterOverride->setItemText(i, tr("Automatic"));
 			break;
-		case 1:
-			ui->anisotropicFilterOverride->setItemText(i, tr("Force Disabled"));
-			break;
 		case 2:
 		case 4:
 		case 8:
@@ -503,9 +501,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->vsync, emu_settings::VSync);
 	SubscribeTooltip(ui->vsync, json_gpu_main["vsync"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->gpuTextureScaling, emu_settings::GPUTextureScaling);
-	SubscribeTooltip(ui->gpuTextureScaling, json_gpu_main["gpuTextureScaling"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings::StretchToDisplayArea);
 	SubscribeTooltip(ui->stretchToDisplayArea, json_gpu_main["stretchToDisplayArea"].toString());
@@ -724,6 +719,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 #else
 	SubscribeTooltip(ui->audioOutBox, json_audio["audioOutBox_Linux"].toString());
 #endif
+	// Change displayed backend names
+	ui->audioOutBox->setItemText(ui->renderBox->findData("Null"), tr("Disable Audio Output"));
 
 	// Checkboxes
 
@@ -1217,6 +1214,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->strictTextureFlushing, emu_settings::StrictTextureFlushing);
 	SubscribeTooltip(ui->strictTextureFlushing, json_debug["strictTextureFlushing"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->gpuTextureScaling, emu_settings::GPUTextureScaling);
+	SubscribeTooltip(ui->gpuTextureScaling, json_debug["gpuTextureScaling"].toString());
 
 	// Checkboxes: core debug options
 	xemu_settings->EnhanceCheckBox(ui->ppuDebug, emu_settings::PPUDebug);
