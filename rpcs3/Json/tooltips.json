@@ -139,7 +139,7 @@
 	},
 	"system": {
 		"sysLangBox": "Some games may fail to boot if the system language is not available in the game itself.\nOther games will switch language automatically to what is selected here.\nIt is recommended leaving this on a language supported by the game.",
-		"enterButtonAssignment": "The button used for enter/accept/confirm in system dialogs.\nChange this to use the circle button instead, which is the default configuration on japanese systems and in many japanese games.\nIn these cases having the cross button assigned can often lead to confusion.",
+		"enterButtonAssignment": "The button used for enter/accept/confirm in system dialogs.\nChange this to use the circle button instead, which is the default configuration on Japanese systems and in many Japanese games.\nIn these cases having the cross button assigned can often lead to confusion.",
 		"enableHostRoot": "Required for some Homebrew.\nIf unsure, don't use this option.",
 		"limitCacheSize": "Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long term storage."
 	}
