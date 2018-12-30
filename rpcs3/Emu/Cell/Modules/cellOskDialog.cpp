@@ -18,7 +18,19 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 {
 	cellOskDialog.warning("cellOskDialogLoadAsync(container=0x%x, dialogParam=*0x%x, inputFieldInfo=*0x%x)", container, dialogParam, inputFieldInfo);
 
-	u32 maxLength = (inputFieldInfo->limit_length >= 512) ? 511 : (u32)inputFieldInfo->limit_length;
+	if (!inputFieldInfo || !inputFieldInfo->message || !inputFieldInfo->init_text || inputFieldInfo->limit_length > CELL_OSKDIALOG_STRING_SIZE)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
+	const auto osk = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
+
+	if (!osk)
+	{
+		return CELL_SYSUTIL_ERROR_BUSY;
+	}
+
+	u32 maxLength = (inputFieldInfo->limit_length >= CELL_OSKDIALOG_STRING_SIZE) ? 511 : (u32)inputFieldInfo->limit_length;
 
 	s_osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
 	std::memset(s_osk_text, 0, sizeof(s_osk_text));
@@ -31,13 +43,6 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 			s_osk_text[i] = inputFieldInfo->init_text[i];
 			s_osk_text_old[i] = inputFieldInfo->init_text[i];
 		}
-	}
-
-	const auto osk = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
-
-	if (!osk)
-	{
-		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
 	bool result = false;
@@ -128,11 +133,26 @@ s32 cellOskDialogUnloadAsync(vm::ptr<CellOskDialogCallbackReturnParam> OutputInf
 	return getText(OutputInfo, true);
 }
 
-s32 cellOskDialogGetSize(vm::ptr<u16> width, vm::ptr<u16> height, vm::ptr<CellOskDialogType> dialogType)
+s32 cellOskDialogGetSize(vm::ptr<u16> width, vm::ptr<u16> height, u32 /*CellOskDialogType*/ dialogType)
 {
 	cellOskDialog.warning("cellOskDialogGetSize(width=*0x%x, height=*0x%x, dialogType=*0x%x)", width, height, dialogType);
-	*width = 1;
+
+	if (!width || !height)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
+	if (dialogType >= CELL_OSKDIALOG_TYPE_SEPARATE_SINGLELINE_TEXT_WINDOW)
+	{
+		*width = 0;
+	}
+	else
+	{
+		*width = 1;
+	}
+
 	*height = 1;
+
 	return CELL_OK;
 }
 
