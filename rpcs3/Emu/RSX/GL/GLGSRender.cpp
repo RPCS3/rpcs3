@@ -1636,8 +1636,8 @@ void GLGSRender::flip(int buffer)
 				buffer_width = rsx::apply_resolution_scale(buffer_width, true);
 				buffer_height = rsx::apply_resolution_scale(buffer_height, true);
 
-				if (buffer_width < render_target_texture->width() ||
-					buffer_height < render_target_texture->height())
+				if (buffer_width > render_target_texture->width() ||
+					buffer_height > render_target_texture->height())
 				{
 					// TODO: Should emit only once to avoid flooding the log file
 					// TODO: Take AA scaling into account
