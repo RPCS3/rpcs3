@@ -57,8 +57,10 @@ void pad_thread::Init()
 		}
 	}
 
+	const u32 system_info = m_info.system_info;
 	std::memset(&m_info, 0, sizeof(m_info));
 	m_info.now_connect = 0;
+	m_info.system_info |= system_info;
 
 	m_pads.clear();
 	handlers.clear();
@@ -145,6 +147,18 @@ void pad_thread::Reset()
 void pad_thread::SetEnabled(bool enabled)
 {
 	is_enabled = enabled;
+}
+
+void pad_thread::SetIntercepted(bool intercepted)
+{
+	if (intercepted)
+	{
+		m_info.system_info |= CELL_PAD_INFO_INTERCEPTED;
+	}
+	else
+	{
+		m_info.system_info &= ~CELL_PAD_INFO_INTERCEPTED;
+	}
 }
 
 void pad_thread::ThreadFunc()

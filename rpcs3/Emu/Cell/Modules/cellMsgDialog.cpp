@@ -87,7 +87,12 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 
 	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
-		manager->create<rsx::overlays::message_dialog>()->show(msgString.get_ptr(), _type, [callback, userData](s32 status)
+		if (manager->get<rsx::overlays::message_dialog>())
+		{
+			return CELL_SYSUTIL_ERROR_BUSY;
+		}
+
+		const auto res = manager->create<rsx::overlays::message_dialog>()->show(msgString.get_ptr(), _type, [callback, userData](s32 status)
 		{
 			if (callback)
 			{
@@ -99,7 +104,7 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 			}
 		});
 
-		return CELL_OK;
+		return res;
 	}
 
 	const auto dlg = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
@@ -128,7 +133,11 @@ s32 cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialog
 
 			fxm::remove<MsgDialogBase>();
 		}
+
+		pad::SetIntercepted(false);
 	};
+
+	pad::SetIntercepted(true);
 
 	atomic_t<bool> result(false);
 

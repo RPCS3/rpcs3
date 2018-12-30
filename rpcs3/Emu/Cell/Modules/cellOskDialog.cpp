@@ -1,6 +1,8 @@
 #include "stdafx.h"
-#include "Emu/Cell/PPUModule.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
+#include "Emu/Cell/PPUModule.h"
+#include "pad_thread.h"
 
 #include "cellSysutil.h"
 #include "cellOskDialog.h"
@@ -22,14 +24,28 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 		for (u32 i = 0; (i < maxLength) && (inputFieldInfo->init_text[i] != 0); i++)
 			s_osk_text[i] = inputFieldInfo->init_text[i];
 
-	const auto osk = Emu.GetCallbacks().get_msg_dialog();
+	const auto osk = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
+
+	if (!osk)
+	{
+		return CELL_SYSUTIL_ERROR_BUSY;
+	}
+
 	bool result = false;
 
-	osk->on_close = [&](s32 status)
+	osk->on_close = [wptr = std::weak_ptr<MsgDialogBase>(osk)](s32 status)
 	{
+		const auto osk = wptr.lock();
+
+		if (osk && osk->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Close))
+		{
+			fxm::remove<MsgDialogBase>();
+		}
+
 		if (status != CELL_MSGDIALOG_BUTTON_OK) sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED, 0);
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
-		result = true;
+
+		pad::SetIntercepted(false);
 	};
 
 	osk->on_osk_input_entered = [&]()
@@ -37,9 +53,12 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
 	};
 
+	pad::SetIntercepted(true);
+
 	Emu.CallAfter([&]()
 	{
 		osk->CreateOsk("On Screen Keyboard", s_osk_text, maxLength);
+		result = true;
 	});
 
 	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
@@ -78,6 +97,21 @@ s32 cellOskDialogGetSize(vm::ptr<u16> width, vm::ptr<u16> height, vm::ptr<CellOs
 s32 cellOskDialogAbort()
 {
 	cellOskDialog.warning("cellOskDialogAbort()");
+
+	const auto dlg = fxm::get<MsgDialogBase>();
+
+	if (!dlg)
+	{
+		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
+	}
+
+	if (!dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Abort))
+	{
+		return CELL_SYSUTIL_ERROR_BUSY;
+	}
+
+	verify(HERE), fxm::remove<MsgDialogBase>();
+
 	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 	return CELL_OK;
 }
@@ -133,7 +167,7 @@ s32 cellOskDialogSetLayoutMode(s32 layoutMode)
 s32 cellOskDialogGetInputText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo)
 {
 	cellOskDialog.warning("cellOskDialogGetInputText(OutputInfo=*0x%x)", OutputInfo);
-	return cellOskDialogUnloadAsync(OutputInfo); //Same but for use with cellOskDialogSetSeparateWindowOption(). TODO.
+	return cellOskDialogUnloadAsync(OutputInfo); // Same but for use with cellOskDialogSetSeparateWindowOption(). TODO.
 }
 
 s32 cellOskDialogExtInputDeviceUnlock()
@@ -220,9 +254,9 @@ s32 cellOskDialogExtSetPointerEnable(b8 enable)
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtUpdatePointerDisplayPos()
+s32 cellOskDialogExtUpdatePointerDisplayPos(/*const CellOskDialogPoint pos*/)
 {
-	cellOskDialog.todo("cellOskDialogExtUpdatePointerDisplayPos"); // Missing arguments
+	cellOskDialog.todo("cellOskDialogExtUpdatePointerDisplayPos(posX=%f, posY=%f)"/*, pos.x, pos.y*/);
 	return CELL_OK;
 }
 

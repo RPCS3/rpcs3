@@ -24,7 +24,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	m_text = new QLabel(qstr(msg));
 	m_text->setAlignment(Qt::AlignCenter);
 
-	//Layout
+	// Layout
 	QFormLayout* layout = new QFormLayout(m_dialog);
 	layout->setFormAlignment(Qt::AlignHCenter);
 	layout->addRow(m_text);
@@ -140,7 +140,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 		}
 	});
 
-	//Fix size
+	// Fix size
 	m_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
 	m_dialog->show();
 
@@ -164,30 +164,30 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 	m_osk_dialog->setModal(true);
 	m_osk_text_return = osk_text;
 
-	//Title
+	// Title
 	m_osk_dialog->setWindowTitle(qstr(msg));
 
-	//Text Input
+	// Text Input
 	QLineEdit* input = new QLineEdit(m_osk_dialog);
 	input->setFixedWidth(lineEditWidth());
 	input->setMaxLength(charlimit);
 	input->setText(QString::fromStdU16String(std::u16string(m_osk_text_return)));
 	input->setFocus();
 
-	//Text Input Counter
+	// Text Input Counter
 	QLabel* inputCount = new QLabel(QString("%1/%2").arg(input->text().length()).arg(charlimit));
 
-	//Ok Button
+	// Ok Button
 	QPushButton* button_ok = new QPushButton("Ok", m_osk_dialog);
 
-	//Button Layout
+	// Button Layout
 	QHBoxLayout* buttonsLayout = new QHBoxLayout;
 	buttonsLayout->setAlignment(Qt::AlignCenter);
 	buttonsLayout->addStretch();
 	buttonsLayout->addWidget(button_ok);
 	buttonsLayout->addStretch();
 
-	//Input Layout
+	// Input Layout
 	QHBoxLayout* inputLayout = new QHBoxLayout;
 	inputLayout->setAlignment(Qt::AlignHCenter);
 	inputLayout->addWidget(input);
@@ -199,7 +199,7 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 	layout->addRow(buttonsLayout);
 	m_osk_dialog->setLayout(layout);
 
-	//Events
+	// Events
 	connect(input, &QLineEdit::textChanged, [=](const QString& text)
 	{
 		inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
@@ -223,7 +223,7 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 		on_close(CELL_MSGDIALOG_BUTTON_OK);
 	});
 
-	//Fix size
+	// Fix size
 	m_osk_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
 	m_osk_dialog->show();
 }
@@ -385,7 +385,7 @@ void msg_dialog_frame::UpdateProgress(int progress, bool disable)
 		properties.insert(QStringLiteral("progress-visible"), false);
 	else
 		properties.insert(QStringLiteral("progress-visible"), true);
-	//Progress takes a value from 0.0 to 0.1
+	// Progress takes a value from 0.0 to 0.1
 	properties.insert(QStringLiteral("progress"), (double)progress/(double)m_gauge_max);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);

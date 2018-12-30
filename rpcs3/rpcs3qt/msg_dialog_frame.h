@@ -51,7 +51,7 @@ private:
 	QProgressBar* m_gauge1 = nullptr;
 	QProgressBar* m_gauge2 = nullptr;
 
-	QWindow* m_taskbarTarget;	// Window which will be targeted by custom taskbars.
+	QWindow* m_taskbarTarget; // Window which will be targeted by custom taskbars.
 
 	custom_dialog* m_osk_dialog = nullptr;
 	char16_t* m_osk_text_return;

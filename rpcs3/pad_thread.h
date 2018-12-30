@@ -25,6 +25,7 @@ public:
 	void Init();
 	void Reset();
 	void SetEnabled(bool enabled);
+	void SetIntercepted(bool intercepted);
 
 protected:
 	void ThreadFunc();
@@ -36,7 +37,7 @@ protected:
 	void *curthread;
 	void *curwindow;
 
-	PadInfo m_info;
+	PadInfo m_info{ 0, 0 };
 	std::vector<std::shared_ptr<Pad>> m_pads;
 
 	atomic_t<bool> active{ false };
@@ -54,4 +55,11 @@ namespace pad
 	{
 		return verify(HERE, g_current.load());
 	};
+
+	static inline void SetIntercepted(bool intercepted)
+	{
+		std::lock_guard lock(g_pad_mutex);
+		const auto handler = get_current_handler();
+		handler->SetIntercepted(intercepted);
+	}
 }
