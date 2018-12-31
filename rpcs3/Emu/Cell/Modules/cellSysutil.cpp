@@ -6,42 +6,26 @@
 #include "cellSysutil.h"
 
 #include "Utilities/StrUtil.h"
-
-#include <mutex>
-#include <queue>
+#include "Utilities/lockless.h"
 
 LOG_CHANNEL(cellSysutil);
 
 struct sysutil_cb_manager
 {
-	std::mutex mutex;
-
-	std::array<std::pair<vm::ptr<CellSysutilCallback>, vm::ptr<void>>, 4> callbacks;
-
-	std::queue<std::function<s32(ppu_thread&)>> registered;
-
-	std::function<s32(ppu_thread&)> get_cb()
+	struct alignas(8) registered_cb
 	{
-		std::lock_guard lock(mutex);
+		vm::ptr<CellSysutilCallback> first;
+		vm::ptr<void> second;
+	};
 
-		if (registered.empty())
-		{
-			return nullptr;
-		}
+	atomic_t<registered_cb> callbacks[4]{};
 
-		auto func = std::move(registered.front());
-
-		registered.pop();
-
-		return func;
-	}
+	lf_queue<std::function<s32(ppu_thread&)>> registered;
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
-
-	std::lock_guard lock(cbm->mutex);
 
 	cbm->registered.push(std::move(cb));
 }
@@ -50,12 +34,10 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 {
 	if (const auto cbm = fxm::get<sysutil_cb_manager>())
 	{
-		for (auto& cb : cbm->callbacks)
+		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
 			if (cb.first)
 			{
-				std::lock_guard lock(cbm->mutex);
-
 				cbm->registered.push([=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
@@ -244,10 +226,11 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	while (auto func = cbm->get_cb())
+	for (auto list = cbm->registered.pop_all(); list; list = list->pop_all())
 	{
-		if (s32 res = func(ppu))
+		if (s32 res = list->get()(ppu))
 		{
+			// Currently impossible
 			return not_an_error(res);
 		}
 
@@ -271,7 +254,7 @@ s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm:
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	cbm->callbacks[slot] = std::make_pair(func, userdata);
+	cbm->callbacks[slot].store({func, userdata});
 
 	return CELL_OK;
 }
@@ -287,7 +270,7 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	cbm->callbacks[slot] = std::make_pair(vm::null, vm::null);
+	cbm->callbacks[slot].store({});
 
 	return CELL_OK;
 }
