@@ -590,7 +590,17 @@ static size_t get_texture_size(u32 format, u16 width, u16 height, u16 depth, u32
 	const bool packed = !(format & CELL_GCM_TEXTURE_LN);
 	const auto texel_rows_per_line = get_format_texel_rows_per_line(gcm_format);
 
-	verify(HERE), packed || pitch;
+	if (!pitch && !packed)
+	{
+		if (width > 1 || height > 1)
+		{
+			// If width == 1, the scanning just returns texel 0, so it is a valid setup
+			LOG_ERROR(RSX, "Invalid texture pitch setup, width=%d, height=%d, format=0x%x(0x%x)",
+				width, height, format, gcm_format);
+		}
+
+		pitch = get_format_packed_pitch(gcm_format, width);
+	}
 
 	u32 size = 0;
 	if (!packed)
