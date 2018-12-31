@@ -2942,6 +2942,12 @@ namespace rsx
 				ptimer->async_tasks_pending -= processed;
 			}
 
+			if (ptimer->conditional_render_enabled && ptimer->conditional_render_test_address)
+			{
+				ptimer->conditional_render_test_failed = vm::read32(ptimer->conditional_render_test_address) == 0;
+				ptimer->conditional_render_test_address = 0;
+			}
+
 			//Critical, since its likely a WAIT_FOR_IDLE type has been processed, all results are considered available
 			m_cycles_delay = min_zcull_delay_us;
 			m_tsc = std::max(m_tsc, get_system_time());

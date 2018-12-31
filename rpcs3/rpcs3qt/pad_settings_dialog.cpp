@@ -467,6 +467,33 @@ void pad_settings_dialog::ReloadButtons()
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
 
+	// Enable Mouse Deadzones
+	std::vector<std::string> mouse_dz_range_x = m_handler_cfg.mouse_deadzone_x.to_list();
+	ui->mouse_dz_x->setRange(std::stoi(mouse_dz_range_x.front()), std::stoi(mouse_dz_range_x.back()));
+	ui->mouse_dz_x->setValue(m_handler_cfg.mouse_deadzone_x);
+
+	std::vector<std::string> mouse_dz_range_y = m_handler_cfg.mouse_deadzone_y.to_list();
+	ui->mouse_dz_y->setRange(std::stoi(mouse_dz_range_y.front()), std::stoi(mouse_dz_range_y.back()));
+	ui->mouse_dz_y->setValue(m_handler_cfg.mouse_deadzone_y);
+
+	// Enable Mouse Acceleration
+	std::vector<std::string> mouse_accel_range_x = m_handler_cfg.mouse_acceleration_x.to_list();
+	ui->mouse_accel_x->setRange(std::stod(mouse_accel_range_x.front()) / 100.0, std::stod(mouse_accel_range_x.back()) / 100.0);
+	ui->mouse_accel_x->setValue((double)m_handler_cfg.mouse_acceleration_x / 100.0);
+
+	std::vector<std::string> mouse_accel_range_y = m_handler_cfg.mouse_acceleration_y.to_list();
+	ui->mouse_accel_y->setRange(std::stod(mouse_accel_range_y.front()) / 100.0, std::stod(mouse_accel_range_y.back()) / 100.0);
+	ui->mouse_accel_y->setValue((double)m_handler_cfg.mouse_acceleration_y / 100.0);
+
+	// Enable Stick Lerp Factors
+	std::vector<std::string> left_stick_lerp_range = m_handler_cfg.l_stick_lerp_factor.to_list();
+	ui->left_stick_lerp->setRange(std::stod(left_stick_lerp_range.front()) / 100.0, std::stod(left_stick_lerp_range.back()) / 100.0);
+	ui->left_stick_lerp->setValue((double)m_handler_cfg.l_stick_lerp_factor / 100.0);
+
+	std::vector<std::string> right_stick_lerp_range = m_handler_cfg.r_stick_lerp_factor.to_list();
+	ui->right_stick_lerp->setRange(std::stod(right_stick_lerp_range.front()) / 100.0, std::stod(right_stick_lerp_range.back()) / 100.0);
+	ui->right_stick_lerp->setValue((double)m_handler_cfg.r_stick_lerp_factor / 100.0);
+
 	// Enable Vibration Checkboxes
 	m_enable_rumble = m_handler->has_rumble();
 
@@ -708,6 +735,9 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
 	ui->gb_triggers->setEnabled(is_enabled && m_enable_deadzones);
+	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
+	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
+	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
@@ -827,6 +857,10 @@ void pad_settings_dialog::ChangeInputType()
 	// Get this player's current handler and it's currently available devices
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	const auto device_list = m_handler->ListDevices();
+
+	// change our contextual widgets
+	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
+	ui->right_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 
 	// Refill the device combobox with currently available devices
 	switch (m_handler->m_type)
@@ -1016,6 +1050,16 @@ void pad_settings_dialog::SaveProfile()
 		m_handler_cfg.rtriggerthreshold.set(ui->slider_trigger_right->value());
 		m_handler_cfg.lstickdeadzone.set(ui->slider_stick_left->value());
 		m_handler_cfg.rstickdeadzone.set(ui->slider_stick_right->value());
+	}
+
+	if (m_handler->m_type == pad_handler::keyboard)
+	{
+		m_handler_cfg.mouse_acceleration_x.set(ui->mouse_accel_x->value() * 100);
+		m_handler_cfg.mouse_acceleration_y.set(ui->mouse_accel_y->value() * 100);
+		m_handler_cfg.mouse_deadzone_x.set(ui->mouse_dz_x->value());
+		m_handler_cfg.mouse_deadzone_y.set(ui->mouse_dz_y->value());
+		m_handler_cfg.l_stick_lerp_factor.set(ui->left_stick_lerp->value() * 100);
+		m_handler_cfg.r_stick_lerp_factor.set(ui->right_stick_lerp->value() * 100);
 	}
 
 	m_handler_cfg.save();

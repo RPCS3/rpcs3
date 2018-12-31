@@ -343,6 +343,13 @@ QTableWidget#game_grid {
 	font-weight: 600;
 	color: #4d4940;
 	text-transform: uppercase;
+	selection-color: #aea993;
+}
+QTableWidget#game_grid::item:selected:active {
+	selection-background-color: #4d4940;
+}
+QTableWidget#game_grid::item:selected:!active {
+	selection-background-color: #615c51;
 }
 
 

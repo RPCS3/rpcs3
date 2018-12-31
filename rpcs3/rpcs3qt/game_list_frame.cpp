@@ -199,6 +199,7 @@ void game_list_frame::LoadSettings()
 		m_gameList->setColumnHidden(col, !vis);
 	}
 
+	SortGameList();
 	FixNarrowColumns();
 
 	m_gameList->horizontalHeader()->restoreState(m_gameList->horizontalHeader()->saveState());

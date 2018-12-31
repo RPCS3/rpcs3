@@ -395,8 +395,6 @@ public:
 		u32 v1, v2;
 	};
 	attr_t attr[500]{};
-
-	lv2_memory_container container;
 	atomic_t<u32> frame_num;
 };
 

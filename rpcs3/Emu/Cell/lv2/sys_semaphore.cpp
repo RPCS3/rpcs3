@@ -201,16 +201,11 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 {
 	sys_semaphore.trace("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
-	if (count < 0)
-	{
-		return CELL_EINVAL;
-	}
-
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
 	{
 		const s32 val = sema.val;
 
-		if (val >= 0 && count <= sema.max - val)
+		if (val >= 0 && count > 0 && count <= sema.max - val)
 		{
 			if (sema.val.compare_and_swap_test(val, val + count))
 			{
@@ -224,6 +219,11 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	if (!sem)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (count <= 0)
+	{
+		return CELL_EINVAL;
 	}
 
 	if (sem.ret)

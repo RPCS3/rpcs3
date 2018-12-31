@@ -100,7 +100,7 @@
               <item>
                <widget class="QRadioButton" name="spu_asmjit">
                 <property name="text">
-                 <string>ASMJIT Recompiler (fastest)</string>
+                 <string>ASMJIT Recompiler (faster)</string>
                 </property>
                </widget>
               </item>
@@ -270,7 +270,7 @@
          <item>
           <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="1,0">
            <item>
-            <widget class="QGroupBox" name="groupBox_28">
+            <widget class="QGroupBox" name="gb_libs">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -349,7 +349,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox_41">
+        <widget class="QGroupBox" name="gb_description">
          <property name="title">
           <string>Description</string>
          </property>
@@ -388,7 +388,7 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_7">
            <item>
-            <widget class="QGroupBox" name="groupBox_26">
+            <widget class="QGroupBox" name="gb_renderer">
              <property name="title">
               <string>Renderer</string>
              </property>
@@ -400,7 +400,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="groupBox_42">
+            <widget class="QGroupBox" name="gb_graphicsAdapter">
              <property name="title">
               <string>Graphics Device</string>
              </property>
@@ -414,7 +414,7 @@
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,1">
              <item>
-              <widget class="QGroupBox" name="groupBox_44">
+              <widget class="QGroupBox" name="gb_aspectRatio">
                <property name="title">
                 <string>Aspect Ratio</string>
                </property>
@@ -426,7 +426,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="groupBox_45">
+              <widget class="QGroupBox" name="gb_frameLimit">
                <property name="title">
                 <string>Framelimit</string>
                </property>
@@ -489,7 +489,7 @@
          <item>
           <layout class="QVBoxLayout" name="verticalLayout_21">
            <item>
-            <widget class="QGroupBox" name="groupBox_29">
+            <widget class="QGroupBox" name="gb_default_resolution">
              <property name="title">
               <string>Default Resolution</string>
              </property>
@@ -667,13 +667,6 @@
              <widget class="QCheckBox" name="dumpColor">
               <property name="text">
                <string>Write Color Buffers</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="gpuTextureScaling">
-              <property name="text">
-               <string>Use GPU Texture Scaling</string>
               </property>
              </widget>
             </item>
@@ -870,6 +863,12 @@
                 </property>
                 <property name="sizeType">
                  <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
                 </property>
                </spacer>
               </item>
@@ -1156,7 +1155,7 @@
            <property name="title">
             <string>Disk cache</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_73">
+           <layout class="QVBoxLayout" name="verticalLayout_75">
             <item>
              <widget class="QCheckBox" name="enableCacheClearing">
               <property name="text">
@@ -2032,7 +2031,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_21" stretch="1,1,1">
          <item>
-          <widget class="QGroupBox" name="groupBox_48">
+          <widget class="QGroupBox" name="gb_debug_gpu">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -2141,6 +2140,13 @@
              <widget class="QCheckBox" name="strictTextureFlushing">
               <property name="text">
                <string>Strict Texture Flushing</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="gpuTextureScaling">
+              <property name="text">
+               <string>Use GPU Texture Scaling</string>
               </property>
              </widget>
             </item>
@@ -2269,7 +2275,7 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="buttonLayout">
      <item alignment="Qt::AlignLeft">
       <widget class="QPushButton" name="okButton">
        <property name="text">

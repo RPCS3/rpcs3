@@ -16,8 +16,8 @@
 		"SPU": {
 			"precise": "This is extremely slow but may fix broken graphics in some games.",
 			"fast": "This is slower than the SPU Recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
-			"ASMJIT": "This is the fastest option with very good compatibility.\nIf unsure, use this option.",
-			"LLVM": "Experimental. May improve performance, but may also break games."
+			"ASMJIT": "This is the fast option with very good compatibility.\nIf unsure, use this option.",
+			"LLVM": "This is the fastest option with very good compatibility.\nRecompiles the game's SPU LLVM cache before running which adds extra start-up time.\nIf you experience issues, use the ASMJIT Recompiler."
 		},
 		"libraries": {
 			"auto": "Automatically selects the LLE libraries to load.\nWhile this option works fine in most cases, liblv2 is the preferred option.",
@@ -28,7 +28,7 @@
 		"checkboxes": {
 			"accurateXFloat": "Fixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU LLVM is active.",
 			"spuCache": "Should normally stay enabled.\nDisable this if the cache becomes too large.\nDisabling it does not remove the existing cache.",
-			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.",
+			"enableThreadScheduler": "Allows RPCS3 to manually schedule physical cores to run specific tasks on, instead of letting the OS handle it.\nVery useful on Windows, especially for AMD Ryzen systems where it can give huge performance gains.\nNote: This function is only implemented for AMD Ryzen CPUs.",
 			"lowerSPUThrPrio": "Runs SPU threads with lower priority than PPU threads.\nUsually faster on an i3 or i5, possibly slower or no difference on an i7 or Ryzen.",
 			"spuLoopDetection": "Try to detect loop conditions in SPU kernels and use them as scheduling hints.\nImproves performance and reduces CPU usage.\nMay cause severe audio stuttering in rare cases."
 		},
@@ -59,6 +59,7 @@
 		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory.",
 		"disableVulkanMemAllocator": "Disables the custom Vulkan memory allocator and reverts to direct calls to VkAllocateMemory/VkFreeMemory.",
 		"disableFIFOReordering": "Disables RSX FIFO optimizations completely. Draws are processed as they are received by the DMA puller.",
+		"gpuTextureScaling": "Force all texture transfer, scaling and conversion operations on the GPU.\nMay cause texture corruption in some cases.",
 		"strictTextureFlushing": "Forces texture flushing even in situations where it is not necessary/correct. Known to cause visual artifacts, but useful for debugging certain texture cache issues."
 	},
 	"emulator": {
@@ -66,17 +67,17 @@
 			"exitOnStop": "Automatically close RPCS3 when closing a game, or when a game closes itself.",
 			"alwaysStart": "Leave this enabled unless you are a developer.",
 			"startGameFullscreen": "Automatically puts the game window in fullscreen.\nDouble click on the game window or press alt+enter to toggle fullscreen and windowed mode.",
-			"showFPSInTitle": "Shows the framerate in the game window title. May cause buggy or outdated recording software to not notice RPCS3.",
+			"showFPSInTitle": "Shows the frame rate in the game window title. May cause buggy or outdated recording software to not notice RPCS3.",
 			"gs_resizeOnBoot": "Automatically resizes the game window on boot.\nThis does not change the internal game resolution.",
-			"showTrophyPopups": "Show trophy popups when a trophy is unlocked.",
-			"gs_disableMouse": "Disables the activation of fullscreen mode per doubleclick while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR).",
+			"showTrophyPopups": "Show trophy pop-ups when a trophy is unlocked.",
+			"gs_disableMouse": "Disables the activation of fullscreen mode per double-click while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR).",
 			"maxLLVMThreads": "Limits the maximum number of threads used for PPU Module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.",
 			"showShaderCompilationHint": "Show shader compilation hints using the native overlay.",
 			"useNativeInterface": "Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, only the English language is supported."
 		},
 		"overlay": {
 			"perfOverlayEnabled": "Enables or disables the performance overlay.",
-			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the perfomance overlay.",
+			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the performance overlay.",
 			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
 			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
 			"perfOverlayFontSize": "Sets the font size of the performance overlay (measured in pixels).",
@@ -100,7 +101,7 @@
 			"graphicsAdapterBox": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan or DirectX 12.\nThis is not needed when using OpenGL.",
 			"graphicsAdapterBox_Linux": "On multi GPU systems select which GPU to use in RPCS3 when using Vulkan.\nThis is not needed when using OpenGL.",
 			"aspectBox": "Leave this on 16:9 unless you have a 4:3 monitor.\nAuto also works well, especially if you use a resolution that is not 720p.",
-			"frameLimitBox": "Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the framerate is too high.\nIf that happens, set value to anything other than Off.",
+			"frameLimitBox": "Off is the best option as it performs faster.\nUsing the frame limiter will add extra overhead and slow down the game.\nHowever, some games will crash if the frame rate is too high.\nIf that happens, set value to anything other than Off.",
 			"anisotropicFilterOverride": "Higher values increase sharpness of textures on sloped surfaces at the cost of GPU resources.\nModern GPUs can handle this setting just fine even at 16x.\nKeep this on Automatic if you want to use the original setting used by a real PS3."
 		},
 		"sliders": {
@@ -110,7 +111,6 @@
 		"main": {
 			"dumpColor": "Enable this option if you get missing graphics or broken lighting ingame.\nMight degrade performance and introduce stuttering in some cases.\nRequired for Demon's Souls.",
 			"vsync": "By having this off you might obtain a higher frame rate at the cost of tearing artifacts in the game.",
-			"gpuTextureScaling": "Small to significant performance boost in most games and rarely with side effects.\nMay cause texture corruption in rare cases.",
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
 			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
 			"disableAsyncShaders": "Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces stuttering.\nDisable if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.",
@@ -127,7 +127,7 @@
 	},
 	"input": {
 		"padHandlerBox": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nIf you have an Xbox controller, or another compatible device, use XInput.\nOlder controllers such as PS2 controllers with an adapter usually work fine with MMJoystick.\nCheck button mappings in the Windows control panel.",
-		"padHandlerBox_Linux": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.\nevdev input is WIP.",
+		"padHandlerBox_Linux": "If you want to use the keyboard to control, select the Keyboard option.\nIf you have a DualShock 4, select DualShock 4.",
 		"keyboardHandlerBox": "Some games support native keyboard input.\nBasic will work in these cases.",
 		"mouseHandlerBox": "Some games support native mouse input.\nBasic will work in these cases.",
 		"cameraBox": "Camera support is not implemented, leave this on null.",
@@ -139,8 +139,8 @@
 	},
 	"system": {
 		"sysLangBox": "Some games may fail to boot if the system language is not available in the game itself.\nOther games will switch language automatically to what is selected here.\nIt is recommended leaving this on a language supported by the game.",
-		"enterButtonAssignment": "The button used for enter/accept/confirm in system dialogs.\nChange this to use the circle button instead, which is the default configuration on japanese systems and in many japanese games.\nIn these cases having the cross button assigned can often lead to confusion.",
+		"enterButtonAssignment": "The button used for enter/accept/confirm in system dialogs.\nChange this to use the circle button instead, which is the default configuration on Japanese systems and in many Japanese games.\nIn these cases having the cross button assigned can often lead to confusion.",
 		"enableHostRoot": "Required for some Homebrew.\nIf unsure, don't use this option.",
-		"limitCacheSize": "Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long term storage."
+		"limitCacheSize": "Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long-term storage."
 	}
 }
