@@ -1579,6 +1579,8 @@ extern void ppu_initialize(const ppu_module& info)
 
 				if (!Emu.IsStopped())
 				{
+					LOG_WARNING(PPU, "LLVM: Compiling module %s", obj_name);
+
 					// Use another JIT instance
 					jit_compiler jit2({}, g_cfg.core.llvm_cpu);
 					ppu_initialize2(jit2, part, cache_path, obj_name);
@@ -1595,6 +1597,8 @@ extern void ppu_initialize(const ppu_module& info)
 			// Proceed with original JIT instance
 			std::lock_guard lock(jmutex);
 			jit->add(cache_path + obj_name);
+
+			LOG_SUCCESS(PPU, "LLVM: Compiled module %s", obj_name);
 		});
 	}
 
