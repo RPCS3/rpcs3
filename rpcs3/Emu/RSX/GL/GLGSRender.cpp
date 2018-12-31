@@ -214,12 +214,20 @@ void GLGSRender::end()
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 
 	// Handle special memory barrier for ARGB8->D24S8 in an active DSV
-	if (ds && ds->old_contents != nullptr && ds->get_rsx_pitch() == static_cast<gl::render_target*>(ds->old_contents)->get_rsx_pitch() &&
-		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8)
+	if (ds && ds->old_contents != nullptr &&
+		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8 &&
+		ds->get_rsx_pitch() == static_cast<gl::render_target*>(ds->old_contents)->get_rsx_pitch())
 	{
-		// TODO: Partial memory transfer
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
-		m_depth_converter.run(ds->width(), ds->height(), ds->id(), ds->old_contents->id());
+
+		// TODO: Stencil transfer
+		gl::g_hw_blitter->fast_clear_image(cmd, ds, 1.f, 0xFF);
+
+		const auto region = rsx::get_transferable_region(ds);
+		m_depth_converter.run({0, 0, std::get<0>(region), std::get<1>(region)},
+			{0, 0, std::get<2>(region), std::get<3>(region)},
+			ds->old_contents, ds);
+
 		ds->on_write();
 	}
 
