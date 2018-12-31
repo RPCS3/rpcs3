@@ -33,7 +33,20 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	ls
 	COMM_TAG="$(git describe --tags $(git rev-list --tags --max-count=1))"
 	COMM_COUNT="$(git rev-list --count HEAD)"
-	echo $(curl "${UPLOAD_URL}${TRAVIS_COMMIT:0:8}&t=${COMM_TAG}&a=${COMM_COUNT}" --upload-file ./RPCS3*.AppImage)
+	curl -sLO https://github.com/hcorion/uploadtool/raw/master/upload.sh
+	
+	mv ./RPCS3*.AppImage rpcs3-${COMM_TAG}-${COMM_COUNT}-${TRAVIS_COMMIT:0:8}_linux64.AppImage
+	
+	FILESIZEMB=$(bc <<< "scale=6; $(stat -c %s ./rpcs3*.AppImage)/1000000")
+	SHA256SUM=($(sha256sum ./rpcs3*.AppImage))
+	
+	unset TRAVIS_REPO_SLUG
+	REPO_SLUG=RPCS3/rpcs3-binaries-linux \
+		UPLOADTOOL_BODY="$SHA256SUM;${FILESIZEMB}MB"\
+		RELEASE_NAME=build-${TRAVIS_COMMIT}\
+		RELEASE_TITLE=${COMM_TAG}-${COMM_COUNT}\
+		REPO_COMMIT=d812f1254a1157c80fd402f94446310560f54e5f\
+		bash upload.sh rpcs3*.AppImage
 fi
 if [ "$DEPLOY_PPA" = "true" ]; then
 	export DEBFULLNAME="RPCS3 Build Bot"
