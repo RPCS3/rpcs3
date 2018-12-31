@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "GLHelpers.h"
@@ -250,6 +250,7 @@ namespace gl
 			vs_src =
 			{
 				"#version 420\n\n"
+				"uniform vec2 tex_scale;\n"
 				"out vec2 tc0;\n"
 				"\n"
 				"void main()\n"
@@ -257,7 +258,7 @@ namespace gl
 				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
 				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
 				"	gl_Position = vec4(positions[gl_VertexID % 4], 0., 1.);\n"
-				"	tc0 = coords[gl_VertexID % 4];\n"
+				"	tc0 = coords[gl_VertexID % 4] * tex_scale;\n"
 				"}\n"
 			};
 
@@ -275,12 +276,17 @@ namespace gl
 			};
 		}
 
-		void run(u16 w, u16 h, GLuint target, GLuint source)
+		void run(const areai& src_area, const areai& dst_area, gl::texture* source, gl::texture* target)
 		{
-			glActiveTexture(GL_TEXTURE31);
-			glBindTexture(GL_TEXTURE_2D, source);
+			const auto src_ratio_x = f32(src_area.x2) / source->width();
+			const auto src_ratio_y = f32(src_area.y2) / source->height();
 
-			overlay_pass::run(w, h, target, true);
+			program_handle.uniforms["tex_scale"] = color2f(src_ratio_x, src_ratio_y);
+
+			glActiveTexture(GL_TEXTURE31);
+			glBindTexture(GL_TEXTURE_2D, source->id());
+
+			overlay_pass::run(dst_area.x2, dst_area.y2, target->id(), true);
 		}
 	};
 

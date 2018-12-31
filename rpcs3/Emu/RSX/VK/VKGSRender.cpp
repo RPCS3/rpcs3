@@ -1334,21 +1334,32 @@ void VKGSRender::end()
 
 	// Check for data casts
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-	if (ds && ds->old_contents)
+	if (ds && ds->old_contents &&
+		ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM &&
+		ds->get_rsx_pitch() == static_cast<vk::render_target*>(ds->old_contents)->get_rsx_pitch())
 	{
-		if (UNLIKELY(ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM))
-		{
-			// TODO: Partial memory transfer
-			auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
-			auto render_pass = m_render_passes[rp];
-			verify("Usupported renderpass configuration" HERE), render_pass != VK_NULL_HANDLE;
+		auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
+		auto render_pass = m_render_passes[rp];
+		verify("Usupported renderpass configuration" HERE), render_pass != VK_NULL_HANDLE;
 
-			m_depth_converter->run(*m_current_command_buffer, ds->width(), ds->height(), ds,
-				static_cast<vk::render_target*>(ds->old_contents)->get_view(0xAAE4, rsx::default_remap_vector),
-				render_pass, m_framebuffers_to_clean);
+		VkClearDepthStencilValue clear = { 1.f, 0xFF };
+		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
 
-			ds->on_write();
-		}
+		// Clear explicitly before starting the inheritance transfer
+		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_GENERAL, range);
+		vkCmdClearDepthStencilImage(*m_current_command_buffer, ds->value, VK_IMAGE_LAYOUT_GENERAL, &clear, 1, &range);
+		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+
+		// TODO: Stencil transfer
+		const auto region = rsx::get_transferable_region(ds);
+		m_depth_converter->run(*m_current_command_buffer,
+			{ 0, 0, std::get<0>(region), std::get<1>(region) },
+			{ 0, 0, std::get<2>(region), std::get<3>(region) },
+			static_cast<vk::render_target*>(ds->old_contents)->get_view(0xAAE4, rsx::default_remap_vector),
+			ds, render_pass, m_framebuffers_to_clean);
+
+		// TODO: Flush management to avoid pass running out of ubo space (very unlikely)
+		ds->on_write();
 	}
 
 	//Load textures

@@ -448,6 +448,7 @@ namespace rsx
 
 	/**
 	 * Calculates the regions used for memory transfer between rendertargets on succession events
+	 * Returns <src_w, src_h, dst_w, dst_h>
 	 */
 	template <typename SurfaceType>
 	std::tuple<u16, u16, u16, u16> get_transferable_region(SurfaceType* surface)

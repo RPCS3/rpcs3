@@ -396,12 +396,16 @@ namespace vk
 
 	struct depth_convert_pass : public overlay_pass
 	{
+		f32 src_scale_x;
+		f32 src_scale_y;
+
 		depth_convert_pass()
 		{
 			vs_src =
 			{
 				"#version 450\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
+				"layout(std140, set=0, binding=0) uniform static_data{ vec4 regs[8]; };\n"
 				"layout(location=0) out vec2 tc0;\n"
 				"\n"
 				"void main()\n"
@@ -409,7 +413,7 @@ namespace vk
 				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
 				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
 				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
-				"	tc0 = coords[gl_VertexIndex % 4];\n"
+				"	tc0 = coords[gl_VertexIndex % 4] * regs[0].xy;\n"
 				"}\n"
 			};
 
@@ -430,7 +434,28 @@ namespace vk
 
 			renderpass_config.set_depth_mask(true);
 			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
-			renderpass_config.enable_stencil_test(VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_COMPARE_OP_ALWAYS, 0xFF, 0xFF);
+		}
+
+		void update_uniforms(vk::glsl::program* /*program*/) override
+		{
+			m_ubo_offset = (u32)m_ubo.alloc<256>(128);
+			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
+			dst[0] = src_scale_x;
+			dst[1] = src_scale_y;
+			dst[2] = 0.f;
+			dst[3] = 0.f;
+			m_ubo.unmap();
+		}
+
+		void run(vk::command_buffer& cmd, const areai& src_area, const areai& dst_area, vk::image_view* src, vk::image* dst, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		{
+			auto real_src = src->image();
+			verify(HERE), real_src;
+
+			src_scale_x = f32(src_area.x2) / real_src->width();
+			src_scale_y = f32(src_area.y2) / real_src->height();
+
+			overlay_pass::run(cmd, dst_area.x2, dst_area.y2, dst, src, render_pass, framebuffer_resources);
 		}
 	};
 
