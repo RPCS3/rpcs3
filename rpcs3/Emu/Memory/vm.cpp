@@ -246,7 +246,7 @@ namespace vm
 						}
 					}
 
-					busy_wait();
+					_mm_pause();
 				}
 			}
 		}
