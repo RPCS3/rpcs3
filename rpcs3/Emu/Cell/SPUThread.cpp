@@ -852,7 +852,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				break;
 			}
 
-			vm::passive_lock(*this);
+			auto lock = vm::passive_lock(eal & -128u, ::align(eal + size, 128));
 
 			while (size >= 128)
 			{
@@ -872,7 +872,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				size -= 16;
 			}
 
-			vm::passive_unlock(*this);
+			*lock = 0;
 			break;
 		}
 		}

@@ -53,7 +53,8 @@ namespace vm
 	extern thread_local atomic_t<cpu_thread*>* g_tls_locked;
 
 	// Register reader
-	bool passive_lock(cpu_thread& cpu, bool wait = true);
+	void passive_lock(cpu_thread& cpu);
+	atomic_t<u64>* passive_lock(const u32 begin, const u32 end);
 
 	// Unregister reader
 	void passive_unlock(cpu_thread& cpu);
@@ -80,14 +81,10 @@ namespace vm
 
 	struct writer_lock final
 	{
-		const bool locked;
-
 		writer_lock(const writer_lock&) = delete;
 		writer_lock& operator=(const writer_lock&) = delete;
 		writer_lock(u32 addr = 0);
 		~writer_lock();
-
-		explicit operator bool() const { return locked; }
 	};
 
 	// Get reservation status for further atomic update: last update timestamp
