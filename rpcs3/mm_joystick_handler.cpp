@@ -283,7 +283,7 @@ void mm_joystick_handler::ThreadProc()
 	}
 }
 
-void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
+void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();

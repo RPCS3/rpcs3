@@ -185,14 +185,14 @@ namespace rsx
 
 			inline void next()
 			{
-				idx++;
+				++idx;
 				if (idx >= block->size())
 				{
 					idx = UINT32_MAX;
 					return;
 				}
 
-				array_idx++;
+				++array_idx;
 				if (array_idx >= array_size)
 				{
 					array_idx = 0;
@@ -298,7 +298,7 @@ namespace rsx
 
 			value_type *dest = &((*m_data_it)[m_array_idx++]);
 			new (dest) value_type(std::forward<Args>(args)...);
-			m_size++;
+			++m_size;
 			return *dest;
 		}
 	};
@@ -790,7 +790,7 @@ namespace rsx
 						auto blk_end = block->unowned_end();
 						if (iterate && unowned_it != blk_end)
 						{
-							unowned_it++;
+							++unowned_it;
 						}
 
 						if (unowned_it != blk_end)
@@ -820,7 +820,7 @@ namespace rsx
 						auto blk_end = block->end();
 						if (iterate && cur_block_it != blk_end)
 						{
-							cur_block_it++;
+							++cur_block_it;
 						}
 
 						if (cur_block_it != blk_end)

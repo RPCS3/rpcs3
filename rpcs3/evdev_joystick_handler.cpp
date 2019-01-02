@@ -257,7 +257,7 @@ evdev_joystick_handler::EvdevDevice* evdev_joystick_handler::get_device(const st
 	return &dev;
 }
 
-void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, std::vector<std::string> buttons)
+void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
