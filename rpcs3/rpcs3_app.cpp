@@ -202,7 +202,6 @@ void rpcs3_app::InitializeCallbacks()
 			h = guiSettings->GetValue(gui::gs_height).toInt();
 		}
 
-		bool disableMouse = guiSettings->GetValue(gui::gs_disableMouse).toBool();
 		auto frame_geometry = gui::utils::create_centered_window_geometry(RPCS3MainWin->geometry(), w, h);
 
 		gs_frame* frame;
@@ -211,23 +210,23 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null:
 		{
-			frame = new gs_frame("Null", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gs_frame("Null", frame_geometry, RPCS3MainWin->GetAppIcon(), guiSettings);
 			break;
 		}
 		case video_renderer::opengl:
 		{
-			frame = new gl_gs_frame(frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gl_gs_frame(frame_geometry, RPCS3MainWin->GetAppIcon(), guiSettings);
 			break;
 		}
 		case video_renderer::vulkan:
 		{
-			frame = new gs_frame("Vulkan", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gs_frame("Vulkan", frame_geometry, RPCS3MainWin->GetAppIcon(), guiSettings);
 			break;
 		}
 #ifdef _MSC_VER
 		case video_renderer::dx12:
 		{
-			frame = new gs_frame("DirectX 12", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gs_frame("DirectX 12", frame_geometry, RPCS3MainWin->GetAppIcon(), guiSettings);
 			break;
 		}
 #endif
