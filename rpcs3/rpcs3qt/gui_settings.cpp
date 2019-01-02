@@ -241,21 +241,49 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 	SetValue(value, val);
 }
 
-void gui_settings::ShowInfoBox(const gui_save& entry, const QString& title, const QString& text, QWidget* parent)
+void gui_settings::ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
 {
-	if (GetValue(entry).toBool())
+	const std::string dialog_type = confirm ? "Confirmation" : "Info";
+
+	if (entry.name.isEmpty() || GetValue(entry).toBool())
 	{
-		QMessageBox* mb = new QMessageBox(QMessageBox::Information, title, text, QMessageBox::Ok, parent);
-		mb->setCheckBox(new QCheckBox(tr("Don't show again")));
+		const QFlags<QMessageBox::StandardButton> buttons = confirm ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
+		const QMessageBox::Icon icon = confirm ? QMessageBox::Question : QMessageBox::Information;
+
+		QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent);
 		mb->deleteLater();
-		mb->exec();
-		if (mb->checkBox()->isChecked())
+
+		if (!entry.name.isEmpty())
 		{
-			SetValue(entry, false);
-			LOG_NOTICE(GENERAL, "Info Box for Entry %s is now disabled", sstr(entry.name));
+			mb->setCheckBox(new QCheckBox(tr("Don't show again")));
 		}
+
+		connect(mb, &QMessageBox::finished, [&](int res)
+		{
+			if (result)
+			{
+				*result = res;
+			}
+			if (!entry.name.isEmpty() && mb->checkBox()->isChecked())
+			{
+				SetValue(entry, false);
+				LOG_NOTICE(GENERAL, "%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
+			}
+		});
+
+		mb->exec();
 	}
-	else LOG_NOTICE(GENERAL, "Info Box for Entry %s was ignored", sstr(entry.name));
+	else LOG_NOTICE(GENERAL, "%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+}
+
+void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
+{
+	ShowBox(true, title, text, entry, result, parent);
+}
+
+void gui_settings::ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent = nullptr)
+{
+	ShowBox(false, title, text, entry, nullptr, parent);
 }
 
 void gui_settings::SetGamelistColVisibility(int col, bool val)

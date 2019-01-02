@@ -8,6 +8,7 @@
 #include <QTimer>
 #include <QThread>
 #include <QLibraryInfo>
+#include <QMessageBox>
 #include <string>
 
 #include "rpcs3_version.h"
@@ -26,9 +27,11 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-gs_frame::gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, bool disableMouse)
-	: QWindow(), m_windowTitle(title), m_disable_mouse(disableMouse)
+gs_frame::gs_frame(const QString& title, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
+	: QWindow(), m_windowTitle(title), m_gui_settings(gui_settings)
 {
+	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
+
 	// Workaround for a Qt bug affecting 5.11.1 binaries
 	m_use_5_11_1_workaround = QLibraryInfo::version() == QVersionNumber(5, 11, 1);
 
@@ -325,8 +328,24 @@ void gs_frame::HandleCursor(QWindow::Visibility visibility)
 
 bool gs_frame::event(QEvent* ev)
 {
-	if (ev->type()==QEvent::Close)
+	if (ev->type() == QEvent::Close)
 	{
+		if (m_gui_settings->GetValue(gui::ib_confirm_exit).toBool())
+		{
+			int result;
+
+			Emu.CallAfter([this, &result]()
+			{
+				m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
+					tr("Do you really want to exit the game?\n\nAny unsaved progress will be lost!\n"),
+					gui::ib_confirm_exit, &result, nullptr);
+			});
+
+			if (result != QMessageBox::Yes)
+			{
+				return true;
+			}
+		}
 		close();
 	}
 	return QWindow::event(ev);
