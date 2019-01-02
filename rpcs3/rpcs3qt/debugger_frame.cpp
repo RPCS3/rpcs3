@@ -549,7 +549,8 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 		}
 	}
 
-	return static_cast<ulong>(scriptEngine.evaluate(expression).toNumber());
+	const QString fixed_expression = QRegExp("^[A-Fa-f0-9]+$").exactMatch(expression) ? "0x" + expression : expression;
+	return static_cast<ulong>(scriptEngine.evaluate(fixed_expression).toNumber());
 }
 
 void debugger_frame::ClearBreakpoints()
