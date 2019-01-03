@@ -140,6 +140,7 @@ namespace gui
 	const gui_save ib_pup_success  = gui_save(main_window, "infoBoxEnabledInstallPUP", true);
 	const gui_save ib_show_welcome = gui_save(main_window, "infoBoxEnabledWelcome",    true);
 	const gui_save ib_confirm_exit = gui_save(main_window, "confirmationBoxExitGame",  true);
+	const gui_save ib_confirm_boot = gui_save(main_window, "confirmationBoxBootGame",  true);
 
 	const gui_save fd_install_pkg  = gui_save(main_window, "lastExplorePathPKG",  "");
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "");
