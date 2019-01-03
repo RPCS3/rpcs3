@@ -270,6 +270,19 @@ void main_window::OnPlayOrPause()
 
 void main_window::Boot(const std::string& path, bool direct, bool add_only)
 {
+	if (!Emu.IsStopped())
+	{
+		int result;
+		guiSettings->ShowConfirmationBox(tr("Close Running Game?"),
+			tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n"),
+			gui::ib_confirm_boot, &result, this);
+
+		if (result != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+
 	SetAppIconFromPath(path);
 	Emu.SetForceBoot(true);
 	Emu.Stop();

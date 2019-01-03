@@ -1926,6 +1926,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="cb_show_boot_game">
+                <property name="text">
+                 <string>Show Boot Game Dialog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="cb_show_pkg_install">
                 <property name="text">
                  <string>Show PGK Installation Dialog</string>
