@@ -162,7 +162,7 @@ struct vdec_context final
 
 		std::unique_lock cv_lock(in_cv);
 
-		for (auto cmds = in_cmd.pop_all(); !Emu.IsStopped(); cmds ? cmds = cmds->pop_all() : cmds = in_cmd.pop_all())
+		for (auto cmds = in_cmd.pop_all(); !Emu.IsStopped(); cmds ? cmds.pop_front() : cmds = in_cmd.pop_all())
 		{
 			if (!cmds)
 			{
@@ -170,7 +170,7 @@ struct vdec_context final
 				continue;
 			}
 
-			if (std::get_if<vdec_start_seq_t>(&cmds->get()))
+			if (std::get_if<vdec_start_seq_t>(&*cmds))
 			{
 				avcodec_flush_buffers(ctx);
 
@@ -179,7 +179,7 @@ struct vdec_context final
 				next_dts = 0;
 				cellVdec.trace("Start sequence...");
 			}
-			else if (auto* cmd = std::get_if<vdec_cmd>(&cmds->get()))
+			else if (auto* cmd = std::get_if<vdec_cmd>(&*cmds))
 			{
 				AVPacket packet{};
 				packet.pos = -1;
@@ -381,7 +381,7 @@ struct vdec_context final
 					in_cv.wait(cv_lock, 1000);
 				}
 			}
-			else if (auto* frc = std::get_if<CellVdecFrameRate>(&cmds->get()))
+			else if (auto* frc = std::get_if<CellVdecFrameRate>(&*cmds))
 			{
 				frc_set = *frc;
 			}

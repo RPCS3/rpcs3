@@ -331,76 +331,187 @@ public:
 
 // Helper type, linked list element
 template <typename T>
-class lf_item final
+class lf_queue_item final
 {
-	lf_item* m_link = nullptr;
+	lf_queue_item* m_link = nullptr;
 
 	T m_data;
 
 	template <typename U>
+	friend class lf_queue_iterator;
+
+	template <typename U>
+	friend class lf_queue_slice;
+
+	template <typename U>
 	friend class lf_queue;
 
-	constexpr lf_item() = default;
+	constexpr lf_queue_item() = default;
 
 	template <typename... Args>
-	constexpr lf_item(lf_item* link, Args&&... args)
+	constexpr lf_queue_item(lf_queue_item* link, Args&&... args)
 	    : m_link(link)
 	    , m_data(std::forward<Args>(args)...)
 	{
 	}
 
 public:
-	lf_item(const lf_item&) = delete;
+	lf_queue_item(const lf_queue_item&) = delete;
 
-	lf_item& operator=(const lf_item&) = delete;
+	lf_queue_item& operator=(const lf_queue_item&) = delete;
 
-	~lf_item()
+	~lf_queue_item()
 	{
-		for (lf_item* ptr = m_link; ptr;)
+		for (lf_queue_item* ptr = m_link; ptr;)
 		{
 			delete std::exchange(ptr, std::exchange(ptr->m_link, nullptr));
 		}
 	}
+};
 
-	// Withdraw all other elements
-	std::unique_ptr<lf_item<T>> pop_all()
+// Forward iterator: non-owning pointer to the list element in lf_queue_slice<>
+template <typename T>
+class lf_queue_iterator
+{
+	lf_queue_item<T>* m_ptr = nullptr;
+
+	template <typename U>
+	friend class lf_queue_slice;
+
+public:
+	constexpr lf_queue_iterator() = default;
+
+	bool operator ==(const lf_queue_iterator& rhs) const
 	{
-		return std::unique_ptr<lf_item<T>>(std::exchange(m_link, nullptr));
+		return m_ptr == rhs.m_ptr;
 	}
 
-	[[nodiscard]] T& get()
+	bool operator !=(const lf_queue_iterator& rhs) const
 	{
-		return m_data;
+		return m_ptr != rhs.m_ptr;
 	}
 
-	[[nodiscard]] const T& get() const
+	T& operator *() const
 	{
-		return m_data;
+		return m_ptr->m_data;
+	}
+
+	T* operator ->() const
+	{
+		return &m_ptr->m_data;
+	}
+
+	lf_queue_iterator& operator ++()
+	{
+		m_ptr = m_ptr->m_link;
+		return *this;
+	}
+
+	lf_queue_iterator operator ++(int)
+	{
+		lf_queue_iterator result;
+		result.m_ptr = m_ptr;
+		m_ptr = m_ptr->m_link;
+		return result;
 	}
 };
 
-// Full-dynamic multi-producer queue (consumer consumes everything or nothing, thread-safe)
+// Owning pointer to the linked list taken from the lf_queue<>
+template <typename T>
+class lf_queue_slice
+{
+	lf_queue_item<T>* m_head = nullptr;
+
+	template <typename U>
+	friend class lf_queue;
+
+public:
+	constexpr lf_queue_slice() = default;
+
+	lf_queue_slice(const lf_queue_slice&) = delete;
+
+	lf_queue_slice(lf_queue_slice&& r) noexcept
+		: m_head(r.m_head)
+	{
+		r.m_head = nullptr;
+	}
+
+	lf_queue_slice& operator =(const lf_queue_slice&) = delete;
+
+	lf_queue_slice& operator =(lf_queue_slice&& r) noexcept
+	{
+		if (this != &r)
+		{
+			delete m_head;
+			m_head = r.m_head;
+			r.m_head = nullptr;
+		}
+
+		return *this;
+	}
+
+	~lf_queue_slice()
+	{
+		delete m_head;
+	}
+
+	T& operator *() const
+	{
+		return m_head->m_data;
+	}
+
+	T* operator ->() const
+	{
+		return &m_head->m_data;
+	}
+
+	explicit operator bool() const
+	{
+		return m_head != nullptr;
+	}
+
+	lf_queue_iterator<T> begin() const
+	{
+		lf_queue_iterator<T> result;
+		result.m_ptr = m_head;
+		return result;
+	}
+
+	lf_queue_iterator<T> end() const
+	{
+		return {};
+	}
+
+	lf_queue_slice& pop_front()
+	{
+		delete std::exchange(m_head, std::exchange(m_head->m_link, nullptr));
+		return *this;
+	}
+};
+
+// Linked list-based multi-producer queue (the consumer drains the whole queue at once)
 template <typename T>
 class lf_queue
 {
 	// Elements are added by replacing m_head
-	atomic_t<lf_item<T>*> m_head = nullptr;
+	atomic_t<lf_queue_item<T>*> m_head = nullptr;
 
 	// Extract all elements and reverse element order (FILO to FIFO)
-	lf_item<T>* reverse() noexcept
+	lf_queue_item<T>* reverse() noexcept
 	{
-		if (lf_item<T>* head = m_head.load() ? m_head.exchange(nullptr) : nullptr)
+		if (auto* head = m_head.load() ? m_head.exchange(nullptr) : nullptr)
 		{
-			if (lf_item<T>* prev = head->m_link)
+			if (auto* prev = head->m_link)
 			{
 				head->m_link = nullptr;
 
 				do
 				{
-					lf_item<T>* pprev = prev->m_link;
-					prev->m_link      = head;
-					head              = std::exchange(prev, pprev);
-				} while (prev);
+					auto* pprev  = prev->m_link;
+					prev->m_link = head;
+					head         = std::exchange(prev, pprev);
+				}
+				while (prev);
 			}
 
 			return head;
@@ -420,8 +531,8 @@ public:
 	template <typename... Args>
 	void push(Args&&... args)
 	{
-		lf_item<T>* old  = m_head.load();
-		lf_item<T>* item = new lf_item<T>(old, std::forward<Args>(args)...);
+		auto* old  = m_head.load();
+		auto* item = new lf_queue_item<T>(old, std::forward<Args>(args)...);
 
 		while (!m_head.compare_exchange(old, item))
 		{
@@ -429,35 +540,37 @@ public:
 		}
 	}
 
-	// Withdraw the list
-	std::unique_ptr<lf_item<T>> pop_all()
+	// Withdraw the list, supports range-for loop: for (auto&& x : y.pop_all()) ...
+	lf_queue_slice<T> pop_all()
 	{
-		return std::unique_ptr<lf_item<T>>(reverse());
+		lf_queue_slice<T> result;
+		result.m_head = reverse();
+		return result;
 	}
 
-	// Withdraw the list and apply func(data) to each element, return the total length
+	// Apply func(data) to each element, return the total length
 	template <typename F>
 	std::size_t apply(F&& func)
 	{
 		std::size_t count = 0;
 
-		for (std::unique_ptr<lf_item<T>> ptr(reverse()); ptr; ptr = ptr->pop_all(), count++)
+		for (auto slice = pop_all(); slice; slice.pop_front())
 		{
-			std::invoke(std::forward<F>(func), ptr->m_data);
+			std::invoke(std::forward<F>(func), *slice);
 		}
 
 		return count;
 	}
 
-	// apply_all() overload for callable template argument
+	// apply() overload for callable template argument
 	template <auto F>
 	std::size_t apply()
 	{
 		std::size_t count = 0;
 
-		for (std::unique_ptr<lf_item<T>> ptr(reverse()); ptr; ptr = ptr->pop_all(), count++)
+		for (auto slice = pop_all(); slice; slice.pop_front())
 		{
-			std::invoke(F, ptr->m_data);
+			std::invoke(F, *slice);
 		}
 
 		return count;
