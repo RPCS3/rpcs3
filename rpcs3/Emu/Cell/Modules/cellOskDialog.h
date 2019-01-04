@@ -232,3 +232,26 @@ struct CellOskDialogImeDictionaryInfo
 using cellOskDialogConfirmWordFilterCallback = int(vm::ptr<u16> pConfirmString, s32 wordLength);
 using cellOskDialogHardwareKeyboardEventHookCallback = class b8(vm::ptr<CellOskDialogKeyMessage> keyMessage, vm::ptr<u32> action, vm::ptr<void> pActionInfo);
 using cellOskDialogForceFinishCallback = class b8();
+
+enum class OskDialogState
+{
+	Open,
+	Abort,
+	Close,
+};
+
+class OskDialogBase
+{
+public:
+	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit) = 0;
+	virtual ~OskDialogBase();
+
+	std::function<void(s32 status)> on_close;
+	std::function<void()> on_osk_input_entered;
+
+	atomic_t<OskDialogState> state{ OskDialogState::Close };
+
+	CellOskDialogInputFieldResult osk_input_result;
+	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE];
+	char16_t osk_text_old[CELL_OSKDIALOG_STRING_SIZE];
+};
