@@ -152,7 +152,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 #endif
 }
 
-void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32 charlimit)
+void msg_dialog_frame::CreateOsk(const std::string& title, const std::u16string& message, char16_t* osk_text, u32 charlimit)
 {
 	state = MsgDialogState::Open;
 
@@ -169,7 +169,10 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 	m_osk_text_return = osk_text;
 
 	// Title
-	m_osk_dialog->setWindowTitle(qstr(msg));
+	m_osk_dialog->setWindowTitle(qstr(title));
+
+	// Message
+	QLabel* message_label = new QLabel(QString::fromStdU16String(message));
 
 	// Text Input
 	QLineEdit* input = new QLineEdit(m_osk_dialog);
@@ -199,6 +202,7 @@ void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32
 
 	QFormLayout* layout = new QFormLayout(m_osk_dialog);
 	layout->setFormAlignment(Qt::AlignHCenter);
+	layout->addRow(message_label);
 	layout->addRow(inputLayout);
 	layout->addRow(buttonsLayout);
 	m_osk_dialog->setLayout(layout);
