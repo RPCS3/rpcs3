@@ -62,7 +62,7 @@ public:
 	msg_dialog_frame(QWindow* taskbarTarget);
 	~msg_dialog_frame();
 	virtual void Create(const std::string& msg, const std::string& title = "") override;
-	virtual void CreateOsk(const std::string& msg, char16_t* osk_text, u32 charlimit) override;
+	virtual void CreateOsk(const std::string& title, const std::u16string& message, char16_t* osk_text, u32 charlimit) override;
 	virtual void SetMsg(const std::string& msg) override;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
 	virtual void ProgressBarReset(u32 progressBarIndex) override;

@@ -33,8 +33,10 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
+	// Get max length of the return value
 	u32 maxLength = (inputFieldInfo->limit_length >= CELL_OSKDIALOG_STRING_SIZE) ? 511 : (u32)inputFieldInfo->limit_length;
 
+	// Get init text and prepare return value
 	s_osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
 	std::memset(s_osk_text, 0, sizeof(s_osk_text));
 	std::memset(s_osk_text_old, 0, sizeof(s_osk_text_old));
@@ -45,6 +47,19 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 		{
 			s_osk_text[i] = inputFieldInfo->init_text[i];
 			s_osk_text_old[i] = inputFieldInfo->init_text[i];
+		}
+	}
+
+	// Get message to display above the input field
+	// Guarantees 0 terminated (+1). In praxis only 128 but for now lets display all of it
+	char16_t message[CELL_OSKDIALOG_STRING_SIZE + 1];
+	std::memset(message, 0, sizeof(message));
+
+	if (inputFieldInfo->message.addr() != 0)
+	{
+		for (u32 i = 0; (i < CELL_OSKDIALOG_STRING_SIZE) && (inputFieldInfo->message[i] != 0); i++)
+		{
+			message[i] = inputFieldInfo->message[i];
 		}
 	}
 
@@ -94,7 +109,7 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 
 	Emu.CallAfter([&]()
 	{
-		osk->CreateOsk("On Screen Keyboard", s_osk_text, maxLength);
+		osk->CreateOsk("On Screen Keyboard", message, s_osk_text, maxLength);
 		result = true;
 	});
 
