@@ -9,6 +9,8 @@ constexpr auto qstr = QString::fromStdString;
 
 void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 {
+	state = MsgDialogState::Open;
+
 	static const auto& barWidth = [](){return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();};
 
 	if (m_dialog)
@@ -152,6 +154,8 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 
 void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32 charlimit)
 {
+	state = MsgDialogState::Open;
+
 	static const auto& lineEditWidth = []() {return QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width(); };
 
 	if (m_osk_dialog)

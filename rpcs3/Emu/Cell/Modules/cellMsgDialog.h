@@ -91,7 +91,7 @@ protected:
 	s32 taskbar_index = 0;
 
 public:
-	atomic_t<MsgDialogState> state{ MsgDialogState::Open };
+	atomic_t<MsgDialogState> state{ MsgDialogState::Close };
 
 	MsgDialogType type{};
 

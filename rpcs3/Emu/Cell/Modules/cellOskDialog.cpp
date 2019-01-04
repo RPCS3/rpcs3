@@ -20,13 +20,16 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 
 	if (!inputFieldInfo || !inputFieldInfo->message || !inputFieldInfo->init_text || inputFieldInfo->limit_length > CELL_OSKDIALOG_STRING_SIZE)
 	{
+		cellOskDialog.error("cellOskDialogLoadAsync: CELL_OSKDIALOG_ERROR_PARAM");
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
 	const auto osk = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
 
-	if (!osk)
+	// Can't open another dialog if this one is already open.
+	if (!osk || osk->state.load() == MsgDialogState::Open)
 	{
+		cellOskDialog.error("cellOskDialogLoadAsync: CELL_SYSUTIL_ERROR_BUSY");
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
@@ -93,6 +96,7 @@ s32 getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is_unload
 {
 	if (!OutputInfo || OutputInfo->numCharsResultString < 0)
 	{
+		cellOskDialog.error("%s: CELL_OSKDIALOG_ERROR_PARAM", is_unload ? "cellOskDialogUnloadAsync" : "cellOskDialogGetInputText");
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
@@ -112,11 +116,13 @@ s32 getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is_unload
 		}
 	}
 
+	const bool is_valid = OutputInfo->pResultString && (OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK || (is_unload && OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT));
+
 	for (s32 i = 0; i < sizeof(s_osk_text); i++)
 	{
 		s_osk_text_old[i] = s_osk_text[i];
 
-		if (i < OutputInfo->numCharsResultString && (is_unload || OutputInfo->result != CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT))
+		if (is_valid && i < OutputInfo->numCharsResultString)
 		{
 			OutputInfo->pResultString[i] = s_osk_text[i];
 		}
@@ -139,6 +145,7 @@ s32 cellOskDialogGetSize(vm::ptr<u16> width, vm::ptr<u16> height, u32 /*CellOskD
 
 	if (!width || !height)
 	{
+		cellOskDialog.error("cellOskDialogGetSize: CELL_OSKDIALOG_ERROR_PARAM");
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
@@ -162,13 +169,17 @@ s32 cellOskDialogAbort()
 
 	const auto dlg = fxm::get<MsgDialogBase>();
 
-	if (!dlg)
+	// Check for open dialog. In this case the dialog is only "Open" if it was not aborted before.
+	if (!dlg || dlg->state.load() == MsgDialogState::Abort)
 	{
+		cellOskDialog.error("cellOskDialogAbort: CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED");
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
+	// If the dialog has the Open state then it is in use. Only dialogs with the Close state can be aborted.
 	if (!dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Abort))
 	{
+		cellOskDialog.error("cellOskDialogAbort: CELL_SYSUTIL_ERROR_BUSY");
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
