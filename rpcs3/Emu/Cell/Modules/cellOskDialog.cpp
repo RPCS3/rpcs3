@@ -10,17 +10,33 @@
 
 LOG_CHANNEL(cellOskDialog);
 
+template<>
+void fmt_class_string<CellOskDialogError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_OSKDIALOG_ERROR_IME_ALREADY_IN_USE);
+			STR_CASE(CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR);
+			STR_CASE(CELL_OSKDIALOG_ERROR_UNKNOWN);
+			STR_CASE(CELL_OSKDIALOG_ERROR_PARAM);
+		}
+
+		return unknown;
+	});
+}
+
 static CellOskDialogInputFieldResult s_osk_input_result;
 static char16_t s_osk_text[CELL_OSKDIALOG_STRING_SIZE];
 static char16_t s_osk_text_old[CELL_OSKDIALOG_STRING_SIZE];
 
-s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogParam, vm::ptr<CellOskDialogInputFieldInfo> inputFieldInfo)
+error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogParam, vm::ptr<CellOskDialogInputFieldInfo> inputFieldInfo)
 {
 	cellOskDialog.warning("cellOskDialogLoadAsync(container=0x%x, dialogParam=*0x%x, inputFieldInfo=*0x%x)", container, dialogParam, inputFieldInfo);
 
 	if (!inputFieldInfo || !inputFieldInfo->message || !inputFieldInfo->init_text || inputFieldInfo->limit_length > CELL_OSKDIALOG_STRING_SIZE)
 	{
-		cellOskDialog.error("cellOskDialogLoadAsync: CELL_OSKDIALOG_ERROR_PARAM");
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
@@ -29,7 +45,6 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 	// Can't open another dialog if this one is already open.
 	if (!osk || osk->state.load() == MsgDialogState::Open)
 	{
-		cellOskDialog.error("cellOskDialogLoadAsync: CELL_SYSUTIL_ERROR_BUSY");
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
@@ -123,11 +138,10 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 	return CELL_OK;
 }
 
-s32 getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is_unload)
+error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is_unload)
 {
 	if (!OutputInfo || OutputInfo->numCharsResultString < 0)
 	{
-		cellOskDialog.error("%s: CELL_OSKDIALOG_ERROR_PARAM", is_unload ? "cellOskDialogUnloadAsync" : "cellOskDialogGetInputText");
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
@@ -164,19 +178,18 @@ s32 getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is_unload
 	return CELL_OK;
 }
 
-s32 cellOskDialogUnloadAsync(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo)
+error_code cellOskDialogUnloadAsync(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo)
 {
 	cellOskDialog.warning("cellOskDialogUnloadAsync(OutputInfo=*0x%x)", OutputInfo);
 	return getText(OutputInfo, true);
 }
 
-s32 cellOskDialogGetSize(vm::ptr<u16> width, vm::ptr<u16> height, u32 /*CellOskDialogType*/ dialogType)
+error_code cellOskDialogGetSize(vm::ptr<u16> width, vm::ptr<u16> height, u32 /*CellOskDialogType*/ dialogType)
 {
 	cellOskDialog.warning("cellOskDialogGetSize(width=*0x%x, height=*0x%x, dialogType=*0x%x)", width, height, dialogType);
 
 	if (!width || !height)
 	{
-		cellOskDialog.error("cellOskDialogGetSize: CELL_OSKDIALOG_ERROR_PARAM");
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
@@ -194,7 +207,7 @@ s32 cellOskDialogGetSize(vm::ptr<u16> width, vm::ptr<u16> height, u32 /*CellOskD
 	return CELL_OK;
 }
 
-s32 cellOskDialogAbort()
+error_code cellOskDialogAbort()
 {
 	cellOskDialog.warning("cellOskDialogAbort()");
 
@@ -203,14 +216,12 @@ s32 cellOskDialogAbort()
 	// Check for open dialog. In this case the dialog is only "Open" if it was not aborted before.
 	if (!dlg || dlg->state.load() == MsgDialogState::Abort)
 	{
-		cellOskDialog.error("cellOskDialogAbort: CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED");
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
 	// If the dialog has the Open state then it is in use. Only dialogs with the Close state can be aborted.
 	if (!dlg->state.compare_and_swap_test(MsgDialogState::Open, MsgDialogState::Abort))
 	{
-		cellOskDialog.error("cellOskDialogAbort: CELL_SYSUTIL_ERROR_BUSY");
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
@@ -222,13 +233,13 @@ s32 cellOskDialogAbort()
 	return CELL_OK;
 }
 
-s32 cellOskDialogSetDeviceMask(u32 deviceMask)
+error_code cellOskDialogSetDeviceMask(u32 deviceMask)
 {
 	cellOskDialog.todo("cellOskDialogSetDeviceMask(deviceMask=0x%x)", deviceMask);
 	return CELL_OK;
 }
 
-s32 cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWindowOption> windowOption)
+error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWindowOption> windowOption)
 {
 	cellOskDialog.todo("cellOskDialogSetSeparateWindowOption(windowOption=*0x%x)", windowOption);
 
@@ -237,145 +248,145 @@ s32 cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWindowOpti
 	return CELL_OK;
 }
 
-s32 cellOskDialogSetInitialInputDevice(vm::ptr<CellOskDialogInputDevice> inputDevice)
+error_code cellOskDialogSetInitialInputDevice(vm::ptr<CellOskDialogInputDevice> inputDevice)
 {
 	cellOskDialog.todo("cellOskDialogSetInitialInputDevice(inputDevice=*0x%x)", inputDevice);
 	return CELL_OK;
 }
 
-s32 cellOskDialogSetInitialKeyLayout(vm::ptr<CellOskDialogInitialKeyLayout> initialKeyLayout)
+error_code cellOskDialogSetInitialKeyLayout(vm::ptr<CellOskDialogInitialKeyLayout> initialKeyLayout)
 {
 	cellOskDialog.todo("cellOskDialogSetInitialKeyLayout(initialKeyLayout=*0x%x)", initialKeyLayout);
 	return CELL_OK;
 }
 
-s32 cellOskDialogDisableDimmer()
+error_code cellOskDialogDisableDimmer()
 {
 	cellOskDialog.todo("cellOskDialogDisableDimmer()");
 	return CELL_OK;
 }
 
-s32 cellOskDialogSetKeyLayoutOption(u32 option)
+error_code cellOskDialogSetKeyLayoutOption(u32 option)
 {
 	cellOskDialog.todo("cellOskDialogSetKeyLayoutOption(option=0x%x)", option);
 	return CELL_OK;
 }
 
-s32 cellOskDialogAddSupportLanguage(u32 supportLanguage)
+error_code cellOskDialogAddSupportLanguage(u32 supportLanguage)
 {
 	cellOskDialog.todo("cellOskDialogAddSupportLanguage(supportLanguage=0x%x)", supportLanguage);
 	return CELL_OK;
 }
 
-s32 cellOskDialogSetLayoutMode(s32 layoutMode)
+error_code cellOskDialogSetLayoutMode(s32 layoutMode)
 {
 	cellOskDialog.todo("cellOskDialogSetLayoutMode(layoutMode=%d)", layoutMode);
 	return CELL_OK;
 }
 
-s32 cellOskDialogGetInputText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo)
+error_code cellOskDialogGetInputText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo)
 {
 	cellOskDialog.warning("cellOskDialogGetInputText(OutputInfo=*0x%x)", OutputInfo);
 	return getText(OutputInfo, false);
 }
 
-s32 cellOskDialogExtInputDeviceUnlock()
+error_code cellOskDialogExtInputDeviceUnlock()
 {
 	cellOskDialog.todo("cellOskDialogExtInputDeviceUnlock()");
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
+error_code cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtRegisterKeyboardEventHookCallbackEx(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
+error_code cellOskDialogExtRegisterKeyboardEventHookCallbackEx(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallbackEx(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtAddJapaneseOptionDictionary(vm::cpptr<char> filePath)
+error_code cellOskDialogExtAddJapaneseOptionDictionary(vm::cpptr<char> filePath)
 {
 	cellOskDialog.todo("cellOskDialogExtAddJapaneseOptionDictionary(filePath=**0x%0x)", filePath);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtEnableClipboard()
+error_code cellOskDialogExtEnableClipboard()
 {
 	cellOskDialog.todo("cellOskDialogExtEnableClipboard()");
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtSendFinishMessage(s32 /*CellOskDialogFinishReason*/ finishReason)
+error_code cellOskDialogExtSendFinishMessage(s32 /*CellOskDialogFinishReason*/ finishReason)
 {
 	cellOskDialog.todo("cellOskDialogExtSendFinishMessage(finishReason=%d)", finishReason);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtAddOptionDictionary(vm::cptr<CellOskDialogImeDictionaryInfo> dictionaryInfo)
+error_code cellOskDialogExtAddOptionDictionary(vm::cptr<CellOskDialogImeDictionaryInfo> dictionaryInfo)
 {
 	cellOskDialog.todo("cellOskDialogExtAddOptionDictionary(dictionaryInfo=*0x%x)", dictionaryInfo);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtSetInitialScale(f32 initialScale)
+error_code cellOskDialogExtSetInitialScale(f32 initialScale)
 {
 	cellOskDialog.todo("cellOskDialogExtSetInitialScale(initialScale=%f)", initialScale);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtInputDeviceLock()
+error_code cellOskDialogExtInputDeviceLock()
 {
 	cellOskDialog.todo("cellOskDialogExtInputDeviceLock()");
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
+error_code cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
 {
 	cellOskDialog.warning("cellOskDialogExtSetBaseColor(red=%f, blue=%f, green=%f, alpha=%f)", red, blue, green, alpha);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDialogConfirmWordFilterCallback> pCallback)
+error_code cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDialogConfirmWordFilterCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterConfirmWordFilterCallback(pCallback=*0x%x)", pCallback);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtUpdateInputText()
+error_code cellOskDialogExtUpdateInputText()
 {
 	cellOskDialog.todo("cellOskDialogExtUpdateInputText()");
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtDisableHalfByteKana()
+error_code cellOskDialogExtDisableHalfByteKana()
 {
 	cellOskDialog.todo("cellOskDialogExtDisableHalfByteKana()");
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtSetPointerEnable(b8 enable)
+error_code cellOskDialogExtSetPointerEnable(b8 enable)
 {
 	cellOskDialog.todo("cellOskDialogExtSetPointerEnable(enable=%d)", enable);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtUpdatePointerDisplayPos(/*const CellOskDialogPoint pos*/)
+error_code cellOskDialogExtUpdatePointerDisplayPos(/*const CellOskDialogPoint pos*/)
 {
 	cellOskDialog.todo("cellOskDialogExtUpdatePointerDisplayPos(posX=%f, posY=%f)"/*, pos.x, pos.y*/);
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtEnableHalfByteKana()
+error_code cellOskDialogExtEnableHalfByteKana()
 {
 	cellOskDialog.todo("cellOskDialogExtEnableHalfByteKana()");
 	return CELL_OK;
 }
 
-s32 cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForceFinishCallback> pCallback)
+error_code cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForceFinishCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterForceFinishCallback(pCallback=*0x%x)", pCallback);
 	return CELL_OK;

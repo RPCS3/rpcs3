@@ -10,6 +10,26 @@
 
 LOG_CHANNEL(cellSysutil);
 
+template<>
+void fmt_class_string<CellSysutilError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SYSUTIL_ERROR_TYPE);
+			STR_CASE(CELL_SYSUTIL_ERROR_VALUE);
+			STR_CASE(CELL_SYSUTIL_ERROR_SIZE);
+			STR_CASE(CELL_SYSUTIL_ERROR_NUM);
+			STR_CASE(CELL_SYSUTIL_ERROR_BUSY);
+			STR_CASE(CELL_SYSUTIL_ERROR_STATUS);
+			STR_CASE(CELL_SYSUTIL_ERROR_MEMORY);
+		}
+
+		return unknown;
+	});
+}
+
 struct sysutil_cb_manager
 {
 	struct alignas(8) registered_cb

@@ -2,7 +2,7 @@
 
 
 
-enum
+enum CellSysutilError : u32
 {
 	CELL_SYSUTIL_ERROR_TYPE   = 0x8002b101,
 	CELL_SYSUTIL_ERROR_VALUE  = 0x8002b102,
