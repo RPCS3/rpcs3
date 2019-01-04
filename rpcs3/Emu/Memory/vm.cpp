@@ -978,7 +978,7 @@ namespace vm
 		return nullptr;
 	}
 
-	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
+	std::shared_ptr<block_t> get(memory_location_t location, u32 addr, u32 area_size)
 	{
 		vm::reader_lock lock;
 
@@ -989,7 +989,7 @@ namespace vm
 			{
 				auto& loc = g_locations[location];
 
-				if (!loc)
+				if (!loc && area_size)
 				{
 					if (location == vm::user64k || location == vm::user1m)
 					{
@@ -998,7 +998,7 @@ namespace vm
 						if (!loc)
 						{
 							// Deferred allocation
-							loc = _find_map(0x10000000, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
+							loc = _find_map(area_size, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
 						}
 					}
 				}
