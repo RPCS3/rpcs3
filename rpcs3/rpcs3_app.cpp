@@ -279,6 +279,11 @@ void rpcs3_app::InitializeCallbacks()
 		return std::make_shared<msg_dialog_frame>(RPCS3MainWin->windowHandle());
 	};
 
+	callbacks.get_osk_dialog = [=]() -> std::shared_ptr<OskDialogBase>
+	{
+		return std::make_shared<osk_dialog_frame>();
+	};
+
 	callbacks.get_save_dialog = [=]() -> std::unique_ptr<SaveDialogBase>
 	{
 		return std::make_unique<save_data_dialog>();

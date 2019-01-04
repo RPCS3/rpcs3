@@ -96,11 +96,9 @@ public:
 	MsgDialogType type{};
 
 	std::function<void(s32 status)> on_close;
-	std::function<void()> on_osk_input_entered;
 
 	virtual ~MsgDialogBase();
 	virtual void Create(const std::string& msg, const std::string& title = "") = 0;
-	virtual void CreateOsk(const std::string& title, const std::u16string& message, char16_t* osk_text, u32 charlimit) = 0;
 	virtual void SetMsg(const std::string& msg) = 0;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) = 0;
 	virtual void ProgressBarReset(u32 progressBarIndex) = 0;

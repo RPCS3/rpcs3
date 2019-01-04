@@ -689,6 +689,36 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_input_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\custom_dialog.cpp">
+      <Filter>Gui\message dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_custom_dialog.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_custom_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_custom_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_custom_dialog.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\osk_dialog_frame.cpp">
+      <Filter>Gui\message dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_osk_dialog_frame.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_osk_dialog_frame.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_osk_dialog_frame.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_osk_dialog_frame.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -911,6 +941,12 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\input_dialog.h">
       <Filter>Gui\misc dialogs</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\custom_dialog.h">
+      <Filter>Gui\message dialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\osk_dialog_frame.h">
+      <Filter>Gui\message dialog</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

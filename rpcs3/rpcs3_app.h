@@ -15,6 +15,7 @@
 #include "Emu/Audio/AudioThread.h"
 
 #include "rpcs3qt/msg_dialog_frame.h"
+#include "rpcs3qt/osk_dialog_frame.h"
 #include "rpcs3qt/main_window.h"
 #include "rpcs3qt/gui_settings.h"
 #include "rpcs3qt/emu_settings.h"
