@@ -62,8 +62,21 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 		if (status != CELL_MSGDIALOG_BUTTON_OK)
 		{
 			s_osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_CANCELED;
-			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED, 0);
+
+			if (false/* TODO: check for seperate window */)
+			{
+				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED, 0);
+			}
 		}
+		else
+		{
+			if (s_osk_text[0] == 0 && false/* TODO: check for seperate window */)
+			{
+				cellOskDialog.warning("cellOskDialogLoadAsync: input result is CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT");
+				s_osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT;
+			}
+		}
+
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 
 		pad::SetIntercepted(false);
@@ -71,7 +84,10 @@ s32 cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogPara
 
 	osk->on_osk_input_entered = [&]()
 	{
-		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
+		if (false/* TODO: check for seperate window */)
+		{
+			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
+		}
 	};
 
 	pad::SetIntercepted(true);
@@ -200,6 +216,9 @@ s32 cellOskDialogSetDeviceMask(u32 deviceMask)
 s32 cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWindowOption> windowOption)
 {
 	cellOskDialog.todo("cellOskDialogSetSeparateWindowOption(windowOption=*0x%x)", windowOption);
+
+	// TODO: when games set the option to use seperate windows we will have to handle input signals and cancel signals
+
 	return CELL_OK;
 }
 
