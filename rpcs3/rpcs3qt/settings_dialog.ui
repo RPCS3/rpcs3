@@ -2317,6 +2317,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="debugConsoleMode">
+              <property name="text">
+               <string>Debug Console Mode</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <spacer name="verticalSpacer">
               <property name="orientation">
                <enum>Qt::Vertical</enum>

@@ -1304,6 +1304,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, json_debug["hookStFunc"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
+	SubscribeTooltip(ui->debugConsoleMode, json_debug["debugConsoleMode"].toString());
+
 	// Layout fix for High Dpi
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
