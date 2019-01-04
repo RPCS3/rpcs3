@@ -8,7 +8,7 @@ enum
 	CELL_MSGDIALOG_STRING_SIZE             = 512,
 };
 
-enum
+enum CellMsgDialogError : u32
 {
 	CELL_MSGDIALOG_ERROR_PARAM             = 0x8002b301,
 	CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED = 0x8002b302,

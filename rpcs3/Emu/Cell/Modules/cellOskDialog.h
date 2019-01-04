@@ -3,7 +3,7 @@
 
 
 // error codes
-enum
+enum CellOskDialogError : u32
 {
 	CELL_OSKDIALOG_ERROR_IME_ALREADY_IN_USE = 0x8002b501,
 	CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR = 0x8002b502,
