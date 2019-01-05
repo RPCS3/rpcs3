@@ -287,6 +287,11 @@ public:
 		return m_head != nullptr;
 	}
 
+	T* get() const
+	{
+		return m_head ? &m_head->m_data : nullptr;
+	}
+
 	lf_queue_iterator<T> begin() const
 	{
 		lf_queue_iterator<T> result;
