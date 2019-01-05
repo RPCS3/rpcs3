@@ -1946,8 +1946,8 @@ public:
 			swap_info.oldSwapchain = old_swapchain;
 			swap_info.clipped = true;
 
-			swap_info.imageExtent.width = m_width;
-			swap_info.imageExtent.height = m_height;
+			swap_info.imageExtent.width = std::max(m_width, surface_descriptors.minImageExtent.width);
+			swap_info.imageExtent.height = std::max(m_height, surface_descriptors.minImageExtent.height);
 
 			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
 
