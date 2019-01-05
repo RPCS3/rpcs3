@@ -91,11 +91,11 @@ namespace rsx
 	template <typename image_storage_type>
 	struct render_target_descriptor
 	{
-		u64 last_use_tag = 0; // tag indicating when this block was last confirmed to have been written to
-		u32 tag_address = 0;
+		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
+		u32 memory_tag_address = 0u;  // memory address of the start of the ROP block
+		u64 memory_tag_sample = 0ull; // memory sample taken at the memory_tag_address for change testing
 
 		bool dirty = false;
-		bool needs_tagging = false;
 		image_storage_type old_contents = nullptr;
 		rsx::surface_antialiasing read_aa_mode = rsx::surface_antialiasing::center_1_sample;
 
@@ -119,31 +119,26 @@ namespace rsx
 			write_aa_mode = read_aa_mode = rsx::surface_antialiasing::center_1_sample;
 		}
 
-		void tag()
+		bool test() const
 		{
-			auto ptr = vm::get_super_ptr<atomic_t<u32>>(tag_address);
-			*ptr = tag_address;
-
-			needs_tagging = false;
-		}
-
-		bool test()
-		{
-			if (needs_tagging && dirty)
+			if (dirty)
 			{
 				// TODO
 				// Should RCB or mem-sync (inherit previous mem) to init memory
 				LOG_TODO(RSX, "Resource used before memory initialization");
 			}
 
-			auto ptr = vm::get_super_ptr<atomic_t<u32>>(tag_address);
-			return (*ptr == tag_address);
+			return (memory_tag_sample == *vm::get_super_ptr<u64>(memory_tag_address));
 		}
 
 		void queue_tag(u32 address)
 		{
-			tag_address = address;
-			needs_tagging = true;
+			memory_tag_address = address;
+		}
+
+		void sync_tag()
+		{
+			memory_tag_sample = *vm::get_super_ptr<u64>(memory_tag_address);
 		}
 
 		void on_write(u64 write_tag = 0)
@@ -154,10 +149,8 @@ namespace rsx
 				last_use_tag = write_tag;
 			}
 
-			if (needs_tagging)
-			{
-				tag();
-			}
+			// Tag unconditionally without introducing new data
+			sync_tag();
 
 			read_aa_mode = write_aa_mode;
 			dirty = false;

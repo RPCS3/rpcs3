@@ -372,18 +372,6 @@ namespace rsx
 			return true;
 		}
 
-		void tag_framebuffer(u32 texaddr)
-		{
-			auto ptr = vm::get_super_ptr<atomic_t<u32>>(texaddr);
-			*ptr = texaddr;
-		}
-
-		bool test_framebuffer(u32 texaddr)
-		{
-			auto ptr = vm::get_super_ptr<atomic_t<u32>>(texaddr);
-			return *ptr == texaddr;
-		}
-
 		/**
 		 * Section invalidation
 		 */
@@ -1157,7 +1145,6 @@ namespace rsx
 
 			region.create(width, height, 1, 1, image, pitch, false, std::forward<Args>(extras)...);
 			region.reprotect(utils::protection::no, { 0, rsx_range.length() });
-			tag_framebuffer(region.get_section_base());
 
 			region.set_dirty(false);
 			region.touch(m_cache_update_tag);
@@ -1703,8 +1690,8 @@ namespace rsx
 				// TODO: When framebuffer Y compression is properly handled, this section can be removed. A more accurate framebuffer storage check exists below this block
 				if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
 				{
-					const bool is_active = m_rtts.address_is_bound(texaddr, false);
-					if (texptr->test() || is_active)
+					if (const bool is_active = m_rtts.address_is_bound(texaddr, false);
+						is_active || texptr->test())
 					{
 						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
 								tex_width, tex_height, depth, tex_pitch, extended_dimension, false, is_active,
@@ -1719,8 +1706,8 @@ namespace rsx
 
 				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 				{
-					const bool is_active = m_rtts.address_is_bound(texaddr, true);
-					if (texptr->test() || is_active)
+					if (const bool is_active = m_rtts.address_is_bound(texaddr, false);
+						is_active || texptr->test())
 					{
 						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
 								tex_width, tex_height, depth, tex_pitch, extended_dimension, true, is_active,
@@ -1949,6 +1936,8 @@ namespace rsx
 
 			if (src_is_render_target)
 			{
+				src_subres.surface->read_barrier(cmd);
+
 				const auto surf = src_subres.surface;
 				auto src_bpp = surf->get_native_pitch() / surf->get_surface_width();
 				auto expected_bpp = src_is_argb8 ? 4 : 2;
@@ -1972,6 +1961,9 @@ namespace rsx
 
 			if (dst_is_render_target)
 			{
+				// Full barrier is required in case of partial transfers
+				dst_subres.surface->read_barrier(cmd);
+
 				auto dst_bpp = dst_subres.surface->get_native_pitch() / dst_subres.surface->get_surface_width();
 				auto expected_bpp = dst_is_argb8 ? 4 : 2;
 				if (dst_bpp != expected_bpp)
@@ -2411,7 +2403,6 @@ namespace rsx
 							AUDIT(section.get_memory_read_flags() == memory_read_flags::flush_always);
 
 							section.reprotect(utils::protection::no);
-							tag_framebuffer(section.get_section_base());
 							update_tag = true;
 						}
 					}
