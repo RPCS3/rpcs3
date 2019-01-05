@@ -309,6 +309,7 @@ void GLGSRender::end()
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
 		execute_nop_draw();
+		m_rtts.on_write();
 		rsx::thread::end();
 		return;
 	}

@@ -261,6 +261,12 @@ namespace gl
 				baseclass::on_speculative_flush();
 			}
 
+			if (context == rsx::texture_upload_context::framebuffer_storage)
+			{
+				auto as_rtt = static_cast<gl::render_target*>(vram_texture);
+				if (as_rtt->dirty) as_rtt->read_barrier(cmd);
+			}
+
 			if (!pbo_id)
 			{
 				init_buffer();
@@ -403,7 +409,6 @@ namespace gl
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
-
 			// Shuffle
 			bool require_manual_shuffle = false;
 			if (pack_unpack_swap_bytes)
@@ -424,7 +429,6 @@ namespace gl
 			}
 			else if (pack_unpack_swap_bytes && ::gl::get_driver_caps().vendor_AMD)
 			{
-
 				//AMD driver bug - cannot use pack_swap_bytes
 				//Manually byteswap texel data
 				switch (type)
@@ -473,6 +477,12 @@ namespace gl
 					break;
 				}
 				}
+			}
+
+			if (context == rsx::texture_upload_context::framebuffer_storage)
+			{
+				// Update memory tag
+				static_cast<gl::render_target*>(vram_texture)->sync_tag();
 			}
 		}
 
