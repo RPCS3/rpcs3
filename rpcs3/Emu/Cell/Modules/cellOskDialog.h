@@ -243,7 +243,8 @@ enum class OskDialogState
 class OskDialogBase
 {
 public:
-	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit) = 0;
+	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) = 0;
+	virtual void Close(bool accepted) = 0;
 	virtual ~OskDialogBase();
 
 	std::function<void(s32 status)> on_close;
