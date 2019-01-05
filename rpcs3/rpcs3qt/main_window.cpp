@@ -270,6 +270,19 @@ void main_window::OnPlayOrPause()
 
 void main_window::Boot(const std::string& path, bool direct, bool add_only)
 {
+	if (!Emu.IsStopped())
+	{
+		int result;
+		guiSettings->ShowConfirmationBox(tr("Close Running Game?"),
+			tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n"),
+			gui::ib_confirm_boot, &result, this);
+
+		if (result != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+
 	SetAppIconFromPath(path);
 	Emu.SetForceBoot(true);
 	Emu.Stop();
@@ -493,7 +506,7 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 	{
 		m_gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
-		guiSettings->ShowInfoBox(gui::ib_pkg_success, tr("Success!"), tr("Successfully installed software from package!"), this);
+		guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package!"), gui::ib_pkg_success, this);
 	}
 }
 
@@ -633,7 +646,7 @@ void main_window::InstallPup(const QString& dropPath)
 	if (progress > 0)
 	{
 		LOG_SUCCESS(GENERAL, "Successfully installed PS3 firmware version %s.", version_string);
-		guiSettings->ShowInfoBox(gui::ib_pup_success, tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), this);
+		guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);
 
 		Emu.SetForceBoot(true);
 		Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", true);

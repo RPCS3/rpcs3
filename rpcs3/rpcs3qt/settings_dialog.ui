@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>752</width>
-    <height>576</height>
+    <height>584</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -1915,6 +1915,34 @@
                <widget class="QCheckBox" name="cb_show_welcome">
                 <property name="text">
                  <string>Show Welcome Screen</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_show_exit_game">
+                <property name="text">
+                 <string>Show Exit Game Dialog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_show_boot_game">
+                <property name="text">
+                 <string>Show Boot Game Dialog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_show_pkg_install">
+                <property name="text">
+                 <string>Show PGK Installation Dialog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_show_pup_install">
+                <property name="text">
+                 <string>Show PUP Installation Dialog</string>
                 </property>
                </widget>
               </item>

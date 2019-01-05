@@ -139,6 +139,8 @@ namespace gui
 	const gui_save ib_pkg_success  = gui_save(main_window, "infoBoxEnabledInstallPKG", true);
 	const gui_save ib_pup_success  = gui_save(main_window, "infoBoxEnabledInstallPUP", true);
 	const gui_save ib_show_welcome = gui_save(main_window, "infoBoxEnabledWelcome",    true);
+	const gui_save ib_confirm_exit = gui_save(main_window, "confirmationBoxExitGame",  true);
+	const gui_save ib_confirm_boot = gui_save(main_window, "confirmationBoxBootGame",  true);
 
 	const gui_save fd_install_pkg  = gui_save(main_window, "lastExplorePathPKG",  "");
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "");
@@ -250,7 +252,8 @@ public:
 	QVariant List2Var(const q_pair_list& list);
 	q_pair_list Var2List(const QVariant &var);
 
-	void ShowInfoBox(const gui_save& entry, const QString& title, const QString& text, QWidget* parent = 0);
+	void ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
+	void ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent);
 
 	logs::level GetLogLevel();
 	bool GetGamelistColVisibility(int col);
@@ -285,6 +288,7 @@ public Q_SLOTS:
 private:
 	QString ComputeSettingsDir();
 	void BackupSettingsToTarget(const QString& friendly_name);
+	void ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
 
 	QSettings m_settings;
 	QDir m_settingsDir;

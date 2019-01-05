@@ -3,6 +3,8 @@
 #include "stdafx.h"
 #include "Emu/RSX/GSRender.h"
 
+#include "gui_settings.h"
+
 #include <QWidget>
 #include <QWindow>
 
@@ -31,6 +33,8 @@ private:
 	void UpdateProgress(int progress, bool disable = false);
 #endif
 
+	std::shared_ptr<gui_settings> m_gui_settings;
+
 	u64 m_frames = 0;
 	QString m_windowTitle;
 	bool m_show_fps;
@@ -44,7 +48,7 @@ private:
 	bool m_use_5_11_1_workaround = false;   // QT ABI bug workaround
 
 public:
-	gs_frame(const QString& title, const QRect& geometry, QIcon appIcon, bool disableMouse);
+	gs_frame(const QString& title, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
 	~gs_frame();
 
 	draw_context_t make_context() override;

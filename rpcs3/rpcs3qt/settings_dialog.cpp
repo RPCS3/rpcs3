@@ -1011,6 +1011,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Checkboxes: gui options
 	SubscribeTooltip(ui->cb_show_welcome, json_gui["show_welcome"].toString());
 
+	SubscribeTooltip(ui->cb_show_exit_game, json_gui["show_exit_game"].toString());
+
+	SubscribeTooltip(ui->cb_show_boot_game, json_gui["show_boot_game"].toString());
+
+	SubscribeTooltip(ui->cb_show_pkg_install, json_gui["show_pkg_install"].toString());
+
+	SubscribeTooltip(ui->cb_show_pup_install, json_gui["show_pup_install"].toString());
+
 	SubscribeTooltip(ui->useRichPresence, json_gui["useRichPresence"].toString());
 
 	SubscribeTooltip(ui->discordState, json_gui["discordState"].toString());
@@ -1067,6 +1075,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		AddColoredIcons();
 
 		ui->cb_show_welcome->setChecked(xgui_settings->GetValue(gui::ib_show_welcome).toBool());
+		ui->cb_show_exit_game->setChecked(xgui_settings->GetValue(gui::ib_confirm_exit).toBool());
+		ui->cb_show_boot_game->setChecked(xgui_settings->GetValue(gui::ib_confirm_boot).toBool());
+		ui->cb_show_pkg_install->setChecked(xgui_settings->GetValue(gui::ib_pkg_success).toBool());
+		ui->cb_show_pup_install->setChecked(xgui_settings->GetValue(gui::ib_pup_success).toBool());
 
 		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
@@ -1124,6 +1136,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [=](bool val)
 		{
 			xgui_settings->SetValue(gui::ib_show_welcome, val);
+		});
+		connect(ui->cb_show_exit_game, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::ib_confirm_exit, val);
+		});
+		connect(ui->cb_show_boot_game, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::ib_confirm_boot, val);
+		});
+		connect(ui->cb_show_pkg_install, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::ib_pkg_success, val);
+		});
+		connect(ui->cb_show_pup_install, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::ib_pup_success, val);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
