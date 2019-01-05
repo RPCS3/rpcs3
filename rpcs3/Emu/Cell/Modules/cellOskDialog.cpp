@@ -40,7 +40,11 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	const auto osk = fxm::import<OskDialogBase>(Emu.GetCallbacks().get_osk_dialog);
+	auto osk = fxm::get<OskDialogBase>();
+	if (!osk)
+	{
+		osk = fxm::import<OskDialogBase>(Emu.GetCallbacks().get_osk_dialog);
+	}
 
 	// Can't open another dialog if this one is already open.
 	if (!osk || osk->state.load() == OskDialogState::Open)
@@ -80,7 +84,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	bool result = false;
 
-	osk->on_close = [wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
+	osk->on_close = [&maxLength, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
 		const auto osk = wptr.lock();
 		osk->state = OskDialogState::Close;
@@ -100,6 +104,42 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			{
 				cellOskDialog.warning("cellOskDialogLoadAsync: input result is CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT");
 				osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT;
+			}
+
+			if (osk->osk_confirm_callback)
+			{
+				vm::ptr<u16> string_to_send = vm::cast(vm::alloc(CELL_OSKDIALOG_STRING_SIZE * 2, vm::main));
+				atomic_t<bool> done = false;
+				u32 return_value;
+				u32 i = 0;
+
+				for (i; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
+				{
+					string_to_send[i] = osk->osk_text[i];
+					if (osk->osk_text[i] == 0) break;
+				}
+
+				sysutil_register_cb([&, length = i](ppu_thread& cb_ppu) -> s32
+				{
+					return_value = osk->osk_confirm_callback(cb_ppu, string_to_send, (s32)length);
+					cellOskDialog.warning("osk_confirm_callback return_value=%d", return_value);
+
+					for (u32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
+					{
+						osk->osk_text[i] = string_to_send[i];
+					}
+
+					done = true;
+					return 0;
+				});
+
+				while (done == false)
+				{
+					// wait for check callback
+				}
+
+				// reset this here (just to make sure it's null)
+				osk->osk_confirm_callback = vm::null;
 			}
 		}
 
@@ -358,6 +398,14 @@ error_code cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
 error_code cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDialogConfirmWordFilterCallback> pCallback)
 {
 	cellOskDialog.warning("cellOskDialogExtRegisterConfirmWordFilterCallback(pCallback=*0x%x)", pCallback);
+
+	auto osk = fxm::get<OskDialogBase>();
+	if (!osk)
+	{
+		osk = fxm::import<OskDialogBase>(Emu.GetCallbacks().get_osk_dialog);
+	}
+	osk->osk_confirm_callback = pCallback;
+
 	return CELL_OK;
 }
 

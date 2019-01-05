@@ -254,4 +254,6 @@ public:
 	CellOskDialogInputFieldResult osk_input_result;
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE];
 	char16_t osk_text_old[CELL_OSKDIALOG_STRING_SIZE];
+
+	vm::ptr<cellOskDialogConfirmWordFilterCallback> osk_confirm_callback;
 };
