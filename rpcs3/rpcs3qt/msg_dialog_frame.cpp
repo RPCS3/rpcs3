@@ -1,4 +1,4 @@
-
+﻿
 #include "msg_dialog_frame.h"
 
 #include <QApplication>
