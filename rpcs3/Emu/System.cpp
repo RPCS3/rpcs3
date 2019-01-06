@@ -340,8 +340,6 @@ void Emulator::Init()
 		{
 			while (true)
 			{
-				std::shared_ptr<MsgDialogBase> dlg;
-
 				// Wait for the start condition
 				while (!g_progr_ftotal && !g_progr_ptotal)
 				{
@@ -349,7 +347,7 @@ void Emulator::Init()
 				}
 
 				// Initialize message dialog
-				dlg = Emu.GetCallbacks().get_msg_dialog();
+				std::shared_ptr<MsgDialogBase> dlg = Emu.GetCallbacks().get_msg_dialog();
 				dlg->type.se_normal = true;
 				dlg->type.bg_invisible = true;
 				dlg->type.progress_bar_count = 1;
@@ -384,7 +382,9 @@ void Emulator::Init()
 						pdone = g_progr_pdone;
 
 						// Compute new progress in percents
-						const u32 new_value = ((ptotal ? pdone * 1. / ptotal : 0.) + fdone) * 100. / (ftotal ? ftotal : 1);
+						const u32 total = ftotal + ptotal;
+						const u32 done = fdone + pdone;
+						const u32 new_value = double(done) * 100. / double(total ? total : 1);
 
 						// Compute the difference
 						const u32 delta = new_value > value ? new_value - value : 0;
@@ -421,6 +421,11 @@ void Emulator::Init()
 				g_progr_fdone  -= fdone;
 				g_progr_ptotal -= pdone;
 				g_progr_pdone  -= pdone;
+
+				Emu.CallAfter([=]
+				{
+					dlg->Close();
+				});
 			}
 		});
 

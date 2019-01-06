@@ -100,6 +100,7 @@ public:
 
 	virtual ~MsgDialogBase();
 	virtual void Create(const std::string& msg, const std::string& title = "") = 0;
+	virtual void Close() = 0;
 	virtual void SetMsg(const std::string& msg) = 0;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) = 0;
 	virtual void ProgressBarReset(u32 progressBarIndex) = 0;
