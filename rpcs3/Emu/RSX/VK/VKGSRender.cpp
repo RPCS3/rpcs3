@@ -918,7 +918,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			if (target_cb)
 			{
-				target_cb->wait();
+				target_cb->wait(GENERAL_WAIT_TIMEOUT);
 			}
 		}
 
@@ -1044,6 +1044,103 @@ void VKGSRender::check_descriptors()
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
 		m_current_frame->used_descriptors = 0;
 	}
+}
+
+void VKGSRender::check_window_status()
+{
+#ifdef _WIN32
+
+	if (LIKELY(!m_frame->has_wm_events()))
+	{
+		return;
+	}
+
+	while (const auto _event = m_frame->get_wm_event())
+	{
+		switch (_event)
+		{
+		case wm_event::toggle_fullscreen:
+		{
+			renderer_unavailable = true;
+			m_frame->enable_wm_fullscreen();
+			m_frame->toggle_fullscreen();
+			m_frame->disable_wm_fullscreen();
+			break;
+		}
+		case wm_event::geometry_change_notice:
+		{
+			// Stall until finish notification is received. Also, raise surface dirty flag
+			u32 timeout = 1000;
+			bool handled = false;
+
+			while (timeout)
+			{
+				switch (m_frame->get_wm_event())
+				{
+				default:
+					break;
+				case wm_event::window_resized:
+					handled = true;
+					present_surface_dirty_flag = true;
+					break;
+				case wm_event::geometry_change_in_progress:
+					timeout += 10; // Extend timeout to wait for user to finish resizing
+					break;
+				case wm_event::window_restored:
+				case wm_event::window_visibility_changed:
+				case wm_event::window_minimized:
+				case wm_event::window_moved:
+					handled = true; // Ignore these events as they do not alter client area
+					break;
+				}
+
+				if (handled)
+				{
+					break;
+				}
+				else
+				{
+					// Wait for window manager event
+					std::this_thread::sleep_for(1ms);
+					timeout --;
+				}
+			}
+
+			if (!timeout)
+			{
+				LOG_ERROR(RSX, "wm event handler timed out");
+			}
+
+			// Reset renderer availability if something has changed about the window
+			renderer_unavailable = false;
+			break;
+		}
+		case wm_event::window_resized:
+		{
+			LOG_ERROR(RSX, "wm_event::window_resized received without corresponding wm_event::geometry_change_notice!");
+			std::this_thread::sleep_for(100ms);
+			renderer_unavailable = false;
+			break;
+		}
+		}
+	}
+
+#else
+
+	const auto frame_width = m_frame->client_width();
+	const auto frame_height = m_frame->client_height();
+
+	if (m_client_height != frame_height ||
+		m_client_width != frame_width)
+	{
+		if (!!frame_width && !!frame_height)
+		{
+			present_surface_dirty_flag = true;
+			renderer_unavailable = false;
+		}
+	}
+
+#endif
 }
 
 VkDescriptorSet VKGSRender::allocate_descriptor_set()
@@ -1868,6 +1965,7 @@ void VKGSRender::on_init_thread()
 		m_frame->disable_wm_event_queue();
 		m_shaders_cache->load(&helper, *m_device, pipeline_layout);
 		m_frame->enable_wm_event_queue();
+		m_frame->disable_wm_fullscreen();
 	}
 }
 
@@ -2242,8 +2340,14 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 	if (ctx->swap_command_buffer->pending)
 	{
-		//Perform hard swap here
-		ctx->swap_command_buffer->wait();
+		// Perform hard swap here
+		if (ctx->swap_command_buffer->wait(FRAME_PRESENT_TIMEOUT) != VK_SUCCESS)
+		{
+			// Lost surface, release renderer
+			present_surface_dirty_flag = true;
+			renderer_unavailable = true;
+		}
+
 		free_resources = true;
 	}
 
@@ -2347,84 +2451,7 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 		return;
 	}
 
-#ifdef _WIN32
-
-	switch (m_frame->get_wm_event())
-	{
-	case wm_event::none:
-		break;
-	case wm_event::geometry_change_notice:
-	{
-		//Stall until finish notification is received. Also, raise surface dirty flag
-		u32 timeout = 1000;
-		bool handled = false;
-
-		while (timeout)
-		{
-			switch (m_frame->get_wm_event())
-			{
-			default:
-				break;
-			case wm_event::window_resized:
-				handled = true;
-				present_surface_dirty_flag = true;
-				break;
-			case wm_event::geometry_change_in_progress:
-				timeout += 10; //extend timeout to wait for user to finish resizing
-				break;
-			case wm_event::window_restored:
-			case wm_event::window_visibility_changed:
-			case wm_event::window_minimized:
-			case wm_event::window_moved:
-				handled = true; //ignore these events as they do not alter client area
-				break;
-			}
-
-			if (handled)
-				break;
-			else
-			{
-				//wait for window manager event
-				std::this_thread::sleep_for(10ms);
-				timeout -= 10;
-			}
-
-			//reset renderer availability if something has changed about the window
-			renderer_unavailable = false;
-		}
-
-		if (!timeout)
-		{
-			LOG_ERROR(RSX, "wm event handler timed out");
-		}
-
-		break;
-	}
-	case wm_event::window_resized:
-	{
-		LOG_ERROR(RSX, "wm_event::window_resized received without corresponding wm_event::geometry_change_notice!");
-		std::this_thread::sleep_for(100ms);
-		renderer_unavailable = false;
-		break;
-	}
-	}
-
-#else
-
-	const auto frame_width = m_frame->client_width();
-	const auto frame_height = m_frame->client_height();
-
-	if (m_client_height != frame_height ||
-		m_client_width != frame_width)
-	{
-		if (!!frame_width && !!frame_height)
-		{
-			present_surface_dirty_flag = true;
-			renderer_unavailable = false;
-		}
-	}
-
-#endif
+	check_window_status();
 
 	if (m_overlay_manager)
 	{
@@ -3052,8 +3079,8 @@ void VKGSRender::reinitialize_swapchain()
 		if (ctx.present_image == UINT32_MAX)
 			continue;
 
-		//Release present image by presenting it
-		ctx.swap_command_buffer->wait();
+		// Release present image by presenting it
+		ctx.swap_command_buffer->wait(FRAME_PRESENT_TIMEOUT);
 		ctx.swap_command_buffer = nullptr;
 		present(&ctx);
 	}
@@ -3558,7 +3585,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		}
 
 		if (data.command_buffer_to_wait->pending)
-			data.command_buffer_to_wait->wait();
+			data.command_buffer_to_wait->wait(GENERAL_WAIT_TIMEOUT);
 
 		//Gather data
 		for (const auto occlusion_id : data.indices)
