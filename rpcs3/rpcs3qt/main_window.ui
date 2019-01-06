@@ -165,6 +165,17 @@
      <addaction name="freezeRecentAct"/>
      <addaction name="separator"/>
     </widget>
+    <widget class="QMenu" name="menuBatch">
+     <property name="title">
+      <string>All Titles</string>
+     </property>
+     <addaction name="batchCreatePPUCachesAct"/>
+     <addaction name="separator"/>
+     <addaction name="batchRemoveCustomConfigurationsAct"/>
+     <addaction name="batchRemovePPUCachesAct"/>
+     <addaction name="batchRemoveSPUCachesAct"/>
+     <addaction name="batchRemoveShaderCachesAct"/>
+    </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
     <addaction name="bootRecentMenu"/>
@@ -173,6 +184,8 @@
     <addaction name="separator"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
+    <addaction name="separator"/>
+    <addaction name="menuBatch"/>
     <addaction name="separator"/>
     <addaction name="exitAct"/>
    </widget>
@@ -931,14 +944,6 @@
     <string>Other</string>
    </property>
   </action>
-  <action name="showGameToolBarAct">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Show Game Tool Bar</string>
-   </property>
-  </action>
   <action name="showHiddenEntriesAct">
    <property name="checkable">
     <bool>true</bool>
@@ -963,6 +968,31 @@
    </property>
    <property name="text">
     <string>Show Title Bars</string>
+   </property>
+  </action>
+  <action name="batchCreatePPUCachesAct">
+   <property name="text">
+    <string>Create PPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveCustomConfigurationsAct">
+   <property name="text">
+    <string>Remove Custom Configurations</string>
+   </property>
+  </action>
+  <action name="batchRemovePPUCachesAct">
+   <property name="text">
+    <string>Remove PPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveSPUCachesAct">
+   <property name="text">
+    <string>Remove SPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveShaderCachesAct">
+   <property name="text">
+    <string>Remove Shader Caches</string>
    </property>
   </action>
  </widget>
