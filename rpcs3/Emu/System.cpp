@@ -607,6 +607,8 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, boo
 		"/USRDIR/ISO.BIN.EDAT",
 	};
 
+	m_path_old = m_path;
+
 	if (direct && fs::exists(path))
 	{
 		m_path = path;
@@ -1126,6 +1128,7 @@ void Emulator::Load(bool add_only, bool force_global_config)
 		if (add_only)
 		{
 			LOG_NOTICE(LOADER, "Finished to add data to games.yml by boot for: %s", m_path);
+			m_path = m_path_old; // Reset m_path to fix boot from gui
 			return;
 		}
 
