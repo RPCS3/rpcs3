@@ -592,18 +592,27 @@ namespace vk
 		}
 	}
 
-	void wait_for_fence(VkFence fence)
+	VkResult wait_for_fence(VkFence fence, u64 timeout)
 	{
-		while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
+		if (timeout)
 		{
-			switch (status)
+			return vkWaitForFences(*g_current_renderer, 1, &fence, VK_FALSE, timeout * 1000ull);
+		}
+		else
+		{
+			while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
 			{
-			case VK_NOT_READY:
-				continue;
-			default:
-				die_with_error(HERE, status);
-				return;
+				switch (status)
+				{
+				case VK_NOT_READY:
+					continue;
+				default:
+					die_with_error(HERE, status);
+					return status;
+				}
 			}
+
+			return VK_SUCCESS;
 		}
 	}
 

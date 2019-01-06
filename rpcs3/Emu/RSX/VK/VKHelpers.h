@@ -46,6 +46,9 @@
 
 #define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
 
+#define FRAME_PRESENT_TIMEOUT 1000000ull // 1 second
+#define GENERAL_WAIT_TIMEOUT  100000ull  // 100ms
+
 namespace rsx
 {
 	class fragment_texture;
@@ -175,9 +178,9 @@ namespace vk
 	const u64 get_current_frame_id();
 	const u64 get_last_completed_frame_id();
 
-	//Fence reset with driver workarounds in place
+	// Fence reset with driver workarounds in place
 	void reset_fence(VkFence *pFence);
-	void wait_for_fence(VkFence pFence);
+	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
