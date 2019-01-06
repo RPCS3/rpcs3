@@ -55,8 +55,6 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	// Get the OSK options
 	u32 maxLength = (inputFieldInfo->limit_length >= CELL_OSKDIALOG_STRING_SIZE) ? 511 : (u32)inputFieldInfo->limit_length;
 	u32 options = dialogParam->prohibitFlgs;
-	bool use_seperate_windows = false; // TODO
-	bool keep_dialog_open = false; // TODO maybe same as use_seperate_windows
 
 	// Get init text and prepare return value
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
@@ -87,7 +85,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	bool result = false;
 
-	osk->on_close = [maxLength, use_seperate_windows, keep_dialog_open, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
+	osk->on_close = [maxLength, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
 		const auto osk = wptr.lock();
 		osk->state = OskDialogState::Close;
@@ -133,17 +131,10 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				osk->osk_confirm_callback = vm::null;
 			}
 
-			if (use_seperate_windows)
+			if (osk->use_seperate_windows.load() && osk->osk_text[0] == 0)
 			{
-				if (osk->osk_text[0] == 0)
-				{
-					cellOskDialog.warning("cellOskDialogLoadAsync: input result is CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT");
-					osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT;
-				}
-				else
-				{
-					osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
-				}
+				cellOskDialog.warning("cellOskDialogLoadAsync: input result is CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT");
+				osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT;
 			}
 			else
 			{
@@ -156,18 +147,11 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		}
 
 		// Send OSK status
-		if (use_seperate_windows)
+		if (osk->use_seperate_windows.load() && (osk->osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE))
 		{
 			if (accepted)
 			{
-				if (keep_dialog_open)
-				{
-					sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
-				}
-				else
-				{
-					sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
-				}
+				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
 			}
 			else
 			{
@@ -182,9 +166,11 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		pad::SetIntercepted(false);
 	};
 
-	osk->on_osk_input_entered = [=]()
+	osk->on_osk_input_entered = [wptr = std::weak_ptr<OskDialogBase>(osk)]()
 	{
-		if (use_seperate_windows)
+		const auto osk = wptr.lock();
+
+		if (osk->use_seperate_windows.load())
 		{
 			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
 		}
@@ -224,7 +210,7 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 
 	if (is_unload)
 	{
-		OutputInfo->result = osk->osk_input_result;
+		OutputInfo->result = osk->osk_input_result.load();
 	}
 	else
 	{
@@ -323,7 +309,19 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 {
 	cellOskDialog.todo("cellOskDialogSetSeparateWindowOption(windowOption=*0x%x)", windowOption);
 
-	// TODO: when games set the option to use seperate windows we will have to handle input signals and cancel signals
+	if (!windowOption)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
+	auto osk = fxm::get<OskDialogBase>();
+	if (!osk)
+	{
+		osk = fxm::import<OskDialogBase>(Emu.GetCallbacks().get_osk_dialog);
+	}
+
+	osk->use_seperate_windows = true;
+	osk->osk_continuous_mode = (CellOskDialogContinuousMode)(u32)windowOption->continuousMode;
 
 	return CELL_OK;
 }

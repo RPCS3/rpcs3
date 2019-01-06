@@ -207,7 +207,7 @@ struct CellOskDialogLayoutInfo
 
 struct CellOskDialogSeparateWindowOption
 {
-	be_t<s32> continuousMode; //CellOskDialogContinuousMode
+	be_t<u32> continuousMode; // CellOskDialogContinuousMode
 	be_t<s32> deviceMask;
 	be_t<s32> inputFieldWindowWidth;
 	be_t<f32> inputFieldBackgroundTrans;
@@ -251,8 +251,10 @@ public:
 	std::function<void()> on_osk_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Close };
+	atomic_t<bool> use_seperate_windows{ false };
 
-	CellOskDialogInputFieldResult osk_input_result;
+	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode{ CellOskDialogContinuousMode::CELL_OSKDIALOG_CONTINUOUS_MODE_NONE };
+	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE];
 	char16_t osk_text_old[CELL_OSKDIALOG_STRING_SIZE];
 
