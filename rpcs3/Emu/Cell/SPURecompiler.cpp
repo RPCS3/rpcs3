@@ -3348,6 +3348,19 @@ public:
 		return _spu->do_mfc();
 	}
 
+	static void exec_list_unstall(spu_thread* _spu, u32 tag)
+	{
+		for (u32 i = 0; i < _spu->mfc_size; i++)
+		{
+			if (_spu->mfc_queue[i].tag == (tag | 0x80))
+			{
+				_spu->mfc_queue[i].tag &= 0x7f;
+			}
+		}
+
+		return exec_mfc(_spu);
+	}
+
 	static bool exec_mfc_cmd(spu_thread* _spu)
 	{
 		return _spu->process_mfc_cmd(_spu->ch_mfc_cmd);
@@ -3726,7 +3739,7 @@ public:
 			const auto _mfc = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(_old, _new), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
-			call(&exec_mfc, m_thread);
+			call(&exec_list_unstall, m_thread, eval(val & 0x1f).value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
 			return;

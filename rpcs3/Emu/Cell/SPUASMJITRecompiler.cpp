@@ -2758,8 +2758,17 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	}
 	case MFC_WrListStallAck:
 	{
-		auto sub = [](spu_thread* _spu, spu_function_t _ret)
+		auto sub = [](spu_thread* _spu, spu_function_t _ret, u32 tag)
 		{
+			for (u32 i = 0; i < _spu->mfc_size; i++)
+			{
+				if (_spu->mfc_queue[i].tag == (tag | 0x80))
+				{
+					// Unset stall bit
+					_spu->mfc_queue[i].tag &= 0x7f;
+				}
+			}
+
 			_spu->do_mfc(true);
 			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
 		};
@@ -2770,7 +2779,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->btr(SPU_OFF_32(ch_stall_mask), qw0->r32());
 		c->jnc(ret);
 		c->lea(*ls, x86::qword_ptr(ret));
-		c->jmp(imm_ptr<void(*)(spu_thread*, spu_function_t)>(sub));
+		c->jmp(imm_ptr<void(*)(spu_thread*, spu_function_t, u32)>(sub));
 		c->align(kAlignCode, 16);
 		c->bind(ret);
 		return;

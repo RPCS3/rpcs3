@@ -913,7 +913,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 {
-	const u32 mask = 1u << args.tag;
+	const u32 mask = utils::rol32(1, args.tag);
 
 	if (UNLIKELY(mfc_barrier & mask || (args.cmd & (MFC_BARRIER_MASK | MFC_FENCE_MASK) && mfc_fence & mask)))
 	{
@@ -934,7 +934,7 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 
 				if (true)
 				{
-					const u32 _mask = 1u << mfc_queue[i].tag;
+					const u32 _mask = utils::rol32(1u, mfc_queue[i].tag);
 
 					// A command with barrier hard blocks that tag until it's been dealt with
 					if (mfc_queue[i].cmd & MFC_BARRIER_MASK)
@@ -974,14 +974,16 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 	{
 		if (UNLIKELY(item.sb & 0x8000))
 		{
-			ch_stall_mask |= (1u << args.tag);
+			ch_stall_mask |= utils::rol32(1, args.tag);
 
 			if (!ch_stall_stat.get_count())
 			{
 				ch_event_stat |= SPU_EVENT_SN;
 			}
 
-			ch_stall_stat.set_value((1u << args.tag) | ch_stall_stat.get_value());
+			ch_stall_stat.set_value(utils::rol32(1, args.tag) | ch_stall_stat.get_value());
+
+			args.tag |= 0x80; // Set stalled status
 			return false;
 		}
 
@@ -1093,7 +1095,7 @@ void spu_thread::do_mfc(bool wait)
 		}
 
 		// Select tag bit in the tag mask or the stall mask
-		const u32 mask = 1u << args.tag;
+		const u32 mask = utils::rol32(1, args.tag);
 
 		if (barrier & mask)
 		{
@@ -1113,7 +1115,7 @@ void spu_thread::do_mfc(bool wait)
 
 		if (args.cmd & MFC_LIST_MASK)
 		{
-			if (!(ch_stall_mask & mask))
+			if (!(args.tag & 0x80))
 			{
 				if (do_list_transfer(args))
 				{
@@ -1351,7 +1353,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	}
 	case MFC_PUTQLLUC_CMD:
 	{
-		const u32 mask = 1u << args.tag;
+		const u32 mask = utils::rol32(1, args.tag);
 
 		if (UNLIKELY((mfc_barrier | mfc_fence) & mask))
 		{
@@ -1396,11 +1398,11 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 			}
 
 			mfc_queue[mfc_size++] = args;
-			mfc_fence |= 1u << args.tag;
+			mfc_fence |= utils::rol32(1, args.tag);
 
 			if (args.cmd & MFC_BARRIER_MASK)
 			{
-				mfc_barrier |= 1u << args.tag;
+				mfc_barrier |= utils::rol32(1, args.tag);
 			}
 
 			return true;
@@ -1420,7 +1422,7 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 	{
 		if (LIKELY(args.size <= 0x4000))
 		{
-			if (LIKELY(do_dma_check(args) && !(ch_stall_mask & 1u << args.tag)))
+			if (LIKELY(do_dma_check(args)))
 			{
 				if (LIKELY(do_list_transfer(args)))
 				{
@@ -1429,11 +1431,11 @@ bool spu_thread::process_mfc_cmd(spu_mfc_cmd args)
 			}
 
 			mfc_queue[mfc_size++] = args;
-			mfc_fence |= 1u << args.tag;
+			mfc_fence |= utils::rol32(1, args.tag);
 
 			if (args.cmd & MFC_BARRIER_MASK)
 			{
-				mfc_barrier |= 1u << args.tag;
+				mfc_barrier |= utils::rol32(1, args.tag);
 			}
 
 			return true;
@@ -2023,11 +2025,21 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	case MFC_WrListStallAck:
 	{
 		// Reset stall status for specified tag
-		const u32 tag_mask = 1u << value;
+		const u32 tag_mask = utils::rol32(1, value);
 
 		if (ch_stall_mask & tag_mask)
 		{
 			ch_stall_mask &= ~tag_mask;
+
+			for (u32 i = 0; i < mfc_size; i++)
+			{
+				if (mfc_queue[i].tag == (value | 0x80))
+				{
+					// Unset stall bit
+					mfc_queue[i].tag &= 0x7f;
+				}
+			}
+
 			do_mfc(true);
 		}
 
