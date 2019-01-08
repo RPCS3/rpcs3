@@ -483,7 +483,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	GetCallbacks().on_ready();
 
 	auto gsrender = fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render);
-	if (gsrender.get() == nullptr)
+	auto padhandler = fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler);
+
+	if (gsrender.get() == nullptr || padhandler.get() == nullptr)
 		return false;
 
 	GetCallbacks().on_run();

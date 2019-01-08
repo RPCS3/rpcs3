@@ -22,11 +22,7 @@ namespace rsx
 
 			input_timer.Start();
 
-			{
-				std::lock_guard lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
-				handler->SetIntercepted(true);
-			}
+			pad::SetIntercepted(true);
 
 			while (!exit)
 			{
@@ -152,11 +148,7 @@ namespace rsx
 				manager->remove(uid);
 			}
 
-			{
-				std::lock_guard lock(pad::g_pad_mutex);
-				const auto handler = pad::get_current_handler();
-				handler->SetIntercepted(false);
-			}
+			pad::SetIntercepted(false);
 
 			if (on_close)
 				on_close(return_code);
