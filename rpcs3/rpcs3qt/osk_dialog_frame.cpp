@@ -1,4 +1,4 @@
-﻿
+
 #include "osk_dialog_frame.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
@@ -93,26 +93,58 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		input->setFixedWidth(lineEditWidth());
 		input->setText(text);
 		input->setFocus();
+		input->moveCursor(QTextCursor::End);
+		m_text_old = text;
 
 		connect(input, &QTextEdit::textChanged, [=]()
 		{
 			QString text = input->toPlainText();
-			text.chop(text.length() - charlimit);
 
-			if (options & CELL_OSKDIALOG_NO_SPACE)
+			if (text == m_text_old)
 			{
-				text.remove(QRegExp("\\s+"));
+				return;
 			}
 
-			input->setPlainText(text);
-
 			QTextCursor cursor = input->textCursor();
-			cursor.setPosition(QTextCursor::End);
+			const int cursor_pos_new = cursor.position();
+			const int cursor_pos_old = cursor_pos_new + m_text_old.length() - text.length();
+
+			// Reset to old state if character limit was reached
+			if ((u32)m_text_old.length() >= charlimit && (u32)text.length() > charlimit)
+			{
+				input->blockSignals(true);
+				input->setPlainText(m_text_old);
+				cursor.setPosition(cursor_pos_old);
+				input->setTextCursor(cursor);
+				input->blockSignals(false);
+				return;
+			}
+
+			int cursor_pos = cursor.position();
+
+			// Clear text of spaces if necessary
+			if (options & CELL_OSKDIALOG_NO_SPACE)
+			{
+				int trim_len = text.length();
+				text.remove(QRegExp("\\s+"));
+				trim_len -= text.length();
+				cursor_pos -= trim_len;
+			}
+
+			// Crop if more than one character was pasted and the character limit was exceeded
+			text.chop(text.length() - charlimit);
+
+			// Set new text and block signals to prevent infinite loop
+			input->blockSignals(true);
+			input->setPlainText(text);
+			cursor.setPosition(cursor_pos);
 			input->setTextCursor(cursor);
+			input->blockSignals(false);
+
+			m_text_old = text;
 
 			inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
-
 			on_osk_input_entered();
 		});
 

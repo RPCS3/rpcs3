@@ -22,4 +22,5 @@ private:
 	void SetOskText(const QString& text);
 
 	custom_dialog* m_dialog = nullptr;
+	QString m_text_old;
 };
