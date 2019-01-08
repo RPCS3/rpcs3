@@ -263,6 +263,7 @@
     <addaction name="showDebuggerAct"/>
     <addaction name="showLogAct"/>
     <addaction name="separator"/>
+    <addaction name="showTitleBarsAct"/>
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
@@ -954,6 +955,14 @@
   <action name="addGamesAct">
    <property name="text">
     <string>Add Games</string>
+   </property>
+  </action>
+  <action name="showTitleBarsAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Title Bars</string>
    </property>
   </action>
  </widget>
