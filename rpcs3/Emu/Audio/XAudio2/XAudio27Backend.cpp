@@ -9,14 +9,14 @@
 
 class XAudio27Library : public XAudio2Backend::XAudio2Library
 {
-	const HMODULE s_tls_xaudio2_lib;
-	IXAudio2* s_tls_xaudio2_instance{};
-	IXAudio2MasteringVoice* s_tls_master_voice{};
-	IXAudio2SourceVoice* s_tls_source_voice{};
+	const HMODULE tls_xaudio2_lib;
+	IXAudio2* tls_xaudio2_instance{};
+	IXAudio2MasteringVoice* tls_master_voice{};
+	IXAudio2SourceVoice* tls_source_voice{};
 
 public:
 	XAudio27Library(void* lib2_7)
-		: s_tls_xaudio2_lib(static_cast<HMODULE>(lib2_7))
+		: tls_xaudio2_lib(static_cast<HMODULE>(lib2_7))
 	{
 		HRESULT hr = S_OK;
 
@@ -28,7 +28,7 @@ public:
 			return;
 		}
 
-		hr = XAudio2Create(&s_tls_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
+		hr = XAudio2Create(&tls_xaudio2_instance, 0, XAUDIO2_DEFAULT_PROCESSOR);
 		if (FAILED(hr))
 		{
 			LOG_ERROR(GENERAL, "XAudio2Backend : XAudio2Create() failed(0x%08x)", (u32)hr);
@@ -36,42 +36,42 @@ public:
 			return;
 		}
 
-		hr = s_tls_xaudio2_instance->CreateMasteringVoice(&s_tls_master_voice, g_cfg.audio.downmix_to_2ch ? 2 : 8, 48000);
+		hr = tls_xaudio2_instance->CreateMasteringVoice(&tls_master_voice, g_cfg.audio.downmix_to_2ch ? 2 : 8, 48000);
 		if (FAILED(hr))
 		{
 			LOG_ERROR(GENERAL, "XAudio2Backend : CreateMasteringVoice() failed(0x%08x)", (u32)hr);
-			s_tls_xaudio2_instance->Release();
+			tls_xaudio2_instance->Release();
 			Emu.Pause();
 		}
 	}
 
 	~XAudio27Library()
 	{
-		if (s_tls_source_voice != nullptr)
+		if (tls_source_voice != nullptr)
 		{
-			s_tls_source_voice->Stop();
-			s_tls_source_voice->DestroyVoice();
+			tls_source_voice->Stop();
+			tls_source_voice->DestroyVoice();
 		}
 
-		if (s_tls_master_voice != nullptr)
+		if (tls_master_voice != nullptr)
 		{
-			s_tls_master_voice->DestroyVoice();
+			tls_master_voice->DestroyVoice();
 		}
 
-		if (s_tls_xaudio2_instance != nullptr)
+		if (tls_xaudio2_instance != nullptr)
 		{
-			s_tls_xaudio2_instance->StopEngine();
-			s_tls_xaudio2_instance->Release();
+			tls_xaudio2_instance->StopEngine();
+			tls_xaudio2_instance->Release();
 		}
 
 		CoUninitialize();
 
-		FreeLibrary(s_tls_xaudio2_lib);
+		FreeLibrary(tls_xaudio2_lib);
 	}
 
 	virtual void play() override
 	{
-		HRESULT hr = s_tls_source_voice->Start();
+		HRESULT hr = tls_source_voice->Start();
 		if (FAILED(hr))
 		{
 			LOG_ERROR(GENERAL, "XAudio2Backend : Start() failed(0x%08x)", (u32)hr);
@@ -81,7 +81,7 @@ public:
 
 	virtual void flush() override
 	{
-		HRESULT hr = s_tls_source_voice->FlushSourceBuffers();
+		HRESULT hr = tls_source_voice->FlushSourceBuffers();
 		if (FAILED(hr))
 		{
 			LOG_ERROR(GENERAL, "XAudio2Backend : FlushSourceBuffers() failed(0x%08x)", (u32)hr);
@@ -91,7 +91,7 @@ public:
 
 	virtual void stop() override
 	{
-		HRESULT hr = s_tls_source_voice->Stop();
+		HRESULT hr = tls_source_voice->Stop();
 		if (FAILED(hr))
 		{
 			LOG_ERROR(GENERAL, "XAudio2Backend : Stop() failed(0x%08x)", (u32)hr);
@@ -102,7 +102,7 @@ public:
 	virtual bool is_playing() override
 	{
 		XAUDIO2_VOICE_STATE state;
-		s_tls_source_voice->GetState(&state);
+		tls_source_voice->GetState(&state);
 
 		return state.BuffersQueued > 0 || state.pCurrentBufferContext != nullptr;
 	}
@@ -124,7 +124,7 @@ public:
 		waveformatex.wBitsPerSample = sample_size * 8;
 		waveformatex.cbSize = 0;
 
-		hr = s_tls_xaudio2_instance->CreateSourceVoice(&s_tls_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
+		hr = tls_xaudio2_instance->CreateSourceVoice(&tls_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
 		if (FAILED(hr))
 		{
 			LOG_ERROR(GENERAL, "XAudio2Backend : CreateSourceVoice() failed(0x%08x)", (u32)hr);
@@ -132,13 +132,13 @@ public:
 			return;
 		}
 
-		s_tls_source_voice->SetVolume(channels == 2 ? 1.0f : 4.0f);
+		tls_source_voice->SetVolume(channels == 2 ? 1.0f : 4.0f);
 	}
 
 	virtual bool add(const void* src, u32 num_samples) override
 	{
 		XAUDIO2_VOICE_STATE state;
-		s_tls_source_voice->GetState(&state);
+		tls_source_voice->GetState(&state);
 
 		// XAudio 2.7 bug workaround, when it says "SimpList: non-growable list ran out of room for new elements" and hits int 3
 		if (state.BuffersQueued >= MAX_AUDIO_BUFFERS)
@@ -159,7 +159,7 @@ public:
 		buffer.PlayBegin = 0;
 		buffer.PlayLength = AUDIO_BUFFER_SAMPLES;
 
-		HRESULT hr = s_tls_source_voice->SubmitSourceBuffer(&buffer);
+		HRESULT hr = tls_source_voice->SubmitSourceBuffer(&buffer);
 		if (FAILED(hr))
 		{
 			LOG_ERROR(GENERAL, "XAudio2Backend : AddData() failed(0x%08x)", (u32)hr);
@@ -173,7 +173,7 @@ public:
 	virtual u64 enqueued_samples() override
 	{
 		XAUDIO2_VOICE_STATE state;
-		s_tls_source_voice->GetState(&state);
+		tls_source_voice->GetState(&state);
 
 		// all buffers contain AUDIO_BUFFER_SAMPLES, so we can easily calculate how many samples there are remaining
 		return (AUDIO_BUFFER_SAMPLES - state.SamplesPlayed % AUDIO_BUFFER_SAMPLES) + (state.BuffersQueued * AUDIO_BUFFER_SAMPLES);
@@ -183,7 +183,7 @@ public:
 	{
 		new_ratio = std::clamp(new_ratio, XAUDIO2_MIN_FREQ_RATIO, XAUDIO2_DEFAULT_FREQ_RATIO);
 
-		HRESULT hr = s_tls_source_voice->SetFrequencyRatio(new_ratio);
+		HRESULT hr = tls_source_voice->SetFrequencyRatio(new_ratio);
 		if (FAILED(hr))
 		{
 			LOG_ERROR(GENERAL, "XAudio2Backend : SetFrequencyRatio() failed(0x%08x)", (u32)hr);
