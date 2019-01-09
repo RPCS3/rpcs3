@@ -200,7 +200,8 @@ public:
 
 	const s64 period_comparison_margin = 250; // when comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
 
-	const u64 untouched_timeout = 2 * audio_block_period;
+	const u64 fully_untouched_timeout = 2 * audio_block_period; // timeout if the game has not touched any audio buffer yet
+	const u64 partially_untouched_timeout = 4 * audio_block_period; // timeout if the game has not touched all audio buffers yet
 
 	/*
 	 * Time Stretching
@@ -212,7 +213,8 @@ public:
 	const bool time_stretching_enabled = raw_time_stretching_enabled && backend->has_capability(AudioBackend::SET_FREQUENCY_RATIO);
 
 	const f32 time_stretching_threshold = g_cfg.audio.time_stretching_threshold / 100.0f; // we only apply time stretching below this buffer fill rate (adjusted for average period)
-	const f32 time_stretching_step = 0.1f;
+	const f32 time_stretching_step = 0.1f; // will only reduce/increase the frequency ratio in steps of at least this value
+	const f32 time_stretching_scale = 0.9f;
 
 	/*
 	 * Constructor
@@ -232,7 +234,7 @@ private:
 	std::unique_ptr<AudioDumper> m_dump;
 
 	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS];
-	const float silence_buffer[8 * AUDIO_BUFFER_SAMPLES] = { 0 };
+	const float silence_buffer[AUDIO_MAX_CHANNELS_COUNT * AUDIO_BUFFER_SAMPLES] = { 0 };
 
 	bool backend_open = false;
 	bool playing = false;
