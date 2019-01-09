@@ -60,7 +60,7 @@ audio_ringbuffer::audio_ringbuffer(cell_audio_config& _cfg)
 	, emu_paused(Emu.IsPaused())
 {
 	// Initialize buffers
-	if (cfg.num_allocated_buffers >= MAX_AUDIO_BUFFERS)
+	if (cfg.num_allocated_buffers > MAX_AUDIO_BUFFERS)
 	{
 		fmt::throw_exception("MAX_AUDIO_BUFFERS is too small");
 	}
@@ -106,7 +106,7 @@ audio_ringbuffer::~audio_ringbuffer()
 
 f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 {
-	if(!has_capability(AudioBackend::SET_FREQUENCY_RATIO))
+	if (!has_capability(AudioBackend::SET_FREQUENCY_RATIO))
 	{
 		ASSERT(new_ratio == 1.0f);
 		frequency_ratio = 1.0f;
@@ -114,7 +114,7 @@ f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 	else
 	{
 		frequency_ratio = backend->SetFrequencyRatio(new_ratio);
-		//cellAudio.trace("set_frequency_ratio(%1.2f) -> %1.2f", new_ratio, frequency_ratio);
+		cellAudio.error("set_frequency_ratio(%1.2f) -> %1.2f", new_ratio, frequency_ratio);
 	}
 	return frequency_ratio;
 }
@@ -174,7 +174,7 @@ void audio_ringbuffer::play()
 		return;
 	}
 
-	if (has_capability(AudioBackend::IS_PLAYING) && playing)
+	if (playing && has_capability(AudioBackend::IS_PLAYING))
 	{
 		return;
 	}
@@ -221,7 +221,7 @@ u64 audio_ringbuffer::update()
 	if (Emu.IsPaused())
 	{
 		// Emulator paused
-		if (has_capability(AudioBackend::PLAY_PAUSE_FLUSH) && playing)
+		if (playing && has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
 		{
 			backend->Pause();
 		}
@@ -230,13 +230,14 @@ u64 audio_ringbuffer::update()
 	else if (emu_paused)
 	{
 		// Emulator unpaused
-		if (has_capability(AudioBackend::PLAY_PAUSE_FLUSH) && enqueued_samples > 0)
+		if (enqueued_samples > 0 && has_capability(AudioBackend::PLAY_PAUSE_FLUSH))
 		{
 			play();
 		}
 		emu_paused = false;
 	}
 
+	// Prepare timestamp and playing status
 	const u64 timestamp = get_timestamp();
 	const bool new_playing = !emu_paused && get_backend_playing();
 
@@ -252,7 +253,6 @@ u64 audio_ringbuffer::update()
 		{
 			const u64 play_delta = timestamp - (play_timestamp > update_timestamp ? play_timestamp : update_timestamp);
 
-			// NOTE: Only works with a fixed sampling rate
 			const u64 delta_samples_tmp = play_delta * static_cast<u64>(cfg.audio_sampling_rate * frequency_ratio) + last_remainder;
 			last_remainder = delta_samples_tmp % 1'000'000;
 			const u64 delta_samples = delta_samples_tmp / 1'000'000;
@@ -283,7 +283,7 @@ u64 audio_ringbuffer::update()
 	{
 		if (!new_playing)
 		{
-			cellAudio.warning("Audio backend stopped unexpectedly, likely due to a buffer underrun");
+			cellAudio.error("Audio backend stopped unexpectedly, likely due to a buffer underrun");
 
 			flush();
 			playing = false;
@@ -345,7 +345,6 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 		bool retouched = false;
 		for (u32 tag_pos = tag_first_pos, tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_pos += tag_delta, tag_nr++)
 		{
-			// grab current value and re-tag atomically
 			const f32 val = port_buf[tag_pos];
 			f32& last_val = port.last_tag_value[tag_nr];
 
@@ -353,7 +352,7 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 			{
 				last_val = val;
 
-				retouched |= tag_nr < port.prev_touched_tag_nr && port.prev_touched_tag_nr != UINT32_MAX;
+				retouched |= (tag_nr <= port.prev_touched_tag_nr) && port.prev_touched_tag_nr != UINT32_MAX;
 				last_touched_tag_nr = tag_nr;
 			}
 		}
@@ -371,13 +370,22 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 				// we retouched, so wait at least once more to make sure no more tags get touched
 				in_progress++;
 			}
+
 			// buffer has been completely filled
 			port.prev_touched_tag_nr = last_touched_tag_nr;
 		}
 		else if (last_touched_tag_nr == port.prev_touched_tag_nr)
 		{
-			// hasn't been touched since the last call
-			incomplete++;
+			if (retouched)
+			{
+				// we retouched, so wait at least once more to make sure no more tags get touched
+				in_progress++;
+			}
+			else
+			{
+				// hasn't been touched since the last call
+				incomplete++;
+			}
 		}
 		else
 		{
@@ -392,7 +400,7 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 
 void cell_audio_thread::reset_ports(s32 offset)
 {
-	// Memset previous buffer to 0 and tag
+	// Memset buffer to 0 and tag
 	for (auto& port : ports)
 	{
 		if (port.state != audio_port_state::started) continue;
@@ -528,7 +536,7 @@ void cell_audio_thread::operator()()
 				// Ratio between the rolling average of the audio period, and the desired audio period
 				const f32 average_playtime_ratio = m_average_playtime / cfg.audio_buffer_length;
 
-				// Use the above adjusted ratio to decide how much buffer we should be aiming for
+				// Use the above average ratio to decide how much buffer we should be aiming for
 				f32 desired_duration_adjusted = cfg.desired_buffer_duration + (cfg.audio_block_period / 2.0f);
 				if (average_playtime_ratio < 1.0f)
 				{
@@ -547,12 +555,21 @@ void cell_audio_thread::operator()()
 
 					// update frequency ratio if necessary
 					f32 new_ratio = frequency_ratio;
-					if (
-						(desired_duration_rate < cfg.time_stretching_threshold && desired_duration_rate < frequency_ratio - cfg.time_stretching_step) || // Reduce frequency ratio below threshold in 0.1f steps
-						(desired_duration_rate > frequency_ratio + cfg.time_stretching_step) // Increase frequency ratio in 0.1f steps
-					   )
+					if (desired_duration_rate < cfg.time_stretching_threshold)
 					{
-						new_ratio = ringbuffer->set_frequency_ratio(std::min(desired_duration_rate, 1.0f));
+						const f32 normalized_desired_duration_rate = desired_duration_rate / cfg.time_stretching_threshold;
+						const f32 request_ratio = normalized_desired_duration_rate * cfg.time_stretching_scale;
+						AUDIT(request_ratio <= 1.0f);
+
+						// change frequency ratio in steps
+						if (std::abs(frequency_ratio - request_ratio) > cfg.time_stretching_step)
+						{
+							new_ratio = ringbuffer->set_frequency_ratio(request_ratio);
+						}
+					}
+					else if(frequency_ratio != 1.0f)
+					{
+						new_ratio = ringbuffer->set_frequency_ratio(1.0f);
 					}
 
 					if (new_ratio != frequency_ratio)
@@ -579,7 +596,7 @@ void cell_audio_thread::operator()()
 				else
 				{
 					// not as full as desired
-					const f32 multiplier = desired_duration_rate * desired_duration_rate;
+					const f32 multiplier = desired_duration_rate * desired_duration_rate; // quite aggressive, but helps more times than it hurts
 					m_dynamic_period = cfg.minimum_block_period + static_cast<u64>((cfg.audio_block_period - cfg.minimum_block_period) * multiplier);
 				}
 			}
@@ -595,7 +612,7 @@ void cell_audio_thread::operator()()
 			if (active_ports == 0)
 			{
 				// no need to mix, just enqueue silence and advance time
-				cellAudio.trace("advancing time: no active ports, enqueued_buffers=%llu", enqueued_buffers);
+				cellAudio.trace("enqueuing silence: no active ports, enqueued_buffers=%llu", enqueued_buffers);
 				if (playing)
 				{
 					ringbuffer->enqueue_silence(1);
@@ -619,23 +636,37 @@ void cell_audio_thread::operator()()
 					continue;
 				}
 
-
-				// We allow untouched buffers to go through after a timeout
-				// While we should always wait for in-progress buffers, games may sometimes "skip" audio periods entirely if they're falling behind
-				if(time_since_last_period < cfg.untouched_timeout)
+				// Games may sometimes "skip" audio periods entirely if they're falling behind (a sort of "frameskip" for audio)
+				// As such, if the game doesn't touch buffers for too long we advance time hoping the game recovers
+				if (
+					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
+					(time_since_last_period > cfg.partially_untouched_timeout)
+				   )
 				{
-					cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
-					thread_ctrl::wait_for(1000);
-					continue;
-				}
-				else if (untouched == active_ports)
-				{
-					// There's no audio in the buffers, simply advance time
+					// There's no audio in the buffers, simply advance time and hope the game recovers
 					cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
 					untouched_expected = untouched;
 					advance(timestamp);
 					continue;
 				}
+
+				cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
+				thread_ctrl::wait_for(1000);
+				continue;
+			}
+
+			// Fast-path for when there is no audio in the buffers
+			if (untouched == active_ports)
+			{
+				// There's no audio in the buffers, simply advance time
+				cellAudio.trace("enqueuing silence: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
+				if (playing)
+				{
+					ringbuffer->enqueue_silence(1);
+				}
+				untouched_expected = untouched;
+				advance(timestamp);
+				continue;
 			}
 			
 			// Wait for buffer(s) to be completely filled
@@ -646,15 +677,12 @@ void cell_audio_thread::operator()()
 				continue;
 			}
 
-			/*cellAudio.error("time_since_last=%llu, dynamic_period=%llu => %3.2f%%, average_period=%4.2f => %3.2f%%", time_since_last_period,
-				m_dynamic_period, (((f32)m_dynamic_period) / cfg.audio_block_period) * 100.0f,
-				m_average_period, (m_average_period / cfg.audio_block_period) * 100.0f);*/
 			//cellAudio.error("active=%u, untouched=%u, in_progress=%d, incomplete=%d, enqueued_buffers=%u", active_ports, untouched, in_progress, incomplete, enqueued_buffers);
 
 			// Store number of untouched buffers for future reference
 			untouched_expected = untouched;
 
-			// Warn if we enqueued untouched/incomplete buffers
+			// Log if we enqueued untouched/incomplete buffers
 			if (untouched > 0 || incomplete > 0)
 			{
 				cellAudio.trace("enqueueing: untouched=%u/%u (expected=%u), incomplete=%u/%u enqueued_buffers=%llu", untouched, active_ports, untouched_expected, incomplete, active_ports, enqueued_buffers);
@@ -664,7 +692,7 @@ void cell_audio_thread::operator()()
 			if (!playing)
 			{
 				// We are not playing (likely buffer underrun)
-				// align to 5.(3)ms on global clock
+				// align to 5.(3)ms on global clock - some games seem to prefer this
 				const s64 audio_period_alignment_delta = (timestamp - m_start_time) % cfg.audio_block_period;
 				if (audio_period_alignment_delta > cfg.period_comparison_margin)
 				{
