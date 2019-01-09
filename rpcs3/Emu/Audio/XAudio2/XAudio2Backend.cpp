@@ -45,14 +45,12 @@ void XAudio2Backend::Open(u32 /* num_buffers */)
 		}
 		else if (hmodule = LoadLibraryExW(L"XAudio2_8.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
 		{
-			// XAudio 2.9 uses the same code as XAudio 2.8
 			lib.reset(xa28_init(hmodule));
 
 			LOG_SUCCESS(GENERAL, "XAudio 2.8 initialized");
 		}
 		else if (hmodule = LoadLibraryExW(L"XAudio2_7.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32))
 		{
-			// XAudio 2.9 uses the same code as XAudio 2.8
 			lib.reset(xa27_init(hmodule));
 
 			LOG_SUCCESS(GENERAL, "XAudio 2.7 initialized");

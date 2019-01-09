@@ -8,9 +8,9 @@
 
 class ALSABackend : public AudioBackend
 {
-	snd_pcm_t* s_tls_handle{nullptr};
-	snd_pcm_hw_params_t* s_tls_hw_params{nullptr};
-	snd_pcm_sw_params_t* s_tls_sw_params{nullptr};
+	snd_pcm_t* tls_handle{nullptr};
+	snd_pcm_hw_params_t* tls_hw_params{nullptr};
+	snd_pcm_sw_params_t* tls_sw_params{nullptr};
 	
 public:
 	ALSABackend();
