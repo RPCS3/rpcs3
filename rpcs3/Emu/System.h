@@ -313,13 +313,14 @@ public:
 		return m_pause_amend_time;
 	}
 
-	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
+	bool BootGame(std::string path, bool direct = false, bool add_only = false);
 	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
 private:
 	static std::string GetEmuDir();
 	static std::string GetHdd1Dir();
+	static std::string GetUsbDir();
 
 	void LimitCacheSize();
 public:

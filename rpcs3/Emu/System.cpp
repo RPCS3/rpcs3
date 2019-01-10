@@ -293,8 +293,8 @@ void Emulator::Init()
 	// Create directories (can be disabled if necessary)
 	const std::string emu_dir = GetEmuDir();
 	const std::string dev_hdd0 = GetHddDir();
-	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
-	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd1 = GetHdd1Dir();
+	const std::string dev_usb = GetUsbDir();
 
 	if (g_cfg.vfs.init_dirs)
 	{
@@ -570,7 +570,7 @@ void Emulator::LimitCacheSize()
 	LOG_SUCCESS(GENERAL, "Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
 }
 
-bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
+bool Emulator::BootGame(std::string path, bool direct, bool add_only)
 {
 	if (g_cfg.vfs.limit_cache_size)
 		LimitCacheSize();
@@ -583,6 +583,10 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 		"/eboot.bin",
 		"/USRDIR/ISO.BIN.EDAT",
 	};
+
+#ifdef _WIN32
+	std::replace(path.begin(), path.end(), '\\', '/');
+#endif
 
 	if (direct && fs::exists(path))
 	{
@@ -642,17 +646,22 @@ bool Emulator::InstallPkg(const std::string& path)
 std::string Emulator::GetEmuDir()
 {
 	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
-	return emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
+	return fmt::fix_path(emu_dir_.empty() ? fs::get_config_dir() : emu_dir_, true);
 }
 
 std::string Emulator::GetHddDir()
 {
-	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir());
+	return fmt::fix_path(fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir()), true);
 }
 
 std::string Emulator::GetHdd1Dir()
 {
-	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
+	return fmt::fix_path(fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir()), true);
+}
+
+std::string Emulator::GetUsbDir()
+{
+	return fmt::fix_path(fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", GetEmuDir()), true);
 }
 
 std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user)
@@ -827,12 +836,12 @@ void Emulator::Load(bool add_only)
 		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 
 		// Mount default relative path to non-existent directory
-		vfs::mount("/dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
-		vfs::mount("/dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/dev_hdd0", GetHddDir());
+		vfs::mount("/dev_hdd1", GetHdd1Dir());
 		vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
-		vfs::mount("/dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
-		vfs::mount("/dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
-		vfs::mount("/app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/dev_usb", GetUsbDir());
+		vfs::mount("/dev_usb000", GetUsbDir());
+		vfs::mount("/app_home", home_dir.empty() ? elf_dir + '/' : fmt::fix_path(fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir), true));
 
 		// Special boot mode (directory scan)
 		if (fs::is_dir(m_path))
@@ -1037,7 +1046,7 @@ void Emulator::Load(bool add_only)
 		}
 		else if (m_cat == "1P" && from_hdd0_game)
 		{
-			//PS1 Classics
+			// PS1 Classics
 			LOG_NOTICE(LOADER, "PS1 Game: %s, %s", m_title_id, m_title);
 
 			std::string gamePath = m_path.substr(m_path.find("/dev_hdd0/game/"), 24);
@@ -1057,8 +1066,8 @@ void Emulator::Load(bool add_only)
 			argv[7] = "2";                        // ??? arg7 2 -- full screen on/off 2/1 ?
 			argv[8] = "1";                        // ??? arg8 2 -- smoothing	on/off	= 1/0 ?
 
-			//TODO, this seems like it would normally be done by sysutil etc
-			//Basically make 2 128KB memory cards 0 filled and let the games handle formatting.
+			// TODO, this seems like it would normally be done by sysutil etc
+			// Basically make 2 128KB memory cards 0 filled and let the games handle formatting.
 
 			fs::file card_1_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[1]), fs::write + fs::create);
 			card_1_file.trunc(128 * 1024);
@@ -1544,7 +1553,7 @@ std::string cfg_root::node_vfs::get(const cfg::string& _cfg, const char* _def) c
 		return fs::get_config_dir() + _def;
 	}
 
-	return fmt::replace_all(_cfg.get(), "$(EmulatorDir)", emulator_dir.get().empty() ? fs::get_config_dir() : emulator_dir.get());
+	return fmt::fix_path(fmt::replace_all(_cfg.get(), "$(EmulatorDir)", emulator_dir.get().empty() ? fs::get_config_dir() : emulator_dir.get()), true);
 }
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)

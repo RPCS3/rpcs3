@@ -84,6 +84,8 @@ namespace fmt
 		return src;
 	}
 
+	std::string fix_path(std::string path, bool suffix_slash = true);
+
 	std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
 	std::string trim(const std::string& source, const std::string& values = " \t");
 

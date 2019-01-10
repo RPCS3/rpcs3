@@ -374,6 +374,20 @@ std::string fmt::replace_all(const std::string& src, const std::string& from, co
 	return target;
 }
 
+std::string fmt::fix_path(std::string path, bool suffix_slash)
+{
+	if (suffix_slash && path.back() != '/' && path.back() != '\\')
+	{
+		path += '/';
+	}
+
+#ifdef _WIN32
+	std::replace(path.begin(), path.end(), '\\', '/');
+#endif
+
+	return path;
+}
+
 std::vector<std::string> fmt::split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty)
 {
 	std::vector<std::string> result;
