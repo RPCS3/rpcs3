@@ -1,4 +1,4 @@
-#include "rpcs3_app.h"
+﻿#include "rpcs3_app.h"
 
 #include "rpcs3qt/qt_utils.h"
 
@@ -390,7 +390,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 
 		// dock widget
 		"QDockWidget{ background: transparent; color: black; }"
-		"[floating = \"true\"]{ background: white; }"
+		"[floating=\"true\"]{ background: white; }"
 		"QDockWidget::title{ background: #e3e3e3; border: none; padding-top: 0.2em; padding-left: 0.2em; }"
 		"QDockWidget::close-button, QDockWidget::float-button{ background-color: #e3e3e3; }"
 

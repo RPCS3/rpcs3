@@ -1145,6 +1145,13 @@ void main_window::RepaintGui()
 	Q_EMIT RequestTrophyManagerRepaint();
 }
 
+void main_window::ShowTitleBars(bool show)
+{
+	m_gameListFrame->SetTitleBarVisible(show);
+	m_debuggerFrame->SetTitleBarVisible(show);
+	m_logFrame->SetTitleBarVisible(show);
+}
+
 void main_window::CreateActions()
 {
 	ui->exitAct->setShortcuts(QKeySequence::Quit);
@@ -1369,6 +1376,12 @@ void main_window::CreateConnects()
 	{
 		checked ? m_gameListFrame->show() : m_gameListFrame->hide();
 		guiSettings->SetValue(gui::mw_gamelist, checked);
+	});
+
+	connect(ui->showTitleBarsAct, &QAction::triggered, [=](bool checked)
+	{
+		ShowTitleBars(checked);
+		guiSettings->SetValue(gui::mw_titleBarsVisible, checked);
 	});
 
 	connect(ui->showToolBarAct, &QAction::triggered, [=](bool checked)
@@ -1606,11 +1619,14 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->showGameListAct->setChecked(guiSettings->GetValue(gui::mw_gamelist).toBool());
 	ui->showDebuggerAct->setChecked(guiSettings->GetValue(gui::mw_debugger).toBool());
 	ui->showToolBarAct->setChecked(guiSettings->GetValue(gui::mw_toolBarVisible).toBool());
+	ui->showTitleBarsAct->setChecked(guiSettings->GetValue(gui::mw_titleBarsVisible).toBool());
 
 	m_debuggerFrame->setVisible(ui->showDebuggerAct->isChecked());
 	m_logFrame->setVisible(ui->showLogAct->isChecked());
 	m_gameListFrame->setVisible(ui->showGameListAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
+
+	ShowTitleBars(ui->showTitleBarsAct->isChecked());
 
 	ui->showHiddenEntriesAct->setChecked(guiSettings->GetValue(gui::gl_show_hidden).toBool());
 	m_gameListFrame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_gameListFrame->LoadSettings

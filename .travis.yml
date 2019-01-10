@@ -21,7 +21,14 @@ matrix:
           install: "docker pull rpcs3/rpcs3-travis-trusty:1.0"
           script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-trusty:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
         - os: osx
-          osx_image: xcode10
+          osx_image: xcode10.1
+          addons:
+            homebrew:
+                packages:
+                    - ccache
+                    - glew
+                    - ninja
+                    - qt
           script: "/bin/bash -ex .travis/build-mac.bash"
           cache: ccache
         
