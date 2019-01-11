@@ -1426,7 +1426,7 @@ s32 sys_net_bnet_close(ppu_thread& ppu, s32 s)
 	}
 
 	if (!sock->queue.empty())
-		sys_net.fatal("CLOSE");
+		sys_net.error("CLOSE");
 
 	return 0;
 }
