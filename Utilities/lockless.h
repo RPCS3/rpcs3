@@ -311,17 +311,28 @@ public:
 	}
 };
 
+class lf_queue_base
+{
+protected:
+	atomic_t<std::uintptr_t> m_head = 0;
+
+	void imp_notify();
+
+public:
+	// Wait for new elements pushed, no other thread shall call wait() or pop_all() simultaneously
+	bool wait(u64 usec_timeout = -1);
+};
+
 // Linked list-based multi-producer queue (the consumer drains the whole queue at once)
 template <typename T>
-class lf_queue
+class lf_queue : public lf_queue_base
 {
-	// Elements are added by replacing m_head
-	atomic_t<lf_queue_item<T>*> m_head = nullptr;
+	using lf_queue_base::m_head;
 
 	// Extract all elements and reverse element order (FILO to FIFO)
 	lf_queue_item<T>* reverse() noexcept
 	{
-		if (auto* head = m_head.load() ? m_head.exchange(nullptr) : nullptr)
+		if (auto* head = m_head.load() ? reinterpret_cast<lf_queue_item<T>*>(m_head.exchange(0)) : nullptr)
 		{
 			if (auto* prev = head->m_link)
 			{
@@ -347,18 +358,23 @@ public:
 
 	~lf_queue()
 	{
-		delete m_head.load();
+		delete reinterpret_cast<T*>(m_head.load());
 	}
 
 	template <typename... Args>
 	void push(Args&&... args)
 	{
-		auto* old  = m_head.load();
-		auto* item = new lf_queue_item<T>(old, std::forward<Args>(args)...);
+		auto  _old = m_head.load();
+		auto* item = new lf_queue_item<T>(_old & 1 ? nullptr : reinterpret_cast<lf_queue_item<T>*>(_old), std::forward<Args>(args)...);
 
-		while (!m_head.compare_exchange(old, item))
+		while (!m_head.compare_exchange(_old, reinterpret_cast<std::uint64_t>(item)))
 		{
-			item->m_link = old;
+			item->m_link = _old & 1 ? nullptr : reinterpret_cast<lf_queue_item<T>*>(_old);
+		}
+
+		if (_old & 1)
+		{
+			lf_queue_base::imp_notify();
 		}
 	}
 
