@@ -88,6 +88,14 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	osk->on_close = [maxLength, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
 		const auto osk = wptr.lock();
+
+		if (osk->state.load() == OskDialogState::Abort)
+		{
+			pad::SetIntercepted(false);
+			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
+			return;
+		}
+
 		osk->state = OskDialogState::Close;
 
 		const bool accepted = status == CELL_MSGDIALOG_BUTTON_OK;
@@ -292,12 +300,13 @@ error_code cellOskDialogAbort()
 	}
 
 	// If the dialog has the Open state then it is in use. Only dialogs with the Close state can be aborted.
-	if (!osk->state.compare_and_swap_test(OskDialogState::Open, OskDialogState::Abort))
+	if (osk->state.load() == OskDialogState::Open)
 	{
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
+	osk->state = OskDialogState::Abort;
 	osk->Close(false);
 
 	return CELL_OK;
