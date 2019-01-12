@@ -224,14 +224,18 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		}
 	}
 
-	const bool is_valid = OutputInfo->pResultString && (OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK || (is_unload && OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT));
+	bool do_copy = OutputInfo->pResultString && (OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK || (is_unload && OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT));
 
 	for (u32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
 	{
 		osk->osk_text_old[i] = osk->osk_text[i];
 
-		if (is_valid && i < OutputInfo->numCharsResultString)
+		if (do_copy && i < OutputInfo->numCharsResultString)
 		{
+			if (osk->osk_text[i] == 0)
+			{
+				do_copy = false;
+			}
 			OutputInfo->pResultString[i] = osk->osk_text[i];
 		}
 	}
@@ -442,6 +446,11 @@ error_code cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
 error_code cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDialogConfirmWordFilterCallback> pCallback)
 {
 	cellOskDialog.warning("cellOskDialogExtRegisterConfirmWordFilterCallback(pCallback=*0x%x)", pCallback);
+
+	if (!pCallback)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	auto osk = fxm::get<OskDialogBase>();
 	if (!osk)
