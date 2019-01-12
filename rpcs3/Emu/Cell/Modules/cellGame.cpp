@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -831,11 +831,6 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 	if (!prm)
 	{
 		return CELL_GAME_ERROR_FAILURE;
-	}
-
-	if (Emu.GetCat() == "DG")
-	{
-		return CELL_GAME_ERROR_NOTSUPPORTED;
 	}
 
 	const std::string local_dir = !prm->temp.empty() ? prm->temp : vfs::get("/dev_hdd0/game/" + prm->dir);
