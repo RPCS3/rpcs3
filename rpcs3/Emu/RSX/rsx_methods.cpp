@@ -176,8 +176,8 @@ namespace rsx
 
 			if ((location & ~7) != (CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 & ~7))
 			{
-				// TODO: Gcm sets the default to CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0
-				fmt::throw_exception("NV4097_NOTIFY: Unimplemented/invalid context = 0x%x" HERE, method_registers.context_dma_notify());
+				LOG_TRACE(RSX, "NV4097_NOTIFY: invalid context = 0x%x", method_registers.context_dma_notify());
+				return;
 			}
 
 			auto& notify = vm::_ref<RsxNotify>(verify(HERE, RSXIOMem.RealAddr(0xf100000 + (index * 0x40))));
