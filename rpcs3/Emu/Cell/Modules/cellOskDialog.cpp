@@ -238,13 +238,21 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 	{
 		osk->osk_text_old[i] = osk->osk_text[i];
 
-		if (do_copy && i < OutputInfo->numCharsResultString)
+		if (do_copy)
 		{
-			if (osk->osk_text[i] == 0)
+			if (i < OutputInfo->numCharsResultString)
 			{
+				if (osk->osk_text[i] == 0)
+				{
+					do_copy = false;
+				}
+				OutputInfo->pResultString[i] = osk->osk_text[i];
+			}
+			else
+			{
+				OutputInfo->pResultString[i] = 0;
 				do_copy = false;
 			}
-			OutputInfo->pResultString[i] = osk->osk_text[i];
 		}
 	}
 
