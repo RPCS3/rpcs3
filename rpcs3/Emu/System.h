@@ -89,13 +89,13 @@ enum class audio_renderer
 #ifdef _WIN32
 	xaudio,
 #endif
-#ifdef HAVE_ALSA
-	alsa,
-#endif
+	openal,
 #ifdef HAVE_PULSE
 	pulse,
 #endif
-	openal,
+#ifdef HAVE_ALSA
+	alsa,
+#endif
 };
 
 enum class camera_handler
@@ -196,7 +196,7 @@ struct EmuCallbacks
 	std::function<std::shared_ptr<class pad_thread>()> get_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
-	std::function<std::shared_ptr<class AudioThread>()> get_audio;
+	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
@@ -526,9 +526,13 @@ struct cfg_root : cfg::node
 		cfg::_bool dump_to_file{this, "Dump to file"};
 		cfg::_bool convert_to_u16{this, "Convert to 16 bit"};
 		cfg::_bool downmix_to_2ch{this, "Downmix to Stereo", true};
-		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
-		cfg::_int<1, 128> startt{this, "Start Threshold", 1};
+		cfg::_int<1, 128> startt{this, "Start Threshold", 1}; // TODO: used only by ALSA, should probably be removed once ALSA is upgraded
 		cfg::_int<0, 200> volume{this, "Master Volume", 100};
+		cfg::_bool enable_buffering{this, "Enable Buffering", true};
+		cfg::_int <20, 250> desired_buffer_duration{this, "Desired Audio Buffer Duration", 100};
+		cfg::_int<1, 1000> sampling_period_multiplier{this, "Sampling Period Multiplier", 100};
+		cfg::_bool enable_time_stretching{this, "Enable Time Stretching", false};
+		cfg::_int<0, 100> time_stretching_threshold{this, "Time Stretching Threshold", 75};
 
 	} audio{this};
 

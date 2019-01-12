@@ -12,7 +12,7 @@
 #include "Emu/Io/KeyboardHandler.h"
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/MouseHandler.h"
-#include "Emu/Audio/AudioThread.h"
+#include "Emu/Audio/AudioBackend.h"
 
 #include "rpcs3qt/msg_dialog_frame.h"
 #include "rpcs3qt/osk_dialog_frame.h"

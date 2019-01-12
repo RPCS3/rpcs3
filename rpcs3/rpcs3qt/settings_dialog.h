@@ -58,5 +58,6 @@ private:
 	QHash<QObject*, QString> m_descriptions;
 	void SubscribeDescription(QLabel* description);
 	void SubscribeTooltip(QObject* object, const QString& tooltip);
+	void SubscribeTooltip(QList<QObject*> objects, const QString& tooltip);
 	bool eventFilter(QObject* object, QEvent* event) override;
 };

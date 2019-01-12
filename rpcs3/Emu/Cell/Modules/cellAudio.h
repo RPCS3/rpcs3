@@ -1,6 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/Thread.h"
+#include "Emu/Memory/vm.h"
+#include "Emu/Audio/AudioBackend.h"
+#include "Emu/Audio/AudioDumper.h"
 
 // Error codes
 enum CellAudioError : u32
@@ -76,11 +79,26 @@ struct CellAudioPortConfig
 
 enum : u32
 {
-	BUFFER_NUM = 32,
-	BUFFER_SIZE = 256,
 	AUDIO_PORT_COUNT = 8,
-	AUDIO_PORT_OFFSET = 256 * 1024,
-	AUDIO_SAMPLES = CELL_AUDIO_BLOCK_SAMPLES,
+	AUDIO_MAX_BLOCK_COUNT = 32,
+	AUDIO_MAX_CHANNELS_COUNT = 8,
+
+	AUDIO_PORT_OFFSET = AUDIO_BUFFER_SAMPLES * AUDIO_MAX_BLOCK_COUNT * AUDIO_MAX_CHANNELS_COUNT * sizeof(f32),
+	EXTRA_AUDIO_BUFFERS = 8,
+	MAX_AUDIO_EVENT_QUEUES = 64,
+
+	AUDIO_BLOCK_SIZE_2CH = 2 * AUDIO_BUFFER_SAMPLES,
+	AUDIO_BLOCK_SIZE_8CH = 8 * AUDIO_BUFFER_SAMPLES,
+
+	PORT_BUFFER_TAG_COUNT = 6,
+
+	PORT_BUFFER_TAG_LAST_2CH = AUDIO_BLOCK_SIZE_2CH - 1,
+	PORT_BUFFER_TAG_DELTA_2CH = PORT_BUFFER_TAG_LAST_2CH / (PORT_BUFFER_TAG_COUNT - 1),
+	PORT_BUFFER_TAG_FIRST_2CH = PORT_BUFFER_TAG_LAST_2CH % (PORT_BUFFER_TAG_COUNT - 1),
+
+	PORT_BUFFER_TAG_LAST_8CH = AUDIO_BLOCK_SIZE_8CH - 1,
+	PORT_BUFFER_TAG_DELTA_8CH = PORT_BUFFER_TAG_LAST_8CH / (PORT_BUFFER_TAG_COUNT - 1),
+	PORT_BUFFER_TAG_FIRST_8CH = PORT_BUFFER_TAG_LAST_8CH % (PORT_BUFFER_TAG_COUNT - 1),
 };
 
 enum class audio_port_state : u32
@@ -98,12 +116,14 @@ struct audio_port
 	vm::ptr<char> addr{};
 	vm::ptr<u64> index{};
 
-	u32 channel;
-	u32 block;
+	u32 num_channels;
+	u32 num_blocks;
 	u64 attr;
-	u64 tag;
-	u64 counter; // copy of global counter
+	u64 cur_pos;
+	u64 global_counter; // copy of global counter
+	u64 active_counter;
 	u32 size;
+	u64 timestamp; // copy of global timestamp
 
 	struct alignas(8) level_set_t
 	{
@@ -113,25 +133,224 @@ struct audio_port
 
 	float level;
 	atomic_t<level_set_t> level_set;
+
+	u32 block_size() const
+	{
+		return num_channels * AUDIO_BUFFER_SAMPLES;
+	}
+
+	u32 buf_size() const
+	{
+		return block_size() * sizeof(float);
+	}
+
+	u32 position(s32 offset = 0) const
+	{
+		s32 ofs = (offset % num_blocks) + num_blocks;
+		return (cur_pos + ofs) % num_blocks;
+	}
+
+	u32 buf_addr(s32 offset = 0) const
+	{
+		return addr.addr() + position(offset) * buf_size();
+	}
+
+	to_be_t<float>* get_vm_ptr(s32 offset = 0) const
+	{
+		return vm::_ptr<f32>(buf_addr(offset));
+	}
+
+
+	// Tags
+	u32 prev_touched_tag_nr;
+	f32 last_tag_value[PORT_BUFFER_TAG_COUNT] = { 0 };
+
+	void tag(s32 offset = 0);
 };
 
-class audio_thread
+struct cell_audio_config
+{
+	const std::shared_ptr<AudioBackend> backend = Emu.GetCallbacks().get_audio();
+
+	const u32 audio_channels = AudioBackend::get_channels();
+	const u32 audio_sampling_rate = AudioBackend::get_sampling_rate();
+	const u32 audio_block_period = AUDIO_BUFFER_SAMPLES * 1000000 / audio_sampling_rate;
+
+	const u32 audio_buffer_length = AUDIO_BUFFER_SAMPLES * audio_channels;
+	const u32 audio_buffer_size = audio_buffer_length * AudioBackend::get_sample_size();
+
+	/*
+	 * Buffering
+	 */
+	const u64 desired_buffer_duration = g_cfg.audio.desired_buffer_duration * 1000llu;
+private:
+	const bool raw_buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering);
+public:
+	// We need a non-blocking backend (implementing play/pause/flush) to be able to do buffering correctly
+	// We also need to be able to query the current playing state
+	const bool buffering_enabled = raw_buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);
+
+	const u64 minimum_block_period = audio_block_period / 2; // the block period will not be dynamically lowered below this value (usecs)
+	const u64 maximum_block_period = (6 * audio_block_period) / 5; // the block period will not be dynamically increased above this value (usecs)
+
+	const u32 desired_full_buffers = buffering_enabled ? static_cast<u32>(desired_buffer_duration / audio_block_period) + 1 : 2;
+	const u32 num_allocated_buffers = desired_full_buffers + EXTRA_AUDIO_BUFFERS; // number of ringbuffer buffers
+
+	const f32 period_average_alpha = 0.02f; // alpha factor for the m_average_period rolling average
+
+	const s64 period_comparison_margin = 250; // when comparing the current period time with the desired period, if it is below this number of usecs we do not wait any longer
+
+	const u64 fully_untouched_timeout = 2 * audio_block_period; // timeout if the game has not touched any audio buffer yet
+	const u64 partially_untouched_timeout = 4 * audio_block_period; // timeout if the game has not touched all audio buffers yet
+
+	/*
+	 * Time Stretching
+	 */
+private:
+	const bool raw_time_stretching_enabled = buffering_enabled && g_cfg.audio.enable_time_stretching && (g_cfg.audio.time_stretching_threshold > 0);
+public:
+	// We need to be able to set a dynamic frequency ratio to be able to do time stretching
+	const bool time_stretching_enabled = raw_time_stretching_enabled && backend->has_capability(AudioBackend::SET_FREQUENCY_RATIO);
+
+	const f32 time_stretching_threshold = g_cfg.audio.time_stretching_threshold / 100.0f; // we only apply time stretching below this buffer fill rate (adjusted for average period)
+	const f32 time_stretching_step = 0.1f; // will only reduce/increase the frequency ratio in steps of at least this value
+	const f32 time_stretching_scale = 0.9f;
+
+	/*
+	 * Constructor
+	 */
+	cell_audio_config();
+};
+
+class audio_ringbuffer
+{
+private:
+	const std::shared_ptr<AudioBackend> backend;
+
+	const cell_audio_config& cfg;
+
+	const u32 buf_sz;
+
+	std::unique_ptr<AudioDumper> m_dump;
+
+	std::unique_ptr<float[]> buffer[MAX_AUDIO_BUFFERS];
+	const float silence_buffer[AUDIO_MAX_CHANNELS_COUNT * AUDIO_BUFFER_SAMPLES] = { 0 };
+
+	bool backend_open = false;
+	bool playing = false;
+	bool emu_paused = false;
+
+	u64 update_timestamp = 0;
+	u64 play_timestamp = 0;
+
+	u64 last_remainder = 0;
+	u64 enqueued_samples = 0;
+
+	f32 frequency_ratio = 1.0f;
+
+	u32 cur_pos = 0;
+
+	bool get_backend_playing() const
+	{
+		return has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING) ? backend->IsPlaying() : playing;
+	}
+
+public:
+	audio_ringbuffer(cell_audio_config &cfg);
+	~audio_ringbuffer();
+
+	void play();
+	void enqueue(const float* in_buffer = nullptr);
+	void flush();
+	u64 update();
+	void enqueue_silence(u32 buf_count = 1);
+	f32 set_frequency_ratio(f32 new_ratio);
+
+	float* get_buffer(u32 num) const
+	{
+		AUDIT(num < cfg.num_allocated_buffers);
+		AUDIT(buffer[num].get() != nullptr);
+		return buffer[num].get();
+	}
+
+	u64 get_timestamp() const
+	{
+		return get_system_time() - Emu.GetPauseTime();
+	}
+
+	float* get_current_buffer() const
+	{
+		return get_buffer(cur_pos);
+	}
+
+	u64 get_enqueued_samples() const
+	{
+		AUDIT(cfg.buffering_enabled);
+		return enqueued_samples;
+	}
+
+	u64 get_enqueued_playtime(bool raw = false) const
+	{
+		AUDIT(cfg.buffering_enabled);
+		u64 sampling_rate = raw ? cfg.audio_sampling_rate : static_cast<u64>(cfg.audio_sampling_rate * frequency_ratio);
+		return enqueued_samples * 1'000'000 / sampling_rate;
+	}
+
+	bool is_playing() const
+	{
+		return playing;
+	}
+
+	f32 get_frequency_ratio() const
+	{
+		return frequency_ratio;
+	}
+
+	u32 has_capability(u32 cap) const
+	{
+		return backend->has_capability(cap);
+	}
+
+	const char* get_backend_name() const
+	{
+		return backend->GetName();
+	}
+};
+
+
+class cell_audio_thread
 {
 	vm::ptr<char> m_buffer;
 	vm::ptr<u64> m_indexes;
 
-	u64 m_counter{};
+	std::unique_ptr<audio_ringbuffer> ringbuffer;
+
+	void reset_ports(s32 offset = 0);
+	void advance(u64 timestamp, bool reset = true);
+	std::tuple<u32, u32, u32, u32> count_port_buffer_tags();
+	template<bool downmix_to_2ch> void mix(float *out_buffer, s32 offset = 0);
+	void finish_port_volume_stepping();
+
+	constexpr static u64 get_thread_wait_delay(u64 time_left)
+	{
+		return (time_left > 350) ? time_left - 250 : 100;
+	}
 
 public:
-	const u64 start_time = get_system_time();
-
-	std::array<audio_port, AUDIO_PORT_COUNT> ports;
+	cell_audio_config cfg;
 
 	std::vector<u64> keys;
+	std::array<audio_port, AUDIO_PORT_COUNT> ports;
+
+	u64 m_last_period_end = 0;
+	u64 m_counter = 0;
+	u64 m_start_time = 0;
+	u64 m_dynamic_period = 0;
+	f32 m_average_playtime;
 
 	void operator()();
 
-	audio_thread(vm::ptr<char> buf, vm::ptr<u64> ind)
+	cell_audio_thread(vm::ptr<char> buf, vm::ptr<u64> ind)
 		: m_buffer(buf)
 		, m_indexes(ind)
 	{
@@ -155,6 +374,11 @@ public:
 
 		return nullptr;
 	}
+
+	bool has_capability(u32 cap) const
+	{
+		return ringbuffer->has_capability(cap);
+	}
 };
 
-using audio_config = named_thread<audio_thread>;
+using cell_audio = named_thread<cell_audio_thread>;
