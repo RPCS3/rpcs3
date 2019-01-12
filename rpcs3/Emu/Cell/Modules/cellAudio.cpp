@@ -114,7 +114,7 @@ f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 	else
 	{
 		frequency_ratio = backend->SetFrequencyRatio(new_ratio);
-		cellAudio.error("set_frequency_ratio(%1.2f) -> %1.2f", new_ratio, frequency_ratio);
+		//cellAudio.trace("set_frequency_ratio(%1.2f) -> %1.2f", new_ratio, frequency_ratio);
 	}
 	return frequency_ratio;
 }
@@ -567,7 +567,7 @@ void cell_audio_thread::operator()()
 							new_ratio = ringbuffer->set_frequency_ratio(request_ratio);
 						}
 					}
-					else if(frequency_ratio != 1.0f)
+					else if (frequency_ratio != 1.0f)
 					{
 						new_ratio = ringbuffer->set_frequency_ratio(1.0f);
 					}
