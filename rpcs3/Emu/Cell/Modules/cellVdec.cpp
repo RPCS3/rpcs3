@@ -378,7 +378,7 @@ struct vdec_context final
 
 				while (!Emu.IsStopped() && out_max && (std::lock_guard{mutex}, out.size() > out_max))
 				{
-					in_cv.wait(cv_lock, 1000);
+					thread_ctrl::wait_for(1000);
 				}
 			}
 			else if (auto* frc = std::get_if<CellVdecFrameRate>(&*cmds))
@@ -487,6 +487,12 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
 	vdec->in_cv.notify();
+
+	while (!atomic_storage<u64>::load(vdec->ppu_tid))
+	{
+		thread_ctrl::wait_for(1000);
+	}
+
 	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu_tid);
 	return CELL_OK;
 }
@@ -574,7 +580,10 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	}
 
 	if (notify)
-		vdec->in_cv.notify();
+	{
+		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
+		thread_ctrl::notify(*vdec_ppu);
+	}
 
 	if (outBuff)
 	{
