@@ -823,6 +823,22 @@
                 </property>
                </widget>
               </item>
+              <item>
+               <spacer name="verticalSpacer_6">
+                <property name="orientation">
+                 <enum>Qt::Vertical</enum>
+                </property>
+                <property name="sizeType">
+                 <enum>QSizePolicy::MinimumExpanding</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
              </layout>
             </widget>
            </item>
@@ -878,7 +894,71 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="verticalLayout_71"/>
+          <layout class="QVBoxLayout" name="verticalLayout_71">
+           <item>
+            <widget class="QGroupBox" name="groupBox_8">
+             <property name="title">
+              <string>Buffering</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_75">
+              <item>
+               <widget class="QCheckBox" name="enableBuffering">
+                <property name="text">
+                 <string>Enable Buffering</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="audioBufferDurationLabel">
+                <property name="text">
+                 <string>Audio Buffer Duration: 0ms</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="audioBufferDuration">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="tickPosition">
+                 <enum>QSlider::TicksBelow</enum>
+                </property>
+                <property name="tickInterval">
+                 <number>10</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="enableTimeStretching">
+                <property name="text">
+                 <string>Enable Time Stretching</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="timeStretchingThresholdLabel">
+                <property name="text">
+                 <string>Time Stretching Threshold: 0%</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="timeStretchingThreshold">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="tickPosition">
+                 <enum>QSlider::TicksBelow</enum>
+                </property>
+                <property name="tickInterval">
+                 <number>10</number>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </item>

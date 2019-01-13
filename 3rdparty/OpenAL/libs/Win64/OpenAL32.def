@@ -1,72 +1,35 @@
 EXPORTS
-    alAuxiliaryEffectSlotf
-    alAuxiliaryEffectSlotfv
-    alAuxiliaryEffectSloti
-    alAuxiliaryEffectSlotiv
     alBuffer3f
     alBuffer3i
     alBufferData
-    alBufferSamplesSOFT
-    alBufferSubDataSOFT
-    alBufferSubSamplesSOFT
     alBufferf
     alBufferfv
     alBufferi
     alBufferiv
-    alDeferUpdatesSOFT
-    alDeleteAuxiliaryEffectSlots
     alDeleteBuffers
-    alDeleteEffects
-    alDeleteFilters
     alDeleteSources
     alDisable
     alDistanceModel
     alDopplerFactor
     alDopplerVelocity
-    alEffectf
-    alEffectfv
-    alEffecti
-    alEffectiv
     alEnable
-    alFilterf
-    alFilterfv
-    alFilteri
-    alFilteriv
-    alGenAuxiliaryEffectSlots
     alGenBuffers
-    alGenEffects
-    alGenFilters
     alGenSources
-    alGetAuxiliaryEffectSlotf
-    alGetAuxiliaryEffectSlotfv
-    alGetAuxiliaryEffectSloti
-    alGetAuxiliaryEffectSlotiv
     alGetBoolean
     alGetBooleanv
     alGetBuffer3f
     alGetBuffer3i
-    alGetBufferSamplesSOFT
     alGetBufferf
     alGetBufferfv
     alGetBufferi
     alGetBufferiv
     alGetDouble
     alGetDoublev
-    alGetEffectf
-    alGetEffectfv
-    alGetEffecti
-    alGetEffectiv
     alGetEnumValue
     alGetError
-    alGetFilterf
-    alGetFilterfv
-    alGetFilteri
-    alGetFilteriv
     alGetFloat
     alGetFloatv
     alGetInteger
-    alGetInteger64SOFT
-    alGetInteger64vSOFT
     alGetIntegerv
     alGetListener3f
     alGetListener3i
@@ -75,27 +38,16 @@ EXPORTS
     alGetListeneri
     alGetListeneriv
     alGetProcAddress
-    alGetSource3dSOFT
     alGetSource3f
     alGetSource3i
-    alGetSource3i64SOFT
-    alGetSourcedSOFT
-    alGetSourcedvSOFT
     alGetSourcef
     alGetSourcefv
     alGetSourcei
-    alGetSourcei64SOFT
-    alGetSourcei64vSOFT
     alGetSourceiv
     alGetString
-    alGetStringiSOFT
-    alIsAuxiliaryEffectSlot
     alIsBuffer
-    alIsBufferFormatSupportedSOFT
-    alIsEffect
     alIsEnabled
     alIsExtensionPresent
-    alIsFilter
     alIsSource
     alListener3f
     alListener3i
@@ -103,11 +55,8 @@ EXPORTS
     alListenerfv
     alListeneri
     alListeneriv
-    alProcessUpdatesSOFT
-    alSource3dSOFT
     alSource3f
     alSource3i
-    alSource3i64SOFT
     alSourcePause
     alSourcePausev
     alSourcePlay
@@ -118,13 +67,9 @@ EXPORTS
     alSourceStop
     alSourceStopv
     alSourceUnqueueBuffers
-    alSourcedSOFT
-    alSourcedvSOFT
     alSourcef
     alSourcefv
     alSourcei
-    alSourcei64SOFT
-    alSourcei64vSOFT
     alSourceiv
     alSpeedOfSound
     alcCaptureCloseDevice
@@ -135,26 +80,17 @@ EXPORTS
     alcCloseDevice
     alcCreateContext
     alcDestroyContext
-    alcDevicePauseSOFT
-    alcDeviceResumeSOFT
     alcGetContextsDevice
     alcGetCurrentContext
     alcGetEnumValue
     alcGetError
-    alcGetInteger64vSOFT
     alcGetIntegerv
     alcGetProcAddress
     alcGetString
-    alcGetStringiSOFT
     alcGetThreadContext
-    alcIsAmbisonicFormatSupportedSOFT
     alcIsExtensionPresent
-    alcIsRenderFormatSupportedSOFT
-    alcLoopbackOpenDeviceSOFT
     alcMakeContextCurrent
     alcOpenDevice
     alcProcessContext
-    alcRenderSamplesSOFT
-    alcResetDeviceSOFT
     alcSetThreadContext
     alcSuspendContext
