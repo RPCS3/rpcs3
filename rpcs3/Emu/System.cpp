@@ -451,6 +451,18 @@ const bool Emulator::SetUsr(const std::string& user)
 	return true;
 }
 
+std::string Emulator::PPUCache() const
+{
+	const auto _main = fxm::check_unlocked<ppu_module>();
+
+	if (!_main || _main->cache.empty())
+	{
+		fmt::throw_exception("PPU Cache location not initialized.");
+	}
+
+	return _main->cache;
+}
+
 bool Emulator::BootRsxCapture(const std::string& path)
 {
 	if (!fs::is_file(path))
@@ -475,6 +487,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	}
 
 	Init();
+	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
 
@@ -768,25 +781,6 @@ void Emulator::Load(bool add_only)
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 		LOG_NOTICE(LOADER, "Category: %s", GetCat());
 
-		// Initialize data/cache directory
-		if (fs::is_dir(m_path))
-		{
-			m_cache_path = fs::get_cache_dir() + "data/" + GetTitleID() + '/';
-			LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
-		}
-		else
-		{
-			m_cache_path = fs::get_data_dir(m_title_id, m_path);
-			LOG_NOTICE(LOADER, "Cache: %s", GetCachePath());
-		}
-
-		// Load custom config-0
-		if (fs::file cfg_file{m_cache_path + "/config.yml"})
-		{
-			LOG_NOTICE(LOADER, "Applying custom config: %s/config.yml", m_cache_path);
-			g_cfg.from_string(cfg_file.to_string());
-		}
-
 		// Load custom config-1
 		if (fs::file cfg_file{fs::get_config_dir() + "data/" + m_title_id + "/config.yml"})
 		{
@@ -819,7 +813,6 @@ void Emulator::Load(bool add_only)
 
 		// Load patches from different locations
 		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
-		fxm::check_unlocked<patch_engine>()->append(m_cache_path + "/patch.yml");
 
 		// Mount all devices
 		const std::string emu_dir = GetEmuDir();
@@ -1064,8 +1057,6 @@ void Emulator::Load(bool add_only)
 			card_1_file.trunc(128 * 1024);
 			fs::file card_2_file(vfs::get("/dev_hdd0/savedata/vmc/" + argv[2]), fs::write + fs::create);
 			card_2_file.trunc(128 * 1024);
-
-			m_cache_path = fs::get_data_dir("", vfs::get(argv[0]));
 		}
 		else if (m_cat != "DG" && m_cat != "GD")
 		{
@@ -1197,20 +1188,23 @@ void Emulator::Load(bool add_only)
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
-			const std::string decrypted_path = m_cache_path + "boot.elf";
+			const std::string decrypted_path = "boot.elf";
 
 			fs::stat_t encrypted_stat = elf_file.stat();
 			fs::stat_t decrypted_stat;
 
 			// Check modification time and try to load decrypted ELF
-			if (fs::stat(decrypted_path, decrypted_stat) && decrypted_stat.mtime == encrypted_stat.mtime)
+			if (false && fs::stat(decrypted_path, decrypted_stat) && decrypted_stat.mtime == encrypted_stat.mtime)
 			{
 				elf_file.open(decrypted_path);
 			}
 			// Decrypt SELF
 			else if (elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data()))
 			{
-				if (fs::file elf_out{decrypted_path, fs::rewrite})
+				if (true)
+				{
+				}
+				else if (fs::file elf_out{decrypted_path, fs::rewrite})
 				{
 					elf_out.write(elf_file.to_vector<u8>());
 					elf_out.close();
@@ -1278,6 +1272,28 @@ void Emulator::Load(bool add_only)
 			}
 
 			ppu_load_exec(ppu_exec);
+
+			const auto _main = fxm::get<ppu_module>();
+
+			_main->cache = fs::get_cache_dir() + "cache/";
+
+			if (!m_title_id.empty() && m_cat != "1P")
+			{
+				// TODO
+				_main->cache += Emu.GetTitleID();
+				_main->cache += '/';
+			}
+
+			fmt::append(_main->cache, "ppu-%s-%s/", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1));
+
+			if (!fs::create_path(_main->cache))
+			{
+				fmt::throw_exception("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
+			}
+			else
+			{
+				LOG_NOTICE(LOADER, "Cache: %s", _main->cache);
+			}
 
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
 			fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler);
