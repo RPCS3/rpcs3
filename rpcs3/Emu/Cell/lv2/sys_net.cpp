@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -112,6 +112,11 @@ static void network_clear_queue(ppu_thread& ppu)
 
 extern void network_thread_init()
 {
+	if (!g_cfg.net.net_status)
+	{
+		return;
+	}
+
 	thread_ctrl::spawn("Network Thread", []()
 	{
 		std::vector<std::shared_ptr<lv2_socket>> socklist;
@@ -269,6 +274,11 @@ s32 sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, 
 {
 	sys_net.warning("sys_net_bnet_accept(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
+
 	lv2_socket::socket_type native_socket = -1;
 	::sockaddr_storage native_addr;
 	::socklen_t native_addrlen = sizeof(native_addr);
@@ -392,6 +402,11 @@ s32 sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> addr, u
 {
 	sys_net.warning("sys_net_bnet_bind(s=%d, addr=*0x%x, addrlen=%u)", s, addr, addrlen);
 
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
+
 	if (addr->sa_family != SYS_NET_AF_INET)
 	{
 		sys_net.error("sys_net_bnet_bind(s=%d): unsupported sa_family (%d)", s, addr->sa_family);
@@ -427,6 +442,11 @@ s32 sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> addr, u
 s32 sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, u32 addrlen)
 {
 	sys_net.warning("sys_net_bnet_connect(s=%d, addr=*0x%x, addrlen=%u)", s, addr, addrlen);
+
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
 
 	s32 result = 0;
 	::sockaddr_in name{};
@@ -577,6 +597,11 @@ s32 sys_net_bnet_getpeername(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> a
 {
 	sys_net.warning("sys_net_bnet_getpeername(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
 		std::lock_guard lock(sock.mutex);
@@ -618,6 +643,11 @@ s32 sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> a
 {
 	sys_net.warning("sys_net_bnet_getsockname(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);
 
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
 		std::lock_guard lock(sock.mutex);
@@ -658,6 +688,11 @@ s32 sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> a
 s32 sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::ptr<void> optval, vm::ptr<u32> optlen)
 {
 	sys_net.warning("sys_net_bnet_getsockopt(s=%d, level=0x%x, optname=0x%x, optval=*0x%x, optlen=*0x%x)", s, level, optname, optval, optlen);
+
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
 
 	int native_level = -1;
 	int native_opt = -1;
@@ -847,6 +882,11 @@ s32 sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 {
 	sys_net.warning("sys_net_bnet_listen(s=%d, backlog=%d)", s, backlog);
 
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
+
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock) -> s32
 	{
 		std::lock_guard lock(sock.mutex);
@@ -870,6 +910,11 @@ s32 sys_net_bnet_listen(ppu_thread& ppu, s32 s, s32 backlog)
 s32 sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
 {
 	sys_net.warning("sys_net_bnet_recvfrom(s=%d, buf=*0x%x, len=%u, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
+
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
 
 	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL))
 	{
@@ -1014,6 +1059,11 @@ s32 sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32
 {
 	sys_net.warning("sys_net_bnet_sendto(s=%d, buf=*0x%x, len=%u, flags=0x%x, addr=*0x%x, addrlen=%u)", s, buf, len, flags, addr, addrlen);
 
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
+
 	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL))
 	{
 		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", flags);
@@ -1140,6 +1190,11 @@ s32 sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32
 s32 sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen)
 {
 	sys_net.warning("sys_net_bnet_setsockopt(s=%d, level=0x%x, optname=0x%x, optval=*0x%x, optlen=%u)", s, level, optname, optval, optlen);
+
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
 
 	int native_int = 0;
 	int native_level = -1;
@@ -1326,6 +1381,11 @@ s32 sys_net_bnet_shutdown(ppu_thread& ppu, s32 s, s32 how)
 {
 	sys_net.warning("sys_net_bnet_shutdown(s=%d, how=%d)", s, how);
 
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
+
 	if (how < 0 || how > 2)
 	{
 		return -SYS_NET_EINVAL;
@@ -1364,6 +1424,11 @@ s32 sys_net_bnet_shutdown(ppu_thread& ppu, s32 s, s32 how)
 s32 sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protocol)
 {
 	sys_net.warning("sys_net_bnet_socket(family=%d, type=%d, protocol=%d)", family, type, protocol);
+
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
 
 	if (family != SYS_NET_AF_INET && family != SYS_NET_AF_UNSPEC)
 	{
@@ -1418,6 +1483,11 @@ s32 sys_net_bnet_close(ppu_thread& ppu, s32 s)
 {
 	sys_net.warning("sys_net_bnet_close(s=%d)", s);
 
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
+
 	const auto sock = idm::withdraw<lv2_socket>(s);
 
 	if (!sock)
@@ -1434,6 +1504,11 @@ s32 sys_net_bnet_close(ppu_thread& ppu, s32 s)
 s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms)
 {
 	sys_net.warning("sys_net_bnet_poll(fds=*0x%x, nfds=%d, ms=%d)", fds, nfds, ms);
+
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
 
 	atomic_t<s32> signaled{0};
 
@@ -1603,6 +1678,11 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> _timeout)
 {
 	sys_net.warning("sys_net_bnet_select(nfds=%d, readfds=*0x%x, writefds=*0x%x, exceptfds=*0x%x, timeout=*0x%x)", nfds, readfds, writefds, exceptfds, _timeout);
+
+	if (!g_cfg.net.net_status)
+	{
+		return 0;
+	}
 
 	atomic_t<s32> signaled{0};
 
