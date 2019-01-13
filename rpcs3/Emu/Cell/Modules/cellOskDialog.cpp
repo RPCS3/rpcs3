@@ -88,7 +88,22 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	osk->on_close = [maxLength, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
 		const auto osk = wptr.lock();
-		osk->state = OskDialogState::Close;
+
+		if (osk->state.atomic_op([&](OskDialogState& state)
+		{
+			if (state == OskDialogState::Abort)
+			{
+				return true;
+			}
+
+			state = OskDialogState::Close;
+			return false;
+		}))
+		{
+			pad::SetIntercepted(false);
+			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
+			return;
+		}
 
 		const bool accepted = status == CELL_MSGDIALOG_BUTTON_OK;
 
@@ -224,15 +239,27 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		}
 	}
 
-	const bool is_valid = OutputInfo->pResultString && (OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK || (is_unload && OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT));
+	bool do_copy = OutputInfo->pResultString && (OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK || (is_unload && OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT));
 
 	for (u32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
 	{
 		osk->osk_text_old[i] = osk->osk_text[i];
 
-		if (is_valid && i < OutputInfo->numCharsResultString)
+		if (do_copy)
 		{
-			OutputInfo->pResultString[i] = osk->osk_text[i];
+			if (i < OutputInfo->numCharsResultString)
+			{
+				if (osk->osk_text[i] == 0)
+				{
+					do_copy = false;
+				}
+				OutputInfo->pResultString[i] = osk->osk_text[i];
+			}
+			else
+			{
+				OutputInfo->pResultString[i] = 0;
+				do_copy = false;
+			}
 		}
 	}
 
@@ -281,16 +308,33 @@ error_code cellOskDialogAbort()
 
 	const auto osk = fxm::get<OskDialogBase>();
 
-	// Check for open dialog. In this case the dialog is only "Open" if it was not aborted before.
-	if (!osk || osk->state.load() == OskDialogState::Abort)
+	if (!osk)
 	{
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	// If the dialog has the Open state then it is in use. Only dialogs with the Close state can be aborted.
-	if (!osk->state.compare_and_swap_test(OskDialogState::Open, OskDialogState::Abort))
+	const s32 result = osk->state.atomic_op([](OskDialogState& state)
 	{
-		return CELL_SYSUTIL_ERROR_BUSY;
+		// Check for open dialog. In this case the dialog is only "Open" if it was not aborted before.
+		if (state == OskDialogState::Abort)
+		{
+			return static_cast<s32>(CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED);
+		}
+
+		// If the dialog has the Open state then it is in use. Only dialogs with the Close state can be aborted.
+		if (state == OskDialogState::Open)
+		{
+			return static_cast<s32>(CELL_SYSUTIL_ERROR_BUSY);
+		}
+
+		state = OskDialogState::Abort;
+
+		return static_cast<s32>(CELL_OK);
+	});
+
+	if (result != CELL_OK)
+	{
+		return result;
 	}
 
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
@@ -442,6 +486,11 @@ error_code cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
 error_code cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDialogConfirmWordFilterCallback> pCallback)
 {
 	cellOskDialog.warning("cellOskDialogExtRegisterConfirmWordFilterCallback(pCallback=*0x%x)", pCallback);
+
+	if (!pCallback)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
 
 	auto osk = fxm::get<OskDialogBase>();
 	if (!osk)
