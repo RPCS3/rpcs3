@@ -3,6 +3,7 @@
 #include "RSXFIFO.h"
 #include "RSXThread.h"
 #include "Capture/rsx_capture.h"
+#include "Utilities/sysinfo.h"
 
 extern rsx::frame_capture_data frame_capture;
 extern bool user_asked_for_frame_capture;
@@ -401,7 +402,20 @@ namespace rsx
 				}
 				else
 				{
-					std::this_thread::yield();
+					// std::this_thread::yield may behave as a NOP if there is no other thread of same or higher priority ready to run.
+					// Since we have a high priority, it is unlikely that this is ever the case, as such this works as a busy loop
+					if (utils::hardware_concurrency() < 8)
+					{
+						// Low core count CPUs suffer significantly by having a CPU thread busy looping when the RSX FIFO is empty
+						// Forcefully surrender this core for at least 1ms
+						thread_ctrl::wait_for(1000);
+					}
+					else
+					{
+						// High core count CPUs can afford to busy-loop here
+						// Surrendering the core does not increase performance, and may actually reduce it
+						std::this_thread::yield();
+					}
 				}
 
 				return;

@@ -1,4 +1,4 @@
-#include "sysinfo.h"
+﻿#include "sysinfo.h"
 #include "StrFmt.h"
 
 #ifdef _WIN32
@@ -54,6 +54,12 @@ bool utils::has_xop()
 {
 	static const bool g_value = has_avx() && get_cpuid(0x80000001, 0)[2] & 0x800;
 	return g_value;
+}
+
+u32 utils::hardware_concurrency()
+{
+	static const u32 nthreads = std::thread::hardware_concurrency();
+	return nthreads;
 }
 
 std::string utils::get_system_info()

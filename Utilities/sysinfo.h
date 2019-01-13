@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "types.h"
 #include <string>
+#include <thread>
 
 namespace utils
 {
@@ -42,6 +43,8 @@ namespace utils
 	bool has_512();
 
 	bool has_xop();
+
+	u32 hardware_concurrency();
 
 	std::string get_system_info();
 }
