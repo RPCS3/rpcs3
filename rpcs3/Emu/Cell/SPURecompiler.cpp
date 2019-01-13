@@ -94,7 +94,7 @@ void spu_cache::initialize()
 	}
 
 	// SPU cache file (version + block size type)
-	const std::string loc = _main->cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v5.dat";
+	const std::string loc = _main->cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v1-tane.dat";
 
 	auto cache = std::make_shared<spu_cache>(loc);
 
@@ -374,7 +374,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 		const auto add_block = [&](u32 target)
 		{
 			// Validate new target (TODO)
-			if (target > lsa && target < limit)
+			if (target >= lsa && target < limit)
 			{
 				// Check for redundancy
 				if (!m_block_info[target / 4])
