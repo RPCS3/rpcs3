@@ -1504,7 +1504,7 @@ void VKGSRender::end()
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
 		execute_nop_draw();
-		m_rtts.on_write();
+		// m_rtts.on_write(); - breaks games for obvious reasons
 		rsx::thread::end();
 		return;
 	}
