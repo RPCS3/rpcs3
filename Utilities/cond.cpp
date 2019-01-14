@@ -1,5 +1,6 @@
 #include "cond.h"
 #include "sync.h"
+#include "lockless.h"
 
 #include <limits.h>
 
@@ -266,4 +267,28 @@ void cond_x16::imp_notify() noexcept
 	}
 
 	balanced_awaken(m_cvx16, utils::popcnt16(wait_mask));
+}
+
+bool lf_queue_base::wait(u64 _timeout)
+{
+	return balanced_wait_until(m_head, _timeout, [](std::uintptr_t& head, auto... ret) -> int
+	{
+		if (head != 1)
+		{
+			return +1;
+		}
+
+		if constexpr (sizeof...(ret))
+		{
+			head = 0;
+			return -1;
+		}
+
+		return 0;
+	});
+}
+
+void lf_queue_base::imp_notify()
+{
+	balanced_awaken(m_head, 1);
 }

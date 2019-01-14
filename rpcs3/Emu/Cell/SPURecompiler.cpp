@@ -10,7 +10,6 @@
 #include "SPUInterpreter.h"
 #include "SPUDisAsm.h"
 #include "SPURecompiler.h"
-#include "PPUAnalyser.h"
 #include <algorithm>
 #include <mutex>
 #include <thread>
@@ -86,15 +85,15 @@ void spu_cache::add(const std::vector<u32>& func)
 
 void spu_cache::initialize()
 {
-	const auto _main = fxm::get<ppu_module>();
+	const std::string ppu_cache = Emu.PPUCache();
 
-	if (!_main || !g_cfg.core.spu_shared_runtime)
+	if (ppu_cache.empty() || !g_cfg.core.spu_shared_runtime)
 	{
 		return;
 	}
 
 	// SPU cache file (version + block size type)
-	const std::string loc = _main->cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v5.dat";
+	const std::string loc = ppu_cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v1-tane.dat";
 
 	auto cache = std::make_shared<spu_cache>(loc);
 
@@ -374,7 +373,7 @@ std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point
 		const auto add_block = [&](u32 target)
 		{
 			// Validate new target (TODO)
-			if (target > lsa && target < limit)
+			if (target >= lsa && target < limit)
 			{
 				// Check for redundancy
 				if (!m_block_info[target / 4])
@@ -1525,7 +1524,7 @@ public:
 		m_map[std::vector<u32>()] = &spu_recompiler_base::dispatch;
 
 		// Clear LLVM output
-		m_cache_path = fxm::check_unlocked<ppu_module>()->cache;
+		m_cache_path = Emu.PPUCache();
 		fs::create_dir(m_cache_path + "llvm/");
 		fs::remove_all(m_cache_path + "llvm/", false);
 

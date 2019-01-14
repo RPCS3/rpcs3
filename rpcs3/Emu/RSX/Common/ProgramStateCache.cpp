@@ -175,7 +175,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 	if (g_cfg.video.log_programs)
 	{
-		fs::file dump(fs::get_config_dir() + "shaderlog/vp_analyser.bin", fs::rewrite);
+		fs::file dump(fs::get_cache_dir() + "shaderlog/vp_analyser.bin", fs::rewrite);
 		dump.write(&entry, 4);
 		dump.write(data, 512 * 16);
 		dump.close();
