@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "types.h"
 #include "bit_set.h"
@@ -506,7 +506,7 @@ namespace fs
 	bool remove_all(const std::string& path, bool remove_root = true);
 
 	// Get size of all files recursively
-	u64 get_dir_size(const std::string& path);
+	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1);
 
 	enum class error : uint
 	{

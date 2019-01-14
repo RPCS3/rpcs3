@@ -1,4 +1,4 @@
-#include "File.h"
+﻿#include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
 #include "BEType.h"
@@ -1580,7 +1580,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	return true;
 }
 
-u64 fs::get_dir_size(const std::string& path)
+u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 {
 	u64 result = 0;
 
@@ -1593,12 +1593,12 @@ u64 fs::get_dir_size(const std::string& path)
 
 		if (entry.is_directory == false)
 		{
-			result += entry.size;
+			result += ::align(entry.size, rounding_alignment);
 		}
 
 		if (entry.is_directory == true)
 		{
-			result += get_dir_size(path + '/' + entry.name);
+			result += get_dir_size(path + '/' + entry.name, rounding_alignment);
 		}
 	}
 
