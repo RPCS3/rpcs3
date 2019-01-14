@@ -2,6 +2,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 
 #include "cellSysutil.h"
 #include "cellMsgDialog.h"
@@ -213,6 +214,14 @@ s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 		return (s32)CELL_HDDGAME_ERROR_FAILURE;
 	}
 
+	idm::select<lv2_fs_object, lv2_file>([](u32, lv2_file& file)
+	{
+		if (file.flags & CELL_FS_O_WRONLY)
+		{
+			file.file.sync();
+		}
+	});
+
 	*size = ::narrow<u32>(fs::get_dir_size(local_dir) / 1024);
 
 	return CELL_OK;
@@ -261,6 +270,14 @@ s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 	{
 		return CELL_GAMEDATA_ERROR_FAILURE;
 	}
+
+	idm::select<lv2_fs_object, lv2_file>([](u32, lv2_file& file)
+	{
+		if (file.flags & CELL_FS_O_WRONLY)
+		{
+			file.file.sync();
+		}
+	});
 
 	*size = ::narrow<u32>(fs::get_dir_size(local_dir) / 1024);
 
@@ -847,6 +864,14 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 			return CELL_GAME_ERROR_ACCESS_ERROR;
 		}
 	}
+
+	idm::select<lv2_fs_object, lv2_file>([](u32, lv2_file& file)
+	{
+		if (file.flags & CELL_FS_O_WRONLY)
+		{
+			file.file.sync();
+		}
+	});
 
 	*size = ::narrow<u32>(fs::get_dir_size(local_dir) / 1024);
 
