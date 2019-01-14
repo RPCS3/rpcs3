@@ -222,7 +222,7 @@ s32 cellHddGameGetSizeKB(vm::ptr<u32> size)
 		}
 	});
 
-	*size = ::narrow<u32>(fs::get_dir_size(local_dir) / 1024);
+	*size = ::narrow<u32>(fs::get_dir_size(local_dir, 1024) / 1024);
 
 	return CELL_OK;
 }
@@ -279,7 +279,7 @@ s32 cellGameDataGetSizeKB(vm::ptr<u32> size)
 		}
 	});
 
-	*size = ::narrow<u32>(fs::get_dir_size(local_dir) / 1024);
+	*size = ::narrow<u32>(fs::get_dir_size(local_dir, 1024) / 1024);
 
 	return CELL_OK;
 }
@@ -873,7 +873,7 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 		}
 	});
 
-	*size = ::narrow<u32>(fs::get_dir_size(local_dir) / 1024);
+	*size = ::narrow<u32>(fs::get_dir_size(local_dir, 1024) / 1024);
 
 	return CELL_OK;
 }
