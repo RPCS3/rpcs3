@@ -1421,10 +1421,13 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 	// Vertex layout state
 	auto mapping = m_vertex_layout_buffer->alloc_from_heap(128 + 16, m_uniform_buffer_offset_align);
-	auto buf = static_cast<s32*>(mapping.first);
-	*buf = upload_info.vertex_index_base;
+	auto buf = static_cast<u32*>(mapping.first);
+
+	buf[0] = upload_info.vertex_index_base;
+	buf[1] = upload_info.vertex_index_offset;
 	buf += 4;
-	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+
+	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, (s32*)buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
 	m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
 
