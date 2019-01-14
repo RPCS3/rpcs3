@@ -17,6 +17,7 @@
 #include <cereal/types/unordered_map.hpp>
 
 extern u64 get_system_time();
+extern bool is_primitive_disjointed(rsx::primitive_type);
 
 namespace rsx
 {
@@ -312,20 +313,7 @@ namespace rsx
 			draw_command_barriers.clear();
 			inline_vertex_array.clear();
 
-			switch (primitive)
-			{
-			case rsx::primitive_type::line_loop:
-			case rsx::primitive_type::line_strip:
-			case rsx::primitive_type::polygon:
-			case rsx::primitive_type::quad_strip:
-			case rsx::primitive_type::triangle_fan:
-			case rsx::primitive_type::triangle_strip:
-				// Adjacency matters for these types
-				is_disjoint_primitive = false;
-				break;
-			default:
-				is_disjoint_primitive = true;
-			}
+			is_disjoint_primitive = is_primitive_disjointed(primitive);
 		}
 
 		void begin()

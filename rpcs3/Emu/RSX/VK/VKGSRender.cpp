@@ -2735,7 +2735,8 @@ void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
 	auto mem = m_vertex_layout_ring_info.alloc<256>(256);
 	auto buf = (u32*)m_vertex_layout_ring_info.map(mem, 128 + 16);
 
-	*buf = vertex_info.vertex_index_base;
+	buf[0] = vertex_info.vertex_index_base;
+	buf[1] = vertex_info.vertex_index_offset;
 	buf += 4;
 
 	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, (s32*)buf,
