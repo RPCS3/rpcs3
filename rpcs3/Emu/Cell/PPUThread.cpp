@@ -1224,23 +1224,6 @@ extern void ppu_initialize()
 		return;
 	}
 
-	// New PPU cache location
-	_main->cache = fs::get_config_dir() + "data/";
-
-	if (!Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
-	{
-		// TODO
-		_main->cache += Emu.GetTitleID();
-		_main->cache += '/';
-	}
-
-	fmt::append(_main->cache, "ppu-%s-%s/", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1));
-
-	if (!fs::create_path(_main->cache))
-	{
-		fmt::throw_exception("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
-	}
-
 	if (Emu.IsStopped())
 	{
 		return;
@@ -1336,23 +1319,29 @@ extern void ppu_initialize(const ppu_module& info)
 
 	if (info.name.empty())
 	{
-		cache_path = Emu.GetCachePath();
+		cache_path = info.cache;
 	}
 	else
 	{
-		cache_path = vfs::get("/dev_flash/");
+		// New PPU cache location
+		cache_path = fs::get_cache_dir() + "cache/";
 
-		if (info.path.compare(0, cache_path.size(), cache_path) == 0)
+		const std::string dev_flash = vfs::get("/dev_flash/");
+
+		if (info.path.compare(0, dev_flash.size(), dev_flash) != 0 && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
 		{
-			// Remove prefix for dev_flash files
-			cache_path.clear();
-		}
-		else
-		{
-			cache_path = Emu.GetTitleID();
+			// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
+			cache_path += Emu.GetTitleID();
+			cache_path += '/';
 		}
 
-		cache_path = fs::get_data_dir(cache_path, info.path);
+		// Add PPU hash and filename
+		fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
+
+		if (!fs::create_path(cache_path))
+		{
+			fmt::throw_exception("Failed to create cache directory: %s (%s)", cache_path, fs::g_tls_error);
+		}
 	}
 
 #ifdef LLVM_AVAILABLE
@@ -1428,7 +1417,7 @@ extern void ppu_initialize(const ppu_module& info)
 		{
 			auto& func = info.funcs[fpos];
 
-			if (bsize + func.size > 256 * 1024 && bsize)
+			if (bsize + func.size > 100 * 1024 && bsize)
 			{
 				break;
 			}
@@ -1449,21 +1438,8 @@ extern void ppu_initialize(const ppu_module& info)
 			fpos++;
 		}
 
-		// Version, module name and hash: vX-liblv2.sprx-0123456789ABCDEF.obj
-		std::string obj_name = "v2";
-
-		if (info.name.size())
-		{
-			obj_name += '-';
-			obj_name += info.name;
-		}
-
-		if (fstart || fpos < info.funcs.size())
-		{
-			fmt::append(obj_name, "+%06X", suffix);
-		}
-
-		// Compute module hash
+		// Compute module hash to generate (hopefully) unique object name
+		std::string obj_name;
 		{
 			sha1_context ctx;
 			u8 output[20];
@@ -1524,14 +1500,30 @@ extern void ppu_initialize(const ppu_module& info)
 				sha1_update(&ctx, vm::_ptr<const u8>(func.addr), func.size);
 			}
 
-			if (info.name == "liblv2.sprx" || info.name == "libsysmodule.sprx" || info.name == "libnet.sprx")
+			if (false)
 			{
 				const be_t<u64> forced_upd = 3;
 				sha1_update(&ctx, reinterpret_cast<const u8*>(&forced_upd), sizeof(forced_upd));
 			}
 
 			sha1_finish(&ctx, output);
-			fmt::append(obj_name, "-%016X-%s.obj", reinterpret_cast<be_t<u64>&>(output), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+
+			// Settings: should be populated by settings which affect codegen (TODO)
+			enum class ppu_settings : u32
+			{
+				non_win32,
+
+				__bitset_enum_max
+			};
+
+			be_t<bs_t<ppu_settings>> settings{};
+
+#ifndef _WIN32
+			settings += ppu_settings::non_win32;
+#endif
+
+			// Write version, hash, CPU, settings
+			fmt::append(obj_name, "v1-tane-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (Emu.IsStopped())
@@ -1579,7 +1571,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 				if (!Emu.IsStopped())
 				{
-					LOG_WARNING(PPU, "LLVM: Compiling module %s", obj_name);
+					LOG_WARNING(PPU, "LLVM: Compiling module %s%s", cache_path, obj_name);
 
 					// Use another JIT instance
 					jit_compiler jit2({}, g_cfg.core.llvm_cpu);

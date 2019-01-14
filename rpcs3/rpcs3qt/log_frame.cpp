@@ -14,6 +14,7 @@
 #include <deque>
 #include <mutex>
 #include "Utilities/mutex.h"
+#include "Utilities/lockless.h"
 
 extern fs::file g_tty;
 extern atomic_t<s64> g_tty_size;
@@ -26,29 +27,18 @@ struct gui_listener : logs::listener
 {
 	atomic_t<logs::level> enabled{logs::level::_uninit};
 
-	struct packet
+	struct packet_t
 	{
-		atomic_t<packet*> next{};
-
 		logs::level sev{};
 		std::string msg;
-
-		~packet()
-		{
-			for (auto ptr = next.raw(); UNLIKELY(ptr);)
-			{
-				delete std::exchange(ptr, std::exchange(ptr->next.raw(), nullptr));
-			}
-		}
 	};
 
-	atomic_t<packet*> last; // Packet for writing another packet
-	atomic_t<packet*> read; // Packet for reading
+	lf_queue_slice<packet_t> pending;
+
+	lf_queue<packet_t> queue;
 
 	gui_listener()
 		: logs::listener()
-		, last(new packet)
-		, read(+last)
 	{
 		// Self-registration
 		logs::listener::add(this);
@@ -56,7 +46,6 @@ struct gui_listener : logs::listener
 
 	~gui_listener()
 	{
-		delete read;
 	}
 
 	void log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& text)
@@ -65,7 +54,7 @@ struct gui_listener : logs::listener
 
 		if (msg.sev <= enabled)
 		{
-			const auto _new = new packet;
+			packet_t p,* _new = &p;
 			_new->sev = msg.sev;
 
 			if (prefix.size() > 0)
@@ -88,24 +77,24 @@ struct gui_listener : logs::listener
 			_new->msg += text;
 			_new->msg += '\n';
 
-			last.exchange(_new)->next = _new;
+			queue.push(std::move(p));
 		}
 	}
 
 	void pop()
 	{
-		if (const auto head = read.load()->next.exchange(nullptr))
-		{
-			delete read.exchange(head);
-		}
+		pending.pop_front();
 	}
 
-	void clear()
+	packet_t* get()
 	{
-		while (read.load()->next)
+		if (packet_t* _head = pending.get())
 		{
-			pop();
+			return _head;
 		}
+
+		pending = queue.pop_all();
+		return pending.get();
 	}
 };
 
@@ -155,7 +144,7 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	setWidget(m_tabWidget);
 
 	// Open or create TTY.log
-	m_tty_file.open(fs::get_config_dir() + "TTY.log", fs::read + fs::create);
+	m_tty_file.open(fs::get_cache_dir() + "TTY.log", fs::read + fs::create);
 
 	CreateAndConnectActions();
 
@@ -502,7 +491,7 @@ void log_frame::UpdateUI()
 	}
 
 	// Check main logs
-	while (const auto packet = s_gui_listener.read.load()->next.load())
+	while (auto* packet = s_gui_listener.get())
 	{
 		// Confirm log level
 		if (packet->sev <= s_gui_listener.enabled)

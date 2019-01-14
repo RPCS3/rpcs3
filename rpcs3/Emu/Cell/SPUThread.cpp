@@ -487,9 +487,16 @@ void spu_thread::cpu_stop()
 		if (verify(HERE, group->running--) == 1)
 		{
 			{
-				group->stop_count++;
 				std::lock_guard lock(group->mutex);
+				group->stop_count++;
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+
+				if (const auto ppu = std::exchange(group->waiter, nullptr))
+				{
+					// Send exit status directly to the joining thread
+					ppu->gpr[4] = group->join_state;
+					ppu->gpr[5] = group->exit_status;
+				}
 			}
 
 			// Notify on last thread stopped

@@ -493,8 +493,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	}
 
 	const std::string dir_path = base_dir + save_entry.dirName + "/";
-	const std::string old_path = base_dir + "../.backup_" + save_entry.dirName + "/";
-	const std::string new_path = base_dir + "../.working_" + save_entry.dirName + "/";
+	const std::string old_path = base_dir + ".backup_" + save_entry.dirName + "/";
+	const std::string new_path = base_dir + ".working_" + save_entry.dirName + "/";
 
 	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
 	bool has_modified = false;

@@ -2398,7 +2398,7 @@ public:
 						break;
 					}
 
-					fs::file(fs::get_config_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
+					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
 				}
 
 				glShaderSource(m_id, 1, &str, &length);
