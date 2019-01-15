@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
+#include "Emu/Memory/vm.h"
 #include "MFC.h"
 
 #include <map>
@@ -595,7 +596,7 @@ public:
 	void do_mfc(bool wait = true);
 	u32 get_mfc_completed();
 
-	bool process_mfc_cmd(spu_mfc_cmd args);
+	bool process_mfc_cmd();
 	u32 get_events(bool waiting = false);
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);
