@@ -647,6 +647,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* copy_name = info_menu->addAction(tr("&Copy Name"));
 	QAction* copy_serial = info_menu->addAction(tr("&Copy Serial"));
 
+	const std::string cache_base_dir = fs::get_cache_dir() + "cache/" + currGame.serial;
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + currGame.serial;
 
 	connect(boot, &QAction::triggered, [=]
@@ -694,9 +695,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (mb->checkBox()->isChecked())
 			{
-				RemoveShadersCache(config_base_dir);
-				RemovePPUCache(config_base_dir);
-				RemoveSPUCache(config_base_dir);
+				RemoveShadersCache(cache_base_dir);
+				RemovePPUCache(cache_base_dir);
+				RemoveSPUCache(cache_base_dir);
 				RemoveCustomConfiguration(config_base_dir);
 			}
 			fs::remove_all(currGame.path);
@@ -721,15 +722,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(removeShadersCache, &QAction::triggered, [=]()
 	{
-		RemoveShadersCache(config_base_dir, true);
+		RemoveShadersCache(cache_base_dir, true);
 	});
 	connect(removePPUCache, &QAction::triggered, [=]()
 	{
-		RemovePPUCache(config_base_dir, true);
+		RemovePPUCache(cache_base_dir, true);
 	});
 	connect(removeSPUCache, &QAction::triggered, [=]()
 	{
-		RemoveSPUCache(config_base_dir, true);
+		RemoveSPUCache(cache_base_dir, true);
 	});
 	connect(openGameFolder, &QAction::triggered, [=]()
 	{
@@ -834,7 +835,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	removeConfig->setEnabled(gameinfo->hasCustomConfig);
 
 	// remove options if necessary
-	if (!fs::is_dir(config_base_dir))
+	if (!fs::is_dir(cache_base_dir))
 	{
 		removeShadersCache->setEnabled(false);
 		removePPUCache->setEnabled(false);
