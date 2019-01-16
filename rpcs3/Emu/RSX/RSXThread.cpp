@@ -648,20 +648,21 @@ namespace rsx
 		//TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 		auto fragment_alpha_func = rsx::method_registers.alpha_func();
 		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
-		auto rop_control = (u32)rsx::method_registers.alpha_test_enabled();
+		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !rop_control)
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
+			rsx::method_registers.msaa_enabled() &&
+			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
 		{
-			if (rsx::method_registers.msaa_enabled() &&
-				rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
-			{
-				//alpha values generate a coverage mask for order independent blending
-				//requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
-				//simulated using combined alpha blend and alpha test
-				fragment_alpha_func = rsx::comparison_function::greater;
-				alpha_ref = rsx::method_registers.msaa_sample_mask()? 0.25f : 0.f;
-				rop_control |= (1 << 4);
-			}
+			// Alpha values generate a coverage mask for order independent blending
+			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
+			// Simulated using combined alpha blend and alpha test
+			const u32 mask_bit = rsx::method_registers.msaa_sample_mask() ? 1u : 0u;
+			const u32 samples_bit = rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::diagonal_centered_2_samples ? 1u : 0u;
+
+			rop_control |= (1u << 4);                 // CSAA enable bit
+			rop_control |= (mask_bit << 5);           // MSAA mask enable bit
+			rop_control |= (samples_bit << 6);        // Sample configuration bit
 		}
 
 		const f32 fog0 = rsx::method_registers.fog_params_0();
@@ -681,7 +682,7 @@ namespace rsx
 			case rsx::surface_color_format::x32:
 				break;
 			default:
-				rop_control |= 0x2;
+				rop_control |= (1u << 1);
 				break;
 			}
 		}

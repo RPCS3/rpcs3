@@ -2518,38 +2518,17 @@ bool VKGSRender::load_program()
 		rsx::method_registers.blend_enabled_surface_3()
 	};
 
-	bool blend_equation_override = false;
 	VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
 	VkBlendOp equation_rgb, equation_a;
 
-	if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-		!rsx::method_registers.alpha_test_enabled())
-	{
-		if (rsx::method_registers.msaa_enabled() &&
-			rsx::method_registers.msaa_sample_mask() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
-		{
-			//fake alpha-to-coverage
-			//blend used in conjunction with alpha test to fake order-independent edge transparency
-			mrt_blend_enabled[0] = mrt_blend_enabled[1] = mrt_blend_enabled[2] = mrt_blend_enabled[3] = true;
-			blend_equation_override = true;
-			sfactor_rgb = sfactor_a = VK_BLEND_FACTOR_SRC_ALPHA;
-			dfactor_rgb = dfactor_a = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			equation_rgb = equation_a = VK_BLEND_OP_ADD;
-		}
-	}
-
 	if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
 	{
-		if (!blend_equation_override)
-		{
-			sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-			sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
-			dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-			dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
-			equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
-			equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
-		}
+		sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
+		sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
+		dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
+		dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
+		equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
+		equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
 
 		for (u8 idx = 0; idx < m_draw_buffers.size(); ++idx)
 		{
