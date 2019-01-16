@@ -770,6 +770,7 @@ void Emulator::Load(bool add_only)
 			if (c == '\n')
 				c = ' ';
 		}
+		
 
 		if (!_psf.empty() && m_cat.empty())
 		{
@@ -961,13 +962,18 @@ void Emulator::Load(bool add_only)
 		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/PS3_GAME/") + 1 : 0;
 		const bool from_hdd0_game = m_path.find(hdd0_game) != -1;
 
-		if (bdvd_pos && from_hdd0_game)
+				if (m_cat == "DG" && m_path.find(hdd0_game) != -1 && disc.empty())
 		{
 			// Booting disc game from wrong location
 			LOG_ERROR(LOADER, "Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
+			if (!fs::exists(elf_dir + "/../PS3_GAME"))
+			{
+				// PSN version of a game that's just the game disc, ie Demon's Souls PSN versions.
+				m_cat = "GD";
+			}
 			// Move and retry from correct location
-			if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
+			else if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
 			{
 				LOG_SUCCESS(LOADER, "Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
 				return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load();
