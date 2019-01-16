@@ -1499,38 +1499,18 @@ void GLGSRender::update_draw_state()
 		rsx::method_registers.blend_enabled_surface_3()
 	};
 
-	bool blend_equation_override = false;
-	if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-		!rsx::method_registers.alpha_test_enabled())
-	{
-		if (rsx::method_registers.msaa_enabled() &&
-			rsx::method_registers.msaa_sample_mask() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
-		{
-			//fake alpha-to-coverage
-			//blend used in conjunction with alpha test to fake order-independent edge transparency
-			mrt_blend_enabled[0] = mrt_blend_enabled[1] = mrt_blend_enabled[2] = mrt_blend_enabled[3] = true;
-			blend_equation_override = true;
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glBlendEquation(GL_FUNC_ADD);
-		}
-	}
-
 	if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
 	{
-		if (!blend_equation_override)
-		{
-			glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
-				blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
-				blend_factor(rsx::method_registers.blend_func_sfactor_a()),
-				blend_factor(rsx::method_registers.blend_func_dfactor_a()));
+		glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
+			blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
+			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
+			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
 
-			auto blend_colors = rsx::get_constant_blend_colors();
-			glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
+		auto blend_colors = rsx::get_constant_blend_colors();
+		glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
 
-			glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
-				blend_equation(rsx::method_registers.blend_equation_a()));
-		}
+		glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
+			blend_equation(rsx::method_registers.blend_equation_a()));
 	}
 
 	gl_state.enablei(mrt_blend_enabled[0], GL_BLEND, 0);
