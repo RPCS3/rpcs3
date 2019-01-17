@@ -1384,8 +1384,9 @@ const std::string& fs::get_config_dir()
 		std::string dir;
 
 #ifdef _WIN32
-		wchar_t buf[2048];
-		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
+		wchar_t buf[32768];
+		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, std::size(buf)) - 1 >= std::size(buf) - 1 &&
+			GetModuleFileName(NULL, buf, std::size(buf)) - 1 >= std::size(buf) - 1)
 		{
 			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 			return dir; // empty
@@ -1402,8 +1403,8 @@ const std::string& fs::get_config_dir()
 		if (const char* home = ::getenv("HOME"))
 			dir = home + "/Library/Application Support"s;
 #else
-		if (const char* home = ::getenv("XDG_CONFIG_HOME"))
-			dir = home;
+		if (const char* conf = ::getenv("XDG_CONFIG_HOME"))
+			dir = conf;
 		else if (const char* home = ::getenv("HOME"))
 			dir = home + "/.config"s;
 #endif
@@ -1424,73 +1425,42 @@ const std::string& fs::get_config_dir()
 	return s_dir;
 }
 
-std::string fs::get_data_dir(const std::string& prefix, const std::string& location, const std::string& suffix)
+const std::string& fs::get_cache_dir()
 {
 	static const std::string s_dir = []
 	{
-		const std::string dir = get_config_dir() + "data/";
+		std::string dir;
+
+#ifdef _WIN32
+		dir = get_config_dir();
+#else
+
+#ifdef __APPLE__
+		if (const char* home = ::getenv("HOME"))
+			dir = home + "/Library/Caches"s;
+#else
+		if (const char* cache = ::getenv("XDG_CACHE_HOME"))
+			dir = cache;
+		else if (const char* conf = ::getenv("XDG_CONFIG_HOME"))
+			dir = conf;
+		else if (const char* home = ::getenv("HOME"))
+			dir = home + "/.cache"s;
+#endif
+		else // Just in case
+			dir = "./cache";
+
+		dir += "/rpcs3/";
 
 		if (!create_path(dir))
 		{
-			return get_config_dir();
+			std::printf("Failed to create configuration directory '%s' (%d).\n", dir.c_str(), errno);
 		}
+#endif
 
 		return dir;
 	}();
 
-	std::vector<u8> buf;
-	buf.reserve(location.size() + 1);
-
-	// Normalize location
-	for (char c : location)
-	{
-#ifdef _WIN32
-		if (c == '/' || c == '\\')
-#else
-		if (c == '/')
-#endif
-		{
-			if (buf.empty() || buf.back() != '/')
-			{
-				buf.push_back('/');
-			}
-
-			continue;
-		}
-
-		buf.push_back(c);
-	}
-
-	// Calculate hash
-	u8 hash[20];
-	sha1(buf.data(), buf.size(), hash);
-
-	// Concatenate
-	std::string result = fmt::format("%s%s/%016llx%08x-%s/", s_dir, prefix, reinterpret_cast<be_t<u64>&>(hash[0]), reinterpret_cast<be_t<u32>&>(hash[8]), suffix);
-
-	// Create dir if necessary
-	if (create_path(result))
-	{
-		// Acknowledge original location
-		file(result + ".location", rewrite).write(buf);
-	}
-
-	return result;
-}
-
-std::string fs::get_data_dir(const std::string& prefix, const std::string& path)
-{
-#ifdef _WIN32
-	const auto& delim = "/\\";
-#else
-	const auto& delim = "/";
-#endif
-
-	// Extract file name and location
-	const std::string& location = fs::get_parent_dir(path);
-	const std::size_t name_pos = path.find_first_not_of(delim, location.size());
-
-	return fs::get_data_dir(prefix, location, name_pos == -1 ? std::string{} : path.substr(name_pos));
+	return s_dir;
 }
 
 void fs::remove_all(const std::string& path, bool remove_root)

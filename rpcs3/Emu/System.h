@@ -213,7 +213,6 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time; // increased when resumed
 
 	std::string m_path;
-	std::string m_cache_path;
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_cat;
@@ -279,11 +278,6 @@ public:
 		return m_cat;
 	}
 
-	const std::string& GetCachePath() const
-	{
-		return m_cache_path;
-	}
-
 	const std::string& GetDir() const
 	{
 		return m_dir;
@@ -312,6 +306,8 @@ public:
 	{
 		return m_pause_amend_time;
 	}
+
+	std::string PPUCache() const;
 
 	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
 	bool BootRsxCapture(const std::string& path);
@@ -358,7 +354,7 @@ struct cfg_root : cfg::node
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
 
 		cfg::_enum<ppu_decoder_type> ppu_decoder{this, "PPU Decoder", ppu_decoder_type::llvm};
-		cfg::_int<1, 16> ppu_threads{this, "PPU Threads", 2}; // Amount of PPU threads running simultaneously (must be 2)
+		cfg::_int<1, 4> ppu_threads{this, "PPU Threads", 2}; // Amount of PPU threads running simultaneously (must be 2)
 		cfg::_bool ppu_debug{this, "PPU Debug"};
 		cfg::_bool llvm_logs{this, "Save LLVM logs"};
 		cfg::string llvm_cpu{this, "Use LLVM CPU"};

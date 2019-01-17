@@ -246,9 +246,9 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	for (auto list = cbm->registered.pop_all(); list; list = list->pop_all())
+	for (auto&& func : cbm->registered.pop_all())
 	{
-		if (s32 res = list->get()(ppu))
+		if (s32 res = func(ppu))
 		{
 			// Currently impossible
 			return not_an_error(res);

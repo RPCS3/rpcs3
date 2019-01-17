@@ -162,7 +162,7 @@ struct vdec_context final
 
 		std::unique_lock cv_lock(in_cv);
 
-		for (auto cmds = in_cmd.pop_all(); !Emu.IsStopped(); cmds ? cmds = cmds->pop_all() : cmds = in_cmd.pop_all())
+		for (auto cmds = in_cmd.pop_all(); !Emu.IsStopped(); cmds ? cmds.pop_front() : cmds = in_cmd.pop_all())
 		{
 			if (!cmds)
 			{
@@ -170,7 +170,7 @@ struct vdec_context final
 				continue;
 			}
 
-			if (std::get_if<vdec_start_seq_t>(&cmds->get()))
+			if (std::get_if<vdec_start_seq_t>(&*cmds))
 			{
 				avcodec_flush_buffers(ctx);
 
@@ -179,7 +179,7 @@ struct vdec_context final
 				next_dts = 0;
 				cellVdec.trace("Start sequence...");
 			}
-			else if (auto* cmd = std::get_if<vdec_cmd>(&cmds->get()))
+			else if (auto* cmd = std::get_if<vdec_cmd>(&*cmds))
 			{
 				AVPacket packet{};
 				packet.pos = -1;
@@ -378,10 +378,10 @@ struct vdec_context final
 
 				while (!Emu.IsStopped() && out_max && (std::lock_guard{mutex}, out.size() > out_max))
 				{
-					in_cv.wait(cv_lock, 1000);
+					thread_ctrl::wait_for(1000);
 				}
 			}
-			else if (auto* frc = std::get_if<CellVdecFrameRate>(&cmds->get()))
+			else if (auto* frc = std::get_if<CellVdecFrameRate>(&*cmds))
 			{
 				frc_set = *frc;
 			}
@@ -487,6 +487,12 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
 	vdec->in_cv.notify();
+
+	while (!atomic_storage<u64>::load(vdec->ppu_tid))
+	{
+		thread_ctrl::wait_for(1000);
+	}
+
 	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu_tid);
 	return CELL_OK;
 }
@@ -574,7 +580,10 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	}
 
 	if (notify)
-		vdec->in_cv.notify();
+	{
+		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
+		thread_ctrl::notify(*vdec_ppu);
+	}
 
 	if (outBuff)
 	{

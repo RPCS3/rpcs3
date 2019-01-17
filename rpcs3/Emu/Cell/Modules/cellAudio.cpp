@@ -581,7 +581,7 @@ void cell_audio_thread::operator()()
 					}
 				}
 
-			
+
 				//  1.0 means exactly as desired
 				// <1.0 means not as full as desired
 				// >1.0 means more full than desired
@@ -668,7 +668,7 @@ void cell_audio_thread::operator()()
 				advance(timestamp);
 				continue;
 			}
-			
+
 			// Wait for buffer(s) to be completely filled
 			if (in_progress > 0)
 			{
@@ -734,12 +734,12 @@ void cell_audio_thread::operator()()
 	ringbuffer.reset();
 }
 
-template<bool downmix_to_2ch>
+template <bool DownmixToStereo>
 void cell_audio_thread::mix(float *out_buffer, s32 offset)
 {
 	AUDIT(out_buffer != nullptr);
 
-	constexpr u32 channels = downmix_to_2ch ? 2 : 8;
+	constexpr u32 channels = DownmixToStereo ? 2 : 8;
 	constexpr u32 out_buffer_sz = channels * AUDIO_BUFFER_SAMPLES;
 
 	bool first_mix = true;
@@ -786,7 +786,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					out_buffer[out + 0] = left;
 					out_buffer[out + 1] = right;
 
-					if (!downmix_to_2ch)
+					if constexpr (!DownmixToStereo)
 					{
 						out_buffer[out + 2] = 0.0f;
 						out_buffer[out + 3] = 0.0f;
@@ -829,7 +829,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float side_left  = buf[in + 6] * m;
 					const float side_right = buf[in + 7] * m;
 
-					if (downmix_to_2ch)
+					if constexpr (DownmixToStereo)
 					{
 						const float mid = (center + low_freq) * 0.708f;
 						out_buffer[out + 0] = (left + rear_left + side_left + mid) * k;
@@ -864,7 +864,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float side_left  = buf[in + 6] * m;
 					const float side_right = buf[in + 7] * m;
 
-					if (downmix_to_2ch)
+					if constexpr (DownmixToStereo)
 					{
 						const float mid = (center + low_freq) * 0.708f;
 						out_buffer[out + 0] += (left + rear_left + side_left + mid) * k;

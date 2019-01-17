@@ -7,7 +7,7 @@ AudioDumper::AudioDumper(u16 ch)
 {
 	if (GetCh())
 	{
-		m_output.open(fs::get_config_dir() + "audio.wav", fs::rewrite);
+		m_output.open(fs::get_cache_dir() + "audio.wav", fs::rewrite);
 		m_output.write(m_header); // write initial file header
 	}
 }
