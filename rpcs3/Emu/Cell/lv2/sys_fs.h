@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -132,7 +132,7 @@ struct lv2_fs_object
 	const std::add_pointer_t<lv2_fs_mount_point> mp;
 
 	// File Name (max 1055)
-	const std::array<char, 0x420> name;
+	std::array<char, 0x420> name;
 
 	lv2_fs_object(lv2_fs_mount_point* mp, const char* filename)
 		: mp(mp)
@@ -163,7 +163,8 @@ struct lv2_fs_object
 
 struct lv2_file final : lv2_fs_object
 {
-	const fs::file file;
+	fs::file file;
+	fs::stat_t info;
 	const s32 mode;
 	const s32 flags;
 
@@ -175,6 +176,7 @@ struct lv2_file final : lv2_fs_object
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
+		, info(lv2_file::file.stat())
 	{
 	}
 
@@ -183,6 +185,7 @@ struct lv2_file final : lv2_fs_object
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
+		, info(lv2_file::file.stat())
 	{
 	}
 
@@ -191,6 +194,8 @@ struct lv2_file final : lv2_fs_object
 
 	// File writing with intermediate buffer
 	u64 op_write(vm::cptr<void> buf, u64 size);
+
+	const fs::stat_t& stat();
 
 	// For MSELF support
 	struct file_view;

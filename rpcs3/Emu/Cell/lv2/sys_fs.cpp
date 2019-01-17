@@ -66,19 +66,37 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(const char* filename)
 
 u64 lv2_file::op_read(vm::ptr<void> buf, u64 size)
 {
-	// Copy data from intermediate buffer (avoid passing vm pointer to a native API)
-	std::unique_ptr<u8[]> local_buf(new u8[size]);
-	const u64 result = file.read(local_buf.get(), size);
-	std::memcpy(buf.get_ptr(), local_buf.get(), result);
-	return result;
+	if (file)
+	{
+		// Copy data from intermediate buffer (avoid passing vm pointer to a native API)
+		std::unique_ptr<u8[]> local_buf(new u8[size]);
+		const u64 result = file.read(local_buf.get(), size);
+		std::memcpy(buf.get_ptr(), local_buf.get(), result);
+		return result;
+	}
+	return 0;
 }
 
 u64 lv2_file::op_write(vm::cptr<void> buf, u64 size)
 {
-	// Copy data to intermediate buffer (avoid passing vm pointer to a native API)
-	std::unique_ptr<u8[]> local_buf(new u8[size]);
-	std::memcpy(local_buf.get(), buf.get_ptr(), size);
-	return file.write(local_buf.get(), size);
+	if (file)
+	{
+		// Copy data to intermediate buffer (avoid passing vm pointer to a native API)
+		std::unique_ptr<u8[]> local_buf(new u8[size]);
+		std::memcpy(local_buf.get(), buf.get_ptr(), size);
+		return file.write(local_buf.get(), size);
+	}
+	info.size += size;
+	return size;
+}
+
+const fs::stat_t& lv2_file::stat()
+{
+	if (file)
+	{
+		info = file.stat();
+	}
+	return info;
 }
 
 struct lv2_file::file_view : fs::file_base
@@ -693,7 +711,7 @@ error_code sys_fs_fstat(u32 fd, vm::ptr<CellFsStat> sb)
 
 	std::lock_guard lock(file->mp->mutex);
 
-	const fs::stat_t& info = file->file.stat();
+	const fs::stat_t& info = file->stat();
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 	sb->uid = 0; // Always zero
@@ -785,6 +803,14 @@ error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 		return {CELL_EIO, from}; // ???
 	}
 
+	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& file)
+	{
+		if (strcmp(file.name.data(), from.get_ptr()) == 0)
+		{
+			file.name = lv2_file::get_name(to.get_ptr());
+		}
+	});
+
 	sys_fs.notice("sys_fs_rename(): %s renamed to %s", from, to);
 	return CELL_OK;
 }
@@ -861,6 +887,16 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 
 		return {CELL_EIO, path}; // ???
 	}
+
+	idm::select<lv2_fs_object, lv2_file>([&](u32, lv2_file& file)
+	{
+		if (strcmp(file.name.data(), path.get_ptr()) == 0)
+		{
+			std::lock_guard lock(file.mp->mutex);
+			file.stat();
+			file.file.close();
+		}
+	});
 
 	sys_fs.notice("sys_fs_unlink(): file %s deleted", path);
 	return CELL_OK;
