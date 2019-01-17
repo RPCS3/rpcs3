@@ -1044,7 +1044,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	// Process information
 	u32 sdk_version = 0x360001;
-	s32 primary_prio = 0x50;
+	s32 primary_prio = 1001;
 	u32 primary_stacksize = 0x100000;
 	u32 malloc_pagesize = 0x100000;
 
@@ -1182,7 +1182,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				else
 				{
 					sdk_version = info.sdk_version;
-					primary_prio = info.primary_prio;
+
+					if (s32 prio = info.primary_prio; prio < 3072 && prio >= 0)
+					{
+						primary_prio = prio;
+					}
+
 					primary_stacksize = info.primary_stacksize;
 					malloc_pagesize = info.malloc_pagesize;
 
