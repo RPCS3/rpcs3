@@ -872,7 +872,7 @@ namespace rsx
 				taskbar_index = index;
 			}
 
-			s32 progress_bar_set_message(u32 index, const std::string& msg)
+			error_code progress_bar_set_message(u32 index, const std::string& msg)
 			{
 				if (index >= num_progress_bars)
 					return CELL_MSGDIALOG_ERROR_PARAM;
@@ -885,7 +885,7 @@ namespace rsx
 				return CELL_OK;
 			}
 
-			s32 progress_bar_increment(u32 index, f32 value)
+			error_code progress_bar_increment(u32 index, f32 value)
 			{
 				if (index >= num_progress_bars)
 					return CELL_MSGDIALOG_ERROR_PARAM;
@@ -901,7 +901,7 @@ namespace rsx
 				return CELL_OK;
 			}
 
-			s32 progress_bar_reset(u32 index)
+			error_code progress_bar_reset(u32 index)
 			{
 				if (index >= num_progress_bars)
 					return CELL_MSGDIALOG_ERROR_PARAM;
@@ -916,7 +916,7 @@ namespace rsx
 				return CELL_OK;
 			}
 
-			s32 progress_bar_set_limit(u32 index, u32 limit)
+			error_code progress_bar_set_limit(u32 index, u32 limit)
 			{
 				if (index >= num_progress_bars)
 					return CELL_MSGDIALOG_ERROR_PARAM;
