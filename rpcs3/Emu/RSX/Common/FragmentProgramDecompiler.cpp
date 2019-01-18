@@ -482,6 +482,59 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 std::string FragmentProgramDecompiler::BuildCode()
 {
+	// Shader validation
+	// Shader must at least write to one output for the body to be considered valid
+
+	const std::string vec4_type = getFloatTypeName(4);
+	const std::string init_value = vec4_type + "(0., 0., 0., 0.)";
+	std::array<std::string, 4> output_register_names;
+	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
+	bool shader_is_valid = false;
+
+	// Check depth export
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	{
+		if (shader_is_valid = !!temp_registers[1].h0_writes; !shader_is_valid)
+		{
+			LOG_WARNING(RSX, "Fragment shader fails to write the depth value!");
+		}
+	}
+
+	// Add the color output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
+	// This can be used instead of an explicit clear pass in some games (Motorstorm)
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+	{
+		output_register_names = { "r0", "r2", "r3", "r4" };
+	}
+	else
+	{
+		output_register_names = { "h0", "h4", "h6", "h8" };
+	}
+
+	for (int n = 0; n < 4; ++n)
+	{
+		if (!m_parr.HasParam(PF_PARAM_NONE, vec4_type, output_register_names[n]))
+		{
+			m_parr.AddParam(PF_PARAM_NONE, vec4_type, output_register_names[n], init_value);
+			continue;
+		}
+
+		const auto block_index = ouput_register_indices[n];
+		shader_is_valid |= (!!temp_registers[block_index].h0_writes);
+	}
+
+	if (!shader_is_valid)
+	{
+		properties.has_no_output = true;
+
+		if (!properties.has_discard_op)
+		{
+			// NOTE: Discard operation overrides output
+			LOG_WARNING(RSX, "Shader does not write to any output register and will be NOPed");
+			main = "/*" + main + "*/";
+		}
+	}
+
 	std::stringstream OS;
 	insertHeader(OS);
 	OS << "\n";
@@ -765,23 +818,6 @@ std::string FragmentProgramDecompiler::Decompile()
 
 	int forced_unit = FORCE_NONE;
 
-	//Add the output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
-	//This can be used instead of an explicit clear pass in some games (Motorstorm)
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
-	{
-		AddReg(0, CELL_GCM_FALSE);
-		AddReg(2, CELL_GCM_FALSE);
-		AddReg(3, CELL_GCM_FALSE);
-		AddReg(4, CELL_GCM_FALSE);
-	}
-	else
-	{
-		AddReg(0, CELL_GCM_TRUE);
-		AddReg(4, CELL_GCM_TRUE);
-		AddReg(6, CELL_GCM_TRUE);
-		AddReg(8, CELL_GCM_TRUE);
-	}
-
 	while (true)
 	{
 		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
@@ -888,7 +924,10 @@ std::string FragmentProgramDecompiler::Decompile()
 		switch (opcode)
 		{
 		case RSX_FP_OPCODE_NOP: break;
-		case RSX_FP_OPCODE_KIL: AddFlowOp("discard"); break;
+		case RSX_FP_OPCODE_KIL:
+			properties.has_discard_op = true;
+			AddFlowOp("discard");
+			break;
 
 		default:
 			int prev_force_unit = forced_unit;
