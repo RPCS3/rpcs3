@@ -806,7 +806,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 	auto at_ret = gsl::finally([&]()
 	{
-		if (std::uncaught_exceptions())
+		if (is_stopped())
 		{
 			if (last_function)
 			{
@@ -819,18 +819,14 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 					LOG_WARNING(PPU, "'%s' aborted", last_function);
 				}
 			}
+		}
 
-			last_function = old_func;
-		}
-		else
-		{
-			state -= cpu_flag::ret;
-			cia = old_cia;
-			gpr[2] = old_rtoc;
-			lr = old_lr;
-			last_function = old_func;
-			g_tls_log_prefix = old_fmt;
-		}
+		state -= cpu_flag::ret;
+		cia = old_cia;
+		gpr[2] = old_rtoc;
+		lr = old_lr;
+		last_function = old_func;
+		g_tls_log_prefix = old_fmt;
 	});
 
 	try

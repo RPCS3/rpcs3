@@ -167,7 +167,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	{
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		if (timeout)
@@ -200,7 +200,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 	if (ppu.test_stopped())
 	{
-		return 0;
+		return CELL_OK;
 	}
 
 	if (result) *result = ppu.gpr[6];
@@ -377,7 +377,7 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 
 	if (ppu.test_stopped())
 	{
-		return 0;
+		return CELL_OK;
 	}
 
 	if (num) *num = value;

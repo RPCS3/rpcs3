@@ -243,7 +243,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	{
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		if (timeout)

@@ -340,7 +340,7 @@ s32 sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, 
 		{
 			if (ppu.is_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 
 			thread_ctrl::wait();
@@ -553,7 +553,7 @@ s32 sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr,
 		{
 			if (ppu.is_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 
 			thread_ctrl::wait();
@@ -958,7 +958,7 @@ s32 sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 len, s3
 		{
 			if (ppu.is_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 
 			thread_ctrl::wait();
@@ -1116,7 +1116,7 @@ s32 sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32
 		{
 			if (ppu.is_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 
 			thread_ctrl::wait();
@@ -1568,7 +1568,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 	{
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		if (timeout)
@@ -1767,7 +1767,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 	{
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		if (timeout)

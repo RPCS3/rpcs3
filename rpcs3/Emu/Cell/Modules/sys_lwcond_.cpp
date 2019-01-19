@@ -74,7 +74,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		{
 			if (ppu.test_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 
 			lwmutex->all_info--;
@@ -109,7 +109,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		lwmutex->all_info--;
@@ -155,7 +155,7 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		lwmutex->all_info += +res;
@@ -180,7 +180,7 @@ error_code sys_lwcond_signal_all(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 	if (ppu.test_stopped())
 	{
-		return 0;
+		return CELL_OK;
 	}
 
 	if (res > 0)
@@ -222,7 +222,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 		{
 			if (ppu.test_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 
 			lwmutex->all_info--;
@@ -254,7 +254,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		lwmutex->all_info--;

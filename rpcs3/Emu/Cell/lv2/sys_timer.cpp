@@ -310,7 +310,7 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 		{
 			if (ppu.is_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 
 			remaining = sleep_time - passed;

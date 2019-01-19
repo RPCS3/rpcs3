@@ -286,7 +286,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	{
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		if (timeout)

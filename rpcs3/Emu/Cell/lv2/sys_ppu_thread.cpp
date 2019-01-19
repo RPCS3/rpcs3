@@ -125,7 +125,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		*vptr = thread->gpr[3];
@@ -369,7 +369,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 			{
 				if (ppu.is_stopped())
 				{
-					return 0;
+					return CELL_OK;
 				}
 
 				thread_ctrl::wait_for(50000);
@@ -377,7 +377,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 			if (ppu.test_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 		}
 	}

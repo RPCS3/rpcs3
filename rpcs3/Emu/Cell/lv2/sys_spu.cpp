@@ -669,7 +669,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		{
 			if (ppu.is_stopped())
 			{
-				return 0;
+				return CELL_OK;
 			}
 
 			group->cond.wait(lock);
@@ -679,7 +679,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 	if (ppu.test_stopped())
 	{
-		return 0;
+		return CELL_OK;
 	}
 
 	switch (ppu.gpr[4] & (SPU_TGJSF_GROUP_EXIT | SPU_TGJSF_TERMINATED))

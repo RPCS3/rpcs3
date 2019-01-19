@@ -81,7 +81,7 @@ error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -174,7 +174,7 @@ error_code cellSyncBarrierNotify(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barri
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -225,7 +225,7 @@ error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -304,7 +304,7 @@ error_code cellSyncRwmRead(ppu_thread& ppu, vm::ptr<CellSyncRwm> rwm, vm::ptr<vo
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -371,7 +371,7 @@ error_code cellSyncRwmWrite(ppu_thread& ppu, vm::ptr<CellSyncRwm> rwm, vm::cptr<
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -380,7 +380,7 @@ error_code cellSyncRwmWrite(ppu_thread& ppu, vm::ptr<CellSyncRwm> rwm, vm::cptr<
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -482,7 +482,7 @@ error_code cellSyncQueuePush(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -553,7 +553,7 @@ error_code cellSyncQueuePop(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::p
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -624,7 +624,7 @@ error_code cellSyncQueuePeek(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue, vm::
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -709,7 +709,7 @@ error_code cellSyncQueueClear(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue)
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -717,7 +717,7 @@ error_code cellSyncQueueClear(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue)
 	{
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -1155,7 +1155,7 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
@@ -1453,7 +1453,7 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 

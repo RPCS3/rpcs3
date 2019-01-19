@@ -108,7 +108,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 	{
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		if (timeout)

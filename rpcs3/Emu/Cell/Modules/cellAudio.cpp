@@ -968,7 +968,7 @@ error_code cellAudioQuit(ppu_thread& ppu)
 	{
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		thread_ctrl::wait_for(1000);

@@ -1389,7 +1389,7 @@ s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 co
 
 		if (ppu.test_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 
 		busy_wait();

@@ -256,7 +256,7 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return CELL_OK;
 		}
 	}
 
