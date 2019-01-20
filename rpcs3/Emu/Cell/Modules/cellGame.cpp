@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -253,17 +253,7 @@ error_code cellHddGameSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellHddGameExitBroken()
 {
 	cellGame.warning("cellHddGameExitBroken()");
-
-	s32 res = open_msg_dialog(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON,
-		vm::make_str("There has been an error!\n\nPlease reinstall the HDD boot game."));
-
-	if (res != CELL_OK)
-	{
-		return CELL_HDDGAME_ERROR_INTERNAL;
-	}
-
-	sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
-	return CELL_OK;
+	return open_exit_dialog("There has been an error!\n\nPlease reinstall the HDD boot game.", true);
 }
 
 error_code cellGameDataGetSizeKB(vm::ptr<u32> size)
@@ -302,17 +292,7 @@ error_code cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellGameDataExitBroken()
 {
 	cellGame.warning("cellGameDataExitBroken()");
-
-	s32 res = open_msg_dialog(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON,
-		vm::make_str("There has been an error!\n\nPlease delete the game's game data."));
-
-	if (res != CELL_OK)
-	{
-		return CELL_GAMEDATA_ERROR_INTERNAL;
-	}
-
-	sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
-	return CELL_OK;
+	return open_exit_dialog("There has been an error!\n\nPlease delete the game's game data.", true);
 }
 
 error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
@@ -904,12 +884,12 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 	std::string errorName;
 	switch (type)
 	{
-	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted (can be continued).";          break;
-	case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted (can be continued).";      break;
-	case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space (can be continued).";      break;
-	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted (terminate application).";     break;
-	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted (terminate application)."; break;
-	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space (terminate application)."; break;
+	case CELL_GAME_ERRDIALOG_BROKEN_GAMEDATA:      errorName = "Game data is corrupted. The application will continue.";          break;
+	case CELL_GAME_ERRDIALOG_BROKEN_HDDGAME:       errorName = "HDD boot game is corrupted. The application will continue.";      break;
+	case CELL_GAME_ERRDIALOG_NOSPACE:              errorName = "Not enough available space. The application will continue.";      break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA: errorName = "Game data is corrupted. The application will be terminated.";     break;
+	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_HDDGAME:  errorName = "HDD boot game is corrupted. The application will be terminated."; break;
+	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:         errorName = "Not enough available space. The application will be terminated."; break;
 	default: return CELL_GAME_ERROR_PARAM;
 	}
 
@@ -925,12 +905,15 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 
 	if (dirName)
 	{
+		if (!memchr(dirName.get_ptr(), '\0', CELL_GAME_DIRNAME_SIZE))
+		{
+			return CELL_GAME_ERROR_PARAM;
+		}
+
 		errorMsg += fmt::format("\nDirectory name: %s", dirName);
 	}
 
-	verify(HERE), CELL_OK == open_msg_dialog(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON, vm::make_str(errorMsg));
-
-	return CELL_OK;
+	return open_exit_dialog(errorMsg, type > CELL_GAME_ERRDIALOG_NOSPACE);
 }
 
 s32 cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32 option)
