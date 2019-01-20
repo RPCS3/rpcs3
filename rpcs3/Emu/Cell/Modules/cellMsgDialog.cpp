@@ -34,10 +34,39 @@ MsgDialogBase::~MsgDialogBase()
 error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam);
 
 // wrapper to call for other hle dialogs
-error_code open_msg_dialog(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
+error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
-	cellSysutil.warning("open_msg_dialog called. This will call cellMsgDialogOpen2");
-	return cellMsgDialogOpen2(type, msgString, callback, userData, extParam);
+	cellSysutil.warning("open_msg_dialog(is_blocking=%d, type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", is_blocking, type, msgString, callback, userData, extParam);
+
+	const error_code res = cellMsgDialogOpen2(type, msgString, callback, userData, extParam);
+
+	if (res == CELL_OK && is_blocking)
+	{
+		if (auto manager = fxm::get<rsx::overlays::display_manager>())
+		{
+			while (auto dlg = manager->get<rsx::overlays::message_dialog>())
+			{
+				if (Emu.IsStopped())
+				{
+					break;
+				}
+				dlg->refresh();
+			}
+		}
+		else
+		{
+			while (auto dlg = fxm::get<MsgDialogBase>())
+			{
+				if (Emu.IsStopped() || dlg->state != MsgDialogState::Open)
+				{
+					break;
+				}
+				std::this_thread::yield();
+			}
+		}
+	}
+
+	return res;
 }
 
 void exit_game(s32/* buttonType*/, vm::ptr<void>/* userData*/)
@@ -56,10 +85,12 @@ error_code open_exit_dialog(const std::string& message, bool is_exit_requested)
 		callback.set(ppu_function_manager::addr + 8 * FIND_FUNC(exit_game));
 	}
 
-	const error_code res = cellMsgDialogOpen2
+	const error_code res = open_msg_dialog
 	(
+		true,
 		CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK | CELL_MSGDIALOG_TYPE_DISABLE_CANCEL_ON,
-		vm::make_str(message), callback, vm::null, vm::null
+		vm::make_str(message),
+		callback
 	);
 
 	if (res != CELL_OK)
@@ -68,26 +99,6 @@ error_code open_exit_dialog(const std::string& message, bool is_exit_requested)
 		if (is_exit_requested)
 		{
 			sysutil_send_system_cmd(CELL_SYSUTIL_REQUEST_EXITGAME, 0);
-		}
-		return CELL_OK;
-	}
-
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
-	{
-		while (auto dlg = manager->get<rsx::overlays::message_dialog>())
-		{
-			dlg->refresh();
-		}
-	}
-	else
-	{
-		while (auto dlg = fxm::get<MsgDialogBase>())
-		{
-			if (dlg->state != MsgDialogState::Open)
-			{
-				break;
-			}
-			std::this_thread::yield();
 		}
 	}
 
@@ -518,5 +529,5 @@ void cellSysutil_MsgDialog_init()
 	REG_FUNC(cellSysutil, cellMsgDialogAbort);
 
 	// Helper Function
-	REG_FUNC(cellSysutil, exit_game);
+	REG_FUNC(cellSysutil, exit_game).flag(MFF_HIDDEN);
 }
