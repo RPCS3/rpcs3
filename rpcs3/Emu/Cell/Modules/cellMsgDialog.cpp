@@ -34,7 +34,7 @@ MsgDialogBase::~MsgDialogBase()
 error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam);
 
 // wrapper to call for other hle dialogs
-s32 open_msg_dialog(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
+error_code open_msg_dialog(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
 	cellSysutil.warning("open_msg_dialog called. This will call cellMsgDialogOpen2");
 	return cellMsgDialogOpen2(type, msgString, callback, userData, extParam);
