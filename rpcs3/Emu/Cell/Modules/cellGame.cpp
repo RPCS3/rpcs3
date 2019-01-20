@@ -292,7 +292,7 @@ error_code cellGameDataSetSystemVer(vm::cptr<char> systemVersion)
 error_code cellGameDataExitBroken()
 {
 	cellGame.warning("cellGameDataExitBroken()");
-	return open_exit_dialog("There has been an error!\n\nPlease delete the game's game data.", true);
+	return open_exit_dialog("There has been an error!\n\nPlease remove the game data for this title.", true);
 }
 
 error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr<CellGameContentSize> size, vm::ptr<char[CELL_GAME_DIRNAME_SIZE]> dirName)
