@@ -185,12 +185,12 @@ emu_settings::~emu_settings()
 {
 }
 
-void emu_settings::LoadSettings(const std::string& path)
+void emu_settings::LoadSettings(const std::string& title_id)
 {
-	m_path = path;
+	m_title_id = title_id;
 
 	// Create config path if necessary
-	fs::create_path(fs::get_config_dir() + path);
+	fs::create_path(title_id.empty() ? fs::get_config_dir() : Emu.GetCustomConfigDir());
 
 	// Load default config
 	m_defaultSettings = YAML::Load(g_cfg_defaults);
@@ -202,11 +202,23 @@ void emu_settings::LoadSettings(const std::string& path)
 	config.close();
 
 	// Add game config
-	if (!path.empty() && fs::is_file(fs::get_config_dir() + path + "/config.yml"))
+	if (!title_id.empty())
 	{
-		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
-		m_currentSettings += YAML::Load(config.to_string());
-		config.close();
+		const std::string config_path_new = Emu.GetCustomConfigPath(m_title_id);
+		const std::string config_path_old = Emu.GetCustomConfigPath(m_title_id, true);
+
+		if (fs::is_file(config_path_new))
+		{
+			config = fs::file(config_path_new, fs::read + fs::write);
+			m_currentSettings += YAML::Load(config.to_string());
+			config.close();
+		}
+		else if (fs::is_file(config_path_old))
+		{
+			config = fs::file(config_path_old, fs::read + fs::write);
+			m_currentSettings += YAML::Load(config.to_string());
+			config.close();
+		}
 	}
 }
 
@@ -216,9 +228,9 @@ void emu_settings::SaveSettings()
 	YAML::Emitter out;
 	emitData(out, m_currentSettings);
 
-	if (!m_path.empty())
+	if (!m_title_id.empty())
 	{
-		config = fs::file(fs::get_config_dir() + m_path + "/config.yml", fs::read + fs::write + fs::create);
+		config = fs::file(Emu.GetCustomConfigPath(m_title_id), fs::read + fs::write + fs::create);
 	}
 	else
 	{
