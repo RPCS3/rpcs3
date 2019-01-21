@@ -1175,7 +1175,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (sub_index == 0)
 	{
-		m_vertex_layout = analyse_inputs_interleaved();
+		analyse_inputs_interleaved(m_vertex_layout);
 	}
 
 	if (!m_vertex_layout.validate())
@@ -1640,7 +1640,7 @@ void VKGSRender::end()
 			occlusion_id = m_occlusion_query_pool.find_free_slot();
 			if (occlusion_id == UINT32_MAX)
 			{
-				LOG_ERROR(RSX, "Occlusion pool overflow");
+				//LOG_ERROR(RSX, "Occlusion pool overflow");
 				if (m_current_task) m_current_task->result = 1;
 			}
 		}
@@ -2718,7 +2718,7 @@ void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
 	buf[1] = vertex_info.vertex_index_offset;
 	buf += 4;
 
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, (s32*)buf,
+	fill_vertex_layout_state(m_vertex_layout, vertex_info.first_vertex, vertex_info.allocated_vertex_count, (s32*)buf,
 		vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
 
 	m_vertex_layout_ring_info.unmap();

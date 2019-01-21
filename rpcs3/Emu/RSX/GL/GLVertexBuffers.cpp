@@ -48,10 +48,10 @@ namespace
 
 	struct vertex_input_state
 	{
+		bool index_rebase;
+		u32 min_index;
+		u32 max_index;
 		u32 vertex_draw_count;
-		u32 allocated_vertex_count;
-		u32 vertex_data_base;
-		u32 vertex_index_base;
 		u32 vertex_index_offset;
 		std::optional<std::tuple<GLenum, u32>> index_info;
 	};
@@ -70,6 +70,7 @@ namespace
 		{
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			const u32 min_index    = rsx::method_registers.current_draw_clause.min_index();
+			const u32 max_index    = (min_index + vertex_count) - 1;
 
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
 			{
@@ -79,10 +80,10 @@ namespace
 				    rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer,
 					rsx::method_registers.current_draw_clause.get_elements_count());
 
-				return{ index_count, vertex_count, min_index, 0, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
+				return{ false, min_index, max_index, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
 			}
 
-			return{ vertex_count, vertex_count, min_index, 0, 0, std::optional<std::tuple<GLenum, u32>>() };
+			return{ false, min_index, max_index, vertex_count, 0, std::optional<std::tuple<GLenum, u32>>() };
 		}
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
@@ -117,26 +118,13 @@ namespace
 			if (min_index >= max_index)
 			{
 				//empty set, do not draw
-				return{ 0, 0, 0, 0, 0, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
+				return{ false, 0, 0, 0, 0, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
 			}
 
+			// Prefer only reading the vertices that are referenced in the index buffer itself
+			// Offset data source by min_index verts, but also notify the shader to offset the vertexID (important for modulo op)
 			const auto index_offset = rsx::method_registers.vertex_data_base_index();
-
-			//check for vertex arrays with frequency modifiers
-			for (auto &block : m_vertex_layout.interleaved_blocks)
-			{
-				if (block.min_divisor > 1)
-				{
-					//Ignore base offsets and return real results
-					//The upload function will optimize the uploaded range anyway
-					return{ index_count, max_index, 0, 0, index_offset, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
-				}
-			}
-
-			//Prefer only reading the vertices that are referenced in the index buffer itself
-			//Offset data source by min_index verts, but also notify the shader to offset the vertexID
-			const auto data_offset = rsx::get_index_from_base(min_index, index_offset);
-			return{ index_count, (max_index - min_index + 1), data_offset, min_index, index_offset, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
+			return{ true, min_index, max_index, index_count, index_offset, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
 		}
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& command)
@@ -151,10 +139,10 @@ namespace
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
 					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer, vertex_count);
 
-				return{ index_count, vertex_count, 0, 0, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
+				return{ false, index_count, vertex_count, 0, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
 			}
 
-			return{ vertex_count, vertex_count, 0, 0, 0, std::optional<std::tuple<GLenum, u32>>() };
+			return{ false, vertex_count, vertex_count, 0, 0, std::optional<std::tuple<GLenum, u32>>() };
 		}
 
 	private:
@@ -170,18 +158,26 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	//Write index buffers and count verts
 	auto result = std::visit(draw_command_visitor(*m_index_ring_buffer, m_vertex_layout), get_draw_command(rsx::method_registers));
 
-	auto &vertex_count = result.allocated_vertex_count;
-	auto &vertex_base = result.vertex_data_base;
+	const u32 vertex_count = (result.max_index - result.min_index) + 1;
+	u32 vertex_base = result.min_index;
+	u32 index_base = 0;
+
+	if (result.index_rebase)
+	{
+		vertex_base = rsx::get_index_from_base(vertex_base, rsx::method_registers.vertex_data_base_index());
+		index_base = result.min_index;
+	}
 
 	//Do actual vertex upload
-	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
+	auto required = calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
 
 	std::pair<void*, u32> persistent_mapping = {}, volatile_mapping = {};
 	gl::vertex_upload_info upload_info =
 	{
 		result.vertex_draw_count,                // Vertex count
-		result.allocated_vertex_count,           // Allocated vertex count
-		result.vertex_index_base,                // Index of attribute at data location 0
+		vertex_count,                            // Allocated vertex count
+		vertex_base,                             // First vertex in block
+		index_base,                              // Index of attribute at data location 0
 		result.vertex_index_offset,              // Hw index offset
 		0u, 0u,                                  // Mapping
 		result.index_info                        // Index buffer info
