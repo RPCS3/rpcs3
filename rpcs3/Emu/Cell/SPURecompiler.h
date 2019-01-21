@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Utilities/File.h"
+#include "Utilities/mutex.h"
+#include "Utilities/cond.h"
+#include "Utilities/JIT.h"
 #include "SPUThread.h"
 #include <vector>
 #include <bitset>
@@ -28,6 +31,40 @@ public:
 	void add(const std::vector<u32>& func);
 
 	static void initialize();
+};
+
+// Helper class
+class spu_runtime
+{
+public:
+	shared_mutex m_mutex;
+
+	cond_variable m_cond;
+
+	// All functions
+	std::map<std::vector<u32>, spu_function_t> m_map;
+
+	// All dispatchers
+	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
+
+	// Debug module output location
+	std::string m_cache_path;
+
+private:
+	// Temporarily: asmjit runtime collection
+	std::deque<std::unique_ptr<asmjit::JitRuntime>> m_asmjit_rts;
+
+	// Trampoline to spu_recompiler_base::dispatch
+	spu_function_t tr_dispatch = nullptr;
+
+public:
+	spu_runtime();
+
+	// Get new ASMJIT runtime
+	asmjit::JitRuntime* get_asmjit_rt();
+
+	// Add compiled function and generate trampoline if necessary
+	void add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled);
 };
 
 // SPU Recompiler instance base class
