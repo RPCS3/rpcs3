@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
@@ -223,7 +223,7 @@ public:
 	Render_Creator m_render_creator;
 
 	/** Loads the settings from path.*/
-	void LoadSettings(const std::string& path = "");
+	void LoadSettings(const std::string& title_id = "");
 
 	/** Fixes all registered invalid settings after asking the user for permission.*/
 	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
@@ -355,5 +355,5 @@ private:
 
 	YAML::Node m_defaultSettings; // The default settings as a YAML node.
 	YAML::Node m_currentSettings; // The current settings as a YAML node.
-	std::string m_path;
+	std::string m_title_id;
 };

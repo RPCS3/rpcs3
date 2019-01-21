@@ -1,4 +1,4 @@
-#include "game_list_frame.h"
+﻿#include "game_list_frame.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
@@ -461,7 +461,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			}
 
 			const auto compat = m_game_compat->GetCompatibility(game.serial);
-			const bool hasCustomConfig = fs::is_file(fs::get_config_dir() + "data/" + game.serial + "/config.yml");
+			const bool hasCustomConfig = fs::is_file(Emu.GetCustomConfigPath(game.serial)) || fs::is_file(Emu.GetCustomConfigPath(game.serial, true));
 			const QColor color = getGridCompatibilityColor(compat.color);
 
 			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, color);
@@ -655,12 +655,29 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	const QString serial = qstr(currGame.serial);
 	const QString name = qstr(currGame.name).simplified();
 
+	const std::string cache_base_dir = fs::get_cache_dir() + "cache/" + currGame.serial;
+	const std::string data_base_dir  = fs::get_config_dir() + "data/" + currGame.serial;
+
 	// Make Actions
 	QMenu myMenu;
-	QAction* boot = myMenu.addAction(tr("&Boot"));
+	QAction* boot = new QAction(gameinfo->hasCustomConfig ? tr("&Boot with global configuration") : tr("&Boot"));
 	QFont f = boot->font();
 	f.setBold(true);
-	boot->setFont(f);
+	if (gameinfo->hasCustomConfig)
+	{
+		QAction* boot_custom = myMenu.addAction(tr("&Boot with custom configuration"));
+		boot_custom->setFont(f);
+		connect(boot_custom, &QAction::triggered, [=]
+		{
+			LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
+			Q_EMIT RequestBoot(currGame.path);
+		});
+	}
+	else
+	{
+		boot->setFont(f);
+	}
+	myMenu.addAction(boot);
 	QAction* configure = myMenu.addAction(tr("&Configure"));
 	QAction* createPPUCache = myMenu.addAction(tr("&Create PPU Cache"));
 	myMenu.addSeparator();
@@ -671,13 +688,57 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	myMenu.addSeparator();
 	QMenu* remove_menu = myMenu.addMenu(tr("&Remove"));
 	QAction* removeGame = remove_menu->addAction(tr("&Remove %1").arg(qstr(currGame.category)));
-	QAction* removeConfig = remove_menu->addAction(tr("&Remove Custom Configuration"));
-	QAction* removeShadersCache = remove_menu->addAction(tr("&Remove Shaders Cache"));
-	QAction* removePPUCache = remove_menu->addAction(tr("&Remove PPU Cache"));
-	QAction* removeSPUCache = remove_menu->addAction(tr("&Remove SPU Cache"));
+	if (gameinfo->hasCustomConfig)
+	{
+		QAction* remove_custom_config = remove_menu->addAction(tr("&Remove Custom Configuration"));
+		connect(remove_custom_config, &QAction::triggered, [=]()
+		{
+			if (RemoveCustomConfiguration(currGame.serial, true))
+			{
+				ShowCustomConfigIcon(item, false);
+			}
+		});
+	}
+	if (fs::is_dir(cache_base_dir))
+	{
+		QAction* removeShadersCache = remove_menu->addAction(tr("&Remove Shaders Cache"));
+		connect(removeShadersCache, &QAction::triggered, [=]()
+		{
+			RemoveShadersCache(cache_base_dir, true);
+		});
+		QAction* removePPUCache = remove_menu->addAction(tr("&Remove PPU Cache"));
+		connect(removePPUCache, &QAction::triggered, [=]()
+		{
+			RemovePPUCache(cache_base_dir, true);
+		});
+		QAction* removeSPUCache = remove_menu->addAction(tr("&Remove SPU Cache"));
+		connect(removeSPUCache, &QAction::triggered, [=]()
+		{
+			RemoveSPUCache(cache_base_dir, true);
+		});
+	}
 	myMenu.addSeparator();
 	QAction* openGameFolder = myMenu.addAction(tr("&Open Install Folder"));
-	QAction* openConfig = myMenu.addAction(tr("&Open Config Folder"));
+	if (gameinfo->hasCustomConfig)
+	{
+		QAction* open_config_dir = myMenu.addAction(tr("&Open Custom Config Folder"));
+		connect(open_config_dir, &QAction::triggered, [=]()
+		{
+			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial, true)))
+				open_dir(Emu.GetCustomConfigDir());
+
+			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial)))
+				open_dir(data_base_dir);
+		});
+	}
+	if (fs::is_dir(data_base_dir))
+	{
+		QAction* open_data_dir = myMenu.addAction(tr("&Open Data Folder"));
+		connect(open_data_dir, &QAction::triggered, [=]()
+		{
+			open_dir(data_base_dir);
+		});
+	}
 	myMenu.addSeparator();
 	QAction* checkCompat = myMenu.addAction(tr("&Check Game Compatibility"));
 	QAction* downloadCompat = myMenu.addAction(tr("&Download Compatibility Database"));
@@ -688,13 +749,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* copy_name = info_menu->addAction(tr("&Copy Name"));
 	QAction* copy_serial = info_menu->addAction(tr("&Copy Serial"));
 
-	const std::string cache_base_dir = fs::get_cache_dir() + "cache/" + currGame.serial;
-	const std::string config_base_dir = fs::get_config_dir() + "data/" + currGame.serial;
-
 	connect(boot, &QAction::triggered, [=]
 	{
 		LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
-		Q_EMIT RequestBoot(currGame.path);
+		Q_EMIT RequestBoot(currGame.path, gameinfo->hasCustomConfig);
 	});
 	connect(configure, &QAction::triggered, [=]
 	{
@@ -739,7 +797,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				RemoveShadersCache(cache_base_dir);
 				RemovePPUCache(cache_base_dir);
 				RemoveSPUCache(cache_base_dir);
-				RemoveCustomConfiguration(config_base_dir);
+				RemoveCustomConfiguration(currGame.serial);
 			}
 			fs::remove_all(currGame.path);
 			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
@@ -754,32 +812,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
 		}
 	});
-	connect(removeConfig, &QAction::triggered, [=]()
-	{
-		if (RemoveCustomConfiguration(config_base_dir, true))
-		{
-			ShowCustomConfigIcon(item, false);
-		}
-	});
-	connect(removeShadersCache, &QAction::triggered, [=]()
-	{
-		RemoveShadersCache(cache_base_dir, true);
-	});
-	connect(removePPUCache, &QAction::triggered, [=]()
-	{
-		RemovePPUCache(cache_base_dir, true);
-	});
-	connect(removeSPUCache, &QAction::triggered, [=]()
-	{
-		RemoveSPUCache(cache_base_dir, true);
-	});
 	connect(openGameFolder, &QAction::triggered, [=]()
 	{
 		open_dir(currGame.path);
-	});
-	connect(openConfig, &QAction::triggered, [=]()
-	{
-		open_dir(fs::get_config_dir() + "data/" + currGame.serial);
 	});
 	connect(checkCompat, &QAction::triggered, [=]
 	{
@@ -852,61 +887,57 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QApplication::clipboard()->setText(serial);
 	});
 
-	//Disable options depending on software category
+	// Disable options depending on software category
 	QString category = qstr(currGame.category);
 
 	if (category == category::disc_game)
 	{
 		removeGame->setEnabled(false);
 	}
-	else if (0)
-	{
-		boot->setEnabled(false), f.setBold(false), boot->setFont(f);
-		configure->setEnabled(false);
-		removeConfig->setEnabled(false);
-		openConfig->setEnabled(false);
-		checkCompat->setEnabled(false);
-	}
 	else if (category != category::hdd_game)
 	{
 		checkCompat->setEnabled(false);
 	}
 
-	// Disable removeconfig if no config exists.
-	removeConfig->setEnabled(gameinfo->hasCustomConfig);
-
-	// remove options if necessary
-	if (!fs::is_dir(cache_base_dir))
-	{
-		removeShadersCache->setEnabled(false);
-		removePPUCache->setEnabled(false);
-		removeSPUCache->setEnabled(false);
-	}
-
 	myMenu.exec(globalPos);
 }
 
-bool game_list_frame::RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive)
+bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, bool is_interactive)
 {
-	const std::string config_path = base_dir + "/config.yml";
+	const std::string config_path_new = Emu.GetCustomConfigPath(title_id);
+	const std::string config_path_old = Emu.GetCustomConfigPath(title_id, true);
 
-	if (!fs::is_file(config_path))
+	if (!fs::is_file(config_path_new) && !fs::is_file(config_path_old))
 		return false;
 
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove custom game configuration?")) != QMessageBox::Yes)
 		return false;
 
-	if (fs::remove_file(config_path))
+	bool result = true;
+
+	for (const std::string& path : { config_path_new, config_path_old })
 	{
-		LOG_SUCCESS(GENERAL, "Removed configuration file: %s", config_path);
-		return true;
+		if (!fs::is_file(path))
+		{
+			continue;
+		}
+		if (fs::remove_file(path))
+		{
+			LOG_SUCCESS(GENERAL, "Removed configuration file: %s", path);
+		}
+		else
+		{
+			LOG_FATAL(GENERAL, "Failed to remove configuration file: %s\nError: %s", path, fs::g_tls_error);
+			result = false;
+		}
 	}
-	else
+
+	if (is_interactive && !result)
 	{
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove configuration file!"));
-		LOG_FATAL(GENERAL, "Failed to remove configuration file: %s\nError: %s", config_path, fs::g_tls_error);
-		return false;
 	}
+
+	return result;
 }
 
 bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_interactive)

@@ -1,4 +1,4 @@
-#include <QVBoxLayout>
+﻿#include <QVBoxLayout>
 #include <QButtonGroup>
 #include <QPushButton>
 #include <QMessageBox>
@@ -99,7 +99,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	if (game)
 	{
-		xemu_settings->LoadSettings("data/" + game->serial);
+		xemu_settings->LoadSettings(game->serial);
 		setWindowTitle(tr("Settings: [") + qstr(game->serial) + "] " + qstr(game->name));
 	}
 	else

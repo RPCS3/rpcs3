@@ -268,7 +268,7 @@ void main_window::OnPlayOrPause()
 	}
 }
 
-void main_window::Boot(const std::string& path, bool direct, bool add_only)
+void main_window::Boot(const std::string& path, bool direct, bool add_only, bool force_global_config)
 {
 	if (!Emu.IsStopped())
 	{
@@ -287,7 +287,7 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (Emu.BootGame(path, direct, add_only))
+	if (Emu.BootGame(path, direct, add_only, force_global_config))
 	{
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
@@ -1565,7 +1565,10 @@ void main_window::CreateDockWindows()
 		}
 	});
 
-	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const std::string& path){ Boot(path); });
+	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const std::string& path, bool force_global_config)
+	{
+		Boot(path, false, false, force_global_config);
+	});
 }
 
 void main_window::ConfigureGuiFromSettings(bool configure_all)
