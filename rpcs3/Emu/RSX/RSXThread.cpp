@@ -1342,15 +1342,15 @@ namespace rsx
 		}
 	}
 
-	vertex_input_layout thread::analyse_inputs_interleaved() const
+	void thread::analyse_inputs_interleaved(vertex_input_layout& result) const
 	{
 		const rsx_state& state = rsx::method_registers;
 		const u32 input_mask = state.vertex_attrib_input_mask();
 
+		result.clear();
+
 		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
-			vertex_input_layout result = {};
-
 			interleaved_range_info info = {};
 			info.interleaved = true;
 			info.locations.reserve(8);
@@ -1363,7 +1363,7 @@ namespace rsx
 				{
 					// Stride must be updated even if the stream is disabled
 					info.attribute_stride += rsx::get_vertex_type_size_on_host(vinfo.type(), vinfo.size());
-					info.locations.push_back(index);
+					info.locations.push_back({ index, false, 1 });
 
 					if (input_mask & (1u << index))
 					{
@@ -1378,12 +1378,11 @@ namespace rsx
 				}
 			}
 
-			result.interleaved_blocks.push_back(info);
-			return result;
+			result.interleaved_blocks.emplace_back(std::move(info));
+			return;
 		}
 
 		const u32 frequency_divider_mask = rsx::method_registers.frequency_divider_operation_mask();
-		vertex_input_layout result = {};
 		result.interleaved_blocks.reserve(16);
 		result.referenced_registers.reserve(16);
 
@@ -1433,6 +1432,7 @@ namespace rsx
 				result.attribute_placement[index] = attribute_buffer_placement::persistent;
 				const u32 base_address = info.offset() & 0x7fffffff;
 				bool alloc_new_block = true;
+				bool modulo = !!(frequency_divider_mask & (1 << index));
 
 				for (auto &block : result.interleaved_blocks)
 				{
@@ -1471,13 +1471,8 @@ namespace rsx
 					}
 
 					alloc_new_block = false;
-					block.locations.push_back(index);
+					block.locations.push_back({ index, modulo, info.frequency() });
 					block.interleaved = true;
-					block.min_divisor = std::min(block.min_divisor, info.frequency());
-
-					if (block.all_modulus)
-						block.all_modulus = !!(frequency_divider_mask & (1 << index));
-
 					break;
 				}
 
@@ -1488,9 +1483,7 @@ namespace rsx
 					block.attribute_stride = info.stride();
 					block.memory_location = info.offset() >> 31;
 					block.locations.reserve(16);
-					block.locations.push_back(index);
-					block.min_divisor = info.frequency();
-					block.all_modulus = !!(frequency_divider_mask & (1 << index));
+					block.locations.push_back({ index, modulo, info.frequency() });
 
 					if (block.attribute_stride == 0)
 					{
@@ -1498,7 +1491,7 @@ namespace rsx
 						block.attribute_stride = rsx::get_vertex_type_size_on_host(info.type(), info.size());
 					}
 
-					result.interleaved_blocks.push_back(block);
+					result.interleaved_blocks.emplace_back(std::move(block));
 				}
 			}
 		}
@@ -1508,8 +1501,6 @@ namespace rsx
 			//Calculate real data address to be used during upload
 			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location);
 		}
-
-		return result;
 	}
 
 	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
@@ -1835,7 +1826,7 @@ namespace rsx
 		fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
 	}
 
-	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count)
+	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count)
 	{
 		u32 persistent_memory_size = 0;
 		u32 volatile_memory_size = 0;
@@ -1861,37 +1852,13 @@ namespace rsx
 				}
 			}
 
-			for (const auto &block : layout.interleaved_blocks)
-			{
-				u32 unique_verts;
-
-				if (block.single_vertex)
-				{
-					unique_verts = 1;
-				}
-				else if (block.min_divisor > 1)
-				{
-					if (block.all_modulus)
-						unique_verts = block.min_divisor;
-					else
-					{
-						unique_verts = vertex_count / block.min_divisor;
-						if (vertex_count % block.min_divisor) unique_verts++;
-					}
-				}
-				else
-				{
-					unique_verts = vertex_count;
-				}
-
-				persistent_memory_size += block.attribute_stride * unique_verts;
-			}
+			persistent_memory_size = layout.calculate_interleaved_memory_requirements(first_vertex, vertex_count);
 		}
 
 		return std::make_pair(persistent_memory_size, volatile_memory_size);
 	}
 
-	void thread::fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset_base, u32 volatile_offset_base)
+	void thread::fill_vertex_layout_state(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, s32* buffer, u32 persistent_offset_base, u32 volatile_offset_base)
 	{
 		std::array<s32, 16> offset_in_block = {};
 		u32 volatile_offset = volatile_offset_base;
@@ -1917,11 +1884,11 @@ namespace rsx
 		{
 			const auto &block = layout.interleaved_blocks[0];
 			u32 inline_data_offset = volatile_offset;
-			for (const u8 index : block.locations)
+			for (const auto& attrib : block.locations)
 			{
-				auto &info = rsx::method_registers.vertex_arrays_info[index];
+				auto &info = rsx::method_registers.vertex_arrays_info[attrib.index];
 
-				offset_in_block[index] = inline_data_offset;
+				offset_in_block[attrib.index] = inline_data_offset;
 				inline_data_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
 			}
 		}
@@ -1929,34 +1896,14 @@ namespace rsx
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
-				for (u8 index : block.locations)
+				for (const auto& attrib : block.locations)
 				{
-					const u32 local_address = (rsx::method_registers.vertex_arrays_info[index].offset() & 0x7fffffff);
-					offset_in_block[index] = persistent_offset + (local_address - block.base_offset);
+					const u32 local_address = (rsx::method_registers.vertex_arrays_info[attrib.index].offset() & 0x7fffffff);
+					offset_in_block[attrib.index] = persistent_offset + (local_address - block.base_offset);
 				}
 
-				u32 unique_verts;
-
-				if (block.single_vertex)
-				{
-					unique_verts = 1;
-				}
-				else if (block.min_divisor > 1)
-				{
-					if (block.all_modulus)
-						unique_verts = block.min_divisor;
-					else
-					{
-						unique_verts = vertex_count / block.min_divisor;
-						if (vertex_count % block.min_divisor) unique_verts++;
-					}
-				}
-				else
-				{
-					unique_verts = vertex_count;
-				}
-
-				persistent_offset += block.attribute_stride * unique_verts;
+				const auto range = block.calculate_required_range(first_vertex, vertex_count);
+				persistent_offset += block.attribute_stride * range.second;
 			}
 		}
 
@@ -1978,6 +1925,7 @@ namespace rsx
 		const s32 modulo_op_frequency_mask = (1 << 31);
 
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
+		const auto max_index = (first_vertex + vertex_count) - 1;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 		{
@@ -2067,9 +2015,25 @@ namespace rsx
 					default:
 					{
 						if (modulo_mask & (1 << index))
-							attrib1 |= modulo_op_frequency_mask;
-
-						attrib0 |= (frequency << 8);
+						{
+							if (max_index >= frequency)
+							{
+								// Only set modulo mask if a modulo op is actually necessary!
+								// This requires that the uploaded range for this attr = [0, freq-1]
+								// Ignoring modulo op if the rendered range does not wrap allows for range optimization
+								attrib0 |= (frequency << 8);
+								attrib1 |= modulo_op_frequency_mask;
+							}
+							else
+							{
+								attrib0 |= default_frequency_mask;
+							}
+						}
+						else
+						{
+							// Division
+							attrib0 |= (frequency << 8);
+						}
 						break;
 					}
 					}
@@ -2148,30 +2112,11 @@ namespace rsx
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
-				u32 unique_verts;
-				u32 vertex_base = 0;
+				auto range = block.calculate_required_range(first_vertex, vertex_count);
 
-				if (block.single_vertex)
-				{
-					unique_verts = 1;
-				}
-				else if (block.min_divisor > 1)
-				{
-					if (block.all_modulus)
-						unique_verts = block.min_divisor;
-					else
-					{
-						unique_verts = vertex_count / block.min_divisor;
-						if (vertex_count % block.min_divisor) unique_verts++;
-					}
-				}
-				else
-				{
-					unique_verts = vertex_count;
-					vertex_base = first_vertex * block.attribute_stride;
-				}
+				const u32 data_size = range.second * block.attribute_stride;
+				const u32 vertex_base = range.first * block.attribute_stride;
 
-				const u32 data_size = block.attribute_stride * unique_verts;
 				memcpy(persistent, (char*)vm::base(block.real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}

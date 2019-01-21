@@ -478,7 +478,7 @@ void GLGSRender::end()
 	{
 		if (!subdraw)
 		{
-			m_vertex_layout = analyse_inputs_interleaved();
+			analyse_inputs_interleaved(m_vertex_layout);
 			if (!m_vertex_layout.validate())
 			{
 				// Execute remainining pipeline barriers with NOP draw
@@ -1427,7 +1427,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 	buf[1] = upload_info.vertex_index_offset;
 	buf += 4;
 
-	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, (s32*)buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+	fill_vertex_layout_state(m_vertex_layout, upload_info.first_vertex, upload_info.allocated_vertex_count, (s32*)buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
 	m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
 

@@ -361,7 +361,7 @@ namespace glsl
 		"		}\n"
 		"		else\n"
 		"		{\n"
-		"			vertex_id = (" << vertex_id_name << " + int(vertex_index_offset)) / int(desc.frequency); \n"
+		"			vertex_id = vertex_id / int(desc.frequency); \n"
 		"		}\n"
 		"	}\n"
 		"\n"
