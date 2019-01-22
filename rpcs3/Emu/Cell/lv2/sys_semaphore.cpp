@@ -171,17 +171,7 @@ error_code sys_semaphore_trywait(u32 sem_id)
 
 	const auto sem = idm::check<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
 	{
-		const s32 val = sema.val;
-
-		if (val > 0)
-		{
-			if (sema.val.compare_and_swap_test(val, val - 1))
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return sema.val.try_dec(0);
 	});
 
 	if (!sem)
