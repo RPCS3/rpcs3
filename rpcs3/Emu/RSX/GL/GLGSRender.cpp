@@ -693,7 +693,7 @@ void GLGSRender::set_scissor()
 	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
 	// See LIMBO [NPUB-30373] which uses shader window origin = top
 	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
-	glEnable(GL_SCISSOR_TEST);
+	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 }
 
 void GLGSRender::on_init_thread()
@@ -1592,7 +1592,7 @@ void GLGSRender::flip(int buffer)
 	}
 
 	// Disable scissor test (affects blit, clear, etc)
-	glDisable(GL_SCISSOR_TEST);
+	gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
 	// Clear the window background to black
 	gl_state.clear_color(0, 0, 0, 0);
