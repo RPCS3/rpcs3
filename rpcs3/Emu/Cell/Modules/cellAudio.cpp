@@ -283,7 +283,7 @@ u64 audio_ringbuffer::update()
 	{
 		if (!new_playing)
 		{
-			cellAudio.error("Audio backend stopped unexpectedly, likely due to a buffer underrun");
+			cellAudio.warning("Audio backend stopped unexpectedly, likely due to a buffer underrun");
 
 			flush();
 			playing = false;
