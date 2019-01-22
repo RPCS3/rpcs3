@@ -61,6 +61,7 @@ FT build_function_asm(F&& builder)
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include "types.h"
@@ -129,8 +130,8 @@ public:
 	// Get compiled function address
 	u64 get(const std::string& name);
 
-	// Add functions directly to the memory manager (name -> code)
-	static std::unordered_map<std::string, u64> add(std::unordered_map<std::string, std::string>);
+	// Allocate writable executable memory (alignment is assumed 16)
+	static u8* alloc(u32 size);
 
 	// Get CPU info
 	static std::string cpu(const std::string& _cpu);

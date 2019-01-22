@@ -95,6 +95,12 @@ static void* const s_memory = []() -> void*
 	return utils::memory_reserve(s_memory_size);
 }();
 
+// Reserve 2G of memory, should replace previous area for ASLR compatibility
+static void* const s_memory2 = utils::memory_reserve(0x80000000);
+
+static u64 s_code_pos = 0;
+static u64 s_data_pos = 0;
+
 static void* s_next = s_memory;
 
 #ifdef _WIN32
@@ -129,6 +135,11 @@ extern void jit_finalize()
 	utils::memory_decommit(s_memory, s_memory_size);
 
 	s_next = s_memory;
+
+	utils::memory_decommit(s_memory2, 0x80000000);
+
+	s_code_pos = 0;
+	s_data_pos = 0;
 }
 
 // Helper class
@@ -311,24 +322,25 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 // Simple memory manager
 struct MemoryManager2 : llvm::RTDyldMemoryManager
 {
-	// Reserve 2 GiB
-	void* const m_memory = utils::memory_reserve(0x80000000);
+	// Patchwork again...
+	void* const m_memory = s_memory2;
 
 	u8* const m_code = static_cast<u8*>(m_memory) + 0x00000000;
 	u8* const m_data = static_cast<u8*>(m_memory) + 0x40000000;
 
-	u64 m_code_pos = 0;
-	u64 m_data_pos = 0;
+	u64& m_code_pos = s_code_pos;
+	u64& m_data_pos = s_data_pos;
 
 	MemoryManager2() = default;
 
 	~MemoryManager2() override
 	{
-		utils::memory_release(m_memory, 0x80000000);
 	}
 
 	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
+		std::lock_guard lock(s_mutex);
+
 		// Simple allocation
 		const u64 old = m_code_pos;
 		const u64 pos = ::align(m_code_pos, align);
@@ -349,12 +361,20 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 			utils::memory_commit(m_code + olda, newa - olda, utils::protection::wx);
 		}
 
+		if (!sec_id && sec_name.empty())
+		{
+			// Special case: don't log
+			return m_code + pos;
+		}
+
 		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%x, align=0x%x)", sec_id, sec_name.data(), m_code + pos, size, align);
 		return m_code + pos;
 	}
 
 	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
+		std::lock_guard lock(s_mutex);
+
 		// Simple allocation
 		const u64 old = m_data_pos;
 		const u64 pos = ::align(m_data_pos, align);
@@ -642,33 +662,12 @@ u64 jit_compiler::get(const std::string& name)
 	return m_engine->getGlobalValueAddress(name);
 }
 
-std::unordered_map<std::string, u64> jit_compiler::add(std::unordered_map<std::string, std::string> data)
+u8* jit_compiler::alloc(u32 size)
 {
-	// Lock memory manager
-	std::lock_guard lock(s_mutex);
+	// Dummy memory manager object
+	MemoryManager2 mm;
 
-	std::unordered_map<std::string, u64> result;
-
-	std::size_t size = 0;
-
-	for (auto&& pair : data)
-	{
-		size += ::align(pair.second.size(), 16);
-	}
-
-	utils::memory_commit(s_next, size, utils::protection::wx);
-	std::memset(s_next, 0xc3, ::align(size, 4096));
-
-	for (auto&& pair : data)
-	{
-		std::memcpy(s_next, pair.second.data(), pair.second.size());
-		result.emplace(pair.first, (u64)s_next);
-		s_next = (void*)::align((u64)s_next + pair.second.size(), 16);
-	}
-
-	s_next = (void*)::align((u64)s_next, 4096);
-
-	return result;
+	return mm.allocateCodeSection(size, 16, 0, {});
 }
 
 #endif

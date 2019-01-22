@@ -458,7 +458,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, processed, entry_count]()
 				{
 					const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 					dlg->ProgressBarSetMsg(index, fmt::format(text, processed, entry_count));
@@ -470,7 +470,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, value]()
 				{
 					dlg->ProgressBarInc(index, value);
 					ref_cnt--;
@@ -481,7 +481,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, limit]()
 				{
 					dlg->ProgressBarSetLimit(index, limit);
 					ref_cnt--;

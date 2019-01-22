@@ -1,32 +1,9 @@
 #pragma once
 
 #include "Utilities/JIT.h"
-#include "Utilities/mutex.h"
 #include "SPURecompiler.h"
 
 #include <functional>
-
-// SPU ASMJIT Runtime object (global)
-class spu_runtime
-{
-	shared_mutex m_mutex;
-
-	asmjit::JitRuntime m_jitrt;
-
-	// All functions
-	std::map<std::vector<u32>, spu_function_t> m_map;
-
-	// All dispatchers
-	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
-
-	// Debug module output location
-	std::string m_cache_path;
-
-	friend class spu_recompiler;
-
-public:
-	spu_runtime();
-};
 
 // SPU ASMJIT Recompiler
 class spu_recompiler : public spu_recompiler_base
@@ -43,6 +20,9 @@ public:
 	virtual spu_function_t compile(std::vector<u32>&&) override;
 
 private:
+	// ASMJIT runtime
+	asmjit::JitRuntime* m_asmrt;
+
 	// emitter:
 	asmjit::X86Assembler* c;
 
