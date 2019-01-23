@@ -593,7 +593,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	auto src_texture = static_cast<gl::render_target*>(old_contents);
 	if (src_texture->get_rsx_pitch() != get_rsx_pitch())
 	{
-		LOG_TODO(RSX, "Pitch mismatch, could not transfer inherited memory");
+		LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
 		return;
 	}
 
