@@ -188,11 +188,17 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 	return CELL_OK;
 }
 
-void sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable)
+error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_get_join_state(isjoinable=*0x%x)", isjoinable);
 
+	if (!isjoinable)
+	{
+		return CELL_EFAULT;
+	}
+
 	*isjoinable = ppu.joiner != -1;
+	return CELL_OK;
 }
 
 error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
