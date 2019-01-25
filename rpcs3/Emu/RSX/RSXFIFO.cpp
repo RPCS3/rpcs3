@@ -19,20 +19,20 @@ namespace rsx
 			m_ctrl = pctrl->ctrl;
 		}
 
-		void FIFO_control::inc_get()
+		void FIFO_control::inc_get(bool wait)
 		{
 			m_internal_get += 4;
 
-			// Check if put allows to procceed execution
-			while (m_ctrl->put == m_internal_get)
+			if (wait && m_ctrl->put == m_internal_get)
 			{
-				if (Emu.IsStopped())
-				{
-					break;
-				}
-
+				// NOTE: Only supposed to be invoked to wait for a single arg on command[0] (4 bytes)
+				// Wait for put to allow us to procceed execution
 				sync_get();
-				std::this_thread::yield();
+
+				while (m_ctrl->put == m_internal_get && !Emu.IsStopped())
+				{
+					std::this_thread::yield();
+				}
 			}
 		}
 
@@ -62,6 +62,7 @@ namespace rsx
 			// Update ctrl registers
 			m_ctrl->get = get;
 			m_internal_get = get;
+			m_remaining_commands = 0;
 
 			// Clear memwatch spinner
 			m_memwatch_addr = 0;
@@ -70,19 +71,13 @@ namespace rsx
 		bool FIFO_control::read_unsafe(register_pair& data)
 		{
 			// Fast read with no processing, only safe inside a PACKET_BEGIN+count block
-			if (m_remaining_commands)
+			if (m_remaining_commands &&
+				m_internal_get != m_ctrl->put)
 			{
 				m_command_reg += m_command_inc;
 				m_args_ptr += 4;
-
-				if (--m_remaining_commands)
-				{
-					inc_get();
-				}
-				else
-				{
-					m_internal_get += 4;
-				}
+				m_remaining_commands--;
+				m_internal_get += 4;
 
 				data.set(m_command_reg, vm::read32(m_args_ptr));
 				return true;
@@ -100,6 +95,12 @@ namespace rsx
 			{
 				// Nothing to do
 				data.reg = FIFO_EMPTY;
+				return;
+			}
+
+			if (m_remaining_commands && read_unsafe(data))
+			{
+				// Previous block aborted to wait for PUT pointer
 				return;
 			}
 
@@ -179,7 +180,7 @@ namespace rsx
 				m_remaining_commands = count - 1;
 			}
 
-			inc_get();
+			inc_get(true); // Wait for data block to become available
 			m_internal_get += 4;
 
 			data.set(cmd & 0xfffc, vm::read32(m_args_ptr));

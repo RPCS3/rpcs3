@@ -25,7 +25,9 @@ namespace vk
 		VkPrimitiveTopology primitive;
 		u32 vertex_draw_count;
 		u32 allocated_vertex_count;
+		u32 first_vertex;
 		u32 vertex_index_base;
+		u32 vertex_index_offset;
 		u32 persistent_window_offset;
 		u32 volatile_window_offset;
 		std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;

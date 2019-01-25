@@ -67,8 +67,8 @@ enum ParamFlag
 
 struct ParamItem
 {
-	std::string name;
-	std::string value;
+	const std::string name;
+	const std::string value;
 	int location;
 
 	ParamItem(const std::string& _name, int _location, const std::string& _value = "")
@@ -81,7 +81,7 @@ struct ParamItem
 struct ParamType
 {
 	const ParamFlag flag;
-	std::string type;
+	const std::string type;
 	std::vector<ParamItem> items;
 
 	ParamType(const ParamFlag _flag, const std::string& _type)
@@ -127,13 +127,13 @@ struct ParamArray
 		return false;
 	}
 
-	bool HasParam(const ParamFlag flag, std::string type, const std::string& name)
+	bool HasParam(const ParamFlag flag, const std::string& type, const std::string& name)
 	{
 		ParamType* t = SearchParam(flag, type);
 		return t && t->SearchName(name);
 	}
 
-	std::string AddParam(const ParamFlag flag, std::string type, const std::string& name, const std::string& value)
+	std::string AddParam(const ParamFlag flag, const std::string& type, const std::string& name, const std::string& value)
 	{
 		ParamType* t = SearchParam(flag, type);
 
@@ -150,7 +150,7 @@ struct ParamArray
 		return name;
 	}
 
-	std::string AddParam(const ParamFlag flag, std::string type, const std::string& name, int location = -1)
+	std::string AddParam(const ParamFlag flag, const std::string& type, const std::string& name, int location = -1)
 	{
 		ParamType* t = SearchParam(flag, type);
 

@@ -424,19 +424,19 @@ namespace gl
 			target = gl::buffers::color;
 		}
 
+		cmd.drv->enable(GL_FALSE, GL_SCISSOR_TEST);
+
 		save_binding_state saved;
 
-		cmd.drv->enable(GL_FALSE, GL_STENCIL_TEST);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, blit_src.id());
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src_id, 0);
 
-		blit_src.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src_id, 0);
-		blit_src.check();
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, blit_dst.id());
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_id, 0);
 
-		blit_dst.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_id, 0);
-		blit_dst.check();
-
-		blit_src.blit(blit_dst, src_rect, dst_rect, target, interp);
+		glBlitFramebuffer(src_rect.x1, src_rect.y1, src_rect.x2, src_rect.y2,
+			dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2,
+			(GLbitfield)target, (GLenum)interp);
 
 		if (xfer_info.dst_is_typeless)
 		{
@@ -444,11 +444,9 @@ namespace gl
 			copy_typeless(dst, typeless_dst.get());
 		}
 
-		blit_src.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
-
-		blit_dst.bind();
-		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+		// Release the attachments explicitly (not doing so causes glitches, e.g Journey Menu)
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
 	}
 
 	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, const color4f& color)

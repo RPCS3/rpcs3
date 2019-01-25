@@ -309,7 +309,7 @@ void GLGSRender::end()
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
 		execute_nop_draw();
-		m_rtts.on_write();
+		// m_rtts.on_write(); - breaks games for obvious reasons
 		rsx::thread::end();
 		return;
 	}
@@ -478,7 +478,7 @@ void GLGSRender::end()
 	{
 		if (!subdraw)
 		{
-			m_vertex_layout = analyse_inputs_interleaved();
+			analyse_inputs_interleaved(m_vertex_layout);
 			if (!m_vertex_layout.validate())
 			{
 				// Execute remainining pipeline barriers with NOP draw
@@ -693,7 +693,7 @@ void GLGSRender::set_scissor()
 	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
 	// See LIMBO [NPUB-30373] which uses shader window origin = top
 	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
-	glEnable(GL_SCISSOR_TEST);
+	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 }
 
 void GLGSRender::on_init_thread()
@@ -1421,10 +1421,13 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 	// Vertex layout state
 	auto mapping = m_vertex_layout_buffer->alloc_from_heap(128 + 16, m_uniform_buffer_offset_align);
-	auto buf = static_cast<s32*>(mapping.first);
-	*buf = upload_info.vertex_index_base;
+	auto buf = static_cast<u32*>(mapping.first);
+
+	buf[0] = upload_info.vertex_index_base;
+	buf[1] = upload_info.vertex_index_offset;
 	buf += 4;
-	fill_vertex_layout_state(m_vertex_layout, upload_info.allocated_vertex_count, buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+
+	fill_vertex_layout_state(m_vertex_layout, upload_info.first_vertex, upload_info.allocated_vertex_count, (s32*)buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
 	m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
 
@@ -1496,38 +1499,18 @@ void GLGSRender::update_draw_state()
 		rsx::method_registers.blend_enabled_surface_3()
 	};
 
-	bool blend_equation_override = false;
-	if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-		!rsx::method_registers.alpha_test_enabled())
-	{
-		if (rsx::method_registers.msaa_enabled() &&
-			rsx::method_registers.msaa_sample_mask() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
-		{
-			//fake alpha-to-coverage
-			//blend used in conjunction with alpha test to fake order-independent edge transparency
-			mrt_blend_enabled[0] = mrt_blend_enabled[1] = mrt_blend_enabled[2] = mrt_blend_enabled[3] = true;
-			blend_equation_override = true;
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glBlendEquation(GL_FUNC_ADD);
-		}
-	}
-
 	if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
 	{
-		if (!blend_equation_override)
-		{
-			glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
-				blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
-				blend_factor(rsx::method_registers.blend_func_sfactor_a()),
-				blend_factor(rsx::method_registers.blend_func_dfactor_a()));
+		glBlendFuncSeparate(blend_factor(rsx::method_registers.blend_func_sfactor_rgb()),
+			blend_factor(rsx::method_registers.blend_func_dfactor_rgb()),
+			blend_factor(rsx::method_registers.blend_func_sfactor_a()),
+			blend_factor(rsx::method_registers.blend_func_dfactor_a()));
 
-			auto blend_colors = rsx::get_constant_blend_colors();
-			glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
+		auto blend_colors = rsx::get_constant_blend_colors();
+		glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
 
-			glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
-				blend_equation(rsx::method_registers.blend_equation_a()));
-		}
+		glBlendEquationSeparate(blend_equation(rsx::method_registers.blend_equation_rgb()),
+			blend_equation(rsx::method_registers.blend_equation_a()));
 	}
 
 	gl_state.enablei(mrt_blend_enabled[0], GL_BLEND, 0);
@@ -1609,7 +1592,7 @@ void GLGSRender::flip(int buffer)
 	}
 
 	// Disable scissor test (affects blit, clear, etc)
-	glDisable(GL_SCISSOR_TEST);
+	gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
 	// Clear the window background to black
 	gl_state.clear_color(0, 0, 0, 0);
