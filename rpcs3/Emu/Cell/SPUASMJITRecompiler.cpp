@@ -43,7 +43,6 @@ void spu_recompiler::init()
 	{
 		m_cache = fxm::get<spu_cache>();
 		m_spurt = fxm::get_always<spu_runtime>();
-		m_asmrt = m_spurt->get_asmjit_rt();
 	}
 }
 
@@ -105,7 +104,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	}
 
 	CodeHolder code;
-	code.init(m_asmrt->getCodeInfo());
+	code.init(m_asmrt.getCodeInfo());
 	code._globalHints = asmjit::CodeEmitter::kHintOptimizedAlign;
 
 	X86Assembler compiler(&code);
@@ -842,10 +841,12 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	// Compile and get function address
 	spu_function_t fn;
 
-	if (m_asmrt->add(&fn, &code))
+	if (m_asmrt.add(&fn, &code))
 	{
 		LOG_FATAL(SPU, "Failed to build a function");
 	}
+
+	m_spurt->add(*fn_info.first, fn);
 
 	if (g_cfg.core.spu_debug)
 	{
@@ -862,239 +863,6 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	{
 		m_cache->add(func);
 	}
-
-	lock.lock();
-
-	// Register function (possibly temporarily)
-	fn_location = fn;
-
-	// Generate a dispatcher (übertrampoline)
-	std::vector<u32> addrv{func[0]};
-	const auto beg = m_spurt->m_map.lower_bound(addrv);
-	addrv[0] += 4;
-	const auto _end = m_spurt->m_map.lower_bound(addrv);
-	const u32 size0 = std::distance(beg, _end);
-
-	if (size0 == 1)
-	{
-		m_spurt->m_dispatcher[func[0] / 4] = fn;
-	}
-	else
-	{
-		CodeHolder code;
-		code.init(m_asmrt->getCodeInfo());
-
-		X86Assembler compiler(&code);
-		this->c = &compiler;
-
-		struct work
-		{
-			u32 size;
-			u32 level;
-			Label label;
-			std::map<std::vector<u32>, spu_function_t>::iterator beg;
-			std::map<std::vector<u32>, spu_function_t>::iterator end;
-		};
-
-		std::vector<work> workload;
-		workload.reserve(size0);
-		workload.emplace_back();
-		workload.back().size = size0;
-		workload.back().level = 1;
-		workload.back().beg = beg;
-		workload.back().end = _end;
-
-		for (std::size_t i = 0; i < workload.size(); i++)
-		{
-			// Get copy of the workload info
-			work w = workload[i];
-
-			// Split range in two parts
-			auto it = w.beg;
-			auto it2 = w.beg;
-			u32 size1 = w.size / 2;
-			u32 size2 = w.size - size1;
-			std::advance(it2, w.size / 2);
-
-			while (true)
-			{
-				it = it2;
-				size1 = w.size - size2;
-
-				if (w.level >= w.beg->first.size())
-				{
-					// Cannot split: smallest function is a prefix of bigger ones (TODO)
-					break;
-				}
-
-				const u32 x1 = w.beg->first.at(w.level);
-
-				if (!x1)
-				{
-					// Cannot split: some functions contain holes at this level
-					w.level++;
-					continue;
-				}
-
-				// Adjust ranges (forward)
-				while (it != w.end && x1 == it->first.at(w.level))
-				{
-					it++;
-					size1++;
-				}
-
-				if (it == w.end)
-				{
-					// Cannot split: words are identical within the range at this level
-					w.level++;
-				}
-				else
-				{
-					size2 = w.size - size1;
-					break;
-				}
-			}
-
-			if (w.label.isValid())
-			{
-				c->align(kAlignCode, 16);
-				c->bind(w.label);
-			}
-
-			if (w.level >= w.beg->first.size())
-			{
-				// If functions cannot be compared, assume smallest function
-				LOG_ERROR(SPU, "Trampoline simplified at 0x%x (level=%u)", func[0], w.level);
-				c->jmp(imm_ptr(w.beg->second ? w.beg->second : &dispatch));
-				continue;
-			}
-
-			// Value for comparison
-			const u32 x = it->first.at(w.level);
-
-			// Adjust ranges (backward)
-			while (true)
-			{
-				it--;
-
-				if (it->first.at(w.level) != x)
-				{
-					it++;
-					break;
-				}
-
-				verify(HERE), it != w.beg;
-				size1--;
-				size2++;
-			}
-
-			c->cmp(x86::dword_ptr(*ls, start + (w.level - 1) * 4), x);
-
-			// Low subrange target label
-			Label label_below;
-
-			if (size1 == 1)
-			{
-				label_below = c->newLabel();
-				c->jb(label_below);
-			}
-			else
-			{
-				workload.push_back(w);
-				workload.back().end = it;
-				workload.back().size = size1;
-				workload.back().label = c->newLabel();
-				c->jb(workload.back().label);
-			}
-
-			// Second subrange target
-			const auto target = it->second ? it->second : &dispatch;
-
-			if (size2 == 1)
-			{
-				c->jmp(imm_ptr(target));
-			}
-			else
-			{
-				it2 = it;
-
-				// Select additional midrange for equality comparison
-				while (it2 != w.end && it2->first.at(w.level) == x)
-				{
-					size2--;
-					it2++;
-				}
-
-				if (it2 != w.end)
-				{
-					// High subrange target label
-					Label label_above;
-
-					if (size2 == 1)
-					{
-						label_above = c->newLabel();
-						c->ja(label_above);
-					}
-					else
-					{
-						workload.push_back(w);
-						workload.back().beg = it2;
-						workload.back().size = size2;
-						workload.back().label = c->newLabel();
-						c->ja(workload.back().label);
-					}
-
-					const u32 size3 = w.size - size1 - size2;
-
-					if (size3 == 1)
-					{
-						c->jmp(imm_ptr(target));
-					}
-					else
-					{
-						workload.push_back(w);
-						workload.back().beg = it;
-						workload.back().end = it2;
-						workload.back().size = size3;
-						workload.back().label = c->newLabel();
-						c->jmp(workload.back().label);
-					}
-
-					if (label_above.isValid())
-					{
-						c->bind(label_above);
-						c->jmp(imm_ptr(it2->second ? it2->second : &dispatch));
-					}
-				}
-				else
-				{
-					workload.push_back(w);
-					workload.back().beg = it;
-					workload.back().size = w.size - size1;
-					workload.back().label = c->newLabel();
-					c->jmp(workload.back().label);
-				}
-			}
-
-			if (label_below.isValid())
-			{
-				c->bind(label_below);
-				c->jmp(imm_ptr(w.beg->second ? w.beg->second : &dispatch));
-			}
-		}
-
-		spu_function_t tr;
-
-		if (m_asmrt->add(&tr, &code))
-		{
-			LOG_FATAL(SPU, "Failed to build a trampoline");
-		}
-
-		m_spurt->m_dispatcher[func[0] / 4] = tr;
-	}
-
-	lock.unlock();
-	m_spurt->m_cond.notify_all();
 
 	return fn;
 }

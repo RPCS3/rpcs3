@@ -21,7 +21,7 @@ public:
 
 private:
 	// ASMJIT runtime
-	asmjit::JitRuntime* m_asmrt;
+	::jit_runtime m_asmrt;
 
 	// emitter:
 	asmjit::X86Assembler* c;

@@ -253,15 +253,6 @@ spu_runtime::spu_runtime()
 	LOG_SUCCESS(SPU, "SPU Recompiler Runtime initialized...");
 }
 
-asmjit::JitRuntime* spu_runtime::get_asmjit_rt()
-{
-	std::lock_guard lock(m_mutex);
-
-	m_asmjit_rts.emplace_back(std::make_unique<asmjit::JitRuntime>());
-
-	return m_asmjit_rts.back().get();
-}
-
 void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled)
 {
 	std::unique_lock lock(m_mutex);
@@ -289,11 +280,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 	else
 	{
 		// Allocate some writable executable memory
-#ifdef LLVM_AVAILABLE
-		const auto wxptr = jit_compiler::alloc(size0 * 20);
-#else
-		u8* const wxptr = new u8[size0 * 20]; // dummy
-#endif
+		u8* const wxptr = jit_runtime::alloc(size0 * 20, 16);
 
 		// Raw assembly pointer
 		u8* raw = wxptr;
@@ -315,11 +302,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			if (!target && !tr_dispatch)
 			{
 				// Generate a special trampoline with pause instruction
-#ifdef LLVM_AVAILABLE
-				const auto trptr = jit_compiler::alloc(16);
-#else
-				u8* const trptr = new u8[16]; // dummy
-#endif
+				u8* const trptr = jit_runtime::alloc(16, 16);
 				trptr[0] = 0xf3; // pause
 				trptr[1] = 0x90;
 				trptr[2] = 0xff; // jmp [rip]
@@ -623,6 +606,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	else
 	{
 		// Far jumps: extremely rare and disabled due to implementation complexity
+		LOG_ERROR(SPU, "Impossible far jump");
 		bytes[0] = 0x0f; // nop (8-byte form)
 		bytes[1] = 0x1f;
 		bytes[2] = 0x84;

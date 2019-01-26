@@ -51,17 +51,11 @@ public:
 	std::string m_cache_path;
 
 private:
-	// Temporarily: asmjit runtime collection
-	std::deque<std::unique_ptr<asmjit::JitRuntime>> m_asmjit_rts;
-
 	// Trampoline to spu_recompiler_base::dispatch
 	spu_function_t tr_dispatch = nullptr;
 
 public:
 	spu_runtime();
-
-	// Get new ASMJIT runtime
-	asmjit::JitRuntime* get_asmjit_rt();
 
 	// Add compiled function and generate trampoline if necessary
 	void add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled);
