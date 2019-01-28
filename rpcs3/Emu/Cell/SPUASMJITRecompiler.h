@@ -15,8 +15,6 @@ public:
 
 	virtual void init() override;
 
-	virtual spu_function_t get(u32 lsa) override;
-
 	virtual spu_function_t compile(std::vector<u32>&&) override;
 
 private:

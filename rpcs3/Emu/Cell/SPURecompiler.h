@@ -44,9 +44,6 @@ public:
 	// All functions
 	std::map<std::vector<u32>, spu_function_t> m_map;
 
-	// All dispatchers
-	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
-
 	// Debug module output location
 	std::string m_cache_path;
 
@@ -59,6 +56,9 @@ public:
 
 	// Add compiled function and generate trampoline if necessary
 	void add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled);
+
+	// All dispatchers (array allocated in jit memory)
+	static atomic_t<spu_function_t>* const g_dispatcher;
 };
 
 // SPU Recompiler instance base class
@@ -99,9 +99,6 @@ public:
 
 	// Initialize
 	virtual void init() = 0;
-
-	// Get pointer to the trampoline at given position
-	virtual spu_function_t get(u32 lsa) = 0;
 
 	// Compile function
 	virtual spu_function_t compile(std::vector<u32>&&) = 0;

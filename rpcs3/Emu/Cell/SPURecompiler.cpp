@@ -23,6 +23,19 @@ const spu_decoder<spu_iname> s_spu_iname;
 
 extern u64 get_timebased_time();
 
+DECLARE(spu_runtime::g_dispatcher) = []
+{
+	const auto ptr = reinterpret_cast<decltype(spu_runtime::g_dispatcher)>(jit_runtime::alloc(0x10000 * sizeof(void*), 8, false));
+
+	// Initialize lookup table
+	for (u32 i = 0; i < 0x10000; i++)
+	{
+		ptr[i].raw() = &spu_recompiler_base::dispatch;
+	}
+
+	return ptr;
+}();
+
 spu_cache::spu_cache(const std::string& loc)
 	: m_file(loc, fs::read + fs::write + fs::create + fs::append)
 {
@@ -231,12 +244,6 @@ void spu_cache::initialize()
 
 spu_runtime::spu_runtime()
 {
-	// Initialize lookup table
-	for (auto& v : m_dispatcher)
-	{
-		v.raw() = &spu_recompiler_base::dispatch;
-	}
-
 	// Initialize "empty" block
 	m_map[std::vector<u32>()] = &spu_recompiler_base::dispatch;
 
@@ -275,7 +282,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 
 	if (size0 == 1)
 	{
-		m_dispatcher[func[0] / 4] = compiled;
+		g_dispatcher[func[0] / 4] = compiled;
 	}
 	else
 	{
@@ -516,7 +523,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			}
 		}
 
-		m_dispatcher[func[0] / 4] = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
+		g_dispatcher[func[0] / 4] = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
 	}
 
 	lock.unlock();
@@ -543,17 +550,8 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 #endif
 	}
 
-	const auto func = spu.jit->get(spu.pc);
-
-	// First attempt (load new trampoline and retry)
-	if (func != spu.jit_dispatcher[spu.pc / 4])
-	{
-		spu.jit_dispatcher[spu.pc / 4] = func;
-		return;
-	}
-
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
-	if (spu.block_counter != spu.block_recover && func != &dispatch)
+	if (spu.block_counter != spu.block_recover && &dispatch != spu_runtime::g_dispatcher[spu.pc / 4])
 	{
 		spu.block_recover = spu.block_counter;
 		return;
@@ -561,7 +559,6 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 	// Compile
 	verify(HERE), spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), spu.pc));
-	spu.jit_dispatcher[spu.pc / 4] = spu.jit->get(spu.pc);
 
 	// Diagnostic
 	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
@@ -579,7 +576,6 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
 	// Compile (TODO: optimize search of the existing functions)
 	const auto func = verify(HERE, spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), spu.pc)));
-	spu.jit_dispatcher[spu.pc / 4] = spu.jit->get(spu.pc);
 
 	// Overwrite jump to this function with jump to the compiled function
 	const s64 rel = reinterpret_cast<u64>(func) - reinterpret_cast<u64>(rip) - 5;
@@ -1989,9 +1985,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
 			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
-			const auto addr = m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&spu_thread::jit_dispatcher) + target * 2));
 			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
-			tail(m_ir->CreateLoad(m_ir->CreateBitCast(addr, type)));
+			tail(m_ir->CreateLoad(m_ir->CreateIntToPtr(m_ir->getInt64((u64)(spu_runtime::g_dispatcher + target / 4)), type)));
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
@@ -2532,14 +2527,6 @@ public:
 			m_context = m_jit.get_context();
 			m_use_ssse3 = m_jit.has_ssse3();
 		}
-	}
-
-	virtual spu_function_t get(u32 lsa) override
-	{
-		init();
-
-		// Simple atomic read
-		return m_spurt->m_dispatcher[lsa / 4];
 	}
 
 	virtual spu_function_t compile(std::vector<u32>&& func_rv) override
@@ -5663,7 +5650,7 @@ public:
 
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&spu_thread::pc));
 		const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
-		const auto disp = m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, m_ir->getInt64(::offset32(&spu_thread::jit_dispatcher))), type);
+		const auto disp = m_ir->CreateIntToPtr(m_ir->getInt64((u64)spu_runtime::g_dispatcher), type);
 		const auto ad64 = m_ir->CreateZExt(addr.value, get_type<u64>());
 
 		if (ret && g_cfg.core.spu_block_size != spu_block_size_type::safe)

@@ -584,8 +584,6 @@ public:
 	u64 block_recover = 0;
 	u64 block_failure = 0;
 
-	std::array<spu_function_t, 0x10000> jit_dispatcher; // Dispatch table for indirect calls
-
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
 	void push_snr(u32 number, u32 value);
