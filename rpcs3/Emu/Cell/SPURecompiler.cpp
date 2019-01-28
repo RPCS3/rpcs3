@@ -257,6 +257,8 @@ spu_runtime::spu_runtime()
 		fs::file(m_cache_path + "spu.log", fs::rewrite);
 	}
 
+	workload.reserve(250);
+
 	LOG_SUCCESS(SPU, "SPU Recompiler Runtime initialized...");
 }
 
@@ -274,7 +276,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 	where.second = compiled;
 
 	// Generate a dispatcher (übertrampoline)
-	std::vector<u32> addrv{func[0]};
+	addrv[0] = func[0];
 	const auto beg = m_map.lower_bound(addrv);
 	addrv[0] += 4;
 	const auto _end = m_map.lower_bound(addrv);
@@ -287,19 +289,10 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 	else
 	{
 		// Allocate some writable executable memory
-		u8* const wxptr = jit_runtime::alloc(size0 * 20, 16);
+		u8* const wxptr = verify(HERE, jit_runtime::alloc(size0 * 20, 16));
 
 		// Raw assembly pointer
 		u8* raw = wxptr;
-
-		struct work
-		{
-			u32 size;
-			u32 level;
-			u8* rel32;
-			std::map<std::vector<u32>, spu_function_t>::iterator beg;
-			std::map<std::vector<u32>, spu_function_t>::iterator end;
-		};
 
 		// Write jump instruction with rel32 immediate
 		auto make_jump = [&](u8 op, auto target)
@@ -343,7 +336,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			raw += 4;
 		};
 
-		std::vector<work> workload;
+		workload.clear();
 		workload.reserve(size0);
 		workload.emplace_back();
 		workload.back().size  = size0;
@@ -355,7 +348,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 		for (std::size_t i = 0; i < workload.size(); i++)
 		{
 			// Get copy of the workload info
-			work w = workload[i];
+			spu_runtime::work w = workload[i];
 
 			// Split range in two parts
 			auto it = w.beg;
@@ -523,6 +516,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			}
 		}
 
+		workload.clear();
 		g_dispatcher[func[0] / 4] = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
 	}
 

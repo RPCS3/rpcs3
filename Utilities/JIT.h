@@ -7,6 +7,14 @@
 #include <array>
 #include <functional>
 
+enum class jit_class
+{
+	ppu_code,
+	ppu_data,
+	spu_code,
+	spu_data,
+};
+
 // ASMJIT runtime for emitting code in a single 2G region
 struct jit_runtime final : asmjit::HostRuntime
 {

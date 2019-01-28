@@ -47,7 +47,22 @@ public:
 	// Debug module output location
 	std::string m_cache_path;
 
+	// Trampoline generation workload helper
+	struct work
+	{
+		u32 size;
+		u32 level;
+		u8* rel32;
+		std::map<std::vector<u32>, spu_function_t>::iterator beg;
+		std::map<std::vector<u32>, spu_function_t>::iterator end;
+	};
 private:
+	// Scratch vector
+	std::vector<work> workload;
+
+	// Scratch vector
+	std::vector<u32> addrv{u32{0}};
+
 	// Trampoline to spu_recompiler_base::dispatch
 	spu_function_t tr_dispatch = nullptr;
 
