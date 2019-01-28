@@ -214,7 +214,7 @@ QComboBox::disabled {
 }
 
 /* Spin Boxes */
-QSpinBox {
+QSpinBox, QDoubleSpinBox {
 	background: transparent;
 	border: 0.05em solid #4d4940;
 	border-radius: 0.10em;
