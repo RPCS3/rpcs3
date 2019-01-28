@@ -6,6 +6,8 @@
 
 #include "../Overlays/overlays.h"
 
+#define VK_OVERLAY_MAX_DRAW_CALLS 1024
+
 namespace vk
 {
 	//TODO: Refactor text print class to inherit from this base class
@@ -67,8 +69,8 @@ namespace vk
 		{
 			VkDescriptorPoolSize descriptor_pool_sizes[2] =
 			{
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 120 * m_num_usable_samplers },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 120 },
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_OVERLAY_MAX_DRAW_CALLS * m_num_usable_samplers },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_OVERLAY_MAX_DRAW_CALLS },
 			};
 
 			//Reserve descriptor pools
@@ -226,7 +228,7 @@ namespace vk
 			else
 				program = build_pipeline(pass);
 
-			verify(HERE), m_used_descriptors < 120;
+			verify(HERE), m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS;
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
