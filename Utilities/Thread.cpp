@@ -1123,7 +1123,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			g_tls_fault_rsx++;
 			if (cpu && cpu->test_stopped())
 			{
-				std::terminate();
+				//
 			}
 
 			return true;
@@ -1265,7 +1265,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	{
 		if (cpu && cpu->test_stopped())
 		{
-			std::terminate();
+			//
 		}
 
 		return true;
