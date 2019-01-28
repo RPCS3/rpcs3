@@ -1273,7 +1273,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 	if (cpu)
 	{
-		if (fxm::check<page_fault_notification_entries>())
+		// TODO: Only PPU thread page fault notifications are supported
+		if (cpu->id_type() == 1 && fxm::check<page_fault_notification_entries>())
 		{
 			for (const auto& entry : fxm::get<page_fault_notification_entries>()->entries)
 			{
@@ -1297,7 +1298,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 					// Now, we notify the game that a page fault occurred so it can rectify it.
 					// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
 					u64 data1 = addr;
-					u64 data2 = ((u64)SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) + cpu->id; // TODO: fix hack for now that assumes PPU thread always.
+					u64 data2 = ((u64)SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) + cpu->id;
 					u64 data3 = vm::check_addr(addr, a_size, vm::page_readable) ? SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY : SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
 
 					LOG_ERROR(MEMORY, "Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
@@ -1326,14 +1327,19 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 
 		vm::temporary_unlock(*cpu);
-		LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
-		cpu->state += cpu_flag::dbg_pause;
-		cpu->check_state();
+	}
 
-		if (cpu->test_stopped())
-		{
-			std::terminate();
-		}
+	LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
+	Emu.Pause();
+
+	while (Emu.IsPaused())
+	{
+		thread_ctrl::wait();
+	}
+
+	if (Emu.IsStopped())
+	{
+		std::terminate();
 	}
 
 	return true;
