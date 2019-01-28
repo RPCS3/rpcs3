@@ -85,7 +85,7 @@ namespace vm
 				if (!lock && lock.compare_and_swap_test(0, lock_info))
 				{
 					return &lock;
-				}		
+				}
 			}
 		}
 	}
@@ -256,7 +256,7 @@ namespace vm
 				{
 					const u64 value = lock;
 
-					// Test beginning address 
+					// Test beginning address
 					if (static_cast<u32>(value) > addr)
 					{
 						break;
@@ -295,7 +295,7 @@ namespace vm
 
 	writer_lock::~writer_lock()
 	{
-		g_addr_lock.raw() = 0;
+		g_addr_lock.release(0);
 		g_mutex.unlock();
 	}
 

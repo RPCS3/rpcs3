@@ -4,7 +4,7 @@
 #include <functional>
 
 // Helper class, provides access to compiler-specific atomic intrinsics
-template<typename T, std::size_t Size = sizeof(T)>
+template <typename T, std::size_t Size = sizeof(T)>
 struct atomic_storage
 {
 	static_assert(sizeof(T) <= 16 && sizeof(T) == alignof(T), "atomic_storage<> error: invalid type");
@@ -27,6 +27,11 @@ struct atomic_storage
 	static inline void store(T& dest, T value)
 	{
 		__atomic_store(&dest, &value, __ATOMIC_SEQ_CST);
+	}
+
+	static inline void release(T& dest, T value)
+	{
+		__atomic_store(&dest, &value, __ATOMIC_RELEASE);
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -176,7 +181,7 @@ struct atomic_storage
 
 /* The rest: ugly MSVC intrinsics + inline asm implementations */
 
-template<typename T>
+template <typename T>
 struct atomic_storage<T, 1> : atomic_storage<T, 0>
 {
 #ifdef _MSC_VER
@@ -198,6 +203,12 @@ struct atomic_storage<T, 1> : atomic_storage<T, 0>
 	static inline void store(T& dest, T value)
 	{
 		_InterlockedExchange8((volatile char*)&dest, (char&)value);
+	}
+
+	static inline void release(T& dest, T value)
+	{
+		_ReadWriteBarrier();
+		*(volatile char*)&dest = (char&)value;
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -232,7 +243,7 @@ struct atomic_storage<T, 1> : atomic_storage<T, 0>
 #endif
 };
 
-template<typename T>
+template <typename T>
 struct atomic_storage<T, 2> : atomic_storage<T, 0>
 {
 #ifdef _MSC_VER
@@ -254,6 +265,12 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 	static inline void store(T& dest, T value)
 	{
 		_InterlockedExchange16((volatile short*)&dest, (short&)value);
+	}
+
+	static inline void release(T& dest, T value)
+	{
+		_ReadWriteBarrier();
+		*(volatile short*)&dest = (short&)value;
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -324,7 +341,7 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 #endif
 };
 
-template<typename T>
+template <typename T>
 struct atomic_storage<T, 4> : atomic_storage<T, 0>
 {
 #ifdef _MSC_VER
@@ -346,6 +363,12 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 	static inline void store(T& dest, T value)
 	{
 		_InterlockedExchange((volatile long*)&dest, (long&)value);
+	}
+
+	static inline void release(T& dest, T value)
+	{
+		_ReadWriteBarrier();
+		*(volatile long*)&dest = (long&)value;
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -423,7 +446,7 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 #endif
 };
 
-template<typename T>
+template <typename T>
 struct atomic_storage<T, 8> : atomic_storage<T, 0>
 {
 #ifdef _MSC_VER
@@ -445,6 +468,12 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 	static inline void store(T& dest, T value)
 	{
 		_InterlockedExchange64((volatile llong*)&dest, (llong&)value);
+	}
+
+	static inline void release(T& dest, T value)
+	{
+		_ReadWriteBarrier();
+		*(volatile llong*)&dest = (llong&)value;
 	}
 
 	static inline T exchange(T& dest, T value)
@@ -525,7 +554,7 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 #endif
 };
 
-template<typename T>
+template <typename T>
 struct atomic_storage<T, 16> : atomic_storage<T, 0>
 {
 #ifdef _MSC_VER
@@ -543,6 +572,14 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	}
 
 	static inline void store(T& dest, T value)
+	{
+		llong lo = *(llong*)&value;
+		llong hi = *((llong*)&value + 1);
+		llong cmp[2]{ *(volatile llong*)&dest, *((volatile llong*)&dest + 1) };
+		while (!_InterlockedCompareExchange128((volatile llong*)&dest, hi, lo, cmp));
+	}
+
+	static inline void release(T& dest, T value)
 	{
 		llong lo = *(llong*)&value;
 		llong hi = *((llong*)&value + 1);
@@ -762,6 +799,12 @@ public:
 	{
 		atomic_storage<type>::store(m_data, rhs);
 		return rhs;
+	}
+
+	// Atomically write data with release memory order (faster on x86)
+	void release(const type& rhs)
+	{
+		atomic_storage<type>::release(m_data, rhs);
 	}
 
 	// Atomically replace data with value, return previous data value

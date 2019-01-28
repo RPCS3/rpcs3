@@ -543,11 +543,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	// If code verification failed from a patched patchpoint, clear it with a single NOP
 	if (rip)
 	{
-#ifdef _MSC_VER
-		*(volatile u64*)(rip) = 0x841f0f;
-#else
-		__atomic_store_n(reinterpret_cast<u64*>(rip), 0x841f0f, __ATOMIC_RELAXED);
-#endif
+		atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), 0x841f0f);
 	}
 
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
@@ -580,7 +576,11 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	// Overwrite jump to this function with jump to the compiled function
 	const s64 rel = reinterpret_cast<u64>(func) - reinterpret_cast<u64>(rip) - 5;
 
-	alignas(8) u8 bytes[8];
+	union
+	{
+		u8 bytes[8];
+		u64 result;
+	};
 
 	if (rel >= INT32_MIN && rel <= INT32_MAX)
 	{
@@ -609,11 +609,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 		std::memset(bytes + 3, 0x00, 5);
 	}
 
-#ifdef _MSC_VER
-	*(volatile u64*)(rip) = *reinterpret_cast<u64*>(+bytes);
-#else
-	__atomic_store_n(reinterpret_cast<u64*>(rip), *reinterpret_cast<u64*>(+bytes), __ATOMIC_RELAXED);
-#endif
+	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
 }
 
 std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point)
