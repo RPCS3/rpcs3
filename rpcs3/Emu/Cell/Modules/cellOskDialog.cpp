@@ -1,7 +1,8 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/RSX/Overlays/overlays.h"
 #include "pad_thread.h"
 
 #include "cellSysutil.h"
@@ -31,6 +32,39 @@ OskDialogBase::~OskDialogBase()
 {
 }
 
+std::shared_ptr<OskDialogBase> _get_osk_dialog(bool always = false)
+{
+	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	{
+		// NOTE: Osk lifetime is managed by fxm, not display manager
+		// Visibility is still managed by display manager
+		auto osk = fxm::get<rsx::overlays::osk_enUS>();
+		if (always)
+		{
+			if (!osk)
+			{
+				// Create if does not exist
+				osk = fxm::make<rsx::overlays::osk_enUS>();
+			}
+
+			// Attach to display manager forcefully
+			osk = manager->add(osk);
+		}
+
+		return osk;
+	}
+	else
+	{
+		auto osk = fxm::get<OskDialogBase>();
+		if (always && !osk)
+		{
+			return fxm::import<OskDialogBase>(Emu.GetCallbacks().get_osk_dialog);
+		}
+
+		return osk;
+	}
+}
+
 error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogParam, vm::ptr<CellOskDialogInputFieldInfo> inputFieldInfo)
 {
 	cellOskDialog.warning("cellOskDialogLoadAsync(container=0x%x, dialogParam=*0x%x, inputFieldInfo=*0x%x)", container, dialogParam, inputFieldInfo);
@@ -40,11 +74,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	auto osk = fxm::get<OskDialogBase>();
-	if (!osk)
-	{
-		osk = fxm::import<OskDialogBase>(Emu.GetCallbacks().get_osk_dialog);
-	}
+	auto osk = _get_osk_dialog(true);
 
 	// Can't open another dialog if this one is already open.
 	if (!osk || osk->state.load() == OskDialogState::Open)
@@ -85,7 +115,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	bool result = false;
 
-	osk->on_close = [maxLength, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
+	osk->on_osk_close = [maxLength, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
 		const auto osk = wptr.lock();
 
@@ -216,7 +246,7 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	const auto osk = fxm::get<OskDialogBase>();
+	const auto osk = _get_osk_dialog();
 
 	if (!osk)
 	{
@@ -306,7 +336,7 @@ error_code cellOskDialogAbort()
 {
 	cellOskDialog.warning("cellOskDialogAbort()");
 
-	const auto osk = fxm::get<OskDialogBase>();
+	const auto osk = _get_osk_dialog();
 
 	if (!osk)
 	{
@@ -358,12 +388,7 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	auto osk = fxm::get<OskDialogBase>();
-	if (!osk)
-	{
-		osk = fxm::import<OskDialogBase>(Emu.GetCallbacks().get_osk_dialog);
-	}
-
+	auto osk = _get_osk_dialog(true);
 	osk->use_seperate_windows = true;
 	osk->osk_continuous_mode = (CellOskDialogContinuousMode)(u32)windowOption->continuousMode;
 
@@ -446,7 +471,7 @@ error_code cellOskDialogExtSendFinishMessage(u32 /*CellOskDialogFinishReason*/ f
 {
 	cellOskDialog.warning("cellOskDialogExtSendFinishMessage(finishReason=%d)", finishReason);
 
-	const auto osk = fxm::get<OskDialogBase>();
+	const auto osk = _get_osk_dialog();
 
 	// Check for open dialog.
 	if (!osk || osk->state.load() != OskDialogState::Open)
@@ -492,11 +517,7 @@ error_code cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDial
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	auto osk = fxm::get<OskDialogBase>();
-	if (!osk)
-	{
-		osk = fxm::import<OskDialogBase>(Emu.GetCallbacks().get_osk_dialog);
-	}
+	auto osk = _get_osk_dialog(true);
 	osk->osk_confirm_callback = pCallback;
 
 	return CELL_OK;

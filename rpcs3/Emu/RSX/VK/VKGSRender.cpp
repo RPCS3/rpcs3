@@ -1912,7 +1912,7 @@ void VKGSRender::on_init_thread()
 		struct native_helper : vk::shader_cache::progress_dialog_helper
 		{
 			rsx::thread *owner = nullptr;
-			rsx::overlays::message_dialog *dlg = nullptr;
+			std::shared_ptr<rsx::overlays::message_dialog> dlg;
 
 			native_helper(VKGSRender *ptr) :
 				owner(ptr) {}

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "overlay_controls.h"
 
 #include "../../../Utilities/date_time.h"
@@ -11,10 +11,14 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "Emu/Cell/Modules/cellOskDialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Utilities/CPUStats.h"
 #include "Utilities/Timer.h"
 
+// Utils
+std::string utf16_to_utf8(const std::u16string& utf16_string);
+std::u16string utf8_to_utf16(const std::string& utf8_string);
 extern u64 get_system_time();
 
 // Definition of user interface implementations
@@ -87,8 +91,8 @@ namespace rsx
 		{
 		private:
 			atomic_t<u32> m_uid_ctr { 0u };
-			std::vector<std::unique_ptr<overlay>> m_iface_list;
-			std::vector<std::unique_ptr<overlay>> m_dirty_list;
+			std::vector<std::shared_ptr<overlay>> m_iface_list;
+			std::vector<std::shared_ptr<overlay>> m_dirty_list;
 
 			shared_mutex m_list_mutex;
 			std::vector<u32> m_uids_to_remove;
@@ -153,38 +157,36 @@ namespace rsx
 			// Adds an object to the internal list. Optionally removes other objects of the same type.
 			// Original handle loses ownership but a usable pointer is returned
 			template <typename T>
-			T* add(std::unique_ptr<T>& entry, bool remove_existing = true)
+			std::shared_ptr<T> add(std::shared_ptr<T>& entry, bool remove_existing = true)
 			{
 				std::lock_guard lock(m_list_mutex);
 
-				T* e = entry.get();
-				e->uid = m_uid_ctr.fetch_add(1);
-				e->type_index = id_manager::typeinfo::get_index<T>();
+				entry->uid = m_uid_ctr.fetch_add(1);
+				entry->type_index = id_manager::typeinfo::get_index<T>();
 
 				if (remove_existing)
 				{
 					for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
 					{
-						if (It->get()->type_index == e->type_index)
+						if (It->get()->type_index == entry->type_index)
 						{
 							// Replace
 							m_dirty_list.push_back(std::move(*It));
-							It->reset(e);
-							entry.reset();
-							return e;
+							*It = std::move(entry);
+							return std::static_pointer_cast<T>(*It);
 						}
 					}
 				}
 
 				m_iface_list.push_back(std::move(entry));
-				return e;
+				return std::static_pointer_cast<T>(m_iface_list.back());
 			}
 
 			// Allocates object and adds to internal list. Returns pointer to created object
 			template <typename T, typename ...Args>
-			T* create(Args&&... args)
+			std::shared_ptr<T> create(Args&&... args)
 			{
-				std::unique_ptr<T> object = std::make_unique<T>(std::forward<Args>(args)...);
+				auto object = std::make_shared<T>(std::forward<Args>(args)...);
 				return add(object);
 			}
 
@@ -231,14 +233,14 @@ namespace rsx
 			}
 
 			// Returns current list for reading. Caller must ensure synchronization by first locking the list
-			const std::vector<std::unique_ptr<overlay>>& get_views() const
+			const std::vector<std::shared_ptr<overlay>>& get_views() const
 			{
 				return m_iface_list;
 			}
 
 			// Returns current list of removed objects not yet deallocated for reading.
 			// Caller must ensure synchronization by first locking the list
-			const std::vector<std::unique_ptr<overlay>>& get_dirty() const
+			const std::vector<std::shared_ptr<overlay>>& get_dirty() const
 			{
 				return m_dirty_list;
 			}
@@ -255,7 +257,7 @@ namespace rsx
 
 				m_dirty_list.erase
 				(
-					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::unique_ptr<overlay>& e)
+					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::shared_ptr<overlay>& e)
 					{
 						return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
 					}),
@@ -264,22 +266,22 @@ namespace rsx
 			}
 
 			// Returns pointer to the object matching the given uid
-			overlay* get(u32 uid)
+			std::shared_ptr<overlay> get(u32 uid)
 			{
 				reader_lock lock(m_list_mutex);
 
 				for (const auto& iface : m_iface_list)
 				{
 					if (iface->uid == uid)
-						return iface.get();
+						return iface;
 				}
 
-				return nullptr;
+				return {};
 			}
 
 			// Returns pointer to the first object matching the given type
 			template <typename T>
-			T* get()
+			std::shared_ptr<T> get()
 			{
 				reader_lock lock(m_list_mutex);
 
@@ -288,11 +290,11 @@ namespace rsx
 				{
 					if (iface->type_index == type_id)
 					{
-						return static_cast<T*>(iface.get());
+						return std::static_pointer_cast<T>(iface);
 					}
 				}
 
-				return nullptr;
+				return {};
 			}
 
 			// Lock for read-only access (BasicLockable)
@@ -374,6 +376,97 @@ namespace rsx
 				result.add(m_titles.get_compiled());
 				return result;
 			}
+		};
+
+		struct osk_dialog : public user_interface, public OskDialogBase
+		{
+			using callback_t = std::function<void(const std::string&)>;
+
+			enum border_flags
+			{
+				top = 1,
+				bottom = 2,
+				left = 4,
+				right = 8,
+
+				start_cell = top | bottom | left,
+				end_cell = top | bottom | right,
+				middle_cell = top | bottom,
+				default_cell = top | bottom | left | right
+			};
+
+			struct cell
+			{
+				position2u pos;
+				color4f backcolor{};
+				border_flags flags = default_cell;
+				bool selected = false;
+
+				std::vector<std::string> outputs;
+				callback_t callback;
+			};
+
+			struct grid_entry_ctor
+			{
+				std::vector<std::string> outputs;
+				color4f color;
+				u32 num_cell_hz;
+				callback_t callback;
+			};
+
+			// Base UI
+			overlay_element m_frame;
+			overlay_element m_background;
+			label m_title;
+			label m_preview;
+			image_button m_btn_accept;
+			image_button m_btn_cancel;
+			image_button m_btn_shift;
+
+			// Grid
+			u32 cell_size_x = 0;
+			u32 cell_size_y = 0;
+			u32 num_columns = 0;
+			u32 num_rows = 0;
+			u32 num_layers = 0;
+			u32 selected_x = 0;
+			u32 selected_y = 0;
+			u32 selected_z = 0;
+
+			std::vector<cell> m_grid;
+
+			bool m_visible = false;
+			bool m_update = true;
+			compiled_resource m_cached_resource;
+
+			u32 flags = 0;
+			u32 char_limit = UINT32_MAX;
+
+			osk_dialog() {}
+			virtual ~osk_dialog() {}
+
+			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override = 0;
+			void Close(bool accepted) override;
+
+			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text);
+
+			void on_button_pressed(pad_button button_press) override;
+			void on_text_changed();
+
+			void on_default_callback(const std::string&);
+			void on_shift(const std::string&);
+			void on_space(const std::string&);
+			void on_backspace(const std::string&);
+			void on_enter(const std::string&);
+
+			compiled_resource get_compiled() override;
+		};
+
+		struct osk_enUS : osk_dialog
+		{
+			using osk_dialog::osk_dialog;
+
+			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options);
 		};
 
 		struct save_dialog : public user_interface
