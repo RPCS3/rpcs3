@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
 #include "Emu/System.h"
@@ -1292,7 +1292,8 @@ namespace rsx
 		struct image_button : public image_view
 		{
 			const u16 text_horizontal_offset = 25;
-			u16 m_text_offset = 0;
+			u16 m_text_offset_x = 0;
+			s16 m_text_offset_y = 0;
 
 			image_button()
 			{
@@ -1307,10 +1308,15 @@ namespace rsx
 				set_size(_w, _h);
 			}
 
+			void set_text_vertical_adjust(s16 offset)
+			{
+				m_text_offset_y = offset;
+			}
+
 			void set_size(u16 /*w*/, u16 h) override
 			{
 				image_view::set_size(h, h);
-				m_text_offset = (h / 2) + text_horizontal_offset; // By default text is at the horizontal center
+				m_text_offset_x = (h / 2) + text_horizontal_offset; // By default text is at the horizontal center
 			}
 
 			compiled_resource& get_compiled() override
@@ -1325,7 +1331,8 @@ namespace rsx
 							// Text, translate geometry to the right
 							for (auto &v : cmd.verts)
 							{
-								v.values[0] += m_text_offset;
+								v.values[0] += m_text_offset_x;
+								v.values[1] += m_text_offset_y;
 							}
 						}
 					}

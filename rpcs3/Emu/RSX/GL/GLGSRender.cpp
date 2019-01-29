@@ -946,7 +946,7 @@ void GLGSRender::on_init_thread()
 		struct native_helper : gl::shader_cache::progress_dialog_helper
 		{
 			rsx::thread *owner = nullptr;
-			rsx::overlays::message_dialog *dlg = nullptr;
+			std::shared_ptr<rsx::overlays::message_dialog> dlg;
 
 			native_helper(GLGSRender *ptr) :
 				owner(ptr) {}

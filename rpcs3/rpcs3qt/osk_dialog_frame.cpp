@@ -1,4 +1,4 @@
-
+﻿
 #include "osk_dialog_frame.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
@@ -165,12 +165,12 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 	connect(m_dialog, &QDialog::accepted, [=]
 	{
-		on_close(CELL_MSGDIALOG_BUTTON_OK);
+		on_osk_close(CELL_MSGDIALOG_BUTTON_OK);
 	});
 
 	connect(m_dialog, &QDialog::rejected, [=]
 	{
-		on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+		on_osk_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
 	});
 
 	// Fix size

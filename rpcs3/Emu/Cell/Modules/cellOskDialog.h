@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 
 
@@ -247,7 +247,7 @@ public:
 	virtual void Close(bool accepted) = 0;
 	virtual ~OskDialogBase();
 
-	std::function<void(s32 status)> on_close;
+	std::function<void(s32 status)> on_osk_close;
 	std::function<void()> on_osk_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Close };
