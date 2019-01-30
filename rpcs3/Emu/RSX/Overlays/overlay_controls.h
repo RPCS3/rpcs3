@@ -252,22 +252,23 @@ namespace rsx
 				return quad;
 			}
 
-			std::vector<vertex> render_text(const char *text, u16 text_limit = UINT16_MAX, bool wrap = false)
+			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char* text, u32 char_limit, u16 max_width, bool wrap)
 			{
+				x_advance = 0.f;
+				y_advance = 0.f;
+				result.clear();
+
 				if (!initialized)
 				{
-					return{};
+					return;
 				}
 
-				std::vector<vertex> result;
-
-				int i = 0;
-				f32 x_advance = 0.f, y_advance = 0.f;
+				u32 i = 0u;
 				bool skip_whitespace = false;
 
 				while (true)
 				{
-					if (char c = text[i++])
+					if (char c = text[i++]; c && (i <= char_limit))
 					{
 						if ((u32)c >= char_count)
 						{
@@ -301,7 +302,7 @@ namespace rsx
 								skip_whitespace = false;
 							}
 
-							if (quad.x1 > text_limit)
+							if (quad.x1 > max_width)
 							{
 								bool wrapped = false;
 								bool non_whitespace_break = false;
@@ -391,10 +392,25 @@ namespace rsx
 						break;
 					}
 				}
+			}
 
+			std::vector<vertex> render_text(const char *text, u16 max_width = UINT16_MAX, bool wrap = false)
+			{
+				std::vector<vertex> result;
+				f32 unused_x, unused_y;
+
+				render_text_ex(result, unused_x, unused_y, text, UINT32_MAX, max_width, wrap);
 				return result;
 			}
 
+			std::pair<f32, f32> get_char_offset(const char *text, u16 max_length, u16 max_width = UINT16_MAX, bool wrap = false)
+			{
+				std::vector<vertex> unused;
+				f32 loc_x, loc_y;
+
+				render_text_ex(unused, loc_x, loc_y, text, max_length, max_width, wrap);
+				return { loc_x, loc_y };
+			}
 		};
 
 		// TODO: Singletons are cancer
@@ -848,11 +864,14 @@ namespace rsx
 				is_compiled = false;
 			}
 
+			virtual font* get_font() const
+			{
+				return font_ref ? font_ref : fontmgr::get("Arial", 12);
+			}
+
 			virtual std::vector<vertex> render_text(const char *string, f32 x, f32 y)
 			{
-				auto renderer = font_ref;
-				if (!renderer)
-					renderer = fontmgr::get("Arial", 12);
+				auto renderer = get_font();
 
 				f32 text_extents_w = 0.f;
 				u16 clip_width = clip_text ? w : UINT16_MAX;
@@ -974,8 +993,7 @@ namespace rsx
 					return;
 				}
 
-				auto renderer = font_ref;
-				if (!renderer) renderer = fontmgr::get("Arial", 12);
+				auto renderer = get_font();
 
 				f32 text_width = 0.f;
 				f32 unused = 0.f;
@@ -1681,6 +1699,129 @@ namespace rsx
 						compiled.add(m_accept_btn->get_compiled());
 
 					compiled_resources = compiled;
+				}
+
+				return compiled_resources;
+			}
+		};
+
+		struct edit_text : public label
+		{
+			enum direction
+			{
+				up,
+				down,
+				left,
+				right
+			};
+
+			u16 caret_position = 0;
+			u16 vertical_scroll_offset = 0;
+
+			using label::label;
+
+			void move_caret(direction dir)
+			{
+				switch (dir)
+				{
+				case left:
+				{
+					if (caret_position)
+					{
+						caret_position--;
+						refresh();
+					}
+					break;
+				}
+				case right:
+				{
+					if (caret_position < text.length())
+					{
+						caret_position++;
+						refresh();
+					}
+					break;
+				}
+				case up:
+				case down:
+					// TODO
+					break;
+				}
+			}
+
+			void insert_text(const std::string& str)
+			{
+				if (caret_position == 0)
+				{
+					// Start
+					text = str + text;
+				}
+				else if (caret_position == text.length())
+				{
+					// End
+					text += str;
+				}
+				else
+				{
+					// Middle
+					text.insert(caret_position, str);
+				}
+
+				caret_position += ::narrow<u16>(str.length());
+				refresh();
+			}
+
+			void erase()
+			{
+				if (!caret_position)
+				{
+					return;
+				}
+
+				if (caret_position == 1)
+				{
+					text = text.length() > 1? text.substr(1) : "";
+				}
+				else if (caret_position == text.length())
+				{
+					text = text.substr(0, caret_position - 1);
+				}
+				else
+				{
+					text = text.substr(0, caret_position - 1) + text.substr(caret_position);
+				}
+
+				caret_position--;
+				refresh();
+			}
+
+			compiled_resource& get_compiled() override
+			{
+				if (!is_compiled)
+				{
+					auto& compiled = label::get_compiled();
+
+					overlay_element caret;
+					auto renderer = get_font();
+					const auto caret_loc = renderer->get_char_offset(text.c_str(), caret_position,
+						clip_text ? w : UINT16_MAX, wrap_text);
+
+					caret.set_pos(u16(caret_loc.first + padding_left + x), u16(caret_loc.second + padding_top + y));
+					caret.set_size(1, u16(renderer->size_px + 2));
+					caret.fore_color = fore_color;
+					caret.back_color = fore_color;
+					caret.pulse_effect_enabled = true;
+
+					compiled.add(caret.get_compiled());
+
+					for (auto &cmd : compiled.draw_commands)
+					{
+						// TODO: Scrolling by using scroll offset
+						cmd.config.clip_region = true;
+						cmd.config.clip_rect = { f32(x), f32(y), f32(x + w), f32(y + h) };
+					}
+
+					is_compiled = true;
 				}
 
 				return compiled_resources;
