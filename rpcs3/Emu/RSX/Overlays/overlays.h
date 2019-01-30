@@ -62,10 +62,16 @@ namespace rsx
 				dpad_down,
 				dpad_left,
 				dpad_right,
+				select,
+				start,
 				triangle,
 				circle,
 				square,
-				cross
+				cross,
+				L1,
+				R1,
+
+				pad_button_max_enum
 			};
 
 			Timer input_timer;
@@ -401,6 +407,7 @@ namespace rsx
 				color4f backcolor{};
 				border_flags flags = default_cell;
 				bool selected = false;
+				bool enabled = false;
 
 				std::vector<std::string> outputs;
 				callback_t callback;
@@ -422,6 +429,8 @@ namespace rsx
 			image_button m_btn_accept;
 			image_button m_btn_cancel;
 			image_button m_btn_shift;
+			image_button m_btn_space;
+			image_button m_btn_delete;
 
 			// Grid
 			u32 cell_size_x = 0;

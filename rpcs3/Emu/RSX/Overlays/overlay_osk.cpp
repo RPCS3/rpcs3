@@ -105,23 +105,35 @@ namespace rsx
 				_cell.pos += grid_origin;
 			}
 
-			m_btn_shift.set_pos(frame_x + 50, frame_y + frame_h + 10);
-			m_btn_shift.set_size(140, 30);
-			m_btn_shift.set_text("Shift");
-			m_btn_shift.set_text_vertical_adjust(5);
-
-			m_btn_accept.set_pos(frame_x + 200, frame_y + frame_h + 10);
-			m_btn_accept.set_size(140, 30);
-			m_btn_accept.set_text("Accept");
-			m_btn_accept.set_text_vertical_adjust(5);
-
-			m_btn_cancel.set_pos(frame_x + 350, frame_y + frame_h + 10);
+			m_btn_cancel.set_pos(frame_x, frame_y + frame_h + 10);
 			m_btn_cancel.set_size(140, 30);
 			m_btn_cancel.set_text("Cancel");
 			m_btn_cancel.set_text_vertical_adjust(5);
 
-			m_btn_shift.set_image_resource(resource_config::standard_image_resource::triangle);
-			m_btn_accept.set_image_resource(resource_config::standard_image_resource::square);
+			m_btn_space.set_pos(frame_x + 100, frame_y + frame_h + 10);
+			m_btn_space.set_size(100, 30);
+			m_btn_space.set_text("Space");
+			m_btn_space.set_text_vertical_adjust(5);
+
+			m_btn_delete.set_pos(frame_x + 200, frame_y + frame_h + 10);
+			m_btn_delete.set_size(100, 30);
+			m_btn_delete.set_text("Backspace");
+			m_btn_delete.set_text_vertical_adjust(5);
+
+			m_btn_shift.set_pos(frame_x + 320, frame_y + frame_h + 10);
+			m_btn_shift.set_size(80, 30);
+			m_btn_shift.set_text("Shift");
+			m_btn_shift.set_text_vertical_adjust(5);
+
+			m_btn_accept.set_pos(frame_x + 400, frame_y + frame_h + 10);
+			m_btn_accept.set_size(100, 30);
+			m_btn_accept.set_text("Accept");
+			m_btn_accept.set_text_vertical_adjust(5);
+
+			m_btn_shift.set_image_resource(resource_config::standard_image_resource::select);
+			m_btn_accept.set_image_resource(resource_config::standard_image_resource::start);
+			m_btn_space.set_image_resource(resource_config::standard_image_resource::triangle);
+			m_btn_delete.set_image_resource(resource_config::standard_image_resource::square);
 
 			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
 			{
@@ -274,14 +286,24 @@ namespace rsx
 				}
 				break;
 			}
+			case pad_button::select:
+			{
+				on_shift("");
+				break;
+			}
+			case pad_button::start:
+			{
+				Close(true);
+				break;
+			}
 			case pad_button::triangle:
 			{
-				on_shift("Shift");
+				on_space("");
 				break;
 			}
 			case pad_button::square:
 			{
-				Close(true);
+				on_backspace("");
 				break;
 			}
 			case pad_button::cross:
@@ -400,6 +422,8 @@ namespace rsx
 				m_cached_resource.add(m_btn_accept.get_compiled());
 				m_cached_resource.add(m_btn_cancel.get_compiled());
 				m_cached_resource.add(m_btn_shift.get_compiled());
+				m_cached_resource.add(m_btn_space.get_compiled());
+				m_cached_resource.add(m_btn_delete.get_compiled());
 
 				overlay_element tmp;
 				label m_label;
@@ -488,9 +512,9 @@ namespace rsx
 				LOG_WARNING(RSX, "Native OSK dialog does not support multiline text!");
 			}
 
-			color4f default_bg = { 0.5f, 0.5f, 0.5f, 1.f };
-			color4f special_bg = { 0.5f, 0.5f, 0.8f, 1.f };
-			color4f special2_bg = { 0.8f, 0.8f, 0.5f, 1.f };
+			color4f default_bg = { 0.8f, 0.8f, 0.8f, 1.f };
+			color4f special_bg = { 0.2f, 0.7f, 0.7f, 1.f };
+			color4f special2_bg = { 0.93f, 0.91f, 0.67f, 1.f };
 
 			num_rows = 5;
 			num_columns = 10;
