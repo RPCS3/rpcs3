@@ -479,10 +479,16 @@ namespace rsx
 			{
 				fade_top = 1,
 				fade_bottom,
+				select,
+				start,
 				cross,
 				circle,
 				triangle,
 				square,
+				L1,
+				R1,
+				L2,
+				R2,
 				save,
 				new_entry
 			};
@@ -495,10 +501,16 @@ namespace rsx
 			{
 				texture_resource_files.push_back("fade_top.png");
 				texture_resource_files.push_back("fade_bottom.png");
+				texture_resource_files.push_back("select.png");
+				texture_resource_files.push_back("start.png");
 				texture_resource_files.push_back("cross.png");
 				texture_resource_files.push_back("circle.png");
 				texture_resource_files.push_back("triangle.png");
 				texture_resource_files.push_back("square.png");
+				texture_resource_files.push_back("L1.png");
+				texture_resource_files.push_back("R1.png");
+				texture_resource_files.push_back("L2.png");
+				texture_resource_files.push_back("R2.png");
 				texture_resource_files.push_back("save.png");
 				texture_resource_files.push_back("new.png");
 			}

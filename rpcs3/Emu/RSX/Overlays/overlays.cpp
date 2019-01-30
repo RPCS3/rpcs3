@@ -49,7 +49,7 @@ namespace rsx
 			std::array<std::chrono::steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
 			timestamp.fill(std::chrono::steady_clock::now());
 
-			std::array<std::array<bool, 8>, CELL_PAD_MAX_PORT_NUM> button_state;
+			std::array<std::array<bool, pad_button::pad_button_max_enum>, CELL_PAD_MAX_PORT_NUM> button_state;
 			for (auto& state : button_state)
 			{
 				state.fill(true);
@@ -105,6 +105,12 @@ namespace rsx
 							case CELL_PAD_CTRL_UP:
 								button_id = pad_button::dpad_up;
 								break;
+							case CELL_PAD_CTRL_SELECT:
+								button_id = pad_button::select;
+								break;
+							case CELL_PAD_CTRL_START:
+								button_id = pad_button::start;
+								break;
 							}
 						}
 						else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
@@ -122,6 +128,12 @@ namespace rsx
 								break;
 							case CELL_PAD_CTRL_CROSS:
 								button_id = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::circle : pad_button::cross;
+								break;
+							case CELL_PAD_CTRL_L1:
+								button_id = pad_button::L1;
+								break;
+							case CELL_PAD_CTRL_R1:
+								button_id = pad_button::R1;
 								break;
 							}
 						}
