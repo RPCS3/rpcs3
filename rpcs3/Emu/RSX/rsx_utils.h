@@ -716,6 +716,21 @@ namespace rsx
 			}
 		}
 
+		simple_array(const simple_array<Ty>& other)
+		{
+			_capacity = other._capacity;
+			_size = other._size;
+
+			const auto size_bytes = sizeof(Ty) * _capacity;
+			_data = (Ty*)malloc(size_bytes);
+			std::memcpy(_data, other._data, size_bytes);
+		}
+
+		simple_array(simple_array<Ty>&& other) noexcept
+		{
+			swap(other);
+		}
+
 		~simple_array()
 		{
 			if (_data)

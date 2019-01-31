@@ -82,10 +82,11 @@ namespace
 	struct vertex_input_state
 	{
 		VkPrimitiveTopology native_primitive_type;
+		bool index_rebase;
+		u32 min_index;
+		u32 max_index;
 		u32 vertex_draw_count;
-		u32 allocated_vertex_count;
-		u32 vertex_data_base;
-		u32 vertex_index_base;
+		u32 vertex_index_offset;
 		std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
 	};
 
@@ -105,12 +106,7 @@ namespace
 
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			const u32 min_index = rsx::method_registers.current_draw_clause.min_index();
-
-			//if (rsx::method_registers.current_draw_clause.draw_command_ranges.size() > 1)
-			//{
-				// TODO
-				//LOG_ERROR(RSX, "REEEEEEEEEEEEEEEEEEEEEEE (prims_emulated=%d)", primitives_emulated);
-			//}
+			const u32 max_index = (min_index + vertex_count) - 1;
 
 			if (primitives_emulated)
 			{
@@ -121,10 +117,10 @@ namespace
 					generate_emulating_index_buffer(rsx::method_registers.current_draw_clause,
 						vertex_count, m_index_buffer_ring_info);
 
-				return{ prims, index_count, vertex_count, min_index, 0, index_info };
+				return{ prims, false, min_index, max_index, index_count, 0, index_info };
 			}
 
-			return{ prims, vertex_count, vertex_count, min_index, 0, {} };
+			return{ prims, false, min_index, max_index, vertex_count, 0, {} };
 		}
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
@@ -138,7 +134,7 @@ namespace
 				rsx::index_array_type::u32 :
 				rsx::method_registers.index_type();
 
-			constexpr u32 type_size = sizeof(u32); // Force u32 index size dest to avoid overflows when adding vertex base index
+			u32 type_size = gsl::narrow<u32>(get_index_type_size(index_type));
 
 			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			if (primitives_emulated)
@@ -172,37 +168,34 @@ namespace
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
 				rsx::method_registers.restart_index(),
-				rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !vk::is_primitive_native(prim); });
+				[](auto prim) { return !vk::is_primitive_native(prim); });
 
 			if (min_index >= max_index)
 			{
 				//empty set, do not draw
 				m_index_buffer_ring_info.unmap();
-				return{ prims, 0, 0, 0, 0, {} };
+				return{ prims, false, 0, 0, 0, 0, {} };
 			}
 
 			if (emulate_restart)
 			{
-				index_count = rsx::remove_restart_index((u32*)buf, (u32*)tmp.data(), index_count, (u32)UINT32_MAX);
+				if (index_type == rsx::index_array_type::u16)
+				{
+					index_count = rsx::remove_restart_index((u16*)buf, (u16*)tmp.data(), index_count, (u16)UINT16_MAX);
+				}
+				else
+				{
+					index_count = rsx::remove_restart_index((u32*)buf, (u32*)tmp.data(), index_count, (u32)UINT32_MAX);
+				}
 			}
 
 			m_index_buffer_ring_info.unmap();
 
 			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
-				std::make_tuple(offset_in_index_buffer, VK_INDEX_TYPE_UINT32);
+				std::make_tuple(offset_in_index_buffer, vk::get_index_type(index_type));
 
-			//check for vertex arrays with frequency modifiers
-			for (auto &block : m_vertex_layout.interleaved_blocks)
-			{
-				if (block.min_divisor > 1)
-				{
-					//Ignore base offsets and return real results
-					//The upload function will optimize the uploaded range anyway
-					return{ prims, index_count, max_index, 0, 0, index_info };
-				}
-			}
-
-			return {prims, index_count, (max_index - min_index + 1), min_index, min_index, index_info};
+			const auto index_offset = rsx::method_registers.vertex_data_base_index();
+			return {prims, true, min_index, max_index, index_count, index_offset, index_info};
 		}
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& command)
@@ -216,13 +209,13 @@ namespace
 
 			if (!primitives_emulated)
 			{
-				return{ prims, vertex_count, vertex_count, 0, 0, {} };
+				return{ prims, false, 0, vertex_count - 1, vertex_count, 0, {} };
 			}
 
 			u32 index_count;
 			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
 			std::tie(index_count, index_info) = generate_emulating_index_buffer(draw_clause, vertex_count, m_index_buffer_ring_info);
-			return{ prims, index_count, vertex_count, 0, 0, index_info };
+			return{ prims, false, 0, vertex_count - 1, index_count, 0, index_info };
 		}
 
 	private:
@@ -236,11 +229,18 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
 	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));
 
-	auto &vertex_count = result.allocated_vertex_count;
-	auto &vertex_base = result.vertex_data_base;
+	const u32 vertex_count = (result.max_index - result.min_index) + 1;
+	u32 vertex_base = result.min_index;
+	u32 index_base = 0;
+
+	if (result.index_rebase)
+	{
+		vertex_base = rsx::get_index_from_base(vertex_base, rsx::method_registers.vertex_data_base_index());
+		index_base = result.min_index;
+	}
 
 	//Do actual vertex upload
-	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
+	auto required = calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
 	u32 persistent_range_base = UINT32_MAX, volatile_range_base = UINT32_MAX;
 	size_t persistent_offset = UINT64_MAX, volatile_offset = UINT64_MAX;
 
@@ -256,7 +256,9 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
 		{
-			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + vertex_base;
+			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0].attribute_stride);
+			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + data_offset;
+
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{
 				verify(HERE), cached->local_address == storage_address;
@@ -349,5 +351,12 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		}
 	}
 
-	return{ result.native_primitive_type, result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, persistent_range_base, volatile_range_base, result.index_info };
+	return{ result.native_primitive_type,                 // Primitive
+			result.vertex_draw_count,                     // Vertex count
+			vertex_count,                                 // Allocated vertex count
+			vertex_base,                                  // First vertex in stream
+			index_base,                                   // Index of vertex at data location 0
+			result.vertex_index_offset,                   // Index offset
+			persistent_range_base, volatile_range_base,   // Binding range
+			result.index_info };                          // Index buffer info
 }

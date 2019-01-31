@@ -74,7 +74,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 		if (options & CELL_OSKDIALOG_NO_SPACE)
 		{
-			input->setValidator(new QRegExpValidator(QRegExp("^\S*$"), this));
+			input->setValidator(new QRegExpValidator(QRegExp("^\\S*$"), this));
 		}
 
 		connect(input, &QLineEdit::textChanged, [=](const QString& text)

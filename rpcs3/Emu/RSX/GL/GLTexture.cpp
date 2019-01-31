@@ -100,9 +100,9 @@ namespace gl
 		case texture::internal_format::compressed_rgba_s3tc_dxt5:
 			return std::make_tuple(GL_RGBA, GL_UNSIGNED_BYTE, false);
 		case texture::internal_format::r8:
-			return std::make_tuple(GL_R, GL_UNSIGNED_BYTE, false);
+			return std::make_tuple(GL_RED, GL_UNSIGNED_BYTE, false);
 		case texture::internal_format::r32f:
-			return std::make_tuple(GL_R, GL_FLOAT, true);
+			return std::make_tuple(GL_RED, GL_FLOAT, true);
 		case texture::internal_format::r5g6b5:
 			return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_6_5, true);
 		case texture::internal_format::rg8:

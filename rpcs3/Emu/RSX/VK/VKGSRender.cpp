@@ -1175,7 +1175,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (sub_index == 0)
 	{
-		m_vertex_layout = analyse_inputs_interleaved();
+		analyse_inputs_interleaved(m_vertex_layout);
 	}
 
 	if (!m_vertex_layout.validate())
@@ -1504,7 +1504,7 @@ void VKGSRender::end()
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
 		execute_nop_draw();
-		m_rtts.on_write();
+		// m_rtts.on_write(); - breaks games for obvious reasons
 		rsx::thread::end();
 		return;
 	}
@@ -1640,7 +1640,7 @@ void VKGSRender::end()
 			occlusion_id = m_occlusion_query_pool.find_free_slot();
 			if (occlusion_id == UINT32_MAX)
 			{
-				LOG_ERROR(RSX, "Occlusion pool overflow");
+				//LOG_ERROR(RSX, "Occlusion pool overflow");
 				if (m_current_task) m_current_task->result = 1;
 			}
 		}
@@ -2518,38 +2518,17 @@ bool VKGSRender::load_program()
 		rsx::method_registers.blend_enabled_surface_3()
 	};
 
-	bool blend_equation_override = false;
 	VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
 	VkBlendOp equation_rgb, equation_a;
 
-	if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-		!rsx::method_registers.alpha_test_enabled())
-	{
-		if (rsx::method_registers.msaa_enabled() &&
-			rsx::method_registers.msaa_sample_mask() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
-		{
-			//fake alpha-to-coverage
-			//blend used in conjunction with alpha test to fake order-independent edge transparency
-			mrt_blend_enabled[0] = mrt_blend_enabled[1] = mrt_blend_enabled[2] = mrt_blend_enabled[3] = true;
-			blend_equation_override = true;
-			sfactor_rgb = sfactor_a = VK_BLEND_FACTOR_SRC_ALPHA;
-			dfactor_rgb = dfactor_a = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			equation_rgb = equation_a = VK_BLEND_OP_ADD;
-		}
-	}
-
 	if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
 	{
-		if (!blend_equation_override)
-		{
-			sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-			sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
-			dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-			dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
-			equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
-			equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
-		}
+		sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
+		sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
+		dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
+		dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
+		equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
+		equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
 
 		for (u8 idx = 0; idx < m_draw_buffers.size(); ++idx)
 		{
@@ -2735,10 +2714,11 @@ void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
 	auto mem = m_vertex_layout_ring_info.alloc<256>(256);
 	auto buf = (u32*)m_vertex_layout_ring_info.map(mem, 128 + 16);
 
-	*buf = vertex_info.vertex_index_base;
+	buf[0] = vertex_info.vertex_index_base;
+	buf[1] = vertex_info.vertex_index_offset;
 	buf += 4;
 
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, (s32*)buf,
+	fill_vertex_layout_state(m_vertex_layout, vertex_info.first_vertex, vertex_info.allocated_vertex_count, (s32*)buf,
 		vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
 
 	m_vertex_layout_ring_info.unmap();

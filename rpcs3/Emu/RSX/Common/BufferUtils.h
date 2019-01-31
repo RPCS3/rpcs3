@@ -17,6 +17,11 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
  */
 bool is_primitive_native(rsx::primitive_type m_draw_mode);
 
+/*
+ * Returns true if adjacency information does not matter for this type. Allows optimizations e.g removal of primitive restart index
+ */
+bool is_primitive_disjointed(rsx::primitive_type draw_mode);
+
 /**
  * Returns a fixed index count for emulated primitive, otherwise returns initial_index_count
  */
@@ -34,7 +39,7 @@ u32 get_index_type_size(rsx::index_array_type type);
  */
 std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, gsl::span<const gsl::byte> src,
 	rsx::index_array_type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
-	u32 base_index, std::function<bool(rsx::primitive_type)> expands);
+	std::function<bool(rsx::primitive_type)> expands);
 
 /**
  * Write index data needed to emulate non indexed non native primitive mode.

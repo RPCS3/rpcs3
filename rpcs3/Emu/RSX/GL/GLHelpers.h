@@ -1383,8 +1383,7 @@ namespace gl
 
 		enum class internal_format
 		{
-			red = GL_RED,
-			r = GL_R,
+			r = GL_RED,
 			rg = GL_RG,
 			rgb = GL_RGB,
 			rgba = GL_RGBA,

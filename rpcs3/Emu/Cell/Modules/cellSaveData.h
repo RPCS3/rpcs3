@@ -3,7 +3,7 @@
 
 
 // Return codes
-enum
+enum CellSaveDataError : u32
 {
 	CELL_SAVEDATA_ERROR_CBRESULT        = 0x8002b401,
 	CELL_SAVEDATA_ERROR_ACCESS_ERROR    = 0x8002b402,

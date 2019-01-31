@@ -1,4 +1,4 @@
-﻿#include "game_list_frame.h"
+#include "game_list_frame.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
@@ -365,6 +365,9 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		m_notes.clear();
 
 		const std::string _hdd = Emu.GetHddDir();
+		const std::string cat_DG = sstr(category::disc_game);
+		const std::string cat_GD = sstr(category::ps3_data);
+		const std::string cat_unknown = sstr(category::unknown);
 
 		std::vector<std::string> path_list;
 
@@ -407,10 +410,10 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			GameInfo game;
 			game.path         = dir;
 			game.serial       = psf::get_string(psf, "TITLE_ID", "");
-			game.name         = psf::get_string(psf, "TITLE", sstr(category::unknown));
-			game.app_ver      = psf::get_string(psf, "APP_VER", sstr(category::unknown));
-			game.category     = psf::get_string(psf, "CATEGORY", sstr(category::unknown));
-			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", sstr(category::unknown));
+			game.name         = psf::get_string(psf, "TITLE", cat_unknown);
+			game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown);
+			game.category     = psf::get_string(psf, "CATEGORY", cat_unknown);
+			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown);
 			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
 			game.resolution   = psf::get_integer(psf, "RESOLUTION");
 			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
@@ -439,7 +442,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				game.icon_path = sfo_dir + "/ICON0.PNG";
 				game.category = sstr(cat->second);
 			}
-			else if (game.category == sstr(category::unknown))
+			else if (game.category == cat_unknown)
 			{
 				game.icon_path = sfo_dir + "/ICON0.PNG";
 			}
@@ -471,6 +474,44 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			continue;
 			// Blame MSVC for double }}
 		}}
+
+		// Try to update the app version for disc games if there is a patch
+		for (const auto& entry : m_game_data)
+		{
+			if (entry->info.category == cat_DG)
+			{
+				for (const auto& other : m_game_data)
+				{
+					// The patch is game data and must have the same serial and an app version
+					if (entry->info.serial == other->info.serial && other->info.category == cat_GD && other->info.app_ver != cat_unknown)
+					{
+						try
+						{
+							// Update the app version if it's higher than the disc's version (old games may not have an app version)
+							if (entry->info.app_ver == cat_unknown || std::stod(other->info.app_ver) > std::stod(entry->info.app_ver))
+							{
+								entry->info.app_ver = other->info.app_ver;
+							}
+							// Update the firmware version if possible and if it's higher than the disc's version
+							if (other->info.fw != cat_unknown && std::stod(other->info.fw) > std::stod(entry->info.fw))
+							{
+								entry->info.fw = other->info.fw;
+							}
+							// Update the parental level if possible and if it's higher than the disc's level
+							if (other->info.parental_lvl != 0 && other->info.parental_lvl > entry->info.parental_lvl)
+							{
+								entry->info.parental_lvl = other->info.parental_lvl;
+							}
+						}
+						catch (const std::exception& e)
+						{
+							LOG_ERROR(GENERAL, "Failed to update the displayed version numbers for title ID %s\n%s thrown: %s", entry->info.serial, typeid(e).name(), e.what());
+						}
+						break; // Next Entry
+					}
+				}
+			}
+		}
 
 		// Sort by name at the very least.
 		std::sort(m_game_data.begin(), m_game_data.end(), [&](const game_info& game1, const game_info& game2)
@@ -647,6 +688,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* copy_name = info_menu->addAction(tr("&Copy Name"));
 	QAction* copy_serial = info_menu->addAction(tr("&Copy Serial"));
 
+	const std::string cache_base_dir = fs::get_cache_dir() + "cache/" + currGame.serial;
 	const std::string config_base_dir = fs::get_config_dir() + "data/" + currGame.serial;
 
 	connect(boot, &QAction::triggered, [=]
@@ -694,9 +736,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (mb->checkBox()->isChecked())
 			{
-				RemoveShadersCache(config_base_dir);
-				RemovePPUCache(config_base_dir);
-				RemoveSPUCache(config_base_dir);
+				RemoveShadersCache(cache_base_dir);
+				RemovePPUCache(cache_base_dir);
+				RemoveSPUCache(cache_base_dir);
 				RemoveCustomConfiguration(config_base_dir);
 			}
 			fs::remove_all(currGame.path);
@@ -721,15 +763,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(removeShadersCache, &QAction::triggered, [=]()
 	{
-		RemoveShadersCache(config_base_dir, true);
+		RemoveShadersCache(cache_base_dir, true);
 	});
 	connect(removePPUCache, &QAction::triggered, [=]()
 	{
-		RemovePPUCache(config_base_dir, true);
+		RemovePPUCache(cache_base_dir, true);
 	});
 	connect(removeSPUCache, &QAction::triggered, [=]()
 	{
-		RemoveSPUCache(config_base_dir, true);
+		RemoveSPUCache(cache_base_dir, true);
 	});
 	connect(openGameFolder, &QAction::triggered, [=]()
 	{
@@ -834,7 +876,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	removeConfig->setEnabled(gameinfo->hasCustomConfig);
 
 	// remove options if necessary
-	if (!fs::is_dir(config_base_dir))
+	if (!fs::is_dir(cache_base_dir))
 	{
 		removeShadersCache->setEnabled(false);
 		removePPUCache->setEnabled(false);

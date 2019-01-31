@@ -177,18 +177,69 @@ namespace rsx
 		u32 __dummy2;
 	};
 
+	struct interleaved_attribute_t
+	{
+		u8 index;
+		bool modulo;
+		u16 frequency;
+	};
+
 	struct interleaved_range_info
 	{
 		bool interleaved = false;
-		bool all_modulus = false;
 		bool single_vertex = false;
 		u32  base_offset = 0;
 		u32  real_offset_address = 0;
 		u8   memory_location = 0;
 		u8   attribute_stride = 0;
-		u16  min_divisor = 0;
 
-		std::vector<u8> locations;
+		rsx::simple_array<interleaved_attribute_t> locations;
+
+		// Check if we need to upload a full unoptimized range, i.e [0-max_index]
+		std::pair<u32, u32> calculate_required_range(u32 first, u32 count) const
+		{
+			if (single_vertex)
+			{
+				return { 0, 1 };
+			}
+
+			const u32 max_index = (first + count) - 1;
+			u32 _max_index = first;
+			u32 _min_index = first;
+
+			for (const auto &attrib : locations)
+			{
+				if (LIKELY(attrib.frequency <= 1))
+				{
+					_max_index = max_index;
+				}
+				else
+				{
+					if (attrib.modulo)
+					{
+						if (max_index >= attrib.frequency)
+						{
+							// Actually uses the modulo operator, cannot safely optimize
+							_min_index = 0;
+							_max_index = std::max<u32>(_max_index, attrib.frequency - 1);
+						}
+						else
+						{
+							// Same as having no modulo
+							_max_index = max_index;
+						}
+					}
+					else
+					{
+						// Division operator
+						_min_index = std::min(_min_index, first / attrib.frequency);
+						_max_index = std::max<u32>(_max_index, max_index / attrib.frequency);
+					}
+				}
+			}
+
+			return { _min_index, (_max_index - _min_index) + 1 };
+		}
 	};
 
 	enum attribute_buffer_placement : u8
@@ -201,14 +252,21 @@ namespace rsx
 	struct vertex_input_layout
 	{
 		std::vector<interleaved_range_info> interleaved_blocks;  // Interleaved blocks to be uploaded as-is
-		std::vector<std::pair<u8, u32>> volatile_blocks;  // Volatile data blocks (immediate draw vertex data for example)
-		std::vector<u8> referenced_registers;  // Volatile register data
+		std::vector<std::pair<u8, u32>> volatile_blocks;         // Volatile data blocks (immediate draw vertex data for example)
+		rsx::simple_array<u8> referenced_registers;              // Volatile register data
 
 		std::array<attribute_buffer_placement, 16> attribute_placement;
 
 		vertex_input_layout()
 		{
 			attribute_placement.fill(attribute_buffer_placement::none);
+		}
+
+		void clear()
+		{
+			interleaved_blocks.resize(0);
+			volatile_blocks.resize(0);
+			referenced_registers.resize(0);
 		}
 
 		bool validate() const
@@ -251,6 +309,18 @@ namespace rsx
 			}
 
 			return false;
+		}
+
+		u32 calculate_interleaved_memory_requirements(u32 first_vertex, u32 vertex_count) const
+		{
+			u32 mem = 0;
+			for (auto &block : interleaved_blocks)
+			{
+				const auto range = block.calculate_required_range(first_vertex, vertex_count);
+				mem += range.second * block.attribute_stride;
+			}
+
+			return mem;
 		}
 	};
 
@@ -478,7 +548,7 @@ namespace rsx
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
 		 */
-		vertex_input_layout analyse_inputs_interleaved() const;
+		void analyse_inputs_interleaved(vertex_input_layout&) const;
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
@@ -592,12 +662,12 @@ namespace rsx
 		 * result.first contains persistent memory requirements
 		 * result.second contains volatile memory requirements
 		 */
-		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count);
+		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count);
 
 		/**
 		 * Generates vertex input descriptors as an array of 16x4 s32s
 		 */
-		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
+		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
 
 		/**
 		 * Uploads vertex data described in the layout descriptor
