@@ -43,9 +43,23 @@ namespace rsx
 					_cell.backcolor = props.color;
 					_cell.callback = props.callback;
 					_cell.outputs = props.outputs;
-					_cell.selected = 0;
+					_cell.selected = false;
 
-					num_layers = std::max<u32>(num_layers, _cell.outputs.size());
+					switch (props.type_flags)
+					{
+					default:
+					case button_flags::_default:
+						_cell.enabled = true;
+						break;
+					case button_flags::_space:
+						_cell.enabled = !(flags & CELL_OSKDIALOG_NO_SPACE);
+						break;
+					case button_flags::_return:
+						_cell.enabled = !(flags & CELL_OSKDIALOG_NO_RETURN);
+						break;
+					}
+
+					num_layers = std::max(num_layers, u32(_cell.outputs.size()));
 
 					if (LIKELY(props.num_cell_hz == 1))
 					{
@@ -71,16 +85,18 @@ namespace rsx
 
 			verify(HERE), num_layers;
 
+			// TODO: Should just scan for the first enabled cell
 			selected_x = selected_y = selected_z = 0;
 			m_grid[0].selected = true;
-			m_update = true;
 
 			m_background.set_size(1280, 720);
 			m_background.back_color.a = 0.8f;
 
+			const int preview_height = (flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90;
+
 			// Place elements with absolute positioning
 			u16 frame_w = u16(num_columns * cell_size_x);
-			u16 frame_h = u16(num_rows * cell_size_y) + 80;
+			u16 frame_h = u16(num_rows * cell_size_y) + 30 + preview_height;
 			u16 frame_x = (1280 - frame_w) / 2;
 			u16 frame_y = (720 - frame_h) / 2;
 
@@ -95,11 +111,23 @@ namespace rsx
 			m_title.back_color.a = 0.f;
 
 			m_preview.set_pos(frame_x, frame_y + 30);
-			m_preview.set_size(frame_w, 40);
-			m_preview.set_text(initial_text.empty()? "[Enter Text]" : initial_text);
+			m_preview.set_size(frame_w, preview_height);
 			m_preview.set_padding(15, 0, 10, 0);
 
-			position2u grid_origin = { frame_x, frame_y + 70u };
+			if (initial_text.empty())
+			{
+				m_preview.set_text("[Enter Text]");
+				m_preview.caret_position = 0;
+				m_preview.fore_color.a = 0.5f; // Muted contrast for hint text
+			}
+			else
+			{
+				m_preview.set_text(initial_text);
+				m_preview.caret_position = initial_text.length();
+				m_preview.fore_color.a = 1.f;
+			}
+
+			position2u grid_origin = { frame_x, frame_y + 30u + preview_height };
 			for (auto &_cell : m_grid)
 			{
 				_cell.pos += grid_origin;
@@ -145,6 +173,7 @@ namespace rsx
 			}
 
 			m_visible = true;
+			m_update = true;
 			exit = false;
 
 			thread_ctrl::spawn("osk input thread", [this]
@@ -234,31 +263,61 @@ namespace rsx
 
 			switch (button_press)
 			{
+			case pad_button::L1:
+			{
+				m_preview.move_caret(edit_text::direction::left);
+				m_update = true;
+				break;
+			}
+			case pad_button::R1:
+			{
+				m_preview.move_caret(edit_text::direction::right);
+				m_update = true;
+				break;
+			}
 			case pad_button::dpad_right:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
-				const auto current = get_cell_geometry(current_index);
-
-				current_index = current.first + current.second;
-
-				if (current_index < index_limit)
+				while (true)
 				{
-					decode_index(current_index);
-					m_update = true;
+					const auto current = get_cell_geometry(current_index);
+					current_index = current.first + current.second;
+
+					if (current_index > index_limit)
+					{
+						break;
+					}
+
+					if (m_grid[get_cell_geometry(current_index).first].enabled)
+					{
+						decode_index(current_index);
+						m_update = true;
+						break;
+					}
 				}
+
 				break;
 			}
 			case pad_button::dpad_left:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
-				if (current_index > 0)
+				while (current_index > 0)
 				{
 					const auto current = get_cell_geometry(current_index);
 					if (current.first)
 					{
 						current_index = current.first - 1;
-						decode_index(current_index);
-						m_update = true;
+
+						if (m_grid[get_cell_geometry(current_index).first].enabled)
+						{
+							decode_index(current_index);
+							m_update = true;
+							break;
+						}
+					}
+					else
+					{
+						break;
 					}
 				}
 				break;
@@ -266,23 +325,35 @@ namespace rsx
 			case pad_button::dpad_down:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
-				current_index += num_columns;
-
-				if (current_index <= index_limit)
+				while (true)
 				{
-					decode_index(current_index);
-					m_update = true;
+					current_index += num_columns;
+					if (current_index > index_limit)
+					{
+						break;
+					}
+
+					if (m_grid[get_cell_geometry(current_index).first].enabled)
+					{
+						decode_index(current_index);
+						m_update = true;
+						break;
+					}
 				}
 				break;
 			}
 			case pad_button::dpad_up:
 			{
 				u32 current_index = (selected_y * num_columns) + selected_x;
-				if (current_index >= num_columns)
+				while (current_index >= num_columns)
 				{
 					current_index -= num_columns;
-					decode_index(current_index);
-					m_update = true;
+					if (m_grid[get_cell_geometry(current_index).first].enabled)
+					{
+						decode_index(current_index);
+						m_update = true;
+						break;
+					}
 				}
 				break;
 			}
@@ -339,7 +410,11 @@ namespace rsx
 			const auto length = (ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text, ws.c_str(), length);
 
-			on_osk_input_entered();
+			if (on_osk_input_entered)
+			{
+				on_osk_input_entered();
+			}
+
 			m_update = true;
 		}
 
@@ -348,7 +423,9 @@ namespace rsx
 			// Append to output text
 			if (m_preview.text == "[Enter Text]")
 			{
+				m_preview.caret_position = ::narrow<u16>(str.length());
 				m_preview.set_text(str);
+				m_preview.fore_color.a = 1.f;
 			}
 			else
 			{
@@ -358,12 +435,10 @@ namespace rsx
 				}
 
 				auto new_str = m_preview.text + str;
-				if (new_str.length() > char_limit)
+				if (new_str.length() <= char_limit)
 				{
-					new_str = new_str.substr(0, char_limit);
+					m_preview.insert_text(str);
 				}
-
-				m_preview.set_text(new_str);
 			}
 
 			on_text_changed();
@@ -394,15 +469,20 @@ namespace rsx
 				return;
 			}
 
-			auto new_length = m_preview.text.length() - 1;
-			m_preview.set_text(m_preview.text.substr(0, new_length));
+			m_preview.erase();
 			on_text_changed();
 		}
 
 		void osk_dialog::on_enter(const std::string&)
 		{
-			// Accept dialog
-			Close(true);
+			if (!(flags & CELL_OSKDIALOG_NO_RETURN))
+			{
+				on_default_callback("\n");
+			}
+			else
+			{
+				// Beep or give some other kind of visual feedback
+			}
 		}
 
 		compiled_resource osk_dialog::get_compiled()
@@ -427,11 +507,14 @@ namespace rsx
 
 				overlay_element tmp;
 				label m_label;
-				u16   buffered_cell_count;
+				u16   buffered_cell_count = 0;
 				bool  render_label = false;
 
+				const color4f disabled_back_color = { 0.3f, 0.3f, 0.3f, 1.f };
+				const color4f disabled_fore_color = { 0.8f, 0.8f, 0.8f, 1.f };
+				const color4f normal_fore_color = { 0.f, 0.f, 0.f, 1.f };
+
 				m_label.back_color = { 0.f, 0.f, 0.f, 0.f };
-				m_label.fore_color = { 0.f, 0.f, 0.f, 1.f };
 				m_label.set_padding(0, 0, 10, 0);
 
 				for (const auto& c : m_grid)
@@ -459,6 +542,7 @@ namespace rsx
 
 							m_label.set_pos(x - offset_x, y);
 							m_label.set_size(full_width, cell_size_y);
+							m_label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
 
 							auto _z = (selected_z < c.outputs.size()) ? selected_z : u32(c.outputs.size()) - 1u;
 							m_label.set_text(c.outputs[_z]);
@@ -480,7 +564,7 @@ namespace rsx
 
 					buffered_cell_count++;
 
-					tmp.back_color = c.backcolor;
+					tmp.back_color = c.enabled? c.backcolor : disabled_back_color;
 					tmp.set_pos(x, y);
 					tmp.set_size(w, h);
 					tmp.pulse_effect_enabled = c.selected;
@@ -507,14 +591,9 @@ namespace rsx
 			flags = options;
 			char_limit = charlimit;
 
-			if (!(flags & CELL_OSKDIALOG_NO_RETURN))
-			{
-				LOG_WARNING(RSX, "Native OSK dialog does not support multiline text!");
-			}
-
-			color4f default_bg = { 0.8f, 0.8f, 0.8f, 1.f };
+			color4f default_bg = { 0.7f, 0.7f, 0.7f, 1.f };
 			color4f special_bg = { 0.2f, 0.7f, 0.7f, 1.f };
-			color4f special2_bg = { 0.93f, 0.91f, 0.67f, 1.f };
+			color4f special2_bg = { 0.83f, 0.81f, 0.57f, 1.f };
 
 			num_rows = 5;
 			num_columns = 10;
@@ -573,10 +652,10 @@ namespace rsx
 				{{",", "?"}, default_bg, 1},
 
 				// Special
-				{{"Shift"}, special2_bg, 2, shift_callback },
-				{{"Space"}, special_bg, 4, space_callback },
-				{{"Backspace"}, special_bg, 2, delete_callback },
-				{{"Enter"}, special2_bg, 2, enter_callback },
+				{{"Shift"}, special2_bg, 2, button_flags::_default, shift_callback },
+				{{"Space"}, special_bg, 4, button_flags::_space, space_callback },
+				{{"Backspace"}, special_bg, 2, button_flags::_default, delete_callback },
+				{{"Enter"}, special2_bg, 2, button_flags::_return, enter_callback },
 			};
 
 			// Narrow to utf-8 as native does not have support for non-ascii glyphs

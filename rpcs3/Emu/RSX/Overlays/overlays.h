@@ -401,6 +401,13 @@ namespace rsx
 				default_cell = top | bottom | left | right
 			};
 
+			enum button_flags
+			{
+				_default = 0,
+				_return = 1,
+				_space = 2
+			};
+
 			struct cell
 			{
 				position2u pos;
@@ -418,6 +425,7 @@ namespace rsx
 				std::vector<std::string> outputs;
 				color4f color;
 				u32 num_cell_hz;
+				button_flags type_flags;
 				callback_t callback;
 			};
 
@@ -425,7 +433,7 @@ namespace rsx
 			overlay_element m_frame;
 			overlay_element m_background;
 			label m_title;
-			label m_preview;
+			edit_text m_preview;
 			image_button m_btn_accept;
 			image_button m_btn_cancel;
 			image_button m_btn_shift;
