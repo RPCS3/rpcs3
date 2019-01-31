@@ -46,6 +46,7 @@ public:
 		SPUBlockSize,
 		SPUCache,
 		SPUVerification,
+		DebugConsoleMode,
 
 		// Graphics
 		Renderer,
@@ -254,6 +255,7 @@ private:
 		{ SPUBlockSize,             { "Core", "SPU Block Size"}},
 		{ SPUCache,                 { "Core", "SPU Cache"}},
 		{ SPUVerification,          { "Core", "SPU Verification"}},
+		{ DebugConsoleMode,         { "Core", "Debug Console Mode"}},
 
 		// Graphics Tab
 		{ Renderer,                   { "Video", "Renderer"}},

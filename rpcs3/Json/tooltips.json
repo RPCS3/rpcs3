@@ -50,6 +50,7 @@
 		"accurateGETLLAR": "Never use this.",
 		"accuratePUTLLUC": "Never use this.",
 		"hookStFunc": "Allows to hook some functions like 'memcpy' replacing them with high-level implementations. May do nothing or break things. Experimental.",
+		"debugConsoleMode": "Increases the amount of usable system memory to match a DECR console and more.\nCauses some software to behave differently than on retail hardware.",
 		"readColor": "Never use this.",
 		"dumpDepth": "Never use this.",
 		"readDepth": "Never use this.",
