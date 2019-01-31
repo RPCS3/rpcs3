@@ -9,8 +9,15 @@
 // Stupid MSVC bug when T is set to char16_t
 std::string utf16_to_utf8(const std::u16string& utf16_string)
 {
+	// Strip extended codes
+	auto tmp = utf16_string;
+	for (auto &c : tmp)
+	{
+		if (c > 0xFF) c = '#';
+	}
+
 	std::wstring_convert<std::codecvt_utf8_utf16<int16_t>, int16_t> convert;
-	auto p = reinterpret_cast<const int16_t *>(utf16_string.data());
+	auto p = reinterpret_cast<const int16_t *>(tmp.data());
 	return convert.to_bytes(p, p + utf16_string.size());
 }
 
@@ -25,8 +32,15 @@ std::u16string utf8_to_utf16(const std::string& utf8_string)
 
 std::string utf16_to_utf8(const std::u16string& utf16_string)
 {
+	// Strip extended codes
+	auto tmp = utf16_string;
+	for (auto &c : tmp)
+	{
+		if (c > 0xFF) c = '#';
+	}
+
 	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-	return convert.to_bytes(utf16_string);
+	return convert.to_bytes(tmp);
 }
 
 std::u16string utf8_to_utf16(const std::string& utf8_string)
