@@ -348,13 +348,15 @@ namespace gl
 				"layout(location=0) out vec2 tc0;\n"
 				"layout(location=1) out vec4 clip_rect;\n"
 				"uniform vec4 ui_scale;\n"
+				"uniform vec2 viewport;\n"
 				"uniform vec4 clip_bounds;\n"
 				"\n"
 				"void main()\n"
 				"{\n"
 				"	tc0.xy = in_pos.zw;\n"
-				"	clip_rect = (clip_bounds * ui_scale.zwzw);\n"
-				"	clip_rect.yw = ui_scale.yy - clip_rect.wy; //invert y axis\n"
+				"	clip_rect = clip_bounds;\n"
+				"	clip_rect.yw = ui_scale.yy - clip_rect.wy; // Invert y axis\n"
+				"	clip_rect *= (ui_scale.zwzw * viewport.xyxy) / ui_scale.xyxy; // Normalize and convert to window coords\n"
 				"	vec4 pos = vec4((in_pos.xy * ui_scale.zw) / ui_scale.xy, 0., 1.);\n"
 				"	pos.y = (1. - pos.y); //invert y axis\n"
 				"	gl_Position = (pos + pos) - 1.;\n"
@@ -581,6 +583,7 @@ namespace gl
 
 		void run(u16 w, u16 h, GLuint target, rsx::overlays::overlay& ui)
 		{
+			program_handle.uniforms["viewport"] = color2f(f32(w), f32(h));
 			program_handle.uniforms["ui_scale"] = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			program_handle.uniforms["time"] = (f32)(get_system_time() / 1000) * 0.005f;
 			for (auto &cmd : ui.get_compiled().draw_commands)
