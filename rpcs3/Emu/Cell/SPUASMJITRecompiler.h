@@ -15,13 +15,11 @@ public:
 
 	virtual void init() override;
 
-	virtual spu_function_t get(u32 lsa) override;
-
 	virtual spu_function_t compile(std::vector<u32>&&) override;
 
 private:
 	// ASMJIT runtime
-	asmjit::JitRuntime* m_asmrt;
+	::jit_runtime m_asmrt;
 
 	// emitter:
 	asmjit::X86Assembler* c;

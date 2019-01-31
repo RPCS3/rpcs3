@@ -1,10 +1,190 @@
+#include "types.h"
 #include "JIT.h"
+#include "StrFmt.h"
+#include "File.h"
+#include "Log.h"
+#include "mutex.h"
+#include "sysinfo.h"
+#include "VirtualMemory.h"
 #include <immintrin.h>
 
-asmjit::JitRuntime& asmjit::get_global_runtime()
+// Memory manager mutex
+shared_mutex s_mutex2;
+
+#ifdef __linux__
+#define CAN_OVERCOMMIT
+#endif
+
+static u8* get_jit_memory()
+{
+	// Reserve 2G memory (magic static)
+	static void* const s_memory2 = []() -> void*
+	{
+		void* ptr = utils::memory_reserve(0x80000000);
+
+#ifdef CAN_OVERCOMMIT
+		utils::memory_commit(ptr, 0x80000000);
+		utils::memory_protect(ptr, 0x40000000, utils::protection::wx);
+#endif
+		return ptr;
+	}();
+
+	return static_cast<u8*>(s_memory2);
+}
+
+// Allocation counters (1G code, 1G data subranges)
+static atomic_t<u64> s_code_pos{0}, s_data_pos{0};
+
+// Snapshot of code generated before main()
+static std::vector<u8> s_code_init, s_data_init;
+
+template <atomic_t<u64>& Ctr, uint Off, utils::protection Prot>
+static u8* add_jit_memory(std::size_t size, uint align)
+{
+	// Select subrange
+	u8* pointer = get_jit_memory() + Off;
+
+	if (UNLIKELY(!size && !align))
+	{
+		// Return subrange info
+		return pointer;
+	}
+
+#ifndef CAN_OVERCOMMIT
+	std::lock_guard lock(s_mutex2);
+#endif
+
+	u64 olda, newa;
+
+	// Simple allocation by incrementing pointer to the next free data
+	const u64 pos = Ctr.atomic_op([&](u64& ctr) -> u64
+	{
+		const u64 _pos = ::align(ctr, align);
+		const u64 _new = ::align(_pos + size, align);
+
+		if (UNLIKELY(_new > 0x40000000))
+		{
+			return -1;
+		}
+
+		// Check the necessity to commit more memory
+		olda = ::align(ctr, 0x10000);
+		newa = ::align(_new, 0x10000);
+
+		ctr = _new;
+		return _pos;
+	});
+
+	if (UNLIKELY(pos == -1))
+	{
+		LOG_FATAL(GENERAL, "JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
+		return nullptr;
+	}
+
+	if (UNLIKELY(olda != newa))
+	{
+#ifdef CAN_OVERCOMMIT
+		// TODO: possibly madvise
+#else
+		// Commit more memory
+		utils::memory_commit(pointer + olda, newa - olda, Prot);
+#endif
+	}
+
+	return pointer + pos;
+}
+
+jit_runtime::jit_runtime()
+	: HostRuntime()
+{
+}
+
+jit_runtime::~jit_runtime()
+{
+}
+
+asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
+{
+	std::size_t codeSize = code->getCodeSize();
+	if (UNLIKELY(!codeSize))
+	{
+		*dst = nullptr;
+		return asmjit::kErrorNoCodeGenerated;
+	}
+
+	void* p = jit_runtime::alloc(codeSize, 16);
+	if (UNLIKELY(!p))
+	{
+		*dst = nullptr;
+		return asmjit::kErrorNoVirtualMemory;
+	}
+
+	std::size_t relocSize = code->relocate(p);
+	if (UNLIKELY(!relocSize))
+	{
+		*dst = nullptr;
+		return asmjit::kErrorInvalidState;
+	}
+
+	flush(p, relocSize);
+	*dst = p;
+
+	return asmjit::kErrorOk;
+}
+
+asmjit::Error jit_runtime::_release(void* ptr) noexcept
+{
+	return asmjit::kErrorOk;
+}
+
+u8* jit_runtime::alloc(std::size_t size, uint align, bool exec) noexcept
+{
+	if (exec)
+	{
+		return add_jit_memory<s_code_pos, 0x0, utils::protection::wx>(size, align);
+	}
+	else
+	{
+		return add_jit_memory<s_data_pos, 0x40000000, utils::protection::rw>(size, align);
+	}
+}
+
+void jit_runtime::initialize()
+{
+	if (!s_code_init.empty() || !s_data_init.empty())
+	{
+		return;
+	}
+
+	// Create code/data snapshot
+	s_code_init.resize(s_code_pos);
+	std::memcpy(s_code_init.data(), alloc(0, 0, true), s_code_pos);
+	s_data_init.resize(s_data_pos);
+	std::memcpy(s_data_init.data(), alloc(0, 0, false), s_data_pos);
+}
+
+void jit_runtime::finalize() noexcept
+{
+	// Reset JIT memory
+#ifdef CAN_OVERCOMMIT
+	utils::memory_reset(get_jit_memory(), 0x80000000);
+	utils::memory_protect(get_jit_memory(), 0x40000000, utils::protection::wx);
+#else
+	utils::memory_decommit(get_jit_memory(), 0x80000000);
+#endif
+
+	s_code_pos = 0;
+	s_data_pos = 0;
+
+	// Restore code/data snapshot
+	std::memcpy(alloc(s_code_init.size(), 1, true), s_code_init.data(), s_code_init.size());
+	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
+}
+
+::jit_runtime& asmjit::get_global_runtime()
 {
 	// Magic static
-	static asmjit::JitRuntime g_rt;
+	static ::jit_runtime g_rt;
 	return g_rt;
 }
 
@@ -37,14 +217,6 @@ void asmjit::build_transaction_abort(asmjit::X86Assembler& c, unsigned char code
 #include <set>
 #include <array>
 #include <deque>
-
-#include "types.h"
-#include "StrFmt.h"
-#include "File.h"
-#include "Log.h"
-#include "mutex.h"
-#include "sysinfo.h"
-#include "VirtualMemory.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -95,12 +267,6 @@ static void* const s_memory = []() -> void*
 	return utils::memory_reserve(s_memory_size);
 }();
 
-// Reserve 2G of memory, should replace previous area for ASLR compatibility
-static void* const s_memory2 = utils::memory_reserve(0x80000000);
-
-static u64 s_code_pos = 0;
-static u64 s_data_pos = 0;
-
 static void* s_next = s_memory;
 
 #ifdef _WIN32
@@ -135,11 +301,6 @@ extern void jit_finalize()
 	utils::memory_decommit(s_memory, s_memory_size);
 
 	s_next = s_memory;
-
-	utils::memory_decommit(s_memory2, 0x80000000);
-
-	s_code_pos = 0;
-	s_data_pos = 0;
 }
 
 // Helper class
@@ -322,15 +483,6 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 // Simple memory manager
 struct MemoryManager2 : llvm::RTDyldMemoryManager
 {
-	// Patchwork again...
-	void* const m_memory = s_memory2;
-
-	u8* const m_code = static_cast<u8*>(m_memory) + 0x00000000;
-	u8* const m_data = static_cast<u8*>(m_memory) + 0x40000000;
-
-	u64& m_code_pos = s_code_pos;
-	u64& m_data_pos = s_data_pos;
-
 	MemoryManager2() = default;
 
 	~MemoryManager2() override
@@ -339,64 +491,12 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 
 	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
-		std::lock_guard lock(s_mutex);
-
-		// Simple allocation
-		const u64 old = m_code_pos;
-		const u64 pos = ::align(m_code_pos, align);
-		m_code_pos = ::align(pos + size, align);
-
-		if (m_code_pos > 0x40000000)
-		{
-			LOG_FATAL(GENERAL, "LLVM: Out of code memory (size=0x%x, align=0x%x)", size, align);
-			return nullptr;
-		}
-
-		const u64 olda = ::align(old, 0x10000);
-		const u64 newa = ::align(m_code_pos, 0x10000);
-
-		if (olda != newa)
-		{
-			// Commit more memory
-			utils::memory_commit(m_code + olda, newa - olda, utils::protection::wx);
-		}
-
-		if (!sec_id && sec_name.empty())
-		{
-			// Special case: don't log
-			return m_code + pos;
-		}
-
-		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%x, align=0x%x)", sec_id, sec_name.data(), m_code + pos, size, align);
-		return m_code + pos;
+		return jit_runtime::alloc(size, align, true);
 	}
 
 	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
-		std::lock_guard lock(s_mutex);
-
-		// Simple allocation
-		const u64 old = m_data_pos;
-		const u64 pos = ::align(m_data_pos, align);
-		m_data_pos = ::align(pos + size, align);
-
-		if (m_data_pos > 0x40000000)
-		{
-			LOG_FATAL(GENERAL, "LLVM: Out of data memory (size=0x%x, align=0x%x)", size, align);
-			return nullptr;
-		}
-
-		const u64 olda = ::align(old, 0x10000);
-		const u64 newa = ::align(m_data_pos, 0x10000);
-
-		if (olda != newa)
-		{
-			// Commit more memory
-			utils::memory_commit(m_data + olda, newa - olda);
-		}
-
-		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%x, align=0x%x, %s)", sec_id, sec_name.data(), m_data + pos, size, align, is_ro ? "ro" : "rw");
-		return m_data + pos;
+		return jit_runtime::alloc(size, align, false);
 	}
 
 	bool finalizeMemory(std::string* = nullptr) override
@@ -660,14 +760,6 @@ void jit_compiler::fin()
 u64 jit_compiler::get(const std::string& name)
 {
 	return m_engine->getGlobalValueAddress(name);
-}
-
-u8* jit_compiler::alloc(u32 size)
-{
-	// Dummy memory manager object
-	MemoryManager2 mm;
-
-	return mm.allocateCodeSection(size, 16, 0, {});
 }
 
 #endif

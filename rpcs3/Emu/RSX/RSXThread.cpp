@@ -2612,7 +2612,7 @@ namespace rsx
 		void ZCULL_control::allocate_new_query(::rsx::thread* ptimer)
 		{
 			int retries = 0;
-			while (!Emu.IsStopped())
+			while (true)
 			{
 				for (u32 n = 0; n < occlusion_query_count; ++n)
 				{

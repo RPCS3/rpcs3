@@ -39,6 +39,7 @@
 #include "Utilities/GDBDebugServer.h"
 
 #include "Utilities/sysinfo.h"
+#include "Utilities/JIT.h"
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
@@ -274,6 +275,8 @@ void fmt_class_string<enter_button_assign>::format(std::string& out, u64 arg)
 
 void Emulator::Init()
 {
+	jit_runtime::initialize();
+
 	if (!g_tty)
 	{
 		g_tty.open(fs::get_cache_dir() + "TTY.log", fs::rewrite + fs::append);
@@ -1537,6 +1540,7 @@ void Emulator::Stop(bool restart)
 	extern void jit_finalize();
 	jit_finalize();
 #endif
+	jit_runtime::finalize();
 
 	if (restart)
 	{
