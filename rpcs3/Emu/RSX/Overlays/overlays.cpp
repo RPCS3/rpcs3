@@ -2,54 +2,66 @@
 #include "overlays.h"
 #include "../GSRender.h"
 
-#include <locale>
-#include <codecvt>
-
-#if _MSC_VER >= 1900
-// Stupid MSVC bug when T is set to char16_t
-std::string utf16_to_utf8(const std::u16string& utf16_string)
+std::string utf8_to_ascii8(const std::string& utf8_string)
 {
-	// Strip extended codes
-	auto tmp = utf16_string;
-	for (auto &c : tmp)
+	std::vector<u8> out;
+	out.reserve(utf8_string.length() + 1);
+
+	for (u32 index = 0; index < utf8_string.length(); ++index)
 	{
-		if (c > 0xFF) c = '#';
+		const auto code = (u8)utf8_string[index];
+		if (code <= 0x7F)
+		{
+			out.push_back(code);
+			continue;
+		}
+
+		auto extra_bytes = (code <= 0xDF) ? 1u : (code <= 0xEF) ? 2u : 3u;
+		index += extra_bytes;
+
+		if (extra_bytes > 1 || (code & 0x1C))
+		{
+			// Needs more bits than we could represent with extended ASCII anyway
+			out.push_back('#');
+			continue;
+		}
+
+		u8 out_code = ((code & 0x3) << 6) | (u8(utf8_string[index]) & 0x3F);
+		out.push_back(out_code);
 	}
 
-	std::wstring_convert<std::codecvt_utf8_utf16<int16_t>, int16_t> convert;
-	auto p = reinterpret_cast<const int16_t *>(tmp.data());
-	return convert.to_bytes(p, p + utf16_string.size());
+	out.push_back(0);
+	return { reinterpret_cast<char*>(out.data()) };
 }
 
-std::u16string utf8_to_utf16(const std::string& utf8_string)
+std::string utf16_to_ascii8(const std::u16string& utf16_string)
 {
-	std::wstring_convert<std::codecvt_utf8_utf16<int16_t>, int16_t> convert;
-	auto ws = convert.from_bytes(utf8_string);
-	return reinterpret_cast<const char16_t*>(ws.c_str());
-}
+	// Strip extended codes, map to '#' instead (placeholder)
+	std::vector<u8> out;
+	out.reserve(utf16_string.length() + 1);
 
-#else
-
-std::string utf16_to_utf8(const std::u16string& utf16_string)
-{
-	// Strip extended codes
-	auto tmp = utf16_string;
-	for (auto &c : tmp)
+	for (const auto& code : utf16_string)
 	{
-		if (c > 0xFF) c = '#';
+		out.push_back(code > 0xFF ? '#': (u8)code);
 	}
 
-	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-	return convert.to_bytes(tmp);
+	out.push_back(0);
+	return { reinterpret_cast<char*>(out.data()) };
 }
 
-std::u16string utf8_to_utf16(const std::string& utf8_string)
+std::u16string ascii8_to_utf16(const std::string& ascii_string)
 {
-	std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-	return convert.from_bytes(utf8_string);
-}
+	std::vector<char16_t> out;
+	out.reserve(ascii_string.length() + 1);
 
-#endif
+	for (const auto& code : ascii_string)
+	{
+		out.push_back(code > 0xFF ? '#' : (char16_t)code);
+	}
+
+	out.push_back(0);
+	return { out.data() };
+}
 
 namespace rsx
 {

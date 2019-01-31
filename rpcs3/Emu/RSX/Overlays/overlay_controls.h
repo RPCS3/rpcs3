@@ -248,7 +248,7 @@ namespace rsx
 					return{};
 
 				stbtt_aligned_quad quad;
-				stbtt_GetPackedQuad(pack_info.data(), width, height, c, &x_advance, &y_advance, &quad, true);
+				stbtt_GetPackedQuad(pack_info.data(), width, height, u8(c), &x_advance, &y_advance, &quad, true);
 				return quad;
 			}
 
@@ -270,9 +270,10 @@ namespace rsx
 				{
 					if (char c = text[i++]; c && (i <= char_limit))
 					{
-						if ((u32)c >= char_count)
+						if (u8(c) >= char_count)
 						{
 							// Unsupported glyph, render null for now
+							c = ' ';
 							c = ' ';
 						}
 
@@ -1017,7 +1018,7 @@ namespace rsx
 						last_word = text_width;
 					}
 
-					if ((u32)c > renderer->char_count)
+					if (u8(c) > renderer->char_count)
 					{
 						// Non-existent glyph
 						text_width += renderer->em_size;
@@ -1041,7 +1042,6 @@ namespace rsx
 				max_w = std::max(max_w, text_width);
 				width = (u16)ceilf(max_w);
 			}
-
 		};
 
 		struct animation_base
@@ -1376,7 +1376,7 @@ namespace rsx
 		{
 			label() {}
 
-			label(const char *text)
+			label(const std::string& text)
 			{
 				this->text = text;
 			}
