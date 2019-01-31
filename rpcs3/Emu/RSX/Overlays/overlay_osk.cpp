@@ -123,7 +123,7 @@ namespace rsx
 			else
 			{
 				m_preview.set_text(initial_text);
-				m_preview.caret_position = initial_text.length();
+				m_preview.caret_position = ::narrow<u16>(initial_text.length());
 				m_preview.fore_color.a = 1.f;
 			}
 
@@ -406,7 +406,7 @@ namespace rsx
 
 		void osk_dialog::on_text_changed()
 		{
-			const auto ws = utf8_to_utf16(m_preview.text);
+			const auto ws = ascii8_to_utf16(m_preview.text);
 			const auto length = (ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text, ws.c_str(), length);
 
@@ -660,7 +660,7 @@ namespace rsx
 
 			// Narrow to utf-8 as native does not have support for non-ascii glyphs
 			// TODO: Full multibyte string support in all of rsx::overlays (kd-11)
-			initialize_layout(layout, utf16_to_utf8(message), utf16_to_utf8(init_text));
+			initialize_layout(layout, utf16_to_ascii8(message), utf16_to_ascii8(init_text));
 		}
 	}
 }

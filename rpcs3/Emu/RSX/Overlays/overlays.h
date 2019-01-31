@@ -17,8 +17,9 @@
 #include "Utilities/Timer.h"
 
 // Utils
-std::string utf16_to_utf8(const std::u16string& utf16_string);
-std::u16string utf8_to_utf16(const std::string& utf8_string);
+std::string utf8_to_ascii8(const std::string& utf8_string);
+std::string utf16_to_ascii8(const std::u16string& utf16_string);
+std::u16string ascii8_to_utf16(const std::string& utf8_string);
 extern u64 get_system_time();
 
 // Definition of user interface implementations
@@ -495,7 +496,7 @@ namespace rsx
 				std::unique_ptr<image_info> icon_data;
 
 			public:
-				save_dialog_entry(const char* text1, const char* text2, u8 resource_id, const std::vector<u8>& icon_buf)
+				save_dialog_entry(const std::string& text1, const std::string& text2, u8 resource_id, const std::vector<u8>& icon_buf)
 				{
 					std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
 					image->set_size(160, 110);
@@ -519,16 +520,14 @@ namespace rsx
 
 					std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
 					std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
-					std::unique_ptr<overlay_element> header_text = std::make_unique<label>(text1);
-					std::unique_ptr<overlay_element> subtext = std::make_unique<label>(text2);
+					std::unique_ptr<overlay_element> header_text = std::make_unique<label>(utf8_to_ascii8(text1));
+					std::unique_ptr<overlay_element> subtext = std::make_unique<label>(utf8_to_ascii8(text2));
 
 					padding->set_size(1, 1);
 					header_text->set_size(800, 40);
-					header_text->set_text(text1);
 					header_text->set_font("Arial", 16);
 					header_text->set_wrap_text(true);
 					subtext->set_size(800, 40);
-					subtext->set_text(text2);
 					subtext->set_font("Arial", 14);
 					subtext->set_wrap_text(true);
 
@@ -634,7 +633,7 @@ namespace rsx
 				for (auto& entry : save_entries)
 				{
 					std::unique_ptr<overlay_element> e;
-					e = std::make_unique<save_dialog_entry>(entry.title.c_str(), (entry.subtitle + " - " + entry.details).c_str(), image_resource_id::raw_image, entry.iconBuf);
+					e = std::make_unique<save_dialog_entry>(entry.title, entry.subtitle + " - " + entry.details, image_resource_id::raw_image, entry.iconBuf);
 					entries.emplace_back(std::move(e));
 				}
 
@@ -702,12 +701,11 @@ namespace rsx
 
 				if (!m_list->m_items.size())
 				{
-					m_no_saves_text = std::make_unique<label>();
+					m_no_saves_text = std::make_unique<label>("There is no saved data.");
 					m_no_saves_text->set_font("Arial", 20);
 					m_no_saves_text->align_text(overlay_element::text_align::center);
 					m_no_saves_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
 					m_no_saves_text->set_size(m_list->w, 30);
-					m_no_saves_text->set_text("There is no saved data.");
 					m_no_saves_text->back_color.a = 0;
 
 					m_no_saves = true;
@@ -909,7 +907,7 @@ namespace rsx
 				close();
 			}
 
-			s32 show(std::string text, const MsgDialogType &type, std::function<void(s32 status)> on_close)
+			s32 show(const std::string& text, const MsgDialogType &type, std::function<void(s32 status)> on_close)
 			{
 				num_progress_bars = type.progress_bar_count;
 				if (num_progress_bars)
@@ -929,7 +927,7 @@ namespace rsx
 					btn_cancel.translate(0, offset);
 				}
 
-				text_display.set_text(text.c_str());
+				text_display.set_text(utf8_to_ascii8(text));
 
 				u16 text_w, text_h;
 				text_display.measure_text(text_w, text_h);
@@ -1113,7 +1111,7 @@ namespace rsx
 				default: break;
 				}
 
-				trophy_message = "You have earned the " + trophy_message + " trophy\n" + trophy.name;
+				trophy_message = "You have earned the " + trophy_message + " trophy\n" + utf8_to_ascii8(trophy.name);
 				text_view.set_text(trophy_message);
 				text_view.auto_resize();
 
