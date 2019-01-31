@@ -45,16 +45,24 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 		return CELL_ENOMEM;
 	}
 
-	if (!alloc_addr)
+	if (const auto area = vm::get(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000)))
 	{
-		dct->used -= size;
-		return CELL_EFAULT;
+		if (u32 addr = area->alloc(size, align))
+		{
+			if (alloc_addr)
+			{
+				*alloc_addr = addr;
+				return CELL_OK;
+			}
+
+			// Dealloc using the syscall
+			sys_memory_free(addr);
+			return CELL_EFAULT;
+		}
 	}
 
-	// Allocate memory, write back the start address of the allocated area
-	*alloc_addr = verify(HERE, vm::alloc(size, align == 0x10000 ? vm::user64k : vm::user1m, align));
-
-	return CELL_OK;
+	dct->used -= size;
+	return CELL_ENOMEM;
 }
 
 error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
@@ -98,19 +106,28 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 		return ct.ret;
 	}
 
-	if (!alloc_addr)
-	{
-		ct->used -= size;
-		return CELL_EFAULT;
-	}
-
 	// Create phantom memory object
 	const auto mem = idm::make_ptr<lv2_memory_alloca>(size, align, flags, ct.ptr);
 
-	// Allocate memory
-	*alloc_addr = verify(HERE, vm::get(align == 0x10000 ? vm::user64k : vm::user1m)->alloc(size, mem->align, &mem->shm));
+	if (const auto area = vm::get(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000)))
+	{
+		if (u32 addr = area->alloc(size, mem->align, &mem->shm))
+		{
+			if (alloc_addr)
+			{
+				*alloc_addr = addr;
+				return CELL_OK;
+			}
 
-	return CELL_OK;
+			// Dealloc using the syscall
+			sys_memory_free(addr);
+			return CELL_EFAULT;
+		}
+	}
+
+	idm::remove<lv2_memory_alloca>(idm::last_id());
+	ct->used -= size;
+	return CELL_ENOMEM;
 }
 
 error_code sys_memory_free(u32 addr)

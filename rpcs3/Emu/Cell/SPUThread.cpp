@@ -564,7 +564,7 @@ void spu_thread::cpu_task()
 	{
 		while (LIKELY(!state || !check_state()))
 		{
-			jit_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
+			spu_runtime::g_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
 		}
 
 		// Print some stats
@@ -696,9 +696,6 @@ spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::stri
 
 	if (g_cfg.core.spu_decoder != spu_decoder_type::fast && g_cfg.core.spu_decoder != spu_decoder_type::precise)
 	{
-		// Initialize lookup table
-		jit_dispatcher.fill(&spu_recompiler_base::dispatch);
-
 		if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 		{
 			// Initialize stack mirror
@@ -1340,7 +1337,7 @@ bool spu_thread::process_mfc_cmd()
 				while (true)
 				{
 					result = spu_putllc_tx(addr, rtime, rdata.data(), to_write.data());
-					
+
 					if (result < 2)
 					{
 						break;

@@ -59,12 +59,14 @@ namespace vk
 
 		void memory_barrier(vk::command_buffer& cmd, bool force_init = false)
 		{
-			if (!old_contents)
+			// Helper to optionally clear/initialize memory contents depending on barrier type
+			auto null_transfer_impl = [&]()
 			{
 				if (dirty && force_init)
 				{
 					// Initialize memory contents if we did not find anything usable
 					// TODO: Properly sync with Cell
+
 					VkImageSubresourceRange range{ attachment_aspect_flag, 0, 1, 0, 1 };
 					const auto old_layout = current_layout;
 
@@ -84,14 +86,18 @@ namespace vk
 					change_image_layout(cmd, this, old_layout, range);
 					on_write();
 				}
+			};
 
+			if (!old_contents)
+			{
+				null_transfer_impl();
 				return;
 			}
 
 			auto src_texture = static_cast<vk::render_target*>(old_contents);
 			if (src_texture->get_rsx_pitch() != get_rsx_pitch())
 			{
-				LOG_TODO(RSX, "Pitch mismatch, could not transfer inherited memory");
+				LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
 				return;
 			}
 
@@ -107,8 +113,15 @@ namespace vk
 			}
 			else
 			{
-				const bool src_is_depth = !!(vk::get_aspect_flags(src_texture->info.format) & VK_IMAGE_ASPECT_DEPTH_BIT);
-				const bool dst_is_depth = !!(vk::get_aspect_flags(info.format) & VK_IMAGE_ASPECT_DEPTH_BIT);
+				const bool src_is_depth = !!(src_texture->attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
+				const bool dst_is_depth = !!(attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
+
+				if (src_is_depth != dst_is_depth)
+				{
+					// TODO: Implement proper copy_typeless for vulkan that crosses the depth<->color aspect barrier
+					null_transfer_impl();
+					return;
+				}
 
 				if (src_bpp != dst_bpp || src_is_depth || dst_is_depth)
 				{

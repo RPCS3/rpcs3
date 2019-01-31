@@ -25,7 +25,9 @@ namespace vk
 		VkPrimitiveTopology primitive;
 		u32 vertex_draw_count;
 		u32 allocated_vertex_count;
+		u32 first_vertex;
 		u32 vertex_index_base;
+		u32 vertex_index_offset;
 		u32 persistent_window_offset;
 		u32 volatile_window_offset;
 		std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
@@ -94,7 +96,7 @@ struct command_buffer_chunk: public vk::command_buffer
 			poke();
 
 		if (pending)
-			wait();
+			wait(FRAME_PRESENT_TIMEOUT);
 
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
 		num_draws = 0;
@@ -122,14 +124,14 @@ struct command_buffer_chunk: public vk::command_buffer
 		return !pending;
 	}
 
-	void wait()
+	VkResult wait(u64 timeout = 0ull)
 	{
 		reader_lock lock(guard_mutex);
 
 		if (!pending)
-			return;
+			return VK_SUCCESS;
 
-		vk::wait_for_fence(submit_fence);
+		const auto ret = vk::wait_for_fence(submit_fence, timeout);
 
 		lock.upgrade();
 
@@ -138,6 +140,8 @@ struct command_buffer_chunk: public vk::command_buffer
 			vk::reset_fence(&submit_fence);
 			pending = false;
 		}
+
+		return ret;
 	}
 };
 
@@ -438,6 +442,8 @@ public:
 	void set_viewport();
 	void set_scissor();
 	void bind_viewport();
+
+	void check_window_status();
 
 	void sync_hint(rsx::FIFO_hint hint) override;
 

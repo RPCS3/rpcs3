@@ -115,7 +115,7 @@ namespace rsx
 
 			u32 get_pos() { return m_internal_get; }
 			void sync_get() { m_ctrl->get.store(m_internal_get); }
-			void inc_get();
+			void inc_get(bool wait);
 			void set_get(u32 get);
 			void set_put(u32 put);
 

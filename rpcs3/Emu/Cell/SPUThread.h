@@ -245,12 +245,7 @@ public:
 
 	void set_value(u32 value, bool count = true)
 	{
-		const u64 new_data = u64{count} << off_count | value;
-#ifdef _MSC_VER
-		const_cast<volatile u64&>(data.raw()) = new_data;
-#else
-		__atomic_store_n(&data.raw(), new_data, __ATOMIC_RELAXED);
-#endif
+		data.release(u64{count} << off_count | value);
 	}
 
 	u32 get_value()
@@ -583,8 +578,6 @@ public:
 	u64 block_counter = 0;
 	u64 block_recover = 0;
 	u64 block_failure = 0;
-
-	std::array<spu_function_t, 0x10000> jit_dispatcher; // Dispatch table for indirect calls
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 

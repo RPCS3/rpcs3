@@ -45,6 +45,7 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, binding = 1) uniform VertexLayoutBuffer\n";
 	OS << "{\n";
 	OS << "	uint  vertex_base_index;\n";
+	OS << " uint  vertex_index_offset;\n";
 	OS << "	uvec4 input_attributes_blob[16 / 2];\n";
 	OS << "};\n\n";
 }

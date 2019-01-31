@@ -58,7 +58,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode);
 void sys_ppu_thread_yield(ppu_thread& ppu);
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr);
 error_code sys_ppu_thread_detach(u32 thread_id);
-void sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable);
+error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable); // Error code is ignored by the library
 error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio);
 error_code sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop);
 error_code sys_ppu_thread_get_stack_information(ppu_thread& ppu, vm::ptr<sys_ppu_thread_stack_t> sp);

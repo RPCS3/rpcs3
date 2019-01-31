@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "ShaderParam.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include <sstream>
@@ -28,6 +28,9 @@ class FragmentProgramDecompiler
 
 		u32 real_index = UINT32_MAX;
 
+		u32 h0_writes = 0u;   // Number of writes to the first 64-bits of the register
+		u32 h1_writes = 0u;   // Number of writes to the last 64-bits of the register
+
 		void tag(u32 index, bool half_register, bool x, bool y, bool z, bool w)
 		{
 			if (half_register)
@@ -40,6 +43,7 @@ class FragmentProgramDecompiler
 					if (w) last_write_half[3] = true;
 
 					aliased_h1 = true;
+					h1_writes++;
 				}
 				else
 				{
@@ -49,6 +53,7 @@ class FragmentProgramDecompiler
 					if (w) last_write_half[1] = true;
 
 					aliased_h0 = true;
+					h0_writes++;
 				}
 			}
 			else
@@ -59,6 +64,9 @@ class FragmentProgramDecompiler
 				if (w) last_write_half[3] = false;
 
 				aliased_r0 = true;
+
+				h0_writes++;
+				h1_writes++;
 			}
 
 			if (real_index == UINT32_MAX)
@@ -247,6 +255,7 @@ public:
 		bool has_gather_op = false;
 		bool has_wpos_input = false;
 		bool has_no_output = false;
+		bool has_discard_op = false;
 	}
 	properties;
 

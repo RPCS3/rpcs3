@@ -236,7 +236,8 @@ QPushButton::disabled {
 
 
 /* QSpinBox (Settings -> Emulator -> width/height) */
-QSpinBox {
+/* QDoubleSpinBox (Pads -> Mouse Acceleration -> x/y) */ 
+QSpinBox, QDoubleSpinBox {
 	/* background: transparent; - This hits a weird bug in Qt where background flickers */
 	background-color: #b3ac98;
 	border: 0.05em solid #4d4940;

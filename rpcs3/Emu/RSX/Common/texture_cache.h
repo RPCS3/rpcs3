@@ -1706,7 +1706,7 @@ namespace rsx
 
 				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
 				{
-					if (const bool is_active = m_rtts.address_is_bound(texaddr, false);
+					if (const bool is_active = m_rtts.address_is_bound(texaddr, true);
 						is_active || texptr->test())
 					{
 						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
