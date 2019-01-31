@@ -1127,6 +1127,9 @@ void VKGSRender::check_window_status()
 
 #else
 
+	// If the queue is in use, it should be properly consumed
+	verify(HERE), !m_frame->has_wm_events();
+
 	const auto frame_width = m_frame->client_width();
 	const auto frame_height = m_frame->client_height();
 
@@ -1965,7 +1968,11 @@ void VKGSRender::on_init_thread()
 		m_frame->disable_wm_event_queue();
 		m_shaders_cache->load(&helper, *m_device, pipeline_layout);
 		m_frame->enable_wm_event_queue();
+
+#ifdef _WIN32
+		// On windows switching to fullscreen is done by the renderer, not the UI
 		m_frame->disable_wm_fullscreen();
+#endif
 	}
 }
 
