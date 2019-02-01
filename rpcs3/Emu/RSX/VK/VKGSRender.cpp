@@ -2325,7 +2325,9 @@ void VKGSRender::queue_swap_request()
 	}
 	else
 	{
-		close_and_submit_command_buffer({ m_current_frame->present_semaphore }, m_current_command_buffer->submit_fence);
+		close_and_submit_command_buffer({ m_current_frame->present_semaphore },
+			m_current_command_buffer->submit_fence,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
 	}
 
 	m_current_frame->swap_command_buffer->pending = true;
@@ -3092,9 +3094,6 @@ void VKGSRender::reinitialize_swapchain()
 		present(&ctx);
 	}
 
-	//Wait for completion
-	vkDeviceWaitIdle(*m_device);
-
 	//Remove any old refs to the old images as they are about to be destroyed
 	m_framebuffers_to_clean.clear();
 
@@ -3183,8 +3182,8 @@ void VKGSRender::flip(int buffer)
 	{
 		if (m_draw_calls > 0)
 		{
-			//Unreachable
-			fmt::throw_exception("Possible data corruption on frame context storage detected");
+			// This can be 'legal' if the window was being resized and no polling happened because of renderer_unavailable flag
+			LOG_ERROR(RSX, "Possible data corruption on frame context storage detected");
 		}
 
 		//There were no draws and back-to-back flips happened
@@ -3240,6 +3239,7 @@ void VKGSRender::flip(int buffer)
 
 	//Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
 	verify(HERE), m_current_frame->present_image == UINT32_MAX;
+	verify(HERE), m_current_frame->swap_command_buffer == nullptr;
 
 	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->present_semaphore, timeout, &m_current_frame->present_image))
