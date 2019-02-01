@@ -9,14 +9,10 @@ namespace rsx
 		{
 			if (on_osk_close)
 			{
-				if (ok)
+				Emu.CallAfter([this, ok]()
 				{
-					on_osk_close(CELL_MSGDIALOG_BUTTON_OK);
-				}
-				else
-				{
-					on_osk_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
-				}
+					on_osk_close(ok ? CELL_MSGDIALOG_BUTTON_OK : CELL_MSGDIALOG_BUTTON_ESCAPE);
+				});
 			}
 
 			m_visible = false;
