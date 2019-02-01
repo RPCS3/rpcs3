@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -73,15 +73,23 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
-	lv2_lwmutex* mutex;
-
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> cpu_thread*
 	{
-		mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
-
-		if (!mutex)
+		if (ppu_thread_id != -1 && !idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id))
 		{
-			return 0;
+			return (cpu_thread*)(1);
+		}
+
+		lv2_lwmutex* mutex;
+
+		if (mode != 2)
+		{
+			mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
+
+			if (!mutex)
+			{
+				return (cpu_thread*)(1);
+			}
 		}
 
 		if (cond.waiters)
@@ -121,8 +129,6 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 					verify(HERE), !mutex->signaled;
 					std::lock_guard lock(mutex->mutex);
 					mutex->sq.emplace_back(result);
-					result = nullptr;
-					mode = 2; // Enforce CELL_OK
 				}
 
 				return result;
@@ -132,26 +138,31 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 		return nullptr;
 	});
 
-	if (!mutex || !cond)
+	if (!cond || cond.ret == (cpu_thread*)(1))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (cond.ret)
+	if (!cond.ret)
 	{
-		cond->awake(*cond.ret);
-	}
-	else if (mode == 2)
-	{
-		return CELL_OK;
-	}
-	else if (mode == 1 || ppu_thread_id == -1)
-	{
+		if (ppu_thread_id == -1)
+		{
+			if (mode == 3)
+			{
+				return not_an_error(CELL_ENOENT);
+			}
+			else if (mode == 2)
+			{
+				return CELL_OK;
+			}
+		}
+
 		return not_an_error(CELL_EPERM);
 	}
-	else
+
+	if (mode != 1)
 	{
-		return not_an_error(CELL_ENOENT);
+		cond->awake(*cond.ret);
 	}
 
 	return CELL_OK;
@@ -171,15 +182,18 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	std::basic_string<cpu_thread*> threads;
 
-	lv2_lwmutex* mutex;
-
-	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> u32
+	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
 	{
-		mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
+		lv2_lwmutex* mutex;
 
-		if (!mutex)
+		if (mode != 2)
 		{
-			return 0;
+			mutex = idm::check_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
+
+			if (!mutex)
+			{
+				return -1;
+			}
 		}
 
 		if (cond.waiters)
@@ -217,7 +231,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		return 0;
 	});
 
-	if (!mutex || !cond)
+	if (!cond || cond.ret == -1)
 	{
 		return CELL_ESRCH;
 	}
