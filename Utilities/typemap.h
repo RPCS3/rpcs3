@@ -128,6 +128,19 @@ namespace utils
 		static_assert(std::has_virtual_destructor_v<std::decay_t<T>>);
 	};
 
+	// Detect operator ->
+	template <typename T, typename = void>
+	struct typeinfo_pointer
+	{
+		static constexpr bool is_ptr = false;
+	};
+
+	template <typename T>
+	struct typeinfo_pointer<T, std::void_t<decltype(&std::decay_t<T>::operator->)>>
+	{
+		static constexpr bool is_ptr = true;
+	};
+
 	// Type information
 	struct typeinfo_base
 	{
@@ -469,7 +482,15 @@ namespace utils
 
 		auto operator->() const noexcept
 		{
-			return get();
+			// Invoke object's operator -> if available
+			if constexpr (typeinfo_pointer<T>::is_ptr)
+			{
+				return get()->operator->();
+			}
+			else
+			{
+				return get();
+			}
 		}
 
 		// Release the lock and set invalid state
