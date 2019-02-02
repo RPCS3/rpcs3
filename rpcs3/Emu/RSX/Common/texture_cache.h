@@ -1897,16 +1897,26 @@ namespace rsx
 				auto cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height, depth);
 				if (cached_texture)
 				{
-					//TODO: Handle invalidated framebuffer textures better. This is awful
-					if (cached_texture->get_context() == rsx::texture_upload_context::framebuffer_storage)
+					// TODO: Handle invalidated framebuffer textures better. This is awful
+					while (cached_texture->get_context() == rsx::texture_upload_context::framebuffer_storage)
 					{
 						if (!cached_texture->is_locked())
 						{
 							lock.upgrade();
 							cached_texture->set_dirty(true);
+
+							// Check again for another match if possible
+							cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height, depth);
+							if (!cached_texture) break;
+						}
+						else
+						{
+							// Let it play out (will be unlocked and flushed before a shader_read is uploaded)
+							break;
 						}
 					}
-					else
+
+					if (cached_texture && cached_texture->get_context() != rsx::texture_upload_context::framebuffer_storage)
 					{
 						if (cached_texture->get_image_type() == rsx::texture_dimension_extended::texture_dimension_1d)
 							scale_y = 0.f;
