@@ -13,6 +13,7 @@
 #include "Emu/Io/Null/NullPadHandler.h"
 
 #include "keyboard_pad_handler.h"
+#include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
@@ -826,6 +827,9 @@ std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type
 	case pad_handler::keyboard:
 		ret_handler = std::make_unique<keyboard_pad_handler>();
 		break;
+	case pad_handler::ds3:
+		ret_handler = std::make_unique<ds3_pad_handler>();
+		break;
 	case pad_handler::ds4:
 		ret_handler = std::make_unique<ds4_pad_handler>();
 		break;
@@ -879,8 +883,10 @@ void pad_settings_dialog::ChangeInputType()
 	switch (m_handler->m_type)
 	{
 #ifdef _WIN32
-	case pad_handler::ds4:
 	case pad_handler::xinput:
+#endif
+	case pad_handler::ds3:
+	case pad_handler::ds4:
 	{
 		const QString name_string = qstr(m_handler->name_string());
 		for (int i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
@@ -891,7 +897,6 @@ void pad_settings_dialog::ChangeInputType()
 		force_enable = true;
 		break;
 	}
-#endif
 	default:
 	{
 		for (int i = 0; i < device_list.size(); i++)
@@ -993,6 +998,9 @@ void pad_settings_dialog::ChangeProfile()
 	case pad_handler::keyboard:
 		ui->b_blacklist->setEnabled(false);
 		((keyboard_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		break;
+	case pad_handler::ds3:
+		((ds3_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::ds4:
 		((ds4_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);

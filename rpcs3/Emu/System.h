@@ -63,6 +63,7 @@ enum class pad_handler
 {
 	null,
 	keyboard,
+	ds3,
 	ds4,
 #ifdef _WIN32
 	xinput,
