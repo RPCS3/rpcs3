@@ -79,10 +79,10 @@ bool ds3_pad_handler::Init()
 		libusb_device_descriptor desc;
 		libusb_get_device_descriptor(devlist[index], &desc);
 
-		if (desc.idVendor != DS3_VID || desc.idProduct != DS3_PID)
+		if (desc.idVendor != DS3_VID || desc.idProduct != DS3_PID && desc.idProduct != NAVI_PID)
 			continue;
 
-		// We found a DS3 but we need to check if the driver will let us interact with it
+		// We found a DS3 or Navi but we need to check if the driver will let us interact with it
 		libusb_device_handle *devhandle;
 		if (libusb_open(devlist[index], &devhandle) != LIBUSB_SUCCESS)
 		{
@@ -135,18 +135,18 @@ bool ds3_pad_handler::Init()
 
 	if (warn_about_drivers)
 	{
-		LOG_ERROR(HLE, "[DS3] One or more DS3 pads were detected but couldn't be interacted with directly");
+		LOG_ERROR(HLE, "[DS3] One or more DS3 compatible pads were detected but couldn't be interacted with directly");
 #if defined(_WIN32) || defined(__linux__)
 		LOG_ERROR(HLE, "[DS3] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
 	}
 	else if (controllers.size() == 0)
 	{
-		LOG_WARNING(HLE, "[DS3] No controllers found!");
+		LOG_WARNING(HLE, "[DS3] No compatible controllers found!");
 	}
 	else
 	{
-		LOG_SUCCESS(HLE, "[DS3] Controllers found: %d", controllers.size());
+		LOG_SUCCESS(HLE, "[DS3] Compatible controllers found: %d", controllers.size());
 	}
 
 	is_init = true;

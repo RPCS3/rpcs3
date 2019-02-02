@@ -611,6 +611,12 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 			// Dance Dance Revolution Mat
 			info->product_id[i] = 0x0140;
 			break;
+		case CELL_PAD_PCLASS_TYPE_NAVIGATION:
+			// Sony Corp.
+			info->vendor_id[i] = 0x054C;
+			// Navigation Controller
+			info->product_id[i] = 0x042F;
+			break;
 		default:
 			// Sony Corp.
 			info->vendor_id[i] = 0x054C;

@@ -123,6 +123,8 @@ class ds3_pad_handler final : public PadHandlerBase
 	const u16 DS3_VID = 0x054C;
 	const u16 DS3_PID = 0x0268;
 
+	const u16 NAVI_PID = 0x042F;
+
 	// pseudo 'controller id' to keep track of unique controllers
 	std::vector<std::shared_ptr<ds3_device>> controllers;
 
