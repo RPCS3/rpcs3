@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectName>libusb</ProjectName>
+    <ProjectGuid>{349EE8F9-7D25-4909-AAF5-FF3FADE72187}</ProjectGuid>
+    <RootNamespace>libusb</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization Condition="'$(Configuration)'=='Release'">true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)/</IntDir>
+    <OutDir>$(SolutionDir)lib/</OutDir>
+    <TargetName>libusb</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>libusb\msvc;libusb\libusb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WINVER=0x0501;_WIN32_WINNT=0x0501;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ProgramDataBaseFileName>$(IntDir)$(TargetName).pdb</ProgramDataBaseFileName>
+      <WarningLevel>Level4</WarningLevel>
+    </ClCompile>
+    <ClCompile Condition="'$(Configuration)'=='Debug'">
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+    </ClCompile>
+    <ClCompile Condition="'$(Configuration)'=='Release'">
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+    </ClCompile>
+    <Lib>
+      <OutputFile>$(OutDir)libusb.lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="libusb\libusb\core.c" />
+    <ClCompile Include="libusb\libusb\descriptor.c" />
+    <ClCompile Include="libusb\libusb\hotplug.c" />
+    <ClCompile Include="libusb\libusb\io.c" />
+    <ClCompile Include="libusb\libusb\os\poll_windows.c" />
+    <ClCompile Include="libusb\libusb\strerror.c" />
+    <ClCompile Include="libusb\libusb\sync.c" />
+    <ClCompile Include="libusb\libusb\os\threads_windows.c" />
+    <ClCompile Include="libusb\libusb\os\windows_nt_common.c" />
+    <ClCompile Include="libusb\libusb\os\windows_usbdk.c" />
+    <ClCompile Include="libusb\libusb\os\windows_winusb.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="libusb\msvc\config.h" />
+    <ClInclude Include="libusb\libusb\hotplug.h" />
+    <ClInclude Include="libusb\libusb\libusb.h" />
+    <ClInclude Include="libusb\libusb\libusbi.h" />
+    <ClInclude Include="libusb\libusb\os\poll_windows.h" />
+    <ClInclude Include="libusb\libusb\os\threads_windows.h" />
+    <ClInclude Include="libusb\libusb\version.h" />
+    <ClInclude Include="libusb\libusb\version_nano.h" />
+    <ClInclude Include="libusb\libusb\os\windows_common.h" />
+    <ClInclude Include="libusb\libusb\os\windows_nt_common.h" />
+    <ClInclude Include="libusb\libusb\os\windows_nt_shared_types.h" />
+    <ClInclude Include="libusb\libusb\os\windows_usbdk.h" />
+    <ClInclude Include="libusb\libusb\os\windows_winusb.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -55,6 +55,24 @@ else()
 endif()
 
 
+# libusb
+add_library(3rdparty_libusb INTERFACE)
+target_include_directories(3rdparty_libusb INTERFACE libusb/libusb)
+
+if (MSVC)
+	target_include_directories(3rdparty_libusb INTERFACE libusb/libusb)
+	message("-- RPCS3: using submodule libusb present")
+elseif (APPLE)
+	find_package(libusb-1.0 REQUIRED)
+	target_include_directories(3rdparty_libusb INTERFACE ${LIBUSB_1_INCLUDE_DIRS})
+	message("-- RPCS3: using shared mac libusb-1.0")
+else ()
+	# TODO
+endif()
+
+target_link_libraries(3rdparty_libusb INTERFACE ${LIBUSB_1_LIBRARIES})
+
+
 # pugixml
 add_subdirectory(pugixml EXCLUDE_FROM_ALL)
 
@@ -348,6 +366,7 @@ add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)
 add_library(3rdparty::xxhash ALIAS xxhash)
 add_library(3rdparty::hidapi ALIAS 3rdparty_hidapi)
 add_library(3rdparty::libpng ALIAS ${LIBPNG_TARGET})
+add_library(3rdparty::libusb ALIAS 3rdparty_libusb)
 add_library(3rdparty::cereal ALIAS 3rdparty_cereal)
 add_library(3rdparty::opengl ALIAS 3rdparty_opengl)
 add_library(3rdparty::gsl ALIAS 3rdparty_gsl)

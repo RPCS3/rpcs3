@@ -61,7 +61,7 @@ set_target_properties(rpcs3
 		AUTOUIC ON)
 
 target_link_libraries(rpcs3 rpcs3_emu rpcs3_ui)
-target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi)
+target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi 3rdparty::libusb)
 target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
 
 # Win resource file
