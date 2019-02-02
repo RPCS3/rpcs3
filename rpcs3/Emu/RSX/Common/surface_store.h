@@ -3,6 +3,7 @@
 #include "Utilities/GSL.h"
 #include "Emu/Memory/vm.h"
 #include "../GCM.h"
+#include "../rsx_utils.h"
 #include <list>
 
 namespace
@@ -507,7 +508,7 @@ namespace rsx
 //			u32 clip_x = clip_horizontal_reg;
 //			u32 clip_y = clip_vertical_reg;
 
-			cache_tag++;
+			cache_tag = rsx::get_shared_tag();
 			m_memory_tree.clear();
 
 			// Make previous RTTs sampleable
@@ -542,15 +543,11 @@ namespace rsx
 		}
 
 		/**
-		 * Search for given address in stored color surface and returns it if size/format match.
+		 * Search for given address in stored color surface
 		 * Return an empty surface_type otherwise.
 		 */
 		surface_type get_texture_from_render_target_if_applicable(u32 address)
 		{
-			// TODO: Handle texture that overlaps one (or several) surface.
-			// Handle texture conversion
-			// FIXME: Disgaea 3 loading screen seems to use a subset of a surface. It's not properly handled here.
-			// Note: not const because conversions/resolve/... can happen
 			auto It = m_render_targets_storage.find(address);
 			if (It != m_render_targets_storage.end())
 				return Traits::get(It->second);
@@ -558,12 +555,11 @@ namespace rsx
 		}
 
 		/**
-		* Search for given address in stored depth stencil surface and returns it if size/format match.
+		* Search for given address in stored depth stencil surface
 		* Return an empty surface_type otherwise.
 		*/
 		surface_type get_texture_from_depth_stencil_if_applicable(u32 address)
 		{
-			// TODO: Same as above although there wasn't any game using corner case for DS yet.
 			auto It = m_depth_stencil_storage.find(address);
 			if (It != m_depth_stencil_storage.end())
 				return Traits::get(It->second);
@@ -723,7 +719,7 @@ namespace rsx
 						invalidated_resources.push_back(std::move(It->second));
 						m_render_targets_storage.erase(It);
 
-						cache_tag++;
+						cache_tag = rsx::get_shared_tag();
 						return;
 					}
 				}
@@ -741,7 +737,7 @@ namespace rsx
 						invalidated_resources.push_back(std::move(It->second));
 						m_depth_stencil_storage.erase(It);
 
-						cache_tag++;
+						cache_tag = rsx::get_shared_tag();
 						return;
 					}
 				}
@@ -768,7 +764,7 @@ namespace rsx
 					invalidated_resources.push_back(std::move(It->second));
 					m_render_targets_storage.erase(It);
 
-					cache_tag++;
+					cache_tag = rsx::get_shared_tag();
 					return;
 				}
 			}
@@ -781,7 +777,7 @@ namespace rsx
 					invalidated_resources.push_back(std::move(It->second));
 					m_depth_stencil_storage.erase(It);
 
-					cache_tag++;
+					cache_tag = rsx::get_shared_tag();
 					return;
 				}
 			}
@@ -1138,7 +1134,7 @@ namespace rsx
 
 		void notify_memory_structure_changed()
 		{
-			cache_tag++;
+			cache_tag = rsx::get_shared_tag();
 		}
 	};
 }

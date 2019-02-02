@@ -30,6 +30,7 @@ namespace rsx
 	// Definitions
 	class thread;
 	extern thread* g_current_renderer;
+	extern atomic_t<u64> g_rsx_shared_tag;
 
 	//Base for resources with reference counting
 	struct ref_counted
@@ -161,6 +162,12 @@ namespace rsx
 		if (x <= 2) return x;
 
 		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
+	}
+
+	// Returns an ever-increasing tag value
+	static inline u64 get_shared_tag()
+	{
+		return g_rsx_shared_tag++;
 	}
 
 	// Copy memory in inverse direction from source
@@ -409,6 +416,37 @@ namespace rsx
 		}
 
 		return std::make_tuple(x, y, width, height);
+	}
+
+	static inline std::tuple<position2u, position2u, size2u> intersect_region(
+		u32 dst_address, u16 dst_w, u16 dst_h, u16 dst_bpp,
+		u32 src_address, u16 src_w, u16 src_h, u32 src_bpp,
+		u32 pitch)
+	{
+		if (src_address < dst_address)
+		{
+			const auto offset = dst_address - src_address;
+			const auto src_y = (offset / pitch);
+			const auto src_x = (offset % pitch) / src_bpp;
+			const auto dst_x = 0u;
+			const auto dst_y = 0u;
+			const auto w = std::min<u32>(dst_w, src_w - src_x);
+			const auto h = std::min<u32>(dst_h, src_h - src_y);
+
+			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
+		}
+		else
+		{
+			const auto offset = dst_address - src_address;
+			const auto src_x = 0u;
+			const auto src_y = 0u;
+			const auto dst_y = (offset / pitch);
+			const auto dst_x = (offset % pitch) / dst_bpp;
+			const auto w = std::min<u32>(src_w, dst_w - dst_x);
+			const auto h = std::min<u32>(src_h, dst_h - dst_y);
+
+			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
+		}
 	}
 
 	static inline const f32 get_resolution_scale()
