@@ -49,6 +49,7 @@ install:
       3rdparty/GSL `
       3rdparty/hidapi `
       3rdparty/libpng `
+      3rdparty/libusb `
       3rdparty/pugixml `
       3rdparty/xxHash `
       3rdparty/yaml-cpp `

@@ -74,6 +74,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "xxhash", "xxhash", "{D16E24
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "xxhash", "3rdparty\xxhash.vcxproj", "{939FE206-1182-ABC3-1234-FEAB88E98404}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libusb", "libusb", "{6D8E86F7-84A0-45BA-ACC3-F02FC5545B3B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "3rdparty\libusb\msvc\libusb_static_2017.vcxproj", "{349EE8F9-7D25-4909-AAF5-FF3FADE72187}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug - LLVM|x64 = Debug - LLVM|x64
@@ -232,6 +236,16 @@ Global
 		{939FE206-1182-ABC3-1234-FEAB88E98404}.Release - LLVM|x64.Build.0 = Release|x64
 		{939FE206-1182-ABC3-1234-FEAB88E98404}.Release|x64.ActiveCfg = Release|x64
 		{939FE206-1182-ABC3-1234-FEAB88E98404}.Release|x64.Build.0 = Release|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug - LLVM|x64.ActiveCfg = Debug|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug - LLVM|x64.Build.0 = Debug|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug - MemLeak|x64.ActiveCfg = Debug|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug - MemLeak|x64.Build.0 = Debug|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug|x64.ActiveCfg = Debug|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Debug|x64.Build.0 = Debug|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release - LLVM|x64.ActiveCfg = Release|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release - LLVM|x64.Build.0 = Release|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release|x64.ActiveCfg = Release|x64
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -252,6 +266,7 @@ Global
 		{FDC361C5-7734-493B-8CFB-037308B35122} = {DDF904CA-2771-441A-8629-5DF2EB922A79}
 		{A107C21C-418A-4697-BB10-20C3AA60E2E4} = {FA1E6C16-CA63-45F8-8D52-E21DF396BE36}
 		{939FE206-1182-ABC3-1234-FEAB88E98404} = {D16E245C-CC5A-4B9A-8BAB-1176F02C1631}
+		{349EE8F9-7D25-4909-AAF5-FF3FADE72187} = {6D8E86F7-84A0-45BA-ACC3-F02FC5545B3B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {06CC7920-E085-4B81-9582-8DE8AAD42510}
