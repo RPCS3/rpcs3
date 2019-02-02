@@ -1,4 +1,5 @@
-#include "pad_thread.h"
+﻿#include "pad_thread.h"
+#include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
@@ -92,6 +93,9 @@ void pad_thread::Init()
 				keyptr->moveToThread((QThread *)curthread);
 				keyptr->SetTargetWindow((QWindow *)curwindow);
 				cur_pad_handler = keyptr;
+				break;
+			case pad_handler::ds3:
+				cur_pad_handler = std::make_shared<ds3_pad_handler>();
 				break;
 			case pad_handler::ds4:
 				cur_pad_handler = std::make_shared<ds4_pad_handler>();
