@@ -724,10 +724,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = myMenu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [=]()
 		{
-			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial, true)))
+			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial)))
 				open_dir(Emu.GetCustomConfigDir());
 
-			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial)))
+			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial, true)))
 				open_dir(data_base_dir);
 		});
 	}
