@@ -48,3 +48,6 @@
 	path = 3rdparty/libpng
 	url = https://github.com/glennrp/libpng.git
 	ignore = dirty
+[submodule "3rdparty/libusb"]
+	path = 3rdparty/libusb
+	url = https://github.com/RPCS3/libusb.git
