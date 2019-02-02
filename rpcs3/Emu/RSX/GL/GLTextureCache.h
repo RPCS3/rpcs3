@@ -733,6 +733,32 @@ namespace gl
 			}
 		}
 
+		void copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const std::vector<copy_region_descriptor>& sources)
+		{
+			for (const auto &slice : sources)
+			{
+				if (!slice.src)
+					continue;
+
+				if (slice.src_w == slice.dst_w && slice.src_h == slice.dst_h)
+				{
+					glCopyImageSubData(slice.src->id(), GL_TEXTURE_2D, 0, slice.src_x, slice.src_y, 0,
+						dst_image->id(), (GLenum)dst_image->get_target(), 0, slice.dst_x, slice.dst_y, slice.dst_z, slice.src_w, slice.src_h, 1);
+				}
+				else
+				{
+					verify(HERE), dst_image->get_target() == gl::texture::target::texture2D;
+
+					auto _blitter = gl::g_hw_blitter;
+					const areai src_rect = { slice.src_x, slice.src_y, slice.src_x + slice.src_w, slice.src_y + slice.src_h };
+					const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
+
+					_blitter->scale_image(cmd, slice.src, dst_image,
+						src_rect, dst_rect, false, false, {});
+				}
+			}
+		}
+
 	protected:
 
 		gl::texture_view* create_temporary_subresource_view(gl::command_context&, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
@@ -748,7 +774,7 @@ namespace gl
 					GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
 		}
 
-		gl::texture_view* generate_cubemap_from_images(gl::command_context&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_CUBE_MAP, size, size, 1, 1, ifmt);
@@ -757,14 +783,7 @@ namespace gl
 			//Empty GL_ERROR
 			glGetError();
 
-			for (const auto &slice : sources)
-			{
-				if (slice.src)
-				{
-					glCopyImageSubData(slice.src->id(), GL_TEXTURE_2D, 0, slice.src_x, slice.src_y, 0,
-						dst_image->id(), GL_TEXTURE_CUBE_MAP, 0, slice.dst_x, slice.dst_y, slice.dst_z, slice.w, slice.h, 1);
-				}
-			}
+			copy_transfer_regions_impl(cmd, dst_image.get(), sources);
 
 			if (GLenum err = glGetError())
 			{
@@ -777,7 +796,7 @@ namespace gl
 			return result;
 		}
 
-		gl::texture_view* generate_3d_from_2d_images(gl::command_context&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_3D, width, height, depth, 1, ifmt);
@@ -786,14 +805,7 @@ namespace gl
 			//Empty GL_ERROR
 			glGetError();
 
-			for (const auto &slice : sources)
-			{
-				if (slice.src)
-				{
-					glCopyImageSubData(slice.src->id(), GL_TEXTURE_2D, 0, slice.src_x, slice.src_y, 0,
-						dst_image->id(), GL_TEXTURE_3D, 0, slice.dst_x, slice.dst_y, slice.dst_z, slice.w, slice.h, 1);
-				}
-			}
+			copy_transfer_regions_impl(cmd, dst_image.get(), sources);
 
 			if (GLenum err = glGetError())
 			{
@@ -806,17 +818,12 @@ namespace gl
 			return result;
 		}
 
-		gl::texture_view* generate_atlas_from_images(gl::command_context&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
+		gl::texture_view* generate_atlas_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
 				const texture_channel_remap_t& remap_vector) override
 		{
 			auto result = create_temporary_subresource_impl(nullptr, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
-			for (const auto &region : sections_to_copy)
-			{
-				glCopyImageSubData(region.src->id(), GL_TEXTURE_2D, 0, region.src_x, region.src_y, 0,
-					result->image()->id(), GL_TEXTURE_2D, 0, region.dst_x, region.dst_y, 0, region.w, region.h, 1);
-			}
-
+			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
 			return result;
 		}
 

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "rsx_utils.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
@@ -14,6 +14,8 @@ extern "C"
 
 namespace rsx
 {
+	atomic_t<u64> g_rsx_shared_tag{ 0 };
+
 	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear)
 	{

@@ -131,16 +131,25 @@ namespace rsx
 			bool has_flushables = false;
 		};
 
+		enum surface_transform : u32
+		{
+			identity = 0,
+			argb_to_bgra = 1
+		};
+
 		struct copy_region_descriptor
 		{
 			image_resource_type src;
+			surface_transform xform;
 			u16 src_x;
 			u16 src_y;
 			u16 dst_x;
 			u16 dst_y;
 			u16 dst_z;
-			u16 w;
-			u16 h;
+			u16 src_w;
+			u16 src_h;
+			u16 dst_w;
+			u16 dst_h;
 		};
 
 		enum deferred_request_command : u32
@@ -311,7 +320,7 @@ namespace rsx
 		 */
 		inline void update_cache_tag()
 		{
-			m_cache_update_tag++;
+			m_cache_update_tag = rsx::get_shared_tag();
 		}
 
 		template <typename... Args>
@@ -965,7 +974,7 @@ namespace rsx
 		}
 
 
-		std::vector<section_storage_type*> find_texture_from_range(const address_range &test_range)
+		std::vector<section_storage_type*> find_texture_from_range(const address_range &test_range, u32 context_mask=0xFF)
 		{
 			std::vector<section_storage_type*> results;
 
@@ -977,8 +986,10 @@ namespace rsx
 				//if (tex.get_section_base() > test_range.start)
 				//	continue;
 
-				if (!tex.is_dirty())
+				if (!tex.is_dirty() && (context_mask & (u32)tex.get_context()))
+				{
 					results.push_back(&tex);
+				}
 			}
 
 			return results;
@@ -1376,7 +1387,15 @@ namespace rsx
 				std::vector<copy_region_descriptor> sections(6);
 				for (u16 n = 0; n < 6; ++n)
 				{
-					sections[n] = { desc.external_handle, 0, (u16)(desc.height * n), 0, 0, n, desc.width, desc.height };
+					sections[n] =
+					{
+						desc.external_handle,
+						surface_transform::identity,
+						0, (u16)(desc.height * n),
+						0, 0, n,
+						desc.width, desc.height,
+						desc.width, desc.height
+					};
 				}
 
 				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, sections, desc.remap);
@@ -1393,7 +1412,15 @@ namespace rsx
 				sections.resize(desc.depth);
 				for (u16 n = 0; n < desc.depth; ++n)
 				{
-					sections[n] = { desc.external_handle, 0, (u16)(desc.height * n), 0, 0, n, desc.width, desc.height };
+					sections[n] =
+					{
+						desc.external_handle,
+						surface_transform::identity,
+						0, (u16)(desc.height * n),
+						0, 0, n,
+						desc.width, desc.height,
+						desc.width, desc.height
+					};
 				}
 
 				result = generate_3d_from_2d_images(cmd, desc.gcm_format, desc.width, desc.height, desc.depth, sections, desc.remap);
@@ -1455,16 +1482,19 @@ namespace rsx
 					{
 						section.surface->read_barrier(cmd);
 
+						const auto src_width = rsx::apply_resolution_scale(section.width, true), dst_width = src_width;
+						const auto src_height = rsx::apply_resolution_scale(section.height, true), dst_height = src_height;
 						surfaces.push_back
 						({
 							section.surface->get_surface(),
+							surface_transform::identity,
 							rsx::apply_resolution_scale(section.src_x, true),
 							rsx::apply_resolution_scale(section.src_y, true),
 							rsx::apply_resolution_scale(section.dst_x, true),
 							rsx::apply_resolution_scale(section.dst_y, true),
 							slice,
-							rsx::apply_resolution_scale(section.width, true),
-							rsx::apply_resolution_scale(section.height, true)
+							src_width, src_height,
+							dst_width, dst_height
 						});
 					}
 				}
@@ -1554,52 +1584,141 @@ namespace rsx
 			auto overlapping = m_rtts.get_merged_texture_memory_region(texaddr, tex_width, tex_height, tex_pitch, bpp);
 			bool requires_merging = false;
 
-			AUDIT(!overlapping.empty());
-			if (overlapping.size() > 1)
+			verify(HERE), !overlapping.empty();
+			if (LIKELY(overlapping.back().surface == texptr))
 			{
-				// The returned values are sorted with oldest first and newest last
-				// This allows newer data to overwrite older memory when merging the list
-				if (overlapping.back().surface == texptr)
-				{
-					// The texture 'proposed' by the previous lookup is the newest one
-					// If it occupies the entire requested region, just use it as-is
-					requires_merging = (internal_width > surface_width || internal_height > surface_height);
-				}
-				else
-				{
-					requires_merging = true;
-				}
+				// The texture 'proposed' by the previous lookup is the newest one
+				// If it occupies the entire requested region, just use it as-is
+				requires_merging = (internal_width > surface_width || internal_height > surface_height);
+			}
+			else
+			{
+				verify(HERE), overlapping.size() > 1;
+				requires_merging = true;
 			}
 
 			if (requires_merging)
 			{
-				const auto w = rsx::apply_resolution_scale(internal_width, true);
-				const auto h = rsx::apply_resolution_scale(internal_height, true);
+				// TODO: For now we're only testing against blit engine dst, should add other types as wel
+				const auto range = rsx::address_range::start_length(texaddr, tex_pitch * tex_height);
+				auto local_resources = find_texture_from_range(range, rsx::texture_upload_context::blit_engine_dst);
 
-				sampled_image_descriptor result = { texptr->get_surface(), deferred_request_command::atlas_gather,
-						texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
-						scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
-
-				result.external_subresource_desc.sections_to_copy.reserve(overlapping.size());
-
-				for (auto &section : overlapping)
+				if (local_resources.empty() && overlapping.size() == 1)
 				{
-					section.surface->read_barrier(cmd);
-
-					result.external_subresource_desc.sections_to_copy.push_back
-					({
-						section.surface->get_surface(),
-						rsx::apply_resolution_scale(section.src_x, true),
-						rsx::apply_resolution_scale(section.src_y, true),
-						rsx::apply_resolution_scale(section.dst_x, true),
-						rsx::apply_resolution_scale(section.dst_y, true),
-						0,
-						rsx::apply_resolution_scale(section.width, true),
-						rsx::apply_resolution_scale(section.height, true)
-					});
+					// TODO: Fall back to full upload and merge
 				}
+				else
+				{
+					const auto w = rsx::apply_resolution_scale(internal_width, true);
+					const auto h = rsx::apply_resolution_scale(internal_height, true);
 
-				return result;
+					sampled_image_descriptor result = { texptr->get_surface(), deferred_request_command::atlas_gather,
+							texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
+							scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
+
+					result.external_subresource_desc.sections_to_copy.reserve(overlapping.size() + local_resources.size());
+
+					auto add_rtt_resource = [&](auto& section)
+					{
+						section.surface->read_barrier(cmd);
+
+						const auto src_width = rsx::apply_resolution_scale(section.width, true), dst_width = src_width;
+						const auto src_height = rsx::apply_resolution_scale(section.height, true), dst_height = src_height;
+						result.external_subresource_desc.sections_to_copy.push_back
+						({
+							section.surface->get_surface(),
+							surface_transform::identity,
+							rsx::apply_resolution_scale(section.src_x, true),
+							rsx::apply_resolution_scale(section.src_y, true),
+							rsx::apply_resolution_scale(section.dst_x, true),
+							rsx::apply_resolution_scale(section.dst_y, true),
+							0,
+							src_width, src_height,
+							dst_width, dst_height
+							});
+					};
+
+					auto add_local_resource = [&](auto& section)
+					{
+						// Intersect this resource with the original one
+						const auto section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
+						const auto clipped = rsx::intersect_region(texaddr, tex_width, tex_height, bpp,
+							section->get_section_base(), section->get_width(), section->get_height(), section_bpp, tex_pitch);
+
+						// Since output is upscaled, also upscale on dst
+						result.external_subresource_desc.sections_to_copy.push_back
+						({
+							section->get_raw_texture(),
+							is_depth ? surface_transform::identity : surface_transform::argb_to_bgra,
+							(u16)std::get<0>(clipped).x,
+							(u16)std::get<0>(clipped).y,
+							rsx::apply_resolution_scale((u16)std::get<1>(clipped).x, true),
+							rsx::apply_resolution_scale((u16)std::get<1>(clipped).y, true),
+							0,
+							(u16)std::get<2>(clipped).width,
+							(u16)std::get<2>(clipped).height,
+							rsx::apply_resolution_scale((u16)std::get<2>(clipped).width, true),
+							rsx::apply_resolution_scale((u16)std::get<2>(clipped).height, true),
+							});
+					};
+
+					if (LIKELY(local_resources.empty()))
+					{
+						for (auto &section : overlapping)
+						{
+							add_rtt_resource(section);
+						}
+					}
+					else
+					{
+						// Need to preserve sorting order
+						struct sort_helper
+						{
+							u64 tag;   // Timestamp
+							u32 list;  // List source, 0 = fbo, 1 = local
+							u32 index; // Index in list
+						};
+
+						std::vector<sort_helper> sort_list;
+						sort_list.reserve(overlapping.size() + local_resources.size());
+
+						for (u32 index = 0; index < overlapping.size(); ++index)
+						{
+							sort_list.push_back({ overlapping[index].surface->last_use_tag, 0, index });
+						}
+
+						for (u32 index = 0; index < local_resources.size(); ++index)
+						{
+							if (local_resources[index]->get_rsx_pitch() != tex_pitch)
+								continue;
+
+							// TODO: Typeless transfers
+							if (local_resources[index]->is_depth_texture() != is_depth)
+								continue;
+
+							sort_list.push_back({ local_resources[index]->last_write_tag, 1, index });
+						}
+
+						std::sort(sort_list.begin(), sort_list.end(), [](const auto &a, const auto &b)
+						{
+							return (a.tag < b.tag);
+						});
+
+						for (const auto &e : sort_list)
+						{
+							if (e.list == 0)
+							{
+								add_rtt_resource(overlapping[e.index]);
+							}
+							else
+							{
+								add_local_resource(local_resources[e.index]);
+							}
+						}
+					}
+
+					return result;
+				}
 			}
 
 			bool requires_processing = surface_width > internal_width || surface_height > internal_height;
@@ -1688,7 +1807,8 @@ namespace rsx
 			{
 				// Check for sampleable rtts from previous render passes
 				// TODO: When framebuffer Y compression is properly handled, this section can be removed. A more accurate framebuffer storage check exists below this block
-				if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
+				if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr);
+					texptr && texptr->get_rsx_pitch() == tex_pitch)
 				{
 					if (const bool is_active = m_rtts.address_is_bound(texaddr, false);
 						is_active || texptr->test())
@@ -1704,7 +1824,8 @@ namespace rsx
 					}
 				}
 
-				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
+				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr);
+					texptr && texptr->get_rsx_pitch() == tex_pitch)
 				{
 					if (const bool is_active = m_rtts.address_is_bound(texaddr, true);
 						is_active || texptr->test())
@@ -1797,13 +1918,12 @@ namespace rsx
 				if (is_hw_blit_engine_compatible(format))
 				{
 					//Find based on range instead
-					auto overlapping_surfaces = find_texture_from_range(tex_range);
+					auto overlapping_surfaces = find_texture_from_range(tex_range, rsx::texture_upload_context::blit_engine_dst);
 					if (!overlapping_surfaces.empty())
 					{
 						for (const auto &surface : overlapping_surfaces)
 						{
-							if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst ||
-								!surface->overlaps(tex_range, rsx::section_bounds::confirmed_range))
+							if (!surface->overlaps(tex_range, rsx::section_bounds::confirmed_range))
 								continue;
 
 							if (surface->get_width() >= tex_width && surface->get_height() >= tex_height)
@@ -1893,7 +2013,7 @@ namespace rsx
 			u16 dst_h = dst.clip_height;
 
 			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, false, false);
+			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, false, false, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			if (dst_is_render_target && dst_subres.surface->get_native_pitch() != dst.pitch)
@@ -2027,13 +2147,10 @@ namespace rsx
 			if (!dst_is_render_target)
 			{
 				// Check for any available region that will fit this one
-				auto overlapping_surfaces = find_texture_from_range(address_range::start_length(dst_address, dst.pitch * dst.clip_height));
+				auto overlapping_surfaces = find_texture_from_range(address_range::start_length(dst_address, dst.pitch * dst.clip_height), rsx::texture_upload_context::blit_engine_dst);
 
 				for (const auto &surface : overlapping_surfaces)
 				{
-					if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
-						continue;
-
 					if (surface->get_rsx_pitch() != dst.pitch)
 						continue;
 
