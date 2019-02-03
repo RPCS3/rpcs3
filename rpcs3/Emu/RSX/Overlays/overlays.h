@@ -496,7 +496,7 @@ namespace rsx
 				std::unique_ptr<image_info> icon_data;
 
 			public:
-				save_dialog_entry(const std::string& text1, const std::string& text2, u8 resource_id, const std::vector<u8>& icon_buf)
+				save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf)
 				{
 					std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
 					image->set_size(160, 110);
@@ -527,11 +527,10 @@ namespace rsx
 					header_text->set_size(800, 40);
 					header_text->set_font("Arial", 16);
 					header_text->set_wrap_text(true);
-					subtext->set_size(800, 40);
+
+					subtext->set_size(800, 0);
 					subtext->set_font("Arial", 14);
 					subtext->set_wrap_text(true);
-
-					// Auto-resize save details label
 					static_cast<label*>(subtext.get())->auto_resize(true);
 
 					// Make back color transparent for text
@@ -542,6 +541,25 @@ namespace rsx
 					static_cast<vertical_layout*>(text_stack.get())->add_element(padding);
 					static_cast<vertical_layout*>(text_stack.get())->add_element(header_text);
 					static_cast<vertical_layout*>(text_stack.get())->add_element(subtext);
+
+					if (!text3.empty())
+					{
+						// Detail info actually exists
+						std::unique_ptr<overlay_element> detail = std::make_unique<label>(utf8_to_ascii8(text3));
+						detail->set_size(800, 0);
+						detail->set_font("Arial", 12);
+						detail->set_wrap_text(true);
+						detail->back_color.a = 0.f;
+						static_cast<label*>(detail.get())->auto_resize(true);
+						static_cast<vertical_layout*>(text_stack.get())->add_element(detail);
+					}
+
+					if (text_stack->h > image->h)
+					{
+						std::unique_ptr<overlay_element> padding2 = std::make_unique<spacer>();
+						padding2->set_size(1, 5);
+						static_cast<vertical_layout*>(text_stack.get())->add_element(padding2);
+					}
 
 					// Pack
 					this->pack_padding = 15;
@@ -633,7 +651,7 @@ namespace rsx
 				for (auto& entry : save_entries)
 				{
 					std::unique_ptr<overlay_element> e;
-					e = std::make_unique<save_dialog_entry>(entry.title, entry.subtitle + " - " + entry.details, image_resource_id::raw_image, entry.iconBuf);
+					e = std::make_unique<save_dialog_entry>(entry.title, entry.subtitle, entry.details, image_resource_id::raw_image, entry.iconBuf);
 					entries.emplace_back(std::move(e));
 				}
 
@@ -686,7 +704,7 @@ namespace rsx
 						id = image_resource_id::raw_image;
 					}
 
-					new_stub = std::make_unique<save_dialog_entry>(title, "Select to create a new entry", id, icon);
+					new_stub = std::make_unique<save_dialog_entry>(title, "Select to create a new entry", "", id, icon);
 
 					m_list->add_entry(new_stub);
 				}
