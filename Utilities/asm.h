@@ -9,6 +9,8 @@ namespace utils
 #ifdef _MSC_VER
 		ulong res;
 		return _BitScanReverse(&res, arg) || nonzero ? res ^ 31 : 32;
+#elif __LZCNT__
+		return _lzcnt_u32(arg);
 #else
 		return arg || nonzero ? __builtin_clz(arg) : 32;
 #endif
@@ -19,6 +21,8 @@ namespace utils
 #ifdef _MSC_VER
 		ulong res;
 		return _BitScanReverse64(&res, arg) || nonzero ? res ^ 63 : 64;
+#elif __LZCNT__
+		return _lzcnt_u64(arg);
 #else
 		return arg || nonzero ? __builtin_clzll(arg) : 64;
 #endif
@@ -29,6 +33,8 @@ namespace utils
 #ifdef _MSC_VER
 		ulong res;
 		return _BitScanForward(&res, arg) || nonzero ? res : 32;
+#elif __BMI__
+		return _tzcnt_u32(arg);
 #else
 		return arg || nonzero ? __builtin_ctz(arg) : 32;
 #endif
@@ -39,6 +45,8 @@ namespace utils
 #ifdef _MSC_VER
 		ulong res;
 		return _BitScanForward64(&res, arg) || nonzero ? res : 64;
+#elif __BMI__
+		return _tzcnt_u64(arg);
 #else
 		return arg || nonzero ? __builtin_ctzll(arg) : 64;
 #endif
