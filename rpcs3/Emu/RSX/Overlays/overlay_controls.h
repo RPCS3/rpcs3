@@ -248,7 +248,7 @@ namespace rsx
 					return{};
 
 				stbtt_aligned_quad quad;
-				stbtt_GetPackedQuad(pack_info.data(), width, height, u8(c), &x_advance, &y_advance, &quad, true);
+				stbtt_GetPackedQuad(pack_info.data(), width, height, u8(c), &x_advance, &y_advance, &quad, false);
 				return quad;
 			}
 

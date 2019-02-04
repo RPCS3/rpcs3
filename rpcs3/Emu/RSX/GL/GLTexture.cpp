@@ -290,13 +290,13 @@ namespace gl
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 
-	void sampler_state::apply_defaults()
+	void sampler_state::apply_defaults(GLenum default_filter)
 	{
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, GL_REPEAT);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, default_filter);
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, default_filter);
 		glSamplerParameterf(samplerHandle, GL_TEXTURE_LOD_BIAS, 0.f);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_LOD, 0);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAX_LOD, 0);
