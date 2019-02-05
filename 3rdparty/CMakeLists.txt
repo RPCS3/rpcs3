@@ -86,6 +86,11 @@ else()
 endif()
 
 
+# libusb
+add_library(3rdparty_libusb INTERFACE)
+target_include_directories(3rdparty_libusb INTERFACE libusb/libusb)
+
+
 # yaml-cpp
 # We don't want to install yaml-cpp but its cmake file doesn't have option
 # to disable it...
@@ -342,6 +347,7 @@ include(llvm.cmake)
 
 
 # add nice ALIAS targets for ease of use
+add_library(3rdparty::libusb ALIAS 3rdparty_libusb)
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::pugixml ALIAS pugixml)
 add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)
