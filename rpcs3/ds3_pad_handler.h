@@ -103,7 +103,7 @@ private:
 	std::shared_ptr<ds3_device> get_device(const std::string& padId);
 	bool get_data(const std::shared_ptr<ds3_device>& ds3dev);
 	void process_data(const std::shared_ptr<ds3_device>& ds3dev, const std::shared_ptr<Pad>& pad);
-	std::array<std::pair<u16, bool>, ds3_pad_handler::DS3KeyCodes::KeyCodeCount> ds3_pad_handler::get_button_values(const std::shared_ptr<ds3_device>& device);
+	std::array<std::pair<u16, bool>, ds3_pad_handler::DS3KeyCodes::KeyCodeCount> get_button_values(const std::shared_ptr<ds3_device>& device);
 	void send_output_report(const std::shared_ptr<ds3_device>& ds3dev);
 
 private:
