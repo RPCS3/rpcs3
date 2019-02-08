@@ -521,6 +521,11 @@ void spu_thread::cpu_stop()
 				group->stop_count++;
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 
+				if (!group->join_state)
+				{
+					group->join_state = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
+				}
+
 				if (const auto ppu = std::exchange(group->waiter, nullptr))
 				{
 					// Send exit status directly to the joining thread
@@ -2436,7 +2441,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		group->exit_status = value;
-		group->join_state |= SPU_TGJSF_GROUP_EXIT;
+		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
 
 		state += cpu_flag::stop;
 		return true;
