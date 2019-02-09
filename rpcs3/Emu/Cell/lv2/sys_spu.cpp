@@ -683,16 +683,19 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		return 0;
 	}
 
-	if (cause)
+	if (!cause)
 	{
-		*cause = static_cast<u32>(ppu.gpr[4]);
+		return CELL_EFAULT;
 	}
 
-	if (status)
+	*cause = static_cast<u32>(ppu.gpr[4]);
+
+	if (!status)
 	{
-		*status = static_cast<s32>(ppu.gpr[5]);
+		return CELL_EFAULT;
 	}
 
+	*status = static_cast<s32>(ppu.gpr[5]);
 	return CELL_OK;
 }
 
