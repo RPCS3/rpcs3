@@ -1092,17 +1092,18 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	vm::passive_unlock(ppu);
 
 	auto& res = vm::reservation_lock(addr, sizeof(u32));
+	const u64 old_time = res.load() & ~1ull;
 
-	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(old_data, reg_value);
+	const bool result = ppu.rtime == old_time && data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
-		res++;
+		res.release(old_time + 2);
 		vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 	}
 	else
 	{
-		res &= ~1ull;
+		res.release(old_time);
 	}
 
 	vm::passive_lock(ppu);
@@ -1185,17 +1186,18 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	vm::passive_unlock(ppu);
 
 	auto& res = vm::reservation_lock(addr, sizeof(u64));
+	const u64 old_time = res.load() & ~1ull;
 
-	const bool result = ppu.rtime == (res & ~1ull) && data.compare_and_swap_test(old_data, reg_value);
+	const bool result = ppu.rtime == old_time && data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
-		res++;
+		res.release(old_time + 2);
 		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 	}
 	else
 	{
-		res &= ~1ull;
+		res.release(old_time);
 	}
 
 	vm::passive_lock(ppu);
