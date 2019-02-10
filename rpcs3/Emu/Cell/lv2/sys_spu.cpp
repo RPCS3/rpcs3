@@ -648,7 +648,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			return CELL_EBUSY;
 		}
 
-		if (group->join_state)
+		if (group->join_state && group->run_state == SPU_THREAD_GROUP_STATUS_INITIALIZED)
 		{
 			// Already signaled
 			ppu.gpr[4] = group->join_state;
@@ -664,7 +664,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 		lv2_obj::sleep(ppu);
 
-		while (!group->join_state)
+		while (!group->join_state || group->run_state != SPU_THREAD_GROUP_STATUS_INITIALIZED)
 		{
 			if (ppu.is_stopped())
 			{
