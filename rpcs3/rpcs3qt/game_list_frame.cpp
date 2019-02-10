@@ -414,9 +414,9 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown);
 			game.category     = psf::get_string(psf, "CATEGORY", cat_unknown);
 			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown);
-			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL");
-			game.resolution   = psf::get_integer(psf, "RESOLUTION");
-			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT");
+			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
+			game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
+			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
 			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 
