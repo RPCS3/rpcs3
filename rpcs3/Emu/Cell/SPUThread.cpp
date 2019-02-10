@@ -531,6 +531,7 @@ void spu_thread::cpu_stop()
 					// Send exit status directly to the joining thread
 					ppu->gpr[4] = group->join_state;
 					ppu->gpr[5] = group->exit_status;
+					group->join_state.release(0);
 				}
 			}
 
