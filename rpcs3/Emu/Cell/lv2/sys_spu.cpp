@@ -607,7 +607,7 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 	}
 
 	group->exit_status = value;
-	group->join_state |= SPU_TGJSF_TERMINATED;
+	group->join_state = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
 
 	// Wait until the threads are actually stopped
 	const u64 last_stop = group->stop_count - !group->running;
@@ -648,11 +648,12 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			return CELL_EBUSY;
 		}
 
-		if (group->run_state == SPU_THREAD_GROUP_STATUS_INITIALIZED)
+		if (group->join_state && group->run_state == SPU_THREAD_GROUP_STATUS_INITIALIZED)
 		{
-			// Already terminated
+			// Already signaled
 			ppu.gpr[4] = group->join_state;
 			ppu.gpr[5] = group->exit_status;
+			group->join_state.release(0);
 			break;
 		}
 		else
@@ -661,11 +662,9 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			group->waiter = &ppu;
 		}
 
-		const u64 last_stop = group->stop_count - !group->running;
-
 		lv2_obj::sleep(ppu);
 
-		while (group->stop_count == last_stop)
+		while (!group->join_state || group->run_state != SPU_THREAD_GROUP_STATUS_INITIALIZED)
 		{
 			if (ppu.is_stopped())
 			{
@@ -674,6 +673,8 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 			group->cond.wait(lock);
 		}
+
+		group->join_state.release(0);
 	}
 	while (0);
 
@@ -682,34 +683,19 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		return 0;
 	}
 
-	switch (ppu.gpr[4] & (SPU_TGJSF_GROUP_EXIT | SPU_TGJSF_TERMINATED))
+	if (!cause)
 	{
-	case 0:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
-		break;
-	}
-	case SPU_TGJSF_GROUP_EXIT:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
-		break;
-	}
-	case SPU_TGJSF_TERMINATED:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
-		break;
-	}
-	default:
-	{
-		fmt::throw_exception("Unexpected join_state" HERE);
-	}
+		return CELL_EFAULT;
 	}
 
-	if (status)
+	*cause = static_cast<u32>(ppu.gpr[4]);
+
+	if (!status)
 	{
-		*status = static_cast<s32>(ppu.gpr[5]);
+		return CELL_EFAULT;
 	}
 
+	*status = static_cast<s32>(ppu.gpr[5]);
 	return CELL_OK;
 }
 

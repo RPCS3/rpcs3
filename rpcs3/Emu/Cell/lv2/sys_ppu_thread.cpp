@@ -120,19 +120,21 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	// Wait for cleanup
 	(*thread.ptr)();
 
-	// Get the exit status from the register
-	if (vptr)
+	if (ppu.test_stopped())
 	{
-		if (ppu.test_stopped())
-		{
-			return 0;
-		}
-
-		*vptr = thread->gpr[3];
+		return 0;
 	}
 
 	// Cleanup
 	idm::remove<named_thread<ppu_thread>>(thread->id);
+
+	if (!vptr)
+	{
+		return CELL_EFAULT;
+	}
+
+	// Get the exit status from the register
+	*vptr = thread->gpr[3];
 	return CELL_OK;
 }
 

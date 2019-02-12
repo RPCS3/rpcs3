@@ -464,8 +464,55 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	ui->renderBox->setItemText(ui->renderBox->findData("D3D12"), render_creator.name_D3D12);
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
-	ui->resBox->setItemText(ui->resBox->findData("1280x720"), tr("1280x720 (Recommended)"));
 	SubscribeTooltip(ui->resBox, json_gpu_cbo["resBox"].toString());
+	// remove unsupported resolutions from the dropdown
+	const int saved_index = ui->resBox->currentIndex();
+	bool saved_index_removed = false;
+	if (game && game->resolution > 0)
+	{
+		const std::map<u32, std::string> resolutions
+		{
+			{ 1 << 0, fmt::format("%s", video_resolution::_480) },
+			{ 1 << 1, fmt::format("%s", video_resolution::_576) },
+			{ 1 << 2, fmt::format("%s", video_resolution::_720) },
+			{ 1 << 3, fmt::format("%s", video_resolution::_1080) },
+			// { 1 << 4, fmt::format("%s", video_resolution::_480p_16:9) },
+			// { 1 << 5, fmt::format("%s", video_resolution::_576p_16:9) },
+		};
+
+		for (int i = ui->resBox->count() - 1; i >= 0; i--)
+		{
+			bool hasResolution = false;
+			for (const auto& res : resolutions)
+			{
+				if ((game->resolution & res.first) && res.second == sstr(ui->resBox->itemText(i)))
+				{
+					hasResolution = true;
+					break;
+				}
+			}
+			if (!hasResolution)
+			{
+				ui->resBox->removeItem(i);
+				if (i == saved_index)
+				{
+					saved_index_removed = true;
+				}
+			}
+		}
+	}
+	const int res_index = ui->resBox->findData("1280x720");
+	if (res_index >= 0)
+	{
+		// Rename the default resolution for users
+		ui->resBox->setItemText(res_index, tr("1280x720 (Recommended)"));
+
+		// Set the current selection to the default if the original setting wasn't valid
+		if (saved_index_removed)
+		{
+			ui->resBox->setCurrentIndex(res_index);
+		}
+	}
 
 	xemu_settings->EnhanceComboBox(ui->aspectBox, emu_settings::AspectRatio);
 	SubscribeTooltip(ui->aspectBox, json_gpu_cbo["aspectBox"].toString());

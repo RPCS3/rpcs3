@@ -2,12 +2,67 @@
 #include "overlays.h"
 #include "../GSRender.h"
 
+static auto s_ascii_lowering_map = []()
+{
+	std::unordered_map<u32, u8> _map;
+
+	// Fullwidth block (FF00-FF5E)
+	for (u32 u = 0xFF01, c = 0x21; u <= 0xFF5E; ++u, ++c)
+	{
+		_map[u] = u8(c);
+	}
+
+	// Em and En space variations (General Punctuation)
+	for (u32 u = 0x2000; u <= 0x200A; ++u)
+	{
+		_map[u] = u8(' ');
+	}
+
+	// Misc space variations
+	_map[0x202F] = u8(0xA0); // narrow NBSP
+	_map[0x205F] = u8(' ');  // medium mathematical space
+	_map[0x3164] = u8(' ');  // hangul filler
+
+	// Ideographic (CJK punctuation)
+	_map[0x3000] = u8(' ');  // space
+	_map[0x3001] = u8(',');  // comma
+	_map[0x3002] = u8('.');  // fullstop
+	_map[0x3003] = u8('"');  // ditto
+	_map[0x3007] = u8('0');  // wide zero
+	_map[0x3008] = u8('<');  // left angle brace
+	_map[0x3009] = u8('>');  // right angle brace
+	_map[0x300A] = u8(0xAB); // double left angle brace
+	_map[0x300B] = u8(0xBB); // double right angle brace
+	_map[0x300C] = u8('[');  // the following are all slight variations on the angular brace
+	_map[0x300D] = u8(']');
+	_map[0x300E] = u8('[');
+	_map[0x300F] = u8(']');
+	_map[0x3010] = u8('[');
+	_map[0x3011] = u8(']');
+	_map[0x3014] = u8('[');
+	_map[0x3015] = u8(']');
+	_map[0x3016] = u8('[');
+	_map[0x3017] = u8(']');
+	_map[0x3018] = u8('[');
+	_map[0x3019] = u8(']');
+	_map[0x301A] = u8('[');
+	_map[0x301B] = u8(']');
+	_map[0x301C] = u8('~');  // wave dash (inverted tilde)
+	_map[0x301D] = u8('"');  // reverse double prime quotation
+	_map[0x301E] = u8('"');  // double prime quotation
+	_map[0x301F] = u8('"');  // low double prime quotation
+	_map[0x3031] = u8('<');  // vertical kana repeat mark
+
+	return _map;
+}();
+
 std::string utf8_to_ascii8(const std::string& utf8_string)
 {
 	std::vector<u8> out;
 	out.reserve(utf8_string.length() + 1);
 
-	for (u32 index = 0; index < utf8_string.length(); ++index)
+	const auto end = utf8_string.length();
+	for (u32 index = 0; index < end; ++index)
 	{
 		const auto code = (u8)utf8_string[index];
 		if (code <= 0x7F)
@@ -16,18 +71,50 @@ std::string utf8_to_ascii8(const std::string& utf8_string)
 			continue;
 		}
 
-		auto extra_bytes = (code <= 0xDF) ? 1u : (code <= 0xEF) ? 2u : 3u;
+		const auto extra_bytes = (code <= 0xDF) ? 1u : (code <= 0xEF) ? 2u : 3u;
+		if ((index + extra_bytes) > end)
+		{
+			// Malformed string, abort
+			LOG_ERROR(GENERAL, "Failed to decode supossedly malformed utf8 string '%s'", utf8_string);
+			break;
+		}
+
+		u32 u_code = 0;
+		switch (extra_bytes)
+		{
+		case 1:
+			// 11 bits, 6 + 5
+			u_code = (u32(code & 0x1F) << 6) | u32(utf8_string[index + 1] & 0x3F);
+			break;
+		case 2:
+			// 16 bits, 6 + 6 + 4
+			u_code = (u32(code & 0xF) << 12) | (u32(utf8_string[index + 1] & 0x3F) << 6) | u32(utf8_string[index + 2] & 0x3F);
+			break;
+		case 3:
+			// 21 bits, 6 + 6 + 6 + 3
+			u_code = (u32(code & 0x7) << 18) | (u32(utf8_string[index + 1] & 0x3F) << 12) | (u32(utf8_string[index + 2] & 0x3F) << 6) | u32(utf8_string[index + 3] & 0x3F);
+			break;
+		default:
+			fmt::throw_exception("Unreachable" HERE);
+		}
+
 		index += extra_bytes;
 
-		if (extra_bytes > 1 || (code & 0x1C))
+		if (u_code <= 0xFF)
 		{
-			// Needs more bits than we could represent with extended ASCII anyway
+			// Latin-1 supplement block
+			out.push_back(u8(u_code));
+			continue;
+		}
+
+		auto replace = s_ascii_lowering_map.find(u_code);
+		if (replace == s_ascii_lowering_map.end())
+		{
 			out.push_back('#');
 			continue;
 		}
 
-		u8 out_code = ((code & 0x3) << 6) | (u8(utf8_string[index]) & 0x3F);
-		out.push_back(out_code);
+		out.push_back(replace->second);
 	}
 
 	out.push_back(0);
