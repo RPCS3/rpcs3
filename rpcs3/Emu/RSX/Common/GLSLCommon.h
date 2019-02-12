@@ -357,11 +357,11 @@ namespace glsl
 		"		//if a vertex modifier is active; vertex_base must be 0 and is ignored\n"
 		"		if (desc.modulo)\n"
 		"		{\n"
-		"			vertex_id = " << vertex_id_name << " % int(desc.frequency);\n"
+		"			vertex_id = (" << vertex_id_name << " + int(vertex_index_offset)) % int(desc.frequency);\n"
 		"		}\n"
 		"		else\n"
 		"		{\n"
-		"			vertex_id = " << vertex_id_name << " / int(desc.frequency); \n"
+		"			vertex_id = vertex_id / int(desc.frequency); \n"
 		"		}\n"
 		"	}\n"
 		"\n"
@@ -383,10 +383,15 @@ namespace glsl
 		OS <<
 		"	if ((rop_control & 0xFF) != 0)\n"
 		"	{\n"
-		"		bool alpha_test = (rop_control & 0x11) > 0;\n"
+		"		bool alpha_test = (rop_control & 0x1) > 0;\n"
 		"		uint alpha_func = ((rop_control >> 16) & 0x7);\n"
 		"		bool srgb_convert = (rop_control & 0x2) > 0;\n\n"
+		"		bool a2c_enabled = (rop_control & 0x10) > 0;\n"
 		"		if (alpha_test && !comparison_passes(" << reg0 << ".a, alpha_ref, alpha_func))\n"
+		"		{\n"
+		"			discard;\n"
+		"		}\n"
+		"		else if (a2c_enabled && !coverage_test_passes(" << reg0 << ", rop_control >> 5))\n"
 		"		{\n"
 		"			discard;\n"
 		"		}\n";
@@ -415,7 +420,9 @@ namespace glsl
 
 	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false, bool require_texture_ops = true)
 	{
-		OS << "#define _select mix\n\n";
+		OS << "#define _select mix\n";
+		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
+		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
 
 		if (require_lit_emulation)
 		{
@@ -455,6 +462,23 @@ namespace glsl
 		}
 
 		program_common::insert_compare_op(OS);
+
+		// NOTES:
+		// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
+		// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
+		// Helps to avoid A2C tested foliage disappearing in the distance
+		OS <<
+		"bool coverage_test_passes(inout vec4 _sample, uint control)\n"
+		"{\n"
+		"	if ((control & 0x1) == 0) return false;\n"
+		"\n"
+		"	float samples = ((control & 0x2) != 0)? 4.f : 2.f;\n"
+		"	float hash    = _saturate(_rand(gl_FragCoord) + 0.5f) * 0.9f;\n"
+		"	float epsilon = hash / samples;\n"
+		"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"
+		"	//_sample.a     = min(_sample.a, alpha);\n" // Cannot blend A2C samples naively as they are order independent! Causes background bleeding
+		"	return (alpha > 0.f);\n"
+		"}\n\n";
 
 		if (require_depth_conversion)
 		{

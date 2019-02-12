@@ -4598,7 +4598,7 @@ struct vertex_array_helper
 		union
 		{
 			u32 raw_value;
-			bitfield_decoder_t<0, 4> type;
+			bitfield_decoder_t<0, 3> type;
 			bitfield_decoder_t<4, 4> size;
 			bitfield_decoder_t<8, 8> stride;
 			bitfield_decoder_t<16, 16> frequency;

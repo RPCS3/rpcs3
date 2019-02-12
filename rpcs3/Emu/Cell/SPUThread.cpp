@@ -471,20 +471,20 @@ void spu_thread::cpu_init()
 	ch_tag_upd = 0;
 	ch_tag_mask = 0;
 	mfc_prxy_mask = 0;
-	ch_tag_stat.data.store({});
+	ch_tag_stat.data.release({});
 	ch_stall_mask = 0;
-	ch_stall_stat.data.store({});
-	ch_atomic_stat.data.store({});
+	ch_stall_stat.data.release({});
+	ch_atomic_stat.data.release({});
 
 	ch_in_mbox.clear();
 
-	ch_out_mbox.data.store({});
-	ch_out_intr_mbox.data.store({});
+	ch_out_mbox.data.release({});
+	ch_out_intr_mbox.data.release({});
 
 	snr_config = 0;
 
-	ch_snr1.data.store({});
-	ch_snr2.data.store({});
+	ch_snr1.data.release({});
+	ch_snr2.data.release({});
 
 	ch_event_mask = 0;
 	ch_event_stat = 0;
@@ -494,9 +494,9 @@ void spu_thread::cpu_init()
 	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
 
-	run_ctrl = 0;
-	status = 0;
-	npc = 0;
+	run_ctrl.release(0);
+	status.release(0);
+	npc.release(0);
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -520,6 +520,11 @@ void spu_thread::cpu_stop()
 				std::lock_guard lock(group->mutex);
 				group->stop_count++;
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+
+				if (!group->join_state)
+				{
+					group->join_state = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
+				}
 
 				if (const auto ppu = std::exchange(group->waiter, nullptr))
 				{
@@ -564,7 +569,7 @@ void spu_thread::cpu_task()
 	{
 		while (LIKELY(!state || !check_state()))
 		{
-			jit_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
+			spu_runtime::g_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
 		}
 
 		// Print some stats
@@ -696,9 +701,6 @@ spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::stri
 
 	if (g_cfg.core.spu_decoder != spu_decoder_type::fast && g_cfg.core.spu_decoder != spu_decoder_type::precise)
 	{
-		// Initialize lookup table
-		jit_dispatcher.fill(&spu_recompiler_base::dispatch);
-
 		if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 		{
 			// Initialize stack mirror
@@ -808,28 +810,28 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 			auto& res = vm::reservation_lock(eal, 1);
 			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
-			res++;
+			res.release(res.load() + 1);
 			break;
 		}
 		case 2:
 		{
 			auto& res = vm::reservation_lock(eal, 2);
 			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
-			res++;
+			res.release(res.load() + 1);
 			break;
 		}
 		case 4:
 		{
 			auto& res = vm::reservation_lock(eal, 4);
 			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
-			res++;
+			res.release(res.load() + 1);
 			break;
 		}
 		case 8:
 		{
 			auto& res = vm::reservation_lock(eal, 8);
 			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
-			res++;
+			res.release(res.load() + 1);
 			break;
 		}
 		default:
@@ -848,7 +850,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					size -= 16;
 				}
 
-				res++;
+				res.release(res.load() + 1);
 				break;
 			}
 
@@ -872,7 +874,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				size -= 16;
 			}
 
-			*lock = 0;
+			lock->release(0);
 			break;
 		}
 		}
@@ -1084,12 +1086,12 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			// TODO: vm::check_addr
 			vm::writer_lock lock(addr);
 			mov_rdata(data.data(), to_write.data());
-			res++;
+			res.release(res.load() + 1);
 		}
 		else
 		{
 			mov_rdata(data.data(), to_write.data());
-			res++;
+			res.release(res.load() + 1);
 		}
 	}
 
@@ -1279,6 +1281,7 @@ bool spu_thread::process_mfc_cmd()
 		else
 		{
 			auto& res = vm::reservation_lock(addr, 128);
+			const u64 old_time = res.load() & ~1ull;
 
 			if (g_cfg.core.spu_accurate_getllar)
 			{
@@ -1288,15 +1291,15 @@ bool spu_thread::process_mfc_cmd()
 				// TODO: vm::check_addr
 				vm::writer_lock lock(addr);
 
-				ntime = res & ~1ull;
+				ntime = old_time;
 				mov_rdata(dst.data(), data.data());
-				res &= ~1ull;
+				res.release(old_time);
 			}
 			else
 			{
-				ntime = res & ~1ull;
+				ntime = old_time;
 				mov_rdata(dst.data(), data.data());
-				res &= ~1ull;
+				res.release(old_time);
 			}
 		}
 
@@ -1340,7 +1343,7 @@ bool spu_thread::process_mfc_cmd()
 				while (true)
 				{
 					result = spu_putllc_tx(addr, rtime, rdata.data(), to_write.data());
-					
+
 					if (result < 2)
 					{
 						break;
@@ -1353,8 +1356,9 @@ bool spu_thread::process_mfc_cmd()
 			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rdata == data)
 			{
 				auto& res = vm::reservation_lock(raddr, 128);
+				const u64 old_time = res.load() & ~1ull;
 
-				if (rtime == (res & ~1ull))
+				if (rtime == old_time)
 				{
 					*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
@@ -1365,17 +1369,17 @@ bool spu_thread::process_mfc_cmd()
 					if (rdata == data)
 					{
 						mov_rdata(data.data(), to_write.data());
-						res++;
+						res.release(old_time + 2);
 						result = 1;
 					}
 					else
 					{
-						res &= ~1ull;
+						res.release(old_time);
 					}
 				}
 				else
 				{
-					res &= ~1ull;
+					res.release(old_time);
 				}
 			}
 		}
@@ -2439,7 +2443,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		group->exit_status = value;
-		group->join_state |= SPU_TGJSF_GROUP_EXIT;
+		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
 
 		state += cpu_flag::stop;
 		return true;

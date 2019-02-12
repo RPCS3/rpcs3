@@ -39,6 +39,7 @@
 #include "Utilities/GDBDebugServer.h"
 
 #include "Utilities/sysinfo.h"
+#include "Utilities/JIT.h"
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
@@ -274,6 +275,8 @@ void fmt_class_string<enter_button_assign>::format(std::string& out, u64 arg)
 
 void Emulator::Init()
 {
+	jit_runtime::initialize();
+
 	if (!g_tty)
 	{
 		g_tty.open(fs::get_cache_dir() + "TTY.log", fs::rewrite + fs::append);
@@ -583,7 +586,7 @@ void Emulator::LimitCacheSize()
 	LOG_SUCCESS(GENERAL, "Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
 }
 
-bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
+bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, bool force_global_config)
 {
 	if (g_cfg.vfs.limit_cache_size)
 		LimitCacheSize();
@@ -600,7 +603,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 	if (direct && fs::exists(path))
 	{
 		m_path = path;
-		Load(add_only);
+		Load(add_only, force_global_config);
 		return true;
 	}
 
@@ -611,7 +614,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only)
 		if (fs::is_file(elf))
 		{
 			m_path = elf;
-			Load(add_only);
+			Load(add_only, force_global_config);
 			return true;
 		}
 	}
@@ -694,12 +697,33 @@ std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const 
 	return game_path;
 }
 
+std::string Emulator::GetCustomConfigDir()
+{
+#ifdef _WIN32
+	return fs::get_config_dir() + "config/custom_configs/";
+#else
+	return fs::get_config_dir() + "custom_configs/";
+#endif
+}
+
+std::string Emulator::GetCustomConfigPath(const std::string& title_id, bool get_deprecated_path)
+{
+	std::string path;
+
+	if (get_deprecated_path)
+		path = fs::get_config_dir() + "data/" + title_id + "/config.yml";
+	else
+		path = GetCustomConfigDir() + "config_" + title_id + ".yml";
+
+	return path;
+}
+
 void Emulator::SetForceBoot(bool force_boot)
 {
 	m_force_boot = force_boot;
 }
 
-void Emulator::Load(bool add_only)
+void Emulator::Load(bool add_only, bool force_global_config)
 {
 	if (!IsStopped())
 	{
@@ -781,18 +805,31 @@ void Emulator::Load(bool add_only)
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 		LOG_NOTICE(LOADER, "Category: %s", GetCat());
 
-		// Load custom config-1
-		if (fs::file cfg_file{fs::get_config_dir() + "data/" + m_title_id + "/config.yml"})
+		if (!force_global_config)
 		{
-			LOG_NOTICE(LOADER, "Applying custom config: data/%s/config.yml", m_title_id);
-			g_cfg.from_string(cfg_file.to_string());
-		}
+			const std::string config_path_new = GetCustomConfigPath(m_title_id);
+			const std::string config_path_old = GetCustomConfigPath(m_title_id, true);
 
-		// Load custom config-2
-		if (fs::file cfg_file{m_path + ".yml"})
-		{
-			LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
-			g_cfg.from_string(cfg_file.to_string());
+			// Load custom config-1
+			if (fs::file cfg_file{ config_path_old })
+			{
+				LOG_NOTICE(LOADER, "Applying custom config: %s", config_path_old);
+				g_cfg.from_string(cfg_file.to_string());
+			}
+
+			// Load custom config-2
+			if (fs::file cfg_file{ config_path_new })
+			{
+				LOG_NOTICE(LOADER, "Applying custom config: %s", config_path_new);
+				g_cfg.from_string(cfg_file.to_string());
+			}
+
+			// Load custom config-3
+			if (fs::file cfg_file{ m_path + ".yml" })
+			{
+				LOG_NOTICE(LOADER, "Applying custom config: %s.yml", m_path);
+				g_cfg.from_string(cfg_file.to_string());
+			}
 		}
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
@@ -1537,6 +1574,7 @@ void Emulator::Stop(bool restart)
 	extern void jit_finalize();
 	jit_finalize();
 #endif
+	jit_runtime::finalize();
 
 	if (restart)
 	{

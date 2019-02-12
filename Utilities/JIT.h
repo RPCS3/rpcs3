@@ -7,10 +7,40 @@
 #include <array>
 #include <functional>
 
+enum class jit_class
+{
+	ppu_code,
+	ppu_data,
+	spu_code,
+	spu_data,
+};
+
+// ASMJIT runtime for emitting code in a single 2G region
+struct jit_runtime final : asmjit::HostRuntime
+{
+	jit_runtime();
+	~jit_runtime() override;
+
+	// Allocate executable memory
+	asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override;
+
+	// Do nothing (deallocation is delayed)
+	asmjit::Error _release(void* p) noexcept override;
+
+	// Allocate memory
+	static u8* alloc(std::size_t size, uint align, bool exec = true) noexcept;
+
+	// Should be called at least once after global initialization
+	static void initialize();
+
+	// Deallocate all memory
+	static void finalize() noexcept;
+};
+
 namespace asmjit
 {
 	// Should only be used to build global functions
-	JitRuntime& get_global_runtime();
+	::jit_runtime& get_global_runtime();
 
 	// Emit xbegin and adjacent loop, return label at xbegin
 	Label build_transaction_enter(X86Assembler& c, Label fallback);
@@ -61,6 +91,7 @@ FT build_function_asm(F&& builder)
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include "types.h"
@@ -128,9 +159,6 @@ public:
 
 	// Get compiled function address
 	u64 get(const std::string& name);
-
-	// Add functions directly to the memory manager (name -> code)
-	static std::unordered_map<std::string, u64> add(std::unordered_map<std::string, std::string>);
 
 	// Get CPU info
 	static std::string cpu(const std::string& _cpu);

@@ -574,7 +574,7 @@ void _spurs::handler_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 		CHECK_SUCCESS(sys_spu_thread_group_start(ppu, spurs->spuTG));
 
-		if (s32 rc = sys_spu_thread_group_join(ppu, spurs->spuTG, vm::null, vm::null))
+		if (s32 rc = sys_spu_thread_group_join(ppu, spurs->spuTG, vm::var<u32>{}, vm::var<u32>{}))
 		{
 			if (rc == CELL_ESTAT)
 			{

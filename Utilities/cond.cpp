@@ -10,7 +10,7 @@
 
 bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 {
-	verify("cond_variable overflow" HERE), (_old & 0xffff) == 0; // Very unlikely: it requires 65535 distinct threads to wait simultaneously
+	verify("cond_variable overflow" HERE), (_old & 0xffff) != 0xffff; // Very unlikely: it requires 65535 distinct threads to wait simultaneously
 
 	return balanced_wait_until(m_value, _timeout, [&](u32& value, auto... ret) -> int
 	{
@@ -42,7 +42,8 @@ bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 
 void cond_variable::imp_wake(u32 _count) noexcept
 {
-	balanced_awaken(m_value, m_value.atomic_op([&](u32& value) -> u32
+	// TODO (notify_one)
+	balanced_awaken<true>(m_value, m_value.atomic_op([&](u32& value) -> u32
 	{
 		// Subtract already signaled number from total amount of waiters
 		const u32 can_sig = (value & 0xffff) - (value >> 16);
@@ -266,7 +267,7 @@ void cond_x16::imp_notify() noexcept
 		return;
 	}
 
-	balanced_awaken(m_cvx16, utils::popcnt16(wait_mask));
+	balanced_awaken<true>(m_cvx16, utils::popcnt16(wait_mask));
 }
 
 bool lf_queue_base::wait(u64 _timeout)

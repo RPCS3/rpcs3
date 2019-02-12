@@ -49,7 +49,7 @@ namespace gl
 			glDeleteSamplers(1, &samplerHandle);
 		}
 
-		void bind(int index)
+		void bind(int index) const
 		{
 			glBindSampler(index, samplerHandle);
 		}
@@ -57,6 +57,6 @@ namespace gl
 		void apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image);
 		void apply(const rsx::vertex_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image);
 
-		void apply_defaults();
+		void apply_defaults(GLenum default_filter = GL_NEAREST);
 	};
 }

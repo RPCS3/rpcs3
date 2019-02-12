@@ -100,9 +100,9 @@ namespace gl
 		case texture::internal_format::compressed_rgba_s3tc_dxt5:
 			return std::make_tuple(GL_RGBA, GL_UNSIGNED_BYTE, false);
 		case texture::internal_format::r8:
-			return std::make_tuple(GL_R, GL_UNSIGNED_BYTE, false);
+			return std::make_tuple(GL_RED, GL_UNSIGNED_BYTE, false);
 		case texture::internal_format::r32f:
-			return std::make_tuple(GL_R, GL_FLOAT, true);
+			return std::make_tuple(GL_RED, GL_FLOAT, true);
 		case texture::internal_format::r5g6b5:
 			return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_6_5, true);
 		case texture::internal_format::rg8:
@@ -290,13 +290,13 @@ namespace gl
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 
-	void sampler_state::apply_defaults()
+	void sampler_state::apply_defaults(GLenum default_filter)
 	{
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, GL_REPEAT);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, default_filter);
+		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, default_filter);
 		glSamplerParameterf(samplerHandle, GL_TEXTURE_LOD_BIAS, 0.f);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_LOD, 0);
 		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAX_LOD, 0);

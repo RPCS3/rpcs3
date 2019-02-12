@@ -139,7 +139,7 @@ bool ALSABackend::AddData(const void* src, u32 num_samples)
 		return false;
 	}
 
-	if (res < 0)
+	if (false)
 	{
 		res = snd_pcm_recover(tls_handle, res, 0);
 
@@ -157,7 +157,7 @@ bool ALSABackend::AddData(const void* src, u32 num_samples)
 		LOG_WARNING(GENERAL, "ALSA: error (%d)", res);
 		return false;
 	}
-	
+
 	return true;
 }
 

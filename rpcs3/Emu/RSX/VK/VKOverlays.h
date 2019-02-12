@@ -6,6 +6,8 @@
 
 #include "../Overlays/overlays.h"
 
+#define VK_OVERLAY_MAX_DRAW_CALLS 1024
+
 namespace vk
 {
 	//TODO: Refactor text print class to inherit from this base class
@@ -67,8 +69,8 @@ namespace vk
 		{
 			VkDescriptorPoolSize descriptor_pool_sizes[2] =
 			{
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 120 * m_num_usable_samplers },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 120 },
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_OVERLAY_MAX_DRAW_CALLS * m_num_usable_samplers },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_OVERLAY_MAX_DRAW_CALLS },
 			};
 
 			//Reserve descriptor pools
@@ -226,7 +228,7 @@ namespace vk
 			else
 				program = build_pipeline(pass);
 
-			verify(HERE), m_used_descriptors < 120;
+			verify(HERE), m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS;
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
@@ -470,6 +472,7 @@ namespace vk
 		bool m_clip_enabled;
 		int  m_texture_type;
 		areaf m_clip_region;
+		size2f m_viewport_size;
 
 		std::vector<std::unique_ptr<vk::image>> resources;
 		std::unordered_map<u64, std::unique_ptr<vk::image>> font_cache;
@@ -491,14 +494,21 @@ namespace vk
 				"layout(location=3) out vec4 clip_rect;\n"
 				"layout(location=4) out vec4 parameters2;\n"
 				"\n"
+				"vec2 snap_to_grid(vec2 normalized)\n"
+				"{\n"
+				"	return (floor(normalized * regs[5].xy) + 0.5) / regs[5].xy;\n"
+				"}\n"
+				"\n"
 				"void main()\n"
 				"{\n"
 				"	tc0.xy = in_pos.zw;\n"
 				"	color = regs[1];\n"
 				"	parameters = regs[2];\n"
 				"	parameters2 = regs[4];\n"
-				"	clip_rect = regs[3] * regs[0].zwzw;\n"
+				"	clip_rect = (regs[3] * regs[0].zwzw) / regs[0].xyxy;  // Normalized coords\n"
+				"	clip_rect *= regs[5].xyxy;  // Window coords\n"
 				"	vec4 pos = vec4((in_pos.xy * regs[0].zw) / regs[0].xy, 0.5, 1.);\n"
+				"	pos.xy = snap_to_grid(pos.xy);\n"
 				"	gl_Position = (pos + pos) - 1.;\n"
 				"}\n"
 			};
@@ -726,23 +736,38 @@ namespace vk
 		{
 			m_ubo_offset = (u32)m_ubo.alloc<256>(128);
 			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
+
+			// regs[0] = scaling parameters
 			dst[0] = m_scale_offset.r;
 			dst[1] = m_scale_offset.g;
 			dst[2] = m_scale_offset.b;
 			dst[3] = m_scale_offset.a;
+
+			// regs[1] = color
 			dst[4] = m_color.r;
 			dst[5] = m_color.g;
 			dst[6] = m_color.b;
 			dst[7] = m_color.a;
+
+			// regs[2] = fs config parameters
 			dst[8] = m_time;
 			dst[9] = m_pulse_glow? 1.f : 0.f;
 			dst[10] = m_skip_texture_read? 0.f : (f32)m_texture_type;
 			dst[11] = m_clip_enabled ? 1.f : 0.f;
+
+			// regs[3] = clip rect
 			dst[12] = m_clip_region.x1;
 			dst[13] = m_clip_region.y1;
 			dst[14] = m_clip_region.x2;
 			dst[15] = m_clip_region.y2;
+
+			// regs[4] = fs config parameters 2
 			dst[16] = m_blur_strength;
+
+			// regs[5] = viewport size
+			dst[20] = m_viewport_size.width;
+			dst[21] = m_viewport_size.height;
+
 			m_ubo.unmap();
 		}
 
@@ -764,6 +789,7 @@ namespace vk
 		{
 			m_scale_offset = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			m_time = (f32)(get_system_time() / 1000) * 0.005f;
+			m_viewport_size = { f32(w), f32(h) };
 
 			for (auto &command : ui.get_compiled().draw_commands)
 			{

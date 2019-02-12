@@ -175,7 +175,7 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 			return cpu;
 		}
 
-		mutex.signaled = 1;
+		mutex.signaled.release(1);
 		return nullptr;
 	});
 

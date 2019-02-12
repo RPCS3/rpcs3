@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
 #include "Emu/System.h"
@@ -248,30 +248,32 @@ namespace rsx
 					return{};
 
 				stbtt_aligned_quad quad;
-				stbtt_GetPackedQuad(pack_info.data(), width, height, c, &x_advance, &y_advance, &quad, true);
+				stbtt_GetPackedQuad(pack_info.data(), width, height, u8(c), &x_advance, &y_advance, &quad, false);
 				return quad;
 			}
 
-			std::vector<vertex> render_text(const char *text, u16 text_limit = UINT16_MAX, bool wrap = false)
+			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char* text, u32 char_limit, u16 max_width, bool wrap)
 			{
+				x_advance = 0.f;
+				y_advance = 0.f;
+				result.clear();
+
 				if (!initialized)
 				{
-					return{};
+					return;
 				}
 
-				std::vector<vertex> result;
-
-				int i = 0;
-				f32 x_advance = 0.f, y_advance = 0.f;
+				u32 i = 0u;
 				bool skip_whitespace = false;
 
 				while (true)
 				{
-					if (char c = text[i++])
+					if (char c = text[i++]; c && (i <= char_limit))
 					{
-						if ((u32)c >= char_count)
+						if (u8(c) >= char_count)
 						{
 							// Unsupported glyph, render null for now
+							c = ' ';
 							c = ' ';
 						}
 
@@ -301,7 +303,7 @@ namespace rsx
 								skip_whitespace = false;
 							}
 
-							if (quad.x1 > text_limit)
+							if (quad.x1 > max_width)
 							{
 								bool wrapped = false;
 								bool non_whitespace_break = false;
@@ -391,10 +393,25 @@ namespace rsx
 						break;
 					}
 				}
+			}
 
+			std::vector<vertex> render_text(const char *text, u16 max_width = UINT16_MAX, bool wrap = false)
+			{
+				std::vector<vertex> result;
+				f32 unused_x, unused_y;
+
+				render_text_ex(result, unused_x, unused_y, text, UINT32_MAX, max_width, wrap);
 				return result;
 			}
 
+			std::pair<f32, f32> get_char_offset(const char *text, u16 max_length, u16 max_width = UINT16_MAX, bool wrap = false)
+			{
+				std::vector<vertex> unused;
+				f32 loc_x, loc_y;
+
+				render_text_ex(unused, loc_x, loc_y, text, max_length, max_width, wrap);
+				return { loc_x, loc_y };
+			}
 		};
 
 		// TODO: Singletons are cancer
@@ -479,10 +496,16 @@ namespace rsx
 			{
 				fade_top = 1,
 				fade_bottom,
+				select,
+				start,
 				cross,
 				circle,
 				triangle,
 				square,
+				L1,
+				R1,
+				L2,
+				R2,
 				save,
 				new_entry
 			};
@@ -495,10 +518,16 @@ namespace rsx
 			{
 				texture_resource_files.push_back("fade_top.png");
 				texture_resource_files.push_back("fade_bottom.png");
+				texture_resource_files.push_back("select.png");
+				texture_resource_files.push_back("start.png");
 				texture_resource_files.push_back("cross.png");
 				texture_resource_files.push_back("circle.png");
 				texture_resource_files.push_back("triangle.png");
 				texture_resource_files.push_back("square.png");
+				texture_resource_files.push_back("L1.png");
+				texture_resource_files.push_back("R1.png");
+				texture_resource_files.push_back("L2.png");
+				texture_resource_files.push_back("R2.png");
 				texture_resource_files.push_back("save.png");
 				texture_resource_files.push_back("new.png");
 			}
@@ -836,11 +865,14 @@ namespace rsx
 				is_compiled = false;
 			}
 
+			virtual font* get_font() const
+			{
+				return font_ref ? font_ref : fontmgr::get("Arial", 12);
+			}
+
 			virtual std::vector<vertex> render_text(const char *string, f32 x, f32 y)
 			{
-				auto renderer = font_ref;
-				if (!renderer)
-					renderer = fontmgr::get("Arial", 12);
+				auto renderer = get_font();
 
 				f32 text_extents_w = 0.f;
 				u16 clip_width = clip_text ? w : UINT16_MAX;
@@ -962,8 +994,7 @@ namespace rsx
 					return;
 				}
 
-				auto renderer = font_ref;
-				if (!renderer) renderer = fontmgr::get("Arial", 12);
+				auto renderer = get_font();
 
 				f32 text_width = 0.f;
 				f32 unused = 0.f;
@@ -987,7 +1018,7 @@ namespace rsx
 						last_word = text_width;
 					}
 
-					if ((u32)c > renderer->char_count)
+					if (u8(c) > renderer->char_count)
 					{
 						// Non-existent glyph
 						text_width += renderer->em_size;
@@ -1011,7 +1042,6 @@ namespace rsx
 				max_w = std::max(max_w, text_width);
 				width = (u16)ceilf(max_w);
 			}
-
 		};
 
 		struct animation_base
@@ -1292,7 +1322,8 @@ namespace rsx
 		struct image_button : public image_view
 		{
 			const u16 text_horizontal_offset = 25;
-			u16 m_text_offset = 0;
+			u16 m_text_offset_x = 0;
+			s16 m_text_offset_y = 0;
 
 			image_button()
 			{
@@ -1307,10 +1338,15 @@ namespace rsx
 				set_size(_w, _h);
 			}
 
+			void set_text_vertical_adjust(s16 offset)
+			{
+				m_text_offset_y = offset;
+			}
+
 			void set_size(u16 /*w*/, u16 h) override
 			{
 				image_view::set_size(h, h);
-				m_text_offset = (h / 2) + text_horizontal_offset; // By default text is at the horizontal center
+				m_text_offset_x = (h / 2) + text_horizontal_offset; // By default text is at the horizontal center
 			}
 
 			compiled_resource& get_compiled() override
@@ -1325,7 +1361,8 @@ namespace rsx
 							// Text, translate geometry to the right
 							for (auto &v : cmd.verts)
 							{
-								v.values[0] += m_text_offset;
+								v.values[0] += m_text_offset_x;
+								v.values[1] += m_text_offset_y;
 							}
 						}
 					}
@@ -1339,7 +1376,7 @@ namespace rsx
 		{
 			label() {}
 
-			label(const char *text)
+			label(const std::string& text)
 			{
 				this->text = text;
 			}
@@ -1662,6 +1699,129 @@ namespace rsx
 						compiled.add(m_accept_btn->get_compiled());
 
 					compiled_resources = compiled;
+				}
+
+				return compiled_resources;
+			}
+		};
+
+		struct edit_text : public label
+		{
+			enum direction
+			{
+				up,
+				down,
+				left,
+				right
+			};
+
+			u16 caret_position = 0;
+			u16 vertical_scroll_offset = 0;
+
+			using label::label;
+
+			void move_caret(direction dir)
+			{
+				switch (dir)
+				{
+				case left:
+				{
+					if (caret_position)
+					{
+						caret_position--;
+						refresh();
+					}
+					break;
+				}
+				case right:
+				{
+					if (caret_position < text.length())
+					{
+						caret_position++;
+						refresh();
+					}
+					break;
+				}
+				case up:
+				case down:
+					// TODO
+					break;
+				}
+			}
+
+			void insert_text(const std::string& str)
+			{
+				if (caret_position == 0)
+				{
+					// Start
+					text = str + text;
+				}
+				else if (caret_position == text.length())
+				{
+					// End
+					text += str;
+				}
+				else
+				{
+					// Middle
+					text.insert(caret_position, str);
+				}
+
+				caret_position += ::narrow<u16>(str.length());
+				refresh();
+			}
+
+			void erase()
+			{
+				if (!caret_position)
+				{
+					return;
+				}
+
+				if (caret_position == 1)
+				{
+					text = text.length() > 1? text.substr(1) : "";
+				}
+				else if (caret_position == text.length())
+				{
+					text = text.substr(0, caret_position - 1);
+				}
+				else
+				{
+					text = text.substr(0, caret_position - 1) + text.substr(caret_position);
+				}
+
+				caret_position--;
+				refresh();
+			}
+
+			compiled_resource& get_compiled() override
+			{
+				if (!is_compiled)
+				{
+					auto& compiled = label::get_compiled();
+
+					overlay_element caret;
+					auto renderer = get_font();
+					const auto caret_loc = renderer->get_char_offset(text.c_str(), caret_position,
+						clip_text ? w : UINT16_MAX, wrap_text);
+
+					caret.set_pos(u16(caret_loc.first + padding_left + x), u16(caret_loc.second + padding_top + y));
+					caret.set_size(1, u16(renderer->size_px + 2));
+					caret.fore_color = fore_color;
+					caret.back_color = fore_color;
+					caret.pulse_effect_enabled = true;
+
+					compiled.add(caret.get_compiled());
+
+					for (auto &cmd : compiled.draw_commands)
+					{
+						// TODO: Scrolling by using scroll offset
+						cmd.config.clip_region = true;
+						cmd.config.clip_rect = { f32(x), f32(y), f32(x + w), f32(y + h) };
+					}
+
+					is_compiled = true;
 				}
 
 				return compiled_resources;

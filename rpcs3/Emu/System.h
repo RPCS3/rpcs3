@@ -89,12 +89,12 @@ enum class audio_renderer
 #ifdef _WIN32
 	xaudio,
 #endif
+#ifdef HAVE_ALSA
+	alsa,
+#endif
 	openal,
 #ifdef HAVE_PULSE
 	pulse,
-#endif
-#ifdef HAVE_ALSA
-	alsa,
 #endif
 };
 
@@ -309,7 +309,7 @@ public:
 
 	std::string PPUCache() const;
 
-	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
+	bool BootGame(const std::string& path, bool direct = false, bool add_only = false, bool force_global_config = false);
 	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
@@ -322,9 +322,12 @@ public:
 	static std::string GetHddDir();
 	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user);
 
+	static std::string GetCustomConfigDir();
+	static std::string GetCustomConfigPath(const std::string& title_id, bool get_deprecated_path = false);
+
 	void SetForceBoot(bool force_boot);
 
-	void Load(bool add_only = false);
+	void Load(bool add_only = false, bool force_global_config = false);
 	void Run();
 	bool Pause();
 	void Resume();
@@ -367,7 +370,6 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
-		cfg::_bool spu_shared_runtime{this, "SPU Shared Runtime", true}; // Share compiled SPU functions between all threads
 		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size", spu_block_size_type::safe};
 		cfg::_bool spu_accurate_getllar{this, "Accurate GETLLAR", false};
 		cfg::_bool spu_accurate_putlluc{this, "Accurate PUTLLUC", false};

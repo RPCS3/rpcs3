@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
@@ -225,7 +225,7 @@ private Q_SLOTS:
 	void doubleClickedSlot(QTableWidgetItem *item);
 Q_SIGNALS:
 	void GameListFrameClosed();
-	void RequestBoot(const std::string& path);
+	void RequestBoot(const std::string& path, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/

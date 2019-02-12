@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Utilities/File.h"
+#include "Utilities/mutex.h"
+#include "Utilities/cond.h"
+#include "Utilities/JIT.h"
 #include "SPUThread.h"
 #include <vector>
 #include <bitset>
@@ -28,6 +31,49 @@ public:
 	void add(const std::vector<u32>& func);
 
 	static void initialize();
+};
+
+// Helper class
+class spu_runtime
+{
+public:
+	shared_mutex m_mutex;
+
+	cond_variable m_cond;
+
+	// All functions
+	std::map<std::vector<u32>, spu_function_t> m_map;
+
+	// Debug module output location
+	std::string m_cache_path;
+
+	// Trampoline generation workload helper
+	struct work
+	{
+		u32 size;
+		u32 level;
+		u8* rel32;
+		std::map<std::vector<u32>, spu_function_t>::iterator beg;
+		std::map<std::vector<u32>, spu_function_t>::iterator end;
+	};
+private:
+	// Scratch vector
+	std::vector<work> workload;
+
+	// Scratch vector
+	std::vector<u32> addrv{u32{0}};
+
+	// Trampoline to spu_recompiler_base::dispatch
+	spu_function_t tr_dispatch = nullptr;
+
+public:
+	spu_runtime();
+
+	// Add compiled function and generate trampoline if necessary
+	void add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled);
+
+	// All dispatchers (array allocated in jit memory)
+	static atomic_t<spu_function_t>* const g_dispatcher;
 };
 
 // SPU Recompiler instance base class
@@ -68,9 +114,6 @@ public:
 
 	// Initialize
 	virtual void init() = 0;
-
-	// Get pointer to the trampoline at given position
-	virtual spu_function_t get(u32 lsa) = 0;
 
 	// Compile function
 	virtual spu_function_t compile(std::vector<u32>&&) = 0;

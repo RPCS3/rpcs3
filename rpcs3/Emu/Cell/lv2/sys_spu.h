@@ -207,13 +207,6 @@ enum : u32
 	SYS_SPU_IMAGE_DIRECT  = 1,
 };
 
-// SPU Thread Group Join State Flag
-enum : u32
-{
-	SPU_TGJSF_TERMINATED = (1 << 1), // set if SPU Thread Group is terminated by sys_spu_thread_group_terminate
-	SPU_TGJSF_GROUP_EXIT = (1 << 2), // set if SPU Thread Group is terminated by sys_spu_thread_group_exit
-};
-
 struct lv2_spu_group
 {
 	static const u32 id_base = 1; // Wrong?
@@ -232,7 +225,7 @@ struct lv2_spu_group
 	atomic_t<s32> prio; // SPU Thread Group Priority
 	atomic_t<u32> run_state; // SPU Thread Group State
 	atomic_t<s32> exit_status; // SPU Thread Group Exit Status
-	atomic_t<u32> join_state; // flags used to detect exit cause
+	atomic_t<u32> join_state; // flags used to detect exit cause and signal
 	atomic_t<u32> running; // Number of running threads
 	cond_variable cond; // used to signal waiting PPU thread
 	atomic_t<u64> stop_count;
