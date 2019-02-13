@@ -3,9 +3,7 @@ cmake_minimum_required(VERSION 3.8.2)
 include(cotire)
 
 # Generate git-version.h at build time.
-add_custom_target(GitVersion ALL
-	COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-	-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
@@ -54,7 +52,7 @@ else()
 	add_executable(rpcs3 ${RPCS3_SRC})
 endif()
 
-add_dependencies(rpcs3 GitVersion)
+gen_git_version(${RPCS3_SRC_DIR})
 set_target_properties(rpcs3
 	PROPERTIES
 		AUTOMOC ON

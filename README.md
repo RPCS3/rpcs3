@@ -85,7 +85,7 @@ If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* fol
 While still in the project root:
 
 1) `cd .. && mkdir rpcs3_build && cd rpcs3_build`
-2) `cmake ../rpcs3/ && make GitVersion && make`
+2) `cmake ../rpcs3/ && make`
 3) Run RPCS3 with `./bin/rpcs3`
 
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
