@@ -925,7 +925,7 @@ namespace rsx
 				close();
 			}
 
-			error_code show(const std::string text, const MsgDialogType &type, std::function<void(s32 status)> on_close)
+			error_code show(const std::string& text, const MsgDialogType &type, std::function<void(s32 status)> on_close)
 			{
 				num_progress_bars = type.progress_bar_count;
 				if (num_progress_bars)

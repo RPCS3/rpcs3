@@ -1,5 +1,7 @@
-#include "sysinfo.h"
+﻿#include "sysinfo.h"
 #include "StrFmt.h"
+#include "File.h"
+#include "Emu/System.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -127,4 +129,27 @@ std::string utils::get_system_info()
 	}
 
 	return result;
+}
+
+std::string utils::get_firmware_version()
+{
+	const std::string file_path = g_cfg.vfs.get_dev_flash() + "vsh/etc/version.txt";
+	if (fs::is_file(file_path))
+	{
+		const fs::file version_file = fs::file(file_path);
+		std::string version = version_file.to_string();
+
+		// Extract version
+		const size_t start = version.find_first_of(':') + 1;
+		const size_t end = version.find_first_of(':', start);
+		version = version.substr(start, end - start);
+
+		// Trim version
+		const size_t trim_start = version.find_first_not_of('0');
+		const size_t trim_end = version.find_last_not_of('0');
+		version = version.substr(trim_start, trim_end);
+
+		return version;
+	}
+	return "";
 }

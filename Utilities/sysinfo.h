@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "types.h"
 #include <string>
@@ -44,4 +44,6 @@ namespace utils
 	bool has_xop();
 
 	std::string get_system_info();
+
+	std::string get_firmware_version();
 }
