@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -420,27 +420,11 @@ error_code sys_ppu_thread_recover_page_fault(u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	// We can only wake a thread if it is being suspended for a page fault.
-	auto pf_events = fxm::get_always<page_fault_event_entries>();
-	auto pf_event_ind = pf_events->events.begin();
-
-	for (auto event_ind = pf_events->events.begin(); event_ind != pf_events->events.end(); ++event_ind)
+	if (auto res = mmapper_thread_recover_page_fault(thread_id))
 	{
-		if (event_ind->thread_id == thread_id)
-		{
-			pf_event_ind = event_ind;
-			break;
-		}
+		return res;
 	}
 
-	if (pf_event_ind == pf_events->events.end())
-	{ // if not found...
-		return CELL_EINVAL;
-	}
-
-	pf_events->events.erase(pf_event_ind);
-
-	lv2_obj::awake(*thread);
 	return CELL_OK;
 }
 
@@ -457,17 +441,10 @@ error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_
 
 	// We can only get a context if the thread is being suspended for a page fault.
 	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	std::shared_lock lock(pf_events->pf_mutex);
 
-	bool found = false;
-	for (const auto& ev : pf_events->events)
-	{
-		if (ev.thread_id == thread_id)
-		{
-			found = true;
-			break;
-		}
-	}
-	if (!found)
+	const auto evt = pf_events->events.find(thread_id);
+	if (evt == pf_events->events.end())
 	{
 		return CELL_EINVAL;
 	}

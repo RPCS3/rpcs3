@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUThread.h"
 #include "sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_event.h"
@@ -202,7 +202,7 @@ error_code sys_mmapper_free_address(u32 addr)
 	for (const auto& ev : pf_events->events)
 	{
 		auto mem = vm::get(vm::any, addr);
-		if (mem && addr <= ev.fault_addr && ev.fault_addr <= addr + mem->size - 1)
+		if (mem && addr <= ev.second && ev.second <= addr + mem->size - 1)
 		{
 			return CELL_EBUSY;
 		}
@@ -223,6 +223,8 @@ error_code sys_mmapper_free_address(u32 addr)
 
 	// If a memory block is freed, remove it from page notification table.
 	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+	std::lock_guard lock(pf_entries->mutex);
+
 	auto ind_to_remove = pf_entries->entries.begin();
 	for (; ind_to_remove != pf_entries->entries.end(); ++ind_to_remove)
 	{
@@ -403,9 +405,9 @@ error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_
 	sys_mmapper.warning("sys_mmapper_enable_page_fault_notification(start_addr=0x%x, event_queue_id=0x%x)", start_addr, event_queue_id);
 
 	auto mem = vm::get(vm::any, start_addr);
-	if (!mem)
+	if (!mem || start_addr != mem->addr || start_addr < 0x20000000 || start_addr >= 0xC0000000)
 	{
-		return CELL_EINVAL;
+		return {CELL_EINVAL, start_addr};
 	}
 
 	// TODO: Check memory region's flags to make sure the memory can be used for page faults.
@@ -417,17 +419,6 @@ error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_
 		return CELL_ESRCH;
 	}
 
-	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
-
-	// We're not allowed to have the same queue registered more than once for page faults.
-	for (const auto& entry : pf_entries->entries)
-	{
-		if (entry.event_queue_id == event_queue_id)
-		{
-			return CELL_ESRCH;
-		}
-	}
-
 	vm::var<u32> port_id(0);
 	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
 	sys_event_port_connect_local(port_id->value(), event_queue_id);
@@ -437,8 +428,44 @@ error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_
 		return CELL_EAGAIN;
 	}
 
+	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+	std::unique_lock lock(pf_entries->mutex);
+
+	// Return error code if page fault notifications are already enabled
+	for (const auto& entry : pf_entries->entries)
+	{
+		if (entry.start_addr == start_addr)
+		{
+			lock.unlock();
+			sys_event_port_disconnect(port_id->value());
+			sys_event_port_destroy(port_id->value());
+			return CELL_EBUSY;
+		}
+	}
+
 	page_fault_notification_entry entry{ start_addr, event_queue_id, port_id->value() };
 	pf_entries->entries.emplace_back(entry);
 
 	return CELL_OK;
+}
+
+CellError mmapper_thread_recover_page_fault(u32 id)
+{
+	// We can only wake a thread if it is being suspended for a page fault.
+	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	{
+		std::lock_guard pf_lock(pf_events->pf_mutex);
+		auto pf_event_ind = pf_events->events.find(id);
+
+		if (pf_event_ind == pf_events->events.end())
+		{
+			// if not found...
+			return CELL_EINVAL;
+		}
+
+		pf_events->events.erase(pf_event_ind);
+	}
+
+	pf_events->cond.notify_all();
+	return CellError(CELL_OK);
 }

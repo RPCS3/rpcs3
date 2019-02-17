@@ -1,7 +1,8 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
@@ -1273,57 +1274,124 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 	if (cpu)
 	{
-		// TODO: Only PPU thread page fault notifications are supported
-		if (cpu->id_type() == 1 && fxm::check<page_fault_notification_entries>())
+		u32 pf_port_id = 0;
+
+		if (auto pf_entries = fxm::get<page_fault_notification_entries>())
 		{
-			for (const auto& entry : fxm::get<page_fault_notification_entries>()->entries)
+			std::shared_lock lock(pf_entries->mutex);
+
+			for (const auto& entry : pf_entries->entries)
 			{
-				auto mem = vm::get(vm::any, entry.start_addr);
-				if (!mem)
+				if (auto mem = vm::get(vm::any, entry.start_addr))
 				{
-					continue;
-				}
-				if (entry.start_addr <= addr && addr <= addr + mem->size - 1)
-				{
-					// Place the page fault event onto table so that other functions [sys_mmapper_free_address and ppu pagefault funcs]
-					// know that this thread is page faulted and where.
-
-					auto pf_entries = fxm::get_always<page_fault_event_entries>();
+					if (entry.start_addr <= addr && addr <= addr + mem->size - 1)
 					{
-						std::lock_guard pf_lock(pf_entries->pf_mutex);
-						page_fault_event pf_event{ cpu->id, addr };
-						pf_entries->events.emplace_back(pf_event);
+						pf_port_id = entry.port_id;
+						break;
 					}
-
-					// Now, we notify the game that a page fault occurred so it can rectify it.
-					// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
-					u64 data1 = addr;
-					u64 data2 = ((u64)SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) + cpu->id;
-					u64 data3 = vm::check_addr(addr, a_size, vm::page_readable) ? SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY : SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
-
-					LOG_ERROR(MEMORY, "Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
-						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
-
-					error_code sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
-
-					// If we fail due to being busy, wait a bit and try again.
-					while (sending_error == CELL_EBUSY)
-					{
-						lv2_obj::sleep(*cpu, 1000);
-						thread_ctrl::wait_for(1000);
-						sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
-					}
-
-					if (sending_error)
-					{
-						fmt::throw_exception("Unknown error %x while trying to pass page fault.", sending_error.value);
-					}
-
-					lv2_obj::sleep(*cpu);
-					thread_ctrl::wait();
-					return true;
 				}
 			}
+		}
+
+		if (pf_port_id)
+		{
+			// We notify the game that a page fault occurred so it can rectify it.
+			// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
+			u64 data1 = addr;
+			u64 data2;
+
+			if (cpu->id_type() == 1)
+			{
+				data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) | cpu->id;
+			}
+			else if (static_cast<spu_thread*>(cpu)->group)
+			{
+				data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD << 32) | cpu->id;
+			}
+			else
+			{
+				// Index is the correct ID in RawSPU
+				data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU << 32) | static_cast<spu_thread*>(cpu)->index;
+			}
+
+			u64 data3;
+			{
+				vm::reader_lock rlock;
+				if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | (is_writing ? vm::page_writable : vm::page_readable)))
+				{
+					// Memory was allocated inbetween, retry
+					return true;
+				}
+				else if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | vm::page_readable))
+				{
+					data3 = SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY; // TODO
+				}
+				else
+				{
+					data3 = SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
+				}
+			}
+
+			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
+			// know that this thread is page faulted and where.
+
+			auto pf_events = fxm::get_always<page_fault_event_entries>();
+			{
+				std::lock_guard pf_lock(pf_events->pf_mutex);
+				pf_events->events.emplace(static_cast<u32>(data2), addr);
+			}
+
+			LOG_ERROR(MEMORY, "Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
+				addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
+
+			error_code sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+
+			// If we fail due to being busy, wait a bit and try again.
+			while (sending_error == CELL_EBUSY)
+			{
+				if (cpu->id_type() == 1)
+				{
+					lv2_obj::sleep(*cpu, 1000);
+				}
+
+				thread_ctrl::wait_for(1000);
+				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+			}
+
+			if (sending_error)
+			{
+				fmt::throw_exception("Unknown error %x while trying to pass page fault.", sending_error.value);
+			}
+
+			if (cpu->id_type() == 1)
+			{
+				// Deschedule
+				lv2_obj::sleep(*cpu);
+			}
+
+			// Wait until the thread is recovered
+			for (std::shared_lock pf_lock(pf_events->pf_mutex);
+				pf_events->events.find(static_cast<u32>(data2)) != pf_events->events.end();)
+			{
+				if (Emu.IsStopped())
+				{
+					break;
+				}
+
+				// Timeout in case the emulator is stopping
+				pf_events->cond.wait(pf_lock, 10000);
+			}
+
+			// Reschedule
+			cpu->test_stopped();
+
+			if (Emu.IsStopped())
+			{
+				// Hack: allocate memory in case the emulator is stopping
+				vm::falloc(addr & -0x10000, 0x10000);
+			}
+
+			return true;
 		}
 
 		vm::temporary_unlock(*cpu);
