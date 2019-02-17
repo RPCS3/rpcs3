@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
 #include <vector>
@@ -45,19 +45,19 @@ struct page_fault_notification_entry
 struct page_fault_notification_entries
 {
 	std::vector<page_fault_notification_entry> entries;
-};
-
-struct page_fault_event
-{
-	u32 thread_id;
-	u32 fault_addr;
+	shared_mutex mutex;
 };
 
 struct page_fault_event_entries
 {
-	std::vector<page_fault_event> events;
+	// First = thread id, second = addr
+	std::unordered_map<u32, u32> events;
 	shared_mutex pf_mutex;
+	cond_variable cond;
 };
+
+// helper function
+CellError mmapper_thread_recover_page_fault(u32 id);
 
 // SysCalls
 error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr);
