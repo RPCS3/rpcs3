@@ -689,13 +689,13 @@ namespace vm
 
 		u8 pflags = page_readable | page_writable;
 
-		if (align >= 0x100000)
-		{
-			pflags |= page_1m_size;
-		}
-		else if (align >= 0x10000)
+		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
 		{
 			pflags |= page_64k_size;
+		}
+		else if (!(flags & (SYS_MEMORY_PAGE_SIZE_MASK & ~SYS_MEMORY_PAGE_SIZE_1M)))
+		{
+			pflags |= page_1m_size;
 		}
 
 		// Create or import shared memory object
@@ -738,13 +738,13 @@ namespace vm
 
 		u8 pflags = page_readable | page_writable;
 
-		if ((flags & SYS_MEMORY_PAGE_SIZE_1M) == SYS_MEMORY_PAGE_SIZE_1M)
-		{
-			pflags |= page_1m_size;
-		}
-		else if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
+		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
 		{
 			pflags |= page_64k_size;
+		}
+		else if (!(flags & (SYS_MEMORY_PAGE_SIZE_MASK & ~SYS_MEMORY_PAGE_SIZE_1M)))
+		{
+			pflags |= page_1m_size;
 		}
 
 		// Create or import shared memory object
@@ -1027,7 +1027,7 @@ namespace vm
 		{
 			g_locations =
 			{
-				std::make_shared<block_t>(0x00010000, 0x1FFF0000), // main
+				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x200), // main
 				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
