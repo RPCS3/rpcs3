@@ -13,9 +13,9 @@ LOG_CHANNEL(sys_lwmutex);
 
 extern u64 get_system_time();
 
-error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6)
+error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, s32 has_name, u64 name)
 {
-	sys_lwmutex.warning("_sys_lwmutex_create(lwmutex_id=*0x%x, protocol=0x%x, control=*0x%x, arg4=0x%x, name=0x%llx, arg6=0x%x)", lwmutex_id, protocol, control, arg4, name, arg6);
+	sys_lwmutex.warning("_sys_lwmutex_create(lwmutex_id=*0x%x, protocol=0x%x, control=*0x%x, arg4=0x%x, name=0x%llx, arg6=0x%x)", lwmutex_id, protocol, control, has_name, name);
 
 	if (protocol == SYS_SYNC_RETRY)
 		sys_lwmutex.todo("_sys_lwmutex_create(): SYS_SYNC_RETRY");
@@ -26,9 +26,9 @@ error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sy
 		return CELL_EINVAL;
 	}
 
-	if (arg4 != 0x80000001 || arg6)
+	if (!(has_name < 0))
 	{
-		fmt::throw_exception("Unknown arguments (arg4=0x%x, arg6=0x%x)" HERE, arg4, arg6);
+		name = 0;
 	}
 
 	if (const u32 id = idm::make<lv2_obj, lv2_lwmutex>(protocol, control, name))
