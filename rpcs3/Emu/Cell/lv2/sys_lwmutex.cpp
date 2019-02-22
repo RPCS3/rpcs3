@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -73,17 +73,35 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 {
 	sys_lwmutex.trace("_sys_lwmutex_lock(lwmutex_id=0x%x, timeout=0x%llx)", lwmutex_id, timeout);
 
+	ppu.gpr[3] = CELL_OK;
+
 	const auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
-		if (mutex.signaled.try_dec())
+		if (mutex.signaled.try_dec(0))
 		{
 			return true;
 		}
 
 		std::lock_guard lock(mutex.mutex);
 
-		if (mutex.signaled.try_dec())
+		auto [old, _] = mutex.signaled.fetch_op([](s32& value)
+		{ 
+			if (value)
+			{
+				value = 0;
+				return true;
+			}
+
+			return false;
+		});
+
+		if (old)
 		{
+			if (old == (1 << 31))
+			{
+				ppu.gpr[3] = CELL_EBUSY;
+			}
+
 			return true;
 		}
 
@@ -99,10 +117,8 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	if (mutex.ret)
 	{
-		return CELL_OK;
+		return not_an_error(ppu.gpr[3]);
 	}
-
-	ppu.gpr[3] = CELL_OK;
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
@@ -146,7 +162,18 @@ error_code _sys_lwmutex_trylock(u32 lwmutex_id)
 
 	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex)
 	{
-		return mutex.signaled.try_dec();
+		auto [_, ok] = mutex.signaled.fetch_op([](s32& value)
+		{ 
+			if (value & 1)
+			{
+				value = 0;
+				return true;
+			}
+
+			return false;
+		});
+
+		return ok;
 	});
 
 	if (!mutex)
@@ -175,7 +202,38 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 			return cpu;
 		}
 
-		mutex.signaled.release(1);
+		mutex.signaled |= 1;
+		return nullptr;
+	});
+
+	if (!mutex)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (mutex.ret)
+	{
+		mutex->awake(*mutex.ret);
+	}
+
+	return CELL_OK;
+}
+
+error_code _sys_lwmutex_unlock2(u32 lwmutex_id)
+{
+	sys_lwmutex.warning("_sys_lwmutex_unlock2(lwmutex_id=0x%x)", lwmutex_id);
+
+	const auto mutex = idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex) -> cpu_thread*
+	{
+		std::lock_guard lock(mutex.mutex);
+
+		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
+		{
+			static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
+			return cpu;
+		}
+
+		mutex.signaled |= 1 << 31;
 		return nullptr;
 	});
 
