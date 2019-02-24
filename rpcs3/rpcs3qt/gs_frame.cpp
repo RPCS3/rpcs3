@@ -493,6 +493,11 @@ bool gs_frame::event(QEvent* ev)
 	{
 		if (m_gui_settings->GetValue(gui::ib_confirm_exit).toBool())
 		{
+			if (visibility() == FullScreen)
+			{
+				toggle_fullscreen();
+			}
+
 			int result;
 
 			Emu.CallAfter([this, &result]()
