@@ -37,6 +37,7 @@
 	save_data_list_dialog.cpp
 	save_manager_dialog.cpp
 	settings_dialog.cpp
+	skylander_dialog.cpp
 	syntax_highlighter.cpp
 	trophy_manager_dialog.cpp
 	trophy_notification_frame.cpp

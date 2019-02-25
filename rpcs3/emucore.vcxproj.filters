@@ -782,6 +782,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_config.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\Skylander.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -817,6 +820,9 @@
     </ClCompile>
     <ClCompile Include="Crypto\md5.cpp">
       <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\usb_device.cpp">
+      <Filter>Emu\Io</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1551,6 +1557,9 @@
     </ClInclude>
     <ClInclude Include="Crypto\md5.h">
       <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\usb_device.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
