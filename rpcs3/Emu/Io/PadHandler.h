@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cmath>
 #include <vector>
@@ -169,6 +169,7 @@ struct Pad
 	u32 m_port_status;
 	u32 m_device_capability;
 	u32 m_device_type;
+	u32 m_class_type;
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state;
@@ -212,11 +213,12 @@ struct Pad
 	u16 m_sensor_z;
 	u16 m_sensor_g;
 
-	void Init(u32 port_status, u32 device_capability, u32 device_type)
+	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type)
 	{
 		m_port_status = port_status;
 		m_device_capability = device_capability;
 		m_device_type = device_type;
+		m_class_type = class_type;
 	}
 
 	Pad(u32 port_status, u32 device_capability, u32 device_type)
@@ -347,6 +349,8 @@ struct pad_config final : cfg::node
 
 	cfg::_int<0, 100> l_stick_lerp_factor{ this, "Left Stick Lerp Factor", 100 };
 	cfg::_int<0, 100> r_stick_lerp_factor{ this, "Right Stick Lerp Factor", 100 };
+
+	cfg::_int<0, 5> device_class_type{ this, "Device Class Type", 0 };
 
 	bool load()
 	{

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -394,7 +394,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 		info->port_setting[i] = config->port_setting[i];
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
-		info->pclass_type[i] = CELL_PAD_PCLASS_TYPE_STANDARD;
+		info->pclass_type[i] = pads[i]->m_class_type;
 		info->pclass_profile[i] = 0x0;
 	}
 
@@ -429,7 +429,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	// todo: support for 'unique' controllers, which goes in offsets 24+ in padData
-	data->pclass_type = CELL_PAD_PCLASS_TYPE_STANDARD;
+	data->pclass_type = pad->m_class_type;
 	data->pclass_profile = 0x0;
 
 	return cellPadGetData(port_no, vm::get_addr(&data->cellpad_data));
