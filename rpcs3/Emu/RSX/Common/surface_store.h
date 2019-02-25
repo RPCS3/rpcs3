@@ -93,8 +93,7 @@ namespace rsx
 	struct render_target_descriptor
 	{
 		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
-		u32 memory_tag_address = 0u;  // memory address of the start of the ROP block
-		u64 memory_tag_sample = 0ull; // memory sample taken at the memory_tag_address for change testing
+		std::array<std::pair<u32, u64>, 5> memory_tag_samples;
 
 		bool dirty = false;
 		image_storage_type old_contents = nullptr;
@@ -130,17 +129,34 @@ namespace rsx
 				LOG_TODO(RSX, "Resource used before memory initialization");
 			}
 
-			return (memory_tag_sample == *vm::get_super_ptr<u64>(memory_tag_address));
+			// Tags are tested in an X pattern
+			for (const auto &tag : memory_tag_samples)
+			{
+				if (tag.second != *reinterpret_cast<u64*>(vm::g_sudo_addr + tag.first))
+					return false;
+			}
+
+			return true;
 		}
 
 		void queue_tag(u32 address)
 		{
-			memory_tag_address = address;
+			const u32 pitch = get_native_pitch();
+			const u32 memory_length = pitch * get_surface_height();
+
+			memory_tag_samples[0].first = address;                         // Top left
+			memory_tag_samples[1].first = address + memory_length - 4;     // Bottom right
+			memory_tag_samples[2].first = address + pitch;                 // Top right
+			memory_tag_samples[3].first = address + (memory_length / 2);   // Center
+			memory_tag_samples[4].first = address + memory_length - pitch; // Bottom left
 		}
 
 		void sync_tag()
 		{
-			memory_tag_sample = *vm::get_super_ptr<u64>(memory_tag_address);
+			for (auto &tag : memory_tag_samples)
+			{
+				tag.second = *reinterpret_cast<u64*>(vm::g_sudo_addr + tag.first);
+			}
 		}
 
 		void on_write(u64 write_tag = 0)
