@@ -111,6 +111,9 @@
     <Filter Include="Io\DS3">
       <UniqueIdentifier>{66e6027b-d3dd-4894-814c-cc4444a4c7df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\skylanders">
+      <UniqueIdentifier>{c25f8f80-cc74-4760-8488-a291b3026b1d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -743,6 +746,9 @@
     <ClCompile Include="headless_application.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\skylander_dialog.cpp">
+      <Filter>Gui\skylanders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -831,6 +837,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\stylesheets.h">
       <Filter>Gui</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\skylander_dialog.h">
+      <Filter>Gui\skylanders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
