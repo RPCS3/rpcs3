@@ -51,6 +51,11 @@ namespace vk
 			return native_pitch;
 		}
 
+		bool is_depth_surface() const override
+		{
+			return !!(attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
+		}
+
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
 			//Use forward scaling to account for rounding and clamping errors

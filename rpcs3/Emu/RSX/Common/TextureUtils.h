@@ -7,7 +7,7 @@
 
 namespace rsx
 {
-	enum texture_upload_context
+	enum texture_upload_context : u32
 	{
 		shader_read = 1,
 		blit_engine_src = 2,
@@ -15,7 +15,7 @@ namespace rsx
 		framebuffer_storage = 8
 	};
 
-	enum texture_colorspace
+	enum texture_colorspace : u32
 	{
 		rgb_linear = 0,
 		srgb_nonlinear = 1

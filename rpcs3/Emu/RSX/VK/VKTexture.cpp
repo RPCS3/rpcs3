@@ -123,7 +123,7 @@ namespace vk
 		if (src->current_layout != preferred_src_format)
 			change_image_layout(cmd, src->value, src_layout, preferred_src_format, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
 
-		if (dst->current_layout != preferred_dst_format)
+		if (dst->current_layout != preferred_dst_format && src != dst)
 			change_image_layout(cmd, dst->value, dst_layout, preferred_dst_format, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
 
 		auto scratch_buf = vk::get_scratch_buffer();
@@ -196,7 +196,7 @@ namespace vk
 		if (src_layout != preferred_src_format)
 			change_image_layout(cmd, src->value, preferred_src_format, src_layout, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
 
-		if (dst_layout != preferred_dst_format)
+		if (dst_layout != preferred_dst_format && src != dst)
 			change_image_layout(cmd, dst->value, preferred_dst_format, dst_layout, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
 	}
 
@@ -231,7 +231,7 @@ namespace vk
 		if (srcLayout != preferred_src_format)
 			change_image_layout(cmd, src, srcLayout, preferred_src_format, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
 
-		if (dstLayout != preferred_dst_format)
+		if (dstLayout != preferred_dst_format && src != dst)
 			change_image_layout(cmd, dst, dstLayout, preferred_dst_format, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
@@ -245,7 +245,7 @@ namespace vk
 		if (srcLayout != preferred_src_format)
 			change_image_layout(cmd, src, preferred_src_format, srcLayout, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
 
-		if (dstLayout != preferred_dst_format)
+		if (dstLayout != preferred_dst_format && src != dst)
 			change_image_layout(cmd, dst, preferred_dst_format, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
 	}
 
@@ -272,7 +272,7 @@ namespace vk
 		if (srcLayout != preferred_src_format)
 			change_image_layout(cmd, src, srcLayout, preferred_src_format, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
-		if (dstLayout != preferred_dst_format)
+		if (dstLayout != preferred_dst_format && src != dst)
 			change_image_layout(cmd, dst, dstLayout, preferred_dst_format, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
 		if (compatible_formats && src_width == dst_width && src_height == dst_height)
@@ -296,7 +296,7 @@ namespace vk
 			}
 			else
 			{
-				auto stretch_image_typeless_unsafe = [&cmd, preferred_src_format, preferred_dst_format](VkImage src, VkImage dst, VkImage typeless,
+				auto stretch_image_typeless_unsafe = [&cmd, preferred_src_format, preferred_dst_format, filter](VkImage src, VkImage dst, VkImage typeless,
 						const areai& src_rect, const areai& dst_rect, VkImageAspectFlags aspect, VkImageAspectFlags transfer_flags = 0xFF)
 				{
 					const u32 src_w = u32(src_rect.x2 - src_rect.x1);
@@ -314,14 +314,14 @@ namespace vk
 
 					//2. Blit typeless surface to self
 					copy_scaled_image(cmd, typeless, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
-						0, 0, src_w, src_h, 0, src_h, dst_w, dst_h, 1, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_FILTER_NEAREST);
+						0, 0, src_w, src_h, 0, src_h, dst_w, dst_h, 1, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_COLOR_BIT, filter);
 
 					//3. Copy back the aspect bits
 					copy_image(cmd, typeless, dst, VK_IMAGE_LAYOUT_GENERAL, preferred_dst_format,
 						{0, (s32)src_h, (s32)dst_w, s32(src_h + dst_h) }, dst_rect, 1, VK_IMAGE_ASPECT_COLOR_BIT, aspect, 0xFF, transfer_flags);
 				};
 
-				auto stretch_image_typeless_safe = [&cmd, preferred_src_format, preferred_dst_format](VkImage src, VkImage dst, VkImage typeless,
+				auto stretch_image_typeless_safe = [&cmd, preferred_src_format, preferred_dst_format, filter](VkImage src, VkImage dst, VkImage typeless,
 					const areai& src_rect, const areai& dst_rect, VkImageAspectFlags aspect, VkImageAspectFlags transfer_flags = 0xFF)
 				{
 					const u32 src_w = u32(src_rect.x2 - src_rect.x1);
@@ -345,7 +345,7 @@ namespace vk
 
 					//2. Blit typeless surface to self
 					copy_scaled_image(cmd, typeless, typeless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
-						0, 0, src_w, src_h, 0, src_h, dst_w, dst_h, 1, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_COLOR_BIT, VK_FILTER_NEAREST);
+						0, 0, src_w, src_h, 0, src_h, dst_w, dst_h, 1, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_COLOR_BIT, filter);
 
 					//3. Copy back the aspect bits
 					info.imageExtent = { dst_w, dst_h, 1 };
@@ -423,7 +423,7 @@ namespace vk
 		if (srcLayout != preferred_src_format)
 			change_image_layout(cmd, src, preferred_src_format, srcLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 
-		if (dstLayout != preferred_dst_format)
+		if (dstLayout != preferred_dst_format && src != dst)
 			change_image_layout(cmd, dst, preferred_dst_format, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 	}
 

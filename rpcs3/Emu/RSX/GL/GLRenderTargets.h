@@ -107,6 +107,19 @@ namespace gl
 			return surface_height;
 		}
 
+		bool is_depth_surface() const override
+		{
+			switch (get_internal_format())
+			{
+			case gl::texture::internal_format::depth16:
+			case gl::texture::internal_format::depth24_stencil8:
+			case gl::texture::internal_format::depth32f_stencil8:
+				return true;
+			default:
+				return false;
+			}
+		}
+
 		texture* get_surface() override
 		{
 			return (gl::texture*)this;

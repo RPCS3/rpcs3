@@ -108,6 +108,7 @@ namespace rsx
 		virtual u16 get_surface_height() const = 0;
 		virtual u16 get_rsx_pitch() const = 0;
 		virtual u16 get_native_pitch() const = 0;
+		virtual bool is_depth_surface() const = 0;
 
 		void save_aa_mode()
 		{
@@ -216,6 +217,9 @@ namespace rsx
 		std::unordered_map<u32, surface_storage_type> m_render_targets_storage = {};
 		std::unordered_map<u32, surface_storage_type> m_depth_stencil_storage = {};
 
+		rsx::address_range m_render_targets_memory_range;
+		rsx::address_range m_depth_stencil_memory_range;
+
 	public:
 		std::array<std::tuple<u32, surface_type>, 4> m_bound_render_targets = {};
 		std::tuple<u32, surface_type> m_bound_depth_stencil = {};
@@ -323,7 +327,8 @@ namespace rsx
 		surface_type bind_address_as_render_targets(
 			command_list_type command_list,
 			u32 address,
-			surface_color_format color_format, size_t width, size_t height,
+			surface_color_format color_format,
+			size_t width, size_t height, size_t pitch,
 			Args&&... extra_params)
 		{
 			// TODO: Fix corner cases
@@ -359,6 +364,10 @@ namespace rsx
 				old_surface_storage = std::move(rtt);
 				m_render_targets_storage.erase(address);
 			}
+
+			// Range test
+			rsx::address_range range = rsx::address_range::start_length(address, u32(pitch * height));
+			m_render_targets_memory_range = range.get_min_max(m_render_targets_memory_range);
 
 			// Select source of original data if any
 			auto contents_to_copy = old_surface == nullptr ? convert_surface : old_surface;
@@ -410,7 +419,8 @@ namespace rsx
 		surface_type bind_address_as_depth_stencil(
 			command_list_type command_list,
 			u32 address,
-			surface_depth_format depth_format, size_t width, size_t height,
+			surface_depth_format depth_format,
+			size_t width, size_t height, size_t pitch,
 			Args&&... extra_params)
 		{
 			surface_storage_type old_surface_storage;
@@ -444,6 +454,10 @@ namespace rsx
 				old_surface_storage = std::move(ds);
 				m_depth_stencil_storage.erase(address);
 			}
+
+			// Range test
+			rsx::address_range range = rsx::address_range::start_length(address, u32(pitch * height));
+			m_depth_stencil_memory_range = range.get_min_max(m_depth_stencil_memory_range);
 
 			// Select source of original data if any
 			auto contents_to_copy = old_surface == nullptr ? convert_surface : old_surface;
@@ -525,8 +539,9 @@ namespace rsx
 				if (surface_addresses[surface_index] == 0)
 					continue;
 
+				const auto pitch = clip_width * 4; // TODO
 				m_bound_render_targets[surface_index] = std::make_tuple(surface_addresses[surface_index],
-					bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, clip_width, clip_height, std::forward<Args>(extra_params)...));
+					bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, clip_width, clip_height, pitch, std::forward<Args>(extra_params)...));
 			}
 
 			// Same for depth buffer
@@ -538,8 +553,10 @@ namespace rsx
 			if (!address_z)
 				return;
 
+			// TODO
+			const auto pitch = (depth_format == rsx::surface_depth_format::z16) ? clip_width * 2 : clip_width * 4;
 			m_bound_depth_stencil = std::make_tuple(address_z,
-				bind_address_as_depth_stencil(command_list, address_z, depth_format, clip_width, clip_height, std::forward<Args>(extra_params)...));
+				bind_address_as_depth_stencil(command_list, address_z, depth_format, clip_width, clip_height, pitch, std::forward<Args>(extra_params)...));
 		}
 
 		/**
@@ -564,6 +581,19 @@ namespace rsx
 			if (It != m_depth_stencil_storage.end())
 				return Traits::get(It->second);
 			return surface_type();
+		}
+
+		surface_type get_surface_at(u32 address)
+		{
+			auto It = m_render_targets_storage.find(address);
+			if (It != m_render_targets_storage.end())
+				return Traits::get(It->second);
+
+			auto _It = m_depth_stencil_storage.find(address);
+			if (_It != m_depth_stencil_storage.end())
+				return Traits::get(_It->second);
+
+			fmt::throw_exception("Unreachable" HERE);
 		}
 
 		/**
@@ -749,7 +779,7 @@ namespace rsx
 		 */
 		void invalidate_surface_address(u32 addr, bool depth)
 		{
-			if (address_is_bound(addr, depth))
+			if (address_is_bound(addr))
 			{
 				LOG_ERROR(RSX, "Cannot invalidate a currently bound render target!");
 				return;
@@ -862,20 +892,17 @@ namespace rsx
 			return (offset < range);
 		}
 
-		bool address_is_bound(u32 address, bool is_depth) const
+		bool address_is_bound(u32 address) const
 		{
-			if (is_depth)
-			{
-				const u32 bound_depth_address = std::get<0>(m_bound_depth_stencil);
-				return (bound_depth_address == address);
-			}
-
 			for (auto &surface : m_bound_render_targets)
 			{
 				const u32 bound_address = std::get<0>(surface);
 				if (bound_address == address)
 					return true;
 			}
+
+			if (std::get<0>(m_bound_depth_stencil) == address)
+				return true;
 
 			return false;
 		}
@@ -966,7 +993,7 @@ namespace rsx
 					}
 
 					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address, false), false, clipped };
+						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address), false, clipped };
 				}
 			}
 
@@ -992,16 +1019,18 @@ namespace rsx
 					}
 
 					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address, true), true, clipped };
+						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address), true, clipped };
 				}
 			}
 
 			return{};
 		}
 
-		std::vector<surface_overlap_info> get_merged_texture_memory_region(u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u32 bpp)
+		template <typename commandbuffer_type>
+		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u32 bpp)
 		{
 			std::vector<surface_overlap_info> result;
+			std::vector<std::pair<u32, bool>> dirty;
 			const u32 limit = texaddr + (required_pitch * required_height);
 
 			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data, bool is_depth)
@@ -1020,6 +1049,12 @@ namespace rsx
 					const auto texture_size = pitch * surface->get_surface_height();
 					if ((this_address + texture_size) <= texaddr)
 						continue;
+
+					if (surface->read_barrier(cmd); !surface->test())
+					{
+						dirty.emplace_back(this_address, is_depth);
+						continue;
+					}
 
 					surface_overlap_info info;
 					info.surface = surface;
@@ -1050,8 +1085,27 @@ namespace rsx
 				}
 			};
 
-			process_list_function(m_render_targets_storage, false);
-			process_list_function(m_depth_stencil_storage, true);
+			// Range test helper to quickly discard blocks
+			// Fortunately, render targets tend to be clustered anyway
+			rsx::address_range test = rsx::address_range::start_end(texaddr, limit-1);
+
+			if (test.overlaps(m_render_targets_memory_range))
+			{
+				process_list_function(m_render_targets_storage, false);
+			}
+
+			if (test.overlaps(m_depth_stencil_memory_range))
+			{
+				process_list_function(m_depth_stencil_storage, true);
+			}
+
+			if (!dirty.empty())
+			{
+				for (const auto& p : dirty)
+				{
+					invalidate_surface_address(p.first, p.second);
+				}
+			}
 
 			if (result.size() > 1)
 			{

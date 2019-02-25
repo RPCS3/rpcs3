@@ -375,29 +375,36 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
 
-	//Mark buffer regions as NO_ACCESS on Cell visible side
-	if (g_cfg.video.write_color_buffers)
+	const auto color_format = rsx::internals::surface_color_format_to_gl(layout.color_format);
+	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
-		auto color_format = rsx::internals::surface_color_format_to_gl(layout.color_format);
+		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
 
-		for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
+		const auto surface_range = m_surface_info[i].get_memory_range(layout.aa_factors[1]);
+		if (g_cfg.video.write_color_buffers)
 		{
-			if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
-
-			const utils::address_range surface_range = m_surface_info[i].get_memory_range(layout.aa_factors[1]);
+			// Mark buffer regions as NO_ACCESS on Cell-visible side
 			m_gl_texture_cache.lock_memory_region(cmd, std::get<1>(m_rtts.m_bound_render_targets[i]), surface_range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
 				std::tuple<>{}, color_format.format, color_format.type, color_format.swap_bytes);
 		}
+		else
+		{
+			m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
+		}
 	}
 
-	if (g_cfg.video.write_depth_buffer)
+	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
-		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
+		const auto surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
+		if (g_cfg.video.write_depth_buffer)
 		{
 			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(layout.depth_format);
-			const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
 			m_gl_texture_cache.lock_memory_region(cmd, std::get<1>(m_rtts.m_bound_depth_stencil), surface_range, m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
 				std::tuple<>{}, depth_format_gl.format, depth_format_gl.type, true);
+		}
+		else
+		{
+			m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface_range);
 		}
 	}
 
@@ -585,6 +592,8 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 			{
 				gl::g_hw_blitter->fast_clear_image(cmd, this, {});
 			}
+
+			on_write();
 		}
 
 		return;
