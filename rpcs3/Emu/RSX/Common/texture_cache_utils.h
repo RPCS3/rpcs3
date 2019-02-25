@@ -99,6 +99,17 @@ namespace rsx
 				fmt::throw_exception("Unreachable " HERE);
 		}
 
+		constexpr invalidation_cause defer() const
+		{
+			AUDIT(!deferred_flush());
+			if (cause == read)
+				return deferred_read;
+			else if (cause == write)
+				return deferred_write;
+			else
+				fmt::throw_exception("Unreachable " HERE);
+		}
+
 		constexpr invalidation_cause() : cause(invalid) {}
 		constexpr invalidation_cause(enum_type _cause) : cause(_cause) {}
 		operator enum_type&() { return cause; }

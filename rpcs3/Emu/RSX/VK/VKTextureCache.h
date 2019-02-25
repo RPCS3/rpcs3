@@ -457,7 +457,7 @@ namespace vk
 			m_discarded_memory_size = 0;
 		}
 
-		VkComponentMapping apply_component_mapping_flags(u32 gcm_format, rsx::texture_create_flags flags, const texture_channel_remap_t& remap_vector)
+		VkComponentMapping apply_component_mapping_flags(u32 gcm_format, rsx::texture_create_flags flags, const texture_channel_remap_t& remap_vector) const
 		{
 			switch (gcm_format)
 			{
@@ -496,7 +496,7 @@ namespace vk
 			return mapping;
 		}
 
-		void copy_transfer_regions_impl(vk::command_buffer& cmd, vk::image* dst, const std::vector<copy_region_descriptor>& sections_to_transfer)
+		void copy_transfer_regions_impl(vk::command_buffer& cmd, vk::image* dst, const std::vector<copy_region_descriptor>& sections_to_transfer) const
 		{
 			for (const auto &section : sections_to_transfer)
 			{
@@ -515,9 +515,18 @@ namespace vk
 
 					copy_rgn.srcOffset = { section.src_x, section.src_y, 0 };
 					copy_rgn.dstOffset = { section.dst_x, section.dst_y, 0 };
-					copy_rgn.dstSubresource = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, section.dst_z, 1 };
+					copy_rgn.dstSubresource = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
 					copy_rgn.srcSubresource = { src_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
 					copy_rgn.extent = { section.src_w, section.src_h, 1 };
+
+					if (dst->info.imageType == VK_IMAGE_TYPE_3D)
+					{
+						copy_rgn.dstOffset.z = section.dst_z;
+					}
+					else
+					{
+						copy_rgn.dstSubresource.baseArrayLayer = section.dst_z;
+					}
 
 					vk::change_image_layout(cmd, section.src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src_range);
 					vkCmdCopyImage(cmd, section.src->value, section.src->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
@@ -579,6 +588,35 @@ namespace vk
 			}
 		}
 
+		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const
+		{
+			vk::image* result = nullptr;
+			for (const auto &section : sections_to_transfer)
+			{
+				if (!section.src)
+					continue;
+
+				if (!result)
+				{
+					result = section.src;
+				}
+				else
+				{
+					if (section.src->native_component_map.a != result->native_component_map.a ||
+						section.src->native_component_map.r != result->native_component_map.r ||
+						section.src->native_component_map.g != result->native_component_map.g ||
+						section.src->native_component_map.b != result->native_component_map.b)
+					{
+						// TODO
+						// This requires a far more complex setup as its not always possible to mix and match without compute assistance
+						return nullptr;
+					}
+				}
+			}
+
+			return result;
+		}
+
 	protected:
 		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
 			u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector, bool copy)
@@ -587,7 +625,7 @@ namespace vk
 			std::unique_ptr<vk::image_view> view;
 
 			VkImageAspectFlags aspect;
-			VkImageCreateFlags image_flags;
+			VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 
 			if (source)
@@ -599,13 +637,10 @@ namespace vk
 					//HACK! Should use typeless transfer
 					dst_format = source->info.format;
 				}
-
-				image_flags = source->info.flags;
 			}
 			else
 			{
 				aspect = vk::get_aspect_flags(dst_format);
-				image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE)? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 			}
 
 			image.reset(new vk::viewable_image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -772,13 +807,25 @@ namespace vk
 			auto result = create_temporary_subresource_view_impl(cmd, nullptr, VK_IMAGE_TYPE_2D,
 					VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
+			const auto image = result->image();
 			VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
 			VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
-			vk::change_image_layout(cmd, result->image(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
+			vk::change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
 
-			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
+			if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
+			{
+				VkClearColorValue clear = {};
+				vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
+			else
+			{
+				VkClearDepthStencilValue clear = { 1.f, 0 };
+				vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			}
 
-			vk::change_image_layout(cmd, result->image(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dst_range);
+			copy_transfer_regions_impl(cmd, image, sections_to_copy);
+
+			vk::change_image_layout(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dst_range);
 			return result;
 		}
 
@@ -940,6 +987,7 @@ namespace vk
 
 			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subres_range);
 
+			section->last_write_tag = rsx::get_shared_tag();
 			return section;
 		}
 
@@ -988,6 +1036,7 @@ namespace vk
 			case CELL_GCM_TEXTURE_DEPTH24_D8:
 			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 				return (vk_format == VK_FORMAT_D24_UNORM_S8_UINT || vk_format == VK_FORMAT_D32_SFLOAT_S8_UINT);
+			case CELL_GCM_TEXTURE_X16:
 			case CELL_GCM_TEXTURE_DEPTH16:
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 				return (vk_format == VK_FORMAT_D16_UNORM);

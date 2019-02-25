@@ -1626,12 +1626,12 @@ void VKGSRender::end()
 		if (current_fp_metadata.referenced_textures_mask & (1 << i))
 		{
 			vk::image_view* view = nullptr;
-			if (rsx::method_registers.fragment_textures[i].enabled())
-			{
-				auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-				view = sampler_state->image_handle;
+			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 
-				if (!view && sampler_state->external_subresource_desc.external_handle)
+			if (rsx::method_registers.fragment_textures[i].enabled() &&
+				sampler_state->validate())
+			{
+				if (view = sampler_state->image_handle; !view)
 				{
 					//Requires update, copy subresource
 					view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
@@ -1705,7 +1705,7 @@ void VKGSRender::end()
 			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 			auto image_ptr = sampler_state->image_handle;
 
-			if (!image_ptr && sampler_state->external_subresource_desc.external_handle)
+			if (!image_ptr && sampler_state->validate())
 			{
 				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
 				m_vertex_textures_dirty[i] = true;
@@ -2970,27 +2970,35 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_texture_cache.notify_surface_changed(layout.zeta_address);
 	}
 
-	if (g_cfg.video.write_color_buffers)
+	const auto color_fmt_info = vk::get_compatible_gcm_format(layout.color_format);
+	for (u8 index : m_draw_buffers)
 	{
-		const auto color_fmt_info = vk::get_compatible_gcm_format(layout.color_format);
-		for (u8 index : m_draw_buffers)
-		{
-			if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
+		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
-			const utils::address_range surface_range = m_surface_info[index].get_memory_range(layout.aa_factors[1]);
+		const utils::address_range surface_range = m_surface_info[index].get_memory_range(layout.aa_factors[1]);
+		if (g_cfg.video.write_color_buffers)
+		{
 			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_render_targets[index]), surface_range,
 				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index], std::tuple<VkQueue>{ m_swapchain->get_graphics_queue() }, color_fmt_info.first, color_fmt_info.second);
 		}
+		else
+		{
+			m_texture_cache.commit_framebuffer_memory_region(*m_current_command_buffer, surface_range, m_swapchain->get_graphics_queue());
+		}
 	}
 
-	if (g_cfg.video.write_depth_buffer)
+	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
-		if (m_depth_surface_info.address && m_depth_surface_info.pitch)
+		const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
+		if (g_cfg.video.write_depth_buffer)
 		{
-			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16)? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
-			const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
+			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil), surface_range,
 				m_depth_surface_info.width, m_depth_surface_info.height, layout.actual_zeta_pitch, std::tuple<VkQueue>{ m_swapchain->get_graphics_queue() }, gcm_format, false);
+		}
+		else
+		{
+			m_texture_cache.commit_framebuffer_memory_region(*m_current_command_buffer, surface_range, m_swapchain->get_graphics_queue());
 		}
 	}
 
@@ -3301,7 +3309,7 @@ void VKGSRender::flip(int buffer)
 			}
 			else
 			{
-				const auto overlap_info = m_rtts.get_merged_texture_memory_region(absolute_address, buffer_width, buffer_height, buffer_pitch, 4);
+				const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer, absolute_address, buffer_width, buffer_height, buffer_pitch, 4);
 				verify(HERE), !overlap_info.empty();
 
 				if (overlap_info.back().surface == render_target_texture)
@@ -3341,16 +3349,14 @@ void VKGSRender::flip(int buffer)
 		{
 			// Read from cell
 			const auto range = utils::address_range::start_length(absolute_address, buffer_pitch * buffer_height);
-			const auto overlap = m_texture_cache.find_texture_from_range(range);
+			const u32  lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
+			const auto overlap = m_texture_cache.find_texture_from_range(range, 0, lookup_mask);
 			bool flush_queue = false;
 
 			for (const auto & section : overlap)
 			{
-				if (section->get_protection() == utils::protection::no)
-				{
-					section->copy_texture(*m_current_command_buffer, false, m_swapchain->get_graphics_queue());
-					flush_queue = true;
-				}
+				section->copy_texture(*m_current_command_buffer, false, m_swapchain->get_graphics_queue());
+				flush_queue = true;
 			}
 
 			if (flush_queue)

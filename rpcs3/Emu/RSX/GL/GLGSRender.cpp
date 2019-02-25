@@ -330,12 +330,12 @@ void GLGSRender::end()
 			_SelectTexture(GL_FRAGMENT_TEXTURES_START + i);
 
 			gl::texture_view* view = nullptr;
-			if (rsx::method_registers.fragment_textures[i].enabled())
-			{
-				auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-				view = sampler_state->image_handle;
+			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 
-				if (!view && sampler_state->external_subresource_desc.external_handle)
+			if (rsx::method_registers.fragment_textures[i].enabled() &&
+				sampler_state->validate())
+			{
+				if (view = sampler_state->image_handle; UNLIKELY(!view))
 				{
 					view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
 				}
@@ -375,13 +375,17 @@ void GLGSRender::end()
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
 			_SelectTexture(GL_VERTEX_TEXTURES_START + i);
 
-			if (sampler_state->image_handle)
+			if (rsx::method_registers.vertex_textures[i].enabled() &&
+				sampler_state->validate())
 			{
-				sampler_state->image_handle->bind();
-			}
-			else if (sampler_state->external_subresource_desc.external_handle)
-			{
-				m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc)->bind();
+				if (LIKELY(sampler_state->image_handle))
+				{
+					sampler_state->image_handle->bind();
+				}
+				else
+				{
+					m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc)->bind();
+				}
 			}
 			else
 			{
@@ -1640,7 +1644,8 @@ void GLGSRender::flip(int buffer)
 			}
 			else
 			{
-				const auto overlap_info = m_rtts.get_merged_texture_memory_region(absolute_address, buffer_width, buffer_height, buffer_pitch, 4);
+				gl::command_context cmd = { gl_state };
+				const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, absolute_address, buffer_width, buffer_height, buffer_pitch, 4);
 				verify(HERE), !overlap_info.empty();
 
 				if (overlap_info.back().surface == render_target_texture)
@@ -1825,8 +1830,8 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 		is_writing ? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		           : (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
 
-	gl::command_context null_cmd;
-	auto result = m_gl_texture_cache.invalidate_address(null_cmd, address, cause);
+	auto cmd = can_flush ? gl::command_context{ gl_state } : gl::command_context{};
+	auto result = m_gl_texture_cache.invalidate_address(cmd, address, cause);
 
 	if (!result.violation_handled)
 		return false;

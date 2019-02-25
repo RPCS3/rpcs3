@@ -387,6 +387,7 @@ namespace gl
 			if (synchronized)
 				return;
 
+			verify(HERE), cmd.drv;
 			copy_texture(cmd, blocking);
 
 			if (blocking)
@@ -700,7 +701,7 @@ namespace gl
 			return result;
 		}
 
-		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::texture_create_flags flags)
+		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::texture_create_flags flags) const
 		{
 			switch (gcm_format)
 			{
@@ -733,7 +734,7 @@ namespace gl
 			}
 		}
 
-		void copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const std::vector<copy_region_descriptor>& sources)
+		void copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const std::vector<copy_region_descriptor>& sources) const
 		{
 			for (const auto &slice : sources)
 			{
@@ -757,6 +758,38 @@ namespace gl
 						src_rect, dst_rect, false, false, {});
 				}
 			}
+		}
+
+		gl::texture* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const
+		{
+			gl::texture* result = nullptr;
+			for (const auto &section : sections_to_transfer)
+			{
+				if (!section.src)
+					continue;
+
+				if (!result)
+				{
+					result = section.src;
+				}
+				else
+				{
+					const auto set1 = result->get_native_component_layout();
+					const auto set2 = section.src->get_native_component_layout();
+
+					if (set1[0] != set2[0] ||
+						set1[1] != set2[1] ||
+						set1[2] != set2[2] ||
+						set1[3] != set2[3])
+					{
+						// TODO
+						// This requires a far more complex setup as its not always possible to mix and match without compute assistance
+						return nullptr;
+					}
+				}
+			}
+
+			return result;
 		}
 
 	protected:
@@ -909,6 +942,7 @@ namespace gl
 			gl::upload_texture(section->get_raw_texture()->id(), gcm_format, width, height, depth, mipmaps,
 					input_swizzled, type, subresource_layout);
 
+			section->last_write_tag = rsx::get_shared_tag();
 			return section;
 		}
 
@@ -966,6 +1000,7 @@ namespace gl
 				return (ifmt == gl::texture::internal_format::depth24_stencil8 ||
 						ifmt == gl::texture::internal_format::depth32f_stencil8 ||
 						ifmt == gl::texture::internal_format::depth_stencil);
+			case CELL_GCM_TEXTURE_X16:
 			case CELL_GCM_TEXTURE_DEPTH16:
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 				return (ifmt == gl::texture::internal_format::depth16 ||
