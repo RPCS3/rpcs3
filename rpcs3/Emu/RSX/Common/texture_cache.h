@@ -1628,8 +1628,8 @@ namespace rsx
 				const auto h = std::min(section_end, slice_end) - section.dst_y;
 				auto src_width = rsx::apply_resolution_scale(section.width, true);
 				auto src_height = rsx::apply_resolution_scale(h, true);
-				auto dst_width = src_width;
-				auto dst_height = src_height;
+				auto dst_width = u16(src_width * scale_x);
+				auto dst_height = u16(src_height * scale_y);
 
 				if (scale_x > 1.f)
 				{
@@ -1639,13 +1639,13 @@ namespace rsx
 
 					if (limit_x > slice_w)
 					{
-						dst_width = (limit_x - dst_x);
+						dst_width = (slice_w - dst_x);
 						src_width = dst_width / scale_x;
 					}
 
 					if (limit_y > slice_h)
 					{
-						dst_height = (limit_y - dst_y);
+						dst_height = (slice_h - dst_y);
 						src_height = dst_height / scale_y;
 					}
 				}

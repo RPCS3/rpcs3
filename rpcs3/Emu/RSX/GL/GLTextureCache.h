@@ -762,6 +762,11 @@ namespace gl
 
 		gl::texture* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const
 		{
+			if (LIKELY(sections_to_transfer.size() == 1))
+			{
+				return sections_to_transfer.front().src;
+			}
+
 			gl::texture* result = nullptr;
 			for (const auto &section : sections_to_transfer)
 			{
@@ -854,7 +859,9 @@ namespace gl
 		gl::texture_view* generate_atlas_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
 				const texture_channel_remap_t& remap_vector) override
 		{
-			auto result = create_temporary_subresource_impl(nullptr, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
+			auto _template = get_template_from_collection_impl(sections_to_copy);
+			const GLenum ifmt = _template ? (GLenum)_template->get_internal_format() : GL_NONE;
+			auto result = create_temporary_subresource_impl(_template, ifmt, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
 			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
 			return result;
