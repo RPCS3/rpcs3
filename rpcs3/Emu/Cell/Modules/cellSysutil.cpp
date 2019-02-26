@@ -297,7 +297,6 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 
 s32 cellSysCacheClear()
 {
-
 	cellSysutil.warning("cellSysCacheClear()");
 
 	// Get the param as a shared ptr, then decipher the cacheid from it
@@ -329,15 +328,18 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
 	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
 
-	const std::string& cache_id = param->cacheId;
-	verify(HERE), cache_id.size() < sizeof(param->cacheId);
+	if (!param || !memchr(param->cacheId, '\0', CELL_SYSCACHE_ID_SIZE))
+	{
+		return CELL_SYSCACHE_ERROR_PARAM;
+	}
 
+	const std::string& cache_id = param->cacheId;
 	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
 	// TODO: implement (what?)
 	fxm::make_always<CellSysCacheParam>(*param);
-	if (!fs::create_dir(vfs::get(cache_path)))
+	if (!fs::create_dir(vfs::get(cache_path)) && !cache_id.empty())
 	{
 		return CELL_SYSCACHE_RET_OK_RELAYED;
 	}

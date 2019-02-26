@@ -34,7 +34,7 @@ You should also contact any of the developers in the forums or in the Discord se
 * [CMake 3.8.2+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
 * [Vulkan SDK](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
-* [Qt 5.10+](https://www.qt.io/download-open-source/) (Avoid 5.11.1, due to a bug)
+* [Qt 5.10+](https://www.qt.io/download-qt-installer) (Avoid 5.11.1, due to a bug)
 
 
 **Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.11.2\msvc2017_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools-19123)**
@@ -85,7 +85,7 @@ If you're not using precompiled libs, build the projects in *__BUILD_BEFORE* fol
 While still in the project root:
 
 1) `cd .. && mkdir rpcs3_build && cd rpcs3_build`
-2) `cmake ../rpcs3/ && make GitVersion && make`
+2) `cmake ../rpcs3/ && make`
 3) Run RPCS3 with `./bin/rpcs3`
 
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).

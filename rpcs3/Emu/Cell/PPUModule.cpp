@@ -1433,7 +1433,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Set path (TODO)
-	_main->name = "";
+	_main->name.clear();
 	_main->path = vfs::get(Emu.argv[0]);
 
 	// Analyse executable (TODO)
