@@ -590,6 +590,11 @@ namespace vk
 
 		vk::image* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const
 		{
+			if (LIKELY(sections_to_transfer.size() == 1))
+			{
+				return sections_to_transfer.front().src;
+			}
+
 			vk::image* result = nullptr;
 			for (const auto &section : sections_to_transfer)
 			{
@@ -804,7 +809,8 @@ namespace vk
 		vk::image_view* generate_atlas_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height,
 				const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) override
 		{
-			auto result = create_temporary_subresource_view_impl(cmd, nullptr, VK_IMAGE_TYPE_2D,
+			auto _template = get_template_from_collection_impl(sections_to_copy);
+			auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 					VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
 			const auto image = result->image();
