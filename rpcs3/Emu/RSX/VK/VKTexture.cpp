@@ -236,7 +236,7 @@ namespace vk
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 		{
-			vkCmdCopyImage(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &rgn);
+			vkCmdCopyImage(cmd, src, preferred_src_format, dst, preferred_dst_format, 1, &rgn);
 
 			rgn.srcSubresource.mipLevel++;
 			rgn.dstSubresource.mipLevel++;

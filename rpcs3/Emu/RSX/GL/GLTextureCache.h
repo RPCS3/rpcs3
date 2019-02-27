@@ -426,7 +426,7 @@ namespace gl
 			if (require_manual_shuffle)
 			{
 				//byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, valid_length / rsx_pitch);
+				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, align(valid_length, rsx_pitch) / rsx_pitch);
 			}
 			else if (pack_unpack_swap_bytes && ::gl::get_driver_caps().vendor_AMD)
 			{
@@ -750,12 +750,28 @@ namespace gl
 				{
 					verify(HERE), dst_image->get_target() == gl::texture::target::texture2D;
 
+					std::unique_ptr<gl::texture> tmp;
+					auto _dst = dst_image;
+
 					auto _blitter = gl::g_hw_blitter;
 					const areai src_rect = { slice.src_x, slice.src_y, slice.src_x + slice.src_w, slice.src_y + slice.src_h };
 					const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
 
-					_blitter->scale_image(cmd, slice.src, dst_image,
+					if (UNLIKELY(slice.src->get_internal_format() != dst_image->get_internal_format()))
+					{
+						tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, (GLenum)slice.src->get_internal_format());
+						_dst = tmp.get();
+					}
+
+					_blitter->scale_image(cmd, slice.src, _dst,
 						src_rect, dst_rect, false, false, {});
+
+					if (tmp)
+					{
+						// Data cast comes after scaling
+						glCopyImageSubData(tmp->id(), GL_TEXTURE_2D, 0, slice.dst_x, slice.dst_y, 0,
+							dst_image->id(), (GLenum)dst_image->get_target(), 0, slice.dst_x, slice.dst_y, slice.dst_z, slice.dst_w, slice.dst_h, 1);
+					}
 				}
 			}
 		}
@@ -860,8 +876,7 @@ namespace gl
 				const texture_channel_remap_t& remap_vector) override
 		{
 			auto _template = get_template_from_collection_impl(sections_to_copy);
-			const GLenum ifmt = _template ? (GLenum)_template->get_internal_format() : GL_NONE;
-			auto result = create_temporary_subresource_impl(_template, ifmt, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
+			auto result = create_temporary_subresource_impl(_template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
 
 			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
 			return result;
