@@ -535,13 +535,27 @@ namespace vk
 				else
 				{
 					verify(HERE), section.dst_z == 0;
+
+					u32 dst_x = section.dst_x, dst_y = section.dst_y;
+					vk::image* _dst;
+
+					if (LIKELY(section.src->info.format == dst->info.format))
+					{
+						_dst = dst;
+					}
+					else
+					{
+						_dst = vk::get_typeless_helper(section.src->info.format, dst->width(), dst->height() * 2);
+						vk::change_image_layout(cmd, _dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, src_range);
+					}
+
 					if (section.xform == surface_transform::identity)
 					{
-						vk::copy_scaled_image(cmd, section.src->value, dst->value, section.src->current_layout, dst->current_layout,
+						vk::copy_scaled_image(cmd, section.src->value, _dst->value, section.src->current_layout, _dst->current_layout,
 							section.src_x, section.src_y, section.src_w, section.src_h,
 							section.dst_x, section.dst_y, section.dst_w, section.dst_h,
-							1, src_aspect, section.src->info.format == dst->info.format,
-							VK_FILTER_NEAREST);
+							1, src_aspect, section.src->info.format == _dst->info.format,
+							VK_FILTER_NEAREST, section.src->info.format, _dst->info.format);
 					}
 					else if (section.xform == surface_transform::argb_to_bgra)
 					{
@@ -572,17 +586,38 @@ namespace vk
 
 						vkCmdCopyBufferToImage(cmd, scratch_buf->value, tmp->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 
-						vk::copy_scaled_image(cmd, tmp->value, dst->value, tmp->current_layout, dst->current_layout,
+						if (UNLIKELY(tmp == _dst))
+						{
+							dst_x = 0;
+							dst_y = section.src_h;
+						}
+
+						vk::copy_scaled_image(cmd, tmp->value, _dst->value, tmp->current_layout, _dst->current_layout,
 							0, 0, section.src_w, section.src_h,
-							section.dst_x, section.dst_y, section.dst_w, section.dst_h,
-							1, src_aspect, section.src->info.format == dst->info.format,
-							VK_FILTER_NEAREST);
+							dst_x, dst_y, section.dst_w, section.dst_h,
+							1, src_aspect, section.src->info.format == _dst->info.format,
+							VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);
 
 						vk::change_image_layout(cmd, section.src, old_src_layout, src_range);
 					}
 					else
 					{
 						fmt::throw_exception("Unreachable" HERE);
+					}
+
+					if (UNLIKELY(_dst != dst))
+					{
+						// Casting comes after the scaling!
+
+						VkImageCopy copy_rgn;
+						copy_rgn.srcOffset = { s32(dst_x), s32(dst_y), 0 };
+						copy_rgn.dstOffset = { section.dst_x, section.dst_y, 0 };
+						copy_rgn.dstSubresource = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
+						copy_rgn.srcSubresource = { src_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
+						copy_rgn.extent = { section.dst_w, section.dst_h, 1 };
+
+						vk::change_image_layout(cmd, _dst, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src_range);
+						vkCmdCopyImage(cmd, _dst->value, _dst->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 					}
 				}
 			}
