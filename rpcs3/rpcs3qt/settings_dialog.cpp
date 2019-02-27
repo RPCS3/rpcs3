@@ -936,10 +936,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Checkboxes
 
-	SubscribeTooltip(ui->gs_resizeOnBoot, json_emu_misc["gs_resizeOnBoot"].toString());
-
-	SubscribeTooltip(ui->gs_disableMouse, json_emu_misc["gs_disableMouse"].toString());
-
 	xemu_settings->EnhanceCheckBox(ui->exitOnStop, emu_settings::ExitRPCS3OnFinish);
 	SubscribeTooltip(ui->exitOnStop, json_emu_misc["exitOnStop"].toString());
 
@@ -1041,6 +1037,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Global settings (gui_settings)
 	if (!game)
 	{
+		SubscribeTooltip(ui->gs_resizeOnBoot, json_emu_misc["gs_resizeOnBoot"].toString());
+
+		SubscribeTooltip(ui->gs_disableMouse, json_emu_misc["gs_disableMouse"].toString());
+
 		ui->gs_disableMouse->setChecked(xgui_settings->GetValue(gui::gs_disableMouse).toBool());
 		connect(ui->gs_disableMouse, &QCheckBox::clicked, [=](bool val)
 		{
@@ -1075,6 +1075,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
 		});
 	}
+	else
+	{
+		ui->gb_viewport->setEnabled(false);
+		ui->gb_viewport->setVisible(false);
+	}
 
 	//     _____  _    _  _   _______    _
 	//    / ____|| |  | || | |__   __|  | |
@@ -1083,31 +1088,31 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	//   | |__| || |__| || |    | | (_| | |_) |
 	//    \_____| \____/ |_|    |_|\__,_|_.__/
 
-	// Comboboxes
-	SubscribeTooltip(ui->combo_configs, json_gui["configs"].toString());
-
-	SubscribeTooltip(ui->combo_stylesheets, json_gui["stylesheets"].toString());
-
-	// Checkboxes:
-	SubscribeTooltip(ui->cb_custom_colors, json_gui["custom_colors"].toString());
-
-	// Checkboxes: gui options
-	SubscribeTooltip(ui->cb_show_welcome, json_gui["show_welcome"].toString());
-
-	SubscribeTooltip(ui->cb_show_exit_game, json_gui["show_exit_game"].toString());
-
-	SubscribeTooltip(ui->cb_show_boot_game, json_gui["show_boot_game"].toString());
-
-	SubscribeTooltip(ui->cb_show_pkg_install, json_gui["show_pkg_install"].toString());
-
-	SubscribeTooltip(ui->cb_show_pup_install, json_gui["show_pup_install"].toString());
-
-	SubscribeTooltip(ui->useRichPresence, json_gui["useRichPresence"].toString());
-
-	SubscribeTooltip(ui->discordState, json_gui["discordState"].toString());
-
 	if (!game)
 	{
+		// Comboboxes
+		SubscribeTooltip(ui->combo_configs, json_gui["configs"].toString());
+
+		SubscribeTooltip(ui->combo_stylesheets, json_gui["stylesheets"].toString());
+
+		// Checkboxes:
+		SubscribeTooltip(ui->cb_custom_colors, json_gui["custom_colors"].toString());
+
+		// Checkboxes: gui options
+		SubscribeTooltip(ui->cb_show_welcome, json_gui["show_welcome"].toString());
+
+		SubscribeTooltip(ui->cb_show_exit_game, json_gui["show_exit_game"].toString());
+
+		SubscribeTooltip(ui->cb_show_boot_game, json_gui["show_boot_game"].toString());
+
+		SubscribeTooltip(ui->cb_show_pkg_install, json_gui["show_pkg_install"].toString());
+
+		SubscribeTooltip(ui->cb_show_pup_install, json_gui["show_pup_install"].toString());
+
+		SubscribeTooltip(ui->useRichPresence, json_gui["useRichPresence"].toString());
+
+		SubscribeTooltip(ui->discordState, json_gui["discordState"].toString());
+
 		// Discord:
 		ui->useRichPresence->setChecked(m_use_discord);
 		ui->label_discordState->setEnabled(m_use_discord);

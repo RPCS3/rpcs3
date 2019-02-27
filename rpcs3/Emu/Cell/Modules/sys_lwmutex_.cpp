@@ -42,7 +42,7 @@ error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmute
 	attrs->flags     = 0;
 	attrs->name_u64  = attr->name_u64;
 
-	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64, 0))
+	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64))
 	{
 		return res;
 	}
