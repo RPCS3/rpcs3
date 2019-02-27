@@ -67,11 +67,17 @@ private:
 	// Trampoline to spu_recompiler_base::dispatch
 	spu_function_t tr_dispatch = nullptr;
 
+	// Trampoline to spu_recompiler_base::branch
+	spu_function_t tr_branch = nullptr;
+
 public:
 	spu_runtime();
 
 	// Add compiled function and generate trampoline if necessary
 	void add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled);
+
+	// Generate a patchable trampoline to spu_recompiler_base::branch
+	spu_function_t make_branch_patchpoint(u32 target) const;
 
 	// All dispatchers (array allocated in jit memory)
 	static atomic_t<spu_function_t>* const g_dispatcher;
