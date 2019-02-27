@@ -51,7 +51,8 @@ public:
 	struct work
 	{
 		u32 size;
-		u32 level;
+		u16 from;
+		u16 level;
 		u8* rel32;
 		std::map<std::vector<u32>, spu_function_t>::iterator beg;
 		std::map<std::vector<u32>, spu_function_t>::iterator end;

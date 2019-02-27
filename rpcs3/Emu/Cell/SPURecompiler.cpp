@@ -341,6 +341,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 		workload.emplace_back();
 		workload.back().size  = size0;
 		workload.back().level = 1;
+		workload.back().from  = 0;
 		workload.back().rel32 = 0;
 		workload.back().beg   = beg;
 		workload.back().end   = _end;
@@ -348,7 +349,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 		for (std::size_t i = 0; i < workload.size(); i++)
 		{
 			// Get copy of the workload info
-			spu_runtime::work w = workload[i];
+			auto w = workload[i];
 
 			// Split range in two parts
 			auto it = w.beg;
@@ -357,7 +358,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			u32 size2 = w.size - size1;
 			std::advance(it2, w.size / 2);
 
-			while (true)
+			while (verify("spu_runtime::work::level overflow" HERE, w.level))
 			{
 				it = it2;
 				size1 = w.size - size2;
@@ -431,17 +432,27 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			}
 
 			// Emit 32-bit comparison: cmp [ls+addr], imm32
-			verify("Asm overflow" HERE), raw + 10 <= wxptr + size0 * 20;
-			const u32 cmp_lsa = start + (w.level - 1) * 4;
-			*raw++ = 0x81;
+			verify("Asm overflow" HERE), raw + 11 <= wxptr + size0 * 20;
+
+			if (w.from != w.level)
+			{
+				// If necessary (level has advanced), emit load: mov eax, [ls + addr]
 #ifdef _WIN32
-			*raw++ = 0xba;
+				*raw++ = 0x8b;
+				*raw++ = 0x82; // ls = rdx
 #else
-			*raw++ = 0xbe;
+				*raw++ = 0x8b;
+				*raw++ = 0x86; // ls = rsi
 #endif
-			std::memcpy(raw, &cmp_lsa, 4);
-			std::memcpy(raw + 4, &x, 4);
-			raw += 8;
+				const u32 cmp_lsa = start + (w.level - 1) * 4;
+				std::memcpy(raw, &cmp_lsa, 4);
+				raw += 4;
+			}
+
+			// Emit comparison: cmp eax, imm32
+			*raw++ = 0x3d;
+			std::memcpy(raw, &x, 4);
+			raw += 4;
 
 			// Low subrange target
 			if (size1 == 1)
@@ -451,10 +462,11 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			else
 			{
 				make_jump(0x82, raw); // jb rel32 (stub)
-				workload.push_back(w);
-				workload.back().end = it;
-				workload.back().size = size1;
-				workload.back().rel32 = raw;
+				auto& to = workload.emplace_back(w);
+				to.end   = it;
+				to.size  = size1;
+				to.rel32 = raw;
+				to.from  = w.level;
 			}
 
 			// Second subrange target
@@ -483,10 +495,11 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 					else
 					{
 						make_jump(0x87, raw); // ja rel32 (stub)
-						workload.push_back(w);
-						workload.back().beg = it2;
-						workload.back().size = size2;
-						workload.back().rel32 = raw;
+						auto& to = workload.emplace_back(w);
+						to.beg   = it2;
+						to.size  = size2;
+						to.rel32 = raw;
+						to.from  = w.level;
 					}
 
 					const u32 size3 = w.size - size1 - size2;
@@ -498,20 +511,22 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 					else
 					{
 						make_jump(0xe9, raw); // jmp rel32 (stub)
-						workload.push_back(w);
-						workload.back().beg = it;
-						workload.back().end = it2;
-						workload.back().size = size3;
-						workload.back().rel32 = raw;
+						auto& to = workload.emplace_back(w);
+						to.beg   = it;
+						to.end   = it2;
+						to.size  = size3;
+						to.rel32 = raw;
+						to.from  = w.level;
 					}
 				}
 				else
 				{
 					make_jump(0xe9, raw); // jmp rel32 (stub)
-					workload.push_back(w);
-					workload.back().beg = it;
-					workload.back().size = w.size - size1;
-					workload.back().rel32 = raw;
+					auto& to = workload.emplace_back(w);
+					to.beg   = it;
+					to.size  = w.size - size1;
+					to.rel32 = raw;
+					to.from  = w.level;
 				}
 			}
 		}
