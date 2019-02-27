@@ -3,9 +3,7 @@ cmake_minimum_required(VERSION 3.8.2)
 include(cotire)
 
 # Generate git-version.h at build time.
-add_custom_target(GitVersion ALL
-	COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-	-P ${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
@@ -42,19 +40,15 @@ file(GLOB RPCS3_SRC "*.cpp")
 if(WIN32)
 	add_executable(rpcs3 WIN32 ${RPCS3_SRC})
 elseif(APPLE)
-	set(MACOSX_BUNDLE_BUNDLE_NAME rpcs3)
-	set(MACOSX_BUNDLE_GUI_IDENTIFIER "net.rpcs3.rpcs3")
-	set(MACOSX_BUNDLE_INFO_STRING "Open-source Sony PlayStation 3 emulator")
-	set(MACOSX_BUNDLE_ICON_FILE "rpcs3.icns")
-	set(MACOSX_BUNDLE_LONG_VERSION_STRING "0.0.5")
-	set(MACOSX_BUNDLE_SHORT_VERSION_STRING "0.0.5")
-	set(MACOSX_BUNDLE_BUNDLE_VERSION "0.0.5")
 	add_executable(rpcs3 MACOSX_BUNDLE ${RPCS3_SRC} "${RPCS3_SRC_DIR}/rpcs3.icns")
+	set_target_properties(rpcs3
+		PROPERTIES
+			MACOSX_BUNDLE_INFO_PLIST "${RPCS3_SRC_DIR}/rpcs3.plist.in")
 else()
 	add_executable(rpcs3 ${RPCS3_SRC})
 endif()
 
-add_dependencies(rpcs3 GitVersion)
+gen_git_version(${RPCS3_SRC_DIR})
 set_target_properties(rpcs3
 	PROPERTIES
 		AUTOMOC ON

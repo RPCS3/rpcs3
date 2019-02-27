@@ -1,4 +1,4 @@
-#include <QCheckBox>
+﻿#include <QCheckBox>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -168,6 +168,13 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent)
 
 	// Refresh Button
 	connect(ui->b_refresh, &QPushButton::clicked, this, &pad_settings_dialog::RefreshInputTypes);
+
+	ui->chooseClass->addItem(tr("Standard (Pad)"));
+	ui->chooseClass->addItem(tr("Guitar"));
+	ui->chooseClass->addItem(tr("Drum"));
+	ui->chooseClass->addItem(tr("DJ"));
+	ui->chooseClass->addItem(tr("Dance Mat"));
+	ui->chooseClass->addItem(tr("Navigation"));
 
 	// Initialize configurable buttons
 	InitButtons();
@@ -467,6 +474,8 @@ void pad_settings_dialog::ReloadButtons()
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
 
+	ui->chooseClass->setCurrentIndex(m_handler_cfg.device_class_type);
+
 	// Enable Mouse Deadzones
 	std::vector<std::string> mouse_dz_range_x = m_handler_cfg.mouse_deadzone_x.to_list();
 	ui->mouse_dz_x->setRange(std::stoi(mouse_dz_range_x.front()), std::stoi(mouse_dz_range_x.back()));
@@ -551,6 +560,7 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseProfile->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::WheelFocus);
+	ui->chooseClass->setFocusPolicy(Qt::WheelFocus);
 }
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y)
@@ -726,6 +736,8 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 
 		m_padButtons->button(entry.first)->setText(entry.second.text);
 	}
+
+	ui->chooseClass->setCurrentIndex(m_handler_cfg.device_class_type);
 }
 
 void pad_settings_dialog::SwitchButtons(bool is_enabled)
@@ -778,6 +790,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	ui->chooseProfile->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::ClickFocus);
+	ui->chooseClass->setFocusPolicy(Qt::ClickFocus);
 
 	m_last_pos = QCursor::pos();
 
@@ -892,6 +905,7 @@ void pad_settings_dialog::ChangeInputType()
 	// Handle empty device list
 	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
 	ui->chooseDevice->setEnabled(config_enabled);
+	ui->chooseClass->setEnabled(config_enabled);
 
 	if (config_enabled)
 	{
@@ -1061,6 +1075,8 @@ void pad_settings_dialog::SaveProfile()
 		m_handler_cfg.l_stick_lerp_factor.set(ui->left_stick_lerp->value() * 100);
 		m_handler_cfg.r_stick_lerp_factor.set(ui->right_stick_lerp->value() * 100);
 	}
+
+	m_handler_cfg.device_class_type.set(ui->chooseClass->currentIndex());
 
 	m_handler_cfg.save();
 }

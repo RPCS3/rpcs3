@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 
 
@@ -40,6 +40,19 @@ struct sys_lwmutex_locker
 	{
 		verify(HERE), sys_lwmutex_unlock(ppu, mutex) == CELL_OK;
 	}
+};
+
+enum
+{
+	SYS_CRASH_DUMP_MAX_LABEL_SIZE = 16,
+	SYS_CRASH_DUMP_MAX_LOG_AREA   = 127 // not actually defined in CELL
+};
+
+struct sys_crash_dump_log_area_info_t
+{
+	char label[SYS_CRASH_DUMP_MAX_LABEL_SIZE]; // 15 + 1 (0 terminated)
+	vm::ptr<void> addr;
+	be_t<u64> size;
 };
 
 struct sys_lwcond_t;
