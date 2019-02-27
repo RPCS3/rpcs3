@@ -1205,17 +1205,6 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	return result;
 }
 
-static bool adde_carry(u64 a, u64 b, bool c)
-{
-#ifdef _MSC_VER
-	return _addcarry_u64(c, a, b, nullptr) != 0;
-#else
-	bool result;
-	__asm__("addb $0xff, %[c] \n adcq %[a], %[b] \n setb %[result]" : [a] "+&r" (a), [b] "+&r" (b), [c] "+&r" (c), [result] "=r" (result));
-	return result;
-#endif
-}
-
 extern void ppu_initialize()
 {
 	const auto _main = fxm::get<ppu_module>();

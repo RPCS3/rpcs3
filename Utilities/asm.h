@@ -71,58 +71,90 @@ namespace utils
 
 	inline u8 rol8(u8 x, u8 n)
 	{
+#if __has_builtin(__builtin_rotateleft8)
+		return __builtin_rotateleft8(x, n);
+#else
 		u8 result = x;
 		__asm__("rolb %[n], %[result]" : [result] "+g"(result) : [n] "c"(n));
 		return result;
+#endif
 	}
 
 	inline u8 ror8(u8 x, u8 n)
 	{
+#if __has_builtin(__builtin_rotateright8)
+		return __builtin_rotateright8(x, n);
+#else
 		u8 result = x;
 		__asm__("rorb %[n], %[result]" : [result] "+g"(result) : [n] "c"(n));
 		return result;
+#endif
 	}
 
 	inline u16 rol16(u16 x, u16 n)
 	{
+#if __has_builtin(__builtin_rotateleft16)
+		return __builtin_rotateleft16(x, n);
+#else
 		u16 result = x;
 		__asm__("rolw %b[n], %[result]" : [result] "+g"(result) : [n] "c"(n));
 		return result;
+#endif
 	}
 
 	inline u16 ror16(u16 x, u16 n)
 	{
+#if __has_builtin(__builtin_rotateright16)
+		return __builtin_rotateright16(x, n);
+#else
 		u16 result = x;
 		__asm__("rorw %b[n], %[result]" : [result] "+g"(result) : [n] "c"(n));
 		return result;
+#endif
 	}
 
 	inline u32 rol32(u32 x, u32 n)
 	{
+#if __has_builtin(__builtin_rotateleft32)
+		return __builtin_rotateleft32(x, n);
+#else
 		u32 result = x;
 		__asm__("roll %b[n], %[result]" : [result] "+g"(result) : [n] "c"(n));
 		return result;
+#endif
 	}
 
 	inline u32 ror32(u32 x, u32 n)
 	{
+#if __has_builtin(__builtin_rotateright32)
+		return __builtin_rotateright32(x, n);
+#else
 		u32 result = x;
 		__asm__("rorl %b[n], %[result]" : [result] "+g"(result) : [n] "c"(n));
 		return result;
+#endif
 	}
 
 	inline u64 rol64(u64 x, u64 n)
 	{
+#if __has_builtin(__builtin_rotateleft64)
+		return __builtin_rotateleft64(x, n);
+#else
 		u64 result = x;
 		__asm__("rolq %b[n], %[result]" : [result] "+g"(result) : [n] "c"(n));
 		return result;
+#endif
 	}
 
 	inline u64 ror64(u64 x, u64 n)
 	{
+#if __has_builtin(__builtin_rotateright64)
+		return __builtin_rotateright64(x, n);
+#else
 		u64 result = x;
 		__asm__("rorq %b[n], %[result]" : [result] "+g"(result) : [n] "c"(n));
 		return result;
+#endif
 	}
 
 	inline u64 umulh64(u64 a, u64 b)
