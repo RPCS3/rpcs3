@@ -42,7 +42,8 @@ namespace rsx
 	};
 
 	struct invalidation_cause {
-		enum enum_type {
+		enum enum_type
+		{
 			invalid = 0,
 			read,
 			deferred_read,
@@ -50,7 +51,8 @@ namespace rsx
 			deferred_write,
 			unmap, // fault range is being unmapped
 			reprotect, // we are going to reprotect the fault range
-			superseded_by_fbo // used by texture_cache::locked_memory_region
+			superseded_by_fbo, // used by texture_cache::locked_memory_region
+			committed_as_fbo   // same as superseded_by_fbo but without locking or preserving page flags
 		} cause;
 
 		constexpr bool valid() const
@@ -82,7 +84,13 @@ namespace rsx
 			return (cause == unmap || cause == reprotect || cause == superseded_by_fbo);
 		}
 
-		bool skip_flush() const
+		constexpr bool skip_fbos() const
+		{
+			AUDIT(valid());
+			return (cause == superseded_by_fbo || cause == committed_as_fbo);
+		}
+
+		constexpr bool skip_flush() const
 		{
 			AUDIT(valid());
 			return (cause == unmap) || (!g_cfg.video.strict_texture_flushing && cause == superseded_by_fbo);
@@ -1401,20 +1409,16 @@ namespace rsx
 			}
 			else
 			{
-
-				ASSERT(valid_length % rsx_pitch == 0);
-
 				u8 *_src = src;
 				u32 _dst = dst;
-				const auto num_rows = valid_length / rsx_pitch;
 
 				const auto num_exclusions = flush_exclusions.size();
 				if (num_exclusions > 0)
 				{
-					LOG_WARNING(RSX, "Slow imp_flush path triggered with non-empty flush_exclusions (%d exclusions, %d rows), performance might suffer", num_exclusions, num_rows);
+					LOG_WARNING(RSX, "Slow imp_flush path triggered with non-empty flush_exclusions (%d exclusions, %d bytes), performance might suffer", num_exclusions, valid_length);
 				}
 
-				for (u32 row = 0; row < num_rows; ++row)
+				for (s32 remaining = s32(valid_length); remaining > 0; remaining -= rsx_pitch)
 				{
 					imp_flush_memcpy(_dst, _src, real_pitch);
 					_src += real_pitch;

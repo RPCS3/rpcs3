@@ -227,6 +227,9 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	const auto color_offsets = get_offsets();
 	const auto color_locations = get_locations();
 
+	const u8 color_bpp = get_format_block_size_in_bytes(layout.color_format);
+	const u8 depth_bpp = (layout.depth_format == rsx::surface_depth_format::z16 ? 2 : 4);
+
 	gl::command_context cmd{ gl_state };
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
@@ -250,7 +253,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			color_targets[i] = rtt->id();
 
 			rtt->set_rsx_pitch(layout.actual_color_pitch[i]);
-			m_surface_info[i] = { layout.color_addresses[i], layout.actual_color_pitch[i], false, layout.color_format, layout.depth_format, layout.width, layout.height };
+			m_surface_info[i] = { layout.color_addresses[i], layout.actual_color_pitch[i], false, layout.color_format, layout.depth_format, layout.width, layout.height, color_bpp };
 
 			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
 			rtt->write_aa_mode = layout.aa_mode;
@@ -279,7 +282,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		depth_stencil_target = ds->id();
 
 		std::get<1>(m_rtts.m_bound_depth_stencil)->set_rsx_pitch(layout.actual_zeta_pitch);
-		m_depth_surface_info = { layout.zeta_address, layout.actual_zeta_pitch, true, layout.color_format, layout.depth_format, layout.width, layout.height };
+		m_depth_surface_info = { layout.zeta_address, layout.actual_zeta_pitch, true, layout.color_format, layout.depth_format, layout.width, layout.height, depth_bpp };
 
 		ds->write_aa_mode = layout.aa_mode;
 		m_gl_texture_cache.notify_surface_changed(layout.zeta_address);
@@ -380,7 +383,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	{
 		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
 
-		const auto surface_range = m_surface_info[i].get_memory_range(layout.aa_factors[1]);
+		const auto surface_range = m_surface_info[i].get_memory_range(layout.aa_factors);
 		if (g_cfg.video.write_color_buffers)
 		{
 			// Mark buffer regions as NO_ACCESS on Cell-visible side
@@ -395,7 +398,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
-		const auto surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors[1]);
+		const auto surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors);
 		if (g_cfg.video.write_depth_buffer)
 		{
 			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(layout.depth_format);

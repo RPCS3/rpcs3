@@ -535,7 +535,7 @@ namespace rsx
 
 					// Sanity checks
 					AUDIT(exclusion_range.is_page_range());
-					AUDIT(data.cause.is_read() && !excluded->is_flushable() || data.cause == invalidation_cause::superseded_by_fbo || !exclusion_range.overlaps(data.fault_range));
+					AUDIT(data.cause.is_read() && !excluded->is_flushable() || data.cause.skip_fbos() || !exclusion_range.overlaps(data.fault_range));
 
 					// Apply exclusion
 					ranges_to_unprotect.exclude(exclusion_range);
@@ -792,7 +792,7 @@ namespace rsx
 						// Unsynchronized sections (or any flushable when skipping flushes) that do not overlap the fault range directly can also be ignored
 						(invalidation_ignore_unsynchronized && tex.is_flushable() && (cause.skip_flush() || !tex.is_synchronized()) && !overlaps_fault_range) ||
 						// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
-						(overlaps_fault_range && cause == invalidation_cause::superseded_by_fbo && tex.get_context() == texture_upload_context::framebuffer_storage && tex.get_section_base() != fault_range_in.start)
+						(overlaps_fault_range && cause.skip_fbos() && tex.get_context() == texture_upload_context::framebuffer_storage && tex.get_section_base() != fault_range_in.start)
 					   )
 					{
 						// False positive
@@ -874,7 +874,7 @@ namespace rsx
 				else
 				{
 					// This is a read and all overlapping sections were RO and were excluded (except for cause == superseded_by_fbo)
-					AUDIT(cause == invalidation_cause::superseded_by_fbo || cause.is_read() && !result.sections_to_exclude.empty());
+					AUDIT(cause.skip_fbos() || cause.is_read() && !result.sections_to_exclude.empty());
 
 					// We did not handle this violation
 					result.clear_sections();
@@ -1262,7 +1262,7 @@ namespace rsx
 				return;
 
 			std::lock_guard lock(m_cache_mutex);
-			invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
+			invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::committed_as_fbo, std::forward<Args>(extras)...);
 		}
 
 		void set_memory_read_flags(const address_range &memory_range, memory_read_flags flags)
@@ -1640,13 +1640,13 @@ namespace rsx
 					if (limit_x > slice_w)
 					{
 						dst_width = (slice_w - dst_x);
-						src_width = dst_width / scale_x;
+						src_width = u16(dst_width / scale_x);
 					}
 
 					if (limit_y > slice_h)
 					{
 						dst_height = (slice_h - dst_y);
-						src_height = dst_height / scale_y;
+						src_height = u16(dst_height / scale_y);
 					}
 				}
 
@@ -2060,7 +2060,7 @@ namespace rsx
 							u16 internal_height = required_surface_height;
 							get_native_dimensions(internal_width, internal_height, last.surface);
 
-							if (last.width == internal_width && last.height == internal_height)
+							if (last.width >= internal_width && last.height >= internal_height)
 							{
 								verify(HERE), last.surface->test();
 								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, tex.format(), tex_width, tex_height, depth,
