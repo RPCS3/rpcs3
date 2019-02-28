@@ -1769,8 +1769,15 @@ namespace rsx
 
 			if (found_slices < count)
 			{
-				//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
-				LOG_ERROR(RSX, "Could not gather all required slices for cubemap/3d generation");
+				if (found_slices > 0)
+				{
+					//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
+					LOG_ERROR(RSX, "Could not gather all required slices for cubemap/3d generation");
+				}
+				else
+				{
+					LOG_WARNING(RSX, "Could not gather textures into an atlas; using CPU fallback...");
+				}
 			}
 
 			return surfaces;
@@ -1885,23 +1892,20 @@ namespace rsx
 				rsx::texture_dimension_extended extended_dimension, u32 encoded_remap, const texture_channel_remap_t& decoded_remap, int select_hint = -1)
 		{
 			u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
-			bool is_depth = false;
+			bool is_depth;
 
-			const auto bpp = get_format_block_size_in_bytes(format);
-
-			if (LIKELY(!fbos.empty()))
+			verify(HERE), (select_hint & 0x1) == select_hint;
+			if (is_depth = (select_hint == 0) ? fbos.back().is_depth : local.back()->is_depth_texture();
+				is_depth)
 			{
-				verify(HERE), (select_hint & 0x1) == select_hint;
-				if (select_hint == 0 && fbos.back().is_depth)
-				{
-					is_depth = true;
-					format = get_compatible_depth_format(format);
-				}
+				format = get_compatible_depth_format(format);
 			}
 
 			// If this method was called, there is no easy solution, likely means atlas gather is needed
 			auto scaled_w = rsx::apply_resolution_scale(tex_width, true);
 			auto scaled_h = rsx::apply_resolution_scale(tex_height, true);
+
+			const auto bpp = get_format_block_size_in_bytes(format);
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
 			{
@@ -2068,10 +2072,28 @@ namespace rsx
 							}
 						}
 					}
+					else if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
+					{
+						const auto last = overlapping_locals.back();
+						if (last->get_section_base() == texaddr &&
+							last->get_width() >= tex_width && last->get_height() >= tex_height)
+						{
+							return { last->get_raw_texture(), deferred_request_command::copy_image_static, texaddr, format, 0, 0,
+									tex_width, tex_height, 1, last->get_context(), last->is_depth_texture(),
+									1.f, extended_dimension == rsx::texture_dimension_extended::texture_dimension_2d? 1.f : 0.f,
+									extended_dimension, tex.decoded_remap() };
+						}
+					}
 
-					return merge_cache_resources(cmd, overlapping_fbos, overlapping_locals,
+					auto result = merge_cache_resources(cmd, overlapping_fbos, overlapping_locals,
 						texaddr, tex.format(), tex_width, tex_height, depth, tex_pitch, slice_h,
 						extended_dimension, tex.remap(), tex.decoded_remap(), _pool);
+
+					if (!result.external_subresource_desc.sections_to_copy.empty())
+					{
+						// If there are really no hits, just use fallback
+						return result;
+					}
 				}
 			}
 
