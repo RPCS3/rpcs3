@@ -579,8 +579,24 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 		info->status[i] = pads[i]->m_port_status;
 		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
-		info->product_id[i] = 0x0268;
-		info->vendor_id[i] = 0x054C;
+
+		switch (pads[i]->m_class_type)
+		{
+		case CELL_PAD_PCLASS_TYPE_GUITAR:
+			// Guitar Hero Guitar
+			info->vendor_id[i] = 0x12BA;
+			info->product_id[i] = 0x0200;
+			break;
+		case CELL_PAD_PCLASS_TYPE_DRUM:
+			// Guitar Hero Drum
+			info->vendor_id[i] = 0x12BA;
+			info->product_id[i] = 0x0210;
+			break;
+		default:
+			info->vendor_id[i] = 0x054C;
+			info->product_id[i] = 0x0268;
+			break;
+		}
 	}
 
 	return CELL_OK;
@@ -653,7 +669,8 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	// Should return the same as device capability mask, psl1ght has it backwards in pad->h
-	info->info[port_no] = pad->m_device_capability;
+	memset(info->info, 0, CELL_PAD_MAX_CAPABILITY_INFO * sizeof(u32));
+	info->info[0] = pad->m_device_capability;
 
 	return CELL_OK;
 }
