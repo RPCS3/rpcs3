@@ -182,9 +182,9 @@ struct gl_render_target_traits
 		result->set_native_component_layout(native_layout);
 		result->old_contents = old_surface;
 
-		result->queue_tag(address);
 		result->set_cleared(false);
 		result->update_surface();
+		result->queue_tag(address);
 		return result;
 	}
 
@@ -210,9 +210,9 @@ struct gl_render_target_traits
 		result->set_native_component_layout(native_layout);
 		result->old_contents = old_surface;
 
-		result->queue_tag(address);
 		result->set_cleared(false);
 		result->update_surface();
+		result->queue_tag(address);
 		return result;
 	}
 

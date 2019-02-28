@@ -458,7 +458,7 @@ void GLGSRender::end()
 			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
 			//It is impossible for the render target to be type A or B here (clear all would have been flagged)
 			for (auto &i : buffers_to_clear)
-				glClearBufferfv(m_draw_fbo->id(), i, colors);
+				glClearBufferfv(GL_COLOR, i, colors);
 		}
 
 		if (clear_depth)
