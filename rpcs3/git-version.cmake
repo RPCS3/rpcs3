@@ -61,15 +61,15 @@ function(gen_git_version rpcs3_src_dir)
 
 		# Don't update if it's already the same.
 		file(STRINGS ${GIT_VERSION_FILE} match
-			REGEX "${GIT_VERSION}")
+			REGEX "${RPCS3_GIT_VERSION}")
 		if(NOT "${match}" STREQUAL "")
 			set(GIT_VERSION_UPDATE "0")
 		endif()
 	endif()
 
 	set(code_string "// This is a generated file.\n\n"
-		"#define RPCS3_GIT_VERSION \"${GIT_VERSION}\"\n"
-		"#define RPCS3_GIT_BRANCH \"${GIT_BRANCH}\"\n\n"
+		"#define RPCS3_GIT_VERSION \"${RPCS3_GIT_VERSION}\"\n"
+		"#define RPCS3_GIT_BRANCH \"${RPCS3_GIT_BRANCH}\"\n\n"
 		"// If you don't want this file to update/recompile, change to 1.\n"
 		"#define RPCS3_GIT_VERSION_NO_UPDATE 0\n")
 
