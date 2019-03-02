@@ -282,7 +282,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			return cpu;
 		}
 
-		mutex->signaled.release(1);
+		mutex->signaled |= 1;
 		return nullptr;
 	});
 
