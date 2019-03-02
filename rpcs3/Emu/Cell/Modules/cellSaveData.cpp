@@ -1,5 +1,6 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 
@@ -373,8 +374,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		while (funcList)
 		{
+			// Yield
+			lv2_obj::sleep(ppu);
+
 			// Display Save Data List asynchronously in the GUI thread.
 			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, operation, listSet);
+
+			// Reschedule
+			ppu.check_state();
 
 			// UI returns -1 for new save games
 			if (selected == -1)
