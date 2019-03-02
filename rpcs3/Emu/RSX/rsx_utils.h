@@ -544,6 +544,32 @@ namespace rsx
 		return std::make_tuple(u16(dst_w / scale_x), u16(dst_h / scale_y), dst_w, dst_h);
 	}
 
+	template <typename SurfaceType>
+	inline bool pitch_compatible(SurfaceType* a, SurfaceType* b)
+	{
+		if (a->get_surface_height() == 1 || b->get_surface_height() == 1)
+			return true;
+
+		return (a->get_rsx_pitch() == b->get_rsx_pitch());
+	}
+
+	template <bool __is_surface = true, typename SurfaceType>
+	inline bool pitch_compatible(SurfaceType* surface, u16 pitch_required, u16 height_required)
+	{
+		if constexpr (__is_surface)
+		{
+			if (height_required == 1 || surface->get_surface_height() == 1)
+				return true;
+		}
+		else
+		{
+			if (height_required == 1 || surface->get_height() == 1)
+				return true;
+		}
+
+		return (surface->get_rsx_pitch() == pitch_required);
+	}
+
 	/**
 	 * Remove restart index and emulate using degenerate triangles
 	 * Can be used as a workaround when restart_index doesnt work too well

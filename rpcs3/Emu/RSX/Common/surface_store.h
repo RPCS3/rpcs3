@@ -997,7 +997,7 @@ namespace rsx
 						continue;
 
 					surface = std::get<1>(tex_info).get();
-					if (surface->get_rsx_pitch() != requested_pitch)
+					if (!rsx::pitch_compatible(surface, requested_pitch, requested_height))
 						continue;
 
 					if (requested_width == 0 || requested_height == 0)
@@ -1023,7 +1023,7 @@ namespace rsx
 						continue;
 
 					surface = std::get<1>(tex_info).get();
-					if (surface->get_rsx_pitch() != requested_pitch)
+					if (!rsx::pitch_compatible(surface, requested_pitch, requested_height))
 						continue;
 
 					if (requested_width == 0 || requested_height == 0)
@@ -1059,7 +1059,7 @@ namespace rsx
 
 					auto surface = std::get<1>(tex_info).get();
 					const auto pitch = surface->get_rsx_pitch();
-					if (pitch != required_pitch)
+					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
 						continue;
 
 					const auto texture_size = pitch * surface->get_surface_height();
