@@ -27,21 +27,25 @@ extern u64 get_system_time();
 
 struct RSXIOTable
 {
-	u16 ea[4096];
-	u16 io[3072];
+	atomic_t<u16> ea[4096];
+	atomic_t<u16> io[3072];
 
 	// try to get the real address given a mapped address
 	// return non zero on success
 	inline u32 RealAddr(u32 offs)
 	{
-		const u32 upper = this->ea[offs >> 20];
+		u32 result = this->ea[offs >> 20].load();
 
-		if (static_cast<s16>(upper) < 0)
+		if (static_cast<s16>(result) < 0)
 		{
 			return 0;
 		}
 
-		return (upper << 20) | (offs & 0xFFFFF);
+		result <<= 20; result |= (offs & 0xFFFFF);
+
+		ASSUME(result != 0);
+
+		return result;
 	}
 };
 
