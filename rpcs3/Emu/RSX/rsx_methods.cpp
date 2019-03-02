@@ -820,7 +820,7 @@ namespace rsx
 
 			const blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
 			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
-			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
+			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
 			const f32 in_x = std::ceil(method_registers.blit_engine_in_x());
 			const f32 in_y = std::ceil(method_registers.blit_engine_in_y());
@@ -924,7 +924,16 @@ namespace rsx
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
 				src_color_format != rsx::blit_engine::transfer_source_format::a8r8g8b8)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, (u8)src_color_format);
+				// Alpha has no meaning in both formats
+				if (src_color_format == rsx::blit_engine::transfer_source_format::x8r8g8b8)
+				{
+					src_color_format = rsx::blit_engine::transfer_source_format::a8r8g8b8;
+				}
+				else
+				{
+					// TODO: Support more formats
+					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, (u8)src_color_format);
+				}
 			}
 
 			f32 scale_x = method_registers.blit_engine_ds_dx();
