@@ -1086,8 +1086,8 @@ s32 cellGcmUnmapEaIoAddress(u32 ea)
 
 		for (u32 i = 0; i < size; i++)
 		{
-			RSXIOMem.io[ea + i] = offsetTable.ioAddress[ea + i] = 0xFFFF;
-			RSXIOMem.ea[io + i] = offsetTable.eaAddress[io + i] = 0xFFFF;
+			RSXIOMem.io[ea + i].release(offsetTable.ioAddress[ea + i] = 0xFFFF);
+			RSXIOMem.ea[io + i].release(offsetTable.eaAddress[io + i] = 0xFFFF);
 		}
 	}
 	else
@@ -1109,8 +1109,8 @@ s32 cellGcmUnmapIoAddress(u32 io)
 
 		for (u32 i = 0; i < size; i++)
 		{
-			RSXIOMem.io[ea + i] = offsetTable.ioAddress[ea + i] = 0xFFFF;
-			RSXIOMem.ea[io + i] = offsetTable.eaAddress[io + i] = 0xFFFF;
+			RSXIOMem.io[ea + i].release(offsetTable.ioAddress[ea + i] = 0xFFFF);
+			RSXIOMem.ea[io + i].release(offsetTable.eaAddress[io + i] = 0xFFFF);
 		}
 	}
 	else

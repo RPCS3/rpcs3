@@ -196,8 +196,8 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 
 	for (u32 i = 0; i < size; i++)
 	{
-		RSXIOMem.io[ea + i] = io + i;
-		RSXIOMem.ea[io + i] = ea + i;
+		RSXIOMem.io[ea + i].release(io + i);
+		RSXIOMem.ea[io + i].release(ea + i);
 	}
 
 	return CELL_OK;
@@ -221,8 +221,8 @@ s32 sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 	const u32 end = (io >>= 20) + (size >>= 20);
 	for (u32 ea = RSXIOMem.ea[io]; io < end;)
 	{
-		RSXIOMem.io[ea++] = 0xFFFF;
-		RSXIOMem.ea[io++] = 0xFFFF;
+		RSXIOMem.io[ea++].release(0xFFFF);
+		RSXIOMem.ea[io++].release(0xFFFF);
 	}
 
 	return CELL_OK;
