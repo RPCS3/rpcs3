@@ -720,6 +720,8 @@ namespace rsx
 			// Fast code-path for keeping the fault range protection when not flushing anything
 			if (cause.keep_fault_range_protection() && cause.skip_flush() && !trampled_set.sections.empty())
 			{
+				verify(HERE), cause != invalidation_cause::committed_as_fbo;
+
 				// We discard all sections fully inside fault_range
 				for (auto &obj : trampled_set.sections)
 				{
@@ -792,7 +794,8 @@ namespace rsx
 						// Unsynchronized sections (or any flushable when skipping flushes) that do not overlap the fault range directly can also be ignored
 						(invalidation_ignore_unsynchronized && tex.is_flushable() && (cause.skip_flush() || !tex.is_synchronized()) && !overlaps_fault_range) ||
 						// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
-						(overlaps_fault_range && cause.skip_fbos() && tex.get_context() == texture_upload_context::framebuffer_storage && tex.get_section_base() != fault_range_in.start)
+						// If region is committed as fbo, all non-fbo data is removed but all fbos in the region must be preserved if possible
+						(overlaps_fault_range && tex.get_context() == texture_upload_context::framebuffer_storage && cause.skip_fbos() && (tex.get_section_base() != fault_range_in.start || cause == invalidation_cause::committed_as_fbo))
 					   )
 					{
 						// False positive
