@@ -3581,6 +3581,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 	{
 		if (data.command_buffer_to_wait == m_current_command_buffer)
 		{
+			std::lock_guard lock(m_flush_queue_mutex);
 			flush_command_queue();
 
 			//Clear any deferred flush requests from previous call to get_query_status()
