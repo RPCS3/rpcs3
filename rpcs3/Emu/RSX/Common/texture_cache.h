@@ -1040,7 +1040,7 @@ namespace rsx
 		}
 
 		template <bool check_unlocked = false>
-		std::vector<section_storage_type*> find_texture_from_range(const address_range &test_range, u16 required_pitch = 0, u32 context_mask=0xFF)
+		std::vector<section_storage_type*> find_texture_from_range(const address_range &test_range, u16 required_pitch = 0, u32 context_mask = 0xFF)
 		{
 			std::vector<section_storage_type*> results;
 
@@ -1060,7 +1060,7 @@ namespace rsx
 							continue;
 					}
 
-					if (required_pitch && tex.get_rsx_pitch() != required_pitch)
+					if (required_pitch && !rsx::pitch_compatible<false>(&tex, required_pitch, UINT16_MAX))
 					{
 						continue;
 					}
@@ -1575,8 +1575,7 @@ namespace rsx
 
 				for (u32 index = 0; index < local.size(); ++index)
 				{
-					if (local[index]->get_rsx_pitch() != pitch ||
-						local[index]->get_context() != rsx::texture_upload_context::blit_engine_dst)
+					if (local[index]->get_context() != rsx::texture_upload_context::blit_engine_dst)
 						continue;
 
 					sort_list.push_back({ local[index]->last_write_tag, 1, index });
@@ -1742,9 +1741,6 @@ namespace rsx
 				{
 					for (auto &section : local)
 					{
-						if (section->get_rsx_pitch() != pitch)
-							continue;
-
 						add_local_resource(section, current_address, slice, false);
 					}
 				}
@@ -1791,7 +1787,7 @@ namespace rsx
 			u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch,
 			rsx::texture_dimension_extended extended_dimension)
 		{
-			if (texptr->get_rsx_pitch() != tex_pitch)
+			if (!rsx::pitch_compatible(texptr, tex_pitch, tex_height))
 			{
 				return false;
 			}
@@ -2008,7 +2004,7 @@ namespace rsx
 			// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
 			const u32 lookup_mask = (is_compressed_format)? rsx::texture_upload_context::shader_read :
 				rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
-			const auto overlapping_locals = find_texture_from_range<true>(tex_range, tex_pitch, lookup_mask);
+			const auto overlapping_locals = find_texture_from_range<true>(tex_range, tex_height > 1? tex_pitch : 0, lookup_mask);
 
 			for (auto& cached_texture : overlapping_locals)
 			{

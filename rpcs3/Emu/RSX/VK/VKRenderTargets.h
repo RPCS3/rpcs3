@@ -100,7 +100,7 @@ namespace vk
 			}
 
 			auto src_texture = static_cast<vk::render_target*>(old_contents);
-			if (src_texture->get_rsx_pitch() != get_rsx_pitch())
+			if (!rsx::pitch_compatible(this, src_texture))
 			{
 				LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
 				return;

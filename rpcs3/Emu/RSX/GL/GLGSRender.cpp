@@ -216,7 +216,7 @@ void GLGSRender::end()
 	// Handle special memory barrier for ARGB8->D24S8 in an active DSV
 	if (ds && ds->old_contents != nullptr &&
 		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8 &&
-		ds->get_rsx_pitch() == static_cast<gl::render_target*>(ds->old_contents)->get_rsx_pitch())
+		rsx::pitch_compatible(ds, static_cast<gl::render_target*>(ds->old_contents)))
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 

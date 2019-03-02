@@ -1436,7 +1436,7 @@ void VKGSRender::end()
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && ds->old_contents &&
 		ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM &&
-		ds->get_rsx_pitch() == static_cast<vk::render_target*>(ds->old_contents)->get_rsx_pitch())
+		rsx::pitch_compatible(ds, static_cast<vk::render_target*>(ds->old_contents)))
 	{
 		auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
 		auto render_pass = m_render_passes[rp];
