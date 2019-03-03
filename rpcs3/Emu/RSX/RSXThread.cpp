@@ -1053,61 +1053,22 @@ namespace rsx
 			fmt::throw_exception("Unknown framebuffer context 0x%x" HERE, (u32)context);
 		}
 
-		auto check_swizzled_render = [&]()
-		{
-			// Packed rasterization with optimal memory layout
-			// Pitch has to be packed for all active render targets, i.e 64
-			// Formats also seemingly need matching depth and color pitch if both are active
-
-			if (color_buffer_unused)
-			{
-				// Check only depth
-				return (layout.zeta_pitch == 64);
-			}
-			else if (depth_buffer_unused)
-			{
-				// Check only color
-				for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
-				{
-					if (layout.color_pitch[index] != 64)
-					{
-						return false;
-					}
-				}
-
-				return true;
-			}
-
-			if (depth_texel_size != color_texel_size)
-			{
-				// Both depth and color exist, but pixel size differs
-				return false;
-			}
-			else
-			{
-				// Qualifies, but only if all the pitch values are disabled (64)
-				// Both depth and color are assumed to exist in this case, unless proven otherwise
-				if (layout.zeta_pitch != 64)
-				{
-					return false;
-				}
-
-				for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
-				{
-					if (layout.color_pitch[index] != 64)
-					{
-						return false;
-					}
-				}
-
-				return true;
-			}
-		};
-
 		// Swizzled render does tight packing of bytes
-		const bool packed_render = check_swizzled_render();
+		bool packed_render = false;
 		u32 minimum_color_pitch = 64u;
 		u32 minimum_zeta_pitch = 64u;
+
+		switch (const auto mode = rsx::method_registers.surface_type())
+		{
+		default:
+			LOG_ERROR(RSX, "Unknown raster mode 0x%x", (u32)mode);
+			[[fallthrough]];
+		case rsx::surface_raster_type::linear:
+			break;
+		case rsx::surface_raster_type::swizzle:
+			packed_render = true;
+			break;
+		};
 
 		if (!packed_render)
 		{
