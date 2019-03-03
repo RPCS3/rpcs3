@@ -1243,6 +1243,11 @@ namespace rsx
 			return decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
 		}
 
+		surface_raster_type surface_type() const
+		{
+			return decode<NV4097_SET_SURFACE_FORMAT>().type();
+		}
+
 		surface_antialiasing surface_antialias() const
 		{
 			return decode<NV4097_SET_SURFACE_FORMAT>().antialias();

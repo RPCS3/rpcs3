@@ -61,6 +61,12 @@ namespace rsx
 
 	surface_depth_format to_surface_depth_format(u8 in);
 
+	enum class surface_raster_type : u8
+	{
+		linear = 1,
+		swizzle = 2,
+	};
+
 	enum class surface_antialiasing : u8
 	{
 		center_1_sample,
