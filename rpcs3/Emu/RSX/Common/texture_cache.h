@@ -2034,8 +2034,7 @@ namespace rsx
 					break;
 				}
 
-				auto bpp = get_format_block_size_in_bytes(format);
-				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch, bpp);
+				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch);
 
 				if (!overlapping_fbos.empty() || !overlapping_locals.empty())
 				{
@@ -2150,8 +2149,19 @@ namespace rsx
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
 
-			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, false, false, false);
+			auto rtt_lookup = [&m_rtts, &cmd](u32 address, u32 width, u32 height, u32 pitch, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
+			{
+				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch);
+				if (list.empty() || (list.back().is_clipped && !allow_clipped))
+				{
+					return {};
+				}
+
+				return list.back();
+			};
+
+			// Check if src/dst are parts of render targets
+			auto dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			if (dst_is_render_target && dst_subres.surface->get_native_pitch() != dst.pitch)
@@ -2163,7 +2173,7 @@ namespace rsx
 			}
 
 			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src_w, src_h, src.pitch, true, false, false);
+			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, true);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			if (src_is_render_target && src_subres.surface->get_native_pitch() != src.pitch)
@@ -2176,14 +2186,14 @@ namespace rsx
 
 			if (src_is_render_target && !src_subres.surface->test() && !m_rtts.address_is_bound(src_subres.base_address))
 			{
-				m_rtts.invalidate_surface_address(src_subres.base_address, src_subres.is_depth_surface);
+				m_rtts.invalidate_surface_address(src_subres.base_address, src_subres.is_depth);
 				invalidate_address(cmd, src_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
 				src_is_render_target = false;
 			}
 
 			if (dst_is_render_target && !dst_subres.surface->test() && !m_rtts.address_is_bound(dst_subres.base_address))
 			{
-				m_rtts.invalidate_surface_address(dst_subres.base_address, dst_subres.is_depth_surface);
+				m_rtts.invalidate_surface_address(dst_subres.base_address, dst_subres.is_depth);
 				invalidate_address(cmd, dst_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
 				dst_is_render_target = false;
 			}
@@ -2203,15 +2213,15 @@ namespace rsx
 				{
 					//Enable type scaling in src
 					typeless_info.src_is_typeless = true;
-					typeless_info.src_is_depth = src_subres.is_depth_surface;
+					typeless_info.src_is_depth = src_subres.is_depth;
 					typeless_info.src_scaling_hint = (f32)src_bpp / expected_bpp;
 					typeless_info.src_gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 
 					src_w = (u16)(src_w / typeless_info.src_scaling_hint);
 					if (!src_subres.is_clipped)
-						src_subres.w = (u16)(src_subres.w / typeless_info.src_scaling_hint);
+						src_subres.width = (u16)(src_subres.width / typeless_info.src_scaling_hint);
 					else
-						src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src_w, src_h, src.pitch, true, false, false);
+						src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, true);
 
 					verify(HERE), src_subres.surface != nullptr;
 				}
@@ -2228,15 +2238,15 @@ namespace rsx
 				{
 					//Enable type scaling in dst
 					typeless_info.dst_is_typeless = true;
-					typeless_info.dst_is_depth = dst_subres.is_depth_surface;
+					typeless_info.dst_is_depth = dst_subres.is_depth;
 					typeless_info.dst_scaling_hint = (f32)dst_bpp / expected_bpp;
 					typeless_info.dst_gcm_format = dst_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 
 					dst_w = (u16)(dst_w / typeless_info.dst_scaling_hint);
 					if (!dst_subres.is_clipped)
-						dst_subres.w = (u16)(dst_subres.w / typeless_info.dst_scaling_hint);
+						dst_subres.width = (u16)(dst_subres.width / typeless_info.dst_scaling_hint);
 					else
-						dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst_w, dst_h, dst.pitch, true, false, false);
+						dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, false);
 
 					verify(HERE), dst_subres.surface != nullptr;
 				}
@@ -2325,12 +2335,19 @@ namespace rsx
 			}
 			else
 			{
-				//TODO: Investigate effects of tile compression
+				// Destination dimensions are relaxed (true)
+				dst_area.x1 = dst_subres.src_x;
+				dst_area.y1 = dst_subres.src_y;
+				dst_area.x2 += dst_subres.src_x;
+				dst_area.y2 += dst_subres.src_y;
 
-				dst_area.x1 = dst_subres.x;
-				dst_area.y1 = dst_subres.y;
-				dst_area.x2 += dst_subres.x;
-				dst_area.y2 += dst_subres.y;
+				f32 scale_x = get_internal_scaling_x(dst_subres.surface);
+				f32 scale_y = get_internal_scaling_y(dst_subres.surface);
+
+				dst_area.x1 = s32(scale_x * dst_area.x1);
+				dst_area.x2 = s32(scale_x * dst_area.x2);
+				dst_area.y1 = s32(scale_y * dst_area.y1);
+				dst_area.y2 = s32(scale_y * dst_area.y2);
 
 				dest_texture = dst_subres.surface->get_surface();
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
@@ -2400,8 +2417,8 @@ namespace rsx
 			{
 				if (!dst_is_render_target)
 				{
-					u16 src_subres_w = src_subres.w;
-					u16 src_subres_h = src_subres.h;
+					u16 src_subres_w = src_subres.width;
+					u16 src_subres_h = src_subres.height;
 					get_rsx_dimensions(src_subres_w, src_subres_h, src_subres.surface);
 
 					const int dst_width = (int)(src_subres_w * scale_x * typeless_info.src_scaling_hint);
@@ -2411,20 +2428,20 @@ namespace rsx
 					dst_area.y2 = dst_area.y1 + dst_height;
 				}
 
-				src_area.x2 = src_subres.w;
-				src_area.y2 = src_subres.h;
+				src_area.x2 = src_subres.width;
+				src_area.y2 = src_subres.height;
 
-				src_area.x1 = src_subres.x;
-				src_area.y1 = src_subres.y;
-				src_area.x2 += src_subres.x;
-				src_area.y2 += src_subres.y;
+				src_area.x1 = src_subres.src_x;
+				src_area.y1 = src_subres.src_y;
+				src_area.x2 += src_subres.src_x;
+				src_area.y2 += src_subres.src_y;
 
 				vram_texture = src_subres.surface->get_surface();
 				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}
 
-			const bool src_is_depth = src_subres.is_depth_surface;
-			const bool dst_is_depth = dst_is_render_target? dst_subres.is_depth_surface :
+			const bool src_is_depth = src_subres.is_depth;
+			const bool dst_is_depth = dst_is_render_target? dst_subres.is_depth :
 										dest_texture ? cached_dest->is_depth_texture() : src_is_depth;
 
 			//Type of blit decided by the source, destination use should adapt on the fly
