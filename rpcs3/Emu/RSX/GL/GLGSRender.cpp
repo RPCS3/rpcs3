@@ -1645,7 +1645,7 @@ void GLGSRender::flip(int buffer)
 			else
 			{
 				gl::command_context cmd = { gl_state };
-				const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, absolute_address, buffer_width, buffer_height, buffer_pitch, 4);
+				const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, absolute_address, buffer_width, buffer_height, buffer_pitch);
 				verify(HERE), !overlap_info.empty();
 
 				if (overlap_info.back().surface == render_target_texture)

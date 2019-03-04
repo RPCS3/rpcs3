@@ -25,32 +25,12 @@ namespace rsx
 	}
 
 	template <typename surface_type>
-	struct surface_subresource_storage
-	{
-		surface_type surface = nullptr;
-		u32 base_address = 0;
-
-		u16 x = 0;
-		u16 y = 0;
-		u16 w = 0;
-		u16 h = 0;
-
-		bool is_bound = false;
-		bool is_depth_surface = false;
-		bool is_clipped = false;
-
-		surface_subresource_storage() {}
-
-		surface_subresource_storage(u32 addr, surface_type src, u16 X, u16 Y, u16 W, u16 H, bool _Bound, bool _Depth, bool _Clipped = false)
-			: base_address(addr), surface(src), x(X), y(Y), w(W), h(H), is_bound(_Bound), is_depth_surface(_Depth), is_clipped(_Clipped)
-		{}
-	};
-
-	template <typename surface_type>
 	struct surface_overlap_info_t
 	{
 		surface_type surface = nullptr;
+		u32 base_address = 0;
 		bool is_depth = false;
+		bool is_clipped = false;
 
 		u16 src_x = 0;
 		u16 src_y = 0;
@@ -222,14 +202,14 @@ namespace rsx
 			}
 		}
 
-	protected:
+	public:
 		using surface_storage_type = typename Traits::surface_storage_type;
 		using surface_type = typename Traits::surface_type;
 		using command_list_type = typename Traits::command_list_type;
 		using download_buffer_object = typename Traits::download_buffer_object;
-		using surface_subresource = surface_subresource_storage<surface_type>;
 		using surface_overlap_info = surface_overlap_info_t<surface_type>;
 
+	protected:
 		std::unordered_map<u32, surface_storage_type> m_render_targets_storage = {};
 		std::unordered_map<u32, surface_storage_type> m_depth_stencil_storage = {};
 
@@ -829,85 +809,6 @@ namespace rsx
 			}
 		}
 
-		/**
-		 * Clipping and fitting lookup functions
-		 * surface_overlaps - returns true if surface overlaps a given surface address and returns the relative x and y position of the surface address within the surface
-		 * address_is_bound - returns true if the surface at a given address is actively bound
-		 * get_surface_subresource_if_available - returns a section descriptor that allows to crop surfaces stored in memory
-		 */
-		bool surface_overlaps_address(surface_type surface, u32 surface_address, u32 texaddr, u16 *x, u16 *y)
-		{
-			bool is_subslice = false;
-			u16  x_offset = 0;
-			u16  y_offset = 0;
-
-			if (surface_address > texaddr)
-				return false;
-
-			const u32 offset = texaddr - surface_address;
-			if (offset == 0)
-			{
-				*x = 0;
-				*y = 0;
-				return true;
-			}
-			else
-			{
-				surface_format_info info{};
-				Traits::get_surface_info(surface, &info);
-
-				bool doubled_x = false;
-				bool doubled_y = false;
-
-				switch (surface->read_aa_mode)
-				{
-				case rsx::surface_antialiasing::square_rotated_4_samples:
-				case rsx::surface_antialiasing::square_centered_4_samples:
-					doubled_y = true;
-					//fall through
-				case rsx::surface_antialiasing::diagonal_centered_2_samples:
-					doubled_x = true;
-					break;
-				}
-
-				u32 range = info.rsx_pitch * info.surface_height;
-				if (doubled_y) range <<= 1;
-
-				if (offset < range)
-				{
-					y_offset = (offset / info.rsx_pitch);
-					x_offset = (offset % info.rsx_pitch) / info.bpp;
-
-					if (doubled_x) x_offset /= 2;
-					if (doubled_y) y_offset /= 2;
-
-					is_subslice = true;
-				}
-			}
-
-			if (is_subslice)
-			{
-				*x = x_offset;
-				*y = y_offset;
-
-				return true;
-			}
-
-			return false;
-		}
-
-		//Fast hit test
-		inline bool surface_overlaps_address_fast(surface_type surface, u32 surface_address, u32 texaddr)
-		{
-			if (surface_address > texaddr)
-				return false;
-
-			const u32 offset = texaddr - surface_address;
-			const u32 range = surface->get_rsx_pitch() * surface->get_surface_height();
-
-			return (offset < range);
-		}
-
 		bool address_is_bound(u32 address) const
 		{
 			for (auto &surface : m_bound_render_targets)
@@ -923,127 +824,8 @@ namespace rsx
 			return false;
 		}
 
-		inline bool region_fits(u16 region_width, u16 region_height, u16 x_offset, u16 y_offset, u16 width, u16 height) const
-		{
-			if ((x_offset + width) > region_width) return false;
-			if ((y_offset + height) > region_height) return false;
-
-			return true;
-		}
-
-		surface_subresource get_surface_subresource_if_applicable(u32 texaddr, u16 requested_width, u16 requested_height, u16 requested_pitch,
-			bool crop = false, bool ignore_depth_formats = false, bool ignore_color_formats = false)
-		{
-			auto test_surface = [&](surface_type surface, u32 this_address, u16 &x_offset, u16 &y_offset, u16 &w, u16 &h, bool &clipped)
-			{
-				if (surface_overlaps_address(surface, this_address, texaddr, &x_offset, &y_offset))
-				{
-					surface_format_info info{};
-					Traits::get_surface_info(surface, &info);
-
-					u16 real_width = requested_width;
-					u16 real_height = requested_height;
-
-					switch (surface->read_aa_mode)
-					{
-					case rsx::surface_antialiasing::diagonal_centered_2_samples:
-						real_width /= 2;
-						break;
-					case rsx::surface_antialiasing::square_centered_4_samples:
-					case rsx::surface_antialiasing::square_rotated_4_samples:
-						real_width /= 2;
-						real_height /= 2;
-						break;
-					}
-
-					if (region_fits(info.surface_width, info.surface_height, x_offset, y_offset, real_width, real_height))
-					{
-						w = real_width;
-						h = real_height;
-						clipped = false;
-
-						return true;
-					}
-					else if (crop && info.surface_width > x_offset && info.surface_height > y_offset)
-					{
-						//Forcefully fit the requested region by clipping and scaling
-						u16 remaining_width = info.surface_width - x_offset;
-						u16 remaining_height = info.surface_height - y_offset;
-
-						w = std::min(real_width, remaining_width);
-						h = std::min(real_height, remaining_height);
-						clipped = true;
-
-						return true;
-					}
-				}
-
-				return false;
-			};
-
-			surface_type surface = nullptr;
-			bool clipped = false;
-			u16  x_offset = 0;
-			u16  y_offset = 0;
-			u16  w;
-			u16  h;
-
-			if (!ignore_color_formats)
-			{
-				for (auto &tex_info : m_render_targets_storage)
-				{
-					const u32 this_address = std::get<0>(tex_info);
-					if (texaddr < this_address)
-						continue;
-
-					surface = std::get<1>(tex_info).get();
-					if (!rsx::pitch_compatible(surface, requested_pitch, requested_height))
-						continue;
-
-					if (requested_width == 0 || requested_height == 0)
-					{
-						if (!surface_overlaps_address_fast(surface, this_address, texaddr))
-							continue;
-						else
-							return{ this_address, surface, 0, 0, 0, 0, false, false, false };
-					}
-
-					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address), false, clipped };
-				}
-			}
-
-			if (!ignore_depth_formats)
-			{
-				//Check depth surfaces for overlap
-				for (auto &tex_info : m_depth_stencil_storage)
-				{
-					const u32 this_address = std::get<0>(tex_info);
-					if (texaddr < this_address)
-						continue;
-
-					surface = std::get<1>(tex_info).get();
-					if (!rsx::pitch_compatible(surface, requested_pitch, requested_height))
-						continue;
-
-					if (requested_width == 0 || requested_height == 0)
-					{
-						if (!surface_overlaps_address_fast(surface, this_address, texaddr))
-							continue;
-						else
-							return{ this_address, surface, 0, 0, 0, 0, false, true, false };
-					}
-
-					if (test_surface(surface, this_address, x_offset, y_offset, w, h, clipped))
-						return{ this_address, surface, x_offset, y_offset, w, h, address_is_bound(this_address), true, clipped };
-				}
-			}
-
-			return{};
-		}
-
 		template <typename commandbuffer_type>
-		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u32 bpp)
+		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch)
 		{
 			std::vector<surface_overlap_info> result;
 			std::vector<std::pair<u32, bool>> dirty;
@@ -1062,7 +844,10 @@ namespace rsx
 					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
 						continue;
 
-					const auto texture_size = pitch * surface->get_surface_height();
+					const u16 scale_x = surface->read_aa_mode > rsx::surface_antialiasing::center_1_sample? 2 : 1;
+					const u16 scale_y = surface->read_aa_mode > rsx::surface_antialiasing::diagonal_centered_2_samples? 2 : 1;
+					const auto texture_size = pitch * surface->get_surface_height() * scale_y;
+
 					if ((this_address + texture_size) <= texaddr)
 						continue;
 
@@ -1074,27 +859,41 @@ namespace rsx
 
 					surface_overlap_info info;
 					info.surface = surface;
+					info.base_address = this_address;
 					info.is_depth = is_depth;
+
+					surface_format_info surface_info{};
+					Traits::get_surface_info(surface, &surface_info);
 
 					if (this_address < texaddr)
 					{
+						const auto int_required_width = required_width / scale_x;
+						const auto int_required_height = required_height / scale_y;
+
 						auto offset = texaddr - this_address;
-						info.src_y = (offset / required_pitch);
-						info.src_x = (offset % required_pitch) / bpp;
+						info.src_y = (offset / required_pitch) / scale_y;
+						info.src_x = (offset % required_pitch) / surface_info.bpp / scale_x;
 						info.dst_x = 0;
 						info.dst_y = 0;
-						info.width = std::min<u32>(required_width, surface->get_surface_width() - info.src_x);
-						info.height = std::min<u32>(required_height, surface->get_surface_height() - info.src_y);
+						info.width = std::min<u32>(int_required_width, surface_info.surface_width - info.src_x);
+						info.height = std::min<u32>(int_required_height, surface_info.surface_height - info.src_y);
+						info.is_clipped = (info.width < int_required_width || info.height < int_required_height);
 					}
 					else
 					{
+						const auto int_surface_width = surface_info.surface_width * scale_x;
+						const auto int_surface_height = surface_info.surface_height * scale_y;
+
 						auto offset = this_address - texaddr;
 						info.src_x = 0;
 						info.src_y = 0;
 						info.dst_y = (offset / required_pitch);
-						info.dst_x = (offset % required_pitch) / bpp;
-						info.width = std::min<u32>(surface->get_surface_width(), required_width - info.dst_x);
-						info.height = std::min<u32>(surface->get_surface_height(), required_height - info.dst_y);
+						info.dst_x = (offset % required_pitch) / surface_info.bpp;
+						info.width = std::min<u32>(int_surface_width, required_width - info.dst_x);
+						info.height = std::min<u32>(int_surface_height, required_height - info.dst_y);
+						info.is_clipped = (info.width < required_width || info.height < required_height);
+						info.width /= scale_x;
+						info.height /= scale_y;
 					}
 
 					result.push_back(info);
