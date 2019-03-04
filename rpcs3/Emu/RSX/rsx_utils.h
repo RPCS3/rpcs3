@@ -450,7 +450,7 @@ namespace rsx
 		}
 		else
 		{
-			const auto offset = dst_address - src_address;
+			const auto offset = src_address - dst_address;
 			const auto src_x = 0u;
 			const auto src_y = 0u;
 			const auto dst_y = (offset / pitch);

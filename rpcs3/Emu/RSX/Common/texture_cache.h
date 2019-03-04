@@ -256,6 +256,38 @@ namespace rsx
 				}
 			}
 
+			bool atlas_covers_target_area() const
+			{
+				if (external_subresource_desc.op != deferred_request_command::atlas_gather)
+					return true;
+
+				u16 min_x = external_subresource_desc.width, min_y = external_subresource_desc.height,
+					max_x = 0, max_y = 0;
+
+				// Require at least 90% coverage
+				const u32 target_area = ((min_x * min_y) * 9) / 10;
+
+				for (const auto &section : external_subresource_desc.sections_to_copy)
+				{
+					if (section.dst_x < min_x) min_x = section.dst_x;
+					if (section.dst_y < min_y) min_y = section.dst_y;
+
+					const auto _u = section.dst_x + section.dst_w;
+					const auto _v = section.dst_y + section.dst_h;
+					if (_u > max_x) max_x = _u;
+					if (_v > max_y) max_y = _v;
+
+					if (const auto _w = max_x - min_x, _h = max_y - min_y;
+						(_w * _h) >= target_area)
+					{
+						// Target area mostly covered, return success
+						return true;
+					}
+				}
+
+				return false;
+			}
+
 			u32 encoded_component_map() const override
 			{
 				if (image_handle)
@@ -1047,10 +1079,6 @@ namespace rsx
 			for (auto It = m_storage.range_begin(test_range, full_range); It != m_storage.range_end(); It++)
 			{
 				auto &tex = *It;
-
-				// TODO ruipin: Removed as a workaround for a bug, will need to be fixed by kd-11
-				//if (tex.get_section_base() > test_range.start)
-				//	continue;
 
 				if (!tex.is_dirty() && (context_mask & (u32)tex.get_context()))
 				{
@@ -2078,8 +2106,7 @@ namespace rsx
 						{
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, texaddr, format, 0, 0,
 									tex_width, tex_height, 1, last->get_context(), last->is_depth_texture(),
-									1.f, extended_dimension == rsx::texture_dimension_extended::texture_dimension_2d? 1.f : 0.f,
-									extended_dimension, tex.decoded_remap() };
+									scale_x, scale_y, extended_dimension, tex.decoded_remap() };
 						}
 					}
 
@@ -2087,10 +2114,14 @@ namespace rsx
 						texaddr, tex.format(), tex_width, tex_height, depth, tex_pitch, slice_h,
 						extended_dimension, tex.remap(), tex.decoded_remap(), _pool);
 
-					if (!result.external_subresource_desc.sections_to_copy.empty())
+					if (!result.external_subresource_desc.sections_to_copy.empty() &&
+						result.atlas_covers_target_area())
 					{
-						// If there are really no hits, just use fallback
 						return result;
+					}
+					else
+					{
+						//LOG_TRACE(RSX, "Partial memory recovered from cache; may require WCB/WDB to properly gather all the data");
 					}
 				}
 			}
@@ -2291,6 +2322,7 @@ namespace rsx
 			}
 
 			section_storage_type* cached_dest = nullptr;
+			const auto old_dst_area = dst_area;
 
 			if (!dst_is_render_target)
 			{
@@ -2299,8 +2331,25 @@ namespace rsx
 
 				for (const auto &surface : overlapping_surfaces)
 				{
-					const auto old_dst_area = dst_area;
-					if (const u32 address_offset = dst_address - surface->get_section_base())
+					if (!surface->is_locked())
+					{
+						surface->set_dirty(true);
+						continue;
+					}
+
+					if (cached_dest)
+					{
+						// Nothing to do
+						continue;
+					}
+
+					const auto this_address = surface->get_section_base();
+					if (this_address > dst_address)
+					{
+						continue;
+					}
+
+					if (const u32 address_offset = dst_address - this_address)
 					{
 						const u16 bpp = dst_is_argb8 ? 4 : 2;
 						const u16 offset_y = address_offset / dst.pitch;
@@ -2318,7 +2367,7 @@ namespace rsx
 						(unsigned)dst_area.y2 <= surface->get_height())
 					{
 						cached_dest = surface;
-						break;
+						continue;
 					}
 
 					dst_area = old_dst_area;
@@ -2356,16 +2405,73 @@ namespace rsx
 				max_dst_height = dst_subres.surface->get_surface_height();
 			}
 
+			const bool src_is_depth = src_subres.is_depth;
+			const bool dst_is_depth = dst_is_render_target? dst_subres.is_depth :
+										dest_texture ? cached_dest->is_depth_texture() : src_is_depth;
+
+			// Type of blit decided by the source, destination use should adapt on the fly
+			const bool is_depth_blit = src_is_depth;
+
+			bool format_mismatch = (src_is_depth != dst_is_depth);
+			if (format_mismatch)
+			{
+				if (dst_is_render_target)
+				{
+					LOG_ERROR(RSX, "Depth<->RGBA blit on a framebuffer requested but not supported");
+					return false;
+				}
+			}
+			else if (src_is_render_target && cached_dest)
+			{
+				switch (cached_dest->get_gcm_format())
+				{
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+					format_mismatch = !dst_is_argb8;
+					break;
+				case CELL_GCM_TEXTURE_R5G6B5:
+				case CELL_GCM_TEXTURE_DEPTH16:
+					format_mismatch = dst_is_argb8;
+					break;
+				default:
+					format_mismatch = true;
+					break;
+				}
+			}
+
+			//TODO: Check for other types of format mismatch
+			const address_range dst_range = address_range::start_length(dst_address, dst.pitch * dst.height);
+			AUDIT(cached_dest == nullptr || cached_dest->overlaps(dst_range, section_bounds::full_range));
+			if (format_mismatch)
+			{
+				lock.upgrade();
+
+				// Invalidate as the memory is not reusable now
+				invalidate_range_impl_base(cmd, cached_dest->get_section_range(), invalidation_cause::write, std::forward<Args>(extras)...);
+				AUDIT(!cached_dest->is_locked());
+
+				cached_dest->set_dirty(true);
+				cached_dest = nullptr;
+				dest_texture = 0;
+				dst_area = old_dst_area;
+			}
+
 			// Create source texture if does not exist
 			if (!src_is_render_target)
 			{
 				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst;
-				auto overlapping_surfaces = find_texture_from_range(address_range::start_length(src_address, src.pitch * src.height), src.pitch, lookup_mask);
+				auto overlapping_surfaces = find_texture_from_range<true>(address_range::start_length(src_address, src.pitch * src.height), src.pitch, lookup_mask);
 
 				auto old_src_area = src_area;
 				for (const auto &surface : overlapping_surfaces)
 				{
-					if (const u32 address_offset = src_address - surface->get_section_base())
+					const auto this_address = surface->get_section_base();
+					if (this_address > src_address)
+					{
+						continue;
+					}
+
+					if (const u32 address_offset = src_address - this_address)
 					{
 						const u16 bpp = src_is_argb8 ? 4 : 2;
 						const u16 offset_y = address_offset / src.pitch;
@@ -2440,55 +2546,6 @@ namespace rsx
 				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}
 
-			const bool src_is_depth = src_subres.is_depth;
-			const bool dst_is_depth = dst_is_render_target? dst_subres.is_depth :
-										dest_texture ? cached_dest->is_depth_texture() : src_is_depth;
-
-			//Type of blit decided by the source, destination use should adapt on the fly
-			const bool is_depth_blit = src_is_depth;
-
-			bool format_mismatch = (src_is_depth != dst_is_depth);
-			if (format_mismatch)
-			{
-				if (dst_is_render_target)
-				{
-					LOG_ERROR(RSX, "Depth<->RGBA blit on a framebuffer requested but not supported");
-					return false;
-				}
-			}
-			else if (src_is_render_target && cached_dest)
-			{
-				switch (cached_dest->get_gcm_format())
-				{
-				case CELL_GCM_TEXTURE_A8R8G8B8:
-				case CELL_GCM_TEXTURE_DEPTH24_D8:
-					format_mismatch = !dst_is_argb8;
-					break;
-				case CELL_GCM_TEXTURE_R5G6B5:
-				case CELL_GCM_TEXTURE_DEPTH16:
-					format_mismatch = dst_is_argb8;
-					break;
-				default:
-					format_mismatch = true;
-					break;
-				}
-			}
-
-			//TODO: Check for other types of format mismatch
-			const address_range dst_range = address_range::start_length(dst_address, dst.pitch * dst.height);
-			AUDIT(cached_dest == nullptr || cached_dest->overlaps(dst_range, section_bounds::full_range));
-			if (format_mismatch)
-			{
-				lock.upgrade();
-
-				// Invalidate as the memory is not reusable now
-				invalidate_range_impl_base(cmd, cached_dest->get_section_range(), invalidation_cause::write, std::forward<Args>(extras)...);
-				AUDIT(!cached_dest->is_locked());
-
-				dest_texture = 0;
-				cached_dest = nullptr;
-			}
-
 			u32 gcm_format;
 			if (is_depth_blit)
 				gcm_format = (dst_is_argb8) ? CELL_GCM_TEXTURE_DEPTH24_D8 : CELL_GCM_TEXTURE_DEPTH16;
@@ -2497,7 +2554,7 @@ namespace rsx
 
 			if (cached_dest)
 			{
-				//Prep surface
+				// Prep surface
 				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
 					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
 					rsx::texture_create_flags::swapped_native_component_order;
@@ -2505,11 +2562,11 @@ namespace rsx
 				enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
 			}
 
-			//Validate clipping region
+			// Validate clipping region
 			if ((dst.offset_x + dst.clip_x + dst.clip_width) > max_dst_width) dst.clip_x = 0;
 			if ((dst.offset_y + dst.clip_y + dst.clip_height) > max_dst_height) dst.clip_y = 0;
 
-			//Reproject clip offsets onto source to simplify blit
+			// Reproject clip offsets onto source to simplify blit
 			if (dst.clip_x || dst.clip_y)
 			{
 				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / (scale_x * typeless_info.src_scaling_hint));
