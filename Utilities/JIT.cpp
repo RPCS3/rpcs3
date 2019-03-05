@@ -624,6 +624,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			m_cpu == "broadwell" ||
 			m_cpu == "skylake" ||
 			m_cpu == "skylake-avx512" ||
+			m_cpu == "cascadelake" ||
 			m_cpu == "cannonlake" ||
 			m_cpu == "icelake" ||
 			m_cpu == "icelake-client" ||
@@ -637,6 +638,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 		}
 
 		if (m_cpu == "skylake-avx512" ||
+			m_cpu == "cascadelake" ||
 			m_cpu == "cannonlake" ||
 			m_cpu == "icelake" ||
 			m_cpu == "icelake-client" ||
