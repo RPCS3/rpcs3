@@ -202,6 +202,18 @@ namespace rsx
 			}
 		}
 
+		constexpr u32 get_aa_factor_v(surface_antialiasing aa_mode)
+		{
+			switch (aa_mode)
+			{
+			case surface_antialiasing::center_1_sample:
+			case surface_antialiasing::diagonal_centered_2_samples:
+				return 1;
+			default:
+				return 2;
+			};
+		}
+
 	public:
 		using surface_storage_type = typename Traits::surface_storage_type;
 		using surface_type = typename Traits::surface_type;
@@ -324,6 +336,7 @@ namespace rsx
 			command_list_type command_list,
 			u32 address,
 			surface_color_format color_format,
+			surface_antialiasing antialias,
 			size_t width, size_t height, size_t pitch,
 			Args&&... extra_params)
 		{
@@ -362,7 +375,8 @@ namespace rsx
 			}
 
 			// Range test
-			rsx::address_range range = rsx::address_range::start_length(address, u32(pitch * height));
+			const auto aa_factor_v = get_aa_factor_v(antialias);
+			rsx::address_range range = rsx::address_range::start_length(address, u32(pitch * height * aa_factor_v));
 			m_render_targets_memory_range = range.get_min_max(m_render_targets_memory_range);
 
 			// Select source of original data if any
@@ -416,6 +430,7 @@ namespace rsx
 			command_list_type command_list,
 			u32 address,
 			surface_depth_format depth_format,
+			surface_antialiasing antialias,
 			size_t width, size_t height, size_t pitch,
 			Args&&... extra_params)
 		{
@@ -452,7 +467,8 @@ namespace rsx
 			}
 
 			// Range test
-			rsx::address_range range = rsx::address_range::start_length(address, u32(pitch * height));
+			const auto aa_factor_v = get_aa_factor_v(antialias);
+			rsx::address_range range = rsx::address_range::start_length(address, u32(pitch * height * aa_factor_v));
 			m_depth_stencil_memory_range = range.get_min_max(m_depth_stencil_memory_range);
 
 			// Select source of original data if any
@@ -510,7 +526,9 @@ namespace rsx
 			surface_color_format color_format, surface_depth_format depth_format,
 			u32 clip_horizontal_reg, u32 clip_vertical_reg,
 			surface_target set_surface_target,
+			surface_antialiasing antialias,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
+			const std::array<u32, 4> &surface_pitch, u32 zeta_pitch,
 			Args&&... extra_params)
 		{
 			u32 clip_width = clip_horizontal_reg;
@@ -535,9 +553,9 @@ namespace rsx
 				if (surface_addresses[surface_index] == 0)
 					continue;
 
-				const auto pitch = clip_width * 4; // TODO
 				m_bound_render_targets[surface_index] = std::make_tuple(surface_addresses[surface_index],
-					bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, clip_width, clip_height, pitch, std::forward<Args>(extra_params)...));
+					bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, antialias,
+						clip_width, clip_height, surface_pitch[surface_index], std::forward<Args>(extra_params)...));
 			}
 
 			// Same for depth buffer
@@ -549,10 +567,9 @@ namespace rsx
 			if (!address_z)
 				return;
 
-			// TODO
-			const auto pitch = (depth_format == rsx::surface_depth_format::z16) ? clip_width * 2 : clip_width * 4;
 			m_bound_depth_stencil = std::make_tuple(address_z,
-				bind_address_as_depth_stencil(command_list, address_z, depth_format, clip_width, clip_height, pitch, std::forward<Args>(extra_params)...));
+				bind_address_as_depth_stencil(command_list, address_z, depth_format, antialias,
+					clip_width, clip_height, zeta_pitch, std::forward<Args>(extra_params)...));
 		}
 
 		/**

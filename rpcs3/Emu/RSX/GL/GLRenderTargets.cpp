@@ -215,8 +215,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		return;
 	}
 
-	m_rtts.prepare_render_target(nullptr, layout.color_format, layout.depth_format, layout.width, layout.height,
-		layout.target, layout.color_addresses, layout.zeta_address);
+	m_rtts.prepare_render_target(nullptr,
+		layout.color_format, layout.depth_format,
+		layout.width, layout.height,
+		layout.target, layout.aa_mode,
+		layout.color_addresses, layout.zeta_address,
+		layout.actual_color_pitch, layout.actual_zeta_pitch);
 
 	bool old_format_found = false;
 	gl::texture::format old_format;

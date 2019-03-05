@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12RenderTargetSets.h"
@@ -177,20 +177,17 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 		rsx::method_registers.clear_color_a() / 255.f,
 	};
 
-	u32 clip_width = rsx::method_registers.surface_clip_width();
-	u32 clip_height = rsx::method_registers.surface_clip_height();
-
-	if (clip_height == 0 || clip_width == 0)
+	const auto layout = get_framebuffer_layout(rsx::framebuffer_creation_context::context_draw);
+	if (!framebuffer_status_valid)
 		return;
 
 	m_rtts.prepare_render_target(copycmdlist,
-		rsx::method_registers.surface_color(), rsx::method_registers.surface_depth_fmt(),
-		clip_width, clip_height,
-		rsx::method_registers.surface_color_target(),
-		get_color_surface_addresses(), get_zeta_surface_address(),
+		layout.color_format, layout.depth_format,
+		layout.width, layout.height,
+		layout.target, layout.aa_mode,
+		layout.color_addresses, layout.zeta_address,
+		layout.actual_color_pitch, layout.actual_zeta_pitch,
 		m_device.Get(), clear_color, 1.f, 0);
-
-	framebuffer_status_valid = true;
 
 	// write descriptors
 	DXGI_FORMAT dxgi_format = get_color_surface_format(rsx::method_registers.surface_color());
