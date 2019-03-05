@@ -130,7 +130,7 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 			// Absolute path: finalize
 			for (auto it = list.rbegin(), rend = list.rend(); it != rend; it++)
 			{
-				if (auto* dir = *it; dir && !dir->path.empty())
+				if (auto* dir = *it; dir && (!dir->path.empty() || list.size() == 1))
 				{
 					// Save latest valid mount path
 					result_base = dir->path;
