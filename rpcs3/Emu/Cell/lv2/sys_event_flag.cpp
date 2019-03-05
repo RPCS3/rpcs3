@@ -29,12 +29,7 @@ error_code sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribu
 
 	const u32 protocol = attr->protocol;
 
-	if (protocol == SYS_SYNC_RETRY)
-		sys_event_flag.todo("sys_event_flag_create(): SYS_SYNC_RETRY");
-	if (protocol == SYS_SYNC_PRIORITY_INHERIT)
-		sys_event_flag.todo("sys_event_flag_create(): SYS_SYNC_PRIORITY_INHERIT");
-
-	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
+	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY)
 	{
 		sys_event_flag.error("sys_event_flag_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
@@ -115,10 +110,10 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 	const auto flag = idm::get<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag) -> CellError
 	{
-		if (flag.pattern.atomic_op([&](u64& pat)
+		if (flag.pattern.fetch_op([&](u64& pat)
 		{
 			return lv2_event_flag::check_pattern(pat, bitptn, mode, &ppu.gpr[6]);
-		}))
+		}).second)
 		{
 			// TODO: is it possible to return EPERM in this case?
 			return {};
@@ -126,10 +121,10 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 		std::lock_guard lock(flag.mutex);
 
-		if (flag.pattern.atomic_op([&](u64& pat)
+		if (flag.pattern.fetch_op([&](u64& pat)
 		{
 			return lv2_event_flag::check_pattern(pat, bitptn, mode, &ppu.gpr[6]);
-		}))
+		}).second)
 		{
 			return {};
 		}
@@ -223,10 +218,10 @@ error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> res
 
 	const auto flag = idm::check<lv2_obj, lv2_event_flag>(id, [&](lv2_event_flag& flag)
 	{
-		return flag.pattern.atomic_op([&](u64& pat)
+		return flag.pattern.fetch_op([&](u64& pat)
 		{
 			return lv2_event_flag::check_pattern(pat, bitptn, mode, &pattern);
-		});
+		}).second;
 	});
 
 	if (!flag)
@@ -290,6 +285,10 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 				{
 					ppu.gpr[3] = CELL_OK;
 					count++;
+				}
+				else
+				{
+					ppu.gpr[3] = -1;
 				}
 			}
 
