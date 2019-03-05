@@ -2893,8 +2893,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_rtts.prepare_render_target(&*m_current_command_buffer,
 		layout.color_format, layout.depth_format,
 		layout.width, layout.height,
-		layout.target,
+		layout.target, layout.aa_mode,
 		layout.color_addresses, layout.zeta_address,
+		layout.actual_color_pitch, layout.actual_zeta_pitch,
 		(*m_device), &*m_current_command_buffer);
 
 	// Reset framebuffer information
