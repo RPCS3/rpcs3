@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
@@ -46,6 +46,7 @@ public:
 		SPUBlockSize,
 		SPUCache,
 		SPUVerification,
+		DebugConsoleMode,
 
 		// Graphics
 		Renderer,
@@ -102,6 +103,10 @@ public:
 		ConvertTo16Bit,
 		DownmixStereo,
 		MasterVolume,
+		EnableBuffering,
+		AudioBufferDuration,
+		EnableTimeStretching,
+		TimeStretchingThreshold,
 
 		// Input / Output
 		PadHandler,
@@ -218,7 +223,7 @@ public:
 	Render_Creator m_render_creator;
 
 	/** Loads the settings from path.*/
-	void LoadSettings(const std::string& path = "");
+	void LoadSettings(const std::string& title_id = "");
 
 	/** Fixes all registered invalid settings after asking the user for permission.*/
 	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
@@ -250,6 +255,7 @@ private:
 		{ SPUBlockSize,             { "Core", "SPU Block Size"}},
 		{ SPUCache,                 { "Core", "SPU Cache"}},
 		{ SPUVerification,          { "Core", "SPU Verification"}},
+		{ DebugConsoleMode,         { "Core", "Debug Console Mode"}},
 
 		// Graphics Tab
 		{ Renderer,                   { "Video", "Renderer"}},
@@ -301,11 +307,15 @@ private:
 		{ ShaderLoadBgBlur,         { "Video", "Shader Loading Dialog", "Blur effect strength" } },
 
 		// Audio
-		{ AudioRenderer,  { "Audio", "Renderer"}},
-		{ DumpToFile,     { "Audio", "Dump to file"}},
-		{ ConvertTo16Bit, { "Audio", "Convert to 16 bit"}},
-		{ DownmixStereo,  { "Audio", "Downmix to Stereo"}},
-		{ MasterVolume,   { "Audio", "Master Volume"}},
+		{ AudioRenderer,           { "Audio", "Renderer"}},
+		{ DumpToFile,              { "Audio", "Dump to file"}},
+		{ ConvertTo16Bit,          { "Audio", "Convert to 16 bit"}},
+		{ DownmixStereo,           { "Audio", "Downmix to Stereo"}},
+		{ MasterVolume,            { "Audio", "Master Volume"}},
+		{ EnableBuffering,         { "Audio", "Enable Buffering"}},
+		{ AudioBufferDuration,     { "Audio", "Desired Audio Buffer Duration"}},
+		{ EnableTimeStretching,    { "Audio", "Enable Time Stretching"}},
+		{ TimeStretchingThreshold, { "Audio", "Time Stretching Threshold"}},
 
 		// Input / Output
 		{ PadHandler,      { "Input/Output", "Pad"}},
@@ -345,5 +355,5 @@ private:
 
 	YAML::Node m_defaultSettings; // The default settings as a YAML node.
 	YAML::Node m_currentSettings; // The current settings as a YAML node.
-	std::string m_path;
+	std::string m_title_id;
 };

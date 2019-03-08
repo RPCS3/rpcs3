@@ -128,6 +128,19 @@ namespace utils
 		static_assert(std::has_virtual_destructor_v<std::decay_t<T>>);
 	};
 
+	// Detect operator ->
+	template <typename T, typename = void>
+	struct typeinfo_pointer
+	{
+		static constexpr bool is_ptr = false;
+	};
+
+	template <typename T>
+	struct typeinfo_pointer<T, std::void_t<decltype(&std::decay_t<T>::operator->)>>
+	{
+		static constexpr bool is_ptr = true;
+	};
+
 	// Type information
 	struct typeinfo_base
 	{
@@ -340,6 +353,121 @@ namespace utils
 		}
 	}
 
+	// An object of type T paired with atomic refcounter
+	template <typename T>
+	class refctr final
+	{
+		atomic_t<std::size_t> m_ref{1};
+
+	public:
+		T object;
+
+		template <typename... Args>
+		refctr(Args&&... args)
+			: object(std::forward<Args>(args)...)
+		{
+		}
+
+		void add_ref() noexcept
+		{
+			m_ref++;
+		}
+
+		std::size_t remove_ref() noexcept
+		{
+			return --m_ref;
+		}
+	};
+
+	// Simplified "shared" ptr making use of refctr<T> class
+	template <typename T>
+	class refptr final
+	{
+		refctr<T>* m_ptr = nullptr;
+
+		void destroy()
+		{
+			if (m_ptr && !m_ptr->remove_ref())
+				delete m_ptr;
+		}
+
+	public:
+		constexpr refptr() = default;
+
+		// Construct directly from refctr<T> pointer
+		explicit refptr(refctr<T>* ptr) noexcept
+			: m_ptr(ptr)
+		{
+		}
+
+		refptr(const refptr& rhs) noexcept
+			: m_ptr(rhs.m_ptr)
+		{
+			if (m_ptr)
+				m_ptr->add_ref();
+		}
+
+		refptr(refptr&& rhs) noexcept
+			: m_ptr(rhs.m_ptr)
+		{
+			rhs.m_ptr = nullptr;
+		}
+
+		~refptr()
+		{
+			destroy();
+		}
+
+		refptr& operator =(const refptr& rhs) noexcept
+		{
+			destroy();
+			m_ptr = rhs.m_ptr;
+			if (m_ptr)
+				m_ptr->add_ref();
+		}
+
+		refptr& operator =(refptr&& rhs) noexcept
+		{
+			std::swap(m_ptr, rhs.m_ptr);
+		}
+
+		void reset() noexcept
+		{
+			destroy();
+			m_ptr = nullptr;
+		}
+
+		refctr<T>* release() noexcept
+		{
+			return std::exchange(m_ptr, nullptr);
+		}
+
+		void swap(refptr&& rhs) noexcept
+		{
+			std::swap(m_ptr, rhs.m_ptr);
+		}
+
+		refctr<T>* get() const noexcept
+		{
+			return m_ptr;
+		}
+
+		T& operator *() const noexcept
+		{
+			return m_ptr->object;
+		}
+
+		T* operator ->() const noexcept
+		{
+			return &m_ptr->object;
+		}
+
+		explicit operator bool() const noexcept
+		{
+			return !!m_ptr;
+		}
+	};
+
 	// Internal, typemap control block for a particular type
 	struct alignas(64) typemap_head
 	{
@@ -469,7 +597,15 @@ namespace utils
 
 		auto operator->() const noexcept
 		{
-			return get();
+			// Invoke object's operator -> if available
+			if constexpr (typeinfo_pointer<T>::is_ptr)
+			{
+				return get()->operator->();
+			}
+			else
+			{
+				return get();
+			}
 		}
 
 		// Release the lock and set invalid state
@@ -1147,44 +1283,48 @@ namespace utils
 			return true;
 		}
 
+		// Transform T&& into refptr<T>, moving const qualifier from T to refptr<T>
+		template <typename T, typename U = std::remove_reference_t<T>>
+		using decode_t = std::conditional_t<!std::is_rvalue_reference_v<T>, T,
+			std::conditional_t<std::is_const_v<U>, const refptr<std::remove_const_t<U>>, refptr<U>>>;
+
 	public:
 		// Lock any objects by their identifiers, special tags id_new/id_any/id_always, or search predicates
 		template <typename... Types, typename... Args, typename = std::enable_if_t<sizeof...(Types) == sizeof...(Args)>>
 		auto lock(Args&&... ids) const
 		{
 			static_assert(((!std::is_lvalue_reference_v<Types> == !typeinfo_poly<Types>::is_poly) && ...));
-			static_assert(((!std::is_rvalue_reference_v<Types>) && ...));
 			static_assert(((!std::is_array_v<Types>) && ...));
 			static_assert(((!std::is_void_v<Types>) && ...));
 
 			// Initialize pointers
-			std::array<typeptr_base, sizeof...(Types)> result{this->init_ptr<Types>(std::forward<Args>(ids))...};
+			std::array<typeptr_base, sizeof...(Types)> result{this->init_ptr<decode_t<Types>>(std::forward<Args>(ids))...};
 
 			// Whether requires locking after init_ptr
-			using locks_t = std::integer_sequence<bool, does_need_lock<Types, Args>()...>;
+			using locks_t = std::integer_sequence<bool, does_need_lock<decode_t<Types>, Args>()...>;
 
 			// Array index helper
-			using seq_t = std::index_sequence_for<Types...>;
+			using seq_t = std::index_sequence_for<decode_t<Types>...>;
 
 			// Lock any number of objects in safe manner
 			while (true)
 			{
-				const uint locked = lock_array<Types...>(result, seq_t{}, locks_t{});
-				if (LIKELY(try_lock<0, Types...>(result, locked, locks_t{})))
+				const uint locked = lock_array<decode_t<Types>...>(result, seq_t{}, locks_t{});
+				if (LIKELY(try_lock<0, decode_t<Types>...>(result, locked, locks_t{})))
 					break;
 			}
 
 			// Verify object types
-			check_array<Types...>(result, seq_t{}, std::forward<Args>(ids)...);
+			check_array<decode_t<Types>...>(result, seq_t{}, std::forward<Args>(ids)...);
 
 			// Return tuple of possibly locked pointers, or a single pointer
 			if constexpr (sizeof...(Types) != 1)
 			{
-				return array_to_tuple<Types...>(result, seq_t{});
+				return array_to_tuple<decode_t<Types>...>(result, seq_t{});
 			}
 			else
 			{
-				return typeptr<Types...>(result[0]);
+				return typeptr<decode_t<Types>...>(result[0]);
 			}
 		}
 
@@ -1193,17 +1333,16 @@ namespace utils
 		ullong apply(F&& func)
 		{
 			static_assert(!std::is_lvalue_reference_v<Type> == !typeinfo_poly<Type>::is_poly);
-			static_assert(!std::is_rvalue_reference_v<Type>);
 			static_assert(!std::is_array_v<Type>);
 			static_assert(!std::is_void_v<Type>);
 
-			const uint type_id = g_typeinfo<std::decay_t<Type>>.type;
+			const uint type_id = g_typeinfo<std::decay_t<decode_t<Type>>>.type;
 
-			typemap_head* head = get_head<Type>();
+			typemap_head* head = get_head<decode_t<Type>>();
 
 			const ullong ix = head->m_create_count;
 
-			for (std::size_t j = 0; j < (typeinfo_count<Type>::max_count != 1 ? +head->m_limit : 1); j++)
+			for (std::size_t j = 0; j < (typeinfo_count<decode_t<Type>>::max_count != 1 ? +head->m_limit : 1); j++)
 			{
 				const auto block = reinterpret_cast<typemap_block*>(head->m_ptr + j * head->m_ssize);
 
@@ -1219,7 +1358,7 @@ namespace utils
 						}
 						else
 						{
-							std::invoke(std::forward<F>(func), *block->get_ptr<Type>());
+							std::invoke(std::forward<F>(func), *block->get_ptr<decode_t<Type>>());
 						}
 					}
 				}

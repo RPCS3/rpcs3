@@ -322,8 +322,8 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 logs::file_writer::file_writer(const std::string& name)
 	: m_name(name)
 {
-	const std::string log_name = fs::get_config_dir() + name + ".log";
-	const std::string buf_name = fs::get_config_dir() + name + ".buf";
+	const std::string log_name = fs::get_cache_dir() + name + ".log";
+	const std::string buf_name = fs::get_cache_dir() + name + ".buf";
 
 	try
 	{
@@ -352,7 +352,7 @@ logs::file_writer::file_writer(const std::string& name)
 
 		// Check free space
 		fs::device_stat stats{};
-		if (!fs::statfs(fs::get_config_dir(), stats) || stats.avail_free < s_log_size * 8)
+		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < s_log_size * 8)
 		{
 			fmt::throw_exception("Not enough free space (%f KB)", stats.avail_free / 1000000.);
 		}
@@ -372,9 +372,9 @@ logs::file_writer::file_writer(const std::string& name)
 		verify(name.c_str()), m_fptr;
 
 		// Rotate backups (TODO)
-		fs::remove_file(fs::get_config_dir() + name + "1.log.gz");
-		fs::create_dir(fs::get_config_dir() + "old_logs");
-		fs::rename(fs::get_config_dir() + m_name + ".log.gz", fs::get_config_dir() + "old_logs/" + m_name + ".log.gz", true);
+		fs::remove_file(fs::get_cache_dir() + name + "1.log.gz");
+		fs::create_dir(fs::get_cache_dir() + "old_logs");
+		fs::rename(fs::get_cache_dir() + m_name + ".log.gz", fs::get_cache_dir() + "old_logs/" + m_name + ".log.gz", true);
 
 		// Actual log file (allowed to fail)
 		m_fout.open(log_name, fs::rewrite);

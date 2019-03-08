@@ -861,8 +861,7 @@ namespace gl
 				{
 				case CELL_GCM_TEXTURE_A8R8G8B8:
 				{
-					bool bgra = (flags == rsx::texture_create_flags::native_component_order);
-					cached.set_format(bgra ? gl::texture::format::bgra : gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, false);
+					cached.set_format(gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, false);
 					break;
 				}
 				case CELL_GCM_TEXTURE_R5G6B5:

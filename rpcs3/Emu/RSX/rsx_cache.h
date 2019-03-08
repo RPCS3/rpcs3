@@ -458,7 +458,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, processed, entry_count]()
 				{
 					const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 					dlg->ProgressBarSetMsg(index, fmt::format(text, processed, entry_count));
@@ -470,7 +470,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, value]()
 				{
 					dlg->ProgressBarInc(index, value);
 					ref_cnt--;
@@ -481,7 +481,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, limit]()
 				{
 					dlg->ProgressBarSetLimit(index, limit);
 					ref_cnt--;
@@ -505,13 +505,16 @@ namespace rsx
 			, pipeline_class_name(pipeline_class)
 			, m_storage(storage)
 		{
-			root_path = Emu.GetCachePath() + "/shaders_cache";
+			if (!g_cfg.video.disable_on_disk_shader_cache)
+			{
+				root_path = Emu.PPUCache() + "shaders_cache";
+			}
 		}
 
 		template <typename... Args>
 		void load(progress_dialog_helper* dlg, Args&& ...args)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
+			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
 				return;
 			}
@@ -682,7 +685,7 @@ namespace rsx
 
 		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
+			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
 				return;
 			}

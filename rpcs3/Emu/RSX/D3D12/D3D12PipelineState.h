@@ -130,7 +130,7 @@ struct D3D12Traits
 			}
 		}
 
-		fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram" + std::to_string(ID) + ".hlsl", fs::rewrite).write(shader);
+		fs::file(fs::get_cache_dir() + "shaderlog/FragmentProgram" + std::to_string(ID) + ".hlsl", fs::rewrite).write(shader);
 		fragmentProgramData.id = (u32)ID;
 	}
 
@@ -141,7 +141,7 @@ struct D3D12Traits
 		std::string shaderCode = VS.Decompile();
 		vertexProgramData.Compile(shaderCode, Shader::SHADER_TYPE::SHADER_TYPE_VERTEX);
 		vertexProgramData.vertex_shader_input_count = RSXVP.rsx_vertex_inputs.size();
-		fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(ID) + ".hlsl", fs::rewrite).write(shaderCode);
+		fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(ID) + ".hlsl", fs::rewrite).write(shaderCode);
 		vertexProgramData.id = (u32)ID;
 	}
 

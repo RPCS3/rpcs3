@@ -57,8 +57,12 @@ namespace vm
 	// Memory mutex acknowledgement
 	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
 
+	// Currently locked address
+	atomic_t<u32> g_addr_lock = 0;
+
 	// Memory mutex: passive locks
-	std::array<atomic_t<cpu_thread*>, 32> g_locks;
+	std::array<atomic_t<cpu_thread*>, 4> g_locks{};
+	std::array<atomic_t<u64>, 6> g_range_locks{};
 
 	static void _register_lock(cpu_thread* _cpu)
 	{
@@ -72,11 +76,25 @@ namespace vm
 		}
 	}
 
-	bool passive_lock(cpu_thread& cpu, bool wait)
+	static atomic_t<u64>* _register_range_lock(const u64 lock_info)
+	{
+		while (true)
+		{
+			for (auto& lock : g_range_locks)
+			{
+				if (!lock && lock.compare_and_swap_test(0, lock_info))
+				{
+					return &lock;
+				}
+			}
+		}
+	}
+
+	void passive_lock(cpu_thread& cpu)
 	{
 		if (UNLIKELY(g_tls_locked && *g_tls_locked == &cpu))
 		{
-			return true;
+			return;
 		}
 
 		if (LIKELY(g_mutex.is_lockable()))
@@ -84,31 +102,46 @@ namespace vm
 			// Optimistic path (hope that mutex is not exclusively locked)
 			_register_lock(&cpu);
 
-			if (UNLIKELY(!g_mutex.is_lockable()))
+			if (LIKELY(g_mutex.is_lockable()))
 			{
-				passive_unlock(cpu);
-
-				if (!wait)
-				{
-					return false;
-				}
-
-				::reader_lock lock(g_mutex);
-				_register_lock(&cpu);
+				return;
 			}
+
+			passive_unlock(cpu);
 		}
-		else
+
+		::reader_lock lock(g_mutex);
+		_register_lock(&cpu);
+	}
+
+	atomic_t<u64>* passive_lock(const u32 addr, const u32 end)
+	{
+		static const auto test_addr = [](const u32 target, const u32 addr, const u32 end)
 		{
-			if (!wait)
+			return addr > target || end <= target;
+		};
+
+		atomic_t<u64>* _ret;
+
+		if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
+		{
+			// Optimistic path (hope that address range is not locked)
+			_ret = _register_range_lock((u64)end << 32 | addr);
+
+			if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
 			{
-				return false;
+				return _ret;
 			}
 
-			::reader_lock lock(g_mutex);
-			_register_lock(&cpu);
+			*_ret = 0;
 		}
 
-		return true;
+		{
+			::reader_lock lock(g_mutex);
+			_ret = _register_range_lock((u64)end << 32 | addr);
+		}
+
+		return _ret;
 	}
 
 	void passive_unlock(cpu_thread& cpu)
@@ -194,8 +227,7 @@ namespace vm
 		m_upgraded = true;
 	}
 
-	writer_lock::writer_lock(int full)
-		: locked(true)
+	writer_lock::writer_lock(u32 addr)
 	{
 		auto cpu = get_current_cpu_thread();
 
@@ -206,13 +238,37 @@ namespace vm
 
 		g_mutex.lock();
 
-		if (full)
+		if (addr)
 		{
 			for (auto& lock : g_locks)
 			{
 				if (cpu_thread* ptr = lock)
 				{
 					ptr->state.test_and_set(cpu_flag::memory);
+				}
+			}
+
+			g_addr_lock = addr;
+
+			for (auto& lock : g_range_locks)
+			{
+				while (true)
+				{
+					const u64 value = lock;
+
+					// Test beginning address
+					if (static_cast<u32>(value) > addr)
+					{
+						break;
+					}
+
+					// Test end address
+					if (static_cast<u32>(value >> 32) <= addr)
+					{
+						break;
+					}
+
+					_mm_pause();
 				}
 			}
 
@@ -225,7 +281,7 @@ namespace vm
 						break;
 					}
 
-					busy_wait();
+					_mm_pause();
 				}
 			}
 		}
@@ -239,10 +295,8 @@ namespace vm
 
 	writer_lock::~writer_lock()
 	{
-		if (locked)
-		{
-			g_mutex.unlock();
-		}
+		g_addr_lock.release(0);
+		g_mutex.unlock();
 	}
 
 	void reservation_lock_internal(atomic_t<u64>& res)
@@ -635,13 +689,13 @@ namespace vm
 
 		u8 pflags = page_readable | page_writable;
 
-		if (align >= 0x100000)
-		{
-			pflags |= page_1m_size;
-		}
-		else if (align >= 0x10000)
+		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
 		{
 			pflags |= page_64k_size;
+		}
+		else if (!(flags & (SYS_MEMORY_PAGE_SIZE_MASK & ~SYS_MEMORY_PAGE_SIZE_1M)))
+		{
+			pflags |= page_1m_size;
 		}
 
 		// Create or import shared memory object
@@ -684,13 +738,13 @@ namespace vm
 
 		u8 pflags = page_readable | page_writable;
 
-		if ((flags & SYS_MEMORY_PAGE_SIZE_1M) == SYS_MEMORY_PAGE_SIZE_1M)
-		{
-			pflags |= page_1m_size;
-		}
-		else if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
+		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
 		{
 			pflags |= page_64k_size;
+		}
+		else if (!(flags & (SYS_MEMORY_PAGE_SIZE_MASK & ~SYS_MEMORY_PAGE_SIZE_1M)))
+		{
+			pflags |= page_1m_size;
 		}
 
 		// Create or import shared memory object
@@ -924,7 +978,7 @@ namespace vm
 		return nullptr;
 	}
 
-	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
+	std::shared_ptr<block_t> get(memory_location_t location, u32 addr, u32 area_size)
 	{
 		vm::reader_lock lock;
 
@@ -935,7 +989,7 @@ namespace vm
 			{
 				auto& loc = g_locations[location];
 
-				if (!loc)
+				if (!loc && area_size)
 				{
 					if (location == vm::user64k || location == vm::user1m)
 					{
@@ -944,7 +998,7 @@ namespace vm
 						if (!loc)
 						{
 							// Deferred allocation
-							loc = _find_map(0x10000000, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
+							loc = _find_map(area_size, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
 						}
 					}
 				}
@@ -973,7 +1027,7 @@ namespace vm
 		{
 			g_locations =
 			{
-				std::make_shared<block_t>(0x00010000, 0x1FFF0000), // main
+				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x200), // main
 				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video

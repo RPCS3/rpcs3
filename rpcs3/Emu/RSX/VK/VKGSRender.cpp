@@ -706,9 +706,9 @@ VKGSRender::VKGSRender() : GSRender()
 		VkClearColorValue clear_color{};
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
-		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
-		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_GENERAL, target_layout, range);
+		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 
 	}
 
@@ -918,7 +918,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			if (target_cb)
 			{
-				target_cb->wait();
+				target_cb->wait(GENERAL_WAIT_TIMEOUT);
 			}
 		}
 
@@ -1044,6 +1044,106 @@ void VKGSRender::check_descriptors()
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
 		m_current_frame->used_descriptors = 0;
 	}
+}
+
+void VKGSRender::check_window_status()
+{
+#ifdef _WIN32
+
+	if (LIKELY(!m_frame->has_wm_events()))
+	{
+		return;
+	}
+
+	while (const auto _event = m_frame->get_wm_event())
+	{
+		switch (_event)
+		{
+		case wm_event::toggle_fullscreen:
+		{
+			renderer_unavailable = true;
+			m_frame->enable_wm_fullscreen();
+			m_frame->toggle_fullscreen();
+			m_frame->disable_wm_fullscreen();
+			break;
+		}
+		case wm_event::geometry_change_notice:
+		{
+			// Stall until finish notification is received. Also, raise surface dirty flag
+			u32 timeout = 1000;
+			bool handled = false;
+
+			while (timeout)
+			{
+				switch (m_frame->get_wm_event())
+				{
+				default:
+					break;
+				case wm_event::window_resized:
+					handled = true;
+					present_surface_dirty_flag = true;
+					break;
+				case wm_event::geometry_change_in_progress:
+					timeout += 10; // Extend timeout to wait for user to finish resizing
+					break;
+				case wm_event::window_restored:
+				case wm_event::window_visibility_changed:
+				case wm_event::window_minimized:
+				case wm_event::window_moved:
+					handled = true; // Ignore these events as they do not alter client area
+					break;
+				}
+
+				if (handled)
+				{
+					break;
+				}
+				else
+				{
+					// Wait for window manager event
+					std::this_thread::sleep_for(1ms);
+					timeout --;
+				}
+			}
+
+			if (!timeout)
+			{
+				LOG_ERROR(RSX, "wm event handler timed out");
+			}
+
+			// Reset renderer availability if something has changed about the window
+			renderer_unavailable = false;
+			break;
+		}
+		case wm_event::window_resized:
+		{
+			LOG_ERROR(RSX, "wm_event::window_resized received without corresponding wm_event::geometry_change_notice!");
+			std::this_thread::sleep_for(100ms);
+			renderer_unavailable = false;
+			break;
+		}
+		}
+	}
+
+#else
+
+	// If the queue is in use, it should be properly consumed
+	verify(HERE), !m_frame->has_wm_events();
+
+	const auto frame_width = m_frame->client_width();
+	const auto frame_height = m_frame->client_height();
+
+	if (m_client_height != frame_height ||
+		m_client_width != frame_width)
+	{
+		if (!!frame_width && !!frame_height)
+		{
+			present_surface_dirty_flag = true;
+			renderer_unavailable = false;
+		}
+	}
+
+#endif
 }
 
 VkDescriptorSet VKGSRender::allocate_descriptor_set()
@@ -1175,7 +1275,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (sub_index == 0)
 	{
-		m_vertex_layout = analyse_inputs_interleaved();
+		analyse_inputs_interleaved(m_vertex_layout);
 	}
 
 	if (!m_vertex_layout.validate())
@@ -1346,8 +1446,8 @@ void VKGSRender::end()
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
 
 		// Clear explicitly before starting the inheritance transfer
-		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_GENERAL, range);
-		vkCmdClearDepthStencilImage(*m_current_command_buffer, ds->value, VK_IMAGE_LAYOUT_GENERAL, &clear, 1, &range);
+		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+		vkCmdClearDepthStencilImage(*m_current_command_buffer, ds->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
 		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
 		// TODO: Stencil transfer
@@ -1504,7 +1604,7 @@ void VKGSRender::end()
 		// Program is not ready, skip drawing this
 		std::this_thread::yield();
 		execute_nop_draw();
-		m_rtts.on_write();
+		// m_rtts.on_write(); - breaks games for obvious reasons
 		rsx::thread::end();
 		return;
 	}
@@ -1640,7 +1740,7 @@ void VKGSRender::end()
 			occlusion_id = m_occlusion_query_pool.find_free_slot();
 			if (occlusion_id == UINT32_MAX)
 			{
-				LOG_ERROR(RSX, "Occlusion pool overflow");
+				//LOG_ERROR(RSX, "Occlusion pool overflow");
 				if (m_current_task) m_current_task->result = 1;
 			}
 		}
@@ -1812,7 +1912,7 @@ void VKGSRender::on_init_thread()
 		struct native_helper : vk::shader_cache::progress_dialog_helper
 		{
 			rsx::thread *owner = nullptr;
-			rsx::overlays::message_dialog *dlg = nullptr;
+			std::shared_ptr<rsx::overlays::message_dialog> dlg;
 
 			native_helper(VKGSRender *ptr) :
 				owner(ptr) {}
@@ -1868,6 +1968,11 @@ void VKGSRender::on_init_thread()
 		m_frame->disable_wm_event_queue();
 		m_shaders_cache->load(&helper, *m_device, pipeline_layout);
 		m_frame->enable_wm_event_queue();
+
+#ifdef _WIN32
+		// On windows switching to fullscreen is done by the renderer, not the UI
+		m_frame->disable_wm_fullscreen();
+#endif
 	}
 }
 
@@ -2220,7 +2325,9 @@ void VKGSRender::queue_swap_request()
 	}
 	else
 	{
-		close_and_submit_command_buffer({ m_current_frame->present_semaphore }, m_current_command_buffer->submit_fence);
+		close_and_submit_command_buffer({ m_current_frame->present_semaphore },
+			m_current_command_buffer->submit_fence,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
 	}
 
 	m_current_frame->swap_command_buffer->pending = true;
@@ -2242,8 +2349,14 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 	if (ctx->swap_command_buffer->pending)
 	{
-		//Perform hard swap here
-		ctx->swap_command_buffer->wait();
+		// Perform hard swap here
+		if (ctx->swap_command_buffer->wait(FRAME_PRESENT_TIMEOUT) != VK_SUCCESS)
+		{
+			// Lost surface, release renderer
+			present_surface_dirty_flag = true;
+			renderer_unavailable = true;
+		}
+
 		free_resources = true;
 	}
 
@@ -2347,84 +2460,7 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 		return;
 	}
 
-#ifdef _WIN32
-
-	switch (m_frame->get_wm_event())
-	{
-	case wm_event::none:
-		break;
-	case wm_event::geometry_change_notice:
-	{
-		//Stall until finish notification is received. Also, raise surface dirty flag
-		u32 timeout = 1000;
-		bool handled = false;
-
-		while (timeout)
-		{
-			switch (m_frame->get_wm_event())
-			{
-			default:
-				break;
-			case wm_event::window_resized:
-				handled = true;
-				present_surface_dirty_flag = true;
-				break;
-			case wm_event::geometry_change_in_progress:
-				timeout += 10; //extend timeout to wait for user to finish resizing
-				break;
-			case wm_event::window_restored:
-			case wm_event::window_visibility_changed:
-			case wm_event::window_minimized:
-			case wm_event::window_moved:
-				handled = true; //ignore these events as they do not alter client area
-				break;
-			}
-
-			if (handled)
-				break;
-			else
-			{
-				//wait for window manager event
-				std::this_thread::sleep_for(10ms);
-				timeout -= 10;
-			}
-
-			//reset renderer availability if something has changed about the window
-			renderer_unavailable = false;
-		}
-
-		if (!timeout)
-		{
-			LOG_ERROR(RSX, "wm event handler timed out");
-		}
-
-		break;
-	}
-	case wm_event::window_resized:
-	{
-		LOG_ERROR(RSX, "wm_event::window_resized received without corresponding wm_event::geometry_change_notice!");
-		std::this_thread::sleep_for(100ms);
-		renderer_unavailable = false;
-		break;
-	}
-	}
-
-#else
-
-	const auto frame_width = m_frame->client_width();
-	const auto frame_height = m_frame->client_height();
-
-	if (m_client_height != frame_height ||
-		m_client_width != frame_width)
-	{
-		if (!!frame_width && !!frame_height)
-		{
-			present_surface_dirty_flag = true;
-			renderer_unavailable = false;
-		}
-	}
-
-#endif
+	check_window_status();
 
 	if (m_overlay_manager)
 	{
@@ -2518,38 +2554,17 @@ bool VKGSRender::load_program()
 		rsx::method_registers.blend_enabled_surface_3()
 	};
 
-	bool blend_equation_override = false;
 	VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
 	VkBlendOp equation_rgb, equation_a;
 
-	if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-		!rsx::method_registers.alpha_test_enabled())
-	{
-		if (rsx::method_registers.msaa_enabled() &&
-			rsx::method_registers.msaa_sample_mask() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
-		{
-			//fake alpha-to-coverage
-			//blend used in conjunction with alpha test to fake order-independent edge transparency
-			mrt_blend_enabled[0] = mrt_blend_enabled[1] = mrt_blend_enabled[2] = mrt_blend_enabled[3] = true;
-			blend_equation_override = true;
-			sfactor_rgb = sfactor_a = VK_BLEND_FACTOR_SRC_ALPHA;
-			dfactor_rgb = dfactor_a = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-			equation_rgb = equation_a = VK_BLEND_OP_ADD;
-		}
-	}
-
 	if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
 	{
-		if (!blend_equation_override)
-		{
-			sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-			sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
-			dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-			dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
-			equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
-			equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
-		}
+		sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
+		sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
+		dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
+		dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
+		equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
+		equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
 
 		for (u8 idx = 0; idx < m_draw_buffers.size(); ++idx)
 		{
@@ -2735,10 +2750,11 @@ void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
 	auto mem = m_vertex_layout_ring_info.alloc<256>(256);
 	auto buf = (u32*)m_vertex_layout_ring_info.map(mem, 128 + 16);
 
-	*buf = vertex_info.vertex_index_base;
+	buf[0] = vertex_info.vertex_index_base;
+	buf[1] = vertex_info.vertex_index_offset;
 	buf += 4;
 
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.allocated_vertex_count, (s32*)buf,
+	fill_vertex_layout_state(m_vertex_layout, vertex_info.first_vertex, vertex_info.allocated_vertex_count, (s32*)buf,
 		vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
 
 	m_vertex_layout_ring_info.unmap();
@@ -3072,14 +3088,11 @@ void VKGSRender::reinitialize_swapchain()
 		if (ctx.present_image == UINT32_MAX)
 			continue;
 
-		//Release present image by presenting it
-		ctx.swap_command_buffer->wait();
+		// Release present image by presenting it
+		ctx.swap_command_buffer->wait(FRAME_PRESENT_TIMEOUT);
 		ctx.swap_command_buffer = nullptr;
 		present(&ctx);
 	}
-
-	//Wait for completion
-	vkDeviceWaitIdle(*m_device);
 
 	//Remove any old refs to the old images as they are about to be destroyed
 	m_framebuffers_to_clean.clear();
@@ -3107,9 +3120,9 @@ void VKGSRender::reinitialize_swapchain()
 		VkClearColorValue clear_color{};
 		VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
-		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_GENERAL, &clear_color, 1, &range);
-		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_GENERAL, target_layout, range);
+		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 	}
 
 	//Will have to block until rendering is completed
@@ -3169,8 +3182,8 @@ void VKGSRender::flip(int buffer)
 	{
 		if (m_draw_calls > 0)
 		{
-			//Unreachable
-			fmt::throw_exception("Possible data corruption on frame context storage detected");
+			// This can be 'legal' if the window was being resized and no polling happened because of renderer_unavailable flag
+			LOG_ERROR(RSX, "Possible data corruption on frame context storage detected");
 		}
 
 		//There were no draws and back-to-back flips happened
@@ -3226,6 +3239,7 @@ void VKGSRender::flip(int buffer)
 
 	//Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
 	verify(HERE), m_current_frame->present_image == UINT32_MAX;
+	verify(HERE), m_current_frame->swap_command_buffer == nullptr;
 
 	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->present_semaphore, timeout, &m_current_frame->present_image))
@@ -3381,9 +3395,9 @@ void VKGSRender::flip(int buffer)
 		//TODO: Upload raw bytes from cpu for rendering
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 		VkClearColorValue clear_black {};
-		vk::change_image_layout(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), present_layout, VK_IMAGE_LAYOUT_GENERAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), VK_IMAGE_LAYOUT_GENERAL, &clear_black, 1, &range);
-		vk::change_image_layout(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), VK_IMAGE_LAYOUT_GENERAL, present_layout, range);
+		vk::change_image_layout(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+		vkCmdClearColorImage(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &range);
+		vk::change_image_layout(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, present_layout, range);
 	}
 
 	std::unique_ptr<vk::framebuffer_holder> direct_fbo;
@@ -3578,7 +3592,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		}
 
 		if (data.command_buffer_to_wait->pending)
-			data.command_buffer_to_wait->wait();
+			data.command_buffer_to_wait->wait(GENERAL_WAIT_TIMEOUT);
 
 		//Gather data
 		for (const auto occlusion_id : data.indices)

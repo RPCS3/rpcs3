@@ -1,17 +1,13 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "AudioDumper.h"
-#include "AudioThread.h"
 
-AudioThread::~AudioThread()
-{
-}
 
 AudioDumper::AudioDumper(u16 ch)
 	: m_header(ch)
 {
 	if (GetCh())
 	{
-		m_output.open(fs::get_config_dir() + "audio.wav", fs::rewrite);
+		m_output.open(fs::get_cache_dir() + "audio.wav", fs::rewrite);
 		m_output.write(m_header); // write initial file header
 	}
 }

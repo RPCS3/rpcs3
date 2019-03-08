@@ -176,7 +176,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_semaphore_get_value),                     //114 (0x072)
 	BIND_FUNC(_sys_lwcond_signal),                          //115 (0x073)
 	BIND_FUNC(_sys_lwcond_signal_all),                      //116 (0x074)
-	null_func,//BIND_FUNC(sys_semaphore_...)                //117 (0x075) // internal, used by sys_lwmutex_unlock
+	BIND_FUNC(_sys_lwmutex_unlock2),                        //117 (0x075)
 	BIND_FUNC(sys_event_flag_clear),                        //118 (0x076)
 	null_func,//BIND_FUNC(sys_time_get_rtc)                 //119 (0x077)  ROOT
 	BIND_FUNC(sys_rwlock_create),                           //120 (0x078)

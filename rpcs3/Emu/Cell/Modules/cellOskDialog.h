@@ -1,9 +1,9 @@
-#pragma once
+﻿#pragma once
 
 
 
 // error codes
-enum
+enum CellOskDialogError : u32
 {
 	CELL_OSKDIALOG_ERROR_IME_ALREADY_IN_USE = 0x8002b501,
 	CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR = 0x8002b502,
@@ -207,7 +207,7 @@ struct CellOskDialogLayoutInfo
 
 struct CellOskDialogSeparateWindowOption
 {
-	be_t<s32> continuousMode; //CellOskDialogContinuousMode
+	be_t<u32> continuousMode; // CellOskDialogContinuousMode
 	be_t<s32> deviceMask;
 	be_t<s32> inputFieldWindowWidth;
 	be_t<f32> inputFieldBackgroundTrans;
@@ -232,3 +232,31 @@ struct CellOskDialogImeDictionaryInfo
 using cellOskDialogConfirmWordFilterCallback = int(vm::ptr<u16> pConfirmString, s32 wordLength);
 using cellOskDialogHardwareKeyboardEventHookCallback = class b8(vm::ptr<CellOskDialogKeyMessage> keyMessage, vm::ptr<u32> action, vm::ptr<void> pActionInfo);
 using cellOskDialogForceFinishCallback = class b8();
+
+enum class OskDialogState
+{
+	Open,
+	Abort,
+	Close,
+};
+
+class OskDialogBase
+{
+public:
+	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) = 0;
+	virtual void Close(bool accepted) = 0;
+	virtual ~OskDialogBase();
+
+	std::function<void(s32 status)> on_osk_close;
+	std::function<void()> on_osk_input_entered;
+
+	atomic_t<OskDialogState> state{ OskDialogState::Close };
+	atomic_t<bool> use_seperate_windows{ false };
+
+	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode{ CellOskDialogContinuousMode::CELL_OSKDIALOG_CONTINUOUS_MODE_NONE };
+	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
+	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE];
+	char16_t osk_text_old[CELL_OSKDIALOG_STRING_SIZE];
+
+	vm::ptr<cellOskDialogConfirmWordFilterCallback> osk_confirm_callback{ vm::null };
+};

@@ -206,12 +206,12 @@ namespace rsx
 						auto fifo = vm::ptr<u16>::make(idxAddr);
 						for (u32 i = 0; i < idxCount; ++i)
 						{
-							u32 index = fifo[i];
-							if (is_primitive_restart_enabled && index == primitive_restart_index)
+							u16 index = fifo[i];
+							if (is_primitive_restart_enabled && (u32)index == primitive_restart_index)
 								continue;
-							index     = get_index_from_base(index, method_registers.vertex_data_base_index());
-							min_index = std::min(index, min_index);
-							max_index = std::max(index, max_index);
+							index     = (u16)get_index_from_base(index, method_registers.vertex_data_base_index());
+							min_index = (u16)std::min(index, (u16)min_index);
+							max_index = (u16)std::max(index, (u16)max_index);
 						}
 						break;
 					}

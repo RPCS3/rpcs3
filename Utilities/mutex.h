@@ -46,10 +46,36 @@ public:
 		}
 	}
 
+	void lock_shared_hle()
+	{
+		const u32 value = m_value.load();
+
+		if (LIKELY(value < c_one - 1))
+		{
+			u32 old = value;
+			if (LIKELY(atomic_storage<u32>::compare_exchange_hle_acq(m_value.raw(), old, value + 1)))
+			{
+				return;
+			}
+		}
+
+		imp_lock_shared(value);
+	}
+
 	void unlock_shared()
 	{
 		// Unconditional decrement (can result in broken state)
 		const u32 value = m_value.fetch_sub(1);
+
+		if (UNLIKELY(value >= c_one))
+		{
+			imp_unlock_shared(value);
+		}
+	}
+
+	void unlock_shared_hle()
+	{
+		const u32 value = atomic_storage<u32>::fetch_add_hle_rel(m_value.raw(), -1);
 
 		if (UNLIKELY(value >= c_one))
 		{
@@ -72,10 +98,30 @@ public:
 		}
 	}
 
+	void lock_hle()
+	{
+		u32 value = 0;
+
+		if (UNLIKELY(!atomic_storage<u32>::compare_exchange_hle_acq(m_value.raw(), value, c_one)))
+		{
+			imp_lock(value);
+		}
+	}
+
 	void unlock()
 	{
 		// Unconditional decrement (can result in broken state)
 		const u32 value = m_value.fetch_sub(c_one);
+
+		if (UNLIKELY(value != c_one))
+		{
+			imp_unlock(value);
+		}
+	}
+
+	void unlock_hle()
+	{
+		const u32 value = atomic_storage<u32>::fetch_add_hle_rel(m_value.raw(), -c_one);
 
 		if (UNLIKELY(value != c_one))
 		{

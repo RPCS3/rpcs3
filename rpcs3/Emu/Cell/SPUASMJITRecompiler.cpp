@@ -32,33 +32,8 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_asmjit_recompiler
 	return std::make_unique<spu_recompiler>();
 }
 
-spu_runtime::spu_runtime()
-{
-	m_cache_path = fxm::check_unlocked<ppu_module>()->cache;
-
-	if (g_cfg.core.spu_debug)
-	{
-		fs::file(m_cache_path + "spu.log", fs::rewrite);
-	}
-
-	LOG_SUCCESS(SPU, "SPU Recompiler Runtime (ASMJIT) initialized...");
-
-	// Initialize lookup table
-	for (auto& v : m_dispatcher)
-	{
-		v.raw() = &spu_recompiler_base::dispatch;
-	}
-
-	// Initialize "empty" block
-	m_map[std::vector<u32>()] = &spu_recompiler_base::dispatch;
-}
-
 spu_recompiler::spu_recompiler()
 {
-	if (!g_cfg.core.spu_shared_runtime)
-	{
-		m_spurt = std::make_shared<spu_runtime>();
-	}
 }
 
 void spu_recompiler::init()
@@ -71,30 +46,25 @@ void spu_recompiler::init()
 	}
 }
 
-spu_function_t spu_recompiler::get(u32 lsa)
-{
-	init();
-
-	// Simple atomic read
-	return m_spurt->m_dispatcher[lsa / 4];
-}
-
 spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 {
 	init();
 
-	// Don't lock without shared runtime
-	std::unique_lock lock(m_spurt->m_mutex, std::defer_lock);
-
-	if (g_cfg.core.spu_shared_runtime)
-	{
-		lock.lock();
-	}
+	std::unique_lock lock(m_spurt->m_mutex);
 
 	// Try to find existing function, register new one if necessary
 	const auto fn_info = m_spurt->m_map.emplace(std::move(func_rv), nullptr);
 
 	auto& fn_location = fn_info.first->second;
+
+	if (!fn_location && !fn_info.second)
+	{
+		// Wait if already in progress
+		while (!fn_location)
+		{
+			m_spurt->m_cond.wait(lock);
+		}
+	}
 
 	if (fn_location)
 	{
@@ -102,6 +72,8 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	}
 
 	auto& func = fn_info.first->first;
+
+	lock.unlock();
 
 	using namespace asmjit;
 
@@ -124,7 +96,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	}
 
 	CodeHolder code;
-	code.init(m_spurt->m_jitrt.getCodeInfo());
+	code.init(m_asmrt.getCodeInfo());
 	code._globalHints = asmjit::CodeEmitter::kHintOptimizedAlign;
 
 	X86Assembler compiler(&code);
@@ -861,13 +833,12 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	// Compile and get function address
 	spu_function_t fn;
 
-	if (m_spurt->m_jitrt.add(&fn, &code))
+	if (m_asmrt.add(&fn, &code))
 	{
 		LOG_FATAL(SPU, "Failed to build a function");
 	}
 
-	// Register function
-	fn_location = fn;
+	m_spurt->add(*fn_info.first, fn);
 
 	if (g_cfg.core.spu_debug)
 	{
@@ -883,239 +854,6 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& func_rv)
 	if (m_cache && g_cfg.core.spu_cache)
 	{
 		m_cache->add(func);
-	}
-
-	// Generate a dispatcher (übertrampoline)
-	std::vector<u32> addrv{func[0]};
-	const auto beg = m_spurt->m_map.lower_bound(addrv);
-	addrv[0] += 4;
-	const auto _end = m_spurt->m_map.lower_bound(addrv);
-	const u32 size0 = std::distance(beg, _end);
-
-	if (size0 == 1)
-	{
-		m_spurt->m_dispatcher[func[0] / 4] = fn;
-	}
-	else
-	{
-		CodeHolder code;
-		code.init(m_spurt->m_jitrt.getCodeInfo());
-
-		X86Assembler compiler(&code);
-		this->c = &compiler;
-
-		if (g_cfg.core.spu_debug)
-		{
-			// Set logger
-			code.setLogger(&logger);
-		}
-
-		compiler.comment("\n\nTrampoline:\n\n");
-
-		struct work
-		{
-			u32 size;
-			u32 level;
-			Label label;
-			std::map<std::vector<u32>, spu_function_t>::iterator beg;
-			std::map<std::vector<u32>, spu_function_t>::iterator end;
-		};
-
-		std::vector<work> workload;
-		workload.reserve(size0);
-		workload.emplace_back();
-		workload.back().size = size0;
-		workload.back().level = 1;
-		workload.back().beg = beg;
-		workload.back().end = _end;
-
-		for (std::size_t i = 0; i < workload.size(); i++)
-		{
-			// Get copy of the workload info
-			work w = workload[i];
-
-			// Split range in two parts
-			auto it = w.beg;
-			auto it2 = w.beg;
-			u32 size1 = w.size / 2;
-			u32 size2 = w.size - size1;
-			std::advance(it2, w.size / 2);
-
-			while (true)
-			{
-				it = it2;
-				size1 = w.size - size2;
-
-				if (w.level >= w.beg->first.size())
-				{
-					// Cannot split: smallest function is a prefix of bigger ones (TODO)
-					break;
-				}
-
-				const u32 x1 = w.beg->first.at(w.level);
-
-				if (!x1)
-				{
-					// Cannot split: some functions contain holes at this level
-					w.level++;
-					continue;
-				}
-
-				// Adjust ranges (forward)
-				while (it != w.end && x1 == it->first.at(w.level))
-				{
-					it++;
-					size1++;
-				}
-
-				if (it == w.end)
-				{
-					// Cannot split: words are identical within the range at this level
-					w.level++;
-				}
-				else
-				{
-					size2 = w.size - size1;
-					break;
-				}
-			}
-
-			if (w.label.isValid())
-			{
-				c->align(kAlignCode, 16);
-				c->bind(w.label);
-			}
-
-			if (w.level >= w.beg->first.size())
-			{
-				// If functions cannot be compared, assume smallest function
-				LOG_ERROR(SPU, "Trampoline simplified at 0x%x (level=%u)", func[0], w.level);
-				c->jmp(imm_ptr(w.beg->second ? w.beg->second : &dispatch));
-				continue;
-			}
-
-			// Value for comparison
-			const u32 x = it->first.at(w.level);
-
-			// Adjust ranges (backward)
-			while (true)
-			{
-				it--;
-
-				if (it->first.at(w.level) != x)
-				{
-					it++;
-					break;
-				}
-
-				verify(HERE), it != w.beg;
-				size1--;
-				size2++;
-			}
-
-			c->cmp(x86::dword_ptr(*ls, start + (w.level - 1) * 4), x);
-
-			// Low subrange target label
-			Label label_below;
-
-			if (size1 == 1)
-			{
-				label_below = c->newLabel();
-				c->jb(label_below);
-			}
-			else
-			{
-				workload.push_back(w);
-				workload.back().end = it;
-				workload.back().size = size1;
-				workload.back().label = c->newLabel();
-				c->jb(workload.back().label);
-			}
-
-			// Second subrange target
-			const auto target = it->second ? it->second : &dispatch;
-
-			if (size2 == 1)
-			{
-				c->jmp(imm_ptr(target));
-			}
-			else
-			{
-				it2 = it;
-
-				// Select additional midrange for equality comparison
-				while (it2 != w.end && it2->first.at(w.level) == x)
-				{
-					size2--;
-					it2++;
-				}
-
-				if (it2 != w.end)
-				{
-					// High subrange target label
-					Label label_above;
-
-					if (size2 == 1)
-					{
-						label_above = c->newLabel();
-						c->ja(label_above);
-					}
-					else
-					{
-						workload.push_back(w);
-						workload.back().beg = it2;
-						workload.back().size = size2;
-						workload.back().label = c->newLabel();
-						c->ja(workload.back().label);
-					}
-
-					const u32 size3 = w.size - size1 - size2;
-
-					if (size3 == 1)
-					{
-						c->jmp(imm_ptr(target));
-					}
-					else
-					{
-						workload.push_back(w);
-						workload.back().beg = it;
-						workload.back().end = it2;
-						workload.back().size = size3;
-						workload.back().label = c->newLabel();
-						c->jmp(workload.back().label);
-					}
-
-					if (label_above.isValid())
-					{
-						c->bind(label_above);
-						c->jmp(imm_ptr(it2->second ? it2->second : &dispatch));
-					}
-				}
-				else
-				{
-					workload.push_back(w);
-					workload.back().beg = it;
-					workload.back().size = w.size - size1;
-					workload.back().label = c->newLabel();
-					c->jmp(workload.back().label);
-				}
-			}
-
-			if (label_below.isValid())
-			{
-				c->bind(label_below);
-				c->jmp(imm_ptr(w.beg->second ? w.beg->second : &dispatch));
-			}
-		}
-
-		spu_function_t tr;
-
-		if (m_spurt->m_jitrt.add(&tr, &code))
-		{
-			LOG_FATAL(SPU, "Failed to build a trampoline");
-		}
-
-		m_spurt->m_dispatcher[func[0] / 4] = tr;
 	}
 
 	return fn;
@@ -1209,33 +947,11 @@ void spu_recompiler::branch_fixed(u32 target)
 		return;
 	}
 
-	c->mov(x86::rax, x86::qword_ptr(*cpu, offset32(&spu_thread::jit_dispatcher) + target * 2));
 	c->mov(SPU_OFF_32(pc), target);
+	c->xor_(qw0->r32(), qw0->r32());
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_stop);
-
-	if (false)
-	{
-		// Don't generate patch points (TODO)
-		c->xor_(qw0->r32(), qw0->r32());
-		c->jmp(x86::rax);
-		return;
-	}
-
-	// Set patch address as a third argument and fallback to it
-	Label patch_point = c->newLabel();
-	c->lea(*qw0, x86::qword_ptr(patch_point));
-
-	// Need to emit exactly one executable instruction within 8 bytes
-	c->align(kAlignCode, 8);
-	c->bind(patch_point);
-	//c->dq(0x841f0f);
-	c->jmp(imm_ptr(&spu_recompiler_base::branch));
-
-	// Fallback to the branch via dispatcher
-	c->align(kAlignCode, 8);
-	c->xor_(qw0->r32(), qw0->r32());
-	c->jmp(x86::rax);
+	c->jmp(imm_ptr(m_spurt->make_branch_patchpoint(target)));
 }
 
 void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
@@ -1292,7 +1008,8 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 	if (!jt && g_cfg.core.spu_block_size != spu_block_size_type::giga)
 	{
 		// Simply external call (return or indirect call)
-		c->mov(x86::r10, x86::qword_ptr(*cpu, addr->r64(), 1, offset32(&spu_thread::jit_dispatcher)));
+		c->mov(x86::r10, imm_ptr(spu_runtime::g_dispatcher));
+		c->mov(x86::r10, x86::qword_ptr(x86::r10, addr->r64(), 1, 0));
 	}
 	else
 	{
@@ -1311,7 +1028,8 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		c->lea(x86::r10, x86::qword_ptr(instr_table));
 		c->cmp(qw1->r32(), end - start);
 		c->lea(x86::r10, x86::qword_ptr(x86::r10, *qw1, 1, 0));
-		c->lea(*qw1, x86::qword_ptr(*cpu, addr->r64(), 1, offset32(&spu_thread::jit_dispatcher)));
+		c->mov(*qw1, imm_ptr(spu_runtime::g_dispatcher));
+		c->lea(*qw1, x86::qword_ptr(*qw1, addr->r64(), 1, 0));
 		c->cmovae(x86::r10, *qw1);
 		c->mov(x86::r10, x86::qword_ptr(x86::r10));
 	}
@@ -1436,6 +1154,7 @@ void spu_recompiler::get_events()
 		c->mov(*qw0, imm_ptr(vm::g_reservations));
 		c->shr(qw1->r32(), 4);
 		c->mov(*qw0, x86::qword_ptr(*qw0, *qw1));
+		c->and_(qw0->r64(), (u64)(~1ull));
 		c->cmp(*qw0, SPU_OFF_64(rtime));
 		c->jne(fail);
 		c->mov(*qw0, imm_ptr(vm::g_base_addr));
@@ -2596,7 +2315,7 @@ static void spu_wrch(spu_thread* _spu, u32 ch, u32 value, spu_function_t _ret)
 
 static void spu_wrch_mfc(spu_thread* _spu, spu_function_t _ret)
 {
-	if (!_spu->process_mfc_cmd(_spu->ch_mfc_cmd))
+	if (!_spu->process_mfc_cmd())
 	{
 		_ret = &spu_wrch_ret;
 	}
@@ -2758,8 +2477,17 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	}
 	case MFC_WrListStallAck:
 	{
-		auto sub = [](spu_thread* _spu, spu_function_t _ret)
+		auto sub = [](spu_thread* _spu, spu_function_t _ret, u32 tag)
 		{
+			for (u32 i = 0; i < _spu->mfc_size; i++)
+			{
+				if (_spu->mfc_queue[i].tag == (tag | 0x80))
+				{
+					// Unset stall bit
+					_spu->mfc_queue[i].tag &= 0x7f;
+				}
+			}
+
 			_spu->do_mfc(true);
 			_ret(*_spu, _spu->_ptr<u8>(0), nullptr);
 		};
@@ -2770,7 +2498,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 		c->btr(SPU_OFF_32(ch_stall_mask), qw0->r32());
 		c->jnc(ret);
 		c->lea(*ls, x86::qword_ptr(ret));
-		c->jmp(imm_ptr<void(*)(spu_thread*, spu_function_t)>(sub));
+		c->jmp(imm_ptr<void(*)(spu_thread*, spu_function_t, u32)>(sub));
 		c->align(kAlignCode, 16);
 		c->bind(ret);
 		return;

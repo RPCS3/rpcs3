@@ -119,15 +119,16 @@ bool cpu_thread::check_state()
 
 	while (true)
 	{
-		if (state & cpu_flag::memory && state.test_and_reset(cpu_flag::memory))
+		if (state & cpu_flag::memory)
 		{
-			cpu_flag_memory = true;
-
 			if (auto& ptr = vm::g_tls_locked)
 			{
 				ptr->compare_and_swap(this, nullptr);
 				ptr = nullptr;
 			}
+
+			cpu_flag_memory = true;
+			state -= cpu_flag::memory;
 		}
 
 		if (state & cpu_flag::exit + cpu_flag::dbg_global_stop)

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/bin_patch.h"
 #include "Crypto/sha1.h"
@@ -13,6 +13,8 @@
 
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
+
+#include "Emu/Cell/Modules/StaticHLE.h"
 
 #include <map>
 #include <set>
@@ -255,6 +257,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::sysPrxForUser,
 		&ppu_module_manager::sys_libc,
 		&ppu_module_manager::sys_lv2dbg,
+		&ppu_module_manager::static_hle,
 	};
 
 	// Initialize double-purpose fake OPD array for HLE functions
@@ -1044,7 +1047,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	// Process information
 	u32 sdk_version = 0x360001;
-	s32 primary_prio = 0x50;
+	s32 primary_prio = 1001;
 	u32 primary_stacksize = 0x100000;
 	u32 malloc_pagesize = 0x100000;
 
@@ -1136,6 +1139,18 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
 
+	// Static HLE patching
+	if (g_cfg.core.hook_functions)
+	{
+		auto shle = fxm::get_always<statichle_handler>();
+
+		for (u32 i = _main->segs[0].addr; i < (_main->segs[0].addr + _main->segs[0].size); i += 4)
+		{
+			vm::cptr<u8> _ptr = vm::cast(i);
+			shle->check_against_patterns(_ptr, (_main->segs[0].addr + _main->segs[0].size) - i, i);
+		}
+	}
+
 	// Load other programs
 	for (auto& prog : elf.progs)
 	{
@@ -1182,7 +1197,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				else
 				{
 					sdk_version = info.sdk_version;
-					primary_prio = info.primary_prio;
+
+					if (s32 prio = info.primary_prio; prio < 3072 && prio >= 0)
+					{
+						primary_prio = prio;
+					}
+
 					primary_stacksize = info.primary_stacksize;
 					malloc_pagesize = info.malloc_pagesize;
 
@@ -1428,7 +1448,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Set path (TODO)
-	_main->name = "";
+	_main->name.clear();
 	_main->path = vfs::get(Emu.argv[0]);
 
 	// Analyse executable (TODO)
@@ -1489,7 +1509,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	p.stack_addr = vm::cast(vm::alloc(primary_stacksize, vm::stack, 4096));
 	p.stack_size = primary_stacksize;
 
-	auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] Thread (main_thread)", p, "main_thread", primary_prio);
+	auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] Thread (main_thread)", p, "main_thread", primary_prio, 1);
 
 	// Write initial data (exitspawn)
 	if (Emu.data.size())

@@ -607,7 +607,7 @@ error_code sys_spu_thread_group_terminate(u32 id, s32 value)
 	}
 
 	group->exit_status = value;
-	group->join_state |= SPU_TGJSF_TERMINATED;
+	group->join_state = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
 
 	// Wait until the threads are actually stopped
 	const u64 last_stop = group->stop_count - !group->running;
@@ -633,9 +633,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		return CELL_ESRCH;
 	}
 
-	u32 join_state = 0;
-	s32 exit_value = 0;
-
+	do
 	{
 		std::unique_lock lock(group->mutex);
 
@@ -644,17 +642,30 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			return CELL_ESTAT;
 		}
 
-		if (group->join_state.fetch_or(SPU_TGJSF_IS_JOINING) & SPU_TGJSF_IS_JOINING)
+		if (group->waiter)
 		{
 			// another PPU thread is joining this thread group
 			return CELL_EBUSY;
 		}
 
-		const u64 last_stop = group->stop_count - !group->running;
+		if (group->join_state && group->run_state == SPU_THREAD_GROUP_STATUS_INITIALIZED)
+		{
+			// Already signaled
+			ppu.gpr[4] = group->join_state;
+			ppu.gpr[5] = group->exit_status;
+			group->join_state.release(0);
+			break;
+		}
+		else
+		{
+			// Subscribe to receive status in r4-r5
+			ppu.gpr[4] = 0;
+			group->waiter = &ppu;
+		}
 
 		lv2_obj::sleep(ppu);
 
-		while (group->stop_count == last_stop)
+		while (!ppu.gpr[4])
 		{
 			if (ppu.is_stopped())
 			{
@@ -663,45 +674,27 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 			group->cond.wait(lock);
 		}
-
-		join_state = group->join_state;
-		exit_value = group->exit_status;
-		group->join_state &= ~SPU_TGJSF_IS_JOINING;
 	}
+	while (0);
 
 	if (ppu.test_stopped())
 	{
 		return 0;
 	}
 
-	switch (join_state & ~SPU_TGJSF_IS_JOINING)
+	if (!cause)
 	{
-	case 0:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_ALL_THREADS_EXIT;
-		break;
-	}
-	case SPU_TGJSF_GROUP_EXIT:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
-		break;
-	}
-	case SPU_TGJSF_TERMINATED:
-	{
-		if (cause) *cause = SYS_SPU_THREAD_GROUP_JOIN_TERMINATED;
-		break;
-	}
-	default:
-	{
-		fmt::throw_exception("Unexpected join_state" HERE);
-	}
+		return CELL_EFAULT;
 	}
 
-	if (status)
+	*cause = static_cast<u32>(ppu.gpr[4]);
+
+	if (!status)
 	{
-		*status = group->exit_status;
+		return CELL_EFAULT;
 	}
 
+	*status = static_cast<s32>(ppu.gpr[5]);
 	return CELL_OK;
 }
 

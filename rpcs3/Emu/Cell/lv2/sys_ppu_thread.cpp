@@ -120,19 +120,21 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	// Wait for cleanup
 	(*thread.ptr)();
 
-	// Get the exit status from the register
-	if (vptr)
+	if (ppu.test_stopped())
 	{
-		if (ppu.test_stopped())
-		{
-			return 0;
-		}
-
-		*vptr = thread->gpr[3];
+		return 0;
 	}
 
 	// Cleanup
 	idm::remove<named_thread<ppu_thread>>(thread->id);
+
+	if (!vptr)
+	{
+		return CELL_EFAULT;
+	}
+
+	// Get the exit status from the register
+	*vptr = thread->gpr[3];
 	return CELL_OK;
 }
 
@@ -188,11 +190,17 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 	return CELL_OK;
 }
 
-void sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable)
+error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_get_join_state(isjoinable=*0x%x)", isjoinable);
 
+	if (!isjoinable)
+	{
+		return CELL_EFAULT;
+	}
+
 	*isjoinable = ppu.joiner != -1;
+	return CELL_OK;
 }
 
 error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)

@@ -44,6 +44,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, set = 0, binding = 1) uniform VertexLayoutBuffer\n";
 	OS << "{\n";
 	OS << "	uint  vertex_base_index;\n";
+	OS << " uint  vertex_index_offset;\n";
 	OS << "	uvec4 input_attributes_blob[16 / 2];\n";
 	OS << "};\n\n";
 
@@ -353,7 +354,7 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 
 void VKVertexProgram::Compile()
 {
-	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+	fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
 	handle = shader.compile();
 }
 

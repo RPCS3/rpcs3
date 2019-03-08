@@ -671,7 +671,7 @@ void rsx_debugger::GetMemory()
 		dump += '\n';
 	}
 
-	fs::file(fs::get_config_dir() + "command_dump.log", fs::rewrite).write(dump);
+	fs::file(fs::get_cache_dir() + "command_dump.log", fs::rewrite).write(dump);
 
 	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
 		m_list_captured_draw_calls->setItem(i, 0, new QTableWidgetItem(qstr(frame_debug.draw_calls[i].name)));

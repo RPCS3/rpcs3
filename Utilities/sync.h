@@ -153,7 +153,7 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 template <typename T, typename Pred>
 bool balanced_wait_until(atomic_t<T>& var, u64 usec_timeout, Pred&& pred)
 {
-	static_assert(sizeof(T) == 4);
+	static_assert(sizeof(T) == 4 || sizeof(T) == 8);
 
 	const bool is_inf = usec_timeout > u64{UINT32_MAX / 1000} * 1000000;
 
@@ -184,9 +184,9 @@ bool balanced_wait_until(atomic_t<T>& var, u64 usec_timeout, Pred&& pred)
 	{
 		while (!test_pred(value))
 		{
-			if (OptWaitOnAddress(&var, &value, sizeof(u32), is_inf ? INFINITE : usec_timeout / 1000))
+			if (OptWaitOnAddress(&var, &value, sizeof(T), is_inf ? INFINITE : usec_timeout / 1000))
 			{
-				if (!test_pred(value) && !test_pred(value, nullptr))
+				if (!test_pred(value, nullptr))
 				{
 					return false;
 				}
@@ -220,7 +220,7 @@ bool balanced_wait_until(atomic_t<T>& var, u64 usec_timeout, Pred&& pred)
 		return true;
 	}
 
-	if (!test_pred(value) && !test_pred(value, nullptr))
+	if (!test_pred(value, nullptr))
 	{
 		// Stolen notification: restore balance
 		NtReleaseKeyedEvent(nullptr, &var, false, nullptr);
@@ -237,7 +237,7 @@ bool balanced_wait_until(atomic_t<T>& var, u64 usec_timeout, Pred&& pred)
 	{
 		if (futex(&var, FUTEX_WAIT_PRIVATE, static_cast<u32>(value), is_inf ? nullptr : &timeout) == 0)
 		{
-			if (!test_pred(value) && !test_pred(value, nullptr))
+			if (!test_pred(value, nullptr))
 			{
 				return false;
 			}
@@ -257,19 +257,21 @@ bool balanced_wait_until(atomic_t<T>& var, u64 usec_timeout, Pred&& pred)
 #endif
 }
 
-template <typename T>
+template <bool All = false, typename T>
 void balanced_awaken(atomic_t<T>& var, u32 weight)
 {
-	static_assert(sizeof(T) == 4);
+	static_assert(sizeof(T) == 4 || sizeof(T) == 8);
 
 #ifdef _WIN32
 	if (OptWaitOnAddress)
 	{
-		if (weight > 1)
+		if (All || weight > 3)
 		{
 			OptWakeByAddressAll(&var);
+			return;
 		}
-		else if (weight == 1)
+
+		for (u32 i = 0; i < weight; i++)
 		{
 			OptWakeByAddressSingle(&var);
 		}
@@ -282,9 +284,9 @@ void balanced_awaken(atomic_t<T>& var, u32 weight)
 		NtReleaseKeyedEvent(nullptr, &var, false, nullptr);
 	}
 #else
-	if (weight)
+	if (All || weight)
 	{
-		futex(&var, FUTEX_WAKE_PRIVATE, std::min<u32>(INT_MAX, weight));
+		futex(&var, FUTEX_WAKE_PRIVATE, All ? INT_MAX : std::min<u32>(INT_MAX, weight));
 	}
 
 	return;

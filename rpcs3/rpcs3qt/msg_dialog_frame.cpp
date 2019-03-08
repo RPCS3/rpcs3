@@ -9,6 +9,8 @@ constexpr auto qstr = QString::fromStdString;
 
 void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 {
+	state = MsgDialogState::Open;
+
 	static const auto& barWidth = [](){return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();};
 
 	if (m_dialog)
@@ -75,8 +77,8 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		m_dialog->setModal(true);
 
-		m_button_yes = new QPushButton("&Yes", m_dialog);
-		m_button_no = new QPushButton("&No", m_dialog);
+		QPushButton* m_button_yes = new QPushButton("&Yes", m_dialog);
+		QPushButton* m_button_no = new QPushButton("&No", m_dialog);
 
 		QHBoxLayout* hBoxButtons = new QHBoxLayout;
 		hBoxButtons->setAlignment(Qt::AlignCenter);
@@ -110,7 +112,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		m_dialog->setModal(true);
 
-		m_button_ok = new QPushButton("&OK", m_dialog);
+		QPushButton* m_button_ok = new QPushButton("&OK", m_dialog);
 		m_button_ok->setFixedWidth(50);
 
 		QHBoxLayout* hBoxButtons = new QHBoxLayout;
@@ -150,84 +152,6 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 #endif
 }
 
-void msg_dialog_frame::CreateOsk(const std::string& msg, char16_t* osk_text, u32 charlimit)
-{
-	static const auto& lineEditWidth = []() {return QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width(); };
-
-	if (m_osk_dialog)
-	{
-		m_osk_dialog->close();
-		delete m_osk_dialog;
-	}
-
-	m_osk_dialog = new custom_dialog(type.disable_cancel);
-	m_osk_dialog->setModal(true);
-	m_osk_text_return = osk_text;
-
-	// Title
-	m_osk_dialog->setWindowTitle(qstr(msg));
-
-	// Text Input
-	QLineEdit* input = new QLineEdit(m_osk_dialog);
-	input->setFixedWidth(lineEditWidth());
-	input->setMaxLength(charlimit);
-	input->setText(QString::fromStdU16String(std::u16string(m_osk_text_return)));
-	input->setFocus();
-
-	// Text Input Counter
-	QLabel* inputCount = new QLabel(QString("%1/%2").arg(input->text().length()).arg(charlimit));
-
-	// Ok Button
-	QPushButton* button_ok = new QPushButton("Ok", m_osk_dialog);
-
-	// Button Layout
-	QHBoxLayout* buttonsLayout = new QHBoxLayout;
-	buttonsLayout->setAlignment(Qt::AlignCenter);
-	buttonsLayout->addStretch();
-	buttonsLayout->addWidget(button_ok);
-	buttonsLayout->addStretch();
-
-	// Input Layout
-	QHBoxLayout* inputLayout = new QHBoxLayout;
-	inputLayout->setAlignment(Qt::AlignHCenter);
-	inputLayout->addWidget(input);
-	inputLayout->addWidget(inputCount);
-
-	QFormLayout* layout = new QFormLayout(m_osk_dialog);
-	layout->setFormAlignment(Qt::AlignHCenter);
-	layout->addRow(inputLayout);
-	layout->addRow(buttonsLayout);
-	m_osk_dialog->setLayout(layout);
-
-	// Events
-	connect(input, &QLineEdit::textChanged, [=](const QString& text)
-	{
-		inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
-		on_osk_input_entered();
-	});
-
-	connect(input, &QLineEdit::returnPressed, m_osk_dialog, &QDialog::accept);
-	connect(button_ok, &QAbstractButton::clicked, m_osk_dialog, &QDialog::accept);
-
-	connect(m_osk_dialog, &QDialog::rejected, [=]
-	{
-		if (!type.disable_cancel)
-		{
-			on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
-		}
-	});
-
-	connect(m_osk_dialog, &QDialog::accepted, [=]
-	{
-		std::memcpy(m_osk_text_return, reinterpret_cast<const char16_t*>(input->text().constData()), ((input->text()).size() + 1) * sizeof(char16_t));
-		on_close(CELL_MSGDIALOG_BUTTON_OK);
-	});
-
-	// Fix size
-	m_osk_dialog->layout()->setSizeConstraint(QLayout::SetFixedSize);
-	m_osk_dialog->show();
-}
-
 msg_dialog_frame::msg_dialog_frame(QWindow* taskbarTarget) : m_taskbarTarget(taskbarTarget) {}
 
 msg_dialog_frame::~msg_dialog_frame()
@@ -248,10 +172,6 @@ msg_dialog_frame::~msg_dialog_frame()
 	if (m_dialog)
 	{
 		m_dialog->deleteLater();
-	}
-	if (m_osk_dialog)
-	{
-		m_osk_dialog->deleteLater();
 	}
 }
 

@@ -45,6 +45,7 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, binding = 1) uniform VertexLayoutBuffer\n";
 	OS << "{\n";
 	OS << "	uint  vertex_base_index;\n";
+	OS << " uint  vertex_index_offset;\n";
 	OS << "	uvec4 input_attributes_blob[16 / 2];\n";
 	OS << "};\n\n";
 }
@@ -299,11 +300,11 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	//RSX matrices passed already map to the [0, 1] range but mapping to classic OGL requires that we undo this step
 	//This can be made unnecessary using the call glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE).
 	//However, ClipControl only made it to opengl core in ver 4.5 though, so this is a workaround.
-	
+
 	//NOTE: It is completely valid for games to use very large w values, causing the post-multiplied z to be in the hundreds
 	//It is therefore critical that this step is done post-transform and the result re-scaled by w
 	//SEE Naruto: UNS
-	
+
 	//NOTE: On GPUs, poor fp32 precision means dividing z by w, then multiplying by w again gives slightly incorrect results
 	//This equation is simplified algebraically to an addition and subreaction which gives more accurate results (Fixes flickering skybox in Dark Souls 2)
 	//OS << "	float ndc_z = gl_Position.z / gl_Position.w;\n";
@@ -345,7 +346,7 @@ void GLVertexProgram::Compile()
 	const char* str = shader.c_str();
 	const int strlen = ::narrow<int>(shader.length());
 
-	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
+	fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);

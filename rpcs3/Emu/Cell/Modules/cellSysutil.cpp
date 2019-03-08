@@ -10,6 +10,26 @@
 
 LOG_CHANNEL(cellSysutil);
 
+template<>
+void fmt_class_string<CellSysutilError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SYSUTIL_ERROR_TYPE);
+			STR_CASE(CELL_SYSUTIL_ERROR_VALUE);
+			STR_CASE(CELL_SYSUTIL_ERROR_SIZE);
+			STR_CASE(CELL_SYSUTIL_ERROR_NUM);
+			STR_CASE(CELL_SYSUTIL_ERROR_BUSY);
+			STR_CASE(CELL_SYSUTIL_ERROR_STATUS);
+			STR_CASE(CELL_SYSUTIL_ERROR_MEMORY);
+		}
+
+		return unknown;
+	});
+}
+
 struct sysutil_cb_manager
 {
 	struct alignas(8) registered_cb
@@ -226,9 +246,9 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	for (auto list = cbm->registered.pop_all(); list; list = list->pop_all())
+	for (auto&& func : cbm->registered.pop_all())
 	{
-		if (s32 res = list->get()(ppu))
+		if (s32 res = func(ppu))
 		{
 			// Currently impossible
 			return not_an_error(res);
@@ -277,7 +297,6 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 
 s32 cellSysCacheClear()
 {
-
 	cellSysutil.warning("cellSysCacheClear()");
 
 	// Get the param as a shared ptr, then decipher the cacheid from it
@@ -309,15 +328,18 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
 	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
 
-	const std::string& cache_id = param->cacheId;
-	verify(HERE), cache_id.size() < sizeof(param->cacheId);
+	if (!param || !memchr(param->cacheId, '\0', CELL_SYSCACHE_ID_SIZE))
+	{
+		return CELL_SYSCACHE_ERROR_PARAM;
+	}
 
+	const std::string& cache_id = param->cacheId;
 	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
 	// TODO: implement (what?)
 	fxm::make_always<CellSysCacheParam>(*param);
-	if (!fs::create_dir(vfs::get(cache_path)))
+	if (!fs::create_dir(vfs::get(cache_path)) && !cache_id.empty())
 	{
 		return CELL_SYSCACHE_RET_OK_RELAYED;
 	}

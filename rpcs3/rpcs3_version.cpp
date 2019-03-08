@@ -10,5 +10,5 @@ namespace rpcs3
 	}
 
 	//TODO: Make this accessible from cmake and keep in sync with MACOSX_BUNDLE_BUNDLE_VERSION.
-	const extern utils::version version{ 0, 0, 5, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
+	const extern utils::version version{ 0, 0, 6, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
 }

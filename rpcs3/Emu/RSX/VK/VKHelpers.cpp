@@ -428,6 +428,25 @@ namespace vk
 
 		switch (new_layout)
 		{
+		case VK_IMAGE_LAYOUT_GENERAL:
+			// Avoid this layout as it is unoptimized
+			barrier.dstAccessMask =
+			{
+				VK_ACCESS_TRANSFER_READ_BIT |
+				VK_ACCESS_TRANSFER_WRITE_BIT |
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+				VK_ACCESS_SHADER_READ_BIT |
+				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
+			};
+			dst_stage =
+			{
+				VK_PIPELINE_STAGE_TRANSFER_BIT |
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+			};
+			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -449,10 +468,32 @@ namespace vk
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
 			dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			break;
+		case VK_IMAGE_LAYOUT_UNDEFINED:
+		case VK_IMAGE_LAYOUT_PREINITIALIZED:
+			fmt::throw_exception("Attempted to transition to an invalid layout");
 		}
 
 		switch (current_layout)
 		{
+		case VK_IMAGE_LAYOUT_GENERAL:
+			// Avoid this layout as it is unoptimized
+			barrier.srcAccessMask =
+			{
+				VK_ACCESS_TRANSFER_READ_BIT |
+				VK_ACCESS_TRANSFER_WRITE_BIT |
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+				VK_ACCESS_SHADER_READ_BIT |
+				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
+			};
+			src_stage =
+			{
+				VK_PIPELINE_STAGE_TRANSFER_BIT |
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+				VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+			};
+			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -589,18 +630,27 @@ namespace vk
 		}
 	}
 
-	void wait_for_fence(VkFence fence)
+	VkResult wait_for_fence(VkFence fence, u64 timeout)
 	{
-		while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
+		if (timeout)
 		{
-			switch (status)
+			return vkWaitForFences(*g_current_renderer, 1, &fence, VK_FALSE, timeout * 1000ull);
+		}
+		else
+		{
+			while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
 			{
-			case VK_NOT_READY:
-				continue;
-			default:
-				die_with_error(HERE, status);
-				return;
+				switch (status)
+				{
+				case VK_NOT_READY:
+					continue;
+				default:
+					die_with_error(HERE, status);
+					return status;
+				}
 			}
+
+			return VK_SUCCESS;
 		}
 	}
 

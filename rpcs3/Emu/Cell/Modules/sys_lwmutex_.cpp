@@ -42,7 +42,7 @@ error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmute
 	attrs->flags     = 0;
 	attrs->name_u64  = attr->name_u64;
 
-	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64, 0))
+	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64))
 	{
 		return res;
 	}
@@ -85,7 +85,7 @@ error_code sys_lwmutex_destroy(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 
 	// deleting succeeded
-	lwmutex->vars.owner.exchange(lwmutex_dead);
+	lwmutex->vars.owner.release(lwmutex_dead);
 
 	return CELL_OK;
 }
@@ -184,8 +184,57 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 	if (res == CELL_EBUSY && lwmutex->attribute & SYS_SYNC_RETRY)
 	{
-		// TODO (protocol is ignored in current implementation)
-		fmt::throw_exception("Unimplemented" HERE);
+		while (true)
+		{
+			for (u32 i = 0; i < 10; i++)
+			{
+				busy_wait();
+
+				if (lwmutex->vars.owner.load() == lwmutex_free)
+				{
+					if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
+					{
+						return CELL_OK;
+					}
+				}
+			}
+
+			lwmutex->all_info++;
+
+			if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
+			{
+				lwmutex->all_info--;
+				return CELL_OK;
+			}
+
+			const u64 time0 = timeout ? get_system_time() : 0;
+
+			const error_code res_ = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
+
+			if (res_ == CELL_OK)
+			{
+				lwmutex->vars.owner.release(tid);
+			}
+			else if (timeout && res_ != CELL_ETIMEDOUT)
+			{
+				const u64 time_diff = get_system_time() - time0;
+
+				if (timeout <= time_diff)
+				{
+					lwmutex->all_info--;
+					return not_an_error(CELL_ETIMEDOUT);
+				}
+
+				timeout -= time_diff;
+			}
+
+			lwmutex->all_info--;
+
+			if (res_ != CELL_EBUSY)
+			{
+				return res_;
+			}
+		}
 	}
 
 	return res;
@@ -297,11 +346,19 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 	if (lwmutex->attribute & SYS_SYNC_RETRY)
 	{
-		// TODO (protocol is ignored in current implementation)
+		lwmutex->vars.owner.release(lwmutex_free);
+
+		// Call the alternative syscall
+		if (_sys_lwmutex_unlock2(lwmutex->sleep_queue) == CELL_ESRCH)
+		{
+			return CELL_ESRCH;
+		}
+
+		return CELL_OK;
 	}
 
 	// set special value
-	lwmutex->vars.owner.exchange(lwmutex_reserved);
+	lwmutex->vars.owner.release(lwmutex_reserved);
 
 	// call the syscall
 	if (_sys_lwmutex_unlock(ppu, lwmutex->sleep_queue) == CELL_ESRCH)

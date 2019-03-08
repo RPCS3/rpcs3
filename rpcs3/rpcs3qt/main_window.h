@@ -89,7 +89,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnPlayOrPause();
-	void Boot(const std::string& path, bool direct = false, bool add_only = false);
+	void Boot(const std::string& path, bool direct = false, bool add_only = false, bool force_global_config = false);
 	void BootElf();
 	void BootGame();
 	void BootRsxCapture(std::string path = "");
@@ -116,6 +116,7 @@ private:
 	void CreateConnects();
 	void CreateDockWindows();
 	void EnableMenus(bool enabled);
+	void ShowTitleBars(bool show);
 	void InstallPkg(const QString& dropPath = "", bool is_bulk = false);
 	void InstallPup(const QString& dropPath = "");
 

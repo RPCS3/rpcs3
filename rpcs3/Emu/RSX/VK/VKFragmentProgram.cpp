@@ -403,7 +403,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	decompiler.Task();
 
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);
-	
+
 	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
 	{
 		for (const ParamItem& PI : PT.items)
@@ -422,7 +422,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 
 void VKFragmentProgram::Compile()
 {
-	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+	fs::file(fs::get_cache_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
 	handle = shader.compile();
 }
 

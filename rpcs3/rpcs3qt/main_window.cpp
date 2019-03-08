@@ -268,7 +268,7 @@ void main_window::OnPlayOrPause()
 	}
 }
 
-void main_window::Boot(const std::string& path, bool direct, bool add_only)
+void main_window::Boot(const std::string& path, bool direct, bool add_only, bool force_global_config)
 {
 	if (!Emu.IsStopped())
 	{
@@ -287,7 +287,7 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only)
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (Emu.BootGame(path, direct, add_only))
+	if (Emu.BootGame(path, direct, add_only, force_global_config))
 	{
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
@@ -567,7 +567,7 @@ void main_window::InstallPup(const QString& dropPath)
 	std::string version_string = pup.get_file(0x100).to_string();
 	version_string.erase(version_string.find('\n'));
 
-	const std::string cur_version = "4.83";
+	const std::string cur_version = "4.84";
 
 	if (version_string < cur_version &&
 		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
@@ -1145,6 +1145,13 @@ void main_window::RepaintGui()
 	Q_EMIT RequestTrophyManagerRepaint();
 }
 
+void main_window::ShowTitleBars(bool show)
+{
+	m_gameListFrame->SetTitleBarVisible(show);
+	m_debuggerFrame->SetTitleBarVisible(show);
+	m_logFrame->SetTitleBarVisible(show);
+}
+
 void main_window::CreateActions()
 {
 	ui->exitAct->setShortcuts(QKeySequence::Quit);
@@ -1371,6 +1378,12 @@ void main_window::CreateConnects()
 		guiSettings->SetValue(gui::mw_gamelist, checked);
 	});
 
+	connect(ui->showTitleBarsAct, &QAction::triggered, [=](bool checked)
+	{
+		ShowTitleBars(checked);
+		guiSettings->SetValue(gui::mw_titleBarsVisible, checked);
+	});
+
 	connect(ui->showToolBarAct, &QAction::triggered, [=](bool checked)
 	{
 		ui->toolBar->setVisible(checked);
@@ -1552,7 +1565,10 @@ void main_window::CreateDockWindows()
 		}
 	});
 
-	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const std::string& path){ Boot(path); });
+	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const std::string& path, bool force_global_config)
+	{
+		Boot(path, false, false, force_global_config);
+	});
 }
 
 void main_window::ConfigureGuiFromSettings(bool configure_all)
@@ -1606,11 +1622,14 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->showGameListAct->setChecked(guiSettings->GetValue(gui::mw_gamelist).toBool());
 	ui->showDebuggerAct->setChecked(guiSettings->GetValue(gui::mw_debugger).toBool());
 	ui->showToolBarAct->setChecked(guiSettings->GetValue(gui::mw_toolBarVisible).toBool());
+	ui->showTitleBarsAct->setChecked(guiSettings->GetValue(gui::mw_titleBarsVisible).toBool());
 
 	m_debuggerFrame->setVisible(ui->showDebuggerAct->isChecked());
 	m_logFrame->setVisible(ui->showLogAct->isChecked());
 	m_gameListFrame->setVisible(ui->showGameListAct->isChecked());
 	ui->toolBar->setVisible(ui->showToolBarAct->isChecked());
+
+	ShowTitleBars(ui->showTitleBarsAct->isChecked());
 
 	ui->showHiddenEntriesAct->setChecked(guiSettings->GetValue(gui::gl_show_hidden).toBool());
 	m_gameListFrame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_gameListFrame->LoadSettings

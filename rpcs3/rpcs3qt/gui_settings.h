@@ -149,13 +149,14 @@ namespace gui
 	const gui_save fd_decrypt_sprx = gui_save(main_window, "lastExplorePathSPRX", "");
 	const gui_save fd_cg_disasm    = gui_save(main_window, "lastExplorePathCGD",  "");
 
-	const gui_save mw_debugger       = gui_save(main_window, "debuggerVisible", false);
-	const gui_save mw_logger         = gui_save(main_window, "loggerVisible",   true);
-	const gui_save mw_gamelist       = gui_save(main_window, "gamelistVisible", true);
-	const gui_save mw_toolBarVisible = gui_save(main_window, "toolBarVisible",  true);
-	const gui_save mw_geometry       = gui_save(main_window, "geometry",        QByteArray());
-	const gui_save mw_windowState    = gui_save(main_window, "windowState",     QByteArray());
-	const gui_save mw_mwState        = gui_save(main_window, "wwState",         QByteArray());
+	const gui_save mw_debugger         = gui_save(main_window, "debuggerVisible",  false);
+	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    true);
+	const gui_save mw_gamelist         = gui_save(main_window, "gamelistVisible",  true);
+	const gui_save mw_toolBarVisible   = gui_save(main_window, "toolBarVisible",   true);
+	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", true);
+	const gui_save mw_geometry         = gui_save(main_window, "geometry",         QByteArray());
+	const gui_save mw_windowState      = gui_save(main_window, "windowState",      QByteArray());
+	const gui_save mw_mwState          = gui_save(main_window, "wwState",          QByteArray());
 
 	const gui_save cat_hdd_game    = gui_save(game_list, "categoryVisibleHDDGame",    true);
 	const gui_save cat_disc_game   = gui_save(game_list, "categoryVisibleDiscGame",   true);

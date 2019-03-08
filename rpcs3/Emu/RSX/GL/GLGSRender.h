@@ -24,7 +24,9 @@ namespace gl
 	{
 		u32 vertex_draw_count;
 		u32 allocated_vertex_count;
+		u32 first_vertex;
 		u32 vertex_index_base;
+		u32 vertex_index_offset;
 		u32 persistent_mapping_offset;
 		u32 volatile_mapping_offset;
 		std::optional<std::tuple<GLenum, u32> > index_info;
