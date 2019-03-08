@@ -1299,11 +1299,8 @@ error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 		return CELL_EBADF;
 	}
 
-	// Disabled due to performance costs
-	// Does not provide a real world benefit
-	//file->file.sync();
-
 	lv2_obj::sleep(ppu);
+	file->file.sync();
 	return CELL_OK;
 }
 
@@ -1318,11 +1315,8 @@ error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 		return CELL_EBADF;
 	}
 
-	// Disabled due to performance costs
-	// Does not provide a real world benefit
-	//file->file.sync();
-
 	lv2_obj::sleep(ppu);
+	file->file.sync();
 	return CELL_OK;
 }
 
