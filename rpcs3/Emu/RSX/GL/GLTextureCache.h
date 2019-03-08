@@ -129,11 +129,10 @@ namespace gl
 			return size;
 		}
 
-		void init_buffer()
+		void init_buffer(const gl::texture* src)
 		{
-			const f32 resolution_scale = (context == rsx::texture_upload_context::framebuffer_storage? rsx::get_resolution_scale() : 1.f);
-			const u32 real_buffer_size = (resolution_scale <= 1.f) ? get_section_size() : (u32)(resolution_scale * resolution_scale * get_section_size());
-			const u32 buffer_size = align(real_buffer_size, 4096);
+			const u32 vram_size = src->pitch() * src->height();
+			const u32 buffer_size = align(vram_size, 4096);
 
 			if (pbo_id)
 			{
@@ -171,9 +170,6 @@ namespace gl
 			}
 			else
 			{
-				if (pbo_id == 0)
-					init_buffer();
-
 				aa_mode = static_cast<gl::render_target*>(image)->read_aa_mode;
 				ASSERT(managed_texture.get() == nullptr);
 			}
@@ -219,12 +215,6 @@ namespace gl
 			baseclass::on_section_resources_created();
 		}
 
-		void make_flushable()
-		{
-			//verify(HERE), pbo_id == 0;
-			init_buffer();
-		}
-
 		void set_dimensions(u32 width, u32 height, u32 /*depth*/, u32 pitch)
 		{
 			this->width = width;
@@ -265,11 +255,6 @@ namespace gl
 			{
 				auto as_rtt = static_cast<gl::render_target*>(vram_texture);
 				if (as_rtt->dirty) as_rtt->read_barrier(cmd);
-			}
-
-			if (!pbo_id)
-			{
-				init_buffer();
 			}
 
 			gl::texture* target_texture = vram_texture;
@@ -324,6 +309,8 @@ namespace gl
 					target_texture = scaled_texture.get();
 				}
 			}
+
+			init_buffer(target_texture);
 
 			glGetError();
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
@@ -946,7 +933,6 @@ namespace gl
 				}
 
 				//NOTE: Protection is handled by the caller
-				cached.make_flushable();
 				cached.set_dimensions(width, height, depth, (rsx_range.length() / height));
 				no_access_range = cached.get_min_max(no_access_range, rsx::section_bounds::locked_range);
 			}
