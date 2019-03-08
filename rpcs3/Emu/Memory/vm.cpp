@@ -665,8 +665,14 @@ namespace vm
 		}
 	}
 
-	u32 block_t::alloc(const u32 orig_size, u32 align, const std::shared_ptr<utils::shm>* src)
+	u32 block_t::alloc(const u32 orig_size, u32 align, const std::shared_ptr<utils::shm>* src, u64 flags)
 	{
+		if (!src)
+		{
+			// Use the block's flags
+			flags = this->flags;
+		}
+
 		vm::writer_lock lock(0);
 
 		// Determine minimal alignment
@@ -720,8 +726,14 @@ namespace vm
 		return 0;
 	}
 
-	u32 block_t::falloc(u32 addr, const u32 orig_size, const std::shared_ptr<utils::shm>* src)
+	u32 block_t::falloc(u32 addr, const u32 orig_size, const std::shared_ptr<utils::shm>* src, u64 flags)
 	{
+		if (!src)
+		{
+			// Use the block's flags
+			flags = this->flags;
+		}
+
 		vm::writer_lock lock(0);
 
 		// Determine minimal alignment
