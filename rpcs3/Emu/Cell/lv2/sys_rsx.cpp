@@ -176,10 +176,20 @@ s32 sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 flags)
 {
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
-	if (!size || io & 0xFFFFF || ea & 0xFFFFF || size & 0xFFFFF ||
+	if (!size || io & 0xFFFFF || ea >= 0xC0000000 || ea & 0xFFFFF || size & 0xFFFFF ||
 		rsx::get_current_renderer()->main_mem_size < io + size)
 	{
 		return CELL_EINVAL;
+	}
+
+	vm::reader_lock rlock;
+
+	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
+	{
+		if (!vm::check_addr(addr, 1, vm::page_allocated | vm::page_1m_size))
+		{
+			return CELL_EINVAL;
+		}
 	}
 
 	io >>= 20, ea >>= 20, size >>= 20;

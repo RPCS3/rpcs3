@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -6,6 +6,8 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
+
 #include "cellGcmSys.h"
 #include "sysPrxForUser.h"
 
@@ -951,21 +953,26 @@ s32 cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 
 s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 {
-	if (!size || (ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)
-	 || rsx::get_current_renderer()->main_mem_size < io + size)
+	if (!size || (ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF))
 	{
-		 return CELL_GCM_ERROR_FAILURE;
+		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	ea >>=20, io >>= 20, size >>= 20;
+	// TODO: Pass correct flags and context
+	if (s32 error = sys_rsx_context_iomap(0, io, ea, size, 0))
+	{
+		return error;
+	}
+
+	ea >>= 20, io >>= 20, size >>= 20;
 
 	IoMapTable[ea] = size;
 
-	// Fill the offset table and map memory
+	// Fill the offset table
 	for (u32 i = 0; i < size; i++)
 	{
-		RSXIOMem.io[ea + i] = offsetTable.ioAddress[ea + i] = io + i;
-		RSXIOMem.ea[io + i] = offsetTable.eaAddress[io + i] = ea + i;
+		offsetTable.ioAddress[ea + i] = io + i;
+		offsetTable.eaAddress[io + i] = ea + i;
 	}
 
 	return CELL_OK;
@@ -1018,19 +1025,23 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 		{
 			if (unmap_count >= (size >> 20))
 			{
-				*offset = io << 20;
+				if (s32 error = sys_rsx_context_iomap(0, io << 20, ea, size, 0))
+				{
+					return error;
+				}
 
 				ea >>= 20, size >>= 20;
 
 				IoMapTable[ea] = size;
 
-				// Fill the offset table and map memory
+				// Fill the offset table
 				for (u32 i = 0; i < size; i++)
 				{
-					RSXIOMem.io[ea + i] = offsetTable.ioAddress[ea + i] = io + i;
-					RSXIOMem.ea[io + i] = offsetTable.eaAddress[io + i] = ea + i;
+					offsetTable.ioAddress[ea + i] = io + i;
+					offsetTable.eaAddress[io + i] = ea + i;
 				}
 
+				*offset = io << 20;
 				return CELL_OK;
 			}
 		}

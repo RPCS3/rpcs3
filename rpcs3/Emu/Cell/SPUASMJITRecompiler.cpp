@@ -947,35 +947,11 @@ void spu_recompiler::branch_fixed(u32 target)
 		return;
 	}
 
-	c->mov(x86::rax, imm_ptr(spu_runtime::g_dispatcher + target / 4));
-	c->mov(x86::rax, x86::qword_ptr(x86::rax));
-
 	c->mov(SPU_OFF_32(pc), target);
+	c->xor_(qw0->r32(), qw0->r32());
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_stop);
-
-	if (false)
-	{
-		// Don't generate patch points (TODO)
-		c->xor_(qw0->r32(), qw0->r32());
-		c->jmp(x86::rax);
-		return;
-	}
-
-	// Set patch address as a third argument and fallback to it
-	Label patch_point = c->newLabel();
-	c->lea(*qw0, x86::qword_ptr(patch_point));
-
-	// Need to emit exactly one executable instruction within 8 bytes
-	c->align(kAlignCode, 8);
-	c->bind(patch_point);
-	//c->dq(0x841f0f);
-	c->jmp(imm_ptr(&spu_recompiler_base::branch));
-
-	// Fallback to the branch via dispatcher
-	c->align(kAlignCode, 8);
-	c->xor_(qw0->r32(), qw0->r32());
-	c->jmp(x86::rax);
+	c->jmp(imm_ptr(m_spurt->make_branch_patchpoint(target)));
 }
 
 void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)

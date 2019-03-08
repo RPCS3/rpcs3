@@ -659,12 +659,13 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		else
 		{
 			// Subscribe to receive status in r4-r5
+			ppu.gpr[4] = 0;
 			group->waiter = &ppu;
 		}
 
 		lv2_obj::sleep(ppu);
 
-		while (!group->join_state || group->run_state != SPU_THREAD_GROUP_STATUS_INITIALIZED)
+		while (!ppu.gpr[4])
 		{
 			if (ppu.is_stopped())
 			{
@@ -673,8 +674,6 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 			group->cond.wait(lock);
 		}
-
-		group->join_state.release(0);
 	}
 	while (0);
 

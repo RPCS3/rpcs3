@@ -259,6 +259,15 @@ spu_runtime::spu_runtime()
 
 	workload.reserve(250);
 
+	// Generate a trampoline to spu_recompiler_base::branch
+	u8* const trptr = jit_runtime::alloc(16, 16);
+	trptr[0] = 0xff; // jmp [rip]
+	trptr[1] = 0x25;
+	std::memset(trptr + 2, 0, 4);
+	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::branch);
+	std::memcpy(trptr + 6, &target, 8);
+	tr_branch = reinterpret_cast<spu_function_t>(trptr);
+
 	LOG_SUCCESS(SPU, "SPU Recompiler Runtime initialized...");
 }
 
@@ -341,6 +350,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 		workload.emplace_back();
 		workload.back().size  = size0;
 		workload.back().level = 1;
+		workload.back().from  = 0;
 		workload.back().rel32 = 0;
 		workload.back().beg   = beg;
 		workload.back().end   = _end;
@@ -348,7 +358,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 		for (std::size_t i = 0; i < workload.size(); i++)
 		{
 			// Get copy of the workload info
-			spu_runtime::work w = workload[i];
+			auto w = workload[i];
 
 			// Split range in two parts
 			auto it = w.beg;
@@ -357,7 +367,7 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			u32 size2 = w.size - size1;
 			std::advance(it2, w.size / 2);
 
-			while (true)
+			while (verify("spu_runtime::work::level overflow" HERE, w.level))
 			{
 				it = it2;
 				size1 = w.size - size2;
@@ -431,17 +441,27 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			}
 
 			// Emit 32-bit comparison: cmp [ls+addr], imm32
-			verify("Asm overflow" HERE), raw + 10 <= wxptr + size0 * 20;
-			const u32 cmp_lsa = start + (w.level - 1) * 4;
-			*raw++ = 0x81;
+			verify("Asm overflow" HERE), raw + 11 <= wxptr + size0 * 20;
+
+			if (w.from != w.level)
+			{
+				// If necessary (level has advanced), emit load: mov eax, [ls + addr]
 #ifdef _WIN32
-			*raw++ = 0xba;
+				*raw++ = 0x8b;
+				*raw++ = 0x82; // ls = rdx
 #else
-			*raw++ = 0xbe;
+				*raw++ = 0x8b;
+				*raw++ = 0x86; // ls = rsi
 #endif
-			std::memcpy(raw, &cmp_lsa, 4);
-			std::memcpy(raw + 4, &x, 4);
-			raw += 8;
+				const u32 cmp_lsa = start + (w.level - 1) * 4;
+				std::memcpy(raw, &cmp_lsa, 4);
+				raw += 4;
+			}
+
+			// Emit comparison: cmp eax, imm32
+			*raw++ = 0x3d;
+			std::memcpy(raw, &x, 4);
+			raw += 4;
 
 			// Low subrange target
 			if (size1 == 1)
@@ -451,10 +471,11 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 			else
 			{
 				make_jump(0x82, raw); // jb rel32 (stub)
-				workload.push_back(w);
-				workload.back().end = it;
-				workload.back().size = size1;
-				workload.back().rel32 = raw;
+				auto& to = workload.emplace_back(w);
+				to.end   = it;
+				to.size  = size1;
+				to.rel32 = raw;
+				to.from  = w.level;
 			}
 
 			// Second subrange target
@@ -483,10 +504,11 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 					else
 					{
 						make_jump(0x87, raw); // ja rel32 (stub)
-						workload.push_back(w);
-						workload.back().beg = it2;
-						workload.back().size = size2;
-						workload.back().rel32 = raw;
+						auto& to = workload.emplace_back(w);
+						to.beg   = it2;
+						to.size  = size2;
+						to.rel32 = raw;
+						to.from  = w.level;
 					}
 
 					const u32 size3 = w.size - size1 - size2;
@@ -498,20 +520,22 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 					else
 					{
 						make_jump(0xe9, raw); // jmp rel32 (stub)
-						workload.push_back(w);
-						workload.back().beg = it;
-						workload.back().end = it2;
-						workload.back().size = size3;
-						workload.back().rel32 = raw;
+						auto& to = workload.emplace_back(w);
+						to.beg   = it;
+						to.end   = it2;
+						to.size  = size3;
+						to.rel32 = raw;
+						to.from  = w.level;
 					}
 				}
 				else
 				{
 					make_jump(0xe9, raw); // jmp rel32 (stub)
-					workload.push_back(w);
-					workload.back().beg = it;
-					workload.back().size = w.size - size1;
-					workload.back().rel32 = raw;
+					auto& to = workload.emplace_back(w);
+					to.beg   = it;
+					to.size  = w.size - size1;
+					to.rel32 = raw;
+					to.from  = w.level;
 				}
 			}
 		}
@@ -524,6 +548,40 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 	m_cond.notify_all();
 }
 
+spu_function_t spu_runtime::make_branch_patchpoint(u32 target) const
+{
+	u8* const raw = jit_runtime::alloc(16, 16);
+
+	// Save address of the following jmp
+#ifdef _WIN32
+	raw[0] = 0x4c; // lea r8, [rip+1]
+	raw[1] = 0x8d;
+	raw[2] = 0x05;
+#else
+	raw[0] = 0x48; // lea rdx, [rip+1]
+	raw[1] = 0x8d;
+	raw[2] = 0x15;
+#endif
+	raw[3] = 0x01;
+	raw[4] = 0x00;
+	raw[5] = 0x00;
+	raw[6] = 0x00;
+	raw[7] = 0x90; // nop
+
+	// Jump to spu_recompiler_base::branch
+	raw[8] = 0xe9;
+	// Compute the distance
+	const s64 rel = reinterpret_cast<u64>(tr_branch) - reinterpret_cast<u64>(raw + 8) - 5;
+	std::memcpy(raw + 9, &rel, 4);
+	raw[13] = 0xcc;
+
+	// Write compressed target address
+	raw[14] = target >> 2;
+	raw[15] = target >> 10;
+
+	return reinterpret_cast<spu_function_t>(raw);
+}
+
 spu_recompiler_base::spu_recompiler_base()
 {
 }
@@ -534,10 +592,25 @@ spu_recompiler_base::~spu_recompiler_base()
 
 void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 {
-	// If code verification failed from a patched patchpoint, clear it with a single NOP
+	// If code verification failed from a patched patchpoint, clear it with a dispatcher jump
 	if (rip)
 	{
-		atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), 0x841f0f);
+		const u32 target = *(u16*)(rip + 6) * 4;
+		const s64 rel = reinterpret_cast<u64>(spu_runtime::g_dispatcher) + 2 * target - reinterpret_cast<u64>(rip - 8) - 6;
+
+		union
+		{
+			u8 bytes[8];
+			u64 result;
+		};
+
+		bytes[0] = 0xff; // jmp [rip + 0x...]
+		bytes[1] = 0x25;
+		std::memcpy(bytes + 2, &rel, 4);
+		bytes[6] = 0x90;
+		bytes[7] = 0x90;
+
+		atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip - 8), result);
 	}
 
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
@@ -565,7 +638,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
 	// Compile (TODO: optimize search of the existing functions)
-	const auto func = verify(HERE, spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), spu.pc)));
+	const auto func = verify(HERE, spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), *(u16*)(rip + 6) * 4)));
 
 	// Overwrite jump to this function with jump to the compiled function
 	const s64 rel = reinterpret_cast<u64>(func) - reinterpret_cast<u64>(rip) - 5;
@@ -584,23 +657,22 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 		{
 			bytes[0] = 0xeb; // jmp rel8
 			bytes[1] = static_cast<s8>(rel8);
-			std::memset(bytes + 2, 0x90, 6);
+			std::memset(bytes + 2, 0xcc, 4);
 		}
 		else
 		{
 			bytes[0] = 0xe9; // jmp rel32
 			std::memcpy(bytes + 1, &rel, 4);
-			std::memset(bytes + 5, 0x90, 3);
+			bytes[5] = 0xcc;
 		}
+
+		// Preserve target address
+		bytes[6] = rip[6];
+		bytes[7] = rip[7];
 	}
 	else
 	{
-		// Far jumps: extremely rare and disabled due to implementation complexity
-		LOG_ERROR(SPU, "Impossible far jump");
-		bytes[0] = 0x0f; // nop (8-byte form)
-		bytes[1] = 0x1f;
-		bytes[2] = 0x84;
-		std::memset(bytes + 3, 0x00, 5);
+		fmt::throw_exception("Impossible far jump: %p -> %p", rip, func);
 	}
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
@@ -1970,13 +2042,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				LOG_ERROR(SPU, "[0x%x] Predecessor not found for target 0x%x (chunk=0x%x, entry=0x%x, size=%u)", m_pos, target, m_entry, m_function_queue[0], m_size / 4);
 			}
 
-			// Generate external indirect tail call
+			// Generate a patchpoint for fixed location
 			const auto cblock = m_ir->GetInsertBlock();
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
 			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
-			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo()->getPointerTo();
-			tail(m_ir->CreateLoad(m_ir->CreateIntToPtr(m_ir->getInt64((u64)(spu_runtime::g_dispatcher + target / 4)), type)));
+			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo();
+			tail(m_ir->CreateIntToPtr(m_ir->getInt64((u64)m_spurt->make_branch_patchpoint(target)), type));
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}

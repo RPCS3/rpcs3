@@ -206,18 +206,18 @@ error_code cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
 	return sys_fs_lseek(fd, offset, whence, pos);
 }
 
-error_code cellFsFdatasync(u32 fd)
+error_code cellFsFdatasync(ppu_thread& ppu, u32 fd)
 {
 	cellFs.trace("cellFsFdatasync(fd=%d)", fd);
 
-	return sys_fs_fdatasync(fd);
+	return sys_fs_fdatasync(ppu, fd);
 }
 
-error_code cellFsFsync(u32 fd)
+error_code cellFsFsync(ppu_thread& ppu, u32 fd)
 {
 	cellFs.trace("cellFsFsync(fd=%d)", fd);
 
-	return sys_fs_fsync(fd);
+	return sys_fs_fsync(ppu, fd);
 }
 
 error_code cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
