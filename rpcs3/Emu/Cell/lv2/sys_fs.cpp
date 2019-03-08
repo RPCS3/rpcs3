@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "sys_sync.h"
 #include "sys_fs.h"
 
 #include <mutex>
@@ -1287,7 +1288,7 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 	return CELL_OK;
 }
 
-error_code sys_fs_fdatasync(u32 fd)
+error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 {
 	sys_fs.trace("sys_fs_fdadasync(fd=%d)", fd);
 
@@ -1298,12 +1299,12 @@ error_code sys_fs_fdatasync(u32 fd)
 		return CELL_EBADF;
 	}
 
+	lv2_obj::sleep(ppu);
 	file->file.sync();
-
 	return CELL_OK;
 }
 
-error_code sys_fs_fsync(u32 fd)
+error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 {
 	sys_fs.trace("sys_fs_fsync(fd=%d)", fd);
 
@@ -1314,8 +1315,8 @@ error_code sys_fs_fsync(u32 fd)
 		return CELL_EBADF;
 	}
 
+	lv2_obj::sleep(ppu);
 	file->file.sync();
-
 	return CELL_OK;
 }
 
