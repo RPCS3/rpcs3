@@ -1844,18 +1844,16 @@ namespace rsx
 
 		template <typename render_target_type>
 		sampled_image_descriptor process_framebuffer_resource_fast(commandbuffer_type& cmd, render_target_type texptr,
-			u32 texaddr, u32 gcm_format, u16 tex_width, u16 tex_height, u16 tex_depth,
-			rsx::texture_dimension_extended extended_dimension, u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
+			u32 texaddr, u32 format,
+			u16 tex_width, u16 tex_height, u16 tex_depth,
+			f32 scale_x, f32 scale_y,
+			rsx::texture_dimension_extended extended_dimension,
+			u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
 			bool assume_bound = true)
 		{
 			texptr->read_barrier(cmd);
 
-			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
-			const bool unnormalized = (gcm_format & CELL_GCM_TEXTURE_UN) != 0;
 			const bool is_depth = texptr->is_depth_surface();
-			f32 scale_x = (unnormalized) ? (1.f / tex_width) : 1.f;
-			f32 scale_y = (unnormalized) ? (1.f / tex_height) : 1.f;
-
 			const auto surface_width = texptr->get_surface_width();
 			const auto surface_height = texptr->get_surface_height();
 
@@ -1869,7 +1867,6 @@ namespace rsx
 				if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 				{
 					internal_height = 1;
-					scale_y = 0.f;
 				}
 
 				if ((assume_bound && g_cfg.video.strict_rendering_mode) ||
@@ -1915,13 +1912,16 @@ namespace rsx
 
 		template <typename surface_store_list_type>
 		sampled_image_descriptor merge_cache_resources(commandbuffer_type& cmd, const surface_store_list_type& fbos, const std::vector<section_storage_type*>& local,
-				u32 texaddr, u32 gcm_format, u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch, u16 slice_h,
-				rsx::texture_dimension_extended extended_dimension, u32 encoded_remap, const texture_channel_remap_t& decoded_remap, int select_hint = -1)
+				u32 texaddr, u32 format,
+				u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch, u16 slice_h,
+				f32 scale_x, f32 scale_y,
+				rsx::texture_dimension_extended extended_dimension,
+				u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
+				int select_hint = -1)
 		{
-			u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
-			bool is_depth;
-
 			verify(HERE), (select_hint & 0x1) == select_hint;
+
+			bool is_depth;
 			if (is_depth = (select_hint == 0) ? fbos.back().is_depth : local.back()->is_depth_texture();
 				is_depth)
 			{
@@ -1957,14 +1957,9 @@ namespace rsx
 				return desc;
 			}
 
-			const bool unnormalized = (gcm_format & CELL_GCM_TEXTURE_UN) != 0;
-			f32 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
-			f32 scale_y = (unnormalized)? (1.f / tex_height) : 1.f;
-
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 			{
 				verify(HERE), tex_height == 1;
-				scale_y = 0.f;
 			}
 
 			const auto w = fbos.empty()? tex_width : rsx::apply_resolution_scale(tex_width, true);
@@ -1990,7 +1985,7 @@ namespace rsx
 			const bool unnormalized = (tex.format() & CELL_GCM_TEXTURE_UN) != 0;
 
 			const auto extended_dimension = tex.get_extended_texture_dimension();
-			const u16 tex_width = tex.width();
+			u16 tex_width = tex.width();
 			u16 tex_height = tex.height();
 			u16 tex_pitch = (tex.format() & CELL_GCM_TEXTURE_LN)? (u16)tex.pitch() : get_format_packed_pitch(format, tex_width);
 
@@ -2011,6 +2006,21 @@ namespace rsx
 				break;
 			}
 
+			f32 scale_x = (unnormalized) ? (1.f / tex_width) : 1.f;
+			f32 scale_y = (unnormalized) ? (1.f / tex_height) : 1.f;
+
+			if (!tex_pitch)
+			{
+				// Linear scanning with pitch of 0, read only texel (0,0)
+				tex_pitch = get_format_packed_pitch(format, tex_width);
+				scale_x = 0.f;
+				scale_y = 0.f;
+			}
+			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
+			{
+				scale_y = 0.f;
+			}
+
 			// Sanity check
 			if (UNLIKELY(unnormalized && extended_dimension > rsx::texture_dimension_extended::texture_dimension_2d))
 			{
@@ -2022,16 +2032,10 @@ namespace rsx
 				if (auto texptr = m_rtts.get_surface_at(texaddr);
 					check_framebuffer_resource(cmd, texptr, tex_width, tex_height, depth, tex_pitch, extended_dimension))
 				{
-					return process_framebuffer_resource_fast(cmd, texptr, texaddr, tex.format(),
-						tex_width, tex_height, depth, extended_dimension, tex.remap(), tex.decoded_remap());
+					return process_framebuffer_resource_fast(cmd, texptr, texaddr, format, tex_width, tex_height, depth,
+						scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap());
 				}
 			}
-
-			f32 scale_x = (unnormalized) ? (1.f / tex_width) : 1.f;
-			f32 scale_y = (unnormalized) ? (1.f / tex_height) : 1.f;
-
-			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
-				scale_y = 0.f;
 
 			reader_lock lock(m_cache_mutex);
 
@@ -2098,8 +2102,8 @@ namespace rsx
 
 							if (last.width >= internal_width && last.height >= internal_height)
 							{
-								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, tex.format(), tex_width, tex_height, depth,
-									extended_dimension, tex.remap(), tex.decoded_remap(), false);
+								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, format, tex_width, tex_height, depth,
+									scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), false);
 							}
 						}
 					}
@@ -2116,8 +2120,8 @@ namespace rsx
 					}
 
 					auto result = merge_cache_resources(cmd, overlapping_fbos, overlapping_locals,
-						texaddr, tex.format(), tex_width, tex_height, depth, tex_pitch, slice_h,
-						extended_dimension, tex.remap(), tex.decoded_remap(), _pool);
+						texaddr, format, tex_width, tex_height, depth, tex_pitch, slice_h,
+						scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), _pool);
 
 					if (!result.external_subresource_desc.sections_to_copy.empty() && result.atlas_covers_target_area())
 					{
