@@ -2119,8 +2119,7 @@ namespace rsx
 						texaddr, tex.format(), tex_width, tex_height, depth, tex_pitch, slice_h,
 						extended_dimension, tex.remap(), tex.decoded_remap(), _pool);
 
-					if (!result.external_subresource_desc.sections_to_copy.empty() &&
-						(_pool == 0 || result.atlas_covers_target_area()))
+					if (!result.external_subresource_desc.sections_to_copy.empty() && result.atlas_covers_target_area())
 					{
 						// TODO: Investigate why a full re-upload can cause problems in some games (yellow flicker in SCV)
 						// Unimplemented readback formats?
@@ -2162,8 +2161,8 @@ namespace rsx
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
 		blit_op_result upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
 		{
-			//Since we will have dst in vram, we can 'safely' ignore the swizzle flag
-			//TODO: Verify correct behavior
+			// Since we will have dst in vram, we can 'safely' ignore the swizzle flag
+			// TODO: Verify correct behavior
 			bool src_is_render_target = false;
 			bool dst_is_render_target = false;
 			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
@@ -2176,11 +2175,21 @@ namespace rsx
 			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
 
-			f32 scale_x = dst.scale_x;
-			f32 scale_y = dst.scale_y;
+			const f32 scale_x = fabsf(dst.scale_x);
+			const f32 scale_y = fabsf(dst.scale_y);
 
-			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
-			//Reproject final clip onto source...
+			if (dst.scale_y < 0.f)
+			{
+				// TODO
+			}
+
+			if (dst.scale_x < 0.f)
+			{
+				// TODO
+			}
+
+			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
+			// Reproject final clip onto source...
 			u16 src_w = (u16)((f32)dst.clip_width / scale_x);
 			u16 src_h = (u16)((f32)dst.clip_height / scale_y);
 
@@ -2209,6 +2218,32 @@ namespace rsx
 			// Always use GPU blit if src or dst is in the surface store
 			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
 				return false;
+
+			// Check if trivial memcpy can perform the same task
+			// Used to copy programs and arbitrary data to the GPU in some cases
+			if (!src_is_render_target && !dst_is_render_target && dst_is_argb8 == src_is_argb8 && !dst.swizzled)
+			{
+				if ((src.slice_h == 1 && dst.clip_height == 1) ||
+					(dst.clip_width == src.width && dst.clip_height == src.slice_h && src.pitch == dst.pitch))
+				{
+					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
+					{
+						const u8 bpp = dst_is_argb8 ? 4 : 2;
+						const u32 memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
+
+						std::lock_guard lock(m_cache_mutex);
+						invalidate_range_impl_base(cmd, address_range::start_length(src_address, memcpy_bytes_length), invalidation_cause::read, std::forward<Args>(extras)...);
+						invalidate_range_impl_base(cmd, address_range::start_length(dst_address, memcpy_bytes_length), invalidation_cause::write, std::forward<Args>(extras)...);
+						memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
+						return true;
+					}
+					else
+					{
+						// Rotation transform applied, use fallback
+						return false;
+					}
+				}
+			}
 
 			if (src_is_render_target)
 			{
@@ -2260,41 +2295,32 @@ namespace rsx
 				}
 			}
 
-			//Check if trivial memcpy can perform the same task
-			//Used to copy programs to the GPU in some cases
-			if (!src_is_render_target && !dst_is_render_target && dst_is_argb8 == src_is_argb8 && !dst.swizzled)
-			{
-				if ((src.slice_h == 1 && dst.clip_height == 1) ||
-					(dst.clip_width == src.width && dst.clip_height == src.slice_h && src.pitch == dst.pitch))
-				{
-					const u8 bpp = dst_is_argb8 ? 4 : 2;
-					const u32 memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
-
-					std::lock_guard lock(m_cache_mutex);
-					invalidate_range_impl_base(cmd, address_range::start_length(src_address, memcpy_bytes_length), invalidation_cause::read, std::forward<Args>(extras)...);
-					invalidate_range_impl_base(cmd, address_range::start_length(dst_address, memcpy_bytes_length), invalidation_cause::write, std::forward<Args>(extras)...);
-					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
-					return true;
-				}
-			}
-
 			section_storage_type* cached_dest = nullptr;
 			u16 max_dst_width = dst.width;
 			u16 max_dst_height = dst.height;
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst_w, dst_h };
 
-			// 1024 height is a hack (for ~720p buffers)
-			// It is possible to have a large buffer that goes up to around 4kx4k but anything above 1280x720 is rare
-			// RSX only handles 512x512 tiles so texture 'stitching' will eventually be needed to be completely accurate
-			// Sections will be submitted as (512x512 + 512x512 + 256x512 + 512x208 + 512x208 + 256x208) to blit a 720p surface to the backbuffer for example
 			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.height };
 			if (src_is_render_target)
 			{
 				if (dst_dimensions.width == src_subres.surface->get_surface_width())
+				{
 					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(), dst.height);
+				}
 				else if (dst.max_tile_h > dst.height)
-					dst_dimensions.height = std::min((s32)dst.max_tile_h, 1024);
+				{
+					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
+					// TODO: Add more entries based on empirical data
+					if (LIKELY(dst.width == 1280))
+					{
+						dst_dimensions.height = std::max<s32>(dst.height, 720);
+					}
+					else
+					{
+						dst_dimensions.height = std::min((s32)dst.max_tile_h, 1024);
+					}
+				}
 			}
 
 			reader_lock lock(m_cache_mutex);
@@ -2435,7 +2461,7 @@ namespace rsx
 					{
 						// TODO: Rejecting unlocked blit_engine dst causes stutter in SCV
 						// Surfaces marked as dirty have already been removed, leaving only flushed blit_dst data
-						// continue;
+						continue;
 					}
 
 					const auto this_address = surface->get_section_base();
