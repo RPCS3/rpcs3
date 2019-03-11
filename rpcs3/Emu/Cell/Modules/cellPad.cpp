@@ -577,8 +577,8 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		if (i >= config->max_connect)
 			break;
 
+		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
 		info->status[i] = pads[i]->m_port_status;
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 		switch (pads[i]->m_class_type)
 		{
