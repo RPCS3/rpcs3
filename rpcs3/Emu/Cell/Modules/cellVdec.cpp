@@ -435,6 +435,17 @@ s32 cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> att
 template <typename T, typename U>
 static s32 vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
 {
+	if (!type || !res || !cb || !handle)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	if (u32(res->ppuThreadPriority) > 3071 || u32(res->spuThreadPriority) > 255 || res->ppuThreadStackSize < 4096
+		|| u32(type->codecType) > 0xd)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
 	// Create decoder context
 	const u32 vid = idm::make<vdec_context>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
 
