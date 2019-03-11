@@ -2098,7 +2098,6 @@ namespace rsx
 
 							if (last.width >= internal_width && last.height >= internal_height)
 							{
-								verify(HERE), last.surface->test();
 								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, tex.format(), tex_width, tex_height, depth,
 									extended_dimension, tex.remap(), tex.decoded_remap(), false);
 							}
