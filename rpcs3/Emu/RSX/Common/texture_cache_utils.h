@@ -1397,8 +1397,32 @@ namespace rsx
 			const auto valid_offset = valid_range.start - get_section_base();
 			AUDIT(valid_length > 0);
 
+			// In case of pitch mismatch, match the offset point to the correct point
+			u32 mapped_offset, mapped_length;
+			if (real_pitch != rsx_pitch)
+			{
+				if (LIKELY(!valid_offset))
+				{
+					mapped_offset = 0;
+				}
+				else if (valid_offset)
+				{
+					const u32 offset_in_x = valid_offset % rsx_pitch;
+					const u32 offset_in_y = valid_offset / rsx_pitch;
+					mapped_offset = (offset_in_y * real_pitch) + offset_in_x;
+				}
+
+				const u32 available_vmem = (get_section_size() / rsx_pitch) * real_pitch + std::min<u32>(get_section_size() % rsx_pitch, real_pitch);
+				mapped_length = std::min(available_vmem - mapped_offset, valid_length);
+			}
+			else
+			{
+				mapped_offset = valid_offset;
+				mapped_length = valid_length;
+			}
+
 			// Obtain pointers to the source and destination memory regions
-			u8 *src = static_cast<u8*>(derived()->map_synchronized(valid_offset, valid_length));
+			u8 *src = static_cast<u8*>(derived()->map_synchronized(mapped_offset, mapped_length));
 			u32 dst = valid_range.start;
 			ASSERT(src != nullptr);
 
