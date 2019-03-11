@@ -387,6 +387,7 @@ namespace gl
 		{
 			AUDIT(synchronized);
 
+			verify(HERE), (offset + size) <= pbo_size;
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			return glMapBufferRange(GL_PIXEL_PACK_BUFFER, offset, size, GL_MAP_READ_BIT);
 		}
