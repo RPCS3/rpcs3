@@ -93,6 +93,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 114: return "sys_semaphore_get_value";
 	case 115: return "_sys_lwcond_signal";
 	case 116: return "_sys_lwcond_signal_all";
+	case 117: return "_sys_lwmutex_unlock2";
 	case 118: return "sys_event_flag_clear";
 	case 119: return "sys_time_get_rtc";
 	case 120: return "sys_rwlock_create";
