@@ -157,18 +157,18 @@ namespace utils
 #endif
 	}
 
-	inline u64 umulh64(u64 a, u64 b)
+	constexpr u64 umulh64(u64 a, u64 b)
 	{
-		u64 result;
-		__asm__("mulq %[b]" : "=d"(result) : [a] "a"(a), [b] "rm"(b));
-		return result;
+		const __uint128_t x = a;
+		const __uint128_t y = b;
+		return (x * y) >> 64;
 	}
 
-	inline s64 mulh64(s64 a, s64 b)
+	constexpr s64 mulh64(s64 a, s64 b)
 	{
-		s64 result;
-		__asm__("imulq %[b]" : "=d"(result) : [a] "a"(a), [b] "rm"(b));
-		return result;
+		const __int128_t x = a;
+		const __int128_t y = b;
+		return (x * y) >> 64;
 	}
 
 #elif defined(_MSC_VER)
