@@ -1280,13 +1280,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 		if (auto pf_entries = fxm::get<page_fault_notification_entries>())
 		{
-			std::shared_lock lock(pf_entries->mutex);
-
-			for (const auto& entry : pf_entries->entries)
+			if (auto mem = vm::get(vm::any, addr))
 			{
-				if (auto mem = vm::get(vm::any, entry.start_addr))
+				std::shared_lock lock(pf_entries->mutex);
+
+				for (const auto& entry : pf_entries->entries)
 				{
-					if (entry.start_addr <= addr && addr <= addr + mem->size - 1)
+					if (entry.start_addr == mem->addr)
 					{
 						pf_port_id = entry.port_id;
 						break;
