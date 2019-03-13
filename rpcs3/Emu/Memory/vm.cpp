@@ -903,10 +903,8 @@ namespace vm
 		return nullptr;
 	}
 
-	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
+	static std::shared_ptr<block_t> _map(u32 addr, u32 size, u64 flags)
 	{
-		vm::writer_lock lock(0);
-
 		if (!size || (size | addr) % 4096)
 		{
 			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
@@ -930,6 +928,13 @@ namespace vm
 		g_locations.emplace_back(block);
 
 		return block;
+	}
+
+	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
+	{
+		vm::writer_lock lock(0);
+
+		return _map(addr, size, flags);
 	}
 
 	std::shared_ptr<block_t> find_map(u32 orig_size, u32 align, u64 flags)
@@ -1028,6 +1033,12 @@ namespace vm
 			{
 				return block;
 			}
+		}
+
+		if (area_size)
+		{
+			lock.upgrade();
+			return _map(addr, area_size, 0x200);
 		}
 
 		return nullptr;

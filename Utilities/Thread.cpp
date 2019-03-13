@@ -1396,7 +1396,36 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			return true;
 		}
 
-		vm::temporary_unlock(*cpu);
+		if (cpu->id_type() == 2)
+		{
+			LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
+
+			// TODO:
+			// RawSPU: Send appropriate interrupt
+			// SPUThread: Send sys_spu exception event
+			cpu->state += cpu_flag::dbg_pause;
+			if (cpu->check_state())
+			{
+				// Hack: allocate memory in case the emulator is stopping
+				auto area = vm::get(vm::any, addr & -0x10000, 0x10000);
+
+				if (area->flags & 0x100)
+				{
+					// For 4kb pages
+					utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
+				}
+				else
+				{
+					area->falloc(addr & -0x10000, 0x10000);
+				}
+
+				return true;
+			}
+		}
+		else
+		{
+			lv2_obj::sleep(*cpu);
+		}
 	}
 
 	LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
