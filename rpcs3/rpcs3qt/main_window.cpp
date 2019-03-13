@@ -565,7 +565,11 @@ void main_window::InstallPup(const QString& dropPath)
 		updatefilenames.end());
 
 	std::string version_string = pup.get_file(0x100).to_string();
-	version_string.erase(version_string.find('\n'));
+	size_t version_pos = version_string.find('\n');
+	if (version_pos != std::string::npos)
+	{
+		version_string.erase(version_pos);
+	}
 
 	const std::string cur_version = "4.84";
 
