@@ -1898,6 +1898,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Global variable (function table)
 	llvm::GlobalVariable* m_function_table{};
 
+	llvm::MDNode* m_md_unlikely;
+	llvm::MDNode* m_md_likely;
+
 	struct block_info
 	{
 		// Current block's entry block
@@ -2530,10 +2533,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto check = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto stop  = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), _body, check);
+		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		m_ir->CreateStore(m_ir->getInt32(addr), spu_ptr<u32>(&spu_thread::pc));
-		m_ir->CreateCondBr(call(&exec_check_state, m_thread), stop, _body);
+		m_ir->CreateCondBr(call(&exec_check_state, m_thread), stop, _body, m_md_unlikely);
 		m_ir->SetInsertPoint(stop);
 		m_ir->CreateRetVoid();
 		m_ir->SetInsertPoint(_body);
@@ -2588,6 +2591,14 @@ public:
 			m_spurt = fxm::get_always<spu_runtime>();
 			m_context = m_jit.get_context();
 			m_use_ssse3 = m_jit.has_ssse3();
+
+			const auto md_name = llvm::MDString::get(m_context, "branch_weights");
+			const auto md_low = llvm::ValueAsMetadata::get(llvm::ConstantInt::get(GetType<u32>(), 1));
+			const auto md_high = llvm::ValueAsMetadata::get(llvm::ConstantInt::get(GetType<u32>(), 999));
+
+			// Metadata for branch weights
+			m_md_likely = llvm::MDTuple::get(m_context, {md_name, md_high, md_low});
+			m_md_unlikely = llvm::MDTuple::get(m_context, {md_name, md_low, md_high});
 		}
 	}
 
@@ -2717,7 +2728,7 @@ public:
 
 		// Emit state check
 		const auto pstate = spu_ptr<u32>(&spu_thread::state);
-		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), label_stop, label_test);
+		m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), label_stop, label_test, m_md_unlikely);
 
 		// Emit code check
 		u32 check_iterations = 0;
@@ -2731,12 +2742,12 @@ public:
 		else if (func.size() - 1 == 1)
 		{
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(_ptr<u32>(m_lsptr, start)), m_ir->getInt32(func[1]));
-			m_ir->CreateCondBr(cond, label_diff, label_body);
+			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 		else if (func.size() - 1 == 2)
 		{
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(_ptr<u64>(m_lsptr, start)), m_ir->getInt64(static_cast<u64>(func[2]) << 32 | func[1]));
-			m_ir->CreateCondBr(cond, label_diff, label_body);
+			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 		else
 		{
@@ -2807,7 +2818,7 @@ public:
 
 			// Compare result with zero
 			const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
-			m_ir->CreateCondBr(cond, label_diff, label_body);
+			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 
 		// Increase block counter with statistics
@@ -3707,12 +3718,12 @@ public:
 					}
 
 					const auto cond = m_ir->CreateIsNull(m_ir->CreateAnd(mask, barrier));
-					m_ir->CreateCondBr(cond, exec, fail);
+					m_ir->CreateCondBr(cond, exec, fail, m_md_likely);
 					m_ir->SetInsertPoint(exec);
 
 					const auto mmio = llvm::BasicBlock::Create(m_context, "", m_function);
 					const auto copy = llvm::BasicBlock::Create(m_context, "", m_function);
-					m_ir->CreateCondBr(m_ir->CreateICmpUGE(eal.value, m_ir->getInt32(0xe0000000)), mmio, copy);
+					m_ir->CreateCondBr(m_ir->CreateICmpUGE(eal.value, m_ir->getInt32(0xe0000000)), mmio, copy, m_md_unlikely);
 					m_ir->SetInsertPoint(mmio);
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					call(&exec_mfc_cmd, m_thread);
@@ -3786,7 +3797,7 @@ public:
 				case MFC_SYNC_CMD:
 				{
 					const auto cond = m_ir->CreateIsNull(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::mfc_size)));
-					m_ir->CreateCondBr(cond, exec, fail);
+					m_ir->CreateCondBr(cond, exec, fail, m_md_likely);
 					m_ir->SetInsertPoint(exec);
 					m_ir->CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
 					m_ir->CreateBr(next);
@@ -5580,7 +5591,7 @@ public:
 	{
 		const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto halt = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(cond.value, halt, next);
+		m_ir->CreateCondBr(cond.value, halt, next, m_md_unlikely);
 		m_ir->SetInsertPoint(halt);
 		const auto pstatus = spu_ptr<u32>(&spu_thread::status);
 		const auto chalt = m_ir->getInt32(SPU_STATUS_STOPPED_BY_HALT);
@@ -5733,7 +5744,7 @@ public:
 			const auto link = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_thread, stack1.value), get_type<u64*>()));
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
-			m_ir->CreateCondBr(m_ir->CreateICmpEQ(ad64, link), done, fail);
+			m_ir->CreateCondBr(m_ir->CreateICmpEQ(ad64, link), done, fail, m_md_likely);
 			m_ir->SetInsertPoint(done);
 
 			// Clear stack mirror and return by tail call to the provided return address
