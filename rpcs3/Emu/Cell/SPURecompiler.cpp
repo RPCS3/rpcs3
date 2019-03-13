@@ -3710,6 +3710,15 @@ public:
 					m_ir->CreateCondBr(cond, exec, fail);
 					m_ir->SetInsertPoint(exec);
 
+					const auto mmio = llvm::BasicBlock::Create(m_context, "", m_function);
+					const auto copy = llvm::BasicBlock::Create(m_context, "", m_function);
+					m_ir->CreateCondBr(m_ir->CreateICmpUGE(eal.value, m_ir->getInt32(0xe0000000)), mmio, copy);
+					m_ir->SetInsertPoint(mmio);
+					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
+					call(&exec_mfc_cmd, m_thread);
+					m_ir->CreateBr(next);
+					m_ir->SetInsertPoint(copy);
+
 					llvm::Type* vtype = get_type<u8(*)[16]>();
 
 					switch (csize)
