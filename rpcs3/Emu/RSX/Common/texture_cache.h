@@ -2123,14 +2123,24 @@ namespace rsx
 						texaddr, format, tex_width, tex_height, depth, tex_pitch, slice_h,
 						scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), _pool);
 
-					if (!result.external_subresource_desc.sections_to_copy.empty() && result.atlas_covers_target_area())
+					if (!result.external_subresource_desc.sections_to_copy.empty() &&
+						(_pool == 0 || result.atlas_covers_target_area()))
 					{
-						// TODO: Investigate why a full re-upload can cause problems in some games (yellow flicker in SCV)
-						// Unimplemented readback formats?
+						// TODO: Overlapped section persistance is required for framebuffer resources to work with this!
+						// Yellow filter in SCV is because of a 384x384 surface being reused as 160x90 (and likely not getting written to)
+						// Its then sampled again here as 384x384 and this does not work! (obviously)
 						return result;
 					}
 					else
 					{
+						LOG_ERROR(RSX, "Area merge failed! addr=0x%x, w=%d, h=%d, gcm_format=0x%x[sz=%d]", texaddr, tex_width, tex_height, format, !(tex.format() & CELL_GCM_TEXTURE_LN));
+						for (const auto &s : overlapping_locals)
+						{
+							if (s->get_context() == rsx::texture_upload_context::blit_engine_dst)
+							{
+								LOG_ERROR(RSX, "Btw, you're about to lose a blit surface at 0x%x", s->get_section_base());
+							}
+						}
 						//LOG_TRACE(RSX, "Partial memory recovered from cache; may require WCB/WDB to properly gather all the data");
 					}
 				}
@@ -2600,26 +2610,35 @@ namespace rsx
 				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
 				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
 
-				const u16 pitch_in_block = dst_is_argb8 ? dst.pitch >> 2 : dst.pitch >> 1;
-				std::vector<rsx_subresource_layout> subresource_layout;
-				rsx_subresource_layout subres = {};
-				subres.width_in_block = dst_dimensions.width;
-				subres.height_in_block = dst_dimensions.height;
-				subres.pitch_in_block = pitch_in_block;
-				subres.depth = 1;
-				subres.data = { (const gsl::byte*)dst.pixels, dst.pitch * dst_dimensions.height };
-				subresource_layout.push_back(subres);
-
-				cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
-					gcm_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
-					rsx::texture_dimension_extended::texture_dimension_2d, false);
-
 				// render target data is already in correct swizzle layout
 				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
 					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
 					rsx::texture_create_flags::swapped_native_component_order;
 
-				enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
+				if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
+				{
+					cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
+						gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
+						channel_order);
+				}
+				else
+				{
+					const u16 pitch_in_block = dst_is_argb8 ? dst.pitch >> 2 : dst.pitch >> 1;
+					std::vector<rsx_subresource_layout> subresource_layout;
+					rsx_subresource_layout subres = {};
+					subres.width_in_block = dst_dimensions.width;
+					subres.height_in_block = dst_dimensions.height;
+					subres.pitch_in_block = pitch_in_block;
+					subres.depth = 1;
+					subres.data = { (const gsl::byte*)dst.pixels, dst.pitch * dst_dimensions.height };
+					subresource_layout.push_back(subres);
+
+					cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
+						gcm_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
+						rsx::texture_dimension_extended::texture_dimension_2d, false);
+
+					enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
+				}
 
 				dest_texture = cached_dest->get_raw_texture();
 				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
