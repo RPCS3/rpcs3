@@ -53,6 +53,7 @@ struct vdec_frame
 	u64 pts;
 	u64 userdata;
 	u32 frc;
+	bool PicItemRecieved = false;
 
 	AVFrame* operator ->() const
 	{
@@ -84,7 +85,7 @@ struct vdec_context final
 	u64 next_dts{};
 	u64 ppu_tid{};
 
-	std::queue<vdec_frame> out;
+	std::deque<vdec_frame> out;
 	atomic_t<u32> out_max = 60;
 
 	atomic_t<u32> au_count{0};
@@ -353,7 +354,7 @@ struct vdec_context final
 
 						cellVdec.trace("Got picture (pts=0x%llx[0x%llx], dts=0x%llx[0x%llx])", frame.pts, frame->pkt_pts, frame.dts, frame->pkt_dts);
 
-						std::lock_guard{mutex}, out.push(std::move(frame));
+						std::lock_guard{mutex}, out.push_back(std::move(frame));
 
 						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_PICOUT, CELL_OK, cb_arg);
 						lv2_obj::sleep(ppu);
@@ -586,7 +587,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 
 		frame = std::move(vdec->out.front());
 
-		vdec->out.pop();
+		vdec->out.pop_front();
 		if (vdec->out.size() + 1 == vdec->out_max)
 			notify = true;
 	}
@@ -706,16 +707,25 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	{
 		std::lock_guard lock(vdec->mutex);
 
-		if (vdec->out.empty())
+		for (auto& picture : vdec->out)
 		{
-			return CELL_VDEC_ERROR_EMPTY;
+			if (!picture.PicItemRecieved)
+			{
+				picture.PicItemRecieved = true;
+				frame = picture.avf.get();
+				pts = picture.pts;
+				dts = picture.dts;
+				usrd = picture.userdata;
+				frc = picture.frc;
+				break;
+			}
 		}
+	}
 
-		frame = vdec->out.front().avf.get();
-		pts = vdec->out.front().pts;
-		dts = vdec->out.front().dts;
-		usrd = vdec->out.front().userdata;
-		frc = vdec->out.front().frc;
+	if (!frame)
+	{
+		// If frame is empty info was not found
+		return CELL_VDEC_ERROR_EMPTY;
 	}
 
 	const vm::ptr<CellVdecPicItem> info = vm::cast(vdec->mem_addr + vdec->mem_bias);
