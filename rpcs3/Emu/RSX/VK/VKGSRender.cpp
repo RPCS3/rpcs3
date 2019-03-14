@@ -871,10 +871,6 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		const bool is_rsxthr = std::this_thread::get_id() == m_rsx_thread;
 		bool has_queue_ref = false;
 
-		u64 sync_timestamp = 0ull;
-		for (const auto& tex : result.sections_to_flush)
-			sync_timestamp = std::max(sync_timestamp, tex->get_sync_timestamp());
-
 		if (!is_rsxthr)
 		{
 			//Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
@@ -882,7 +878,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			std::lock_guard lock(m_flush_queue_mutex);
 
-			m_flush_requests.post(sync_timestamp == 0ull);
+			m_flush_requests.post(false);
 			has_queue_ref = true;
 		}
 		else if (!vk::is_uninterruptible())
@@ -893,33 +889,6 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		else
 		{
 			//LOG_ERROR(RSX, "Fault in uninterruptible code!");
-		}
-
-		if (sync_timestamp > 0)
-		{
-			// Wait for earliest cb submitted after the sync timestamp to finish
-			command_buffer_chunk *target_cb = nullptr;
-			for (auto &cb : m_primary_cb_list)
-			{
-				if (cb.last_sync >= sync_timestamp)
-				{
-					if (!cb.pending)
-					{
-						target_cb = nullptr;
-						break;
-					}
-
-					if (target_cb == nullptr || target_cb->last_sync > cb.last_sync)
-					{
-						target_cb = &cb;
-					}
-				}
-			}
-
-			if (target_cb)
-			{
-				target_cb->wait(GENERAL_WAIT_TIMEOUT);
-			}
 		}
 
 		if (has_queue_ref)
@@ -3520,9 +3489,18 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	//Verify enough memory exists before attempting to handle data transfer
 	check_heap_status();
 
+	const auto old_speculations_count = m_texture_cache.get_num_cache_speculative_writes();
 	if (m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer))
 	{
 		m_samplers_dirty.store(true);
+		m_current_command_buffer->flags |= cb_has_blit_transfer;
+
+		if (m_texture_cache.get_num_cache_speculative_writes() > old_speculations_count)
+		{
+			// A speculative write happened, flush while the dma resource is valid
+			// TODO: Deeper investigation as to why this can trigger problems
+			flush_command_queue();
+		}
 		return true;
 	}
 

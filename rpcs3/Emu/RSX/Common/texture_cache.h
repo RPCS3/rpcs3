@@ -2670,6 +2670,7 @@ namespace rsx
 			else
 			{
 				verify(HERE), dst_is_render_target;
+				dst_subres.surface->on_write();
 			}
 
 			if (rsx::get_resolution_scale_percent() != 100)

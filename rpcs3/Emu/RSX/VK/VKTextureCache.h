@@ -36,7 +36,7 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> managed_texture = nullptr;
 
 		//DMA relevant data
-		VkFence dma_fence = VK_NULL_HANDLE;
+		VkEvent dma_fence = VK_NULL_HANDLE;
 		vk::render_device* m_device = nullptr;
 		vk::viewable_image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
@@ -82,9 +82,9 @@ namespace vk
 			{
 				dma_buffer.reset();
 
-				if (dma_fence != nullptr)
+				if (dma_fence != VK_NULL_HANDLE)
 				{
-					vkDestroyFence(*m_device, dma_fence, nullptr);
+					vkDestroyEvent(*m_device, dma_fence, nullptr);
 					dma_fence = VK_NULL_HANDLE;
 				}
 			}
@@ -164,9 +164,9 @@ namespace vk
 
 			if (dma_fence == VK_NULL_HANDLE)
 			{
-				VkFenceCreateInfo createInfo = {};
-				createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				vkCreateFence(*m_device, &createInfo, nullptr, &dma_fence);
+				VkEventCreateInfo createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+				vkCreateEvent(*m_device, &createInfo, nullptr, &dma_fence);
 			}
 
 			if (dma_buffer.get() == nullptr)
@@ -297,16 +297,32 @@ namespace vk
 
 			if (manage_cb_lifetime)
 			{
-				cmd.end();
-				cmd.submit(submit_queue, {}, dma_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+				VkFence submit_fence;
+				VkFenceCreateInfo create_info{};
+				create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+				vkCreateFence(*m_device, &create_info, nullptr, &submit_fence);
 
-				//Now we need to restart the command-buffer to restore it to the way it was before...
-				vk::wait_for_fence(dma_fence);
-				vk::reset_fence(&dma_fence);
+				cmd.end();
+				cmd.submit(submit_queue, {}, submit_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+
+				// Now we need to restart the command-buffer to restore it to the way it was before...
+				vk::wait_for_fence(submit_fence);
 				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
 
+				// Cleanup
+				vkDestroyFence(*m_device, submit_fence, nullptr);
+				vkSetEvent(*m_device, dma_fence);
 				if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
+				{
+					// If this is a primary CB, restart it
 					cmd.begin();
+				}
+			}
+			else
+			{
+				// Only used when doing speculation
+				verify(HERE), vkGetEventStatus(*m_device, dma_fence) == VK_EVENT_RESET;
+				vkCmdSetEvent(cmd, dma_fence, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
 			}
 
 			synchronized = true;
@@ -332,6 +348,10 @@ namespace vk
 		void* map_synchronized(u32 offset, u32 size)
 		{
 			AUDIT(synchronized);
+
+			// Synchronize, reset dma_fence after waiting
+			vk::wait_for_event(dma_fence, GENERAL_WAIT_TIMEOUT);
+			vkResetEvent(*m_device, dma_fence);
 
 			return dma_buffer->map(offset, size);
 		}
