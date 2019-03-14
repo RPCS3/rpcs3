@@ -50,7 +50,8 @@ extern u64 get_system_time();
 
 enum command_buffer_data_flag
 {
-	cb_has_occlusion_task = 1
+	cb_has_occlusion_task = 1,
+	cb_has_blit_transfer = 2
 };
 
 struct command_buffer_chunk: public vk::command_buffer

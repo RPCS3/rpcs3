@@ -181,6 +181,7 @@ namespace vk
 	// Fence reset with driver workarounds in place
 	void reset_fence(VkFence *pFence);
 	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
+	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
