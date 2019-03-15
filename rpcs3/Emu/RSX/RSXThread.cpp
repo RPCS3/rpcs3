@@ -471,13 +471,14 @@ namespace rsx
 						thread_ctrl::notify(*intr_thread);
 					}
 
+					std::this_thread::sleep_for(16ms);
 					continue;
 				}
 
 				while (Emu.IsPaused() && !m_rsx_thread_exiting)
-					std::this_thread::sleep_for(10ms);
+					std::this_thread::sleep_for(16ms);
 
-				std::this_thread::sleep_for(1ms); // hack
+				thread_ctrl::wait_for(100); // Hack
 			}
 		});
 
