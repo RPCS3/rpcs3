@@ -1100,12 +1100,19 @@ namespace rsx
 			return results;
 		}
 
+		template <bool check_unlocked = false>
 		section_storage_type *find_texture_from_dimensions(u32 rsx_address, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
 		{
 			auto &block = m_storage.block_for(rsx_address);
 			for (auto &tex : block)
 			{
-				if (tex.matches(rsx_address, width, height, depth, mipmaps) && !tex.is_dirty())
+				if constexpr (check_unlocked)
+				{
+					if (!tex.is_locked())
+						continue;
+				}
+
+				if (!tex.is_dirty() && tex.matches(rsx_address, width, height, depth, mipmaps))
 				{
 					return &tex;
 				}
