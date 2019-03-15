@@ -175,7 +175,7 @@ namespace rsx
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
 			surface_color_format format,
-			size_t width, size_t height,
+			size_t width, size_t height, size_t pitch,
 			vk::render_target* old_surface,
 			vk::render_device &device, vk::command_buffer *cmd)
 		{
@@ -197,10 +197,11 @@ namespace rsx
 			change_image_layout(*cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 			rtt->native_component_map = fmt.second;
+			rtt->rsx_pitch = (u16)pitch;
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
 			rtt->surface_width = (u16)width;
 			rtt->surface_height = (u16)height;
-			rtt->old_contents = old_surface;
+			rtt->set_old_contents(old_surface);
 			rtt->queue_tag(address);
 			rtt->dirty = true;
 
@@ -210,7 +211,7 @@ namespace rsx
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
 			surface_depth_format format,
-			size_t width, size_t height,
+			size_t width, size_t height, size_t pitch,
 			vk::render_target* old_surface,
 			vk::render_device &device, vk::command_buffer *cmd)
 		{
@@ -242,17 +243,17 @@ namespace rsx
 				ds->native_pitch *= 2;
 
 			ds->attachment_aspect_flag = range.aspectMask;
+			ds->rsx_pitch = (u16)pitch;
 			ds->surface_width = (u16)width;
 			ds->surface_height = (u16)height;
-			ds->old_contents = old_surface;
+			ds->set_old_contents(old_surface);
 			ds->queue_tag(address);
 			ds->dirty = true;
 
 			return ds;
 		}
 
-		static
-		void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
+		static void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
 		{
 			info->rsx_pitch = surface->rsx_pitch;
 			info->native_pitch = surface->native_pitch;
@@ -293,24 +294,27 @@ namespace rsx
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static
-		void invalidate_surface_contents(u32 address, vk::command_buffer* /*pcmd*/, vk::render_target *surface, vk::render_target *old_surface)
+		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target> &surface, size_t pitch)
 		{
-			surface->old_contents = old_surface;
+			return surface->rsx_pitch == pitch;
+		}
+
+		static void invalidate_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *surface, vk::render_target *old_surface, u32 address, size_t pitch)
+		{
+			surface->rsx_pitch = (u16)pitch;
+			surface->set_old_contents(old_surface);
 			surface->reset_aa_mode();
 			surface->queue_tag(address);
 			surface->dirty = true;
 		}
 
-		static
-		void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
+		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
 		{
 			surface->frame_tag = vk::get_current_frame_id();
 			if (!surface->frame_tag) surface->frame_tag = 1;
 		}
 
-		static
-		void notify_surface_persist(const std::unique_ptr<vk::render_target> &surface)
+		static void notify_surface_persist(const std::unique_ptr<vk::render_target> &surface)
 		{
 			surface->save_aa_mode();
 		}
