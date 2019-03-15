@@ -2630,7 +2630,7 @@ namespace rsx
 					subres.height_in_block = dst_dimensions.height;
 					subres.pitch_in_block = pitch_in_block;
 					subres.depth = 1;
-					subres.data = { (const gsl::byte*)dst.pixels, dst.pitch * dst_dimensions.height };
+					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(dst.rsx_address)), dst.pitch * dst_dimensions.height };
 					subresource_layout.push_back(subres);
 
 					cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
