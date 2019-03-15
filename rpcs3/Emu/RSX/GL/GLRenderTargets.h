@@ -166,8 +166,7 @@ struct gl_render_target_traits
 	std::unique_ptr<gl::render_target> create_new_surface(
 		u32 address,
 		rsx::surface_color_format surface_color_format,
-		size_t width,
-		size_t height,
+		size_t width, size_t height, size_t pitch,
 		gl::render_target* old_surface
 	)
 	{
@@ -177,10 +176,11 @@ struct gl_render_target_traits
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
 			rsx::apply_resolution_scale((u16)height, true), (GLenum)internal_fmt));
 		result->set_native_pitch((u16)width * format.channel_count * format.channel_size);
+		result->set_rsx_pitch((u16)pitch);
 
 		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
 		result->set_native_component_layout(native_layout);
-		result->old_contents = old_surface;
+		result->set_old_contents(old_surface);
 
 		result->set_cleared(false);
 		result->update_surface();
@@ -192,8 +192,7 @@ struct gl_render_target_traits
 	std::unique_ptr<gl::render_target> create_new_surface(
 			u32 address,
 		rsx::surface_depth_format surface_depth_format,
-			size_t width,
-			size_t height,
+			size_t width, size_t height, size_t pitch,
 			gl::render_target* old_surface
 		)
 	{
@@ -207,8 +206,9 @@ struct gl_render_target_traits
 
 		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
 		result->set_native_pitch(native_pitch);
+		result->set_rsx_pitch((u16)pitch);
 		result->set_native_component_layout(native_layout);
-		result->old_contents = old_surface;
+		result->set_old_contents(old_surface);
 
 		result->set_cleared(false);
 		result->update_surface();
@@ -233,9 +233,16 @@ struct gl_render_target_traits
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
 	static
-	void invalidate_surface_contents(u32 address, void *, gl::render_target *surface, gl::render_target* old_surface)
+	bool surface_is_pitch_compatible(const std::unique_ptr<gl::render_target> &surface, size_t pitch)
 	{
-		surface->old_contents = old_surface;
+		return surface->get_rsx_pitch() == pitch;
+	}
+
+	static
+	void invalidate_surface_contents(void *, gl::render_target *surface, gl::render_target* old_surface, u32 address, size_t pitch)
+	{
+		surface->set_rsx_pitch((u16)pitch);
+		surface->set_old_contents(old_surface);
 		surface->reset_aa_mode();
 		surface->queue_tag(address);
 		surface->set_cleared(false);

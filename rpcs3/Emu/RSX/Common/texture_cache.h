@@ -278,7 +278,7 @@ namespace rsx
 					if (_v > max_y) max_y = _v;
 
 					if (const auto _w = max_x - min_x, _h = max_y - min_y;
-						(_w * _h) >= target_area)
+						u32(_w * _h) >= target_area)
 					{
 						// Target area mostly covered, return success
 						return true;

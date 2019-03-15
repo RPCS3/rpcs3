@@ -112,6 +112,9 @@ namespace rsx
 			// Tags are tested in an X pattern
 			for (const auto &tag : memory_tag_samples)
 			{
+				if (!tag.first)
+					break;
+
 				if (tag.second != *reinterpret_cast<u64*>(vm::g_sudo_addr + tag.first))
 					return false;
 			}
@@ -119,22 +122,59 @@ namespace rsx
 			return true;
 		}
 
+		template<typename T>
+		void set_old_contents(T* other)
+		{
+			if (!other || other->get_rsx_pitch() != this->get_rsx_pitch())
+			{
+				old_contents = nullptr;
+				return;
+			}
+
+			old_contents = other;
+		}
+
 		void queue_tag(u32 address)
 		{
-			const u32 pitch = get_native_pitch();
-			const u32 memory_length = pitch * get_surface_height();
+			for (int i = 0; i < memory_tag_samples.size(); ++i)
+			{
+				if (LIKELY(i))
+					memory_tag_samples[i].first = 0;
+				else
+					memory_tag_samples[i].first = address; // Top left
+			}
 
-			memory_tag_samples[0].first = address;                         // Top left
-			memory_tag_samples[1].first = address + memory_length - 4;     // Bottom right
-			memory_tag_samples[2].first = address + pitch;                 // Top right
-			memory_tag_samples[3].first = address + (memory_length / 2);   // Center
-			memory_tag_samples[4].first = address + memory_length - pitch; // Bottom left
+			const u32 pitch = get_native_pitch();
+			if (UNLIKELY(pitch < 16))
+			{
+				// Not enough area to gather samples if pitch is too small
+				return;
+			}
+
+			// Top right corner
+			memory_tag_samples[1].first = address + pitch - 8;
+
+			if (const u32 h = get_surface_height(); h > 1)
+			{
+				// Last row
+				const u32 pitch2 = get_rsx_pitch();
+				const u32 last_row_offset = pitch2 * (h - 1);
+				memory_tag_samples[2].first = address + last_row_offset;              // Bottom left corner
+				memory_tag_samples[3].first = address + last_row_offset + pitch - 8;  // Bottom right corner
+
+				// Centroid
+				const u32 center_row_offset = pitch2 * (h / 2);
+				memory_tag_samples[4].first = address + center_row_offset + pitch / 2;
+			}
 		}
 
 		void sync_tag()
 		{
 			for (auto &tag : memory_tag_samples)
 			{
+				if (!tag.first)
+					break;
+
 				tag.second = *reinterpret_cast<u64*>(vm::g_sudo_addr + tag.first);
 			}
 		}
@@ -364,7 +404,11 @@ namespace rsx
 				surface_storage_type &rtt = It->second;
 				if (Traits::rtt_has_format_width_height(rtt, color_format, width, height))
 				{
-					Traits::notify_surface_persist(rtt);
+					if (Traits::surface_is_pitch_compatible(rtt, pitch))
+						Traits::notify_surface_persist(rtt);
+					else
+						Traits::invalidate_surface_contents(command_list, Traits::get(rtt), nullptr, address, pitch);
+
 					Traits::prepare_rtt_for_drawing(command_list, Traits::get(rtt));
 					return Traits::get(rtt);
 				}
@@ -401,7 +445,7 @@ namespace rsx
 						invalidated_resources.erase(It);
 
 					new_surface = Traits::get(new_surface_storage);
-					Traits::invalidate_surface_contents(address, command_list, new_surface, contents_to_copy);
+					Traits::invalidate_surface_contents(command_list, new_surface, contents_to_copy, address, pitch);
 					Traits::prepare_rtt_for_drawing(command_list, new_surface);
 					break;
 				}
@@ -421,7 +465,7 @@ namespace rsx
 				return new_surface;
 			}
 
-			m_render_targets_storage[address] = Traits::create_new_surface(address, color_format, width, height, contents_to_copy, std::forward<Args>(extra_params)...);
+			m_render_targets_storage[address] = Traits::create_new_surface(address, color_format, width, height, pitch, contents_to_copy, std::forward<Args>(extra_params)...);
 			return Traits::get(m_render_targets_storage[address]);
 		}
 
@@ -456,7 +500,11 @@ namespace rsx
 				surface_storage_type &ds = It->second;
 				if (Traits::ds_has_format_width_height(ds, depth_format, width, height))
 				{
-					Traits::notify_surface_persist(ds);
+					if (Traits::surface_is_pitch_compatible(ds, pitch))
+						Traits::notify_surface_persist(ds);
+					else
+						Traits::invalidate_surface_contents(command_list, Traits::get(ds), nullptr, address, pitch);
+
 					Traits::prepare_ds_for_drawing(command_list, Traits::get(ds));
 					return Traits::get(ds);
 				}
@@ -493,7 +541,7 @@ namespace rsx
 
 					new_surface = Traits::get(new_surface_storage);
 					Traits::prepare_ds_for_drawing(command_list, new_surface);
-					Traits::invalidate_surface_contents(address, command_list, new_surface, contents_to_copy);
+					Traits::invalidate_surface_contents(command_list, new_surface, contents_to_copy, address, pitch);
 					break;
 				}
 			}
@@ -512,7 +560,7 @@ namespace rsx
 				return new_surface;
 			}
 
-			m_depth_stencil_storage[address] = Traits::create_new_surface(address, depth_format, width, height, contents_to_copy, std::forward<Args>(extra_params)...);
+			m_depth_stencil_storage[address] = Traits::create_new_surface(address, depth_format, width, height, pitch, contents_to_copy, std::forward<Args>(extra_params)...);
 			return Traits::get(m_depth_stencil_storage[address]);
 		}
 	public:

@@ -2923,7 +2923,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 			m_surface_info[index].address = layout.color_addresses[index];
 			m_surface_info[index].pitch = layout.actual_color_pitch[index];
-			surface->rsx_pitch = layout.actual_color_pitch[index];
+			verify("Pitch mismatch!" HERE), surface->rsx_pitch == layout.actual_color_pitch[index];
 
 			surface->write_aa_mode = layout.aa_mode;
 			m_texture_cache.notify_surface_changed(layout.color_addresses[index]);
@@ -2938,7 +2938,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		m_depth_surface_info.address = layout.zeta_address;
 		m_depth_surface_info.pitch = layout.actual_zeta_pitch;
-		ds->rsx_pitch = layout.actual_zeta_pitch;
+		verify("Pitch mismatch!" HERE), ds->rsx_pitch == layout.actual_zeta_pitch;
 
 		ds->write_aa_mode = layout.aa_mode;
 		m_texture_cache.notify_surface_changed(layout.zeta_address);
@@ -3284,9 +3284,7 @@ void VKGSRender::flip(int buffer)
 			else
 			{
 				const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer, absolute_address, buffer_width, buffer_height, buffer_pitch);
-				verify(HERE), !overlap_info.empty();
-
-				if (overlap_info.back().surface == render_target_texture)
+				if (!overlap_info.empty() && overlap_info.back().surface == render_target_texture)
 				{
 					// Confirmed to be the newest data source in that range
 					image_to_flip = render_target_texture;
@@ -3324,7 +3322,7 @@ void VKGSRender::flip(int buffer)
 			// Read from cell
 			const auto range = utils::address_range::start_length(absolute_address, buffer_pitch * buffer_height);
 			const u32  lookup_mask = rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::framebuffer_storage;
-			const auto overlap = m_texture_cache.find_texture_from_range(range, 0, lookup_mask);
+			const auto overlap = m_texture_cache.find_texture_from_range<true>(range, 0, lookup_mask);
 			bool flush_queue = false;
 
 			for (const auto & section : overlap)
