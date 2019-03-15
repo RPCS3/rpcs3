@@ -3310,7 +3310,7 @@ void VKGSRender::flip(int buffer)
 				}
 			}
 		}
-		else if (auto surface = m_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
+		else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(absolute_address, buffer_width, buffer_height))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
