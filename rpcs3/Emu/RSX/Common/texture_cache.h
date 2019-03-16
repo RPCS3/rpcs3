@@ -2206,28 +2206,20 @@ namespace rsx
 			// TODO: Verify correct behavior
 			bool src_is_render_target = false;
 			bool dst_is_render_target = false;
-			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
-			bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
+			const bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
+			const bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
+			const u8 src_bpp = src_is_argb8 ? 4 : 2;
+			const u8 dst_bpp = dst_is_argb8 ? 4 : 2;
 
 			typeless_xfer typeless_info = {};
 			image_resource_type vram_texture = 0;
 			image_resource_type dest_texture = 0;
 
-			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
+			u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 
 			const f32 scale_x = fabsf(dst.scale_x);
 			const f32 scale_y = fabsf(dst.scale_y);
-
-			if (dst.scale_y < 0.f)
-			{
-				// TODO
-			}
-
-			if (dst.scale_x < 0.f)
-			{
-				// TODO
-			}
 
 			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			// Reproject final clip onto source...
@@ -2236,6 +2228,18 @@ namespace rsx
 
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
+
+			if (dst.scale_y < 0.f)
+			{
+				typeless_info.flip_vertical = true;
+				src_address -= (src.pitch * (src_h - 1));
+			}
+
+			if (dst.scale_x < 0.f)
+			{
+				typeless_info.flip_horizontal = true;
+				src_address += (src.width - src_w) * src_bpp;
+			}
 
 			auto rtt_lookup = [&m_rtts, &cmd](u32 address, u32 width, u32 height, u32 pitch, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
 			{
@@ -2269,8 +2273,7 @@ namespace rsx
 				{
 					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
 					{
-						const u8 bpp = dst_is_argb8 ? 4 : 2;
-						const u32 memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
+						const u32 memcpy_bytes_length = dst.clip_width * dst_bpp * dst.clip_height;
 
 						std::lock_guard lock(m_cache_mutex);
 						invalidate_range_impl_base(cmd, address_range::start_length(src_address, memcpy_bytes_length), invalidation_cause::read, std::forward<Args>(extras)...);
@@ -2291,14 +2294,13 @@ namespace rsx
 				src_subres.surface->read_barrier(cmd);
 
 				const auto surf = src_subres.surface;
-				auto src_bpp = surf->get_native_pitch() / surf->get_surface_width();
-				auto expected_bpp = src_is_argb8 ? 4 : 2;
-				if (src_bpp != expected_bpp)
+				auto bpp = surf->get_native_pitch() / surf->get_surface_width();
+				if (bpp != src_bpp)
 				{
 					//Enable type scaling in src
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_is_depth = src_subres.is_depth;
-					typeless_info.src_scaling_hint = (f32)src_bpp / expected_bpp;
+					typeless_info.src_scaling_hint = (f32)bpp / src_bpp;
 					typeless_info.src_gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 
 					src_w = (u16)(src_w / typeless_info.src_scaling_hint);
@@ -2316,14 +2318,13 @@ namespace rsx
 				// Full barrier is required in case of partial transfers
 				dst_subres.surface->read_barrier(cmd);
 
-				auto dst_bpp = dst_subres.surface->get_native_pitch() / dst_subres.surface->get_surface_width();
-				auto expected_bpp = dst_is_argb8 ? 4 : 2;
-				if (dst_bpp != expected_bpp)
+				auto bpp = dst_subres.surface->get_native_pitch() / dst_subres.surface->get_surface_width();
+				if (bpp != dst_bpp)
 				{
 					//Enable type scaling in dst
 					typeless_info.dst_is_typeless = true;
 					typeless_info.dst_is_depth = dst_subres.is_depth;
-					typeless_info.dst_scaling_hint = (f32)dst_bpp / expected_bpp;
+					typeless_info.dst_scaling_hint = (f32)bpp / dst_bpp;
 					typeless_info.dst_gcm_format = dst_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 
 					dst_w = (u16)(dst_w / typeless_info.dst_scaling_hint);
@@ -2342,7 +2343,7 @@ namespace rsx
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst_w, dst_h };
 
-			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.height };
+			size2i dst_dimensions = { dst.pitch / dst_bpp, dst.height };
 			if (src_is_render_target)
 			{
 				if (dst_dimensions.width == src_subres.surface->get_surface_width())
@@ -2395,10 +2396,9 @@ namespace rsx
 
 					if (const u32 address_offset = dst_address - this_address)
 					{
-						const u16 bpp = dst_is_argb8 ? 4 : 2;
 						const u16 offset_y = address_offset / dst.pitch;
 						const u16 offset_x = address_offset % dst.pitch;
-						const u16 offset_x_in_block = offset_x / bpp;
+						const u16 offset_x_in_block = offset_x / dst_bpp;
 
 						dst_area.x1 += offset_x_in_block;
 						dst_area.x2 += offset_x_in_block;
@@ -2513,10 +2513,9 @@ namespace rsx
 
 					if (const u32 address_offset = src_address - this_address)
 					{
-						const u16 bpp = src_is_argb8 ? 4 : 2;
 						const u16 offset_y = address_offset / src.pitch;
 						const u16 offset_x = address_offset % src.pitch;
-						const u16 offset_x_in_block = offset_x / bpp;
+						const u16 offset_x_in_block = offset_x / src_bpp;
 
 						src_area.x1 += offset_x_in_block;
 						src_area.x2 += offset_x_in_block;
@@ -2542,7 +2541,7 @@ namespace rsx
 					const auto rsx_range = address_range::start_length(src_address, src.pitch * src.slice_h);
 					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
-					const u16 _width = src_is_argb8 ? src.pitch >> 2 : src.pitch >> 1;
+					const u16 _width = src.pitch / src_bpp;
 					std::vector<rsx_subresource_layout> subresource_layout;
 					rsx_subresource_layout subres = {};
 					subres.width_in_block = _width;
@@ -2650,7 +2649,7 @@ namespace rsx
 				}
 				else
 				{
-					const u16 pitch_in_block = dst_is_argb8 ? dst.pitch >> 2 : dst.pitch >> 1;
+					const u16 pitch_in_block = dst.pitch / dst_bpp;
 					std::vector<rsx_subresource_layout> subresource_layout;
 					rsx_subresource_layout subres = {};
 					subres.width_in_block = dst_dimensions.width;
@@ -2680,7 +2679,7 @@ namespace rsx
 
 				if (dst.clip_height == 1)
 				{
-					mem_length = dst.clip_width * (dst_is_argb8 ? 4 : 2);
+					mem_length = dst.clip_width * dst_bpp;
 				}
 				else
 				{

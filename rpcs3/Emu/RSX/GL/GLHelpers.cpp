@@ -434,6 +434,16 @@ namespace gl
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, blit_dst.id());
 		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_id, 0);
 
+		if (xfer_info.flip_horizontal)
+		{
+			src_rect.flip_horizontal();
+		}
+
+		if (xfer_info.flip_vertical)
+		{
+			src_rect.flip_vertical();
+		}
+
 		glBlitFramebuffer(src_rect.x1, src_rect.y1, src_rect.x2, src_rect.y2,
 			dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2,
 			(GLbitfield)target, (GLenum)interp);

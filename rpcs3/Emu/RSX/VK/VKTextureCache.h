@@ -235,8 +235,8 @@ namespace vk
 					const auto filter = (aspect_flag == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
 
 					vk::copy_scaled_image(cmd, vram_texture->value, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target->current_layout,
-						0, 0, vram_texture->width(), vram_texture->height(), 0, 0, transfer_width, transfer_height, 1, aspect_flag, true, filter,
-						vram_texture->info.format, target->info.format);
+						{ 0, 0, (s32)vram_texture->width(), (s32)vram_texture->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
+						1, aspect_flag, true, filter, vram_texture->info.format, target->info.format);
 				}
 			}
 
@@ -536,7 +536,7 @@ namespace vk
 				{
 					verify(HERE), section.dst_z == 0;
 
-					u32 dst_x = section.dst_x, dst_y = section.dst_y;
+					u16 dst_x = section.dst_x, dst_y = section.dst_y;
 					vk::image* _dst;
 
 					if (LIKELY(section.src->info.format == dst->info.format))
@@ -552,8 +552,8 @@ namespace vk
 					if (section.xform == surface_transform::identity)
 					{
 						vk::copy_scaled_image(cmd, section.src->value, _dst->value, section.src->current_layout, _dst->current_layout,
-							section.src_x, section.src_y, section.src_w, section.src_h,
-							section.dst_x, section.dst_y, section.dst_w, section.dst_h,
+							coordi{ { section.src_x, section.src_y }, { section.src_w, section.src_h } },
+							coordi{ { section.dst_x, section.dst_y }, { section.dst_w, section.dst_h } },
 							1, src_aspect, section.src->info.format == _dst->info.format,
 							VK_FILTER_NEAREST, section.src->info.format, _dst->info.format);
 					}
@@ -593,8 +593,8 @@ namespace vk
 						}
 
 						vk::copy_scaled_image(cmd, tmp->value, _dst->value, tmp->current_layout, _dst->current_layout,
-							0, 0, section.src_w, section.src_h,
-							dst_x, dst_y, section.dst_w, section.dst_h,
+							areai{ 0, 0, (s32)section.src_w, (s32)section.src_h },
+							coordi{ {dst_x, dst_y}, {section.dst_w, section.dst_h} },
 							1, src_aspect, section.src->info.format == _dst->info.format,
 							VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);
 

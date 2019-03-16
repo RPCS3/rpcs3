@@ -40,6 +40,9 @@ namespace rsx
 		bool dst_is_typeless = false;
 		bool src_is_depth = false;
 		bool dst_is_depth = false;
+		bool flip_vertical = false;
+		bool flip_horizontal = false;
+
 		u32 src_gcm_format = 0;
 		u32 dst_gcm_format = 0;
 		u32 src_native_format_override = 0;
