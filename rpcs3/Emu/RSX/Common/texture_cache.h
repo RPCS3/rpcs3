@@ -364,6 +364,8 @@ namespace rsx
 		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
+		virtual void prepare_for_dma_transfers(commandbuffer_type&) = 0;
+		virtual void cleanup_after_dma_transfers(commandbuffer_type&) = 0;
 
 	public:
 		virtual void destroy() = 0;
@@ -397,13 +399,13 @@ namespace rsx
 		template <typename... Args>
 		void err_once(const char* fmt, const Args&... params)
 		{
-			logs::RSX.error(fmt, params...);
+			emit_once(true, fmt, params...);
 		}
 
 		template <typename... Args>
 		void warn_once(const char* fmt, const Args&... params)
 		{
-			logs::RSX.warning(fmt, params...);
+			emit_once(false, fmt, params...);
 		}
 
 		/**
@@ -458,19 +460,40 @@ namespace rsx
 				});
 			}
 
+			rsx::simple_array<section_storage_type*> sections_to_transfer;
 			for (auto &surface : data.sections_to_flush)
 			{
-				if (surface->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
+				if (!surface->is_synchronized())
+				{
+					sections_to_transfer.push_back(surface);
+				}
+				else if (surface->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
 				{
 					// This region is set to always read from itself (unavoidable hard sync)
 					const auto ROP_timestamp = rsx::get_current_renderer()->ROP_sync_timestamp;
-					if (surface->is_synchronized() && ROP_timestamp > surface->get_sync_timestamp())
+					if (ROP_timestamp > surface->get_sync_timestamp())
 					{
-						surface->copy_texture(cmd, true, std::forward<Args>(extras)...);
+						sections_to_transfer.push_back(surface);
 					}
 				}
+			}
 
-				surface->flush(cmd, std::forward<Args>(extras)...);
+			if (!sections_to_transfer.empty())
+			{
+				// Batch all hard faults together
+				prepare_for_dma_transfers(cmd);
+
+				for (auto &surface : sections_to_transfer)
+				{
+					surface->copy_texture(cmd, true, std::forward<Args>(extras)...);
+				}
+
+				cleanup_after_dma_transfers(cmd);
+			}
+
+			for (auto &surface : data.sections_to_flush)
+			{
+				surface->flush();
 
 				// Exclude this region when flushing other sections that should not trample it
 				// If we overlap an excluded RO, set it as dirty
@@ -1224,7 +1247,7 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, std::tuple<FlushArgs...>&& flush_extras, Args&&... extras)
+		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
@@ -1244,10 +1267,7 @@ namespace rsx
 			if (!region.is_locked() || region.get_context() != texture_upload_context::framebuffer_storage)
 			{
 				// Invalidate sections from surface cache occupying same address range
-				std::apply(&texture_cache::invalidate_range_impl_base<FlushArgs...>, std::tuple_cat(
-					std::forward_as_tuple(this, cmd, rsx_range, invalidation_cause::superseded_by_fbo),
-					std::forward<std::tuple<FlushArgs...> >(flush_extras)
-				));
+				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::superseded_by_fbo);
 			}
 
 			if (!region.is_locked() || region.can_be_reused())

@@ -217,13 +217,17 @@ namespace gl
 			}
 		}
 
-		void copy_texture(gl::command_context& cmd, bool manage_lifetime)
+		void copy_texture(gl::command_context& cmd, bool miss)
 		{
 			ASSERT(exists());
 
-			if (!manage_lifetime)
+			if (LIKELY(!miss))
 			{
 				baseclass::on_speculative_flush();
+			}
+			else
+			{
+				baseclass::on_miss();
 			}
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
@@ -347,15 +351,6 @@ namespace gl
 		/**
 		 * Flush
 		 */
-		void synchronize(bool blocking, gl::command_context& cmd)
-		{
-			if (synchronized)
-				return;
-
-			verify(HERE), cmd.drv;
-			copy_texture(cmd, blocking);
-		}
-
 		void* map_synchronized(u32 offset, u32 size)
 		{
 			AUDIT(synchronized && !m_fence.is_empty());
@@ -642,7 +637,7 @@ namespace gl
 				if (src)
 				{
 					//Format mismatch
-					err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
+					warn_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
 				}
 
 				//Apply base component map onto the new texture if a data cast has been done
@@ -991,6 +986,12 @@ namespace gl
 						ifmt == gl::texture::internal_format::depth);
 			}
 		}
+
+		void prepare_for_dma_transfers(gl::command_context&) override
+		{}
+
+		void cleanup_after_dma_transfers(gl::command_context&) override
+		{}
 
 	public:
 
