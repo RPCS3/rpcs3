@@ -101,6 +101,11 @@ u8 get_format_block_size_in_texel(int format);
 u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
 
 /**
+ * Returns number of texel rows encoded in one pitch-length line of bytes
+ */
+u8 get_format_texel_rows_per_line(u32 format);
+
+/**
 * Get number of bytes occupied by texture in RSX mem
 */
 size_t get_texture_size(const rsx::fragment_texture &texture);
