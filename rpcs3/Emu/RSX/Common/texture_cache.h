@@ -1734,6 +1734,19 @@ namespace rsx
 				const auto clipped = rsx::intersect_region(address, slice_w, slice_h, bpp,
 					section->get_section_base(), section->get_width(), section->get_height(), section_bpp, pitch);
 
+				const auto slice_begin = (slice * src_slice_h);
+				const auto slice_end = (slice_begin + slice_h);
+
+				const auto dst_y = std::get<1>(clipped).y;
+				const auto dst_h = std::get<2>(clipped).height;
+
+				const auto section_end = dst_y + dst_h;
+				if (dst_y >= slice_end || section_end <= slice_begin)
+				{
+					// Belongs to a different slice
+					return;
+				}
+
 				if (scaling)
 				{
 					// Since output is upscaled, also upscale on dst
@@ -2064,13 +2077,25 @@ namespace rsx
 				}
 			}
 
+			// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
+			const u32 lookup_mask = (is_compressed_format) ? rsx::texture_upload_context::shader_read :
+				rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
+
+			auto lookup_range = tex_range;
+			if (LIKELY(extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d))
+			{
+				// Optimize the range a bit by only searching for mip0, layer0 to avoid false positives
+				const auto texel_rows_per_line = get_format_texel_rows_per_line(format);
+				const auto num_rows = (tex_height + texel_rows_per_line - 1) / texel_rows_per_line;
+				if (const auto length = num_rows * tex_pitch; length < tex_range.length())
+				{
+					lookup_range = utils::address_range::start_length(texaddr, length);
+				}
+			}
+
 			reader_lock lock(m_cache_mutex);
 
-			// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
-			const u32 lookup_mask = (is_compressed_format)? rsx::texture_upload_context::shader_read :
-				rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
-			const auto overlapping_locals = find_texture_from_range<true>(tex_range, tex_height > 1? tex_pitch : 0, lookup_mask);
-
+			const auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
 			for (auto& cached_texture : overlapping_locals)
 			{
 				if (cached_texture->matches(texaddr, tex_width, tex_height, depth, 0))
