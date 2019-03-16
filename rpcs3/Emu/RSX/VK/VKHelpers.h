@@ -1168,6 +1168,14 @@ namespace vk
 		}
 		access_hint = flush_only;
 
+		enum command_buffer_data_flag : u32
+		{
+			cb_has_occlusion_task = 1,
+			cb_has_blit_transfer = 2,
+			cb_has_dma_transfer = 4
+		};
+		u32 flags = 0;
+
 	public:
 		command_buffer() {}
 		~command_buffer() {}
@@ -1204,6 +1212,16 @@ namespace vk
 		vk::command_pool& get_command_pool() const
 		{
 			return *pool;
+		}
+
+		void clear_flags()
+		{
+			flags = 0;
+		}
+
+		void set_flag(command_buffer_data_flag flag)
+		{
+			flags |= flag;
 		}
 
 		operator VkCommandBuffer() const
@@ -1278,6 +1296,8 @@ namespace vk
 			acquire_global_submit_lock();
 			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
 			release_global_submit_lock();
+
+			clear_flags();
 		}
 	};
 

@@ -48,19 +48,10 @@ namespace vk
 
 extern u64 get_system_time();
 
-enum command_buffer_data_flag
-{
-	cb_has_occlusion_task = 1,
-	cb_has_blit_transfer = 2
-};
-
 struct command_buffer_chunk: public vk::command_buffer
 {
 	VkFence submit_fence = VK_NULL_HANDLE;
 	VkDevice m_device = VK_NULL_HANDLE;
-
-	u32 num_draws = 0;
-	u32 flags = 0;
 
 	std::atomic_bool pending = { false };
 	std::atomic<u64> last_sync = { 0 };
@@ -100,8 +91,6 @@ struct command_buffer_chunk: public vk::command_buffer
 			wait(FRAME_PRESENT_TIMEOUT);
 
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
-		num_draws = 0;
-		flags = 0;
 	}
 
 	bool poke()

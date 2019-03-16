@@ -392,7 +392,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		{
 			// Mark buffer regions as NO_ACCESS on Cell-visible side
 			m_gl_texture_cache.lock_memory_region(cmd, std::get<1>(m_rtts.m_bound_render_targets[i]), surface_range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
-				std::tuple<>{}, color_format.format, color_format.type, color_format.swap_bytes);
+				color_format.format, color_format.type, color_format.swap_bytes);
 		}
 		else
 		{
@@ -407,7 +407,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		{
 			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(layout.depth_format);
 			m_gl_texture_cache.lock_memory_region(cmd, std::get<1>(m_rtts.m_bound_depth_stencil), surface_range, m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
-				std::tuple<>{}, depth_format_gl.format, depth_format_gl.type, true);
+				depth_format_gl.format, depth_format_gl.type, true);
 		}
 		else
 		{
