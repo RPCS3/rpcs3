@@ -119,7 +119,7 @@ struct lv2_prx final : lv2_obj, ppu_module
 {
 	static const u32 id_base = 0x23000000;
 
-	bool is_started = false;
+	atomic_t<bool> is_started = false;
 
 	std::unordered_map<u32, u32> specials;
 	std::unordered_map<u32, void*> imports;
