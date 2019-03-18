@@ -36,10 +36,13 @@ public:
 // Helper class
 class spu_runtime
 {
-public:
-	shared_mutex m_mutex;
+	mutable shared_mutex m_mutex;
 
-	cond_variable m_cond;
+	mutable cond_variable m_cond;
+
+	mutable atomic_t<u64> m_passive_locks{0};
+
+	atomic_t<u64> m_reset_count{0};
 
 	// All functions
 	std::map<std::vector<u32>, spu_function_t> m_map;
@@ -57,12 +60,12 @@ public:
 		std::map<std::vector<u32>, spu_function_t>::iterator beg;
 		std::map<std::vector<u32>, spu_function_t>::iterator end;
 	};
-private:
-	// Scratch vector
-	std::vector<work> workload;
 
 	// Scratch vector
-	std::vector<u32> addrv{u32{0}};
+	static thread_local std::vector<work> workload;
+
+	// Scratch vector
+	static thread_local std::vector<u32> addrv;
 
 	// Trampoline to spu_recompiler_base::dispatch
 	static const spu_function_t tr_dispatch;
@@ -73,20 +76,104 @@ private:
 public:
 	spu_runtime();
 
+	const std::string& get_cache_path() const
+	{
+		return m_cache_path;
+	}
+
 	// Add compiled function and generate trampoline if necessary
-	void add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled);
+	bool add(u64 last_reset_count, void* where, spu_function_t compiled);
+
+	// Return opaque pointer for add()
+	void* find(u64 last_reset_count, const std::vector<u32>&);
 
 	// Find existing function
-	spu_function_t find(const se_t<u32, false>* ls, u32 addr);
+	spu_function_t find(const se_t<u32, false>* ls, u32 addr) const;
 
 	// Generate a patchable trampoline to spu_recompiler_base::branch
 	spu_function_t make_branch_patchpoint(u32 target) const;
 
+	// reset() arg retriever, for race avoidance (can result in double reset)
+	u64 get_reset_count() const
+	{
+		return m_reset_count.load();
+	}
+
+	// Remove all compiled function and free JIT memory
+	u64 reset(std::size_t last_reset_count);
+
 	// Handle cpu_flag::jit_return
-	void handle_return(cpu_thread* _thr);
+	void handle_return(spu_thread* _spu);
 
 	// All dispatchers (array allocated in jit memory)
 	static atomic_t<spu_function_t>* const g_dispatcher;
+
+	struct passive_lock
+	{
+		spu_runtime& _this;
+
+		passive_lock(const passive_lock&) = delete;
+
+		passive_lock(spu_runtime& _this)
+			: _this(_this)
+		{
+			std::lock_guard lock(_this.m_mutex);
+			_this.m_passive_locks++;
+		}
+
+		~passive_lock()
+		{
+			_this.m_passive_locks--;
+		}
+	};
+
+	// Exclusive lock within passive_lock scope
+	struct writer_lock
+	{
+		spu_runtime& _this;
+		bool notify = false;
+
+		writer_lock(const writer_lock&) = delete;
+
+		writer_lock(spu_runtime& _this)
+			: _this(_this)
+		{
+			// Temporarily release the passive lock
+			_this.m_passive_locks--;
+			_this.m_mutex.lock();
+		}
+
+		~writer_lock()
+		{
+			_this.m_passive_locks++;
+			_this.m_mutex.unlock();
+
+			if (notify)
+			{
+				_this.m_cond.notify_all();
+			}
+		}
+	};
+
+	struct reader_lock
+	{
+		const spu_runtime& _this;
+
+		reader_lock(const reader_lock&) = delete;
+
+		reader_lock(const spu_runtime& _this)
+			: _this(_this)
+		{
+			_this.m_passive_locks--;
+			_this.m_mutex.lock_shared();
+		}
+
+		~reader_lock()
+		{
+			_this.m_passive_locks++;
+			_this.m_mutex.unlock_shared();
+		}
+	};
 };
 
 // SPU Recompiler instance base class
@@ -130,8 +217,11 @@ public:
 	// Initialize
 	virtual void init() = 0;
 
-	// Compile function
-	virtual spu_function_t compile(std::vector<u32>&&) = 0;
+	// Compile function (may fail)
+	virtual bool compile(u64 last_reset_count, const std::vector<u32>&) = 0;
+
+	// Compile function, handle failure
+	void make_function(const std::vector<u32>&);
 
 	// Default dispatch function fallback (second arg is unused)
 	static void dispatch(spu_thread&, void*, u8* rip);

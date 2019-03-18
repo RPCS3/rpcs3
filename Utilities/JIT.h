@@ -40,7 +40,7 @@ struct jit_runtime final : asmjit::HostRuntime
 namespace asmjit
 {
 	// Should only be used to build global functions
-	::jit_runtime& get_global_runtime();
+	asmjit::JitRuntime& get_global_runtime();
 
 	// Emit xbegin and adjacent loop, return label at xbegin
 	Label build_transaction_enter(X86Assembler& c, Label fallback);

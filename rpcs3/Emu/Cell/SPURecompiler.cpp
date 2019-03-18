@@ -23,6 +23,10 @@ const spu_decoder<spu_iname> s_spu_iname;
 
 extern u64 get_timebased_time();
 
+thread_local DECLARE(spu_runtime::workload){};
+
+thread_local DECLARE(spu_runtime::addrv){u32{0}};
+
 DECLARE(spu_runtime::tr_dispatch) = []
 {
 	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
@@ -149,6 +153,7 @@ void spu_cache::initialize()
 	// Read cache
 	auto func_list = cache->get();
 	atomic_t<std::size_t> fnext{};
+	atomic_t<u8> fail_flag{0};
 
 	// Initialize compiler instances for parallel compilation
 	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
@@ -190,6 +195,9 @@ void spu_cache::initialize()
 
 	for (std::size_t i = 0; i < compilers.size(); i++) thread_queue.emplace_back("Worker " + std::to_string(i), [&, compiler = compilers[i].get()]()
 	{
+		// Register SPU runtime user
+		spu_runtime::passive_lock _passive_lock(compiler->get_runtime());
+
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
@@ -198,7 +206,7 @@ void spu_cache::initialize()
 		{
 			std::vector<u32>& func = func_list[func_i];
 
-			if (Emu.IsStopped())
+			if (Emu.IsStopped() || fail_flag)
 			{
 				g_progr_pdone++;
 				continue;
@@ -222,7 +230,11 @@ void spu_cache::initialize()
 				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
 			}
 
-			compiler->compile(std::move(func));
+			if (!compiler->compile(0, func))
+			{
+				// Likely, out of JIT memory. Signal to prevent further building.
+				fail_flag |= 1;
+			}
 
 			// Clear fake LS
 			for (u32 i = 1, pos = start; i < func2.size(); i++, pos += 4)
@@ -253,6 +265,14 @@ void spu_cache::initialize()
 	if (Emu.IsStopped())
 	{
 		LOG_ERROR(SPU, "SPU Runtime: Cache building aborted.");
+		return;
+	}
+
+	if (fail_flag)
+	{
+		LOG_ERROR(SPU, "SPU Runtime: Cache building failed (too much data). SPU Cache will be disabled.");
+		spu_runtime::passive_lock _passive_lock(compilers[0]->get_runtime());
+		compilers[0]->get_runtime().reset(0);
 		return;
 	}
 
@@ -288,9 +308,18 @@ spu_runtime::spu_runtime()
 	LOG_SUCCESS(SPU, "SPU Recompiler Runtime initialized...");
 }
 
-void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled)
+bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compiled)
 {
-	std::unique_lock lock(m_mutex);
+	writer_lock lock(*this);
+
+	// Check reset count (makes where invalid)
+	if (!_where || last_reset_count != m_reset_count)
+	{
+		return false;
+	}
+
+	// Use opaque pointer
+	auto& where = *static_cast<decltype(m_map)::value_type*>(_where);
 
 	// Function info
 	const std::vector<u32>& func = where.first;
@@ -315,7 +344,12 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 	else
 	{
 		// Allocate some writable executable memory
-		u8* const wxptr = verify(HERE, jit_runtime::alloc(size0 * 20, 16));
+		u8* const wxptr = jit_runtime::alloc(size0 * 20, 16);
+
+		if (!wxptr)
+		{
+			return false;
+		}
 
 		// Raw assembly pointer
 		u8* raw = wxptr;
@@ -547,13 +581,63 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 		g_dispatcher[func[0] / 4] = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
 	}
 
-	lock.unlock();
-	m_cond.notify_all();
+	// Notify in lock destructor
+	lock.notify = true;
+	return true;
 }
 
-spu_function_t spu_runtime::find(const se_t<u32, false>* ls, u32 addr)
+void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
 {
-	std::unique_lock lock(m_mutex);
+	writer_lock lock(*this);
+
+	// Check reset count
+	if (last_reset_count != m_reset_count)
+	{
+		return nullptr;
+	}
+
+	// Try to find existing function, register new one if necessary
+	const auto result = m_map.try_emplace(func, nullptr);
+
+	// Pointer to the value in the map (pair)
+	const auto fn_location = &*result.first;
+
+	if (fn_location->second)
+	{
+		// Already compiled
+		return g_dispatcher;
+	}
+	else if (!result.second)
+	{
+		// Wait if already in progress
+		while (!fn_location->second)
+		{
+			m_cond.wait(m_mutex);
+
+			// If reset count changed, fn_location is invalidated; also requires return
+			if (last_reset_count != m_reset_count)
+			{
+				return nullptr;
+			}
+		}
+
+		return g_dispatcher;
+	}
+
+	// Return location to compile and use in add()
+	return fn_location;
+}
+
+spu_function_t spu_runtime::find(const se_t<u32, false>* ls, u32 addr) const
+{
+	const u64 reset_count = m_reset_count;
+
+	reader_lock lock(*this);
+
+	if (reset_count != m_reset_count)
+	{
+		return nullptr;
+	}
 
 	const u32 start = addr * (g_cfg.core.spu_block_size != spu_block_size_type::giga);
 
@@ -591,6 +675,11 @@ spu_function_t spu_runtime::make_branch_patchpoint(u32 target) const
 {
 	u8* const raw = jit_runtime::alloc(16, 16);
 
+	if (!raw)
+	{
+		return nullptr;
+	}
+
 	// Save address of the following jmp
 #ifdef _WIN32
 	raw[0] = 0x4c; // lea r8, [rip+1]
@@ -621,13 +710,50 @@ spu_function_t spu_runtime::make_branch_patchpoint(u32 target) const
 	return reinterpret_cast<spu_function_t>(raw);
 }
 
-void spu_runtime::handle_return(cpu_thread* _thr)
+u64 spu_runtime::reset(std::size_t last_reset_count)
+{
+	writer_lock lock(*this);
+
+	if (last_reset_count != m_reset_count || !m_reset_count.compare_and_swap_test(last_reset_count, last_reset_count + 1))
+	{
+		// Probably already reset
+		return m_reset_count;
+	}
+
+	// Notify SPU threads
+	idm::select<named_thread<spu_thread>>([](u32, cpu_thread& cpu)
+	{
+		if (!cpu.state.test_and_set(cpu_flag::jit_return))
+		{
+			cpu.notify();
+		}
+	});
+
+	// Reset function map (may take some time)
+	m_map.clear();
+
+	// Wait for threads to catch on jit_return flag
+	while (m_passive_locks)
+	{
+		busy_wait();
+	}
+
+	// Reinitialize (TODO)
+	jit_runtime::finalize();
+	jit_runtime::initialize();
+	return ++m_reset_count;
+}
+
+void spu_runtime::handle_return(spu_thread* _spu)
 {
 	// Wait until the runtime becomes available
-	//writer_lock lock(*this);
+	writer_lock lock(*this);
 
-	// Simply reset the flag
-	_thr->state -= cpu_flag::jit_return;
+	// Reset stack mirror
+	std::memset(_spu->stack_mirror.data(), 0xff, sizeof(spu_thread::stack_mirror));
+
+	// Reset the flag
+	_spu->state -= cpu_flag::jit_return;
 }
 
 spu_recompiler_base::spu_recompiler_base()
@@ -636,6 +762,19 @@ spu_recompiler_base::spu_recompiler_base()
 
 spu_recompiler_base::~spu_recompiler_base()
 {
+}
+
+void spu_recompiler_base::make_function(const std::vector<u32>& data)
+{
+	for (u64 reset_count = m_spurt->get_reset_count();;)
+	{
+		if (LIKELY(compile(reset_count, data)))
+		{
+			break;
+		}
+
+		reset_count = m_spurt->reset(reset_count);
+	}
 }
 
 void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
@@ -669,7 +808,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	}
 
 	// Compile
-	verify(HERE), spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), spu.pc));
+	spu.jit->make_function(spu.jit->block(spu._ptr<u32>(0), spu.pc));
 
 	// Diagnostic
 	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
@@ -2097,11 +2236,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 			// Generate a patchpoint for fixed location
 			const auto cblock = m_ir->GetInsertBlock();
+			const auto ppptr  = m_spurt->make_branch_patchpoint(target);
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
 			m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc));
 			const auto type = llvm::FunctionType::get(get_type<void>(), {get_type<u8*>(), get_type<u8*>(), get_type<u32>()}, false)->getPointerTo();
-			tail(m_ir->CreateIntToPtr(m_ir->getInt64((u64)m_spurt->make_branch_patchpoint(target)), type));
+			tail(m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(ppptr ? ppptr : &spu_recompiler_base::dispatch)), type));
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
@@ -2652,35 +2792,19 @@ public:
 		}
 	}
 
-	virtual spu_function_t compile(std::vector<u32>&& func_rv) override
+	virtual bool compile(u64 last_reset_count, const std::vector<u32>& func) override
 	{
-		init();
+		const auto fn_location = m_spurt->find(last_reset_count, func);
 
-		// Don't lock without shared runtime
-		std::unique_lock lock(m_spurt->m_mutex);
-
-		// Try to find existing function, register new one if necessary
-		const auto fn_info = m_spurt->m_map.emplace(std::move(func_rv), nullptr);
-
-		auto& fn_location = fn_info.first->second;
-
-		if (!fn_location && !fn_info.second)
+		if (fn_location == spu_runtime::g_dispatcher)
 		{
-			// Wait if already in progress
-			while (!fn_location)
-			{
-				m_spurt->m_cond.wait(lock);
-			}
+			return true;
 		}
 
-		if (fn_location)
+		if (!fn_location)
 		{
-			return fn_location;
+			return false;
 		}
-
-		auto& func = fn_info.first->first;
-
-		lock.unlock();
 
 		std::string hash;
 		{
@@ -2744,12 +2868,7 @@ public:
 
 			log += '\n';
 			this->dump(log);
-			fs::file(m_spurt->m_cache_path + "spu.log", fs::write + fs::append).write(log);
-		}
-
-		if (m_cache && g_cfg.core.spu_cache)
-		{
-			m_cache->add(func);
+			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
 
 		using namespace llvm;
@@ -3181,7 +3300,7 @@ public:
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file(m_spurt->m_cache_path + "spu.log", fs::write + fs::append).write(log);
+				fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 			}
 
 			fmt::raw_error("Compilation failed");
@@ -3190,7 +3309,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			// Testing only
-			m_jit.add(std::move(module), m_spurt->m_cache_path + "llvm/");
+			m_jit.add(std::move(module), m_spurt->get_cache_path() + "llvm/");
 		}
 		else
 		{
@@ -3202,15 +3321,23 @@ public:
 		// Register function pointer
 		const spu_function_t fn = reinterpret_cast<spu_function_t>(m_jit.get_engine().getPointerToFunction(main_func));
 
-		m_spurt->add(*fn_info.first, fn);
+		if (!m_spurt->add(last_reset_count, fn_location, fn))
+		{
+			return false;
+		}
 
 		if (g_cfg.core.spu_debug)
 		{
 			out.flush();
-			fs::file(m_spurt->m_cache_path + "spu.log", fs::write + fs::append).write(log);
+			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
 
-		return fn;
+		if (m_cache && g_cfg.core.spu_cache)
+		{
+			m_cache->add(func);
+		}
+
+		return true;
 	}
 
 	static bool exec_check_state(spu_thread* _spu)

@@ -64,6 +64,8 @@ static u8* add_jit_memory(std::size_t size, uint align)
 
 		if (UNLIKELY(_new > 0x40000000))
 		{
+			// Sorry, we failed, and further attempts should fail too.
+			ctr = 0x40000000;
 			return -1;
 		}
 
@@ -77,7 +79,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 
 	if (UNLIKELY(pos == -1))
 	{
-		LOG_FATAL(GENERAL, "JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
+		LOG_WARNING(GENERAL, "JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
 		return nullptr;
 	}
 
@@ -181,10 +183,10 @@ void jit_runtime::finalize() noexcept
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
 }
 
-::jit_runtime& asmjit::get_global_runtime()
+asmjit::JitRuntime& asmjit::get_global_runtime()
 {
 	// Magic static
-	static ::jit_runtime g_rt;
+	static asmjit::JitRuntime g_rt;
 	return g_rt;
 }
 
