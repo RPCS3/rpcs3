@@ -36,7 +36,7 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> managed_texture = nullptr;
 
 		//DMA relevant data
-		VkFence dma_fence = VK_NULL_HANDLE;
+		VkEvent dma_fence = VK_NULL_HANDLE;
 		vk::render_device* m_device = nullptr;
 		vk::viewable_image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
@@ -66,11 +66,21 @@ namespace vk
 				managed_texture.reset(vram_texture);
 			}
 
-			//Even if we are managing the same vram section, we cannot guarantee contents are static
-			//The create method is only invoked when a new managed session is required
-			synchronized = false;
-			flushed = false;
-			sync_timestamp = 0ull;
+			if (synchronized)
+			{
+				// Even if we are managing the same vram section, we cannot guarantee contents are static
+				// The create method is only invoked when a new managed session is required
+				if (!flushed)
+				{
+					// Reset fence
+					verify(HERE), m_device, dma_buffer, dma_fence != VK_NULL_HANDLE;
+					vkResetEvent(*m_device, dma_fence);
+				}
+
+				synchronized = false;
+				flushed = false;
+				sync_timestamp = 0ull;
+			}
 
 			// Notify baseclass
 			baseclass::on_section_resources_created();
@@ -82,9 +92,9 @@ namespace vk
 			{
 				dma_buffer.reset();
 
-				if (dma_fence != nullptr)
+				if (dma_fence != VK_NULL_HANDLE)
 				{
-					vkDestroyFence(*m_device, dma_fence, nullptr);
+					vkDestroyEvent(*m_device, dma_fence, nullptr);
 					dma_fence = VK_NULL_HANDLE;
 				}
 			}
@@ -148,13 +158,17 @@ namespace vk
 			return flushed;
 		}
 
-		void copy_texture(vk::command_buffer& cmd, bool manage_cb_lifetime, VkQueue submit_queue)
+		void copy_texture(vk::command_buffer& cmd, bool miss)
 		{
 			ASSERT(exists());
 
-			if (!manage_cb_lifetime)
+			if (LIKELY(!miss))
 			{
 				baseclass::on_speculative_flush();
+			}
+			else
+			{
+				baseclass::on_miss();
 			}
 
 			if (m_device == nullptr)
@@ -164,20 +178,15 @@ namespace vk
 
 			if (dma_fence == VK_NULL_HANDLE)
 			{
-				VkFenceCreateInfo createInfo = {};
-				createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				vkCreateFence(*m_device, &createInfo, nullptr, &dma_fence);
+				VkEventCreateInfo createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+				vkCreateEvent(*m_device, &createInfo, nullptr, &dma_fence);
 			}
 
 			if (dma_buffer.get() == nullptr)
 			{
 				auto memory_type = m_device->get_memory_mapping().host_visible_coherent;
 				dma_buffer.reset(new vk::buffer(*m_device, align(get_section_size(), 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
-			}
-
-			if (manage_cb_lifetime)
-			{
-				cmd.begin();
 			}
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
@@ -226,8 +235,8 @@ namespace vk
 					const auto filter = (aspect_flag == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
 
 					vk::copy_scaled_image(cmd, vram_texture->value, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target->current_layout,
-						0, 0, vram_texture->width(), vram_texture->height(), 0, 0, transfer_width, transfer_height, 1, aspect_flag, true, filter,
-						vram_texture->info.format, target->info.format);
+						{ 0, 0, (s32)vram_texture->width(), (s32)vram_texture->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
+						1, aspect_flag, true, filter, vram_texture->info.format, target->info.format);
 				}
 			}
 
@@ -295,19 +304,19 @@ namespace vk
 				vkCmdCopyBuffer(cmd, mem_target->value, dma_buffer->value, 1, &copy);
 			}
 
-			if (manage_cb_lifetime)
+			if (LIKELY(!miss))
 			{
-				cmd.end();
-				cmd.submit(submit_queue, {}, dma_fence, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-
-				//Now we need to restart the command-buffer to restore it to the way it was before...
-				vk::wait_for_fence(dma_fence);
-				vk::reset_fence(&dma_fence);
-				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
-
-				if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
-					cmd.begin();
+				// If this is speculated, it should only occur once
+				verify(HERE), vkGetEventStatus(*m_device, dma_fence) == VK_EVENT_RESET;
 			}
+			else
+			{
+				// This is the only acceptable situation where a sync can occur twice, due to flush_always being set
+				vkResetEvent(*m_device, dma_fence);
+			}
+
+			cmd.set_flag(vk::command_buffer::cb_has_dma_transfer);
+			vkCmdSetEvent(cmd, dma_fence, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 			synchronized = true;
 			sync_timestamp = get_system_time();
@@ -316,22 +325,13 @@ namespace vk
 		/**
 		 * Flush
 		 */
-		void synchronize(bool blocking, vk::command_buffer& cmd, VkQueue submit_queue)
-		{
-			if (synchronized)
-				return;
-
-			if (m_device == nullptr)
-			{
-				m_device = &cmd.get_command_pool().get_owner();
-			}
-
-			copy_texture(cmd, blocking, submit_queue);
-		}
-
 		void* map_synchronized(u32 offset, u32 size)
 		{
 			AUDIT(synchronized);
+
+			// Synchronize, reset dma_fence after waiting
+			vk::wait_for_event(dma_fence, GENERAL_WAIT_TIMEOUT);
+			vkResetEvent(*m_device, dma_fence);
 
 			return dma_buffer->map(offset, size);
 		}
@@ -536,7 +536,7 @@ namespace vk
 				{
 					verify(HERE), section.dst_z == 0;
 
-					u32 dst_x = section.dst_x, dst_y = section.dst_y;
+					u16 dst_x = section.dst_x, dst_y = section.dst_y;
 					vk::image* _dst;
 
 					if (LIKELY(section.src->info.format == dst->info.format))
@@ -552,8 +552,8 @@ namespace vk
 					if (section.xform == surface_transform::identity)
 					{
 						vk::copy_scaled_image(cmd, section.src->value, _dst->value, section.src->current_layout, _dst->current_layout,
-							section.src_x, section.src_y, section.src_w, section.src_h,
-							section.dst_x, section.dst_y, section.dst_w, section.dst_h,
+							coordi{ { section.src_x, section.src_y }, { section.src_w, section.src_h } },
+							coordi{ { section.dst_x, section.dst_y }, { section.dst_w, section.dst_h } },
 							1, src_aspect, section.src->info.format == _dst->info.format,
 							VK_FILTER_NEAREST, section.src->info.format, _dst->info.format);
 					}
@@ -593,8 +593,8 @@ namespace vk
 						}
 
 						vk::copy_scaled_image(cmd, tmp->value, _dst->value, tmp->current_layout, _dst->current_layout,
-							0, 0, section.src_w, section.src_h,
-							dst_x, dst_y, section.dst_w, section.dst_h,
+							areai{ 0, 0, (s32)section.src_w, (s32)section.src_h },
+							coordi{ {dst_x, dst_y}, {section.dst_w, section.dst_h} },
 							1, src_aspect, section.src->info.format == _dst->info.format,
 							VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);
 
@@ -1084,6 +1084,44 @@ namespace vk
 			}
 		}
 
+		void prepare_for_dma_transfers(vk::command_buffer& cmd) override
+		{
+			if (!cmd.is_recording())
+			{
+				cmd.begin();
+			}
+		}
+
+		void cleanup_after_dma_transfers(vk::command_buffer& cmd) override
+		{
+			// End recording
+			cmd.end();
+
+			if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
+			{
+				// Primary access command queue, must restart it after
+				VkFence submit_fence;
+				VkFenceCreateInfo info{};
+				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+				vkCreateFence(*m_device, &info, nullptr, &submit_fence);
+
+				cmd.submit(m_submit_queue, {}, submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+
+				vk::wait_for_fence(submit_fence, GENERAL_WAIT_TIMEOUT);
+				vkDestroyFence(*m_device, submit_fence, nullptr);
+
+				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
+				cmd.begin();
+			}
+			else
+			{
+				// Auxilliary command queue with auto-restart capability
+				cmd.submit(m_submit_queue, {}, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			}
+
+			verify(HERE), cmd.flags == 0;
+		}
+
 	public:
 		using baseclass::texture_cache;
 
@@ -1161,12 +1199,6 @@ namespace vk
 			baseclass::on_frame_end();
 		}
 
-		template<typename RsxTextureType>
-		sampled_image_descriptor _upload_texture(vk::command_buffer& cmd, RsxTextureType& tex, rsx::vk_render_targets& m_rtts)
-		{
-			return upload_texture(cmd, tex, m_rtts, const_cast<const VkQueue>(m_submit_queue));
-		}
-
 		vk::image *upload_image_simple(vk::command_buffer& cmd, u32 address, u32 width, u32 height)
 		{
 			if (!m_formats_support.bgra8_linear)
@@ -1223,13 +1255,13 @@ namespace vk
 		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
 		{
 			blitter helper;
-			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper, const_cast<const VkQueue>(m_submit_queue));
+			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper);
 
 			if (reply.succeeded)
 			{
 				if (reply.real_dst_size)
 				{
-					flush_if_cache_miss_likely(cmd, reply.to_address_range(), m_submit_queue);
+					flush_if_cache_miss_likely(cmd, reply.to_address_range());
 				}
 
 				return true;

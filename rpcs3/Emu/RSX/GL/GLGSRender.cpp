@@ -1646,9 +1646,8 @@ void GLGSRender::flip(int buffer)
 			{
 				gl::command_context cmd = { gl_state };
 				const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, absolute_address, buffer_width, buffer_height, buffer_pitch);
-				verify(HERE), !overlap_info.empty();
 
-				if (overlap_info.back().surface == render_target_texture)
+				if (!overlap_info.empty() && overlap_info.back().surface == render_target_texture)
 				{
 					// Confirmed to be the newest data source in that range
 					image = render_target_texture->raw_handle();
@@ -1674,11 +1673,11 @@ void GLGSRender::flip(int buffer)
 				}
 			}
 		}
-		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions(absolute_address, buffer_width, buffer_height))
+		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(absolute_address, buffer_width, buffer_height))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
-			image = surface->get_raw_texture()->id();
+			if (const auto tex = surface->get_raw_texture(); tex) image = tex->id();
 		}
 
 		if (!image)

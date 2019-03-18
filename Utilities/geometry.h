@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cmath>
 
@@ -673,6 +673,16 @@ struct area_base
 		return{ x1, y1, x2 - x1, y2 - y1 };
 	}
 
+	constexpr T width() const
+	{
+		return (x1 < x2) ? (x2 - x1) : (x1 - x2);
+	}
+
+	constexpr T height() const
+	{
+		return (y1 < y2) ? (y2 - y1) : (y1 - y2);
+	}
+
 	void flip_vertical()
 	{
 		T _y = y1; y1 = y2; y2 = _y;
@@ -691,6 +701,11 @@ struct area_base
 	constexpr area_base flipped_horizontal() const
 	{
 		return{ x2, y1, x1, y2 };
+	}
+
+	constexpr bool is_flipped() const
+	{
+		return (x1 > x2 || y1 > y2);
 	}
 
 	constexpr bool operator == (const area_base& rhs) const

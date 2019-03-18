@@ -1303,14 +1303,10 @@ namespace rsx
 			return get_context() != texture_upload_context::shader_read && get_memory_read_flags() != memory_read_flags::flush_always;
 		}
 
-		void on_flush(bool miss)
+		void on_flush()
 		{
 			speculatively_flushed = false;
 
-			if (miss)
-			{
-				m_tex_cache->on_miss(*derived());
-			}
 			m_tex_cache->on_flush();
 
 			if (tracked_by_predictor())
@@ -1326,6 +1322,12 @@ namespace rsx
 			speculatively_flushed = true;
 
 			m_tex_cache->on_speculative_flush();
+		}
+
+		void on_miss()
+		{
+			LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
+			m_tex_cache->on_miss(*derived());
 		}
 
 		void touch(u64 tag)
@@ -1397,8 +1399,32 @@ namespace rsx
 			const auto valid_offset = valid_range.start - get_section_base();
 			AUDIT(valid_length > 0);
 
+			// In case of pitch mismatch, match the offset point to the correct point
+			u32 mapped_offset, mapped_length;
+			if (real_pitch != rsx_pitch)
+			{
+				if (LIKELY(!valid_offset))
+				{
+					mapped_offset = 0;
+				}
+				else if (valid_offset)
+				{
+					const u32 offset_in_x = valid_offset % rsx_pitch;
+					const u32 offset_in_y = valid_offset / rsx_pitch;
+					mapped_offset = (offset_in_y * real_pitch) + offset_in_x;
+				}
+
+				const u32 available_vmem = (get_section_size() / rsx_pitch) * real_pitch + std::min<u32>(get_section_size() % rsx_pitch, real_pitch);
+				mapped_length = std::min(available_vmem - mapped_offset, valid_length);
+			}
+			else
+			{
+				mapped_offset = valid_offset;
+				mapped_length = valid_length;
+			}
+
 			// Obtain pointers to the source and destination memory regions
-			u8 *src = static_cast<u8*>(derived()->map_synchronized(valid_offset, valid_length));
+			u8 *src = static_cast<u8*>(derived()->map_synchronized(mapped_offset, mapped_length));
 			u32 dst = valid_range.start;
 			ASSERT(src != nullptr);
 
@@ -1430,11 +1456,9 @@ namespace rsx
 
 	public:
 		// Returns false if there was a cache miss
-		template <typename ...Args>
-		bool flush(Args&&... extras)
+		void flush()
 		{
-			if (flushed) return true;
-			bool miss = false;
+			if (flushed) return;
 
 			// Sanity checks
 			ASSERT(exists());
@@ -1445,19 +1469,12 @@ namespace rsx
 			{
 				flushed = true;
 				flush_exclusions.clear();
-				on_flush(miss);
-				return !miss;
+				on_flush();
+				return;
 			}
 
-			// If we are not synchronized, we must synchronize before proceeding (hard fault)
-			if (!synchronized)
-			{
-				LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
-				derived()->synchronize(true, std::forward<Args>(extras)...);
-				miss = true;
-
-				ASSERT(synchronized); // TODO ruipin: This might be possible in OGL. Revisit
-			}
+			// NOTE: Hard faults should have been pre-processed beforehand
+			ASSERT(synchronized);
 
 			// Copy flush result to guest memory
 			imp_flush();
@@ -1467,9 +1484,7 @@ namespace rsx
 			flushed = true;
 			derived()->finish_flush();
 			flush_exclusions.clear();
-			on_flush(miss);
-
-			return !miss;
+			on_flush();
 		}
 
 		void add_flush_exclusion(const address_range& rng)

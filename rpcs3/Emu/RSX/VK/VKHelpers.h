@@ -155,8 +155,8 @@ namespace vk
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
-			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps,
-			VkImageAspectFlags aspect, bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats,
+			VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
@@ -181,6 +181,7 @@ namespace vk
 	// Fence reset with driver workarounds in place
 	void reset_fence(VkFence *pFence);
 	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
+	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
@@ -1167,6 +1168,14 @@ namespace vk
 		}
 		access_hint = flush_only;
 
+		enum command_buffer_data_flag : u32
+		{
+			cb_has_occlusion_task = 1,
+			cb_has_blit_transfer = 2,
+			cb_has_dma_transfer = 4
+		};
+		u32 flags = 0;
+
 	public:
 		command_buffer() {}
 		~command_buffer() {}
@@ -1203,6 +1212,16 @@ namespace vk
 		vk::command_pool& get_command_pool() const
 		{
 			return *pool;
+		}
+
+		void clear_flags()
+		{
+			flags = 0;
+		}
+
+		void set_flag(command_buffer_data_flag flag)
+		{
+			flags |= flag;
 		}
 
 		operator VkCommandBuffer() const
@@ -1277,6 +1296,8 @@ namespace vk
 			acquire_global_submit_lock();
 			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
 			release_global_submit_lock();
+
+			clear_flags();
 		}
 	};
 

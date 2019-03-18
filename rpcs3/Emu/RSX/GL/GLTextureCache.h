@@ -61,7 +61,6 @@ namespace gl
 
 		texture::format format = texture::format::rgba;
 		texture::type type = texture::type::ubyte;
-		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
 
 		u8 get_pixel_size(texture::format fmt_, texture::type type_)
 		{
@@ -157,7 +156,7 @@ namespace gl
 		using baseclass::cached_texture_section;
 
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, gl::texture* image, u32 rsx_pitch, bool read_only,
-				gl::texture::format gl_format, gl::texture::type gl_type, bool swap_bytes)
+				gl::texture::format gl_format = gl::texture::format::rgba, gl::texture::type gl_type = gl::texture::type::ubyte, bool swap_bytes = false)
 		{
 			auto new_texture = static_cast<gl::viewable_image*>(image);
 			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
@@ -166,11 +165,9 @@ namespace gl
 			if (read_only)
 			{
 				managed_texture.reset(vram_texture);
-				aa_mode = rsx::surface_antialiasing::center_1_sample;
 			}
 			else
 			{
-				aa_mode = static_cast<gl::render_target*>(image)->read_aa_mode;
 				ASSERT(managed_texture.get() == nullptr);
 			}
 
@@ -188,28 +185,6 @@ namespace gl
 			this->mipmaps = mipmaps;
 
 			set_format(gl_format, gl_type, swap_bytes);
-
-			// Notify baseclass
-			baseclass::on_section_resources_created();
-		}
-
-		void create_read_only(gl::viewable_image* image, u32 width, u32 height, u32 depth, u32 mipmaps, u16 pitch)
-		{
-			ASSERT(!exists() || !is_managed() || vram_texture == image);
-
-			verify(HERE), pitch;
-
-			//Only to be used for ro memory, we dont care about most members, just dimensions and the vram texture handle
-			this->width = width;
-			this->height = height;
-			this->depth = depth;
-			this->mipmaps = mipmaps;
-
-			managed_texture.reset(image);
-			vram_texture = image;
-
-			rsx_pitch = pitch;
-			real_pitch = 0;
 
 			// Notify baseclass
 			baseclass::on_section_resources_created();
@@ -242,13 +217,17 @@ namespace gl
 			}
 		}
 
-		void copy_texture(gl::command_context& cmd, bool manage_lifetime)
+		void copy_texture(gl::command_context& cmd, bool miss)
 		{
 			ASSERT(exists());
 
-			if (!manage_lifetime)
+			if (LIKELY(!miss))
 			{
 				baseclass::on_speculative_flush();
+			}
+			else
+			{
+				baseclass::on_miss();
 			}
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
@@ -264,17 +243,20 @@ namespace gl
 				u32 real_width = width;
 				u32 real_height = height;
 
-				switch (aa_mode)
+				if (context == rsx::texture_upload_context::framebuffer_storage)
 				{
-				case rsx::surface_antialiasing::center_1_sample:
-					break;
-				case rsx::surface_antialiasing::diagonal_centered_2_samples:
-					real_width *= 2;
-					break;
-				default:
-					real_width *= 2;
-					real_height *= 2;
-					break;
+					switch (static_cast<gl::render_target*>(vram_texture)->read_aa_mode)
+					{
+					case rsx::surface_antialiasing::center_1_sample:
+						break;
+					case rsx::surface_antialiasing::diagonal_centered_2_samples:
+						real_width *= 2;
+						break;
+					default:
+						real_width *= 2;
+						real_height *= 2;
+						break;
+					}
 				}
 
 				areai src_area = { 0, 0, 0, 0 };
@@ -369,24 +351,13 @@ namespace gl
 		/**
 		 * Flush
 		 */
-		void synchronize(bool blocking, gl::command_context& cmd)
-		{
-			if (synchronized)
-				return;
-
-			verify(HERE), cmd.drv;
-			copy_texture(cmd, blocking);
-
-			if (blocking)
-			{
-				m_fence.wait_for_signal();
-			}
-		}
-
 		void* map_synchronized(u32 offset, u32 size)
 		{
-			AUDIT(synchronized);
+			AUDIT(synchronized && !m_fence.is_empty());
 
+			m_fence.wait_for_signal();
+
+			verify(HERE), (offset + size) <= pbo_size;
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
 			return glMapBufferRange(GL_PIXEL_PACK_BUFFER, offset, size, GL_MAP_READ_BIT);
 		}
@@ -666,7 +637,7 @@ namespace gl
 				if (src)
 				{
 					//Format mismatch
-					err_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
+					warn_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
 				}
 
 				//Apply base component map onto the new texture if a data cast has been done
@@ -893,7 +864,7 @@ namespace gl
 			cached.set_image_type(type);
 			cached.set_gcm_format(gcm_format);
 
-			cached.create_read_only(image, width, height, depth, mipmaps, pitch);
+			cached.create(width, height, depth, mipmaps, image, pitch, true);
 			cached.set_dirty(false);
 
 			if (context != rsx::texture_upload_context::blit_engine_dst)
@@ -1015,6 +986,12 @@ namespace gl
 						ifmt == gl::texture::internal_format::depth);
 			}
 		}
+
+		void prepare_for_dma_transfers(gl::command_context&) override
+		{}
+
+		void cleanup_after_dma_transfers(gl::command_context&) override
+		{}
 
 	public:
 
