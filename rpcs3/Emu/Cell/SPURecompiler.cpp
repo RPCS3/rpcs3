@@ -551,6 +551,42 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 	m_cond.notify_all();
 }
 
+spu_function_t spu_runtime::find(const se_t<u32, false>* ls, u32 addr)
+{
+	std::unique_lock lock(m_mutex);
+
+	const u32 start = addr * (g_cfg.core.spu_block_size != spu_block_size_type::giga);
+
+	addrv[0] = addr;
+	const auto beg = m_map.lower_bound(addrv);
+	addrv[0] += 4;
+	const auto _end = m_map.lower_bound(addrv);
+
+	for (auto it = beg; it != _end; ++it)
+	{
+		bool bad = false;
+
+		for (u32 i = 1; i < it->first.size(); ++i)
+		{
+			const u32 x = it->first[i];
+			const u32 y = ls[start / 4 + i - 1];
+
+			if (x && x != y)
+			{
+				bad = true;
+				break;
+			}
+		}
+
+		if (!bad)
+		{
+			return it->second;
+		}
+	}
+
+	return nullptr;
+}
+
 spu_function_t spu_runtime::make_branch_patchpoint(u32 target) const
 {
 	u8* const raw = jit_runtime::alloc(16, 16);
@@ -649,8 +685,13 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
-	// Compile (TODO: optimize search of the existing functions)
-	const auto func = verify(HERE, spu.jit->compile(spu.jit->block(spu._ptr<u32>(0), *(u16*)(rip + 6) * 4)));
+	// Find function
+	const auto func = spu.jit->get_runtime().find(spu._ptr<se_t<u32, false>>(0), *(u16*)(rip + 6) * 4);
+
+	if (!func)
+	{
+		return;
+	}
 
 	// Overwrite jump to this function with jump to the compiled function
 	const s64 rel = reinterpret_cast<u64>(func) - reinterpret_cast<u64>(rip) - 5;

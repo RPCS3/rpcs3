@@ -76,6 +76,9 @@ public:
 	// Add compiled function and generate trampoline if necessary
 	void add(std::pair<const std::vector<u32>, spu_function_t>& where, spu_function_t compiled);
 
+	// Find existing function
+	spu_function_t find(const se_t<u32, false>* ls, u32 addr);
+
 	// Generate a patchable trampoline to spu_recompiler_base::branch
 	spu_function_t make_branch_patchpoint(u32 target) const;
 
