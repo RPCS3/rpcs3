@@ -503,6 +503,59 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 	{
 		return false;
 	}
+
+	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	{
+	}
+
+	void deregisterEHFrames() override
+	{
+	}
+};
+
+// Simple memory manager. I promise there will be no MemoryManager4.
+struct MemoryManager3 : llvm::RTDyldMemoryManager
+{
+	std::vector<std::pair<u8*, std::size_t>> allocs;
+
+	MemoryManager3() = default;
+
+	~MemoryManager3() override
+	{
+		for (auto& a : allocs)
+		{
+			utils::memory_release(a.first, a.second);
+		}
+	}
+
+	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	{
+		u8* r = static_cast<u8*>(utils::memory_reserve(size));
+		utils::memory_commit(r, size, utils::protection::wx);
+		allocs.emplace_back(r, size);
+		return r;
+	}
+
+	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	{
+		u8* r = static_cast<u8*>(utils::memory_reserve(size));
+		utils::memory_commit(r, size);
+		allocs.emplace_back(r, size);
+		return r;
+	}
+
+	bool finalizeMemory(std::string* = nullptr) override
+	{
+		return false;
+	}
+
+	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	{
+	}
+
+	void deregisterEHFrames() override
+	{
+	}
 };
 
 // Helper class
@@ -655,7 +708,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 	return m_cpu;
 }
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, bool large)
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
 	: m_link(_link)
 	, m_cpu(cpu(_cpu))
 {
@@ -663,13 +716,24 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 
 	if (m_link.empty())
 	{
+		std::unique_ptr<llvm::RTDyldMemoryManager> mem;
+
+		if (flags & 0x1)
+		{
+			mem = std::make_unique<MemoryManager3>();
+		}
+		else
+		{
+			mem = std::make_unique<MemoryManager2>();
+		}
+
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
-			.setMCJITMemoryManager(std::make_unique<MemoryManager2>())
+			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
+			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
 	}
@@ -684,7 +748,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
+			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
 

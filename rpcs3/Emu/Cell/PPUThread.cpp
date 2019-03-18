@@ -1564,7 +1564,7 @@ extern void ppu_initialize(const ppu_module& info)
 					LOG_WARNING(PPU, "LLVM: Compiling module %s%s", cache_path, obj_name);
 
 					// Use another JIT instance
-					jit_compiler jit2({}, g_cfg.core.llvm_cpu);
+					jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
 					ppu_initialize2(jit2, part, cache_path, obj_name);
 				}
 
