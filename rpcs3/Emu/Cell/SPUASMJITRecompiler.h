@@ -8,8 +8,6 @@
 // SPU ASMJIT Recompiler
 class spu_recompiler : public spu_recompiler_base
 {
-	std::shared_ptr<spu_runtime> m_spurt;
-
 public:
 	spu_recompiler();
 

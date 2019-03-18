@@ -582,6 +582,15 @@ spu_function_t spu_runtime::make_branch_patchpoint(u32 target) const
 	return reinterpret_cast<spu_function_t>(raw);
 }
 
+void spu_runtime::handle_return(cpu_thread* _thr)
+{
+	// Wait until the runtime becomes available
+	//writer_lock lock(*this);
+
+	// Simply reset the flag
+	_thr->state -= cpu_flag::jit_return;
+}
+
 spu_recompiler_base::spu_recompiler_base()
 {
 }
@@ -1874,9 +1883,6 @@ void spu_recompiler_base::dump(std::string& out)
 
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 {
-	// SPU Runtime Instance
-	std::shared_ptr<spu_runtime> m_spurt;
-
 	// JIT Instance
 	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu)};
 

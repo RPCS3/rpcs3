@@ -131,7 +131,7 @@ bool cpu_thread::check_state()
 			state -= cpu_flag::memory;
 		}
 
-		if (state & cpu_flag::exit + cpu_flag::dbg_global_stop)
+		if (state & cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop)
 		{
 			return true;
 		}

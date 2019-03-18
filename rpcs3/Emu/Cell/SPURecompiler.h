@@ -79,6 +79,9 @@ public:
 	// Generate a patchable trampoline to spu_recompiler_base::branch
 	spu_function_t make_branch_patchpoint(u32 target) const;
 
+	// Handle cpu_flag::jit_return
+	void handle_return(cpu_thread* _thr);
+
 	// All dispatchers (array allocated in jit memory)
 	static atomic_t<spu_function_t>* const g_dispatcher;
 };
@@ -87,6 +90,8 @@ public:
 class spu_recompiler_base
 {
 protected:
+	std::shared_ptr<spu_runtime> m_spurt;
+
 	u32 m_pos;
 	u32 m_size;
 
@@ -136,6 +141,17 @@ public:
 
 	// Print analyser internal state
 	void dump(std::string& out);
+
+	// Get SPU Runtime
+	spu_runtime& get_runtime()
+	{
+		if (!m_spurt)
+		{
+			init();
+		}
+
+		return *m_spurt;
+	}
 
 	// Create recompiler instance (ASMJIT)
 	static std::unique_ptr<spu_recompiler_base> make_asmjit_recompiler();

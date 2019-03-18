@@ -13,6 +13,7 @@ enum class cpu_flag : u32
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
 
+	jit_return, // JIT compiler event (forced return)
 	dbg_global_pause, // Emulation paused
 	dbg_global_stop, // Emulation stopped
 	dbg_pause, // Thread paused
@@ -60,7 +61,7 @@ public:
 	// Test stopped state
 	bool is_stopped()
 	{
-		return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::dbg_global_stop));
+		return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop));
 	}
 
 	// Test paused state
