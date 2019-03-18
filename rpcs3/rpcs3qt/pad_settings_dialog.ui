@@ -1502,7 +1502,7 @@
            <item>
             <widget class="QLabel" name="l_description">
              <property name="text">
-              <string>Unfortunately, we currently do not natively support DualShock 3 controllers. You can however use third party tools like SCP Driver Package to allow your DualShock 3 controller to function like an XInput controller. We plan to add additional input methods in the future.</string>
+              <string>To use a DualShock 3 controller on Windows you need a generic driver, like WinUSB. Press the PS button to activate the controller.</string>
              </property>
              <property name="textFormat">
               <enum>Qt::PlainText</enum>
