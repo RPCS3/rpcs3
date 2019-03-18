@@ -87,7 +87,13 @@ endif()
 
 
 # libusb
-add_subdirectory(libusb EXCLUDE_FROM_ALL)
+if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+	# Always use system libusb as reference implementation isn't supported
+	add_library(usb-1.0-static INTERFACE)
+	target_link_libraries(usb-1.0-static INTERFACE usb)
+else()
+	add_subdirectory(libusb EXCLUDE_FROM_ALL)
+endif()
 
 
 # yaml-cpp
