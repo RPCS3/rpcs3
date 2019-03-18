@@ -142,7 +142,7 @@ public:
 			exception, the corresponding element in the target vr is cleared to '0'. In both cases, the '0'
 			has the same sign as the denormalized or underflowing value.
 	*/
-	bool nj = true;
+	bool nj = false;
 
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
