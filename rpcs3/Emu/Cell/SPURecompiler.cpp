@@ -23,6 +23,32 @@ const spu_decoder<spu_iname> s_spu_iname;
 
 extern u64 get_timebased_time();
 
+DECLARE(spu_runtime::tr_dispatch) = []
+{
+	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
+	u8* const trptr = jit_runtime::alloc(16, 16);
+	trptr[0] = 0xf3; // pause
+	trptr[1] = 0x90;
+	trptr[2] = 0xff; // jmp [rip]
+	trptr[3] = 0x25;
+	std::memset(trptr + 4, 0, 4);
+	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::dispatch);
+	std::memcpy(trptr + 8, &target, 8);
+	return reinterpret_cast<spu_function_t>(trptr);
+}();
+
+DECLARE(spu_runtime::tr_branch) = []
+{
+	// Generate a trampoline to spu_recompiler_base::branch
+	u8* const trptr = jit_runtime::alloc(16, 16);
+	trptr[0] = 0xff; // jmp [rip]
+	trptr[1] = 0x25;
+	std::memset(trptr + 2, 0, 4);
+	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::branch);
+	std::memcpy(trptr + 6, &target, 8);
+	return reinterpret_cast<spu_function_t>(trptr);
+}();
+
 DECLARE(spu_runtime::g_dispatcher) = []
 {
 	const auto ptr = reinterpret_cast<decltype(spu_runtime::g_dispatcher)>(jit_runtime::alloc(0x10000 * sizeof(void*), 8, false));
@@ -259,15 +285,6 @@ spu_runtime::spu_runtime()
 
 	workload.reserve(250);
 
-	// Generate a trampoline to spu_recompiler_base::branch
-	u8* const trptr = jit_runtime::alloc(16, 16);
-	trptr[0] = 0xff; // jmp [rip]
-	trptr[1] = 0x25;
-	std::memset(trptr + 2, 0, 4);
-	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::branch);
-	std::memcpy(trptr + 6, &target, 8);
-	tr_branch = reinterpret_cast<spu_function_t>(trptr);
-
 	LOG_SUCCESS(SPU, "SPU Recompiler Runtime initialized...");
 }
 
@@ -307,20 +324,6 @@ void spu_runtime::add(std::pair<const std::vector<u32>, spu_function_t>& where, 
 		auto make_jump = [&](u8 op, auto target)
 		{
 			verify("Asm overflow" HERE), raw + 6 <= wxptr + size0 * 20;
-
-			if (!target && !tr_dispatch)
-			{
-				// Generate a special trampoline with pause instruction
-				u8* const trptr = jit_runtime::alloc(16, 16);
-				trptr[0] = 0xf3; // pause
-				trptr[1] = 0x90;
-				trptr[2] = 0xff; // jmp [rip]
-				trptr[3] = 0x25;
-				std::memset(trptr + 4, 0, 4);
-				const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::dispatch);
-				std::memcpy(trptr + 8, &target, 8);
-				tr_dispatch = reinterpret_cast<spu_function_t>(trptr);
-			}
 
 			// Fallback to dispatch if no target
 			const u64 taddr = target ? reinterpret_cast<u64>(target) : reinterpret_cast<u64>(tr_dispatch);

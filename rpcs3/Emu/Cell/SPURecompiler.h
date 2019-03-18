@@ -65,10 +65,10 @@ private:
 	std::vector<u32> addrv{u32{0}};
 
 	// Trampoline to spu_recompiler_base::dispatch
-	spu_function_t tr_dispatch = nullptr;
+	static const spu_function_t tr_dispatch;
 
 	// Trampoline to spu_recompiler_base::branch
-	spu_function_t tr_branch = nullptr;
+	static const spu_function_t tr_branch;
 
 public:
 	spu_runtime();
