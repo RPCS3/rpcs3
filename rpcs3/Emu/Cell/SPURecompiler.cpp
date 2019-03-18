@@ -2714,7 +2714,8 @@ public:
 		m_ir = &irb;
 
 		// Add entry function (contains only state/code check)
-		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_type<void>(), get_type<u8*>(), get_type<u8*>()));
+		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_type<void>(), get_type<u8*>(), get_type<u8*>(), get_type<u8*>()));
+		const auto main_arg2 = &*(main_func->arg_begin() + 2);
 		set_function(main_func);
 
 		// Start compilation
@@ -2840,7 +2841,7 @@ public:
 		{
 			const auto pbfail = spu_ptr<u64>(&spu_thread::block_failure);
 			m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
-			tail(&spu_recompiler_base::dispatch, m_thread, m_ir->getInt32(0), m_ir->getInt32(0));
+			tail(&spu_recompiler_base::dispatch, m_thread, m_ir->getInt32(0), main_arg2);
 		}
 		else
 		{
