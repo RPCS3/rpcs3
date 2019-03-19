@@ -443,7 +443,7 @@ std::string ppu_thread::dump() const
 	for (uint i = 0; i < 32; ++i) fmt::append(ret, "FPR[%d] = %.6G\n", i, fpr[i]);
 	for (uint i = 0; i < 32; ++i) fmt::append(ret, "VR[%d] = %s [x: %g y: %g z: %g w: %g]\n", i, vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
 
-	fmt::append(ret, "CR = 0x%08x\n", cr_pack());
+	fmt::append(ret, "CR = 0x%08x\n", cr.pack());
 	fmt::append(ret, "LR = 0x%llx\n", lr);
 	fmt::append(ret, "CTR = 0x%llx\n", ctr);
 	fmt::append(ret, "VRSAVE = 0x%08x\n", vrsave);
