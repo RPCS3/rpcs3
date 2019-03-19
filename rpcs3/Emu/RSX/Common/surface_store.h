@@ -935,9 +935,17 @@ namespace rsx
 						const auto int_required_width = required_width / scale_x;
 						const auto int_required_height = required_height / scale_y;
 
-						auto offset = texaddr - this_address;
+						const auto offset = texaddr - this_address;
 						info.src_y = (offset / required_pitch) / scale_y;
 						info.src_x = (offset % required_pitch) / surface_info.bpp / scale_x;
+
+						if (UNLIKELY(info.src_x >= surface_info.surface_width || info.src_y >= surface_info.surface_height))
+						{
+							// Region lies outside the actual texture area, but inside the 'tile'
+							// In this case, a small region lies to the top-left corner, partially occupying the  target
+							continue;
+						}
+
 						info.dst_x = 0;
 						info.dst_y = 0;
 						info.width = std::min<u32>(int_required_width, surface_info.surface_width - info.src_x);
@@ -949,11 +957,18 @@ namespace rsx
 						const auto int_surface_width = surface_info.surface_width * scale_x;
 						const auto int_surface_height = surface_info.surface_height * scale_y;
 
-						auto offset = this_address - texaddr;
-						info.src_x = 0;
-						info.src_y = 0;
+						const auto offset = this_address - texaddr;
 						info.dst_y = (offset / required_pitch);
 						info.dst_x = (offset % required_pitch) / surface_info.bpp;
+
+						if (UNLIKELY(info.dst_x >= int_surface_width || info.dst_y >= int_surface_height))
+						{
+							// False positive
+							continue;
+						}
+
+						info.src_x = 0;
+						info.src_y = 0;
 						info.width = std::min<u32>(int_surface_width, required_width - info.dst_x);
 						info.height = std::min<u32>(int_surface_height, required_height - info.dst_y);
 						info.is_clipped = (info.width < required_width || info.height < required_height);
