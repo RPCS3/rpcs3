@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
@@ -212,6 +212,12 @@ struct lv2_obj
 		}
 		}
 	}
+
+	// Last time a thread was released
+	static atomic_t<u64> g_last_sleep;
+
+	// Forcefully put running threads to sleep, reschedule
+	static void release_all();
 
 private:
 	// Scheduler mutex

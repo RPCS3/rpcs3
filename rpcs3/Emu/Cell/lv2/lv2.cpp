@@ -34,6 +34,8 @@
 #include "sys_ss.h"
 #include "sys_gpio.h"
 
+#include <thread>
+
 extern std::string ppu_get_syscall_name(u64 code);
 
 template <>
@@ -1001,6 +1003,7 @@ DECLARE(lv2_obj::g_mutex);
 DECLARE(lv2_obj::g_ppu);
 DECLARE(lv2_obj::g_pending);
 DECLARE(lv2_obj::g_waiting);
+DECLARE(lv2_obj::g_last_sleep);
 
 void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 {
@@ -1034,6 +1037,7 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 		unqueue(g_pending, ppu);
 
 		ppu->start_time = start_time;
+		g_last_sleep.release(start_time);
 	}
 
 	if (timeout)
@@ -1150,6 +1154,37 @@ void lv2_obj::cleanup()
 	g_ppu.clear();
 	g_pending.clear();
 	g_waiting.clear();
+}
+
+void lv2_obj::release_all()
+{
+	std::unique_lock lock(g_mutex);
+
+	const u64 current = get_system_time();
+
+	if (g_ppu.size() <= g_cfg.core.ppu_threads)
+	{
+		// Nothing to do
+		g_last_sleep.release(current);
+		return;
+	}
+
+	// Suspend threads if necessary
+	for (std::size_t i = 0; i < g_ppu.size(); i++)
+	{
+		auto target = g_ppu[i];
+
+		if (!target->state.test_and_set(cpu_flag::suspend))
+		{
+			// Find and remove the thread
+			g_ppu.erase(g_ppu.begin() + i);
+			unqueue(g_pending, target);
+			i--;
+		}
+	}
+
+	g_last_sleep.release(current);
+	schedule_all();
 }
 
 void lv2_obj::schedule_all()

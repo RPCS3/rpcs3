@@ -13,6 +13,7 @@
 #include "rsx_methods.h"
 #include "rsx_utils.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 
 #include "Utilities/GSL.h"
@@ -449,13 +450,16 @@ namespace rsx
 		thread_ctrl::spawn("VBlank Thread", [this]()
 		{
 			const u64 start_time = get_system_time();
+			u64 last_check = 0;
 
 			vblank_count = 0;
 
 			// TODO: exit condition
 			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
 			{
-				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
+				last_check = get_system_time();
+
+				if (last_check - start_time > vblank_count * 1000000 / 60)
 				{
 					vblank_count++;
 					sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
@@ -469,6 +473,11 @@ namespace rsx
 						});
 
 						thread_ctrl::notify(*intr_thread);
+					}
+
+					if ((s64)last_check - (s64)::lv2_obj::g_last_sleep.load() > 32)
+					{
+						lv2_obj::release_all();
 					}
 
 					continue;
