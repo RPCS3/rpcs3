@@ -613,8 +613,8 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 		return;
 	}
 
-	auto src_bpp = src_texture->get_native_pitch() / src_texture->width();
-	auto dst_bpp = get_native_pitch() / width();
+	auto src_bpp = src_texture->get_native_pitch() / src_texture->get_surface_width();
+	auto dst_bpp = get_native_pitch() / get_surface_width();
 	rsx::typeless_xfer typeless_info{};
 
 	const bool dst_is_depth = is_depth(get_internal_format());
