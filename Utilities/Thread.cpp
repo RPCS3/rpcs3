@@ -29,7 +29,9 @@
 #endif
 #include <errno.h>
 #include <signal.h>
+#ifndef __OpenBSD__
 #include <ucontext.h>
+#endif
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -802,7 +804,7 @@ register_t* freebsd_x64reg(x64_context *context, int reg)
 
 long* openbsd_x64reg(x64_context *context, int reg)
 {
-	auto *state = &context->uc_mcontext;
+	auto *state = &context;
 	switch(reg)
 	{
 	case 0: return &state->sc_rax;
