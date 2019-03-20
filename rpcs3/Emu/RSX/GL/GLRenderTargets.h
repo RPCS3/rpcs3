@@ -217,7 +217,7 @@ struct gl_render_target_traits
 		info->native_pitch = surface->get_native_pitch();
 		info->surface_width = surface->get_surface_width();
 		info->surface_height = surface->get_surface_height();
-		info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
+		info->bpp = surface->get_bpp();
 	}
 
 	static void prepare_rtt_for_drawing(void *, gl::render_target *rtt) { rtt->reset_refs(); }

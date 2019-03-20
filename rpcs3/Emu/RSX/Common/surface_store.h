@@ -38,6 +38,16 @@ namespace rsx
 		u16 dst_y = 0;
 		u16 width = 0;
 		u16 height = 0;
+
+		areai get_src_area() const
+		{
+			return coordi{ {src_x, src_y}, {width, height} };
+		}
+
+		areai get_dst_area() const
+		{
+			return coordi{ {dst_x, dst_y}, {width, height} };
+		}
 	};
 
 	struct surface_format_info
@@ -88,6 +98,11 @@ namespace rsx
 		virtual u16 get_rsx_pitch() const = 0;
 		virtual u16 get_native_pitch() const = 0;
 		virtual bool is_depth_surface() const = 0;
+
+		u8 get_bpp() const
+		{
+			return u8(get_native_pitch() / get_surface_width());
+		}
 
 		void save_aa_mode()
 		{
@@ -890,7 +905,7 @@ namespace rsx
 		}
 
 		template <typename commandbuffer_type>
-		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch)
+		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp)
 		{
 			std::vector<surface_overlap_info> result;
 			std::vector<std::pair<u32, bool>> dirty;
@@ -930,16 +945,26 @@ namespace rsx
 					surface_format_info surface_info{};
 					Traits::get_surface_info(surface, &surface_info);
 
-					if (this_address < texaddr)
+					const auto normalized_surface_width = (surface_info.surface_width * scale_x * surface_info.bpp) / required_bpp;
+					const auto normalized_surface_height = surface_info.surface_height * scale_y;
+
+					if (LIKELY(this_address >= texaddr))
 					{
-						const auto int_required_width = required_width / scale_x;
-						const auto int_required_height = required_height / scale_y;
-
+						const auto offset = this_address - texaddr;
+						info.src_x = 0;
+						info.src_y = 0;
+						info.dst_y = (offset / required_pitch);
+						info.dst_x = (offset % required_pitch) / required_bpp;
+						info.width = std::min<u32>(normalized_surface_width, required_width - info.dst_x);
+						info.height = std::min<u32>(normalized_surface_height, required_height - info.dst_y);
+					}
+					else
+					{
 						const auto offset = texaddr - this_address;
-						info.src_y = (offset / required_pitch) / scale_y;
-						info.src_x = (offset % required_pitch) / surface_info.bpp / scale_x;
+						info.src_y = (offset / required_pitch);
+						info.src_x = (offset % required_pitch) / required_bpp;
 
-						if (UNLIKELY(info.src_x >= surface_info.surface_width || info.src_y >= surface_info.surface_height))
+						if (UNLIKELY(info.src_x >= normalized_surface_width || info.src_y >= normalized_surface_height))
 						{
 							// Region lies outside the actual texture area, but inside the 'tile'
 							// In this case, a small region lies to the top-left corner, partially occupying the  target
@@ -948,31 +973,26 @@ namespace rsx
 
 						info.dst_x = 0;
 						info.dst_y = 0;
-						info.width = std::min<u32>(int_required_width, surface_info.surface_width - info.src_x);
-						info.height = std::min<u32>(int_required_height, surface_info.surface_height - info.src_y);
-						info.is_clipped = (info.width < int_required_width || info.height < int_required_height);
+						info.width = std::min<u32>(required_width, normalized_surface_width - info.src_x);
+						info.height = std::min<u32>(required_height, normalized_surface_height - info.src_y);
 					}
-					else
+
+					info.is_clipped = (info.width < required_width || info.height < required_height);
+
+					if (UNLIKELY(surface_info.bpp != required_bpp))
 					{
-						const auto int_surface_width = surface_info.surface_width * scale_x;
-						const auto int_surface_height = surface_info.surface_height * scale_y;
+						// Width is calculated in the coordinate-space of the requester; normalize
+						info.src_x = (info.src_x * required_bpp) / surface_info.bpp;
+						info.width = (info.width * required_bpp) / surface_info.bpp;
+					}
 
-						const auto offset = this_address - texaddr;
-						info.dst_y = (offset / required_pitch);
-						info.dst_x = (offset % required_pitch) / surface_info.bpp;
-
-						if (UNLIKELY(info.dst_x >= int_surface_width || info.dst_y >= int_surface_height))
-						{
-							// False positive
-							continue;
-						}
-
-						info.src_x = 0;
-						info.src_y = 0;
-						info.width = std::min<u32>(int_surface_width, required_width - info.dst_x);
-						info.height = std::min<u32>(int_surface_height, required_height - info.dst_y);
-						info.is_clipped = (info.width < required_width || info.height < required_height);
+					if (UNLIKELY(scale_x > 1))
+					{
+						info.src_x /= scale_x;
+						info.dst_x /= scale_x;
 						info.width /= scale_x;
+						info.src_y /= scale_y;
+						info.dst_y /= scale_y;
 						info.height /= scale_y;
 					}
 
