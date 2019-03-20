@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
@@ -188,19 +188,50 @@ static u32 ppu_cache(u32 addr)
 
 static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
-	{
-		fmt::throw_exception("Unregistered PPU function");
-	}
-
-	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
-
 	if (g_cfg.core.ppu_debug)
 	{
 		LOG_ERROR(PPU, "Unregistered instruction: 0x%08x", op.opcode);
 	}
 
+	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
+
 	return false;
+}
+
+// TODO: Make this a dispatch call
+void ppu_recompiler_fallback(ppu_thread& ppu)
+{
+	if (g_cfg.core.ppu_debug)
+	{
+		LOG_ERROR(PPU, "Unregistered PPU Function (LR=0x%llx)", ppu.lr);
+	}
+
+	const auto& table = g_ppu_interpreter_fast.get_table();
+	const auto base = vm::g_base_addr;
+	const auto cache = vm::g_exec_addr;
+
+	while (true)
+	{
+		// Run instructions in interpreter
+		if (const u32 op = *reinterpret_cast<be_t<u32>*>(base + ppu.cia);
+			LIKELY(table[ppu_decode(op)](ppu, { op })))
+		{
+			ppu.cia += 4;
+			continue;
+		}
+
+		if (uptr func = *reinterpret_cast<u32*>(cache + ppu.cia);
+			func != reinterpret_cast<uptr>(ppu_recompiler_fallback))
+		{
+			// We found a recompiler function at cia, return
+			return;
+		}
+
+		if (ppu.test_stopped())
+		{
+			return;
+		}
+	}
 }
 
 static std::unordered_map<u32, u32>* s_ppu_toc;
@@ -240,7 +271,8 @@ extern void ppu_register_range(u32 addr, u32 size)
 	// Register executable range at
 	utils::memory_commit(&ppu_ref(addr), size, utils::protection::rw);
 
-	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
+	const u32 fallback = ::narrow<u32>(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ? 
+	reinterpret_cast<uptr>(ppu_recompiler_fallback) : reinterpret_cast<uptr>(ppu_fallback));
 
 	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
 	while (size)
@@ -1521,7 +1553,7 @@ extern void ppu_initialize(const ppu_module& info)
 #endif
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v1-tane-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v2-tane-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (Emu.IsStopped())
