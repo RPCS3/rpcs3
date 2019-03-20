@@ -2124,7 +2124,8 @@ namespace rsx
 					break;
 				}
 
-				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch);
+				const auto bpp = get_format_block_size_in_bytes(format);
+				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch, bpp);
 
 				if (!overlapping_fbos.empty() || !overlapping_locals.empty())
 				{
@@ -2266,9 +2267,9 @@ namespace rsx
 				src_address += (src.width - src_w) * src_bpp;
 			}
 
-			auto rtt_lookup = [&m_rtts, &cmd](u32 address, u32 width, u32 height, u32 pitch, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
+			auto rtt_lookup = [&m_rtts, &cmd](u32 address, u32 width, u32 height, u32 pitch, u32 bpp, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
 			{
-				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch);
+				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp);
 				if (list.empty() || (list.back().is_clipped && !allow_clipped))
 				{
 					return {};
@@ -2278,11 +2279,11 @@ namespace rsx
 			};
 
 			// Check if src/dst are parts of render targets
-			auto dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, false);
+			auto dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, dst_bpp, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, true);
+			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, true);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			// Always use GPU blit if src or dst is in the surface store
@@ -2319,7 +2320,7 @@ namespace rsx
 				src_subres.surface->read_barrier(cmd);
 
 				const auto surf = src_subres.surface;
-				auto bpp = surf->get_native_pitch() / surf->get_surface_width();
+				const auto bpp = surf->get_bpp();
 				if (bpp != src_bpp)
 				{
 					//Enable type scaling in src
@@ -2327,14 +2328,6 @@ namespace rsx
 					typeless_info.src_is_depth = src_subres.is_depth;
 					typeless_info.src_scaling_hint = (f32)bpp / src_bpp;
 					typeless_info.src_gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-
-					src_w = (u16)(src_w / typeless_info.src_scaling_hint);
-					if (!src_subres.is_clipped)
-						src_subres.width = (u16)(src_subres.width / typeless_info.src_scaling_hint);
-					else
-						src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, true);
-
-					verify(HERE), src_subres.surface != nullptr;
 				}
 			}
 
@@ -2343,7 +2336,7 @@ namespace rsx
 				// Full barrier is required in case of partial transfers
 				dst_subres.surface->read_barrier(cmd);
 
-				auto bpp = dst_subres.surface->get_native_pitch() / dst_subres.surface->get_surface_width();
+				auto bpp = dst_subres.surface->get_bpp();
 				if (bpp != dst_bpp)
 				{
 					//Enable type scaling in dst
@@ -2351,14 +2344,6 @@ namespace rsx
 					typeless_info.dst_is_depth = dst_subres.is_depth;
 					typeless_info.dst_scaling_hint = (f32)bpp / dst_bpp;
 					typeless_info.dst_gcm_format = dst_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-
-					dst_w = (u16)(dst_w / typeless_info.dst_scaling_hint);
-					if (!dst_subres.is_clipped)
-						dst_subres.width = (u16)(dst_subres.width / typeless_info.dst_scaling_hint);
-					else
-						dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, false);
-
-					verify(HERE), dst_subres.surface != nullptr;
 				}
 			}
 
@@ -2379,7 +2364,7 @@ namespace rsx
 				{
 					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
 					// TODO: Add more entries based on empirical data
-					if (LIKELY(dst.width == 1280))
+					if (LIKELY(dst_dimensions.width == 1280))
 					{
 						dst_dimensions.height = std::max<s32>(dst.height, 720);
 					}
@@ -2450,18 +2435,7 @@ namespace rsx
 			else
 			{
 				// Destination dimensions are relaxed (true)
-				dst_area.x1 = dst_subres.src_x;
-				dst_area.y1 = dst_subres.src_y;
-				dst_area.x2 += dst_subres.src_x;
-				dst_area.y2 += dst_subres.src_y;
-
-				f32 scale_x = get_internal_scaling_x(dst_subres.surface);
-				f32 scale_y = get_internal_scaling_y(dst_subres.surface);
-
-				dst_area.x1 = s32(scale_x * dst_area.x1);
-				dst_area.x2 = s32(scale_x * dst_area.x2);
-				dst_area.y1 = s32(scale_y * dst_area.y1);
-				dst_area.y2 = s32(scale_y * dst_area.y2);
+				dst_area = dst_subres.get_src_area();
 
 				dest_texture = dst_subres.surface->get_surface();
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
@@ -2585,27 +2559,7 @@ namespace rsx
 			}
 			else
 			{
-				if (LIKELY(!dst_is_render_target))
-				{
-					u16 src_subres_w = src_subres.width;
-					u16 src_subres_h = src_subres.height;
-					get_rsx_dimensions(src_subres_w, src_subres_h, src_subres.surface);
-
-					const int dst_width = (int)(src_subres_w * scale_x * typeless_info.src_scaling_hint);
-					const int dst_height = (int)(src_subres_h * scale_y);
-
-					dst_area.x2 = dst_area.x1 + dst_width;
-					dst_area.y2 = dst_area.y1 + dst_height;
-				}
-
-				src_area.x2 = src_subres.width;
-				src_area.y2 = src_subres.height;
-
-				src_area.x1 = src_subres.src_x;
-				src_area.y1 = src_subres.src_y;
-				src_area.x2 += src_subres.src_x;
-				src_area.y2 += src_subres.src_y;
-
+				src_area = src_subres.get_src_area();
 				vram_texture = src_subres.surface->get_surface();
 				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}

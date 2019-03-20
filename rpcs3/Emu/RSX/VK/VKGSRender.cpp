@@ -3288,7 +3288,7 @@ void VKGSRender::flip(int buffer)
 			}
 			else
 			{
-				const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer, absolute_address, buffer_width, buffer_height, buffer_pitch);
+				const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer, absolute_address, buffer_width, buffer_height, buffer_pitch, render_target_texture->get_bpp());
 				if (!overlap_info.empty() && overlap_info.back().surface == render_target_texture)
 				{
 					// Confirmed to be the newest data source in that range

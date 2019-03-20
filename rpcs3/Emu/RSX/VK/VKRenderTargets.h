@@ -106,8 +106,8 @@ namespace vk
 				return;
 			}
 
-			auto src_bpp = src_texture->get_native_pitch() / src_texture->get_surface_width();
-			auto dst_bpp = get_native_pitch() / get_surface_width();
+			const auto src_bpp = src_texture->get_bpp();
+			const auto dst_bpp = get_bpp();
 			rsx::typeless_xfer typeless_info{};
 
 			const auto region = rsx::get_transferable_region(this);
@@ -259,7 +259,7 @@ namespace rsx
 			info->native_pitch = surface->native_pitch;
 			info->surface_width = surface->get_surface_width();
 			info->surface_height = surface->get_surface_height();
-			info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
+			info->bpp = surface->get_bpp();
 		}
 
 		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
