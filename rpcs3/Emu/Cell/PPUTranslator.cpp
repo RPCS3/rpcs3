@@ -1,4 +1,4 @@
-#ifdef LLVM_AVAILABLE
+﻿#ifdef LLVM_AVAILABLE
 
 #include "PPUTranslator.h"
 #include "PPUThread.h"
@@ -271,6 +271,8 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 	}
 	else
 	{
+		m_ir->CreateStore(Trunc(indirect, GetType<u32>()), m_ir->CreateStructGEP(nullptr, m_thread, &m_cia - m_locals), true);
+
 		// Try to optimize
 		if (auto inst = dyn_cast_or_null<Instruction>(indirect))
 		{
