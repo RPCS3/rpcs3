@@ -1734,8 +1734,8 @@ namespace rsx
 				const auto clipped = rsx::intersect_region(address, slice_w, slice_h, bpp,
 					section->get_section_base(), section->get_width(), section->get_height(), section_bpp, pitch);
 
-				const auto slice_begin = (slice * src_slice_h);
-				const auto slice_end = (slice_begin + slice_h);
+				const auto slice_begin = u32(slice * src_slice_h);
+				const auto slice_end = u32(slice_begin + slice_h);
 
 				const auto dst_y = std::get<1>(clipped).y;
 				const auto dst_h = std::get<2>(clipped).height;
@@ -2087,7 +2087,7 @@ namespace rsx
 				// Optimize the range a bit by only searching for mip0, layer0 to avoid false positives
 				const auto texel_rows_per_line = get_format_texel_rows_per_line(format);
 				const auto num_rows = (tex_height + texel_rows_per_line - 1) / texel_rows_per_line;
-				if (const auto length = num_rows * tex_pitch; length < tex_range.length())
+				if (const auto length = u32(num_rows * tex_pitch); length < tex_range.length())
 				{
 					lookup_range = utils::address_range::start_length(texaddr, length);
 				}
