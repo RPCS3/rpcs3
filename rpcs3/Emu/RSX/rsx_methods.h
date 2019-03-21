@@ -95,10 +95,7 @@ namespace rsx
 		void insert_draw_command(u32 index, const draw_range_t& range)
 		{
 			auto range_It = draw_command_ranges.begin();
-			while (index--)
-			{
-				++range_It;
-			}
+			std::advance(range_It, index);
 
 			draw_command_ranges.insert(range_It, range);
 
