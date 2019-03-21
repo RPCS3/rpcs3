@@ -3086,6 +3086,7 @@ void PPUTranslator::LSWI(ppu_opcode_t op)
 				if (--index)
 				{
 					addr = m_ir->CreateAdd(addr, m_ir->getInt64(1));
+					i--;
 				}
 			}
 
@@ -3181,7 +3182,7 @@ void PPUTranslator::STSWI(ppu_opcode_t op)
 
 			while (index)
 			{
-				WriteMemory(addr, m_ir->CreateLShr(buf, 24));
+				WriteMemory(addr, Trunc(m_ir->CreateLShr(buf, 24), GetType<u8>()));
 
 				if (--index)
 				{
