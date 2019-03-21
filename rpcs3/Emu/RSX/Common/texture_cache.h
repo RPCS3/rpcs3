@@ -2620,6 +2620,12 @@ namespace rsx
 					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
 					rsx::texture_create_flags::swapped_native_component_order;
 
+				// Translate dst_area into the 'full' dst block based on dst.rsx_address as (0, 0)
+				dst_area.x1 += dst.offset_x;
+				dst_area.x2 += dst.offset_x;
+				dst_area.y1 += dst.offset_y;
+				dst_area.y2 += dst.offset_y;
+
 				if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
 				{
 					cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
