@@ -209,6 +209,9 @@ private:
 	// For private use
 	std::bitset<0x10000> m_bits;
 
+	// Result of analyse(), to avoid copying and allocation
+	std::vector<u32> result;
+
 public:
 	spu_recompiler_base();
 
@@ -229,8 +232,8 @@ public:
 	// Target for the unresolved patch point (second arg is unused)
 	static void branch(spu_thread&, void*, u8* rip);
 
-	// Get the block at specified address
-	std::vector<u32> block(const be_t<u32>* ls, u32 lsa);
+	// Get the function data at specified address
+	const std::vector<u32>& analyse(const be_t<u32>* ls, u32 lsa);
 
 	// Print analyser internal state
 	void dump(std::string& out);

@@ -223,7 +223,7 @@ void spu_cache::initialize()
 			}
 
 			// Call analyser
-			std::vector<u32> func2 = compiler->block(ls.data(), func[0]);
+			const std::vector<u32>& func2 = compiler->analyse(ls.data(), func[0]);
 
 			if (func2.size() != size0)
 			{
@@ -758,6 +758,7 @@ void spu_runtime::handle_return(spu_thread* _spu)
 
 spu_recompiler_base::spu_recompiler_base()
 {
+	result.reserve(8192);
 }
 
 spu_recompiler_base::~spu_recompiler_base()
@@ -808,7 +809,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	}
 
 	// Compile
-	spu.jit->make_function(spu.jit->block(spu._ptr<u32>(0), spu.pc));
+	spu.jit->make_function(spu.jit->analyse(spu._ptr<u32>(0), spu.pc));
 
 	// Diagnostic
 	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
@@ -870,11 +871,10 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
 }
 
-std::vector<u32> spu_recompiler_base::block(const be_t<u32>* ls, u32 entry_point)
+const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 {
 	// Result: addr + raw instruction data
-	std::vector<u32> result;
-	result.reserve(256);
+	result.clear();
 	result.push_back(entry_point);
 
 	// Initialize block entries
