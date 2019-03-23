@@ -193,6 +193,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::cellMusic,
 		&ppu_module_manager::cellMusicDecode,
 		&ppu_module_manager::cellMusicExport,
+		&ppu_module_manager::cellNetAoi,
 		&ppu_module_manager::cellNetCtl,
 		&ppu_module_manager::cellOskDialog,
 		&ppu_module_manager::cellOvis,
