@@ -410,6 +410,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellMusicExport.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellNetAoi.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellNetCtl.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
