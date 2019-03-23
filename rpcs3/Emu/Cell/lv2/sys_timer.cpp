@@ -331,7 +331,7 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 	}
 	else
 	{
-		lv2_obj::yield(ppu);
+		std::this_thread::yield();
 	}
 
 	return CELL_OK;
