@@ -239,6 +239,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellVdec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVideoExport.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVideoOut.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellVideoPlayerUtility.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVideoUpload.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVoice.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVpost.cpp" />

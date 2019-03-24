@@ -246,6 +246,7 @@ public:
 	static const ppu_static_module cellUserInfo;
 	static const ppu_static_module cellVdec;
 	static const ppu_static_module cellVideoExport;
+	static const ppu_static_module cellVideoPlayerUtility;
 	static const ppu_static_module cellVideoUpload;
 	static const ppu_static_module cellVoice;
 	static const ppu_static_module cellVpost;

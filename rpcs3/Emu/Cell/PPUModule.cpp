@@ -239,6 +239,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::cellUserInfo,
 		&ppu_module_manager::cellVdec,
 		&ppu_module_manager::cellVideoExport,
+        &ppu_module_manager::cellVideoPlayerUtility,
 		&ppu_module_manager::cellVideoUpload,
 		&ppu_module_manager::cellVoice,
 		&ppu_module_manager::cellVpost,
