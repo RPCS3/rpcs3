@@ -237,8 +237,8 @@ public:
 	static const ppu_static_module cellSysmodule;
 	static const ppu_static_module cellSysutil;
 	static const ppu_static_module cellSysutilAp;
-	static const ppu_static_module cellSysutilAvc;
 	static const ppu_static_module cellSysutilAvc2;
+	static const ppu_static_module cellSysutilAvcExt;
 	static const ppu_static_module cellSysutilNpEula;
 	static const ppu_static_module cellSysutilMisc;
 	static const ppu_static_module cellUsbd;
