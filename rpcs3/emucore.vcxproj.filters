@@ -557,6 +557,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellVideoOut.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellVideoPlayerUtility.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellVideoUpload.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
