@@ -335,6 +335,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellDtcpIpUtility.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
