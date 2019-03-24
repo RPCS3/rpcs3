@@ -197,6 +197,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellOvis.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPad.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPamf.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPesmUtility.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPhotoDecode.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPhotoExport.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPhotoImport.cpp" />
