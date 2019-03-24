@@ -231,6 +231,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilAvcExt.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilNpEula.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp" />
