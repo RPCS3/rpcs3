@@ -431,6 +431,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellPamf.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellPesmUtility.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellPhotoDecode.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>

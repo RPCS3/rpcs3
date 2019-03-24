@@ -199,6 +199,7 @@ static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link
 		&ppu_module_manager::cellOskDialog,
 		&ppu_module_manager::cellOvis,
 		&ppu_module_manager::cellPamf,
+		&ppu_module_manager::cellPesmUtility,
 		&ppu_module_manager::cellPhotoDecode,
 		&ppu_module_manager::cellPhotoExport,
 		&ppu_module_manager::cellPhotoImportUtil,
