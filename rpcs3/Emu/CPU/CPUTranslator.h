@@ -923,6 +923,12 @@ public:
 		return llvm_value_t<T>::get_type(m_context);
 	}
 
+	template <typename R, typename... Args>
+	llvm::FunctionType* get_ftype()
+	{
+		return llvm::FunctionType::get(get_type<R>(), {get_type<Args>()...}, false);
+	}
+
 	template <typename T>
 	using value_t = llvm_value_t<T>;
 
@@ -1080,6 +1086,15 @@ public:
 	{
 		value_t<T> result;
 		result.value = llvm::ConstantFP::get(result.get_type(m_context), c);
+		return result;
+	}
+
+	template <typename T, typename V>
+	auto vsplat(V v)
+	{
+		value_t<T> result;
+		static_assert(result.is_vector);
+		result.value = m_ir->CreateVectorSplat(result.is_vector, v.eval(m_ir));
 		return result;
 	}
 
@@ -1254,6 +1269,19 @@ public:
 			result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result.value);
 		}
 
+		return result;
+	}
+
+	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i)
+	{
+		return m_ir->CreateLoad(m_ir->CreateGEP(g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
+	}
+
+	template <typename T, typename I>
+	value_t<T> load_const(llvm::GlobalVariable* g, I i)
+	{
+		value_t<T> result;
+		result.value = load_const(g, i.eval(m_ir));
 		return result;
 	}
 
