@@ -2255,6 +2255,18 @@ namespace rsx
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
 
+			if (UNLIKELY((src_h + src.offset_y) > src.height))
+			{
+				src_h = src.height - src.offset_y;
+				dst_h = u16(src_h * scale_y + 0.000001f);
+			}
+
+			if (UNLIKELY((src_w + src.offset_x) > src.width))
+			{
+				src_w = src.width - src.offset_x;
+				dst_w = u16(src_w * scale_x + 0.000001f);
+			}
+
 			if (dst.scale_y < 0.f)
 			{
 				typeless_info.flip_vertical = true;
@@ -2267,11 +2279,44 @@ namespace rsx
 				src_address += (src.width - src_w) * src_bpp;
 			}
 
-			auto rtt_lookup = [&m_rtts, &cmd](u32 address, u32 width, u32 height, u32 pitch, u32 bpp, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
+			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
 			{
 				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp);
-				if (list.empty() || (list.back().is_clipped && !allow_clipped))
+				if (list.empty())
 				{
+					return {};
+				}
+
+				if (list.back().is_clipped && !allow_clipped)
+				{
+					for (auto It = list.rbegin(); It != list.rend(); ++It)
+					{
+						if (!It->is_clipped)
+						{
+							return *It;
+						}
+
+						auto _w = u32(It->width * It->surface->get_bpp()) / bpp;
+						auto _h = u32(It->height);
+						get_rsx_dimensions(_w, _h, It->surface);
+
+						if (_w < width)
+						{
+							if ((_w * scale_x) <= 1.f)
+								continue;
+						}
+
+						if (_h < height)
+						{
+							if ((_h * scale_y) <= 1.f)
+								continue;
+						}
+
+						// Some surface exists, but its size is questionable
+						// Opt to re-upload (needs WCB/WDB to work properly)
+						break;
+					}
+
 					return {};
 				}
 
@@ -2283,20 +2328,18 @@ namespace rsx
 			dst_is_render_target = dst_subres.surface != nullptr;
 
 			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, true);
+			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, false);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			// Always use GPU blit if src or dst is in the surface store
 			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
 				return false;
 
-
 			// Check if trivial memcpy can perform the same task
 			// Used to copy programs and arbitrary data to the GPU in some cases
 			if (!src_is_render_target && !dst_is_render_target && dst_is_argb8 == src_is_argb8 && !dst.swizzled)
 			{
-				if ((src.slice_h == 1 && dst.clip_height == 1) ||
-					(dst.clip_width == src.width && dst.clip_height == src.slice_h && src.pitch == dst.pitch))
+				if ((src_h == 1 && dst_h == 1) || (dst_w == src_w && dst_h == src_h && src.pitch == dst.pitch))
 				{
 					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
 					{
@@ -2372,18 +2415,15 @@ namespace rsx
 				{
 					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(), dst.height);
 				}
-				else if (dst.max_tile_h > dst.height)
+				else if (LIKELY(dst_dimensions.width == 1280 || dst_dimensions.width == 2560))
 				{
 					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
 					// TODO: Add more entries based on empirical data
-					if (LIKELY(dst_dimensions.width == 1280))
-					{
-						dst_dimensions.height = std::max<s32>(dst.height, 720);
-					}
-					else
-					{
-						dst_dimensions.height = std::min((s32)dst.max_tile_h, 1024);
-					}
+					dst_dimensions.height = std::max<s32>(dst.height, 720);
+				}
+				else
+				{
+					//LOG_TRACE(RSX, "Blit transfer to surface with dims %dx%d", dst_dimensions.width, dst.height);
 				}
 			}
 
@@ -2540,23 +2580,29 @@ namespace rsx
 
 				if (!vram_texture)
 				{
+					// Translate src_area into the declared block
+					src_area.x1 += src.offset_x;
+					src_area.x2 += src.offset_x;
+					src_area.y1 += src.offset_y;
+					src_area.y2 += src.offset_y;
+
 					lock.upgrade();
 
-					const auto rsx_range = address_range::start_length(src_address, src.pitch * src.slice_h);
+					const auto rsx_range = address_range::start_length(src.rsx_address, src.pitch * src.height);
 					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
 					const u16 _width = src.pitch / src_bpp;
 					std::vector<rsx_subresource_layout> subresource_layout;
 					rsx_subresource_layout subres = {};
 					subres.width_in_block = _width;
-					subres.height_in_block = src.slice_h;
+					subres.height_in_block = src.height;
 					subres.pitch_in_block = _width;
 					subres.depth = 1;
-					subres.data = { (const gsl::byte*)src.pixels, src.pitch * src.slice_h };
+					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(src.rsx_address)), src.pitch * src.height };
 					subresource_layout.push_back(subres);
 
 					const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-					vram_texture = upload_image_from_cpu(cmd, rsx_range, _width, src.slice_h, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
+					vram_texture = upload_image_from_cpu(cmd, rsx_range, _width, src.height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
 					typeless_info.src_context = texture_upload_context::blit_engine_src;
@@ -2610,7 +2656,7 @@ namespace rsx
 
 				// Need to calculate the minium required size that will fit the data, anchored on the rsx_address
 				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
-				const u32 write_end = dst_address + (dst.pitch * dst.clip_height);
+				const u32 write_end = dst_address + (dst.pitch * dst_h);
 				const u32 expected_end = dst.rsx_address + (dst.pitch * dst_dimensions.height);
 
 				const u32 section_length = std::max(write_end, expected_end) - dst.rsx_address;
