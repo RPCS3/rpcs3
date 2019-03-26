@@ -1637,7 +1637,7 @@ namespace rsx
 			return true;
 		}
 
-		bool matches(u32 rsx_address, u32 width, u32 height, u32 depth, u32 mipmaps)
+		bool matches(u32 rsx_address, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
 		{
 			if (!valid_range())
 				return false;
@@ -1645,15 +1645,21 @@ namespace rsx
 			if (rsx_address != get_section_base())
 				return false;
 
+			if ((gcm_format & format) != format)
+				return false;
+
 			return matches_dimensions(width, height, depth, mipmaps);
 		}
 
-		bool matches(const address_range& memory_range, u32 width, u32 height, u32 depth, u32 mipmaps)
+		bool matches(const address_range& memory_range, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
 		{
 			if (!valid_range())
 				return false;
 
 			if (!rsx::buffered_section::matches(memory_range))
+				return false;
+
+			if ((gcm_format & format) != format)
 				return false;
 
 			return matches_dimensions(width, height, depth, mipmaps);
