@@ -1124,7 +1124,7 @@ namespace rsx
 		}
 
 		template <bool check_unlocked = false>
-		section_storage_type *find_texture_from_dimensions(u32 rsx_address, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
+		section_storage_type *find_texture_from_dimensions(u32 rsx_address, u32 format, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
 		{
 			auto &block = m_storage.block_for(rsx_address);
 			for (auto &tex : block)
@@ -1135,7 +1135,7 @@ namespace rsx
 						continue;
 				}
 
-				if (!tex.is_dirty() && tex.matches(rsx_address, width, height, depth, mipmaps))
+				if (!tex.is_dirty() && tex.matches(rsx_address, format, width, height, depth, mipmaps))
 				{
 					return &tex;
 				}
@@ -2098,7 +2098,7 @@ namespace rsx
 			const auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
 			for (auto& cached_texture : overlapping_locals)
 			{
-				if (cached_texture->matches(texaddr, tex_width, tex_height, depth, 0))
+				if (cached_texture->matches(texaddr, format, tex_width, tex_height, depth, 0))
 				{
 					return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
 				}
@@ -2147,7 +2147,7 @@ namespace rsx
 					{
 						// Surface cache data is newer, check if this thing fits our search parameters
 						const auto& last = overlapping_fbos.back();
-						if (last.src_x == 0 && last.src_y == 0)
+						if (last.src_x == 0 && last.src_y == 0 && last.surface->get_bpp() == bpp)
 						{
 							u16 internal_width = tex_width;
 							u16 internal_height = required_surface_height;
@@ -2164,6 +2164,7 @@ namespace rsx
 					{
 						const auto last = overlapping_locals.back();
 						if (last->get_section_base() == texaddr &&
+							get_format_block_size_in_bytes(last->get_gcm_format()) == bpp &&
 							last->get_width() >= tex_width && last->get_height() >= tex_height)
 						{
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, texaddr, format, 0, 0,
