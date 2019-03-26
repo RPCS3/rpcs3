@@ -518,7 +518,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_hid_manager_check_focus),                 //510 (0x1FE)
 	null_func,//BIND_FUNC(sys_hid_manager_set_master_process) //511 (0x1FF)  ROOT
 	BIND_FUNC(sys_hid_manager_is_process_permission_root),  //512 (0x200)  ROOT
-	null_func,//BIND_FUNC(sys_hid_manager_...)              //513 (0x201)
+	BIND_FUNC(sys_hid_manager_513),                         //513 (0x201)
 	BIND_FUNC(sys_hid_manager_514),                         //514 (0x202)
 	uns_func,                                               //515 (0x203)  UNS
 	BIND_FUNC(sys_config_open),                             //516 (0x204)

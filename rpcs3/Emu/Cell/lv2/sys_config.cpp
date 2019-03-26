@@ -440,3 +440,9 @@ error_code sys_config_unregister_io_error_listener(u32 config_hdl)
 	sys_config.todo("sys_config_register_io_error_listener(config_hdl=0x%x)", config_hdl);
 	return CELL_OK;
 }
+
+error_code sys_config_unregister_io_error_listener(u32 config_hdl)
+{
+	sys_config.todo("sys_config_register_io_error_listener(config_hdl=0x%x)", config_hdl);
+	return CELL_OK;
+}
