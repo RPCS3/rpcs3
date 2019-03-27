@@ -958,7 +958,7 @@ namespace vm
 
 		auto block = _find_map(size, align, flags);
 
-		g_locations.emplace_back(block);
+		if (block) g_locations.emplace_back(block);
 
 		return block;
 	}
