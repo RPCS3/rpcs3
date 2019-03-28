@@ -4835,9 +4835,8 @@ public:
 	void make_spu_rotate_mask(spu_opcode_t op, value_t<T> by)
 	{
 		value_t<R> sh;
+		static_assert(sh.esize == by.esize);
 		sh.value = m_ir->CreateAnd(m_ir->CreateNeg(by.value), by.esize * 2 - 1);
-		if constexpr (sh.esize != by.esize)
-			sh.value = m_ir->CreateZExtOrTrunc(sh.value, m_ir->getIntNTy(sh.esize));
 		if constexpr (!by.is_vector)
 			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
 
@@ -4848,9 +4847,8 @@ public:
 	void make_spu_rotate_sext(spu_opcode_t op, value_t<T> by)
 	{
 		value_t<R> sh;
+		static_assert(sh.esize == by.esize);
 		sh.value = m_ir->CreateAnd(m_ir->CreateNeg(by.value), by.esize * 2 - 1);
-		if constexpr (sh.esize != by.esize)
-			sh.value = m_ir->CreateZExtOrTrunc(sh.value, m_ir->getIntNTy(sh.esize));
 		if constexpr (!by.is_vector)
 			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
 
@@ -4863,9 +4861,8 @@ public:
 	void make_spu_shift_left(spu_opcode_t op, value_t<T> by)
 	{
 		value_t<R> sh;
+		static_assert(sh.esize == by.esize);
 		sh.value = m_ir->CreateAnd(by.value, by.esize * 2 - 1);
-		if constexpr (sh.esize != by.esize)
-			sh.value = m_ir->CreateZExtOrTrunc(sh.value, m_ir->getIntNTy(sh.esize));
 		if constexpr (!by.is_vector)
 			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
 
