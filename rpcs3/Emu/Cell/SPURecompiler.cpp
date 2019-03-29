@@ -2193,7 +2193,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		// Get function chunk name
 		const std::string name = fmt::format("spu-chunk-0x%05x", addr);
-		llvm::Function* result = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, get_type<void>(), get_type<u8*>(), get_type<u8*>(), get_type<u32>()));
+		llvm::Function* result = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(name, get_ftype<void, u8*, u8*, u32>()).getCallee());
 
 		// Set parameters
 		result->setLinkage(llvm::GlobalValue::InternalLinkage);
@@ -3089,7 +3089,7 @@ public:
 		m_ir = &irb;
 
 		// Add entry function (contains only state/code check)
-		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_type<void>(), get_type<u8*>(), get_type<u8*>(), get_type<u8*>()));
+		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_ftype<void, u8*, u8*, u8*>()).getCallee());
 		const auto main_arg2 = &*(main_func->arg_begin() + 2);
 		set_function(main_func);
 
@@ -3423,7 +3423,7 @@ public:
 			std::vector<llvm::Constant*> chunks;
 			chunks.reserve(m_size / 4);
 
-			const auto null = cast<Function>(module->getOrInsertFunction("spu-null", get_type<void>(), get_type<u8*>(), get_type<u8*>(), get_type<u32>()));
+			const auto null = cast<Function>(module->getOrInsertFunction("spu-null", get_ftype<void, u8*, u8*, u32>()).getCallee());
 			null->setLinkage(llvm::GlobalValue::InternalLinkage);
 			set_function(null);
 			m_ir->CreateRetVoid();
@@ -3599,7 +3599,7 @@ public:
 		m_function_table = new GlobalVariable(*m_module, ArrayType::get(if_type->getPointerTo(), 1u << m_interp_magn), true, GlobalValue::InternalLinkage, nullptr);
 
 		// Add return function
-		const auto ret_func = cast<Function>(module->getOrInsertFunction("spu_ret", if_type));
+		const auto ret_func = cast<Function>(module->getOrInsertFunction("spu_ret", if_type).getCallee());
 		ret_func->setCallingConv(CallingConv::GHC);
 		ret_func->setLinkage(GlobalValue::InternalLinkage);
 		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", ret_func));
@@ -3609,7 +3609,7 @@ public:
 		m_ir->CreateRetVoid();
 
 		// Add entry function, serves as a trampoline
-		const auto main_func = llvm::cast<Function>(m_module->getOrInsertFunction("spu_interpreter", get_ftype<void, u8*, u8*, u8*>()));
+		const auto main_func = llvm::cast<Function>(m_module->getOrInsertFunction("spu_interpreter", get_ftype<void, u8*, u8*, u8*>()).getCallee());
 		set_function(main_func);
 
 		// Load pc and opcode
@@ -3681,7 +3681,7 @@ public:
 			}
 
 			// Decode instruction name, access function
-			const auto f = cast<Function>(module->getOrInsertFunction(fname, if_type));
+			const auto f = cast<Function>(module->getOrInsertFunction(fname, if_type).getCallee());
 
 			// Build if necessary
 			if (f->empty())

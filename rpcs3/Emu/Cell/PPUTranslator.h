@@ -302,7 +302,7 @@ public:
 	llvm::CallInst* Call(llvm::Type* ret, llvm::AttributeList attr, llvm::StringRef name, Args... args)
 	{
 		// Call the function
-		return m_ir->CreateCall(m_module->getOrInsertFunction(name, attr, ret, args->getType()...), {args...});
+		return m_ir->CreateCall(m_module->getOrInsertFunction(name, attr, ret, args->getType()...).getCallee(), {args...});
 	}
 
 	// Call a function

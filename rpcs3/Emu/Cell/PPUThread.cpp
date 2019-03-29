@@ -1690,7 +1690,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	{
 		if (func.size)
 		{
-			const auto f = cast<Function>(module->getOrInsertFunction(func.name, _func));
+			const auto f = cast<Function>(module->getOrInsertFunction(func.name, _func).getCallee());
 			f->addAttribute(1, Attribute::NoAlias);
 		}
 	}
