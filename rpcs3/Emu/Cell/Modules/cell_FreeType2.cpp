@@ -371,6 +371,12 @@ s32 FT_Get_TrueType_Engine_Type()
 	return CELL_OK;
 }
 
+s32 FT_Get_X11_Font_Format()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
 s32 FT_Get_WinFNT_Header()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
@@ -971,6 +977,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Get_Track_Kerning);
 	REG_FUNC(cell_FreeType2, FT_Get_TrueType_Engine_Type);
 	REG_FUNC(cell_FreeType2, FT_Get_WinFNT_Header);
+	REG_FUNC(cell_FreeType2, FT_Get_X11_Font_Format);
 	REG_FUNC(cell_FreeType2, FT_Glyph_Copy);
 	REG_FUNC(cell_FreeType2, FT_Glyph_Get_CBox);
 	REG_FUNC(cell_FreeType2, FT_GlyphSlot_Own_Bitmap);
