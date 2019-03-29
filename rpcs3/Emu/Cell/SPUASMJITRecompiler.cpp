@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -2681,7 +2681,23 @@ void spu_recompiler::IRET(spu_opcode_t op)
 
 void spu_recompiler::BISLED(spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
+	c->and_(*addr, 0x3fffc);
+
+	const XmmLink& vr = XmmAlloc();
+	c->movdqa(vr, XmmConst(_mm_set_epi32(spu_branch_target(m_pos + 4), 0, 0, 0)));
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
+
+	asmjit::Label branch_label = c->newLabel();
+	get_events();
+	c->jne(branch_label);
+
+	after.emplace_back([=]
+	{
+		c->align(asmjit::kAlignCode, 16);
+		c->bind(branch_label);
+		branch_indirect(op);
+	});
 }
 
 void spu_recompiler::HBR(spu_opcode_t op)
@@ -3429,7 +3445,7 @@ void spu_recompiler::FCGT(spu_opcode_t op)
 
 void spu_recompiler::DFCGT(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	UNK(op);
 }
 
 void spu_recompiler::FA(spu_opcode_t op)
@@ -3572,14 +3588,7 @@ void spu_recompiler::FCMGT(spu_opcode_t op)
 
 void spu_recompiler::DFCMGT(spu_opcode_t op)
 {
-	const auto mask = XmmConst(_mm_set1_epi64x(0x7fffffffffffffff));
-	const XmmLink& va = XmmGet(op.ra, XmmType::Double);
-	const XmmLink& vb = XmmGet(op.rb, XmmType::Double);
-
-	c->andpd(va, mask);
-	c->andpd(vb, mask);
-	c->cmppd(vb, va, 1);
-	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
+	UNK(op);
 }
 
 void spu_recompiler::DFA(spu_opcode_t op)
@@ -3798,7 +3807,7 @@ void spu_recompiler::FSCRWR(spu_opcode_t op)
 
 void spu_recompiler::DFTSV(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	UNK(op);
 }
 
 void spu_recompiler::FCEQ(spu_opcode_t op)
@@ -3811,7 +3820,7 @@ void spu_recompiler::FCEQ(spu_opcode_t op)
 
 void spu_recompiler::DFCEQ(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	UNK(op);
 }
 
 void spu_recompiler::MPY(spu_opcode_t op)
@@ -3876,7 +3885,7 @@ void spu_recompiler::FCMEQ(spu_opcode_t op)
 
 void spu_recompiler::DFCMEQ(spu_opcode_t op)
 {
-	fmt::throw_exception("Unexpected instruction" HERE);
+	UNK(op);
 }
 
 void spu_recompiler::MPYU(spu_opcode_t op)
