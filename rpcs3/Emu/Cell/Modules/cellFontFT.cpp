@@ -5,6 +5,12 @@
 
 LOG_CHANNEL(cellFontFT);
 
+s32 cellFontInitLibraryFreeType()
+{
+	UNIMPLEMENTED_FUNC(cellFontFT);
+	return CELL_OK;
+}
+
 s32 cellFontInitLibraryFreeTypeWithRevision(u64 revisionFlags, vm::ptr<CellFontLibraryConfigFT> config, vm::pptr<CellFontLibrary> lib)
 {
 	cellFontFT.warning("cellFontInitLibraryFreeTypeWithRevision(revisionFlags=0x%llx, config=*0x%x, lib=**0x%x)", revisionFlags, config, lib);
@@ -202,6 +208,7 @@ s32 FTManager_OpenStreamFace()
 
 DECLARE(ppu_module_manager::cellFontFT)("cellFontFT", []()
 {
+	REG_FUNC(cellFontFT, cellFontInitLibraryFreeType);
 	REG_FUNC(cellFontFT, cellFontInitLibraryFreeTypeWithRevision);
 	REG_FUNC(cellFontFT, cellFontFTGetRevisionFlags);
 	REG_FUNC(cellFontFT, cellFontFTGetInitializedRevisionFlags);
