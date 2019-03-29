@@ -1331,8 +1331,8 @@ void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)
 
 void PPUTranslator::VSEL(ppu_opcode_t op)
 {
-	const auto abc = GetVrs(VrType::vi32, op.va, op.vb, op.vc);
-	SetVr(op.vd, m_ir->CreateOr(m_ir->CreateAnd(abc[1], abc[2]), m_ir->CreateAnd(abc[0], m_ir->CreateNot(abc[2]))));
+	const auto [a, b, c] = get_vrs<u32[4]>(op.va, op.vb, op.vc);
+	set_vr(op.vd, eval((b & c) | (a & ~c)));
 }
 
 void PPUTranslator::VSL(ppu_opcode_t op)
