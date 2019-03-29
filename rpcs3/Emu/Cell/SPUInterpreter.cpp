@@ -496,7 +496,16 @@ bool spu_interpreter::IRET(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::BISLED(spu_thread& spu, spu_opcode_t op)
 {
-	fmt::throw_exception("Unimplemented instruction" HERE);
+	const u32 target = spu_branch_target(spu.gpr[op.ra]._u32[3]);
+	spu.gpr[op.rt] = v128::from32r(spu_branch_target(spu.pc + 4));
+
+	if (spu.get_events())
+	{
+		spu.pc = target;
+		set_interrupt_status(spu, op);
+		return false;
+	}
+
 	return true;
 }
 
@@ -1043,10 +1052,7 @@ bool spu_interpreter_fast::FCMGT(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::DFCMGT(spu_thread& spu, spu_opcode_t op)
 {
-	const auto mask = _mm_castsi128_pd(_mm_set1_epi64x(0x7fffffffffffffff));
-	const auto ra = _mm_and_pd(spu.gpr[op.ra].vd, mask);
-	const auto rb = _mm_and_pd(spu.gpr[op.rb].vd, mask);
-	spu.gpr[op.rt].vd = _mm_cmpgt_pd(ra, rb);
+	fmt::throw_exception("Unexpected Instruction" HERE);
 	return true;
 }
 

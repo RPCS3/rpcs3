@@ -1001,7 +1001,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		case spu_itype::DFCEQ:
 		case spu_itype::DFCMEQ:
 		case spu_itype::DFCGT:
-		//case spu_itype::DFCMGT:
+		case spu_itype::DFCMGT:
 		case spu_itype::DFTSV:
 		{
 			// Stop before invalid instructions (TODO)
@@ -3706,7 +3706,7 @@ public:
 				case spu_itype::DFCEQ:
 				case spu_itype::DFCMEQ:
 				case spu_itype::DFCGT:
-				//case spu_itype::DFCMGT:
+				case spu_itype::DFCMGT:
 				case spu_itype::DFTSV:
 				case spu_itype::STOP:
 				case spu_itype::STOPD:
@@ -5854,7 +5854,7 @@ public:
 
 	void DFCMGT(spu_opcode_t op) //
 	{
-		set_vr(op.rt, sext<u64[2]>(fcmp<llvm::FCmpInst::FCMP_OGT>(fabs(get_vr<f64[2]>(op.ra)), fabs(get_vr<f64[2]>(op.rb)))));
+		return UNK(op);
 	}
 
 	void DFCMEQ(spu_opcode_t op) //
@@ -6785,7 +6785,13 @@ public:
 
 	void BISLED(spu_opcode_t op) //
 	{
-		UNK(op);
+		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
+		const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
+		set_link(op);
+		value_t<u32> res;
+		res.value = call(&exec_get_events, m_thread);
+		const auto target = add_block_indirect(op, addr);
+		m_ir->CreateCondBr(m_ir->CreateICmpNE(res.value, m_ir->getInt32(0)), target, add_block_next());
 	}
 
 	void BRZ(spu_opcode_t op) //
