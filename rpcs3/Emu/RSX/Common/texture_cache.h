@@ -951,14 +951,14 @@ namespace rsx
 		}
 
 	protected:
-		inline bool is_hw_blit_engine_compatible(u32 format) const
+		inline bool is_gcm_depth_format(u32 format) const
 		{
 			switch (format)
 			{
-			case CELL_GCM_TEXTURE_A8R8G8B8:
-			case CELL_GCM_TEXTURE_R5G6B5:
 			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 			case CELL_GCM_TEXTURE_DEPTH24_D8:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 				return true;
 			default:
 				return false;
@@ -976,12 +976,12 @@ namespace rsx
 			case CELL_GCM_TEXTURE_DEPTH16:
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 			case CELL_GCM_TEXTURE_X16:
-			case CELL_GCM_TEXTURE_A4R4G4B4:
-			case CELL_GCM_TEXTURE_G8B8:
-			case CELL_GCM_TEXTURE_A1R5G5B5:
-			case CELL_GCM_TEXTURE_R5G5B5A1:
-			case CELL_GCM_TEXTURE_R5G6B5:
-			case CELL_GCM_TEXTURE_R6G5B5:
+			//case CELL_GCM_TEXTURE_A4R4G4B4:
+			//case CELL_GCM_TEXTURE_G8B8:
+			//case CELL_GCM_TEXTURE_A1R5G5B5:
+			//case CELL_GCM_TEXTURE_R5G5B5A1:
+			//case CELL_GCM_TEXTURE_R5G6B5:
+			//case CELL_GCM_TEXTURE_R6G5B5:
 				return CELL_GCM_TEXTURE_DEPTH16;
 			}
 
@@ -1731,8 +1731,9 @@ namespace rsx
 
 				// Intersect this resource with the original one
 				const auto section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
+				const auto normalized_width = (section->get_width() * section_bpp) / bpp;
 				const auto clipped = rsx::intersect_region(address, slice_w, slice_h, bpp,
-					section->get_section_base(), section->get_width(), section->get_height(), section_bpp, pitch);
+					section->get_section_base(), normalized_width, section->get_height(), section_bpp, pitch);
 
 				const auto slice_begin = u32(slice * src_slice_h);
 				const auto slice_end = u32(slice_begin + slice_h);
@@ -1747,6 +1748,7 @@ namespace rsx
 					return;
 				}
 
+				const u16 internal_clip_width = u16(std::get<2>(clipped).width * bpp) / section_bpp;
 				if (scaling)
 				{
 					// Since output is upscaled, also upscale on dst
@@ -1759,15 +1761,15 @@ namespace rsx
 						rsx::apply_resolution_scale((u16)std::get<1>(clipped).x, true),
 						rsx::apply_resolution_scale((u16)std::get<1>(clipped).y, true),
 						slice,
-						(u16)std::get<2>(clipped).width,
+						internal_clip_width,
 						(u16)std::get<2>(clipped).height,
-						rsx::apply_resolution_scale((u16)std::get<2>(clipped).width, true),
+						rsx::apply_resolution_scale(internal_clip_width, true),
 						rsx::apply_resolution_scale((u16)std::get<2>(clipped).height, true),
 					});
 				}
 				else
 				{
-					const auto src_width = (u16)std::get<2>(clipped).width, dst_width = src_width;
+					const auto src_width = internal_clip_width, dst_width = src_width;
 					const auto src_height = (u16)std::get<2>(clipped).height, dst_height = src_height;
 					surfaces.push_back
 					({
@@ -1893,13 +1895,31 @@ namespace rsx
 		{
 			texptr->read_barrier(cmd);
 
-			const bool is_depth = texptr->is_depth_surface();
 			const auto surface_width = texptr->get_surface_width();
 			const auto surface_height = texptr->get_surface_height();
 
 			u32 internal_width = tex_width;
 			u32 internal_height = tex_height;
 			get_native_dimensions(internal_width, internal_height, texptr);
+
+			bool is_depth = texptr->is_depth_surface();
+			const bool force_convert = !render_target_format_is_compatible(texptr, format);
+
+			if (const bool gcm_format_is_depth = is_gcm_depth_format(format);
+				gcm_format_is_depth != is_depth)
+			{
+				if (force_convert)
+				{
+					is_depth = gcm_format_is_depth;
+				}
+				else
+				{
+					format = get_compatible_depth_format(format);
+				}
+
+				// Always make sure the conflict is resolved!
+				verify(HERE), is_gcm_depth_format(format) == is_depth;
+			}
 
 			if (LIKELY(extended_dimension == rsx::texture_dimension_extended::texture_dimension_2d ||
 				extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d))
@@ -1912,12 +1932,12 @@ namespace rsx
 				if ((assume_bound && g_cfg.video.strict_rendering_mode) ||
 					internal_width < surface_width ||
 					internal_height < surface_height ||
-					!render_target_format_is_compatible(texptr, format))
+					force_convert)
 				{
 					const auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
 					const auto scaled_h = rsx::apply_resolution_scale(internal_height, true);
 
-					auto command = assume_bound ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
+					const auto command = assume_bound ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 					return { texptr->get_surface(), command, texaddr, format, 0, 0, scaled_w, scaled_h, 1,
 							texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
 							extended_dimension, decoded_remap };
@@ -1965,7 +1985,16 @@ namespace rsx
 			if (is_depth = (select_hint == 0) ? fbos.back().is_depth : local.back()->is_depth_texture();
 				is_depth)
 			{
-				format = get_compatible_depth_format(format);
+				if (const auto suggested_format = get_compatible_depth_format(format);
+					!is_gcm_depth_format(suggested_format))
+				{
+					// Failed!
+					is_depth = false;
+				}
+				else
+				{
+					format = suggested_format;
+				}
 			}
 
 			// If this method was called, there is no easy solution, likely means atlas gather is needed
@@ -2147,13 +2176,14 @@ namespace rsx
 					{
 						// Surface cache data is newer, check if this thing fits our search parameters
 						const auto& last = overlapping_fbos.back();
-						if (last.src_x == 0 && last.src_y == 0 && last.surface->get_bpp() == bpp)
+						if (last.src_x == 0 && last.src_y == 0)
 						{
 							u16 internal_width = tex_width;
 							u16 internal_height = required_surface_height;
 							get_native_dimensions(internal_width, internal_height, last.surface);
 
-							if (last.width >= internal_width && last.height >= internal_height)
+							u16 normalized_width = u16(last.width * last.surface->get_bpp()) / bpp;
+							if (normalized_width >= internal_width && last.height >= internal_height)
 							{
 								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, format, tex_width, tex_height, depth,
 									scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), false);
@@ -2163,12 +2193,66 @@ namespace rsx
 					else if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
 					{
 						const auto last = overlapping_locals.back();
+						const auto normalized_width = u16(last->get_width() * get_format_block_size_in_bytes(last->get_gcm_format())) / bpp;
+
 						if (last->get_section_base() == texaddr &&
-							get_format_block_size_in_bytes(last->get_gcm_format()) == bpp &&
-							last->get_width() >= tex_width && last->get_height() >= tex_height)
+							normalized_width >= tex_width && last->get_height() >= tex_height)
 						{
-							return { last->get_raw_texture(), deferred_request_command::copy_image_static, texaddr, format, 0, 0,
-									tex_width, tex_height, 1, last->get_context(), last->is_depth_texture(),
+							bool is_depth = last->is_depth_texture();
+							u32  gcm_format = format;
+
+							if (const auto gcm_format_is_depth = is_gcm_depth_format(format);
+								is_depth != gcm_format_is_depth)
+							{
+								// Conflict, resolve
+								if (gcm_format_is_depth)
+								{
+									is_depth = true;
+								}
+								else
+								{
+									const auto actual_format = last->get_gcm_format();
+									bool  resolved = false;
+
+									switch (format)
+									{
+									case CELL_GCM_TEXTURE_A8R8G8B8:
+									case CELL_GCM_TEXTURE_D8R8G8B8:
+									{
+										// Compatible with D24S8_UINT
+										if (actual_format == CELL_GCM_TEXTURE_DEPTH24_D8)
+										{
+											gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
+											resolved = true;
+											is_depth = true;
+										}
+										break;
+									}
+									case CELL_GCM_TEXTURE_X16:
+									{
+										// Compatible with DEPTH16_UNORM
+										if (actual_format == CELL_GCM_TEXTURE_DEPTH16)
+										{
+											gcm_format = CELL_GCM_TEXTURE_DEPTH16;
+											resolved = true;
+											is_depth = true;
+										}
+										break;
+									}
+									}
+
+									if (!resolved)
+									{
+										LOG_ERROR(RSX, "Reading texture with gcm format 0x%x as unexpected cast with format 0x%x",
+											actual_format, format);
+
+										is_depth = gcm_format_is_depth;
+									}
+								}
+							}
+
+							return { last->get_raw_texture(), deferred_request_command::copy_image_static, texaddr, gcm_format, 0, 0,
+									tex_width, tex_height, 1, last->get_context(), is_depth,
 									scale_x, scale_y, extended_dimension, tex.decoded_remap() };
 						}
 					}
