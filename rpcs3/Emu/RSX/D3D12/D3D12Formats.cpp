@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12Formats.h"
@@ -166,8 +166,6 @@ DXGI_FORMAT get_texture_format(u8 format)
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return DXGI_FORMAT_R8G8_B8G8_UNORM;
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return DXGI_FORMAT_R8G8_SNORM;
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return DXGI_FORMAT_G8R8_G8B8_UNORM;
-	case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return DXGI_FORMAT_R8G8_B8G8_UNORM;
 	}
 	fmt::throw_exception("Invalid texture format (0x%x)" HERE, (u32)format);
 }
