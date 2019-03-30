@@ -6257,8 +6257,10 @@ public:
 				return;
 			}
 
+			const auto _max = fsplat<f64[4]>(std::exp2(32.f));
 			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
-			set_vr(op.rt, r & sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f64[4]>(0.))));
+			r.value = m_ir->CreateSelect(m_ir->CreateFCmpUGE(a.value, _max.value), splat<s32[4]>(-1).eval(m_ir), (r & sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f64[4]>(0.)))).eval(m_ir));
+			set_vr(op.rt, r);
 		}
 		else
 		{
@@ -6272,8 +6274,10 @@ public:
 				a = eval(a * s);
 
 			value_t<s32[4]> r;
+			const auto _max = fsplat<f32[4]>(std::exp2(32.f));
 			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
-			set_vr(op.rt, r & ~(bitcast<s32[4]>(a) >> 31));
+			r.value = m_ir->CreateSelect(m_ir->CreateFCmpUGE(a.value, _max.value), splat<s32[4]>(-1).eval(m_ir), (r & ~(bitcast<s32[4]>(a) >> 31)).eval(m_ir));
+			set_vr(op.rt, r);
 		}
 	}
 
