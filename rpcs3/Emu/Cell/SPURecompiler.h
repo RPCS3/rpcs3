@@ -108,6 +108,9 @@ public:
 	// All dispatchers (array allocated in jit memory)
 	static atomic_t<spu_function_t>* const g_dispatcher;
 
+	// Interpreter entry point
+	static spu_function_t g_interpreter;
+
 	struct passive_lock
 	{
 		spu_runtime& _this;
@@ -253,7 +256,7 @@ public:
 	static std::unique_ptr<spu_recompiler_base> make_asmjit_recompiler();
 
 	// Create recompiler instance (LLVM)
-	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler();
+	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler(u8 magn = 0);
 
 	enum : u8
 	{

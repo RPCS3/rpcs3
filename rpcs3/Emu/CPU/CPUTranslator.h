@@ -923,6 +923,12 @@ public:
 		return llvm_value_t<T>::get_type(m_context);
 	}
 
+	template <typename R, typename... Args>
+	llvm::FunctionType* get_ftype()
+	{
+		return llvm::FunctionType::get(get_type<R>(), {get_type<Args>()...}, false);
+	}
+
 	template <typename T>
 	using value_t = llvm_value_t<T>;
 
@@ -986,13 +992,6 @@ public:
 		return (b ^ s) & ~(a ^ b);
 	}
 
-	// Get signed subtraction overflow into the sign bit (d = a - b)
-	template <typename T>
-	static inline auto sborrow(T a, T b, T d)
-	{
-		return (a ^ b) & (a ^ d);
-	}
-
 	// Bitwise select (c ? a : b)
 	template <typename T>
 	static inline auto merge(T c, T a, T b)
@@ -1008,12 +1007,96 @@ public:
 		return a << (b & mask) | a >> (-b & mask);
 	}
 
-	// Rotate left
+	// Add with saturation
 	template <typename T>
-	static inline auto rol(T a, u64 b)
+	inline auto add_sat(T a, T b)
 	{
-		static constexpr u64 mask = value_t<typename T::type>::esize - 1;
-		return a << (b & mask) | a >> ((0 - b) & mask);
+		value_t<typename T::type> result;
+		const auto eva = a.eval(m_ir);
+		const auto evb = b.eval(m_ir);
+
+		// Compute constant result immediately if possible
+		if (llvm::isa<llvm::Constant>(eva) && llvm::isa<llvm::Constant>(evb))
+		{
+			static_assert(result.is_sint || result.is_uint);
+
+			if constexpr (result.is_sint)
+			{
+				llvm::Type* cast_to = m_ir->getIntNTy(result.esize * 2);
+				if constexpr (result.is_vector != 0)
+					cast_to = llvm::VectorType::get(cast_to, result.is_vector);
+
+				const auto axt = m_ir->CreateSExt(eva, cast_to);
+				const auto bxt = m_ir->CreateSExt(evb, cast_to);
+				result.value = m_ir->CreateAdd(axt, bxt);
+				const auto _max = m_ir->getInt(llvm::APInt::getSignedMaxValue(result.esize * 2).ashr(result.esize));
+				const auto _min = m_ir->getInt(llvm::APInt::getSignedMinValue(result.esize * 2).ashr(result.esize));
+				const auto smax = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _max) : _max;
+				const auto smin = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _min) : _min;
+				result.value = m_ir->CreateSelect(m_ir->CreateICmpSGT(result.value, smax), smax, result.value);
+				result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(result.value, smin), smin, result.value);
+				result.value = m_ir->CreateTrunc(result.value, result.get_type(m_context));
+			}
+			else
+			{
+				const auto _max = m_ir->getInt(llvm::APInt::getMaxValue(result.esize));
+				const auto ones = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _max) : _max;
+				result.value = m_ir->CreateAdd(eva, evb);
+				result.value = m_ir->CreateSelect(m_ir->CreateICmpULT(result.value, eva), ones, result.value);
+			}
+		}
+		else
+		{
+			result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(result.is_sint ? llvm::Intrinsic::sadd_sat : llvm::Intrinsic::uadd_sat), {eva, evb});
+		}
+
+		return result;
+	}
+
+	// Subtract with saturation
+	template <typename T>
+	inline auto sub_sat(T a, T b)
+	{
+		value_t<typename T::type> result;
+		const auto eva = a.eval(m_ir);
+		const auto evb = b.eval(m_ir);
+
+		// Compute constant result immediately if possible
+		if (llvm::isa<llvm::Constant>(eva) && llvm::isa<llvm::Constant>(evb))
+		{
+			static_assert(result.is_sint || result.is_uint);
+
+			if constexpr (result.is_sint)
+			{
+				llvm::Type* cast_to = m_ir->getIntNTy(result.esize * 2);
+				if constexpr (result.is_vector != 0)
+					cast_to = llvm::VectorType::get(cast_to, result.is_vector);
+
+				const auto axt = m_ir->CreateSExt(eva, cast_to);
+				const auto bxt = m_ir->CreateSExt(evb, cast_to);
+				result.value = m_ir->CreateSub(axt, bxt);
+				const auto _max = m_ir->getInt(llvm::APInt::getSignedMaxValue(result.esize * 2).ashr(result.esize));
+				const auto _min = m_ir->getInt(llvm::APInt::getSignedMinValue(result.esize * 2).ashr(result.esize));
+				const auto smax = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _max) : _max;
+				const auto smin = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _min) : _min;
+				result.value = m_ir->CreateSelect(m_ir->CreateICmpSGT(result.value, smax), smax, result.value);
+				result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(result.value, smin), smin, result.value);
+				result.value = m_ir->CreateTrunc(result.value, result.get_type(m_context));
+			}
+			else
+			{
+				const auto _min = m_ir->getInt(llvm::APInt::getMinValue(result.esize));
+				const auto zero = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _min) : _min;
+				result.value = m_ir->CreateSub(eva, evb);
+				result.value = m_ir->CreateSelect(m_ir->CreateICmpULT(eva, evb), zero, result.value);
+			}
+		}
+		else
+		{
+			result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(result.is_sint ? llvm::Intrinsic::ssub_sat : llvm::Intrinsic::usub_sat), {eva, evb});
+		}
+
+		return result;
 	}
 
 	// Average: (a + b + 1) >> 1
@@ -1023,18 +1106,15 @@ public:
 		//return (a >> 1) + (b >> 1) + ((a | b) & 1);
 
 		value_t<typename T::type> result;
-		llvm::Instruction::CastOps cast_op = llvm::Instruction::BitCast;
-		if (result.is_sint)
-			cast_op = llvm::Instruction::SExt;
-		if (result.is_uint)
-			cast_op = llvm::Instruction::ZExt;
-		llvm::Type* cast_t = m_ir->getIntNTy(result.esize * 2);
-		if (result.is_vector != 0)
-			cast_t = llvm::VectorType::get(cast_t, result.is_vector);
+		static_assert(result.is_sint || result.is_uint);
+		const auto cast_op = result.is_sint ? llvm::Instruction::SExt : llvm::Instruction::ZExt;
+		llvm::Type* cast_to = m_ir->getIntNTy(result.esize * 2);
+		if constexpr (result.is_vector != 0)
+			cast_to = llvm::VectorType::get(cast_to, result.is_vector);
 
-		const auto axt = m_ir->CreateCast(cast_op, a.eval(m_ir), cast_t);
-		const auto bxt = m_ir->CreateCast(cast_op, b.eval(m_ir), cast_t);
-		const auto cxt = llvm::ConstantInt::get(cast_t, 1, false);
+		const auto axt = m_ir->CreateCast(cast_op, a.eval(m_ir), cast_to);
+		const auto bxt = m_ir->CreateCast(cast_op, b.eval(m_ir), cast_to);
+		const auto cxt = llvm::ConstantInt::get(cast_to, 1, false);
 		const auto abc = m_ir->CreateAdd(m_ir->CreateAdd(axt, bxt), cxt);
 		result.value = m_ir->CreateTrunc(m_ir->CreateLShr(abc, 1), result.get_type(m_context));
 		return result;
@@ -1080,6 +1160,15 @@ public:
 	{
 		value_t<T> result;
 		result.value = llvm::ConstantFP::get(result.get_type(m_context), c);
+		return result;
+	}
+
+	template <typename T, typename V>
+	auto vsplat(V v)
+	{
+		value_t<T> result;
+		static_assert(result.is_vector);
+		result.value = m_ir->CreateVectorSplat(result.is_vector, v.eval(m_ir));
 		return result;
 	}
 
@@ -1254,6 +1343,19 @@ public:
 			result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result.value);
 		}
 
+		return result;
+	}
+
+	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i)
+	{
+		return m_ir->CreateLoad(m_ir->CreateGEP(g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
+	}
+
+	template <typename T, typename I>
+	value_t<T> load_const(llvm::GlobalVariable* g, I i)
+	{
+		value_t<T> result;
+		result.value = load_const(g, i.eval(m_ir));
 		return result;
 	}
 
