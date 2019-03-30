@@ -1581,6 +1581,7 @@ namespace gl
 					m_aspect_flags = image_aspect::depth;
 					break;
 				}
+				case GL_DEPTH_COMPONENT32: // Unimplemented decode
 				case GL_DEPTH24_STENCIL8:
 				case GL_DEPTH32F_STENCIL8:
 				{

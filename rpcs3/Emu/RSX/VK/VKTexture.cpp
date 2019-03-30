@@ -557,7 +557,7 @@ namespace vk
 	{
 		u32 mipmap_level = 0;
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
-		u8 block_size_in_bytes = get_format_block_size_in_bytes(format);
+		u8  block_size_in_bytes = get_format_block_size_in_bytes(format);
 
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{

@@ -701,9 +701,9 @@ namespace vk
 			VkComponentMapping view_swizzle;
 			if (!source || dst_format != source->info.format)
 			{
-				//This is a data cast operation
-				//Use native mapping for the new type
-				//TODO: Also simulate the readback+reupload step (very tricky)
+				// This is a data cast operation
+				// Use native mapping for the new type
+				// TODO: Also simulate the readback+reupload step (very tricky)
 				const auto remap = get_component_mapping(gcm_format);
 				view_swizzle = { remap[1], remap[2], remap[3], remap[0] };
 			}
