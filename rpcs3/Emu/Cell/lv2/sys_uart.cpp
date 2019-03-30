@@ -25,7 +25,7 @@ error_code sys_uart_initialize()
 
 error_code sys_uart_receive(ppu_thread& ppu, vm::ptr<void> buffer, u64 size, u32 unk)
 {
-	sys_uart.todo("sys_uart_receive(buffer=*0x%x, size=0x%llx, unk=0x%x)", buffer, size, unk);
+	sys_uart.trace("sys_uart_receive(buffer=*0x%x, size=0x%llx, unk=0x%x)", buffer, size, unk);
 
 	// blocking this for 0.85, not sure if correct for newer kernels
 	u32 rtnSize = 0;
@@ -157,7 +157,7 @@ error_code sys_uart_receive(ppu_thread& ppu, vm::ptr<void> buffer, u64 size, u32
 
 error_code sys_uart_send(vm::cptr<void> buffer, u64 size, u64 flags)
 {
-	sys_uart.todo("sys_uart_send(buffer=0x%x, size=0x%llx, flags=0x%x)", buffer, size, flags);
+	sys_uart.trace("sys_uart_send(buffer=0x%x, size=0x%llx, flags=0x%x)", buffer, size, flags);
 
 	if ((flags & ~2ull) != 0)
 	{
@@ -199,10 +199,10 @@ error_code sys_uart_send(vm::cptr<void> buffer, u64 size, u64 flags)
 
 			for (const auto& d : pl.data)
 			{
-				sys_uart.error("uart: 0x%x", d);
+				sys_uart.trace("uart: 0x%x", d);
 			}
 
-			sys_uart.error("end");
+			sys_uart.trace("end");
 			pl.version = hdr->version;
 			payloads.emplace_back(pl);
 
