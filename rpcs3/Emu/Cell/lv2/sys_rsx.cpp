@@ -459,6 +459,7 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 
 	case 0xFED: // hack: vblank command
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
+		vm::_ref<u32>(render->ctxt_addr + 0x30) = 1;
 		driverInfo.head[a3].vBlankCount++;
 		driverInfo.head[a3].lastSecondVTime = rsxTimeStamp();
 		sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 1), 0);
