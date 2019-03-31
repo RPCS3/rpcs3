@@ -43,7 +43,7 @@ You should also contact any of the developers in the forums or in the Discord se
 * [Qt 5.10+](https://www.qt.io/download-open-source/) (Avoid 5.11.1, due to a bug)
 * GCC 7.3+ or Clang 5.0+
 * CMake 3.8.2+
-* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default libevdev-dev`
+* Debian & Ubuntu: `sudo apt-get install cmake build-essential libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git qt5-default libevdev-dev qtdeclarative5-dev`
 * Arch: `sudo pacman -S glew openal cmake vulkan-validation-layers qt5-base qt5-declarative`
 * Fedora: `sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-devel vulkan-devel`
 * OpenSUSE: `sudo zypper install git cmake libasound2 libpulse-devel openal-soft-devel glew-devel zlib-devel libedit-devel vulkan-devel libudev-devel libqt5-qtbase-devel libevdev-devel`
