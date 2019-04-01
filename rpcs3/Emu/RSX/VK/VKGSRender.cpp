@@ -2872,7 +2872,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
-		//Flush old address if we keep missing it
+		// Flush old address if we keep missing it
 		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
 			if (old_format == VK_FORMAT_UNDEFINED)
@@ -2925,7 +2925,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			verify("Pitch mismatch!" HERE), surface->rsx_pitch == layout.actual_color_pitch[index];
 
 			surface->write_aa_mode = layout.aa_mode;
-			m_texture_cache.notify_surface_changed(layout.color_addresses[index]);
+			m_texture_cache.notify_surface_changed(m_surface_info[index].get_memory_range(layout.aa_factors));
 			m_draw_buffers.push_back(index);
 		}
 	}
@@ -2940,7 +2940,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		verify("Pitch mismatch!" HERE), ds->rsx_pitch == layout.actual_zeta_pitch;
 
 		ds->write_aa_mode = layout.aa_mode;
-		m_texture_cache.notify_surface_changed(layout.zeta_address);
+		m_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
 	}
 
 	// Before messing with memory properties, flush command queue if there are dma transfers queued up
@@ -2954,7 +2954,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
-		const utils::address_range surface_range = m_surface_info[index].get_memory_range(layout.aa_factors);
+		const utils::address_range surface_range = m_surface_info[index].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
 		{
 			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_render_targets[index]), surface_range,
@@ -2968,7 +2968,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
-		const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors);
+		const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;

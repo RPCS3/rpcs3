@@ -178,6 +178,7 @@ namespace rsx
 			u16 width = 0;
 			u16 height = 0;
 			u16 depth = 1;
+			bool do_not_cache = false;
 
 			deferred_subresource()
 			{}
@@ -1506,20 +1507,23 @@ namespace rsx
 
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
 		{
-			const auto found = m_temporary_subresource_cache.equal_range(desc.base_address);
-			for (auto It = found.first; It != found.second; ++It)
+			if (!desc.do_not_cache)
 			{
-				const auto& found_desc = It->second.first;
-				if (found_desc.external_handle != desc.external_handle ||
-					found_desc.op != desc.op ||
-					found_desc.x != desc.x || found_desc.y != desc.y ||
-					found_desc.width != desc.width || found_desc.height != desc.height)
-					continue;
+				const auto found = m_temporary_subresource_cache.equal_range(desc.base_address);
+				for (auto It = found.first; It != found.second; ++It)
+				{
+					const auto& found_desc = It->second.first;
+					if (found_desc.external_handle != desc.external_handle ||
+						found_desc.op != desc.op ||
+						found_desc.x != desc.x || found_desc.y != desc.y ||
+						found_desc.width != desc.width || found_desc.height != desc.height)
+						continue;
 
-				if (desc.op == deferred_request_command::copy_image_dynamic)
-					update_image_contents(cmd, It->second.second, desc.external_handle, desc.width, desc.height);
+					if (desc.op == deferred_request_command::copy_image_dynamic)
+						update_image_contents(cmd, It->second.second, desc.external_handle, desc.width, desc.height);
 
-				return It->second.second;
+					return It->second.second;
+				}
 			}
 
 			image_view_type result = 0;
@@ -1600,9 +1604,19 @@ namespace rsx
 			return result;
 		}
 
-		void notify_surface_changed(u32 base_address)
+		void notify_surface_changed(const utils::address_range& range)
 		{
-			m_temporary_subresource_cache.erase(base_address);
+			for (auto It = m_temporary_subresource_cache.begin(); It != m_temporary_subresource_cache.end();)
+			{
+				if (range.overlaps(It->first))
+				{
+					It = m_temporary_subresource_cache.erase(It);
+				}
+				else
+				{
+					++It;
+				}
+			}
 		}
 
 		template<typename surface_store_list_type>
@@ -2271,6 +2285,25 @@ namespace rsx
 						// TODO: Overlapped section persistance is required for framebuffer resources to work with this!
 						// Yellow filter in SCV is because of a 384x384 surface being reused as 160x90 (and likely not getting written to)
 						// Its then sampled again here as 384x384 and this does not work! (obviously)
+
+						// Optionally disallow caching if resource is being written to as it is being read from
+						for (const auto &section : overlapping_fbos)
+						{
+							if (m_rtts.address_is_bound(section.base_address))
+							{
+								if (result.external_subresource_desc.op == deferred_request_command::copy_image_static)
+								{
+									result.external_subresource_desc.op = deferred_request_command::copy_image_dynamic;
+								}
+								else
+								{
+									result.external_subresource_desc.do_not_cache = true;
+								}
+
+								break;
+							}
+						}
+
 						return result;
 					}
 					else
@@ -2798,22 +2831,25 @@ namespace rsx
 				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
 			}
 
+			// Calculate number of bytes actually modified
+			u32 mem_length;
+			const u32 mem_base = dst_address - dst.rsx_address;
+			if (dst.clip_height == 1)
+			{
+				mem_length = dst.clip_width * dst_bpp;
+			}
+			else
+			{
+				const u32 mem_excess = mem_base % dst.pitch;
+				mem_length = (dst.pitch * dst.clip_height) - mem_excess;
+			}
+
+			// Invalidate any cached subresources in modified range
+			notify_surface_changed(utils::address_range::start_length(dst_address, mem_length));
+
 			if (cached_dest)
 			{
 				lock.upgrade();
-
-				u32 mem_length;
-				const u32 mem_base = dst_address - cached_dest->get_section_base();
-
-				if (dst.clip_height == 1)
-				{
-					mem_length = dst.clip_width * dst_bpp;
-				}
-				else
-				{
-					const u32 mem_excess = mem_base % dst.pitch;
-					mem_length = (dst.pitch * dst.clip_height) - mem_excess;
-				}
 
 				verify(HERE), (mem_base + mem_length) <= cached_dest->get_section_size();
 
@@ -2863,7 +2899,6 @@ namespace rsx
 
 			typeless_info.analyse();
 			blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit, typeless_info);
-			notify_surface_changed(dst.rsx_address);
 
 			blit_op_result result = true;
 			result.is_depth = is_depth_blit;
