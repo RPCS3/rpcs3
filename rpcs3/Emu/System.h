@@ -612,6 +612,7 @@ struct cfg_root : cfg::node
 		cfg::_bool autostart{this, "Automatically start games after boot", true};
 		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
+		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true};
 		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
 		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true };

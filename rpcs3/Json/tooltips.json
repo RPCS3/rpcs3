@@ -80,6 +80,7 @@
 			"exitOnStop": "Automatically close RPCS3 when closing a game, or when a game closes itself.",
 			"alwaysStart": "Leave this enabled unless you are a developer.",
 			"startGameFullscreen": "Automatically puts the game window in fullscreen.\nDouble click on the game window or press alt+enter to toggle fullscreen and windowed mode.",
+			"preventDisplaySleep": "Prevent the display from sleeping while a game is running.\nThis requires the org.freedesktop.ScreenSaver D-Bus service on Linux.\nThis option will be disabled if the current platform does not support display sleep control.",
 			"showFPSInTitle": "Shows the frame rate in the game window title. May cause buggy or outdated recording software to not notice RPCS3.",
 			"gs_resizeOnBoot": "Automatically resizes the game window on boot.\nThis does not change the internal game resolution.",
 			"showTrophyPopups": "Show trophy pop-ups when a trophy is unlocked.",

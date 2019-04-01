@@ -1900,6 +1900,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="preventDisplaySleep">
+                <property name="text">
+                 <string>Prevent display sleep while running games</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="showFPSInTitle">
                 <property name="text">
                  <string>Show framerate in the window title</string>

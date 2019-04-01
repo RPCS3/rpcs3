@@ -38,6 +38,7 @@ add_subdirectory(rpcs3qt)
 set(RPCS3_SRC
 	basic_keyboard_handler.cpp
 	basic_mouse_handler.cpp
+	display_sleep_control.cpp
 	ds3_pad_handler.cpp
 	ds4_pad_handler.cpp
 	evdev_joystick_handler.cpp

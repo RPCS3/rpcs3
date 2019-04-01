@@ -42,6 +42,8 @@
 
 #include "Utilities/JIT.h"
 
+#include "display_sleep_control.h"
+
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
@@ -1669,6 +1671,11 @@ void Emulator::Run()
 	// Initialize debug server at the end of emu run sequence
 	fxm::make<GDBDebugServer>();
 #endif
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		disable_display_sleep();
+	}
 }
 
 bool Emulator::Pause()
@@ -1696,6 +1703,12 @@ bool Emulator::Pause()
 
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		enable_display_sleep();
+	}
+
 	return true;
 }
 
@@ -1761,6 +1774,11 @@ void Emulator::Resume()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 	GetCallbacks().on_resume();
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		disable_display_sleep();
+	}
 }
 
 void Emulator::Stop(bool restart)
@@ -1832,6 +1850,11 @@ void Emulator::Stop(bool restart)
 	klic.clear();
 
 	m_force_boot = false;
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		enable_display_sleep();
+	}
 }
 
 std::string cfg_root::node_vfs::get(const cfg::string& _cfg, const char* _def) const
