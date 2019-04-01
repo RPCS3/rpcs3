@@ -81,6 +81,7 @@ namespace rsx
 
 		address_range get_memory_range() const
 		{
+			verify(HERE), range.start == address;
 			return range;
 		}
 	};
