@@ -167,6 +167,11 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 	// lock using the syscall
 	const error_code res = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
 
+	if (ppu.test_stopped())
+	{
+		return 0;
+	}
+
 	lwmutex->all_info--;
 
 	if (res == CELL_OK)
@@ -210,6 +215,11 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 			const u64 time0 = timeout ? get_system_time() : 0;
 
 			const error_code res_ = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
+
+			if (ppu.test_stopped())
+			{
+				return 0;
+			}
 
 			if (res_ == CELL_OK)
 			{

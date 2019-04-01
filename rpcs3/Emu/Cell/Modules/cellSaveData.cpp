@@ -381,7 +381,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, operation, listSet);
 
 			// Reschedule
-			ppu.check_state();
+			if (ppu.check_state())
+			{
+				return 0;
+			}
 
 			// UI returns -1 for new save games
 			if (selected == -1)
