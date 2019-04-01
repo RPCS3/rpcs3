@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 
@@ -13,6 +14,8 @@
 #include <algorithm>
 
 LOG_CHANNEL(cellSaveData);
+
+extern u32 g_ps3_sdk_version;
 
 template<>
 void fmt_class_string<CellSaveDataError>::format(std::string& out, u64 arg)
@@ -87,11 +90,164 @@ vm::gvar<savedata_context> g_savedata_context;
 
 std::mutex g_savedata_mutex;
 
+static bool savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirName,
+	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
+	PFuncFile funcFile, u32 container, u32 unk_op_flags, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
+{
+	if (version > CELL_SAVEDATA_VERSION_420)
+	{
+		// ****** sysutil savedata parameter error : 1 ******
+		return false;
+	}
+
+	if (errDialog > CELL_SAVEDATA_ERRDIALOG_NOREPEAT)
+	{
+		// ****** sysutil savedata parameter error : 5 ******
+		return false;
+	}
+
+	if (operation <= SAVEDATA_OP_AUTO_LOAD && !dirName)
+	{
+		// ****** sysutil savedata parameter error : 2 ******
+		return false;
+	}
+
+	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_FIXED_DELETE)
+	{
+		if (!setList)
+		{
+			// ****** sysutil savedata parameter error : 11 ******
+			return false;
+		}
+
+		if (setList->sortType > CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+		{
+			// ****** sysutil savedata parameter error : 12 ******
+			return false;
+		}
+
+		if (setList->sortOrder > CELL_SAVEDATA_SORTORDER_ASCENT)
+		{
+			// ****** sysutil savedata parameter error : 13 ******
+			return false;
+		}
+
+		if (!setList->dirNamePrefix)
+		{
+			// ****** sysutil savedata parameter error : 15 ******
+			return false;
+		}
+
+		if (!memchr(setList->dirNamePrefix.get_ptr(), '\0', CELL_SAVEDATA_PREFIX_SIZE)
+			|| (g_ps3_sdk_version > 0x3FFFFF && !setList->dirNamePrefix[0]))
+		{
+			// ****** sysutil savedata parameter error : 17 ******
+			return false;
+		}
+
+		// TODO: Theres some check here I've missed about dirNamePrefix
+
+		if (setList->reserved)
+		{
+			// ****** sysutil savedata parameter error : 14 ******
+			return false;
+		}
+	}
+
+	if (!setBuf)
+	{
+		// ****** sysutil savedata parameter error : 74 ******
+		return false;
+	}
+
+	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_FIXED_DELETE)
+	{	
+		if (setBuf->dirListMax > CELL_SAVEDATA_DIRLIST_MAX)
+		{
+			// ****** sysutil savedata parameter error : 8 ******
+			return false;
+		}
+
+		CHECK_SIZE(CellSaveDataDirList, 48);
+
+		if (setBuf->dirListMax * sizeof(CellSaveDataDirList) > setBuf->bufSize)
+		{
+			// ****** sysutil savedata parameter error : 7 ******
+			return false;
+		}
+	}
+
+	CHECK_SIZE(CellSaveDataFileStat, 56);
+
+	if (operation == SAVEDATA_OP_FIXED_DELETE)
+	{
+		if (setBuf->fileListMax != 0)
+		{
+			// ****** sysutil savedata parameter error : 9 ******
+			return false;
+		}
+	}
+	else if (setBuf->fileListMax * sizeof(CellSaveDataFileStat) > setBuf->bufSize)
+	{
+		// ****** sysutil savedata parameter error : 7 ******
+		return false;
+	}
+
+	if (setBuf->bufSize && !setBuf->buf)
+	{
+		// ****** sysutil savedata parameter error : 6 ******
+		return false;
+	}
+
+	for (be_t<u32> resv : setBuf->reserved)
+	{
+		if (resv != 0)
+		{
+			// ****** sysutil savedata parameter error : 10 ******
+			return false;
+		}
+	}
+
+	if ((operation == SAVEDATA_OP_LIST_SAVE || operation == SAVEDATA_OP_LIST_LOAD) && !funcList)
+	{
+		// ****** sysutil savedata parameter error : 18 ******
+		return false;
+	}
+	else if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD || 
+		operation == SAVEDATA_OP_LIST_AUTO_LOAD || operation == SAVEDATA_OP_LIST_AUTO_SAVE || operation == SAVEDATA_OP_FIXED_DELETE) && !funcFixed)
+	{
+		// ****** sysutil savedata parameter error : 19 ******
+		return false;
+	}
+
+	if (!(unk_op_flags & 0x2) || operation == SAVEDATA_OP_AUTO_SAVE || operation == SAVEDATA_OP_AUTO_LOAD)
+	{
+		if (!funcStat)
+		{
+			// ****** sysutil savedata parameter error : 20 ******
+			return false;
+		}
+
+		if (!(unk_op_flags & 0x2) && !funcFile)
+		{
+			// ****** sysutil savedata parameter error : 18 ******
+			return false;
+		}
+	}
+
+	return true;
+}
+
 static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
-	PFuncFile funcFile, u32 container, u32 unknown, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
+	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
-	// TODO: check arguments
+	if (!savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat, 
+	funcFile, container, unk_op_flags, userdata, userId, funcDone))
+	{
+		return CELL_SAVEDATA_ERROR_PARAM;
+	}
+
 	std::unique_lock lock(g_savedata_mutex, std::try_to_lock);
 
 	if (!lock)
@@ -190,11 +346,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			const u32 order = setList->sortOrder;
 			const u32 type = setList->sortType;
-
-			if (order > CELL_SAVEDATA_SORTORDER_ASCENT || type > CELL_SAVEDATA_SORTTYPE_SUBTITLE)
-			{
-				// error
-			}
 
 			std::sort(save_entries.begin(), save_entries.end(), [=](const SaveDataEntry& entry1, const SaveDataEntry& entry2)
 			{
