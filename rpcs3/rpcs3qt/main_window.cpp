@@ -1725,7 +1725,20 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 */
 void main_window::closeEvent(QCloseEvent* closeEvent)
 {
-	Q_UNUSED(closeEvent);
+	if (!Emu.IsStopped() && guiSettings->GetValue(gui::ib_confirm_exit).toBool())
+	{
+		int result;
+
+		guiSettings->ShowConfirmationBox(tr("Exit RPCS3?"),
+			tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n"),
+			gui::ib_confirm_exit, &result, nullptr);
+
+		if (result != QMessageBox::Yes)
+		{
+			closeEvent->ignore();
+			return;
+		}
+	}
 
 	// Cleanly stop the emulator.
 	Emu.Stop();
