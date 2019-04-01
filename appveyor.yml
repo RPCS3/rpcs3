@@ -10,7 +10,7 @@ environment:
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
   VULKAN_SDK: "C:\\VulkanSDK\\1.1.73.0"
   VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.73.0/windows/VulkanSDK-1.1.73.0-Installer.exe
-  VULKAN_SDK_MIRROR: https://obk.ee/rpcs3/VulkanSDK-1.1.73.0-Installer.exe
+  VULKAN_SDK_MIRROR: https://nkmk.ch/rpcs3/VulkanSDK-1.1.73.0-Installer.exe
   VULKAN_SDK_SHA: a5d193f97db4de97e6b4fdd81f00ff6a603f66bb17dc3cf8ac0fe9aec58497c7
 
 cache:
