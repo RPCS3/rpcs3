@@ -1054,8 +1054,12 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.jz(fail);
 	c.sar(x86::eax, 24);
 	c.js(fail);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::dword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.jmp(begin);
 
 	c.bind(fail);
@@ -1148,8 +1152,12 @@ const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.jz(fail);
 	c.sar(x86::eax, 24);
 	c.js(fail);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.jmp(begin);
 
 	c.bind(fail);
