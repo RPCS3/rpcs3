@@ -10,6 +10,7 @@
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
 
+#include <thread>
 #include <mutex>
 #include <algorithm>
 
@@ -254,6 +255,16 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	{
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
+
+	// Simulate idle time while data is being sent to VSH
+	const auto lv2_sleep = [](ppu_thread& ppu, size_t sleep_time)
+	{
+		lv2_obj::sleep(ppu);
+		std::this_thread::sleep_for(std::chrono::microseconds(sleep_time));
+		ppu.check_state();
+	};
+
+	lv2_sleep(ppu, 500);
 
 	*g_savedata_context = {};
 
@@ -576,6 +587,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (funcFixed)
 		{
+			lv2_sleep(ppu, 250);
+
 			// Fixed Callback
 			funcFixed(ppu, result, listGet, fixedSet);
 
@@ -659,6 +672,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
 	bool has_modified = false;
+
+	lv2_sleep(ppu, 250);
 
 	// Get save stats
 	{
