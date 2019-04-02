@@ -146,6 +146,9 @@ namespace vk
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
+	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region);
+	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
+
 	void copy_image_typeless(const command_buffer &cmd, const image *src, const image *dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
 		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
