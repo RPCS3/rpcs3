@@ -1528,14 +1528,14 @@ namespace rsx
 					{
 					case CELL_GCM_TEXTURE_X16:
 					{
-						// NOP, a simple way to quickly read DEPTH16 data without shadow comparison
+						// A simple way to quickly read DEPTH16 data without shadow comparison
 						break;
 					}
 					case CELL_GCM_TEXTURE_A8R8G8B8:
 					case CELL_GCM_TEXTURE_D8R8G8B8:
-					case CELL_GCM_TEXTURE_A4R4G4B4: //TODO
-					case CELL_GCM_TEXTURE_R5G6B5:   //TODO
 					{
+						// Reading depth data as XRGB8 is supported with in-shader conversion
+						// TODO: Optionally add support for 16-bit formats (not necessary since type casts are easy with that)
 						u32 remap = tex.remap();
 						result.redirected_textures |= (1 << i);
 						result.texture_scale[i][2] = (f32&)remap;
