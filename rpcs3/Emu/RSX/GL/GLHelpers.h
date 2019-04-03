@@ -1415,8 +1415,10 @@ namespace gl
 			rgba8 = GL_RGBA8,
 			r5g6b5 = GL_RGB565,
 			r8 = GL_R8,
-			rg8 = GL_RG8,
 			r32f = GL_R32F,
+			rg8 = GL_RG8,
+			rg16 = GL_RG16,
+			rg16f = GL_RG16F,
 			rgba16f = GL_RGBA16F,
 			rgba32f = GL_RGBA32F
 		};
