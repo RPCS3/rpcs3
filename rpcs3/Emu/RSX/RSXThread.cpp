@@ -2094,7 +2094,7 @@ namespace rsx
 		}
 	}
 
-	void thread::flip(int buffer)
+	void thread::flip(int buffer, bool emu_flip)
 	{
 		if (!(async_flip_requested & flip_request::any))
 		{
@@ -2135,7 +2135,14 @@ namespace rsx
 				m_flattener.force_disable();
 			}
 
-			async_flip_requested.clear();
+			if (emu_flip) 
+			{
+				async_flip_requested.clear(flip_request::emu_requested);
+			}
+			else
+			{
+				async_flip_requested.clear(flip_request::native_ui);
+			}
 		}
 
 		if (!skip_frame)
@@ -2462,7 +2469,7 @@ namespace rsx
 
 		int_flip_index++;
 		current_display_buffer = buffer;
-		flip(buffer);
+		flip(buffer, true);
 
 		last_flip_time = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;

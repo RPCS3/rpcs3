@@ -50,7 +50,7 @@ void GSRender::on_exit()
 	rsx::thread::on_exit();
 }
 
-void GSRender::flip(int buffer)
+void GSRender::flip(int buffer, bool emu_flip)
 {
 	if (m_frame)
 	{

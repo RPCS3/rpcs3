@@ -172,7 +172,7 @@ public:
 	void on_init_thread() override;
 	void on_exit() override;
 
-	void flip(int buffer) override;
+	void flip(int buffer, bool emu_flip = false) override;
 
 	GSFrameBase* get_frame() { return m_frame; };
 };
