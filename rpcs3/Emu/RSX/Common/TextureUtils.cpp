@@ -30,6 +30,13 @@ namespace
 		std::copy(src.begin(), src.end(), dst.begin());
 	}
 
+	u16 convert_rgb655_to_rgb565(const u16 bits)
+	{
+		// g6 = g5
+		// r5 = (((bits & 0xFC00) >> 1) & 0xFC00) << 1 is equivalent to truncating the least significant bit
+		return (bits & 0xF81F) | (bits & 0x3E0) << 1;
+	}
+
 struct copy_unmodified_block
 {
 	template<typename T, typename U>
@@ -55,16 +62,8 @@ struct copy_unmodified_block_swizzled
 			std::vector<U> tmp(width_in_block * row_count * depth);
 			rsx::convert_linear_swizzle_3d<U>((void*)src.data(), tmp.data(), width_in_block, row_count, depth);
 
-			gsl::span<U> src_span = tmp;
-			u32 src_offset = 0;
-			u32 dst_offset = 0;
-
-			for (int n = 0; n < row_count * depth; ++n)
-			{
-				copy(dst.subspan(dst_offset, width_in_block), src_span.subspan(src_offset, width_in_block));
-				dst_offset += dst_pitch_in_block;
-				src_offset += width_in_block;
-			}
+			gsl::span<const U> src_span = tmp;
+			copy_unmodified_block::copy_mipmap_level(dst, src_span, width_in_block, row_count, depth, dst_pitch_in_block, width_in_block);
 		}
 	}
 };
@@ -163,6 +162,40 @@ struct copy_decoded_rb_rg_block
 			src_offset += src_pitch_in_block;
 			dst_offset += dst_pitch_in_block;
 		}
+	}
+};
+
+struct copy_rgb655_block
+{
+	template<typename T, typename U>
+	static void copy_mipmap_level(gsl::span<T> dst, gsl::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	{
+		static_assert(sizeof(T) == sizeof(U), "Type size doesn't match.");
+
+		u32 src_offset = 0, dst_offset = 0;
+		for (int row = 0; row < row_count * depth; ++row)
+		{
+			for (int col = 0; col < width_in_block; ++col)
+			{
+				dst[dst_offset + col] = convert_rgb655_to_rgb565(src[src_offset + col]);
+			}
+
+			src_offset += src_pitch_in_block;
+			dst_offset += dst_pitch_in_block;
+		}
+	}
+};
+
+struct copy_rgb655_block_swizzled
+{
+	template<typename T, typename U>
+	static void copy_mipmap_level(gsl::span<T> dst, gsl::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block)
+	{
+		std::vector<U> tmp(width_in_block * row_count * depth);
+		rsx::convert_linear_swizzle_3d<U>((void*)src.data(), tmp.data(), width_in_block, row_count, depth);
+
+		gsl::span<const U> src_span = tmp;
+		copy_rgb655_block::copy_mipmap_level(dst, src_span, width_in_block, row_count, depth, dst_pitch_in_block, width_in_block);
 	}
 };
 
@@ -348,6 +381,15 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 		break;
 	}
 
+	case CELL_GCM_TEXTURE_R6G5B5:
+	{
+		if (is_swizzled)
+			copy_rgb655_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u16>(w, dst_row_pitch_multiple_of));
+		else
+			copy_rgb655_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u16>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+		break;
+	}
+
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 		// TODO: Test if the HILO compressed formats support swizzling (other compressed_* formats ignore this option)
@@ -358,7 +400,6 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	case CELL_GCM_TEXTURE_A4R4G4B4:
 	case CELL_GCM_TEXTURE_R5G5B5A1:
 	case CELL_GCM_TEXTURE_R5G6B5:
-	case CELL_GCM_TEXTURE_R6G5B5:
 	case CELL_GCM_TEXTURE_G8B8:
 	{
 		if (is_swizzled)
