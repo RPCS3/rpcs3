@@ -285,13 +285,13 @@ QMenu::item {
 	padding-top: 0.25em;
 	padding-bottom: 0.25em;
 	margin-bottom: 0.125em;
-	border-left: 1px solid #8cf944;
+	border-left: 1px solid transparent;
 }
 
 QMenu::item:selected {
 	background: #2d3038;
 	color: #8cf944;
-	/*border-left: 1px solid #8cf944;*/
+	border-left: 1px solid #8cf944;
 }
 
 QMenu::item:disabled {
