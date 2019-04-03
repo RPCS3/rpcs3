@@ -617,7 +617,6 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	const auto dst_bpp = get_bpp();
 	rsx::typeless_xfer typeless_info{};
 
-	const bool dst_is_depth = is_depth(get_internal_format());
 	const auto region = rsx::get_transferable_region(this);
 
 	if (get_internal_format() == src_texture->get_internal_format())
@@ -628,17 +627,17 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	else
 	{
 		// Mem cast, generate typeless xfer info
-		const bool src_is_depth = is_depth(src_texture->get_internal_format());
-		if (src_bpp != dst_bpp || dst_is_depth || src_is_depth)
+		if (src_bpp != dst_bpp || aspect() != src_texture->aspect())
 		{
 			typeless_info.src_is_typeless = true;
 			typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 			typeless_info.src_native_format_override = (u32)get_internal_format();
-			typeless_info.src_is_depth = src_is_depth;
+			typeless_info.src_is_depth = !!(src_texture->aspect() & gl::image_aspect::depth);
 			typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 		}
 	}
 
+	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
 	gl::g_hw_blitter->scale_image(cmd, old_contents, this,
 		{ 0, 0, std::get<0>(region), std::get<1>(region) },
 		{ 0, 0, std::get<2>(region) , std::get<3>(region) },
