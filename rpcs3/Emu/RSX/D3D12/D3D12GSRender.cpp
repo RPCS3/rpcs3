@@ -524,7 +524,7 @@ bool is_flip_surface_in_global_memory(rsx::surface_target color_target)
 }
 }
 
-void D3D12GSRender::flip(int buffer)
+void D3D12GSRender::flip(int buffer, bool emu_flip)
 {
 	ID3D12Resource *resource_to_flip;
 	float viewport_w, viewport_h;

@@ -466,7 +466,7 @@ protected:
 	void on_init_thread() override;
 	void on_exit() override;
 	bool do_method(u32 id, u32 arg) override;
-	void flip(int buffer) override;
+	void flip(int buffer, bool emu_flip = false) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
