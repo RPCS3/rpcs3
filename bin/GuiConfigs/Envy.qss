@@ -57,7 +57,7 @@ QTabBar::tab {
 	padding-right: 1.5em;
 	padding-top: 0.25em;
 	padding-bottom: 0.25em;
-	margin: 0.66em;
+	margin: 0.7em;
 	border-bottom: 0.0525em solid #f8f8f8;
 }
 
