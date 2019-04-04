@@ -4,6 +4,7 @@ Skyline theme for RPCS3 by drysalter (https://github.com/drysalter)
 */
 
 /* Color Palette:
+
 Purple: #8500ae
 Pink Highlight: #f8edfb
 Blue: #4343c1
@@ -70,7 +71,6 @@ QMenu::item:disabled {
 
 /* Toolbar */
 QToolBar {
-	border: 1px solid #FFFFFF;
 	background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #8500ae, stop: 0.5 #4343c1, stop: 1 #009ed0);
 	border: none;
 }
@@ -117,6 +117,11 @@ QLineEdit#mw_searchbar:hover {
 	border: 0.0525em solid #0071ec;
 	margin: 15;
 }
+
+QLineEdit#mw_searchbar:focus { 
+	border: 0.0525em solid #0071ec;
+}
+
 
 /* Sliders */
 QSlider {
@@ -429,6 +434,8 @@ QHeaderView::section {
 	background-color: #FFFFFF;
 	color: #455971;
 	padding-left: 0.25em;
+	padding-top: 0.25em;
+	padding-bottom: 0.25em;
 	border: 1px solid #8500ae;
 	border-left: none;
 	border-right: none;
@@ -517,3 +524,4 @@ QLabel#color_button {
 QLabel#thumbnail_icon_color {
 	color: #8500ae;
 }
+

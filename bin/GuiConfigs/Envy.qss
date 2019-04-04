@@ -43,6 +43,8 @@ QHeaderView::section {
 	background-color: #23262d;
 	color: #f8f8f8;
 	padding-left: 0.25em;
+	padding-top: 0.25em;
+	padding-bottom: 0.25em;
 	border: 0.0525em solid #8cf944;
 	border-top: none;
 	border-left: none;
@@ -367,6 +369,10 @@ QLineEdit#mw_searchbar:hover {
 	margin: 15;
 }
 
+QLineEdit#mw_searchbar:focus { 
+	border: 0.0525em solid #8cf944;
+}
+
 /* Toolbar */
 QToolBar {
 	border: none;
@@ -507,3 +513,4 @@ QLabel#debugger_frame_pc {
 	color: #000;
 	background-color: #8cf944;
 }
+
