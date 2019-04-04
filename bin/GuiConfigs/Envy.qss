@@ -252,8 +252,18 @@ QTextEdit {
 	border-top: 0.05em solid #8cf944;
 }
 
+QLineEdit {
+	border: 1px solid #f8f8f8;
+	border-top: none;
+	border-left: none;
+	border-right: none;
+}
+
 QLineEdit:focus {
-	border-top: 0.05em solid #8cf944;
+	border: 1px solid #8cf944;
+	border-top: none;
+	border-left: none;
+	border-right: none;
 }
 
 
@@ -270,7 +280,9 @@ QTabWidget::pane {
 
 /* Top Menu Bar */
 QMenuBar::item:selected {
+	margin-bottom: 0.125em;
 	color: #8cf944;
+	background: transparent;
 }
 
 QMenuBar::item:pressed {
@@ -370,6 +382,7 @@ QToolButton {
 	margin-bottom: 0.125em;
 	min-width: 0.063em;
 	width: auto;
+	border-bottom: 1px solid transparent;
 }
 
 QToolButton::disabled {
@@ -388,6 +401,10 @@ QTableView {
 	selection-background-color: #2d3038;
 	selection-color: #8cf944;
 }
+
+QTableView::item:hover {
+    color: #8cf944;
+}      
 
 /* Game Icon Background */
 QLabel#gamelist_icon_background_color {
