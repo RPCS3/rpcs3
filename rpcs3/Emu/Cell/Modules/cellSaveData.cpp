@@ -767,7 +767,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		statGet->sysSizeKB = 35; // always reported as 35 regardless of actual file sizes
-		statGet->sizeKB = size_kbytes ? size_kbytes + statGet->sysSizeKB : 0;
+		statGet->sizeKB = !save_entry.isNew ? size_kbytes + statGet->sysSizeKB : 0;
 
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
@@ -797,6 +797,30 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (statSet->setParam)
 		{
+			if (statSet->setParam->attribute > CELL_SAVEDATA_ATTR_NODUPLICATE)
+			{
+				// ****** sysutil savedata parameter error : 57 ******
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+
+			for (u8 resv : statSet->setParam->reserved2)
+			{
+				if (resv)
+				{
+					// ****** sysutil savedata parameter error : 58 ******
+					return CELL_SAVEDATA_ERROR_PARAM;
+				}
+			}
+
+			for (u8 resv : statSet->setParam->reserved)
+			{
+				if (resv)
+				{
+					// ****** sysutil savedata parameter error : 59 ******
+					return CELL_SAVEDATA_ERROR_PARAM;
+				}
+			}
+
 			// Update PARAM.SFO
 			psf.clear();
 			psf.insert(
@@ -816,14 +840,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			has_modified = true;
 		}
-		//else if (psf.empty())
-		//{
-		//	// setParam is specified if something required updating.
-		//	// Do not exit. Recreate mode will handle the rest
-		//	//return CELL_OK;
-		//}
+		else if (save_entry.isNew)
+		{
+			// ****** sysutil savedata parameter error : 50 ******
+			return CELL_SAVEDATA_ERROR_PARAM;
+		}
 
-		switch (const u32 mode = statSet->reCreateMode & 0xffff)
+		switch (const u32 mode = statSet->reCreateMode & CELL_SAVEDATA_RECREATE_MASK)
 		{
 		case CELL_SAVEDATA_RECREATE_NO:
 		{
@@ -841,6 +864,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		case CELL_SAVEDATA_RECREATE_YES:
 		case CELL_SAVEDATA_RECREATE_YES_RESET_OWNER:
 		{
+			if (!statSet->setParam)
+			{
+				// ****** sysutil savedata parameter error : 50 ******
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
 
 			// TODO: Only delete data, not owner info
 			for (const auto& entry : fs::dir(dir_path))
@@ -849,15 +877,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				{
 					fs::remove_file(dir_path + entry.name);
 				}
-			}
-
-			//TODO: probably not deleting owner info
-			if (!statSet->setParam)
-			{
-				// Savedata deleted and setParam is NULL: delete directory and abort operation
-				if (fs::remove_dir(dir_path)) cellSaveData.error("savedata_op(): savedata directory %s deleted", save_entry.dirName);
-
-				//return CELL_OK;
 			}
 
 			break;
