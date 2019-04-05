@@ -695,6 +695,24 @@ s32 cellHttpClientSetSslIdDestroyCallback()
 	return CELL_OK;
 }
 
+s32 cellHttpFlushCache()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpEndCache()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+s32 cellHttpInitCache()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellHttp)("cellHttp", []()
 {
 	REG_FUNC(cellHttp, cellHttpAuthCacheExport);
@@ -826,6 +844,10 @@ DECLARE(ppu_module_manager::cellHttp)("cellHttp", []()
 	REG_FUNC(cellHttp, cellHttpClientSetSslVersion);
 	REG_FUNC(cellHttp, cellHttpClientGetSslVersion);
 	REG_FUNC(cellHttp, cellHttpClientSetSslIdDestroyCallback);
+
+	REG_FUNC(cellHttp, cellHttpFlushCache);
+	REG_FUNC(cellHttp, cellHttpEndCache);
+	REG_FUNC(cellHttp, cellHttpInitCache);
 });
 
 DECLARE(ppu_module_manager::cellHttps)("cellHttps", []()
