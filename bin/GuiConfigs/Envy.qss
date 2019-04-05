@@ -340,7 +340,7 @@ QListWidget::item:hover {
 
 /* Pad Settings: Controller Image */
 QLabel#l_controller { 
-	color: #FFFFFF;
+	color: #8cf944;
 }
 
 /* Slider on Toolbar */
