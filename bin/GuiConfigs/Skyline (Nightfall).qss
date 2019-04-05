@@ -40,7 +40,10 @@ QMenuBar::item:selected {
 
 QMenuBar::item:!selected {
 	border-bottom: 2px solid transparent;
-	padding: 3px;
+	padding-top: 3px;
+	padding-bottom: 3px;
+	padding-left: 6px;
+	padding-right: 6px;
 }
 
 QMenuBar::item:pressed {
@@ -103,23 +106,23 @@ QToolButton::hover {
 
 /* Searchbar in Main Toolbar */
 QLineEdit#mw_searchbar { 
-	margin-left: 0.7em; 
 	color: #455971;
 	background-color: #FFFFFF;
-	border: 0.0525em solid #999999;
-	margin: 15;
+	border: 1px solid #999999;
+	margin: 15px;
+	padding-left: 5px;
 }
 
 QLineEdit#mw_searchbar:hover { 
 	margin-left: 0.7em; 
 	color: #0074e7;
 	background-color: #FFFFFF;
-	border: 0.0525em solid #0071ec;
-	margin: 15;
+	border: 1px solid #0071ec;
+	margin: 15px;
 }
 
 QLineEdit#mw_searchbar:focus { 
-	border: 0.0525em solid #0074e7;
+	border: 1px solid #0074e7;
 }
 
 
@@ -286,17 +289,12 @@ QComboBox {
 }
 
 QComboBox::hover {
+	color: #FFFFFF;
 	background-color: #1c273d;
 	border: 0.0625em solid #0074e7;
 	border-radius: 0.10em;
 	padding-bottom: 0.125em;
 	padding-left: 0.25em;
-}
-
-QComboBox QAbstractItemView {
-	background-color: #111525;
-	color: #161249;
-	selection-background-color: #0074e7;
 }
 
 QComboBox::item:selected {
@@ -305,6 +303,17 @@ QComboBox::item:selected {
 	border: 0.0625em solid #0074e7;
 	border-radius: 0.10em;
 	border: none;
+	padding: 5px;
+}
+
+QComboBox::item:!selected {
+	color: #FFFFFF;
+	background-color: #111525;
+	border: 0.0625em solid #0074e7;
+	border-radius: 0.10em;
+	border: none;
+	padding: 5px;
+	height: 15px;
 }
 
 QComboBox::indicator{
@@ -334,6 +343,7 @@ QPushButton {
 	color: #FFFFFF;
 	border-radius: 2px;
 	background-color: #1c273d;
+	width: 65px
 }
 
 QPushButton::hover {
