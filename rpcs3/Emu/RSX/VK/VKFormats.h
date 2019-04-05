@@ -11,6 +11,8 @@ namespace vk
 	VkFormat get_compatible_srgb_format(VkFormat rgb_format);
 	u8 get_format_texel_width(VkFormat format);
 	std::pair<u8, u8> get_format_element_size(VkFormat format);
+	std::pair<bool, u32> get_format_convert_flags(VkFormat format);
+	bool formats_are_bitcast_compatible(VkFormat format1, VkFormat format2);
 
 	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter);
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter);

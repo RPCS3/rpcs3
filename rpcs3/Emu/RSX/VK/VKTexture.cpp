@@ -56,56 +56,6 @@ namespace vk
 		}
 	}
 
-	std::pair<bool, u32> get_format_convert_flags(VkFormat format)
-	{
-		switch (format)
-		{
-			//8-bit
-		case VK_FORMAT_R8_UNORM:
-		case VK_FORMAT_R8G8_UNORM:
-		case VK_FORMAT_R8G8_SNORM:
-		case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
-		case VK_FORMAT_R8G8B8A8_UNORM:
-			return{ false, 1 };
-		case VK_FORMAT_B8G8R8A8_UNORM:
-		case VK_FORMAT_B8G8R8A8_SRGB:
-			return{ true, 4 };
-			//16-bit
-		case VK_FORMAT_R16_UINT:
-		case VK_FORMAT_R16_SFLOAT:
-		case VK_FORMAT_R16_UNORM:
-		case VK_FORMAT_R16G16_UNORM:
-		case VK_FORMAT_R16G16_SFLOAT:
-		case VK_FORMAT_R16G16B16A16_SFLOAT:
-		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-		case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
-		case VK_FORMAT_R5G6B5_UNORM_PACK16:
-		case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
-			return{ true, 2 };
-			//32-bit
-		case VK_FORMAT_R32_UINT:
-		case VK_FORMAT_R32_SFLOAT:
-		case VK_FORMAT_R32G32B32A32_SFLOAT:
-			return{ true, 4 };
-			//DXT
-		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
-		case VK_FORMAT_BC2_UNORM_BLOCK:
-		case VK_FORMAT_BC3_UNORM_BLOCK:
-		case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
-		case VK_FORMAT_BC2_SRGB_BLOCK:
-		case VK_FORMAT_BC3_SRGB_BLOCK:
-			return{ false, 1 };
-			//Depth
-		case VK_FORMAT_D16_UNORM:
-			return{ true, 2 };
-		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-		case VK_FORMAT_D24_UNORM_S8_UINT:
-			return{ true, 4 };
-		}
-
-		fmt::throw_exception("Unknown vkFormat 0x%x" HERE, (u32)format);
-	}
-
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region)
 	{
 		switch (src->format())

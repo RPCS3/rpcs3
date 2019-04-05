@@ -615,6 +615,97 @@ namespace gl
 		fill_texture(type, mipmaps, gcm_format, width, height, depth, subresources_layout, is_swizzled, gl_format, gl_type, data_upload_buf);
 	}
 
+	u32 get_format_texel_width(GLenum format)
+	{
+		switch (format)
+		{
+		case GL_R8:
+			return 1;
+		case GL_R32F:
+		case GL_RG16:
+		case GL_RG16F:
+		case GL_RGBA8:
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return 4;
+		case GL_R16:
+		case GL_RG8:
+		case GL_RGB565:
+			return 2;
+		case GL_RGBA16F:
+			return 8;
+		case GL_RGBA32F:
+			return 16;
+		case GL_DEPTH_COMPONENT16:
+			return 2;
+		case GL_DEPTH24_STENCIL8:
+		case GL_DEPTH32F_STENCIL8:
+			return 4;
+		default:
+			fmt::throw_exception("Unexpected internal format 0x%X" HERE, (u32)format);
+		}
+	}
+
+	std::pair<bool, u32> get_format_convert_flags(GLenum format)
+	{
+		switch (format)
+		{
+		case GL_R8:
+		case GL_RG8:
+		case GL_RGBA8:
+			return { false, 1 };
+		case GL_R16:
+		case GL_RG16:
+		case GL_RG16F:
+		case GL_RGB565:
+		case GL_RGBA16F:
+			return { true, 2 };
+		case GL_R32F:
+		case GL_RGBA32F:
+			return { true, 4 };
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return { false, 4 };
+		case GL_DEPTH_COMPONENT16:
+			return { true, 2 };
+		case GL_DEPTH24_STENCIL8:
+		case GL_DEPTH32F_STENCIL8:
+			return { true, 4 };
+		default:
+			fmt::throw_exception("Unexpected internal format 0x%X" HERE, (u32)format);
+		}
+	}
+
+	bool formats_are_bitcast_compatible(GLenum format1, GLenum format2)
+	{
+		if (LIKELY(format1 == format2))
+		{
+			return true;
+		}
+
+		// Formats are compatible if the following conditions are met:
+		// 1. Texel sizes must match
+		// 2. Both formats require no transforms (basic memcpy) or...
+		// 3. Both formats have the same transform (e.g RG16_UNORM to RG16_SFLOAT, both are down and uploaded with a 2-byte byteswap)
+
+		if (get_format_texel_width(format1) != get_format_texel_width(format2))
+		{
+			return false;
+		}
+
+		const auto transform_a = get_format_convert_flags(format1);
+		const auto transform_b = get_format_convert_flags(format2);
+
+		if (transform_a.first == transform_b.first)
+		{
+			return !transform_a.first || (transform_a.second == transform_b.second);
+		}
+
+		return false;
+	}
+
 	void copy_typeless(texture * dst, const texture * src)
 	{
 		GLsizeiptr src_mem = src->width() * src->height();

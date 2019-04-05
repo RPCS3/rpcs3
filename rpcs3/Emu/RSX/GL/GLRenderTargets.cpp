@@ -627,7 +627,8 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	else
 	{
 		// Mem cast, generate typeless xfer info
-		if (src_bpp != dst_bpp || aspect() != src_texture->aspect())
+		if (!formats_are_bitcast_compatible((GLenum)get_internal_format(), (GLenum)src_texture->get_internal_format()) ||
+			aspect() != src_texture->aspect())
 		{
 			typeless_info.src_is_typeless = true;
 			typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
