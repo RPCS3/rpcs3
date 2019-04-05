@@ -442,8 +442,8 @@ QHeaderView::section {
 
 /* Tooltips */
 QToolTip {
-	background-color: #1c273d;
-	color: #370048;
+	background-color: #111525;
+	color: #FFFFFF;
 	padding: 0.1em;
 	border: none;
 }
