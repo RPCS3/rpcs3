@@ -596,9 +596,10 @@ namespace gl
 				u16 x, u16 y, u16 width, u16 height, const texture_channel_remap_t& remap, bool copy)
 		{
 			if (sized_internal_fmt == GL_NONE)
+			{
 				sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
+			}
 
-			const auto ifmt = static_cast<gl::texture::internal_format>(sized_internal_fmt);
 			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, 1, 1, sized_internal_fmt);
 
 			if (copy)
@@ -615,15 +616,9 @@ namespace gl
 			}
 
 			std::array<GLenum, 4> swizzle;
-			if (!src || (GLenum)ifmt != sized_internal_fmt)
+			if (!src || (GLenum)src->get_internal_format() != sized_internal_fmt)
 			{
-				if (src)
-				{
-					//Format mismatch
-					warn_once("GL format mismatch (data cast?). Sized ifmt=0x%X vs Src ifmt=0x%X", sized_internal_fmt, (GLenum)ifmt);
-				}
-
-				//Apply base component map onto the new texture if a data cast has been done
+				// Apply base component map onto the new texture if a data cast has been done
 				swizzle = get_component_mapping(gcm_format, rsx::texture_create_flags::default_component_order);
 			}
 			else
@@ -685,8 +680,8 @@ namespace gl
 				if (!slice.src)
 					continue;
 
-				const auto src_bpp = slice.src->pitch() / slice.src->width();
-				const bool typeless = dst_bpp != src_bpp || dst_aspect != slice.src->aspect();
+				const bool typeless = dst_aspect != slice.src->aspect() ||
+					!formats_are_bitcast_compatible((GLenum)slice.src->get_internal_format(), (GLenum)dst_image->get_internal_format());
 
 				auto src_image = slice.src;
 				auto src_x = slice.src_x;
@@ -694,6 +689,7 @@ namespace gl
 
 				if (UNLIKELY(typeless))
 				{
+					const auto src_bpp = slice.src->pitch() / slice.src->width();
 					const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
 					tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, (GLenum)dst_image->get_internal_format());
 
@@ -842,10 +838,17 @@ namespace gl
 			return result;
 		}
 
-		void update_image_contents(gl::command_context&, gl::texture_view* dst, gl::texture* src, u16 width, u16 height) override
+		void update_image_contents(gl::command_context& cmd, gl::texture_view* dst, gl::texture* src, u16 width, u16 height) override
 		{
-			glCopyImageSubData(src->id(), GL_TEXTURE_2D, 0, 0, 0, 0,
-					dst->image()->id(), GL_TEXTURE_2D, 0, 0, 0, 0, width, height, 1);
+			std::vector<copy_region_descriptor> region =
+			{{
+				src,
+				surface_transform::identity,
+				0, 0, 0, 0, 0,
+				width, height, width, height
+			}};
+
+			copy_transfer_regions_impl(cmd, dst->image(), region);
 		}
 
 		cached_texture_section* create_new_texture(gl::command_context&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,

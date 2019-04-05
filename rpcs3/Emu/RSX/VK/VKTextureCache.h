@@ -506,8 +506,8 @@ namespace vk
 				if (!section.src)
 					continue;
 
-				const auto src_bpp = vk::get_format_texel_width(section.src->format());
-				const bool typeless = section.src->aspect() != dst_aspect || src_bpp != dst_bpp;
+				const bool typeless = section.src->aspect() != dst_aspect ||
+					!formats_are_bitcast_compatible(dst->format(), section.src->format());
 
 				section.src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
@@ -517,6 +517,7 @@ namespace vk
 					src_image = vk::get_typeless_helper(dst->info.format, section.src_x + section.src_w, section.src_y + section.src_h);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+					const auto src_bpp = vk::get_format_texel_width(section.src->format());
 					const u16 convert_w = u16(section.src_w * dst_bpp) / src_bpp;
 					const areai src_rect = coordi{{ section.src_x, section.src_y }, { convert_w, section.src_h }};
 					const areai dst_rect = coordi{{ section.src_x, section.src_y }, { section.src_w, section.src_h }};
@@ -874,25 +875,18 @@ namespace vk
 
 		void update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, vk::image* src, u16 width, u16 height) override
 		{
-			VkImage dst = dst_view->info.image;
-			VkImageAspectFlags aspect = vk::get_aspect_flags(src->info.format);
-			VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
-			vk::change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+			std::vector<copy_region_descriptor> region =
+			{{
+				src,
+				surface_transform::identity,
+				0, 0, 0, 0, 0,
+				width, height, width, height
+			}};
 
-			VkImageLayout old_src_layout = src->current_layout;
-			vk::change_image_layout(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-
-			VkImageCopy copy_rgn;
-			copy_rgn.srcOffset = { 0, 0, 0 };
-			copy_rgn.dstOffset = { 0, 0, 0 };
-			copy_rgn.dstSubresource = { aspect & ~(VK_IMAGE_ASPECT_DEPTH_BIT), 0, 0, 1 };
-			copy_rgn.srcSubresource = { aspect & ~(VK_IMAGE_ASPECT_DEPTH_BIT), 0, 0, 1 };
-			copy_rgn.extent = { width, height, 1 };
-
-			vkCmdCopyImage(cmd, src->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_rgn);
-
-			vk::change_image_layout(cmd, src, old_src_layout, subresource_range);
-			vk::change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
+			auto dst = dst_view->image();
+			dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			copy_transfer_regions_impl(cmd, dst, region);
+			dst->pop_layout(cmd);
 		}
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps,  u16 pitch,

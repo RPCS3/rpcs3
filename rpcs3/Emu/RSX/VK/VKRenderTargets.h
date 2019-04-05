@@ -118,7 +118,8 @@ namespace vk
 			}
 			else
 			{
-				if (src_bpp != dst_bpp || src_texture->attachment_aspect_flag != attachment_aspect_flag)
+				if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
+					src_texture->attachment_aspect_flag != attachment_aspect_flag)
 				{
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
