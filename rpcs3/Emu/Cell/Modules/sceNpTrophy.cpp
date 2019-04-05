@@ -817,6 +817,12 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 	return CELL_OK;
 }
 
+error_code sceNpTrophyGetUserInfo()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	return CELL_OK;
+}
+
 error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
@@ -886,6 +892,7 @@ DECLARE(ppu_module_manager::sceNpTrophy)("sceNpTrophy", []()
 	REG_FUNC(sceNpTrophy, sceNpTrophyUnlockTrophy);
 	REG_FUNC(sceNpTrophy, sceNpTrophyTerm);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyUnlockState);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetUserInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyIcon);
 	REG_FUNC(sceNpTrophy, sceNpTrophyCreateContext);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);

@@ -9,7 +9,19 @@ s32 sceAdGetAssetInfo()
 	return CELL_OK;
 }
 
+s32 sceAdCloseContext()
+{
+	UNIMPLEMENTED_FUNC(libad_core);
+	return CELL_OK;
+}
+
 s32 sceAdGetSpaceInfo()
+{
+	UNIMPLEMENTED_FUNC(libad_core);
+	return CELL_OK;
+}
+
+s32 sceAdGetConnectionInfo()
 {
 	UNIMPLEMENTED_FUNC(libad_core);
 	return CELL_OK;
@@ -18,5 +30,7 @@ s32 sceAdGetSpaceInfo()
 DECLARE(ppu_module_manager::libad_core)("libad_core", []()
 {
 	REG_FUNC(libad_core, sceAdGetAssetInfo);
+	REG_FUNC(libad_core, sceAdCloseContext);
 	REG_FUNC(libad_core, sceAdGetSpaceInfo);
+	REG_FUNC(libad_core, sceAdGetConnectionInfo);
 });
