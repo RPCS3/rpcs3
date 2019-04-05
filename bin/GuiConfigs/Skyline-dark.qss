@@ -448,7 +448,7 @@ QToolTip {
 	border: none;
 }
 
-/* Log and Debugger Borders */6
+/* Log and Debugger Borders */
 QTextEdit {
 	border-top: 1px solid #0074e7;
 }
