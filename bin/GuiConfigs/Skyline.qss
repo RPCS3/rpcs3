@@ -343,7 +343,7 @@ QPushButton {
 	color: #455971;
 	border-radius: 2px;
 	background-color: #FFFFFF;
-	width: 65px;
+	width: 82px;
 }
 
 QPushButton::hover {
