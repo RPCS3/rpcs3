@@ -1,7 +1,9 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/RSX/Overlays/overlays.h"
 
 #include "cellSysutil.h"
@@ -219,18 +221,24 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 	pad::SetIntercepted(true);
 
-	atomic_t<bool> result(false);
+	auto& ppu = *get_current_cpu_thread();
+	lv2_obj::sleep(ppu);
 
 	// Run asynchronously in GUI thread
 	Emu.CallAfter([&]()
 	{
 		dlg->Create(msgString.get_ptr());
-		result = true;
+		lv2_obj::awake(ppu);
 	});
 
-	while (!result)
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
-		thread_ctrl::wait_for(1000);
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
+		thread_ctrl::wait();
 	}
 
 	return CELL_OK;
