@@ -68,7 +68,7 @@ namespace vk
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		{
-			verify(HERE), region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+			verify(HERE), region.imageSubresource.aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 
 			const u32 out_w = region.bufferRowLength? region.bufferRowLength : region.imageExtent.width;
 			const u32 out_h = region.bufferImageHeight? region.bufferImageHeight : region.imageExtent.height;
@@ -76,7 +76,7 @@ namespace vk
 			const u32 in_depth_size = packed_length;
 			const u32 in_stencil_size = out_w * out_h;
 
-			const u32 allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
+			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
 			verify(HERE), dst->size() >= allocation_end;
 
 			const VkDeviceSize z_offset = align<VkDeviceSize>(region.bufferOffset + packed_length, 256);
@@ -134,7 +134,7 @@ namespace vk
 			const u32 in_depth_size = packed_length;
 			const u32 in_stencil_size = out_w * out_h;
 
-			const u32 allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
+			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
 			verify(HERE), src->size() >= allocation_end;
 
 			const VkDeviceSize z_offset = align<VkDeviceSize>(region.bufferOffset + packed_length, 256);
