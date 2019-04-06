@@ -148,9 +148,15 @@ QSlider::handle:horizontal {
 }
 
 QSlider::handle:horizontal:hover {
-	background: #FFFFFF;
-	border: 1px solid #0074e7;
 	background: #111525;
+	border: 1px solid #0074e7;
+	width: 18px;
+	margin: -2px 4; 
+}
+
+QSlider::handle:horizontal:pressed {
+	border: 1px solid #0074e7;
+	background: #1c273d;
 	width: 18px;
 	margin: -2px 4; 
 }
@@ -180,6 +186,44 @@ QSlider#sizeSlider::handle:horizontal {
 
 QSlider#sizeSlider::handle:hover {
 	border: 1px solid #0074e7;
+}
+
+/* Scrollbars */
+QScrollBar {
+	width: 5px;
+}
+
+QTableView QScrollBar {
+	width: 3px;
+	margin-top: 23px;
+}
+
+QScrollBar::handle {
+	background: #455971;
+	min-height: 20px;
+}
+
+QScrollBar::handle:hover {
+	background: #0074e7;
+}
+
+QScrollBar::handle:pressed {
+	background: #0074e7;
+}
+
+QScrollBar::handle:disabled {
+	background: #26293b;
+}
+
+QTableView QScrollBar::handle {
+	background: #00364a;
+	min-height: 20px;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical, QScrollBar::up-button:vertical, QScrollBar::down-button:vertical, QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
+	color: transparent;
+	background: transparent;
+	border: none;
 }
 
 /* Radio Buttons */
