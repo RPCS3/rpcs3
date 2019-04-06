@@ -384,7 +384,6 @@ namespace vk
 		depth_convert_pass()
 		{
 			vs_src =
-			{
 				"#version 450\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
 				"layout(std140, set=0, binding=0) uniform static_data{ vec4 regs[8]; };\n"
@@ -396,11 +395,9 @@ namespace vk
 				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
 				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
 				"	tc0 = coords[gl_VertexIndex % 4] * regs[0].xy;\n"
-				"}\n"
-			};
+				"}\n";
 
 			fs_src =
-			{
 				"#version 420\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
 				"#extension GL_ARB_shader_stencil_export : enable\n\n"
@@ -411,8 +408,7 @@ namespace vk
 				"{\n"
 				"	vec4 rgba_in = texture(fs0, tc0);\n"
 				"	gl_FragDepth = rgba_in.w * 0.99609 + rgba_in.x * 0.00389 + rgba_in.y * 0.00002;\n"
-				"}\n"
-			};
+				"}\n";
 
 			renderpass_config.set_depth_mask(true);
 			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
@@ -463,7 +459,6 @@ namespace vk
 		ui_overlay_renderer()
 		{
 			vs_src =
-			{
 				"#version 450\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
 				"layout(location=0) in vec4 in_pos;\n"
@@ -490,11 +485,9 @@ namespace vk
 				"	vec4 pos = vec4((in_pos.xy * regs[0].zw) / regs[0].xy, 0.5, 1.);\n"
 				"	pos.xy = snap_to_grid(pos.xy);\n"
 				"	gl_Position = (pos + pos) - 1.;\n"
-				"}\n"
-			};
+				"}\n";
 
 			fs_src =
-			{
 				"#version 420\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
 				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
@@ -576,8 +569,7 @@ namespace vk
 				"		ocol = texture(fs0, tc0).rrrr * diff_color;\n"
 				"	else\n"
 				"		ocol = sample_image(fs0, tc0, parameters2.x).bgra * diff_color;\n"
-				"}\n"
-			};
+				"}\n";
 
 			renderpass_config.set_attachment_count(1);
 			renderpass_config.set_color_mask(true, true, true, true);
@@ -823,7 +815,6 @@ namespace vk
 		attachment_clear_pass()
 		{
 			vs_src =
-			{
 				"#version 450\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
 				"layout(push_constant) uniform static_data{ vec4 regs[2]; };\n"
@@ -839,11 +830,9 @@ namespace vk
 				"	color = regs[0];\n"
 				"	mask = regs[1];\n"
 				"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
-				"}\n"
-			};
+				"}\n";
 
 			fs_src =
-			{
 				"#version 420\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n"
 				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
@@ -856,8 +845,7 @@ namespace vk
 				"{\n"
 				"	vec4 original_color = texture(fs0, tc0);\n"
 				"	out_color = mix(original_color, color, bvec4(mask));\n"
-				"}\n"
-			};
+				"}\n";
 
 			renderpass_config.set_depth_mask(false);
 			renderpass_config.set_color_mask(true, true, true, true);
