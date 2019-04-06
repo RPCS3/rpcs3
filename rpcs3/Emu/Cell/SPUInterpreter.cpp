@@ -333,13 +333,13 @@ bool spu_interpreter::ROTI(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::ROTMI(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_srli_epi32(spu.gpr[op.ra].vi, 0-op.i7 & 0x3f);
+	spu.gpr[op.rt].vi = _mm_srli_epi32(spu.gpr[op.ra].vi, (0-op.i7) & 0x3f);
 	return true;
 }
 
 bool spu_interpreter::ROTMAI(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_srai_epi32(spu.gpr[op.ra].vi, 0-op.i7 & 0x3f);
+	spu.gpr[op.rt].vi = _mm_srai_epi32(spu.gpr[op.ra].vi, (0-op.i7) & 0x3f);
 	return true;
 }
 
@@ -359,13 +359,13 @@ bool spu_interpreter::ROTHI(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::ROTHMI(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_srli_epi16(spu.gpr[op.ra].vi, 0-op.i7 & 0x1f);
+	spu.gpr[op.rt].vi = _mm_srli_epi16(spu.gpr[op.ra].vi, (0-op.i7) & 0x1f);
 	return true;
 }
 
 bool spu_interpreter::ROTMAHI(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt].vi = _mm_srai_epi16(spu.gpr[op.ra].vi, 0-op.i7 & 0x1f);
+	spu.gpr[op.rt].vi = _mm_srai_epi16(spu.gpr[op.ra].vi, (0-op.i7) & 0x1f);
 	return true;
 }
 
@@ -708,7 +708,7 @@ bool spu_interpreter::ROTQMBY(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (0 - spu.gpr[op.rb]._u32[3] & 0x1f)));
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - spu.gpr[op.rb]._u32[3]) & 0x1f)));
 	return true;
 }
 
@@ -789,7 +789,7 @@ bool spu_interpreter::ROTQBII(spu_thread& spu, spu_opcode_t op)
 bool spu_interpreter::ROTQMBII(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
-	const s32 n = 0-op.i7 & 0x7;
+	const s32 n = (0-op.i7) & 0x7;
 	spu.gpr[op.rt].vi = _mm_or_si128(_mm_srli_epi64(a, n), _mm_slli_epi64(_mm_srli_si128(a, 8), 64 - n));
 	return true;
 }
@@ -814,7 +814,7 @@ bool spu_interpreter::ROTQMBYI(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (0 - op.i7 & 0x1f)));
+	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - op.i7) & 0x1f)));
 	return true;
 }
 

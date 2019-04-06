@@ -2995,7 +2995,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		{
 			if (spuq == v.first)
 			{
-				if (queue = v.second.lock())
+				if ((queue = v.second.lock()))
 				{
 					break;
 				}

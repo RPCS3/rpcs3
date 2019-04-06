@@ -853,7 +853,7 @@ s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribu
 	const auto vc = *vc_attribute;
 
 	if (!vc_attribute || vc.version == 0 || vc.output_format == 0 ||
-		vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME && !vc.buffer_memory)
+		(vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME && !vc.buffer_memory))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
