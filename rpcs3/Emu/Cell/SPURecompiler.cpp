@@ -3342,7 +3342,7 @@ public:
 					// Emit state check if necessary (TODO: more conditions)
 					for (u32 pred : pfound->second)
 					{
-						if (pred >= baddr && bi > 0)
+						if (pred >= baddr)
 						{
 							// If this block is a target of a backward branch (possibly loop), emit a check
 							check_state(baddr);
