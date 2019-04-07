@@ -852,7 +852,7 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (!fs::remove_file(local_path))
+	if (!vfs::host::unlink(local_path))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
