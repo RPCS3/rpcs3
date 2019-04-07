@@ -199,12 +199,12 @@ QTableView QScrollBar {
 }
 
 QScrollBar::handle {
-	background: #455971;
+	background: #999999;
 	min-height: 20px;
 }
 
 QTableView QScrollBar::handle {
-	background: #f8edfb;
+	background: #999999;
 }
 
 QScrollBar::handle:hover {
@@ -213,6 +213,14 @@ QScrollBar::handle:hover {
 
 QScrollBar::handle:pressed {
 	background: #8500ae;
+}
+
+QTableView QScrollBar::handle:hover {
+	background: #4343c1;
+}
+
+QTableView QScrollBar::handle:pressed {
+	background: #4343c1;
 }
 
 QScrollBar::handle:disabled {
