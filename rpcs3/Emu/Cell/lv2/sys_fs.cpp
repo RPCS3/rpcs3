@@ -774,7 +774,7 @@ error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 		return CELL_ENOTMOUNTED;
 	}
 
-	if (!fs::rename(local_from, local_to, false))
+	if (!vfs::host::rename(local_from, local_to, false))
 	{
 		switch (auto error = fs::g_tls_error)
 		{

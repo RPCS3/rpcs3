@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "IdManager.h"
+#include "System.h"
 #include "VFS.h"
 
 #include "Utilities/mutex.h"
@@ -446,4 +447,18 @@ std::string vfs::unescape(std::string_view path)
 	}
 
 	return result;
+}
+
+bool vfs::host::rename(const std::string& from, const std::string& to, bool overwrite)
+{
+	while (!fs::rename(from, to, overwrite))
+	{
+		// Try to ignore access error in order to prevent spurious failure
+		if (Emu.IsStopped() || fs::g_tls_error != fs::error::acces)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
