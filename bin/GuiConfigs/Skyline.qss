@@ -195,7 +195,7 @@ QScrollBar {
 
 QTableView QScrollBar {
 	width: 3px;
-	margin-top: 23px;
+	margin-top: 24px;
 }
 
 QScrollBar::handle {

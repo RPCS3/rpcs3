@@ -117,7 +117,7 @@ QScrollBar {
 
 QTableView QScrollBar {
 	width: 3px;
-	margin-top: 23px;
+	margin-top: 24px;
 }
 
 QScrollBar::handle {
@@ -456,6 +456,7 @@ QToolButton::hover {
 QTableView {
 	selection-background-color: #2d3038;
 	selection-color: #8cf944;
+	border: none;
 }
 
 QTableView::item:hover {
