@@ -1229,6 +1229,15 @@ fs::native_handle fs::file::get_handle() const
 #endif
 }
 
+#ifdef _WIN32
+bool fs::file::set_delete(bool autodelete) const
+{
+	FILE_DISPOSITION_INFO disp;
+	disp.DeleteFileW = autodelete;
+	return SetFileInformationByHandle(get_handle(), FileDispositionInfo, &disp, sizeof(disp)) != 0;
+}
+#endif
+
 void fs::dir::xnull() const
 {
 	fmt::throw_exception<std::logic_error>("fs::dir is null");

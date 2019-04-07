@@ -361,6 +361,11 @@ namespace fs
 
 		// Get native handle if available
 		native_handle get_handle() const;
+
+#ifdef _WIN32
+		// Windows-specific function
+		bool set_delete(bool autodelete = true) const;
+#endif
 	};
 
 	class dir final
