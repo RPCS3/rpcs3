@@ -45,7 +45,7 @@ QHeaderView::section {
 	padding-left: 0.25em;
 	padding-top: 0.25em;
 	padding-bottom: 0.25em;
-	border: 0.0525em solid #8cf944;
+	border: 1px solid #8cf944;
 	border-top: none;
 	border-left: none;
 	border-right: none;
@@ -113,23 +113,19 @@ QCheckBox::indicator::disabled {
 /* Scrollbars */
 QScrollBar {
 	width: 5px;
+	background: #23262d;
 }
 
 QTableView QScrollBar {
 	width: 3px;
-	margin-top: 24px;
+	height: 3px;
 }
 
 QScrollBar::handle {
 	background: #4d5058;
-	min-height: 20px;
 }
 
-QScrollBar::handle:hover {
-	background: #8cf944;
-}
-
-QScrollBar::handle:pressed {
+QScrollBar::handle:hover, QScrollBar::handle:pressed {
 	background: #8cf944;
 }
 
@@ -137,7 +133,7 @@ QScrollBar::handle:disabled {
 	background: #2d3038;
 }
 
-QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical, QScrollBar::up-button:vertical, QScrollBar::down-button:vertical, QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
+QScrollBar::up-arrow, QScrollBar::down-arrow, QScrollBar::up-button:vertical, QScrollBar::down-button, QScrollBar::sub-line, QScrollBar::add-line, QScrollBar::add-page, QScrollBar::sub-page {
 	color: transparent;
 	background: transparent;
 	border: none;
@@ -375,6 +371,25 @@ QListWidget::item:hover {
 	background-color:  #30333a;
 	color: #8cf944;
 	border-radius: 0.25em;
+}
+
+QListWidget::indicator {
+	border: 1px solid #f8f8f8;
+	background: #000000;
+	padding: 5px;
+}
+
+QListWidget::indicator:checked {
+	background: #8cf944;
+}
+
+QListWidget::indicator:hover {
+	border: 1px solid #8cf944;
+}
+
+QListWidget::indicator:disabled {
+	background: transparent;
+	border: 1px solid #1b1e23;
 }
 
 /* Pad Settings: Controller Image */

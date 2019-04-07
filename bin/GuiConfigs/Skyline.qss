@@ -193,33 +193,28 @@ QScrollBar {
 	width: 5px;
 }
 
+QScrollArea {
+    background: transparent;
+}
+
 QTableView QScrollBar {
 	width: 3px;
-	margin-top: 24px;
+	height: 3px;
 }
 
 QScrollBar::handle {
 	background: #999999;
-	min-height: 20px;
 }
 
 QTableView QScrollBar::handle {
 	background: #999999;
 }
 
-QScrollBar::handle:hover {
+QScrollBar::handle:hover, QScrollBar::handle:pressed {
 	background: #8500ae;
 }
 
-QScrollBar::handle:pressed {
-	background: #8500ae;
-}
-
-QTableView QScrollBar::handle:hover {
-	background: #4343c1;
-}
-
-QTableView QScrollBar::handle:pressed {
+QTableView QScrollBar::handle:hover, QTableView QScrollBar::handle:pressed {
 	background: #4343c1;
 }
 
@@ -227,7 +222,7 @@ QScrollBar::handle:disabled {
 	background: #b3b3b3;
 }
 
-QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical, QScrollBar::up-button:vertical, QScrollBar::down-button:vertical, QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
+QScrollBar::up-arrow, QScrollBar::down-arrow, QScrollBar::up-button:vertical, QScrollBar::down-button, QScrollBar::sub-line, QScrollBar::add-line, QScrollBar::add-page, QScrollBar::sub-page {
 	color: transparent;
 	background: transparent;
 	border: none;
@@ -459,6 +454,10 @@ QListWidget::item:disabled {
 QDockWidget::close-button, QDockWidget::float-button {
 	background-color: transparent;
 	width: auto;
+}
+
+QDockWidget::title {
+	background: #FFFFFF;
 }
 
 /* Game Table */
