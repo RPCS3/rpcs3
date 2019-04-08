@@ -381,10 +381,10 @@ QPushButton {
 	color: #FFFFFF;
 	border-radius: 2px;
 	background-color: #1c273d;
-	width: 82px
+	min-width: 82px;
 }
 
-QPushButton::hover {
+QPushButton:hover {
 	background-color: #1c273d;
 	border: 1px solid #0074e7;
 	padding: 2px;
@@ -409,19 +409,21 @@ QSpinBox, QDoubleSpinBox {
 	background-color: #1c273d;
 }
 
-QSpinBox::hover {
+QSpinBox:hover, QDoubleSpinBox:hover {
 	background-color: #1c273d;
 	border: 1px solid #0074e7;
 	padding: 2px;
 	color: #FFFFFF;
 }
 
-QSpinBox::up-button {
+QSpinBox::up-button, QSpinBox::down-button, QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
 	background: transparent;
 }
 
-QSpinBox::down-button {
-	background: transparent;
+QSpinBox:disabled, QDoubleSpinBox:disabled {
+	color: #455971;
+	background: #26293b;
+	border: 1px solid #455971;
 }
 
 /* Libraries List */
@@ -459,6 +461,7 @@ QTableView {
 QProgressBar {
 	border: 1px solid #455971;
 	border-radius: 3px;
+	text-align: center;
 }
 
 QProgressBar::chunk {

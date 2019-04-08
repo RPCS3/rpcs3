@@ -238,12 +238,13 @@ QSlider::handle:horizontal:pressed {
 
 /* Progress Bar */
 QProgressBar {
-    border: 0.05em solid #999999;
-    border-radius: 3px;
+	border: 0.05em solid #999999;
+	border-radius: 3px;
+	text-align: center;
 }
 
 QProgressBar::chunk {
-    background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #b1f184, stop: 0.5 #99f75b, stop: 1 #8cf944);
+	background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #b1f184, stop: 0.5 #99f75b, stop: 1 #8cf944);
 }
 
 /* Group Boxes (Settings Dialog) */
@@ -268,10 +269,10 @@ QPushButton {
 	border: 1px solid #f8f8f8;
 	padding: 2px;
 	color: #f8f8f8;
-	width: 82px;
+	min-width: 82px;
 }
 
-QPushButton::hover {
+QPushButton:hover {
 	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #23262d, stop: 1 #23262d);
 	border-width: 2px;
 	border: 1px solid #8cf944;
@@ -285,6 +286,30 @@ QPushButton::disabled {
 
 QPushButton::pressed {
 	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #2d3038, stop: 1 #2d3038); 
+}
+
+/* Spinboxes */
+QSpinBox, QDoubleSpinBox {
+	border: 1px solid #999999;
+	padding: 2px;
+	color: #999999;
+	border-radius: 2px;
+	background-color: transparent;
+}
+
+QSpinBox:hover, QDoubleSpinBox:hover {
+	background-color: transparent;
+	border: 1px solid #8cf944;
+	padding: 2px;
+}
+
+QSpinBox::up-button, QSpinBox::down-button, QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+	background: transparent;
+}
+
+QSpinBox:disabled, QDoubleSpinBox:disabled {
+	border: 1px solid #4d5058;
+	color: #4d5058;
 }
 
 
