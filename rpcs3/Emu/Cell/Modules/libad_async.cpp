@@ -15,8 +15,15 @@ s32 sceAdAsyncSpaceClose()
 	return CELL_OK;
 }
 
+s32 sceAdAsyncCloseContext()
+{
+	UNIMPLEMENTED_FUNC(libad_async);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::libad_async)("libad_async", []()
 {
 	REG_FUNC(libad_async, sceAdAsyncSpaceOpen);
 	REG_FUNC(libad_async, sceAdAsyncSpaceClose);
+	REG_FUNC(libad_async, sceAdAsyncCloseContext);
 });
