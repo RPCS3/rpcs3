@@ -590,14 +590,10 @@ error_code sys_fs_closedir(u32 fd)
 {
 	sys_fs.warning("sys_fs_closedir(fd=%d)", fd);
 
-	const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
-
-	if (!directory)
+	if (!idm::remove<lv2_fs_object, lv2_dir>(fd))
 	{
 		return CELL_EBADF;
 	}
-
-	idm::remove<lv2_fs_object, lv2_dir>(fd);
 
 	return CELL_OK;
 }
