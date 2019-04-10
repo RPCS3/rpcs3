@@ -1466,7 +1466,7 @@ void Emulator::Resume()
 
 		std::string dump;
 
-		for (u32 i = 0x10000; i < 0x20000000;)
+		for (u32 i = 0x10000; i < 0x10000000;)
 		{
 			if (vm::check_addr(i))
 			{
