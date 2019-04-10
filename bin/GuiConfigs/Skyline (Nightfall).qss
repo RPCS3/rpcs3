@@ -287,32 +287,63 @@ QGroupBox::title {
 
 /* Settings Dialog: Tabs */
 QTabBar::tab {
-	color: #FFFFFF;
-	padding-left: 1.5em;
-	padding-right: 1.5em;
-	padding-top: 0.25em;
-	padding-bottom: 0.25em;
-	margin: 0.7em;
-	border-bottom: 0.0525em solid #FFFFFF;
-}
-
-QTabBar::tab:last {
-	margin-right: 0em;
+	color: #455971;
+	padding-left: 1.25em;
+	padding-right: 1.25em;
+	padding-top: 0.5em;
+	padding-bottom: 0.75em;
+	border: none;
+	min-width: 65px;
+	border-bottom: 1px solid transparent;
 }
 
 QTabBar::tab:!selected {
 	color: #FFFFFF;
+	border-bottom: 1px solid transparent;
 }
 
 QTabBar::tab:selected {
-	color: #FFFFFF;
-	border-bottom: 0.0525em solid #0074e7;
+	color: #0074e7;
+	border-bottom: 1px solid #0074e7;
 }
 
 QTabBar::tab:hover {
+	color: #0074e7;
+}
+
+QTabBar#tab_bar_settings {
+	border-bottom: 1px solid #0074e7;
+	width: 5.20em;
+}
+
+QTabBar#tab_bar_settings::tab:!selected {
 	color: #FFFFFF;
-	background-margin: 5em;
-	border-bottom: 0.0525em solid #0074e7;
+	border-bottom: 1px solid transparent;
+}
+
+QTabBar#tab_bar_settings::tab:selected {
+	color: #0074e7;
+	border-bottom: 1px solid transparent;
+}
+
+QTabBar#tab_bar_settings::tab:hover {
+	color: #177fe7;
+	border-bottom: 1px solid transparent;
+}
+
+QTabBar#tab_bar_log::tab:!selected {
+	color: #FFFFFF;
+	border: none;
+}
+
+QTabBar#tab_bar_log::tab:selected {
+	color: #0074e7;
+	border: none;
+}
+
+QTabBar#tab_bar_log::tab:hover {
+	color: #0074e7;
+	border: none;
 }
 
 /* Combo Boxes */

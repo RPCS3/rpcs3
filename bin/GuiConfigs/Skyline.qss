@@ -296,31 +296,61 @@ QGroupBox::title {
 /* Settings Dialog: Tabs */
 QTabBar::tab {
 	color: #455971;
-	padding-left: 1.5em;
-	padding-right: 1.5em;
-	padding-top: 0.25em;
-	padding-bottom: 0.25em;
-	margin: 0.7em;
-	border-bottom: 0.0525em solid #455971;
-}
-
-QTabBar::tab:last {
-	margin-right: 0em;
+	padding-left: 1.25em;
+	padding-right: 1.25em;
+	padding-top: 0.5em;
+	padding-bottom: 0.75em;
+	border: none;
+	min-width: 65px;
+	border-bottom: 1px solid #455971;
 }
 
 QTabBar::tab:!selected {
 	color: #455971;
+	border-bottom: 1px solid transparent;
 }
 
 QTabBar::tab:selected {
-	color: #4343c1;
-	border-bottom: 0.0525em solid #4343c1;
+	color: #8500ae;
+	background: qlineargradient(x1: 0, y1: 1, x2: 0, y2: 0, stop: 0.2 #FFF3FF, stop: 1 #FFFFFF);
+	border-bottom: 1px solid #8500ae;
 }
 
 QTabBar::tab:hover {
 	color: #8500ae;
-	background-margin: 5em;
-	border-bottom: 0.0525em solid #8500ae;
+}
+
+QTabBar#tab_bar_settings {
+	border-bottom: 1px solid qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #8500ae, stop: 0.5 #4343c1, stop: 1 #009ed0);
+	width: 5.20em;
+}
+
+QTabBar#tab_bar_settings::tab:!selected {
+	color: #455971;
+	border-bottom: 1px solid transparent;
+}
+
+QTabBar#tab_bar_settings::tab:selected, QTabBar#tab_bar_settings::tab:hover {
+	color: #8500ae;
+	background: qlineargradient(x1: 0, y1: 1, x2: 0, y2: 0, stop: 0.2 #FFF3FF, stop: 1 #FFFFFF);
+	border-bottom: 1px solid #8500ae;
+}
+
+QTabBar#tab_bar_log::tab:!selected {
+	color: #956fa1;
+	border: none;
+}
+
+QTabBar#tab_bar_log::tab:selected {
+	color: #4343c1;
+	background: qlineargradient(x1: 0, y1: 1, x2: 0, y2: 0, stop: 0.2 #FFF3FF, stop: 1 #FFFFFF);
+	border: none;
+}
+
+QTabBar#tab_bar_log::tab:hover {
+	color: #8500ae;
+	background: qlineargradient(x1: 0, y1: 1, x2: 0, y2: 0, stop: 0.2 #FFF3FF, stop: 1 #FFFFFF);
+	border: none;
 }
 
 /* Combo Boxes */
@@ -395,7 +425,7 @@ QPushButton {
 }
 
 QPushButton:hover {
-	background-color: #FFFFFF;
+	background-color: qlineargradient(x1: 0, y1: 1, x2: 0, y2: 0, stop: 0.2 #FFF3FF, stop: 1 #FFFFFF);
 	border: 1px solid qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #8500ae, stop: 0.5 #4343c1, stop: 1 #009ed0);
 	padding: 2px;
 	color: #455971;

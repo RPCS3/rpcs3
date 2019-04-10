@@ -54,33 +54,61 @@ QHeaderView::section {
 /* Settings Dialog: Tabs */
 QTabBar::tab {
 	color: #8cf944;
-	background-color: #23262d;
-	padding-left: 1.5em;
-	padding-right: 1.5em;
-	padding-top: 0.25em;
-	padding-bottom: 0.25em;
-	margin: 0.7em;
-	border-bottom: 0.0525em solid #f8f8f8;
-}
-
-QTabBar::tab:last {
-	margin-right: 0em;
+	padding-left: 1.25em;
+	padding-right: 1.25em;
+	padding-top: 0.5em;
+	padding-bottom: 0.75em;
+	border: none;
+	min-width: 65px;
+	border-bottom: 1px solid #8cf944;
 }
 
 QTabBar::tab:!selected {
 	color: #f8f8f8;
-	background-color: #23262d;
+	border-bottom: 1px solid transparent;
 }
+
 QTabBar::tab:selected {
 	color: #8cf944;
-	background-color: #23262d;
-	border-bottom: 0.0525em solid #8cf944;
+	border-bottom: 1px solid #8cf944;
 }
 
 QTabBar::tab:hover {
 	color: #b1f184;
-	background-margin: 5em;
-	border-bottom: 0.0525em solid #b1f184;
+}
+
+QTabBar#tab_bar_settings {
+	border-bottom: 1px solid #8cf944;
+}
+
+QTabBar#tab_bar_settings::tab:!selected {
+	color: #FFF;
+	border-bottom: 1px solid transparent;
+}
+
+QTabBar#tab_bar_settings::tab:selected {
+	color: #8cf944;
+	border-bottom: 1px solid #8cf944;
+}
+
+QTabBar#tab_bar_settings::tab:hover {
+	color: #b1f184;
+	border-bottom: 1px solid #8cf944;
+}
+
+QTabBar#tab_bar_log::tab:!selected {
+	color: #FFF;
+	border: none;
+}
+
+QTabBar#tab_bar_log::tab:selected {
+	color: #8cf944;
+	border: none;
+}
+
+QTabBar#tab_bar_log::tab:hover {
+	color: #b1f184;
+	border: none;
 }
 
 /* Checkboxes */
@@ -218,6 +246,7 @@ QSlider::groove:horizontal {
 QSlider::handle:horizontal {
 	background: #23262d;
 	border: 1px solid #5c5c5c;
+	border-radius: 0.1em;
 	width: 18px;
 	margin: -2px 4; 
 }
@@ -267,6 +296,7 @@ QPushButton {
 	background-color: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #23262d, stop: 1 #23262d);
 	border-width: 2px;
 	border: 1px solid #f8f8f8;
+	border-radius: 2px;
 	padding: 2px;
 	color: #f8f8f8;
 	min-width: 82px;
