@@ -192,6 +192,15 @@ namespace fs
 		// Do notning
 	}
 
+	native_handle file_base::get_native_handle()
+	{
+#ifdef _WIN32
+		return INVALID_HANDLE_VALUE;
+#else
+		return -1;
+#endif
+	}
+
 	dir_base::~dir_base()
 	{
 	}
@@ -884,7 +893,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	class windows_file final : public file_base, public get_native_handle
+	class windows_file final : public file_base
 	{
 		const HANDLE m_handle;
 
@@ -987,7 +996,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return size.QuadPart;
 		}
 
-		native_handle get() override
+		native_handle get_native_handle() override
 		{
 			return m_handle;
 		}
@@ -1034,7 +1043,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		::ftruncate(fd, 0);
 	}
 
-	class unix_file final : public file_base, public get_native_handle
+	class unix_file final : public file_base
 	{
 		const int m_fd;
 
@@ -1127,7 +1136,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return file_info.st_size;
 		}
 
-		native_handle get() override
+		native_handle get_native_handle() override
 		{
 			return m_fd;
 		}
@@ -1208,9 +1217,9 @@ fs::file::file(const void* ptr, std::size_t size)
 
 fs::native_handle fs::file::get_handle() const
 {
-	if (auto getter = dynamic_cast<get_native_handle*>(m_file.get()))
+	if (m_file)
 	{
-		return getter->get();
+		return m_file->get_native_handle();
 	}
 
 #ifdef _WIN32
@@ -1219,6 +1228,15 @@ fs::native_handle fs::file::get_handle() const
 	return -1;
 #endif
 }
+
+#ifdef _WIN32
+bool fs::file::set_delete(bool autodelete) const
+{
+	FILE_DISPOSITION_INFO disp;
+	disp.DeleteFileW = autodelete;
+	return SetFileInformationByHandle(get_handle(), FileDispositionInfo, &disp, sizeof(disp)) != 0;
+}
+#endif
 
 void fs::dir::xnull() const
 {
