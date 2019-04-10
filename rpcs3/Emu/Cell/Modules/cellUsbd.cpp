@@ -156,6 +156,12 @@ s32 cellUsbdAllocateMemory()
 	return CELL_OK;
 }
 
+s32 cellUsbdAllocateMemoryFromContainer()
+{
+	UNIMPLEMENTED_FUNC(cellUsbd);
+	return CELL_OK;
+}
+
 s32 cellUsbdAllocateSharedMemory()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
@@ -209,6 +215,7 @@ DECLARE(ppu_module_manager::cellUsbd)("cellUsbd", []()
 	REG_FUNC(cellUsbd, cellUsbdGetPrivateData);
 
 	REG_FUNC(cellUsbd, cellUsbdAllocateMemory);
+	REG_FUNC(cellUsbd, cellUsbdAllocateMemoryFromContainer);
 	REG_FUNC(cellUsbd, cellUsbdAllocateSharedMemory);
 	REG_FUNC(cellUsbd, cellUsbdFreeMemory);
 
