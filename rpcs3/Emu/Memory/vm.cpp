@@ -715,7 +715,7 @@ namespace vm
 			shm = std::make_shared<utils::shm>(size);
 
 		// Search for an appropriate place (unoptimized)
-		for (u32 addr = ::align(this->addr, align); addr < this->addr + this->size - 1; addr += align)
+		for (u32 addr = ::align(this->addr, align), max = this->addr + this->size - size; addr <= max; addr += align)
 		{
 			if (try_alloc(addr, pflags, size, std::move(shm)))
 			{
