@@ -130,12 +130,6 @@ error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u
 
 	if (!handler)
 	{
-		if (const auto thread = idm::withdraw<named_thread<ppu_thread>>(ih))
-		{
-			*r13 = thread->gpr[13];
-			return CELL_OK;
-		}
-
 		return CELL_ESRCH;
 	}
 

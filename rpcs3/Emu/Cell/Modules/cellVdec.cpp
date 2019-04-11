@@ -159,6 +159,9 @@ struct vdec_context final
 
 	void exec(ppu_thread& ppu, u32 vid)
 	{
+		ppu.state -= cpu_flag::signal;
+		lv2_obj::sleep(ppu);
+
 		ppu_tid = ppu.id;
 
 		std::unique_lock cv_lock(in_cv);
@@ -451,22 +454,17 @@ static s32 vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> cb, vm:
 	const u32 vid = idm::make<vdec_context>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
 
 	// Run thread
-	vm::var<u64> _tid;
+	vm::var<u64> _tid(0);
 	vm::var<char[]> _name = vm::make_str("HLE Video Decoder");
-	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, ppu_function_manager::addr + 8 * FIND_FUNC(vdecEntry), vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_JOINABLE, +_name);
+
+	if (ppu.test_stopped())
+	{
+		return 0;
+	}
+
+	verify(HERE), *_tid;
 	*handle = vid;
-
-	const auto thrd = idm::get<named_thread<ppu_thread>>(*_tid);
-
-	thrd->cmd_list
-	({
-		{ ppu_cmd::set_args, 1 }, u64{vid},
-		{ ppu_cmd::hle_call, FIND_FUNC(vdecEntry) },
-	});
-
-	thrd->state -= cpu_flag::stop;
-	thread_ctrl::notify(*thrd);
-
 	return CELL_OK;
 }
 
@@ -495,7 +493,6 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	lv2_obj::sleep(ppu);
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
 	vdec->in_cv.notify();
@@ -505,8 +502,14 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 		thread_ctrl::wait_for(1000);
 	}
 
-	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu_tid);
-	idm::remove<vdec_context>(handle);
+	vm::var<u64> ret;
+	sys_ppu_thread_join(ppu, vdec->ppu_tid, +ret);
+
+	if (!idm::remove<vdec_context>(handle))
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
 	return CELL_OK;
 }
 
