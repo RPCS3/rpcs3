@@ -453,7 +453,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 		// Make temporary directory persistent
 		const auto vdir = vfs::get(dir);
 
-		if (fs::rename(prm->temp, vdir, false))
+		if (vfs::host::rename(prm->temp, vdir, false))
 		{
 			cellGame.success("cellGameContentPermit(): directory '%s' has been created", dir);
 		}

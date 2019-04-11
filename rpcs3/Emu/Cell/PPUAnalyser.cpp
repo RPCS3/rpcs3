@@ -931,6 +931,44 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				}
 			}
 
+			if (ptr + 0x7 <= fend &&
+				ptr[0] == STD(r2, r1, 0x28) &&
+				(ptr[1] & 0xffff0000) == ADDIS(r12, r2, {}) &&
+				(ptr[2] & 0xffff0000) == LWZ(r11, r12, {}) &&
+				(ptr[3] & 0xffff0000) == ADDIS(r2, r2, {}) &&
+				(ptr[4] & 0xffff0000) == ADDI(r2, r2, {}) &&
+				ptr[5] == MTCTR(r11) &&
+				ptr[6] == BCTR())
+			{
+				func.toc = -1;
+				func.size = 0x1C;
+				func.blocks.emplace(func.addr, func.size);
+				func.attr += ppu_attr::known_addr;
+				func.attr += ppu_attr::known_size;
+
+				// Look for another imports to fill gaps (hack)
+				auto p2 = ptr + 7;
+
+				while (p2 + 0x7 <= fend &&
+					p2[0] == STD(r2, r1, 0x28) &&
+					(p2[1] & 0xffff0000) == ADDIS(r12, r2, {}) &&
+					(p2[2] & 0xffff0000) == LWZ(r11, r12, {}) &&
+					(p2[3] & 0xffff0000) == ADDIS(r2, r2, {}) &&
+					(p2[4] & 0xffff0000) == ADDI(r2, r2, {}) &&
+					p2[5] == MTCTR(r11) &&
+					p2[6] == BCTR())
+				{
+					auto& next = add_func(p2.addr(), -1, func.addr);
+					next.size = 0x1C;
+					next.blocks.emplace(next.addr, next.size);
+					next.attr += ppu_attr::known_addr;
+					next.attr += ppu_attr::known_size;
+					p2 += 7;
+				}
+
+				continue;
+			}
+
 			if (ptr + 4 <= fend &&
 				ptr[0] == STD(r2, r1, 0x28) &&
 				(ptr[1] & 0xffff0000) == ADDIS(r2, r2, {}) &&

@@ -247,8 +247,12 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.js(fail);
 	c.sub(args[0].r32(), 1);
 	c.jz(retry);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 #ifdef _WIN32
 	c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
 	c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 96));
@@ -298,8 +302,12 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	// Touch memory after transaction failure
 	c.bind(fall);
 	c.pause();
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.mov(x86::rax, x86::qword_ptr(x86::r11));
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.sub(args[0], 1);
 	c.jnz(begin);
 	c.mov(x86::eax, 1);
@@ -343,8 +351,12 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	// Touch memory after transaction failure
 	c.bind(fall);
 	c.pause();
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.sub(args[0], 1);
 	c.jnz(begin);
 	c.xor_(x86::eax, x86::eax);

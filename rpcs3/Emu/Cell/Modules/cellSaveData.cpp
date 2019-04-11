@@ -934,19 +934,16 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		fs::remove_all(old_path, false);
 
 		// Backup old savedata
-		while (!fs::rename(dir_path, old_path, true))
+		if (!vfs::host::rename(dir_path, old_path, true))
 		{
-			// Try to ignore access error in order to prevent spurious failure
-			if (Emu.IsStopped() || fs::g_tls_error != fs::error::acces)
-				fmt::throw_exception("Failed to move directory %s (%s)", dir_path, fs::g_tls_error);
+			fmt::throw_exception("Failed to move directory %s (%s)", dir_path, fs::g_tls_error);
 		}
 
 		// Commit new savedata
-		while (!fs::rename(new_path, dir_path, false))
+		if (!vfs::host::rename(new_path, dir_path, false))
 		{
 			// TODO: handle the case when only commit failed at the next save load
-			if (Emu.IsStopped() || fs::g_tls_error != fs::error::acces)
-				fmt::throw_exception("Failed to move directory %s (%s)", new_path, fs::g_tls_error);
+			fmt::throw_exception("Failed to move directory %s (%s)", new_path, fs::g_tls_error);
 		}
 
 		// Remove backup again (TODO: may be changed to persistent backup implementation)

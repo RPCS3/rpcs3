@@ -1300,11 +1300,19 @@ int game_list_frame::PopulateGameList()
 			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color));
 		}
 
+		// Version
+		QString app_version = qstr(game->info.app_ver);
+
+		if (!game->compat.version.isEmpty() && (app_version == category::unknown || game->compat.version.toDouble() > app_version.toDouble()))
+		{
+			app_version = tr("%0 (Update available: %1)").arg(app_version, game->compat.version);
+		}
+
 		m_gameList->setItem(row, gui::column_icon,       icon_item);
 		m_gameList->setItem(row, gui::column_name,       title_item);
 		m_gameList->setItem(row, gui::column_serial,     serial_item);
 		m_gameList->setItem(row, gui::column_firmware,   new custom_table_widget_item(game->info.fw));
-		m_gameList->setItem(row, gui::column_version,    new custom_table_widget_item(game->info.app_ver));
+		m_gameList->setItem(row, gui::column_version,    new custom_table_widget_item(app_version));
 		m_gameList->setItem(row, gui::column_category,   new custom_table_widget_item(game->info.category));
 		m_gameList->setItem(row, gui::column_path,       new custom_table_widget_item(game->info.path));
 		m_gameList->setItem(row, gui::column_move,       new custom_table_widget_item(sstr(supports_move ? tr("Supported") : tr("Not Supported")), Qt::UserRole, !supports_move));

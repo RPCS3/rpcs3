@@ -65,12 +65,6 @@ namespace fs
 		s64 ctime;
 	};
 
-	// Native handle getter
-	struct get_native_handle
-	{
-		virtual native_handle get() = 0;
-	};
-
 	// File handle base
 	struct file_base
 	{
@@ -83,6 +77,7 @@ namespace fs
 		virtual u64 write(const void* buffer, u64 size) = 0;
 		virtual u64 seek(s64 offset, seek_mode whence) = 0;
 		virtual u64 size() = 0;
+		virtual native_handle get_native_handle();
 	};
 
 	// Directory entry (TODO)
@@ -366,6 +361,11 @@ namespace fs
 
 		// Get native handle if available
 		native_handle get_handle() const;
+
+#ifdef _WIN32
+		// Windows-specific function
+		bool set_delete(bool autodelete = true) const;
+#endif
 	};
 
 	class dir final
