@@ -638,7 +638,7 @@ void ppu_thread::exec_task()
 			return reinterpret_cast<func_t>((uptr)(u32)op)(*this, {u32(op >> 32)});
 		};
 
-		if (cia % 8 || !s_use_ssse3 || UNLIKELY(state))
+		if (cia % 8 || UNLIKELY(state))
 		{
 			if (test_stopped()) return;
 
