@@ -2377,16 +2377,45 @@ namespace rsx
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
 
-			if (UNLIKELY((src_h + src.offset_y) > src.height))
+			if (true) // This block is a debug/sanity check and should be optionally disabled with a config option
 			{
-				src_h = src.height - src.offset_y;
-				dst_h = u16(src_h * scale_y + 0.000001f);
-			}
+				// Do subpixel correction in the special case of reverse scanning
+				// When reverse scanning, pixel0 is at offset = (dimension - 1)
+				if (dst.scale_y < 0.f && src.offset_y)
+				{
+					if (src.offset_y = (src.height - src.offset_y);
+						src.offset_y == 1)
+					{
+						src.offset_y = 0;
+					}
+				}
 
-			if (UNLIKELY((src_w + src.offset_x) > src.width))
-			{
-				src_w = src.width - src.offset_x;
-				dst_w = u16(src_w * scale_x + 0.000001f);
+				if (dst.scale_x < 0.f && src.offset_x)
+				{
+					if (src.offset_x = (src.width - src.offset_x);
+						src.offset_x == 1)
+					{
+						src.offset_x = 0;
+					}
+				}
+
+				if (UNLIKELY((src_h + src.offset_y) > src.height))
+				{
+					// TODO: Special case that needs wrapping around (custom blit)
+					LOG_ERROR(RSX, "Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
+
+					src_h = src.height - src.offset_y;
+					dst_h = u16(src_h * scale_y + 0.000001f);
+				}
+
+				if (UNLIKELY((src_w + src.offset_x) > src.width))
+				{
+					// TODO: Special case that needs wrapping around (custom blit)
+					LOG_ERROR(RSX, "Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
+
+					src_w = src.width - src.offset_x;
+					dst_w = u16(src_w * scale_x + 0.000001f);
+				}
 			}
 
 			if (dst.scale_y < 0.f)
@@ -2702,29 +2731,57 @@ namespace rsx
 
 				if (!vram_texture)
 				{
-					// Translate src_area into the declared block
-					src_area.x1 += src.offset_x;
-					src_area.x2 += src.offset_x;
-					src_area.y1 += src.offset_y;
-					src_area.y2 += src.offset_y;
+					const u16 full_width = src.pitch / src_bpp;
+					u32 image_base = src.rsx_address;
+					u16 image_width = full_width;
+					u16 image_height = src.height;
+
+					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
+					{
+						// Loading full image from the corner address
+						// Translate src_area into the declared block
+						src_area.x1 += src.offset_x;
+						src_area.x2 += src.offset_x;
+						src_area.y1 += src.offset_y;
+						src_area.y2 += src.offset_y;
+					}
+					else if (!src.offset_x && !src.offset_y)
+					{
+						if (dst.scale_y < 0.f)
+						{
+							image_base = src.rsx_address - (src.pitch * src.height);
+						}
+						else
+						{
+							// Reverse X without reverse Y and no offset in X. Is this even possible?
+							LOG_ERROR(RSX, "Unexpected scaling parameters: reversed X without reverse Y");
+							image_base = src.rsx_address - src.pitch;
+						}
+					}
+					else
+					{
+						// It is difficult to determine the transfer region
+						image_base = src_address;
+						image_width = src_w;
+						image_height = src_h;
+					}
 
 					lock.upgrade();
 
-					const auto rsx_range = address_range::start_length(src.rsx_address, src.pitch * src.height);
+					const auto rsx_range = address_range::start_length(image_base, src.pitch * image_height);
 					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
-					const u16 _width = src.pitch / src_bpp;
 					std::vector<rsx_subresource_layout> subresource_layout;
 					rsx_subresource_layout subres = {};
-					subres.width_in_block = _width;
-					subres.height_in_block = src.height;
-					subres.pitch_in_block = _width;
+					subres.width_in_block = image_width;
+					subres.height_in_block = image_height;
+					subres.pitch_in_block = full_width;
 					subres.depth = 1;
-					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(src.rsx_address)), src.pitch * src.height };
+					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(image_base)), src.pitch * image_height };
 					subresource_layout.push_back(subres);
 
 					const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-					vram_texture = upload_image_from_cpu(cmd, rsx_range, _width, src.height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
+					vram_texture = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
 					typeless_info.src_context = texture_upload_context::blit_engine_src;
