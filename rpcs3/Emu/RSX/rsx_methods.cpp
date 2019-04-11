@@ -831,16 +831,14 @@ namespace rsx
 			auto in_x = (u16)std::floor(method_registers.blit_engine_in_x());
 			auto in_y = (u16)std::floor(method_registers.blit_engine_in_y());
 
-			if ((in_x + in_y) && fabsf(fabsf(scale_x * scale_y) - 1.f) > 0.000001f)
+			if (UNLIKELY(in_x || in_y))
 			{
-				// Scaling operation, check for subpixel correction offsets
-				if (in_x > 1 || in_y > 1)
+				if (scale_x < 0.f || scale_y < 0.f || fabsf(fabsf(scale_x * scale_y) - 1.f) > 0.000001f)
 				{
-					LOG_ERROR(RSX, "Unexpected blit input setup; DT/S=%f,%f, in_x=%d, in_y=%d", scale_x, scale_y, in_x, in_y);
+					// Scaling operation, check for subpixel correction offsets
+					if (in_x == 1) in_x = 0;
+					if (in_y == 1) in_y = 0;
 				}
-
-				if (in_x == 1) in_x = 0;
-				if (in_y == 1) in_y = 0;
 			}
 
 			// Clipping
@@ -967,18 +965,18 @@ namespace rsx
 				return;
 			}
 
-			blit_src_info src_info = {};
-			blit_dst_info dst_info = {};
-
 			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
 			{
+				blit_src_info src_info = {};
+				blit_dst_info dst_info = {};
+
 				src_info.format = src_color_format;
 				src_info.origin = in_origin;
 				src_info.width = in_w;
 				src_info.height = in_h;
 				src_info.pitch = in_pitch;
-				src_info.offset_x = (u16)in_x;
-				src_info.offset_y = (u16)in_y;
+				src_info.offset_x = in_x;
+				src_info.offset_y = in_y;
 				src_info.rsx_address = src_address;
 				src_info.pixels = pixels_src;
 
