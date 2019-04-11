@@ -7,7 +7,7 @@
 #include "Utilities/asm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/RSXThread.h"
 #include <atomic>
 #include <thread>
 #include <deque>
@@ -347,7 +347,7 @@ namespace vm
 		// Notify rsx that range has become valid
 		// Note: This must be done *before* memory gets mapped while holding the vm lock, otherwise
 		//       the RSX might try to invalidate memory that got unmapped and remapped
-		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
+		if (const auto rsxthr = rsx::get_current_renderer())
 		{
 			rsxthr->on_notify_memory_mapped(addr, size);
 		}
@@ -476,7 +476,7 @@ namespace vm
 		// Notify rsx to invalidate range
 		// Note: This must be done *before* memory gets unmapped while holding the vm lock, otherwise
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
-		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
+		if (const auto rsxthr = rsx::get_current_renderer())
 		{
 			rsxthr->on_notify_memory_unmapped(addr, size);
 		}

@@ -981,12 +981,12 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = fxm::check<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += fxm::check<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "PRX library hash: %s (<- %u)", hash, applied);
@@ -1136,12 +1136,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = fxm::check<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += fxm::check<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "PPU executable hash: %s (<- %u)", hash, applied);
@@ -1707,12 +1707,12 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = fxm::check<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += fxm::check<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "OVL executable hash: %s (<- %u)", hash, applied);
