@@ -300,7 +300,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 
 	uns_func, uns_func, uns_func, uns_func, uns_func,       //255-259  UNS
 
-	null_func,//BIND_FUNC(sys_spu_image_open_by_fd)         //260 (0x104)
+	BIND_FUNC(sys_spu_image_open_by_fd),                    //260 (0x104)
 
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //261-269  UNS
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //270-279  UNS
