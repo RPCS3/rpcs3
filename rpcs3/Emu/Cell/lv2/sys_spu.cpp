@@ -14,6 +14,7 @@
 #include "sys_interrupt.h"
 #include "sys_mmapper.h"
 #include "sys_event.h"
+#include "sys_fs.h"
 #include "sys_spu.h"
 
 LOG_CHANNEL(sys_spu);
@@ -159,11 +160,9 @@ error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, vm::ptr<u3
 	return CELL_OK;
 }
 
-error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
+static error_code spu_image_open(vm::ptr<sys_spu_image> img, std::string_view path)
 {
-	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
-
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path)), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
 
 	if (!elf_file)
 	{
@@ -172,8 +171,28 @@ error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
 	}
 
 	img->load(elf_file);
-
 	return CELL_OK;
+}
+
+error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path)
+{
+	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
+
+	return spu_image_open(img, path.get_ptr());
+}
+
+error_code sys_spu_image_open_by_fd(vm::ptr<sys_spu_image> img, u32 fd)
+{
+	sys_spu.warning("sys_spu_image_open_by_fd(img=*0x%x, fd=%d)", img, fd);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	return spu_image_open(img, file->name.data());
 }
 
 error_code _sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 size, u32 arg4)

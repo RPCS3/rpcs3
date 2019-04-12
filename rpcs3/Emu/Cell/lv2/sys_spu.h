@@ -287,6 +287,7 @@ class ppu_thread;
 error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
 error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, vm::ptr<u32> entry_point, vm::ptr<s32> nsegs);
 error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path);
+error_code sys_spu_image_open_by_fd(vm::ptr<sys_spu_image> img, u32 fd);
 error_code _sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 size, u32 arg4);
 error_code _sys_spu_image_close(vm::ptr<sys_spu_image> img);
 error_code _sys_spu_image_get_segments(vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_segment> segments, s32 nseg);
