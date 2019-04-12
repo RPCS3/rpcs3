@@ -249,7 +249,7 @@ std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 p
 	case 0:
 		break;
 	case 1:
-		return "clamp(" + code + ", -65504., 65504.)";
+		return "clamp16(" + code + ")";
 	case 2:
 		return "clamp(" + code + ", -2., 2.)";
 	case 3:
@@ -545,10 +545,27 @@ std::string FragmentProgramDecompiler::BuildCode()
 	insertOutputs(OS);
 	OS << "\n";
 
-	//Insert global function definitions
+	// Insert global function definitions
 	insertGlobalFunctions(OS);
 
-	//Declare register gather/merge if needed
+	// Accurate float to half clamping (preserves IEEE-754 NaN)
+	OS <<
+	"vec4 clamp16(vec4 x)\n"
+	"{\n"
+	"	bvec4 sel = isnan(x);\n"
+	"	vec4 clamped = clamp(x, -65504., +65504.);\n"
+	"	if (!any(sel))\n"
+	"	{\n"
+	"		return clamped;\n"
+	"	}\n\n"
+	"	return _select(clamped, x, sel);\n"
+	"}\n\n"
+
+	"vec3 clamp16(vec3 x){ return clamp16(x.xyzz).xyz; }\n"
+	"vec2 clamp16(vec2 x){ return clamp16(x.xyxy).xy; }\n"
+	"float clamp16(float x){ return isnan(x)? x : clamp(x, -65504., +65504.); }\n";
+
+	// Declare register gather/merge if needed
 	if (properties.has_gather_op)
 	{
 		std::string float2 = getFloatTypeName(2);
