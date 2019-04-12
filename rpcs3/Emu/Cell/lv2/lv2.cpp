@@ -427,7 +427,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_overlay_unload_module),                   //451 (0x1C3)
 	null_func,//BIND_FUNC(sys_overlay_get_module_list)      //452 (0x1C4)
 	null_func,//BIND_FUNC(sys_overlay_get_module_info)      //453 (0x1C5)
-	null_func,//BIND_FUNC(sys_overlay_load_module_by_fd)    //454 (0x1C6)
+	BIND_FUNC(sys_overlay_load_module_by_fd),               //454 (0x1C6)
 	null_func,//BIND_FUNC(sys_overlay_get_module_info2)     //455 (0x1C7)
 	null_func,//BIND_FUNC(sys_overlay_get_sdk_version)      //456 (0x1C8)
 	null_func,//BIND_FUNC(sys_overlay_get_module_dbg_info)  //457 (0x1C9)
