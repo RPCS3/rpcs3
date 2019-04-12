@@ -102,15 +102,28 @@ namespace gl
 		bool ARB_depth_buffer_float_supported = false;
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
+		bool NV_gpu_shader5_supported = false;
+		bool AMD_gpu_shader_half_float_supported = false;
 		bool initialized = false;
-		bool vendor_INTEL = false;  //has broken GLSL compiler
-		bool vendor_AMD = false;    //has broken ARB_multidraw
-		bool vendor_NVIDIA = false; //has NaN poisoning issues
-		bool vendor_MESA = false;   //requires CLIENT_STORAGE bit set for streaming buffers
+		bool vendor_INTEL = false;  // has broken GLSL compiler
+		bool vendor_AMD = false;    // has broken ARB_multidraw
+		bool vendor_NVIDIA = false; // has NaN poisoning issues
+		bool vendor_MESA = false;   // requires CLIENT_STORAGE bit set for streaming buffers
+
+		bool check(const std::string& ext_name, const char* test)
+		{
+			if (ext_name == test)
+			{
+				LOG_NOTICE(RSX, "Extension %s is supported", ext_name);
+				return true;
+			}
+
+			return false;
+		}
 
 		void initialize()
 		{
-			int find_count = 8;
+			int find_count = 10;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -120,64 +133,78 @@ namespace gl
 
 				const std::string ext_name = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
 
-				if (ext_name == "GL_ARB_shader_draw_parameters")
+				if (check(ext_name, "GL_ARB_shader_draw_parameters"))
 				{
 					ARB_shader_draw_parameters_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_EXT_direct_state_access")
+				if (check(ext_name, "GL_EXT_direct_state_access"))
 				{
 					EXT_dsa_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_direct_state_access")
+				if (check(ext_name, "GL_ARB_direct_state_access"))
 				{
 					ARB_dsa_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_buffer_storage")
+				if (check(ext_name, "GL_ARB_buffer_storage"))
 				{
 					ARB_buffer_storage_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_texture_buffer_object")
+				if (check(ext_name, "GL_ARB_texture_buffer_object"))
 				{
 					ARB_texture_buffer_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_depth_buffer_float")
+				if (check(ext_name, "GL_ARB_depth_buffer_float"))
 				{
 					ARB_depth_buffer_float_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_texture_barrier")
+				if (check(ext_name, "GL_ARB_texture_barrier"))
 				{
 					ARB_texture_barrier_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_NV_texture_barrier")
+				if (check(ext_name, "GL_NV_texture_barrier"))
 				{
 					NV_texture_barrier_supported = true;
 					find_count--;
 					continue;
 				}
+
+				if (check(ext_name, "GL_NV_gpu_shader5"))
+				{
+					NV_gpu_shader5_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (check(ext_name, "GL_AMD_gpu_shader_half_float"))
+				{
+					AMD_gpu_shader_half_float_supported = true;
+					find_count--;
+					continue;
+				}
 			}
 
-			//Workaround for intel drivers which have terrible capability reporting
+			// Workaround for intel drivers which have terrible capability reporting
 			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 			if (!vendor_string.empty())
 			{

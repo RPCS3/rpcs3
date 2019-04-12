@@ -201,6 +201,12 @@ namespace vk
 		bool bgra8_linear;
 	};
 
+	struct gpu_shader_types_support
+	{
+		bool allow_float16;
+		bool allow_int8;
+	};
+
 	// Memory Allocator - base class
 
 	class mem_allocator_base
@@ -515,8 +521,31 @@ namespace vk
 		physical_device *pgpu = nullptr;
 		memory_type_mapping memory_map{};
 		gpu_formats_support m_formats_support{};
+		gpu_shader_types_support m_shader_types_support{};
 		std::unique_ptr<mem_allocator_base> m_allocator;
 		VkDevice dev = VK_NULL_HANDLE;
+
+		void get_physical_device_features(VkPhysicalDeviceFeatures& features)
+		{
+			if (!vkGetPhysicalDeviceFeatures2)
+			{
+				vkGetPhysicalDeviceFeatures(*pgpu, &features);
+			}
+			else
+			{
+				VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+
+				VkPhysicalDeviceFeatures2 features2;
+				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+				features2.pNext = &shader_support_info;
+				vkGetPhysicalDeviceFeatures2(*pgpu, &features2);
+
+				m_shader_types_support.allow_float16 = false;//!!shader_support_info.shaderFloat16;
+				m_shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
+				features = features2.features;
+			}
+		}
 
 	public:
 		render_device()
@@ -549,7 +578,7 @@ namespace vk
 			//2. DXT support
 			//3. Indexable storage buffers
 			VkPhysicalDeviceFeatures available_features;
-			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
+			get_physical_device_features(available_features);
 
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
@@ -565,6 +594,21 @@ namespace vk
 			device.enabledExtensionCount = 1;
 			device.ppEnabledExtensionNames = requested_extensions;
 			device.pEnabledFeatures = &available_features;
+
+			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+			if (m_shader_types_support.allow_float16)
+			{
+				// Allow use of f16 type in shaders if possible
+				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+				shader_support_info.shaderFloat16 = VK_TRUE;
+				device.pNext = &shader_support_info;
+
+				LOG_NOTICE(RSX, "GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
+			}
+			else
+			{
+				LOG_NOTICE(RSX, "GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
+			}
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
 
@@ -632,6 +676,11 @@ namespace vk
 		const gpu_formats_support& get_formats_support() const
 		{
 			return m_formats_support;
+		}
+
+		const gpu_shader_types_support& get_shader_types_support() const
+		{
+			return m_shader_types_support;
 		}
 
 		mem_allocator_base* get_allocator() const

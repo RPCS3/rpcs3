@@ -18,6 +18,11 @@ std::string D3D12FragmentDecompiler::getFloatTypeName(size_t elementCount)
 	return getFloatTypeNameImp(elementCount);
 }
 
+std::string D3D12FragmentDecompiler::getHalfTypeName(size_t elementCount)
+{
+	return getFloatTypeNameImp(elementCount);
+}
+
 std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 {
 	return getFunctionImp(f);
