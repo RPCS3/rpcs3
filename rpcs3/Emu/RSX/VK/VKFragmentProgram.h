@@ -24,6 +24,7 @@ public:
 	const std::vector<vk::glsl::program_input>& get_inputs() { return inputs; }
 protected:
 	virtual std::string getFloatTypeName(size_t elementCount) override;
+	virtual std::string getHalfTypeName(size_t elementCount) override;
 	virtual std::string getFunction(FUNCTION) override;
 	virtual std::string saturate(const std::string &code) override;
 	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) override;

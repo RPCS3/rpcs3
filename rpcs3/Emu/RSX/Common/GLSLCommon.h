@@ -111,6 +111,23 @@ namespace glsl
 		}
 	}
 
+	static std::string getHalfTypeNameImpl(size_t elementCount)
+	{
+		switch (elementCount)
+		{
+		default:
+			abort();
+		case 1:
+			return "float16_t";
+		case 2:
+			return "f16vec2";
+		case 3:
+			return "f16vec3";
+		case 4:
+			return "f16vec4";
+		}
+	}
+
 	static std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar = false)
 	{
 		if (scalar)
@@ -372,7 +389,7 @@ namespace glsl
 		"}\n\n";
 	}
 
-	static void insert_rop(std::ostream& OS, bool _32_bit_exports)
+	static void insert_rop(std::ostream& OS, bool _32_bit_exports, bool native_half_support)
 	{
 		const std::string reg0 = _32_bit_exports ? "r0" : "h0";
 		const std::string reg1 = _32_bit_exports ? "r2" : "h4";
@@ -398,15 +415,29 @@ namespace glsl
 
 		if (!_32_bit_exports)
 		{
-			//Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
-			OS <<
-			"		else if (srgb_convert)\n"
-			"		{\n"
-			"			" << reg0 << ".rgb = linear_to_srgb(" << reg0 << ").rgb;\n"
-			"			" << reg1 << ".rgb = linear_to_srgb(" << reg1 << ").rgb;\n"
-			"			" << reg2 << ".rgb = linear_to_srgb(" << reg2 << ").rgb;\n"
-			"			" << reg3 << ".rgb = linear_to_srgb(" << reg3 << ").rgb;\n"
-			"		}\n";
+			// Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
+			if (native_half_support)
+			{
+				OS <<
+				"		else if (srgb_convert)\n"
+				"		{\n"
+				"			" << reg0 << ".rgb = clamp16(linear_to_srgb(" << reg0 << ")).rgb;\n"
+				"			" << reg1 << ".rgb = clamp16(linear_to_srgb(" << reg1 << ")).rgb;\n"
+				"			" << reg2 << ".rgb = clamp16(linear_to_srgb(" << reg2 << ")).rgb;\n"
+				"			" << reg3 << ".rgb = clamp16(linear_to_srgb(" << reg3 << ")).rgb;\n"
+				"		}\n";
+			}
+			else
+			{
+				OS <<
+				"		else if (srgb_convert)\n"
+				"		{\n"
+				"			" << reg0 << ".rgb = linear_to_srgb(" << reg0 << ").rgb;\n"
+				"			" << reg1 << ".rgb = linear_to_srgb(" << reg1 << ").rgb;\n"
+				"			" << reg2 << ".rgb = linear_to_srgb(" << reg2 << ").rgb;\n"
+				"			" << reg3 << ".rgb = linear_to_srgb(" << reg3 << ").rgb;\n"
+				"		}\n";
+			}
 		}
 
 		OS <<
@@ -468,7 +499,7 @@ namespace glsl
 		// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
 		// Helps to avoid A2C tested foliage disappearing in the distance
 		OS <<
-		"bool coverage_test_passes(inout vec4 _sample, uint control)\n"
+		"bool coverage_test_passes(/*inout*/in vec4 _sample, uint control)\n"
 		"{\n"
 		"	if ((control & 0x1) == 0) return false;\n"
 		"\n"
