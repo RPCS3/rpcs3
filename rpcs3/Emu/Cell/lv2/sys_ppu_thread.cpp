@@ -214,10 +214,7 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
-		if (thread.prio != prio)
-		{
-			lv2_obj::awake(thread, prio);
-		}
+		lv2_obj::awake(thread, prio);
 	});
 
 	if (!thread)

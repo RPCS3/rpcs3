@@ -1066,11 +1066,15 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 
 	if (prio < INT32_MAX)
 	{
-        // Priority set
-        if (static_cast<ppu_thread&>(cpu).prio.exchange(prio) == prio || !unqueue(g_ppu, &cpu))
-        {
-            return;
-        }
+		// Priority set
+		const u32 old = static_cast<ppu_thread&>(cpu).prio.exchange(prio);
+
+		// On current thread: yield if priority has been lowered
+		// On other thread: unqueue unconditionally 
+		if ((&cpu == get_current_cpu_thread() && old >= prio) || !unqueue(g_ppu, &cpu))
+		{
+			return;
+		}
 	}
 	else if (prio == -4)
 	{
