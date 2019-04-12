@@ -7,6 +7,7 @@
 #include "Loader/ELF.h"
 
 #include "sys_overlay.h"
+#include "sys_fs.h"
 
 extern std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object&, const std::string& path);
 
@@ -14,11 +15,8 @@ extern void ppu_initialize(const ppu_module&);
 
 LOG_CHANNEL(sys_overlay);
 
-error_code sys_overlay_load_module(vm::ptr<u32> ovlmid, vm::cptr<char> path2, u64 flags, vm::ptr<u32> entry)
+static error_code overlay_load_module(vm::ptr<u32> ovlmid, std::string path, u64 flags, vm::ptr<u32> entry)
 {
-	sys_overlay.warning("sys_overlay_load_module(ovlmid=*0x%x, path=%s, flags=0x%x, entry=*0x%x)", ovlmid, path2, flags, entry);
-
-	const std::string path = path2.get_ptr();
 	const auto name = path.substr(path.find_last_of('/') + 1);
 
 	const ppu_exec_object obj = decrypt_self(fs::file(vfs::get(path)), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
@@ -32,12 +30,50 @@ error_code sys_overlay_load_module(vm::ptr<u32> ovlmid, vm::cptr<char> path2, u6
 
 	ppu_initialize(*ovlm);
 
-	sys_overlay.success("Loaded overlay: %s", path);
+	const u32 id = idm::last_id();
 
-	*ovlmid = idm::last_id();
+	if (!ovlmid || !entry)
+	{
+		if (ovlmid)
+		{
+			*ovlmid = id;
+		}
+
+		sys_overlay_unload_module(id);
+		return CELL_EFAULT;
+	}
+
+	*ovlmid = id;
 	*entry  = ovlm->entry;
 
+	sys_overlay.success("Loaded overlay: %s", path);
 	return CELL_OK;
+}
+
+error_code sys_overlay_load_module(vm::ptr<u32> ovlmid, vm::cptr<char> path, u64 flags, vm::ptr<u32> entry)
+{
+	sys_overlay.warning("sys_overlay_load_module(ovlmid=*0x%x, path=%s, flags=0x%x, entry=*0x%x)", ovlmid, path, flags, entry);
+
+	if (!path)
+	{
+		return CELL_EFAULT;
+	}
+
+	return overlay_load_module(ovlmid, path.get_ptr(), flags, entry);
+}
+
+error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 flags, vm::ptr<u32> entry)
+{
+	sys_overlay.warning("sys_overlay_load_module_by_fd(ovlmid=*0x%x, fd=%d, flags=0x%x, entry=*0x%x)", ovlmid, fd, flags, entry);
+
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
+	{
+		return CELL_EBADF;
+	}
+
+	return overlay_load_module(ovlmid, file->name.data(), flags, entry);
 }
 
 error_code sys_overlay_unload_module(u32 ovlmid)
