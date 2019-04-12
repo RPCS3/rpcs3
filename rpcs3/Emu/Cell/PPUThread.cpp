@@ -620,6 +620,12 @@ void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
+		// Reset cpu flags
+		if (state && check_state())
+		{
+			return;
+		}
+
 		while (!(state & (cpu_flag::ret + cpu_flag::exit + cpu_flag::stop + cpu_flag::dbg_global_stop)))
 		{
 			reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>((u32)ppu_ref(cia)))(*this);

@@ -159,7 +159,6 @@ struct vdec_context final
 
 	void exec(ppu_thread& ppu, u32 vid)
 	{
-		ppu.state -= cpu_flag::signal;
 		lv2_obj::sleep(ppu);
 
 		ppu_tid = ppu.id;
