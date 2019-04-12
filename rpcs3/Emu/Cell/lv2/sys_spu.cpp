@@ -1364,16 +1364,16 @@ error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id)
 	// Clear interrupt handlers
 	for (auto& intr : thread->int_ctrl)
 	{
-		if (intr.tag)
+		if (auto _tag = intr.tag.lock())
 		{
-			if (auto handler = intr.tag->handler.lock())
+			if (auto handler = _tag->handler.lock())
 			{
 				// SLEEP
 				handler->join();
 				to_remove.emplace(handler.get(), 0);
 			}
 
-			to_remove.emplace(intr.tag.get(), 0);
+			to_remove.emplace(_tag.get(), 0);
 		}
 	}
 
@@ -1426,7 +1426,7 @@ error_code sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, 
 
 		auto& int_ctrl = thread->int_ctrl[class_id];
 
-		if (int_ctrl.tag)
+		if (!int_ctrl.tag.expired())
 		{
 			error = CELL_EAGAIN;
 			return result;

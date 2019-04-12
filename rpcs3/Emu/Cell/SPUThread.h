@@ -353,7 +353,7 @@ struct spu_int_ctrl_t
 	atomic_t<u64> mask;
 	atomic_t<u64> stat;
 
-	std::shared_ptr<struct lv2_int_tag> tag;
+	std::weak_ptr<struct lv2_int_tag> tag;
 
 	void set(u64 ints);
 
@@ -366,7 +366,7 @@ struct spu_int_ctrl_t
 	{
 		mask.release(0);
 		stat.release(0);
-		tag = nullptr;
+		tag.reset();
 	}
 };
 
