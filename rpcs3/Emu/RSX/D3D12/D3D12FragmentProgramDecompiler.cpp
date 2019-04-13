@@ -28,11 +28,6 @@ std::string D3D12FragmentDecompiler::getFunction(enum class FUNCTION f)
 	return getFunctionImp(f);
 }
 
-std::string D3D12FragmentDecompiler::saturate(const std::string & code)
-{
-	return "saturate(" + code + ")";
-}
-
 std::string D3D12FragmentDecompiler::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
 {
 	return compareFunctionImp(f, Op0, Op1);

@@ -541,7 +541,7 @@ namespace vk
 				features2.pNext = &shader_support_info;
 				vkGetPhysicalDeviceFeatures2(*pgpu, &features2);
 
-				m_shader_types_support.allow_float16 = false;//!!shader_support_info.shaderFloat16;
+				m_shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 				m_shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
 				features = features2.features;
 			}
