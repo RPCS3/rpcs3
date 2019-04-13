@@ -516,6 +516,51 @@ namespace vk
 		}
 	};
 
+	class supported_extensions
+	{
+	private:
+		std::vector<VkExtensionProperties> m_vk_exts;
+
+	public:
+		enum enumeration_class
+		{
+			instance = 0,
+			device = 1
+		};
+
+		supported_extensions(enumeration_class _class, const char* layer_name = nullptr, physical_device* pgpu = nullptr)
+		{
+			uint32_t count;
+			if (_class == enumeration_class::instance)
+			{
+				if (vkEnumerateInstanceExtensionProperties(layer_name, &count, nullptr) != VK_SUCCESS)
+					return;
+			}
+			else
+			{
+				verify(HERE), pgpu;
+				if (vkEnumerateDeviceExtensionProperties(*pgpu, layer_name, &count, nullptr) != VK_SUCCESS)
+					return;
+			}
+
+			m_vk_exts.resize(count);
+			if (_class == enumeration_class::instance)
+			{
+				vkEnumerateInstanceExtensionProperties(layer_name, &count, m_vk_exts.data());
+			}
+			else
+			{
+				vkEnumerateDeviceExtensionProperties(*pgpu, layer_name, &count, m_vk_exts.data());
+			}
+		}
+
+		bool is_supported(const char *ext)
+		{
+			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
+				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
+		}
+	};
+
 	class render_device
 	{
 		physical_device *pgpu = nullptr;
@@ -533,12 +578,20 @@ namespace vk
 			}
 			else
 			{
-				VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
-				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+				supported_extensions extension_support(supported_extensions::device, nullptr, pgpu);
 
 				VkPhysicalDeviceFeatures2 features2;
 				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-				features2.pNext = &shader_support_info;
+				features2.pNext = nullptr;
+
+				VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+
+				if (extension_support.is_supported("VK_KHR_shader_float16_int8"))
+				{
+					shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+					features2.pNext = &shader_support_info;
+				}
+
 				vkGetPhysicalDeviceFeatures2(*pgpu, &features2);
 
 				m_shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
@@ -566,19 +619,24 @@ namespace vk
 			queue.queueCount = 1;
 			queue.pQueuePriorities = queue_priorities;
 
-			//Set up instance information
-			const char *requested_extensions[] =
+			// Set up instance information
+			std::vector<const char *>requested_extensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			};
 
-			//Enable hardware features manually
-			//Currently we require:
-			//1. Anisotropic sampling
-			//2. DXT support
-			//3. Indexable storage buffers
+			// Enable hardware features manually
+			// Currently we require:
+			// 1. Anisotropic sampling
+			// 2. DXT support
+			// 3. Indexable storage buffers
 			VkPhysicalDeviceFeatures available_features;
 			get_physical_device_features(available_features);
+
+			if (m_shader_types_support.allow_float16)
+			{
+				requested_extensions.push_back("VK_KHR_shader_float16_int8");
+			}
 
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
@@ -586,13 +644,13 @@ namespace vk
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-			device.pNext = NULL;
+			device.pNext = nullptr;
 			device.queueCreateInfoCount = 1;
 			device.pQueueCreateInfos = &queue;
 			device.enabledLayerCount = 0;
 			device.ppEnabledLayerNames = nullptr; // Deprecated
-			device.enabledExtensionCount = 1;
-			device.ppEnabledExtensionNames = requested_extensions;
+			device.enabledExtensionCount = (u32)requested_extensions.size();
+			device.ppEnabledExtensionNames = requested_extensions.data();
 			device.pEnabledFeatures = &available_features;
 
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
@@ -2114,29 +2172,6 @@ public:
 		}
 	};
 
-	class supported_extensions
-	{
-	private:
-		std::vector<VkExtensionProperties> m_vk_exts;
-
-	public:
-		supported_extensions()
-		{
-			uint32_t count;
-			if (vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr) != VK_SUCCESS)
-				return;
-
-			m_vk_exts.resize(count);
-			vkEnumerateInstanceExtensionProperties(nullptr, &count, m_vk_exts.data());
-		}
-
-		bool is_supported(const char *ext)
-		{
-			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
-				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
-		}
-	};
-
 	class context
 	{
 	private:
@@ -2224,7 +2259,7 @@ public:
 
 			if (!fast)
 			{
-				supported_extensions support;
+				supported_extensions support(supported_extensions::instance);
 
 				extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 				if (support.is_supported(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
