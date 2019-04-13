@@ -21,6 +21,7 @@ namespace gl
 
 	viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type);
 
+	bool formats_are_bitcast_compatible(GLenum format1, GLenum format2);
 	void copy_typeless(texture* dst, const texture* src);
 	/**
 	 * is_swizzled - determines whether input bytes are in morton order

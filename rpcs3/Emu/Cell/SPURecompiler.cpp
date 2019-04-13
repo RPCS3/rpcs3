@@ -1001,7 +1001,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		case spu_itype::DFCEQ:
 		case spu_itype::DFCMEQ:
 		case spu_itype::DFCGT:
-		//case spu_itype::DFCMGT:
+		case spu_itype::DFCMGT:
 		case spu_itype::DFTSV:
 		{
 			// Stop before invalid instructions (TODO)
@@ -3342,7 +3342,7 @@ public:
 					// Emit state check if necessary (TODO: more conditions)
 					for (u32 pred : pfound->second)
 					{
-						if (pred >= baddr && bi > 0)
+						if (pred >= baddr)
 						{
 							// If this block is a target of a backward branch (possibly loop), emit a check
 							check_state(baddr);
@@ -3706,7 +3706,7 @@ public:
 				case spu_itype::DFCEQ:
 				case spu_itype::DFCMEQ:
 				case spu_itype::DFCGT:
-				//case spu_itype::DFCMGT:
+				case spu_itype::DFCMGT:
 				case spu_itype::DFTSV:
 				case spu_itype::STOP:
 				case spu_itype::STOPD:
@@ -5854,7 +5854,7 @@ public:
 
 	void DFCMGT(spu_opcode_t op) //
 	{
-		set_vr(op.rt, sext<u64[2]>(fcmp<llvm::FCmpInst::FCMP_OGT>(fabs(get_vr<f64[2]>(op.ra)), fabs(get_vr<f64[2]>(op.rb)))));
+		return UNK(op);
 	}
 
 	void DFCMEQ(spu_opcode_t op) //
@@ -6257,8 +6257,10 @@ public:
 				return;
 			}
 
+			const auto _max = fsplat<f64[4]>(std::exp2(32.f));
 			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
-			set_vr(op.rt, r & sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f64[4]>(0.))));
+			r.value = m_ir->CreateSelect(m_ir->CreateFCmpUGE(a.value, _max.value), splat<s32[4]>(-1).eval(m_ir), (r & sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f64[4]>(0.)))).eval(m_ir));
+			set_vr(op.rt, r);
 		}
 		else
 		{
@@ -6272,8 +6274,10 @@ public:
 				a = eval(a * s);
 
 			value_t<s32[4]> r;
+			const auto _max = fsplat<f32[4]>(std::exp2(32.f));
 			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
-			set_vr(op.rt, r & ~(bitcast<s32[4]>(a) >> 31));
+			r.value = m_ir->CreateSelect(m_ir->CreateFCmpUGE(a.value, _max.value), splat<s32[4]>(-1).eval(m_ir), (r & ~(bitcast<s32[4]>(a) >> 31)).eval(m_ir));
+			set_vr(op.rt, r);
 		}
 	}
 
@@ -6785,7 +6789,13 @@ public:
 
 	void BISLED(spu_opcode_t op) //
 	{
-		UNK(op);
+		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
+		const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
+		set_link(op);
+		value_t<u32> res;
+		res.value = call(&exec_get_events, m_thread);
+		const auto target = add_block_indirect(op, addr);
+		m_ir->CreateCondBr(m_ir->CreateICmpNE(res.value, m_ir->getInt32(0)), target, add_block_next());
 	}
 
 	void BRZ(spu_opcode_t op) //

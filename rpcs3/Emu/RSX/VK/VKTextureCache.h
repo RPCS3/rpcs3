@@ -498,25 +498,45 @@ namespace vk
 
 		void copy_transfer_regions_impl(vk::command_buffer& cmd, vk::image* dst, const std::vector<copy_region_descriptor>& sections_to_transfer) const
 		{
+			const auto dst_aspect = dst->aspect();
+			const auto dst_bpp = vk::get_format_texel_width(dst->format());
+
 			for (const auto &section : sections_to_transfer)
 			{
 				if (!section.src)
 					continue;
 
-				VkImageAspectFlags dst_aspect = vk::get_aspect_flags(dst->info.format);
-				VkImageAspectFlags src_aspect = vk::get_aspect_flags(section.src->info.format);
-				VkImageSubresourceRange src_range = { src_aspect, 0, 1, 0, 1 };
+				const bool typeless = section.src->aspect() != dst_aspect ||
+					!formats_are_bitcast_compatible(dst->format(), section.src->format());
 
-				if (section.src_w == section.dst_w && section.src_h == section.dst_h &&
-					section.xform == surface_transform::identity)
+				section.src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+				auto src_image = section.src;
+				if (UNLIKELY(typeless))
 				{
-					VkImageLayout old_src_layout = section.src->current_layout;
-					VkImageCopy copy_rgn;
+					src_image = vk::get_typeless_helper(dst->info.format, section.src_x + section.src_w, section.src_y + section.src_h);
+					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+					const auto src_bpp = vk::get_format_texel_width(section.src->format());
+					const u16 convert_w = u16(section.src_w * dst_bpp) / src_bpp;
+					const areai src_rect = coordi{{ section.src_x, section.src_y }, { convert_w, section.src_h }};
+					const areai dst_rect = coordi{{ section.src_x, section.src_y }, { section.src_w, section.src_h }};
+					vk::copy_image_typeless(cmd, section.src, src_image, src_rect, dst_rect, 1, section.src->aspect(), dst_aspect);
+					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				}
+
+				verify(HERE), src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+				// Final aspect mask of the 'final' transfer source
+				const auto new_src_aspect = src_image->aspect();
+
+				if (LIKELY(section.src_w == section.dst_w && section.src_h == section.dst_h && section.xform == surface_transform::identity))
+				{
+					VkImageCopy copy_rgn;
 					copy_rgn.srcOffset = { section.src_x, section.src_y, 0 };
 					copy_rgn.dstOffset = { section.dst_x, section.dst_y, 0 };
-					copy_rgn.dstSubresource = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
-					copy_rgn.srcSubresource = { src_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
+					copy_rgn.dstSubresource = { dst_aspect, 0, 0, 1 };
+					copy_rgn.srcSubresource = { new_src_aspect, 0, 0, 1 };
 					copy_rgn.extent = { section.src_w, section.src_h, 1 };
 
 					if (dst->info.imageType == VK_IMAGE_TYPE_3D)
@@ -528,77 +548,79 @@ namespace vk
 						copy_rgn.dstSubresource.baseArrayLayer = section.dst_z;
 					}
 
-					vk::change_image_layout(cmd, section.src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src_range);
-					vkCmdCopyImage(cmd, section.src->value, section.src->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
-					vk::change_image_layout(cmd, section.src, old_src_layout, src_range);
+					vkCmdCopyImage(cmd, src_image->value, src_image->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 				}
 				else
 				{
 					verify(HERE), section.dst_z == 0;
 
 					u16 dst_x = section.dst_x, dst_y = section.dst_y;
+					auto xform = section.xform;
 					vk::image* _dst;
 
-					if (LIKELY(section.src->info.format == dst->info.format))
+					if (LIKELY(src_image->info.format == dst->info.format))
 					{
 						_dst = dst;
 					}
 					else
 					{
-						_dst = vk::get_typeless_helper(section.src->info.format, dst->width(), dst->height() * 2);
-						vk::change_image_layout(cmd, _dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, src_range);
+						verify(HERE), !typeless;
+
+						_dst = vk::get_typeless_helper(src_image->info.format, dst->width(), dst->height() * 2);
+						_dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 					}
 
 					if (section.xform == surface_transform::identity)
 					{
-						vk::copy_scaled_image(cmd, section.src->value, _dst->value, section.src->current_layout, _dst->current_layout,
+						vk::copy_scaled_image(cmd, src_image->value, _dst->value, section.src->current_layout, _dst->current_layout,
 							coordi{ { section.src_x, section.src_y }, { section.src_w, section.src_h } },
 							coordi{ { section.dst_x, section.dst_y }, { section.dst_w, section.dst_h } },
-							1, src_aspect, section.src->info.format == _dst->info.format,
-							VK_FILTER_NEAREST, section.src->info.format, _dst->info.format);
+							1, src_image->aspect(), src_image->info.format == _dst->info.format,
+							VK_FILTER_NEAREST, src_image->info.format, _dst->info.format);
 					}
 					else if (section.xform == surface_transform::argb_to_bgra)
 					{
-						VkImageLayout old_src_layout = section.src->current_layout;
 						VkBufferImageCopy copy{};
-
 						copy.imageExtent = { section.src_w, section.src_h, 1 };
 						copy.imageOffset = { section.src_x, section.src_y, 0 };
-						copy.imageSubresource = { src_aspect, 0, 0, 1 };
+						copy.imageSubresource = { src_image->aspect(), 0, 0, 1 };
 
 						auto scratch_buf = vk::get_scratch_buffer();
-						vk::change_image_layout(cmd, section.src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src_range);
-						vkCmdCopyImageToBuffer(cmd, section.src->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, scratch_buf->value, 1, &copy);
+						vkCmdCopyImageToBuffer(cmd, src_image->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, scratch_buf->value, 1, &copy);
 
-						const auto length = section.src->width() * section.src->width() * 4;
-						vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+						const auto mem_length = section.src_w * section.src_h * dst_bpp;
+						vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 							VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
 						auto shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_32>();
-						shuffle_kernel->run(cmd, scratch_buf, length);
+						shuffle_kernel->run(cmd, scratch_buf, mem_length);
 
-						vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 							VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-						auto tmp = vk::get_typeless_helper(section.src->info.format, section.dst_x + section.dst_w, section.dst_y + section.dst_h);
-						vk::change_image_layout(cmd, tmp, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { src_aspect, 0, 1, 0, 1 });
-						copy.imageOffset = { 0, 0, 0 };
+						auto tmp = vk::get_typeless_helper(src_image->info.format, section.dst_x + section.dst_w, section.dst_y + section.dst_h);
+						tmp->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+						copy.imageOffset = { 0, 0, 0 };
 						vkCmdCopyBufferToImage(cmd, scratch_buf->value, tmp->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy);
 
-						if (UNLIKELY(tmp == _dst))
+						dst_x = 0;
+						dst_y = 0;
+
+						if (section.src_w != section.dst_w || section.src_h != section.dst_h)
 						{
-							dst_x = 0;
-							dst_y = section.src_h;
+							// Optionally scale if needed
+							if (UNLIKELY(tmp == _dst))
+							{
+								dst_y = section.src_h;
+							}
+
+							vk::copy_scaled_image(cmd, tmp->value, _dst->value, tmp->current_layout, _dst->current_layout,
+								areai{ 0, 0, section.src_w, (s32)section.src_h },
+								coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
+								1, new_src_aspect, tmp->info.format == _dst->info.format,
+								VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);
 						}
-
-						vk::copy_scaled_image(cmd, tmp->value, _dst->value, tmp->current_layout, _dst->current_layout,
-							areai{ 0, 0, (s32)section.src_w, (s32)section.src_h },
-							coordi{ {dst_x, dst_y}, {section.dst_w, section.dst_h} },
-							1, src_aspect, section.src->info.format == _dst->info.format,
-							VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);
-
-						vk::change_image_layout(cmd, section.src, old_src_layout, src_range);
 					}
 					else
 					{
@@ -608,18 +630,19 @@ namespace vk
 					if (UNLIKELY(_dst != dst))
 					{
 						// Casting comes after the scaling!
-
 						VkImageCopy copy_rgn;
 						copy_rgn.srcOffset = { s32(dst_x), s32(dst_y), 0 };
 						copy_rgn.dstOffset = { section.dst_x, section.dst_y, 0 };
-						copy_rgn.dstSubresource = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
-						copy_rgn.srcSubresource = { src_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1 };
+						copy_rgn.dstSubresource = { dst_aspect, 0, 0, 1 };
+						copy_rgn.srcSubresource = { _dst->aspect(), 0, 0, 1 };
 						copy_rgn.extent = { section.dst_w, section.dst_h, 1 };
 
-						vk::change_image_layout(cmd, _dst, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, src_range);
+						_dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 						vkCmdCopyImage(cmd, _dst->value, _dst->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 					}
 				}
+
+				section.src->pop_layout(cmd);
 			}
 		}
 
@@ -664,24 +687,9 @@ namespace vk
 			std::unique_ptr<vk::image> image;
 			std::unique_ptr<vk::image_view> view;
 
-			VkImageAspectFlags aspect;
 			VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
-
-			if (source)
-			{
-				aspect = vk::get_aspect_flags(source->info.format);
-				if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT ||
-					vk::get_format_texel_width(dst_format) != vk::get_format_texel_width(source->info.format))
-				{
-					//HACK! Should use typeless transfer
-					dst_format = source->info.format;
-				}
-			}
-			else
-			{
-				aspect = vk::get_aspect_flags(dst_format);
-			}
+			VkImageAspectFlags aspect = vk::get_aspect_flags(dst_format);
 
 			image.reset(new vk::viewable_image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				image_type,
@@ -694,9 +702,9 @@ namespace vk
 			VkComponentMapping view_swizzle;
 			if (!source || dst_format != source->info.format)
 			{
-				//This is a data cast operation
-				//Use native mapping for the new type
-				//TODO: Also simulate the readback+reupload step (very tricky)
+				// This is a data cast operation
+				// Use native mapping for the new type
+				// TODO: Also simulate the readback+reupload step (very tricky)
 				const auto remap = get_component_mapping(gcm_format);
 				view_swizzle = { remap[1], remap[2], remap[3], remap[0] };
 			}
@@ -714,22 +722,17 @@ namespace vk
 
 			if (copy)
 			{
-				VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
-				VkImageLayout old_src_layout = source->current_layout;
+				std::vector<copy_region_descriptor> region =
+				{{
+					source,
+					surface_transform::identity,
+					x, y, 0, 0, 0,
+					w, h, w, h
+				}};
 
-				vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-				vk::change_image_layout(cmd, source, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-
-				VkImageCopy copy_rgn;
-				copy_rgn.srcOffset = { (s32)x, (s32)y, 0 };
-				copy_rgn.dstOffset = { (s32)0, (s32)0, 0 };
-				copy_rgn.dstSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.srcSubresource = { aspect, 0, 0, 1 };
-				copy_rgn.extent = { w, h, 1 };
-
-				vkCmdCopyImage(cmd, source->value, source->current_layout, image->value, image->current_layout, 1, &copy_rgn);
-				vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
-				vk::change_image_layout(cmd, source, old_src_layout, subresource_range);
+				vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				copy_transfer_regions_impl(cmd, image.get(), region);
+				vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 
 			const u32 resource_memory = w * h * 4; //Rough approximate
@@ -872,25 +875,18 @@ namespace vk
 
 		void update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, vk::image* src, u16 width, u16 height) override
 		{
-			VkImage dst = dst_view->info.image;
-			VkImageAspectFlags aspect = vk::get_aspect_flags(src->info.format);
-			VkImageSubresourceRange subresource_range = { aspect, 0, 1, 0, 1 };
-			vk::change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+			std::vector<copy_region_descriptor> region =
+			{{
+				src,
+				surface_transform::identity,
+				0, 0, 0, 0, 0,
+				width, height, width, height
+			}};
 
-			VkImageLayout old_src_layout = src->current_layout;
-			vk::change_image_layout(cmd, src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-
-			VkImageCopy copy_rgn;
-			copy_rgn.srcOffset = { 0, 0, 0 };
-			copy_rgn.dstOffset = { 0, 0, 0 };
-			copy_rgn.dstSubresource = { aspect & ~(VK_IMAGE_ASPECT_DEPTH_BIT), 0, 0, 1 };
-			copy_rgn.srcSubresource = { aspect & ~(VK_IMAGE_ASPECT_DEPTH_BIT), 0, 0, 1 };
-			copy_rgn.extent = { width, height, 1 };
-
-			vkCmdCopyImage(cmd, src->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_rgn);
-
-			vk::change_image_layout(cmd, src, old_src_layout, subresource_range);
-			vk::change_image_layout(cmd, dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, subresource_range);
+			auto dst = dst_view->image();
+			dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+			copy_transfer_regions_impl(cmd, dst, region);
+			dst->pop_layout(cmd);
 		}
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps,  u16 pitch,

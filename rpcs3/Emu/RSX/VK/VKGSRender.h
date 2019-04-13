@@ -48,6 +48,21 @@ namespace vk
 
 extern u64 get_system_time();
 
+enum
+{
+	VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE = 0x1,
+	VK_HEAP_CHECK_VERTEX_STORAGE = 0x2,
+	VK_HEAP_CHECK_VERTEX_ENV_STORAGE = 0x4,
+	VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE = 0x8,
+	VK_HEAP_CHECK_TEXTURE_ENV_STORAGE = 0x10,
+	VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE = 0x20,
+	VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE = 0x40,
+	VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE = 0x80,
+
+	VK_HEAP_CHECK_MAX_ENUM = VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE,
+	VK_HEAP_CHECK_ALL = 0xFF,
+};
+
 struct command_buffer_chunk: public vk::command_buffer
 {
 	VkFence submit_fence = VK_NULL_HANDLE;
@@ -414,7 +429,7 @@ private:
 
 	void update_draw_state();
 
-	void check_heap_status();
+	void check_heap_status(u32 flags = VK_HEAP_CHECK_ALL);
 
 	void check_descriptors();
 	VkDescriptorSet allocate_descriptor_set();

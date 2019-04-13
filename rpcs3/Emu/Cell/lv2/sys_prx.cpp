@@ -236,10 +236,9 @@ error_code _sys_prx_start_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_m
 		return CELL_ESRCH;
 	}
 
-	//if (prx->is_started)
-	//	return CELL_PRX_ERROR_ALREADY_STARTED;
+	if (prx->is_started.exchange(true))
+		return not_an_error(CELL_PRX_ERROR_ALREADY_STARTED);
 
-	//prx->is_started = true;
 	pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
 	pOpt->entry2.set(prx->prologue ? prx->prologue.addr() : ~0ull);
 	return CELL_OK;
@@ -256,10 +255,9 @@ error_code _sys_prx_stop_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_mo
 		return CELL_ESRCH;
 	}
 
-	//if (!prx->is_started)
-	//	return CELL_PRX_ERROR_ALREADY_STOPPED;
+	if (!prx->is_started.exchange(false))
+		return not_an_error(CELL_PRX_ERROR_ALREADY_STOPPED);
 
-	//prx->is_started = false;
 	pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
 	pOpt->entry2.set(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 

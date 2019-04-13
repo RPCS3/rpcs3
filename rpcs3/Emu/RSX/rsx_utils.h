@@ -81,6 +81,7 @@ namespace rsx
 
 		address_range get_memory_range() const
 		{
+			verify(HERE), range.start == address;
 			return range;
 		}
 	};
@@ -103,13 +104,9 @@ namespace rsx
 		u16 offset_y;
 		u16 width;
 		u16 height;
-		u16 slice_h;
 		u16 pitch;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
 		u32 rsx_address;
+		void *pixels;
 	};
 
 	struct blit_dst_info
@@ -124,16 +121,11 @@ namespace rsx
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
-		u16 max_tile_h;
 		f32 scale_x;
 		f32 scale_y;
-
-		bool swizzled;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
 		u32  rsx_address;
+		void *pixels;
+		bool swizzled;
 	};
 
 	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =

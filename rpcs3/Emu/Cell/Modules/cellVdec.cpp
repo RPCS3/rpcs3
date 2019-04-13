@@ -453,7 +453,7 @@ static s32 vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> cb, vm:
 	// Run thread
 	vm::var<u64> _tid;
 	vm::var<char[]> _name = vm::make_str("HLE Video Decoder");
-	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	*handle = vid;
 
 	const auto thrd = idm::get<named_thread<ppu_thread>>(*_tid);
