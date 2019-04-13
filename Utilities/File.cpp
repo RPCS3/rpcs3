@@ -137,6 +137,8 @@ static fs::error to_error(DWORD e)
 #include <mach-o/dyld.h>
 #elif defined(__linux__) || defined(__sun)
 #include <sys/sendfile.h>
+#include <sys/syscall.h>
+#include <linux/fs.h>
 #else
 #include <fstream>
 #endif
@@ -192,7 +194,7 @@ namespace fs
 		// Do notning
 	}
 
-	native_handle file_base::get_native_handle()
+	fs::native_handle fs::file_base::get_handle()
 	{
 #ifdef _WIN32
 		return INVALID_HANDLE_VALUE;
@@ -609,6 +611,21 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 
 	return true;
 #else
+
+#ifdef __linux__
+	if (syscall(SYS_renameat2, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), overwrite ? 0 : 1 /* RENAME_NOREPLACE */) == 0)
+	{
+		return true;
+	}
+
+	// If the filesystem doesn't support RENAME_NOREPLACE, it returns EINVAL. Retry with fallback method in that case.
+	if (errno != EINVAL || overwrite)
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+#endif
+
 	if (!overwrite && exists(to))
 	{
 		g_tls_error = fs::error::exist;
@@ -996,7 +1013,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return size.QuadPart;
 		}
 
-		native_handle get_native_handle() override
+		native_handle get_handle() override
 		{
 			return m_handle;
 		}
@@ -1136,7 +1153,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return file_info.st_size;
 		}
 
-		native_handle get_native_handle() override
+		native_handle get_handle() override
 		{
 			return m_fd;
 		}
@@ -1219,7 +1236,7 @@ fs::native_handle fs::file::get_handle() const
 {
 	if (m_file)
 	{
-		return m_file->get_native_handle();
+		return m_file->get_handle();
 	}
 
 #ifdef _WIN32
