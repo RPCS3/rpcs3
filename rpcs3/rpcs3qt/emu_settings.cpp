@@ -244,7 +244,7 @@ void emu_settings::SaveSettings()
 	config.close();
 }
 
-void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged, bool use_max, int max)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged, bool use_max, int max, bool sorted)
 {
 	if (!combobox)
 	{
@@ -265,7 +265,14 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 	}
 	else
 	{
-		for (QString setting : GetSettingOptions(type))
+		QStringList settings = GetSettingOptions(type);
+
+		if (sorted)
+		{
+			settings.sort();
+		}
+
+		for (QString setting : settings)
 		{
 			combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
 		}
