@@ -785,6 +785,11 @@ spu_recompiler_base::~spu_recompiler_base()
 
 void spu_recompiler_base::make_function(const std::vector<u32>& data)
 {
+	if (m_cache && g_cfg.core.spu_cache)
+	{
+		m_cache->add(data);
+	}
+
 	for (u64 reset_count = m_spurt->get_reset_count();;)
 	{
 		if (LIKELY(compile(reset_count, data)))
@@ -3536,11 +3541,6 @@ public:
 		{
 			out.flush();
 			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
-		}
-
-		if (m_cache && g_cfg.core.spu_cache)
-		{
-			m_cache->add(func);
 		}
 
 		return true;

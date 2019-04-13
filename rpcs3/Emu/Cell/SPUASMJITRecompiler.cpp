@@ -844,11 +844,6 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 		fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 	}
 
-	if (m_cache && g_cfg.core.spu_cache)
-	{
-		m_cache->add(func);
-	}
-
 	return true;
 }
 
