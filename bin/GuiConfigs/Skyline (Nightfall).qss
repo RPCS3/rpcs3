@@ -200,6 +200,7 @@ QTableView QScrollBar {
 
 QScrollBar::handle {
 	background: #455971;
+	min-height: 30px;
 }
 
 QScrollBar::handle:hover, QScrollBar::handle:pressed {
