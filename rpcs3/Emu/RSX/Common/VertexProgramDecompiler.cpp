@@ -241,7 +241,8 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) },
-		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) }
+		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) },
+		{ "$Ty", [this](){ return getFloatTypeName(4); } }
 	};
 
 	return fmt::replace_all(code, repl_list);

@@ -660,23 +660,23 @@ namespace glsl
 		default:
 			abort();
 		case FUNCTION::FUNCTION_DP2:
-			return "vec4(dot($0.xy, $1.xy))";
+			return "$Ty(dot($0.xy, $1.xy))";
 		case FUNCTION::FUNCTION_DP2A:
-			return "vec4(dot($0.xy, $1.xy) + $2.x)";
+			return "$Ty(dot($0.xy, $1.xy) + $2.x)";
 		case FUNCTION::FUNCTION_DP3:
-			return "vec4(dot($0.xyz, $1.xyz))";
+			return "$Ty(dot($0.xyz, $1.xyz))";
 		case FUNCTION::FUNCTION_DP4:
-			return "vec4(dot($0, $1))";
+			return "$Ty(dot($0, $1))";
 		case FUNCTION::FUNCTION_DPH:
-			return "vec4(dot(vec4($0.xyz, 1.0), $1))";
+			return "$Ty(dot(vec4($0.xyz, 1.0), $1))";
 		case FUNCTION::FUNCTION_SFL:
-			return "vec4(0., 0., 0., 0.)";
+			return "$Ty(0., 0., 0., 0.)";
 		case FUNCTION::FUNCTION_STR:
-			return "vec4(1., 1., 1., 1.)";
+			return "$Ty(1., 1., 1., 1.)";
 		case FUNCTION::FUNCTION_FRACT:
 			return "fract($0)";
 		case FUNCTION::FUNCTION_REFL:
-			return "vec4($0 - 2.0 * (dot($0, $1)) * $1)";
+			return "$Ty($0 - 2.0 * (dot($0, $1)) * $1)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
 			return "TEX1D($_i, $0.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:

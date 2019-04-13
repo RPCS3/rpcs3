@@ -128,10 +128,20 @@ struct temp_register
  */
 class FragmentProgramDecompiler
 {
+	enum OPFLAGS
+	{
+		no_src_mask = 1,
+		src_cast_f32 = 2,
+		skip_type_cast = 4,
+
+		op_extern = src_cast_f32 | skip_type_cast,
+	};
+
 	OPDEST dst;
 	SRC0 src0;
 	SRC1 src1;
 	SRC2 src2;
+	u32  opflags;
 
 	std::string main;
 	u32& m_size;
@@ -148,7 +158,7 @@ class FragmentProgramDecompiler
 
 	std::string GetMask();
 
-	void SetDst(std::string code, bool append_mask = true);
+	void SetDst(std::string code, u32 flags = 0);
 	void AddCode(const std::string& code);
 	std::string AddReg(u32 index, bool fp16);
 	bool HasReg(u32 index, bool fp16);
@@ -164,13 +174,8 @@ class FragmentProgramDecompiler
 	//Support the transform-2d temp result for use with TEXBEM
 	std::string AddX2d();
 
-	//Prevent division by zero by catching denormals
-	//Simpler variant where input and output are expected to be positive
-	std::string NotZero(const std::string& code);
-	std::string NotZeroPositive(const std::string& code);
-	
 	//Prevents operations from overflowing the desired range (tested with fp_dynamic3 autotest sample, DS2 for src1.input_prec_mod)
-	std::string ClampValue(const std::string& code, u32 precision);
+	std::string ClampValue(const std::string& code, u32 precision, bool is_half_type);
 
 	/**
 	* Returns true if the dst set is not a vector (i.e only a single component)
@@ -219,9 +224,6 @@ protected:
 	 */
 	virtual std::string getFunction(FUNCTION) = 0;
 
-	/** returns string calling saturate function.
-	*/
-	virtual std::string saturate(const std::string &code) = 0;
 	/** returns string calling comparison function on 2 args passed as strings.
 	 */
 	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &) = 0;

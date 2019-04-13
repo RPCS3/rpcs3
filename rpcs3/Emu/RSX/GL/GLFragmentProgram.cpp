@@ -23,11 +23,6 @@ std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string GLFragmentDecompilerThread::saturate(const std::string & code)
-{
-	return "clamp(" + code + ", 0., 1.)";
-}
-
 std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1);
@@ -110,7 +105,8 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	const auto reg_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? "vec4" : getHalfTypeName(4);
+	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
+	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
 	for (int i = 0; i < std::size(table); ++i)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))

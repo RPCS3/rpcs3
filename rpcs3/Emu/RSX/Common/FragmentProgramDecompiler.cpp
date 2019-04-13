@@ -16,23 +16,37 @@ FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &p
 	m_size = 0;
 }
 
-void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
+void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 {
 	if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
-	switch (src1.scale)
+	if (src1.scale)
 	{
-	case 0: break;
-	case 1: code = "(" + code + " * 2.0)"; break;
-	case 2: code = "(" + code + " * 4.0)"; break;
-	case 3: code = "(" + code + " * 8.0)"; break;
-	case 5: code = "(" + code + " / 2.0)"; break;
-	case 6: code = "(" + code + " / 4.0)"; break;
-	case 7: code = "(" + code + " / 8.0)"; break;
+		std::string modifier;
+		switch (src1.scale)
+		{
+		case 0: break;
+		case 1: code = "(" + code + " * "; modifier = "2."; break;
+		case 2: code = "(" + code + " * "; modifier = "4."; break;
+		case 3: code = "(" + code + " * "; modifier = "8."; break;
+		case 5: code = "(" + code + " / "; modifier = "2."; break;
+		case 6: code = "(" + code + " / "; modifier = "4."; break;
+		case 7: code = "(" + code + " / "; modifier = "8."; break;
 
-	default:
-		LOG_ERROR(RSX, "Bad scale: %d", u32{ src1.scale });
-		break;
+		default:
+			LOG_ERROR(RSX, "Bad scale: %d", u32{ src1.scale });
+			break;
+		}
+
+		if (flags & OPFLAGS::skip_type_cast && dst.fp16 && device_props.has_native_half_support)
+		{
+			modifier = getHalfTypeName(1) + "(" + modifier + ")";
+		}
+
+		if (!modifier.empty())
+		{
+			code = code + modifier + ")";
+		}
 	}
 
 	if (!dst.no_dest)
@@ -44,23 +58,23 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 			code = "((" + code + "- 0.5) * 2.)";
 		}
 
-		if (dst.fp16 && device_props.has_native_half_support)
+		if (dst.fp16 && device_props.has_native_half_support && !(flags & OPFLAGS::skip_type_cast))
 		{
 			// Cast to native data type
 			if (dst.opcode == RSX_FP_OPCODE_NRM)
 			{
 				// Returns a 3-component vector as the result
-				code = ClampValue(code + ".xyzz", 1);
+				code = ClampValue(code + ".xyzz", 1, true);
 			}
 			else
 			{
-				code = ClampValue(code, 1);
+				code = ClampValue(code, 1, true);
 			}
 		}
 
 		if (dst.saturate)
 		{
-			code = saturate(code);
+			code = ClampValue(code, 4, !!dst.fp16);
 		}
 		else if (dst.prec)
 		{
@@ -94,14 +108,15 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 					break;
 
 				// clamp value to allowed range
-				code = ClampValue(code, dst.prec);
+				code = ClampValue(code, dst.prec, !!dst.fp16);
 				break;
 			}
 			}
 		}
 	}
 
-	code += (append_mask ? "$m" : "");
+	opflags = flags;
+	code += (flags & OPFLAGS::no_src_mask) ? "" : "$m";
 
 	if (dst.no_dest)
 	{
@@ -249,36 +264,48 @@ std::string FragmentProgramDecompiler::AddX2d()
 	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", getFloatTypeName(4) + "(0., 0., 0., 0.)");
 }
 
-//Both of these were tested with a trace SoulCalibur IV title screen
-//Failure to catch causes infinite values since there is a lot of rcp(0)
-std::string FragmentProgramDecompiler::NotZero(const std::string& code)
-{
-	return "(max(abs(" + code + "), 0.0000000001) * sign(" + code + "))";
-}
-
-std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
-{
-	return "max(abs(" + code + "), 0.0000000001)";
-}
-
-std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
+std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision, bool is_half_type)
 {
 	// FP16 is expected to overflow a lot easier at 0+-65504
 	// FP32 can still work up to 0+-3.4E38
 	// See http://http.download.nvidia.com/developer/Papers/2005/FP_Specials/FP_Specials.pdf
 
-	switch (precision)
+	if (LIKELY(precision <= 1))
 	{
-	case 0:
-		break;
-	case 1:
-		return "clamp16(" + code + ")";
-	case 2:
-		return "clamp(" + code + ", -2., 2.)";
-	case 3:
-		return "clamp(" + code + ", -1., 1.)";
-	case 4:
-		return "clamp(" + code + ", 0., 1.)";
+		if (precision == 1)
+		{
+			return "clamp16(" + code + ")";
+		}
+		else
+		{
+			return code;
+		}
+	}
+
+	if (!is_half_type || !device_props.has_native_half_support)
+	{
+		switch (precision)
+		{
+		case 2:
+			return "clamp(" + code + ", -2., 2.)";
+		case 3:
+			return "clamp(" + code + ", -1., 1.)";
+		case 4:
+			return "clamp(" + code + ", 0., 1.)";
+		}
+	}
+	else
+	{
+		const auto type = getHalfTypeName(1);
+		switch (precision)
+		{
+		case 2:
+			return "clamp(" + code + ", " + type + "(-2.), " + type + "(2.))";
+		case 3:
+			return "clamp(" + code + ", " + type + "(-1.), " + type + "(1.))";
+		case 4:
+			return "clamp(" + code + ", " + type + "(0.), " + type + "(1.))";
+		}
 	}
 
 	return code;
@@ -316,7 +343,7 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
 		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) },
-		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } }
+		{ "$Ty", [this]() -> std::string { return (!device_props.has_native_half_support || !dst.fp16)? getFloatTypeName(4) : getHalfTypeName(4); } }
 	};
 
 	if (!ignore_redirects)
@@ -404,6 +431,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
 	bool apply_precision_modifier = !!src1.input_prec_mod;
+	bool is_half_type = false;
 
 	switch (src.reg_type)
 	{
@@ -427,8 +455,19 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				}
 			}
 		}
+		else
+		{
+			is_half_type = true;
+		}
 
-		ret += AddReg(src.tmp_reg_index, !!src.fp16);
+		ret += AddReg(src.tmp_reg_index, is_half_type);
+
+		if (opflags & OPFLAGS::src_cast_f32 && is_half_type && device_props.has_native_half_support)
+		{
+			// Upconvert if there is a chance for ambiguity
+			ret = getFloatTypeName(4) + "(" + ret + ")";
+		}
+
 		break;
 
 	case RSX_FP_REGISTER_TYPE_INPUT:
@@ -497,7 +536,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	// Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
 	if (src.abs) ret = "abs(" + ret + ")";
-	if (apply_precision_modifier) ret = ClampValue(ret, src1.input_prec_mod);
+	if (apply_precision_modifier) ret = ClampValue(ret, src1.input_prec_mod, is_half_type);
 	if (src.neg) ret = "-" + ret;
 
 	return ret;
@@ -590,12 +629,34 @@ std::string FragmentProgramDecompiler::BuildCode()
 		"vec3 clamp16(vec3 x){ return clamp16(x.xyzz).xyz; }\n"
 		"vec2 clamp16(vec2 x){ return clamp16(x.xyxy).xy; }\n"
 		"float clamp16(float x){ return isnan(x)? x : clamp(x, -65504., +65504.); }\n\n";
+
+		OS <<
+		"#define _builtin_min min\n"
+		"#define _builtin_max max\n"
+		"#define _builtin_lit lit_legacy\n"
+		"#define _builtin_distance distance\n"
+		"#define _builtin_rcp(x) (1. / x)\n"
+		"#define _builtin_rsq(x) (1. / sqrt(x))\n"
+		"#define _builtin_log2(x) log2(abs(x))\n"
+		"#define _builtin_div(x, y) (x / y)\n"
+		"#define _builtin_divsq(x, y) (x / sqrt(y))\n\n";
 	}
 	else
 	{
 		// Define raw casts from f32->f16
+		// Also define upcasting to avoid ambiguous function overloading in case of mixed inputs
 		const std::string half4 = getHalfTypeName(4);
-		OS << "#define clamp16(x) " << half4 << "(x)\n\n";
+		OS <<
+		"#define clamp16(x) " << half4 << "(x)\n"
+		"#define _builtin_min(x, y) min(vec4(x), vec4(y))\n"
+		"#define _builtin_max(x, y) max(vec4(x), vec4(y))\n"
+		"#define _builtin_lit lit_legacy\n"
+		"#define _builtin_distance(x, y) distance(vec4(x), vec4(y))\n"
+		"#define _builtin_rcp(x) (1. / x)\n"
+		"#define _builtin_rsq(x) (1. / sqrt(x))\n"
+		"#define _builtin_log2(x) log2(abs(x))\n"
+		"#define _builtin_div(x, y) (x / y)\n"
+		"#define _builtin_divsq(x, y) (x / sqrt(y))\n\n";
 	}
 	
 
@@ -634,37 +695,37 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	switch (opcode)
 	{
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
-	case RSX_FP_OPCODE_DIV: SetDst("($0 / " + NotZero("$1.x") + ")"); return true;
+	case RSX_FP_OPCODE_DIV: SetDst("_builtin_div($0, $1.x)"); return true;
 	// Note: DIVSQ is not IEEE compliant. divsq(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
 	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
-	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt(" + NotZeroPositive("$1.x") + "))"); return true;
-	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
-	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
-	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
-	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A)); return true;
+	case RSX_FP_OPCODE_DIVSQ: SetDst("_builtin_divsq($0, $1.x)"); return true;
+	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
-	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); return true;
-	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
+	case RSX_FP_OPCODE_MAX: SetDst("_builtin_max($0, $1)"); return true;
+	case RSX_FP_OPCODE_MIN: SetDst("_builtin_min($0, $1)"); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
 	// Note: It's highly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
-	case RSX_FP_OPCODE_RCP: SetDst("(1. / " +  NotZero("$0.x") + ").xxxx"); return true;
+	case RSX_FP_OPCODE_RCP: SetDst("_builtin_rcp($0.x).xxxx"); return true;
 	// Note: RSQ is not IEEE compliant. rsq(0) is some big number (Silent Hill 3 HD)
 	// It is not know what happens if 0 is negative.
-	case RSX_FP_OPCODE_RSQ: SetDst("(1. / sqrt(" + NotZeroPositive("$0.x") + ").xxxx)"); return true;
-	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
-	case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SGT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SLE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SLT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SNE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR)); return true;
+	case RSX_FP_OPCODE_RSQ: SetDst("_builtin_rsq($0.x).xxxx"); return true;
+	case RSX_FP_OPCODE_SEQ: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL), OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_SGE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SGT: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SLE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SLT: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SNE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR), OPFLAGS::skip_type_cast); return true;
 
 	// SCB-only ops
 	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
-	case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); return true;
-	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL)); return true;
+	case RSX_FP_OPCODE_DST: SetDst("_builtin_distance($0, $1).xxxx"); return true;
+	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
 	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); return true;
@@ -672,15 +733,15 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		SetDst("lit_legacy($0)");
 		properties.has_lit_op = true;
 		return true;
-	case RSX_FP_OPCODE_LIF: SetDst(getFloatTypeName(4) + "(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); return true;
-	case RSX_FP_OPCODE_LRP: SetDst(getFloatTypeName(4) + "($2 * (1 - $0) + $1 * $0)"); return true;
-	case RSX_FP_OPCODE_LG2: SetDst("log2(" + NotZeroPositive("$0.x") + ").xxxx"); return true;
-		//Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)", OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_LRP: SetDst("$Ty($2 * (1 - $0) + $1 * $0)", OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_LG2: SetDst("_builtin_log2($0.x).xxxx"); return true;
+		// Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	case RSX_FP_OPCODE_PK2: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packHalf2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PK4: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PKG:
-		//Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
+		// Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
 	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); return true;
 	}
@@ -813,12 +874,12 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		}
 		return false;
-	//Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	// Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	case RSX_FP_OPCODE_UP2: SetDst("unpackHalf2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(floatBitsToUint($0.x))"); return true;
 	case RSX_FP_OPCODE_UP16: SetDst("unpackSnorm2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UPG:
-	//Same as UPB with gamma correction
+	// Same as UPB with gamma correction
 	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(floatBitsToUint($0.x)))"); return true;
 	}
 	return false;
@@ -871,6 +932,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		src2.HEX = GetData(data[3]);
 
 		m_offset = 4 * sizeof(u32);
+		opflags = 0;
 
 		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
 
