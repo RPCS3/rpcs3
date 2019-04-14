@@ -254,6 +254,11 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 
 	if (is_ranged)
 	{
+		if (sorted)
+		{
+			LOG_WARNING(GENERAL, "EnhanceCombobox '%s': ignoring sorting request on ranged combo box", GetSettingName(type));
+		}
+
 		QStringList range = GetSettingOptions(type);
 
 		int max_item = use_max ? max : range.last().toInt();
