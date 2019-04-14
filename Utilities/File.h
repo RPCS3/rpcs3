@@ -77,7 +77,7 @@ namespace fs
 		virtual u64 write(const void* buffer, u64 size) = 0;
 		virtual u64 seek(s64 offset, seek_mode whence) = 0;
 		virtual u64 size() = 0;
-		virtual native_handle get_native_handle();
+		virtual native_handle get_handle();
 	};
 
 	// Directory entry (TODO)

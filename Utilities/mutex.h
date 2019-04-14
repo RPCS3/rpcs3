@@ -121,7 +121,7 @@ public:
 
 	void unlock_hle()
 	{
-		const u32 value = atomic_storage<u32>::fetch_add_hle_rel(m_value.raw(), -c_one);
+		const u32 value = atomic_storage<u32>::fetch_add_hle_rel(m_value.raw(), 0u - c_one);
 
 		if (UNLIKELY(value != c_one))
 		{

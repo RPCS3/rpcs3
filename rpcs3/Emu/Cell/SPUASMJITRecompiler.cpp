@@ -181,17 +181,31 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 	if (!g_cfg.core.spu_verification)
 	{
 		// Disable check (unsafe)
+		if (utils::has_avx())
+		{
+			c->vzeroupper();
+		}
 	}
 	else if (m_size == 4)
 	{
 		c->cmp(x86::dword_ptr(*ls, start), func[1]);
 		c->jnz(label_diff);
+
+		if (utils::has_avx())
+		{
+			c->vzeroupper();
+		}
 	}
 	else if (m_size == 8)
 	{
 		c->mov(*qw1, static_cast<u64>(func[2]) << 32 | func[1]);
 		c->cmp(*qw1, x86::qword_ptr(*ls, start));
 		c->jnz(label_diff);
+
+		if (utils::has_avx())
+		{
+			c->vzeroupper();
+		}
 	}
 	else if (utils::has_512() && false)
 	{
@@ -272,8 +286,9 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 
 		c->ktestw(x86::k1, x86::k1);
 		c->jnz(label_diff);
+		c->vzeroupper();
 	}
-	else if (utils::has_512())
+	else if (0 && utils::has_512())
 	{
 		// AVX-512 optimized check using 256-bit registers
 		words_align = 32;
@@ -392,8 +407,10 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 			c->vptest(x86::ymm0, x86::ymm0);
 			c->jnz(label_diff);
 		}
+
+		c->vzeroupper();
 	}
-	else if (utils::has_avx())
+	else if (0 && utils::has_avx())
 	{
 		// Mainstream AVX
 		words_align = 32;
@@ -531,6 +548,8 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 			c->vptest(x86::ymm0, x86::ymm0);
 			c->jnz(label_diff);
 		}
+
+		c->vzeroupper();
 	}
 	else
 	{
@@ -659,11 +678,6 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 			c->test(x86::rax, x86::rax);
 			c->jne(label_diff);
 		}
-	}
-
-	if (utils::has_avx())
-	{
-		c->vzeroupper();
 	}
 
 	// Acknowledge success and add statistics
@@ -842,11 +856,6 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 
 		// Append log file
 		fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
-	}
-
-	if (m_cache && g_cfg.core.spu_cache)
-	{
-		m_cache->add(func);
 	}
 
 	return true;
