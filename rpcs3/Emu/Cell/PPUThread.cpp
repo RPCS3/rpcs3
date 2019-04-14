@@ -1053,8 +1053,8 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 7);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.and_(args[0], (u32)-128u);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.bswap(args[2].r32());
 	c.bswap(args[3].r32());
 	c.mov(args[0].r32(), 5);
@@ -1078,11 +1078,9 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.sar(x86::eax, 24);
 	c.js(fail);
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
+	c.add(x86::dword_ptr(x86::r10, 124), 0);
 	c.lock().add(x86::dword_ptr(x86::r11), 0);
-	c.lock().add(x86::qword_ptr(x86::r10), 0);
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
 	c.jmp(begin);
 
 	c.bind(fail);
@@ -1151,8 +1149,8 @@ const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 7);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.and_(args[0], (u32)-128u);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.bswap(args[2]);
 	c.bswap(args[3]);
 	c.mov(args[0].r32(), 5);
@@ -1176,11 +1174,9 @@ const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.sar(x86::eax, 24);
 	c.js(fail);
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
+	c.add(x86::dword_ptr(x86::r10, 124), 0);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
-	c.lock().add(x86::qword_ptr(x86::r10), 0);
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
 	c.jmp(begin);
 
 	c.bind(fail);

@@ -223,7 +223,6 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.mov(args[0].r32(), 3);
 
@@ -328,11 +327,9 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.sub(args[0].r32(), 1);
 	c.jz(retry);
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
+	c.add(x86::dword_ptr(x86::r10, 124), 0);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
-	c.lock().add(x86::qword_ptr(x86::r10), 0);
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
 	c.jmp(begin);
 
 	c.bind(fail);
@@ -404,7 +401,6 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.mov(args[0].r32(), 2);
 
@@ -458,11 +454,9 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.bind(fall);
 	c.pause();
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
 	c.mov(x86::rax, x86::qword_ptr(x86::r11));
-	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.mov(x86::rax, x86::qword_ptr(x86::r10, 64));
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
 	c.sub(args[0], 1);
 	c.jnz(begin);
 	c.mov(x86::eax, 1);
@@ -515,7 +509,6 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 4);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.mov(args[0].r32(), 2);
 
@@ -571,11 +564,9 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.bind(fall);
 	c.pause();
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
+	c.add(x86::dword_ptr(x86::r10, 124), 0);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
-	c.lock().add(x86::qword_ptr(x86::r10), 0);
 	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
 	c.sub(args[0], 1);
 	c.jnz(begin);
 	c.xor_(x86::eax, x86::eax);
@@ -1020,10 +1011,11 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 	u8* dst = (u8*)vm::base(eal);
 	u8* src = (u8*)vm::base(offset + lsa);
+	u32 size = args.size;
 
-	if (UNLIKELY(!is_get && !g_use_rtm))
+	if (UNLIKELY(!is_get && !g_use_rtm && (eal + size) >> 28 != 0xC))
 	{
-		switch (u32 size = args.size)
+		switch (size)
 		{
 		case 1:
 		{
@@ -1058,7 +1050,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 			if (((eal & 127) + size) <= 128)
 			{
 				// Lock one cache line
-				auto& res = vm::reservation_lock(eal, 128);
+				auto& res = vm::reservation_lock(eal, 16);
 
 				while (size)
 				{
@@ -1106,7 +1098,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		std::swap(dst, src);
 	}
 
-	switch (u32 size = args.size)
+	switch (size)
 	{
 	case 1:
 	{

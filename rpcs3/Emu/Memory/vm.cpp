@@ -42,11 +42,8 @@ namespace vm
 	// Stats for debugging
 	u8* const g_stat_addr = memory_reserve_4GiB((std::uintptr_t)g_exec_addr);
 
-	// Reservation stats (compressed x16)
+	// Reservation stats
 	u8* const g_reservations = memory_reserve_4GiB((std::uintptr_t)g_stat_addr);
-
-	// Reservation sync variables
-	u8* const g_reservations2 = g_reservations + 0x10000000;
 
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
@@ -372,6 +369,12 @@ namespace vm
 			utils::memory_commit(g_stat_addr + addr, size);
 		}
 
+		// Avoid RSX local memory
+		if (addr >> 28 != 0xC)
+		{
+			utils::memory_commit(g_reservations + addr, size);
+		}
+
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
 			if (g_pages[i].flags.exchange(flags | page_allocated))
@@ -606,33 +609,6 @@ namespace vm
 		, size(size)
 		, flags(flags)
 	{
-		// Allocate compressed reservation info area (avoid SPU MMIO area)
-		if (addr != 0xe0000000)
-		{
-			// Beginning of the address space
-			if (addr == 0x10000)
-			{
-				utils::memory_commit(g_reservations, 0x1000);
-				utils::memory_commit(g_reservations2, 0x1000);
-			}
-
-			utils::memory_commit(g_reservations + addr / 16, size / 16);
-			utils::memory_commit(g_reservations2 + addr / 16, size / 16);
-		}
-		else
-		{
-			// RawSPU LS
-			for (u32 i = 0; i < 6; i++)
-			{
-				utils::memory_commit(g_reservations + addr / 16 + i * 0x10000, 0x4000);
-				utils::memory_commit(g_reservations2 + addr / 16 + i * 0x10000, 0x4000);
-			}
-
-			// End of the address space
-			utils::memory_commit(g_reservations + 0xfff0000, 0x10000);
-			utils::memory_commit(g_reservations2 + 0xfff0000, 0x10000);
-		}
-
 		if (flags & 0x100)
 		{
 			// Special path for 4k-aligned pages

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <map>
 #include <functional>
@@ -16,7 +16,6 @@ namespace vm
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
 	extern u8* const g_reservations;
-	extern u8* const g_reservations2;
 
 	enum memory_location_t : uint
 	{
@@ -88,30 +87,43 @@ namespace vm
 	};
 
 	// Get reservation status for further atomic update: last update timestamp
-	inline atomic_t<u64>& reservation_acquire(u32 addr, u32 size)
+	inline atomic_t<u64>& reservation_acquire(u32 addr, const u32 align)
 	{
 		// Access reservation info: stamp and the lock bit
-		return reinterpret_cast<atomic_t<u64>*>(g_reservations)[addr / 128];
+		if (align == 128)
+		{
+			return *reinterpret_cast<atomic_t<u64>*>(g_reservations + addr);
+		}
+
+		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & -128u));
 	}
 
 	// Update reservation status
-	inline void reservation_update(u32 addr, u32 size, bool lsb = false)
+	inline void reservation_update(u32 addr, const u32 size, bool lsb = false)
 	{
 		// Update reservation info with new timestamp
-		reservation_acquire(addr, size) += 2;
+		if (addr >> 28 != 0xc)
+		{
+			reservation_acquire(addr, size) += 2;
+		}
 	}
 
 	// Get reservation sync variable
-	inline cond_x16& reservation_notifier(u32 addr, u32 size)
+	inline cond_x16& reservation_notifier(u32 addr, const u32 align)
 	{
-		return *reinterpret_cast<cond_x16*>(g_reservations2 + addr / 128 * 8);
+		if (align == 128)
+		{
+			return *reinterpret_cast<cond_x16*>(g_reservations + addr + 64);
+		}
+
+		return *reinterpret_cast<cond_x16*>(g_reservations + (addr & -128u) + 64);
 	}
 
 	void reservation_lock_internal(atomic_t<u64>&);
 
-	inline atomic_t<u64>& reservation_lock(u32 addr, u32 size)
+	inline atomic_t<u64>& reservation_lock(u32 addr, const u32 align)
 	{
-		auto& res = vm::reservation_acquire(addr, size);
+		auto& res = vm::reservation_acquire(addr, align);
 
 		if (UNLIKELY(atomic_storage<u64>::bts(res.raw(), 0)))
 		{
