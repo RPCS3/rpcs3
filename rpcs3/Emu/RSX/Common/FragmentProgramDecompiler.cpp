@@ -235,6 +235,8 @@ std::string FragmentProgramDecompiler::AddConst()
 
 std::string FragmentProgramDecompiler::AddTex()
 {
+	properties.has_tex_op = true;
+
 	std::string sampler;
 	switch (m_prog.get_texture_dimension(dst.tex_num))
 	{
@@ -251,6 +253,7 @@ std::string FragmentProgramDecompiler::AddTex()
 		sampler = "sampler3D";
 		break;
 	}
+
 	return m_parr.AddParam(PF_PARAM_UNIFORM, sampler, std::string("tex") + std::to_string(dst.tex_num));
 }
 

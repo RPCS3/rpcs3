@@ -69,8 +69,9 @@ namespace vk
 
 	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
 	{
+		VkPhysicalDevice pdev = dev;
 		VkPhysicalDeviceMemoryProperties memory_properties;
-		vkGetPhysicalDeviceMemoryProperties((VkPhysicalDevice&)dev, &memory_properties);
+		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 
 		memory_type_mapping result;
 		result.device_local = VK_MAX_MEMORY_TYPES;

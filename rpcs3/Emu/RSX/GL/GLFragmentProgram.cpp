@@ -196,7 +196,8 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
-	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program, properties.has_lit_op, m_prog.redirected_textures != 0, properties.has_wpos_input);
+	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program, properties.has_lit_op,
+		m_prog.redirected_textures != 0, properties.has_wpos_input, properties.has_tex_op, device_props.emulate_depth_compare);
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)

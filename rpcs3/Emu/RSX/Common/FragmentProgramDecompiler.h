@@ -258,12 +258,14 @@ public:
 		bool has_wpos_input = false;
 		bool has_no_output = false;
 		bool has_discard_op = false;
+		bool has_tex_op = false;
 	}
 	properties;
 
 	struct
 	{
 		bool has_native_half_support = false;
+		bool emulate_depth_compare = false;
 	}
 	device_props;
 
