@@ -42,7 +42,7 @@ D3D12_SAMPLER_DESC get_sampler_desc(const rsx::fragment_texture &texture)
 	samplerDesc.AddressU = get_texture_wrap_mode(texture.wrap_s());
 	samplerDesc.AddressV = get_texture_wrap_mode(texture.wrap_t());
 	samplerDesc.AddressW = get_texture_wrap_mode(texture.wrap_r());
-	samplerDesc.ComparisonFunc = get_sampler_compare_func[texture.zfunc()];
+	samplerDesc.ComparisonFunc = get_sampler_compare_func[static_cast<u8>(texture.zfunc())];
 	samplerDesc.MaxAnisotropy = get_texture_max_aniso(texture.max_aniso());
 	samplerDesc.MipLODBias = texture.bias();
 	samplerDesc.BorderColor[0] = (FLOAT)texture.border_color();

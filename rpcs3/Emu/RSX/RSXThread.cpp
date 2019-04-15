@@ -1555,11 +1555,14 @@ namespace rsx
 					case CELL_GCM_TEXTURE_DEPTH24_D8:
 					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 					{
-						const auto compare_mode = (rsx::comparison_function)tex.zfunc();
+						const auto compare_mode = tex.zfunc();
 						if (result.textures_alpha_kill[i] == 0 &&
 							compare_mode < rsx::comparison_function::always &&
 							compare_mode > rsx::comparison_function::never)
+						{
 							result.shadow_textures |= (1 << i);
+							texture_control |= u32(tex.zfunc()) << 8;
+						}
 						break;
 					}
 					default:
@@ -1652,7 +1655,7 @@ namespace rsx
 				if (tex.alpha_kill_enabled())
 				{
 					//alphakill can be ignored unless a valid comparison function is set
-					const rsx::comparison_function func = (rsx::comparison_function)tex.zfunc();
+					const auto func = tex.zfunc();
 					if (func < rsx::comparison_function::always && func > rsx::comparison_function::never)
 					{
 						result.textures_alpha_kill[i] = 1;
@@ -1708,7 +1711,7 @@ namespace rsx
 						case CELL_GCM_TEXTURE_DEPTH24_D8:
 						case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 						{
-							const auto compare_mode = (rsx::comparison_function)tex.zfunc();
+							const auto compare_mode = tex.zfunc();
 							if (result.textures_alpha_kill[i] == 0 &&
 								compare_mode < rsx::comparison_function::always &&
 								compare_mode > rsx::comparison_function::never)

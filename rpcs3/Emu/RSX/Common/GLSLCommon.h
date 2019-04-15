@@ -25,6 +25,26 @@ namespace program_common
 		"}\n\n";
 	}
 
+	static void insert_compare_op_vector(std::ostream& OS)
+	{
+		OS <<
+		"bvec4 comparison_passes(vec4 a, vec4 b, uint func)\n"
+		"{\n"
+		"	switch (func)\n"
+		"	{\n"
+		"		default:\n"
+		"		case 0: return bvec4(false); //never\n"
+		"		case 1: return lessThan(a, b); //less\n"
+		"		case 2: return equal(a, b); //equal\n"
+		"		case 3: return lessThanEqual(a, b); //lequal\n"
+		"		case 4: return greaterThan(a, b); //greater\n"
+		"		case 5: return notEqual(a, b); //nequal\n"
+		"		case 6: return greaterThanEqual(a, b); //gequal\n"
+		"		case 7: return bvec4(true); //always\n"
+		"	}\n"
+		"}\n\n";
+	}
+
 	static void insert_fog_declaration(std::ostream& OS, const std::string wide_vector_type, const std::string input_coord, bool declare = false)
 	{
 		std::string template_body;
@@ -449,7 +469,7 @@ namespace glsl
 		"	ocol3 = " << reg3 << ";\n\n";
 	}
 
-	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false, bool require_texture_ops = true)
+	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false, bool require_texture_ops = true, bool emulate_pcf = false)
 	{
 		OS << "#define _select mix\n";
 		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
@@ -494,6 +514,11 @@ namespace glsl
 
 		program_common::insert_compare_op(OS);
 
+		if (require_texture_ops && emulate_pcf)
+		{
+			program_common::insert_compare_op_vector(OS);
+		}
+
 		// NOTES:
 		// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
 		// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
@@ -509,6 +534,20 @@ namespace glsl
 		"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"
 		"	//_sample.a     = min(_sample.a, alpha);\n" // Cannot blend A2C samples naively as they are order independent! Causes background bleeding
 		"	return (alpha > 0.f);\n"
+		"}\n\n"
+
+		"vec4 linear_to_srgb(vec4 cl)\n"
+		"{\n"
+		"	vec4 low = cl * 12.92;\n"
+		"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
+		"	bvec4 select = lessThan(cl, vec4(0.0031308));\n"
+		"	return clamp(mix(high, low, select), 0., 1.);\n"
+		"}\n\n"
+
+		"float srgb_to_linear(float cs)\n"
+		"{\n"
+		"	if (cs <= 0.04045) return cs / 12.92;\n"
+		"	return pow((cs + 0.055) / 1.055, 2.4);\n"
 		"}\n\n";
 
 		if (require_depth_conversion)
@@ -518,7 +557,7 @@ namespace glsl
 			OS <<
 			"vec4 decodeLinearDepth(float depth_value)\n"
 			"{\n"
-			"	uint value = uint(depth_value * 16777215);\n"
+			"	uint value = uint(depth_value * 16777215.);\n"
 			"	uint b = (value & 0xff);\n"
 			"	uint g = (value >> 8) & 0xff;\n"
 			"	uint r = (value >> 16) & 0xff;\n"
@@ -557,20 +596,24 @@ namespace glsl
 
 		if (require_texture_ops)
 		{
-			OS <<
-			"vec4 linear_to_srgb(vec4 cl)\n"
-			"{\n"
-			"	vec4 low = cl * 12.92;\n"
-			"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
-			"	bvec4 select = lessThan(cl, vec4(0.0031308));\n"
-			"	return clamp(mix(high, low, select), 0., 1.);\n"
-			"}\n\n"
+			if (emulate_pcf)
+			{
+				OS <<
+				"vec4 shadowCompare(sampler2D tex, vec3 p, uint func)\n"
+				"{\n"
+				"	vec4 samples = textureGather(tex, p.xy).xxxx;\n"
+				"	vec4 ref = clamp(p.z, 0., 1.).xxxx;\n"
+				"	vec4 filtered = vec4(comparison_passes(samples, ref, func));\n"
+				"	return filtered * dot(filtered, vec4(0.25f));\n"
+				"}\n\n"
 
-			"float srgb_to_linear(float cs)\n"
-			"{\n"
-			"	if (cs <= 0.04045) return cs / 12.92;\n"
-			"	return pow((cs + 0.055) / 1.055, 2.4);\n"
-			"}\n\n"
+				"vec4 shadowCompareProj(sampler2D tex, vec4 p, uint func)\n"
+				"{\n"
+				"	return shadowCompare(tex, p.xyz / p.w, func);\n"
+				"}\n\n";
+			}
+
+			OS <<
 
 #ifdef __APPLE__
 			"vec4 remap_vector(vec4 rgba, uint remap_bits)\n"
@@ -592,7 +635,7 @@ namespace glsl
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
 			"	if (remap_bits != 0x8D5) rgba = remap_vector(rgba, remap_bits);\n\n"
 #endif
-			"	if ((control_bits & 0xFFFF) == 0) return rgba;\n\n"
+			"	if ((control_bits & 0xFF) == 0) return rgba;\n\n"
 			"	if ((control_bits & 0x10) > 0)\n"
 			"	{\n"
 			"		//Alphakill\n"
@@ -626,10 +669,22 @@ namespace glsl
 			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].xy, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
 			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.)), floatBitsToUint(texture_parameters[index].w))\n"
 
-			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.))\n"
-			"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n"
+			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n";
 
+			if (emulate_pcf)
+			{
+				OS <<
+				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) shadowCompareProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n";
+			}
+			else
+			{
+				OS <<
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n";
+			}
+
+			OS <<
 			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), floatBitsToUint(texture_parameters[index].w))\n"
 			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), floatBitsToUint(texture_parameters[index].w))\n"
 			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), floatBitsToUint(texture_parameters[index].w))\n"

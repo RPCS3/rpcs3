@@ -132,7 +132,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (m_prog.shadow_textures & mask)
+			if (!device_props.emulate_depth_compare && m_prog.shadow_textures & mask)
 			{
 				if (m_shadow_sampled_textures & mask)
 				{
@@ -228,7 +228,8 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
-	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program, properties.has_lit_op, m_prog.redirected_textures != 0, properties.has_wpos_input);
+	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program, properties.has_lit_op,
+		m_prog.redirected_textures != 0, properties.has_wpos_input, properties.has_tex_op, device_props.emulate_depth_compare);
 }
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -417,11 +418,13 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	std::string source;
 	VKFragmentDecompilerThread decompiler(source, parr, prog, size, *this);
 
+	const auto pdev = vk::get_current_renderer();
 	if (!g_cfg.video.disable_native_float16)
 	{
-		decompiler.device_props.has_native_half_support = vk::get_current_renderer()->get_shader_types_support().allow_float16;
+		decompiler.device_props.has_native_half_support = pdev->get_shader_types_support().allow_float16;
 	}
 
+	decompiler.device_props.emulate_depth_compare = !pdev->get_formats_support().d24_unorm_s8;
 	decompiler.Task();
 
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);

@@ -1503,29 +1503,69 @@ void VKGSRender::end()
 				if (rsx::method_registers.fragment_textures[i].enabled())
 				{
 					check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
-
 					*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
 
-					const u32 texture_format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
-					const VkBool32 compare_enabled = (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8 ||
-							texture_format == CELL_GCM_TEXTURE_DEPTH16_FLOAT || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT);
-					VkCompareOp depth_compare_mode = compare_enabled ? vk::get_compare_func((rsx::comparison_function)rsx::method_registers.fragment_textures[i].zfunc(), true) : VK_COMPARE_OP_NEVER;
-
 					bool replace = !fs_sampler_handles[i];
-					VkFilter min_filter;
+					VkFilter min_filter, mag_filter;
 					VkSamplerMipmapMode mip_mode;
 					f32 min_lod = 0.f, max_lod = 0.f;
 					f32 lod_bias = 0.f;
+
+					const u32 texture_format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+					VkBool32 compare_enabled = VK_FALSE;
+					VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER;
+
+					if (texture_format >= CELL_GCM_TEXTURE_DEPTH24_D8 && texture_format <= CELL_GCM_TEXTURE_DEPTH16_FLOAT)
+					{
+						if (m_device->get_formats_support().d24_unorm_s8)
+						{
+							// NOTE:
+							// The nvidia-specific format D24S8 has a special way of doing depth comparison that matches the PS3
+							// In case of projected shadow lookup the result of the divide operation has its Z clamped to [0-1] before comparison
+							// Most other wide formats (Z bits > 16) do not behave this way and depth greater than 1 is possible due to the use of floating point as storage
+							// Compare operations for these formats (such as D32_SFLOAT) are therefore emulated for correct results
+
+							// NOTE2:
+							// To improve reusability, DEPTH16 shadow ops are also emulated if D24S8 support is not available
+
+							compare_enabled = VK_TRUE;
+							depth_compare_mode = vk::get_compare_func(rsx::method_registers.fragment_textures[i].zfunc(), true);
+						}
+					}
 
 					const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
 					const f32 af_level = aniso_override ? g_cfg.video.anisotropic_level_override : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
 					const auto wrap_s = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s());
 					const auto wrap_t = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t());
 					const auto wrap_r = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r());
-					const auto mag_filter = vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter());
 					const auto border_color = vk::get_border_color(rsx::method_registers.fragment_textures[i].border_color());
 
-					std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
+					// Check if non-point filtering can even be used on this format
+					bool can_sample_linear;
+					if (LIKELY(!sampler_state->is_depth_texture))
+					{
+						// Most PS3-like formats can be linearly filtered without problem
+						can_sample_linear = true;
+					}
+					else
+					{
+						// Not all GPUs support linear filtering of depth formats
+						const auto vk_format = sampler_state->image_handle ? sampler_state->image_handle->image()->format() :
+							vk::get_compatible_sampler_format(m_device->get_formats_support(), sampler_state->external_subresource_desc.gcm_format);
+
+						can_sample_linear = m_device->get_format_properties(vk_format).optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+					}
+
+					if (can_sample_linear)
+					{
+						mag_filter = vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter());
+						std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
+					}
+					else
+					{
+						mag_filter = min_filter = VK_FILTER_NEAREST;
+						mip_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+					}
 
 					if (sampler_state->upload_context == rsx::texture_upload_context::shader_read &&
 						rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
@@ -1576,6 +1616,7 @@ void VKGSRender::end()
 
 				if (rsx::method_registers.vertex_textures[i].enabled())
 				{
+					check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
 					*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts);
 
 					bool replace = !vs_sampler_handles[i];
