@@ -818,7 +818,7 @@ void spu_thread::cpu_task()
 				}
 			}
 
-			spu_runtime::g_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
+			spu_runtime::g_dispatcher[pc / 4](*this, _ptr<u8>(0), nullptr);
 		}
 
 		// Print some stats
@@ -837,7 +837,7 @@ void spu_thread::cpu_task()
 					break;
 			}
 
-			spu_runtime::g_interpreter(*this, vm::_ptr<u8>(offset), nullptr);
+			spu_runtime::g_interpreter(*this, _ptr<u8>(0), nullptr);
 		}
 
 		cpu_stop();
@@ -851,7 +851,7 @@ void spu_thread::cpu_task()
 		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
 
 	// LS pointer
-	const auto base = vm::_ptr<const u8>(offset);
+	const auto base = _ptr<const u8>(0);
 
 	while (true)
 	{
@@ -892,11 +892,12 @@ spu_thread::~spu_thread()
 	}
 }
 
-spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name)
+spu_thread::spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name)
 	: cpu_thread(idm::last_id())
 	, spu_name(name)
 	, index(index)
-	, offset(ls)
+	, offset(_ls)
+	, ls((u8*)vm::base(_ls))
 	, group(group)
 {
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
@@ -1010,7 +1011,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	}
 
 	u8* dst = (u8*)vm::base(eal);
-	u8* src = (u8*)vm::base(offset + lsa);
+	u8* src = ls + lsa;
 	u32 size = args.size;
 
 	if (UNLIKELY(!is_get && !g_use_rtm && (eal + size) >> 28 != 0xC))

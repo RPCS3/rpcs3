@@ -510,7 +510,7 @@ public:
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
 
-	spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name);
+	spu_thread(vm::addr_t _ls, lv2_spu_group* group, u32 index, std::string_view name);
 
 	u32 pc = 0;
 
@@ -569,6 +569,7 @@ public:
 
 	const u32 index; // SPU index
 	const u32 offset; // SPU LS offset
+	u8* const ls; // SPU LS direct pointer
 	lv2_spu_group* const group; // SPU Thread Group
 
 	lf_value<std::string> spu_name; // Thread name
@@ -605,7 +606,7 @@ public:
 	template<typename T>
 	inline to_be_t<T>* _ptr(u32 lsa)
 	{
-		return static_cast<to_be_t<T>*>(vm::base(offset + lsa));
+		return reinterpret_cast<to_be_t<T>*>(ls + lsa);
 	}
 
 	// Convert specified SPU LS address to a reference of specified (possibly converted to BE) type
