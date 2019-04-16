@@ -346,6 +346,9 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
 		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) },
+		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } },
+		{ "$float3", [this]() -> std::string { return getFloatTypeName(3); } },
+		{ "$float2", [this]() -> std::string { return getFloatTypeName(2); } },
 		{ "$Ty", [this]() -> std::string { return (!device_props.has_native_half_support || !dst.fp16)? getFloatTypeName(4) : getHalfTypeName(4); } }
 	};
 
@@ -551,8 +554,8 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Shader must at least write to one output for the body to be considered valid
 
 	const bool fp16_out = !(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
-	const std::string vec4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
-	const std::string init_value = vec4_type + "(0., 0., 0., 0.)";
+	const std::string $float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
+	const std::string init_value = $float4_type + "(0., 0., 0., 0.)";
 	std::array<std::string, 4> output_register_names;
 	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
 	bool shader_is_valid = false;
@@ -579,9 +582,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	for (int n = 0; n < 4; ++n)
 	{
-		if (!m_parr.HasParam(PF_PARAM_NONE, vec4_type, output_register_names[n]))
+		if (!m_parr.HasParam(PF_PARAM_NONE, $float4_type, output_register_names[n]))
 		{
-			m_parr.AddParam(PF_PARAM_NONE, vec4_type, output_register_names[n], init_value);
+			m_parr.AddParam(PF_PARAM_NONE, $float4_type, output_register_names[n], init_value);
 			continue;
 		}
 
@@ -614,24 +617,20 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Insert global function definitions
 	insertGlobalFunctions(OS);
 
+	std::string float4 = getFloatTypeName(4);
+
 	if (!device_props.has_native_half_support)
 	{
 		// Accurate float to half clamping (preserves IEEE-754 NaN)
-		OS <<
-		"vec4 clamp16(vec4 x)\n"
+		std::string clamp_func =
+		"$float4 clamp16($float4 x)\n"
 		"{\n"
-		"	bvec4 sel = isnan(x);\n"
-		"	vec4 clamped = clamp(x, -65504., +65504.);\n"
-		"	if (!any(sel))\n"
-		"	{\n"
-		"		return clamped;\n"
-		"	}\n\n"
+		"	$float4 sel = $float4(isnan(x));\n"
+		"	$float4 clamped = clamp(x, -65504., +65504.);\n"
 		"	return _select(clamped, x, sel);\n"
-		"}\n\n"
+		"}\n\n";
 
-		"vec3 clamp16(vec3 x){ return clamp16(x.xyzz).xyz; }\n"
-		"vec2 clamp16(vec2 x){ return clamp16(x.xyxy).xy; }\n"
-		"float clamp16(float x){ return isnan(x)? x : clamp(x, -65504., +65504.); }\n\n";
+		OS << Format(clamp_func);
 
 		OS <<
 		"#define _builtin_min min\n"
@@ -641,33 +640,48 @@ std::string FragmentProgramDecompiler::BuildCode()
 		"#define _builtin_rcp(x) (1. / x)\n"
 		"#define _builtin_rsq(x) (1. / sqrt(x))\n"
 		"#define _builtin_log2(x) log2(abs(x))\n"
-		"#define _builtin_div(x, y) (x / y)\n"
-		"#define _builtin_divsq(x, y) (x / sqrt(y))\n\n";
+		"#define _builtin_div(x, y) (x / y)\n\n";
 	}
 	else
 	{
 		// Define raw casts from f32->f16
 		// Also define upcasting to avoid ambiguous function overloading in case of mixed inputs
 		const std::string half4 = getHalfTypeName(4);
-		OS <<
-		"#define clamp16(x) " << half4 << "(x)\n"
-		"#define _builtin_min(x, y) min(vec4(x), vec4(y))\n"
-		"#define _builtin_max(x, y) max(vec4(x), vec4(y))\n"
+		const std::string builtin_funcs =
+		"#define clamp16(x) " + half4 + "(x)\n"
+		"#define _builtin_min(x, y) min($float4(x), $float4(y))\n"
+		"#define _builtin_max(x, y) max($float4(x), $float4(y))\n"
 		"#define _builtin_lit lit_legacy\n"
-		"#define _builtin_distance(x, y) distance(vec4(x), vec4(y))\n"
+		"#define _builtin_distance(x, y) distance($float4(x), $float4(y))\n"
 		"#define _builtin_rcp(x) (1. / x)\n"
 		"#define _builtin_rsq(x) (1. / sqrt(x))\n"
 		"#define _builtin_log2(x) log2(abs(x))\n"
-		"#define _builtin_div(x, y) (x / y)\n"
-		"#define _builtin_divsq(x, y) (x / sqrt(y))\n\n";
+		"#define _builtin_div(x, y) (x / y)\n\n";
+
+		OS << Format(builtin_funcs);
 	}
-	
+
+	// Define RSX-compliant DIVSQ
+	// If the numerator is 0, the result is always 0 even if the denominator is 0
+	// NOTE: This operation is component-wise and cannot be accelerated with lerp/mix because these always return NaN if any of the choices is NaN
+	std::string divsq_func =
+	"$float4 _builtin_divsq($float4 a, float b)\n"
+	"{"
+	"	$float4 tmp = a / sqrt(b);\n"
+	"	$float4 choice = abs(a);\n"
+	"	if (choice.x > 0.) a.x = tmp.x;\n"
+	"	if (choice.y > 0.) a.y = tmp.y;\n"
+	"	if (choice.z > 0.) a.z = tmp.z;\n"
+	"	if (choice.w > 0.) a.w = tmp.w;\n"
+	"	return a;\n"
+	"}\n\n";
+
+	OS << Format(divsq_func);
 
 	// Declare register gather/merge if needed
 	if (properties.has_gather_op)
 	{
 		std::string float2 = getFloatTypeName(2);
-		std::string float4 = getFloatTypeName(4);
 
 		OS << float4 << " gather(" << float4 << " _h0, " << float4 << " _h1)\n";
 		OS << "{\n";
@@ -695,12 +709,16 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 {
+	// Compliance notes based on HW tests:
+	// DIV is IEEE compliant as is MUL, LG2, EX2 with exception to the fact that they operate on absolute values (Needs more testing)
+	// DIVSQ is not compliant. Result is 0 if numerator is 0 regardless of denominator
+	// RSQ(0) and RCP(0) return INF as expected
+	// Some games that rely on broken DIVSQ behaviour include Dark Souls II and Super Puzzle Fighter II Turbo HD Remix
+
 	switch (opcode)
 	{
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
 	case RSX_FP_OPCODE_DIV: SetDst("_builtin_div($0, $1.x)"); return true;
-	// Note: DIVSQ is not IEEE compliant. divsq(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
-	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
 	case RSX_FP_OPCODE_DIVSQ: SetDst("_builtin_divsq($0, $1.x)"); return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3), OPFLAGS::op_extern); return true;
@@ -711,10 +729,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	case RSX_FP_OPCODE_MIN: SetDst("_builtin_min($0, $1)"); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
-	// Note: It's highly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
 	case RSX_FP_OPCODE_RCP: SetDst("_builtin_rcp($0.x).xxxx"); return true;
-	// Note: RSQ is not IEEE compliant. rsq(0) is some big number (Silent Hill 3 HD)
-	// It is not know what happens if 0 is negative.
 	case RSX_FP_OPCODE_RSQ: SetDst("_builtin_rsq($0.x).xxxx"); return true;
 	case RSX_FP_OPCODE_SEQ: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL), OPFLAGS::skip_type_cast); return true;
