@@ -228,8 +228,16 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
-	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program, properties.has_lit_op,
-		m_prog.redirected_textures != 0, properties.has_wpos_input, properties.has_tex_op, device_props.emulate_depth_compare);
+	glsl::shader_properties properties2;
+	properties2.domain = glsl::glsl_fragment_program;
+	properties2.require_lit_emulation = properties.has_lit_op;
+	properties2.require_depth_conversion = m_prog.redirected_textures != 0;
+	properties2.require_wpos = properties.has_wpos_input;
+	properties2.require_texture_ops = properties.has_tex_op;
+	properties2.emulate_shadow_compare = device_props.emulate_depth_compare;
+	properties2.low_precision_tests = vk::get_current_renderer()->gpu().get_driver_vendor() == vk::driver_vendor::NVIDIA;
+
+	glsl::insert_glsl_legacy_function(OS, properties2);
 }
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)

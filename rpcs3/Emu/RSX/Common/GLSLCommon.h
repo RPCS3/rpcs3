@@ -5,24 +5,55 @@
 
 namespace program_common
 {
-	static void insert_compare_op(std::ostream& OS)
+	static void insert_compare_op(std::ostream& OS, bool low_precision)
 	{
-		OS <<
-		"bool comparison_passes(float a, float b, uint func)\n"
-		"{\n"
-		"	switch (func)\n"
-		"	{\n"
-		"		default:\n"
-		"		case 0: return false; //never\n"
-		"		case 1: return (a < b); //less\n"
-		"		case 2: return (a == b); //equal\n"
-		"		case 3: return (a <= b); //lequal\n"
-		"		case 4: return (a > b); //greater\n"
-		"		case 5: return (a != b); //nequal\n"
-		"		case 6: return (a >= b); //gequal\n"
-		"		case 7: return true; //always\n"
-		"	}\n"
-		"}\n\n";
+		if (low_precision)
+		{
+			OS <<
+				"int compare(float a, float b)\n"
+				"{\n"
+				"	if (abs(a - b) < 0.000001) return 2;\n"
+				"	return (a > b)? 4 : 1;\n"
+				"}\n\n"
+
+				"bool comparison_passes(float a, float b, uint func)\n"
+				"{\n"
+				"	if (func == 0) return false; // never\n"
+				"	if (func == 7) return true;  // always\n\n"
+
+				"	int op = compare(a, b);\n"
+				"	switch (func)\n"
+				"	{\n"
+				"		case 1: return op == 1; // less\n"
+				"		case 2: return op == 2; // equal\n"
+				"		case 3: return op <= 2; // lequal\n"
+				"		case 4: return op == 4; // greater\n"
+				"		case 5: return op != 2; // nequal\n"
+				"		case 6: return (op == 4 || op == 2); // gequal\n"
+				"	}\n\n"
+
+				"	return false; // unreachable\n"
+				"}\n\n";
+		}
+		else
+		{
+			OS <<
+			"bool comparison_passes(float a, float b, uint func)\n"
+			"{\n"
+			"	switch (func)\n"
+			"	{\n"
+			"		default:\n"
+			"		case 0: return false; //never\n"
+			"		case 1: return (a < b); //less\n"
+			"		case 2: return (a == b); //equal\n"
+			"		case 3: return (a <= b); //lequal\n"
+			"		case 4: return (a > b); //greater\n"
+			"		case 5: return (a != b); //nequal\n"
+			"		case 6: return (a >= b); //gequal\n"
+			"		case 7: return true; //always\n"
+			"	}\n"
+			"}\n\n";
+		}
 	}
 
 	static void insert_compare_op_vector(std::ostream& OS)
@@ -469,13 +500,27 @@ namespace glsl
 		"	ocol3 = " << reg3 << ";\n\n";
 	}
 
-	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false, bool require_texture_ops = true, bool emulate_pcf = false)
+	struct shader_properties
+	{
+		glsl::program_domain domain;
+		// Applicable in vertex stage
+		bool require_lit_emulation;
+
+		// Only relevant for fragment programs
+		bool require_wpos;
+		bool require_depth_conversion;
+		bool require_texture_ops;
+		bool emulate_shadow_compare;
+		bool low_precision_tests;
+	};
+
+	static void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props)
 	{
 		OS << "#define _select mix\n";
 		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
 		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
 
-		if (require_lit_emulation)
+		if (props.require_lit_emulation)
 		{
 			OS <<
 			"vec4 lit_legacy(vec4 val)"
@@ -492,7 +537,7 @@ namespace glsl
 			"}\n\n";
 		}
 
-		if (domain == glsl::program_domain::glsl_vertex_program)
+		if (props.domain == glsl::program_domain::glsl_vertex_program)
 		{
 			OS <<
 			"vec4 apply_zclip_xform(vec4 pos, float near_plane, float far_plane)\n"
@@ -512,9 +557,9 @@ namespace glsl
 			return;
 		}
 
-		program_common::insert_compare_op(OS);
+		program_common::insert_compare_op(OS, props.low_precision_tests);
 
-		if (require_texture_ops && emulate_pcf)
+		if (props.require_texture_ops && props.emulate_shadow_compare)
 		{
 			program_common::insert_compare_op_vector(OS);
 		}
@@ -550,7 +595,7 @@ namespace glsl
 		"	return pow((cs + 0.055) / 1.055, 2.4);\n"
 		"}\n\n";
 
-		if (require_depth_conversion)
+		if (props.require_depth_conversion)
 		{
 			//NOTE: Memory layout is fetched as byteswapped BGRA [GBAR] (GOW collection, DS2, DeS)
 			//The A component (Z) is useless (should contain stencil8 or just 1)
@@ -594,9 +639,9 @@ namespace glsl
 			"}\n\n";
 		}
 
-		if (require_texture_ops)
+		if (props.require_texture_ops)
 		{
-			if (emulate_pcf)
+			if (props.emulate_shadow_compare)
 			{
 				OS <<
 				"vec4 shadowCompare(sampler2D tex, vec3 p, uint func)\n"
@@ -671,7 +716,7 @@ namespace glsl
 
 			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n";
 
-			if (emulate_pcf)
+			if (props.emulate_shadow_compare)
 			{
 				OS <<
 				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n"
@@ -692,7 +737,7 @@ namespace glsl
 			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), floatBitsToUint(texture_parameters[index].w))\n\n";
 		}
 
-		if (require_wpos)
+		if (props.require_wpos)
 		{
 			OS <<
 			"vec4 get_wpos()\n"
