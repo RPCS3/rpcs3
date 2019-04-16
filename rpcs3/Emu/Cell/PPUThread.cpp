@@ -252,7 +252,7 @@ static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
 	}
 
 	// Fallback to the interpreter function
-	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{ppu_cache(ppu.cia)})(ppu, op))
+	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{(u32)ppu_cache(ppu.cia)})(ppu, op))
 	{
 		ppu.cia += 4;
 	}
@@ -336,7 +336,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 	}
 
 	// Fallback to the interpreter function
-	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{ppu_cache(ppu.cia)})(ppu, op))
+	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{(u32)ppu_cache(ppu.cia)})(ppu, op))
 	{
 		ppu.cia += 4;
 	}
