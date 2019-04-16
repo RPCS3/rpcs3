@@ -1097,7 +1097,19 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	auto& data = vm::_ref<atomic_be_t<u32>>(addr);
 	const u32 old_data = static_cast<u32>(ppu.rdata << ((addr & 7) * 8) >> 32);
 
-	if (ppu.raddr != addr || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & ~1ull))
+	if (UNLIKELY(ppu.raddr != addr))
+	{
+		if (((ppu.raddr ^ addr) & -128u) == 0)
+		{
+			// TODO
+			fmt::throw_exception("Unimplemented PPU 128-bytes long atomic op with partial store" HERE);
+		}
+
+		ppu.raddr = 0;
+		return false;
+	}
+
+	if (old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & ~1ull))
 	{
 		ppu.raddr = 0;
 		return false;
@@ -1194,7 +1206,19 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr);
 	const u64 old_data = ppu.rdata;
 
-	if (ppu.raddr != addr || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & ~1ull))
+	if (UNLIKELY(ppu.raddr != addr))
+	{
+		if (((ppu.raddr ^ addr) & -128u) == 0)
+		{
+			// TODO
+			fmt::throw_exception("Unimplemented PPU 128-bytes long atomic op with partial store" HERE);
+		}
+
+		ppu.raddr = 0;
+		return false;
+	}
+
+	if (old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & ~1ull))
 	{
 		ppu.raddr = 0;
 		return false;
