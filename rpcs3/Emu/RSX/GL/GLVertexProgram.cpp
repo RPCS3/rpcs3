@@ -154,8 +154,20 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 
 void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	insert_glsl_legacy_function(OS, glsl::glsl_vertex_program, properties.has_lit_op);
-	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, gl::get_driver_caps().vendor_INTEL==false);
+	const auto& dev_caps = gl::get_driver_caps();
+
+	glsl::shader_properties properties2;
+	properties2.domain = glsl::glsl_vertex_program;
+	properties2.require_lit_emulation = properties.has_lit_op;
+	// Unused
+	properties2.require_depth_conversion = false;
+	properties2.require_wpos = false;
+	properties2.require_texture_ops = false;
+	properties2.emulate_shadow_compare = false;
+	properties2.low_precision_tests = false;
+
+	insert_glsl_legacy_function(OS, properties2);
+	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -306,7 +318,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	//SEE Naruto: UNS
 
 	//NOTE: On GPUs, poor fp32 precision means dividing z by w, then multiplying by w again gives slightly incorrect results
-	//This equation is simplified algebraically to an addition and subreaction which gives more accurate results (Fixes flickering skybox in Dark Souls 2)
+	//This equation is simplified algebraically to an addition and subtraction which gives more accurate results (Fixes flickering skybox in Dark Souls 2)
 	//OS << "	float ndc_z = gl_Position.z / gl_Position.w;\n";
 	//OS << "	ndc_z = (ndc_z * 2.) - 1.;\n";
 	//OS << "	gl_Position.z = ndc_z * gl_Position.w;\n";

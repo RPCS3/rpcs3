@@ -733,7 +733,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
 	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); return true;
 	case RSX_FP_OPCODE_LIT:
-		SetDst("lit_legacy($0)");
+		SetDst("_builtin_lit($0)");
 		properties.has_lit_op = true;
 		return true;
 	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)", OPFLAGS::skip_type_cast); return true;
