@@ -66,7 +66,7 @@ error_code cellPadClearBuf(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -110,7 +110,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -363,7 +363,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -407,7 +407,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -441,7 +441,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -472,7 +472,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -513,7 +513,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -553,7 +553,7 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -577,8 +577,8 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		if (i >= config->max_connect)
 			break;
 
+		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
 		info->status[i] = pads[i]->m_port_status;
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
 
 		switch (pads[i]->m_class_type)
 		{
@@ -608,7 +608,7 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -648,7 +648,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -681,7 +681,7 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -708,7 +708,7 @@ s32 cellPadInfoPressMode(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -737,7 +737,7 @@ s32 cellPadInfoSensorMode(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -766,7 +766,7 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -802,7 +802,7 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;

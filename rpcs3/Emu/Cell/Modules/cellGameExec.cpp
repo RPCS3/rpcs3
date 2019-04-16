@@ -58,6 +58,12 @@ s32 cellGameGetHomeLaunchOptionPath(vm::ptr<char> commonPath, vm::ptr<char> pers
 	return CELL_GAME_ERROR_NOAPP;
 }
 
+s32 cellGameExecGame()
+{
+	UNIMPLEMENTED_FUNC(cellGameExec);
+	return CELL_OK;
+}
+
 s32 cellGameGetBootGameInfo(vm::ptr<u32> type, vm::ptr<char> dirName, vm::ptr<u32> execdata)
 {
 	cellGameExec.todo("cellGameGetBootGameInfo(type=*0x%x, dirName=%s, execdata=*0x%x)", type, dirName, execdata);
@@ -80,5 +86,6 @@ DECLARE(ppu_module_manager::cellGameExec)("cellGameExec", []()
 	REG_FUNC(cellGameExec, cellGameGetHomePath);
 	REG_FUNC(cellGameExec, cellGameGetHomeDataImportPath);
 	REG_FUNC(cellGameExec, cellGameGetHomeLaunchOptionPath);
+	REG_FUNC(cellGameExec, cellGameExecGame);
 	REG_FUNC(cellGameExec, cellGameGetBootGameInfo);
 });

@@ -325,6 +325,12 @@ u32 cellGcmGetFlipStatus()
 	return status;
 }
 
+s32 cellGcmGetFlipStatus2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
 u32 cellGcmGetTiledPitchSize(u32 size)
 {
 	cellGcmSys.trace("cellGcmGetTiledPitchSize(size=%d)", size);
@@ -437,7 +443,7 @@ s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 
 
 	vm::var<u64> _tid;
 	vm::var<char[]> _name = vm::make_str("_gcm_intr_thread");
-	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 128, 0, 1, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, 0, 1, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	render->intr_thread = idm::get<named_thread<ppu_thread>>(*_tid);
 	render->intr_thread->state -= cpu_flag::stop;
 	render->main_mem_addr = 0;
@@ -454,6 +460,12 @@ void cellGcmResetFlipStatus()
 	cellGcmSys.trace("cellGcmResetFlipStatus()");
 
 	rsx::get_current_renderer()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
+}
+
+s32 cellGcmResetFlipStatus2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 void cellGcmSetDebugOutputLevel(s32 level)
@@ -516,6 +528,12 @@ void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler)
 	rsx::get_current_renderer()->flip_handler = handler;
 }
 
+s32 cellGcmSetFlipHandler2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
 void cellGcmSetFlipMode(u32 mode)
 {
 	cellGcmSys.warning("cellGcmSetFlipMode(mode=%d)", mode);
@@ -523,11 +541,23 @@ void cellGcmSetFlipMode(u32 mode)
 	rsx::get_current_renderer()->requested_vsync.store(mode == CELL_GCM_DISPLAY_VSYNC);
 }
 
+s32 cellGcmSetFlipMode2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
 void cellGcmSetFlipStatus()
 {
 	cellGcmSys.warning("cellGcmSetFlipStatus()");
 
 	rsx::get_current_renderer()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+}
+
+s32 cellGcmSetFlipStatus2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 s32 cellGcmSetPrepareFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
@@ -810,6 +840,12 @@ u64 cellGcmGetLastFlipTime()
 	return rsx::get_current_renderer()->last_flip_time;
 }
 
+s32 cellGcmGetLastFlipTime2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
 u64 cellGcmGetLastSecondVTime()
 {
 	cellGcmSys.todo("cellGcmGetLastSecondVTime()");
@@ -821,6 +857,12 @@ u64 cellGcmGetVBlankCount()
 	cellGcmSys.trace("cellGcmGetVBlankCount()");
 
 	return rsx::get_current_renderer()->vblank_count;
+}
+
+s32 cellGcmGetVBlankCount2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 s32 cellGcmSysGetLastVBlankTime()
@@ -849,6 +891,12 @@ s32 cellGcmSetFlipImmediate(u8 id)
 
 	cellGcmSetFlipMode(id);
 
+	return CELL_OK;
+}
+
+s32 cellGcmSetFlipImmediate2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
 	return CELL_OK;
 }
 
@@ -1225,6 +1273,12 @@ s32 _cellGcmSetFlipCommand(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctx, u32
 	return cellGcmSetPrepareFlip(ppu, ctx, id);
 }
 
+s32 _cellGcmSetFlipCommand2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
 s32 _cellGcmSetFlipCommandWithWaitLabel(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
 {
 	cellGcmSys.trace("cellGcmSetFlipCommandWithWaitLabel(ctx=*0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)", ctx, id, label_index, label_value);
@@ -1439,23 +1493,31 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGetConfiguration);
 	REG_FUNC(cellGcmSys, cellGcmGetDisplayBufferByFlipIndex);
 	REG_FUNC(cellGcmSys, cellGcmGetFlipStatus);
+	REG_FUNC(cellGcmSys, cellGcmGetFlipStatus2);
 	REG_FUNC(cellGcmSys, cellGcmGetLastFlipTime);
+	REG_FUNC(cellGcmSys, cellGcmGetLastFlipTime2);
 	REG_FUNC(cellGcmSys, cellGcmGetLastSecondVTime);
 	REG_FUNC(cellGcmSys, cellGcmGetTiledPitchSize);
 	REG_FUNC(cellGcmSys, cellGcmGetVBlankCount);
+	REG_FUNC(cellGcmSys, cellGcmGetVBlankCount2);
 	REG_FUNC(cellGcmSys, cellGcmSysGetLastVBlankTime);
 	REG_FUNC(cellGcmSys, _cellGcmFunc1);
 	REG_FUNC(cellGcmSys, _cellGcmFunc15);
 	REG_FUNC(cellGcmSys, _cellGcmInitBody);
 	REG_FUNC(cellGcmSys, cellGcmInitSystemMode);
 	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus);
+	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus2);
 	REG_FUNC(cellGcmSys, cellGcmSetDebugOutputLevel);
 	REG_FUNC(cellGcmSys, cellGcmSetDisplayBuffer);
 	REG_FUNC(cellGcmSys, cellGcmSetFlip); //
 	REG_FUNC(cellGcmSys, cellGcmSetFlipHandler);
+	REG_FUNC(cellGcmSys, cellGcmSetFlipHandler2);
 	REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate);
+	REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate2);
 	REG_FUNC(cellGcmSys, cellGcmSetFlipMode);
+	REG_FUNC(cellGcmSys, cellGcmSetFlipMode2);
 	REG_FUNC(cellGcmSys, cellGcmSetFlipStatus);
+	REG_FUNC(cellGcmSys, cellGcmSetFlipStatus2);
 	REG_FUNC(cellGcmSys, cellGcmSetGraphicsHandler);
 	REG_FUNC(cellGcmSys, cellGcmSetPrepareFlip);
 	REG_FUNC(cellGcmSys, cellGcmSetQueueHandler);
@@ -1507,6 +1569,7 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 
 	// Other
 	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand);
+	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand2);
 	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommandWithWaitLabel);
 	REG_FUNC(cellGcmSys, cellGcmSetTile);
 	REG_FUNC(cellGcmSys, _cellGcmFunc2);

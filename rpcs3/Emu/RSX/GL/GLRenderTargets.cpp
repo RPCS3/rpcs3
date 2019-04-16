@@ -261,7 +261,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
 			rtt->write_aa_mode = layout.aa_mode;
-			m_gl_texture_cache.notify_surface_changed(m_surface_info[i].address);
+			m_gl_texture_cache.notify_surface_changed(m_surface_info[i].get_memory_range(layout.aa_factors));
 		}
 		else
 		{
@@ -270,18 +270,18 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		}
 	}
 
+	if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+	{
+		auto bpp = m_depth_surface_info.pitch / m_depth_surface_info.width;
+		auto old_format = (bpp == 2) ? gl::texture::format::depth : gl::texture::format::depth_stencil;
+
+		const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
+		m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
+		m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
+	}
+
 	if (std::get<0>(m_rtts.m_bound_depth_stencil))
 	{
-		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
-		{
-			auto bpp = m_depth_surface_info.pitch / m_depth_surface_info.width;
-			auto old_format = (bpp == 2) ? gl::texture::format::depth : gl::texture::format::depth_stencil;
-
-			const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
-			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
-			m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
-		}
-
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
 
@@ -289,7 +289,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_depth_surface_info = { layout.zeta_address, layout.actual_zeta_pitch, true, layout.color_format, layout.depth_format, layout.width, layout.height, depth_bpp };
 
 		ds->write_aa_mode = layout.aa_mode;
-		m_gl_texture_cache.notify_surface_changed(layout.zeta_address);
+		m_gl_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
 	}
 	else
 	{
@@ -387,7 +387,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	{
 		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
 
-		const auto surface_range = m_surface_info[i].get_memory_range(layout.aa_factors);
+		const auto surface_range = m_surface_info[i].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
 		{
 			// Mark buffer regions as NO_ACCESS on Cell-visible side
@@ -402,7 +402,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
-		const auto surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors);
+		const auto surface_range = m_depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
 			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(layout.depth_format);
@@ -617,7 +617,6 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	const auto dst_bpp = get_bpp();
 	rsx::typeless_xfer typeless_info{};
 
-	const bool dst_is_depth = is_depth(get_internal_format());
 	const auto region = rsx::get_transferable_region(this);
 
 	if (get_internal_format() == src_texture->get_internal_format())
@@ -628,17 +627,18 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	else
 	{
 		// Mem cast, generate typeless xfer info
-		const bool src_is_depth = is_depth(src_texture->get_internal_format());
-		if (src_bpp != dst_bpp || dst_is_depth || src_is_depth)
+		if (!formats_are_bitcast_compatible((GLenum)get_internal_format(), (GLenum)src_texture->get_internal_format()) ||
+			aspect() != src_texture->aspect())
 		{
 			typeless_info.src_is_typeless = true;
 			typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 			typeless_info.src_native_format_override = (u32)get_internal_format();
-			typeless_info.src_is_depth = src_is_depth;
+			typeless_info.src_is_depth = !!(src_texture->aspect() & gl::image_aspect::depth);
 			typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 		}
 	}
 
+	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
 	gl::g_hw_blitter->scale_image(cmd, old_contents, this,
 		{ 0, 0, std::get<0>(region), std::get<1>(region) },
 		{ 0, 0, std::get<2>(region) , std::get<3>(region) },

@@ -23,16 +23,6 @@
 #include <atomic>
 #include <thread>
 
-const bool s_use_ssse3 =
-#ifdef _MSC_VER
-	utils::has_ssse3();
-#elif __SSSE3__
-	true;
-#else
-	false;
-#define _mm_shuffle_epi8
-#endif
-
 #ifdef _MSC_VER
 bool operator ==(const u128& lhs, const u128& rhs)
 {
@@ -257,8 +247,12 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.js(fail);
 	c.sub(args[0].r32(), 1);
 	c.jz(retry);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 #ifdef _WIN32
 	c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
 	c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 96));
@@ -308,8 +302,12 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	// Touch memory after transaction failure
 	c.bind(fall);
 	c.pause();
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.mov(x86::rax, x86::qword_ptr(x86::r11));
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.sub(args[0], 1);
 	c.jnz(begin);
 	c.mov(x86::eax, 1);
@@ -353,8 +351,12 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	// Touch memory after transaction failure
 	c.bind(fall);
 	c.pause();
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.sub(args[0], 1);
 	c.jnz(begin);
 	c.xor_(x86::eax, x86::eax);
@@ -597,6 +599,23 @@ void spu_thread::cpu_task()
 		return;
 	}
 
+	if (spu_runtime::g_interpreter)
+	{
+		while (true)
+		{
+			if (UNLIKELY(state))
+			{
+				if (check_state())
+					break;
+			}
+
+			spu_runtime::g_interpreter(*this, vm::_ptr<u8>(offset), nullptr);
+		}
+
+		cpu_stop();
+		return;
+	}
+
 	// Select opcode table
 	const auto& table = *(
 		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
@@ -605,11 +624,6 @@ void spu_thread::cpu_task()
 
 	// LS pointer
 	const auto base = vm::_ptr<const u8>(offset);
-	const auto bswap4 = _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
-
-	v128 _op;
-	using func_t = decltype(&spu_interpreter::UNK);
-	func_t func0, func1, func2, func3, func4, func5;
 
 	while (true)
 	{
@@ -617,62 +631,11 @@ void spu_thread::cpu_task()
 		{
 			if (check_state())
 				break;
-
-			// Decode single instruction (may be step)
-			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
-			if (table[spu_decode(op)](*this, {op})) { pc += 4; }
-			continue;
 		}
 
-		if (pc % 16 || !s_use_ssse3)
-		{
-			// Unaligned
-			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
-			if (table[spu_decode(op)](*this, {op})) { pc += 4; }
-			continue;
-		}
-
-		// Reinitialize
-		_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + pc)), bswap4);
-		func0 = table[spu_decode(_op._u32[0])];
-		func1 = table[spu_decode(_op._u32[1])];
-		func2 = table[spu_decode(_op._u32[2])];
-		func3 = table[spu_decode(_op._u32[3])];
-
-		while (LIKELY(func0(*this, {_op._u32[0]})))
-		{
+		const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
+		if (table[spu_decode(op)](*this, {op}))
 			pc += 4;
-			if (LIKELY(func1(*this, {_op._u32[1]})))
-			{
-				pc += 4;
-				u32 op2 = _op._u32[2];
-				u32 op3 = _op._u32[3];
-				_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + pc + 8)), bswap4);
-				func0 = table[spu_decode(_op._u32[0])];
-				func1 = table[spu_decode(_op._u32[1])];
-				func4 = table[spu_decode(_op._u32[2])];
-				func5 = table[spu_decode(_op._u32[3])];
-				if (LIKELY(func2(*this, {op2})))
-				{
-					pc += 4;
-					if (LIKELY(func3(*this, {op3})))
-					{
-						pc += 4;
-						func2 = func4;
-						func3 = func5;
-
-						if (UNLIKELY(state))
-						{
-							break;
-						}
-						continue;
-					}
-					break;
-				}
-				break;
-			}
-			break;
-		}
 	}
 
 	cpu_stop();

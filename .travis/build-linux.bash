@@ -28,8 +28,8 @@ fi
 
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_LLVM_SUBMODULE=OFF -DLLVM_DIR=llvmlibs/lib/cmake/llvm/ -DUSE_NATIVE_INSTRUCTIONS=OFF -G Ninja
 
-ninja
+ninja; build_status=$?;
 
 cd ..
 # If it compiled succesfully let's deploy
-if [ $? -eq 0 ] && [ -n "$GITHUB_TOKEN" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then /bin/bash -ex .travis/deploy-linux.bash ; fi
+if [ $build_status -eq 0 ] && [ -n "$GITHUB_TOKEN" ] && [ "$TRAVIS_BRANCH" = "master" ] && [ "$TRAVIS_PULL_REQUEST" = false ]; then /bin/bash -ex .travis/deploy-linux.bash ; fi

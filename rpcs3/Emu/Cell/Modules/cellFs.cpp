@@ -550,6 +550,12 @@ error_code cellFsSdataOpenWithVersion()
 	return CELL_OK;
 }
 
+error_code cellFsSetAttribute()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
 error_code cellFsSetDefaultContainer(u32 id, u32 total_limit)
 {
 	cellFs.todo("cellFsSetDefaultContainer(id=0x%x, total_limit=%u)", id, total_limit);
@@ -1064,6 +1070,7 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsSdataOpen);
 	REG_FUNC(sys_fs, cellFsSdataOpenByFd);
 	REG_FUNC(sys_fs, cellFsSdataOpenWithVersion);
+	REG_FUNC(sys_fs, cellFsSetAttribute);
 	REG_FUNC(sys_fs, cellFsSetDefaultContainer);
 	REG_FUNC(sys_fs, cellFsSetDiscReadRetrySetting);
 	REG_FUNC(sys_fs, cellFsSetIoBuffer);

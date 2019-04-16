@@ -939,17 +939,67 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 	}
 }
 
-void VKGSRender::check_heap_status()
+void VKGSRender::check_heap_status(u32 flags)
 {
-	if (m_attrib_ring_info.is_critical() ||
-		m_texture_upload_buffer_ring_info.is_critical() ||
-		m_fragment_env_ring_info.is_critical() ||
-		m_vertex_env_ring_info.is_critical() ||
-		m_fragment_texture_params_ring_info.is_critical() ||
-		m_vertex_layout_ring_info.is_critical() ||
-		m_fragment_constants_ring_info.is_critical() ||
-		m_transform_constants_ring_info.is_critical() ||
-		m_index_buffer_ring_info.is_critical())
+	bool heap_critical;
+	if (flags == VK_HEAP_CHECK_ALL)
+	{
+		heap_critical = m_attrib_ring_info.is_critical() ||
+			m_texture_upload_buffer_ring_info.is_critical() ||
+			m_fragment_env_ring_info.is_critical() ||
+			m_vertex_env_ring_info.is_critical() ||
+			m_fragment_texture_params_ring_info.is_critical() ||
+			m_vertex_layout_ring_info.is_critical() ||
+			m_fragment_constants_ring_info.is_critical() ||
+			m_transform_constants_ring_info.is_critical() ||
+			m_index_buffer_ring_info.is_critical();
+	}
+	else if (flags)
+	{
+		heap_critical = false;
+		u32 test = 1 << utils::cnttz32(flags, true);
+
+		do
+		{
+			switch (flags & test)
+			{
+			case 0:
+				break;
+			case VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE:
+				heap_critical = m_texture_upload_buffer_ring_info.is_critical();
+				break;
+			case VK_HEAP_CHECK_VERTEX_STORAGE:
+				heap_critical = m_attrib_ring_info.is_critical() || m_index_buffer_ring_info.is_critical();
+				break;
+			case VK_HEAP_CHECK_VERTEX_ENV_STORAGE:
+				heap_critical = m_vertex_env_ring_info.is_critical();
+				break;
+			case VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE:
+				heap_critical = m_fragment_env_ring_info.is_critical();
+				break;
+			case VK_HEAP_CHECK_TEXTURE_ENV_STORAGE:
+				heap_critical = m_fragment_texture_params_ring_info.is_critical();
+				break;
+			case VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE:
+				heap_critical = m_vertex_layout_ring_info.is_critical();
+				break;
+			case VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE:
+				heap_critical = m_transform_constants_ring_info.is_critical();
+				break;
+			case VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE:
+				heap_critical = m_fragment_constants_ring_info.is_critical();
+				break;
+			default:
+				fmt::throw_exception("Unexpected heap flag set! (0x%X)", test);
+			}
+
+			flags &= ~test;
+			test <<= 1;
+		}
+		while (flags && !heap_critical);
+	}
+
+	if (heap_critical)
 	{
 		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
 
@@ -1144,8 +1194,6 @@ void VKGSRender::begin()
 
 	if (!framebuffer_status_valid)
 		return;
-
-	check_heap_status();
 }
 
 void VKGSRender::update_draw_state()
@@ -1454,6 +1502,8 @@ void VKGSRender::end()
 
 				if (rsx::method_registers.fragment_textures[i].enabled())
 				{
+					check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
+
 					*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
 
 					const u32 texture_format = rsx::method_registers.fragment_textures[i].format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
@@ -1741,6 +1791,9 @@ void VKGSRender::end()
 			}
 		}
 	}
+
+	// Final heap check...
+	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
 
 	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
 	// Only textures are synchronized tightly with the GPU and they have been read back above
@@ -2633,6 +2686,8 @@ void VKGSRender::load_program_env()
 
 	if (update_vertex_env)
 	{
+		check_heap_status(VK_HEAP_CHECK_VERTEX_ENV_STORAGE);
+
 		// Vertex state
 		const auto mem = m_vertex_env_ring_info.alloc<256>(256);
 		auto buf = (u8*)m_vertex_env_ring_info.map(mem, 144);
@@ -2650,6 +2705,8 @@ void VKGSRender::load_program_env()
 
 	if (update_transform_constants)
 	{
+		check_heap_status(VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE);
+
 		// Transform constants
 		auto mem = m_transform_constants_ring_info.alloc<256>(8192);
 		auto buf = m_transform_constants_ring_info.map(mem, 8192);
@@ -2661,6 +2718,8 @@ void VKGSRender::load_program_env()
 
 	if (update_fragment_constants)
 	{
+		check_heap_status(VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE);
+
 		// Fragment constants
 		if (fragment_constants_size)
 		{
@@ -2681,6 +2740,8 @@ void VKGSRender::load_program_env()
 
 	if (update_fragment_env)
 	{
+		check_heap_status(VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE);
+
 		auto mem = m_fragment_env_ring_info.alloc<256>(256);
 		auto buf = m_fragment_env_ring_info.map(mem, 32);
 
@@ -2691,6 +2752,8 @@ void VKGSRender::load_program_env()
 
 	if (update_fragment_texture_env)
 	{
+		check_heap_status(VK_HEAP_CHECK_TEXTURE_ENV_STORAGE);
+
 		auto mem = m_fragment_texture_params_ring_info.alloc<256>(256);
 		auto buf = m_fragment_texture_params_ring_info.map(mem, 256);
 
@@ -2733,9 +2796,9 @@ void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
-	//Clear any pending swap requests
-	//TODO: Decide on what to do if we circle back to a new frame before the previous frame waiting on it is still pending
-	//Dropping the frame would in theory allow the thread to advance faster
+	// Clear any pending swap requests
+	// TODO: Decide on what to do if we circle back to a new frame before the previous frame waiting on it is still pending
+	// Dropping the frame would in theory allow the thread to advance faster
 	for (auto &ctx : frame_context_storage)
 	{
 		if (ctx.swap_command_buffer)
@@ -2872,7 +2935,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
-		//Flush old address if we keep missing it
+		// Flush old address if we keep missing it
 		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
 			if (old_format == VK_FORMAT_UNDEFINED)
@@ -2925,7 +2988,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			verify("Pitch mismatch!" HERE), surface->rsx_pitch == layout.actual_color_pitch[index];
 
 			surface->write_aa_mode = layout.aa_mode;
-			m_texture_cache.notify_surface_changed(layout.color_addresses[index]);
+			m_texture_cache.notify_surface_changed(m_surface_info[index].get_memory_range(layout.aa_factors));
 			m_draw_buffers.push_back(index);
 		}
 	}
@@ -2940,7 +3003,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		verify("Pitch mismatch!" HERE), ds->rsx_pitch == layout.actual_zeta_pitch;
 
 		ds->write_aa_mode = layout.aa_mode;
-		m_texture_cache.notify_surface_changed(layout.zeta_address);
+		m_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
 	}
 
 	// Before messing with memory properties, flush command queue if there are dma transfers queued up
@@ -2954,7 +3017,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
-		const utils::address_range surface_range = m_surface_info[index].get_memory_range(layout.aa_factors);
+		const utils::address_range surface_range = m_surface_info[index].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
 		{
 			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_render_targets[index]), surface_range,
@@ -2968,7 +3031,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
-		const utils::address_range surface_range = m_depth_surface_info.get_memory_range(layout.aa_factors);
+		const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
@@ -3490,8 +3553,8 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 	if (renderer_unavailable)
 		return false;
 
-	//Verify enough memory exists before attempting to handle data transfer
-	check_heap_status();
+	// Verify enough memory exists before attempting to handle data transfer
+	check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
 
 	if (m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer))
 	{

@@ -232,6 +232,16 @@ s32 cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 	return CELL_OK;
 }
 
+s32 cellAudioOutConfigure2()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
+s32 cellAudioOutGetConfiguration2()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
 s32 cellAudioOutRegisterCallback()
 {
 	fmt::throw_exception("Unimplemented" HERE);
@@ -247,11 +257,13 @@ void cellSysutil_AudioOut_init()
 {
 	REG_FUNC(cellSysutil, cellAudioOutGetState);
 	REG_FUNC(cellSysutil, cellAudioOutConfigure);
+	REG_FUNC(cellSysutil, cellAudioOutConfigure2);
 	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability);
 	REG_FUNC(cellSysutil, cellAudioOutGetSoundAvailability2);
 	REG_FUNC(cellSysutil, cellAudioOutGetDeviceInfo);
 	REG_FUNC(cellSysutil, cellAudioOutGetNumberOfDevice);
 	REG_FUNC(cellSysutil, cellAudioOutGetConfiguration);
+	REG_FUNC(cellSysutil, cellAudioOutGetConfiguration2);
 	REG_FUNC(cellSysutil, cellAudioOutSetCopyControl);
 	REG_FUNC(cellSysutil, cellAudioOutRegisterCallback);
 	REG_FUNC(cellSysutil, cellAudioOutUnregisterCallback);

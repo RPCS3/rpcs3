@@ -1280,13 +1280,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 		if (auto pf_entries = fxm::get<page_fault_notification_entries>())
 		{
-			std::shared_lock lock(pf_entries->mutex);
-
-			for (const auto& entry : pf_entries->entries)
+			if (auto mem = vm::get(vm::any, addr))
 			{
-				if (auto mem = vm::get(vm::any, entry.start_addr))
+				std::shared_lock lock(pf_entries->mutex);
+
+				for (const auto& entry : pf_entries->entries)
 				{
-					if (entry.start_addr <= addr && addr <= addr + mem->size - 1)
+					if (entry.start_addr == mem->addr)
 					{
 						pf_port_id = entry.port_id;
 						break;
@@ -1396,7 +1396,36 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			return true;
 		}
 
-		vm::temporary_unlock(*cpu);
+		if (cpu->id_type() == 2)
+		{
+			LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
+
+			// TODO:
+			// RawSPU: Send appropriate interrupt
+			// SPUThread: Send sys_spu exception event
+			cpu->state += cpu_flag::dbg_pause;
+			if (cpu->check_state())
+			{
+				// Hack: allocate memory in case the emulator is stopping
+				auto area = vm::get(vm::any, addr & -0x10000, 0x10000);
+
+				if (area->flags & 0x100)
+				{
+					// For 4kb pages
+					utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
+				}
+				else
+				{
+					area->falloc(addr & -0x10000, 0x10000);
+				}
+
+				return true;
+			}
+		}
+		else
+		{
+			lv2_obj::sleep(*cpu);
+		}
 	}
 
 	LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);

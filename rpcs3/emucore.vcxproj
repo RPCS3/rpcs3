@@ -115,6 +115,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp" />
     <ClCompile Include="Emu\Cell\Modules\StaticHLE.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp" />
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -231,6 +232,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilAvcExt.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilNpEula.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp" />
@@ -244,6 +246,8 @@
     <ClCompile Include="Emu\Cell\Modules\cellVoice.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libad_async.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libad_core.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libmedi.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libmixer.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libsnd3.cpp" />
@@ -405,6 +409,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellHttp.h" />
     <ClInclude Include="Emu\Cell\Modules\cellHttpUtil.h" />
     <ClInclude Include="Emu\Cell\Modules\cellJpgEnc.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_overlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVoice.h" />
     <ClInclude Include="Emu\Cell\Modules\StaticHLE.h" />

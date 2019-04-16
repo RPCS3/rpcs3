@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 LOG_CHANNEL(cell_FreeType2);
@@ -24,6 +23,12 @@ s32 FT_Add_Default_Modules()
 }
 
 s32 FT_Add_Module()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
+s32 FT_Alloc()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
@@ -209,6 +214,12 @@ s32 FT_FloorFix()
 	return CELL_OK;
 }
 
+s32 FT_Free()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
 s32 FT_Get_BDF_Charset_ID()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
@@ -366,6 +377,12 @@ s32 FT_Get_Track_Kerning()
 }
 
 s32 FT_Get_TrueType_Engine_Type()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
+s32 FT_Get_X11_Font_Format()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
@@ -533,6 +550,12 @@ s32 FT_New_Library()
 	return CELL_OK;
 }
 
+s32 FT_New_Memory()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
 s32 FT_New_Memory_Face()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
@@ -654,6 +677,12 @@ s32 FT_Outline_Transform()
 }
 
 s32 FT_Outline_Translate()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
+s32 FT_Realloc()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
@@ -913,6 +942,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Activate_Size);
 	REG_FUNC(cell_FreeType2, FT_Add_Default_Modules);
 	REG_FUNC(cell_FreeType2, FT_Add_Module);
+	REG_FUNC(cell_FreeType2, FT_Alloc);
 	REG_FUNC(cell_FreeType2, FT_Angle_Diff);
 	REG_FUNC(cell_FreeType2, FT_Atan2);
 	REG_FUNC(cell_FreeType2, FT_Attach_File);
@@ -943,6 +973,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Done_Library);
 	REG_FUNC(cell_FreeType2, FT_Done_Size);
 	REG_FUNC(cell_FreeType2, FT_FloorFix);
+	REG_FUNC(cell_FreeType2, FT_Free);
 	REG_FUNC(cell_FreeType2, FT_Get_BDF_Charset_ID);
 	REG_FUNC(cell_FreeType2, FT_Get_BDF_Property);
 	REG_FUNC(cell_FreeType2, FT_Get_Char_Index);
@@ -971,6 +1002,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Get_Track_Kerning);
 	REG_FUNC(cell_FreeType2, FT_Get_TrueType_Engine_Type);
 	REG_FUNC(cell_FreeType2, FT_Get_WinFNT_Header);
+	REG_FUNC(cell_FreeType2, FT_Get_X11_Font_Format);
 	REG_FUNC(cell_FreeType2, FT_Glyph_Copy);
 	REG_FUNC(cell_FreeType2, FT_Glyph_Get_CBox);
 	REG_FUNC(cell_FreeType2, FT_GlyphSlot_Own_Bitmap);
@@ -997,6 +1029,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_MulFix);
 	REG_FUNC(cell_FreeType2, FT_New_Face);
 	REG_FUNC(cell_FreeType2, FT_New_Library);
+	REG_FUNC(cell_FreeType2, FT_New_Memory);
 	REG_FUNC(cell_FreeType2, FT_New_Memory_Face);
 	REG_FUNC(cell_FreeType2, FT_New_Size);
 	REG_FUNC(cell_FreeType2, FT_Open_Face);
@@ -1018,6 +1051,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Outline_Reverse);
 	REG_FUNC(cell_FreeType2, FT_Outline_Transform);
 	REG_FUNC(cell_FreeType2, FT_Outline_Translate);
+	REG_FUNC(cell_FreeType2, FT_Realloc);
 	REG_FUNC(cell_FreeType2, FT_Remove_Module);
 	REG_FUNC(cell_FreeType2, FT_Render_Glyph);
 	REG_FUNC(cell_FreeType2, FT_Request_Size);

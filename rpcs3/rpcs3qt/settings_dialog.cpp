@@ -291,7 +291,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->accurateXFloat->setEnabled(checked);
 	});
 
-	ui->accurateXFloat->setEnabled(ui->spu_llvm->isChecked());
+	connect(ui->spu_fast, &QAbstractButton::toggled, [this](bool checked)
+	{
+		ui->accurateXFloat->setEnabled(checked);
+	});
+
+	ui->accurateXFloat->setEnabled(ui->spu_llvm->isChecked() || ui->spu_fast->isChecked());
 
 #ifndef LLVM_AVAILABLE
 	ui->ppu_llvm->setEnabled(false);
@@ -856,7 +861,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Comboboxes
 
-	xemu_settings->EnhanceComboBox(ui->sysLangBox, emu_settings::Language);
+	xemu_settings->EnhanceComboBox(ui->sysLangBox, emu_settings::Language, false, false, 0, true);
 	SubscribeTooltip(ui->sysLangBox, json_sys["sysLangBox"].toString());
 
 	// Checkboxes

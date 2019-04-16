@@ -806,6 +806,7 @@ namespace rsx
 
 	namespace nv3089
 	{
+#pragma optimize("", off)
 		void image_in(thread *rsx, u32 _reg, u32 arg)
 		{
 			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
@@ -822,11 +823,26 @@ namespace rsx
 			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
 			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
-			const f32 in_x = std::ceil(method_registers.blit_engine_in_x());
-			const f32 in_y = std::ceil(method_registers.blit_engine_in_y());
+			const f32 scale_x = method_registers.blit_engine_ds_dx();
+			const f32 scale_y = method_registers.blit_engine_dt_dy();
 
-			//Clipping
-			//Validate that clipping rect will fit onto both src and dst regions
+			// NOTE: Do not round these value up!
+			// Sub-pixel offsets are used to signify pixel centers and do not mean to read from the next block (fill convention)
+			auto in_x = (u16)std::floor(method_registers.blit_engine_in_x());
+			auto in_y = (u16)std::floor(method_registers.blit_engine_in_y());
+
+			if (UNLIKELY(in_x || in_y))
+			{
+				if (scale_x < 0.f || scale_y < 0.f || fabsf(fabsf(scale_x * scale_y) - 1.f) > 0.000001f)
+				{
+					// Scaling operation, check for subpixel correction offsets
+					if (in_x == 1) in_x = 0;
+					if (in_y == 1) in_y = 0;
+				}
+			}
+
+			// Clipping
+			// Validate that clipping rect will fit onto both src and dst regions
 			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
 			const u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
 
@@ -852,9 +868,12 @@ namespace rsx
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
 
-			if (in_origin != blit_engine::transfer_origin::corner)
+			switch (in_origin)
 			{
-				// Probably refers to texel geometry which would affect clipping algorithm slightly when rounding texel addresses
+			case blit_engine::transfer_origin::corner:
+			case blit_engine::transfer_origin::center:
+				break;
+			default:
 				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
 			}
 
@@ -903,14 +922,14 @@ namespace rsx
 				out_pitch = out_bpp * out_w;
 			}
 
-			const u32 in_offset = u32(in_x * in_bpp + in_pitch * in_y);
+			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
-			const tiled_region dst_region = rsx->get_tiled_address(dst_offset + out_offset, dst_dma & 0xf);
+			const u32 src_address = get_address(src_offset, src_dma);
+			const u32 dst_address = get_address(dst_offset, dst_dma);
 
-			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
-			u8* pixels_dst = vm::_ptr<u8>(get_address(dst_offset + out_offset, dst_dma));
+			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
+			u8* pixels_dst = vm::_ptr<u8>(dst_address + out_offset);
 
 			const auto read_address = get_address(src_offset, src_dma);
 			rsx->read_barrier(read_address, in_pitch * (in_h - 1) + (in_w * in_bpp));
@@ -936,9 +955,6 @@ namespace rsx
 				}
 			}
 
-			f32 scale_x = method_registers.blit_engine_ds_dx();
-			f32 scale_y = method_registers.blit_engine_dt_dy();
-
 			u32 convert_w = (u32)(std::abs(scale_x) * in_w);
 			u32 convert_h = (u32)(std::abs(scale_y) * in_h);
 
@@ -949,60 +965,20 @@ namespace rsx
 				return;
 			}
 
-			u32 slice_h = clip_h;
-			blit_src_info src_info = {};
-			blit_dst_info dst_info = {};
-
-			if (src_region.tile)
-			{
-				switch(src_region.tile->comp)
-				{
-				case CELL_GCM_COMPMODE_C32_2X2:
-					slice_h *= 2;
-					src_info.compressed_y = true;
-				case CELL_GCM_COMPMODE_C32_2X1:
-					src_info.compressed_x = true;
-					break;
-				}
-
-				u32 size = slice_h * in_pitch;
-
-				if (size > src_region.tile->size - src_region.base)
-				{
-					u32 diff = size - (src_region.tile->size - src_region.base);
-					slice_h -= diff / in_pitch + (diff % in_pitch ? 1 : 0);
-				}
-			}
-
-			if (dst_region.tile)
-			{
-				switch (dst_region.tile->comp)
-				{
-				case CELL_GCM_COMPMODE_C32_2X2:
-					dst_info.compressed_y = true;
-				case CELL_GCM_COMPMODE_C32_2X1:
-					dst_info.compressed_x = true;
-					break;
-				}
-
-				dst_info.max_tile_h = static_cast<u16>((dst_region.tile->size - dst_region.base) / out_pitch);
-			}
-
 			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
 			{
-				//For now, only use this for actual scaled images, there are use cases that should not go through 3d engine, e.g program ucode transfer
-				//TODO: Figure out more instances where we can use this without problems
-				//NOTE: In cases where slice_h is modified due to compression (read from tiled memory), the new value (clip_h * 2) does not matter if memory is on the GPU
+				blit_src_info src_info = {};
+				blit_dst_info dst_info = {};
+
 				src_info.format = src_color_format;
 				src_info.origin = in_origin;
 				src_info.width = in_w;
 				src_info.height = in_h;
 				src_info.pitch = in_pitch;
-				src_info.slice_h = slice_h;
-				src_info.offset_x = (u16)in_x;
-				src_info.offset_y = (u16)in_y;
+				src_info.offset_x = in_x;
+				src_info.offset_y = in_y;
+				src_info.rsx_address = src_address;
 				src_info.pixels = pixels_src;
-				src_info.rsx_address = get_address(src_offset, src_dma);
 
 				dst_info.format = dst_color_format;
 				dst_info.width = convert_w;
@@ -1016,8 +992,8 @@ namespace rsx
 				dst_info.pitch = out_pitch;
 				dst_info.scale_x = scale_x;
 				dst_info.scale_y = scale_y;
+				dst_info.rsx_address = dst_address;
 				dst_info.pixels = pixels_dst;
-				dst_info.rsx_address = get_address(dst_offset, dst_dma);
 				dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
 
 				if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
@@ -1067,6 +1043,7 @@ namespace rsx
 				convert_w != out_w || convert_h != out_h;
 
 			const bool need_convert = out_format != in_format || std::abs(scale_x) != 1.0 || std::abs(scale_y) != 1.0;
+			const u32  slice_h = std::ceil(f32(clip_h + clip_y) / scale_x);
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
@@ -1137,7 +1114,7 @@ namespace rsx
 						temp3.reset(new u8[out_pitch * (out_h - 1) + (out_bpp * out_w)]);
 
 						convert_scale_image(temp3.get(), out_format, out_w, out_h, out_pitch,
-							pixels_src, in_format, in_w, in_h, in_pitch, clip_h, in_inter == blit_engine::transfer_interpolator::foh);
+							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 
 					pixels_src = temp3.get();
@@ -1201,6 +1178,7 @@ namespace rsx
 				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
 			}
 		}
+#pragma optimize("", on)
 	}
 
 	namespace nv0039

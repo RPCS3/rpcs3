@@ -1,11 +1,9 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellCelpEnc.h"
 
 LOG_CHANNEL(cellCelpEnc);
-
 
 s32 cellCelpEncQueryAttr()
 {
@@ -20,6 +18,12 @@ s32 cellCelpEncOpen()
 }
 
 s32 cellCelpEncOpenEx()
+{
+	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	return CELL_OK;
+}
+
+s32 cellCelpEncOpenExt()
 {
 	UNIMPLEMENTED_FUNC(cellCelpEnc);
 	return CELL_OK;
@@ -66,6 +70,7 @@ DECLARE(ppu_module_manager::cellCelpEnc)("cellCelpEnc", []()
 	REG_FUNC(cellCelpEnc, cellCelpEncQueryAttr);
 	REG_FUNC(cellCelpEnc, cellCelpEncOpen);
 	REG_FUNC(cellCelpEnc, cellCelpEncOpenEx);
+	REG_FUNC(cellCelpEnc, cellCelpEncOpenExt);
 	REG_FUNC(cellCelpEnc, cellCelpEncClose);
 	REG_FUNC(cellCelpEnc, cellCelpEncStart);
 	REG_FUNC(cellCelpEnc, cellCelpEncEnd);

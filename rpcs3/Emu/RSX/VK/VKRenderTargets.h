@@ -118,22 +118,13 @@ namespace vk
 			}
 			else
 			{
-				const bool src_is_depth = !!(src_texture->attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
-				const bool dst_is_depth = !!(attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
-
-				if (src_is_depth != dst_is_depth)
-				{
-					// TODO: Implement proper copy_typeless for vulkan that crosses the depth<->color aspect barrier
-					null_transfer_impl();
-					return;
-				}
-
-				if (src_bpp != dst_bpp || src_is_depth || dst_is_depth)
+				if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
+					src_texture->attachment_aspect_flag != attachment_aspect_flag)
 				{
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 					typeless_info.src_native_format_override = (u32)info.format;
-					typeless_info.src_is_depth = src_is_depth;
+					typeless_info.src_is_depth = !!(src_texture->attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
 					typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 				}
 			}

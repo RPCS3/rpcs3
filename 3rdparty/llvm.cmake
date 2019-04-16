@@ -26,7 +26,7 @@ if(WITH_LLVM)
 		set(CMAKE_CXX_FLAGS ${CXX_FLAGS_OLD})
 
 		# now tries to find LLVM again
-		find_package(LLVM 8.0 CONFIG)
+		find_package(LLVM 9.0 CONFIG)
 		if(NOT LLVM_FOUND)
 			message(FATAL_ERROR "Couldn't build LLVM from the submodule. You might need to run `git submodule update --init`")
 		endif()
@@ -39,11 +39,11 @@ if(WITH_LLVM)
 			set(LLVM_DIR ${CMAKE_SOURCE_DIR}/${LLVM_DIR})
 		endif()
 
-		find_package(LLVM 8.0 CONFIG)
+		find_package(LLVM 9.0 CONFIG)
 
 		if (NOT LLVM_FOUND)
-			if (LLVM_VERSION AND LLVM_VERSION_MAJOR LESS 8)
-				message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 8.0. \
+			if (LLVM_VERSION AND LLVM_VERSION_MAJOR LESS 9)
+				message(FATAL_ERROR "Found LLVM version ${LLVM_VERSION}. Required version 9.0. \
 														 Enable BUILD_LLVM_SUBMODULE option to build LLVM from included as a git submodule.")
 			endif()
 

@@ -1,8 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
+#include "sys_memory.h"
+
+#include <array>
 
 enum : u64
 {
@@ -23,6 +26,30 @@ struct sys_vm_statistics_t
 	be_t<u32> pmem_total;     // Total physical memory allocated for the virtual memory area.
 	be_t<u32> pmem_used;      // Physical memory in use by the virtual memory area.
 	be_t<u64> timestamp;
+};
+
+// Block info
+struct sys_vm_t
+{
+	static const u32 id_base = 0x1;
+	static const u32 id_step = 0x1;
+	static const u32 id_count = 16;
+
+	const std::shared_ptr<lv2_memory_container> ct;
+	const u32 addr;
+	const u32 size;
+	u32 psize;
+	shared_mutex mutex;
+
+	sys_vm_t(const std::shared_ptr<vm::block_t>& area, const std::shared_ptr<lv2_memory_container>& ct, u32 psize);
+	~sys_vm_t();
+
+	static std::array<atomic_t<u32>, id_count> g_ids;
+
+	static u32 find_id(u32 addr)
+	{
+		return g_ids[addr >> 28].load();
+	}
 };
 
 // SysCalls

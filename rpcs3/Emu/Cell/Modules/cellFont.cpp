@@ -745,6 +745,11 @@ s32 cellFontControl()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellFontStatic()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
 DECLARE(ppu_module_manager::cellFont)("cellFont", []()
 {
 
@@ -831,4 +836,5 @@ DECLARE(ppu_module_manager::cellFont)("cellFont", []()
 	REG_FUNC(cellFont, cellFontGetScalePoint);
 	REG_FUNC(cellFont, cellFontGraphicsGetLineRGBA);
 	REG_FUNC(cellFont, cellFontControl);
+	REG_FUNC(cellFont, cellFontStatic);
 });
