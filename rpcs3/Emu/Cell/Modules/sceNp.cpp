@@ -1334,6 +1334,12 @@ s32 sceNpManagerGetEntitlementById()
 	return CELL_OK;
 }
 
+s32 sceNpManagerGetSigninId()
+{
+	UNIMPLEMENTED_FUNC(sceNp);
+	return CELL_OK;
+}
+
 s32 sceNpManagerSubSignin()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
@@ -2107,6 +2113,7 @@ DECLARE(ppu_module_manager::sceNp)("sceNp", []()
 	REG_FUNC(sceNp, sceNpManagerGetTicketParam);
 	REG_FUNC(sceNp, sceNpManagerGetEntitlementIdList);
 	REG_FUNC(sceNp, sceNpManagerGetEntitlementById);
+	REG_FUNC(sceNp, sceNpManagerGetSigninId);
 	REG_FUNC(sceNp, sceNpManagerSubSignin);
 	REG_FUNC(sceNp, sceNpManagerSubSigninAbortGui);
 	REG_FUNC(sceNp, sceNpManagerSubSignout);

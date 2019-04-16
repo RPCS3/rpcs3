@@ -364,7 +364,7 @@ namespace vm
 
 		if (flags & page_executable)
 		{
-			utils::memory_commit(g_exec_addr + addr, size);
+			utils::memory_commit(g_exec_addr + addr * 2, size * 2);
 		}
 
 		if (g_cfg.core.ppu_debug)
@@ -494,7 +494,7 @@ namespace vm
 
 		if (is_exec)
 		{
-			utils::memory_decommit(g_exec_addr + addr, size);
+			utils::memory_decommit(g_exec_addr + addr * 2, size * 2);
 		}
 
 		if (g_cfg.core.ppu_debug)

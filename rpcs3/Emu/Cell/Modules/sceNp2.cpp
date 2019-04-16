@@ -505,6 +505,12 @@ s32 sceNpAuthGetAuthorizationCode()
 	return CELL_OK;
 }
 
+s32 sceNpAuthGetAuthorizationCode2()
+{
+	UNIMPLEMENTED_FUNC(sceNp2);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::sceNp2)("sceNp2", []()
 {
 	REG_FUNC(sceNp2, sceNpMatching2DestroyContext);
@@ -587,4 +593,5 @@ DECLARE(ppu_module_manager::sceNp2)("sceNp2", []()
 	REG_FUNC(sceNp2, sceNpAuthDeleteOAuthRequest);
 	REG_FUNC(sceNp2, sceNpAuthAbortOAuthRequest);
 	REG_FUNC(sceNp2, sceNpAuthGetAuthorizationCode);
+	REG_FUNC(sceNp2, sceNpAuthGetAuthorizationCode2);
 });

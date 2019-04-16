@@ -532,8 +532,7 @@ namespace vk
 	{
 		if (image->current_layout == new_layout) return;
 
-		VkImageAspectFlags flags = get_aspect_flags(image->info.format);
-		change_image_layout(cmd, image->value, image->current_layout, new_layout, { flags, 0, 1, 0, 1 });
+		change_image_layout(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
 		image->current_layout = new_layout;
 	}
 

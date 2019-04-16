@@ -368,6 +368,12 @@ s32 cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 	return CELL_OK;
 }
 
+s32 cellGemEnableMagnetometer2()
+{
+	UNIMPLEMENTED_FUNC(cellGem);
+	return CELL_OK;
+}
+
 s32 cellGemEnd()
 {
 	cellGem.warning("cellGemEnd()");
@@ -1034,6 +1040,7 @@ DECLARE(ppu_module_manager::cellGem)("libgem", []()
 	REG_FUNC(libgem, cellGemConvertVideoStart);
 	REG_FUNC(libgem, cellGemEnableCameraPitchAngleCorrection);
 	REG_FUNC(libgem, cellGemEnableMagnetometer);
+	REG_FUNC(libgem, cellGemEnableMagnetometer2);
 	REG_FUNC(libgem, cellGemEnd);
 	REG_FUNC(libgem, cellGemFilterState);
 	REG_FUNC(libgem, cellGemForceRGB);

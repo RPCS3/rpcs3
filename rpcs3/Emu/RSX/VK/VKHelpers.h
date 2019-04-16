@@ -86,7 +86,7 @@ namespace vk
 	class swap_chain_image;
 	class physical_device;
 	class command_buffer;
-	struct image;
+	class image;
 	struct buffer;
 	struct data_heap;
 	class mem_allocator_base;
@@ -145,6 +145,9 @@ namespace vk
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
+
+	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region);
+	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 
 	void copy_image_typeless(const command_buffer &cmd, const image *src, const image *dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
@@ -642,8 +645,203 @@ namespace vk
 		}
 	};
 
-	struct image
+	class command_pool
 	{
+		vk::render_device *owner = nullptr;
+		VkCommandPool pool = nullptr;
+
+	public:
+		command_pool() {}
+		~command_pool() {}
+
+		void create(vk::render_device &dev)
+		{
+			owner = &dev;
+			VkCommandPoolCreateInfo infos = {};
+			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+
+			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
+		}
+
+		void destroy()
+		{
+			if (!pool)
+				return;
+
+			vkDestroyCommandPool((*owner), pool, nullptr);
+			pool = nullptr;
+		}
+
+		vk::render_device& get_owner()
+		{
+			return (*owner);
+		}
+
+		operator VkCommandPool()
+		{
+			return pool;
+		}
+	};
+
+	class command_buffer
+	{
+	private:
+		bool is_open = false;
+		bool is_pending = false;
+		VkFence m_submit_fence = VK_NULL_HANDLE;
+
+	protected:
+		vk::command_pool *pool = nullptr;
+		VkCommandBuffer commands = nullptr;
+
+	public:
+		enum access_type_hint
+		{
+			flush_only, //Only to be submitted/opened/closed via command flush
+			all         //Auxiliary, can be submitted/opened/closed at any time
+		}
+		access_hint = flush_only;
+
+		enum command_buffer_data_flag : u32
+		{
+			cb_has_occlusion_task = 1,
+			cb_has_blit_transfer = 2,
+			cb_has_dma_transfer = 4
+		};
+		u32 flags = 0;
+
+	public:
+		command_buffer() {}
+		~command_buffer() {}
+
+		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
+		{
+			VkCommandBufferAllocateInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			infos.commandBufferCount = 1;
+			infos.commandPool = (VkCommandPool)cmd_pool;
+			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
+
+			if (auto_reset)
+			{
+				VkFenceCreateInfo info = {};
+				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
+			}
+
+			pool = &cmd_pool;
+		}
+
+		void destroy()
+		{
+			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
+
+			if (m_submit_fence)
+			{
+				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+			}
+		}
+
+		vk::command_pool& get_command_pool() const
+		{
+			return *pool;
+		}
+
+		void clear_flags()
+		{
+			flags = 0;
+		}
+
+		void set_flag(command_buffer_data_flag flag)
+		{
+			flags |= flag;
+		}
+
+		operator VkCommandBuffer() const
+		{
+			return commands;
+		}
+
+		bool is_recording() const
+		{
+			return is_open;
+		}
+
+		void begin()
+		{
+			if (m_submit_fence && is_pending)
+			{
+				wait_for_fence(m_submit_fence);
+				is_pending = false;
+
+				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+			}
+
+			if (is_open)
+				return;
+
+			VkCommandBufferInheritanceInfo inheritance_info = {};
+			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+			VkCommandBufferBeginInfo begin_infos = {};
+			begin_infos.pInheritanceInfo = &inheritance_info;
+			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
+			is_open = true;
+		}
+
+		void end()
+		{
+			if (!is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
+				return;
+			}
+
+			CHECK_RESULT(vkEndCommandBuffer(commands));
+			is_open = false;
+		}
+
+		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		{
+			if (is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
+				return;
+			}
+
+			if (fence == VK_NULL_HANDLE)
+			{
+				fence = m_submit_fence;
+				is_pending = (fence != VK_NULL_HANDLE);
+			}
+
+			VkSubmitInfo infos = {};
+			infos.commandBufferCount = 1;
+			infos.pCommandBuffers = &commands;
+			infos.pWaitDstStageMask = &pipeline_stage_flags;
+			infos.pWaitSemaphores = semaphores.data();
+			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
+			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+			acquire_global_submit_lock();
+			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
+			release_global_submit_lock();
+
+			clear_flags();
+		}
+	};
+
+	class image
+	{
+		std::stack<VkImageLayout> m_layout_stack;
+		VkImageAspectFlags m_storage_aspect = 0;
+
+	public:
 		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
 		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -692,6 +890,8 @@ namespace vk
 
 			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index);
 			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
+
+			m_storage_aspect = get_aspect_flags(format);
 		}
 
 		// TODO: Ctor that uses a provided memory heap
@@ -717,6 +917,40 @@ namespace vk
 		u32 depth() const
 		{
 			return info.extent.depth;
+		}
+
+		VkFormat format() const
+		{
+			return info.format;
+		}
+
+		VkImageAspectFlags aspect() const
+		{
+			return m_storage_aspect;
+		}
+
+		void push_layout(command_buffer& cmd, VkImageLayout layout)
+		{
+			m_layout_stack.push(current_layout);
+			change_image_layout(cmd, this, layout);
+		}
+
+		void pop_layout(command_buffer& cmd)
+		{
+			verify(HERE), !m_layout_stack.empty();
+
+			auto layout = m_layout_stack.top();
+			m_layout_stack.pop();
+			change_image_layout(cmd, this, layout);
+		}
+
+		void change_layout(command_buffer& cmd, VkImageLayout new_layout)
+		{
+			if (current_layout == new_layout)
+				return;
+
+			verify(HERE), m_layout_stack.empty();
+			change_image_layout(cmd, this, new_layout);
 		}
 
 	private:
@@ -851,7 +1085,9 @@ namespace vk
 				remap
 			);
 
-			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, get_aspect_flags(info.format) & mask);
+			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
+
+			verify(HERE), range.aspectMask;
 			auto view = std::make_unique<vk::image_view>(*get_current_renderer(), this, real_mapping, range);
 
 			auto result = view.get();
@@ -1108,197 +1344,6 @@ namespace vk
 
 	private:
 		VkDevice m_device;
-	};
-
-	class command_pool
-	{
-		vk::render_device *owner = nullptr;
-		VkCommandPool pool = nullptr;
-
-	public:
-		command_pool() {}
-		~command_pool() {}
-
-		void create(vk::render_device &dev)
-		{
-			owner = &dev;
-			VkCommandPoolCreateInfo infos = {};
-			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-
-			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
-		}
-
-		void destroy()
-		{
-			if (!pool)
-				return;
-
-			vkDestroyCommandPool((*owner), pool, nullptr);
-			pool = nullptr;
-		}
-
-		vk::render_device& get_owner()
-		{
-			return (*owner);
-		}
-
-		operator VkCommandPool()
-		{
-			return pool;
-		}
-	};
-
-	class command_buffer
-	{
-	private:
-		bool is_open = false;
-		bool is_pending = false;
-		VkFence m_submit_fence = VK_NULL_HANDLE;
-
-	protected:
-		vk::command_pool *pool = nullptr;
-		VkCommandBuffer commands = nullptr;
-
-	public:
-		enum access_type_hint
-		{
-			flush_only, //Only to be submitted/opened/closed via command flush
-			all         //Auxiliary, can be submitted/opened/closed at any time
-		}
-		access_hint = flush_only;
-
-		enum command_buffer_data_flag : u32
-		{
-			cb_has_occlusion_task = 1,
-			cb_has_blit_transfer = 2,
-			cb_has_dma_transfer = 4
-		};
-		u32 flags = 0;
-
-	public:
-		command_buffer() {}
-		~command_buffer() {}
-
-		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
-		{
-			VkCommandBufferAllocateInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			infos.commandBufferCount = 1;
-			infos.commandPool = (VkCommandPool)cmd_pool;
-			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
-
-			if (auto_reset)
-			{
-				VkFenceCreateInfo info = {};
-				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
-			}
-
-			pool = &cmd_pool;
-		}
-
-		void destroy()
-		{
-			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
-
-			if (m_submit_fence)
-			{
-				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
-			}
-		}
-
-		vk::command_pool& get_command_pool() const
-		{
-			return *pool;
-		}
-
-		void clear_flags()
-		{
-			flags = 0;
-		}
-
-		void set_flag(command_buffer_data_flag flag)
-		{
-			flags |= flag;
-		}
-
-		operator VkCommandBuffer() const
-		{
-			return commands;
-		}
-
-		bool is_recording() const
-		{
-			return is_open;
-		}
-
-		void begin()
-		{
-			if (m_submit_fence && is_pending)
-			{
-				wait_for_fence(m_submit_fence);
-				is_pending = false;
-
-				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
-				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
-			}
-
-			if (is_open)
-				return;
-
-			VkCommandBufferInheritanceInfo inheritance_info = {};
-			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-
-			VkCommandBufferBeginInfo begin_infos = {};
-			begin_infos.pInheritanceInfo = &inheritance_info;
-			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
-			is_open = true;
-		}
-
-		void end()
-		{
-			if (!is_open)
-			{
-				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
-				return;
-			}
-
-			CHECK_RESULT(vkEndCommandBuffer(commands));
-			is_open = false;
-		}
-
-		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
-		{
-			if (is_open)
-			{
-				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
-				return;
-			}
-
-			if (fence == VK_NULL_HANDLE)
-			{
-				fence = m_submit_fence;
-				is_pending = (fence != VK_NULL_HANDLE);
-			}
-
-			VkSubmitInfo infos = {};
-			infos.commandBufferCount = 1;
-			infos.pCommandBuffers = &commands;
-			infos.pWaitDstStageMask = &pipeline_stage_flags;
-			infos.pWaitSemaphores = semaphores.data();
-			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
-			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-			acquire_global_submit_lock();
-			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
-			release_global_submit_lock();
-
-			clear_flags();
-		}
 	};
 
 	class swapchain_image_WSI

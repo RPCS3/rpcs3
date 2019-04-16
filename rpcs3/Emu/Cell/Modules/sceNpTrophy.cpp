@@ -145,6 +145,12 @@ error_code sceNpTrophyDestroyHandle(u32 handle)
 	return CELL_OK;
 }
 
+error_code sceNpTrophyGetGameDetails()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	return CELL_OK;
+}
+
 error_code sceNpTrophyAbortHandle(u32 handle)
 {
 	sceNpTrophy.todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
@@ -523,6 +529,12 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 	return CELL_OK;
 }
 
+error_code sceNpTrophyGetLatestTrophies()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	return CELL_OK;
+}
+
 error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
 {
 	sceNpTrophy.error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
@@ -629,6 +641,12 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 			flags->flag_bits[id / 32] &= ~(1 << (id % 32));
 	}
 
+	return CELL_OK;
+}
+
+error_code sceNpTrophyGetTrophyDetails()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
 	return CELL_OK;
 }
 
@@ -817,6 +835,12 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 	return CELL_OK;
 }
 
+error_code sceNpTrophyGetUserInfo()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	return CELL_OK;
+}
+
 error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
@@ -883,11 +907,15 @@ DECLARE(ppu_module_manager::sceNpTrophy)("sceNpTrophy", []()
 	REG_FUNC(sceNpTrophy, sceNpTrophyAbortHandle);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyDestroyHandle);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameDetails);
 	REG_FUNC(sceNpTrophy, sceNpTrophyUnlockTrophy);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetLatestTrophies);
 	REG_FUNC(sceNpTrophy, sceNpTrophyTerm);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyUnlockState);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetUserInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyIcon);
 	REG_FUNC(sceNpTrophy, sceNpTrophyCreateContext);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyDetails);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameIcon);
 });

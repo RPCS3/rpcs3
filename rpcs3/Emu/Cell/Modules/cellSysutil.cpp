@@ -132,6 +132,12 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 	});
 }
 
+s32 _cellSysutilGetSystemParamInt()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
 {
 	cellSysutil.warning("cellSysutilGetSystemParamInt(id=0x%x(%s), value=*0x%x)", id, id, value);
@@ -485,6 +491,11 @@ s32 cellSysutilSharedMemoryFree()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellSysutilNotification()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
 s32 _ZN4cxml7Element11AppendChildERS0_()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -605,6 +616,12 @@ s32 _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf()
 	return CELL_OK;
 }
 
+s32 _ZN8cxmlutil8SetFloatERKN4cxml7ElementEPKcf()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 s32 _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -696,6 +713,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	cellSysutil_AudioOut_init(); // cellAudioOut functions
 	cellSysutil_VideoOut_init(); // cellVideoOut functions
 
+	REG_FUNC(cellSysutil, _cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);
 
@@ -730,6 +748,8 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilSharedMemoryAlloc);
 	REG_FUNC(cellSysutil, cellSysutilSharedMemoryFree);
 
+	REG_FUNC(cellSysutil, cellSysutilNotification);
+
 	REG_FUNC(cellSysutil, _ZN4cxml7Element11AppendChildERS0_);
 
 	REG_FUNC(cellSysutil, _ZN4cxml8DocumentC1Ev);
@@ -753,6 +773,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil7SetFileERKN4cxml7ElementEPKcRKNS0_4FileE);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil8SetFloatERKN4cxml7ElementEPKcf);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc);
