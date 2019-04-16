@@ -966,19 +966,21 @@ static void ppu_trace(u64 addr)
 template <typename T>
 static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 {
-	// Always load aligned 64-bit value (unaligned reservation will fail to store)
+	// Always load aligned 64-bit value
+	verify(HERE), (addr & (sizeof(T) - 1)) == 0;
 	auto& data = vm::_ref<const atomic_be_t<u64>>(addr & -8);
-	const u64 size_off = (sizeof(T) * 8) & 63;
+	auto& res = vm::reservation_acquire(addr, sizeof(T));
+	constexpr u64 size_off = (sizeof(T) * 8) & 63;
 	const u64 data_off = (addr & 7) * 8;
 
 	ppu.raddr = addr;
 
 	while (LIKELY(g_use_rtm))
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+		ppu.rtime = res;
 		ppu.rdata = data;
 
-		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+		if (LIKELY(res == ppu.rtime))
 		{
 			return static_cast<T>(ppu.rdata << data_off >> size_off);
 		}
@@ -988,13 +990,13 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+	ppu.rtime = res;
 
 	if (LIKELY((ppu.rtime & 1) == 0))
 	{
 		ppu.rdata = data;
 
-		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+		if (LIKELY(res == ppu.rtime))
 		{
 			return static_cast<T>(ppu.rdata << data_off >> size_off);
 		}
@@ -1004,13 +1006,13 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	for (u64 i = 0;; i++)
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+		ppu.rtime = res;
 
 		if (LIKELY((ppu.rtime & 1) == 0))
 		{
 			ppu.rdata = data;
 
-			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+			if (LIKELY(res == ppu.rtime))
 			{
 				break;
 			}
@@ -1091,10 +1093,11 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 
 extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 {
-	auto& data = vm::_ref<atomic_be_t<u32>>(addr & -4);
+	verify(HERE), (addr & 3) == 0;
+	auto& data = vm::_ref<atomic_be_t<u32>>(addr);
 	const u32 old_data = static_cast<u32>(ppu.rdata << ((addr & 7) * 8) >> 32);
 
-	if (ppu.raddr != addr || addr & 3 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & ~1ull))
+	if (ppu.raddr != addr || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & ~1ull))
 	{
 		ppu.raddr = 0;
 		return false;
@@ -1187,10 +1190,11 @@ const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 
 extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 {
-	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
-	const u64 old_data = ppu.rdata << ((addr & 7) * 8);
+	verify(HERE), (addr & 7) == 0;
+	auto& data = vm::_ref<atomic_be_t<u64>>(addr);
+	const u64 old_data = ppu.rdata;
 
-	if (ppu.raddr != addr || addr & 7 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & ~1ull))
+	if (ppu.raddr != addr || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & ~1ull))
 	{
 		ppu.raddr = 0;
 		return false;
