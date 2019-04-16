@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
@@ -169,13 +169,13 @@ static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_pa
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 
 // Get pointer to executable cache
-static u32& ppu_ref(u32 addr)
+static u64& ppu_ref(u32 addr)
 {
-	return *reinterpret_cast<u32*>(vm::g_exec_addr + addr);
+	return *reinterpret_cast<u64*>(vm::g_exec_addr + (u64)addr * 2);
 }
 
 // Get interpreter cache value
-static u32 ppu_cache(u32 addr)
+static u64 ppu_cache(u32 addr)
 {
 	// Select opcode table
 	const auto& table = *(
@@ -183,24 +183,55 @@ static u32 ppu_cache(u32 addr)
 		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &g_ppu_interpreter_fast.get_table() :
 		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
 
-	return ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(vm::read32(addr))]));
+	const u32 value = vm::read32(addr);
+	return (u64)value << 32 | ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(value)]));
 }
 
 static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
 {
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
-	{
-		fmt::throw_exception("Unregistered PPU function");
-	}
-
-	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
-
 	if (g_cfg.core.ppu_debug)
 	{
 		LOG_ERROR(PPU, "Unregistered instruction: 0x%08x", op.opcode);
 	}
 
+	ppu_ref(ppu.cia) = ppu_cache(ppu.cia);
+
 	return false;
+}
+
+// TODO: Make this a dispatch call
+void ppu_recompiler_fallback(ppu_thread& ppu)
+{
+	if (g_cfg.core.ppu_debug)
+	{
+		LOG_ERROR(PPU, "Unregistered PPU Function (LR=0x%llx)", ppu.lr);
+	}
+
+	const auto& table = g_ppu_interpreter_fast.get_table();
+	const auto cache = vm::g_exec_addr;
+
+	while (true)
+	{
+		// Run instructions in interpreter
+		if (const u32 op = *reinterpret_cast<u32*>(cache + (u64)ppu.cia * 2 + 4);
+			LIKELY(table[ppu_decode(op)](ppu, { op })))
+		{
+			ppu.cia += 4;
+			continue;
+		}
+
+		if (uptr func = *reinterpret_cast<u32*>(cache + (u64)ppu.cia * 2);
+			func != reinterpret_cast<uptr>(ppu_recompiler_fallback))
+		{
+			// We found a recompiler function at cia, return
+			return;
+		}
+
+		if (ppu.test_stopped())
+		{
+			return;
+		}
+	}
 }
 
 static std::unordered_map<u32, u32>* s_ppu_toc;
@@ -238,14 +269,15 @@ extern void ppu_register_range(u32 addr, u32 size)
 	}
 
 	// Register executable range at
-	utils::memory_commit(&ppu_ref(addr), size, utils::protection::rw);
+	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
 
-	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ppu_fallback));
+	const u32 fallback = ::narrow<u32>(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ? 
+	reinterpret_cast<uptr>(ppu_recompiler_fallback) : reinterpret_cast<uptr>(ppu_fallback));
 
 	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
 	while (size)
 	{
-		ppu_ref(addr) = fallback;
+		ppu_ref(addr) = (u64)vm::read32(addr) << 32 | fallback;
 		addr += 4;
 		size -= 4;
 	}
@@ -256,7 +288,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	// Initialize specific function
 	if (ptr)
 	{
-		ppu_ref(addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ptr));
+		*reinterpret_cast<u32*>(&ppu_ref(addr)) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ptr));
 		return;
 	}
 
@@ -280,7 +312,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 
 	while (size)
 	{
-		if (ppu_ref(addr) == fallback)
+		if ((u32)ppu_ref(addr) == fallback)
 		{
 			ppu_ref(addr) = ppu_cache(addr);
 		}
@@ -325,7 +357,7 @@ extern void ppu_breakpoint(u32 addr, bool isAdding)
 	if (isAdding)
 	{
 		// Set breakpoint
-		ppu_ref(addr) = _break;
+		*reinterpret_cast<u32*>(&ppu_ref(addr)) = _break;
 	}
 	else
 	{
@@ -344,9 +376,9 @@ extern void ppu_set_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (ppu_ref(addr) != _break)
+	if ((u32)ppu_ref(addr) != _break)
 	{
-		ppu_ref(addr) = _break;
+		*reinterpret_cast<u32*>(&ppu_ref(addr)) = _break;
 	}
 }
 
@@ -360,7 +392,7 @@ extern void ppu_remove_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if (ppu_ref(addr) == _break)
+	if ((u32)ppu_ref(addr) == _break)
 	{
 		ppu_ref(addr) = ppu_cache(addr);
 	}
@@ -388,7 +420,7 @@ extern bool ppu_patch(u32 addr, u32 value)
 	const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
 
-	if (ppu_ref(addr) != _break && ppu_ref(addr) != fallback)
+	if ((u32)ppu_ref(addr) != _break && (u32)ppu_ref(addr) != fallback)
 	{
 		ppu_ref(addr) = ppu_cache(addr);
 	}
@@ -443,7 +475,7 @@ std::string ppu_thread::dump() const
 	for (uint i = 0; i < 32; ++i) fmt::append(ret, "FPR[%d] = %.6G\n", i, fpr[i]);
 	for (uint i = 0; i < 32; ++i) fmt::append(ret, "VR[%d] = %s [x: %g y: %g z: %g w: %g]\n", i, vr[i], vr[i]._f[3], vr[i]._f[2], vr[i]._f[1], vr[i]._f[0]);
 
-	fmt::append(ret, "CR = 0x%08x\n", cr_pack());
+	fmt::append(ret, "CR = 0x%08x\n", cr.pack());
 	fmt::append(ret, "LR = 0x%llx\n", lr);
 	fmt::append(ret, "CTR = 0x%llx\n", ctr);
 	fmt::append(ret, "VRSAVE = 0x%08x\n", vrsave);
@@ -590,81 +622,72 @@ void ppu_thread::exec_task()
 	{
 		while (!(state & (cpu_flag::ret + cpu_flag::exit + cpu_flag::stop + cpu_flag::dbg_global_stop)))
 		{
-			reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>(ppu_ref(cia)))(*this);
+			reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>((u32)ppu_ref(cia)))(*this);
 		}
 
 		return;
 	}
 
-	const auto base = vm::_ptr<const u8>(0);
 	const auto cache = vm::g_exec_addr;
-	const auto bswap4 = _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
-
-	v128 _op;
 	using func_t = decltype(&ppu_interpreter::UNK);
-	func_t func0, func1, func2, func3, func4, func5;
 
 	while (true)
 	{
-		if (UNLIKELY(state))
+		const auto exec_op = [this](u64 op)
 		{
-			if (check_state()) return;
+			return reinterpret_cast<func_t>((uptr)(u32)op)(*this, {u32(op >> 32)});
+		};
+
+		if (cia % 8 || !s_use_ssse3 || UNLIKELY(state))
+		{
+			if (test_stopped()) return;
 
 			// Decode single instruction (may be step)
-			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
-			if (reinterpret_cast<func_t>((std::uintptr_t)ppu_ref(cia))(*this, {op})) { cia += 4; }
+			if (exec_op(*reinterpret_cast<u64*>(cache + (u64)cia * 2))) { cia += 4; }
 			continue;
 		}
 
-		if (cia % 16 || !s_use_ssse3)
-		{
-			// Unaligned
-			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + cia);
-			if (reinterpret_cast<func_t>((std::uintptr_t)ppu_ref(cia))(*this, {op})) { cia += 4; }
-			continue;
-		}
+		u64 op0, op1, op2, op3;
+		u64 _pos = (u64)cia * 2;
 
 		// Reinitialize
 		{
-			const v128 x = v128::fromV(_mm_load_si128(reinterpret_cast<const __m128i*>(cache + cia)));
-			func0 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[0]);
-			func1 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[1]);
-			func2 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[2]);
-			func3 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[3]);
-			_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + cia)), bswap4);
+			const v128 _op0 = *reinterpret_cast<const v128*>(cache + _pos);
+			const v128 _op1 = *reinterpret_cast<const v128*>(cache + _pos + 16);
+			op0 = _op0._u64[0];
+			op1 = _op0._u64[1];
+			op2 = _op1._u64[0];
+			op3 = _op1._u64[1];
 		}
 
-		while (LIKELY(func0(*this, {_op._u32[0]})))
+		while (LIKELY(exec_op(op0)))
 		{
 			cia += 4;
 
-			if (LIKELY(func1(*this, {_op._u32[1]})))
+			if (LIKELY(exec_op(op1)))
 			{
 				cia += 4;
 
-				const v128 x = v128::fromV(_mm_load_si128(reinterpret_cast<const __m128i*>(cache + cia + 8)));
-				func0 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[0]);
-				func1 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[1]);
-				func4 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[2]);
-				func5 = reinterpret_cast<func_t>((std::uintptr_t)x._u32[3]);
-
-				if (LIKELY(func2(*this, {_op._u32[2]})))
+				if (LIKELY(exec_op(op2)))
 				{
 					cia += 4;
 
-					if (LIKELY(func3(*this, {_op._u32[3]})))
+					if (LIKELY(exec_op(op3)))
 					{
 						cia += 4;
-
-						func2 = func4;
-						func3 = func5;
 
 						if (UNLIKELY(state))
 						{
 							break;
 						}
 
-						_op.vi = _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + cia)), bswap4);
+						_pos += 32;
+						const v128 _op0 = *reinterpret_cast<const v128*>(cache + _pos);
+						const v128 _op1 = *reinterpret_cast<const v128*>(cache + _pos + 16);
+						op0 = _op0._u64[0];
+						op1 = _op0._u64[1];
+						op2 = _op1._u64[0];
+						op3 = _op1._u64[1];
 						continue;
 					}
 					break;
@@ -1054,8 +1077,12 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.jz(fail);
 	c.sar(x86::eax, 24);
 	c.js(fail);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::dword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.jmp(begin);
 
 	c.bind(fail);
@@ -1148,8 +1175,12 @@ const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.jz(fail);
 	c.sar(x86::eax, 24);
 	c.js(fail);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.jmp(begin);
 
 	c.bind(fail);
@@ -1256,7 +1287,7 @@ extern void ppu_initialize(const ppu_module& info)
 			if (g_cfg.core.ppu_debug && func.size && func.toc != -1)
 			{
 				s_ppu_toc->emplace(func.addr, func.toc);
-				ppu_ref(func.addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));
+				*reinterpret_cast<u32*>(&ppu_ref(func.addr)) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));
 			}
 		}
 
@@ -1513,7 +1544,7 @@ extern void ppu_initialize(const ppu_module& info)
 #endif
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v1-tane-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v3-tane-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (Emu.IsStopped())
@@ -1612,7 +1643,7 @@ extern void ppu_initialize(const ppu_module& info)
 				{
 					const u64 addr = jit->get(fmt::format("__0x%x", block.first - reloc));
 					jit_mod.funcs.emplace_back(reinterpret_cast<ppu_function_t>(addr));
-					ppu_ref(block.first) = ::narrow<u32>(addr);
+					*reinterpret_cast<u32*>(&ppu_ref(block.first)) = ::narrow<u32>(addr);
 				}
 			}
 		}
@@ -1643,7 +1674,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				if (block.second)
 				{
-					ppu_ref(block.first) = ::narrow<u32>(reinterpret_cast<uptr>(jit_mod.funcs[index++]));
+					*reinterpret_cast<u32*>(&ppu_ref(block.first)) = ::narrow<u32>(reinterpret_cast<uptr>(jit_mod.funcs[index++]));
 				}
 			}
 		}

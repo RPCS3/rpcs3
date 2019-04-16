@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 
@@ -22,6 +22,7 @@ struct compat_status
 	QString color;
 	QString text;
 	QString tooltip;
+	QString version;
 };
 
 class game_compatibility : public QObject
