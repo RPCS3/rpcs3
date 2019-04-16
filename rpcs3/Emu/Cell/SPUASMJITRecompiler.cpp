@@ -288,7 +288,7 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 		c->jnz(label_diff);
 		c->vzeroupper();
 	}
-	else if (0 && utils::has_512())
+	else if (utils::has_512())
 	{
 		// AVX-512 optimized check using 256-bit registers
 		words_align = 32;
@@ -410,7 +410,7 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 
 		c->vzeroupper();
 	}
-	else if (0 && utils::has_avx())
+	else if (utils::has_avx())
 	{
 		// Mainstream AVX
 		words_align = 32;
