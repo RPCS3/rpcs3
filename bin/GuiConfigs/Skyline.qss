@@ -13,7 +13,7 @@ Gray: #455971
 Toolbar-blue: #4c5ad6
 Border-blue: #359aff
 Button-blue: #0071ec
-Fatal-error red: #e85545
+Fatal-error red: #b23345
 Warning-orange: #e49000
 Todo-orange: #fbb81b
 Disable-gray: #999999 & #b3b3b3
@@ -577,11 +577,11 @@ QLabel#log_level_always {
 }
 
 QLabel#log_level_fatal {
-	color: #e85545;
+	color: #b23345;
 }
 
 QLabel#log_level_error {
-	color: #359aff;
+	color: #e85545;
 }
 
 QLabel#log_level_todo {
