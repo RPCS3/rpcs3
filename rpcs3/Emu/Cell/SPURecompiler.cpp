@@ -5372,7 +5372,7 @@ public:
 
 	void ADDX(spu_opcode_t op)
 	{
-		set_vr(op.rt, get_vr(op.ra) + get_vr(op.rb) + (get_vr(op.rt) & 1));
+		set_vr(op.rt, llvm_sum{get_vr(op.ra), get_vr(op.rb), get_vr(op.rt) & 1});
 	}
 
 	void SFX(spu_opcode_t op)
@@ -5924,7 +5924,7 @@ public:
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
 		{
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb))));
+			set_vr(op.rt, sext<u32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) > get_vr<f64[4]>(op.rb))));
 			return;
 		}
 
@@ -5945,7 +5945,7 @@ public:
 		}
 		else
 		{
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(a, b)));
+			set_vr(op.rt, sext<u32[4]>(fcmp_ord(a > b)));
 		}
 	}
 
@@ -5953,7 +5953,7 @@ public:
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
 		{
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(fabs(get_vr<f64[4]>(op.ra)), fabs(get_vr<f64[4]>(op.rb)))));
+			set_vr(op.rt, sext<u32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) > fabs(get_vr<f64[4]>(op.rb)))));
 			return;
 		}
 
@@ -5973,7 +5973,7 @@ public:
 		}
 		else
 		{
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OGT>(abs_a, abs_b)));
+			set_vr(op.rt, sext<u32[4]>(fcmp_ord(abs_a > abs_b)));
 		}
 	}
 
@@ -6065,17 +6065,17 @@ public:
 	void FCEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb))));
+			set_vr(op.rt, sext<u32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) == get_vr<f64[4]>(op.rb))));
 		else
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb))));
+			set_vr(op.rt, sext<u32[4]>(fcmp_ord(get_vr<f32[4]>(op.ra) == get_vr<f32[4]>(op.rb))));
 	}
 
 	void FCMEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(fabs(get_vr<f64[4]>(op.ra)), fabs(get_vr<f64[4]>(op.rb)))));
+			set_vr(op.rt, sext<u32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) == fabs(get_vr<f64[4]>(op.rb)))));
 		else
-			set_vr(op.rt, sext<u32[4]>(fcmp<llvm::FCmpInst::FCMP_OEQ>(fabs(get_vr<f32[4]>(op.ra)), fabs(get_vr<f32[4]>(op.rb)))));
+			set_vr(op.rt, sext<u32[4]>(fcmp_ord(fabs(get_vr<f32[4]>(op.ra)) == fabs(get_vr<f32[4]>(op.rb)))));
 	}
 
 	// Multiply and return zero if any of the arguments is in the xfloat range.
@@ -6184,7 +6184,7 @@ public:
 			}
 
 			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
-			set_vr(op.rt, r ^ sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f64[4]>(std::exp2(31.f)))));
+			set_vr(op.rt, r ^ sext<s32[4]>(fcmp_ord(a >= fsplat<f64[4]>(std::exp2(31.f)))));
 		}
 		else
 		{
@@ -6199,7 +6199,7 @@ public:
 
 			value_t<s32[4]> r;
 			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
-			set_vr(op.rt, r ^ sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f32[4]>(std::exp2(31.f)))));
+			set_vr(op.rt, r ^ sext<s32[4]>(fcmp_ord(a >= fsplat<f32[4]>(std::exp2(31.f)))));
 		}
 	}
 
@@ -6259,7 +6259,7 @@ public:
 
 			const auto _max = fsplat<f64[4]>(std::exp2(32.f));
 			r.value = m_ir->CreateFPToUI(a.value, get_type<s32[4]>());
-			r.value = m_ir->CreateSelect(m_ir->CreateFCmpUGE(a.value, _max.value), splat<s32[4]>(-1).eval(m_ir), (r & sext<s32[4]>(fcmp<llvm::FCmpInst::FCMP_OGE>(a, fsplat<f64[4]>(0.)))).eval(m_ir));
+			r.value = m_ir->CreateSelect(m_ir->CreateFCmpUGE(a.value, _max.value), splat<s32[4]>(-1).eval(m_ir), (r & sext<s32[4]>(fcmp_ord(a >= fsplat<f64[4]>(0.)))).eval(m_ir));
 			set_vr(op.rt, r);
 		}
 		else
