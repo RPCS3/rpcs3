@@ -298,6 +298,12 @@ struct llvm_value_t<T*> : llvm_value_t<T>
 	using base = llvm_value_t<T>;
 	using base::base;
 
+	static constexpr uint esize      = 64;
+	static constexpr bool is_int     = false;
+	static constexpr bool is_sint    = false;
+	static constexpr bool is_uint    = false;
+	static constexpr bool is_float   = false;
+	static constexpr uint is_vector  = false;
 	static constexpr uint is_pointer = llvm_value_t<T>::is_pointer + 1;
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
