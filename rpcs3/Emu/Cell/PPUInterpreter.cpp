@@ -44,6 +44,30 @@ inline void ppu_ov_set(ppu_thread& ppu, bool bit)
 	ppu.xer.so |= bit;
 }
 
+// Write comparison results to FPCC field with optional CR field update
+template<typename T>
+inline void ppu_fpcc_set(ppu_thread& ppu, const T& a, const T& b, const bool rc, const u64 cr_field = 1)
+{
+	// TODO: Do not hardcode to be endian dependant  
+	u32 fpcc = u32{a < b} << (8 * 0) | u32{a > b} << (8 * 1) | u32{a == b} << (8 * 2);
+
+	// Test FU
+	if (UNLIKELY(fpcc == 0)) fpcc = 1 << (8 * 3);
+
+	// Write FPCC
+	ppu.fpscr.fields[4] = fpcc;
+
+	if (UNLIKELY(rc))
+	{
+		ppu.cr.fields[cr_field] = fpcc;
+
+		if (UNLIKELY(g_cfg.core.ppu_debug))
+		{
+			*(u32*)(vm::g_stat_addr + ppu.cia) |= ppu.cr.fields[cr_field];
+		}
+	}
+}
+
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
 {
@@ -2923,7 +2947,7 @@ bool ppu_interpreter::B(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::MCRF(ppu_thread& ppu, ppu_opcode_t op)
 {
 	CHECK_SIZE(ppu_thread::cr, 32);
-	reinterpret_cast<u32*>(+ppu.cr.bits)[op.crfd] = reinterpret_cast<u32*>(+ppu.cr.bits)[op.crfs];
+	ppu.cr.fields[op.crfd] = ppu.cr.fields[op.crfs];
 	return true;
 }
 
@@ -3471,7 +3495,7 @@ bool ppu_interpreter::ADDE(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 {
-	static u8 s_table[16][4]
+	alignas(4) static const u8 s_table[16][4]
 	{
 		{0, 0, 0, 0},
 		{0, 0, 0, 1},
@@ -3498,9 +3522,8 @@ bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 		// MTOCRF
 
 		const u32 n = utils::cntlz32(op.crm) & 7;
-		const u32 p = n * 4;
-		const u64 v = (s >> (p ^ 0x1c)) & 0xf;
-		*(u32*)(ppu.cr.bits + p) = *(u32*)(s_table + v);
+		const u64 v = (s >> ((n * 4) ^ 0x1c)) & 0xf;
+		ppu.cr.fields[n] = *(u32*)(s_table + v);
 	}
 	else
 	{
@@ -3510,9 +3533,8 @@ bool ppu_interpreter::MTOCRF(ppu_thread& ppu, ppu_opcode_t op)
 		{
 			if (op.crm & (128 >> i))
 			{
-				const u32 p = i * 4;
-				const u64 v = (s >> (p ^ 0x1c)) & 0xf;
-				*(u32*)(ppu.cr.bits + p) = *(u32*)(s_table + v);
+				const u64 v = (s >> ((i * 4) ^ 0x1c)) & 0xf;
+				ppu.cr.fields[i] = *(u32*)(s_table + v);
 			}
 		}
 	}
@@ -4583,73 +4605,133 @@ bool ppu_interpreter::STDU(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::FDIVS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::FDIVS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] / ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FSUBS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FDIVS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] / ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FSUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] - ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FADDS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FSUBS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] - ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FADDS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] + ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FSQRTS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FADDS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] + ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FSQRTS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(std::sqrt(ppu.fpr[op.frb]));
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FRES(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FSQRTS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(std::sqrt(ppu.fpr[op.frb]));
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FRES(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(1.0 / ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FMULS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FRES(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(1.0 / ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FMULS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] * ppu.fpr[op.frc]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FMADDS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FMULS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] * ppu.fpr[op.frc]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FMADDS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FMSUBS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FMADDS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FMSUBS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]));
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FNMADDS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FNMSUBS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]));
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FNMADDS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]));
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
+	return true;
+}
+
+bool ppu_interpreter_precise::FNMADDS(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(-(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]));
+	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
 
@@ -4665,7 +4747,7 @@ bool ppu_interpreter::MTFSB1(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::MCRFS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	if (op.crfs != 4) LOG_WARNING(PPU, "MCRFS(%d)", op.crfs);
-	reinterpret_cast<u32*>(+ppu.cr.bits)[op.crfd] = reinterpret_cast<u32*>(&ppu.fpscr.bits[0])[op.crfs];
+	ppu.cr.fields[op.crfd] = ppu.fpscr.fields[op.crfs];
 	return true;
 }
 
@@ -4688,11 +4770,24 @@ bool ppu_interpreter::MTFSFI(ppu_thread& ppu, ppu_opcode_t op)
 	}
 	else
 	{
-		u32 i = op.i;
-		ppu.fpscr.bits[bf + 3] = i & 1; i >>= 1;
-		ppu.fpscr.bits[bf + 2] = i & 1; i >>= 1;
-		ppu.fpscr.bits[bf + 1] = i & 1; i >>= 1;
-		ppu.fpscr.bits[bf + 0] = i & 1;
+		static constexpr std::array<u32, 16> all_values = []() -> std::array<u32, 16>
+		{
+			std::array<u32, 16> values{};
+
+			for (size_t i = 0; i < values.size(); i++)
+			{
+				u32 value = 0, im = i;
+				value |= (im & 1) << (8 * 3); im >>= 1;
+				value |= (im & 1) << (8 * 2); im >>= 1;
+				value |= (im & 1) << (8 * 1); im >>= 1;
+				value |= (im & 1) << (8 * 0);
+				values[i] = value;
+			}
+
+			return values;
+		}();
+
+		ppu.fpscr.fields[bf] = all_values[op.i];
 	}
 
 	if (UNLIKELY(op.rc)) ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
@@ -4718,18 +4813,7 @@ bool ppu_interpreter::FCMPU(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const f64 a = ppu.fpr[op.fra];
 	const f64 b = ppu.fpr[op.frb];
-	u8 test_fu = ppu.fpscr.fg = a > b;
-	test_fu |= ppu.fpscr.fl = a < b;
-	test_fu |= ppu.fpscr.fe = a == b;
-	ppu.fpscr.fu = std::bit_cast<bool, u8>(test_fu ^ 1);
-	ppu_cr_set(ppu, op.crfd, ppu.fpscr.fl, ppu.fpscr.fg, ppu.fpscr.fe, ppu.fpscr.fu);
-	return true;
-}
-
-bool ppu_interpreter::FRSP(ppu_thread& ppu, ppu_opcode_t op)
-{
-	ppu.fpr[op.frd] = f32(ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
+	ppu_fpcc_set(ppu, a, b, true, op.crfd);
 	return true;
 }
 
@@ -4751,31 +4835,68 @@ bool ppu_interpreter::FCTIWZ(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::FDIV(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::FRSP(ppu_thread& ppu, ppu_opcode_t op)
+{
+	ppu.fpr[op.frd] = f32(ppu.fpr[op.frb]);
+	return true;
+}
+
+bool ppu_interpreter_precise::FRSP(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = f32(ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FDIV(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = ppu.fpr[op.fra] / ppu.fpr[op.frb];
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FSUB(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FDIV(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = ppu.fpr[op.fra] / ppu.fpr[op.frb];
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FSUB(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = ppu.fpr[op.fra] - ppu.fpr[op.frb];
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FADD(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FSUB(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = ppu.fpr[op.fra] - ppu.fpr[op.frb];
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FADD(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = ppu.fpr[op.fra] + ppu.fpr[op.frb];
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FSQRT(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FADD(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = ppu.fpr[op.fra] + ppu.fpr[op.frb];
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FSQRT(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = std::sqrt(ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
+	return true;
+}
+
+bool ppu_interpreter_precise::FSQRT(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = std::sqrt(ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
 
@@ -4786,45 +4907,81 @@ bool ppu_interpreter::FSEL(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::FMUL(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::FMUL(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = ppu.fpr[op.fra] * ppu.fpr[op.frc];
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FRSQRTE(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FMUL(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = ppu.fpr[op.fra] * ppu.fpr[op.frc];
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FRSQRTE(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = 1.0 / std::sqrt(ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FMSUB(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FRSQRTE(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = 1.0 / std::sqrt(ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FMSUB(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb];
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FMADD(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FMSUB(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb];
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FMADD(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb];
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FNMSUB(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FMADD(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb];
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FNMSUB(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
-bool ppu_interpreter::FNMADD(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_precise::FNMSUB(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
+	return true;
+}
+
+bool ppu_interpreter_fast::FNMADD(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]);
-	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
+	return true;
+}
+
+bool ppu_interpreter_precise::FNMADD(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const f64 res = ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]);
+	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
 
