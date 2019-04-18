@@ -3087,6 +3087,7 @@ public:
 		// Create LLVM module
 		std::unique_ptr<Module> module = std::make_unique<Module>(hash + ".obj", m_context);
 		module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
+		module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = module.get();
 
 		// Initialize IR Builder
@@ -3587,6 +3588,7 @@ public:
 		// Create LLVM module
 		std::unique_ptr<Module> module = std::make_unique<Module>("spu_interpreter.obj", m_context);
 		module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
+		module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = module.get();
 
 		// Initialize IR Builder
@@ -4425,12 +4427,12 @@ public:
 		}
 		case MFC_Size:
 		{
-			set_reg_fixed(s_reg_mfc_size, trunc<u16>(val & 0x7fff).value);
+			set_reg_fixed(s_reg_mfc_size, trunc<u16>(val & 0x7fff).eval(m_ir));
 			return;
 		}
 		case MFC_TagID:
 		{
-			set_reg_fixed(s_reg_mfc_tag, trunc<u8>(val & 0x1f).value);
+			set_reg_fixed(s_reg_mfc_tag, trunc<u8>(val & 0x1f).eval(m_ir));
 			return;
 		}
 		case MFC_Cmd:
@@ -4447,14 +4449,14 @@ public:
 				break;
 			}
 
-			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).value))
+			if (auto ci = llvm::dyn_cast<llvm::ConstantInt>(trunc<u8>(val).eval(m_ir)))
 			{
 				const auto eal = get_reg_fixed<u32>(s_reg_mfc_eal);
 				const auto lsa = get_reg_fixed<u32>(s_reg_mfc_lsa);
 				const auto tag = get_reg_fixed<u8>(s_reg_mfc_tag);
 
 				const auto size = get_reg_fixed<u16>(s_reg_mfc_size);
-				const auto mask = m_ir->CreateShl(m_ir->getInt32(1), zext<u32>(tag).value);
+				const auto mask = m_ir->CreateShl(m_ir->getInt32(1), zext<u32>(tag).eval(m_ir));
 				const auto exec = llvm::BasicBlock::Create(m_context, "", m_function);
 				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
@@ -4515,8 +4517,8 @@ public:
 						csize = -1;
 					}
 
-					llvm::Value* src = m_ir->CreateGEP(m_lsptr, zext<u64>(lsa).value);
-					llvm::Value* dst = m_ir->CreateGEP(m_memptr, zext<u64>(eal).value);
+					llvm::Value* src = m_ir->CreateGEP(m_lsptr, zext<u64>(lsa).eval(m_ir));
+					llvm::Value* dst = m_ir->CreateGEP(m_memptr, zext<u64>(eal).eval(m_ir));
 
 					if (cmd & MFC_GET_CMD)
 					{
@@ -4599,7 +4601,7 @@ public:
 					else
 					{
 						// TODO
-						m_ir->CreateCall(get_intrinsic<u8*, u8*, u32>(llvm::Intrinsic::memcpy), {dst, src, zext<u32>(size).value, m_ir->getTrue()});
+						m_ir->CreateCall(get_intrinsic<u8*, u8*, u32>(llvm::Intrinsic::memcpy), {dst, src, zext<u32>(size).eval(m_ir), m_ir->getTrue()});
 					}
 
 					m_ir->CreateBr(next);
@@ -4840,7 +4842,7 @@ public:
 		if constexpr (!by.is_vector)
 			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
 
-		set_vr(op.rt, select(sh < by.esize, eval(get_vr<R>(op.ra) >> sh), splat<R>(0)));
+		set_vr(op.rt, select(sh < by.esize, get_vr<R>(op.ra) >> sh, splat<R>(0)));
 	}
 
 	template <typename R, typename T>
@@ -4866,7 +4868,7 @@ public:
 		if constexpr (!by.is_vector)
 			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
 
-		set_vr(op.rt, select(sh < by.esize, eval(get_vr<R>(op.ra) << sh), splat<R>(0)));
+		set_vr(op.rt, select(sh < by.esize, get_vr<R>(op.ra) << sh, splat<R>(0)));
 	}
 
 	void ROT(spu_opcode_t op)
@@ -4996,7 +4998,7 @@ public:
 		}
 
 		const auto m = zext<u32>(bitcast<i4>(trunc<bool[4]>(a)));
-		set_vr(op.rt, insert(splat<u32[4]>(0), 3, m));
+		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
 
 	void GBH(spu_opcode_t op)
@@ -5014,7 +5016,7 @@ public:
 		}
 
 		const auto m = zext<u32>(bitcast<u8>(trunc<bool[8]>(a)));
-		set_vr(op.rt, insert(splat<u32[4]>(0), 3, m));
+		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
 
 	void GBB(spu_opcode_t op)
@@ -5032,7 +5034,7 @@ public:
 		}
 
 		const auto m = zext<u32>(bitcast<u16>(trunc<bool[16]>(a)));
-		set_vr(op.rt, insert(splat<u32[4]>(0), 3, m));
+		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
 
 	void FSM(spu_opcode_t op)
@@ -5047,7 +5049,7 @@ public:
 		}
 
 		const auto m = bitcast<bool[4]>(trunc<i4>(v));
-		set_vr(op.rt, sext<u32[4]>(m));
+		set_vr(op.rt, sext<s32[4]>(m));
 	}
 
 	void FSMH(spu_opcode_t op)
@@ -5062,7 +5064,7 @@ public:
 		}
 
 		const auto m = bitcast<bool[8]>(trunc<u8>(v));
-		set_vr(op.rt, sext<u16[8]>(m));
+		set_vr(op.rt, sext<s16[8]>(m));
 	}
 
 	void FSMB(spu_opcode_t op)
@@ -5077,7 +5079,7 @@ public:
 		}
 
 		const auto m = bitcast<bool[16]>(trunc<u16>(v));
-		set_vr(op.rt, sext<u8[16]>(m));
+		set_vr(op.rt, sext<s8[16]>(m));
 	}
 
 	void ROTQBYBI(spu_opcode_t op)
@@ -5276,7 +5278,7 @@ public:
 
 	void CGT(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u32[4]>(get_vr<s32[4]>(op.ra) > get_vr<s32[4]>(op.rb)));
+		set_vr(op.rt, sext<s32[4]>(get_vr<s32[4]>(op.ra) > get_vr<s32[4]>(op.rb)));
 	}
 
 	void XOR(spu_opcode_t op)
@@ -5286,7 +5288,7 @@ public:
 
 	void CGTH(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u16[8]>(get_vr<s16[8]>(op.ra) > get_vr<s16[8]>(op.rb)));
+		set_vr(op.rt, sext<s16[8]>(get_vr<s16[8]>(op.ra) > get_vr<s16[8]>(op.rb)));
 	}
 
 	void EQV(spu_opcode_t op)
@@ -5296,7 +5298,7 @@ public:
 
 	void CGTB(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u8[16]>(get_vr<s8[16]>(op.ra) > get_vr<s8[16]>(op.rb)));
+		set_vr(op.rt, sext<s8[16]>(get_vr<s8[16]>(op.ra) > get_vr<s8[16]>(op.rb)));
 	}
 
 	void SUMB(spu_opcode_t op)
@@ -5337,7 +5339,7 @@ public:
 
 	void CLGT(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u32[4]>(get_vr(op.ra) > get_vr(op.rb)));
+		set_vr(op.rt, sext<s32[4]>(get_vr(op.ra) > get_vr(op.rb)));
 	}
 
 	void ANDC(spu_opcode_t op)
@@ -5347,7 +5349,7 @@ public:
 
 	void CLGTH(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u16[8]>(get_vr<u16[8]>(op.ra) > get_vr<u16[8]>(op.rb)));
+		set_vr(op.rt, sext<s16[8]>(get_vr<u16[8]>(op.ra) > get_vr<u16[8]>(op.rb)));
 	}
 
 	void ORC(spu_opcode_t op)
@@ -5357,12 +5359,12 @@ public:
 
 	void CLGTB(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u8[16]>(get_vr<u8[16]>(op.ra) > get_vr<u8[16]>(op.rb)));
+		set_vr(op.rt, sext<s8[16]>(get_vr<u8[16]>(op.ra) > get_vr<u8[16]>(op.rb)));
 	}
 
 	void CEQ(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u32[4]>(get_vr(op.ra) == get_vr(op.rb)));
+		set_vr(op.rt, sext<s32[4]>(get_vr(op.ra) == get_vr(op.rb)));
 	}
 
 	void MPYHHU(spu_opcode_t op)
@@ -5384,16 +5386,16 @@ public:
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = get_vr(op.rb);
-		const auto x = eval(~get_vr<u32[4]>(op.rt) & 1);
+		const auto x = ~get_vr(op.rt) & 1;
 		const auto s = eval(a + b);
-		set_vr(op.rt, zext<u32[4]>((sext<u32[4]>(s < a) | (s & ~x)) == -1));
+		set_vr(op.rt, zext<u32[4]>((noncast<u32[4]>(sext<s32[4]>(s < a)) | (s & ~x)) == -1));
 	}
 
 	void BGX(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = get_vr(op.rb);
-		const auto c = eval(get_vr<s32[4]>(op.rt) << 31);
+		const auto c = get_vr<s32[4]>(op.rt) << 31;
 		set_vr(op.rt, zext<u32[4]>(a <= b & ~(a == b & c >= 0)));
 	}
 
@@ -5429,7 +5431,7 @@ public:
 
 	void CEQH(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u16[8]>(get_vr<u16[8]>(op.ra) == get_vr<u16[8]>(op.rb)));
+		set_vr(op.rt, sext<s16[8]>(get_vr<u16[8]>(op.ra) == get_vr<u16[8]>(op.rb)));
 	}
 
 	void MPYU(spu_opcode_t op)
@@ -5439,24 +5441,13 @@ public:
 
 	void CEQB(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u8[16]>(get_vr<u8[16]>(op.ra) == get_vr<u8[16]>(op.rb)));
+		set_vr(op.rt, sext<s8[16]>(get_vr<u8[16]>(op.ra) == get_vr<u8[16]>(op.rb)));
 	}
 
 	void FSMBI(spu_opcode_t op)
 	{
-		if (m_interp_magn)
-		{
-			const auto m = bitcast<bool[16]>(get_imm<u16>(op.i16));
-			set_vr(op.rt, sext<u8[16]>(m));
-			return;
-		}
-
-		v128 data;
-		for (u32 i = 0; i < 16; i++)
-			data._bytes[i] = op.i16 & (1u << i) ? -1 : 0;
-		value_t<u8[16]> r;
-		r.value = make_const_vector<v128>(data, get_type<u8[16]>());
-		set_vr(op.rt, r);
+		const auto m = bitcast<bool[16]>(get_imm<u16>(op.i16));
+		set_vr(op.rt, sext<s8[16]>(m));
 	}
 
 	void IL(spu_opcode_t op)
@@ -5546,32 +5537,32 @@ public:
 
 	void CGTI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u32[4]>(get_vr<s32[4]>(op.ra) > get_imm<s32[4]>(op.si10)));
+		set_vr(op.rt, sext<s32[4]>(get_vr<s32[4]>(op.ra) > get_imm<s32[4]>(op.si10)));
 	}
 
 	void CGTHI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u16[8]>(get_vr<s16[8]>(op.ra) > get_imm<s16[8]>(op.si10)));
+		set_vr(op.rt, sext<s16[8]>(get_vr<s16[8]>(op.ra) > get_imm<s16[8]>(op.si10)));
 	}
 
 	void CGTBI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u8[16]>(get_vr<s8[16]>(op.ra) > get_imm<s8[16]>(op.si10)));
+		set_vr(op.rt, sext<s8[16]>(get_vr<s8[16]>(op.ra) > get_imm<s8[16]>(op.si10)));
 	}
 
 	void CLGTI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u32[4]>(get_vr(op.ra) > get_imm(op.si10)));
+		set_vr(op.rt, sext<s32[4]>(get_vr(op.ra) > get_imm(op.si10)));
 	}
 
 	void CLGTHI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u16[8]>(get_vr<u16[8]>(op.ra) > get_imm<u16[8]>(op.si10)));
+		set_vr(op.rt, sext<s16[8]>(get_vr<u16[8]>(op.ra) > get_imm<u16[8]>(op.si10)));
 	}
 
 	void CLGTBI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u8[16]>(get_vr<u8[16]>(op.ra) > get_imm<u8[16]>(op.si10)));
+		set_vr(op.rt, sext<s8[16]>(get_vr<u8[16]>(op.ra) > get_imm<u8[16]>(op.si10)));
 	}
 
 	void MPYI(spu_opcode_t op)
@@ -5586,17 +5577,17 @@ public:
 
 	void CEQI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u32[4]>(get_vr(op.ra) == get_imm(op.si10)));
+		set_vr(op.rt, sext<s32[4]>(get_vr(op.ra) == get_imm(op.si10)));
 	}
 
 	void CEQHI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u16[8]>(get_vr<u16[8]>(op.ra) == get_imm<u16[8]>(op.si10)));
+		set_vr(op.rt, sext<s16[8]>(get_vr<u16[8]>(op.ra) == get_imm<u16[8]>(op.si10)));
 	}
 
 	void CEQBI(spu_opcode_t op)
 	{
-		set_vr(op.rt, sext<u8[16]>(get_vr<u8[16]>(op.ra) == get_imm<u8[16]>(op.si10)));
+		set_vr(op.rt, sext<s8[16]>(get_vr<u8[16]>(op.ra) == get_imm<u8[16]>(op.si10)));
 	}
 
 	void ILA(spu_opcode_t op)
@@ -5819,11 +5810,11 @@ public:
 			LOG_TODO(SPU, "[0x%x] Const SHUFB mask: %s", m_pos, mask);
 		}
 
-		const auto x = avg(sext<u8[16]>((c & 0xc0) == 0xc0), sext<u8[16]>((c & 0xe0) == 0xc0));
-		const auto cr = c ^ 0xf;
+		const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
+		const auto cr = eval(c ^ 0xf);
 		const auto a = pshufb(get_vr<u8[16]>(op.ra), cr);
 		const auto b = pshufb(get_vr<u8[16]>(op.rb), cr);
-		set_vr(op.rt4, select(bitcast<s8[16]>(cr << 3) >= 0, a, b) | x);
+		set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, a, b) | x);
 	}
 
 	void MPYA(spu_opcode_t op)
@@ -5924,7 +5915,7 @@ public:
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
 		{
-			set_vr(op.rt, sext<u32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) > get_vr<f64[4]>(op.rb))));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) > get_vr<f64[4]>(op.rb))));
 			return;
 		}
 
@@ -5941,11 +5932,11 @@ public:
 			// Use sign bits to invert abs values before comparison.
 			const auto ca = eval(ia ^ (bitcast<s32[4]>(a) >> 31));
 			const auto cb = eval(ib ^ (bitcast<s32[4]>(b) >> 31));
-			set_vr(op.rt, sext<u32[4]>((ca > cb) & nz));
+			set_vr(op.rt, sext<s32[4]>((ca > cb) & nz));
 		}
 		else
 		{
-			set_vr(op.rt, sext<u32[4]>(fcmp_ord(a > b)));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a > b)));
 		}
 	}
 
@@ -5953,7 +5944,7 @@ public:
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
 		{
-			set_vr(op.rt, sext<u32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) > fabs(get_vr<f64[4]>(op.rb)))));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) > fabs(get_vr<f64[4]>(op.rb)))));
 			return;
 		}
 
@@ -5969,11 +5960,11 @@ public:
 			const auto ia = bitcast<s32[4]>(abs_a);
 			const auto ib = bitcast<s32[4]>(abs_b);
 			const auto nz = eval((ia > 0x7fffff) | (ib > 0x7fffff));
-			set_vr(op.rt, sext<u32[4]>((ia > ib) & nz));
+			set_vr(op.rt, sext<s32[4]>((ia > ib) & nz));
 		}
 		else
 		{
-			set_vr(op.rt, sext<u32[4]>(fcmp_ord(abs_a > abs_b)));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(abs_a > abs_b)));
 		}
 	}
 
@@ -6065,17 +6056,17 @@ public:
 	void FCEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, sext<u32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) == get_vr<f64[4]>(op.rb))));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) == get_vr<f64[4]>(op.rb))));
 		else
-			set_vr(op.rt, sext<u32[4]>(fcmp_ord(get_vr<f32[4]>(op.ra) == get_vr<f32[4]>(op.rb))));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f32[4]>(op.ra) == get_vr<f32[4]>(op.rb))));
 	}
 
 	void FCMEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, sext<u32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) == fabs(get_vr<f64[4]>(op.rb)))));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) == fabs(get_vr<f64[4]>(op.rb)))));
 		else
-			set_vr(op.rt, sext<u32[4]>(fcmp_ord(fabs(get_vr<f32[4]>(op.ra)) == fabs(get_vr<f32[4]>(op.rb)))));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f32[4]>(op.ra)) == fabs(get_vr<f32[4]>(op.rb)))));
 	}
 
 	// Multiply and return zero if any of the arguments is in the xfloat range.
@@ -6084,7 +6075,7 @@ public:
 		// Compare absolute values with max positive float in normal range.
 		const auto aa = bitcast<s32[4]>(fabs(a));
 		const auto ab = bitcast<s32[4]>(fabs(b));
-		return select(eval(max(aa, ab) > 0x7f7fffff), fsplat<f32[4]>(0.), eval(a * b));
+		return eval(select(max(aa, ab) > 0x7f7fffff, fsplat<f32[4]>(0.), a * b));
 	}
 
 	void FNMS(spu_opcode_t op)
@@ -6365,7 +6356,7 @@ public:
 
 	void STQX(spu_opcode_t op)
 	{
-		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0);
+		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0));
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
@@ -6373,7 +6364,7 @@ public:
 
 	void LQX(spu_opcode_t op)
 	{
-		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0);
+		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0));
 		value_t<u8[16]> r;
 		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
@@ -6400,8 +6391,8 @@ public:
 	void STQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr;
-		addr.value = m_interp_magn ? m_interp_pc : m_ir->getInt32(m_pos);
-		addr = eval(((get_imm<u64>(op.i16, false) << 2) + zext<u64>(addr)) & 0x3fff0);
+		addr.value = m_interp_magn ? m_ir->CreateZExt(m_interp_pc, get_type<u64>()) : m_ir->getInt64(m_pos);
+		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & 0x3fff0);
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
@@ -6410,8 +6401,8 @@ public:
 	void LQR(spu_opcode_t op) //
 	{
 		value_t<u64> addr;
-		addr.value = m_interp_magn ? m_interp_pc : m_ir->getInt32(m_pos);
-		addr = eval(((get_imm<u64>(op.i16, false) << 2) + zext<u64>(addr)) & 0x3fff0);
+		addr.value = m_interp_magn ? m_ir->CreateZExt(m_interp_pc, get_type<u64>()) : m_ir->getInt64(m_pos);
+		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & 0x3fff0);
 		value_t<u8[16]> r;
 		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
@@ -6420,7 +6411,7 @@ public:
 
 	void STQD(spu_opcode_t op)
 	{
-		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + (get_imm<u32>(op.si10) << 4)) & 0x3fff0);
+		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + (get_imm<u32>(op.si10) << 4)) & 0x3fff0));
 		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
 		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
@@ -6428,7 +6419,7 @@ public:
 
 	void LQD(spu_opcode_t op)
 	{
-		value_t<u64> addr = zext<u64>((extract(get_vr(op.ra), 3) + (get_imm<u32>(op.si10) << 4)) & 0x3fff0);
+		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + (get_imm<u32>(op.si10) << 4)) & 0x3fff0));
 		value_t<u8[16]> r;
 		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
 		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});

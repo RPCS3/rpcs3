@@ -271,7 +271,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 	// Register executable range at
 	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
 
-	const u32 fallback = ::narrow<u32>(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ? 
+	const u32 fallback = ::narrow<u32>(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ?
 	reinterpret_cast<uptr>(ppu_recompiler_fallback) : reinterpret_cast<uptr>(ppu_fallback));
 
 	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
@@ -1708,6 +1708,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 
 	// Initialize target
 	module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
+	module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator
 	PPUTranslator translator(jit.get_context(), module.get(), module_part, jit.has_ssse3());

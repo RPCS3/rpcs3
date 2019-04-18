@@ -1053,8 +1053,8 @@ void PPUTranslator::VMSUMMBM(ppu_opcode_t op)
 	const auto a = get_vr<s16[8]>(op.va);
 	const auto b = get_vr<u16[8]>(op.vb);
 	const auto c = get_vr<s32[4]>(op.vc);
-	const auto ml = bitcast<s32[4]>((a << 8 >> 8) * bitcast<s16[8]>(b << 8 >> 8));
-	const auto mh = bitcast<s32[4]>((a >> 8) * bitcast<s16[8]>(b >> 8));
+	const auto ml = bitcast<s32[4]>((a << 8 >> 8) * noncast<s16[8]>(b << 8 >> 8));
+	const auto mh = bitcast<s32[4]>((a >> 8) * noncast<s16[8]>(b >> 8));
 	set_vr(op.vd, eval(((ml << 16 >> 16) + (ml >> 16)) + ((mh << 16 >> 16) + (mh >> 16)) + c));
 }
 
@@ -1191,7 +1191,7 @@ void PPUTranslator::VPERM(ppu_opcode_t op)
 	const auto b = get_vr<u8[16]>(op.vb);
 	const auto c = get_vr<u8[16]>(op.vc);
 	const auto i = eval(~c & 0x1f);
-	set_vr(op.vd, select(bitcast<s8[16]>(c << 3) >= 0, pshufb(a, i), pshufb(b, i)));
+	set_vr(op.vd, select(noncast<s8[16]>(c << 3) >= 0, pshufb(a, i), pshufb(b, i)));
 }
 
 void PPUTranslator::VPKPX(ppu_opcode_t op)

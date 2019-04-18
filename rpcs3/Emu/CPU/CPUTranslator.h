@@ -9,6 +9,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -951,6 +952,226 @@ inline llvm_cmp<T1, llvm_const_int<typename is_llvm_expr<T1>::type>, llvm::ICmpI
 	return {a1, {c}};
 }
 
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_noncast
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_noncast<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int, "llvm_noncast<>: invalid result type");
+	static_assert(llvm_value_t<T>::esize == llvm_value_t<U>::esize, "llvm_noncast<>: result is resized");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_noncast<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<T>::is_int &&
+		llvm_value_t<U>::is_int &&
+		llvm_value_t<T>::esize == llvm_value_t<U>::esize &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		// No operation required
+		return a1.eval(ir);
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_bitcast
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static constexpr uint bitsize0 = llvm_value_t<T>::is_vector ? llvm_value_t<T>::is_vector * llvm_value_t<T>::esize : llvm_value_t<T>::esize;
+	static constexpr uint bitsize1 = llvm_value_t<U>::is_vector ? llvm_value_t<U>::is_vector * llvm_value_t<U>::esize : llvm_value_t<U>::esize;
+
+	static_assert(bitsize0 == bitsize1, "llvm_bitcast<>: invalid type (size mismatch)");
+	static_assert(llvm_value_t<T>::is_int || llvm_value_t<T>::is_float, "llvm_bitcast<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int || llvm_value_t<U>::is_float, "llvm_bitcast<>: invalid result type");
+
+	static constexpr bool is_ok =
+		bitsize0 && bitsize0 == bitsize1 &&
+		(llvm_value_t<T>::is_int || llvm_value_t<T>::is_float) &&
+		(llvm_value_t<U>::is_int || llvm_value_t<U>::is_float);
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto rt = llvm_value_t<U>::get_type(ir->getContext());
+
+		if constexpr (llvm_value_t<T>::is_int == llvm_value_t<U>::is_int && llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector)
+		{
+			// No-op case
+			return v1;
+		}
+
+		if (const auto c1 = llvm::dyn_cast<llvm::Constant>(v1))
+		{
+			const auto module = ir->GetInsertBlock()->getParent()->getParent();
+			const auto result = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, rt, module->getDataLayout());
+
+			if (result)
+			{
+				return result;
+			}
+		}
+
+		return ir->CreateBitCast(v1, rt);
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_trunc
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_trunc<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int, "llvm_trunc<>: invalid result type");
+	static_assert(llvm_value_t<T>::esize > llvm_value_t<U>::esize, "llvm_trunc<>: result is not truncated");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_trunc<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<T>::is_int &&
+		llvm_value_t<U>::is_int &&
+		llvm_value_t<T>::esize > llvm_value_t<U>::esize &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateTrunc(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_sext
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_sext<>: invalid type");
+	static_assert(llvm_value_t<U>::is_sint, "llvm_sext<>: invalid result type");
+	static_assert(llvm_value_t<T>::esize < llvm_value_t<U>::esize, "llvm_sext<>: result is not extended");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_sext<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<T>::is_int &&
+		llvm_value_t<U>::is_sint &&
+		llvm_value_t<T>::esize < llvm_value_t<U>::esize &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateSExt(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_zext
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_zext<>: invalid type");
+	static_assert(llvm_value_t<U>::is_uint, "llvm_zext<>: invalid result type");
+	static_assert(llvm_value_t<T>::esize < llvm_value_t<U>::esize, "llvm_zext<>: result is not extended");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_zext<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<T>::is_int &&
+		llvm_value_t<U>::is_uint &&
+		llvm_value_t<T>::esize < llvm_value_t<U>::esize &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateZExt(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+};
+
+template <typename A1, typename A2, typename A3, typename T = llvm_common_t<A2, A3>, typename U = llvm_common_t<A1>>
+struct llvm_select
+{
+	using type = T;
+
+	llvm_expr_t<A1> cond;
+	llvm_expr_t<A2> a2;
+	llvm_expr_t<A3> a3;
+
+	static_assert(llvm_value_t<U>::esize == 1 && llvm_value_t<U>::is_int, "llvm_select<>: invalid condition type (bool expected)");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_select<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<U>::esize == 1 && llvm_value_t<U>::is_int &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateSelect(cond.eval(ir), a2.eval(ir), a3.eval(ir));
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_min
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_min<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		if constexpr (llvm_value_t<T>::is_sint)
+		{
+			return ir->CreateSelect(ir->CreateICmpSLT(v1, v2), v1, v2);
+		}
+
+		if constexpr (llvm_value_t<T>::is_uint)
+		{
+			return ir->CreateSelect(ir->CreateICmpULT(v1, v2), v1, v2);
+		}
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_max
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_max<>: invalid type");
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		if constexpr (llvm_value_t<T>::is_sint)
+		{
+			return ir->CreateSelect(ir->CreateICmpSLT(v1, v2), v2, v1);
+		}
+
+		if constexpr (llvm_value_t<T>::is_uint)
+		{
+			return ir->CreateSelect(ir->CreateICmpULT(v1, v2), v2, v1);
+		}
+	}
+};
+
 class cpu_translator
 {
 protected:
@@ -1027,36 +1248,52 @@ public:
 		return llvm_uno{std::forward<T>(cmp_expr)};
 	}
 
-	template <typename T, typename T2>
-	value_t<T> bitcast(T2 expr)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_noncast<U, T>::is_ok>>
+	static auto noncast(T&& expr)
 	{
-		value_t<T> result;
-		result.value = m_ir->CreateBitCast(expr.eval(m_ir), result.get_type(m_context));
-		return result;
+		return llvm_noncast<U, T>{std::forward<T>(expr)};
 	}
 
-	template <typename T, typename T2>
-	value_t<T> trunc(T2 expr)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_bitcast<U, T>::is_ok>>
+	static auto bitcast(T&& expr)
 	{
-		value_t<T> result;
-		result.value = m_ir->CreateTrunc(expr.eval(m_ir), result.get_type(m_context));
-		return result;
+		return llvm_bitcast<U, T>{std::forward<T>(expr)};
 	}
 
-	template <typename T, typename T2>
-	value_t<T> sext(T2 expr)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_trunc<U, T>::is_ok>>
+	static auto trunc(T&& expr)
 	{
-		value_t<T> result;
-		result.value = m_ir->CreateSExt(expr.eval(m_ir), result.get_type(m_context));
-		return result;
+		return llvm_trunc<U, T>{std::forward<T>(expr)};
 	}
 
-	template <typename T, typename T2>
-	value_t<T> zext(T2 expr)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_sext<U, T>::is_ok>>
+	static auto sext(T&& expr)
 	{
-		value_t<T> result;
-		result.value = m_ir->CreateZExt(expr.eval(m_ir), result.get_type(m_context));
-		return result;
+		return llvm_sext<U, T>{std::forward<T>(expr)};
+	}
+
+	template <typename U, typename T, typename = std::enable_if_t<llvm_zext<U, T>::is_ok>>
+	static auto zext(T&& expr)
+	{
+		return llvm_zext<U, T>{std::forward<T>(expr)};
+	}
+
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_select<T, U, V>::is_ok>>
+	static auto select(T&& c, U&& a, V&& b)
+	{
+		return llvm_select<T, U, V>{std::forward<T>(c), std::forward<U>(a), std::forward<V>(b)};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<llvm_min<T, U>::is_ok>>
+	static auto min(T&& a, U&& b)
+	{
+		return llvm_min<T, U>{std::forward<T>(a), std::forward<U>(b)};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<llvm_min<T, U>::is_ok>>
+	static auto max(T&& a, U&& b)
+	{
+		return llvm_max<T, U>{std::forward<T>(a), std::forward<U>(b)};
 	}
 
 	// Get signed addition overflow into the sign bit (s = a + b)
@@ -1194,17 +1431,6 @@ public:
 		return result;
 	}
 
-	// Select (c ? a : b)
-	template <typename T, typename T2>
-	auto select(T2 c, T a, T b)
-	{
-		static_assert(value_t<typename T2::type>::esize == 1, "select: expected bool type (first argument)");
-		static_assert(value_t<typename T2::type>::is_vector == value_t<typename T::type>::is_vector, "select: incompatible arguments (vectors)");
-		T result;
-		result.value = m_ir->CreateSelect(c.eval(m_ir), a.eval(m_ir), b.eval(m_ir));
-		return result;
-	}
-
 	template <typename T, typename E>
 	auto insert(T v, u64 i, E e)
 	{
@@ -1243,24 +1469,6 @@ public:
 		value_t<T> result;
 		static_assert(result.is_vector);
 		result.value = m_ir->CreateVectorSplat(result.is_vector, v.eval(m_ir));
-		return result;
-	}
-
-	// Min
-	template <typename T>
-	auto min(T a, T b)
-	{
-		T result;
-		result.value = m_ir->CreateSelect((a > b).eval(m_ir), b.eval(m_ir), a.eval(m_ir));
-		return result;
-	}
-
-	// Max
-	template <typename T>
-	auto max(T a, T b)
-	{
-		T result;
-		result.value = m_ir->CreateSelect((a > b).eval(m_ir), a.eval(m_ir), b.eval(m_ir));
 		return result;
 	}
 
