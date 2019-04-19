@@ -5678,7 +5678,8 @@ public:
 			return;
 		}
 
-		set_vr(op.rt4, merge(get_vr(op.rc), get_vr(op.rb), get_vr(op.ra)));
+		const auto c = get_vr(op.rc);
+		set_vr(op.rt4, (get_vr(op.rb) & c) | (get_vr(op.ra) & ~c));
 	}
 
 	void SHUFB(spu_opcode_t op) //

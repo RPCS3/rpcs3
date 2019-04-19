@@ -1296,20 +1296,6 @@ public:
 		return llvm_max<T, U>{std::forward<T>(a), std::forward<U>(b)};
 	}
 
-	// Get signed addition overflow into the sign bit (s = a + b)
-	template <typename T>
-	static inline auto scarry(T a, T b, T s)
-	{
-		return (b ^ s) & ~(a ^ b);
-	}
-
-	// Bitwise select (c ? a : b)
-	template <typename T>
-	static inline auto merge(T c, T a, T b)
-	{
-		return (a & c) | (b & ~c);
-	}
-
 	// Rotate left
 	template <typename T>
 	static inline auto rol(T a, T b)

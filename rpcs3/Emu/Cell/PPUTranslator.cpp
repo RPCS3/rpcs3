@@ -950,8 +950,8 @@ void PPUTranslator::VMHADDSHS(ppu_opcode_t op)
 	// m.value = m_ir->CreateOr(m.value, m_ir->CreateLShr(m_ir->CreateMul(a.value, b.value), 15));
 	// const auto s = eval(c + m);
 	// const auto z = eval((c >> 15) ^ 0x7fff);
-	// const auto x = eval(scarry(c, m, s) >> 15);
-	// set_vr(op.vd, eval(merge(x, z, s)));
+	// const auto x = eval(((m ^ s) & ~(c ^ m)) >> 15);
+	// set_vr(op.vd, eval((z & x) | (s & ~x)));
 	//SetSat(IsNotZero(saturated.second));
 }
 
@@ -1078,8 +1078,9 @@ void PPUTranslator::VMSUMSHS(ppu_opcode_t op)
 	const auto m = eval(ml + mh);
 	const auto s = eval(m + c);
 	const auto z = eval((c >> 31) ^ 0x7fffffff);
-	const auto x = eval(scarry(c, eval(m ^ sext<s32[4]>(m == 0x80000000u)), s) >> 31);
-	set_vr(op.vd, eval(merge(x, z, s)));
+	const auto mx = eval(m ^ sext<s32[4]>(m == 0x80000000u));
+	const auto x = eval(((mx ^ s) & ~(c ^ mx)) >> 31);
+	set_vr(op.vd, eval((z & x) | (s & ~x)));
 	SetSat(IsNotZero(x.value));
 }
 
