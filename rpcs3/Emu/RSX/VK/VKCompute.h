@@ -81,9 +81,9 @@ namespace vk
 					break;
 				case vk::driver_vendor::AMD:
 				case vk::driver_vendor::RADV:
-					unroll_loops = false;
-					optimal_kernel_size = 1;
-					optimal_group_size = 64;
+					unroll_loops = true;
+					optimal_group_size = 32;
+					optimal_kernel_size = 16;
 					break;
 				}
 
