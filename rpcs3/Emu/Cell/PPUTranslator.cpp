@@ -1301,20 +1301,20 @@ void PPUTranslator::VRFIZ(ppu_opcode_t op)
 
 void PPUTranslator::VRLB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRLH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRLW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)

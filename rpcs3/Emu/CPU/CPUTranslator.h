@@ -667,6 +667,120 @@ inline llvm_shr<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator >>
 	return {a1, {c}};
 }
 
+template <typename A1, typename A2, typename A3, typename T = llvm_common_t<A1, A2, A3>>
+struct llvm_fshl
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+	llvm_expr_t<A3> a3;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_fshl<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	static llvm::Function* get_fshl(llvm::IRBuilder<>* ir)
+	{
+		const auto module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::fshl, {llvm_value_t<T>::get_type(ir->getContext())});
+	}
+
+	static llvm::Value* fold(llvm::IRBuilder<>* ir, llvm::Value* v1, llvm::Value* v2, llvm::Value* v3)
+	{
+		// Compute constant result.
+		const u64 size = v3->getType()->getScalarSizeInBits();
+		const auto val = ir->CreateURem(v3, llvm::ConstantInt::get(v3->getType(), size));
+		const auto shl = ir->CreateShl(v1, val);
+		const auto shr = ir->CreateLShr(v2, ir->CreateSub(llvm::ConstantInt::get(v3->getType(), size - 1), val));
+		return ir->CreateOr(shl, ir->CreateLShr(shr, 1));
+	}
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+		const auto v3 = a3.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2) && llvm::isa<llvm::Constant>(v3))
+		{
+			return fold(ir, v1, v2, v3);
+		}
+
+		return ir->CreateCall(get_fshl(ir), {v1, v2, v3});
+	}
+};
+
+template <typename A1, typename A2, typename A3, typename T = llvm_common_t<A1, A2, A3>>
+struct llvm_fshr
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+	llvm_expr_t<A3> a3;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_fshr<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	static llvm::Function* get_fshr(llvm::IRBuilder<>* ir)
+	{
+		const auto module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::fshr, {llvm_value_t<T>::get_type(ir->getContext())});
+	}
+
+	static llvm::Value* fold(llvm::IRBuilder<>* ir, llvm::Value* v1, llvm::Value* v2, llvm::Value* v3)
+	{
+		// Compute constant result.
+		const u64 size = v3->getType()->getScalarSizeInBits();
+		const auto val = ir->CreateURem(v3, llvm::ConstantInt::get(v3->getType(), size));
+		const auto shr = ir->CreateLShr(v2, val);
+		const auto shl = ir->CreateShl(v1, ir->CreateSub(llvm::ConstantInt::get(v3->getType(), size - 1), val));
+		return ir->CreateOr(shr, ir->CreateShl(shl, 1));
+	}
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+		const auto v3 = a3.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2) && llvm::isa<llvm::Constant>(v3))
+		{
+			return fold(ir, v1, v2, v3);
+		}
+
+		return ir->CreateCall(get_fshr(ir), {v1, v2, v3});
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_rol
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_rol<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2))
+		{
+			return llvm_fshl<A1, A1, A2>::fold(ir, v1, v1, v2);
+		}
+
+		return ir->CreateCall(llvm_fshl<A1, A1, A2>::get_fshl(ir), {v1, v1, v2});
+	}
+};
+
 template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
 struct llvm_and
 {
@@ -1296,12 +1410,22 @@ public:
 		return llvm_max<T, U>{std::forward<T>(a), std::forward<U>(b)};
 	}
 
-	// Rotate left
-	template <typename T>
-	static inline auto rol(T a, T b)
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_fshl<T, U, V>::is_ok>>
+	static auto fshl(T&& a, U&& b, V&& c)
 	{
-		static constexpr u64 mask = value_t<typename T::type>::esize - 1;
-		return a << (b & mask) | a >> (-b & mask);
+		return llvm_fshl<T, U, V>{std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)};
+	}
+
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_fshr<T, U, V>::is_ok>>
+	static auto fshr(T&& a, U&& b, V&& c)
+	{
+		return llvm_fshr<T, U, V>{std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<llvm_rol<T, U>::is_ok>>
+	static auto rol(T&& a, U&& b)
+	{
+		return llvm_rol<T, U>{std::forward<T>(a), std::forward<U>(b)};
 	}
 
 	// Add with saturation
