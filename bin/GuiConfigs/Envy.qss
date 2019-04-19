@@ -625,14 +625,3 @@ QLabel#memory_viewer_ascii_panel {
 	background-color: #131313;
 }
 
-/* Debugger colors */
-QLabel#debugger_frame_breakpoint {
-	color: #000;
-	background-color: #f2d571;
-}
-
-QLabel#debugger_frame_pc {
-	color: #000;
-	background-color: #8cf944;
-}
-
