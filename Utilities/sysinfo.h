@@ -46,4 +46,6 @@ namespace utils
 	std::string get_system_info();
 
 	std::string get_firmware_version();
+
+	std::string get_OS_version();
 }
