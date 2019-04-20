@@ -59,19 +59,23 @@ namespace rsx
 			rsx->ctrl->ref.exchange(arg);
 		}
 
-		void semaphore_acquire(thread* rsx, u32 _reg, u32 arg)
+		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
-			if (vm::read32(addr) == arg) return;
+
+#ifdef IS_LE_MACHINE
+			arg = se_storage<u32>::swap(arg);
+			const auto& sema = vm::_ref<le_t<u32>>(addr);
+#else
+			const auto& sema = vm::_ref<u32>(addr);
+#endif
+			// TODO: Remove vblank semaphore hack
+			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
 
 			u64 start = get_system_time();
-			while (vm::read32(addr) != arg)
+			while (sema != arg)
 			{
-				// todo: LLE: why does this one keep hanging? is it vsh system semaphore? whats actually pushing this to the command buffer?!
-				if (addr == get_current_renderer()->ctxt_addr + 0x30)
-					return;
-
 				if (Emu.IsStopped())
 					return;
 

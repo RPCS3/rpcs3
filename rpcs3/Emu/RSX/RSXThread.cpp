@@ -527,20 +527,13 @@ namespace rsx
 		fesetround(FE_TONEAREST);
 
 		// TODO: exit condition
-		while (!Emu.IsStopped())
+		while (true)
 		{
 			// Wait for external pause events
 			if (external_interrupt_lock.load())
 			{
 				external_interrupt_ack.store(true);
 				while (external_interrupt_lock.load()) _mm_pause();
-			}
-
-			// Idle if emulation paused
-			if (Emu.IsPaused())
-			{
-				std::this_thread::sleep_for(1ms);
-				continue;
 			}
 
 			// Note a possible rollback address
@@ -559,6 +552,20 @@ namespace rsx
 
 			// Execute FIFO queue
 			run_FIFO();
+
+			if (!Emu.IsRunning())
+			{
+				// Idle if emulation paused
+				while (Emu.IsPaused())
+				{
+					std::this_thread::sleep_for(1ms);
+				}
+
+				if (Emu.IsStopped())
+				{
+					break;
+				}
+			}
 		}
 	}
 
@@ -900,12 +907,14 @@ namespace rsx
 
 		if (!in_begin_end && state != FIFO_state::lock_wait)
 		{
-			reader_lock lock(m_mtx_task);
-
-			if (m_invalidated_memory_range.valid())
+			if (atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
 			{
-				lock.upgrade();
-				handle_invalidated_memory_range();
+				std::lock_guard lock(m_mtx_task);
+
+				if (m_invalidated_memory_range.valid())
+				{
+					handle_invalidated_memory_range();
+				}
 			}
 		}
 	}
@@ -2085,7 +2094,7 @@ namespace rsx
 		}
 	}
 
-	void thread::flip(int buffer)
+	void thread::flip(int buffer, bool emu_flip)
 	{
 		if (!(async_flip_requested & flip_request::any))
 		{
@@ -2126,7 +2135,14 @@ namespace rsx
 				m_flattener.force_disable();
 			}
 
-			async_flip_requested.clear();
+			if (emu_flip) 
+			{
+				async_flip_requested.clear(flip_request::emu_requested);
+			}
+			else
+			{
+				async_flip_requested.clear(flip_request::native_ui);
+			}
 		}
 
 		if (!skip_frame)
@@ -2453,7 +2469,7 @@ namespace rsx
 
 		int_flip_index++;
 		current_display_buffer = buffer;
-		flip(buffer);
+		flip(buffer, true);
 
 		last_flip_time = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;

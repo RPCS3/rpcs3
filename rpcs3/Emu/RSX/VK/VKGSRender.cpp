@@ -2488,7 +2488,7 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
 			flush_command_queue(true);
-			flip((s32)current_display_buffer);
+			flip((s32)current_display_buffer, false);
 		}
 	}
 }
@@ -3194,12 +3194,12 @@ void VKGSRender::reinitialize_swapchain()
 	renderer_unavailable = false;
 }
 
-void VKGSRender::flip(int buffer)
+void VKGSRender::flip(int buffer, bool emu_flip)
 {
 	if (skip_frame || renderer_unavailable)
 	{
 		m_frame->flip(m_context);
-		rsx::thread::flip(buffer);
+		rsx::thread::flip(buffer, emu_flip);
 
 		if (!skip_frame)
 		{
@@ -3537,7 +3537,7 @@ void VKGSRender::flip(int buffer)
 	//NOTE:Resource destruction is handled within the real swap handler
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(buffer);
+	rsx::thread::flip(buffer, emu_flip);
 
 	//Do not reset perf counters if we are skipping the next frame
 	if (skip_frame) return;

@@ -1,7 +1,7 @@
 ﻿#include "stdafx.h"
 #include "StaticHLE.h"
 
-logs::channel static_hle("static_hle");
+LOG_CHANNEL(static_hle);
 
 // for future use
 DECLARE(ppu_module_manager::static_hle) ("static_hle", []()

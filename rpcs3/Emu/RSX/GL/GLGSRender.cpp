@@ -1564,7 +1564,7 @@ void GLGSRender::update_draw_state()
 	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
 }
 
-void GLGSRender::flip(int buffer)
+void GLGSRender::flip(int buffer, bool emu_flip)
 {
 	if (skip_frame)
 	{
@@ -1789,7 +1789,7 @@ void GLGSRender::flip(int buffer)
 	}
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(buffer);
+	rsx::thread::flip(buffer, emu_flip);
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
@@ -1910,7 +1910,7 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 	{
 		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
-			flip((s32)current_display_buffer);
+			flip((s32)current_display_buffer, false);
 		}
 	}
 }
