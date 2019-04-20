@@ -668,10 +668,10 @@ std::string FragmentProgramDecompiler::BuildCode()
 		const std::string half4 = getHalfTypeName(4);
 		const std::string builtin_funcs =
 		"#define clamp16(x) " + half4 + "(x)\n"
-		"#define _builtin_min(x, y) min($float4(x), $float4(y))\n"
-		"#define _builtin_max(x, y) max($float4(x), $float4(y))\n"
+		"#define _builtin_min min\n"
+		"#define _builtin_max max\n"
 		"#define _builtin_lit lit_legacy\n"
-		"#define _builtin_distance(x, y) distance($float4(x), $float4(y))\n"
+		"#define _builtin_distance(x, y) distance\n"
 		"#define _builtin_rcp(x) (1. / x)\n"
 		"#define _builtin_rsq(x) (1. / sqrt(x))\n"
 		"#define _builtin_log2(x) log2(abs(x))\n"
@@ -756,8 +756,8 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
-	case RSX_FP_OPCODE_MAX: SetDst("_builtin_max($0, $1)"); return true;
-	case RSX_FP_OPCODE_MIN: SetDst("_builtin_min($0, $1)"); return true;
+	case RSX_FP_OPCODE_MAX: SetDst("_builtin_max($0, $1)", OPFLAGS::src_cast_f32); return true;
+	case RSX_FP_OPCODE_MIN: SetDst("_builtin_min($0, $1)", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
 	case RSX_FP_OPCODE_RCP: SetDst("_builtin_rcp($0.x).xxxx"); return true;
@@ -773,7 +773,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 
 	// SCB-only ops
 	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
-	case RSX_FP_OPCODE_DST: SetDst("_builtin_distance($0, $1).xxxx"); return true;
+	case RSX_FP_OPCODE_DST: SetDst("_builtin_distance($0, $1).xxxx", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
@@ -782,7 +782,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		SetDst("_builtin_lit($0)");
 		properties.has_lit_op = true;
 		return true;
-	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)", OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)", OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_LRP: SetDst("$Ty($2 * (1 - $0) + $1 * $0)", OPFLAGS::skip_type_cast); return true;
 	case RSX_FP_OPCODE_LG2: SetDst("_builtin_log2($0.x).xxxx"); return true;
 		// Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
