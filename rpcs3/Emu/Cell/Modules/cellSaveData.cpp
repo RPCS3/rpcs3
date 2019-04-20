@@ -803,12 +803,15 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return CELL_SAVEDATA_ERROR_PARAM;
 			}
 
-			for (u8 resv : statSet->setParam->reserved2)
+			if (g_ps3_sdk_version > 0x36FFFF)
 			{
-				if (resv)
+				for (u8 resv : statSet->setParam->reserved2)
 				{
-					// ****** sysutil savedata parameter error : 58 ******
-					return CELL_SAVEDATA_ERROR_PARAM;
+					if (resv)
+					{
+						// ****** sysutil savedata parameter error : 58 ******
+						return CELL_SAVEDATA_ERROR_PARAM;
+					}
 				}
 			}
 
