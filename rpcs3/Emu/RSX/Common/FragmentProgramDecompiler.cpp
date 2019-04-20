@@ -618,16 +618,35 @@ std::string FragmentProgramDecompiler::BuildCode()
 	insertGlobalFunctions(OS);
 
 	std::string float4 = getFloatTypeName(4);
+	const bool glsl = float4 == "vec4";
 
 	if (!device_props.has_native_half_support)
 	{
 		// Accurate float to half clamping (preserves IEEE-754 NaN)
 		std::string clamp_func =
 		"$float4 clamp16($float4 x)\n"
-		"{\n"
-		"	$float4 sel = $float4(isnan(x));\n"
-		"	$float4 clamped = clamp(x, -65504., +65504.);\n"
-		"	return _select(clamped, x, sel);\n"
+		"{\n";
+
+		if (glsl)
+		{
+			clamp_func +=
+			"	uvec4 bits = floatBitsToUint(x);\n"
+			"	uvec4 extend = uvec4(0x7f800000);\n"
+			"	bvec4 test = equal(bits & extend, extend);\n"
+			"	vec4 clamped = clamp(x, -65504., +65504.);\n"
+			"	return _select(clamped, x, test);\n";
+		}
+		else
+		{
+			clamp_func +=
+			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
+			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
+			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
+			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
+			"	return x;\n";
+		}
+
+		clamp_func +=
 		"}\n\n";
 
 		OS << Format(clamp_func);
@@ -668,12 +687,24 @@ std::string FragmentProgramDecompiler::BuildCode()
 	"$float4 _builtin_divsq($float4 a, float b)\n"
 	"{"
 	"	$float4 tmp = a / sqrt(b);\n"
-	"	$float4 choice = abs(a);\n"
-	"	if (choice.x > 0.) a.x = tmp.x;\n"
-	"	if (choice.y > 0.) a.y = tmp.y;\n"
-	"	if (choice.z > 0.) a.z = tmp.z;\n"
-	"	if (choice.w > 0.) a.w = tmp.w;\n"
-	"	return a;\n"
+	"	$float4 choice = abs(a);\n";
+
+	if (glsl)
+	{
+		divsq_func +=
+		"	return _select(a, tmp, greaterThan(choice, vec4(0.)));\n";
+	}
+	else
+	{
+		divsq_func +=
+		"	if (choice.x > 0.) a.x = tmp.x;\n"
+		"	if (choice.y > 0.) a.y = tmp.y;\n"
+		"	if (choice.z > 0.) a.z = tmp.z;\n"
+		"	if (choice.w > 0.) a.w = tmp.w;\n"
+		"	return a;\n";
+	}
+
+	divsq_func +=
 	"}\n\n";
 
 	OS << Format(divsq_func);
