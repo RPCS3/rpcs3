@@ -668,6 +668,11 @@ std::string spu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
 
+	if (group)
+	{
+		fmt::append(ret, "\nGroup ID: 0x%x", group->id);
+	}
+
 	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
 	fmt::append(ret, "\nTag Mask: 0x%08x", ch_tag_mask);
