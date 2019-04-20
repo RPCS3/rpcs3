@@ -580,20 +580,41 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
 		info->status[i] = pads[i]->m_port_status;
 
+		// TODO: Allow selecting different product IDs
 		switch (pads[i]->m_class_type)
 		{
 		case CELL_PAD_PCLASS_TYPE_GUITAR:
-			// Guitar Hero Guitar
+			// Sony Computer Entertainment America
 			info->vendor_id[i] = 0x12BA;
-			info->product_id[i] = 0x0200;
+			// RedOctane Guitar (Guitar Hero)
+			info->product_id[i] = 0x0100;
+			// Harmonix Guitar (Rock Band)
+			// info->product_id[i] = 0x0200;
 			break;
 		case CELL_PAD_PCLASS_TYPE_DRUM:
-			// Guitar Hero Drum
+			// Sony Computer Entertainment America
 			info->vendor_id[i] = 0x12BA;
-			info->product_id[i] = 0x0210;
+			// RedOctane Drum Kit (Guitar Hero)
+			info->product_id[i] = 0x0120;
+			// Harmonix Drum Kit (Rock Band)
+			// info->product_id[i] = 0x0210;
+			break;
+		case CELL_PAD_PCLASS_TYPE_DJ:
+			// Sony Computer Entertainment America
+			info->vendor_id[i] = 0x12BA;
+			// DJ Hero Turntable
+			info->product_id[i] = 0x0140;
+			break;
+		case CELL_PAD_PCLASS_TYPE_DANCEMAT:
+			// Konami Digital Entertainment
+			info->vendor_id[i] = 0x1CCF;
+			// Dance Dance Revolution Mat
+			info->product_id[i] = 0x0140;
 			break;
 		default:
+			// Sony Corp.
 			info->vendor_id[i] = 0x054C;
+			// PlayStation 3 Controller
 			info->product_id[i] = 0x0268;
 			break;
 		}
