@@ -650,43 +650,32 @@ std::string FragmentProgramDecompiler::BuildCode()
 		"}\n\n";
 
 		OS << Format(clamp_func);
-
-		OS <<
-		"#define _builtin_min min\n"
-		"#define _builtin_max max\n"
-		"#define _builtin_lit lit_legacy\n"
-		"#define _builtin_distance distance\n"
-		"#define _builtin_rcp(x) (1. / x)\n"
-		"#define _builtin_rsq(x) (1. / sqrt(x))\n"
-		"#define _builtin_log2(x) log2(abs(x))\n"
-		"#define _builtin_div(x, y) (x / y)\n\n";
 	}
 	else
 	{
 		// Define raw casts from f32->f16
-		// Also define upcasting to avoid ambiguous function overloading in case of mixed inputs
-		const std::string half4 = getHalfTypeName(4);
-		const std::string builtin_funcs =
-		"#define clamp16(x) " + half4 + "(x)\n"
-		"#define _builtin_min min\n"
-		"#define _builtin_max max\n"
-		"#define _builtin_lit lit_legacy\n"
-		"#define _builtin_distance(x, y) distance\n"
-		"#define _builtin_rcp(x) (1. / x)\n"
-		"#define _builtin_rsq(x) (1. / sqrt(x))\n"
-		"#define _builtin_log2(x) log2(abs(x))\n"
-		"#define _builtin_div(x, y) (x / y)\n\n";
-
-		OS << Format(builtin_funcs);
+		OS <<
+		"#define clamp16(x) " << getHalfTypeName(4) << "(x)\n";
 	}
+
+	OS <<
+	"#define _builtin_min min\n"
+	"#define _builtin_max max\n"
+	"#define _builtin_lit lit_legacy\n"
+	"#define _builtin_distance distance\n"
+	"#define _builtin_log2(x) log2(abs(x))\n"
+	"#define _builtin_sqrt(x) sqrt(abs(x))\n"
+	"#define _builtin_rcp(x) (1. / x)\n"
+	"#define _builtin_rsq(x) (1. / _builtin_sqrt(x))\n"
+	"#define _builtin_div(x, y) (x / y)\n\n";
 
 	// Define RSX-compliant DIVSQ
 	// If the numerator is 0, the result is always 0 even if the denominator is 0
 	// NOTE: This operation is component-wise and cannot be accelerated with lerp/mix because these always return NaN if any of the choices is NaN
 	std::string divsq_func =
 	"$float4 _builtin_divsq($float4 a, float b)\n"
-	"{"
-	"	$float4 tmp = a / sqrt(b);\n"
+	"{\n"
+	"	$float4 tmp = a / _builtin_sqrt(b);\n"
 	"	$float4 choice = abs(a);\n";
 
 	if (glsl)
@@ -744,6 +733,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	// DIV is IEEE compliant as is MUL, LG2, EX2 with exception to the fact that they operate on absolute values (Needs more testing)
 	// DIVSQ is not compliant. Result is 0 if numerator is 0 regardless of denominator
 	// RSQ(0) and RCP(0) return INF as expected
+	// RSQ and LG2 ignore the sign of the inputs (Metro Last Light, GTA4)
 	// Some games that rely on broken DIVSQ behaviour include Dark Souls II and Super Puzzle Fighter II Turbo HD Remix
 
 	switch (opcode)
