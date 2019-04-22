@@ -4986,17 +4986,6 @@ public:
 	void GB(spu_opcode_t op)
 	{
 		const auto a = get_vr<s32[4]>(op.ra);
-
-		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
-		{
-			v128 data = get_const_vector(cv, m_pos, 680);
-			u32 res = 0;
-			for (u32 i = 0; i < 4; i++)
-				res |= (data._u32[i] & 1) << i;
-			set_vr(op.rt, build<u32[4]>(0, 0, 0, res));
-			return;
-		}
-
 		const auto m = zext<u32>(bitcast<i4>(trunc<bool[4]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
@@ -5004,17 +4993,6 @@ public:
 	void GBH(spu_opcode_t op)
 	{
 		const auto a = get_vr<s16[8]>(op.ra);
-
-		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
-		{
-			v128 data = get_const_vector(cv, m_pos, 684);
-			u32 res = 0;
-			for (u32 i = 0; i < 8; i++)
-				res |= (data._u16[i] & 1) << i;
-			set_vr(op.rt, build<u32[4]>(0, 0, 0, res));
-			return;
-		}
-
 		const auto m = zext<u32>(bitcast<u8>(trunc<bool[8]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
@@ -5022,17 +5000,6 @@ public:
 	void GBB(spu_opcode_t op)
 	{
 		const auto a = get_vr<s8[16]>(op.ra);
-
-		if (auto cv = llvm::dyn_cast<llvm::Constant>(a.value))
-		{
-			v128 data = get_const_vector(cv, m_pos, 688);
-			u32 res = 0;
-			for (u32 i = 0; i < 16; i++)
-				res |= (data._u8[i] & 1) << i;
-			set_vr(op.rt, build<u32[4]>(0, 0, 0, res));
-			return;
-		}
-
 		const auto m = zext<u32>(bitcast<u16>(trunc<bool[16]>(a)));
 		set_vr(op.rt, insert(splat<u32[4]>(0), 3, eval(m)));
 	}
@@ -5040,14 +5007,6 @@ public:
 	void FSM(spu_opcode_t op)
 	{
 		const auto v = extract(get_vr(op.ra), 3);
-
-		if (auto cv = llvm::dyn_cast<llvm::ConstantInt>(v.value))
-		{
-			const u64 v = cv->getZExtValue() & 0xf;
-			set_vr(op.rt, -(build<u32[4]>(v >> 0, v >> 1, v >> 2, v >> 3) & 1));
-			return;
-		}
-
 		const auto m = bitcast<bool[4]>(trunc<i4>(v));
 		set_vr(op.rt, sext<s32[4]>(m));
 	}
@@ -5055,14 +5014,6 @@ public:
 	void FSMH(spu_opcode_t op)
 	{
 		const auto v = extract(get_vr(op.ra), 3);
-
-		if (auto cv = llvm::dyn_cast<llvm::ConstantInt>(v.value))
-		{
-			const u64 v = cv->getZExtValue() & 0xff;
-			set_vr(op.rt, -(build<u16[8]>(v >> 0, v >> 1, v >> 2, v >> 3, v >> 4, v >> 5, v >> 6, v >> 7) & 1));
-			return;
-		}
-
 		const auto m = bitcast<bool[8]>(trunc<u8>(v));
 		set_vr(op.rt, sext<s16[8]>(m));
 	}
@@ -5070,14 +5021,6 @@ public:
 	void FSMB(spu_opcode_t op)
 	{
 		const auto v = extract(get_vr(op.ra), 3);
-
-		if (auto cv = llvm::dyn_cast<llvm::ConstantInt>(v.value))
-		{
-			const u64 v = cv->getZExtValue() & 0xffff;
-			op.i16 = static_cast<u32>(v);
-			return FSMBI(op);
-		}
-
 		const auto m = bitcast<bool[16]>(trunc<u16>(v));
 		set_vr(op.rt, sext<s8[16]>(m));
 	}
