@@ -133,6 +133,7 @@ class FragmentProgramDecompiler
 		no_src_mask = 1,
 		src_cast_f32 = 2,
 		skip_type_cast = 4,
+		texture_ref = 8,
 
 		op_extern = src_cast_f32 | skip_type_cast,
 	};
@@ -175,7 +176,7 @@ class FragmentProgramDecompiler
 	std::string AddX2d();
 
 	//Prevents operations from overflowing the desired range (tested with fp_dynamic3 autotest sample, DS2 for src1.input_prec_mod)
-	std::string ClampValue(const std::string& code, u32 precision, bool is_half_type);
+	std::string ClampValue(const std::string& code, u32 precision);
 
 	/**
 	* Returns true if the dst set is not a vector (i.e only a single component)
@@ -259,6 +260,8 @@ public:
 		bool has_no_output = false;
 		bool has_discard_op = false;
 		bool has_tex_op = false;
+		bool has_divsq = false;
+		bool has_clamp = false;
 	}
 	properties;
 
