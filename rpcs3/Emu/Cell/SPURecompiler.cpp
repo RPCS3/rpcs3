@@ -4326,7 +4326,7 @@ public:
 
 	void WRCH(spu_opcode_t op) //
 	{
-		const auto val = extract(get_vr(op.rt), 3);
+		const auto val = eval(extract(get_vr(op.rt), 3));
 
 		if (m_interp_magn)
 		{
@@ -5051,8 +5051,7 @@ public:
 		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
 		const auto i = eval(~s & 0xf);
 		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
-		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt8(0x3), i.value);
-		set_vr(op.rt, r);
+		set_vr(op.rt, insert(r, i, splat<u8>(0x03)));
 	}
 
 	void CHX(spu_opcode_t op)
@@ -5060,8 +5059,7 @@ public:
 		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
 		const auto i = eval(~s >> 1 & 0x7);
 		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
-		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt16(0x0203), i.value);
-		set_vr(op.rt, r);
+		set_vr(op.rt, insert(r, i, splat<u16>(0x0203)));
 	}
 
 	void CWX(spu_opcode_t op)
@@ -5069,8 +5067,7 @@ public:
 		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
 		const auto i = eval(~s >> 2 & 0x3);
 		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
-		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt32(0x010203), i.value);
-		set_vr(op.rt, r);
+		set_vr(op.rt, insert(r, i, splat<u32>(0x010203)));
 	}
 
 	void CDX(spu_opcode_t op)
@@ -5078,8 +5075,7 @@ public:
 		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
 		const auto i = eval(~s >> 3 & 0x1);
 		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
-		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt64(0x01020304050607), i.value);
-		set_vr(op.rt, r);
+		set_vr(op.rt, insert(r, i, splat<u64>(0x01020304050607)));
 	}
 
 	void ROTQBI(spu_opcode_t op)
@@ -5143,8 +5139,7 @@ public:
 		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
 		const auto i = eval(~a & 0xf);
 		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
-		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt8(0x3), i.value);
-		set_vr(op.rt, r);
+		set_vr(op.rt, insert(r, i, splat<u8>(0x03)));
 	}
 
 	void CHD(spu_opcode_t op)
@@ -5152,8 +5147,7 @@ public:
 		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
 		const auto i = eval(~a >> 1 & 0x7);
 		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
-		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt16(0x0203), i.value);
-		set_vr(op.rt, r);
+		set_vr(op.rt, insert(r, i, splat<u16>(0x0203)));
 	}
 
 	void CWD(spu_opcode_t op)
@@ -5161,8 +5155,7 @@ public:
 		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
 		const auto i = eval(~a >> 2 & 0x3);
 		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
-		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt32(0x010203), i.value);
-		set_vr(op.rt, r);
+		set_vr(op.rt, insert(r, i, splat<u32>(0x010203)));
 	}
 
 	void CDD(spu_opcode_t op)
@@ -5170,8 +5163,7 @@ public:
 		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
 		const auto i = eval(~a >> 3 & 0x1);
 		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
-		r.value = m_ir->CreateInsertElement(r.value, m_ir->getInt64(0x01020304050607), i.value);
-		set_vr(op.rt, r);
+		set_vr(op.rt, insert(r, i, splat<u64>(0x01020304050607)));
 	}
 
 	void ROTQBII(spu_opcode_t op)
@@ -5646,22 +5638,22 @@ public:
 			if (c0 && c1 && c1->getType() == get_type<u64>() && c1->getZExtValue() == 0x01020304050607)
 			{
 				vtype = get_type<u64[2]>();
-				_new  = extract(get_vr<u64[2]>(op.ra), 1).value;
+				_new  = extract(get_vr<u64[2]>(op.ra), 1).eval(m_ir);
 			}
 			else if (c0 && c1 && c1->getType() == get_type<u32>() && c1->getZExtValue() == 0x010203)
 			{
 				vtype = get_type<u32[4]>();
-				_new  = extract(get_vr<u32[4]>(op.ra), 3).value;
+				_new  = extract(get_vr<u32[4]>(op.ra), 3).eval(m_ir);
 			}
 			else if (c0 && c1 && c1->getType() == get_type<u16>() && c1->getZExtValue() == 0x0203)
 			{
 				vtype = get_type<u16[8]>();
-				_new  = extract(get_vr<u16[8]>(op.ra), 6).value;
+				_new  = extract(get_vr<u16[8]>(op.ra), 6).eval(m_ir);
 			}
 			else if (c0 && c1 && c1->getType() == get_type<u8>() && c1->getZExtValue() == 0x03)
 			{
 				vtype = get_type<u8[16]>();
-				_new  = extract(get_vr<u8[16]>(op.ra), 12).value;
+				_new  = extract(get_vr<u8[16]>(op.ra), 12).eval(m_ir);
 			}
 
 			if (vtype && _new)

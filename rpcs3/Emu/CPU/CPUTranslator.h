@@ -1405,6 +1405,55 @@ struct llvm_sub_sat
 	}
 };
 
+template <typename A1, typename I2, typename T = llvm_common_t<A1>, typename U = llvm_common_t<I2>>
+struct llvm_extract
+{
+	using type = std::remove_extent_t<T>;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<I2> i2;
+
+	static_assert(llvm_value_t<T>::is_vector, "llvm_extract<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int && !llvm_value_t<U>::is_vector, "llvm_extract<>: invalid index type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_vector &&
+		llvm_value_t<U>::is_int && !llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = i2.eval(ir);
+
+		return ir->CreateExtractElement(v1, v2);
+	}
+};
+
+template <typename A1, typename I2, typename A3, typename T = llvm_common_t<A1>, typename U = llvm_common_t<I2>, typename V = llvm_common_t<A3>>
+struct llvm_insert
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<I2> i2;
+	llvm_expr_t<A3> a3;
+
+	static_assert(llvm_value_t<T>::is_vector, "llvm_insert<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int && !llvm_value_t<U>::is_vector, "llvm_insert<>: invalid index type");
+	static_assert(std::is_same_v<V, std::remove_extent_t<T>>, "llvm_insert<>: invalid element type");
+
+	static constexpr bool is_ok = llvm_extract<A1, I2>::is_ok &&
+		std::is_same_v<V, std::remove_extent_t<T>>;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = i2.eval(ir);
+		const auto v3 = a3.eval(ir);
+
+		return ir->CreateInsertElement(v1, v3, v2);
+	}
+};
+
 class cpu_translator
 {
 protected:
@@ -1559,6 +1608,30 @@ public:
 		return llvm_sub_sat<T, U>{std::forward<T>(a), std::forward<U>(b)};
 	}
 
+	template <typename T, typename U, typename = std::enable_if_t<llvm_extract<T, U>::is_ok>>
+	static auto extract(T&& v, U&& i)
+	{
+		return llvm_extract<T, U>{std::forward<T>(v), std::forward<U>(i)};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_extract<T, llvm_const_int<u32>>::is_ok>>
+	static auto extract(T&& v, u32 i)
+	{
+		return llvm_extract<T, llvm_const_int<u32>>{std::forward<T>(v), llvm_const_int<u32>{i}};
+	}
+
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_insert<T, U, V>::is_ok>>
+	static auto insert(T&& v, U&& i, V&& e)
+	{
+		return llvm_insert<T, U, V>{std::forward<T>(v), std::forward<U>(i), std::forward<V>(e)};
+	}
+
+	template <typename T, typename V, typename = std::enable_if_t<llvm_insert<T, llvm_const_int<u32>, V>::is_ok>>
+	static auto insert(T&& v, u32 i, V&& e)
+	{
+		return llvm_insert<T, llvm_const_int<u32>, V>{std::forward<T>(v), llvm_const_int<u32>{i}, std::forward<V>(e)};
+	}
+
 	// Average: (a + b + 1) >> 1
 	template <typename T>
 	inline auto avg(T a, T b)
@@ -1577,22 +1650,6 @@ public:
 		const auto cxt = llvm::ConstantInt::get(cast_to, 1, false);
 		const auto abc = m_ir->CreateAdd(m_ir->CreateAdd(axt, bxt), cxt);
 		result.value = m_ir->CreateTrunc(m_ir->CreateLShr(abc, 1), result.get_type(m_context));
-		return result;
-	}
-
-	template <typename T, typename E>
-	auto insert(T v, u64 i, E e)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateInsertElement(v.eval(m_ir), e.eval(m_ir), i);
-		return result;
-	}
-
-	template <typename T>
-	auto extract(T v, u64 i)
-	{
-		typename value_t<typename T::type>::base result;
-		result.value = m_ir->CreateExtractElement(v.eval(m_ir), i);
 		return result;
 	}
 
