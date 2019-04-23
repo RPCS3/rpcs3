@@ -368,11 +368,30 @@ struct llvm_const_int
 
 	u64 val;
 
+	static constexpr bool is_ok = llvm_value_t<T>::is_int;
+
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		static_assert(llvm_value_t<T>::is_int, "llvm_const_int<>: invalid type");
 
 		return llvm::ConstantInt::get(llvm_value_t<T>::get_type(ir->getContext()), val, ForceSigned || llvm_value_t<T>::is_sint);
+	}
+};
+
+template <typename T>
+struct llvm_const_float
+{
+	using type = T;
+
+	f64 val;
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_float;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		static_assert(llvm_value_t<T>::is_float, "llvm_const_float<>: invalid type");
+
+		return llvm::ConstantFP::get(llvm_value_t<T>::get_type(ir->getContext()), val);
 	}
 };
 
@@ -1454,6 +1473,30 @@ struct llvm_insert
 	}
 };
 
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_splat
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(!llvm_value_t<T>::is_vector, "llvm_splat<>: invalid type");
+	static_assert(llvm_value_t<U>::is_vector, "llvm_splat<>: invalid result type");
+	static_assert(std::is_same_v<T, std::remove_extent_t<U>>, "llvm_splat<>: incompatible splat type");
+
+	static constexpr bool is_ok =
+		!llvm_value_t<T>::is_vector &&
+		llvm_value_t<U>::is_vector &&
+		std::is_same_v<T, std::remove_extent_t<U>>;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+
+		return ir->CreateVectorSplat(llvm_value_t<U>::is_vector, v1);
+	}
+};
+
 class cpu_translator
 {
 protected:
@@ -1632,6 +1675,24 @@ public:
 		return llvm_insert<T, llvm_const_int<u32>, V>{std::forward<T>(v), llvm_const_int<u32>{i}, std::forward<V>(e)};
 	}
 
+	template <typename T, typename = std::enable_if_t<llvm_const_int<T>::is_ok>>
+	static auto splat(u64 c)
+	{
+		return llvm_const_int<T>{c};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_const_float<T>::is_ok>>
+	static auto fsplat(f64 c)
+	{
+		return llvm_const_float<T>{c};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<llvm_splat<T, U>::is_ok>>
+	static auto vsplat(U&& v)
+	{
+		return llvm_splat<T, U>{std::forward<U>(v)};
+	}
+
 	// Average: (a + b + 1) >> 1
 	template <typename T>
 	inline auto avg(T a, T b)
@@ -1650,31 +1711,6 @@ public:
 		const auto cxt = llvm::ConstantInt::get(cast_to, 1, false);
 		const auto abc = m_ir->CreateAdd(m_ir->CreateAdd(axt, bxt), cxt);
 		result.value = m_ir->CreateTrunc(m_ir->CreateLShr(abc, 1), result.get_type(m_context));
-		return result;
-	}
-
-	template <typename T>
-	auto splat(u64 c)
-	{
-		value_t<T> result;
-		result.value = llvm::ConstantInt::get(result.get_type(m_context), c, result.is_sint);
-		return result;
-	}
-
-	template <typename T>
-	auto fsplat(f64 c)
-	{
-		value_t<T> result;
-		result.value = llvm::ConstantFP::get(result.get_type(m_context), c);
-		return result;
-	}
-
-	template <typename T, typename V>
-	auto vsplat(V v)
-	{
-		value_t<T> result;
-		static_assert(result.is_vector);
-		result.value = m_ir->CreateVectorSplat(result.is_vector, v.eval(m_ir));
 		return result;
 	}
 
