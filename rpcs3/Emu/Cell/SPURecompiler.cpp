@@ -2686,6 +2686,31 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return {get_vr<T>(args)...};
 	}
 
+	template <typename T = u32[4], uint I>
+	llvm_match_t<T> match_vr(const bf_t<u32, I, 7>& index)
+	{
+		llvm_match_t<T> r;
+
+		if (m_block)
+		{
+			auto v = m_block->reg.at(index);
+
+			if (v && v->getType() == get_type<T>())
+			{
+				r.value = v;
+				return r;
+			}
+		}
+
+		return r;
+	}
+
+	template <typename T = u32[4], typename... Args>
+	std::tuple<std::conditional_t<false, Args, llvm_match_t<T>>...> match_vrs(const Args&... args)
+	{
+		return {match_vr<T>(args)...};
+	}
+
 	void set_reg_fixed(u32 index, llvm::Value* value, bool fixup = true)
 	{
 		llvm::StoreInst* dummy{};
@@ -4962,6 +4987,18 @@ public:
 
 	void AND(spu_opcode_t op)
 	{
+		if (const auto [a, b] = match_vrs<u8[16]>(op.ra, op.rb); a && b)
+		{
+			set_vr(op.rt, a & b);
+			return;
+		}
+
+		if (const auto [a, b] = match_vrs<u16[8]>(op.ra, op.rb); a && b)
+		{
+			set_vr(op.rt, a & b);
+			return;
+		}
+
 		set_vr(op.rt, get_vr(op.ra) & get_vr(op.rb));
 	}
 

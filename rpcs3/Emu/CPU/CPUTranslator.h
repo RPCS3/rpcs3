@@ -361,6 +361,24 @@ struct is_llvm_expr_of<T, Of, std::void_t<typename is_llvm_expr<T>::type, typena
 template <typename T, typename... Types>
 using llvm_common_t = std::enable_if_t<(is_llvm_expr_of<T, Types>::ok && ...), typename is_llvm_expr<T>::type>;
 
+template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
+struct llvm_match_t
+{
+	using type = T;
+
+	llvm::Value* value = nullptr;
+
+	explicit operator bool() const
+	{
+		return value != nullptr;
+	}
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return value;
+	}
+};
+
 template <typename T, bool ForceSigned = false>
 struct llvm_const_int
 {
