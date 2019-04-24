@@ -5027,22 +5027,22 @@ public:
 
 	void ROTQBYBI(spu_opcode_t op)
 	{
-		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		sh = eval((sh - (zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf);
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = (sc - (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf;
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
 	{
-		auto sh = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		sh = eval(sh + (-(zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3) & 0x1f));
+		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sh = sc + (-(zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3) & 0x1f);
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void SHLQBYBI(spu_opcode_t op)
 	{
-		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		sh = eval(sh - (zshuffle<u8[16]>(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3));
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = sc - (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3);
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
@@ -5081,30 +5081,30 @@ public:
 	void ROTQBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(get_vr(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, fshl(a, zshuffle<u32[4]>(a, 3, 0, 1, 2), b));
+		const auto b = zshuffle(get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		set_vr(op.rt, fshl(a, zshuffle(a, 3, 0, 1, 2), b));
 	}
 
 	void ROTQMBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(-get_vr(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, fshr(zshuffle<u32[4]>(a, 1, 2, 3, 4), a, b));
+		const auto b = zshuffle(-get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		set_vr(op.rt, fshr(zshuffle(a, 1, 2, 3, 4), a, b));
 	}
 
 	void SHLQBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle<u32[4]>(get_vr(op.rb) & 0x7, 3, 3, 3, 3);
-		set_vr(op.rt, fshl(a, zshuffle<u32[4]>(a, 4, 0, 1, 2), b));
+		const auto b = zshuffle(get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		set_vr(op.rt, fshl(a, zshuffle(a, 4, 0, 1, 2), b));
 	}
 
 	void ROTQBY(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
-		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		sh = eval((sh - zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = eval((sc - zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -5112,8 +5112,8 @@ public:
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
-		auto sh = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		sh = eval(sh + (-zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
+		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sh = sc + (-zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -5121,17 +5121,17 @@ public:
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
-		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		sh = eval(sh - (zshuffle<u8[16]>(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f));
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = sc - (zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void ORX(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto x = zshuffle<u32[4]>(a, 2, 3, 0, 1) | a;
-		const auto y = zshuffle<u32[4]>(x, 1, 0, 3, 2) | x;
-		set_vr(op.rt, zshuffle<u32[4]>(y, 4, 4, 4, 3));
+		const auto x = zshuffle(a, 2, 3, 0, 1) | a;
+		const auto y = zshuffle(x, 1, 0, 3, 2) | x;
+		set_vr(op.rt, zshuffle(y, 4, 4, 4, 3));
 	}
 
 	void CBD(spu_opcode_t op)
@@ -5170,44 +5170,44 @@ public:
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = eval(get_imm(op.i7, false) & 0x7);
-		set_vr(op.rt, fshl(a, zshuffle<u32[4]>(a, 3, 0, 1, 2), b));
+		set_vr(op.rt, fshl(a, zshuffle(a, 3, 0, 1, 2), b));
 	}
 
 	void ROTQMBII(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = eval(-get_imm(op.i7, false) & 0x7);
-		set_vr(op.rt, fshr(zshuffle<u32[4]>(a, 1, 2, 3, 4), a, b));
+		set_vr(op.rt, fshr(zshuffle(a, 1, 2, 3, 4), a, b));
 	}
 
 	void SHLQBII(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
 		const auto b = eval(get_imm(op.i7, false) & 0x7);
-		set_vr(op.rt, fshl(a, zshuffle<u32[4]>(a, 4, 0, 1, 2), b));
+		set_vr(op.rt, fshl(a, zshuffle(a, 4, 0, 1, 2), b));
 	}
 
 	void ROTQBYI(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		sh = eval((sh - get_imm<u8[16]>(op.i7, false)) & 0xf);
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = (sc - get_imm<u8[16]>(op.i7, false)) & 0xf;
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void ROTQMBYI(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		auto sh = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		sh = eval(sh + (-get_imm<u8[16]>(op.i7, false) & 0x1f));
+		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sh = sc + (-get_imm<u8[16]>(op.i7, false) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void SHLQBYI(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		auto sh = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		sh = eval(sh - (get_imm<u8[16]>(op.i7, false) & 0x1f));
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = sc - (get_imm<u8[16]>(op.i7, false) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -5242,8 +5242,8 @@ public:
 		const auto b = get_vr<u16[8]>(op.rb);
 		const auto ahs = eval((a >> 8) + (a & 0xff));
 		const auto bhs = eval((b >> 8) + (b & 0xff));
-		const auto lsh = shuffle2<u16[8]>(ahs, bhs, 0, 9, 2, 11, 4, 13, 6, 15);
-		const auto hsh = shuffle2<u16[8]>(ahs, bhs, 1, 8, 3, 10, 5, 12, 7, 14);
+		const auto lsh = shuffle2(ahs, bhs, 0, 9, 2, 11, 4, 13, 6, 15);
+		const auto hsh = shuffle2(ahs, bhs, 1, 8, 3, 10, 5, 12, 7, 14);
 		set_vr(op.rt, lsh + hsh);
 	}
 
@@ -5952,7 +5952,7 @@ public:
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
 		{
-			const auto r = shuffle2<f64[2]>(get_vr<f64[4]>(op.ra), fsplat<f64[4]>(0.), 1, 3);
+			const auto r = shuffle2(get_vr<f64[4]>(op.ra), fsplat<f64[4]>(0.), 1, 3);
 			const auto d = bitcast<s64[2]>(r);
 			const auto a = eval(d & 0x7fffffffffffffff);
 			const auto s = eval(d & 0x8000000000000000);
@@ -5963,7 +5963,7 @@ public:
 		else
 		{
 			value_t<f64[2]> r;
-			r.value = m_ir->CreateFPExt(shuffle2<f32[2]>(get_vr<f32[4]>(op.ra), fsplat<f32[4]>(0.), 1, 3).value, get_type<f64[2]>());
+			r.value = m_ir->CreateFPExt(shuffle2(get_vr<f32[4]>(op.ra), fsplat<f32[4]>(0.), 1, 3).eval(m_ir), get_type<f64[2]>());
 			set_vr(op.rt, r);
 		}
 	}
@@ -5979,13 +5979,13 @@ public:
 			const auto i = select(a > 0x47f0000000000000, eval(s | 0x47f0000000000000), d);
 			const auto n = select(a > 0x7ff0000000000000, splat<s64[2]>(0x47f8000000000000), i);
 			const auto z = select(a < 0x3810000000000000, s, n);
-			set_vr(op.rt, shuffle2<f64[4]>(bitcast<f64[2]>(z), fsplat<f64[2]>(0.), 2, 0, 3, 1), false);
+			set_vr(op.rt, shuffle2(bitcast<f64[2]>(z), fsplat<f64[2]>(0.), 2, 0, 3, 1), false);
 		}
 		else
 		{
 			value_t<f32[2]> r;
 			r.value = m_ir->CreateFPTrunc(get_vr<f64[2]>(op.ra).value, get_type<f32[2]>());
-			set_vr(op.rt, shuffle2<f32[4]>(r, fsplat<f32[2]>(0.), 2, 0, 3, 1));
+			set_vr(op.rt, shuffle2(r, fsplat<f32[2]>(0.), 2, 0, 3, 1));
 		}
 	}
 
@@ -6214,7 +6214,7 @@ public:
 			if (auto ca = llvm::dyn_cast<llvm::Constant>(a.value))
 			{
 				v128 data = get_const_vector(ca, m_pos, 25971);
-				r = build<f64[4]>(data._s32[0], data._s32[1], data._s32[2], data._s32[3]);
+				r.value = build<f64[4]>(data._s32[0], data._s32[1], data._s32[2], data._s32[3]).eval(m_ir);
 			}
 			else
 			{
@@ -6255,7 +6255,7 @@ public:
 			if (auto ca = llvm::dyn_cast<llvm::Constant>(a.value))
 			{
 				v128 data = get_const_vector(ca, m_pos, 20971);
-				r = build<f64[4]>(data._u32[0], data._u32[1], data._u32[2], data._u32[3]);
+				r.value = build<f64[4]>(data._u32[0], data._u32[1], data._u32[2], data._u32[3]).eval(m_ir);
 			}
 			else
 			{
@@ -6286,38 +6286,41 @@ public:
 		}
 	}
 
+	void make_store_ls(value_t<u64> addr, value_t<u8[16]> data)
+	{
+		const auto bswapped = zshuffle(data, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+		m_ir->CreateStore(bswapped.eval(m_ir), m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
+	}
+
+	auto make_load_ls(value_t<u64> addr)
+	{
+		value_t<u8[16]> data;
+		data.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
+		return zshuffle(data, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+	}
+
 	void STQX(spu_opcode_t op)
 	{
 		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0));
-		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
-		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
+		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
 
 	void LQX(spu_opcode_t op)
 	{
 		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3)) & 0x3fff0));
-		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
-		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		set_vr(op.rt, r);
+		set_vr(op.rt, make_load_ls(addr));
 	}
 
 	void STQA(spu_opcode_t op)
 	{
 		value_t<u64> addr = eval((get_imm<u64>(op.i16, false) << 2) & 0x3fff0);
-		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
-		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
+		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
 
 	void LQA(spu_opcode_t op)
 	{
 		value_t<u64> addr = eval((get_imm<u64>(op.i16, false) << 2) & 0x3fff0);
-		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
-		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		set_vr(op.rt, r);
+		set_vr(op.rt, make_load_ls(addr));
 	}
 
 	void STQR(spu_opcode_t op) //
@@ -6325,9 +6328,7 @@ public:
 		value_t<u64> addr;
 		addr.value = m_interp_magn ? m_ir->CreateZExt(m_interp_pc, get_type<u64>()) : m_ir->getInt64(m_pos);
 		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & 0x3fff0);
-		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
-		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
+		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
 
 	void LQR(spu_opcode_t op) //
@@ -6335,27 +6336,19 @@ public:
 		value_t<u64> addr;
 		addr.value = m_interp_magn ? m_ir->CreateZExt(m_interp_pc, get_type<u64>()) : m_ir->getInt64(m_pos);
 		addr = eval(((get_imm<u64>(op.i16, false) << 2) + addr) & 0x3fff0);
-		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
-		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		set_vr(op.rt, r);
+		set_vr(op.rt, make_load_ls(addr));
 	}
 
 	void STQD(spu_opcode_t op)
 	{
 		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + (get_imm<u32>(op.si10) << 4)) & 0x3fff0));
-		value_t<u8[16]> r = get_vr<u8[16]>(op.rt);
-		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		m_ir->CreateStore(r.value, m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
+		make_store_ls(addr, get_vr<u8[16]>(op.rt));
 	}
 
 	void LQD(spu_opcode_t op)
 	{
 		value_t<u64> addr = eval(zext<u64>((extract(get_vr(op.ra), 3) + (get_imm<u32>(op.si10) << 4)) & 0x3fff0));
-		value_t<u8[16]> r;
-		r.value = m_ir->CreateLoad(m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, addr.value), get_type<u8(*)[16]>()));
-		r.value = m_ir->CreateShuffleVector(r.value, r.value, {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0});
-		set_vr(op.rt, r);
+		set_vr(op.rt, make_load_ls(addr));
 	}
 
 	void make_halt(value_t<bool> cond)

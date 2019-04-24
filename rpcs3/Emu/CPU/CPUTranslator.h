@@ -395,6 +395,23 @@ struct llvm_const_float
 	}
 };
 
+template <uint N, typename T>
+struct llvm_const_vector
+{
+	using type = T;
+
+	T data;
+
+	static constexpr bool is_ok = N && llvm_value_t<T>::is_vector == N;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		static_assert(N && llvm_value_t<T>::is_vector == N, "llvm_const_vector<>: invalid type");
+
+		return llvm::ConstantDataVector::get(ir->getContext(), data);
+	}
+};
+
 template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
 struct llvm_add
 {
@@ -1497,6 +1514,48 @@ struct llvm_splat
 	}
 };
 
+template <uint N, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_zshuffle
+{
+	using type = std::remove_extent_t<T>[N];
+
+	llvm_expr_t<A1> a1;
+	u32 index_array[N];
+
+	static_assert(llvm_value_t<T>::is_vector, "llvm_zshuffle<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_vector && 1;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+
+		return ir->CreateShuffleVector(v1, llvm::ConstantAggregateZero::get(v1->getType()), index_array);
+	}
+};
+
+template <uint N, typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_shuffle2
+{
+	using type = std::remove_extent_t<T>[N];
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+	u32 index_array[N];
+
+	static_assert(llvm_value_t<T>::is_vector, "llvm_shuffle2<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_vector && 1;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		return ir->CreateShuffleVector(v1, v2, index_array);
+	}
+};
+
 class cpu_translator
 {
 protected:
@@ -1693,6 +1752,24 @@ public:
 		return llvm_splat<T, U>{std::forward<U>(v)};
 	}
 
+	template <typename T, typename... Args, typename = std::enable_if_t<llvm_const_vector<sizeof...(Args), T>::is_ok>>
+	static auto build(Args... args)
+	{
+		return llvm_const_vector<sizeof...(Args), T>{static_cast<std::remove_extent_t<T>>(args)...};
+	}
+
+	template <typename T, typename... Args, typename = std::enable_if_t<llvm_zshuffle<sizeof...(Args), T>::is_ok>>
+	static auto zshuffle(T&& v, Args... indices)
+	{
+		return llvm_zshuffle<sizeof...(Args), T>{std::forward<T>(v), {static_cast<u32>(indices)...}};
+	}
+
+	template <typename T, typename U, typename... Args, typename = std::enable_if_t<llvm_shuffle2<sizeof...(Args), T, U>::is_ok>>
+	static auto shuffle2(T&& v1, U&& v2, Args... indices)
+	{
+		return llvm_shuffle2<sizeof...(Args), T, U>{std::forward<T>(v1), std::forward<U>(v2), {static_cast<u32>(indices)...}};
+	}
+
 	// Average: (a + b + 1) >> 1
 	template <typename T>
 	inline auto avg(T a, T b)
@@ -1711,40 +1788,6 @@ public:
 		const auto cxt = llvm::ConstantInt::get(cast_to, 1, false);
 		const auto abc = m_ir->CreateAdd(m_ir->CreateAdd(axt, bxt), cxt);
 		result.value = m_ir->CreateTrunc(m_ir->CreateLShr(abc, 1), result.get_type(m_context));
-		return result;
-	}
-
-	// Shuffle single vector using all zeros second vector of the same size
-	template <typename T, typename T1, typename... Args>
-	auto zshuffle(T1 a, Args... args)
-	{
-		static_assert(sizeof(T) / sizeof(std::remove_extent_t<T>) == sizeof...(Args), "zshuffle: unexpected result type");
-		const u32 values[]{static_cast<u32>(args)...};
-		value_t<T> result;
-		result.value = a.eval(m_ir);
-		result.value = m_ir->CreateShuffleVector(result.value, llvm::ConstantInt::get(result.value->getType(), 0), values);
-		return result;
-	}
-
-	template <typename T, typename T1, typename T2, typename... Args>
-	auto shuffle2(T1 a, T2 b, Args... args)
-	{
-		static_assert(sizeof(T) / sizeof(std::remove_extent_t<T>) == sizeof...(Args), "shuffle2: unexpected result type");
-		const u32 values[]{static_cast<u32>(args)...};
-		value_t<T> result;
-		result.value = a.eval(m_ir);
-		result.value = m_ir->CreateShuffleVector(result.value, b.eval(m_ir), values);
-		return result;
-	}
-
-	template <typename T, typename... Args>
-	auto build(Args... args)
-	{
-		using value_type = std::remove_extent_t<T>;
-		const value_type values[]{static_cast<value_type>(args)...};
-		static_assert(sizeof(T) / sizeof(value_type) == sizeof...(Args), "build: unexpected number of arguments");
-		value_t<T> result;
-		result.value = llvm::ConstantDataVector::get(m_context, values);
 		return result;
 	}
 
