@@ -453,7 +453,7 @@ static s32 vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> cb, vm:
 	// Run thread
 	vm::var<u64> _tid;
 	vm::var<char[]> _name = vm::make_str("HLE Video Decoder");
-	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	*handle = vid;
 
 	const auto thrd = idm::get<named_thread<ppu_thread>>(*_tid);
@@ -561,6 +561,12 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 	// TODO: check info
 	vdec->in_cmd.push(vdec_cmd{mode, *auInfo});
 	vdec->in_cv.notify();
+	return CELL_OK;
+}
+
+s32 cellVdecDecodeAuEx2()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
 	return CELL_OK;
 }
 
@@ -921,6 +927,12 @@ s32 cellVdecStartSeqExt()
 	return CELL_OK;
 }
 
+s32 cellVdecGetPicItemEx()
+{
+	UNIMPLEMENTED_FUNC(cellVdec);
+	return CELL_OK;
+}
+
 s32 cellVdecGetPicItemExt()
 {
 	UNIMPLEMENTED_FUNC(cellVdec);
@@ -962,9 +974,11 @@ DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 	REG_FUNC(libvdec, cellVdecStartSeqExt); // 0xebb8e70a
 	REG_FUNC(libvdec, cellVdecEndSeq);
 	REG_FUNC(libvdec, cellVdecDecodeAu);
+	REG_FUNC(libvdec, cellVdecDecodeAuEx2);
 	REG_FUNC(libvdec, cellVdecGetPicture);
 	REG_FUNC(libvdec, cellVdecGetPictureExt); // 0xa21aa896
 	REG_FUNC(libvdec, cellVdecGetPicItem);
+	REG_FUNC(libvdec, cellVdecGetPicItemEx);
 	REG_FUNC(libvdec, cellVdecGetPicItemExt); // 0x2cbd9806
 	REG_FUNC(libvdec, cellVdecSetFrameRate);
 	REG_FUNC(libvdec, cellVdecSetFrameRateExt); // 0xcffc42a5

@@ -39,6 +39,12 @@ s32 cellImeJpOpen3()
 	return CELL_OK;
 }
 
+s32 cellImeJpOpenExt()
+{
+	UNIMPLEMENTED_FUNC(cellImeJp);
+	return CELL_OK;
+}
+
 s32 cellImeJpClose()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
@@ -280,6 +286,7 @@ DECLARE(ppu_module_manager::cellImeJp)("cellImeJpUtility", []()
 	REG_FUNC(cellImeJpUtility, cellImeJpOpen);
 	REG_FUNC(cellImeJpUtility, cellImeJpOpen2);
 	REG_FUNC(cellImeJpUtility, cellImeJpOpen3);
+	REG_FUNC(cellImeJpUtility, cellImeJpOpenExt);
 	REG_FUNC(cellImeJpUtility, cellImeJpClose);
 
 	REG_FUNC(cellImeJpUtility, cellImeJpSetKanaInputMode);

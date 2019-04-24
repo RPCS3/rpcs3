@@ -13,6 +13,7 @@
 
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
+#include "Emu/Cell/lv2/sys_overlay.h"
 
 #include "Emu/Cell/Modules/StaticHLE.h"
 
@@ -1529,7 +1530,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	u32 mem_size;
 	if (sdk_version > 0x0021FFFF)
 	{
-		mem_size = 0xD500000; 
+		mem_size = 0xD500000;
 	}
 	else if (sdk_version > 0x00192FFF)
 	{
@@ -1619,4 +1620,194 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			verify(HERE), vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable);
 		}
 	}
+}
+
+std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const std::string& path)
+{
+	const auto ovlm = idm::make_ptr<lv2_obj, lv2_overlay>();
+
+	// Access linkage information object
+	const auto link = fxm::get_always<ppu_linkage_info>();
+
+	// Executable hash
+	sha1_context sha;
+	sha1_starts(&sha);
+
+	// Allocate memory at fixed positions
+	for (const auto& prog : elf.progs)
+	{
+		LOG_NOTICE(LOADER, "** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
+
+		ppu_segment _seg;
+		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr, HERE);
+		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+		const u32 type = _seg.type = prog.p_type;
+		const u32 flag = _seg.flags = prog.p_flags;
+		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
+
+		// Hash big-endian values
+		sha1_update(&sha, (uchar*)&prog.p_type, sizeof(prog.p_type));
+		sha1_update(&sha, (uchar*)&prog.p_flags, sizeof(prog.p_flags));
+
+		if (type == 0x1 /* LOAD */ && prog.p_memsz)
+		{
+			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
+				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
+
+			if (!vm::falloc(addr, size))
+				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
+
+			// Copy segment data, hash it
+			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
+			sha1_update(&sha, (uchar*)&prog.p_vaddr, sizeof(prog.p_vaddr));
+			sha1_update(&sha, (uchar*)&prog.p_memsz, sizeof(prog.p_memsz));
+			sha1_update(&sha, prog.bin.data(), prog.bin.size());
+
+			// Initialize executable code if necessary
+			if (prog.p_flags & 0x1)
+			{
+				ppu_register_range(addr, size);
+			}
+
+			// Store only LOAD segments (TODO)
+			ovlm->segs.emplace_back(_seg);
+		}
+	}
+
+	// Load section list, used by the analyser
+	for (const auto& s : elf.shdrs)
+	{
+		LOG_NOTICE(LOADER, "** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
+
+		ppu_segment _sec;
+		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
+		const u32 size = _sec.size = vm::cast(s.sh_size);
+		const u32 type = _sec.type = s.sh_type;
+		const u32 flag = _sec.flags = s.sh_flags & 7;
+		_sec.filesz = 0;
+
+		if (s.sh_type == 1 && addr && size)
+		{
+			ovlm->secs.emplace_back(_sec);
+		}
+	}
+
+	sha1_finish(&sha, ovlm->sha1);
+
+	// Format patch name
+	std::string hash("OVL-0000000000000000000000000000000000000000");
+	for (u32 i = 0; i < 20; i++)
+	{
+		constexpr auto pal = "0123456789abcdef";
+		hash[4 + i * 2] = pal[ovlm->sha1[i] >> 4];
+		hash[5 + i * 2] = pal[ovlm->sha1[i] & 15];
+	}
+
+	// Apply the patch
+	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+
+	if (!Emu.GetTitleID().empty())
+	{
+		// Alternative patch
+		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+	}
+
+	LOG_NOTICE(LOADER, "OVL executable hash: %s (<- %u)", hash, applied);
+
+	// Load other programs
+	for (auto& prog : elf.progs)
+	{
+		switch (const u32 p_type = prog.p_type)
+		{
+		case 0x00000001: break; // LOAD (already loaded)
+
+		case 0x60000001: // LOOS+1
+		{
+			if (prog.p_filesz)
+			{
+				struct process_param_t
+				{
+					be_t<u32> size;		//0x60
+					be_t<u32> magic;	//string OVLM
+					be_t<u32> version;	//0x17000
+					be_t<u32> sdk_version;	//seems to be correct
+											//string "stage_ovlm"
+											//and a lot of zeros.
+				};
+
+				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
+
+				if (info.size < sizeof(process_param_t))
+				{
+					LOG_WARNING(LOADER, "Bad process_param size! [0x%x : 0x%x]", info.size, u32{sizeof(process_param_t)});
+				}
+
+				if (info.magic != 0x4f564c4d)	//string "OVLM"
+				{
+					LOG_ERROR(LOADER, "Bad process_param magic! [0x%x]", info.magic);
+				}
+				else
+				{
+					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
+				}
+			}
+			break;
+		}
+
+		case 0x60000002: // LOOS+2 seems to be 0x0 in size for overlay elfs, at least in known cases
+		{
+			if (prog.p_filesz)
+			{
+				struct ppu_proc_prx_param_t
+				{
+					be_t<u32> size;
+					be_t<u32> magic;
+					be_t<u32> version;
+					be_t<u32> unk0;
+					be_t<u32> libent_start;
+					be_t<u32> libent_end;
+					be_t<u32> libstub_start;
+					be_t<u32> libstub_end;
+					be_t<u16> ver;
+					be_t<u16> unk1;
+					be_t<u32> unk2;
+				};
+
+				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr, HERE));
+
+				LOG_NOTICE(LOADER, "* libent_start = *0x%x", proc_prx_param.libent_start);
+				LOG_NOTICE(LOADER, "* libstub_start = *0x%x", proc_prx_param.libstub_start);
+				LOG_NOTICE(LOADER, "* unk0 = 0x%x", proc_prx_param.unk0);
+				LOG_NOTICE(LOADER, "* unk2 = 0x%x", proc_prx_param.unk2);
+
+				if (proc_prx_param.magic != 0x1b434cec)
+				{
+					fmt::throw_exception("Bad magic! (0x%x)", proc_prx_param.magic);
+				}
+
+				ppu_load_exports(link, proc_prx_param.libent_start, proc_prx_param.libent_end);
+				ppu_load_imports(ovlm->relocs, link, proc_prx_param.libstub_start, proc_prx_param.libstub_end);
+			}
+			break;
+		}
+		default:
+		{
+			LOG_ERROR(LOADER, "Unknown phdr type (0x%08x)", p_type);
+		}
+		}
+	}
+
+	ovlm->entry = static_cast<u32>(elf.header.e_entry);
+
+	// Analyse executable (TODO)
+	ovlm->analyse(0, ovlm->entry);
+
+	// Validate analyser results (not required)
+	ovlm->validate(0);
+
+	// Set path (TODO)
+	ovlm->name = path.substr(path.find_last_of('/') + 1);
+	ovlm->path = path;
+
+	return ovlm;
 }

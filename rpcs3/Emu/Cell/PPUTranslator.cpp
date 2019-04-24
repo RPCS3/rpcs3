@@ -1,4 +1,4 @@
-#ifdef LLVM_AVAILABLE
+﻿#ifdef LLVM_AVAILABLE
 
 #include "PPUTranslator.h"
 #include "PPUThread.h"
@@ -49,7 +49,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 
 	// Callable
-	m_call = new GlobalVariable(*module, ArrayType::get(GetType<u32>(), 0x40000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__cptr%x", gsuffix));
+	m_call = new GlobalVariable(*module, ArrayType::get(GetType<u32>(), 0x80000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__cptr%x", gsuffix));
 	m_call->setInitializer(ConstantPointerNull::get(cast<PointerType>(m_call->getType()->getPointerElementType())));
 	m_call->setExternallyInitialized(true);
 
@@ -271,6 +271,8 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 	}
 	else
 	{
+		m_ir->CreateStore(Trunc(indirect, GetType<u32>()), m_ir->CreateStructGEP(nullptr, m_thread, &m_cia - m_locals), true);
+
 		// Try to optimize
 		if (auto inst = dyn_cast_or_null<Instruction>(indirect))
 		{
@@ -280,7 +282,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 			}
 		}
 
-		const auto pos = m_ir->CreateLShr(indirect, 2, "", true);
+		const auto pos = m_ir->CreateShl(m_ir->CreateLShr(indirect, 2, "", true), 1, "", true);
 		const auto ptr = m_ir->CreateGEP(m_ir->CreateLoad(m_call), {m_ir->getInt64(0), pos});
 		indirect = m_ir->CreateIntToPtr(m_ir->CreateLoad(ptr), type->getPointerTo());
 	}
@@ -3084,6 +3086,7 @@ void PPUTranslator::LSWI(ppu_opcode_t op)
 				if (--index)
 				{
 					addr = m_ir->CreateAdd(addr, m_ir->getInt64(1));
+					i--;
 				}
 			}
 
@@ -3179,7 +3182,7 @@ void PPUTranslator::STSWI(ppu_opcode_t op)
 
 			while (index)
 			{
-				WriteMemory(addr, m_ir->CreateLShr(buf, 24));
+				WriteMemory(addr, Trunc(m_ir->CreateLShr(buf, 24), GetType<u8>()));
 
 				if (--index)
 				{

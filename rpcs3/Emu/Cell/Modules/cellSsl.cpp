@@ -25,6 +25,12 @@ s32 cellSslEnd()
 	return CELL_OK;
 }
 
+s32 cellSslGetMemoryInfo()
+{
+	UNIMPLEMENTED_FUNC(cellSsl);
+	return CELL_OK;
+}
+
 std::string getCert(const std::string certPath, const int certID, const bool isNormalCert)
 {
 	int newID = certID;
@@ -662,6 +668,7 @@ DECLARE(ppu_module_manager::cellSsl)("cellSsl", []()
 {
 	REG_FUNC(cellSsl, cellSslInit);
 	REG_FUNC(cellSsl, cellSslEnd);
+	REG_FUNC(cellSsl, cellSslGetMemoryInfo);
 
 	REG_FUNC(cellSsl, cellSslCertificateLoader);
 

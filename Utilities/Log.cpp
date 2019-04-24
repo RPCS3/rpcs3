@@ -387,9 +387,7 @@ logs::file_writer::file_writer(const std::string& name)
 
 #ifdef _WIN32
 		// Autodelete compressed log file
-		FILE_DISPOSITION_INFO disp;
-		disp.DeleteFileW = TRUE;
-		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+		m_fout2.set_delete();
 #endif
 	}
 	catch (const std::exception& e)
@@ -469,9 +467,7 @@ logs::file_writer::~file_writer()
 
 #ifdef _WIN32
 	// Cancel compressed log file autodeletion
-	FILE_DISPOSITION_INFO disp;
-	disp.DeleteFileW = FALSE;
-	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
+	m_fout2.set_delete(false);
 
 	UnmapViewOfFile(m_fptr);
 	CloseHandle(m_fmap);
@@ -593,12 +589,15 @@ logs::file_listener::file_listener(const std::string& name)
 	// Write UTF-8 BOM
 	file_writer::log(logs::level::always, "\xEF\xBB\xBF", 3);
 
+	const std::string firmware_version = utils::get_firmware_version();
+	const std::string firmware_string  = firmware_version.empty() ? "" : (" | Firmware version: " + firmware_version);
+
 	// Write initial message
 	stored_message ver;
 	ver.m.ch  = nullptr;
 	ver.m.sev = level::always;
 	ver.stamp = 0;
-	ver.text = fmt::format("RPCS3 v%s | %s\n%s", rpcs3::version.to_string(), rpcs3::get_branch(), utils::get_system_info());
+	ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::version.to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
 
 	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
 	file_writer::log(logs::level::always, "\n", 1);

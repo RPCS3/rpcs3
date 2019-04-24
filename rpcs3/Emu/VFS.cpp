@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "IdManager.h"
+#include "System.h"
 #include "VFS.h"
 
 #include "Utilities/mutex.h"
@@ -384,6 +385,17 @@ std::string vfs::unescape(std::string_view path)
 						result += '*';
 						break;
 					}
+					case char{u8"＄"[2]}:
+					{
+						if (i == 0)
+						{
+							// Special case: filename starts with full-width $ likely created by vfs::host::unlink
+							result.resize(1, '.');
+							return result;
+						}
+
+						[[fallthrough]];
+					}
 					default:
 					{
 						// Unrecognized character (ignored)
@@ -446,4 +458,46 @@ std::string vfs::unescape(std::string_view path)
 	}
 
 	return result;
+}
+
+bool vfs::host::rename(const std::string& from, const std::string& to, bool overwrite)
+{
+	while (!fs::rename(from, to, overwrite))
+	{
+		// Try to ignore access error in order to prevent spurious failure
+		if (Emu.IsStopped() || fs::g_tls_error != fs::error::acces)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool vfs::host::unlink(const std::string& path)
+{
+#ifdef _WIN32
+	if (path.size() < 2 || reinterpret_cast<const u16&>(path.front()) != "//"_u16)
+	{
+		// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
+		const std::string dummy = fmt::format(u8"%s/＄%s%s", fs::get_parent_dir(path), fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+
+		if (!fs::rename(path, dummy, true))
+		{
+			return false;
+		}
+
+		if (fs::file f{dummy, fs::read + fs::write})
+		{
+			// Set to delete on close on last handle
+			f.set_delete();
+			return true;
+		}
+
+		// TODO: what could cause this and how to handle it
+		return true;
+	}
+#endif
+
+	return fs::remove_file(path);
 }

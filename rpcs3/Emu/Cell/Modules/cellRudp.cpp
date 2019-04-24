@@ -142,7 +142,19 @@ s32 cellRudpGetRemoteInfo()
 	return CELL_OK;
 }
 
+s32 cellRudpAccept()
+{
+	UNIMPLEMENTED_FUNC(cellRudp);
+	return CELL_OK;
+}
+
 s32 cellRudpBind()
+{
+	UNIMPLEMENTED_FUNC(cellRudp);
+	return CELL_OK;
+}
+
+s32 cellRudpListen()
 {
 	UNIMPLEMENTED_FUNC(cellRudp);
 	return CELL_OK;
@@ -256,7 +268,9 @@ DECLARE(ppu_module_manager::cellRudp)("cellRudp", []()
 	REG_FUNC(cellRudp, cellRudpGetLocalInfo);
 	REG_FUNC(cellRudp, cellRudpGetRemoteInfo);
 
+	REG_FUNC(cellRudp, cellRudpAccept);
 	REG_FUNC(cellRudp, cellRudpBind);
+	REG_FUNC(cellRudp, cellRudpListen);
 	REG_FUNC(cellRudp, cellRudpInitiate);
 	REG_FUNC(cellRudp, cellRudpActivate);
 	REG_FUNC(cellRudp, cellRudpTerminate);

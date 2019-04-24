@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 
@@ -9,10 +10,13 @@
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
 
+#include <thread>
 #include <mutex>
 #include <algorithm>
 
 LOG_CHANNEL(cellSaveData);
+
+extern u32 g_ps3_sdk_version;
 
 template<>
 void fmt_class_string<CellSaveDataError>::format(std::string& out, u64 arg)
@@ -87,17 +91,180 @@ vm::gvar<savedata_context> g_savedata_context;
 
 std::mutex g_savedata_mutex;
 
+static bool savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirName,
+	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
+	PFuncFile funcFile, u32 container, u32 unk_op_flags, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
+{
+	if (version > CELL_SAVEDATA_VERSION_420)
+	{
+		// ****** sysutil savedata parameter error : 1 ******
+		return false;
+	}
+
+	if (errDialog > CELL_SAVEDATA_ERRDIALOG_NOREPEAT)
+	{
+		// ****** sysutil savedata parameter error : 5 ******
+		return false;
+	}
+
+	if (operation <= SAVEDATA_OP_AUTO_LOAD && !dirName)
+	{
+		// ****** sysutil savedata parameter error : 2 ******
+		return false;
+	}
+
+	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_FIXED_DELETE)
+	{
+		if (!setList)
+		{
+			// ****** sysutil savedata parameter error : 11 ******
+			return false;
+		}
+
+		if (setList->sortType > CELL_SAVEDATA_SORTTYPE_SUBTITLE)
+		{
+			// ****** sysutil savedata parameter error : 12 ******
+			return false;
+		}
+
+		if (setList->sortOrder > CELL_SAVEDATA_SORTORDER_ASCENT)
+		{
+			// ****** sysutil savedata parameter error : 13 ******
+			return false;
+		}
+
+		if (!setList->dirNamePrefix)
+		{
+			// ****** sysutil savedata parameter error : 15 ******
+			return false;
+		}
+
+		if (!memchr(setList->dirNamePrefix.get_ptr(), '\0', CELL_SAVEDATA_PREFIX_SIZE)
+			|| (g_ps3_sdk_version > 0x3FFFFF && !setList->dirNamePrefix[0]))
+		{
+			// ****** sysutil savedata parameter error : 17 ******
+			return false;
+		}
+
+		// TODO: Theres some check here I've missed about dirNamePrefix
+
+		if (setList->reserved)
+		{
+			// ****** sysutil savedata parameter error : 14 ******
+			return false;
+		}
+	}
+
+	if (!setBuf)
+	{
+		// ****** sysutil savedata parameter error : 74 ******
+		return false;
+	}
+
+	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_FIXED_DELETE)
+	{	
+		if (setBuf->dirListMax > CELL_SAVEDATA_DIRLIST_MAX)
+		{
+			// ****** sysutil savedata parameter error : 8 ******
+			return false;
+		}
+
+		CHECK_SIZE(CellSaveDataDirList, 48);
+
+		if (setBuf->dirListMax * sizeof(CellSaveDataDirList) > setBuf->bufSize)
+		{
+			// ****** sysutil savedata parameter error : 7 ******
+			return false;
+		}
+	}
+
+	CHECK_SIZE(CellSaveDataFileStat, 56);
+
+	if (operation == SAVEDATA_OP_FIXED_DELETE)
+	{
+		if (setBuf->fileListMax != 0)
+		{
+			// ****** sysutil savedata parameter error : 9 ******
+			return false;
+		}
+	}
+	else if (setBuf->fileListMax * sizeof(CellSaveDataFileStat) > setBuf->bufSize)
+	{
+		// ****** sysutil savedata parameter error : 7 ******
+		return false;
+	}
+
+	if (setBuf->bufSize && !setBuf->buf)
+	{
+		// ****** sysutil savedata parameter error : 6 ******
+		return false;
+	}
+
+	for (be_t<u32> resv : setBuf->reserved)
+	{
+		if (resv != 0)
+		{
+			// ****** sysutil savedata parameter error : 10 ******
+			return false;
+		}
+	}
+
+	if ((operation == SAVEDATA_OP_LIST_SAVE || operation == SAVEDATA_OP_LIST_LOAD) && !funcList)
+	{
+		// ****** sysutil savedata parameter error : 18 ******
+		return false;
+	}
+	else if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD || 
+		operation == SAVEDATA_OP_LIST_AUTO_LOAD || operation == SAVEDATA_OP_LIST_AUTO_SAVE || operation == SAVEDATA_OP_FIXED_DELETE) && !funcFixed)
+	{
+		// ****** sysutil savedata parameter error : 19 ******
+		return false;
+	}
+
+	if (!(unk_op_flags & 0x2) || operation == SAVEDATA_OP_AUTO_SAVE || operation == SAVEDATA_OP_AUTO_LOAD)
+	{
+		if (!funcStat)
+		{
+			// ****** sysutil savedata parameter error : 20 ******
+			return false;
+		}
+
+		if (!(unk_op_flags & 0x2) && !funcFile)
+		{
+			// ****** sysutil savedata parameter error : 18 ******
+			return false;
+		}
+	}
+
+	return true;
+}
+
 static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 version, vm::cptr<char> dirName,
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
-	PFuncFile funcFile, u32 container, u32 unknown, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
+	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
-	// TODO: check arguments
+	if (!savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat, 
+	funcFile, container, unk_op_flags, userdata, userId, funcDone))
+	{
+		return CELL_SAVEDATA_ERROR_PARAM;
+	}
+
 	std::unique_lock lock(g_savedata_mutex, std::try_to_lock);
 
 	if (!lock)
 	{
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
+
+	// Simulate idle time while data is being sent to VSH
+	const auto lv2_sleep = [](ppu_thread& ppu, size_t sleep_time)
+	{
+		lv2_obj::sleep(ppu);
+		std::this_thread::sleep_for(std::chrono::microseconds(sleep_time));
+		ppu.check_state();
+	};
+
+	lv2_sleep(ppu, 500);
 
 	*g_savedata_context = {};
 
@@ -190,11 +357,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			const u32 order = setList->sortOrder;
 			const u32 type = setList->sortType;
-
-			if (order > CELL_SAVEDATA_SORTORDER_ASCENT || type > CELL_SAVEDATA_SORTTYPE_SUBTITLE)
-			{
-				// error
-			}
 
 			std::sort(save_entries.begin(), save_entries.end(), [=](const SaveDataEntry& entry1, const SaveDataEntry& entry2)
 			{
@@ -381,7 +543,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, operation, listSet);
 
 			// Reschedule
-			ppu.check_state();
+			if (ppu.check_state())
+			{
+				return 0;
+			}
 
 			// UI returns -1 for new save games
 			if (selected == -1)
@@ -422,6 +587,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (funcFixed)
 		{
+			lv2_sleep(ppu, 250);
+
 			// Fixed Callback
 			funcFixed(ppu, result, listGet, fixedSet);
 
@@ -505,6 +672,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
 	bool has_modified = false;
+
+	lv2_sleep(ppu, 250);
 
 	// Get save stats
 	{
@@ -598,7 +767,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		statGet->sysSizeKB = 35; // always reported as 35 regardless of actual file sizes
-		statGet->sizeKB = size_kbytes ? size_kbytes + statGet->sysSizeKB : 0;
+		statGet->sizeKB = !save_entry.isNew ? size_kbytes + statGet->sysSizeKB : 0;
 
 		// Stat Callback
 		funcStat(ppu, result, statGet, statSet);
@@ -628,6 +797,33 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (statSet->setParam)
 		{
+			if (statSet->setParam->attribute > CELL_SAVEDATA_ATTR_NODUPLICATE)
+			{
+				// ****** sysutil savedata parameter error : 57 ******
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
+
+			if (g_ps3_sdk_version > 0x36FFFF)
+			{
+				for (u8 resv : statSet->setParam->reserved2)
+				{
+					if (resv)
+					{
+						// ****** sysutil savedata parameter error : 58 ******
+						return CELL_SAVEDATA_ERROR_PARAM;
+					}
+				}
+			}
+
+			for (u8 resv : statSet->setParam->reserved)
+			{
+				if (resv)
+				{
+					// ****** sysutil savedata parameter error : 59 ******
+					return CELL_SAVEDATA_ERROR_PARAM;
+				}
+			}
+
 			// Update PARAM.SFO
 			psf.clear();
 			psf.insert(
@@ -647,14 +843,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			has_modified = true;
 		}
-		//else if (psf.empty())
-		//{
-		//	// setParam is specified if something required updating.
-		//	// Do not exit. Recreate mode will handle the rest
-		//	//return CELL_OK;
-		//}
+		else if (save_entry.isNew)
+		{
+			// ****** sysutil savedata parameter error : 50 ******
+			return CELL_SAVEDATA_ERROR_PARAM;
+		}
 
-		switch (const u32 mode = statSet->reCreateMode & 0xffff)
+		switch (const u32 mode = statSet->reCreateMode & CELL_SAVEDATA_RECREATE_MASK)
 		{
 		case CELL_SAVEDATA_RECREATE_NO:
 		{
@@ -672,6 +867,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		case CELL_SAVEDATA_RECREATE_YES:
 		case CELL_SAVEDATA_RECREATE_YES_RESET_OWNER:
 		{
+			if (!statSet->setParam)
+			{
+				// ****** sysutil savedata parameter error : 50 ******
+				return CELL_SAVEDATA_ERROR_PARAM;
+			}
 
 			// TODO: Only delete data, not owner info
 			for (const auto& entry : fs::dir(dir_path))
@@ -680,15 +880,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				{
 					fs::remove_file(dir_path + entry.name);
 				}
-			}
-
-			//TODO: probably not deleting owner info
-			if (!statSet->setParam)
-			{
-				// Savedata deleted and setParam is NULL: delete directory and abort operation
-				if (fs::remove_dir(dir_path)) cellSaveData.error("savedata_op(): savedata directory %s deleted", save_entry.dirName);
-
-				//return CELL_OK;
 			}
 
 			break;
@@ -934,19 +1125,16 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		fs::remove_all(old_path, false);
 
 		// Backup old savedata
-		while (!fs::rename(dir_path, old_path, true))
+		if (!vfs::host::rename(dir_path, old_path, true))
 		{
-			// Try to ignore access error in order to prevent spurious failure
-			if (Emu.IsStopped() || fs::g_tls_error != fs::error::acces)
-				fmt::throw_exception("Failed to move directory %s (%s)", dir_path, fs::g_tls_error);
+			fmt::throw_exception("Failed to move directory %s (%s)", dir_path, fs::g_tls_error);
 		}
 
 		// Commit new savedata
-		while (!fs::rename(new_path, dir_path, false))
+		if (!vfs::host::rename(new_path, dir_path, false))
 		{
 			// TODO: handle the case when only commit failed at the next save load
-			if (Emu.IsStopped() || fs::g_tls_error != fs::error::acces)
-				fmt::throw_exception("Failed to move directory %s (%s)", new_path, fs::g_tls_error);
+			fmt::throw_exception("Failed to move directory %s (%s)", new_path, fs::g_tls_error);
 		}
 
 		// Remove backup again (TODO: may be changed to persistent backup implementation)
@@ -1131,7 +1319,7 @@ error_code cellSaveDataListAutoSave(ppu_thread& ppu, u32 version, u32 errDialog,
 	cellSaveData.warning("cellSaveDataListAutoSave(version=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, errDialog, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_SAVE, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 0, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_SAVE, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
 error_code cellSaveDataListAutoLoad(ppu_thread& ppu, u32 version, u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed, PFuncStat funcStat, PFuncFile funcFile, u32 container, vm::ptr<void> userdata)
@@ -1139,7 +1327,7 @@ error_code cellSaveDataListAutoLoad(ppu_thread& ppu, u32 version, u32 errDialog,
 	cellSaveData.warning("cellSaveDataListAutoLoad(version=%d, errDialog=%d, setList=*0x%x, setBuf=*0x%x, funcFixed=*0x%x, funcStat=*0x%x, funcFile=*0x%x, container=0x%x, userdata=*0x%x)",
 		version, errDialog, setList, setBuf, funcFixed, funcStat, funcFile, container, userdata);
 
-	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_LOAD, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 0, userdata, 0, vm::null);
+	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_LOAD, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
 error_code cellSaveDataDelete2(u32 container)

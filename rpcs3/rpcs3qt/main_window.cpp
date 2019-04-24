@@ -517,7 +517,7 @@ void main_window::InstallPup(const QString& dropPath)
 	if (filePath.isEmpty())
 	{
 		QString path_last_PUP = guiSettings->GetValue(gui::fd_install_pup).toString();
-		filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)"));
+		filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup);;All files (*.*)"));
 	}
 	else
 	{

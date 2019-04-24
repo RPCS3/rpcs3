@@ -1,4 +1,4 @@
-
+﻿
 #include "register_editor_dialog.h"
 
 constexpr auto qstr = QString::fromStdString;
@@ -105,7 +105,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 			if (reg.compare(0, 3, "FPR") == 0) str = fmt::format("%016llx", ppu.fpr[reg_index]);
 			if (reg.compare(0, 2, "VR") == 0)  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
 		}
-		if (reg == "CR")  str = fmt::format("%08x", ppu.cr_pack());
+		if (reg == "CR")  str = fmt::format("%08x", ppu.cr.pack());
 		if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
 		if (reg == "CTR") str = fmt::format("%016llx", ppu.ctr);
 	}
@@ -169,7 +169,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 			if (reg == "CR")
 			{
 				const ullong reg_value = std::stoull(value.substr(24, 31), 0, 16);
-				if (reg == "CR") ppu.cr_unpack((u32)reg_value);
+				if (reg == "CR") ppu.cr.unpack((u32)reg_value);
 				return;
 			}
 		}
