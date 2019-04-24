@@ -2680,6 +2680,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return r;
 	}
 
+	template <typename T = u32[4], typename... Args>
+	std::tuple<std::conditional_t<false, Args, value_t<T>>...> get_vrs(const Args&... args)
+	{
+		return {get_vr<T>(args)...};
+	}
+
 	void set_reg_fixed(u32 index, llvm::Value* value, bool fixup = true)
 	{
 		llvm::StoreInst* dummy{};
@@ -4805,8 +4811,7 @@ public:
 
 	void BG(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = get_vr(op.rb);
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 		set_vr(op.rt, zext<u32[4]>(a <= b));
 	}
 
@@ -4822,8 +4827,7 @@ public:
 
 	void ABSDB(spu_opcode_t op)
 	{
-		const auto a = get_vr<u8[16]>(op.ra);
-		const auto b = get_vr<u8[16]>(op.rb);
+		const auto [a, b] = get_vrs<u8[16]>(op.ra, op.rb);
 		set_vr(op.rt, max(a, b) - min(a, b));
 	}
 
@@ -4963,8 +4967,7 @@ public:
 
 	void CG(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = get_vr(op.rb);
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 		set_vr(op.rt, zext<u32[4]>(a + b < a));
 	}
 
@@ -5238,8 +5241,7 @@ public:
 
 	void SUMB(spu_opcode_t op)
 	{
-		const auto a = get_vr<u16[8]>(op.ra);
-		const auto b = get_vr<u16[8]>(op.rb);
+		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
 		const auto ahs = eval((a >> 8) + (a & 0xff));
 		const auto bhs = eval((b >> 8) + (b & 0xff));
 		const auto lsh = shuffle2(ahs, bhs, 0, 9, 2, 11, 4, 13, 6, 15);
@@ -5319,8 +5321,7 @@ public:
 
 	void CGX(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = get_vr(op.rb);
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 		const auto x = ~get_vr(op.rt) & 1;
 		const auto s = eval(a + b);
 		set_vr(op.rt, zext<u32[4]>((noncast<u32[4]>(sext<s32[4]>(s < a)) | (s & ~x)) == -1));
@@ -5328,8 +5329,7 @@ public:
 
 	void BGX(spu_opcode_t op)
 	{
-		const auto a = get_vr(op.ra);
-		const auto b = get_vr(op.rb);
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 		const auto c = get_vr<s32[4]>(op.rt) << 31;
 		set_vr(op.rt, zext<u32[4]>(a <= b & ~(a == b & c >= 0)));
 	}
