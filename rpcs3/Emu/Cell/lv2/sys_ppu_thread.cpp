@@ -49,7 +49,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		std::lock_guard lock(id_manager::g_mutex);
 
 		// Schedule joiner and unqueue
-		lv2_obj::awake(*idm::check_unlocked<named_thread<ppu_thread>>(jid), -2);
+		lv2_obj::awake(idm::check_unlocked<named_thread<ppu_thread>>(jid), -2);
 	}
 
 	// Unqueue
@@ -63,7 +63,7 @@ void sys_ppu_thread_yield(ppu_thread& ppu)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_yield()");
 
-	lv2_obj::awake(ppu, -4);
+	lv2_obj::yield(ppu);
 }
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
@@ -219,7 +219,7 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 	{
 		if (thread.prio != prio)
 		{
-			lv2_obj::awake(thread, prio);
+			lv2_obj::awake(&thread, prio);
 		}
 	});
 
@@ -359,7 +359,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
-		lv2_obj::awake(thread, -2);
+		lv2_obj::awake(&thread, -2);
 	});
 
 	if (!thread)

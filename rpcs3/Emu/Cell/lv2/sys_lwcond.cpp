@@ -175,7 +175,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 	if (mode != 1)
 	{
-		cond->awake(*cond.ret);
+		cond->awake(cond.ret);
 	}
 
 	return CELL_OK;
@@ -194,8 +194,6 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	{
 		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
-
-	std::basic_string<cpu_thread*> threads;
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
 	{
@@ -234,7 +232,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				}
 				else
 				{
-					threads.push_back(cpu);
+					lv2_obj::append(cpu);
 				}
 
 				result++;
@@ -251,9 +249,9 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		return CELL_ESRCH;
 	}
 
-	for (auto cpu : threads)
+	if (mode == 2)
 	{
-		cond->awake(*cpu);
+		lv2_obj::awake_all();
 	}
 
 	if (mode == 1)
@@ -275,7 +273,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	std::shared_ptr<lv2_lwmutex> mutex;
 
-	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> cpu_thread*
+	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond)
 	{
 		mutex = idm::get_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
@@ -289,28 +287,28 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		// Add a waiter
 		cond.waiters++;
 		cond.sq.emplace_back(&ppu);
-		cond.sleep(ppu, timeout);
 
-		std::lock_guard lock2(mutex->mutex);
-
-		// Process lwmutex sleep queue
-		if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
 		{
-			return cpu;
+			std::lock_guard lock2(mutex->mutex);
+
+			// Process lwmutex sleep queue
+			if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
+			{
+				cond.append(cpu);
+			}
+			else
+			{
+				mutex->signaled |= 1;
+			}
 		}
 
-		mutex->signaled |= 1;
-		return nullptr;
+		// Sleep current thread and schedule lwmutex waiter
+		cond.sleep(ppu, timeout);
 	});
 
 	if (!cond || !mutex)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (cond.ret)
-	{
-		cond->awake(*cond.ret);
 	}
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))

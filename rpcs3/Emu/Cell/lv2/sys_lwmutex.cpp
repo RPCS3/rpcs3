@@ -212,7 +212,7 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 
 	if (mutex.ret)
 	{
-		mutex->awake(*mutex.ret);
+		mutex->awake(mutex.ret);
 	}
 
 	return CELL_OK;
@@ -245,7 +245,7 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 
 	if (mutex.ret)
 	{
-		mutex->awake(*mutex.ret);
+		mutex->awake(mutex.ret);
 	}
 
 	return CELL_OK;

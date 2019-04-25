@@ -228,7 +228,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 	Emu.CallAfter([&]()
 	{
 		dlg->Create(msgString.get_ptr());
-		lv2_obj::awake(ppu);
+		lv2_obj::awake(&ppu);
 	});
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))

@@ -615,7 +615,7 @@ void ppu_thread::cpu_task()
 void ppu_thread::cpu_sleep()
 {
 	vm::temporary_unlock(*this);
-	lv2_obj::awake(*this);
+	lv2_obj::awake(this);
 }
 
 void ppu_thread::cpu_mem()

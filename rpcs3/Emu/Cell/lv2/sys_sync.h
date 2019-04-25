@@ -115,27 +115,42 @@ struct lv2_obj
 		return res;
 	}
 
+private:
 	// Remove the current thread from the scheduling queue, register timeout
-	static void sleep_timeout(cpu_thread&, u64 timeout);
+	static void sleep_unlocked(cpu_thread&, u64 timeout);
 
-	static void sleep(cpu_thread& thread, u64 timeout = 0)
+	// Schedule the thread
+	static void awake_unlocked(cpu_thread*, u32 prio = -1);
+
+public:
+	static void sleep(cpu_thread& cpu, const u64 timeout = 0)
 	{
-		vm::temporary_unlock(thread);
-		sleep_timeout(thread, timeout);
+		vm::temporary_unlock(cpu);
+		std::lock_guard{g_mutex}, sleep_unlocked(cpu, timeout);
+		g_to_awake.clear();
+	}
+
+	static inline void awake(cpu_thread* const thread, const u32 prio = -1)
+	{
+		std::lock_guard lock(g_mutex);
+		awake_unlocked(thread, prio);
 	}
 
 	static void yield(cpu_thread& thread)
 	{
 		vm::temporary_unlock(thread);
-		awake(thread, -4);
+		awake(&thread, -4);
 	}
 
-	// Schedule the thread
-	static void awake(cpu_thread&, u32 prio);
-
-	static void awake(cpu_thread& thread)
+	static inline void awake_all()
 	{
-		awake(thread, -1);
+		awake({});
+		g_to_awake.clear();
+	}
+
+	static inline void append(cpu_thread* const thread)
+	{
+		g_to_awake.emplace_back(thread);
 	}
 
 	static void cleanup();
@@ -216,7 +231,7 @@ struct lv2_obj
 	}
 
 	template<bool is_usleep = false>
-	static bool wait_timeout(u64 usec, cpu_thread* const cpu = nullptr)
+	static bool wait_timeout(u64 usec, cpu_thread* const cpu = {})
 	{
 		static_assert(UINT64_MAX / cond_variable::max_timeout >= g_cfg.core.clocks_scale.max, "timeout may overflow during scaling");
 
@@ -286,6 +301,9 @@ struct lv2_obj
 private:
 	// Scheduler mutex
 	static shared_mutex g_mutex;
+
+	// Pending list of threads to run
+	static thread_local std::vector<class cpu_thread*> g_to_awake;
 
 	// Scheduler queue for active PPU threads
 	static std::deque<class ppu_thread*> g_ppu;

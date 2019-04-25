@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_semaphore.h"
 
 #include "Emu/System.h"
@@ -242,8 +242,10 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 		// Wake threads
 		for (s32 i = std::min<s32>(-std::min<s32>(val, 0), count); i > 0; i--)
 		{
-			sem->awake(*verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol)));
+			sem->append(verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol)));
 		}
+
+		lv2_obj::awake_all();
 	}
 
 	return CELL_OK;

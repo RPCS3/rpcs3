@@ -1006,10 +1006,10 @@ DECLARE(lv2_obj::g_ppu);
 DECLARE(lv2_obj::g_pending);
 DECLARE(lv2_obj::g_waiting);
 
-void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
-{
-	std::lock_guard lock(g_mutex);
+thread_local DECLARE(lv2_obj::g_to_awake);
 
+void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
+{
 	const u64 start_time = get_guest_system_time();
 
 	if (auto ppu = static_cast<ppu_thread*>(thread.id_type() == 1 ? &thread : nullptr))
@@ -1055,20 +1055,26 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 		}
 	}
 
-	schedule_all();
+	if (!g_to_awake.empty())
+	{
+		// Schedule pending entries 
+		awake_unlocked({});
+	}
+	else
+	{
+		schedule_all();
+	}
 }
 
-void lv2_obj::awake(cpu_thread& cpu, u32 prio)
+void lv2_obj::awake_unlocked(cpu_thread* cpu, u32 prio)
 {
 	// Check thread type
-	if (cpu.id_type() != 1) return;
-
-	std::lock_guard lock(g_mutex);
+	AUDIT(!cpu || cpu->id_type() == 1);
 
 	if (prio < INT32_MAX)
 	{
         // Priority set
-        if (static_cast<ppu_thread&>(cpu).prio.exchange(prio) == prio || !unqueue(g_ppu, &cpu))
+        if (static_cast<ppu_thread*>(cpu)->prio.exchange(prio) == prio || !unqueue(g_ppu, cpu))
         {
             return;
         }
@@ -1080,7 +1086,7 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 
 		for (std::size_t i = 0, pos = -1; i < g_ppu.size(); i++)
 		{
-			if (g_ppu[i] == &cpu)
+			if (g_ppu[i] == cpu)
 			{
 				pos = i;
 				prio = g_ppu[i]->prio;
@@ -1091,45 +1097,58 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 			}
 		}
 
-		unqueue(g_ppu, &cpu);
-		unqueue(g_pending, &cpu);
+		unqueue(g_ppu, cpu);
+		unqueue(g_pending, cpu);
 
-		static_cast<ppu_thread&>(cpu).start_time = start_time;
+		static_cast<ppu_thread*>(cpu)->start_time = start_time;
 	}
 
-	// Emplace current thread
-	for (std::size_t i = 0; i <= g_ppu.size(); i++)
+	const auto emplace_thread = [](cpu_thread* const cpu)
 	{
-		if (i < g_ppu.size() && g_ppu[i] == &cpu)
+		for (auto it = g_ppu.cbegin(), end = g_ppu.cend();; it++)
 		{
-			LOG_TRACE(PPU, "sleep() - suspended (p=%zu)", g_pending.size());
-			break;
-		}
-
-		// Use priority, also preserve FIFO order
-		if (i == g_ppu.size() || g_ppu[i]->prio > static_cast<ppu_thread&>(cpu).prio)
-		{
-			LOG_TRACE(PPU, "awake(): %s", cpu.id);
-			g_ppu.insert(g_ppu.cbegin() + i, &static_cast<ppu_thread&>(cpu));
-
-			// Unregister timeout if necessary
-			for (auto it = g_waiting.cbegin(), end = g_waiting.cend(); it != end; it++)
+			if (it != end && *it == cpu)
 			{
-				if (it->second == &cpu)
-				{
-					g_waiting.erase(it);
-					break;
-				}
+				LOG_TRACE(PPU, "sleep() - suspended (p=%zu)", g_pending.size());
+				return;
 			}
 
-			break;
+			// Use priority, also preserve FIFO order
+			if (it == end || (*it)->prio > static_cast<ppu_thread*>(cpu)->prio)
+			{
+				g_ppu.insert(it, static_cast<ppu_thread*>(cpu));
+				break;
+			}
 		}
-	}
 
-	// Remove pending if necessary
-	if (!g_pending.empty() && &cpu == get_current_cpu_thread())
+		// Unregister timeout if necessary
+		for (auto it = g_waiting.cbegin(), end = g_waiting.cend(); it != end; it++)
+		{
+			if (it->second == cpu)
+			{
+				g_waiting.erase(it);
+				break;
+			}
+		}
+
+		LOG_TRACE(PPU, "awake(): %s", cpu->id);
+	};
+
+	if (cpu)
 	{
-		unqueue(g_pending, &cpu);
+		// Emplace current thread
+		emplace_thread(cpu);
+	}
+	else for (const auto _cpu : g_to_awake)
+	{
+		// Emplace threads from list
+		emplace_thread(_cpu);
+	}
+	
+	// Remove pending if necessary
+	if (!g_pending.empty() && cpu && cpu == get_current_cpu_thread())
+	{
+		unqueue(g_pending, cpu);
 	}
 
 	// Suspend threads if necessary
