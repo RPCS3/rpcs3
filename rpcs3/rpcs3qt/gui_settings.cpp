@@ -241,7 +241,7 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 	SetValue(value, val);
 }
 
-void gui_settings::ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
+void gui_settings::ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, bool always_on_top = false)
 {
 	const std::string dialog_type = confirm ? "Confirmation" : "Info";
 
@@ -250,7 +250,7 @@ void gui_settings::ShowBox(bool confirm, const QString& title, const QString& te
 		const QFlags<QMessageBox::StandardButton> buttons = confirm ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
 		const QMessageBox::Icon icon = confirm ? QMessageBox::Question : QMessageBox::Information;
 
-		QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent);
+		QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
 		mb->deleteLater();
 
 		if (!entry.name.isEmpty())
@@ -278,12 +278,12 @@ void gui_settings::ShowBox(bool confirm, const QString& title, const QString& te
 
 void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
 {
-	ShowBox(true, title, text, entry, result, parent);
+	ShowBox(true, title, text, entry, result, parent, true);
 }
 
 void gui_settings::ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent = nullptr)
 {
-	ShowBox(false, title, text, entry, nullptr, parent);
+	ShowBox(false, title, text, entry, nullptr, parent, false);
 }
 
 void gui_settings::SetGamelistColVisibility(int col, bool val)

@@ -297,6 +297,11 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 	// call the syscall
 	const error_code res = _sys_lwcond_queue_wait(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
 
+	if (ppu.test_stopped())
+	{
+		return 0;
+	}
+
 	if (res == CELL_OK || res == CELL_ESRCH)
 	{
 		if (res == CELL_OK)

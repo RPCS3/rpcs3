@@ -950,8 +950,8 @@ void PPUTranslator::VMHADDSHS(ppu_opcode_t op)
 	// m.value = m_ir->CreateOr(m.value, m_ir->CreateLShr(m_ir->CreateMul(a.value, b.value), 15));
 	// const auto s = eval(c + m);
 	// const auto z = eval((c >> 15) ^ 0x7fff);
-	// const auto x = eval(scarry(c, m, s) >> 15);
-	// set_vr(op.vd, eval(merge(x, z, s)));
+	// const auto x = eval(((m ^ s) & ~(c ^ m)) >> 15);
+	// set_vr(op.vd, eval((z & x) | (s & ~x)));
 	//SetSat(IsNotZero(saturated.second));
 }
 
@@ -1053,8 +1053,8 @@ void PPUTranslator::VMSUMMBM(ppu_opcode_t op)
 	const auto a = get_vr<s16[8]>(op.va);
 	const auto b = get_vr<u16[8]>(op.vb);
 	const auto c = get_vr<s32[4]>(op.vc);
-	const auto ml = bitcast<s32[4]>((a << 8 >> 8) * bitcast<s16[8]>(b << 8 >> 8));
-	const auto mh = bitcast<s32[4]>((a >> 8) * bitcast<s16[8]>(b >> 8));
+	const auto ml = bitcast<s32[4]>((a << 8 >> 8) * noncast<s16[8]>(b << 8 >> 8));
+	const auto mh = bitcast<s32[4]>((a >> 8) * noncast<s16[8]>(b >> 8));
 	set_vr(op.vd, eval(((ml << 16 >> 16) + (ml >> 16)) + ((mh << 16 >> 16) + (mh >> 16)) + c));
 }
 
@@ -1078,8 +1078,9 @@ void PPUTranslator::VMSUMSHS(ppu_opcode_t op)
 	const auto m = eval(ml + mh);
 	const auto s = eval(m + c);
 	const auto z = eval((c >> 31) ^ 0x7fffffff);
-	const auto x = eval(scarry(c, eval(m ^ sext<s32[4]>(m == 0x80000000u)), s) >> 31);
-	set_vr(op.vd, eval(merge(x, z, s)));
+	const auto mx = eval(m ^ sext<s32[4]>(m == 0x80000000u));
+	const auto x = eval(((mx ^ s) & ~(c ^ mx)) >> 31);
+	set_vr(op.vd, eval((z & x) | (s & ~x)));
 	SetSat(IsNotZero(x.value));
 }
 
@@ -1108,8 +1109,8 @@ void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 	const auto a = get_vr<u32[4]>(op.va);
 	const auto b = get_vr<u32[4]>(op.vb);
 	const auto c = get_vr<u32[4]>(op.vc);
-	const auto ml = bitcast<u32[4]>((a << 16 >> 16) * (b << 16 >> 16));
-	const auto mh = bitcast<u32[4]>((a >> 16) * (b >> 16));
+	const auto ml = noncast<u32[4]>((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = noncast<u32[4]>((a >> 16) * (b >> 16));
 	const auto s = eval(ml + mh);
 	const auto s2 = eval(s + c);
 	const auto x = eval(s < ml | s2 < s);
@@ -1191,7 +1192,7 @@ void PPUTranslator::VPERM(ppu_opcode_t op)
 	const auto b = get_vr<u8[16]>(op.vb);
 	const auto c = get_vr<u8[16]>(op.vc);
 	const auto i = eval(~c & 0x1f);
-	set_vr(op.vd, select(bitcast<s8[16]>(c << 3) >= 0, pshufb(a, i), pshufb(b, i)));
+	set_vr(op.vd, select(noncast<s8[16]>(c << 3) >= 0, pshufb(a, i), pshufb(b, i)));
 }
 
 void PPUTranslator::VPKPX(ppu_opcode_t op)
@@ -1300,20 +1301,20 @@ void PPUTranslator::VRFIZ(ppu_opcode_t op)
 
 void PPUTranslator::VRLB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRLH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRLW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)

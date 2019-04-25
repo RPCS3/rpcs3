@@ -94,9 +94,9 @@ public:
 	}
 
 	template <typename T>
-	void set_vr(u32 vr, value_t<T> v)
+	void set_vr(u32 vr, T&& expr)
 	{
-		return SetVr(vr, v.value);
+		return SetVr(vr, expr.eval(m_ir));
 	}
 
 	// Get current instruction address

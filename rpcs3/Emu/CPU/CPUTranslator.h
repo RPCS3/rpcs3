@@ -9,6 +9,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
@@ -57,6 +58,16 @@ struct llvm_value_t
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		return value;
+	}
+
+	std::tuple<> match(llvm::Value*& value) const
+	{
+		if (value != this->value)
+		{
+			value = nullptr;
+		}
+
+		return {};
 	}
 
 	llvm::Value* value;
@@ -298,6 +309,12 @@ struct llvm_value_t<T*> : llvm_value_t<T>
 	using base = llvm_value_t<T>;
 	using base::base;
 
+	static constexpr uint esize      = 64;
+	static constexpr bool is_int     = false;
+	static constexpr bool is_sint    = false;
+	static constexpr bool is_uint    = false;
+	static constexpr bool is_float   = false;
+	static constexpr uint is_vector  = false;
 	static constexpr uint is_pointer = llvm_value_t<T>::is_pointer + 1;
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
@@ -325,466 +342,979 @@ struct llvm_value_t<T[N]> : llvm_value_t<T>
 	}
 };
 
-template <typename T, typename A1, typename A2>
-struct llvm_add_t
+template <typename T>
+using llvm_expr_t = std::decay_t<T>;
+
+template <typename T, typename = void>
+struct is_llvm_expr
+{
+};
+
+template <typename T>
+struct is_llvm_expr<T, std::void_t<decltype(std::declval<T>().eval(std::declval<llvm::IRBuilder<>*>()))>>
+{
+	using type = typename std::decay_t<T>::type;
+};
+
+template <typename T, typename Of, typename = void>
+struct is_llvm_expr_of
+{
+	static constexpr bool ok = false;
+};
+
+template <typename T, typename Of>
+struct is_llvm_expr_of<T, Of, std::void_t<typename is_llvm_expr<T>::type, typename is_llvm_expr<Of>::type>>
+{
+	static constexpr bool ok = std::is_same_v<typename is_llvm_expr<T>::type, typename is_llvm_expr<Of>::type>;
+};
+
+template <typename T, typename... Types>
+using llvm_common_t = std::enable_if_t<(is_llvm_expr_of<T, Types>::ok && ...), typename is_llvm_expr<T>::type>;
+
+template <typename... Args>
+using llvm_match_tuple = decltype(std::tuple_cat(std::declval<llvm_expr_t<Args>&>().match(std::declval<llvm::Value*&>())...));
+
+template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
+struct llvm_match_t
 {
 	using type = T;
 
-	A1 a1;
-	A2 a2;
+	llvm::Value* value = nullptr;
 
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_add_t<>: invalid type");
+	explicit operator bool() const
+	{
+		return value != nullptr;
+	}
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return value;
+	}
+
+	std::tuple<> match(llvm::Value*& value) const
+	{
+		if (value != this->value)
+		{
+			value = nullptr;
+		}
+
+		return {};
+	}
+};
+
+template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
+struct llvm_placeholder_t
+{
+	using type = T;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return nullptr;
+	}
+
+	std::tuple<llvm_match_t<T>> match(llvm::Value*& value) const
+	{
+		if (value && value->getType() == llvm_value_t<T>::get_type(value->getContext()))
+		{
+			return {value};
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename T, bool ForceSigned = false>
+struct llvm_const_int
+{
+	using type = T;
+
+	u64 val;
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_int;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		static_assert(llvm_value_t<T>::is_int, "llvm_const_int<>: invalid type");
+
+		return llvm::ConstantInt::get(llvm_value_t<T>::get_type(ir->getContext()), val, ForceSigned || llvm_value_t<T>::is_sint);
+	}
+
+	std::tuple<> match(llvm::Value*& value) const
+	{
+		if (value && value == llvm::ConstantInt::get(llvm_value_t<T>::get_type(value->getContext()), val, ForceSigned || llvm_value_t<T>::is_sint))
+		{
+			return {};
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename T>
+struct llvm_const_float
+{
+	using type = T;
+
+	f64 val;
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_float;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		static_assert(llvm_value_t<T>::is_float, "llvm_const_float<>: invalid type");
+
+		return llvm::ConstantFP::get(llvm_value_t<T>::get_type(ir->getContext()), val);
+	}
+
+	std::tuple<> match(llvm::Value*& value) const
+	{
+		if (value && value == llvm::ConstantFP::get(llvm_value_t<T>::get_type(value->getContext()), val))
+		{
+			return {};
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <uint N, typename T>
+struct llvm_const_vector
+{
+	using type = T;
+
+	T data;
+
+	static constexpr bool is_ok = N && llvm_value_t<T>::is_vector == N;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		static_assert(N && llvm_value_t<T>::is_vector == N, "llvm_const_vector<>: invalid type");
+
+		return llvm::ConstantDataVector::get(ir->getContext(), data);
+	}
+
+	std::tuple<> match(llvm::Value*& value) const
+	{
+		if (value && value == llvm::ConstantDataVector::get(value->getContext(), data))
+		{
+			return {};
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_add
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_add<>: invalid type");
+
+	static constexpr auto opc = llvm_value_t<T>::is_float ? llvm::Instruction::FAdd : llvm::Instruction::Add;
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
+		return ir->CreateBinOp(opc, v1, v2);
+	}
 
-		if (llvm_value_t<T>::is_int)
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == opc)
 		{
-			return ir->CreateAdd(v1, v2);
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
 		}
 
-		if (llvm_value_t<T>::is_float)
-		{
-			return ir->CreateFAdd(v1, v2);
-		}
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_add_t<typename T1::type, T1, T2> operator +(T1 a1, T2 a2)
+template <typename T1, typename T2>
+inline llvm_add<T1, T2> operator +(T1&& a1, T2&& a2)
 {
 	return {a1, a2};
 }
 
-template <typename T, typename A1>
-struct llvm_add_const_t
+template <typename T1>
+inline llvm_add<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator +(T1&& a1, u64 c)
 {
-	using type = T;
-
-	A1 a1;
-	u64 c;
-
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_add_const_t<>: invalid type");
-
-	llvm::Value* eval(llvm::IRBuilder<>* ir) const
-	{
-		return ir->CreateAdd(a1.eval(ir), llvm::ConstantInt::get(llvm_value_t<T>::get_type(ir->getContext()), c, llvm_value_t<T>::is_sint));
-	}
-};
-
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_add_const_t<typename T1::type, T1> operator +(T1 a1, u64 c)
-{
-	return {a1, c};
+	return {a1, {c}};
 }
 
-template <typename T, typename A1, typename A2>
-struct llvm_sub_t
+template <typename A1, typename A2, typename A3, typename T = llvm_common_t<A1, A2, A3>>
+struct llvm_sum
 {
 	using type = T;
 
-	A1 a1;
-	A2 a2;
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+	llvm_expr_t<A3> a3;
 
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_sub_t<>: invalid type");
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_sum<>: invalid_type");
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
+		const auto v3 = a3.eval(ir);
+		return ir->CreateAdd(ir->CreateAdd(v1, v2), v3);
+	}
 
-		if (llvm_value_t<T>::is_int)
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+		llvm::Value* v3 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == llvm::Instruction::Add)
 		{
-			return ir->CreateSub(v1, v2);
+			v3 = i->getOperand(1);
+
+			if (auto r3 = a3.match(v3); v3)
+			{
+				i = llvm::dyn_cast<llvm::BinaryOperator>(i->getOperand(0));
+
+				if (i && i->getOpcode() == llvm::Instruction::Add)
+				{
+					v1 = i->getOperand(0);
+					v2 = i->getOperand(1);
+
+					if (auto r1 = a1.match(v1); v1)
+					{
+						if (auto r2 = a2.match(v2); v2)
+						{
+							return std::tuple_cat(r1, r2, r3);
+						}
+					}
+				}
+			}
 		}
 
-		if (llvm_value_t<T>::is_float)
-		{
-			return ir->CreateFSub(v1, v2);
-		}
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_sub_t<typename T1::type, T1, T2> operator -(T1 a1, T2 a2)
-{
-	return {a1, a2};
-}
+template <typename T1, typename T2, typename T3>
+llvm_sum(T1&& a1, T2&& a2, T3&& a3) -> llvm_sum<T1, T2, T3>;
 
-template <typename T, typename A1>
-struct llvm_sub_const_t
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_sub
 {
 	using type = T;
 
-	A1 a1;
-	u64 c;
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
 
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_sub_const_t<>: invalid type");
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_sub<>: invalid type");
 
-	llvm::Value* eval(llvm::IRBuilder<>* ir) const
-	{
-		return ir->CreateSub(a1.eval(ir), llvm::ConstantInt::get(llvm_value_t<T>::get_type(ir->getContext()), c, llvm_value_t<T>::is_sint));
-	}
-};
-
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_sub_const_t<typename T1::type, T1> operator -(T1 a1, u64 c)
-{
-	return {a1, c};
-}
-
-template <typename T, typename A1>
-struct llvm_const_sub_t
-{
-	using type = T;
-
-	A1 a1;
-	u64 c;
-
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_const_sub_t<>: invalid type");
-
-	llvm::Value* eval(llvm::IRBuilder<>* ir) const
-	{
-		return ir->CreateSub(llvm::ConstantInt::get(llvm_value_t<T>::get_type(ir->getContext()), c, llvm_value_t<T>::is_sint), a1.eval(ir));
-	}
-};
-
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_const_sub_t<typename T1::type, T1> operator -(u64 c, T1 a1)
-{
-	return {a1, c};
-}
-
-template <typename T, typename A1, typename A2>
-struct llvm_mul_t
-{
-	using type = T;
-
-	A1 a1;
-	A2 a2;
-
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_mul_t<>: invalid type");
+	static constexpr auto opc = llvm_value_t<T>::is_float ? llvm::Instruction::FSub : llvm::Instruction::Sub;
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
+		return ir->CreateBinOp(opc, v1, v2);
+	}
 
-		if (llvm_value_t<T>::is_int)
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == opc)
 		{
-			return ir->CreateMul(v1, v2);
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
 		}
 
-		if (llvm_value_t<T>::is_float)
-		{
-			return ir->CreateFMul(v1, v2);
-		}
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_mul_t<typename T1::type, T1, T2> operator *(T1 a1, T2 a2)
+template <typename T1, typename T2>
+inline llvm_sub<T1, T2> operator -(T1&& a1, T2&& a2)
 {
 	return {a1, a2};
 }
 
-template <typename T, typename A1, typename A2>
-struct llvm_div_t
+template <typename T1>
+inline llvm_sub<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator -(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename T1>
+inline llvm_sub<llvm_const_int<typename is_llvm_expr<T1>::type>, T1> operator -(u64 c, T1&& a1)
+{
+	return {{c}, a1};
+}
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_mul
 {
 	using type = T;
 
-	A1 a1;
-	A2 a2;
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
 
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_div_t<>: invalid type");
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_mul<>: invalid type");
+
+	static constexpr auto opc = llvm_value_t<T>::is_float ? llvm::Instruction::FMul : llvm::Instruction::Mul;
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
+		return ir->CreateBinOp(opc, v1, v2);
+	}
 
-		if (llvm_value_t<T>::is_sint)
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == opc)
 		{
-			return ir->CreateSDiv(v1, v2);
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
 		}
 
-		if (llvm_value_t<T>::is_uint)
-		{
-			return ir->CreateUDiv(v1, v2);
-		}
-
-		if (llvm_value_t<T>::is_float)
-		{
-			return ir->CreateFDiv(v1, v2);
-		}
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_div_t<typename T1::type, T1, T2> operator /(T1 a1, T2 a2)
+template <typename T1, typename T2>
+inline llvm_mul<T1, T2> operator *(T1&& a1, T2&& a2)
 {
 	return {a1, a2};
 }
 
-template <typename T, typename A1>
-struct llvm_neg_t
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_div
 {
 	using type = T;
 
-	A1 a1;
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
 
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_neg_t<>: invalid type");
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_div<>: invalid type");
+
+	static constexpr auto opc =
+		llvm_value_t<T>::is_float ? llvm::Instruction::FDiv :
+		llvm_value_t<T>::is_uint ? llvm::Instruction::UDiv : llvm::Instruction::SDiv;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+		return ir->CreateBinOp(opc, v1, v2);
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == opc)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename T1, typename T2>
+inline llvm_div<T1, T2> operator /(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_neg
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_neg<>: invalid type");
+
+	static constexpr auto opc = llvm_value_t<T>::is_float ? llvm::Instruction::FSub : llvm::Instruction::Sub;
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 
-		if (llvm_value_t<T>::is_int)
+		if constexpr (llvm_value_t<T>::is_int)
 		{
 			return ir->CreateNeg(v1);
 		}
 
-		if (llvm_value_t<T>::is_float)
+		if constexpr (llvm_value_t<T>::is_float)
 		{
 			return ir->CreateFNeg(v1);
 		}
 	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == opc)
+		{
+			v1 = i->getOperand(1);
+
+			if (i->getOperand(0) == llvm::ConstantFP::getZeroValueForNegation(v1->getType()))
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
 };
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<(llvm_value_t<typename T1::type>::esize > 1)>>
-inline llvm_neg_t<typename T1::type, T1> operator -(T1 a1)
+template <typename T1>
+inline llvm_neg<T1> operator -(T1 a1)
 {
 	return {a1};
 }
 
-// Constant int helper
-struct llvm_int_t
-{
-	u64 value;
-
-	u64 eval(llvm::IRBuilder<>*) const
-	{
-		return value;
-	}
-};
-
-template <typename T, typename A1, typename A2>
-struct llvm_shl_t
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_shl
 {
 	using type = T;
 
-	A1 a1;
-	A2 a2;
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
 
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_shl_t<>: invalid type");
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_shl<>: invalid type");
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+		return ir->CreateShl(v1, v2);
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == llvm::Instruction::Shl)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename T1, typename T2>
+inline llvm_shl<T1, T2> operator <<(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1>
+inline llvm_shl<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator <<(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_shr
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_shr<>: invalid type");
+
+	static constexpr auto opc = llvm_value_t<T>::is_uint ? llvm::Instruction::LShr : llvm::Instruction::AShr;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+		return ir->CreateBinOp(opc, v1, v2);
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == opc)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename T1, typename T2>
+inline llvm_shr<T1, T2> operator >>(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1>
+inline llvm_shr<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator >>(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename A1, typename A2, typename A3, typename T = llvm_common_t<A1, A2, A3>>
+struct llvm_fshl
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+	llvm_expr_t<A3> a3;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_fshl<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	static llvm::Function* get_fshl(llvm::IRBuilder<>* ir)
+	{
+		const auto module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::fshl, {llvm_value_t<T>::get_type(ir->getContext())});
+	}
+
+	static llvm::Value* fold(llvm::IRBuilder<>* ir, llvm::Value* v1, llvm::Value* v2, llvm::Value* v3)
+	{
+		// Compute constant result.
+		const u64 size = v3->getType()->getScalarSizeInBits();
+		const auto val = ir->CreateURem(v3, llvm::ConstantInt::get(v3->getType(), size));
+		const auto shl = ir->CreateShl(v1, val);
+		const auto shr = ir->CreateLShr(v2, ir->CreateSub(llvm::ConstantInt::get(v3->getType(), size - 1), val));
+		return ir->CreateOr(shl, ir->CreateLShr(shr, 1));
+	}
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+		const auto v3 = a3.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2) && llvm::isa<llvm::Constant>(v3))
+		{
+			return fold(ir, v1, v2, v3);
+		}
+
+		return ir->CreateCall(get_fshl(ir), {v1, v2, v3});
+	}
+
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+		llvm::Value* v3 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::fshl)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+			v3 = i->getOperand(2);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					if (auto r3 = a3.match(v3); v3)
+					{
+						return std::tuple_cat(r1, r2, r3);
+					}
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename A3, typename T = llvm_common_t<A1, A2, A3>>
+struct llvm_fshr
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+	llvm_expr_t<A3> a3;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_fshr<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	static llvm::Function* get_fshr(llvm::IRBuilder<>* ir)
+	{
+		const auto module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::fshr, {llvm_value_t<T>::get_type(ir->getContext())});
+	}
+
+	static llvm::Value* fold(llvm::IRBuilder<>* ir, llvm::Value* v1, llvm::Value* v2, llvm::Value* v3)
+	{
+		// Compute constant result.
+		const u64 size = v3->getType()->getScalarSizeInBits();
+		const auto val = ir->CreateURem(v3, llvm::ConstantInt::get(v3->getType(), size));
+		const auto shr = ir->CreateLShr(v2, val);
+		const auto shl = ir->CreateShl(v1, ir->CreateSub(llvm::ConstantInt::get(v3->getType(), size - 1), val));
+		return ir->CreateOr(shr, ir->CreateShl(shl, 1));
+	}
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+		const auto v3 = a3.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2) && llvm::isa<llvm::Constant>(v3))
+		{
+			return fold(ir, v1, v2, v3);
+		}
+
+		return ir->CreateCall(get_fshr(ir), {v1, v2, v3});
+	}
+
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+		llvm::Value* v3 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::fshr)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+			v3 = i->getOperand(2);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					if (auto r3 = a3.match(v3); v3)
+					{
+						return std::tuple_cat(r1, r2, r3);
+					}
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_rol
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_rol<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
 
-		if (llvm_value_t<T>::is_sint)
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2))
 		{
-			return ir->CreateShl(v1, v2);
+			return llvm_fshl<A1, A1, A2>::fold(ir, v1, v1, v2);
 		}
 
-		if (llvm_value_t<T>::is_uint)
+		return ir->CreateCall(llvm_fshl<A1, A1, A2>::get_fshl(ir), {v1, v1, v2});
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::fshl)
 		{
-			return ir->CreateShl(v1, v2);
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(2);
+
+			if (i->getOperand(1) == v1)
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					if (auto r2 = a2.match(v2); v2)
+					{
+						return std::tuple_cat(r1, r2);
+					}
+				}
+			}
 		}
+
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_shl_t<typename T1::type, T1, T2> operator <<(T1 a1, T2 a2)
-{
-	return {a1, a2};
-}
-
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_shl_t<typename T1::type, T1, llvm_int_t> operator <<(T1 a1, u64 a2)
-{
-	return {a1, llvm_int_t{a2}};
-}
-
-template <typename T, typename A1, typename A2>
-struct llvm_shr_t
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_and
 {
 	using type = T;
 
-	A1 a1;
-	A2 a2;
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
 
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_shr_t<>: invalid type");
+	static_assert(llvm_value_t<T>::is_int, "llvm_and<>: invalid type");
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
+		return ir->CreateAnd(v1, v2);
+	}
 
-		if (llvm_value_t<T>::is_sint)
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == llvm::Instruction::And)
 		{
-			return ir->CreateAShr(v1, v2);
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
 		}
 
-		if (llvm_value_t<T>::is_uint)
-		{
-			return ir->CreateLShr(v1, v2);
-		}
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_shr_t<typename T1::type, T1, T2> operator >>(T1 a1, T2 a2)
+template <typename T1, typename T2>
+inline llvm_and<T1, T2> operator &(T1&& a1, T2&& a2)
 {
 	return {a1, a2};
 }
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_shr_t<typename T1::type, T1, llvm_int_t> operator >>(T1 a1, u64 a2)
+template <typename T1>
+inline llvm_and<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator &(T1&& a1, u64 c)
 {
-	return {a1, llvm_int_t{a2}};
+	return {a1, {c}};
 }
 
-template <typename T, typename A1, typename A2>
-struct llvm_and_t
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_or
 {
 	using type = T;
 
-	A1 a1;
-	A2 a2;
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
 
-	static_assert(llvm_value_t<T>::is_int, "llvm_and_t<>: invalid type");
+	static_assert(llvm_value_t<T>::is_int, "llvm_or<>: invalid type");
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
+		return ir->CreateOr(v1, v2);
+	}
 
-		if (llvm_value_t<T>::is_int)
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == llvm::Instruction::Or)
 		{
-			return ir->CreateAnd(v1, v2);
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
 		}
+
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_and_t<typename T1::type, T1, T2> operator &(T1 a1, T2 a2)
+template <typename T1, typename T2>
+inline llvm_or<T1, T2> operator |(T1&& a1, T2&& a2)
 {
 	return {a1, a2};
 }
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_and_t<typename T1::type, T1, llvm_int_t> operator &(T1 a1, u64 a2)
+template <typename T1>
+inline llvm_or<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator |(T1&& a1, u64 c)
 {
-	return {a1, llvm_int_t{a2}};
+	return {a1, {c}};
 }
 
-template <typename T, typename A1, typename A2>
-struct llvm_or_t
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_xor
 {
 	using type = T;
 
-	A1 a1;
-	A2 a2;
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
 
-	static_assert(llvm_value_t<T>::is_int, "llvm_or_t<>: invalid type");
+	static_assert(llvm_value_t<T>::is_int, "llvm_xor<>: invalid type");
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
+		return ir->CreateXor(v1, v2);
+	}
 
-		if (llvm_value_t<T>::is_int)
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::BinaryOperator>(value); i && i->getOpcode() == llvm::Instruction::Xor)
 		{
-			return ir->CreateOr(v1, v2);
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
 		}
+
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_or_t<typename T1::type, T1, T2> operator |(T1 a1, T2 a2)
+template <typename T1, typename T2>
+inline llvm_xor<T1, T2> operator ^(T1&& a1, T2&& a2)
 {
 	return {a1, a2};
 }
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_or_t<typename T1::type, T1, llvm_int_t> operator |(T1 a1, u64 a2)
+template <typename T1>
+inline llvm_xor<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator ^(T1&& a1, u64 c)
 {
-	return {a1, llvm_int_t{a2}};
+	return {a1, {c}};
 }
 
-template <typename T, typename A1, typename A2>
-struct llvm_xor_t
+template <typename T1>
+inline llvm_xor<T1, llvm_const_int<typename is_llvm_expr<T1>::type, true>> operator ~(T1&& a1)
 {
-	using type = T;
-
-	A1 a1;
-	A2 a2;
-
-	static_assert(llvm_value_t<T>::is_int, "llvm_xor_t<>: invalid type");
-
-	llvm::Value* eval(llvm::IRBuilder<>* ir) const
-	{
-		const auto v1 = a1.eval(ir);
-		const auto v2 = a2.eval(ir);
-
-		if (llvm_value_t<T>::is_int)
-		{
-			return ir->CreateXor(v1, v2);
-		}
-	}
-};
-
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_xor_t<typename T1::type, T1, T2> operator ^(T1 a1, T2 a2)
-{
-	return {a1, a2};
+	return {a1, {UINT64_MAX}};
 }
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_xor_t<typename T1::type, T1, llvm_int_t> operator ^(T1 a1, u64 a2)
-{
-	return {a1, llvm_int_t{a2}};
-}
-
-template <typename T, typename A1>
-struct llvm_not_t
-{
-	using type = T;
-
-	A1 a1;
-
-	static_assert(llvm_value_t<T>::is_int, "llvm_not_t<>: invalid type");
-
-	llvm::Value* eval(llvm::IRBuilder<>* ir) const
-	{
-		const auto v1 = a1.eval(ir);
-
-		if (llvm_value_t<T>::is_int)
-		{
-			return ir->CreateNot(v1);
-		}
-	}
-};
-
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_not_t<typename T1::type, T1> operator ~(T1 a1)
-{
-	return {a1};
-}
-
-template <typename T, typename A1, typename A2, llvm::CmpInst::Predicate UPred>
-struct llvm_icmp_t
+template <typename A1, typename A2, llvm::CmpInst::Predicate UPred, typename T = llvm_common_t<A1, A2>>
+struct llvm_cmp
 {
 	using type = std::conditional_t<llvm_value_t<T>::is_vector != 0, bool[llvm_value_t<T>::is_vector], bool>;
 
-	A1 a1;
-	A2 a2;
+	static constexpr bool is_float = llvm_value_t<T>::is_float;
 
-	static_assert(llvm_value_t<T>::is_int, "llvm_eq_t<>: invalid type");
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_int || is_float, "llvm_cmp<>: invalid type");
 
 	// Convert unsigned comparison predicate to signed if necessary
 	static constexpr llvm::CmpInst::Predicate pred = llvm_value_t<T>::is_uint ? UPred :
@@ -793,16 +1323,616 @@ struct llvm_icmp_t
 		UPred == llvm::ICmpInst::ICMP_ULT ? llvm::ICmpInst::ICMP_SLT :
 		UPred == llvm::ICmpInst::ICMP_ULE ? llvm::ICmpInst::ICMP_SLE : UPred;
 
-	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || UPred == llvm::ICmpInst::ICMP_EQ || UPred == llvm::ICmpInst::ICMP_NE, "llvm_eq_t<>: invalid type(II)");
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || is_float || UPred == llvm::ICmpInst::ICMP_EQ || UPred == llvm::ICmpInst::ICMP_NE, "llvm_cmp<>: invalid operation on sign-undefined type");
 
-	static inline llvm::Value* icmp(llvm::IRBuilder<>* ir, llvm::Value* lhs, llvm::Value* rhs)
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
-		return ir->CreateICmp(pred, lhs, rhs);
+		static_assert(!is_float, "llvm_cmp<>: invalid operation (missing fcmp_ord or fcmp_uno)");
+
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+		return ir->CreateICmp(pred, v1, v2);
 	}
 
-	static inline llvm::Value* icmp(llvm::IRBuilder<>* ir, llvm::Value* lhs, u64 value)
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
 	{
-		return ir->CreateICmp(pred, lhs, llvm::ConstantInt::get(llvm_value_t<T>::get_type(ir->getContext()), value, llvm_value_t<T>::is_sint));
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::ICmpInst>(value); i && i->getOpcode() == pred)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename T>
+struct is_llvm_cmp : std::bool_constant<false>
+{
+};
+
+template <typename A1, typename A2, auto UPred, typename T>
+struct is_llvm_cmp<llvm_cmp<A1, A2, UPred, T>> : std::bool_constant<true>
+{
+};
+
+template <typename Cmp, typename T = llvm_common_t<Cmp>>
+struct llvm_ord
+{
+	using base = std::decay_t<Cmp>;
+	using type = typename base::type;
+
+	llvm_expr_t<Cmp> cmp;
+
+	// Convert comparison predicate to ordered
+	static constexpr llvm::CmpInst::Predicate pred =
+		base::pred == llvm::ICmpInst::ICMP_EQ ? llvm::ICmpInst::FCMP_OEQ :
+		base::pred == llvm::ICmpInst::ICMP_NE ? llvm::ICmpInst::FCMP_ONE :
+		base::pred == llvm::ICmpInst::ICMP_SGT ? llvm::ICmpInst::FCMP_OGT :
+		base::pred == llvm::ICmpInst::ICMP_SGE ? llvm::ICmpInst::FCMP_OGE :
+		base::pred == llvm::ICmpInst::ICMP_SLT ? llvm::ICmpInst::FCMP_OLT :
+		base::pred == llvm::ICmpInst::ICMP_SLE ? llvm::ICmpInst::FCMP_OLE : base::pred;
+
+	static_assert(base::is_float, "llvm_ord<>: invalid type");
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = cmp.a1.eval(ir);
+		const auto v2 = cmp.a2.eval(ir);
+		return ir->CreateFCmp(pred, v1, v2);
+	}
+
+	llvm_match_tuple<Cmp> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::FCmpInst>(value); i && i->getOpcode() == pred)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = cmp.a1.match(v1); v1)
+			{
+				if (auto r2 = cmp.a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename T>
+llvm_ord(T&&) -> llvm_ord<std::enable_if_t<is_llvm_cmp<std::decay_t<T>>::value, T&&>>;
+
+template <typename Cmp, typename T = llvm_common_t<Cmp>>
+struct llvm_uno
+{
+	using base = std::decay_t<Cmp>;
+	using type = typename base::type;
+
+	llvm_expr_t<Cmp> cmp;
+
+	// Convert comparison predicate to unordered
+	static constexpr llvm::CmpInst::Predicate pred =
+		base::pred == llvm::ICmpInst::ICMP_EQ ? llvm::ICmpInst::FCMP_UEQ :
+		base::pred == llvm::ICmpInst::ICMP_NE ? llvm::ICmpInst::FCMP_UNE :
+		base::pred == llvm::ICmpInst::ICMP_SGT ? llvm::ICmpInst::FCMP_UGT :
+		base::pred == llvm::ICmpInst::ICMP_SGE ? llvm::ICmpInst::FCMP_UGE :
+		base::pred == llvm::ICmpInst::ICMP_SLT ? llvm::ICmpInst::FCMP_ULT :
+		base::pred == llvm::ICmpInst::ICMP_SLE ? llvm::ICmpInst::FCMP_ULE : base::pred;
+
+	static_assert(base::is_float, "llvm_uno<>: invalid type");
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = cmp.a1.eval(ir);
+		const auto v2 = cmp.a2.eval(ir);
+		return ir->CreateFCmp(pred, v1, v2);
+	}
+
+	llvm_match_tuple<Cmp> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::FCmpInst>(value); i && i->getOpcode() == pred)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = cmp.a1.match(v1); v1)
+			{
+				if (auto r2 = cmp.a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename T>
+llvm_uno(T&&) -> llvm_uno<std::enable_if_t<is_llvm_cmp<std::decay_t<T>>::value, T&&>>;
+
+template <typename T1, typename T2>
+inline llvm_cmp<T1, T2, llvm::ICmpInst::ICMP_EQ> operator ==(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1>
+inline llvm_cmp<T1, llvm_const_int<typename is_llvm_expr<T1>::type>, llvm::ICmpInst::ICMP_EQ> operator ==(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename T1, typename T2>
+inline llvm_cmp<T1, T2, llvm::ICmpInst::ICMP_NE> operator !=(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1>
+inline llvm_cmp<T1, llvm_const_int<typename is_llvm_expr<T1>::type>, llvm::ICmpInst::ICMP_NE> operator !=(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename T1, typename T2>
+inline llvm_cmp<T1, T2, llvm::ICmpInst::ICMP_UGT> operator >(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1>
+inline llvm_cmp<T1, llvm_const_int<typename is_llvm_expr<T1>::type>, llvm::ICmpInst::ICMP_UGT> operator >(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename T1, typename T2>
+inline llvm_cmp<T1, T2, llvm::ICmpInst::ICMP_UGE> operator >=(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1>
+inline llvm_cmp<T1, llvm_const_int<typename is_llvm_expr<T1>::type>, llvm::ICmpInst::ICMP_UGE> operator >=(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename T1, typename T2>
+inline llvm_cmp<T1, T2, llvm::ICmpInst::ICMP_ULT> operator <(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1>
+inline llvm_cmp<T1, llvm_const_int<typename is_llvm_expr<T1>::type>, llvm::ICmpInst::ICMP_ULT> operator <(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename T1, typename T2>
+inline llvm_cmp<T1, T2, llvm::ICmpInst::ICMP_ULE> operator <=(T1&& a1, T2&& a2)
+{
+	return {a1, a2};
+}
+
+template <typename T1>
+inline llvm_cmp<T1, llvm_const_int<typename is_llvm_expr<T1>::type>, llvm::ICmpInst::ICMP_ULE> operator <=(T1&& a1, u64 c)
+{
+	return {a1, {c}};
+}
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_noncast
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_noncast<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int, "llvm_noncast<>: invalid result type");
+	static_assert(llvm_value_t<T>::esize == llvm_value_t<U>::esize, "llvm_noncast<>: result is resized");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_noncast<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<T>::is_int &&
+		llvm_value_t<U>::is_int &&
+		llvm_value_t<T>::esize == llvm_value_t<U>::esize &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		// No operation required
+		return a1.eval(ir);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		if (value)
+		{
+			if (auto r1 = a1.match(value); value)
+			{
+				return r1;
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_bitcast
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static constexpr uint bitsize0 = llvm_value_t<T>::is_vector ? llvm_value_t<T>::is_vector * llvm_value_t<T>::esize : llvm_value_t<T>::esize;
+	static constexpr uint bitsize1 = llvm_value_t<U>::is_vector ? llvm_value_t<U>::is_vector * llvm_value_t<U>::esize : llvm_value_t<U>::esize;
+
+	static_assert(bitsize0 == bitsize1, "llvm_bitcast<>: invalid type (size mismatch)");
+	static_assert(llvm_value_t<T>::is_int || llvm_value_t<T>::is_float, "llvm_bitcast<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int || llvm_value_t<U>::is_float, "llvm_bitcast<>: invalid result type");
+	static_assert(llvm_value_t<T>::is_int != llvm_value_t<U>::is_int || llvm_value_t<T>::is_vector != llvm_value_t<U>::is_vector,
+		"llvm_bitcast<>: no-op cast (use noncast)");
+
+	static constexpr bool is_ok =
+		bitsize0 && bitsize0 == bitsize1 &&
+		(llvm_value_t<T>::is_int || llvm_value_t<T>::is_float) &&
+		(llvm_value_t<U>::is_int || llvm_value_t<U>::is_float);
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto rt = llvm_value_t<U>::get_type(ir->getContext());
+
+		if (const auto c1 = llvm::dyn_cast<llvm::Constant>(v1))
+		{
+			const auto module = ir->GetInsertBlock()->getParent()->getParent();
+			const auto result = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, rt, module->getDataLayout());
+
+			if (result)
+			{
+				return result;
+			}
+		}
+
+		return ir->CreateBitCast(v1, rt);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == llvm::Instruction::BitCast)
+		{
+			v1 = i->getOperand(0);
+
+			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		if (auto c = llvm::dyn_cast_or_null<llvm::Constant>(value))
+		{
+			// TODO
+			// const auto target = llvm_value_t<T>::get_type(c->getContext());
+
+			// // Reverse bitcast on a constant
+			// if (llvm::Value* cv = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c, target, module->getDataLayout()))
+			// {
+			// 	if (auto r1 = a1.match(cv); cv)
+			// 	{
+			// 		return r1;
+			// 	}
+			// }
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_trunc
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_trunc<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int, "llvm_trunc<>: invalid result type");
+	static_assert(llvm_value_t<T>::esize > llvm_value_t<U>::esize, "llvm_trunc<>: result is not truncated");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_trunc<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<T>::is_int &&
+		llvm_value_t<U>::is_int &&
+		llvm_value_t<T>::esize > llvm_value_t<U>::esize &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateTrunc(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == llvm::Instruction::Trunc)
+		{
+			v1 = i->getOperand(0);
+
+			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_sext
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_sext<>: invalid type");
+	static_assert(llvm_value_t<U>::is_sint, "llvm_sext<>: invalid result type");
+	static_assert(llvm_value_t<T>::esize < llvm_value_t<U>::esize, "llvm_sext<>: result is not extended");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_sext<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<T>::is_int &&
+		llvm_value_t<U>::is_sint &&
+		llvm_value_t<T>::esize < llvm_value_t<U>::esize &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateSExt(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == llvm::Instruction::SExt)
+		{
+			v1 = i->getOperand(0);
+
+			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_zext
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_int, "llvm_zext<>: invalid type");
+	static_assert(llvm_value_t<U>::is_uint, "llvm_zext<>: invalid result type");
+	static_assert(llvm_value_t<T>::esize < llvm_value_t<U>::esize, "llvm_zext<>: result is not extended");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_zext<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<T>::is_int &&
+		llvm_value_t<U>::is_uint &&
+		llvm_value_t<T>::esize < llvm_value_t<U>::esize &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateZExt(a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == llvm::Instruction::ZExt)
+		{
+			v1 = i->getOperand(0);
+
+			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename A3, typename T = llvm_common_t<A2, A3>, typename U = llvm_common_t<A1>>
+struct llvm_select
+{
+	using type = T;
+
+	llvm_expr_t<A1> cond;
+	llvm_expr_t<A2> a2;
+	llvm_expr_t<A3> a3;
+
+	static_assert(llvm_value_t<U>::esize == 1 && llvm_value_t<U>::is_int, "llvm_select<>: invalid condition type (bool expected)");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_select<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		llvm_value_t<U>::esize == 1 && llvm_value_t<U>::is_int &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateSelect(cond.eval(ir), a2.eval(ir), a3.eval(ir));
+	}
+
+	llvm_match_tuple<A1, A2, A3> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+		llvm::Value* v3 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::SelectInst>(value))
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+			v3 = i->getOperand(2);
+
+			if (auto r1 = cond.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					if (auto r3 = a3.match(v3); v3)
+					{
+						return std::tuple_cat(r1, r2, r3);
+					}
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_min
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_min<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		if constexpr (llvm_value_t<T>::is_sint)
+		{
+			return ir->CreateSelect(ir->CreateICmpSLT(v1, v2), v1, v2);
+		}
+
+		if constexpr (llvm_value_t<T>::is_uint)
+		{
+			return ir->CreateSelect(ir->CreateICmpULT(v1, v2), v1, v2);
+		}
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_max
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_max<>: invalid type");
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		if constexpr (llvm_value_t<T>::is_sint)
+		{
+			return ir->CreateSelect(ir->CreateICmpSLT(v1, v2), v2, v1);
+		}
+
+		if constexpr (llvm_value_t<T>::is_uint)
+		{
+			return ir->CreateSelect(ir->CreateICmpULT(v1, v2), v2, v1);
+		}
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_add_sat
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_add_sat<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	static constexpr auto intr = llvm_value_t<T>::is_sint ? llvm::Intrinsic::sadd_sat : llvm::Intrinsic::uadd_sat;
+
+	static llvm::Function* get_add_sat(llvm::IRBuilder<>* ir)
+	{
+		const auto module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
 	}
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
@@ -810,84 +1940,305 @@ struct llvm_icmp_t
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
 
-		if (llvm_value_t<T>::is_int)
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2))
 		{
-			return icmp(ir, v1, v2);
+			const auto sum = ir->CreateAdd(v1, v2);
+
+			if constexpr (llvm_value_t<T>::is_sint)
+			{
+				const auto max = llvm::ConstantInt::get(v1->getType(), llvm::APInt::getSignedMaxValue(llvm_value_t<T>::esize));
+				const auto sat = ir->CreateXor(ir->CreateAShr(v1, llvm_value_t<T>::esize - 1), max); // Max -> min if v1 < 0
+				const auto ovf = ir->CreateAnd(ir->CreateXor(v2, sum), ir->CreateNot(ir->CreateXor(v1, v2))); // Get overflow
+				return ir->CreateSelect(ir->CreateICmpSLT(ovf, llvm::ConstantInt::get(v1->getType(), 0)), sat, sum);
+			}
+
+			if constexpr (llvm_value_t<T>::is_uint)
+			{
+				const auto max = llvm::ConstantInt::get(v1->getType(), llvm::APInt::getMaxValue(llvm_value_t<T>::esize));
+				return ir->CreateSelect(ir->CreateICmpULT(sum, v1), max, sum);
+			}
 		}
+
+		return ir->CreateCall(get_add_sat(ir), {v1, v2});
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == intr)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
 	}
 };
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_EQ> operator ==(T1 a1, T2 a2)
+template <typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_sub_sat
 {
-	return {a1, a2};
-}
+	using type = T;
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_EQ> operator ==(T1 a1, u64 a2)
-{
-	return {a1, llvm_int_t{a2}};
-}
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_NE> operator !=(T1 a1, T2 a2)
-{
-	return {a1, a2};
-}
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_sub_sat<>: invalid type");
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_NE> operator !=(T1 a1, u64 a2)
-{
-	return {a1, llvm_int_t{a2}};
-}
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_UGT> operator >(T1 a1, T2 a2)
-{
-	return {a1, a2};
-}
+	static constexpr auto intr = llvm_value_t<T>::is_sint ? llvm::Intrinsic::ssub_sat : llvm::Intrinsic::usub_sat;
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_UGT> operator >(T1 a1, u64 a2)
-{
-	return {a1, llvm_int_t{a2}};
-}
+	static llvm::Function* get_sub_sat(llvm::IRBuilder<>* ir)
+	{
+		const auto module = ir->GetInsertBlock()->getParent()->getParent();
+		return llvm::Intrinsic::getDeclaration(module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
+	}
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_UGE> operator >=(T1 a1, T2 a2)
-{
-	return {a1, a2};
-}
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_UGE> operator >=(T1 a1, u64 a2)
-{
-	return {a1, llvm_int_t{a2}};
-}
+		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2))
+		{
+			const auto dif = ir->CreateSub(v1, v2);
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_ULT> operator <(T1 a1, T2 a2)
-{
-	return {a1, a2};
-}
+			if constexpr (llvm_value_t<T>::is_sint)
+			{
+				const auto max = llvm::ConstantInt::get(v1->getType(), llvm::APInt::getSignedMaxValue(llvm_value_t<T>::esize));
+				const auto sat = ir->CreateXor(ir->CreateAShr(v1, llvm_value_t<T>::esize - 1), max); // Max -> min if v1 < 0
+				const auto ovf = ir->CreateAnd(ir->CreateXor(v1, dif), ir->CreateXor(v1, v2)); // Get overflow (subtraction)
+				return ir->CreateSelect(ir->CreateICmpSLT(ovf, llvm::ConstantInt::get(v1->getType(), 0)), sat, dif);
+			}
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_ULT> operator <(T1 a1, u64 a2)
-{
-	return {a1, llvm_int_t{a2}};
-}
+			if constexpr (llvm_value_t<T>::is_uint)
+			{
+				return ir->CreateSelect(ir->CreateICmpULT(v1, v2), llvm::ConstantInt::get(v1->getType(), 0), dif);
+			}
+		}
 
-template <typename T1, typename T2, typename = decltype(std::declval<T1>().eval(0)), typename = decltype(std::declval<T2>().eval(0)), typename = std::enable_if_t<std::is_same<typename T1::type, typename T2::type>::value>>
-inline llvm_icmp_t<typename T1::type, T1, T2, llvm::ICmpInst::ICMP_ULE> operator <=(T1 a1, T2 a2)
-{
-	return {a1, a2};
-}
+		return ir->CreateCall(get_sub_sat(ir), {v1, v2});
+	}
 
-template <typename T1, typename = decltype(std::declval<T1>().eval(0)), typename = std::enable_if_t<llvm_value_t<typename T1::type>::is_int>>
-inline llvm_icmp_t<typename T1::type, T1, llvm_int_t, llvm::ICmpInst::ICMP_ULE> operator <=(T1 a1, u64 a2)
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == intr)
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = a2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename I2, typename T = llvm_common_t<A1>, typename U = llvm_common_t<I2>>
+struct llvm_extract
 {
-	return {a1, llvm_int_t{a2}};
-}
+	using type = std::remove_extent_t<T>;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<I2> i2;
+
+	static_assert(llvm_value_t<T>::is_vector, "llvm_extract<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int && !llvm_value_t<U>::is_vector, "llvm_extract<>: invalid index type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_vector &&
+		llvm_value_t<U>::is_int && !llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = i2.eval(ir);
+
+		return ir->CreateExtractElement(v1, v2);
+	}
+
+	llvm_match_tuple<A1, I2> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::ExtractElementInst>(value))
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = i2.match(v2); v2)
+				{
+					return std::tuple_cat(r1, r2);
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename I2, typename A3, typename T = llvm_common_t<A1>, typename U = llvm_common_t<I2>, typename V = llvm_common_t<A3>>
+struct llvm_insert
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<I2> i2;
+	llvm_expr_t<A3> a3;
+
+	static_assert(llvm_value_t<T>::is_vector, "llvm_insert<>: invalid type");
+	static_assert(llvm_value_t<U>::is_int && !llvm_value_t<U>::is_vector, "llvm_insert<>: invalid index type");
+	static_assert(std::is_same_v<V, std::remove_extent_t<T>>, "llvm_insert<>: invalid element type");
+
+	static constexpr bool is_ok = llvm_extract<A1, I2>::is_ok &&
+		std::is_same_v<V, std::remove_extent_t<T>>;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = i2.eval(ir);
+		const auto v3 = a3.eval(ir);
+
+		return ir->CreateInsertElement(v1, v3, v2);
+	}
+
+	llvm_match_tuple<A1, I2, A3> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+		llvm::Value* v3 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::InsertElementInst>(value))
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+			v3 = i->getOperand(2);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				if (auto r2 = i2.match(v2); v2)
+				{
+					if (auto r3 = a3.match(v3); v3)
+					{
+						return std::tuple_cat(r1, r2, r3);
+					}
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_splat
+{
+	using type = U;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(!llvm_value_t<T>::is_vector, "llvm_splat<>: invalid type");
+	static_assert(llvm_value_t<U>::is_vector, "llvm_splat<>: invalid result type");
+	static_assert(std::is_same_v<T, std::remove_extent_t<U>>, "llvm_splat<>: incompatible splat type");
+
+	static constexpr bool is_ok =
+		!llvm_value_t<T>::is_vector &&
+		llvm_value_t<U>::is_vector &&
+		std::is_same_v<T, std::remove_extent_t<U>>;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+
+		return ir->CreateVectorSplat(llvm_value_t<U>::is_vector, v1);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		value = nullptr;
+		return {};
+	}
+};
+
+template <uint N, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_zshuffle
+{
+	using type = std::remove_extent_t<T>[N];
+
+	llvm_expr_t<A1> a1;
+	u32 index_array[N];
+
+	static_assert(llvm_value_t<T>::is_vector, "llvm_zshuffle<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_vector && 1;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+
+		return ir->CreateShuffleVector(v1, llvm::ConstantAggregateZero::get(v1->getType()), index_array);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		value = nullptr;
+		return {};
+	}
+};
+
+template <uint N, typename A1, typename A2, typename T = llvm_common_t<A1, A2>>
+struct llvm_shuffle2
+{
+	using type = std::remove_extent_t<T>[N];
+
+	llvm_expr_t<A1> a1;
+	llvm_expr_t<A2> a2;
+	u32 index_array[N];
+
+	static_assert(llvm_value_t<T>::is_vector, "llvm_shuffle2<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_vector && 1;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		const auto v1 = a1.eval(ir);
+		const auto v2 = a2.eval(ir);
+
+		return ir->CreateShuffleVector(v1, v2, index_array);
+	}
+
+	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
+	{
+		value = nullptr;
+		return {};
+	}
+};
 
 class cpu_translator
 {
@@ -946,157 +2297,161 @@ public:
 	}
 
 	template <typename T>
-	auto eval(T expr)
+	auto eval(T&& expr)
 	{
-		value_t<typename T::type> result;
+		value_t<typename std::decay_t<T>::type> result;
 		result.value = expr.eval(m_ir);
 		return result;
 	}
 
-	template <typename T, typename T2>
-	value_t<T> bitcast(T2 expr)
+	template <typename T, typename = std::enable_if_t<is_llvm_cmp<std::decay_t<T>>::value>>
+	static auto fcmp_ord(T&& cmp_expr)
 	{
-		value_t<T> result;
-		result.value = m_ir->CreateBitCast(expr.eval(m_ir), result.get_type(m_context));
-		return result;
+		return llvm_ord{std::forward<T>(cmp_expr)};
 	}
 
-	template <typename T, typename T2>
-	value_t<T> trunc(T2 expr)
+	template <typename T, typename = std::enable_if_t<is_llvm_cmp<std::decay_t<T>>::value>>
+	static auto fcmp_uno(T&& cmp_expr)
 	{
-		value_t<T> result;
-		result.value = m_ir->CreateTrunc(expr.eval(m_ir), result.get_type(m_context));
-		return result;
+		return llvm_uno{std::forward<T>(cmp_expr)};
 	}
 
-	template <typename T, typename T2>
-	value_t<T> sext(T2 expr)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_noncast<U, T>::is_ok>>
+	static auto noncast(T&& expr)
 	{
-		value_t<T> result;
-		result.value = m_ir->CreateSExt(expr.eval(m_ir), result.get_type(m_context));
-		return result;
+		return llvm_noncast<U, T>{std::forward<T>(expr)};
 	}
 
-	template <typename T, typename T2>
-	value_t<T> zext(T2 expr)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_bitcast<U, T>::is_ok>>
+	static auto bitcast(T&& expr)
 	{
-		value_t<T> result;
-		result.value = m_ir->CreateZExt(expr.eval(m_ir), result.get_type(m_context));
-		return result;
+		return llvm_bitcast<U, T>{std::forward<T>(expr)};
 	}
 
-	// Get signed addition overflow into the sign bit (s = a + b)
-	template <typename T>
-	static inline auto scarry(T a, T b, T s)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_trunc<U, T>::is_ok>>
+	static auto trunc(T&& expr)
 	{
-		return (b ^ s) & ~(a ^ b);
+		return llvm_trunc<U, T>{std::forward<T>(expr)};
 	}
 
-	// Bitwise select (c ? a : b)
-	template <typename T>
-	static inline auto merge(T c, T a, T b)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_sext<U, T>::is_ok>>
+	static auto sext(T&& expr)
 	{
-		return (a & c) | (b & ~c);
+		return llvm_sext<U, T>{std::forward<T>(expr)};
 	}
 
-	// Rotate left
-	template <typename T>
-	static inline auto rol(T a, T b)
+	template <typename U, typename T, typename = std::enable_if_t<llvm_zext<U, T>::is_ok>>
+	static auto zext(T&& expr)
 	{
-		static constexpr u64 mask = value_t<typename T::type>::esize - 1;
-		return a << (b & mask) | a >> (-b & mask);
+		return llvm_zext<U, T>{std::forward<T>(expr)};
 	}
 
-	// Add with saturation
-	template <typename T>
-	inline auto add_sat(T a, T b)
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_select<T, U, V>::is_ok>>
+	static auto select(T&& c, U&& a, V&& b)
 	{
-		value_t<typename T::type> result;
-		const auto eva = a.eval(m_ir);
-		const auto evb = b.eval(m_ir);
-
-		// Compute constant result immediately if possible
-		if (llvm::isa<llvm::Constant>(eva) && llvm::isa<llvm::Constant>(evb))
-		{
-			static_assert(result.is_sint || result.is_uint);
-
-			if constexpr (result.is_sint)
-			{
-				llvm::Type* cast_to = m_ir->getIntNTy(result.esize * 2);
-				if constexpr (result.is_vector != 0)
-					cast_to = llvm::VectorType::get(cast_to, result.is_vector);
-
-				const auto axt = m_ir->CreateSExt(eva, cast_to);
-				const auto bxt = m_ir->CreateSExt(evb, cast_to);
-				result.value = m_ir->CreateAdd(axt, bxt);
-				const auto _max = m_ir->getInt(llvm::APInt::getSignedMaxValue(result.esize * 2).ashr(result.esize));
-				const auto _min = m_ir->getInt(llvm::APInt::getSignedMinValue(result.esize * 2).ashr(result.esize));
-				const auto smax = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _max) : _max;
-				const auto smin = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _min) : _min;
-				result.value = m_ir->CreateSelect(m_ir->CreateICmpSGT(result.value, smax), smax, result.value);
-				result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(result.value, smin), smin, result.value);
-				result.value = m_ir->CreateTrunc(result.value, result.get_type(m_context));
-			}
-			else
-			{
-				const auto _max = m_ir->getInt(llvm::APInt::getMaxValue(result.esize));
-				const auto ones = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _max) : _max;
-				result.value = m_ir->CreateAdd(eva, evb);
-				result.value = m_ir->CreateSelect(m_ir->CreateICmpULT(result.value, eva), ones, result.value);
-			}
-		}
-		else
-		{
-			result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(result.is_sint ? llvm::Intrinsic::sadd_sat : llvm::Intrinsic::uadd_sat), {eva, evb});
-		}
-
-		return result;
+		return llvm_select<T, U, V>{std::forward<T>(c), std::forward<U>(a), std::forward<V>(b)};
 	}
 
-	// Subtract with saturation
-	template <typename T>
-	inline auto sub_sat(T a, T b)
+	template <typename T, typename U, typename = std::enable_if_t<llvm_min<T, U>::is_ok>>
+	static auto min(T&& a, U&& b)
 	{
-		value_t<typename T::type> result;
-		const auto eva = a.eval(m_ir);
-		const auto evb = b.eval(m_ir);
+		return llvm_min<T, U>{std::forward<T>(a), std::forward<U>(b)};
+	}
 
-		// Compute constant result immediately if possible
-		if (llvm::isa<llvm::Constant>(eva) && llvm::isa<llvm::Constant>(evb))
-		{
-			static_assert(result.is_sint || result.is_uint);
+	template <typename T, typename U, typename = std::enable_if_t<llvm_min<T, U>::is_ok>>
+	static auto max(T&& a, U&& b)
+	{
+		return llvm_max<T, U>{std::forward<T>(a), std::forward<U>(b)};
+	}
 
-			if constexpr (result.is_sint)
-			{
-				llvm::Type* cast_to = m_ir->getIntNTy(result.esize * 2);
-				if constexpr (result.is_vector != 0)
-					cast_to = llvm::VectorType::get(cast_to, result.is_vector);
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_fshl<T, U, V>::is_ok>>
+	static auto fshl(T&& a, U&& b, V&& c)
+	{
+		return llvm_fshl<T, U, V>{std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)};
+	}
 
-				const auto axt = m_ir->CreateSExt(eva, cast_to);
-				const auto bxt = m_ir->CreateSExt(evb, cast_to);
-				result.value = m_ir->CreateSub(axt, bxt);
-				const auto _max = m_ir->getInt(llvm::APInt::getSignedMaxValue(result.esize * 2).ashr(result.esize));
-				const auto _min = m_ir->getInt(llvm::APInt::getSignedMinValue(result.esize * 2).ashr(result.esize));
-				const auto smax = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _max) : _max;
-				const auto smin = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _min) : _min;
-				result.value = m_ir->CreateSelect(m_ir->CreateICmpSGT(result.value, smax), smax, result.value);
-				result.value = m_ir->CreateSelect(m_ir->CreateICmpSLT(result.value, smin), smin, result.value);
-				result.value = m_ir->CreateTrunc(result.value, result.get_type(m_context));
-			}
-			else
-			{
-				const auto _min = m_ir->getInt(llvm::APInt::getMinValue(result.esize));
-				const auto zero = result.is_vector != 0 ? llvm::ConstantVector::getSplat(result.is_vector, _min) : _min;
-				result.value = m_ir->CreateSub(eva, evb);
-				result.value = m_ir->CreateSelect(m_ir->CreateICmpULT(eva, evb), zero, result.value);
-			}
-		}
-		else
-		{
-			result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(result.is_sint ? llvm::Intrinsic::ssub_sat : llvm::Intrinsic::usub_sat), {eva, evb});
-		}
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_fshr<T, U, V>::is_ok>>
+	static auto fshr(T&& a, U&& b, V&& c)
+	{
+		return llvm_fshr<T, U, V>{std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)};
+	}
 
-		return result;
+	template <typename T, typename U, typename = std::enable_if_t<llvm_rol<T, U>::is_ok>>
+	static auto rol(T&& a, U&& b)
+	{
+		return llvm_rol<T, U>{std::forward<T>(a), std::forward<U>(b)};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<llvm_add_sat<T, U>::is_ok>>
+	static auto add_sat(T&& a, U&& b)
+	{
+		return llvm_add_sat<T, U>{std::forward<T>(a), std::forward<U>(b)};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<llvm_sub_sat<T, U>::is_ok>>
+	static auto sub_sat(T&& a, U&& b)
+	{
+		return llvm_sub_sat<T, U>{std::forward<T>(a), std::forward<U>(b)};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<llvm_extract<T, U>::is_ok>>
+	static auto extract(T&& v, U&& i)
+	{
+		return llvm_extract<T, U>{std::forward<T>(v), std::forward<U>(i)};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_extract<T, llvm_const_int<u32>>::is_ok>>
+	static auto extract(T&& v, u32 i)
+	{
+		return llvm_extract<T, llvm_const_int<u32>>{std::forward<T>(v), llvm_const_int<u32>{i}};
+	}
+
+	template <typename T, typename U, typename V, typename = std::enable_if_t<llvm_insert<T, U, V>::is_ok>>
+	static auto insert(T&& v, U&& i, V&& e)
+	{
+		return llvm_insert<T, U, V>{std::forward<T>(v), std::forward<U>(i), std::forward<V>(e)};
+	}
+
+	template <typename T, typename V, typename = std::enable_if_t<llvm_insert<T, llvm_const_int<u32>, V>::is_ok>>
+	static auto insert(T&& v, u32 i, V&& e)
+	{
+		return llvm_insert<T, llvm_const_int<u32>, V>{std::forward<T>(v), llvm_const_int<u32>{i}, std::forward<V>(e)};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_const_int<T>::is_ok>>
+	static auto splat(u64 c)
+	{
+		return llvm_const_int<T>{c};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_const_float<T>::is_ok>>
+	static auto fsplat(f64 c)
+	{
+		return llvm_const_float<T>{c};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<llvm_splat<T, U>::is_ok>>
+	static auto vsplat(U&& v)
+	{
+		return llvm_splat<T, U>{std::forward<U>(v)};
+	}
+
+	template <typename T, typename... Args, typename = std::enable_if_t<llvm_const_vector<sizeof...(Args), T>::is_ok>>
+	static auto build(Args... args)
+	{
+		return llvm_const_vector<sizeof...(Args), T>{static_cast<std::remove_extent_t<T>>(args)...};
+	}
+
+	template <typename T, typename... Args, typename = std::enable_if_t<llvm_zshuffle<sizeof...(Args), T>::is_ok>>
+	static auto zshuffle(T&& v, Args... indices)
+	{
+		return llvm_zshuffle<sizeof...(Args), T>{std::forward<T>(v), {static_cast<u32>(indices)...}};
+	}
+
+	template <typename T, typename U, typename... Args, typename = std::enable_if_t<llvm_shuffle2<sizeof...(Args), T, U>::is_ok>>
+	static auto shuffle2(T&& v1, U&& v2, Args... indices)
+	{
+		return llvm_shuffle2<sizeof...(Args), T, U>{std::forward<T>(v1), std::forward<U>(v2), {static_cast<u32>(indices)...}};
 	}
 
 	// Average: (a + b + 1) >> 1
@@ -1117,110 +2472,6 @@ public:
 		const auto cxt = llvm::ConstantInt::get(cast_to, 1, false);
 		const auto abc = m_ir->CreateAdd(m_ir->CreateAdd(axt, bxt), cxt);
 		result.value = m_ir->CreateTrunc(m_ir->CreateLShr(abc, 1), result.get_type(m_context));
-		return result;
-	}
-
-	// Select (c ? a : b)
-	template <typename T, typename T2>
-	auto select(T2 c, T a, T b)
-	{
-		static_assert(value_t<typename T2::type>::esize == 1, "select: expected bool type (first argument)");
-		static_assert(value_t<typename T2::type>::is_vector == value_t<typename T::type>::is_vector, "select: incompatible arguments (vectors)");
-		T result;
-		result.value = m_ir->CreateSelect(c.eval(m_ir), a.eval(m_ir), b.eval(m_ir));
-		return result;
-	}
-
-	template <typename T, typename E>
-	auto insert(T v, u64 i, E e)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateInsertElement(v.eval(m_ir), e.eval(m_ir), i);
-		return result;
-	}
-
-	template <typename T>
-	auto extract(T v, u64 i)
-	{
-		typename value_t<typename T::type>::base result;
-		result.value = m_ir->CreateExtractElement(v.eval(m_ir), i);
-		return result;
-	}
-
-	template <typename T>
-	auto splat(u64 c)
-	{
-		value_t<T> result;
-		result.value = llvm::ConstantInt::get(result.get_type(m_context), c, result.is_sint);
-		return result;
-	}
-
-	template <typename T>
-	auto fsplat(f64 c)
-	{
-		value_t<T> result;
-		result.value = llvm::ConstantFP::get(result.get_type(m_context), c);
-		return result;
-	}
-
-	template <typename T, typename V>
-	auto vsplat(V v)
-	{
-		value_t<T> result;
-		static_assert(result.is_vector);
-		result.value = m_ir->CreateVectorSplat(result.is_vector, v.eval(m_ir));
-		return result;
-	}
-
-	// Min
-	template <typename T>
-	auto min(T a, T b)
-	{
-		T result;
-		result.value = m_ir->CreateSelect((a > b).eval(m_ir), b.eval(m_ir), a.eval(m_ir));
-		return result;
-	}
-
-	// Max
-	template <typename T>
-	auto max(T a, T b)
-	{
-		T result;
-		result.value = m_ir->CreateSelect((a > b).eval(m_ir), a.eval(m_ir), b.eval(m_ir));
-		return result;
-	}
-
-	// Shuffle single vector using all zeros second vector of the same size
-	template <typename T, typename T1, typename... Args>
-	auto zshuffle(T1 a, Args... args)
-	{
-		static_assert(sizeof(T) / sizeof(std::remove_extent_t<T>) == sizeof...(Args), "zshuffle: unexpected result type");
-		const u32 values[]{static_cast<u32>(args)...};
-		value_t<T> result;
-		result.value = a.eval(m_ir);
-		result.value = m_ir->CreateShuffleVector(result.value, llvm::ConstantInt::get(result.value->getType(), 0), values);
-		return result;
-	}
-
-	template <typename T, typename T1, typename T2, typename... Args>
-	auto shuffle2(T1 a, T2 b, Args... args)
-	{
-		static_assert(sizeof(T) / sizeof(std::remove_extent_t<T>) == sizeof...(Args), "shuffle2: unexpected result type");
-		const u32 values[]{static_cast<u32>(args)...};
-		value_t<T> result;
-		result.value = a.eval(m_ir);
-		result.value = m_ir->CreateShuffleVector(result.value, b.eval(m_ir), values);
-		return result;
-	}
-
-	template <typename T, typename... Args>
-	auto build(Args... args)
-	{
-		using value_type = std::remove_extent_t<T>;
-		const value_type values[]{static_cast<value_type>(args)...};
-		static_assert(sizeof(T) / sizeof(value_type) == sizeof...(Args), "build: unexpected number of arguments");
-		value_t<T> result;
-		result.value = llvm::ConstantDataVector::get(m_context, values);
 		return result;
 	}
 
@@ -1260,14 +2511,6 @@ public:
 	{
 		value_t<typename T::type> result;
 		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fabs), {a.eval(m_ir)});
-		return result;
-	}
-
-	template <llvm::CmpInst::Predicate FPred, typename T>
-	auto fcmp(T a, T b)
-	{
-		value_t<std::conditional_t<llvm_value_t<typename T::type>::is_vector != 0, bool[llvm_value_t<typename T::type>::is_vector], bool>> result;
-		result.value = m_ir->CreateFCmp(FPred, a.eval(m_ir), b.eval(m_ir));
 		return result;
 	}
 

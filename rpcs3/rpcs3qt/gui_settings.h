@@ -289,7 +289,7 @@ public Q_SLOTS:
 private:
 	QString ComputeSettingsDir();
 	void BackupSettingsToTarget(const QString& friendly_name);
-	void ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
+	void ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
 
 	QSettings m_settings;
 	QDir m_settingsDir;
