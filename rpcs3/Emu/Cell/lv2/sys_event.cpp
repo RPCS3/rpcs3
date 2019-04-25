@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_event.h"
 
 #include "Emu/System.h"
@@ -48,7 +48,7 @@ bool lv2_event_queue::send(lv2_event event)
 
 		std::tie(ppu.gpr[4], ppu.gpr[5], ppu.gpr[6], ppu.gpr[7]) = event;
 
-		awake(ppu);
+		awake(&ppu);
 	}
 	else
 	{
@@ -171,14 +171,19 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 	{
 		std::lock_guard lock(queue->mutex);
 
-		for (auto cpu : queue->sq)
+		if (queue->type == SYS_PPU_QUEUE)
 		{
-			if (queue->type == SYS_PPU_QUEUE)
+			for (auto cpu : queue->sq)
 			{
 				static_cast<ppu_thread&>(*cpu).gpr[3] = CELL_ECANCELED;
-				queue->awake(*cpu);
+				queue->append(cpu);
 			}
-			else
+
+			lv2_obj::awake_all();
+		}
+		else
+		{
+			for (auto cpu : queue->sq)
 			{
 				static_cast<spu_thread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
 				cpu->state += cpu_flag::signal;

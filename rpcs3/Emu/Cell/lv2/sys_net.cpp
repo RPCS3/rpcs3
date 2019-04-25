@@ -203,8 +203,10 @@ extern void network_thread_init()
 			for (ppu_thread* ppu : s_to_awake)
 			{
 				network_clear_queue(*ppu);
-				lv2_obj::awake(*ppu);
+				lv2_obj::append(ppu);
 			}
+
+			lv2_obj::awake_all();
 
 			s_to_awake.clear();
 			socklist.clear();
@@ -309,7 +311,7 @@ s32 sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, 
 
 				if (native_socket != -1 || (result = get_last_error(!sock.so_nbio)))
 				{
-					lv2_obj::awake(ppu);
+					lv2_obj::awake(&ppu);
 					return true;
 				}
 			}
@@ -532,7 +534,7 @@ s32 sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr,
 					result = native_error ? get_last_error(false, native_error) : 0;
 				}
 
-				lv2_obj::awake(ppu);
+				lv2_obj::awake(&ppu);
 				return true;
 			}
 
@@ -946,7 +948,7 @@ s32 sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 len, s3
 
 				if (native_result >= 0 || (result = get_last_error(!sock.so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0)))
 				{
-					lv2_obj::awake(ppu);
+					lv2_obj::awake(&ppu);
 					return true;
 				}
 			}
@@ -1115,7 +1117,7 @@ s32 sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 len, s32
 
 				if (native_result >= 0 || (result = get_last_error(!sock.so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0)))
 				{
-					lv2_obj::awake(ppu);
+					lv2_obj::awake(&ppu);
 					return true;
 				}
 			}

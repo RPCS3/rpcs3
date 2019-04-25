@@ -104,7 +104,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 	if (cond.ret)
 	{
-		cond->awake(*cond.ret);
+		cond->awake(cond.ret);
 	}
 
 	return CELL_OK;
@@ -145,7 +145,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 	if (cond.ret)
 	{
-		cond->awake(*cond.ret);
+		cond->awake(cond.ret);
 	}
 
 	return CELL_OK;
@@ -194,7 +194,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 	if (cond.ret && cond.ret != (cpu_thread*)(2))
 	{
-		cond->awake(*cond.ret);
+		cond->awake(cond.ret);
 	}
 	else if (!cond.ret)
 	{
@@ -233,22 +233,24 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	}
 	else
 	{
+		// Further function result
+		ppu.gpr[3] = CELL_OK;
+
 		std::lock_guard lock(cond->mutex->mutex);
 
 		// Register waiter
 		cond->sq.emplace_back(&ppu);
-		cond->sleep(ppu, timeout);
 
 		// Unlock the mutex
 		cond->mutex->lock_count = 0;
 
 		if (auto cpu = cond->mutex->reown<ppu_thread>())
 		{
-			cond->mutex->awake(*cpu);
+			cond->mutex->append(cpu);
 		}
 
-		// Further function result
-		ppu.gpr[3] = CELL_OK;
+		// Sleep current thread and schedule mutex waiter
+		cond->sleep(ppu, timeout);
 	}
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))

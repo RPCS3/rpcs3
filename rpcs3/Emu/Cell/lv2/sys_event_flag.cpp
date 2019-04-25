@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_event_flag.h"
 
 #include "Emu/System.h"
@@ -310,7 +310,7 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 			if (ppu.gpr[3] == CELL_OK)
 			{
 				flag->waiters--;
-				flag->awake(ppu);
+				flag->append(cpu);
 				return true;
 			}
 
@@ -318,6 +318,7 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 		});
 
 		flag->sq.erase(tail, flag->sq.end());
+		lv2_obj::awake_all();
 	}
 
 	return CELL_OK;
@@ -376,8 +377,10 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 			ppu.gpr[6] = pattern;
 
 			flag->waiters--;
-			flag->awake(ppu);
+			flag->append(thread);
 		}
+
+		lv2_obj::awake_all();
 	}
 
 	if (ppu.test_stopped())

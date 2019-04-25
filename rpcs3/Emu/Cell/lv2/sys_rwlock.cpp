@@ -250,7 +250,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 			{
 				rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
 
-				rwlock->awake(*cpu);
+				rwlock->awake(cpu);
 			}
 			else
 			{
@@ -348,16 +348,19 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				// If the last waiter quit the writer sleep queue, wake blocked readers
 				if (!rwlock->rq.empty() && rwlock->wq.empty() && rwlock->owner < 0)
 				{
-					verify(HERE), rwlock->owner & 1;
-
-					rwlock->owner -= s64{2} * rwlock->rq.size();
-
-					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
+					rwlock->owner.atomic_op([&](s64& owner)
 					{
-						rwlock->awake(*cpu);
+						owner -= -2 * static_cast<s64>(rwlock->rq.size()); // Add readers to value
+						owner &= -2; // Clear wait bit
+					});
+
+					// Protocol doesn't matter here since they are all enqueued anyways
+					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
+					{
+						rwlock->append(cpu);
 					}
 
-					rwlock->owner &= ~1;
+					lv2_obj::awake_all();
 				}
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;
@@ -437,18 +440,17 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 		{
 			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
 
-			rwlock->awake(*cpu);
+			rwlock->awake(cpu);
 		}
 		else if (auto readers = rwlock->rq.size())
 		{
-			rwlock->owner = (s64{-2} * readers) | 1;
-
-			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
+			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
 			{
-				rwlock->awake(*cpu);
+				rwlock->append(cpu);
 			}
 
-			rwlock->owner &= ~1;
+			rwlock->owner.release(-2 * static_cast<s64>(readers));
+			lv2_obj::awake_all();
 		}
 		else
 		{

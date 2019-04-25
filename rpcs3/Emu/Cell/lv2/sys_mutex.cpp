@@ -237,7 +237,7 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 
 		if (auto cpu = mutex->reown<ppu_thread>())
 		{
-			mutex->awake(*cpu);
+			mutex->awake(cpu);
 		}
 	}
 	else if (mutex.ret)
