@@ -140,7 +140,7 @@ QSlider::groove:horizontal {
 }
 
 QSlider::groove:horizontal:disabled {
-	background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #51657e, stop:1 #455971);
+	background: #b3b3b3;
 }
 
 QSlider::handle:horizontal {
@@ -149,6 +149,10 @@ QSlider::handle:horizontal {
 	border-radius: 0.1em;
 	width: 18px;
 	margin: -2px 4; 
+}
+
+QSlider::handle:horizontal:disabled {
+	border: 1px solid #b3b3b3;
 }
 
 QSlider::handle:horizontal:hover {
@@ -283,8 +287,12 @@ QCheckBox::indicator:unchecked {
 	background-color: #FFFFFF;
 }
 
-QCheckBox::indicator:disabled {
-	background-color: qradialgradient(cx:0, cy:0, radius: 1, fx:0.3, fy:0.3, stop:0.8 #51657e, stop:1 #455971);
+QCheckBox::indicator:checked:disabled {
+	background-color: qradialgradient(cx:0, cy:0, radius: 1, fx:0.3, fy:0.3, stop:0.8 #b3b3b3, stop:1 #9d9d9d);
+}
+
+QCheckBox::indicator:unchecked:disabled {
+	border: 1px solid #b3b3b3;
 }
 
 /* Group Boxes (Settings Dialog) */
