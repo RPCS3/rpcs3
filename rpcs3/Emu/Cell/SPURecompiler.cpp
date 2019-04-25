@@ -2478,27 +2478,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		verify("double_to_xfloat" HERE), val, val->getType() == get_type<f64[4]>();
 
-		// Detect xfloat_to_double to avoid unnecessary ops and prevent zeroed denormals
-		if (auto _bitcast = llvm::dyn_cast<llvm::CastInst>(val))
-		{
-			if (_bitcast->getOpcode() == llvm::Instruction::BitCast)
-			{
-				if (auto _select = llvm::dyn_cast<llvm::SelectInst>(_bitcast->getOperand(0)))
-				{
-					if (auto _icmp = llvm::dyn_cast<llvm::ICmpInst>(_select->getOperand(0)))
-					{
-						if (auto _and = llvm::dyn_cast<llvm::BinaryOperator>(_icmp->getOperand(0)))
-						{
-							if (auto _zext = llvm::dyn_cast<llvm::CastInst>(_and->getOperand(0)))
-							{
-								// TODO: check all details and return xfloat_to_double() arg
-							}
-						}
-					}
-				}
-			}
-		}
-
 		const auto d = double_as_uint64(val);
 		const auto s = m_ir->CreateAnd(m_ir->CreateLShr(d, 32), 0x80000000);
 		const auto m = m_ir->CreateXor(m_ir->CreateLShr(d, 29), 0x40000000);
@@ -2680,6 +2659,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return r;
 	}
 
+	template <typename U, uint I>
+	auto get_vr_as(U&&, const bf_t<u32, I, 7>& index)
+	{
+		return get_vr<typename llvm_expr_t<U>::type>(index);
+	}
+
 	template <typename T = u32[4], typename... Args>
 	std::tuple<std::conditional_t<false, Args, value_t<T>>...> get_vrs(const Args&... args)
 	{
@@ -2705,10 +2690,49 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return r;
 	}
 
+	template <typename U, uint I>
+	auto match_vr_as(U&&, const bf_t<u32, I, 7>& index)
+	{
+		return match_vr<typename llvm_expr_t<U>::type>(index);
+	}
+
+	template <typename... Types, uint I, typename F>
+	bool match_vr(const bf_t<u32, I, 7>& index, F&& pred)
+	{
+		return ((match_vr<Types>(index) && pred(match_vr<Types>(index), match<Types>())) || ...);
+	}
+
 	template <typename T = u32[4], typename... Args>
 	std::tuple<std::conditional_t<false, Args, llvm_match_t<T>>...> match_vrs(const Args&... args)
 	{
 		return {match_vr<T>(args)...};
+	}
+
+	// Extract scalar value from the preferred slot
+	template <typename T>
+	auto get_scalar(T&& value)
+	{
+		using v_type = typename llvm_expr_t<T>::type;
+		using e_type = std::remove_extent_t<v_type>;
+
+		static_assert(sizeof(v_type) == 16 || std::is_same_v<f64[4], v_type>, "Unknown vector type");
+
+		if constexpr (sizeof(e_type) == 1)
+		{
+			return extract(std::forward<T>(value), 12);
+		}
+		else if constexpr (sizeof(e_type) == 2)
+		{
+			return extract(std::forward<T>(value), 6);
+		}
+		else if constexpr (sizeof(e_type) == 4 || sizeof(v_type) == 32)
+		{
+			return extract(std::forward<T>(value), 3);
+		}
+		else
+		{
+			return extract(std::forward<T>(value), 1);
+		}
 	}
 
 	void set_reg_fixed(u32 index, llvm::Value* value, bool fixup = true)
@@ -4987,15 +5011,21 @@ public:
 
 	void AND(spu_opcode_t op)
 	{
-		if (const auto [a, b] = match_vrs<u8[16]>(op.ra, op.rb); a && b)
+		if (match_vr<u8[16], u16[8], u64[2]>(op.ra, [&](auto a, auto MP1)
 		{
-			set_vr(op.rt, a & b);
-			return;
-		}
+			if (auto b = match_vr_as(a, op.rb))
+			{
+				set_vr(op.rt, a & b);
+				return true;
+			}
 
-		if (const auto [a, b] = match_vrs<u16[8]>(op.ra, op.rb); a && b)
+			return match_vr<u8[16], u16[8], u64[2]>(op.rb, [&](auto b, auto MP2)
+			{
+				set_vr(op.rt, a & get_vr_as(a, op.rb));
+				return true;
+			});
+		}))
 		{
-			set_vr(op.rt, a & b);
 			return;
 		}
 
@@ -5086,36 +5116,37 @@ public:
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
+	template <typename RT, typename T>
+	auto spu_get_insertion_shuffle_mask(T&& index)
+	{
+		const auto c = bitcast<RT>(build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10));
+		using e_type = std::remove_extent_t<RT>;
+		const auto v = splat<e_type>(static_cast<e_type>(sizeof(e_type) == 8 ? 0x01020304050607ull : 0x010203ull));
+		return insert(c, std::forward<T>(index), v);
+	}
+
 	void CBX(spu_opcode_t op)
 	{
-		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
-		const auto i = eval(~s & 0xf);
-		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
-		set_vr(op.rt, insert(r, i, splat<u8>(0x03)));
+		const auto s = get_scalar(get_vr(op.ra)) + get_scalar(get_vr(op.rb));
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u8[16]>(~s & 0xf));
 	}
 
 	void CHX(spu_opcode_t op)
 	{
-		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
-		const auto i = eval(~s >> 1 & 0x7);
-		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
-		set_vr(op.rt, insert(r, i, splat<u16>(0x0203)));
+		const auto s = get_scalar(get_vr(op.ra)) + get_scalar(get_vr(op.rb));
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u16[8]>(~s >> 1 & 0x7));
 	}
 
 	void CWX(spu_opcode_t op)
 	{
-		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
-		const auto i = eval(~s >> 2 & 0x3);
-		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
-		set_vr(op.rt, insert(r, i, splat<u32>(0x010203)));
+		const auto s = get_scalar(get_vr(op.ra)) + get_scalar(get_vr(op.rb));
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u32[4]>(~s >> 2 & 0x3));
 	}
 
 	void CDX(spu_opcode_t op)
 	{
-		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
-		const auto i = eval(~s >> 3 & 0x1);
-		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
-		set_vr(op.rt, insert(r, i, splat<u64>(0x01020304050607)));
+		const auto s = get_scalar(get_vr(op.ra)) + get_scalar(get_vr(op.rb));
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u64[2]>(~s >> 3 & 0x1));
 	}
 
 	void ROTQBI(spu_opcode_t op)
@@ -5176,34 +5207,26 @@ public:
 
 	void CBD(spu_opcode_t op)
 	{
-		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
-		const auto i = eval(~a & 0xf);
-		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
-		set_vr(op.rt, insert(r, i, splat<u8>(0x03)));
+		const auto a = get_scalar(get_vr(op.ra)) + get_imm<u32>(op.i7);
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u8[16]>(~a & 0xf));
 	}
 
 	void CHD(spu_opcode_t op)
 	{
-		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
-		const auto i = eval(~a >> 1 & 0x7);
-		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
-		set_vr(op.rt, insert(r, i, splat<u16>(0x0203)));
+		const auto a = get_scalar(get_vr(op.ra)) + get_imm<u32>(op.i7);
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u16[8]>(~a >> 1 & 0x7));
 	}
 
 	void CWD(spu_opcode_t op)
 	{
-		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
-		const auto i = eval(~a >> 2 & 0x3);
-		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
-		set_vr(op.rt, insert(r, i, splat<u32>(0x010203)));
+		const auto a = get_scalar(get_vr(op.ra)) + get_imm<u32>(op.i7);
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u32[4]>(~a >> 2 & 0x3));
 	}
 
 	void CDD(spu_opcode_t op)
 	{
-		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
-		const auto i = eval(~a >> 3 & 0x1);
-		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
-		set_vr(op.rt, insert(r, i, splat<u64>(0x01020304050607)));
+		const auto a = get_scalar(get_vr(op.ra)) + get_imm<u32>(op.i7);
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u64[2]>(~a >> 3 & 0x1));
 	}
 
 	void ROTQBII(spu_opcode_t op)
@@ -5656,48 +5679,21 @@ public:
 
 	void SHUFB(spu_opcode_t op) //
 	{
-		if (auto ii = llvm::dyn_cast_or_null<llvm::InsertElementInst>(get_reg_raw(op.rc)))
+		if (match_vr<u8[16], u16[8], u32[4], u64[2]>(op.rc, [&](auto c, auto MP)
 		{
-			// Detect if the mask comes from a CWD-like constant generation instruction
-			auto c0 = llvm::dyn_cast<llvm::Constant>(ii->getOperand(0));
+			using VT = typename decltype(MP)::type;
 
-			if (c0 && get_const_vector(c0, m_pos, op.rc) != v128::from64(0x18191a1b1c1d1e1f, 0x1011121314151617))
+			// If the mask comes from a constant generation instruction, replace SHUFB with insert
+			if (auto [ok, i] = match_expr(c, spu_get_insertion_shuffle_mask<VT>(match<u32>())); ok)
 			{
-				c0 = nullptr;
-			}
-
-			auto c1 = llvm::dyn_cast<llvm::ConstantInt>(ii->getOperand(1));
-
-			llvm::Type* vtype = nullptr;
-			llvm::Value* _new = nullptr;
-
-			// Optimization: emit SHUFB as simple vector insert
-			if (c0 && c1 && c1->getType() == get_type<u64>() && c1->getZExtValue() == 0x01020304050607)
-			{
-				vtype = get_type<u64[2]>();
-				_new  = extract(get_vr<u64[2]>(op.ra), 1).eval(m_ir);
-			}
-			else if (c0 && c1 && c1->getType() == get_type<u32>() && c1->getZExtValue() == 0x010203)
-			{
-				vtype = get_type<u32[4]>();
-				_new  = extract(get_vr<u32[4]>(op.ra), 3).eval(m_ir);
-			}
-			else if (c0 && c1 && c1->getType() == get_type<u16>() && c1->getZExtValue() == 0x0203)
-			{
-				vtype = get_type<u16[8]>();
-				_new  = extract(get_vr<u16[8]>(op.ra), 6).eval(m_ir);
-			}
-			else if (c0 && c1 && c1->getType() == get_type<u8>() && c1->getZExtValue() == 0x03)
-			{
-				vtype = get_type<u8[16]>();
-				_new  = extract(get_vr<u8[16]>(op.ra), 12).eval(m_ir);
+				set_vr(op.rt4, insert(get_vr_as(c, op.rb), i, get_scalar(get_vr_as(c, op.ra))));
+				return true;
 			}
 
-			if (vtype && _new)
-			{
-				set_reg_fixed(op.rt4, m_ir->CreateInsertElement(get_reg_fixed(op.rb, vtype), _new, ii->getOperand(2)));
-				return;
-			}
+			return false;
+		}))
+		{
+			return;
 		}
 
 		const auto c = get_vr<u8[16]>(op.rc);
