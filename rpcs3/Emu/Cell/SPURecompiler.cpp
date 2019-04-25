@@ -2144,6 +2144,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::GlobalVariable* m_scale_float_to{};
 	llvm::GlobalVariable* m_scale_to_float{};
 
+	// Helper for check_state
+	llvm::GlobalVariable* m_fake_global1{};
+
 	llvm::MDNode* m_md_unlikely;
 	llvm::MDNode* m_md_likely;
 
@@ -2998,12 +3001,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto check = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto stop  = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), _body, check, m_md_likely);
+		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		m_ir->CreateStore(m_ir->getInt32(addr), spu_ptr<u32>(&spu_thread::pc));
-		m_ir->CreateCondBr(call(&exec_check_state, m_thread), stop, _body, m_md_unlikely);
+		m_ir->CreateCondBr(m_ir->CreateLoad(m_fake_global1, true), stop, _body, m_md_unlikely);
 		m_ir->SetInsertPoint(stop);
-		m_ir->CreateRetVoid();
+		m_ir->CreateStore(m_ir->getFalse(), m_fake_global1, true);
+		m_ir->CreateBr(_body);
 		m_ir->SetInsertPoint(_body);
 	}
 
@@ -3163,6 +3167,9 @@ public:
 		// Initialize IR Builder
 		IRBuilder<> irb(m_context);
 		m_ir = &irb;
+
+		// Helper for check_state. Used to not interfere with LICM pass.
+		m_fake_global1 = new llvm::GlobalVariable(*m_module, get_type<bool>(), false, llvm::GlobalValue::InternalLinkage, m_ir->getFalse());
 
 		// Add entry function (contains only state/code check)
 		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_ftype<void, u8*, u8*, u8*>()).getCallee());
@@ -3547,13 +3554,54 @@ public:
 		pm.add(createCFGSimplificationPass());
 		pm.add(createNewGVNPass());
 		pm.add(createDeadStoreEliminationPass());
-		pm.add(createLoopVersioningLICMPass());
+		pm.add(createLICMPass());
 		pm.add(createAggressiveDCEPass());
 		//pm.add(createLintPass()); // Check
 
 		for (const auto& func : m_functions)
 		{
-			pm.run(*func.second.func);
+			const auto f = func.second.func;
+			pm.run(*f);
+
+			for (auto& bb : *f)
+			{
+				for (auto& i : bb)
+				{
+					// Replace volatile fake load with check_state call
+					if (auto li = dyn_cast<LoadInst>(&i); li && li->getOperand(0) == m_fake_global1)
+					{
+						m_ir->SetInsertPoint(bb.getTerminator());
+						li->replaceAllUsesWith(call(&exec_check_state, &*f->arg_begin()));
+						li->eraseFromParent();
+						break;
+					}
+
+					// Replace volatile fake store with return
+					if (auto si = dyn_cast<StoreInst>(&i); si && si->getOperand(1) == m_fake_global1)
+					{
+						const auto br = bb.getTerminator();
+
+						for (auto& j : *br->getSuccessor(0))
+						{
+							// Cleanup PHI nodes if exist
+							if (auto phi = dyn_cast<PHINode>(&j))
+							{
+								phi->removeIncomingValue(&bb, false);
+							}
+							else
+							{
+								break;
+							}
+						}
+
+						m_ir->SetInsertPoint(bb.getTerminator());
+						m_ir->CreateRetVoid();
+						si->eraseFromParent();
+						br->eraseFromParent();
+						break;
+					}
+				}
+			}
 		}
 
 		// Clear context (TODO)
