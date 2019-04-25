@@ -1109,8 +1109,8 @@ void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 	const auto a = get_vr<u32[4]>(op.va);
 	const auto b = get_vr<u32[4]>(op.vb);
 	const auto c = get_vr<u32[4]>(op.vc);
-	const auto ml = bitcast<u32[4]>((a << 16 >> 16) * (b << 16 >> 16));
-	const auto mh = bitcast<u32[4]>((a >> 16) * (b >> 16));
+	const auto ml = noncast<u32[4]>((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = noncast<u32[4]>((a >> 16) * (b >> 16));
 	const auto s = eval(ml + mh);
 	const auto s2 = eval(s + c);
 	const auto x = eval(s < ml | s2 < s);
