@@ -39,18 +39,22 @@ QToolTip {
 }
 
 /* Table Headers */
+QHeaderView {
+	border: none;
+	border-bottom: 1px solid #8cf944;
+}
+
 QHeaderView::section {
 	background-color: #23262d;
 	color: #f8f8f8;
 	padding-top: 3px;
-	padding-left: 5px;	
+	padding-left: 3px;
 	height: 20px;
 	border: none;
 }
 
-QHeaderView {
-	border: none;
-	border-bottom: 1px solid #8cf944;
+QHeaderView::section:first {
+	padding-left: 5px;
 }
 
 /* Tabs */

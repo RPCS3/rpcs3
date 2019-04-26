@@ -568,20 +568,24 @@ QLabel#gamelist_icon_background_color {
 }
 
 /* Table Headers */
-QHeaderView::section {
-	background-color: #FFFFFF;
-	color: #455971;
-	padding-top: 3px;
-	padding-left: 5px;	
-	height: 20px;
-	border: none;
-}
-
 QHeaderView {
 	border: 1px solid qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #8500ae, stop: 0.5 #4343c1, stop: 1 #009ed0);
 	border-left: none;
 	border-right: none;
 	border-top: none;
+}
+
+QHeaderView::section {
+	background-color: #FFFFFF;
+	color: #455971;
+	padding-top: 3px;
+	padding-left: 3px;	
+	height: 20px;
+	border: none;
+}
+
+QHeaderView::section:first {
+	padding-left: 5px;
 }
 
 /* Tooltips */
