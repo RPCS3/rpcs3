@@ -602,6 +602,17 @@ logs::file_listener::file_listener(const std::string& name)
 	file_writer::log(logs::level::always, ver.text.data(), ver.text.size());
 	file_writer::log(logs::level::always, "\n", 1);
 	messages.emplace_back(std::move(ver));
+
+	// Write OS version
+	stored_message os;
+	os.m.ch  = nullptr;
+	os.m.sev = level::notice;
+	os.stamp = 0;
+	os.text = utils::get_OS_version();
+
+	file_writer::log(logs::level::notice, os.text.data(), os.text.size());
+	file_writer::log(logs::level::notice, "\n", 1);
+	messages.emplace_back(std::move(os));
 }
 
 void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::string& prefix, const std::string& _text)
