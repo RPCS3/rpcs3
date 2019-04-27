@@ -3294,13 +3294,21 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if (!buffer_pitch) buffer_pitch = buffer_width * 4; // TODO: Check avconf
+	u32 av_format;
+	const auto avconfig = fxm::get<rsx::avconf>();
 
-	auto avconfig = fxm::get<rsx::avconf>();
 	if (avconfig)
 	{
+		av_format = avconfig->get_compatible_gcm_format();
+		if (!buffer_pitch) buffer_pitch = buffer_width * avconfig->get_bpp();
+
 		buffer_width = std::min(buffer_width, avconfig->resolution_x);
 		buffer_height = std::min(buffer_height, avconfig->resolution_y);
+	}
+	else
+	{
+		av_format = CELL_GCM_TEXTURE_A8R8G8B8;
+		if (!buffer_pitch) buffer_pitch = buffer_width * 4;
 	}
 
 	coordi aspect_ratio;
@@ -3419,7 +3427,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 				}
 			}
 		}
-		else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(absolute_address, buffer_width, buffer_height))
+		else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(absolute_address, av_format, buffer_width, buffer_height))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display

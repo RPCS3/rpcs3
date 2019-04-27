@@ -94,6 +94,34 @@ namespace rsx
 		f32 gamma = 1.f;           // NO GAMMA CORRECTION
 		u32 resolution_x = 1280;   // X RES
 		u32 resolution_y = 720;    // Y RES
+
+		u32 get_compatible_gcm_format()
+		{
+			switch (format)
+			{
+			default:
+				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+				return CELL_GCM_TEXTURE_A8R8G8B8;
+			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+				return CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
+			}
+		}
+
+		u8 get_bpp()
+		{
+			switch (format)
+			{
+			default:
+				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+				return 4;
+			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+				return 8;
+			}
+		}
 	};
 
 	struct blit_src_info
