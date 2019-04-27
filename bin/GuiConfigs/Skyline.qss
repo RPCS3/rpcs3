@@ -132,7 +132,7 @@ QSlider {
 }
 
 QSlider::groove:horizontal {
-	border: -5px solid #8cf944;
+	border: -3px solid transparent;
 	border-radius: 0.45em;
 	height: 8px;
 	background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #8500ae, stop: 0.5 #4343c1, stop: 1 #009ed0);
@@ -594,6 +594,7 @@ QToolTip {
 	color: #8500ae;
 	padding: 0.1em;
 	border: none;
+	opacity: 200;
 }
 
 /* Log and Debugger Borders */

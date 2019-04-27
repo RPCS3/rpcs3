@@ -256,7 +256,7 @@ QComboBox:disabled {
 
 /* Sliders */
 QSlider::groove:horizontal {
-	border: -5px solid #8cf944;
+	border: -3px solid transparent;
 	border-radius: 0.45em;
 	height: 8px;
 	background: #8cf944;
