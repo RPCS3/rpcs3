@@ -404,9 +404,9 @@ QComboBox::item:!selected {
 }
 
 QComboBox::indicator{
-	background-color:transparent;
-	selection-background-color:transparent;
-	color:transparent;
+	background-color: transparent;
+	selection-background-color: transparent;
+	color: transparent;
 	selection-color: transparent;
 }
 
@@ -567,7 +567,7 @@ QToolTip {
 	color: #FFFFFF;
 	padding: 0.1em;
 	border: none;
-	opacity: 200;
+	opacity: 225;
 }
 
 /* Log and Debugger Borders */
