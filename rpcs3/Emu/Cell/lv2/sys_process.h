@@ -34,6 +34,14 @@ struct sys_exit2_param
 	vm::bpptr<char, u64, u64> args;
 };
 
+struct ps3_process_info_t 
+{
+	u32 sdk_ver;
+	u32 ppc_seg;
+};
+
+extern ps3_process_info_t  g_ps3_process_info;
+
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);

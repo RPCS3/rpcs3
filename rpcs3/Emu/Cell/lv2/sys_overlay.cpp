@@ -6,6 +6,7 @@
 #include "Crypto/unedat.h"
 #include "Loader/ELF.h"
 
+#include "sys_process.h"
 #include "sys_overlay.h"
 #include "sys_fs.h"
 
@@ -17,6 +18,12 @@ LOG_CHANNEL(sys_overlay);
 
 static error_code overlay_load_module(vm::ptr<u32> ovlmid, std::string path, u64 flags, vm::ptr<u32> entry)
 {
+	if (!g_ps3_process_info.ppc_seg)
+	{
+		// Process not permitted
+		return CELL_ENOSYS;
+	}
+
 	const auto name = path.substr(path.find_last_of('/') + 1);
 
 	const ppu_exec_object obj = decrypt_self(fs::file(vfs::get(path)), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());

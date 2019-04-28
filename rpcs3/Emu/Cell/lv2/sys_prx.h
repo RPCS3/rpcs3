@@ -135,6 +135,12 @@ struct lv2_prx final : lv2_obj, ppu_module
 	be_t<u16> module_info_attributes;
 };
 
+enum : u64
+{
+	SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR = 1,
+	SYS_PRX_LOAD_MODULE_FLAGS_INVALIDMASK = 0xFFFFFFFE
+};
+
 // SysCalls
 
 error_code sys_prx_get_ppu_guid();

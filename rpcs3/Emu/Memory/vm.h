@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <map>
 #include <functional>
@@ -21,6 +21,7 @@ namespace vm
 	enum memory_location_t : uint
 	{
 		main,
+		main_ex,
 		user64k,
 		user1m,
 		video,

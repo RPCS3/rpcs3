@@ -1008,15 +1008,12 @@ namespace vm
 
 				if (!loc && area_size)
 				{
-					if (location == vm::user64k || location == vm::user1m)
-					{
-						lock.upgrade();
+					lock.upgrade();
 
-						if (!loc)
-						{
-							// Deferred allocation
-							loc = _find_map(area_size, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
-						}
+					if (!loc)
+					{
+						// Deferred allocation
+						loc = _find_map(area_size, 0x10000000, flags);
 					}
 				}
 
@@ -1051,6 +1048,7 @@ namespace vm
 			g_locations =
 			{
 				std::make_shared<block_t>(0x00010000, 0x0FFF0000, 0x200), // main
+				nullptr, // main extended
 				nullptr, // user 64k pages
 				nullptr, // user 1m pages
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
