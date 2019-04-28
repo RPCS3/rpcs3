@@ -20,6 +20,7 @@ extern atomic_t<u64> g_progr_pdone;
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
+const spu_decoder<spu_iflag> s_spu_iflag;
 
 extern u64 get_timebased_time();
 
@@ -911,6 +912,9 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 	workload.push_back(entry_point);
 
 	std::memset(m_regmod.data(), 0xff, sizeof(m_regmod));
+	std::memset(m_use_ra.data(), 0xff, sizeof(m_use_ra));
+	std::memset(m_use_rb.data(), 0xff, sizeof(m_use_rb));
+	std::memset(m_use_rc.data(), 0xff, sizeof(m_use_rc));
 	m_targets.clear();
 	m_preds.clear();
 	m_preds[entry_point];
@@ -998,6 +1002,17 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		wa += 4;
 
 		m_targets.erase(pos);
+
+		// Fill register access info
+		if (auto iflags = s_spu_iflag.decode(data))
+		{
+			if (iflags & spu_iflag::use_ra)
+				m_use_ra[pos / 4] = op.ra;
+			if (iflags & spu_iflag::use_rb)
+				m_use_rb[pos / 4] = op.rb;
+			if (iflags & spu_iflag::use_rc)
+				m_use_rc[pos / 4] = op.rc;
+		}
 
 		// Analyse instruction
 		switch (const auto type = s_spu_itype.decode(data))
