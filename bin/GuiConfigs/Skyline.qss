@@ -148,7 +148,7 @@ QSlider::handle:horizontal {
 	border: 1px solid #5c5c5c;
 	border-radius: 0.1em;
 	width: 18px;
-	margin: -2px 4; 
+	margin: -2px 2; 
 }
 
 QSlider::handle:horizontal:disabled {
@@ -158,15 +158,11 @@ QSlider::handle:horizontal:disabled {
 QSlider::handle:horizontal:hover {
 	background: qlineargradient(x1: 0, y1: 1, x2: 0, y2: 0, stop: 0.2 #FFF3FF, stop: 1 #FFFFFF);
 	border: 1px solid #8500ae;
-	width: 18px;
-	margin: -2px 4; 
 }
 
 QSlider::handle:horizontal:pressed {
 	background: #f8edfb;
 	border: 1px solid #8500ae;
-	width: 18px;
-	margin: -2px 4; 
 }
 
 /* Slider on Toolbar */

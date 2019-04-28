@@ -148,21 +148,17 @@ QSlider::handle:horizontal {
 	border: 1px solid #5c5c5c;
 	border-radius: 0.1em;
 	width: 18px;
-	margin: -2px 4; 
+	margin: -2px 2; 
 }
 
 QSlider::handle:horizontal:hover {
 	background: #111525;
 	border: 1px solid #0074e7;
-	width: 18px;
-	margin: -2px 4; 
 }
 
 QSlider::handle:horizontal:pressed {
 	border: 1px solid #0074e7;
 	background: #1c273d;
-	width: 18px;
-	margin: -2px 4; 
 }
 
 /* Slider on Toolbar */
@@ -517,6 +513,10 @@ QTableView {
 	selection-color: #FFFFFF;
 	border: none;
 	color: #FFFFFF;
+}
+
+QTableView::item:hover {
+	color: #0074e7;
 }
 
 /* Progress Bar */

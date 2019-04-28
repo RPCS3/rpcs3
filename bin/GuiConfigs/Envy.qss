@@ -272,21 +272,17 @@ QSlider::handle:horizontal {
 	border: 1px solid #5c5c5c;
 	border-radius: 0.1em;
 	width: 18px;
-	margin: -2px 4; 
+	margin: -2px 2; 
 }
 
 QSlider::handle:horizontal:hover {
 	background: #23262d;
 	border: 1px solid #8cf944;
-	width: 18px;
-	margin: -2px 4; 
 }
 
 QSlider::handle:horizontal:pressed {
 	background: #30333a;
 	border: 1px solid #8cf944;
-	width: 18px;
-	margin: -2px 4; 
 }
 
 /* Progress Bar */
