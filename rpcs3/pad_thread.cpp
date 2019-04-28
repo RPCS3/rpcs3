@@ -192,7 +192,7 @@ void pad_thread::ThreadFunc()
 			connected += cur_pad_handler.second->connected;
 		}
 
-		m_info.now_connect = connected;
+		m_info.now_connect = connected + num_ldd_pad;
 
 		// The following section is only reached when a dialog was closed and the pads are still intercepted.
 		// As long as any of the listed buttons is pressed the interception stays active.
@@ -234,4 +234,26 @@ void pad_thread::ThreadFunc()
 
 		std::this_thread::sleep_for(1ms);
 	}
+}
+
+s32 pad_thread::AddLddPad()
+{
+	// Look for first null pad
+	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++)
+	{
+		if (g_cfg_input.player[i]->handler == pad_handler::null)
+		{
+			m_pads[i]->ldd = true;
+			num_ldd_pad++;
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void pad_thread::UnregisterLddPad(u32 handle)
+{
+	m_pads[handle]->ldd = false;
+	num_ldd_pad--;
 }
