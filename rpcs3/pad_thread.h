@@ -27,6 +27,9 @@ public:
 	void SetEnabled(bool enabled);
 	void SetIntercepted(bool intercepted);
 
+	s32 AddLddPad();
+	void UnregisterLddPad(u32 handle);
+
 protected:
 	void ThreadFunc();
 
@@ -45,6 +48,8 @@ protected:
 	atomic_t<bool> is_enabled{ true };
 	atomic_t<bool> m_is_intercepted{ false };
 	std::shared_ptr<std::thread> thread;
+
+	u32 num_ldd_pad = 0;
 };
 
 namespace pad
