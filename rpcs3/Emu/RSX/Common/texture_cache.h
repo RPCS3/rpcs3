@@ -2888,9 +2888,19 @@ namespace rsx
 				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
 			}
 
+			verify(HERE), cached_dest || dst_is_render_target;
+
 			// Calculate number of bytes actually modified
-			u32 mem_length;
-			const u32 mem_base = dst_address - dst.rsx_address;
+			u32 mem_base, mem_length;
+			if (dst_is_render_target)
+			{
+				mem_base = dst_address - dst_subres.base_address;
+			}
+			else
+			{
+				mem_base = dst_address - cached_dest->get_section_base();
+			}
+
 			if (dst.clip_height == 1)
 			{
 				mem_length = dst.clip_width * dst_bpp;
@@ -2916,7 +2926,6 @@ namespace rsx
 			}
 			else
 			{
-				verify(HERE), dst_is_render_target;
 				dst_subres.surface->on_write();
 			}
 
