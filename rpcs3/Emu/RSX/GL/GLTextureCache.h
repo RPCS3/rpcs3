@@ -1004,18 +1004,6 @@ namespace gl
 			{
 				if (result.real_dst_size)
 				{
-					gl::texture::format fmt;
-					if (!result.is_depth)
-					{
-						fmt = dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8 ?
-							gl::texture::format::bgra : gl::texture::format::rgba;
-					}
-					else
-					{
-						fmt = dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8 ?
-							gl::texture::format::depth_stencil : gl::texture::format::depth;
-					}
-
 					flush_if_cache_miss_likely(cmd, result.to_address_range());
 				}
 

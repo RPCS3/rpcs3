@@ -3389,8 +3389,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 
 	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
 	{
-		rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
-		u32 absolute_address = buffer_region.address + buffer_region.base;
+		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 		{

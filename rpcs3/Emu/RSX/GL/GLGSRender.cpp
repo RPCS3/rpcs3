@@ -1639,9 +1639,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		aspect_ratio.size = new_size;
 
 		// Find the source image
-		rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
-		u32 absolute_address = buffer_region.address + buffer_region.base;
-
+		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		GLuint image = GL_NONE;
 
 		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
@@ -1700,16 +1698,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 				m_flip_tex_color.reset(new gl::texture(GL_TEXTURE_2D, buffer_width, buffer_height, 1, 1, GL_RGBA8));
 			}
 
-			if (buffer_region.tile)
-			{
-				std::unique_ptr<u8[]> temp(new u8[buffer_height * buffer_pitch]);
-				buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
-				m_flip_tex_color->copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
-			}
-			else
-			{
-				m_flip_tex_color->copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
-			}
+			m_flip_tex_color->copy_from(vm::base(absolute_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
 
 			image = m_flip_tex_color->id();
 		}
