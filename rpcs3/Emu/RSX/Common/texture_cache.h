@@ -2314,6 +2314,7 @@ namespace rsx
 
 						return result;
 					}
+#ifdef TEXTURE_CACHE_DEBUG
 					else
 					{
 						LOG_ERROR(RSX, "Area merge failed! addr=0x%x, w=%d, h=%d, gcm_format=0x%x[sz=%d]", texaddr, tex_width, tex_height, format, !(tex.format() & CELL_GCM_TEXTURE_LN));
@@ -2326,6 +2327,7 @@ namespace rsx
 						}
 						//LOG_TRACE(RSX, "Partial memory recovered from cache; may require WCB/WDB to properly gather all the data");
 					}
+#endif // TEXTURE_CACHE_DEBUG
 				}
 			}
 
