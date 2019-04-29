@@ -1753,6 +1753,14 @@ namespace rsx
 				const auto clipped = rsx::intersect_region(address, slice_w, slice_h, bpp,
 					section->get_section_base(), normalized_width, section->get_height(), section_bpp, pitch);
 
+				// Rect intersection test
+				// TODO: Make the intersection code cleaner with proper 2D regions
+				if (std::get<0>(clipped).x >= section->get_width())
+				{
+					// Overlap lies outside the image area!
+					return;
+				}
+
 				const auto slice_begin = u32(slice * src_slice_h);
 				const auto slice_end = u32(slice_begin + slice_h);
 
