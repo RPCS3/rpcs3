@@ -1126,6 +1126,11 @@ void GLGSRender::on_exit()
 void GLGSRender::clear_surface(u32 arg)
 {
 	if (skip_frame || !framebuffer_status_valid) return;
+
+	// If stencil write mask is disabled, remove clear_stencil bit
+	if (!rsx::method_registers.stencil_mask()) arg &= ~0x2u;
+
+	// Ignore invalid clear flags
 	if ((arg & 0xf3) == 0) return;
 
 	GLbitfield mask = 0;

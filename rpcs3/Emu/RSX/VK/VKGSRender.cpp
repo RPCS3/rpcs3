@@ -2048,6 +2048,9 @@ void VKGSRender::clear_surface(u32 mask)
 {
 	if (skip_frame || renderer_unavailable) return;
 
+	// If stencil write mask is disabled, remove clear_stencil bit
+	if (!rsx::method_registers.stencil_mask()) mask &= ~0x2u;
+
 	// Ignore invalid clear flags
 	if (!(mask & 0xF3)) return;
 
@@ -2097,7 +2100,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 		{
-			if (mask & 0x2 && rsx::method_registers.stencil_mask() != 0)
+			if (mask & 0x2)
 			{
 				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
