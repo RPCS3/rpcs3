@@ -2524,7 +2524,7 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 		{
 			LOG_ERROR(PPU, "Unregistered function called (LR=0x%x)", ppu.lr);
 			ppu.gpr[3] = 0;
-			ppu.cia += 4;
+			ppu.cia = (u32)ppu.lr & ~3;
 			return false;
 		},
 		[](ppu_thread& ppu) -> bool
