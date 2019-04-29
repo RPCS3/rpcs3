@@ -149,7 +149,7 @@ namespace vk
 		shader_object.setEnvInput(glslang::EShSourceGlsl, lang, glslang::EShClientVulkan, 100);
 		shader_object.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetClientVersion::EShTargetVulkan_1_0);
 		shader_object.setEnvTarget(glslang::EshTargetSpv, glslang::EShTargetLanguageVersion::EShTargetSpv_1_0);
-		
+
 		bool success = false;
 		const char *shader_text = shader.data();
 

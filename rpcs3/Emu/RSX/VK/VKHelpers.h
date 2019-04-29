@@ -201,6 +201,12 @@ namespace vk
 		bool bgra8_linear;
 	};
 
+	struct gpu_shader_types_support
+	{
+		bool allow_float16;
+		bool allow_int8;
+	};
+
 	// Memory Allocator - base class
 
 	class mem_allocator_base
@@ -398,7 +404,8 @@ namespace vk
 
 	class physical_device
 	{
-		VkPhysicalDevice dev = nullptr;
+		VkInstance parent = VK_NULL_HANDLE;
+		VkPhysicalDevice dev = VK_NULL_HANDLE;
 		VkPhysicalDeviceProperties props;
 		VkPhysicalDeviceMemoryProperties memory_properties;
 		std::vector<VkQueueFamilyProperties> queue_props;
@@ -408,9 +415,10 @@ namespace vk
 		physical_device() {}
 		~physical_device() {}
 
-		void set_device(VkPhysicalDevice pdev)
+		void create(VkInstance context, VkPhysicalDevice pdev)
 		{
 			dev = pdev;
+			parent = context;
 			vkGetPhysicalDeviceProperties(pdev, &props);
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 
@@ -508,15 +516,101 @@ namespace vk
 		{
 			return dev;
 		}
+
+		operator VkInstance() const
+		{
+			return parent;
+		}
+	};
+
+	class supported_extensions
+	{
+	private:
+		std::vector<VkExtensionProperties> m_vk_exts;
+
+	public:
+		enum enumeration_class
+		{
+			instance = 0,
+			device = 1
+		};
+
+		supported_extensions(enumeration_class _class, const char* layer_name = nullptr, physical_device* pgpu = nullptr)
+		{
+			uint32_t count;
+			if (_class == enumeration_class::instance)
+			{
+				if (vkEnumerateInstanceExtensionProperties(layer_name, &count, nullptr) != VK_SUCCESS)
+					return;
+			}
+			else
+			{
+				verify(HERE), pgpu;
+				if (vkEnumerateDeviceExtensionProperties(*pgpu, layer_name, &count, nullptr) != VK_SUCCESS)
+					return;
+			}
+
+			m_vk_exts.resize(count);
+			if (_class == enumeration_class::instance)
+			{
+				vkEnumerateInstanceExtensionProperties(layer_name, &count, m_vk_exts.data());
+			}
+			else
+			{
+				vkEnumerateDeviceExtensionProperties(*pgpu, layer_name, &count, m_vk_exts.data());
+			}
+		}
+
+		bool is_supported(const char *ext)
+		{
+			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
+				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
+		}
 	};
 
 	class render_device
 	{
 		physical_device *pgpu = nullptr;
 		memory_type_mapping memory_map{};
+		std::unordered_map<VkFormat, VkFormatProperties> m_format_properties;
 		gpu_formats_support m_formats_support{};
+		gpu_shader_types_support m_shader_types_support{};
 		std::unique_ptr<mem_allocator_base> m_allocator;
 		VkDevice dev = VK_NULL_HANDLE;
+
+		void get_physical_device_features(VkPhysicalDeviceFeatures& features)
+		{
+			supported_extensions instance_extensions(supported_extensions::instance);
+
+			if (!instance_extensions.is_supported("VK_KHR_get_physical_device_properties2"))
+			{
+				vkGetPhysicalDeviceFeatures(*pgpu, &features);
+			}
+			else
+			{
+				supported_extensions device_extensions(supported_extensions::device, nullptr, pgpu);
+
+				VkPhysicalDeviceFeatures2KHR features2;
+				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+				features2.pNext = nullptr;
+
+				VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+
+				if (device_extensions.is_supported("VK_KHR_shader_float16_int8"))
+				{
+					shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+					features2.pNext = &shader_support_info;
+				}
+
+				auto getPhysicalDeviceFeatures2KHR = (PFN_vkGetPhysicalDeviceFeatures2KHR)vkGetInstanceProcAddr(*pgpu, "vkGetPhysicalDeviceFeatures2KHR");
+				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
+				getPhysicalDeviceFeatures2KHR(*pgpu, &features2);
+
+				m_shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
+				m_shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
+				features = features2.features;
+			}
+		}
 
 	public:
 		render_device()
@@ -537,19 +631,24 @@ namespace vk
 			queue.queueCount = 1;
 			queue.pQueuePriorities = queue_priorities;
 
-			//Set up instance information
-			const char *requested_extensions[] =
+			// Set up instance information
+			std::vector<const char *>requested_extensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			};
 
-			//Enable hardware features manually
-			//Currently we require:
-			//1. Anisotropic sampling
-			//2. DXT support
-			//3. Indexable storage buffers
+			// Enable hardware features manually
+			// Currently we require:
+			// 1. Anisotropic sampling
+			// 2. DXT support
+			// 3. Indexable storage buffers
 			VkPhysicalDeviceFeatures available_features;
-			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
+			get_physical_device_features(available_features);
+
+			if (m_shader_types_support.allow_float16)
+			{
+				requested_extensions.push_back("VK_KHR_shader_float16_int8");
+			}
 
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
@@ -557,14 +656,29 @@ namespace vk
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-			device.pNext = NULL;
+			device.pNext = nullptr;
 			device.queueCreateInfoCount = 1;
 			device.pQueueCreateInfos = &queue;
 			device.enabledLayerCount = 0;
 			device.ppEnabledLayerNames = nullptr; // Deprecated
-			device.enabledExtensionCount = 1;
-			device.ppEnabledExtensionNames = requested_extensions;
+			device.enabledExtensionCount = (u32)requested_extensions.size();
+			device.ppEnabledExtensionNames = requested_extensions.data();
 			device.pEnabledFeatures = &available_features;
+
+			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+			if (m_shader_types_support.allow_float16)
+			{
+				// Allow use of f16 type in shaders if possible
+				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+				shader_support_info.shaderFloat16 = VK_TRUE;
+				device.pNext = &shader_support_info;
+
+				LOG_NOTICE(RSX, "GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
+			}
+			else
+			{
+				LOG_NOTICE(RSX, "GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
+			}
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
 
@@ -592,6 +706,19 @@ namespace vk
 				memory_map = {};
 				m_formats_support = {};
 			}
+		}
+
+		const VkFormatProperties get_format_properties(VkFormat format)
+		{
+			auto found = m_format_properties.find(format);
+			if (found != m_format_properties.end())
+			{
+				return found->second;
+			}
+
+			auto& props = m_format_properties[format];
+			vkGetPhysicalDeviceFormatProperties(*pgpu, format, &props);
+			return props;
 		}
 
 		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32 *type_index) const
@@ -632,6 +759,11 @@ namespace vk
 		const gpu_formats_support& get_formats_support() const
 		{
 			return m_formats_support;
+		}
+
+		const gpu_shader_types_support& get_shader_types_support() const
+		{
+			return m_shader_types_support;
 		}
 
 		mem_allocator_base* get_allocator() const
@@ -2065,29 +2197,6 @@ public:
 		}
 	};
 
-	class supported_extensions
-	{
-	private:
-		std::vector<VkExtensionProperties> m_vk_exts;
-
-	public:
-		supported_extensions()
-		{
-			uint32_t count;
-			if (vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr) != VK_SUCCESS)
-				return;
-
-			m_vk_exts.resize(count);
-			vkEnumerateInstanceExtensionProperties(nullptr, &count, m_vk_exts.data());
-		}
-
-		bool is_supported(const char *ext)
-		{
-			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
-				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
-		}
-	};
-
 	class context
 	{
 	private:
@@ -2175,12 +2284,17 @@ public:
 
 			if (!fast)
 			{
-				supported_extensions support;
+				supported_extensions support(supported_extensions::instance);
 
 				extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 				if (support.is_supported(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
 				{
 					extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				}
+
+				if (support.is_supported("VK_KHR_get_physical_device_properties2"))
+				{
+					extensions.push_back("VK_KHR_get_physical_device_properties2");
 				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -2273,7 +2387,7 @@ public:
 				CHECK_RESULT(vkEnumeratePhysicalDevices(m_instance, &num_gpus, pdevs.data()));
 
 				for (u32 i = 0; i < num_gpus; ++i)
-					gpus[i].set_device(pdevs[i]);
+					gpus[i].create(m_instance, pdevs[i]);
 			}
 
 			return gpus;

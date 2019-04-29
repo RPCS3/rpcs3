@@ -84,6 +84,12 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 		const std::string reg_sel = (is_address_reg) ? "a" : "tmp";
 		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(tmp_index)) + mask;
 	}
+	else if (!is_result)
+	{
+		// Not writing to result register, but not writing to a tmp register either
+		// Write to CC instead (Far Cry 2)
+		ret = AddCondReg() + mask;
+	}
 
 	return ret;
 }
@@ -159,20 +165,12 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 {
 	if (d0.cond == 0) return;
 
-	enum
-	{
-		lt = 0x1,
-		eq = 0x2,
-		gt = 0x4,
-	};
-
-	std::string mask = GetMask(is_sca);
-
 	if (is_sca)
 	{
 		value = getFloatTypeName(4) + "(" + value + ")";
 	}
 
+	std::string mask = GetMask(is_sca);
 	value += mask;
 
 	if (d0.staturate)
@@ -182,20 +180,21 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 
 	std::string dest;
 
-	if (d0.cond_update_enable_0 || d0.cond_update_enable_1)
-	{
-		dest = AddCondReg() + mask;
-	}
-	else if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
+	if (const auto tmp_reg = is_sca? d3.sca_dst_tmp: d0.dst_tmp;
+		d3.dst != 0x1f || tmp_reg != 0x3f)
 	{
 		dest = GetDST(is_sca);
 	}
-
-	//std::string code;
-	//if (d0.cond_test_enable)
-	//	code += "$ifcond ";
-	//code += dest + value;
-	//AddCode(code + ";");
+	else if (d0.cond_update_enable_0 || d0.cond_update_enable_1)
+	{
+		dest = AddCondReg() + mask;
+	}
+	else
+	{
+		// Broken instruction?
+		LOG_ERROR(RSX, "Operation has no output defined! (0x%x, 0x%x, 0x%x, 0x%x)", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
+		dest = " //";
+	}
 
 	AddCodeCond(Format(dest), value);
 }
@@ -241,7 +240,8 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) },
-		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) }
+		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) },
+		{ "$Ty", [this](){ return getFloatTypeName(4); } }
 	};
 
 	return fmt::replace_all(code, repl_list);

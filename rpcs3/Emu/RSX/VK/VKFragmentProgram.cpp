@@ -12,14 +12,14 @@ std::string VKFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
+std::string VKFragmentDecompilerThread::getHalfTypeName(size_t elementCount)
+{
+	return glsl::getHalfTypeNameImpl(elementCount);
+}
+
 std::string VKFragmentDecompilerThread::getFunction(FUNCTION f)
 {
 	return glsl::getFunctionImpl(f);
-}
-
-std::string VKFragmentDecompilerThread::saturate(const std::string & code)
-{
-	return "clamp(" + code + ", 0., 1.)";
 }
 
 std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
@@ -29,7 +29,16 @@ std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
-	OS << "#version 420\n";
+	if (device_props.has_native_half_support)
+	{
+		OS << "#version 450\n";
+		OS << "#extension GL_KHX_shader_explicit_arithmetic_types_float16: enable\n";
+	}
+	else
+	{
+		OS << "#version 420\n";
+	}
+
 	OS << "#extension GL_ARB_separate_shader_objects: enable\n\n";
 }
 
@@ -93,9 +102,11 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 
 	//NOTE: We do not skip outputs, the only possible combinations are a(0), b(0), ab(0,1), abc(0,1,2), abcd(0,1,2,3)
 	u8 output_index = 0;
+	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
+	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
 	for (int i = 0; i < std::size(table); ++i)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
 		{
 			OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";\n";
 			vk_prog->output_color_masks[i] = UINT32_MAX;
@@ -121,7 +132,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (m_prog.shadow_textures & mask)
+			if (!device_props.emulate_depth_compare && m_prog.shadow_textures & mask)
 			{
 				if (m_shadow_sampled_textures & mask)
 				{
@@ -217,7 +228,16 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
-	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program, properties.has_lit_op, m_prog.redirected_textures != 0, properties.has_wpos_input);
+	glsl::shader_properties properties2;
+	properties2.domain = glsl::glsl_fragment_program;
+	properties2.require_lit_emulation = properties.has_lit_op;
+	properties2.require_depth_conversion = m_prog.redirected_textures != 0;
+	properties2.require_wpos = properties.has_wpos_input;
+	properties2.require_texture_ops = properties.has_tex_op;
+	properties2.emulate_shadow_compare = device_props.emulate_depth_compare;
+	properties2.low_precision_tests = vk::get_current_renderer()->gpu().get_driver_vendor() == vk::driver_vendor::NVIDIA;
+
+	glsl::insert_glsl_legacy_function(OS, properties2);
 }
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -242,14 +262,16 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	};
 
 	std::string parameters = "";
+	const auto half4 = getHalfTypeName(4);
 	for (auto &reg_name : output_values)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
+		if (m_parr.HasParam(PF_PARAM_NONE, type, reg_name))
 		{
 			if (parameters.length())
 				parameters += ", ";
 
-			parameters += "inout vec4 " + reg_name;
+			parameters += "inout " + type + " " + reg_name;
 		}
 	}
 
@@ -346,21 +368,24 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "{\n";
 
 	std::string parameters = "";
+	const auto half4 = getHalfTypeName(4);
+
 	for (auto &reg_name : output_values)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		const std::string type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
+		if (m_parr.HasParam(PF_PARAM_NONE, type, reg_name))
 		{
 			if (parameters.length())
 				parameters += ", ";
 
 			parameters += reg_name;
-			OS << "	vec4 " << reg_name << " = vec4(0.);\n";
+			OS << "	" << type << " " << reg_name << " = " << type << "(0.);\n";
 		}
 	}
 
 	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
 
-	glsl::insert_rop(OS, !!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS));
+	glsl::insert_rop(OS, !!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS), device_props.has_native_half_support);
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
@@ -400,6 +425,14 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	u32 size;
 	std::string source;
 	VKFragmentDecompilerThread decompiler(source, parr, prog, size, *this);
+
+	const auto pdev = vk::get_current_renderer();
+	if (!g_cfg.video.disable_native_float16)
+	{
+		decompiler.device_props.has_native_half_support = pdev->get_shader_types_support().allow_float16;
+	}
+
+	decompiler.device_props.emulate_depth_compare = !pdev->get_formats_support().d24_unorm_s8;
 	decompiler.Task();
 
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);

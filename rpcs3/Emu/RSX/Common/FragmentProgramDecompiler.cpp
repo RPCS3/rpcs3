@@ -16,24 +16,37 @@ FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &p
 	m_size = 0;
 }
 
-
-void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
+void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 {
 	if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt) return;
 
-	switch (src1.scale)
+	if (src1.scale)
 	{
-	case 0: break;
-	case 1: code = "(" + code + " * 2.0)"; break;
-	case 2: code = "(" + code + " * 4.0)"; break;
-	case 3: code = "(" + code + " * 8.0)"; break;
-	case 5: code = "(" + code + " / 2.0)"; break;
-	case 6: code = "(" + code + " / 4.0)"; break;
-	case 7: code = "(" + code + " / 8.0)"; break;
+		std::string modifier;
+		switch (src1.scale)
+		{
+		case 0: break;
+		case 1: code = "(" + code + " * "; modifier = "2."; break;
+		case 2: code = "(" + code + " * "; modifier = "4."; break;
+		case 3: code = "(" + code + " * "; modifier = "8."; break;
+		case 5: code = "(" + code + " / "; modifier = "2."; break;
+		case 6: code = "(" + code + " / "; modifier = "4."; break;
+		case 7: code = "(" + code + " / "; modifier = "8."; break;
 
-	default:
-		LOG_ERROR(RSX, "Bad scale: %d", u32{ src1.scale });
-		break;
+		default:
+			LOG_ERROR(RSX, "Bad scale: %d", u32{ src1.scale });
+			break;
+		}
+
+		if (flags & OPFLAGS::skip_type_cast && dst.fp16 && device_props.has_native_half_support)
+		{
+			modifier = getHalfTypeName(1) + "(" + modifier + ")";
+		}
+
+		if (!modifier.empty())
+		{
+			code = code + modifier + ")";
+		}
 	}
 
 	if (!dst.no_dest)
@@ -45,9 +58,15 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 			code = "((" + code + "- 0.5) * 2.)";
 		}
 
+		if (dst.fp16 && device_props.has_native_half_support && !(flags & OPFLAGS::skip_type_cast))
+		{
+			// Cast to native data type
+			code = ClampValue(code, 1);
+		}
+
 		if (dst.saturate)
 		{
-			code = saturate(code);
+			code = ClampValue(code, 4);
 		}
 		else if (dst.prec)
 		{
@@ -67,16 +86,20 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 			case RSX_FP_OPCODE_LG2:
 				break;
 			case RSX_FP_OPCODE_MOV:
-				//NOTE: Sometimes varying inputs from VS are out of range so do not exempt any input types, unless fp16 (Naruto UNS)
+				// NOTE: Sometimes varying inputs from VS are out of range so do not exempt any input types, unless fp16 (Naruto UNS)
 				if (dst.fp16 && src0.fp16 && src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP)
 					break;
 			default:
 			{
-				//fp16 precsion flag on f32 register; ignore
+				// fp16 precsion flag on f32 register; ignore
 				if (dst.prec == 1 && !dst.fp16)
 					break;
 
-				//clamp value to allowed range
+				// Native type already has fp16 clamped (input must have been cast)
+				if (dst.prec == 1 && dst.fp16 && device_props.has_native_half_support)
+					break;
+
+				// clamp value to allowed range
 				code = ClampValue(code, dst.prec);
 				break;
 			}
@@ -84,7 +107,8 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 		}
 	}
 
-	code += (append_mask ? "$m" : "");
+	opflags = flags;
+	code += (flags & OPFLAGS::no_src_mask) ? "" : "$m";
 
 	if (dst.no_dest)
 	{
@@ -100,7 +124,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, bool append_mask)
 		return;
 	}
 
-	std::string dest = AddReg(dst.dest_reg, dst.fp16) + "$m";
+	std::string dest = AddReg(dst.dest_reg, !!dst.fp16) + "$m";
 
 	AddCodeCond(Format(dest), code);
 	//AddCode("$ifcond " + dest + code + (append_mask ? "$m;" : ";"));
@@ -159,15 +183,20 @@ std::string FragmentProgramDecompiler::GetMask()
 	return ret.empty() || strncmp(ret.c_str(), dst_mask, 4) == 0 ? "" : ("." + ret);
 }
 
-std::string FragmentProgramDecompiler::AddReg(u32 index, int fp16)
+std::string FragmentProgramDecompiler::AddReg(u32 index, bool fp16)
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string(fp16 ? "h" : "r") + std::to_string(index), getFloatTypeName(4) + "(0., 0., 0., 0.)");
+	const std::string type_name = (fp16 && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
+	const std::string reg_name = std::string(fp16 ? "h" : "r") + std::to_string(index);
+
+	return m_parr.AddParam(PF_PARAM_NONE, type_name, reg_name, type_name + "(0., 0., 0., 0.)");
 }
 
-bool FragmentProgramDecompiler::HasReg(u32 index, int fp16)
+bool FragmentProgramDecompiler::HasReg(u32 index, bool fp16)
 {
-	return m_parr.HasParam(PF_PARAM_NONE, getFloatTypeName(4),
-		std::string(fp16 ? "h" : "r") + std::to_string(index));
+	const std::string type_name = (fp16 && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
+	const std::string reg_name = std::string(fp16 ? "h" : "r") + std::to_string(index);
+
+	return m_parr.HasParam(PF_PARAM_NONE, type_name, reg_name);
 }
 
 std::string FragmentProgramDecompiler::AddCond()
@@ -177,26 +206,29 @@ std::string FragmentProgramDecompiler::AddCond()
 
 std::string FragmentProgramDecompiler::AddConst()
 {
-	std::string name = std::string("fc") + std::to_string(m_size + 4 * 4);
-	if (m_parr.HasParam(PF_PARAM_UNIFORM, getFloatTypeName(4), name))
+	const std::string name = std::string("fc") + std::to_string(m_size + 4 * 4);
+	const std::string type = getFloatTypeName(4);
+
+	if (m_parr.HasParam(PF_PARAM_UNIFORM, type, name))
 	{
 		return name;
 	}
 
 	auto data = (be_t<u32>*) ((char*)m_prog.addr + m_size + 4 * u32{sizeof(u32)});
-
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
 	u32 y = GetData(data[1]);
 	u32 z = GetData(data[2]);
 	u32 w = GetData(data[3]);
-	return m_parr.AddParam(PF_PARAM_UNIFORM, getFloatTypeName(4), name,
-		std::string(getFloatTypeName(4) + "(") + std::to_string((float&)x) + ", " + std::to_string((float&)y)
-		+ ", " + std::to_string((float&)z) + ", " + std::to_string((float&)w) + ")");
+
+	const auto var = fmt::format("%s(%f, %f, %f, %f)", type, (f32&)x, (f32&)y, (f32&)z, (f32&)w);
+	return m_parr.AddParam(PF_PARAM_UNIFORM, type, name, var);
 }
 
 std::string FragmentProgramDecompiler::AddTex()
 {
+	properties.has_tex_op = true;
+
 	std::string sampler;
 	switch (m_prog.get_texture_dimension(dst.tex_num))
 	{
@@ -213,6 +245,8 @@ std::string FragmentProgramDecompiler::AddTex()
 		sampler = "sampler3D";
 		break;
 	}
+
+	opflags |= OPFLAGS::texture_ref;
 	return m_parr.AddParam(PF_PARAM_UNIFORM, sampler, std::string("tex") + std::to_string(dst.tex_num));
 }
 
@@ -226,36 +260,37 @@ std::string FragmentProgramDecompiler::AddX2d()
 	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "x2d", getFloatTypeName(4) + "(0., 0., 0., 0.)");
 }
 
-//Both of these were tested with a trace SoulCalibur IV title screen
-//Failure to catch causes infinite values since there is a lot of rcp(0)
-std::string FragmentProgramDecompiler::NotZero(const std::string& code)
-{
-	return "(max(abs(" + code + "), 0.0000000001) * sign(" + code + "))";
-}
-
-std::string FragmentProgramDecompiler::NotZeroPositive(const std::string& code)
-{
-	return "max(abs(" + code + "), 0.0000000001)";
-}
-
 std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 precision)
 {
-	//FP16 is expected to overflow a lot easier at 0+-65504
-	//FP32 can still work up to 0+-3.4E38
-	//See http://http.download.nvidia.com/developer/Papers/2005/FP_Specials/FP_Specials.pdf
+	// FP16 is expected to overflow a lot easier at 0+-65504
+	// FP32 can still work up to 0+-3.4E38
+	// See http://http.download.nvidia.com/developer/Papers/2005/FP_Specials/FP_Specials.pdf
+
+	if (precision > 1 && precision < 5)
+	{
+		// Define precision_clamp
+		properties.has_clamp = true;
+	}
 
 	switch (precision)
 	{
 	case 0:
+		// Full 32-bit precision
 		break;
 	case 1:
-		return "clamp(" + code + ", -65504., 65504.)";
+		return "clamp16(" + code + ")";
 	case 2:
-		return "clamp(" + code + ", -2., 2.)";
+		return "precision_clamp(" + code + ", -2., 2.)";
 	case 3:
-		return "clamp(" + code + ", -1., 1.)";
+		return "precision_clamp(" + code + ", -1., 1.)";
 	case 4:
-		return "clamp(" + code + ", 0., 1.)";
+		return "precision_clamp(" + code + ", 0., 1.)";
+	case 5:
+		// Doesn't seem to do anything to the input from hw tests, same as 0
+		break;
+	default:
+		LOG_ERROR(RSX, "Unexpected precision modifier (%d)\n", precision);
+		break;
 	}
 
 	return code;
@@ -293,7 +328,15 @@ std::string FragmentProgramDecompiler::Format(const std::string& code, bool igno
 		},
 		{ "$cond", std::bind(std::mem_fn(&FragmentProgramDecompiler::GetCond), this) },
 		{ "$_c", std::bind(std::mem_fn(&FragmentProgramDecompiler::AddConst), this) },
-		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } }
+		{ "$float4", [this]() -> std::string { return getFloatTypeName(4); } },
+		{ "$float3", [this]() -> std::string { return getFloatTypeName(3); } },
+		{ "$float2", [this]() -> std::string { return getFloatTypeName(2); } },
+		{ "$float_t", [this]() -> std::string { return getFloatTypeName(1); } },
+		{ "$half4", [this]() -> std::string { return getHalfTypeName(4); } },
+		{ "$half3", [this]() -> std::string { return getHalfTypeName(3); } },
+		{ "$half2", [this]() -> std::string { return getHalfTypeName(2); } },
+		{ "$half_t", [this]() -> std::string { return getHalfTypeName(1); } },
+		{ "$Ty", [this]() -> std::string { return (!device_props.has_native_half_support || !dst.fp16)? getFloatTypeName(4) : getHalfTypeName(4); } }
 	};
 
 	if (!ignore_redirects)
@@ -372,9 +415,53 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 		return;
 	}
 
+	std::string src_prefix;
+	if (device_props.has_native_half_support && !this->dst.fp16)
+	{
+		// Target is not fp16 but src might be
+		// Usually vecX a = f16vecX b is fine, but causes operator overload issues when used in a mix/lerp function
+		// mix(f32, f16, bvec) causes compiler issues
+		// NOTE: If dst is fp16 the src will already have been cast to match so this is not a problem in that case
+
+		bool src_is_fp16 = false;
+		if ((opflags & (OPFLAGS::texture_ref | OPFLAGS::src_cast_f32)) == 0 &&
+			src.find("$0") != std::string::npos)
+		{
+			// Texture sample operations are full-width and are exempt
+			src_is_fp16 = (src0.fp16 && src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
+
+			if (src_is_fp16 && src.find("$1") != std::string::npos)
+			{
+				// References operand 1
+				src_is_fp16 = (src1.fp16 && src1.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
+
+				if (src_is_fp16 && src.find("$2") != std::string::npos)
+				{
+					// References operand 2
+					src_is_fp16 = (src2.fp16 && src2.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
+				}
+			}
+		}
+
+		if (src_is_fp16)
+		{
+			// LHS argument is of native half type, need to cast to proper type!
+			if (src[0] != '(')
+			{
+				// Upcast inputs to processing function instead
+				opflags |= OPFLAGS::src_cast_f32;
+			}
+			else
+			{
+				// No need to add explicit casts all over the place, just cast the result once
+				src_prefix = "$Ty";
+			}
+		}
+	}
+
 	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
 	const auto cond = ShaderVariable(dst).match_size(GetRawCond());
-	AddCode(dst + " = _select(" + dst + ", " + src + ", " + cond + ");");
+	AddCode(dst + " = _select(" + dst + ", " + src_prefix + src + ", " + cond + ");");
 }
 
 template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
@@ -406,6 +493,13 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		}
 
 		ret += AddReg(src.tmp_reg_index, src.fp16);
+
+		if (opflags & OPFLAGS::src_cast_f32 && src.fp16 && device_props.has_native_half_support)
+		{
+			// Upconvert if there is a chance for ambiguity
+			ret = getFloatTypeName(4) + "(" + ret + ")";
+		}
+
 		break;
 
 	case RSX_FP_REGISTER_TYPE_INPUT:
@@ -472,7 +566,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	if (strncmp(swizzle.c_str(), f, 4) != 0) ret += "." + swizzle;
 
-	//Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
+	// Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
 	if (src.abs) ret = "abs(" + ret + ")";
 	if (apply_precision_modifier) ret = ClampValue(ret, src1.input_prec_mod);
 	if (src.neg) ret = "-" + ret;
@@ -485,8 +579,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Shader validation
 	// Shader must at least write to one output for the body to be considered valid
 
-	const std::string vec4_type = getFloatTypeName(4);
-	const std::string init_value = vec4_type + "(0., 0., 0., 0.)";
+	const bool fp16_out = !(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
+	const std::string $float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
+	const std::string init_value = $float4_type + "(0., 0., 0., 0.)";
 	std::array<std::string, 4> output_register_names;
 	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
 	bool shader_is_valid = false;
@@ -502,7 +597,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	// Add the color output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
 	// This can be used instead of an explicit clear pass in some games (Motorstorm)
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+	if (!fp16_out)
 	{
 		output_register_names = { "r0", "r2", "r3", "r4" };
 	}
@@ -513,9 +608,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	for (int n = 0; n < 4; ++n)
 	{
-		if (!m_parr.HasParam(PF_PARAM_NONE, vec4_type, output_register_names[n]))
+		if (!m_parr.HasParam(PF_PARAM_NONE, $float4_type, output_register_names[n]))
 		{
-			m_parr.AddParam(PF_PARAM_NONE, vec4_type, output_register_names[n], init_value);
+			m_parr.AddParam(PF_PARAM_NONE, $float4_type, output_register_names[n], init_value);
 			continue;
 		}
 
@@ -545,14 +640,121 @@ std::string FragmentProgramDecompiler::BuildCode()
 	insertOutputs(OS);
 	OS << "\n";
 
-	//Insert global function definitions
+	// Insert global function definitions
 	insertGlobalFunctions(OS);
 
-	//Declare register gather/merge if needed
+	std::string float4 = getFloatTypeName(4);
+	const bool glsl = float4 == "vec4";
+
+	if (properties.has_clamp)
+	{
+		std::string precision_func =
+		"$float4 precision_clamp($float4 x, float _min, float _max)\n"
+		"{\n"
+		"	// Treat NaNs as 0\n"
+		"	bvec4 nans = isnan(x);\n"
+		"	x = _select(x, $float4(0., 0., 0., 0.), nans);\n"
+		"	return clamp(x, _min, _max);\n"
+		"}\n\n";
+
+		if (device_props.has_native_half_support)
+		{
+			precision_func +=
+			"$half4 precision_clamp($half4 x, float _min, float _max)\n"
+			"{\n"
+			"	// Treat NaNs as 0\n"
+			"	bvec4 nans = isnan(x);\n"
+			"	x = _select(x, $half4(0., 0., 0., 0.), nans);\n"
+			"	return clamp(x, $half_t(_min), $half_t(_max));\n"
+			"}\n\n";
+		}
+
+		OS << Format(precision_func);
+	}
+
+	if (!device_props.has_native_half_support)
+	{
+		// Accurate float to half clamping (preserves IEEE-754 NaN)
+		std::string clamp_func =
+		"$float4 clamp16($float4 x)\n"
+		"{\n";
+
+		if (glsl)
+		{
+			clamp_func +=
+			"	uvec4 bits = floatBitsToUint(x);\n"
+			"	uvec4 extend = uvec4(0x7f800000);\n"
+			"	bvec4 test = equal(bits & extend, extend);\n"
+			"	vec4 clamped = clamp(x, -65504., +65504.);\n"
+			"	return _select(clamped, x, test);\n";
+		}
+		else
+		{
+			clamp_func +=
+			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
+			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
+			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
+			"	if (!isnan(x.x) && !isinf(x.x)) x.x = clamp(x.x, -65504., +65504.);\n"
+			"	return x;\n";
+		}
+
+		clamp_func +=
+		"}\n\n";
+
+		OS << Format(clamp_func);
+	}
+	else
+	{
+		// Define raw casts from f32->f16
+		OS <<
+		"#define clamp16(x) " << getHalfTypeName(4) << "(x)\n";
+	}
+
+	OS <<
+	"#define _builtin_lit lit_legacy\n"
+	"#define _builtin_log2 log2\n"
+	"#define _builtin_normalize(x) (length(x) > 0? normalize(x) : x)\n" // HACK!! Workaround for some games that generate NaNs unless texture filtering exactly matches PS3 (BFBC)
+	"#define _builtin_sqrt(x) sqrt(abs(x))\n"
+	"#define _builtin_rcp(x) (1. / x)\n"
+	"#define _builtin_rsq(x) (1. / _builtin_sqrt(x))\n"
+	"#define _builtin_div(x, y) (x / y)\n\n";
+
+	if (properties.has_divsq)
+	{
+		// Define RSX-compliant DIVSQ
+		// If the numerator is 0, the result is always 0 even if the denominator is 0
+		// NOTE: This operation is component-wise and cannot be accelerated with lerp/mix because these always return NaN if any of the choices is NaN
+		std::string divsq_func =
+			"$float4 _builtin_divsq($float4 a, float b)\n"
+			"{\n"
+			"	$float4 tmp = a / _builtin_sqrt(b);\n"
+			"	$float4 choice = abs(a);\n";
+
+		if (glsl)
+		{
+			divsq_func +=
+				"	return _select(a, tmp, greaterThan(choice, vec4(0.)));\n";
+		}
+		else
+		{
+			divsq_func +=
+				"	if (choice.x > 0.) a.x = tmp.x;\n"
+				"	if (choice.y > 0.) a.y = tmp.y;\n"
+				"	if (choice.z > 0.) a.z = tmp.z;\n"
+				"	if (choice.w > 0.) a.w = tmp.w;\n"
+				"	return a;\n";
+		}
+
+		divsq_func +=
+			"}\n\n";
+
+		OS << Format(divsq_func);
+	}
+
+	// Declare register gather/merge if needed
 	if (properties.has_gather_op)
 	{
 		std::string float2 = getFloatTypeName(2);
-		std::string float4 = getFloatTypeName(4);
 
 		OS << float4 << " gather(" << float4 << " _h0, " << float4 << " _h1)\n";
 		OS << "{\n";
@@ -578,88 +780,66 @@ std::string FragmentProgramDecompiler::BuildCode()
 	return OS.str();
 }
 
-bool FragmentProgramDecompiler::handle_sct(u32 opcode)
+bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 {
+	// Compliance notes based on HW tests:
+	// DIV is IEEE compliant as is MUL, LG2, EX2. LG2 with negative input returns NaN as expected.
+	// DIVSQ is not compliant. Result is 0 if numerator is 0 regardless of denominator
+	// RSQ(0) and RCP(0) return INF as expected
+	// RSQ ignores the sign of the inputs (Metro Last Light, GTA4)
+	// SAT modifier flushes NaNs to 0
+	// Some games that rely on broken DIVSQ behaviour include Dark Souls II and Super Puzzle Fighter II Turbo HD Remix
+
 	switch (opcode)
 	{
 	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
-	case RSX_FP_OPCODE_DIV: SetDst("($0 / " + NotZero("$1.x") + ")"); return true;
-	// Note: DIVSQ is not IEEE compliant. divsq(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
-	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
-	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt(" + NotZeroPositive("$1.x") + "))"); return true;
-	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
-	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
-	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
-	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A)); return true;
+	case RSX_FP_OPCODE_DIV: SetDst("_builtin_div($0, $1.x)"); return true;
+	case RSX_FP_OPCODE_DIVSQ:
+		SetDst("_builtin_divsq($0, $1.x)");
+		properties.has_divsq = true;
+		return true;
+	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
-	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); return true;
-	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
+	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)", OPFLAGS::src_cast_f32); return true;
+	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
 	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
-	// Note: It's highly likely that RCP is not IEEE compliant but a game that uses rcp(0) has to be found
-	case RSX_FP_OPCODE_RCP: SetDst("(1. / " +  NotZero("$0.x") + ").xxxx"); return true;
-	// Note: RSQ is not IEEE compliant. rsq(0) is some big number (Silent Hill 3 HD)
-	// It is not know what happens if 0 is negative.
-	case RSX_FP_OPCODE_RSQ: SetDst("(1. / sqrt(" + NotZeroPositive("$0.x") + ").xxxx)"); return true;
-	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
-	case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SGT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SLE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SLT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SNE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR)); return true;
-	}
-	return false;
-}
+	case RSX_FP_OPCODE_RCP: SetDst("_builtin_rcp($0.x).xxxx"); return true;
+	case RSX_FP_OPCODE_RSQ: SetDst("_builtin_rsq($0.x).xxxx"); return true;
+	case RSX_FP_OPCODE_SEQ: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL), OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_SGE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SGT: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SLE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SLT: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_SNE: SetDst("$Ty(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR), OPFLAGS::skip_type_cast); return true;
 
-bool FragmentProgramDecompiler::handle_scb(u32 opcode)
-{
-	switch (opcode)
-	{
-	case RSX_FP_OPCODE_ADD: SetDst("($0 + $1)"); return true;
+	// SCB-only ops
 	case RSX_FP_OPCODE_COS: SetDst("cos($0.xxxx)"); return true;
-	case RSX_FP_OPCODE_DIV: SetDst("($0 / " + NotZero("$1.x") + ")"); return true;
-	// Note: DIVSQ is not IEEE compliant. sqrt(0, 0) is 0 (Super Puzzle Fighter II Turbo HD Remix).
-	// sqrt(x, 0) might be equal to some big value (in absolute) whose sign is sign(x) but it has to be proven.
-	case RSX_FP_OPCODE_DIVSQ: SetDst("($0 / sqrt(" + NotZeroPositive("$1.x") + "))"); return true;
-	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::FUNCTION_DP2)); return true;
-	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3)); return true;
-	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4)); return true;
-	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A)); return true;
-	case RSX_FP_OPCODE_DST: SetDst("vec4(distance($0, $1))"); return true;
-	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL)); return true;
+	case RSX_FP_OPCODE_DST: SetDst("distance($0, $1).xxxx", OPFLAGS::src_cast_f32); return true;
+	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
 	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
 	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); return true;
 	case RSX_FP_OPCODE_LIT:
-		SetDst("lit_legacy($0)");
+		SetDst("_builtin_lit($0)");
 		properties.has_lit_op = true;
 		return true;
-	case RSX_FP_OPCODE_LIF: SetDst(getFloatTypeName(4) + "(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)"); return true;
-	case RSX_FP_OPCODE_LRP: SetDst(getFloatTypeName(4) + "($2 * (1 - $0) + $1 * $0)"); return true;
-	case RSX_FP_OPCODE_LG2: SetDst("log2(" + NotZeroPositive("$0.x") + ").xxxx"); return true;
-	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
-	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)"); return true;
-	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)"); return true;
-	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;
-	case RSX_FP_OPCODE_MUL: SetDst("($0 * $1)"); return true;
-	//Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? pow(2.0, $0.w) : 0.0), 1.0)", OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_LRP: SetDst("$Ty($2 * (1 - $0) + $1 * $0)", OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_LG2: SetDst("_builtin_log2($0.x).xxxx"); return true;
+		// Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	case RSX_FP_OPCODE_PK2: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packHalf2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PK4: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packSnorm2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PKG:
-	//Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
+		// Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
 	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
-	case RSX_FP_OPCODE_SEQ: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SEQ, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SFL: SetDst(getFunction(FUNCTION::FUNCTION_SFL)); return true;
-	case RSX_FP_OPCODE_SGE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SGT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SGT, "$0", "$1") + ")"); return true;
 	case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); return true;
-	case RSX_FP_OPCODE_SLE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SLT: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SLT, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_SNE: SetDst(getFloatTypeName(4) + "(" + compareFunction(COMPARE::FUNCTION_SNE, "$0", "$1") + ")"); return true;
-	case RSX_FP_OPCODE_STR: SetDst(getFunction(FUNCTION::FUNCTION_STR)); return true;
 	}
 	return false;
 }
@@ -670,7 +850,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	{
 	case RSX_FP_OPCODE_DDX: SetDst(getFunction(FUNCTION::FUNCTION_DFDX)); return true;
 	case RSX_FP_OPCODE_DDY: SetDst(getFunction(FUNCTION::FUNCTION_DFDY)); return true;
-	case RSX_FP_OPCODE_NRM: SetDst("normalize($0.xyz)"); return true;
+	case RSX_FP_OPCODE_NRM: SetDst("_builtin_normalize($0.xyz).xyzz", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_BEM: SetDst("$0.xyxy + $1.xxxx * $2.xzxz + $1.yyyy * $2.ywyw"); return true;
 	case RSX_FP_OPCODE_TEXBEM:
 		//Untested, should be x2d followed by TEX
@@ -790,12 +970,12 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			return true;
 		}
 		return false;
-	//Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+	// Unpack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	case RSX_FP_OPCODE_UP2: SetDst("unpackHalf2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(floatBitsToUint($0.x))"); return true;
 	case RSX_FP_OPCODE_UP16: SetDst("unpackSnorm2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UPG:
-	//Same as UPB with gamma correction
+	// Same as UPB with gamma correction
 	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(floatBitsToUint($0.x)))"); return true;
 	}
 	return false;
@@ -848,6 +1028,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		src2.HEX = GetData(data[3]);
 
 		m_offset = 4 * sizeof(u32);
+		opflags = 0;
 
 		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
 
@@ -932,16 +1113,14 @@ std::string FragmentProgramDecompiler::Decompile()
 		default:
 			int prev_force_unit = forced_unit;
 
-			//Some instructions do not respect forced unit
-			//Tested with Tales of Vesperia
+			// Some instructions do not respect forced unit
+			// Tested with Tales of Vesperia
 			if (SIP()) break;
 			if (handle_tex_srb(opcode)) break;
 
-			//FENCT/FENCB do not actually reject instructions if they dont match the forced unit
-			//Tested with Dark Souls II where the respecting FENCX instruction will result in empty luminance averaging shaders
-			//TODO: More research is needed to determine what real HW does
-			if (handle_sct(opcode)) break;
-			if (handle_scb(opcode)) break;
+			// FENCT/FENCB do not actually reject instructions if they dont match the forced unit
+			// Looks like they are optimization hints and not hard-coded forced paths
+			if (handle_sct_scb(opcode)) break;
 			forced_unit = FORCE_NONE;
 
 			LOG_ERROR(RSX, "Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);

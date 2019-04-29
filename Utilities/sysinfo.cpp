@@ -5,8 +5,13 @@
 
 #ifdef _WIN32
 #include "windows.h"
+#include "sysinfoapi.h"
+#include "subauth.h"
+#include "stringapiset.h"
 #else
 #include <unistd.h>
+#include <sys/utsname.h>
+#include <errno.h>
 #endif
 
 bool utils::has_ssse3()
@@ -152,4 +157,47 @@ std::string utils::get_firmware_version()
 		return version;
 	}
 	return "";
+}
+
+std::string utils::get_OS_version()
+{
+	std::string output = "";
+#ifdef _WIN32
+	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
+	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
+
+	const DWORD peb_offset = 0x60;
+	const INT_PTR peb = __readgsqword(peb_offset);
+
+	const DWORD version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
+	const DWORD version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
+	const WORD build = *reinterpret_cast<const WORD*>(peb + 0x120);
+	const UNICODE_STRING service_pack = *reinterpret_cast<const UNICODE_STRING*>(peb + 0x02E8);
+	const u64 compatibility_mode = *reinterpret_cast<const u64*>(peb + 0x02C8); // Two DWORDs, major & minor version
+
+	const bool has_sp = service_pack.Length > 0;
+	std::vector<char> holder(service_pack.Length + 1, '\0');
+	if (has_sp)
+	{
+		WideCharToMultiByte(CP_UTF8, NULL, service_pack.Buffer, service_pack.Length,
+			(LPSTR) holder.data(), static_cast<int>(holder.size()), NULL, NULL);
+	}
+
+	fmt::append(output,
+		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
+		version_major, version_minor, build, has_sp ? holder.data() : "none", compatibility_mode);
+#else
+	struct utsname details = {};
+
+	if (!uname(&details))
+	{
+		fmt::append(output, "Operating system: POSIX, Name: %s, Release: %s, Version: %s",
+			details.sysname, details.release, details.version);
+	}
+	else
+	{
+		fmt::append(output, "Operating system: POSIX, Unknown version! (Error: %d)", errno);
+	}
+#endif
+	return output;
 }
