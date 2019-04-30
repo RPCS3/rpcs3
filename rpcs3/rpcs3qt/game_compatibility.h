@@ -83,6 +83,6 @@ public:
 		QPainter painter(this);
 		painter.setPen(color);
 		painter.setBrush(color);
-		painter.drawRect(2, 3, 10, 10);
+		painter.drawRect(5, 3, 10, 10);
 	}
 };
