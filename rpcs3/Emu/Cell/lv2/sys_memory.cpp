@@ -261,9 +261,14 @@ error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	}
 
 	// Create the memory container
-	*cid = idm::make<lv2_memory_container>(size);
+	if (const u32 id = idm::make<lv2_memory_container>(size))
+	{
+		*cid = id;
+		return CELL_OK;
+	}
 
-	return CELL_OK;
+	dct->used -= size;
+	return CELL_EAGAIN;
 }
 
 error_code sys_memory_container_destroy(u32 cid)
