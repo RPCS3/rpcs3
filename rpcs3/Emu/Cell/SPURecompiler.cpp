@@ -918,6 +918,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 	m_targets.clear();
 	m_preds.clear();
 	m_preds[entry_point];
+	m_bbs.clear();
 
 	// Value flags (TODO)
 	enum class vf : u32
@@ -1448,6 +1449,11 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				m_regmod[pos / 4] = s_reg_mfc_size;
 				break;
 			}
+			case MFC_Cmd:
+			{
+				m_use_rb[pos / 4] = s_reg_mfc_eal;
+				break;
+			}
 			}
 
 			break;
@@ -1940,7 +1946,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		it++;
 	}
 
-	// Fill holes which contain only NOP and LNOP instructions
+	// Fill holes which contain only NOP and LNOP instructions (TODO: compile)
 	for (u32 i = 1, nnop = 0, vsize = 0; i <= result.size(); i++)
 	{
 		if (i >= result.size() || result[i])
@@ -1969,28 +1975,96 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		}
 	}
 
-	// Fill entry map, add entry points
+	// Fill block info
+	for (auto& pred : m_preds)
+	{
+		auto& block = m_bbs[pred.first];
+
+		// Copy predeccessors (wrong at this point, needs a fixup later)
+		block.preds = pred.second;
+
+		// Fill register usage info
+		for (u32 ia = pred.first; ia < 0x40000; ia += 4)
+		{
+			block.size++;
+
+			for (auto* _use : {&m_use_ra, &m_use_rb, &m_use_rc})
+			{
+				if (u8 reg = (*_use)[ia / 4]; reg < s_reg_max)
+				{
+					// Register reg use only if it happens before reg mod
+					if (!block.reg_mod[reg])
+						block.reg_use.set(reg);
+				}
+			}
+
+			if (m_use_rb[ia / 4] == s_reg_mfc_eal)
+			{
+				// Expand MFC_Cmd reg use
+				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
+				{
+					if (!block.reg_mod[reg])
+						block.reg_use.set(reg);
+				}
+			}
+
+			// Register reg modification
+			if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
+			{
+				block.reg_mod.set(reg);
+			}
+
+			// Find targets (also means end of the block)
+			const auto tfound = m_targets.find(ia);
+
+			if (tfound != m_targets.end())
+			{
+				// Copy targets
+				block.targets = tfound->second;
+				break;
+			}
+		}
+
+		block.reg_origin[0] = 0x80000000;
+		block.reg_origin_abs[0] = 0x80000000;
+	}
+
+	// Fixup block predeccessors to point to basic blocks, not last instructions
+	for (auto& bb : m_bbs)
+	{
+		for (u32& pred : bb.second.preds)
+		{
+			pred = std::prev(m_bbs.upper_bound(pred))->first;
+		}
+	}
+
+	// Fill entry map, add chunk addresses
 	while (true)
 	{
 		workload.clear();
 		workload.push_back(entry_point);
-		std::memset(m_entry_map.data(), 0, sizeof(m_entry_map));
 
 		std::basic_string<u32> new_entries;
 
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			const u16 _new = m_entry_map[addr / 4];
+			auto& block    = m_bbs.at(addr);
+			const u32 _new = block.chunk;
 
-			if (!m_entry_info[addr / 4])
+			if (m_entry_info[addr / 4])
+			{
+				// Register empty chunk
+				m_chunks[addr];
+			}
+			else
 			{
 				// Check block predecessors
-				for (u32 pred : m_preds[addr])
+				for (u32 pred : block.preds)
 				{
-					const u16 _old = m_entry_map[pred / 4];
+					const u32 _old = m_bbs[pred].chunk;
 
-					if (_old && _old != _new)
+					if (_old < 0x40000 && _old != _new)
 					{
 						// If block has multiple 'entry' points, it becomes an entry point itself
 						new_entries.push_back(addr);
@@ -1998,42 +2072,27 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				}
 			}
 
-			// Fill value
-			const u16 root = m_entry_info[addr / 4] ? ::narrow<u16>(addr / 4) : _new;
+			// Update chunk address
+			block.chunk = m_entry_info[addr / 4] ? addr : _new;
 
-			for (u32 wa = addr; wa < limit && result[(wa - lsa) / 4 + 1]; wa += 4)
+			// Process block targets
+			for (u32 target : block.targets)
 			{
-				// Fill entry address for the instruction
-				m_entry_map[wa / 4] = root;
+				const u32 value = m_entry_info[target / 4] ? target : block.chunk;
 
-				// Find targets (also means end of the block)
-				const auto tfound = m_targets.find(wa);
-
-				if (tfound == m_targets.end())
+				if (u32& tval = m_bbs[target].chunk; tval < 0x40000)
 				{
-					continue;
-				}
-
-				for (u32 target : tfound->second)
-				{
-					const u16 value = m_entry_info[target / 4] ? ::narrow<u16>(target / 4) : root;
-
-					if (u16& tval = m_entry_map[target / 4])
+					// TODO: fix condition
+					if (tval != value && !m_entry_info[target / 4])
 					{
-						// TODO: fix condition
-						if (tval != value && !m_entry_info[target / 4])
-						{
-							new_entries.push_back(target);
-						}
-					}
-					else
-					{
-						tval = value;
-						workload.emplace_back(target);
+						new_entries.push_back(target);
 					}
 				}
-
-				break;
+				else
+				{
+					tval = value;
+					workload.emplace_back(target);
+				}
 			}
 		}
 
@@ -2045,6 +2104,91 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		for (u32 entry : new_entries)
 		{
 			m_entry_info[entry / 4] = true;
+
+			// Acknowledge artificial (reversible) chunk entry point
+			m_chunks[entry].joinable = true;
+		}
+
+		for (auto& bb : m_bbs)
+		{
+			// Reset chunk info
+			bb.second.chunk = 0x40000;
+		}
+	}
+
+	// Fill chunk info
+	for (auto& bb : m_bbs)
+	{
+		auto& chunk = m_chunks.at(bb.second.chunk);
+		chunk.bbs.push_back(bb.first);
+	}
+
+	workload.clear();
+	workload.push_back(entry_point);
+
+	// Fill register origin info
+	for (u32 wi = 0; wi < workload.size(); wi++)
+	{
+		const u32 addr = workload[wi];
+		auto& block    = m_bbs.at(addr);
+
+		if (block.reg_origin[0] == 0x80000000)
+		{
+			// Initialize entry point with default value: unknown origin (requires load)
+			block.reg_origin.fill(0x40000);
+		}
+
+		if (block.reg_origin_abs[0] == 0x80000000)
+		{
+			block.reg_origin_abs.fill(0x40000);
+		}
+
+		for (u32 target : block.targets)
+		{
+			auto& tb = m_bbs.at(target);
+
+			// Target block is either queued for the first time, or on request
+			bool enqueue = tb.reg_origin[0] == 0x80000000 || tb.reg_origin_abs[0] == 0x80000000;
+
+			for (u32 i = 0; i < s_reg_max; i++)
+			{
+				if (tb.chunk == block.chunk && tb.reg_origin[i] != -1)
+				{
+					const u32 expected = block.reg_mod[i] || block.reg_origin[i] == -1 ? addr : block.reg_origin[i];
+
+					if (tb.reg_origin[i] != expected)
+					{
+						// Multiple origins merged (requires PHI node)
+						tb.reg_origin[i] = -1;
+
+						// Need to process this target block again in order to propagate -1
+						enqueue = true;
+					}
+				}
+
+				if (tb.chunk != block.chunk && target != addr + block.size * 4 && m_entry_info[target / 4])
+				{
+					// Skip call target completely
+					continue;
+				}
+
+				if (tb.reg_origin_abs[i] != -1)
+				{
+					const u32 expected = block.reg_mod[i] || block.reg_origin_abs[i] == -1 ? addr : block.reg_origin_abs[i];
+
+					if (tb.reg_origin_abs[i] != expected)
+					{
+						tb.reg_origin_abs[i] = -1;
+
+						enqueue = true;
+					}
+				}
+			}
+
+			if (enqueue)
+			{
+				workload.emplace_back(target);
+			}
 		}
 	}
 
@@ -2158,12 +2302,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Final block (for PHI nodes, set after completion)
 		llvm::BasicBlock* block_end{};
 
-		// Regmod compilation (TODO)
-		std::bitset<s_reg_max> mod;
-
-		// List of actual predecessors
-		std::basic_string<u32> preds;
-
 		// Current register values
 		std::array<llvm::Value*, s_reg_max> reg{};
 
@@ -2239,7 +2377,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				{
 					if (auto c = llvm::dyn_cast_or_null<llvm::Constant>(m_block->reg[i]))
 					{
-						if (!(find_reg_origin(addr, i, false) >> 31))
+						if (m_bbs.at(addr).reg_origin_abs[i] != -1)
 						{
 							regs[i] = c;
 						}
@@ -2883,112 +3021,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return eval(splat<T>(imm));
 	}
 
-	// Return either basic block addr with single dominating value, or negative number of PHI entries
-	u32 find_reg_origin(u32 addr, u32 index, bool chunk_only = true)
-	{
-		u32 result = -1;
-
-		// Handle entry point specially
-		if (chunk_only && m_entry_info[addr / 4])
-		{
-			result = addr;
-		}
-
-		// Used for skipping blocks from different chunks
-		const u16 root = ::narrow<u16>(m_entry / 4);
-
-		// List of predecessors to check
-		m_scan_queue.clear();
-
-		const auto pfound = m_preds.find(addr);
-
-		if (pfound != m_preds.end())
-		{
-			for (u32 pred : pfound->second)
-			{
-				if (chunk_only && m_entry_map[pred / 4] != root)
-				{
-					continue;
-				}
-
-				m_scan_queue.push_back(pred);
-			}
-		}
-
-		// TODO: allow to avoid untouched registers in some cases
-		bool regmod_any = result == -1;
-
-		for (u32 i = 0; i < m_scan_queue.size(); i++)
-		{
-			// Find whether the block modifies the selected register
-			bool regmod = false;
-
-			for (addr = m_scan_queue[i];; addr -= 4)
-			{
-				if (index == m_regmod.at(addr / 4))
-				{
-					regmod = true;
-					regmod_any = true;
-				}
-
-				if (LIKELY(!m_block_info[addr / 4]))
-				{
-					continue;
-				}
-
-				const auto pfound = m_preds.find(addr);
-
-				if (pfound == m_preds.end())
-				{
-					continue;
-				}
-
-				if (!regmod)
-				{
-					// Enqueue predecessors if register is not modified there
-					for (u32 pred : pfound->second)
-					{
-						if (chunk_only && m_entry_map[pred / 4] != root)
-						{
-							continue;
-						}
-
-						// TODO
-						if (std::find(m_scan_queue.cbegin(), m_scan_queue.cend(), pred) == m_scan_queue.cend())
-						{
-							m_scan_queue.push_back(pred);
-						}
-					}
-				}
-
-				break;
-			}
-
-			if (regmod || (chunk_only && m_entry_info[addr / 4]))
-			{
-				if (result == -1)
-				{
-					result = addr;
-				}
-				else if (result >> 31)
-				{
-					result--;
-				}
-				else
-				{
-					result = -2;
-				}
-			}
-		}
-
-		if (!regmod_any)
-		{
-			result = addr;
-		}
-
-		return result;
-	}
-
 	void update_pc()
 	{
 		m_ir->CreateStore(m_ir->getInt32(m_pos), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
@@ -3325,32 +3357,28 @@ public:
 				const u32 baddr = m_block_queue[bi];
 				m_block = &m_blocks[baddr];
 				m_ir->SetInsertPoint(m_block->block);
+				auto& bb = m_bbs.at(baddr);
+				bool need_check = false;
 
-				const auto pfound = m_preds.find(baddr);
-
-				if (pfound != m_preds.end() && !pfound->second.empty())
+				if (bb.preds.size())
 				{
 					// Initialize registers and build PHI nodes if necessary
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						// TODO: optimize
-						const u32 src = find_reg_origin(baddr, i);
+						const u32 src = bb.reg_origin[i];
 
-						if (src >> 31)
+						//fs::file(m_spurt->get_cache_path() + "info.log", fs::write + fs::create + fs::append)
+						//	.write(fmt::format("0x%05x: $%u = 0x%05x\n", baddr, i, src >> 31 ? -1 : src));
+
+						if (src == -1)
 						{
 							// TODO: type
-							const auto _phi = m_ir->CreatePHI(get_reg_type(i), 0 - src);
+							const auto _phi = m_ir->CreatePHI(get_reg_type(i), ::size32(bb.preds));
 							m_block->phi[i] = _phi;
 							m_block->reg[i] = _phi;
 
-							for (u32 pred : pfound->second)
+							for (u32 pred : bb.preds)
 							{
-								// TODO: optimize
-								while (!m_block_info[pred / 4])
-								{
-									pred -= 4;
-								}
-
 								const auto bfound = m_blocks.find(pred);
 
 								if (bfound != m_blocks.end() && bfound->second.block_end)
@@ -3404,38 +3432,41 @@ public:
 								_phi->addIncoming(value, &m_function->getEntryBlock());
 							}
 						}
-						else if (src != baddr)
+						else if (src < 0x40000)
 						{
-							// Passthrough static value or constant
+							// Passthrough register value
 							const auto bfound = m_blocks.find(src);
 
-							// TODO: error
 							if (bfound != m_blocks.end())
 							{
 								m_block->reg[i] = bfound->second.reg[i];
 							}
+							else
+							{
+								LOG_ERROR(SPU, "[0x%05x] Value not found ($%u from 0x%05x)", baddr, i, src);
+							}
 						}
-						else if (baddr == m_entry)
+						else
 						{
-							// Passthrough constant from a different chunk
+							// Passthrough constant from a different chunk (will be removed in future)
 							m_block->reg[i] = m_finfo->reg[i];
 						}
 					}
 
 					// Emit state check if necessary (TODO: more conditions)
-					for (u32 pred : pfound->second)
+					for (u32 pred : bb.preds)
 					{
 						if (pred >= baddr)
 						{
 							// If this block is a target of a backward branch (possibly loop), emit a check
-							check_state(baddr);
+							need_check = true;
 							break;
 						}
 					}
 				}
 
 				// State check at the beginning of the chunk
-				if (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+				if (need_check || (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe))
 				{
 					check_state(baddr);
 				}
