@@ -901,6 +901,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 	m_block_info.set(entry_point / 4);
 	m_entry_info.reset();
 	m_entry_info.set(entry_point / 4);
+	m_ret_info.reset();
 
 	// Simple block entry workload list
 	std::vector<u32> workload;
@@ -1151,6 +1152,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 				if (sl && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 				{
+					m_ret_info[pos / 4 + 1] = true;
 					m_entry_info[pos / 4 + 1] = true;
 					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
@@ -1302,6 +1304,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				}
 				else
 				{
+					m_ret_info[pos / 4 + 1] = true;
 					m_entry_info[pos / 4 + 1] = true;
 					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
@@ -1336,6 +1339,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 			if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 			{
+				m_ret_info[pos / 4 + 1] = true;
 				m_entry_info[pos / 4 + 1] = true;
 				m_targets[pos].push_back(pos + 4);
 				add_block(pos + 4);
@@ -1763,6 +1767,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		{
 			m_block_info[addr / 4] = false;
 			m_entry_info[addr / 4] = false;
+			m_ret_info[addr / 4] = false;
 			m_preds.erase(addr);
 		}
 	}
@@ -1906,8 +1911,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			}
 		}
 
-		block.reg_origin[0] = 0x80000000;
-		block.reg_origin_abs[0] = 0x80000000;
+		block.analysis2 = false;
 	}
 
 	// Fixup block predeccessors to point to basic blocks, not last instructions
@@ -1936,7 +1940,10 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			if (m_entry_info[addr / 4])
 			{
 				// Register empty chunk
-				m_chunks[addr];
+				if (auto emp = m_chunks.try_emplace(addr); emp.second)
+				{
+					emp.first->second.joinable = m_ret_info[addr / 4];
+				}
 			}
 			else
 			{
@@ -2001,74 +2008,140 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 	for (auto& bb : m_bbs)
 	{
 		auto& chunk = m_chunks.at(bb.second.chunk);
+
 		chunk.bbs.push_back(bb.first);
 	}
 
 	workload.clear();
 	workload.push_back(entry_point);
 
-	// Fill register origin info
+	// Fill workload adding targets
 	for (u32 wi = 0; wi < workload.size(); wi++)
 	{
-		const u32 addr = workload[wi];
-		auto& block    = m_bbs.at(addr);
-
-		if (block.reg_origin[0] == 0x80000000)
-		{
-			// Initialize entry point with default value: unknown origin (requires load)
-			block.reg_origin.fill(0x40000);
-		}
-
-		if (block.reg_origin_abs[0] == 0x80000000)
-		{
-			block.reg_origin_abs.fill(0x40000);
-		}
+		const u32 addr  = workload[wi];
+		auto& block     = m_bbs.at(addr);
+		block.analysis2 = true;
 
 		for (u32 target : block.targets)
 		{
 			auto& tb = m_bbs.at(target);
 
-			// Target block is either queued for the first time, or on request
-			bool enqueue = tb.reg_origin[0] == 0x80000000 || tb.reg_origin_abs[0] == 0x80000000;
-
-			for (u32 i = 0; i < s_reg_max; i++)
+			if (!tb.analysis2)
 			{
-				if (tb.chunk == block.chunk && tb.reg_origin[i] != -1)
+				workload.push_back(target);
+			}
+		}
+
+		block.reg_origin.fill(0x80000000);
+		block.reg_origin_abs.fill(0x80000000);
+	}
+
+	// Fill register origin info
+	while (true)
+	{
+		bool must_repeat = false;
+
+		for (u32 wi = 0; wi < workload.size(); wi++)
+		{
+			const u32 addr = workload[wi];
+			auto& block    = m_bbs.at(addr);
+
+			// Initialize entry point with default value: unknown origin (requires load)
+			if (m_entry_info[addr / 4])
+			{
+				for (u32 i = 0; i < s_reg_max; i++)
 				{
-					const u32 expected = block.reg_mod[i] || block.reg_origin[i] == -1 ? addr : block.reg_origin[i];
-
-					if (tb.reg_origin[i] != expected)
-					{
-						// Multiple origins merged (requires PHI node)
-						tb.reg_origin[i] = -1;
-
-						// Need to process this target block again in order to propagate -1
-						enqueue = true;
-					}
-				}
-
-				if (tb.chunk != block.chunk && target != addr + block.size * 4 && m_entry_info[target / 4])
-				{
-					// Skip call target completely
-					continue;
-				}
-
-				if (tb.reg_origin_abs[i] != -1)
-				{
-					const u32 expected = block.reg_mod[i] || block.reg_origin_abs[i] == -1 ? addr : block.reg_origin_abs[i];
-
-					if (tb.reg_origin_abs[i] != expected)
-					{
-						tb.reg_origin_abs[i] = -1;
-
-						enqueue = true;
-					}
+					if (block.reg_origin[i] == 0x80000000)
+						block.reg_origin[i] = 0x40000;
 				}
 			}
 
-			if (enqueue)
+			if (m_entry_info[addr / 4] && !m_chunks.at(addr).joinable)
 			{
-				workload.emplace_back(target);
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (block.reg_origin_abs[i] == 0x80000000)
+						block.reg_origin_abs[i] = 0x40000;
+					else if (block.reg_origin_abs[i] == -1)
+						block.reg_origin_abs[i] = -2;
+				}
+			}
+
+			for (u32 target : block.targets)
+			{
+				auto& tb = m_bbs.at(target);
+
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (tb.chunk == block.chunk && tb.reg_origin[i] != -1)
+					{
+						const u32 expected = block.reg_mod[i] || block.reg_origin[i] == -1 ? addr : block.reg_origin[i];
+
+						if (tb.reg_origin[i] == 0x80000000)
+						{
+							tb.reg_origin[i] = expected;
+						}
+						else if (tb.reg_origin[i] != expected)
+						{
+							// Set -1 if multiple origins merged (requires PHI node)
+							tb.reg_origin[i] = -1;
+
+							must_repeat |= !tb.targets.empty();
+						}
+					}
+
+					if (tb.chunk != block.chunk && m_entry_info[target / 4] && !m_chunks.at(target).joinable)
+					{
+						// Skip call targets completely
+						continue;
+					}
+
+					if (tb.reg_origin_abs[i] != -2)
+					{
+						const u32 expected = block.reg_mod[i] || block.reg_origin_abs[i] >> 31 ? addr : block.reg_origin_abs[i];
+
+						if (tb.reg_origin_abs[i] == 0x80000000)
+						{
+							tb.reg_origin_abs[i] = expected;
+						}
+						else if (tb.reg_origin_abs[i] != expected)
+						{
+							if (tb.reg_origin_abs[i] == 0x40000 || (!block.reg_mod[i] && (block.reg_origin_abs[i] == -2 || block.reg_origin_abs[i] == 0x40000)))
+							{
+								// Set -2: sticky value indicating possible external reg origin (0x40000)
+								tb.reg_origin_abs[i] = -2;
+
+								must_repeat |= !tb.targets.empty();
+							}
+							else if (tb.reg_origin_abs[i] != -1)
+							{
+								tb.reg_origin_abs[i] = -1;
+
+								must_repeat |= !tb.targets.empty();
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (!must_repeat)
+		{
+			break;
+		}
+
+		for (u32 wi = 0; wi < workload.size(); wi++)
+		{
+			const u32 addr = workload[wi];
+			auto& block    = m_bbs.at(addr);
+
+			// Reset values for the next attempt (keep negative values)
+			for (u32 i = 0; i < s_reg_max; i++)
+			{
+				if (block.reg_origin[i] <= 0x40000)
+					block.reg_origin[i] = 0x80000000;
+				if (block.reg_origin_abs[i] <= 0x40000)
+					block.reg_origin_abs[i] = 0x80000000;
 			}
 		}
 	}
@@ -2084,31 +2157,33 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 void spu_recompiler_base::dump(std::string& out)
 {
-	for (u32 i = 0; i < 0x10000; i++)
+	for (auto& bb : m_bbs)
 	{
-		if (m_block_info[i])
+		if (m_block_info[bb.first / 4])
 		{
-			fmt::append(out, "A: [0x%05x] %s\n", i * 4, m_entry_info[i] ? "Entry" : "Block");
+			fmt::append(out, "?: [0x%05x] %s\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Return" : "Entry") : "Block");
+
+			if (auto found = m_chunks.find(bb.first); found != m_chunks.end())
+			{
+				if (found->second.joinable)
+					fmt::append(out, "\tJoinable chunk.\n");
+				else
+					fmt::append(out, "\tNon-joinable chunk.\n");
+			}
+
+			for (u32 pred : bb.second.preds)
+			{
+				fmt::append(out, "\t<- 0x%05x\n", pred);
+			}
+
+			for (u32 target : bb.second.targets)
+			{
+				fmt::append(out, "\t-> 0x%05x\n", target);
+			}
 		}
-	}
-
-	for (auto&& pair : std::map<u32, std::basic_string<u32>>(m_targets.begin(), m_targets.end()))
-	{
-		fmt::append(out, "T: [0x%05x]\n", pair.first);
-
-		for (u32 value : pair.second)
+		else
 		{
-			fmt::append(out, "\t-> 0x%05x\n", value);
-		}
-	}
-
-	for (auto&& pair : std::map<u32, std::basic_string<u32>>(m_preds.begin(), m_preds.end()))
-	{
-		fmt::append(out, "P: [0x%05x]\n", pair.first);
-
-		for (u32 value : pair.second)
-		{
-			fmt::append(out, "\t<- 0x%05x\n", value);
+			fmt::append(out, "?: [0x%05x] ?\n", bb.first);
 		}
 	}
 
@@ -2258,7 +2333,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				{
 					if (auto c = llvm::dyn_cast_or_null<llvm::Constant>(m_block->reg[i]))
 					{
-						if (m_bbs.at(addr).reg_origin_abs[i] != -1)
+						if (m_bbs.at(addr).reg_origin_abs[i] < 0x40000)
 						{
 							regs[i] = c;
 						}
@@ -3253,9 +3328,6 @@ public:
 					{
 						const u32 src = bb.reg_origin[i];
 
-						//fs::file(m_spurt->get_cache_path() + "info.log", fs::write + fs::create + fs::append)
-						//	.write(fmt::format("0x%05x: $%u = 0x%05x\n", baddr, i, src >> 31 ? -1 : src));
-
 						if (src == -1)
 						{
 							// TODO: type
@@ -3332,7 +3404,7 @@ public:
 								LOG_ERROR(SPU, "[0x%05x] Value not found ($%u from 0x%05x)", baddr, i, src);
 							}
 						}
-						else
+						else if (baddr == m_entry)
 						{
 							// Passthrough constant from a different chunk (will be removed in future)
 							m_block->reg[i] = m_finfo->reg[i];
