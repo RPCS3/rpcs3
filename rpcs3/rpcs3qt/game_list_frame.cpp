@@ -1046,7 +1046,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 		QColor copyColor = QColor(compatibility_color);
 		copyColor.setAlpha(215); // ~85% opacity
 		painter.setBrush(QBrush(copyColor));
-		painter.drawEllipse(spacing, spacing, size, size);
+		painter.drawRect(spacing, spacing, size, size);
 	}
 
 	painter.end();
