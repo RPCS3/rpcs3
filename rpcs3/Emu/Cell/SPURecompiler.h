@@ -283,7 +283,7 @@ public:
 	virtual void init() = 0;
 
 	// Compile function (may fail)
-	virtual bool compile(u64 last_reset_count, const std::vector<u32>&) = 0;
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&) = 0;
 
 	// Compile function, handle failure
 	void make_function(const std::vector<u32>&);

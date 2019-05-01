@@ -786,11 +786,6 @@ spu_recompiler_base::~spu_recompiler_base()
 
 void spu_recompiler_base::make_function(const std::vector<u32>& data)
 {
-	if (m_cache && g_cfg.core.spu_cache)
-	{
-		m_cache->add(data);
-	}
-
 	for (u64 reset_count = m_spurt->get_reset_count();;)
 	{
 		if (LIKELY(compile(reset_count, data)))
@@ -3104,7 +3099,7 @@ public:
 		}
 	}
 
-	virtual bool compile(u64 last_reset_count, const std::vector<u32>& func) override
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>& func) override
 	{
 		if (func.empty() && last_reset_count == 0 && m_interp_magn)
 		{
@@ -3115,12 +3110,17 @@ public:
 
 		if (fn_location == spu_runtime::g_dispatcher)
 		{
-			return true;
+			return &dispatch;
 		}
 
 		if (!fn_location)
 		{
-			return false;
+			return nullptr;
+		}
+
+		if (m_cache && g_cfg.core.spu_cache)
+		{
+			m_cache->add(func);
 		}
 
 		std::string hash;
@@ -3684,7 +3684,7 @@ public:
 
 		if (!m_spurt->add(last_reset_count, fn_location, fn))
 		{
-			return false;
+			return nullptr;
 		}
 
 		if (g_cfg.core.spu_debug)
@@ -3693,7 +3693,7 @@ public:
 			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
 
-		return true;
+		return fn;
 	}
 
 	static void interp_check(spu_thread* _spu, bool after)
@@ -3730,7 +3730,7 @@ public:
 		}
 	}
 
-	bool compile_interpreter()
+	spu_function_t compile_interpreter()
 	{
 		using namespace llvm;
 
@@ -4044,7 +4044,7 @@ public:
 
 		if (!spu_runtime::g_interpreter)
 		{
-			return false;
+			return nullptr;
 		}
 
 		if (g_cfg.core.spu_debug)
@@ -4053,7 +4053,7 @@ public:
 			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
 
-		return true;
+		return spu_runtime::g_interpreter;
 	}
 
 	static bool exec_check_state(spu_thread* _spu)
