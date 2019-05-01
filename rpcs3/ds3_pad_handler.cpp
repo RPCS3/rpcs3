@@ -25,11 +25,37 @@ ds3_pad_handler::~ds3_pad_handler()
 			controller->large_motor = 0;
 			controller->small_motor = 0;
 			send_output_report(controller);
+#ifdef _WIN32
 			libusb_close(controller->handle);
 			libusb_unref_device(controller->device);
+#else
+			hid_close(controller->handle);
+#endif
 		}
 	}
+#ifdef _WIN32
 	libusb_exit(nullptr);
+#else
+	hid_exit();
+#endif
+}
+
+bool ds3_pad_handler::init_usb()
+{
+#ifdef _WIN32
+	if (libusb_init(nullptr) != LIBUSB_SUCCESS)
+	{
+		LOG_FATAL(HLE, "[DS3] Failed to init libusb for the DS3 pad handler");
+		return false;
+	}
+#else
+	if (hid_init() != 0)
+	{
+		LOG_FATAL(HLE, "[DS3] Failed to init hidapi for the DS3 pad handler");
+		return false;
+	}
+#endif
+	return true;
 }
 
 bool ds3_pad_handler::Init()
@@ -37,17 +63,16 @@ bool ds3_pad_handler::Init()
 	if (is_init)
 		return true;
 
-	const int res = libusb_init(nullptr);
-	if (res != LIBUSB_SUCCESS)
-	{
-		LOG_FATAL(HLE, "[DS3] Failed to init libusb for the DS3 pad handler");
+	if (!init_usb())
 		return false;
-	}
-
-	libusb_device **devlist;
-	ssize_t cnt = libusb_get_device_list(nullptr, &devlist);
 
 	bool warn_about_drivers = false;
+
+	// Uses libusb for windows as hidapi will never work with UsbHid driver for the ds3 and it won't work with WinUsb either(windows hid api needs the UsbHid in the driver stack as far as I can tell)
+	// For other os use hidapi and hope for the best!
+#ifdef _WIN32
+	libusb_device **devlist;
+	ssize_t cnt = libusb_get_device_list(nullptr, &devlist);
 
 	for (ssize_t index = 0; index < cnt; index++)
 	{
@@ -64,6 +89,7 @@ bool ds3_pad_handler::Init()
 			warn_about_drivers = true;
 			continue;
 		}
+
 		// Even if the drivers let us open the device we need to check it authorizes us to get an unadvertised feature report
 		// The default windows driver for the DS3(UsbHid) won't let us do that
 		unsigned char reportbuf[64];
@@ -84,11 +110,40 @@ bool ds3_pad_handler::Init()
 	}
 
 	libusb_free_device_list(devlist, true);
+#else
+	hid_device_info* hid_info = hid_enumerate(DS3_VID, DS3_PID);
+	hid_device_info* head = hid_info;
+	while (hid_info)
+	{
+		hid_device *handle = hid_open_path(hid_info->path);
+		if (handle)
+		{
+			std::shared_ptr<ds3_device> ds3dev = std::make_shared<ds3_device>();
+			ds3dev->device = hid_info->path;
+			ds3dev->handle = handle;
+			controllers.emplace_back(ds3dev);
+		}
+		else
+		{
+			warn_about_drivers = true;
+		}
+		hid_info = hid_info->next;
+	}
+
+	hid_free_enumeration(head);
+#endif
 
 	if (warn_about_drivers)
 	{
+#ifdef _WIN32
 		LOG_ERROR(HLE, "[DS3] One or more DS3 pads were detected but couldn't be handled because of drivers");
 		LOG_ERROR(HLE, "[DS3] We recommend you use Zadig( https://zadig.akeo.ie/ ) to change your ds3 drivers to WinUSB ones");
+#else
+		LOG_ERROR(HLE, "[DS3] One or more DS3 pads were detected but couldn't be interacted with directly");
+#ifdef __linux__
+		LOG_ERROR(HLE, "[DS3] On linux you can try to add those udev rules:\n# DS3 Bluetooth\nKERNEL==\"hidraw*\", KERNELS==\"*054C:0268*\", MODE=\"0666\"\n\n# DS3 USB\nKERNEL==\"hidraw*\", ATTRS{idVendor}==\"054c\", ATTRS{idProduct}==\"0268\", MODE=\"0666\"");
+#endif
+#endif
 	}
 	else if (controllers.size() == 0)
 		LOG_WARNING(HLE, "[DS3] No controllers found!");
@@ -182,6 +237,7 @@ void ds3_pad_handler::ThreadProc()
 
 		if (m_dev->handle == nullptr)
 		{
+#ifdef _WIN32
 			// Tries to reopen
 			libusb_device_handle *devhandle;
 			if (libusb_open(m_dev->device, &devhandle) != LIBUSB_SUCCESS)
@@ -196,6 +252,13 @@ void ds3_pad_handler::ThreadProc()
 				libusb_close(devhandle);
 				continue;
 			}
+#else
+			hid_device* devhandle = hid_open_path(m_dev->device.c_str());
+			if (!devhandle)
+			{
+				continue;
+			}
+#endif
 
 			m_dev->handle = devhandle;
 		}
@@ -227,7 +290,11 @@ void ds3_pad_handler::ThreadProc()
 			{
 				m_dev->status = DS3Status::Disconnected;
 				thepad->m_port_status = CELL_PAD_STATUS_DISCONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES;
+#ifdef _WIN32
 				libusb_close(m_dev->handle);
+#else
+				hid_close(m_dev->handle);
+#endif
 				m_dev->handle = nullptr;
 				LOG_WARNING(HLE, "[DS3] Pad was disconnected");
 
@@ -281,6 +348,7 @@ void ds3_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 
 void ds3_pad_handler::send_output_report(const std::shared_ptr<ds3_device>& ds3dev)
 {
+#ifdef _WIN32
 	u8 report_buf[] = {
 		0x00, 0xff, 0x00, 0xff, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0x00,
@@ -295,6 +363,22 @@ void ds3_pad_handler::send_output_report(const std::shared_ptr<ds3_device>& ds3d
 	report_buf[4] = ds3dev->small_motor;
 
 	libusb_control_transfer(ds3dev->handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE, HID_SETREPORT, HIDREPORT_OUTPUT | 01, 0, report_buf, sizeof(report_buf), 0);
+#else
+	u8 report_buf[] = {
+		0x01,
+		0x00, 0xff, 0x00, 0xff, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00,
+		0xff, 0x27, 0x10, 0x00, 0x32,
+		0xff, 0x27, 0x10, 0x00, 0x32,
+		0xff, 0x27, 0x10, 0x00, 0x32,
+		0xff, 0x27, 0x10, 0x00, 0x32,
+		0x00, 0x00, 0x00, 0x00, 0x00
+	};
+	report_buf[3] = ds3dev->large_motor;
+	report_buf[5] = ds3dev->small_motor;
+
+	hid_write(ds3dev->handle, report_buf, sizeof(report_buf));
+#endif
 }
 
 std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_device(const std::string& padId)
@@ -366,6 +450,7 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 	int num_bytes = 0;
 	auto& dbuf = ds3dev->buf;
 
+#ifdef _WIN32
 	int result = libusb_interrupt_transfer(ds3dev->handle, DS3_ENDPOINT_IN, dbuf, sizeof(dbuf), &num_bytes, 10);
 
 	if(result == LIBUSB_SUCCESS)
@@ -385,7 +470,27 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 	{
 		return DS3Status::Connected;
 	}
+#else
+	int result = hid_read(ds3dev->handle, dbuf, sizeof(dbuf));
+	if (result > 0)
+	{
+		if (dbuf[0] == 0x01 && dbuf[1] != 0xFF)
+		{
+			return DS3Status::NewData;
+		}
+		else
+		{
+			LOG_WARNING(HLE, "[DS3] Unknown packet received:0x%02x", dbuf[0]);
+			return DS3Status::Connected;
+		}
+	}
+	else
+	{
+		if(result == 0)
+			return DS3Status::Connected;
+	}
 
+#endif
 	return DS3Status::Disconnected;
 }
 
@@ -460,10 +565,18 @@ void ds3_pad_handler::process_data(const std::shared_ptr<ds3_device>& ds3dev, co
 		pad->m_sticks[i].m_value = ds3_info[key_max].first;
 	}
 
+#ifdef _WIN32
 	pad->m_sensors[0].m_value = 512 - (*((be_t<u16> *)&ds3dev->buf[41]) - 512);
 	pad->m_sensors[1].m_value = *((be_t<u16> *)&ds3dev->buf[45]);
 	pad->m_sensors[2].m_value = *((be_t<u16> *)&ds3dev->buf[43]);
 	pad->m_sensors[3].m_value = *((be_t<u16> *)&ds3dev->buf[47]);
+#else
+	// For unknown reasons the sixaxis values seem to be in little endian on linux
+	pad->m_sensors[0].m_value = 512 - (*((le_t<u16> *)&ds3dev->buf[41]) - 512);
+	pad->m_sensors[1].m_value = *((le_t<u16> *)&ds3dev->buf[45]);
+	pad->m_sensors[2].m_value = *((le_t<u16> *)&ds3dev->buf[43]);
+	pad->m_sensors[3].m_value = *((le_t<u16> *)&ds3dev->buf[47]);
+#endif
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
 	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16

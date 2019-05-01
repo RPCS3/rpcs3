@@ -182,6 +182,23 @@ public:
 // SPU Recompiler instance base class
 class spu_recompiler_base
 {
+public:
+	enum : u8
+	{
+		s_reg_lr = 0,
+		s_reg_sp = 1,
+		s_reg_80 = 80,
+		s_reg_127 = 127,
+
+		s_reg_mfc_eal,
+		s_reg_mfc_lsa,
+		s_reg_mfc_tag,
+		s_reg_mfc_size,
+
+		// Max number of registers (for m_regmod)
+		s_reg_max
+	};
+
 protected:
 	std::shared_ptr<spu_runtime> m_spurt;
 
@@ -194,6 +211,10 @@ protected:
 	// GPR modified by the instruction (-1 = not set)
 	std::array<u8, 0x10000> m_regmod;
 
+	std::array<u8, 0x10000> m_use_ra;
+	std::array<u8, 0x10000> m_use_rb;
+	std::array<u8, 0x10000> m_use_rc;
+
 	// List of possible targets for the instruction (entry shouldn't exist for simple instructions)
 	std::unordered_map<u32, std::basic_string<u32>, value_hash<u32, 2>> m_targets;
 
@@ -203,8 +224,46 @@ protected:
 	// List of function entry points and return points (set after BRSL, BRASL, BISL, BISLED)
 	std::bitset<0x10000> m_entry_info;
 
-	// Compressed address of unique entry point for each instruction
-	std::array<u16, 0x10000> m_entry_map{};
+	// Basic block information
+	struct block_info
+	{
+		// Address of the chunk entry point (chunk this block belongs to)
+		u32 chunk = 0x40000;
+
+		// Number of instructions
+		u16 size = 0;
+
+		// Bit mask of the registers modified in the block
+		std::bitset<s_reg_max> reg_mod{};
+
+		// Bit mask of the registers used (before modified)
+		std::bitset<s_reg_max> reg_use{};
+
+		// Single source of the reg value (dominating block address within the same chunk) or a negative number
+		std::array<u32, s_reg_max> reg_origin, reg_origin_abs;
+
+		// All possible successor blocks
+		std::basic_string<u32> targets;
+
+		// All predeccessor blocks
+		std::basic_string<u32> preds;
+	};
+
+	// Sorted basic block info
+	std::map<u32, block_info> m_bbs;
+
+	// Advanced block (chunk) information
+	struct chunk_info
+	{
+		// Flag set for synthetic chunks (false for call targets and return locations)
+		bool joinable = false;
+
+		// List of basic blocks
+		std::basic_string<u32> bbs;
+	};
+
+	// Sorted chunk info
+	std::map<u32, chunk_info> m_chunks;
 
 	std::shared_ptr<spu_cache> m_cache;
 
@@ -257,20 +316,4 @@ public:
 
 	// Create recompiler instance (LLVM)
 	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler(u8 magn = 0);
-
-	enum : u8
-	{
-		s_reg_lr = 0,
-		s_reg_sp = 1,
-		s_reg_80 = 80,
-		s_reg_127 = 127,
-
-		s_reg_mfc_eal,
-		s_reg_mfc_lsa,
-		s_reg_mfc_tag,
-		s_reg_mfc_size,
-
-		// Max number of registers (for m_regmod)
-		s_reg_max
-	};
 };

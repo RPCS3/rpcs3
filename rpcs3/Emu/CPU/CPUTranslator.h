@@ -386,6 +386,12 @@ struct llvm_match_t
 		return value != nullptr;
 	}
 
+	template <typename... Args>
+	bool eq(const Args&... args) const
+	{
+		return value && ((value == args.value) && ...);
+	}
+
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		return value;
@@ -405,6 +411,8 @@ struct llvm_match_t
 template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
 struct llvm_placeholder_t
 {
+	// TODO: placeholder extracting actual constant values (u64, f64, vector, etc)
+
 	using type = T;
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
@@ -416,7 +424,7 @@ struct llvm_placeholder_t
 	{
 		if (value && value->getType() == llvm_value_t<T>::get_type(value->getContext()))
 		{
-			return {value};
+			return {{value}};
 		}
 
 		value = nullptr;
@@ -1339,7 +1347,7 @@ struct llvm_cmp
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
 
-		if (auto i = llvm::dyn_cast_or_null<llvm::ICmpInst>(value); i && i->getOpcode() == pred)
+		if (auto i = llvm::dyn_cast_or_null<llvm::ICmpInst>(value); i && i->getPredicate() == pred)
 		{
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
@@ -1399,7 +1407,7 @@ struct llvm_ord
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
 
-		if (auto i = llvm::dyn_cast_or_null<llvm::FCmpInst>(value); i && i->getOpcode() == pred)
+		if (auto i = llvm::dyn_cast_or_null<llvm::FCmpInst>(value); i && i->getPredicate() == pred)
 		{
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
@@ -1452,7 +1460,7 @@ struct llvm_uno
 		llvm::Value* v1 = {};
 		llvm::Value* v2 = {};
 
-		if (auto i = llvm::dyn_cast_or_null<llvm::FCmpInst>(value); i && i->getOpcode() == pred)
+		if (auto i = llvm::dyn_cast_or_null<llvm::FCmpInst>(value); i && i->getPredicate() == pred)
 		{
 			v1 = i->getOperand(0);
 			v2 = i->getOperand(1);
@@ -1591,6 +1599,7 @@ struct llvm_bitcast
 	using type = U;
 
 	llvm_expr_t<A1> a1;
+	llvm::Module* module;
 
 	static constexpr uint bitsize0 = llvm_value_t<T>::is_vector ? llvm_value_t<T>::is_vector * llvm_value_t<T>::esize : llvm_value_t<T>::esize;
 	static constexpr uint bitsize1 = llvm_value_t<U>::is_vector ? llvm_value_t<U>::is_vector * llvm_value_t<U>::esize : llvm_value_t<U>::esize;
@@ -1598,8 +1607,6 @@ struct llvm_bitcast
 	static_assert(bitsize0 == bitsize1, "llvm_bitcast<>: invalid type (size mismatch)");
 	static_assert(llvm_value_t<T>::is_int || llvm_value_t<T>::is_float, "llvm_bitcast<>: invalid type");
 	static_assert(llvm_value_t<U>::is_int || llvm_value_t<U>::is_float, "llvm_bitcast<>: invalid result type");
-	static_assert(llvm_value_t<T>::is_int != llvm_value_t<U>::is_int || llvm_value_t<T>::is_vector != llvm_value_t<U>::is_vector,
-		"llvm_bitcast<>: no-op cast (use noncast)");
 
 	static constexpr bool is_ok =
 		bitsize0 && bitsize0 == bitsize1 &&
@@ -1611,9 +1618,13 @@ struct llvm_bitcast
 		const auto v1 = a1.eval(ir);
 		const auto rt = llvm_value_t<U>::get_type(ir->getContext());
 
+		if constexpr (llvm_value_t<T>::is_int == llvm_value_t<U>::is_int && llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector)
+		{
+			return v1;
+		}
+
 		if (const auto c1 = llvm::dyn_cast<llvm::Constant>(v1))
 		{
-			const auto module = ir->GetInsertBlock()->getParent()->getParent();
 			const auto result = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, rt, module->getDataLayout());
 
 			if (result)
@@ -1627,6 +1638,19 @@ struct llvm_bitcast
 
 	llvm_match_tuple<A1> match(llvm::Value*& value) const
 	{
+		if constexpr (llvm_value_t<T>::is_int == llvm_value_t<U>::is_int && llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector)
+		{
+			if (value)
+			{
+				if (auto r1 = a1.match(value); value)
+				{
+					return r1;
+				}
+			}
+
+			return {};
+		}
+
 		llvm::Value* v1 = {};
 
 		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == llvm::Instruction::BitCast)
@@ -1644,17 +1668,16 @@ struct llvm_bitcast
 
 		if (auto c = llvm::dyn_cast_or_null<llvm::Constant>(value))
 		{
-			// TODO
-			// const auto target = llvm_value_t<T>::get_type(c->getContext());
+			const auto target = llvm_value_t<T>::get_type(c->getContext());
 
-			// // Reverse bitcast on a constant
-			// if (llvm::Value* cv = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c, target, module->getDataLayout()))
-			// {
-			// 	if (auto r1 = a1.match(cv); cv)
-			// 	{
-			// 		return r1;
-			// 	}
-			// }
+			// Reverse bitcast on a constant
+			if (llvm::Value* cv = llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c, target, module->getDataLayout()))
+			{
+				if (auto r1 = a1.match(cv); cv)
+				{
+					return r1;
+				}
+			}
 		}
 
 		value = nullptr;
@@ -1859,24 +1882,40 @@ struct llvm_min
 
 	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
 
+	static constexpr auto pred = llvm_value_t<T>::is_sint ? llvm::ICmpInst::ICMP_SLT : llvm::ICmpInst::ICMP_ULT;
+
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
-
-		if constexpr (llvm_value_t<T>::is_sint)
-		{
-			return ir->CreateSelect(ir->CreateICmpSLT(v1, v2), v1, v2);
-		}
-
-		if constexpr (llvm_value_t<T>::is_uint)
-		{
-			return ir->CreateSelect(ir->CreateICmpULT(v1, v2), v1, v2);
-		}
+		return ir->CreateSelect(ir->CreateICmp(pred, v1, v2), v1, v2);
 	}
 
 	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
 	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::SelectInst>(value))
+		{
+			v1 = i->getOperand(1);
+			v2 = i->getOperand(2);
+
+			if (auto j = llvm::dyn_cast<llvm::ICmpInst>(i->getOperand(0)); j && j->getPredicate() == pred)
+			{
+				if (v1 == j->getOperand(0) && v2 == j->getOperand(1))
+				{
+					if (auto r1 = a1.match(v1); v1)
+					{
+						if (auto r2 = a2.match(v2); v2)
+						{
+							return std::tuple_cat(r1, r2);
+						}
+					}
+				}
+			}
+		}
+
 		value = nullptr;
 		return {};
 	}
@@ -1892,24 +1931,40 @@ struct llvm_max
 
 	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_max<>: invalid type");
 
+	static constexpr auto pred = llvm_value_t<T>::is_sint ? llvm::ICmpInst::ICMP_SLT : llvm::ICmpInst::ICMP_ULT;
+
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
 		const auto v1 = a1.eval(ir);
 		const auto v2 = a2.eval(ir);
-
-		if constexpr (llvm_value_t<T>::is_sint)
-		{
-			return ir->CreateSelect(ir->CreateICmpSLT(v1, v2), v2, v1);
-		}
-
-		if constexpr (llvm_value_t<T>::is_uint)
-		{
-			return ir->CreateSelect(ir->CreateICmpULT(v1, v2), v2, v1);
-		}
+		return ir->CreateSelect(ir->CreateICmp(pred, v1, v2), v2, v1);
 	}
 
 	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
 	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::SelectInst>(value))
+		{
+			v1 = i->getOperand(2);
+			v2 = i->getOperand(1);
+
+			if (auto j = llvm::dyn_cast<llvm::ICmpInst>(i->getOperand(0)); j && j->getPredicate() == pred)
+			{
+				if (v1 == j->getOperand(0) && v2 == j->getOperand(1))
+				{
+					if (auto r1 = a1.match(v1); v1)
+					{
+						if (auto r2 = a2.match(v2); v2)
+						{
+							return std::tuple_cat(r1, r2);
+						}
+					}
+				}
+			}
+		}
+
 		value = nullptr;
 		return {};
 	}
@@ -2136,8 +2191,8 @@ struct llvm_insert
 		if (auto i = llvm::dyn_cast_or_null<llvm::InsertElementInst>(value))
 		{
 			v1 = i->getOperand(0);
-			v2 = i->getOperand(1);
-			v3 = i->getOperand(2);
+			v2 = i->getOperand(2);
+			v3 = i->getOperand(1);
 
 			if (auto r1 = a1.match(v1); v1)
 			{
@@ -2181,6 +2236,27 @@ struct llvm_splat
 
 	llvm_match_tuple<A1> match(llvm::Value*& value) const
 	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::ShuffleVectorInst>(value))
+		{
+			if (llvm::isa<llvm::ConstantAggregateZero>(i->getOperand(2)))
+			{
+				if (auto j = llvm::dyn_cast<llvm::InsertElementInst>(i->getOperand(0)))
+				{
+					if (llvm::cast<llvm::ConstantInt>(j->getOperand(2))->isZero())
+					{
+						v1 = j->getOperand(1);
+
+						if (auto r1 = a1.match(v1); v1)
+						{
+							return r1;
+						}
+					}
+				}
+			}
+		}
+
 		value = nullptr;
 		return {};
 	}
@@ -2207,6 +2283,24 @@ struct llvm_zshuffle
 
 	llvm_match_tuple<A1> match(llvm::Value*& value) const
 	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::ShuffleVectorInst>(value))
+		{
+			v1 = i->getOperand(0);
+
+			if (auto z = llvm::dyn_cast<llvm::ConstantAggregateZero>(i->getOperand(1)); z && z->getType() == v1->getType())
+			{
+				if (llvm::ConstantDataVector::get(value->getContext(), index_array) == i->getOperand(2))
+				{
+					if (auto r1 = a1.match(v1); v1)
+					{
+						return r1;
+					}
+				}
+			}
+		}
+
 		value = nullptr;
 		return {};
 	}
@@ -2235,6 +2329,29 @@ struct llvm_shuffle2
 
 	llvm_match_tuple<A1, A2> match(llvm::Value*& value) const
 	{
+		llvm::Value* v1 = {};
+		llvm::Value* v2 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::ShuffleVectorInst>(value))
+		{
+			v1 = i->getOperand(0);
+			v2 = i->getOperand(1);
+
+			if (v1->getType() == v2->getType() && v1->getType() == llvm_value_t<T>::get_type(v1->getContext()))
+			{
+				if (llvm::ConstantDataVector::get(value->getContext(), index_array) == i->getOperand(2))
+				{
+					if (auto r1 = a1.match(v1); v1)
+					{
+						if (auto r2 = a2.match(v2); v2)
+						{
+							return std::tuple_cat(r1, r2);
+						}
+					}
+				}
+			}
+		}
+
 		value = nullptr;
 		return {};
 	}
@@ -2304,6 +2421,27 @@ public:
 		return result;
 	}
 
+	template <typename T>
+	static llvm_placeholder_t<T> match()
+	{
+		return {};
+	}
+
+	template <typename T, typename U, typename = llvm_common_t<T, U>>
+	auto match_expr(T&& arg, U&& expr) -> decltype(std::tuple_cat(std::make_tuple(false), expr.match(std::declval<llvm::Value*&>())))
+	{
+		auto v = arg.eval(m_ir);
+		auto r = expr.match(v);
+		return std::tuple_cat(std::make_tuple(v != nullptr), r);
+	}
+
+	template <typename... Types, typename F>
+	bool match_for(F&& pred)
+	{
+		// Execute pred(.) for each type until one of them returns true
+		return (pred(llvm_placeholder_t<Types>{}) || ...);
+	}
+
 	template <typename T, typename = std::enable_if_t<is_llvm_cmp<std::decay_t<T>>::value>>
 	static auto fcmp_ord(T&& cmp_expr)
 	{
@@ -2323,9 +2461,9 @@ public:
 	}
 
 	template <typename U, typename T, typename = std::enable_if_t<llvm_bitcast<U, T>::is_ok>>
-	static auto bitcast(T&& expr)
+	auto bitcast(T&& expr)
 	{
-		return llvm_bitcast<U, T>{std::forward<T>(expr)};
+		return llvm_bitcast<U, T>{std::forward<T>(expr), m_module};
 	}
 
 	template <typename U, typename T, typename = std::enable_if_t<llvm_trunc<U, T>::is_ok>>
