@@ -745,6 +745,7 @@ bool ds4_pad_handler::Init()
 		fmt::throw_exception("hidapi-init error.threadproc");
 
 	// get all the possible controllers at start
+	bool warn_about_drivers = false;
 	for (auto pid : ds4Pids)
 	{
 		hid_device_info* devInfo = hid_enumerate(DS4_VID, pid);
@@ -756,18 +757,34 @@ bool ds4_pad_handler::Init()
 
 			hid_device* dev = hid_open_path(devInfo->path);
 			if (dev)
+			{
 				CheckAddDevice(dev, devInfo);
+			}
 			else
+			{
 				LOG_ERROR(HLE, "[DS4] hid_open_path failed! Reason: %s", hid_error(dev));
+				warn_about_drivers = true;
+			}
 			devInfo = devInfo->next;
 		}
 		hid_free_enumeration(head);
 	}
 
-	if (controllers.size() == 0)
+	if (warn_about_drivers)
+	{
+		LOG_ERROR(HLE, "[DS4] One or more DS4 pads were detected but couldn't be interacted with directly");
+#if defined(_WIN32) || defined(__linux__)
+		LOG_ERROR(HLE, "[DS4] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
+#endif
+	}
+	else if (controllers.size() == 0)
+	{
 		LOG_WARNING(HLE, "[DS4] No controllers found!");
+	}
 	else
+	{
 		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
+	}
 
 	is_init = true;
 	return true;
