@@ -343,10 +343,12 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 					continue;
 				}
 
-				// If the last waiter quit the writer sleep queue, readers must acquire the lock
-				if (!rwlock->rq.empty() && rwlock->wq.empty())
+				// If the last waiter quit the writer sleep queue, wake blocked readers
+				if (!rwlock->rq.empty() && rwlock->wq.empty() && rwlock->owner < 0)
 				{
-					rwlock->owner = (s64{-2} * rwlock->rq.size()) | 1;
+					verify(HERE), rwlock->owner & 1;
+
+					rwlock->owner -= s64{2} * rwlock->rq.size();
 
 					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
 					{
