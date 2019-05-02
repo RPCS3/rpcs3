@@ -2698,9 +2698,17 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 						newphi->addIncoming(xfloat_to_double(ivalue), iblock);
 					}
 
-					if (phi->getParent() == m_block->block)
+					for (auto& b : m_blocks)
 					{
-						m_block->phi[index] = newphi;
+						if (b.second.phi[index] == phi)
+						{
+							b.second.phi[index] = newphi;
+						}
+
+						if (b.second.reg[index] == phi)
+						{
+							b.second.reg[index] = newphi;
+						}
 					}
 
 					reg = newphi;
