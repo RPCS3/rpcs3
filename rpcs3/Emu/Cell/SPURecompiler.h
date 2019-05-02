@@ -236,7 +236,8 @@ protected:
 		// Number of instructions
 		u16 size = 0;
 
-		u8 analysis2 : 1;
+		// Internal use flag
+		bool analysed = false;
 
 		// Bit mask of the registers modified in the block
 		std::bitset<s_reg_max> reg_mod{};

@@ -1910,8 +1910,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				break;
 			}
 		}
-
-		block.analysis2 = false;
 	}
 
 	// Fixup block predeccessors to point to basic blocks, not last instructions
@@ -2020,15 +2018,16 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 	{
 		const u32 addr  = workload[wi];
 		auto& block     = m_bbs.at(addr);
-		block.analysis2 = true;
+		block.analysed  = true;
 
 		for (u32 target : block.targets)
 		{
 			auto& tb = m_bbs.at(target);
 
-			if (!tb.analysis2)
+			if (!tb.analysed)
 			{
 				workload.push_back(target);
+				tb.analysed = true;
 			}
 		}
 
