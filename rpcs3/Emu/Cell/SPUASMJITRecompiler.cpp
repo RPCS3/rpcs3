@@ -4359,7 +4359,7 @@ void spu_recompiler::AHI(spu_opcode_t op)
 void spu_recompiler::STQD(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.si10) c->add(*addr, op.si10 << 4);
+	if (op.si10) c->add(*addr, op.si10 * 16);
 	c->and_(*addr, 0x3fff0);
 
 	if (utils::has_ssse3())
@@ -4382,7 +4382,7 @@ void spu_recompiler::STQD(spu_opcode_t op)
 void spu_recompiler::LQD(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.si10) c->add(*addr, op.si10 << 4);
+	if (op.si10) c->add(*addr, op.si10 * 16);
 	c->and_(*addr, 0x3fff0);
 
 	if (utils::has_ssse3())
