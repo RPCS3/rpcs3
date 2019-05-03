@@ -1935,15 +1935,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			auto& block    = m_bbs.at(addr);
 			const u32 _new = block.chunk;
 
-			if (m_entry_info[addr / 4])
-			{
-				// Register empty chunk
-				if (auto emp = m_chunks.try_emplace(addr); emp.second)
-				{
-					emp.first->second.joinable = m_ret_info[addr / 4];
-				}
-			}
-			else
+			if (!m_entry_info[addr / 4])
 			{
 				// Check block predecessors
 				for (u32 pred : block.preds)
@@ -1992,7 +1984,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_entry_info[entry / 4] = true;
 
 			// Acknowledge artificial (reversible) chunk entry point
-			m_chunks[entry].joinable = true;
+			m_ret_info[entry / 4] = true;
 		}
 
 		for (auto& bb : m_bbs)
@@ -2000,14 +1992,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			// Reset chunk info
 			bb.second.chunk = 0x40000;
 		}
-	}
-
-	// Fill chunk info
-	for (auto& bb : m_bbs)
-	{
-		auto& chunk = m_chunks.at(bb.second.chunk);
-
-		chunk.bbs.push_back(bb.first);
 	}
 
 	workload.clear();
@@ -2055,7 +2039,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				}
 			}
 
-			if (m_entry_info[addr / 4] && !m_chunks.at(addr).joinable)
+			if (m_entry_info[addr / 4] && !m_ret_info[addr / 4])
 			{
 				for (u32 i = 0; i < s_reg_max; i++)
 				{
@@ -2089,7 +2073,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 						}
 					}
 
-					if (tb.chunk != block.chunk && m_entry_info[target / 4] && !m_chunks.at(target).joinable)
+					if (tb.chunk != block.chunk && !(m_entry_info[target / 4] && m_ret_info[target / 4]))
 					{
 						// Skip call targets completely
 						continue;
@@ -2160,15 +2144,7 @@ void spu_recompiler_base::dump(std::string& out)
 	{
 		if (m_block_info[bb.first / 4])
 		{
-			fmt::append(out, "?: [0x%05x] %s\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Return" : "Entry") : "Block");
-
-			if (auto found = m_chunks.find(bb.first); found != m_chunks.end())
-			{
-				if (found->second.joinable)
-					fmt::append(out, "\tJoinable chunk.\n");
-				else
-					fmt::append(out, "\tNon-joinable chunk.\n");
-			}
+			fmt::append(out, "?: [0x%05x] %s\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Chunk" : "Entry") : "Block");
 
 			for (u32 pred : bb.second.preds)
 			{

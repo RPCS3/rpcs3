@@ -224,7 +224,7 @@ protected:
 	// List of function entry points and return points (set after BRSL, BRASL, BISL, BISLED)
 	std::bitset<0x10000> m_entry_info;
 
-	// Set after return points
+	// Set after return points and disjoint chunks
 	std::bitset<0x10000> m_ret_info;
 
 	// Basic block information
@@ -261,11 +261,6 @@ protected:
 	// Advanced block (chunk) information
 	struct chunk_info
 	{
-		// Flag set for synthetic chunks (false for call targets and return locations)
-		bool joinable = false;
-
-		// List of basic blocks
-		std::basic_string<u32> bbs;
 	};
 
 	// Sorted chunk info
