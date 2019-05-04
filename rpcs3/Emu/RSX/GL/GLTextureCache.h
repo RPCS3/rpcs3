@@ -300,10 +300,6 @@ namespace gl
 			pixel_pack_settings pack_settings;
 			pack_settings.alignment(1);
 
-			//NOTE: AMD proprietary driver bug - disable swap bytes
-			if (!::gl::get_driver_caps().vendor_AMD)
-				pack_settings.swap_bytes(pack_unpack_swap_bytes);
-
 			target_texture->copy_to(nullptr, format, type, pack_settings);
 			real_pitch = target_texture->pitch();
 
@@ -311,10 +307,10 @@ namespace gl
 			{
 				if (error == GL_OUT_OF_MEMORY && ::gl::get_driver_caps().vendor_AMD)
 				{
-					//AMD driver bug
-					//Pixel transfer fails with GL_OUT_OF_MEMORY. Usually happens with float textures
-					//Failed operations also leak a large amount of memory
-					LOG_ERROR(RSX, "Memory transfer failure (AMD bug). Format=0x%x, Type=0x%x", (u32)format, (u32)type);
+					// AMD driver bug
+					// Pixel transfer fails with GL_OUT_OF_MEMORY. Usually happens with float textures or operations attempting to swap endianness.
+					// Failed operations also leak a large amount of memory
+					LOG_ERROR(RSX, "Memory transfer failure (AMD bug). Please update your driver to Adrenalin 19.4.3 or newer. Format=0x%x, Type=0x%x, Swap=%d", (u32)format, (u32)type, pack_unpack_swap_bytes);
 				}
 				else
 				{
@@ -385,57 +381,6 @@ namespace gl
 			{
 				//byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
 				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, align(valid_length, rsx_pitch) / rsx_pitch);
-			}
-			else if (pack_unpack_swap_bytes && ::gl::get_driver_caps().vendor_AMD)
-			{
-				//AMD driver bug - cannot use pack_swap_bytes
-				//Manually byteswap texel data
-				switch (type)
-				{
-				case texture::type::f16:
-				case texture::type::sshort:
-				case texture::type::ushort:
-				case texture::type::ushort_5_6_5:
-				case texture::type::ushort_4_4_4_4:
-				case texture::type::ushort_1_5_5_5_rev:
-				case texture::type::ushort_5_5_5_1:
-				{
-					const u32 num_reps = valid_length / 2;
-					be_t<u16>* in = (be_t<u16>*)(dst);
-					u16* out = (u16*)dst;
-
-					for (u32 n = 0; n < num_reps; ++n)
-					{
-						out[n] = in[n];
-					}
-
-					break;
-				}
-				case texture::type::f32:
-				case texture::type::sint:
-				case texture::type::uint:
-				case texture::type::uint_10_10_10_2:
-				case texture::type::uint_24_8:
-				case texture::type::uint_2_10_10_10_rev:
-				case texture::type::uint_8_8_8_8:
-				{
-					u32 num_reps = valid_length / 4;
-					be_t<u32>* in = (be_t<u32>*)(dst);
-					u32* out = (u32*)dst;
-
-					for (u32 n = 0; n < num_reps; ++n)
-					{
-						out[n] = in[n];
-					}
-
-					break;
-				}
-				default:
-				{
-					LOG_ERROR(RSX, "Texture type 0x%x is not implemented " HERE, (u32)type);
-					break;
-				}
-				}
 			}
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
@@ -1059,18 +1004,6 @@ namespace gl
 			{
 				if (result.real_dst_size)
 				{
-					gl::texture::format fmt;
-					if (!result.is_depth)
-					{
-						fmt = dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8 ?
-							gl::texture::format::bgra : gl::texture::format::rgba;
-					}
-					else
-					{
-						fmt = dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8 ?
-							gl::texture::format::depth_stencil : gl::texture::format::depth;
-					}
-
 					flush_if_cache_miss_likely(cmd, result.to_address_range());
 				}
 

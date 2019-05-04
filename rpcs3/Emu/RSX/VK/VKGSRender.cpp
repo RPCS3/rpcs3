@@ -2048,6 +2048,9 @@ void VKGSRender::clear_surface(u32 mask)
 {
 	if (skip_frame || renderer_unavailable) return;
 
+	// If stencil write mask is disabled, remove clear_stencil bit
+	if (!rsx::method_registers.stencil_mask()) mask &= ~0x2u;
+
 	// Ignore invalid clear flags
 	if (!(mask & 0xF3)) return;
 
@@ -2097,7 +2100,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 		{
-			if (mask & 0x2 && rsx::method_registers.stencil_mask() != 0)
+			if (mask & 0x2)
 			{
 				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
@@ -3294,13 +3297,21 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if (!buffer_pitch) buffer_pitch = buffer_width * 4; // TODO: Check avconf
+	u32 av_format;
+	const auto avconfig = fxm::get<rsx::avconf>();
 
-	auto avconfig = fxm::get<rsx::avconf>();
 	if (avconfig)
 	{
+		av_format = avconfig->get_compatible_gcm_format();
+		if (!buffer_pitch) buffer_pitch = buffer_width * avconfig->get_bpp();
+
 		buffer_width = std::min(buffer_width, avconfig->resolution_x);
 		buffer_height = std::min(buffer_height, avconfig->resolution_y);
+	}
+	else
+	{
+		av_format = CELL_GCM_TEXTURE_A8R8G8B8;
+		if (!buffer_pitch) buffer_pitch = buffer_width * 4;
 	}
 
 	coordi aspect_ratio;
@@ -3381,8 +3392,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 
 	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
 	{
-		rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
-		u32 absolute_address = buffer_region.address + buffer_region.base;
+		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
 		{
@@ -3419,7 +3429,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 				}
 			}
 		}
-		else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(absolute_address, buffer_width, buffer_height))
+		else if (auto surface = m_texture_cache.find_texture_from_dimensions<true>(absolute_address, av_format, buffer_width, buffer_height))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display

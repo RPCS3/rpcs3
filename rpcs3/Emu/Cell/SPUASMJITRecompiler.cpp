@@ -46,18 +46,23 @@ void spu_recompiler::init()
 	}
 }
 
-bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
+spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 {
 	const auto fn_location = m_spurt->find(last_reset_count, func);
 
 	if (fn_location == spu_runtime::g_dispatcher)
 	{
-		return true;
+		return &dispatch;
 	}
 
 	if (!fn_location)
 	{
-		return false;
+		return nullptr;
+	}
+
+	if (m_cache && g_cfg.core.spu_cache)
+	{
+		m_cache->add(func);
 	}
 
 	using namespace asmjit;
@@ -836,7 +841,7 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 	{
 		if (err == asmjit::ErrorCode::kErrorNoVirtualMemory)
 		{
-			return false;
+			return nullptr;
 		}
 
 		LOG_FATAL(SPU, "Failed to build a function");
@@ -844,7 +849,7 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 
 	if (!m_spurt->add(last_reset_count, fn_location, fn))
 	{
-		return false;
+		return nullptr;
 	}
 
 	if (g_cfg.core.spu_debug)
@@ -858,7 +863,7 @@ bool spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
 		fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 	}
 
-	return true;
+	return fn;
 }
 
 spu_recompiler::XmmLink spu_recompiler::XmmAlloc() // get empty xmm register
@@ -4354,7 +4359,7 @@ void spu_recompiler::AHI(spu_opcode_t op)
 void spu_recompiler::STQD(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.si10) c->add(*addr, op.si10 << 4);
+	if (op.si10) c->add(*addr, op.si10 * 16);
 	c->and_(*addr, 0x3fff0);
 
 	if (utils::has_ssse3())
@@ -4377,7 +4382,7 @@ void spu_recompiler::STQD(spu_opcode_t op)
 void spu_recompiler::LQD(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, 3));
-	if (op.si10) c->add(*addr, op.si10 << 4);
+	if (op.si10) c->add(*addr, op.si10 * 16);
 	c->and_(*addr, 0x3fff0);
 
 	if (utils::has_ssse3())

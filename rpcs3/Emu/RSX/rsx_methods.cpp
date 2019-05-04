@@ -835,16 +835,6 @@ namespace rsx
 			auto in_x = (u16)std::floor(method_registers.blit_engine_in_x());
 			auto in_y = (u16)std::floor(method_registers.blit_engine_in_y());
 
-			if (UNLIKELY(in_x || in_y))
-			{
-				if (scale_x < 0.f || scale_y < 0.f || fabsf(fabsf(scale_x * scale_y) - 1.f) > 0.000001f)
-				{
-					// Scaling operation, check for subpixel correction offsets
-					if (in_x == 1) in_x = 0;
-					if (in_y == 1) in_y = 0;
-				}
-			}
-
 			// Clipping
 			// Validate that clipping rect will fit onto both src and dst regions
 			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
@@ -924,6 +914,25 @@ namespace rsx
 			if (out_pitch == 0)
 			{
 				out_pitch = out_bpp * out_w;
+			}
+
+			if (UNLIKELY(in_x == 1 || in_y == 1))
+			{
+				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || fabsf(fabsf(scale_x * scale_y) - 1.f) > 0.000001f;
+				if (!is_graphics_op)
+				{
+					// No scaling factor, so size in src == size in dst
+					// Check for texel wrapping where (offset + size) > size by 1 pixel
+					// TODO: Should properly RE this behaviour when I have time (kd-11)
+					if (in_x == 1 && in_w == clip_w) in_x = 0;
+					if (in_y == 1 && in_h == clip_h) in_y = 0;
+				}
+				else
+				{
+					// Graphics operation, ignore subpixel correction offsets
+					if (in_x == 1) in_x = 0;
+					if (in_y == 1) in_y = 0;
+				}
 			}
 
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;

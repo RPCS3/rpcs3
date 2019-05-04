@@ -135,20 +135,19 @@ bool ds3_pad_handler::Init()
 
 	if (warn_about_drivers)
 	{
-#ifdef _WIN32
-		LOG_ERROR(HLE, "[DS3] One or more DS3 pads were detected but couldn't be handled because of drivers");
-		LOG_ERROR(HLE, "[DS3] We recommend you use Zadig( https://zadig.akeo.ie/ ) to change your ds3 drivers to WinUSB ones");
-#else
 		LOG_ERROR(HLE, "[DS3] One or more DS3 pads were detected but couldn't be interacted with directly");
-#ifdef __linux__
-		LOG_ERROR(HLE, "[DS3] On linux you can try to add those udev rules:\n# DS3 Bluetooth\nKERNEL==\"hidraw*\", KERNELS==\"*054C:0268*\", MODE=\"0666\"\n\n# DS3 USB\nKERNEL==\"hidraw*\", ATTRS{idVendor}==\"054c\", ATTRS{idProduct}==\"0268\", MODE=\"0666\"");
-#endif
+#if defined(_WIN32) || defined(__linux__)
+		LOG_ERROR(HLE, "[DS3] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
 	}
 	else if (controllers.size() == 0)
+	{
 		LOG_WARNING(HLE, "[DS3] No controllers found!");
+	}
 	else
+	{
 		LOG_SUCCESS(HLE, "[DS3] Controllers found: %d", controllers.size());
+	}
 
 	is_init = true;
 	return true;

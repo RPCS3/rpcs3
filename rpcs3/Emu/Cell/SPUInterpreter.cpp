@@ -1516,13 +1516,13 @@ bool spu_interpreter::AHI(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::STQD(spu_thread& spu, spu_opcode_t op)
 {
-	spu._ref<v128>((spu.gpr[op.ra]._s32[3] + (op.si10 << 4)) & 0x3fff0) = spu.gpr[op.rt];
+	spu._ref<v128>((spu.gpr[op.ra]._s32[3] + (op.si10 * 16)) & 0x3fff0) = spu.gpr[op.rt];
 	return true;
 }
 
 bool spu_interpreter::LQD(spu_thread& spu, spu_opcode_t op)
 {
-	spu.gpr[op.rt] = spu._ref<v128>((spu.gpr[op.ra]._s32[3] + (op.si10 << 4)) & 0x3fff0);
+	spu.gpr[op.rt] = spu._ref<v128>((spu.gpr[op.ra]._s32[3] + (op.si10 * 16)) & 0x3fff0);
 	return true;
 }
 

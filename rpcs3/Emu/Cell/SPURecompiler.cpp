@@ -20,6 +20,7 @@ extern atomic_t<u64> g_progr_pdone;
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
+const spu_decoder<spu_iflag> s_spu_iflag;
 
 extern u64 get_timebased_time();
 
@@ -785,11 +786,6 @@ spu_recompiler_base::~spu_recompiler_base()
 
 void spu_recompiler_base::make_function(const std::vector<u32>& data)
 {
-	if (m_cache && g_cfg.core.spu_cache)
-	{
-		m_cache->add(data);
-	}
-
 	for (u64 reset_count = m_spurt->get_reset_count();;)
 	{
 		if (LIKELY(compile(reset_count, data)))
@@ -905,15 +901,20 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 	m_block_info.set(entry_point / 4);
 	m_entry_info.reset();
 	m_entry_info.set(entry_point / 4);
+	m_ret_info.reset();
 
 	// Simple block entry workload list
 	std::vector<u32> workload;
 	workload.push_back(entry_point);
 
 	std::memset(m_regmod.data(), 0xff, sizeof(m_regmod));
+	std::memset(m_use_ra.data(), 0xff, sizeof(m_use_ra));
+	std::memset(m_use_rb.data(), 0xff, sizeof(m_use_rb));
+	std::memset(m_use_rc.data(), 0xff, sizeof(m_use_rc));
 	m_targets.clear();
 	m_preds.clear();
 	m_preds[entry_point];
+	m_bbs.clear();
 
 	// Value flags (TODO)
 	enum class vf : u32
@@ -999,6 +1000,17 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 		m_targets.erase(pos);
 
+		// Fill register access info
+		if (auto iflags = s_spu_iflag.decode(data))
+		{
+			if (iflags & spu_iflag::use_ra)
+				m_use_ra[pos / 4] = op.ra;
+			if (iflags & spu_iflag::use_rb)
+				m_use_rb[pos / 4] = op.rb;
+			if (iflags & spu_iflag::use_rc)
+				m_use_rc[pos / 4] = op.rc;
+		}
+
 		// Analyse instruction
 		switch (const auto type = s_spu_itype.decode(data))
 		{
@@ -1077,11 +1089,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				m_regmod[pos / 4] = op.rt;
 				vflags[op.rt] = +vf::is_const;
 				values[op.rt] = pos + 4;
-
-				if (op.rt == 1 && (pos + 4) % 16)
-				{
-					LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: BISL", pos);
-				}
 			}
 
 			if (af & vf::is_const)
@@ -1145,6 +1152,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 				if (sl && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 				{
+					m_ret_info[pos / 4 + 1] = true;
 					m_entry_info[pos / 4 + 1] = true;
 					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
@@ -1296,6 +1304,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				}
 				else
 				{
+					m_ret_info[pos / 4 + 1] = true;
 					m_entry_info[pos / 4 + 1] = true;
 					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
@@ -1320,11 +1329,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = pos + 4;
 
-			if (op.rt == 1 && (pos + 4) % 16)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: BRSL", pos);
-			}
-
 			if (target == pos + 4)
 			{
 				// Get next instruction address idiom
@@ -1335,6 +1339,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 			if (g_cfg.core.spu_block_size != spu_block_size_type::safe)
 			{
+				m_ret_info[pos / 4 + 1] = true;
 				m_entry_info[pos / 4 + 1] = true;
 				m_targets[pos].push_back(pos + 4);
 				add_block(pos + 4);
@@ -1433,6 +1438,11 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				m_regmod[pos / 4] = s_reg_mfc_size;
 				break;
 			}
+			case MFC_Cmd:
+			{
+				m_use_rb[pos / 4] = s_reg_mfc_eal;
+				break;
+			}
 			}
 
 			break;
@@ -1475,12 +1485,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.si16;
-
-			if (op.rt == 1 && values[1] & ~0x3fff0u)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: IL -> 0x%x", pos, values[1]);
-			}
-
 			break;
 		}
 		case spu_itype::ILA:
@@ -1488,12 +1492,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i18;
-
-			if (op.rt == 1 && values[1] & ~0x3fff0u)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ILA -> 0x%x", pos, values[1]);
-			}
-
 			break;
 		}
 		case spu_itype::ILH:
@@ -1501,12 +1499,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i16 << 16 | op.i16;
-
-			if (op.rt == 1 && values[1] & ~0x3fff0u)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ILH -> 0x%x", pos, values[1]);
-			}
-
 			break;
 		}
 		case spu_itype::ILHU:
@@ -1514,24 +1506,12 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = op.i16 << 16;
-
-			if (op.rt == 1 && values[1] & ~0x3fff0u)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ILHU -> 0x%x", pos, values[1]);
-			}
-
 			break;
 		}
 		case spu_itype::IOHL:
 		{
 			m_regmod[pos / 4] = op.rt;
 			values[op.rt] = values[op.rt] | op.i16;
-
-			if (op.rt == 1 && op.i16 % 16)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: IOHL, 0x%x", pos, op.i16);
-			}
-
 			break;
 		}
 		case spu_itype::ORI:
@@ -1539,12 +1519,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] | op.si10;
-
-			if (op.rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ORI", pos);
-			}
-
 			break;
 		}
 		case spu_itype::OR:
@@ -1552,12 +1526,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] | values[op.rb];
-
-			if (op.rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: OR", pos);
-			}
-
 			break;
 		}
 		case spu_itype::ANDI:
@@ -1565,12 +1533,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] & op.si10;
-
-			if (op.rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ANDI", pos);
-			}
-
 			break;
 		}
 		case spu_itype::AND:
@@ -1578,12 +1540,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] & values[op.rb];
-
-			if (op.rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: AND", pos);
-			}
-
 			break;
 		}
 		case spu_itype::AI:
@@ -1591,12 +1547,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = values[op.ra] + op.si10;
-
-			if (op.rt == 1 && op.si10 % 16)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: AI, 0x%x", pos, op.si10 + 0u);
-			}
-
 			break;
 		}
 		case spu_itype::A:
@@ -1604,22 +1554,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.ra] + values[op.rb];
-
-			if (op.rt == 1)
-			{
-				if (op.ra == 1 || op.rb == 1)
-				{
-					const u32 r2 = op.ra == 1 ? +op.rb : +op.ra;
-
-					if (vflags[r2] & vf::is_const && (values[r2] % 16) == 0)
-					{
-						break;
-					}
-				}
-
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: A", pos);
-			}
-
 			break;
 		}
 		case spu_itype::SFI:
@@ -1627,12 +1561,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vf::is_const;
 			values[op.rt] = op.si10 - values[op.ra];
-
-			if (op.rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: SFI", pos);
-			}
-
 			break;
 		}
 		case spu_itype::SF:
@@ -1640,22 +1568,11 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_regmod[pos / 4] = op.rt;
 			vflags[op.rt] = vflags[op.ra] & vflags[op.rb] & vf::is_const;
 			values[op.rt] = values[op.rb] - values[op.ra];
-
-			if (op.rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: SF", pos);
-			}
-
 			break;
 		}
 		case spu_itype::ROTMI:
 		{
 			m_regmod[pos / 4] = op.rt;
-
-			if (op.rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: ROTMI", pos);
-			}
 
 			if (-op.i7 & 0x20)
 			{
@@ -1671,11 +1588,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		case spu_itype::SHLI:
 		{
 			m_regmod[pos / 4] = op.rt;
-
-			if (op.rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: SHLI", pos);
-			}
 
 			if (op.i7 & 0x20)
 			{
@@ -1695,12 +1607,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			const u32 op_rt = type & spu_itype::_quadrop ? +op.rt4 : +op.rt;
 			m_regmod[pos / 4] = op_rt;
 			vflags[op_rt] = {};
-
-			if (op_rt == 1)
-			{
-				LOG_WARNING(SPU, "[0x%x] Unexpected instruction on $SP: %s", pos, s_spu_iname.decode(data));
-			}
-
 			break;
 		}
 		}
@@ -1861,6 +1767,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		{
 			m_block_info[addr / 4] = false;
 			m_entry_info[addr / 4] = false;
+			m_ret_info[addr / 4] = false;
 			m_preds.erase(addr);
 		}
 	}
@@ -1925,7 +1832,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		it++;
 	}
 
-	// Fill holes which contain only NOP and LNOP instructions
+	// Fill holes which contain only NOP and LNOP instructions (TODO: compile)
 	for (u32 i = 1, nnop = 0, vsize = 0; i <= result.size(); i++)
 	{
 		if (i >= result.size() || result[i])
@@ -1954,28 +1861,99 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		}
 	}
 
-	// Fill entry map, add entry points
+	// Skip some steps for asmjit
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+	{
+		if (result.size() == 1)
+		{
+			result.clear();
+		}
+
+		return result;
+	}
+
+	// Fill block info
+	for (auto& pred : m_preds)
+	{
+		auto& block = m_bbs[pred.first];
+
+		// Copy predeccessors (wrong at this point, needs a fixup later)
+		block.preds = pred.second;
+
+		// Fill register usage info
+		for (u32 ia = pred.first; ia < 0x40000; ia += 4)
+		{
+			block.size++;
+
+			for (auto* _use : {&m_use_ra, &m_use_rb, &m_use_rc})
+			{
+				if (u8 reg = (*_use)[ia / 4]; reg < s_reg_max)
+				{
+					// Register reg use only if it happens before reg mod
+					if (!block.reg_mod[reg])
+						block.reg_use.set(reg);
+				}
+			}
+
+			if (m_use_rb[ia / 4] == s_reg_mfc_eal)
+			{
+				// Expand MFC_Cmd reg use
+				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
+				{
+					if (!block.reg_mod[reg])
+						block.reg_use.set(reg);
+				}
+			}
+
+			// Register reg modification
+			if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
+			{
+				block.reg_mod.set(reg);
+			}
+
+			// Find targets (also means end of the block)
+			const auto tfound = m_targets.find(ia);
+
+			if (tfound != m_targets.end())
+			{
+				// Copy targets
+				block.targets = tfound->second;
+				break;
+			}
+		}
+	}
+
+	// Fixup block predeccessors to point to basic blocks, not last instructions
+	for (auto& bb : m_bbs)
+	{
+		for (u32& pred : bb.second.preds)
+		{
+			pred = std::prev(m_bbs.upper_bound(pred))->first;
+		}
+	}
+
+	// Fill entry map, add chunk addresses
 	while (true)
 	{
 		workload.clear();
 		workload.push_back(entry_point);
-		std::memset(m_entry_map.data(), 0, sizeof(m_entry_map));
 
 		std::basic_string<u32> new_entries;
 
 		for (u32 wi = 0; wi < workload.size(); wi++)
 		{
 			const u32 addr = workload[wi];
-			const u16 _new = m_entry_map[addr / 4];
+			auto& block    = m_bbs.at(addr);
+			const u32 _new = block.chunk;
 
 			if (!m_entry_info[addr / 4])
 			{
 				// Check block predecessors
-				for (u32 pred : m_preds[addr])
+				for (u32 pred : block.preds)
 				{
-					const u16 _old = m_entry_map[pred / 4];
+					const u32 _old = m_bbs[pred].chunk;
 
-					if (_old && _old != _new)
+					if (_old < 0x40000 && _old != _new)
 					{
 						// If block has multiple 'entry' points, it becomes an entry point itself
 						new_entries.push_back(addr);
@@ -1983,42 +1961,36 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				}
 			}
 
-			// Fill value
-			const u16 root = m_entry_info[addr / 4] ? ::narrow<u16>(addr / 4) : _new;
+			// Update chunk address
+			block.chunk = m_entry_info[addr / 4] ? addr : _new;
 
-			for (u32 wa = addr; wa < limit && result[(wa - lsa) / 4 + 1]; wa += 4)
+			// Process block targets
+			for (u32 target : block.targets)
 			{
-				// Fill entry address for the instruction
-				m_entry_map[wa / 4] = root;
+				const auto tfound = m_bbs.find(target);
 
-				// Find targets (also means end of the block)
-				const auto tfound = m_targets.find(wa);
-
-				if (tfound == m_targets.end())
+				if (tfound == m_bbs.end())
 				{
 					continue;
 				}
 
-				for (u32 target : tfound->second)
-				{
-					const u16 value = m_entry_info[target / 4] ? ::narrow<u16>(target / 4) : root;
+				auto& tb = tfound->second;
 
-					if (u16& tval = m_entry_map[target / 4])
+				const u32 value = m_entry_info[target / 4] ? target : block.chunk;
+
+				if (u32& tval = tb.chunk; tval < 0x40000)
+				{
+					// TODO: fix condition
+					if (tval != value && !m_entry_info[target / 4])
 					{
-						// TODO: fix condition
-						if (tval != value && !m_entry_info[target / 4])
-						{
-							new_entries.push_back(target);
-						}
-					}
-					else
-					{
-						tval = value;
-						workload.emplace_back(target);
+						new_entries.push_back(target);
 					}
 				}
-
-				break;
+				else
+				{
+					tval = value;
+					workload.emplace_back(target);
+				}
 			}
 		}
 
@@ -2030,6 +2002,164 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		for (u32 entry : new_entries)
 		{
 			m_entry_info[entry / 4] = true;
+
+			// Acknowledge artificial (reversible) chunk entry point
+			m_ret_info[entry / 4] = true;
+		}
+
+		for (auto& bb : m_bbs)
+		{
+			// Reset chunk info
+			bb.second.chunk = 0x40000;
+		}
+	}
+
+	workload.clear();
+	workload.push_back(entry_point);
+
+	// Fill workload adding targets
+	for (u32 wi = 0; wi < workload.size(); wi++)
+	{
+		const u32 addr  = workload[wi];
+		auto& block     = m_bbs.at(addr);
+		block.analysed  = true;
+
+		for (u32 target : block.targets)
+		{
+			const auto tfound = m_bbs.find(target);
+
+			if (tfound == m_bbs.end())
+			{
+				continue;
+			}
+
+			auto& tb = tfound->second;
+
+			if (!tb.analysed)
+			{
+				workload.push_back(target);
+				tb.analysed = true;
+			}
+		}
+
+		block.reg_origin.fill(0x80000000);
+		block.reg_origin_abs.fill(0x80000000);
+	}
+
+	// Fill register origin info
+	while (true)
+	{
+		bool must_repeat = false;
+
+		for (u32 wi = 0; wi < workload.size(); wi++)
+		{
+			const u32 addr = workload[wi];
+			auto& block    = m_bbs.at(addr);
+
+			// Initialize entry point with default value: unknown origin (requires load)
+			if (m_entry_info[addr / 4])
+			{
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (block.reg_origin[i] == 0x80000000)
+						block.reg_origin[i] = 0x40000;
+				}
+			}
+
+			if (m_entry_info[addr / 4] && !m_ret_info[addr / 4])
+			{
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (block.reg_origin_abs[i] == 0x80000000)
+						block.reg_origin_abs[i] = 0x40000;
+					else if (block.reg_origin_abs[i] == -1)
+						block.reg_origin_abs[i] = -2;
+				}
+			}
+
+			for (u32 target : block.targets)
+			{
+				const auto tfound = m_bbs.find(target);
+
+				if (tfound == m_bbs.end())
+				{
+					continue;
+				}
+
+				auto& tb = tfound->second;
+
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (tb.chunk == block.chunk && tb.reg_origin[i] != -1)
+					{
+						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin[i];
+
+						if (tb.reg_origin[i] == 0x80000000)
+						{
+							tb.reg_origin[i] = expected;
+						}
+						else if (tb.reg_origin[i] != expected)
+						{
+							// Set -1 if multiple origins merged (requires PHI node)
+							tb.reg_origin[i] = -1;
+
+							must_repeat |= !tb.targets.empty();
+						}
+					}
+
+					if (tb.chunk != block.chunk && !(m_entry_info[target / 4] && m_ret_info[target / 4]))
+					{
+						// Skip call targets completely
+						continue;
+					}
+
+					if (tb.reg_origin_abs[i] != -2)
+					{
+						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin_abs[i];
+
+						if (tb.reg_origin_abs[i] == 0x80000000)
+						{
+							tb.reg_origin_abs[i] = expected;
+						}
+						else if (tb.reg_origin_abs[i] != expected)
+						{
+							if (tb.reg_origin_abs[i] == 0x40000 || expected == -2 || expected == 0x40000)
+							{
+								// Set -2: sticky value indicating possible external reg origin (0x40000)
+								tb.reg_origin_abs[i] = -2;
+
+								must_repeat |= !tb.targets.empty();
+							}
+							else if (tb.reg_origin_abs[i] != -1)
+							{
+								tb.reg_origin_abs[i] = -1;
+
+								must_repeat |= !tb.targets.empty();
+							}
+						}
+					}
+				}
+			}
+		}
+
+		if (!must_repeat)
+		{
+			break;
+		}
+
+		for (u32 wi = 0; wi < workload.size(); wi++)
+		{
+			const u32 addr = workload[wi];
+			auto& block    = m_bbs.at(addr);
+
+			// Reset values for the next attempt (keep negative values)
+			for (u32 i = 0; i < s_reg_max; i++)
+			{
+				if (block.reg_origin[i] <= 0x40000)
+					block.reg_origin[i] = 0x80000000;
+				if (block.reg_origin_abs[i] <= 0x40000)
+					block.reg_origin_abs[i] = 0x80000000;
+			}
 		}
 	}
 
@@ -2044,31 +2174,25 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 void spu_recompiler_base::dump(std::string& out)
 {
-	for (u32 i = 0; i < 0x10000; i++)
+	for (auto& bb : m_bbs)
 	{
-		if (m_block_info[i])
+		if (m_block_info[bb.first / 4])
 		{
-			fmt::append(out, "A: [0x%05x] %s\n", i * 4, m_entry_info[i] ? "Entry" : "Block");
+			fmt::append(out, "?: [0x%05x] %s\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Chunk" : "Entry") : "Block");
+
+			for (u32 pred : bb.second.preds)
+			{
+				fmt::append(out, "\t<- 0x%05x\n", pred);
+			}
+
+			for (u32 target : bb.second.targets)
+			{
+				fmt::append(out, "\t-> 0x%05x\n", target);
+			}
 		}
-	}
-
-	for (auto&& pair : std::map<u32, std::basic_string<u32>>(m_targets.begin(), m_targets.end()))
-	{
-		fmt::append(out, "T: [0x%05x]\n", pair.first);
-
-		for (u32 value : pair.second)
+		else
 		{
-			fmt::append(out, "\t-> 0x%05x\n", value);
-		}
-	}
-
-	for (auto&& pair : std::map<u32, std::basic_string<u32>>(m_preds.begin(), m_preds.end()))
-	{
-		fmt::append(out, "P: [0x%05x]\n", pair.first);
-
-		for (u32 value : pair.second)
-		{
-			fmt::append(out, "\t<- 0x%05x\n", value);
+			fmt::append(out, "?: [0x%05x] ?\n", bb.first);
 		}
 	}
 
@@ -2129,6 +2253,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::GlobalVariable* m_scale_float_to{};
 	llvm::GlobalVariable* m_scale_to_float{};
 
+	// Helper for check_state
+	llvm::GlobalVariable* m_fake_global1{};
+
 	llvm::MDNode* m_md_unlikely;
 	llvm::MDNode* m_md_likely;
 
@@ -2139,12 +2266,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		// Final block (for PHI nodes, set after completion)
 		llvm::BasicBlock* block_end{};
-
-		// Regmod compilation (TODO)
-		std::bitset<s_reg_max> mod;
-
-		// List of actual predecessors
-		std::basic_string<u32> preds;
 
 		// Current register values
 		std::array<llvm::Value*, s_reg_max> reg{};
@@ -2221,7 +2342,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				{
 					if (auto c = llvm::dyn_cast_or_null<llvm::Constant>(m_block->reg[i]))
 					{
-						if (!(find_reg_origin(addr, i, false) >> 31))
+						if (m_bbs.at(addr).reg_origin_abs[i] < 0x40000)
 						{
 							regs[i] = c;
 						}
@@ -2478,27 +2599,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		verify("double_to_xfloat" HERE), val, val->getType() == get_type<f64[4]>();
 
-		// Detect xfloat_to_double to avoid unnecessary ops and prevent zeroed denormals
-		if (auto _bitcast = llvm::dyn_cast<llvm::CastInst>(val))
-		{
-			if (_bitcast->getOpcode() == llvm::Instruction::BitCast)
-			{
-				if (auto _select = llvm::dyn_cast<llvm::SelectInst>(_bitcast->getOperand(0)))
-				{
-					if (auto _icmp = llvm::dyn_cast<llvm::ICmpInst>(_select->getOperand(0)))
-					{
-						if (auto _and = llvm::dyn_cast<llvm::BinaryOperator>(_icmp->getOperand(0)))
-						{
-							if (auto _zext = llvm::dyn_cast<llvm::CastInst>(_and->getOperand(0)))
-							{
-								// TODO: check all details and return xfloat_to_double() arg
-							}
-						}
-					}
-				}
-			}
-		}
-
 		const auto d = double_as_uint64(val);
 		const auto s = m_ir->CreateAnd(m_ir->CreateLShr(d, 32), 0x80000000);
 		const auto m = m_ir->CreateXor(m_ir->CreateLShr(d, 29), 0x40000000);
@@ -2607,9 +2707,17 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 						newphi->addIncoming(xfloat_to_double(ivalue), iblock);
 					}
 
-					if (phi->getParent() == m_block->block)
+					for (auto& b : m_blocks)
 					{
-						m_block->phi[index] = newphi;
+						if (b.second.phi[index] == phi)
+						{
+							b.second.phi[index] = newphi;
+						}
+
+						if (b.second.reg[index] == phi)
+						{
+							b.second.reg[index] = newphi;
+						}
 					}
 
 					reg = newphi;
@@ -2680,6 +2788,12 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return r;
 	}
 
+	template <typename U, uint I>
+	auto get_vr_as(U&&, const bf_t<u32, I, 7>& index)
+	{
+		return get_vr<typename llvm_expr_t<U>::type>(index);
+	}
+
 	template <typename T = u32[4], typename... Args>
 	std::tuple<std::conditional_t<false, Args, value_t<T>>...> get_vrs(const Args&... args)
 	{
@@ -2705,10 +2819,49 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return r;
 	}
 
+	template <typename U, uint I>
+	auto match_vr_as(U&&, const bf_t<u32, I, 7>& index)
+	{
+		return match_vr<typename llvm_expr_t<U>::type>(index);
+	}
+
+	template <typename... Types, uint I, typename F>
+	bool match_vr(const bf_t<u32, I, 7>& index, F&& pred)
+	{
+		return ((match_vr<Types>(index) && pred(match_vr<Types>(index), match<Types>())) || ...);
+	}
+
 	template <typename T = u32[4], typename... Args>
 	std::tuple<std::conditional_t<false, Args, llvm_match_t<T>>...> match_vrs(const Args&... args)
 	{
 		return {match_vr<T>(args)...};
+	}
+
+	// Extract scalar value from the preferred slot
+	template <typename T>
+	auto get_scalar(T&& value)
+	{
+		using v_type = typename llvm_expr_t<T>::type;
+		using e_type = std::remove_extent_t<v_type>;
+
+		static_assert(sizeof(v_type) == 16 || std::is_same_v<f64[4], v_type>, "Unknown vector type");
+
+		if constexpr (sizeof(e_type) == 1)
+		{
+			return extract(std::forward<T>(value), 12);
+		}
+		else if constexpr (sizeof(e_type) == 2)
+		{
+			return extract(std::forward<T>(value), 6);
+		}
+		else if constexpr (sizeof(e_type) == 4 || sizeof(v_type) == 32)
+		{
+			return extract(std::forward<T>(value), 3);
+		}
+		else
+		{
+			return extract(std::forward<T>(value), 1);
+		}
 	}
 
 	void set_reg_fixed(u32 index, llvm::Value* value, bool fixup = true)
@@ -2841,112 +2994,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return eval(splat<T>(imm));
 	}
 
-	// Return either basic block addr with single dominating value, or negative number of PHI entries
-	u32 find_reg_origin(u32 addr, u32 index, bool chunk_only = true)
-	{
-		u32 result = -1;
-
-		// Handle entry point specially
-		if (chunk_only && m_entry_info[addr / 4])
-		{
-			result = addr;
-		}
-
-		// Used for skipping blocks from different chunks
-		const u16 root = ::narrow<u16>(m_entry / 4);
-
-		// List of predecessors to check
-		m_scan_queue.clear();
-
-		const auto pfound = m_preds.find(addr);
-
-		if (pfound != m_preds.end())
-		{
-			for (u32 pred : pfound->second)
-			{
-				if (chunk_only && m_entry_map[pred / 4] != root)
-				{
-					continue;
-				}
-
-				m_scan_queue.push_back(pred);
-			}
-		}
-
-		// TODO: allow to avoid untouched registers in some cases
-		bool regmod_any = result == -1;
-
-		for (u32 i = 0; i < m_scan_queue.size(); i++)
-		{
-			// Find whether the block modifies the selected register
-			bool regmod = false;
-
-			for (addr = m_scan_queue[i];; addr -= 4)
-			{
-				if (index == m_regmod.at(addr / 4))
-				{
-					regmod = true;
-					regmod_any = true;
-				}
-
-				if (LIKELY(!m_block_info[addr / 4]))
-				{
-					continue;
-				}
-
-				const auto pfound = m_preds.find(addr);
-
-				if (pfound == m_preds.end())
-				{
-					continue;
-				}
-
-				if (!regmod)
-				{
-					// Enqueue predecessors if register is not modified there
-					for (u32 pred : pfound->second)
-					{
-						if (chunk_only && m_entry_map[pred / 4] != root)
-						{
-							continue;
-						}
-
-						// TODO
-						if (std::find(m_scan_queue.cbegin(), m_scan_queue.cend(), pred) == m_scan_queue.cend())
-						{
-							m_scan_queue.push_back(pred);
-						}
-					}
-				}
-
-				break;
-			}
-
-			if (regmod || (chunk_only && m_entry_info[addr / 4]))
-			{
-				if (result == -1)
-				{
-					result = addr;
-				}
-				else if (result >> 31)
-				{
-					result--;
-				}
-				else
-				{
-					result = -2;
-				}
-			}
-		}
-
-		if (!regmod_any)
-		{
-			result = addr;
-		}
-
-		return result;
-	}
-
 	void update_pc()
 	{
 		m_ir->CreateStore(m_ir->getInt32(m_pos), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
@@ -2959,12 +3006,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		const auto _body = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto check = llvm::BasicBlock::Create(m_context, "", m_function);
 		const auto stop  = llvm::BasicBlock::Create(m_context, "", m_function);
-		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate), m_ir->getInt32(0)), _body, check, m_md_likely);
+		m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_ir->CreateLoad(pstate, true), m_ir->getInt32(0)), _body, check, m_md_likely);
 		m_ir->SetInsertPoint(check);
 		m_ir->CreateStore(m_ir->getInt32(addr), spu_ptr<u32>(&spu_thread::pc));
-		m_ir->CreateCondBr(call(&exec_check_state, m_thread), stop, _body, m_md_unlikely);
+		m_ir->CreateCondBr(m_ir->CreateLoad(m_fake_global1, true), stop, _body, m_md_unlikely);
 		m_ir->SetInsertPoint(stop);
-		m_ir->CreateRetVoid();
+		m_ir->CreateStore(m_ir->getFalse(), m_fake_global1, true);
+		m_ir->CreateBr(_body);
 		m_ir->SetInsertPoint(_body);
 	}
 
@@ -3029,7 +3077,7 @@ public:
 		}
 	}
 
-	virtual bool compile(u64 last_reset_count, const std::vector<u32>& func) override
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>& func) override
 	{
 		if (func.empty() && last_reset_count == 0 && m_interp_magn)
 		{
@@ -3040,12 +3088,17 @@ public:
 
 		if (fn_location == spu_runtime::g_dispatcher)
 		{
-			return true;
+			return &dispatch;
 		}
 
 		if (!fn_location)
 		{
-			return false;
+			return nullptr;
+		}
+
+		if (m_cache && g_cfg.core.spu_cache)
+		{
+			m_cache->add(func);
 		}
 
 		std::string hash;
@@ -3124,6 +3177,9 @@ public:
 		// Initialize IR Builder
 		IRBuilder<> irb(m_context);
 		m_ir = &irb;
+
+		// Helper for check_state. Used to not interfere with LICM pass.
+		m_fake_global1 = new llvm::GlobalVariable(*m_module, get_type<bool>(), false, llvm::GlobalValue::InternalLinkage, m_ir->getFalse());
 
 		// Add entry function (contains only state/code check)
 		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_ftype<void, u8*, u8*, u8*>()).getCallee());
@@ -3279,32 +3335,25 @@ public:
 				const u32 baddr = m_block_queue[bi];
 				m_block = &m_blocks[baddr];
 				m_ir->SetInsertPoint(m_block->block);
+				auto& bb = m_bbs.at(baddr);
+				bool need_check = false;
 
-				const auto pfound = m_preds.find(baddr);
-
-				if (pfound != m_preds.end() && !pfound->second.empty())
+				if (bb.preds.size())
 				{
 					// Initialize registers and build PHI nodes if necessary
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						// TODO: optimize
-						const u32 src = find_reg_origin(baddr, i);
+						const u32 src = bb.reg_origin[i];
 
-						if (src >> 31)
+						if (src == -1)
 						{
 							// TODO: type
-							const auto _phi = m_ir->CreatePHI(get_reg_type(i), 0 - src);
+							const auto _phi = m_ir->CreatePHI(get_reg_type(i), ::size32(bb.preds));
 							m_block->phi[i] = _phi;
 							m_block->reg[i] = _phi;
 
-							for (u32 pred : pfound->second)
+							for (u32 pred : bb.preds)
 							{
-								// TODO: optimize
-								while (!m_block_info[pred / 4])
-								{
-									pred -= 4;
-								}
-
 								const auto bfound = m_blocks.find(pred);
 
 								if (bfound != m_blocks.end() && bfound->second.block_end)
@@ -3358,38 +3407,41 @@ public:
 								_phi->addIncoming(value, &m_function->getEntryBlock());
 							}
 						}
-						else if (src != baddr)
+						else if (src < 0x40000)
 						{
-							// Passthrough static value or constant
+							// Passthrough register value
 							const auto bfound = m_blocks.find(src);
 
-							// TODO: error
 							if (bfound != m_blocks.end())
 							{
 								m_block->reg[i] = bfound->second.reg[i];
 							}
+							else
+							{
+								LOG_ERROR(SPU, "[0x%05x] Value not found ($%u from 0x%05x)", baddr, i, src);
+							}
 						}
 						else if (baddr == m_entry)
 						{
-							// Passthrough constant from a different chunk
+							// Passthrough constant from a different chunk (will be removed in future)
 							m_block->reg[i] = m_finfo->reg[i];
 						}
 					}
 
 					// Emit state check if necessary (TODO: more conditions)
-					for (u32 pred : pfound->second)
+					for (u32 pred : bb.preds)
 					{
 						if (pred >= baddr)
 						{
 							// If this block is a target of a backward branch (possibly loop), emit a check
-							check_state(baddr);
+							need_check = true;
 							break;
 						}
 					}
 				}
 
 				// State check at the beginning of the chunk
-				if (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+				if (need_check || (bi == 0 && g_cfg.core.spu_block_size != spu_block_size_type::safe))
 				{
 					check_state(baddr);
 				}
@@ -3508,13 +3560,54 @@ public:
 		pm.add(createCFGSimplificationPass());
 		pm.add(createNewGVNPass());
 		pm.add(createDeadStoreEliminationPass());
-		pm.add(createLoopVersioningLICMPass());
+		pm.add(createLICMPass());
 		pm.add(createAggressiveDCEPass());
 		//pm.add(createLintPass()); // Check
 
 		for (const auto& func : m_functions)
 		{
-			pm.run(*func.second.func);
+			const auto f = func.second.func;
+			pm.run(*f);
+
+			for (auto& bb : *f)
+			{
+				for (auto& i : bb)
+				{
+					// Replace volatile fake load with check_state call
+					if (auto li = dyn_cast<LoadInst>(&i); li && li->getOperand(0) == m_fake_global1)
+					{
+						m_ir->SetInsertPoint(bb.getTerminator());
+						li->replaceAllUsesWith(call(&exec_check_state, &*f->arg_begin()));
+						li->eraseFromParent();
+						break;
+					}
+
+					// Replace volatile fake store with return
+					if (auto si = dyn_cast<StoreInst>(&i); si && si->getOperand(1) == m_fake_global1)
+					{
+						const auto br = bb.getTerminator();
+
+						for (auto& j : *br->getSuccessor(0))
+						{
+							// Cleanup PHI nodes if exist
+							if (auto phi = dyn_cast<PHINode>(&j))
+							{
+								phi->removeIncomingValue(&bb, false);
+							}
+							else
+							{
+								break;
+							}
+						}
+
+						m_ir->SetInsertPoint(bb.getTerminator());
+						m_ir->CreateRetVoid();
+						si->eraseFromParent();
+						br->eraseFromParent();
+						break;
+					}
+				}
+			}
 		}
 
 		// Clear context (TODO)
@@ -3566,7 +3659,7 @@ public:
 
 		if (!m_spurt->add(last_reset_count, fn_location, fn))
 		{
-			return false;
+			return nullptr;
 		}
 
 		if (g_cfg.core.spu_debug)
@@ -3575,7 +3668,7 @@ public:
 			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
 
-		return true;
+		return fn;
 	}
 
 	static void interp_check(spu_thread* _spu, bool after)
@@ -3612,7 +3705,7 @@ public:
 		}
 	}
 
-	bool compile_interpreter()
+	spu_function_t compile_interpreter()
 	{
 		using namespace llvm;
 
@@ -3926,7 +4019,7 @@ public:
 
 		if (!spu_runtime::g_interpreter)
 		{
-			return false;
+			return nullptr;
 		}
 
 		if (g_cfg.core.spu_debug)
@@ -3935,7 +4028,7 @@ public:
 			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
 
-		return true;
+		return spu_runtime::g_interpreter;
 	}
 
 	static bool exec_check_state(spu_thread* _spu)
@@ -4987,15 +5080,21 @@ public:
 
 	void AND(spu_opcode_t op)
 	{
-		if (const auto [a, b] = match_vrs<u8[16]>(op.ra, op.rb); a && b)
+		if (match_vr<u8[16], u16[8], u64[2]>(op.ra, [&](auto a, auto MP1)
 		{
-			set_vr(op.rt, a & b);
-			return;
-		}
+			if (auto b = match_vr_as(a, op.rb))
+			{
+				set_vr(op.rt, a & b);
+				return true;
+			}
 
-		if (const auto [a, b] = match_vrs<u16[8]>(op.ra, op.rb); a && b)
+			return match_vr<u8[16], u16[8], u64[2]>(op.rb, [&](auto b, auto MP2)
+			{
+				set_vr(op.rt, a & get_vr_as(a, op.rb));
+				return true;
+			});
+		}))
 		{
-			set_vr(op.rt, a & b);
 			return;
 		}
 
@@ -5086,36 +5185,37 @@ public:
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
+	template <typename RT, typename T>
+	auto spu_get_insertion_shuffle_mask(T&& index)
+	{
+		const auto c = bitcast<RT>(build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10));
+		using e_type = std::remove_extent_t<RT>;
+		const auto v = splat<e_type>(static_cast<e_type>(sizeof(e_type) == 8 ? 0x01020304050607ull : 0x010203ull));
+		return insert(c, std::forward<T>(index), v);
+	}
+
 	void CBX(spu_opcode_t op)
 	{
-		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
-		const auto i = eval(~s & 0xf);
-		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
-		set_vr(op.rt, insert(r, i, splat<u8>(0x03)));
+		const auto s = get_scalar(get_vr(op.ra)) + get_scalar(get_vr(op.rb));
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u8[16]>(~s & 0xf));
 	}
 
 	void CHX(spu_opcode_t op)
 	{
-		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
-		const auto i = eval(~s >> 1 & 0x7);
-		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
-		set_vr(op.rt, insert(r, i, splat<u16>(0x0203)));
+		const auto s = get_scalar(get_vr(op.ra)) + get_scalar(get_vr(op.rb));
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u16[8]>(~s >> 1 & 0x7));
 	}
 
 	void CWX(spu_opcode_t op)
 	{
-		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
-		const auto i = eval(~s >> 2 & 0x3);
-		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
-		set_vr(op.rt, insert(r, i, splat<u32>(0x010203)));
+		const auto s = get_scalar(get_vr(op.ra)) + get_scalar(get_vr(op.rb));
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u32[4]>(~s >> 2 & 0x3));
 	}
 
 	void CDX(spu_opcode_t op)
 	{
-		const auto s = eval(extract(get_vr(op.ra), 3) + extract(get_vr(op.rb), 3));
-		const auto i = eval(~s >> 3 & 0x1);
-		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
-		set_vr(op.rt, insert(r, i, splat<u64>(0x01020304050607)));
+		const auto s = get_scalar(get_vr(op.ra)) + get_scalar(get_vr(op.rb));
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u64[2]>(~s >> 3 & 0x1));
 	}
 
 	void ROTQBI(spu_opcode_t op)
@@ -5176,34 +5276,26 @@ public:
 
 	void CBD(spu_opcode_t op)
 	{
-		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
-		const auto i = eval(~a & 0xf);
-		auto r = build<u8[16]>(0x1f, 0x1e, 0x1d, 0x1c, 0x1b, 0x1a, 0x19, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10);
-		set_vr(op.rt, insert(r, i, splat<u8>(0x03)));
+		const auto a = get_scalar(get_vr(op.ra)) + get_imm<u32>(op.i7);
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u8[16]>(~a & 0xf));
 	}
 
 	void CHD(spu_opcode_t op)
 	{
-		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
-		const auto i = eval(~a >> 1 & 0x7);
-		auto r = build<u16[8]>(0x1e1f, 0x1c1d, 0x1a1b, 0x1819, 0x1617, 0x1415, 0x1213, 0x1011);
-		set_vr(op.rt, insert(r, i, splat<u16>(0x0203)));
+		const auto a = get_scalar(get_vr(op.ra)) + get_imm<u32>(op.i7);
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u16[8]>(~a >> 1 & 0x7));
 	}
 
 	void CWD(spu_opcode_t op)
 	{
-		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
-		const auto i = eval(~a >> 2 & 0x3);
-		auto r = build<u32[4]>(0x1c1d1e1f, 0x18191a1b, 0x14151617, 0x10111213);
-		set_vr(op.rt, insert(r, i, splat<u32>(0x010203)));
+		const auto a = get_scalar(get_vr(op.ra)) + get_imm<u32>(op.i7);
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u32[4]>(~a >> 2 & 0x3));
 	}
 
 	void CDD(spu_opcode_t op)
 	{
-		const auto a = eval(extract(get_vr(op.ra), 3) + get_imm<u32>(op.i7));
-		const auto i = eval(~a >> 3 & 0x1);
-		auto r = build<u64[2]>(0x18191a1b1c1d1e1f, 0x1011121314151617);
-		set_vr(op.rt, insert(r, i, splat<u64>(0x01020304050607)));
+		const auto a = get_scalar(get_vr(op.ra)) + get_imm<u32>(op.i7);
+		set_vr(op.rt, spu_get_insertion_shuffle_mask<u64[2]>(~a >> 3 & 0x1));
 	}
 
 	void ROTQBII(spu_opcode_t op)
@@ -5656,48 +5748,21 @@ public:
 
 	void SHUFB(spu_opcode_t op) //
 	{
-		if (auto ii = llvm::dyn_cast_or_null<llvm::InsertElementInst>(get_reg_raw(op.rc)))
+		if (match_vr<u8[16], u16[8], u32[4], u64[2]>(op.rc, [&](auto c, auto MP)
 		{
-			// Detect if the mask comes from a CWD-like constant generation instruction
-			auto c0 = llvm::dyn_cast<llvm::Constant>(ii->getOperand(0));
+			using VT = typename decltype(MP)::type;
 
-			if (c0 && get_const_vector(c0, m_pos, op.rc) != v128::from64(0x18191a1b1c1d1e1f, 0x1011121314151617))
+			// If the mask comes from a constant generation instruction, replace SHUFB with insert
+			if (auto [ok, i] = match_expr(c, spu_get_insertion_shuffle_mask<VT>(match<u32>())); ok)
 			{
-				c0 = nullptr;
-			}
-
-			auto c1 = llvm::dyn_cast<llvm::ConstantInt>(ii->getOperand(1));
-
-			llvm::Type* vtype = nullptr;
-			llvm::Value* _new = nullptr;
-
-			// Optimization: emit SHUFB as simple vector insert
-			if (c0 && c1 && c1->getType() == get_type<u64>() && c1->getZExtValue() == 0x01020304050607)
-			{
-				vtype = get_type<u64[2]>();
-				_new  = extract(get_vr<u64[2]>(op.ra), 1).eval(m_ir);
-			}
-			else if (c0 && c1 && c1->getType() == get_type<u32>() && c1->getZExtValue() == 0x010203)
-			{
-				vtype = get_type<u32[4]>();
-				_new  = extract(get_vr<u32[4]>(op.ra), 3).eval(m_ir);
-			}
-			else if (c0 && c1 && c1->getType() == get_type<u16>() && c1->getZExtValue() == 0x0203)
-			{
-				vtype = get_type<u16[8]>();
-				_new  = extract(get_vr<u16[8]>(op.ra), 6).eval(m_ir);
-			}
-			else if (c0 && c1 && c1->getType() == get_type<u8>() && c1->getZExtValue() == 0x03)
-			{
-				vtype = get_type<u8[16]>();
-				_new  = extract(get_vr<u8[16]>(op.ra), 12).eval(m_ir);
+				set_vr(op.rt4, insert(get_vr_as(c, op.rb), i, get_scalar(get_vr_as(c, op.ra))));
+				return true;
 			}
 
-			if (vtype && _new)
-			{
-				set_reg_fixed(op.rt4, m_ir->CreateInsertElement(get_reg_fixed(op.rb, vtype), _new, ii->getOperand(2)));
-				return;
-			}
+			return false;
+		}))
+		{
+			return;
 		}
 
 		const auto c = get_vr<u8[16]>(op.rc);

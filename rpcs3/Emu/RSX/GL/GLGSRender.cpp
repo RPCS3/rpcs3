@@ -1126,6 +1126,11 @@ void GLGSRender::on_exit()
 void GLGSRender::clear_surface(u32 arg)
 {
 	if (skip_frame || !framebuffer_status_valid) return;
+
+	// If stencil write mask is disabled, remove clear_stencil bit
+	if (!rsx::method_registers.stencil_mask()) arg &= ~0x2u;
+
+	// Ignore invalid clear flags
 	if ((arg & 0xf3) == 0) return;
 
 	GLbitfield mask = 0;
@@ -1586,13 +1591,21 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	u32 buffer_height = display_buffers[buffer].height;
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
-	if (!buffer_pitch) buffer_pitch = buffer_width * 4;
+	u32 av_format;
+	const auto avconfig = fxm::get<rsx::avconf>();
 
-	auto avconfig = fxm::get<rsx::avconf>();
 	if (avconfig)
 	{
+		av_format = avconfig->get_compatible_gcm_format();
+		if (!buffer_pitch) buffer_pitch = buffer_width * avconfig->get_bpp();
+
 		buffer_width = std::min(buffer_width, avconfig->resolution_x);
 		buffer_height = std::min(buffer_height, avconfig->resolution_y);
+	}
+	else
+	{
+		av_format = CELL_GCM_TEXTURE_A8R8G8B8;
+		if (!buffer_pitch) buffer_pitch = buffer_width * 4;
 	}
 
 	// Disable scissor test (affects blit, clear, etc)
@@ -1631,9 +1644,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		aspect_ratio.size = new_size;
 
 		// Find the source image
-		rsx::tiled_region buffer_region = get_tiled_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
-		u32 absolute_address = buffer_region.address + buffer_region.base;
-
+		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		GLuint image = GL_NONE;
 
 		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
@@ -1673,7 +1684,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 				}
 			}
 		}
-		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(absolute_address, buffer_width, buffer_height))
+		else if (auto surface = m_gl_texture_cache.find_texture_from_dimensions<true>(absolute_address, av_format, buffer_width, buffer_height))
 		{
 			//Hack - this should be the first location to check for output
 			//The render might have been done offscreen or in software and a blit used to display
@@ -1692,16 +1703,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 				m_flip_tex_color.reset(new gl::texture(GL_TEXTURE_2D, buffer_width, buffer_height, 1, 1, GL_RGBA8));
 			}
 
-			if (buffer_region.tile)
-			{
-				std::unique_ptr<u8[]> temp(new u8[buffer_height * buffer_pitch]);
-				buffer_region.read(temp.get(), buffer_width, buffer_height, buffer_pitch);
-				m_flip_tex_color->copy_from(temp.get(), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
-			}
-			else
-			{
-				m_flip_tex_color->copy_from(buffer_region.ptr, gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
-			}
+			m_flip_tex_color->copy_from(vm::base(absolute_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
 
 			image = m_flip_tex_color->id();
 		}

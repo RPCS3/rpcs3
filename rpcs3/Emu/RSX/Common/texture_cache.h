@@ -1753,6 +1753,14 @@ namespace rsx
 				const auto clipped = rsx::intersect_region(address, slice_w, slice_h, bpp,
 					section->get_section_base(), normalized_width, section->get_height(), section_bpp, pitch);
 
+				// Rect intersection test
+				// TODO: Make the intersection code cleaner with proper 2D regions
+				if (std::get<0>(clipped).x >= section->get_width())
+				{
+					// Overlap lies outside the image area!
+					return;
+				}
+
 				const auto slice_begin = u32(slice * src_slice_h);
 				const auto slice_end = u32(slice_begin + slice_h);
 
@@ -2306,6 +2314,7 @@ namespace rsx
 
 						return result;
 					}
+#ifdef TEXTURE_CACHE_DEBUG
 					else
 					{
 						LOG_ERROR(RSX, "Area merge failed! addr=0x%x, w=%d, h=%d, gcm_format=0x%x[sz=%d]", texaddr, tex_width, tex_height, format, !(tex.format() & CELL_GCM_TEXTURE_LN));
@@ -2318,6 +2327,7 @@ namespace rsx
 						}
 						//LOG_TRACE(RSX, "Partial memory recovered from cache; may require WCB/WDB to properly gather all the data");
 					}
+#endif // TEXTURE_CACHE_DEBUG
 				}
 			}
 
@@ -2888,9 +2898,19 @@ namespace rsx
 				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
 			}
 
+			verify(HERE), cached_dest || dst_is_render_target;
+
 			// Calculate number of bytes actually modified
-			u32 mem_length;
-			const u32 mem_base = dst_address - dst.rsx_address;
+			u32 mem_base, mem_length;
+			if (dst_is_render_target)
+			{
+				mem_base = dst_address - dst_subres.base_address;
+			}
+			else
+			{
+				mem_base = dst_address - cached_dest->get_section_base();
+			}
+
 			if (dst.clip_height == 1)
 			{
 				mem_length = dst.clip_width * dst_bpp;
@@ -2916,7 +2936,6 @@ namespace rsx
 			}
 			else
 			{
-				verify(HERE), dst_is_render_target;
 				dst_subres.surface->on_write();
 			}
 
