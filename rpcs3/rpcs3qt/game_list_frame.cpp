@@ -1,4 +1,4 @@
-﻿#include "game_list_frame.h"
+#include "game_list_frame.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
@@ -1297,7 +1297,7 @@ int game_list_frame::PopulateGameList()
 		compat_item->setToolTip(game->compat.tooltip);
 		if (!game->compat.color.isEmpty())
 		{
-			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color));
+			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatio() * 2));
 		}
 
 		// Version
