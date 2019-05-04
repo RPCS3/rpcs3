@@ -1322,7 +1322,9 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 	{
 		const int width = original_size.width() * 0.2;
 		const QPoint origin = QPoint(original_size.width() - width, 0);
-		painter.drawImage(origin, QImage(":/Icons/custom_config_2.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		QImage custom_config_icon(":/Icons/custom_config_2.png");
+		custom_config_icon.setDevicePixelRatio(device_pixel_ratio);
+		painter.drawImage(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
 	if (compatibility_color.isValid())
