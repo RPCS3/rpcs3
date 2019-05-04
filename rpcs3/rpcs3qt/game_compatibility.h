@@ -82,8 +82,8 @@ public:
 
 		QPainter painter(this);
 		setDevicePixelRatio(pixel_ratio);
-		painter.setPen(color);
+		painter.setPen(Qt::NoPen);
 		painter.setBrush(color);
-		painter.drawEllipse(0, 0, 15 * pixel_ratio, 15 * pixel_ratio);
+		painter.drawEllipse(0, 0, width(), height());
 	}
 };
