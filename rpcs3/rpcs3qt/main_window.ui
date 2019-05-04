@@ -845,7 +845,7 @@
     <string>Config</string>
    </property>
    <property name="toolTip">
-    <string>Configuration</string>
+    <string>Configure the emulator</string>
    </property>
   </action>
   <action name="toolbar_controls">
