@@ -266,6 +266,7 @@ struct spu_iflag
 	enum flag
 	{
 		UNK = 0,
+		HBR,
 		HBRA,
 		HBRR,
 		STOP,
@@ -330,8 +331,7 @@ struct spu_iflag
 		FNMS,
 		FMS,
 
-		HBR = use_ra,
-		HEQI,
+		HEQI = use_ra,
 		HGTI,
 		HLGTI,
 		LQD,
