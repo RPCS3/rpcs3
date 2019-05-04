@@ -73,7 +73,7 @@ namespace vk
 				switch (vk::get_driver_vendor())
 				{
 				case vk::driver_vendor::unknown:
-					// Probably intel
+				case vk::driver_vendor::INTEL:
 				case vk::driver_vendor::NVIDIA:
 					unroll_loops = true;
 					optimal_group_size = 32;

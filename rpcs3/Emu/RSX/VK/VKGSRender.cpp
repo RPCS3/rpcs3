@@ -1067,6 +1067,13 @@ void VKGSRender::check_descriptors()
 
 void VKGSRender::check_window_status()
 {
+	if (m_swapchain->supports_automatic_wm_reports())
+	{
+		// This driver will report window events as VK_ERROR_OUT_OF_DATE_KHR
+		m_frame->clear_wm_events();
+		return;
+	}
+
 #ifdef _WIN32
 
 	if (LIKELY(!m_frame->has_wm_events()))
@@ -2032,8 +2039,11 @@ void VKGSRender::on_init_thread()
 		m_frame->enable_wm_event_queue();
 
 #ifdef _WIN32
-		// On windows switching to fullscreen is done by the renderer, not the UI
-		m_frame->disable_wm_fullscreen();
+		if (!m_swapchain->supports_automatic_wm_reports())
+		{
+			// If the renderer does not handle WM events itself, switching to fullscreen is done by the renderer, not the UI
+			m_frame->disable_wm_fullscreen();
+		}
 #endif
 	}
 }
@@ -2355,6 +2365,7 @@ void VKGSRender::present(frame_context_t *ctx)
 		switch (VkResult error = m_swapchain->present(ctx->present_image))
 		{
 		case VK_SUCCESS:
+			break;
 		case VK_SUBOPTIMAL_KHR:
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
