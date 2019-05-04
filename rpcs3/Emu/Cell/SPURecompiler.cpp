@@ -1956,9 +1956,18 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			// Process block targets
 			for (u32 target : block.targets)
 			{
+				const auto tfound = m_bbs.find(target);
+
+				if (tfound == m_bbs.end())
+				{
+					continue;
+				}
+
+				auto& tb = tfound->second;
+
 				const u32 value = m_entry_info[target / 4] ? target : block.chunk;
 
-				if (u32& tval = m_bbs[target].chunk; tval < 0x40000)
+				if (u32& tval = tb.chunk; tval < 0x40000)
 				{
 					// TODO: fix condition
 					if (tval != value && !m_entry_info[target / 4])
@@ -2006,7 +2015,14 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 		for (u32 target : block.targets)
 		{
-			auto& tb = m_bbs.at(target);
+			const auto tfound = m_bbs.find(target);
+
+			if (tfound == m_bbs.end())
+			{
+				continue;
+			}
+
+			auto& tb = tfound->second;
 
 			if (!tb.analysed)
 			{
@@ -2052,13 +2068,20 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 			for (u32 target : block.targets)
 			{
-				auto& tb = m_bbs.at(target);
+				const auto tfound = m_bbs.find(target);
+
+				if (tfound == m_bbs.end())
+				{
+					continue;
+				}
+
+				auto& tb = tfound->second;
 
 				for (u32 i = 0; i < s_reg_max; i++)
 				{
 					if (tb.chunk == block.chunk && tb.reg_origin[i] != -1)
 					{
-						const u32 expected = block.reg_mod[i] || block.reg_origin[i] == -1 ? addr : block.reg_origin[i];
+						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin[i];
 
 						if (tb.reg_origin[i] == 0x80000000)
 						{
@@ -2081,7 +2104,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 					if (tb.reg_origin_abs[i] != -2)
 					{
-						const u32 expected = block.reg_mod[i] || block.reg_origin_abs[i] >> 31 ? addr : block.reg_origin_abs[i];
+						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin_abs[i];
 
 						if (tb.reg_origin_abs[i] == 0x80000000)
 						{
@@ -2089,7 +2112,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 						}
 						else if (tb.reg_origin_abs[i] != expected)
 						{
-							if (tb.reg_origin_abs[i] == 0x40000 || (!block.reg_mod[i] && (block.reg_origin_abs[i] == -2 || block.reg_origin_abs[i] == 0x40000)))
+							if (tb.reg_origin_abs[i] == 0x40000 || expected == -2 || expected == 0x40000)
 							{
 								// Set -2: sticky value indicating possible external reg origin (0x40000)
 								tb.reg_origin_abs[i] = -2;
