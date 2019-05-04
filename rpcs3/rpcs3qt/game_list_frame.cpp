@@ -1,4 +1,4 @@
-#include "game_list_frame.h"
+﻿#include "game_list_frame.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "table_item_delegate.h"
@@ -1304,9 +1304,11 @@ void game_list_frame::BatchRemoveShaderCaches()
 
 QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon, const QColor& compatibility_color)
 {
+	const int device_pixel_ratio = devicePixelRatio();
 	const QSize original_size = img.size();
 
-	QImage image = QImage(original_size, QImage::Format_ARGB32);
+	QImage image = QImage(original_size * device_pixel_ratio, QImage::Format_ARGB32);
+	image.setDevicePixelRatio(device_pixel_ratio);
 	image.fill(m_Icon_Color);
 
 	QPainter painter(&image);
@@ -1335,7 +1337,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 
 	painter.end();
 
-	return QPixmap::fromImage(image.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	return QPixmap::fromImage(image.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
 void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
