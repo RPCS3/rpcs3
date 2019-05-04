@@ -235,7 +235,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	properties2.require_wpos = properties.has_wpos_input;
 	properties2.require_texture_ops = properties.has_tex_op;
 	properties2.emulate_shadow_compare = device_props.emulate_depth_compare;
-	properties2.low_precision_tests = vk::get_current_renderer()->gpu().get_driver_vendor() == vk::driver_vendor::NVIDIA;
+	properties2.low_precision_tests = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 }

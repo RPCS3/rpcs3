@@ -78,7 +78,8 @@ namespace vk
 		unknown,
 		AMD,
 		NVIDIA,
-		RADV
+		RADV,
+		INTEL
 	};
 
 	class context;
@@ -446,6 +447,11 @@ namespace vk
 			if (gpu_name.find("RADV") != std::string::npos)
 			{
 				return driver_vendor::RADV;
+			}
+
+			if (gpu_name.find("Intel") != std::string::npos)
+			{
+				return driver_vendor::INTEL;
 			}
 
 			return driver_vendor::unknown;
@@ -1627,6 +1633,11 @@ public:
 		virtual VkResult present(u32 index) = 0;
 		virtual VkImageLayout get_optimal_present_layout() = 0;
 
+		virtual bool supports_automatic_wm_reports() const
+		{
+			return false;
+		}
+
 		virtual bool init(u32 w, u32 h)
 		{
 			m_width = w;
@@ -1972,6 +1983,8 @@ public:
 		PFN_vkAcquireNextImageKHR acquireNextImageKHR = nullptr;
 		PFN_vkQueuePresentKHR queuePresentKHR = nullptr;
 
+		bool m_wm_reports_flag = false;
+
 	protected:
 		void init_swapchain_images(render_device& dev, u32 /*preferred_count*/ = 0) override
 		{
@@ -2003,6 +2016,26 @@ public:
 
 			m_surface = surface;
 			m_color_space = color_space;
+
+			switch (gpu.get_driver_vendor())
+			{
+			case driver_vendor::NVIDIA:
+#ifndef _WIN32
+				m_wm_reports_flag = true;
+#endif
+				break;
+			case driver_vendor::AMD:
+#ifdef _WIN32
+				break;
+#endif
+			case driver_vendor::INTEL:
+				// Untested
+			case driver_vendor::RADV:
+				m_wm_reports_flag = true;
+				break;
+			default:
+				break;
+			}
 		}
 
 		~swapchain_WSI()
@@ -2163,6 +2196,11 @@ public:
 
 			init_swapchain_images(dev);
 			return true;
+		}
+
+		bool supports_automatic_wm_reports() const override
+		{
+			return m_wm_reports_flag;
 		}
 
 		VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) override
