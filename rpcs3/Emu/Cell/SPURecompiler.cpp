@@ -1861,6 +1861,17 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		}
 	}
 
+	// Skip some steps for asmjit
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+	{
+		if (result.size() == 1)
+		{
+			result.clear();
+		}
+
+		return result;
+	}
+
 	// Fill block info
 	for (auto& pred : m_preds)
 	{
