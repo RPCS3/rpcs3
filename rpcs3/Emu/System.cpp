@@ -424,7 +424,7 @@ void Emulator::Init()
 
 				Emu.CallAfter([=]
 				{
-					dlg->Close();
+					dlg->Close(true);
 				});
 			}
 		});

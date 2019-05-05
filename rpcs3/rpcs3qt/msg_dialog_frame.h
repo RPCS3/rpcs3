@@ -38,7 +38,7 @@ private:
 #elif HAVE_QTDBUS
 	int m_progress_value = 0;
 #endif
-	custom_dialog* m_dialog =nullptr;
+	custom_dialog* m_dialog = nullptr;
 	QLabel* m_text = nullptr;
 	QLabel* m_text1 = nullptr;
 	QLabel* m_text2 = nullptr;
@@ -53,7 +53,7 @@ public:
 	msg_dialog_frame(QWindow* taskbarTarget);
 	~msg_dialog_frame();
 	virtual void Create(const std::string& msg, const std::string& title = "") override;
-	virtual void Close() override;
+	virtual void Close(bool success) override;
 	virtual void SetMsg(const std::string& msg) override;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
 	virtual void ProgressBarReset(u32 progressBarIndex) override;
