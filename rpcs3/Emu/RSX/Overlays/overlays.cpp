@@ -159,8 +159,13 @@ namespace rsx
 
 		s32 user_interface::run_input_loop()
 		{
+			const u64 ms_interval = 200;
 			std::array<std::chrono::steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
 			timestamp.fill(std::chrono::steady_clock::now());
+
+			const u64 ms_threshold = 500;
+			std::array<std::chrono::steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> initial_timestamp;
+			initial_timestamp.fill(std::chrono::steady_clock::now());
 
 			std::array<std::array<bool, pad_button::pad_button_max_enum>, CELL_PAD_MAX_PORT_NUM> button_state;
 			for (auto& state : button_state)
@@ -257,16 +262,23 @@ namespace rsx
 							{
 								if (button_id < 4) // d-pad button
 								{
-									if (!button_state[pad_index][button_id] || input_timer.GetMsSince(timestamp[pad_index]) > 200)
+									if (!button_state[pad_index][button_id])
 									{
-										// d-pad button was not pressed, or was pressed more than 200ms ago
+										// the d-pad button was not pressed before, so this is a new button press
+										timestamp[pad_index] = std::chrono::steady_clock::now();
+										initial_timestamp[pad_index] = timestamp[pad_index];
+										on_button_pressed(static_cast<pad_button>(button_id));
+									}
+									else if (input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold && input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
+									{
+										// the d-pad button was pressed for at least the given threshold in ms and will trigger at an interval
 										timestamp[pad_index] = std::chrono::steady_clock::now();
 										on_button_pressed(static_cast<pad_button>(button_id));
 									}
 								}
 								else if (!button_state[pad_index][button_id])
 								{
-									// button was not pressed
+									// the button was not pressed before, so this is a new button press
 									on_button_pressed(static_cast<pad_button>(button_id));
 								}
 							}
