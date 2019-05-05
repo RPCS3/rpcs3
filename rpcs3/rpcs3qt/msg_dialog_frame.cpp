@@ -13,7 +13,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 
 	static const auto& barWidth = [](){return QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width();};
 
-	Close();
+	Close(true);
 
 	m_dialog = new custom_dialog(type.disable_cancel);
 	m_dialog->setWindowTitle(title.empty() ? (type.se_normal ? "Normal dialog" : "Error dialog") : qstr(title));
@@ -148,11 +148,12 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 #endif
 }
 
-void msg_dialog_frame::Close()
+void msg_dialog_frame::Close(bool success)
 {
 	if (m_dialog)
 	{
-		m_dialog->close();
+		m_dialog->done(success ? QDialog::Accepted : QDialog::Rejected);
+		m_dialog->deleteLater();
 	}
 }
 
