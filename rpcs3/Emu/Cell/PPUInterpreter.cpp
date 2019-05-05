@@ -4677,7 +4677,7 @@ bool ppu_interpreter::MTFSB0(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::MTFSFI(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u32 bf = op.crfd * 4;
-	if (bf != 4 * 4) 
+	if (bf != 4 * 4)
 	{
 		// Do nothing on non-FPCC field (TODO)
 		LOG_WARNING(PPU, "MTFSFI(%d)", op.crfd);

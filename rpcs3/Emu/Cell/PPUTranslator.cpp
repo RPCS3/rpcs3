@@ -11,14 +11,13 @@ using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
 
-PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info, bool ssse3)
+PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info, ExecutionEngine& engine)
 	: cpu_translator(module, false)
 	, m_info(info)
 	, m_pure_attr(AttributeList::get(m_context, AttributeList::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
 {
 	// Bind context
-	m_context = context;
-	m_use_ssse3 = ssse3;
+	cpu_translator::initialize(context, engine);
 
 	// There is no weak linkage on JIT, so let's create variables with different names for each module part
 	const u32 gsuffix = m_info.name.empty() ? info.funcs[0].addr : info.funcs[0].addr - m_info.segs[0].addr;

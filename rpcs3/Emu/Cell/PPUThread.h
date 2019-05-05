@@ -79,7 +79,7 @@ public:
 				result |= bit;
 			}
 
-			return result;	
+			return result;
 		}
 
 		// Unpack CR bits

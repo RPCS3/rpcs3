@@ -9,6 +9,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -19,6 +20,8 @@
 #include "../Utilities/StrFmt.h"
 #include "../Utilities/BEType.h"
 #include "../Utilities/BitField.h"
+#include "../Utilities/Log.h"
+#include "../Utilities/JIT.h"
 
 #include <unordered_map>
 #include <map>
@@ -47,6 +50,7 @@ struct llvm_value_t
 	static constexpr bool is_sint    = false;
 	static constexpr bool is_uint    = false;
 	static constexpr bool is_float   = false;
+	static constexpr uint is_array   = false;
 	static constexpr uint is_vector  = false;
 	static constexpr uint is_pointer = false;
 
@@ -314,6 +318,7 @@ struct llvm_value_t<T*> : llvm_value_t<T>
 	static constexpr bool is_sint    = false;
 	static constexpr bool is_uint    = false;
 	static constexpr bool is_float   = false;
+	static constexpr uint is_array   = false;
 	static constexpr uint is_vector  = false;
 	static constexpr uint is_pointer = llvm_value_t<T>::is_pointer + 1;
 
@@ -333,12 +338,55 @@ struct llvm_value_t<T[N]> : llvm_value_t<T>
 	using base = llvm_value_t<T>;
 	using base::base;
 
+	static constexpr uint is_array   = 0;
 	static constexpr uint is_vector  = N;
 	static constexpr uint is_pointer = 0;
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
 		return llvm::VectorType::get(llvm_value_t<T>::get_type(context), N);
+	}
+};
+
+template <typename T, uint N>
+struct llvm_value_t<T[0][N]> : llvm_value_t<T>
+{
+	using type = T[0][N];
+	using base = llvm_value_t<T>;
+	using base::base;
+
+	static constexpr bool is_int     = false;
+	static constexpr bool is_sint    = false;
+	static constexpr bool is_uint    = false;
+	static constexpr bool is_float   = false;
+	static constexpr uint is_array   = N;
+	static constexpr uint is_vector  = false;
+	static constexpr uint is_pointer = false;
+
+	static llvm::Type* get_type(llvm::LLVMContext& context)
+	{
+		return llvm::ArrayType::get(llvm_value_t<T>::get_type(context), N);
+	}
+};
+
+template <typename T, uint V, uint N>
+struct llvm_value_t<T[V][N]> : llvm_value_t<T[V]>
+{
+	using type = T[V][N];
+	using base = llvm_value_t<T[V]>;
+	using base::base;
+
+	static constexpr bool is_int     = false;
+	static constexpr bool is_sint    = false;
+	static constexpr bool is_uint    = false;
+	static constexpr bool is_float   = false;
+	static constexpr uint is_array   = N;
+	static constexpr uint is_vector  = false;
+	static constexpr uint is_pointer = false;
+
+	static llvm::Type* get_type(llvm::LLVMContext& context)
+	{
+		return llvm::ArrayType::get(llvm_value_t<T[V]>::get_type(context), N);
 	}
 };
 
@@ -2368,6 +2416,9 @@ protected:
 	// Module to which all generated code is output to
 	llvm::Module* m_module;
 
+	// Execution engine from JIT instance
+	llvm::ExecutionEngine* m_engine{};
+
 	// Endianness, affects vector element numbering (TODO)
 	bool m_is_be;
 
@@ -2376,6 +2427,8 @@ protected:
 
 	// IR builder
 	llvm::IRBuilder<>* m_ir;
+
+	void initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine);
 
 public:
 	// Convert a C++ type to an LLVM type (TODO: remove)
@@ -2419,6 +2472,26 @@ public:
 		value_t<typename std::decay_t<T>::type> result;
 		result.value = expr.eval(m_ir);
 		return result;
+	}
+
+	// Call external function: provide name and function pointer
+	template <typename RT, typename... FArgs, typename... Args>
+	llvm::CallInst* call(std::string_view lame, RT(*_func)(FArgs...), Args... args)
+	{
+		static_assert(sizeof...(FArgs) == sizeof...(Args), "spu_llvm_recompiler::call(): unexpected arg number");
+		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
+		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({lame.data(), lame.size()}, type).getCallee());
+		m_engine->addGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<std::uintptr_t>(_func));
+		return m_ir->CreateCall(func, {args...});
+	}
+
+	// Bitcast with immediate constant folding
+	llvm::Value* bitcast(llvm::Value* val, llvm::Type* type);
+
+	template <typename T>
+	llvm::Value* bitcast(llvm::Value* val)
+	{
+		return bitcast(val, get_type<T>());
 	}
 
 	template <typename T>

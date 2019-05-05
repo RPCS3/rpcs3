@@ -11,6 +11,7 @@ struct spu_itype
 	static constexpr struct branch_tag{} branch{}; // Branch Instructions
 	static constexpr struct floating_tag{} floating{}; // Floating-Point Instructions
 	static constexpr struct quadrop_tag{} _quadrop{}; // 4-op Instructions
+	static constexpr struct xfloat_tag{} xfloat{}; // Instructions producing xfloat values
 
 	enum type : unsigned char
 	{
@@ -146,24 +147,26 @@ struct spu_itype
 		FMS, // quadrop_tag last
 
 		FA,
-		DFA,
 		FS,
-		DFS,
 		FM,
+		FREST,
+		FRSQEST,
+		FI,
+		CSFLT,
+		CUFLT,
+		FRDS, // xfloat_tag last
+
+		DFA,
+		DFS,
 		DFM,
 		DFMA,
 		DFNMS,
 		DFMS,
 		DFNMA,
-		FREST,
-		FRSQEST,
-		FI,
-		CSFLT,
-		CFLTS,
-		CUFLT,
-		CFLTU,
-		FRDS,
 		FESD,
+
+		CFLTS,
+		CFLTU,
 		FCEQ,
 		FCMEQ,
 		FCGT,
@@ -251,6 +254,12 @@ struct spu_itype
 	friend constexpr bool operator &(type value, quadrop_tag)
 	{
 		return value >= MPYA && value <= FMS;
+	}
+
+	// Test for xfloat instruction
+	friend constexpr bool operator &(type value, xfloat_tag)
+	{
+		return value >= FMA && value <= FRDS;
 	}
 };
 

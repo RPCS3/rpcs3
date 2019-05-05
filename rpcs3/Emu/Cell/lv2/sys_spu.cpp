@@ -232,7 +232,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 		sys_spu.todo("Unimplemented SPU Thread options (0x%x)", option);
 	}
 
-	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(0x40000, vm::main))};
+	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(0x80000, vm::main))};
 
 	const u32 tid = idm::import<named_thread<spu_thread>>([&]()
 	{
