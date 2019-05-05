@@ -401,8 +401,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			path_list.back().resize(path_list.back().find_last_not_of('/') + 1);
 		}
 
-		// Used to remove duplications from the list (serial -> set of cats)
-		std::map<std::string, std::set<std::string>> serial_cat;
+		// Used to remove duplications from the list (serial -> set of cat names)
+		std::map<std::string, std::set<std::string>> serial_cat_name;
 
 		QSet<QString> serials;
 
@@ -431,7 +431,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 
 			// Detect duplication
-			if (!serial_cat[game.serial].emplace(game.category).second)
+			if (!serial_cat_name[game.serial].emplace(game.category + game.name).second)
 			{
 				continue;
 			}
@@ -517,7 +517,13 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 						{
 							LOG_ERROR(GENERAL, "Failed to update the displayed version numbers for title ID %s\n%s thrown: %s", entry->info.serial, typeid(e).name(), e.what());
 						}
-						break; // Next Entry
+
+						const std::string key = "GD" + other->info.name;
+						serial_cat_name[other->info.serial].erase(key);
+						if (!serial_cat_name[other->info.serial].count(key))
+						{
+							break;
+						}
 					}
 				}
 			}
