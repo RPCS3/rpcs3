@@ -257,9 +257,9 @@ namespace rsx
 							{
 								if (button_id < 4) // d-pad button
 								{
-									if (!button_state[pad_index][button_id] || input_timer.GetMsSince(timestamp[pad_index]) > 400)
+									if (!button_state[pad_index][button_id] || input_timer.GetMsSince(timestamp[pad_index]) > 200)
 									{
-										// d-pad button was not pressed, or was pressed more than 400ms ago
+										// d-pad button was not pressed, or was pressed more than 200ms ago
 										timestamp[pad_index] = std::chrono::steady_clock::now();
 										on_button_pressed(static_cast<pad_button>(button_id));
 									}
