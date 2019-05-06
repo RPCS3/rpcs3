@@ -30,6 +30,7 @@ namespace rsx
 	// Definitions
 	class thread;
 	extern thread* g_current_renderer;
+	extern atomic_t<u64> g_rsx_shared_tag;
 
 	//Base for resources with reference counting
 	struct ref_counted
@@ -47,27 +48,41 @@ namespace rsx
 		u32 address = 0;
 		u32 pitch = 0;
 
-		bool is_depth_surface;
+		bool is_depth_surface = false;
 
 		rsx::surface_color_format color_format;
 		rsx::surface_depth_format depth_format;
 
-		u16 width;
-		u16 height;
+		u16 width = 0;
+		u16 height = 0;
+		u8  bpp = 0;
 
-		gcm_framebuffer_info()
-		{
-			address = 0;
-			pitch = 0;
-		}
+		address_range range{};
 
-		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h)
-			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h)
+		gcm_framebuffer_info() {}
+
+		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h, const u8 bpp_)
+			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h), bpp(bpp_)
 		{}
 
-		address_range get_memory_range(u32 aa_factor = 1) const
+		void calculate_memory_range(u32 aa_factor_u, u32 aa_factor_v)
 		{
-			return address_range::start_length(address, pitch * height * aa_factor);
+			// Account for the last line of the block not reaching the end
+			const u32 block_size = pitch * (height - 1) * aa_factor_v;
+			const u32 line_size = width * aa_factor_u * bpp;
+			range = address_range::start_length(address, block_size + line_size);
+		}
+
+		address_range get_memory_range(const u32* aa_factors)
+		{
+			calculate_memory_range(aa_factors[0], aa_factors[1]);
+			return range;
+		}
+
+		address_range get_memory_range() const
+		{
+			verify(HERE), range.start == address;
+			return range;
 		}
 	};
 
@@ -79,6 +94,34 @@ namespace rsx
 		f32 gamma = 1.f;           // NO GAMMA CORRECTION
 		u32 resolution_x = 1280;   // X RES
 		u32 resolution_y = 720;    // Y RES
+
+		u32 get_compatible_gcm_format()
+		{
+			switch (format)
+			{
+			default:
+				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+				return CELL_GCM_TEXTURE_A8R8G8B8;
+			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+				return CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
+			}
+		}
+
+		u8 get_bpp()
+		{
+			switch (format)
+			{
+			default:
+				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+				return 4;
+			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+				return 8;
+			}
+		}
 	};
 
 	struct blit_src_info
@@ -89,13 +132,9 @@ namespace rsx
 		u16 offset_y;
 		u16 width;
 		u16 height;
-		u16 slice_h;
 		u16 pitch;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
 		u32 rsx_address;
+		void *pixels;
 	};
 
 	struct blit_dst_info
@@ -110,16 +149,11 @@ namespace rsx
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
-		u16 max_tile_h;
 		f32 scale_x;
 		f32 scale_y;
-
-		bool swizzled;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
 		u32  rsx_address;
+		void *pixels;
+		bool swizzled;
 	};
 
 	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
@@ -161,6 +195,12 @@ namespace rsx
 		if (x <= 2) return x;
 
 		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
+	}
+
+	// Returns an ever-increasing tag value
+	static inline u64 get_shared_tag()
+	{
+		return g_rsx_shared_tag++;
 	}
 
 	// Copy memory in inverse direction from source
@@ -411,6 +451,37 @@ namespace rsx
 		return std::make_tuple(x, y, width, height);
 	}
 
+	static inline std::tuple<position2u, position2u, size2u> intersect_region(
+		u32 dst_address, u16 dst_w, u16 dst_h, u16 dst_bpp,
+		u32 src_address, u16 src_w, u16 src_h, u32 src_bpp,
+		u32 pitch)
+	{
+		if (src_address < dst_address)
+		{
+			const auto offset = dst_address - src_address;
+			const auto src_y = (offset / pitch);
+			const auto src_x = (offset % pitch) / src_bpp;
+			const auto dst_x = 0u;
+			const auto dst_y = 0u;
+			const auto w = std::min<u32>(dst_w, src_w - src_x);
+			const auto h = std::min<u32>(dst_h, src_h - src_y);
+
+			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
+		}
+		else
+		{
+			const auto offset = src_address - dst_address;
+			const auto src_x = 0u;
+			const auto src_y = 0u;
+			const auto dst_y = (offset / pitch);
+			const auto dst_x = (offset % pitch) / dst_bpp;
+			const auto w = std::min<u32>(src_w, dst_w - dst_x);
+			const auto h = std::min<u32>(src_h, dst_h - dst_y);
+
+			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
+		}
+	}
+
 	static inline const f32 get_resolution_scale()
 	{
 		return g_cfg.video.strict_rendering_mode? 1.f : ((f32)g_cfg.video.resolution_scale_percent / 100.f);
@@ -491,6 +562,32 @@ namespace rsx
 
 		std::tie(std::ignore, std::ignore, dst_w, dst_h) = clip_region<u16>(dst_w, dst_h, 0, 0, surface->width(), surface->height(), true);
 		return std::make_tuple(u16(dst_w / scale_x), u16(dst_h / scale_y), dst_w, dst_h);
+	}
+
+	template <typename SurfaceType>
+	inline bool pitch_compatible(SurfaceType* a, SurfaceType* b)
+	{
+		if (a->get_surface_height() == 1 || b->get_surface_height() == 1)
+			return true;
+
+		return (a->get_rsx_pitch() == b->get_rsx_pitch());
+	}
+
+	template <bool __is_surface = true, typename SurfaceType>
+	inline bool pitch_compatible(SurfaceType* surface, u16 pitch_required, u16 height_required)
+	{
+		if constexpr (__is_surface)
+		{
+			if (height_required == 1 || surface->get_surface_height() == 1)
+				return true;
+		}
+		else
+		{
+			if (height_required == 1 || surface->get_height() == 1)
+				return true;
+		}
+
+		return (surface->get_rsx_pitch() == pitch_required);
 	}
 
 	/**

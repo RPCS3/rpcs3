@@ -1,4 +1,5 @@
-#include "pad_thread.h"
+﻿#include "pad_thread.h"
+#include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
@@ -47,7 +48,7 @@ void pad_thread::Init()
 	std::vector<pad_setting> pad_settings;
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
 	{
-		if (i >= m_pads.size())
+		if (!m_pads[i])
 		{
 			pad_settings.push_back({ CELL_PAD_STATUS_DISCONNECTED, CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_ACTUATOR, CELL_PAD_DEV_TYPE_STANDARD });
 		}
@@ -62,7 +63,6 @@ void pad_thread::Init()
 	m_info.now_connect = 0;
 	m_info.system_info |= system_info;
 
-	m_pads.clear();
 	handlers.clear();
 
 	g_cfg_input.load();
@@ -93,6 +93,9 @@ void pad_thread::Init()
 				keyptr->SetTargetWindow((QWindow *)curwindow);
 				cur_pad_handler = keyptr;
 				break;
+			case pad_handler::ds3:
+				cur_pad_handler = std::make_shared<ds3_pad_handler>();
+				break;
 			case pad_handler::ds4:
 				cur_pad_handler = std::make_shared<ds4_pad_handler>();
 				break;
@@ -116,13 +119,13 @@ void pad_thread::Init()
 		}
 		cur_pad_handler->Init();
 
-		m_pads.push_back(std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type));
+		m_pads[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
 
-		if (cur_pad_handler->bindPadToDevice(m_pads.back(), g_cfg_input.player[i]->device.to_string()) == false)
+		if (cur_pad_handler->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string()) == false)
 		{
 			// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
 			LOG_ERROR(GENERAL, "Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type.to_string());
-			nullpad->bindPadToDevice(m_pads.back(), g_cfg_input.player[i]->device.to_string());
+			nullpad->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string());
 		}
 	}
 }

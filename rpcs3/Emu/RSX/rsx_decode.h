@@ -3530,6 +3530,7 @@ struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 			u32 raw_value;
 			bitfield_decoder_t<0, 5> color_fmt;
 			bitfield_decoder_t<5, 3> depth_fmt;
+			bitfield_decoder_t<8, 4> type;
 			bitfield_decoder_t<12, 4> antialias;
 			bitfield_decoder_t<16, 8> log2width;
 			bitfield_decoder_t<24, 8> log2height;
@@ -3545,6 +3546,11 @@ struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 		surface_depth_format depth_fmt() const
 		{
 			return to_surface_depth_format(m_data.depth_fmt);
+		}
+
+		surface_raster_type type() const
+		{
+			return static_cast<surface_raster_type>(u8(m_data.type));
 		}
 
 		surface_antialiasing antialias() const

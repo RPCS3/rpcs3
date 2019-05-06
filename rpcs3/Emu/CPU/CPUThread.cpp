@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
 #include "CPUThread.h"
@@ -131,7 +131,7 @@ bool cpu_thread::check_state()
 			state -= cpu_flag::memory;
 		}
 
-		if (state & cpu_flag::exit + cpu_flag::dbg_global_stop)
+		if (state & cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop)
 		{
 			return true;
 		}

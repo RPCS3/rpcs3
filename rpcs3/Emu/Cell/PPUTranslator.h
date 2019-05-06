@@ -87,10 +87,16 @@ public:
 		return result;
 	}
 
-	template <typename T>
-	void set_vr(u32 vr, value_t<T> v)
+	template <typename T, typename... Args>
+	std::tuple<std::conditional_t<false, Args, value_t<T>>...> get_vrs(const Args&... args)
 	{
-		return SetVr(vr, v.value);
+		return {get_vr<T>(args)...};
+	}
+
+	template <typename T>
+	void set_vr(u32 vr, T&& expr)
+	{
+		return SetVr(vr, expr.eval(m_ir));
 	}
 
 	// Get current instruction address
@@ -296,7 +302,7 @@ public:
 	llvm::CallInst* Call(llvm::Type* ret, llvm::AttributeList attr, llvm::StringRef name, Args... args)
 	{
 		// Call the function
-		return m_ir->CreateCall(m_module->getOrInsertFunction(name, attr, ret, args->getType()...), {args...});
+		return m_ir->CreateCall(m_module->getOrInsertFunction(name, attr, ret, args->getType()...).getCallee(), {args...});
 	}
 
 	// Call a function

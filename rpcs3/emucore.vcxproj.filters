@@ -335,6 +335,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellDtcpIpUtility.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -410,6 +413,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellMusicExport.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellNetAoi.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellNetCtl.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -423,6 +429,9 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellPamf.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellPesmUtility.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellPhotoDecode.cpp">
@@ -524,6 +533,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc2.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilAvcExt.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -548,6 +560,9 @@
     <ClCompile Include="Emu\Cell\Modules\cellVideoOut.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\cellVideoPlayerUtility.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellVideoUpload.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
@@ -558,6 +573,12 @@
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\libad_async.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\libad_core.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\libmedi.cpp">
@@ -752,8 +773,14 @@
     <ClCompile Include="Emu\RSX\RSXFIFO.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\StaticHLE.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1399,6 +1426,9 @@
     <ClInclude Include="Emu\Cell\lv2\sys_net.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_overlay.h">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_gpio.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
@@ -1455,6 +1485,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache_predictor.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\StaticHLE.h">
+      <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Audio\AudioBackend.h">
       <Filter>Emu\Audio</Filter>

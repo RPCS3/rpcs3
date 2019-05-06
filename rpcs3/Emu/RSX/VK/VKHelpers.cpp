@@ -69,8 +69,9 @@ namespace vk
 
 	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
 	{
+		VkPhysicalDevice pdev = dev;
 		VkPhysicalDeviceMemoryProperties memory_properties;
-		vkGetPhysicalDeviceMemoryProperties((VkPhysicalDevice&)dev, &memory_properties);
+		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 
 		memory_type_mapping result;
 		result.device_local = VK_MAX_MEMORY_TYPES;
@@ -183,7 +184,7 @@ namespace vk
 			u32 new_height = align(requested_height, 1024u);
 
 			return new vk::image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				VK_IMAGE_TYPE_2D, format, 4096, 4096, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TYPE_2D, format, new_width, new_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 		};
 
@@ -312,6 +313,7 @@ namespace vk
 			// Nvidia cards are easily susceptible to NaN poisoning
 			g_drv_sanitize_fp_values = true;
 			break;
+		case driver_vendor::INTEL:
 		default:
 			LOG_WARNING(RSX, "Unsupported device: %s", gpu_name);
 		}
@@ -532,8 +534,7 @@ namespace vk
 	{
 		if (image->current_layout == new_layout) return;
 
-		VkImageAspectFlags flags = get_aspect_flags(image->info.format);
-		change_image_layout(cmd, image->value, image->current_layout, new_layout, { flags, 0, 1, 0, 1 });
+		change_image_layout(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
 		image->current_layout = new_layout;
 	}
 
@@ -651,6 +652,42 @@ namespace vk
 			}
 
 			return VK_SUCCESS;
+		}
+	}
+
+	VkResult wait_for_event(VkEvent event, u64 timeout)
+	{
+		u64 t = 0;
+		while (true)
+		{
+			switch (const auto status = vkGetEventStatus(*g_current_renderer, event))
+			{
+			case VK_EVENT_SET:
+				return VK_SUCCESS;
+			case VK_EVENT_RESET:
+				break;
+			default:
+				die_with_error(HERE, status);
+				return status;
+			}
+
+			if (timeout)
+			{
+				if (!t)
+				{
+					t = get_system_time();
+					continue;
+				}
+
+				if ((get_system_time() - t) > timeout)
+				{
+					LOG_ERROR(RSX, "[vulkan] vk::wait_for_event has timed out!");
+					return VK_TIMEOUT;
+				}
+			}
+
+			//std::this_thread::yield();
+			_mm_pause();
 		}
 	}
 

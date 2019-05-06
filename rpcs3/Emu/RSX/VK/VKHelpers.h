@@ -78,7 +78,8 @@ namespace vk
 		unknown,
 		AMD,
 		NVIDIA,
-		RADV
+		RADV,
+		INTEL
 	};
 
 	class context;
@@ -86,7 +87,7 @@ namespace vk
 	class swap_chain_image;
 	class physical_device;
 	class command_buffer;
-	struct image;
+	class image;
 	struct buffer;
 	struct data_heap;
 	class mem_allocator_base;
@@ -146,6 +147,9 @@ namespace vk
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
+	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region);
+	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
+
 	void copy_image_typeless(const command_buffer &cmd, const image *src, const image *dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
 		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
@@ -155,8 +159,8 @@ namespace vk
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
-			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps,
-			VkImageAspectFlags aspect, bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats,
+			VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
@@ -181,6 +185,7 @@ namespace vk
 	// Fence reset with driver workarounds in place
 	void reset_fence(VkFence *pFence);
 	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
+	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
@@ -195,6 +200,12 @@ namespace vk
 		bool d24_unorm_s8;
 		bool d32_sfloat_s8;
 		bool bgra8_linear;
+	};
+
+	struct gpu_shader_types_support
+	{
+		bool allow_float16;
+		bool allow_int8;
 	};
 
 	// Memory Allocator - base class
@@ -394,7 +405,8 @@ namespace vk
 
 	class physical_device
 	{
-		VkPhysicalDevice dev = nullptr;
+		VkInstance parent = VK_NULL_HANDLE;
+		VkPhysicalDevice dev = VK_NULL_HANDLE;
 		VkPhysicalDeviceProperties props;
 		VkPhysicalDeviceMemoryProperties memory_properties;
 		std::vector<VkQueueFamilyProperties> queue_props;
@@ -404,9 +416,10 @@ namespace vk
 		physical_device() {}
 		~physical_device() {}
 
-		void set_device(VkPhysicalDevice pdev)
+		void create(VkInstance context, VkPhysicalDevice pdev)
 		{
 			dev = pdev;
+			parent = context;
 			vkGetPhysicalDeviceProperties(pdev, &props);
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 
@@ -434,6 +447,11 @@ namespace vk
 			if (gpu_name.find("RADV") != std::string::npos)
 			{
 				return driver_vendor::RADV;
+			}
+
+			if (gpu_name.find("Intel") != std::string::npos)
+			{
+				return driver_vendor::INTEL;
 			}
 
 			return driver_vendor::unknown;
@@ -504,15 +522,101 @@ namespace vk
 		{
 			return dev;
 		}
+
+		operator VkInstance() const
+		{
+			return parent;
+		}
+	};
+
+	class supported_extensions
+	{
+	private:
+		std::vector<VkExtensionProperties> m_vk_exts;
+
+	public:
+		enum enumeration_class
+		{
+			instance = 0,
+			device = 1
+		};
+
+		supported_extensions(enumeration_class _class, const char* layer_name = nullptr, physical_device* pgpu = nullptr)
+		{
+			uint32_t count;
+			if (_class == enumeration_class::instance)
+			{
+				if (vkEnumerateInstanceExtensionProperties(layer_name, &count, nullptr) != VK_SUCCESS)
+					return;
+			}
+			else
+			{
+				verify(HERE), pgpu;
+				if (vkEnumerateDeviceExtensionProperties(*pgpu, layer_name, &count, nullptr) != VK_SUCCESS)
+					return;
+			}
+
+			m_vk_exts.resize(count);
+			if (_class == enumeration_class::instance)
+			{
+				vkEnumerateInstanceExtensionProperties(layer_name, &count, m_vk_exts.data());
+			}
+			else
+			{
+				vkEnumerateDeviceExtensionProperties(*pgpu, layer_name, &count, m_vk_exts.data());
+			}
+		}
+
+		bool is_supported(const char *ext)
+		{
+			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
+				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
+		}
 	};
 
 	class render_device
 	{
 		physical_device *pgpu = nullptr;
 		memory_type_mapping memory_map{};
+		std::unordered_map<VkFormat, VkFormatProperties> m_format_properties;
 		gpu_formats_support m_formats_support{};
+		gpu_shader_types_support m_shader_types_support{};
 		std::unique_ptr<mem_allocator_base> m_allocator;
 		VkDevice dev = VK_NULL_HANDLE;
+
+		void get_physical_device_features(VkPhysicalDeviceFeatures& features)
+		{
+			supported_extensions instance_extensions(supported_extensions::instance);
+
+			if (!instance_extensions.is_supported("VK_KHR_get_physical_device_properties2"))
+			{
+				vkGetPhysicalDeviceFeatures(*pgpu, &features);
+			}
+			else
+			{
+				supported_extensions device_extensions(supported_extensions::device, nullptr, pgpu);
+
+				VkPhysicalDeviceFeatures2KHR features2;
+				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+				features2.pNext = nullptr;
+
+				VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+
+				if (device_extensions.is_supported("VK_KHR_shader_float16_int8"))
+				{
+					shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+					features2.pNext = &shader_support_info;
+				}
+
+				auto getPhysicalDeviceFeatures2KHR = (PFN_vkGetPhysicalDeviceFeatures2KHR)vkGetInstanceProcAddr(*pgpu, "vkGetPhysicalDeviceFeatures2KHR");
+				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
+				getPhysicalDeviceFeatures2KHR(*pgpu, &features2);
+
+				m_shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
+				m_shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
+				features = features2.features;
+			}
+		}
 
 	public:
 		render_device()
@@ -533,19 +637,24 @@ namespace vk
 			queue.queueCount = 1;
 			queue.pQueuePriorities = queue_priorities;
 
-			//Set up instance information
-			const char *requested_extensions[] =
+			// Set up instance information
+			std::vector<const char *>requested_extensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			};
 
-			//Enable hardware features manually
-			//Currently we require:
-			//1. Anisotropic sampling
-			//2. DXT support
-			//3. Indexable storage buffers
+			// Enable hardware features manually
+			// Currently we require:
+			// 1. Anisotropic sampling
+			// 2. DXT support
+			// 3. Indexable storage buffers
 			VkPhysicalDeviceFeatures available_features;
-			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
+			get_physical_device_features(available_features);
+
+			if (m_shader_types_support.allow_float16)
+			{
+				requested_extensions.push_back("VK_KHR_shader_float16_int8");
+			}
 
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
@@ -553,14 +662,29 @@ namespace vk
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-			device.pNext = NULL;
+			device.pNext = nullptr;
 			device.queueCreateInfoCount = 1;
 			device.pQueueCreateInfos = &queue;
 			device.enabledLayerCount = 0;
 			device.ppEnabledLayerNames = nullptr; // Deprecated
-			device.enabledExtensionCount = 1;
-			device.ppEnabledExtensionNames = requested_extensions;
+			device.enabledExtensionCount = (u32)requested_extensions.size();
+			device.ppEnabledExtensionNames = requested_extensions.data();
 			device.pEnabledFeatures = &available_features;
+
+			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+			if (m_shader_types_support.allow_float16)
+			{
+				// Allow use of f16 type in shaders if possible
+				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+				shader_support_info.shaderFloat16 = VK_TRUE;
+				device.pNext = &shader_support_info;
+
+				LOG_NOTICE(RSX, "GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
+			}
+			else
+			{
+				LOG_NOTICE(RSX, "GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
+			}
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
 
@@ -588,6 +712,19 @@ namespace vk
 				memory_map = {};
 				m_formats_support = {};
 			}
+		}
+
+		const VkFormatProperties get_format_properties(VkFormat format)
+		{
+			auto found = m_format_properties.find(format);
+			if (found != m_format_properties.end())
+			{
+				return found->second;
+			}
+
+			auto& props = m_format_properties[format];
+			vkGetPhysicalDeviceFormatProperties(*pgpu, format, &props);
+			return props;
 		}
 
 		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32 *type_index) const
@@ -630,6 +767,11 @@ namespace vk
 			return m_formats_support;
 		}
 
+		const gpu_shader_types_support& get_shader_types_support() const
+		{
+			return m_shader_types_support;
+		}
+
 		mem_allocator_base* get_allocator() const
 		{
 			return m_allocator.get();
@@ -641,8 +783,203 @@ namespace vk
 		}
 	};
 
-	struct image
+	class command_pool
 	{
+		vk::render_device *owner = nullptr;
+		VkCommandPool pool = nullptr;
+
+	public:
+		command_pool() {}
+		~command_pool() {}
+
+		void create(vk::render_device &dev)
+		{
+			owner = &dev;
+			VkCommandPoolCreateInfo infos = {};
+			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+
+			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
+		}
+
+		void destroy()
+		{
+			if (!pool)
+				return;
+
+			vkDestroyCommandPool((*owner), pool, nullptr);
+			pool = nullptr;
+		}
+
+		vk::render_device& get_owner()
+		{
+			return (*owner);
+		}
+
+		operator VkCommandPool()
+		{
+			return pool;
+		}
+	};
+
+	class command_buffer
+	{
+	private:
+		bool is_open = false;
+		bool is_pending = false;
+		VkFence m_submit_fence = VK_NULL_HANDLE;
+
+	protected:
+		vk::command_pool *pool = nullptr;
+		VkCommandBuffer commands = nullptr;
+
+	public:
+		enum access_type_hint
+		{
+			flush_only, //Only to be submitted/opened/closed via command flush
+			all         //Auxiliary, can be submitted/opened/closed at any time
+		}
+		access_hint = flush_only;
+
+		enum command_buffer_data_flag : u32
+		{
+			cb_has_occlusion_task = 1,
+			cb_has_blit_transfer = 2,
+			cb_has_dma_transfer = 4
+		};
+		u32 flags = 0;
+
+	public:
+		command_buffer() {}
+		~command_buffer() {}
+
+		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
+		{
+			VkCommandBufferAllocateInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			infos.commandBufferCount = 1;
+			infos.commandPool = (VkCommandPool)cmd_pool;
+			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
+
+			if (auto_reset)
+			{
+				VkFenceCreateInfo info = {};
+				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
+			}
+
+			pool = &cmd_pool;
+		}
+
+		void destroy()
+		{
+			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
+
+			if (m_submit_fence)
+			{
+				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+			}
+		}
+
+		vk::command_pool& get_command_pool() const
+		{
+			return *pool;
+		}
+
+		void clear_flags()
+		{
+			flags = 0;
+		}
+
+		void set_flag(command_buffer_data_flag flag)
+		{
+			flags |= flag;
+		}
+
+		operator VkCommandBuffer() const
+		{
+			return commands;
+		}
+
+		bool is_recording() const
+		{
+			return is_open;
+		}
+
+		void begin()
+		{
+			if (m_submit_fence && is_pending)
+			{
+				wait_for_fence(m_submit_fence);
+				is_pending = false;
+
+				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+			}
+
+			if (is_open)
+				return;
+
+			VkCommandBufferInheritanceInfo inheritance_info = {};
+			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+			VkCommandBufferBeginInfo begin_infos = {};
+			begin_infos.pInheritanceInfo = &inheritance_info;
+			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
+			is_open = true;
+		}
+
+		void end()
+		{
+			if (!is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
+				return;
+			}
+
+			CHECK_RESULT(vkEndCommandBuffer(commands));
+			is_open = false;
+		}
+
+		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		{
+			if (is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
+				return;
+			}
+
+			if (fence == VK_NULL_HANDLE)
+			{
+				fence = m_submit_fence;
+				is_pending = (fence != VK_NULL_HANDLE);
+			}
+
+			VkSubmitInfo infos = {};
+			infos.commandBufferCount = 1;
+			infos.pCommandBuffers = &commands;
+			infos.pWaitDstStageMask = &pipeline_stage_flags;
+			infos.pWaitSemaphores = semaphores.data();
+			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
+			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+			acquire_global_submit_lock();
+			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
+			release_global_submit_lock();
+
+			clear_flags();
+		}
+	};
+
+	class image
+	{
+		std::stack<VkImageLayout> m_layout_stack;
+		VkImageAspectFlags m_storage_aspect = 0;
+
+	public:
 		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
 		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -691,6 +1028,8 @@ namespace vk
 
 			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index);
 			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
+
+			m_storage_aspect = get_aspect_flags(format);
 		}
 
 		// TODO: Ctor that uses a provided memory heap
@@ -716,6 +1055,40 @@ namespace vk
 		u32 depth() const
 		{
 			return info.extent.depth;
+		}
+
+		VkFormat format() const
+		{
+			return info.format;
+		}
+
+		VkImageAspectFlags aspect() const
+		{
+			return m_storage_aspect;
+		}
+
+		void push_layout(command_buffer& cmd, VkImageLayout layout)
+		{
+			m_layout_stack.push(current_layout);
+			change_image_layout(cmd, this, layout);
+		}
+
+		void pop_layout(command_buffer& cmd)
+		{
+			verify(HERE), !m_layout_stack.empty();
+
+			auto layout = m_layout_stack.top();
+			m_layout_stack.pop();
+			change_image_layout(cmd, this, layout);
+		}
+
+		void change_layout(command_buffer& cmd, VkImageLayout new_layout)
+		{
+			if (current_layout == new_layout)
+				return;
+
+			verify(HERE), m_layout_stack.empty();
+			change_image_layout(cmd, this, new_layout);
 		}
 
 	private:
@@ -850,7 +1223,9 @@ namespace vk
 				remap
 			);
 
-			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, get_aspect_flags(info.format) & mask);
+			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
+
+			verify(HERE), range.aspectMask;
 			auto view = std::make_unique<vk::image_view>(*get_current_renderer(), this, real_mapping, range);
 
 			auto result = view.get();
@@ -1109,177 +1484,6 @@ namespace vk
 		VkDevice m_device;
 	};
 
-	class command_pool
-	{
-		vk::render_device *owner = nullptr;
-		VkCommandPool pool = nullptr;
-
-	public:
-		command_pool() {}
-		~command_pool() {}
-
-		void create(vk::render_device &dev)
-		{
-			owner = &dev;
-			VkCommandPoolCreateInfo infos = {};
-			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-
-			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
-		}
-
-		void destroy()
-		{
-			if (!pool)
-				return;
-
-			vkDestroyCommandPool((*owner), pool, nullptr);
-			pool = nullptr;
-		}
-
-		vk::render_device& get_owner()
-		{
-			return (*owner);
-		}
-
-		operator VkCommandPool()
-		{
-			return pool;
-		}
-	};
-
-	class command_buffer
-	{
-	private:
-		bool is_open = false;
-		bool is_pending = false;
-		VkFence m_submit_fence = VK_NULL_HANDLE;
-
-	protected:
-		vk::command_pool *pool = nullptr;
-		VkCommandBuffer commands = nullptr;
-
-	public:
-		enum access_type_hint
-		{
-			flush_only, //Only to be submitted/opened/closed via command flush
-			all         //Auxiliary, can be submitted/opened/closed at any time
-		}
-		access_hint = flush_only;
-
-	public:
-		command_buffer() {}
-		~command_buffer() {}
-
-		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
-		{
-			VkCommandBufferAllocateInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			infos.commandBufferCount = 1;
-			infos.commandPool = (VkCommandPool)cmd_pool;
-			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
-
-			if (auto_reset)
-			{
-				VkFenceCreateInfo info = {};
-				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
-			}
-
-			pool = &cmd_pool;
-		}
-
-		void destroy()
-		{
-			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
-
-			if (m_submit_fence)
-			{
-				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
-			}
-		}
-
-		vk::command_pool& get_command_pool() const
-		{
-			return *pool;
-		}
-
-		operator VkCommandBuffer() const
-		{
-			return commands;
-		}
-
-		bool is_recording() const
-		{
-			return is_open;
-		}
-
-		void begin()
-		{
-			if (m_submit_fence && is_pending)
-			{
-				wait_for_fence(m_submit_fence);
-				is_pending = false;
-
-				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
-				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
-			}
-
-			if (is_open)
-				return;
-
-			VkCommandBufferInheritanceInfo inheritance_info = {};
-			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-
-			VkCommandBufferBeginInfo begin_infos = {};
-			begin_infos.pInheritanceInfo = &inheritance_info;
-			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
-			is_open = true;
-		}
-
-		void end()
-		{
-			if (!is_open)
-			{
-				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
-				return;
-			}
-
-			CHECK_RESULT(vkEndCommandBuffer(commands));
-			is_open = false;
-		}
-
-		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
-		{
-			if (is_open)
-			{
-				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
-				return;
-			}
-
-			if (fence == VK_NULL_HANDLE)
-			{
-				fence = m_submit_fence;
-				is_pending = (fence != VK_NULL_HANDLE);
-			}
-
-			VkSubmitInfo infos = {};
-			infos.commandBufferCount = 1;
-			infos.pCommandBuffers = &commands;
-			infos.pWaitDstStageMask = &pipeline_stage_flags;
-			infos.pWaitSemaphores = semaphores.data();
-			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
-			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-			acquire_global_submit_lock();
-			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
-			release_global_submit_lock();
-		}
-	};
-
 	class swapchain_image_WSI
 	{
 		VkImageView view = nullptr;
@@ -1428,6 +1632,11 @@ public:
 		virtual void end_frame(command_buffer& cmd, u32 index) = 0;
 		virtual VkResult present(u32 index) = 0;
 		virtual VkImageLayout get_optimal_present_layout() = 0;
+
+		virtual bool supports_automatic_wm_reports() const
+		{
+			return false;
+		}
 
 		virtual bool init(u32 w, u32 h)
 		{
@@ -1774,6 +1983,8 @@ public:
 		PFN_vkAcquireNextImageKHR acquireNextImageKHR = nullptr;
 		PFN_vkQueuePresentKHR queuePresentKHR = nullptr;
 
+		bool m_wm_reports_flag = false;
+
 	protected:
 		void init_swapchain_images(render_device& dev, u32 /*preferred_count*/ = 0) override
 		{
@@ -1805,6 +2016,26 @@ public:
 
 			m_surface = surface;
 			m_color_space = color_space;
+
+			switch (gpu.get_driver_vendor())
+			{
+			case driver_vendor::NVIDIA:
+#ifndef _WIN32
+				m_wm_reports_flag = true;
+#endif
+				break;
+			case driver_vendor::AMD:
+#ifdef _WIN32
+				break;
+#endif
+			case driver_vendor::INTEL:
+				// Untested
+			case driver_vendor::RADV:
+				m_wm_reports_flag = true;
+				break;
+			default:
+				break;
+			}
 		}
 
 		~swapchain_WSI()
@@ -1967,6 +2198,11 @@ public:
 			return true;
 		}
 
+		bool supports_automatic_wm_reports() const override
+		{
+			return m_wm_reports_flag;
+		}
+
 		VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) override
 		{
 			return vkAcquireNextImageKHR(dev, m_vk_swapchain, timeout, semaphore, VK_NULL_HANDLE, result);
@@ -1996,29 +2232,6 @@ public:
 		VkImageLayout get_optimal_present_layout() override
 		{
 			return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-		}
-	};
-
-	class supported_extensions
-	{
-	private:
-		std::vector<VkExtensionProperties> m_vk_exts;
-
-	public:
-		supported_extensions()
-		{
-			uint32_t count;
-			if (vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr) != VK_SUCCESS)
-				return;
-
-			m_vk_exts.resize(count);
-			vkEnumerateInstanceExtensionProperties(nullptr, &count, m_vk_exts.data());
-		}
-
-		bool is_supported(const char *ext)
-		{
-			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
-				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
 		}
 	};
 
@@ -2109,12 +2322,17 @@ public:
 
 			if (!fast)
 			{
-				supported_extensions support;
+				supported_extensions support(supported_extensions::instance);
 
 				extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 				if (support.is_supported(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
 				{
 					extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				}
+
+				if (support.is_supported("VK_KHR_get_physical_device_properties2"))
+				{
+					extensions.push_back("VK_KHR_get_physical_device_properties2");
 				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -2207,7 +2425,7 @@ public:
 				CHECK_RESULT(vkEnumeratePhysicalDevices(m_instance, &num_gpus, pdevs.data()));
 
 				for (u32 i = 0; i < num_gpus; ++i)
-					gpus[i].set_device(pdevs[i]);
+					gpus[i].create(m_instance, pdevs[i]);
 			}
 
 			return gpus;

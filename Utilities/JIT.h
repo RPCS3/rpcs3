@@ -40,7 +40,7 @@ struct jit_runtime final : asmjit::HostRuntime
 namespace asmjit
 {
 	// Should only be used to build global functions
-	::jit_runtime& get_global_runtime();
+	asmjit::JitRuntime& get_global_runtime();
 
 	// Emit xbegin and adjacent loop, return label at xbegin
 	Label build_transaction_enter(X86Assembler& c, Label fallback);
@@ -128,7 +128,7 @@ class jit_compiler final
 	std::string m_cpu;
 
 public:
-	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, bool large = false);
+	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0);
 	~jit_compiler();
 
 	// Get LLVM context

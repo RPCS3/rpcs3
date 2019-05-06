@@ -471,13 +471,14 @@ namespace rsx
 						thread_ctrl::notify(*intr_thread);
 					}
 
+					std::this_thread::sleep_for(16ms);
 					continue;
 				}
 
 				while (Emu.IsPaused() && !m_rsx_thread_exiting)
-					std::this_thread::sleep_for(10ms);
+					std::this_thread::sleep_for(16ms);
 
-				std::this_thread::sleep_for(1ms); // hack
+				thread_ctrl::wait_for(100); // Hack
 			}
 		});
 
@@ -526,20 +527,13 @@ namespace rsx
 		fesetround(FE_TONEAREST);
 
 		// TODO: exit condition
-		while (!Emu.IsStopped())
+		while (true)
 		{
 			// Wait for external pause events
 			if (external_interrupt_lock.load())
 			{
 				external_interrupt_ack.store(true);
 				while (external_interrupt_lock.load()) _mm_pause();
-			}
-
-			// Idle if emulation paused
-			if (Emu.IsPaused())
-			{
-				std::this_thread::sleep_for(1ms);
-				continue;
 			}
 
 			// Note a possible rollback address
@@ -558,6 +552,20 @@ namespace rsx
 
 			// Execute FIFO queue
 			run_FIFO();
+
+			if (!Emu.IsRunning())
+			{
+				// Idle if emulation paused
+				while (Emu.IsPaused())
+				{
+					std::this_thread::sleep_for(1ms);
+				}
+
+				if (Emu.IsStopped())
+				{
+					break;
+				}
+			}
 		}
 	}
 
@@ -899,12 +907,14 @@ namespace rsx
 
 		if (!in_begin_end && state != FIFO_state::lock_wait)
 		{
-			reader_lock lock(m_mtx_task);
-
-			if (m_invalidated_memory_range.valid())
+			if (atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
 			{
-				lock.upgrade();
-				handle_invalidated_memory_range();
+				std::lock_guard lock(m_mtx_task);
+
+				if (m_invalidated_memory_range.valid())
+				{
+					handle_invalidated_memory_range();
+				}
 			}
 		}
 	}
@@ -1053,61 +1063,22 @@ namespace rsx
 			fmt::throw_exception("Unknown framebuffer context 0x%x" HERE, (u32)context);
 		}
 
-		auto check_swizzled_render = [&]()
-		{
-			// Packed rasterization with optimal memory layout
-			// Pitch has to be packed for all active render targets, i.e 64
-			// Formats also seemingly need matching depth and color pitch if both are active
-
-			if (color_buffer_unused)
-			{
-				// Check only depth
-				return (layout.zeta_pitch == 64);
-			}
-			else if (depth_buffer_unused)
-			{
-				// Check only color
-				for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
-				{
-					if (layout.color_pitch[index] != 64)
-					{
-						return false;
-					}
-				}
-
-				return true;
-			}
-
-			if (depth_texel_size != color_texel_size)
-			{
-				// Both depth and color exist, but pixel size differs
-				return false;
-			}
-			else
-			{
-				// Qualifies, but only if all the pitch values are disabled (64)
-				// Both depth and color are assumed to exist in this case, unless proven otherwise
-				if (layout.zeta_pitch != 64)
-				{
-					return false;
-				}
-
-				for (const auto& index : rsx::utility::get_rtt_indexes(layout.target))
-				{
-					if (layout.color_pitch[index] != 64)
-					{
-						return false;
-					}
-				}
-
-				return true;
-			}
-		};
-
 		// Swizzled render does tight packing of bytes
-		const bool packed_render = check_swizzled_render();
+		bool packed_render = false;
 		u32 minimum_color_pitch = 64u;
 		u32 minimum_zeta_pitch = 64u;
+
+		switch (const auto mode = rsx::method_registers.surface_type())
+		{
+		default:
+			LOG_ERROR(RSX, "Unknown raster mode 0x%x", (u32)mode);
+			[[fallthrough]];
+		case rsx::surface_raster_type::linear:
+			break;
+		case rsx::surface_raster_type::swizzle:
+			packed_render = true;
+			break;
+		};
 
 		if (!packed_render)
 		{
@@ -1566,14 +1537,14 @@ namespace rsx
 					{
 					case CELL_GCM_TEXTURE_X16:
 					{
-						// NOP, a simple way to quickly read DEPTH16 data without shadow comparison
+						// A simple way to quickly read DEPTH16 data without shadow comparison
 						break;
 					}
 					case CELL_GCM_TEXTURE_A8R8G8B8:
 					case CELL_GCM_TEXTURE_D8R8G8B8:
-					case CELL_GCM_TEXTURE_A4R4G4B4: //TODO
-					case CELL_GCM_TEXTURE_R5G6B5:   //TODO
 					{
+						// Reading depth data as XRGB8 is supported with in-shader conversion
+						// TODO: Optionally add support for 16-bit formats (not necessary since type casts are easy with that)
 						u32 remap = tex.remap();
 						result.redirected_textures |= (1 << i);
 						result.texture_scale[i][2] = (f32&)remap;
@@ -1584,11 +1555,14 @@ namespace rsx
 					case CELL_GCM_TEXTURE_DEPTH24_D8:
 					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 					{
-						const auto compare_mode = (rsx::comparison_function)tex.zfunc();
+						const auto compare_mode = tex.zfunc();
 						if (result.textures_alpha_kill[i] == 0 &&
 							compare_mode < rsx::comparison_function::always &&
 							compare_mode > rsx::comparison_function::never)
+						{
 							result.shadow_textures |= (1 << i);
+							texture_control |= u32(tex.zfunc()) << 8;
+						}
 						break;
 					}
 					default:
@@ -1681,7 +1655,7 @@ namespace rsx
 				if (tex.alpha_kill_enabled())
 				{
 					//alphakill can be ignored unless a valid comparison function is set
-					const rsx::comparison_function func = (rsx::comparison_function)tex.zfunc();
+					const auto func = tex.zfunc();
 					if (func < rsx::comparison_function::always && func > rsx::comparison_function::never)
 					{
 						result.textures_alpha_kill[i] = 1;
@@ -1737,7 +1711,7 @@ namespace rsx
 						case CELL_GCM_TEXTURE_DEPTH24_D8:
 						case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 						{
-							const auto compare_mode = (rsx::comparison_function)tex.zfunc();
+							const auto compare_mode = tex.zfunc();
 							if (result.textures_alpha_kill[i] == 0 &&
 								compare_mode < rsx::comparison_function::always &&
 								compare_mode > rsx::comparison_function::never)
@@ -2123,7 +2097,7 @@ namespace rsx
 		}
 	}
 
-	void thread::flip(int buffer)
+	void thread::flip(int buffer, bool emu_flip)
 	{
 		if (!(async_flip_requested & flip_request::any))
 		{
@@ -2164,7 +2138,14 @@ namespace rsx
 				m_flattener.force_disable();
 			}
 
-			async_flip_requested.clear();
+			if (emu_flip) 
+			{
+				async_flip_requested.clear(flip_request::emu_requested);
+			}
+			else
+			{
+				async_flip_requested.clear(flip_request::native_ui);
+			}
 		}
 
 		if (!skip_frame)
@@ -2491,7 +2472,7 @@ namespace rsx
 
 		int_flip_index++;
 		current_display_buffer = buffer;
-		flip(buffer);
+		flip(buffer, true);
 
 		last_flip_time = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;

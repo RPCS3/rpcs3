@@ -1,4 +1,4 @@
-#include <QCheckBox>
+﻿#include <QCheckBox>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -13,6 +13,7 @@
 #include "Emu/Io/Null/NullPadHandler.h"
 
 #include "keyboard_pad_handler.h"
+#include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
@@ -168,6 +169,13 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent)
 
 	// Refresh Button
 	connect(ui->b_refresh, &QPushButton::clicked, this, &pad_settings_dialog::RefreshInputTypes);
+
+	ui->chooseClass->addItem(tr("Standard (Pad)"));
+	ui->chooseClass->addItem(tr("Guitar"));
+	ui->chooseClass->addItem(tr("Drum"));
+	ui->chooseClass->addItem(tr("DJ"));
+	ui->chooseClass->addItem(tr("Dance Mat"));
+	ui->chooseClass->addItem(tr("Navigation"));
 
 	// Initialize configurable buttons
 	InitButtons();
@@ -467,6 +475,8 @@ void pad_settings_dialog::ReloadButtons()
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
 
+	ui->chooseClass->setCurrentIndex(m_handler_cfg.device_class_type);
+
 	// Enable Mouse Deadzones
 	std::vector<std::string> mouse_dz_range_x = m_handler_cfg.mouse_deadzone_x.to_list();
 	ui->mouse_dz_x->setRange(std::stoi(mouse_dz_range_x.front()), std::stoi(mouse_dz_range_x.back()));
@@ -551,6 +561,7 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseProfile->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::WheelFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::WheelFocus);
+	ui->chooseClass->setFocusPolicy(Qt::WheelFocus);
 }
 
 void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int dz, int w, int x, int y)
@@ -726,6 +737,8 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 
 		m_padButtons->button(entry.first)->setText(entry.second.text);
 	}
+
+	ui->chooseClass->setCurrentIndex(m_handler_cfg.device_class_type);
 }
 
 void pad_settings_dialog::SwitchButtons(bool is_enabled)
@@ -778,6 +791,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	ui->chooseProfile->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseHandler->setFocusPolicy(Qt::ClickFocus);
 	ui->chooseDevice->setFocusPolicy(Qt::ClickFocus);
+	ui->chooseClass->setFocusPolicy(Qt::ClickFocus);
 
 	m_last_pos = QCursor::pos();
 
@@ -812,6 +826,9 @@ std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type
 		break;
 	case pad_handler::keyboard:
 		ret_handler = std::make_unique<keyboard_pad_handler>();
+		break;
+	case pad_handler::ds3:
+		ret_handler = std::make_unique<ds3_pad_handler>();
 		break;
 	case pad_handler::ds4:
 		ret_handler = std::make_unique<ds4_pad_handler>();
@@ -866,8 +883,10 @@ void pad_settings_dialog::ChangeInputType()
 	switch (m_handler->m_type)
 	{
 #ifdef _WIN32
-	case pad_handler::ds4:
 	case pad_handler::xinput:
+#endif
+	case pad_handler::ds3:
+	case pad_handler::ds4:
 	{
 		const QString name_string = qstr(m_handler->name_string());
 		for (int i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
@@ -878,7 +897,6 @@ void pad_settings_dialog::ChangeInputType()
 		force_enable = true;
 		break;
 	}
-#endif
 	default:
 	{
 		for (int i = 0; i < device_list.size(); i++)
@@ -892,6 +910,7 @@ void pad_settings_dialog::ChangeInputType()
 	// Handle empty device list
 	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
 	ui->chooseDevice->setEnabled(config_enabled);
+	ui->chooseClass->setEnabled(config_enabled);
 
 	if (config_enabled)
 	{
@@ -980,6 +999,9 @@ void pad_settings_dialog::ChangeProfile()
 		ui->b_blacklist->setEnabled(false);
 		((keyboard_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
+	case pad_handler::ds3:
+		((ds3_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		break;
 	case pad_handler::ds4:
 		((ds4_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
@@ -1061,6 +1083,8 @@ void pad_settings_dialog::SaveProfile()
 		m_handler_cfg.l_stick_lerp_factor.set(ui->left_stick_lerp->value() * 100);
 		m_handler_cfg.r_stick_lerp_factor.set(ui->right_stick_lerp->value() * 100);
 	}
+
+	m_handler_cfg.device_class_type.set(ui->chooseClass->currentIndex());
 
 	m_handler_cfg.save();
 }

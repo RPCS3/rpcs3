@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "GCM.h"
 
 namespace rsx
@@ -51,8 +51,8 @@ namespace rsx
 		rsx::texture_wrap_mode wrap_s() const;
 		rsx::texture_wrap_mode wrap_t() const;
 		rsx::texture_wrap_mode wrap_r() const;
+		rsx::comparison_function zfunc() const;
 		u8 unsigned_remap() const;
-		u8 zfunc() const;
 		u8 gamma() const;
 		u8 aniso_bias() const;
 		u8 signed_remap() const;

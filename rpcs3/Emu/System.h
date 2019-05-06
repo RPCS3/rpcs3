@@ -63,6 +63,7 @@ enum class pad_handler
 {
 	null,
 	keyboard,
+	ds3,
 	ds4,
 #ifdef _WIN32
 	xinput,
@@ -213,6 +214,7 @@ class Emulator final
 	atomic_t<u64> m_pause_amend_time; // increased when resumed
 
 	std::string m_path;
+	std::string m_path_old;
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_cat;
@@ -447,6 +449,7 @@ struct cfg_root : cfg::node
 		cfg::_bool full_rgb_range_output{this, "Use full RGB output range", true}; // Video out dynamic range
 		cfg::_bool disable_asynchronous_shader_compiler{this, "Disable Asynchronous Shader Compiler", false};
 		cfg::_bool strict_texture_flushing{this, "Strict Texture Flushing", false};
+		cfg::_bool disable_native_float16{this, "Disable native float16 support", false};
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
@@ -477,7 +480,7 @@ struct cfg_root : cfg::node
 			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Performance Overlay") {}
 
 			cfg::_bool perf_overlay_enabled{this, "Enabled", false};
-			cfg::_enum<detail_level> level{this, "Detail level", detail_level::high};
+			cfg::_enum<detail_level> level{this, "Detail level", detail_level::medium};
 			cfg::_int<30, 5000> update_interval{ this, "Metrics update interval (ms)", 350 };
 			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10 };
 			cfg::_enum<screen_quadrant> position{this, "Position", screen_quadrant::top_left};

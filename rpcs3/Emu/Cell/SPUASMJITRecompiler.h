@@ -8,14 +8,12 @@
 // SPU ASMJIT Recompiler
 class spu_recompiler : public spu_recompiler_base
 {
-	std::shared_ptr<spu_runtime> m_spurt;
-
 public:
 	spu_recompiler();
 
 	virtual void init() override;
 
-	virtual spu_function_t compile(std::vector<u32>&&) override;
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&) override;
 
 private:
 	// ASMJIT runtime

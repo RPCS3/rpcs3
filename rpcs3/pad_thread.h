@@ -20,7 +20,7 @@ public:
 	~pad_thread();
 
 	PadInfo& GetInfo() { return m_info; }
-	std::vector<std::shared_ptr<Pad>>& GetPads() { return m_pads; }
+	auto& GetPads() { return m_pads; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
 	void Init();
 	void Reset();
@@ -38,7 +38,7 @@ protected:
 	void *curwindow;
 
 	PadInfo m_info{ 0, 0 };
-	std::vector<std::shared_ptr<Pad>> m_pads;
+	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
 
 	atomic_t<bool> active{ false };
 	atomic_t<bool> reset{ false };

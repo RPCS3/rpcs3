@@ -114,6 +114,8 @@
     <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\StaticHLE.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp" />
     <ClCompile Include="Emu\Cell\PPUAnalyser.cpp" />
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -164,6 +166,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellCrossController.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDaisy.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellDmux.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellDtcpIpUtility.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFiber.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFont.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellFontFT.cpp" />
@@ -189,11 +192,13 @@
     <ClCompile Include="Emu\Cell\Modules\cellMusic.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMusicDecode.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMusicExport.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellNetAoi.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellNetCtl.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellOskDialog.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellOvis.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPad.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPamf.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellPesmUtility.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPhotoDecode.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPhotoExport.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellPhotoImport.cpp" />
@@ -227,6 +232,7 @@
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAp.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilAvc2.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellSysutilAvcExt.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilMisc.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellSysutilNpEula.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellUsbd.cpp" />
@@ -235,10 +241,13 @@
     <ClCompile Include="Emu\Cell\Modules\cellVdec.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVideoExport.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVideoOut.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\cellVideoPlayerUtility.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVideoUpload.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVoice.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellVpost.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellWebBrowser.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libad_async.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libad_core.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libmedi.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libmixer.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libsnd3.cpp" />
@@ -400,8 +409,10 @@
     <ClInclude Include="Emu\Cell\Modules\cellHttp.h" />
     <ClInclude Include="Emu\Cell\Modules\cellHttpUtil.h" />
     <ClInclude Include="Emu\Cell\Modules\cellJpgEnc.h" />
+    <ClInclude Include="Emu\Cell\lv2\sys_overlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellOskDialog.h" />
     <ClInclude Include="Emu\Cell\Modules\cellVoice.h" />
+    <ClInclude Include="Emu\Cell\Modules\StaticHLE.h" />
     <ClInclude Include="Emu\Cell\PPUAnalyser.h" />
     <ClInclude Include="Emu\Cell\PPUTranslator.h" />
     <ClInclude Include="Emu\CPU\CPUTranslator.h" />

@@ -60,8 +60,7 @@ namespace rsx
 			}
 
 			// Update ctrl registers
-			m_ctrl->get = get;
-			m_internal_get = get;
+			m_ctrl->get.release(m_internal_get = get);
 			m_remaining_commands = 0;
 
 			// Clear memwatch spinner
@@ -167,7 +166,7 @@ namespace rsx
 
 			if (!count)
 			{
-				m_ctrl->get.store(m_internal_get + 4);
+				m_ctrl->get.release(m_internal_get + 4);
 				data.reg = FIFO_NOP;
 				return;
 			}

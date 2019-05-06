@@ -23,15 +23,8 @@
 #include <atomic>
 #include <thread>
 
-const bool s_use_ssse3 =
-#ifdef _MSC_VER
-	utils::has_ssse3();
-#elif __SSSE3__
-	true;
-#else
-	false;
-#define _mm_shuffle_epi8
-#endif
+// Verify AVX availability for TSX transactions
+static const bool s_tsx_avx = utils::has_avx();
 
 #ifdef _MSC_VER
 bool operator ==(const u128& lhs, const u128& rhs)
@@ -193,6 +186,36 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	Label fall = c.newLabel();
 	Label fail = c.newLabel();
 	Label retry = c.newLabel();
+	Label _ret = c.newLabel();
+
+	if (utils::has_avx() && !s_tsx_avx)
+	{
+		c.vzeroupper();
+	}
+
+	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
+#ifdef _WIN32
+	if (s_tsx_avx)
+	{
+		c.sub(x86::rsp, 40);
+		c.vmovups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+		c.vmovups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
+	}
+	else
+	{
+		c.sub(x86::rsp, 168);
+		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
+		c.movups(x86::oword_ptr(x86::rsp, 32), x86::xmm8);
+		c.movups(x86::oword_ptr(x86::rsp, 48), x86::xmm9);
+		c.movups(x86::oword_ptr(x86::rsp, 64), x86::xmm10);
+		c.movups(x86::oword_ptr(x86::rsp, 80), x86::xmm11);
+		c.movups(x86::oword_ptr(x86::rsp, 96), x86::xmm12);
+		c.movups(x86::oword_ptr(x86::rsp, 112), x86::xmm13);
+		c.movups(x86::oword_ptr(x86::rsp, 128), x86::xmm14);
+		c.movups(x86::oword_ptr(x86::rsp, 144), x86::xmm15);
+	}
+#endif
 
 	// Prepare registers
 	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
@@ -204,52 +227,99 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.mov(args[0].r32(), 3);
 
-	// Prepare data (Windows has only 6 volatile vector registers)
-	c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
-	c.vmovups(x86::ymm1, x86::yword_ptr(args[2], 32));
-	c.vmovups(x86::ymm2, x86::yword_ptr(args[2], 64));
-	c.vmovups(x86::ymm3, x86::yword_ptr(args[2], 96));
-#ifdef _WIN32
-	c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
-	c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 96));
-#else
-	c.vmovups(x86::ymm6, x86::yword_ptr(args[3], 0));
-	c.vmovups(x86::ymm7, x86::yword_ptr(args[3], 32));
-	c.vmovups(x86::ymm8, x86::yword_ptr(args[3], 64));
-	c.vmovups(x86::ymm9, x86::yword_ptr(args[3], 96));
-#endif
+	// Prepare data
+	if (s_tsx_avx)
+	{
+		c.vmovups(x86::ymm0, x86::yword_ptr(args[2], 0));
+		c.vmovups(x86::ymm1, x86::yword_ptr(args[2], 32));
+		c.vmovups(x86::ymm2, x86::yword_ptr(args[2], 64));
+		c.vmovups(x86::ymm3, x86::yword_ptr(args[2], 96));
+		c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
+		c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 32));
+		c.vmovups(x86::ymm6, x86::yword_ptr(args[3], 64));
+		c.vmovups(x86::ymm7, x86::yword_ptr(args[3], 96));
+	}
+	else
+	{
+		c.movaps(x86::xmm0, x86::oword_ptr(args[2], 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(args[2], 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(args[2], 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(args[2], 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(args[2], 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(args[2], 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(args[2], 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(args[2], 112));
+		c.movaps(x86::xmm8, x86::oword_ptr(args[3], 0));
+		c.movaps(x86::xmm9, x86::oword_ptr(args[3], 16));
+		c.movaps(x86::xmm10, x86::oword_ptr(args[3], 32));
+		c.movaps(x86::xmm11, x86::oword_ptr(args[3], 48));
+		c.movaps(x86::xmm12, x86::oword_ptr(args[3], 64));
+		c.movaps(x86::xmm13, x86::oword_ptr(args[3], 80));
+		c.movaps(x86::xmm14, x86::oword_ptr(args[3], 96));
+		c.movaps(x86::xmm15, x86::oword_ptr(args[3], 112));
+	}
 
 	// Begin transaction
 	Label begin = build_transaction_enter(c, fall);
 	c.cmp(x86::qword_ptr(x86::r10), args[1]);
 	c.jne(fail);
-	c.vxorps(x86::ymm0, x86::ymm0, x86::yword_ptr(x86::r11, 0));
-	c.vxorps(x86::ymm1, x86::ymm1, x86::yword_ptr(x86::r11, 32));
-	c.vxorps(x86::ymm2, x86::ymm2, x86::yword_ptr(x86::r11, 64));
-	c.vxorps(x86::ymm3, x86::ymm3, x86::yword_ptr(x86::r11, 96));
-	c.vorps(x86::ymm0, x86::ymm0, x86::ymm1);
-	c.vorps(x86::ymm1, x86::ymm2, x86::ymm3);
-	c.vorps(x86::ymm0, x86::ymm1, x86::ymm0);
-	c.vptest(x86::ymm0, x86::ymm0);
+
+	if (s_tsx_avx)
+	{
+		c.vxorps(x86::ymm0, x86::ymm0, x86::yword_ptr(x86::r11, 0));
+		c.vxorps(x86::ymm1, x86::ymm1, x86::yword_ptr(x86::r11, 32));
+		c.vxorps(x86::ymm2, x86::ymm2, x86::yword_ptr(x86::r11, 64));
+		c.vxorps(x86::ymm3, x86::ymm3, x86::yword_ptr(x86::r11, 96));
+		c.vorps(x86::ymm0, x86::ymm0, x86::ymm1);
+		c.vorps(x86::ymm1, x86::ymm2, x86::ymm3);
+		c.vorps(x86::ymm0, x86::ymm1, x86::ymm0);
+		c.vptest(x86::ymm0, x86::ymm0);
+	}
+	else
+	{
+		c.xorps(x86::xmm0, x86::oword_ptr(x86::r11, 0));
+		c.xorps(x86::xmm1, x86::oword_ptr(x86::r11, 16));
+		c.xorps(x86::xmm2, x86::oword_ptr(x86::r11, 32));
+		c.xorps(x86::xmm3, x86::oword_ptr(x86::r11, 48));
+		c.xorps(x86::xmm4, x86::oword_ptr(x86::r11, 64));
+		c.xorps(x86::xmm5, x86::oword_ptr(x86::r11, 80));
+		c.xorps(x86::xmm6, x86::oword_ptr(x86::r11, 96));
+		c.xorps(x86::xmm7, x86::oword_ptr(x86::r11, 112));
+		c.orps(x86::xmm0, x86::xmm1);
+		c.orps(x86::xmm2, x86::xmm3);
+		c.orps(x86::xmm4, x86::xmm5);
+		c.orps(x86::xmm6, x86::xmm7);
+		c.orps(x86::xmm0, x86::xmm2);
+		c.orps(x86::xmm4, x86::xmm6);
+		c.orps(x86::xmm0, x86::xmm4);
+		c.ptest(x86::xmm0, x86::xmm0);
+	}
+
 	c.jnz(fail);
-#ifdef _WIN32
-	c.vmovups(x86::ymm2, x86::yword_ptr(args[3], 32));
-	c.vmovups(x86::ymm3, x86::yword_ptr(args[3], 64));
-	c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm4);
-	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm2);
-	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm3);
-	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm5);
-#else
-	c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm6);
-	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm7);
-	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm8);
-	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm9);
-#endif
+
+	if (s_tsx_avx)
+	{
+		c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm4);
+		c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm5);
+		c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm6);
+		c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm7);
+	}
+	else
+	{
+		c.movaps(x86::oword_ptr(x86::r11, 0), x86::xmm8);
+		c.movaps(x86::oword_ptr(x86::r11, 16), x86::xmm9);
+		c.movaps(x86::oword_ptr(x86::r11, 32), x86::xmm10);
+		c.movaps(x86::oword_ptr(x86::r11, 48), x86::xmm11);
+		c.movaps(x86::oword_ptr(x86::r11, 64), x86::xmm12);
+		c.movaps(x86::oword_ptr(x86::r11, 80), x86::xmm13);
+		c.movaps(x86::oword_ptr(x86::r11, 96), x86::xmm14);
+		c.movaps(x86::oword_ptr(x86::r11, 112), x86::xmm15);
+	}
+
 	c.add(x86::qword_ptr(x86::r10), 2);
 	c.xend();
-	c.vzeroupper();
 	c.mov(x86::eax, 1);
-	c.ret();
+	c.jmp(_ret);
 
 	// Touch memory after transaction failure
 	c.bind(fall);
@@ -257,20 +327,52 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.js(fail);
 	c.sub(args[0].r32(), 1);
 	c.jz(retry);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
-#ifdef _WIN32
-	c.vmovups(x86::ymm4, x86::yword_ptr(args[3], 0));
-	c.vmovups(x86::ymm5, x86::yword_ptr(args[3], 96));
-#endif
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.jmp(begin);
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
 	c.xor_(x86::eax, x86::eax);
-	c.ret();
+	c.jmp(_ret);
 	c.bind(retry);
 	c.mov(x86::eax, 2);
+	c.jmp(_ret);
+
+	c.bind(_ret);
+
+#ifdef _WIN32
+	if (s_tsx_avx)
+	{
+		c.vmovups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+		c.vmovups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
+		c.add(x86::rsp, 40);
+	}
+	else
+	{
+		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
+		c.movups(x86::xmm8, x86::oword_ptr(x86::rsp, 32));
+		c.movups(x86::xmm9, x86::oword_ptr(x86::rsp, 48));
+		c.movups(x86::xmm10, x86::oword_ptr(x86::rsp, 64));
+		c.movups(x86::xmm11, x86::oword_ptr(x86::rsp, 80));
+		c.movups(x86::xmm12, x86::oword_ptr(x86::rsp, 96));
+		c.movups(x86::xmm13, x86::oword_ptr(x86::rsp, 112));
+		c.movups(x86::xmm14, x86::oword_ptr(x86::rsp, 128));
+		c.movups(x86::xmm15, x86::oword_ptr(x86::rsp, 144));
+		c.add(x86::rsp, 168);
+	}
+#endif
+
+	if (s_tsx_avx)
+	{
+		c.vzeroupper();
+	}
+
 	c.ret();
 });
 
@@ -279,6 +381,22 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	using namespace asmjit;
 
 	Label fall = c.newLabel();
+	Label _ret = c.newLabel();
+
+	if (utils::has_avx() && !s_tsx_avx)
+	{
+		c.vzeroupper();
+	}
+
+	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
+#ifdef _WIN32
+	if (!s_tsx_avx)
+	{
+		c.sub(x86::rsp, 40);
+		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
+	}
+#endif
 
 	// Prepare registers
 	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
@@ -293,26 +411,79 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	// Begin transaction
 	Label begin = build_transaction_enter(c, fall);
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.vmovaps(x86::ymm0, x86::yword_ptr(x86::r11, 0));
-	c.vmovaps(x86::ymm1, x86::yword_ptr(x86::r11, 32));
-	c.vmovaps(x86::ymm2, x86::yword_ptr(x86::r11, 64));
-	c.vmovaps(x86::ymm3, x86::yword_ptr(x86::r11, 96));
+
+	if (s_tsx_avx)
+	{
+		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::r11, 0));
+		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::r11, 32));
+		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::r11, 64));
+		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::r11, 96));
+	}
+	else
+	{
+		c.movaps(x86::xmm0, x86::oword_ptr(x86::r11, 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(x86::r11, 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(x86::r11, 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(x86::r11, 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(x86::r11, 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(x86::r11, 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(x86::r11, 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(x86::r11, 112));
+	}
+
 	c.xend();
-	c.vmovups(x86::yword_ptr(args[1], 0), x86::ymm0);
-	c.vmovups(x86::yword_ptr(args[1], 32), x86::ymm1);
-	c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
-	c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
-	c.vzeroupper();
-	c.ret();
+
+	if (s_tsx_avx)
+	{
+		c.vmovups(x86::yword_ptr(args[1], 0), x86::ymm0);
+		c.vmovups(x86::yword_ptr(args[1], 32), x86::ymm1);
+		c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
+		c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
+	}
+	else
+	{
+		c.movaps(x86::oword_ptr(args[1], 0), x86::xmm0);
+		c.movaps(x86::oword_ptr(args[1], 16), x86::xmm1);
+		c.movaps(x86::oword_ptr(args[1], 32), x86::xmm2);
+		c.movaps(x86::oword_ptr(args[1], 48), x86::xmm3);
+		c.movaps(x86::oword_ptr(args[1], 64), x86::xmm4);
+		c.movaps(x86::oword_ptr(args[1], 80), x86::xmm5);
+		c.movaps(x86::oword_ptr(args[1], 96), x86::xmm6);
+		c.movaps(x86::oword_ptr(args[1], 112), x86::xmm7);
+	}
+
+	c.jmp(_ret);
 
 	// Touch memory after transaction failure
 	c.bind(fall);
 	c.pause();
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.mov(x86::rax, x86::qword_ptr(x86::r11));
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.sub(args[0], 1);
 	c.jnz(begin);
 	c.mov(x86::eax, 1);
+	c.jmp(_ret);
+
+	c.bind(_ret);
+
+#ifdef _WIN32
+	if (!s_tsx_avx)
+	{
+		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
+		c.add(x86::rsp, 40);
+	}
+#endif
+
+	if (s_tsx_avx)
+	{
+		c.vzeroupper();
+	}
+
 	c.ret();
 });
 
@@ -321,6 +492,22 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	using namespace asmjit;
 
 	Label fall = c.newLabel();
+	Label _ret = c.newLabel();
+
+	if (utils::has_avx() && !s_tsx_avx)
+	{
+		c.vzeroupper();
+	}
+
+	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
+#ifdef _WIN32
+	if (!s_tsx_avx)
+	{
+		c.sub(x86::rsp, 40);
+		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
+	}
+#endif
 
 	// Prepare registers
 	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
@@ -333,31 +520,83 @@ const auto spu_putlluc_tx = build_function_asm<bool(*)(u32 raddr, const void* rd
 	c.mov(args[0].r32(), 2);
 
 	// Prepare data
-	c.vmovups(x86::ymm0, x86::yword_ptr(args[1], 0));
-	c.vmovups(x86::ymm1, x86::yword_ptr(args[1], 32));
-	c.vmovups(x86::ymm2, x86::yword_ptr(args[1], 64));
-	c.vmovups(x86::ymm3, x86::yword_ptr(args[1], 96));
+	if (s_tsx_avx)
+	{
+		c.vmovups(x86::ymm0, x86::yword_ptr(args[1], 0));
+		c.vmovups(x86::ymm1, x86::yword_ptr(args[1], 32));
+		c.vmovups(x86::ymm2, x86::yword_ptr(args[1], 64));
+		c.vmovups(x86::ymm3, x86::yword_ptr(args[1], 96));
+	}
+	else
+	{
+		c.movaps(x86::xmm0, x86::oword_ptr(args[1], 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(args[1], 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(args[1], 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(args[1], 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(args[1], 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(args[1], 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(args[1], 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(args[1], 112));
+	}
 
 	// Begin transaction
 	Label begin = build_transaction_enter(c, fall);
-	c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm0);
-	c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm1);
-	c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm2);
-	c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm3);
+
+	if (s_tsx_avx)
+	{
+		c.vmovaps(x86::yword_ptr(x86::r11, 0), x86::ymm0);
+		c.vmovaps(x86::yword_ptr(x86::r11, 32), x86::ymm1);
+		c.vmovaps(x86::yword_ptr(x86::r11, 64), x86::ymm2);
+		c.vmovaps(x86::yword_ptr(x86::r11, 96), x86::ymm3);
+	}
+	else
+	{
+		c.movaps(x86::oword_ptr(x86::r11, 0), x86::xmm0);
+		c.movaps(x86::oword_ptr(x86::r11, 16), x86::xmm1);
+		c.movaps(x86::oword_ptr(x86::r11, 32), x86::xmm2);
+		c.movaps(x86::oword_ptr(x86::r11, 48), x86::xmm3);
+		c.movaps(x86::oword_ptr(x86::r11, 64), x86::xmm4);
+		c.movaps(x86::oword_ptr(x86::r11, 80), x86::xmm5);
+		c.movaps(x86::oword_ptr(x86::r11, 96), x86::xmm6);
+		c.movaps(x86::oword_ptr(x86::r11, 112), x86::xmm7);
+	}
+
 	c.add(x86::qword_ptr(x86::r10), 2);
 	c.xend();
 	c.vzeroupper();
 	c.mov(x86::eax, 1);
-	c.ret();
+	c.jmp(_ret);
 
 	// Touch memory after transaction failure
 	c.bind(fall);
 	c.pause();
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::r11), 0);
 	c.lock().add(x86::qword_ptr(x86::r10), 0);
+	c.xor_(x86::r11, 0xf80);
+	c.xor_(x86::r10, 0xf80);
 	c.sub(args[0], 1);
 	c.jnz(begin);
 	c.xor_(x86::eax, x86::eax);
+	c.jmp(_ret);
+
+	c.bind(_ret);
+
+#ifdef _WIN32
+	if (!s_tsx_avx)
+	{
+		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
+		c.add(x86::rsp, 40);
+	}
+#endif
+
+	if (s_tsx_avx)
+	{
+		c.vzeroupper();
+	}
+
 	c.ret();
 });
 
@@ -428,6 +667,11 @@ std::string spu_thread::get_name() const
 std::string spu_thread::dump() const
 {
 	std::string ret = cpu_thread::dump();
+
+	if (group)
+	{
+		fmt::append(ret, "\nGroup ID: 0x%x", group->id);
+	}
 
 	fmt::append(ret, "\nBlock Weight: %u (Retreats: %u)", block_counter, block_failure);
 	fmt::append(ret, "\n[%s]", ch_mfc_cmd);
@@ -531,6 +775,7 @@ void spu_thread::cpu_stop()
 					// Send exit status directly to the joining thread
 					ppu->gpr[4] = group->join_state;
 					ppu->gpr[5] = group->exit_status;
+					group->join_state.release(0);
 				}
 			}
 
@@ -567,13 +812,48 @@ void spu_thread::cpu_task()
 
 	if (jit)
 	{
-		while (LIKELY(!state || !check_state()))
+		// Register SPU runtime user
+		spu_runtime::passive_lock _passive_lock(jit->get_runtime());
+
+		while (true)
 		{
+			if (UNLIKELY(state))
+			{
+				if (check_state())
+				{
+					if (state & cpu_flag::jit_return)
+					{
+						// Handle jit_return as a special case
+						jit->get_runtime().handle_return(this);
+						continue;
+					}
+
+					break;
+				}
+			}
+
 			spu_runtime::g_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
 		}
 
 		// Print some stats
 		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
+		cpu_stop();
+		return;
+	}
+
+	if (spu_runtime::g_interpreter)
+	{
+		while (true)
+		{
+			if (UNLIKELY(state))
+			{
+				if (check_state())
+					break;
+			}
+
+			spu_runtime::g_interpreter(*this, vm::_ptr<u8>(offset), nullptr);
+		}
+
 		cpu_stop();
 		return;
 	}
@@ -586,11 +866,6 @@ void spu_thread::cpu_task()
 
 	// LS pointer
 	const auto base = vm::_ptr<const u8>(offset);
-	const auto bswap4 = _mm_set_epi8(12, 13, 14, 15, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3);
-
-	v128 _op;
-	using func_t = decltype(&spu_interpreter::UNK);
-	func_t func0, func1, func2, func3, func4, func5;
 
 	while (true)
 	{
@@ -598,62 +873,11 @@ void spu_thread::cpu_task()
 		{
 			if (check_state())
 				break;
-
-			// Decode single instruction (may be step)
-			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
-			if (table[spu_decode(op)](*this, {op})) { pc += 4; }
-			continue;
 		}
 
-		if (pc % 16 || !s_use_ssse3)
-		{
-			// Unaligned
-			const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
-			if (table[spu_decode(op)](*this, {op})) { pc += 4; }
-			continue;
-		}
-
-		// Reinitialize
-		_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + pc)), bswap4);
-		func0 = table[spu_decode(_op._u32[0])];
-		func1 = table[spu_decode(_op._u32[1])];
-		func2 = table[spu_decode(_op._u32[2])];
-		func3 = table[spu_decode(_op._u32[3])];
-
-		while (LIKELY(func0(*this, {_op._u32[0]})))
-		{
+		const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
+		if (table[spu_decode(op)](*this, {op}))
 			pc += 4;
-			if (LIKELY(func1(*this, {_op._u32[1]})))
-			{
-				pc += 4;
-				u32 op2 = _op._u32[2];
-				u32 op3 = _op._u32[3];
-				_op.vi =  _mm_shuffle_epi8(_mm_load_si128(reinterpret_cast<const __m128i*>(base + pc + 8)), bswap4);
-				func0 = table[spu_decode(_op._u32[0])];
-				func1 = table[spu_decode(_op._u32[1])];
-				func4 = table[spu_decode(_op._u32[2])];
-				func5 = table[spu_decode(_op._u32[3])];
-				if (LIKELY(func2(*this, {op2})))
-				{
-					pc += 4;
-					if (LIKELY(func3(*this, {op3})))
-					{
-						pc += 4;
-						func2 = func4;
-						func3 = func5;
-
-						if (UNLIKELY(state))
-						{
-							break;
-						}
-						continue;
-					}
-					break;
-				}
-				break;
-			}
-			break;
-		}
 	}
 
 	cpu_stop();

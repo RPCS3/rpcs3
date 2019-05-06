@@ -361,19 +361,31 @@ s32 cellSysmoduleFetchImage()
 	return CELL_OK;
 }
 
-s32 cellSysmodule_B498BF77()
+s32 cellSysmoduleUnloadModuleInternal()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmodule_D9B8C0EE()
+s32 cellSysmoduleLoadModuleInternal()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmodule_1A267F98()
+s32 cellSysmoduleUnloadModuleEx()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
+s32 cellSysmoduleLoadModuleEx()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
+s32 cellSysmoduleIsLoadedEx()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
@@ -389,7 +401,9 @@ DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 	REG_FUNC(cellSysmodule, cellSysmoduleIsLoaded);
 	REG_FUNC(cellSysmodule, cellSysmoduleGetImagesize);
 	REG_FUNC(cellSysmodule, cellSysmoduleFetchImage);
-	REG_FNID(cellSysmodule, 0xB498BF77, cellSysmodule_B498BF77);
-	REG_FNID(cellSysmodule, 0xD9B8C0EE, cellSysmodule_D9B8C0EE);
-	REG_FNID(cellSysmodule, 0x1A267F98, cellSysmodule_1A267F98);
+	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleInternal);
+	REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleInternal);
+	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleEx);
+	REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleEx);
+	REG_FUNC(cellSysmodule, cellSysmoduleIsLoadedEx);
 });

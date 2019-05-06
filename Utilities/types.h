@@ -20,6 +20,10 @@
 #define IS_LE_MACHINE 1
 #define IS_BE_MACHINE 0
 
+#ifndef __has_builtin
+	#define __has_builtin(x) 0
+#endif
+
 #ifdef _MSC_VER
 
 #define ASSUME(...) __assume(__VA_ARGS__) // MSVC __assume ignores side-effects

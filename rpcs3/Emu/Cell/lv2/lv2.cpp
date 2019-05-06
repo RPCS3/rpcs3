@@ -15,6 +15,7 @@
 #include "sys_memory.h"
 #include "sys_mmapper.h"
 #include "sys_net.h"
+#include "sys_overlay.h"
 #include "sys_ppu_thread.h"
 #include "sys_process.h"
 #include "sys_prx.h"
@@ -176,7 +177,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_semaphore_get_value),                     //114 (0x072)
 	BIND_FUNC(_sys_lwcond_signal),                          //115 (0x073)
 	BIND_FUNC(_sys_lwcond_signal_all),                      //116 (0x074)
-	null_func,//BIND_FUNC(sys_semaphore_...)                //117 (0x075) // internal, used by sys_lwmutex_unlock
+	BIND_FUNC(_sys_lwmutex_unlock2),                        //117 (0x075)
 	BIND_FUNC(sys_event_flag_clear),                        //118 (0x076)
 	null_func,//BIND_FUNC(sys_time_get_rtc)                 //119 (0x077)  ROOT
 	BIND_FUNC(sys_rwlock_create),                           //120 (0x078)
@@ -257,8 +258,8 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	uns_func,                                               //195 (0x0C3)  UNS
 	BIND_FUNC(sys_raw_spu_set_spu_cfg),                     //196 (0x0C4)
 	BIND_FUNC(sys_raw_spu_get_spu_cfg),                     //197 (0x0C5)
-	null_func,//BIND_FUNC(sys_spu_thread_recover_page_fault)//198 (0x0C6)
-	null_func,//BIND_FUNC(sys_raw_spu_recover_page_fault)   //199 (0x0C7)
+	BIND_FUNC(sys_spu_thread_recover_page_fault),           //198 (0x0C6)
+	BIND_FUNC(sys_raw_spu_recover_page_fault),              //199 (0x0C7)
 
 	null_func, null_func, null_func, null_func, null_func,  //204  UNS?
 	null_func, null_func, null_func, null_func, null_func,  //209  UNS?
@@ -422,8 +423,8 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //430-439  UNS
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //440-449  UNS
 
-	null_func,//BIND_FUNC(sys_overlay_load_module)          //450 (0x1C2)
-	null_func,//BIND_FUNC(sys_overlay_unload_module)        //451 (0x1C3)
+	BIND_FUNC(sys_overlay_load_module),                     //450 (0x1C2)
+	BIND_FUNC(sys_overlay_unload_module),                   //451 (0x1C3)
 	null_func,//BIND_FUNC(sys_overlay_get_module_list)      //452 (0x1C4)
 	null_func,//BIND_FUNC(sys_overlay_get_module_info)      //453 (0x1C5)
 	null_func,//BIND_FUNC(sys_overlay_load_module_by_fd)    //454 (0x1C6)

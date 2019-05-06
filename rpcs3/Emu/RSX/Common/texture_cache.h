@@ -131,20 +131,30 @@ namespace rsx
 			bool has_flushables = false;
 		};
 
+		enum surface_transform : u32
+		{
+			identity = 0,
+			argb_to_bgra = 1
+		};
+
 		struct copy_region_descriptor
 		{
 			image_resource_type src;
+			surface_transform xform;
 			u16 src_x;
 			u16 src_y;
 			u16 dst_x;
 			u16 dst_y;
 			u16 dst_z;
-			u16 w;
-			u16 h;
+			u16 src_w;
+			u16 src_h;
+			u16 dst_w;
+			u16 dst_h;
 		};
 
 		enum deferred_request_command : u32
 		{
+			nop = 0,
 			copy_image_static,
 			copy_image_dynamic,
 			cubemap_gather,
@@ -160,7 +170,7 @@ namespace rsx
 			image_resource_type external_handle = 0;
 			std::vector<copy_region_descriptor> sections_to_copy;
 			texture_channel_remap_t remap;
-			deferred_request_command op;
+			deferred_request_command op = deferred_request_command::nop;
 			u32 base_address = 0;
 			u32 gcm_format = 0;
 			u16 x = 0;
@@ -168,6 +178,7 @@ namespace rsx
 			u16 width = 0;
 			u16 height = 0;
 			u16 depth = 1;
+			bool do_not_cache = false;
 
 			deferred_subresource()
 			{}
@@ -226,6 +237,58 @@ namespace rsx
 				image_type = type;
 			}
 
+			void simplify()
+			{
+				// Optimizations in the straightforward methods copy_image_static and copy_image_dynamic make them preferred over the atlas method
+				if (external_subresource_desc.op == deferred_request_command::atlas_gather &&
+					external_subresource_desc.sections_to_copy.size() == 1)
+				{
+					// Check if the subresource fills the target, if so, change the command to copy_image_static
+					const auto &cpy = external_subresource_desc.sections_to_copy.front();
+					if (cpy.dst_x == 0 && cpy.dst_y == 0 &&
+						cpy.dst_w == external_subresource_desc.width && cpy.dst_h == external_subresource_desc.height &&
+						cpy.src_w == cpy.dst_w && cpy.src_h == cpy.dst_h)
+					{
+						external_subresource_desc.external_handle = cpy.src;
+						external_subresource_desc.x = cpy.src_x;
+						external_subresource_desc.y = cpy.src_y;
+						external_subresource_desc.op = deferred_request_command::copy_image_static;
+					}
+				}
+			}
+
+			bool atlas_covers_target_area() const
+			{
+				if (external_subresource_desc.op != deferred_request_command::atlas_gather)
+					return true;
+
+				u16 min_x = external_subresource_desc.width, min_y = external_subresource_desc.height,
+					max_x = 0, max_y = 0;
+
+				// Require at least 50% coverage
+				const u32 target_area = (min_x * min_y) / 2;
+
+				for (const auto &section : external_subresource_desc.sections_to_copy)
+				{
+					if (section.dst_x < min_x) min_x = section.dst_x;
+					if (section.dst_y < min_y) min_y = section.dst_y;
+
+					const auto _u = section.dst_x + section.dst_w;
+					const auto _v = section.dst_y + section.dst_h;
+					if (_u > max_x) max_x = _u;
+					if (_v > max_y) max_y = _v;
+
+					if (const auto _w = max_x - min_x, _h = max_y - min_y;
+						u32(_w * _h) >= target_area)
+					{
+						// Target area mostly covered, return success
+						return true;
+					}
+				}
+
+				return false;
+			}
+
 			u32 encoded_component_map() const override
 			{
 				if (image_handle)
@@ -234,6 +297,11 @@ namespace rsx
 				}
 
 				return 0;
+			}
+
+			bool validate() const
+			{
+				return (image_handle || external_subresource_desc.op != deferred_request_command::nop);
 			}
 		};
 
@@ -297,6 +365,8 @@ namespace rsx
 		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
+		virtual void prepare_for_dma_transfers(commandbuffer_type&) = 0;
+		virtual void cleanup_after_dma_transfers(commandbuffer_type&) = 0;
 
 	public:
 		virtual void destroy() = 0;
@@ -311,7 +381,7 @@ namespace rsx
 		 */
 		inline void update_cache_tag()
 		{
-			m_cache_update_tag++;
+			m_cache_update_tag = rsx::get_shared_tag();
 		}
 
 		template <typename... Args>
@@ -330,13 +400,13 @@ namespace rsx
 		template <typename... Args>
 		void err_once(const char* fmt, const Args&... params)
 		{
-			logs::RSX.error(fmt, params...);
+			emit_once(true, fmt, params...);
 		}
 
 		template <typename... Args>
 		void warn_once(const char* fmt, const Args&... params)
 		{
-			logs::RSX.warning(fmt, params...);
+			emit_once(false, fmt, params...);
 		}
 
 		/**
@@ -391,19 +461,40 @@ namespace rsx
 				});
 			}
 
+			rsx::simple_array<section_storage_type*> sections_to_transfer;
 			for (auto &surface : data.sections_to_flush)
 			{
-				if (surface->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
+				if (!surface->is_synchronized())
+				{
+					sections_to_transfer.push_back(surface);
+				}
+				else if (surface->get_memory_read_flags() == rsx::memory_read_flags::flush_always)
 				{
 					// This region is set to always read from itself (unavoidable hard sync)
 					const auto ROP_timestamp = rsx::get_current_renderer()->ROP_sync_timestamp;
-					if (surface->is_synchronized() && ROP_timestamp > surface->get_sync_timestamp())
+					if (ROP_timestamp > surface->get_sync_timestamp())
 					{
-						surface->copy_texture(cmd, true, std::forward<Args>(extras)...);
+						sections_to_transfer.push_back(surface);
 					}
 				}
+			}
 
-				surface->flush(cmd, std::forward<Args>(extras)...);
+			if (!sections_to_transfer.empty())
+			{
+				// Batch all hard faults together
+				prepare_for_dma_transfers(cmd);
+
+				for (auto &surface : sections_to_transfer)
+				{
+					surface->copy_texture(cmd, true, std::forward<Args>(extras)...);
+				}
+
+				cleanup_after_dma_transfers(cmd);
+			}
+
+			for (auto &surface : data.sections_to_flush)
+			{
+				surface->flush();
 
 				// Exclude this region when flushing other sections that should not trample it
 				// If we overlap an excluded RO, set it as dirty
@@ -500,7 +591,7 @@ namespace rsx
 
 					// Sanity checks
 					AUDIT(exclusion_range.is_page_range());
-					AUDIT(data.cause.is_read() && !excluded->is_flushable() || data.cause == invalidation_cause::superseded_by_fbo || !exclusion_range.overlaps(data.fault_range));
+					AUDIT(data.cause.is_read() && !excluded->is_flushable() || data.cause.skip_fbos() || !exclusion_range.overlaps(data.fault_range));
 
 					// Apply exclusion
 					ranges_to_unprotect.exclude(exclusion_range);
@@ -685,6 +776,8 @@ namespace rsx
 			// Fast code-path for keeping the fault range protection when not flushing anything
 			if (cause.keep_fault_range_protection() && cause.skip_flush() && !trampled_set.sections.empty())
 			{
+				verify(HERE), cause != invalidation_cause::committed_as_fbo;
+
 				// We discard all sections fully inside fault_range
 				for (auto &obj : trampled_set.sections)
 				{
@@ -757,7 +850,8 @@ namespace rsx
 						// Unsynchronized sections (or any flushable when skipping flushes) that do not overlap the fault range directly can also be ignored
 						(invalidation_ignore_unsynchronized && tex.is_flushable() && (cause.skip_flush() || !tex.is_synchronized()) && !overlaps_fault_range) ||
 						// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
-						(overlaps_fault_range && cause == invalidation_cause::superseded_by_fbo && tex.get_context() == texture_upload_context::framebuffer_storage && tex.get_section_base() != fault_range_in.start)
+						// If region is committed as fbo, all non-fbo data is removed but all fbos in the region must be preserved if possible
+						(overlaps_fault_range && tex.get_context() == texture_upload_context::framebuffer_storage && cause.skip_fbos() && (tex.get_section_base() != fault_range_in.start || cause == invalidation_cause::committed_as_fbo))
 					   )
 					{
 						// False positive
@@ -839,7 +933,7 @@ namespace rsx
 				else
 				{
 					// This is a read and all overlapping sections were RO and were excluded (except for cause == superseded_by_fbo)
-					AUDIT(cause == invalidation_cause::superseded_by_fbo || cause.is_read() && !result.sections_to_exclude.empty());
+					AUDIT(cause.skip_fbos() || cause.is_read() && !result.sections_to_exclude.empty());
 
 					// We did not handle this violation
 					result.clear_sections();
@@ -858,17 +952,58 @@ namespace rsx
 		}
 
 	protected:
-		inline bool is_hw_blit_engine_compatible(u32 format) const
+		inline bool is_gcm_depth_format(u32 format) const
 		{
 			switch (format)
 			{
-			case CELL_GCM_TEXTURE_A8R8G8B8:
-			case CELL_GCM_TEXTURE_R5G6B5:
 			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 			case CELL_GCM_TEXTURE_DEPTH24_D8:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 				return true;
 			default:
 				return false;
+			}
+		}
+
+		inline u32 get_compatible_depth_format(u32 gcm_format) const
+		{
+			switch (gcm_format)
+			{
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+			case CELL_GCM_TEXTURE_A8R8G8B8:
+				return CELL_GCM_TEXTURE_DEPTH24_D8;
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			case CELL_GCM_TEXTURE_X16:
+			//case CELL_GCM_TEXTURE_A4R4G4B4:
+			//case CELL_GCM_TEXTURE_G8B8:
+			//case CELL_GCM_TEXTURE_A1R5G5B5:
+			//case CELL_GCM_TEXTURE_R5G5B5A1:
+			//case CELL_GCM_TEXTURE_R5G6B5:
+			//case CELL_GCM_TEXTURE_R6G5B5:
+				return CELL_GCM_TEXTURE_DEPTH16;
+			}
+
+			LOG_ERROR(RSX, "Unsupported depth conversion (0x%X)", gcm_format);
+			return gcm_format;
+		}
+
+		inline bool is_compressed_gcm_format(u32 format)
+		{
+			switch (format)
+			{
+			default:
+				return false;
+			case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+			case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+			case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+			case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+			case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+			case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+			case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+				return true;
 			}
 		}
 
@@ -964,8 +1099,8 @@ namespace rsx
 			reset_frame_statistics();
 		}
 
-
-		std::vector<section_storage_type*> find_texture_from_range(const address_range &test_range)
+		template <bool check_unlocked = false>
+		std::vector<section_storage_type*> find_texture_from_range(const address_range &test_range, u16 required_pitch = 0, u32 context_mask = 0xFF)
 		{
 			std::vector<section_storage_type*> results;
 
@@ -973,23 +1108,39 @@ namespace rsx
 			{
 				auto &tex = *It;
 
-				// TODO ruipin: Removed as a workaround for a bug, will need to be fixed by kd-11
-				//if (tex.get_section_base() > test_range.start)
-				//	continue;
+				if (!tex.is_dirty() && (context_mask & (u32)tex.get_context()))
+				{
+					if constexpr (check_unlocked)
+					{
+						if (!tex.is_locked())
+							continue;
+					}
 
-				if (!tex.is_dirty())
+					if (required_pitch && !rsx::pitch_compatible<false>(&tex, required_pitch, UINT16_MAX))
+					{
+						continue;
+					}
+
 					results.push_back(&tex);
+				}
 			}
 
 			return results;
 		}
 
-		section_storage_type *find_texture_from_dimensions(u32 rsx_address, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
+		template <bool check_unlocked = false>
+		section_storage_type *find_texture_from_dimensions(u32 rsx_address, u32 format, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
 		{
 			auto &block = m_storage.block_for(rsx_address);
 			for (auto &tex : block)
 			{
-				if (tex.matches(rsx_address, width, height, depth, mipmaps) && !tex.is_dirty())
+				if constexpr (check_unlocked)
+				{
+					if (!tex.is_locked())
+						continue;
+				}
+
+				if (!tex.is_dirty() && tex.matches(rsx_address, format, width, height, depth, mipmaps))
 				{
 					return &tex;
 				}
@@ -1101,7 +1252,7 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, std::tuple<FlushArgs...>&& flush_extras, Args&&... extras)
+		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
@@ -1121,10 +1272,7 @@ namespace rsx
 			if (!region.is_locked() || region.get_context() != texture_upload_context::framebuffer_storage)
 			{
 				// Invalidate sections from surface cache occupying same address range
-				std::apply(&texture_cache::invalidate_range_impl_base<FlushArgs...>, std::tuple_cat(
-					std::forward_as_tuple(this, cmd, rsx_range, invalidation_cause::superseded_by_fbo),
-					std::forward<std::tuple<FlushArgs...> >(flush_extras)
-				));
+				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::superseded_by_fbo);
 			}
 
 			if (!region.is_locked() || region.can_be_reused())
@@ -1166,6 +1314,18 @@ namespace rsx
 			// Check that the cache makes sense
 			tex_cache_checker.verify();
 #endif // TEXTURE_CACHE_DEBUG
+		}
+
+		template <typename ...Args>
+		void commit_framebuffer_memory_region(commandbuffer_type& cmd, const address_range &rsx_range, Args&&... extras)
+		{
+			AUDIT(!g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer);
+
+			if (!region_intersects_cache(rsx_range, true))
+				return;
+
+			std::lock_guard lock(m_cache_mutex);
+			invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::committed_as_fbo, std::forward<Args>(extras)...);
 		}
 
 		void set_memory_read_flags(const address_range &memory_range, memory_read_flags flags)
@@ -1347,20 +1507,23 @@ namespace rsx
 
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
 		{
-			const auto found = m_temporary_subresource_cache.equal_range(desc.base_address);
-			for (auto It = found.first; It != found.second; ++It)
+			if (!desc.do_not_cache)
 			{
-				const auto& found_desc = It->second.first;
-				if (found_desc.external_handle != desc.external_handle ||
-					found_desc.op != desc.op ||
-					found_desc.x != desc.x || found_desc.y != desc.y ||
-					found_desc.width != desc.width || found_desc.height != desc.height)
-					continue;
+				const auto found = m_temporary_subresource_cache.equal_range(desc.base_address);
+				for (auto It = found.first; It != found.second; ++It)
+				{
+					const auto& found_desc = It->second.first;
+					if (found_desc.external_handle != desc.external_handle ||
+						found_desc.op != desc.op ||
+						found_desc.x != desc.x || found_desc.y != desc.y ||
+						found_desc.width != desc.width || found_desc.height != desc.height)
+						continue;
 
-				if (desc.op == deferred_request_command::copy_image_dynamic)
-					update_image_contents(cmd, It->second.second, desc.external_handle, desc.width, desc.height);
+					if (desc.op == deferred_request_command::copy_image_dynamic)
+						update_image_contents(cmd, It->second.second, desc.external_handle, desc.width, desc.height);
 
-				return It->second.second;
+					return It->second.second;
+				}
 			}
 
 			image_view_type result = 0;
@@ -1376,7 +1539,15 @@ namespace rsx
 				std::vector<copy_region_descriptor> sections(6);
 				for (u16 n = 0; n < 6; ++n)
 				{
-					sections[n] = { desc.external_handle, 0, (u16)(desc.height * n), 0, 0, n, desc.width, desc.height };
+					sections[n] =
+					{
+						desc.external_handle,
+						surface_transform::identity,
+						0, (u16)(desc.height * n),
+						0, 0, n,
+						desc.width, desc.height,
+						desc.width, desc.height
+					};
 				}
 
 				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, sections, desc.remap);
@@ -1393,7 +1564,15 @@ namespace rsx
 				sections.resize(desc.depth);
 				for (u16 n = 0; n < desc.depth; ++n)
 				{
-					sections[n] = { desc.external_handle, 0, (u16)(desc.height * n), 0, 0, n, desc.width, desc.height };
+					sections[n] =
+					{
+						desc.external_handle,
+						surface_transform::identity,
+						0, (u16)(desc.height * n),
+						0, 0, n,
+						desc.width, desc.height,
+						desc.width, desc.height
+					};
 				}
 
 				result = generate_3d_from_2d_images(cmd, desc.gcm_format, desc.width, desc.height, desc.depth, sections, desc.remap);
@@ -1425,65 +1604,290 @@ namespace rsx
 			return result;
 		}
 
-		void notify_surface_changed(u32 base_address)
+		void notify_surface_changed(const utils::address_range& range)
 		{
-			m_temporary_subresource_cache.erase(base_address);
-		}
-
-		template<typename surface_store_type>
-		std::vector<copy_region_descriptor> gather_texture_slices_from_framebuffers(commandbuffer_type& cmd,
-			u32 texaddr, u16 slice_w, u16 slice_h, u16 pitch, u16 count, u8 bpp, surface_store_type& m_rtts)
-		{
-			std::vector<copy_region_descriptor> surfaces;
-			u32 current_address = texaddr;
-			u32 slice_size = (pitch * slice_h);
-			bool unsafe = false;
-
-			for (u16 slice = 0; slice < count; ++slice)
+			for (auto It = m_temporary_subresource_cache.begin(); It != m_temporary_subresource_cache.end();)
 			{
-				auto overlapping = m_rtts.get_merged_texture_memory_region(current_address, slice_w, slice_h, pitch, bpp);
-				current_address += (pitch * slice_h);
-
-				if (overlapping.empty())
+				if (range.overlaps(It->first))
 				{
-					unsafe = true;
-					surfaces.push_back({});
+					It = m_temporary_subresource_cache.erase(It);
 				}
 				else
 				{
-					for (auto &section : overlapping)
-					{
-						section.surface->read_barrier(cmd);
+					++It;
+				}
+			}
+		}
 
-						surfaces.push_back
-						({
-							section.surface->get_surface(),
-							rsx::apply_resolution_scale(section.src_x, true),
-							rsx::apply_resolution_scale(section.src_y, true),
-							rsx::apply_resolution_scale(section.dst_x, true),
-							rsx::apply_resolution_scale(section.dst_y, true),
-							slice,
-							rsx::apply_resolution_scale(section.width, true),
-							rsx::apply_resolution_scale(section.height, true)
-						});
+		template<typename surface_store_list_type>
+		std::vector<copy_region_descriptor> gather_texture_slices(commandbuffer_type& cmd,
+			const surface_store_list_type& fbos, const std::vector<section_storage_type*>& local,
+			u32 texaddr, u16 slice_w, u16 slice_h, u16 src_padding, u16 pitch, u16 count, u8 bpp, bool is_depth)
+		{
+			// Need to preserve sorting order
+			struct sort_helper
+			{
+				u64 tag;   // Timestamp
+				u32 list;  // List source, 0 = fbo, 1 = local
+				u32 index; // Index in list
+			};
+
+			std::vector<copy_region_descriptor> surfaces;
+			std::vector<sort_helper> sort_list;
+			const u16 src_slice_h = slice_h + src_padding;
+
+			if (!fbos.empty() && !local.empty())
+			{
+				// Generate sorting tree if both resources are available and overlapping
+				sort_list.reserve(fbos.size() + local.size());
+
+				for (u32 index = 0; index < fbos.size(); ++index)
+				{
+					sort_list.push_back({ fbos[index].surface->last_use_tag, 0, index });
+				}
+
+				for (u32 index = 0; index < local.size(); ++index)
+				{
+					if (local[index]->get_context() != rsx::texture_upload_context::blit_engine_dst)
+						continue;
+
+					sort_list.push_back({ local[index]->last_write_tag, 1, index });
+				}
+
+				std::sort(sort_list.begin(), sort_list.end(), [](const auto &a, const auto &b)
+				{
+					return (a.tag < b.tag);
+				});
+			}
+
+			auto add_rtt_resource = [&](auto& section, u16 slice)
+			{
+				if (section.is_depth != is_depth)
+				{
+					// TODO
+					return;
+				}
+
+				const auto slice_begin = (slice * src_slice_h);
+				const auto slice_end = (slice_begin + slice_h);
+
+				const auto section_end = section.dst_y + section.height;
+				if (section.dst_y >= slice_end || section_end <= slice_begin)
+				{
+					// Belongs to a different slice
+					return;
+				}
+
+				section.surface->read_barrier(cmd);
+
+				// How much of this slice to read?
+				int rebased = int(section.dst_y) - slice_begin;
+				const auto src_x = section.src_x;
+				const auto dst_x = section.dst_x;
+				auto src_y = section.src_y;
+				auto dst_y = section.dst_y;
+
+				if (rebased < 0)
+				{
+					const u16 delta = u16(-rebased);
+					src_y += delta;
+					dst_y += delta;
+				}
+
+				verify(HERE), dst_y >= slice_begin;
+				dst_y = (dst_y - slice_begin);
+
+				const auto scale_x = 1.f / get_internal_scaling_x(section.surface);
+				const auto scale_y = 1.f / get_internal_scaling_y(section.surface);
+
+				const auto h = std::min(section_end, slice_end) - section.dst_y;
+				auto src_width = rsx::apply_resolution_scale(section.width, true);
+				auto src_height = rsx::apply_resolution_scale(h, true);
+				auto dst_width = u16(src_width * scale_x);
+				auto dst_height = u16(src_height * scale_y);
+
+				if (scale_x > 1.f)
+				{
+					// Clipping
+					const auto limit_x = dst_x + dst_width;
+					const auto limit_y = dst_x + dst_height;
+
+					if (limit_x > slice_w)
+					{
+						dst_width = (slice_w - dst_x);
+						src_width = u16(dst_width / scale_x);
 					}
+
+					if (limit_y > slice_h)
+					{
+						dst_height = (slice_h - dst_y);
+						src_height = u16(dst_height / scale_y);
+					}
+				}
+
+				surfaces.push_back
+				({
+					section.surface->get_surface(),
+					surface_transform::identity,
+					rsx::apply_resolution_scale(src_x, true),
+					rsx::apply_resolution_scale(src_y, true),
+					rsx::apply_resolution_scale(dst_x, true),
+					rsx::apply_resolution_scale(dst_y, true),
+					slice,
+					src_width, src_height,
+					dst_width, dst_height
+				});
+			};
+
+			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling = true)
+			{
+				if (section->is_depth_texture() != is_depth)
+				{
+					// TODO
+					return;
+				}
+
+				// Intersect this resource with the original one
+				const auto section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
+				const auto normalized_width = (section->get_width() * section_bpp) / bpp;
+				const auto clipped = rsx::intersect_region(address, slice_w, slice_h, bpp,
+					section->get_section_base(), normalized_width, section->get_height(), section_bpp, pitch);
+
+				// Rect intersection test
+				// TODO: Make the intersection code cleaner with proper 2D regions
+				if (std::get<0>(clipped).x >= section->get_width())
+				{
+					// Overlap lies outside the image area!
+					return;
+				}
+
+				const auto slice_begin = u32(slice * src_slice_h);
+				const auto slice_end = u32(slice_begin + slice_h);
+
+				const auto dst_y = std::get<1>(clipped).y;
+				const auto dst_h = std::get<2>(clipped).height;
+
+				const auto section_end = dst_y + dst_h;
+				if (dst_y >= slice_end || section_end <= slice_begin)
+				{
+					// Belongs to a different slice
+					return;
+				}
+
+				const u16 internal_clip_width = u16(std::get<2>(clipped).width * bpp) / section_bpp;
+				if (scaling)
+				{
+					// Since output is upscaled, also upscale on dst
+					surfaces.push_back
+					({
+						section->get_raw_texture(),
+						is_depth ? surface_transform::identity : surface_transform::argb_to_bgra,
+						(u16)std::get<0>(clipped).x,
+						(u16)std::get<0>(clipped).y,
+						rsx::apply_resolution_scale((u16)std::get<1>(clipped).x, true),
+						rsx::apply_resolution_scale((u16)std::get<1>(clipped).y, true),
+						slice,
+						internal_clip_width,
+						(u16)std::get<2>(clipped).height,
+						rsx::apply_resolution_scale(internal_clip_width, true),
+						rsx::apply_resolution_scale((u16)std::get<2>(clipped).height, true),
+					});
+				}
+				else
+				{
+					const auto src_width = internal_clip_width, dst_width = src_width;
+					const auto src_height = (u16)std::get<2>(clipped).height, dst_height = src_height;
+					surfaces.push_back
+					({
+						section->get_raw_texture(),
+						is_depth ? surface_transform::identity : surface_transform::argb_to_bgra,
+						(u16)std::get<0>(clipped).x,
+						(u16)std::get<0>(clipped).y,
+						(u16)std::get<1>(clipped).x,
+						(u16)std::get<1>(clipped).y,
+						0,
+						src_width,
+						src_height,
+						dst_width,
+						dst_height,
+					});
+				}
+			};
+
+			u32 current_address = texaddr;
+			u16 current_src_offset = 0;
+			u16 current_dst_offset = 0;
+			u32 slice_size = (pitch * src_slice_h);
+
+			surfaces.reserve(count);
+			u16 found_slices = 0;
+
+			for (u16 slice = 0; slice < count; ++slice)
+			{
+				auto num_surface = surfaces.size();
+
+				if (LIKELY(local.empty()))
+				{
+					for (auto &section : fbos)
+					{
+						add_rtt_resource(section, slice);
+					}
+				}
+				else if (fbos.empty())
+				{
+					for (auto &section : local)
+					{
+						add_local_resource(section, current_address, slice, false);
+					}
+				}
+				else
+				{
+					for (const auto &e : sort_list)
+					{
+						if (e.list == 0)
+						{
+							add_rtt_resource(fbos[e.index], slice);
+						}
+						else
+						{
+							add_local_resource(local[e.index], current_address, slice);
+						}
+					}
+				}
+
+				current_address += slice_size;
+				if (surfaces.size() != num_surface)
+				{
+					found_slices++;
 				}
 			}
 
-			if (unsafe)
+			if (found_slices < count)
 			{
-				//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
-				LOG_ERROR(RSX, "Could not gather all required slices for cubemap/3d generation");
+				if (found_slices > 0)
+				{
+					//TODO: Gather remaining sides from the texture cache or upload from cpu (too slow?)
+					LOG_ERROR(RSX, "Could not gather all required slices for cubemap/3d generation");
+				}
+				else
+				{
+					LOG_WARNING(RSX, "Could not gather textures into an atlas; using CPU fallback...");
+				}
 			}
 
 			return surfaces;
 		}
 
-		template <typename render_target_type, typename surface_store_type>
-		sampled_image_descriptor process_framebuffer_resource(commandbuffer_type& cmd, render_target_type texptr, u32 texaddr, u32 gcm_format, surface_store_type& m_rtts,
-				u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch, rsx::texture_dimension_extended extended_dimension, bool is_depth, bool is_bound, u32 encoded_remap, const texture_channel_remap_t& decoded_remap)
+		template<typename render_target_type>
+		bool check_framebuffer_resource(commandbuffer_type& cmd, render_target_type texptr,
+			u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch,
+			rsx::texture_dimension_extended extended_dimension)
 		{
-			const u32 format = gcm_format & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
+			if (!rsx::pitch_compatible(texptr, tex_pitch, tex_height))
+			{
+				return false;
+			}
+
 			const auto surface_width = texptr->get_surface_width();
 			const auto surface_height = texptr->get_surface_height();
 
@@ -1491,165 +1895,178 @@ namespace rsx
 			u32 internal_height = tex_height;
 			get_native_dimensions(internal_width, internal_height, texptr);
 
+			switch (extended_dimension)
+			{
+			case rsx::texture_dimension_extended::texture_dimension_1d:
+				return (surface_width >= internal_width);
+			case rsx::texture_dimension_extended::texture_dimension_2d:
+				return (surface_width >= internal_width && surface_height >= internal_height);
+			case rsx::texture_dimension_extended::texture_dimension_3d:
+				return (surface_width >= internal_width && surface_height >= (internal_height * tex_depth));
+			case rsx::texture_dimension_extended::texture_dimension_cubemap:
+				return (surface_width == internal_height && surface_width >= internal_width && surface_height >= (internal_height * 6));
+			}
+
+			return false;
+		}
+
+		template <typename render_target_type>
+		sampled_image_descriptor process_framebuffer_resource_fast(commandbuffer_type& cmd, render_target_type texptr,
+			u32 texaddr, u32 format,
+			u16 tex_width, u16 tex_height, u16 tex_depth,
+			f32 scale_x, f32 scale_y,
+			rsx::texture_dimension_extended extended_dimension,
+			u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
+			bool assume_bound = true)
+		{
 			texptr->read_barrier(cmd);
 
-			if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
-				extended_dimension != rsx::texture_dimension_extended::texture_dimension_1d)
+			const auto surface_width = texptr->get_surface_width();
+			const auto surface_height = texptr->get_surface_height();
+
+			u32 internal_width = tex_width;
+			u32 internal_height = tex_height;
+			get_native_dimensions(internal_width, internal_height, texptr);
+
+			bool is_depth = texptr->is_depth_surface();
+			const bool force_convert = !render_target_format_is_compatible(texptr, format);
+
+			if (const bool gcm_format_is_depth = is_gcm_depth_format(format);
+				gcm_format_is_depth != is_depth)
 			{
-				if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
+				if (force_convert)
 				{
-					const auto scaled_size = rsx::apply_resolution_scale(internal_width, true);
-					if (surface_height == (surface_width * 6))
-					{
-						return{ texptr->get_surface(), deferred_request_command::cubemap_unwrap, texaddr, format, 0, 0,
-								scaled_size, scaled_size, 1,
-								texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
-								rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
-					}
-
-					sampled_image_descriptor desc = { texptr->get_surface(), deferred_request_command::cubemap_gather, texaddr, format, 0, 0,
-							scaled_size, scaled_size, 1,
-							texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
-							rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
-
-					auto bpp = get_format_block_size_in_bytes(format);
-					desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices_from_framebuffers(cmd, texaddr, tex_width, tex_height, tex_pitch, 6, bpp, m_rtts));
-					return desc;
-				}
-				else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && tex_depth > 1)
-				{
-					auto minimum_height = (tex_height * tex_depth);
-					auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
-					auto scaled_h = rsx::apply_resolution_scale(internal_height, true);
-					if (surface_height >= minimum_height && surface_width >= tex_width)
-					{
-						return{ texptr->get_surface(), deferred_request_command::_3d_unwrap, texaddr, format, 0, 0,
-								scaled_w, scaled_h, tex_depth,
-								texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
-								rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
-					}
-
-					sampled_image_descriptor desc = { texptr->get_surface(), deferred_request_command::_3d_gather, texaddr, format, 0, 0,
-						scaled_w, scaled_h, tex_depth,
-						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
-						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
-
-					const auto bpp = get_format_block_size_in_bytes(format);
-					desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices_from_framebuffers(cmd, texaddr, tex_width, tex_height, tex_pitch, tex_depth, bpp, m_rtts));
-					return desc;
-				}
-			}
-
-			const bool unnormalized = (gcm_format & CELL_GCM_TEXTURE_UN) != 0;
-			f32 scale_x = (unnormalized)? (1.f / tex_width) : 1.f;
-			f32 scale_y = (unnormalized)? (1.f / tex_height) : 1.f;
-
-			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
-			{
-				internal_height = 1;
-				scale_y = 0.f;
-			}
-
-			auto bpp = get_format_block_size_in_bytes(format);
-			auto overlapping = m_rtts.get_merged_texture_memory_region(texaddr, tex_width, tex_height, tex_pitch, bpp);
-			bool requires_merging = false;
-
-			AUDIT(!overlapping.empty());
-			if (overlapping.size() > 1)
-			{
-				// The returned values are sorted with oldest first and newest last
-				// This allows newer data to overwrite older memory when merging the list
-				if (overlapping.back().surface == texptr)
-				{
-					// The texture 'proposed' by the previous lookup is the newest one
-					// If it occupies the entire requested region, just use it as-is
-					requires_merging = (internal_width > surface_width || internal_height > surface_height);
+					is_depth = gcm_format_is_depth;
 				}
 				else
 				{
-					requires_merging = true;
+					format = get_compatible_depth_format(format);
 				}
+
+				// Always make sure the conflict is resolved!
+				verify(HERE), is_gcm_depth_format(format) == is_depth;
 			}
 
-			if (requires_merging)
+			if (LIKELY(extended_dimension == rsx::texture_dimension_extended::texture_dimension_2d ||
+				extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d))
 			{
-				const auto w = rsx::apply_resolution_scale(internal_width, true);
-				const auto h = rsx::apply_resolution_scale(internal_height, true);
-
-				sampled_image_descriptor result = { texptr->get_surface(), deferred_request_command::atlas_gather,
-						texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
-						scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
-
-				result.external_subresource_desc.sections_to_copy.reserve(overlapping.size());
-
-				for (auto &section : overlapping)
+				if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 				{
-					section.surface->read_barrier(cmd);
-
-					result.external_subresource_desc.sections_to_copy.push_back
-					({
-						section.surface->get_surface(),
-						rsx::apply_resolution_scale(section.src_x, true),
-						rsx::apply_resolution_scale(section.src_y, true),
-						rsx::apply_resolution_scale(section.dst_x, true),
-						rsx::apply_resolution_scale(section.dst_y, true),
-						0,
-						rsx::apply_resolution_scale(section.width, true),
-						rsx::apply_resolution_scale(section.height, true)
-					});
+					internal_height = 1;
 				}
 
-				return result;
-			}
-
-			bool requires_processing = surface_width > internal_width || surface_height > internal_height;
-			bool update_subresource_cache = false;
-			if (!requires_processing)
-			{
-				//NOTE: The scale also accounts for sampling outside the RTT region, e.g render to one quadrant but send whole texture for sampling
-				//In these cases, internal dimensions will exceed available surface dimensions. Account for the missing information using scaling (missing data will result in border color)
-				//TODO: Proper gather and stitching without performance loss
-				if (internal_width > surface_width)
-					scale_x *= ((f32)internal_width / surface_width);
-
-				if (internal_height > surface_height)
-					scale_y *= ((f32)internal_height / surface_height);
-
-				if (is_bound)
+				if ((assume_bound && g_cfg.video.strict_rendering_mode) ||
+					internal_width < surface_width ||
+					internal_height < surface_height ||
+					force_convert)
 				{
-					if (g_cfg.video.strict_rendering_mode)
-					{
-						LOG_TRACE(RSX, "Attempting to sample a currently bound %s target @ 0x%x", is_depth? "depth" : "color", texaddr);
-						requires_processing = true;
-						update_subresource_cache = true;
-					}
-					else
-					{
-						// Issue a texture barrier to ensure previous writes are visible
-						insert_texture_barrier(cmd, texptr);
-					}
+					const auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
+					const auto scaled_h = rsx::apply_resolution_scale(internal_height, true);
+
+					const auto command = assume_bound ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
+					return { texptr->get_surface(), command, texaddr, format, 0, 0, scaled_w, scaled_h, 1,
+							texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
+							extended_dimension, decoded_remap };
 				}
-			}
 
-			if (!requires_processing)
-			{
-				//Check if we need to do anything about the formats
-				requires_processing = !render_target_format_is_compatible(texptr, format);
-			}
+				if (assume_bound)
+				{
+					insert_texture_barrier(cmd, texptr);
+				}
 
-			if (requires_processing)
-			{
-				const auto w = rsx::apply_resolution_scale(std::min<u16>(internal_width, surface_width), true);
-				const auto h = rsx::apply_resolution_scale(std::min<u16>(internal_height, surface_height), true);
-
-				auto command = update_subresource_cache ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
-				return { texptr->get_surface(), command, texaddr, format, 0, 0, w, h, 1,
-						texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
-						rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
-			}
-
-			return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
+				return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
 					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
+			}
+
+			const auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
+			const auto scaled_h = rsx::apply_resolution_scale(internal_height, true);
+
+			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
+			{
+				return{ texptr->get_surface(), deferred_request_command::_3d_unwrap, texaddr, format, 0, 0,
+						scaled_w, scaled_h, tex_depth,
+						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
+			}
+
+			verify(HERE), extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap;
+			return{ texptr->get_surface(), deferred_request_command::cubemap_unwrap, texaddr, format, 0, 0,
+					scaled_w, scaled_h, 1,
+					texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
+		}
+
+		template <typename surface_store_list_type>
+		sampled_image_descriptor merge_cache_resources(commandbuffer_type& cmd, const surface_store_list_type& fbos, const std::vector<section_storage_type*>& local,
+				u32 texaddr, u32 format,
+				u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch, u16 slice_h,
+				f32 scale_x, f32 scale_y,
+				rsx::texture_dimension_extended extended_dimension,
+				u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
+				int select_hint = -1)
+		{
+			verify(HERE), (select_hint & 0x1) == select_hint;
+
+			bool is_depth;
+			if (is_depth = (select_hint == 0) ? fbos.back().is_depth : local.back()->is_depth_texture();
+				is_depth)
+			{
+				if (const auto suggested_format = get_compatible_depth_format(format);
+					!is_gcm_depth_format(suggested_format))
+				{
+					// Failed!
+					is_depth = false;
+				}
+				else
+				{
+					format = suggested_format;
+				}
+			}
+
+			// If this method was called, there is no easy solution, likely means atlas gather is needed
+			auto scaled_w = rsx::apply_resolution_scale(tex_width, true);
+			auto scaled_h = rsx::apply_resolution_scale(tex_height, true);
+
+			const auto bpp = get_format_block_size_in_bytes(format);
+
+			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
+			{
+				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather, texaddr, format, 0, 0,
+						scaled_w, scaled_w, 1,
+						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
+
+				u16 padding = u16(slice_h - tex_width);
+				desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices(cmd, fbos, local, texaddr, tex_width, tex_height, padding, tex_pitch, 6, bpp, is_depth));
+				return desc;
+			}
+			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && tex_depth > 1)
+			{
+				sampled_image_descriptor desc = { nullptr, deferred_request_command::_3d_gather, texaddr, format, 0, 0,
+					scaled_w, scaled_h, tex_depth,
+					texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
+
+				u16 padding = u16(slice_h - tex_height);
+				desc.external_subresource_desc.sections_to_copy = std::move(gather_texture_slices(cmd, fbos, local, texaddr, tex_width, tex_height, padding, tex_pitch, tex_depth, bpp, is_depth));
+				return desc;
+			}
+
+			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
+			{
+				verify(HERE), tex_height == 1;
+			}
+
+			const auto w = fbos.empty()? tex_width : rsx::apply_resolution_scale(tex_width, true);
+			const auto h = fbos.empty()? tex_height : rsx::apply_resolution_scale(tex_height, true);
+
+			sampled_image_descriptor result = { nullptr, deferred_request_command::atlas_gather,
+					texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
+					scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
+
+			result.external_subresource_desc.sections_to_copy = gather_texture_slices(cmd, fbos, local, texaddr, tex_width, tex_height, 0, tex_pitch, 1, bpp, is_depth);
+			result.simplify();
+			return result;
 		}
 
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
@@ -1659,13 +2076,13 @@ namespace rsx
 			const u32 tex_size = (u32)get_texture_size(tex);
 			const address_range tex_range = address_range::start_length(texaddr, tex_size);
 			const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-			const bool is_compressed_format = (format == CELL_GCM_TEXTURE_COMPRESSED_DXT1 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT23 || format == CELL_GCM_TEXTURE_COMPRESSED_DXT45);
+			const bool is_compressed_format = is_compressed_gcm_format(format);
+			const bool unnormalized = (tex.format() & CELL_GCM_TEXTURE_UN) != 0;
 
 			const auto extended_dimension = tex.get_extended_texture_dimension();
-			const u16 tex_width = tex.width();
+			u16 tex_width = tex.width();
 			u16 tex_height = tex.height();
-			u16 tex_pitch = (u16)tex.pitch();
-			if (tex_pitch == 0) tex_pitch = get_format_packed_pitch(format, tex_width);
+			u16 tex_pitch = (tex.format() & CELL_GCM_TEXTURE_LN)? (u16)tex.pitch() : get_format_packed_pitch(format, tex_width);
 
 			u16 depth;
 			switch (extended_dimension)
@@ -1684,278 +2101,449 @@ namespace rsx
 				break;
 			}
 
-			if (!is_compressed_format)
-			{
-				// Check for sampleable rtts from previous render passes
-				// TODO: When framebuffer Y compression is properly handled, this section can be removed. A more accurate framebuffer storage check exists below this block
-				if (auto texptr = m_rtts.get_texture_from_render_target_if_applicable(texaddr))
-				{
-					if (const bool is_active = m_rtts.address_is_bound(texaddr, false);
-						is_active || texptr->test())
-					{
-						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
-								tex_width, tex_height, depth, tex_pitch, extended_dimension, false, is_active,
-								tex.remap(), tex.decoded_remap());
-					}
-					else
-					{
-						m_rtts.invalidate_surface_address(texaddr, false);
-						invalidate_address(cmd, texaddr, invalidation_cause::read, std::forward<Args>(extras)...);
-					}
-				}
-
-				if (auto texptr = m_rtts.get_texture_from_depth_stencil_if_applicable(texaddr))
-				{
-					if (const bool is_active = m_rtts.address_is_bound(texaddr, true);
-						is_active || texptr->test())
-					{
-						return process_framebuffer_resource(cmd, texptr, texaddr, tex.format(), m_rtts,
-								tex_width, tex_height, depth, tex_pitch, extended_dimension, true, is_active,
-								tex.remap(), tex.decoded_remap());
-					}
-					else
-					{
-						m_rtts.invalidate_surface_address(texaddr, true);
-						invalidate_address(cmd, texaddr, invalidation_cause::read, std::forward<Args>(extras)...);
-					}
-				}
-			}
-
-			const bool unnormalized = (tex.format() & CELL_GCM_TEXTURE_UN) != 0;
 			f32 scale_x = (unnormalized) ? (1.f / tex_width) : 1.f;
 			f32 scale_y = (unnormalized) ? (1.f / tex_height) : 1.f;
 
-			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
+			if (!tex_pitch)
+			{
+				// Linear scanning with pitch of 0, read only texel (0,0)
+				tex_pitch = get_format_packed_pitch(format, tex_width);
+				scale_x = 0.f;
 				scale_y = 0.f;
+			}
+			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
+			{
+				scale_y = 0.f;
+			}
+
+			// Sanity check
+			if (UNLIKELY(unnormalized && extended_dimension > rsx::texture_dimension_extended::texture_dimension_2d))
+			{
+				LOG_ERROR(RSX, "Unimplemented unnormalized sampling for texture type %d", (u32)extended_dimension);
+			}
+
+			if (UNLIKELY(m_rtts.address_is_bound(texaddr)))
+			{
+				if (auto texptr = m_rtts.get_surface_at(texaddr);
+					check_framebuffer_resource(cmd, texptr, tex_width, tex_height, depth, tex_pitch, extended_dimension))
+				{
+					return process_framebuffer_resource_fast(cmd, texptr, texaddr, format, tex_width, tex_height, depth,
+						scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap());
+				}
+			}
+
+			// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
+			const u32 lookup_mask = (is_compressed_format) ? rsx::texture_upload_context::shader_read :
+				rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
+
+			auto lookup_range = tex_range;
+			if (LIKELY(extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d))
+			{
+				// Optimize the range a bit by only searching for mip0, layer0 to avoid false positives
+				const auto texel_rows_per_line = get_format_texel_rows_per_line(format);
+				const auto num_rows = (tex_height + texel_rows_per_line - 1) / texel_rows_per_line;
+				if (const auto length = u32(num_rows * tex_pitch); length < tex_range.length())
+				{
+					lookup_range = utils::address_range::start_length(texaddr, length);
+				}
+			}
+
+			reader_lock lock(m_cache_mutex);
+
+			const auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
+			for (auto& cached_texture : overlapping_locals)
+			{
+				if (cached_texture->matches(texaddr, format, tex_width, tex_height, depth, 0))
+				{
+					return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
+				}
+			}
 
 			if (!is_compressed_format)
 			{
-				// Check if we are re-sampling a subresource of an RTV/DSV texture, bound or otherwise
-
-				const auto rsc = m_rtts.get_surface_subresource_if_applicable(texaddr, tex_width, tex_height, tex_pitch);
-				if (rsc.surface)
+				// Next, attempt to merge blit engine and surface store
+				// Blit sources contain info from any shader-read stuff in range
+				// NOTE: Compressed formats require a reupload, facilitated by blit synchronization and/or WCB and are not handled here
+				u32 required_surface_height, slice_h;
+				switch (extended_dimension)
 				{
-					if (!rsc.surface->test() && !m_rtts.address_is_bound(rsc.base_address, rsc.is_depth_surface))
-					{
-						m_rtts.invalidate_surface_address(rsc.base_address, rsc.is_depth_surface);
-						invalidate_address(cmd, rsc.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
-					}
-					else if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
-							 extended_dimension != rsx::texture_dimension_extended::texture_dimension_1d)
-					{
-						LOG_ERROR(RSX, "Sampling of RTT region as non-2D texture! addr=0x%x, Type=%d, dims=%dx%d",
-							texaddr, (u8)tex.get_extended_texture_dimension(), tex.width(), tex.height());
-					}
-					else
-					{
-						u16 internal_width = tex_width;
-						u16 internal_height = tex_height;
-
-						get_native_dimensions(internal_width, internal_height, rsc.surface);
-						if (!rsc.x && !rsc.y && rsc.w == internal_width && rsc.h == internal_height)
-						{
-							//Full sized hit from the surface cache. This should have been already found before getting here
-							fmt::throw_exception("Unreachable" HERE);
-						}
-
-						internal_width = rsx::apply_resolution_scale(internal_width, true);
-						internal_height = (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)? 1: rsx::apply_resolution_scale(internal_height, true);
-
-						return{ rsc.surface->get_surface(), deferred_request_command::copy_image_static, rsc.base_address, format,
-							rsx::apply_resolution_scale(rsc.x, false), rsx::apply_resolution_scale(rsc.y, false),
-							internal_width, internal_height, 1, texture_upload_context::framebuffer_storage, rsc.is_depth_surface, scale_x, scale_y,
-							rsx::texture_dimension_extended::texture_dimension_2d, tex.decoded_remap() };
-					}
-				}
-			}
-
-			{
-				//Search in cache and upload/bind
-				reader_lock lock(m_cache_mutex);
-
-				auto cached_texture = find_texture_from_dimensions(texaddr, tex_width, tex_height, depth);
-				if (cached_texture)
-				{
-					//TODO: Handle invalidated framebuffer textures better. This is awful
-					if (cached_texture->get_context() == rsx::texture_upload_context::framebuffer_storage)
-					{
-						if (!cached_texture->is_locked())
-						{
-							lock.upgrade();
-							cached_texture->set_dirty(true);
-						}
-					}
-					else
-					{
-						if (cached_texture->get_image_type() == rsx::texture_dimension_extended::texture_dimension_1d)
-							scale_y = 0.f;
-
-						return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
-					}
-				}
-
-				if (is_hw_blit_engine_compatible(format))
-				{
-					//Find based on range instead
-					auto overlapping_surfaces = find_texture_from_range(tex_range);
-					if (!overlapping_surfaces.empty())
-					{
-						for (const auto &surface : overlapping_surfaces)
-						{
-							if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst ||
-								!surface->overlaps(tex_range, rsx::section_bounds::confirmed_range))
-								continue;
-
-							if (surface->get_width() >= tex_width && surface->get_height() >= tex_height)
-							{
-								u16 offset_x = 0, offset_y = 0;
-								if (const u32 address_offset = texaddr - surface->get_section_base())
-								{
-									const auto bpp = get_format_block_size_in_bytes(format);
-									offset_y = address_offset / tex_pitch;
-									offset_x = (address_offset % tex_pitch) / bpp;
-								}
-
-								if ((offset_x + tex_width) <= surface->get_width() &&
-									(offset_y + tex_height) <= surface->get_height())
-								{
-									if (extended_dimension != rsx::texture_dimension_extended::texture_dimension_2d &&
-										extended_dimension != rsx::texture_dimension_extended::texture_dimension_1d)
-									{
-										LOG_ERROR(RSX, "Texture resides in blit engine memory, but requested type is not 2D (%d)", (u32)extended_dimension);
-										break;
-									}
-
-									auto src_image = surface->get_raw_texture();
-									return{ src_image, deferred_request_command::copy_image_static, surface->get_section_base(), format, offset_x, offset_y, tex_width, tex_height, 1,
-										texture_upload_context::blit_engine_dst, surface->is_depth_texture(), scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d,
-										rsx::default_remap_vector };
-								}
-							}
-						}
-					}
-				}
-
-				//Do direct upload from CPU as the last resort
-				const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
-				auto subresources_layout = get_subresources_layout(tex);
-
-				bool is_depth_format = false;
-				switch (format)
-				{
-				case CELL_GCM_TEXTURE_DEPTH16:
-				case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-				case CELL_GCM_TEXTURE_DEPTH24_D8:
-				case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-					is_depth_format = true;
+				case rsx::texture_dimension_extended::texture_dimension_3d:
+				case rsx::texture_dimension_extended::texture_dimension_cubemap:
+					// Account for padding between mipmaps for all layers
+					required_surface_height = tex_range.length() / tex_pitch;
+					slice_h = required_surface_height / depth;
+					break;
+				default:
+					// Ignore mipmaps and search for LOD0
+					required_surface_height = slice_h = tex_height;
 					break;
 				}
 
-				// Upgrade lock
-				lock.upgrade();
+				const auto bpp = get_format_block_size_in_bytes(format);
+				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch, bpp);
 
-				//Invalidate
-				invalidate_range_impl_base(cmd, tex_range, invalidation_cause::read, std::forward<Args>(extras)...);
+				if (!overlapping_fbos.empty() || !overlapping_locals.empty())
+				{
+					int _pool = -1;
+					if (LIKELY(overlapping_locals.empty()))
+					{
+						_pool = 0;
+					}
+					else if (overlapping_fbos.empty())
+					{
+						_pool = 1;
+					}
+					else
+					{
+						_pool = (overlapping_locals.back()->last_write_tag < overlapping_fbos.back().surface->last_use_tag) ? 0 : 1;
+					}
 
-				//NOTE: SRGB correction is to be handled in the fragment shader; upload as linear RGB
-				return{ upload_image_from_cpu(cmd, tex_range, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
-					texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled)->get_view(tex.remap(), tex.decoded_remap()),
-					texture_upload_context::shader_read, is_depth_format, scale_x, scale_y, extended_dimension };
+					if (_pool == 0)
+					{
+						// Surface cache data is newer, check if this thing fits our search parameters
+						const auto& last = overlapping_fbos.back();
+						if (last.src_x == 0 && last.src_y == 0)
+						{
+							u16 internal_width = tex_width;
+							u16 internal_height = required_surface_height;
+							get_native_dimensions(internal_width, internal_height, last.surface);
+
+							u16 normalized_width = u16(last.width * last.surface->get_bpp()) / bpp;
+							if (normalized_width >= internal_width && last.height >= internal_height)
+							{
+								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, format, tex_width, tex_height, depth,
+									scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), false);
+							}
+						}
+					}
+					else if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
+					{
+						const auto last = overlapping_locals.back();
+						const auto normalized_width = u16(last->get_width() * get_format_block_size_in_bytes(last->get_gcm_format())) / bpp;
+
+						if (last->get_section_base() == texaddr &&
+							normalized_width >= tex_width && last->get_height() >= tex_height)
+						{
+							bool is_depth = last->is_depth_texture();
+							u32  gcm_format = format;
+
+							if (const auto gcm_format_is_depth = is_gcm_depth_format(format);
+								is_depth != gcm_format_is_depth)
+							{
+								// Conflict, resolve
+								if (gcm_format_is_depth)
+								{
+									is_depth = true;
+								}
+								else
+								{
+									const auto actual_format = last->get_gcm_format();
+									bool  resolved = false;
+
+									switch (format)
+									{
+									case CELL_GCM_TEXTURE_A8R8G8B8:
+									case CELL_GCM_TEXTURE_D8R8G8B8:
+									{
+										// Compatible with D24S8_UINT
+										if (actual_format == CELL_GCM_TEXTURE_DEPTH24_D8)
+										{
+											gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
+											resolved = true;
+											is_depth = true;
+										}
+										break;
+									}
+									case CELL_GCM_TEXTURE_X16:
+									{
+										// Compatible with DEPTH16_UNORM
+										if (actual_format == CELL_GCM_TEXTURE_DEPTH16)
+										{
+											gcm_format = CELL_GCM_TEXTURE_DEPTH16;
+											resolved = true;
+											is_depth = true;
+										}
+										break;
+									}
+									}
+
+									if (!resolved)
+									{
+										LOG_ERROR(RSX, "Reading texture with gcm format 0x%x as unexpected cast with format 0x%x",
+											actual_format, format);
+
+										is_depth = gcm_format_is_depth;
+									}
+								}
+							}
+
+							return { last->get_raw_texture(), deferred_request_command::copy_image_static, texaddr, gcm_format, 0, 0,
+									tex_width, tex_height, 1, last->get_context(), is_depth,
+									scale_x, scale_y, extended_dimension, tex.decoded_remap() };
+						}
+					}
+
+					auto result = merge_cache_resources(cmd, overlapping_fbos, overlapping_locals,
+						texaddr, format, tex_width, tex_height, depth, tex_pitch, slice_h,
+						scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), _pool);
+
+					if (!result.external_subresource_desc.sections_to_copy.empty() &&
+						(_pool == 0 || result.atlas_covers_target_area()))
+					{
+						// TODO: Overlapped section persistance is required for framebuffer resources to work with this!
+						// Yellow filter in SCV is because of a 384x384 surface being reused as 160x90 (and likely not getting written to)
+						// Its then sampled again here as 384x384 and this does not work! (obviously)
+
+						// Optionally disallow caching if resource is being written to as it is being read from
+						for (const auto &section : overlapping_fbos)
+						{
+							if (m_rtts.address_is_bound(section.base_address))
+							{
+								if (result.external_subresource_desc.op == deferred_request_command::copy_image_static)
+								{
+									result.external_subresource_desc.op = deferred_request_command::copy_image_dynamic;
+								}
+								else
+								{
+									result.external_subresource_desc.do_not_cache = true;
+								}
+
+								break;
+							}
+						}
+
+						return result;
+					}
+#ifdef TEXTURE_CACHE_DEBUG
+					else
+					{
+						LOG_ERROR(RSX, "Area merge failed! addr=0x%x, w=%d, h=%d, gcm_format=0x%x[sz=%d]", texaddr, tex_width, tex_height, format, !(tex.format() & CELL_GCM_TEXTURE_LN));
+						for (const auto &s : overlapping_locals)
+						{
+							if (s->get_context() == rsx::texture_upload_context::blit_engine_dst)
+							{
+								LOG_ERROR(RSX, "Btw, you're about to lose a blit surface at 0x%x", s->get_section_base());
+							}
+						}
+						//LOG_TRACE(RSX, "Partial memory recovered from cache; may require WCB/WDB to properly gather all the data");
+					}
+#endif // TEXTURE_CACHE_DEBUG
+				}
 			}
+
+			// Do direct upload from CPU as the last resort
+			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
+			auto subresources_layout = get_subresources_layout(tex);
+
+			bool is_depth_format = false;
+			switch (format)
+			{
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+				is_depth_format = true;
+				break;
+			}
+
+			lock.upgrade();
+
+			//Invalidate
+			invalidate_range_impl_base(cmd, tex_range, invalidation_cause::read, std::forward<Args>(extras)...);
+
+			//NOTE: SRGB correction is to be handled in the fragment shader; upload as linear RGB
+			return{ upload_image_from_cpu(cmd, tex_range, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
+				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled)->get_view(tex.remap(), tex.decoded_remap()),
+				texture_upload_context::shader_read, is_depth_format, scale_x, scale_y, extended_dimension };
 		}
 
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
 		blit_op_result upload_scaled_image(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
 		{
-			//Since we will have dst in vram, we can 'safely' ignore the swizzle flag
-			//TODO: Verify correct behavior
+			// Since we will have dst in vram, we can 'safely' ignore the swizzle flag
+			// TODO: Verify correct behavior
 			bool src_is_render_target = false;
 			bool dst_is_render_target = false;
-			bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
-			bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
+			const bool dst_is_argb8 = (dst.format == rsx::blit_engine::transfer_destination_format::a8r8g8b8);
+			const bool src_is_argb8 = (src.format == rsx::blit_engine::transfer_source_format::a8r8g8b8);
+			const u8 src_bpp = src_is_argb8 ? 4 : 2;
+			const u8 dst_bpp = dst_is_argb8 ? 4 : 2;
 
 			typeless_xfer typeless_info = {};
 			image_resource_type vram_texture = 0;
 			image_resource_type dest_texture = 0;
 
-			const u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
+			u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
 
-			f32 scale_x = dst.scale_x;
-			f32 scale_y = dst.scale_y;
+			const f32 scale_x = fabsf(dst.scale_x);
+			const f32 scale_y = fabsf(dst.scale_y);
 
-			//Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
-			//Reproject final clip onto source...
+			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
+			// Reproject final clip onto source...
 			u16 src_w = (u16)((f32)dst.clip_width / scale_x);
 			u16 src_h = (u16)((f32)dst.clip_height / scale_y);
 
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
 
-			//Check if src/dst are parts of render targets
-			auto dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst.width, dst.clip_height, dst.pitch, true, false, false);
+			if (true) // This block is a debug/sanity check and should be optionally disabled with a config option
+			{
+				// Do subpixel correction in the special case of reverse scanning
+				// When reverse scanning, pixel0 is at offset = (dimension - 1)
+				if (dst.scale_y < 0.f && src.offset_y)
+				{
+					if (src.offset_y = (src.height - src.offset_y);
+						src.offset_y == 1)
+					{
+						src.offset_y = 0;
+					}
+				}
+
+				if (dst.scale_x < 0.f && src.offset_x)
+				{
+					if (src.offset_x = (src.width - src.offset_x);
+						src.offset_x == 1)
+					{
+						src.offset_x = 0;
+					}
+				}
+
+				if (UNLIKELY((src_h + src.offset_y) > src.height))
+				{
+					// TODO: Special case that needs wrapping around (custom blit)
+					LOG_ERROR(RSX, "Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
+
+					src_h = src.height - src.offset_y;
+					dst_h = u16(src_h * scale_y + 0.000001f);
+				}
+
+				if (UNLIKELY((src_w + src.offset_x) > src.width))
+				{
+					// TODO: Special case that needs wrapping around (custom blit)
+					LOG_ERROR(RSX, "Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
+
+					src_w = src.width - src.offset_x;
+					dst_w = u16(src_w * scale_x + 0.000001f);
+				}
+			}
+
+			if (dst.scale_y < 0.f)
+			{
+				typeless_info.flip_vertical = true;
+				src_address -= (src.pitch * (src_h - 1));
+			}
+
+			if (dst.scale_x < 0.f)
+			{
+				typeless_info.flip_horizontal = true;
+				src_address += (src.width - src_w) * src_bpp;
+			}
+
+			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
+			{
+				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp);
+				if (list.empty())
+				{
+					return {};
+				}
+
+				if (list.back().is_clipped && !allow_clipped)
+				{
+					for (auto It = list.rbegin(); It != list.rend(); ++It)
+					{
+						if (!It->is_clipped)
+						{
+							return *It;
+						}
+
+						auto _w = u32(It->width * It->surface->get_bpp()) / bpp;
+						auto _h = u32(It->height);
+						get_rsx_dimensions(_w, _h, It->surface);
+
+						if (_w < width)
+						{
+							if ((_w * scale_x) <= 1.f)
+								continue;
+						}
+
+						if (_h < height)
+						{
+							if ((_h * scale_y) <= 1.f)
+								continue;
+						}
+
+						// Some surface exists, but its size is questionable
+						// Opt to re-upload (needs WCB/WDB to work properly)
+						break;
+					}
+
+					return {};
+				}
+
+				return list.back();
+			};
+
+			// Check if src/dst are parts of render targets
+			auto dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, dst_bpp, false);
 			dst_is_render_target = dst_subres.surface != nullptr;
 
-			if (dst_is_render_target && dst_subres.surface->get_native_pitch() != dst.pitch)
-			{
-				//Surface pitch is invalid if it is less that the rsx pitch (usually set to 64 in such a case)
-				if (dst_subres.surface->get_rsx_pitch() != dst.pitch ||
-					dst.pitch < dst_subres.surface->get_native_pitch())
-					dst_is_render_target = false;
-			}
-
-			//TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src_w, src_h, src.pitch, true, false, false);
+			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
+			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, false);
 			src_is_render_target = src_subres.surface != nullptr;
 
-			if (src_is_render_target && src_subres.surface->get_native_pitch() != src.pitch)
-			{
-				//Surface pitch is invalid if it is less that the rsx pitch (usually set to 64 in such a case)
-				if (src_subres.surface->get_rsx_pitch() != src.pitch ||
-					src.pitch < src_subres.surface->get_native_pitch())
-					src_is_render_target = false;
-			}
-
-			if (src_is_render_target && !src_subres.surface->test() && !m_rtts.address_is_bound(src_subres.base_address, src_subres.is_depth_surface))
-			{
-				m_rtts.invalidate_surface_address(src_subres.base_address, src_subres.is_depth_surface);
-				invalidate_address(cmd, src_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
-				src_is_render_target = false;
-			}
-
-			if (dst_is_render_target && !dst_subres.surface->test() && !m_rtts.address_is_bound(dst_subres.base_address, dst_subres.is_depth_surface))
-			{
-				m_rtts.invalidate_surface_address(dst_subres.base_address, dst_subres.is_depth_surface);
-				invalidate_address(cmd, dst_subres.base_address, invalidation_cause::read, std::forward<Args>(extras)...);
-				dst_is_render_target = false;
-			}
-
-			//Always use GPU blit if src or dst is in the surface store
+			// Always use GPU blit if src or dst is in the surface store
 			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
 				return false;
+
+			// Check if trivial memcpy can perform the same task
+			// Used to copy programs and arbitrary data to the GPU in some cases
+			if (!src_is_render_target && !dst_is_render_target && dst_is_argb8 == src_is_argb8 && !dst.swizzled)
+			{
+				if ((src_h == 1 && dst_h == 1) || (dst_w == src_w && dst_h == src_h && src.pitch == dst.pitch))
+				{
+					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
+					{
+						const u32 memcpy_bytes_length = dst.clip_width * dst_bpp * dst.clip_height;
+
+						std::lock_guard lock(m_cache_mutex);
+						invalidate_range_impl_base(cmd, address_range::start_length(src_address, memcpy_bytes_length), invalidation_cause::read, std::forward<Args>(extras)...);
+						invalidate_range_impl_base(cmd, address_range::start_length(dst_address, memcpy_bytes_length), invalidation_cause::write, std::forward<Args>(extras)...);
+						memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
+						return true;
+					}
+					else
+					{
+						// Rotation transform applied, use fallback
+						return false;
+					}
+				}
+			}
+
+			// Sanity and format compatibility checks
+			if (dst_is_render_target)
+			{
+				if (src_subres.is_depth != dst_subres.is_depth)
+				{
+					// Create a cache-local resource to resolve later
+					// TODO: Support depth->RGBA typeless transfer for vulkan
+					dst_is_render_target = false;
+				}
+			}
 
 			if (src_is_render_target)
 			{
 				src_subres.surface->read_barrier(cmd);
 
 				const auto surf = src_subres.surface;
-				auto src_bpp = surf->get_native_pitch() / surf->get_surface_width();
-				auto expected_bpp = src_is_argb8 ? 4 : 2;
-				if (src_bpp != expected_bpp)
+				const auto bpp = surf->get_bpp();
+				if (bpp != src_bpp)
 				{
 					//Enable type scaling in src
 					typeless_info.src_is_typeless = true;
-					typeless_info.src_is_depth = src_subres.is_depth_surface;
-					typeless_info.src_scaling_hint = (f32)src_bpp / expected_bpp;
+					typeless_info.src_is_depth = src_subres.is_depth;
+					typeless_info.src_scaling_hint = (f32)bpp / src_bpp;
 					typeless_info.src_gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-
-					src_w = (u16)(src_w / typeless_info.src_scaling_hint);
-					if (!src_subres.is_clipped)
-						src_subres.w = (u16)(src_subres.w / typeless_info.src_scaling_hint);
-					else
-						src_subres = m_rtts.get_surface_subresource_if_applicable(src_address, src_w, src_h, src.pitch, true, false, false);
-
-					verify(HERE), src_subres.surface != nullptr;
 				}
 			}
 
@@ -1964,86 +2552,75 @@ namespace rsx
 				// Full barrier is required in case of partial transfers
 				dst_subres.surface->read_barrier(cmd);
 
-				auto dst_bpp = dst_subres.surface->get_native_pitch() / dst_subres.surface->get_surface_width();
-				auto expected_bpp = dst_is_argb8 ? 4 : 2;
-				if (dst_bpp != expected_bpp)
+				auto bpp = dst_subres.surface->get_bpp();
+				if (bpp != dst_bpp)
 				{
 					//Enable type scaling in dst
 					typeless_info.dst_is_typeless = true;
-					typeless_info.dst_is_depth = dst_subres.is_depth_surface;
-					typeless_info.dst_scaling_hint = (f32)dst_bpp / expected_bpp;
+					typeless_info.dst_is_depth = dst_subres.is_depth;
+					typeless_info.dst_scaling_hint = (f32)bpp / dst_bpp;
 					typeless_info.dst_gcm_format = dst_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-
-					dst_w = (u16)(dst_w / typeless_info.dst_scaling_hint);
-					if (!dst_subres.is_clipped)
-						dst_subres.w = (u16)(dst_subres.w / typeless_info.dst_scaling_hint);
-					else
-						dst_subres = m_rtts.get_surface_subresource_if_applicable(dst_address, dst_w, dst_h, dst.pitch, true, false, false);
-
-					verify(HERE), dst_subres.surface != nullptr;
 				}
 			}
 
-			reader_lock lock(m_cache_mutex);
-
-			//Check if trivial memcpy can perform the same task
-			//Used to copy programs to the GPU in some cases
-			if (!src_is_render_target && !dst_is_render_target && dst_is_argb8 == src_is_argb8 && !dst.swizzled)
-			{
-				if ((src.slice_h == 1 && dst.clip_height == 1) ||
-					(dst.clip_width == src.width && dst.clip_height == src.slice_h && src.pitch == dst.pitch))
-				{
-					const u8 bpp = dst_is_argb8 ? 4 : 2;
-					const u32 memcpy_bytes_length = dst.clip_width * bpp * dst.clip_height;
-
-					lock.upgrade();
-					invalidate_range_impl_base(cmd, address_range::start_length(src_address, memcpy_bytes_length), invalidation_cause::read, std::forward<Args>(extras)...);
-					invalidate_range_impl_base(cmd, address_range::start_length(dst_address, memcpy_bytes_length), invalidation_cause::write, std::forward<Args>(extras)...);
-					memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
-					return true;
-				}
-			}
-
+			section_storage_type* cached_dest = nullptr;
 			u16 max_dst_width = dst.width;
 			u16 max_dst_height = dst.height;
 			areai src_area = { 0, 0, src_w, src_h };
 			areai dst_area = { 0, 0, dst_w, dst_h };
 
-			//1024 height is a hack (for ~720p buffers)
-			//It is possible to have a large buffer that goes up to around 4kx4k but anything above 1280x720 is rare
-			//RSX only handles 512x512 tiles so texture 'stitching' will eventually be needed to be completely accurate
-			//Sections will be submitted as (512x512 + 512x512 + 256x512 + 512x208 + 512x208 + 256x208) to blit a 720p surface to the backbuffer for example
-			size2i dst_dimensions = { dst.pitch / (dst_is_argb8 ? 4 : 2), dst.height };
+			size2i dst_dimensions = { dst.pitch / dst_bpp, dst.height };
 			if (src_is_render_target)
 			{
 				if (dst_dimensions.width == src_subres.surface->get_surface_width())
+				{
 					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(), dst.height);
-				else if (dst.max_tile_h > dst.height)
-					dst_dimensions.height = std::min((s32)dst.max_tile_h, 1024);
+				}
+				else if (LIKELY(dst_dimensions.width == 1280 || dst_dimensions.width == 2560))
+				{
+					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
+					// TODO: Add more entries based on empirical data
+					dst_dimensions.height = std::max<s32>(dst.height, 720);
+				}
+				else
+				{
+					//LOG_TRACE(RSX, "Blit transfer to surface with dims %dx%d", dst_dimensions.width, dst.height);
+				}
 			}
 
-			section_storage_type* cached_dest = nullptr;
+			reader_lock lock(m_cache_mutex);
 
+			const auto old_dst_area = dst_area;
 			if (!dst_is_render_target)
 			{
 				// Check for any available region that will fit this one
-				auto overlapping_surfaces = find_texture_from_range(address_range::start_length(dst_address, dst.pitch * dst.clip_height));
-
+				auto overlapping_surfaces = find_texture_from_range(address_range::start_length(dst_address, dst.pitch * dst.clip_height), dst.pitch, rsx::texture_upload_context::blit_engine_dst);
 				for (const auto &surface : overlapping_surfaces)
 				{
-					if (surface->get_context() != rsx::texture_upload_context::blit_engine_dst)
-						continue;
-
-					if (surface->get_rsx_pitch() != dst.pitch)
-						continue;
-
-					const auto old_dst_area = dst_area;
-					if (const u32 address_offset = dst_address - surface->get_section_base())
+					if (!surface->is_locked())
 					{
-						const u16 bpp = dst_is_argb8 ? 4 : 2;
+						// Discard
+						surface->set_dirty(true);
+						continue;
+					}
+
+					if (cached_dest)
+					{
+						// Nothing to do
+						continue;
+					}
+
+					const auto this_address = surface->get_section_base();
+					if (this_address > dst_address)
+					{
+						continue;
+					}
+
+					if (const u32 address_offset = dst_address - this_address)
+					{
 						const u16 offset_y = address_offset / dst.pitch;
 						const u16 offset_x = address_offset % dst.pitch;
-						const u16 offset_x_in_block = offset_x / bpp;
+						const u16 offset_x_in_block = offset_x / dst_bpp;
 
 						dst_area.x1 += offset_x_in_block;
 						dst_area.x2 += offset_x_in_block;
@@ -2056,29 +2633,21 @@ namespace rsx
 						(unsigned)dst_area.y2 <= surface->get_height())
 					{
 						cached_dest = surface;
-						break;
+						dest_texture = cached_dest->get_raw_texture();
+						typeless_info.dst_context = cached_dest->get_context();
+
+						max_dst_width = cached_dest->get_width();
+						max_dst_height = cached_dest->get_height();
+						continue;
 					}
 
 					dst_area = old_dst_area;
 				}
-
-				if (cached_dest)
-				{
-					dest_texture = cached_dest->get_raw_texture();
-					typeless_info.dst_context = cached_dest->get_context();
-
-					max_dst_width = cached_dest->get_width();
-					max_dst_height = cached_dest->get_height();
-				}
 			}
 			else
 			{
-				//TODO: Investigate effects of tile compression
-
-				dst_area.x1 = dst_subres.x;
-				dst_area.y1 = dst_subres.y;
-				dst_area.x2 += dst_subres.x;
-				dst_area.y2 += dst_subres.y;
+				// Destination dimensions are relaxed (true)
+				dst_area = dst_subres.get_src_area();
 
 				dest_texture = dst_subres.surface->get_surface();
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
@@ -2087,28 +2656,71 @@ namespace rsx
 				max_dst_height = dst_subres.surface->get_surface_height();
 			}
 
-			//Create source texture if does not exist
+			// Check if available target is acceptable
+			// TODO: Check for other types of format mismatch
+			bool format_mismatch = false;
+			if (cached_dest)
+			{
+				if (cached_dest->is_depth_texture() != src_subres.is_depth)
+				{
+					// Dest surface has the wrong 'aspect'
+					format_mismatch = true;
+				}
+				else
+				{
+					// Check if it matches the transfer declaration
+					switch (cached_dest->get_gcm_format())
+					{
+					case CELL_GCM_TEXTURE_A8R8G8B8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+						format_mismatch = !dst_is_argb8;
+						break;
+					case CELL_GCM_TEXTURE_R5G6B5:
+					case CELL_GCM_TEXTURE_DEPTH16:
+						format_mismatch = dst_is_argb8;
+						break;
+					default:
+						format_mismatch = true;
+						break;
+					}
+				}
+			}
+
+			if (format_mismatch)
+			{
+				// The invalidate call before creating a new target will remove this section
+				cached_dest = nullptr;
+				dest_texture = 0;
+				dst_area = old_dst_area;
+			}
+
+			// Create source texture if does not exist
 			if (!src_is_render_target)
 			{
-				auto overlapping_surfaces = find_texture_from_range(address_range::start_length(src_address, src.pitch * src.height));
+				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst;
+				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src.pitch * src.height), src.pitch, lookup_mask);
 
 				auto old_src_area = src_area;
 				for (const auto &surface : overlapping_surfaces)
 				{
-					//look for any that will fit, unless its a shader read surface or framebuffer_storage
-					if (surface->get_context() == rsx::texture_upload_context::shader_read ||
-						surface->get_context() == rsx::texture_upload_context::framebuffer_storage)
-						continue;
-
-					if (surface->get_rsx_pitch() != src.pitch)
-						continue;
-
-					if (const u32 address_offset = src_address - surface->get_section_base())
+					if (!surface->is_locked())
 					{
-						const u16 bpp = src_is_argb8 ? 4 : 2;
+						// TODO: Rejecting unlocked blit_engine dst causes stutter in SCV
+						// Surfaces marked as dirty have already been removed, leaving only flushed blit_dst data
+						continue;
+					}
+
+					const auto this_address = surface->get_section_base();
+					if (this_address > src_address)
+					{
+						continue;
+					}
+
+					if (const u32 address_offset = src_address - this_address)
+					{
 						const u16 offset_y = address_offset / src.pitch;
 						const u16 offset_x = address_offset % src.pitch;
-						const u16 offset_x_in_block = offset_x / bpp;
+						const u16 offset_x_in_block = offset_x / src_bpp;
 
 						src_area.x1 += offset_x_in_block;
 						src_area.x2 += offset_x_in_block;
@@ -2129,23 +2741,57 @@ namespace rsx
 
 				if (!vram_texture)
 				{
+					const u16 full_width = src.pitch / src_bpp;
+					u32 image_base = src.rsx_address;
+					u16 image_width = full_width;
+					u16 image_height = src.height;
+
+					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
+					{
+						// Loading full image from the corner address
+						// Translate src_area into the declared block
+						src_area.x1 += src.offset_x;
+						src_area.x2 += src.offset_x;
+						src_area.y1 += src.offset_y;
+						src_area.y2 += src.offset_y;
+					}
+					else if (!src.offset_x && !src.offset_y)
+					{
+						if (dst.scale_y < 0.f)
+						{
+							image_base = src.rsx_address - (src.pitch * src.height);
+						}
+						else
+						{
+							// Reverse X without reverse Y and no offset in X. Is this even possible?
+							LOG_ERROR(RSX, "Unexpected scaling parameters: reversed X without reverse Y");
+							image_base = src.rsx_address - src.pitch;
+						}
+					}
+					else
+					{
+						// It is difficult to determine the transfer region
+						image_base = src_address;
+						image_width = src_w;
+						image_height = src_h;
+					}
+
 					lock.upgrade();
 
-					const auto rsx_range = address_range::start_length(src_address, src.pitch * src.slice_h);
+					const auto rsx_range = address_range::start_length(image_base, src.pitch * image_height);
 					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, std::forward<Args>(extras)...);
 
-					const u16 pitch_in_block = src_is_argb8 ? src.pitch >> 2 : src.pitch >> 1;
 					std::vector<rsx_subresource_layout> subresource_layout;
 					rsx_subresource_layout subres = {};
-					subres.width_in_block = src.width;
-					subres.height_in_block = src.slice_h;
-					subres.pitch_in_block = pitch_in_block;
+					subres.width_in_block = image_width;
+					subres.height_in_block = image_height;
+					subres.pitch_in_block = full_width;
 					subres.depth = 1;
-					subres.data = { (const gsl::byte*)src.pixels, src.pitch * src.slice_h };
+					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(image_base)), src.pitch * image_height };
 					subresource_layout.push_back(subres);
 
 					const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
-					vram_texture = upload_image_from_cpu(cmd, rsx_range, src.width, src.slice_h, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
+					vram_texture = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
 					typeless_info.src_context = texture_upload_context::blit_engine_src;
@@ -2153,81 +2799,15 @@ namespace rsx
 			}
 			else
 			{
-				if (!dst_is_render_target)
-				{
-					u16 src_subres_w = src_subres.w;
-					u16 src_subres_h = src_subres.h;
-					get_rsx_dimensions(src_subres_w, src_subres_h, src_subres.surface);
-
-					const int dst_width = (int)(src_subres_w * scale_x * typeless_info.src_scaling_hint);
-					const int dst_height = (int)(src_subres_h * scale_y);
-
-					dst_area.x2 = dst_area.x1 + dst_width;
-					dst_area.y2 = dst_area.y1 + dst_height;
-				}
-
-				src_area.x2 = src_subres.w;
-				src_area.y2 = src_subres.h;
-
-				src_area.x1 = src_subres.x;
-				src_area.y1 = src_subres.y;
-				src_area.x2 += src_subres.x;
-				src_area.y2 += src_subres.y;
-
+				src_area = src_subres.get_src_area();
 				vram_texture = src_subres.surface->get_surface();
 				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}
 
-			const bool src_is_depth = src_subres.is_depth_surface;
-			const bool dst_is_depth = dst_is_render_target? dst_subres.is_depth_surface :
-										dest_texture ? cached_dest->is_depth_texture() : src_is_depth;
-
-			//Type of blit decided by the source, destination use should adapt on the fly
-			const bool is_depth_blit = src_is_depth;
-
-			bool format_mismatch = (src_is_depth != dst_is_depth);
-			if (format_mismatch)
-			{
-				if (dst_is_render_target)
-				{
-					LOG_ERROR(RSX, "Depth<->RGBA blit on a framebuffer requested but not supported");
-					return false;
-				}
-			}
-			else if (src_is_render_target && cached_dest)
-			{
-				switch (cached_dest->get_gcm_format())
-				{
-				case CELL_GCM_TEXTURE_A8R8G8B8:
-				case CELL_GCM_TEXTURE_DEPTH24_D8:
-					format_mismatch = !dst_is_argb8;
-					break;
-				case CELL_GCM_TEXTURE_R5G6B5:
-				case CELL_GCM_TEXTURE_DEPTH16:
-					format_mismatch = dst_is_argb8;
-					break;
-				default:
-					format_mismatch = true;
-					break;
-				}
-			}
-
-			//TODO: Check for other types of format mismatch
-			const address_range dst_range = address_range::start_length(dst_address, dst.pitch * dst.height);
-			AUDIT(cached_dest == nullptr || cached_dest->overlaps(dst_range, section_bounds::full_range));
-			if (format_mismatch)
-			{
-				lock.upgrade();
-
-				// Invalidate as the memory is not reusable now
-				invalidate_range_impl_base(cmd, cached_dest->get_section_range(), invalidation_cause::write, std::forward<Args>(extras)...);
-				AUDIT(!cached_dest->is_locked());
-
-				dest_texture = 0;
-				cached_dest = nullptr;
-			}
-
+			// Type of blit decided by the source, destination use should adapt on the fly
+			const bool is_depth_blit = src_subres.is_depth;
 			u32 gcm_format;
+
 			if (is_depth_blit)
 				gcm_format = (dst_is_argb8) ? CELL_GCM_TEXTURE_DEPTH24_D8 : CELL_GCM_TEXTURE_DEPTH16;
 			else
@@ -2235,7 +2815,7 @@ namespace rsx
 
 			if (cached_dest)
 			{
-				//Prep surface
+				// Prep surface
 				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
 					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
 					rsx::texture_create_flags::swapped_native_component_order;
@@ -2243,11 +2823,11 @@ namespace rsx
 				enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
 			}
 
-			//Validate clipping region
+			// Validate clipping region
 			if ((dst.offset_x + dst.clip_x + dst.clip_width) > max_dst_width) dst.clip_x = 0;
 			if ((dst.offset_y + dst.clip_y + dst.clip_height) > max_dst_height) dst.clip_y = 0;
 
-			//Reproject clip offsets onto source to simplify blit
+			// Reproject clip offsets onto source to simplify blit
 			if (dst.clip_x || dst.clip_y)
 			{
 				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / (scale_x * typeless_info.src_scaling_hint));
@@ -2265,7 +2845,7 @@ namespace rsx
 
 				// Need to calculate the minium required size that will fit the data, anchored on the rsx_address
 				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
-				const u32 write_end = dst_address + (dst.pitch * dst.clip_height);
+				const u32 write_end = dst_address + (dst.pitch * dst_h);
 				const u32 expected_end = dst.rsx_address + (dst.pitch * dst_dimensions.height);
 
 				const u32 section_length = std::max(write_end, expected_end) - dst.rsx_address;
@@ -2273,50 +2853,80 @@ namespace rsx
 
 				lock.upgrade();
 
+				// NOTE: Invalidating for read also flushes framebuffers locked in the range and invalidates them (obj->test() will fail)
 				const auto rsx_range = address_range::start_length(dst.rsx_address, section_length);
+				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
 				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
-
-				const u16 pitch_in_block = dst_is_argb8 ? dst.pitch >> 2 : dst.pitch >> 1;
-				std::vector<rsx_subresource_layout> subresource_layout;
-				rsx_subresource_layout subres = {};
-				subres.width_in_block = dst_dimensions.width;
-				subres.height_in_block = dst_dimensions.height;
-				subres.pitch_in_block = pitch_in_block;
-				subres.depth = 1;
-				subres.data = { (const gsl::byte*)dst.pixels, dst.pitch * dst_dimensions.height };
-				subresource_layout.push_back(subres);
-
-				cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
-					gcm_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
-					rsx::texture_dimension_extended::texture_dimension_2d, false);
 
 				// render target data is already in correct swizzle layout
 				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
 					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
 					rsx::texture_create_flags::swapped_native_component_order;
 
-				enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
+				// Translate dst_area into the 'full' dst block based on dst.rsx_address as (0, 0)
+				dst_area.x1 += dst.offset_x;
+				dst_area.x2 += dst.offset_x;
+				dst_area.y1 += dst.offset_y;
+				dst_area.y2 += dst.offset_y;
+
+				if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
+				{
+					cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
+						gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
+						channel_order);
+				}
+				else
+				{
+					const u16 pitch_in_block = dst.pitch / dst_bpp;
+					std::vector<rsx_subresource_layout> subresource_layout;
+					rsx_subresource_layout subres = {};
+					subres.width_in_block = dst_dimensions.width;
+					subres.height_in_block = dst_dimensions.height;
+					subres.pitch_in_block = pitch_in_block;
+					subres.depth = 1;
+					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(dst.rsx_address)), dst.pitch * dst_dimensions.height };
+					subresource_layout.push_back(subres);
+
+					cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
+						gcm_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
+						rsx::texture_dimension_extended::texture_dimension_2d, false);
+
+					enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
+				}
 
 				dest_texture = cached_dest->get_raw_texture();
 				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
 			}
 
+			verify(HERE), cached_dest || dst_is_render_target;
+
+			// Calculate number of bytes actually modified
+			u32 mem_base, mem_length;
+			if (dst_is_render_target)
+			{
+				mem_base = dst_address - dst_subres.base_address;
+			}
+			else
+			{
+				mem_base = dst_address - cached_dest->get_section_base();
+			}
+
+			if (dst.clip_height == 1)
+			{
+				mem_length = dst.clip_width * dst_bpp;
+			}
+			else
+			{
+				const u32 mem_excess = mem_base % dst.pitch;
+				mem_length = (dst.pitch * dst.clip_height) - mem_excess;
+			}
+
+			// Invalidate any cached subresources in modified range
+			notify_surface_changed(utils::address_range::start_length(dst_address, mem_length));
+
 			if (cached_dest)
 			{
 				lock.upgrade();
-
-				u32 mem_length;
-				const u32 mem_base = dst_address - cached_dest->get_section_base();
-
-				if (dst.clip_height == 1)
-				{
-					mem_length = dst.clip_width * (dst_is_argb8 ? 4 : 2);
-				}
-				else
-				{
-					const u32 mem_excess = mem_base % dst.pitch;
-					mem_length = (dst.pitch * dst.clip_height) - mem_excess;
-				}
 
 				verify(HERE), (mem_base + mem_length) <= cached_dest->get_section_size();
 
@@ -2326,7 +2936,7 @@ namespace rsx
 			}
 			else
 			{
-				verify(HERE), dst_is_render_target;
+				dst_subres.surface->on_write();
 			}
 
 			if (rsx::get_resolution_scale_percent() != 100)
@@ -2365,7 +2975,6 @@ namespace rsx
 
 			typeless_info.analyse();
 			blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit, typeless_info);
-			notify_surface_changed(dst.rsx_address);
 
 			blit_op_result result = true;
 			result.is_depth = is_depth_blit;

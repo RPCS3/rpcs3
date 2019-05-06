@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <memory>
 
@@ -22,6 +22,7 @@ struct compat_status
 	QString color;
 	QString text;
 	QString tooltip;
+	QString version;
 };
 
 class game_compatibility : public QObject
@@ -75,13 +76,14 @@ Q_SIGNALS:
 class compat_pixmap : public QPixmap
 {
 public:
-	compat_pixmap(const QColor& color) : QPixmap(16, 16)
+	compat_pixmap(const QColor& color, int pixel_ratio) : QPixmap(16 * pixel_ratio, 16 * pixel_ratio)
 	{
 		fill(Qt::transparent);
 
 		QPainter painter(this);
-		painter.setPen(color);
+		setDevicePixelRatio(pixel_ratio);
+		painter.setPen(Qt::NoPen);
 		painter.setBrush(color);
-		painter.drawEllipse(0, 0, 15, 15);
+		painter.drawEllipse(0, 0, width(), height());
 	}
 };

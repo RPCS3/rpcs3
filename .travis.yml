@@ -1,15 +1,15 @@
 language: cpp
 matrix:
     include:
-        - os: linux
-          env:
-            - NAME="Linux build"
-            - COMPILER="gcc"
-          dist: trusty
-          services: docker
-          cache: ccache
-          install: "docker pull rpcs3/rpcs3-travis-trusty:1.0"
-          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-trusty:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
+#        - os: linux
+#          env:
+#            - NAME="Linux build"
+#            - COMPILER="gcc"
+#          dist: trusty
+#          services: docker
+#          cache: ccache
+#          install: "docker pull rpcs3/rpcs3-travis-trusty:1.0"
+#          script: 'travis_wait docker run -v $(pwd):/rpcs3 -v "$HOME/.ccache":/root/.ccache --env-file .travis/travis.env rpcs3/rpcs3-travis-trusty:1.0 /bin/bash -ex /rpcs3/.travis/build-linux.bash'
         - os: linux
           env:
             - NAME="Linux build"
@@ -31,7 +31,7 @@ matrix:
                     - qt
           script: "/bin/bash -ex .travis/build-mac.bash"
           cache: ccache
-        
+
 git:
   depth: false # Unshallow clone to obtain proper GIT_VERSION
   submodules: false

@@ -239,6 +239,12 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	return CELL_OK;
 }
 
+error_code cellOskDialogLoadAsyncExt()
+{
+	UNIMPLEMENTED_FUNC(cellOskDialog);
+	return CELL_OK;
+}
+
 error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is_unload)
 {
 	if (!OutputInfo || OutputInfo->numCharsResultString < 0)
@@ -563,6 +569,7 @@ error_code cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForc
 void cellSysutil_OskDialog_init()
 {
 	REG_FUNC(cellSysutil, cellOskDialogLoadAsync);
+	REG_FUNC(cellSysutil, cellOskDialogLoadAsyncExt);
 	REG_FUNC(cellSysutil, cellOskDialogUnloadAsync);
 	REG_FUNC(cellSysutil, cellOskDialogGetSize);
 	REG_FUNC(cellSysutil, cellOskDialogAbort);

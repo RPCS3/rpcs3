@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -66,7 +66,7 @@ error_code cellPadClearBuf(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -110,7 +110,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -363,7 +363,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -394,7 +394,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 		info->port_setting[i] = config->port_setting[i];
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
-		info->pclass_type[i] = CELL_PAD_PCLASS_TYPE_STANDARD;
+		info->pclass_type[i] = pads[i]->m_class_type;
 		info->pclass_profile[i] = 0x0;
 	}
 
@@ -407,7 +407,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -429,7 +429,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	// todo: support for 'unique' controllers, which goes in offsets 24+ in padData
-	data->pclass_type = CELL_PAD_PCLASS_TYPE_STANDARD;
+	data->pclass_type = pad->m_class_type;
 	data->pclass_profile = 0x0;
 
 	return cellPadGetData(port_no, vm::get_addr(&data->cellpad_data));
@@ -441,7 +441,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -472,7 +472,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -513,7 +513,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -553,7 +553,7 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -577,10 +577,47 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 		if (i >= config->max_connect)
 			break;
 
+		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
 		info->status[i] = pads[i]->m_port_status;
-		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
-		info->product_id[i] = 0x0268;
-		info->vendor_id[i] = 0x054C;
+
+		// TODO: Allow selecting different product IDs
+		switch (pads[i]->m_class_type)
+		{
+		case CELL_PAD_PCLASS_TYPE_GUITAR:
+			// Sony Computer Entertainment America
+			info->vendor_id[i] = 0x12BA;
+			// RedOctane Guitar (Guitar Hero)
+			info->product_id[i] = 0x0100;
+			// Harmonix Guitar (Rock Band)
+			// info->product_id[i] = 0x0200;
+			break;
+		case CELL_PAD_PCLASS_TYPE_DRUM:
+			// Sony Computer Entertainment America
+			info->vendor_id[i] = 0x12BA;
+			// RedOctane Drum Kit (Guitar Hero)
+			info->product_id[i] = 0x0120;
+			// Harmonix Drum Kit (Rock Band)
+			// info->product_id[i] = 0x0210;
+			break;
+		case CELL_PAD_PCLASS_TYPE_DJ:
+			// Sony Computer Entertainment America
+			info->vendor_id[i] = 0x12BA;
+			// DJ Hero Turntable
+			info->product_id[i] = 0x0140;
+			break;
+		case CELL_PAD_PCLASS_TYPE_DANCEMAT:
+			// Konami Digital Entertainment
+			info->vendor_id[i] = 0x1CCF;
+			// Dance Dance Revolution Mat
+			info->product_id[i] = 0x0140;
+			break;
+		default:
+			// Sony Corp.
+			info->vendor_id[i] = 0x054C;
+			// PlayStation 3 Controller
+			info->product_id[i] = 0x0268;
+			break;
+		}
 	}
 
 	return CELL_OK;
@@ -592,7 +629,7 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -632,7 +669,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -653,7 +690,8 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	// Should return the same as device capability mask, psl1ght has it backwards in pad->h
-	info->info[port_no] = pad->m_device_capability;
+	memset(info->info, 0, CELL_PAD_MAX_CAPABILITY_INFO * sizeof(u32));
+	info->info[0] = pad->m_device_capability;
 
 	return CELL_OK;
 }
@@ -664,7 +702,7 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -691,7 +729,7 @@ s32 cellPadInfoPressMode(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -720,7 +758,7 @@ s32 cellPadInfoSensorMode(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -749,7 +787,7 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;
@@ -785,7 +823,7 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::get<pad_t>();
+	const auto config = fxm::check<pad_t>();
 
 	if (!config)
 		return CELL_PAD_ERROR_UNINITIALIZED;

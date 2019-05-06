@@ -364,7 +364,7 @@ namespace vm
 
 		if (flags & page_executable)
 		{
-			utils::memory_commit(g_exec_addr + addr, size);
+			utils::memory_commit(g_exec_addr + addr * 2, size * 2);
 		}
 
 		if (g_cfg.core.ppu_debug)
@@ -494,7 +494,7 @@ namespace vm
 
 		if (is_exec)
 		{
-			utils::memory_decommit(g_exec_addr + addr, size);
+			utils::memory_decommit(g_exec_addr + addr * 2, size * 2);
 		}
 
 		if (g_cfg.core.ppu_debug)
@@ -638,7 +638,7 @@ namespace vm
 			// Special path for 4k-aligned pages
 			m_common = std::make_shared<utils::shm>(size);
 			verify(HERE), m_common->map_critical(vm::base(addr), utils::protection::no) == vm::base(addr);
-			verify(HERE), m_common->map_critical(vm::get_super_ptr(addr), utils::protection::no) == vm::get_super_ptr(addr);
+			verify(HERE), m_common->map_critical(vm::get_super_ptr(addr), utils::protection::rw) == vm::get_super_ptr(addr);
 		}
 	}
 
@@ -665,8 +665,14 @@ namespace vm
 		}
 	}
 
-	u32 block_t::alloc(const u32 orig_size, u32 align, const std::shared_ptr<utils::shm>* src)
+	u32 block_t::alloc(const u32 orig_size, u32 align, const std::shared_ptr<utils::shm>* src, u64 flags)
 	{
+		if (!src)
+		{
+			// Use the block's flags
+			flags = this->flags;
+		}
+
 		vm::writer_lock lock(0);
 
 		// Determine minimal alignment
@@ -689,13 +695,13 @@ namespace vm
 
 		u8 pflags = page_readable | page_writable;
 
-		if (align >= 0x100000)
-		{
-			pflags |= page_1m_size;
-		}
-		else if (align >= 0x10000)
+		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
 		{
 			pflags |= page_64k_size;
+		}
+		else if (!(flags & (SYS_MEMORY_PAGE_SIZE_MASK & ~SYS_MEMORY_PAGE_SIZE_1M)))
+		{
+			pflags |= page_1m_size;
 		}
 
 		// Create or import shared memory object
@@ -720,8 +726,14 @@ namespace vm
 		return 0;
 	}
 
-	u32 block_t::falloc(u32 addr, const u32 orig_size, const std::shared_ptr<utils::shm>* src)
+	u32 block_t::falloc(u32 addr, const u32 orig_size, const std::shared_ptr<utils::shm>* src, u64 flags)
 	{
+		if (!src)
+		{
+			// Use the block's flags
+			flags = this->flags;
+		}
+
 		vm::writer_lock lock(0);
 
 		// Determine minimal alignment
@@ -738,13 +750,13 @@ namespace vm
 
 		u8 pflags = page_readable | page_writable;
 
-		if ((flags & SYS_MEMORY_PAGE_SIZE_1M) == SYS_MEMORY_PAGE_SIZE_1M)
-		{
-			pflags |= page_1m_size;
-		}
-		else if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
+		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
 		{
 			pflags |= page_64k_size;
+		}
+		else if (!(flags & (SYS_MEMORY_PAGE_SIZE_MASK & ~SYS_MEMORY_PAGE_SIZE_1M)))
+		{
+			pflags |= page_1m_size;
 		}
 
 		// Create or import shared memory object
@@ -891,10 +903,8 @@ namespace vm
 		return nullptr;
 	}
 
-	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
+	static std::shared_ptr<block_t> _map(u32 addr, u32 size, u64 flags)
 	{
-		vm::writer_lock lock(0);
-
 		if (!size || (size | addr) % 4096)
 		{
 			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
@@ -920,6 +930,13 @@ namespace vm
 		return block;
 	}
 
+	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
+	{
+		vm::writer_lock lock(0);
+
+		return _map(addr, size, flags);
+	}
+
 	std::shared_ptr<block_t> find_map(u32 orig_size, u32 align, u64 flags)
 	{
 		vm::writer_lock lock(0);
@@ -941,7 +958,7 @@ namespace vm
 
 		auto block = _find_map(size, align, flags);
 
-		g_locations.emplace_back(block);
+		if (block) g_locations.emplace_back(block);
 
 		return block;
 	}
@@ -1018,6 +1035,12 @@ namespace vm
 			}
 		}
 
+		if (area_size)
+		{
+			lock.upgrade();
+			return _map(addr, area_size, 0x200);
+		}
+
 		return nullptr;
 	}
 
@@ -1027,7 +1050,7 @@ namespace vm
 		{
 			g_locations =
 			{
-				std::make_shared<block_t>(0x00010000, 0x1FFF0000), // main
+				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x200), // main
 				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video

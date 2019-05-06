@@ -54,8 +54,6 @@ namespace gl
 		u32 rsx_pitch = 0;
 		u16 native_pitch = 0;
 
-		u16 internal_width = 0;
-		u16 internal_height = 0;
 		u16 surface_height = 0;
 		u16 surface_width = 0;
 		u16 surface_pixel_size = 0;
@@ -86,7 +84,13 @@ namespace gl
 			return native_pitch;
 		}
 
-		// Rsx pitch
+		void set_surface_dimensions(u16 w, u16 h, u16 pitch)
+		{
+			surface_width = w;
+			surface_height = h;
+			rsx_pitch = pitch;
+		}
+
 		void set_rsx_pitch(u16 pitch)
 		{
 			rsx_pitch = pitch;
@@ -107,6 +111,19 @@ namespace gl
 			return surface_height;
 		}
 
+		bool is_depth_surface() const override
+		{
+			switch (get_internal_format())
+			{
+			case gl::texture::internal_format::depth16:
+			case gl::texture::internal_format::depth24_stencil8:
+			case gl::texture::internal_format::depth32f_stencil8:
+				return true;
+			default:
+				return false;
+			}
+		}
+
 		texture* get_surface() override
 		{
 			return (gl::texture*)this;
@@ -117,18 +134,10 @@ namespace gl
 			return id();
 		}
 
-		void update_surface()
-		{
-			internal_width = width();
-			internal_height = height();
-			surface_width = rsx::apply_inverse_resolution_scale(internal_width, true);
-			surface_height = rsx::apply_inverse_resolution_scale(internal_height, true);
-		}
-
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
 			//Use forward scaling to account for rounding and clamping errors
-			return (rsx::apply_resolution_scale(_width, true) == internal_width) && (rsx::apply_resolution_scale(_height, true) == internal_height);
+			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
 
 		void memory_barrier(gl::command_context& cmd, bool force_init = false);
@@ -153,8 +162,7 @@ struct gl_render_target_traits
 	std::unique_ptr<gl::render_target> create_new_surface(
 		u32 address,
 		rsx::surface_color_format surface_color_format,
-		size_t width,
-		size_t height,
+		size_t width, size_t height, size_t pitch,
 		gl::render_target* old_surface
 	)
 	{
@@ -164,14 +172,14 @@ struct gl_render_target_traits
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
 			rsx::apply_resolution_scale((u16)height, true), (GLenum)internal_fmt));
 		result->set_native_pitch((u16)width * format.channel_count * format.channel_size);
+		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
 
 		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
 		result->set_native_component_layout(native_layout);
-		result->old_contents = old_surface;
+		result->set_old_contents(old_surface);
 
-		result->queue_tag(address);
 		result->set_cleared(false);
-		result->update_surface();
+		result->queue_tag(address);
 		return result;
 	}
 
@@ -179,8 +187,7 @@ struct gl_render_target_traits
 	std::unique_ptr<gl::render_target> create_new_surface(
 			u32 address,
 		rsx::surface_depth_format surface_depth_format,
-			size_t width,
-			size_t height,
+			size_t width, size_t height, size_t pitch,
 			gl::render_target* old_surface
 		)
 	{
@@ -194,12 +201,12 @@ struct gl_render_target_traits
 
 		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
 		result->set_native_pitch(native_pitch);
+		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
 		result->set_native_component_layout(native_layout);
-		result->old_contents = old_surface;
+		result->set_old_contents(old_surface);
 
-		result->queue_tag(address);
 		result->set_cleared(false);
-		result->update_surface();
+		result->queue_tag(address);
 		return result;
 	}
 
@@ -210,7 +217,7 @@ struct gl_render_target_traits
 		info->native_pitch = surface->get_native_pitch();
 		info->surface_width = surface->get_surface_width();
 		info->surface_height = surface->get_surface_height();
-		info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
+		info->bpp = surface->get_bpp();
 	}
 
 	static void prepare_rtt_for_drawing(void *, gl::render_target *rtt) { rtt->reset_refs(); }
@@ -220,9 +227,16 @@ struct gl_render_target_traits
 	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
 
 	static
-	void invalidate_surface_contents(u32 address, void *, gl::render_target *surface, gl::render_target* old_surface)
+	bool surface_is_pitch_compatible(const std::unique_ptr<gl::render_target> &surface, size_t pitch)
 	{
-		surface->old_contents = old_surface;
+		return surface->get_rsx_pitch() == pitch;
+	}
+
+	static
+	void invalidate_surface_contents(void *, gl::render_target *surface, gl::render_target* old_surface, u32 address, size_t pitch)
+	{
+		surface->set_rsx_pitch((u16)pitch);
+		surface->set_old_contents(old_surface);
 		surface->reset_aa_mode();
 		surface->queue_tag(address);
 		surface->set_cleared(false);

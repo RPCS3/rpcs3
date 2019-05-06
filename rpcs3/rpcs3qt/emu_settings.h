@@ -187,7 +187,7 @@ public:
 	~emu_settings();
 
 	/** Connects a combo box with the target settings type*/
-	void EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged = false, bool use_max = false, int max = 0);
+	void EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false);
 
 	/** Connects a check box with the target settings type*/
 	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);

@@ -48,18 +48,25 @@ namespace vk
 
 extern u64 get_system_time();
 
-enum command_buffer_data_flag
+enum
 {
-	cb_has_occlusion_task = 1
+	VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE = 0x1,
+	VK_HEAP_CHECK_VERTEX_STORAGE = 0x2,
+	VK_HEAP_CHECK_VERTEX_ENV_STORAGE = 0x4,
+	VK_HEAP_CHECK_FRAGMENT_ENV_STORAGE = 0x8,
+	VK_HEAP_CHECK_TEXTURE_ENV_STORAGE = 0x10,
+	VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE = 0x20,
+	VK_HEAP_CHECK_TRANSFORM_CONSTANTS_STORAGE = 0x40,
+	VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE = 0x80,
+
+	VK_HEAP_CHECK_MAX_ENUM = VK_HEAP_CHECK_FRAGMENT_CONSTANTS_STORAGE,
+	VK_HEAP_CHECK_ALL = 0xFF,
 };
 
 struct command_buffer_chunk: public vk::command_buffer
 {
 	VkFence submit_fence = VK_NULL_HANDLE;
 	VkDevice m_device = VK_NULL_HANDLE;
-
-	u32 num_draws = 0;
-	u32 flags = 0;
 
 	std::atomic_bool pending = { false };
 	std::atomic<u64> last_sync = { 0 };
@@ -99,8 +106,6 @@ struct command_buffer_chunk: public vk::command_buffer
 			wait(FRAME_PRESENT_TIMEOUT);
 
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
-		num_draws = 0;
-		flags = 0;
 	}
 
 	bool poke()
@@ -424,7 +429,7 @@ private:
 
 	void update_draw_state();
 
-	void check_heap_status();
+	void check_heap_status(u32 flags = VK_HEAP_CHECK_ALL);
 
 	void check_descriptors();
 	VkDescriptorSet allocate_descriptor_set();
@@ -461,7 +466,7 @@ protected:
 	void on_init_thread() override;
 	void on_exit() override;
 	bool do_method(u32 id, u32 arg) override;
-	void flip(int buffer) override;
+	void flip(int buffer, bool emu_flip = false) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;

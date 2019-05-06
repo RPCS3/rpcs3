@@ -102,15 +102,28 @@ namespace gl
 		bool ARB_depth_buffer_float_supported = false;
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
+		bool NV_gpu_shader5_supported = false;
+		bool AMD_gpu_shader_half_float_supported = false;
 		bool initialized = false;
-		bool vendor_INTEL = false;  //has broken GLSL compiler
-		bool vendor_AMD = false;    //has broken ARB_multidraw
-		bool vendor_NVIDIA = false; //has NaN poisoning issues
-		bool vendor_MESA = false;   //requires CLIENT_STORAGE bit set for streaming buffers
+		bool vendor_INTEL = false;  // has broken GLSL compiler
+		bool vendor_AMD = false;    // has broken ARB_multidraw
+		bool vendor_NVIDIA = false; // has NaN poisoning issues
+		bool vendor_MESA = false;   // requires CLIENT_STORAGE bit set for streaming buffers
+
+		bool check(const std::string& ext_name, const char* test)
+		{
+			if (ext_name == test)
+			{
+				LOG_NOTICE(RSX, "Extension %s is supported", ext_name);
+				return true;
+			}
+
+			return false;
+		}
 
 		void initialize()
 		{
-			int find_count = 8;
+			int find_count = 10;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -120,64 +133,78 @@ namespace gl
 
 				const std::string ext_name = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
 
-				if (ext_name == "GL_ARB_shader_draw_parameters")
+				if (check(ext_name, "GL_ARB_shader_draw_parameters"))
 				{
 					ARB_shader_draw_parameters_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_EXT_direct_state_access")
+				if (check(ext_name, "GL_EXT_direct_state_access"))
 				{
 					EXT_dsa_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_direct_state_access")
+				if (check(ext_name, "GL_ARB_direct_state_access"))
 				{
 					ARB_dsa_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_buffer_storage")
+				if (check(ext_name, "GL_ARB_buffer_storage"))
 				{
 					ARB_buffer_storage_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_texture_buffer_object")
+				if (check(ext_name, "GL_ARB_texture_buffer_object"))
 				{
 					ARB_texture_buffer_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_depth_buffer_float")
+				if (check(ext_name, "GL_ARB_depth_buffer_float"))
 				{
 					ARB_depth_buffer_float_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_texture_barrier")
+				if (check(ext_name, "GL_ARB_texture_barrier"))
 				{
 					ARB_texture_barrier_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_NV_texture_barrier")
+				if (check(ext_name, "GL_NV_texture_barrier"))
 				{
 					NV_texture_barrier_supported = true;
 					find_count--;
 					continue;
 				}
+
+				if (check(ext_name, "GL_NV_gpu_shader5"))
+				{
+					NV_gpu_shader5_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (check(ext_name, "GL_AMD_gpu_shader_half_float"))
+				{
+					AMD_gpu_shader_half_float_supported = true;
+					find_count--;
+					continue;
+				}
 			}
 
-			//Workaround for intel drivers which have terrible capability reporting
+			// Workaround for intel drivers which have terrible capability reporting
 			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 			if (!vendor_string.empty())
 			{
@@ -1322,6 +1349,13 @@ namespace gl
 		}
 	};
 
+	enum image_aspect : u32
+	{
+		color = 1,
+		depth = 2,
+		stencil = 4
+	};
+
 	class texture
 	{
 	public:
@@ -1408,8 +1442,10 @@ namespace gl
 			rgba8 = GL_RGBA8,
 			r5g6b5 = GL_RGB565,
 			r8 = GL_R8,
-			rg8 = GL_RG8,
 			r32f = GL_R32F,
+			rg8 = GL_RG8,
+			rg16 = GL_RG16,
+			rg16f = GL_RG16F,
 			rgba16f = GL_RGBA16F,
 			rgba32f = GL_RGBA32F
 		};
@@ -1479,6 +1515,7 @@ namespace gl
 		GLuint m_mipmaps = 0;
 		GLuint m_pitch = 0;
 		GLuint m_compressed = GL_FALSE;
+		GLuint m_aspect_flags = 0;
 
 		target m_target = target::texture2D;
 		internal_format m_internal_format = internal_format::rgba8;
@@ -1563,18 +1600,22 @@ namespace gl
 				m_height = height;
 				m_depth = depth;
 				m_mipmaps = mipmaps;
+				m_aspect_flags = image_aspect::color;
 
 				switch (sized_format)
 				{
 				case GL_DEPTH_COMPONENT16:
 				{
 					m_pitch = width * 2;
+					m_aspect_flags = image_aspect::depth;
 					break;
 				}
+				case GL_DEPTH_COMPONENT32: // Unimplemented decode
 				case GL_DEPTH24_STENCIL8:
 				case GL_DEPTH32F_STENCIL8:
 				{
 					m_pitch = width * 4;
+					m_aspect_flags = image_aspect::depth | image_aspect::stencil;
 					break;
 				}
 				case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
@@ -1688,6 +1729,11 @@ namespace gl
 			return m_compressed;
 		}
 
+		GLuint aspect() const
+		{
+			return m_aspect_flags;
+		}
+
 		sizei size2D() const
 		{
 			return{ (int)m_width, (int)m_height };
@@ -1798,13 +1844,6 @@ namespace gl
 		{
 			copy_to(buf, format, type, pixel_pack_settings());
 		}
-	};
-
-	enum image_aspect : u32
-	{
-		color = 1,
-		depth = 2,
-		stencil = 4
 	};
 
 	class texture_view
@@ -1950,6 +1989,7 @@ public:
 				}
 			}
 
+			verify(HERE), aspect() & aspect_flags;
 			auto mapping = apply_swizzle_remap(get_native_component_layout(), remap);
 			auto view = std::make_unique<texture_view>(this, mapping.data(), aspect_flags);
 			auto result = view.get();

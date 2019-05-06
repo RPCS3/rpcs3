@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>rpcs3</string>
+	<key>CFBundleGetInfoString</key>
+	<string>Open-source Sony PlayStation 3 emulator</string>
+	<key>CFBundleIconFile</key>
+	<string>rpcs3.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>net.rpcs3.rpcs3</string>
+	<key>CFBundleLongVersionString</key>
+	<string>${RPCS3_GIT_TAG}</string>
+	<key>CFBundleName</key>
+	<string>RPCS3</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>${RPCS3_GIT_TAG}</string>
+	<key>CFBundleVersion</key>
+	<string>${RPCS3_GIT_TAG}</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Licensed under GPLv2</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+</dict>
+</plist>

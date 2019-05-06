@@ -24,7 +24,7 @@ struct GameInfo
 
 	void Reset()
 	{
-		path = "";
+		path.clear();
 
 		name = "Unknown";
 		serial = "Unknown";

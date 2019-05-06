@@ -95,10 +95,7 @@ namespace rsx
 		void insert_draw_command(u32 index, const draw_range_t& range)
 		{
 			auto range_It = draw_command_ranges.begin();
-			while (index--)
-			{
-				++range_It;
-			}
+			std::advance(range_It, index);
 
 			draw_command_ranges.insert(range_It, range);
 
@@ -1241,6 +1238,11 @@ namespace rsx
 		surface_depth_format surface_depth_fmt() const
 		{
 			return decode<NV4097_SET_SURFACE_FORMAT>().depth_fmt();
+		}
+
+		surface_raster_type surface_type() const
+		{
+			return decode<NV4097_SET_SURFACE_FORMAT>().type();
 		}
 
 		surface_antialiasing surface_antialias() const

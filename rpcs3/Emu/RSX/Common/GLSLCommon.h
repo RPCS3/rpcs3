@@ -5,22 +5,73 @@
 
 namespace program_common
 {
-	static void insert_compare_op(std::ostream& OS)
+	static void insert_compare_op(std::ostream& OS, bool low_precision)
+	{
+		if (low_precision)
+		{
+			OS <<
+				"int compare(float a, float b)\n"
+				"{\n"
+				"	if (abs(a - b) < 0.000001) return 2;\n"
+				"	return (a > b)? 4 : 1;\n"
+				"}\n\n"
+
+				"bool comparison_passes(float a, float b, uint func)\n"
+				"{\n"
+				"	if (func == 0) return false; // never\n"
+				"	if (func == 7) return true;  // always\n\n"
+
+				"	int op = compare(a, b);\n"
+				"	switch (func)\n"
+				"	{\n"
+				"		case 1: return op == 1; // less\n"
+				"		case 2: return op == 2; // equal\n"
+				"		case 3: return op <= 2; // lequal\n"
+				"		case 4: return op == 4; // greater\n"
+				"		case 5: return op != 2; // nequal\n"
+				"		case 6: return (op == 4 || op == 2); // gequal\n"
+				"	}\n\n"
+
+				"	return false; // unreachable\n"
+				"}\n\n";
+		}
+		else
+		{
+			OS <<
+			"bool comparison_passes(float a, float b, uint func)\n"
+			"{\n"
+			"	switch (func)\n"
+			"	{\n"
+			"		default:\n"
+			"		case 0: return false; //never\n"
+			"		case 1: return (a < b); //less\n"
+			"		case 2: return (a == b); //equal\n"
+			"		case 3: return (a <= b); //lequal\n"
+			"		case 4: return (a > b); //greater\n"
+			"		case 5: return (a != b); //nequal\n"
+			"		case 6: return (a >= b); //gequal\n"
+			"		case 7: return true; //always\n"
+			"	}\n"
+			"}\n\n";
+		}
+	}
+
+	static void insert_compare_op_vector(std::ostream& OS)
 	{
 		OS <<
-		"bool comparison_passes(float a, float b, uint func)\n"
+		"bvec4 comparison_passes(vec4 a, vec4 b, uint func)\n"
 		"{\n"
 		"	switch (func)\n"
 		"	{\n"
 		"		default:\n"
-		"		case 0: return false; //never\n"
-		"		case 1: return (a < b); //less\n"
-		"		case 2: return (a == b); //equal\n"
-		"		case 3: return (a <= b); //lequal\n"
-		"		case 4: return (a > b); //greater\n"
-		"		case 5: return (a != b); //nequal\n"
-		"		case 6: return (a >= b); //gequal\n"
-		"		case 7: return true; //always\n"
+		"		case 0: return bvec4(false); //never\n"
+		"		case 1: return lessThan(a, b); //less\n"
+		"		case 2: return equal(a, b); //equal\n"
+		"		case 3: return lessThanEqual(a, b); //lequal\n"
+		"		case 4: return greaterThan(a, b); //greater\n"
+		"		case 5: return notEqual(a, b); //nequal\n"
+		"		case 6: return greaterThanEqual(a, b); //gequal\n"
+		"		case 7: return bvec4(true); //always\n"
 		"	}\n"
 		"}\n\n";
 	}
@@ -108,6 +159,23 @@ namespace glsl
 			return "vec3";
 		case 4:
 			return "vec4";
+		}
+	}
+
+	static std::string getHalfTypeNameImpl(size_t elementCount)
+	{
+		switch (elementCount)
+		{
+		default:
+			abort();
+		case 1:
+			return "float16_t";
+		case 2:
+			return "f16vec2";
+		case 3:
+			return "f16vec3";
+		case 4:
+			return "f16vec4";
 		}
 	}
 
@@ -372,7 +440,7 @@ namespace glsl
 		"}\n\n";
 	}
 
-	static void insert_rop(std::ostream& OS, bool _32_bit_exports)
+	static void insert_rop(std::ostream& OS, bool _32_bit_exports, bool native_half_support)
 	{
 		const std::string reg0 = _32_bit_exports ? "r0" : "h0";
 		const std::string reg1 = _32_bit_exports ? "r2" : "h4";
@@ -398,15 +466,29 @@ namespace glsl
 
 		if (!_32_bit_exports)
 		{
-			//Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
-			OS <<
-			"		else if (srgb_convert)\n"
-			"		{\n"
-			"			" << reg0 << ".rgb = linear_to_srgb(" << reg0 << ").rgb;\n"
-			"			" << reg1 << ".rgb = linear_to_srgb(" << reg1 << ").rgb;\n"
-			"			" << reg2 << ".rgb = linear_to_srgb(" << reg2 << ").rgb;\n"
-			"			" << reg3 << ".rgb = linear_to_srgb(" << reg3 << ").rgb;\n"
-			"		}\n";
+			// Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
+			if (native_half_support)
+			{
+				OS <<
+				"		else if (srgb_convert)\n"
+				"		{\n"
+				"			" << reg0 << ".rgb = clamp16(linear_to_srgb(" << reg0 << ")).rgb;\n"
+				"			" << reg1 << ".rgb = clamp16(linear_to_srgb(" << reg1 << ")).rgb;\n"
+				"			" << reg2 << ".rgb = clamp16(linear_to_srgb(" << reg2 << ")).rgb;\n"
+				"			" << reg3 << ".rgb = clamp16(linear_to_srgb(" << reg3 << ")).rgb;\n"
+				"		}\n";
+			}
+			else
+			{
+				OS <<
+				"		else if (srgb_convert)\n"
+				"		{\n"
+				"			" << reg0 << ".rgb = linear_to_srgb(" << reg0 << ").rgb;\n"
+				"			" << reg1 << ".rgb = linear_to_srgb(" << reg1 << ").rgb;\n"
+				"			" << reg2 << ".rgb = linear_to_srgb(" << reg2 << ").rgb;\n"
+				"			" << reg3 << ".rgb = linear_to_srgb(" << reg3 << ").rgb;\n"
+				"		}\n";
+			}
 		}
 
 		OS <<
@@ -418,13 +500,27 @@ namespace glsl
 		"	ocol3 = " << reg3 << ";\n\n";
 	}
 
-	static void insert_glsl_legacy_function(std::ostream& OS, glsl::program_domain domain, bool require_lit_emulation, bool require_depth_conversion = false, bool require_wpos = false, bool require_texture_ops = true)
+	struct shader_properties
+	{
+		glsl::program_domain domain;
+		// Applicable in vertex stage
+		bool require_lit_emulation;
+
+		// Only relevant for fragment programs
+		bool require_wpos;
+		bool require_depth_conversion;
+		bool require_texture_ops;
+		bool emulate_shadow_compare;
+		bool low_precision_tests;
+	};
+
+	static void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props)
 	{
 		OS << "#define _select mix\n";
 		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
 		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
 
-		if (require_lit_emulation)
+		if (props.require_lit_emulation)
 		{
 			OS <<
 			"vec4 lit_legacy(vec4 val)"
@@ -441,7 +537,7 @@ namespace glsl
 			"}\n\n";
 		}
 
-		if (domain == glsl::program_domain::glsl_vertex_program)
+		if (props.domain == glsl::program_domain::glsl_vertex_program)
 		{
 			OS <<
 			"vec4 apply_zclip_xform(vec4 pos, float near_plane, float far_plane)\n"
@@ -461,14 +557,19 @@ namespace glsl
 			return;
 		}
 
-		program_common::insert_compare_op(OS);
+		program_common::insert_compare_op(OS, props.low_precision_tests);
+
+		if (props.require_texture_ops && props.emulate_shadow_compare)
+		{
+			program_common::insert_compare_op_vector(OS);
+		}
 
 		// NOTES:
 		// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
 		// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
 		// Helps to avoid A2C tested foliage disappearing in the distance
 		OS <<
-		"bool coverage_test_passes(inout vec4 _sample, uint control)\n"
+		"bool coverage_test_passes(/*inout*/in vec4 _sample, uint control)\n"
 		"{\n"
 		"	if ((control & 0x1) == 0) return false;\n"
 		"\n"
@@ -478,16 +579,30 @@ namespace glsl
 		"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"
 		"	//_sample.a     = min(_sample.a, alpha);\n" // Cannot blend A2C samples naively as they are order independent! Causes background bleeding
 		"	return (alpha > 0.f);\n"
+		"}\n\n"
+
+		"vec4 linear_to_srgb(vec4 cl)\n"
+		"{\n"
+		"	vec4 low = cl * 12.92;\n"
+		"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
+		"	bvec4 select = lessThan(cl, vec4(0.0031308));\n"
+		"	return clamp(mix(high, low, select), 0., 1.);\n"
+		"}\n\n"
+
+		"float srgb_to_linear(float cs)\n"
+		"{\n"
+		"	if (cs <= 0.04045) return cs / 12.92;\n"
+		"	return pow((cs + 0.055) / 1.055, 2.4);\n"
 		"}\n\n";
 
-		if (require_depth_conversion)
+		if (props.require_depth_conversion)
 		{
 			//NOTE: Memory layout is fetched as byteswapped BGRA [GBAR] (GOW collection, DS2, DeS)
 			//The A component (Z) is useless (should contain stencil8 or just 1)
 			OS <<
 			"vec4 decodeLinearDepth(float depth_value)\n"
 			"{\n"
-			"	uint value = uint(depth_value * 16777215);\n"
+			"	uint value = uint(depth_value * 16777215.);\n"
 			"	uint b = (value & 0xff);\n"
 			"	uint g = (value >> 8) & 0xff;\n"
 			"	uint r = (value >> 16) & 0xff;\n"
@@ -524,22 +639,26 @@ namespace glsl
 			"}\n\n";
 		}
 
-		if (require_texture_ops)
+		if (props.require_texture_ops)
 		{
-			OS <<
-			"vec4 linear_to_srgb(vec4 cl)\n"
-			"{\n"
-			"	vec4 low = cl * 12.92;\n"
-			"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
-			"	bvec4 select = lessThan(cl, vec4(0.0031308));\n"
-			"	return clamp(mix(high, low, select), 0., 1.);\n"
-			"}\n\n"
+			if (props.emulate_shadow_compare)
+			{
+				OS <<
+				"vec4 shadowCompare(sampler2D tex, vec3 p, uint func)\n"
+				"{\n"
+				"	vec4 samples = textureGather(tex, p.xy).xxxx;\n"
+				"	vec4 ref = clamp(p.z, 0., 1.).xxxx;\n"
+				"	vec4 filtered = vec4(comparison_passes(samples, ref, func));\n"
+				"	return filtered * dot(filtered, vec4(0.25f));\n"
+				"}\n\n"
 
-			"float srgb_to_linear(float cs)\n"
-			"{\n"
-			"	if (cs <= 0.04045) return cs / 12.92;\n"
-			"	return pow((cs + 0.055) / 1.055, 2.4);\n"
-			"}\n\n"
+				"vec4 shadowCompareProj(sampler2D tex, vec4 p, uint func)\n"
+				"{\n"
+				"	return shadowCompare(tex, p.xyz / p.w, func);\n"
+				"}\n\n";
+			}
+
+			OS <<
 
 #ifdef __APPLE__
 			"vec4 remap_vector(vec4 rgba, uint remap_bits)\n"
@@ -561,7 +680,7 @@ namespace glsl
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
 			"	if (remap_bits != 0x8D5) rgba = remap_vector(rgba, remap_bits);\n\n"
 #endif
-			"	if ((control_bits & 0xFFFF) == 0) return rgba;\n\n"
+			"	if ((control_bits & 0xFF) == 0) return rgba;\n\n"
 			"	if ((control_bits & 0x10) > 0)\n"
 			"	{\n"
 			"		//Alphakill\n"
@@ -595,10 +714,22 @@ namespace glsl
 			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].xy, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
 			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.)), floatBitsToUint(texture_parameters[index].w))\n"
 
-			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.))\n"
-			"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n"
+			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n";
 
+			if (props.emulate_shadow_compare)
+			{
+				OS <<
+				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) shadowCompareProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n";
+			}
+			else
+			{
+				OS <<
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n";
+			}
+
+			OS <<
 			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), floatBitsToUint(texture_parameters[index].w))\n"
 			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), floatBitsToUint(texture_parameters[index].w))\n"
 			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), floatBitsToUint(texture_parameters[index].w))\n"
@@ -606,7 +737,7 @@ namespace glsl
 			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), floatBitsToUint(texture_parameters[index].w))\n\n";
 		}
 
-		if (require_wpos)
+		if (props.require_wpos)
 		{
 			OS <<
 			"vec4 get_wpos()\n"
@@ -629,23 +760,23 @@ namespace glsl
 		default:
 			abort();
 		case FUNCTION::FUNCTION_DP2:
-			return "vec4(dot($0.xy, $1.xy))";
+			return "$Ty(dot($0.xy, $1.xy))";
 		case FUNCTION::FUNCTION_DP2A:
-			return "vec4(dot($0.xy, $1.xy) + $2.x)";
+			return "$Ty(dot($0.xy, $1.xy) + $2.x)";
 		case FUNCTION::FUNCTION_DP3:
-			return "vec4(dot($0.xyz, $1.xyz))";
+			return "$Ty(dot($0.xyz, $1.xyz))";
 		case FUNCTION::FUNCTION_DP4:
-			return "vec4(dot($0, $1))";
+			return "$Ty(dot($0, $1))";
 		case FUNCTION::FUNCTION_DPH:
-			return "vec4(dot(vec4($0.xyz, 1.0), $1))";
+			return "$Ty(dot(vec4($0.xyz, 1.0), $1))";
 		case FUNCTION::FUNCTION_SFL:
-			return "vec4(0., 0., 0., 0.)";
+			return "$Ty(0., 0., 0., 0.)";
 		case FUNCTION::FUNCTION_STR:
-			return "vec4(1., 1., 1., 1.)";
+			return "$Ty(1., 1., 1., 1.)";
 		case FUNCTION::FUNCTION_FRACT:
 			return "fract($0)";
 		case FUNCTION::FUNCTION_REFL:
-			return "vec4($0 - 2.0 * (dot($0, $1)) * $1)";
+			return "$Ty($0 - 2.0 * (dot($0, $1)) * $1)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D:
 			return "TEX1D($_i, $0.x)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE1D_BIAS:

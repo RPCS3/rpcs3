@@ -137,6 +137,8 @@ static fs::error to_error(DWORD e)
 #include <mach-o/dyld.h>
 #elif defined(__linux__) || defined(__sun)
 #include <sys/sendfile.h>
+#include <sys/syscall.h>
+#include <linux/fs.h>
 #else
 #include <fstream>
 #endif
@@ -190,6 +192,15 @@ namespace fs
 	void file_base::sync()
 	{
 		// Do notning
+	}
+
+	fs::native_handle fs::file_base::get_handle()
+	{
+#ifdef _WIN32
+		return INVALID_HANDLE_VALUE;
+#else
+		return -1;
+#endif
 	}
 
 	dir_base::~dir_base()
@@ -600,6 +611,21 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 
 	return true;
 #else
+
+#ifdef __linux__
+	if (syscall(SYS_renameat2, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), overwrite ? 0 : 1 /* RENAME_NOREPLACE */) == 0)
+	{
+		return true;
+	}
+
+	// If the filesystem doesn't support RENAME_NOREPLACE, it returns EINVAL. Retry with fallback method in that case.
+	if (errno != EINVAL || overwrite)
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+#endif
+
 	if (!overwrite && exists(to))
 	{
 		g_tls_error = fs::error::exist;
@@ -884,7 +910,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	class windows_file final : public file_base, public get_native_handle
+	class windows_file final : public file_base
 	{
 		const HANDLE m_handle;
 
@@ -987,7 +1013,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return size.QuadPart;
 		}
 
-		native_handle get() override
+		native_handle get_handle() override
 		{
 			return m_handle;
 		}
@@ -1034,7 +1060,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		::ftruncate(fd, 0);
 	}
 
-	class unix_file final : public file_base, public get_native_handle
+	class unix_file final : public file_base
 	{
 		const int m_fd;
 
@@ -1127,7 +1153,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return file_info.st_size;
 		}
 
-		native_handle get() override
+		native_handle get_handle() override
 		{
 			return m_fd;
 		}
@@ -1208,9 +1234,9 @@ fs::file::file(const void* ptr, std::size_t size)
 
 fs::native_handle fs::file::get_handle() const
 {
-	if (auto getter = dynamic_cast<get_native_handle*>(m_file.get()))
+	if (m_file)
 	{
-		return getter->get();
+		return m_file->get_handle();
 	}
 
 #ifdef _WIN32
@@ -1219,6 +1245,15 @@ fs::native_handle fs::file::get_handle() const
 	return -1;
 #endif
 }
+
+#ifdef _WIN32
+bool fs::file::set_delete(bool autodelete) const
+{
+	FILE_DISPOSITION_INFO disp;
+	disp.DeleteFileW = autodelete;
+	return SetFileInformationByHandle(get_handle(), FileDispositionInfo, &disp, sizeof(disp)) != 0;
+}
+#endif
 
 void fs::dir::xnull() const
 {

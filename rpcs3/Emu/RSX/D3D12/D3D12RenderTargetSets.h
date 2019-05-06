@@ -24,7 +24,7 @@ struct render_target_traits
 	static
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
-		surface_color_format color_format, size_t width, size_t height,
+		surface_color_format color_format, size_t width, size_t height, size_t /*pitch*/,
 		ID3D12Resource* /*old*/,
 		ID3D12Device* device, const std::array<float, 4> &clear_color, float, u8)
 	{
@@ -85,7 +85,7 @@ struct render_target_traits
 	static
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
-		surface_depth_format surfaceDepthFormat, size_t width, size_t height,
+		surface_depth_format surfaceDepthFormat, size_t width, size_t height, size_t /*pitch*/,
 		ID3D12Resource* /*old*/,
 		ID3D12Device* device, const std::array<float, 4>& , float clear_depth, u8 clear_stencil)
 	{
@@ -130,9 +130,9 @@ struct render_target_traits
 
 	static
 	void invalidate_surface_contents(
-		u32,
 		ID3D12GraphicsCommandList*,
-		ID3D12Resource*, ID3D12Resource*)
+		ID3D12Resource*, ID3D12Resource*,
+		u32, size_t)
 	{}
 
 	static
@@ -142,6 +142,12 @@ struct render_target_traits
 	static
 	void notify_surface_persist(const ComPtr<ID3D12Resource>&)
 	{}
+
+	static
+	bool surface_is_pitch_compatible(const ComPtr<ID3D12Resource>&, size_t)
+	{
+		return true;
+	}
 
 	static
 	bool rtt_has_format_width_height(const ComPtr<ID3D12Resource> &rtt, surface_color_format surface_color_format, size_t width, size_t height, bool=false)

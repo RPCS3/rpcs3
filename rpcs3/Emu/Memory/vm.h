@@ -161,10 +161,10 @@ namespace vm
 		const u64 flags; // Currently unused
 
 		// Search and map memory (min alignment is 0x10000)
-		u32 alloc(u32 size, u32 align = 0x10000, const std::shared_ptr<utils::shm>* = nullptr);
+		u32 alloc(u32 size, u32 align = 0x10000, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
 
 		// Try to map memory at fixed location
-		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr);
+		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
 		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr);

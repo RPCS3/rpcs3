@@ -374,6 +374,12 @@ s32 cellCameraOpen() // seems unused
 	return CELL_OK;
 }
 
+s32 cellCameraOpenAsync()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
 s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
 	cellCamera.todo("cellCameraOpenEx(dev_num=%d, type=*0x%x)", dev_num, info);
@@ -442,6 +448,12 @@ s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	return CELL_OK;
 }
 
+s32 cellCameraOpenPost()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
 s32 cellCameraClose(s32 dev_num)
 {
 	cellCamera.todo("cellCameraClose(dev_num=%d)", dev_num);
@@ -473,6 +485,18 @@ s32 cellCameraClose(s32 dev_num)
 	vm::dealloc(g_camera->info.buffer.addr(), vm::memory_location_t::main);
 	g_camera->is_open = false;
 
+	return CELL_OK;
+}
+
+s32 cellCameraCloseAsync()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
+s32 cellCameraClosePost()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
@@ -706,6 +730,12 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 	return CELL_OK;
 }
 
+s32 cellCameraResetAttribute()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
 s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
 	cellCamera.todo("cellCameraGetBufferSize(dev_num=%d, info=*0x%x)", dev_num, info);
@@ -838,6 +868,12 @@ s32 cellCameraSetExtensionUnit(s32 dev_num, u16 value, u16 length, vm::ptr<u8> d
 	return cellCameraCtrlExtensionUnit(dev_num, SET_CUR, value, length, data);
 }
 
+s32 cellCameraSetContainer()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
 s32 cellCameraReset(s32 dev_num)
 {
 	cellCamera.todo("cellCameraReset(dev_num=%d)", dev_num);
@@ -871,6 +907,18 @@ s32 cellCameraReset(s32 dev_num)
 
 	// TODO reset camera
 
+	return CELL_OK;
+}
+
+s32 cellCameraResetAsync()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
+s32 cellCameraResetPost()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
@@ -913,6 +961,18 @@ s32 cellCameraStart(s32 dev_num)
 	return CELL_OK;
 }
 
+s32 cellCameraStartAsync()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
+s32 cellCameraStartPost()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
 s32 cellCameraRead(s32 dev_num, vm::ptr<u32> frame_num, vm::ptr<u32> bytes_read)
 {
 	cellCamera.todo("cellCameraRead(dev_num=%d, frame_num=*0x%x, bytes_read=*0x%x)", dev_num, frame_num, bytes_read);
@@ -936,6 +996,12 @@ s32 cellCameraRead(s32 dev_num, vm::ptr<u32> frame_num, vm::ptr<u32> bytes_read)
 		*bytes_read = read_ex->bytesread;
 	}
 
+	return CELL_OK;
+}
+
+s32 cellCameraRead2()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
@@ -1044,6 +1110,18 @@ s32 cellCameraStop(s32 dev_num)
 	return CELL_OK;
 }
 
+s32 cellCameraStopAsync()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
+s32 cellCameraStopPost()
+{
+	UNIMPLEMENTED_FUNC(cellCamera);
+	return CELL_OK;
+}
+
 s32 cellCameraSetNotifyEventQueue(u64 key)
 {
 	cellCamera.todo("cellCameraSetNotifyEventQueue(key=0x%x)", key);
@@ -1120,9 +1198,13 @@ DECLARE(ppu_module_manager::cellCamera)("cellCamera", []()
 {
 	REG_FUNC(cellCamera, cellCameraInit);
 	REG_FUNC(cellCamera, cellCameraEnd);
-	REG_FUNC(cellCamera, cellCameraOpen); // was "renamed", but exists
+	REG_FUNC(cellCamera, cellCameraOpen);
+	REG_FUNC(cellCamera, cellCameraOpenAsync);
 	REG_FUNC(cellCamera, cellCameraOpenEx);
+	REG_FUNC(cellCamera, cellCameraOpenPost);
 	REG_FUNC(cellCamera, cellCameraClose);
+	REG_FUNC(cellCamera, cellCameraCloseAsync);
+	REG_FUNC(cellCamera, cellCameraClosePost);
 
 	REG_FUNC(cellCamera, cellCameraGetDeviceGUID);
 	REG_FUNC(cellCamera, cellCameraGetType);
@@ -1132,21 +1214,30 @@ DECLARE(ppu_module_manager::cellCamera)("cellCamera", []()
 	REG_FUNC(cellCamera, cellCameraIsStarted);
 	REG_FUNC(cellCamera, cellCameraGetAttribute);
 	REG_FUNC(cellCamera, cellCameraSetAttribute);
+	REG_FUNC(cellCamera, cellCameraResetAttribute);
 	REG_FUNC(cellCamera, cellCameraGetBufferSize);
-	REG_FUNC(cellCamera, cellCameraGetBufferInfo); // was "renamed", but exists
+	REG_FUNC(cellCamera, cellCameraGetBufferInfo);
 	REG_FUNC(cellCamera, cellCameraGetBufferInfoEx);
 
 	REG_FUNC(cellCamera, cellCameraPrepExtensionUnit);
 	REG_FUNC(cellCamera, cellCameraCtrlExtensionUnit);
 	REG_FUNC(cellCamera, cellCameraGetExtensionUnit);
 	REG_FUNC(cellCamera, cellCameraSetExtensionUnit);
+	REG_FUNC(cellCamera, cellCameraSetContainer);
 
 	REG_FUNC(cellCamera, cellCameraReset);
+	REG_FUNC(cellCamera, cellCameraResetAsync);
+	REG_FUNC(cellCamera, cellCameraResetPost);
 	REG_FUNC(cellCamera, cellCameraStart);
+	REG_FUNC(cellCamera, cellCameraStartAsync);
+	REG_FUNC(cellCamera, cellCameraStartPost);
 	REG_FUNC(cellCamera, cellCameraRead);
+	REG_FUNC(cellCamera, cellCameraRead2);
 	REG_FUNC(cellCamera, cellCameraReadEx);
 	REG_FUNC(cellCamera, cellCameraReadComplete);
 	REG_FUNC(cellCamera, cellCameraStop);
+	REG_FUNC(cellCamera, cellCameraStopAsync);
+	REG_FUNC(cellCamera, cellCameraStopPost);
 
 	REG_FUNC(cellCamera, cellCameraSetNotifyEventQueue);
 	REG_FUNC(cellCamera, cellCameraRemoveNotifyEventQueue);

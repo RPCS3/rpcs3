@@ -1,4 +1,5 @@
 ﻿#include "stdafx.h"
+#include "sys_sync.h"
 #include "sys_fs.h"
 
 #include <mutex>
@@ -773,7 +774,7 @@ error_code sys_fs_rename(vm::cptr<char> from, vm::cptr<char> to)
 		return CELL_ENOTMOUNTED;
 	}
 
-	if (!fs::rename(local_from, local_to, false))
+	if (!vfs::host::rename(local_from, local_to, false))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -851,7 +852,12 @@ error_code sys_fs_unlink(vm::cptr<char> path)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (!fs::remove_file(local_path))
+	if (fs::is_dir(local_path))
+	{
+		return {CELL_EISDIR, path};
+	}
+
+	if (!vfs::host::unlink(local_path))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
@@ -1287,7 +1293,7 @@ error_code sys_fs_lseek(u32 fd, s64 offset, s32 whence, vm::ptr<u64> pos)
 	return CELL_OK;
 }
 
-error_code sys_fs_fdatasync(u32 fd)
+error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 {
 	sys_fs.trace("sys_fs_fdadasync(fd=%d)", fd);
 
@@ -1298,12 +1304,12 @@ error_code sys_fs_fdatasync(u32 fd)
 		return CELL_EBADF;
 	}
 
+	lv2_obj::sleep(ppu);
 	file->file.sync();
-
 	return CELL_OK;
 }
 
-error_code sys_fs_fsync(u32 fd)
+error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 {
 	sys_fs.trace("sys_fs_fsync(fd=%d)", fd);
 
@@ -1314,8 +1320,8 @@ error_code sys_fs_fsync(u32 fd)
 		return CELL_EBADF;
 	}
 
+	lv2_obj::sleep(ppu);
 	file->file.sync();
-
 	return CELL_OK;
 }
 

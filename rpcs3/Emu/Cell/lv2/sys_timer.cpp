@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -33,17 +33,17 @@ void lv2_timer_context::operator()()
 				if (const auto queue = port.lock())
 				{
 					queue->send(source, data1, data2, next);
-
-					if (period)
-					{
-						// Set next expiration time and check again (HACK)
-						expire += period;
-						continue;
-					}
 				}
 
-				// Stop: oneshot or the event port was disconnected (TODO: is it correct?)
-				state = SYS_TIMER_STATE_STOP;
+				if (period)
+				{
+					// Set next expiration time and check again (HACK)
+					expire += period;
+					continue;
+				}
+
+				// Stop after oneshot
+				state.compare_and_swap_test(SYS_TIMER_STATE_RUN, SYS_TIMER_STATE_STOP);
 				continue;
 			}
 
@@ -331,7 +331,7 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 	}
 	else
 	{
-		lv2_obj::yield(ppu);
+		std::this_thread::yield();
 	}
 
 	return CELL_OK;

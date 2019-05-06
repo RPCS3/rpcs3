@@ -367,8 +367,8 @@ namespace gl
 	{
 		std::unique_ptr<texture> typeless_src;
 		std::unique_ptr<texture> typeless_dst;
-		u32 src_id = src->id();
-		u32 dst_id = dst->id();
+		const gl::texture* real_src = src;
+		const gl::texture* real_dst = dst;
 
 		if (xfer_info.src_is_typeless)
 		{
@@ -380,7 +380,7 @@ namespace gl
 			typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
 			copy_typeless(typeless_src.get(), src);
 
-			src_id = typeless_src->id();
+			real_src = typeless_src.get();
 			src_rect.x1 = (u16)(src_rect.x1 * xfer_info.src_scaling_hint);
 			src_rect.x2 = (u16)(src_rect.x2 * xfer_info.src_scaling_hint);
 		}
@@ -395,7 +395,7 @@ namespace gl
 			typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
 			copy_typeless(typeless_dst.get(), dst);
 
-			dst_id = typeless_dst->id();
+			real_dst = typeless_dst.get();
 			dst_rect.x1 = (u16)(dst_rect.x1 * xfer_info.dst_scaling_hint);
 			dst_rect.x2 = (u16)(dst_rect.x2 * xfer_info.dst_scaling_hint);
 		}
@@ -406,16 +406,16 @@ namespace gl
 
 		if (is_depth_copy)
 		{
-			if (src->get_internal_format() == gl::texture::internal_format::depth16 ||
-				dst->get_internal_format() == gl::texture::internal_format::depth16)
-			{
-				attachment = GL_DEPTH_ATTACHMENT;
-				target = gl::buffers::depth;
-			}
-			else
+			verify(HERE), real_src->aspect() == real_dst->aspect();
+			if (real_dst->aspect() & gl::image_aspect::stencil)
 			{
 				attachment = GL_DEPTH_STENCIL_ATTACHMENT;
 				target = gl::buffers::depth_stencil;
+			}
+			else
+			{
+				attachment = GL_DEPTH_ATTACHMENT;
+				target = gl::buffers::depth;
 			}
 		}
 		else
@@ -429,10 +429,20 @@ namespace gl
 		save_binding_state saved;
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, blit_src.id());
-		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, src_id, 0);
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_src->id(), 0);
 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, blit_dst.id());
-		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst_id, 0);
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_dst->id(), 0);
+
+		if (xfer_info.flip_horizontal)
+		{
+			src_rect.flip_horizontal();
+		}
+
+		if (xfer_info.flip_vertical)
+		{
+			src_rect.flip_vertical();
+		}
 
 		glBlitFramebuffer(src_rect.x1, src_rect.y1, src_rect.x2, src_rect.y2,
 			dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2,

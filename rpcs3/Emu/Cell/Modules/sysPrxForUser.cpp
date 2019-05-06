@@ -144,21 +144,27 @@ s32 sys_lv2coredump_D725F320()
 	fmt::raw_error(__func__);
 }
 
-// quick notes on sys_crash_dump_(get|set)_user_log_area
-// (only tested with Destiny BLUS31181)
-// unk1 is always 0
-// unk2 is a pointer to a cstring
-// unk3 is a pointer to... something? a struct maybe?
-
-s32 sys_crash_dump_get_user_log_area(u32 unk1, vm::ptr<char> unk2, vm::ptr<void> unk3)
+error_code sys_crash_dump_get_user_log_area(u8 index, vm::ptr<sys_crash_dump_log_area_info_t> entry)
 {
-	sysPrxForUser.todo("sys_crash_dump_get_user_log_area(unk1=%d, unk2=*0x%x, unk3=*0x%x)", unk1, unk2, unk3);
+	sysPrxForUser.todo("sys_crash_dump_get_user_log_area(index=%d, entry=*0x%x)", index, entry);
+
+	if (index > SYS_CRASH_DUMP_MAX_LOG_AREA || !entry)
+	{
+		return CELL_EINVAL;
+	}
+
 	return CELL_OK;
 }
 
-s32 sys_crash_dump_set_user_log_area(u32 unk1, vm::ptr<char> unk2, vm::ptr<void> unk3)
+error_code sys_crash_dump_set_user_log_area(u8 index, vm::ptr<sys_crash_dump_log_area_info_t> new_entry)
 {
-	sysPrxForUser.todo("sys_crash_dump_set_user_log_area(unk1=%d, unk2=*0x%x %s, unk3=*0x%x)", unk1, unk2, unk2, unk3);
+	sysPrxForUser.todo("sys_crash_dump_set_user_log_area(index=%d, new_entry=*0x%x)", index, new_entry);
+
+	if (index > SYS_CRASH_DUMP_MAX_LOG_AREA || !new_entry)
+	{
+		return CELL_EINVAL;
+	}
+
 	return CELL_OK;
 }
 

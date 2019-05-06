@@ -1,4 +1,4 @@
-#ifdef _WIN32
+﻿#ifdef _WIN32
 #include "mm_joystick_handler.h"
 
 mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
@@ -148,7 +148,8 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
-		CELL_PAD_DEV_TYPE_STANDARD
+		CELL_PAD_DEV_TYPE_STANDARD,
+		p_profile->device_class_type
 	);
 
 	joy_device->trigger_left  = find_key(p_profile->l2);

@@ -10,6 +10,7 @@
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
+#include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
@@ -99,6 +100,7 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 		{
 		case pad_handler::null: return "Null";
 		case pad_handler::keyboard: return "Keyboard";
+		case pad_handler::ds3: return "DualShock 3";
 		case pad_handler::ds4: return "DualShock 4";
 #ifdef _WIN32
 		case pad_handler::xinput: return "XInput";
@@ -338,8 +340,6 @@ void Emulator::Init()
 		{
 			while (true)
 			{
-				std::shared_ptr<MsgDialogBase> dlg;
-
 				// Wait for the start condition
 				while (!g_progr_ftotal && !g_progr_ptotal)
 				{
@@ -347,7 +347,7 @@ void Emulator::Init()
 				}
 
 				// Initialize message dialog
-				dlg = Emu.GetCallbacks().get_msg_dialog();
+				std::shared_ptr<MsgDialogBase> dlg = Emu.GetCallbacks().get_msg_dialog();
 				dlg->type.se_normal = true;
 				dlg->type.bg_invisible = true;
 				dlg->type.progress_bar_count = 1;
@@ -382,7 +382,9 @@ void Emulator::Init()
 						pdone = g_progr_pdone;
 
 						// Compute new progress in percents
-						const u32 new_value = ((ptotal ? pdone * 1. / ptotal : 0.) + fdone) * 100. / (ftotal ? ftotal : 1);
+						const u32 total = ftotal + ptotal;
+						const u32 done = fdone + pdone;
+						const u32 new_value = double(done) * 100. / double(total ? total : 1);
 
 						// Compute the difference
 						const u32 delta = new_value > value ? new_value - value : 0;
@@ -419,6 +421,11 @@ void Emulator::Init()
 				g_progr_fdone  -= fdone;
 				g_progr_ptotal -= pdone;
 				g_progr_pdone  -= pdone;
+
+				Emu.CallAfter([=]
+				{
+					dlg->Close(true);
+				});
 			}
 		});
 
@@ -599,6 +606,8 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, boo
 		"/eboot.bin",
 		"/USRDIR/ISO.BIN.EDAT",
 	};
+
+	m_path_old = m_path;
 
 	if (direct && fs::exists(path))
 	{
@@ -1119,6 +1128,7 @@ void Emulator::Load(bool add_only, bool force_global_config)
 		if (add_only)
 		{
 			LOG_NOTICE(LOADER, "Finished to add data to games.yml by boot for: %s", m_path);
+			m_path = m_path_old; // Reset m_path to fix boot from gui
 			return;
 		}
 

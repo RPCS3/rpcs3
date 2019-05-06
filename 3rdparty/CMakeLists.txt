@@ -86,6 +86,20 @@ else()
 endif()
 
 
+# libusb
+if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+	# Always use system libusb as reference implementation isn't supported
+	add_library(usb-1.0-static INTERFACE)
+	target_link_libraries(usb-1.0-static INTERFACE usb)
+elseif(MSVC)
+	# Windows time.h defines timespec but doesn't add any flag for it, which makes libusb attempt to define it again
+	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
+	add_subdirectory(libusb EXCLUDE_FROM_ALL)
+else()
+	add_subdirectory(libusb EXCLUDE_FROM_ALL)
+endif()
+
+
 # yaml-cpp
 # We don't want to install yaml-cpp but its cmake file doesn't have option
 # to disable it...
@@ -342,6 +356,7 @@ include(llvm.cmake)
 
 
 # add nice ALIAS targets for ease of use
+add_library(3rdparty::libusb ALIAS usb-1.0-static)
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::pugixml ALIAS pugixml)
 add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)

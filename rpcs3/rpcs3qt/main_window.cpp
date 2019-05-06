@@ -291,7 +291,10 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only, bool
 	{
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
-		AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		if (!add_only)
+		{
+			AddRecentAction(gui::Recent_Game(qstr(Emu.GetBoot()), qstr(serial + Emu.GetTitle())));
+		}
 	}
 	else
 	{
@@ -465,8 +468,6 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 
 	progress_dialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
 	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
-	pdlg.setWindowModality(Qt::WindowModal);
-	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
 
 	// Synchronization variable
@@ -517,7 +518,7 @@ void main_window::InstallPup(const QString& dropPath)
 	if (filePath.isEmpty())
 	{
 		QString path_last_PUP = guiSettings->GetValue(gui::fd_install_pup).toString();
-		filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP)"));
+		filePath = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_PUP, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup);;All files (*.*)"));
 	}
 	else
 	{
@@ -565,9 +566,13 @@ void main_window::InstallPup(const QString& dropPath)
 		updatefilenames.end());
 
 	std::string version_string = pup.get_file(0x100).to_string();
-	version_string.erase(version_string.find('\n'));
+	size_t version_pos = version_string.find('\n');
+	if (version_pos != std::string::npos)
+	{
+		version_string.erase(version_pos);
+	}
 
-	const std::string cur_version = "4.83";
+	const std::string cur_version = "4.84";
 
 	if (version_string < cur_version &&
 		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
@@ -578,8 +583,6 @@ void main_window::InstallPup(const QString& dropPath)
 
 	progress_dialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
-	pdlg.setWindowModality(Qt::WindowModal);
-	pdlg.setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
 	pdlg.show();
 
 	// Synchronization variable
@@ -1238,6 +1241,13 @@ void main_window::CreateConnects()
 	connect(ui->bootInstallPkgAct, &QAction::triggered, [this] {InstallPkg(); });
 	connect(ui->bootInstallPupAct, &QAction::triggered, [this] {InstallPup(); });
 	connect(ui->exitAct, &QAction::triggered, this, &QWidget::close);
+
+	connect(ui->batchCreatePPUCachesAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchCreatePPUCaches);
+	connect(ui->batchRemovePPUCachesAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemovePPUCaches);
+	connect(ui->batchRemoveSPUCachesAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveSPUCaches);
+	connect(ui->batchRemoveShaderCachesAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveShaderCaches);
+	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveCustomConfigurations);
+
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Restart(); });
@@ -1721,7 +1731,20 @@ void main_window::mouseDoubleClickEvent(QMouseEvent *event)
 */
 void main_window::closeEvent(QCloseEvent* closeEvent)
 {
-	Q_UNUSED(closeEvent);
+	if (!Emu.IsStopped() && guiSettings->GetValue(gui::ib_confirm_exit).toBool())
+	{
+		int result;
+
+		guiSettings->ShowConfirmationBox(tr("Exit RPCS3?"),
+			tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n"),
+			gui::ib_confirm_exit, &result, nullptr);
+
+		if (result != QMessageBox::Yes)
+		{
+			closeEvent->ignore();
+			return;
+		}
+	}
 
 	// Cleanly stop the emulator.
 	Emu.Stop();

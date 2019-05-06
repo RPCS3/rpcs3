@@ -1,8 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-LOG_CHANNEL(cellSysutilAvc);
-
 s32 cellSysutilAvcByeRequest()
 {
 	fmt::throw_exception("Unimplemented" HERE);
@@ -103,118 +101,6 @@ s32 cellSysutilAvcUnloadAsync()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
-
-s32 cellSysutilAvcExtInitOptionParam()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtSetHideNamePlate()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtSetShowNamePlate()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtHideWindow()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtShowWindow()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtGetWindowAlpha()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtGetWindowSize()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtGetWindowRotation()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtGetWindowPosition()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtSetWindowAlpha()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtSetWindowSize()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtSetWindowRotation()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtSetWindowPosition()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtLoadAsyncEx()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtHidePanelEx()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtShowPanelEx()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtGetNamePlateShowStatus()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtStopVoiceDetection()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtStartVoiceDetection()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtGetSurfacePointer()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtSetWindowZorder()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-s32 cellSysutilAvcExtGetWindowShowStatus()
-{
-	fmt::throw_exception("Unimplemented" HERE);
-}
-
-
 void cellSysutil_SysutilAvc_init()
 {
 	REG_FUNC(cellSysutil, cellSysutilAvcByeRequest);
@@ -238,29 +124,3 @@ void cellSysutil_SysutilAvc_init()
 	REG_FUNC(cellSysutil, cellSysutilAvcShowPanel);
 	REG_FUNC(cellSysutil, cellSysutilAvcUnloadAsync);
 }
-
-DECLARE(ppu_module_manager::cellSysutilAvc)("cellSysutilAvc", []()
-{
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtInitOptionParam);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtSetHideNamePlate);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtSetShowNamePlate);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtHideWindow);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtShowWindow);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtGetWindowAlpha);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtGetWindowSize);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtGetWindowRotation);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtGetWindowPosition);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtSetWindowAlpha);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtSetWindowSize);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtSetWindowRotation);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtSetWindowPosition);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtLoadAsyncEx);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtHidePanelEx);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtShowPanelEx);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtGetNamePlateShowStatus);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtStopVoiceDetection);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtStartVoiceDetection);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtGetSurfacePointer);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtSetWindowZorder);
-	REG_FUNC(cellSysutilAvc, cellSysutilAvcExtGetWindowShowStatus);
-});

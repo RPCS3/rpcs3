@@ -35,7 +35,7 @@ void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 	case RSX_FP_OPCODE_NOP:
 	case RSX_FP_OPCODE_REP:
 	case RSX_FP_OPCODE_RET: 
-		m_dst_reg_name = "";
+		m_dst_reg_name.clear();
 		op_name = rsx_fp_op_names[m_opcode] + std::string(dst.fp16 ? "H" : "R");
 		break;
 

@@ -51,6 +51,11 @@ namespace vk
 			return native_pitch;
 		}
 
+		bool is_depth_surface() const override
+		{
+			return !!(attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
+		}
+
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
 			//Use forward scaling to account for rounding and clamping errors
@@ -95,14 +100,14 @@ namespace vk
 			}
 
 			auto src_texture = static_cast<vk::render_target*>(old_contents);
-			if (src_texture->get_rsx_pitch() != get_rsx_pitch())
+			if (!rsx::pitch_compatible(this, src_texture))
 			{
 				LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
 				return;
 			}
 
-			auto src_bpp = src_texture->get_native_pitch() / src_texture->width();
-			auto dst_bpp = get_native_pitch() / width();
+			const auto src_bpp = src_texture->get_bpp();
+			const auto dst_bpp = get_bpp();
 			rsx::typeless_xfer typeless_info{};
 
 			const auto region = rsx::get_transferable_region(this);
@@ -113,22 +118,13 @@ namespace vk
 			}
 			else
 			{
-				const bool src_is_depth = !!(src_texture->attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
-				const bool dst_is_depth = !!(attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
-
-				if (src_is_depth != dst_is_depth)
-				{
-					// TODO: Implement proper copy_typeless for vulkan that crosses the depth<->color aspect barrier
-					null_transfer_impl();
-					return;
-				}
-
-				if (src_bpp != dst_bpp || src_is_depth || dst_is_depth)
+				if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
+					src_texture->attachment_aspect_flag != attachment_aspect_flag)
 				{
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 					typeless_info.src_native_format_override = (u32)info.format;
-					typeless_info.src_is_depth = src_is_depth;
+					typeless_info.src_is_depth = !!(src_texture->attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
 					typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 				}
 			}
@@ -170,7 +166,7 @@ namespace rsx
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
 			surface_color_format format,
-			size_t width, size_t height,
+			size_t width, size_t height, size_t pitch,
 			vk::render_target* old_surface,
 			vk::render_device &device, vk::command_buffer *cmd)
 		{
@@ -192,10 +188,11 @@ namespace rsx
 			change_image_layout(*cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 			rtt->native_component_map = fmt.second;
+			rtt->rsx_pitch = (u16)pitch;
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
 			rtt->surface_width = (u16)width;
 			rtt->surface_height = (u16)height;
-			rtt->old_contents = old_surface;
+			rtt->set_old_contents(old_surface);
 			rtt->queue_tag(address);
 			rtt->dirty = true;
 
@@ -205,7 +202,7 @@ namespace rsx
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
 			surface_depth_format format,
-			size_t width, size_t height,
+			size_t width, size_t height, size_t pitch,
 			vk::render_target* old_surface,
 			vk::render_device &device, vk::command_buffer *cmd)
 		{
@@ -237,23 +234,23 @@ namespace rsx
 				ds->native_pitch *= 2;
 
 			ds->attachment_aspect_flag = range.aspectMask;
+			ds->rsx_pitch = (u16)pitch;
 			ds->surface_width = (u16)width;
 			ds->surface_height = (u16)height;
-			ds->old_contents = old_surface;
+			ds->set_old_contents(old_surface);
 			ds->queue_tag(address);
 			ds->dirty = true;
 
 			return ds;
 		}
 
-		static
-		void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
+		static void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
 		{
 			info->rsx_pitch = surface->rsx_pitch;
 			info->native_pitch = surface->native_pitch;
 			info->surface_width = surface->get_surface_width();
 			info->surface_height = surface->get_surface_height();
-			info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
+			info->bpp = surface->get_bpp();
 		}
 
 		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
@@ -288,24 +285,27 @@ namespace rsx
 			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 		}
 
-		static
-		void invalidate_surface_contents(u32 address, vk::command_buffer* /*pcmd*/, vk::render_target *surface, vk::render_target *old_surface)
+		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target> &surface, size_t pitch)
 		{
-			surface->old_contents = old_surface;
+			return surface->rsx_pitch == pitch;
+		}
+
+		static void invalidate_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *surface, vk::render_target *old_surface, u32 address, size_t pitch)
+		{
+			surface->rsx_pitch = (u16)pitch;
+			surface->set_old_contents(old_surface);
 			surface->reset_aa_mode();
 			surface->queue_tag(address);
 			surface->dirty = true;
 		}
 
-		static
-		void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
+		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
 		{
 			surface->frame_tag = vk::get_current_frame_id();
 			if (!surface->frame_tag) surface->frame_tag = 1;
 		}
 
-		static
-		void notify_surface_persist(const std::unique_ptr<vk::render_target> &surface)
+		static void notify_surface_persist(const std::unique_ptr<vk::render_target> &surface)
 		{
 			surface->save_aa_mode();
 		}

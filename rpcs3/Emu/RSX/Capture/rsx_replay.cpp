@@ -3,6 +3,7 @@
 
 #include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 
@@ -13,15 +14,29 @@ namespace rsx
 {
 	be_t<u32> rsx_replay_thread::allocate_context()
 	{
-		// 'fake' initialize usermemory
-		// todo: seriously, need to probly watch the replay memory map and just make sure its mapped before we copy rather than do this
-		user_mem_addr = vm::falloc(vm::get(vm::user1m)->addr, 0x10000000);
-		verify(HERE), user_mem_addr != 0;
+		u32 buffer_size = 4;
+
+		// run through replay commands to figure out how big command buffer needs to be
+		for (const auto& rc : frame->replay_commands)
+		{
+			const u32 count = (rc.rsx_command.first >> 18) & 0x7ff;
+			// allocate for register plus w/e number of arguments it has
+			buffer_size += (count * 4) + 4;
+		}
+
+		// User memory + fifo size
+		buffer_size = ::align<u32>(buffer_size, 0x100000) + 0x10000000;
+		// We are not allowed to drain all memory so add a little 
+		fxm::make_always<lv2_memory_container>(buffer_size + 0x1000000);
 
 		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
 		if (contextAddr == 0)
 			fmt::throw_exception("Capture Replay: context alloc failed");
 		const auto& contextInfo = vm::_ref<rsx_context>(contextAddr);
+
+		// 'fake' initialize usermemory
+		sys_memory_allocate(buffer_size, SYS_MEMORY_PAGE_SIZE_1M, vm::get_addr(&contextInfo.user_addr));
+		verify(HERE), (user_mem_addr = contextInfo.user_addr) != 0;
 
 		if (sys_rsx_device_map(vm::get_addr(&contextInfo.dev_addr), vm::null, 0x8) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
@@ -32,37 +47,22 @@ namespace rsx
 		if (sys_rsx_context_allocate(vm::get_addr(&contextInfo.context_id), vm::get_addr(&contextInfo.dma_addr), vm::get_addr(&contextInfo.driver_info), vm::get_addr(&contextInfo.reports_addr), contextInfo.mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
-		// 1024Mb, the extra 512Mb memory is needed to allocate FIFO commands on
-		// So there wont be any conflicts with memory used in the capture
-		get_current_renderer()->main_mem_size = 0x40000000;
+		get_current_renderer()->main_mem_size = buffer_size;
+
+		if (sys_rsx_context_iomap(contextInfo.context_id, 0, user_mem_addr, buffer_size, 0) != CELL_OK)
+			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
 
 		return contextInfo.context_id;
 	}
 
 	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id)
 	{
-		u32 fifo_size = 4;
-
-		// run through replay commands to figure out how big command buffer needs to be
-		for (const auto& rc : frame->replay_commands)
-		{
-			const u32 count = (rc.rsx_command.first >> 18) & 0x7ff;
-			// allocate for register plus w/e number of arguments it has
-			fifo_size += (count * 4) + 4;
-		}
-
-		fifo_size = ::align<u32>(fifo_size, 0x100000);
-
-		const u32 fifo_mem = vm::alloc(fifo_size, vm::main, 0x100000);
-		if (fifo_mem == 0)
-			fmt::throw_exception("Capture Replay: fifo alloc failed! size: 0x%x", fifo_size);
-
 		// copy commands into fifo buffer
 		// todo: could change rsx_command to just be values to avoid this loop,
-		auto fifo_addr = vm::ptr<u32>::make(fifo_mem);
+		auto fifo_addr = vm::ptr<u32>::make(user_mem_addr + 0x10000000);
 		u32 count = 0;
 		std::vector<u32> fifo_stops;
-		u32 currentOffset = 0x20000000;
+		u32 currentOffset = 0x10000000;
 		for (const auto& rc : frame->replay_commands)
 		{
 			bool hasState = (rc.memory_state.size() > 0) || (rc.display_buffer_state != 0) || (rc.tile_state != 0);
@@ -97,10 +97,6 @@ namespace rsx
 		}
 
 		fifo_stops.emplace_back(currentOffset);
-
-		if (sys_rsx_context_iomap(context_id, 0x20000000, fifo_mem, fifo_size, 0) != CELL_OK)
-			fmt::throw_exception("Capture Replay: fifo mapping failed");
-
 		return fifo_stops;
 	}
 
@@ -179,10 +175,6 @@ namespace rsx
 
 		auto fifo_stops = alloc_write_fifo(context_id);
 
-		// map game io
-		if (sys_rsx_context_iomap(context_id, 0x0, user_mem_addr, 0x10000000, 0) != CELL_OK)
-			fmt::throw_exception("rsx io map failed");
-
 		while (!Emu.IsStopped())
 		{
 			// Load registers while the RSX is still idle
@@ -190,7 +182,7 @@ namespace rsx
 			_mm_mfence();
 
 			// start up fifo buffer by dumping the put ptr to first stop
-			sys_rsx_context_attribute(context_id, 0x001, 0x20000000, fifo_stops[0], 0, 0);
+			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
 
 			auto render = get_current_renderer();
 			auto last_flip = render->int_flip_index;

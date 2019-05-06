@@ -12,6 +12,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "sys_interrupt.h"
+#include "sys_mmapper.h"
 #include "sys_event.h"
 #include "sys_spu.h"
 
@@ -659,12 +660,13 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		else
 		{
 			// Subscribe to receive status in r4-r5
+			ppu.gpr[4] = 0;
 			group->waiter = &ppu;
 		}
 
 		lv2_obj::sleep(ppu);
 
-		while (!group->join_state || group->run_state != SPU_THREAD_GROUP_STATUS_INITIALIZED)
+		while (!ppu.gpr[4])
 		{
 			if (ppu.is_stopped())
 			{
@@ -673,8 +675,6 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 			group->cond.wait(lock);
 		}
-
-		group->join_state.release(0);
 	}
 	while (0);
 
@@ -1249,6 +1249,44 @@ error_code sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup)
 		{
 			t->spup[spup].reset();
 		}
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_recover_page_fault(u32 id)
+{
+	sys_spu.warning("sys_spu_thread_recover_page_fault(id=0x%x)", id);
+
+	const auto thread = idm::get<named_thread<spu_thread>>(id);
+
+	if (UNLIKELY(!thread || !thread->group))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (auto res = mmapper_thread_recover_page_fault(id))
+	{
+		return res;
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_raw_spu_recover_page_fault(u32 id)
+{
+	sys_spu.warning("sys_raw_spu_recover_page_fault(id=0x%x)", id);
+
+	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
+
+	if (UNLIKELY(!thread || thread->group))
+	{
+		return CELL_ESRCH;
+	}
+
+	if (auto res = mmapper_thread_recover_page_fault(id))
+	{
+		return res;
 	}
 
 	return CELL_OK;

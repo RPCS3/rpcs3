@@ -211,15 +211,16 @@ public:
 	void SetShowHidden(bool show);
 
 public Q_SLOTS:
+	void BatchCreatePPUCaches();
+	void BatchRemovePPUCaches();
+	void BatchRemoveSPUCaches();
+	void BatchRemoveCustomConfigurations();
+	void BatchRemoveShaderCaches();
 	void SetListMode(const bool& isList);
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
 
 private Q_SLOTS:
-	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
-	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
-	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
-	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
@@ -243,6 +244,14 @@ private:
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
 
+	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
+	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
+	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
+	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
+	bool CreatePPUCache(const std::string& path);
+
+	std::string GetCacheDirBySerial(const std::string& serial);
+	std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 

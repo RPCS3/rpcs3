@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "types.h"
 #include "Atomic.h"
@@ -358,7 +358,7 @@ public:
 
 	~lf_queue()
 	{
-		delete reinterpret_cast<T*>(m_head.load());
+		delete reinterpret_cast<lf_queue_item<T>*>(m_head.load());
 	}
 
 	template <typename... Args>

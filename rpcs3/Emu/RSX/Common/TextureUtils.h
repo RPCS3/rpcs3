@@ -7,7 +7,7 @@
 
 namespace rsx
 {
-	enum texture_upload_context
+	enum texture_upload_context : u32
 	{
 		shader_read = 1,
 		blit_engine_src = 2,
@@ -15,7 +15,7 @@ namespace rsx
 		framebuffer_storage = 8
 	};
 
-	enum texture_colorspace
+	enum texture_colorspace : u32
 	{
 		rgb_linear = 0,
 		srgb_nonlinear = 1
@@ -40,6 +40,9 @@ namespace rsx
 		bool dst_is_typeless = false;
 		bool src_is_depth = false;
 		bool dst_is_depth = false;
+		bool flip_vertical = false;
+		bool flip_horizontal = false;
+
 		u32 src_gcm_format = 0;
 		u32 dst_gcm_format = 0;
 		u32 src_native_format_override = 0;
@@ -96,6 +99,11 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 u8 get_format_block_size_in_bytes(int format);
 u8 get_format_block_size_in_texel(int format);
 u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
+
+/**
+ * Returns number of texel rows encoded in one pitch-length line of bytes
+ */
+u8 get_format_texel_rows_per_line(u32 format);
 
 /**
 * Get number of bytes occupied by texture in RSX mem

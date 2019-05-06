@@ -58,7 +58,7 @@ struct lv2_lwmutex final : lv2_obj
 	const u64 name;
 
 	shared_mutex mutex;
-	atomic_t<u32> signaled{0};
+	atomic_t<s32> signaled{0};
 	std::deque<cpu_thread*> sq;
 
 	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name)
@@ -74,8 +74,9 @@ class ppu_thread;
 
 // Syscalls
 
-error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6);
+error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, s32 has_name, u64 name);
 error_code _sys_lwmutex_destroy(u32 lwmutex_id);
 error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout);
 error_code _sys_lwmutex_trylock(u32 lwmutex_id);
 error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id);
+error_code _sys_lwmutex_unlock2(u32 lwmutex_id);

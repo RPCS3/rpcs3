@@ -209,8 +209,8 @@ enum : u32
 
 struct lv2_spu_group
 {
-	static const u32 id_base = 1; // Wrong?
-	static const u32 id_step = 1;
+	static const u32 id_base = 0x04000100;
+	static const u32 id_step = 0x100;
 	static const u32 id_count = 255;
 
 	const std::string name;
@@ -317,6 +317,7 @@ error_code sys_spu_thread_disconnect_event(u32 id, u32 event_type, u8 spup);
 error_code sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
 error_code sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
 error_code sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status);
+error_code sys_spu_thread_recover_page_fault(u32 id);
 
 error_code sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr);
 error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id);
@@ -328,3 +329,4 @@ error_code sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat);
 error_code sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value);
 error_code sys_raw_spu_set_spu_cfg(u32 id, u32 value);
 error_code sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value);
+error_code sys_raw_spu_recover_page_fault(u32 id);

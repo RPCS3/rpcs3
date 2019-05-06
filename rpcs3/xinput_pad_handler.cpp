@@ -1,4 +1,4 @@
-
+﻿
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 
@@ -485,7 +485,8 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
-		CELL_PAD_DEV_TYPE_STANDARD
+		CELL_PAD_DEV_TYPE_STANDARD,
+		p_profile->device_class_type
 	);
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->up),       CELL_PAD_CTRL_UP);

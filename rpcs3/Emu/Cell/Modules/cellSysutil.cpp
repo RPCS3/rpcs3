@@ -132,6 +132,12 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 	});
 }
 
+s32 _cellSysutilGetSystemParamInt()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
 {
 	cellSysutil.warning("cellSysutilGetSystemParamInt(id=0x%x(%s), value=*0x%x)", id, id, value);
@@ -297,7 +303,6 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 
 s32 cellSysCacheClear()
 {
-
 	cellSysutil.warning("cellSysCacheClear()");
 
 	// Get the param as a shared ptr, then decipher the cacheid from it
@@ -329,15 +334,18 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
 	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
 
-	const std::string& cache_id = param->cacheId;
-	verify(HERE), cache_id.size() < sizeof(param->cacheId);
+	if (!param || !memchr(param->cacheId, '\0', CELL_SYSCACHE_ID_SIZE))
+	{
+		return CELL_SYSCACHE_ERROR_PARAM;
+	}
 
+	const std::string& cache_id = param->cacheId;
 	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
 	// TODO: implement (what?)
 	fxm::make_always<CellSysCacheParam>(*param);
-	if (!fs::create_dir(vfs::get(cache_path)))
+	if (!fs::create_dir(vfs::get(cache_path)) && !cache_id.empty())
 	{
 		return CELL_SYSCACHE_RET_OK_RELAYED;
 	}
@@ -483,6 +491,11 @@ s32 cellSysutilSharedMemoryFree()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellSysutilNotification()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
 s32 _ZN4cxml7Element11AppendChildERS0_()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -603,6 +616,12 @@ s32 _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf()
 	return CELL_OK;
 }
 
+s32 _ZN8cxmlutil8SetFloatERKN4cxml7ElementEPKcf()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 s32 _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -694,6 +713,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	cellSysutil_AudioOut_init(); // cellAudioOut functions
 	cellSysutil_VideoOut_init(); // cellVideoOut functions
 
+	REG_FUNC(cellSysutil, _cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);
 
@@ -728,6 +748,8 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilSharedMemoryAlloc);
 	REG_FUNC(cellSysutil, cellSysutilSharedMemoryFree);
 
+	REG_FUNC(cellSysutil, cellSysutilNotification);
+
 	REG_FUNC(cellSysutil, _ZN4cxml7Element11AppendChildERS0_);
 
 	REG_FUNC(cellSysutil, _ZN4cxml8DocumentC1Ev);
@@ -751,6 +773,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil7SetFileERKN4cxml7ElementEPKcRKNS0_4FileE);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil8SetFloatERKN4cxml7ElementEPKcf);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc);

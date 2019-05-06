@@ -64,6 +64,8 @@ static u8* add_jit_memory(std::size_t size, uint align)
 
 		if (UNLIKELY(_new > 0x40000000))
 		{
+			// Sorry, we failed, and further attempts should fail too.
+			ctr = 0x40000000;
 			return -1;
 		}
 
@@ -77,7 +79,7 @@ static u8* add_jit_memory(std::size_t size, uint align)
 
 	if (UNLIKELY(pos == -1))
 	{
-		LOG_FATAL(GENERAL, "JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
+		LOG_WARNING(GENERAL, "JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
 		return nullptr;
 	}
 
@@ -181,10 +183,10 @@ void jit_runtime::finalize() noexcept
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
 }
 
-::jit_runtime& asmjit::get_global_runtime()
+asmjit::JitRuntime& asmjit::get_global_runtime()
 {
 	// Magic static
-	static ::jit_runtime g_rt;
+	static asmjit::JitRuntime g_rt;
 	return g_rt;
 }
 
@@ -503,6 +505,59 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 	{
 		return false;
 	}
+
+	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	{
+	}
+
+	void deregisterEHFrames() override
+	{
+	}
+};
+
+// Simple memory manager. I promise there will be no MemoryManager4.
+struct MemoryManager3 : llvm::RTDyldMemoryManager
+{
+	std::vector<std::pair<u8*, std::size_t>> allocs;
+
+	MemoryManager3() = default;
+
+	~MemoryManager3() override
+	{
+		for (auto& a : allocs)
+		{
+			utils::memory_release(a.first, a.second);
+		}
+	}
+
+	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	{
+		u8* r = static_cast<u8*>(utils::memory_reserve(size));
+		utils::memory_commit(r, size, utils::protection::wx);
+		allocs.emplace_back(r, size);
+		return r;
+	}
+
+	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	{
+		u8* r = static_cast<u8*>(utils::memory_reserve(size));
+		utils::memory_commit(r, size);
+		allocs.emplace_back(r, size);
+		return r;
+	}
+
+	bool finalizeMemory(std::string* = nullptr) override
+	{
+		return false;
+	}
+
+	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	{
+	}
+
+	void deregisterEHFrames() override
+	{
+	}
 };
 
 // Helper class
@@ -515,7 +570,7 @@ struct EventListener : llvm::JITEventListener
 	{
 	}
 
-	void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
+	void notifyObjectLoaded(ObjectKey K, const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
 	{
 #ifdef _WIN32
 		for (auto it = obj.section_begin(), end = obj.section_end(); it != end; ++it)
@@ -624,8 +679,11 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			m_cpu == "broadwell" ||
 			m_cpu == "skylake" ||
 			m_cpu == "skylake-avx512" ||
+			m_cpu == "cascadelake" ||
 			m_cpu == "cannonlake" ||
-			m_cpu == "icelake")
+			m_cpu == "icelake" ||
+			m_cpu == "icelake-client" ||
+			m_cpu == "icelake-server")
 		{
 			// Downgrade if AVX is not supported by some chips
 			if (!utils::has_avx())
@@ -635,8 +693,11 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 		}
 
 		if (m_cpu == "skylake-avx512" ||
+			m_cpu == "cascadelake" ||
 			m_cpu == "cannonlake" ||
-			m_cpu == "icelake")
+			m_cpu == "icelake" ||
+			m_cpu == "icelake-client" ||
+			m_cpu == "icelake-server")
 		{
 			// Downgrade if AVX-512 is disabled or not supported
 			if (!utils::has_512())
@@ -649,7 +710,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 	return m_cpu;
 }
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, bool large)
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
 	: m_link(_link)
 	, m_cpu(cpu(_cpu))
 {
@@ -657,13 +718,24 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 
 	if (m_link.empty())
 	{
+		std::unique_ptr<llvm::RTDyldMemoryManager> mem;
+
+		if (flags & 0x1)
+		{
+			mem = std::make_unique<MemoryManager3>();
+		}
+		else
+		{
+			mem = std::make_unique<MemoryManager2>();
+		}
+
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
 		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
-			.setMCJITMemoryManager(std::make_unique<MemoryManager2>())
+			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
+			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
 	}
@@ -678,7 +750,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(large ? llvm::CodeModel::Large : llvm::CodeModel::Small)
+			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
 

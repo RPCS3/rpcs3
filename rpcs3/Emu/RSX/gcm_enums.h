@@ -61,6 +61,12 @@ namespace rsx
 
 	surface_depth_format to_surface_depth_format(u8 in);
 
+	enum class surface_raster_type : u8
+	{
+		linear = 1,
+		swizzle = 2,
+	};
+
 	enum class surface_antialiasing : u8
 	{
 		center_1_sample,
@@ -444,6 +450,8 @@ enum
 	CELL_GCM_TEXTURE_COMPRESSED_DXT23 = 0x87,
 	CELL_GCM_TEXTURE_COMPRESSED_DXT45 = 0x88,
 	CELL_GCM_TEXTURE_G8B8 = 0x8B,
+	CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 = 0x8D,
+	CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 = 0x8E,
 	CELL_GCM_TEXTURE_R6G5B5 = 0x8F,
 	CELL_GCM_TEXTURE_DEPTH24_D8 = 0x90,
 	CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT = 0x91,
@@ -460,8 +468,6 @@ enum
 	CELL_GCM_TEXTURE_D1R5G5B5 = 0x9D,
 	CELL_GCM_TEXTURE_D8R8G8B8 = 0x9E,
 	CELL_GCM_TEXTURE_Y16_X16_FLOAT = 0x9F,
-	CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 = 0xAD,
-	CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 = 0xAE,
 
 	// Swizzle Flag
 	CELL_GCM_TEXTURE_SZ = 0x00,

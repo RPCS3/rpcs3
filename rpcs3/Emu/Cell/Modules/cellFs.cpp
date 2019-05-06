@@ -206,18 +206,18 @@ error_code cellFsLseek(u32 fd, s64 offset, u32 whence, vm::ptr<u64> pos)
 	return sys_fs_lseek(fd, offset, whence, pos);
 }
 
-error_code cellFsFdatasync(u32 fd)
+error_code cellFsFdatasync(ppu_thread& ppu, u32 fd)
 {
 	cellFs.trace("cellFsFdatasync(fd=%d)", fd);
 
-	return sys_fs_fdatasync(fd);
+	return sys_fs_fdatasync(ppu, fd);
 }
 
-error_code cellFsFsync(u32 fd)
+error_code cellFsFsync(ppu_thread& ppu, u32 fd)
 {
 	cellFs.trace("cellFsFsync(fd=%d)", fd);
 
-	return sys_fs_fsync(fd);
+	return sys_fs_fsync(ppu, fd);
 }
 
 error_code cellFsFGetBlockSize(u32 fd, vm::ptr<u64> sector_size, vm::ptr<u64> block_size)
@@ -545,6 +545,12 @@ error_code cellFsSdataOpenByFd(u32 mself_fd, s32 flags, vm::ptr<u32> sdata_fd, u
 }
 
 error_code cellFsSdataOpenWithVersion()
+{
+	UNIMPLEMENTED_FUNC(cellFs);
+	return CELL_OK;
+}
+
+error_code cellFsSetAttribute()
 {
 	UNIMPLEMENTED_FUNC(cellFs);
 	return CELL_OK;
@@ -1064,6 +1070,7 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsSdataOpen);
 	REG_FUNC(sys_fs, cellFsSdataOpenByFd);
 	REG_FUNC(sys_fs, cellFsSdataOpenWithVersion);
+	REG_FUNC(sys_fs, cellFsSetAttribute);
 	REG_FUNC(sys_fs, cellFsSetDefaultContainer);
 	REG_FUNC(sys_fs, cellFsSetDiscReadRetrySetting);
 	REG_FUNC(sys_fs, cellFsSetIoBuffer);
