@@ -355,6 +355,16 @@ void game_list_frame::SortGameList()
 	m_gameList->resizeColumnToContents(gui::column_count - 1);
 }
 
+std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
+{
+	return fs::get_config_dir() + "cache/" + serial;
+}
+
+std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
+{
+	return fs::get_config_dir() + "data/" + serial;
+}
+
 void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 {
 	if (fromDrive)
@@ -391,8 +401,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			path_list.back().resize(path_list.back().find_last_not_of('/') + 1);
 		}
 
-		// Used to remove duplications from the list (serial -> set of cats)
-		std::map<std::string, std::set<std::string>> serial_cat;
+		// Used to remove duplications from the list (serial -> set of cat names)
+		std::map<std::string, std::set<std::string>> serial_cat_name;
 
 		QSet<QString> serials;
 
@@ -421,7 +431,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 
 			// Detect duplication
-			if (!serial_cat[game.serial].emplace(game.category).second)
+			if (!serial_cat_name[game.serial].emplace(game.category + game.name).second)
 			{
 				continue;
 			}
@@ -462,8 +472,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			const auto compat = m_game_compat->GetCompatibility(game.serial);
 			const bool hasCustomConfig = fs::is_file(Emu.GetCustomConfigPath(game.serial)) || fs::is_file(Emu.GetCustomConfigPath(game.serial, true));
-			const QColor color = getGridCompatibilityColor(compat.color);
 
+			const QColor color = getGridCompatibilityColor(compat.color);
 			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, color);
 
 			m_game_data.push_back(game_info(new gui_game_info{ game, compat, img, pxmap, hasCustomConfig }));
@@ -507,7 +517,13 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 						{
 							LOG_ERROR(GENERAL, "Failed to update the displayed version numbers for title ID %s\n%s thrown: %s", entry->info.serial, typeid(e).name(), e.what());
 						}
-						break; // Next Entry
+
+						const std::string key = "GD" + other->info.name;
+						serial_cat_name[other->info.serial].erase(key);
+						if (!serial_cat_name[other->info.serial].count(key))
+						{
+							break;
+						}
 					}
 				}
 			}
@@ -655,8 +671,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	const QString serial = qstr(currGame.serial);
 	const QString name = qstr(currGame.name).simplified();
 
-	const std::string cache_base_dir = fs::get_cache_dir() + "cache/" + currGame.serial;
-	const std::string data_base_dir  = fs::get_config_dir() + "data/" + currGame.serial;
+	const std::string cache_base_dir = GetCacheDirBySerial(currGame.serial);
+	const std::string data_base_dir  = GetDataDirBySerial(currGame.serial);
 
 	// Make Actions
 	QMenu myMenu;
@@ -774,10 +790,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(createPPUCache, &QAction::triggered, [=]
 	{
-		Emu.SetForceBoot(true);
-		Emu.Stop();
-		Emu.SetForceBoot(true);
-		Emu.BootGame(currGame.path, true);
+		CreatePPUCache(currGame.path);
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
@@ -902,16 +915,34 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	myMenu.exec(globalPos);
 }
 
+bool game_list_frame::CreatePPUCache(const std::string& path)
+{
+	Emu.SetForceBoot(true);
+	Emu.Stop();
+	Emu.SetForceBoot(true);
+	const bool success = Emu.BootGame(path, true);
+
+	if (success)
+	{
+		LOG_WARNING(GENERAL, "Creating PPU Cache for %s", path);
+	}
+	else
+	{
+		LOG_ERROR(GENERAL, "Could not create PPU Cache for %s", path);
+	}
+	return success;
+}
+
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, bool is_interactive)
 {
 	const std::string config_path_new = Emu.GetCustomConfigPath(title_id);
 	const std::string config_path_old = Emu.GetCustomConfigPath(title_id, true);
 
 	if (!fs::is_file(config_path_new) && !fs::is_file(config_path_old))
-		return false;
+		return true;
 
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove custom game configuration?")) != QMessageBox::Yes)
-		return false;
+		return true;
 
 	bool result = true;
 
@@ -943,10 +974,10 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, boo
 bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_interactive)
 {
 	if (!fs::is_dir(base_dir))
-		return false;
+		return true;
 
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove shaders cache?")) != QMessageBox::Yes)
-		return false;
+		return true;
 
 	QDirIterator dir_iter(qstr(base_dir), QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 	while (dir_iter.hasNext())
@@ -956,23 +987,31 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 		if (dir_iter.fileName() == "shaders_cache")
 		{
 			if (QDir(filepath).removeRecursively())
+			{
 				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
+			}
 			else
-				LOG_WARNING(GENERAL, "Could not remove shaders cache file: %s", sstr(filepath));
+			{
+				LOG_FATAL(GENERAL, "Could not completely remove shaders cache file: %s", sstr(filepath));
+				return false;
+			}
+			break;
 		}
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
 	return true;
 }
 
 bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_interactive)
 {
 	if (!fs::is_dir(base_dir))
-		return false;
+		return true;
 
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove PPU cache?")) != QMessageBox::Yes)
-		return false;
+		return true;
+
+	u32 files_removed = 0;
+	u32 files_total = 0;
 
 	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 	while (dir_iter.hasNext())
@@ -982,23 +1021,38 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".obj", Qt::CaseInsensitive))
 		{
 			if (QFile::remove(filepath))
+			{
+				++files_removed;
 				LOG_NOTICE(GENERAL, "Removed PPU cache file: %s", sstr(filepath));
+			}
 			else
+			{
 				LOG_WARNING(GENERAL, "Could not remove PPU cache file: %s", sstr(filepath));
+			}
+			++files_total;
 		}
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed PPU cache in %s", base_dir);
-	return true;
+	const bool success = files_total == files_removed;
+
+	if (success)
+		LOG_SUCCESS(GENERAL, "Removed PPU cache in %s", base_dir);
+	else
+		LOG_FATAL(GENERAL, "Only %d/%d PPU cache files could be removed in %s", files_removed, files_total, base_dir);
+
+	return success;
 }
 
 bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_interactive)
 {
 	if (!fs::is_dir(base_dir))
-		return false;
+		return true;
 
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove SPU cache?")) != QMessageBox::Yes)
-		return false;
+		return true;
+
+	u32 files_removed = 0;
+	u32 files_total = 0;
 
 	QDirIterator dir_iter(qstr(base_dir), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 	while (dir_iter.hasNext())
@@ -1008,14 +1062,244 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".dat", Qt::CaseInsensitive))
 		{
 			if (QFile::remove(filepath))
+			{
+				++files_removed;
 				LOG_NOTICE(GENERAL, "Removed SPU cache file: %s", sstr(filepath));
+			}
 			else
+			{
 				LOG_WARNING(GENERAL, "Could not remove SPU cache file: %s", sstr(filepath));
+			}
+			++files_total;
 		}
 	}
 
-	LOG_SUCCESS(GENERAL, "Removed SPU cache in %s", base_dir);
-	return true;
+	const bool success = files_total == files_removed;
+
+	if (success)
+		LOG_SUCCESS(GENERAL, "Removed SPU cache in %s", base_dir);
+	else
+		LOG_FATAL(GENERAL, "Only %d/%d SPU cache files could be removed in %s", files_removed, files_total, base_dir);
+
+	return success;
+}
+
+void game_list_frame::BatchCreatePPUCaches()
+{
+	std::set<std::string> paths;
+	for (const auto& game : m_game_data)
+	{
+		paths.emplace(game->info.path);
+	}
+	const u32 total = paths.size();
+
+	if (total == 0)
+	{
+		QMessageBox::information(this, tr("PPU Cache Batch Creation"), tr("No titles found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Creating all PPU caches"), tr("Cancel"), 0, m_game_data.size(), this);
+	pdlg->setWindowTitle(tr("PPU Cache Batch Creation"));
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->show();
+
+	u32 created = 0;
+	for (const auto& path : paths)
+	{
+		if (pdlg->wasCanceled())
+		{
+			LOG_NOTICE(GENERAL, "PPU Cache Batch Creation was canceled");
+			break;
+		}
+		QApplication::processEvents();
+
+		if (CreatePPUCache(path))
+		{
+			while (!Emu.IsStopped())
+			{
+				QApplication::processEvents();
+			}
+			pdlg->SetValue(++created);
+		}
+	}
+
+	pdlg->setLabelText(tr("Created PPU Caches for %0 titles").arg(created));
+	pdlg->setCancelButtonText(tr("OK"));
+	QApplication::beep();
+}
+
+void game_list_frame::BatchRemovePPUCaches()
+{
+	std::set<std::string> serials;
+	for (const auto& game : m_game_data)
+	{
+		serials.emplace(game->info.serial);
+	}
+	const u32 total = serials.size();
+
+	if (total == 0)
+	{
+		QMessageBox::information(this, tr("PPU Cache Batch Removal"), tr("No files found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Removing all PPU caches"), tr("Cancel"), 0, total, this);
+	pdlg->setWindowTitle(tr("PPU Cache Batch Removal"));
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->show();
+
+	u32 removed = 0;
+	for (const auto& serial : serials)
+	{
+		if (pdlg->wasCanceled())
+		{
+			LOG_NOTICE(GENERAL, "PPU Cache Batch Removal was canceled");
+			break;
+		}
+		QApplication::processEvents();
+
+		if (RemovePPUCache(GetCacheDirBySerial(serial)))
+		{
+			pdlg->SetValue(++removed);
+		}
+	}
+
+	pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
+	pdlg->setCancelButtonText(tr("OK"));
+	QApplication::beep();
+}
+
+void game_list_frame::BatchRemoveSPUCaches()
+{
+	std::set<std::string> serials;
+	for (const auto& game : m_game_data)
+	{
+		serials.emplace(game->info.serial);
+	}
+	const u32 total = serials.size();
+
+	if (total == 0)
+	{
+		QMessageBox::information(this, tr("SPU Cache Batch Removal"), tr("No files found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Removing all SPU caches"), tr("Cancel"), 0, total, this);
+	pdlg->setWindowTitle(tr("SPU Cache Batch Removal"));
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->show();
+
+	u32 removed = 0;
+	for (const auto& serial : serials)
+	{
+		if (pdlg->wasCanceled())
+		{
+			LOG_NOTICE(GENERAL, "SPU Cache Batch Removal was canceled. %d/%d folders cleared", removed, total);
+			break;
+		}
+		QApplication::processEvents();
+
+		if (RemoveSPUCache(GetCacheDirBySerial(serial)))
+		{
+			pdlg->SetValue(++removed);
+		}
+	}
+
+	pdlg->setLabelText(tr("%0/%1 caches cleared").arg(removed).arg(total));
+	pdlg->setCancelButtonText(tr("OK"));
+	QApplication::beep();
+}
+
+void game_list_frame::BatchRemoveCustomConfigurations()
+{
+	std::set<std::string> serials;
+	for (const auto& game : m_game_data)
+	{
+		if (game->hasCustomConfig && !serials.count(game->info.serial))
+		{
+			serials.emplace(game->info.serial);
+		}
+	}
+	const u32 total = serials.size();
+
+	if (total == 0)
+	{
+		QMessageBox::information(this, tr("Custom Configuration Batch Removal"), tr("No files found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Removing all custom configurations"), tr("Cancel"), 0, total, this);
+	pdlg->setWindowTitle(tr("Custom Configuration Batch Removal"));
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->show();
+
+	u32 removed = 0;
+	for (const auto& serial : serials)
+	{
+		if (pdlg->wasCanceled())
+		{
+			LOG_NOTICE(GENERAL, "Custom Configuration Batch Removal was canceled. %d/%d custom configurations cleared", removed, total);
+			break;
+		}
+		QApplication::processEvents();
+
+		if (RemoveCustomConfiguration(serial))
+		{
+			pdlg->SetValue(++removed);
+		}
+	}
+
+	pdlg->setLabelText(tr("%0/%1 custom configurations cleared").arg(removed).arg(total));
+	pdlg->setCancelButtonText(tr("OK"));
+	QApplication::beep();
+	Refresh(true);
+}
+
+void game_list_frame::BatchRemoveShaderCaches()
+{
+	std::set<std::string> serials;
+	for (const auto& game : m_game_data)
+	{
+		serials.emplace(game->info.serial);
+	}
+	const u32 total = serials.size();
+
+	if (total == 0)
+	{
+		QMessageBox::information(this, tr("Shader Cache Batch Removal"), tr("No files found"), QMessageBox::Ok);
+		return;
+	}
+
+	progress_dialog* pdlg = new progress_dialog(tr("Removing all shader caches"), tr("Cancel"), 0, total, this);
+	pdlg->setWindowTitle(tr("Shader Cache Batch Removal"));
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->show();
+
+	u32 removed = 0;
+	for (const auto& serial : serials)
+	{
+		if (pdlg->wasCanceled())
+		{
+			LOG_NOTICE(GENERAL, "Shader Cache Batch Removal was canceled");
+			break;
+		}
+		QApplication::processEvents();
+
+		if (RemoveShadersCache(GetCacheDirBySerial(serial)))
+		{
+			pdlg->SetValue(++removed);
+		}
+	}
+
+	pdlg->setLabelText(tr("%0/%1 shader caches cleared").arg(removed).arg(total));
+	pdlg->setCancelButtonText(tr("OK"));
+	QApplication::beep();
 }
 
 QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon, const QColor& compatibility_color)

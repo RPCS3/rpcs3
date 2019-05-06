@@ -48,7 +48,7 @@ user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_setti
 	: QDialog(parent), m_user_list(), m_sort_column(1), m_sort_ascending(true), m_gui_settings(gui_settings)
 {
 	setWindowTitle(tr("User Manager"));
-	setMinimumSize(QSize(400, 400));
+	setMinimumSize(QSize(500, 400));
 	setModal(true);
 
 	Init();
