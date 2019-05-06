@@ -1304,9 +1304,11 @@ void game_list_frame::BatchRemoveShaderCaches()
 
 QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon, const QColor& compatibility_color)
 {
+	const int device_pixel_ratio = devicePixelRatio();
 	const QSize original_size = img.size();
 
-	QImage image = QImage(original_size, QImage::Format_ARGB32);
+	QImage image = QImage(original_size * device_pixel_ratio, QImage::Format_ARGB32);
+	image.setDevicePixelRatio(device_pixel_ratio);
 	image.fill(m_Icon_Color);
 
 	QPainter painter(&image);
@@ -1320,7 +1322,9 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 	{
 		const int width = original_size.width() * 0.2;
 		const QPoint origin = QPoint(original_size.width() - width, 0);
-		painter.drawImage(origin, QImage(":/Icons/custom_config_2.png").scaled(QSize(width, width), Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		QImage custom_config_icon(":/Icons/custom_config_2.png");
+		custom_config_icon.setDevicePixelRatio(device_pixel_ratio);
+		painter.drawImage(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
 	if (compatibility_color.isValid())
@@ -1335,7 +1339,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 
 	painter.end();
 
-	return QPixmap::fromImage(image.scaled(m_Icon_Size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	return QPixmap::fromImage(image.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
 void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled)
@@ -1581,7 +1585,7 @@ int game_list_frame::PopulateGameList()
 		compat_item->setToolTip(game->compat.tooltip);
 		if (!game->compat.color.isEmpty())
 		{
-			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color));
+			compat_item->setData(Qt::DecorationRole, compat_pixmap(game->compat.color, devicePixelRatio() * 2));
 		}
 
 		// Version
