@@ -2,6 +2,10 @@
 
 #include <thread>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 ds3_pad_handler::ds3_pad_handler() : PadHandlerBase(pad_handler::ds3)
 {
 	init_configs();
@@ -25,36 +29,19 @@ ds3_pad_handler::~ds3_pad_handler()
 			controller->large_motor = 0;
 			controller->small_motor = 0;
 			send_output_report(controller);
-#ifdef _WIN32
-			libusb_close(controller->handle);
-			libusb_unref_device(controller->device);
-#else
 			hid_close(controller->handle);
-#endif
 		}
 	}
-#ifdef _WIN32
-	libusb_exit(nullptr);
-#else
 	hid_exit();
-#endif
 }
 
 bool ds3_pad_handler::init_usb()
 {
-#ifdef _WIN32
-	if (libusb_init(nullptr) != LIBUSB_SUCCESS)
-	{
-		LOG_FATAL(HLE, "[DS3] Failed to init libusb for the DS3 pad handler");
-		return false;
-	}
-#else
 	if (hid_init() != 0)
 	{
 		LOG_FATAL(HLE, "[DS3] Failed to init hidapi for the DS3 pad handler");
 		return false;
 	}
-#endif
 	return true;
 }
 
@@ -70,53 +57,19 @@ bool ds3_pad_handler::Init()
 
 	// Uses libusb for windows as hidapi will never work with UsbHid driver for the ds3 and it won't work with WinUsb either(windows hid api needs the UsbHid in the driver stack as far as I can tell)
 	// For other os use hidapi and hope for the best!
-#ifdef _WIN32
-	libusb_device **devlist;
-	ssize_t cnt = libusb_get_device_list(nullptr, &devlist);
-
-	for (ssize_t index = 0; index < cnt; index++)
-	{
-		libusb_device_descriptor desc;
-		libusb_get_device_descriptor(devlist[index], &desc);
-
-		if (desc.idVendor != DS3_VID || desc.idProduct != DS3_PID)
-			continue;
-
-		// We found a DS3 but we need to check if the driver will let us interact with it
-		libusb_device_handle *devhandle;
-		if (libusb_open(devlist[index], &devhandle) != LIBUSB_SUCCESS)
-		{
-			warn_about_drivers = true;
-			continue;
-		}
-
-		// Even if the drivers let us open the device we need to check it authorizes us to get an unadvertised feature report
-		// The default windows driver for the DS3(UsbHid) won't let us do that
-		unsigned char reportbuf[64];
-		if (libusb_claim_interface(devhandle, 0) != LIBUSB_SUCCESS
-			|| libusb_control_transfer(devhandle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE, HID_GETREPORT, HIDREPORT_FEATURE | 0xF2, 0, reportbuf, sizeof(reportbuf), 1000) < 0)
-		{
-			warn_about_drivers = true;
-			libusb_close(devhandle);
-			continue;
-		}
-
-		std::shared_ptr<ds3_device> ds3dev = std::make_shared<ds3_device>();
-		ds3dev->device = devlist[index];
-		ds3dev->handle = devhandle;
-
-		libusb_ref_device(ds3dev->device);
-		controllers.emplace_back(ds3dev);
-	}
-
-	libusb_free_device_list(devlist, true);
-#else
 	hid_device_info* hid_info = hid_enumerate(DS3_VID, DS3_PID);
 	hid_device_info* head = hid_info;
 	while (hid_info)
 	{
 		hid_device *handle = hid_open_path(hid_info->path);
-		if (handle)
+
+#ifdef _WIN32
+		u8 buf[0xFF];
+		buf[0] = 0xF2;
+		if (handle && (hid_get_feature_report(handle, buf, 0xFF) >= 0))
+#else
+		if(handle)
+#endif
 		{
 			std::shared_ptr<ds3_device> ds3dev = std::make_shared<ds3_device>();
 			ds3dev->device = hid_info->path;
@@ -125,13 +78,15 @@ bool ds3_pad_handler::Init()
 		}
 		else
 		{
+			if (handle)
+				hid_close(handle);
+
 			warn_about_drivers = true;
 		}
 		hid_info = hid_info->next;
 	}
 
 	hid_free_enumeration(head);
-#endif
 
 	if (warn_about_drivers)
 	{
@@ -232,32 +187,14 @@ void ds3_pad_handler::ThreadProc()
 	{
 		m_dev = bindings[i].first;
 		auto thepad = bindings[i].second;
-		auto profile = m_dev->config;
 
 		if (m_dev->handle == nullptr)
 		{
-#ifdef _WIN32
-			// Tries to reopen
-			libusb_device_handle *devhandle;
-			if (libusb_open(m_dev->device, &devhandle) != LIBUSB_SUCCESS)
-			{
-				continue;
-			}
-
-			unsigned char reportbuf[64];
-			if (libusb_claim_interface(devhandle, 0) != LIBUSB_SUCCESS
-				|| libusb_control_transfer(devhandle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE, HID_GETREPORT, HIDREPORT_FEATURE | 0xF2, 0, reportbuf, sizeof(reportbuf), 1000) < 0)
-			{
-				libusb_close(devhandle);
-				continue;
-			}
-#else
 			hid_device* devhandle = hid_open_path(m_dev->device.c_str());
 			if (!devhandle)
 			{
 				continue;
 			}
-#endif
 
 			m_dev->handle = devhandle;
 		}
@@ -278,8 +215,8 @@ void ds3_pad_handler::ThreadProc()
 
 			if (m_dev->large_motor != thepad->m_vibrateMotors[0].m_value || m_dev->small_motor != thepad->m_vibrateMotors[1].m_value)
 			{
-				m_dev->large_motor = thepad->m_vibrateMotors[0].m_value;
-				m_dev->small_motor = thepad->m_vibrateMotors[1].m_value;
+				m_dev->large_motor = (u8)thepad->m_vibrateMotors[0].m_value;
+				m_dev->small_motor = (u8)thepad->m_vibrateMotors[1].m_value;
 				send_output_report(m_dev);
 			}
 
@@ -289,11 +226,8 @@ void ds3_pad_handler::ThreadProc()
 			{
 				m_dev->status = DS3Status::Disconnected;
 				thepad->m_port_status = CELL_PAD_STATUS_DISCONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES;
-#ifdef _WIN32
-				libusb_close(m_dev->handle);
-#else
 				hid_close(m_dev->handle);
-#endif
+
 				m_dev->handle = nullptr;
 				LOG_WARNING(HLE, "[DS3] Pad was disconnected");
 
@@ -349,19 +283,12 @@ void ds3_pad_handler::send_output_report(const std::shared_ptr<ds3_device>& ds3d
 {
 #ifdef _WIN32
 	u8 report_buf[] = {
-		0x00, 0xff, 0x00, 0xff, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0x00, 0x00, 0x00, 0x00, 0x00
+		0x00,
+		0x02, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00
 	};
 
-	report_buf[2] = ds3dev->large_motor;
-	report_buf[4] = ds3dev->small_motor;
-
-	libusb_control_transfer(ds3dev->handle, LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE, HID_SETREPORT, HIDREPORT_OUTPUT | 01, 0, report_buf, sizeof(report_buf), 0);
+	report_buf[6] = ds3dev->small_motor;
+	report_buf[8] = ds3dev->large_motor;
 #else
 	u8 report_buf[] = {
 		0x01,
@@ -375,9 +302,9 @@ void ds3_pad_handler::send_output_report(const std::shared_ptr<ds3_device>& ds3d
 	};
 	report_buf[3] = ds3dev->large_motor;
 	report_buf[5] = ds3dev->small_motor;
+#endif
 
 	hid_write(ds3dev->handle, report_buf, sizeof(report_buf));
-#endif
 }
 
 std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_device(const std::string& padId)
@@ -446,34 +373,22 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 
 ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_device>& ds3dev)
 {
-	int num_bytes = 0;
 	auto& dbuf = ds3dev->buf;
 
 #ifdef _WIN32
-	int result = libusb_interrupt_transfer(ds3dev->handle, DS3_ENDPOINT_IN, dbuf, sizeof(dbuf), &num_bytes, 10);
-
-	if(result == LIBUSB_SUCCESS)
-	{
-		if (dbuf[0] == 0x01 && dbuf[1] != 0xFF)
-		{
-			return DS3Status::NewData;
-		}
-		else
-		{
-			LOG_WARNING(HLE, "[DS3] Unknown packet received:0x%02x", dbuf[0]);
-			return DS3Status::Connected;
-		}
-	}
-
-	if (result == LIBUSB_ERROR_TIMEOUT)
-	{
-		return DS3Status::Connected;
-	}
+	dbuf[0] = 0xF2;
+	int result = hid_get_feature_report(ds3dev->handle, dbuf, sizeof(dbuf));
 #else
 	int result = hid_read(ds3dev->handle, dbuf, sizeof(dbuf));
+#endif
+
 	if (result > 0)
 	{
+#ifdef _WIN32
+		if(dbuf[0] == 0xF2)
+#else
 		if (dbuf[0] == 0x01 && dbuf[1] != 0xFF)
+#endif
 		{
 			return DS3Status::NewData;
 		}
@@ -489,7 +404,6 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 			return DS3Status::Connected;
 	}
 
-#endif
 	return DS3Status::Disconnected;
 }
 
@@ -498,45 +412,45 @@ std::array<std::pair<u16, bool>, ds3_pad_handler::DS3KeyCodes::KeyCodeCount> ds3
 	std::array<std::pair<u16, bool>, DS3KeyCodes::KeyCodeCount> key_buf;
 	auto& dbuf = device->buf;
 
-	key_buf[DS3KeyCodes::Up].second    = dbuf[2] & 0x10;
-	key_buf[DS3KeyCodes::Right].second = dbuf[2] & 0x20;
-	key_buf[DS3KeyCodes::Down].second  = dbuf[2] & 0x40;
-	key_buf[DS3KeyCodes::Left].second  = dbuf[2] & 0x80;
+	key_buf[DS3KeyCodes::Up].second    = dbuf[2 + DS3_HID_OFFSET] & 0x10;
+	key_buf[DS3KeyCodes::Right].second = dbuf[2 + DS3_HID_OFFSET] & 0x20;
+	key_buf[DS3KeyCodes::Down].second  = dbuf[2 + DS3_HID_OFFSET] & 0x40;
+	key_buf[DS3KeyCodes::Left].second  = dbuf[2 + DS3_HID_OFFSET] & 0x80;
 
-	key_buf[DS3KeyCodes::Select].second = dbuf[2] & 0x01;
-	key_buf[DS3KeyCodes::L3].second     = dbuf[2] & 0x02;
-	key_buf[DS3KeyCodes::R3].second     = dbuf[2] & 0x04;
-	key_buf[DS3KeyCodes::Start].second  = dbuf[2] & 0x08;
+	key_buf[DS3KeyCodes::Select].second = dbuf[2 + DS3_HID_OFFSET] & 0x01;
+	key_buf[DS3KeyCodes::L3].second     = dbuf[2 + DS3_HID_OFFSET] & 0x02;
+	key_buf[DS3KeyCodes::R3].second     = dbuf[2 + DS3_HID_OFFSET] & 0x04;
+	key_buf[DS3KeyCodes::Start].second  = dbuf[2 + DS3_HID_OFFSET] & 0x08;
 
-	key_buf[DS3KeyCodes::Square].second   = dbuf[3] & 0x80;
-	key_buf[DS3KeyCodes::Cross].second    = dbuf[3] & 0x40;
-	key_buf[DS3KeyCodes::Circle].second   = dbuf[3] & 0x20;
-	key_buf[DS3KeyCodes::Triangle].second = dbuf[3] & 0x10;
+	key_buf[DS3KeyCodes::Square].second   = dbuf[3 + DS3_HID_OFFSET] & 0x80;
+	key_buf[DS3KeyCodes::Cross].second    = dbuf[3 + DS3_HID_OFFSET] & 0x40;
+	key_buf[DS3KeyCodes::Circle].second   = dbuf[3 + DS3_HID_OFFSET] & 0x20;
+	key_buf[DS3KeyCodes::Triangle].second = dbuf[3 + DS3_HID_OFFSET] & 0x10;
 
-	key_buf[DS3KeyCodes::R1].second = dbuf[3] & 0x08;
-	key_buf[DS3KeyCodes::L1].second = dbuf[3] & 0x04;
-	key_buf[DS3KeyCodes::R2].second = dbuf[3] & 0x02;
-	key_buf[DS3KeyCodes::L2].second = dbuf[3] & 0x01;
+	key_buf[DS3KeyCodes::R1].second = dbuf[3 + DS3_HID_OFFSET] & 0x08;
+	key_buf[DS3KeyCodes::L1].second = dbuf[3 + DS3_HID_OFFSET] & 0x04;
+	key_buf[DS3KeyCodes::R2].second = dbuf[3 + DS3_HID_OFFSET] & 0x02;
+	key_buf[DS3KeyCodes::L2].second = dbuf[3 + DS3_HID_OFFSET] & 0x01;
 
-	key_buf[DS3KeyCodes::PSButton].second = dbuf[4] & 0x01;
+	key_buf[DS3KeyCodes::PSButton].second = dbuf[4 + DS3_HID_OFFSET] & 0x01;
 
-	key_buf[DS3KeyCodes::LSXPos].first = dbuf[6];
-	key_buf[DS3KeyCodes::LSYPos].first = dbuf[7];
-	key_buf[DS3KeyCodes::RSXPos].first = dbuf[8];
-	key_buf[DS3KeyCodes::RSYPos].first = dbuf[9];
+	key_buf[DS3KeyCodes::LSXPos].first = dbuf[6 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::LSYPos].first = dbuf[7 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::RSXPos].first = dbuf[8 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::RSYPos].first = dbuf[9 + DS3_HID_OFFSET];
 
-	key_buf[DS3KeyCodes::Up].first    = dbuf[14];
-	key_buf[DS3KeyCodes::Right].first = dbuf[15];
-	key_buf[DS3KeyCodes::Down].first  = dbuf[16];
-	key_buf[DS3KeyCodes::Left].first  = dbuf[17];
-	key_buf[DS3KeyCodes::Triangle].first = dbuf[22];
-	key_buf[DS3KeyCodes::Circle].first   = dbuf[23];
-	key_buf[DS3KeyCodes::Cross].first    = dbuf[24];
-	key_buf[DS3KeyCodes::Square].first   = dbuf[25];
-	key_buf[DS3KeyCodes::L1].first = dbuf[20];
-	key_buf[DS3KeyCodes::R1].first = dbuf[21];
-	key_buf[DS3KeyCodes::L2].first = dbuf[18];
-	key_buf[DS3KeyCodes::R2].first = dbuf[19];
+	key_buf[DS3KeyCodes::Up].first    = dbuf[14 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Right].first = dbuf[15 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Down].first  = dbuf[16 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Left].first  = dbuf[17 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Triangle].first = dbuf[22 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Circle].first   = dbuf[23 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Cross].first    = dbuf[24 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Square].first   = dbuf[25 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::L1].first = dbuf[20 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::R1].first = dbuf[21 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::L2].first = dbuf[18 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::R2].first = dbuf[19 + DS3_HID_OFFSET];
 
 	return key_buf;
 }
@@ -564,18 +478,18 @@ void ds3_pad_handler::process_data(const std::shared_ptr<ds3_device>& ds3dev, co
 		pad->m_sticks[i].m_value = ds3_info[key_max].first;
 	}
 
-#ifdef _WIN32
-	pad->m_sensors[0].m_value = 512 - (*((be_t<u16> *)&ds3dev->buf[41]) - 512);
-	pad->m_sensors[1].m_value = *((be_t<u16> *)&ds3dev->buf[45]);
-	pad->m_sensors[2].m_value = *((be_t<u16> *)&ds3dev->buf[43]);
-	pad->m_sensors[3].m_value = *((be_t<u16> *)&ds3dev->buf[47]);
-#else
 	// For unknown reasons the sixaxis values seem to be in little endian on linux
+
+#ifdef _WIN32
+	// Official Sony Windows DS3 driver seems to do the same modification of this value as the ps3
+	pad->m_sensors[0].m_value = *((le_t<u16> *)&ds3dev->buf[41 + DS3_HID_OFFSET]);
+#else
+	// When getting raw values from the device this adjustement is needed
 	pad->m_sensors[0].m_value = 512 - (*((le_t<u16> *)&ds3dev->buf[41]) - 512);
-	pad->m_sensors[1].m_value = *((le_t<u16> *)&ds3dev->buf[45]);
-	pad->m_sensors[2].m_value = *((le_t<u16> *)&ds3dev->buf[43]);
-	pad->m_sensors[3].m_value = *((le_t<u16> *)&ds3dev->buf[47]);
 #endif
+	pad->m_sensors[1].m_value = *((le_t<u16> *)&ds3dev->buf[45 + DS3_HID_OFFSET]);
+	pad->m_sensors[2].m_value = *((le_t<u16> *)&ds3dev->buf[43 + DS3_HID_OFFSET]);
+	pad->m_sensors[3].m_value = *((le_t<u16> *)&ds3dev->buf[47 + DS3_HID_OFFSET]);
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
 	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16
