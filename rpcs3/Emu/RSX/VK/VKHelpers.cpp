@@ -313,6 +313,7 @@ namespace vk
 			// Nvidia cards are easily susceptible to NaN poisoning
 			g_drv_sanitize_fp_values = true;
 			break;
+		case driver_vendor::INTEL:
 		default:
 			LOG_WARNING(RSX, "Unsupported device: %s", gpu_name);
 		}

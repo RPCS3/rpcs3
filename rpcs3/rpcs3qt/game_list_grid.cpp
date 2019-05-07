@@ -59,6 +59,8 @@ void game_list_grid::setIconSize(const QSize& size)
 
 void game_list_grid::addItem(const QPixmap& img, const QString& name, const int& row, const int& col)
 {
+	const int device_pixel_ratio = devicePixelRatio();
+
 	// define size of expanded image, which is raw image size + margins
 	QSize exp_size;
 	if (m_text_enabled)
@@ -74,11 +76,13 @@ void game_list_grid::addItem(const QPixmap& img, const QString& name, const int&
 	QPoint offset = QPoint(m_icon_size.width() * m_margin_factor, m_icon_size.height() * m_margin_factor);
 
 	// create empty canvas for expanded image
-	QImage exp_img = QImage(exp_size, QImage::Format_ARGB32);
+	QImage exp_img = QImage(exp_size * device_pixel_ratio, QImage::Format_ARGB32);
+	exp_img.setDevicePixelRatio(device_pixel_ratio);
 	exp_img.fill(Qt::transparent);
 
 	// create background for image
 	QImage bg_img = QImage(img.size(), QImage::Format_ARGB32);
+	bg_img.setDevicePixelRatio(device_pixel_ratio);
 	bg_img.fill(m_icon_color);
 
 	// place raw image inside expanded image
