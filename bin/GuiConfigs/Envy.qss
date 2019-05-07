@@ -382,11 +382,18 @@ QLineEdit:focus {
 	border-right: none;
 }
 
-
-/* Title Bar Docking Buttons */
+/* Title Bar Docks */
 QDockWidget::close-button, QDockWidget::float-button {
 	background-color: #23262d;
 	width: auto;
+}
+
+QDockWidget#logger {
+	color: transparent;
+}
+
+QDockWidget#gamelist {
+	color: #f8f8f8;
 }
 
 /* Top Menu Bar */

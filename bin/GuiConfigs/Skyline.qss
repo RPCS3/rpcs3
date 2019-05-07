@@ -166,7 +166,6 @@ QSlider::handle:horizontal:pressed {
 }
 
 /* Slider on Toolbar */
-
 QToolBar#mw_toolbar QSlider {
 	background-color: transparent;
 }
@@ -243,10 +242,10 @@ QRadioButton::indicator {
 }
 
 QRadioButton::indicator:checked {
-	background: qradialgradient(cx:0, cy:0, radius: 1, fx:1, fy:1, stop:0.25 #8500ae, stop:0.3 #FFFFFF);
+	background: qradialgradient(cx:0, cy:0, radius: 1, fx:1, fy:1, stop:0.25 #b345d9, stop:0.3 #FFFFFF);
 }
 
-QRadioButton::indicator:unchecked:hover {
+QRadioButton::indicator:unchecked:hover, QRadioButton::indicator:checked:hover {
 	border: 0.0625em solid #8500ae;
 }
 
@@ -520,14 +519,17 @@ QListWidget::item:disabled {
 	color: #999999;
 }
 
-/* Title Bar Docking Buttons */
+/* Title Bar & Docking Buttons */
 QDockWidget::close-button, QDockWidget::float-button {
-	background-color: transparent;
-	width: auto;
+	background: transparent;
 }
 
-QDockWidget::title {
-	background: #FFFFFF;
+QDockWidget::title#gamelist {
+	background: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #8500ae, stop: 0.5 #4343c1, stop: 1 #009ed0);
+}
+
+QDockWidget#gamelist {
+	color: #FFFFFF;
 }
 
 /* Game Table */
@@ -594,6 +596,14 @@ QToolTip {
 }
 
 /* Log and Debugger Borders */
+QDockWidget::title#logger {
+	background: #FFFFFF;
+}
+
+QDockWidget#logger {
+	color: transparent;
+}
+
 QTextEdit {
 	border-top: 1px solid qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0.25 #8500ae, stop: 0.5 #4343c1, stop: 1 #009ed0);
 }
