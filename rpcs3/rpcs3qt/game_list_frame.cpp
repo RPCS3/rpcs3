@@ -1099,7 +1099,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Creating all PPU caches"), tr("Cancel"), 0, m_game_data.size(), this);
+	progress_dialog* pdlg = new progress_dialog(tr("Creating all PPU caches"), tr("Cancel"), 0, total, this);
 	pdlg->setWindowTitle(tr("PPU Cache Batch Creation"));
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
