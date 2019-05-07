@@ -154,6 +154,11 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> cpu_thread*
 	{
+		if (!idm::check_unlocked<named_thread<ppu_thread>>(thread_id))
+		{
+			return (cpu_thread*)(1);
+		}
+
 		if (cond.waiters)
 		{
 			std::lock_guard lock(cond.mutex->mutex);
@@ -169,7 +174,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 						return cpu;
 					}
 
-					return (cpu_thread*)(1);
+					return (cpu_thread*)(2);
 				}
 			}
 		}
@@ -177,12 +182,12 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 		return nullptr;
 	});
 
-	if (!cond)
+	if (!cond || cond.ret == (cpu_thread*)(1))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (cond.ret && cond.ret != (cpu_thread*)(1))
+	if (cond.ret && cond.ret != (cpu_thread*)(2))
 	{
 		cond->awake(*cond.ret);
 	}
