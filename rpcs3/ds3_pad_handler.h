@@ -2,13 +2,10 @@
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/Thread.h"
-#include <libusb.h>
 #include <limits>
 #include <unordered_map>
 
-#ifndef _WIN32
 #include "hidapi.h"
-#endif
 
 class ds3_pad_handler final : public PadHandlerBase
 {
@@ -106,13 +103,8 @@ class ds3_pad_handler final : public PadHandlerBase
 
 	struct ds3_device
 	{
-#ifdef _WIN32
-		libusb_device *device = nullptr;
-		libusb_device_handle *handle = nullptr;
-#else
 		std::string device = {};
 		hid_device *handle = nullptr;
-#endif
 		pad_config* config{ nullptr };
 		u8 buf[64];
 		u8 large_motor = 0;
@@ -122,6 +114,12 @@ class ds3_pad_handler final : public PadHandlerBase
 
 	const u16 DS3_VID = 0x054C;
 	const u16 DS3_PID = 0x0268;
+
+#ifdef _WIN32
+	const u8 DS3_HID_OFFSET = 0x01;
+#else
+	const u8 DS3_HID_OFFSET = 0x00;
+#endif
 
 	// pseudo 'controller id' to keep track of unique controllers
 	std::vector<std::shared_ptr<ds3_device>> controllers;
