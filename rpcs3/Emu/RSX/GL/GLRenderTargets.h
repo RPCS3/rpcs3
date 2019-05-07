@@ -149,21 +149,26 @@ namespace gl
 	{
 		using gl::fbo::fbo;
 	};
+
+	static inline gl::render_target* as_rtt(gl::texture* t)
+	{
+		return reinterpret_cast<gl::render_target*>(t);
+	}
 }
 
 struct gl_render_target_traits
 {
 	using surface_storage_type = std::unique_ptr<gl::render_target>;
 	using surface_type = gl::render_target*;
-	using command_list_type = void*;
+	using command_list_type = gl::command_context&;
 	using download_buffer_object = std::vector<u8>;
+	using barrier_descriptor_t = rsx::deferred_clipped_region<gl::render_target*>;
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
 		u32 address,
 		rsx::surface_color_format surface_color_format,
-		size_t width, size_t height, size_t pitch,
-		gl::render_target* old_surface
+		size_t width, size_t height, size_t pitch
 	)
 	{
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
@@ -176,7 +181,6 @@ struct gl_render_target_traits
 
 		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
 		result->set_native_component_layout(native_layout);
-		result->set_old_contents(old_surface);
 
 		result->set_cleared(false);
 		result->queue_tag(address);
@@ -187,8 +191,7 @@ struct gl_render_target_traits
 	std::unique_ptr<gl::render_target> create_new_surface(
 			u32 address,
 		rsx::surface_depth_format surface_depth_format,
-			size_t width, size_t height, size_t pitch,
-			gl::render_target* old_surface
+			size_t width, size_t height, size_t pitch
 		)
 	{
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
@@ -203,11 +206,45 @@ struct gl_render_target_traits
 		result->set_native_pitch(native_pitch);
 		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
 		result->set_native_component_layout(native_layout);
-		result->set_old_contents(old_surface);
 
 		result->set_cleared(false);
 		result->queue_tag(address);
 		return result;
+	}
+
+	static
+	void clone_surface(
+		gl::command_context&,
+		std::unique_ptr<gl::render_target>& sink, gl::render_target* ref,
+		u32 address, barrier_descriptor_t& prev)
+	{
+		if (!sink)
+		{
+			auto internal_format = (GLenum)ref->get_internal_format();
+			const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width());
+			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height());
+
+			sink.reset(new gl::render_target(new_w, new_h, internal_format));
+		}
+
+		prev.target = sink.get();
+
+		sink->set_native_pitch(prev.width * ref->get_bpp());
+		sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
+		sink->set_native_component_layout(ref->get_native_component_layout());
+		sink->queue_tag(address);
+		sink->sync_tag();
+		sink->set_old_contents_region(prev, false);
+		sink->set_cleared(false);
+		sink->last_use_tag = ref->last_use_tag;
+	}
+
+	static
+	bool is_compatible_surface(const gl::render_target* surface, const gl::render_target* ref, u16 width, u16 height, u8 /*sample_count*/)
+	{
+		return (surface->get_internal_format() == ref->get_internal_format() &&
+				surface->get_surface_width() == width &&
+				surface->get_surface_height() == height);
 	}
 
 	static
@@ -220,11 +257,11 @@ struct gl_render_target_traits
 		info->bpp = surface->get_bpp();
 	}
 
-	static void prepare_rtt_for_drawing(void *, gl::render_target *rtt) { rtt->reset_refs(); }
-	static void prepare_rtt_for_sampling(void *, gl::render_target*) {}
+	static void prepare_rtt_for_drawing(gl::command_context&, gl::render_target *rtt) { rtt->reset_refs(); }
+	static void prepare_rtt_for_sampling(gl::command_context&, gl::render_target*) {}
 	
-	static void prepare_ds_for_drawing(void *, gl::render_target *ds) { ds->reset_refs(); }
-	static void prepare_ds_for_sampling(void *, gl::render_target*) {}
+	static void prepare_ds_for_drawing(gl::command_context&, gl::render_target *ds) { ds->reset_refs(); }
+	static void prepare_ds_for_sampling(gl::command_context&, gl::render_target*) {}
 
 	static
 	bool surface_is_pitch_compatible(const std::unique_ptr<gl::render_target> &surface, size_t pitch)
@@ -233,10 +270,9 @@ struct gl_render_target_traits
 	}
 
 	static
-	void invalidate_surface_contents(void *, gl::render_target *surface, gl::render_target* old_surface, u32 address, size_t pitch)
+	void invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, size_t pitch)
 	{
 		surface->set_rsx_pitch((u16)pitch);
-		surface->set_old_contents(old_surface);
 		surface->reset_aa_mode();
 		surface->queue_tag(address);
 		surface->set_cleared(false);

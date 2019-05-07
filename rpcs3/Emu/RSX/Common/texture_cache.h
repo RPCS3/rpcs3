@@ -1750,8 +1750,11 @@ namespace rsx
 				// Intersect this resource with the original one
 				const auto section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
 				const auto normalized_width = (section->get_width() * section_bpp) / bpp;
-				const auto clipped = rsx::intersect_region(address, slice_w, slice_h, bpp,
-					section->get_section_base(), normalized_width, section->get_height(), section_bpp, pitch);
+
+				const auto clipped = rsx::intersect_region(
+					section->get_section_base(), normalized_width, section->get_height(), section_bpp, /* parent region (extractee) */
+					address, slice_w, slice_h, bpp, /* child region (extracted) */
+					pitch);
 
 				// Rect intersection test
 				// TODO: Make the intersection code cleaner with proper 2D regions
