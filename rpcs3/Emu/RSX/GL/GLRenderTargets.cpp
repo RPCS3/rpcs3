@@ -215,7 +215,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		return;
 	}
 
-	m_rtts.prepare_render_target(nullptr,
+	gl::command_context cmd{ gl_state };
+	m_rtts.prepare_render_target(cmd,
 		layout.color_format, layout.depth_format,
 		layout.width, layout.height,
 		layout.target, layout.aa_mode,
@@ -233,8 +234,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	const u8 color_bpp = get_format_block_size_in_bytes(layout.color_format);
 	const u8 depth_bpp = (layout.depth_format == rsx::surface_depth_format::z16 ? 2 : 4);
-
-	gl::command_context cmd{ gl_state };
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -606,7 +605,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 		return;
 	}
 
-	auto src_texture = static_cast<gl::render_target*>(old_contents);
+	auto src_texture = gl::as_rtt(old_contents.source);
 	if (!rsx::pitch_compatible(this, src_texture))
 	{
 		LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
@@ -616,8 +615,6 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	const auto src_bpp = src_texture->get_bpp();
 	const auto dst_bpp = get_bpp();
 	rsx::typeless_xfer typeless_info{};
-
-	const auto region = rsx::get_transferable_region(this);
 
 	if (get_internal_format() == src_texture->get_internal_format())
 	{
@@ -639,9 +636,11 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	}
 
 	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
-	gl::g_hw_blitter->scale_image(cmd, old_contents, this,
-		{ 0, 0, std::get<0>(region), std::get<1>(region) },
-		{ 0, 0, std::get<2>(region) , std::get<3>(region) },
+	old_contents.init_transfer(this);
+
+	gl::g_hw_blitter->scale_image(cmd, old_contents.source, this,
+		old_contents.src_rect(),
+		old_contents.dst_rect(),
 		!dst_is_depth, dst_is_depth, typeless_info);
 
 	// Memory has been transferred, discard old contents and update memory flags

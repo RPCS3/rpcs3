@@ -214,19 +214,19 @@ void GLGSRender::end()
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 
 	// Handle special memory barrier for ARGB8->D24S8 in an active DSV
-	if (ds && ds->old_contents != nullptr &&
-		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8 &&
-		rsx::pitch_compatible(ds, static_cast<gl::render_target*>(ds->old_contents)))
+	if (ds && ds->old_contents &&
+		ds->old_contents.source->get_internal_format() == gl::texture::internal_format::rgba8 &&
+		rsx::pitch_compatible(ds, gl::as_rtt(ds->old_contents.source)))
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
 		// TODO: Stencil transfer
 		gl::g_hw_blitter->fast_clear_image(cmd, ds, 1.f, 0xFF);
+		ds->old_contents.init_transfer(ds);
 
-		const auto region = rsx::get_transferable_region(ds);
-		m_depth_converter.run({0, 0, std::get<0>(region), std::get<1>(region)},
-			{0, 0, std::get<2>(region), std::get<3>(region)},
-			ds->old_contents, ds);
+		m_depth_converter.run(ds->old_contents.src_rect(),
+			ds->old_contents.dst_rect(),
+			ds->old_contents.source, ds);
 
 		ds->on_write();
 	}
@@ -400,7 +400,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> draw_start = textures_end;
 
 	// Optionally do memory synchronization if the texture stage has not yet triggered this
-	if (g_cfg.video.strict_rendering_mode)
+	if (1)//g_cfg.video.strict_rendering_mode)
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 

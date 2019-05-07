@@ -1459,8 +1459,8 @@ void VKGSRender::end()
 	// Check for data casts
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && ds->old_contents &&
-		ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM &&
-		rsx::pitch_compatible(ds, static_cast<vk::render_target*>(ds->old_contents)))
+		ds->old_contents.source->info.format == VK_FORMAT_B8G8R8A8_UNORM &&
+		rsx::pitch_compatible(ds, vk::as_rtt(ds->old_contents.source)))
 	{
 		auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
 		auto render_pass = m_render_passes[rp];
@@ -1475,11 +1475,11 @@ void VKGSRender::end()
 		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
 		// TODO: Stencil transfer
-		const auto region = rsx::get_transferable_region(ds);
+		ds->old_contents.init_transfer(ds);
 		m_depth_converter->run(*m_current_command_buffer,
-			{ 0, 0, std::get<0>(region), std::get<1>(region) },
-			{ 0, 0, std::get<2>(region), std::get<3>(region) },
-			static_cast<vk::render_target*>(ds->old_contents)->get_view(0xAAE4, rsx::default_remap_vector),
+			ds->old_contents.src_rect(),
+			ds->old_contents.dst_rect(),
+			vk::as_rtt(ds->old_contents.source)->get_view(0xAAE4, rsx::default_remap_vector),
 			ds, render_pass, m_framebuffers_to_clean);
 
 		// TODO: Flush management to avoid pass running out of ubo space (very unlikely)
@@ -1827,7 +1827,7 @@ void VKGSRender::end()
 	}
 
 	// Apply write memory barriers
-	if (g_cfg.video.strict_rendering_mode)
+	if (1)//g_cfg.video.strict_rendering_mode)
 	{
 		if (ds) ds->write_barrier(*m_current_command_buffer);
 
@@ -2976,13 +2976,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		return;
 	}
 
-	m_rtts.prepare_render_target(&*m_current_command_buffer,
+	m_rtts.prepare_render_target(*m_current_command_buffer,
 		layout.color_format, layout.depth_format,
 		layout.width, layout.height,
 		layout.target, layout.aa_mode,
 		layout.color_addresses, layout.zeta_address,
 		layout.actual_color_pitch, layout.actual_zeta_pitch,
-		(*m_device), &*m_current_command_buffer);
+		(*m_device), *m_current_command_buffer);
 
 	// Reset framebuffer information
 	VkFormat old_format = VK_FORMAT_UNDEFINED;

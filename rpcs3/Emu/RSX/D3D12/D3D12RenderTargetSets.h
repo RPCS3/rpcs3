@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#define INCOMPLETE_SURFACE_CACHE_IMPL
+
 #include <utility>
 #include <d3d12.h>
 #include "d3dx12.h"
@@ -25,7 +27,6 @@ struct render_target_traits
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
 		surface_color_format color_format, size_t width, size_t height, size_t /*pitch*/,
-		ID3D12Resource* /*old*/,
 		ID3D12Device* device, const std::array<float, 4> &clear_color, float, u8)
 	{
 		DXGI_FORMAT dxgi_format = get_color_surface_format(color_format);
@@ -86,7 +87,6 @@ struct render_target_traits
 	ComPtr<ID3D12Resource> create_new_surface(
 		u32 address,
 		surface_depth_format surfaceDepthFormat, size_t width, size_t height, size_t /*pitch*/,
-		ID3D12Resource* /*old*/,
 		ID3D12Device* device, const std::array<float, 4>& , float clear_depth, u8 clear_stencil)
 	{
 		D3D12_CLEAR_VALUE clear_depth_value = {};
@@ -131,7 +131,7 @@ struct render_target_traits
 	static
 	void invalidate_surface_contents(
 		ID3D12GraphicsCommandList*,
-		ID3D12Resource*, ID3D12Resource*,
+		ID3D12Resource*,
 		u32, size_t)
 	{}
 
