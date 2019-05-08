@@ -32,8 +32,8 @@ namespace vk
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_MAX_COMPUTE_TASKS }
 			};
 
-			//Reserve descriptor pools
-			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes, 1);
+			// Reserve descriptor pools
+			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes, 2);
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings(2);
 

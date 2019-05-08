@@ -58,6 +58,10 @@ namespace vk
 
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region)
 	{
+		// Always validate
+		verify("Invalid image layout!" HERE),
+			src->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src->current_layout == VK_IMAGE_LAYOUT_GENERAL;
+
 		switch (src->format())
 		{
 		default:
@@ -118,6 +122,10 @@ namespace vk
 
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region)
 	{
+		// Always validate
+		verify("Invalid image layout!" HERE),
+			dst->current_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL || dst->current_layout == VK_IMAGE_LAYOUT_GENERAL;
+
 		switch (dst->format())
 		{
 		default:
@@ -177,7 +185,7 @@ namespace vk
 		}
 	}
 
-	void copy_image_typeless(const vk::command_buffer& cmd, const vk::image* src, const vk::image* dst, const areai& src_rect, const areai& dst_rect,
+	void copy_image_typeless(const vk::command_buffer& cmd, vk::image* src, vk::image* dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect, VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
 	{
 		if (src->info.format == dst->info.format)
@@ -186,16 +194,15 @@ namespace vk
 			return;
 		}
 
-		auto preferred_src_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		auto preferred_dst_format = (src == dst) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		const auto src_layout = src->current_layout;
-		const auto dst_layout = dst->current_layout;
-
-		if (src->current_layout != preferred_src_format)
-			change_image_layout(cmd, src->value, src_layout, preferred_src_format, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
-
-		if (dst->current_layout != preferred_dst_format && src != dst)
-			change_image_layout(cmd, dst->value, dst_layout, preferred_dst_format, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
+		if (LIKELY(src != dst))
+		{
+			src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		}
+		else
+		{
+			src->push_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
+		}
 
 		auto scratch_buf = vk::get_scratch_buffer();
 		VkBufferImageCopy src_copy{}, dst_copy{};
@@ -264,11 +271,8 @@ namespace vk
 			dst_copy.imageSubresource.mipLevel++;
 		}
 
-		if (src_layout != preferred_src_format)
-			change_image_layout(cmd, src->value, preferred_src_format, src_layout, vk::get_image_subresource_range(0, 0, 1, 1, src_aspect));
-
-		if (dst_layout != preferred_dst_format && src != dst)
-			change_image_layout(cmd, dst->value, preferred_dst_format, dst_layout, vk::get_image_subresource_range(0, 0, 1, 1, dst_aspect));
+		src->pop_layout(cmd);
+		if (src != dst) dst->pop_layout(cmd);
 	}
 
 	void copy_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
@@ -651,10 +655,9 @@ namespace vk
 					const auto scratch_buf = vk::get_scratch_buffer();
 					const auto data_length = src->info.extent.width * src->info.extent.height * 4;
 
-					const auto current_layout = src->current_layout;
-					vk::change_image_layout(cmd, real_src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+					src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 					vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, scratch_buf->value, 1, &copy);
-					vk::change_image_layout(cmd, real_src, current_layout, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+					src->pop_layout(cmd);
 
 					vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, data_length,
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -667,8 +670,7 @@ namespace vk
 						VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 					real_src = vk::get_typeless_helper(src->info.format, src->width(), src->height());
-					vk::change_image_layout(cmd, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
-
+					real_src->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 					vkCmdCopyBufferToImage(cmd, scratch_buf->value, real_src->value, real_src->current_layout, 1, &copy);
 				}
 			}
