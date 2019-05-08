@@ -215,24 +215,39 @@ namespace rsx
 	}
 
 	// Returns interleaved bits of X|Y|Z used as Z-order curve indices
-	static inline u32 calculate_z_index(u32 x, u32 y, u32 z)
+	static inline u32 calculate_z_index(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
 	{
-		//Result = X' | Y' | Z' which are x,y,z bits interleaved
-		u32 shift_size = 0;
-		u32 result = 0;
+		AUDIT(x < (1u << log2_width) && y < (1u << log2_height) && z < (1u << log2_depth));
 
-		while (x | y | z)
+		// offset = X' | Y' | Z' which are x,y,z bits interleaved
+		u32 offset = 0;
+		u32 shift_count = 0;
+		do
 		{
-			result |= (x & 0x1) << shift_size++;
-			result |= (y & 0x1) << shift_size++;
-			result |= (z & 0x1) << shift_size++;
+			if (log2_width)
+			{
+				offset |= (x & 0x1) << shift_count++;
+				x >>= 1;
+				log2_width--;
+			}
 
-			x >>= 1;
-			y >>= 1;
-			z >>= 1;
+			if (log2_height)
+			{
+				offset |= (y & 0x1) << shift_count++;
+				y >>= 1;
+				log2_height--;
+			}
+
+			if (log2_depth)
+			{
+				offset |= (z & 0x1) << shift_count++;
+				z >>= 1;
+				log2_depth--;
+			}
 		}
+		while (x | y | z);
 
-		return result;
+		return offset;
 	}
 
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
@@ -332,13 +347,17 @@ namespace rsx
 		T *src = static_cast<T*>(input_pixels);
 		T *dst = static_cast<T*>(output_pixels);
 
+		const u32 log2_w = ceil_log2(width);
+		const u32 log2_h = ceil_log2(height);
+		const u32 log2_d = ceil_log2(depth);
+	
 		for (u32 z = 0; z < depth; ++z)
 		{
 			for (u32 y = 0; y < height; ++y)
 			{
 				for (u32 x = 0; x < width; ++x)
 				{
-					*dst++ = src[calculate_z_index(x, y, z)];
+					*dst++ = src[calculate_z_index(x, y, z, log2_w, log2_h, log2_d)];
 				}
 			}
 		}
