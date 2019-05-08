@@ -150,7 +150,7 @@ namespace vk
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region);
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 
-	void copy_image_typeless(const command_buffer &cmd, const image *src, const image *dst, const areai& src_rect, const areai& dst_rect,
+	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
 		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
@@ -1067,13 +1067,13 @@ namespace vk
 			return m_storage_aspect;
 		}
 
-		void push_layout(command_buffer& cmd, VkImageLayout layout)
+		void push_layout(VkCommandBuffer cmd, VkImageLayout layout)
 		{
 			m_layout_stack.push(current_layout);
 			change_image_layout(cmd, this, layout);
 		}
 
-		void pop_layout(command_buffer& cmd)
+		void pop_layout(VkCommandBuffer cmd)
 		{
 			verify(HERE), !m_layout_stack.empty();
 

@@ -19,9 +19,6 @@ namespace vk
 		u16 surface_width = 0;
 		u16 surface_height = 0;
 
-		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
-		std::unordered_multimap<u32, std::unique_ptr<vk::image_view>> views;
-
 		u64 frame_tag = 0; // frame id when invalidated, 0 if not invalid
 
 		using viewable_image::viewable_image;
@@ -53,7 +50,7 @@ namespace vk
 
 		bool is_depth_surface() const override
 		{
-			return !!(attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
+			return !!(aspect() & VK_IMAGE_ASPECT_DEPTH_BIT);
 		}
 
 		bool matches_dimensions(u16 _width, u16 _height) const
@@ -72,12 +69,12 @@ namespace vk
 					// Initialize memory contents if we did not find anything usable
 					// TODO: Properly sync with Cell
 
-					VkImageSubresourceRange range{ attachment_aspect_flag, 0, 1, 0, 1 };
+					VkImageSubresourceRange range{ aspect(), 0, 1, 0, 1 };
 					const auto old_layout = current_layout;
 
 					change_image_layout(cmd, this, VK_IMAGE_LAYOUT_GENERAL, range);
 
-					if (attachment_aspect_flag & VK_IMAGE_ASPECT_COLOR_BIT)
+					if (aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
 					{
 						VkClearColorValue color{};
 						vkCmdClearColorImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &color, 1, &range);
@@ -117,12 +114,12 @@ namespace vk
 			else
 			{
 				if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
-					src_texture->attachment_aspect_flag != attachment_aspect_flag)
+					src_texture->aspect() != aspect())
 				{
 					typeless_info.src_is_typeless = true;
 					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 					typeless_info.src_native_format_override = (u32)info.format;
-					typeless_info.src_is_depth = !!(src_texture->attachment_aspect_flag & VK_IMAGE_ASPECT_DEPTH_BIT);
+					typeless_info.src_is_depth = src_texture->is_depth_surface();
 					typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 				}
 			}
@@ -236,7 +233,6 @@ namespace rsx
 			if (format == rsx::surface_depth_format::z24s8)
 				ds->native_pitch *= 2;
 
-			ds->attachment_aspect_flag = range.aspectMask;
 			ds->rsx_pitch = (u16)pitch;
 			ds->surface_width = (u16)width;
 			ds->surface_height = (u16)height;
@@ -303,8 +299,7 @@ namespace rsx
 
 		static void prepare_rtt_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
 		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(cmd, surface, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
+			surface->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 			//Reset deref count
 			surface->deref_count = 0;
@@ -313,14 +308,12 @@ namespace rsx
 
 		static void prepare_rtt_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
 		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(cmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
+			surface->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 
 		static void prepare_ds_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
 		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(cmd, surface, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+			surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			//Reset deref count
 			surface->deref_count = 0;
@@ -329,8 +322,7 @@ namespace rsx
 
 		static void prepare_ds_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
 		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(cmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
+			surface->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 
 		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target> &surface, size_t pitch)
