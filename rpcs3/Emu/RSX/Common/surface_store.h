@@ -1280,10 +1280,17 @@ namespace rsx
 					if (LIKELY(this_address >= texaddr))
 					{
 						const auto offset = this_address - texaddr;
-						info.src_x = 0;
-						info.src_y = 0;
 						info.dst_y = (offset / required_pitch);
 						info.dst_x = (offset % required_pitch) / required_bpp;
+
+						if (UNLIKELY(info.dst_x >= required_width || info.dst_y >= required_height))
+						{
+							// Out of bounds
+							continue;
+						}
+
+						info.src_x = 0;
+						info.src_y = 0;
 						info.width = std::min<u32>(normalized_surface_width, required_width - info.dst_x);
 						info.height = std::min<u32>(normalized_surface_height, required_height - info.dst_y);
 					}
