@@ -385,6 +385,7 @@ protected:
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
 
+	bool b_has_led = false;
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
 	bool b_has_config = false;
@@ -457,6 +458,7 @@ public:
 	bool has_config();
 	bool has_rumble();
 	bool has_deadzones();
+	bool has_led();
 
 	static std::string get_config_dir(pad_handler type);
 	static std::string get_config_filename(int i);
@@ -467,6 +469,7 @@ public:
 	//Sets window to config the controller(optional)
 	virtual void GetNextButtonPress(const std::string& /*padId*/, const std::function<void(u16, std::string, std::string, int[])>& /*callback*/, const std::function<void(std::string)>& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) {};
 	virtual void TestVibration(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/) {};
+	virtual void SetLED(const std::string& /*padId*/, s32 /*r*/, s32 /*g*/, s32 /*b*/){};
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	//Callback called during pad_thread::ThreadFunc

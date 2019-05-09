@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "PadHandler.h"
 
 cfg_input g_cfg_input;
@@ -261,6 +261,11 @@ bool PadHandlerBase::has_rumble()
 bool PadHandlerBase::has_deadzones()
 {
 	return b_has_deadzones;
+}
+
+bool PadHandlerBase::has_led()
+{
+	return b_has_led;
 }
 
 std::string PadHandlerBase::get_config_dir(pad_handler type)
