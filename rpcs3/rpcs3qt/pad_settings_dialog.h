@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QButtonGroup>
 #include <QDialog>
@@ -66,6 +66,7 @@ class pad_settings_dialog : public QDialog
 
 		id_pad_end, // end
 
+		id_led,
 		id_reset_parameters,
 		id_blacklist,
 		id_refresh,
@@ -107,6 +108,7 @@ private:
 	bool m_enable_buttons{ false };
 	bool m_enable_rumble{ false };
 	bool m_enable_deadzones{ false };
+	bool m_enable_led{ false };
 
 	// Button Mapping
 	QButtonGroup* m_padButtons;

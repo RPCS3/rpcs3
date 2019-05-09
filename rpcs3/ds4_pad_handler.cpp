@@ -95,6 +95,7 @@ ds4_pad_handler::ds4_pad_handler() : PadHandlerBase(pad_handler::ds4)
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
+	b_has_led = true;
 
 	m_name_string = "DS4 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -247,6 +248,40 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 	}
 
 	// Start/Stop the engines :)
+	SendVibrateData(device);
+}
+
+void ds4_pad_handler::SetLED(const std::string& padId, s32 r, s32 g, s32 b)
+{
+	std::shared_ptr<DS4Device> device = GetDevice(padId);
+	if (device == nullptr || device->hidDevice == nullptr)
+		return;
+
+	int index = 0;
+	for (int i = 0; i < MAX_GAMEPADS; i++)
+	{
+		if (g_cfg_input.player[i]->handler == pad_handler::ds4)
+		{
+			if (g_cfg_input.player[i]->device.to_string() == padId)
+			{
+				m_pad_configs[index].load();
+				device->config = &m_pad_configs[index];
+				break;
+			}
+			index++;
+		}
+	}
+
+	// disable pulse
+	device->led_delay_on  = 0;
+	device->led_delay_off = 0;
+
+	// set new color
+	device->config->colorR.set(r);
+	device->config->colorG.set(g);
+	device->config->colorB.set(b);
+
+	// Show new color :)
 	SendVibrateData(device);
 }
 
