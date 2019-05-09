@@ -33,7 +33,7 @@ struct lv2_mutex final : lv2_obj
 
 	shared_mutex mutex;
 	atomic_t<u32> owner{0}; // Owner Thread ID
-	atomic_t<u32> lock_count{0}; // Recursive Locks
+	u32 lock_count{0}; // Recursive Locks
 	atomic_t<u32> cond_count{0}; // Condition Variables
 	std::deque<cpu_thread*> sq;
 
@@ -132,12 +132,12 @@ struct lv2_mutex final : lv2_obj
 	{
 		if (auto cpu = schedule<T>(sq, protocol))
 		{
-			owner = cpu->id << 1 | !sq.empty();
+			owner.release(cpu->id << 1 | !sq.empty());
 			return static_cast<T*>(cpu);
 		}
 		else
 		{
-			owner = 0;
+			owner.release(0);
 			return nullptr;
 		}
 	}

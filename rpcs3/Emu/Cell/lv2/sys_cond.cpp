@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -205,11 +205,14 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 
 	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
 	{
-		// Add a "promise" to add a waiter
-		cond.waiters++;
+		if (cond.mutex->owner >> 1 == ppu.id)
+		{
+			// Add a "promise" to add a waiter
+			cond.waiters++;
+		}
 
 		// Save the recursive value
-		return cond.mutex->lock_count.load();
+		return cond.mutex->lock_count;
 	});
 
 	if (!cond)
@@ -220,12 +223,15 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 	// Verify ownership
 	if (cond->mutex->owner >> 1 != ppu.id)
 	{
-		// Awww
-		cond->waiters--;
 		return CELL_EPERM;
 	}
 	else
 	{
+		// Further function result
+		ppu.gpr[3] = CELL_OK;
+
+		cond->mutex->lock_count = 0;
+
 		std::lock_guard lock(cond->mutex->mutex);
 
 		// Register waiter
@@ -233,15 +239,10 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		cond->sleep(ppu, timeout);
 
 		// Unlock the mutex
-		cond->mutex->lock_count = 0;
-
 		if (auto cpu = cond->mutex->reown<ppu_thread>())
 		{
 			cond->mutex->awake(*cpu);
 		}
-
-		// Further function result
-		ppu.gpr[3] = CELL_OK;
 	}
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
