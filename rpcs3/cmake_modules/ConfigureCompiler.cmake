@@ -9,7 +9,9 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	# Set compiler options here
 
 	# Warnings
+	add_compile_options(-Wall)
 	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
+	add_compile_options(-Wno-unknown-pragmas -Wno-unused-variable -Wno-reorder -Wno-comment)
 
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
 	# Clang 5.0 or latter is required
@@ -20,6 +22,7 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
 	# Set compiler options here
 
 	add_compile_options(-ftemplate-depth=1024)
+	add_compile_options(-Wunused-value -Wunused-comparison)
 	if(APPLE)
 		add_compile_options(-stdlib=libc++)
 	endif()

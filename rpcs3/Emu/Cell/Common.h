@@ -12,5 +12,13 @@ enum FPSCR_RN
 // Get the exponent of a float
 inline int fexpf(float x)
 {
-	return ((u32&)x >> 23) & 0xFF;
+	union
+	{
+		char data[4];
+		u32 data32;
+		float arg;
+	};
+
+	arg = x;
+	return (data32 >> 23) & 0xFF;
 }

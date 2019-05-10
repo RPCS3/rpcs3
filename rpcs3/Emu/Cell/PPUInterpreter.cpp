@@ -3,6 +3,7 @@
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 #include "Utilities/asm.h"
+#include "Emu/Cell/Common.h"
 
 #include <cmath>
 

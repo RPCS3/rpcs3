@@ -6,6 +6,7 @@
 #include "Utilities/asm.h"
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
+#include "Emu/Cell/Common.h"
 
 #include <cmath>
 #include <cfenv>
