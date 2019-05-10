@@ -832,7 +832,7 @@ void spu_thread::cpu_task()
 				}
 			}
 
-			spu_runtime::g_dispatcher[pc / 4](*this, vm::_ptr<u8>(offset), nullptr);
+			spu_runtime::g_dispatcher[0](*this, vm::_ptr<u8>(offset), nullptr);
 		}
 
 		// Print some stats

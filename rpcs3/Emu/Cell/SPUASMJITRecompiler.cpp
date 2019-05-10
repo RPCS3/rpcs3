@@ -1026,7 +1026,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 	{
 		// Simply external call (return or indirect call)
 		c->mov(x86::r10, imm_ptr(spu_runtime::g_dispatcher));
-		c->mov(x86::r10, x86::qword_ptr(x86::r10, addr->r64(), 1, 0));
+		c->mov(x86::r10, x86::qword_ptr(x86::r10));
 	}
 	else
 	{
@@ -1046,7 +1046,6 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		c->cmp(qw1->r32(), end - start);
 		c->lea(x86::r10, x86::qword_ptr(x86::r10, *qw1, 1, 0));
 		c->mov(*qw1, imm_ptr(spu_runtime::g_dispatcher));
-		c->lea(*qw1, x86::qword_ptr(*qw1, addr->r64(), 1, 0));
 		c->cmovae(x86::r10, *qw1);
 		c->mov(x86::r10, x86::qword_ptr(x86::r10));
 	}

@@ -53,25 +53,11 @@ class spu_runtime
 	// All functions
 	std::map<std::vector<u32>, spu_function_t, func_compare> m_map;
 
+	// All functions as PIC
+	std::map<std::basic_string_view<u32>, spu_function_t> m_pic_map;
+
 	// Debug module output location
 	std::string m_cache_path;
-
-	// Trampoline generation workload helper
-	struct work
-	{
-		u32 size;
-		u16 from;
-		u16 level;
-		u8* rel32;
-		decltype(m_map)::iterator beg;
-		decltype(m_map)::iterator end;
-	};
-
-	// Scratch vector
-	static thread_local std::vector<work> workload;
-
-	// Scratch vector
-	static thread_local std::vector<u32> addrv;
 
 	// Trampoline to spu_recompiler_base::dispatch
 	static const spu_function_t tr_dispatch;

@@ -24,10 +24,6 @@ const spu_decoder<spu_iflag> s_spu_iflag;
 
 extern u64 get_timebased_time();
 
-thread_local DECLARE(spu_runtime::workload){};
-
-thread_local DECLARE(spu_runtime::addrv){u32{0}};
-
 DECLARE(spu_runtime::tr_dispatch) = []
 {
 	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
@@ -56,14 +52,8 @@ DECLARE(spu_runtime::tr_branch) = []
 
 DECLARE(spu_runtime::g_dispatcher) = []
 {
-	const auto ptr = reinterpret_cast<decltype(spu_runtime::g_dispatcher)>(jit_runtime::alloc(0x10000 * sizeof(void*), 8, false));
-
-	// Initialize lookup table
-	for (u32 i = 0; i < 0x10000; i++)
-	{
-		ptr[i].raw() = &spu_recompiler_base::dispatch;
-	}
-
+	const auto ptr = reinterpret_cast<decltype(spu_runtime::g_dispatcher)>(jit_runtime::alloc(sizeof(spu_function_t), 8, false));
+	ptr->raw() = &spu_recompiler_base::dispatch;
 	return ptr;
 }();
 
@@ -369,8 +359,6 @@ spu_runtime::spu_runtime()
 		fs::file(m_cache_path + "spu.log", fs::rewrite);
 	}
 
-	workload.reserve(250);
-
 	LOG_SUCCESS(SPU, "SPU Recompiler Runtime initialized...");
 }
 
@@ -391,26 +379,40 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	const std::vector<u32>& func = where.first;
 
 	//
-	const u32 start = func[0] * (g_cfg.core.spu_block_size != spu_block_size_type::giga);
+	const u32 _off = 1 + (func[0] / 4) * (g_cfg.core.spu_block_size == spu_block_size_type::giga);
 
 	// Set pointer to the compiled function
 	where.second = compiled;
 
+	// Register function in PIC map
+	m_pic_map[{func.data() + _off, func.size() - _off}] = compiled;
+
+	struct work
+	{
+		u32 size;
+		u16 from;
+		u16 level;
+		u8* rel32;
+		decltype(m_pic_map)::iterator beg;
+		decltype(m_pic_map)::iterator end;
+	};
+
+	// Scratch vector
+	static thread_local std::vector<work> workload;
+
 	// Generate a dispatcher (übertrampoline)
-	addrv[0] = func[0];
-	const auto beg = m_map.lower_bound(addrv);
-	addrv[0] += 4;
-	const auto _end = m_map.lower_bound(addrv);
-	const u32 size0 = std::distance(beg, _end);
+	const auto beg = m_pic_map.begin();
+	const auto _end = m_pic_map.end();
+	const u32 size0 = ::size32(m_pic_map);
 
 	if (size0 == 1)
 	{
-		g_dispatcher[func[0] / 4] = compiled;
+		g_dispatcher[0] = compiled;
 	}
 	else
 	{
 		// Allocate some writable executable memory
-		u8* const wxptr = jit_runtime::alloc(size0 * 20, 16);
+		u8* const wxptr = jit_runtime::alloc(size0 * 22 + 11, 16);
 
 		if (!wxptr)
 		{
@@ -423,7 +425,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 		// Write jump instruction with rel32 immediate
 		auto make_jump = [&](u8 op, auto target)
 		{
-			verify("Asm overflow" HERE), raw + 6 <= wxptr + size0 * 20;
+			verify("Asm overflow" HERE), raw + 8 <= wxptr + size0 * 22;
 
 			// Fallback to dispatch if no target
 			const u64 taddr = target ? reinterpret_cast<u64>(target) : reinterpret_cast<u64>(tr_dispatch);
@@ -452,17 +454,32 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 		workload.reserve(size0);
 		workload.emplace_back();
 		workload.back().size  = size0;
-		workload.back().level = 1;
-		workload.back().from  = 0;
+		workload.back().level = 0;
+		workload.back().from  = -1;
 		workload.back().rel32 = 0;
 		workload.back().beg   = beg;
 		workload.back().end   = _end;
 
-		if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
-		{
-			// In Giga mode, start comparing instructions from the actual entry point
-			verify("spu_runtime::work::level overflow" HERE), workload.back().level += func[0] / 4;
-		}
+		// mov eax, [spu_thread::pc]
+		*raw++ = 0x8b;
+#ifdef _WIN32
+		*raw++ = 0x81;
+#else
+		*raw++ = 0x87;
+#endif
+		const u32 pc_off = ::offset32(&spu_thread::pc);
+		std::memcpy(raw, &pc_off, 4);
+		raw += 4;
+
+		// lea r9, [ls + rax]
+		*raw++ = 0x4c;
+		*raw++ = 0x8d;
+		*raw++ = 0x0c;
+#ifdef _WIN32
+		*raw++ = 0x02;
+#else
+		*raw++ = 0x06;
+#endif
 
 		for (std::size_t i = 0; i < workload.size(); i++)
 		{
@@ -476,7 +493,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 			u32 size2 = w.size - size1;
 			std::advance(it2, w.size / 2);
 
-			while (verify("spu_runtime::work::level overflow" HERE, w.level))
+			while (verify("spu_runtime::work::level overflow" HERE, w.level != 0xffff))
 			{
 				it = it2;
 				size1 = w.size - size2;
@@ -522,10 +539,10 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 				std::memcpy(w.rel32 - 4, &r32, 4);
 			}
 
-			if (w.level >= w.beg->first.size())
+			if (w.level >= w.beg->first.size() || w.level >= it->first.size())
 			{
 				// If functions cannot be compared, assume smallest function
-				LOG_ERROR(SPU, "Trampoline simplified at 0x%x (level=%u)", func[0], w.level);
+				LOG_FATAL(SPU, "Trampoline simplified at 0x%x (level=%u)", func[0], w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -534,9 +551,15 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 			const u32 x = it->first.at(w.level);
 
 			// Adjust ranges (backward)
-			while (true)
+			while (it != m_pic_map.begin())
 			{
 				it--;
+
+				if (w.level >= it->first.size())
+				{
+					it = m_pic_map.end();
+					break;
+				}
 
 				if (it->first.at(w.level) != x)
 				{
@@ -549,20 +572,23 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 				size2++;
 			}
 
-			// Emit 32-bit comparison: cmp [ls+addr], imm32
-			verify("Asm overflow" HERE), raw + 11 <= wxptr + size0 * 20;
+			if (it == m_pic_map.end())
+			{
+				LOG_FATAL(SPU, "Trampoline simplified (II) at 0x%x (level=%u)", func[0], w.level);
+				make_jump(0xe9, w.beg->second); // jmp rel32
+				continue;
+			}
+
+			// Emit 32-bit comparison
+			verify("Asm overflow" HERE), raw + 12 <= wxptr + size0 * 22;
 
 			if (w.from != w.level)
 			{
-				// If necessary (level has advanced), emit load: mov eax, [ls + addr]
-#ifdef _WIN32
+				// If necessary (level has advanced), emit load: mov eax, [r9 + addr]
+				*raw++ = 0x41;
 				*raw++ = 0x8b;
-				*raw++ = 0x82; // ls = rdx
-#else
-				*raw++ = 0x8b;
-				*raw++ = 0x86; // ls = rsi
-#endif
-				const u32 cmp_lsa = start + (w.level - 1) * 4;
+				*raw++ = 0x81;
+				const u32 cmp_lsa = w.level * 4u;
 				std::memcpy(raw, &cmp_lsa, 4);
 				raw += 4;
 			}
@@ -650,7 +676,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 		}
 
 		workload.clear();
-		g_dispatcher[func[0] / 4] = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
+		g_dispatcher[0] = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
 	}
 
 	// Notify in lock destructor
@@ -668,8 +694,34 @@ void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
 		return nullptr;
 	}
 
+	//
+	const u32 _off = 1 + (func[0] / 4) * (g_cfg.core.spu_block_size == spu_block_size_type::giga);
+
+	// Try to find PIC first
+	const auto found = m_pic_map.find({func.data() + _off, func.size() - _off});
+
+	if (found != m_pic_map.end())
+	{
+		// Wait if already in progress
+		while (!found->second)
+		{
+			m_cond.wait(m_mutex);
+
+			if (last_reset_count != m_reset_count)
+			{
+				return nullptr;
+			}
+		}
+
+		// Already compiled
+		return g_dispatcher;
+	}
+
 	// Try to find existing function, register new one if necessary
 	const auto result = m_map.try_emplace(func, nullptr);
+
+	// Add PIC entry as well
+	m_pic_map.try_emplace({result.first->first.data() + _off, result.first->first.size() - _off}, nullptr);
 
 	// Pointer to the value in the map (pair)
 	const auto fn_location = &*result.first;
@@ -710,6 +762,9 @@ spu_function_t spu_runtime::find(const se_t<u32, false>* ls, u32 addr) const
 	{
 		return nullptr;
 	}
+
+	// Scratch vector
+	static thread_local std::vector<u32> addrv{u32{0}};
 
 	const u32 start = addr * (g_cfg.core.spu_block_size != spu_block_size_type::giga);
 
@@ -803,6 +858,7 @@ u64 spu_runtime::reset(std::size_t last_reset_count)
 
 	// Reset function map (may take some time)
 	m_map.clear();
+	m_pic_map.clear();
 
 	// Wait for threads to catch on jit_return flag
 	while (m_passive_locks)
@@ -856,7 +912,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	if (rip)
 	{
 		const u32 target = *(u16*)(rip + 6) * 4;
-		const s64 rel = reinterpret_cast<u64>(spu_runtime::g_dispatcher) + 2 * target - reinterpret_cast<u64>(rip - 8) - 6;
+		const s64 rel = reinterpret_cast<u64>(spu_runtime::g_dispatcher) - reinterpret_cast<u64>(rip - 8) - 6;
 
 		union
 		{
@@ -874,7 +930,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	}
 
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
-	if (spu.block_counter != spu.block_recover && &dispatch != spu_runtime::g_dispatcher[spu.pc / 4])
+	if (spu.block_counter != spu.block_recover && &dispatch != spu_runtime::g_dispatcher[0])
 	{
 		spu.block_recover = spu.block_counter;
 		return;
