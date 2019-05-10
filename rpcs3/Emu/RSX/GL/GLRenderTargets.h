@@ -124,6 +124,11 @@ namespace gl
 			}
 		}
 
+		void release_ref(texture* t) const override
+		{
+			static_cast<gl::render_target*>(t)->release();
+		}
+
 		texture* get_surface() override
 		{
 			return (gl::texture*)this;
@@ -184,6 +189,7 @@ struct gl_render_target_traits
 
 		result->set_cleared(false);
 		result->queue_tag(address);
+		result->add_ref();
 		return result;
 	}
 
@@ -209,6 +215,7 @@ struct gl_render_target_traits
 
 		result->set_cleared(false);
 		result->queue_tag(address);
+		result->add_ref();
 		return result;
 	}
 
@@ -225,6 +232,7 @@ struct gl_render_target_traits
 			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height());
 
 			sink.reset(new gl::render_target(new_w, new_h, internal_format));
+			sink->add_ref();
 		}
 
 		prev.target = sink.get();
@@ -257,10 +265,10 @@ struct gl_render_target_traits
 		info->bpp = surface->get_bpp();
 	}
 
-	static void prepare_rtt_for_drawing(gl::command_context&, gl::render_target *rtt) { rtt->reset_refs(); }
+	static void prepare_rtt_for_drawing(gl::command_context&, gl::render_target*) {}
 	static void prepare_rtt_for_sampling(gl::command_context&, gl::render_target*) {}
 	
-	static void prepare_ds_for_drawing(gl::command_context&, gl::render_target *ds) { ds->reset_refs(); }
+	static void prepare_ds_for_drawing(gl::command_context&, gl::render_target*) {}
 	static void prepare_ds_for_sampling(gl::command_context&, gl::render_target*) {}
 
 	static
@@ -279,8 +287,11 @@ struct gl_render_target_traits
 	}
 
 	static
-	void notify_surface_invalidated(const std::unique_ptr<gl::render_target>&)
-	{}
+	void notify_surface_invalidated(const std::unique_ptr<gl::render_target>& surface)
+	{
+		if (surface->old_contents) surface->clear_rw_barrier();
+		surface->release();
+	}
 
 	static
 	void notify_surface_persist(const std::unique_ptr<gl::render_target>& surface)
@@ -289,23 +300,29 @@ struct gl_render_target_traits
 	}
 
 	static
+	void notify_surface_reused(const std::unique_ptr<gl::render_target>& surface)
+	{
+		surface->add_ref();
+	}
+
+	static
 	bool rtt_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_color_format format, size_t width, size_t height, bool check_refs=false)
 	{
-		if (check_refs) //TODO
+		if (check_refs && rtt->has_refs())
 			return false;
 
-		auto internal_fmt = rsx::internals::sized_internal_format(format);
+		const auto internal_fmt = rsx::internals::sized_internal_format(format);
 		return rtt->get_internal_format() == internal_fmt && rtt->matches_dimensions((u16)width, (u16)height);
 	}
 
 	static
-	bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &rtt, rsx::surface_depth_format, size_t width, size_t height, bool check_refs=false)
+	bool ds_has_format_width_height(const std::unique_ptr<gl::render_target> &ds, rsx::surface_depth_format format, size_t width, size_t height, bool check_refs=false)
 	{
-		if (check_refs) //TODO
+		if (check_refs && ds->has_refs())
 			return false;
 
-		// TODO: check format
-		return rtt->matches_dimensions((u16)width, (u16)height);
+		const auto internal_fmt = rsx::internals::surface_depth_format_to_gl(format).internal_format;
+		return ds->get_internal_format() == internal_fmt && ds->matches_dimensions((u16)width, (u16)height);
 	}
 
 	// Note : pbo breaks fbo here so use classic texture copy
@@ -353,18 +370,23 @@ struct gl_render_target_traits
 
 struct gl_render_targets : public rsx::surface_store<gl_render_target_traits>
 {
+	void destroy()
+	{
+		invalidate_all();
+		invalidated_resources.clear();
+	}
+
 	std::vector<GLuint> free_invalidated()
 	{
 		std::vector<GLuint> removed;
 		invalidated_resources.remove_if([&](auto &rtt)
 		{
-			if (rtt->deref_count >= 2)
+			if (rtt->unused_check_count() >= 2)
 			{
 				removed.push_back(rtt->id());
 				return true;
 			}
 
-			rtt->deref_count++;
 			return false;
 		});
 

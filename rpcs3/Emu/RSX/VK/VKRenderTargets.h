@@ -53,6 +53,11 @@ namespace vk
 			return !!(aspect() & VK_IMAGE_ASPECT_DEPTH_BIT);
 		}
 
+		void release_ref(vk::image* t) const override
+		{
+			static_cast<vk::render_target*>(t)->release();
+		}
+
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
 			//Use forward scaling to account for rounding and clamping errors
@@ -100,6 +105,8 @@ namespace vk
 			if (!rsx::pitch_compatible(this, src_texture))
 			{
 				LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
+
+				clear_rw_barrier();
 				return;
 			}
 
@@ -197,6 +204,7 @@ namespace rsx
 			rtt->queue_tag(address);
 			rtt->dirty = true;
 
+			rtt->add_ref();
 			return rtt;
 		}
 
@@ -239,6 +247,7 @@ namespace rsx
 			ds->queue_tag(address);
 			ds->dirty = true;
 
+			ds->add_ref();
 			return ds;
 		}
 
@@ -263,6 +272,8 @@ namespace rsx
 					VK_IMAGE_TILING_OPTIMAL,
 					ref->info.usage,
 					ref->info.flags));
+
+				sink->add_ref();
 			}
 
 			prev.target = sink.get();
@@ -300,9 +311,6 @@ namespace rsx
 		static void prepare_rtt_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
 		{
 			surface->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-			//Reset deref count
-			surface->deref_count = 0;
 			surface->frame_tag = 0;
 		}
 
@@ -314,9 +322,6 @@ namespace rsx
 		static void prepare_ds_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
 		{
 			surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-			//Reset deref count
-			surface->deref_count = 0;
 			surface->frame_tag = 0;
 		}
 
@@ -342,6 +347,9 @@ namespace rsx
 		{
 			surface->frame_tag = vk::get_current_frame_id();
 			if (!surface->frame_tag) surface->frame_tag = 1;
+
+			if (surface->old_contents) surface->clear_rw_barrier();
+			surface->release();
 		}
 
 		static void notify_surface_persist(const std::unique_ptr<vk::render_target> &surface)
@@ -349,9 +357,14 @@ namespace rsx
 			surface->save_aa_mode();
 		}
 
+		static void notify_surface_reused(const std::unique_ptr<vk::render_target> &surface)
+		{
+			surface->add_ref();
+		}
+
 		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height, bool check_refs=false)
 		{
-			if (check_refs && rtt->deref_count == 0) //Surface may still have read refs from data 'copy'
+			if (check_refs && rtt->has_refs()) // Surface may still have read refs from data 'copy'
 				return false;
 
 			VkFormat fmt = vk::get_compatible_surface_format(format).first;
@@ -365,7 +378,7 @@ namespace rsx
 
 		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format format, size_t width, size_t height, bool check_refs=false)
 		{
-			if (check_refs && ds->deref_count == 0) //Surface may still have read refs from data 'copy'
+			if (check_refs && ds->has_refs()) //Surface may still have read refs from data 'copy'
 				return false;
 
 			if (ds->matches_dimensions((u16)width, (u16)height))
@@ -418,8 +431,7 @@ namespace rsx
 	{
 		void destroy()
 		{
-			m_render_targets_storage.clear();
-			m_depth_stencil_storage.clear();
+			invalidate_all();
 			invalidated_resources.clear();
 		}
 
@@ -430,10 +442,9 @@ namespace rsx
 			{
 				verify(HERE), rtt->frame_tag != 0;
 
-				if (rtt->deref_count >= 2 && rtt->frame_tag < last_finished_frame)
+				if (rtt->unused_check_count() >= 2 && rtt->frame_tag < last_finished_frame)
 					return true;
 
-				rtt->deref_count++;
 				return false;
 			});
 		}

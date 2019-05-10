@@ -2334,8 +2334,7 @@ void VKGSRender::advance_queued_frames()
 	//Remove stale framebuffers. Ref counted to prevent use-after-free
 	m_framebuffers_to_clean.remove_if([](std::unique_ptr<vk::framebuffer_holder>& fbo)
 	{
-		if (fbo->deref_count >= 2) return true;
-		fbo->deref_count++;
+		if (fbo->unused_check_count() >= 2) return true;
 		return false;
 	});
 
@@ -3102,17 +3101,23 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	auto vk_depth_format = (layout.zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_device->get_formats_support(), layout.depth_format);
 	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(layout.color_format).first, vk_depth_format, (u8)m_draw_buffers.size());
 
-	//Search old framebuffers for this same configuration
+	// Search old framebuffers for this same configuration
 	bool framebuffer_found = false;
 	const auto fbo_width = rsx::apply_resolution_scale(layout.width, true);
 	const auto fbo_height = rsx::apply_resolution_scale(layout.height, true);
+
+	if (m_draw_fbo)
+	{
+		// Release old ref
+		m_draw_fbo->release();
+	}
 
 	for (auto &fbo : m_framebuffers_to_clean)
 	{
 		if (fbo->matches(bound_images, fbo_width, fbo_height))
 		{
 			m_draw_fbo.swap(fbo);
-			m_draw_fbo->reset_refs();
+			m_draw_fbo->add_ref();
 			framebuffer_found = true;
 			break;
 		}
@@ -3159,6 +3164,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			m_framebuffers_to_clean.push_back(std::move(m_draw_fbo));
 
 		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, fbo_width, fbo_height, std::move(fbo_images)));
+		m_draw_fbo->add_ref();
 	}
 
 	set_viewport();
@@ -3199,10 +3205,10 @@ void VKGSRender::reinitialize_swapchain()
 		present(&ctx);
 	}
 
-	//Remove any old refs to the old images as they are about to be destroyed
-	m_framebuffers_to_clean.clear();
+	// Remove any old refs to the old images as they are about to be destroyed
+	//m_framebuffers_to_clean;
 
-	//Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
+	// Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 	if (!m_swapchain->init(new_width, new_height))
 	{
 		LOG_WARNING(RSX, "Swapchain initialization failed. Request ignored [%dx%d]", new_width, new_height);
@@ -3539,7 +3545,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 			if (fbo->attachments[0]->info.image == target_image)
 			{
 				direct_fbo.swap(fbo);
-				direct_fbo->reset_refs();
+				direct_fbo->add_ref();
 				m_framebuffers_to_clean.erase(It);
 				break;
 			}
@@ -3549,6 +3555,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		{
 			swap_image_view.push_back(std::make_unique<vk::image_view>(*m_device, target_image, VK_IMAGE_VIEW_TYPE_2D, m_swapchain->get_surface_format(), vk::default_component_map(), subres));
 			direct_fbo.reset(new vk::framebuffer_holder(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
+			direct_fbo->add_ref();
 		}
 
 		if (has_overlay)
@@ -3588,6 +3595,8 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		}
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, present_layout, subres);
+
+		direct_fbo->release();
 		m_framebuffers_to_clean.push_back(std::move(direct_fbo));
 	}
 

@@ -134,12 +134,24 @@ namespace rsx
 		GcmTileInfo *tile = nullptr;
 		rsx::surface_antialiasing write_aa_mode = rsx::surface_antialiasing::center_1_sample;
 
+		render_target_descriptor() {}
+
+		virtual ~render_target_descriptor()
+		{
+			if (old_contents)
+			{
+				// Cascade resource derefs
+				LOG_ERROR(RSX, "Resource was destroyed whilst holding a resource reference!");
+			}
+		}
+
 		virtual image_storage_type get_surface() = 0;
 		virtual u16 get_surface_width() const = 0;
 		virtual u16 get_surface_height() const = 0;
 		virtual u16 get_rsx_pitch() const = 0;
 		virtual u16 get_native_pitch() const = 0;
 		virtual bool is_depth_surface() const = 0;
+		virtual void release_ref(image_storage_type) const = 0;
 
 		u8 get_bpp() const
 		{
@@ -179,9 +191,17 @@ namespace rsx
 			return true;
 		}
 
+		void clear_rw_barrier()
+		{
+			release_ref(old_contents.source);
+			old_contents = {};
+		}
+
 		template<typename T>
 		void set_old_contents(T* other)
 		{
+			verify(HERE), !old_contents;
+
 			if (!other || other->get_rsx_pitch() != this->get_rsx_pitch())
 			{
 				old_contents = {};
@@ -190,14 +210,29 @@ namespace rsx
 
 			old_contents = {};
 			old_contents.source = other;
+			other->add_ref();
 		}
 
 		template<typename T>
 		void set_old_contents_region(const T& region, bool normalized)
 		{
+			if (old_contents)
+			{
+				// This can happen when doing memory splits
+				auto old_surface = static_cast<decltype(region.source)>(old_contents.source);
+				if (old_surface->last_use_tag > region.source->last_use_tag)
+				{
+					return;
+				}
+
+				clear_rw_barrier();
+			}
+
 			// NOTE: This method will not perform pitch verification!
-			verify(HERE), region.source;
+			verify(HERE), !old_contents, region.source, region.source != this;
+
 			old_contents = region.template cast<image_storage_type>();
+			region.source->add_ref();
 
 			// Reverse normalization process if needed
 			if (normalized)
@@ -298,7 +333,11 @@ namespace rsx
 
 			read_aa_mode = write_aa_mode;
 			dirty = false;
-			old_contents = {};
+
+			if (old_contents.source)
+			{
+				clear_rw_barrier();
+			}
 		}
 
 		// Returns the rect area occupied by this surface expressed as an 8bpp image with no AA
@@ -712,7 +751,9 @@ namespace rsx
 					if (Traits::rtt_has_format_width_height(rtt, color_format, width, height, true))
 					{
 						new_surface_storage = std::move(rtt);
-
+#ifndef INCOMPLETE_SURFACE_CACHE_IMPL
+						Traits::notify_surface_reused(new_surface_storage);
+#endif
 						if (old_surface)
 						{
 							// Exchange this surface with the invalidated one
@@ -843,7 +884,9 @@ namespace rsx
 					if (Traits::ds_has_format_width_height(ds, depth_format, width, height, true))
 					{
 						new_surface_storage = std::move(ds);
-
+#ifndef INCOMPLETE_SURFACE_CACHE_IMPL
+						Traits::notify_surface_reused(new_surface_storage);
+#endif
 						if (old_surface)
 						{
 							//Exchange this surface with the invalidated one
@@ -1439,6 +1482,30 @@ namespace rsx
 		void notify_memory_structure_changed()
 		{
 			cache_tag = rsx::get_shared_tag();
+		}
+
+		void invalidate_all()
+		{
+			// Unbind and invalidate all resources
+			auto free_resource_list = [&](auto &data)
+			{
+				for (auto &e : data)
+				{
+					Traits::notify_surface_invalidated(e.second);
+					invalidated_resources.push_back(std::move(e.second));
+				}
+
+				data.clear();
+			};
+
+			free_resource_list(m_render_targets_storage);
+			free_resource_list(m_depth_stencil_storage);
+
+			m_bound_depth_stencil = std::make_pair(0, nullptr);
+			for (auto &rtt : m_bound_render_targets)
+			{
+				rtt = std::make_pair(0, nullptr);
+			}
 		}
 	};
 }

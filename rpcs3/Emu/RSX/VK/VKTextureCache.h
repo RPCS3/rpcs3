@@ -555,7 +555,6 @@ namespace vk
 					verify(HERE), section.dst_z == 0;
 
 					u16 dst_x = section.dst_x, dst_y = section.dst_y;
-					auto xform = section.xform;
 					vk::image* _dst;
 
 					if (LIKELY(src_image->info.format == dst->info.format))

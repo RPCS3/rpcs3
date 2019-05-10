@@ -312,7 +312,7 @@ namespace vk
 				auto fbo = It->get();
 				if (fbo->matches(test, target->width(), target->height()))
 				{
-					fbo->deref_count = 0;
+					fbo->add_ref();
 					return fbo;
 				}
 			}
@@ -338,6 +338,7 @@ namespace vk
 			auto result = fbo.get();
 			framebuffer_resources.push_back(std::move(fbo));
 
+			result->add_ref();
 			return result;
 		}
 
@@ -381,7 +382,10 @@ namespace vk
 		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, const std::vector<VkImageView>& src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
 		{
 			vk::framebuffer *fbo = get_framebuffer(target, render_pass, framebuffer_resources);
+
 			run(cmd, w, h, fbo, src, render_pass);
+
+			static_cast<vk::framebuffer_holder*>(fbo)->release();
 		}
 
 		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, VkImageView src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
