@@ -3075,7 +3075,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		result->setLinkage(llvm::GlobalValue::InternalLinkage);
 		result->addAttribute(1, llvm::Attribute::NoAlias);
 		result->addAttribute(2, llvm::Attribute::NoAlias);
+#ifndef _WIN32
 		result->setCallingConv(llvm::CallingConv::GHC);
+#endif
 
 		empl.first->second.chunk = result;
 
@@ -3096,7 +3098,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				fn->setLinkage(llvm::GlobalValue::InternalLinkage);
 				fn->addAttribute(1, llvm::Attribute::NoAlias);
 				fn->addAttribute(2, llvm::Attribute::NoAlias);
+#ifndef _WIN32
 				fn->setCallingConv(llvm::CallingConv::GHC);
+#endif
 				empl.first->second.fn = fn;
 			}
 		}
@@ -3111,7 +3115,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	void tail_chunk(llvm::Value* chunk, llvm::Value* base_pc = nullptr)
 	{
 		auto call = m_ir->CreateCall(chunk, {m_thread, m_lsptr, base_pc ? base_pc : m_base_pc});
-		call->setCallingConv(llvm::CallingConv::GHC);
+		call->setCallingConv(m_finfo ? m_finfo->chunk->getCallingConv() : llvm::cast<llvm::Function>(chunk)->getCallingConv());
 		call->setTailCall();
 		m_ir->CreateRetVoid();
 	}
@@ -3146,7 +3150,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		const auto _call = m_ir->CreateCall(verify(HERE, fn), {m_thread, m_lsptr, m_base_pc, sp, args[0], args[1]});
 
-		_call->setCallingConv(llvm::CallingConv::GHC);
+		_call->setCallingConv(fn->getCallingConv());
 
 		// Tail call using loaded LR value (gateway from a chunk)
 		if (!m_finfo->fn)
@@ -4074,7 +4078,7 @@ public:
 		gateway->setLinkage(GlobalValue::InternalLinkage);
 		gateway->setCallingConv(CallingConv::GHC);
 
-		m_ir->CreateCall(gateway, {m_thread, m_lsptr, m_base_pc})->setCallingConv(CallingConv::GHC);
+		m_ir->CreateCall(gateway, {m_thread, m_lsptr, m_base_pc})->setCallingConv(gateway->getCallingConv());
 		m_ir->CreateRetVoid();
 		m_ir->SetInsertPoint(label_stop);
 		m_ir->CreateRetVoid();
@@ -4324,7 +4328,7 @@ public:
 
 			const auto null = cast<Function>(module->getOrInsertFunction("spu-null", entry_chunk->chunk->getFunctionType()).getCallee());
 			null->setLinkage(llvm::GlobalValue::InternalLinkage);
-			null->setCallingConv(llvm::CallingConv::GHC);
+			null->setCallingConv(entry_chunk->chunk->getCallingConv());
 			set_function(null);
 			m_ir->CreateRetVoid();
 
@@ -4378,7 +4382,7 @@ public:
 						if (si->getOperand(0) == m_ir->getFalse())
 						{
 							ci = m_ir->CreateCall(m_test_state, {&*f->arg_begin()});
-							ci->setCallingConv(CallingConv::PreserveAll);
+							ci->setCallingConv(m_test_state->getCallingConv());
 						}
 						else
 						{
