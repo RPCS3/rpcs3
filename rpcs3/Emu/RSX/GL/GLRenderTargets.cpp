@@ -298,11 +298,17 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	framebuffer_status_valid = false;
 
+	if (m_draw_fbo)
+	{
+		// Release resource
+		static_cast<gl::framebuffer_holder*>(m_draw_fbo)->release();
+	}
+
 	for (auto &fbo : m_framebuffer_cache)
 	{
 		if (fbo.matches(color_targets, depth_stencil_target))
 		{
-			fbo.reset_refs();
+			fbo.add_ref();
 
 			m_draw_fbo = &fbo;
 			m_draw_fbo->bind();
@@ -316,6 +322,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	if (!framebuffer_status_valid)
 	{
 		m_framebuffer_cache.emplace_back();
+		m_framebuffer_cache.back().add_ref();
+
 		m_draw_fbo = &m_framebuffer_cache.back();
 		m_draw_fbo->create();
 		m_draw_fbo->bind();
@@ -609,6 +617,8 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	if (!rsx::pitch_compatible(this, src_texture))
 	{
 		LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
+
+		clear_rw_barrier();
 		return;
 	}
 

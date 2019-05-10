@@ -1013,6 +1013,7 @@ void GLGSRender::on_exit()
 	zcull_ctrl.release();
 
 	m_prog_buffer.clear();
+	m_rtts.destroy();
 
 	for (auto &fbo : m_framebuffer_cache)
 	{
@@ -1800,10 +1801,9 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	auto removed_textures = m_rtts.free_invalidated();
 	m_framebuffer_cache.remove_if([&](auto& fbo)
 	{
-		if (fbo.deref_count >= 2) return true; // Remove if stale
+		if (fbo.unused_check_count() >= 2) return true; // Remove if stale
 		if (fbo.references_any(removed_textures)) return true; // Remove if any of the attachments is invalid
 
-		fbo.deref_count++;
 		return false;
 	});
 

@@ -33,11 +33,38 @@ namespace rsx
 	extern atomic_t<u64> g_rsx_shared_tag;
 
 	//Base for resources with reference counting
-	struct ref_counted
+	class ref_counted
 	{
-		u8 deref_count = 0;
+		atomic_t<s32> ref_count{ 0 }; // References held
+		atomic_t<u8> idle_time{ 0 };  // Number of times the resource has been tagged idle
 
-		void reset_refs() { deref_count = 0; }
+	public:
+		void add_ref()
+		{
+			ref_count++;
+			idle_time = 0;
+		}
+
+		void release()
+		{
+			ref_count--;
+		}
+
+		bool has_refs()
+		{
+			return (ref_count > 0);
+		}
+
+		// Returns number of times the resource has been checked without being used in-between checks
+		u8 unused_check_count()
+		{
+			if (ref_count)
+			{
+				return 0;
+			}
+
+			return idle_time++;
+		}
 	};
 
 	/**
