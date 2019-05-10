@@ -439,7 +439,7 @@ namespace vk
 					vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst, preferred_dst_format, 1, &info);
 				};
 
-				const u32 typeless_w = dst_rect.width();
+				const u32 typeless_w = std::max(dst_rect.width(), src_rect.width());
 				const u32 typeless_h = src_rect.height() + dst_rect.height();
 
 				switch (src_format)

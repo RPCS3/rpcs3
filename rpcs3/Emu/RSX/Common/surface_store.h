@@ -214,8 +214,8 @@ namespace rsx
 				old_contents.dst_x /= bytes_to_texels_x2;
 				old_contents.dst_y /= rows_to_texels_y2;
 
-				old_contents.transfer_scale_x = f32(bytes_to_texels_x2) / bytes_to_texels_x;
-				old_contents.transfer_scale_y = f32(rows_to_texels_y2) / rows_to_texels_y;
+				old_contents.transfer_scale_x = f32(bytes_to_texels_x) / bytes_to_texels_x2;
+				old_contents.transfer_scale_y = f32(rows_to_texels_y) / rows_to_texels_y2;
 			}
 
 			// Apply resolution scale if needed
