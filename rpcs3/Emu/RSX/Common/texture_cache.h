@@ -2135,35 +2135,43 @@ namespace rsx
 				}
 			}
 
-			// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
-			const u32 lookup_mask = (is_compressed_format) ? rsx::texture_upload_context::shader_read :
-				rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
-
-			auto lookup_range = tex_range;
-			if (LIKELY(extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d))
-			{
-				// Optimize the range a bit by only searching for mip0, layer0 to avoid false positives
-				const auto texel_rows_per_line = get_format_texel_rows_per_line(format);
-				const auto num_rows = (tex_height + texel_rows_per_line - 1) / texel_rows_per_line;
-				if (const auto length = u32(num_rows * tex_pitch); length < tex_range.length())
-				{
-					lookup_range = utils::address_range::start_length(texaddr, length);
-				}
-			}
-
 			reader_lock lock(m_cache_mutex);
 
-			const auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
-			for (auto& cached_texture : overlapping_locals)
+			if (LIKELY(is_compressed_format))
 			{
-				if (cached_texture->matches(texaddr, format, tex_width, tex_height, depth, 0))
+				// Most mesh textures are stored as compressed to make the most of the limited memory
+				if (auto cached_texture = find_texture_from_dimensions(texaddr, format, tex_width, tex_height, depth))
 				{
 					return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
 				}
 			}
-
-			if (!is_compressed_format)
+			else
 			{
+				// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
+				const u32 lookup_mask = (is_compressed_format) ? rsx::texture_upload_context::shader_read :
+					rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
+
+				auto lookup_range = tex_range;
+				if (LIKELY(extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d))
+				{
+					// Optimize the range a bit by only searching for mip0, layer0 to avoid false positives
+					const auto texel_rows_per_line = get_format_texel_rows_per_line(format);
+					const auto num_rows = (tex_height + texel_rows_per_line - 1) / texel_rows_per_line;
+					if (const auto length = u32(num_rows * tex_pitch); length < tex_range.length())
+					{
+						lookup_range = utils::address_range::start_length(texaddr, length);
+					}
+				}
+
+				const auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
+				for (auto& cached_texture : overlapping_locals)
+				{
+					if (cached_texture->matches(texaddr, format, tex_width, tex_height, depth, 0))
+					{
+						return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
+					}
+				}
+
 				// Next, attempt to merge blit engine and surface store
 				// Blit sources contain info from any shader-read stuff in range
 				// NOTE: Compressed formats require a reupload, facilitated by blit synchronization and/or WCB and are not handled here
