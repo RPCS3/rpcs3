@@ -397,6 +397,8 @@ namespace rsx
 				}
 				break;
 			}
+			default:
+				break;
 			}
 		}
 

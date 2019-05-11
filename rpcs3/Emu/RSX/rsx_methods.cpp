@@ -245,6 +245,8 @@ namespace rsx
 				// Get BE data
 				arg = be_t<u32>{arg}.raw();
 				break;
+			default:
+				break;
 			}
 
 			if (rsx->in_begin_end)

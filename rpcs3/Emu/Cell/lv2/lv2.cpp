@@ -913,6 +913,7 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 		STR_CASE(CELL_ETIMEDOUT);
 		STR_CASE(CELL_EABORT);
 		STR_CASE(CELL_EFAULT);
+		STR_CASE(CELL_ENOCHILD);
 		STR_CASE(CELL_ESTAT);
 		STR_CASE(CELL_EALIGN);
 		STR_CASE(CELL_EKRESOURCE);

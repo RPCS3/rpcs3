@@ -17,6 +17,9 @@ namespace
 		{
 		case rsx::surface_depth_format::z16: return 0xFFFF;
 		case rsx::surface_depth_format::z24s8: return 0xFFFFFF;
+		default:
+			ASSUME(0);
+			break;
 		}
 		fmt::throw_exception("Unknown depth format" HERE);
 	}
@@ -27,6 +30,9 @@ namespace
 		{
 		case rsx::surface_depth_format::z16: return 2;
 		case rsx::surface_depth_format::z24s8: return 4;
+		default:
+			ASSUME(0);
+			break;
 		}
 		fmt::throw_exception("Unknown depth format" HERE);
 	}
@@ -1068,7 +1074,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	}
 	else if (draw_call.execute_pipeline_dependencies() & rsx::vertex_base_changed)
 	{
-		// Rebase vertex bases instead of 
+		// Rebase vertex bases instead of
 		for (auto &info : m_vertex_layout.interleaved_blocks)
 		{
 			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();

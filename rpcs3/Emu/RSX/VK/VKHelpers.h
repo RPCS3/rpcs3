@@ -1215,6 +1215,9 @@ private:
 			case VK_IMAGE_TYPE_3D:
 				info.viewType = VK_IMAGE_VIEW_TYPE_3D;
 				break;
+			default:
+				ASSUME(0);
+				break;
 			}
 
 			create_impl();
