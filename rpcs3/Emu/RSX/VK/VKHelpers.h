@@ -247,7 +247,7 @@ namespace vk
 			vmaCreateAllocator(&allocatorInfo, &m_allocator);
 		}
 
-		~mem_allocator_vma() {};
+		~mem_allocator_vma() {}
 
 		void destroy() override
 		{
@@ -314,10 +314,10 @@ namespace vk
 	class mem_allocator_vk : public mem_allocator_base
 	{
 	public:
-		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {};
-		~mem_allocator_vk() {};
+		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
+		~mem_allocator_vk() {}
 
-		void destroy() override {};
+		void destroy() override {}
 
 		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, uint32_t memory_type_index) override
 		{

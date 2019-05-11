@@ -263,7 +263,7 @@ namespace vk
 		default:
 			fmt::throw_exception("Unknown blend factor 0x%x" HERE, (u32)factor);
 		}
-	};
+	}
 
 	VkBlendOp get_blend_op(rsx::blend_equation op)
 	{
@@ -2162,7 +2162,7 @@ void VKGSRender::clear_surface(u32 mask)
 			default:
 				use_fast_clear = (colormask == (0x10 | 0x20 | 0x40 | 0x80));
 				break;
-			};
+			}
 
 			if (!ignore_clear)
 			{

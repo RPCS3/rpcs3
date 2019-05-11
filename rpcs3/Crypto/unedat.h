@@ -95,7 +95,7 @@ public:
 	bool trunc(u64 length) override 
 	{
 		return true;
-	};
+	}
 	u64 read(void* buffer, u64 size) override
 	{
 		u64 bytesRead = ReadData(pos, (u8*)buffer, size);

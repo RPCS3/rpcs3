@@ -24,10 +24,10 @@ public:
 	OpenALBackend();
 	virtual ~OpenALBackend() override;
 
-	virtual const char* GetName() const override { return "OpenAL"; };
+	virtual const char* GetName() const override { return "OpenAL"; }
 
 	static const u32 capabilities = PLAY_PAUSE_FLUSH | IS_PLAYING | GET_NUM_ENQUEUED_SAMPLES | SET_FREQUENCY_RATIO;
-	virtual u32 GetCapabilities() const override { return capabilities; };
+	virtual u32 GetCapabilities() const override { return capabilities; }
 
 	virtual void Open(u32 num_buffers) override;
 	virtual void Close() override;

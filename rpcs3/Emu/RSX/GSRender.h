@@ -174,5 +174,5 @@ public:
 
 	void flip(int buffer, bool emu_flip = false) override;
 
-	GSFrameBase* get_frame() { return m_frame; };
+	GSFrameBase* get_frame() { return m_frame; }
 };

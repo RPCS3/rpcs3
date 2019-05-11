@@ -16,10 +16,10 @@ public:
 	ALSABackend();
 	virtual ~ALSABackend() override;
 
-	virtual const char* GetName() const override { return "ALSA"; };
+	virtual const char* GetName() const override { return "ALSA"; }
 
 	static const u32 capabilities = 0;
-	virtual u32 GetCapabilities() const override { return capabilities; };
+	virtual u32 GetCapabilities() const override { return capabilities; }
 
 	virtual void Open(u32) override;
 	virtual void Close() override;

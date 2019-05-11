@@ -979,7 +979,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(floatBitsToUint($0.x)))"); return true;
 	}
 	return false;
-};
+}
 
 std::string FragmentProgramDecompiler::Decompile()
 {

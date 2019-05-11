@@ -746,7 +746,7 @@ namespace rsx
 		atomic_t<bitmask_type> m_data;
 
 	public:
-		atomic_bitmask_t() { m_data.store(0); };
+		atomic_bitmask_t() { m_data.store(0); }
 		~atomic_bitmask_t() {}
 
 		T load() const

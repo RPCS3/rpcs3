@@ -89,7 +89,7 @@ struct CellSyncBarrier
 		}
 
 		return true;
-	};
+	}
 
 	static inline bool try_wait(ctrl_t& ctrl)
 	{
