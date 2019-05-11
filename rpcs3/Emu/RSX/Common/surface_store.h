@@ -438,8 +438,8 @@ namespace rsx
 		std::pair<u32, surface_type> m_bound_depth_stencil = {};
 
 		std::list<surface_storage_type> invalidated_resources;
-		u64 cache_tag = 0ull;
-		u64 write_tag = 0ull;
+		u64 cache_tag = 1ull; // Use 1 as the start since 0 is default tag on new surfaces
+		u64 write_tag = 1ull;
 
 		surface_store() = default;
 		~surface_store() = default;
@@ -555,10 +555,10 @@ namespace rsx
 		}
 
 		template <bool is_depth_surface>
-		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface)
+		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
-			auto scan_list = [&new_surface](const rsx::address_range& mem_range,
+			auto scan_list = [&new_surface, address](const rsx::address_range& mem_range, u64 timestamp_check,
 				std::unordered_map<u32, surface_storage_type>& data) -> std::vector<std::pair<u32, surface_type>>
 			{
 				std::vector<std::pair<u32, surface_type>> result;
@@ -566,7 +566,10 @@ namespace rsx
 				{
 					auto surface = Traits::get(e.second);
 
-					if (new_surface == surface || e.second->dirty || e.second->last_use_tag <= new_surface->last_use_tag)
+					if (e.second->last_use_tag <= timestamp_check ||
+						new_surface == surface ||
+						address == e.first ||
+						e.second->dirty)
 					{
 						// Do not bother synchronizing with uninitialized data
 						continue;
@@ -602,12 +605,30 @@ namespace rsx
 			};
 
 			const rsx::address_range mem_range = new_surface->get_memory_range();
-			const auto list1 = scan_list(mem_range, m_render_targets_storage);
-			const auto list2 = scan_list(mem_range, m_depth_stencil_storage);
+			const u64 timestamp_check = prev_surface ? prev_surface->last_use_tag : new_surface->last_use_tag;
 
-			if (list1.empty() && list2.empty())
+			auto list1 = scan_list(mem_range, timestamp_check, m_render_targets_storage);
+			auto list2 = scan_list(mem_range, timestamp_check, m_depth_stencil_storage);
+
+			if (prev_surface)
 			{
-				return;
+				// Append the previous removed surface to the intersection list
+				std::pair<u32, surface_type> e = { address, prev_surface };
+				if constexpr (is_depth_surface)
+				{
+					list2.push_back({ address, prev_surface });
+				}
+				else
+				{
+					list1.push_back({ address, prev_surface });
+				}
+			}
+			else
+			{
+				if (list1.empty() && list2.empty())
+				{
+					return;
+				}
 			}
 
 			std::vector<std::pair<u32, surface_type>> surface_info;
@@ -784,13 +805,9 @@ namespace rsx
 
 			if (!new_surface)
 			{
-				m_render_targets_storage[address] = Traits::create_new_surface(address, color_format, width, height, pitch, std::forward<Args>(extra_params)...);
-				new_surface = Traits::get(m_render_targets_storage[address]);
-			}
-			else if (store)
-			{
-				// New surface was found among invalidated surfaces
-				m_render_targets_storage[address] = std::move(new_surface_storage);
+				verify(HERE), store;
+				new_surface_storage = Traits::create_new_surface(address, color_format, width, height, pitch, std::forward<Args>(extra_params)...);
+				new_surface = Traits::get(new_surface_storage);
 			}
 
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
@@ -802,7 +819,13 @@ namespace rsx
 			else
 #endif
 			{
-				intersect_surface_region<false>(command_list, address, new_surface);
+				intersect_surface_region<false>(command_list, address, new_surface, old_surface);
+			}
+
+			if (store)
+			{
+				// New surface was found among invalidated surfaces
+				m_render_targets_storage[address] = std::move(new_surface_storage);
 			}
 
 			// Remove and preserve if possible any overlapping/replaced depth surface
@@ -906,20 +929,16 @@ namespace rsx
 
 			if (old_surface != nullptr && new_surface == nullptr)
 			{
-				//This was already determined to be invalid and is excluded from testing above
+				// This was already determined to be invalid and is excluded from testing above
 				Traits::notify_surface_invalidated(old_surface_storage);
 				invalidated_resources.push_back(std::move(old_surface_storage));
 			}
 
 			if (!new_surface)
 			{
-				m_depth_stencil_storage[address] = Traits::create_new_surface(address, depth_format, width, height, pitch, std::forward<Args>(extra_params)...);
-				new_surface = Traits::get(m_depth_stencil_storage[address]);
-			}
-			else if (store)
-			{
-				// New surface was found among invalidated surfaces
-				m_depth_stencil_storage[address] = std::move(new_surface_storage);
+				verify(HERE), store;
+				new_surface_storage = Traits::create_new_surface(address, depth_format, width, height, pitch, std::forward<Args>(extra_params)...);
+				new_surface = Traits::get(new_surface_storage);
 			}
 
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
@@ -931,7 +950,13 @@ namespace rsx
 			else
 #endif
 			{
-				intersect_surface_region<true>(command_list, address, new_surface);
+				intersect_surface_region<true>(command_list, address, new_surface, old_surface);
+			}
+
+			if (store)
+			{
+				// New surface was found among invalidated surfaces
+				m_depth_stencil_storage[address] = std::move(new_surface_storage);
 			}
 
 			// Remove and preserve if possible any overlapping/replaced color surface
