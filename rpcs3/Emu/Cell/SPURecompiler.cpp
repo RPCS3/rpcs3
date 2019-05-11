@@ -1936,7 +1936,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		block.preds = pred.second;
 
 		// Fill register usage info
-		for (u32 ia = pred.first; ia < 0x40000; ia += 4)
+		for (u32 ia = pred.first; ia < limit; ia += 4)
 		{
 			block.size++;
 
