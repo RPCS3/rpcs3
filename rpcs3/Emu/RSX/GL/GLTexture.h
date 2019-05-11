@@ -1,4 +1,6 @@
-﻿#include "OpenGL.h"
+﻿#pragma once
+
+#include "OpenGL.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 #include "GLHelpers.h"
