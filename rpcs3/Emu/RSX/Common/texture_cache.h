@@ -2939,7 +2939,8 @@ namespace rsx
 			}
 			else
 			{
-				dst_subres.surface->on_write();
+				dst_subres.surface->on_write(rsx::get_shared_tag());
+				m_rtts.notify_memory_structure_changed();
 			}
 
 			if (rsx::get_resolution_scale_percent() != 100)
