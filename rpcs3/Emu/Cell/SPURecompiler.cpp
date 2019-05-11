@@ -3164,6 +3164,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Function for check_state execution
 	llvm::Function* m_test_state{};
 
+	// Chunk for external tail call (dispatch)
+	llvm::Function* m_dispatch{};
+
 	llvm::MDNode* m_md_unlikely;
 	llvm::MDNode* m_md_likely;
 
@@ -3230,11 +3233,15 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 
 		// Chunk function type
-		// 0. Result (void)
+		// 0. Result (tail call target)
 		// 1. Thread context
 		// 2. Local storage pointer
 		// 3.
+#ifdef _WIN32
+		const auto chunk_type = get_ftype<u8*, u8*, u8*, u32>();
+#else
 		const auto chunk_type = get_ftype<void, u8*, u8*, u32>();
+#endif
 
 		// Get function chunk name
 		const std::string name = fmt::format("spu-chunk-0x%05x", addr);
@@ -3284,9 +3291,18 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	void tail_chunk(llvm::Value* chunk, llvm::Value* base_pc = nullptr)
 	{
 		auto call = m_ir->CreateCall(chunk, {m_thread, m_lsptr, base_pc ? base_pc : m_base_pc});
-		call->setCallingConv(m_finfo ? m_finfo->chunk->getCallingConv() : llvm::cast<llvm::Function>(chunk)->getCallingConv());
+		auto func = m_finfo ? m_finfo->chunk : llvm::cast<llvm::Function>(chunk);
+		call->setCallingConv(func->getCallingConv());
 		call->setTailCall();
-		m_ir->CreateRetVoid();
+
+		if (func->getReturnType() == get_type<void>())
+		{
+			m_ir->CreateRetVoid();
+		}
+		else
+		{
+			m_ir->CreateRet(call);
+		}
 	}
 
 	// Call the real function
@@ -3462,7 +3478,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
 			update_pc(target);
-			m_ir->CreateRetVoid();
+			tail_chunk(m_dispatch);
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
@@ -4114,7 +4130,7 @@ public:
 		m_fake_global1 = new llvm::GlobalVariable(*m_module, get_type<bool>(), false, llvm::GlobalValue::InternalLinkage, m_ir->getFalse());
 
 		// Add entry function (contains only state/code check)
-		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_ftype<void, u8*, u8*, u8*>()).getCallee());
+		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_ftype<void, u8*, u8*, u64>()).getCallee());
 		const auto main_arg2 = &*(main_func->arg_begin() + 2);
 		main_func->setCallingConv(CallingConv::GHC);
 		set_function(main_func);
@@ -4246,7 +4262,30 @@ public:
 
 		// Call the entry function chunk
 		const auto entry_chunk = add_function(m_pos);
-		tail_chunk(entry_chunk->chunk);
+		const auto entry_call = m_ir->CreateCall(entry_chunk->chunk, {m_thread, m_lsptr, m_base_pc});
+		entry_call->setCallingConv(entry_chunk->chunk->getCallingConv());
+
+#ifdef _WIN32
+		// TODO: fix this mess
+		const auto dispatcher = m_ir->CreateIntToPtr(m_ir->getInt64((u64)+spu_runtime::g_dispatcher), get_type<u8**>());
+#else
+		const auto dispatcher = new llvm::GlobalVariable(*m_module, get_type<u8*>(), true, GlobalValue::ExternalLinkage, nullptr, "spu_dispatcher");
+		m_engine->addGlobalMapping("spu_dispatcher", (u64)+spu_runtime::g_dispatcher);
+#endif
+
+		// Proceed to the next code
+		if (entry_chunk->chunk->getReturnType() != get_type<void>())
+		{
+			const auto next_call = m_ir->CreateCall(m_ir->CreateBitCast(entry_call, main_func->getType()), {m_thread, m_lsptr, m_ir->getInt64(0)});
+			next_call->setCallingConv(main_func->getCallingConv());
+			next_call->setTailCall();
+		}
+		else
+		{
+			entry_call->setTailCall();
+		}
+
+		m_ir->CreateRetVoid();
 
 		m_ir->SetInsertPoint(label_stop);
 		m_ir->CreateRetVoid();
@@ -4257,7 +4296,7 @@ public:
 		{
 			const auto pbfail = spu_ptr<u64>(&spu_thread::block_failure);
 			m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
-			const auto dispci = call("spu_dispatch", spu_runtime::tr_dispatch, m_thread, m_ir->getInt32(0), main_arg2);
+			const auto dispci = call("spu_dispatch", spu_runtime::tr_dispatch, m_thread, m_lsptr, main_arg2);
 			dispci->setCallingConv(CallingConv::GHC);
 			dispci->setTailCall();
 			m_ir->CreateRetVoid();
@@ -4265,6 +4304,24 @@ public:
 		else
 		{
 			m_ir->CreateUnreachable();
+		}
+
+		m_dispatch = cast<Function>(module->getOrInsertFunction("spu-null", entry_chunk->chunk->getFunctionType()).getCallee());
+		m_dispatch->setLinkage(llvm::GlobalValue::InternalLinkage);
+		m_dispatch->setCallingConv(entry_chunk->chunk->getCallingConv());
+		set_function(m_dispatch);
+
+		if (entry_chunk->chunk->getReturnType() == get_type<void>())
+		{
+			const auto next_func = m_ir->CreateLoad(dispatcher);
+			const auto next_call = m_ir->CreateCall(m_ir->CreateBitCast(next_func, main_func->getType()), {m_thread, m_lsptr, m_ir->getInt64(0)});
+			next_call->setCallingConv(main_func->getCallingConv());
+			next_call->setTailCall();
+			m_ir->CreateRetVoid();
+		}
+		else
+		{
+			m_ir->CreateRet(m_ir->CreateLoad(dispatcher));
 		}
 
 		// Longjmp analogue (restore saved host thread's stack pointer)
@@ -4486,19 +4543,13 @@ public:
 			std::vector<llvm::Constant*> chunks;
 			chunks.reserve(m_size / 4);
 
-			const auto null = cast<Function>(module->getOrInsertFunction("spu-null", entry_chunk->chunk->getFunctionType()).getCallee());
-			null->setLinkage(llvm::GlobalValue::InternalLinkage);
-			null->setCallingConv(entry_chunk->chunk->getCallingConv());
-			set_function(null);
-			m_ir->CreateRetVoid();
-
 			for (u32 i = start; i < end; i += 4)
 			{
 				const auto found = m_functions.find(i);
 
 				if (found == m_functions.end())
 				{
-					chunks.push_back(null);
+					chunks.push_back(m_dispatch);
 					continue;
 				}
 
@@ -5029,7 +5080,6 @@ public:
 		m_block->block_end = m_ir->GetInsertBlock();
 		update_pc();
 		call("spu_unknown", &exec_unk, m_thread, m_ir->getInt32(op_unk.opcode));
-		m_ir->CreateRetVoid();
 	}
 
 	static bool exec_stop(spu_thread* _spu, u32 code)
@@ -5065,12 +5115,11 @@ public:
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
-			m_ir->CreateRetVoid();
+			tail_chunk(m_dispatch);
+			return;
 		}
-		else
-		{
-			check_state(m_pos + 4);
-		}
+
+		check_state(m_pos + 4);
 	}
 
 	void STOPD(spu_opcode_t op) //
@@ -5858,7 +5907,7 @@ public:
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
-			m_ir->CreateRetVoid();
+			tail_chunk(m_dispatch);
 		}
 	}
 
@@ -7686,7 +7735,7 @@ public:
 			m_ir->SetInsertPoint(fail);
 		}
 
-		m_ir->CreateRetVoid();
+		tail_chunk(m_dispatch);
 		m_ir->SetInsertPoint(cblock);
 		return result;
 	}
@@ -7825,7 +7874,7 @@ public:
 			}
 			else
 			{
-				m_ir->CreateRetVoid();
+				tail_chunk(m_dispatch);
 			}
 		}
 		else
