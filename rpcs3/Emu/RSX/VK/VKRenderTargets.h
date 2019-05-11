@@ -341,6 +341,7 @@ namespace rsx
 			surface->reset_aa_mode();
 			surface->queue_tag(address);
 			surface->dirty = true;
+			surface->last_use_tag = 0;
 		}
 
 		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
@@ -348,7 +349,12 @@ namespace rsx
 			surface->frame_tag = vk::get_current_frame_id();
 			if (!surface->frame_tag) surface->frame_tag = 1;
 
-			if (surface->old_contents) surface->clear_rw_barrier();
+			if (surface->old_contents)
+			{
+				// TODO: Retire the deferred writes
+				surface->clear_rw_barrier();
+			}
+
 			surface->release();
 		}
 

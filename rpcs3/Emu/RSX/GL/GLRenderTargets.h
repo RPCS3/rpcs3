@@ -284,12 +284,18 @@ struct gl_render_target_traits
 		surface->reset_aa_mode();
 		surface->queue_tag(address);
 		surface->set_cleared(false);
+		surface->last_use_tag = 0;
 	}
 
 	static
 	void notify_surface_invalidated(const std::unique_ptr<gl::render_target>& surface)
 	{
-		if (surface->old_contents) surface->clear_rw_barrier();
+		if (surface->old_contents)
+		{
+			// TODO: Retire the deferred writes
+			surface->clear_rw_barrier();
+		}
+
 		surface->release();
 	}
 
