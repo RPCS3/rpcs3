@@ -434,6 +434,7 @@ namespace rsx
 		rsx::address_range m_depth_stencil_memory_range;
 
 	public:
+		std::pair<u8, u8> m_bound_render_targets_config = {};
 		std::array<std::pair<u32, surface_type>, 4> m_bound_render_targets = {};
 		std::pair<u32, surface_type> m_bound_depth_stencil = {};
 
@@ -1000,22 +1001,36 @@ namespace rsx
 			cache_tag = rsx::get_shared_tag();
 
 			// Make previous RTTs sampleable
-			for (auto &rtt : m_bound_render_targets)
+			for (int i = m_bound_render_targets_config.first, count = 0;
+				count < m_bound_render_targets_config.second;
+				++i, ++count)
 			{
-				if (std::get<1>(rtt) != nullptr)
-					Traits::prepare_rtt_for_sampling(command_list, std::get<1>(rtt));
+				auto &rtt = m_bound_render_targets[i];
+				Traits::prepare_rtt_for_sampling(command_list, std::get<1>(rtt));
 				rtt = std::make_pair(0, nullptr);
 			}
 
-			// Create/Reuse requested rtts
-			for (u8 surface_index : utility::get_rtt_indexes(set_surface_target))
+			const auto rtt_indices = utility::get_rtt_indexes(set_surface_target);
+			if (LIKELY(!rtt_indices.empty()))
 			{
-				if (surface_addresses[surface_index] == 0)
-					continue;
+				m_bound_render_targets_config = { rtt_indices.front(), 0 };
 
-				m_bound_render_targets[surface_index] = std::make_pair(surface_addresses[surface_index],
-					bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, antialias,
-						clip_width, clip_height, surface_pitch[surface_index], std::forward<Args>(extra_params)...));
+				// Create/Reuse requested rtts
+				for (u8 surface_index : rtt_indices)
+				{
+					if (surface_addresses[surface_index] == 0)
+						continue;
+
+					m_bound_render_targets[surface_index] = std::make_pair(surface_addresses[surface_index],
+						bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, antialias,
+							clip_width, clip_height, surface_pitch[surface_index], std::forward<Args>(extra_params)...));
+
+					m_bound_render_targets_config.second++;
+				}
+			}
+			else
+			{
+				m_bound_render_targets_config = { 0, 0 };
 			}
 
 			// Same for depth buffer
@@ -1288,17 +1303,15 @@ namespace rsx
 
 		bool address_is_bound(u32 address) const
 		{
-			for (auto &surface : m_bound_render_targets)
+			for (int i = m_bound_render_targets_config.first, count = 0;
+				count < m_bound_render_targets_config.second;
+				++i, ++count)
 			{
-				const u32 bound_address = std::get<0>(surface);
-				if (bound_address == address)
+				if (m_bound_render_targets[i].first == address)
 					return true;
 			}
 
-			if (std::get<0>(m_bound_depth_stencil) == address)
-				return true;
-
-			return false;
+			return (m_bound_depth_stencil.first == address);
 		}
 
 		template <typename commandbuffer_type>
@@ -1460,17 +1473,10 @@ namespace rsx
 				}
 
 				// Tag all available surfaces
-				for (int i = 0; i < m_bound_render_targets.size(); ++i)
+				for (int i = m_bound_render_targets_config.first, count = 0;
+					count < m_bound_render_targets_config.second;
+					++i, ++count)
 				{
-					// Usually only 1 or 2 buffers are bound anyway
-					if (LIKELY(!m_bound_render_targets[i].first))
-					{
-						if (i) break;
-
-						// B-surface binding
-						continue;
-					}
-
 					m_bound_render_targets[i].second->on_write(write_tag);
 				}
 
@@ -1481,14 +1487,10 @@ namespace rsx
 			}
 			else
 			{
-				for (int i = 0; i < m_bound_render_targets.size(); ++i)
+				for (int i = m_bound_render_targets_config.first, count = 0;
+					count < m_bound_render_targets_config.second;
+					++i, ++count)
 				{
-					if (LIKELY(!m_bound_render_targets[i].first))
-					{
-						if (i) break;
-						continue;
-					}
-
 					if (m_bound_render_targets[i].first != address)
 					{
 						continue;
@@ -1527,6 +1529,7 @@ namespace rsx
 			free_resource_list(m_depth_stencil_storage);
 
 			m_bound_depth_stencil = std::make_pair(0, nullptr);
+			m_bound_render_targets_config = { 0, 0 };
 			for (auto &rtt : m_bound_render_targets)
 			{
 				rtt = std::make_pair(0, nullptr);
