@@ -57,7 +57,7 @@ namespace
 		case rsx::comparison_function::greater_or_equal: return GL_GEQUAL;
 		case rsx::comparison_function::always: return GL_ALWAYS;
 		}
-		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, (u32)op);;
+		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, (u32)op);
 	}
 
 	GLenum stencil_op(rsx::stencil_op op)

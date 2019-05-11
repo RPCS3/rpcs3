@@ -19,14 +19,14 @@ struct gui_save
 		key = "";
 		name = "";
 		def = QVariant();
-	};
+	}
 
 	gui_save(const QString& k, const QString& n, const QVariant& d)
 	{
 		key = k;
 		name = n;
 		def = d;
-	};
+	}
 };
 
 typedef std::map<std::string, const QString> q_from_char;
