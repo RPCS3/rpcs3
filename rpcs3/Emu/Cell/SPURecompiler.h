@@ -59,6 +59,8 @@ class spu_runtime
 	// Debug module output location
 	std::string m_cache_path;
 
+public:
+
 	// Trampoline to spu_recompiler_base::dispatch
 	static const spu_function_t tr_dispatch;
 
@@ -99,6 +101,9 @@ public:
 
 	// All dispatchers (array allocated in jit memory)
 	static atomic_t<spu_function_t>* const g_dispatcher;
+
+	// Recompiler entry point
+	static const spu_function_t g_gateway;
 
 	// Interpreter entry point
 	static spu_function_t g_interpreter;

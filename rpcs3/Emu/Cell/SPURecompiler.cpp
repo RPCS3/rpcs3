@@ -4,6 +4,8 @@
 #include "Emu/Memory/vm.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/JIT.h"
+#include "Utilities/sysinfo.h"
 
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
@@ -24,38 +26,153 @@ const spu_decoder<spu_iflag> s_spu_iflag;
 
 extern u64 get_timebased_time();
 
+// Move 4 args for calling native function from a GHC calling convention function
+static u8* move_args_ghc_to_native(u8* raw)
+{
+#ifdef _WIN32
+	// mov  rcx, r13
+	// mov  rdx, rbp
+	// mov  r8,  r12
+	// mov  r9,  rbx
+	std::memcpy(raw, "\x4C\x89\xE9\x48\x89\xEA\x4D\x89\xE0\x49\x89\xD9", 12);
+#else
+	// mov  rdi, r13
+	// mov  rsi, rbp
+	// mov  rdx, r12
+	// mov  rcx, rbx
+	std::memcpy(raw, "\x4C\x89\xEF\x48\x89\xEE\x4C\x89\xE2\x48\x89\xD9", 12);
+#endif
+
+	return raw + 12;
+}
+
 DECLARE(spu_runtime::tr_dispatch) = []
 {
 	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
-	u8* const trptr = jit_runtime::alloc(16, 16);
-	trptr[0] = 0xf3; // pause
-	trptr[1] = 0x90;
-	trptr[2] = 0xff; // jmp [rip]
-	trptr[3] = 0x25;
-	std::memset(trptr + 4, 0, 4);
+	u8* const trptr = jit_runtime::alloc(32, 16);
+	u8* raw = move_args_ghc_to_native(trptr);
+	*raw++ = 0xf3; // pause
+	*raw++ = 0x90;
+	*raw++ = 0xff; // jmp [rip]
+	*raw++ = 0x25;
+	std::memset(raw, 0, 4);
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::dispatch);
-	std::memcpy(trptr + 8, &target, 8);
+	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
 }();
 
 DECLARE(spu_runtime::tr_branch) = []
 {
 	// Generate a trampoline to spu_recompiler_base::branch
-	u8* const trptr = jit_runtime::alloc(16, 16);
-	trptr[0] = 0xff; // jmp [rip]
-	trptr[1] = 0x25;
-	std::memset(trptr + 2, 0, 4);
+	u8* const trptr = jit_runtime::alloc(32, 16);
+	u8* raw = move_args_ghc_to_native(trptr);
+	*raw++ = 0xff; // jmp [rip]
+	*raw++ = 0x25;
+	std::memset(raw, 0, 4);
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::branch);
-	std::memcpy(trptr + 6, &target, 8);
+	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
 }();
 
 DECLARE(spu_runtime::g_dispatcher) = []
 {
 	const auto ptr = reinterpret_cast<decltype(spu_runtime::g_dispatcher)>(jit_runtime::alloc(sizeof(spu_function_t), 8, false));
-	ptr->raw() = &spu_recompiler_base::dispatch;
+	ptr->raw() = tr_dispatch;
 	return ptr;
 }();
+
+DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::X86Assembler& c, auto& args)
+{
+	// Gateway for SPU dispatcher, converts from native to GHC calling convention, also saves RSP value for spu_escape
+	using namespace asmjit;
+
+#ifdef _WIN32
+	c.push(x86::r15);
+	c.push(x86::r14);
+	c.push(x86::r13);
+	c.push(x86::r12);
+	c.push(x86::rsi);
+	c.push(x86::rdi);
+	c.push(x86::rbp);
+	c.push(x86::rbx);
+	c.sub(x86::rsp, 0xa8);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x90), x86::xmm15);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x80), x86::xmm14);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x70), x86::xmm13);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x60), x86::xmm12);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x50), x86::xmm11);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x40), x86::xmm10);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x30), x86::xmm9);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x20), x86::xmm8);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x10), x86::xmm7);
+	c.movaps(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+#else
+	c.push(x86::rbp);
+	c.push(x86::r15);
+	c.push(x86::r14);
+	c.push(x86::r13);
+	c.push(x86::r12);
+	c.push(x86::rbx);
+	c.push(x86::rax);
+#endif
+
+	// Load g_dispatcher pointer to call g_dispatcher[0]
+	c.mov(x86::rax, asmjit::imm_ptr(spu_runtime::g_dispatcher));
+	c.mov(x86::rax, x86::qword_ptr(x86::rax));
+
+	// Save native stack pointer for longjmp emulation
+	c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)), x86::rsp);
+
+	// Move 4 args (despite spu_function_t def)
+	c.mov(x86::r13, args[0]);
+	c.mov(x86::rbp, args[1]);
+	c.mov(x86::r12, args[2]);
+	c.mov(x86::rbx, args[3]);
+
+	if (utils::has_avx())
+	{
+		c.vzeroupper();
+	}
+
+	c.call(x86::rax);
+
+	if (utils::has_avx())
+	{
+		c.vzeroupper();
+	}
+
+#ifdef _WIN32
+	c.movaps(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+	c.movaps(x86::xmm7, x86::oword_ptr(x86::rsp, 0x10));
+	c.movaps(x86::xmm8, x86::oword_ptr(x86::rsp, 0x20));
+	c.movaps(x86::xmm9, x86::oword_ptr(x86::rsp, 0x30));
+	c.movaps(x86::xmm10, x86::oword_ptr(x86::rsp, 0x40));
+	c.movaps(x86::xmm11, x86::oword_ptr(x86::rsp, 0x50));
+	c.movaps(x86::xmm12, x86::oword_ptr(x86::rsp, 0x60));
+	c.movaps(x86::xmm13, x86::oword_ptr(x86::rsp, 0x70));
+	c.movaps(x86::xmm14, x86::oword_ptr(x86::rsp, 0x80));
+	c.movaps(x86::xmm15, x86::oword_ptr(x86::rsp, 0x90));
+	c.add(x86::rsp, 0xa8);
+	c.pop(x86::rbx);
+	c.pop(x86::rbp);
+	c.pop(x86::rdi);
+	c.pop(x86::rsi);
+	c.pop(x86::r12);
+	c.pop(x86::r13);
+	c.pop(x86::r14);
+	c.pop(x86::r15);
+#else
+	c.add(x86::rsp, +8);
+	c.pop(x86::rbx);
+	c.pop(x86::r12);
+	c.pop(x86::r13);
+	c.pop(x86::r14);
+	c.pop(x86::r15);
+	c.pop(x86::rbp);
+#endif
+
+	c.ret();
+});
 
 DECLARE(spu_runtime::g_interpreter) = nullptr;
 
@@ -347,7 +464,7 @@ bool spu_runtime::func_compare::operator()(const std::vector<u32>& lhs, const st
 spu_runtime::spu_runtime()
 {
 	// Initialize "empty" block
-	m_map[std::vector<u32>()] = &spu_recompiler_base::dispatch;
+	m_map[std::vector<u32>()] = tr_dispatch;
 
 	// Clear LLVM output
 	m_cache_path = Emu.PPUCache();
@@ -412,7 +529,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	else
 	{
 		// Allocate some writable executable memory
-		u8* const wxptr = jit_runtime::alloc(size0 * 22 + 11, 16);
+		u8* const wxptr = jit_runtime::alloc(size0 * 22 + 14, 16);
 
 		if (!wxptr)
 		{
@@ -425,7 +542,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 		// Write jump instruction with rel32 immediate
 		auto make_jump = [&](u8 op, auto target)
 		{
-			verify("Asm overflow" HERE), raw + 8 <= wxptr + size0 * 22;
+			verify("Asm overflow" HERE), raw + 8 <= wxptr + size0 * 22 + 16;
 
 			// Fallback to dispatch if no target
 			const u64 taddr = target ? reinterpret_cast<u64>(target) : reinterpret_cast<u64>(tr_dispatch);
@@ -460,26 +577,18 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 		workload.back().beg   = beg;
 		workload.back().end   = _end;
 
-		// mov eax, [spu_thread::pc]
+		// Load PC: mov eax, [r13 + spu_thread::pc]
+		*raw++ = 0x41;
 		*raw++ = 0x8b;
-#ifdef _WIN32
-		*raw++ = 0x81;
-#else
-		*raw++ = 0x87;
-#endif
-		const u32 pc_off = ::offset32(&spu_thread::pc);
-		std::memcpy(raw, &pc_off, 4);
-		raw += 4;
+		*raw++ = 0x45;
+		*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
 
-		// lea r9, [ls + rax]
-		*raw++ = 0x4c;
+		// Get LS address starting from PC: lea rcx, [rbp + rax]
+		*raw++ = 0x48;
 		*raw++ = 0x8d;
-		*raw++ = 0x0c;
-#ifdef _WIN32
-		*raw++ = 0x02;
-#else
-		*raw++ = 0x06;
-#endif
+		*raw++ = 0x4c;
+		*raw++ = 0x05;
+		*raw++ = 0x00;
 
 		for (std::size_t i = 0; i < workload.size(); i++)
 		{
@@ -580,17 +689,26 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 			}
 
 			// Emit 32-bit comparison
-			verify("Asm overflow" HERE), raw + 12 <= wxptr + size0 * 22;
+			verify("Asm overflow" HERE), raw + 12 <= wxptr + size0 * 22 + 16;
 
 			if (w.from != w.level)
 			{
-				// If necessary (level has advanced), emit load: mov eax, [r9 + addr]
-				*raw++ = 0x41;
-				*raw++ = 0x8b;
-				*raw++ = 0x81;
+				// If necessary (level has advanced), emit load: mov eax, [rcx + addr]
 				const u32 cmp_lsa = w.level * 4u;
-				std::memcpy(raw, &cmp_lsa, 4);
-				raw += 4;
+
+				if (cmp_lsa < 0x80)
+				{
+					*raw++ = 0x8b;
+					*raw++ = 0x41;
+					*raw++ = ::narrow<s8>(cmp_lsa);
+				}
+				else
+				{
+					*raw++ = 0x8b;
+					*raw++ = 0x81;
+					std::memcpy(raw, &cmp_lsa, 4);
+					raw += 4;
+				}
 			}
 
 			// Emit comparison: cmp eax, imm32
@@ -807,20 +925,15 @@ spu_function_t spu_runtime::make_branch_patchpoint(u32 target) const
 		return nullptr;
 	}
 
-	// Save address of the following jmp
-#ifdef _WIN32
-	raw[0] = 0x4c; // lea r8, [rip+1]
+	// Save address of the following jmp (GHC CC 3rd argument)
+	raw[0] = 0x4c; // lea r12, [rip+1]
 	raw[1] = 0x8d;
-	raw[2] = 0x05;
-#else
-	raw[0] = 0x48; // lea rdx, [rip+1]
-	raw[1] = 0x8d;
-	raw[2] = 0x15;
-#endif
+	raw[2] = 0x25;
 	raw[3] = 0x01;
 	raw[4] = 0x00;
 	raw[5] = 0x00;
 	raw[6] = 0x00;
+
 	raw[7] = 0x90; // nop
 
 	// Jump to spu_recompiler_base::branch
@@ -4003,6 +4116,7 @@ public:
 		// Add entry function (contains only state/code check)
 		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_ftype<void, u8*, u8*, u8*>()).getCallee());
 		const auto main_arg2 = &*(main_func->arg_begin() + 2);
+		main_func->setCallingConv(CallingConv::GHC);
 		set_function(main_func);
 
 		// Start compilation
@@ -4130,17 +4244,10 @@ public:
 		const auto pbcount = spu_ptr<u64>(&spu_thread::block_counter);
 		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbcount), m_ir->getInt64(check_iterations)), pbcount);
 
-		const auto gateway = llvm::cast<Function>(m_module->getOrInsertFunction("spu_chunk_gateway", get_ftype<void, u8*, u8*, u32>()).getCallee());
-		gateway->setLinkage(GlobalValue::InternalLinkage);
-		gateway->setCallingConv(CallingConv::GHC);
+		// Call the entry function chunk
+		const auto entry_chunk = add_function(m_pos);
+		tail_chunk(entry_chunk->chunk);
 
-		// Save host thread's stack pointer
-		const auto native_sp = spu_ptr<u64>(&spu_thread::saved_native_sp);
-		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
-		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);
-
-		m_ir->CreateCall(gateway, {m_thread, m_lsptr, m_base_pc})->setCallingConv(gateway->getCallingConv());
-		m_ir->CreateRetVoid();
 		m_ir->SetInsertPoint(label_stop);
 		m_ir->CreateRetVoid();
 
@@ -4150,7 +4257,9 @@ public:
 		{
 			const auto pbfail = spu_ptr<u64>(&spu_thread::block_failure);
 			m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(pbfail), m_ir->getInt64(1)), pbfail);
-			call("spu_dispatch", &spu_recompiler_base::dispatch, m_thread, m_ir->getInt32(0), main_arg2)->setTailCall();
+			const auto dispci = call("spu_dispatch", spu_runtime::tr_dispatch, m_thread, m_ir->getInt32(0), main_arg2);
+			dispci->setCallingConv(CallingConv::GHC);
+			dispci->setTailCall();
 			m_ir->CreateRetVoid();
 		}
 		else
@@ -4158,17 +4267,12 @@ public:
 			m_ir->CreateUnreachable();
 		}
 
-		set_function(gateway);
-
-		// Call the entry function chunk
-		const auto entry_chunk = add_function(m_pos);
-		tail_chunk(entry_chunk->chunk);
-
 		// Longjmp analogue (restore saved host thread's stack pointer)
 		const auto escape = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("spu_escape", get_ftype<void, u8*>()).getCallee());
 		escape->setLinkage(GlobalValue::InternalLinkage);
 		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", escape));
 		const auto load_sp = m_ir->CreateLoad(_ptr<u64>(&*escape->arg_begin(), ::offset32(&spu_thread::saved_native_sp)));
+		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
 		m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::write_register), {rsp_name, m_ir->CreateSub(load_sp, m_ir->getInt64(8))});
 		m_ir->CreateRetVoid();
 
