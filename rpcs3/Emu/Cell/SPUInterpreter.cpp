@@ -572,7 +572,7 @@ bool spu_interpreter::FSMB(spu_thread& spu, spu_opcode_t op)
 {
 	const auto vsrc = spu.gpr[op.ra].vi;
 	const auto bits = _mm_shuffle_epi32(_mm_shufflehi_epi16(_mm_unpackhi_epi8(vsrc, vsrc), 0x50), 0xfa);
-	const auto mask = _mm_set_epi8(128, 64, 32, 16, 8, 4, 2, 1, 128, 64, 32, 16, 8, 4, 2, 1);
+	const auto mask = _mm_set_epi8(-128, 64, 32, 16, 8, 4, 2, 1, -128, 64, 32, 16, 8, 4, 2, 1);
 	spu.gpr[op.rt].vi = _mm_cmpeq_epi8(_mm_and_si128(bits, mask), mask);
 	return true;
 }
@@ -1429,7 +1429,7 @@ bool spu_interpreter::FSMBI(spu_thread& spu, spu_opcode_t op)
 {
 	const auto vsrc = _mm_set_epi32(0, 0, 0, op.i16);
 	const auto bits = _mm_shuffle_epi32(_mm_shufflelo_epi16(_mm_unpacklo_epi8(vsrc, vsrc), 0x50), 0x50);
-	const auto mask = _mm_set_epi8(128, 64, 32, 16, 8, 4, 2, 1, 128, 64, 32, 16, 8, 4, 2, 1);
+	const auto mask = _mm_set_epi8(-128, 64, 32, 16, 8, 4, 2, 1, -128, 64, 32, 16, 8, 4, 2, 1);
 	spu.gpr[op.rt].vi = _mm_cmpeq_epi8(_mm_and_si128(bits, mask), mask);
 	return true;
 }
