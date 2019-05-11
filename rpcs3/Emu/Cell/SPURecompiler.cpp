@@ -4134,6 +4134,11 @@ public:
 		gateway->setLinkage(GlobalValue::InternalLinkage);
 		gateway->setCallingConv(CallingConv::GHC);
 
+		// Save host thread's stack pointer
+		const auto native_sp = spu_ptr<u64>(&spu_thread::saved_native_sp);
+		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
+		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);
+
 		m_ir->CreateCall(gateway, {m_thread, m_lsptr, m_base_pc})->setCallingConv(gateway->getCallingConv());
 		m_ir->CreateRetVoid();
 		m_ir->SetInsertPoint(label_stop);
@@ -4155,11 +4160,6 @@ public:
 
 		set_function(gateway);
 
-		// Save host thread's stack pointer in the gateway
-		const auto native_sp = spu_ptr<u64>(&spu_thread::saved_native_sp);
-		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
-		m_ir->CreateStore(m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::read_register), {rsp_name}), native_sp);
-
 		// Call the entry function chunk
 		const auto entry_chunk = add_function(m_pos);
 		tail_chunk(entry_chunk->chunk);
@@ -4169,7 +4169,7 @@ public:
 		escape->setLinkage(GlobalValue::InternalLinkage);
 		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", escape));
 		const auto load_sp = m_ir->CreateLoad(_ptr<u64>(&*escape->arg_begin(), ::offset32(&spu_thread::saved_native_sp)));
-		m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::write_register), {rsp_name, load_sp});
+		m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::write_register), {rsp_name, m_ir->CreateSub(load_sp, m_ir->getInt64(8))});
 		m_ir->CreateRetVoid();
 
 		// Function that executes check_state and escapes if necessary
