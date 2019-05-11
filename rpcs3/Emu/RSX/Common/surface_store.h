@@ -812,7 +812,7 @@ namespace rsx
 
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
 			// Check if old_surface is 'new' and avoid intersection
-			if (old_surface && old_surface->last_use_tag == write_tag)
+			if (old_surface && old_surface->last_use_tag >= write_tag)
 			{
 				new_surface->set_old_contents(old_surface);
 			}
@@ -943,7 +943,7 @@ namespace rsx
 
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
 			// Check if old_surface is 'new' and avoid intersection
-			if (old_surface && old_surface->last_use_tag == write_tag)
+			if (old_surface && old_surface->last_use_tag >= write_tag)
 			{
 				new_surface->set_old_contents(old_surface);
 			}
