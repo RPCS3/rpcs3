@@ -954,7 +954,7 @@ void spu_recompiler::branch_fixed(u32 target)
 		return;
 	}
 
-	const auto ppptr = m_spurt->make_branch_patchpoint(target);
+	const auto ppptr = m_spurt->make_branch_patchpoint();
 
 	c->mov(SPU_OFF_32(pc), target);
 	c->xor_(qw0->r32(), qw0->r32());

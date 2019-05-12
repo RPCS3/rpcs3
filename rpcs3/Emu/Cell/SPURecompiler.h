@@ -82,10 +82,10 @@ public:
 	void* find(u64 last_reset_count, const std::vector<u32>&);
 
 	// Find existing function
-	spu_function_t find(const se_t<u32, false>* ls, u32 addr) const;
+	spu_function_t find(const u32* ls, u32 addr) const;
 
 	// Generate a patchable trampoline to spu_recompiler_base::branch
-	spu_function_t make_branch_patchpoint(u32 target) const;
+	spu_function_t make_branch_patchpoint() const;
 
 	// reset() arg retriever, for race avoidance (can result in double reset)
 	u64 get_reset_count() const

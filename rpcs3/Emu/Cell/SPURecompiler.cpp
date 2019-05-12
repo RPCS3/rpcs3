@@ -870,7 +870,7 @@ void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
 	return fn_location;
 }
 
-spu_function_t spu_runtime::find(const se_t<u32, false>* ls, u32 addr) const
+spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 {
 	const u64 reset_count = m_reset_count;
 
@@ -881,42 +881,22 @@ spu_function_t spu_runtime::find(const se_t<u32, false>* ls, u32 addr) const
 		return nullptr;
 	}
 
-	// Scratch vector
-	static thread_local std::vector<u32> addrv{u32{0}};
+	const auto upper = m_pic_map.upper_bound({ls + addr / 4, (0x40000 - addr) / 4});
 
-	const u32 start = addr * (g_cfg.core.spu_block_size != spu_block_size_type::giga);
-
-	addrv[0] = addr;
-	const auto beg = m_map.lower_bound(addrv);
-	addrv[0] += 4;
-	const auto _end = m_map.lower_bound(addrv);
-
-	for (auto it = beg; it != _end; ++it)
+	if (upper != m_pic_map.begin())
 	{
-		bool bad = false;
+		const auto found = std::prev(upper);
 
-		for (u32 i = 1; i < it->first.size(); ++i)
+		if (found->first.compare(0, found->first.size(), ls + addr / 4, found->first.size()) == 0)
 		{
-			const u32 x = it->first[i];
-			const u32 y = ls[start / 4 + i - 1];
-
-			if (x && x != y)
-			{
-				bad = true;
-				break;
-			}
-		}
-
-		if (!bad)
-		{
-			return it->second;
+			return found->second;
 		}
 	}
 
 	return nullptr;
 }
 
-spu_function_t spu_runtime::make_branch_patchpoint(u32 target) const
+spu_function_t spu_runtime::make_branch_patchpoint() const
 {
 	u8* const raw = jit_runtime::alloc(16, 16);
 
@@ -942,10 +922,8 @@ spu_function_t spu_runtime::make_branch_patchpoint(u32 target) const
 	const s64 rel = reinterpret_cast<u64>(tr_branch) - reinterpret_cast<u64>(raw + 8) - 5;
 	std::memcpy(raw + 9, &rel, 4);
 	raw[13] = 0xcc;
-
-	// Write compressed target address
-	raw[14] = target >> 2;
-	raw[15] = target >> 10;
+	raw[14] = 0;
+	raw[15] = 0;
 
 	return reinterpret_cast<spu_function_t>(raw);
 }
@@ -1024,7 +1002,6 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	// If code verification failed from a patched patchpoint, clear it with a dispatcher jump
 	if (rip)
 	{
-		const u32 target = *(u16*)(rip + 6) * 4;
 		const s64 rel = reinterpret_cast<u64>(spu_runtime::g_dispatcher) - reinterpret_cast<u64>(rip - 8) - 6;
 
 		union
@@ -1067,7 +1044,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
 	// Find function
-	const auto func = spu.jit->get_runtime().find(spu._ptr<se_t<u32, false>>(0), *(u16*)(rip + 6) * 4);
+	const auto func = spu.jit->get_runtime().find(static_cast<u32*>(vm::base(spu.offset)), spu.pc);
 
 	if (!func)
 	{
@@ -1100,9 +1077,8 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 			bytes[5] = 0xcc;
 		}
 
-		// Preserve target address
-		bytes[6] = rip[6];
-		bytes[7] = rip[7];
+		bytes[6] = 0;
+		bytes[7] = 0;
 	}
 	else
 	{
@@ -3129,6 +3105,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Main entry point offset
 	u32 m_base;
 
+	// Module name
+	std::string m_hash;
+
 	// Current function (chunk)
 	llvm::Function* m_function;
 
@@ -3290,6 +3269,34 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Create tail call to the function chunk (non-tail calls are just out of question)
 	void tail_chunk(llvm::Value* chunk, llvm::Value* base_pc = nullptr)
 	{
+		if (!chunk && (g_cfg.core.spu_block_size == spu_block_size_type::giga || !g_cfg.core.spu_verification))
+		{
+			// Disable patchpoints in some cases
+			chunk = m_dispatch;
+		}
+		else if (!chunk)
+		{
+			// Create branch patchpoint if chunk == nullptr
+			verify(HERE), m_finfo, !m_finfo->fn;
+
+			// Register under a unique linkable name
+			const std::string ppname = fmt::format("%s-pp-0x%05x", m_hash, m_pos);
+			m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint());
+
+			// Create function with not exactly correct type
+			const auto ppfunc = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(ppname, m_finfo->chunk->getFunctionType()).getCallee());
+			ppfunc->setCallingConv(m_finfo->chunk->getCallingConv());
+
+			if (m_finfo->chunk->getReturnType() != get_type<void>())
+			{
+				m_ir->CreateRet(m_ir->CreateBitCast(ppfunc, get_type<u8*>()));
+				return;
+			}
+
+			chunk = ppfunc;
+			base_pc = m_ir->getInt32(0);
+		}
+
 		auto call = m_ir->CreateCall(chunk, {m_thread, m_lsptr, base_pc ? base_pc : m_base_pc});
 		auto func = m_finfo ? m_finfo->chunk : llvm::cast<llvm::Function>(chunk);
 		call->setCallingConv(func->getCallingConv());
@@ -3478,7 +3485,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
 			update_pc(target);
-			tail_chunk(m_dispatch);
+			tail_chunk(nullptr);
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
@@ -4048,7 +4055,6 @@ public:
 			m_cache->add(func);
 		}
 
-		std::string hash;
 		{
 			sha1_context ctx;
 			u8 output[20];
@@ -4057,16 +4063,17 @@ public:
 			sha1_update(&ctx, reinterpret_cast<const u8*>(func.data() + 1), func.size() * 4 - 4);
 			sha1_finish(&ctx, output);
 
-			fmt::append(hash, "spu-0x%05x-%s", func[0], fmt::base57(output));
+			m_hash.clear();
+			fmt::append(m_hash, "spu-0x%05x-%s", func[0], fmt::base57(output));
 		}
 
 		if (m_cache)
 		{
-			LOG_SUCCESS(SPU, "LLVM: Building %s (size %u)...", hash, func.size() - 1);
+			LOG_SUCCESS(SPU, "LLVM: Building %s (size %u)...", m_hash, func.size() - 1);
 		}
 		else
 		{
-			LOG_NOTICE(SPU, "Building function 0x%x... (size %u, %s)", func[0], func.size() - 1, hash);
+			LOG_NOTICE(SPU, "Building function 0x%x... (size %u, %s)", func[0], func.size() - 1, m_hash);
 		}
 
 		SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
@@ -4086,7 +4093,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			std::string log;
-			fmt::append(log, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", func[0], func.size() - 1, hash);
+			fmt::append(log, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", func[0], func.size() - 1, m_hash);
 
 			// Disassemble if necessary
 			for (u32 i = 1; i < func.size(); i++)
@@ -4117,7 +4124,7 @@ public:
 		using namespace llvm;
 
 		// Create LLVM module
-		std::unique_ptr<Module> module = std::make_unique<Module>(hash + ".obj", m_context);
+		std::unique_ptr<Module> module = std::make_unique<Module>(m_hash + ".obj", m_context);
 		module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
 		module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = module.get();
@@ -4130,7 +4137,7 @@ public:
 		m_fake_global1 = new llvm::GlobalVariable(*m_module, get_type<bool>(), false, llvm::GlobalValue::InternalLinkage, m_ir->getFalse());
 
 		// Add entry function (contains only state/code check)
-		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(hash, get_ftype<void, u8*, u8*, u64>()).getCallee());
+		const auto main_func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(m_hash, get_ftype<void, u8*, u8*, u64>()).getCallee());
 		const auto main_arg2 = &*(main_func->arg_begin() + 2);
 		main_func->setCallingConv(CallingConv::GHC);
 		set_function(main_func);
@@ -7735,7 +7742,7 @@ public:
 			m_ir->SetInsertPoint(fail);
 		}
 
-		tail_chunk(m_dispatch);
+		tail_chunk(nullptr);
 		m_ir->SetInsertPoint(cblock);
 		return result;
 	}
@@ -7874,7 +7881,7 @@ public:
 			}
 			else
 			{
-				tail_chunk(m_dispatch);
+				tail_chunk(nullptr);
 			}
 		}
 		else
