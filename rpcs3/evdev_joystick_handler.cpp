@@ -884,7 +884,7 @@ int evdev_joystick_handler::FindAxisDirection(const std::unordered_map<int, bool
 		return -1;
 	else
 		return it->second;
-};
+}
 
 bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {

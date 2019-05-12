@@ -62,7 +62,7 @@ static FORCE_INLINE void mov_rdata(u128* const dst, const u128* const src)
 		dst[6] = data0;
 		dst[7] = data1;
 	}
-};
+}
 
 extern u64 get_timebased_time();
 extern u64 get_system_time();

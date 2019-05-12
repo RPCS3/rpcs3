@@ -56,7 +56,7 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
 
 	Update();
-};
+}
 
 constexpr auto qstr = QString::fromStdString;
 
