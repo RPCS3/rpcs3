@@ -474,6 +474,7 @@ spu_runtime::spu_runtime()
 	if (g_cfg.core.spu_debug)
 	{
 		fs::file(m_cache_path + "spu.log", fs::rewrite);
+		fs::file(m_cache_path + "spu-ir.log", fs::rewrite);
 	}
 
 	LOG_SUCCESS(SPU, "SPU Recompiler Runtime initialized...");
@@ -3037,8 +3038,36 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 void spu_recompiler_base::dump(std::string& out)
 {
+	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
+	dis_asm.offset = reinterpret_cast<const u8*>(result.data() + 1);
+
+	if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
+	{
+		dis_asm.offset -= result[0];
+	}
+
+	std::string hash;
+	{
+		sha1_context ctx;
+		u8 output[20];
+
+		sha1_starts(&ctx);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data() + 1), result.size() * 4 - 4);
+		sha1_finish(&ctx, output);
+		fmt::append(hash, "%s", fmt::base57(output));
+	}
+
+	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n", result[0], result.size() - 1, hash);
+
 	for (auto& bb : m_bbs)
 	{
+		for (u32 pos = bb.first, end = bb.first + bb.second.size * 4; pos < end; pos += 4)
+		{
+			dis_asm.dump_pc = pos;
+			dis_asm.disasm(pos);
+			fmt::append(out, ">%s\n", dis_asm.last_opcode);
+		}
+
 		if (m_block_info[bb.first / 4])
 		{
 			fmt::append(out, "A: [0x%05x] %s\n", bb.first, m_entry_info[bb.first / 4] ? (m_ret_info[bb.first / 4] ? "Chunk" : "Entry") : "Block");
@@ -3059,6 +3088,8 @@ void spu_recompiler_base::dump(std::string& out)
 		{
 			fmt::append(out, "A: [0x%05x] ?\n", bb.first);
 		}
+
+		out += '\n';
 	}
 
 	for (auto& f : m_funcs)
@@ -4050,6 +4081,8 @@ public:
 			return nullptr;
 		}
 
+		std::string log;
+
 		if (m_cache && g_cfg.core.spu_cache)
 		{
 			m_cache->add(func);
@@ -4076,14 +4109,6 @@ public:
 			LOG_NOTICE(SPU, "Building function 0x%x... (size %u, %s)", func[0], func.size() - 1, m_hash);
 		}
 
-		SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-		dis_asm.offset = reinterpret_cast<const u8*>(func.data() + 1);
-
-		if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
-		{
-			dis_asm.offset -= func[0];
-		}
-
 		m_pos = func[0];
 		m_base = func[0];
 		m_size = (func.size() - 1) * 4;
@@ -4092,31 +4117,6 @@ public:
 
 		if (g_cfg.core.spu_debug)
 		{
-			std::string log;
-			fmt::append(log, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n\n", func[0], func.size() - 1, m_hash);
-
-			// Disassemble if necessary
-			for (u32 i = 1; i < func.size(); i++)
-			{
-				const u32 pos = start + (i - 1) * 4;
-
-				// Disasm
-				dis_asm.dump_pc = pos;
-				dis_asm.disasm(pos);
-
-				if (func[i])
-				{
-					log += '>';
-					log += dis_asm.last_opcode;
-					log += '\n';
-				}
-				else
-				{
-					fmt::append(log, ">[%08x]  xx xx xx xx: <hole>\n", pos);
-				}
-			}
-
-			log += '\n';
 			this->dump(log);
 			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
@@ -4622,8 +4622,6 @@ public:
 		m_function_queue.clear();
 		m_function_table = nullptr;
 
-		std::string log;
-
 		raw_string_ostream out(log);
 
 		if (g_cfg.core.spu_debug)
@@ -4640,7 +4638,7 @@ public:
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 			}
 
 			fmt::raw_error("Compilation failed");
@@ -4669,7 +4667,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			out.flush();
-			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 		}
 
 		return fn;
@@ -5006,7 +5004,7 @@ public:
 
 			if (g_cfg.core.spu_debug)
 			{
-				fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+				fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 			}
 
 			fmt::raw_error("Compilation failed");
@@ -5035,7 +5033,7 @@ public:
 		if (g_cfg.core.spu_debug)
 		{
 			out.flush();
-			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 		}
 
 		return spu_runtime::g_interpreter;
