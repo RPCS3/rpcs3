@@ -21,7 +21,7 @@ struct pad_info
 	bool is_connected{false};
 };
 
-Q_DECLARE_METATYPE(pad_info);
+Q_DECLARE_METATYPE(pad_info)
 
 class pad_settings_dialog : public QDialog
 {

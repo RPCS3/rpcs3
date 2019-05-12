@@ -39,4 +39,4 @@ fs::file pup_object::get_file(u64 entry_id)
 		}
 	}
 	return fs::file();
-};
+}

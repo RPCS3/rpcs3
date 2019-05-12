@@ -371,7 +371,7 @@ Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
 	setLayout(layout);
 
 	installEventFilter(parent);
-};
+}
 
 // Draws a formatted and buffered <image> inside the Buffer Widget
 void Buffer::showImage(const QImage& image)
@@ -500,7 +500,7 @@ namespace
 		}
 		return buffer;
 	}
-};
+}
 
 void rsx_debugger::OnClickDrawCalls()
 {

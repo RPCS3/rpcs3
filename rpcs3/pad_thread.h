@@ -55,7 +55,7 @@ namespace pad
 	static inline class pad_thread* get_current_handler()
 	{
 		return verify(HERE, g_current.load());
-	};
+	}
 
 	static inline void SetIntercepted(bool intercepted)
 	{

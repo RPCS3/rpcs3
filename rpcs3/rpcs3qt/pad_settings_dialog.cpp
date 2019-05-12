@@ -46,7 +46,7 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 
 	new_file.close();
 	return true;
-};
+}
 
 pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	: QDialog(parent), ui(new Ui::pad_settings_dialog)

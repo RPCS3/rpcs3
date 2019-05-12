@@ -65,16 +65,16 @@ class PPUTranslator final : public cpu_translator
 	llvm::Value*& loc = m_locals[pos];\
 	llvm::Value*& glb = m_globals[pos];
 
-	DEF_VALUE(m_lr, m_g_lr, 163); // LR, Link Register
-	DEF_VALUE(m_ctr, m_g_ctr, 164); // CTR, Counter Register
-	DEF_VALUE(m_vrsave, m_g_vrsave, 165);
-	DEF_VALUE(m_cia, m_g_cia, 166);
-	DEF_VALUE(m_so, m_g_so, 167); // XER.SO bit, summary overflow
-	DEF_VALUE(m_ov, m_g_ov, 168); // XER.OV bit, overflow flag
-	DEF_VALUE(m_ca, m_g_ca, 169); // XER.CA bit, carry flag
-	DEF_VALUE(m_cnt, m_g_cnt, 170); // XER.CNT
-	DEF_VALUE(m_sat, m_g_sat, 171); // VSCR.SAT bit, sticky saturation flag
-	DEF_VALUE(m_nj, m_g_nj, 172); // VSCR.NJ bit, non-Java mode
+	DEF_VALUE(m_lr, m_g_lr, 163) // LR, Link Register
+	DEF_VALUE(m_ctr, m_g_ctr, 164) // CTR, Counter Register
+	DEF_VALUE(m_vrsave, m_g_vrsave, 165)
+	DEF_VALUE(m_cia, m_g_cia, 166)
+	DEF_VALUE(m_so, m_g_so, 167) // XER.SO bit, summary overflow
+	DEF_VALUE(m_ov, m_g_ov, 168) // XER.OV bit, overflow flag
+	DEF_VALUE(m_ca, m_g_ca, 169) // XER.CA bit, carry flag
+	DEF_VALUE(m_cnt, m_g_cnt, 170) // XER.CNT
+	DEF_VALUE(m_sat, m_g_sat, 171) // VSCR.SAT bit, sticky saturation flag
+	DEF_VALUE(m_nj, m_g_nj, 172) // VSCR.NJ bit, non-Java mode
 
 #undef DEF_VALUE
 public:

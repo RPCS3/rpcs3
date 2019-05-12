@@ -1027,7 +1027,7 @@ void main_window::BootRecentAction(const QAction* act)
 
 	LOG_NOTICE(LOADER, "Booting from recent games list...");
 	Boot(path, "", true);
-};
+}
 
 QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint& sc_idx)
 {
@@ -1069,7 +1069,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	connect(act, &QAction::triggered, [=]() {BootRecentAction(act); });
 
 	return act;
-};
+}
 
 void main_window::AddRecentAction(const q_string_pair& entry)
 {

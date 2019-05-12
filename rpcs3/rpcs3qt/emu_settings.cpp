@@ -98,7 +98,7 @@ namespace cfg_adapter
 	{
 		return get_node(node, loc.cbegin(), loc.cend());
 	}
-};
+}
 
 /** Returns possible options for values for some particular setting.*/
 static QStringList getOptions(cfg_location location)
