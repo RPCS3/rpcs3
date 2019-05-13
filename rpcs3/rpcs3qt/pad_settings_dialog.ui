@@ -25,8 +25,8 @@
     <rect>
      <x>60</x>
      <y>10</y>
-     <width>878</width>
-     <height>624</height>
+     <width>886</width>
+     <height>612</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="mainLayout">
@@ -1172,6 +1172,9 @@
             <item>
              <widget class="QWidget" name="widget_9" native="true">
               <layout class="QHBoxLayout" name="horizontalLayout_16">
+               <property name="spacing">
+                <number>10</number>
+               </property>
                <property name="leftMargin">
                 <number>0</number>
                </property>
@@ -1403,6 +1406,41 @@
               <widget class="QPushButton" name="b_shift_l3">
                <property name="text">
                 <string>F</string>
+               </property>
+               <property name="autoDefault">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="gb_led">
+            <property name="title">
+             <string>LED</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_39">
+             <property name="leftMargin">
+              <number>5</number>
+             </property>
+             <property name="topMargin">
+              <number>5</number>
+             </property>
+             <property name="rightMargin">
+              <number>5</number>
+             </property>
+             <property name="bottomMargin">
+              <number>5</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="b_led">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="icon">
+                <iconset resource="../resources.qrc">
+                 <normaloff>:/Icons/controllers.png</normaloff>:/Icons/controllers.png</iconset>
                </property>
                <property name="autoDefault">
                 <bool>false</bool>

@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Memory/vm.h"
@@ -578,6 +577,10 @@ public:
 	u64 block_counter = 0;
 	u64 block_recover = 0;
 	u64 block_failure = 0;
+
+	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
+
+	u8* memory_base_addr = vm::g_base_addr;
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 

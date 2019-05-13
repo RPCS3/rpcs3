@@ -1,10 +1,11 @@
-﻿#include <QCheckBox>
+#include <QCheckBox>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QPainter>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QColorDialog>
 
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
@@ -246,6 +247,7 @@ void pad_settings_dialog::InitButtons()
 	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right);
 	insertButton(button_ids::id_pad_rstick_up, ui->b_rstick_up);
 
+	m_padButtons->addButton(ui->b_led, button_ids::id_led);
 	m_padButtons->addButton(ui->b_reset, button_ids::id_reset_parameters);
 	m_padButtons->addButton(ui->b_blacklist, button_ids::id_blacklist);
 	m_padButtons->addButton(ui->b_refresh, button_ids::id_refresh);
@@ -322,6 +324,19 @@ void pad_settings_dialog::InitButtons()
 	connect(ui->slider_stick_right, &QSlider::valueChanged, [&](int value)
 	{
 		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry);
+	});
+
+	connect(ui->b_led, &QPushButton::clicked, [=]()
+	{
+		QColorDialog dlg(QColor(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB), this);
+		dlg.setWindowTitle(tr("LED Color"));
+		if (dlg.exec() == QColorDialog::Accepted)
+		{
+			const QColor newColor = dlg.selectedColor();
+			m_handler->SetLED(m_device_name, newColor.red(), newColor.green(), newColor.blue());
+			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, newColor));
+			ui->b_led->setProperty("led", newColor);
+		}
 	});
 
 	// Enable Button Remapping
@@ -529,6 +544,15 @@ void pad_settings_dialog::ReloadButtons()
 
 	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly);
 	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry);
+
+	// Enable and repaint the LED Button
+	m_enable_led = m_handler->has_led();
+	m_handler->SetLED(m_device_name, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+
+	const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+	ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
+	ui->b_led->setProperty("led", led_color);
+	ui->gb_led->setVisible(m_enable_led);
 }
 
 void pad_settings_dialog::ReactivateButtons()
@@ -725,6 +749,14 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 			ui->slider_stick_left->setValue(m_handler_cfg.lstickdeadzone);
 			ui->slider_stick_right->setValue(m_handler_cfg.rstickdeadzone);
 		}
+
+		if (m_handler->has_led())
+		{
+			const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+			ui->b_led->setProperty("led", led_color);
+			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
+			m_handler->SetLED(m_device_name, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+		}
 	}
 
 	for (auto& entry : m_cfg_entries)
@@ -748,6 +780,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
 	ui->gb_triggers->setEnabled(is_enabled && m_enable_deadzones);
+	ui->gb_led->setEnabled(is_enabled && m_enable_led);
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
@@ -762,6 +795,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 {
 	switch (id)
 	{
+	case button_ids::id_led:
 	case button_ids::id_pad_begin:
 	case button_ids::id_pad_end:
 	case button_ids::id_add_profile:
@@ -1072,6 +1106,14 @@ void pad_settings_dialog::SaveProfile()
 		m_handler_cfg.rtriggerthreshold.set(ui->slider_trigger_right->value());
 		m_handler_cfg.lstickdeadzone.set(ui->slider_stick_left->value());
 		m_handler_cfg.rstickdeadzone.set(ui->slider_stick_right->value());
+	}
+
+	if (m_handler->has_led() && ui->b_led->property("led").canConvert<QColor>())
+	{
+		const QColor led_color = ui->b_led->property("led").value<QColor>();
+		m_handler_cfg.colorR.set(led_color.red());
+		m_handler_cfg.colorG.set(led_color.green());
+		m_handler_cfg.colorB.set(led_color.blue());
 	}
 
 	if (m_handler->m_type == pad_handler::keyboard)

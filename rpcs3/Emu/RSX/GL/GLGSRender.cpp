@@ -57,7 +57,7 @@ namespace
 		case rsx::comparison_function::greater_or_equal: return GL_GEQUAL;
 		case rsx::comparison_function::always: return GL_ALWAYS;
 		}
-		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, (u32)op);;
+		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, (u32)op);
 	}
 
 	GLenum stencil_op(rsx::stencil_op op)
@@ -672,7 +672,7 @@ void GLGSRender::set_scissor()
 		return;
 	}
 
-	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_config_state_dirty);
+	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_invalid);
 
 	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
 	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);

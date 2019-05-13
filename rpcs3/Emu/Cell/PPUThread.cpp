@@ -1711,7 +1711,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator
-	PPUTranslator translator(jit.get_context(), module.get(), module_part, jit.has_ssse3());
+	PPUTranslator translator(jit.get_context(), module.get(), module_part, jit.get_engine());
 
 	// Define some types
 	const auto _void = Type::getVoidTy(jit.get_context());

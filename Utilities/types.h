@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cstring>
 #include <type_traits>
 #include <utility>
 #include <chrono>
@@ -365,6 +366,9 @@ struct alignas(16) s128
 CHECK_SIZE_ALIGN(u128, 16, 16);
 CHECK_SIZE_ALIGN(s128, 16, 16);
 
+using f32 = float;
+using f64 = double;
+
 union alignas(2) f16
 {
 	u16 _u16;
@@ -375,21 +379,27 @@ union alignas(2) f16
 		_u16 = raw;
 	}
 
-	explicit operator float() const
+	explicit operator f32() const
 	{
 		// See http://stackoverflow.com/a/26779139
 		// The conversion doesn't handle NaN/Inf
 		u32 raw = ((_u16 & 0x8000) << 16) |             // Sign (just moved)
 		          (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
 		          ((_u16 & 0x03FF) << 13);              // Mantissa
-		return (float&)raw;
+
+		union
+		{
+			char data[4];
+			u32 data32;
+			f32 res;
+		};
+
+		data32 = raw;
+		return res;
 	}
 };
 
 CHECK_SIZE_ALIGN(f16, 2, 2);
-
-using f32 = float;
-using f64 = double;
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 constexpr T align(const T& value, ullong align)
@@ -400,12 +410,21 @@ constexpr T align(const T& value, ullong align)
 template <typename T, typename T2>
 inline u32 offset32(T T2::*const mptr)
 {
+	union
+	{
+		char data[sizeof(std::size_t)];
+		std::size_t data_;
+		u32 data32;
+	};
+
 #ifdef _MSC_VER
 	static_assert(sizeof(mptr) == sizeof(u32), "Invalid pointer-to-member size");
-	return reinterpret_cast<const u32&>(mptr);
+	std::memcpy(data, &mptr, sizeof(u32));
+	return data32;
 #elif __GNUG__
 	static_assert(sizeof(mptr) == sizeof(std::size_t), "Invalid pointer-to-member size");
-	return static_cast<u32>(reinterpret_cast<const std::size_t&>(mptr));
+	std::memcpy(data, &mptr, sizeof(std::size_t));
+	return data_;
 #else
 	static_assert(sizeof(mptr) == 0, "Invalid pointer-to-member size");
 #endif

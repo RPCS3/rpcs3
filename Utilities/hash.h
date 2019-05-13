@@ -28,20 +28,19 @@ namespace rpcs3
 	template<typename T>
 	static size_t hash_struct(const T& value)
 	{
-		// TODO: use c++17 if constexpr
 		static constexpr auto block_sz = sizeof(T);
 
-		if ((block_sz & 0x7) == 0)
+		if constexpr ((block_sz & 0x7) == 0)
 		{
 			return hash_struct_base<T, u64>(value);
 		}
 
-		if ((block_sz & 0x3) == 0)
+		if constexpr ((block_sz & 0x3) == 0)
 		{
 			return hash_struct_base<T, u32>(value);
 		}
 
-		if ((block_sz & 0x1) == 0)
+		if constexpr ((block_sz & 0x1) == 0)
 		{
 			return hash_struct_base<T, u16>(value);
 		}

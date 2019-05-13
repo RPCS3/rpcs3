@@ -474,7 +474,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		s_unfire.push_front(std::make_pair(addr, size));
 #endif
 
-		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
+		return RTDyldMemoryManager::registerEHFramesInProcess(addr, size);
 	}
 
 	void deregisterEHFrames() override
@@ -508,6 +508,10 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 
 	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
 	{
+#ifndef _WIN32
+		RTDyldMemoryManager::registerEHFramesInProcess(addr, size);
+		s_unfire.push_front(std::make_pair(addr, size));
+#endif
 	}
 
 	void deregisterEHFrames() override
@@ -768,25 +772,6 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 
 jit_compiler::~jit_compiler()
 {
-}
-
-bool jit_compiler::has_ssse3() const
-{
-	if (m_cpu == "generic" ||
-		m_cpu == "k8" ||
-		m_cpu == "opteron" ||
-		m_cpu == "athlon64" ||
-		m_cpu == "athlon-fx" ||
-		m_cpu == "k8-sse3" ||
-		m_cpu == "opteron-sse3" ||
-		m_cpu == "athlon64-sse3" ||
-		m_cpu == "amdfam10" ||
-		m_cpu == "barcelona")
-	{
-		return false;
-	}
-
-	return true;
 }
 
 void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& path)

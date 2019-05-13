@@ -266,7 +266,7 @@ namespace rsx
 				return 1;
 			default:
 				return 2;
-			};
+			}
 		}
 
 	public:
