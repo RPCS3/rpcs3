@@ -183,6 +183,7 @@ struct gl_render_target_traits
 			rsx::apply_resolution_scale((u16)height, true), (GLenum)internal_fmt));
 		result->set_native_pitch((u16)width * format.channel_count * format.channel_size);
 		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
+		result->set_format(surface_color_format);
 
 		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
 		result->set_native_component_layout(native_layout);
@@ -212,6 +213,7 @@ struct gl_render_target_traits
 		result->set_native_pitch(native_pitch);
 		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
 		result->set_native_component_layout(native_layout);
+		result->set_format(surface_depth_format);
 
 		result->set_cleared(false);
 		result->queue_tag(address);
@@ -233,14 +235,19 @@ struct gl_render_target_traits
 
 			sink.reset(new gl::render_target(new_w, new_h, internal_format));
 			sink->add_ref();
+			sink->format_info = ref->format_info;
+			sink->set_native_pitch(prev.width * ref->get_bpp());
+			sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
+			sink->set_native_component_layout(ref->get_native_component_layout());
+			sink->queue_tag(address);
+		}
+		else
+		{
+			sink->set_rsx_pitch(ref->get_rsx_pitch());
 		}
 
 		prev.target = sink.get();
 
-		sink->set_native_pitch(prev.width * ref->get_bpp());
-		sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
-		sink->set_native_component_layout(ref->get_native_component_layout());
-		sink->queue_tag(address);
 		sink->sync_tag();
 		sink->set_old_contents_region(prev, false);
 		sink->set_cleared(false);
@@ -251,8 +258,8 @@ struct gl_render_target_traits
 	bool is_compatible_surface(const gl::render_target* surface, const gl::render_target* ref, u16 width, u16 height, u8 /*sample_count*/)
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
-				surface->get_surface_width() == width &&
-				surface->get_surface_height() == height);
+				surface->get_surface_width() >= width &&
+				surface->get_surface_height() >= height);
 	}
 
 	static

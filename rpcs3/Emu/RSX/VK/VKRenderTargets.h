@@ -196,6 +196,7 @@ namespace rsx
 
 			change_image_layout(cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
+			rtt->set_format(format);
 			rtt->native_component_map = fmt.second;
 			rtt->rsx_pitch = (u16)pitch;
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
@@ -234,6 +235,7 @@ namespace rsx
 				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT| VK_IMAGE_USAGE_TRANSFER_SRC_BIT| VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,
 				0));
 
+			ds->set_format(format);
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
 			change_image_layout(cmd, ds.get(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
@@ -274,16 +276,17 @@ namespace rsx
 					ref->info.flags));
 
 				sink->add_ref();
+				sink->format_info = ref->format_info;
+				sink->native_component_map = ref->native_component_map;
+				sink->native_pitch = u16(prev.width * ref->get_bpp());
+				sink->surface_width = prev.width;
+				sink->surface_height = prev.height;
+				sink->queue_tag(address);
 			}
 
 			prev.target = sink.get();
 
-			sink->native_component_map = ref->native_component_map;
 			sink->rsx_pitch = ref->get_rsx_pitch();
-			sink->native_pitch = u16(prev.width * ref->get_bpp());
-			sink->surface_width = prev.width;
-			sink->surface_height = prev.height;
-			sink->queue_tag(address);
 			sink->sync_tag();
 			sink->set_old_contents_region(prev, false);
 			sink->dirty = true;
@@ -295,8 +298,8 @@ namespace rsx
 		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 /*sample_count*/)
 		{
 			return (surface->format() == ref->format() &&
-					surface->get_surface_width() == width &&
-					surface->get_surface_height() == height);
+					surface->get_surface_width() >= width &&
+					surface->get_surface_height() >= height);
 		}
 
 		static void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
