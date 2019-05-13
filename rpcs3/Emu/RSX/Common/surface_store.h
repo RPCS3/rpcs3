@@ -134,6 +134,13 @@ namespace rsx
 		GcmTileInfo *tile = nullptr;
 		rsx::surface_antialiasing write_aa_mode = rsx::surface_antialiasing::center_1_sample;
 
+		union
+		{
+			rsx::surface_color_format gcm_color_format;
+			rsx::surface_depth_format gcm_depth_format;
+		}
+		format_info;
+
 		render_target_descriptor() {}
 
 		virtual ~render_target_descriptor()
@@ -167,6 +174,26 @@ namespace rsx
 		void reset_aa_mode()
 		{
 			write_aa_mode = read_aa_mode = rsx::surface_antialiasing::center_1_sample;
+		}
+
+		void set_format(rsx::surface_color_format format)
+		{
+			format_info.gcm_color_format = format;
+		}
+
+		void set_format(rsx::surface_depth_format format)
+		{
+			format_info.gcm_depth_format = format;
+		}
+
+		rsx::surface_color_format get_surface_color_format()
+		{
+			return format_info.gcm_color_format;
+		}
+
+		rsx::surface_depth_format get_surface_depth_format()
+		{
+			return format_info.gcm_depth_format;
 		}
 
 		bool test() const
@@ -438,6 +465,9 @@ namespace rsx
 		std::array<std::pair<u32, surface_type>, 4> m_bound_render_targets = {};
 		std::pair<u32, surface_type> m_bound_depth_stencil = {};
 
+		// List of sections derived from a section that has been split and invalidated
+		std::vector<surface_type> orphaned_surfaces;
+
 		std::list<surface_storage_type> invalidated_resources;
 		u64 cache_tag = 1ull; // Use 1 as the start since 0 is default tag on new surfaces
 		u64 write_tag = 1ull;
@@ -483,7 +513,9 @@ namespace rsx
 				}
 
 				Traits::clone_surface(cmd, sink, region.source, new_address, region);
+
 				verify(HERE), region.target == Traits::get(sink);
+				orphaned_surfaces.push_back(region.target);
 				data[new_address] = std::move(sink);
 			};
 

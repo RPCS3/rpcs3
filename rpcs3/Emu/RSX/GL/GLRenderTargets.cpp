@@ -422,6 +422,44 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		}
 	}
 
+	if (!m_rtts.orphaned_surfaces.empty())
+	{
+		if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
+		{
+			gl::texture::format format;
+			gl::texture::type type;
+			bool swap_bytes;
+
+			for (auto& surface : m_rtts.orphaned_surfaces)
+			{
+				if (surface->is_depth_surface())
+				{
+					if (!g_cfg.video.write_depth_buffer) continue;
+
+					const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(surface->get_surface_depth_format());
+					format = depth_format_gl.format;
+					type = depth_format_gl.type;
+					swap_bytes = true;
+				}
+				else
+				{
+					if (!g_cfg.video.write_color_buffers) continue;
+
+					const auto color_format_gl = rsx::internals::surface_color_format_to_gl(surface->get_surface_color_format());
+					format = color_format_gl.format;
+					type = color_format_gl.type;
+					swap_bytes = color_format_gl.swap_bytes;
+				}
+
+				m_gl_texture_cache.lock_memory_region(cmd, surface, surface->get_memory_range(),
+					surface->get_surface_width(), surface->get_surface_height(), surface->get_rsx_pitch(),
+					format, type, swap_bytes);
+			}
+		}
+
+		m_rtts.orphaned_surfaces.clear();
+	}
+
 	if (m_gl_texture_cache.get_ro_tex_invalidate_intr())
 	{
 		//Invalidate cached sampler state
