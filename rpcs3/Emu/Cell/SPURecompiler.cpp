@@ -174,6 +174,16 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::
 	c.ret();
 });
 
+DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	// Restore native stack pointer (longjmp emulation)
+	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
+	c.sub(x86::rsp, 8);
+	c.ret();
+});
+
 DECLARE(spu_runtime::g_interpreter) = nullptr;
 
 spu_cache::spu_cache(const std::string& loc)
@@ -2060,17 +2070,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				nnop++;
 			}
 		}
-	}
-
-	// Skip some steps for asmjit
-	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
-	{
-		if (result.size() == 1)
-		{
-			result.clear();
-		}
-
-		return result;
 	}
 
 	// Fill block info
@@ -4331,15 +4330,6 @@ public:
 			m_ir->CreateRet(m_ir->CreateLoad(dispatcher));
 		}
 
-		// Longjmp analogue (restore saved host thread's stack pointer)
-		const auto escape = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("spu_escape", get_ftype<void, u8*>()).getCallee());
-		escape->setLinkage(GlobalValue::InternalLinkage);
-		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", escape));
-		const auto load_sp = m_ir->CreateLoad(_ptr<u64>(&*escape->arg_begin(), ::offset32(&spu_thread::saved_native_sp)));
-		const auto rsp_name = MetadataAsValue::get(m_context, MDNode::get(m_context, {MDString::get(m_context, "rsp")}));
-		m_ir->CreateCall(get_intrinsic<u64>(Intrinsic::write_register), {rsp_name, m_ir->CreateSub(load_sp, m_ir->getInt64(8))});
-		m_ir->CreateRetVoid();
-
 		// Function that executes check_state and escapes if necessary
 		m_test_state = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("spu_test_state", get_ftype<void, u8*>()).getCallee());
 		m_test_state->setLinkage(GlobalValue::InternalLinkage);
@@ -4349,7 +4339,7 @@ public:
 		const auto escape_no = BasicBlock::Create(m_context, "", m_test_state);
 		m_ir->CreateCondBr(call("spu_exec_check_state", &exec_check_state, &*m_test_state->arg_begin()), escape_yes, escape_no);
 		m_ir->SetInsertPoint(escape_yes);
-		m_ir->CreateCall(escape, {&*m_test_state->arg_begin()});
+		call("spu_escape", spu_runtime::g_escape, &*m_test_state->arg_begin());
 		m_ir->CreateRetVoid();
 		m_ir->SetInsertPoint(escape_no);
 		m_ir->CreateRetVoid();

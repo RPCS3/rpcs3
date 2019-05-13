@@ -105,6 +105,9 @@ public:
 	// Recompiler entry point
 	static const spu_function_t g_gateway;
 
+	// Longjmp to the end of the gateway function (native CC)
+	static void(*const g_escape)(spu_thread*);
+
 	// Interpreter entry point
 	static spu_function_t g_interpreter;
 
