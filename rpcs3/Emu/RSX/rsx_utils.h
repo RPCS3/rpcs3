@@ -27,6 +27,11 @@ namespace rsx
 	using utils::page_end;
 	using utils::next_page;
 
+	using flags64_t = uint64_t;
+	using flags32_t = uint32_t;
+	using flags16_t = uint16_t;
+	using flags8_t = uint8_t;
+
 	// Definitions
 	class thread;
 	extern thread* g_current_renderer;

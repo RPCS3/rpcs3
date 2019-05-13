@@ -188,6 +188,7 @@ struct gl_render_target_traits
 		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
 		result->set_native_component_layout(native_layout);
 
+		result->usage = rsx::surface_usage_flags::attachment;
 		result->set_cleared(false);
 		result->queue_tag(address);
 		result->add_ref();
@@ -215,6 +216,7 @@ struct gl_render_target_traits
 		result->set_native_component_layout(native_layout);
 		result->set_format(surface_depth_format);
 
+		result->usage = rsx::surface_usage_flags::attachment;
 		result->set_cleared(false);
 		result->queue_tag(address);
 		result->add_ref();
@@ -234,6 +236,7 @@ struct gl_render_target_traits
 			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height());
 
 			sink.reset(new gl::render_target(new_w, new_h, internal_format));
+			sink->usage = rsx::surface_usage_flags::storage;
 			sink->add_ref();
 			sink->format_info = ref->format_info;
 			sink->set_native_pitch(prev.width * ref->get_bpp());
@@ -272,10 +275,17 @@ struct gl_render_target_traits
 		info->bpp = surface->get_bpp();
 	}
 
-	static void prepare_rtt_for_drawing(gl::command_context&, gl::render_target*) {}
+	static void prepare_rtt_for_drawing(gl::command_context&, gl::render_target* rtt)
+	{
+		rtt->usage |= rsx::surface_usage_flags::attachment;
+	}
+
+	static void prepare_ds_for_drawing(gl::command_context&, gl::render_target* ds)
+	{
+		ds->usage |= rsx::surface_usage_flags::attachment;
+	}
+
 	static void prepare_rtt_for_sampling(gl::command_context&, gl::render_target*) {}
-	
-	static void prepare_ds_for_drawing(gl::command_context&, gl::render_target*) {}
 	static void prepare_ds_for_sampling(gl::command_context&, gl::render_target*) {}
 
 	static
@@ -292,6 +302,7 @@ struct gl_render_target_traits
 		surface->queue_tag(address);
 		surface->set_cleared(false);
 		surface->last_use_tag = 0;
+		surface->usage = rsx::surface_usage_flags::unknown;
 	}
 
 	static

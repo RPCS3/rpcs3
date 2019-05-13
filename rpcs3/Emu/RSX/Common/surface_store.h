@@ -134,6 +134,8 @@ namespace rsx
 		GcmTileInfo *tile = nullptr;
 		rsx::surface_antialiasing write_aa_mode = rsx::surface_antialiasing::center_1_sample;
 
+		flags32_t usage = surface_usage_flags::unknown;
+
 		union
 		{
 			rsx::surface_color_format gcm_color_format;
