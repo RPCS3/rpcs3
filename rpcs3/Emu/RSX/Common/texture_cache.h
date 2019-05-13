@@ -2459,40 +2459,50 @@ namespace rsx
 					return {};
 				}
 
-				if (list.back().is_clipped && !allow_clipped)
+				for (auto It = list.rbegin(); It != list.rend(); ++It)
 				{
-					for (auto It = list.rbegin(); It != list.rend(); ++It)
+					if (!(It->surface->usage & rsx::surface_usage_flags::attachment))
 					{
-						if (!It->is_clipped)
-						{
-							return *It;
-						}
-
-						auto _w = u32(It->width * It->surface->get_bpp()) / bpp;
-						auto _h = u32(It->height);
-						get_rsx_dimensions(_w, _h, It->surface);
-
-						if (_w < width)
-						{
-							if ((_w * scale_x) <= 1.f)
-								continue;
-						}
-
-						if (_h < height)
-						{
-							if ((_h * scale_y) <= 1.f)
-								continue;
-						}
-
-						// Some surface exists, but its size is questionable
-						// Opt to re-upload (needs WCB/WDB to work properly)
-						break;
+						// HACK
+						// TODO: Properly analyse the input here to determine if it can properly fit what we need
+						// This is a problem due to chunked transfer
+						// First 2 512x720 blocks go into a cpu-side buffer but suddenly when its time to render the final 256x720
+						// it falls onto some storage buffer in surface cache that has bad dimensions
+						// Proper solution is to always merge when a cpu resource is created (it should absorb the render targets in range)
+						// We then should not have any 'dst-is-rendertarget' surfaces in use
+						// Option 2: Make surfaces here part of surface cache and do not pad them for optimization
+						// Surface cache is good at merging for resolve operations. This keeps integrity even when drawing to the rendertgargets
+						// This option needs a lot more work
+						continue;
 					}
 
-					return {};
+					if (!It->is_clipped || allow_clipped)
+					{
+						return *It;
+					}
+
+					auto _w = u32(It->width * It->surface->get_bpp()) / bpp;
+					auto _h = u32(It->height);
+					get_rsx_dimensions(_w, _h, It->surface);
+
+					if (_w < width)
+					{
+						if ((_w * scale_x) <= 1.f)
+							continue;
+					}
+
+					if (_h < height)
+					{
+						if ((_h * scale_y) <= 1.f)
+							continue;
+					}
+
+					// Some surface exists, but its size is questionable
+					// Opt to re-upload (needs WCB/WDB to work properly)
+					break;
 				}
 
-				return list.back();
+				return {};
 			};
 
 			// Check if src/dst are parts of render targets

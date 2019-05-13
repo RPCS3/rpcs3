@@ -197,6 +197,7 @@ namespace rsx
 			change_image_layout(cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 			rtt->set_format(format);
+			rtt->usage = rsx::surface_usage_flags::attachment;
 			rtt->native_component_map = fmt.second;
 			rtt->rsx_pitch = (u16)pitch;
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
@@ -235,7 +236,9 @@ namespace rsx
 				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT| VK_IMAGE_USAGE_TRANSFER_SRC_BIT| VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,
 				0));
 
+
 			ds->set_format(format);
+			ds->usage = rsx::surface_usage_flags::attachment;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
 			change_image_layout(cmd, ds.get(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
@@ -277,6 +280,7 @@ namespace rsx
 
 				sink->add_ref();
 				sink->format_info = ref->format_info;
+				sink->usage = rsx::surface_usage_flags::storage;
 				sink->native_component_map = ref->native_component_map;
 				sink->native_pitch = u16(prev.width * ref->get_bpp());
 				sink->surface_width = prev.width;
@@ -315,6 +319,7 @@ namespace rsx
 		{
 			surface->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			surface->frame_tag = 0;
+			surface->usage |= rsx::surface_usage_flags::attachment;
 		}
 
 		static void prepare_rtt_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
@@ -326,6 +331,7 @@ namespace rsx
 		{
 			surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			surface->frame_tag = 0;
+			surface->usage |= rsx::surface_usage_flags::attachment;
 		}
 
 		static void prepare_ds_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
@@ -345,6 +351,7 @@ namespace rsx
 			surface->queue_tag(address);
 			surface->dirty = true;
 			surface->last_use_tag = 0;
+			surface->usage = rsx::surface_usage_flags::unknown;
 		}
 
 		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)

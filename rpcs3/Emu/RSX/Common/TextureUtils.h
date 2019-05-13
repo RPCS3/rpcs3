@@ -21,6 +21,13 @@ namespace rsx
 		srgb_nonlinear = 1
 	};
 
+	enum surface_usage_flags : u32
+	{
+		unknown = 0,
+		attachment = 1,
+		storage = 2
+	};
+
 	//Sampled image descriptor
 	struct sampled_image_descriptor_base
 	{
