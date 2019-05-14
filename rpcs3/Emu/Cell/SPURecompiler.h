@@ -59,6 +59,9 @@ class spu_runtime
 	// Debug module output location
 	std::string m_cache_path;
 
+	// Scratch vector
+	std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
+
 public:
 
 	// Trampoline to spu_recompiler_base::dispatch

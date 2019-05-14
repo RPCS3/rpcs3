@@ -144,7 +144,7 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	m_pos = func[0];
 	m_base = func[0];
 	m_size = ::size32(func) * 4 - 4;
-	const u32 start = m_pos * (g_cfg.core.spu_block_size != spu_block_size_type::giga);
+	const u32 start = m_pos;
 	const u32 end = start + m_size;
 
 	// Create block labels
@@ -226,7 +226,7 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 			c->vzeroupper();
 		}
 	}
-	else if (m_size == 8 && (g_cfg.core.spu_block_size != spu_block_size_type::giga || func[0] != 4))
+	else if (m_size == 8)
 	{
 		c->mov(x86::rax, static_cast<u64>(func[2]) << 32 | func[1]);
 		c->cmp(x86::rax, x86::qword_ptr(*ls, *pc0));
@@ -237,9 +237,9 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 			c->vzeroupper();
 		}
 	}
-	else if (m_size == 8 || m_size == 4)
+	else if (m_size == 4)
 	{
-		c->cmp(x86::dword_ptr(*ls, *pc0), +func.back());
+		c->cmp(x86::dword_ptr(*ls, *pc0), func[1]);
 		c->jnz(label_diff);
 
 		if (utils::has_avx())
@@ -724,7 +724,7 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	// Acknowledge success and add statistics
 	c->add(SPU_OFF_64(block_counter), ::size32(words) / (words_align / 4));
 
-	if (g_cfg.core.spu_block_size == spu_block_size_type::giga && m_pos != start)
+	if (m_pos != start)
 	{
 		// Jump to the entry point if necessary
 		c->jmp(instr_labels[m_pos]);
@@ -971,7 +971,7 @@ void spu_recompiler::branch_fixed(u32 target)
 		return;
 	}
 
-	const auto ppptr = g_cfg.core.spu_block_size == spu_block_size_type::giga || !g_cfg.core.spu_verification ? nullptr : m_spurt->make_branch_patchpoint();
+	const auto ppptr = !g_cfg.core.spu_verification ? nullptr : m_spurt->make_branch_patchpoint();
 
 	c->lea(addr->r64(), get_pc(target));
 	c->mov(SPU_OFF_32(pc), *addr);
@@ -1088,7 +1088,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 	}
 
 	// Simply external call (return or indirect call)
-	const auto ppptr = g_cfg.core.spu_block_size == spu_block_size_type::giga || !g_cfg.core.spu_verification ? nullptr : m_spurt->make_branch_patchpoint();
+	const auto ppptr = !g_cfg.core.spu_verification ? nullptr : m_spurt->make_branch_patchpoint();
 
 	if (ppptr)
 	{

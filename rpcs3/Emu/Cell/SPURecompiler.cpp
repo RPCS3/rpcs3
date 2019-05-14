@@ -226,6 +226,12 @@ std::deque<std::vector<u32>> spu_cache::get()
 			break;
 		}
 
+		if (!size || !func[1])
+		{
+			// Skip old format Giga entries
+			continue;
+		}
+
 		result.emplace_front(std::move(func));
 	}
 
@@ -349,7 +355,7 @@ void spu_cache::initialize()
 			}
 
 			// Get data start
-			const u32 start = func[0] * (g_cfg.core.spu_block_size != spu_block_size_type::giga);
+			const u32 start = func[0];
 			const u32 size0 = ::size32(func);
 
 			// Initialize LS with function data only
@@ -448,7 +454,7 @@ bool spu_runtime::func_compare::operator()(const std::vector<u32>& lhs, const st
 	else if (rhs_data.empty())
 		return false;
 
-	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
+	if (false)
 	{
 		// In Giga mode, compare instructions starting from the entry point first
 		lhs_data.remove_prefix(lhs_addr / 4);
@@ -507,7 +513,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	const std::vector<u32>& func = where.first;
 
 	//
-	const u32 _off = 1 + (func[0] / 4) * (g_cfg.core.spu_block_size == spu_block_size_type::giga);
+	const u32 _off = 1 + (func[0] / 4) * (false);
 
 	// Set pointer to the compiled function
 	where.second = compiled;
@@ -515,23 +521,27 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	// Register function in PIC map
 	m_pic_map[{func.data() + _off, func.size() - _off}] = compiled;
 
+	// Prepare sorted list
+	m_flat_list.clear();
+	m_flat_list.assign(m_pic_map.cbegin(), m_pic_map.cend());
+
 	struct work
 	{
 		u32 size;
 		u16 from;
 		u16 level;
 		u8* rel32;
-		decltype(m_pic_map)::iterator beg;
-		decltype(m_pic_map)::iterator end;
+		decltype(m_flat_list)::iterator beg;
+		decltype(m_flat_list)::iterator end;
 	};
 
 	// Scratch vector
 	static thread_local std::vector<work> workload;
 
 	// Generate a dispatcher (übertrampoline)
-	const auto beg = m_pic_map.begin();
-	const auto _end = m_pic_map.end();
-	const u32 size0 = ::size32(m_pic_map);
+	const auto beg = m_flat_list.begin();
+	const auto _end = m_flat_list.end();
+	const u32 size0 = ::size32(m_flat_list);
 
 	if (size0 == 1)
 	{
@@ -630,6 +640,19 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 				{
 					// Cannot split: some functions contain holes at this level
 					w.level++;
+
+					// Resort subrange starting from the new level
+					std::stable_sort(w.beg, w.end, [&](const auto& a, const auto& b)
+					{
+						std::basic_string_view<u32> lhs = a.first;
+						std::basic_string_view<u32> rhs = b.first;
+
+						lhs.remove_prefix(w.level);
+						rhs.remove_prefix(w.level);
+
+						return lhs < rhs;
+					});
+
 					continue;
 				}
 
@@ -662,7 +685,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 			if (w.level >= w.beg->first.size() || w.level >= it->first.size())
 			{
 				// If functions cannot be compared, assume smallest function
-				LOG_FATAL(SPU, "Trampoline simplified at 0x%x (level=%u)", func[0], w.level);
+				LOG_ERROR(SPU, "Trampoline simplified at 0x%x (level=%u)", func[0], w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -671,13 +694,13 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 			const u32 x = it->first.at(w.level);
 
 			// Adjust ranges (backward)
-			while (it != m_pic_map.begin())
+			while (it != m_flat_list.begin())
 			{
 				it--;
 
 				if (w.level >= it->first.size())
 				{
-					it = m_pic_map.end();
+					it = m_flat_list.end();
 					break;
 				}
 
@@ -692,9 +715,9 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 				size2++;
 			}
 
-			if (it == m_pic_map.end())
+			if (it == m_flat_list.end())
 			{
-				LOG_FATAL(SPU, "Trampoline simplified (II) at 0x%x (level=%u)", func[0], w.level);
+				LOG_ERROR(SPU, "Trampoline simplified (II) at 0x%x (level=%u)", func[0], w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -824,7 +847,7 @@ void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
 	}
 
 	//
-	const u32 _off = 1 + (func[0] / 4) * (g_cfg.core.spu_block_size == spu_block_size_type::giga);
+	const u32 _off = 1 + (func[0] / 4) * (false);
 
 	// Try to find PIC first
 	const auto found = m_pic_map.find({func.data() + _off, func.size() - _off});
@@ -1154,8 +1177,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 	{
-		// In Giga mode, all data starts from the address 0
-		lsa = 0;
 	}
 
 	for (u32 wi = 0, wa = workload[0]; wi < workload.size();)
@@ -1842,7 +1863,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		}
 	}
 
-	while (g_cfg.core.spu_block_size != spu_block_size_type::giga || limit < 0x40000)
+	while (lsa > 0 || limit < 0x40000)
 	{
 		const u32 initial_size = result.size();
 
@@ -2031,14 +2052,6 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			it = m_targets.erase(it);
 			continue;
 		}
-
-		// Erase unreachable targets
-		const auto new_end = std::remove_if(it->second.begin(), it->second.end(), [&](u32 addr)
-		{
-			return addr < lsa || addr >= limit;
-		});
-
-		it->second.erase(new_end, it->second.end());
 
 		it++;
 	}
@@ -3013,7 +3026,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 					if (f.second.good)
 					{
-						LOG_ERROR(SPU, "Function 0x%05x: calls bad function (0x%05x)", f.first, ffound->first);
+						LOG_ERROR(SPU, "Function 0x%05x: calls bad function (0x%05x)", f.first, call);
 						f.second.good = false;
 					}
 				}
@@ -3040,7 +3053,7 @@ void spu_recompiler_base::dump(std::string& out)
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
 	dis_asm.offset = reinterpret_cast<const u8*>(result.data() + 1);
 
-	if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
+	if (true)
 	{
 		dis_asm.offset -= result[0];
 	}
@@ -3299,15 +3312,15 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Create tail call to the function chunk (non-tail calls are just out of question)
 	void tail_chunk(llvm::Value* chunk, llvm::Value* base_pc = nullptr)
 	{
-		if (!chunk && (g_cfg.core.spu_block_size == spu_block_size_type::giga || !g_cfg.core.spu_verification))
+		if (!chunk && !g_cfg.core.spu_verification)
 		{
-			// Disable patchpoints in some cases
+			// Disable patchpoints if verification is disabled
 			chunk = m_dispatch;
 		}
 		else if (!chunk)
 		{
 			// Create branch patchpoint if chunk == nullptr
-			verify(HERE), m_finfo, !m_finfo->fn;
+			verify(HERE), m_finfo, !m_finfo->fn || m_function == m_finfo->chunk;
 
 			// Register under a unique linkable name
 			const std::string ppname = fmt::format("%s-pp-0x%05x", m_hash, m_pos);
@@ -4111,7 +4124,7 @@ public:
 		m_pos = func[0];
 		m_base = func[0];
 		m_size = (func.size() - 1) * 4;
-		const u32 start = m_pos * (g_cfg.core.spu_block_size != spu_block_size_type::giga);
+		const u32 start = m_pos;
 		const u32 end = start + m_size;
 
 		if (g_cfg.core.spu_debug)
@@ -4169,7 +4182,7 @@ public:
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(pu32), m_ir->getInt32(func[1]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
-		else if (func.size() - 1 == 2 && g_cfg.core.spu_block_size != spu_block_size_type::giga)
+		else if (func.size() - 1 == 2)
 		{
 			const auto pu64 = m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, m_base_pc), get_type<u64*>());
 			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(pu64), m_ir->getInt64(static_cast<u64>(func[2]) << 32 | func[1]));
@@ -5617,6 +5630,7 @@ public:
 					m_ir->CreateUnreachable();
 					m_ir->SetInsertPoint(next);
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
+					update_pc();
 					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
 					return;
 				}
@@ -7698,7 +7712,7 @@ public:
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&spu_thread::pc));
 		const auto type = m_finfo->chunk->getFunctionType()->getPointerTo()->getPointerTo();
 
-		if (ret && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+		if (ret && g_cfg.core.spu_block_size == spu_block_size_type::mega)
 		{
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&spu_thread::stack_mirror));
@@ -8089,7 +8103,7 @@ public:
 			return;
 		}
 
-		if (g_cfg.core.spu_block_size != spu_block_size_type::safe && m_block_info[m_pos / 4 + 1] && m_entry_info[m_pos / 4 + 1])
+		if (g_cfg.core.spu_block_size == spu_block_size_type::mega && m_block_info[m_pos / 4 + 1] && m_entry_info[m_pos / 4 + 1])
 		{
 			// Store the return function chunk address at the stack mirror
 			const auto pfunc = add_function(m_pos + 4);
