@@ -25,7 +25,7 @@ namespace rsx
 	{
 		unknown = 0,
 		attachment = 1,
-		storage = 2
+		storage = 2,
 	};
 
 	//Sampled image descriptor

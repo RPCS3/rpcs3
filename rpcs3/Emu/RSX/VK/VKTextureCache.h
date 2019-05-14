@@ -192,7 +192,7 @@ namespace vk
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				auto as_rtt = static_cast<vk::render_target*>(vram_texture);
-				if (as_rtt->dirty) as_rtt->read_barrier(cmd);
+				if (as_rtt->dirty()) as_rtt->read_barrier(cmd);
 			}
 
 			vk::image *target = vram_texture;

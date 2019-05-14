@@ -67,31 +67,40 @@ namespace vk
 		void memory_barrier(vk::command_buffer& cmd, bool force_init = false)
 		{
 			// Helper to optionally clear/initialize memory contents depending on barrier type
+			auto clear_surface_impl = [&]()
+			{
+				VkImageSubresourceRange range{ aspect(), 0, 1, 0, 1 };
+				const auto old_layout = current_layout;
+
+				change_image_layout(cmd, this, VK_IMAGE_LAYOUT_GENERAL, range);
+
+				if (aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					VkClearColorValue color{};
+					vkCmdClearColorImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &color, 1, &range);
+				}
+				else
+				{
+					VkClearDepthStencilValue clear{ 1.f, 255 };
+					vkCmdClearDepthStencilImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &clear, 1, &range);
+				}
+
+				change_image_layout(cmd, this, old_layout, range);
+				state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+			};
+
 			auto null_transfer_impl = [&]()
 			{
-				if (dirty && force_init)
+				if (dirty() && (force_init || state_flags & rsx::surface_state_flags::erase_bkgnd))
 				{
 					// Initialize memory contents if we did not find anything usable
 					// TODO: Properly sync with Cell
-
-					VkImageSubresourceRange range{ aspect(), 0, 1, 0, 1 };
-					const auto old_layout = current_layout;
-
-					change_image_layout(cmd, this, VK_IMAGE_LAYOUT_GENERAL, range);
-
-					if (aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
-					{
-						VkClearColorValue color{};
-						vkCmdClearColorImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &color, 1, &range);
-					}
-					else
-					{
-						VkClearDepthStencilValue clear{ 1.f, 255 };
-						vkCmdClearDepthStencilImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &clear, 1, &range);
-					}
-
-					change_image_layout(cmd, this, old_layout, range);
+					clear_surface_impl();
 					on_write();
+				}
+				else
+				{
+					verify(HERE), state_flags == rsx::surface_state_flags::ready;
 				}
 			};
 
@@ -133,6 +142,19 @@ namespace vk
 
 			vk::blitter hw_blitter;
 			old_contents.init_transfer(this);
+
+			if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+			{
+				const auto area = old_contents.dst_rect();
+				if (area.x1 > 0 || area.y1 > 0 || area.x2 < width() || area.y2 < height())
+				{
+					clear_surface_impl();
+				}
+				else
+				{
+					state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+				}
+			}
 
 			hw_blitter.scale_image(cmd, old_contents.source, this,
 				old_contents.src_rect(),
@@ -197,14 +219,14 @@ namespace rsx
 			change_image_layout(cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 			rtt->set_format(format);
-			rtt->usage = rsx::surface_usage_flags::attachment;
+			rtt->memory_usage_flags = rsx::surface_usage_flags::attachment;
+			rtt->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			rtt->native_component_map = fmt.second;
 			rtt->rsx_pitch = (u16)pitch;
 			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
 			rtt->surface_width = (u16)width;
 			rtt->surface_height = (u16)height;
 			rtt->queue_tag(address);
-			rtt->dirty = true;
 
 			rtt->add_ref();
 			return rtt;
@@ -238,8 +260,10 @@ namespace rsx
 
 
 			ds->set_format(format);
-			ds->usage = rsx::surface_usage_flags::attachment;
+			ds->memory_usage_flags= rsx::surface_usage_flags::attachment;
+			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
+
 			change_image_layout(cmd, ds.get(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
 			ds->native_pitch = (u16)width * 2;
@@ -250,7 +274,6 @@ namespace rsx
 			ds->surface_width = (u16)width;
 			ds->surface_height = (u16)height;
 			ds->queue_tag(address);
-			ds->dirty = true;
 
 			ds->add_ref();
 			return ds;
@@ -280,7 +303,8 @@ namespace rsx
 
 				sink->add_ref();
 				sink->format_info = ref->format_info;
-				sink->usage = rsx::surface_usage_flags::storage;
+				sink->memory_usage_flags = rsx::surface_usage_flags::storage;
+				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
 				sink->native_component_map = ref->native_component_map;
 				sink->native_pitch = u16(prev.width * ref->get_bpp());
 				sink->surface_width = prev.width;
@@ -293,7 +317,6 @@ namespace rsx
 			sink->rsx_pitch = ref->get_rsx_pitch();
 			sink->sync_tag();
 			sink->set_old_contents_region(prev, false);
-			sink->dirty = true;
 			sink->last_use_tag = ref->last_use_tag;
 
 			change_image_layout(cmd, sink.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -319,7 +342,7 @@ namespace rsx
 		{
 			surface->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			surface->frame_tag = 0;
-			surface->usage |= rsx::surface_usage_flags::attachment;
+			surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 		}
 
 		static void prepare_rtt_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
@@ -331,7 +354,7 @@ namespace rsx
 		{
 			surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			surface->frame_tag = 0;
-			surface->usage |= rsx::surface_usage_flags::attachment;
+			surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 		}
 
 		static void prepare_ds_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
@@ -349,9 +372,8 @@ namespace rsx
 			surface->rsx_pitch = (u16)pitch;
 			surface->reset_aa_mode();
 			surface->queue_tag(address);
-			surface->dirty = true;
 			surface->last_use_tag = 0;
-			surface->usage = rsx::surface_usage_flags::unknown;
+			surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
 		}
 
 		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
@@ -375,6 +397,7 @@ namespace rsx
 
 		static void notify_surface_reused(const std::unique_ptr<vk::render_target> &surface)
 		{
+			surface->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 			surface->add_ref();
 		}
 

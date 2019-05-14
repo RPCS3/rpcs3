@@ -25,6 +25,12 @@ namespace rsx
 		size_t get_packed_pitch(surface_color_format format, u32 width);
 	}
 
+	enum surface_state_flags : u32
+	{
+		ready = 0,
+		erase_bkgnd = 1
+	};
+
 	template <typename surface_type>
 	struct surface_overlap_info_t
 	{
@@ -127,14 +133,14 @@ namespace rsx
 		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
 		std::array<std::pair<u32, u64>, 5> memory_tag_samples;
 
-		bool dirty = false;
 		deferred_clipped_region<image_storage_type> old_contents{};
 		rsx::surface_antialiasing read_aa_mode = rsx::surface_antialiasing::center_1_sample;
 
 		GcmTileInfo *tile = nullptr;
 		rsx::surface_antialiasing write_aa_mode = rsx::surface_antialiasing::center_1_sample;
 
-		flags32_t usage = surface_usage_flags::unknown;
+		flags32_t memory_usage_flags = surface_usage_flags::unknown;
+		flags32_t state_flags = surface_state_flags::ready;
 
 		union
 		{
@@ -198,9 +204,14 @@ namespace rsx
 			return format_info.gcm_depth_format;
 		}
 
+		bool dirty() const
+		{
+			return (state_flags != rsx::surface_state_flags::ready) || old_contents;
+		}
+
 		bool test() const
 		{
-			if (dirty)
+			if (dirty())
 			{
 				// TODO
 				// Should RCB or mem-sync (inherit previous mem) to init memory
@@ -361,7 +372,9 @@ namespace rsx
 			sync_tag();
 
 			read_aa_mode = write_aa_mode;
-			dirty = false;
+
+			// HACK!! This should be cleared through memory barriers only
+			state_flags = rsx::surface_state_flags::ready;
 
 			if (old_contents.source)
 			{
@@ -604,7 +617,7 @@ namespace rsx
 					if (e.second->last_use_tag <= timestamp_check ||
 						new_surface == surface ||
 						address == e.first ||
-						e.second->dirty)
+						e.second->dirty())
 					{
 						// Do not bother synchronizing with uninitialized data
 						continue;
@@ -731,7 +744,6 @@ namespace rsx
 				region.target = new_surface;
 
 				new_surface->set_old_contents_region(region, true);
-				new_surface->dirty = true;
 				break;
 			}
 #endif

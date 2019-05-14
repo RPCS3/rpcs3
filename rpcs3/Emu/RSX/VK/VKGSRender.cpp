@@ -1826,6 +1826,16 @@ void VKGSRender::end()
 		m_current_command_buffer->flags |= vk::command_buffer::cb_has_occlusion_task;
 	}
 
+	// Final heap check...
+	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
+
+	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
+	// Only textures are synchronized tightly with the GPU and they have been read back above
+	vk::enter_uninterruptible();
+
+	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+	update_draw_state();
+
 	// Apply write memory barriers
 	if (1)//g_cfg.video.strict_rendering_mode)
 	{
@@ -1838,46 +1848,41 @@ void VKGSRender::end()
 				surface->write_barrier(*m_current_command_buffer);
 			}
 		}
+
+		begin_render_pass();
 	}
-
-	// Final heap check...
-	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
-
-	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
-	// Only textures are synchronized tightly with the GPU and they have been read back above
-	vk::enter_uninterruptible();
-
-	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-	update_draw_state();
-	begin_render_pass();
-
-	// Clear any 'dirty' surfaces - possible is a recycled cache surface is used
-	rsx::simple_array<VkClearAttachment> buffers_to_clear;
-
-	if (ds && ds->dirty)
+	else
 	{
-		// Clear this surface before drawing on it
-		VkClearValue clear_value = {};
-		clear_value.depthStencil = { 1.f, 255 };
-		buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
-	}
+		begin_render_pass();
 
-	for (u32 index = 0; index < m_draw_buffers.size(); ++index)
-	{
-		if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
+		// Clear any 'dirty' surfaces - possible is a recycled cache surface is used
+		rsx::simple_array<VkClearAttachment> buffers_to_clear;
+
+		if (ds && ds->dirty())
 		{
-			if (rtt->dirty)
+			// Clear this surface before drawing on it
+			VkClearValue clear_value = {};
+			clear_value.depthStencil = { 1.f, 255 };
+			buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
+		}
+
+		for (u32 index = 0; index < m_draw_buffers.size(); ++index)
+		{
+			if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
 			{
-				buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
+				if (rtt->dirty())
+				{
+					buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
+				}
 			}
 		}
-	}
 
-	if (UNLIKELY(!buffers_to_clear.empty()))
-	{
-		VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
-		vkCmdClearAttachments(*m_current_command_buffer, buffers_to_clear.size(),
-			buffers_to_clear.data(), 1, &rect);
+		if (UNLIKELY(!buffers_to_clear.empty()))
+		{
+			VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
+			vkCmdClearAttachments(*m_current_command_buffer, buffers_to_clear.size(),
+				buffers_to_clear.data(), 1, &rect);
+		}
 	}
 
 	u32 sub_index = 0;
@@ -2078,11 +2083,10 @@ void VKGSRender::clear_surface(u32 mask)
 	std::vector<VkClearAttachment> clear_descriptors;
 	VkClearValue depth_stencil_clear_values = {}, color_clear_values = {};
 
-	const auto scale = rsx::get_resolution_scale();
-	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
-	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
-	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
-	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
+	u16 scissor_x = (u16)m_scissor.offset.x;
+	u16 scissor_w = (u16)m_scissor.extent.width;
+	u16 scissor_y = (u16)m_scissor.offset.y;
+	u16 scissor_h = (u16)m_scissor.extent.height;
 
 	const u16 fb_width = m_draw_fbo->width();
 	const u16 fb_height = m_draw_fbo->height();
@@ -2091,6 +2095,7 @@ void VKGSRender::clear_surface(u32 mask)
 	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
 	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
 
+	const bool require_mem_load = (scissor_w * scissor_h) < (fb_width * fb_height);
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & 0x3)
@@ -2118,7 +2123,7 @@ void VKGSRender::clear_surface(u32 mask)
 				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 			}
 
-			if ((mask & 0x3) != 0x3 && ds->dirty)
+			if ((mask & 0x3) != 0x3 && !require_mem_load && ds->state_flags & rsx::surface_state_flags::erase_bkgnd)
 			{
 				verify(HERE), depth_stencil_mask;
 
@@ -2202,8 +2207,10 @@ void VKGSRender::clear_surface(u32 mask)
 
 					for (const auto &index : m_draw_buffers)
 					{
-						if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
+						if (auto rtt = m_rtts.m_bound_render_targets[index].second)
 						{
+							if (require_mem_load) rtt->write_barrier(*m_current_command_buffer);
+
 							vk::insert_texture_barrier(*m_current_command_buffer, rtt);
 							m_attachment_clear_pass->run(*m_current_command_buffer, rtt,
 								region.rect, renderpass, m_framebuffers_to_clean);
@@ -2219,8 +2226,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 				for (auto &rtt : m_rtts.m_bound_render_targets)
 				{
-					if (const auto address = std::get<0>(rtt))
+					if (const auto address = rtt.first)
 					{
+						if (require_mem_load) rtt.second->write_barrier(*m_current_command_buffer);
 						m_rtts.on_write(address);
 					}
 				}
@@ -2230,8 +2238,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (depth_stencil_mask)
 	{
-		if (const auto address = std::get<0>(m_rtts.m_bound_depth_stencil))
+		if (const auto address = m_rtts.m_bound_depth_stencil.first)
 		{
+			if (require_mem_load) m_rtts.m_bound_depth_stencil.second->write_barrier(*m_current_command_buffer);
 			m_rtts.on_write(address);
 			clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
 		}
