@@ -63,16 +63,6 @@ namespace gl
 			: viewable_image(GL_TEXTURE_2D, width, height, 1, 1, sized_format)
 		{}
 
-		void set_cleared(bool clear=true)
-		{
-			dirty = !clear;
-		}
-
-		bool cleared() const
-		{
-			return !dirty;
-		}
-
 		// Internal pitch is the actual row length in bytes of the openGL texture
 		void set_native_pitch(u16 pitch)
 		{
@@ -188,8 +178,8 @@ struct gl_render_target_traits
 		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
 		result->set_native_component_layout(native_layout);
 
-		result->usage = rsx::surface_usage_flags::attachment;
-		result->set_cleared(false);
+		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
+		result->state_flags = rsx::surface_state_flags::erase_bkgnd;
 		result->queue_tag(address);
 		result->add_ref();
 		return result;
@@ -216,8 +206,8 @@ struct gl_render_target_traits
 		result->set_native_component_layout(native_layout);
 		result->set_format(surface_depth_format);
 
-		result->usage = rsx::surface_usage_flags::attachment;
-		result->set_cleared(false);
+		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
+		result->state_flags = rsx::surface_state_flags::erase_bkgnd;
 		result->queue_tag(address);
 		result->add_ref();
 		return result;
@@ -236,9 +226,12 @@ struct gl_render_target_traits
 			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height());
 
 			sink.reset(new gl::render_target(new_w, new_h, internal_format));
-			sink->usage = rsx::surface_usage_flags::storage;
 			sink->add_ref();
+
+			sink->memory_usage_flags = rsx::surface_usage_flags::storage;
+			sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			sink->format_info = ref->format_info;
+
 			sink->set_native_pitch(prev.width * ref->get_bpp());
 			sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
 			sink->set_native_component_layout(ref->get_native_component_layout());
@@ -253,7 +246,6 @@ struct gl_render_target_traits
 
 		sink->sync_tag();
 		sink->set_old_contents_region(prev, false);
-		sink->set_cleared(false);
 		sink->last_use_tag = ref->last_use_tag;
 	}
 
@@ -277,12 +269,12 @@ struct gl_render_target_traits
 
 	static void prepare_rtt_for_drawing(gl::command_context&, gl::render_target* rtt)
 	{
-		rtt->usage |= rsx::surface_usage_flags::attachment;
+		rtt->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 	}
 
 	static void prepare_ds_for_drawing(gl::command_context&, gl::render_target* ds)
 	{
-		ds->usage |= rsx::surface_usage_flags::attachment;
+		ds->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 	}
 
 	static void prepare_rtt_for_sampling(gl::command_context&, gl::render_target*) {}
@@ -300,9 +292,8 @@ struct gl_render_target_traits
 		surface->set_rsx_pitch((u16)pitch);
 		surface->reset_aa_mode();
 		surface->queue_tag(address);
-		surface->set_cleared(false);
 		surface->last_use_tag = 0;
-		surface->usage = rsx::surface_usage_flags::unknown;
+		surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
 	}
 
 	static
@@ -326,6 +317,7 @@ struct gl_render_target_traits
 	static
 	void notify_surface_reused(const std::unique_ptr<gl::render_target>& surface)
 	{
+		surface->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 		surface->add_ref();
 	}
 

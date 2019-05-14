@@ -2461,7 +2461,7 @@ namespace rsx
 
 				for (auto It = list.rbegin(); It != list.rend(); ++It)
 				{
-					if (!(It->surface->usage & rsx::surface_usage_flags::attachment))
+					if (!(It->surface->memory_usage_flags & rsx::surface_usage_flags::attachment))
 					{
 						// HACK
 						// TODO: Properly analyse the input here to determine if it can properly fit what we need

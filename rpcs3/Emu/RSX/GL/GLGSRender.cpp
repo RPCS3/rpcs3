@@ -414,55 +414,57 @@ void GLGSRender::end()
 			}
 		}
 	}
-
-	rsx::simple_array<int> buffers_to_clear;
-	bool clear_all_color = true;
-	bool clear_depth = false;
-
-	for (int index = 0; index < 4; index++)
+	else
 	{
-		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0)
+		rsx::simple_array<int> buffers_to_clear;
+		bool clear_all_color = true;
+		bool clear_depth = false;
+
+		for (int index = 0; index < 4; index++)
 		{
-			if (std::get<1>(m_rtts.m_bound_render_targets[index])->cleared())
-				clear_all_color = false;
-			else
-				buffers_to_clear.push_back(index);
-		}
-	}
-
-	if (ds && !ds->cleared())
-	{
-		clear_depth = true;
-	}
-
-	if (clear_depth || buffers_to_clear.size() > 0)
-	{
-		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
-		GLenum mask = 0;
-
-		if (clear_depth)
-		{
-			gl_state.depth_mask(GL_TRUE);
-			gl_state.clear_depth(1.f);
-			gl_state.clear_stencil(255);
-			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+			if (m_rtts.m_bound_render_targets[index].first)
+			{
+				if (!m_rtts.m_bound_render_targets[index].second->dirty())
+					clear_all_color = false;
+				else
+					buffers_to_clear.push_back(index);
+			}
 		}
 
-		if (clear_all_color)
-			mask |= GL_COLOR_BUFFER_BIT;
-
-		glClear(mask);
-
-		if (buffers_to_clear.size() > 0 && !clear_all_color)
+		if (ds && ds->dirty())
 		{
-			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
-			//It is impossible for the render target to be type A or B here (clear all would have been flagged)
-			for (auto &i : buffers_to_clear)
-				glClearBufferfv(GL_COLOR, i, colors);
+			clear_depth = true;
 		}
 
-		if (clear_depth)
-			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+		if (clear_depth || buffers_to_clear.size() > 0)
+		{
+			gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
+			GLenum mask = 0;
+
+			if (clear_depth)
+			{
+				gl_state.depth_mask(GL_TRUE);
+				gl_state.clear_depth(1.f);
+				gl_state.clear_stencil(255);
+				mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+			}
+
+			if (clear_all_color)
+				mask |= GL_COLOR_BUFFER_BIT;
+
+			glClear(mask);
+
+			if (buffers_to_clear.size() > 0 && !clear_all_color)
+			{
+				GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
+				//It is impossible for the render target to be type A or B here (clear all would have been flagged)
+				for (auto &i : buffers_to_clear)
+					glClearBufferfv(GL_COLOR, i, colors);
+			}
+
+			if (clear_depth)
+				gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+		}
 	}
 
 	// Unconditionally enable stencil test if it was disabled before
@@ -1136,6 +1138,13 @@ void GLGSRender::clear_surface(u32 arg)
 
 	GLbitfield mask = 0;
 
+	gl::command_context cmd{ gl_state };
+	const bool require_mem_load =
+		rsx::method_registers.scissor_origin_x() > 0 ||
+		rsx::method_registers.scissor_origin_y() > 0 ||
+		rsx::method_registers.scissor_width() < rsx::method_registers.surface_clip_width() ||
+		rsx::method_registers.scissor_height() < rsx::method_registers.surface_clip_height();
+
 	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
@@ -1161,7 +1170,7 @@ void GLGSRender::clear_surface(u32 arg)
 				mask |= GLenum(gl::buffers::stencil);
 			}
 
-			if ((arg & 0x3) != 0x3 && ds->dirty)
+			if ((arg & 0x3) != 0x3 && !require_mem_load && ds->dirty())
 			{
 				verify(HERE), mask;
 
@@ -1185,6 +1194,8 @@ void GLGSRender::clear_surface(u32 arg)
 
 		if (mask)
 		{
+			if (require_mem_load) ds->write_barrier(cmd);
+
 			// Memory has been initialized
 			m_rtts.on_write(std::get<0>(m_rtts.m_bound_depth_stencil));
 		}
@@ -1220,8 +1231,9 @@ void GLGSRender::clear_surface(u32 arg)
 
 			for (auto &rtt : m_rtts.m_bound_render_targets)
 			{
-				if (const auto address = std::get<0>(rtt))
+				if (const auto address = rtt.first)
 				{
+					if (require_mem_load) rtt.second->write_barrier(cmd);
 					m_rtts.on_write(address);
 				}
 			}

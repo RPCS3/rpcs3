@@ -233,7 +233,7 @@ namespace gl
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				auto as_rtt = static_cast<gl::render_target*>(vram_texture);
-				if (as_rtt->dirty) as_rtt->read_barrier(cmd);
+				if (as_rtt->dirty()) as_rtt->read_barrier(cmd);
 			}
 
 			gl::texture* target_texture = vram_texture;

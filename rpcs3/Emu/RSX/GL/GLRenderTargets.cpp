@@ -615,36 +615,28 @@ void GLGSRender::read_buffers()
 
 void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init)
 {
-	auto is_depth = [](gl::texture::internal_format format)
+	auto clear_surface_impl = [&]()
 	{
-		// TODO: Change this to image aspect semantics
-		switch (format)
+		if (aspect() & gl::image_aspect::depth)
 		{
-		case gl::texture::internal_format::depth16:
-		case gl::texture::internal_format::depth24_stencil8:
-		case gl::texture::internal_format::depth32f_stencil8:
-			return true;
-		default:
-			return false;
+			gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
 		}
+		else
+		{
+			gl::g_hw_blitter->fast_clear_image(cmd, this, {});
+		}
+
+		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
 	};
 
 	if (!old_contents)
 	{
 		// No memory to inherit
-		if (dirty && force_init)
+		if (dirty() && (force_init || state_flags & rsx::surface_state_flags::erase_bkgnd))
 		{
 			// Initialize memory contents if we did not find anything usable
 			// TODO: Properly sync with Cell
-			if (is_depth(get_internal_format()))
-			{
-				gl::g_hw_blitter->fast_clear_image(cmd, this, 1.f, 255);
-			}
-			else
-			{
-				gl::g_hw_blitter->fast_clear_image(cmd, this, {});
-			}
-
+			clear_surface_impl();
 			on_write();
 		}
 
@@ -685,6 +677,19 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 
 	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
 	old_contents.init_transfer(this);
+
+	if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+	{
+		const auto area = old_contents.dst_rect();
+		if (area.x1 > 0 || area.y1 > 0 || area.x2 < width() || area.y2 < height())
+		{
+			clear_surface_impl();
+		}
+		else
+		{
+			state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+		}
+	}
 
 	gl::g_hw_blitter->scale_image(cmd, old_contents.source, this,
 		old_contents.src_rect(),
