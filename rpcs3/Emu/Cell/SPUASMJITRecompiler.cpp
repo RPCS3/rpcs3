@@ -157,7 +157,7 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	}
 
 	// Load actual PC and check status
-	c->push(x86::rax);
+	c->sub(x86::rsp, 0x28);
 	c->mov(pc0->r32(), SPU_OFF_32(pc));
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_stop);
@@ -793,7 +793,7 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	// Simply return
 	c->align(kAlignCode, 16);
 	c->bind(label_stop);
-	c->pop(x86::rax);
+	c->add(x86::rsp, 0x28);
 	c->ret();
 
 	if (g_cfg.core.spu_verification)
@@ -802,7 +802,7 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 		c->align(kAlignCode, 16);
 		c->bind(label_diff);
 		c->inc(SPU_OFF_64(block_failure));
-		c->pop(x86::rax);
+		c->add(x86::rsp, 0x28);
 		c->jmp(imm_ptr(spu_runtime::tr_dispatch));
 	}
 
@@ -981,7 +981,7 @@ void spu_recompiler::branch_fixed(u32 target)
 
 	if (ppptr)
 	{
-		c->pop(x86::rax);
+		c->add(x86::rsp, 0x28);
 		c->jmp(imm_ptr(ppptr));
 	}
 	else
@@ -1025,7 +1025,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		c->bind(fail);
 		c->mov(SPU_OFF_32(pc), *addr);
 		c->mov(*arg0, *cpu);
-		c->pop(x86::rax);
+		c->add(x86::rsp, 0x28);
 		c->jmp(imm_ptr<void(*)(spu_thread*)>(_throw));
 
 		// Save addr in srr0 and disable interrupts
@@ -1092,7 +1092,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 
 	if (ppptr)
 	{
-		c->pop(x86::rax);
+		c->add(x86::rsp, 0x28);
 		c->jmp(imm_ptr(ppptr));
 	}
 	else
@@ -1282,7 +1282,7 @@ void spu_recompiler::get_events()
 
 		c->bind(fail);
 		c->mov(*arg0, *cpu);
-		c->pop(x86::rax);
+		c->add(x86::rsp, 0x28);
 		c->jmp(imm_ptr<void(*)(spu_thread*)>(_throw));
 	});
 
@@ -1308,7 +1308,7 @@ void spu_recompiler::UNK(spu_opcode_t op)
 	c->mov(SPU_OFF_32(pc), *addr);
 	c->mov(arg1->r32(), op.opcode);
 	c->mov(*arg0, *cpu);
-	c->pop(asmjit::x86::rax);
+	c->add(asmjit::x86::rsp, 0x28);
 	c->jmp(asmjit::imm_ptr<void(*)(spu_thread*, u32)>(gate));
 	m_pos = -1;
 }
