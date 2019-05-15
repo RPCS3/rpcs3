@@ -540,9 +540,14 @@ namespace vk
 
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range)
 	{
+		// NOTE: Sampling from an attachment in ATTACHMENT_OPTIMAL layout on some hw ends up with garbage output
+		// Transition to GENERAL if this resource is both input and output
+		// TODO: This implicitly makes the target incompatible with the renderpass declaration; investigate a proper workaround
+		// TODO: This likely throws out hw optimizations on the rest of the renderpass, manage carefully
+
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.newLayout = layout;
+		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 		barrier.oldLayout = layout;
 		barrier.image = image;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -558,7 +563,7 @@ namespace vk
 		}
 		else
 		{
-			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 		}
 
