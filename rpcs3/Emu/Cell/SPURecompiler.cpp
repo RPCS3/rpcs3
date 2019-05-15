@@ -3287,8 +3287,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			if (ffound != m_funcs.end() && ffound->second.good)
 			{
 				// Real function type (not equal to chunk type)
-				// 4. $SP (only 32 bit value)
-				const auto func_type = get_ftype<u32[4][2], u8*, u8*, u32, u32[4], u32[4], u32[4]>();
+				// 4. $SP
+				// 5. $3
+				const auto func_type = get_ftype<u32[4], u8*, u8*, u32, u32[4], u32[4]>();
 
 				const std::string fname = fmt::format("spu-function-0x%05x", addr);
 				llvm::Function* fn = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(fname, func_type).getCallee());
@@ -3360,30 +3361,22 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		llvm::Value* lr{};
 		llvm::Value* sp{};
-		llvm::Value* args[2]{};
+		llvm::Value* r3{};
 
 		if (!m_finfo->fn && !m_block)
 		{
 			lr = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::gpr, +s_reg_lr, &v128::_u32, 3));
 			sp = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, +s_reg_sp));
-
-			for (u32 i = 3; i < 3 + std::size(args); i++)
-			{
-				args[i - 3] = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, +i));
-			}
+			r3 = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, 3));
 		}
 		else
 		{
 			lr = m_ir->CreateExtractElement(get_reg_fixed<u32[4]>(s_reg_lr).value, 3);
 			sp = get_reg_fixed<u32[4]>(s_reg_sp).value;
-
-			for (u32 i = 3; i < 3 + std::size(args); i++)
-			{
-				args[i - 3] = get_reg_fixed<u32[4]>(i).value;
-			}
+			r3 = get_reg_fixed<u32[4]>(3).value;
 		}
 
-		const auto _call = m_ir->CreateCall(verify(HERE, fn), {m_thread, m_lsptr, m_base_pc, sp, args[0], args[1]});
+		const auto _call = m_ir->CreateCall(verify(HERE, fn), {m_thread, m_lsptr, m_base_pc, sp, r3});
 
 		_call->setCallingConv(fn->getCallingConv());
 
@@ -3392,7 +3385,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		{
 			lr = m_ir->CreateAnd(lr, 0x3fffc);
 			m_ir->CreateStore(lr, spu_ptr<u32>(&spu_thread::pc));
-			m_ir->CreateStore(_call, spu_ptr<u32[4][2]>(&spu_thread::gpr, 3));
+			m_ir->CreateStore(_call, spu_ptr<u32[4]>(&spu_thread::gpr, 3));
 			m_ir->CreateBr(add_block_indirect({}, value<u32>(lr)));
 		}
 		else if (tail)
@@ -3411,24 +3404,15 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				}
 			}
 
-			for (u32 i = 3; i < 3 + std::size(args); i++)
-			{
-				m_block->reg[i] = m_ir->CreateExtractValue(_call, {i - 3});
-			}
+			// Set result
+			m_block->reg[3] = _call;
 		}
 	}
 
 	// Emit return from the real function
 	void ret_function()
 	{
-		llvm::Value* r = llvm::ConstantAggregateZero::get(get_type<u32[4][2]>());
-
-		for (u32 i = 3; i < 5; i++)
-		{
-			r = m_ir->CreateInsertValue(r, get_reg_fixed<u32[4]>(i).value, {i - 3});
-		}
-
-		m_ir->CreateRet(r);
+		m_ir->CreateRet(get_reg_fixed<u32[4]>(3).value);
 	}
 
 	void set_function(llvm::Function* func)
@@ -3485,10 +3469,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				m_finfo->load[s_reg_sp] = &*(fn->arg_begin() + 3);
 
 				// Load first args
-				for (u32 i = 3; i < 5; i++)
-				{
-					m_finfo->load[i] = &*(fn->arg_begin() + i + 1);
-				}
+				m_finfo->load[3] = &*(fn->arg_begin() + 4);
 			}
 		}
 		else if (m_block_info[target / 4] && m_entry_info[target / 4] && !(pred_found && m_entry == target) && (!m_finfo->fn || !m_ret_info[target / 4]))
@@ -3915,7 +3896,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (m_finfo && m_finfo->fn)
 		{
-			if (index == s_reg_lr || (index >= 3 && index <= 4) || (index >= s_reg_80 && index <= s_reg_127))
+			if (index == s_reg_lr || index == 3 || (index >= s_reg_80 && index <= s_reg_127))
 			{
 				// Don't save some registers in true functions
 				return;
