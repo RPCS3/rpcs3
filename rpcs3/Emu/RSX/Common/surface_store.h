@@ -857,6 +857,20 @@ namespace rsx
 				new_surface = Traits::get(new_surface_storage);
 			}
 
+			if (!old_surface)
+			{
+				// Remove and preserve if possible any overlapping/replaced depth surface
+				auto aliased_depth_surface = m_depth_stencil_storage.find(address);
+				if (aliased_depth_surface != m_depth_stencil_storage.end())
+				{
+					old_surface = Traits::get(aliased_depth_surface->second);
+
+					Traits::notify_surface_invalidated(aliased_depth_surface->second);
+					invalidated_resources.push_back(std::move(aliased_depth_surface->second));
+					m_depth_stencil_storage.erase(aliased_depth_surface);
+				}
+			}
+
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
 			// Check if old_surface is 'new' and avoid intersection
 			if (old_surface && old_surface->last_use_tag >= write_tag)
@@ -873,22 +887,6 @@ namespace rsx
 			{
 				// New surface was found among invalidated surfaces
 				m_render_targets_storage[address] = std::move(new_surface_storage);
-			}
-
-			// Remove and preserve if possible any overlapping/replaced depth surface
-			auto aliased_depth_surface = m_depth_stencil_storage.find(address);
-			if (aliased_depth_surface != m_depth_stencil_storage.end())
-			{
-				if (Traits::surface_is_pitch_compatible(aliased_depth_surface->second, pitch))
-				{
-					// Preserve memory outside the area to be inherited if needed
-					const u8 bpp = get_format_block_size_in_bytes(color_format);
-					split_surface_region<true>(command_list, address, Traits::get(aliased_depth_surface->second), (u16)width, (u16)height, bpp, antialias);
-				}
-
-				Traits::notify_surface_invalidated(aliased_depth_surface->second);
-				invalidated_resources.push_back(std::move(aliased_depth_surface->second));
-				m_depth_stencil_storage.erase(aliased_depth_surface);
 			}
 
 			return new_surface;
@@ -988,6 +986,20 @@ namespace rsx
 				new_surface = Traits::get(new_surface_storage);
 			}
 
+			if (!old_surface)
+			{
+				// Remove and preserve if possible any overlapping/replaced color surface
+				auto aliased_rtt_surface = m_render_targets_storage.find(address);
+				if (aliased_rtt_surface != m_render_targets_storage.end())
+				{
+					old_surface = Traits::get(aliased_rtt_surface->second);
+
+					Traits::notify_surface_invalidated(aliased_rtt_surface->second);
+					invalidated_resources.push_back(std::move(aliased_rtt_surface->second));
+					m_render_targets_storage.erase(aliased_rtt_surface);
+				}
+			}
+
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
 			// Check if old_surface is 'new' and avoid intersection
 			if (old_surface && old_surface->last_use_tag >= write_tag)
@@ -1004,21 +1016,6 @@ namespace rsx
 			{
 				// New surface was found among invalidated surfaces
 				m_depth_stencil_storage[address] = std::move(new_surface_storage);
-			}
-
-			// Remove and preserve if possible any overlapping/replaced color surface
-			auto aliased_rtt_surface = m_render_targets_storage.find(address);
-			if (aliased_rtt_surface != m_render_targets_storage.end())
-			{
-				if (Traits::surface_is_pitch_compatible(aliased_rtt_surface->second, pitch))
-				{
-					const u8 bpp = (depth_format == rsx::surface_depth_format::z16) ? 2 : 4;
-					split_surface_region<false>(command_list, address, Traits::get(aliased_rtt_surface->second), (u16)width, (u16)height, bpp, antialias);
-				}
-
-				Traits::notify_surface_invalidated(aliased_rtt_surface->second);
-				invalidated_resources.push_back(std::move(aliased_rtt_surface->second));
-				m_render_targets_storage.erase(aliased_rtt_surface);
 			}
 
 			return new_surface;
