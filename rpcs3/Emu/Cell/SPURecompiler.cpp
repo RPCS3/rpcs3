@@ -4028,7 +4028,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Update PC for current or explicitly specified instruction address
 	void update_pc(u32 target = -1)
 	{
-		m_ir->CreateStore(get_pc(target + 1 ? target : m_pos), spu_ptr<u32>(&spu_thread::pc), true);
+		m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr<u32>(&spu_thread::pc), true);
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
@@ -8096,7 +8096,7 @@ public:
 			return;
 		}
 
-		set_vr(op.rt, insert(splat<u32[4]>(0), 3, value<u32>(get_pc(m_pos + 4))));
+		set_vr(op.rt, insert(splat<u32[4]>(0), 3, value<u32>(get_pc(m_pos + 4)) & 0x3fffc));
 
 		if (m_finfo && m_finfo->fn)
 		{
