@@ -952,7 +952,7 @@ static void check_state(spu_thread* _spu)
 	}
 }
 
-void spu_recompiler::branch_fixed(u32 target)
+void spu_recompiler::branch_fixed(u32 target, bool absolute)
 {
 	using namespace asmjit;
 
@@ -961,6 +961,15 @@ void spu_recompiler::branch_fixed(u32 target)
 
 	if (local != instr_labels.end() && local->second.isValid())
 	{
+		Label fail;
+
+		if (absolute)
+		{
+			fail = c->newLabel();
+			c->cmp(pc0->r32(), m_base);
+			c->jne(fail);
+		}
+
 		c->cmp(SPU_OFF_32(state), 0);
 		c->jz(local->second);
 		c->lea(addr->r64(), get_pc(target));
@@ -969,14 +978,30 @@ void spu_recompiler::branch_fixed(u32 target)
 		c->mov(*arg0, *cpu);
 		c->call(imm_ptr(&check_state));
 		c->jmp(local->second);
-		return;
+
+		if (absolute)
+		{
+			c->bind(fail);
+		}
+		else
+		{
+			return;
+		}
 	}
 
 	const auto ppptr = !g_cfg.core.spu_verification ? nullptr : m_spurt->make_branch_patchpoint();
 
-	c->lea(addr->r64(), get_pc(target));
-	c->and_(*addr, 0x3fffc);
-	c->mov(SPU_OFF_32(pc), *addr);
+	if (absolute)
+	{
+		c->mov(SPU_OFF_32(pc), target);
+	}
+	else
+	{
+		c->lea(addr->r64(), get_pc(target));
+		c->and_(*addr, 0x3fffc);
+		c->mov(SPU_OFF_32(pc), *addr);
+	}
+
 	c->xor_(rip->r32(), rip->r32());
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_stop);
@@ -4132,11 +4157,8 @@ void spu_recompiler::BRA(spu_opcode_t op)
 {
 	const u32 target = spu_branch_target(0, op.i16);
 
-	if (target != m_pos + 4)
-	{
-		branch_fixed(target);
-		m_pos = -1;
-	}
+	branch_fixed(target, true);
+	m_pos = -1;
 }
 
 void spu_recompiler::LQA(spu_opcode_t op)
@@ -4170,12 +4192,9 @@ void spu_recompiler::BRASL(spu_opcode_t op)
 	c->pslldq(vr, 12);
 	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 
-	if (target != m_pos + 4)
-	{
-		branch_set_link(m_pos + 4);
-		branch_fixed(target);
-		m_pos = -1;
-	}
+	branch_set_link(m_pos + 4);
+	branch_fixed(target, true);
+	m_pos = -1;
 }
 
 void spu_recompiler::BR(spu_opcode_t op)

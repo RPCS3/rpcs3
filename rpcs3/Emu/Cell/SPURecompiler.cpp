@@ -1344,14 +1344,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			{
 				const u32 target = spu_branch_target(av);
 
-				if (target == pos + 4)
-				{
-					LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to next%s", result[0], pos, op.d ? " (D)" : op.e ? " (E)" : "");
-				}
-				else
-				{
-					LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x", result[0], pos, target);
-				}
+				LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x%s", result[0], pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
 
 				m_targets[pos].push_back(target);
 
@@ -1368,11 +1361,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 					}
 					else
 					{
-						if (op.d || op.e)
-						{
-							m_entry_info[target / 4] = true;
-						}
-
+						m_entry_info[target / 4] = true;
 						add_block(target);
 					}
 				}
@@ -1578,7 +1567,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = pos + 4;
 
-			if (target == pos + 4)
+			if (type == spu_itype::BRSL && target == pos + 4)
 			{
 				// Get next instruction address idiom
 				break;
@@ -1616,14 +1605,39 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			break;
 		}
 
-		case spu_itype::BR:
 		case spu_itype::BRA:
+		{
+			const u32 target = spu_branch_target(0, op.i16);
+
+			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
+			{
+				m_entry_info[target / 4] = true;
+				add_block(target);
+			}
+			else
+			{
+				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
+				{
+					LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", result[0], pos, target);
+				}
+
+				if (target > entry_point)
+				{
+					limit = std::min<u32>(limit, target);
+				}
+			}
+
+			next_block();
+			break;
+		}
+
+		case spu_itype::BR:
 		case spu_itype::BRZ:
 		case spu_itype::BRNZ:
 		case spu_itype::BRHZ:
 		case spu_itype::BRHNZ:
 		{
-			const u32 target = spu_branch_target(type == spu_itype::BRA ? 0 : pos, op.i16);
+			const u32 target = spu_branch_target(pos, op.i16);
 
 			if (target == pos + 4)
 			{
@@ -1634,7 +1648,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_targets[pos].push_back(target);
 			add_block(target);
 
-			if (type != spu_itype::BR && type != spu_itype::BRA)
+			if (type != spu_itype::BR)
 			{
 				m_targets[pos].push_back(pos + 4);
 				add_block(pos + 4);
@@ -2192,6 +2206,10 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 					break;
 				case spu_itype::BRASL:
 					is_call = spu_branch_target(0, op.i16) != ia + 4;
+					break;
+				case spu_itype::BRA:
+					is_call = true;
+					is_tail = true;
 					break;
 				case spu_itype::BISL:
 				case spu_itype::BISLED:
@@ -2779,21 +2797,19 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		switch (last_inst)
 		{
 		case spu_itype::BR:
-		case spu_itype::BRA:
 		case spu_itype::BRNZ:
 		case spu_itype::BRZ:
 		case spu_itype::BRHNZ:
 		case spu_itype::BRHZ:
 		case spu_itype::BRSL:
-		case spu_itype::BRASL:
 		{
-			const u32 target = spu_branch_target(last_inst == spu_itype::BRA || last_inst == spu_itype::BRASL ? 0 : tia, op.i16);
+			const u32 target = spu_branch_target(tia, op.i16);
 
 			if (target == tia + 4)
 			{
 				bb.terminator = term_type::fallthrough;
 			}
-			else if (last_inst != spu_itype::BRSL && last_inst != spu_itype::BRASL)
+			else if (last_inst != spu_itype::BRSL)
 			{
 				// No-op terminator or simple branch instruction
 				bb.terminator = term_type::br;
@@ -2813,6 +2829,12 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				bb.terminator = term_type::interrupt_call;
 			}
 
+			break;
+		}
+		case spu_itype::BRA:
+		case spu_itype::BRASL:
+		{
+			bb.terminator = term_type::indirect_call;
 			break;
 		}
 		case spu_itype::BI:
@@ -3449,7 +3471,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	// Add block with current block as a predecessor
-	llvm::BasicBlock* add_block(u32 target)
+	llvm::BasicBlock* add_block(u32 target, bool absolute = false)
 	{
 		// Check the predecessor
 		const bool pred_found = m_block_info[target / 4] && m_preds[target].find_first_of(m_pos) + 1;
@@ -3497,6 +3519,19 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			m_ir->SetInsertPoint(result);
 			const auto pfinfo = add_function(target);
 
+			if (absolute)
+			{
+				verify(HERE), !m_finfo->fn;
+
+				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
+				m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_base_pc, m_ir->getInt32(m_base)), next, fail);
+				m_ir->SetInsertPoint(fail);
+				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc), true);
+				tail_chunk(nullptr);
+				m_ir->SetInsertPoint(next);
+			}
+
 			if (pfinfo->fn)
 			{
 				// Tail call to the real function
@@ -3525,11 +3560,24 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto cblock = m_ir->GetInsertBlock();
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
-			update_pc(target);
+
+			if (absolute)
+			{
+				verify(HERE), !m_finfo->fn;
+
+				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc), true);
+			}
+			else
+			{
+				update_pc(target);
+			}
+
 			tail_chunk(nullptr);
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
+
+		verify(HERE), !absolute;
 
 		auto& result = m_blocks[target].block;
 
@@ -7639,33 +7687,10 @@ public:
 			return result;
 		}
 
-		// Convert an indirect branch into a static one if possible
-		if (const auto _int = llvm::dyn_cast<llvm::ConstantInt>(addr.value); _int && op.opcode)
+		if (llvm::isa<llvm::Constant>(addr.value))
 		{
-			const u32 target = ::narrow<u32>(_int->getZExtValue(), HERE);
-
-			LOG_WARNING(SPU, "[0x%x] Fixed branch to 0x%x", m_pos, target);
-
-			if (!op.e && !op.d)
-			{
-				return add_block(target);
-			}
-
-			if (!m_entry_info[target / 4])
-			{
-				LOG_ERROR(SPU, "[0x%x] Fixed branch to 0x%x", m_pos, target);
-			}
-			else
-			{
-				add_function(target);
-			}
-
 			// Fixed branch excludes the possibility it's a function return (TODO)
 			ret = false;
-		}
-		else if (llvm::isa<llvm::Constant>(addr.value) && op.opcode)
-		{
-			LOG_ERROR(SPU, "[0x%x] Unexpected constant (add_block_indirect)", m_pos);
 		}
 
 		if (m_finfo && m_finfo->fn && op.opcode)
@@ -8011,33 +8036,13 @@ public:
 
 		const u32 target = spu_branch_target(0, op.i16);
 
-		if (target != m_pos + 4)
-		{
-			m_block->block_end = m_ir->GetInsertBlock();
-			m_ir->CreateBr(add_block(target));
-		}
+		m_block->block_end = m_ir->GetInsertBlock();
+		m_ir->CreateBr(add_block(target, true));
 	}
 
 	void BRASL(spu_opcode_t op) //
 	{
 		set_link(op);
-
-		const u32 target = spu_branch_target(0, op.i16);
-
-		if (m_finfo && m_finfo->fn && target != m_pos + 4)
-		{
-			if (auto fn = add_function(target)->fn)
-			{
-				call_function(fn);
-				return;
-			}
-			else
-			{
-				LOG_FATAL(SPU, "[0x%x] Can't add function 0x%x", m_pos, target);
-				return;
-			}
-		}
-
 		BRA(op);
 	}
 
