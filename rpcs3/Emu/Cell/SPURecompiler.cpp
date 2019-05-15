@@ -180,8 +180,25 @@ DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>([](asm
 
 	// Restore native stack pointer (longjmp emulation)
 	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
-	c.sub(x86::rsp, 8);
-	c.ret();
+
+	// Return to the return location
+	c.jmp(x86::qword_ptr(x86::rsp, -8));
+});
+
+DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, spu_function_t, u8*)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	// Restore native stack pointer (longjmp emulation)
+	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
+
+	// Tail call, GHC CC (second arg)
+	c.mov(x86::r13, args[0]);
+	c.mov(x86::ebp, x86::dword_ptr(args[0], ::offset32(&spu_thread::offset)));
+	c.add(x86::rbp, x86::qword_ptr(args[0], ::offset32(&spu_thread::memory_base_addr)));
+	c.mov(x86::r12, args[2]);
+	c.xor_(x86::ebx, x86::ebx);
+	c.jmp(args[1]);
 });
 
 DECLARE(spu_runtime::g_interpreter) = nullptr;
