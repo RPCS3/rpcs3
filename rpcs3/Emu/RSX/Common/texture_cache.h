@@ -1252,7 +1252,7 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, Args&&... extras)
+		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, bool is_active_surface, u32 width, u32 height, u32 pitch, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
@@ -1297,15 +1297,18 @@ namespace rsx
 			region.set_dirty(false);
 			region.touch(m_cache_update_tag);
 
-			// Add to flush always cache
-			if (region.get_memory_read_flags() != memory_read_flags::flush_always)
+			if (is_active_surface)
 			{
-				region.set_memory_read_flags(memory_read_flags::flush_always, false);
-				update_flush_always_cache(region, true);
-			}
-			else
-			{
-				AUDIT(m_flush_always_cache.find(region.get_section_range()) != m_flush_always_cache.end());
+				// Add to flush always cache
+				if (region.get_memory_read_flags() != memory_read_flags::flush_always)
+				{
+					region.set_memory_read_flags(memory_read_flags::flush_always, false);
+					update_flush_always_cache(region, true);
+				}
+				else
+				{
+					AUDIT(m_flush_always_cache.find(region.get_section_range()) != m_flush_always_cache.end());
+				}
 			}
 
 			update_cache_tag();

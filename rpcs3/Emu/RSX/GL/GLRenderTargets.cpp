@@ -398,7 +398,9 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		if (g_cfg.video.write_color_buffers)
 		{
 			// Mark buffer regions as NO_ACCESS on Cell-visible side
-			m_gl_texture_cache.lock_memory_region(cmd, std::get<1>(m_rtts.m_bound_render_targets[i]), surface_range, m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
+			m_gl_texture_cache.lock_memory_region(
+				cmd, m_rtts.m_bound_render_targets[i].second, surface_range, true,
+				m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
 				color_format.format, color_format.type, color_format.swap_bytes);
 		}
 		else
@@ -413,7 +415,9 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		if (g_cfg.video.write_depth_buffer)
 		{
 			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(layout.depth_format);
-			m_gl_texture_cache.lock_memory_region(cmd, std::get<1>(m_rtts.m_bound_depth_stencil), surface_range, m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
+			m_gl_texture_cache.lock_memory_region(
+				cmd, m_rtts.m_bound_depth_stencil.second, surface_range, true,
+				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
 				depth_format_gl.format, depth_format_gl.type, true);
 		}
 		else
@@ -451,7 +455,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 					swap_bytes = color_format_gl.swap_bytes;
 				}
 
-				m_gl_texture_cache.lock_memory_region(cmd, surface, surface->get_memory_range(),
+				m_gl_texture_cache.lock_memory_region(
+					cmd, surface, surface->get_memory_range(), false,
 					surface->get_surface_width(), surface->get_surface_height(), surface->get_rsx_pitch(),
 					format, type, swap_bytes);
 			}
@@ -681,7 +686,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	if (state_flags & rsx::surface_state_flags::erase_bkgnd)
 	{
 		const auto area = old_contents.dst_rect();
-		if (area.x1 > 0 || area.y1 > 0 || area.x2 < width() || area.y2 < height())
+		if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
 		{
 			clear_surface_impl();
 		}
