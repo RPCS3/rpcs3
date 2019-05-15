@@ -3288,7 +3288,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			{
 				// Real function type (not equal to chunk type)
 				// 4. $SP (only 32 bit value)
-				const auto func_type = get_ftype<u32[4][2], u8*, u8*, u32, u32, u32[4], u32[4]>();
+				const auto func_type = get_ftype<u32[4][2], u8*, u8*, u32, u32[4], u32[4], u32[4]>();
 
 				const std::string fname = fmt::format("spu-function-0x%05x", addr);
 				llvm::Function* fn = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(fname, func_type).getCallee());
@@ -3365,7 +3365,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		if (!m_finfo->fn && !m_block)
 		{
 			lr = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::gpr, +s_reg_lr, &v128::_u32, 3));
-			sp = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::gpr, +s_reg_sp, &v128::_u32, 3));
+			sp = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, +s_reg_sp));
 
 			for (u32 i = 3; i < 3 + std::size(args); i++)
 			{
@@ -3375,7 +3375,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		else
 		{
 			lr = m_ir->CreateExtractElement(get_reg_fixed<u32[4]>(s_reg_lr).value, 3);
-			sp = m_ir->CreateExtractElement(get_reg_fixed<u32[4]>(s_reg_sp).value, 3);
+			sp = get_reg_fixed<u32[4]>(s_reg_sp).value;
 
 			for (u32 i = 3; i < 3 + std::size(args); i++)
 			{
@@ -3482,7 +3482,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				}
 
 				// Load $SP
-				//m_finfo->load[s_reg_sp] = m_ir->CreateVectorSplat(4, &*(fn->arg_begin() + 3));
+				m_finfo->load[s_reg_sp] = &*(fn->arg_begin() + 3);
 
 				// Load first args
 				for (u32 i = 3; i < 5; i++)
@@ -3918,6 +3918,11 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			if (index == s_reg_lr || (index >= 3 && index <= 4) || (index >= s_reg_80 && index <= s_reg_127))
 			{
 				// Don't save some registers in true functions
+				return;
+			}
+
+			if (index == s_reg_sp)
+			{
 				return;
 			}
 		}
@@ -7498,7 +7503,7 @@ public:
 	{
 		if (m_finfo && m_finfo->fn)
 		{
-			if (op.rt == s_reg_lr || (op.rt >= s_reg_80 && op.rt <= s_reg_127))
+			if (op.rt <= s_reg_sp || (op.rt >= s_reg_80 && op.rt <= s_reg_127))
 			{
 				if (m_block->bb->reg_save_dom[op.rt] && get_reg_raw(op.rt) == m_finfo->load[op.rt])
 				{
@@ -7525,6 +7530,8 @@ public:
 		m_ir->SetInsertPoint(halt);
 		if (m_interp_magn)
 			m_ir->CreateStore(&*(m_function->arg_begin() + 2), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
+		else
+			update_pc();
 		const auto pstatus = spu_ptr<u32>(&spu_thread::status);
 		const auto chalt = m_ir->getInt32(SPU_STATUS_STOPPED_BY_HALT);
 		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, pstatus, chalt, llvm::AtomicOrdering::Release)->setVolatile(true);
