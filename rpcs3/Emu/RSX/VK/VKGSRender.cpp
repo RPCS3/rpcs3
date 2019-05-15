@@ -3083,8 +3083,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		const utils::address_range surface_range = m_surface_info[index].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
 		{
-			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_render_targets[index]), surface_range,
-				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index], color_fmt_info.first, color_fmt_info.second);
+			m_texture_cache.lock_memory_region(
+				*m_current_command_buffer, m_rtts.m_bound_render_targets[index].second, surface_range, true,
+				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index],
+				color_fmt_info.first, color_fmt_info.second);
 		}
 		else
 		{
@@ -3098,7 +3100,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (g_cfg.video.write_depth_buffer)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
-			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil), surface_range,
+			m_texture_cache.lock_memory_region(
+				*m_current_command_buffer, m_rtts.m_bound_depth_stencil.second, surface_range, true,
 				m_depth_surface_info.width, m_depth_surface_info.height, layout.actual_zeta_pitch, gcm_format, false);
 		}
 		else
@@ -3132,7 +3135,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 					swap_bytes = info.second;
 				}
 
-				m_texture_cache.lock_memory_region(*m_current_command_buffer, surface, surface->get_memory_range(),
+				m_texture_cache.lock_memory_region(
+					*m_current_command_buffer, surface, surface->get_memory_range(), false,
 					surface->get_surface_width(), surface->get_surface_height(), surface->get_rsx_pitch(),
 					gcm_format, swap_bytes);
 			}

@@ -146,7 +146,7 @@ namespace vk
 			if (state_flags & rsx::surface_state_flags::erase_bkgnd)
 			{
 				const auto area = old_contents.dst_rect();
-				if (area.x1 > 0 || area.y1 > 0 || area.x2 < width() || area.y2 < height())
+				if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
 				{
 					clear_surface_impl();
 				}
