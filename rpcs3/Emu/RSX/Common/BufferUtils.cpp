@@ -15,7 +15,7 @@ const bool s_use_ssse3 =
 	true;
 #else
 	false;
-#define _mm_shuffle_epi8
+#define _mm_shuffle_epi8(opa, opb) opb
 #endif
 
 namespace
