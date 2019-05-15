@@ -5124,8 +5124,6 @@ public:
 			tail_chunk(m_dispatch);
 			return;
 		}
-
-		check_state(m_pos + 4);
 	}
 
 	void STOPD(spu_opcode_t op) //

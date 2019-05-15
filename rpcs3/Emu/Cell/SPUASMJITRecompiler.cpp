@@ -1347,15 +1347,6 @@ void spu_recompiler::STOP(spu_opcode_t op)
 		c->jmp(label_stop);
 		m_pos = -1;
 	}
-	else
-	{
-		Label label_next = c->newLabel();
-		c->cmp(SPU_OFF_32(state), 0);
-		c->jz(label_next);
-		c->mov(*arg0, *cpu);
-		c->call(imm_ptr(&check_state));
-		c->bind(label_next);
-	}
 }
 
 void spu_recompiler::LNOP(spu_opcode_t op)
