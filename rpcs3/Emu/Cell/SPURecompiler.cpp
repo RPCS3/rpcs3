@@ -3896,14 +3896,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (m_finfo && m_finfo->fn)
 		{
-			if (index == s_reg_lr || index == 3 || (index >= s_reg_80 && index <= s_reg_127))
+			if (index <= 3 || (index >= s_reg_80 && index <= s_reg_127))
 			{
 				// Don't save some registers in true functions
-				return;
-			}
-
-			if (index == s_reg_sp)
-			{
 				return;
 			}
 		}
