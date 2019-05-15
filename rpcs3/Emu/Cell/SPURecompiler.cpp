@@ -7817,7 +7817,7 @@ public:
 		if (!op.d && !op.e && tfound != m_targets.end() && tfound->second.size() > 1)
 		{
 			// Shift aligned address for switch
-			const auto addrfx = m_ir->CreateAdd(m_ir->CreateSub(addr.value, m_base_pc), m_ir->getInt32(m_base));
+			const auto addrfx = m_ir->CreateSub(addr.value, m_base_pc);
 			const auto sw_arg = m_ir->CreateLShr(addrfx, 2, "", true);
 
 			// Initialize jump table targets
@@ -7860,12 +7860,12 @@ public:
 
 					if (found != targets.end())
 					{
-						sw->addCase(m_ir->getInt32(pos / 4), found->second);
+						sw->addCase(m_ir->getInt32(pos / 4 - m_base / 4), found->second);
 						continue;
 					}
 				}
 
-				sw->addCase(m_ir->getInt32(pos / 4), sw->getDefaultDest());
+				sw->addCase(m_ir->getInt32(pos / 4 - m_base / 4), sw->getDefaultDest());
 			}
 
 			// Exit function on unexpected target
