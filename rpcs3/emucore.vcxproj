@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug - LLVM|x64">
@@ -304,8 +304,16 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlays.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_edit_text.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_font.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_list_view.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_message_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_perf_metrics.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_progress_bar.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_save_dialog.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_shader_compile_notification.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_trophy_notification.cpp" />
     <ClCompile Include="Emu\RSX\RSXFIFO.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
     <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
