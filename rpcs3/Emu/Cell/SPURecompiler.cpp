@@ -7735,7 +7735,7 @@ public:
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&spu_thread::pc));
 		const auto type = m_finfo->chunk->getFunctionType()->getPointerTo()->getPointerTo();
 
-		if (ret && g_cfg.core.spu_block_size == spu_block_size_type::mega)
+		if (ret && g_cfg.core.spu_block_size >= spu_block_size_type::mega)
 		{
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&spu_thread::stack_mirror));
@@ -8107,7 +8107,7 @@ public:
 			return;
 		}
 
-		if (g_cfg.core.spu_block_size == spu_block_size_type::mega && m_block_info[m_pos / 4 + 1] && m_entry_info[m_pos / 4 + 1])
+		if (g_cfg.core.spu_block_size >= spu_block_size_type::mega && m_block_info[m_pos / 4 + 1] && m_entry_info[m_pos / 4 + 1])
 		{
 			// Store the return function chunk address at the stack mirror
 			const auto pfunc = add_function(m_pos + 4);
