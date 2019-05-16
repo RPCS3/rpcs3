@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cmath>
 #include <vector>
@@ -346,6 +346,8 @@ struct pad_config final : cfg::node
 	cfg::string l2      { this, "L2", "" };
 	cfg::string l3      { this, "L3", "" };
 
+	cfg::_int<0, 200> lstickmultiplier{this, "Left Stick Multiplier", 100};
+	cfg::_int<0, 200> rstickmultiplier{this, "Right Stick Multiplier", 100};
 	cfg::_int<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
@@ -437,9 +439,9 @@ protected:
 
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 	// the input values must lie in 0+
-	u16 NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 maximum);
+	u16 NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum);
 
-	u16 NormalizeStickInput(u16 raw_value, int threshold, bool ignore_threshold = false);
+	u16 NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold = false);
 
 	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
 	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range

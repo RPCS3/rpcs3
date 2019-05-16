@@ -525,12 +525,12 @@ void evdev_joystick_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u1
 	else if (checkButtons(m_dev.axis_left))
 	{
 		pressed = value > (ignore_threshold ? 0 : profile->lstickdeadzone);
-		value = pressed ? NormalizeStickInput(value, profile->lstickdeadzone, ignore_threshold) : 0;
+		value = pressed ? NormalizeStickInput(value, profile->lstickdeadzone, profile->lstickmultiplier, ignore_threshold) : 0;
 	}
 	else if (checkButtons(m_dev.axis_right))
 	{
 		pressed = value > (ignore_threshold ? 0 : profile->rstickdeadzone);
-		value = pressed ? NormalizeStickInput(value, profile->rstickdeadzone, ignore_threshold) : 0;
+		value = pressed ? NormalizeStickInput(value, profile->rstickdeadzone, profile->rstickmultiplier, ignore_threshold) : 0;
 	}
 	else // normal button (should in theory also support sensitive buttons)
 	{

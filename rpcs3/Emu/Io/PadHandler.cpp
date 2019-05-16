@@ -130,14 +130,14 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold)
 
 // normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 // the input values must lie in 0+
-u16 PadHandlerBase::NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 maximum)
+u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum)
 {
 	if (threshold >= maximum || maximum <= 0)
 	{
 		return static_cast<u16>(0);
 	}
 
-	float val = float(std::clamp(static_cast<s32>(raw_value), 0, maximum)) / float(maximum); // value based on max range converted to [0, 1]
+	float val = float(std::clamp(raw_value, 0, maximum)) / float(maximum); // value based on max range converted to [0, 1]
 
 	if (threshold <= 0)
 	{
@@ -150,15 +150,17 @@ u16 PadHandlerBase::NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 max
 	}
 }
 
-u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, bool ignore_threshold)
+u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold)
 {
+	const s32 scaled_value = (multiplier * raw_value) / 100;
+
 	if (ignore_threshold)
 	{
-		return static_cast<u16>(ScaleStickInput(raw_value, 0, thumb_max));
+		return static_cast<u16>(ScaleStickInput(scaled_value, 0, thumb_max));
 	}
 	else
 	{
-		return NormalizeDirectedInput(raw_value, threshold, thumb_max);
+		return NormalizeDirectedInput(scaled_value, threshold, thumb_max);
 	}
 }
 

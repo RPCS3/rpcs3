@@ -1,4 +1,4 @@
-#include "ds4_pad_handler.h"
+﻿#include "ds4_pad_handler.h"
 
 #include <thread>
 
@@ -340,14 +340,14 @@ void ds4_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val,
 	case DS4KeyCodes::LSYNeg:
 	case DS4KeyCodes::LSYPos:
 		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, p_profile->lstickmultiplier, ignore_threshold) : 0;
 		break;
 	case DS4KeyCodes::RSXNeg:
 	case DS4KeyCodes::RSXPos:
 	case DS4KeyCodes::RSYNeg:
 	case DS4KeyCodes::RSYPos:
 		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, p_profile->rstickmultiplier, ignore_threshold) : 0;
 		break;
 	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
