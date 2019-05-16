@@ -1364,7 +1364,6 @@ namespace vk
 			VkBool32 depth_compare = false, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
 			: m_device(dev)
 		{
-			VkSamplerCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 			info.addressModeU = clamp_u;
 			info.addressModeV = clamp_v;
