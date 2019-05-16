@@ -1,4 +1,4 @@
-
+﻿
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 
@@ -172,14 +172,14 @@ void xinput_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& v
 	case XInputKeyCodes::LSYPos:
 	case XInputKeyCodes::LSYNeg:
 		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, p_profile->lstickmultiplier, ignore_threshold) : 0;
 		break;
 	case XInputKeyCodes::RSXNeg:
 	case XInputKeyCodes::RSXPos:
 	case XInputKeyCodes::RSYPos:
 	case XInputKeyCodes::RSYNeg:
 		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, p_profile->rstickmultiplier, ignore_threshold) : 0;
 		break;
 	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
