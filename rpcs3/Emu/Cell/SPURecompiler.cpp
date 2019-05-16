@@ -7758,10 +7758,11 @@ public:
 			// Try to load chunk address from the function table
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
-			m_ir->CreateCondBr(m_ir->CreateICmpULT(addr.value, m_ir->getInt32(m_size)), done, fail, m_md_likely);
+			const auto ad32 = m_ir->CreateSub(addr.value, m_base_pc);
+			m_ir->CreateCondBr(m_ir->CreateICmpULT(ad32, m_ir->getInt32(m_size)), done, fail, m_md_likely);
 			m_ir->SetInsertPoint(done);
 
-			const auto ad64 = m_ir->CreateZExt(addr.value, get_type<u64>());
+			const auto ad64 = m_ir->CreateZExt(ad32, get_type<u64>());
 			const auto pptr = m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)});
 			tail_chunk(m_ir->CreateLoad(pptr));
 			m_ir->SetInsertPoint(fail);
