@@ -310,5 +310,5 @@ private:
 	QSize m_Icon_Size = gui::gl_icon_size_min; // ensure a valid size
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
-	bool m_drawCompatStatusToGrid;
+	bool m_drawCompatStatusToGrid = false;
 };

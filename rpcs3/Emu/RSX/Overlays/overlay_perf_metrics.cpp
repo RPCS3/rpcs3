@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "overlays.h"
 #include "../GSRender.h"
 
@@ -19,7 +19,7 @@ namespace rsx
 			}
 
 			unsigned long hexval;
-			const int len = hex_color.length();
+			const size_t len = hex_color.length();
 
 			try
 			{

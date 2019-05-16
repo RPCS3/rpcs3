@@ -1,4 +1,4 @@
-﻿#include "ds4_pad_handler.h"
+#include "ds4_pad_handler.h"
 
 #include <thread>
 
@@ -494,7 +494,7 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 #endif
 
 	// used to get the absolute value of an axis
-	s32 stick_val[4];
+	s32 stick_val[4]{0};
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)

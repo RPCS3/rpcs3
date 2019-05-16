@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <cmath>
 #include <vector>
@@ -175,7 +175,7 @@ struct Pad
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state;
 
-	// DS4: 0 - 9  while unplugged, 0 - 10 while plugged in, 11 charge complete
+	// DS4: 0 - 9 while unplugged, 0 - 10 while plugged in, 11 charge complete
 	// XInput: 0 = Empty, 1 = Low, 2 = Medium, 3 = Full
 	u8 m_battery_level;
 
@@ -227,6 +227,9 @@ struct Pad
 		, m_port_status(port_status)
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
+		, m_class_type(0)
+		, m_cable_state(0)
+		, m_battery_level(0)
 
 		, m_digital_1(0)
 		, m_digital_2(0)

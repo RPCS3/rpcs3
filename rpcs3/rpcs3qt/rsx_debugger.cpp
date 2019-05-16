@@ -1,4 +1,4 @@
-
+﻿
 #include "rsx_debugger.h"
 #include "qt_utils.h"
 
@@ -633,7 +633,7 @@ void rsx_debugger::GetMemory()
 	int item_count = m_list_commands->rowCount();
 
 	// Write information
-	for(u32 i=0, addr = m_addr; i < item_count; i++, addr += 4)
+	for (int i = 0, addr = m_addr; i < item_count; i++, addr += 4)
 	{
 		QTableWidgetItem* address_item = new QTableWidgetItem(qstr(fmt::format("%07x", addr)));
 		address_item->setData(Qt::UserRole, addr);

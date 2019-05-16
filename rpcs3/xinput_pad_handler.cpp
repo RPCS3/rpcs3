@@ -1,4 +1,4 @@
-﻿
+
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 
@@ -369,7 +369,7 @@ void xinput_pad_handler::ThreadProc()
 			}
 
 			// used to get the absolute value of an axis
-			s32 stick_val[4];
+			s32 stick_val[4]{0};
 
 			// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 			for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
