@@ -775,7 +775,6 @@ VKGSRender::~VKGSRender()
 	}
 
 	m_aux_frame_context.buffer_views_to_clean.clear();
-	m_aux_frame_context.samplers_to_clean.clear();
 
 	//NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
 	for (auto &ctx : frame_context_storage)
@@ -784,7 +783,6 @@ VKGSRender::~VKGSRender()
 		ctx.descriptor_pool.destroy();
 
 		ctx.buffer_views_to_clean.clear();
-		ctx.samplers_to_clean.clear();
 	}
 
 	m_draw_fbo.reset();
@@ -798,13 +796,7 @@ VKGSRender::~VKGSRender()
 	m_rtts.destroy();
 	m_texture_cache.destroy();
 
-	//Sampler handles
-	for (auto& handle : fs_sampler_handles)
-		handle.reset();
-
-	for (auto& handle : vs_sampler_handles)
-		handle.reset();
-
+	m_resource_manager.destroy();
 	m_stencil_mirror_sampler.reset();
 
 	//Overlay text handler
@@ -1594,14 +1586,13 @@ void VKGSRender::end()
 						if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode))
 						{
-							m_current_frame->samplers_to_clean.push_back(std::move(fs_sampler_handles[i]));
 							replace = true;
 						}
 					}
 
 					if (replace)
 					{
-						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+						fs_sampler_handles[i] = m_resource_manager.find_sampler(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
 					}
 				}
@@ -1641,14 +1632,13 @@ void VKGSRender::end()
 						if (!vs_sampler_handles[i]->matches(VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 							unnormalized_coords, 0.f, 1.f, min_lod, max_lod, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color))
 						{
-							m_current_frame->samplers_to_clean.push_back(std::move(vs_sampler_handles[i]));
 							replace = true;
 						}
 					}
 
 					if (replace)
 					{
-						vs_sampler_handles[i] = std::make_unique<vk::sampler>(
+						vs_sampler_handles[i] = m_resource_manager.find_sampler(
 							*m_device,
 							VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 							unnormalized_coords,
@@ -2506,7 +2496,6 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 		m_ui_renderer->free_resources();
 
 		ctx->buffer_views_to_clean.clear();
-		ctx->samplers_to_clean.clear();
 
 		if (ctx->last_frame_sync_time > m_last_heap_sync_time)
 		{
