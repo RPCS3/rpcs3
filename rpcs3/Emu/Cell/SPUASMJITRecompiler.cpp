@@ -1089,13 +1089,13 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		const u32 end = instr_labels.rbegin()->first + 4;
 
 		// Load local indirect jump address, check local bounds
+		verify(HERE), start == m_base;
 		Label fail = c->newLabel();
-		c->lea(*qw1, get_pc(start));
-		c->neg(*qw1);
-		c->lea(*qw1, x86::qword_ptr(addr->r64(), *qw1));
-		c->lea(addr->r64(), x86::qword_ptr(instr_table));
+		c->mov(qw1->r32(), *addr);
+		c->sub(qw1->r32(), pc0->r32());
 		c->cmp(qw1->r32(), end - start);
 		c->jae(fail);
+		c->lea(addr->r64(), x86::qword_ptr(instr_table));
 		c->jmp(x86::qword_ptr(addr->r64(), *qw1, 1, 0));
 		c->bind(fail);
 	}
