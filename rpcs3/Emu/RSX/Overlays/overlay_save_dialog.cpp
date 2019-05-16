@@ -129,6 +129,12 @@ namespace rsx
 			case pad_button::dpad_down:
 				m_list->select_next();
 				break;
+			case pad_button::L1:
+				m_list->select_previous(10);
+				break;
+			case pad_button::R1:
+				m_list->select_next(10);
+				break;
 			default:
 				LOG_TRACE(RSX, "[ui] Button %d pressed", (u8)button_press);
 			}

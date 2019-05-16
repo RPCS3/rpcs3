@@ -1177,8 +1177,8 @@ namespace rsx
 
 			void update_selection();
 
-			void select_next();
-			void select_previous();
+			void select_next(u16 count = 1);
+			void select_previous(u16 count = 1);
 
 			void add_entry(std::unique_ptr<overlay_element>& entry);
 
