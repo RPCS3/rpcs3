@@ -1167,11 +1167,12 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 	m_chunks.clear();
 	m_funcs.clear();
 
-	// Value flags (TODO)
+	// Value flags (TODO: only is_const is implemented)
 	enum class vf : u32
 	{
 		is_const,
 		is_mask,
+		is_rel,
 
 		__bitset_enum_max
 	};
@@ -1348,29 +1349,11 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 
 				m_targets[pos].push_back(target);
 
-				if (!sl)
+				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 				{
 					if (sync)
 					{
-						LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring branch to 0x%x (SYNC)", result[0], pos, target);
-
-						if (entry_point < target)
-						{
-							limit = std::min<u32>(limit, target);
-						}
-					}
-					else
-					{
-						m_entry_info[target / 4] = true;
-						add_block(target);
-					}
-				}
-
-				if (sl && g_cfg.core.spu_block_size == spu_block_size_type::giga)
-				{
-					if (sync)
-					{
-						LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring call to 0x%x (SYNC)", result[0], pos, target);
+						LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring %scall to 0x%x (SYNC)", result[0], pos, sl ? "" : "tail ", target);
 
 						if (target > entry_point)
 						{
@@ -1383,7 +1366,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 						add_block(target);
 					}
 				}
-				else if (sl && target > entry_point)
+				else if (target > entry_point)
 				{
 					limit = std::min<u32>(limit, target);
 				}
