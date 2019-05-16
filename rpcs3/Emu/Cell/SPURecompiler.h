@@ -111,6 +111,9 @@ public:
 	// Longjmp to the end of the gateway function (native CC)
 	static void(*const g_escape)(spu_thread*);
 
+	// Similar to g_escape, but doing tail call to the new function.
+	static void(*const g_tail_escape)(spu_thread*, spu_function_t, u8*);
+
 	// Interpreter entry point
 	static spu_function_t g_interpreter;
 

@@ -180,8 +180,25 @@ DECLARE(spu_runtime::g_escape) = build_function_asm<void(*)(spu_thread*)>([](asm
 
 	// Restore native stack pointer (longjmp emulation)
 	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
-	c.sub(x86::rsp, 8);
-	c.ret();
+
+	// Return to the return location
+	c.jmp(x86::qword_ptr(x86::rsp, -8));
+});
+
+DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, spu_function_t, u8*)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	// Restore native stack pointer (longjmp emulation)
+	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
+
+	// Tail call, GHC CC (second arg)
+	c.mov(x86::r13, args[0]);
+	c.mov(x86::ebp, x86::dword_ptr(args[0], ::offset32(&spu_thread::offset)));
+	c.add(x86::rbp, x86::qword_ptr(args[0], ::offset32(&spu_thread::memory_base_addr)));
+	c.mov(x86::r12, args[2]);
+	c.xor_(x86::ebx, x86::ebx);
+	c.jmp(args[1]);
 });
 
 DECLARE(spu_runtime::g_interpreter) = nullptr;
@@ -1327,14 +1344,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			{
 				const u32 target = spu_branch_target(av);
 
-				if (target == pos + 4)
-				{
-					LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to next%s", result[0], pos, op.d ? " (D)" : op.e ? " (E)" : "");
-				}
-				else
-				{
-					LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x", result[0], pos, target);
-				}
+				LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x%s", result[0], pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
 
 				m_targets[pos].push_back(target);
 
@@ -1351,11 +1361,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 					}
 					else
 					{
-						if (op.d || op.e)
-						{
-							m_entry_info[target / 4] = true;
-						}
-
+						m_entry_info[target / 4] = true;
 						add_block(target);
 					}
 				}
@@ -1561,7 +1567,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			vflags[op.rt] = +vf::is_const;
 			values[op.rt] = pos + 4;
 
-			if (target == pos + 4)
+			if (type == spu_itype::BRSL && target == pos + 4)
 			{
 				// Get next instruction address idiom
 				break;
@@ -1599,14 +1605,39 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			break;
 		}
 
-		case spu_itype::BR:
 		case spu_itype::BRA:
+		{
+			const u32 target = spu_branch_target(0, op.i16);
+
+			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
+			{
+				m_entry_info[target / 4] = true;
+				add_block(target);
+			}
+			else
+			{
+				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
+				{
+					LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", result[0], pos, target);
+				}
+
+				if (target > entry_point)
+				{
+					limit = std::min<u32>(limit, target);
+				}
+			}
+
+			next_block();
+			break;
+		}
+
+		case spu_itype::BR:
 		case spu_itype::BRZ:
 		case spu_itype::BRNZ:
 		case spu_itype::BRHZ:
 		case spu_itype::BRHNZ:
 		{
-			const u32 target = spu_branch_target(type == spu_itype::BRA ? 0 : pos, op.i16);
+			const u32 target = spu_branch_target(pos, op.i16);
 
 			if (target == pos + 4)
 			{
@@ -1617,7 +1648,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 			m_targets[pos].push_back(target);
 			add_block(target);
 
-			if (type != spu_itype::BR && type != spu_itype::BRA)
+			if (type != spu_itype::BR)
 			{
 				m_targets[pos].push_back(pos + 4);
 				add_block(pos + 4);
@@ -2175,6 +2206,10 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 					break;
 				case spu_itype::BRASL:
 					is_call = spu_branch_target(0, op.i16) != ia + 4;
+					break;
+				case spu_itype::BRA:
+					is_call = true;
+					is_tail = true;
 					break;
 				case spu_itype::BISL:
 				case spu_itype::BISLED:
@@ -2762,21 +2797,19 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 		switch (last_inst)
 		{
 		case spu_itype::BR:
-		case spu_itype::BRA:
 		case spu_itype::BRNZ:
 		case spu_itype::BRZ:
 		case spu_itype::BRHNZ:
 		case spu_itype::BRHZ:
 		case spu_itype::BRSL:
-		case spu_itype::BRASL:
 		{
-			const u32 target = spu_branch_target(last_inst == spu_itype::BRA || last_inst == spu_itype::BRASL ? 0 : tia, op.i16);
+			const u32 target = spu_branch_target(tia, op.i16);
 
 			if (target == tia + 4)
 			{
 				bb.terminator = term_type::fallthrough;
 			}
-			else if (last_inst != spu_itype::BRSL && last_inst != spu_itype::BRASL)
+			else if (last_inst != spu_itype::BRSL)
 			{
 				// No-op terminator or simple branch instruction
 				bb.terminator = term_type::br;
@@ -2796,6 +2829,12 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 				bb.terminator = term_type::interrupt_call;
 			}
 
+			break;
+		}
+		case spu_itype::BRA:
+		case spu_itype::BRASL:
+		{
+			bb.terminator = term_type::indirect_call;
 			break;
 		}
 		case spu_itype::BI:
@@ -3287,8 +3326,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			if (ffound != m_funcs.end() && ffound->second.good)
 			{
 				// Real function type (not equal to chunk type)
-				// 4. $SP (only 32 bit value)
-				const auto func_type = get_ftype<u32[4][2], u8*, u8*, u32, u32, u32[4], u32[4]>();
+				// 4. $SP
+				// 5. $3
+				const auto func_type = get_ftype<u32[4], u8*, u8*, u32, u32[4], u32[4]>();
 
 				const std::string fname = fmt::format("spu-function-0x%05x", addr);
 				llvm::Function* fn = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(fname, func_type).getCallee());
@@ -3360,30 +3400,22 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		llvm::Value* lr{};
 		llvm::Value* sp{};
-		llvm::Value* args[2]{};
+		llvm::Value* r3{};
 
 		if (!m_finfo->fn && !m_block)
 		{
 			lr = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::gpr, +s_reg_lr, &v128::_u32, 3));
-			sp = m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::gpr, +s_reg_sp, &v128::_u32, 3));
-
-			for (u32 i = 3; i < 3 + std::size(args); i++)
-			{
-				args[i - 3] = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, +i));
-			}
+			sp = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, +s_reg_sp));
+			r3 = m_ir->CreateLoad(spu_ptr<u32[4]>(&spu_thread::gpr, 3));
 		}
 		else
 		{
 			lr = m_ir->CreateExtractElement(get_reg_fixed<u32[4]>(s_reg_lr).value, 3);
-			sp = m_ir->CreateExtractElement(get_reg_fixed<u32[4]>(s_reg_sp).value, 3);
-
-			for (u32 i = 3; i < 3 + std::size(args); i++)
-			{
-				args[i - 3] = get_reg_fixed<u32[4]>(i).value;
-			}
+			sp = get_reg_fixed<u32[4]>(s_reg_sp).value;
+			r3 = get_reg_fixed<u32[4]>(3).value;
 		}
 
-		const auto _call = m_ir->CreateCall(verify(HERE, fn), {m_thread, m_lsptr, m_base_pc, sp, args[0], args[1]});
+		const auto _call = m_ir->CreateCall(verify(HERE, fn), {m_thread, m_lsptr, m_base_pc, sp, r3});
 
 		_call->setCallingConv(fn->getCallingConv());
 
@@ -3392,7 +3424,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		{
 			lr = m_ir->CreateAnd(lr, 0x3fffc);
 			m_ir->CreateStore(lr, spu_ptr<u32>(&spu_thread::pc));
-			m_ir->CreateStore(_call, spu_ptr<u32[4][2]>(&spu_thread::gpr, 3));
+			m_ir->CreateStore(_call, spu_ptr<u32[4]>(&spu_thread::gpr, 3));
 			m_ir->CreateBr(add_block_indirect({}, value<u32>(lr)));
 		}
 		else if (tail)
@@ -3411,24 +3443,15 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				}
 			}
 
-			for (u32 i = 3; i < 3 + std::size(args); i++)
-			{
-				m_block->reg[i] = m_ir->CreateExtractValue(_call, {i - 3});
-			}
+			// Set result
+			m_block->reg[3] = _call;
 		}
 	}
 
 	// Emit return from the real function
 	void ret_function()
 	{
-		llvm::Value* r = llvm::ConstantAggregateZero::get(get_type<u32[4][2]>());
-
-		for (u32 i = 3; i < 5; i++)
-		{
-			r = m_ir->CreateInsertValue(r, get_reg_fixed<u32[4]>(i).value, {i - 3});
-		}
-
-		m_ir->CreateRet(r);
+		m_ir->CreateRet(get_reg_fixed<u32[4]>(3).value);
 	}
 
 	void set_function(llvm::Function* func)
@@ -3448,7 +3471,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	}
 
 	// Add block with current block as a predecessor
-	llvm::BasicBlock* add_block(u32 target)
+	llvm::BasicBlock* add_block(u32 target, bool absolute = false)
 	{
 		// Check the predecessor
 		const bool pred_found = m_block_info[target / 4] && m_preds[target].find_first_of(m_pos) + 1;
@@ -3482,13 +3505,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				}
 
 				// Load $SP
-				//m_finfo->load[s_reg_sp] = m_ir->CreateVectorSplat(4, &*(fn->arg_begin() + 3));
+				m_finfo->load[s_reg_sp] = &*(fn->arg_begin() + 3);
 
 				// Load first args
-				for (u32 i = 3; i < 5; i++)
-				{
-					m_finfo->load[i] = &*(fn->arg_begin() + i + 1);
-				}
+				m_finfo->load[3] = &*(fn->arg_begin() + 4);
 			}
 		}
 		else if (m_block_info[target / 4] && m_entry_info[target / 4] && !(pred_found && m_entry == target) && (!m_finfo->fn || !m_ret_info[target / 4]))
@@ -3498,6 +3518,19 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
 			const auto pfinfo = add_function(target);
+
+			if (absolute)
+			{
+				verify(HERE), !m_finfo->fn;
+
+				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
+				const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
+				m_ir->CreateCondBr(m_ir->CreateICmpEQ(m_base_pc, m_ir->getInt32(m_base)), next, fail);
+				m_ir->SetInsertPoint(fail);
+				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc), true);
+				tail_chunk(nullptr);
+				m_ir->SetInsertPoint(next);
+			}
 
 			if (pfinfo->fn)
 			{
@@ -3527,11 +3560,24 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const auto cblock = m_ir->GetInsertBlock();
 			const auto result = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->SetInsertPoint(result);
-			update_pc(target);
+
+			if (absolute)
+			{
+				verify(HERE), !m_finfo->fn;
+
+				m_ir->CreateStore(m_ir->getInt32(target), spu_ptr<u32>(&spu_thread::pc), true);
+			}
+			else
+			{
+				update_pc(target);
+			}
+
 			tail_chunk(nullptr);
 			m_ir->SetInsertPoint(cblock);
 			return result;
 		}
+
+		verify(HERE), !absolute;
 
 		auto& result = m_blocks[target].block;
 
@@ -3915,7 +3961,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		if (m_finfo && m_finfo->fn)
 		{
-			if (index == s_reg_lr || (index >= 3 && index <= 4) || (index >= s_reg_80 && index <= s_reg_127))
+			if (index <= 3 || (index >= s_reg_80 && index <= s_reg_127))
 			{
 				// Don't save some registers in true functions
 				return;
@@ -4030,7 +4076,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Update PC for current or explicitly specified instruction address
 	void update_pc(u32 target = -1)
 	{
-		m_ir->CreateStore(get_pc(target + 1 ? target : m_pos), spu_ptr<u32>(&spu_thread::pc), true);
+		m_ir->CreateStore(m_ir->CreateAnd(get_pc(target + 1 ? target : m_pos), 0x3fffc), spu_ptr<u32>(&spu_thread::pc), true);
 	}
 
 	// Call cpu_thread::check_state if necessary and return or continue (full check)
@@ -5126,8 +5172,6 @@ public:
 			tail_chunk(m_dispatch);
 			return;
 		}
-
-		check_state(m_pos + 4);
 	}
 
 	void STOPD(spu_opcode_t op) //
@@ -7498,7 +7542,7 @@ public:
 	{
 		if (m_finfo && m_finfo->fn)
 		{
-			if (op.rt == s_reg_lr || (op.rt >= s_reg_80 && op.rt <= s_reg_127))
+			if (op.rt <= s_reg_sp || (op.rt >= s_reg_80 && op.rt <= s_reg_127))
 			{
 				if (m_block->bb->reg_save_dom[op.rt] && get_reg_raw(op.rt) == m_finfo->load[op.rt])
 				{
@@ -7525,6 +7569,8 @@ public:
 		m_ir->SetInsertPoint(halt);
 		if (m_interp_magn)
 			m_ir->CreateStore(&*(m_function->arg_begin() + 2), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
+		else
+			update_pc();
 		const auto pstatus = spu_ptr<u32>(&spu_thread::status);
 		const auto chalt = m_ir->getInt32(SPU_STATUS_STOPPED_BY_HALT);
 		m_ir->CreateAtomicRMW(llvm::AtomicRMWInst::Or, pstatus, chalt, llvm::AtomicOrdering::Release)->setVolatile(true);
@@ -7641,33 +7687,10 @@ public:
 			return result;
 		}
 
-		// Convert an indirect branch into a static one if possible
-		if (const auto _int = llvm::dyn_cast<llvm::ConstantInt>(addr.value); _int && op.opcode)
+		if (llvm::isa<llvm::Constant>(addr.value))
 		{
-			const u32 target = ::narrow<u32>(_int->getZExtValue(), HERE);
-
-			LOG_WARNING(SPU, "[0x%x] Fixed branch to 0x%x", m_pos, target);
-
-			if (!op.e && !op.d)
-			{
-				return add_block(target);
-			}
-
-			if (!m_entry_info[target / 4])
-			{
-				LOG_ERROR(SPU, "[0x%x] Fixed branch to 0x%x", m_pos, target);
-			}
-			else
-			{
-				add_function(target);
-			}
-
 			// Fixed branch excludes the possibility it's a function return (TODO)
 			ret = false;
-		}
-		else if (llvm::isa<llvm::Constant>(addr.value) && op.opcode)
-		{
-			LOG_ERROR(SPU, "[0x%x] Unexpected constant (add_block_indirect)", m_pos);
 		}
 
 		if (m_finfo && m_finfo->fn && op.opcode)
@@ -7712,7 +7735,7 @@ public:
 		m_ir->CreateStore(addr.value, spu_ptr<u32>(&spu_thread::pc));
 		const auto type = m_finfo->chunk->getFunctionType()->getPointerTo()->getPointerTo();
 
-		if (ret && g_cfg.core.spu_block_size == spu_block_size_type::mega)
+		if (ret && g_cfg.core.spu_block_size >= spu_block_size_type::mega)
 		{
 			// Compare address stored in stack mirror with addr
 			const auto stack0 = eval(zext<u64>(sp) + ::offset32(&spu_thread::stack_mirror));
@@ -7735,10 +7758,11 @@ public:
 			// Try to load chunk address from the function table
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
 			const auto done = llvm::BasicBlock::Create(m_context, "", m_function);
-			m_ir->CreateCondBr(m_ir->CreateICmpULT(addr.value, m_ir->getInt32(m_size)), done, fail, m_md_likely);
+			const auto ad32 = m_ir->CreateSub(addr.value, m_base_pc);
+			m_ir->CreateCondBr(m_ir->CreateICmpULT(ad32, m_ir->getInt32(m_size)), done, fail, m_md_likely);
 			m_ir->SetInsertPoint(done);
 
-			const auto ad64 = m_ir->CreateZExt(addr.value, get_type<u64>());
+			const auto ad64 = m_ir->CreateZExt(ad32, get_type<u64>());
 			const auto pptr = m_ir->CreateGEP(m_function_table, {m_ir->getInt64(0), m_ir->CreateLShr(ad64, 2, "", true)});
 			tail_chunk(m_ir->CreateLoad(pptr));
 			m_ir->SetInsertPoint(fail);
@@ -7819,7 +7843,7 @@ public:
 		if (!op.d && !op.e && tfound != m_targets.end() && tfound->second.size() > 1)
 		{
 			// Shift aligned address for switch
-			const auto addrfx = m_ir->CreateAdd(m_ir->CreateSub(addr.value, m_base_pc), m_ir->getInt32(m_base));
+			const auto addrfx = m_ir->CreateSub(addr.value, m_base_pc);
 			const auto sw_arg = m_ir->CreateLShr(addrfx, 2, "", true);
 
 			// Initialize jump table targets
@@ -7862,12 +7886,12 @@ public:
 
 					if (found != targets.end())
 					{
-						sw->addCase(m_ir->getInt32(pos / 4), found->second);
+						sw->addCase(m_ir->getInt32(pos / 4 - m_base / 4), found->second);
 						continue;
 					}
 				}
 
-				sw->addCase(m_ir->getInt32(pos / 4), sw->getDefaultDest());
+				sw->addCase(m_ir->getInt32(pos / 4 - m_base / 4), sw->getDefaultDest());
 			}
 
 			// Exit function on unexpected target
@@ -8013,33 +8037,13 @@ public:
 
 		const u32 target = spu_branch_target(0, op.i16);
 
-		if (target != m_pos + 4)
-		{
-			m_block->block_end = m_ir->GetInsertBlock();
-			m_ir->CreateBr(add_block(target));
-		}
+		m_block->block_end = m_ir->GetInsertBlock();
+		m_ir->CreateBr(add_block(target, true));
 	}
 
 	void BRASL(spu_opcode_t op) //
 	{
 		set_link(op);
-
-		const u32 target = spu_branch_target(0, op.i16);
-
-		if (m_finfo && m_finfo->fn && target != m_pos + 4)
-		{
-			if (auto fn = add_function(target)->fn)
-			{
-				call_function(fn);
-				return;
-			}
-			else
-			{
-				LOG_FATAL(SPU, "[0x%x] Can't add function 0x%x", m_pos, target);
-				return;
-			}
-		}
-
 		BRA(op);
 	}
 
@@ -8096,14 +8100,14 @@ public:
 			return;
 		}
 
-		set_vr(op.rt, insert(splat<u32[4]>(0), 3, value<u32>(get_pc(m_pos + 4))));
+		set_vr(op.rt, insert(splat<u32[4]>(0), 3, value<u32>(get_pc(m_pos + 4)) & 0x3fffc));
 
 		if (m_finfo && m_finfo->fn)
 		{
 			return;
 		}
 
-		if (g_cfg.core.spu_block_size == spu_block_size_type::mega && m_block_info[m_pos / 4 + 1] && m_entry_info[m_pos / 4 + 1])
+		if (g_cfg.core.spu_block_size >= spu_block_size_type::mega && m_block_info[m_pos / 4 + 1] && m_entry_info[m_pos / 4 + 1])
 		{
 			// Store the return function chunk address at the stack mirror
 			const auto pfunc = add_function(m_pos + 4);

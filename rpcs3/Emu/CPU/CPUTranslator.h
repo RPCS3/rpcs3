@@ -348,32 +348,13 @@ struct llvm_value_t<T[N]> : llvm_value_t<T>
 	}
 };
 
-template <typename T, uint N>
-struct llvm_value_t<T[0][N]> : llvm_value_t<T>
-{
-	using type = T[0][N];
-	using base = llvm_value_t<T>;
-	using base::base;
-
-	static constexpr bool is_int     = false;
-	static constexpr bool is_sint    = false;
-	static constexpr bool is_uint    = false;
-	static constexpr bool is_float   = false;
-	static constexpr uint is_array   = N;
-	static constexpr uint is_vector  = false;
-	static constexpr uint is_pointer = false;
-
-	static llvm::Type* get_type(llvm::LLVMContext& context)
-	{
-		return llvm::ArrayType::get(llvm_value_t<T>::get_type(context), N);
-	}
-};
-
+// u32[4][123] : array of 123 u32[4] vectors
+// u32[0][123] : array of 123 u32 scalars
 template <typename T, uint V, uint N>
-struct llvm_value_t<T[V][N]> : llvm_value_t<T[V]>
+struct llvm_value_t<T[V][N]> : llvm_value_t<std::conditional_t<V != 0, T[V], T>>
 {
 	using type = T[V][N];
-	using base = llvm_value_t<T[V]>;
+	using base = llvm_value_t<std::conditional_t<V != 0, T[V], T>>;
 	using base::base;
 
 	static constexpr bool is_int     = false;
@@ -386,7 +367,7 @@ struct llvm_value_t<T[V][N]> : llvm_value_t<T[V]>
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
-		return llvm::ArrayType::get(llvm_value_t<T[V]>::get_type(context), N);
+		return llvm::ArrayType::get(base::get_type(context), N);
 	}
 };
 

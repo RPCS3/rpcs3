@@ -1459,8 +1459,8 @@ void VKGSRender::end()
 	// Check for data casts
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && ds->old_contents &&
-		ds->old_contents->info.format == VK_FORMAT_B8G8R8A8_UNORM &&
-		rsx::pitch_compatible(ds, static_cast<vk::render_target*>(ds->old_contents)))
+		ds->old_contents.source->info.format == VK_FORMAT_B8G8R8A8_UNORM &&
+		rsx::pitch_compatible(ds, vk::as_rtt(ds->old_contents.source)))
 	{
 		auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
 		auto render_pass = m_render_passes[rp];
@@ -1475,11 +1475,11 @@ void VKGSRender::end()
 		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
 		// TODO: Stencil transfer
-		const auto region = rsx::get_transferable_region(ds);
+		ds->old_contents.init_transfer(ds);
 		m_depth_converter->run(*m_current_command_buffer,
-			{ 0, 0, std::get<0>(region), std::get<1>(region) },
-			{ 0, 0, std::get<2>(region), std::get<3>(region) },
-			static_cast<vk::render_target*>(ds->old_contents)->get_view(0xAAE4, rsx::default_remap_vector),
+			ds->old_contents.src_rect(),
+			ds->old_contents.dst_rect(),
+			vk::as_rtt(ds->old_contents.source)->get_view(0xAAE4, rsx::default_remap_vector),
 			ds, render_pass, m_framebuffers_to_clean);
 
 		// TODO: Flush management to avoid pass running out of ubo space (very unlikely)
@@ -1826,8 +1826,18 @@ void VKGSRender::end()
 		m_current_command_buffer->flags |= vk::command_buffer::cb_has_occlusion_task;
 	}
 
+	// Final heap check...
+	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
+
+	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
+	// Only textures are synchronized tightly with the GPU and they have been read back above
+	vk::enter_uninterruptible();
+
+	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+	update_draw_state();
+
 	// Apply write memory barriers
-	if (g_cfg.video.strict_rendering_mode)
+	if (1)//g_cfg.video.strict_rendering_mode)
 	{
 		if (ds) ds->write_barrier(*m_current_command_buffer);
 
@@ -1838,46 +1848,41 @@ void VKGSRender::end()
 				surface->write_barrier(*m_current_command_buffer);
 			}
 		}
+
+		begin_render_pass();
 	}
-
-	// Final heap check...
-	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
-
-	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
-	// Only textures are synchronized tightly with the GPU and they have been read back above
-	vk::enter_uninterruptible();
-
-	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-	update_draw_state();
-	begin_render_pass();
-
-	// Clear any 'dirty' surfaces - possible is a recycled cache surface is used
-	rsx::simple_array<VkClearAttachment> buffers_to_clear;
-
-	if (ds && ds->dirty)
+	else
 	{
-		// Clear this surface before drawing on it
-		VkClearValue clear_value = {};
-		clear_value.depthStencil = { 1.f, 255 };
-		buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
-	}
+		begin_render_pass();
 
-	for (u32 index = 0; index < m_draw_buffers.size(); ++index)
-	{
-		if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
+		// Clear any 'dirty' surfaces - possible is a recycled cache surface is used
+		rsx::simple_array<VkClearAttachment> buffers_to_clear;
+
+		if (ds && ds->dirty())
 		{
-			if (rtt->dirty)
+			// Clear this surface before drawing on it
+			VkClearValue clear_value = {};
+			clear_value.depthStencil = { 1.f, 255 };
+			buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
+		}
+
+		for (u32 index = 0; index < m_draw_buffers.size(); ++index)
+		{
+			if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
 			{
-				buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
+				if (rtt->dirty())
+				{
+					buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
+				}
 			}
 		}
-	}
 
-	if (UNLIKELY(!buffers_to_clear.empty()))
-	{
-		VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
-		vkCmdClearAttachments(*m_current_command_buffer, buffers_to_clear.size(),
-			buffers_to_clear.data(), 1, &rect);
+		if (UNLIKELY(!buffers_to_clear.empty()))
+		{
+			VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
+			vkCmdClearAttachments(*m_current_command_buffer, buffers_to_clear.size(),
+				buffers_to_clear.data(), 1, &rect);
+		}
 	}
 
 	u32 sub_index = 0;
@@ -2078,11 +2083,10 @@ void VKGSRender::clear_surface(u32 mask)
 	std::vector<VkClearAttachment> clear_descriptors;
 	VkClearValue depth_stencil_clear_values = {}, color_clear_values = {};
 
-	const auto scale = rsx::get_resolution_scale();
-	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
-	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
-	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
-	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
+	u16 scissor_x = (u16)m_scissor.offset.x;
+	u16 scissor_w = (u16)m_scissor.extent.width;
+	u16 scissor_y = (u16)m_scissor.offset.y;
+	u16 scissor_h = (u16)m_scissor.extent.height;
 
 	const u16 fb_width = m_draw_fbo->width();
 	const u16 fb_height = m_draw_fbo->height();
@@ -2091,6 +2095,7 @@ void VKGSRender::clear_surface(u32 mask)
 	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
 	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
 
+	const bool require_mem_load = (scissor_w * scissor_h) < (fb_width * fb_height);
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & 0x3)
@@ -2118,7 +2123,7 @@ void VKGSRender::clear_surface(u32 mask)
 				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 			}
 
-			if ((mask & 0x3) != 0x3 && ds->dirty)
+			if ((mask & 0x3) != 0x3 && !require_mem_load && ds->state_flags & rsx::surface_state_flags::erase_bkgnd)
 			{
 				verify(HERE), depth_stencil_mask;
 
@@ -2202,8 +2207,10 @@ void VKGSRender::clear_surface(u32 mask)
 
 					for (const auto &index : m_draw_buffers)
 					{
-						if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
+						if (auto rtt = m_rtts.m_bound_render_targets[index].second)
 						{
+							if (require_mem_load) rtt->write_barrier(*m_current_command_buffer);
+
 							vk::insert_texture_barrier(*m_current_command_buffer, rtt);
 							m_attachment_clear_pass->run(*m_current_command_buffer, rtt,
 								region.rect, renderpass, m_framebuffers_to_clean);
@@ -2219,8 +2226,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 				for (auto &rtt : m_rtts.m_bound_render_targets)
 				{
-					if (const auto address = std::get<0>(rtt))
+					if (const auto address = rtt.first)
 					{
+						if (require_mem_load) rtt.second->write_barrier(*m_current_command_buffer);
 						m_rtts.on_write(address);
 					}
 				}
@@ -2230,8 +2238,9 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (depth_stencil_mask)
 	{
-		if (const auto address = std::get<0>(m_rtts.m_bound_depth_stencil))
+		if (const auto address = m_rtts.m_bound_depth_stencil.first)
 		{
+			if (require_mem_load) m_rtts.m_bound_depth_stencil.second->write_barrier(*m_current_command_buffer);
 			m_rtts.on_write(address);
 			clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
 		}
@@ -2334,8 +2343,7 @@ void VKGSRender::advance_queued_frames()
 	//Remove stale framebuffers. Ref counted to prevent use-after-free
 	m_framebuffers_to_clean.remove_if([](std::unique_ptr<vk::framebuffer_holder>& fbo)
 	{
-		if (fbo->deref_count >= 2) return true;
-		fbo->deref_count++;
+		if (fbo->unused_check_count() >= 2) return true;
 		return false;
 	});
 
@@ -2976,13 +2984,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		return;
 	}
 
-	m_rtts.prepare_render_target(&*m_current_command_buffer,
+	m_rtts.prepare_render_target(*m_current_command_buffer,
 		layout.color_format, layout.depth_format,
 		layout.width, layout.height,
 		layout.target, layout.aa_mode,
 		layout.color_addresses, layout.zeta_address,
 		layout.actual_color_pitch, layout.actual_zeta_pitch,
-		(*m_device), &*m_current_command_buffer);
+		(*m_device), *m_current_command_buffer);
 
 	// Reset framebuffer information
 	VkFormat old_format = VK_FORMAT_UNDEFINED;
@@ -3075,8 +3083,10 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		const utils::address_range surface_range = m_surface_info[index].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
 		{
-			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_render_targets[index]), surface_range,
-				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index], color_fmt_info.first, color_fmt_info.second);
+			m_texture_cache.lock_memory_region(
+				*m_current_command_buffer, m_rtts.m_bound_render_targets[index].second, surface_range, true,
+				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index],
+				color_fmt_info.first, color_fmt_info.second);
 		}
 		else
 		{
@@ -3090,7 +3100,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (g_cfg.video.write_depth_buffer)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
-			m_texture_cache.lock_memory_region(*m_current_command_buffer, std::get<1>(m_rtts.m_bound_depth_stencil), surface_range,
+			m_texture_cache.lock_memory_region(
+				*m_current_command_buffer, m_rtts.m_bound_depth_stencil.second, surface_range, true,
 				m_depth_surface_info.width, m_depth_surface_info.height, layout.actual_zeta_pitch, gcm_format, false);
 		}
 		else
@@ -3099,20 +3110,61 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 	}
 
+	if (!m_rtts.orphaned_surfaces.empty())
+	{
+		if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
+		{
+			u32 gcm_format;
+			bool swap_bytes;
+
+			for (auto& surface : m_rtts.orphaned_surfaces)
+			{
+				if (surface->is_depth_surface())
+				{
+					if (!g_cfg.video.write_depth_buffer) continue;
+
+					gcm_format = (surface->get_surface_depth_format() != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
+					swap_bytes = true;
+				}
+				else
+				{
+					if (!g_cfg.video.write_color_buffers) continue;
+
+					auto info = vk::get_compatible_gcm_format(surface->get_surface_color_format());
+					gcm_format = info.first;
+					swap_bytes = info.second;
+				}
+
+				m_texture_cache.lock_memory_region(
+					*m_current_command_buffer, surface, surface->get_memory_range(), false,
+					surface->get_surface_width(), surface->get_surface_height(), surface->get_rsx_pitch(),
+					gcm_format, swap_bytes);
+			}
+		}
+
+		m_rtts.orphaned_surfaces.clear();
+	}
+
 	auto vk_depth_format = (layout.zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_device->get_formats_support(), layout.depth_format);
 	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(layout.color_format).first, vk_depth_format, (u8)m_draw_buffers.size());
 
-	//Search old framebuffers for this same configuration
+	// Search old framebuffers for this same configuration
 	bool framebuffer_found = false;
 	const auto fbo_width = rsx::apply_resolution_scale(layout.width, true);
 	const auto fbo_height = rsx::apply_resolution_scale(layout.height, true);
+
+	if (m_draw_fbo)
+	{
+		// Release old ref
+		m_draw_fbo->release();
+	}
 
 	for (auto &fbo : m_framebuffers_to_clean)
 	{
 		if (fbo->matches(bound_images, fbo_width, fbo_height))
 		{
 			m_draw_fbo.swap(fbo);
-			m_draw_fbo->reset_refs();
+			m_draw_fbo->add_ref();
 			framebuffer_found = true;
 			break;
 		}
@@ -3159,6 +3211,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			m_framebuffers_to_clean.push_back(std::move(m_draw_fbo));
 
 		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, fbo_width, fbo_height, std::move(fbo_images)));
+		m_draw_fbo->add_ref();
 	}
 
 	set_viewport();
@@ -3199,10 +3252,10 @@ void VKGSRender::reinitialize_swapchain()
 		present(&ctx);
 	}
 
-	//Remove any old refs to the old images as they are about to be destroyed
-	m_framebuffers_to_clean.clear();
+	// Remove any old refs to the old images as they are about to be destroyed
+	//m_framebuffers_to_clean;
 
-	//Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
+	// Rebuild swapchain. Old swapchain destruction is handled by the init_swapchain call
 	if (!m_swapchain->init(new_width, new_height))
 	{
 		LOG_WARNING(RSX, "Swapchain initialization failed. Request ignored [%dx%d]", new_width, new_height);
@@ -3539,7 +3592,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 			if (fbo->attachments[0]->info.image == target_image)
 			{
 				direct_fbo.swap(fbo);
-				direct_fbo->reset_refs();
+				direct_fbo->add_ref();
 				m_framebuffers_to_clean.erase(It);
 				break;
 			}
@@ -3549,6 +3602,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		{
 			swap_image_view.push_back(std::make_unique<vk::image_view>(*m_device, target_image, VK_IMAGE_VIEW_TYPE_2D, m_swapchain->get_surface_format(), vk::default_component_map(), subres));
 			direct_fbo.reset(new vk::framebuffer_holder(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
+			direct_fbo->add_ref();
 		}
 
 		if (has_overlay)
@@ -3588,6 +3642,8 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		}
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, present_layout, subres);
+
+		direct_fbo->release();
 		m_framebuffers_to_clean.push_back(std::move(direct_fbo));
 	}
 

@@ -1252,7 +1252,7 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, u32 width, u32 height, u32 pitch, Args&&... extras)
+		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, bool is_active_surface, u32 width, u32 height, u32 pitch, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
@@ -1297,15 +1297,18 @@ namespace rsx
 			region.set_dirty(false);
 			region.touch(m_cache_update_tag);
 
-			// Add to flush always cache
-			if (region.get_memory_read_flags() != memory_read_flags::flush_always)
+			if (is_active_surface)
 			{
-				region.set_memory_read_flags(memory_read_flags::flush_always, false);
-				update_flush_always_cache(region, true);
-			}
-			else
-			{
-				AUDIT(m_flush_always_cache.find(region.get_section_range()) != m_flush_always_cache.end());
+				// Add to flush always cache
+				if (region.get_memory_read_flags() != memory_read_flags::flush_always)
+				{
+					region.set_memory_read_flags(memory_read_flags::flush_always, false);
+					update_flush_always_cache(region, true);
+				}
+				else
+				{
+					AUDIT(m_flush_always_cache.find(region.get_section_range()) != m_flush_always_cache.end());
+				}
 			}
 
 			update_cache_tag();
@@ -1750,8 +1753,11 @@ namespace rsx
 				// Intersect this resource with the original one
 				const auto section_bpp = get_format_block_size_in_bytes(section->get_gcm_format());
 				const auto normalized_width = (section->get_width() * section_bpp) / bpp;
-				const auto clipped = rsx::intersect_region(address, slice_w, slice_h, bpp,
-					section->get_section_base(), normalized_width, section->get_height(), section_bpp, pitch);
+
+				const auto clipped = rsx::intersect_region(
+					section->get_section_base(), normalized_width, section->get_height(), section_bpp, /* parent region (extractee) */
+					address, slice_w, slice_h, bpp, /* child region (extracted) */
+					pitch);
 
 				// Rect intersection test
 				// TODO: Make the intersection code cleaner with proper 2D regions
@@ -2132,35 +2138,43 @@ namespace rsx
 				}
 			}
 
-			// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
-			const u32 lookup_mask = (is_compressed_format) ? rsx::texture_upload_context::shader_read :
-				rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
-
-			auto lookup_range = tex_range;
-			if (LIKELY(extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d))
-			{
-				// Optimize the range a bit by only searching for mip0, layer0 to avoid false positives
-				const auto texel_rows_per_line = get_format_texel_rows_per_line(format);
-				const auto num_rows = (tex_height + texel_rows_per_line - 1) / texel_rows_per_line;
-				if (const auto length = u32(num_rows * tex_pitch); length < tex_range.length())
-				{
-					lookup_range = utils::address_range::start_length(texaddr, length);
-				}
-			}
-
 			reader_lock lock(m_cache_mutex);
 
-			const auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
-			for (auto& cached_texture : overlapping_locals)
+			if (LIKELY(is_compressed_format))
 			{
-				if (cached_texture->matches(texaddr, format, tex_width, tex_height, depth, 0))
+				// Most mesh textures are stored as compressed to make the most of the limited memory
+				if (auto cached_texture = find_texture_from_dimensions(texaddr, format, tex_width, tex_height, depth))
 				{
 					return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
 				}
 			}
-
-			if (!is_compressed_format)
+			else
 			{
+				// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
+				const u32 lookup_mask = (is_compressed_format) ? rsx::texture_upload_context::shader_read :
+					rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
+
+				auto lookup_range = tex_range;
+				if (LIKELY(extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d))
+				{
+					// Optimize the range a bit by only searching for mip0, layer0 to avoid false positives
+					const auto texel_rows_per_line = get_format_texel_rows_per_line(format);
+					const auto num_rows = (tex_height + texel_rows_per_line - 1) / texel_rows_per_line;
+					if (const auto length = u32(num_rows * tex_pitch); length < tex_range.length())
+					{
+						lookup_range = utils::address_range::start_length(texaddr, length);
+					}
+				}
+
+				const auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
+				for (auto& cached_texture : overlapping_locals)
+				{
+					if (cached_texture->matches(texaddr, format, tex_width, tex_height, depth, 0))
+					{
+						return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
+					}
+				}
+
 				// Next, attempt to merge blit engine and surface store
 				// Blit sources contain info from any shader-read stuff in range
 				// NOTE: Compressed formats require a reupload, facilitated by blit synchronization and/or WCB and are not handled here
@@ -2448,40 +2462,50 @@ namespace rsx
 					return {};
 				}
 
-				if (list.back().is_clipped && !allow_clipped)
+				for (auto It = list.rbegin(); It != list.rend(); ++It)
 				{
-					for (auto It = list.rbegin(); It != list.rend(); ++It)
+					if (!(It->surface->memory_usage_flags & rsx::surface_usage_flags::attachment))
 					{
-						if (!It->is_clipped)
-						{
-							return *It;
-						}
-
-						auto _w = u32(It->width * It->surface->get_bpp()) / bpp;
-						auto _h = u32(It->height);
-						get_rsx_dimensions(_w, _h, It->surface);
-
-						if (_w < width)
-						{
-							if ((_w * scale_x) <= 1.f)
-								continue;
-						}
-
-						if (_h < height)
-						{
-							if ((_h * scale_y) <= 1.f)
-								continue;
-						}
-
-						// Some surface exists, but its size is questionable
-						// Opt to re-upload (needs WCB/WDB to work properly)
-						break;
+						// HACK
+						// TODO: Properly analyse the input here to determine if it can properly fit what we need
+						// This is a problem due to chunked transfer
+						// First 2 512x720 blocks go into a cpu-side buffer but suddenly when its time to render the final 256x720
+						// it falls onto some storage buffer in surface cache that has bad dimensions
+						// Proper solution is to always merge when a cpu resource is created (it should absorb the render targets in range)
+						// We then should not have any 'dst-is-rendertarget' surfaces in use
+						// Option 2: Make surfaces here part of surface cache and do not pad them for optimization
+						// Surface cache is good at merging for resolve operations. This keeps integrity even when drawing to the rendertgargets
+						// This option needs a lot more work
+						continue;
 					}
 
-					return {};
+					if (!It->is_clipped || allow_clipped)
+					{
+						return *It;
+					}
+
+					auto _w = u32(It->width * It->surface->get_bpp()) / bpp;
+					auto _h = u32(It->height);
+					get_rsx_dimensions(_w, _h, It->surface);
+
+					if (_w < width)
+					{
+						if ((_w * scale_x) <= 1.f)
+							continue;
+					}
+
+					if (_h < height)
+					{
+						if ((_h * scale_y) <= 1.f)
+							continue;
+					}
+
+					// Some surface exists, but its size is questionable
+					// Opt to re-upload (needs WCB/WDB to work properly)
+					break;
 				}
 
-				return list.back();
+				return {};
 			};
 
 			// Check if src/dst are parts of render targets
@@ -2936,7 +2960,8 @@ namespace rsx
 			}
 			else
 			{
-				dst_subres.surface->on_write();
+				dst_subres.surface->on_write(rsx::get_shared_tag());
+				m_rtts.notify_memory_structure_changed();
 			}
 
 			if (rsx::get_resolution_scale_percent() != 100)

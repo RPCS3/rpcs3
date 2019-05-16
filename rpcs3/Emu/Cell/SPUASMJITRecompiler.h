@@ -90,7 +90,7 @@ private:
 	asmjit::X86Mem XmmConst(__m128i data);
 
 	asmjit::X86Mem get_pc(u32 addr);
-	void branch_fixed(u32 target);
+	void branch_fixed(u32 target, bool absolute = false);
 	void branch_indirect(spu_opcode_t op, bool jt = false, bool ret = true);
 	void branch_set_link(u32 target);
 	void fall(spu_opcode_t op);

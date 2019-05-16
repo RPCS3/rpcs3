@@ -810,7 +810,6 @@ namespace rsx
 
 	namespace nv3089
 	{
-#pragma optimize("", off)
 		void image_in(thread *rsx, u32 _reg, u32 arg)
 		{
 			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
@@ -1191,7 +1190,6 @@ namespace rsx
 				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
 			}
 		}
-#pragma optimize("", on)
 	}
 
 	namespace nv0039

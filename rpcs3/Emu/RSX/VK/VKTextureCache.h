@@ -192,7 +192,7 @@ namespace vk
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				auto as_rtt = static_cast<vk::render_target*>(vram_texture);
-				if (as_rtt->dirty) as_rtt->read_barrier(cmd);
+				if (as_rtt->dirty()) as_rtt->read_barrier(cmd);
 			}
 
 			vk::image *target = vram_texture;
@@ -555,7 +555,6 @@ namespace vk
 					verify(HERE), section.dst_z == 0;
 
 					u16 dst_x = section.dst_x, dst_y = section.dst_y;
-					auto xform = section.xform;
 					vk::image* _dst;
 
 					if (LIKELY(src_image->info.format == dst->info.format))
