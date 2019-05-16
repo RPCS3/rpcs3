@@ -1,4 +1,4 @@
-﻿#ifdef _WIN32
+#ifdef _WIN32
 #include "mm_joystick_handler.h"
 
 mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
@@ -244,7 +244,7 @@ void mm_joystick_handler::ThreadProc()
 			TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
 		}
 
-		s32 stick_val[4];
+		s32 stick_val[4]{0};
 
 		// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 		for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)

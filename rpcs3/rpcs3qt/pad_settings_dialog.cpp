@@ -416,7 +416,7 @@ void pad_settings_dialog::InitButtons()
 				continue;
 			}
 			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
-			m_handler->GetNextButtonPress(info.name, [=](u16 val, std::string name, std::string pad_name, int preview_values[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->GetNextButtonPress(info.name, [=](u16, std::string, std::string pad_name, int[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
 }
@@ -670,7 +670,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 	ReactivateButtons();
 }
 
-void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
+void pad_settings_dialog::mouseMoveEvent(QMouseEvent*/* event*/)
 {
 	if (m_handler->m_type != pad_handler::keyboard)
 	{
@@ -960,7 +960,7 @@ void pad_settings_dialog::ChangeInputType()
 				continue;
 			}
 			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
-			m_handler->GetNextButtonPress(info.name, [=](u16 val, std::string name, std::string pad_name, int preview_values[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->GetNextButtonPress(info.name, [=](u16, std::string, std::string pad_name, int[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 			if (info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);

@@ -277,7 +277,7 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 
 	bool do_copy = OutputInfo->pResultString && (OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK || (is_unload && OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT));
 
-	for (u32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
+	for (s32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
 	{
 		osk->osk_text_old[i] = osk->osk_text[i];
 
