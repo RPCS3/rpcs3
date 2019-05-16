@@ -872,6 +872,9 @@ namespace rsx
 			}
 
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
+			// TODO: This can be done better after refactoring
+			new_surface->write_aa_mode = antialias;
+
 			// Check if old_surface is 'new' and avoid intersection
 			if (old_surface && old_surface->last_use_tag >= write_tag)
 			{
@@ -1001,6 +1004,9 @@ namespace rsx
 			}
 
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
+			// TODO: Forward this to the management functions
+			new_surface->write_aa_mode = antialias;
+
 			// Check if old_surface is 'new' and avoid intersection
 			if (old_surface && old_surface->last_use_tag >= write_tag)
 			{
