@@ -164,7 +164,6 @@ struct frame_context_t
 	u32 used_descriptors = 0;
 
 	std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
-	std::vector<std::unique_ptr<vk::sampler>> samplers_to_clean;
 
 	u32 present_image = UINT32_MAX;
 	command_buffer_chunk* swap_command_buffer = nullptr;
@@ -205,7 +204,6 @@ struct frame_context_t
 	void swap_storage(frame_context_t &other)
 	{
 		std::swap(buffer_views_to_clean, other.buffer_views_to_clean);
-		std::swap(samplers_to_clean, other.samplers_to_clean);
 	}
 
 	void tag_frame_end(s64 attrib_loc, s64 vtxenv_loc, s64 fragenv_loc, s64 vtxlayout_loc, s64 fragtex_loc, s64 fragconst_loc,s64 vtxconst_loc, s64 index_loc, s64 texture_loc)
@@ -279,6 +277,66 @@ struct flush_request_task
 	}
 };
 
+// TODO: This class will be expanded into a global allocator/collector eventually
+class resource_manager
+{
+private:
+	std::unordered_multimap<u64, std::unique_ptr<vk::sampler>> m_sampler_pool;
+
+	bool value_compare(const f32& a, const f32& b)
+	{
+		return fabsf(a - b) < 0.0000001f;
+	}
+
+public:
+
+	resource_manager() {}
+	~resource_manager() {}
+
+	void destroy()
+	{
+		m_sampler_pool.clear();
+	}
+
+	vk::sampler* find_sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+		VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
+		VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
+		VkBool32 depth_compare = VK_FALSE, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
+	{
+		u64 key = u16(clamp_u) | u64(clamp_v) << 3 | u64(clamp_w) << 6;
+		key |= u64(unnormalized_coordinates) << 9; // 1 bit
+		key |= u64(min_filter) << 10 | u64(mag_filter) << 11; // 1 bit each
+		key |= u64(mipmap_mode) << 12; // 1 bit
+		key |= u64(border_color) << 13; // 3 bits
+		key |= u64(depth_compare) << 16; // 1 bit
+		key |= u64(depth_compare_mode) << 17; // 3 bits
+
+		const auto found = m_sampler_pool.equal_range(key);
+		for (auto It = found.first; It != found.second; ++It)
+		{
+			const auto& info = It->second->info;
+			if (!value_compare(info.mipLodBias, mipLodBias) ||
+				!value_compare(info.maxAnisotropy, max_anisotropy) ||
+				!value_compare(info.minLod, min_lod) ||
+				!value_compare(info.maxLod, max_lod))
+			{
+				continue;
+			}
+
+			return It->second.get();
+		}
+
+		auto result = std::make_unique<vk::sampler>(
+			dev, clamp_u, clamp_v, clamp_w, unnormalized_coordinates,
+			mipLodBias, max_anisotropy, min_lod, max_lod,
+			min_filter, mag_filter, mipmap_mode, border_color,
+			depth_compare, depth_compare_mode);
+
+		auto It = m_sampler_pool.emplace(key, std::move(result));
+		return It->second.get();
+	}
+};
+
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
@@ -303,11 +361,13 @@ private:
 	std::unique_ptr<vk::sampler> m_stencil_mirror_sampler;
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
-	std::array<std::unique_ptr<vk::sampler>, rsx::limits::fragment_textures_count> fs_sampler_handles;
-	std::array<std::unique_ptr<vk::sampler>, rsx::limits::vertex_textures_count> vs_sampler_handles;
+	std::array<vk::sampler*, rsx::limits::fragment_textures_count> fs_sampler_handles{};
+	std::array<vk::sampler*, rsx::limits::vertex_textures_count> vs_sampler_handles{};
 
 	std::unique_ptr<vk::buffer_view> m_persistent_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
+
+	resource_manager m_resource_manager;
 
 public:
 	//vk::fbo draw_fbo;
@@ -396,7 +456,8 @@ private:
 
 	std::atomic<u64> m_last_sync_event = { 0 };
 
-	bool render_pass_open = false;
+	bool m_render_pass_open = false;
+	bool m_render_pass_is_cyclic = false;
 	size_t m_current_renderpass_id = 0;
 
 	//Vertex layout

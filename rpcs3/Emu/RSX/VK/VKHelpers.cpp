@@ -479,22 +479,46 @@ namespace vk
 		{
 		case VK_IMAGE_LAYOUT_GENERAL:
 			// Avoid this layout as it is unoptimized
-			barrier.srcAccessMask =
+			if (new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+				new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
 			{
-				VK_ACCESS_TRANSFER_READ_BIT |
-				VK_ACCESS_TRANSFER_WRITE_BIT |
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-				VK_ACCESS_SHADER_READ_BIT |
-				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
-			};
-			src_stage =
+				if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+					src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				}
+				else
+				{
+					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+					src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+				}
+			}
+			else if (new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
+					 new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 			{
-				VK_PIPELINE_STAGE_TRANSFER_BIT |
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-				VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-			};
+				// Finish reading before writing
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+				src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			}
+			else
+			{
+				barrier.srcAccessMask =
+				{
+					VK_ACCESS_TRANSFER_READ_BIT |
+					VK_ACCESS_TRANSFER_WRITE_BIT |
+					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+					VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+					VK_ACCESS_SHADER_READ_BIT |
+					VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
+				};
+				src_stage =
+				{
+					VK_PIPELINE_STAGE_TRANSFER_BIT |
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+					VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
+					VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+				};
+			}
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -540,43 +564,54 @@ namespace vk
 
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range)
 	{
+		// NOTE: Sampling from an attachment in ATTACHMENT_OPTIMAL layout on some hw ends up with garbage output
+		// Transition to GENERAL if this resource is both input and output
+		// TODO: This implicitly makes the target incompatible with the renderpass declaration; investigate a proper workaround
+		// TODO: This likely throws out hw optimizations on the rest of the renderpass, manage carefully
+
+		VkAccessFlags src_access;
+		VkPipelineStageFlags src_stage;
+		if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+		{
+			if (!rsx::method_registers.color_write_enabled() && layout == VK_IMAGE_LAYOUT_GENERAL)
+			{
+				// Nothing to do
+				return;
+			}
+
+			src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		}
+		else
+		{
+			if (!rsx::method_registers.depth_write_enabled() && layout == VK_IMAGE_LAYOUT_GENERAL)
+			{
+				// Nothing to do
+				return;
+			}
+
+			src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		}
+
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.newLayout = layout;
+		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
 		barrier.oldLayout = layout;
 		barrier.image = image;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.subresourceRange = range;
+		barrier.srcAccessMask = src_access;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		VkPipelineStageFlags src_stage;
-		if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
-		{
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		}
-		else
-		{
-			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		}
 
 		vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
 	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image)
 	{
-		if (image->info.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
-		{
-			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-			if (image->info.format != VK_FORMAT_D16_UNORM) aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
-			insert_texture_barrier(cmd, image->value, image->current_layout, { aspect, 0, 1, 0, 1 });
-		}
-		else
-		{
-			insert_texture_barrier(cmd, image->value, image->current_layout, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
-		}
+		insert_texture_barrier(cmd, image->value, image->current_layout, { image->aspect(), 0, 1, 0, 1 });
+		image->current_layout = VK_IMAGE_LAYOUT_GENERAL;
 	}
 
 	void enter_uninterruptible()

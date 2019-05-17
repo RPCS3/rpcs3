@@ -775,7 +775,6 @@ VKGSRender::~VKGSRender()
 	}
 
 	m_aux_frame_context.buffer_views_to_clean.clear();
-	m_aux_frame_context.samplers_to_clean.clear();
 
 	//NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
 	for (auto &ctx : frame_context_storage)
@@ -784,7 +783,6 @@ VKGSRender::~VKGSRender()
 		ctx.descriptor_pool.destroy();
 
 		ctx.buffer_views_to_clean.clear();
-		ctx.samplers_to_clean.clear();
 	}
 
 	m_draw_fbo.reset();
@@ -798,13 +796,7 @@ VKGSRender::~VKGSRender()
 	m_rtts.destroy();
 	m_texture_cache.destroy();
 
-	//Sampler handles
-	for (auto& handle : fs_sampler_handles)
-		handle.reset();
-
-	for (auto& handle : vs_sampler_handles)
-		handle.reset();
-
+	m_resource_manager.destroy();
 	m_stencil_mirror_sampler.reset();
 
 	//Overlay text handler
@@ -1267,7 +1259,7 @@ void VKGSRender::update_draw_state()
 
 void VKGSRender::begin_render_pass()
 {
-	if (render_pass_open)
+	if (m_render_pass_open)
 		return;
 
 	VkRenderPassBeginInfo rp_begin = {};
@@ -1280,16 +1272,16 @@ void VKGSRender::begin_render_pass()
 	rp_begin.renderArea.extent.height = m_draw_fbo->height();
 
 	vkCmdBeginRenderPass(*m_current_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-	render_pass_open = true;
+	m_render_pass_open = true;
 }
 
 void VKGSRender::close_render_pass()
 {
-	if (!render_pass_open)
+	if (!m_render_pass_open)
 		return;
 
 	vkCmdEndRenderPass(*m_current_command_buffer);
-	render_pass_open = false;
+	m_render_pass_open = false;
 }
 
 void VKGSRender::emit_geometry(u32 sub_index)
@@ -1497,6 +1489,9 @@ void VKGSRender::end()
 			surface_store_tag = m_rtts.cache_tag;
 		}
 
+		const bool check_for_cyclic_refs = m_render_pass_is_cyclic;
+		m_render_pass_is_cyclic = false;
+
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			if (!fs_sampler_state[i])
@@ -1591,14 +1586,13 @@ void VKGSRender::end()
 						if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode))
 						{
-							m_current_frame->samplers_to_clean.push_back(std::move(fs_sampler_handles[i]));
 							replace = true;
 						}
 					}
 
 					if (replace)
 					{
-						fs_sampler_handles[i] = std::make_unique<vk::sampler>(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+						fs_sampler_handles[i] = m_resource_manager.find_sampler(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
 					}
 				}
@@ -1608,6 +1602,7 @@ void VKGSRender::end()
 				}
 
 				m_textures_dirty[i] = false;
+				m_render_pass_is_cyclic |= sampler_state->is_cyclic_reference;
 			}
 		}
 
@@ -1637,14 +1632,13 @@ void VKGSRender::end()
 						if (!vs_sampler_handles[i]->matches(VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 							unnormalized_coords, 0.f, 1.f, min_lod, max_lod, VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, border_color))
 						{
-							m_current_frame->samplers_to_clean.push_back(std::move(vs_sampler_handles[i]));
 							replace = true;
 						}
 					}
 
 					if (replace)
 					{
-						vs_sampler_handles[i] = std::make_unique<vk::sampler>(
+						vs_sampler_handles[i] = m_resource_manager.find_sampler(
 							*m_device,
 							VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 							unnormalized_coords,
@@ -1656,10 +1650,32 @@ void VKGSRender::end()
 					*sampler_state = {};
 
 				m_vertex_textures_dirty[i] = false;
+				m_render_pass_is_cyclic |= sampler_state->is_cyclic_reference;
 			}
 		}
 
 		m_samplers_dirty.store(false);
+
+		if (check_for_cyclic_refs && !m_render_pass_is_cyclic)
+		{
+			// Reverse texture barriers for optimal performance
+			for (unsigned i = m_rtts.m_bound_render_targets_config.first, count = 0;
+				count < m_rtts.m_bound_render_targets_config.second;
+				++i, ++count)
+			{
+				if (auto surface = m_rtts.m_bound_render_targets[i].second;
+					surface->current_layout == VK_IMAGE_LAYOUT_GENERAL)
+				{
+					surface->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				}
+			}
+
+			if (auto surface = m_rtts.m_bound_depth_stencil.second;
+				surface && surface->current_layout == VK_IMAGE_LAYOUT_GENERAL)
+			{
+				surface->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			}
+		}
 	}
 
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
@@ -1707,7 +1723,7 @@ void VKGSRender::end()
 
 			if (LIKELY(view))
 			{
-				m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, view->image()->current_layout },
 					i,
 					::glsl::program_domain::glsl_fragment_program,
 					m_current_frame->descriptor_set);
@@ -1729,7 +1745,7 @@ void VKGSRender::end()
 							VK_BORDER_COLOR_INT_OPAQUE_BLACK);
 					}
 
-					m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, stencil_view->image()->current_layout },
 						i,
 						::glsl::program_domain::glsl_fragment_program,
 						m_current_frame->descriptor_set,
@@ -1785,7 +1801,7 @@ void VKGSRender::end()
 				continue;
 			}
 
-			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
 				i,
 				::glsl::program_domain::glsl_vertex_program,
 				m_current_frame->descriptor_set);
@@ -2480,7 +2496,6 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 		m_ui_renderer->free_resources();
 
 		ctx->buffer_views_to_clean.clear();
-		ctx->samplers_to_clean.clear();
 
 		if (ctx->last_frame_sync_time > m_last_heap_sync_time)
 		{
