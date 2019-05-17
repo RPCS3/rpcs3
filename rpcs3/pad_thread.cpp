@@ -174,6 +174,10 @@ void pad_thread::ThreadFunc()
 	{
 		if (!is_enabled)
 		{
+			if (!handlers.empty())
+			{
+				handlers.clear();
+			}
 			std::this_thread::sleep_for(1ms);
 			continue;
 		}
