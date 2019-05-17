@@ -47,6 +47,7 @@ public:
 		SPUCache,
 		SPUVerification,
 		DebugConsoleMode,
+		MaxSPURSThreads,
 
 		// Graphics
 		Renderer,
@@ -256,6 +257,7 @@ private:
 		{ SPUCache,                 { "Core", "SPU Cache"}},
 		{ SPUVerification,          { "Core", "SPU Verification"}},
 		{ DebugConsoleMode,         { "Core", "Debug Console Mode"}},
+		{ MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
 
 		// Graphics Tab
 		{ Renderer,                   { "Video", "Renderer"}},

@@ -1364,6 +1364,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
 	SubscribeTooltip(ui->debugConsoleMode, json_debug["debugConsoleMode"].toString());
 
+	// Comboboxes
+	xemu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings::MaxSPURSThreads, true);
+	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData("6"), tr("Unlimited (Default)"));
+	SubscribeTooltip(ui->maxSPURSThreads, json_debug["maxSPURSThreads"].toString());
+
 	// Layout fix for High Dpi
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
