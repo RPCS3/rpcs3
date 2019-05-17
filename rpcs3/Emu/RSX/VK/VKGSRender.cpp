@@ -1042,6 +1042,23 @@ void VKGSRender::check_heap_status(u32 flags)
 	}
 }
 
+void VKGSRender::check_present_status()
+{
+	if (!m_queued_frames.empty())
+	{
+		auto ctx = m_queued_frames.front();
+		if (ctx->swap_command_buffer->pending)
+		{
+			if (!ctx->swap_command_buffer->poke())
+			{
+				return;
+			}
+		}
+
+		process_swap_request(ctx, true);
+	}
+}
+
 void VKGSRender::check_descriptors()
 {
 	// Ease resource pressure if the number of draw calls becomes too high or we are running low on memory resources
@@ -1049,8 +1066,8 @@ void VKGSRender::check_descriptors()
 	verify(HERE), required_descriptors < DESCRIPTOR_MAX_DRAW_CALLS;
 	if ((required_descriptors + m_current_frame->used_descriptors) > DESCRIPTOR_MAX_DRAW_CALLS)
 	{
-		//No need to stall if we have more than one frame queue anyway
-		flush_command_queue();
+		// Should hard sync before resetting descriptors for spec compliance
+		flush_command_queue(true);
 
 		CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
 		m_current_frame->used_descriptors = 0;
@@ -1193,6 +1210,27 @@ void VKGSRender::begin()
 
 	if (!framebuffer_status_valid)
 		return;
+
+	if (m_current_frame->flags & frame_context_state::dirty)
+	{
+		check_present_status();
+
+		if (m_current_frame->swap_command_buffer)
+		{
+			// Borrow time by using the auxilliary context
+			m_aux_frame_context.grab_resources(*m_current_frame);
+			m_current_frame = &m_aux_frame_context;
+		}
+
+		verify(HERE), !m_current_frame->swap_command_buffer;
+		if (m_current_frame->used_descriptors)
+		{
+			CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
+			m_current_frame->used_descriptors = 0;
+		}
+
+		m_current_frame->flags &= ~frame_context_state::dirty;
+	}
 }
 
 void VKGSRender::update_draw_state()
@@ -2276,7 +2314,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 
 	if (hard_sync)
 	{
-		//swap handler checks the pending flag, so call it here
+		// swap handler checks the pending flag, so call it here
 		process_swap_request(m_current_frame);
 
 		//wait for the latest instruction to execute
@@ -2294,14 +2332,14 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 	}
 	else
 	{
-		//Mark this queue as pending
+		// Mark this queue as pending
 		m_current_command_buffer->pending = true;
 
-		//Grab next cb in line and make it usable
+		// Grab next cb in line and make it usable
 		m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
 		m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
 
-		//Soft sync if a present has not yet occured before consuming the wait event
+		// Soft sync if a present has not yet occured before consuming the wait event
 		for (auto &ctx : frame_context_storage)
 		{
 			if (ctx.swap_command_buffer == m_current_command_buffer)
@@ -2332,22 +2370,8 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint)
 
 void VKGSRender::advance_queued_frames()
 {
-	//Check all other frames for completion and clear resources
-	for (auto &ctx : frame_context_storage)
-	{
-		if (&ctx == m_current_frame)
-			continue;
-
-		if (ctx.swap_command_buffer)
-		{
-			ctx.swap_command_buffer->poke();
-			if (ctx.swap_command_buffer->pending)
-				continue;
-
-			//Present the bound image
-			process_swap_request(&ctx, true);
-		}
-	}
+	// Check all other frames for completion and clear resources
+	check_present_status();
 
 	//m_rtts storage is double buffered and should be safe to tag on frame boundary
 	m_rtts.free_invalidated();
@@ -2374,8 +2398,12 @@ void VKGSRender::advance_queued_frames()
 		m_index_buffer_ring_info.get_current_put_pos_minus_one(),
 		m_texture_upload_buffer_ring_info.get_current_put_pos_minus_one());
 
+	m_queued_frames.push_back(m_current_frame);
+	verify(HERE), m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES;
+
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
 	m_current_frame = &frame_context_storage[m_current_queue_index];
+	m_current_frame->flags |= frame_context_state::dirty;
 
 	vk::advance_frame_counter();
 }
@@ -2400,19 +2428,31 @@ void VKGSRender::present(frame_context_t *ctx)
 		}
 	}
 
-	//Presentation image released; reset value
+	// Presentation image released; reset value
 	ctx->present_image = UINT32_MAX;
+
+	// Remove from queued list
+	while (!m_queued_frames.empty())
+	{
+		auto frame = m_queued_frames.front();
+		m_queued_frames.pop_front();
+
+		if (frame == ctx)
+		{
+			break;
+		}
+	}
 
 	vk::advance_completed_frame_counter();
 }
 
 void VKGSRender::queue_swap_request()
 {
-	//buffer the swap request and return
+	// Buffer the swap request and return
 	if (m_current_frame->swap_command_buffer &&
 		m_current_frame->swap_command_buffer->pending)
 	{
-		//Its probable that no actual drawing took place
+		// Its probable that no actual drawing took place
 		process_swap_request(m_current_frame);
 	}
 
@@ -2553,10 +2593,18 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 
 	rsx::thread::do_local_task(state);
 
-	if (state == rsx::FIFO_state::lock_wait)
+	switch (state)
 	{
+	case rsx::FIFO_state::lock_wait:
 		// Critical check finished
 		return;
+	case rsx::FIFO_state::spinning:
+	case rsx::FIFO_state::empty:
+		// We have some time, check the present queue
+		check_present_status();
+		break;
+	default:
+		break;
 	}
 
 	check_window_status();
@@ -2874,33 +2922,6 @@ void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
-	// Clear any pending swap requests
-	// TODO: Decide on what to do if we circle back to a new frame before the previous frame waiting on it is still pending
-	// Dropping the frame would in theory allow the thread to advance faster
-	for (auto &ctx : frame_context_storage)
-	{
-		if (ctx.swap_command_buffer)
-		{
-			if (ctx.swap_command_buffer->pending)
-			{
-				ctx.swap_command_buffer->poke();
-
-				if (&ctx == m_current_frame && ctx.swap_command_buffer->pending)
-				{
-					//Instead of stopping to wait, use the aux storage to ease pressure
-					m_aux_frame_context.grab_resources(*m_current_frame);
-					m_current_frame = &m_aux_frame_context;
-				}
-			}
-
-			if (!ctx.swap_command_buffer->pending)
-			{
-				//process swap without advancing the frame base
-				process_swap_request(&ctx, true);
-			}
-		}
-	}
-
 	prepare_rtts(context);
 
 	if (!skip_reading)
@@ -3342,8 +3363,8 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		m_current_frame = &frame_context_storage[m_current_queue_index];
 		if (m_current_frame->swap_command_buffer)
 		{
-			//Always present if pending swap is present.
-			//Its possible this flip request is triggered by overlays and the flip queue is in undefined state
+			// Always present if pending swap is present.
+			// Its possible this flip request is triggered by overlays and the flip queue is in undefined state
 			process_swap_request(m_current_frame, true);
 		}
 
