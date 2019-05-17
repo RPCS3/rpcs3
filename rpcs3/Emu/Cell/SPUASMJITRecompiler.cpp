@@ -1076,6 +1076,20 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_stop);
 
+	if (g_cfg.core.spu_block_size != spu_block_size_type::safe && ret)
+	{
+		// Get stack pointer, try to use native return address (check SPU return address)
+		Label fail = c->newLabel();
+		c->mov(qw1->r32(), SPU_OFF_32(gpr, 1, &v128::_u32, 3));
+		c->and_(qw1->r32(), 0x3fff0);
+		c->lea(*qw1, x86::qword_ptr(*cpu, *qw1, 0, ::offset32(&spu_thread::stack_mirror)));
+		c->cmp(x86::dword_ptr(*qw1, 8), *addr);
+		c->jne(fail);
+		c->mov(pc0->r32(), x86::dword_ptr(*qw1, 12));
+		c->jmp(x86::qword_ptr(*qw1));
+		c->bind(fail);
+	}
+
 	if (jt || g_cfg.core.spu_block_size == spu_block_size_type::giga)
 	{
 		if (!instr_table.isValid())
@@ -1097,20 +1111,6 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		c->jae(fail);
 		c->lea(addr->r64(), x86::qword_ptr(instr_table));
 		c->jmp(x86::qword_ptr(addr->r64(), *qw1, 1, 0));
-		c->bind(fail);
-	}
-
-	if (g_cfg.core.spu_block_size != spu_block_size_type::safe && ret)
-	{
-		// Get stack pointer, try to use native return address (check SPU return address)
-		Label fail = c->newLabel();
-		c->mov(qw1->r32(), SPU_OFF_32(gpr, 1, &v128::_u32, 3));
-		c->and_(qw1->r32(), 0x3fff0);
-		c->lea(*qw1, x86::qword_ptr(*cpu, *qw1, 0, ::offset32(&spu_thread::stack_mirror)));
-		c->cmp(x86::dword_ptr(*qw1, 8), *addr);
-		c->jne(fail);
-		c->mov(pc0->r32(), x86::dword_ptr(*qw1, 12));
-		c->jmp(x86::qword_ptr(*qw1));
 		c->bind(fail);
 	}
 
