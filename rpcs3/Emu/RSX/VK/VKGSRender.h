@@ -396,7 +396,8 @@ private:
 
 	std::atomic<u64> m_last_sync_event = { 0 };
 
-	bool render_pass_open = false;
+	bool m_render_pass_open = false;
+	bool m_render_pass_is_cyclic = false;
 	size_t m_current_renderpass_id = 0;
 
 	//Vertex layout

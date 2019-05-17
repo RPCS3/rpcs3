@@ -213,11 +213,13 @@ namespace rsx
 			sampled_image_descriptor()
 			{}
 
-			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, bool is_depth, f32 x_scale, f32 y_scale, rsx::texture_dimension_extended type)
+			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, bool is_depth,
+				f32 x_scale, f32 y_scale, rsx::texture_dimension_extended type, bool cyclic_reference = false)
 			{
 				image_handle = handle;
 				upload_context = ctx;
 				is_depth_texture = is_depth;
+				is_cyclic_reference = cyclic_reference;
 				scale_x = x_scale;
 				scale_y = y_scale;
 				image_type = type;
@@ -1981,7 +1983,7 @@ namespace rsx
 				}
 
 				return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
-					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d };
+					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, assume_bound };
 			}
 
 			const auto scaled_w = rsx::apply_resolution_scale(internal_width, true);

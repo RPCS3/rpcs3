@@ -1267,7 +1267,7 @@ void VKGSRender::update_draw_state()
 
 void VKGSRender::begin_render_pass()
 {
-	if (render_pass_open)
+	if (m_render_pass_open)
 		return;
 
 	VkRenderPassBeginInfo rp_begin = {};
@@ -1280,16 +1280,16 @@ void VKGSRender::begin_render_pass()
 	rp_begin.renderArea.extent.height = m_draw_fbo->height();
 
 	vkCmdBeginRenderPass(*m_current_command_buffer, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-	render_pass_open = true;
+	m_render_pass_open = true;
 }
 
 void VKGSRender::close_render_pass()
 {
-	if (!render_pass_open)
+	if (!m_render_pass_open)
 		return;
 
 	vkCmdEndRenderPass(*m_current_command_buffer);
-	render_pass_open = false;
+	m_render_pass_open = false;
 }
 
 void VKGSRender::emit_geometry(u32 sub_index)
@@ -1497,6 +1497,9 @@ void VKGSRender::end()
 			surface_store_tag = m_rtts.cache_tag;
 		}
 
+		const bool check_for_cyclic_refs = m_render_pass_is_cyclic;
+		m_render_pass_is_cyclic = false;
+
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			if (!fs_sampler_state[i])
@@ -1608,6 +1611,7 @@ void VKGSRender::end()
 				}
 
 				m_textures_dirty[i] = false;
+				m_render_pass_is_cyclic |= sampler_state->is_cyclic_reference;
 			}
 		}
 
@@ -1656,10 +1660,32 @@ void VKGSRender::end()
 					*sampler_state = {};
 
 				m_vertex_textures_dirty[i] = false;
+				m_render_pass_is_cyclic |= sampler_state->is_cyclic_reference;
 			}
 		}
 
 		m_samplers_dirty.store(false);
+
+		if (check_for_cyclic_refs && !m_render_pass_is_cyclic)
+		{
+			// Reverse texture barriers for optimal performance
+			for (unsigned i = m_rtts.m_bound_render_targets_config.first, count = 0;
+				count < m_rtts.m_bound_render_targets_config.second;
+				++i, ++count)
+			{
+				if (auto surface = m_rtts.m_bound_render_targets[i].second;
+					surface->current_layout == VK_IMAGE_LAYOUT_GENERAL)
+				{
+					surface->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				}
+			}
+
+			if (auto surface = m_rtts.m_bound_depth_stencil.second;
+				surface && surface->current_layout == VK_IMAGE_LAYOUT_GENERAL)
+			{
+				surface->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			}
+		}
 	}
 
 	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
@@ -1707,7 +1733,7 @@ void VKGSRender::end()
 
 			if (LIKELY(view))
 			{
-				m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, view->image()->current_layout },
 					i,
 					::glsl::program_domain::glsl_fragment_program,
 					m_current_frame->descriptor_set);
@@ -1729,7 +1755,7 @@ void VKGSRender::end()
 							VK_BORDER_COLOR_INT_OPAQUE_BLACK);
 					}
 
-					m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, stencil_view->image()->current_layout },
 						i,
 						::glsl::program_domain::glsl_fragment_program,
 						m_current_frame->descriptor_set,
@@ -1785,7 +1811,7 @@ void VKGSRender::end()
 				continue;
 			}
 
-			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
 				i,
 				::glsl::program_domain::glsl_vertex_program,
 				m_current_frame->descriptor_set);
