@@ -69,23 +69,21 @@ namespace vk
 			// Helper to optionally clear/initialize memory contents depending on barrier type
 			auto clear_surface_impl = [&]()
 			{
+				push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				VkImageSubresourceRange range{ aspect(), 0, 1, 0, 1 };
-				const auto old_layout = current_layout;
-
-				change_image_layout(cmd, this, VK_IMAGE_LAYOUT_GENERAL, range);
 
 				if (aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
 				{
 					VkClearColorValue color{};
-					vkCmdClearColorImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &color, 1, &range);
+					vkCmdClearColorImage(cmd, value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &color, 1, &range);
 				}
 				else
 				{
 					VkClearDepthStencilValue clear{ 1.f, 255 };
-					vkCmdClearDepthStencilImage(cmd, value, VK_IMAGE_LAYOUT_GENERAL, &clear, 1, &range);
+					vkCmdClearDepthStencilImage(cmd, value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
 				}
 
-				change_image_layout(cmd, this, old_layout, range);
+				pop_layout(cmd);
 				state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
 			};
 

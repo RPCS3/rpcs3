@@ -34,6 +34,7 @@ namespace rsx
 		texture_upload_context upload_context = texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = texture_dimension_extended::texture_dimension_2d;
 		bool is_depth_texture = false;
+		bool is_cyclic_reference = false;
 		f32 scale_x = 1.f;
 		f32 scale_y = 1.f;
 
