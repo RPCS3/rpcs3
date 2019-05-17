@@ -277,6 +277,8 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 	c.jmp(args[1]);
 });
 
+DECLARE(spu_runtime::g_interpreter_table) = {};
+
 DECLARE(spu_runtime::g_interpreter) = nullptr;
 
 spu_cache::spu_cache(const std::string& loc)
@@ -392,16 +394,20 @@ void spu_cache::initialize()
 	u32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
 	std::vector<std::unique_ptr<spu_recompiler_base>> compilers{thread_count};
 
-	if (g_cfg.core.spu_decoder == spu_decoder_type::fast)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::fast || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		if (auto compiler = spu_recompiler_base::make_llvm_recompiler(11))
 		{
 			compiler->init();
 
-			if (compiler->compile(0, {}) && spu_runtime::g_interpreter)
+			if (compiler->compile(0, {}, nullptr) && spu_runtime::g_interpreter)
 			{
 				LOG_SUCCESS(SPU, "SPU Runtime: built interpreter.");
-				return;
+
+				if (g_cfg.core.spu_decoder != spu_decoder_type::llvm)
+				{
+					return;
+				}
 			}
 		}
 	}
@@ -450,7 +456,7 @@ void spu_cache::initialize()
 		// Build functions
 		for (std::size_t func_i = fnext++; func_i < func_list.size(); func_i = fnext++)
 		{
-			std::vector<u32>& func = func_list[func_i];
+			const std::vector<u32>& func = std::as_const(func_list)[func_i];
 
 			if (Emu.IsStopped() || fail_flag)
 			{
@@ -476,7 +482,7 @@ void spu_cache::initialize()
 				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
 			}
 
-			if (!compiler->compile(0, func))
+			if (!compiler->compile(0, func, nullptr))
 			{
 				// Likely, out of JIT memory. Signal to prevent further building.
 				fail_flag |= 1;
@@ -615,7 +621,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	auto& where = *static_cast<decltype(m_map)::value_type*>(_where);
 
 	// Function info
-	const std::vector<u32>& func = where.first;
+	const std::vector<u32>& func = get_func(_where);
 
 	//
 	const u32 _off = 1 + (func[0] / 4) * (false);
@@ -1137,7 +1143,7 @@ void spu_recompiler_base::make_function(const std::vector<u32>& data)
 {
 	for (u64 reset_count = m_spurt->get_reset_count();;)
 	{
-		if (LIKELY(compile(reset_count, data)))
+		if (LIKELY(compile(reset_count, data, nullptr)))
 		{
 			break;
 		}
@@ -3276,6 +3282,7 @@ void spu_recompiler_base::dump(std::string& out)
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/Analysis/Lint.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
@@ -4231,14 +4238,17 @@ public:
 		}
 	}
 
-	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>& func) override
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>& func, void* fn_location) override
 	{
 		if (func.empty() && last_reset_count == 0 && m_interp_magn)
 		{
 			return compile_interpreter();
 		}
 
-		const auto fn_location = m_spurt->find(last_reset_count, func);
+		if (!fn_location)
+		{
+			fn_location = m_spurt->find(last_reset_count, func);
+		}
 
 		if (fn_location == spu_runtime::g_dispatcher)
 		{
@@ -4273,14 +4283,7 @@ public:
 			m_hash_start = hash_start;
 		}
 
-		if (g_fxo->get<spu_cache>())
-		{
-			LOG_SUCCESS(SPU, "LLVM: Building %s (size %u)...", m_hash, func.size() - 1);
-		}
-		else
-		{
-			LOG_NOTICE(SPU, "Building function 0x%x... (size %u, %s)", func[0], func.size() - 1, m_hash);
-		}
+		LOG_NOTICE(SPU, "Building function 0x%x... (size %u, %s)", func[0], func.size() - 1, m_hash);
 
 		m_pos = func[0];
 		m_base = func[0];
@@ -4838,6 +4841,11 @@ public:
 			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 		}
 
+		if (g_fxo->get<spu_cache>())
+		{
+			LOG_SUCCESS(SPU, "New block compiled successfully");
+		}
+
 		return fn;
 	}
 
@@ -4899,7 +4907,6 @@ public:
 		m_ir->SetInsertPoint(BasicBlock::Create(m_context, "", ret_func));
 		m_thread = &*(ret_func->arg_begin() + 1);
 		m_interp_pc = &*(ret_func->arg_begin() + 2);
-		m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc));
 		m_ir->CreateRetVoid();
 
 		// Add entry function, serves as a trampoline
@@ -4953,12 +4960,13 @@ public:
 		}
 
 		// Fill interpreter table
+		std::array<llvm::Function*, 256> ifuncs{};
 		std::vector<llvm::Constant*> iptrs;
 		iptrs.reserve(1ull << m_interp_magn);
 
 		m_block = nullptr;
 
-		auto last_itype = spu_itype::UNK;
+		auto last_itype = spu_itype::type{255};
 
 		for (u32 i = 0; i < 1u << m_interp_magn;)
 		{
@@ -4988,8 +4996,12 @@ public:
 			// Build if necessary
 			if (f->empty())
 			{
+				if (last_itype != itype)
+				{
+					ifuncs[itype] = f;
+				}
+
 				f->setCallingConv(CallingConv::GHC);
-				f->setLinkage(GlobalValue::InternalLinkage);
 
 				m_function = f;
 				m_lsptr  = &*(f->arg_begin() + 0);
@@ -5090,6 +5102,62 @@ public:
 							m_interp_pc = m_interp_pc_next;
 						}
 
+						if (last_itype != itype)
+						{
+							// Reset to discard dead code
+							llvm::cast<LoadInst>(next_if)->setVolatile(false);
+
+							if (itype & spu_itype::branch)
+							{
+								const auto _stop = BasicBlock::Create(m_context, "", f);
+								const auto _next = BasicBlock::Create(m_context, "", f);
+								m_ir->CreateCondBr(m_ir->CreateIsNotNull(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::state))), _stop, _next, m_md_unlikely);
+								m_ir->SetInsertPoint(_stop);
+								m_ir->CreateStore(m_interp_pc, spu_ptr<u32>(&spu_thread::pc));
+
+								const auto escape_yes = BasicBlock::Create(m_context, "", f);
+								const auto escape_no = BasicBlock::Create(m_context, "", f);
+								m_ir->CreateCondBr(call("spu_exec_check_state", &exec_check_state, m_thread), escape_yes, escape_no);
+								m_ir->SetInsertPoint(escape_yes);
+								call("spu_escape", spu_runtime::g_escape, m_thread);
+								m_ir->CreateBr(_next);
+								m_ir->SetInsertPoint(escape_no);
+								m_ir->CreateBr(_next);
+								m_ir->SetInsertPoint(_next);
+							}
+
+							llvm::Value* fret = m_ir->CreateBitCast(m_interp_table, if_type->getPointerTo());
+
+							if (itype == spu_itype::WRCH ||
+								itype == spu_itype::RDCH ||
+								itype == spu_itype::RCHCNT ||
+								itype == spu_itype::STOP ||
+								itype == spu_itype::STOPD ||
+								itype == spu_itype::UNK ||
+								itype == spu_itype::DFCMEQ ||
+								itype == spu_itype::DFCMGT ||
+								itype == spu_itype::DFCGT ||
+								itype == spu_itype::DFCEQ ||
+								itype == spu_itype::DFTSV)
+							{
+								m_interp_7f0  = m_ir->getInt32(0x7f0);
+								m_interp_regs = _ptr(m_thread, get_reg_offset(0));
+								fret = ret_func;
+							}
+							else if (!(itype & spu_itype::branch))
+							{
+								// Hack: inline ret instruction before final jmp; this is not reliable.
+								m_ir->CreateCall(InlineAsm::get(get_ftype<void>(), "ret", "", true, false, InlineAsm::AD_Intel));
+								fret = ret_func;
+							}
+
+							const auto arg3 = UndefValue::get(get_type<u32>());
+							const auto _ret = m_ir->CreateCall(fret, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
+							_ret->setCallingConv(CallingConv::GHC);
+							_ret->setTailCall();
+							m_ir->CreateRetVoid();
+						}
+
 						if (!m_ir->GetInsertBlock()->getTerminator())
 						{
 							// Call next instruction.
@@ -5129,7 +5197,7 @@ public:
 				}
 			}
 
-			if (last_itype != itype)
+			if (last_itype != itype && g_cfg.core.spu_decoder != spu_decoder_type::llvm)
 			{
 				// Repeat after probing
 				last_itype = itype;
@@ -5193,6 +5261,12 @@ public:
 
 		// Register interpreter entry point
 		spu_runtime::g_interpreter = reinterpret_cast<spu_function_t>(m_jit.get_engine().getPointerToFunction(main_func));
+
+		for (u32 i = 0; i < spu_runtime::g_interpreter_table.size(); i++)
+		{
+			// Fill exported interpreter table
+			spu_runtime::g_interpreter_table[i] = ifuncs[i] ? reinterpret_cast<u64>(m_jit.get_engine().getPointerToFunction(ifuncs[i])) : 0;
+		}
 
 		if (!spu_runtime::g_interpreter)
 		{
@@ -8242,3 +8316,416 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u
 }
 
 #endif
+
+// SPU LLVM recompiler thread context
+struct spu_llvm
+{
+	// Workload
+	lf_queue<std::pair<void*, u8*>> registered;
+
+	void operator()()
+	{
+		// SPU LLVM Recompiler instance
+		const auto compiler = spu_recompiler_base::make_llvm_recompiler();
+		compiler->init();
+
+		// Fake LS
+		std::vector<be_t<u32>> ls(0x10000);
+
+		for (auto* parg : registered)
+		{
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				break;
+			}
+
+			if (!parg)
+			{
+				continue;
+			}
+
+			const std::vector<u32>& func = spu_runtime::get_func(parg->first);
+
+			// Get data start
+			const u32 start = func[0];
+			const u32 size0 = ::size32(func);
+
+			// Initialize LS with function data only
+			for (u32 i = 1, pos = start; i < size0; i++, pos += 4)
+			{
+				ls[pos / 4] = se_storage<u32>::swap(func[i]);
+			}
+
+			// Call analyser
+			const std::vector<u32>& func2 = compiler->analyse(ls.data(), func[0]);
+
+			if (func2.size() != size0)
+			{
+				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
+			}
+
+			if (const auto target = compiler->compile(0, func, parg->first))
+			{
+				// Redirect old function
+				const s64 rel = reinterpret_cast<u64>(target) - reinterpret_cast<u64>(parg->second) - 5;
+
+				union
+				{
+					u8 bytes[8];
+					u64 result;
+				};
+
+				bytes[0] = 0xe9; // jmp rel32
+				std::memcpy(bytes + 1, &rel, 4);
+				bytes[5] = 0x90;
+				bytes[6] = 0x90;
+				bytes[7] = 0x90;
+
+				atomic_storage<u64>::release(*reinterpret_cast<u64*>(parg->second), result);
+			}
+			else
+			{
+				LOG_FATAL(SPU, "[0x%05x] Compilation failed.", func2[0]);
+			}
+
+			// Clear fake LS
+			for (u32 i = 1, pos = start; i < func2.size(); i++, pos += 4)
+			{
+				if (se_storage<u32>::swap(func2[i]) != ls[pos / 4])
+				{
+					LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed at 0x%x", func2[0], pos);
+				}
+
+				ls[pos / 4] = 0;
+			}
+
+			if (func2.size() != size0)
+			{
+				std::memset(ls.data(), 0, 0x40000);
+			}
+		}
+	}
+
+	static constexpr auto thread_name = "SPU LLVM"sv;
+};
+
+using spu_llvm_thread = named_thread<spu_llvm>;
+
+struct spu_fast : public spu_recompiler_base
+{
+	virtual void init() override
+	{
+		if (!m_spurt)
+		{
+			m_spurt = g_fxo->get<spu_runtime>();
+		}
+	}
+
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>& func, void* fn_location) override
+	{
+		if (!fn_location)
+		{
+			fn_location = m_spurt->find(last_reset_count, func);
+		}
+
+		if (fn_location == spu_runtime::g_dispatcher)
+		{
+			return &dispatch;
+		}
+
+		if (!fn_location)
+		{
+			return nullptr;
+		}
+
+		if (g_cfg.core.spu_debug)
+		{
+			std::string log;
+			this->dump(log);
+			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
+		}
+
+		// Allocate executable area with necessary size
+		const auto result = jit_runtime::alloc(8 + 1 + 9 + (::size32(func) - 1) * (16 + 16) + 36 + 47, 16);
+
+		if (!result)
+		{
+			return nullptr;
+		}
+
+		m_pos = func[0];
+		m_size = (::size32(func) - 1) * 4;
+
+		u8* raw = result;
+
+		// 8-byte NOP for patching
+		*raw++ = 0x0f;
+		*raw++ = 0x1f;
+		*raw++ = 0x84;
+		*raw++ = 0x00;
+		*raw++ = 0x00;
+		*raw++ = 0x00;
+		*raw++ = 0x00;
+		*raw++ = 0x00;
+
+		// Load PC: mov eax, [r13 + spu_thread::pc]
+		*raw++ = 0x41;
+		*raw++ = 0x8b;
+		*raw++ = 0x45;
+		*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
+
+		// Get LS address starting from PC: lea rcx, [rbp + rax]
+		*raw++ = 0x48;
+		*raw++ = 0x8d;
+		*raw++ = 0x4c;
+		*raw++ = 0x05;
+		*raw++ = 0x00;
+
+		// Verification (slow)
+		for (u32 i = 1; i < func.size(); i++)
+		{
+			if (!func[i])
+			{
+				continue;
+			}
+
+			// cmp dword ptr [rcx + off], opc
+			*raw++ = 0x81;
+			*raw++ = 0xb9;
+			const u32 off = (i - 1) * 4;
+			const u32 opc = func[i];
+			std::memcpy(raw + 0, &off, 4);
+			std::memcpy(raw + 4, &opc, 4);
+			raw += 8;
+
+			// jne tr_dispatch
+			const s64 rel = reinterpret_cast<u64>(spu_runtime::tr_dispatch) - reinterpret_cast<u64>(raw) - 6;
+			*raw++ = 0x0f;
+			*raw++ = 0x85;
+			std::memcpy(raw + 0, &rel, 4);
+			raw += 4;
+		}
+
+		// trap
+		//*raw++ = 0xcc;
+
+		// Secondary prologue: sub rsp,0x28
+		*raw++ = 0x48;
+		*raw++ = 0x83;
+		*raw++ = 0xec;
+		*raw++ = 0x28;
+
+		// Fix args: xchg r13,rbp
+		*raw++ = 0x49;
+		*raw++ = 0x87;
+		*raw++ = 0xed;
+
+		// mov r12d, eax
+		*raw++ = 0x41;
+		*raw++ = 0x89;
+		*raw++ = 0xc4;
+
+		// mov esi, 0x7f0
+		*raw++ = 0xbe;
+		*raw++ = 0xf0;
+		*raw++ = 0x07;
+		*raw++ = 0x00;
+		*raw++ = 0x00;
+
+		// lea rdi, [rbp + spu_thread::gpr]
+		*raw++ = 0x48;
+		*raw++ = 0x8d;
+		*raw++ = 0x7d;
+		*raw++ = ::narrow<s8>(::offset32(&spu_thread::gpr));
+
+		// Save base pc: mov [rbp + spu_thread::base_pc], eax
+		*raw++ = 0x89;
+		*raw++ = 0x45;
+		*raw++ = ::narrow<s8>(::offset32(&spu_thread::base_pc));
+
+		// inc block_counter
+		*raw++ = 0x48;
+		*raw++ = 0xff;
+		*raw++ = 0x85;
+		const u32 blc_off = ::offset32(&spu_thread::block_counter);
+		std::memcpy(raw, &blc_off, 4);
+		raw += 4;
+
+		// lea r14, [local epilogue]
+		*raw++ = 0x4c;
+		*raw++ = 0x8d;
+		*raw++ = 0x35;
+		const u32 epi_off = (::size32(func) - 1) * 16;
+		std::memcpy(raw, &epi_off, 4);
+		raw += 4;
+
+		// Instructions (each instruction occupies fixed number of bytes)
+		for (u32 i = 1; i < func.size(); i++)
+		{
+			const u32 pos = m_pos + (i - 1) * 4;
+
+			if (!func[i])
+			{
+				// Save pc: mov [rbp + spu_thread::pc], r12d
+				*raw++ = 0x44;
+				*raw++ = 0x89;
+				*raw++ = 0x65;
+				*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
+
+				// Epilogue: add rsp,0x28
+				*raw++ = 0x48;
+				*raw++ = 0x83;
+				*raw++ = 0xc4;
+				*raw++ = 0x28;
+
+				// ret (TODO)
+				*raw++ = 0xc3;
+				std::memset(raw, 0xcc, 16 - 9);
+				raw += 16 - 9;
+				continue;
+			}
+
+			// Fix endianness
+			const spu_opcode_t op{se_storage<u32>::swap(func[i])};
+
+			switch (auto type = s_spu_itype.decode(op.opcode))
+			{
+			case spu_itype::BRZ:
+			case spu_itype::BRHZ:
+			case spu_itype::BRNZ:
+			case spu_itype::BRHNZ:
+			{
+				const u32 target = spu_branch_target(pos, op.i16);
+
+				if (0 && target >= m_pos && target < m_pos + m_size)
+				{
+					*raw++ = type == spu_itype::BRHZ || type == spu_itype::BRHNZ ? 0x66 : 0x90;
+					*raw++ = 0x83;
+					*raw++ = 0xbd;
+					const u32 off = ::offset32(&spu_thread::gpr, op.rt) + 12;
+					std::memcpy(raw, &off, 4);
+					raw += 4;
+					*raw++ = 0x00;
+
+					*raw++ = 0x0f;
+					*raw++ = type == spu_itype::BRZ || type == spu_itype::BRHZ ? 0x84 : 0x85;
+					const u32 dif = (target - (pos + 4)) / 4 * 16 + 2;
+					std::memcpy(raw, &dif, 4);
+					raw += 4;
+
+					*raw++ = 0x66;
+					*raw++ = 0x90;
+					break;
+				}
+
+				[[fallthrough]];
+			}
+			default:
+			{
+				// Ballast: mov r15d, pos
+				*raw++ = 0x41;
+				*raw++ = 0xbf;
+				std::memcpy(raw, &pos, 4);
+				raw += 4;
+
+				// mov ebx, opc
+				*raw++ = 0xbb;
+				std::memcpy(raw, &op, 4);
+				raw += 4;
+
+				// call spu_* (specially built interpreter function)
+				const s64 rel = spu_runtime::g_interpreter_table[type] - reinterpret_cast<u64>(raw) - 5;
+				*raw++ = 0xe8;
+				std::memcpy(raw, &rel, 4);
+				raw += 4;
+				break;
+			}
+			}
+		}
+
+		// Local dispatcher/epilogue: fix stack after branch instruction, then dispatch or return
+
+		// add rsp, 8
+		*raw++ = 0x48;
+		*raw++ = 0x83;
+		*raw++ = 0xc4;
+		*raw++ = 0x08;
+
+		// and rsp, -16
+		*raw++ = 0x48;
+		*raw++ = 0x83;
+		*raw++ = 0xe4;
+		*raw++ = 0xf0;
+
+		// lea rax, [r12 - size]
+		*raw++ = 0x49;
+		*raw++ = 0x8d;
+		*raw++ = 0x84;
+		*raw++ = 0x24;
+		const u32 msz = 0u - m_size;
+		std::memcpy(raw, &msz, 4);
+		raw += 4;
+
+		// sub eax, [rbp + spu_thread::base_pc]
+		*raw++ = 0x2b;
+		*raw++ = 0x45;
+		*raw++ = ::narrow<s8>(::offset32(&spu_thread::base_pc));
+
+		// cmp eax, (0 - size)
+		*raw++ = 0x3d;
+		std::memcpy(raw, &msz, 4);
+		raw += 4;
+
+		// jb epilogue
+		*raw++ = 0x72;
+		*raw++ = +12;
+
+		// movsxd rax, eax
+		*raw++ = 0x48;
+		*raw++ = 0x63;
+		*raw++ = 0xc0;
+
+		// shl rax, 2
+		*raw++ = 0x48;
+		*raw++ = 0xc1;
+		*raw++ = 0xe0;
+		*raw++ = 0x02;
+
+		// add rax, r14
+		*raw++ = 0x4c;
+		*raw++ = 0x01;
+		*raw++ = 0xf0;
+
+		// jmp rax
+		*raw++ = 0xff;
+		*raw++ = 0xe0;
+
+		// Save pc: mov [rbp + spu_thread::pc], r12d
+		*raw++ = 0x44;
+		*raw++ = 0x89;
+		*raw++ = 0x65;
+		*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
+
+		// Epilogue: add rsp,0x28 ; ret
+		*raw++ = 0x48;
+		*raw++ = 0x83;
+		*raw++ = 0xc4;
+		*raw++ = 0x28;
+		*raw++ = 0xc3;
+
+		if (!m_spurt->add(last_reset_count, fn_location, reinterpret_cast<spu_function_t>(result)))
+		{
+			return nullptr;
+		}
+
+		// Send work to LLVM compiler thread; after add() to avoid race
+		g_fxo->get<spu_llvm_thread>()->registered.push(fn_location, result);
+
+		return reinterpret_cast<spu_function_t>(result);
+	}
+};
+
+std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_fast_llvm_recompiler()
+{
+	return std::make_unique<spu_fast>();
+}
