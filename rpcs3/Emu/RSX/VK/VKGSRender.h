@@ -46,6 +46,7 @@ namespace vk
 #define VK_MAX_ASYNC_CB_COUNT 64
 #define VK_MAX_ASYNC_FRAMES 2
 
+using rsx::flags32_t;
 extern u64 get_system_time();
 
 enum
@@ -156,12 +157,20 @@ struct occlusion_data
 	command_buffer_chunk* command_buffer_to_wait = nullptr;
 };
 
+enum frame_context_state : u32
+{
+	dirty = 1
+};
+
 struct frame_context_t
 {
 	VkSemaphore present_semaphore = VK_NULL_HANDLE;
 	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
+
 	vk::descriptor_pool descriptor_pool;
 	u32 used_descriptors = 0;
+
+	flags32_t flags = 0;
 
 	std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
 
@@ -188,6 +197,7 @@ struct frame_context_t
 		descriptor_set = other.descriptor_set;
 		descriptor_pool = other.descriptor_pool;
 		used_descriptors = other.used_descriptors;
+		flags = other.flags;
 
 		attrib_heap_ptr = other.attrib_heap_ptr;
 		vtx_env_heap_ptr = other.vtx_env_heap_ptr;
@@ -435,6 +445,7 @@ private:
 
 	u32 m_current_queue_index = 0;
 	frame_context_t* m_current_frame = nullptr;
+	std::deque<frame_context_t*> m_queued_frames;
 
 	u32 m_client_width = 0;
 	u32 m_client_height = 0;
@@ -510,6 +521,7 @@ public:
 	void bind_viewport();
 
 	void check_window_status();
+	void check_present_status();
 
 	void sync_hint(rsx::FIFO_hint hint) override;
 
