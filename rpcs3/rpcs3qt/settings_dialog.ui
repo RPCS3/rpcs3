@@ -2336,6 +2336,24 @@
               </property>
              </spacer>
             </item>
+            <item>
+             <widget class="QGroupBox" name="gb_max_spurs_threads">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>Maximum Number of SPURS Threads</string>
+              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_76">
+               <item>
+                <widget class="QComboBox" name="maxSPURSThreads"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
            </layout>
           </widget>
          </item>
