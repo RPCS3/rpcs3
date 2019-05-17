@@ -192,6 +192,9 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 	// Restore native stack pointer (longjmp emulation)
 	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)));
 
+	// Adjust stack for initial call instruction in the gateway
+	c.sub(x86::rsp, 8);
+
 	// Tail call, GHC CC (second arg)
 	c.mov(x86::r13, args[0]);
 	c.mov(x86::ebp, x86::dword_ptr(args[0], ::offset32(&spu_thread::offset)));
