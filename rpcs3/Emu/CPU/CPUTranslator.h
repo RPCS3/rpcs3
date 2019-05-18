@@ -328,46 +328,39 @@ struct llvm_value_t<T*> : llvm_value_t<T>
 	}
 };
 
+// u32[4] : vector of 4 u32 elements
+// u32[123][4] : array of 123 u32[4] vectors
+// u32[123][1] : array of 123 u32 scalars
 template <typename T, uint N>
-struct llvm_value_t<T[N]> : llvm_value_t<T>
+struct llvm_value_t<T[N]> : llvm_value_t<std::conditional_t<(std::extent_v<T> > 1), T, std::remove_extent_t<T>>>
 {
-	static_assert(!llvm_value_t<T>::is_vector, "llvm_value_t<> error: invalid multidimensional vector");
-	static_assert(!llvm_value_t<T>::is_pointer, "llvm_value_t<>: vector of pointers is not allowed");
-
 	using type = T[N];
-	using base = llvm_value_t<T>;
+	using base = llvm_value_t<std::conditional_t<(std::extent_v<T> > 1), T, std::remove_extent_t<T>>>;
 	using base::base;
 
-	static constexpr uint is_array   = 0;
-	static constexpr uint is_vector  = N;
+	static constexpr uint esize      = std::is_array_v<T> ? 0 : base::esize;
+	static constexpr bool is_int     = !std::is_array_v<T> && base::is_int;
+	static constexpr bool is_sint    = !std::is_array_v<T> && base::is_sint;
+	static constexpr bool is_uint    = !std::is_array_v<T> && base::is_uint;
+	static constexpr bool is_float   = !std::is_array_v<T> && base::is_float;
+	static constexpr uint is_array   = std::is_array_v<T> ? N : 0;
+	static constexpr uint is_vector  = std::is_array_v<T> ? 0 : N;
 	static constexpr uint is_pointer = 0;
 
 	static llvm::Type* get_type(llvm::LLVMContext& context)
 	{
-		return llvm::VectorType::get(llvm_value_t<T>::get_type(context), N);
-	}
-};
-
-// u32[4][123] : array of 123 u32[4] vectors
-// u32[0][123] : array of 123 u32 scalars
-template <typename T, uint V, uint N>
-struct llvm_value_t<T[V][N]> : llvm_value_t<std::conditional_t<V != 0, T[V], T>>
-{
-	using type = T[V][N];
-	using base = llvm_value_t<std::conditional_t<V != 0, T[V], T>>;
-	using base::base;
-
-	static constexpr bool is_int     = false;
-	static constexpr bool is_sint    = false;
-	static constexpr bool is_uint    = false;
-	static constexpr bool is_float   = false;
-	static constexpr uint is_array   = N;
-	static constexpr uint is_vector  = false;
-	static constexpr uint is_pointer = false;
-
-	static llvm::Type* get_type(llvm::LLVMContext& context)
-	{
-		return llvm::ArrayType::get(base::get_type(context), N);
+		if constexpr (std::is_array_v<T>)
+		{
+			return llvm::ArrayType::get(base::get_type(context), N);
+		}
+		else if constexpr (N > 1)
+		{
+			return llvm::VectorType::get(base::get_type(context), N);
+		}
+		else
+		{
+			return base::get_type(context);
+		}
 	}
 };
 
