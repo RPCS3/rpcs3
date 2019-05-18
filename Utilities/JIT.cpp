@@ -250,6 +250,7 @@ static void* const s_memory = []() -> void*
 {
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
+	llvm::InitializeNativeTargetAsmParser();
 	LLVMLinkInMCJIT();
 
 #ifdef MAP_32BIT
