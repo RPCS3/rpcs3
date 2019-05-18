@@ -123,7 +123,7 @@ namespace rsx
 			{
 				auto& res = vm::reservation_lock(addr, 4);
 				vm::write32(addr, arg);
-				res &= ~1ull;
+				res &= -128;
 			}
 
 			if (addr >> 28 != 0x4)
@@ -1018,7 +1018,7 @@ namespace rsx
 			{
 				temp1.reset(new u8[in_pitch * (in_h - 1) + (in_bpp * in_w)]);
 
-				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch; 
+				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch;
 
 				for (u32 y = 0; y < in_h; ++y)
 				{

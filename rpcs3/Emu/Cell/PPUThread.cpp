@@ -975,7 +975,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	while (LIKELY(g_use_rtm))
 	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
+		ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
 		ppu.rdata = data;
 
 		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
@@ -990,7 +990,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 
 	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 
-	if (LIKELY((ppu.rtime & 1) == 0))
+	if (LIKELY((ppu.rtime & 127) == 0))
 	{
 		ppu.rdata = data;
 
@@ -1006,7 +1006,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	{
 		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
 
-		if (LIKELY((ppu.rtime & 1) == 0))
+		if (LIKELY((ppu.rtime & 127) == 0))
 		{
 			ppu.rdata = data;
 
@@ -1066,7 +1066,7 @@ const auto ppu_stwcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.cmp(x86::dword_ptr(x86::r11), args[2].r32());
 	c.jne(fail);
 	c.mov(x86::dword_ptr(x86::r11), args[3].r32());
-	c.add(x86::qword_ptr(x86::r10), 2);
+	c.sub(x86::qword_ptr(x86::r10), -128);
 	c.xend();
 	c.mov(x86::eax, 1);
 	c.ret();
@@ -1096,7 +1096,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	auto& data = vm::_ref<atomic_be_t<u32>>(addr & -4);
 	const u32 old_data = static_cast<u32>(ppu.rdata << ((addr & 7) * 8) >> 32);
 
-	if (ppu.raddr != addr || addr & 3 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & ~1ull))
+	if (ppu.raddr != addr || addr & 3 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & -128))
 	{
 		ppu.raddr = 0;
 		return false;
@@ -1119,13 +1119,13 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	vm::passive_unlock(ppu);
 
 	auto& res = vm::reservation_lock(addr, sizeof(u32));
-	const u64 old_time = res.load() & ~1ull;
+	const u64 old_time = res.load() & -128;
 
 	const bool result = ppu.rtime == old_time && data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
-		res.release(old_time + 2);
+		res.release(old_time + 128);
 		vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 	}
 	else
@@ -1164,7 +1164,7 @@ const auto ppu_stdcx_tx = build_function_asm<bool(*)(u32 raddr, u64 rtime, u64 r
 	c.cmp(x86::qword_ptr(x86::r11), args[2]);
 	c.jne(fail);
 	c.mov(x86::qword_ptr(x86::r11), args[3]);
-	c.add(x86::qword_ptr(x86::r10), 2);
+	c.sub(x86::qword_ptr(x86::r10), -128);
 	c.xend();
 	c.mov(x86::eax, 1);
 	c.ret();
@@ -1194,7 +1194,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
 	const u64 old_data = ppu.rdata << ((addr & 7) * 8);
 
-	if (ppu.raddr != addr || addr & 7 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & ~1ull))
+	if (ppu.raddr != addr || addr & 7 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & -128))
 	{
 		ppu.raddr = 0;
 		return false;
@@ -1217,13 +1217,13 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	vm::passive_unlock(ppu);
 
 	auto& res = vm::reservation_lock(addr, sizeof(u64));
-	const u64 old_time = res.load() & ~1ull;
+	const u64 old_time = res.load() & -128;
 
 	const bool result = ppu.rtime == old_time && data.compare_and_swap_test(old_data, reg_value);
 
 	if (result)
 	{
-		res.release(old_time + 2);
+		res.release(old_time + 128);
 		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 	}
 	else
