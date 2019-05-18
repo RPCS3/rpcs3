@@ -143,7 +143,7 @@ namespace vk
 			const u32 in_stencil_size = out_w * out_h;
 
 			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
-			verify(HERE), src->size() >= allocation_end;
+			verify("Out of memory (compute heap). Lower your resolution scale setting." HERE), src->size() >= allocation_end;
 
 			const VkDeviceSize z_offset = align<VkDeviceSize>(region.bufferOffset + packed_length, 256);
 			const VkDeviceSize s_offset = align<VkDeviceSize>(z_offset + in_depth_size, 256);
