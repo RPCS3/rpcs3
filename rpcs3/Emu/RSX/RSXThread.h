@@ -208,7 +208,7 @@ namespace rsx
 			}
 
 			const u32 max_index = (first + count) - 1;
-			u32 _max_index = first;
+			u32 _max_index = 0;
 			u32 _min_index = first;
 
 			for (const auto &attrib : locations)
@@ -242,6 +242,7 @@ namespace rsx
 				}
 			}
 
+			verify(HERE), _max_index >= _min_index;
 			return { _min_index, (_max_index - _min_index) + 1 };
 		}
 	};
