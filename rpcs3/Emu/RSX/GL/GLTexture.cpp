@@ -606,7 +606,8 @@ namespace gl
 		// The rest of sampler state is now handled by sampler state objects
 
 		// Calculate staging buffer size
-		size_t texture_data_sz = depth * height * width * get_format_block_size_in_bytes(gcm_format);
+		const u32 aligned_pitch = align<u32>(width * get_format_block_size_in_bytes(gcm_format), 4);
+		size_t texture_data_sz = depth * height * aligned_pitch;
 		std::vector<gsl::byte> data_upload_buf(texture_data_sz);
 
 		const auto format_type = get_format_type(gcm_format);
