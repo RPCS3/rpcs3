@@ -152,18 +152,16 @@ namespace vk
 		return g_null_sampler;
 	}
 
-	VkImageView null_image_view(vk::command_buffer &cmd)
+	vk::image_view* null_image_view(vk::command_buffer &cmd)
 	{
 		if (g_null_image_view)
-			return g_null_image_view->value;
+			return g_null_image_view.get();
 
 		g_null_texture.reset(new image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
 
-		g_null_image_view.reset(new image_view(*g_current_renderer, g_null_texture->value, VK_IMAGE_VIEW_TYPE_2D,
-			VK_FORMAT_B8G8R8A8_UNORM, {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
-			{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}));
+		g_null_image_view.reset(new image_view(*g_current_renderer, g_null_texture.get()));
 
 		// Initialize memory to transparent black
 		VkClearColorValue clear_color = {};
@@ -173,7 +171,7 @@ namespace vk
 
 		// Prep for shader access
 		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
-		return g_null_image_view->value;
+		return g_null_image_view.get();
 	}
 
 	vk::image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height)
@@ -562,7 +560,7 @@ namespace vk
 		image->current_layout = new_layout;
 	}
 
-	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range)
+	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
 	{
 		// NOTE: Sampling from an attachment in ATTACHMENT_OPTIMAL layout on some hw ends up with garbage output
 		// Transition to GENERAL if this resource is both input and output
@@ -573,7 +571,7 @@ namespace vk
 		VkPipelineStageFlags src_stage;
 		if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
 		{
-			if (!rsx::method_registers.color_write_enabled() && layout == VK_IMAGE_LAYOUT_GENERAL)
+			if (!rsx::method_registers.color_write_enabled() && current_layout == new_layout)
 			{
 				// Nothing to do
 				return;
@@ -584,7 +582,7 @@ namespace vk
 		}
 		else
 		{
-			if (!rsx::method_registers.depth_write_enabled() && layout == VK_IMAGE_LAYOUT_GENERAL)
+			if (!rsx::method_registers.depth_write_enabled() && current_layout == new_layout)
 			{
 				// Nothing to do
 				return;
@@ -596,8 +594,8 @@ namespace vk
 
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-		barrier.oldLayout = layout;
+		barrier.newLayout = new_layout;
+		barrier.oldLayout = current_layout;
 		barrier.image = image;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -608,10 +606,10 @@ namespace vk
 		vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image)
+	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout)
 	{
-		insert_texture_barrier(cmd, image->value, image->current_layout, { image->aspect(), 0, 1, 0, 1 });
-		image->current_layout = VK_IMAGE_LAYOUT_GENERAL;
+		insert_texture_barrier(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
+		image->current_layout = new_layout;
 	}
 
 	void enter_uninterruptible()

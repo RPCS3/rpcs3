@@ -88,6 +88,7 @@ namespace vk
 	class physical_device;
 	class command_buffer;
 	class image;
+	struct image_view;
 	struct buffer;
 	struct data_heap;
 	class mem_allocator_base;
@@ -116,7 +117,7 @@ namespace vk
 	VkImageAspectFlags get_aspect_flags(VkFormat format);
 
 	VkSampler null_sampler();
-	VkImageView null_image_view(vk::command_buffer&);
+	image_view* null_image_view(vk::command_buffer&);
 	image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height);
 	buffer* get_scratch_buffer();
 
@@ -166,8 +167,8 @@ namespace vk
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
 	//Texture barrier applies to a texture to ensure writes to it are finished before any reads are attempted to avoid RAW hazards
-	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
-	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
+	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
+	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length,
 			VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);

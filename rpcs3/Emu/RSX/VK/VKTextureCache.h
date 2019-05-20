@@ -1043,7 +1043,7 @@ namespace vk
 
 		void insert_texture_barrier(vk::command_buffer& cmd, vk::image* tex) override
 		{
-			vk::insert_texture_barrier(cmd, tex);
+			vk::insert_texture_barrier(cmd, tex, VK_IMAGE_LAYOUT_GENERAL);
 		}
 
 		bool render_target_format_is_compatible(vk::image* tex, u32 gcm_format) override
