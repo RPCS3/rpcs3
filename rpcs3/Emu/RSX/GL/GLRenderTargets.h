@@ -51,11 +51,6 @@ namespace gl
 {
 	class render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<texture*>
 	{
-		u32 rsx_pitch = 0;
-		u16 native_pitch = 0;
-
-		u16 surface_height = 0;
-		u16 surface_width = 0;
 		u16 surface_pixel_size = 0;
 
 	public:
@@ -67,11 +62,6 @@ namespace gl
 		void set_native_pitch(u16 pitch)
 		{
 			native_pitch = pitch;
-		}
-
-		u16 get_native_pitch() const override
-		{
-			return native_pitch;
 		}
 
 		void set_surface_dimensions(u16 w, u16 h, u16 pitch)
@@ -89,16 +79,6 @@ namespace gl
 		u16 get_rsx_pitch() const override
 		{
 			return rsx_pitch;
-		}
-
-		u16 get_surface_width() const override
-		{
-			return surface_width;
-		}
-
-		u16 get_surface_height() const override
-		{
-			return surface_height;
 		}
 
 		bool is_depth_surface() const override
@@ -119,8 +99,9 @@ namespace gl
 			static_cast<gl::render_target*>(t)->release();
 		}
 
-		texture* get_surface() override
+		texture* get_surface(rsx::surface_access access_type) override
 		{
+			// TODO
 			return (gl::texture*)this;
 		}
 
@@ -222,8 +203,8 @@ struct gl_render_target_traits
 		if (!sink)
 		{
 			auto internal_format = (GLenum)ref->get_internal_format();
-			const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width());
-			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height());
+			const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width(rsx::surface_metrics::pixels));
+			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height(rsx::surface_metrics::pixels));
 
 			sink = std::make_unique<gl::render_target>(new_w, new_h, internal_format);
 			sink->add_ref();
@@ -253,18 +234,8 @@ struct gl_render_target_traits
 	bool is_compatible_surface(const gl::render_target* surface, const gl::render_target* ref, u16 width, u16 height, u8 /*sample_count*/)
 	{
 		return (surface->get_internal_format() == ref->get_internal_format() &&
-				surface->get_surface_width() >= width &&
-				surface->get_surface_height() >= height);
-	}
-
-	static
-	void get_surface_info(gl::render_target *surface, rsx::surface_format_info *info)
-	{
-		info->rsx_pitch = surface->get_rsx_pitch();
-		info->native_pitch = surface->get_native_pitch();
-		info->surface_width = surface->get_surface_width();
-		info->surface_height = surface->get_surface_height();
-		info->bpp = surface->get_bpp();
+				surface->get_surface_width(rsx::surface_metrics::pixels) >= width &&
+				surface->get_surface_height(rsx::surface_metrics::pixels) >= height);
 	}
 
 	static void prepare_rtt_for_drawing(gl::command_context&, gl::render_target* rtt)
@@ -290,7 +261,7 @@ struct gl_render_target_traits
 	void invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, size_t pitch)
 	{
 		surface->set_rsx_pitch((u16)pitch);
-		surface->reset_aa_mode();
+		surface->set_aa_mode(rsx::surface_antialiasing::center_1_sample);
 		surface->queue_tag(address);
 		surface->last_use_tag = 0;
 		surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
@@ -310,9 +281,7 @@ struct gl_render_target_traits
 
 	static
 	void notify_surface_persist(const std::unique_ptr<gl::render_target>& surface)
-	{
-		surface->save_aa_mode();
-	}
+	{}
 
 	static
 	void notify_surface_reused(const std::unique_ptr<gl::render_target>& surface)

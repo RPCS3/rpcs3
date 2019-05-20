@@ -195,19 +195,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
-		for (u32 index = 0; index < 4; index++)
-		{
-			if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
-			{
-				surface->write_aa_mode = layout.aa_mode;
-			}
-		}
-
-		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
-		{
-			ds->write_aa_mode = layout.aa_mode;
-		}
-
 		m_draw_fbo->bind();
 		set_viewport();
 		set_scissor();
@@ -223,9 +210,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		layout.color_addresses, layout.zeta_address,
 		layout.actual_color_pitch, layout.actual_zeta_pitch);
 
-	bool old_format_found = false;
-	gl::texture::format old_format;
-
 	std::array<GLuint, 4> color_targets;
 	GLuint depth_stencil_target;
 
@@ -234,17 +218,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	const u8 color_bpp = get_format_block_size_in_bytes(layout.color_format);
 	const u8 depth_bpp = (layout.depth_format == rsx::surface_depth_format::z16 ? 2 : 4);
+	const auto samples = get_format_sample_count(layout.aa_mode);
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
-			if (!old_format_found)
-			{
-				old_format = rsx::internals::surface_color_format_to_gl(m_surface_info[i].color_format).format;
-				old_format_found = true;
-			}
-
 			const utils::address_range surface_range = m_surface_info[i].get_memory_range();
 			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
 			m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);
@@ -256,10 +235,13 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			color_targets[i] = rtt->id();
 
 			verify("Pitch mismatch!" HERE), rtt->get_rsx_pitch() == layout.actual_color_pitch[i];
-			m_surface_info[i] = { layout.color_addresses[i], layout.actual_color_pitch[i], false, layout.color_format, layout.depth_format, layout.width, layout.height, color_bpp };
-
-			rtt->tile = find_tile(color_offsets[i], color_locations[i]);
-			rtt->write_aa_mode = layout.aa_mode;
+			m_surface_info[i].address = layout.color_addresses[i];
+			m_surface_info[i].pitch = layout.actual_color_pitch[i];
+			m_surface_info[i].width = layout.width;
+			m_surface_info[i].height = layout.height;
+			m_surface_info[i].color_format = layout.color_format;
+			m_surface_info[i].bpp = color_bpp;
+			m_surface_info[i].samples = samples;
 			m_gl_texture_cache.notify_surface_changed(m_surface_info[i].get_memory_range(layout.aa_factors));
 		}
 		else
@@ -285,9 +267,14 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		depth_stencil_target = ds->id();
 
 		verify("Pitch mismatch!" HERE), std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == layout.actual_zeta_pitch;
-		m_depth_surface_info = { layout.zeta_address, layout.actual_zeta_pitch, true, layout.color_format, layout.depth_format, layout.width, layout.height, depth_bpp };
 
-		ds->write_aa_mode = layout.aa_mode;
+		m_depth_surface_info.address = layout.zeta_address;
+		m_depth_surface_info.pitch = layout.actual_zeta_pitch;
+		m_depth_surface_info.width = layout.width;
+		m_depth_surface_info.height = layout.height;
+		m_depth_surface_info.depth_format = layout.depth_format;
+		m_depth_surface_info.bpp = (layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
+		m_depth_surface_info.samples = samples;
 		m_gl_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
 	}
 	else
@@ -457,7 +444,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 				m_gl_texture_cache.lock_memory_region(
 					cmd, surface, surface->get_memory_range(), false,
-					surface->get_surface_width(), surface->get_surface_height(), surface->get_rsx_pitch(),
+					surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
 					format, type, swap_bytes);
 			}
 		}

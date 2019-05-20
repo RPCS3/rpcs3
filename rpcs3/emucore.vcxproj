@@ -547,6 +547,7 @@
     <ClInclude Include="Emu\RSX\Capture\rsx_replay.h" />
     <ClInclude Include="Emu\RSX\Capture\rsx_trace.h" />
     <ClInclude Include="Emu\RSX\Common\GLSLCommon.h" />
+    <ClInclude Include="Emu\RSX\Common\surface_utils.h" />
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_checker.h" />

@@ -1007,80 +1007,6 @@ namespace rsx
 			}
 		}
 
-		/**
-		 * Scaling helpers
-		 * - get_native_dimensions() returns w and h for the native texture given rsx dimensions
-		 *   on rsx a 512x512 texture with 4x AA is treated as a 1024x1024 texture for example
-		 * - get_rsx_dimensions() inverse, return rsx w and h given a real texture w and h
-		 * - get_internal_scaling_x/y() returns a scaling factor to be multiplied by 1/size
-		 *   when sampling with unnormalized coordinates. tcoords passed to rsx will be in rsx dimensions
-		 */
-		template <typename T, typename U>
-		inline void get_native_dimensions(T &width, T &height, U surface)
-		{
-			switch (surface->read_aa_mode)
-			{
-			case rsx::surface_antialiasing::center_1_sample:
-				return;
-			case rsx::surface_antialiasing::diagonal_centered_2_samples:
-				width /= 2;
-				return;
-			case rsx::surface_antialiasing::square_centered_4_samples:
-			case rsx::surface_antialiasing::square_rotated_4_samples:
-				width /= 2;
-				height /= 2;
-				return;
-			}
-		}
-
-		template <typename T, typename U>
-		inline void get_rsx_dimensions(T &width, T &height, U surface)
-		{
-			switch (surface->read_aa_mode)
-			{
-			case rsx::surface_antialiasing::center_1_sample:
-				return;
-			case rsx::surface_antialiasing::diagonal_centered_2_samples:
-				width *= 2;
-				return;
-			case rsx::surface_antialiasing::square_centered_4_samples:
-			case rsx::surface_antialiasing::square_rotated_4_samples:
-				width *= 2;
-				height *= 2;
-				return;
-			}
-		}
-
-		template <typename T>
-		inline f32 get_internal_scaling_x(T surface)
-		{
-			switch (surface->read_aa_mode)
-			{
-			default:
-			case rsx::surface_antialiasing::center_1_sample:
-				return 1.f;
-			case rsx::surface_antialiasing::diagonal_centered_2_samples:
-			case rsx::surface_antialiasing::square_centered_4_samples:
-			case rsx::surface_antialiasing::square_rotated_4_samples:
-				return 0.5f;
-			}
-		}
-
-		template <typename T>
-		inline f32 get_internal_scaling_y(T surface)
-		{
-			switch (surface->read_aa_mode)
-			{
-			default:
-			case rsx::surface_antialiasing::center_1_sample:
-			case rsx::surface_antialiasing::diagonal_centered_2_samples:
-				return 1.f;
-			case rsx::surface_antialiasing::square_centered_4_samples:
-			case rsx::surface_antialiasing::square_rotated_4_samples:
-				return 0.5f;
-			}
-		}
-
 	public:
 
 		texture_cache() : m_storage(this), m_predictor(this) {}
@@ -1700,37 +1626,15 @@ namespace rsx
 				verify(HERE), dst_y >= slice_begin;
 				dst_y = (dst_y - slice_begin);
 
-				const auto scale_x = 1.f / get_internal_scaling_x(section.surface);
-				const auto scale_y = 1.f / get_internal_scaling_y(section.surface);
-
 				const auto h = std::min(section_end, slice_end) - section.dst_y;
-				auto src_width = rsx::apply_resolution_scale(section.width, true);
-				auto src_height = rsx::apply_resolution_scale(h, true);
-				auto dst_width = u16(src_width * scale_x);
-				auto dst_height = u16(src_height * scale_y);
-
-				if (scale_x > 1.f)
-				{
-					// Clipping
-					const auto limit_x = dst_x + dst_width;
-					const auto limit_y = dst_x + dst_height;
-
-					if (limit_x > slice_w)
-					{
-						dst_width = (slice_w - dst_x);
-						src_width = u16(dst_width / scale_x);
-					}
-
-					if (limit_y > slice_h)
-					{
-						dst_height = (slice_h - dst_y);
-						src_height = u16(dst_height / scale_y);
-					}
-				}
+				const auto src_width = rsx::apply_resolution_scale(section.width, true);
+				const auto src_height = rsx::apply_resolution_scale(h, true);
+				const auto dst_width = src_width;
+				const auto dst_height = src_height;
 
 				surfaces.push_back
 				({
-					section.surface->get_surface(),
+					section.surface->get_surface(rsx::surface_access::read),
 					surface_transform::identity,
 					rsx::apply_resolution_scale(src_x, true),
 					rsx::apply_resolution_scale(src_y, true),
@@ -1894,23 +1798,19 @@ namespace rsx
 				return false;
 			}
 
-			const auto surface_width = texptr->get_surface_width();
-			const auto surface_height = texptr->get_surface_height();
-
-			u32 internal_width = tex_width;
-			u32 internal_height = tex_height;
-			get_native_dimensions(internal_width, internal_height, texptr);
+			const auto surface_width = texptr->get_surface_width(rsx::surface_metrics::samples);
+			const auto surface_height = texptr->get_surface_height(rsx::surface_metrics::samples);
 
 			switch (extended_dimension)
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
-				return (surface_width >= internal_width);
+				return (surface_width >= tex_width);
 			case rsx::texture_dimension_extended::texture_dimension_2d:
-				return (surface_width >= internal_width && surface_height >= internal_height);
+				return (surface_width >= tex_width && surface_height >= tex_height);
 			case rsx::texture_dimension_extended::texture_dimension_3d:
-				return (surface_width >= internal_width && surface_height >= (internal_height * tex_depth));
+				return (surface_width >= tex_width && surface_height >= (tex_height * tex_depth));
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
-				return (surface_width == internal_height && surface_width >= internal_width && surface_height >= (internal_height * 6));
+				return (surface_width == tex_height && surface_width >= tex_width && surface_height >= (tex_height * 6));
 			}
 
 			return false;
@@ -1927,12 +1827,8 @@ namespace rsx
 		{
 			texptr->read_barrier(cmd);
 
-			const auto surface_width = texptr->get_surface_width();
-			const auto surface_height = texptr->get_surface_height();
-
-			u32 internal_width = tex_width;
-			u32 internal_height = tex_height;
-			get_native_dimensions(internal_width, internal_height, texptr);
+			const auto surface_width = texptr->get_surface_width(rsx::surface_metrics::samples);
+			const auto surface_height = texptr->get_surface_height(rsx::surface_metrics::samples);
 
 			bool is_depth = texptr->is_depth_surface();
 			const bool force_convert = !render_target_format_is_compatible(texptr, format);
@@ -1958,19 +1854,19 @@ namespace rsx
 			{
 				if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
 				{
-					internal_height = 1;
+					tex_height = 1;
 				}
 
 				if ((surface_is_rop_target && g_cfg.video.strict_rendering_mode) ||
-					internal_width < surface_width ||
-					internal_height < surface_height ||
+					tex_width < surface_width ||
+					tex_height < surface_height ||
 					force_convert)
 				{
-					const auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
-					const auto scaled_h = rsx::apply_resolution_scale(internal_height, true);
+					const auto scaled_w = rsx::apply_resolution_scale(tex_width, true);
+					const auto scaled_h = rsx::apply_resolution_scale(tex_height, true);
 
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
-					return { texptr->get_surface(), command, texaddr, format, 0, 0, scaled_w, scaled_h, 1,
+					return { texptr->get_surface(rsx::surface_access::read), command, texaddr, format, 0, 0, scaled_w, scaled_h, 1,
 							texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
 							extended_dimension, decoded_remap };
 				}
@@ -1984,19 +1880,19 @@ namespace rsx
 					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
 			}
 
-			const auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
-			const auto scaled_h = rsx::apply_resolution_scale(internal_height, true);
+			const auto scaled_w = rsx::apply_resolution_scale(tex_width, true);
+			const auto scaled_h = rsx::apply_resolution_scale(tex_height, true);
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
-				return{ texptr->get_surface(), deferred_request_command::_3d_unwrap, texaddr, format, 0, 0,
+				return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::_3d_unwrap, texaddr, format, 0, 0,
 						scaled_w, scaled_h, tex_depth,
 						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 			}
 
 			verify(HERE), extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap;
-			return{ texptr->get_surface(), deferred_request_command::cubemap_unwrap, texaddr, format, 0, 0,
+			return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::cubemap_unwrap, texaddr, format, 0, 0,
 					scaled_w, scaled_h, 1,
 					texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
 					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
@@ -2218,12 +2114,8 @@ namespace rsx
 						const auto& last = overlapping_fbos.back();
 						if (last.src_x == 0 && last.src_y == 0)
 						{
-							u16 internal_width = tex_width;
-							u16 internal_height = required_surface_height;
-							get_native_dimensions(internal_width, internal_height, last.surface);
-
 							u16 normalized_width = u16(last.width * last.surface->get_bpp()) / bpp;
-							if (normalized_width >= internal_width && last.height >= internal_height)
+							if (normalized_width >= tex_width && last.height >= tex_height)
 							{
 								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, format, tex_width, tex_height, depth,
 									scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), false);
@@ -2486,7 +2378,6 @@ namespace rsx
 
 					auto _w = u32(It->width * It->surface->get_bpp()) / bpp;
 					auto _h = u32(It->height);
-					get_rsx_dimensions(_w, _h, It->surface);
 
 					if (_w < width)
 					{
@@ -2596,9 +2487,9 @@ namespace rsx
 			size2i dst_dimensions = { dst.pitch / dst_bpp, dst.height };
 			if (src_is_render_target)
 			{
-				if (dst_dimensions.width == src_subres.surface->get_surface_width())
+				if (dst_dimensions.width == src_subres.surface->get_surface_width(rsx::surface_metrics::samples))
 				{
-					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(), dst.height);
+					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(rsx::surface_metrics::samples), dst.height);
 				}
 				else if (LIKELY(dst_dimensions.width == 1280 || dst_dimensions.width == 2560))
 				{
@@ -2673,11 +2564,11 @@ namespace rsx
 				// Destination dimensions are relaxed (true)
 				dst_area = dst_subres.get_src_area();
 
-				dest_texture = dst_subres.surface->get_surface();
+				dest_texture = dst_subres.surface->get_surface(rsx::surface_access::write);
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 
-				max_dst_width = (u16)(dst_subres.surface->get_surface_width() * typeless_info.dst_scaling_hint);
-				max_dst_height = dst_subres.surface->get_surface_height();
+				max_dst_width = (u16)(dst_subres.surface->get_surface_width(rsx::surface_metrics::samples) * typeless_info.dst_scaling_hint);
+				max_dst_height = dst_subres.surface->get_surface_height(rsx::surface_metrics::samples);
 			}
 
 			// Check if available target is acceptable
@@ -2824,7 +2715,7 @@ namespace rsx
 			else
 			{
 				src_area = src_subres.get_src_area();
-				vram_texture = src_subres.surface->get_surface();
+				vram_texture = src_subres.surface->get_surface(rsx::surface_access::read);
 				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}
 
@@ -2969,13 +2860,13 @@ namespace rsx
 				const f32 resolution_scale = rsx::get_resolution_scale();
 				if (src_is_render_target)
 				{
-					if (src_subres.surface->get_surface_width() > g_cfg.video.min_scalable_dimension)
+					if (src_subres.surface->get_surface_width(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
 					{
 						src_area.x1 = (u16)(src_area.x1 * resolution_scale);
 						src_area.x2 = (u16)(src_area.x2 * resolution_scale);
 					}
 
-					if (src_subres.surface->get_surface_height() > g_cfg.video.min_scalable_dimension)
+					if (src_subres.surface->get_surface_height(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
 					{
 						src_area.y1 = (u16)(src_area.y1 * resolution_scale);
 						src_area.y2 = (u16)(src_area.y2 * resolution_scale);
@@ -2984,18 +2875,30 @@ namespace rsx
 
 				if (dst_is_render_target)
 				{
-					if (dst_subres.surface->get_surface_width() > g_cfg.video.min_scalable_dimension)
+					if (dst_subres.surface->get_surface_width(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
 					{
 						dst_area.x1 = (u16)(dst_area.x1 * resolution_scale);
 						dst_area.x2 = (u16)(dst_area.x2 * resolution_scale);
 					}
 
-					if (dst_subres.surface->get_surface_height() > g_cfg.video.min_scalable_dimension)
+					if (dst_subres.surface->get_surface_height(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
 					{
 						dst_area.y1 = (u16)(dst_area.y1 * resolution_scale);
 						dst_area.y2 = (u16)(dst_area.y2 * resolution_scale);
 					}
 				}
+			}
+
+			if (src_is_render_target)
+			{
+				// TODO: Specify typeless for high sample counts
+				src_subres.surface->transform_samples_to_pixels(src_area);
+			}
+
+			if (dst_is_render_target)
+			{
+				// TODO: Specify typeless for high sample counts
+				dst_subres.surface->transform_samples_to_pixels(dst_area);
 			}
 
 			typeless_info.analyse();

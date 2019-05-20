@@ -2,7 +2,7 @@
 
 #include "Utilities/GSL.h"
 #include "Emu/Memory/vm.h"
-#include "TextureUtils.h"
+#include "surface_utils.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
 #include <list>
@@ -24,379 +24,6 @@ namespace rsx
 		size_t get_aligned_pitch(surface_color_format format, u32 width);
 		size_t get_packed_pitch(surface_color_format format, u32 width);
 	}
-
-	enum surface_state_flags : u32
-	{
-		ready = 0,
-		erase_bkgnd = 1
-	};
-
-	template <typename surface_type>
-	struct surface_overlap_info_t
-	{
-		surface_type surface = nullptr;
-		u32 base_address = 0;
-		bool is_depth = false;
-		bool is_clipped = false;
-
-		u16 src_x = 0;
-		u16 src_y = 0;
-		u16 dst_x = 0;
-		u16 dst_y = 0;
-		u16 width = 0;
-		u16 height = 0;
-
-		areai get_src_area() const
-		{
-			return coordi{ {src_x, src_y}, {width, height} };
-		}
-
-		areai get_dst_area() const
-		{
-			return coordi{ {dst_x, dst_y}, {width, height} };
-		}
-	};
-
-	struct surface_format_info
-	{
-		u32 surface_width;
-		u32 surface_height;
-		u16 native_pitch;
-		u16 rsx_pitch;
-		u8 bpp;
-	};
-
-	template <typename surface_type>
-	struct deferred_clipped_region
-	{
-		u16 src_x, src_y, dst_x, dst_y, width, height;
-		f32 transfer_scale_x, transfer_scale_y;
-		surface_type target;
-		surface_type source;
-
-		template <typename T>
-		deferred_clipped_region<T> cast() const
-		{
-			deferred_clipped_region<T> ret;
-			ret.src_x = src_x;
-			ret.src_y = src_y;
-			ret.dst_x = dst_x;
-			ret.dst_y = dst_y;
-			ret.width = width;
-			ret.height = height;
-			ret.transfer_scale_x = transfer_scale_x;
-			ret.transfer_scale_y = transfer_scale_y;
-			ret.target = (T)(target);
-			ret.source = (T)(source);
-
-			return ret;
-		}
-
-		operator bool() const
-		{
-			return (source != nullptr);
-		}
-
-		template <typename T>
-		void init_transfer(T target_surface)
-		{
-			if (!width)
-			{
-				// Perform intersection here
-				const auto region = rsx::get_transferable_region(target_surface);
-				width = std::get<0>(region);
-				height = std::get<1>(region);
-
-				transfer_scale_x = f32(std::get<2>(region)) / width;
-				transfer_scale_y = f32(std::get<3>(region)) / height;
-
-				target = target_surface;
-			}
-		}
-
-		areai src_rect() const
-		{
-			verify(HERE), width;
-			return { src_x, src_y, src_x + width, src_y + height };
-		}
-
-		areai dst_rect() const
-		{
-			verify(HERE), width;
-			return { dst_x, dst_y, dst_x + u16(width * transfer_scale_x + 0.5f), dst_y + u16(height * transfer_scale_y + 0.5f) };
-		}
-	};
-
-	template <typename image_storage_type>
-	struct render_target_descriptor
-	{
-		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
-		std::array<std::pair<u32, u64>, 5> memory_tag_samples;
-
-		deferred_clipped_region<image_storage_type> old_contents{};
-		rsx::surface_antialiasing read_aa_mode = rsx::surface_antialiasing::center_1_sample;
-
-		GcmTileInfo *tile = nullptr;
-		rsx::surface_antialiasing write_aa_mode = rsx::surface_antialiasing::center_1_sample;
-
-		flags32_t memory_usage_flags = surface_usage_flags::unknown;
-		flags32_t state_flags = surface_state_flags::ready;
-
-		union
-		{
-			rsx::surface_color_format gcm_color_format;
-			rsx::surface_depth_format gcm_depth_format;
-		}
-		format_info;
-
-		render_target_descriptor() = default;
-
-		virtual ~render_target_descriptor()
-		{
-			if (old_contents)
-			{
-				// Cascade resource derefs
-				LOG_ERROR(RSX, "Resource was destroyed whilst holding a resource reference!");
-			}
-		}
-
-		virtual image_storage_type get_surface() = 0;
-		virtual u16 get_surface_width() const = 0;
-		virtual u16 get_surface_height() const = 0;
-		virtual u16 get_rsx_pitch() const = 0;
-		virtual u16 get_native_pitch() const = 0;
-		virtual bool is_depth_surface() const = 0;
-		virtual void release_ref(image_storage_type) const = 0;
-
-		u8 get_bpp() const
-		{
-			return u8(get_native_pitch() / get_surface_width());
-		}
-
-		void save_aa_mode()
-		{
-			read_aa_mode = write_aa_mode;
-			write_aa_mode = rsx::surface_antialiasing::center_1_sample;
-		}
-
-		void reset_aa_mode()
-		{
-			write_aa_mode = read_aa_mode = rsx::surface_antialiasing::center_1_sample;
-		}
-
-		void set_format(rsx::surface_color_format format)
-		{
-			format_info.gcm_color_format = format;
-		}
-
-		void set_format(rsx::surface_depth_format format)
-		{
-			format_info.gcm_depth_format = format;
-		}
-
-		rsx::surface_color_format get_surface_color_format()
-		{
-			return format_info.gcm_color_format;
-		}
-
-		rsx::surface_depth_format get_surface_depth_format()
-		{
-			return format_info.gcm_depth_format;
-		}
-
-		bool dirty() const
-		{
-			return (state_flags != rsx::surface_state_flags::ready) || old_contents;
-		}
-
-		bool test() const
-		{
-			if (dirty())
-			{
-				// TODO
-				// Should RCB or mem-sync (inherit previous mem) to init memory
-				LOG_TODO(RSX, "Resource used before memory initialization");
-			}
-
-			// Tags are tested in an X pattern
-			for (const auto &tag : memory_tag_samples)
-			{
-				if (!tag.first)
-					break;
-
-				if (tag.second != *reinterpret_cast<u64*>(vm::g_sudo_addr + tag.first))
-					return false;
-			}
-
-			return true;
-		}
-
-		void clear_rw_barrier()
-		{
-			release_ref(old_contents.source);
-			old_contents = {};
-		}
-
-		template<typename T>
-		void set_old_contents(T* other)
-		{
-			verify(HERE), !old_contents;
-
-			if (!other || other->get_rsx_pitch() != this->get_rsx_pitch())
-			{
-				old_contents = {};
-				return;
-			}
-
-			old_contents = {};
-			old_contents.source = other;
-			other->add_ref();
-		}
-
-		template<typename T>
-		void set_old_contents_region(const T& region, bool normalized)
-		{
-			if (old_contents)
-			{
-				// This can happen when doing memory splits
-				auto old_surface = static_cast<decltype(region.source)>(old_contents.source);
-				if (old_surface->last_use_tag > region.source->last_use_tag)
-				{
-					return;
-				}
-
-				clear_rw_barrier();
-			}
-
-			// NOTE: This method will not perform pitch verification!
-			verify(HERE), !old_contents, region.source, region.source != this;
-
-			old_contents = region.template cast<image_storage_type>();
-			region.source->add_ref();
-
-			// Reverse normalization process if needed
-			if (normalized)
-			{
-				const u16 bytes_to_texels_x = region.source->get_bpp() * (region.source->write_aa_mode == rsx::surface_antialiasing::center_1_sample? 1 : 2);
-				const u16 rows_to_texels_y = (region.source->write_aa_mode > rsx::surface_antialiasing::diagonal_centered_2_samples? 2 : 1);
-				old_contents.src_x /= bytes_to_texels_x;
-				old_contents.src_y /= rows_to_texels_y;
-				old_contents.width /= bytes_to_texels_x;
-				old_contents.height /= rows_to_texels_y;
-
-				const u16 bytes_to_texels_x2 = (get_bpp() * (write_aa_mode == rsx::surface_antialiasing::center_1_sample? 1 : 2));
-				const u16 rows_to_texels_y2 = (write_aa_mode > rsx::surface_antialiasing::diagonal_centered_2_samples)? 2 : 1;
-				old_contents.dst_x /= bytes_to_texels_x2;
-				old_contents.dst_y /= rows_to_texels_y2;
-
-				old_contents.transfer_scale_x = f32(bytes_to_texels_x) / bytes_to_texels_x2;
-				old_contents.transfer_scale_y = f32(rows_to_texels_y) / rows_to_texels_y2;
-			}
-
-			// Apply resolution scale if needed
-			if (g_cfg.video.resolution_scale_percent != 100)
-			{
-				auto src_width = rsx::apply_resolution_scale(old_contents.width, true, old_contents.source->width());
-				auto src_height = rsx::apply_resolution_scale(old_contents.height, true, old_contents.source->height());
-
-				auto dst_width = rsx::apply_resolution_scale(old_contents.width, true, old_contents.target->width());
-				auto dst_height = rsx::apply_resolution_scale(old_contents.height, true, old_contents.target->height());
-
-				old_contents.transfer_scale_x *= f32(dst_width) / src_width;
-				old_contents.transfer_scale_y *= f32(dst_height) / src_height;
-
-				old_contents.width = src_width;
-				old_contents.height = src_height;
-
-				old_contents.src_x = rsx::apply_resolution_scale(old_contents.src_x, false, old_contents.source->width());
-				old_contents.src_y = rsx::apply_resolution_scale(old_contents.src_y, false, old_contents.source->height());
-				old_contents.dst_x = rsx::apply_resolution_scale(old_contents.dst_x, false, old_contents.target->width());
-				old_contents.dst_y = rsx::apply_resolution_scale(old_contents.dst_y, false, old_contents.target->height());
-			}
-		}
-
-		void queue_tag(u32 address)
-		{
-			for (int i = 0; i < memory_tag_samples.size(); ++i)
-			{
-				if (LIKELY(i))
-					memory_tag_samples[i].first = 0;
-				else
-					memory_tag_samples[i].first = address; // Top left
-			}
-
-			const u32 pitch = get_native_pitch();
-			if (UNLIKELY(pitch < 16))
-			{
-				// Not enough area to gather samples if pitch is too small
-				return;
-			}
-
-			// Top right corner
-			memory_tag_samples[1].first = address + pitch - 8;
-
-			if (const u32 h = get_surface_height(); h > 1)
-			{
-				// Last row
-				const u32 pitch2 = get_rsx_pitch();
-				const u32 last_row_offset = pitch2 * (h - 1);
-				memory_tag_samples[2].first = address + last_row_offset;              // Bottom left corner
-				memory_tag_samples[3].first = address + last_row_offset + pitch - 8;  // Bottom right corner
-
-				// Centroid
-				const u32 center_row_offset = pitch2 * (h / 2);
-				memory_tag_samples[4].first = address + center_row_offset + pitch / 2;
-			}
-		}
-
-		void sync_tag()
-		{
-			for (auto &tag : memory_tag_samples)
-			{
-				if (!tag.first)
-					break;
-
-				tag.second = *reinterpret_cast<u64*>(vm::g_sudo_addr + tag.first);
-			}
-		}
-
-		void on_write(u64 write_tag = 0)
-		{
-			if (write_tag)
-			{
-				// Update use tag if requested
-				last_use_tag = write_tag;
-			}
-
-			// Tag unconditionally without introducing new data
-			sync_tag();
-
-			read_aa_mode = write_aa_mode;
-
-			// HACK!! This should be cleared through memory barriers only
-			state_flags = rsx::surface_state_flags::ready;
-
-			if (old_contents.source)
-			{
-				clear_rw_barrier();
-			}
-		}
-
-		// Returns the rect area occupied by this surface expressed as an 8bpp image with no AA
-		areau get_normalized_memory_area() const
-		{
-			const u16 internal_width = get_native_pitch() * (write_aa_mode > rsx::surface_antialiasing::center_1_sample? 2: 1);
-			const u16 internal_height = get_surface_height() * (write_aa_mode > rsx::surface_antialiasing::diagonal_centered_2_samples? 2: 1);
-
-			return { 0, 0, internal_width, internal_height };
-		}
-
-		rsx::address_range get_memory_range() const
-		{
-			const u32 internal_height = get_surface_height() * (write_aa_mode > rsx::surface_antialiasing::diagonal_centered_2_samples? 2: 1);
-			return rsx::address_range::start_length(memory_tag_samples[0].first, internal_height * get_rsx_pitch());
-		}
-	};
 
 	/**
 	 * Helper for surface (ie color and depth stencil render target) management.
@@ -435,7 +62,7 @@ namespace rsx
 		template<typename T, typename U>
 		void copy_pitched_src_to_dst(gsl::span<T> dest, gsl::span<const U> src, size_t src_pitch_in_bytes, size_t width, size_t height)
 		{
-			for (int row = 0; row < height; row++)
+			for (unsigned row = 0; row < height; row++)
 			{
 				for (unsigned col = 0; col < width; col++)
 					dest[col] = src[col];
@@ -548,7 +175,7 @@ namespace rsx
 			{
 				// Split in X
 				const u32 baseaddr = address + _new.width;
-				const u32 bytes_to_texels_x = (bpp * get_aa_factor_u(prev_surface->write_aa_mode));
+				const u32 bytes_to_texels_x = (bpp * prev_surface->samples_x);
 
 				deferred_clipped_region<surface_type> copy;
 				copy.src_x = _new.width / bytes_to_texels_x;
@@ -576,15 +203,15 @@ namespace rsx
 			{
 				// Split in Y
 				const u32 baseaddr = address + (_new.height * prev_surface->get_rsx_pitch());
-				const u32 bytes_to_texels_x = (bpp * get_aa_factor_u(prev_surface->write_aa_mode));
+				const u32 bytes_to_texels_x = (bpp * prev_surface->samples_x);
 
 				deferred_clipped_region<surface_type> copy;
 				copy.src_x = 0;
-				copy.src_y = _new.height / get_aa_factor_v(prev_surface->write_aa_mode);
+				copy.src_y = _new.height / prev_surface->samples_y;
 				copy.dst_x = 0;
 				copy.dst_y = 0;
 				copy.width = std::min(_new.width, old.width) / bytes_to_texels_x;
-				copy.height = (old.height - _new.height) / get_aa_factor_v(prev_surface->write_aa_mode);
+				copy.height = (old.height - _new.height) / prev_surface->samples_y;
 				copy.transfer_scale_x = 1.f;
 				copy.transfer_scale_y = 1.f;
 				copy.target = nullptr;
@@ -661,7 +288,6 @@ namespace rsx
 			if (prev_surface)
 			{
 				// Append the previous removed surface to the intersection list
-				std::pair<u32, surface_type> e = { address, prev_surface };
 				if constexpr (is_depth_surface)
 				{
 					list2.push_back({ address, prev_surface });
@@ -873,7 +499,7 @@ namespace rsx
 
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
 			// TODO: This can be done better after refactoring
-			new_surface->write_aa_mode = antialias;
+			new_surface->set_aa_mode(antialias);
 
 			// Check if old_surface is 'new' and avoid intersection
 			if (old_surface && old_surface->last_use_tag >= write_tag)
@@ -1005,7 +631,7 @@ namespace rsx
 
 #ifndef INCOMPLETE_SURFACE_CACHE_IMPL
 			// TODO: Forward this to the management functions
-			new_surface->write_aa_mode = antialias;
+			new_surface->set_aa_mode(antialias);
 
 			// Check if old_surface is 'new' and avoid intersection
 			if (old_surface && old_surface->last_use_tag >= write_tag)
@@ -1044,8 +670,6 @@ namespace rsx
 		{
 			u32 clip_width = clip_horizontal_reg;
 			u32 clip_height = clip_vertical_reg;
-//			u32 clip_x = clip_horizontal_reg;
-//			u32 clip_y = clip_vertical_reg;
 
 			cache_tag = rsx::get_shared_tag();
 
@@ -1268,50 +892,6 @@ namespace rsx
 		}
 
 		/**
-		 * Moves a single surface from surface storage to invalidated surface store.
-		 * Can be triggered by the texture cache's blit functionality when formats do not match
-		 */
-		void invalidate_single_surface(surface_type surface, bool depth)
-		{
-			if (!depth)
-			{
-				for (auto It = m_render_targets_storage.begin(); It != m_render_targets_storage.end(); It++)
-				{
-					const auto address = It->first;
-					const auto ref = Traits::get(It->second);
-
-					if (surface == ref)
-					{
-						Traits::notify_surface_invalidated(It->second);
-						invalidated_resources.push_back(std::move(It->second));
-						m_render_targets_storage.erase(It);
-
-						cache_tag = rsx::get_shared_tag();
-						return;
-					}
-				}
-			}
-			else
-			{
-				for (auto It = m_depth_stencil_storage.begin(); It != m_depth_stencil_storage.end(); It++)
-				{
-					const auto address = It->first;
-					const auto ref = Traits::get(It->second);
-
-					if (surface == ref)
-					{
-						Traits::notify_surface_invalidated(It->second);
-						invalidated_resources.push_back(std::move(It->second));
-						m_depth_stencil_storage.erase(It);
-
-						cache_tag = rsx::get_shared_tag();
-						return;
-					}
-				}
-			}
-		}
-
-		/**
 		 * Invalidates surface that exists at an address
 		 */
 		void invalidate_surface_address(u32 addr, bool depth)
@@ -1383,10 +963,7 @@ namespace rsx
 					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
 						continue;
 
-					const u16 scale_x = surface->read_aa_mode > rsx::surface_antialiasing::center_1_sample? 2 : 1;
-					const u16 scale_y = surface->read_aa_mode > rsx::surface_antialiasing::diagonal_centered_2_samples? 2 : 1;
-					const auto texture_size = pitch * surface->get_surface_height() * scale_y;
-
+					const auto texture_size = pitch * surface->get_surface_height(rsx::surface_metrics::samples);
 					if ((this_address + texture_size) <= texaddr)
 						continue;
 
@@ -1401,11 +978,8 @@ namespace rsx
 					info.base_address = this_address;
 					info.is_depth = is_depth;
 
-					surface_format_info surface_info{};
-					Traits::get_surface_info(surface, &surface_info);
-
-					const auto normalized_surface_width = (surface_info.surface_width * scale_x * surface_info.bpp) / required_bpp;
-					const auto normalized_surface_height = surface_info.surface_height * scale_y;
+					const auto normalized_surface_width = surface->get_native_pitch() / required_bpp;
+					const auto normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
 
 					if (LIKELY(this_address >= texaddr))
 					{
@@ -1445,21 +1019,11 @@ namespace rsx
 
 					info.is_clipped = (info.width < required_width || info.height < required_height);
 
-					if (UNLIKELY(surface_info.bpp != required_bpp))
+					if (auto surface_bpp = surface->get_bpp(); UNLIKELY(surface_bpp != required_bpp))
 					{
 						// Width is calculated in the coordinate-space of the requester; normalize
-						info.src_x = (info.src_x * required_bpp) / surface_info.bpp;
-						info.width = (info.width * required_bpp) / surface_info.bpp;
-					}
-
-					if (UNLIKELY(scale_x > 1))
-					{
-						info.src_x /= scale_x;
-						info.dst_x /= scale_x;
-						info.width /= scale_x;
-						info.src_y /= scale_y;
-						info.dst_y /= scale_y;
-						info.height /= scale_y;
+						info.src_x = (info.src_x * required_bpp) / surface_bpp;
+						info.width = (info.width * required_bpp) / surface_bpp;
 					}
 
 					result.push_back(info);
