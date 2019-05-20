@@ -220,6 +220,11 @@ namespace rsx
 
 			if (elapsed >= m_update_interval || m_force_update)
 			{
+				if (!m_force_update)
+				{
+					m_update_timer.Start();
+				}
+
 				f32 fps{0};
 				f32 frametime{0};
 
@@ -349,7 +354,6 @@ namespace rsx
 				if (!m_force_update)
 				{
 					m_frames = 0;
-					m_update_timer.Start();
 				}
 				else
 				{
