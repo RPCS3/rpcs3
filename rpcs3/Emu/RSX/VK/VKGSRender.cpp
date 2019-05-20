@@ -1757,6 +1757,20 @@ void VKGSRender::end()
 					//Requires update, copy subresource
 					view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
 				}
+				else
+				{
+					switch (view->image()->current_layout)
+					{
+					default:
+					//case VK_IMAGE_LAYOUT_GENERAL:
+					//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+						break;
+					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
+						view->image()->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+						break;
+					}
+				}
 			}
 
 			if (LIKELY(view))
@@ -1792,14 +1806,14 @@ void VKGSRender::end()
 			}
 			else
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_fragment_program,
 					m_current_frame->descriptor_set);
 
 				if (current_fragment_program.redirected_textures & (1 << i))
 				{
-					m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 						i,
 						::glsl::program_domain::glsl_fragment_program,
 						m_current_frame->descriptor_set,
@@ -1815,7 +1829,7 @@ void VKGSRender::end()
 		{
 			if (!rsx::method_registers.vertex_textures[i].enabled())
 			{
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_vertex_program,
 					m_current_frame->descriptor_set);
@@ -1835,8 +1849,20 @@ void VKGSRender::end()
 			if (!image_ptr)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::vertex_texture_names[i], m_current_frame->descriptor_set);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::vertex_texture_names[i], m_current_frame->descriptor_set);
 				continue;
+			}
+
+			switch (image_ptr->image()->current_layout)
+			{
+			default:
+			//case VK_IMAGE_LAYOUT_GENERAL:
+			//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+				break;
+			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
+				image_ptr->image()->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				break;
 			}
 
 			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
@@ -2265,9 +2291,14 @@ void VKGSRender::clear_surface(u32 mask)
 						{
 							if (require_mem_load) rtt->write_barrier(*m_current_command_buffer);
 
-							vk::insert_texture_barrier(*m_current_command_buffer, rtt);
+							// Add a barrier to ensure previous writes are visible; also transitions into GENERAL layout
+							const auto old_layout = rtt->current_layout;
+							vk::insert_texture_barrier(*m_current_command_buffer, rtt, VK_IMAGE_LAYOUT_GENERAL);
+
 							m_attachment_clear_pass->run(*m_current_command_buffer, rtt,
 								region.rect, renderpass, m_framebuffers_to_clean);
+
+							rtt->change_layout(*m_current_command_buffer, old_layout);
 						}
 						else
 							fmt::throw_exception("Unreachable" HERE);

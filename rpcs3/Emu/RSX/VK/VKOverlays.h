@@ -219,7 +219,7 @@ namespace vk
 			return result;
 		}
 
-		void load_program(vk::command_buffer cmd, VkRenderPass pass, const std::vector<VkImageView>& src)
+		void load_program(vk::command_buffer cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
 		{
 			vk::glsl::program *program = nullptr;
 			auto found = m_program_cache.find(pass);
@@ -252,7 +252,7 @@ namespace vk
 
 			for (int n = 0; n < src.size(); ++n)
 			{
-				VkDescriptorImageInfo info = { m_sampler->value, src[n], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL };
+				VkDescriptorImageInfo info = { m_sampler->value, src[n]->value, src[n]->image()->current_layout };
 				program->bind_uniform(info, "fs" + std::to_string(n), m_descriptor_set);
 			}
 
@@ -360,7 +360,7 @@ namespace vk
 			vkCmdSetScissor(cmd, 0, 1, &vs);
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* fbo, const std::vector<VkImageView>& src, VkRenderPass render_pass)
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* fbo, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
 		{
 			load_program(cmd, render_pass, src);
 			set_up_viewport(cmd, w, h);
@@ -379,7 +379,7 @@ namespace vk
 			vkCmdEndRenderPass(cmd);
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, const std::vector<VkImageView>& src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, const std::vector<vk::image_view*>& src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
 		{
 			vk::framebuffer *fbo = get_framebuffer(target, render_pass, framebuffer_resources);
 
@@ -388,15 +388,10 @@ namespace vk
 			static_cast<vk::framebuffer_holder*>(fbo)->release();
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, VkImageView src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
-		{
-			std::vector<VkImageView> views = { src };
-			run(cmd, w, h, target, views, render_pass, framebuffer_resources);
-		}
-
 		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, vk::image_view* src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
 		{
-			run(cmd, w, h, target, src->value, render_pass, framebuffer_resources);
+			std::vector<vk::image_view*> views = { src };
+			run(cmd, w, h, target, views, render_pass, framebuffer_resources);
 		}
 	};
 
@@ -821,13 +816,13 @@ namespace vk
 					break;
 				case rsx::overlays::image_resource_id::font_file:
 					m_texture_type = 2;
-					src = find_font(command.config.font_ref, cmd, upload_heap)->value;
+					src = find_font(command.config.font_ref, cmd, upload_heap);
 					break;
 				case rsx::overlays::image_resource_id::raw_image:
-					src = find_temp_image((rsx::overlays::image_info*)command.config.external_data_ref, cmd, upload_heap, ui.uid)->value;
+					src = find_temp_image((rsx::overlays::image_info*)command.config.external_data_ref, cmd, upload_heap, ui.uid);
 					break;
 				default:
-					src = view_cache[command.config.texture_ref]->value;
+					src = view_cache[command.config.texture_ref].get();
 					break;
 				}
 
@@ -938,7 +933,7 @@ namespace vk
 			region = rect;
 
 			overlay_pass::run(cmd, target->width(), target->height(), target,
-				target->get_view(0xAAE4, rsx::default_remap_vector)->value,
+				target->get_view(0xAAE4, rsx::default_remap_vector),
 				render_pass, framebuffer_resources);
 		}
 	};
