@@ -2725,22 +2725,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
-
-		const auto aa_mode = rsx::method_registers.surface_antialias();
-
-		for (u32 index = 0; index < 4; index++)
-		{
-			if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
-			{
-				surface->write_aa_mode = layout.aa_mode;
-			}
-		}
-
-		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
-		{
-			ds->write_aa_mode = layout.aa_mode;
-		}
-
+		set_scissor();
 		return;
 	}
 
@@ -2755,6 +2740,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	// Reset framebuffer information
 	VkFormat old_format = VK_FORMAT_UNDEFINED;
 	const auto color_bpp = get_format_block_size_in_bytes(layout.color_format);
+	const auto samples = get_format_sample_count(layout.aa_mode);
 
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -2774,6 +2760,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_surface_info[i].height = layout.height;
 		m_surface_info[i].color_format = layout.color_format;
 		m_surface_info[i].bpp = color_bpp;
+		m_surface_info[i].samples = samples;
 	}
 
 	//Process depth surface as well
@@ -2791,6 +2778,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.height = layout.height;
 		m_depth_surface_info.depth_format = layout.depth_format;
 		m_depth_surface_info.bpp = (layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
+		m_depth_surface_info.samples = samples;
 	}
 
 	//Bind created rtts as current fbo...
@@ -2808,7 +2796,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			m_surface_info[index].pitch = layout.actual_color_pitch[index];
 			verify("Pitch mismatch!" HERE), surface->rsx_pitch == layout.actual_color_pitch[index];
 
-			surface->write_aa_mode = layout.aa_mode;
 			m_texture_cache.notify_surface_changed(m_surface_info[index].get_memory_range(layout.aa_factors));
 			m_draw_buffers.push_back(index);
 		}
@@ -2823,7 +2810,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.pitch = layout.actual_zeta_pitch;
 		verify("Pitch mismatch!" HERE), ds->rsx_pitch == layout.actual_zeta_pitch;
 
-		ds->write_aa_mode = layout.aa_mode;
 		m_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
 	}
 
@@ -2895,7 +2881,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 				m_texture_cache.lock_memory_region(
 					*m_current_command_buffer, surface, surface->get_memory_range(), false,
-					surface->get_surface_width(), surface->get_surface_height(), surface->get_rsx_pitch(),
+					surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
 					gcm_format, swap_bytes);
 			}
 		}
@@ -3184,7 +3170,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 					// TODO: Take AA scaling into account
 					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
 						display_buffers[buffer].width, display_buffers[buffer].height, avconfig? avconfig->resolution_x : 0, avconfig? avconfig->resolution_y : 0,
-						render_target_texture->get_surface_width(), render_target_texture->get_surface_height());
+						render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
 
 					buffer_width = render_target_texture->width();
 					buffer_height = render_target_texture->height();

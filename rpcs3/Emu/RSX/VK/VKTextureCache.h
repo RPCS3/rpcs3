@@ -211,18 +211,9 @@ namespace vk
 			{
 				if (context == rsx::texture_upload_context::framebuffer_storage)
 				{
-					switch (static_cast<vk::render_target*>(vram_texture)->read_aa_mode)
-					{
-					case rsx::surface_antialiasing::center_1_sample:
-						break;
-					case rsx::surface_antialiasing::diagonal_centered_2_samples:
-						transfer_width *= 2;
-						break;
-					default:
-						transfer_width *= 2;
-						transfer_height *= 2;
-						break;
-					}
+					auto surface = vk::as_rtt(vram_texture);
+					transfer_width *= surface->samples_x;
+					transfer_height *= surface->samples_y;
 				}
 
 				if (transfer_width != vram_texture->width() || transfer_height != vram_texture->height())
@@ -512,15 +503,25 @@ namespace vk
 				section.src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				auto src_image = section.src;
+				auto src_x = section.src_x;
+				auto src_y = section.src_y;
+				auto src_w = section.src_w;
+				auto src_h = section.src_h;
+
+				if (auto surface = dynamic_cast<vk::render_target*>(section.src))
+				{
+					surface->transform_samples_to_pixels(src_x, src_y, src_w, src_h);
+				}
+
 				if (UNLIKELY(typeless))
 				{
-					src_image = vk::get_typeless_helper(dst->info.format, section.src_x + section.src_w, section.src_y + section.src_h);
+					src_image = vk::get_typeless_helper(dst->info.format, src_x + src_w, src_y + src_h);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 					const auto src_bpp = vk::get_format_texel_width(section.src->format());
-					const u16 convert_w = u16(section.src_w * dst_bpp) / src_bpp;
-					const areai src_rect = coordi{{ section.src_x, section.src_y }, { convert_w, section.src_h }};
-					const areai dst_rect = coordi{{ section.src_x, section.src_y }, { section.src_w, section.src_h }};
+					const u16 convert_w = u16(src_w * dst_bpp) / src_bpp;
+					const areai src_rect = coordi{{ src_x, src_y }, { convert_w, src_h }};
+					const areai dst_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
 					vk::copy_image_typeless(cmd, section.src, src_image, src_rect, dst_rect, 1, section.src->aspect(), dst_aspect);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 				}
@@ -530,14 +531,14 @@ namespace vk
 				// Final aspect mask of the 'final' transfer source
 				const auto new_src_aspect = src_image->aspect();
 
-				if (LIKELY(section.src_w == section.dst_w && section.src_h == section.dst_h && section.xform == surface_transform::identity))
+				if (LIKELY(src_w == section.dst_w && src_h == section.dst_h && section.xform == surface_transform::identity))
 				{
 					VkImageCopy copy_rgn;
-					copy_rgn.srcOffset = { section.src_x, section.src_y, 0 };
+					copy_rgn.srcOffset = { src_x, src_y, 0 };
 					copy_rgn.dstOffset = { section.dst_x, section.dst_y, 0 };
 					copy_rgn.dstSubresource = { dst_aspect, 0, 0, 1 };
 					copy_rgn.srcSubresource = { new_src_aspect, 0, 0, 1 };
-					copy_rgn.extent = { section.src_w, section.src_h, 1 };
+					copy_rgn.extent = { src_w, src_h, 1 };
 
 					if (dst->info.imageType == VK_IMAGE_TYPE_3D)
 					{
@@ -572,7 +573,7 @@ namespace vk
 					if (section.xform == surface_transform::identity)
 					{
 						vk::copy_scaled_image(cmd, src_image->value, _dst->value, section.src->current_layout, _dst->current_layout,
-							coordi{ { section.src_x, section.src_y }, { section.src_w, section.src_h } },
+							coordi{ { src_x, src_y }, { src_w, src_h } },
 							coordi{ { section.dst_x, section.dst_y }, { section.dst_w, section.dst_h } },
 							1, src_image->aspect(), src_image->info.format == _dst->info.format,
 							VK_FILTER_NEAREST, src_image->info.format, _dst->info.format);
@@ -580,14 +581,14 @@ namespace vk
 					else if (section.xform == surface_transform::argb_to_bgra)
 					{
 						VkBufferImageCopy copy{};
-						copy.imageExtent = { section.src_w, section.src_h, 1 };
-						copy.imageOffset = { section.src_x, section.src_y, 0 };
+						copy.imageExtent = { src_w, src_h, 1 };
+						copy.imageOffset = { src_x, src_y, 0 };
 						copy.imageSubresource = { src_image->aspect(), 0, 0, 1 };
 
 						auto scratch_buf = vk::get_scratch_buffer();
 						vkCmdCopyImageToBuffer(cmd, src_image->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, scratch_buf->value, 1, &copy);
 
-						const auto mem_length = section.src_w * section.src_h * dst_bpp;
+						const auto mem_length = src_w * src_h * dst_bpp;
 						vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 							VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
@@ -606,16 +607,16 @@ namespace vk
 						dst_x = 0;
 						dst_y = 0;
 
-						if (section.src_w != section.dst_w || section.src_h != section.dst_h)
+						if (src_w != section.dst_w || src_h != section.dst_h)
 						{
 							// Optionally scale if needed
 							if (UNLIKELY(tmp == _dst))
 							{
-								dst_y = section.src_h;
+								dst_y = src_h;
 							}
 
 							vk::copy_scaled_image(cmd, tmp->value, _dst->value, tmp->current_layout, _dst->current_layout,
-								areai{ 0, 0, section.src_w, (s32)section.src_h },
+								areai{ 0, 0, src_w, (s32)src_h },
 								coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
 								1, new_src_aspect, tmp->info.format == _dst->info.format,
 								VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);

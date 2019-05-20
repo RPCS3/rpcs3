@@ -13,39 +13,14 @@ namespace vk
 {
 	struct render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::viewable_image*>
 	{
-		u16 native_pitch = 0;
-		u16 rsx_pitch = 0;
-
-		u16 surface_width = 0;
-		u16 surface_height = 0;
-
 		u64 frame_tag = 0; // frame id when invalidated, 0 if not invalid
 
 		using viewable_image::viewable_image;
 
-		vk::viewable_image* get_surface() override
+		vk::viewable_image* get_surface(rsx::surface_access access_type) override
 		{
+			// TODO
 			return (vk::viewable_image*)this;
-		}
-
-		u16 get_surface_width() const override
-		{
-			return surface_width;
-		}
-
-		u16 get_surface_height() const override
-		{
-			return surface_height;
-		}
-
-		u16 get_rsx_pitch() const override
-		{
-			return rsx_pitch;
-		}
-
-		u16 get_native_pitch() const override
-		{
-			return native_pitch;
 		}
 
 		bool is_depth_surface() const override
@@ -273,8 +248,8 @@ namespace rsx
 		{
 			if (!sink)
 			{
-				const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width());
-				const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height());
+				const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width(rsx::surface_metrics::pixels));
+				const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height(rsx::surface_metrics::pixels));
 
 				auto& dev = cmd.get_command_pool().get_owner();
 				sink = std::make_unique<vk::render_target>(dev, dev.get_memory_mapping().device_local,
@@ -282,7 +257,7 @@ namespace rsx
 					VK_IMAGE_TYPE_2D,
 					ref->format(),
 					new_w, new_h, 1, 1, 1,
-					VK_SAMPLE_COUNT_1_BIT,
+					(VkSampleCountFlagBits)ref->samples(),
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL,
 					ref->info.usage,
@@ -314,15 +289,6 @@ namespace rsx
 			return (surface->format() == ref->format() &&
 					surface->get_surface_width() >= width &&
 					surface->get_surface_height() >= height);
-		}
-
-		static void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
-		{
-			info->rsx_pitch = surface->rsx_pitch;
-			info->native_pitch = surface->native_pitch;
-			info->surface_width = surface->get_surface_width();
-			info->surface_height = surface->get_surface_height();
-			info->bpp = surface->get_bpp();
 		}
 
 		static void prepare_rtt_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
@@ -357,7 +323,7 @@ namespace rsx
 		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target *surface, u32 address, size_t pitch)
 		{
 			surface->rsx_pitch = (u16)pitch;
-			surface->reset_aa_mode();
+			surface->set_aa_mode(rsx::surface_antialiasing::center_1_sample);
 			surface->queue_tag(address);
 			surface->last_use_tag = 0;
 			surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
@@ -378,9 +344,7 @@ namespace rsx
 		}
 
 		static void notify_surface_persist(const std::unique_ptr<vk::render_target> &surface)
-		{
-			surface->save_aa_mode();
-		}
+		{}
 
 		static void notify_surface_reused(const std::unique_ptr<vk::render_target> &surface)
 		{

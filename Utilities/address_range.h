@@ -1,4 +1,6 @@
-﻿#include "types.h"
+﻿#pragma once
+
+#include "types.h"
 #include "StrFmt.h"
 #include <vector>
 
@@ -376,7 +378,7 @@ namespace utils
 
 			// We use index access because we might have to push_back within the loop, which could invalidate the iterators
 			size_type _size = data.size();
-			for (int n = 0; n < _size; ++n)
+			for (size_type n = 0; n < _size; ++n)
 			{
 				address_range &existing = data[n];
 
@@ -453,7 +455,7 @@ namespace utils
 		{
 			size_t _size = data.size();
 
-			for (int i = 0; i < _size; ++i)
+			for (size_t i = 0; i < _size; ++i)
 			{
 				const auto &r1 = data[i];
 				if (!r1.valid())
@@ -461,7 +463,7 @@ namespace utils
 					continue;
 				}
 
-				for (int j = i + 1; j < _size; ++j)
+				for (size_t j = i + 1; j < _size; ++j)
 				{
 					const auto &r2 = data[j];
 					if (!r2.valid())
