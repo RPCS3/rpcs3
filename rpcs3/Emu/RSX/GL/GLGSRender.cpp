@@ -1655,7 +1655,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		GLuint image = GL_NONE;
 
-		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
+		if (auto render_target_texture = m_rtts.get_color_surface_at(absolute_address))
 		{
 			if (render_target_texture->last_use_tag == m_rtts.write_tag)
 			{

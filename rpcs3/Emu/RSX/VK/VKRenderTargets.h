@@ -161,6 +161,7 @@ namespace rsx
 			u32 address,
 			surface_color_format format,
 			size_t width, size_t height, size_t pitch,
+			rsx::surface_antialiasing antialias,
 			vk::render_device &device, vk::command_buffer& cmd)
 		{
 			auto fmt = vk::get_compatible_surface_format(format);
@@ -181,6 +182,7 @@ namespace rsx
 			change_image_layout(cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
 			rtt->set_format(format);
+			rtt->set_aa_mode(antialias);
 			rtt->memory_usage_flags = rsx::surface_usage_flags::attachment;
 			rtt->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			rtt->native_component_map = fmt.second;
@@ -198,6 +200,7 @@ namespace rsx
 			u32 address,
 			surface_depth_format format,
 			size_t width, size_t height, size_t pitch,
+			rsx::surface_antialiasing antialias,
 			vk::render_device &device, vk::command_buffer& cmd)
 		{
 			VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
@@ -222,6 +225,7 @@ namespace rsx
 
 
 			ds->set_format(format);
+			ds->set_aa_mode(antialias);
 			ds->memory_usage_flags= rsx::surface_usage_flags::attachment;
 			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
@@ -264,6 +268,7 @@ namespace rsx
 					ref->info.flags);
 
 				sink->add_ref();
+				sink->set_spp(ref->get_spp());
 				sink->format_info = ref->format_info;
 				sink->memory_usage_flags = rsx::surface_usage_flags::storage;
 				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
@@ -284,33 +289,30 @@ namespace rsx
 			sink->last_use_tag = ref->last_use_tag;
 		}
 
-		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 /*sample_count*/)
+		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 sample_count)
 		{
 			return (surface->format() == ref->format() &&
+					surface->get_spp() == sample_count &&
 					surface->get_surface_width() >= width &&
 					surface->get_surface_height() >= height);
 		}
 
-		static void prepare_rtt_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
+		static void prepare_surface_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
 		{
-			surface->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			if (surface->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
+			{
+				surface->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			}
+			else
+			{
+				surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			}
+
 			surface->frame_tag = 0;
 			surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 		}
 
-		static void prepare_rtt_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
-		{
-			surface->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		}
-
-		static void prepare_ds_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
-		{
-			surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-			surface->frame_tag = 0;
-			surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
-		}
-
-		static void prepare_ds_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
+		static void prepare_surface_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
 		{
 			surface->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
@@ -352,63 +354,45 @@ namespace rsx
 			surface->add_ref();
 		}
 
-		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height, bool check_refs=false)
+		static bool int_surface_matches_properties(
+			const std::unique_ptr<vk::render_target> &surface,
+			VkFormat format,
+			size_t width, size_t height,
+			rsx::surface_antialiasing antialias,
+			bool check_refs)
 		{
-			if (check_refs && rtt->has_refs()) // Surface may still have read refs from data 'copy'
-				return false;
-
-			VkFormat fmt = vk::get_compatible_surface_format(format).first;
-
-			if (rtt->info.format == fmt &&
-				rtt->matches_dimensions((u16)width, (u16)height))
-				return true;
-
-			return false;
-		}
-
-		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format format, size_t width, size_t height, bool check_refs=false)
-		{
-			if (check_refs && ds->has_refs()) //Surface may still have read refs from data 'copy'
-				return false;
-
-			if (ds->matches_dimensions((u16)width, (u16)height))
+			if (check_refs && surface->has_refs())
 			{
-				//Check format
-				switch (ds->info.format)
-				{
-				case VK_FORMAT_D16_UNORM:
-					return format == surface_depth_format::z16;
-				case VK_FORMAT_D24_UNORM_S8_UINT:
-				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-					return format == surface_depth_format::z24s8;
-				}
+				// Surface may still have read refs from data 'copy'
+				return false;
 			}
 
-			return false;
+			return (surface->info.format == format &&
+				surface->get_spp() == get_format_sample_count(antialias) &&
+				surface->matches_dimensions((u16)width, (u16)height));
 		}
 
-		static download_buffer_object issue_download_command(surface_type, surface_color_format, size_t /*width*/, size_t /*height*/, ...)
+		static bool surface_matches_properties(
+			const std::unique_ptr<vk::render_target> &surface,
+			surface_color_format format,
+			size_t width, size_t height,
+			rsx::surface_antialiasing antialias,
+			bool check_refs = false)
 		{
-			return nullptr;
+			VkFormat vk_format = vk::get_compatible_surface_format(format).first;
+			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
 		}
 
-		static download_buffer_object issue_depth_download_command(surface_type, surface_depth_format, size_t /*width*/, size_t /*height*/, ...)
+		static bool surface_matches_properties(
+			const std::unique_ptr<vk::render_target> &surface,
+			surface_depth_format format,
+			size_t width, size_t height,
+			rsx::surface_antialiasing antialias,
+			bool check_refs = false)
 		{
-			return nullptr;
-		}
-
-		static download_buffer_object issue_stencil_download_command(surface_type, surface_depth_format, size_t /*width*/, size_t /*height*/, ...)
-		{
-			return nullptr;
-		}
-
-		gsl::span<const gsl::byte> map_downloaded_buffer(download_buffer_object, ...)
-		{
-			return {};
-		}
-
-		static void unmap_downloaded_buffer(download_buffer_object, ...)
-		{
+			auto device = vk::get_current_renderer();
+			VkFormat vk_format = vk::get_compatible_depth_surface_format(device->get_formats_support(), format);
+			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
 		}
 
 		static vk::render_target *get(const std::unique_ptr<vk::render_target> &tex)
