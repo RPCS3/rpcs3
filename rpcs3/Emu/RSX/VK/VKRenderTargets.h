@@ -187,7 +187,7 @@ namespace rsx
 			rtt->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			rtt->native_component_map = fmt.second;
 			rtt->rsx_pitch = (u16)pitch;
-			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
+			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format) * get_format_sample_count(antialias);
 			rtt->surface_width = (u16)width;
 			rtt->surface_height = (u16)height;
 			rtt->queue_tag(address);
@@ -232,7 +232,7 @@ namespace rsx
 
 			change_image_layout(cmd, ds.get(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
-			ds->native_pitch = (u16)width * 2;
+			ds->native_pitch = (u16)width * 2 * get_format_sample_count(antialias);
 			if (format == rsx::surface_depth_format::z24s8)
 				ds->native_pitch *= 2;
 
@@ -273,7 +273,7 @@ namespace rsx
 				sink->memory_usage_flags = rsx::surface_usage_flags::storage;
 				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
 				sink->native_component_map = ref->native_component_map;
-				sink->native_pitch = u16(prev.width * ref->get_bpp());
+				sink->native_pitch = u16(prev.width * ref->get_bpp() * ref->get_spp());
 				sink->surface_width = prev.width;
 				sink->surface_height = prev.height;
 				sink->queue_tag(address);

@@ -701,7 +701,7 @@ namespace rsx
 					info.base_address = this_address;
 					info.is_depth = is_depth;
 
-					const auto normalized_surface_width = surface->get_native_pitch() / required_bpp;
+					const auto normalized_surface_width = surface->get_surface_width(rsx::surface_metrics::bytes) / required_bpp;
 					const auto normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
 
 					if (LIKELY(this_address >= texaddr))

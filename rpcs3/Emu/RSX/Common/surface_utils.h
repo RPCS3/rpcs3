@@ -153,7 +153,7 @@ namespace rsx
 				case rsx::surface_metrics::pixels:
 					return surface_width;
 				case rsx::surface_metrics::bytes:
-					return rsx_pitch;
+					return native_pitch;
 				default:
 					fmt::throw_exception("Unknown surface metric %d", u32(metrics));
 			}
@@ -185,7 +185,7 @@ namespace rsx
 
 		u8 get_bpp() const
 		{
-			return u8(get_native_pitch() / get_surface_width());
+			return u8(get_native_pitch() / get_surface_width(rsx::surface_metrics::samples));
 		}
 
 		u8 get_spp() const

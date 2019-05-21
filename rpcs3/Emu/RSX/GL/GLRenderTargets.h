@@ -148,7 +148,7 @@ struct gl_render_target_traits
 
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
 			rsx::apply_resolution_scale((u16)height, true), (GLenum)internal_fmt));
-		result->set_native_pitch((u16)width * format.channel_count * format.channel_size);
+		result->set_native_pitch((u16)width * format.channel_count * format.channel_size * get_format_sample_count(antialias));
 		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
 		result->set_format(surface_color_format);
 		result->set_aa_mode(antialias);
@@ -175,7 +175,7 @@ struct gl_render_target_traits
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
 				rsx::apply_resolution_scale((u16)height, true), (GLenum)format.internal_format));
 
-		u16 native_pitch = (u16)width * 2;
+		u16 native_pitch = (u16)width * 2 * get_format_sample_count(antialias);
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 			native_pitch *= 2;
 
@@ -213,7 +213,7 @@ struct gl_render_target_traits
 			sink->format_info = ref->format_info;
 
 			sink->set_spp(ref->get_spp());
-			sink->set_native_pitch(prev.width * ref->get_bpp());
+			sink->set_native_pitch(prev.width * ref->get_bpp() * ref->get_spp());
 			sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
 			sink->set_native_component_layout(ref->get_native_component_layout());
 			sink->queue_tag(address);
