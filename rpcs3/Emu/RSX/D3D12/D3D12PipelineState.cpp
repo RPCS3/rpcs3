@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12PipelineState.h"
@@ -321,7 +321,5 @@ std::pair<std::string, std::string> D3D12GSRender::get_programs() const
 
 void D3D12GSRender::notify_tile_unbound(u32 tile)
 {
-	u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-	m_rtts.invalidate_surface_address(addr, false);
 }
 #endif
