@@ -33,7 +33,7 @@ namespace vk
 			};
 
 			// Reserve descriptor pools
-			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes, 2);
+			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes, 2, VK_MAX_COMPUTE_TASKS, 2);
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings(2);
 
@@ -112,7 +112,7 @@ namespace vk
 			if (m_used_descriptors == 0)
 				return;
 
-			vkResetDescriptorPool(*get_current_renderer(), m_descriptor_pool, 0);
+			m_descriptor_pool.reset(0);
 			m_used_descriptors = 0;
 		}
 

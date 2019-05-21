@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
@@ -39,7 +39,7 @@ namespace vk
 			};
 
 			//Reserve descriptor pools
-			m_descriptor_pool.create(dev, descriptor_pools, 1);
+			m_descriptor_pool.create(dev, descriptor_pools, 1, 120, 2);
 
 			VkDescriptorSetLayoutBinding bindings[1] = {};
 			
@@ -370,7 +370,7 @@ namespace vk
 			if (m_used_descriptors == 0)
 				return;
 
-			vkResetDescriptorPool(device, m_descriptor_pool, 0);
+			m_descriptor_pool.reset(0);
 			m_used_descriptors = 0;
 		}
 	};

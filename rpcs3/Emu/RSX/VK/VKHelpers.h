@@ -2602,43 +2602,66 @@ public:
 
 	class descriptor_pool
 	{
-		VkDescriptorPool pool = nullptr;
-		const vk::render_device *owner = nullptr;
+		const vk::render_device *m_owner = nullptr;
+
+		std::vector<VkDescriptorPool> m_device_pools;
+		VkDescriptorPool m_current_pool_handle = VK_NULL_HANDLE;
+		u32 m_current_pool_index = 0;
 
 	public:
 		descriptor_pool() {}
 		~descriptor_pool() {}
 
-		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count)
+		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 		{
+			verify(HERE), subpool_count;
+
 			VkDescriptorPoolCreateInfo infos = {};
 			infos.flags = 0;
-			infos.maxSets = DESCRIPTOR_MAX_DRAW_CALLS;
+			infos.maxSets = max_sets;
 			infos.poolSizeCount = size_descriptors_count;
 			infos.pPoolSizes = sizes;
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 
-			owner = &dev;
-			CHECK_RESULT(vkCreateDescriptorPool(dev, &infos, nullptr, &pool));
+			m_owner = &dev;
+			m_device_pools.resize(subpool_count);
+
+			for (auto &pool : m_device_pools)
+			{
+				CHECK_RESULT(vkCreateDescriptorPool(dev, &infos, nullptr, &pool));
+			}
+
+			m_current_pool_handle = m_device_pools[0];
 		}
 
 		void destroy()
 		{
-			if (!pool) return;
+			if (m_device_pools.empty()) return;
 
-			vkDestroyDescriptorPool((*owner), pool, nullptr);
-			owner = nullptr;
-			pool = nullptr;
+			for (auto &pool : m_device_pools)
+			{
+				vkDestroyDescriptorPool((*m_owner), pool, nullptr);
+				pool = VK_NULL_HANDLE;
+			}
+
+			m_owner = nullptr;
 		}
 
 		bool valid()
 		{
-			return (pool != nullptr);
+			return (!m_device_pools.empty());
 		}
 
 		operator VkDescriptorPool()
 		{
-			return pool;
+			return m_current_pool_handle;
+		}
+
+		void reset(VkDescriptorPoolResetFlags flags)
+		{
+			m_current_pool_index = (m_current_pool_index + 1) % u32(m_device_pools.size());
+			m_current_pool_handle = m_device_pools[m_current_pool_index];
+			CHECK_RESULT(vkResetDescriptorPool(*m_owner, m_current_pool_handle, flags));
 		}
 	};
 
