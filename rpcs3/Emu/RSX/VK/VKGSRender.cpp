@@ -666,7 +666,7 @@ VKGSRender::VKGSRender() : GSRender()
 	for (auto &ctx : frame_context_storage)
 	{
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_semaphore);
-		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()));
+		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()), DESCRIPTOR_MAX_DRAW_CALLS, 1);
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();
@@ -1069,7 +1069,7 @@ void VKGSRender::check_descriptors()
 		// Should hard sync before resetting descriptors for spec compliance
 		flush_command_queue(true);
 
-		CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
+		m_current_frame->descriptor_pool.reset(0);
 		m_current_frame->used_descriptors = 0;
 	}
 }
@@ -1225,11 +1225,15 @@ void VKGSRender::begin()
 		verify(HERE), !m_current_frame->swap_command_buffer;
 		if (m_current_frame->used_descriptors)
 		{
-			CHECK_RESULT(vkResetDescriptorPool(*m_device, m_current_frame->descriptor_pool, 0));
+			m_current_frame->descriptor_pool.reset(0);
 			m_current_frame->used_descriptors = 0;
 		}
 
 		m_current_frame->flags &= ~frame_context_state::dirty;
+	}
+	else
+	{
+		check_present_status();
 	}
 }
 
@@ -2536,8 +2540,6 @@ void VKGSRender::process_swap_request(frame_context_t *ctx, bool free_resources)
 
 	if (free_resources)
 	{
-		//Cleanup of reference sensitive resources
-		//TODO: These should be double buffered as well to prevent destruction of anything in use
 		if (g_cfg.video.overlay)
 		{
 			m_text_writer->reset_descriptors();
@@ -2629,11 +2631,11 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 	case rsx::FIFO_state::lock_wait:
 		// Critical check finished
 		return;
-	case rsx::FIFO_state::spinning:
-	case rsx::FIFO_state::empty:
+	//case rsx::FIFO_state::spinning:
+	//case rsx::FIFO_state::empty:
 		// We have some time, check the present queue
-		check_present_status();
-		break;
+		//check_present_status();
+		//break;
 	default:
 		break;
 	}

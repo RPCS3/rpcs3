@@ -74,7 +74,7 @@ namespace vk
 			};
 
 			//Reserve descriptor pools
-			m_descriptor_pool.create(*m_device, descriptor_pool_sizes, 2);
+			m_descriptor_pool.create(*m_device, descriptor_pool_sizes, 2, VK_OVERLAY_MAX_DRAW_CALLS, 2);
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings(1 + m_num_usable_samplers);
 
@@ -297,7 +297,7 @@ namespace vk
 			if (m_used_descriptors == 0)
 				return;
 
-			vkResetDescriptorPool(*m_device, m_descriptor_pool, 0);
+			m_descriptor_pool.reset(0);
 			m_used_descriptors = 0;
 
 			m_vao.reset_allocation_stats();
