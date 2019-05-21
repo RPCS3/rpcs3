@@ -787,6 +787,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
+	ui->b_blacklist->setEnabled(is_enabled && m_handler->m_type != pad_handler::keyboard);
 
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
@@ -1034,7 +1035,6 @@ void pad_settings_dialog::ChangeProfile()
 		((NullPadHandler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::keyboard:
-		ui->b_blacklist->setEnabled(false);
 		((keyboard_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::ds3:
