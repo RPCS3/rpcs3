@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
@@ -211,6 +211,26 @@ namespace rsx
 					break;
 				default:
 					fmt::throw_exception("Unknown AA mode 0x%x", (u32)aa);
+			}
+		}
+
+		void set_spp(u8 count)
+		{
+			switch (count)
+			{
+			case 1:
+				samples_x = samples_y = spp = 1;
+				break;
+			case 2:
+				samples_x = spp = 2;
+				samples_y = 1;
+				break;
+			case 4:
+				samples_x = samples_y = 2;
+				spp = 4;
+				break;
+			default:
+				fmt::throw_exception("Unexpected sample count 0x%x", count);
 			}
 		}
 

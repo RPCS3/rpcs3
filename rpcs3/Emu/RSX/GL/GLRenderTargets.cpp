@@ -454,23 +454,19 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (m_gl_texture_cache.get_ro_tex_invalidate_intr())
 	{
-		//Invalidate cached sampler state
+		// Invalidate cached sampler state
 		m_samplers_dirty.store(true);
 	}
 }
 
 std::array<std::vector<gsl::byte>, 4> GLGSRender::copy_render_targets_to_memory()
 {
-	int clip_w = rsx::method_registers.surface_clip_width();
-	int clip_h = rsx::method_registers.surface_clip_height();
-	return m_rtts.get_render_targets_data(rsx::method_registers.surface_color(), clip_w, clip_h);
+	return {};
 }
 
 std::array<std::vector<gsl::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_memory()
 {
-	int clip_w = rsx::method_registers.surface_clip_width();
-	int clip_h = rsx::method_registers.surface_clip_height();
-	return m_rtts.get_depth_stencil_data(rsx::method_registers.surface_depth_fmt(), clip_w, clip_h);
+	return {};
 }
 
 void GLGSRender::read_buffers()
