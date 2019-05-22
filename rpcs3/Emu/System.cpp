@@ -39,7 +39,6 @@
 
 #include "Utilities/GDBDebugServer.h"
 
-#include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
@@ -303,31 +302,31 @@ void Emulator::Init()
 
 	if (g_cfg.vfs.init_dirs)
 	{
-	fs::create_path(dev_hdd0);
-	fs::create_path(dev_hdd1);
-	fs::create_path(dev_usb);
-	fs::create_dir(dev_hdd0 + "game/");
-	fs::create_dir(dev_hdd0 + "game/TEST12345/");
-	fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
-	fs::create_dir(dev_hdd0 + "game/.locks/");
-	fs::create_dir(dev_hdd0 + "home/");
-	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/");
-	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/exdata/");
-	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/savedata/");
-	fs::create_dir(dev_hdd0 + "home/" + m_usr + "/trophy/");
-	fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s);
-	fs::create_dir(dev_hdd0 + "disc/");
-	fs::create_dir(dev_hdd0 + "savedata/");
-	fs::create_dir(dev_hdd0 + "savedata/vmc/");
-	fs::create_dir(dev_hdd1 + "cache/");
-	fs::create_dir(dev_hdd1 + "game/");
+		fs::create_path(dev_hdd0);
+		fs::create_path(dev_hdd1);
+		fs::create_path(dev_usb);
+		fs::create_dir(dev_hdd0 + "game/");
+		fs::create_dir(dev_hdd0 + "game/TEST12345/");
+		fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
+		fs::create_dir(dev_hdd0 + "game/.locks/");
+		fs::create_dir(dev_hdd0 + "home/");
+		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/");
+		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/exdata/");
+		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/savedata/");
+		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/trophy/");
+		fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s);
+		fs::create_dir(dev_hdd0 + "disc/");
+		fs::create_dir(dev_hdd0 + "savedata/");
+		fs::create_dir(dev_hdd0 + "savedata/vmc/");
+		fs::create_dir(dev_hdd1 + "cache/");
+		fs::create_dir(dev_hdd1 + "game/");
 	}
 
 	fs::create_path(fs::get_cache_dir() + "shaderlog/");
 	fs::create_path(fs::get_config_dir() + "captures/");
 
 #ifdef WITH_GDB_DEBUGGER
-	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int) g_cfg.misc.gdb_server_port);
+	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int)g_cfg.misc.gdb_server_port);
 #endif
 
 	// Initialize patch engine
@@ -506,7 +505,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	GetCallbacks().on_ready();
 
 	auto gsrender = fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render);
-	auto padhandler = fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler);
+	auto padhandler = fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler, "");
 
 	if (gsrender.get() == nullptr || padhandler.get() == nullptr)
 		return false;
@@ -725,6 +724,22 @@ std::string Emulator::GetCustomConfigPath(const std::string& title_id, bool get_
 		path = GetCustomConfigDir() + "config_" + title_id + ".yml";
 
 	return path;
+}
+
+std::string Emulator::GetCustomInputConfigDir(const std::string& title_id)
+{
+	// Notice: the extra folder for each title id may be removed at a later stage
+	// Warning: make sure to change any function that removes this directory as well
+#ifdef _WIN32
+	return fs::get_config_dir() + "config/custom_input_configs/" + title_id + "/";
+#else
+	return fs::get_config_dir() + "custom_input_configs/" + title_id + "/";
+#endif
+}
+
+std::string Emulator::GetCustomInputConfigPath(const std::string& title_id)
+{
+	return GetCustomInputConfigDir(title_id) + "/config_input_" + title_id + ".yml";
 }
 
 void Emulator::SetForceBoot(bool force_boot)
@@ -1343,7 +1358,7 @@ void Emulator::Load(bool add_only, bool force_global_config)
 			}
 
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
-			fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler);
+			fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler, m_title_id);
 			network_thread_init();
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)

@@ -189,12 +189,12 @@ struct EmuCallbacks
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
 	std::function<void()> exit;
-	std::function<void()> reset_pads;
+	std::function<void(const std::string&)> reset_pads;
 	std::function<void(bool)> enable_pads;
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
-	std::function<std::shared_ptr<class pad_thread>()> get_pad_handler;
+	std::function<std::shared_ptr<class pad_thread>(const std::string&)> get_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
@@ -326,6 +326,8 @@ public:
 
 	static std::string GetCustomConfigDir();
 	static std::string GetCustomConfigPath(const std::string& title_id, bool get_deprecated_path = false);
+	static std::string GetCustomInputConfigDir(const std::string& title_id);
+	static std::string GetCustomInputConfigPath(const std::string& title_id);
 
 	void SetForceBoot(bool force_boot);
 
@@ -372,6 +374,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
+		cfg::_int<0, 6> max_spurs_threads{this, "Max SPURS Threads", 6}; // HACK. If less then 6, max number of running SPURS threads in each thread group.
 		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size", spu_block_size_type::safe};
 		cfg::_bool spu_accurate_getllar{this, "Accurate GETLLAR", false};
 		cfg::_bool spu_accurate_putlluc{this, "Accurate PUTLLUC", false};

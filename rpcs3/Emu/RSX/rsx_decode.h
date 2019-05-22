@@ -4209,7 +4209,7 @@ struct registers_decoder<NV4097_NO_OPERATION>
 {
 	struct decoded_type
 	{
-		decoded_type(u32) {};
+		decoded_type(u32) {}
 	};
 
 	static std::string dump(u32 &&)
@@ -4223,7 +4223,7 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_CACHE_FILE>
 {
 	struct decoded_type
 	{
-		decoded_type(u32) {};
+		decoded_type(u32) {}
 	};
 
 	static std::string dump(u32 &&)
@@ -4237,7 +4237,7 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_FILE>
 {
 	struct decoded_type
 	{
-		decoded_type(u32) {};
+		decoded_type(u32) {}
 	};
 
 	static std::string dump(u32 &&)

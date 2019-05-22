@@ -41,7 +41,7 @@ class pup_object
 public:
 	pup_object(const fs::file& file);
 
-	explicit operator bool() const { return isValid; };
+	explicit operator bool() const { return isValid; }
 
 	fs::file get_file(u64 entry_id);
 };

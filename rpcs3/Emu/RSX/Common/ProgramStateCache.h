@@ -317,7 +317,7 @@ public:
 		{
 			free(pair.first.addr);
 		}
-	};
+	}
 
 	const vertex_program_type& get_transform_program(const RSXVertexProgram& rsx_vp) const
 	{

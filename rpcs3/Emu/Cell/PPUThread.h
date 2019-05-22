@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-#include "Common.h"
 #include "../CPU/CPUThread.h"
 #include "../Memory/vm.h"
 #include "Utilities/lockless.h"
@@ -79,7 +78,7 @@ public:
 				result |= bit;
 			}
 
-			return result;	
+			return result;
 		}
 
 		// Unpack CR bits

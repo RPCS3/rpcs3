@@ -58,12 +58,12 @@ namespace utils
 			return (start1 >= start2 && end1 <= end2);
 		}
 
-		address_range(u32 _start, u32 _end) : start(_start), end(_end) {};
+		address_range(u32 _start, u32 _end) : start(_start), end(_end) {}
 
 	public:
 		// Constructors
 		address_range() = default;
-		address_range(const address_range &other) : start(other.start), end(other.end) {};
+		address_range(const address_range &other) : start(other.start), end(other.end) {}
 
 		static inline address_range start_length(u32 _start, u32 _length)
 		{

@@ -27,17 +27,49 @@ namespace rsx
 	using utils::page_end;
 	using utils::next_page;
 
+	using flags64_t = uint64_t;
+	using flags32_t = uint32_t;
+	using flags16_t = uint16_t;
+	using flags8_t = uint8_t;
+
 	// Definitions
 	class thread;
 	extern thread* g_current_renderer;
 	extern atomic_t<u64> g_rsx_shared_tag;
 
 	//Base for resources with reference counting
-	struct ref_counted
+	class ref_counted
 	{
-		u8 deref_count = 0;
+		atomic_t<s32> ref_count{ 0 }; // References held
+		atomic_t<u8> idle_time{ 0 };  // Number of times the resource has been tagged idle
 
-		void reset_refs() { deref_count = 0; }
+	public:
+		void add_ref()
+		{
+			ref_count++;
+			idle_time = 0;
+		}
+
+		void release()
+		{
+			ref_count--;
+		}
+
+		bool has_refs()
+		{
+			return (ref_count > 0);
+		}
+
+		// Returns number of times the resource has been checked without being used in-between checks
+		u8 unused_check_count()
+		{
+			if (ref_count)
+			{
+				return 0;
+			}
+
+			return idle_time++;
+		}
 	};
 
 	/**
@@ -215,24 +247,39 @@ namespace rsx
 	}
 
 	// Returns interleaved bits of X|Y|Z used as Z-order curve indices
-	static inline u32 calculate_z_index(u32 x, u32 y, u32 z)
+	static inline u32 calculate_z_index(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
 	{
-		//Result = X' | Y' | Z' which are x,y,z bits interleaved
-		u32 shift_size = 0;
-		u32 result = 0;
+		AUDIT(x < (1u << log2_width) && y < (1u << log2_height) && z < (1u << log2_depth));
 
-		while (x | y | z)
+		// offset = X' | Y' | Z' which are x,y,z bits interleaved
+		u32 offset = 0;
+		u32 shift_count = 0;
+		do
 		{
-			result |= (x & 0x1) << shift_size++;
-			result |= (y & 0x1) << shift_size++;
-			result |= (z & 0x1) << shift_size++;
+			if (log2_width)
+			{
+				offset |= (x & 0x1) << shift_count++;
+				x >>= 1;
+				log2_width--;
+			}
 
-			x >>= 1;
-			y >>= 1;
-			z >>= 1;
+			if (log2_height)
+			{
+				offset |= (y & 0x1) << shift_count++;
+				y >>= 1;
+				log2_height--;
+			}
+
+			if (log2_depth)
+			{
+				offset |= (z & 0x1) << shift_count++;
+				z >>= 1;
+				log2_depth--;
+			}
 		}
+		while (x | y | z);
 
-		return result;
+		return offset;
 	}
 
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
@@ -332,13 +379,17 @@ namespace rsx
 		T *src = static_cast<T*>(input_pixels);
 		T *dst = static_cast<T*>(output_pixels);
 
+		const u32 log2_w = ceil_log2(width);
+		const u32 log2_h = ceil_log2(height);
+		const u32 log2_d = ceil_log2(depth);
+	
 		for (u32 z = 0; z < depth; ++z)
 		{
 			for (u32 y = 0; y < height; ++y)
 			{
 				for (u32 x = 0; x < width; ++x)
 				{
-					*dst++ = src[calculate_z_index(x, y, z)];
+					*dst++ = src[calculate_z_index(x, y, z, log2_w, log2_h, log2_d)];
 				}
 			}
 		}
@@ -451,32 +502,35 @@ namespace rsx
 		return std::make_tuple(x, y, width, height);
 	}
 
+	/**
+	 * Extracts from 'parent' a region that fits in 'child'
+	 */
 	static inline std::tuple<position2u, position2u, size2u> intersect_region(
-		u32 dst_address, u16 dst_w, u16 dst_h, u16 dst_bpp,
-		u32 src_address, u16 src_w, u16 src_h, u32 src_bpp,
+		u32 parent_address, u16 parent_w, u16 parent_h, u16 parent_bpp,
+		u32 child_address, u16 child_w, u16 child_h, u32 child_bpp,
 		u32 pitch)
 	{
-		if (src_address < dst_address)
+		if (child_address < parent_address)
 		{
-			const auto offset = dst_address - src_address;
-			const auto src_y = (offset / pitch);
-			const auto src_x = (offset % pitch) / src_bpp;
-			const auto dst_x = 0u;
-			const auto dst_y = 0u;
-			const auto w = std::min<u32>(dst_w, src_w - src_x);
-			const auto h = std::min<u32>(dst_h, src_h - src_y);
+			const auto offset = parent_address - child_address;
+			const auto src_x = 0u;
+			const auto src_y = 0u;
+			const auto dst_y = (offset / pitch);
+			const auto dst_x = (offset % pitch) / child_bpp;
+			const auto w = std::min<u32>(parent_w, child_w - dst_x);
+			const auto h = std::min<u32>(parent_h, child_h - dst_y);
 
 			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
 		}
 		else
 		{
-			const auto offset = src_address - dst_address;
-			const auto src_x = 0u;
-			const auto src_y = 0u;
-			const auto dst_y = (offset / pitch);
-			const auto dst_x = (offset % pitch) / dst_bpp;
-			const auto w = std::min<u32>(src_w, dst_w - dst_x);
-			const auto h = std::min<u32>(src_h, dst_h - dst_y);
+			const auto offset = child_address - parent_address;
+			const auto src_y = (offset / pitch);
+			const auto src_x = (offset % pitch) / parent_bpp;
+			const auto dst_x = 0u;
+			const auto dst_y = 0u;
+			const auto w = std::min<u32>(child_w, parent_w - src_x);
+			const auto h = std::min<u32>(child_h, parent_h - src_y);
 
 			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
 		}
@@ -492,10 +546,14 @@ namespace rsx
 		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
 	}
 
-	static inline const u16 apply_resolution_scale(u16 value, bool clamp)
+	static inline const u16 apply_resolution_scale(u16 value, bool clamp, u16 ref = 0)
 	{
-		if (value <= g_cfg.video.min_scalable_dimension)
+		if (ref == 0)
+			ref = value;
+
+		if (ref <= g_cfg.video.min_scalable_dimension)
 			return value;
+
 		else if (clamp)
 			return (u16)std::max((get_resolution_scale_percent() * value) / 100, 1);
 		else
@@ -522,14 +580,14 @@ namespace rsx
 	 * Returns <src_w, src_h, dst_w, dst_h>
 	 */
 	template <typename SurfaceType>
-	std::tuple<u16, u16, u16, u16> get_transferable_region(SurfaceType* surface)
+	std::tuple<u16, u16, u16, u16> get_transferable_region(const SurfaceType* surface)
 	{
-		const u16 src_w = surface->old_contents->width();
-		const u16 src_h = surface->old_contents->height();
+		const u16 src_w = surface->old_contents.source->width();
+		const u16 src_h = surface->old_contents.source->height();
 		u16 dst_w = src_w;
 		u16 dst_h = src_h;
 
-		switch (static_cast<SurfaceType*>(surface->old_contents)->read_aa_mode)
+		switch (static_cast<const SurfaceType*>(surface->old_contents.source)->read_aa_mode)
 		{
 		case rsx::surface_antialiasing::center_1_sample:
 			break;
@@ -565,7 +623,7 @@ namespace rsx
 	}
 
 	template <typename SurfaceType>
-	inline bool pitch_compatible(SurfaceType* a, SurfaceType* b)
+	inline bool pitch_compatible(const SurfaceType* a, const SurfaceType* b)
 	{
 		if (a->get_surface_height() == 1 || b->get_surface_height() == 1)
 			return true;
@@ -574,7 +632,7 @@ namespace rsx
 	}
 
 	template <bool __is_surface = true, typename SurfaceType>
-	inline bool pitch_compatible(SurfaceType* surface, u16 pitch_required, u16 height_required)
+	inline bool pitch_compatible(const SurfaceType* surface, u16 pitch_required, u16 height_required)
 	{
 		if constexpr (__is_surface)
 		{
@@ -727,7 +785,7 @@ namespace rsx
 		atomic_t<bitmask_type> m_data;
 
 	public:
-		atomic_bitmask_t() { m_data.store(0); };
+		atomic_bitmask_t() { m_data.store(0); }
 		~atomic_bitmask_t() {}
 
 		T load() const

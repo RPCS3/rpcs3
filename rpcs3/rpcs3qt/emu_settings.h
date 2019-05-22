@@ -47,6 +47,7 @@ public:
 		SPUCache,
 		SPUVerification,
 		DebugConsoleMode,
+		MaxSPURSThreads,
 
 		// Graphics
 		Renderer,
@@ -153,10 +154,10 @@ public:
 		bool supported = true;
 		bool has_adapters = true;
 
-		Render_Info() {};
-		Render_Info(const QString& name) : name(name), has_adapters(false) {};
+		Render_Info() {}
+		Render_Info(const QString& name) : name(name), has_adapters(false) {}
 		Render_Info(const QString& name, const QStringList& adapters, bool supported, SettingsType type)
-			: name(name), adapters(adapters), supported(supported), type(type) {};
+			: name(name), adapters(adapters), supported(supported), type(type) {}
 	};
 
 	struct Render_Creator
@@ -256,6 +257,7 @@ private:
 		{ SPUCache,                 { "Core", "SPU Cache"}},
 		{ SPUVerification,          { "Core", "SPU Verification"}},
 		{ DebugConsoleMode,         { "Core", "Debug Console Mode"}},
+		{ MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
 
 		// Graphics Tab
 		{ Renderer,                   { "Video", "Renderer"}},

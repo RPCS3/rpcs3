@@ -57,7 +57,7 @@ namespace
 		case rsx::comparison_function::greater_or_equal: return GL_GEQUAL;
 		case rsx::comparison_function::always: return GL_ALWAYS;
 		}
-		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, (u32)op);;
+		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, (u32)op);
 	}
 
 	GLenum stencil_op(rsx::stencil_op op)
@@ -214,19 +214,19 @@ void GLGSRender::end()
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 
 	// Handle special memory barrier for ARGB8->D24S8 in an active DSV
-	if (ds && ds->old_contents != nullptr &&
-		ds->old_contents->get_internal_format() == gl::texture::internal_format::rgba8 &&
-		rsx::pitch_compatible(ds, static_cast<gl::render_target*>(ds->old_contents)))
+	if (ds && ds->old_contents &&
+		ds->old_contents.source->get_internal_format() == gl::texture::internal_format::rgba8 &&
+		rsx::pitch_compatible(ds, gl::as_rtt(ds->old_contents.source)))
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
 		// TODO: Stencil transfer
 		gl::g_hw_blitter->fast_clear_image(cmd, ds, 1.f, 0xFF);
+		ds->old_contents.init_transfer(ds);
 
-		const auto region = rsx::get_transferable_region(ds);
-		m_depth_converter.run({0, 0, std::get<0>(region), std::get<1>(region)},
-			{0, 0, std::get<2>(region), std::get<3>(region)},
-			ds->old_contents, ds);
+		m_depth_converter.run(ds->old_contents.src_rect(),
+			ds->old_contents.dst_rect(),
+			ds->old_contents.source, ds);
 
 		ds->on_write();
 	}
@@ -400,7 +400,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> draw_start = textures_end;
 
 	// Optionally do memory synchronization if the texture stage has not yet triggered this
-	if (g_cfg.video.strict_rendering_mode)
+	if (1)//g_cfg.video.strict_rendering_mode)
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
@@ -414,55 +414,57 @@ void GLGSRender::end()
 			}
 		}
 	}
-
-	rsx::simple_array<int> buffers_to_clear;
-	bool clear_all_color = true;
-	bool clear_depth = false;
-
-	for (int index = 0; index < 4; index++)
+	else
 	{
-		if (std::get<0>(m_rtts.m_bound_render_targets[index]) != 0)
+		rsx::simple_array<int> buffers_to_clear;
+		bool clear_all_color = true;
+		bool clear_depth = false;
+
+		for (int index = 0; index < 4; index++)
 		{
-			if (std::get<1>(m_rtts.m_bound_render_targets[index])->cleared())
-				clear_all_color = false;
-			else
-				buffers_to_clear.push_back(index);
-		}
-	}
-
-	if (ds && !ds->cleared())
-	{
-		clear_depth = true;
-	}
-
-	if (clear_depth || buffers_to_clear.size() > 0)
-	{
-		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
-		GLenum mask = 0;
-
-		if (clear_depth)
-		{
-			gl_state.depth_mask(GL_TRUE);
-			gl_state.clear_depth(1.f);
-			gl_state.clear_stencil(255);
-			mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+			if (m_rtts.m_bound_render_targets[index].first)
+			{
+				if (!m_rtts.m_bound_render_targets[index].second->dirty())
+					clear_all_color = false;
+				else
+					buffers_to_clear.push_back(index);
+			}
 		}
 
-		if (clear_all_color)
-			mask |= GL_COLOR_BUFFER_BIT;
-
-		glClear(mask);
-
-		if (buffers_to_clear.size() > 0 && !clear_all_color)
+		if (ds && ds->dirty())
 		{
-			GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
-			//It is impossible for the render target to be type A or B here (clear all would have been flagged)
-			for (auto &i : buffers_to_clear)
-				glClearBufferfv(GL_COLOR, i, colors);
+			clear_depth = true;
 		}
 
-		if (clear_depth)
-			gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+		if (clear_depth || buffers_to_clear.size() > 0)
+		{
+			gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
+			GLenum mask = 0;
+
+			if (clear_depth)
+			{
+				gl_state.depth_mask(GL_TRUE);
+				gl_state.clear_depth(1.f);
+				gl_state.clear_stencil(255);
+				mask |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+			}
+
+			if (clear_all_color)
+				mask |= GL_COLOR_BUFFER_BIT;
+
+			glClear(mask);
+
+			if (buffers_to_clear.size() > 0 && !clear_all_color)
+			{
+				GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
+				//It is impossible for the render target to be type A or B here (clear all would have been flagged)
+				for (auto &i : buffers_to_clear)
+					glClearBufferfv(GL_COLOR, i, colors);
+			}
+
+			if (clear_depth)
+				gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
+		}
 	}
 
 	// Unconditionally enable stencil test if it was disabled before
@@ -672,7 +674,7 @@ void GLGSRender::set_scissor()
 		return;
 	}
 
-	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_config_state_dirty);
+	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_invalid);
 
 	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
 	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
@@ -1013,6 +1015,7 @@ void GLGSRender::on_exit()
 	zcull_ctrl.release();
 
 	m_prog_buffer.clear();
+	m_rtts.destroy();
 
 	for (auto &fbo : m_framebuffer_cache)
 	{
@@ -1135,6 +1138,13 @@ void GLGSRender::clear_surface(u32 arg)
 
 	GLbitfield mask = 0;
 
+	gl::command_context cmd{ gl_state };
+	const bool require_mem_load =
+		rsx::method_registers.scissor_origin_x() > 0 ||
+		rsx::method_registers.scissor_origin_y() > 0 ||
+		rsx::method_registers.scissor_width() < rsx::method_registers.surface_clip_width() ||
+		rsx::method_registers.scissor_height() < rsx::method_registers.surface_clip_height();
+
 	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
@@ -1160,7 +1170,7 @@ void GLGSRender::clear_surface(u32 arg)
 				mask |= GLenum(gl::buffers::stencil);
 			}
 
-			if ((arg & 0x3) != 0x3 && ds->dirty)
+			if ((arg & 0x3) != 0x3 && !require_mem_load && ds->dirty())
 			{
 				verify(HERE), mask;
 
@@ -1184,6 +1194,8 @@ void GLGSRender::clear_surface(u32 arg)
 
 		if (mask)
 		{
+			if (require_mem_load) ds->write_barrier(cmd);
+
 			// Memory has been initialized
 			m_rtts.on_write(std::get<0>(m_rtts.m_bound_depth_stencil));
 		}
@@ -1219,8 +1231,9 @@ void GLGSRender::clear_surface(u32 arg)
 
 			for (auto &rtt : m_rtts.m_bound_render_targets)
 			{
-				if (const auto address = std::get<0>(rtt))
+				if (const auto address = rtt.first)
 				{
+					if (require_mem_load) rtt.second->write_barrier(cmd);
 					m_rtts.on_write(address);
 				}
 			}
@@ -1800,10 +1813,9 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	auto removed_textures = m_rtts.free_invalidated();
 	m_framebuffer_cache.remove_if([&](auto& fbo)
 	{
-		if (fbo.deref_count >= 2) return true; // Remove if stale
+		if (fbo.unused_check_count() >= 2) return true; // Remove if stale
 		if (fbo.references_any(removed_textures)) return true; // Remove if any of the attachments is invalid
 
-		fbo.deref_count++;
 		return false;
 	});
 

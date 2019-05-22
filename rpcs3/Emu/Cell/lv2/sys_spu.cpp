@@ -232,7 +232,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 		sys_spu.todo("Unimplemented SPU Thread options (0x%x)", option);
 	}
 
-	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(0x40000, vm::main))};
+	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(0x80000, vm::main))};
 
 	const u32 tid = idm::import<named_thread<spu_thread>>([&]()
 	{
@@ -257,6 +257,17 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	if (++group->init == group->max_num)
 	{
+		if (g_cfg.core.max_spurs_threads < 6 && group->max_num > g_cfg.core.max_spurs_threads)
+		{
+			if (group->name.size() >= 20 && group->name.compare(group->name.size() - 20, 20, "CellSpursKernelGroup", 20) == 0)
+			{
+				// Hack: don't run more SPURS threads than specified.
+				group->init = g_cfg.core.max_spurs_threads;
+
+				LOG_SUCCESS(SPU, "HACK: '%s' (0x%x) limited to %u threads.", group->name, group_id, +g_cfg.core.max_spurs_threads);
+			}
+		}
+
 		group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
 	}
 
@@ -386,12 +397,20 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 
 	std::lock_guard lock(group->mutex);
 
+	u32 max_threads = +group->init;
+
 	group->join_state = 0;
-	group->running = +group->init;
+	group->running = max_threads;
+	u32 run_threads = max_threads;
 
 	for (auto& thread : group->threads)
 	{
-		if (thread)
+		if (!run_threads)
+		{
+			break;
+		}
+
+		if (thread && run_threads--)
 		{
 			auto& args = group->args[thread->index];
 			auto& img = group->imgs[thread->index];
@@ -413,9 +432,16 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 	// TODO: check data2 and data3
 	group->send_run_event(id, 0, 0);
 
+	u32 ran_threads = max_threads;
+
 	for (auto& thread : group->threads)
 	{
-		if (thread)
+		if (!ran_threads)
+		{
+			break;
+		}
+
+		if (thread && ran_threads--)
 		{
 			thread->state -= cpu_flag::stop;
 			thread_ctrl::notify(*thread);

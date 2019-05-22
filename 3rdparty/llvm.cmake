@@ -52,7 +52,7 @@ if(WITH_LLVM)
 		endif()
 	endif()
 
-	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen)
+	set(LLVM_LIBS LLVMMCJIT LLVMX86CodeGen LLVMX86AsmParser)
 
 	add_library(3rdparty_llvm INTERFACE)
 	target_link_libraries(3rdparty_llvm INTERFACE ${LLVM_LIBS})

@@ -123,7 +123,7 @@ namespace rsx
 			{
 				auto& res = vm::reservation_lock(addr, 4);
 				vm::write32(addr, arg);
-				res &= ~1ull;
+				res &= -128;
 			}
 
 			if (addr >> 28 != 0x4)
@@ -810,7 +810,6 @@ namespace rsx
 
 	namespace nv3089
 	{
-#pragma optimize("", off)
 		void image_in(thread *rsx, u32 _reg, u32 arg)
 		{
 			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
@@ -1019,7 +1018,7 @@ namespace rsx
 			{
 				temp1.reset(new u8[in_pitch * (in_h - 1) + (in_bpp * in_w)]);
 
-				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch; 
+				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch;
 
 				for (u32 y = 0; y < in_h; ++y)
 				{
@@ -1191,7 +1190,6 @@ namespace rsx
 				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
 			}
 		}
-#pragma optimize("", on)
 	}
 
 	namespace nv0039

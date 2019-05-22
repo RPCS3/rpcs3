@@ -44,28 +44,25 @@ class spu_runtime
 
 	atomic_t<u64> m_reset_count{0};
 
+	struct func_compare
+	{
+		// Comparison function for SPU programs
+		bool operator()(const std::vector<u32>& lhs, const std::vector<u32>& rhs) const;
+	};
+
 	// All functions
-	std::map<std::vector<u32>, spu_function_t> m_map;
+	std::map<std::vector<u32>, spu_function_t, func_compare> m_map;
+
+	// All functions as PIC
+	std::map<std::basic_string_view<u32>, spu_function_t> m_pic_map;
 
 	// Debug module output location
 	std::string m_cache_path;
 
-	// Trampoline generation workload helper
-	struct work
-	{
-		u32 size;
-		u16 from;
-		u16 level;
-		u8* rel32;
-		std::map<std::vector<u32>, spu_function_t>::iterator beg;
-		std::map<std::vector<u32>, spu_function_t>::iterator end;
-	};
-
 	// Scratch vector
-	static thread_local std::vector<work> workload;
+	std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
 
-	// Scratch vector
-	static thread_local std::vector<u32> addrv;
+public:
 
 	// Trampoline to spu_recompiler_base::dispatch
 	static const spu_function_t tr_dispatch;
@@ -88,10 +85,10 @@ public:
 	void* find(u64 last_reset_count, const std::vector<u32>&);
 
 	// Find existing function
-	spu_function_t find(const se_t<u32, false>* ls, u32 addr) const;
+	spu_function_t find(const u32* ls, u32 addr) const;
 
 	// Generate a patchable trampoline to spu_recompiler_base::branch
-	spu_function_t make_branch_patchpoint(u32 target) const;
+	spu_function_t make_branch_patchpoint() const;
 
 	// reset() arg retriever, for race avoidance (can result in double reset)
 	u64 get_reset_count() const
@@ -107,6 +104,15 @@ public:
 
 	// All dispatchers (array allocated in jit memory)
 	static atomic_t<spu_function_t>* const g_dispatcher;
+
+	// Recompiler entry point
+	static const spu_function_t g_gateway;
+
+	// Longjmp to the end of the gateway function (native CC)
+	static void(*const g_escape)(spu_thread*);
+
+	// Similar to g_escape, but doing tail call to the new function.
+	static void(*const g_tail_escape)(spu_thread*, spu_function_t, u8*);
 
 	// Interpreter entry point
 	static spu_function_t g_interpreter;
@@ -199,6 +205,17 @@ public:
 		s_reg_max
 	};
 
+	// Classify terminator instructions
+	enum class term_type : unsigned char
+	{
+		br,
+		ret,
+		call,
+		fallthrough,
+		indirect_call,
+		interrupt_call,
+	};
+
 protected:
 	std::shared_ptr<spu_runtime> m_spurt;
 
@@ -239,11 +256,38 @@ protected:
 		// Internal use flag
 		bool analysed = false;
 
+		// Terminator instruction type
+		term_type terminator;
+
 		// Bit mask of the registers modified in the block
 		std::bitset<s_reg_max> reg_mod{};
 
+		// Set if last modifying instruction produces xfloat
+		std::bitset<s_reg_max> reg_mod_xf{};
+
+		// Set if the initial register value in this block may be xfloat
+		std::bitset<s_reg_max> reg_maybe_xf{};
+
 		// Bit mask of the registers used (before modified)
 		std::bitset<s_reg_max> reg_use{};
+
+		// Bit mask of the trivial (u32 x 4) constant value resulting in this block
+		std::bitset<s_reg_max> reg_const{};
+
+		// Bit mask of register saved onto the stack before use
+		std::bitset<s_reg_max> reg_save_dom{};
+
+		// Address of the function
+		u32 func = 0x40000;
+
+		// Value subtracted from $SP in this block, negative if something funny is done on $SP
+		u32 stack_sub = 0;
+
+		// Constant values associated with reg_const
+		std::array<u32, s_reg_max> reg_val32;
+
+		// Registers loaded from the stack in this block (stack offset)
+		std::array<u32, s_reg_max> reg_load_mod{};
 
 		// Single source of the reg value (dominating block address within the same chunk) or a negative number
 		std::array<u32, s_reg_max> reg_origin, reg_origin_abs;
@@ -258,19 +302,36 @@ protected:
 	// Sorted basic block info
 	std::map<u32, block_info> m_bbs;
 
-	// Advanced block (chunk) information
-	struct chunk_info
+	// Sorted advanced block (chunk) list
+	std::basic_string<u32> m_chunks;
+
+	// Function information
+	struct func_info
 	{
+		// Size to the end of last basic block
+		u16 size = 0;
+
+		// Determines whether a function is eligible for optimizations
+		bool good = false;
+
+		// Call targets
+		std::basic_string<u32> calls;
+
+		// Register save info (stack offset)
+		std::array<u32, s_reg_max> reg_save_off{};
 	};
 
-	// Sorted chunk info
-	std::map<u32, chunk_info> m_chunks;
+	// Sorted function info
+	std::map<u32, func_info> m_funcs;
 
 	std::shared_ptr<spu_cache> m_cache;
 
 private:
 	// For private use
 	std::bitset<0x10000> m_bits;
+
+	// For private use
+	std::vector<u32> workload;
 
 	// Result of analyse(), to avoid copying and allocation
 	std::vector<u32> result;

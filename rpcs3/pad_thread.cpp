@@ -14,6 +14,7 @@ namespace pad
 {
 	atomic_t<pad_thread*> g_current = nullptr;
 	std::recursive_mutex g_pad_mutex;
+	std::string g_title_id;
 }
 
 struct pad_setting
@@ -23,8 +24,9 @@ struct pad_setting
 	u32 device_type;
 };
 
-pad_thread::pad_thread(void *_curthread, void *_curwindow) : curthread(_curthread), curwindow(_curwindow)
+pad_thread::pad_thread(void *_curthread, void *_curwindow, const std::string& title_id) : curthread(_curthread), curwindow(_curwindow)
 {
+	pad::g_title_id = title_id;
 	Init();
 
 	thread = std::make_shared<std::thread>(&pad_thread::ThreadFunc, this);
@@ -65,7 +67,7 @@ void pad_thread::Init()
 
 	handlers.clear();
 
-	g_cfg_input.load();
+	g_cfg_input.load(pad::g_title_id);
 
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
@@ -142,8 +144,9 @@ void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
 	}
 }
 
-void pad_thread::Reset()
+void pad_thread::Reset(const std::string& title_id)
 {
+	pad::g_title_id = title_id;
 	reset = active.load();
 }
 

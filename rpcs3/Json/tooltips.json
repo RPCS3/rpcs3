@@ -65,7 +65,8 @@
 		"disableVulkanMemAllocator": "Disables the custom Vulkan memory allocator and reverts to direct calls to VkAllocateMemory/VkFreeMemory.",
 		"disableFIFOReordering": "Disables RSX FIFO optimizations completely. Draws are processed as they are received by the DMA puller.",
 		"gpuTextureScaling": "Force all texture transfer, scaling and conversion operations on the GPU.\nMay cause texture corruption in some cases.",
-		"strictTextureFlushing": "Forces texture flushing even in situations where it is not necessary/correct. Known to cause visual artifacts, but useful for debugging certain texture cache issues."
+		"strictTextureFlushing": "Forces texture flushing even in situations where it is not necessary/correct. Known to cause visual artifacts, but useful for debugging certain texture cache issues.",
+		"maxSPURSThreads": "Limits the maximum number of SPURS threads in each thread group.\nMay improve performance in some cases, especially on systems with limited number of hardware threads.\nLimiting the number of threads is likely to cause crashes; it's recommended to keep this at default value."
 	},
 	"emulator": {
 		"misc": {

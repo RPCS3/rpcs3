@@ -5,6 +5,7 @@
 #include <QPainter>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QColorDialog>
 
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
@@ -28,19 +29,13 @@ constexpr auto qstr = QString::fromStdString;
 
 inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
-	QString input_dir = qstr(fs::get_config_dir()) + "/InputConfigs/";
-	if (!QDir().mkdir(input_dir) && !QDir().exists(input_dir))
-	{
-		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(input_dir));
-		return false;
-	}
-	if (!QDir().mkdir(dir) && !QDir().exists(dir))
+	if (!QDir().mkpath(dir))
 	{
 		LOG_ERROR(GENERAL, "Failed to create dir %s", sstr(dir));
 		return false;
 	}
 
-	QString filename = dir + name + ".yml";
+	const QString filename = dir + name + ".yml";
 	QFile new_file(filename);
 
 	if (!new_file.open(QIODevice::WriteOnly))
@@ -53,16 +48,25 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	return true;
 };
 
-pad_settings_dialog::pad_settings_dialog(QWidget *parent)
+pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	: QDialog(parent), ui(new Ui::pad_settings_dialog)
 {
 	ui->setupUi(this);
 
-	setWindowTitle(tr("Gamepads Settings"));
-
 	// load input config
 	g_cfg_input.from_default();
-	g_cfg_input.load();
+	
+	if (game)
+	{
+		m_title_id = game->serial;
+		g_cfg_input.load(game->serial);
+		setWindowTitle(tr("Gamepads Settings: [%0] %1").arg(qstr(game->serial)).arg(qstr(game->name).simplified()));
+	}
+	else
+	{
+		g_cfg_input.load();
+		setWindowTitle(tr("Gamepads Settings"));
+	}
 
 	// Create tab widget for 7 players
 	m_tabs = new QTabWidget;
@@ -152,7 +156,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent)
 				QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 				continue;
 			}
-			if (CreateConfigFile(qstr(PadHandlerBase::get_config_dir(g_cfg_input.player[i]->handler)), friendlyName))
+			if (CreateConfigFile(qstr(PadHandlerBase::get_config_dir(g_cfg_input.player[i]->handler, m_title_id)), friendlyName))
 			{
 				ui->chooseProfile->addItem(friendlyName);
 				ui->chooseProfile->setCurrentText(friendlyName);
@@ -246,6 +250,7 @@ void pad_settings_dialog::InitButtons()
 	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right);
 	insertButton(button_ids::id_pad_rstick_up, ui->b_rstick_up);
 
+	m_padButtons->addButton(ui->b_led, button_ids::id_led);
 	m_padButtons->addButton(ui->b_reset, button_ids::id_reset_parameters);
 	m_padButtons->addButton(ui->b_blacklist, button_ids::id_blacklist);
 	m_padButtons->addButton(ui->b_refresh, button_ids::id_refresh);
@@ -322,6 +327,19 @@ void pad_settings_dialog::InitButtons()
 	connect(ui->slider_stick_right, &QSlider::valueChanged, [&](int value)
 	{
 		RepaintPreviewLabel(ui->preview_stick_right, value, ui->slider_stick_right->size().width(), rx, ry);
+	});
+
+	connect(ui->b_led, &QPushButton::clicked, [=]()
+	{
+		QColorDialog dlg(QColor(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB), this);
+		dlg.setWindowTitle(tr("LED Color"));
+		if (dlg.exec() == QColorDialog::Accepted)
+		{
+			const QColor newColor = dlg.selectedColor();
+			m_handler->SetLED(m_device_name, newColor.red(), newColor.green(), newColor.blue());
+			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, newColor));
+			ui->b_led->setProperty("led", newColor);
+		}
 	});
 
 	// Enable Button Remapping
@@ -529,6 +547,15 @@ void pad_settings_dialog::ReloadButtons()
 
 	RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), lx, ly);
 	RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), rx, ry);
+
+	// Enable and repaint the LED Button
+	m_enable_led = m_handler->has_led();
+	m_handler->SetLED(m_device_name, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+
+	const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+	ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
+	ui->b_led->setProperty("led", led_color);
+	ui->gb_led->setVisible(m_enable_led);
 }
 
 void pad_settings_dialog::ReactivateButtons()
@@ -725,6 +752,14 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 			ui->slider_stick_left->setValue(m_handler_cfg.lstickdeadzone);
 			ui->slider_stick_right->setValue(m_handler_cfg.rstickdeadzone);
 		}
+
+		if (m_handler->has_led())
+		{
+			const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+			ui->b_led->setProperty("led", led_color);
+			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
+			m_handler->SetLED(m_device_name, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+		}
 	}
 
 	for (auto& entry : m_cfg_entries)
@@ -748,6 +783,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
 	ui->gb_triggers->setEnabled(is_enabled && m_enable_deadzones);
+	ui->gb_led->setEnabled(is_enabled && m_enable_led);
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
@@ -762,6 +798,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 {
 	switch (id)
 	{
+	case button_ids::id_led:
 	case button_ids::id_pad_begin:
 	case button_ids::id_pad_end:
 	case button_ids::id_add_profile:
@@ -805,6 +842,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 
 void pad_settings_dialog::OnTabChanged(int index)
 {
+	// TODO: Do not save yet! But keep all profile changes until the dialog was saved.
 	// Save old profile
 	SaveProfile();
 
@@ -864,7 +902,7 @@ void pad_settings_dialog::ChangeInputType()
 	if (!g_cfg_input.player[player]->handler.from_string(handler))
 	{
 		// Something went wrong
-		LOG_ERROR(GENERAL, "Failed to convert input string:%s", handler);
+		LOG_ERROR(GENERAL, "Failed to convert input string: %s", handler);
 		return;
 	}
 
@@ -929,7 +967,7 @@ void pad_settings_dialog::ChangeInputType()
 			}
 		}
 
-		QString profile_dir = qstr(PadHandlerBase::get_config_dir(m_handler->m_type));
+		QString profile_dir = qstr(PadHandlerBase::get_config_dir(m_handler->m_type, m_title_id));
 		QStringList profiles = gui::utils::get_dir_entries(QDir(profile_dir), QStringList() << "*.yml");
 
 		if (profiles.isEmpty())
@@ -987,7 +1025,7 @@ void pad_settings_dialog::ChangeProfile()
 	}
 
 	// Change handler
-	const std::string cfg_name = PadHandlerBase::get_config_dir(m_handler->m_type) + m_profile + ".yml";
+	const std::string cfg_name = PadHandlerBase::get_config_dir(m_handler->m_type, m_title_id) + m_profile + ".yml";
 
 	// Adjust to the different pad handlers
 	switch (m_handler->m_type)
@@ -1074,6 +1112,14 @@ void pad_settings_dialog::SaveProfile()
 		m_handler_cfg.rstickdeadzone.set(ui->slider_stick_right->value());
 	}
 
+	if (m_handler->has_led() && ui->b_led->property("led").canConvert<QColor>())
+	{
+		const QColor led_color = ui->b_led->property("led").value<QColor>();
+		m_handler_cfg.colorR.set(led_color.red());
+		m_handler_cfg.colorG.set(led_color.green());
+		m_handler_cfg.colorB.set(led_color.blue());
+	}
+
 	if (m_handler->m_type == pad_handler::keyboard)
 	{
 		m_handler_cfg.mouse_acceleration_x.set(ui->mouse_accel_x->value() * 100);
@@ -1103,7 +1149,7 @@ void pad_settings_dialog::SaveExit()
 		g_cfg_input.player[i]->profile.from_default();
 	}
 
-	g_cfg_input.save();
+	g_cfg_input.save(m_title_id);
 
 	QDialog::accept();
 }

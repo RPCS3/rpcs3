@@ -31,8 +31,8 @@
 #define VK_DISABLE_COMPONENT_SWIZZLE 0
 #endif
 
-#define DESCRIPTOR_MAX_DRAW_CALLS 4096
-#define OCCLUSION_MAX_POOL_SIZE 8192
+#define DESCRIPTOR_MAX_DRAW_CALLS 16384
+#define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
 #define VERTEX_PARAMS_BIND_SLOT 0
 #define VERTEX_LAYOUT_BIND_SLOT 1
@@ -88,6 +88,7 @@ namespace vk
 	class physical_device;
 	class command_buffer;
 	class image;
+	struct image_view;
 	struct buffer;
 	struct data_heap;
 	class mem_allocator_base;
@@ -116,7 +117,7 @@ namespace vk
 	VkImageAspectFlags get_aspect_flags(VkFormat format);
 
 	VkSampler null_sampler();
-	VkImageView null_image_view(vk::command_buffer&);
+	image_view* null_image_view(vk::command_buffer&);
 	image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height);
 	buffer* get_scratch_buffer();
 
@@ -150,7 +151,7 @@ namespace vk
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region);
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 
-	void copy_image_typeless(const command_buffer &cmd, const image *src, const image *dst, const areai& src_rect, const areai& dst_rect,
+	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
 		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
@@ -166,8 +167,8 @@ namespace vk
 	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
 	//Texture barrier applies to a texture to ensure writes to it are finished before any reads are attempted to avoid RAW hazards
-	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
-	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
+	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
+	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length,
 			VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
@@ -247,7 +248,7 @@ namespace vk
 			vmaCreateAllocator(&allocatorInfo, &m_allocator);
 		}
 
-		~mem_allocator_vma() {};
+		~mem_allocator_vma() {}
 
 		void destroy() override
 		{
@@ -314,10 +315,10 @@ namespace vk
 	class mem_allocator_vk : public mem_allocator_base
 	{
 	public:
-		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {};
-		~mem_allocator_vk() {};
+		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
+		~mem_allocator_vk() {}
 
-		void destroy() override {};
+		void destroy() override {}
 
 		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, uint32_t memory_type_index) override
 		{
@@ -1067,13 +1068,13 @@ namespace vk
 			return m_storage_aspect;
 		}
 
-		void push_layout(command_buffer& cmd, VkImageLayout layout)
+		void push_layout(VkCommandBuffer cmd, VkImageLayout layout)
 		{
 			m_layout_stack.push(current_layout);
 			change_image_layout(cmd, this, layout);
 		}
 
-		void pop_layout(command_buffer& cmd)
+		void pop_layout(VkCommandBuffer cmd)
 		{
 			verify(HERE), !m_layout_stack.empty();
 
@@ -1364,7 +1365,6 @@ namespace vk
 			VkBool32 depth_compare = false, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
 			: m_device(dev)
 		{
-			VkSamplerCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 			info.addressModeU = clamp_u;
 			info.addressModeV = clamp_v;
@@ -2602,43 +2602,66 @@ public:
 
 	class descriptor_pool
 	{
-		VkDescriptorPool pool = nullptr;
-		const vk::render_device *owner = nullptr;
+		const vk::render_device *m_owner = nullptr;
+
+		std::vector<VkDescriptorPool> m_device_pools;
+		VkDescriptorPool m_current_pool_handle = VK_NULL_HANDLE;
+		u32 m_current_pool_index = 0;
 
 	public:
 		descriptor_pool() {}
 		~descriptor_pool() {}
 
-		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count)
+		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 		{
+			verify(HERE), subpool_count;
+
 			VkDescriptorPoolCreateInfo infos = {};
 			infos.flags = 0;
-			infos.maxSets = DESCRIPTOR_MAX_DRAW_CALLS;
+			infos.maxSets = max_sets;
 			infos.poolSizeCount = size_descriptors_count;
 			infos.pPoolSizes = sizes;
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 
-			owner = &dev;
-			CHECK_RESULT(vkCreateDescriptorPool(dev, &infos, nullptr, &pool));
+			m_owner = &dev;
+			m_device_pools.resize(subpool_count);
+
+			for (auto &pool : m_device_pools)
+			{
+				CHECK_RESULT(vkCreateDescriptorPool(dev, &infos, nullptr, &pool));
+			}
+
+			m_current_pool_handle = m_device_pools[0];
 		}
 
 		void destroy()
 		{
-			if (!pool) return;
+			if (m_device_pools.empty()) return;
 
-			vkDestroyDescriptorPool((*owner), pool, nullptr);
-			owner = nullptr;
-			pool = nullptr;
+			for (auto &pool : m_device_pools)
+			{
+				vkDestroyDescriptorPool((*m_owner), pool, nullptr);
+				pool = VK_NULL_HANDLE;
+			}
+
+			m_owner = nullptr;
 		}
 
 		bool valid()
 		{
-			return (pool != nullptr);
+			return (!m_device_pools.empty());
 		}
 
 		operator VkDescriptorPool()
 		{
-			return pool;
+			return m_current_pool_handle;
+		}
+
+		void reset(VkDescriptorPoolResetFlags flags)
+		{
+			m_current_pool_index = (m_current_pool_index + 1) % u32(m_device_pools.size());
+			m_current_pool_handle = m_device_pools[m_current_pool_index];
+			CHECK_RESULT(vkResetDescriptorPool(*m_owner, m_current_pool_handle, flags));
 		}
 	};
 

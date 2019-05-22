@@ -9,7 +9,54 @@ cpu_translator::cpu_translator(llvm::Module* module, bool is_be)
 	, m_module(module)
 	, m_is_be(is_be)
 {
+}
 
+void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine)
+{
+	m_context = context;
+	m_engine = &engine;
+
+	const auto cpu = m_engine->getTargetMachine()->getTargetCPU();
+
+	m_use_ssse3 = true;
+
+	// Test SSSE3 feature (TODO)
+	if (cpu == "generic" ||
+		cpu == "k8" ||
+		cpu == "opteron" ||
+		cpu == "athlon64" ||
+		cpu == "athlon-fx" ||
+		cpu == "k8-sse3" ||
+		cpu == "opteron-sse3" ||
+		cpu == "athlon64-sse3" ||
+		cpu == "amdfam10" ||
+		cpu == "barcelona")
+	{
+		m_use_ssse3 = false;
+	}
+}
+
+llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type)
+{
+	uint s1 = type->getScalarSizeInBits();
+	uint s2 = val->getType()->getScalarSizeInBits();
+
+	if (type->isVectorTy())
+		s1 *= type->getVectorNumElements();
+	if (val->getType()->isVectorTy())
+		s2 *= val->getType()->getVectorNumElements();
+
+	if (s1 != s2)
+	{
+		fmt::throw_exception("cpu_translator::bitcast(): incompatible type sizes (%u vs %u)", s1, s2);
+	}
+
+	if (const auto c1 = llvm::dyn_cast<llvm::Constant>(val))
+	{
+		return verify(HERE, llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, type, m_module->getDataLayout()));
+	}
+
+	return m_ir->CreateBitCast(val, type);
 }
 
 template <>
