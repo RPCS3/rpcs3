@@ -2025,11 +2025,8 @@ public:
 #endif
 				break;
 			case driver_vendor::AMD:
-#ifdef _WIN32
 				break;
-#endif
 			case driver_vendor::INTEL:
-				// Untested
 			case driver_vendor::RADV:
 				m_wm_reports_flag = true;
 				break;
