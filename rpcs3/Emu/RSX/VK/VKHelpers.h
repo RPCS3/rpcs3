@@ -437,6 +437,9 @@ namespace vk
 			const auto gpu_name = get_name();
 			if (gpu_name.find("Radeon") != std::string::npos)
 			{
+#ifndef _WIN32
+				LOG_ERROR(RSX, "Using non RADV drivers on linux currently incurs a ~40% performance loss due to a window resizing workaround. Using RADV is recommended.");
+#endif
 				return driver_vendor::AMD;
 			}
 
