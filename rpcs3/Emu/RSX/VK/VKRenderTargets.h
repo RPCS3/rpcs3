@@ -308,6 +308,8 @@ namespace rsx
 				sink->surface_width = prev.width;
 				sink->surface_height = prev.height;
 				sink->queue_tag(address);
+
+				change_image_layout(cmd, sink.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 
 			prev.target = sink.get();
@@ -316,8 +318,6 @@ namespace rsx
 			sink->sync_tag();
 			sink->set_old_contents_region(prev, false);
 			sink->last_use_tag = ref->last_use_tag;
-
-			change_image_layout(cmd, sink.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 
 		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 /*sample_count*/)

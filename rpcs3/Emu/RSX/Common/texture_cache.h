@@ -1925,7 +1925,7 @@ namespace rsx
 			f32 scale_x, f32 scale_y,
 			rsx::texture_dimension_extended extended_dimension,
 			u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
-			bool assume_bound = true)
+			bool surface_is_rop_target)
 		{
 			texptr->read_barrier(cmd);
 
@@ -1963,7 +1963,7 @@ namespace rsx
 					internal_height = 1;
 				}
 
-				if ((assume_bound && g_cfg.video.strict_rendering_mode) ||
+				if ((surface_is_rop_target && g_cfg.video.strict_rendering_mode) ||
 					internal_width < surface_width ||
 					internal_height < surface_height ||
 					force_convert)
@@ -1971,19 +1971,19 @@ namespace rsx
 					const auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
 					const auto scaled_h = rsx::apply_resolution_scale(internal_height, true);
 
-					const auto command = assume_bound ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
+					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 					return { texptr->get_surface(), command, texaddr, format, 0, 0, scaled_w, scaled_h, 1,
 							texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
 							extended_dimension, decoded_remap };
 				}
 
-				if (assume_bound)
+				if (surface_is_rop_target)
 				{
 					insert_texture_barrier(cmd, texptr);
 				}
 
 				return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
-					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, assume_bound };
+					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
 			}
 
 			const auto scaled_w = rsx::apply_resolution_scale(internal_width, true);
@@ -2136,7 +2136,7 @@ namespace rsx
 					check_framebuffer_resource(cmd, texptr, tex_width, tex_height, depth, tex_pitch, extended_dimension))
 				{
 					return process_framebuffer_resource_fast(cmd, texptr, texaddr, format, tex_width, tex_height, depth,
-						scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap());
+						scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), true);
 				}
 			}
 

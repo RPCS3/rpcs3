@@ -46,6 +46,9 @@
     <ClInclude Include="Emu\RSX\VK\VKCompute.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKRenderPass.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp">
@@ -79,6 +82,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

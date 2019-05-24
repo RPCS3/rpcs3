@@ -406,8 +406,6 @@ private:
 	std::array<command_buffer_chunk, VK_MAX_ASYNC_CB_COUNT> m_primary_cb_list;
 	command_buffer_chunk* m_current_command_buffer = nullptr;
 
-	std::array<VkRenderPass, 120> m_render_passes;
-
 	VkDescriptorSetLayout descriptor_layouts;
 	VkPipelineLayout pipeline_layout;
 
@@ -468,8 +466,9 @@ private:
 	std::atomic<u64> m_last_sync_event = { 0 };
 
 	bool m_render_pass_open = false;
-	bool m_render_pass_is_cyclic = false;
-	size_t m_current_renderpass_id = 0;
+	u64  m_current_renderpass_key = 0;
+	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
+	std::vector<vk::image*> m_fbo_images;
 
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;

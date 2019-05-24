@@ -253,7 +253,7 @@ namespace vk
 			}
 		}
 
-		void init(vk::render_device &dev, VkRenderPass &render_pass)
+		void init(vk::render_device &dev, VkRenderPass render_pass)
 		{
 			verify(HERE), render_pass != VK_NULL_HANDLE;
 

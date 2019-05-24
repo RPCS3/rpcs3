@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "VKHelpers.h"
 #include "VKCompute.h"
+#include "VKRenderPass.h"
 #include "Utilities/mutex.h"
 
 namespace vk
@@ -234,6 +235,9 @@ namespace vk
 
 	void destroy_global_resources()
 	{
+		VkDevice dev = *g_current_renderer;
+		vk::clear_renderpass_cache(dev);
+
 		g_null_texture.reset();
 		g_null_image_view.reset();
 		g_scratch_buffer.reset();
@@ -242,9 +246,10 @@ namespace vk
 		g_deleted_typeless_textures.clear();
 
 		if (g_null_sampler)
-			vkDestroySampler(*g_current_renderer, g_null_sampler, nullptr);
-
-		g_null_sampler = nullptr;
+		{
+			vkDestroySampler(dev, g_null_sampler, nullptr);
+			g_null_sampler = nullptr;
+		}
 
 		for (const auto& p : g_compute_tasks)
 		{

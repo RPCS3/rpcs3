@@ -7,6 +7,7 @@
 #include "../Common/BufferUtils.h"
 #include "VKFormats.h"
 #include "VKCommonDecompiler.h"
+#include "VKRenderPass.h"
 
 namespace
 {
@@ -159,63 +160,6 @@ namespace vk
 		}
 	}
 
-	/** Maps color_format, depth_stencil_format and color count to an int as below :
-	 * idx = color_count + 5 * depth_stencil_idx + 15 * color_format_idx
-	 * This should perform a 1:1 mapping
-	 */
-
-	size_t get_render_pass_location(VkFormat color_format, VkFormat depth_stencil_format, u8 color_count)
-	{
-		size_t color_format_idx = 0;
-		size_t depth_format_idx = 0;
-
-		verify(HERE), color_count < 5;
-
-		switch (color_format)
-		{
-		case VK_FORMAT_R5G6B5_UNORM_PACK16:
-			color_format_idx = 0;
-			break;
-		case VK_FORMAT_B8G8R8A8_UNORM:
-			color_format_idx = 1;
-			break;
-		case VK_FORMAT_R16G16B16A16_SFLOAT:
-			color_format_idx = 2;
-			break;
-		case VK_FORMAT_R32G32B32A32_SFLOAT:
-			color_format_idx = 3;
-			break;
-		case VK_FORMAT_R8_UNORM:
-			color_format_idx = 4;
-			break;
-		case VK_FORMAT_R8G8_UNORM:
-			color_format_idx = 5;
-			break;
-		case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-			color_format_idx = 6;
-			break;
-		case VK_FORMAT_R32_SFLOAT:
-			color_format_idx = 7;
-			break;
-		}
-
-		switch (depth_stencil_format)
-		{
-		case VK_FORMAT_D16_UNORM:
-			depth_format_idx = 0;
-			break;
-		case VK_FORMAT_D24_UNORM_S8_UINT:
-		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			depth_format_idx = 1;
-			break;
-		case VK_FORMAT_UNDEFINED:
-			depth_format_idx = 2;
-			break;
-		}
-
-		return color_count + 5 * depth_format_idx + 5 * 3 * color_format_idx;
-	}
-
 	VkLogicOp get_logic_op(rsx::logic_op op)
 	{
 		switch (op)
@@ -326,111 +270,8 @@ namespace vk
 	}
 }
 
-
 namespace
 {
-	VkRenderPass precompute_render_pass(VkDevice dev, VkFormat color_format, u8 number_of_color_surface, VkFormat depth_format)
-	{
-		// Some driver crashes when using empty render pass
-		if (number_of_color_surface == 0 && depth_format == VK_FORMAT_UNDEFINED)
-			return nullptr;
-		/* Describe a render pass and framebuffer attachments */
-		std::vector<VkAttachmentDescription> attachments = {};
-		std::vector<VkAttachmentReference> attachment_references;
-
-		VkAttachmentDescription color_attachment_description = {};
-		color_attachment_description.format = color_format;
-		color_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-		color_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		color_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		color_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		color_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		color_attachment_description.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		color_attachment_description.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		for (u32 i = 0; i < number_of_color_surface; ++i)
-		{
-			attachments.push_back(color_attachment_description);
-			attachment_references.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
-		}
-
-		if (depth_format != VK_FORMAT_UNDEFINED)
-		{
-			VkAttachmentDescription depth_attachment_description = {};
-			depth_attachment_description.format = depth_format;
-			depth_attachment_description.samples = VK_SAMPLE_COUNT_1_BIT;
-			depth_attachment_description.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			depth_attachment_description.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depth_attachment_description.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-			depth_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-			depth_attachment_description.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			depth_attachment_description.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			attachments.push_back(depth_attachment_description);
-
-			attachment_references.push_back({ number_of_color_surface, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
-		}
-
-		VkSubpassDescription subpass = {};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = number_of_color_surface;
-		subpass.pColorAttachments = number_of_color_surface > 0 ? attachment_references.data() : nullptr;
-		subpass.pDepthStencilAttachment = depth_format != VK_FORMAT_UNDEFINED ? &attachment_references.back() : nullptr;
-
-		VkRenderPassCreateInfo rp_info = {};
-		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-		rp_info.pAttachments = attachments.data();
-		rp_info.subpassCount = 1;
-		rp_info.pSubpasses = &subpass;
-		rp_info.pDependencies = nullptr;
-		rp_info.dependencyCount = 0;
-
-		VkRenderPass result;
-		CHECK_RESULT(vkCreateRenderPass(dev, &rp_info, NULL, &result));
-		return result;
-	}
-
-	std::array<VkRenderPass, 120> get_precomputed_render_passes(VkPhysicalDevice gpu, VkDevice dev, const vk::gpu_formats_support &gpu_format_support)
-	{
-		std::array<VkRenderPass, 120> result = {};
-		VkImageFormatProperties props = {};
-
-		const std::array<VkFormat, 3> depth_format_list = { VK_FORMAT_UNDEFINED, VK_FORMAT_D16_UNORM, gpu_format_support.d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT };
-		const std::array<VkFormat, 8> color_format_list = { VK_FORMAT_R5G6B5_UNORM_PACK16, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R16G16B16A16_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8_UNORM, VK_FORMAT_R8G8_UNORM, VK_FORMAT_A1R5G5B5_UNORM_PACK16, VK_FORMAT_R32_SFLOAT };
-
-		for (const VkFormat &color_format : color_format_list)
-		{
-			VkResult support = vkGetPhysicalDeviceImageFormatProperties(gpu, color_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0, &props);
-			if (support != VK_SUCCESS)
-			{
-				LOG_ERROR(RSX, "Format 0x%x is not supported for color target usage by your GPU driver. Crashes may arise.", (u32)color_format);
-				verify(HERE), support == VK_ERROR_FORMAT_NOT_SUPPORTED;
-				continue;
-			}
-
-			for (const VkFormat &depth_stencil_format : depth_format_list)
-			{
-				if (depth_stencil_format != VK_FORMAT_UNDEFINED)
-				{
-					VkResult support = vkGetPhysicalDeviceImageFormatProperties(gpu, depth_stencil_format, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, &props);
-					if (support != VK_SUCCESS)
-					{
-						LOG_ERROR(RSX, "Format 0x%x is not supported for depth/stencil target usage by your GPU driver. Crashes may arise.", (u32)depth_stencil_format);
-						verify(HERE), support == VK_ERROR_FORMAT_NOT_SUPPORTED;
-						continue;
-					}
-				}
-
-				for (u8 number_of_draw_buffer = 0; number_of_draw_buffer <= 4; number_of_draw_buffer++)
-				{
-					size_t idx = vk::get_render_pass_location(color_format, depth_stencil_format, number_of_draw_buffer);
-					result[idx] = precompute_render_pass(dev, color_format, number_of_draw_buffer, depth_stencil_format);
-				}
-			}
-		}
-		return result;
-	}
-
 	std::tuple<VkPipelineLayout, VkDescriptorSetLayout> get_shared_pipeline_layout(VkDevice dev)
 	{
 		std::array<VkDescriptorSetLayoutBinding, VK_NUM_DESCRIPTOR_BINDINGS> bindings = {};
@@ -625,7 +466,6 @@ VKGSRender::VKGSRender() : GSRender()
 	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
 
 	//Precalculated stuff
-	m_render_passes = get_precomputed_render_passes(m_device->gpu(), *m_device, m_device->get_formats_support());
 	std::tie(pipeline_layout, descriptor_layouts) = get_shared_pipeline_layout(*m_device);
 
 	//Occlusion
@@ -677,9 +517,9 @@ VKGSRender::VKGSRender() : GSRender()
 
 	if (g_cfg.video.overlay)
 	{
-		size_t idx = vk::get_render_pass_location( m_swapchain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
+		auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
 		m_text_writer.reset(new vk::text_writer());
-		m_text_writer->init(*m_device, m_render_passes[idx]);
+		m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
 	}
 
 	m_depth_converter.reset(new vk::depth_convert_pass());
@@ -688,7 +528,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_attachment_clear_pass.reset(new vk::attachment_clear_pass());
 	m_attachment_clear_pass->create(*m_device);
 
-	m_prog_buffer.reset(new VKProgramBuffer(m_render_passes.data()));
+	m_prog_buffer.reset(new VKProgramBuffer());
 
 	if (g_cfg.video.disable_vertex_cache)
 		m_vertex_cache.reset(new vk::null_vertex_cache());
@@ -786,11 +626,6 @@ VKGSRender::~VKGSRender()
 	}
 
 	m_draw_fbo.reset();
-
-	//Render passes
-	for (auto &render_pass : m_render_passes)
-		if (render_pass)
-			vkDestroyRenderPass(*m_device, render_pass, nullptr);
 
 	//Textures
 	m_rtts.destroy();
@@ -1304,9 +1139,11 @@ void VKGSRender::begin_render_pass()
 	if (m_render_pass_open)
 		return;
 
+	const auto renderpass = (m_cached_renderpass)? m_cached_renderpass : vk::get_renderpass(*m_device, m_current_renderpass_key);
+
 	VkRenderPassBeginInfo rp_begin = {};
 	rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-	rp_begin.renderPass = m_draw_fbo->info.renderPass;
+	rp_begin.renderPass = renderpass;
 	rp_begin.framebuffer = m_draw_fbo->value;
 	rp_begin.renderArea.offset.x = 0;
 	rp_begin.renderArea.offset.y = 0;
@@ -1496,17 +1333,18 @@ void VKGSRender::end()
 		ds->old_contents.source->info.format == VK_FORMAT_B8G8R8A8_UNORM &&
 		rsx::pitch_compatible(ds, vk::as_rtt(ds->old_contents.source)))
 	{
-		auto rp = vk::get_render_pass_location(VK_FORMAT_UNDEFINED, ds->info.format, 0);
-		auto render_pass = m_render_passes[rp];
+		auto key = vk::get_renderpass_key(ds->info.format);
+		auto render_pass = vk::get_renderpass(*m_device, key);
 		verify("Usupported renderpass configuration" HERE), render_pass != VK_NULL_HANDLE;
 
 		VkClearDepthStencilValue clear = { 1.f, 0xFF };
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
 
 		// Clear explicitly before starting the inheritance transfer
-		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+		const bool preinitialized = (ds->current_layout == VK_IMAGE_LAYOUT_GENERAL);
+		if (!preinitialized) ds->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		vkCmdClearDepthStencilImage(*m_current_command_buffer, ds->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
-		vk::change_image_layout(*m_current_command_buffer, ds, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
+		if (!preinitialized) ds->pop_layout(*m_current_command_buffer);
 
 		// TODO: Stencil transfer
 		ds->old_contents.init_transfer(ds);
@@ -1524,15 +1362,13 @@ void VKGSRender::end()
 	{
 		std::lock_guard lock(m_sampler_mutex);
 		bool update_framebuffer_sourced = false;
+		bool check_for_cyclic_refs = false;
 
-		if (surface_store_tag != m_rtts.cache_tag)
+		if (UNLIKELY(surface_store_tag != m_rtts.cache_tag))
 		{
 			update_framebuffer_sourced = true;
 			surface_store_tag = m_rtts.cache_tag;
 		}
-
-		const bool check_for_cyclic_refs = m_render_pass_is_cyclic;
-		m_render_pass_is_cyclic = false;
 
 		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
@@ -1548,6 +1384,11 @@ void VKGSRender::end()
 				{
 					check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
 					*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.fragment_textures[i], m_rtts);
+
+					if (sampler_state->is_cyclic_reference)
+					{
+						check_for_cyclic_refs |= true;
+					}
 
 					bool replace = !fs_sampler_handles[i];
 					VkFilter min_filter, mag_filter;
@@ -1644,7 +1485,6 @@ void VKGSRender::end()
 				}
 
 				m_textures_dirty[i] = false;
-				m_render_pass_is_cyclic |= sampler_state->is_cyclic_reference;
 			}
 		}
 
@@ -1662,6 +1502,11 @@ void VKGSRender::end()
 				{
 					check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
 					*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts);
+
+					if (sampler_state->is_cyclic_reference)
+					{
+						check_for_cyclic_refs |= true;
+					}
 
 					bool replace = !vs_sampler_handles[i];
 					const VkBool32 unnormalized_coords = !!(rsx::method_registers.vertex_textures[i].format() & CELL_GCM_TEXTURE_UN);
@@ -1692,30 +1537,19 @@ void VKGSRender::end()
 					*sampler_state = {};
 
 				m_vertex_textures_dirty[i] = false;
-				m_render_pass_is_cyclic |= sampler_state->is_cyclic_reference;
 			}
 		}
 
 		m_samplers_dirty.store(false);
 
-		if (check_for_cyclic_refs && !m_render_pass_is_cyclic)
+		if (check_for_cyclic_refs)
 		{
-			// Reverse texture barriers for optimal performance
-			for (unsigned i = m_rtts.m_bound_render_targets_config.first, count = 0;
-				count < m_rtts.m_bound_render_targets_config.second;
-				++i, ++count)
+			// Regenerate renderpass key
+			if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key);
+				key != m_current_renderpass_key)
 			{
-				if (auto surface = m_rtts.m_bound_render_targets[i].second;
-					surface->current_layout == VK_IMAGE_LAYOUT_GENERAL)
-				{
-					surface->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-				}
-			}
-
-			if (auto surface = m_rtts.m_bound_depth_stencil.second;
-				surface && surface->current_layout == VK_IMAGE_LAYOUT_GENERAL)
-			{
-				surface->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				m_current_renderpass_key = key;
+				m_cached_renderpass = VK_NULL_HANDLE;
 			}
 		}
 	}
@@ -2282,11 +2116,7 @@ void VKGSRender::clear_surface(u32 mask)
 						color_clear_values.color.float32[3]
 					};
 
-					const auto fbo_format = vk::get_compatible_surface_format(rsx::method_registers.surface_color()).first;
-					const auto rp_index = vk::get_render_pass_location(fbo_format, VK_FORMAT_UNDEFINED, 1);
-					const auto renderpass = m_render_passes[rp_index];
-					verify("Usupported renderpass configuration" HERE), renderpass != VK_NULL_HANDLE;
-
+					VkRenderPass renderpass = VK_NULL_HANDLE;
 					m_attachment_clear_pass->update_config(colormask, clear_color);
 
 					for (const auto &index : m_draw_buffers)
@@ -2298,6 +2128,13 @@ void VKGSRender::clear_surface(u32 mask)
 							// Add a barrier to ensure previous writes are visible; also transitions into GENERAL layout
 							const auto old_layout = rtt->current_layout;
 							vk::insert_texture_barrier(*m_current_command_buffer, rtt, VK_IMAGE_LAYOUT_GENERAL);
+
+							if (!renderpass)
+							{
+								std::vector<vk::image*> surfaces = { rtt };
+								const auto key = vk::get_renderpass_key(surfaces);
+								renderpass = vk::get_renderpass(*m_device, key);
+							}
 
 							m_attachment_clear_pass->run(*m_current_command_buffer, rtt,
 								region.rect, renderpass, m_framebuffers_to_clean);
@@ -2784,8 +2621,7 @@ bool VKGSRender::load_program()
 		}
 	}
 
-	properties.render_pass = m_render_passes[m_current_renderpass_id];
-	properties.render_pass_location = (int)m_current_renderpass_id;
+	properties.renderpass_key = m_current_renderpass_key;
 	properties.num_targets = (u32)m_draw_buffers.size();
 
 	vk::enter_uninterruptible();
@@ -3104,16 +2940,14 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	//Bind created rtts as current fbo...
 	const auto draw_buffers = rsx::utility::get_rtt_indexes(layout.target);
-	m_draw_buffers.resize(0);
-
-	std::vector<vk::image*> bound_images;
-	bound_images.reserve(5);
+	m_draw_buffers.clear();
+	m_fbo_images.clear();
 
 	for (u8 index : draw_buffers)
 	{
 		if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
 		{
-			bound_images.push_back(surface);
+			m_fbo_images.push_back(surface);
 
 			m_surface_info[index].address = layout.color_addresses[index];
 			m_surface_info[index].pitch = layout.actual_color_pitch[index];
@@ -3128,7 +2962,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-		bound_images.push_back(ds);
+		m_fbo_images.push_back(ds);
 
 		m_depth_surface_info.address = layout.zeta_address;
 		m_depth_surface_info.pitch = layout.actual_zeta_pitch;
@@ -3214,8 +3048,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_rtts.orphaned_surfaces.clear();
 	}
 
-	auto vk_depth_format = (layout.zeta_address == 0) ? VK_FORMAT_UNDEFINED : vk::get_compatible_depth_surface_format(m_device->get_formats_support(), layout.depth_format);
-	m_current_renderpass_id = vk::get_render_pass_location(vk::get_compatible_surface_format(layout.color_format).first, vk_depth_format, (u8)m_draw_buffers.size());
+	m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images);
+	m_cached_renderpass = VK_NULL_HANDLE;
 
 	// Search old framebuffers for this same configuration
 	bool framebuffer_found = false;
@@ -3230,7 +3064,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	for (auto &fbo : m_framebuffers_to_clean)
 	{
-		if (fbo->matches(bound_images, fbo_width, fbo_height))
+		if (fbo->matches(m_fbo_images, fbo_width, fbo_height))
 		{
 			m_draw_fbo.swap(fbo);
 			m_draw_fbo->add_ref();
@@ -3273,7 +3107,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
 		}
 
-		VkRenderPass current_render_pass = m_render_passes[m_current_renderpass_id];
+		VkRenderPass current_render_pass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 		verify("Usupported renderpass configuration" HERE), current_render_pass != VK_NULL_HANDLE;
 
 		if (m_draw_fbo)
@@ -3626,9 +3460,9 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		//TODO: Upload raw bytes from cpu for rendering
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 		VkClearColorValue clear_black {};
-		vk::change_image_layout(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &range);
-		vk::change_image_layout(*m_current_command_buffer, m_swapchain->get_image(m_current_frame->present_image), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, present_layout, range);
+		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
+		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &range);
+		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, present_layout, range);
 	}
 
 	std::unique_ptr<vk::framebuffer_holder> direct_fbo;
@@ -3651,8 +3485,8 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 
 		vkCmdPipelineBarrier(*m_current_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &barrier);
 
-		size_t idx = vk::get_render_pass_location(m_swapchain->get_surface_format(), VK_FORMAT_UNDEFINED, 1);
-		VkRenderPass single_target_pass = m_render_passes[idx];
+		auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
+		VkRenderPass single_target_pass = vk::get_renderpass(*m_device, key);
 		verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
 
 		for (auto It = m_framebuffers_to_clean.begin(); It != m_framebuffers_to_clean.end(); It++)

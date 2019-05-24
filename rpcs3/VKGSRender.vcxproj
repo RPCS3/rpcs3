@@ -31,6 +31,7 @@
     <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
     <ClInclude Include="Emu\RSX\VK\VKOverlays.h" />
     <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKRenderPass.h" />
     <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
     <ClInclude Include="Emu\RSX\VK\VKTextOut.h" />
     <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
@@ -44,6 +45,7 @@
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
