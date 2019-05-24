@@ -33,7 +33,7 @@ namespace
 		// get the saves matching the supplied prefix
 		for (const auto& entry : fs::dir(base_dir))
 		{
-			if (!entry.is_directory)
+			if (!entry.is_directory || entry.name == "." || entry.name == "..")
 			{
 				continue;
 			}
@@ -43,6 +43,7 @@ namespace
 
 			if (psf.empty())
 			{
+				LOG_ERROR(LOADER, "Failed to load savedata: %s", base_dir + "/" + entry.name);
 				continue;
 			}
 

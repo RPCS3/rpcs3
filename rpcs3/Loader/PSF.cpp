@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "PSF.h"
 
 template<>
@@ -103,7 +103,7 @@ namespace psf
 		registry result;
 
 		// Hack for empty input (TODO)
-		if (!stream)
+		if (!stream || !stream.size())
 		{
 			return result;
 		}
