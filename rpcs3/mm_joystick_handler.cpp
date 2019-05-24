@@ -297,7 +297,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 
 	if (cur_pad != padId)
 	{
-		cur_pad == padId;
+		cur_pad = padId;
 		id = GetIDByName(padId);
 		if (id < 0)
 		{

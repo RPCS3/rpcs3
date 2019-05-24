@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "Emu/Memory/vm.h"
@@ -32,13 +32,11 @@ private:
 
 	void closeEvent(QCloseEvent* event) override;
 
-	QTableWidget* m_list;
+	QTableWidget* m_list = nullptr;
 	std::string m_dir;
 	std::vector<SaveDataEntry> m_save_entries;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
-
-	QMenu* m_sort_options;
 
 	int m_sort_column;
 	bool m_sort_ascending;
