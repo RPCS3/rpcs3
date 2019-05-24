@@ -164,7 +164,6 @@ namespace vk
 			VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
-	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
 	//Texture barrier applies to a texture to ensure writes to it are finished before any reads are attempted to avoid RAW hazards
 	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
@@ -1056,6 +1055,11 @@ namespace vk
 		u32 depth() const
 		{
 			return info.extent.depth;
+		}
+
+		u8 samples() const
+		{
+			return u8(info.samples);
 		}
 
 		VkFormat format() const

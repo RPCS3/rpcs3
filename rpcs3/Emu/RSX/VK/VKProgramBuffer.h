@@ -4,22 +4,22 @@
 #include "../Common/ProgramStateCache.h"
 #include "Utilities/hash.h"
 #include "VKHelpers.h"
+#include "VKRenderPass.h"
 
 namespace vk
 {
 	struct pipeline_props
 	{
 		graphics_pipeline_state state;
-		VkRenderPass render_pass;
 		int num_targets;
-		int render_pass_location;
+		u64 renderpass_key;
 
 		bool operator==(const pipeline_props& other) const
 		{
 			if (memcmp(&state.att_state[0], &other.state.att_state[0], sizeof(VkPipelineColorBlendAttachmentState)))
 				return false;
 
-			if (render_pass_location != other.render_pass_location)
+			if (renderpass_key != other.renderpass_key)
 				return false;
 
 			if (memcmp(&state.rs, &other.state.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
@@ -162,7 +162,7 @@ struct VKTraits
 		info.layout = common_pipeline_layout;
 		info.basePipelineIndex = -1;
 		info.basePipelineHandle = VK_NULL_HANDLE;
-		info.renderPass = pipelineProperties.render_pass;
+		info.renderPass = vk::get_renderpass(dev, pipelineProperties.renderpass_key);
 
 		CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &info, NULL, &pipeline));
 
@@ -172,14 +172,9 @@ struct VKTraits
 	}
 };
 
-class VKProgramBuffer : public program_state_cache<VKTraits>
+struct VKProgramBuffer : public program_state_cache<VKTraits>
 {
-	const VkRenderPass *m_render_pass_data;
-
-public:
-	VKProgramBuffer(VkRenderPass *renderpass_list)
-		: m_render_pass_data(renderpass_list)
-	{}
+	VKProgramBuffer() = default;
 
 	void clear()
 	{
@@ -206,8 +201,6 @@ public:
 	template <typename... Args>
 	void add_pipeline_entry(RSXVertexProgram &vp, RSXFragmentProgram &fp, vk::pipeline_props &props, Args&& ...args)
 	{
-		props.render_pass = m_render_pass_data[props.render_pass_location];
-		verify("Usupported renderpass configuration" HERE), props.render_pass != VK_NULL_HANDLE;
 		vp.skip_vertex_input_check = true;
 		get_graphics_pipeline(vp, fp, props, false, std::forward<Args>(args)...);
 	}
