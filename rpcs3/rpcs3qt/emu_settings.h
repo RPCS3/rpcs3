@@ -150,7 +150,7 @@ public:
 		QString name;
 		QString old_adapter;
 		QStringList adapters;
-		SettingsType type;
+		SettingsType type = VulkanAdapter;
 		bool supported = true;
 		bool has_adapters = true;
 

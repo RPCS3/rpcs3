@@ -31,15 +31,6 @@ enum Category
 	Others,
 };
 
-namespace config
-{
-	enum class type
-	{
-		emu,
-		pad
-	};
-}
-
 namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
 {
 	// PS3 bootable
@@ -247,7 +238,7 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
 	QColor getGridCompatibilityColor(const QString& string);
-	void ShowCustomConfigIcon(QTableWidgetItem* item, config::type type);
+	void ShowCustomConfigIcon(QTableWidgetItem* item);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
 	void SortGameList();

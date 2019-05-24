@@ -719,7 +719,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (RemoveCustomConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item, config::type::emu);
+				ShowCustomConfigIcon(item);
 			}
 		});
 	}
@@ -730,7 +730,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (RemoveCustomPadConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item, config::type::pad);
+				ShowCustomConfigIcon(item);
 			}
 		});
 	}
@@ -795,7 +795,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomConfig)
 		{
 			gameinfo->hasCustomConfig = true;
-			ShowCustomConfigIcon(item, config::type::emu);
+			ShowCustomConfigIcon(item);
 		}
 	});
 	connect(pad_configure, &QAction::triggered, [=]
@@ -816,7 +816,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
 			gameinfo->hasCustomPadConfig = true;
-			ShowCustomConfigIcon(item, config::type::pad);
+			ShowCustomConfigIcon(item);
 		}
 		if (!Emu.IsStopped())
 		{
@@ -1488,7 +1488,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 	return QPixmap::fromImage(image.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
-void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, config::type type)
+void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
 {
 	auto game = GetGameInfoFromItem(item);
 	if (game == nullptr)
