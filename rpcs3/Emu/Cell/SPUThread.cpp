@@ -409,7 +409,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 	c.bind(fall2);
 	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
 
-	if (s_tsx_haswell)
+	if (s_tsx_haswell || std::thread::hardware_concurrency() < 12)
 	{
 		// Call yield and restore data
 		c.call(imm_ptr(&std::this_thread::yield));
@@ -531,10 +531,14 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 	}
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
+	c.push(x86::rbp);
+	c.push(x86::r13);
+	c.push(x86::r12);
+	c.push(x86::rbx);
+	c.sub(x86::rsp, 72);
 #ifdef _WIN32
 	if (!s_tsx_avx)
 	{
-		c.sub(x86::rsp, 40);
 		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
 		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
 	}
@@ -542,73 +546,86 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 
 	// Prepare registers
 	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
-	c.mov(x86::r11, x86::qword_ptr(x86::rax));
-	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
+	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.shr(args[0], 4);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
-	c.xor_(args[0].r32(), args[0].r32());
+	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
+	c.xor_(x86::r12d, x86::r12d);
+	c.mov(x86::r13, args[1]);
+	c.mov(x86::qword_ptr(x86::rsp, 64), args[2]);
 
 	// Begin transaction
 	Label begin = build_transaction_enter(c, fall);
-	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::r11, 0));
-		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::r11, 32));
-		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::r11, 64));
-		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::r11, 96));
+		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
+		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
+		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
+		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
 	}
 	else
 	{
-		c.movaps(x86::xmm0, x86::oword_ptr(x86::r11, 0));
-		c.movaps(x86::xmm1, x86::oword_ptr(x86::r11, 16));
-		c.movaps(x86::xmm2, x86::oword_ptr(x86::r11, 32));
-		c.movaps(x86::xmm3, x86::oword_ptr(x86::r11, 48));
-		c.movaps(x86::xmm4, x86::oword_ptr(x86::r11, 64));
-		c.movaps(x86::xmm5, x86::oword_ptr(x86::r11, 80));
-		c.movaps(x86::xmm6, x86::oword_ptr(x86::r11, 96));
-		c.movaps(x86::xmm7, x86::oword_ptr(x86::r11, 112));
+		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
 	}
 
 	c.xend();
 
 	if (s_tsx_avx)
 	{
-		c.vmovups(x86::yword_ptr(args[1], 0), x86::ymm0);
-		c.vmovups(x86::yword_ptr(args[1], 32), x86::ymm1);
-		c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
-		c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
+		c.vmovups(x86::yword_ptr(x86::r13, 0), x86::ymm0);
+		c.vmovups(x86::yword_ptr(x86::r13, 32), x86::ymm1);
+		c.vmovups(x86::yword_ptr(x86::r13, 64), x86::ymm2);
+		c.vmovups(x86::yword_ptr(x86::r13, 96), x86::ymm3);
 	}
 	else
 	{
-		c.movaps(x86::oword_ptr(args[1], 0), x86::xmm0);
-		c.movaps(x86::oword_ptr(args[1], 16), x86::xmm1);
-		c.movaps(x86::oword_ptr(args[1], 32), x86::xmm2);
-		c.movaps(x86::oword_ptr(args[1], 48), x86::xmm3);
-		c.movaps(x86::oword_ptr(args[1], 64), x86::xmm4);
-		c.movaps(x86::oword_ptr(args[1], 80), x86::xmm5);
-		c.movaps(x86::oword_ptr(args[1], 96), x86::xmm6);
-		c.movaps(x86::oword_ptr(args[1], 112), x86::xmm7);
+		c.movaps(x86::oword_ptr(x86::r13, 0), x86::xmm0);
+		c.movaps(x86::oword_ptr(x86::r13, 16), x86::xmm1);
+		c.movaps(x86::oword_ptr(x86::r13, 32), x86::xmm2);
+		c.movaps(x86::oword_ptr(x86::r13, 48), x86::xmm3);
+		c.movaps(x86::oword_ptr(x86::r13, 64), x86::xmm4);
+		c.movaps(x86::oword_ptr(x86::r13, 80), x86::xmm5);
+		c.movaps(x86::oword_ptr(x86::r13, 96), x86::xmm6);
+		c.movaps(x86::oword_ptr(x86::r13, 112), x86::xmm7);
 	}
 
 	c.and_(x86::rax, -128);
+	c.mov(args[2], x86::qword_ptr(x86::rsp, 64));
 	c.mov(x86::qword_ptr(args[2]), x86::rax);
-	c.mov(x86::rax, args[0]);
+	c.mov(x86::rax, x86::r12);
 	c.jmp(_ret);
 
 	// Touch memory after transaction failure
 	c.bind(fall);
-	c.lea(args[0], x86::qword_ptr(args[0], 1));
-	c.pause();
-	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
-	c.mov(x86::rax, x86::qword_ptr(x86::r11));
-	c.mov(x86::rax, x86::qword_ptr(x86::r10));
-	c.xor_(x86::r11, 0xf80);
-	c.xor_(x86::r10, 0xf80);
+	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
+
+	if (s_tsx_haswell || std::thread::hardware_concurrency() < 12)
+	{
+		c.call(imm_ptr(&std::this_thread::yield));
+	}
+	else
+	{
+		c.mov(args[0], 500);
+		c.call(imm_ptr(&::busy_wait));
+	}
+
+	c.xor_(x86::rbp, 0xf80);
+	c.xor_(x86::rbx, 0xf80);
+	c.mov(x86::rax, x86::qword_ptr(x86::rbp));
+	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
+	c.xor_(x86::rbp, 0xf80);
+	c.xor_(x86::rbx, 0xf80);
 	c.jmp(begin);
 	c.bind(_ret);
 
@@ -617,7 +634,6 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 	{
 		c.movups(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
 		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
-		c.add(x86::rsp, 40);
 	}
 #endif
 
@@ -626,6 +642,11 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 		c.vzeroupper();
 	}
 
+	c.add(x86::rsp, 72);
+	c.pop(x86::rbx);
+	c.pop(x86::r12);
+	c.pop(x86::r13);
+	c.pop(x86::rbp);
 	c.ret();
 });
 
@@ -641,10 +662,14 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 	}
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
+	c.push(x86::rbp);
+	c.push(x86::r13);
+	c.push(x86::r12);
+	c.push(x86::rbx);
+	c.sub(x86::rsp, 72);
 #ifdef _WIN32
 	if (!s_tsx_avx)
 	{
-		c.sub(x86::rsp, 72);
 		c.movups(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
 		c.movups(x86::oword_ptr(x86::rsp, 16), x86::xmm7);
 		c.movups(x86::oword_ptr(x86::rsp, 32), x86::xmm8);
@@ -654,44 +679,46 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 
 	// Prepare registers
 	c.mov(x86::rax, imm_ptr(&vm::g_reservations));
-	c.mov(x86::r10, x86::qword_ptr(x86::rax));
+	c.mov(x86::rbx, x86::qword_ptr(x86::rax));
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
-	c.mov(x86::r11, x86::qword_ptr(x86::rax));
-	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
+	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
 	c.shr(args[0], 4);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
-	c.xor_(args[0].r32(), args[0].r32());
+	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
+	c.xor_(x86::r12d, x86::r12d);
+	c.mov(x86::r13, args[1]);
+	c.mov(x86::qword_ptr(x86::rsp, 64), args[2]);
 
 	// Begin copying
 	Label begin = c.newLabel();
 	Label test0 = c.newLabel();
 	c.bind(begin);
-	c.mov(x86::rax, x86::qword_ptr(x86::r10));
+	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 
 	if (s_tsx_avx)
 	{
-		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::r11, 0));
-		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::r11, 32));
-		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::r11, 64));
-		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::r11, 96));
+		c.vmovaps(x86::ymm0, x86::yword_ptr(x86::rbp, 0));
+		c.vmovaps(x86::ymm1, x86::yword_ptr(x86::rbp, 32));
+		c.vmovaps(x86::ymm2, x86::yword_ptr(x86::rbp, 64));
+		c.vmovaps(x86::ymm3, x86::yword_ptr(x86::rbp, 96));
 	}
 	else
 	{
-		c.movaps(x86::xmm0, x86::oword_ptr(x86::r11, 0));
-		c.movaps(x86::xmm1, x86::oword_ptr(x86::r11, 16));
-		c.movaps(x86::xmm2, x86::oword_ptr(x86::r11, 32));
-		c.movaps(x86::xmm3, x86::oword_ptr(x86::r11, 48));
-		c.movaps(x86::xmm4, x86::oword_ptr(x86::r11, 64));
-		c.movaps(x86::xmm5, x86::oword_ptr(x86::r11, 80));
-		c.movaps(x86::xmm6, x86::oword_ptr(x86::r11, 96));
-		c.movaps(x86::xmm7, x86::oword_ptr(x86::r11, 112));
+		c.movaps(x86::xmm0, x86::oword_ptr(x86::rbp, 0));
+		c.movaps(x86::xmm1, x86::oword_ptr(x86::rbp, 16));
+		c.movaps(x86::xmm2, x86::oword_ptr(x86::rbp, 32));
+		c.movaps(x86::xmm3, x86::oword_ptr(x86::rbp, 48));
+		c.movaps(x86::xmm4, x86::oword_ptr(x86::rbp, 64));
+		c.movaps(x86::xmm5, x86::oword_ptr(x86::rbp, 80));
+		c.movaps(x86::xmm6, x86::oword_ptr(x86::rbp, 96));
+		c.movaps(x86::xmm7, x86::oword_ptr(x86::rbp, 112));
 	}
 
 	// Verify and retry if necessary.
-	c.cmp(x86::rax, x86::qword_ptr(x86::r10));
+	c.cmp(x86::rax, x86::qword_ptr(x86::rbx));
 	c.je(test0);
 	c.pause();
-	c.lea(args[0], x86::qword_ptr(args[0], 1));
+	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
 	c.jmp(begin);
 
 	c.bind(test0);
@@ -702,12 +729,12 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 	// If there are lock bits set, verify data as well.
 	if (s_tsx_avx)
 	{
-		c.vxorps(x86::ymm4, x86::ymm0, x86::yword_ptr(x86::r11, 0));
-		c.vxorps(x86::ymm5, x86::ymm1, x86::yword_ptr(x86::r11, 32));
+		c.vxorps(x86::ymm4, x86::ymm0, x86::yword_ptr(x86::rbp, 0));
+		c.vxorps(x86::ymm5, x86::ymm1, x86::yword_ptr(x86::rbp, 32));
 		c.vorps(x86::ymm5, x86::ymm5, x86::ymm4);
-		c.vxorps(x86::ymm4, x86::ymm2, x86::yword_ptr(x86::r11, 64));
+		c.vxorps(x86::ymm4, x86::ymm2, x86::yword_ptr(x86::rbp, 64));
 		c.vorps(x86::ymm5, x86::ymm5, x86::ymm4);
-		c.vxorps(x86::ymm4, x86::ymm3, x86::yword_ptr(x86::r11, 96));
+		c.vxorps(x86::ymm4, x86::ymm3, x86::yword_ptr(x86::rbp, 96));
 		c.vorps(x86::ymm5, x86::ymm5, x86::ymm4);
 		c.vptest(x86::ymm5, x86::ymm5);
 	}
@@ -715,59 +742,62 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 	{
 		c.xorps(x86::xmm9, x86::xmm9);
 		c.movaps(x86::xmm8, x86::xmm0);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::r11, 0));
+		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 0));
 		c.orps(x86::xmm9, x86::xmm8);
 		c.movaps(x86::xmm8, x86::xmm1);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::r11, 16));
+		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 16));
 		c.orps(x86::xmm9, x86::xmm8);
 		c.movaps(x86::xmm8, x86::xmm2);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::r11, 32));
+		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 32));
 		c.orps(x86::xmm9, x86::xmm8);
 		c.movaps(x86::xmm8, x86::xmm3);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::r11, 48));
+		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 48));
 		c.orps(x86::xmm9, x86::xmm8);
 		c.movaps(x86::xmm8, x86::xmm4);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::r11, 64));
+		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 64));
 		c.orps(x86::xmm9, x86::xmm8);
 		c.movaps(x86::xmm8, x86::xmm5);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::r11, 80));
+		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 80));
 		c.orps(x86::xmm9, x86::xmm8);
 		c.movaps(x86::xmm8, x86::xmm6);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::r11, 96));
+		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 96));
 		c.orps(x86::xmm9, x86::xmm8);
 		c.movaps(x86::xmm8, x86::xmm7);
-		c.xorps(x86::xmm8, x86::oword_ptr(x86::r11, 112));
+		c.xorps(x86::xmm8, x86::oword_ptr(x86::rbp, 112));
 		c.orps(x86::xmm9, x86::xmm8);
 		c.ptest(x86::xmm9, x86::xmm9);
 	}
 
 	c.jz(_ret);
-	c.lea(args[0], x86::qword_ptr(args[0], 2));
+	c.lea(x86::r12, x86::qword_ptr(x86::r12, 2));
+	c.mov(args[0], 500);
+	c.call(imm_ptr(&::busy_wait));
 	c.jmp(begin);
 
 	c.bind(_ret);
 
 	if (s_tsx_avx)
 	{
-		c.vmovups(x86::yword_ptr(args[1], 0), x86::ymm0);
-		c.vmovups(x86::yword_ptr(args[1], 32), x86::ymm1);
-		c.vmovups(x86::yword_ptr(args[1], 64), x86::ymm2);
-		c.vmovups(x86::yword_ptr(args[1], 96), x86::ymm3);
+		c.vmovups(x86::yword_ptr(x86::r13, 0), x86::ymm0);
+		c.vmovups(x86::yword_ptr(x86::r13, 32), x86::ymm1);
+		c.vmovups(x86::yword_ptr(x86::r13, 64), x86::ymm2);
+		c.vmovups(x86::yword_ptr(x86::r13, 96), x86::ymm3);
 	}
 	else
 	{
-		c.movaps(x86::oword_ptr(args[1], 0), x86::xmm0);
-		c.movaps(x86::oword_ptr(args[1], 16), x86::xmm1);
-		c.movaps(x86::oword_ptr(args[1], 32), x86::xmm2);
-		c.movaps(x86::oword_ptr(args[1], 48), x86::xmm3);
-		c.movaps(x86::oword_ptr(args[1], 64), x86::xmm4);
-		c.movaps(x86::oword_ptr(args[1], 80), x86::xmm5);
-		c.movaps(x86::oword_ptr(args[1], 96), x86::xmm6);
-		c.movaps(x86::oword_ptr(args[1], 112), x86::xmm7);
+		c.movaps(x86::oword_ptr(x86::r13, 0), x86::xmm0);
+		c.movaps(x86::oword_ptr(x86::r13, 16), x86::xmm1);
+		c.movaps(x86::oword_ptr(x86::r13, 32), x86::xmm2);
+		c.movaps(x86::oword_ptr(x86::r13, 48), x86::xmm3);
+		c.movaps(x86::oword_ptr(x86::r13, 64), x86::xmm4);
+		c.movaps(x86::oword_ptr(x86::r13, 80), x86::xmm5);
+		c.movaps(x86::oword_ptr(x86::r13, 96), x86::xmm6);
+		c.movaps(x86::oword_ptr(x86::r13, 112), x86::xmm7);
 	}
 
+	c.mov(args[2], x86::qword_ptr(x86::rsp, 64));
 	c.mov(x86::qword_ptr(args[2]), x86::rax);
-	c.mov(x86::rax, args[0]);
+	c.mov(x86::rax, x86::r12);
 
 #ifdef _WIN32
 	if (!s_tsx_avx)
@@ -776,7 +806,6 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 		c.movups(x86::xmm7, x86::oword_ptr(x86::rsp, 16));
 		c.movups(x86::xmm8, x86::oword_ptr(x86::rsp, 32));
 		c.movups(x86::xmm9, x86::oword_ptr(x86::rsp, 48));
-		c.add(x86::rsp, 72);
 	}
 #endif
 
@@ -785,6 +814,11 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 		c.vzeroupper();
 	}
 
+	c.add(x86::rsp, 72);
+	c.pop(x86::rbx);
+	c.pop(x86::r12);
+	c.pop(x86::r13);
+	c.pop(x86::rbp);
 	c.ret();
 });
 
@@ -913,7 +947,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	c.bind(fall2);
 	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
 
-	if (s_tsx_haswell)
+	if (s_tsx_haswell || std::thread::hardware_concurrency() < 12)
 	{
 		// Call yield and restore data
 		c.call(imm_ptr(&std::this_thread::yield));
