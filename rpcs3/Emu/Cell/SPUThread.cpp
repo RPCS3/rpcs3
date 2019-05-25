@@ -467,8 +467,12 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
-	c.je(retry);
-	//c.jmp(fail);
+	c.jne(fail);
+	c.cmp(x86::r12, 16);
+	c.jb(retry);
+	c.mov(x86::rax, imm_ptr(&g_cfg.core.spu_accurate_putllc.get()));
+	c.test(x86::byte_ptr(x86::rax), 1);
+	c.jnz(retry);
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
