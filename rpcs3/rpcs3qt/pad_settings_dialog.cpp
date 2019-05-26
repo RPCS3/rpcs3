@@ -331,7 +331,12 @@ void pad_settings_dialog::InitButtons()
 
 	connect(ui->b_led, &QPushButton::clicked, [=]()
 	{
-		QColorDialog dlg(QColor(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB), this);
+		QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+		if (ui->b_led->property("led").canConvert<QColor>())
+		{
+			led_color = ui->b_led->property("led").value<QColor>();
+		}
+		QColorDialog dlg(led_color, this);
 		dlg.setWindowTitle(tr("LED Color"));
 		if (dlg.exec() == QColorDialog::Accepted)
 		{
