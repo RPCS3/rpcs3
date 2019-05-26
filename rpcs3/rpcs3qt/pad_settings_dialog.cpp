@@ -277,12 +277,12 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		ui->chb_vibration_switch->isChecked() ? m_handler->TestVibration(m_device_name, m_min_force, m_max_force)
-		                                      : m_handler->TestVibration(m_device_name, m_max_force, m_min_force);
+		ui->chb_vibration_switch->isChecked() ? SetPadData(m_min_force, m_max_force)
+		                                      : SetPadData(m_max_force, m_min_force);
 
 		QTimer::singleShot(300, [this]()
 		{
-			m_handler->TestVibration(m_device_name, m_min_force, m_min_force);
+			SetPadData(m_min_force, m_min_force);
 		});
 	});
 
@@ -293,28 +293,28 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		ui->chb_vibration_switch->isChecked() ? m_handler->TestVibration(m_device_name, m_max_force, m_min_force)
-		                                      : m_handler->TestVibration(m_device_name, m_min_force, m_max_force);
+		ui->chb_vibration_switch->isChecked() ? SetPadData(m_max_force, m_min_force)
+		                                      : SetPadData(m_min_force, m_max_force);
 
 		QTimer::singleShot(300, [this]()
 		{
-			m_handler->TestVibration(m_device_name, m_min_force, m_min_force);
+			SetPadData(m_min_force, m_min_force);
 		});
 	});
 
 	connect(ui->chb_vibration_switch, &QCheckBox::clicked, [this](bool checked)
 	{
-		checked ? m_handler->TestVibration(m_device_name, m_min_force, m_max_force)
-		        : m_handler->TestVibration(m_device_name, m_max_force, m_min_force);
+		checked ? SetPadData(m_min_force, m_max_force)
+		        : SetPadData(m_max_force, m_min_force);
 
 		QTimer::singleShot(200, [this, checked]()
 		{
-			checked ? m_handler->TestVibration(m_device_name, m_max_force, m_min_force)
-			        : m_handler->TestVibration(m_device_name, m_min_force, m_max_force);
+			checked ? SetPadData(m_max_force, m_min_force)
+			        : SetPadData(m_min_force, m_max_force);
 
 			QTimer::singleShot(200, [this]()
 			{
-				m_handler->TestVibration(m_device_name, m_min_force, m_min_force);
+				SetPadData(m_min_force, m_min_force);
 			});
 		});
 	});
@@ -341,7 +341,7 @@ void pad_settings_dialog::InitButtons()
 		if (dlg.exec() == QColorDialog::Accepted)
 		{
 			const QColor newColor = dlg.selectedColor();
-			m_handler->SetLED(m_device_name, newColor.red(), newColor.green(), newColor.blue());
+			m_handler->SetPadData(m_device_name, 0, 0, newColor.red(), newColor.green(), newColor.blue());
 			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, newColor));
 			ui->b_led->setProperty("led", newColor);
 		}
@@ -424,6 +424,16 @@ void pad_settings_dialog::InitButtons()
 			m_handler->GetNextButtonPress(info.name, [=](u16, std::string, std::string pad_name, int[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
+}
+
+void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor)
+{
+	QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+	if (ui->b_led->property("led").canConvert<QColor>())
+	{
+		led_color = ui->b_led->property("led").value<QColor>();
+	}
+	m_handler->SetPadData(m_device_name, large_motor, small_motor, led_color.red(), led_color.green(), led_color.blue());
 }
 
 void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_connected)
@@ -555,7 +565,7 @@ void pad_settings_dialog::ReloadButtons()
 
 	// Enable and repaint the LED Button
 	m_enable_led = m_handler->has_led();
-	m_handler->SetLED(m_device_name, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+	m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 
 	const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 	ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
@@ -763,7 +773,7 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 			const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 			ui->b_led->setProperty("led", led_color);
 			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
-			m_handler->SetLED(m_device_name, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+			m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 		}
 	}
 

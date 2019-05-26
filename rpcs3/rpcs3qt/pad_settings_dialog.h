@@ -148,6 +148,9 @@ private:
 	// Input timer. Its Callback handles the input
 	QTimer m_timer_input;
 
+	// Set vibrate data while keeping the current color
+	void SetPadData(u32 large_motor, u32 small_motor);
+
 	/** Update all the Button Labels with current button mapping */
 	void UpdateLabel(bool is_reset = false);
 	void SwitchPadInfo(const std::string& name, bool is_connected);

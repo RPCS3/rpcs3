@@ -478,7 +478,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	device->force_small = small;
 }
 
-void evdev_joystick_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
+void evdev_joystick_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32/* b*/)
 {
 	// Get our evdev device
 	EvdevDevice* dev = get_device(padId);

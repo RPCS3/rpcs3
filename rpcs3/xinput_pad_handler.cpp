@@ -136,7 +136,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 		return callback(0, "", padId, preview_values);
 }
 
-void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
+void xinput_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32/* b*/)
 {
 	int device_number = GetDeviceNumber(padId);
 	if (device_number < 0)
