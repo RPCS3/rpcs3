@@ -7,6 +7,7 @@
 #include "VKTextOut.h"
 #include "VKOverlays.h"
 #include "VKProgramBuffer.h"
+#include "VKFramebuffer.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
 #include <thread>
@@ -409,7 +410,7 @@ private:
 	VkDescriptorSetLayout descriptor_layouts;
 	VkPipelineLayout pipeline_layout;
 
-	std::unique_ptr<vk::framebuffer_holder> m_draw_fbo;
+	vk::framebuffer_holder* m_draw_fbo = nullptr;
 
 	bool present_surface_dirty_flag = false;
 	bool renderer_unavailable = false;
@@ -437,9 +438,6 @@ private:
 	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
 	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
 	frame_context_t m_aux_frame_context;
-
-	//framebuffers are shared between frame contexts
-	std::list<std::unique_ptr<vk::framebuffer_holder>> m_framebuffers_to_clean;
 
 	u32 m_current_queue_index = 0;
 	frame_context_t* m_current_frame = nullptr;

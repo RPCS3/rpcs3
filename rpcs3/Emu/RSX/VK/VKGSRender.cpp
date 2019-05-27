@@ -603,9 +603,6 @@ VKGSRender::~VKGSRender()
 	null_buffer.reset();
 	null_buffer_view.reset();
 
-	//Frame context
-	m_framebuffers_to_clean.clear();
-
 	if (m_current_frame == &m_aux_frame_context)
 	{
 		//Return resources back to the owner
@@ -624,8 +621,6 @@ VKGSRender::~VKGSRender()
 
 		ctx.buffer_views_to_clean.clear();
 	}
-
-	m_draw_fbo.reset();
 
 	//Textures
 	m_rtts.destroy();
@@ -1352,7 +1347,7 @@ void VKGSRender::end()
 			ds->old_contents.src_rect(),
 			ds->old_contents.dst_rect(),
 			vk::as_rtt(ds->old_contents.source)->get_view(0xAAE4, rsx::default_remap_vector),
-			ds, render_pass, m_framebuffers_to_clean);
+			ds, render_pass);
 
 		// TODO: Flush management to avoid pass running out of ubo space (very unlikely)
 		ds->on_write();
@@ -2137,7 +2132,7 @@ void VKGSRender::clear_surface(u32 mask)
 							}
 
 							m_attachment_clear_pass->run(*m_current_command_buffer, rtt,
-								region.rect, renderpass, m_framebuffers_to_clean);
+								region.rect, renderpass);
 
 							rtt->change_layout(*m_current_command_buffer, old_layout);
 						}
@@ -2252,12 +2247,7 @@ void VKGSRender::advance_queued_frames()
 	m_texture_cache.on_frame_end();
 	m_samplers_dirty.store(true);
 
-	//Remove stale framebuffers. Ref counted to prevent use-after-free
-	m_framebuffers_to_clean.remove_if([](std::unique_ptr<vk::framebuffer_holder>& fbo)
-	{
-		if (fbo->unused_check_count() >= 2) return true;
-		return false;
-	});
+	vk::remove_unused_framebuffers();
 
 	m_vertex_cache->purge();
 	m_current_frame->tag_frame_end(m_attrib_ring_info.get_current_put_pos_minus_one(),
@@ -3049,10 +3039,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	}
 
 	m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images);
-	m_cached_renderpass = VK_NULL_HANDLE;
+	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	bool framebuffer_found = false;
 	const auto fbo_width = rsx::apply_resolution_scale(layout.width, true);
 	const auto fbo_height = rsx::apply_resolution_scale(layout.height, true);
 
@@ -3062,60 +3051,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_draw_fbo->release();
 	}
 
-	for (auto &fbo : m_framebuffers_to_clean)
-	{
-		if (fbo->matches(m_fbo_images, fbo_width, fbo_height))
-		{
-			m_draw_fbo.swap(fbo);
-			m_draw_fbo->add_ref();
-			framebuffer_found = true;
-			break;
-		}
-	}
-
-	if (!framebuffer_found)
-	{
-		std::vector<std::unique_ptr<vk::image_view>> fbo_images;
-		fbo_images.reserve(5);
-
-		for (u8 index : draw_buffers)
-		{
-			if (vk::image *raw = std::get<1>(m_rtts.m_bound_render_targets[index]))
-			{
-				VkImageSubresourceRange subres = {};
-				subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				subres.baseArrayLayer = 0;
-				subres.baseMipLevel = 0;
-				subres.layerCount = 1;
-				subres.levelCount = 1;
-
-				fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
-			}
-		}
-
-		if (std::get<1>(m_rtts.m_bound_depth_stencil) != nullptr)
-		{
-			vk::image *raw = (std::get<1>(m_rtts.m_bound_depth_stencil));
-
-			VkImageSubresourceRange subres = {};
-			subres.aspectMask = (rsx::method_registers.surface_depth_fmt() == rsx::surface_depth_format::z24s8) ? (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT) : VK_IMAGE_ASPECT_DEPTH_BIT;
-			subres.baseArrayLayer = 0;
-			subres.baseMipLevel = 0;
-			subres.layerCount = 1;
-			subres.levelCount = 1;
-
-			fbo_images.push_back(std::make_unique<vk::image_view>(*m_device, raw->value, VK_IMAGE_VIEW_TYPE_2D, raw->info.format, vk::default_component_map(), subres));
-		}
-
-		VkRenderPass current_render_pass = vk::get_renderpass(*m_device, m_current_renderpass_key);
-		verify("Usupported renderpass configuration" HERE), current_render_pass != VK_NULL_HANDLE;
-
-		if (m_draw_fbo)
-			m_framebuffers_to_clean.push_back(std::move(m_draw_fbo));
-
-		m_draw_fbo.reset(new vk::framebuffer_holder(*m_device, current_render_pass, fbo_width, fbo_height, std::move(fbo_images)));
-		m_draw_fbo->add_ref();
-	}
+	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, m_cached_renderpass, m_fbo_images);
+	m_draw_fbo->add_ref();
 
 	set_viewport();
 	set_scissor();
@@ -3465,8 +3402,6 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, present_layout, range);
 	}
 
-	std::unique_ptr<vk::framebuffer_holder> direct_fbo;
-	std::vector<std::unique_ptr<vk::image_view>> swap_image_view;
 	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
 	if (g_cfg.video.overlay || has_overlay)
 	{
@@ -3489,24 +3424,8 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		VkRenderPass single_target_pass = vk::get_renderpass(*m_device, key);
 		verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
 
-		for (auto It = m_framebuffers_to_clean.begin(); It != m_framebuffers_to_clean.end(); It++)
-		{
-			auto &fbo = *It;
-			if (fbo->attachments[0]->info.image == target_image)
-			{
-				direct_fbo.swap(fbo);
-				direct_fbo->add_ref();
-				m_framebuffers_to_clean.erase(It);
-				break;
-			}
-		}
-
-		if (!direct_fbo)
-		{
-			swap_image_view.push_back(std::make_unique<vk::image_view>(*m_device, target_image, VK_IMAGE_VIEW_TYPE_2D, m_swapchain->get_surface_format(), vk::default_component_map(), subres));
-			direct_fbo.reset(new vk::framebuffer_holder(*m_device, single_target_pass, m_client_width, m_client_height, std::move(swap_image_view)));
-			direct_fbo->add_ref();
-		}
+		auto direct_fbo = vk::get_framebuffer(*m_device, m_client_width, m_client_height, single_target_pass, m_swapchain->get_surface_format(), target_image);
+		direct_fbo->add_ref();
 
 		if (has_overlay)
 		{
@@ -3515,7 +3434,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo.get(), single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
 			}
 		}
 
@@ -3547,7 +3466,6 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, present_layout, subres);
 
 		direct_fbo->release();
-		m_framebuffers_to_clean.push_back(std::move(direct_fbo));
 	}
 
 	queue_swap_request();

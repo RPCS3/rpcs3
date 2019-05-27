@@ -3,6 +3,7 @@
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKRenderTargets.h"
+#include "VKFramebuffer.h"
 
 #include "../Overlays/overlays.h"
 
@@ -304,42 +305,10 @@ namespace vk
 			m_ubo.reset_allocation_stats();
 		}
 
-		vk::framebuffer* get_framebuffer(vk::image* target, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		vk::framebuffer* get_framebuffer(vk::image* target, VkRenderPass render_pass)
 		{
-			std::vector<vk::image*> test = {target};
-			for (auto It = framebuffer_resources.begin(); It != framebuffer_resources.end(); It++)
-			{
-				auto fbo = It->get();
-				if (fbo->matches(test, target->width(), target->height()))
-				{
-					fbo->add_ref();
-					return fbo;
-				}
-			}
-
-			//No match, create new fbo and add to the list
-			std::vector<std::unique_ptr<vk::image_view>> views;
-			VkComponentMapping mapping = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
-			VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-
-			switch (target->info.format)
-			{
-			case VK_FORMAT_D16_UNORM:
-			case VK_FORMAT_D24_UNORM_S8_UINT:
-			case VK_FORMAT_D32_SFLOAT_S8_UINT:
-				range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; //We are only writing to depth
-				break;
-			}
-
-			auto view = std::make_unique<vk::image_view>(*m_device, target->value, VK_IMAGE_VIEW_TYPE_2D, target->info.format, mapping, range);
-			views.push_back(std::move(view));
-
-			auto fbo = std::make_unique<vk::framebuffer_holder>(*m_device, render_pass, target->width(), target->height(), std::move(views));
-			auto result = fbo.get();
-			framebuffer_resources.push_back(std::move(fbo));
-
-			result->add_ref();
-			return result;
+			VkDevice dev = (*vk::get_current_renderer());
+			return vk::get_framebuffer(dev, target->width(), target->height(), render_pass, { target });
 		}
 
 		virtual void emit_geometry(vk::command_buffer &cmd)
@@ -379,19 +348,19 @@ namespace vk
 			vkCmdEndRenderPass(cmd);
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, const std::vector<vk::image_view*>& src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
 		{
-			vk::framebuffer *fbo = get_framebuffer(target, render_pass, framebuffer_resources);
+			vk::framebuffer *fbo = get_framebuffer(target, render_pass);
 
 			run(cmd, w, h, fbo, src, render_pass);
 
 			static_cast<vk::framebuffer_holder*>(fbo)->release();
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, vk::image_view* src, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, vk::image_view* src, VkRenderPass render_pass)
 		{
 			std::vector<vk::image_view*> views = { src };
-			run(cmd, w, h, target, views, render_pass, framebuffer_resources);
+			run(cmd, w, h, target, views, render_pass);
 		}
 	};
 
@@ -448,7 +417,7 @@ namespace vk
 			m_ubo.unmap();
 		}
 
-		void run(vk::command_buffer& cmd, const areai& src_area, const areai& dst_area, vk::image_view* src, vk::image* dst, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		void run(vk::command_buffer& cmd, const areai& src_area, const areai& dst_area, vk::image_view* src, vk::image* dst, VkRenderPass render_pass)
 		{
 			auto real_src = src->image();
 			verify(HERE), real_src;
@@ -456,7 +425,7 @@ namespace vk
 			src_scale_x = f32(src_area.x2) / real_src->width();
 			src_scale_y = f32(src_area.y2) / real_src->height();
 
-			overlay_pass::run(cmd, dst_area.x2, dst_area.y2, dst, src, render_pass, framebuffer_resources);
+			overlay_pass::run(cmd, dst_area.x2, dst_area.y2, dst, src, render_pass);
 		}
 	};
 
@@ -928,13 +897,13 @@ namespace vk
 			return false;
 		}
 
-		void run(vk::command_buffer &cmd, vk::render_target* target, VkRect2D rect, VkRenderPass render_pass, std::list<std::unique_ptr<vk::framebuffer_holder>>& framebuffer_resources)
+		void run(vk::command_buffer &cmd, vk::render_target* target, VkRect2D rect, VkRenderPass render_pass)
 		{
 			region = rect;
 
 			overlay_pass::run(cmd, target->width(), target->height(), target,
 				target->get_view(0xAAE4, rsx::default_remap_vector),
-				render_pass, framebuffer_resources);
+				render_pass);
 		}
 	};
 }
