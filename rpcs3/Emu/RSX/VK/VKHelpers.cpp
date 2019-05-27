@@ -2,6 +2,7 @@
 #include "VKHelpers.h"
 #include "VKCompute.h"
 #include "VKRenderPass.h"
+#include "VKFramebuffer.h"
 #include "Utilities/mutex.h"
 
 namespace vk
@@ -237,6 +238,7 @@ namespace vk
 	{
 		VkDevice dev = *g_current_renderer;
 		vk::clear_renderpass_cache(dev);
+		vk::clear_framebuffer_cache();
 
 		g_null_texture.reset();
 		g_null_image_view.reset();

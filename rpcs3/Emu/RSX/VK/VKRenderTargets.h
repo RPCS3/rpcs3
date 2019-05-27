@@ -2,16 +2,16 @@
 
 #include "stdafx.h"
 #include "VKHelpers.h"
+#include "VKFormats.h"
 #include "../GCM.h"
 #include "../Common/surface_store.h"
 #include "../Common/TextureUtils.h"
 #include "../Common/texture_cache_utils.h"
-#include "VKFormats.h"
 #include "../rsx_utils.h"
 
 namespace vk
 {
-	struct render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::image*>
+	struct render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::viewable_image*>
 	{
 		u16 native_pitch = 0;
 		u16 rsx_pitch = 0;
@@ -23,9 +23,9 @@ namespace vk
 
 		using viewable_image::viewable_image;
 
-		vk::image* get_surface() override
+		vk::viewable_image* get_surface() override
 		{
-			return (vk::image*)this;
+			return (vk::viewable_image*)this;
 		}
 
 		u16 get_surface_width() const override
@@ -53,7 +53,7 @@ namespace vk
 			return !!(aspect() & VK_IMAGE_ASPECT_DEPTH_BIT);
 		}
 
-		void release_ref(vk::image* t) const override
+		void release_ref(vk::viewable_image* t) const override
 		{
 			static_cast<vk::render_target*>(t)->release();
 		}
@@ -164,17 +164,6 @@ namespace vk
 
 		void read_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, true); }
 		void write_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, false); }
-	};
-
-	struct framebuffer_holder: public vk::framebuffer, public rsx::ref_counted
-	{
-		framebuffer_holder(VkDevice dev,
-			VkRenderPass pass,
-			u32 width, u32 height,
-			std::vector<std::unique_ptr<vk::image_view>> &&atts)
-
-			: framebuffer(dev, pass, width, height, std::move(atts))
-		{}
 	};
 
 	static inline vk::render_target* as_rtt(vk::image* t)
