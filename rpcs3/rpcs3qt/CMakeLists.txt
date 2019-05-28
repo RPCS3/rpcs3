@@ -4,6 +4,7 @@
 	breakpoint_handler.cpp
 	breakpoint_list.cpp
 	cg_disasm_window.cpp
+	cheat_manager.cpp
 	custom_dialog.cpp
 	debugger_frame.cpp
 	debugger_list.cpp
