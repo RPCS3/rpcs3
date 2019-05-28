@@ -32,7 +32,7 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	if (device_props.has_native_half_support)
 	{
 		OS << "#version 450\n";
-		OS << "#extension GL_KHX_shader_explicit_arithmetic_types_float16: enable\n";
+		OS << "#extension GL_EXT_shader_explicit_arithmetic_types_float16: enable\n";
 	}
 	else
 	{
