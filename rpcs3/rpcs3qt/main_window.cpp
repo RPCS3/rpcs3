@@ -29,6 +29,7 @@
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
 #include "skylander_dialog.h"
+#include "cheat_manager.h"
 
 #include <thread>
 
@@ -1319,6 +1320,12 @@ void main_window::CreateConnects()
 		skylander_dialog* sky_diag = skylander_dialog::get_dlg(this);
 		sky_diag->show();
 	});
+	
+	connect(ui->actionManage_Cheats, &QAction::triggered, [=]
+	{
+		cheat_manager_dialog* cheat_manager = cheat_manager_dialog::get_dlg(this);
+		cheat_manager->show();
+ 	});
 
 	connect(ui->actionManage_Users, &QAction::triggered, [=]
 	{
