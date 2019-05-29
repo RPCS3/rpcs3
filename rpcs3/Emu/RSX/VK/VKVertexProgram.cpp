@@ -4,6 +4,7 @@
 #include "VKVertexProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
+#include "../Common/GLSLCommon.h"
 
 std::string VKVertexDecompilerThread::getFloatTypeName(size_t elementCount)
 {
@@ -205,7 +206,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.low_precision_tests = false;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
-	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_rpirv);
+	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)

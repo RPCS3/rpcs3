@@ -2,9 +2,9 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "VKFragmentProgram.h"
-
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
+#include "../Common/GLSLCommon.h"
 #include "../GCM.h"
 
 std::string VKFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
