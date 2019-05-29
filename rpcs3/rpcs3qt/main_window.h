@@ -29,7 +29,7 @@ class main_window : public QMainWindow
 
 	Ui::main_window *ui;
 
-	bool m_sys_menu_opened;
+	bool m_sys_menu_opened = false;
 	bool m_is_list_mode = true;
 	bool m_save_slider_pos = false;
 	int m_other_slider_pos = 0;
@@ -130,17 +130,17 @@ private:
 	q_pair_list m_rg_entries;
 	QList<QAction*> m_recentGameActs;
 
-	QActionGroup* m_iconSizeActGroup;
-	QActionGroup* m_listModeActGroup;
-	QActionGroup* m_categoryVisibleActGroup;
+	QActionGroup* m_iconSizeActGroup = nullptr;
+	QActionGroup* m_listModeActGroup = nullptr;
+	QActionGroup* m_categoryVisibleActGroup = nullptr;
 
 	QMessageBox::StandardButton m_install_bulk = QMessageBox::NoButton;
 
 	// Dockable widget frames
-	QMainWindow *m_mw;
-	log_frame *m_logFrame;
-	debugger_frame *m_debuggerFrame;
-	game_list_frame *m_gameListFrame;
+	QMainWindow *m_mw = nullptr;
+	log_frame* m_logFrame = nullptr;
+	debugger_frame* m_debuggerFrame = nullptr;
+	game_list_frame* m_gameListFrame = nullptr;
 	std::shared_ptr<gui_settings> guiSettings;
 	std::shared_ptr<emu_settings> emuSettings;
 };

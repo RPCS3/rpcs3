@@ -1417,7 +1417,7 @@ void main_window::CreateConnects()
 	connect(m_categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		QStringList categories;
-		int id;
+		int id = 0;
 		const bool& checked = act->isChecked();
 
 		if      (act == ui->showCatHDDGameAct)    categories += category::hdd_game, id = Category::HDD_Game;
@@ -1432,8 +1432,11 @@ void main_window::CreateConnects()
 		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
 		else LOG_WARNING(GENERAL, "categoryVisibleActGroup: category action not found");
 
-		m_gameListFrame->ToggleCategoryFilter(categories, checked);
-		guiSettings->SetCategoryVisibility(id, checked);
+		if (!categories.isEmpty())
+		{
+			m_gameListFrame->ToggleCategoryFilter(categories, checked);
+			guiSettings->SetCategoryVisibility(id, checked);
+		}
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, [this]

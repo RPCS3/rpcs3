@@ -45,9 +45,9 @@ private:
 	QString m_filepath;
 	QString m_url;
 	QNetworkRequest m_network_request;
+	progress_dialog* m_progress_dialog = nullptr;
 	std::shared_ptr<gui_settings> m_xgui_settings;
 	std::unique_ptr<QTimer> m_progress_timer;
-	std::unique_ptr<progress_dialog> m_progress_dialog;
 	std::unique_ptr<QNetworkAccessManager> m_network_access_manager;
 	std::map<std::string, compat_status> m_compat_database;
 

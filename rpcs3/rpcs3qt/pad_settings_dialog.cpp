@@ -277,12 +277,12 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		ui->chb_vibration_switch->isChecked() ? m_handler->TestVibration(m_device_name, m_min_force, m_max_force)
-		                                      : m_handler->TestVibration(m_device_name, m_max_force, m_min_force);
+		ui->chb_vibration_switch->isChecked() ? SetPadData(m_min_force, m_max_force)
+		                                      : SetPadData(m_max_force, m_min_force);
 
 		QTimer::singleShot(300, [this]()
 		{
-			m_handler->TestVibration(m_device_name, m_min_force, m_min_force);
+			SetPadData(m_min_force, m_min_force);
 		});
 	});
 
@@ -293,28 +293,28 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		ui->chb_vibration_switch->isChecked() ? m_handler->TestVibration(m_device_name, m_max_force, m_min_force)
-		                                      : m_handler->TestVibration(m_device_name, m_min_force, m_max_force);
+		ui->chb_vibration_switch->isChecked() ? SetPadData(m_max_force, m_min_force)
+		                                      : SetPadData(m_min_force, m_max_force);
 
 		QTimer::singleShot(300, [this]()
 		{
-			m_handler->TestVibration(m_device_name, m_min_force, m_min_force);
+			SetPadData(m_min_force, m_min_force);
 		});
 	});
 
 	connect(ui->chb_vibration_switch, &QCheckBox::clicked, [this](bool checked)
 	{
-		checked ? m_handler->TestVibration(m_device_name, m_min_force, m_max_force)
-		        : m_handler->TestVibration(m_device_name, m_max_force, m_min_force);
+		checked ? SetPadData(m_min_force, m_max_force)
+		        : SetPadData(m_max_force, m_min_force);
 
 		QTimer::singleShot(200, [this, checked]()
 		{
-			checked ? m_handler->TestVibration(m_device_name, m_max_force, m_min_force)
-			        : m_handler->TestVibration(m_device_name, m_min_force, m_max_force);
+			checked ? SetPadData(m_max_force, m_min_force)
+			        : SetPadData(m_min_force, m_max_force);
 
 			QTimer::singleShot(200, [this]()
 			{
-				m_handler->TestVibration(m_device_name, m_min_force, m_min_force);
+				SetPadData(m_min_force, m_min_force);
 			});
 		});
 	});
@@ -331,12 +331,17 @@ void pad_settings_dialog::InitButtons()
 
 	connect(ui->b_led, &QPushButton::clicked, [=]()
 	{
-		QColorDialog dlg(QColor(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB), this);
+		QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+		if (ui->b_led->property("led").canConvert<QColor>())
+		{
+			led_color = ui->b_led->property("led").value<QColor>();
+		}
+		QColorDialog dlg(led_color, this);
 		dlg.setWindowTitle(tr("LED Color"));
 		if (dlg.exec() == QColorDialog::Accepted)
 		{
 			const QColor newColor = dlg.selectedColor();
-			m_handler->SetLED(m_device_name, newColor.red(), newColor.green(), newColor.blue());
+			m_handler->SetPadData(m_device_name, 0, 0, newColor.red(), newColor.green(), newColor.blue());
 			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, newColor));
 			ui->b_led->setProperty("led", newColor);
 		}
@@ -416,9 +421,19 @@ void pad_settings_dialog::InitButtons()
 				continue;
 			}
 			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
-			m_handler->GetNextButtonPress(info.name, [=](u16 val, std::string name, std::string pad_name, int preview_values[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->GetNextButtonPress(info.name, [=](u16, std::string, std::string pad_name, int[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
+}
+
+void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor)
+{
+	QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+	if (ui->b_led->property("led").canConvert<QColor>())
+	{
+		led_color = ui->b_led->property("led").value<QColor>();
+	}
+	m_handler->SetPadData(m_device_name, large_motor, small_motor, led_color.red(), led_color.green(), led_color.blue());
 }
 
 void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_connected)
@@ -550,7 +565,7 @@ void pad_settings_dialog::ReloadButtons()
 
 	// Enable and repaint the LED Button
 	m_enable_led = m_handler->has_led();
-	m_handler->SetLED(m_device_name, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+	m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 
 	const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 	ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
@@ -670,7 +685,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 	ReactivateButtons();
 }
 
-void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
+void pad_settings_dialog::mouseMoveEvent(QMouseEvent*/* event*/)
 {
 	if (m_handler->m_type != pad_handler::keyboard)
 	{
@@ -758,7 +773,7 @@ void pad_settings_dialog::UpdateLabel(bool is_reset)
 			const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 			ui->b_led->setProperty("led", led_color);
 			ui->b_led->setIcon(gui::utils::get_colorized_icon(QIcon(":/Icons/controllers.png"), Qt::black, led_color));
-			m_handler->SetLED(m_device_name, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
+			m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 		}
 	}
 
@@ -787,6 +802,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
+	ui->b_blacklist->setEnabled(is_enabled && m_handler->m_type != pad_handler::keyboard);
 
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
@@ -960,7 +976,7 @@ void pad_settings_dialog::ChangeInputType()
 				continue;
 			}
 			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
-			m_handler->GetNextButtonPress(info.name, [=](u16 val, std::string name, std::string pad_name, int preview_values[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->GetNextButtonPress(info.name, [=](u16, std::string, std::string pad_name, int[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 			if (info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);
@@ -1034,7 +1050,6 @@ void pad_settings_dialog::ChangeProfile()
 		((NullPadHandler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::keyboard:
-		ui->b_blacklist->setEnabled(false);
 		((keyboard_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::ds3:

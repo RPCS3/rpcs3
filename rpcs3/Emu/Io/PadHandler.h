@@ -175,7 +175,7 @@ struct Pad
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state;
 
-	// DS4: 0 - 9  while unplugged, 0 - 10 while plugged in, 11 charge complete
+	// DS4: 0 - 9 while unplugged, 0 - 10 while plugged in, 11 charge complete
 	// XInput: 0 = Empty, 1 = Low, 2 = Medium, 3 = Full
 	u8 m_battery_level;
 
@@ -227,6 +227,9 @@ struct Pad
 		, m_port_status(port_status)
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
+		, m_class_type(0)
+		, m_cable_state(0)
+		, m_battery_level(0)
 
 		, m_digital_1(0)
 		, m_digital_2(0)
@@ -343,6 +346,8 @@ struct pad_config final : cfg::node
 	cfg::string l2      { this, "L2", "" };
 	cfg::string l3      { this, "L3", "" };
 
+	cfg::_int<0, 200> lstickmultiplier{this, "Left Stick Multiplier", 100};
+	cfg::_int<0, 200> rstickmultiplier{this, "Right Stick Multiplier", 100};
 	cfg::_int<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
@@ -434,9 +439,9 @@ protected:
 
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 	// the input values must lie in 0+
-	u16 NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 maximum);
+	u16 NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum);
 
-	u16 NormalizeStickInput(u16 raw_value, int threshold, bool ignore_threshold = false);
+	u16 NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold = false);
 
 	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
 	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
@@ -483,8 +488,7 @@ public:
 	virtual ~PadHandlerBase() = default;
 	//Sets window to config the controller(optional)
 	virtual void GetNextButtonPress(const std::string& /*padId*/, const std::function<void(u16, std::string, std::string, int[])>& /*callback*/, const std::function<void(std::string)>& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) {}
-	virtual void TestVibration(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/) {}
-	virtual void SetLED(const std::string& /*padId*/, s32 /*r*/, s32 /*g*/, s32 /*b*/) {}
+	virtual void SetPadData(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/) {}
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	//Callback called during pad_thread::ThreadFunc

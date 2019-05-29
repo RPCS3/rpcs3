@@ -18,7 +18,7 @@ namespace Ui
 struct pad_info
 {
 	std::string name;
-	bool is_connected;
+	bool is_connected{false};
 };
 
 Q_DECLARE_METATYPE(pad_info);
@@ -104,7 +104,7 @@ private:
 	std::string m_title_id;
 
 	// TabWidget
-	QTabWidget* m_tabs;
+	QTabWidget* m_tabs = nullptr;
 
 	// Capabilities
 	bool m_enable_buttons{ false };
@@ -113,7 +113,7 @@ private:
 	bool m_enable_led{ false };
 
 	// Button Mapping
-	QButtonGroup* m_padButtons;
+	QButtonGroup* m_padButtons = nullptr;
 	u32 m_button_id = id_pad_begin;
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
 
@@ -124,8 +124,8 @@ private:
 	int ry = 0;
 
 	// Rumble
-	s32 m_min_force;
-	s32 m_max_force;
+	s32 m_min_force = 0;
+	s32 m_max_force = 0;
 
 	// Backup for standard button palette
 	QPalette m_palette;
@@ -147,6 +147,9 @@ private:
 
 	// Input timer. Its Callback handles the input
 	QTimer m_timer_input;
+
+	// Set vibrate data while keeping the current color
+	void SetPadData(u32 large_motor, u32 small_motor);
 
 	/** Update all the Button Labels with current button mapping */
 	void UpdateLabel(bool is_reset = false);

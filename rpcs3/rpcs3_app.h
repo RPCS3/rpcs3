@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 
@@ -52,7 +52,7 @@ private:
 	void InitializeCallbacks();
 	void InitializeConnects();
 
-	main_window* RPCS3MainWin;
+	main_window* RPCS3MainWin = nullptr;
 
 	std::shared_ptr<gui_settings> guiSettings;
 	std::shared_ptr<emu_settings> emuSettings;

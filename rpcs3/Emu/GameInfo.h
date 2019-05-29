@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 struct GameInfo
 {
@@ -11,11 +11,11 @@ struct GameInfo
 	std::string category;
 	std::string fw;
 
-	u32 attr;
-	u32 bootable;
-	u32 parental_lvl;
-	u32 sound_format;
-	u32 resolution;
+	u32 attr = 0;
+	u32 bootable = 0;
+	u32 parental_lvl = 0;
+	u32 sound_format = 0;
+	u32 resolution = 0;
 
 	GameInfo()
 	{
