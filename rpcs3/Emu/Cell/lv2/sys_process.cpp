@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -314,7 +314,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		}
 
 		Emu.SetForceBoot(true);
-		Emu.BootGame(path, true);
+		Emu.BootGame(path, "", true);
 	});
 
 	ppu.state += cpu_flag::dbg_global_stop;

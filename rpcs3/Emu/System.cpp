@@ -593,7 +593,7 @@ void Emulator::LimitCacheSize()
 	LOG_SUCCESS(GENERAL, "Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
 }
 
-bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, bool force_global_config)
+bool Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
 {
 	if (g_cfg.vfs.limit_cache_size)
 		LimitCacheSize();
@@ -612,7 +612,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, boo
 	if (direct && fs::exists(path))
 	{
 		m_path = path;
-		Load(add_only, force_global_config);
+		Load(title_id, add_only, force_global_config);
 		return true;
 	}
 
@@ -624,7 +624,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, boo
 		if (fs::is_file(elf))
 		{
 			m_path = elf;
-			Load(add_only, force_global_config);
+			Load(title_id, add_only, force_global_config);
 			success = true;
 			break;
 		}
@@ -634,6 +634,11 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, boo
 	{
 		for (auto&& entry : fs::dir{ path })
 		{
+			if (entry.name == "." || entry.name == "..")
+			{
+				continue;
+			}
+
 			if (entry.is_directory && std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
 			{
 				const std::string elf = path + "/" + entry.name + "/USRDIR/EBOOT.BIN";
@@ -641,7 +646,7 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, boo
 				if (fs::is_file(elf))
 				{
 					m_path = elf;
-					Load(add_only, force_global_config);
+					Load(title_id, add_only, force_global_config);
 					success = true;
 				}
 			}
@@ -700,8 +705,37 @@ std::string Emulator::GetHdd1Dir()
 	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
 }
 
-std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user)
+std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id)
 {
+	if (fs::is_file(game_path + "/PS3_DISC.SFB"))
+	{
+		// This is a disc game.
+		if (!title_id.empty())
+		{
+			for (auto&& entry : fs::dir{game_path})
+			{
+				if (entry.name == "." || entry.name == "..")
+				{
+					continue;
+				}
+
+				const std::string sfo_path = game_path + "/" + entry.name + "/PARAM.SFO";
+
+				if (entry.is_directory && fs::is_file(sfo_path))
+				{
+					const auto psf           = psf::load_object(fs::file(sfo_path));
+					const std::string serial = get_string(psf, "TITLE_ID");
+					if (serial == title_id)
+					{
+						return game_path + "/" + entry.name;
+					}
+				}
+			}
+		}
+
+		return game_path + "/PS3_GAME";
+	}
+
 	const auto psf = psf::load_object(fs::file(game_path + "/PARAM.SFO"));
 
 	const std::string category   = get_string(psf, "CATEGORY");
@@ -762,11 +796,16 @@ void Emulator::SetForceBoot(bool force_boot)
 	m_force_boot = force_boot;
 }
 
-void Emulator::Load(bool add_only, bool force_global_config)
+void Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config)
 {
 	if (!IsStopped())
 	{
 		Stop();
+	}
+
+	if (!title_id.empty())
+	{
+		m_title_id = title_id;
 	}
 
 	try
@@ -797,7 +836,7 @@ void Emulator::Load(bool add_only, bool force_global_config)
 			if (fs::is_dir(m_path))
 			{
 				// Special case (directory scan)
-				m_sfo_dir = GetSfoDirFromGamePath(m_path, GetUsr());
+				m_sfo_dir = GetSfoDirFromGamePath(m_path, GetUsr(), m_title_id);
 			}
 			else if (disc.size())
 			{
@@ -812,12 +851,12 @@ void Emulator::Load(bool add_only, bool force_global_config)
 				}
 				else
 				{
-					m_sfo_dir = GetSfoDirFromGamePath(disc, GetUsr());
+					m_sfo_dir = GetSfoDirFromGamePath(disc, GetUsr(), m_title_id);
 				}
 			}
 			else
 			{
-				m_sfo_dir = GetSfoDirFromGamePath(elf_dir + "/../", GetUsr());
+				m_sfo_dir = GetSfoDirFromGamePath(elf_dir + "/../", GetUsr(), m_title_id);
 			}
 
 			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
@@ -1074,8 +1113,7 @@ void Emulator::Load(bool add_only, bool force_global_config)
 			// Load /dev_bdvd/ from game list if available
 			if (auto node = games[m_title_id])
 			{
-				const std::string game_dir = node.Scalar();
-				bdvd_dir = game_dir.substr(0, game_dir.size() - game_dir_size);
+				bdvd_dir = node.Scalar();
 			}
 			else
 			{
@@ -1109,7 +1147,7 @@ void Emulator::Load(bool add_only, bool force_global_config)
 			}
 
 			// Store /dev_bdvd/ location
-			games[m_title_id] = bdvd_dir + m_game_dir;
+			games[m_title_id] = bdvd_dir;
 			YAML::Emitter out;
 			out << games;
 			fs::file(fs::get_config_dir() + "/games.yml", fs::rewrite).write(out.c_str(), out.size());
