@@ -11,7 +11,9 @@ namespace rsx
 	enum surface_state_flags : u32
 	{
 		ready = 0,
-		erase_bkgnd = 1
+		erase_bkgnd = 1,
+		require_resolve = 2,
+		require_unresolve = 4
 	};
 
 	template <typename surface_type>
@@ -119,8 +121,11 @@ namespace rsx
 		u8  samples_x = 1;
 		u8  samples_y = 1;
 
+		std::unique_ptr<typename std::remove_pointer<image_storage_type>::type> resolve_surface;
+
 		flags32_t memory_usage_flags = surface_usage_flags::unknown;
 		flags32_t state_flags = surface_state_flags::ready;
+		flags32_t msaa_flags = surface_state_flags::ready;
 
 		union
 		{
@@ -410,7 +415,7 @@ namespace rsx
 			}
 		}
 
-		void on_write(u64 write_tag = 0)
+		void on_write(u64 write_tag = 0, rsx::surface_state_flags resolve_flags = surface_state_flags::require_resolve)
 		{
 			if (write_tag)
 			{
@@ -424,10 +429,20 @@ namespace rsx
 			// HACK!! This should be cleared through memory barriers only
 			state_flags = rsx::surface_state_flags::ready;
 
+			if (spp > 1)
+			{
+				msaa_flags = resolve_flags;
+			}
+
 			if (old_contents.source)
 			{
 				clear_rw_barrier();
 			}
+		}
+
+		void on_write_copy(u64 write_tag = 0)
+		{
+			on_write(write_tag, rsx::surface_state_flags::require_unresolve);
 		}
 
 		// Returns the rect area occupied by this surface expressed as an 8bpp image with no AA
@@ -457,6 +472,17 @@ namespace rsx
 		}
 
 		template <typename T>
+		void transform_pixels_to_samples(area_base<T>& area)
+		{
+			if (LIKELY(spp == 1)) return;
+
+			area.x1 *= samples_x;
+			area.x2 *= samples_x;
+			area.y1 *= samples_y;
+			area.y2 *= samples_y;
+		}
+
+		template <typename T>
 		void transform_samples_to_pixels(T& x1, T& x2, T& y1, T& y2)
 		{
 			if (LIKELY(spp == 1)) return;
@@ -465,6 +491,17 @@ namespace rsx
 			x2 /= samples_x;
 			y1 /= samples_y;
 			y2 /= samples_y;
+		}
+
+		template <typename T>
+		void transform_pixels_to_samples(T& x1, T& x2, T& y1, T& y2)
+		{
+			if (LIKELY(spp == 1)) return;
+
+			x1 *= samples_x;
+			x2 *= samples_x;
+			y1 *= samples_y;
+			y2 *= samples_y;
 		}
 	};
 }

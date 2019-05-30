@@ -89,10 +89,10 @@ namespace vk
 			return std::make_pair(VK_FORMAT_R32G32B32A32_SFLOAT, vk::default_component_map());
 
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_rgb);
+			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, o_rgb);
 
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_rgb);
+			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, z_rgb);
 
 		case rsx::surface_color_format::b8:
 		{
@@ -539,7 +539,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.7");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.8");
 
 	open_command_buffer();
 
@@ -1566,7 +1566,11 @@ void VKGSRender::end()
 			if (!image_ptr)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::vertex_texture_names[i], m_current_frame->descriptor_set);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					i,
+					::glsl::program_domain::glsl_vertex_program,
+					m_current_frame->descriptor_set);
+
 				continue;
 			}
 
@@ -1623,16 +1627,6 @@ void VKGSRender::end()
 		m_current_command_buffer->flags |= vk::command_buffer::cb_has_occlusion_task;
 	}
 
-	// Final heap check...
-	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
-
-	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
-	// Only textures are synchronized tightly with the GPU and they have been read back above
-	vk::enter_uninterruptible();
-
-	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-	update_draw_state();
-
 	// Apply write memory barriers
 	if (true)//g_cfg.video.strict_rendering_mode)
 	{
@@ -1681,6 +1675,16 @@ void VKGSRender::end()
 				buffers_to_clear.data(), 1, &rect);
 		}
 	}
+
+	// Final heap check...
+	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
+
+	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
+	// Only textures are synchronized tightly with the GPU and they have been read back above
+	vk::enter_uninterruptible();
+
+	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+	update_draw_state();
 
 	u32 sub_index = 0;
 	rsx::method_registers.current_draw_clause.begin();
@@ -2238,7 +2242,7 @@ void VKGSRender::frame_context_cleanup(frame_context_t *ctx, bool free_resources
 			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
-		vk::reset_compute_tasks();
+		vk::reset_global_resources();
 
 		m_attachment_clear_pass->free_resources();
 		m_depth_converter->free_resources();
@@ -2472,8 +2476,18 @@ bool VKGSRender::load_program()
 		}
 	}
 
+	const auto rasterization_samples = u8((m_current_renderpass_key >> 16) & 0xF);
+	if (rasterization_samples > 1)
+	{
+		properties.state.set_multisample_state(
+			rasterization_samples,
+			rsx::method_registers.msaa_sample_mask(),
+			rsx::method_registers.msaa_enabled(),
+			rsx::method_registers.msaa_alpha_to_coverage_enabled(),
+			rsx::method_registers.msaa_alpha_to_one_enabled());
+	}
+
 	properties.renderpass_key = m_current_renderpass_key;
-	properties.num_targets = (u32)m_draw_buffers.size();
 
 	vk::enter_uninterruptible();
 

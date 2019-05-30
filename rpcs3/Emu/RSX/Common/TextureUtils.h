@@ -38,7 +38,8 @@ namespace rsx
 	enum surface_access : u32
 	{
 		read = 0,
-		write = 1
+		write = 1,
+		transfer = 2
 	};
 
 	//Sampled image descriptor

@@ -2564,7 +2564,7 @@ namespace rsx
 				// Destination dimensions are relaxed (true)
 				dst_area = dst_subres.get_src_area();
 
-				dest_texture = dst_subres.surface->get_surface(rsx::surface_access::write);
+				dest_texture = dst_subres.surface->get_surface(rsx::surface_access::transfer);
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 
 				max_dst_width = (u16)(dst_subres.surface->get_surface_width(rsx::surface_metrics::samples) * typeless_info.dst_scaling_hint);
@@ -2851,7 +2851,7 @@ namespace rsx
 			}
 			else
 			{
-				dst_subres.surface->on_write(rsx::get_shared_tag());
+				dst_subres.surface->on_write_copy(rsx::get_shared_tag());
 				m_rtts.notify_memory_structure_changed();
 			}
 
@@ -2889,13 +2889,13 @@ namespace rsx
 				}
 			}
 
-			if (src_is_render_target)
+			if (0)//src_is_render_target)
 			{
 				// TODO: Specify typeless for high sample counts
 				src_subres.surface->transform_samples_to_pixels(src_area);
 			}
 
-			if (dst_is_render_target)
+			if (0)//dst_is_render_target)
 			{
 				// TODO: Specify typeless for high sample counts
 				dst_subres.surface->transform_samples_to_pixels(dst_area);

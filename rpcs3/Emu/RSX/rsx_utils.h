@@ -577,20 +577,24 @@ namespace rsx
 	template <typename SurfaceType>
 	std::tuple<u16, u16, u16, u16> get_transferable_region(const SurfaceType* surface)
 	{
-		const u16 src_w = surface->old_contents.source->width();
-		const u16 src_h = surface->old_contents.source->height();
-		u16 dst_w = src_w;
-		u16 dst_h = src_h;
-
 		auto src = static_cast<const SurfaceType*>(surface->old_contents.source);
-		dst_w = (dst_w * src->samples_x) / surface->samples_x;
-		dst_h = (dst_h * src->samples_y) / surface->samples_y;
+		auto area1 = surface->get_normalized_memory_area();
+		auto area2 = surface->get_normalized_memory_area();
 
-		const f32 scale_x = (f32)dst_w / src_w;
-		const f32 scale_y = (f32)dst_h / src_h;
+		auto w = std::min(area1.x2, area2.x2);
+		auto h = std::min(area1.y2, area2.y2);
 
-		std::tie(std::ignore, std::ignore, dst_w, dst_h) = clip_region<u16>(dst_w, dst_h, 0, 0, surface->width(), surface->height(), true);
-		return std::make_tuple(u16(dst_w / scale_x), u16(dst_h / scale_y), dst_w, dst_h);
+		const auto src_scale_x = src->get_bpp() * src->samples_x;
+		const auto src_scale_y = src->samples_y;
+		const auto dst_scale_x = surface->get_bpp() * surface->samples_x;
+		const auto dst_scale_y = surface->samples_y;
+
+		const u16 src_w = u16(w / src_scale_x);
+		const u16 src_h = u16(h / src_scale_y);
+		const u16 dst_w = u16(w / dst_scale_x);
+		const u16 dst_h = u16(h / dst_scale_y);
+
+		return std::make_tuple(src_w, src_h, dst_w, dst_h);
 	}
 
 	template <typename SurfaceType>

@@ -677,11 +677,11 @@ namespace rsx
 			{
 				for (auto &tex_info : data)
 				{
-					auto this_address = std::get<0>(tex_info);
+					const auto this_address = tex_info.first;
 					if (this_address >= limit)
 						continue;
 
-					auto surface = std::get<1>(tex_info).get();
+					auto surface = tex_info.second.get();
 					const auto pitch = surface->get_rsx_pitch();
 					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
 						continue;
