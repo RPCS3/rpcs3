@@ -133,6 +133,7 @@ namespace vk
 	void reset_compute_tasks();
 
 	void destroy_global_resources();
+	void reset_global_resources();
 
 	/**
 	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
@@ -171,6 +172,10 @@ namespace vk
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length,
 			VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
+	
+	void insert_image_memory_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout,
+		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask,
+		const VkImageSubresourceRange& range);
 
 	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
 	void enter_uninterruptible();
@@ -1217,7 +1222,7 @@ namespace vk
 	public:
 		using image::image;
 
-		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
+		virtual image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
 		{
 			auto found = views.equal_range(remap_encoding);
@@ -2799,6 +2804,13 @@ public:
 		VkPipelineColorBlendAttachmentState att_state[4];
 		VkPipelineColorBlendStateCreateInfo cs;
 		VkPipelineRasterizationStateCreateInfo rs;
+		VkPipelineMultisampleStateCreateInfo ms;
+
+		struct extra_parameters
+		{
+			VkSampleMask msaa_sample_mask;
+		}
+		temp_storage;
 
 		graphics_pipeline_state()
 		{
@@ -2814,6 +2826,10 @@ public:
 			rs.cullMode = VK_CULL_MODE_NONE;
 			rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			rs.lineWidth = 1.f;
+
+			ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+			ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+			temp_storage.msaa_sample_mask = 0xFFFFFFFF;
 		}
 
 		graphics_pipeline_state(const graphics_pipeline_state& other)
@@ -2973,6 +2989,27 @@ public:
 			cs.attachmentCount = count;
 			cs.pAttachments = att_state;
 		}
+
+		void set_multisample_state(u8 sample_count, u32 sample_mask, bool msaa_enabled, bool alpha_to_coverage, bool alpha_to_one)
+		{
+			temp_storage.msaa_sample_mask = sample_mask;
+
+			ms.rasterizationSamples = static_cast<VkSampleCountFlagBits>(sample_count);
+			ms.alphaToCoverageEnable = alpha_to_coverage;
+			ms.alphaToOneEnable = alpha_to_one;
+
+			if (!msaa_enabled)
+			{
+				// This register is likely glMinSampleShading but in reverse; probably sets max sample shading rate of 1
+				// I (kd-11) suspect its what the control panel setting affects when MSAA is set to disabled
+			}
+		}
+
+		void set_multisample_shading_rate(float shading_rate)
+		{
+			ms.sampleShadingEnable = VK_TRUE;
+			ms.minSampleShading = shading_rate;
+		}
 	};
 
 	namespace glsl
@@ -3095,21 +3132,24 @@ public:
 			std::array<u32, 4>  vs_texture_bindings;
 			bool linked;
 
+			void create_impl();
+
 		public:
 			VkPipeline pipeline;
 			u64 attribute_location_mask;
 			u64 vertex_attributes_mask;
 
 			program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
+			program(VkDevice dev, VkPipeline p);
 			program(const program&) = delete;
 			program(program&& other) = delete;
 			~program();
 
-			program& load_uniforms(::glsl::program_domain domain, const std::vector<program_input>& inputs);
+			program& load_uniforms(const std::vector<program_input>& inputs);
 			program& link();
 
 			bool has_uniform(program_input_type type, const std::string &uniform_name);
-			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorType type, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror = false);
 			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);

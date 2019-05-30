@@ -119,7 +119,7 @@ namespace vk
 		}
 
 		// Decode
-		VkSampleCountFlagBits samples = VkSampleCountFlagBits((renderpass_key >> 16) & 0x1F);
+		VkSampleCountFlagBits samples = VkSampleCountFlagBits((renderpass_key >> 16) & 0xF);
 		std::vector<VkImageLayout> rtv_layouts;
 		VkImageLayout dsv_layout;
 

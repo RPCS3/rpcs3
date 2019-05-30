@@ -80,7 +80,7 @@ namespace vk
 
 			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			bindings[0].descriptorCount = 1;
-			bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+			bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 			bindings[0].binding = 0;
 			bindings[0].pImmutableSamplers = nullptr;
 
@@ -187,11 +187,6 @@ namespace vk
 			vp.scissorCount = 1;
 			vp.viewportCount = 1;
 
-			VkPipelineMultisampleStateCreateInfo ms = {};
-			ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-			ms.pSampleMask = NULL;
-			ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
 			VkPipeline pipeline;
 			VkGraphicsPipelineCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -199,7 +194,7 @@ namespace vk
 			info.pInputAssemblyState = &renderpass_config.ia;
 			info.pRasterizationState = &renderpass_config.rs;
 			info.pColorBlendState = &renderpass_config.cs;
-			info.pMultisampleState = &ms;
+			info.pMultisampleState = &renderpass_config.ms;
 			info.pViewportState = &vp;
 			info.pDepthStencilState = &renderpass_config.ds;
 			info.stageCount = 2;
@@ -253,7 +248,7 @@ namespace vk
 			for (int n = 0; n < src.size(); ++n)
 			{
 				VkDescriptorImageInfo info = { m_sampler->value, src[n]->value, src[n]->image()->current_layout };
-				program->bind_uniform(info, "fs" + std::to_string(n), m_descriptor_set);
+				program->bind_uniform(info, "fs" + std::to_string(n), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, m_descriptor_set);
 			}
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, program->pipeline);

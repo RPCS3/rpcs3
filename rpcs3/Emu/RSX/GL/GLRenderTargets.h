@@ -94,7 +94,7 @@ namespace gl
 			static_cast<gl::render_target*>(t)->release();
 		}
 
-		texture* get_surface(rsx::surface_access access_type) override
+		texture* get_surface(rsx::surface_access /*access_type*/) override
 		{
 			// TODO
 			return (gl::texture*)this;
@@ -259,7 +259,6 @@ struct gl_render_target_traits
 	void invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, size_t pitch)
 	{
 		surface->set_rsx_pitch((u16)pitch);
-		surface->set_aa_mode(rsx::surface_antialiasing::center_1_sample);
 		surface->queue_tag(address);
 		surface->last_use_tag = 0;
 		surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
@@ -278,7 +277,7 @@ struct gl_render_target_traits
 	}
 
 	static
-	void notify_surface_persist(const std::unique_ptr<gl::render_target>& surface)
+	void notify_surface_persist(const std::unique_ptr<gl::render_target>& /*surface*/)
 	{}
 
 	static
