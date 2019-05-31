@@ -578,7 +578,7 @@ namespace rsx
 	std::tuple<u16, u16, u16, u16> get_transferable_region(const SurfaceType* surface)
 	{
 		auto src = static_cast<const SurfaceType*>(surface->old_contents.source);
-		auto area1 = surface->get_normalized_memory_area();
+		auto area1 = src->get_normalized_memory_area();
 		auto area2 = surface->get_normalized_memory_area();
 
 		auto w = std::min(area1.x2, area2.x2);
