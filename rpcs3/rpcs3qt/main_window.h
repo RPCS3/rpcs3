@@ -89,7 +89,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnPlayOrPause();
-	void Boot(const std::string& path, bool direct = false, bool add_only = false, bool force_global_config = false);
+	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
 	void BootElf();
 	void BootGame();
 	void BootRsxCapture(std::string path = "");
@@ -108,7 +108,8 @@ protected:
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
 	void dragLeaveEvent(QDragLeaveEvent* event) override;
-	void SetAppIconFromPath(const std::string& path);
+	void SetAppIconFromPath(const std::string& path, const std::string& title_id = "");
+
 private:
 	void RepaintToolBarIcons();
 	void RepaintThumbnailIcons();

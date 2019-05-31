@@ -36,6 +36,7 @@
 #include <queue>
 #include <fstream>
 #include <memory>
+#include <regex>
 
 #include "Utilities/GDBDebugServer.h"
 
@@ -592,18 +593,18 @@ void Emulator::LimitCacheSize()
 	LOG_SUCCESS(GENERAL, "Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
 }
 
-bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, bool force_global_config)
+bool Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
 {
 	if (g_cfg.vfs.limit_cache_size)
 		LimitCacheSize();
 
 	static const char* boot_list[] =
 	{
-		"/PS3_GAME/USRDIR/EBOOT.BIN",
-		"/USRDIR/EBOOT.BIN",
-		"/EBOOT.BIN",
 		"/eboot.bin",
+		"/EBOOT.BIN",
+		"/USRDIR/EBOOT.BIN",
 		"/USRDIR/ISO.BIN.EDAT",
+		"/PS3_GAME/USRDIR/EBOOT.BIN",
 	};
 
 	m_path_old = m_path;
@@ -611,10 +612,11 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, boo
 	if (direct && fs::exists(path))
 	{
 		m_path = path;
-		Load(add_only, force_global_config);
+		Load(title_id, add_only, force_global_config);
 		return true;
 	}
 
+	bool success = false;
 	for (std::string elf : boot_list)
 	{
 		elf = path + elf;
@@ -622,12 +624,36 @@ bool Emulator::BootGame(const std::string& path, bool direct, bool add_only, boo
 		if (fs::is_file(elf))
 		{
 			m_path = elf;
-			Load(add_only, force_global_config);
-			return true;
+			Load(title_id, add_only, force_global_config);
+			success = true;
+			break;
 		}
 	}
 
-	return false;
+	if (add_only)
+	{
+		for (auto&& entry : fs::dir{ path })
+		{
+			if (entry.name == "." || entry.name == "..")
+			{
+				continue;
+			}
+
+			if (entry.is_directory && std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+			{
+				const std::string elf = path + "/" + entry.name + "/USRDIR/EBOOT.BIN";
+
+				if (fs::is_file(elf))
+				{
+					m_path = elf;
+					Load(title_id, add_only, force_global_config);
+					success = true;
+				}
+			}
+		}
+	}
+
+	return success;
 }
 
 bool Emulator::InstallPkg(const std::string& path)
@@ -679,11 +705,34 @@ std::string Emulator::GetHdd1Dir()
 	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
 }
 
-std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user)
+std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id)
 {
 	if (fs::is_file(game_path + "/PS3_DISC.SFB"))
 	{
 		// This is a disc game.
+		if (!title_id.empty())
+		{
+			for (auto&& entry : fs::dir{game_path})
+			{
+				if (entry.name == "." || entry.name == "..")
+				{
+					continue;
+				}
+
+				const std::string sfo_path = game_path + "/" + entry.name + "/PARAM.SFO";
+
+				if (entry.is_directory && fs::is_file(sfo_path))
+				{
+					const auto psf           = psf::load_object(fs::file(sfo_path));
+					const std::string serial = get_string(psf, "TITLE_ID");
+					if (serial == title_id)
+					{
+						return game_path + "/" + entry.name;
+					}
+				}
+			}
+		}
+
 		return game_path + "/PS3_GAME";
 	}
 
@@ -747,11 +796,16 @@ void Emulator::SetForceBoot(bool force_boot)
 	m_force_boot = force_boot;
 }
 
-void Emulator::Load(bool add_only, bool force_global_config)
+void Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config)
 {
 	if (!IsStopped())
 	{
 		Stop();
+	}
+
+	if (!title_id.empty())
+	{
+		m_title_id = title_id;
 	}
 
 	try
@@ -782,14 +836,14 @@ void Emulator::Load(bool add_only, bool force_global_config)
 			if (fs::is_dir(m_path))
 			{
 				// Special case (directory scan)
-				m_sfo_dir = GetSfoDirFromGamePath(m_path, GetUsr());
+				m_sfo_dir = GetSfoDirFromGamePath(m_path, GetUsr(), m_title_id);
 			}
 			else if (disc.size())
 			{
 				// Check previously used category before it's overwritten
 				if (m_cat == "DG")
 				{
-					m_sfo_dir = disc + "/PS3_GAME";
+					m_sfo_dir = disc + "/" + m_game_dir;
 				}
 				else if (m_cat == "GD")
 				{
@@ -797,12 +851,12 @@ void Emulator::Load(bool add_only, bool force_global_config)
 				}
 				else
 				{
-					m_sfo_dir = GetSfoDirFromGamePath(disc, GetUsr());
+					m_sfo_dir = GetSfoDirFromGamePath(disc, GetUsr(), m_title_id);
 				}
 			}
 			else
 			{
-				m_sfo_dir = GetSfoDirFromGamePath(elf_dir + "/../", GetUsr());
+				m_sfo_dir = GetSfoDirFromGamePath(elf_dir + "/../", GetUsr(), m_title_id);
 			}
 
 			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
@@ -1019,7 +1073,8 @@ void Emulator::Load(bool add_only, bool force_global_config)
 		// Detect boot location
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
-		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/PS3_GAME/") + 1 : 0;
+		const std::size_t game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
+		const std::size_t bdvd_pos = m_cat == "DG" && bdvd_dir.empty() && disc.empty() ? elf_dir.rfind("/USRDIR") - game_dir_size : 0;
 		const bool from_hdd0_game = m_path.find(hdd0_game) != -1;
 
 		if (bdvd_pos && from_hdd0_game)
@@ -1045,6 +1100,11 @@ void Emulator::Load(bool add_only, bool force_global_config)
 		{
 			// Mount /dev_bdvd/ if necessary
 			bdvd_dir = elf_dir.substr(0, bdvd_pos);
+			m_game_dir = elf_dir.substr(bdvd_pos, game_dir_size);
+		}
+		else
+		{
+			m_game_dir = "PS3_GAME"; // reset
 		}
 
 		// Booting patch data
@@ -1068,6 +1128,9 @@ void Emulator::Load(bool add_only, bool force_global_config)
 
 			vfs::mount("/dev_bdvd", bdvd_dir);
 			LOG_NOTICE(LOADER, "Disc: %s", vfs::get("/dev_bdvd"));
+
+			vfs::mount("/dev_bdvd/PS3_GAME", bdvd_dir + m_game_dir + "/");
+			LOG_NOTICE(LOADER, "Game: %s", vfs::get("/dev_bdvd/PS3_GAME"));
 
 			if (!sfb_file.open(vfs::get("/dev_bdvd/PS3_DISC.SFB")) || sfb_file.size() < 4 || sfb_file.read<u32>() != ".SFB"_u32)
 			{
@@ -1167,9 +1230,10 @@ void Emulator::Load(bool add_only, bool force_global_config)
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
-					if (!entry.is_directory && ends_with(entry.name, ".PKG") && !InstallPkg(ins_dir + entry.name))
+					const std::string pkg = ins_dir + entry.name;
+					if (!entry.is_directory && ends_with(entry.name, ".PKG") && !InstallPkg(pkg))
 					{
-						LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/INSDIR/%s", entry.name);
+						LOG_ERROR(LOADER, "Failed to install %s", pkg);
 						return;
 					}
 				}
@@ -1187,7 +1251,7 @@ void Emulator::Load(bool add_only, bool force_global_config)
 
 						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
 						{
-							LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/PKGDIR/%s/INSTALL.PKG", entry.name);
+							LOG_ERROR(LOADER, "Failed to install %s", pkg_file);
 							return;
 						}
 					}
@@ -1206,7 +1270,7 @@ void Emulator::Load(bool add_only, bool force_global_config)
 
 						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
 						{
-							LOG_ERROR(LOADER, "Failed to install /dev_bdvd/PS3_GAME/PKGDIR/%s/DATA000.PKG", entry.name);
+							LOG_ERROR(LOADER, "Failed to install %s", pkg_file);
 							return;
 						}
 					}
@@ -1319,8 +1383,8 @@ void Emulator::Load(bool add_only, bool force_global_config)
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
-					const std::size_t pos = m_path.rfind("PS3_GAME");
-					argv[0] = "/dev_bdvd/" + m_path.substr(pos);
+					const std::size_t pos = m_path.rfind(m_game_dir);
+					argv[0] = "/dev_bdvd/PS3_GAME/" + m_path.substr(pos + game_dir_size + 1);
 					m_dir = "/dev_bdvd/PS3_GAME/";
 				}
 				else

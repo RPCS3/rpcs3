@@ -15,6 +15,7 @@
 #include <iterator>
 #include <memory>
 #include <set>
+#include <regex>
 
 #include <QDesktopServices>
 #include <QHeaderView>
@@ -386,13 +387,40 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		std::vector<std::string> path_list;
 
+		const auto add_disc_dir = [&](const std::string& path)
+		{
+			for (const auto& entry : fs::dir(path))
+			{
+				if (!entry.is_directory || entry.name == "." || entry.name == "..")
+				{
+					continue;
+				}
+
+				if (entry.name == "PS3_GAME" || std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+				{
+					path_list.emplace_back(path + "/" + entry.name);
+				}
+			}
+		};
+
 		const auto add_dir = [&](const std::string& path)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
-				if (entry.is_directory)
+				if (entry.name == "." || entry.name == "..")
 				{
-					path_list.emplace_back(path + entry.name);
+					continue;
+				}
+
+				const std::string entry_path = path + entry.name;
+
+				if (fs::is_file(entry_path + "/PS3_DISC.SFB"))
+				{
+					add_disc_dir(entry_path);
+				}
+				else if (entry.is_directory)
+				{
+					path_list.emplace_back(entry_path);
 				}
 			}
 		};
@@ -402,8 +430,17 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
 		{
-			path_list.push_back(pair.second.Scalar());
-			path_list.back().resize(path_list.back().find_last_not_of('/') + 1);
+			const std::string game_dir = pair.second.Scalar();
+
+			if (fs::is_file(game_dir + "/PS3_DISC.SFB"))
+			{
+				add_disc_dir(game_dir);
+			}
+			else
+			{
+				path_list.push_back(game_dir);
+				path_list.back().resize(path_list.back().find_last_not_of('/') + 1);
+			}
 		}
 
 		// Used to remove duplications from the list (serial -> set of cat names)
@@ -648,7 +685,7 @@ void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 	}
 
 	LOG_NOTICE(LOADER, "Booting from gamelist per doubleclick...");
-	Q_EMIT RequestBoot(game->info.path);
+	Q_EMIT RequestBoot(game);
 }
 
 void game_list_frame::ShowContextMenu(const QPoint &pos)
@@ -693,7 +730,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		connect(boot_custom, &QAction::triggered, [=]
 		{
 			LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
-			Q_EMIT RequestBoot(currGame.path);
+			Q_EMIT RequestBoot(gameinfo);
 		});
 	}
 	else
@@ -787,7 +824,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(boot, &QAction::triggered, [=]
 	{
 		LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
-		Q_EMIT RequestBoot(currGame.path, gameinfo->hasCustomConfig);
+		Q_EMIT RequestBoot(gameinfo, gameinfo->hasCustomConfig);
 	});
 	connect(configure, &QAction::triggered, [=]
 	{
@@ -835,7 +872,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(createPPUCache, &QAction::triggered, [=]
 	{
-		CreatePPUCache(currGame.path);
+		CreatePPUCache(gameinfo);
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
@@ -961,20 +998,20 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	myMenu.exec(globalPos);
 }
 
-bool game_list_frame::CreatePPUCache(const std::string& path)
+bool game_list_frame::CreatePPUCache(const game_info& game)
 {
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 	Emu.SetForceBoot(true);
-	const bool success = Emu.BootGame(path, true);
+	const bool success = Emu.BootGame(game->info.path, game->info.serial, true);
 
 	if (success)
 	{
-		LOG_WARNING(GENERAL, "Creating PPU Cache for %s", path);
+		LOG_WARNING(GENERAL, "Creating PPU Cache for %s", game->info.path);
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Could not create PPU Cache for %s", path);
+		LOG_ERROR(GENERAL, "Could not create PPU Cache for %s", game->info.path);
 	}
 	return success;
 }
@@ -1171,12 +1208,7 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 
 void game_list_frame::BatchCreatePPUCaches()
 {
-	std::set<std::string> paths;
-	for (const auto& game : m_game_data)
-	{
-		paths.emplace(game->info.path);
-	}
-	const u32 total = paths.size();
+	const u32 total = m_game_data.size();
 
 	if (total == 0)
 	{
@@ -1191,7 +1223,7 @@ void game_list_frame::BatchCreatePPUCaches()
 	pdlg->show();
 
 	u32 created = 0;
-	for (const auto& path : paths)
+	for (const auto& game : m_game_data)
 	{
 		if (pdlg->wasCanceled())
 		{
@@ -1200,7 +1232,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		}
 		QApplication::processEvents();
 
-		if (CreatePPUCache(path))
+		if (CreatePPUCache(game))
 		{
 			while (!Emu.IsStopped())
 			{
@@ -1635,7 +1667,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 					return false;
 
 				LOG_NOTICE(LOADER, "Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");
-				Q_EMIT RequestBoot(gameinfo->info.path);
+				Q_EMIT RequestBoot(gameinfo);
 
 				return true;
 			}

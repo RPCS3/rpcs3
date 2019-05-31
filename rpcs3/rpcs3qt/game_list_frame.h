@@ -228,7 +228,7 @@ private Q_SLOTS:
 	void doubleClickedSlot(QTableWidgetItem *item);
 Q_SIGNALS:
 	void GameListFrameClosed();
-	void RequestBoot(const std::string& path, bool force_global_config = false);
+	void RequestBoot(const game_info& game, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
@@ -251,7 +251,7 @@ private:
 	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
-	bool CreatePPUCache(const std::string& path);
+	bool CreatePPUCache(const game_info& game);
 
 	std::string GetCacheDirBySerial(const std::string& serial);
 	std::string GetDataDirBySerial(const std::string& serial);
