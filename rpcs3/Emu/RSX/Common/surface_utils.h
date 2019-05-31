@@ -80,11 +80,26 @@ namespace rsx
 			{
 				// Perform intersection here
 				const auto region = rsx::get_transferable_region(target_surface);
-				width = std::get<0>(region);
-				height = std::get<1>(region);
 
-				transfer_scale_x = f32(std::get<2>(region)) / width;
-				transfer_scale_y = f32(std::get<3>(region)) / height;
+				auto src_w = std::get<0>(region);
+				auto src_h = std::get<1>(region);
+				auto dst_w = std::get<2>(region);
+				auto dst_h = std::get<3>(region);
+
+				// Apply resolution scale if needed
+				if (g_cfg.video.resolution_scale_percent != 100)
+				{
+					auto src = static_cast<T>(source);
+					src_w = rsx::apply_resolution_scale(src_w, true, src->get_surface_width(rsx::surface_metrics::pixels));
+					src_h = rsx::apply_resolution_scale(src_h, true, src->get_surface_height(rsx::surface_metrics::pixels));
+					dst_w = rsx::apply_resolution_scale(dst_w, true, target_surface->get_surface_width(rsx::surface_metrics::pixels));
+					dst_h = rsx::apply_resolution_scale(dst_h, true, target_surface->get_surface_height(rsx::surface_metrics::pixels));
+				}
+
+				width = src_w;
+				height = src_h;
+				transfer_scale_x = f32(dst_w) / src_w;
+				transfer_scale_y = f32(dst_h) / src_h;
 
 				target = target_surface;
 			}
