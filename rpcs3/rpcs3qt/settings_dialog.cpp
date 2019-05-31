@@ -1346,9 +1346,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings::SPUDebug);
 	SubscribeTooltip(ui->spuDebug, json_debug["spuDebug"].toString());
 
-	xemu_settings->EnhanceCheckBox(ui->spuVerification, emu_settings::SPUVerification);
-	SubscribeTooltip(ui->spuVerification, json_debug["spuVerification"].toString());
-
 	xemu_settings->EnhanceCheckBox(ui->setDAZandFTZ, emu_settings::SetDAZandFTZ);
 	SubscribeTooltip(ui->setDAZandFTZ, json_debug["setDAZandFTZ"].toString());
 

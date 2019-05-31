@@ -45,7 +45,6 @@ public:
 		SetDAZandFTZ,
 		SPUBlockSize,
 		SPUCache,
-		SPUVerification,
 		DebugConsoleMode,
 		MaxSPURSThreads,
 
@@ -255,7 +254,6 @@ private:
 		{ SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
 		{ SPUBlockSize,             { "Core", "SPU Block Size"}},
 		{ SPUCache,                 { "Core", "SPU Cache"}},
-		{ SPUVerification,          { "Core", "SPU Verification"}},
 		{ DebugConsoleMode,         { "Core", "Debug Console Mode"}},
 		{ MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
 
