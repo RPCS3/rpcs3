@@ -365,7 +365,8 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 
 void VKVertexProgram::Compile()
 {
-	fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+	if (g_cfg.video.log_programs)
+		fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
 	handle = shader.compile();
 }
 

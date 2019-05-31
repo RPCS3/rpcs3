@@ -12,6 +12,7 @@
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
 
+#include "Emu/System.h"
 #include "Utilities/geometry.h"
 
 #define GL_FRAGMENT_TEXTURES_START 0
@@ -2421,7 +2422,7 @@ public:
 			{
 				const char* str = src.c_str();
 				const GLint length = (GLint)src.length();
-
+				if (g_cfg.video.log_programs)
 				{
 					std::string base_name;
 					switch (shader_type)

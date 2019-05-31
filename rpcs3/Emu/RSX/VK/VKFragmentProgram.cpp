@@ -455,7 +455,8 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 
 void VKFragmentProgram::Compile()
 {
-	fs::file(fs::get_cache_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+	if (g_cfg.video.log_programs)
+		fs::file(fs::get_cache_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
 	handle = shader.compile();
 }
 
