@@ -1051,13 +1051,13 @@ void VKGSRender::begin()
 			m_aux_frame_context.grab_resources(*m_current_frame);
 			m_current_frame = &m_aux_frame_context;
 		}
-
-		verify(HERE), !m_current_frame->swap_command_buffer;
-		if (m_current_frame->used_descriptors)
+		else if (m_current_frame->used_descriptors)
 		{
 			m_current_frame->descriptor_pool.reset(0);
 			m_current_frame->used_descriptors = 0;
 		}
+
+		verify(HERE), !m_current_frame->swap_command_buffer;
 
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}

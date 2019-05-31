@@ -1,6 +1,6 @@
 #pragma once
 #include "../Common/ShaderParam.h"
-#include "../Common/GLSLCommon.h"
+#include "../Common/GLSLTypes.h"
 
 namespace vk
 {

@@ -40,9 +40,6 @@ namespace vk
 			if (memcmp(&state.ds, &other.state.ds, sizeof(VkPipelineDepthStencilStateCreateInfo)))
 				return false;
 
-			if (num_targets != other.num_targets)
-				return false;
-
 			return num_targets == other.num_targets;
 		}
 	};

@@ -4,6 +4,7 @@
 #include "VKVertexProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
+#include "../Common/GLSLCommon.h"
 
 std::string VKVertexDecompilerThread::getFloatTypeName(size_t elementCount)
 {
@@ -205,7 +206,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.low_precision_tests = false;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
-	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_rpirv);
+	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
 
 	std::string parameters = "";
 	for (int i = 0; i < 16; ++i)
@@ -364,7 +365,8 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 
 void VKVertexProgram::Compile()
 {
-	fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+	if (g_cfg.video.log_programs)
+		fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
 	handle = shader.compile();
 }
 
