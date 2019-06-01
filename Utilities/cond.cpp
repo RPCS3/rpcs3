@@ -267,7 +267,7 @@ void cond_x16::imp_notify() noexcept
 		return;
 	}
 
-	balanced_awaken<true>(m_cvx16, utils::popcnt16(wait_mask));
+	balanced_awaken<true>(m_cvx16, utils::popcnt32(wait_mask));
 }
 
 bool lf_queue_base::wait(u64 _timeout)
