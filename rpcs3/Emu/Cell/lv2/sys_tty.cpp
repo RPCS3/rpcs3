@@ -45,7 +45,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 			std::string& input = g_tty_input[ch].front();
 
 			// we have to stop reading at either a new line, the param len, or our input string size
-			size_t new_line_pos = input.find_first_of("\n");
+			size_t new_line_pos = input.find_first_of('\n');
 
 			if (new_line_pos != input.npos)
 			{

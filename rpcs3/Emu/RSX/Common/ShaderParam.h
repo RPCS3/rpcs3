@@ -190,7 +190,7 @@ public:
 			simple_var = var;
 		}
 
-		const auto brace_pos = var.find_last_of(")");
+		const auto brace_pos = var.find_last_of(')');
 		std::string prefix;
 		if (brace_pos != std::string::npos)
 		{
