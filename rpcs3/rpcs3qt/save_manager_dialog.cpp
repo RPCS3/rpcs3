@@ -147,7 +147,7 @@ void save_manager_dialog::UpdateList()
 {
 	if (m_dir == "")
 	{
-		m_dir = Emu.GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
+		m_dir = Emulator::GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
 	}
 
 	m_save_entries = GetSaveEntries(m_dir);

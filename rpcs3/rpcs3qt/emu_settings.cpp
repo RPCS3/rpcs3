@@ -190,7 +190,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 	m_title_id = title_id;
 
 	// Create config path if necessary
-	fs::create_path(title_id.empty() ? fs::get_config_dir() : Emu.GetCustomConfigDir());
+	fs::create_path(title_id.empty() ? fs::get_config_dir() : Emulator::GetCustomConfigDir());
 
 	// Load default config
 	m_defaultSettings = YAML::Load(g_cfg_defaults);
@@ -204,8 +204,8 @@ void emu_settings::LoadSettings(const std::string& title_id)
 	// Add game config
 	if (!title_id.empty())
 	{
-		const std::string config_path_new = Emu.GetCustomConfigPath(m_title_id);
-		const std::string config_path_old = Emu.GetCustomConfigPath(m_title_id, true);
+		const std::string config_path_new = Emulator::GetCustomConfigPath(m_title_id);
+		const std::string config_path_old = Emulator::GetCustomConfigPath(m_title_id, true);
 
 		if (fs::is_file(config_path_new))
 		{
@@ -230,7 +230,7 @@ void emu_settings::SaveSettings()
 
 	if (!m_title_id.empty())
 	{
-		config = fs::file(Emu.GetCustomConfigPath(m_title_id), fs::read + fs::write + fs::create);
+		config = fs::file(Emulator::GetCustomConfigPath(m_title_id), fs::read + fs::write + fs::create);
 	}
 	else
 	{

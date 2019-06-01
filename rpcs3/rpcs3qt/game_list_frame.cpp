@@ -380,7 +380,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		m_game_data.clear();
 		m_notes.clear();
 
-		const std::string _hdd = Emu.GetHddDir();
+		const std::string _hdd = Emulator::GetHddDir();
 		const std::string cat_DG = sstr(category::disc_game);
 		const std::string cat_GD = sstr(category::ps3_data);
 		const std::string cat_unknown = sstr(category::unknown);
@@ -450,7 +450,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		for (const auto& dir : path_list) { try
 		{
-			const std::string sfo_dir = Emu.GetSfoDirFromGamePath(dir, Emu.GetUsr());
+			const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir, Emu.GetUsr());
 			const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
 			if (!sfo_file)
 			{
@@ -514,8 +514,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			const auto compat = m_game_compat->GetCompatibility(game.serial);
 
-			const bool hasCustomConfig = fs::is_file(Emu.GetCustomConfigPath(game.serial)) || fs::is_file(Emu.GetCustomConfigPath(game.serial, true));
-			const bool hasCustomPadConfig = fs::is_file(Emu.GetCustomInputConfigPath(game.serial));
+			const bool hasCustomConfig = fs::is_file(Emulator::GetCustomConfigPath(game.serial)) || fs::is_file(Emulator::GetCustomConfigPath(game.serial, true));
+			const bool hasCustomPadConfig = fs::is_file(Emulator::GetCustomInputConfigPath(game.serial));
 
 			const QColor color = getGridCompatibilityColor(compat.color);
 			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, hasCustomPadConfig, color);
@@ -796,10 +796,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = myMenu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [=]()
 		{
-			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial)))
-				open_dir(Emu.GetCustomConfigDir());
+			if (fs::is_file(Emulator::GetCustomConfigPath(currGame.serial)))
+				open_dir(Emulator::GetCustomConfigDir());
 
-			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial, true)))
+			if (fs::is_file(Emulator::GetCustomConfigPath(currGame.serial, true)))
 				open_dir(data_base_dir);
 		});
 	}
@@ -1018,8 +1018,8 @@ bool game_list_frame::CreatePPUCache(const game_info& game)
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, game_info game, bool is_interactive)
 {
-	const std::string config_path_new = Emu.GetCustomConfigPath(title_id);
-	const std::string config_path_old = Emu.GetCustomConfigPath(title_id, true);
+	const std::string config_path_new = Emulator::GetCustomConfigPath(title_id);
+	const std::string config_path_old = Emulator::GetCustomConfigPath(title_id, true);
 
 	if (!fs::is_file(config_path_new) && !fs::is_file(config_path_old))
 		return true;
@@ -1060,7 +1060,7 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, gam
 
 bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, game_info game, bool is_interactive)
 {
-	const std::string config_dir = Emu.GetCustomInputConfigDir(title_id);
+	const std::string config_dir = Emulator::GetCustomConfigPath(title_id);
 
 	if (!fs::is_dir(config_dir))
 		return true;

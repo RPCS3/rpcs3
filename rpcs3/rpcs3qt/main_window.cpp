@@ -198,7 +198,7 @@ void main_window::SetAppIconFromPath(const std::string& path, const std::string&
 			continue;
 		}
 
-		const std::string sfo_dir = Emu.GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
+		const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
 		const std::string ico     = sfo_dir + "/ICON0.PNG";
 		if (fs::is_file(ico))
 		{
@@ -1899,7 +1899,7 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
-			if (!fs::copy_file(sstr(rap), Emu.GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
+			if (!fs::copy_file(sstr(rap), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
 			{
 				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
 			}
