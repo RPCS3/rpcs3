@@ -394,7 +394,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	//Actually confirm  that the loader found at least one compatible device
 	//This should not happen unless something is wrong with the driver setup on the target system
-	if (gpus.size() == 0)
+	if (gpus.empty())
 	{
 		//We can't throw in Emulator::Load, so we show error and return
 		LOG_FATAL(RSX, "No compatible GPU devices found");
@@ -2167,7 +2167,7 @@ void VKGSRender::clear_surface(u32 mask)
 		}
 	}
 
-	if (clear_descriptors.size() > 0)
+	if (!clear_descriptors.empty())
 	{
 		begin_render_pass();
 		vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
@@ -3538,7 +3538,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 		return true;
 
 	auto &data = found->second;
-	if (data.indices.size() == 0)
+	if (data.indices.empty())
 		return true;
 
 	if (data.command_buffer_to_wait == m_current_command_buffer)
@@ -3568,7 +3568,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		return;
 
 	auto &data = found->second;
-	if (data.indices.size() == 0)
+	if (data.indices.empty())
 		return;
 
 	if (query->num_draws)
@@ -3618,7 +3618,7 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 		return;
 
 	auto &data = found->second;
-	if (data.indices.size() == 0)
+	if (data.indices.empty())
 		return;
 
 	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);

@@ -364,7 +364,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 
 	if (get_blacklist)
 	{
-		if (blacklist.size() <= 0)
+		if (blacklist.empty())
 			LOG_SUCCESS(HLE, "Evdev Calibration: Blacklist is clear. No input spam detected");
 		return;
 	}

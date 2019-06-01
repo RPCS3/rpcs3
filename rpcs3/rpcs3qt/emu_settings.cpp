@@ -155,7 +155,7 @@ emu_settings::Render_Creator::Render_Creator()
 		device_enum_context.makeCurrentInstance(instance_handle);
 		std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
 
-		if (gpus.size() > 0)
+		if (!gpus.empty())
 		{
 			//A device with vulkan support found. Init data
 			supportsVulkan = true;

@@ -123,7 +123,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 
 	if (get_blacklist)
 	{
-		if (blacklist.size() <= 0)
+		if (blacklist.empty())
 			LOG_SUCCESS(HLE, "XInput Calibration: Blacklist is clear. No input spam detected");
 		return;
 	}

@@ -257,7 +257,7 @@ void save_manager_dialog::OnEntryRemove()
 void save_manager_dialog::OnEntriesRemove()
 {
 	QModelIndexList selection(m_list->selectionModel()->selectedRows());
-	if (selection.size() == 0)
+	if (selection.empty())
 	{
 		return;
 	}

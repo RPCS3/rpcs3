@@ -391,7 +391,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 
 		if (get_blacklist)
 		{
-			if (blacklist.size() <= 0)
+			if (blacklist.empty())
 				LOG_SUCCESS(HLE, "MMJOY Calibration: Blacklist is clear. No input spam detected");
 			return;
 		}

@@ -15,7 +15,7 @@ namespace rsx
 	{
 		void insert_mem_block_in_map(std::unordered_set<u64>& mem_changes, frame_capture_data::memory_block&& block, frame_capture_data::memory_block_data&& data)
 		{
-			if (data.data.size() > 0)
+			if (!data.data.empty())
 			{
 				u64 data_hash = XXH64(data.data.data(), data.data.size(), 0);
 				block.data_state = data_hash;
