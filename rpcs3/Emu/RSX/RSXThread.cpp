@@ -1244,7 +1244,7 @@ namespace rsx
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 		current_vertex_program.skip_vertex_input_check = skip_vertex_inputs;
 
-		current_vertex_program.rsx_vertex_inputs.resize(0);
+		current_vertex_program.rsx_vertex_inputs.clear();
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
 		current_vertex_program.texture_dimensions = 0;
@@ -2615,7 +2615,7 @@ namespace rsx
 					m_statistics_map[m_statistics_tag_id] = 1;
 
 					verify(HERE), m_pending_writes.front().sink == 0;
-					m_pending_writes.resize(0);
+					m_pending_writes.clear();
 
 					for (auto &query : m_occlusion_query_data)
 					{
@@ -2752,7 +2752,7 @@ namespace rsx
 				if (!has_unclaimed)
 				{
 					verify(HERE), processed == m_pending_writes.size();
-					m_pending_writes.resize(0);
+					m_pending_writes.clear();
 				}
 				else
 				{
@@ -2928,7 +2928,7 @@ namespace rsx
 				}
 				else
 				{
-					m_pending_writes.resize(0);
+					m_pending_writes.clear();
 				}
 
 				ptimer->async_tasks_pending -= processed;

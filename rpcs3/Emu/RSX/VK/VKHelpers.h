@@ -2192,7 +2192,7 @@ public:
 					for (auto &img : swapchain_images)
 						img.discard(dev);
 
-					swapchain_images.resize(0);
+					swapchain_images.clear();
 				}
 
 				destroySwapchainKHR(dev, old_swapchain, nullptr);
@@ -2285,7 +2285,7 @@ public:
 			}
 
 			m_instance = nullptr;
-			m_vk_instances.resize(0);
+			m_vk_instances.clear();
 		}
 
 		void enable_debugging()
@@ -3216,7 +3216,7 @@ public:
 			{
 				verify (HERE), shadow, heap;
 				vkCmdCopyBuffer(cmd, shadow->value, heap->value, (u32)dirty_ranges.size(), dirty_ranges.data());
-				dirty_ranges.resize(0);
+				dirty_ranges.clear();
 
 				insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
