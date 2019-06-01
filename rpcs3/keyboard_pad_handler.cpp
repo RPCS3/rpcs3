@@ -289,23 +289,23 @@ void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
 			break;
 		}
 	}
-	processKeyEvent(event, 1);
+	processKeyEvent(event, true);
 }
 
 void keyboard_pad_handler::keyReleaseEvent(QKeyEvent* event)
 {
-	processKeyEvent(event, 0);
+	processKeyEvent(event, false);
 }
 
 void keyboard_pad_handler::mousePressEvent(QMouseEvent* event)
 {
-	Key(event->button(), 1);
+	Key(event->button(), true);
 	event->ignore();
 }
 
 void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 {
-	Key(event->button(), 0, 0);
+	Key(event->button(), false, 0);
 	event->ignore();
 }
 
@@ -350,28 +350,28 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 
 	if (movement_x < 0)
 	{
-		Key(mouse::move_right, 0);
-		Key(mouse::move_left, 1, std::min(m_deadzone_x + std::abs(movement_x), 255));
+		Key(mouse::move_right, false);
+		Key(mouse::move_left, true, std::min(m_deadzone_x + std::abs(movement_x), 255));
 		m_last_mouse_move_left = std::chrono::steady_clock::now();
 	}
 	else if (movement_x > 0)
 	{
-		Key(mouse::move_left, 0);
-		Key(mouse::move_right, 1, std::min(m_deadzone_x + movement_x, 255));
+		Key(mouse::move_left, false);
+		Key(mouse::move_right, true, std::min(m_deadzone_x + movement_x, 255));
 		m_last_mouse_move_right = std::chrono::steady_clock::now();
 	}
 
 	// in Qt mouse up is equivalent to movement_y < 0
 	if (movement_y < 0)
 	{
-		Key(mouse::move_down, 0);
-		Key(mouse::move_up, 1, std::min(m_deadzone_y + std::abs(movement_y), 255));
+		Key(mouse::move_down, false);
+		Key(mouse::move_up, true, std::min(m_deadzone_y + std::abs(movement_y), 255));
 		m_last_mouse_move_up = std::chrono::steady_clock::now();
 	}
 	else if (movement_y > 0)
 	{
-		Key(mouse::move_up, 0);
-		Key(mouse::move_down, 1, std::min(m_deadzone_y + movement_y, 255));
+		Key(mouse::move_up, false);
+		Key(mouse::move_down, true, std::min(m_deadzone_y + movement_y, 255));
 		m_last_mouse_move_down = std::chrono::steady_clock::now();
 	}
 
@@ -614,22 +614,22 @@ void keyboard_pad_handler::ThreadProc()
 			// roughly 1-2 frames to process the next mouse move
 			if (elapsed_left > mouse_interval)
 			{
-				Key(mouse::move_left, 0);
+				Key(mouse::move_left, false);
 				m_last_mouse_move_left = now;
 			}
 			if (elapsed_right > mouse_interval)
 			{
-				Key(mouse::move_right, 0);
+				Key(mouse::move_right, false);
 				m_last_mouse_move_right = now;
 			}
 			if (elapsed_up > mouse_interval)
 			{
-				Key(mouse::move_up, 0);
+				Key(mouse::move_up, false);
 				m_last_mouse_move_up = now;
 			}
 			if (elapsed_down > mouse_interval)
 			{
-				Key(mouse::move_down, 0);
+				Key(mouse::move_down, false);
 				m_last_mouse_move_down = now;
 			}
 
