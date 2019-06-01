@@ -263,7 +263,7 @@ namespace rsx
 			m_size = 0;
 			m_array_idx = 0;
 			m_capacity = 0;
-			m_data.resize(0);
+			m_data.clear();
 			m_data_it = m_data.end();
 		}
 

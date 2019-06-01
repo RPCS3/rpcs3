@@ -269,9 +269,9 @@ namespace rsx
 
 		void clear()
 		{
-			interleaved_blocks.resize(0);
-			volatile_blocks.resize(0);
-			referenced_registers.resize(0);
+			interleaved_blocks.clear();
+			volatile_blocks.clear();
+			referenced_registers.clear();
 		}
 
 		bool validate() const

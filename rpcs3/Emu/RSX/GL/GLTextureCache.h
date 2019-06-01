@@ -535,7 +535,7 @@ namespace gl
 
 		void clear_temporary_subresources()
 		{
-			m_temporary_surfaces.resize(0);
+			m_temporary_surfaces.clear();
 		}
 
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
