@@ -46,7 +46,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 	// Button Layout
 	QHBoxLayout* hbox_action = new QHBoxLayout();
 
-	if (entries.size() > 0)
+	if (!entries.empty())
 	{ // If there are no entries, don't add the selection widget or the selection label to the UI.
 		QPushButton *push_select = new QPushButton(tr("&Select Entry"), this);
 		connect(push_select, &QAbstractButton::clicked, this, &save_data_list_dialog::accept);

@@ -604,7 +604,7 @@ namespace rsx
 				u16 clip_width = clip_text ? w : UINT16_MAX;
 				std::vector<vertex> result = renderer->render_text(string, clip_width, wrap_text);
 
-				if (result.size() > 0)
+				if (!result.empty())
 				{
 					for (auto &v : result)
 					{
@@ -702,7 +702,7 @@ namespace rsx
 						cmd_text.config.color = fore_color;
 						cmd_text.verts = render_text(text.c_str(), (f32)x, (f32)y);
 
-						if (cmd_text.verts.size() > 0)
+						if (!cmd_text.verts.empty())
 							compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
 					}
 

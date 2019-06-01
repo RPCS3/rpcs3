@@ -436,7 +436,7 @@ void GLGSRender::end()
 			clear_depth = true;
 		}
 
-		if (clear_depth || buffers_to_clear.size() > 0)
+		if (clear_depth || !buffers_to_clear.empty())
 		{
 			gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 			GLenum mask = 0;
@@ -454,7 +454,7 @@ void GLGSRender::end()
 
 			glClear(mask);
 
-			if (buffers_to_clear.size() > 0 && !clear_all_color)
+			if (!buffers_to_clear.empty() && !clear_all_color)
 			{
 				GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
 				//It is impossible for the render target to be type A or B here (clear all would have been flagged)

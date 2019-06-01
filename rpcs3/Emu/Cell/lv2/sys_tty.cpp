@@ -39,7 +39,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 	{
 		std::lock_guard lock(g_tty_mutex);
 
-		if (g_tty_input[ch].size() > 0)
+		if (!g_tty_input[ch].empty())
 		{
 			// reference to our first queue element
 			std::string& input = g_tty_input[ch].front();
@@ -62,7 +62,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 			// remove the just read text from the input string
 			input = input.substr(chars_to_read, input.size() - 1);
 
-			if (input.size() == 0)
+			if (input.empty())
 			{
 				// pop the first queue element if it was completely consumed
 				g_tty_input[ch].pop_front();

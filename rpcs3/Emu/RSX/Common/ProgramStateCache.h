@@ -304,7 +304,7 @@ public:
 
 		bool is_empty() const
 		{
-			return db.size() == 0;
+			return db.empty();
 		}
 	}
 	patch_table;

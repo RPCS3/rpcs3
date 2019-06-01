@@ -57,7 +57,7 @@ struct gui_listener : logs::listener
 			packet_t p,* _new = &p;
 			_new->sev = msg.sev;
 
-			if (prefix.size() > 0)
+			if (!prefix.empty())
 			{
 				_new->msg += "{";
 				_new->msg += prefix;

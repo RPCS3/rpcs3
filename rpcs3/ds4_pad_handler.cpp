@@ -209,7 +209,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 
 	if (get_blacklist)
 	{
-		if (blacklist.size() <= 0)
+		if (blacklist.empty())
 			LOG_SUCCESS(HLE, "DS4 Calibration: Blacklist is clear. No input spam detected");
 		return;
 	}
@@ -786,7 +786,7 @@ bool ds4_pad_handler::Init()
 		LOG_ERROR(HLE, "[DS4] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
 	}
-	else if (controllers.size() == 0)
+	else if (controllers.empty())
 	{
 		LOG_WARNING(HLE, "[DS4] No controllers found!");
 	}

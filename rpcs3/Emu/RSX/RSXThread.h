@@ -424,7 +424,7 @@ namespace rsx
 			void on_draw();
 
 			// Check for pending writes
-			bool has_pending() const { return (m_pending_writes.size() != 0); }
+			bool has_pending() const { return !m_pending_writes.empty(); }
 
 			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}

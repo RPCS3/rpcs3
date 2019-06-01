@@ -200,7 +200,7 @@ public:
 
 		auto var_blocks = fmt::split(simple_var, { "." });
 
-		verify(HERE), (var_blocks.size() != 0);
+		verify(HERE), (!var_blocks.empty());
 
 		name = prefix + var_blocks[0];
 
