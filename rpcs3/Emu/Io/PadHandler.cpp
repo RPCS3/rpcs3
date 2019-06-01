@@ -275,16 +275,16 @@ std::string PadHandlerBase::get_config_dir(pad_handler type, const std::string& 
 {
 	if (!title_id.empty())
 	{
-		return Emu.GetCustomInputConfigDir(title_id) + fmt::format("%s", type) + "/";
+		return Emulator::GetCustomInputConfigDir(title_id) + fmt::format("%s", type) + "/";
 	}
 	return fs::get_config_dir() + "/InputConfigs/" + fmt::format("%s", type) + "/";
 }
 
 std::string PadHandlerBase::get_config_filename(int i, const std::string& title_id)
 {
-	if (!title_id.empty() && fs::is_file(Emu.GetCustomInputConfigPath(title_id)))
+	if (!title_id.empty() && fs::is_file(Emulator::GetCustomInputConfigPath(title_id)))
 	{
-		const std::string path = Emu.GetCustomInputConfigDir(title_id) + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
+		const std::string path = Emulator::GetCustomInputConfigDir(title_id) + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
 		if (fs::is_file(path))
 		{
 			return path;

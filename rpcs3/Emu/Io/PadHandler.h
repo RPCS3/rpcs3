@@ -286,7 +286,7 @@ struct cfg_input final : cfg::node
 
 	bool load(const std::string& title_id = "")
 	{
-		cfg_name = Emu.GetCustomInputConfigPath(title_id);
+		cfg_name = Emulator::GetCustomInputConfigPath(title_id);
 
 		if (!fs::is_file(cfg_name))
 		{
@@ -308,7 +308,7 @@ struct cfg_input final : cfg::node
 		}
 		else
 		{
-			cfg_name = Emu.GetCustomInputConfigPath(title_id);
+			cfg_name = Emulator::GetCustomInputConfigPath(title_id);
 		}
 		fs::file(cfg_name, fs::rewrite).write(to_string());
 	}

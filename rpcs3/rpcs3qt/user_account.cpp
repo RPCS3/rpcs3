@@ -6,7 +6,7 @@ UserAccount::UserAccount(const std::string& user_id)
 	m_user_id = user_id;
 
 	// Setting userDir.
-	m_user_dir = Emu.GetHddDir() + "home/" + m_user_id + "/";
+	m_user_dir = Emulator::GetHddDir() + "home/" + m_user_id + "/";
 
 	// Setting userName.
 	fs::file file;
