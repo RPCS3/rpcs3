@@ -373,10 +373,10 @@ namespace rsx
 				// Avoid byteswapping
 				auto tile = rsx->tiles[i].pack();
 				auto& tstate = tilestate.tiles[i];
-				tstate.tile = *reinterpret_cast<u32*>(&tile.tile);
-				tstate.limit = *reinterpret_cast<u32*>(&tile.limit);
-				tstate.pitch = rsx->tiles[i].binded ? *reinterpret_cast<u32*>(&tile.pitch) : 0;
-				tstate.format = rsx->tiles[i].binded ? *reinterpret_cast<u32*>(&tile.format) : 0;
+				tstate.tile = std::bit_cast<u32>(tile.tile);
+				tstate.limit = std::bit_cast<u32>(tile.limit);
+				tstate.pitch = rsx->tiles[i].binded ? std::bit_cast<u32>(tile.pitch) : 0;
+				tstate.format = rsx->tiles[i].binded ? std::bit_cast<u32>(tile.format) : 0;
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
@@ -384,12 +384,12 @@ namespace rsx
 				// Avoid byteswapping
 				auto zc = rsx->zculls[i].pack();
 				auto& zcstate = tilestate.zculls[i];
-				zcstate.region = *reinterpret_cast<u32*>(&zc.region);
-				zcstate.size = *reinterpret_cast<u32*>(&zc.size);
-				zcstate.start = *reinterpret_cast<u32*>(&zc.start);
-				zcstate.offset = *reinterpret_cast<u32*>(&zc.offset);
-				zcstate.status0 = rsx->zculls[i].binded ? *reinterpret_cast<u32*>(&zc.status0) : 0;
-				zcstate.status1 = rsx->zculls[i].binded ? *reinterpret_cast<u32*>(&zc.status1) : 0;
+				zcstate.region = std::bit_cast<u32>(zc.region);
+				zcstate.size = std::bit_cast<u32>(zc.size);
+				zcstate.start = std::bit_cast<u32>(zc.start);
+				zcstate.offset = std::bit_cast<u32>(zc.offset);
+				zcstate.status0 = rsx->zculls[i].binded ? std::bit_cast<u32>(zc.status0) : 0;
+				zcstate.status1 = rsx->zculls[i].binded ? std::bit_cast<u32>(zc.status1) : 0;
 			}
 
 			const u64 tsnum = XXH64(&tilestate, sizeof(frame_capture_data::tile_state), 0);

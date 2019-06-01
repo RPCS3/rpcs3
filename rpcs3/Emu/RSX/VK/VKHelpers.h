@@ -232,7 +232,7 @@ namespace vk
 	private:
 	};
 
-	// Memory Allocator - Vulkan Memory Allocator 
+	// Memory Allocator - Vulkan Memory Allocator
 	// https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
 
 	class mem_allocator_vma : public mem_allocator_base
@@ -2144,7 +2144,7 @@ public:
 					break;
 			}
 
-			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", (s32&)swapchain_present_mode);
+			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", static_cast<int>(swapchain_present_mode));
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 			if (surface_descriptors.maxImageCount > 0)

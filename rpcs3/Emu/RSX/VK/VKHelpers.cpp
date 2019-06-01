@@ -352,7 +352,7 @@ namespace vk
 			{
 				info.usage = usage;
 				CHECK_RESULT(vkCreateBuffer(*g_current_renderer, &info, nullptr, &tmp));
-				
+
 				vkGetBufferMemoryRequirements(*g_current_renderer, tmp, &memory_reqs);
 				if (g_current_renderer->get_compatible_memory_type(memory_reqs.memoryTypeBits, memory_flags, nullptr))
 				{
@@ -815,7 +815,7 @@ namespace vk
 			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
 			break;
 		default:
-			error_message = fmt::format("Unknown Code (%Xh, %d)%s", (s32)error_code, (s32&)error_code, faulting_addr);
+			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), faulting_addr);
 			break;
 		}
 

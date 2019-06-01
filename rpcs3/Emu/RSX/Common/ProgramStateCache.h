@@ -271,11 +271,11 @@ public:
 
 		bool test_and_set(f32 value, f32* dst) const
 		{
-			u32 hex = (u32&)value;
+			u32 hex = std::bit_cast<u32>(value);
 			if ((hex & 0x7FFFFFFF) == (hex_key & 0x7FFFFFFF))
 			{
 				hex = (hex & ~0x7FFFFFF) | hex_value;
-				*dst = (f32&)hex;
+				*dst = std::bit_cast<f32>(hex);
 				return true;
 			}
 
@@ -560,14 +560,14 @@ public:
 			else if (sanitize)
 			{
 				//Convert NaNs and Infs to 0
-				const auto masked = _mm_and_si128((__m128i&)shuffled_vector, _mm_set1_epi32(0x7fffffff));
+				const auto masked = _mm_and_si128(shuffled_vector, _mm_set1_epi32(0x7fffffff));
 				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
-				const auto result = _mm_and_si128((__m128i&)shuffled_vector, valid);
-				_mm_stream_si128((__m128i*)dst, (__m128i&)result);
+				const auto result = _mm_and_si128(shuffled_vector, valid);
+				_mm_stream_si128(std::bit_cast<__m128i*>(dst), result);
 			}
 			else
 			{
-				_mm_stream_si128((__m128i*)dst, shuffled_vector);
+				_mm_stream_si128(std::bit_cast<__m128i*>(dst), shuffled_vector);
 			}
 
 			dst += 4;

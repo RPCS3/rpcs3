@@ -177,13 +177,13 @@ void fmt_class_string<ullong>::format(std::string& out, u64 arg)
 template <>
 void fmt_class_string<float>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "%gf", static_cast<float>(reinterpret_cast<f64&>(arg)));
+	fmt::append(out, "%gf", static_cast<float>(std::bit_cast<f64>(arg)));
 }
 
 template <>
 void fmt_class_string<double>::format(std::string& out, u64 arg)
 {
-	fmt::append(out, "%g", reinterpret_cast<f64&>(arg));
+	fmt::append(out, "%g", std::bit_cast<f64>(arg));
 }
 
 template <>

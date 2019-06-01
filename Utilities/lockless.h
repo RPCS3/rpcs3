@@ -68,13 +68,13 @@ public:
 	// Get current "push" position
 	u32 size() const
 	{
-		return reinterpret_cast<const atomic_t<u32>&>(m_ctrl).load(); // Hack
+		return m_ctrl.load().push;
 	}
 
 	// Acquire the place for one or more elements.
 	u32 push_begin(u32 count = 1)
 	{
-		return reinterpret_cast<atomic_t<u32>&>(m_ctrl).fetch_add(count); // Hack
+		return std::bit_cast<atomic_t<u64>*>(&m_ctrl)->fetch_add(count); // Hack
 	}
 
 	// Get current "pop" position

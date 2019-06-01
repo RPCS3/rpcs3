@@ -440,7 +440,7 @@ namespace
 		{
 			be_t<u32> stored_val = as_const_span<const be_t<u32>>(orig_buffer)[idx];
 			u32 swapped_val = stored_val;
-			f32 float_val = (f32&)swapped_val;
+			f32 float_val = std::bit_cast<f32>(swapped_val);
 			u8 val = float_val * 255.f;
 			return{ val, val, val };
 		}

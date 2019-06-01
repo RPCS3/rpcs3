@@ -1147,7 +1147,7 @@ struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_MIN>
 
 		f32 depth_bound_min() const
 		{
-			return reinterpret_cast<const f32&>(m_data.depth_bound_min);
+			return std::bit_cast<f32, u32>(m_data.depth_bound_min);
 		}
 	};
 
@@ -1173,7 +1173,7 @@ struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_MAX>
 
 		f32 depth_bound_max() const
 		{
-			return reinterpret_cast<const f32&>(m_data.depth_bound_max);
+			return std::bit_cast<f32, u32>(m_data.depth_bound_max);
 		}
 	};
 
@@ -1199,7 +1199,7 @@ struct registers_decoder<NV4097_SET_FOG_PARAMS>
 
 		f32 fog_param_0() const
 		{
-			return reinterpret_cast<const f32&>(m_data.fog_param_0);
+			return std::bit_cast<f32, u32>(m_data.fog_param_0);
 		}
 	};
 
@@ -1225,7 +1225,7 @@ struct registers_decoder<NV4097_SET_FOG_PARAMS + 1>
 
 		f32 fog_param_1() const
 		{
-			return reinterpret_cast<const f32&>(m_data.fog_param_1);
+			return std::bit_cast<f32, u32>(m_data.fog_param_1);
 		}
 	};
 
@@ -1251,7 +1251,7 @@ struct registers_decoder<NV4097_SET_CLIP_MIN>
 
 		f32 clip_min() const
 		{
-			return reinterpret_cast<const f32&>(m_data.clip_min);
+			return std::bit_cast<f32, u32>(m_data.clip_min);
 		}
 	};
 
@@ -1277,7 +1277,7 @@ struct registers_decoder<NV4097_SET_CLIP_MAX>
 
 		f32 clip_max() const
 		{
-			return reinterpret_cast<const f32&>(m_data.clip_max);
+			return std::bit_cast<f32, u32>(m_data.clip_max);
 		}
 	};
 
@@ -1303,7 +1303,7 @@ struct registers_decoder<NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR>
 
 		f32 polygon_offset_scale_factor() const
 		{
-			return reinterpret_cast<const f32&>(m_data.polygon_offset_scale_factor);
+			return std::bit_cast<f32, u32>(m_data.polygon_offset_scale_factor);
 		}
 	};
 
@@ -1329,7 +1329,7 @@ struct registers_decoder<NV4097_SET_POLYGON_OFFSET_BIAS>
 
 		f32 polygon_offset_scale_bias() const
 		{
-			return reinterpret_cast<const f32&>(m_data.polygon_offset_scale_bias);
+			return std::bit_cast<f32, u32>(m_data.polygon_offset_scale_bias);
 		}
 	};
 
@@ -1355,7 +1355,7 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE>
 
 		f32 viewport_scale_x() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_scale_x);
+			return std::bit_cast<f32, u32>(m_data.viewport_scale_x);
 		}
 	};
 
@@ -1381,7 +1381,7 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 1>
 
 		f32 viewport_scale_y() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_scale_y);
+			return std::bit_cast<f32, u32>(m_data.viewport_scale_y);
 		}
 	};
 
@@ -1407,7 +1407,7 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 2>
 
 		f32 viewport_scale_z() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_scale_z);
+			return std::bit_cast<f32, u32>(m_data.viewport_scale_z);
 		}
 	};
 
@@ -1433,7 +1433,7 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 3>
 
 		f32 viewport_scale_w() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_scale_w);
+			return std::bit_cast<f32, u32>(m_data.viewport_scale_w);
 		}
 	};
 
@@ -1459,7 +1459,7 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET>
 
 		f32 viewport_offset_x() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_offset_x);
+			return std::bit_cast<f32, u32>(m_data.viewport_offset_x);
 		}
 	};
 
@@ -1485,7 +1485,7 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 1>
 
 		f32 viewport_offset_y() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_offset_y);
+			return std::bit_cast<f32, u32>(m_data.viewport_offset_y);
 		}
 	};
 
@@ -1511,7 +1511,7 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 2>
 
 		f32 viewport_offset_z() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_offset_z);
+			return std::bit_cast<f32, u32>(m_data.viewport_offset_z);
 		}
 	};
 
@@ -1537,7 +1537,7 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 3>
 
 		f32 viewport_offset_w() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_offset_w);
+			return std::bit_cast<f32, u32>(m_data.viewport_offset_w);
 		}
 	};
 
@@ -3509,7 +3509,7 @@ struct registers_decoder<NV4097_SET_POINT_SIZE>
 
 		f32 point_size() const
 		{
-			return (f32&)m_data.raw_data;
+			return std::bit_cast<f32>(m_data.raw_data);
 		}
 	};
 
@@ -3604,7 +3604,7 @@ struct registers_decoder<NV4097_SET_ZSTENCIL_CLEAR_VALUE>
 		{
 			if (is_depth_stencil)
 				return m_data.clear_z24;
-			
+
 			return m_data.clear_z16;
 		}
 	};
@@ -4450,7 +4450,7 @@ struct transform_constant_helper
 
 		f32 constant_value() const
 		{
-			return reinterpret_cast<const f32&>(m_data.raw_value);
+			return std::bit_cast<f32>(m_data.raw_value);
 		}
 	};
 
@@ -4690,7 +4690,7 @@ struct register_vertex_printer<f32, count>
 
 	static std::string value(u32 v)
 	{
-		return std::to_string(reinterpret_cast<f32&>(v));
+		return std::to_string(std::bit_cast<f32>(v));
 	}
 };
 

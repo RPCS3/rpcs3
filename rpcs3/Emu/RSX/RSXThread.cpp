@@ -593,10 +593,10 @@ namespace rsx
 		float offset_z = rsx::method_registers.viewport_offset_z();
 		float one = 1.f;
 
-		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);
-		stream_vector((char*)buffer + 16, 0, (u32&)scale_y, 0, (u32&)offset_y);
-		stream_vector((char*)buffer + 32, 0, 0, (u32&)scale_z, (u32&)offset_z);
-		stream_vector((char*)buffer + 48, 0, 0, 0, (u32&)one);
+		stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
+		stream_vector((char*)buffer + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
+		stream_vector((char*)buffer + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
+		stream_vector((char*)buffer + 48, 0, 0, 0, std::bit_cast<u32>(one));
 	}
 
 	void thread::fill_user_clip_data(void *buffer) const
@@ -708,8 +708,8 @@ namespace rsx
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
 
 		u32 *dst = static_cast<u32*>(buffer);
-		stream_vector(dst, (u32&)fog0, (u32&)fog1, rop_control, (u32&)alpha_ref);
-		stream_vector(dst + 4, alpha_func, fog_mode, (u32&)wpos_scale, (u32&)wpos_bias);
+		stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
+		stream_vector(dst + 4, alpha_func, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
 	void thread::fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program)
@@ -1547,7 +1547,7 @@ namespace rsx
 						// TODO: Optionally add support for 16-bit formats (not necessary since type casts are easy with that)
 						u32 remap = tex.remap();
 						result.redirected_textures |= (1 << i);
-						result.texture_scale[i][2] = (f32&)remap;
+						result.texture_scale[i][2] = std::bit_cast<f32>(remap);
 						break;
 					}
 					case CELL_GCM_TEXTURE_DEPTH16:
@@ -1598,7 +1598,7 @@ namespace rsx
 #ifdef __APPLE__
 				texture_control |= (sampler_descriptors[i]->encoded_component_map() << 16);
 #endif
-				result.texture_scale[i][3] = (f32&)texture_control;
+				result.texture_scale[i][3] = std::bit_cast<f32>(texture_control);
 			}
 		}
 
@@ -1703,7 +1703,7 @@ namespace rsx
 						{
 							u32 remap = tex.remap();
 							result.redirected_textures |= (1 << i);
-							result.texture_scale[i][2] = (f32&)remap;
+							result.texture_scale[i][2] = std::bit_cast<f32>(remap);
 							break;
 						}
 						case CELL_GCM_TEXTURE_DEPTH16:
@@ -2138,7 +2138,7 @@ namespace rsx
 				m_flattener.force_disable();
 			}
 
-			if (emu_flip) 
+			if (emu_flip)
 			{
 				async_flip_requested.clear(flip_request::emu_requested);
 			}

@@ -221,7 +221,7 @@ std::string FragmentProgramDecompiler::AddConst()
 	u32 z = GetData(data[2]);
 	u32 w = GetData(data[3]);
 
-	const auto var = fmt::format("%s(%f, %f, %f, %f)", type, (f32&)x, (f32&)y, (f32&)z, (f32&)w);
+	const auto var = fmt::format("%s(%f, %f, %f, %f)", type, std::bit_cast<f32>(x), std::bit_cast<f32>(y), std::bit_cast<f32>(z), std::bit_cast<f32>(w));
 	return m_parr.AddParam(PF_PARAM_UNIFORM, type, name, var);
 }
 
