@@ -148,7 +148,7 @@ bool notifier::wait(u64 usec_timeout)
 	return res;
 }
 
-bool cond_one::imp_wait(u64 _timeout) noexcept
+bool unique_cond::imp_wait(u64 _timeout) noexcept
 {
 	// State transition: c_sig -> c_lock \ c_lock -> c_wait
 	const u32 _old = m_value.fetch_sub(1);
@@ -173,7 +173,7 @@ bool cond_one::imp_wait(u64 _timeout) noexcept
 	});
 }
 
-void cond_one::imp_notify() noexcept
+void unique_cond::imp_notify() noexcept
 {
 	auto [old, ok] = m_value.fetch_op([](u32& v)
 	{

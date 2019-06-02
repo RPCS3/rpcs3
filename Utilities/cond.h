@@ -64,7 +64,7 @@ public:
 	static constexpr u64 max_timeout = u64{UINT32_MAX} / 1000 * 1000000;
 };
 
-// Pair of a fake shared mutex (only limited shared locking) and a condition variable
+// Pair of a fake shared mutex (only limited shared locking) and a condition variable. Obsolete.
 class notifier
 {
 	atomic_t<u32> m_counter{0};
@@ -129,7 +129,8 @@ public:
 	static constexpr u32 max_readers = 0x7f;
 };
 
-class cond_one
+// Condition variable fused with a pseudo-mutex which is never supposed to be locked concurrently.
+class unique_cond
 {
 	enum : u32
 	{
@@ -144,7 +145,7 @@ class cond_one
 	void imp_notify() noexcept;
 
 public:
-	constexpr cond_one() = default;
+	constexpr unique_cond() = default;
 
 	void lock() noexcept
 	{
@@ -158,7 +159,7 @@ public:
 		m_value = 0;
 	}
 
-	bool wait(std::unique_lock<cond_one>& lock, u64 usec_timeout = -1) noexcept
+	bool wait(std::unique_lock<unique_cond>& lock, u64 usec_timeout = -1) noexcept
 	{
 		AUDIT(lock.owns_lock());
 		AUDIT(lock.mutex() == this);
