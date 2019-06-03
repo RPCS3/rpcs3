@@ -841,7 +841,7 @@ struct color4_base
 		T xyzw[4];
 	};
 
-	color4_base()
+	constexpr color4_base()
 		: x{}
 		, y{}
 		, z{}
@@ -849,7 +849,7 @@ struct color4_base
 	{
 	}
 
-	color4_base(T x, T y = {}, T z = {}, T w = {})
+	constexpr color4_base(T x, T y = {}, T z = {}, T w = {})
 		: x(x)
 		, y(y)
 		, z(z)
@@ -857,18 +857,18 @@ struct color4_base
 	{
 	}
 
-	bool operator == (const color4_base& rhs) const
+	constexpr bool operator == (const color4_base& rhs) const
 	{
 		return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a;
 	}
 
-	bool operator != (const color4_base& rhs) const
+	constexpr bool operator != (const color4_base& rhs) const
 	{
 		return !(*this == rhs);
 	}
 
 	template<typename NT>
-	operator color4_base<NT>() const
+	constexpr operator color4_base<NT>() const
 	{
 		return{ (NT)x, (NT)y, (NT)z, (NT)w };
 	}
