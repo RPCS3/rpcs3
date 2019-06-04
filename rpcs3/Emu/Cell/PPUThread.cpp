@@ -996,31 +996,37 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-	if (LIKELY((ppu.rtime & 127) == 0))
 	{
-		ppu.rdata = data;
+		const auto& res = vm::reservation_acquire(addr, sizeof(T));
+		const u64 rtime = ppu.rtime = res.load();
 
-		if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
-		{
-			return static_cast<T>(ppu.rdata << data_off >> size_off);
-		}
-	}
-
-	vm::passive_unlock(ppu);
-
-	for (u64 i = 0;; i++)
-	{
-		ppu.rtime = vm::reservation_acquire(addr, sizeof(T));
-
-		if (LIKELY((ppu.rtime & 127) == 0))
+		if (LIKELY((rtime & 127) == 0))
 		{
 			ppu.rdata = data;
 
-			if (LIKELY(vm::reservation_acquire(addr, sizeof(T)) == ppu.rtime))
+			if (LIKELY(res.load() == rtime))
 			{
-				break;
+				return static_cast<T>(ppu.rdata << data_off >> size_off);
+			}
+		}
+	}
+
+	vm::signal_unlock();
+
+	for (u64 i = 0;; i++)
+	{
+		{
+			const auto& res = vm::reservation_acquire(addr, sizeof(T));
+			const u64 rtime = ppu.rtime = res.load();
+
+			if (LIKELY((rtime & 127) == 0))
+			{
+				ppu.rdata = data;
+
+				if (LIKELY(res.load() == rtime))
+				{
+					break;
+				}
 			}
 		}
 
@@ -1034,7 +1040,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		}
 	}
 
-	vm::passive_lock(ppu);
+	vm::signal_lock();
 	return static_cast<T>(ppu.rdata << data_off >> size_off);
 }
 
@@ -1146,7 +1152,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		return false;
 	}
 
-	vm::passive_unlock(ppu);
+	vm::signal_unlock();
 
 	auto& res = vm::reservation_lock(addr, sizeof(u32));
 	const u64 old_time = res.load() & -128;
@@ -1163,8 +1169,8 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		res.release(old_time);
 	}
 
-	vm::passive_lock(ppu);
 	ppu.raddr = 0;
+	vm::signal_lock();
 	return result;
 }
 
@@ -1266,7 +1272,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		return false;
 	}
 
-	vm::passive_unlock(ppu);
+	vm::signal_unlock();
 
 	auto& res = vm::reservation_lock(addr, sizeof(u64));
 	const u64 old_time = res.load() & -128;
@@ -1283,8 +1289,8 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		res.release(old_time);
 	}
 
-	vm::passive_lock(ppu);
 	ppu.raddr = 0;
+	vm::signal_lock();
 	return result;
 }
 

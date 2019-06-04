@@ -565,6 +565,8 @@ s32 cellVdecDecodeAuEx2()
 
 s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u8> outBuff)
 {
+	vm::temporary_unlock();
+
 	cellVdec.trace("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
 	const auto vdec = idm::get<vdec_context>(handle);
@@ -689,6 +691,8 @@ s32 cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::
 
 s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 {
+	vm::temporary_unlock();
+
 	cellVdec.trace("cellVdecGetPicItem(handle=0x%x, picItem=**0x%x)", handle, picItem);
 
 	const auto vdec = idm::get<vdec_context>(handle);

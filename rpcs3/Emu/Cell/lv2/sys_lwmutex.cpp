@@ -68,6 +68,8 @@ error_code _sys_lwmutex_destroy(u32 lwmutex_id)
 
 error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_lwmutex.trace("_sys_lwmutex_lock(lwmutex_id=0x%x, timeout=0x%llx)", lwmutex_id, timeout);
 
 	ppu.gpr[3] = CELL_OK;

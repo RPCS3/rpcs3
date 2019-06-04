@@ -11,7 +11,8 @@ enum class cpu_flag : u32
 	suspend, // Thread suspended
 	ret, // Callback return requested
 	signal, // Thread received a signal (HLE)
-	memory, // Thread must unlock memory mutex
+	memory, // Thread must acquire memory mutex
+	memory_suspend, // Thread must unlock memory mutex
 
 	jit_return, // JIT compiler event (forced return)
 	dbg_global_pause, // Emulation paused

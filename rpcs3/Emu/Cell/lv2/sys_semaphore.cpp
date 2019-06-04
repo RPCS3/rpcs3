@@ -83,6 +83,8 @@ error_code sys_semaphore_destroy(u32 sem_id)
 
 error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
@@ -189,6 +191,8 @@ error_code sys_semaphore_trywait(u32 sem_id)
 
 error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_semaphore.trace("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)

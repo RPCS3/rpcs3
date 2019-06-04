@@ -192,6 +192,8 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 error_code sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number)
 {
+	vm::temporary_unlock();
+
 	sys_event.trace("sys_event_queue_tryreceive(equeue_id=0x%x, event_array=*0x%x, size=%d, number=*0x%x)", equeue_id, event_array, size, number);
 
 	const auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id);
@@ -226,6 +228,8 @@ error_code sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_
 
 error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_event.trace("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx)", equeue_id, dummy_event, timeout);
 
 	ppu.gpr[3] = CELL_OK;
@@ -455,6 +459,8 @@ error_code sys_event_port_disconnect(u32 eport_id)
 
 error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 {
+	vm::temporary_unlock();
+
 	sys_event.trace("sys_event_port_send(eport_id=0x%x, data1=0x%llx, data2=0x%llx, data3=0x%llx)", eport_id, data1, data2, data3);
 
 	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError

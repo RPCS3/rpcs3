@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include <map>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include "Utilities/VirtualMemory.h"
 
 class shared_mutex;
@@ -54,10 +55,12 @@ namespace vm
 
 	// Register reader
 	void passive_lock(cpu_thread& cpu);
-	atomic_t<u64>* passive_lock(const u32 begin, const u32 end);
 
 	// Unregister reader
-	void passive_unlock(cpu_thread& cpu);
+	void passive_unlock() noexcept;
+
+	void signal_unlock() noexcept;
+	void signal_lock() noexcept;
 
 	// Unregister reader (foreign thread)
 	void cleanup_unlock(cpu_thread& cpu) noexcept;
@@ -65,27 +68,6 @@ namespace vm
 	// Optimization (set cpu_flag::memory)
 	void temporary_unlock(cpu_thread& cpu) noexcept;
 	void temporary_unlock() noexcept;
-
-	class reader_lock final
-	{
-		bool m_upgraded = false;
-
-	public:
-		reader_lock(const reader_lock&) = delete;
-		reader_lock& operator=(const reader_lock&) = delete;
-		reader_lock();
-		~reader_lock();
-
-		void upgrade();
-	};
-
-	struct writer_lock final
-	{
-		writer_lock(const writer_lock&) = delete;
-		writer_lock& operator=(const writer_lock&) = delete;
-		writer_lock(u32 addr = 0);
-		~writer_lock();
-	};
 
 	// Get reservation status for further atomic update: last update timestamp
 	inline atomic_t<u64>& reservation_acquire(u32 addr, u32 size)
@@ -173,7 +155,7 @@ namespace vm
 		std::pair<u32, std::shared_ptr<utils::shm>> get(u32 addr, u32 size = 0);
 
 		// Internal
-		u32 imp_used(const vm::writer_lock&);
+		u32 imp_used(const std::lock_guard<shared_mutex>&);
 
 		// Get allocated memory count
 		u32 used();

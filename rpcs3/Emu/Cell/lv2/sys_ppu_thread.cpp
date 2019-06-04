@@ -5,6 +5,7 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
 #include "sys_ppu_thread.h"
 #include "sys_event.h"
 #include "sys_mmapper.h"
@@ -14,6 +15,9 @@ LOG_CHANNEL(sys_ppu_thread);
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
 	vm::temporary_unlock(ppu);
+
+	// Wait until all current putllc executers finish before deleting the thread
+	while (g_putllc_guard.info.executer) _mm_pause();
 
 	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 

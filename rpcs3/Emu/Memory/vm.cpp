@@ -7,6 +7,7 @@
 #include "Utilities/asm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/lv2/sys_memory.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Emu/RSX/GSRender.h"
 #include <atomic>
 #include <thread>
@@ -57,104 +58,64 @@ namespace vm
 	// Memory mutex acknowledgement
 	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
 
-	// Currently locked address
-	atomic_t<u32> g_addr_lock = 0;
-
 	// Memory mutex: passive locks
-	std::array<atomic_t<cpu_thread*>, 4> g_locks{};
-	std::array<atomic_t<u64>, 6> g_range_locks{};
-
-	static void _register_lock(cpu_thread* _cpu)
-	{
-		for (u32 i = 0;; i = (i + 1) % g_locks.size())
-		{
-			if (!g_locks[i] && g_locks[i].compare_and_swap_test(nullptr, _cpu))
-			{
-				g_tls_locked = g_locks.data() + i;
-				return;
-			}
-		}
-	}
-
-	static atomic_t<u64>* _register_range_lock(const u64 lock_info)
-	{
-		while (true)
-		{
-			for (auto& lock : g_range_locks)
-			{
-				if (!lock && lock.compare_and_swap_test(0, lock_info))
-				{
-					return &lock;
-				}
-			}
-		}
-	}
+	std::array<atomic_t<cpu_thread*>, 16> g_locks{};
 
 	void passive_lock(cpu_thread& cpu)
 	{
-		if (UNLIKELY(g_tls_locked && *g_tls_locked == &cpu))
+		cpu.state -= cpu_flag::memory + cpu_flag::memory_suspend;
+
+		for (u32 i = 0, max = g_cfg.core.ppu_threads;;)
 		{
-			return;
+			if (!g_locks[i] && g_locks[i].compare_and_swap_test(nullptr, &cpu))
+			{
+				g_tls_locked = g_locks.data() + i;
+				signal_lock();
+				return;
+			}
+
+			++i;
+
+			if (i == max)
+			{
+				i = 0;
+			}
 		}
+	}
 
-		if (LIKELY(g_mutex.is_lockable()))
+	void signal_unlock() noexcept
+	{
+		g_putllc_guard.info.unstopped--;
+	}
+
+	void signal_lock() noexcept
+	{
+		for (;;)
 		{
-			// Optimistic path (hope that mutex is not exclusively locked)
-			_register_lock(&cpu);
+			if (busy_wait_(8000, []()
+			{
+				if (const u64 state = g_putllc_guard.state; (u32)state == 0 && g_putllc_guard.state.compare_and_swap_test(state, state + (1ull << 32)))
+				{
+					return true;
+				}
 
-			if (LIKELY(g_mutex.is_lockable()))
+				return false;
+			}))
 			{
 				return;
 			}
 
-			passive_unlock(cpu);
+			std::this_thread::yield();
 		}
-
-		::reader_lock lock(g_mutex);
-		_register_lock(&cpu);
 	}
 
-	atomic_t<u64>* passive_lock(const u32 addr, const u32 end)
-	{
-		static const auto test_addr = [](const u32 target, const u32 addr, const u32 end)
-		{
-			return addr > target || end <= target;
-		};
-
-		atomic_t<u64>* _ret;
-
-		if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
-		{
-			// Optimistic path (hope that address range is not locked)
-			_ret = _register_range_lock((u64)end << 32 | addr);
-
-			if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
-			{
-				return _ret;
-			}
-
-			*_ret = 0;
-		}
-
-		{
-			::reader_lock lock(g_mutex);
-			_ret = _register_range_lock((u64)end << 32 | addr);
-		}
-
-		return _ret;
-	}
-
-	void passive_unlock(cpu_thread& cpu)
+	void passive_unlock() noexcept
 	{
 		if (auto& ptr = g_tls_locked)
 		{
-			*ptr = nullptr;
+			signal_unlock();
+			ptr->release(nullptr);
 			ptr = nullptr;
-
-			if (cpu.state & cpu_flag::memory)
-			{
-				cpu.state -= cpu_flag::memory;
-			}
 		}
 	}
 
@@ -172,9 +133,12 @@ namespace vm
 
 	void temporary_unlock(cpu_thread& cpu) noexcept
 	{
-		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
+		if (auto& lock = g_tls_locked)
 		{
+			signal_unlock();
+			lock->release(nullptr);
 			cpu.cpu_unmem();
+			lock = nullptr;
 		}
 	}
 
@@ -184,119 +148,6 @@ namespace vm
 		{
 			temporary_unlock(*cpu);
 		}
-	}
-
-	reader_lock::reader_lock()
-	{
-		auto cpu = get_current_cpu_thread();
-
-		if (!cpu || !g_tls_locked || !g_tls_locked->compare_and_swap_test(cpu, nullptr))
-		{
-			cpu = nullptr;
-		}
-
-		g_mutex.lock_shared();
-
-		if (cpu)
-		{
-			_register_lock(cpu);
-			cpu->state -= cpu_flag::memory;
-		}
-	}
-
-	reader_lock::~reader_lock()
-	{
-		if (m_upgraded)
-		{
-			g_mutex.unlock();
-		}
-		else
-		{
-			g_mutex.unlock_shared();
-		}
-	}
-
-	void reader_lock::upgrade()
-	{
-		if (m_upgraded)
-		{
-			return;
-		}
-
-		g_mutex.lock_upgrade();
-		m_upgraded = true;
-	}
-
-	writer_lock::writer_lock(u32 addr)
-	{
-		auto cpu = get_current_cpu_thread();
-
-		if (!cpu || !g_tls_locked || !g_tls_locked->compare_and_swap_test(cpu, nullptr))
-		{
-			cpu = nullptr;
-		}
-
-		g_mutex.lock();
-
-		if (addr)
-		{
-			for (auto& lock : g_locks)
-			{
-				if (cpu_thread* ptr = lock)
-				{
-					ptr->state.test_and_set(cpu_flag::memory);
-				}
-			}
-
-			g_addr_lock = addr;
-
-			for (auto& lock : g_range_locks)
-			{
-				while (true)
-				{
-					const u64 value = lock;
-
-					// Test beginning address
-					if (static_cast<u32>(value) > addr)
-					{
-						break;
-					}
-
-					// Test end address
-					if (static_cast<u32>(value >> 32) <= addr)
-					{
-						break;
-					}
-
-					_mm_pause();
-				}
-			}
-
-			for (auto& lock : g_locks)
-			{
-				while (cpu_thread* ptr = lock)
-				{
-					if (ptr->is_stopped())
-					{
-						break;
-					}
-
-					_mm_pause();
-				}
-			}
-		}
-
-		if (cpu)
-		{
-			_register_lock(cpu);
-			cpu->state -= cpu_flag::memory;
-		}
-	}
-
-	writer_lock::~writer_lock()
-	{
-		g_addr_lock.release(0);
-		g_mutex.unlock();
 	}
 
 	void reservation_lock_internal(atomic_t<u64>& res)
@@ -383,7 +234,7 @@ namespace vm
 
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
-		vm::writer_lock lock(0);
+		std::lock_guard lock(g_mutex);
 
 		if (!size || (size | addr) % 4096)
 		{
@@ -645,7 +496,7 @@ namespace vm
 	block_t::~block_t()
 	{
 		{
-			vm::writer_lock lock(0);
+			std::lock_guard lock(g_mutex);
 
 			// Deallocate all memory
 			for (auto it = m_map.begin(), end = m_map.end(); !m_common && it != end;)
@@ -673,7 +524,7 @@ namespace vm
 			flags = this->flags;
 		}
 
-		vm::writer_lock lock(0);
+		std::lock_guard lock(g_mutex);
 
 		// Determine minimal alignment
 		const u32 min_page_size = flags & 0x100 ? 0x1000 : 0x10000;
@@ -734,7 +585,7 @@ namespace vm
 			flags = this->flags;
 		}
 
-		vm::writer_lock lock(0);
+		std::lock_guard lock(g_mutex);
 
 		// Determine minimal alignment
 		const u32 min_page_size = flags & 0x100 ? 0x1000 : 0x10000;
@@ -780,7 +631,7 @@ namespace vm
 	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src)
 	{
 		{
-			vm::writer_lock lock(0);
+			std::lock_guard lock(g_mutex);
 
 			const auto found = m_map.find(addr - (flags & 0x10 ? 0x1000 : 0));
 
@@ -821,7 +672,7 @@ namespace vm
 			return {addr, nullptr};
 		}
 
-		vm::reader_lock lock;
+		::reader_lock lock(g_mutex);
 
 		const auto upper = m_map.upper_bound(addr);
 
@@ -853,7 +704,7 @@ namespace vm
 		return {found->first, found->second.second};
 	}
 
-	u32 block_t::imp_used(const vm::writer_lock&)
+	u32 block_t::imp_used(const std::lock_guard<shared_mutex>&)
 	{
 		u32 result = 0;
 
@@ -867,7 +718,7 @@ namespace vm
 
 	u32 block_t::used()
 	{
-		vm::writer_lock lock(0);
+		std::lock_guard lock(g_mutex);
 
 		return imp_used(lock);
 	}
@@ -932,14 +783,14 @@ namespace vm
 
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
-		vm::writer_lock lock(0);
+		std::lock_guard lock(g_mutex);
 
 		return _map(addr, size, flags);
 	}
 
 	std::shared_ptr<block_t> find_map(u32 orig_size, u32 align, u64 flags)
 	{
-		vm::writer_lock lock(0);
+		std::lock_guard lock(g_mutex);
 
 		// Align to minimal page size
 		const u32 size = ::align(orig_size, 0x10000);
@@ -965,7 +816,7 @@ namespace vm
 
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty)
 	{
-		vm::writer_lock lock(0);
+		std::lock_guard lock(g_mutex);
 
 		for (auto it = g_locations.begin() + memory_location_max; it != g_locations.end(); it++)
 		{
@@ -997,7 +848,7 @@ namespace vm
 
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr, u32 area_size)
 	{
-		vm::reader_lock lock;
+		::reader_lock lock(g_mutex);
 
 		if (location != any)
 		{

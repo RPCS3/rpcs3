@@ -91,6 +91,8 @@ error_code sys_event_flag_destroy(u32 id)
 
 error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_event_flag.trace("sys_event_flag_wait(id=0x%x, bitptn=0x%llx, mode=0x%x, result=*0x%x, timeout=0x%llx)", id, bitptn, mode, result, timeout);
 
 	// Fix function arguments for external access
@@ -240,6 +242,8 @@ error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> res
 
 error_code sys_event_flag_set(u32 id, u64 bitptn)
 {
+	vm::temporary_unlock();
+
 	// Warning: may be called from SPU thread.
 	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);
 

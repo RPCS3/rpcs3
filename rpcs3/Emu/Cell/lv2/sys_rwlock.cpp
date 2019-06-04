@@ -77,6 +77,8 @@ error_code sys_rwlock_destroy(u32 rw_lock_id)
 
 error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
@@ -198,6 +200,8 @@ error_code sys_rwlock_tryrlock(u32 rw_lock_id)
 
 error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.trace("sys_rwlock_runlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rwlock)

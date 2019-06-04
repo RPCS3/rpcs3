@@ -23,6 +23,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::ret: return "ret";
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
+		case cpu_flag::memory_suspend: return "mems";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_global_stop: return "G-EXIT";
 		case cpu_flag::dbg_pause: return "PAUSE";
@@ -114,25 +115,18 @@ bool cpu_thread::check_state()
 	}
 #endif
 
-	bool cpu_sleep_called = false;
-	bool cpu_flag_memory = false;
-
-	while (true)
+	if (((state & cpu_flag::memory_suspend + cpu_flag::memory) == cpu_flag::memory_suspend))
 	{
-		if (state & cpu_flag::memory)
-		{
-			if (auto& ptr = vm::g_tls_locked)
-			{
-				ptr->compare_and_swap(this, nullptr);
-				ptr = nullptr;
-			}
+		vm::signal_unlock();
+		state -= cpu_flag::memory_suspend;
+		vm::signal_lock();
+	}
 
-			cpu_flag_memory = true;
-			state -= cpu_flag::memory;
-		}
-
+	for (bool cpu_sleep_called = false;;)
+	{
 		if (state & cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop)
 		{
+			vm::temporary_unlock(*this);
 			return true;
 		}
 
@@ -143,7 +137,7 @@ bool cpu_thread::check_state()
 
 		if (!is_paused())
 		{
-			if (cpu_flag_memory)
+			if (state & cpu_flag::memory)
 			{
 				cpu_mem();
 			}

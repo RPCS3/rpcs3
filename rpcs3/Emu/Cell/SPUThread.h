@@ -151,6 +151,26 @@ enum : u32
 	RAW_SPU_PROB_OFFSET = 0x00040000,
 };
 
+union alignas(8) putllc_guard
+{
+	struct
+	{
+#if IS_LE_MACHINE == 1
+		atomic_t<u32> executer;
+		atomic_t<u32> unstopped;
+#else
+		atomic_t<u32> unstopped;
+		atomic_t<u32> executer;
+#endif
+	} info;
+
+	atomic_t<u64> state;
+};
+
+static_assert(sizeof(putllc_guard) == 8);
+
+extern putllc_guard g_putllc_guard;
+
 struct spu_channel
 {
 	// Low 32 bits contain value

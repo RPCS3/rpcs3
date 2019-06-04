@@ -109,6 +109,8 @@ error_code open_exit_dialog(const std::string& message, bool is_exit_requested)
 
 error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam)
 {
+	vm::temporary_unlock();
+
 	cellSysutil.warning("cellMsgDialogOpen2(type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
 
 	if (!msgString || std::strlen(msgString.get_ptr()) >= CELL_MSGDIALOG_STRING_SIZE || type & -0x33f8)

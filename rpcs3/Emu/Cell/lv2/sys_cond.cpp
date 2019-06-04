@@ -201,6 +201,8 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_cond.trace("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
 
 	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
