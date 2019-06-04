@@ -196,46 +196,51 @@ void unique_cond::imp_notify() noexcept
 	balanced_awaken(m_value, 1);
 }
 
-bool cond_x16::imp_wait(u32 slot, u64 _timeout) noexcept
+bool shared_cond::imp_wait(u32 slot, u64 _timeout) noexcept
 {
-	const u32 wait_bit = c_wait << slot;
-	const u32 lock_bit = c_lock << slot;
+	if (slot >= 32)
+	{
+		// Invalid argument, assume notified
+		return true;
+	}
+
+	const u64 wait_bit = c_wait << slot;
+	const u64 lock_bit = c_lock << slot;
 
 	// Change state from c_lock to c_wait
-	const u32 old_ = m_cvx16.fetch_op([=](u32& cvx16)
+	const u64 old_ = m_cvx32.fetch_op([=](u64& cvx32)
 	{
-		if (cvx16 & wait_bit)
+		if (cvx32 & wait_bit)
 		{
-			// c_sig -> c_lock
-			cvx16 &= ~wait_bit;
+			// c_lock -> c_wait
+			cvx32 &= ~(lock_bit & ~wait_bit);
 		}
 		else
 		{
-			cvx16 |= wait_bit;
-			cvx16 &= ~lock_bit;
+			// c_sig -> c_lock
+			cvx32 |= lock_bit;
 		}
 	});
 
-	if (old_ & wait_bit)
+	if ((old_ & wait_bit) == 0)
 	{
 		// Already signaled, return without waiting
 		return true;
 	}
 
-	return balanced_wait_until(m_cvx16, _timeout, [&](u32& cvx16, auto... ret) -> int
+	return balanced_wait_until(m_cvx32, _timeout, [&](u64& cvx32, auto... ret) -> int
 	{
-		if (cvx16 & lock_bit)
+		if ((cvx32 & wait_bit) == 0)
 		{
 			// c_sig -> c_lock
-			cvx16 &= ~wait_bit;
+			cvx32 |= lock_bit;
 			return +1;
 		}
 
 		if constexpr (sizeof...(ret))
 		{
 			// Retire
-			cvx16 |= lock_bit;
-			cvx16 &= ~wait_bit;
+			cvx32 |= lock_bit;
 			return -1;
 		}
 
@@ -243,16 +248,14 @@ bool cond_x16::imp_wait(u32 slot, u64 _timeout) noexcept
 	});
 }
 
-void cond_x16::imp_notify() noexcept
+void shared_cond::imp_notify() noexcept
 {
-	auto [old, ok] = m_cvx16.fetch_op([](u32& v)
+	auto [old, ok] = m_cvx32.fetch_op([](u64& cvx32)
 	{
-		const u32 lock_mask = v >> 16;
-		const u32 wait_mask = v & 0xffff;
-
-		if (const u32 sig_mask = lock_mask ^ wait_mask)
+		if (const u64 sig_mask = cvx32 & 0xffffffff)
 		{
-			v |= sig_mask | sig_mask << 16;
+			cvx32 &= 0xffffffffull << 32;
+			cvx32 |= sig_mask << 32;
 			return true;
 		}
 
@@ -260,14 +263,14 @@ void cond_x16::imp_notify() noexcept
 	});
 
 	// Determine if some waiters need a syscall notification
-	const u32 wait_mask = old & (~old >> 16);
+	const u64 wait_mask = old & (~old >> 32);
 
 	if (UNLIKELY(!ok || !wait_mask))
 	{
 		return;
 	}
 
-	balanced_awaken<true>(m_cvx16, utils::popcnt32(wait_mask));
+	balanced_awaken<true>(m_cvx32, utils::popcnt32(wait_mask));
 }
 
 bool lf_queue_base::wait(u64 _timeout)
