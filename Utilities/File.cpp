@@ -219,7 +219,7 @@ namespace fs
 			total += buffers[i].iov_len;
 		}
 
-		const auto buf = std::make_unique<uchar>(total);
+		const auto buf = std::make_unique<uchar[]>(total);
 
 		u64 copied = 0;
 
