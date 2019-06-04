@@ -2889,15 +2889,17 @@ namespace rsx
 				}
 			}
 
-			if (0)//src_is_render_target)
+			if (src_is_render_target &&
+				dynamic_cast<decltype(src_subres.surface)>(vram_texture) != nullptr)
 			{
-				// TODO: Specify typeless for high sample counts
+				// The resource is of surface type; possibly disabled AA emulation
 				src_subres.surface->transform_samples_to_pixels(src_area);
 			}
 
-			if (0)//dst_is_render_target)
+			if (dst_is_render_target &&
+				dynamic_cast<decltype(dst_subres.surface)>(dest_texture) != nullptr)
 			{
-				// TODO: Specify typeless for high sample counts
+				// The resource is of surface type; possibly disabled AA emulation
 				dst_subres.surface->transform_samples_to_pixels(dst_area);
 			}
 
