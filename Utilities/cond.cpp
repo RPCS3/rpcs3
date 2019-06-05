@@ -275,6 +275,14 @@ void shared_cond::imp_notify() noexcept
 
 bool lf_queue_base::wait(u64 _timeout)
 {
+	auto _old = m_head.compare_and_swap(0, 1);
+
+	if (_old)
+	{
+		verify("lf_queue concurrent wait" HERE), _old != 1;
+		return true;
+	}
+
 	return balanced_wait_until(m_head, _timeout, [](std::uintptr_t& head, auto... ret) -> int
 	{
 		if (head != 1)
