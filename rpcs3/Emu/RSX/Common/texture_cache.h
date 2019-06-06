@@ -2889,18 +2889,16 @@ namespace rsx
 				}
 			}
 
-			if (src_is_render_target &&
-				dynamic_cast<decltype(src_subres.surface)>(vram_texture) != nullptr)
+			if (src_is_render_target)
 			{
 				// The resource is of surface type; possibly disabled AA emulation
-				src_subres.surface->transform_samples_to_pixels(src_area);
+				src_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, src_area);
 			}
 
-			if (dst_is_render_target &&
-				dynamic_cast<decltype(dst_subres.surface)>(dest_texture) != nullptr)
+			if (dst_is_render_target)
 			{
 				// The resource is of surface type; possibly disabled AA emulation
-				dst_subres.surface->transform_samples_to_pixels(dst_area);
+				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, dst_area);
 			}
 
 			typeless_info.analyse();

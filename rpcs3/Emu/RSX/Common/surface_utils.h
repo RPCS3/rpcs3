@@ -16,6 +16,12 @@ namespace rsx
 		require_unresolve = 4
 	};
 
+	enum surface_sample_layout : u32
+	{
+		null = 0,
+		ps3 = 1
+	};
+
 	template <typename surface_type>
 	struct surface_overlap_info_t
 	{
@@ -137,6 +143,7 @@ namespace rsx
 		u8  samples_y = 1;
 
 		std::unique_ptr<typename std::remove_pointer<image_storage_type>::type> resolve_surface;
+		surface_sample_layout sample_layout = surface_sample_layout::null;
 
 		flags32_t memory_usage_flags = surface_usage_flags::unknown;
 		flags32_t state_flags = surface_state_flags::ready;
@@ -444,7 +451,7 @@ namespace rsx
 			// HACK!! This should be cleared through memory barriers only
 			state_flags = rsx::surface_state_flags::ready;
 
-			if (spp > 1)
+			if (spp > 1 && sample_layout != surface_sample_layout::null)
 			{
 				msaa_flags = resolve_flags;
 			}
@@ -517,6 +524,16 @@ namespace rsx
 			x2 *= samples_x;
 			y1 *= samples_y;
 			y2 *= samples_y;
+		}
+
+		template<typename T>
+		void transform_blit_coordinates(rsx::surface_access access_type, area_base<T>& region)
+		{
+			if (spp == 1 || sample_layout == rsx::surface_sample_layout::ps3)
+				return;
+
+			verify(HERE), access_type != rsx::surface_access::write;
+			transform_samples_to_pixels(region);
 		}
 	};
 }
