@@ -658,9 +658,9 @@ namespace rsx
 		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
 
-		if (0 &&
-			rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
+			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
+			g_cfg.video.antialiasing_level == msaa_level::none)
 		{
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)

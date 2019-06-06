@@ -22,7 +22,7 @@ namespace vk
 
 		vk::viewable_image* get_surface(rsx::surface_access access_type) override
 		{
-			if (spp == 1 || access_type == rsx::surface_access::write)
+			if (samples() == 1 || access_type == rsx::surface_access::write)
 			{
 				return this;
 			}
@@ -277,7 +277,7 @@ namespace vk
 			};
 
 			const bool read_access = (access != rsx::surface_access::write);
-			if (spp > 1 && read_access)
+			if (samples() > 1 && read_access)
 			{
 				get_resolve_target();
 			}
@@ -352,10 +352,13 @@ namespace vk
 			auto src_area = old_contents.src_rect();
 			auto dst_area = old_contents.dst_rect();
 
-			src_texture->transform_pixels_to_samples(src_area);
-			this->transform_pixels_to_samples(dst_area);
+			if (g_cfg.video.antialiasing_level != msaa_level::none)
+			{
+				src_texture->transform_pixels_to_samples(src_area);
+				this->transform_pixels_to_samples(dst_area);
+			}
 
-			vk::image *target_image = (spp > 1) ? get_resolve_target() : this;
+			vk::image *target_image = (samples() > 1) ? get_resolve_target() : this;
 			if (dst_area.x1 == 0 && dst_area.y1 == 0 &&
 				unsigned(dst_area.x2) == target_image->width() && unsigned(dst_area.y2) == target_image->height())
 			{
@@ -386,7 +389,7 @@ namespace vk
 
 			on_write_copy();
 
-			if (!read_access && spp > 1)
+			if (!read_access && samples() > 1)
 			{
 				// Write barrier, must initialize
 				unresolve(cmd);
@@ -421,11 +424,23 @@ namespace rsx
 			vk::render_device &device, vk::command_buffer& cmd)
 		{
 			const auto fmt = vk::get_compatible_surface_format(format);
-			const auto spp = get_format_sample_count(antialias);
 			VkFormat requested_format = fmt.first;
-			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-			if (antialias == rsx::surface_antialiasing::center_1_sample)
+			u8 samples;
+			surface_sample_layout sample_layout;
+			if (g_cfg.video.antialiasing_level == msaa_level::_auto)
+			{
+				samples = get_format_sample_count(antialias);
+				sample_layout = surface_sample_layout::ps3;
+			}
+			else
+			{
+				samples = 1;
+				sample_layout = surface_sample_layout::null;
+			}
+
+			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			if (LIKELY(samples == 1))
 			{
 				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			}
@@ -440,7 +455,7 @@ namespace rsx
 				VK_IMAGE_TYPE_2D,
 				requested_format,
 				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
-				static_cast<VkSampleCountFlagBits>(spp),
+				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
@@ -450,6 +465,7 @@ namespace rsx
 
 			rtt->set_format(format);
 			rtt->set_aa_mode(antialias);
+			rtt->sample_layout = sample_layout;
 			rtt->memory_usage_flags = rsx::surface_usage_flags::attachment;
 			rtt->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			rtt->native_component_map = fmt.second;
@@ -471,10 +487,22 @@ namespace rsx
 			vk::render_device &device, vk::command_buffer& cmd)
 		{
 			const VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
-			const auto spp = get_format_sample_count(antialias);
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-			if (antialias == rsx::surface_antialiasing::center_1_sample)
+			u8 samples;
+			surface_sample_layout sample_layout;
+			if (g_cfg.video.antialiasing_level == msaa_level::_auto)
+			{
+				samples = get_format_sample_count(antialias);
+				sample_layout = surface_sample_layout::ps3;
+			}
+			else
+			{
+				samples = 1;
+				sample_layout = surface_sample_layout::null;
+			}
+
+			if (LIKELY(samples == 1))
 			{
 				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			}
@@ -485,7 +513,7 @@ namespace rsx
 				VK_IMAGE_TYPE_2D,
 				requested_format,
 				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
-				static_cast<VkSampleCountFlagBits>(spp),
+				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
@@ -495,6 +523,7 @@ namespace rsx
 
 			ds->set_format(format);
 			ds->set_aa_mode(antialias);
+			ds->sample_layout = sample_layout;
 			ds->memory_usage_flags= rsx::surface_usage_flags::attachment;
 			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
@@ -540,6 +569,7 @@ namespace rsx
 				sink->memory_usage_flags = rsx::surface_usage_flags::storage;
 				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
 				sink->native_component_map = ref->native_component_map;
+				sink->sample_layout = ref->sample_layout;
 				sink->native_pitch = u16(prev.width * ref->get_bpp() * ref->samples_x);
 				sink->surface_width = prev.width;
 				sink->surface_height = prev.height;

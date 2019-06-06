@@ -525,6 +525,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceComboBox(ui->frameLimitBox, emu_settings::FrameLimit);
 	SubscribeTooltip(ui->frameLimitBox, json_gpu_cbo["frameLimitBox"].toString());
 
+	xemu_settings->EnhanceComboBox(ui->antiAliasing, emu_settings::MSAA);
+	SubscribeTooltip(ui->antiAliasing, json_gpu_cbo["antiAliasing"].toString());
+
 	xemu_settings->EnhanceComboBox(ui->anisotropicFilterOverride, emu_settings::AnisotropicFilterOverride, true);
 	SubscribeTooltip(ui->anisotropicFilterOverride, json_gpu_cbo["anisotropicFilterOverride"].toString());
 	// only allow values 0,2,4,8,16
