@@ -2,12 +2,15 @@
 
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"
+#include "../Utilities/cond.h"
 
 // Thread state flags
 enum class cpu_flag : u32
 {
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
+	wait, // Indicates waiting state, set by the thread itself
+	pause, // Thread suspended by suspend_all technique
 	suspend, // Thread suspended
 	ret, // Callback return requested
 	signal, // Thread received a signal (HLE)
@@ -39,15 +42,15 @@ public:
 	const u32 id;
 
 	// Public thread state
-	atomic_bs_t<cpu_flag> state{+cpu_flag::stop};
+	atomic_bs_t<cpu_flag> state{cpu_flag::stop + cpu_flag::wait};
 
 	// Process thread state, return true if the checker must return
-	bool check_state();
+	bool check_state() noexcept;
 
 	// Process thread state (pause)
 	[[nodiscard]] bool test_stopped()
 	{
-		if (UNLIKELY(state))
+		if (state)
 		{
 			if (check_state())
 			{
@@ -99,6 +102,20 @@ public:
 
 	// Callback for vm::temporary_unlock
 	virtual void cpu_unmem() {}
+
+	// Thread locker
+	class suspend_all
+	{
+		decltype(std::declval<shared_cond&>().try_shared_lock()) m_lock;
+
+		cpu_thread* m_this;
+
+	public:
+		suspend_all(cpu_thread* _this) noexcept;
+		suspend_all(const suspend_all&) = delete;
+		suspend_all& operator=(const suspend_all&) = delete;
+		~suspend_all();
+	};
 };
 
 inline cpu_thread* get_current_cpu_thread() noexcept

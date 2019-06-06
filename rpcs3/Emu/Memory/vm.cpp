@@ -172,6 +172,8 @@ namespace vm
 
 	void temporary_unlock(cpu_thread& cpu) noexcept
 	{
+		cpu.state += cpu_flag::wait;
+
 		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
 		{
 			cpu.cpu_unmem();

@@ -206,7 +206,7 @@ class shared_cond
 			m_slot = m_this->m_cvx32.atomic_op([](u64& cvx32)
 			{
 				// Combine used bits and invert to find least significant bit unused
-				const u32 slot = utils::cnttz32(~((cvx32 & 0xffffffff) | (cvx32 >> 32)), true);
+				const u32 slot = utils::cnttz64(~((cvx32 & 0xffffffff) | (cvx32 >> 32)), true);
 
 				// Set lock bits (does nothing if all slots are used)
 				const u64 bit = (1ull << slot) & 0xffffffff;
@@ -216,6 +216,13 @@ class shared_cond
 		}
 
 		shared_lock(const shared_lock&) = delete;
+
+		shared_lock(shared_lock&& rhs)
+			: m_this(rhs.m_this)
+			, m_slot(rhs.m_slot)
+		{
+			rhs.m_slot = 32;
+		}
 
 		shared_lock& operator=(const shared_lock&) = delete;
 
@@ -261,6 +268,10 @@ public:
 		return imp_wait(lock.m_slot, usec_timeout);
 	}
 
+	void wait_all() noexcept;
+
+	bool wait_all(shared_lock& lock) noexcept;
+
 	void notify_all() noexcept
 	{
 		if (LIKELY(!m_cvx32))
@@ -268,4 +279,6 @@ public:
 
 		imp_notify();
 	}
+
+	bool notify_all(shared_lock& lock) noexcept;
 };

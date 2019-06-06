@@ -1349,6 +1349,12 @@ void spu_stop(spu_thread* _spu, u32 code)
 	{
 		spu_runtime::g_escape(_spu);
 	}
+
+	if (_spu->test_stopped())
+	{
+		_spu->pc += 4;
+		spu_runtime::g_escape(_spu);
+	}
 }
 
 void spu_recompiler::STOP(spu_opcode_t op)
@@ -1407,7 +1413,7 @@ void spu_recompiler::MFSPR(spu_opcode_t op)
 	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 }
 
-static s64 spu_rdch(spu_thread* _spu, u32 ch)
+static u32 spu_rdch(spu_thread* _spu, u32 ch)
 {
 	const s64 result = _spu->get_ch_value(ch);
 
@@ -1416,7 +1422,13 @@ static s64 spu_rdch(spu_thread* _spu, u32 ch)
 		spu_runtime::g_escape(_spu);
 	}
 
-	return result;
+	if (_spu->test_stopped())
+	{
+		_spu->pc += 4;
+		spu_runtime::g_escape(_spu);
+	}
+
+	return static_cast<u32>(result & 0xffffffff);
 }
 
 void spu_recompiler::RDCH(spu_opcode_t op)
@@ -2319,12 +2331,24 @@ static void spu_wrch(spu_thread* _spu, u32 ch, u32 value)
 	{
 		spu_runtime::g_escape(_spu);
 	}
+
+	if (_spu->test_stopped())
+	{
+		_spu->pc += 4;
+		spu_runtime::g_escape(_spu);
+	}
 }
 
-static void spu_wrch_mfc(spu_thread* _spu, spu_function_t _ret)
+static void spu_wrch_mfc(spu_thread* _spu)
 {
 	if (!_spu->process_mfc_cmd())
 	{
+		spu_runtime::g_escape(_spu);
+	}
+
+	if (_spu->test_stopped())
+	{
+		_spu->pc += 4;
 		spu_runtime::g_escape(_spu);
 	}
 }

@@ -936,9 +936,16 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 		// Set RTM usage
 		g_use_rtm = utils::has_rtm() && ((utils::has_mpx() && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
+
 		if (g_use_rtm && !utils::has_mpx())
 		{
 			LOG_WARNING(GENERAL, "TSX forced by User");
+		}
+
+		if (g_use_rtm && g_cfg.core.preferred_spu_threads)
+		{
+			g_cfg.core.preferred_spu_threads.set(0);
+			LOG_ERROR(GENERAL, "Preferred SPU Threads forcefully disabled - not compatible with TSX in this version.");
 		}
 
 		// Load patches from different locations
