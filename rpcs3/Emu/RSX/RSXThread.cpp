@@ -771,7 +771,7 @@ namespace rsx
 
 	gsl::span<const gsl::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
-		if (element_push_buffer.size())
+		if (!element_push_buffer.empty())
 		{
 			//Indices provided via immediate mode
 			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};

@@ -430,7 +430,7 @@ std::string VertexProgramDecompiler::Decompile()
 		m_instructions[i].reset();
 	}
 
-	if (m_prog.jump_table.size())
+	if (!m_prog.jump_table.empty())
 	{
 		last_label_addr = *m_prog.jump_table.rbegin();
 	}
