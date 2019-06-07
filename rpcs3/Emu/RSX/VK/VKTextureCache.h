@@ -189,22 +189,22 @@ namespace vk
 				dma_buffer = std::make_unique<vk::buffer>(*m_device, align(get_section_size(), 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
 			}
 
+			vk::image *locked_resource = vram_texture;
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
-				auto as_rtt = static_cast<vk::render_target*>(vram_texture);
-				if (as_rtt->dirty()) as_rtt->read_barrier(cmd);
+				auto surface = vk::as_rtt(vram_texture);
+				surface->read_barrier(cmd);
+				locked_resource = surface->get_surface(rsx::surface_access::read);
 			}
 
-			vk::image *target = vram_texture;
-			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * vram_texture->width();
+			verify(HERE), locked_resource->samples() == 1;
 
-			VkImageAspectFlags aspect_flag = vk::get_aspect_flags(vram_texture->info.format);
-			VkImageSubresourceRange subresource_range = { aspect_flag, 0, 1, 0, 1 };
+			vk::image* target = locked_resource;
+			locked_resource->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			real_pitch = vk::get_format_texel_width(locked_resource->info.format) * locked_resource->width();
+
 			u32 transfer_width = width;
 			u32 transfer_height = height;
-
-			VkImageLayout old_layout = vram_texture->current_layout;
-			change_image_layout(cmd, vram_texture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
 
 			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
 				(real_pitch != rsx_pitch))
@@ -216,42 +216,39 @@ namespace vk
 					transfer_height *= surface->samples_y;
 				}
 
-				if (transfer_width != vram_texture->width() || transfer_height != vram_texture->height())
+				if (transfer_width != locked_resource->width() || transfer_height != locked_resource->height())
 				{
 					// TODO: Synchronize access to typeles textures
 					target = vk::get_typeless_helper(vram_texture->info.format, transfer_width, transfer_height);
-					change_image_layout(cmd, target, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+					target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 					// Allow bilinear filtering on color textures where compatibility is likely
-					const auto filter = (aspect_flag == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+					const auto filter = (target->aspect() == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
 
-					vk::copy_scaled_image(cmd, vram_texture->value, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target->current_layout,
-						{ 0, 0, (s32)vram_texture->width(), (s32)vram_texture->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
-						1, aspect_flag, true, filter, vram_texture->info.format, target->info.format);
+					vk::copy_scaled_image(cmd, locked_resource->value, target->value, locked_resource->current_layout, target->current_layout,
+						{ 0, 0, (s32)locked_resource->width(), (s32)locked_resource->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
+						1, target->aspect(), true, filter, vram_texture->format(), target->format());
+
+					target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 				}
 			}
 
-			if (target->current_layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-			{
-				// Using a scaled intermediary
-				verify(HERE), target != vram_texture;
-				change_image_layout(cmd, target, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-			}
+			verify(HERE), target->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
 			// Handle any format conversions using compute tasks
 			vk::cs_shuffle_base *shuffle_kernel = nullptr;
 
-			if (vram_texture->info.format == VK_FORMAT_D24_UNORM_S8_UINT)
+			if (vram_texture->format() == VK_FORMAT_D24_UNORM_S8_UINT)
 			{
 				shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_se_d24x8>();
 			}
-			else if (vram_texture->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+			else if (vram_texture->format() == VK_FORMAT_D32_SFLOAT_S8_UINT)
 			{
 				shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_se_f32_d24x8>();
 			}
 			else if (pack_unpack_swap_bytes)
 			{
-				const auto texel_layout = vk::get_format_element_size(vram_texture->info.format);
+				const auto texel_layout = vk::get_format_element_size(vram_texture->format());
 				const auto elem_size = texel_layout.first;
 
 				if (elem_size == 2)
@@ -269,12 +266,12 @@ namespace vk
 
 			// TODO: Read back stencil values (is this really necessary?)
 			VkBufferImageCopy region = {};
-			region.imageSubresource = {aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
+			region.imageSubresource = {vram_texture->aspect() & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
 			region.imageExtent = {transfer_width, transfer_height, 1};
 			vkCmdCopyImageToBuffer(cmd, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mem_target->value, 1, &region);
 
-			change_image_layout(cmd, vram_texture, old_layout, subresource_range);
-			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * transfer_width;
+			locked_resource->pop_layout(cmd);
+			real_pitch = vk::get_format_texel_width(vram_texture->format()) * transfer_width;
 
 			if (shuffle_kernel)
 			{
