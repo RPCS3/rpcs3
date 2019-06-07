@@ -3022,7 +3022,7 @@ namespace rsx
 
 		void do_update()
 		{
-			if (m_flush_always_cache.size())
+			if (!m_flush_always_cache.empty())
 			{
 				if (m_cache_update_tag.load(std::memory_order_consume) != m_flush_always_update_timestamp)
 				{

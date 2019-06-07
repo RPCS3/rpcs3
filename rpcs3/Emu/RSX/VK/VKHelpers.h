@@ -484,7 +484,7 @@ namespace vk
 
 		uint32_t get_queue_count() const
 		{
-			if (queue_props.size())
+			if (!queue_props.empty())
 				return (u32)queue_props.size();
 
 			uint32_t count = 0;
@@ -495,7 +495,7 @@ namespace vk
 
 		VkQueueFamilyProperties get_queue_properties(uint32_t queue)
 		{
-			if (!queue_props.size())
+			if (queue_props.empty())
 			{
 				uint32_t count = 0;
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
@@ -2190,7 +2190,7 @@ public:
 
 			if (old_swapchain)
 			{
-				if (swapchain_images.size())
+				if (!swapchain_images.empty())
 				{
 					for (auto &img : swapchain_images)
 						img.discard(dev);
@@ -2270,13 +2270,13 @@ public:
 
 		~context()
 		{
-			if (m_instance || m_vk_instances.size())
+			if (m_instance || !m_vk_instances.empty())
 				close();
 		}
 
 		void close()
 		{
-			if (!m_vk_instances.size()) return;
+			if (m_vk_instances.empty()) return;
 
 			if (m_debugger)
 			{
