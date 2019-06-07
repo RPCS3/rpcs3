@@ -144,9 +144,9 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				vm::ptr<u16> string_to_send = vm::cast(vm::alloc(CELL_OSKDIALOG_STRING_SIZE * 2, vm::main));
 				atomic_t<bool> done = false;
 				u32 return_value;
-				u32 i = 0;
+				u32 i;
 
-				for (i; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
+				for (i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
 				{
 					string_to_send[i] = osk->osk_text[i];
 					if (osk->osk_text[i] == 0) break;

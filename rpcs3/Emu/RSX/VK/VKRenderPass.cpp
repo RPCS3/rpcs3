@@ -52,7 +52,7 @@ namespace vk
 	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key)
 	{
 		// Partial update; assumes compatible renderpass keys
-		const u64 layout_mask = (0x7FFF << 22);
+		const u64 layout_mask = (0x7FFFull << 22);
 
 		u64 key = previous_key & ~layout_mask;
 		u64 layout_offset = 22;

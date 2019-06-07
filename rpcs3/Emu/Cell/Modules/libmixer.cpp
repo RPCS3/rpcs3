@@ -64,13 +64,17 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 	switch (type)
 	{
 	case CELL_SURMIXER_CHSTRIP_TYPE1A:
-		if (port >= g_surmx.ch_strips_1) type = 0; break;
+		if (port >= g_surmx.ch_strips_1) type = 0;
+		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE2A:
-		if (port >= g_surmx.ch_strips_2) type = 0; break;
+		if (port >= g_surmx.ch_strips_2) type = 0;
+		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE6A:
-		if (port >= g_surmx.ch_strips_6) type = 0; break;
+		if (port >= g_surmx.ch_strips_6) type = 0;
+		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE8A:
-		if (port >= g_surmx.ch_strips_8) type = 0; break;
+		if (port >= g_surmx.ch_strips_8) type = 0;
+		break;
 	default:
 		type = 0; break;
 	}

@@ -1394,7 +1394,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			}
 
 			// Reschedule
-			cpu->test_stopped();
+			if (cpu->test_stopped())
+			{
+				//
+			}
 
 			if (Emu.IsStopped())
 			{
@@ -1692,7 +1695,7 @@ const bool s_exception_handler_set = []() -> bool
 #endif
 
 // TODO
-extern atomic_t<u32> g_thread_count(0);
+atomic_t<u32> g_thread_count(0);
 
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
