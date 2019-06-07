@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include <exception>
@@ -170,7 +170,7 @@ namespace vk
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length,
 			VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
-	
+
 	void insert_image_memory_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout,
 		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask,
 		const VkImageSubresourceRange& range);
@@ -2313,7 +2313,6 @@ public:
 		PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = nullptr;
 		VkDebugReportCallbackEXT m_debugger = nullptr;
 
-		bool loader_exists = false;
 		bool extensions_loaded = false;
 
 	public:
@@ -2321,9 +2320,6 @@ public:
 		context()
 		{
 			m_instance = nullptr;
-
-			//Check that some critical entry-points have been loaded into memory indicating presence of a loader
-			loader_exists = (vkCreateInstance != nullptr);
 		}
 
 		~context()
@@ -2370,8 +2366,6 @@ public:
 
 		uint32_t createInstance(const char *app_name, bool fast = false)
 		{
-			if (!loader_exists) return 0;
-
 			//Initialize a vulkan instance
 			VkApplicationInfo app = {};
 
@@ -2477,9 +2471,6 @@ public:
 
 		std::vector<physical_device>& enumerateDevices()
 		{
-			if (!loader_exists)
-				return gpus;
-
 			uint32_t num_gpus;
 			// This may fail on unsupported drivers, so just assume no devices
 			if (vkEnumeratePhysicalDevices(m_instance, &num_gpus, nullptr) != VK_SUCCESS)
