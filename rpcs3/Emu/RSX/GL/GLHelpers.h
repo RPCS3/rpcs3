@@ -1942,7 +1942,7 @@ namespace gl
 			return m_aspect_flags;
 		}
 
-		bool compare_swizzle(GLenum* argb_swizzle) const
+		bool compare_swizzle(const GLenum* argb_swizzle) const
 		{
 			return (argb_swizzle[0] == component_swizzle[3] &&
 				argb_swizzle[1] == component_swizzle[0] &&

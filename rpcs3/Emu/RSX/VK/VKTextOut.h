@@ -198,7 +198,7 @@ namespace vk
 			m_program = std::make_unique<vk::glsl::program>((VkDevice)dev, pipeline, unused, unused);
 		}
 
-		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, float *offsets, size_t nb_offsets, std::array<float, 4> color)
+		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, size_t nb_offsets, std::array<float, 4> color)
 		{
 			verify(HERE), m_used_descriptors < 120;
 
