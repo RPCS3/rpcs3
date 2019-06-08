@@ -127,7 +127,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		for (const ParamItem& PI : PT.items)
 		{
 			std::string samplerType = PT.type;
-			int index = atoi(&PI.name.data()[3]);
+			int index = atoi(&PI.name[3]);
 
 			const auto mask = (1 << index);
 
