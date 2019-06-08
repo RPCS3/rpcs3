@@ -170,7 +170,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);
 
-	std::string parameters = "";
+	std::string parameters;
 	for (int i = 0; i < 16; ++i)
 	{
 		std::string reg_name = "dst_reg" + std::to_string(i);
@@ -218,7 +218,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main ()\n";
 	OS << "{\n";
 
-	std::string parameters = "";
+	std::string parameters;
 
 	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{

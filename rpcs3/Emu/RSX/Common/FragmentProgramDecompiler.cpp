@@ -558,7 +558,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
 
-	std::string swizzle = "";
+	std::string swizzle;
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
 	swizzle += f[src.swizzle_z];
