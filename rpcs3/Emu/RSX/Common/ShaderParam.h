@@ -206,7 +206,7 @@ public:
 
 		if (var_blocks.size() == 1)
 		{
-			swizzles.push_back("xyzw");
+			swizzles.emplace_back("xyzw");
 		}
 		else
 		{

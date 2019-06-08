@@ -579,7 +579,7 @@ namespace gl
 			auto view = std::make_unique<gl::texture_view>(dst.get(), dst_type, sized_internal_fmt, swizzle.data());
 			auto result = view.get();
 
-			m_temporary_surfaces.push_back({ dst, view });
+			m_temporary_surfaces.emplace_back(dst, view);
 			return result;
 		}
 
@@ -748,7 +748,7 @@ namespace gl
 			}
 
 			auto result = view.get();
-			m_temporary_surfaces.push_back({ dst_image, view });
+			m_temporary_surfaces.emplace_back(dst_image, view);
 			return result;
 		}
 
@@ -770,7 +770,7 @@ namespace gl
 			}
 
 			auto result = view.get();
-			m_temporary_surfaces.push_back({ dst_image, view });
+			m_temporary_surfaces.emplace_back(dst_image, view);
 			return result;
 		}
 
