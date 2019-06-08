@@ -10,8 +10,8 @@
 #else
 // Cannot include Xlib.h before Qt5
 // and we don't need all of Xlib anyway
-typedef struct _XDisplay Display;
-typedef unsigned long Window;
+using Display = struct _XDisplay;
+using Window = unsigned long;
 #endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
