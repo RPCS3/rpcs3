@@ -22,6 +22,7 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
 	# Set compiler options here
 
 	add_compile_options(-ftemplate-depth=1024)
+	add_compile_options(-fconstexpr-steps=1048576)
 	add_compile_options(-Wunused-value -Wunused-comparison)
 	if(APPLE)
 		add_compile_options(-stdlib=libc++)

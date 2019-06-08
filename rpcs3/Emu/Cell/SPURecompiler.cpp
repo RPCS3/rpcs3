@@ -20,9 +20,9 @@ extern atomic_t<const char*> g_progr;
 extern atomic_t<u64> g_progr_ptotal;
 extern atomic_t<u64> g_progr_pdone;
 
-const spu_decoder<spu_itype> s_spu_itype;
-const spu_decoder<spu_iname> s_spu_iname;
-const spu_decoder<spu_iflag> s_spu_iflag;
+constexpr spu_decoder<spu_itype> s_spu_itype;
+constexpr spu_decoder<spu_iname> s_spu_iname;
+constexpr spu_decoder<spu_iflag> s_spu_iflag;
 
 extern u64 get_timebased_time();
 

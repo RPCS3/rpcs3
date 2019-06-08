@@ -77,7 +77,7 @@ template <typename D, typename T = decltype(&D::UNK)>
 class ppu_decoder
 {
 	// Fast lookup table
-	std::array<T, 0x20000> m_table;
+	std::array<T, 0x20000> m_table{};
 
 	struct instruction_info
 	{
@@ -85,14 +85,14 @@ class ppu_decoder
 		T pointer;
 		u32 magn; // Non-zero for "columns" (effectively, number of most significant bits "eaten")
 
-		instruction_info(u32 v, T p, u32 m = 0)
+		constexpr instruction_info(u32 v, T p, u32 m = 0)
 			: value(v)
 			, pointer(p)
 			, magn(m)
 		{
 		}
 
-		instruction_info(u32 v, const T* p, u32 m = 0)
+		constexpr instruction_info(u32 v, const T* p, u32 m = 0)
 			: value(v)
 			, pointer(*p)
 			, magn(m)
@@ -101,7 +101,7 @@ class ppu_decoder
 	};
 
 	// Fill lookup table
-	void fill_table(u32 main_op, u32 count, u32 sh, std::initializer_list<instruction_info> entries)
+	constexpr void fill_table(u32 main_op, u32 count, u32 sh, std::initializer_list<instruction_info> entries)
 	{
 		if (sh < 11)
 		{
@@ -111,7 +111,7 @@ class ppu_decoder
 				{
 					for (u32 j = 0; j < 1u << sh; j++)
 					{
-						m_table.at((((((i << (count - v.magn)) | v.value) << sh) | j) << 6) | main_op) = v.pointer;
+						m_table[(((((i << (count - v.magn)) | v.value) << sh) | j) << 6) | main_op] = v.pointer;
 					}
 				}
 			}
@@ -123,16 +123,19 @@ class ppu_decoder
 			{
 				for (u32 i = 0; i < 1u << 11; i++)
 				{
-					m_table.at(i << 6 | v.value) = v.pointer;
+					m_table[i << 6 | v.value] = v.pointer;
 				}
 			}
 		}
 	}
 
 public:
-	ppu_decoder()
+	constexpr ppu_decoder()
 	{
-		m_table.fill(&D::UNK);
+		for (auto& value : m_table)
+		{
+			value = &D::UNK;
+		}
 
 		// Main opcodes (field 0..5)
 		fill_table(0x00, 6, -1,
@@ -572,7 +575,7 @@ public:
 	}
 
 	template <typename F>
-	ppu_decoder(F&& init) : ppu_decoder()
+	constexpr ppu_decoder(F&& init) : ppu_decoder()
 	{
 		init(m_table);
 	}

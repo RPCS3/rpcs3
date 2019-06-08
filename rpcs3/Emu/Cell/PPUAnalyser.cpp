@@ -7,7 +7,7 @@
 #include "yaml-cpp/yaml.h"
 #include "Utilities/asm.h"
 
-const ppu_decoder<ppu_itype> s_ppu_itype;
+constexpr ppu_decoder<ppu_itype> s_ppu_itype;
 
 template<>
 void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
