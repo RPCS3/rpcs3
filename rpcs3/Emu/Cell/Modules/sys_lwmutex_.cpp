@@ -10,7 +10,7 @@
 
 extern logs::channel sysPrxForUser;
 
-error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
+error_code sys_lwmutex_create(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
 {
 	sysPrxForUser.trace("sys_lwmutex_create(lwmutex=*0x%x, attr=*0x%x)", lwmutex, attr);
 
@@ -42,7 +42,7 @@ error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmute
 	attrs->flags     = 0;
 	attrs->name_u64  = attr->name_u64;
 
-	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64))
+	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(ppu, out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64))
 	{
 		return res;
 	}
@@ -60,7 +60,7 @@ error_code sys_lwmutex_destroy(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 	if (g_cfg.core.hle_lwmutex)
 	{
-		return sys_mutex_destroy(lwmutex->sleep_queue);
+		return sys_mutex_destroy(ppu, lwmutex->sleep_queue);
 	}
 
 	// check to prevent recursive locking in the next call

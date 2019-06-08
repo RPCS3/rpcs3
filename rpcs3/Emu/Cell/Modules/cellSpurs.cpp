@@ -1140,7 +1140,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	const auto lwCond  = spurs.ptr(&CellSpurs::cond);
 
 	// Create a mutex to protect access to SPURS handler thread data
-	if (s32 rc = sys_lwmutex_create(lwMutex, vm::make_var(sys_lwmutex_attribute_t{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, "_spuPrv" })))
+	if (s32 rc = sys_lwmutex_create(ppu, lwMutex, vm::make_var(sys_lwmutex_attribute_t{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, "_spuPrv" })))
 	{
 		_spurs::finalize_spu(ppu, spurs);
 		return rollback(), rc;

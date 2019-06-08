@@ -147,8 +147,8 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr);
-error_code sys_mutex_destroy(u32 mutex_id);
+error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr);
+error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id);
 error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout);
 error_code sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id);
 error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id);
