@@ -71,7 +71,7 @@ struct VertexProgramDecompiler
 	std::string GetVecMask();
 	std::string GetScaMask();
 	std::string GetDST(bool is_sca = false);
-	std::string GetSRC(const u32 n);
+	std::string GetSRC(u32 n);
 	std::string GetTex();
 	std::string GetRawCond();
 	std::string GetCond();
