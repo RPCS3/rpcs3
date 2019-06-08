@@ -373,9 +373,9 @@ std::string VertexProgramDecompiler::BuildCode()
 			lvl++;
 		}
 
-		for (uint j = 0; j < m_instructions[i].body.size(); ++j)
+		for (const auto& instruction_body : m_instructions[i].body)
 		{
-			main_body.append(lvl, '\t') += m_instructions[i].body[j] + "\n";
+			main_body.append(lvl, '\t') += instruction_body + "\n";
 		}
 
 		lvl += m_instructions[i].open_scopes;
@@ -420,14 +420,14 @@ std::string VertexProgramDecompiler::Decompile()
 	u32 i = 1;
 	u32 last_label_addr = 0;
 
-	for (unsigned i = 0; i < PF_PARAM_COUNT; i++)
+	for (auto& param : m_parr.params)
 	{
-		m_parr.params[i].clear();
+		param.clear();
 	}
 
-	for (int i = 0; i < m_max_instr_count; ++i)
+	for (auto& instruction : m_instructions)
 	{
-		m_instructions[i].reset();
+		instruction.reset();
 	}
 
 	if (!m_prog.jump_table.empty())

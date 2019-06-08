@@ -661,11 +661,11 @@ namespace vk
 		void remove_temp_resources(u32 key)
 		{
 			std::vector<u64> keys_to_remove;
-			for (auto It = temp_image_cache.begin(); It != temp_image_cache.end(); ++It)
+			for (const auto& temp_image : temp_image_cache)
 			{
-				if (It->second.first == key)
+				if (temp_image.second.first == key)
 				{
-					keys_to_remove.push_back(It->first);
+					keys_to_remove.push_back(temp_image.first);
 				}
 			}
 

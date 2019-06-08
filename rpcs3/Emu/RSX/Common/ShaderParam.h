@@ -90,11 +90,11 @@ struct ParamType
 	{
 	}
 
-	bool SearchName(const std::string& name)
+	bool SearchName(const std::string& name) const
 	{
-		for (u32 i = 0; i<items.size(); ++i)
+		for (const auto& item : items)
 		{
-			if (items[i].name == name) return true;
+			if (item.name == name) return true;
 		}
 
 		return false;
@@ -107,10 +107,10 @@ struct ParamArray
 
 	ParamType* SearchParam(const ParamFlag &flag, const std::string& type)
 	{
-		for (u32 i = 0; i<params[flag].size(); ++i)
+		for (auto& param : params[flag])
 		{
-			if (params[flag][i].type == type)
-				return &params[flag][i];
+			if (param.type == type)
+				return &param;
 		}
 
 		return nullptr;
@@ -118,9 +118,9 @@ struct ParamArray
 
 	bool HasParamTypeless(const ParamFlag flag, const std::string& name)
 	{
-		for (u32 i = 0; i<params[flag].size(); ++i)
+		for (const auto& param : params[flag])
 		{
-			if (params[flag][i].SearchName(name))
+			if (param.SearchName(name))
 				return true;
 		}
 
