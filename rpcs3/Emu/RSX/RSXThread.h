@@ -397,8 +397,8 @@ namespace rsx
 			ZCULL_control() {}
 			~ZCULL_control() {}
 
-			void set_enabled(class ::rsx::thread* ptimer, bool enabled);
-			void set_active(class ::rsx::thread* ptimer, bool active);
+			void set_enabled(class ::rsx::thread* ptimer, bool state);
+			void set_active(class ::rsx::thread* ptimer, bool state);
 
 			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
 
