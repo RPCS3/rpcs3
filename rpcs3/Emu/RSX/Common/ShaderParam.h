@@ -94,7 +94,7 @@ struct ParamType
 	{
 		for (u32 i = 0; i<items.size(); ++i)
 		{
-			if (items[i].name.compare(name) == 0) return true;
+			if (items[i].name == name) return true;
 		}
 
 		return false;
@@ -109,7 +109,7 @@ struct ParamArray
 	{
 		for (u32 i = 0; i<params[flag].size(); ++i)
 		{
-			if (params[flag][i].type.compare(type) == 0)
+			if (params[flag][i].type == type)
 				return &params[flag][i];
 		}
 
