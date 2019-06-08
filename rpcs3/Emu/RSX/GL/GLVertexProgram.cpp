@@ -142,10 +142,10 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
-		outputs_to_declare.push_back("front_diff_color");
+		outputs_to_declare.emplace_back("front_diff_color");
 
 	if (insert_back_specular && insert_front_specular)
-		outputs_to_declare.push_back("front_spec_color");
+		outputs_to_declare.emplace_back("front_spec_color");
 
 	for (auto &name: outputs_to_declare)
 	{

@@ -432,7 +432,7 @@ namespace vk
 			if (tex.is_managed())
 			{
 				m_discarded_memory_size += tex.get_section_size();
-				m_discardable_storage.push_back(tex);
+				m_discardable_storage.emplace_back(tex);
 			}
 		}
 
@@ -735,7 +735,7 @@ namespace vk
 			}
 
 			const u32 resource_memory = w * h * 4; //Rough approximate
-			m_discardable_storage.push_back({ image, view });
+			m_discardable_storage.emplace_back(image, view);
 			m_discardable_storage.back().block_size = resource_memory;
 			m_discarded_memory_size += resource_memory;
 
@@ -792,7 +792,7 @@ namespace vk
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dst_range);
 
 			const u32 resource_memory = size * size * 6 * 4; //Rough approximate
-			m_discardable_storage.push_back({ image, view });
+			m_discardable_storage.emplace_back(image, view);
 			m_discardable_storage.back().block_size = resource_memory;
 			m_discarded_memory_size += resource_memory;
 
@@ -836,7 +836,7 @@ namespace vk
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dst_range);
 
 			const u32 resource_memory = width * height * depth * 4; //Rough approximate
-			m_discardable_storage.push_back({ image, view });
+			m_discardable_storage.emplace_back(image, view);
 			m_discardable_storage.back().block_size = resource_memory;
 			m_discarded_memory_size += resource_memory;
 
@@ -1240,7 +1240,7 @@ namespace vk
 
 			auto result = image.get();
 			const u32 resource_memory = width * height * 4; //Rough approximate
-			m_discardable_storage.push_back(image);
+			m_discardable_storage.emplace_back(image);
 			m_discardable_storage.back().block_size = resource_memory;
 			m_discarded_memory_size += resource_memory;
 

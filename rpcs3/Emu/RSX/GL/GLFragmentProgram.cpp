@@ -80,12 +80,12 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 	{
 		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
 		{
-			inputs_to_declare.push_back("front_diff_color");
+			inputs_to_declare.emplace_back("front_diff_color");
 		}
 
 		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
 		{
-			inputs_to_declare.push_back("front_spec_color");
+			inputs_to_declare.emplace_back("front_spec_color");
 		}
 	}
 

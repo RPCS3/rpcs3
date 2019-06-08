@@ -19,14 +19,14 @@ namespace rsx
 			if (home == nullptr)
 				home = getpwuid(getuid())->pw_dir;
 
-			font_dirs.push_back(home);
+			font_dirs.emplace_back(home);
 			if (home[font_dirs[0].length() - 1] == '/')
 				font_dirs[0] += ".fonts/";
 			else
 				font_dirs[0] += "/.fonts/";
 
-			fallback_fonts.push_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
-			fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
+			fallback_fonts.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
+			fallback_fonts.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
 #endif
 			// Search dev_flash for the font too
 			font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
@@ -256,10 +256,10 @@ namespace rsx
 							}
 						}
 
-						result.push_back({quad.x0, quad.y0, quad.s0, quad.t0});
-						result.push_back({quad.x1, quad.y0, quad.s1, quad.t0});
-						result.push_back({quad.x0, quad.y1, quad.s0, quad.t1});
-						result.push_back({quad.x1, quad.y1, quad.s1, quad.t1});
+						result.emplace_back(quad.x0, quad.y0, quad.s0, quad.t0);
+						result.emplace_back(quad.x1, quad.y0, quad.s1, quad.t0);
+						result.emplace_back(quad.x0, quad.y1, quad.s0, quad.t1);
+						result.emplace_back(quad.x1, quad.y1, quad.s1, quad.t1);
 						break;
 					}
 					} // switch

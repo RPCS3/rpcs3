@@ -488,7 +488,7 @@ namespace rsx
 				const u32 reg = (command.reg & 0xfffc) >> 2;
 				const u32 value = command.value;
 
-				frame_debug.command_queue.push_back(std::make_pair(reg, value));
+				frame_debug.command_queue.emplace_back(reg, value);
 
 				if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
 				{

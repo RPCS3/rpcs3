@@ -823,7 +823,7 @@ namespace rsx
 			if (state.vertex_arrays_info[index].size() > 0)
 			{
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
-				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
+				result.emplace_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
 					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), state.current_draw_clause), index, true});
 				continue;
 			}
@@ -834,18 +834,18 @@ namespace rsx
 				const u8 element_size = info.size * sizeof(u32);
 
 				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
-				result.push_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
+				result.emplace_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
 				continue;
 			}
 
 			if (state.register_vertex_info[index].size > 0)
 			{
 				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
-				result.push_back(vertex_array_register{info.type, info.size, info.data, index});
+				result.emplace_back(vertex_array_register{info.type, info.size, info.data, index});
 				continue;
 			}
 
-			result.push_back(empty_vertex_array{index});
+			result.emplace_back(empty_vertex_array{index});
 		}
 
 		return result;

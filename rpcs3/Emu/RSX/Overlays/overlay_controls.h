@@ -242,20 +242,20 @@ namespace rsx
 
 			resource_config()
 			{
-				texture_resource_files.push_back("fade_top.png");
-				texture_resource_files.push_back("fade_bottom.png");
-				texture_resource_files.push_back("select.png");
-				texture_resource_files.push_back("start.png");
-				texture_resource_files.push_back("cross.png");
-				texture_resource_files.push_back("circle.png");
-				texture_resource_files.push_back("triangle.png");
-				texture_resource_files.push_back("square.png");
-				texture_resource_files.push_back("L1.png");
-				texture_resource_files.push_back("R1.png");
-				texture_resource_files.push_back("L2.png");
-				texture_resource_files.push_back("R2.png");
-				texture_resource_files.push_back("save.png");
-				texture_resource_files.push_back("new.png");
+				texture_resource_files.emplace_back("fade_top.png");
+				texture_resource_files.emplace_back("fade_bottom.png");
+				texture_resource_files.emplace_back("select.png");
+				texture_resource_files.emplace_back("start.png");
+				texture_resource_files.emplace_back("cross.png");
+				texture_resource_files.emplace_back("circle.png");
+				texture_resource_files.emplace_back("triangle.png");
+				texture_resource_files.emplace_back("square.png");
+				texture_resource_files.emplace_back("L1.png");
+				texture_resource_files.emplace_back("R1.png");
+				texture_resource_files.emplace_back("L2.png");
+				texture_resource_files.emplace_back("R2.png");
+				texture_resource_files.emplace_back("save.png");
+				texture_resource_files.emplace_back("new.png");
 			}
 
 			void load_files()
@@ -633,7 +633,7 @@ namespace rsx
 							case '\r':
 								continue;
 							case '\n':
-								lines.push_back({ line_begin, ctr });
+								lines.emplace_back(line_begin, ctr);
 								line_begin = ctr;
 								continue;
 							default:
@@ -641,7 +641,7 @@ namespace rsx
 							}
 						}
 
-						lines.push_back({ line_begin, ctr });
+						lines.emplace_back(line_begin, ctr);
 						const auto max_region_w = std::max<f32>(text_extents_w, w);
 
 						for (auto p : lines)
