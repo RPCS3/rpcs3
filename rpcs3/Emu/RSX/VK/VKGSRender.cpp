@@ -1882,7 +1882,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	//clip region
 	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
-	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
+	VkClearRect region = { { { scissor_x, scissor_y }, { scissor_w, scissor_h } }, 0, 1 };
 
 	const bool require_mem_load = (scissor_w * scissor_h) < (fb_width * fb_height);
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
@@ -1910,6 +1910,12 @@ void VKGSRender::clear_surface(u32 mask)
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
 
 				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+				if (ds->samples() > 1)
+				{
+					if (!require_mem_load) ds->stencil_init_flags &= 0xFF;
+					ds->stencil_init_flags |= clear_stencil;
+				}
 			}
 
 			if ((mask & 0x3) != 0x3 && !require_mem_load && ds->state_flags & rsx::surface_state_flags::erase_bkgnd)
@@ -2469,6 +2475,21 @@ bool VKGSRender::load_program()
 				vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass()),
 				vk::get_compare_func(rsx::method_registers.back_stencil_func()),
 				0xFF, 0xFF); //write mask, func_mask, ref are dynamic
+		}
+
+		if (auto ds = m_rtts.m_bound_depth_stencil.second;
+			ds && ds->samples() > 1 && !(ds->stencil_init_flags & 0xFF00))
+		{
+			if (properties.state.ds.front.failOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.depthFailOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.passOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.failOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.depthFailOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.passOp != VK_STENCIL_OP_KEEP)
+			{
+				// Toggle bit 9 to signal require full bit-wise transfer
+				ds->stencil_init_flags |= (1 << 8);
+			}
 		}
 	}
 

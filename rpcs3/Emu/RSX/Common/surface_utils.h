@@ -148,6 +148,7 @@ namespace rsx
 		flags32_t memory_usage_flags = surface_usage_flags::unknown;
 		flags32_t state_flags = surface_state_flags::ready;
 		flags32_t msaa_flags = surface_state_flags::ready;
+		flags32_t stencil_init_flags = 0;
 
 		union
 		{
@@ -462,9 +463,15 @@ namespace rsx
 			}
 		}
 
-		void on_write_copy(u64 write_tag = 0)
+		void on_write_copy(u64 write_tag = 0, bool keep_optimizations = false)
 		{
 			on_write(write_tag, rsx::surface_state_flags::require_unresolve);
+
+			if (!keep_optimizations && is_depth_surface())
+			{
+				// A successful write-copy occured, cannot guarantee flat contents in stencil area
+				stencil_init_flags |= (1 << 9);
+			}
 		}
 
 		// Returns the rect area occupied by this surface expressed as an 8bpp image with no AA

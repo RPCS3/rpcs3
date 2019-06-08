@@ -359,12 +359,16 @@ namespace vk
 			}
 
 			vk::image *target_image = (samples() > 1) ? get_resolve_target() : this;
+			bool memory_load = true;
 			if (dst_area.x1 == 0 && dst_area.y1 == 0 &&
 				unsigned(dst_area.x2) == target_image->width() && unsigned(dst_area.y2) == target_image->height())
 			{
 				// Skip a bunch of useless work
 				state_flags &= ~(rsx::surface_state_flags::erase_bkgnd);
 				msaa_flags = rsx::surface_state_flags::ready;
+
+				memory_load = false;
+				stencil_init_flags = src_texture->stencil_init_flags;
 			}
 			else if (state_flags & rsx::surface_state_flags::erase_bkgnd)
 			{
@@ -387,7 +391,7 @@ namespace vk
 				dst_area,
 				/*linear?*/false, /*depth?(unused)*/false, typeless_info);
 
-			on_write_copy();
+			on_write_copy(0, !memory_load);
 
 			if (!read_access && samples() > 1)
 			{
@@ -570,6 +574,7 @@ namespace rsx
 				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
 				sink->native_component_map = ref->native_component_map;
 				sink->sample_layout = ref->sample_layout;
+				sink->stencil_init_flags = ref->stencil_init_flags;
 				sink->native_pitch = u16(prev.width * ref->get_bpp() * ref->samples_x);
 				sink->surface_width = prev.width;
 				sink->surface_height = prev.height;
@@ -631,6 +636,7 @@ namespace rsx
 			surface->rsx_pitch = (u16)pitch;
 			surface->queue_tag(address);
 			surface->last_use_tag = 0;
+			surface->stencil_init_flags = 0;
 			surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
 		}
 
