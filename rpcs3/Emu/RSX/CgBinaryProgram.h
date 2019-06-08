@@ -161,7 +161,7 @@ public:
 	std::string GetVecMaskDisasm();
 	std::string GetScaMaskDisasm();
 	std::string GetDSTDisasm(bool is_sca = false);
-	std::string GetSRCDisasm(const u32 n);
+	std::string GetSRCDisasm(u32 n);
 	std::string GetTexDisasm();
 	std::string GetCondDisasm();
 	std::string AddAddrMaskDisasm();
