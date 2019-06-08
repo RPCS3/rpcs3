@@ -168,7 +168,7 @@ namespace gl
 			}
 			else
 			{
-				ASSERT(managed_texture.get() == nullptr);
+				ASSERT(!managed_texture);
 			}
 
 			flushed = false;
@@ -396,7 +396,7 @@ namespace gl
 		 */
 		void destroy()
 		{
-			if (!is_locked() && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty() && managed_texture.get() == nullptr)
+			if (!is_locked() && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty() && !managed_texture)
 				//Already destroyed
 				return;
 
@@ -427,7 +427,7 @@ namespace gl
 
 		bool is_managed() const
 		{
-			return !exists() || managed_texture.get() != nullptr;
+			return !exists() || managed_texture;
 		}
 
 		texture::format get_format() const
