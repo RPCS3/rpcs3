@@ -37,15 +37,15 @@ std::string VertexProgramDecompiler::GetScaMask()
 	return GetMask(true);
 }
 
-std::string VertexProgramDecompiler::GetDST(bool isSca)
+std::string VertexProgramDecompiler::GetDST(bool is_sca)
 {
 	std::string ret;
-	const std::string mask = GetMask(isSca);
+	const std::string mask = GetMask(is_sca);
 
 	// ARL writes to special integer registers
-	const bool is_address_reg = !isSca && (d1.vec_opcode == RSX_VEC_OPCODE_ARL);
-	const auto tmp_index = isSca ? d3.sca_dst_tmp : d0.dst_tmp;
-	const bool is_result = isSca ? (tmp_index == 0x3f) : d0.vec_result;
+	const bool is_address_reg = !is_sca && (d1.vec_opcode == RSX_VEC_OPCODE_ARL);
+	const auto tmp_index = is_sca ? d3.sca_dst_tmp : d0.dst_tmp;
+	const bool is_result = is_sca ? (tmp_index == 0x3f) : d0.vec_result;
 
 	if (is_result)
 	{
@@ -76,7 +76,7 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 		if (!ret.empty())
 		{
 			// Double assignment. Only possible for vector ops
-			verify(HERE), !isSca;
+			verify(HERE), !is_sca;
 			ret += " = ";
 		}
 

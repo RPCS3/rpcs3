@@ -55,7 +55,7 @@ public:
 	std::array<u32, 4> output_color_masks{ {} };
 
 	std::vector<vk::glsl::program_input> uniforms;
-	void SetInputs(std::vector<vk::glsl::program_input>& uniforms);
+	void SetInputs(std::vector<vk::glsl::program_input>& inputs);
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
 	 * @param prog RSXShaderProgram specifying the location and size of the shader in memory

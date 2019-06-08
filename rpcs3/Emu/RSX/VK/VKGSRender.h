@@ -512,7 +512,7 @@ private:
 
 	bool load_program();
 	void load_program_env();
-	void update_vertex_env(const vk::vertex_upload_info& upload_info);
+	void update_vertex_env(const vk::vertex_upload_info& vertex_info);
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
@@ -537,7 +537,7 @@ protected:
 
 	void on_init_thread() override;
 	void on_exit() override;
-	bool do_method(u32 id, u32 arg) override;
+	bool do_method(u32 cmd, u32 arg) override;
 	void flip(int buffer, bool emu_flip = false) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
