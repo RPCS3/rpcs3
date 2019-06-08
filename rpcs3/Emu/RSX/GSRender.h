@@ -94,7 +94,7 @@ protected:
 
 public:
 	GSRender();
-	virtual ~GSRender();
+	~GSRender() override;
 
 	void on_init_rsx() override;
 	void on_init_thread() override;

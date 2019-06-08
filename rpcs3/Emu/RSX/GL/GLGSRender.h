@@ -351,7 +351,7 @@ private:
 	std::vector<u8> m_scratch_buffer;
 
 public:
-	u64 get_cycles() override final;
+	u64 get_cycles() final;
 	GLGSRender();
 
 private:

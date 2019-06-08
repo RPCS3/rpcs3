@@ -81,8 +81,8 @@ namespace rsx
 			s32 return_code = CELL_OK;
 			std::function<void(s32 status)> on_close;
 
-			virtual void update() override {}
-			virtual compiled_resource get_compiled() override = 0;
+			void update() override {}
+			compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/)
 			{
@@ -461,7 +461,7 @@ namespace rsx
 			u32 char_limit = UINT32_MAX;
 
 			osk_dialog() = default;
-			virtual ~osk_dialog() = default;
+			~osk_dialog() override = default;
 
 			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override = 0;
 			void Close(bool ok) override;
@@ -484,7 +484,7 @@ namespace rsx
 		{
 			using osk_dialog::osk_dialog;
 
-			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options);
+			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override;
 		};
 
 		struct save_dialog : public user_interface
