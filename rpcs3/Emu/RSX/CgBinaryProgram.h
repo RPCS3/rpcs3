@@ -4,24 +4,23 @@
 #include "Emu/RSX/GL/GLVertexProgram.h"
 #include "Emu/RSX/GL/GLFragmentProgram.h"
 
-typedef be_t<u32> CGprofile;
-typedef be_t<s32> CGbool;
-typedef be_t<u32> CGresource;
-typedef be_t<u32> CGenum;
-typedef be_t<u32> CGtype;
+using CGprofile = be_t<u32>;
+using CGbool = be_t<s32>;
+using CGresource = be_t<u32>;
+using CGenum = be_t<u32>;
+using CGtype = be_t<u32>;
 
-typedef be_t<u32>                       CgBinaryOffset;
-typedef CgBinaryOffset                  CgBinaryEmbeddedConstantOffset;
-typedef CgBinaryOffset                  CgBinaryFloatOffset;
-typedef CgBinaryOffset                  CgBinaryStringOffset;
-typedef CgBinaryOffset                  CgBinaryParameterOffset;
+using CgBinaryOffset = be_t<u32>;
+using CgBinaryEmbeddedConstantOffset = CgBinaryOffset;
+using CgBinaryFloatOffset = CgBinaryOffset;
+using CgBinaryStringOffset = CgBinaryOffset;
+using CgBinaryParameterOffset = CgBinaryOffset;
 
-// a few typedefs
-typedef struct CgBinaryParameter        CgBinaryParameter;
-typedef struct CgBinaryEmbeddedConstant CgBinaryEmbeddedConstant;
-typedef struct CgBinaryVertexProgram    CgBinaryVertexProgram;
-typedef struct CgBinaryFragmentProgram  CgBinaryFragmentProgram;
-typedef struct CgBinaryProgram          CgBinaryProgram;
+using CgBinaryParameter = struct CgBinaryParameter;
+using CgBinaryEmbeddedConstant = struct CgBinaryEmbeddedConstant;
+using CgBinaryVertexProgram = struct CgBinaryVertexProgram;
+using CgBinaryFragmentProgram = struct CgBinaryFragmentProgram;
+using CgBinaryProgram = struct CgBinaryProgram;
 
 // fragment programs have their constants embedded in the microcode
 struct CgBinaryEmbeddedConstant
