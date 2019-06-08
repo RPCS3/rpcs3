@@ -848,7 +848,7 @@ namespace gl
 			return created();
 		}
 
-		void map(std::function<void(GLubyte*)> impl, access access_)
+		void map(const std::function<void(GLubyte*)>& impl, access access_)
 		{
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
@@ -2298,8 +2298,8 @@ public:
 		void clear(buffers buffers_) const;
 		void clear(buffers buffers_, color4f color_value, double depth_value, u8 stencil_value) const;
 
-		void copy_from(const void* pixels, sizei size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
-		void copy_from(const buffer& buf, sizei size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
+		void copy_from(const void* pixels, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
+		void copy_from(const buffer& buf, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
 
 		void copy_to(void* pixels, coordi coord, gl::texture::format format_, gl::texture::type type_, class pixel_pack_settings pixel_settings = pixel_pack_settings()) const;
 		void copy_to(const buffer& buf, coordi coord, gl::texture::format format_, gl::texture::type type_, class pixel_pack_settings pixel_settings = pixel_pack_settings()) const;
@@ -2311,7 +2311,7 @@ public:
 		GLuint id() const;
 		void set_id(GLuint id);
 
-		void set_extents(size2i extents);
+		void set_extents(const size2i& extents);
 		size2i get_extents() const;
 
 		bool matches(const std::array<GLuint, 4>& color_targets, GLuint depth_stencil_target) const;

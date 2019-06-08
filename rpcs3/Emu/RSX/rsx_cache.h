@@ -501,8 +501,8 @@ namespace rsx
 		};
 
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
-			: version_prefix(version_prefix_str)
-			, pipeline_class_name(pipeline_class)
+			: version_prefix(std::move(version_prefix_str))
+			, pipeline_class_name(std::move(pipeline_class))
 			, m_storage(storage)
 		{
 			if (!g_cfg.video.disable_on_disk_shader_cache)

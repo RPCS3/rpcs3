@@ -173,7 +173,7 @@ public:
 	void AddVecCodeDisasm(const std::string& code = "");
 	void AddCodeCondDisasm(const std::string& dst, const std::string& src);
 	void AddCodeDisasm(const std::string& code);
-	void SetDSTDisasm(bool is_sca, std::string value);
+	void SetDSTDisasm(bool is_sca, const std::string& value);
 	void SetDSTVecDisasm(const std::string& code);
 	void SetDSTScaDisasm(const std::string& code);
 
