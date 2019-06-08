@@ -261,6 +261,7 @@ struct gl_render_target_traits
 		surface->set_rsx_pitch((u16)pitch);
 		surface->queue_tag(address);
 		surface->last_use_tag = 0;
+		surface->stencil_init_flags = 0;
 		surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
 	}
 

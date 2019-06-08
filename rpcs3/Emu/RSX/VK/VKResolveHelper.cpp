@@ -2,6 +2,7 @@
 
 #include "VKResolveHelper.h"
 #include "VKRenderPass.h"
+#include "VKRenderTargets.h"
 
 namespace
 {
@@ -83,10 +84,26 @@ namespace vk
 				else
 				{
 					initialize_pass(g_depth_resolver, dev);
-					initialize_pass(g_stencil_resolver, dev);
-
 					g_depth_resolver->run(cmd, src, dst, renderpass);
-					g_stencil_resolver->run(cmd, src, dst, renderpass);
+
+					// Chance for optimization here: If the stencil buffer was not used, simply perform a clear operation
+					const auto stencil_init_flags = vk::as_rtt(src)->stencil_init_flags;
+					if (stencil_init_flags & 0xFF00)
+					{
+						initialize_pass(g_stencil_resolver, dev);
+						g_stencil_resolver->run(cmd, src, dst, renderpass);
+					}
+					else
+					{
+						VkClearDepthStencilValue clear{ 1.f, stencil_init_flags & 0xFF };
+						VkImageSubresourceRange range{ VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
+
+						dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+						vkCmdClearDepthStencilImage(cmd, dst->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
+						dst->pop_layout(cmd);
+					}
+
+					vk::as_rtt(dst)->stencil_init_flags = stencil_init_flags;
 				}
 			}
 			else
@@ -128,10 +145,24 @@ namespace vk
 				else
 				{
 					initialize_pass(g_depth_unresolver, dev);
-					initialize_pass(g_stencil_unresolver, dev);
-
 					g_depth_unresolver->run(cmd, dst, src, renderpass);
-					g_stencil_unresolver->run(cmd, dst, src, renderpass);
+
+					// Chance for optimization here: If the stencil buffer was not used, simply perform a clear operation
+					const auto stencil_init_flags = vk::as_rtt(dst)->stencil_init_flags;
+					if (stencil_init_flags & 0xFF00)
+					{
+						initialize_pass(g_stencil_unresolver, dev);
+						g_stencil_unresolver->run(cmd, dst, src, renderpass);
+					}
+					else
+					{
+						VkClearDepthStencilValue clear{ 1.f, stencil_init_flags & 0xFF };
+						VkImageSubresourceRange range{ VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
+
+						dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+						vkCmdClearDepthStencilImage(cmd, dst->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
+						dst->pop_layout(cmd);
+					}
 				}
 			}
 			else
