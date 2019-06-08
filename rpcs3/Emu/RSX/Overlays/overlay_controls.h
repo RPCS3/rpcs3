@@ -650,7 +650,7 @@ namespace rsx
 								continue;
 
 							const f32 line_length = result[p.second - 1].values[0] - result[p.first].values[0];
-							const bool wrapped = fabs(result[p.second - 1].values[1] - result[p.first + 3].values[1]) >= (renderer->size_px * 0.5f);
+							const bool wrapped = std::fabs(result[p.second - 1].values[1] - result[p.first + 3].values[1]) >= (renderer->size_px * 0.5f);
 
 							if (wrapped)
 								continue;
