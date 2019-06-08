@@ -2015,10 +2015,6 @@ void VKGSRender::clear_surface(u32 mask)
 						else
 							fmt::throw_exception("Unreachable" HERE);
 					}
-
-					//Fush unconditionally - parameters might not persist
-					//TODO: Better parameter management for overlay passes
-					flush_command_queue();
 				}
 
 				for (auto &rtt : m_rtts.m_bound_render_targets)
