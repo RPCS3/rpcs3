@@ -50,8 +50,8 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr);
-error_code sys_cond_destroy(u32 cond_id);
+error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr);
+error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id);
 error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout);
 error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id);
 error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id);

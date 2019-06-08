@@ -9,16 +9,16 @@
 #include "sys_mutex.h"
 #include "sys_cond.h"
 
-
-
 LOG_CHANNEL(sys_cond);
 
 template<> DECLARE(ipc_manager<lv2_cond, u64>::g_ipc) {};
 
 extern u64 get_system_time();
 
-error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
+error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_cond.warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
 	auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
@@ -45,8 +45,10 @@ error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_
 	return CELL_OK;
 }
 
-error_code sys_cond_destroy(u32 cond_id)
+error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_cond.warning("sys_cond_destroy(cond_id=0x%x)", cond_id);
 
 	const auto cond = idm::withdraw<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> CellError
@@ -74,6 +76,8 @@ error_code sys_cond_destroy(u32 cond_id)
 
 error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_cond.trace("sys_cond_signal(cond_id=0x%x)", cond_id);
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [](lv2_cond& cond) -> cpu_thread*
@@ -111,6 +115,8 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_cond.trace("sys_cond_signal_all(cond_id=0x%x)", cond_id);
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [](lv2_cond& cond)
@@ -150,6 +156,8 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_cond.trace("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> cpu_thread*
@@ -201,6 +209,8 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_cond.trace("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
 
 	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
