@@ -220,7 +220,7 @@ namespace vk
 			return result;
 		}
 
-		void load_program(vk::command_buffer cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
+		void load_program(const vk::command_buffer& cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
 		{
 			vk::glsl::program *program = nullptr;
 			auto found = m_program_cache.find(pass);

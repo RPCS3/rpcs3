@@ -77,7 +77,7 @@ namespace program_common
 		"}\n\n";
 	}
 
-	static void insert_fog_declaration(std::ostream& OS, const std::string wide_vector_type, const std::string input_coord, bool declare = false)
+	static void insert_fog_declaration(std::ostream& OS, const std::string& wide_vector_type, const std::string& input_coord, bool declare = false)
 	{
 		std::string template_body;
 

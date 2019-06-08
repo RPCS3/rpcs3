@@ -165,7 +165,7 @@ namespace rsx
 
 		void perf_metrics_overlay::set_font(std::string font)
 		{
-			m_font = font;
+			m_font = std::move(font);
 
 			if (m_is_initialised)
 			{

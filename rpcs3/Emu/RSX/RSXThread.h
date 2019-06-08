@@ -566,7 +566,7 @@ namespace rsx
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
-		void get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info);
+		void get_current_fragment_program_legacy(const std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)>& get_surface_info);
 
 	public:
 		double fps_limit = 59.94;
@@ -688,7 +688,7 @@ namespace rsx
 			std::function<bool()> callback;
 			//std::promise<void> promise;
 
-			internal_task_entry(std::function<bool()> callback) : callback(callback)
+			internal_task_entry(std::function<bool()> callback) : callback(std::move(callback))
 			{
 			}
 		};

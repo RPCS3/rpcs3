@@ -140,7 +140,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
-void FragmentProgramDecompiler::AddFlowOp(std::string code)
+void FragmentProgramDecompiler::AddFlowOp(const std::string& code)
 {
 	//Flow operations can only consider conditionals and have no dst
 

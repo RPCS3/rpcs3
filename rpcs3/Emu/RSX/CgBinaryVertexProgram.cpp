@@ -134,7 +134,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 	return ret;
 }
 
-void CgBinaryDisasm::SetDSTDisasm(bool is_sca, std::string value)
+void CgBinaryDisasm::SetDSTDisasm(bool is_sca, const std::string& value)
 {
 	is_sca ? AddScaCodeDisasm() : AddVecCodeDisasm();
 

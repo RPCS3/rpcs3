@@ -1613,7 +1613,7 @@ namespace rsx
 		}
 	}
 
-	void thread::get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info)
+	void thread::get_current_fragment_program_legacy(const std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)>& get_surface_info)
 	{
 		auto &result = current_fragment_program = {};
 
