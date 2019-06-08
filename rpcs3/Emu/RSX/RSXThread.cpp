@@ -2172,11 +2172,11 @@ namespace rsx
 			if (zeta_address)
 			{
 				//Find zeta address in bound zculls
-				for (int i = 0; i < rsx::limits::zculls_count; i++)
+				for (const auto& zcull : zculls)
 				{
-					if (zculls[i].binded)
+					if (zcull.binded)
 					{
-						const u32 rsx_address = rsx::get_address(zculls[i].offset, CELL_GCM_LOCATION_LOCAL);
+						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL);
 						if (rsx_address == zeta_address)
 						{
 							zcull_surface_active = true;
