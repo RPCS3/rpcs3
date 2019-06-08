@@ -400,7 +400,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> draw_start = textures_end;
 
 	// Optionally do memory synchronization if the texture stage has not yet triggered this
-	if (1)//g_cfg.video.strict_rendering_mode)
+	if (true)//g_cfg.video.strict_rendering_mode)
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 

@@ -1634,7 +1634,7 @@ void VKGSRender::end()
 	update_draw_state();
 
 	// Apply write memory barriers
-	if (1)//g_cfg.video.strict_rendering_mode)
+	if (true)//g_cfg.video.strict_rendering_mode)
 	{
 		if (ds) ds->write_barrier(*m_current_command_buffer);
 

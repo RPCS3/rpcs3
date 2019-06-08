@@ -94,15 +94,15 @@ namespace vk
 		rsc.maxCombinedClipAndCullDistances = 8;
 		rsc.maxSamples = 4;
 
-		rsc.limits.nonInductiveForLoops = 1;
-		rsc.limits.whileLoops = 1;
-		rsc.limits.doWhileLoops = 1;
-		rsc.limits.generalUniformIndexing = 1;
-		rsc.limits.generalAttributeMatrixVectorIndexing = 1;
-		rsc.limits.generalVaryingIndexing = 1;
-		rsc.limits.generalSamplerIndexing = 1;
-		rsc.limits.generalVariableIndexing = 1;
-		rsc.limits.generalConstantMatrixVectorIndexing = 1;
+		rsc.limits.nonInductiveForLoops = true;
+		rsc.limits.whileLoops = true;
+		rsc.limits.doWhileLoops = true;
+		rsc.limits.generalUniformIndexing = true;
+		rsc.limits.generalAttributeMatrixVectorIndexing = true;
+		rsc.limits.generalVaryingIndexing = true;
+		rsc.limits.generalSamplerIndexing = true;
+		rsc.limits.generalVariableIndexing = true;
+		rsc.limits.generalConstantMatrixVectorIndexing = true;
 	}
 
 	static constexpr std::array<std::pair<std::string_view, int>, 18> varying_registers =
