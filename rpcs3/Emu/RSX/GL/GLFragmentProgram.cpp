@@ -375,9 +375,7 @@ void GLFragmentDecompilerThread::Task()
 	m_shader = Decompile();
 }
 
-GLFragmentProgram::GLFragmentProgram()
-{
-}
+GLFragmentProgram::GLFragmentProgram() = default;
 
 GLFragmentProgram::~GLFragmentProgram()
 {

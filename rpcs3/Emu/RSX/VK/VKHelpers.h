@@ -216,7 +216,7 @@ namespace vk
 		using mem_handle_t = void *;
 
 		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {}
-		virtual ~mem_allocator_base() {}
+		virtual ~mem_allocator_base() = default;
 
 		virtual void destroy() = 0;
 
@@ -247,7 +247,7 @@ namespace vk
 			vmaCreateAllocator(&allocatorInfo, &m_allocator);
 		}
 
-		~mem_allocator_vma() {}
+		~mem_allocator_vma() = default;
 
 		void destroy() override
 		{
@@ -315,7 +315,7 @@ namespace vk
 	{
 	public:
 		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
-		~mem_allocator_vk() {}
+		~mem_allocator_vk() = default;
 
 		void destroy() override {}
 
@@ -413,8 +413,8 @@ namespace vk
 
 	public:
 
-		physical_device() {}
-		~physical_device() {}
+		physical_device() = default;
+		~physical_device() = default;
 
 		void create(VkInstance context, VkPhysicalDevice pdev)
 		{
@@ -619,11 +619,8 @@ namespace vk
 		}
 
 	public:
-		render_device()
-		{}
-
-		~render_device()
-		{}
+		render_device() = default;
+		~render_device() = default;
 
 		void create(vk::physical_device &pdev, uint32_t graphics_queue_idx)
 		{
@@ -789,8 +786,8 @@ namespace vk
 		VkCommandPool pool = nullptr;
 
 	public:
-		command_pool() {}
-		~command_pool() {}
+		command_pool() = default;
+		~command_pool() = default;
 
 		void create(vk::render_device &dev)
 		{
@@ -850,8 +847,8 @@ namespace vk
 		u32 flags = 0;
 
 	public:
-		command_buffer() {}
-		~command_buffer() {}
+		command_buffer() = default;
+		~command_buffer() = default;
 
 		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
 		{
@@ -1506,7 +1503,7 @@ namespace vk
 		vk::render_device *owner = nullptr;
 
 	public:
-		swapchain_image_WSI() {}
+		swapchain_image_WSI() = default;
 
 		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
 		{
@@ -1634,7 +1631,7 @@ public:
 			m_surface_format = format;
 		}
 
-		virtual ~swapchain_base() {}
+		virtual ~swapchain_base() = default;
 
 		virtual void create(display_handle_t& handle) = 0;
 		virtual void destroy(bool full = true) = 0;
@@ -1696,8 +1693,7 @@ public:
 		: swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~abstract_swapchain_impl()
-		{}
+		~abstract_swapchain_impl() = default;
 
 		u32 get_swap_image_count() const override
 		{
@@ -1852,7 +1848,7 @@ public:
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~swapchain_X11(){}
+		~swapchain_X11() = default;
 
 		bool init() override
 		{
@@ -2045,8 +2041,7 @@ public:
 			}
 		}
 
-		~swapchain_WSI()
-		{}
+		~swapchain_WSI() = default;
 
 		void create(display_handle_t&) override
 		{}
@@ -2618,8 +2613,8 @@ public:
 		u32 m_current_pool_index = 0;
 
 	public:
-		descriptor_pool() {}
-		~descriptor_pool() {}
+		descriptor_pool() = default;
+		~descriptor_pool() = default;
 
 		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 		{
@@ -2833,8 +2828,7 @@ public:
 			}
 		}
 
-		~graphics_pipeline_state()
-		{}
+		~graphics_pipeline_state() = default;
 
 		graphics_pipeline_state& operator = (const graphics_pipeline_state& other)
 		{
@@ -3028,11 +3022,8 @@ public:
 			std::vector<u32> m_compiled;
 
 		public:
-			shader()
-			{}
-
-			~shader()
-			{}
+			shader() = default;
+			~shader() = default;
 
 			void create(::glsl::program_domain domain, const std::string& source)
 			{

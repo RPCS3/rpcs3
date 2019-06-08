@@ -124,7 +124,7 @@ namespace rsx
 
 		public:
 			FIFO_control(rsx::thread* pctrl);
-			~FIFO_control() {}
+			~FIFO_control() = default;
 
 			u32 get_pos() { return m_internal_get; }
 			void sync_get() { m_ctrl->get.release(m_internal_get); }

@@ -74,8 +74,7 @@ struct command_buffer_chunk: public vk::command_buffer
 	std::atomic<u64> last_sync = { 0 };
 	shared_mutex guard_mutex;
 
-	command_buffer_chunk()
-	{}
+	command_buffer_chunk() = default;
 
 	void init_fence(VkDevice dev)
 	{
@@ -246,7 +245,7 @@ struct flush_request_task
 	atomic_t<int> num_waiters{ 0 };  //Number of threads waiting for this request to be serviced
 	bool hard_sync = false;
 
-	flush_request_task(){}
+	flush_request_task() = default;
 
 	void post(bool _hard_sync)
 	{
@@ -303,8 +302,8 @@ private:
 
 public:
 
-	resource_manager() {}
-	~resource_manager() {}
+	resource_manager() = default;
+	~resource_manager() = default;
 
 	void destroy()
 	{

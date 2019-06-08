@@ -158,8 +158,8 @@ namespace rsx
 			}
 
 		public:
-			display_manager() {}
-			~display_manager() {}
+			display_manager() = default;
+			~display_manager() = default;
 
 			// Adds an object to the internal list. Optionally removes other objects of the same type.
 			// Original handle loses ownership but a usable pointer is returned
@@ -460,8 +460,8 @@ namespace rsx
 			u32 flags = 0;
 			u32 char_limit = UINT32_MAX;
 
-			osk_dialog() {}
-			virtual ~osk_dialog() {}
+			osk_dialog() = default;
+			virtual ~osk_dialog() = default;
 
 			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override = 0;
 			void Close(bool ok) override;

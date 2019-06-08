@@ -54,8 +54,7 @@ namespace vk
 			renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 		}
 
-		~overlay_pass()
-		{}
+		~overlay_pass() = default;
 
 		void check_heap()
 		{

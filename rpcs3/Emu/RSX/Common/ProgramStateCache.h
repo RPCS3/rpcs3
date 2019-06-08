@@ -254,8 +254,7 @@ public:
 			f32 fp_value;
 		};
 
-		program_buffer_patch_entry()
-		{}
+		program_buffer_patch_entry() = default;
 
 		program_buffer_patch_entry(f32& key, f32& value)
 		{

@@ -268,8 +268,8 @@ namespace gl
 
 	public:
 
-		fence() {}
-		~fence() {}
+		fence() = default;
+		~fence() = default;
 
 		void create()
 		{
@@ -1120,8 +1120,7 @@ namespace gl
 			: m_buffer(_buffer), m_offset(offset), m_range(range), m_format(format)
 		{}
 
-		buffer_view()
-		{}
+		buffer_view() = default;
 
 		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
 		{

@@ -91,7 +91,7 @@ namespace rsx
 
 		address_range range{};
 
-		gcm_framebuffer_info() {}
+		gcm_framebuffer_info() = default;
 
 		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h, const u8 bpp_)
 			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h), bpp(bpp_)
@@ -786,7 +786,7 @@ namespace rsx
 
 	public:
 		atomic_bitmask_t() { m_data.store(0); }
-		~atomic_bitmask_t() {}
+		~atomic_bitmask_t() = default;
 
 		T load() const
 		{
@@ -848,7 +848,7 @@ namespace rsx
 		}
 
 	public:
-		simple_array() {}
+		simple_array() = default;
 
 		simple_array(u32 initial_size, const Ty val = {})
 		{

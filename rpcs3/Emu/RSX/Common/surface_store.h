@@ -149,7 +149,7 @@ namespace rsx
 		}
 		format_info;
 
-		render_target_descriptor() {}
+		render_target_descriptor() = default;
 
 		virtual ~render_target_descriptor()
 		{
