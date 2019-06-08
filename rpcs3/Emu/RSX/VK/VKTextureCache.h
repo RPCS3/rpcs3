@@ -88,7 +88,7 @@ namespace vk
 
 		void release_dma_resources()
 		{
-			if (dma_buffer.get() != nullptr)
+			if (dma_buffer)
 			{
 				dma_buffer.reset();
 
@@ -108,7 +108,7 @@ namespace vk
 			m_tex_cache->on_section_destroyed(*this);
 
 			vram_texture = nullptr;
-			ASSERT(managed_texture.get() == nullptr);
+			ASSERT(!managed_texture);
 			release_dma_resources();
 
 			baseclass::on_section_resources_destroyed();
@@ -121,7 +121,7 @@ namespace vk
 
 		bool is_managed() const
 		{
-			return !exists() || managed_texture.get() != nullptr;
+			return !exists() || managed_texture;
 		}
 
 		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
@@ -183,7 +183,7 @@ namespace vk
 				vkCreateEvent(*m_device, &createInfo, nullptr, &dma_fence);
 			}
 
-			if (dma_buffer.get() == nullptr)
+			if (!dma_buffer)
 			{
 				auto memory_type = m_device->get_memory_mapping().host_visible_coherent;
 				dma_buffer.reset(new vk::buffer(*m_device, align(get_section_size(), 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));

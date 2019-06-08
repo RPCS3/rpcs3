@@ -1965,7 +1965,7 @@ public:
 
 		VkImage& get_image(u32 index) override
 		{
-			return (VkImage&)(*swapchain_images[index].second.get());
+			return (VkImage&)(*swapchain_images[index].second);
 		}
 
 		VkImageLayout get_optimal_present_layout() override
