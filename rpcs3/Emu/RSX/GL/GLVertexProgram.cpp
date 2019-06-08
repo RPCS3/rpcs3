@@ -332,9 +332,7 @@ void GLVertexDecompilerThread::Task()
 	m_shader = Decompile();
 }
 
-GLVertexProgram::GLVertexProgram()
-{
-}
+GLVertexProgram::GLVertexProgram() = default;
 
 GLVertexProgram::~GLVertexProgram()
 {

@@ -343,9 +343,7 @@ void VKVertexDecompilerThread::Task()
 	vk_prog->SetInputs(inputs);
 }
 
-VKVertexProgram::VKVertexProgram()
-{
-}
+VKVertexProgram::VKVertexProgram() = default;
 
 VKVertexProgram::~VKVertexProgram()
 {

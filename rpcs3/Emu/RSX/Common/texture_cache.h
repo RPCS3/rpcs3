@@ -180,8 +180,7 @@ namespace rsx
 			u16 depth = 1;
 			bool do_not_cache = false;
 
-			deferred_subresource()
-			{}
+			deferred_subresource() = default;
 
 			deferred_subresource(image_resource_type _res, deferred_request_command _op, u32 _addr, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h, u16 _d, texture_channel_remap_t _remap) :
 				external_handle(_res), op(_op), base_address(_addr), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h), depth(_d), remap(std::move(_remap))
@@ -210,8 +209,7 @@ namespace rsx
 			deferred_subresource external_subresource_desc = {};
 			bool flag = false;
 
-			sampled_image_descriptor()
-			{}
+			sampled_image_descriptor() = default;
 
 			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, bool is_depth,
 				f32 x_scale, f32 y_scale, rsx::texture_dimension_extended type, bool cyclic_reference = false)
@@ -1086,7 +1084,7 @@ namespace rsx
 	public:
 
 		texture_cache() : m_storage(this), m_predictor(this) {}
-		~texture_cache() {}
+		~texture_cache() = default;
 
 		void clear()
 		{

@@ -409,9 +409,7 @@ void VKFragmentDecompilerThread::Task()
 	vk_prog->SetInputs(inputs);
 }
 
-VKFragmentProgram::VKFragmentProgram()
-{
-}
+VKFragmentProgram::VKFragmentProgram() = default;
 
 VKFragmentProgram::~VKFragmentProgram()
 {

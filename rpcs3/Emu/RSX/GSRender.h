@@ -68,7 +68,7 @@ using draw_context_t = void*;
 	public:
 		GSFrameBase() = default;
 		GSFrameBase(const GSFrameBase&) = delete;
-		virtual ~GSFrameBase() {}
+		virtual ~GSFrameBase() = default;
 
 		virtual void close() = 0;
 		virtual bool shown() = 0;

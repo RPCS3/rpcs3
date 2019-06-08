@@ -46,7 +46,7 @@ namespace rsx
 		{
 			float values[4];
 
-			vertex() {}
+			vertex() = default;
 
 			vertex(float x, float y)
 			{
@@ -162,7 +162,7 @@ namespace rsx
 
 		public:
 
-			fontmgr() {}
+			fontmgr() = default;
 			~fontmgr()
 			{
 				if (m_instance)
@@ -364,7 +364,7 @@ namespace rsx
 
 				u8 blur_strength = 0;
 
-				command_config() {}
+				command_config() = default;
 
 				void set_image_resource(u8 ref)
 				{
@@ -482,7 +482,7 @@ namespace rsx
 			u16 margin_left = 0;
 			u16 margin_top = 0;
 
-			overlay_element() {}
+			overlay_element() = default;
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
 			virtual ~overlay_element() = default;
 
@@ -1100,7 +1100,7 @@ namespace rsx
 
 		struct label : public overlay_element
 		{
-			label() {}
+			label() = default;
 
 			label(const std::string& text)
 			{

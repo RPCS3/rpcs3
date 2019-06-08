@@ -394,8 +394,8 @@ namespace rsx
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
 
-			ZCULL_control() {}
-			~ZCULL_control() {}
+			ZCULL_control() = default;
+			~ZCULL_control() = default;
 
 			void set_enabled(class ::rsx::thread* ptimer, bool state);
 			void set_active(class ::rsx::thread* ptimer, bool state);

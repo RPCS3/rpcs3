@@ -502,8 +502,7 @@ namespace gl
 			std::unique_ptr<gl::texture> image;
 			std::unique_ptr<gl::texture_view> view;
 
-			discardable_storage()
-			{}
+			discardable_storage() = default;
 
 			discardable_storage(std::unique_ptr<gl::texture>& tex)
 			{

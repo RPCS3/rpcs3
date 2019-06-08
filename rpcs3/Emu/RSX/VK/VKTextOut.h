@@ -239,7 +239,7 @@ namespace vk
 
 	public:
 
-		text_writer() {}
+		text_writer() = default;
 		~text_writer()
 		{
 			if (initialized)

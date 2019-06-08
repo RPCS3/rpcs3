@@ -546,7 +546,7 @@ namespace rsx
 			memset(transform_constants.data(), 0, 512 * 4 * sizeof(u32));
 		}
 
-		~rsx_state() { }
+		~rsx_state() = default;
 
 		void decode(u32 reg, u32 value);
 
