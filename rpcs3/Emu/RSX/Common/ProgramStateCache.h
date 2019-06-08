@@ -146,8 +146,8 @@ public:
 		const fragment_program_type& fp;
 		pipeline_properties props;
 
-		async_link_task_entry(const vertex_program_type& _V, const fragment_program_type& _F, const pipeline_properties& _P)
-			: vp(_V), fp(_F), props(_P)
+		async_link_task_entry(const vertex_program_type& _V, const fragment_program_type& _F, pipeline_properties _P)
+			: vp(_V), fp(_F), props(std::move(_P))
 		{}
 	};
 
@@ -159,8 +159,8 @@ public:
 
 		std::vector<u8> tmp_cache;
 
-		async_decompile_task_entry(const RSXVertexProgram& _V)
-			: vp(_V), is_fp(false)
+		async_decompile_task_entry(RSXVertexProgram _V)
+			: vp(std::move(_V)), is_fp(false)
 		{
 		}
 

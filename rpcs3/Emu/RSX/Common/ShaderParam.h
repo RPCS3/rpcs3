@@ -71,9 +71,9 @@ struct ParamItem
 	const std::string value;
 	int location;
 
-	ParamItem(const std::string& _name, int _location, const std::string& _value = "")
-		: name(_name)
-		, value(_value),
+	ParamItem(std::string _name, int _location, std::string _value = "")
+		: name(std::move(_name))
+		, value(std::move(_value)),
 		location(_location)
 	{ }
 };
@@ -84,9 +84,9 @@ struct ParamType
 	const std::string type;
 	std::vector<ParamItem> items;
 
-	ParamType(const ParamFlag _flag, const std::string& _type)
+	ParamType(const ParamFlag _flag, std::string _type)
 		: flag(_flag)
-		, type(_type)
+		, type(std::move(_type))
 	{
 	}
 
