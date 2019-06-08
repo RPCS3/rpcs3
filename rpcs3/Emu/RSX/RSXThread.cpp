@@ -24,7 +24,7 @@
 #include <thread>
 #include <unordered_set>
 #include <exception>
-#include <fenv.h>
+#include <cfenv>
 
 class GSRender;
 
