@@ -247,7 +247,7 @@ namespace vk
 			vmaCreateAllocator(&allocatorInfo, &m_allocator);
 		}
 
-		~mem_allocator_vma() = default;
+		~mem_allocator_vma() override = default;
 
 		void destroy() override
 		{
@@ -315,7 +315,7 @@ namespace vk
 	{
 	public:
 		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
-		~mem_allocator_vk() = default;
+		~mem_allocator_vk() override = default;
 
 		void destroy() override {}
 
@@ -1693,7 +1693,7 @@ public:
 		: swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~abstract_swapchain_impl() = default;
+		~abstract_swapchain_impl() override = default;
 
 		u32 get_swap_image_count() const override
 		{
@@ -1848,7 +1848,7 @@ public:
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~swapchain_X11() = default;
+		~swapchain_X11() override = default;
 
 		bool init() override
 		{
@@ -2041,7 +2041,7 @@ public:
 			}
 		}
 
-		~swapchain_WSI() = default;
+		~swapchain_WSI() override = default;
 
 		void create(display_handle_t&) override
 		{}

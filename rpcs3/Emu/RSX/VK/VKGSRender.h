@@ -474,9 +474,9 @@ private:
 #endif
 
 public:
-	u64 get_cycles() override final;
+	u64 get_cycles() final;
 	VKGSRender();
-	~VKGSRender();
+	~VKGSRender() override;
 
 private:
 	void clear_surface(u32 mask);
