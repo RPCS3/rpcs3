@@ -206,7 +206,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
 
-	std::string parameters = "";
+	std::string parameters;
 	for (int i = 0; i < 16; ++i)
 	{
 		std::string reg_name = "dst_reg" + std::to_string(i);
@@ -254,7 +254,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main ()\n";
 	OS << "{\n";
 
-	std::string parameters = "";
+	std::string parameters;
 
 	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{

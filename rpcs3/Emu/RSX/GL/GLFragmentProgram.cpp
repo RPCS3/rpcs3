@@ -229,7 +229,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		"h0", "h2", "h4", "h6", "h8"
 	};
 
-	std::string parameters = "";
+	std::string parameters;
 	const auto half4 = getHalfTypeName(4);
 	for (auto &reg_name : output_values)
 	{
@@ -332,7 +332,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	std::string parameters = "";
+	std::string parameters;
 	const auto half4 = getHalfTypeName(4);
 
 	for (auto &reg_name : output_values)
