@@ -192,7 +192,7 @@ namespace rsx
 			VkFormat requested_format = fmt.first;
 
 			std::unique_ptr<vk::render_target> rtt;
-			rtt.reset(new vk::render_target(device, device.get_memory_mapping().device_local,
+			rtt = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -201,7 +201,7 @@ namespace rsx
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,
-				0));
+				0);
 
 			change_image_layout(cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
 
@@ -234,7 +234,7 @@ namespace rsx
 			const auto scale = rsx::get_resolution_scale();
 
 			std::unique_ptr<vk::render_target> ds;
-			ds.reset(new vk::render_target(device, device.get_memory_mapping().device_local,
+			ds = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -243,7 +243,7 @@ namespace rsx
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT| VK_IMAGE_USAGE_TRANSFER_SRC_BIT| VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,
-				0));
+				0);
 
 
 			ds->set_format(format);
@@ -277,7 +277,7 @@ namespace rsx
 				const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height());
 
 				auto& dev = cmd.get_command_pool().get_owner();
-				sink.reset(new vk::render_target(dev, dev.get_memory_mapping().device_local,
+				sink = std::make_unique<vk::render_target>(dev, dev.get_memory_mapping().device_local,
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					VK_IMAGE_TYPE_2D,
 					ref->format(),
@@ -286,7 +286,7 @@ namespace rsx
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL,
 					ref->info.usage,
-					ref->info.flags));
+					ref->info.flags);
 
 				sink->add_ref();
 				sink->format_info = ref->format_info;

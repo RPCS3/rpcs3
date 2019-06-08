@@ -522,24 +522,24 @@ VKGSRender::VKGSRender() : GSRender()
 	if (g_cfg.video.overlay)
 	{
 		auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
-		m_text_writer.reset(new vk::text_writer());
+		m_text_writer = std::make_unique<vk::text_writer>();
 		m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
 	}
 
-	m_depth_converter.reset(new vk::depth_convert_pass());
+	m_depth_converter = std::make_unique<vk::depth_convert_pass>();
 	m_depth_converter->create(*m_device);
 
-	m_attachment_clear_pass.reset(new vk::attachment_clear_pass());
+	m_attachment_clear_pass = std::make_unique<vk::attachment_clear_pass>();
 	m_attachment_clear_pass->create(*m_device);
 
-	m_prog_buffer.reset(new VKProgramBuffer());
+	m_prog_buffer = std::make_unique<VKProgramBuffer>();
 
 	if (g_cfg.video.disable_vertex_cache)
-		m_vertex_cache.reset(new vk::null_vertex_cache());
+		m_vertex_cache = std::make_unique<vk::null_vertex_cache>();
 	else
-		m_vertex_cache.reset(new vk::weak_vertex_cache());
+		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache.reset(new vk::shader_cache(*m_prog_buffer, "vulkan", "v1.7"));
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.7");
 
 	open_command_buffer();
 
@@ -561,7 +561,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_texture_cache.initialize((*m_device), m_swapchain->get_graphics_queue(),
 			m_texture_upload_buffer_ring_info);
 
-	m_ui_renderer.reset(new vk::ui_overlay_renderer());
+	m_ui_renderer = std::make_unique<vk::ui_overlay_renderer>();
 	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
 	supports_multidraw = true;
