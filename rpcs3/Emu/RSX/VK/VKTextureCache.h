@@ -186,7 +186,7 @@ namespace vk
 			if (!dma_buffer)
 			{
 				auto memory_type = m_device->get_memory_mapping().host_visible_coherent;
-				dma_buffer.reset(new vk::buffer(*m_device, align(get_section_size(), 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0));
+				dma_buffer = std::make_unique<vk::buffer>(*m_device, align(get_section_size(), 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
 			}
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
@@ -690,11 +690,11 @@ namespace vk
 			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 			VkImageAspectFlags aspect = vk::get_aspect_flags(dst_format);
 
-			image.reset(new vk::viewable_image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			image = std::make_unique<vk::viewable_image>(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				image_type,
 				dst_format,
 				w, h, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags));
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags);
 
 			//This method is almost exclusively used to work on framebuffer resources
 			//Keep the original swizzle layout unless there is data format conversion
@@ -717,7 +717,7 @@ namespace vk
 				view_swizzle = vk::apply_swizzle_remap({view_swizzle.a, view_swizzle.r, view_swizzle.g, view_swizzle.b}, remap_vector);
 
 			VkImageSubresourceRange view_range = { aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
-			view.reset(new vk::image_view(*vk::get_current_renderer(), image.get(), view_swizzle, view_range));
+			view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), image.get(), view_swizzle, view_range);
 
 			if (copy)
 			{
@@ -764,14 +764,14 @@ namespace vk
 			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 			VkImageAspectFlags dst_aspect = vk::get_aspect_flags(dst_format);
 
-			image.reset(new vk::viewable_image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			image = std::make_unique<vk::viewable_image>(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				dst_format,
 				size, size, 1, 1, 6, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT));
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 
 			VkImageSubresourceRange view_range = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 6 };
-			view.reset(new vk::image_view(*vk::get_current_renderer(), image.get(), image->native_component_map, view_range));
+			view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), image.get(), image->native_component_map, view_range);
 
 			VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 6 };
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
@@ -808,14 +808,14 @@ namespace vk
 			VkFormat dst_format = vk::get_compatible_sampler_format(m_formats_support, gcm_format);
 			VkImageAspectFlags dst_aspect = vk::get_aspect_flags(dst_format);
 
-			image.reset(new vk::viewable_image(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			image = std::make_unique<vk::viewable_image>(*vk::get_current_renderer(), m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_3D,
 				dst_format,
 				width, height, depth, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
 			VkImageSubresourceRange view_range = { dst_aspect & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 1, 0, 1 };
-			view.reset(new vk::image_view(*vk::get_current_renderer(), image.get(), image->native_component_map, view_range));
+			view = std::make_unique<vk::image_view>(*vk::get_current_renderer(), image.get(), image->native_component_map, view_range);
 
 			VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);

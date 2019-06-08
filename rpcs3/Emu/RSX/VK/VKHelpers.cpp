@@ -159,11 +159,11 @@ namespace vk
 		if (g_null_image_view)
 			return g_null_image_view.get();
 
-		g_null_texture.reset(new image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		g_null_texture = std::make_unique<image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
-		g_null_image_view.reset(new image_view(*g_current_renderer, g_null_texture.get()));
+		g_null_image_view = std::make_unique<image_view>(*g_current_renderer, g_null_texture.get());
 
 		// Initialize memory to transparent black
 		VkClearColorValue clear_color = {};

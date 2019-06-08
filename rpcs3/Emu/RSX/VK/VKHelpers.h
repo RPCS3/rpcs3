@@ -1290,7 +1290,7 @@ namespace vk
 					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
-			memory.reset(new memory_block(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index));
+			memory = std::make_unique<memory_block>(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index);
 			vkBindBufferMemory(dev, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset());
 		}
 
@@ -3156,13 +3156,13 @@ public:
 			{
 				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", (u32)usage);
 
-				shadow.reset(new buffer(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+				shadow = std::make_unique<buffer>(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0);
 				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 				memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 				memory_index = memory_map.device_local;
 			}
 
-			heap.reset(new buffer(*device, size, memory_index, memory_flags, usage, 0));
+			heap = std::make_unique<buffer>(*device, size, memory_index, memory_flags, usage, 0);
 		}
 
 		void destroy()
