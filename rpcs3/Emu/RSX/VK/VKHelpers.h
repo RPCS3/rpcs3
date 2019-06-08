@@ -586,12 +586,14 @@ namespace vk
 		std::unordered_map<VkFormat, VkFormatProperties> m_format_properties;
 		gpu_formats_support m_formats_support{};
 		gpu_shader_types_support m_shader_types_support{};
+		bool m_stencil_export_support = false;
 		std::unique_ptr<mem_allocator_base> m_allocator;
 		VkDevice dev = VK_NULL_HANDLE;
 
 		void get_physical_device_features(VkPhysicalDeviceFeatures& features)
 		{
 			supported_extensions instance_extensions(supported_extensions::instance);
+			supported_extensions device_extensions(supported_extensions::device, nullptr, pgpu);
 
 			if (!instance_extensions.is_supported("VK_KHR_get_physical_device_properties2"))
 			{
@@ -599,8 +601,6 @@ namespace vk
 			}
 			else
 			{
-				supported_extensions device_extensions(supported_extensions::device, nullptr, pgpu);
-
 				VkPhysicalDeviceFeatures2KHR features2;
 				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 				features2.pNext = nullptr;
@@ -621,6 +621,8 @@ namespace vk
 				m_shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
 				features = features2.features;
 			}
+
+			m_stencil_export_support = device_extensions.is_supported("VK_EXT_shader_stencil_export");
 		}
 
 	public:
@@ -772,6 +774,11 @@ namespace vk
 		const gpu_shader_types_support& get_shader_types_support() const
 		{
 			return m_shader_types_support;
+		}
+
+		bool get_shader_stencil_export_support() const
+		{
+			return m_stencil_export_support;
 		}
 
 		mem_allocator_base* get_allocator() const

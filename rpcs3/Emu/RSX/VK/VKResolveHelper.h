@@ -165,6 +165,7 @@ namespace vk
 	{
 		u8 samples_x = 1;
 		u8 samples_y = 1;
+		s32 static_parameters[4];
 
 		depth_resolve_base()
 		{
@@ -172,7 +173,7 @@ namespace vk
 			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
 		}
 
-		void build(const std::string& kernel, const std::string& extensions, bool stencil_texturing, bool input_is_multisampled)
+		void build(const std::string& kernel, const std::string& extensions, const std::vector<const char*>& inputs)
 		{
 			vs_src =
 				"#version 450\n"
@@ -187,17 +188,14 @@ namespace vk
 			fs_src =
 				"#version 420\n"
 				"#extension GL_ARB_separate_shader_objects : enable\n";
-				fs_src += extensions +
+			fs_src += extensions +
 				"\n"
-				"layout(std140, set=0, binding=0) uniform static_data{ ivec4 regs[8]; };\n"
-				"layout(set=0, binding=1) uniform sampler2D fs0;\n";
+				"layout(push_constant) uniform static_data{ ivec4 regs[1]; };\n";
 
-				if (stencil_texturing)
+				int binding = 1;
+				for (const auto& input : inputs)
 				{
-					m_num_usable_samplers = 2;
-
-					fs_src +=
-					"layout(set=0, binding=2) uniform usampler2D fs1;\n";
+					fs_src += "layout(set=0, binding=" + std::to_string(binding++) + ") uniform " + input + ";\n";
 				}
 
 				fs_src +=
@@ -208,28 +206,22 @@ namespace vk
 					fs_src += kernel +
 				"}\n";
 
-			if (input_is_multisampled)
-			{
-				auto sampler_loc = fs_src.find("sampler2D fs0");
-				fs_src.insert(sampler_loc + 9, "MS");
-
-				if (stencil_texturing)
-				{
-					sampler_loc = fs_src.find("sampler2D fs1");
-					fs_src.insert(sampler_loc + 9, "MS");
-				}
-			}
-
 			LOG_ERROR(RSX, "Resolve shader:\n%s", fs_src);
 		}
 
-		void update_uniforms(vk::glsl::program* /*program*/) override
+		std::vector<VkPushConstantRange> get_push_constants() override
 		{
-			m_ubo_offset = (u32)m_ubo.alloc<256>(8);
-			auto dst = (s32*)m_ubo.map(m_ubo_offset, 128);
-			dst[0] = samples_x;
-			dst[1] = samples_y;
-			m_ubo.unmap();
+			VkPushConstantRange constant;
+			constant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			constant.offset = 0;
+			constant.size = 16;
+
+			return { constant };
+		}
+
+		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override
+		{
+			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8, static_parameters);
 		}
 
 		void update_sample_configuration(vk::image* msaa_image)
@@ -248,6 +240,9 @@ namespace vk
 			default:
 				fmt::throw_exception("Unsupported sample count %d" HERE, msaa_image->samples());
 			}
+
+			static_parameters[0] = samples_x;
+			static_parameters[1] = samples_y;
 		}
 	};
 
@@ -258,13 +253,12 @@ namespace vk
 			build(
 				"	ivec2 out_coord = ivec2(gl_FragCoord.xy);\n"
 				"	ivec2 in_coord = (out_coord / regs[0].xy);\n"
-				"	ivec2 sample_loc = out_coord % ivec2(regs[0].xy);\n"
+				"	ivec2 sample_loc = out_coord % regs[0].xy;\n"
 				"	int sample_index = sample_loc.x + (sample_loc.y * regs[0].y);\n"
 				"	float frag_depth = texelFetch(fs0, in_coord, sample_index).x;\n"
 				"	gl_FragDepth = frag_depth;\n",
 				"",
-				false,
-				true);
+				{ "sampler2DMS fs0" });
 		}
 
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
@@ -292,8 +286,7 @@ namespace vk
 				"	float frag_depth = texelFetch(fs0, pixel_coord, 0).x;\n"
 				"	gl_FragDepth = frag_depth;\n",
 				"",
-				false,
-				false);
+				{ "sampler2D fs0" });
 		}
 
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
@@ -312,9 +305,142 @@ namespace vk
 		}
 	};
 
-	struct depthstencil_resolve_AMD : depth_resolve_base
+	struct stencilonly_resolve : depth_resolve_base
 	{
-		depthstencil_resolve_AMD()
+		VkClearRect region{};
+		VkClearAttachment clear_info{};
+
+		stencilonly_resolve()
+		{
+			renderpass_config.enable_stencil_test(
+				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
+				VK_COMPARE_OP_ALWAYS,                                                 // Always pass
+				0xFF,                                                                 // Full write-through
+				0xFF);                                                                // Write active bit
+
+			renderpass_config.set_stencil_mask(0xFF);
+			renderpass_config.set_depth_mask(false);
+
+			clear_info.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+			region.baseArrayLayer = 0;
+			region.layerCount = 1;
+
+			build(
+				"	ivec2 out_coord = ivec2(gl_FragCoord.xy);\n"
+				"	ivec2 in_coord = (out_coord / regs[0].xy);\n"
+				"	ivec2 sample_loc = out_coord % regs[0].xy;\n"
+				"	int sample_index = sample_loc.x + (sample_loc.y * regs[0].y);\n"
+				"	uint frag_stencil = texelFetch(fs0, in_coord, sample_index).x;\n"
+				"	if ((frag_stencil & uint(regs[0].z)) == 0) discard;\n",
+				"",
+				{"usampler2DMS fs0"});
+		}
+
+		void get_dynamic_state_entries(VkDynamicState* state_descriptors, VkPipelineDynamicStateCreateInfo& info) override
+		{
+			state_descriptors[info.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+		}
+
+		void emit_geometry(vk::command_buffer& cmd) override
+		{
+			vkCmdClearAttachments(cmd, 1, &clear_info, 1, &region);
+
+			for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)
+			{
+				vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FRONT_AND_BACK, write_mask);
+				vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
+
+				overlay_pass::emit_geometry(cmd);
+			}
+		}
+
+		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
+		{
+			update_sample_configuration(msaa_image);
+			auto stencil_view = msaa_image->get_view(0xDEADBEEF, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+
+			region.rect.extent.width = resolve_image->width();
+			region.rect.extent.height = resolve_image->height();
+
+			overlay_pass::run(
+				cmd,
+				(u16)resolve_image->width(), (u16)resolve_image->height(),
+				resolve_image, stencil_view,
+				render_pass);
+		}
+	};
+
+	struct stencilonly_unresolve : depth_resolve_base
+	{
+		VkClearRect region{};
+		VkClearAttachment clear_info{};
+
+		stencilonly_unresolve()
+		{
+			renderpass_config.enable_stencil_test(
+				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
+				VK_COMPARE_OP_ALWAYS,                                                 // Always pass
+				0xFF,                                                                 // Full write-through
+				0xFF);                                                                // Write active bit
+
+			renderpass_config.set_stencil_mask(0xFF);
+			renderpass_config.set_depth_mask(false);
+
+			clear_info.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
+			region.baseArrayLayer = 0;
+			region.layerCount = 1;
+
+			build(
+				"	ivec2 pixel_coord = ivec2(gl_FragCoord.xy);\n"
+				"	pixel_coord *= regs[0].xy;\n"
+				"	pixel_coord.x += (gl_SampleID % regs[0].x);\n"
+				"	pixel_coord.y += (gl_SampleID / regs[0].x);\n"
+				"	uint frag_stencil = texelFetch(fs0, pixel_coord, 0).x;\n"
+				"	if ((frag_stencil & uint(regs[0].z)) == 0) discard;\n",
+				"",
+				{ "usampler2D fs0" });
+		}
+
+		void get_dynamic_state_entries(VkDynamicState* state_descriptors, VkPipelineDynamicStateCreateInfo& info) override
+		{
+			state_descriptors[info.dynamicStateCount++] = VK_DYNAMIC_STATE_STENCIL_WRITE_MASK;
+		}
+
+		void emit_geometry(vk::command_buffer& cmd) override
+		{
+			vkCmdClearAttachments(cmd, 1, &clear_info, 1, &region);
+
+			for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)
+			{
+				vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FRONT_AND_BACK, write_mask);
+				vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
+
+				overlay_pass::emit_geometry(cmd);
+			}
+		}
+
+		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
+		{
+			renderpass_config.set_multisample_state(msaa_image->samples(), 0xFFFF, true, false, false);
+			renderpass_config.set_multisample_shading_rate(1.f);
+			update_sample_configuration(msaa_image);
+
+			auto stencil_view = resolve_image->get_view(0xAAE4, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+
+			region.rect.extent.width = resolve_image->width();
+			region.rect.extent.height = resolve_image->height();
+
+			overlay_pass::run(
+				cmd,
+				(u16)msaa_image->width(), (u16)msaa_image->height(),
+				msaa_image, stencil_view,
+				render_pass);
+		}
+	};
+
+	struct depthstencil_resolve_EXT : depth_resolve_base
+	{
+		depthstencil_resolve_EXT()
 		{
 			renderpass_config.enable_stencil_test(
 				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
@@ -322,6 +448,7 @@ namespace vk
 				0xFF,                                                                 // Full write-through
 				0);                                                                   // Unused
 
+			renderpass_config.set_stencil_mask(0xFF);
 			m_num_usable_samplers = 2;
 
 			build(
@@ -336,8 +463,7 @@ namespace vk
 
 				"#extension GL_ARB_shader_stencil_export : enable\n",
 
-				true,
-				true);
+				{ "sampler2DMS fs0", "usampler2DMS fs1" });
 		}
 
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)
@@ -354,9 +480,9 @@ namespace vk
 		}
 	};
 
-	struct depthstencil_unresolve_AMD : depth_resolve_base
+	struct depthstencil_unresolve_EXT : depth_resolve_base
 	{
-		depthstencil_unresolve_AMD()
+		depthstencil_unresolve_EXT()
 		{
 			renderpass_config.enable_stencil_test(
 				VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE, VK_STENCIL_OP_REPLACE,  // Always replace
@@ -364,6 +490,7 @@ namespace vk
 				0xFF,                                                                 // Full write-through
 				0);                                                                   // Unused
 
+			renderpass_config.set_stencil_mask(0xFF);
 			m_num_usable_samplers = 2;
 
 			build(
@@ -378,8 +505,7 @@ namespace vk
 
 				"#extension GL_ARB_shader_stencil_export : enable\n",
 
-				true,
-				false);
+				{ "sampler2D fs0", "usampler2D fs1" });
 		}
 
 		void run(vk::command_buffer& cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image, VkRenderPass render_pass)

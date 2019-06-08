@@ -37,8 +37,20 @@ namespace vk
 	std::unordered_map<VkFormat, std::unique_ptr<vk::cs_unresolve_task>> g_unresolve_helpers;
 	std::unique_ptr<vk::depthonly_resolve> g_depth_resolver;
 	std::unique_ptr<vk::depthonly_unresolve> g_depth_unresolver;
-	std::unique_ptr<vk::depthstencil_resolve_AMD> g_depthstencil_resolverAMD;
-	std::unique_ptr<vk::depthstencil_unresolve_AMD> g_depthstencil_unresolverAMD;
+	std::unique_ptr<vk::stencilonly_resolve> g_stencil_resolver;
+	std::unique_ptr<vk::stencilonly_unresolve> g_stencil_unresolver;
+	std::unique_ptr<vk::depthstencil_resolve_EXT> g_depthstencil_resolver;
+	std::unique_ptr<vk::depthstencil_unresolve_EXT> g_depthstencil_unresolver;
+
+	template <typename T, typename ...Args>
+	void initialize_pass(std::unique_ptr<T>& ptr, vk::render_device& dev, Args&&... extras)
+	{
+		if (!ptr)
+		{
+			ptr = std::make_unique<T>(std::forward<Args>(extras)...);
+			ptr->create(dev);
+		}
+	}
 
 	void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src)
 	{
@@ -63,22 +75,23 @@ namespace vk
 
 			if (src->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
 			{
-				if (!g_depthstencil_resolverAMD)
+				if (dev.get_shader_stencil_export_support())
 				{
-					g_depthstencil_resolverAMD.reset(new vk::depthstencil_resolve_AMD());
-					g_depthstencil_resolverAMD->create(dev);
+					initialize_pass(g_depthstencil_resolver, dev);
+					g_depthstencil_resolver->run(cmd, src, dst, renderpass);
 				}
+				else
+				{
+					initialize_pass(g_depth_resolver, dev);
+					initialize_pass(g_stencil_resolver, dev);
 
-				g_depthstencil_resolverAMD->run(cmd, src, dst, renderpass);
+					g_depth_resolver->run(cmd, src, dst, renderpass);
+					g_stencil_resolver->run(cmd, src, dst, renderpass);
+				}
 			}
 			else
 			{
-				if (!g_depth_resolver)
-				{
-					g_depth_resolver.reset(new vk::depthonly_resolve());
-					g_depth_resolver->create(dev);
-				}
-
+				initialize_pass(g_depth_resolver, dev);
 				g_depth_resolver->run(cmd, src, dst, renderpass);
 			}
 		}
@@ -107,22 +120,23 @@ namespace vk
 
 			if (src->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
 			{
-				if (!g_depthstencil_unresolverAMD)
+				if (dev.get_shader_stencil_export_support())
 				{
-					g_depthstencil_unresolverAMD.reset(new vk::depthstencil_unresolve_AMD());
-					g_depthstencil_unresolverAMD->create(dev);
+					initialize_pass(g_depthstencil_unresolver, dev);
+					g_depthstencil_unresolver->run(cmd, dst, src, renderpass);
 				}
+				else
+				{
+					initialize_pass(g_depth_unresolver, dev);
+					initialize_pass(g_stencil_unresolver, dev);
 
-				g_depthstencil_unresolverAMD->run(cmd, dst, src, renderpass);
+					g_depth_unresolver->run(cmd, dst, src, renderpass);
+					g_stencil_unresolver->run(cmd, dst, src, renderpass);
+				}
 			}
 			else
 			{
-				if (!g_depth_unresolver)
-				{
-					g_depth_unresolver.reset(new vk::depthonly_unresolve());
-					g_depth_unresolver->create(dev);
-				}
-
+				initialize_pass(g_depth_unresolver, dev);
 				g_depth_unresolver->run(cmd, dst, src, renderpass);
 			}
 		}
@@ -149,10 +163,16 @@ namespace vk
 			g_depth_resolver.reset();
 		}
 
-		if (g_depthstencil_resolverAMD)
+		if (g_stencil_resolver)
 		{
-			g_depthstencil_resolverAMD->destroy();
-			g_depthstencil_resolverAMD.reset();
+			g_stencil_resolver->destroy();
+			g_stencil_resolver.reset();
+		}
+
+		if (g_depthstencil_resolver)
+		{
+			g_depthstencil_resolver->destroy();
+			g_depthstencil_resolver.reset();
 		}
 
 		if (g_depth_unresolver)
@@ -161,10 +181,16 @@ namespace vk
 			g_depth_unresolver.reset();
 		}
 
-		if (g_depthstencil_unresolverAMD)
+		if (g_stencil_unresolver)
 		{
-			g_depthstencil_unresolverAMD->destroy();
-			g_depthstencil_unresolverAMD.reset();
+			g_stencil_unresolver->destroy();
+			g_stencil_unresolver.reset();
+		}
+
+		if (g_depthstencil_unresolver)
+		{
+			g_depthstencil_unresolver->destroy();
+			g_depthstencil_unresolver.reset();
 		}
 	}
 
@@ -175,7 +201,9 @@ namespace vk
 
 		if (g_depth_resolver) g_depth_resolver->free_resources();
 		if (g_depth_unresolver) g_depth_unresolver->free_resources();
-		if (g_depthstencil_resolverAMD) g_depthstencil_resolverAMD->free_resources();
-		if (g_depthstencil_unresolverAMD) g_depthstencil_unresolverAMD->free_resources();
+		if (g_stencil_resolver) g_stencil_resolver->free_resources();
+		if (g_stencil_unresolver) g_stencil_unresolver->free_resources();
+		if (g_depthstencil_resolver) g_depthstencil_resolver->free_resources();
+		if (g_depthstencil_unresolver) g_depthstencil_unresolver->free_resources();
 	}
 }
