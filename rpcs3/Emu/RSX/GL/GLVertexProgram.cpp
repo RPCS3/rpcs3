@@ -5,6 +5,7 @@
 #include "GLCommonDecompiler.h"
 #include "GLHelpers.h"
 #include "../GCM.h"
+#include "../Common/GLSLCommon.h"
 
 #include <algorithm>
 
