@@ -947,7 +947,7 @@ namespace vk
 			is_open = false;
 		}
 
-		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
 		{
 			if (is_open)
 			{
@@ -955,19 +955,29 @@ namespace vk
 				return;
 			}
 
-			if (fence == VK_NULL_HANDLE)
+			if (!fence)
 			{
 				fence = m_submit_fence;
 				is_pending = (fence != VK_NULL_HANDLE);
 			}
 
 			VkSubmitInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 			infos.commandBufferCount = 1;
 			infos.pCommandBuffers = &commands;
 			infos.pWaitDstStageMask = &pipeline_stage_flags;
-			infos.pWaitSemaphores = semaphores.data();
-			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
-			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+			if (wait_semaphore)
+			{
+				infos.waitSemaphoreCount = 1;
+				infos.pWaitSemaphores = &wait_semaphore;
+			}
+
+			if (signal_semaphore)
+			{
+				infos.signalSemaphoreCount = 1;
+				infos.pSignalSemaphores = &signal_semaphore;
+			}
 
 			acquire_global_submit_lock();
 			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
@@ -1637,7 +1647,7 @@ public:
 		virtual VkImage& get_image(u32 index) = 0;
 		virtual VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) = 0;
 		virtual void end_frame(command_buffer& cmd, u32 index) = 0;
-		virtual VkResult present(u32 index) = 0;
+		virtual VkResult present(VkSemaphore semaphore, u32 index) = 0;
 		virtual VkImageLayout get_optimal_present_layout() = 0;
 
 		virtual bool supports_automatic_wm_reports() const
@@ -1769,7 +1779,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 image) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 image) override
 		{
 			auto& src = swapchain_images[image];
 			GdiFlush();
@@ -1826,7 +1836,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 index) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
 		{
 			fmt::throw_exception("Native macOS swapchain is not implemented yet!");
 		}
@@ -1914,7 +1924,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 index) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
 		{
 			auto& src = swapchain_images[index];
 			if (pixmap)
@@ -2216,7 +2226,7 @@ public:
 		{
 		}
 
-		VkResult present(u32 image) override
+		VkResult present(VkSemaphore semaphore, u32 image) override
 		{
 			VkPresentInfoKHR present = {};
 			present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -2224,6 +2234,8 @@ public:
 			present.swapchainCount = 1;
 			present.pSwapchains = &m_vk_swapchain;
 			present.pImageIndices = &image;
+			present.waitSemaphoreCount = 1;
+			present.pWaitSemaphores = &semaphore;
 
 			return queuePresentKHR(vk_present_queue, &present);
 		}

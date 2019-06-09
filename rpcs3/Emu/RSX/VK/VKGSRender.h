@@ -165,7 +165,8 @@ enum frame_context_state : u32
 
 struct frame_context_t
 {
-	VkSemaphore present_semaphore = VK_NULL_HANDLE;
+	VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
+	VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
 	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
 
 	vk::descriptor_pool descriptor_pool;
@@ -194,7 +195,8 @@ struct frame_context_t
 	//Copy shareable information
 	void grab_resources(frame_context_t &other)
 	{
-		present_semaphore = other.present_semaphore;
+		present_wait_semaphore = other.present_wait_semaphore;
+		acquire_signal_semaphore = other.acquire_signal_semaphore;
 		descriptor_set = other.descriptor_set;
 		descriptor_pool = other.descriptor_pool;
 		used_descriptors = other.used_descriptors;
@@ -482,13 +484,18 @@ public:
 
 private:
 	void clear_surface(u32 mask);
-	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-	void open_command_buffer();
 	void prepare_rtts(rsx::framebuffer_creation_context context);
+
+	void open_command_buffer();
+	void close_and_submit_command_buffer(
+		VkFence fence = VK_NULL_HANDLE,
+		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
+		VkSemaphore signal_semaphore = VK_NULL_HANDLE,
+		VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
 	void flush_command_queue(bool hard_sync = false);
 	void queue_swap_request();
-	void process_swap_request(frame_context_t *ctx, bool free_resources = false);
+	void frame_context_cleanup(frame_context_t *ctx, bool free_resources = false);
 	void advance_queued_frames();
 	void present(frame_context_t *ctx);
 	void reinitialize_swapchain();
