@@ -50,6 +50,25 @@ You should also contact any of the developers in the forums or in the Discord se
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
 
+#### Vulkan-SDK
+
+For Ubuntu systems, it is strongly recommended to use the PPA from [LunarG](https://packages.lunarg.com/) which will provide a compatible Vulkan-SDK to compile RPCS3. If your Vulkan-SDK is older, it can lead to compilation errors.
+
+##### Ubuntu 18.04 (Bionic Beaver)
+```
+wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.1.106-bionic.list http://packages.lunarg.com/vulkan/1.1.106/lunarg-vulkan-1.1.106-bionic.list
+sudo apt update
+sudo apt install vulkan-sdk
+```
+
+##### Ubuntu 16.04 (Xenial Xerus)
+```
+wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.1.106-xenial.list http://packages.lunarg.com/vulkan/1.1.106/lunarg-vulkan-1.1.106-xenial.list
+sudo apt update
+sudo apt install vulkan-sdk
+```
 
 ## Building
 
