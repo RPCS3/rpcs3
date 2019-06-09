@@ -1544,10 +1544,6 @@
              </property>
              <property name="textFormat">
               <enum>Qt::PlainText</enum>
-
-             </property>
-             <property name="textFormat">
-              <enum>Qt::PlainText</enum>
              </property>
              <property name="alignment">
               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
