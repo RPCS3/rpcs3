@@ -430,7 +430,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
 		{
-			const std::string game_dir = pair.second.Scalar();
+			std::string game_dir = pair.second.Scalar();
+			game_dir.resize(game_dir.find_last_not_of('/') + 1);
 
 			if (fs::is_file(game_dir + "/PS3_DISC.SFB"))
 			{
@@ -439,7 +440,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			else
 			{
 				path_list.push_back(game_dir);
-				path_list.back().resize(path_list.back().find_last_not_of('/') + 1);
 			}
 		}
 
