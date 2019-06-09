@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "VKHelpers.h"
+#include "Utilities/StrUtil.h"
 
 #define VK_MAX_COMPUTE_TASKS 1024   // Max number of jobs per frame
 
