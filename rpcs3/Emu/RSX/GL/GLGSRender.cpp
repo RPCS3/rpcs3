@@ -939,12 +939,8 @@ void GLGSRender::on_init_thread()
 
 	if (!supports_native_ui)
 	{
-		m_frame->disable_wm_event_queue();
 		m_frame->hide();
-
 		m_shaders_cache->load(nullptr);
-
-		m_frame->enable_wm_event_queue();
 		m_frame->show();
 	}
 	else
@@ -1004,7 +1000,6 @@ void GLGSRender::on_init_thread()
 		}
 		helper(this);
 
-		m_frame->enable_wm_event_queue();
 		m_shaders_cache->load(&helper);
 	}
 }
@@ -1917,8 +1912,6 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 		// Critical check finished
 		return;
 	}
-
-	m_frame->clear_wm_events();
 
 	if (m_overlay_manager)
 	{
