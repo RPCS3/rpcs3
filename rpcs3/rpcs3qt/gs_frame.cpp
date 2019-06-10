@@ -27,155 +27,6 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-#ifdef _WIN32
-
-namespace win32
-{
-	HHOOK _hook = NULL;
-	bool _in_sizing_event = false;
-	bool _interactive_resize = false;
-	bool _user_interaction_active = false;
-	bool _minimized = false;
-
-	void _ReleaseHook();
-
-	LRESULT CALLBACK __HookCallback(INT nCode, WPARAM wParam, LPARAM lParam)
-	{
-		std::shared_ptr<GSRender> renderer;
-
-		if (Emu.IsStopped())
-		{
-			// Stop receiving events
-			_ReleaseHook();
-		}
-		else
-		{
-			renderer = fxm::get<GSRender>();
-		}
-
-		if (nCode >= 0 && renderer)
-		{
-			auto frame_wnd = renderer->get_frame();
-			auto msg = (CWPSTRUCT*)lParam;
-
-			switch ((msg->hwnd == frame_wnd->handle()) ? msg->message : 0)
-			{
-			case WM_WINDOWPOSCHANGING:
-			{
-				const auto flags = reinterpret_cast<LPWINDOWPOS>(msg->lParam)->flags & SWP_NOSIZE;
-				if (_in_sizing_event || flags != 0)
-					break;
-
-				// About to resize
-				_in_sizing_event = true;
-				_interactive_resize = false;
-				frame_wnd->push_wm_event(wm_event::geometry_change_notice);
-				break;
-			}
-			case WM_WINDOWPOSCHANGED:
-			{
-				if (_user_interaction_active)
-				{
-					// Window dragged or resized by user causing position to change, but user is not yet done
-					frame_wnd->push_wm_event(wm_event::geometry_change_in_progress);
-					break;
-				}
-
-				const auto flags = reinterpret_cast<LPWINDOWPOS>(msg->lParam)->flags & (SWP_NOSIZE | SWP_NOMOVE);
-				if (!_in_sizing_event || flags == (SWP_NOSIZE | SWP_NOMOVE))
-					break;
-
-				_in_sizing_event = false;
-
-				if (flags & SWP_NOSIZE)
-				{
-					frame_wnd->push_wm_event(wm_event::window_moved);
-				}
-				else
-				{
-					LPWINDOWPOS wpos = reinterpret_cast<LPWINDOWPOS>(msg->lParam);
-					if (wpos->cx <= GetSystemMetrics(SM_CXMINIMIZED) || wpos->cy <= GetSystemMetrics(SM_CYMINIMIZED))
-					{
-						// Minimize event
-						_minimized = true;
-						frame_wnd->push_wm_event(wm_event::window_minimized);
-					}
-					else if (_minimized)
-					{
-						_minimized = false;
-						frame_wnd->push_wm_event(wm_event::window_restored);
-					}
-					else
-					{
-						// Handle the resize in WM_SIZE message
-						_in_sizing_event = true;
-					}
-				}
-
-				break;
-			}
-			case WM_ENTERSIZEMOVE:
-				_user_interaction_active = true;
-				break;
-			case WM_EXITSIZEMOVE:
-				_user_interaction_active = false;
-				if (_in_sizing_event && !_user_interaction_active)
-				{
-					// Just finished resizing using manual interaction. The corresponding WM_SIZE is consumed before this event fires
-					frame_wnd->push_wm_event(_interactive_resize ? wm_event::window_resized : wm_event::window_moved);
-					_in_sizing_event = false;
-				}
-				break;
-			case WM_SIZE:
-			{
-				if (_user_interaction_active)
-				{
-					// Interaction is a resize not a move
-					_interactive_resize = true;
-					frame_wnd->push_wm_event(wm_event::geometry_change_in_progress);
-				}
-				else if (_in_sizing_event)
-				{
-					// Any other unexpected resize mode will give an unconsumed WM_SIZE event
-					frame_wnd->push_wm_event(wm_event::window_resized);
-					_in_sizing_event = false;
-				}
-				break;
-			}
-			}
-		}
-
-		return CallNextHookEx(_hook, nCode, wParam, lParam);
-	}
-
-	void _InstallHook()
-	{
-		if (_hook)
-		{
-			_ReleaseHook();
-		}
-
-		Emu.CallAfter([&]()
-		{
-			if (_hook = SetWindowsHookEx(WH_CALLWNDPROC, __HookCallback, NULL, GetCurrentThreadId()); !_hook)
-			{
-				LOG_ERROR(RSX, "Failed to install window hook!");
-			}
-		});
-	}
-
-	void _ReleaseHook()
-	{
-		if (_hook)
-		{
-			UnhookWindowsHookEx(_hook);
-			_hook = NULL;
-		}
-	}
-}
-
-#endif
-
 gs_frame::gs_frame(const QString& title, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
 	: QWindow(), m_windowTitle(title), m_gui_settings(gui_settings)
 {
@@ -235,7 +86,6 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, const QIcon& app
 	m_tb_progress->setRange(0, m_gauge_max);
 	m_tb_progress->setVisible(false);
 
-	win32::_ReleaseHook();
 #elif HAVE_QTDBUS
 	UpdateProgress(0);
 	m_progress_value = 0;
@@ -309,28 +159,19 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 
 void gs_frame::toggle_fullscreen()
 {
-	if (wm_allow_fullscreen)
+	auto l_setFullScreenVis = [&]()
 	{
-		auto l_setFullScreenVis = [&]()
+		if (visibility() == FullScreen)
 		{
-			if (visibility() == FullScreen)
-			{
-				setVisibility(Windowed);
-			}
-			else
-			{
-				setVisibility(FullScreen);
-			}
-		};
+			setVisibility(Windowed);
+		}
+		else
+		{
+			setVisibility(FullScreen);
+		}
+	};
 
-		Emu.CallAfter(l_setFullScreenVis);
-	}
-	else
-	{
-		// Forward the request to the backend
-		push_wm_event(wm_event::toggle_fullscreen);
-		std::this_thread::sleep_for(1s);
-	}
+	Emu.CallAfter(l_setFullScreenVis);
 }
 
 void gs_frame::close()
@@ -405,10 +246,6 @@ draw_context_t gs_frame::make_context()
 void gs_frame::set_current(draw_context_t ctx)
 {
 	Q_UNUSED(ctx);
-
-#ifdef _WIN32
-	win32::_InstallHook();
-#endif
 }
 
 void gs_frame::delete_context(draw_context_t ctx)
