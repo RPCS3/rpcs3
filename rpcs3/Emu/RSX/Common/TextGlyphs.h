@@ -1,7 +1,6 @@
 #pragma once
 
 #include <array>
-#include <charconv>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -170,16 +169,16 @@ private:
 		{
 			glyph this_glyph{};
 
-			const auto index = font_glyph.substr(0, 4);
-			std::from_chars(index.data(), index.data() + index.size(), this_glyph.character, 16);
+			const auto index = std::string(font_glyph.substr(0, 4));
+			this_glyph.character = (u8)std::strtol(index.c_str(), nullptr, 16);
 
 			const auto glyph_data = font_glyph.substr(7);
 			if (glyph_data.length() == 32)
 			{
 				for (std::size_t n = 0; n < this_glyph.plot.size(); ++n)
 				{
-					const auto line = glyph_data.substr(n * 2, 2);
-					std::from_chars(line.data(), line.data() + line.size(), this_glyph.plot[n], 16);
+					const auto line = std::string(glyph_data.substr(n * 2, 2));
+					this_glyph.plot[n] = (u8)std::strtol(line.c_str(), nullptr, 16);
 				}
 			}
 			else
