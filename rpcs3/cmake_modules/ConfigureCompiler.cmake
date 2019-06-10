@@ -1,9 +1,9 @@
 # Check and configure compiler options for RPCS3
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-	# GCC 7.3 or latter is required
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 7.3)
-		message(FATAL_ERROR "RPCS3 requires at least gcc-7.3.")
+	# GCC 8.1 or latter is required
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
+		message(FATAL_ERROR "RPCS3 requires at least gcc-8.")
 	endif()
 
 	# Set compiler options here
