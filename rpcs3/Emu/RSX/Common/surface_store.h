@@ -58,6 +58,8 @@ namespace rsx
 		rsx::address_range m_render_targets_memory_range;
 		rsx::address_range m_depth_stencil_memory_range;
 
+		bool m_invalidate_on_write = false;
+
 	public:
 		std::pair<u8, u8> m_bound_render_targets_config = {};
 		std::array<std::pair<u32, surface_type>, 4> m_bound_render_targets = {};
@@ -531,6 +533,7 @@ namespace rsx
 			u32 clip_height = clip_vertical_reg;
 
 			cache_tag = rsx::get_shared_tag();
+			m_invalidate_on_write = (antialias != rsx::surface_antialiasing::center_1_sample);
 
 			// Make previous RTTs sampleable
 			for (int i = m_bound_render_targets_config.first, count = 0;
@@ -800,7 +803,21 @@ namespace rsx
 			{
 				if (write_tag == cache_tag)
 				{
-					// Nothing to do
+					if (m_invalidate_on_write)
+					{
+						for (int i = m_bound_render_targets_config.first, count = 0;
+							count < m_bound_render_targets_config.second;
+							++i, ++count)
+						{
+							m_bound_render_targets[i].second->on_invalidate_children();
+						}
+
+						if (m_bound_depth_stencil.first)
+						{
+							m_bound_depth_stencil.second->on_invalidate_children();
+						}
+					}
+
 					return;
 				}
 				else
