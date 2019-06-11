@@ -62,7 +62,7 @@ namespace vm
 	// Memory mutex acknowledgement
 	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
 
-	// Currently locked address
+	// Currently locked cache line
 	atomic_t<u32> g_addr_lock = 0;
 
 	// Memory mutex: passive locks
@@ -71,13 +71,15 @@ namespace vm
 
 	static void _register_lock(cpu_thread* _cpu)
 	{
-		for (u32 i = 0;; i = (i + 1) % g_locks.size())
+		for (u32 i = 0, max = g_cfg.core.ppu_threads;;)
 		{
 			if (!g_locks[i] && g_locks[i].compare_and_swap_test(nullptr, _cpu))
 			{
 				g_tls_locked = g_locks.data() + i;
 				return;
 			}
+
+			if (++i == max) i = 0;
 		}
 	}
 
@@ -165,7 +167,7 @@ namespace vm
 
 	void cleanup_unlock(cpu_thread& cpu) noexcept
 	{
-		for (u32 i = 0; i < g_locks.size(); i++)
+		for (u32 i = 0, max = g_cfg.core.ppu_threads; i < max; i++)
 		{
 			if (g_locks[i] == &cpu)
 			{
@@ -247,9 +249,9 @@ namespace vm
 
 		if (addr)
 		{
-			for (auto& lock : g_locks)
+			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
 			{
-				if (cpu_thread* ptr = lock)
+				if (cpu_thread* ptr = *lock)
 				{
 					ptr->state.test_and_set(cpu_flag::memory);
 				}
@@ -279,15 +281,10 @@ namespace vm
 				}
 			}
 
-			for (auto& lock : g_locks)
+			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
 			{
-				while (cpu_thread* ptr = lock)
+				while (*lock)
 				{
-					if (ptr->is_stopped())
-					{
-						break;
-					}
-
 					_mm_pause();
 				}
 			}

@@ -1315,7 +1315,12 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	u8* dst = vm::_ptr<u8>(eal);
 	u8* src = vm::_ptr<u8>(offset + lsa);
 
-	if (UNLIKELY(!is_get && !g_use_rtm))
+	if (is_get)
+	{
+		std::swap(dst, src);
+	}
+
+	if (UNLIKELY(!g_use_rtm && (!is_get || g_cfg.core.spu_accurate_putlluc)))
 	{
 		switch (u32 size = args.size)
 		{
@@ -1323,28 +1328,28 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 			auto& res = vm::reservation_lock(eal, 1);
 			*reinterpret_cast<u8*>(dst) = *reinterpret_cast<const u8*>(src);
-			res.release(res.load() + 127);
+			res.release(res.load() - 1);
 			break;
 		}
 		case 2:
 		{
 			auto& res = vm::reservation_lock(eal, 2);
 			*reinterpret_cast<u16*>(dst) = *reinterpret_cast<const u16*>(src);
-			res.release(res.load() + 127);
+			res.release(res.load() - 1);
 			break;
 		}
 		case 4:
 		{
 			auto& res = vm::reservation_lock(eal, 4);
 			*reinterpret_cast<u32*>(dst) = *reinterpret_cast<const u32*>(src);
-			res.release(res.load() + 127);
+			res.release(res.load() - 1);
 			break;
 		}
 		case 8:
 		{
 			auto& res = vm::reservation_lock(eal, 8);
 			*reinterpret_cast<u64*>(dst) = *reinterpret_cast<const u64*>(src);
-			res.release(res.load() + 127);
+			res.release(res.load() - 1);
 			break;
 		}
 		default:
@@ -1363,7 +1368,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 					size -= 16;
 				}
 
-				res.release(res.load() + 127);
+				res.release(res.load() - 1);
 				break;
 			}
 
@@ -1393,11 +1398,6 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		}
 
 		return;
-	}
-
-	if (is_get)
-	{
-		std::swap(dst, src);
 	}
 
 	switch (u32 size = args.size)
