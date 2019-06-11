@@ -15,6 +15,9 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
 	vm::temporary_unlock(ppu);
 
+	// Need to wait until the current writer finish
+	if (ppu.state & cpu_flag::memory) vm::g_mutex.lock_unlock();
+
 	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
 	ppu.state += cpu_flag::exit;
