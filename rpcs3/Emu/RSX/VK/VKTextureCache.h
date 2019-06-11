@@ -507,7 +507,7 @@ namespace vk
 
 				if (auto surface = dynamic_cast<vk::render_target*>(section.src))
 				{
-					surface->transform_samples_to_pixels(src_x, src_y, src_w, src_h);
+					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
 				}
 
 				if (UNLIKELY(typeless))

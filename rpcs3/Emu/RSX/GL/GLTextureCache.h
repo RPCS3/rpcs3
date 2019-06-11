@@ -628,7 +628,7 @@ namespace gl
 
 				if (auto surface = dynamic_cast<gl::render_target*>(slice.src))
 				{
-					surface->transform_samples_to_pixels(src_x, src_y, src_w, src_h);
+					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
 				}
 
 				if (UNLIKELY(typeless))
