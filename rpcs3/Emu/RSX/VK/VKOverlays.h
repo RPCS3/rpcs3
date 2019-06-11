@@ -921,6 +921,7 @@ namespace vk
 		void run(vk::command_buffer &cmd, vk::render_target* target, VkRect2D rect, VkRenderPass render_pass)
 		{
 			region = rect;
+			target->read_barrier(cmd);
 
 			overlay_pass::run(cmd, target->width(), target->height(), target,
 				target->get_view(0xAAE4, rsx::default_remap_vector),
