@@ -474,6 +474,14 @@ namespace rsx
 			}
 		}
 
+		void on_invalidate_children()
+		{
+			if (resolve_surface)
+			{
+				msaa_flags = rsx::surface_state_flags::require_resolve;
+			}
+		}
+
 		// Returns the rect area occupied by this surface expressed as an 8bpp image with no AA
 		areau get_normalized_memory_area() const
 		{
