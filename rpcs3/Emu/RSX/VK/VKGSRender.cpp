@@ -1226,6 +1226,7 @@ void VKGSRender::end()
 		if (!preinitialized) ds->pop_layout(*m_current_command_buffer);
 
 		// TODO: Stencil transfer
+		vk::as_rtt(ds->old_contents.source)->read_barrier(*m_current_command_buffer);
 		ds->old_contents.init_transfer(ds);
 		m_depth_converter->run(*m_current_command_buffer,
 			ds->old_contents.src_rect(),
