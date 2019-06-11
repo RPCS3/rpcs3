@@ -190,11 +190,16 @@ namespace vk
 			}
 
 			vk::image *locked_resource = vram_texture;
+			u32 transfer_width = width;
+			u32 transfer_height = height;
+
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				auto surface = vk::as_rtt(vram_texture);
 				surface->read_barrier(cmd);
 				locked_resource = surface->get_surface(rsx::surface_access::read);
+				transfer_width *= surface->samples_x;
+				transfer_height *= surface->samples_y;
 			}
 
 			verify(HERE), locked_resource->samples() == 1;
@@ -203,19 +208,9 @@ namespace vk
 			locked_resource->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			real_pitch = vk::get_format_texel_width(locked_resource->info.format) * locked_resource->width();
 
-			u32 transfer_width = width;
-			u32 transfer_height = height;
-
 			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
 				(real_pitch != rsx_pitch))
 			{
-				if (context == rsx::texture_upload_context::framebuffer_storage)
-				{
-					auto surface = vk::as_rtt(vram_texture);
-					transfer_width *= surface->samples_x;
-					transfer_height *= surface->samples_y;
-				}
-
 				if (transfer_width != locked_resource->width() || transfer_height != locked_resource->height())
 				{
 					// TODO: Synchronize access to typeles textures
