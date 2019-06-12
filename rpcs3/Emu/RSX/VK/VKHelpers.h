@@ -478,7 +478,7 @@ private:
 			supported_extensions instance_extensions(supported_extensions::instance);
 			supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
 
-			if (!instance_extensions.is_supported("VK_KHR_get_physical_device_properties2"))
+			if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
 			{
 				vkGetPhysicalDeviceFeatures(dev, &features);
 			}
@@ -490,13 +490,13 @@ private:
 
 				VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
 
-				if (device_extensions.is_supported("VK_KHR_shader_float16_int8"))
+				if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 				{
 					shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
 					features2.pNext = &shader_support_info;
 				}
 
-				if (device_extensions.is_supported("VK_KHR_driver_properties"))
+				if (device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
 				{
 					driver_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
 					driver_properties.pNext = features2.pNext;
@@ -512,7 +512,7 @@ private:
 				features = features2.features;
 			}
 
-			stencil_export_support = device_extensions.is_supported("VK_EXT_shader_stencil_export");
+			stencil_export_support = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		}
 
 	public:
@@ -702,7 +702,7 @@ private:
 			VkPhysicalDeviceFeatures available_features = pgpu->features;
 			if (pgpu->shader_types_support.allow_float16)
 			{
-				requested_extensions.push_back("VK_KHR_shader_float16_int8");
+				requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 			}
 
 			available_features.samplerAnisotropy = VK_TRUE;
@@ -2377,7 +2377,7 @@ public:
 			app.applicationVersion = 0;
 			app.pEngineName = app_name;
 			app.engineVersion = 0;
-			app.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+			app.apiVersion = VK_API_VERSION_1_0;
 
 			//Set up instance information
 
@@ -2395,9 +2395,9 @@ public:
 					extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 				}
 
-				if (support.is_supported("VK_KHR_get_physical_device_properties2"))
+				if (support.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
 				{
-					extensions.push_back("VK_KHR_get_physical_device_properties2");
+					extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
