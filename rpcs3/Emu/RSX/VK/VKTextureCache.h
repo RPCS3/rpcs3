@@ -1100,7 +1100,7 @@ namespace vk
 				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 				vkCreateFence(*m_device, &info, nullptr, &submit_fence);
 
-				cmd.submit(m_submit_queue, {}, submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
 				vk::wait_for_fence(submit_fence, GENERAL_WAIT_TIMEOUT);
 				vkDestroyFence(*m_device, submit_fence, nullptr);
@@ -1111,7 +1111,7 @@ namespace vk
 			else
 			{
 				// Auxilliary command queue with auto-restart capability
-				cmd.submit(m_submit_queue, {}, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 			}
 
 			verify(HERE), cmd.flags == 0;

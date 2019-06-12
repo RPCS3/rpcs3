@@ -1540,7 +1540,7 @@
            <item>
             <widget class="QLabel" name="l_description">
              <property name="text">
-              <string>To use a DualShock 3 controller on Windows you need a generic driver, like WinUSB. Press the PS button to activate the controller.</string>
+              <string>To use a DualShock 3 controller on Windows you can now use Sony's official drivers. To get them you'll have to install PlayStation Now, since the drivers are bundled with it.</string>
              </property>
              <property name="textFormat">
               <enum>Qt::PlainText</enum>

@@ -165,7 +165,8 @@ enum frame_context_state : u32
 
 struct frame_context_t
 {
-	VkSemaphore present_semaphore = VK_NULL_HANDLE;
+	VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
+	VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
 	VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
 
 	vk::descriptor_pool descriptor_pool;
@@ -194,7 +195,8 @@ struct frame_context_t
 	//Copy shareable information
 	void grab_resources(frame_context_t &other)
 	{
-		present_semaphore = other.present_semaphore;
+		present_wait_semaphore = other.present_wait_semaphore;
+		acquire_signal_semaphore = other.acquire_signal_semaphore;
 		descriptor_set = other.descriptor_set;
 		descriptor_pool = other.descriptor_pool;
 		used_descriptors = other.used_descriptors;
@@ -412,8 +414,8 @@ private:
 
 	vk::framebuffer_holder* m_draw_fbo = nullptr;
 
-	bool present_surface_dirty_flag = false;
-	bool renderer_unavailable = false;
+	sizeu m_swapchain_dims{};
+	bool swapchain_unavailable = false;
 
 	u64 m_last_heap_sync_time = 0;
 	u32 m_texbuffer_view_size = 0;
@@ -442,9 +444,6 @@ private:
 	u32 m_current_queue_index = 0;
 	frame_context_t* m_current_frame = nullptr;
 	std::deque<frame_context_t*> m_queued_frames;
-
-	u32 m_client_width = 0;
-	u32 m_client_height = 0;
 
 	VkViewport m_viewport{};
 	VkRect2D m_scissor{};
@@ -482,13 +481,18 @@ public:
 
 private:
 	void clear_surface(u32 mask);
-	void close_and_submit_command_buffer(const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-	void open_command_buffer();
 	void prepare_rtts(rsx::framebuffer_creation_context context);
+
+	void open_command_buffer();
+	void close_and_submit_command_buffer(
+		VkFence fence = VK_NULL_HANDLE,
+		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
+		VkSemaphore signal_semaphore = VK_NULL_HANDLE,
+		VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
 	void flush_command_queue(bool hard_sync = false);
 	void queue_swap_request();
-	void process_swap_request(frame_context_t *ctx, bool free_resources = false);
+	void frame_context_cleanup(frame_context_t *ctx, bool free_resources = false);
 	void advance_queued_frames();
 	void present(frame_context_t *ctx);
 	void reinitialize_swapchain();
@@ -499,6 +503,7 @@ private:
 	void update_draw_state();
 
 	void check_heap_status(u32 flags = VK_HEAP_CHECK_ALL);
+	void check_present_status();
 
 	void check_descriptors();
 	VkDescriptorSet allocate_descriptor_set();
@@ -516,9 +521,6 @@ public:
 	void set_viewport();
 	void set_scissor();
 	void bind_viewport();
-
-	void check_window_status();
-	void check_present_status();
 
 	void sync_hint(rsx::FIFO_hint hint) override;
 
