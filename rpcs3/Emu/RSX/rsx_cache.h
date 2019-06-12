@@ -19,7 +19,7 @@ namespace rsx
 {
 	enum protection_policy
 	{
-		protect_policy_one_page,     //Only guard one page, preferrably one where this section 'wholly' fits
+		protect_policy_one_page,     //Only guard one page, preferably one where this section 'wholly' fits
 		protect_policy_conservative, //Guards as much memory as possible that is guaranteed to only be covered by the defined range without sharing
 		protect_policy_full_range    //Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
 	};
