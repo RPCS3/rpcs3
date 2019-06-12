@@ -572,7 +572,7 @@ namespace utils
 		return vec.overlaps(*this);
 	}
 
-}; // namespace utils
+} // namespace utils
 
 
 namespace std {
@@ -587,4 +587,4 @@ namespace std {
 			return (size_t{ k.start } << 32) | size_t{ k.end };
 		}
 	};
-};
+}

@@ -52,18 +52,21 @@ namespace utils
 #endif
 	}
 
-	inline u8 popcnt16(u16 arg)
+	inline u8 popcnt32(u32 arg)
 	{
-		const u32 a1 = arg & 0x5555;
-		const u32 a2 = (arg >> 1) & 0x5555;
+#ifdef _MSC_VER
+		const u32 a1 = arg & 0x55555555;
+		const u32 a2 = (arg >> 1) & 0x55555555;
 		const u32 a3 = a1 + a2;
-		const u32 b1 = a3 & 0x3333;
-		const u32 b2 = (a3 >> 2) & 0x3333;
+		const u32 b1 = a3 & 0x33333333;
+		const u32 b2 = (a3 >> 2) & 0x33333333;
 		const u32 b3 = b1 + b2;
-		const u32 c1 = b3 & 0x0f0f;
-		const u32 c2 = (b3 >> 4) & 0x0f0f;
-		const u32 c3 = c1 + c2;
-		return static_cast<u8>(c3 + (c3 >> 8));
+		const u32 c3 = (b3 + (b3 >> 4)) & 0x0f0f0f0f;
+		const u32 d3 = c3 + (c3 >> 8);
+		return static_cast<u8>(d3 + (d3 >> 16));
+#else
+		return __builtin_popcount(arg);
+#endif
 	}
 
 // Rotate helpers

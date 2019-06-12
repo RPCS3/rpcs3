@@ -108,7 +108,7 @@ namespace gui
 			dummy_color.setObjectName(object_name);
 			dummy_color.ensurePolished();
 			return dummy_color.palette().color(color_role);
-		};
+		}
 
 		QFont get_label_font(const QString& object_name)
 		{
@@ -116,7 +116,7 @@ namespace gui
 			dummy_font.setObjectName(object_name);
 			dummy_font.ensurePolished();
 			return dummy_font.font();
-		};
+		}
 
 		QImage get_opaque_image_area(const QString& path)
 		{
@@ -176,7 +176,7 @@ namespace gui
 				max_width += combo->view()->autoScrollMargin();
 				combo->view()->setMinimumWidth(max_width);
 			}
-		};
+		}
 
 		void update_table_item_count(QTableWidget* table)
 		{

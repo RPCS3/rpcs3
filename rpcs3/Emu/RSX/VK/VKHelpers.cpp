@@ -2,6 +2,7 @@
 #include "VKHelpers.h"
 #include "VKCompute.h"
 #include "VKRenderPass.h"
+#include "VKFramebuffer.h"
 #include "Utilities/mutex.h"
 
 namespace vk
@@ -158,11 +159,11 @@ namespace vk
 		if (g_null_image_view)
 			return g_null_image_view.get();
 
-		g_null_texture.reset(new image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		g_null_texture = std::make_unique<image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
-		g_null_image_view.reset(new image_view(*g_current_renderer, g_null_texture.get()));
+		g_null_image_view = std::make_unique<image_view>(*g_current_renderer, g_null_texture.get());
 
 		// Initialize memory to transparent black
 		VkClearColorValue clear_color = {};
@@ -206,7 +207,7 @@ namespace vk
 	{
 		if (!g_scratch_buffer)
 		{
-			// 32M disposable scratch memory
+			// 128M disposable scratch memory
 			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 128 * 0x100000,
 				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
@@ -237,6 +238,7 @@ namespace vk
 	{
 		VkDevice dev = *g_current_renderer;
 		vk::clear_renderpass_cache(dev);
+		vk::clear_framebuffer_cache();
 
 		g_null_texture.reset();
 		g_null_image_view.reset();
@@ -350,7 +352,7 @@ namespace vk
 			{
 				info.usage = usage;
 				CHECK_RESULT(vkCreateBuffer(*g_current_renderer, &info, nullptr, &tmp));
-				
+
 				vkGetBufferMemoryRequirements(*g_current_renderer, tmp, &memory_reqs);
 				if (g_current_renderer->get_compatible_memory_type(memory_reqs.memoryTypeBits, memory_flags, nullptr))
 				{
@@ -813,7 +815,7 @@ namespace vk
 			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
 			break;
 		default:
-			error_message = fmt::format("Unknown Code (%Xh, %d)%s", (s32)error_code, (s32&)error_code, faulting_addr);
+			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), faulting_addr);
 			break;
 		}
 

@@ -84,6 +84,22 @@
 #define AUDIT(...) ((void)0)
 #endif
 
+#if defined(__cpp_lib_bit_cast) && (__cpp_lib_bit_cast >= 201806L)
+#include <bit>
+#else
+namespace std
+{
+	template <class To, class From, typename = std::enable_if_t<sizeof(To) == sizeof(From)>>
+	constexpr To bit_cast(const From& from) noexcept
+	{
+		static_assert(sizeof(To) == sizeof(From), "std::bit_cast<>: incompatible type size");
+
+		To result;
+		std::memcpy(&result, &from, sizeof(From));
+		return result;
+	}
+}
+#endif
 
 using schar  = signed char;
 using uchar  = unsigned char;
@@ -387,15 +403,7 @@ union alignas(2) f16
 		          (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
 		          ((_u16 & 0x03FF) << 13);              // Mantissa
 
-		union
-		{
-			char data[4];
-			u32 data32;
-			f32 res;
-		};
-
-		data32 = raw;
-		return res;
+		return std::bit_cast<f32>(raw);
 	}
 };
 
@@ -410,23 +418,12 @@ constexpr T align(const T& value, ullong align)
 template <typename T, typename T2>
 inline u32 offset32(T T2::*const mptr)
 {
-	union
-	{
-		char data[sizeof(std::size_t)];
-		std::size_t data_;
-		u32 data32;
-	};
-
 #ifdef _MSC_VER
-	static_assert(sizeof(mptr) == sizeof(u32), "Invalid pointer-to-member size");
-	std::memcpy(data, &mptr, sizeof(u32));
-	return data32;
+	return std::bit_cast<u32>(mptr);
 #elif __GNUG__
-	static_assert(sizeof(mptr) == sizeof(std::size_t), "Invalid pointer-to-member size");
-	std::memcpy(data, &mptr, sizeof(std::size_t));
-	return data_;
+	return std::bit_cast<std::size_t>(mptr);
 #else
-	static_assert(sizeof(mptr) == 0, "Invalid pointer-to-member size");
+	static_assert(sizeof(mptr) == 0, "Unsupported pointer-to-member size");
 #endif
 }
 

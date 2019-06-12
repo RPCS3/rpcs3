@@ -33,7 +33,7 @@ namespace
 		// get the saves matching the supplied prefix
 		for (const auto& entry : fs::dir(base_dir))
 		{
-			if (!entry.is_directory)
+			if (!entry.is_directory || entry.name == "." || entry.name == "..")
 			{
 				continue;
 			}
@@ -43,6 +43,7 @@ namespace
 
 			if (psf.empty())
 			{
+				LOG_ERROR(LOADER, "Failed to load savedata: %s", base_dir + "/" + entry.name);
 				continue;
 			}
 
@@ -146,7 +147,7 @@ void save_manager_dialog::UpdateList()
 {
 	if (m_dir == "")
 	{
-		m_dir = Emu.GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
+		m_dir = Emulator::GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
 	}
 
 	m_save_entries = GetSaveEntries(m_dir);
@@ -224,7 +225,7 @@ void save_manager_dialog::OnSort(int logicalIndex)
 }
 
 /**
- *Display info dialog directly. Copied from save_data_list_dialog
+ * Display info dialog directly. Copied from save_data_list_dialog
  */
 void save_manager_dialog::OnEntryInfo()
 {
@@ -238,7 +239,7 @@ void save_manager_dialog::OnEntryInfo()
 	}
 }
 
-//Remove a save file, need to be confirmed.
+// Remove a save file, need to be confirmed.
 void save_manager_dialog::OnEntryRemove()
 {
 	int idx = m_list->currentRow();
@@ -256,7 +257,7 @@ void save_manager_dialog::OnEntryRemove()
 void save_manager_dialog::OnEntriesRemove()
 {
 	QModelIndexList selection(m_list->selectionModel()->selectedRows());
-	if (selection.size() == 0)
+	if (selection.empty())
 	{
 		return;
 	}
@@ -279,7 +280,7 @@ void save_manager_dialog::OnEntriesRemove()
 	}
 }
 
-//Pop-up a small context-menu, being a replacement for save_data_manage_dialog
+// Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
 	bool selectedItems = m_list->selectionModel()->selectedRows().size() > 1;
@@ -300,14 +301,14 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	QAction* infoAct = new QAction(tr("&Info"), this);
 	QAction* showDirAct = new QAction(tr("&Open Save Directory"), this);
 
-	//This is also a stub for the sort setting. Ids are set accordingly to their sort-type integer.
+	// This is also a stub for the sort setting. Ids are set accordingly to their sort-type integer.
 	// TODO: add more sorting types.
-	m_sort_options = new QMenu(tr("&Sort By"));
-	m_sort_options->addAction(titleAct);
-	m_sort_options->addAction(subtitleAct);
-	m_sort_options->addAction(saveIDAct);
+	QMenu* sort_options = new QMenu(tr("&Sort By"), this);
+	sort_options->addAction(titleAct);
+	sort_options->addAction(subtitleAct);
+	sort_options->addAction(saveIDAct);
 
-	menu->addMenu(m_sort_options);
+	menu->addMenu(sort_options);
 	menu->addSeparator();
 	menu->addAction(removeAct);
 	menu->addAction(infoAct);

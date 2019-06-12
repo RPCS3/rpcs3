@@ -95,7 +95,7 @@ bool ds3_pad_handler::Init()
 		LOG_ERROR(HLE, "[DS3] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
 	}
-	else if (controllers.size() == 0)
+	else if (controllers.empty())
 	{
 		LOG_WARNING(HLE, "[DS3] No controllers found!");
 	}
@@ -238,7 +238,7 @@ void ds3_pad_handler::ThreadProc()
 	}
 }
 
-void ds3_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
+void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 b/* b*/)
 {
 	std::shared_ptr<ds3_device> device = get_device(padId);
 	if (device == nullptr || device->handle == nullptr)

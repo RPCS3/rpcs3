@@ -237,14 +237,14 @@ namespace gl
 		clear(buffers_);
 	}
 
-	void fbo::copy_from(const void* pixels, sizei size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
+	void fbo::copy_from(const void* pixels, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
 	{
 		save_binding_state save(*this);
 		pixel_settings.apply();
 		glDrawPixels(size.width, size.height, (GLenum)format_, (GLenum)type_, pixels);
 	}
 
-	void fbo::copy_from(const buffer& buf, sizei size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
+	void fbo::copy_from(const buffer& buf, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
 	{
 		save_binding_state save(*this);
 		buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
@@ -301,7 +301,7 @@ namespace gl
 		m_id = id;
 	}
 
-	void fbo::set_extents(size2i extents)
+	void fbo::set_extents(const size2i& extents)
 	{
 		m_size = extents;
 	}

@@ -24,7 +24,7 @@ struct CellGcmConfig
 
 struct CellGcmContextData;
 
-typedef s32(CellGcmContextCallback)(vm::ptr<CellGcmContextData>, u32);
+using CellGcmContextCallback = s32 (vm::ptr<CellGcmContextData>, u32);
 
 struct CellGcmContextData
 {

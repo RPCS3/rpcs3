@@ -25,7 +25,7 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 	connect(button_search, &QAbstractButton::clicked, this, &memory_string_searcher::OnSearch);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
-};
+}
 
 void memory_string_searcher::OnSearch()
 {

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <sstream>
 
+#include "GLSLTypes.h"
 #include "ShaderParam.h"
 
 namespace program_common
@@ -76,7 +77,7 @@ namespace program_common
 		"}\n\n";
 	}
 
-	static void insert_fog_declaration(std::ostream& OS, const std::string wide_vector_type, const std::string input_coord, bool declare = false)
+	static void insert_fog_declaration(std::ostream& OS, const std::string& wide_vector_type, const std::string& input_coord, bool declare = false)
 	{
 		std::string template_body;
 
@@ -132,19 +133,6 @@ namespace program_common
 
 namespace glsl
 {
-	enum program_domain
-	{
-		glsl_vertex_program = 0,
-		glsl_fragment_program = 1,
-		glsl_compute_program = 2
-	};
-
-	enum glsl_rules
-	{
-		glsl_rules_opengl4,
-		glsl_rules_rpirv
-	};
-
 	static std::string getFloatTypeNameImpl(size_t elementCount)
 	{
 		switch (elementCount)
@@ -499,20 +487,6 @@ namespace glsl
 		"	ocol2 = " << reg2 << ";\n"
 		"	ocol3 = " << reg3 << ";\n\n";
 	}
-
-	struct shader_properties
-	{
-		glsl::program_domain domain;
-		// Applicable in vertex stage
-		bool require_lit_emulation;
-
-		// Only relevant for fragment programs
-		bool require_wpos;
-		bool require_depth_conversion;
-		bool require_texture_ops;
-		bool emulate_shadow_compare;
-		bool low_precision_tests;
-	};
 
 	static void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props)
 	{

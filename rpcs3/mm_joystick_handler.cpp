@@ -244,7 +244,7 @@ void mm_joystick_handler::ThreadProc()
 			TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
 		}
 
-		s32 stick_val[4];
+		s32 stick_val[4]{0};
 
 		// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 		for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
@@ -297,7 +297,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 
 	if (cur_pad != padId)
 	{
-		cur_pad == padId;
+		cur_pad = padId;
 		id = GetIDByName(padId);
 		if (id < 0)
 		{
@@ -391,7 +391,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 
 		if (get_blacklist)
 		{
-			if (blacklist.size() <= 0)
+			if (blacklist.empty())
 				LOG_SUCCESS(HLE, "MMJOY Calibration: Blacklist is clear. No input spam detected");
 			return;
 		}
@@ -448,12 +448,12 @@ void mm_joystick_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& 
 	else if (std::find(m_dev->axis_left.begin(), m_dev->axis_left.end(), keyCode) != m_dev->axis_left.end())
 	{
 		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, p_profile->lstickmultiplier, ignore_threshold) : 0;
 	}
 	else if (std::find(m_dev->axis_right.begin(), m_dev->axis_right.end(), keyCode) != m_dev->axis_right.end())
 	{
 		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, p_profile->rstickmultiplier, ignore_threshold) : 0;
 	}
 	else // normal button (should in theory also support sensitive buttons)
 	{

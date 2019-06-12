@@ -110,7 +110,7 @@ namespace logs
 	void set_level(const std::string&, level);
 }
 
-#define LOG_CHANNEL(ch, ...) ::logs::channel ch(#ch, ##__VA_ARGS__);
+#define LOG_CHANNEL(ch, ...) ::logs::channel ch(#ch, ##__VA_ARGS__)
 
 // Legacy:
 

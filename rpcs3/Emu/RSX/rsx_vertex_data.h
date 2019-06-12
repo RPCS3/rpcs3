@@ -123,7 +123,7 @@ struct register_vertex_data_info
 	u8 size = 0;
 	vertex_base_type type = vertex_base_type::f;
 
-	register_vertex_data_info() {}
+	register_vertex_data_info() = default;
 	std::array<u32, 4> data;
 };
 

@@ -797,7 +797,7 @@ namespace
 	std::string transform_constant(size_t index, u32 arg)
 	{
 		return "Transform constant " + std::to_string(index) + ": " + std::to_string(arg) + "/" +
-		       std::to_string((float&)arg);
+		       std::to_string(std::bit_cast<f32>(arg));
 	}
 
 	std::string texture_offset(size_t index, u32 arg)

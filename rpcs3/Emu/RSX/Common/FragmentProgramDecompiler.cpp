@@ -140,7 +140,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
-void FragmentProgramDecompiler::AddFlowOp(std::string code)
+void FragmentProgramDecompiler::AddFlowOp(const std::string& code)
 {
 	//Flow operations can only consider conditionals and have no dst
 
@@ -221,7 +221,7 @@ std::string FragmentProgramDecompiler::AddConst()
 	u32 z = GetData(data[2]);
 	u32 w = GetData(data[3]);
 
-	const auto var = fmt::format("%s(%f, %f, %f, %f)", type, (f32&)x, (f32&)y, (f32&)z, (f32&)w);
+	const auto var = fmt::format("%s(%f, %f, %f, %f)", type, std::bit_cast<f32>(x), std::bit_cast<f32>(y), std::bit_cast<f32>(z), std::bit_cast<f32>(w));
 	return m_parr.AddParam(PF_PARAM_UNIFORM, type, name, var);
 }
 
@@ -558,7 +558,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
 
-	std::string swizzle = "";
+	std::string swizzle;
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
 	swizzle += f[src.swizzle_z];

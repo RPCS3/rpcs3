@@ -75,7 +75,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			d3.HEX = instruction->word[3];
 
 			// Touch current instruction
-			result.instruction_mask[current_instrution] = 1;
+			result.instruction_mask[current_instrution] = true;
 			instruction_range.first = std::min(current_instrution, instruction_range.first);
 			instruction_range.second = std::max(current_instrution, instruction_range.second);
 

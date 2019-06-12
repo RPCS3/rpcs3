@@ -216,7 +216,7 @@ namespace vk
 		using mem_handle_t = void *;
 
 		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {}
-		virtual ~mem_allocator_base() {}
+		virtual ~mem_allocator_base() = default;
 
 		virtual void destroy() = 0;
 
@@ -232,7 +232,7 @@ namespace vk
 	private:
 	};
 
-	// Memory Allocator - Vulkan Memory Allocator 
+	// Memory Allocator - Vulkan Memory Allocator
 	// https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
 
 	class mem_allocator_vma : public mem_allocator_base
@@ -247,7 +247,7 @@ namespace vk
 			vmaCreateAllocator(&allocatorInfo, &m_allocator);
 		}
 
-		~mem_allocator_vma() {}
+		~mem_allocator_vma() override = default;
 
 		void destroy() override
 		{
@@ -315,7 +315,7 @@ namespace vk
 	{
 	public:
 		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
-		~mem_allocator_vk() {}
+		~mem_allocator_vk() override = default;
 
 		void destroy() override {}
 
@@ -413,8 +413,8 @@ namespace vk
 
 	public:
 
-		physical_device() {}
-		~physical_device() {}
+		physical_device() = default;
+		~physical_device() = default;
 
 		void create(VkInstance context, VkPhysicalDevice pdev)
 		{
@@ -436,9 +436,6 @@ namespace vk
 			const auto gpu_name = get_name();
 			if (gpu_name.find("Radeon") != std::string::npos)
 			{
-#ifndef _WIN32
-				LOG_ERROR(RSX, "Using non RADV drivers on linux currently incurs a ~40% performance loss due to a window resizing workaround. Using RADV is recommended.");
-#endif
 				return driver_vendor::AMD;
 			}
 
@@ -487,7 +484,7 @@ namespace vk
 
 		uint32_t get_queue_count() const
 		{
-			if (queue_props.size())
+			if (!queue_props.empty())
 				return (u32)queue_props.size();
 
 			uint32_t count = 0;
@@ -498,7 +495,7 @@ namespace vk
 
 		VkQueueFamilyProperties get_queue_properties(uint32_t queue)
 		{
-			if (!queue_props.size())
+			if (queue_props.empty())
 			{
 				uint32_t count = 0;
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
@@ -622,11 +619,8 @@ namespace vk
 		}
 
 	public:
-		render_device()
-		{}
-
-		~render_device()
-		{}
+		render_device() = default;
+		~render_device() = default;
 
 		void create(vk::physical_device &pdev, uint32_t graphics_queue_idx)
 		{
@@ -792,8 +786,8 @@ namespace vk
 		VkCommandPool pool = nullptr;
 
 	public:
-		command_pool() {}
-		~command_pool() {}
+		command_pool() = default;
+		~command_pool() = default;
 
 		void create(vk::render_device &dev)
 		{
@@ -853,8 +847,8 @@ namespace vk
 		u32 flags = 0;
 
 	public:
-		command_buffer() {}
-		~command_buffer() {}
+		command_buffer() = default;
+		~command_buffer() = default;
 
 		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
 		{
@@ -947,7 +941,7 @@ namespace vk
 			is_open = false;
 		}
 
-		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
 		{
 			if (is_open)
 			{
@@ -955,19 +949,29 @@ namespace vk
 				return;
 			}
 
-			if (fence == VK_NULL_HANDLE)
+			if (!fence)
 			{
 				fence = m_submit_fence;
 				is_pending = (fence != VK_NULL_HANDLE);
 			}
 
 			VkSubmitInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 			infos.commandBufferCount = 1;
 			infos.pCommandBuffers = &commands;
 			infos.pWaitDstStageMask = &pipeline_stage_flags;
-			infos.pWaitSemaphores = semaphores.data();
-			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
-			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+			if (wait_semaphore)
+			{
+				infos.waitSemaphoreCount = 1;
+				infos.pWaitSemaphores = &wait_semaphore;
+			}
+
+			if (signal_semaphore)
+			{
+				infos.signalSemaphoreCount = 1;
+				infos.pSignalSemaphores = &signal_semaphore;
+			}
 
 			acquire_global_submit_lock();
 			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
@@ -1283,7 +1287,7 @@ namespace vk
 					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
-			memory.reset(new memory_block(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index));
+			memory = std::make_unique<memory_block>(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index);
 			vkBindBufferMemory(dev, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset());
 		}
 
@@ -1499,7 +1503,7 @@ namespace vk
 		vk::render_device *owner = nullptr;
 
 	public:
-		swapchain_image_WSI() {}
+		swapchain_image_WSI() = default;
 
 		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
 		{
@@ -1627,7 +1631,7 @@ public:
 			m_surface_format = format;
 		}
 
-		virtual ~swapchain_base() {}
+		virtual ~swapchain_base() = default;
 
 		virtual void create(display_handle_t& handle) = 0;
 		virtual void destroy(bool full = true) = 0;
@@ -1637,7 +1641,7 @@ public:
 		virtual VkImage& get_image(u32 index) = 0;
 		virtual VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) = 0;
 		virtual void end_frame(command_buffer& cmd, u32 index) = 0;
-		virtual VkResult present(u32 index) = 0;
+		virtual VkResult present(VkSemaphore semaphore, u32 index) = 0;
 		virtual VkImageLayout get_optimal_present_layout() = 0;
 
 		virtual bool supports_automatic_wm_reports() const
@@ -1689,8 +1693,7 @@ public:
 		: swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~abstract_swapchain_impl()
-		{}
+		~abstract_swapchain_impl() override = default;
 
 		u32 get_swap_image_count() const override
 		{
@@ -1769,7 +1772,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 image) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 image) override
 		{
 			auto& src = swapchain_images[image];
 			GdiFlush();
@@ -1826,7 +1829,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 index) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
 		{
 			fmt::throw_exception("Native macOS swapchain is not implemented yet!");
 		}
@@ -1845,7 +1848,7 @@ public:
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~swapchain_X11(){}
+		~swapchain_X11() override = default;
 
 		bool init() override
 		{
@@ -1914,7 +1917,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 index) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
 		{
 			auto& src = swapchain_images[index];
 			if (pixmap)
@@ -1958,7 +1961,7 @@ public:
 
 		VkImage& get_image(u32 index) override
 		{
-			return (VkImage&)(*swapchain_images[index].second.get());
+			return (VkImage&)(*swapchain_images[index].second);
 		}
 
 		VkImageLayout get_optimal_present_layout() override
@@ -2026,13 +2029,9 @@ public:
 
 			switch (gpu.get_driver_vendor())
 			{
-			case driver_vendor::NVIDIA:
-#ifndef _WIN32
-				m_wm_reports_flag = true;
-#endif
-				break;
 			case driver_vendor::AMD:
 				break;
+			case driver_vendor::NVIDIA:
 			case driver_vendor::INTEL:
 			case driver_vendor::RADV:
 				m_wm_reports_flag = true;
@@ -2042,8 +2041,7 @@ public:
 			}
 		}
 
-		~swapchain_WSI()
-		{}
+		~swapchain_WSI() override = default;
 
 		void create(display_handle_t&) override
 		{}
@@ -2144,7 +2142,7 @@ public:
 					break;
 			}
 
-			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", (s32&)swapchain_present_mode);
+			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", static_cast<int>(swapchain_present_mode));
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 			if (surface_descriptors.maxImageCount > 0)
@@ -2187,12 +2185,12 @@ public:
 
 			if (old_swapchain)
 			{
-				if (swapchain_images.size())
+				if (!swapchain_images.empty())
 				{
 					for (auto &img : swapchain_images)
 						img.discard(dev);
 
-					swapchain_images.resize(0);
+					swapchain_images.clear();
 				}
 
 				destroySwapchainKHR(dev, old_swapchain, nullptr);
@@ -2216,7 +2214,7 @@ public:
 		{
 		}
 
-		VkResult present(u32 image) override
+		VkResult present(VkSemaphore semaphore, u32 image) override
 		{
 			VkPresentInfoKHR present = {};
 			present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -2224,6 +2222,8 @@ public:
 			present.swapchainCount = 1;
 			present.pSwapchains = &m_vk_swapchain;
 			present.pImageIndices = &image;
+			present.waitSemaphoreCount = 1;
+			present.pWaitSemaphores = &semaphore;
 
 			return queuePresentKHR(vk_present_queue, &present);
 		}
@@ -2265,13 +2265,13 @@ public:
 
 		~context()
 		{
-			if (m_instance || m_vk_instances.size())
+			if (m_instance || !m_vk_instances.empty())
 				close();
 		}
 
 		void close()
 		{
-			if (!m_vk_instances.size()) return;
+			if (m_vk_instances.empty()) return;
 
 			if (m_debugger)
 			{
@@ -2285,7 +2285,7 @@ public:
 			}
 
 			m_instance = nullptr;
-			m_vk_instances.resize(0);
+			m_vk_instances.clear();
 		}
 
 		void enable_debugging()
@@ -2613,8 +2613,8 @@ public:
 		u32 m_current_pool_index = 0;
 
 	public:
-		descriptor_pool() {}
-		~descriptor_pool() {}
+		descriptor_pool() = default;
+		~descriptor_pool() = default;
 
 		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 		{
@@ -2828,8 +2828,7 @@ public:
 			}
 		}
 
-		~graphics_pipeline_state()
-		{}
+		~graphics_pipeline_state() = default;
 
 		graphics_pipeline_state& operator = (const graphics_pipeline_state& other)
 		{
@@ -3023,11 +3022,8 @@ public:
 			std::vector<u32> m_compiled;
 
 		public:
-			shader()
-			{}
-
-			~shader()
-			{}
+			shader() = default;
+			~shader() = default;
 
 			void create(::glsl::program_domain domain, const std::string& source)
 			{
@@ -3151,13 +3147,13 @@ public:
 			{
 				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", (u32)usage);
 
-				shadow.reset(new buffer(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+				shadow = std::make_unique<buffer>(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0);
 				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 				memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 				memory_index = memory_map.device_local;
 			}
 
-			heap.reset(new buffer(*device, size, memory_index, memory_flags, usage, 0));
+			heap = std::make_unique<buffer>(*device, size, memory_index, memory_flags, usage, 0);
 		}
 
 		void destroy()
@@ -3216,7 +3212,7 @@ public:
 			{
 				verify (HERE), shadow, heap;
 				vkCmdCopyBuffer(cmd, shadow->value, heap->value, (u32)dirty_ranges.size(), dirty_ranges.data());
-				dirty_ranges.resize(0);
+				dirty_ranges.clear();
 
 				insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,

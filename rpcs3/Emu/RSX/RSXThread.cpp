@@ -24,7 +24,7 @@
 #include <thread>
 #include <unordered_set>
 #include <exception>
-#include <fenv.h>
+#include <cfenv>
 
 class GSRender;
 
@@ -593,10 +593,10 @@ namespace rsx
 		float offset_z = rsx::method_registers.viewport_offset_z();
 		float one = 1.f;
 
-		stream_vector(buffer, (u32&)scale_x, 0, 0, (u32&)offset_x);
-		stream_vector((char*)buffer + 16, 0, (u32&)scale_y, 0, (u32&)offset_y);
-		stream_vector((char*)buffer + 32, 0, 0, (u32&)scale_z, (u32&)offset_z);
-		stream_vector((char*)buffer + 48, 0, 0, 0, (u32&)one);
+		stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
+		stream_vector((char*)buffer + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
+		stream_vector((char*)buffer + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
+		stream_vector((char*)buffer + 48, 0, 0, 0, std::bit_cast<u32>(one));
 	}
 
 	void thread::fill_user_clip_data(void *buffer) const
@@ -708,8 +708,8 @@ namespace rsx
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
 
 		u32 *dst = static_cast<u32*>(buffer);
-		stream_vector(dst, (u32&)fog0, (u32&)fog1, rop_control, (u32&)alpha_ref);
-		stream_vector(dst + 4, alpha_func, fog_mode, (u32&)wpos_scale, (u32&)wpos_bias);
+		stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
+		stream_vector(dst + 4, alpha_func, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
 	void thread::fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program)
@@ -771,7 +771,7 @@ namespace rsx
 
 	gsl::span<const gsl::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
-		if (element_push_buffer.size())
+		if (!element_push_buffer.empty())
 		{
 			//Indices provided via immediate mode
 			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
@@ -823,7 +823,7 @@ namespace rsx
 			if (state.vertex_arrays_info[index].size() > 0)
 			{
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
-				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
+				result.emplace_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
 					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), state.current_draw_clause), index, true});
 				continue;
 			}
@@ -834,18 +834,18 @@ namespace rsx
 				const u8 element_size = info.size * sizeof(u32);
 
 				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
-				result.push_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
+				result.emplace_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
 				continue;
 			}
 
 			if (state.register_vertex_info[index].size > 0)
 			{
 				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
-				result.push_back(vertex_array_register{info.type, info.size, info.data, index});
+				result.emplace_back(vertex_array_register{info.type, info.size, info.data, index});
 				continue;
 			}
 
-			result.push_back(empty_vertex_array{index});
+			result.emplace_back(empty_vertex_array{index});
 		}
 
 		return result;
@@ -1244,7 +1244,7 @@ namespace rsx
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
 		current_vertex_program.skip_vertex_input_check = skip_vertex_inputs;
 
-		current_vertex_program.rsx_vertex_inputs.resize(0);
+		current_vertex_program.rsx_vertex_inputs.clear();
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
 		current_vertex_program.texture_dimensions = 0;
@@ -1547,7 +1547,7 @@ namespace rsx
 						// TODO: Optionally add support for 16-bit formats (not necessary since type casts are easy with that)
 						u32 remap = tex.remap();
 						result.redirected_textures |= (1 << i);
-						result.texture_scale[i][2] = (f32&)remap;
+						result.texture_scale[i][2] = std::bit_cast<f32>(remap);
 						break;
 					}
 					case CELL_GCM_TEXTURE_DEPTH16:
@@ -1598,7 +1598,7 @@ namespace rsx
 #ifdef __APPLE__
 				texture_control |= (sampler_descriptors[i]->encoded_component_map() << 16);
 #endif
-				result.texture_scale[i][3] = (f32&)texture_control;
+				result.texture_scale[i][3] = std::bit_cast<f32>(texture_control);
 			}
 		}
 
@@ -1613,7 +1613,7 @@ namespace rsx
 		}
 	}
 
-	void thread::get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info)
+	void thread::get_current_fragment_program_legacy(const std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)>& get_surface_info)
 	{
 		auto &result = current_fragment_program = {};
 
@@ -1703,7 +1703,7 @@ namespace rsx
 						{
 							u32 remap = tex.remap();
 							result.redirected_textures |= (1 << i);
-							result.texture_scale[i][2] = (f32&)remap;
+							result.texture_scale[i][2] = std::bit_cast<f32>(remap);
 							break;
 						}
 						case CELL_GCM_TEXTURE_DEPTH16:
@@ -2138,7 +2138,7 @@ namespace rsx
 				m_flattener.force_disable();
 			}
 
-			if (emu_flip) 
+			if (emu_flip)
 			{
 				async_flip_requested.clear(flip_request::emu_requested);
 			}
@@ -2172,11 +2172,11 @@ namespace rsx
 			if (zeta_address)
 			{
 				//Find zeta address in bound zculls
-				for (int i = 0; i < rsx::limits::zculls_count; i++)
+				for (const auto& zcull : zculls)
 				{
-					if (zculls[i].binded)
+					if (zcull.binded)
 					{
-						const u32 rsx_address = rsx::get_address(zculls[i].offset, CELL_GCM_LOCATION_LOCAL);
+						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL);
 						if (rsx_address == zeta_address)
 						{
 							zcull_surface_active = true;
@@ -2615,7 +2615,7 @@ namespace rsx
 					m_statistics_map[m_statistics_tag_id] = 1;
 
 					verify(HERE), m_pending_writes.front().sink == 0;
-					m_pending_writes.resize(0);
+					m_pending_writes.clear();
 
 					for (auto &query : m_occlusion_query_data)
 					{
@@ -2752,7 +2752,7 @@ namespace rsx
 				if (!has_unclaimed)
 				{
 					verify(HERE), processed == m_pending_writes.size();
-					m_pending_writes.resize(0);
+					m_pending_writes.clear();
 				}
 				else
 				{
@@ -2928,7 +2928,7 @@ namespace rsx
 				}
 				else
 				{
-					m_pending_writes.resize(0);
+					m_pending_writes.clear();
 				}
 
 				ptimer->async_tasks_pending -= processed;

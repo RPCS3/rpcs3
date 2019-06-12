@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12GSRender.h"
@@ -308,12 +308,6 @@ void D3D12GSRender::on_exit()
 
 void D3D12GSRender::do_local_task(rsx::FIFO_state state)
 {
-	if (state != rsx::FIFO_state::lock_wait)
-	{
-		//TODO
-		m_frame->clear_wm_events();
-	}
-
 	rsx::thread::do_local_task(state);
 }
 

@@ -198,7 +198,7 @@ namespace vk
 			m_program = std::make_unique<vk::glsl::program>((VkDevice)dev, pipeline, unused, unused);
 		}
 
-		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, float *offsets, size_t nb_offsets, std::array<float, 4> color)
+		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, size_t nb_offsets, std::array<float, 4> color)
 		{
 			verify(HERE), m_used_descriptors < 120;
 
@@ -239,7 +239,7 @@ namespace vk
 
 	public:
 
-		text_writer() {}
+		text_writer() = default;
 		~text_writer()
 		{
 			if (initialized)
@@ -259,8 +259,8 @@ namespace vk
 
 			//At worst case, 1 char = 16*16*8 bytes (average about 24*8), so ~256K for 128 chars. Allocating 512k for verts
 			//uniform params are 8k in size, allocating for 120 lines (max lines at 4k, one column per row. Can be expanded
-			m_vertex_buffer.reset( new vk::buffer(dev, 524288, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0));
-			m_uniforms_buffer.reset(new vk::buffer(dev, 983040, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+			m_vertex_buffer = std::make_unique<vk::buffer>(dev, 524288, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0);
+			m_uniforms_buffer = std::make_unique<vk::buffer>(dev, 983040, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0);
 
 			m_render_pass = render_pass;
 			m_uniform_buffer_size = 983040;

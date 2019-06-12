@@ -29,12 +29,12 @@ u64 GLGSRender::get_cycles()
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache.reset(new gl::shader_cache(m_prog_buffer, "opengl", "v1.6"));
+	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.6");
 
 	if (g_cfg.video.disable_vertex_cache)
-		m_vertex_cache.reset(new gl::null_vertex_cache());
+		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
 	else
-		m_vertex_cache.reset(new gl::weak_vertex_cache());
+		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
 	supports_multidraw = true;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
@@ -400,7 +400,7 @@ void GLGSRender::end()
 	std::chrono::time_point<steady_clock> draw_start = textures_end;
 
 	// Optionally do memory synchronization if the texture stage has not yet triggered this
-	if (1)//g_cfg.video.strict_rendering_mode)
+	if (true)//g_cfg.video.strict_rendering_mode)
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
@@ -436,7 +436,7 @@ void GLGSRender::end()
 			clear_depth = true;
 		}
 
-		if (clear_depth || buffers_to_clear.size() > 0)
+		if (clear_depth || !buffers_to_clear.empty())
 		{
 			gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 			GLenum mask = 0;
@@ -454,7 +454,7 @@ void GLGSRender::end()
 
 			glClear(mask);
 
-			if (buffers_to_clear.size() > 0 && !clear_all_color)
+			if (!buffers_to_clear.empty() && !clear_all_color)
 			{
 				GLfloat colors[] = { 0.f, 0.f, 0.f, 0.f };
 				//It is impossible for the render target to be type A or B here (clear all would have been flagged)
@@ -828,25 +828,25 @@ void GLGSRender::on_init_thread()
 		LOG_WARNING(RSX, "Using legacy openGL buffers.");
 		manually_flush_ring_buffers = true;
 
-		m_attrib_ring_buffer.reset(new gl::legacy_ring_buffer());
-		m_transform_constants_buffer.reset(new gl::legacy_ring_buffer());
-		m_fragment_constants_buffer.reset(new gl::legacy_ring_buffer());
-		m_fragment_env_buffer.reset(new gl::legacy_ring_buffer());
-		m_vertex_env_buffer.reset(new gl::legacy_ring_buffer());
-		m_texture_parameters_buffer.reset(new gl::legacy_ring_buffer());
-		m_vertex_layout_buffer.reset(new gl::legacy_ring_buffer());
-		m_index_ring_buffer.reset(new gl::legacy_ring_buffer());
+		m_attrib_ring_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_transform_constants_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_fragment_constants_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_fragment_env_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_vertex_env_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_texture_parameters_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_vertex_layout_buffer = std::make_unique<gl::legacy_ring_buffer>();
+		m_index_ring_buffer = std::make_unique<gl::legacy_ring_buffer>();
 	}
 	else
 	{
-		m_attrib_ring_buffer.reset(new gl::ring_buffer());
-		m_transform_constants_buffer.reset(new gl::ring_buffer());
-		m_fragment_constants_buffer.reset(new gl::ring_buffer());
-		m_fragment_env_buffer.reset(new gl::ring_buffer());
-		m_vertex_env_buffer.reset(new gl::ring_buffer());
-		m_texture_parameters_buffer.reset(new gl::ring_buffer());
-		m_vertex_layout_buffer.reset(new gl::ring_buffer());
-		m_index_ring_buffer.reset(new gl::ring_buffer());
+		m_attrib_ring_buffer = std::make_unique<gl::ring_buffer>();
+		m_transform_constants_buffer = std::make_unique<gl::ring_buffer>();
+		m_fragment_constants_buffer = std::make_unique<gl::ring_buffer>();
+		m_fragment_env_buffer = std::make_unique<gl::ring_buffer>();
+		m_vertex_env_buffer = std::make_unique<gl::ring_buffer>();
+		m_texture_parameters_buffer = std::make_unique<gl::ring_buffer>();
+		m_vertex_layout_buffer = std::make_unique<gl::ring_buffer>();
+		m_index_ring_buffer = std::make_unique<gl::ring_buffer>();
 	}
 
 	m_attrib_ring_buffer->create(gl::buffer::target::texture, 256 * 0x100000);
@@ -860,7 +860,7 @@ void GLGSRender::on_init_thread()
 
 	if (gl_caps.vendor_AMD)
 	{
-		m_identity_index_buffer.reset(new gl::buffer);
+		m_identity_index_buffer = std::make_unique<gl::buffer>();
 		m_identity_index_buffer->create(gl::buffer::target::element_array, 1 * 0x100000);
 
 		// Initialize with 256k identity entries
@@ -939,12 +939,8 @@ void GLGSRender::on_init_thread()
 
 	if (!supports_native_ui)
 	{
-		m_frame->disable_wm_event_queue();
 		m_frame->hide();
-
 		m_shaders_cache->load(nullptr);
-
-		m_frame->enable_wm_event_queue();
 		m_frame->show();
 	}
 	else
@@ -1004,7 +1000,6 @@ void GLGSRender::on_init_thread()
 		}
 		helper(this);
 
-		m_frame->enable_wm_event_queue();
 		m_shaders_cache->load(&helper);
 	}
 }
@@ -1713,7 +1708,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 
 			if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ (int)buffer_width, (int)buffer_height })
 			{
-				m_flip_tex_color.reset(new gl::texture(GL_TEXTURE_2D, buffer_width, buffer_height, 1, 1, GL_RGBA8));
+				m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, buffer_width, buffer_height, 1, 1, GL_RGBA8);
 			}
 
 			m_flip_tex_color->copy_from(vm::base(absolute_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
@@ -1917,8 +1912,6 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 		// Critical check finished
 		return;
 	}
-
-	m_frame->clear_wm_events();
 
 	if (m_overlay_manager)
 	{

@@ -83,8 +83,8 @@ namespace rsx
 
 	public:
 
-		buffered_section() {}
-		~buffered_section() {}
+		buffered_section() = default;
+		~buffered_section() = default;
 
 		void reset(const address_range &memory_range)
 		{
@@ -501,8 +501,8 @@ namespace rsx
 		};
 
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
-			: version_prefix(version_prefix_str)
-			, pipeline_class_name(pipeline_class)
+			: version_prefix(std::move(version_prefix_str))
+			, pipeline_class_name(std::move(pipeline_class))
 			, m_storage(storage)
 		{
 			if (!g_cfg.video.disable_on_disk_shader_cache)
@@ -863,7 +863,7 @@ namespace rsx
 		class default_vertex_cache
 		{
 		public:
-			virtual ~default_vertex_cache() {}
+			virtual ~default_vertex_cache() = default;
 			virtual storage_type* find_vertex_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
 			virtual void store_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
 			virtual void purge() {}

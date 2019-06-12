@@ -265,15 +265,18 @@ void spu_cache::add(const std::vector<u32>& func)
 		return;
 	}
 
-	// Allocate buffer
-	const auto buf = std::make_unique<be_t<u32>[]>(func.size() + 1);
+	be_t<u32> size = ::size32(func) - 1;
+	be_t<u32> addr = func[0];
 
-	buf[0] = ::size32(func) - 1;
-	buf[1] = func[0];
-	std::memcpy(buf.get() + 2, func.data() + 1, func.size() * 4 - 4);
+	const fs::iovec_clone gather[3]
+	{
+		{&size, sizeof(size)},
+		{&addr, sizeof(addr)},
+		{func.data() + 1, func.size() * 4 - 4}
+	};
 
 	// Append data
-	m_file.write(buf.get(), func.size() * 4 + 4);
+	m_file.write_gather(gather, 3);
 }
 
 void spu_cache::initialize()

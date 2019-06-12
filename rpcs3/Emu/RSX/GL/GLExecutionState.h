@@ -88,7 +88,7 @@ namespace gl
 
 		void clear_depth(GLfloat depth)
 		{
-			u32 value = (u32&)depth;
+			u32 value = std::bit_cast<u32>(depth);
 			if (!test_property(GL_DEPTH_CLEAR_VALUE, value))
 			{
 				glClearDepth(depth);
@@ -107,7 +107,7 @@ namespace gl
 
 		void clear_stencil(GLint stencil)
 		{
-			u32 value = (u32&)stencil;
+			u32 value = std::bit_cast<u32>(stencil);
 			if (!test_property(GL_STENCIL_CLEAR_VALUE, value))
 			{
 				glClearStencil(stencil);
@@ -152,8 +152,8 @@ namespace gl
 
 		void depth_bounds(float min, float max)
 		{
-			u32 depth_min = (u32&)min;
-			u32 depth_max = (u32&)max;
+			u32 depth_min = std::bit_cast<u32>(min);
+			u32 depth_max = std::bit_cast<u32>(max);
 
 			if (!test_property(DEPTH_BOUNDS_MIN, depth_min) || !test_property(DEPTH_BOUNDS_MAX, depth_max))
 			{
@@ -166,8 +166,8 @@ namespace gl
 
 		void depth_range(float min, float max)
 		{
-			u32 depth_min = (u32&)min;
-			u32 depth_max = (u32&)max;
+			u32 depth_min = std::bit_cast<u32>(min);
+			u32 depth_max = std::bit_cast<u32>(max);
 
 			if (!test_property(DEPTH_RANGE_MIN, depth_min) || !test_property(DEPTH_RANGE_MAX, depth_max))
 			{
@@ -189,7 +189,7 @@ namespace gl
 
 		void line_width(GLfloat width)
 		{
-			u32 value = (u32&)width;
+			u32 value = std::bit_cast<u32>(width);
 
 			if (!test_property(GL_LINE_WIDTH, value))
 			{
@@ -218,8 +218,8 @@ namespace gl
 
 		void polygon_offset(float factor, float units)
 		{
-			u32 _units = (u32&)units;
-			u32 _factor = (u32&)factor;
+			u32 _units = std::bit_cast<u32>(units);
+			u32 _factor = std::bit_cast<u32>(factor);
 
 			if (!test_property(GL_POLYGON_OFFSET_UNITS, _units) || !test_property(GL_POLYGON_OFFSET_FACTOR, _factor))
 			{

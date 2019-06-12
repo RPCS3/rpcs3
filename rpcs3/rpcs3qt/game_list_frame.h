@@ -31,15 +31,6 @@ enum Category
 	Others,
 };
 
-namespace config
-{
-	enum class type
-	{
-		emu,
-		pad
-	};
-}
-
 namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
 {
 	// PS3 bootable
@@ -237,7 +228,7 @@ private Q_SLOTS:
 	void doubleClickedSlot(QTableWidgetItem *item);
 Q_SIGNALS:
 	void GameListFrameClosed();
-	void RequestBoot(const std::string& path, bool force_global_config = false);
+	void RequestBoot(const game_info& game, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
@@ -247,7 +238,7 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
 	QColor getGridCompatibilityColor(const QString& string);
-	void ShowCustomConfigIcon(QTableWidgetItem* item, config::type type);
+	void ShowCustomConfigIcon(QTableWidgetItem* item);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
 	void SortGameList();
@@ -260,7 +251,7 @@ private:
 	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
-	bool CreatePPUCache(const std::string& path);
+	bool CreatePPUCache(const game_info& game);
 
 	std::string GetCacheDirBySerial(const std::string& serial);
 	std::string GetDataDirBySerial(const std::string& serial);
@@ -310,5 +301,5 @@ private:
 	QSize m_Icon_Size = gui::gl_icon_size_min; // ensure a valid size
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
-	bool m_drawCompatStatusToGrid;
+	bool m_drawCompatStatusToGrid = false;
 };

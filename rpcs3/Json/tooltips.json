@@ -45,7 +45,6 @@
 	"debug": {
 		"ppuDebug": "Never use this.",
 		"spuDebug": "Never use this.",
-		"spuVerification": "Never disable this.",
 		"setDAZandFTZ": "Never use this.",
 		"accurateGETLLAR": "Never use this.",
 		"accuratePUTLLUC": "Never use this.",

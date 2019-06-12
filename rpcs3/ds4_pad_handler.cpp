@@ -209,7 +209,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 
 	if (get_blacklist)
 	{
-		if (blacklist.size() <= 0)
+		if (blacklist.empty())
 			LOG_SUCCESS(HLE, "DS4 Calibration: Blacklist is clear. No input spam detected");
 		return;
 	}
@@ -222,7 +222,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 		return callback(0, "", padId, preview_values);
 }
 
-void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
+void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b)
 {
 	std::shared_ptr<DS4Device> device = GetDevice(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -247,41 +247,15 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 		}
 	}
 
-	// Start/Stop the engines :)
-	SendVibrateData(device);
-}
-
-void ds4_pad_handler::SetLED(const std::string& padId, s32 r, s32 g, s32 b)
-{
-	std::shared_ptr<DS4Device> device = GetDevice(padId);
-	if (device == nullptr || device->hidDevice == nullptr)
-		return;
-
-	int index = 0;
-	for (int i = 0; i < MAX_GAMEPADS; i++)
+	// Set new LED color
+	if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
 	{
-		if (g_cfg_input.player[i]->handler == pad_handler::ds4)
-		{
-			if (g_cfg_input.player[i]->device.to_string() == padId)
-			{
-				m_pad_configs[index].load();
-				device->config = &m_pad_configs[index];
-				break;
-			}
-			index++;
-		}
+		device->config->colorR.set(r);
+		device->config->colorG.set(g);
+		device->config->colorB.set(b);
 	}
 
-	// disable pulse
-	device->led_delay_on  = 0;
-	device->led_delay_off = 0;
-
-	// set new color
-	device->config->colorR.set(r);
-	device->config->colorG.set(g);
-	device->config->colorB.set(b);
-
-	// Show new color :)
+	// Start/Stop the engines :)
 	SendVibrateData(device);
 }
 
@@ -340,14 +314,14 @@ void ds4_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val,
 	case DS4KeyCodes::LSYNeg:
 	case DS4KeyCodes::LSYPos:
 		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, p_profile->lstickmultiplier, ignore_threshold) : 0;
 		break;
 	case DS4KeyCodes::RSXNeg:
 	case DS4KeyCodes::RSXPos:
 	case DS4KeyCodes::RSYNeg:
 	case DS4KeyCodes::RSYPos:
 		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, p_profile->rstickmultiplier, ignore_threshold) : 0;
 		break;
 	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
@@ -494,7 +468,7 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 #endif
 
 	// used to get the absolute value of an axis
-	s32 stick_val[4];
+	s32 stick_val[4]{0};
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
@@ -812,7 +786,7 @@ bool ds4_pad_handler::Init()
 		LOG_ERROR(HLE, "[DS4] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
 	}
-	else if (controllers.size() == 0)
+	else if (controllers.empty())
 	{
 		LOG_WARNING(HLE, "[DS4] No controllers found!");
 	}

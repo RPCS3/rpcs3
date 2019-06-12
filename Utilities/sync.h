@@ -233,9 +233,16 @@ bool balanced_wait_until(atomic_t<T>& var, u64 usec_timeout, Pred&& pred)
 	timeout.tv_sec  = usec_timeout / 1000000;
 	timeout.tv_nsec = (usec_timeout % 1000000) * 1000;
 
+	char* ptr = reinterpret_cast<char*>(&var);
+
+	if constexpr (sizeof(T) == 8)
+	{
+		ptr += 4 * IS_BE_MACHINE;
+	}
+
 	while (!test_pred(value))
 	{
-		if (futex(&var, FUTEX_WAIT_PRIVATE, static_cast<u32>(value), is_inf ? nullptr : &timeout) == 0)
+		if (futex(ptr, FUTEX_WAIT_PRIVATE, static_cast<u32>(value), is_inf ? nullptr : &timeout) == 0)
 		{
 			if (!test_pred(value, nullptr))
 			{
@@ -284,9 +291,16 @@ void balanced_awaken(atomic_t<T>& var, u32 weight)
 		NtReleaseKeyedEvent(nullptr, &var, false, nullptr);
 	}
 #else
+	char* ptr = reinterpret_cast<char*>(&var);
+
+	if constexpr (sizeof(T) == 8)
+	{
+		ptr += 4 * IS_BE_MACHINE;
+	}
+
 	if (All || weight)
 	{
-		futex(&var, FUTEX_WAKE_PRIVATE, All ? INT_MAX : std::min<u32>(INT_MAX, weight));
+		futex(ptr, FUTEX_WAKE_PRIVATE, All ? INT_MAX : std::min<u32>(INT_MAX, weight));
 	}
 
 	return;

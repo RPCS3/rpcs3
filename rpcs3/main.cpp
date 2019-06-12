@@ -1,4 +1,4 @@
-// Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+﻿// Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <QApplication>
@@ -116,8 +116,8 @@ int main(int argc, char** argv)
 	s_qt_mutex.lock();
 	rpcs3_app app(argc, argv);
 
-	app.setApplicationVersion(qstr(rpcs3::version.to_string()));
-	app.setApplicationName("RPCS3");
+	QCoreApplication::setApplicationVersion(qstr(rpcs3::version.to_string()));
+	QCoreApplication::setApplicationName("RPCS3");
 
 	// Command line args
 	QCommandLineParser parser;
@@ -160,11 +160,11 @@ int main(int argc, char** argv)
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
-			Emu.BootGame(path, true);
+			Emu.BootGame(path, "", true);
 		});
 	}
 
 	s_qt_init.unlock();
 	s_qt_mutex.unlock();
-	return app.exec();
+	return QCoreApplication::exec();
 }

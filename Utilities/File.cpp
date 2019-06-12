@@ -125,6 +125,7 @@ static fs::error to_error(DWORD e)
 #include <sys/types.h>
 #include <sys/statvfs.h>
 #include <sys/file.h>
+#include <sys/uio.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -201,6 +202,34 @@ namespace fs
 #else
 		return -1;
 #endif
+	}
+
+	u64 file_base::write_gather(const iovec_clone* buffers, u64 buf_count)
+	{
+		u64 total = 0;
+
+		for (u64 i = 0; i < buf_count; i++)
+		{
+			if (!buffers[i].iov_base || buffers[i].iov_len + total < total)
+			{
+				g_tls_error = error::inval;
+				return -1;
+			}
+
+			total += buffers[i].iov_len;
+		}
+
+		const auto buf = std::make_unique<uchar[]>(total);
+
+		u64 copied = 0;
+
+		for (u64 i = 0; i < buf_count; i++)
+		{
+			std::memcpy(buf.get() + copied, buffers[i].iov_base, buffers[i].iov_len);
+			copied += buffers[i].iov_len;
+		}
+
+		return this->write(buf.get(), total);
 	}
 
 	dir_base::~dir_base()
@@ -1156,6 +1185,17 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		native_handle get_handle() override
 		{
 			return m_fd;
+		}
+
+		u64 write_gather(const iovec_clone* buffers, u64 buf_count) override
+		{
+			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
+			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
+
+			const auto result = ::writev(m_fd, (const iovec*)buffers, buf_count);
+			verify("file::write_gather" HERE), result != -1;
+
+			return result;
 		}
 	};
 

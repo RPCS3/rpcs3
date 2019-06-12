@@ -185,16 +185,20 @@ QIcon main_window::GetAppIcon()
 }
 
 // loads the appIcon from path and embeds it centered into an empty square icon
-void main_window::SetAppIconFromPath(const std::string& path)
+void main_window::SetAppIconFromPath(const std::string& path, const std::string& title_id)
 {
 	// get Icon for the gs_frame from path. this handles presumably all possible use cases
-	QString qpath = qstr(path);
-	std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
-	for (std::string pth : path_list)
-	{
-		if (!fs::is_dir(pth)) continue;
+	const QString qpath = qstr(path);
+	const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
 
-		const std::string sfo_dir = Emu.GetSfoDirFromGamePath(pth, Emu.GetUsr());
+	for (const std::string& pth : path_list)
+	{
+		if (!fs::is_dir(pth))
+		{
+			continue;
+		}
+
+		const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
 		const std::string ico     = sfo_dir + "/ICON0.PNG";
 		if (fs::is_file(ico))
 		{
@@ -268,7 +272,7 @@ void main_window::OnPlayOrPause()
 	}
 }
 
-void main_window::Boot(const std::string& path, bool direct, bool add_only, bool force_global_config)
+void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
 {
 	if (!Emu.IsStopped())
 	{
@@ -283,11 +287,11 @@ void main_window::Boot(const std::string& path, bool direct, bool add_only, bool
 		}
 	}
 
-	SetAppIconFromPath(path);
+	SetAppIconFromPath(path, title_id);
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (Emu.BootGame(path, direct, add_only, force_global_config))
+	if (Emu.BootGame(path, title_id, direct, add_only, force_global_config))
 	{
 		LOG_SUCCESS(LOADER, "Boot successful.");
 		const std::string serial = Emu.GetTitleID().empty() ? "" : "[" + Emu.GetTitleID() + "] ";
@@ -337,7 +341,7 @@ void main_window::BootElf()
 	const std::string path = sstr(QFileInfo(filePath).canonicalFilePath());
 
 	LOG_NOTICE(LOADER, "Booting from BootElf...");
-	Boot(path, true);
+	Boot(path, "", true);
 }
 
 void main_window::BootGame()
@@ -652,7 +656,7 @@ void main_window::InstallPup(const QString& dropPath)
 		guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);
 
 		Emu.SetForceBoot(true);
-		Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", true);
+		Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", "", true);
 	}
 }
 
@@ -1022,8 +1026,8 @@ void main_window::BootRecentAction(const QAction* act)
 	}
 
 	LOG_NOTICE(LOADER, "Booting from recent games list...");
-	Boot(path, true);
-};
+	Boot(path, "", true);
+}
 
 QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint& sc_idx)
 {
@@ -1065,7 +1069,7 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, const uint&
 	connect(act, &QAction::triggered, [=]() {BootRecentAction(act); });
 
 	return act;
-};
+}
 
 void main_window::AddRecentAction(const q_string_pair& entry)
 {
@@ -1417,7 +1421,7 @@ void main_window::CreateConnects()
 	connect(m_categoryVisibleActGroup, &QActionGroup::triggered, [=](QAction* act)
 	{
 		QStringList categories;
-		int id;
+		int id = 0;
 		const bool& checked = act->isChecked();
 
 		if      (act == ui->showCatHDDGameAct)    categories += category::hdd_game, id = Category::HDD_Game;
@@ -1432,8 +1436,11 @@ void main_window::CreateConnects()
 		else if (act == ui->showCatOtherAct)      categories += category::others, id = Category::Others;
 		else LOG_WARNING(GENERAL, "categoryVisibleActGroup: category action not found");
 
-		m_gameListFrame->ToggleCategoryFilter(categories, checked);
-		guiSettings->SetCategoryVisibility(id, checked);
+		if (!categories.isEmpty())
+		{
+			m_gameListFrame->ToggleCategoryFilter(categories, checked);
+			guiSettings->SetCategoryVisibility(id, checked);
+		}
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, [this]
@@ -1575,9 +1582,9 @@ void main_window::CreateDockWindows()
 		}
 	});
 
-	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const std::string& path, bool force_global_config)
+	connect(m_gameListFrame, &game_list_frame::RequestBoot, [this](const game_info& game, bool force_global_config)
 	{
-		Boot(path, false, false, force_global_config);
+		Boot(game->info.path, game->info.serial, false, false, force_global_config);
 	});
 }
 
@@ -1771,7 +1778,7 @@ void main_window::AddGamesFromDir(const QString& path)
 	const std::string s_path = sstr(path);
 
 	// search dropped path first or else the direct parent to an elf is wrongly skipped
-	if (Emu.BootGame(s_path, false, true))
+	if (Emu.BootGame(s_path, "", false, true))
 	{
 		LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", s_path);
 	}
@@ -1782,7 +1789,7 @@ void main_window::AddGamesFromDir(const QString& path)
 	{
 		std::string pth = sstr(dir_iter.next());
 
-		if (Emu.BootGame(pth, false, true))
+		if (Emu.BootGame(pth, "", false, true))
 		{
 			LOG_NOTICE(GENERAL, "Returned from game addition by drag and drop: %s", pth);
 		}
@@ -1892,7 +1899,7 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			const std::string rapname = sstr(QFileInfo(rap).fileName());
 
-			if (!fs::copy_file(sstr(rap), Emu.GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
+			if (!fs::copy_file(sstr(rap), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + rapname, false))
 			{
 				LOG_WARNING(GENERAL, "Could not copy rap file by drop: %s", rapname);
 			}
@@ -1913,7 +1920,7 @@ void main_window::dropEvent(QDropEvent* event)
 		m_gameListFrame->Refresh(true);
 		break;
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)
-		if (Emu.BootGame(sstr(dropPaths.first()), true))
+		if (Emu.BootGame(sstr(dropPaths.first()), "", true))
 		{
 			LOG_SUCCESS(GENERAL, "Elf Boot from drag and drop done: %s", sstr(dropPaths.first()));
 		}

@@ -204,7 +204,7 @@ namespace rsx
 			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO: interactive = true; break;
 			}
 
-			this->on_close = on_close;
+			this->on_close = std::move(on_close);
 			if (interactive)
 			{
 				thread_ctrl::spawn("dialog input thread", [&] {

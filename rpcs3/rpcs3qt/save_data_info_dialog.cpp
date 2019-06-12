@@ -73,7 +73,7 @@ void save_data_info_dialog::UpdateData()
 	m_list->setItem(3, 1, new QTableWidgetItem(qstr(m_entry.details)));
 
 	QImage img;
-	if (m_entry.iconBuf.size() > 0 && img.loadFromData((uchar*)&m_entry.iconBuf[0], m_entry.iconBuf.size(), "PNG"))
+	if (!m_entry.iconBuf.empty() && img.loadFromData((uchar*)&m_entry.iconBuf[0], m_entry.iconBuf.size(), "PNG"))
 	{
 		m_list->insertRow(0);
 		QTableWidgetItem* img_item = new QTableWidgetItem();

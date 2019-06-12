@@ -774,7 +774,7 @@ bool ppu_interpreter_precise::VCTSXS(ppu_thread& ppu, ppu_opcode_t op)
 		const f32 X = b._f[i];
 		const bool sign = std::signbit(X);
 		const u8 exp = (u8)fexpf(X);
-		const u32 frac = (u32&)X << 9;
+		const u32 frac = std::bit_cast<u32>(X) << 9;
 		const s16 exp2 = exp + uim - 127;
 
 		if (exp == 255)
@@ -827,7 +827,7 @@ bool ppu_interpreter_precise::VCTUXS(ppu_thread& ppu, ppu_opcode_t op)
 		const f32 X = b._f[i];
 		const bool sign = std::signbit(X);
 		const u8 exp = (u8)fexpf(X);
-		const u32 frac = (u32&)X << 9;
+		const u32 frac = std::bit_cast<u32>(X) << 9;
 		const s16 exp2 = exp + uim - 127;
 
 		if (exp == 255)
@@ -4326,7 +4326,7 @@ bool ppu_interpreter::EXTSB(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::STFIWX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	vm::write32(vm::cast(addr, HERE), (u32)(u64&)ppu.fpr[op.frs]);
+	vm::write32(vm::cast(addr, HERE), std::bit_cast<u64>(ppu.fpr[op.frs]));
 	return true;
 }
 
@@ -4699,7 +4699,7 @@ bool ppu_interpreter::MTFSFI(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::MFFS(ppu_thread& ppu, ppu_opcode_t op)
 {
 	LOG_WARNING(PPU, "MFFS");
-	(u64&)ppu.fpr[op.frd] = u64{ppu.fpscr.fl} << 15 | u64{ppu.fpscr.fg} << 14 | u64{ppu.fpscr.fe} << 13 | u64{ppu.fpscr.fu} << 12;
+	ppu.fpr[op.frd] = std::bit_cast<f64>(u64{ppu.fpscr.fl} << 15 | u64{ppu.fpscr.fg} << 14 | u64{ppu.fpscr.fe} << 13 | u64{ppu.fpscr.fu} << 12);
 	if (UNLIKELY(op.rc)) ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -4718,7 +4718,7 @@ bool ppu_interpreter::FCMPU(ppu_thread& ppu, ppu_opcode_t op)
 	u8 test_fu = ppu.fpscr.fg = a > b;
 	test_fu |= ppu.fpscr.fl = a < b;
 	test_fu |= ppu.fpscr.fe = a == b;
-	(u8&)ppu.fpscr.fu = test_fu ^ 1;
+	ppu.fpscr.fu = std::bit_cast<bool, u8>(test_fu ^ 1);
 	ppu_cr_set(ppu, op.crfd, ppu.fpscr.fl, ppu.fpscr.fg, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -4732,14 +4732,14 @@ bool ppu_interpreter::FRSP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCTIW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	(s64&)ppu.fpr[op.frd] = _mm_cvtsd_si32(_mm_load_sd(&ppu.fpr[op.frb]));
+	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsd_si32(_mm_load_sd(&ppu.fpr[op.frb])));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
 bool ppu_interpreter::FCTIWZ(ppu_thread& ppu, ppu_opcode_t op)
 {
-	(s64&)ppu.fpr[op.frd] = _mm_cvttsd_si32(_mm_load_sd(&ppu.fpr[op.frb]));
+	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvttsd_si32(_mm_load_sd(&ppu.fpr[op.frb])));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -4856,21 +4856,21 @@ bool ppu_interpreter::FABS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCTID(ppu_thread& ppu, ppu_opcode_t op)
 {
-	(s64&)ppu.fpr[op.frd] = _mm_cvtsd_si64(_mm_load_sd(&ppu.fpr[op.frb]));
+	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsd_si64(_mm_load_sd(&ppu.fpr[op.frb])));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
 bool ppu_interpreter::FCTIDZ(ppu_thread& ppu, ppu_opcode_t op)
 {
-	(s64&)ppu.fpr[op.frd] = _mm_cvttsd_si64(_mm_load_sd(&ppu.fpr[op.frb]));
+	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvttsd_si64(_mm_load_sd(&ppu.fpr[op.frb])));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
 bool ppu_interpreter::FCFID(ppu_thread& ppu, ppu_opcode_t op)
 {
-	_mm_store_sd(&ppu.fpr[op.frd], _mm_cvtsi64_sd(_mm_setzero_pd(), (s64&)ppu.fpr[op.frb]));
+	_mm_store_sd(&ppu.fpr[op.frd], _mm_cvtsi64_sd(_mm_setzero_pd(), std::bit_cast<s64>(ppu.fpr[op.frb])));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }

@@ -168,7 +168,7 @@ namespace gl
 			}
 			else
 			{
-				ASSERT(managed_texture.get() == nullptr);
+				ASSERT(!managed_texture);
 			}
 
 			flushed = false;
@@ -396,7 +396,7 @@ namespace gl
 		 */
 		void destroy()
 		{
-			if (!is_locked() && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty() && managed_texture.get() == nullptr)
+			if (!is_locked() && pbo_id == 0 && vram_texture == nullptr && m_fence.is_empty() && !managed_texture)
 				//Already destroyed
 				return;
 
@@ -427,7 +427,7 @@ namespace gl
 
 		bool is_managed() const
 		{
-			return !exists() || managed_texture.get() != nullptr;
+			return !exists() || managed_texture;
 		}
 
 		texture::format get_format() const
@@ -502,8 +502,7 @@ namespace gl
 			std::unique_ptr<gl::texture> image;
 			std::unique_ptr<gl::texture_view> view;
 
-			discardable_storage()
-			{}
+			discardable_storage() = default;
 
 			discardable_storage(std::unique_ptr<gl::texture>& tex)
 			{
@@ -535,7 +534,7 @@ namespace gl
 
 		void clear_temporary_subresources()
 		{
-			m_temporary_surfaces.resize(0);
+			m_temporary_surfaces.clear();
 		}
 
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
@@ -579,7 +578,7 @@ namespace gl
 			auto view = std::make_unique<gl::texture_view>(dst.get(), dst_type, sized_internal_fmt, swizzle.data());
 			auto result = view.get();
 
-			m_temporary_surfaces.push_back({ dst, view });
+			m_temporary_surfaces.emplace_back(dst, view);
 			return result;
 		}
 
@@ -748,7 +747,7 @@ namespace gl
 			}
 
 			auto result = view.get();
-			m_temporary_surfaces.push_back({ dst_image, view });
+			m_temporary_surfaces.emplace_back(dst_image, view);
 			return result;
 		}
 
@@ -770,7 +769,7 @@ namespace gl
 			}
 
 			auto result = view.get();
-			m_temporary_surfaces.push_back({ dst_image, view });
+			m_temporary_surfaces.emplace_back(dst_image, view);
 			return result;
 		}
 

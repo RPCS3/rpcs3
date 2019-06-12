@@ -73,7 +73,7 @@ void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 		keyEvent->ignore();
 		return;
 	}
-	Key(keyEvent->key(), 1);
+	Key(keyEvent->key(), true);
 }
 
 void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
@@ -83,7 +83,7 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 		keyEvent->ignore();
 		return;
 	}
-	Key(keyEvent->key(), 0);
+	Key(keyEvent->key(), false);
 }
 
 void basic_keyboard_handler::LoadSettings()

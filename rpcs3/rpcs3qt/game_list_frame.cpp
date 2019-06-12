@@ -15,6 +15,7 @@
 #include <iterator>
 #include <memory>
 #include <set>
+#include <regex>
 
 #include <QDesktopServices>
 #include <QHeaderView>
@@ -379,20 +380,47 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		m_game_data.clear();
 		m_notes.clear();
 
-		const std::string _hdd = Emu.GetHddDir();
+		const std::string _hdd = Emulator::GetHddDir();
 		const std::string cat_DG = sstr(category::disc_game);
 		const std::string cat_GD = sstr(category::ps3_data);
 		const std::string cat_unknown = sstr(category::unknown);
 
 		std::vector<std::string> path_list;
 
+		const auto add_disc_dir = [&](const std::string& path)
+		{
+			for (const auto& entry : fs::dir(path))
+			{
+				if (!entry.is_directory || entry.name == "." || entry.name == "..")
+				{
+					continue;
+				}
+
+				if (entry.name == "PS3_GAME" || std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+				{
+					path_list.emplace_back(path + "/" + entry.name);
+				}
+			}
+		};
+
 		const auto add_dir = [&](const std::string& path)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
-				if (entry.is_directory)
+				if (entry.name == "." || entry.name == "..")
 				{
-					path_list.emplace_back(path + entry.name);
+					continue;
+				}
+
+				const std::string entry_path = path + entry.name;
+
+				if (fs::is_file(entry_path + "/PS3_DISC.SFB"))
+				{
+					add_disc_dir(entry_path);
+				}
+				else if (entry.is_directory)
+				{
+					path_list.emplace_back(entry_path);
 				}
 			}
 		};
@@ -402,8 +430,17 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		for (auto pair : YAML::Load(fs::file{fs::get_config_dir() + "/games.yml", fs::read + fs::create}.to_string()))
 		{
-			path_list.push_back(pair.second.Scalar());
-			path_list.back().resize(path_list.back().find_last_not_of('/') + 1);
+			std::string game_dir = pair.second.Scalar();
+			game_dir.resize(game_dir.find_last_not_of('/') + 1);
+
+			if (fs::is_file(game_dir + "/PS3_DISC.SFB"))
+			{
+				add_disc_dir(game_dir);
+			}
+			else
+			{
+				path_list.push_back(game_dir);
+			}
 		}
 
 		// Used to remove duplications from the list (serial -> set of cat names)
@@ -413,7 +450,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		for (const auto& dir : path_list) { try
 		{
-			const std::string sfo_dir = Emu.GetSfoDirFromGamePath(dir, Emu.GetUsr());
+			const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir, Emu.GetUsr());
 			const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
 			if (!sfo_file)
 			{
@@ -477,8 +514,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			const auto compat = m_game_compat->GetCompatibility(game.serial);
 
-			const bool hasCustomConfig = fs::is_file(Emu.GetCustomConfigPath(game.serial)) || fs::is_file(Emu.GetCustomConfigPath(game.serial, true));
-			const bool hasCustomPadConfig = fs::is_file(Emu.GetCustomInputConfigPath(game.serial));
+			const bool hasCustomConfig = fs::is_file(Emulator::GetCustomConfigPath(game.serial)) || fs::is_file(Emulator::GetCustomConfigPath(game.serial, true));
+			const bool hasCustomPadConfig = fs::is_file(Emulator::GetCustomInputConfigPath(game.serial));
 
 			const QColor color = getGridCompatibilityColor(compat.color);
 			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, hasCustomPadConfig, color);
@@ -648,7 +685,7 @@ void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 	}
 
 	LOG_NOTICE(LOADER, "Booting from gamelist per doubleclick...");
-	Q_EMIT RequestBoot(game->info.path);
+	Q_EMIT RequestBoot(game);
 }
 
 void game_list_frame::ShowContextMenu(const QPoint &pos)
@@ -693,7 +730,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		connect(boot_custom, &QAction::triggered, [=]
 		{
 			LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
-			Q_EMIT RequestBoot(currGame.path);
+			Q_EMIT RequestBoot(gameinfo);
 		});
 	}
 	else
@@ -719,7 +756,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (RemoveCustomConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item, config::type::emu);
+				ShowCustomConfigIcon(item);
 			}
 		});
 	}
@@ -730,7 +767,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (RemoveCustomPadConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item, config::type::pad);
+				ShowCustomConfigIcon(item);
 			}
 		});
 	}
@@ -759,10 +796,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = myMenu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [=]()
 		{
-			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial)))
-				open_dir(Emu.GetCustomConfigDir());
+			if (fs::is_file(Emulator::GetCustomConfigPath(currGame.serial)))
+				open_dir(Emulator::GetCustomConfigDir());
 
-			if (fs::is_file(Emu.GetCustomConfigPath(currGame.serial, true)))
+			if (fs::is_file(Emulator::GetCustomConfigPath(currGame.serial, true)))
 				open_dir(data_base_dir);
 		});
 	}
@@ -787,7 +824,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(boot, &QAction::triggered, [=]
 	{
 		LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
-		Q_EMIT RequestBoot(currGame.path, gameinfo->hasCustomConfig);
+		Q_EMIT RequestBoot(gameinfo, gameinfo->hasCustomConfig);
 	});
 	connect(configure, &QAction::triggered, [=]
 	{
@@ -795,7 +832,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomConfig)
 		{
 			gameinfo->hasCustomConfig = true;
-			ShowCustomConfigIcon(item, config::type::emu);
+			ShowCustomConfigIcon(item);
 		}
 	});
 	connect(pad_configure, &QAction::triggered, [=]
@@ -816,7 +853,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
 			gameinfo->hasCustomPadConfig = true;
-			ShowCustomConfigIcon(item, config::type::pad);
+			ShowCustomConfigIcon(item);
 		}
 		if (!Emu.IsStopped())
 		{
@@ -835,7 +872,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	});
 	connect(createPPUCache, &QAction::triggered, [=]
 	{
-		CreatePPUCache(currGame.path);
+		CreatePPUCache(gameinfo);
 	});
 	connect(removeGame, &QAction::triggered, [=]
 	{
@@ -961,28 +998,28 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	myMenu.exec(globalPos);
 }
 
-bool game_list_frame::CreatePPUCache(const std::string& path)
+bool game_list_frame::CreatePPUCache(const game_info& game)
 {
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 	Emu.SetForceBoot(true);
-	const bool success = Emu.BootGame(path, true);
+	const bool success = Emu.BootGame(game->info.path, game->info.serial, true);
 
 	if (success)
 	{
-		LOG_WARNING(GENERAL, "Creating PPU Cache for %s", path);
+		LOG_WARNING(GENERAL, "Creating PPU Cache for %s", game->info.path);
 	}
 	else
 	{
-		LOG_ERROR(GENERAL, "Could not create PPU Cache for %s", path);
+		LOG_ERROR(GENERAL, "Could not create PPU Cache for %s", game->info.path);
 	}
 	return success;
 }
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, game_info game, bool is_interactive)
 {
-	const std::string config_path_new = Emu.GetCustomConfigPath(title_id);
-	const std::string config_path_old = Emu.GetCustomConfigPath(title_id, true);
+	const std::string config_path_new = Emulator::GetCustomConfigPath(title_id);
+	const std::string config_path_old = Emulator::GetCustomConfigPath(title_id, true);
 
 	if (!fs::is_file(config_path_new) && !fs::is_file(config_path_old))
 		return true;
@@ -1023,7 +1060,7 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, gam
 
 bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, game_info game, bool is_interactive)
 {
-	const std::string config_dir = Emu.GetCustomInputConfigDir(title_id);
+	const std::string config_dir = Emulator::GetCustomConfigPath(title_id);
 
 	if (!fs::is_dir(config_dir))
 		return true;
@@ -1171,12 +1208,7 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 
 void game_list_frame::BatchCreatePPUCaches()
 {
-	std::set<std::string> paths;
-	for (const auto& game : m_game_data)
-	{
-		paths.emplace(game->info.path);
-	}
-	const u32 total = paths.size();
+	const u32 total = m_game_data.size();
 
 	if (total == 0)
 	{
@@ -1191,7 +1223,7 @@ void game_list_frame::BatchCreatePPUCaches()
 	pdlg->show();
 
 	u32 created = 0;
-	for (const auto& path : paths)
+	for (const auto& game : m_game_data)
 	{
 		if (pdlg->wasCanceled())
 		{
@@ -1200,7 +1232,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		}
 		QApplication::processEvents();
 
-		if (CreatePPUCache(path))
+		if (CreatePPUCache(game))
 		{
 			while (!Emu.IsStopped())
 			{
@@ -1488,7 +1520,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 	return QPixmap::fromImage(image.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
-void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item, config::type type)
+void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
 {
 	auto game = GetGameInfoFromItem(item);
 	if (game == nullptr)
@@ -1635,7 +1667,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 					return false;
 
 				LOG_NOTICE(LOADER, "Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");
-				Q_EMIT RequestBoot(gameinfo->info.path);
+				Q_EMIT RequestBoot(gameinfo);
 
 				return true;
 			}

@@ -10,8 +10,8 @@
 #else
 // Cannot include Xlib.h before Qt5
 // and we don't need all of Xlib anyway
-typedef struct _XDisplay Display;
-typedef unsigned long Window;
+using Display = struct _XDisplay;
+using Window = unsigned long;
 #endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
@@ -68,7 +68,7 @@ using draw_context_t = void*;
 	public:
 		GSFrameBase() = default;
 		GSFrameBase(const GSFrameBase&) = delete;
-		virtual ~GSFrameBase() {}
+		virtual ~GSFrameBase() = default;
 
 		virtual void close() = 0;
 		virtual bool shown() = 0;
@@ -84,78 +84,6 @@ using draw_context_t = void*;
 		virtual int client_height() = 0;
 
 		virtual display_handle_t handle() const = 0;
-
-	protected:
-
-		// window manager event management
-		std::deque<wm_event> m_raised_events;
-		std::atomic_bool wm_event_queue_enabled = {};
-		std::atomic_bool wm_allow_fullscreen = { true };
-
-public:
-	// synchronize native window access
-	shared_mutex wm_event_lock;
-
-	void wm_wait() const
-	{
-		while (!m_raised_events.empty() && !Emu.IsStopped()) _mm_pause();
-	}
-
-	bool has_wm_events() const
-	{
-		return !m_raised_events.empty();
-	}
-
-	void clear_wm_events()
-	{
-		if (!m_raised_events.empty())
-		{
-			std::lock_guard lock(wm_event_lock);
-			m_raised_events.clear();
-		}
-	}
-
-	void push_wm_event(wm_event&& _event)
-	{
-		std::lock_guard lock(wm_event_lock);
-		m_raised_events.push_back(_event);
-	}
-
-	wm_event get_wm_event()
-	{
-		if (m_raised_events.empty())
-		{
-			return wm_event::none;
-		}
-		else
-		{
-			std::lock_guard lock(wm_event_lock);
-
-			const auto _event = m_raised_events.front();
-			m_raised_events.pop_front();
-			return _event;
-		}
-	}
-
-	void disable_wm_event_queue()
-	{
-		wm_event_queue_enabled.store(false);
-	}
-
-	void enable_wm_event_queue()
-	{
-		wm_event_queue_enabled.store(true);
-	}
-
-	void disable_wm_fullscreen()
-	{
-		wm_allow_fullscreen.store(false);
-	}
-
-	void enable_wm_fullscreen()
-	{
-		wm_allow_fullscreen.store(true);
-	}
 };
 
 class GSRender : public rsx::thread
@@ -166,7 +94,7 @@ protected:
 
 public:
 	GSRender();
-	virtual ~GSRender();
+	~GSRender() override;
 
 	void on_init_rsx() override;
 	void on_init_thread() override;

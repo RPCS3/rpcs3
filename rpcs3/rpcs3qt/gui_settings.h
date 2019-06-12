@@ -94,7 +94,7 @@ namespace gui
 		default:
 			return "";
 		}
-	};
+	}
 
 	const QSize gl_icon_size_min    = QSize(40, 22);
 	const QSize gl_icon_size_small  = QSize(80, 44);
@@ -108,7 +108,7 @@ namespace gui
 		int size_delta = gl_icon_size_max.width() - gl_icon_size_min.width();
 		int current_delta = current.width() - gl_icon_size_min.width();
 		return gl_max_slider_pos * current_delta / size_delta;
-	};
+	}
 
 	inline q_string_pair Recent_Game(const QString& path, const QString& title)
 	{

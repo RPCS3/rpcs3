@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "overlays.h"
 #include "../GSRender.h"
 
@@ -19,7 +19,7 @@ namespace rsx
 			}
 
 			unsigned long hexval;
-			const int len = hex_color.length();
+			const size_t len = hex_color.length();
 
 			try
 			{
@@ -165,7 +165,7 @@ namespace rsx
 
 		void perf_metrics_overlay::set_font(std::string font)
 		{
-			m_font = font;
+			m_font = std::move(font);
 
 			if (m_is_initialised)
 			{

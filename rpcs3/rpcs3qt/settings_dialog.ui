@@ -2282,13 +2282,6 @@
              </widget>
             </item>
             <item>
-             <widget class="QCheckBox" name="spuVerification">
-              <property name="text">
-               <string>SPU Verification</string>
-              </property>
-             </widget>
-            </item>
-            <item>
              <widget class="QCheckBox" name="setDAZandFTZ">
               <property name="text">
                <string>Set DAZ and FTZ</string>

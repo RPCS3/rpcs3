@@ -1,4 +1,4 @@
-
+﻿
 #include "rsx_debugger.h"
 #include "qt_utils.h"
 
@@ -371,7 +371,7 @@ Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
 	setLayout(layout);
 
 	installEventFilter(parent);
-};
+}
 
 // Draws a formatted and buffered <image> inside the Buffer Widget
 void Buffer::showImage(const QImage& image)
@@ -440,7 +440,7 @@ namespace
 		{
 			be_t<u32> stored_val = as_const_span<const be_t<u32>>(orig_buffer)[idx];
 			u32 swapped_val = stored_val;
-			f32 float_val = (f32&)swapped_val;
+			f32 float_val = std::bit_cast<f32>(swapped_val);
 			u8 val = float_val * 255.f;
 			return{ val, val, val };
 		}
@@ -500,7 +500,7 @@ namespace
 		}
 		return buffer;
 	}
-};
+}
 
 void rsx_debugger::OnClickDrawCalls()
 {
@@ -633,7 +633,7 @@ void rsx_debugger::GetMemory()
 	int item_count = m_list_commands->rowCount();
 
 	// Write information
-	for(u32 i=0, addr = m_addr; i < item_count; i++, addr += 4)
+	for (int i = 0, addr = m_addr; i < item_count; i++, addr += 4)
 	{
 		QTableWidgetItem* address_item = new QTableWidgetItem(qstr(fmt::format("%07x", addr)));
 		address_item->setData(Qt::UserRole, addr);

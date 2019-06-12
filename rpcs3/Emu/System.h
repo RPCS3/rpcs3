@@ -220,6 +220,7 @@ class Emulator final
 	std::string m_cat;
 	std::string m_dir;
 	std::string m_sfo_dir;
+	std::string m_game_dir{"PS3_GAME"};
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
 
@@ -311,7 +312,7 @@ public:
 
 	std::string PPUCache() const;
 
-	bool BootGame(const std::string& path, bool direct = false, bool add_only = false, bool force_global_config = false);
+	bool BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
 	bool BootRsxCapture(const std::string& path);
 	bool InstallPkg(const std::string& path);
 
@@ -322,7 +323,7 @@ private:
 	void LimitCacheSize();
 public:
 	static std::string GetHddDir();
-	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user);
+	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id = "");
 
 	static std::string GetCustomConfigDir();
 	static std::string GetCustomConfigPath(const std::string& title_id, bool get_deprecated_path = false);
@@ -331,7 +332,7 @@ public:
 
 	void SetForceBoot(bool force_boot);
 
-	void Load(bool add_only = false, bool force_global_config = false);
+	void Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false);
 	void Run();
 	bool Pause();
 	void Resume();
@@ -378,6 +379,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size", spu_block_size_type::safe};
 		cfg::_bool spu_accurate_getllar{this, "Accurate GETLLAR", false};
 		cfg::_bool spu_accurate_putlluc{this, "Accurate PUTLLUC", false};
+		cfg::_bool spu_accurate_putllc{this, "Accurate PUTLLC", false};
 		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
 		cfg::_bool spu_cache{this, "SPU Cache", true};
 		cfg::_enum<tsx_usage> enable_TSX{this, "Enable TSX", tsx_usage::enabled}; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully

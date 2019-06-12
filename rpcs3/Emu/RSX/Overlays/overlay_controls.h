@@ -46,7 +46,7 @@ namespace rsx
 		{
 			float values[4];
 
-			vertex() {}
+			vertex() = default;
 
 			vertex(float x, float y)
 			{
@@ -162,7 +162,7 @@ namespace rsx
 
 		public:
 
-			fontmgr() {}
+			fontmgr() = default;
 			~fontmgr()
 			{
 				if (m_instance)
@@ -242,20 +242,20 @@ namespace rsx
 
 			resource_config()
 			{
-				texture_resource_files.push_back("fade_top.png");
-				texture_resource_files.push_back("fade_bottom.png");
-				texture_resource_files.push_back("select.png");
-				texture_resource_files.push_back("start.png");
-				texture_resource_files.push_back("cross.png");
-				texture_resource_files.push_back("circle.png");
-				texture_resource_files.push_back("triangle.png");
-				texture_resource_files.push_back("square.png");
-				texture_resource_files.push_back("L1.png");
-				texture_resource_files.push_back("R1.png");
-				texture_resource_files.push_back("L2.png");
-				texture_resource_files.push_back("R2.png");
-				texture_resource_files.push_back("save.png");
-				texture_resource_files.push_back("new.png");
+				texture_resource_files.emplace_back("fade_top.png");
+				texture_resource_files.emplace_back("fade_bottom.png");
+				texture_resource_files.emplace_back("select.png");
+				texture_resource_files.emplace_back("start.png");
+				texture_resource_files.emplace_back("cross.png");
+				texture_resource_files.emplace_back("circle.png");
+				texture_resource_files.emplace_back("triangle.png");
+				texture_resource_files.emplace_back("square.png");
+				texture_resource_files.emplace_back("L1.png");
+				texture_resource_files.emplace_back("R1.png");
+				texture_resource_files.emplace_back("L2.png");
+				texture_resource_files.emplace_back("R2.png");
+				texture_resource_files.emplace_back("save.png");
+				texture_resource_files.emplace_back("new.png");
 			}
 
 			void load_files()
@@ -364,7 +364,7 @@ namespace rsx
 
 				u8 blur_strength = 0;
 
-				command_config() {}
+				command_config() = default;
 
 				void set_image_resource(u8 ref)
 				{
@@ -482,7 +482,7 @@ namespace rsx
 			u16 margin_left = 0;
 			u16 margin_top = 0;
 
-			overlay_element() {}
+			overlay_element() = default;
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
 			virtual ~overlay_element() = default;
 
@@ -604,7 +604,7 @@ namespace rsx
 				u16 clip_width = clip_text ? w : UINT16_MAX;
 				std::vector<vertex> result = renderer->render_text(string, clip_width, wrap_text);
 
-				if (result.size() > 0)
+				if (!result.empty())
 				{
 					for (auto &v : result)
 					{
@@ -633,7 +633,7 @@ namespace rsx
 							case '\r':
 								continue;
 							case '\n':
-								lines.push_back({ line_begin, ctr });
+								lines.emplace_back(line_begin, ctr);
 								line_begin = ctr;
 								continue;
 							default:
@@ -641,7 +641,7 @@ namespace rsx
 							}
 						}
 
-						lines.push_back({ line_begin, ctr });
+						lines.emplace_back(line_begin, ctr);
 						const auto max_region_w = std::max<f32>(text_extents_w, w);
 
 						for (auto p : lines)
@@ -650,7 +650,7 @@ namespace rsx
 								continue;
 
 							const f32 line_length = result[p.second - 1].values[0] - result[p.first].values[0];
-							const bool wrapped = fabs(result[p.second - 1].values[1] - result[p.first + 3].values[1]) >= (renderer->size_px * 0.5f);
+							const bool wrapped = std::fabs(result[p.second - 1].values[1] - result[p.first + 3].values[1]) >= (renderer->size_px * 0.5f);
 
 							if (wrapped)
 								continue;
@@ -702,7 +702,7 @@ namespace rsx
 						cmd_text.config.color = fore_color;
 						cmd_text.verts = render_text(text.c_str(), (f32)x, (f32)y);
 
-						if (cmd_text.verts.size() > 0)
+						if (!cmd_text.verts.empty())
 							compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
 					}
 
@@ -1100,7 +1100,7 @@ namespace rsx
 
 		struct label : public overlay_element
 		{
-			label() {}
+			label() = default;
 
 			label(const std::string& text)
 			{

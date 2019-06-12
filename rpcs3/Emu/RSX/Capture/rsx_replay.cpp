@@ -65,7 +65,7 @@ namespace rsx
 		u32 currentOffset = 0x10000000;
 		for (const auto& rc : frame->replay_commands)
 		{
-			bool hasState = (rc.memory_state.size() > 0) || (rc.display_buffer_state != 0) || (rc.tile_state != 0);
+			bool hasState = (!rc.memory_state.empty()) || (rc.display_buffer_state != 0) || (rc.tile_state != 0);
 			if (hasState)
 			{
 				if (count != 0)
@@ -197,7 +197,7 @@ namespace rsx
 					break;
 
 				// Loop and hunt down our next state change that needs to be done
-				if (!((replay_cmd.memory_state.size() > 0) || (replay_cmd.display_buffer_state != 0) || (replay_cmd.tile_state != 0)))
+				if (!(!replay_cmd.memory_state.empty() || (replay_cmd.display_buffer_state != 0) || (replay_cmd.tile_state != 0)))
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state

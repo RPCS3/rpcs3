@@ -39,7 +39,7 @@ u32 get_index_type_size(rsx::index_array_type type);
  */
 std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst, gsl::span<const gsl::byte> src,
 	rsx::index_array_type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
-	std::function<bool(rsx::primitive_type)> expands);
+	const std::function<bool(rsx::primitive_type)>& expands);
 
 /**
  * Write index data needed to emulate non indexed non native primitive mode.

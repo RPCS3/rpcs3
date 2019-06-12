@@ -123,7 +123,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 
 	if (get_blacklist)
 	{
-		if (blacklist.size() <= 0)
+		if (blacklist.empty())
 			LOG_SUCCESS(HLE, "XInput Calibration: Blacklist is clear. No input spam detected");
 		return;
 	}
@@ -136,7 +136,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 		return callback(0, "", padId, preview_values);
 }
 
-void xinput_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
+void xinput_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32/* b*/)
 {
 	int device_number = GetDeviceNumber(padId);
 	if (device_number < 0)
@@ -172,14 +172,14 @@ void xinput_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& v
 	case XInputKeyCodes::LSYPos:
 	case XInputKeyCodes::LSYNeg:
 		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, p_profile->lstickmultiplier, ignore_threshold) : 0;
 		break;
 	case XInputKeyCodes::RSXNeg:
 	case XInputKeyCodes::RSXPos:
 	case XInputKeyCodes::RSYPos:
 	case XInputKeyCodes::RSYNeg:
 		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, p_profile->rstickmultiplier, ignore_threshold) : 0;
 		break;
 	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
@@ -369,7 +369,7 @@ void xinput_pad_handler::ThreadProc()
 			}
 
 			// used to get the absolute value of an axis
-			s32 stick_val[4];
+			s32 stick_val[4]{0};
 
 			// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 			for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
