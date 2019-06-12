@@ -375,6 +375,7 @@ namespace vk
 		}
 	};
 
+	// @Deprecated!!
 	struct depth_convert_pass : public overlay_pass
 	{
 		f32 src_scale_x;
@@ -922,6 +923,9 @@ namespace vk
 		{
 			region = rect;
 			target->read_barrier(cmd);
+
+			// Coverage sampling disabled, but actually report correct number of samples
+			renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
 
 			overlay_pass::run(cmd, target->width(), target->height(), target,
 				target->get_view(0xAAE4, rsx::default_remap_vector),
