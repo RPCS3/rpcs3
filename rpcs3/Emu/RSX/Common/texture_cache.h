@@ -2115,7 +2115,7 @@ namespace rsx
 						if (last.src_x == 0 && last.src_y == 0)
 						{
 							u16 normalized_width = u16(last.width * last.surface->get_bpp()) / bpp;
-							if (normalized_width >= tex_width && last.height >= tex_height)
+							if (normalized_width >= tex_width && last.height >= required_surface_height)
 							{
 								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, format, tex_width, tex_height, depth,
 									scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), false);
