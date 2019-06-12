@@ -208,24 +208,20 @@ namespace vk
 			locked_resource->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			real_pitch = vk::get_format_texel_width(locked_resource->info.format) * locked_resource->width();
 
-			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
-				(real_pitch != rsx_pitch))
+			if (transfer_width != locked_resource->width() || transfer_height != locked_resource->height())
 			{
-				if (transfer_width != locked_resource->width() || transfer_height != locked_resource->height())
-				{
-					// TODO: Synchronize access to typeles textures
-					target = vk::get_typeless_helper(vram_texture->info.format, transfer_width, transfer_height);
-					target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				// TODO: Synchronize access to typeles textures
+				target = vk::get_typeless_helper(vram_texture->info.format, transfer_width, transfer_height);
+				target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-					// Allow bilinear filtering on color textures where compatibility is likely
-					const auto filter = (target->aspect() == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+				// Allow bilinear filtering on color textures where compatibility is likely
+				const auto filter = (target->aspect() == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
 
-					vk::copy_scaled_image(cmd, locked_resource->value, target->value, locked_resource->current_layout, target->current_layout,
-						{ 0, 0, (s32)locked_resource->width(), (s32)locked_resource->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
-						1, target->aspect(), true, filter, vram_texture->format(), target->format());
+				vk::copy_scaled_image(cmd, locked_resource->value, target->value, locked_resource->current_layout, target->current_layout,
+					{ 0, 0, (s32)locked_resource->width(), (s32)locked_resource->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
+					1, target->aspect(), true, filter, vram_texture->format(), target->format());
 
-					target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-				}
+				target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			}
 
 			verify(HERE), target->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
