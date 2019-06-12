@@ -1092,7 +1092,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 				if (!g_cfg.video.read_depth_buffer)
 				{
-					// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
+					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
 					if (mask == 1)
 					{
 						// Depth was cleared, initialize stencil

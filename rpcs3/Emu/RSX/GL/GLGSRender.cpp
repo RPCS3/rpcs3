@@ -508,7 +508,7 @@ void GLGSRender::clear_surface(u32 arg)
 			{
 				verify(HERE), mask;
 
-				// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
+				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
 				if (arg == 1)
 				{
 					// Depth was cleared, initialize stencil

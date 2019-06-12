@@ -430,7 +430,7 @@ u32 get_row_pitch_in_block(u16 block_size_in_bytes, u16 width_in_block, size_t a
 }
 
 /**
- * Since rsx ignore unused dimensionnality some app set them to 0.
+ * Since rsx ignore unused dimensionality some app set them to 0.
  * Use 1 value instead to be more general.
  */
 template<typename RsxTextureType>

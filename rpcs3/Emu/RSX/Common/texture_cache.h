@@ -2559,7 +2559,7 @@ namespace rsx
 			{
 				verify(HERE), !dest_texture;
 
-				// Need to calculate the minium required size that will fit the data, anchored on the rsx_address
+				// Need to calculate the minimum required size that will fit the data, anchored on the rsx_address
 				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
 				const u32 write_end = dst_address + dst_payload_length;
 				u32 block_end = dst_base_address + (dst.pitch * dst_dimensions.height);
