@@ -81,6 +81,9 @@ class evdev_joystick_handler final : public PadHandlerBase
 	// Unique button names for the config files and our pad settings dialog
 	const std::unordered_map<u32, std::string> button_list =
 	{
+		// Xbox One S Controller returns some buttons as key when connected through bluetooth
+		{ KEY_BACK            , "Back Key"    },
+		{ KEY_HOMEPAGE        , "Homepage Key"},
 		//{ BTN_MISC            , "Misc"        }, same as BTN_0
 		{ BTN_0               , "0"           },
 		{ BTN_1               , "1"           },
@@ -198,10 +201,7 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ BTN_TRIGGER_HAPPY37 , "Happy 37"    },
 		{ BTN_TRIGGER_HAPPY38 , "Happy 38"    },
 		{ BTN_TRIGGER_HAPPY39 , "Happy 39"    },
-		{ BTN_TRIGGER_HAPPY40 , "Happy 40"    },
-		// Xbox One S Controller returns some buttons as key when connected through bluetooth
-		{ KEY_BACK            , "Back Key"    },
-		{ KEY_HOMEPAGE        , "Homepage Key"},
+		{ BTN_TRIGGER_HAPPY40 , "Happy 40"    }
 	};
 
 	// Unique positive axis names for the config files and our pad settings dialog
