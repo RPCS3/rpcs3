@@ -3,6 +3,10 @@
 #include "types.h"
 #include <functional>
 
+#ifdef _MSC_VER
+#include <atomic>
+#endif
+
 // Helper class, provides access to compiler-specific atomic intrinsics
 template <typename T, std::size_t Size = sizeof(T)>
 struct atomic_storage
@@ -217,7 +221,7 @@ struct atomic_storage<T, 1> : atomic_storage<T, 0>
 	static inline T load(const T& dest)
 	{
 		char value = *(const volatile char*)&dest;
-		_ReadWriteBarrier();
+		std::atomic_thread_fence(std::memory_order_acquire);
 		return (T&)value;
 	}
 
@@ -228,7 +232,7 @@ struct atomic_storage<T, 1> : atomic_storage<T, 0>
 
 	static inline void release(T& dest, T value)
 	{
-		_ReadWriteBarrier();
+		std::atomic_thread_fence(std::memory_order_release);
 		*(volatile char*)&dest = (char&)value;
 	}
 
@@ -279,7 +283,7 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 	static inline T load(const T& dest)
 	{
 		short value = *(const volatile short*)&dest;
-		_ReadWriteBarrier();
+		std::atomic_thread_fence(std::memory_order_acquire);
 		return (T&)value;
 	}
 
@@ -290,7 +294,7 @@ struct atomic_storage<T, 2> : atomic_storage<T, 0>
 
 	static inline void release(T& dest, T value)
 	{
-		_ReadWriteBarrier();
+		std::atomic_thread_fence(std::memory_order_release);
 		*(volatile short*)&dest = (short&)value;
 	}
 
@@ -385,7 +389,7 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 	static inline T load(const T& dest)
 	{
 		long value = *(const volatile long*)&dest;
-		_ReadWriteBarrier();
+		std::atomic_thread_fence(std::memory_order_acquire);
 		return (T&)value;
 	}
 
@@ -396,7 +400,7 @@ struct atomic_storage<T, 4> : atomic_storage<T, 0>
 
 	static inline void release(T& dest, T value)
 	{
-		_ReadWriteBarrier();
+		std::atomic_thread_fence(std::memory_order_release);
 		*(volatile long*)&dest = (long&)value;
 	}
 
@@ -504,7 +508,7 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 	static inline T load(const T& dest)
 	{
 		llong value = *(const volatile llong*)&dest;
-		_ReadWriteBarrier();
+		std::atomic_thread_fence(std::memory_order_acquire);
 		return (T&)value;
 	}
 
@@ -515,7 +519,7 @@ struct atomic_storage<T, 8> : atomic_storage<T, 0>
 
 	static inline void release(T& dest, T value)
 	{
-		_ReadWriteBarrier();
+		std::atomic_thread_fence(std::memory_order_release);
 		*(volatile llong*)&dest = (llong&)value;
 	}
 

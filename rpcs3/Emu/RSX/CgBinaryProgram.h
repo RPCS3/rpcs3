@@ -4,24 +4,23 @@
 #include "Emu/RSX/GL/GLVertexProgram.h"
 #include "Emu/RSX/GL/GLFragmentProgram.h"
 
-typedef be_t<u32> CGprofile;
-typedef be_t<s32> CGbool;
-typedef be_t<u32> CGresource;
-typedef be_t<u32> CGenum;
-typedef be_t<u32> CGtype;
+using CGprofile = be_t<u32>;
+using CGbool = be_t<s32>;
+using CGresource = be_t<u32>;
+using CGenum = be_t<u32>;
+using CGtype = be_t<u32>;
 
-typedef be_t<u32>                       CgBinaryOffset;
-typedef CgBinaryOffset                  CgBinaryEmbeddedConstantOffset;
-typedef CgBinaryOffset                  CgBinaryFloatOffset;
-typedef CgBinaryOffset                  CgBinaryStringOffset;
-typedef CgBinaryOffset                  CgBinaryParameterOffset;
+using CgBinaryOffset = be_t<u32>;
+using CgBinaryEmbeddedConstantOffset = CgBinaryOffset;
+using CgBinaryFloatOffset = CgBinaryOffset;
+using CgBinaryStringOffset = CgBinaryOffset;
+using CgBinaryParameterOffset = CgBinaryOffset;
 
-// a few typedefs
-typedef struct CgBinaryParameter        CgBinaryParameter;
-typedef struct CgBinaryEmbeddedConstant CgBinaryEmbeddedConstant;
-typedef struct CgBinaryVertexProgram    CgBinaryVertexProgram;
-typedef struct CgBinaryFragmentProgram  CgBinaryFragmentProgram;
-typedef struct CgBinaryProgram          CgBinaryProgram;
+using CgBinaryParameter = struct CgBinaryParameter;
+using CgBinaryEmbeddedConstant = struct CgBinaryEmbeddedConstant;
+using CgBinaryVertexProgram = struct CgBinaryVertexProgram;
+using CgBinaryFragmentProgram = struct CgBinaryFragmentProgram;
+using CgBinaryProgram = struct CgBinaryProgram;
 
 // fragment programs have their constants embedded in the microcode
 struct CgBinaryEmbeddedConstant
@@ -162,7 +161,7 @@ public:
 	std::string GetVecMaskDisasm();
 	std::string GetScaMaskDisasm();
 	std::string GetDSTDisasm(bool is_sca = false);
-	std::string GetSRCDisasm(const u32 n);
+	std::string GetSRCDisasm(u32 n);
 	std::string GetTexDisasm();
 	std::string GetCondDisasm();
 	std::string AddAddrMaskDisasm();
@@ -173,7 +172,7 @@ public:
 	void AddVecCodeDisasm(const std::string& code = "");
 	void AddCodeCondDisasm(const std::string& dst, const std::string& src);
 	void AddCodeDisasm(const std::string& code);
-	void SetDSTDisasm(bool is_sca, std::string value);
+	void SetDSTDisasm(bool is_sca, const std::string& value);
 	void SetDSTVecDisasm(const std::string& code);
 	void SetDSTScaDisasm(const std::string& code);
 
@@ -223,7 +222,7 @@ public:
 	std::string GetCgParamName(u32 offset) const
 	{
 		std::stringstream str_stream;
-		std::string name = "";
+		std::string name;
 		while (m_buffer[offset] != 0)
 		{
 			str_stream << m_buffer[offset];
@@ -243,7 +242,7 @@ public:
 	std::string GetCgParamSemantic(u32 offset) const
 	{
 		std::stringstream str_stream;
-		std::string semantic = "";
+		std::string semantic;
 		while (m_buffer[offset] != 0)
 		{
 			str_stream << m_buffer[offset];

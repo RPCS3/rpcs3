@@ -54,7 +54,7 @@ void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 			//ssa is defined in the program body and is not a varying type
 			if (PI.name == "ssa") continue;
 
-			const vk::varying_register_t &reg = vk::get_varying_register(PI.name);
+			const auto reg_location = vk::get_varying_register_location(PI.name);
 			std::string var_name = PI.name;
 
 			if (two_sided_enabled)
@@ -69,7 +69,7 @@ void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 			if (var_name == "fogc")
 				var_name = "fog_c";
 
-			OS << "layout(location=" << reg.reg_location << ") in " << PT.type << " " << var_name << ";\n";
+			OS << "layout(location=" << reg_location << ") in " << PT.type << " " << var_name << ";\n";
 		}
 	}
 
@@ -78,14 +78,12 @@ void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 		//Only include the front counterparts if the default output is for back only and exists.
 		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
 		{
-			const vk::varying_register_t &reg = vk::get_varying_register("front_diff_color");
-			OS << "layout(location=" << reg.reg_location << ") in vec4 front_diff_color;\n";
+			OS << "layout(location=" << vk::get_varying_register_location("front_diff_color") << ") in vec4 front_diff_color;\n";
 		}
 
 		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
 		{
-			const vk::varying_register_t &reg = vk::get_varying_register("front_spec_color");
-			OS << "layout(location=" << reg.reg_location << ") in vec4 front_spec_color;\n";
+			OS << "layout(location=" << vk::get_varying_register_location("front_spec_color") << ") in vec4 front_spec_color;\n";
 		}
 	}
 }
@@ -128,7 +126,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		for (const ParamItem& PI : PT.items)
 		{
 			std::string samplerType = PT.type;
-			int index = atoi(&PI.name.data()[3]);
+			int index = atoi(&PI.name[3]);
 
 			const auto mask = (1 << index);
 
@@ -261,7 +259,7 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		"h0", "h2", "h4", "h6", "h8"
 	};
 
-	std::string parameters = "";
+	std::string parameters;
 	const auto half4 = getHalfTypeName(4);
 	for (auto &reg_name : output_values)
 	{
@@ -367,7 +365,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	std::string parameters = "";
+	std::string parameters;
 	const auto half4 = getHalfTypeName(4);
 
 	for (auto &reg_name : output_values)
@@ -411,9 +409,7 @@ void VKFragmentDecompilerThread::Task()
 	vk_prog->SetInputs(inputs);
 }
 
-VKFragmentProgram::VKFragmentProgram()
-{
-}
+VKFragmentProgram::VKFragmentProgram() = default;
 
 VKFragmentProgram::~VKFragmentProgram()
 {

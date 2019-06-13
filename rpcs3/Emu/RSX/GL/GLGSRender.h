@@ -351,7 +351,7 @@ private:
 	std::vector<u8> m_scratch_buffer;
 
 public:
-	u64 get_cycles() override final;
+	u64 get_cycles() final;
 	GLGSRender();
 
 private:
@@ -392,7 +392,7 @@ protected:
 
 	void on_init_thread() override;
 	void on_exit() override;
-	bool do_method(u32 id, u32 arg) override;
+	bool do_method(u32 cmd, u32 arg) override;
 	void flip(int buffer, bool emu_flip = false) override;
 
 	void do_local_task(rsx::FIFO_state state) override;

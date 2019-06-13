@@ -74,8 +74,7 @@ struct command_buffer_chunk: public vk::command_buffer
 	std::atomic<u64> last_sync = { 0 };
 	shared_mutex guard_mutex;
 
-	command_buffer_chunk()
-	{}
+	command_buffer_chunk() = default;
 
 	void init_fence(VkDevice dev)
 	{
@@ -246,7 +245,7 @@ struct flush_request_task
 	atomic_t<int> num_waiters{ 0 };  //Number of threads waiting for this request to be serviced
 	bool hard_sync = false;
 
-	flush_request_task(){}
+	flush_request_task() = default;
 
 	void post(bool _hard_sync)
 	{
@@ -303,8 +302,8 @@ private:
 
 public:
 
-	resource_manager() {}
-	~resource_manager() {}
+	resource_manager() = default;
+	~resource_manager() = default;
 
 	void destroy()
 	{
@@ -475,9 +474,9 @@ private:
 #endif
 
 public:
-	u64 get_cycles() override final;
+	u64 get_cycles() final;
 	VKGSRender();
-	~VKGSRender();
+	~VKGSRender() override;
 
 private:
 	void clear_surface(u32 mask);
@@ -512,7 +511,7 @@ private:
 
 	bool load_program();
 	void load_program_env();
-	void update_vertex_env(const vk::vertex_upload_info& upload_info);
+	void update_vertex_env(const vk::vertex_upload_info& vertex_info);
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
@@ -537,7 +536,7 @@ protected:
 
 	void on_init_thread() override;
 	void on_exit() override;
-	bool do_method(u32 id, u32 arg) override;
+	bool do_method(u32 cmd, u32 arg) override;
 	void flip(int buffer, bool emu_flip = false) override;
 
 	void do_local_task(rsx::FIFO_state state) override;

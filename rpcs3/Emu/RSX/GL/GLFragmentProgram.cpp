@@ -6,7 +6,7 @@
 #include "GLFragmentProgram.h"
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
-
+#include "../Common/GLSLCommon.h"
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 {
@@ -80,12 +80,12 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 	{
 		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
 		{
-			inputs_to_declare.push_back("front_diff_color");
+			inputs_to_declare.emplace_back("front_diff_color");
 		}
 
 		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
 		{
-			inputs_to_declare.push_back("front_spec_color");
+			inputs_to_declare.emplace_back("front_spec_color");
 		}
 	}
 
@@ -127,7 +127,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		for (const ParamItem& PI : PT.items)
 		{
 			std::string samplerType = PT.type;
-			int index = atoi(&PI.name.data()[3]);
+			int index = atoi(&PI.name[3]);
 
 			const auto mask = (1 << index);
 
@@ -229,7 +229,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		"h0", "h2", "h4", "h6", "h8"
 	};
 
-	std::string parameters = "";
+	std::string parameters;
 	const auto half4 = getHalfTypeName(4);
 	for (auto &reg_name : output_values)
 	{
@@ -332,7 +332,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	std::string parameters = "";
+	std::string parameters;
 	const auto half4 = getHalfTypeName(4);
 
 	for (auto &reg_name : output_values)
@@ -375,9 +375,7 @@ void GLFragmentDecompilerThread::Task()
 	m_shader = Decompile();
 }
 
-GLFragmentProgram::GLFragmentProgram()
-{
-}
+GLFragmentProgram::GLFragmentProgram() = default;
 
 GLFragmentProgram::~GLFragmentProgram()
 {

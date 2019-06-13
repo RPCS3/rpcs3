@@ -15,7 +15,7 @@ namespace rsx
 			{
 				static_cast<image_view*>(image.get())->set_image_resource(resource_id);
 			}
-			else if (icon_buf.size())
+			else if (!icon_buf.empty())
 			{
 				image->set_padding(0, 0, 11, 11); // Half sized icon, 320x176->160x88
 				icon_data = std::make_unique<image_info>(icon_buf);
@@ -228,7 +228,7 @@ namespace rsx
 				}
 			}
 
-			if (!m_list->m_items.size())
+			if (m_list->m_items.empty())
 			{
 				m_no_saves_text = std::make_unique<label>("There is no saved data.");
 				m_no_saves_text->set_font("Arial", 20);

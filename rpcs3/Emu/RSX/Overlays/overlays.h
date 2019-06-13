@@ -19,7 +19,7 @@
 // Utils
 std::string utf8_to_ascii8(const std::string& utf8_string);
 std::string utf16_to_ascii8(const std::u16string& utf16_string);
-std::u16string ascii8_to_utf16(const std::string& utf8_string);
+std::u16string ascii8_to_utf16(const std::string& ascii_string);
 extern u64 get_system_time();
 
 // Definition of user interface implementations
@@ -81,8 +81,8 @@ namespace rsx
 			s32 return_code = CELL_OK;
 			std::function<void(s32 status)> on_close;
 
-			virtual void update() override {}
-			virtual compiled_resource get_compiled() override = 0;
+			void update() override {}
+			compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/)
 			{
@@ -158,8 +158,8 @@ namespace rsx
 			}
 
 		public:
-			display_manager() {}
-			~display_manager() {}
+			display_manager() = default;
+			~display_manager() = default;
 
 			// Adds an object to the internal list. Optionally removes other objects of the same type.
 			// Original handle loses ownership but a usable pointer is returned
@@ -367,7 +367,7 @@ namespace rsx
 			void init();
 
 			void set_detail_level(detail_level level);
-			void set_position(screen_quadrant pos);
+			void set_position(screen_quadrant quadrant);
 			void set_update_interval(u32 update_interval);
 			void set_font(std::string font);
 			void set_font_size(u32 font_size);
@@ -460,11 +460,11 @@ namespace rsx
 			u32 flags = 0;
 			u32 char_limit = UINT32_MAX;
 
-			osk_dialog() {}
-			virtual ~osk_dialog() {}
+			osk_dialog() = default;
+			~osk_dialog() override = default;
 
 			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override = 0;
-			void Close(bool accepted) override;
+			void Close(bool ok) override;
 
 			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text);
 
@@ -484,7 +484,7 @@ namespace rsx
 		{
 			using osk_dialog::osk_dialog;
 
-			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options);
+			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override;
 		};
 
 		struct save_dialog : public user_interface

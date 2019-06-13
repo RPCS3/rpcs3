@@ -39,7 +39,7 @@ namespace rsx
 
 		s32 trophy_notification::show(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer)
 		{
-			if (trophy_icon_buffer.size())
+			if (!trophy_icon_buffer.empty())
 			{
 				icon_info = std::make_unique<image_info>(trophy_icon_buffer);
 				image.set_raw_image(icon_info.get());

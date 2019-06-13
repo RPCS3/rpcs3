@@ -48,15 +48,15 @@ std::string CgBinaryDisasm::GetScaMaskDisasm()
 	return GetMaskDisasm(true);
 }
 
-std::string CgBinaryDisasm::GetDSTDisasm(bool isSca)
+std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca)
 {
 	std::string ret;
-	std::string mask = GetMaskDisasm(isSca);
+	std::string mask = GetMaskDisasm(is_sca);
 
-	switch ((isSca && d3.sca_dst_tmp != 0x3f) ? 0x1f : d3.dst)
+	switch ((is_sca && d3.sca_dst_tmp != 0x3f) ? 0x1f : d3.dst)
 	{
 	case 0x1f:
-		ret += (isSca ? fmt::format("R%d", d3.sca_dst_tmp) : fmt::format("R%d", d0.dst_tmp)) + mask;
+		ret += (is_sca ? fmt::format("R%d", d3.sca_dst_tmp) : fmt::format("R%d", d0.dst_tmp)) + mask;
 		break;
 
 	default:
@@ -134,7 +134,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 	return ret;
 }
 
-void CgBinaryDisasm::SetDSTDisasm(bool is_sca, std::string value)
+void CgBinaryDisasm::SetDSTDisasm(bool is_sca, const std::string& value)
 {
 	is_sca ? AddScaCodeDisasm() : AddVecCodeDisasm();
 

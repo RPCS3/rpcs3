@@ -225,7 +225,7 @@ struct gl_render_target_traits
 			const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width());
 			const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height());
 
-			sink.reset(new gl::render_target(new_w, new_h, internal_format));
+			sink = std::make_unique<gl::render_target>(new_w, new_h, internal_format);
 			sink->add_ref();
 
 			sink->memory_usage_flags = rsx::surface_usage_flags::storage;

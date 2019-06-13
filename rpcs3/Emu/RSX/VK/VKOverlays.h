@@ -54,8 +54,7 @@ namespace vk
 			renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 		}
 
-		~overlay_pass()
-		{}
+		~overlay_pass() = default;
 
 		void check_heap()
 		{
@@ -220,7 +219,7 @@ namespace vk
 			return result;
 		}
 
-		void load_program(vk::command_buffer cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
+		void load_program(const vk::command_buffer& cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
 		{
 			vk::glsl::program *program = nullptr;
 			auto found = m_program_cache.find(pass);
@@ -662,11 +661,11 @@ namespace vk
 		void remove_temp_resources(u32 key)
 		{
 			std::vector<u64> keys_to_remove;
-			for (auto It = temp_image_cache.begin(); It != temp_image_cache.end(); ++It)
+			for (const auto& temp_image : temp_image_cache)
 			{
-				if (It->second.first == key)
+				if (temp_image.second.first == key)
 				{
-					keys_to_remove.push_back(It->first);
+					keys_to_remove.push_back(temp_image.first);
 				}
 			}
 

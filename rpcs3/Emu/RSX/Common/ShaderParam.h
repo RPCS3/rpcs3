@@ -71,9 +71,9 @@ struct ParamItem
 	const std::string value;
 	int location;
 
-	ParamItem(const std::string& _name, int _location, const std::string& _value = "")
-		: name(_name)
-		, value(_value),
+	ParamItem(std::string _name, int _location, std::string _value = "")
+		: name(std::move(_name))
+		, value(std::move(_value)),
 		location(_location)
 	{ }
 };
@@ -84,17 +84,17 @@ struct ParamType
 	const std::string type;
 	std::vector<ParamItem> items;
 
-	ParamType(const ParamFlag _flag, const std::string& _type)
+	ParamType(const ParamFlag _flag, std::string _type)
 		: flag(_flag)
-		, type(_type)
+		, type(std::move(_type))
 	{
 	}
 
-	bool SearchName(const std::string& name)
+	bool SearchName(const std::string& name) const
 	{
-		for (u32 i = 0; i<items.size(); ++i)
+		for (const auto& item : items)
 		{
-			if (items[i].name.compare(name) == 0) return true;
+			if (item.name == name) return true;
 		}
 
 		return false;
@@ -107,10 +107,10 @@ struct ParamArray
 
 	ParamType* SearchParam(const ParamFlag &flag, const std::string& type)
 	{
-		for (u32 i = 0; i<params[flag].size(); ++i)
+		for (auto& param : params[flag])
 		{
-			if (params[flag][i].type.compare(type) == 0)
-				return &params[flag][i];
+			if (param.type == type)
+				return &param;
 		}
 
 		return nullptr;
@@ -118,9 +118,9 @@ struct ParamArray
 
 	bool HasParamTypeless(const ParamFlag flag, const std::string& name)
 	{
-		for (u32 i = 0; i<params[flag].size(); ++i)
+		for (const auto& param : params[flag])
 		{
-			if (params[flag][i].SearchName(name))
+			if (param.SearchName(name))
 				return true;
 		}
 
@@ -206,7 +206,7 @@ public:
 
 		if (var_blocks.size() == 1)
 		{
-			swizzles.push_back("xyzw");
+			swizzles.emplace_back("xyzw");
 		}
 		else
 		{

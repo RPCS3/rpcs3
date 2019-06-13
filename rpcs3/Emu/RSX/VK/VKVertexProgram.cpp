@@ -171,8 +171,7 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 			if (i.name == "front_spec_color")
 				insert_front_specular = false;
 
-			const vk::varying_register_t &reg = vk::get_varying_register(i.name);
-			OS << "layout(location=" << reg.reg_location << ") out vec4 " << i.name << ";\n";
+			OS << "layout(location=" << vk::get_varying_register_location(i.name) << ") out vec4 " << i.name << ";\n";
 		}
 		else
 		{
@@ -180,17 +179,16 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 			//NOTE: Registers that can be skept will not have their check_mask_value set
 			if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
 			{
-				const vk::varying_register_t &reg = vk::get_varying_register(i.name);
-				OS << "layout(location=" << reg.reg_location << ") out vec4 " << i.name << ";\n";
+				OS << "layout(location=" << vk::get_varying_register_location(i.name) << ") out vec4 " << i.name << ";\n";
 			}
 		}
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
-		OS << "layout(location=" << vk::get_varying_register("front_diff_color").reg_location << ") out vec4 front_diff_color;\n";
+		OS << "layout(location=" << vk::get_varying_register_location("front_diff_color") << ") out vec4 front_diff_color;\n";
 
 	if (insert_back_specular && insert_front_specular)
-		OS << "layout(location=" << vk::get_varying_register("front_spec_color").reg_location << ") out vec4 front_spec_color;\n";
+		OS << "layout(location=" << vk::get_varying_register_location("front_spec_color") << ") out vec4 front_spec_color;\n";
 }
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -208,7 +206,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
 
-	std::string parameters = "";
+	std::string parameters;
 	for (int i = 0; i < 16; ++i)
 	{
 		std::string reg_name = "dst_reg" + std::to_string(i);
@@ -225,7 +223,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "{\n";
 
 	//Declare temporary registers, ignoring those mapped to outputs
-	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
+	for (const ParamType &PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem &PI : PT.items)
 		{
@@ -256,7 +254,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main ()\n";
 	OS << "{\n";
 
-	std::string parameters = "";
+	std::string parameters;
 
 	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{
@@ -345,9 +343,7 @@ void VKVertexDecompilerThread::Task()
 	vk_prog->SetInputs(inputs);
 }
 
-VKVertexProgram::VKVertexProgram()
-{
-}
+VKVertexProgram::VKVertexProgram() = default;
 
 VKVertexProgram::~VKVertexProgram()
 {

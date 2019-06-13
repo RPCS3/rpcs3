@@ -139,7 +139,7 @@ namespace rsx
 
 	public:
 		texture_cache_predictor_entry(key_type _key)
-			: key(_key)
+			: key(std::move(_key))
 		{
 			reset();
 		}

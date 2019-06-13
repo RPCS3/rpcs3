@@ -845,7 +845,7 @@ namespace
 	std::tuple<T, T, u32> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
 		gsl::span<const be_t<T>> src,
 		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
-		std::function<bool(rsx::primitive_type)> expands)
+		const std::function<bool(rsx::primitive_type)>& expands)
 	{
 		if (LIKELY(!expands(draw_mode)))
 		{
@@ -879,7 +879,7 @@ namespace
 std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst_ptr,
 	gsl::span<const gsl::byte> src_ptr,
 	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
-	std::function<bool(rsx::primitive_type)> expands)
+	const std::function<bool(rsx::primitive_type)>& expands)
 {
 	switch (type)
 	{

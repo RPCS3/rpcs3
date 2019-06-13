@@ -9,7 +9,7 @@
 void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 {
 	verify(HERE), (m_opcode < 70);
-	std::string op_name = "";
+	std::string op_name;
 
 	if (dst.dest_reg == 63)
 	{
@@ -202,7 +202,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
 
-	std::string swizzle = "";
+	std::string swizzle;
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
 	swizzle += f[src.swizzle_z];

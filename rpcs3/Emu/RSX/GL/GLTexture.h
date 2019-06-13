@@ -14,7 +14,7 @@ namespace rsx
 namespace gl
 {
 	GLenum get_target(rsx::texture_dimension_extended type);
-	GLenum get_sized_internal_format(u32 gcm_format);
+	GLenum get_sized_internal_format(u32 texture_format);
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
 	std::tuple<GLenum, GLenum, bool> get_format_type(texture::internal_format format);
 	GLenum wrap_mode(rsx::texture_wrap_mode wrap);

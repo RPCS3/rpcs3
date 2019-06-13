@@ -91,7 +91,7 @@ namespace rsx
 
 		address_range range{};
 
-		gcm_framebuffer_info() {}
+		gcm_framebuffer_info() = default;
 
 		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h, const u8 bpp_)
 			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h), bpp(bpp_)
@@ -395,7 +395,7 @@ namespace rsx
 		}
 	}
 
-	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
+	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 element_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
 
 	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
@@ -786,7 +786,7 @@ namespace rsx
 
 	public:
 		atomic_bitmask_t() { m_data.store(0); }
-		~atomic_bitmask_t() {}
+		~atomic_bitmask_t() = default;
 
 		T load() const
 		{
@@ -848,7 +848,7 @@ namespace rsx
 		}
 
 	public:
-		simple_array() {}
+		simple_array() = default;
 
 		simple_array(u32 initial_size, const Ty val = {})
 		{

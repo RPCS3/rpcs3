@@ -216,7 +216,7 @@ namespace vk
 		using mem_handle_t = void *;
 
 		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {}
-		virtual ~mem_allocator_base() {}
+		virtual ~mem_allocator_base() = default;
 
 		virtual void destroy() = 0;
 
@@ -247,7 +247,7 @@ namespace vk
 			vmaCreateAllocator(&allocatorInfo, &m_allocator);
 		}
 
-		~mem_allocator_vma() {}
+		~mem_allocator_vma() override = default;
 
 		void destroy() override
 		{
@@ -315,7 +315,7 @@ namespace vk
 	{
 	public:
 		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
-		~mem_allocator_vk() {}
+		~mem_allocator_vk() override = default;
 
 		void destroy() override {}
 
@@ -413,8 +413,8 @@ namespace vk
 
 	public:
 
-		physical_device() {}
-		~physical_device() {}
+		physical_device() = default;
+		~physical_device() = default;
 
 		void create(VkInstance context, VkPhysicalDevice pdev)
 		{
@@ -484,7 +484,7 @@ namespace vk
 
 		uint32_t get_queue_count() const
 		{
-			if (queue_props.size())
+			if (!queue_props.empty())
 				return (u32)queue_props.size();
 
 			uint32_t count = 0;
@@ -495,7 +495,7 @@ namespace vk
 
 		VkQueueFamilyProperties get_queue_properties(uint32_t queue)
 		{
-			if (!queue_props.size())
+			if (queue_props.empty())
 			{
 				uint32_t count = 0;
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
@@ -619,11 +619,8 @@ namespace vk
 		}
 
 	public:
-		render_device()
-		{}
-
-		~render_device()
-		{}
+		render_device() = default;
+		~render_device() = default;
 
 		void create(vk::physical_device &pdev, uint32_t graphics_queue_idx)
 		{
@@ -789,8 +786,8 @@ namespace vk
 		VkCommandPool pool = nullptr;
 
 	public:
-		command_pool() {}
-		~command_pool() {}
+		command_pool() = default;
+		~command_pool() = default;
 
 		void create(vk::render_device &dev)
 		{
@@ -850,8 +847,8 @@ namespace vk
 		u32 flags = 0;
 
 	public:
-		command_buffer() {}
-		~command_buffer() {}
+		command_buffer() = default;
+		~command_buffer() = default;
 
 		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
 		{
@@ -1290,7 +1287,7 @@ namespace vk
 					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
-			memory.reset(new memory_block(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index));
+			memory = std::make_unique<memory_block>(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index);
 			vkBindBufferMemory(dev, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset());
 		}
 
@@ -1506,7 +1503,7 @@ namespace vk
 		vk::render_device *owner = nullptr;
 
 	public:
-		swapchain_image_WSI() {}
+		swapchain_image_WSI() = default;
 
 		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
 		{
@@ -1634,7 +1631,7 @@ public:
 			m_surface_format = format;
 		}
 
-		virtual ~swapchain_base() {}
+		virtual ~swapchain_base() = default;
 
 		virtual void create(display_handle_t& handle) = 0;
 		virtual void destroy(bool full = true) = 0;
@@ -1696,8 +1693,7 @@ public:
 		: swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~abstract_swapchain_impl()
-		{}
+		~abstract_swapchain_impl() override = default;
 
 		u32 get_swap_image_count() const override
 		{
@@ -1852,7 +1848,7 @@ public:
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~swapchain_X11(){}
+		~swapchain_X11() override = default;
 
 		bool init() override
 		{
@@ -1965,7 +1961,7 @@ public:
 
 		VkImage& get_image(u32 index) override
 		{
-			return (VkImage&)(*swapchain_images[index].second.get());
+			return (VkImage&)(*swapchain_images[index].second);
 		}
 
 		VkImageLayout get_optimal_present_layout() override
@@ -2045,8 +2041,7 @@ public:
 			}
 		}
 
-		~swapchain_WSI()
-		{}
+		~swapchain_WSI() override = default;
 
 		void create(display_handle_t&) override
 		{}
@@ -2190,7 +2185,7 @@ public:
 
 			if (old_swapchain)
 			{
-				if (swapchain_images.size())
+				if (!swapchain_images.empty())
 				{
 					for (auto &img : swapchain_images)
 						img.discard(dev);
@@ -2270,13 +2265,13 @@ public:
 
 		~context()
 		{
-			if (m_instance || m_vk_instances.size())
+			if (m_instance || !m_vk_instances.empty())
 				close();
 		}
 
 		void close()
 		{
-			if (!m_vk_instances.size()) return;
+			if (m_vk_instances.empty()) return;
 
 			if (m_debugger)
 			{
@@ -2618,8 +2613,8 @@ public:
 		u32 m_current_pool_index = 0;
 
 	public:
-		descriptor_pool() {}
-		~descriptor_pool() {}
+		descriptor_pool() = default;
+		~descriptor_pool() = default;
 
 		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 		{
@@ -2833,8 +2828,7 @@ public:
 			}
 		}
 
-		~graphics_pipeline_state()
-		{}
+		~graphics_pipeline_state() = default;
 
 		graphics_pipeline_state& operator = (const graphics_pipeline_state& other)
 		{
@@ -3028,11 +3022,8 @@ public:
 			std::vector<u32> m_compiled;
 
 		public:
-			shader()
-			{}
-
-			~shader()
-			{}
+			shader() = default;
+			~shader() = default;
 
 			void create(::glsl::program_domain domain, const std::string& source)
 			{
@@ -3156,13 +3147,13 @@ public:
 			{
 				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", (u32)usage);
 
-				shadow.reset(new buffer(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+				shadow = std::make_unique<buffer>(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0);
 				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 				memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 				memory_index = memory_map.device_local;
 			}
 
-			heap.reset(new buffer(*device, size, memory_index, memory_flags, usage, 0));
+			heap = std::make_unique<buffer>(*device, size, memory_index, memory_flags, usage, 0);
 		}
 
 		void destroy()

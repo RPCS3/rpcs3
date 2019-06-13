@@ -37,15 +37,15 @@ std::string VertexProgramDecompiler::GetScaMask()
 	return GetMask(true);
 }
 
-std::string VertexProgramDecompiler::GetDST(bool isSca)
+std::string VertexProgramDecompiler::GetDST(bool is_sca)
 {
 	std::string ret;
-	const std::string mask = GetMask(isSca);
+	const std::string mask = GetMask(is_sca);
 
 	// ARL writes to special integer registers
-	const bool is_address_reg = !isSca && (d1.vec_opcode == RSX_VEC_OPCODE_ARL);
-	const auto tmp_index = isSca ? d3.sca_dst_tmp : d0.dst_tmp;
-	const bool is_result = isSca ? (tmp_index == 0x3f) : d0.vec_result;
+	const bool is_address_reg = !is_sca && (d1.vec_opcode == RSX_VEC_OPCODE_ARL);
+	const auto tmp_index = is_sca ? d3.sca_dst_tmp : d0.dst_tmp;
+	const bool is_result = is_sca ? (tmp_index == 0x3f) : d0.vec_result;
 
 	if (is_result)
 	{
@@ -76,7 +76,7 @@ std::string VertexProgramDecompiler::GetDST(bool isSca)
 		if (!ret.empty())
 		{
 			// Double assignment. Only possible for vector ops
-			verify(HERE), !isSca;
+			verify(HERE), !is_sca;
 			ret += " = ";
 		}
 
@@ -373,9 +373,9 @@ std::string VertexProgramDecompiler::BuildCode()
 			lvl++;
 		}
 
-		for (uint j = 0; j < m_instructions[i].body.size(); ++j)
+		for (const auto& instruction_body : m_instructions[i].body)
 		{
-			main_body.append(lvl, '\t') += m_instructions[i].body[j] + "\n";
+			main_body.append(lvl, '\t') += instruction_body + "\n";
 		}
 
 		lvl += m_instructions[i].open_scopes;
@@ -420,17 +420,17 @@ std::string VertexProgramDecompiler::Decompile()
 	u32 i = 1;
 	u32 last_label_addr = 0;
 
-	for (unsigned i = 0; i < PF_PARAM_COUNT; i++)
+	for (auto& param : m_parr.params)
 	{
-		m_parr.params[i].clear();
+		param.clear();
 	}
 
-	for (int i = 0; i < m_max_instr_count; ++i)
+	for (auto& instruction : m_instructions)
 	{
-		m_instructions[i].reset();
+		instruction.reset();
 	}
 
-	if (m_prog.jump_table.size())
+	if (!m_prog.jump_table.empty())
 	{
 		last_label_addr = *m_prog.jump_table.rbegin();
 	}

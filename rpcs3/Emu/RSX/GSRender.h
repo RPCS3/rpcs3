@@ -10,8 +10,8 @@
 #else
 // Cannot include Xlib.h before Qt5
 // and we don't need all of Xlib anyway
-typedef struct _XDisplay Display;
-typedef unsigned long Window;
+using Display = struct _XDisplay;
+using Window = unsigned long;
 #endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
@@ -68,7 +68,7 @@ using draw_context_t = void*;
 	public:
 		GSFrameBase() = default;
 		GSFrameBase(const GSFrameBase&) = delete;
-		virtual ~GSFrameBase() {}
+		virtual ~GSFrameBase() = default;
 
 		virtual void close() = 0;
 		virtual bool shown() = 0;
@@ -94,7 +94,7 @@ protected:
 
 public:
 	GSRender();
-	virtual ~GSRender();
+	~GSRender() override;
 
 	void on_init_rsx() override;
 	void on_init_thread() override;

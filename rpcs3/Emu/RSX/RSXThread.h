@@ -394,11 +394,11 @@ namespace rsx
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
 
-			ZCULL_control() {}
-			~ZCULL_control() {}
+			ZCULL_control() = default;
+			~ZCULL_control() = default;
 
-			void set_enabled(class ::rsx::thread* ptimer, bool enabled);
-			void set_active(class ::rsx::thread* ptimer, bool active);
+			void set_enabled(class ::rsx::thread* ptimer, bool state);
+			void set_active(class ::rsx::thread* ptimer, bool state);
 
 			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
 
@@ -566,7 +566,7 @@ namespace rsx
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
-		void get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info);
+		void get_current_fragment_program_legacy(const std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)>& get_surface_info);
 
 	public:
 		double fps_limit = 59.94;
@@ -645,7 +645,7 @@ namespace rsx
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, const u64 consumed_attrib_mask) const;
+		get_vertex_buffers(const rsx::rsx_state& state, u64 consumed_attrib_mask) const;
 
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
@@ -688,7 +688,7 @@ namespace rsx
 			std::function<bool()> callback;
 			//std::promise<void> promise;
 
-			internal_task_entry(std::function<bool()> callback) : callback(callback)
+			internal_task_entry(std::function<bool()> callback) : callback(std::move(callback))
 			{
 			}
 		};

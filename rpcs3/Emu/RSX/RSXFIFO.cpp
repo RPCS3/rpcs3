@@ -4,12 +4,6 @@
 #include "RSXThread.h"
 #include "Capture/rsx_capture.h"
 
-extern rsx::frame_capture_data frame_capture;
-extern bool user_asked_for_frame_capture;
-extern bool capture_current_frame;
-
-#define ENABLE_OPTIMIZATION_DEBUGGING 0
-
 namespace rsx
 {
 	namespace FIFO
@@ -185,28 +179,6 @@ namespace rsx
 			data.set(cmd & 0xfffc, vm::read32(m_args_ptr));
 		}
 
-		flattening_helper::flattening_helper()
-		{
-			const std::pair<u32, u32> ignorable_ranges[] =
-			{
-				// General
-				{ NV4097_INVALIDATE_VERTEX_FILE, 3 }, // PSLight clears VERTEX_FILE[0-2]
-				{ NV4097_INVALIDATE_VERTEX_CACHE_FILE, 1 },
-				{ NV4097_INVALIDATE_L2, 1 },
-				{ NV4097_INVALIDATE_ZCULL, 1 }
-			};
-
-			std::fill(m_register_properties.begin(), m_register_properties.end(), 0u);
-
-			for (const auto &method : ignorable_ranges)
-			{
-				for (u32 i = 0; i < method.second; ++i)
-				{
-					m_register_properties[method.first + i] |= register_props::always_ignore;
-				}
-			}
-		}
-
 		void flattening_helper::reset(bool _enabled)
 		{
 			enabled = _enabled;
@@ -336,8 +308,7 @@ namespace rsx
 			{
 				if (UNLIKELY(draw_count))
 				{
-					const auto props = m_register_properties[reg];
-					if (UNLIKELY(props & register_props::always_ignore))
+					if (UNLIKELY(m_register_properties[reg] & register_props::always_ignore))
 					{
 						// Always ignore
 						command.reg = FIFO_DISABLED_COMMAND;
@@ -517,7 +488,7 @@ namespace rsx
 				const u32 reg = (command.reg & 0xfffc) >> 2;
 				const u32 value = command.value;
 
-				frame_debug.command_queue.push_back(std::make_pair(reg, value));
+				frame_debug.command_queue.emplace_back(reg, value);
 
 				if (!(reg == NV406E_SET_REFERENCE || reg == NV406E_SEMAPHORE_RELEASE || reg == NV406E_SEMAPHORE_ACQUIRE))
 				{

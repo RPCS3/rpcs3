@@ -24,7 +24,7 @@
 #include <thread>
 #include <unordered_set>
 #include <exception>
-#include <fenv.h>
+#include <cfenv>
 
 class GSRender;
 
@@ -771,7 +771,7 @@ namespace rsx
 
 	gsl::span<const gsl::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
-		if (element_push_buffer.size())
+		if (!element_push_buffer.empty())
 		{
 			//Indices provided via immediate mode
 			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
@@ -823,7 +823,7 @@ namespace rsx
 			if (state.vertex_arrays_info[index].size() > 0)
 			{
 				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
-				result.push_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
+				result.emplace_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
 					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), state.current_draw_clause), index, true});
 				continue;
 			}
@@ -834,18 +834,18 @@ namespace rsx
 				const u8 element_size = info.size * sizeof(u32);
 
 				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
-				result.push_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
+				result.emplace_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
 				continue;
 			}
 
 			if (state.register_vertex_info[index].size > 0)
 			{
 				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
-				result.push_back(vertex_array_register{info.type, info.size, info.data, index});
+				result.emplace_back(vertex_array_register{info.type, info.size, info.data, index});
 				continue;
 			}
 
-			result.push_back(empty_vertex_array{index});
+			result.emplace_back(empty_vertex_array{index});
 		}
 
 		return result;
@@ -1613,7 +1613,7 @@ namespace rsx
 		}
 	}
 
-	void thread::get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info)
+	void thread::get_current_fragment_program_legacy(const std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)>& get_surface_info)
 	{
 		auto &result = current_fragment_program = {};
 
@@ -2172,11 +2172,11 @@ namespace rsx
 			if (zeta_address)
 			{
 				//Find zeta address in bound zculls
-				for (int i = 0; i < rsx::limits::zculls_count; i++)
+				for (const auto& zcull : zculls)
 				{
-					if (zculls[i].binded)
+					if (zcull.binded)
 					{
-						const u32 rsx_address = rsx::get_address(zculls[i].offset, CELL_GCM_LOCATION_LOCAL);
+						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL);
 						if (rsx_address == zeta_address)
 						{
 							zcull_surface_active = true;

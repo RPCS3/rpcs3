@@ -2,22 +2,9 @@
 
 #include <Utilities/types.h>
 #include <Utilities/Atomic.h>
-#include <Utilities/mutex.h>
-#include <Utilities/Thread.h>
 
 #include "rsx_utils.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
-
-#include <vector>
-#include <string>
-#include <memory>
-#include <unordered_map>
-
-#ifndef __unused
-#define __unused(expression) do { (void)(expression); } while(0)
-#endif
-
-struct RsxDmaControl;
 
 namespace rsx
 {
@@ -72,7 +59,33 @@ namespace rsx
 				application_not_compatible
 			};
 
-			std::array<u8, 0x10000 / 4> m_register_properties;
+			// Workaround for MSVC, C2248
+			static constexpr u8 register_props_always_ignore = register_props::always_ignore;
+
+			static constexpr std::array<u8, 0x10000 / 4> m_register_properties = []
+			{
+				constexpr std::array<std::pair<u32, u32>, 4> ignorable_ranges =
+				{{
+					// General
+					{ NV4097_INVALIDATE_VERTEX_FILE, 3 }, // PSLight clears VERTEX_FILE[0-2]
+					{ NV4097_INVALIDATE_VERTEX_CACHE_FILE, 1 },
+					{ NV4097_INVALIDATE_L2, 1 },
+					{ NV4097_INVALIDATE_ZCULL, 1 }
+				}};
+
+				std::array<u8, 0x10000 / 4> register_properties{};
+
+				for (const auto &method : ignorable_ranges)
+				{
+					for (u32 i = 0; i < method.second; ++i)
+					{
+						register_properties[method.first + i] |= register_props_always_ignore;
+					}
+				}
+
+				return register_properties;
+			}();
+
 			u32 deferred_primitive = 0;
 			u32 draw_count = 0;
 			u32 begin_end_ctr = 0;
@@ -84,8 +97,8 @@ namespace rsx
 			void reset(bool _enabled);
 
 		public:
-			flattening_helper();
-			~flattening_helper() {}
+			flattening_helper() = default;
+			~flattening_helper() = default;
 
 			u32 get_primitive() const { return deferred_primitive; }
 			bool is_enabled() const { return enabled; }
@@ -111,7 +124,7 @@ namespace rsx
 
 		public:
 			FIFO_control(rsx::thread* pctrl);
-			~FIFO_control() {}
+			~FIFO_control() = default;
 
 			u32 get_pos() { return m_internal_get; }
 			void sync_get() { m_ctrl->get.release(m_internal_get); }
