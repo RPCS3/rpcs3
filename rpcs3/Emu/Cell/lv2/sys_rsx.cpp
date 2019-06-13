@@ -186,7 +186,7 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
 	{
-		if (!vm::check_addr(addr, 1, vm::page_allocated | vm::page_1m_size))
+		if (!vm::check_addr(addr, 1, vm::page_allocated | (addr < 0x20000000 ? 0 : vm::page_1m_size)))
 		{
 			return CELL_EINVAL;
 		}
