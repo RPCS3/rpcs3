@@ -199,7 +199,7 @@ namespace vk
 				}
 
 				fs_src +=
-				"layout(pixel_center_integer) in vec4 gl_FragCoord;\n"
+				"//layout(pixel_center_integer) in vec4 gl_FragCoord;\n"
 				"\n"
 				"void main()\n"
 				"{\n";
