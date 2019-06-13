@@ -552,8 +552,11 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const EvdevDev
 		m_is_button_or_trigger = true;
 
 		// get the button value and return its code
-		if (code < BTN_MISC)
+		if (button_list.find(code) == button_list.end())
+		{
+			LOG_ERROR(GENERAL, "Evdev button %s (%d) is unknown. Please add it to the button list.", libevdev_event_code_get_name(EV_KEY, code), code);
 			return -1;
+		}
 
 		value = val > 0 ? 255 : 0;
 		return code;
