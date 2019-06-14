@@ -361,11 +361,11 @@ namespace vk
 
 		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
 		{
-			vk::framebuffer *fbo = get_framebuffer(target, render_pass);
+			auto fbo = static_cast<vk::framebuffer_holder*>(get_framebuffer(target, render_pass));
+			fbo->add_ref();
 
 			run(cmd, w, h, fbo, src, render_pass);
-
-			static_cast<vk::framebuffer_holder*>(fbo)->release();
+			fbo->release();
 		}
 
 		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, vk::image_view* src, VkRenderPass render_pass)
