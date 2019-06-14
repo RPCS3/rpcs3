@@ -213,11 +213,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	std::array<GLuint, 4> color_targets;
 	GLuint depth_stencil_target;
 
-	const auto color_offsets = get_offsets();
-	const auto color_locations = get_locations();
-
 	const u8 color_bpp = get_format_block_size_in_bytes(layout.color_format);
-	const u8 depth_bpp = (layout.depth_format == rsx::surface_depth_format::z16 ? 2 : 4);
 	const auto samples = get_format_sample_count(layout.aa_mode);
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
@@ -253,9 +249,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 	{
-		auto bpp = m_depth_surface_info.pitch / m_depth_surface_info.width;
-		auto old_format = (bpp == 2) ? gl::texture::format::depth : gl::texture::format::depth_stencil;
-
 		const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
 		m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
 		m_gl_texture_cache.flush_if_cache_miss_likely(cmd, surface_range);

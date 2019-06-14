@@ -2770,7 +2770,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		(*m_device), *m_current_command_buffer);
 
 	// Reset framebuffer information
-	VkFormat old_format = VK_FORMAT_UNDEFINED;
 	const auto color_bpp = get_format_block_size_in_bytes(layout.color_format);
 	const auto samples = get_format_sample_count(layout.aa_mode);
 
@@ -2779,9 +2778,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		// Flush old address if we keep missing it
 		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
-			if (old_format == VK_FORMAT_UNDEFINED)
-				old_format = vk::get_compatible_surface_format(m_surface_info[i].color_format).first;
-
 			const utils::address_range rsx_range = m_surface_info[i].get_memory_range();
 			m_texture_cache.set_memory_read_flags(rsx_range, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(*m_current_command_buffer, rsx_range);
@@ -2799,7 +2795,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 		{
-			auto old_format = vk::get_compatible_depth_surface_format(m_device->get_formats_support(), m_depth_surface_info.depth_format);
 			const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
 			m_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(*m_current_command_buffer, surface_range);
