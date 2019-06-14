@@ -9,13 +9,9 @@ namespace vk
 	{
 		using namespace ::glsl;
 
-		program::program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs)
-			: m_device(dev), pipeline(p)
+		void program::create_impl()
 		{
 			linked = false;
-
-			load_uniforms(program_domain::glsl_vertex_program, vertex_input);
-			load_uniforms(program_domain::glsl_vertex_program, fragment_inputs);
 			attribute_location_mask = 0;
 			vertex_attributes_mask = 0;
 
@@ -24,12 +20,26 @@ namespace vk
 			vs_texture_bindings.fill(~0u);
 		}
 
+		program::program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs)
+			: m_device(dev), pipeline(p)
+		{
+			create_impl();
+			load_uniforms(vertex_input);
+			load_uniforms(fragment_inputs);
+		}
+
+		program::program(VkDevice dev, VkPipeline p)
+			: m_device(dev), pipeline(p)
+		{
+			create_impl();
+		}
+
 		program::~program()
 		{
 			vkDestroyPipeline(m_device, pipeline, nullptr);
 		}
 
-		program& program::load_uniforms(program_domain domain, const std::vector<program_input>& inputs)
+		program& program::load_uniforms(const std::vector<program_input>& inputs)
 		{
 			verify("Cannot change uniforms in already linked program!" HERE), !linked;
 
@@ -92,7 +102,7 @@ namespace vk
 			return false;
 		}
 
-		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string& uniform_name, VkDescriptorSet &descriptor_set)
+		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string& uniform_name, VkDescriptorType type, VkDescriptorSet &descriptor_set)
 		{
 			for (const auto &uniform : uniforms[program_input_type::input_type_texture])
 			{
@@ -106,7 +116,7 @@ namespace vk
 						uniform.location,                          // dstBinding
 						0,                                         // dstArrayElement
 						1,                                         // descriptorCount
-						VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // descriptorType
+						type,                                      // descriptorType
 						&image_descriptor,                         // pImageInfo
 						nullptr,                                   // pBufferInfo
 						nullptr                                    // pTexelBufferView

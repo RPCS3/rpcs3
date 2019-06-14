@@ -1519,5 +1519,8 @@
     <ClInclude Include="Emu\Audio\Null\NullAudioBackend.h">
       <Filter>Emu\Audio\Null</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\surface_utils.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

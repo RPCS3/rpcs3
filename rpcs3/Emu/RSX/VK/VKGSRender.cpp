@@ -89,10 +89,10 @@ namespace vk
 			return std::make_pair(VK_FORMAT_R32G32B32A32_SFLOAT, vk::default_component_map());
 
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_rgb);
+			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, o_rgb);
 
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, z_rgb);
+			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, z_rgb);
 
 		case rsx::surface_color_format::b8:
 		{
@@ -539,7 +539,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.7");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.8");
 
 	open_command_buffer();
 
@@ -1226,6 +1226,7 @@ void VKGSRender::end()
 		if (!preinitialized) ds->pop_layout(*m_current_command_buffer);
 
 		// TODO: Stencil transfer
+		vk::as_rtt(ds->old_contents.source)->read_barrier(*m_current_command_buffer);
 		ds->old_contents.init_transfer(ds);
 		m_depth_converter->run(*m_current_command_buffer,
 			ds->old_contents.src_rect(),
@@ -1566,7 +1567,11 @@ void VKGSRender::end()
 			if (!image_ptr)
 			{
 				LOG_ERROR(RSX, "Texture upload failed to vtexture index %d. Binding null sampler.", i);
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, rsx::constants::vertex_texture_names[i], m_current_frame->descriptor_set);
+				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+					i,
+					::glsl::program_domain::glsl_vertex_program,
+					m_current_frame->descriptor_set);
+
 				continue;
 			}
 
@@ -1623,16 +1628,6 @@ void VKGSRender::end()
 		m_current_command_buffer->flags |= vk::command_buffer::cb_has_occlusion_task;
 	}
 
-	// Final heap check...
-	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
-
-	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
-	// Only textures are synchronized tightly with the GPU and they have been read back above
-	vk::enter_uninterruptible();
-
-	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-	update_draw_state();
-
 	// Apply write memory barriers
 	if (true)//g_cfg.video.strict_rendering_mode)
 	{
@@ -1681,6 +1676,16 @@ void VKGSRender::end()
 				buffers_to_clear.data(), 1, &rect);
 		}
 	}
+
+	// Final heap check...
+	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
+
+	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
+	// Only textures are synchronized tightly with the GPU and they have been read back above
+	vk::enter_uninterruptible();
+
+	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+	update_draw_state();
 
 	u32 sub_index = 0;
 	rsx::method_registers.current_draw_clause.begin();
@@ -1878,7 +1883,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	//clip region
 	std::tie(scissor_x, scissor_y, scissor_w, scissor_h) = rsx::clip_region<u16>(fb_width, fb_height, scissor_x, scissor_y, scissor_w, scissor_h, true);
-	VkClearRect region = { { { scissor_x, scissor_y },{ scissor_w, scissor_h } }, 0, 1 };
+	VkClearRect region = { { { scissor_x, scissor_y }, { scissor_w, scissor_h } }, 0, 1 };
 
 	const bool require_mem_load = (scissor_w * scissor_h) < (fb_width * fb_height);
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
@@ -1906,6 +1911,12 @@ void VKGSRender::clear_surface(u32 mask)
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
 
 				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+
+				if (ds->samples() > 1)
+				{
+					if (!require_mem_load) ds->stencil_init_flags &= 0xFF;
+					ds->stencil_init_flags |= clear_stencil;
+				}
 			}
 
 			if ((mask & 0x3) != 0x3 && !require_mem_load && ds->state_flags & rsx::surface_state_flags::erase_bkgnd)
@@ -2011,10 +2022,6 @@ void VKGSRender::clear_surface(u32 mask)
 						else
 							fmt::throw_exception("Unreachable" HERE);
 					}
-
-					//Fush unconditionally - parameters might not persist
-					//TODO: Better parameter management for overlay passes
-					flush_command_queue();
 				}
 
 				for (auto &rtt : m_rtts.m_bound_render_targets)
@@ -2238,7 +2245,7 @@ void VKGSRender::frame_context_cleanup(frame_context_t *ctx, bool free_resources
 			m_overlay_manager->dispose(uids_to_dispose);
 		}
 
-		vk::reset_compute_tasks();
+		vk::reset_global_resources();
 
 		m_attachment_clear_pass->free_resources();
 		m_depth_converter->free_resources();
@@ -2470,10 +2477,35 @@ bool VKGSRender::load_program()
 				vk::get_compare_func(rsx::method_registers.back_stencil_func()),
 				0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 		}
+
+		if (auto ds = m_rtts.m_bound_depth_stencil.second;
+			ds && ds->samples() > 1 && !(ds->stencil_init_flags & 0xFF00))
+		{
+			if (properties.state.ds.front.failOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.depthFailOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.passOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.failOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.depthFailOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.front.passOp != VK_STENCIL_OP_KEEP)
+			{
+				// Toggle bit 9 to signal require full bit-wise transfer
+				ds->stencil_init_flags |= (1 << 8);
+			}
+		}
+	}
+
+	const auto rasterization_samples = u8((m_current_renderpass_key >> 16) & 0xF);
+	if (rasterization_samples > 1)
+	{
+		properties.state.set_multisample_state(
+			rasterization_samples,
+			rsx::method_registers.msaa_sample_mask(),
+			rsx::method_registers.msaa_enabled(),
+			rsx::method_registers.msaa_alpha_to_coverage_enabled(),
+			rsx::method_registers.msaa_alpha_to_one_enabled());
 	}
 
 	properties.renderpass_key = m_current_renderpass_key;
-	properties.num_targets = (u32)m_draw_buffers.size();
 
 	vk::enter_uninterruptible();
 
@@ -2725,22 +2757,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
-
-		const auto aa_mode = rsx::method_registers.surface_antialias();
-
-		for (u32 index = 0; index < 4; index++)
-		{
-			if (auto surface = std::get<1>(m_rtts.m_bound_render_targets[index]))
-			{
-				surface->write_aa_mode = layout.aa_mode;
-			}
-		}
-
-		if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
-		{
-			ds->write_aa_mode = layout.aa_mode;
-		}
-
+		set_scissor();
 		return;
 	}
 
@@ -2755,6 +2772,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	// Reset framebuffer information
 	VkFormat old_format = VK_FORMAT_UNDEFINED;
 	const auto color_bpp = get_format_block_size_in_bytes(layout.color_format);
+	const auto samples = get_format_sample_count(layout.aa_mode);
 
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -2774,6 +2792,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_surface_info[i].height = layout.height;
 		m_surface_info[i].color_format = layout.color_format;
 		m_surface_info[i].bpp = color_bpp;
+		m_surface_info[i].samples = samples;
 	}
 
 	//Process depth surface as well
@@ -2791,6 +2810,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.height = layout.height;
 		m_depth_surface_info.depth_format = layout.depth_format;
 		m_depth_surface_info.bpp = (layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
+		m_depth_surface_info.samples = samples;
 	}
 
 	//Bind created rtts as current fbo...
@@ -2808,7 +2828,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			m_surface_info[index].pitch = layout.actual_color_pitch[index];
 			verify("Pitch mismatch!" HERE), surface->rsx_pitch == layout.actual_color_pitch[index];
 
-			surface->write_aa_mode = layout.aa_mode;
 			m_texture_cache.notify_surface_changed(m_surface_info[index].get_memory_range(layout.aa_factors));
 			m_draw_buffers.push_back(index);
 		}
@@ -2823,7 +2842,6 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.pitch = layout.actual_zeta_pitch;
 		verify("Pitch mismatch!" HERE), ds->rsx_pitch == layout.actual_zeta_pitch;
 
-		ds->write_aa_mode = layout.aa_mode;
 		m_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
 	}
 
@@ -2895,7 +2913,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 				m_texture_cache.lock_memory_region(
 					*m_current_command_buffer, surface, surface->get_memory_range(), false,
-					surface->get_surface_width(), surface->get_surface_height(), surface->get_rsx_pitch(),
+					surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
 					gcm_format, swap_bytes);
 			}
 		}
@@ -3156,7 +3174,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 	{
 		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
-		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
+		if (auto render_target_texture = m_rtts.get_color_surface_at(absolute_address))
 		{
 			if (render_target_texture->last_use_tag == m_rtts.write_tag)
 			{
@@ -3184,7 +3202,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 					// TODO: Take AA scaling into account
 					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
 						display_buffers[buffer].width, display_buffers[buffer].height, avconfig? avconfig->resolution_x : 0, avconfig? avconfig->resolution_y : 0,
-						render_target_texture->get_surface_width(), render_target_texture->get_surface_height());
+						render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
 
 					buffer_width = render_target_texture->width();
 					buffer_height = render_target_texture->height();

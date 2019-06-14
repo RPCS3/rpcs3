@@ -25,35 +25,49 @@ namespace vk
 		u32 optimal_group_size = 1;
 		u32 optimal_kernel_size = 1;
 
+		virtual std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout()
+		{
+			std::vector<std::pair<VkDescriptorType, u8>> result;
+			result.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 });
+
+			if (uniform_inputs)
+			{
+				result.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 });
+			}
+
+			return result;
+		}
+
 		void init_descriptors()
 		{
-			VkDescriptorPoolSize descriptor_pool_sizes[2] =
+			std::vector<VkDescriptorPoolSize> descriptor_pool_sizes;
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+			const auto layout = get_descriptor_layout();
+			for (const auto &e : layout)
 			{
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_MAX_COMPUTE_TASKS },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_MAX_COMPUTE_TASKS }
-			};
+				descriptor_pool_sizes.push_back({e.first, u32(VK_MAX_COMPUTE_TASKS * e.second)});
+
+				for (unsigned n = 0; n < e.second; ++n)
+				{
+					bindings.push_back
+					({
+						uint32_t(bindings.size()),
+						e.first,
+						1,
+						VK_SHADER_STAGE_COMPUTE_BIT,
+						nullptr
+					});
+				}
+			}
 
 			// Reserve descriptor pools
-			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes, 2, VK_MAX_COMPUTE_TASKS, 2);
-
-			std::vector<VkDescriptorSetLayoutBinding> bindings(2);
-
-			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-			bindings[0].descriptorCount = 1;
-			bindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-			bindings[0].binding = 0;
-			bindings[0].pImmutableSamplers = nullptr;
-
-			bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			bindings[1].descriptorCount = 1;
-			bindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-			bindings[1].binding = 1;
-			bindings[1].pImmutableSamplers = nullptr;
+			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes.data(), (u32)descriptor_pool_sizes.size(), VK_MAX_COMPUTE_TASKS, 2);
 
 			VkDescriptorSetLayoutCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			infos.pBindings = bindings.data();
-			infos.bindingCount = uniform_inputs? 2u : 1u;
+			infos.bindingCount = (u32)bindings.size();
 
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*get_current_renderer(), &infos, nullptr, &m_descriptor_layout));
 
@@ -120,6 +134,9 @@ namespace vk
 		virtual void bind_resources()
 		{}
 
+		virtual void declare_inputs()
+		{}
+
 		void load_program(VkCommandBuffer cmd)
 		{
 			if (!m_program)
@@ -143,8 +160,8 @@ namespace vk
 				VkPipeline pipeline;
 				vkCreateComputePipelines(*get_current_renderer(), nullptr, 1, &info, nullptr, &pipeline);
 
-				std::vector<vk::glsl::program_input> inputs;
-				m_program = std::make_unique<vk::glsl::program>(*get_current_renderer(), pipeline, inputs, inputs);
+				m_program = std::make_unique<vk::glsl::program>(*get_current_renderer(), pipeline);
+				declare_inputs();
 			}
 
 			verify(HERE), m_used_descriptors < VK_MAX_COMPUTE_TASKS;
@@ -164,10 +181,15 @@ namespace vk
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 		}
 
-		virtual void run(VkCommandBuffer cmd, u32 num_invocations)
+		virtual void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y)
 		{
 			load_program(cmd);
-			vkCmdDispatch(cmd, num_invocations, 1, 1);
+			vkCmdDispatch(cmd, invocations_x, invocations_y, 1);
+		}
+
+		virtual void run(VkCommandBuffer cmd, u32 num_invocations)
+		{
+			run(cmd, num_invocations, 1);
 		}
 	};
 

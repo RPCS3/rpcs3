@@ -172,6 +172,21 @@ void fmt_class_string<video_aspect>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<msaa_level>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](msaa_level value)
+	{
+		switch (value)
+		{
+		case msaa_level::none: return "Disabled";
+		case msaa_level::_auto: return "Auto";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<keyboard_handler>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](keyboard_handler value)

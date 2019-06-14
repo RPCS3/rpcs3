@@ -659,8 +659,8 @@ namespace rsx
 		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
 
 		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-			rsx::method_registers.msaa_enabled() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample)
+			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
+			g_cfg.video.antialiasing_level == msaa_level::none)
 		{
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
@@ -1033,6 +1033,7 @@ namespace rsx
 		const auto aa_mode = rsx::method_registers.surface_antialias();
 		const u32 aa_factor_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
 		const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
+		const u8 sample_count = get_format_sample_count(aa_mode);
 
 		const auto depth_texel_size = (layout.depth_format == rsx::surface_depth_format::z16 ? 2 : 4) * aa_factor_u;
 		const auto color_texel_size = get_format_block_size_in_bytes(layout.color_format) * aa_factor_u;
@@ -1213,7 +1214,8 @@ namespace rsx
 			if (layout.color_addresses[i])
 			{
 				if (m_surface_info[i].width != layout.width ||
-					m_surface_info[i].height != layout.height)
+					m_surface_info[i].height != layout.height ||
+					m_surface_info[i].samples != sample_count)
 				{
 					really_changed = true;
 					break;
@@ -1223,7 +1225,8 @@ namespace rsx
 
 		if (!really_changed)
 		{
-			if (layout.zeta_address == m_depth_surface_info.address)
+			if (layout.zeta_address == m_depth_surface_info.address &&
+				sample_count == m_depth_surface_info.samples)
 			{
 				// Same target is reused
 				return layout;

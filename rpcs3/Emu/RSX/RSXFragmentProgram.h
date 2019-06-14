@@ -10,6 +10,16 @@ enum register_type
 	RSX_FP_REGISTER_TYPE_UNKNOWN = 3,
 };
 
+enum register_precision
+{
+	RSX_FP_PRECISION_REAL = 0,
+	RSX_FP_PRECISION_HALF = 1,
+	RSX_FP_PRECISION_FIXED12 = 2,
+	RSX_FP_PRECISION_FIXED9 = 3,
+	RSX_FP_PRECISION_SATURATE = 4,
+	RSX_FP_PRECISION_UNKNOWN = 5 // Unknown what this actually does; seems to do nothing on hwtests but then why would their compiler emit it?
+};
+
 enum fp_opcode
 {
 	RSX_FP_OPCODE_NOP        = 0x00, // No-Operation

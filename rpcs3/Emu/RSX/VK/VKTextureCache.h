@@ -189,78 +189,57 @@ namespace vk
 				dma_buffer = std::make_unique<vk::buffer>(*m_device, align(get_section_size(), 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
 			}
 
-			if (context == rsx::texture_upload_context::framebuffer_storage)
-			{
-				auto as_rtt = static_cast<vk::render_target*>(vram_texture);
-				if (as_rtt->dirty()) as_rtt->read_barrier(cmd);
-			}
-
-			vk::image *target = vram_texture;
-			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * vram_texture->width();
-
-			VkImageAspectFlags aspect_flag = vk::get_aspect_flags(vram_texture->info.format);
-			VkImageSubresourceRange subresource_range = { aspect_flag, 0, 1, 0, 1 };
+			vk::image *locked_resource = vram_texture;
 			u32 transfer_width = width;
 			u32 transfer_height = height;
 
-			VkImageLayout old_layout = vram_texture->current_layout;
-			change_image_layout(cmd, vram_texture, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
-
-			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
-				(real_pitch != rsx_pitch))
+			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
-				if (context == rsx::texture_upload_context::framebuffer_storage)
-				{
-					switch (static_cast<vk::render_target*>(vram_texture)->read_aa_mode)
-					{
-					case rsx::surface_antialiasing::center_1_sample:
-						break;
-					case rsx::surface_antialiasing::diagonal_centered_2_samples:
-						transfer_width *= 2;
-						break;
-					default:
-						transfer_width *= 2;
-						transfer_height *= 2;
-						break;
-					}
-				}
-
-				if (transfer_width != vram_texture->width() || transfer_height != vram_texture->height())
-				{
-					// TODO: Synchronize access to typeles textures
-					target = vk::get_typeless_helper(vram_texture->info.format, transfer_width, transfer_height);
-					change_image_layout(cmd, target, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-
-					// Allow bilinear filtering on color textures where compatibility is likely
-					const auto filter = (aspect_flag == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
-
-					vk::copy_scaled_image(cmd, vram_texture->value, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, target->current_layout,
-						{ 0, 0, (s32)vram_texture->width(), (s32)vram_texture->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
-						1, aspect_flag, true, filter, vram_texture->info.format, target->info.format);
-				}
+				auto surface = vk::as_rtt(vram_texture);
+				surface->read_barrier(cmd);
+				locked_resource = surface->get_surface(rsx::surface_access::read);
+				transfer_width *= surface->samples_x;
+				transfer_height *= surface->samples_y;
 			}
 
-			if (target->current_layout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+			verify(HERE), locked_resource->samples() == 1;
+
+			vk::image* target = locked_resource;
+			locked_resource->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			real_pitch = vk::get_format_texel_width(locked_resource->info.format) * locked_resource->width();
+
+			if (transfer_width != locked_resource->width() || transfer_height != locked_resource->height())
 			{
-				// Using a scaled intermediary
-				verify(HERE), target != vram_texture;
-				change_image_layout(cmd, target, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, subresource_range);
+				// TODO: Synchronize access to typeles textures
+				target = vk::get_typeless_helper(vram_texture->info.format, transfer_width, transfer_height);
+				target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+				// Allow bilinear filtering on color textures where compatibility is likely
+				const auto filter = (target->aspect() == VK_IMAGE_ASPECT_COLOR_BIT) ? VK_FILTER_LINEAR : VK_FILTER_NEAREST;
+
+				vk::copy_scaled_image(cmd, locked_resource->value, target->value, locked_resource->current_layout, target->current_layout,
+					{ 0, 0, (s32)locked_resource->width(), (s32)locked_resource->height() }, { 0, 0, (s32)transfer_width, (s32)transfer_height },
+					1, target->aspect(), true, filter, vram_texture->format(), target->format());
+
+				target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			}
+
+			verify(HERE), target->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
 			// Handle any format conversions using compute tasks
 			vk::cs_shuffle_base *shuffle_kernel = nullptr;
 
-			if (vram_texture->info.format == VK_FORMAT_D24_UNORM_S8_UINT)
+			if (vram_texture->format() == VK_FORMAT_D24_UNORM_S8_UINT)
 			{
 				shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_se_d24x8>();
 			}
-			else if (vram_texture->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+			else if (vram_texture->format() == VK_FORMAT_D32_SFLOAT_S8_UINT)
 			{
 				shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_se_f32_d24x8>();
 			}
 			else if (pack_unpack_swap_bytes)
 			{
-				const auto texel_layout = vk::get_format_element_size(vram_texture->info.format);
+				const auto texel_layout = vk::get_format_element_size(vram_texture->format());
 				const auto elem_size = texel_layout.first;
 
 				if (elem_size == 2)
@@ -278,12 +257,12 @@ namespace vk
 
 			// TODO: Read back stencil values (is this really necessary?)
 			VkBufferImageCopy region = {};
-			region.imageSubresource = {aspect_flag & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
+			region.imageSubresource = {vram_texture->aspect() & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
 			region.imageExtent = {transfer_width, transfer_height, 1};
 			vkCmdCopyImageToBuffer(cmd, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mem_target->value, 1, &region);
 
-			change_image_layout(cmd, vram_texture, old_layout, subresource_range);
-			real_pitch = vk::get_format_texel_width(vram_texture->info.format) * transfer_width;
+			locked_resource->pop_layout(cmd);
+			real_pitch = vk::get_format_texel_width(vram_texture->format()) * transfer_width;
 
 			if (shuffle_kernel)
 			{
@@ -512,15 +491,25 @@ namespace vk
 				section.src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				auto src_image = section.src;
+				auto src_x = section.src_x;
+				auto src_y = section.src_y;
+				auto src_w = section.src_w;
+				auto src_h = section.src_h;
+
+				if (auto surface = dynamic_cast<vk::render_target*>(section.src))
+				{
+					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
+				}
+
 				if (UNLIKELY(typeless))
 				{
-					src_image = vk::get_typeless_helper(dst->info.format, section.src_x + section.src_w, section.src_y + section.src_h);
+					src_image = vk::get_typeless_helper(dst->info.format, src_x + src_w, src_y + src_h);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 					const auto src_bpp = vk::get_format_texel_width(section.src->format());
-					const u16 convert_w = u16(section.src_w * dst_bpp) / src_bpp;
-					const areai src_rect = coordi{{ section.src_x, section.src_y }, { convert_w, section.src_h }};
-					const areai dst_rect = coordi{{ section.src_x, section.src_y }, { section.src_w, section.src_h }};
+					const u16 convert_w = u16(src_w * dst_bpp) / src_bpp;
+					const areai src_rect = coordi{{ src_x, src_y }, { convert_w, src_h }};
+					const areai dst_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
 					vk::copy_image_typeless(cmd, section.src, src_image, src_rect, dst_rect, 1, section.src->aspect(), dst_aspect);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 				}
@@ -530,14 +519,14 @@ namespace vk
 				// Final aspect mask of the 'final' transfer source
 				const auto new_src_aspect = src_image->aspect();
 
-				if (LIKELY(section.src_w == section.dst_w && section.src_h == section.dst_h && section.xform == surface_transform::identity))
+				if (LIKELY(src_w == section.dst_w && src_h == section.dst_h && section.xform == surface_transform::identity))
 				{
 					VkImageCopy copy_rgn;
-					copy_rgn.srcOffset = { section.src_x, section.src_y, 0 };
+					copy_rgn.srcOffset = { src_x, src_y, 0 };
 					copy_rgn.dstOffset = { section.dst_x, section.dst_y, 0 };
 					copy_rgn.dstSubresource = { dst_aspect, 0, 0, 1 };
 					copy_rgn.srcSubresource = { new_src_aspect, 0, 0, 1 };
-					copy_rgn.extent = { section.src_w, section.src_h, 1 };
+					copy_rgn.extent = { src_w, src_h, 1 };
 
 					if (dst->info.imageType == VK_IMAGE_TYPE_3D)
 					{
@@ -572,7 +561,7 @@ namespace vk
 					if (section.xform == surface_transform::identity)
 					{
 						vk::copy_scaled_image(cmd, src_image->value, _dst->value, section.src->current_layout, _dst->current_layout,
-							coordi{ { section.src_x, section.src_y }, { section.src_w, section.src_h } },
+							coordi{ { src_x, src_y }, { src_w, src_h } },
 							coordi{ { section.dst_x, section.dst_y }, { section.dst_w, section.dst_h } },
 							1, src_image->aspect(), src_image->info.format == _dst->info.format,
 							VK_FILTER_NEAREST, src_image->info.format, _dst->info.format);
@@ -580,14 +569,14 @@ namespace vk
 					else if (section.xform == surface_transform::argb_to_bgra)
 					{
 						VkBufferImageCopy copy{};
-						copy.imageExtent = { section.src_w, section.src_h, 1 };
-						copy.imageOffset = { section.src_x, section.src_y, 0 };
+						copy.imageExtent = { src_w, src_h, 1 };
+						copy.imageOffset = { src_x, src_y, 0 };
 						copy.imageSubresource = { src_image->aspect(), 0, 0, 1 };
 
 						auto scratch_buf = vk::get_scratch_buffer();
 						vkCmdCopyImageToBuffer(cmd, src_image->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, scratch_buf->value, 1, &copy);
 
-						const auto mem_length = section.src_w * section.src_h * dst_bpp;
+						const auto mem_length = src_w * src_h * dst_bpp;
 						vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 							VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
@@ -606,16 +595,16 @@ namespace vk
 						dst_x = 0;
 						dst_y = 0;
 
-						if (section.src_w != section.dst_w || section.src_h != section.dst_h)
+						if (src_w != section.dst_w || src_h != section.dst_h)
 						{
 							// Optionally scale if needed
 							if (UNLIKELY(tmp == _dst))
 							{
-								dst_y = section.src_h;
+								dst_y = src_h;
 							}
 
 							vk::copy_scaled_image(cmd, tmp->value, _dst->value, tmp->current_layout, _dst->current_layout,
-								areai{ 0, 0, section.src_w, (s32)section.src_h },
+								areai{ 0, 0, src_w, (s32)src_h },
 								coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
 								1, new_src_aspect, tmp->info.format == _dst->info.format,
 								VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);

@@ -11,36 +11,38 @@ namespace vk
 	struct pipeline_props
 	{
 		graphics_pipeline_state state;
-		int num_targets;
 		u64 renderpass_key;
 
 		bool operator==(const pipeline_props& other) const
 		{
-			if (memcmp(&state.att_state[0], &other.state.att_state[0], sizeof(VkPipelineColorBlendAttachmentState)))
-				return false;
-
 			if (renderpass_key != other.renderpass_key)
-				return false;
-
-			if (memcmp(&state.rs, &other.state.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
-				return false;
-
-			//Cannot memcmp cs due to pAttachments being a pointer to memory
-			if (state.cs.attachmentCount != other.state.cs.attachmentCount ||
-				state.cs.flags != other.state.cs.flags ||
-				state.cs.logicOp != other.state.cs.logicOp ||
-				state.cs.logicOpEnable != other.state.cs.logicOpEnable ||
-				state.cs.sType != other.state.cs.sType ||
-				memcmp(state.cs.blendConstants, other.state.cs.blendConstants, 4 * sizeof(f32)))
 				return false;
 
 			if (memcmp(&state.ia, &other.state.ia, sizeof(VkPipelineInputAssemblyStateCreateInfo)))
 				return false;
 
+			if (memcmp(&state.att_state[0], &other.state.att_state[0], sizeof(VkPipelineColorBlendAttachmentState)))
+				return false;
+
+			if (memcmp(&state.rs, &other.state.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
+				return false;
+
+			// Cannot memcmp cs due to pAttachments being a pointer to memory
+			if (state.cs.logicOp != other.state.cs.logicOp ||
+				state.cs.logicOpEnable != other.state.cs.logicOpEnable ||
+				memcmp(state.cs.blendConstants, other.state.cs.blendConstants, 4 * sizeof(f32)))
+				return false;
+
 			if (memcmp(&state.ds, &other.state.ds, sizeof(VkPipelineDepthStencilStateCreateInfo)))
 				return false;
 
-			return num_targets == other.num_targets;
+			if (state.ms.rasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
+			{
+				if (memcmp(&state.ms, &other.state.ms, sizeof(VkPipelineMultisampleStateCreateInfo)))
+					return false;
+			}
+
+			return true;
 		}
 	};
 }
@@ -50,10 +52,11 @@ namespace rpcs3
 	template <>
 	size_t hash_struct<vk::pipeline_props>(const vk::pipeline_props &pipelineProperties)
 	{
-		size_t seed = hash_base(pipelineProperties.num_targets);
+		size_t seed = hash_base(pipelineProperties.renderpass_key);
 		seed ^= hash_struct(pipelineProperties.state.ia);
 		seed ^= hash_struct(pipelineProperties.state.ds);
 		seed ^= hash_struct(pipelineProperties.state.rs);
+		seed ^= hash_struct(pipelineProperties.state.ms);
 
 		// Do not compare pointers to memory!
 		VkPipelineColorBlendStateCreateInfo tmp;
@@ -134,10 +137,13 @@ struct VKTraits
 		vp.viewportCount = 1;
 		vp.scissorCount = 1;
 
-		VkPipelineMultisampleStateCreateInfo ms = {};
-		ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		ms.pSampleMask = NULL;
-		ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		VkPipelineMultisampleStateCreateInfo ms = pipelineProperties.state.ms;
+		verify("Multisample state mismatch!" HERE), ms.rasterizationSamples == VkSampleCountFlagBits((pipelineProperties.renderpass_key >> 16) & 0xF);
+		if (ms.rasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
+		{
+			// Update the sample mask pointer
+			ms.pSampleMask = &pipelineProperties.state.temp_storage.msaa_sample_mask;
+		}
 
 		// Rebase pointers from pipeline structure in case it is moved/copied
 		VkPipelineColorBlendStateCreateInfo cs = pipelineProperties.state.cs;

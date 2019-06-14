@@ -245,18 +245,9 @@ namespace gl
 
 				if (context == rsx::texture_upload_context::framebuffer_storage)
 				{
-					switch (static_cast<gl::render_target*>(vram_texture)->read_aa_mode)
-					{
-					case rsx::surface_antialiasing::center_1_sample:
-						break;
-					case rsx::surface_antialiasing::diagonal_centered_2_samples:
-						real_width *= 2;
-						break;
-					default:
-						real_width *= 2;
-						real_height *= 2;
-						break;
-					}
+					auto surface = gl::as_rtt(vram_texture);
+					real_width *= surface->samples_x;
+					real_height *= surface->samples_y;
 				}
 
 				areai src_area = { 0, 0, 0, 0 };
@@ -628,9 +619,17 @@ namespace gl
 				const bool typeless = dst_aspect != slice.src->aspect() ||
 					!formats_are_bitcast_compatible((GLenum)slice.src->get_internal_format(), (GLenum)dst_image->get_internal_format());
 
+				std::unique_ptr<gl::texture> tmp;
 				auto src_image = slice.src;
 				auto src_x = slice.src_x;
-				std::unique_ptr<gl::texture> tmp;
+				auto src_y = slice.src_y;
+				auto src_w = slice.src_w;
+				auto src_h = slice.src_h;
+
+				if (auto surface = dynamic_cast<gl::render_target*>(slice.src))
+				{
+					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
+				}
 
 				if (UNLIKELY(typeless))
 				{
@@ -643,17 +642,17 @@ namespace gl
 					gl::copy_typeless(src_image, slice.src);
 				}
 
-				if (slice.src_w == slice.dst_w && slice.src_h == slice.dst_h)
+				if (src_w == slice.dst_w && src_h == slice.dst_h)
 				{
-					glCopyImageSubData(src_image->id(), GL_TEXTURE_2D, 0, src_x, slice.src_y, 0,
-						dst_image->id(), (GLenum)dst_image->get_target(), 0, slice.dst_x, slice.dst_y, slice.dst_z, slice.src_w, slice.src_h, 1);
+					glCopyImageSubData(src_image->id(), GL_TEXTURE_2D, 0, src_x, src_y, 0,
+						dst_image->id(), (GLenum)dst_image->get_target(), 0, slice.dst_x, slice.dst_y, slice.dst_z, src_w, src_h, 1);
 				}
 				else
 				{
 					verify(HERE), dst_image->get_target() == gl::texture::target::texture2D;
 
 					auto _blitter = gl::g_hw_blitter;
-					const areai src_rect = { src_x, slice.src_y, src_x + slice.src_w, slice.src_y + slice.src_h };
+					const areai src_rect = { src_x, src_y, src_x + src_w, src_y + src_h };
 					const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
 
 					auto _dst = dst_image;
