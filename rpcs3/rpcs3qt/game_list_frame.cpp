@@ -773,6 +773,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 	if (fs::is_dir(cache_base_dir))
 	{
+		remove_menu->addSeparator();
 		QAction* removeShadersCache = remove_menu->addAction(tr("&Remove Shaders Cache"));
 		connect(removeShadersCache, &QAction::triggered, [=]()
 		{
@@ -787,6 +788,16 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		connect(removeSPUCache, &QAction::triggered, [=]()
 		{
 			RemoveSPUCache(cache_base_dir, true);
+		});
+		QAction* removeAllCaches = remove_menu->addAction(tr("&Remove All Caches"));
+		connect(removeAllCaches, &QAction::triggered, [=]()
+		{
+			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove all caches?")) != QMessageBox::Yes)
+				return;
+
+			RemoveShadersCache(cache_base_dir);
+			RemovePPUCache(cache_base_dir);
+			RemoveSPUCache(cache_base_dir);
 		});
 	}
 	myMenu.addSeparator();
