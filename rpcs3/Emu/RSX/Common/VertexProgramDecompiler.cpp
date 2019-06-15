@@ -568,7 +568,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MOV: SetDSTVec("$0"); break;
 		case RSX_VEC_OPCODE_MUL: SetDSTVec("($0 * $1)"); break;
 		case RSX_VEC_OPCODE_ADD: SetDSTVec("($0 + $2)"); break;
-		case RSX_VEC_OPCODE_MAD: SetDSTVec("($0 * $1 + $2)"); break;
+		case RSX_VEC_OPCODE_MAD: SetDSTVec("fma($0, $1, $2)"); break;
 		case RSX_VEC_OPCODE_DP3: SetDSTVec(getFunction(FUNCTION::FUNCTION_DP3)); break;
 		case RSX_VEC_OPCODE_DPH: SetDSTVec(getFunction(FUNCTION::FUNCTION_DPH)); break;
 		case RSX_VEC_OPCODE_DP4: SetDSTVec(getFunction(FUNCTION::FUNCTION_DP4)); break;
