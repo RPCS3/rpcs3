@@ -45,7 +45,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "layout(std140, set = 0, binding = 1) uniform VertexLayoutBuffer\n";
 	OS << "{\n";
 	OS << "	uint  vertex_base_index;\n";
-	OS << " uint  vertex_index_offset;\n";
+	OS << "	uint  vertex_index_offset;\n";
 	OS << "	uvec4 input_attributes_blob[16 / 2];\n";
 	OS << "};\n\n";
 
@@ -193,15 +193,9 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	glsl::shader_properties properties2;
+	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
-	// Unused
-	properties2.require_depth_conversion = false;
-	properties2.require_wpos = false;
-	properties2.require_texture_ops = false;
-	properties2.emulate_shadow_compare = false;
-	properties2.low_precision_tests = false;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);

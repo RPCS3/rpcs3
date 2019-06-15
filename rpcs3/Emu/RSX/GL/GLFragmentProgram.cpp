@@ -199,9 +199,12 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	glsl::shader_properties properties2;
 	properties2.domain = glsl::glsl_fragment_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
+	properties2.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
 	properties2.require_depth_conversion = m_prog.redirected_textures != 0;
 	properties2.require_wpos = properties.has_wpos_input;
 	properties2.require_texture_ops = properties.has_tex_op;
+	properties2.require_shadow_ops = m_prog.shadow_textures != 0;
+	properties2.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
 	properties2.emulate_shadow_compare = device_props.emulate_depth_compare;
 	properties2.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
 
@@ -350,7 +353,11 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
 
-	glsl::insert_rop(OS, !!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS), device_props.has_native_half_support);
+	glsl::insert_rop(
+		OS,
+		!!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS),
+		device_props.has_native_half_support,
+		g_cfg.video.antialiasing_level == msaa_level::none);
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{

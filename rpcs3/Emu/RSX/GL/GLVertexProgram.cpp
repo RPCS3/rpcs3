@@ -157,15 +157,9 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	const auto& dev_caps = gl::get_driver_caps();
 
-	glsl::shader_properties properties2;
+	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
-	// Unused
-	properties2.require_depth_conversion = false;
-	properties2.require_wpos = false;
-	properties2.require_texture_ops = false;
-	properties2.emulate_shadow_compare = false;
-	properties2.low_precision_tests = false;
 
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);
