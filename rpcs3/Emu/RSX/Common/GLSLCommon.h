@@ -229,23 +229,23 @@ namespace glsl
 		"	bool modulo;\n"
 		"};\n\n"
 
-		"uint get_bits(uvec4 v, bool swap)\n"
+		"uint get_bits(uint x, uint y, uint z, uint w, bool swap)\n"
 		"{\n"
-		"	if (swap) return (v.w | v.z << 8 | v.y << 16 | v.x << 24);\n"
-		"	return (v.x | v.y << 8 | v.z << 16 | v.w << 24);\n"
+		"	if (swap) return (w | z << 8 | y << 16 | x << 24);\n"
+		"	return (x | y << 8 | z << 16 | w << 24);\n"
 		"}\n\n"
 
-		"uint get_bits(uvec2 v, bool swap)\n"
+		"uint get_bits(uint x, uint y, bool swap)\n"
 		"{\n"
-		"	if (swap) return (v.y | v.x << 8);\n"
-		"	return (v.x | v.y << 8);\n"
+		"	if (swap) return (y | x << 8);\n"
+		"	return (x | y << 8);\n"
 		"}\n\n"
 
 		"int preserve_sign_s16(uint bits)\n"
 		"{\n"
 		"	//convert raw 16 bit value into signed 32-bit integer counterpart\n"
 		"	uint sign = bits & 0x8000;\n"
-		"	if (sign != 0) return int(bits | 0xFFFF0000);\n"
+		"	if (sign != 0) bits |= 0xFFFF0000;\n"
 		"	return int(bits);\n"
 		"}\n\n"
 
@@ -282,7 +282,7 @@ namespace glsl
 		{
 			OS <<
 			"#define mov(v, i, s) v[i] = s\n"
-			"#define ref(v, i) v[i]\n";
+			"#define ref(v, i) v[i]\n\n";
 		}
 
 		OS <<
@@ -290,70 +290,67 @@ namespace glsl
 		"{\n"
 		"	vec4 result = vec4(0., 0., 0., 1.);\n"
 		"	vec4 scale = vec4(1.);\n"
-		"	uvec4 tmp;\n"
-		"	uint bits;\n"
 		"	bool reverse_order = false;\n"
 		"\n"
-		"	int first_byte = int((vertex_id * desc.stride) + desc.starting_offset);\n"
-		"	for (int n = 0; n < 4; n++)\n"
+		"	const int elem_size_table[] = { 2, 4, 2, 1, 2, 4, 1 };\n"
+		"	const int elem_size = elem_size_table[desc.type];\n"
+		"	uvec4 tmp;\n"
+		"\n"
+		"	int n;\n"
+		"	int i = int((vertex_id * desc.stride) + desc.starting_offset);\n"
+		"\n"
+		"	for (n = 0; n < desc.attribute_size; n++)\n"
 		"	{\n"
-		"		if (n == desc.attribute_size) break;\n"
+		"		tmp.x = texelFetch(input_stream, i++).x;\n"
+		"		if (elem_size == 2)\n"
+		"		{\n"
+		"			tmp.y = texelFetch(input_stream, i++).x;\n"
+		"			tmp.x = get_bits(tmp.x, tmp.y, desc.swap_bytes);\n"
+		"		}\n"
+		"		else if (elem_size == 4)\n"
+		"		{\n"
+		"			tmp.y = texelFetch(input_stream, i++).x;\n"
+		"			tmp.z = texelFetch(input_stream, i++).x;\n"
+		"			tmp.w = texelFetch(input_stream, i++).x;\n"
+		"			tmp.x = get_bits(tmp.x, tmp.y, tmp.z, tmp.w, desc.swap_bytes);\n"
+		"		}\n"
 		"\n"
 		"		switch (desc.type)\n"
 		"		{\n"
 		"		case 0:\n"
 		"			//signed normalized 16-bit\n"
-		"			tmp.x = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.y = texelFetch(input_stream, first_byte++).x;\n"
-		"			mov(result, n, get_s16(tmp.xy, desc.swap_bytes));\n"
 		"			mov(scale, n, 32767.);\n"
+		"		case 4:\n"
+		"			//signed word\n"
+		"			mov(result, n, preserve_sign_s16(tmp.x));\n"
 		"			break;\n"
 		"		case 1:\n"
 		"			//float\n"
-		"			tmp.x = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.y = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.z = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.w = texelFetch(input_stream, first_byte++).x;\n"
-		"			mov(result, n, uintBitsToFloat(get_bits(tmp, desc.swap_bytes)));\n"
+		"			mov(result, n, uintBitsToFloat(tmp.x));\n"
 		"			break;\n"
 		"		case 2:\n"
 		"			//half\n"
-		"			tmp.x = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.y = texelFetch(input_stream, first_byte++).x;\n"
-		"			mov(result, n, unpackHalf2x16(uint(get_bits(tmp.xy, desc.swap_bytes))).x);\n"
+		"			mov(result, n, unpackHalf2x16(tmp.x).x);\n"
 		"			break;\n"
 		"		case 3:\n"
 		"			//unsigned byte\n"
-		"			mov(result, n, texelFetch(input_stream, first_byte++).x);\n"
 		"			mov(scale, n, 255.);\n"
+		"		case 6:\n"
+		"			//ub256\n"
+		"			mov(result, n, tmp.x);\n"
 		"			reverse_order = desc.swap_bytes;\n"
-		"			break;\n"
-		"		case 4:\n"
-		"			//signed word\n"
-		"			tmp.x = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.y = texelFetch(input_stream, first_byte++).x;\n"
-		"			mov(result, n, get_s16(tmp.xy, desc.swap_bytes));\n"
 		"			break;\n"
 		"		case 5:\n"
 		"			//cmp\n"
-		"			tmp.x = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.y = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.z = texelFetch(input_stream, first_byte++).x;\n"
-		"			tmp.w = texelFetch(input_stream, first_byte++).x;\n"
-		"			bits = get_bits(tmp, desc.swap_bytes);\n"
-		"			result.x = preserve_sign_s16((bits & 0x7FF) << 5);\n"
-		"			result.y = preserve_sign_s16(((bits >> 11) & 0x7FF) << 5);\n"
-		"			result.z = preserve_sign_s16(((bits >> 22) & 0x3FF) << 6);\n"
+		"			result.x = preserve_sign_s16((tmp.x & 0x7FF) << 5);\n"
+		"			result.y = preserve_sign_s16(((tmp.x >> 11) & 0x7FF) << 5);\n"
+		"			result.z = preserve_sign_s16(((tmp.x >> 22) & 0x3FF) << 6);\n"
 		"			result.w = 1.;\n"
 		"			scale = vec4(32767., 32767., 32767., 1.);\n"
 		"			break;\n"
-		"		case 6:\n"
-		"			//ub256\n"
-		"			mov(result, n, float(texelFetch(input_stream, first_byte++).x));\n"
-		"			reverse_order = desc.swap_bytes;\n"
-		"			break;\n"
 		"		}\n"
-		"	}\n\n"
+		"	}\n"
+		"\n"
 		"	result /= scale;\n"
 		"	return (reverse_order)? result.wzyx: result;\n"
 		"}\n\n"
@@ -410,17 +407,14 @@ namespace glsl
 		"	{\n"
 		"		vertex_id = 0;\n"
 		"	}\n"
-		"	else if (desc.frequency > 1)\n"
+		"	else if (desc.modulo)\n"
 		"	{\n"
 		"		//if a vertex modifier is active; vertex_base must be 0 and is ignored\n"
-		"		if (desc.modulo)\n"
-		"		{\n"
-		"			vertex_id = (" << vertex_id_name << " + int(vertex_index_offset)) % int(desc.frequency);\n"
-		"		}\n"
-		"		else\n"
-		"		{\n"
-		"			vertex_id = vertex_id / int(desc.frequency); \n"
-		"		}\n"
+		"		vertex_id = (" << vertex_id_name << " + int(vertex_index_offset)) % int(desc.frequency);\n"
+		"	}\n"
+		"	else\n"
+		"	{\n"
+		"		vertex_id /= int(desc.frequency); \n"
 		"	}\n"
 		"\n"
 		"	if (desc.is_volatile)\n"
@@ -430,7 +424,7 @@ namespace glsl
 		"}\n\n";
 	}
 
-	static void insert_rop(std::ostream& OS, bool _32_bit_exports, bool native_half_support)
+	static void insert_rop(std::ostream& OS, bool _32_bit_exports, bool native_half_support, bool emulate_coverage_tests)
 	{
 		const std::string reg0 = _32_bit_exports ? "r0" : "h0";
 		const std::string reg1 = _32_bit_exports ? "r2" : "h4";
@@ -442,17 +436,32 @@ namespace glsl
 		"	if ((rop_control & 0xFF) != 0)\n"
 		"	{\n"
 		"		bool alpha_test = (rop_control & 0x1) > 0;\n"
-		"		uint alpha_func = ((rop_control >> 16) & 0x7);\n"
-		"		bool srgb_convert = (rop_control & 0x2) > 0;\n\n"
-		"		bool a2c_enabled = (rop_control & 0x10) > 0;\n"
+		"		uint alpha_func = ((rop_control >> 16) & 0x7);\n";
+
+		if (!_32_bit_exports)
+		{
+			OS << "		bool srgb_convert = (rop_control & 0x2) > 0;\n\n";
+		}
+
+		if (emulate_coverage_tests)
+		{
+			OS << "		bool a2c_enabled = (rop_control & 0x10) > 0;\n";
+		}
+
+		OS <<
 		"		if (alpha_test && !comparison_passes(" << reg0 << ".a, alpha_ref, alpha_func))\n"
 		"		{\n"
 		"			discard;\n"
-		"		}\n"
-		"		else if (a2c_enabled && !coverage_test_passes(" << reg0 << ", rop_control >> 5))\n"
-		"		{\n"
-		"			discard;\n"
 		"		}\n";
+
+		if (emulate_coverage_tests)
+		{
+			OS <<
+			"		else if (a2c_enabled && !coverage_test_passes(" << reg0 << ", rop_control >> 5))\n"
+			"		{\n"
+			"			discard;\n"
+			"		}\n";
+		}
 
 		if (!_32_bit_exports)
 		{
@@ -535,41 +544,42 @@ namespace glsl
 
 		program_common::insert_compare_op(OS, props.low_precision_tests);
 
-		if (props.require_texture_ops && props.emulate_shadow_compare)
+		if (props.require_shadow_ops && props.emulate_shadow_compare)
 		{
 			program_common::insert_compare_op_vector(OS);
 		}
 
-		// NOTES:
-		// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
-		// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
-		// Helps to avoid A2C tested foliage disappearing in the distance
-		OS <<
-		"bool coverage_test_passes(/*inout*/in vec4 _sample, uint control)\n"
-		"{\n"
-		"	if ((control & 0x1) == 0) return false;\n"
-		"\n"
-		"	float samples = ((control & 0x2) != 0)? 4.f : 2.f;\n"
-		"	float hash    = _saturate(_rand(gl_FragCoord) + 0.5f) * 0.9f;\n"
-		"	float epsilon = hash / samples;\n"
-		"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"
-		"	//_sample.a     = min(_sample.a, alpha);\n" // Cannot blend A2C samples naively as they are order independent! Causes background bleeding
-		"	return (alpha > 0.f);\n"
-		"}\n\n"
+		if (props.emulate_coverage_tests)
+		{
+			// NOTES:
+			// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
+			// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
+			// Helps to avoid A2C tested foliage disappearing in the distance
+			OS <<
+			"bool coverage_test_passes(/*inout*/in vec4 _sample, uint control)\n"
+			"{\n"
+			"	if ((control & 0x1) == 0) return false;\n"
+			"\n"
+			"	float samples = ((control & 0x2) != 0)? 4.f : 2.f;\n"
+			"	float hash    = _saturate(_rand(gl_FragCoord) + 0.5f) * 0.9f;\n"
+			"	float epsilon = hash / samples;\n"
+			"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"
+			"	//_sample.a     = min(_sample.a, alpha);\n" // Cannot blend A2C samples naively as they are order independent! Causes background bleeding
+			"	return (alpha > 0.f);\n"
+			"}\n\n";
+		}
 
-		"vec4 linear_to_srgb(vec4 cl)\n"
-		"{\n"
-		"	vec4 low = cl * 12.92;\n"
-		"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
-		"	bvec4 select = lessThan(cl, vec4(0.0031308));\n"
-		"	return clamp(mix(high, low, select), 0., 1.);\n"
-		"}\n\n"
-
-		"float srgb_to_linear(float cs)\n"
-		"{\n"
-		"	if (cs <= 0.04045) return cs / 12.92;\n"
-		"	return pow((cs + 0.055) / 1.055, 2.4);\n"
-		"}\n\n";
+		if (!props.fp32_outputs)
+		{
+			OS <<
+			"vec4 linear_to_srgb(vec4 cl)\n"
+			"{\n"
+			"	vec4 low = cl * 12.92;\n"
+			"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
+			"	bvec4 select = lessThan(cl, vec4(0.0031308));\n"
+			"	return clamp(mix(high, low, select), 0., 1.);\n"
+			"}\n\n";
+		}
 
 		if (props.require_depth_conversion)
 		{
@@ -617,7 +627,7 @@ namespace glsl
 
 		if (props.require_texture_ops)
 		{
-			if (props.emulate_shadow_compare)
+			if (props.require_shadow_ops && props.emulate_shadow_compare)
 			{
 				OS <<
 				"vec4 shadowCompare(sampler2D tex, vec3 p, uint func)\n"
@@ -648,6 +658,12 @@ namespace glsl
 			"	return mix(direct, indexed, choice);\n"
 			"}\n\n"
 #endif
+			"vec4 srgb_to_linear(vec4 cs)\n"
+			"{\n"
+			"	vec4 a = cs / 12.92;\n"
+			"	vec4 b = pow((cs + 0.055) / 1.055, vec4(2.4));\n"
+			"	return _select(a, b, greaterThan(cs, vec4(0.04045)));\n"
+			"}\n\n"
 
 			//TODO: Move all the texture read control operations here
 			"vec4 process_texel(vec4 rgba, uint control_bits)\n"
@@ -656,23 +672,25 @@ namespace glsl
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
 			"	if (remap_bits != 0x8D5) rgba = remap_vector(rgba, remap_bits);\n\n"
 #endif
-			"	if ((control_bits & 0xFF) == 0) return rgba;\n\n"
-			"	if ((control_bits & 0x10) > 0)\n"
+			"	if (control_bits == 0)\n"
 			"	{\n"
-			"		//Alphakill\n"
-			"		if (rgba.a < 0.0000000001)\n"
+			"		return rgba;\n"
+			"	}\n"
+			"\n"
+			"	if ((control_bits & 0x10) != 0)\n"
+			"	{\n"
+			"		// Alphakill\n"
+			"		if (rgba.a < 0.000001)\n"
 			"		{\n"
 			"			discard;\n"
 			"			return rgba;\n"
 			"		}\n"
-			"	}\n\n"
+			"	}\n"
+			"\n"
 			"	//TODO: Verify gamma control bit ordering, looks to be 0x7 for rgb, 0xF for rgba\n"
-			"	uint srgb_in = (control_bits & 0xF);\n"
-			"	if ((srgb_in & 0x1) > 0) rgba.r = srgb_to_linear(rgba.r);\n"
-			"	if ((srgb_in & 0x2) > 0) rgba.g = srgb_to_linear(rgba.g);\n"
-			"	if ((srgb_in & 0x4) > 0) rgba.b = srgb_to_linear(rgba.b);\n"
-			"	if ((srgb_in & 0x8) > 0) rgba.a = srgb_to_linear(rgba.a);\n"
-			"	return rgba;\n"
+			"	uvec4 mask = uvec4(control_bits & 0xF) & uvec4(0x1, 0x2, 0x4, 0x8);\n"
+			"	vec4 convert = srgb_to_linear(rgba);\n"
+			"	return _select(rgba, convert, notEqual(mask, uvec4(0)));\n"
 			"}\n\n"
 
 			"#define TEX_NAME(index) tex##index\n"
