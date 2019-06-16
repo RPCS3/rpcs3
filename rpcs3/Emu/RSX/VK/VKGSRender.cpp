@@ -1207,10 +1207,10 @@ void VKGSRender::end()
 	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
 
 	// Check for data casts
+	// NOTE: This is deprecated and will be removed soon. The memory barrier invoked before rendering does this better
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 	if (ds && ds->old_contents &&
-		ds->old_contents.source->info.format == VK_FORMAT_B8G8R8A8_UNORM &&
-		rsx::pitch_compatible(ds, vk::as_rtt(ds->old_contents.source)))
+		ds->old_contents.source->info.format == VK_FORMAT_B8G8R8A8_UNORM)
 	{
 		auto key = vk::get_renderpass_key(ds->info.format);
 		auto render_pass = vk::get_renderpass(*m_device, key);
@@ -1219,6 +1219,21 @@ void VKGSRender::end()
 		VkClearDepthStencilValue clear = { 1.f, 0xFF };
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
 
+		// Initialize source
+		auto src = vk::as_rtt(ds->old_contents.source);
+		src->read_barrier(*m_current_command_buffer);
+
+		switch (src->current_layout)
+		{
+		case VK_IMAGE_LAYOUT_GENERAL:
+		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			break;
+		//case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+		default:
+			src->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			break;
+		}
+
 		// Clear explicitly before starting the inheritance transfer
 		const bool preinitialized = (ds->current_layout == VK_IMAGE_LAYOUT_GENERAL);
 		if (!preinitialized) ds->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -1226,12 +1241,11 @@ void VKGSRender::end()
 		if (!preinitialized) ds->pop_layout(*m_current_command_buffer);
 
 		// TODO: Stencil transfer
-		vk::as_rtt(ds->old_contents.source)->read_barrier(*m_current_command_buffer);
 		ds->old_contents.init_transfer(ds);
 		m_depth_converter->run(*m_current_command_buffer,
 			ds->old_contents.src_rect(),
 			ds->old_contents.dst_rect(),
-			vk::as_rtt(ds->old_contents.source)->get_view(0xAAE4, rsx::default_remap_vector),
+			src->get_view(0xAAE4, rsx::default_remap_vector),
 			ds, render_pass);
 
 		// TODO: Flush management to avoid pass running out of ubo space (very unlikely)
@@ -1477,15 +1491,49 @@ void VKGSRender::end()
 				}
 				else
 				{
-					switch (view->image()->current_layout)
+					switch (auto raw = view->image(); raw->current_layout)
 					{
 					default:
-					//case VK_IMAGE_LAYOUT_GENERAL:
 					//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 						break;
 					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
-						view->image()->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+						break;
+					case VK_IMAGE_LAYOUT_GENERAL:
+						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
+						if (!sampler_state->is_cyclic_reference)
+						{
+							// This was used in a cyclic ref before, but is missing a barrier
+							// No need for a full stall, use a custom barrier instead
+							VkPipelineStageFlags src_stage;
+							VkAccessFlags src_access;
+							if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
+							{
+								src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+								src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+							}
+							else
+							{
+								src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+								src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+							}
+
+							vk::insert_image_memory_barrier(
+								*m_current_command_buffer,
+								raw->value,
+								VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+								src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+								src_access, VK_ACCESS_SHADER_READ_BIT,
+								{ raw->aspect(), 0, 1, 0, 1 });
+
+							raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						}
+						break;
+					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage, !sampler_state->is_cyclic_reference;
+						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 						break;
 					}
 				}
@@ -1575,15 +1623,48 @@ void VKGSRender::end()
 				continue;
 			}
 
-			switch (image_ptr->image()->current_layout)
+			switch (auto raw = image_ptr->image(); raw->current_layout)
 			{
 			default:
-			//case VK_IMAGE_LAYOUT_GENERAL:
 			//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 				break;
 			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
-				image_ptr->image()->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				break;
+			case VK_IMAGE_LAYOUT_GENERAL:
+				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
+				if (!sampler_state->is_cyclic_reference)
+				{
+					// Custom barrier, see similar block in FS stage
+					VkPipelineStageFlags src_stage;
+					VkAccessFlags src_access;
+					if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
+					{
+						src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+						src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+					}
+					else
+					{
+						src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+						src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+					}
+
+					vk::insert_image_memory_barrier(
+						*m_current_command_buffer,
+						raw->value,
+						VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+						src_stage, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+						src_access, VK_ACCESS_SHADER_READ_BIT,
+						{ raw->aspect(), 0, 1, 0, 1 });
+
+					raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				}
+				break;
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
+				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 				break;
 			}
 
