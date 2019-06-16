@@ -2374,7 +2374,7 @@ public:
 				}
 #endif //(WIN32, __APPLE__)
 				if (g_cfg.video.debug_output)
-					layers.push_back("VK_LAYER_LUNARG_standard_validation");
+					layers.push_back("VK_LAYER_KHRONOS_validation");
 			}
 
 			VkInstanceCreateInfo instance_info = {};
