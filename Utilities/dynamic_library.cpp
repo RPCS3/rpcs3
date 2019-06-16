@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "dynamic_library.h"
 
 #ifdef _WIN32
@@ -50,7 +50,7 @@ namespace utils
 
 	bool dynamic_library::loaded() const
 	{
-		return !m_handle;
+		return m_handle != nullptr;
 	}
 
 	dynamic_library::operator bool() const
