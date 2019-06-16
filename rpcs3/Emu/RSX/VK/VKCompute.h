@@ -28,11 +28,11 @@ namespace vk
 		virtual std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout()
 		{
 			std::vector<std::pair<VkDescriptorType, u8>> result;
-			result.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 });
+			result.emplace_back(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1);
 
 			if (uniform_inputs)
 			{
-				result.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 });
+				result.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
 			}
 
 			return result;
