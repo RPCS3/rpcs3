@@ -131,6 +131,14 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	const PadInfo& rinfo = handler->GetInfo();
+
+	if (rinfo.system_info & CELL_PAD_INFO_INTERCEPTED)
+	{
+		data->len = CELL_PAD_LEN_NO_CHANGE;
+		return CELL_OK;
+	}
+
 	u16 d1Initial, d2Initial;
 	d1Initial = pad->m_digital_1;
 	d2Initial = pad->m_digital_2;

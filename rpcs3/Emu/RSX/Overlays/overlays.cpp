@@ -305,7 +305,7 @@ namespace rsx
 			return 0;
 		}
 
-		void user_interface::close()
+		void user_interface::close(bool use_callback)
 		{
 			// Force unload
 			exit = true;
@@ -322,7 +322,7 @@ namespace rsx
 
 			pad::SetIntercepted(false);
 
-			if (on_close)
+			if (on_close && use_callback)
 				on_close(return_code);
 		}
 
