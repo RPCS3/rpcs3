@@ -80,22 +80,17 @@ namespace rsx
 		u32 address = 0;
 		u32 pitch = 0;
 
-		bool is_depth_surface = false;
-
 		rsx::surface_color_format color_format;
 		rsx::surface_depth_format depth_format;
 
 		u16 width = 0;
 		u16 height = 0;
 		u8  bpp = 0;
+		u8  samples = 0;
 
 		address_range range{};
 
 		gcm_framebuffer_info() = default;
-
-		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h, const u8 bpp_)
-			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h), bpp(bpp_)
-		{}
 
 		void calculate_memory_range(u32 aa_factor_u, u32 aa_factor_v)
 		{
@@ -582,44 +577,24 @@ namespace rsx
 	template <typename SurfaceType>
 	std::tuple<u16, u16, u16, u16> get_transferable_region(const SurfaceType* surface)
 	{
-		const u16 src_w = surface->old_contents.source->width();
-		const u16 src_h = surface->old_contents.source->height();
-		u16 dst_w = src_w;
-		u16 dst_h = src_h;
+		auto src = static_cast<const SurfaceType*>(surface->old_contents.source);
+		auto area1 = src->get_normalized_memory_area();
+		auto area2 = surface->get_normalized_memory_area();
 
-		switch (static_cast<const SurfaceType*>(surface->old_contents.source)->read_aa_mode)
-		{
-		case rsx::surface_antialiasing::center_1_sample:
-			break;
-		case rsx::surface_antialiasing::diagonal_centered_2_samples:
-			dst_w *= 2;
-			break;
-		case rsx::surface_antialiasing::square_centered_4_samples:
-		case rsx::surface_antialiasing::square_rotated_4_samples:
-			dst_w *= 2;
-			dst_h *= 2;
-			break;
-		}
+		auto w = std::min(area1.x2, area2.x2);
+		auto h = std::min(area1.y2, area2.y2);
 
-		switch (surface->write_aa_mode)
-		{
-		case rsx::surface_antialiasing::center_1_sample:
-			break;
-		case rsx::surface_antialiasing::diagonal_centered_2_samples:
-			dst_w /= 2;
-			break;
-		case rsx::surface_antialiasing::square_centered_4_samples:
-		case rsx::surface_antialiasing::square_rotated_4_samples:
-			dst_w /= 2;
-			dst_h /= 2;
-			break;
-		}
+		const auto src_scale_x = src->get_bpp() * src->samples_x;
+		const auto src_scale_y = src->samples_y;
+		const auto dst_scale_x = surface->get_bpp() * surface->samples_x;
+		const auto dst_scale_y = surface->samples_y;
 
-		const f32 scale_x = (f32)dst_w / src_w;
-		const f32 scale_y = (f32)dst_h / src_h;
+		const u16 src_w = u16(w / src_scale_x);
+		const u16 src_h = u16(h / src_scale_y);
+		const u16 dst_w = u16(w / dst_scale_x);
+		const u16 dst_h = u16(h / dst_scale_y);
 
-		std::tie(std::ignore, std::ignore, dst_w, dst_h) = clip_region<u16>(dst_w, dst_h, 0, 0, surface->width(), surface->height(), true);
-		return std::make_tuple(u16(dst_w / scale_x), u16(dst_h / scale_y), dst_w, dst_h);
+		return std::make_tuple(src_w, src_h, dst_w, dst_h);
 	}
 
 	template <typename SurfaceType>

@@ -1655,7 +1655,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		GLuint image = GL_NONE;
 
-		if (auto render_target_texture = m_rtts.get_texture_from_render_target_if_applicable(absolute_address))
+		if (auto render_target_texture = m_rtts.get_color_surface_at(absolute_address))
 		{
 			if (render_target_texture->last_use_tag == m_rtts.write_tag)
 			{
@@ -1685,7 +1685,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 					// TODO: Take AA scaling into account
 					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
 						display_buffers[buffer].width, display_buffers[buffer].height, avconfig ? avconfig->resolution_x : 0, avconfig ? avconfig->resolution_y : 0,
-						render_target_texture->get_surface_width(), render_target_texture->get_surface_height());
+						render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
 
 					buffer_width = render_target_texture->width();
 					buffer_height = render_target_texture->height();

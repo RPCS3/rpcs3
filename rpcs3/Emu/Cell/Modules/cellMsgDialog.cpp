@@ -389,7 +389,7 @@ error_code cellMsgDialogAbort()
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			dlg->close();
+			dlg->close(false);
 			return CELL_OK;
 		}
 	}
@@ -406,7 +406,9 @@ error_code cellMsgDialogAbort()
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
-	verify(HERE), fxm::remove<MsgDialogBase>();
+	verify(HERE), fxm::remove<MsgDialogBase>(); // this shouldn't call on_close
+	pad::SetIntercepted(false);                 // so we need to reenable the pads here
+
 	return CELL_OK;
 }
 

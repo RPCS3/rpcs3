@@ -89,7 +89,7 @@ namespace rsx
 				close();
 			}
 
-			void close();
+			void close(bool use_callback = true);
 
 			s32 run_input_loop();
 		};

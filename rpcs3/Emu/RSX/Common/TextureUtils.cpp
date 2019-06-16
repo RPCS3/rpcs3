@@ -652,6 +652,23 @@ u8 get_format_block_size_in_bytes(rsx::surface_color_format format)
 	}
 }
 
+u8 get_format_sample_count(rsx::surface_antialiasing antialias)
+{
+	switch (antialias)
+	{
+		case rsx::surface_antialiasing::center_1_sample:
+			return 1;
+		case rsx::surface_antialiasing::diagonal_centered_2_samples:
+			return 2;
+		case rsx::surface_antialiasing::square_centered_4_samples:
+		case rsx::surface_antialiasing::square_rotated_4_samples:
+			return 4;
+		default:
+			ASSUME(0);
+			return 0;
+	}
+}
+
 /**
  * Returns number of texel lines decoded in one pitch-length number of bytes
  */

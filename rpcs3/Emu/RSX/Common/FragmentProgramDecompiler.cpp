@@ -274,18 +274,18 @@ std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 p
 
 	switch (precision)
 	{
-	case 0:
+	case RSX_FP_PRECISION_REAL:
 		// Full 32-bit precision
 		break;
-	case 1:
+	case RSX_FP_PRECISION_HALF:
 		return "clamp16(" + code + ")";
-	case 2:
+	case RSX_FP_PRECISION_FIXED12:
 		return "precision_clamp(" + code + ", -2., 2.)";
-	case 3:
+	case RSX_FP_PRECISION_FIXED9:
 		return "precision_clamp(" + code + ", -1., 1.)";
-	case 4:
+	case RSX_FP_PRECISION_SATURATE:
 		return "precision_clamp(" + code + ", 0., 1.)";
-	case 5:
+	case RSX_FP_PRECISION_UNKNOWN:
 		// Doesn't seem to do anything to the input from hw tests, same as 0
 		break;
 	default:
@@ -490,6 +490,11 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 					break;
 				}
 			}
+		}
+		else if (src1.input_prec_mod == RSX_FP_PRECISION_HALF)
+		{
+			// clamp16() is not a cheap operation when emulated; avoid at all costs
+			apply_precision_modifier = false;
 		}
 
 		ret += AddReg(src.tmp_reg_index, src.fp16);

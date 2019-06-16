@@ -3,6 +3,7 @@
 #include "VKCompute.h"
 #include "VKRenderPass.h"
 #include "VKFramebuffer.h"
+#include "VKResolveHelper.h"
 #include "Utilities/mutex.h"
 
 namespace vk
@@ -234,11 +235,18 @@ namespace vk
 		}
 	}
 
+	void reset_global_resources()
+	{
+		vk::reset_compute_tasks();
+		vk::reset_resolve_resources();
+	}
+
 	void destroy_global_resources()
 	{
 		VkDevice dev = *g_current_renderer;
 		vk::clear_renderpass_cache(dev);
 		vk::clear_framebuffer_cache();
+		vk::clear_resolve_helpers();
 
 		g_null_texture.reset();
 		g_null_image_view.reset();
@@ -414,6 +422,27 @@ namespace vk
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+	}
+
+	void insert_image_memory_barrier(
+		VkCommandBuffer cmd, VkImage image,
+		VkImageLayout current_layout, VkImageLayout new_layout,
+		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
+		VkAccessFlags src_mask, VkAccessFlags dst_mask,
+		const VkImageSubresourceRange& range)
+	{
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.newLayout = new_layout;
+		barrier.oldLayout = current_layout;
+		barrier.image = image;
+		barrier.srcAccessMask = src_mask;
+		barrier.dstAccessMask = dst_mask;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.subresourceRange = range;
+
+		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range)
@@ -615,6 +644,12 @@ namespace vk
 
 	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout)
 	{
+		if (image->samples() > 1)
+		{
+			// This barrier is pointless for multisampled images as they require a resolve operation before access anyway
+			return;
+		}
+
 		insert_texture_barrier(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
 		image->current_layout = new_layout;
 	}
@@ -835,6 +870,8 @@ namespace vk
 	{
 		if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
 		{
+			if (strstr(pMsg, "IMAGE_VIEW_TYPE_1D")) return false;
+
 			LOG_ERROR(RSX, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
 		}
 		else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT)

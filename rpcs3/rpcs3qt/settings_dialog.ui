@@ -468,9 +468,6 @@
               </item>
               <item>
                <widget class="QGroupBox" name="gb_antiAliasing">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
                 <property name="title">
                  <string>Anti-Aliasing</string>
                 </property>
