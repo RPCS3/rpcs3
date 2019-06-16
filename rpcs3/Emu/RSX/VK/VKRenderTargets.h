@@ -617,13 +617,8 @@ namespace rsx
 			surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 		}
 
-		static void prepare_surface_for_sampling(vk::command_buffer& cmd, vk::render_target *surface)
-		{
-			if (surface->info.usage & VK_IMAGE_USAGE_SAMPLED_BIT)
-			{
-				surface->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			}
-		}
+		static void prepare_surface_for_sampling(vk::command_buffer& /*cmd*/, vk::render_target* /*surface*/)
+		{}
 
 		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target> &surface, size_t pitch)
 		{
