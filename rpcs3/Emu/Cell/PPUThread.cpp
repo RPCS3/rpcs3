@@ -169,9 +169,10 @@ static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_pa
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 
 // Get pointer to executable cache
-static u64& ppu_ref(u32 addr)
+template<typename T = u64>
+static T& ppu_ref(u32 addr)
 {
-	return *reinterpret_cast<u64*>(vm::g_exec_addr + (u64)addr * 2);
+	return *reinterpret_cast<T*>(vm::g_exec_addr + (u64)addr * 2);
 }
 
 // Get interpreter cache value
@@ -288,7 +289,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	// Initialize specific function
 	if (ptr)
 	{
-		*reinterpret_cast<u32*>(&ppu_ref(addr)) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ptr));
+		ppu_ref<u32>(addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(ptr));
 		return;
 	}
 
@@ -312,7 +313,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 
 	while (size)
 	{
-		if ((u32)ppu_ref(addr) == fallback)
+		if (ppu_ref<u32>(addr) == fallback)
 		{
 			ppu_ref(addr) = ppu_cache(addr);
 		}
@@ -357,7 +358,7 @@ extern void ppu_breakpoint(u32 addr, bool isAdding)
 	if (isAdding)
 	{
 		// Set breakpoint
-		*reinterpret_cast<u32*>(&ppu_ref(addr)) = _break;
+		ppu_ref<u32>(addr) = _break;
 	}
 	else
 	{
@@ -376,9 +377,9 @@ extern void ppu_set_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if ((u32)ppu_ref(addr) != _break)
+	if (ppu_ref<u32>(addr) != _break)
 	{
-		*reinterpret_cast<u32*>(&ppu_ref(addr)) = _break;
+		ppu_ref<u32>(addr) = _break;
 	}
 }
 
@@ -392,7 +393,7 @@ extern void ppu_remove_breakpoint(u32 addr)
 
 	const auto _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 
-	if ((u32)ppu_ref(addr) == _break)
+	if (ppu_ref<u32>(addr) == _break)
 	{
 		ppu_ref(addr) = ppu_cache(addr);
 	}
@@ -420,7 +421,7 @@ extern bool ppu_patch(u32 addr, u32 value)
 	const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
 
-	if ((u32)ppu_ref(addr) != _break && (u32)ppu_ref(addr) != fallback)
+	if (ppu_ref<u32>(addr) != _break && ppu_ref<u32>(addr) != fallback)
 	{
 		ppu_ref(addr) = ppu_cache(addr);
 	}
@@ -622,7 +623,7 @@ void ppu_thread::exec_task()
 	{
 		while (!(state & (cpu_flag::ret + cpu_flag::exit + cpu_flag::stop + cpu_flag::dbg_global_stop)))
 		{
-			reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>((u32)ppu_ref(cia)))(*this);
+			reinterpret_cast<ppu_function_t>(static_cast<std::uintptr_t>(ppu_ref<u32>(cia)))(*this);
 		}
 
 		return;
@@ -1339,7 +1340,7 @@ extern void ppu_initialize(const ppu_module& info)
 			if (g_cfg.core.ppu_debug && func.size && func.toc != -1)
 			{
 				s_ppu_toc->emplace(func.addr, func.toc);
-				*reinterpret_cast<u32*>(&ppu_ref(func.addr)) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));
+				ppu_ref<u32>(func.addr) = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_check_toc));
 			}
 		}
 
@@ -1695,7 +1696,7 @@ extern void ppu_initialize(const ppu_module& info)
 				{
 					const u64 addr = jit->get(fmt::format("__0x%x", block.first - reloc));
 					jit_mod.funcs.emplace_back(reinterpret_cast<ppu_function_t>(addr));
-					*reinterpret_cast<u32*>(&ppu_ref(block.first)) = ::narrow<u32>(addr);
+					ppu_ref<u32>(block.first) = ::narrow<u32>(addr);
 				}
 			}
 		}
@@ -1726,7 +1727,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{
 				if (block.second)
 				{
-					*reinterpret_cast<u32*>(&ppu_ref(block.first)) = ::narrow<u32>(reinterpret_cast<uptr>(jit_mod.funcs[index++]));
+					ppu_ref<u32>(block.first) = ::narrow<u32>(reinterpret_cast<uptr>(jit_mod.funcs[index++]));
 				}
 			}
 		}
