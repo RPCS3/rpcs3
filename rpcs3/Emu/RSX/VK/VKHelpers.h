@@ -3276,7 +3276,7 @@ public:
 
 		void unmap(bool force = false)
 		{
-			if (force || g_cfg.video.disable_vulkan_mem_allocator)
+			if (force)
 			{
 				if (shadow)
 					shadow->unmap();

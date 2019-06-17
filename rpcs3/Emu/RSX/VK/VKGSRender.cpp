@@ -2137,6 +2137,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 void VKGSRender::flush_command_queue(bool hard_sync)
 {
+	rsx::g_dma_manager.sync();
 	close_and_submit_command_buffer(m_current_command_buffer->submit_fence);
 
 	if (hard_sync)
