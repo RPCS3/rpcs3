@@ -534,7 +534,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_prog_buffer = std::make_unique<VKProgramBuffer>();
 
-	if (g_cfg.video.disable_vertex_cache)
+	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
 		m_vertex_cache = std::make_unique<vk::null_vertex_cache>();
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
