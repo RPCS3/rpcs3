@@ -561,19 +561,150 @@ namespace
 
 	struct untouched_impl
 	{
+		static
+		std::tuple<u16, u16, u32> upload_u16_swapped(const void *src, void *dst, u32 count)
+		{
+			const __m128i mask = _mm_set_epi8(
+				0xE, 0xF, 0xC, 0xD,
+				0xA, 0xB, 0x8, 0x9,
+				0x6, 0x7, 0x4, 0x5,
+				0x2, 0x3, 0x0, 0x1);
+
+			auto src_stream = (const __m128i*)src;
+			auto dst_stream = (__m128i*)dst;
+
+			__m128i min = _mm_set1_epi16(0xFFFF);
+			__m128i max = _mm_set1_epi16(0);
+
+			const auto iterations = count / 8;
+			for (unsigned n = 0; n < iterations; ++n)
+			{
+				const __m128i raw = _mm_loadu_si128(src_stream++);
+				const __m128i value = _mm_shuffle_epi8(raw, mask);
+				max = _mm_max_epu16(max, value);
+				min = _mm_min_epu16(min, value);
+				_mm_storeu_si128(dst_stream++, value);
+			}
+
+			const __m128i mask_step1 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
+
+			const __m128i mask_step2 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
+
+			const __m128i mask_step3 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0x3, 0x2);
+
+			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step2);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step3);
+			min = _mm_min_epu16(min, tmp);
+
+			tmp = _mm_shuffle_epi8(max, mask_step1);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step2);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step3);
+			max = _mm_max_epu16(max, tmp);
+
+			const u16 min_index = u16(_mm_cvtsi128_si32(min) & 0xFFFF);
+			const u16 max_index = u16(_mm_cvtsi128_si32(max) & 0xFFFF);
+
+			return std::make_tuple(min_index, max_index, count);
+		}
+
+		static
+		std::tuple<u32, u32, u32> upload_u32_swapped(const void *src, void *dst, u32 count)
+		{
+			const __m128i mask = _mm_set_epi8(
+				0xC, 0xD, 0xE, 0xF,
+				0x8, 0x9, 0xA, 0xB,
+				0x4, 0x5, 0x6, 0x7,
+				0x0, 0x1, 0x2, 0x3);
+
+			auto src_stream = (const __m128i*)src;
+			auto dst_stream = (__m128i*)dst;
+
+			__m128i min = _mm_set1_epi32(~0u);
+			__m128i max = _mm_set1_epi32(0);
+
+			const auto iterations = count / 4;
+			for (unsigned n = 0; n < iterations; ++n)
+			{
+				const __m128i raw = _mm_loadu_si128(src_stream++);
+				const __m128i value = _mm_shuffle_epi8(raw, mask);
+				max = _mm_max_epu32(max, value);
+				min = _mm_min_epu32(min, value);
+				_mm_storeu_si128(dst_stream++, value);
+			}
+
+			// Aggregate min-max
+			const __m128i mask_step1 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
+
+			const __m128i mask_step2 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
+
+			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step2);
+			min = _mm_min_epu16(min, tmp);
+
+			tmp = _mm_shuffle_epi8(max, mask_step1);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step2);
+			max = _mm_max_epu16(max, tmp);
+
+			const u32 min_index = u32(_mm_cvtsi128_si32(min));
+			const u32 max_index = u32(_mm_cvtsi128_si32(max));
+
+			return std::make_tuple(min_index, max_index, count);
+		}
+
 		template<typename T>
 		static
 		std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst)
 		{
-			T min_index = index_limit<T>(), max_index = 0;
-			u32 dst_index = 0;
+			T min_index, max_index;
+			u32 written;
+			u32 remaining = src.size();
 
-			for (const T index : src)
+			if (s_use_ssse3 && remaining >= 32)
 			{
-				dst[dst_index++] = min_max(min_index, max_index, index);
+				if constexpr (std::is_same<T, u32>::value)
+				{
+					const auto count = (remaining & ~0x3);
+					std::tie(min_index, max_index, written) = upload_u32_swapped(src.data(), dst.data(), count);
+				}
+				else if constexpr (std::is_same<T, u16>::value)
+				{
+					const auto count = (remaining & ~0x7);
+					std::tie(min_index, max_index, written) = upload_u16_swapped(src.data(), dst.data(), count);
+				}
+
+				remaining -= written;
+			}
+			else
+			{
+				min_index = index_limit<T>();
+				max_index = 0;
+				written = 0;
 			}
 
-			return std::make_tuple(min_index, max_index, dst_index);
+			while (remaining--)
+			{
+				T index = src[written];
+				dst[written++] = min_max(min_index, max_index, index);
+			}
+
+			return std::make_tuple(min_index, max_index, written);
 		}
 	};
 
