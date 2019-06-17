@@ -80,6 +80,7 @@ public:
 		DisableOnDiskShaderCache,
 		DisableVulkanMemAllocator,
 		DisableAsyncShaderCompiler,
+		MultithreadedRSX,
 
 		// Performance Overlay
 		PerfOverlayEnabled,
@@ -285,6 +286,7 @@ private:
 		{ DisableOnDiskShaderCache,   { "Video", "Disable On-Disk Shader Cache"}},
 		{ DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
 		{ DisableAsyncShaderCompiler, { "Video", "Disable Asynchronous Shader Compiler"}},
+		{ MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
 		{ AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
 		{ ResolutionScale,            { "Video", "Resolution Scale"}},
 		{ MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},

@@ -120,7 +120,8 @@
 			"scrictModeRendering": "Enforces strict compliance to the API specification.\nMight result in degraded performance in some games.\nCan resolve rare cases of missing graphics and flickering.\nIf unsure, don't use this option.",
 			"disableVertexCache": "Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.",
 			"disableAsyncShaders": "Disables asynchronous shader compilation.\nFixes missing graphics while shaders are compiling but introduces stuttering.\nDisable if you do not want to deal with graphics pop-in, or for testing before filing any bug reports.",
-			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area."
+			"stretchToDisplayArea": "Overrides the aspect ratio and stretches the image to the full display area.",
+			"multithreadedRSX": "Offloads some RSX operations to a secondary thread.\nMay improve performance for some high-core processors.\nMay cause slowdown in some situations due to the extra worker thread load."
 		}
 	},
 	"gui": {

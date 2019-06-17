@@ -43,6 +43,7 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 	thread* g_current_renderer = nullptr;
+	dma_manager g_dma_manager;
 
 	u32 get_address(u32 offset, u32 location)
 	{
@@ -250,6 +251,126 @@ namespace rsx
 		}
 	}
 
+	// initialization
+	void dma_manager::init()
+	{
+		m_worker_state = thread_state::created;
+		m_worker_thread = std::thread([this]()
+		{
+			if (!g_cfg.video.multithreaded_rsx)
+			{
+				// Abort
+				return;
+			}
+
+			if (g_cfg.core.thread_scheduler_enabled)
+			{
+				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+			}
+
+			bool idle = false;
+			while (m_worker_state != thread_state::finished)
+			{
+				if (!m_work_queue.empty())
+				{
+					m_queue_mutex.lock();
+					auto task = std::move(m_work_queue.front());
+					m_work_queue.pop_front();
+					m_queue_mutex.unlock();
+
+					if (idle)
+					{
+						thread_ctrl::set_native_priority(0);
+						idle = false;
+					}
+
+					switch (task.type)
+					{
+					case raw_copy:
+						memcpy(task.dst, task.src, task.length);
+						break;
+					case vector_copy:
+						memcpy(task.dst, task.opt_storage.data(), task.length);
+						break;
+					case index_emulate:
+						write_index_array_for_non_indexed_non_native_primitive_to_buffer(
+							reinterpret_cast<char*>(task.dst),
+							static_cast<rsx::primitive_type>(task.aux_param0),
+							task.length);
+						break;
+					default:
+						ASSUME(0);
+						fmt::throw_exception("Unreachable" HERE);
+					}
+				}
+				else
+				{
+					idle = true;
+					thread_ctrl::set_native_priority(-1);
+					std::this_thread::yield();
+				}
+			}
+		});
+	}
+
+	// General tranport
+	void dma_manager::copy(void *dst, std::vector<u8>& src, u32 length)
+	{
+		if (!g_cfg.video.multithreaded_rsx)
+		{
+			std::memcpy(dst, src.data(), length);
+		}
+		else
+		{
+			std::lock_guard lock(m_queue_mutex);
+			m_work_queue.emplace_back(dst, src, length);
+		}
+	}
+
+	void dma_manager::copy(void *dst, void *src, u32 length)
+	{
+		if (!g_cfg.video.multithreaded_rsx)
+		{
+			std::memcpy(dst, src, length);
+		}
+		else
+		{
+			std::lock_guard lock(m_queue_mutex);
+			m_work_queue.emplace_back(dst, src, length);
+		}
+	}
+
+	// Vertex utilities
+	void dma_manager::emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count)
+	{
+		if (!g_cfg.video.multithreaded_rsx)
+		{
+			write_index_array_for_non_indexed_non_native_primitive_to_buffer(
+				reinterpret_cast<char*>(dst), primitive, count);
+		}
+		else
+		{
+			std::lock_guard lock(m_queue_mutex);
+			m_work_queue.emplace_back(dst, primitive, count);
+		}
+	}
+
+	// Synchronization
+	void dma_manager::sync()
+	{
+		if (g_cfg.video.multithreaded_rsx)
+		{
+			while (!m_work_queue.empty())
+				_mm_lfence();
+		}
+	}
+
+	void dma_manager::join()
+	{
+		m_worker_state = thread_state::finished;
+		m_worker_thread.join();
+	}
+
 	thread::thread()
 	{
 		g_current_renderer = this;
@@ -436,6 +557,8 @@ namespace rsx
 
 		method_registers.init();
 
+		g_dma_manager.init();
+
 		if (!zcull_ctrl)
 		{
 			//Backend did not provide an implementation, provide NULL object
@@ -572,6 +695,7 @@ namespace rsx
 	void thread::on_exit()
 	{
 		m_rsx_thread_exiting = true;
+		g_dma_manager.join();
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -2094,7 +2218,7 @@ namespace rsx
 				const u32 data_size = range.second * block.attribute_stride;
 				const u32 vertex_base = range.first * block.attribute_stride;
 
-				memcpy(persistent, (char*)vm::base(block.real_offset_address) + vertex_base, data_size);
+				g_dma_manager.copy(persistent, (char*)vm::base(block.real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}
 		}
