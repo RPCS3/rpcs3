@@ -276,11 +276,36 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	if (ret == LIBEVDEV_READ_STATUS_SYNC)
 		ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
 
+	auto data = GetButtonValues(*device);
+
+	auto find_value = [=](const std::string& name)
+	{
+		int key = FindKeyCodeByString(rev_axis_list, name, false);
+		bool dir = key >= 0;
+		if (key < 0)
+			key = FindKeyCodeByString(axis_list, name, false);
+		if (key < 0)
+			key = FindKeyCodeByString(button_list, name);
+		auto it = data.find(static_cast<u64>(key));
+		return it != data.end() && dir == it->second.second ? it->second.first : 0;
+	};
+
+	int preview_values[6] = {0, 0, 0, 0, 0, 0};
+
+	if (buttons.size() == 10)
+	{
+		preview_values[0] = find_value(buttons[0]);                          // Left Trigger
+		preview_values[1] = find_value(buttons[1]);                          // Right Trigger
+		preview_values[2] = find_value(buttons[3]) - find_value(buttons[2]); // Left Stick X
+		preview_values[3] = find_value(buttons[5]) - find_value(buttons[4]); // Left Stick Y
+		preview_values[4] = find_value(buttons[7]) - find_value(buttons[6]); // Right Stick X
+		preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
+	}
+
 	// return if nothing new has happened. ignore this to get the current state for blacklist
 	if (!get_blacklist && ret < 0)
-		return;
+		return callback(0, "", padId, preview_values);
 
-	auto data = GetButtonValues(*device);
 	std::pair<u16, std::string> pressed_button = { 0, "" };
 
 	for (const auto& button : button_list)
@@ -367,29 +392,6 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 		if (blacklist.empty())
 			LOG_SUCCESS(HLE, "Evdev Calibration: Blacklist is clear. No input spam detected");
 		return;
-	}
-
-	auto find_value = [=](const std::string& name)
-	{
-		int key = FindKeyCodeByString(rev_axis_list, name, false);
-		bool dir = key >= 0;
-		if (key < 0)
-			key = FindKeyCodeByString(axis_list, name, false);
-		if (key < 0)
-			key = FindKeyCodeByString(button_list, name);
-		auto it = data.find(static_cast<u64>(key));
-		return it != data.end() && dir == it->second.second ? it->second.first : 0;
-	};
-
-	int preview_values[6] = { 0, 0, 0, 0, 0, 0 };
-	if (buttons.size() == 10)
-	{
-		preview_values[0] = find_value(buttons[0]);                          // Left Trigger
-		preview_values[1] = find_value(buttons[1]);                          // Right Trigger
-		preview_values[2] = find_value(buttons[3]) - find_value(buttons[2]); // Left Stick X
-		preview_values[3] = find_value(buttons[5]) - find_value(buttons[4]); // Left Stick Y
-		preview_values[4] = find_value(buttons[7]) - find_value(buttons[6]); // Right Stick X
-		preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
 	}
 
 	if (pressed_button.first > 0)
