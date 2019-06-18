@@ -294,7 +294,8 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 	if (sleep_time)
 	{
 #ifdef __linux__
-		constexpr u32 host_min_quantum = 100;
+		// TODO: Confirm whether Apple or any BSD can benefit from this as well
+		constexpr u32 host_min_quantum = 50;
 #else
 		// Host scheduler quantum for windows (worst case)
 		// NOTE: On ps3 this function has very high accuracy
@@ -317,8 +318,13 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 			if (remaining > host_min_quantum)
 			{
-				// Wait on multiple of min quantum for large durations
+#ifdef __linux__
+				// Do not wait for the last quantum to avoid loss of accuracy
+				thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
+#else
+				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus 
 				thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
+#endif
 			}
 			else
 			{
