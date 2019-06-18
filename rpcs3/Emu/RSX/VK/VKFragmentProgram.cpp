@@ -185,13 +185,13 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (!constants_block.empty())
 	{
-		OS << "layout(std140, set = 0, binding = 3) uniform FragmentConstantsBuffer\n";
+		OS << "layout(std140, set = 0, binding = 2) uniform FragmentConstantsBuffer\n";
 		OS << "{\n";
 		OS << constants_block;
 		OS << "};\n\n";
 	}
 
-	OS << "layout(std140, set = 0, binding = 4) uniform FragmentStateBuffer\n";
+	OS << "layout(std140, set = 0, binding = 3) uniform FragmentStateBuffer\n";
 	OS << "{\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
@@ -203,7 +203,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	float wpos_bias;\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, set = 0, binding = 5) uniform TextureParametersBuffer\n";
+	OS << "layout(std140, set = 0, binding = 4) uniform TextureParametersBuffer\n";
 	OS << "{\n";
 	OS << "	vec4 texture_parameters[16];\n";
 	OS << "};\n\n";

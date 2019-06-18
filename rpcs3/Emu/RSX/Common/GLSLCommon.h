@@ -366,20 +366,36 @@ namespace glsl
 		"	// [32-60] starting offset\n"
 		"	// [60-61] swap bytes flag\n"
 		"	// [61-62] volatile flag\n"
-		"	// [62-63] modulo enable flag\n"
-		"	int block = (location >> 1);\n"
-		"	int sub_block = (location & 1) << 1;\n"
-		"	uint attrib0 = ref(input_attributes_blob[block], sub_block + 0);\n"
-		"	uint attrib1 = ref(input_attributes_blob[block], sub_block + 1);\n"
+		"	// [62-63] modulo enable flag\n";
+
+		if (rules == glsl_rules_opengl4)
+		{
+			// Data is packed into a ubo
+			OS <<
+			"	int block = (location >> 1);\n"
+			"	int sub_block = (location & 1) << 1;\n"
+			"	uvec2 attrib = uvec2(\n"
+			"		ref(input_attributes_blob[block], sub_block + 0),\n"
+			"		ref(input_attributes_blob[block], sub_block + 1));\n";
+		}
+		else
+		{
+			// Fetch parameters streamed separately from draw parameters
+			OS <<
+			"	location += int(layout_ptr_offset);\n"
+			"	uvec2 attrib = texelFetch(vertex_layout_stream, location).xy;\n\n";
+		}
+
+		OS <<
 		"	attribute_desc result;\n"
-		"	result.stride = attrib0 & 0xFF;\n"
-		"	result.frequency = (attrib0 >> 8) & 0xFFFF;\n"
-		"	result.type = (attrib0 >> 24) & 0x7;\n"
-		"	result.attribute_size = (attrib0 >> 27) & 0x7;\n"
-		"	result.starting_offset = (attrib1 & 0x1FFFFFFF);\n"
-		"	result.swap_bytes = ((attrib1 >> 29) & 0x1) != 0;\n"
-		"	result.is_volatile = ((attrib1 >> 30) & 0x1) != 0;\n"
-		"	result.modulo = ((attrib1 >> 31) & 0x1) != 0;\n"
+		"	result.stride = attrib.x & 0xFF;\n"
+		"	result.frequency = (attrib.x >> 8) & 0xFFFF;\n"
+		"	result.type = (attrib.x >> 24) & 0x7;\n"
+		"	result.attribute_size = (attrib.x >> 27) & 0x7;\n"
+		"	result.starting_offset = (attrib.y & 0x1FFFFFFF);\n"
+		"	result.swap_bytes = ((attrib.y >> 29) & 0x1) != 0;\n"
+		"	result.is_volatile = ((attrib.y >> 30) & 0x1) != 0;\n"
+		"	result.modulo = ((attrib.y >> 31) & 0x1) != 0;\n"
 		"	return result;\n"
 		"}\n\n"
 

@@ -174,28 +174,33 @@ namespace vk
 			bind_buffer(buffer_descriptor, binding_point, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptor_set);
 		}
 
+		void program::bind_uniform(const VkBufferView &buffer_view, uint32_t binding_point, VkDescriptorSet &descriptor_set)
+		{
+			const VkWriteDescriptorSet descriptor_writer =
+			{
+				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
+				nullptr,                                // pNext
+				descriptor_set,                         // dstSet
+				binding_point,                          // dstBinding
+				0,                                      // dstArrayElement
+				1,                                      // descriptorCount
+				VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,// descriptorType
+				nullptr,                                // pImageInfo
+				nullptr,                                // pBufferInfo
+				&buffer_view                            // pTexelBufferView
+			};
+
+			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+			attribute_location_mask |= (1ull << binding_point);
+		}
+
 		void program::bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set)
 		{
 			for (const auto &uniform : uniforms[type])
 			{
 				if (uniform.name == binding_name)
 				{
-					const VkWriteDescriptorSet descriptor_writer =
-					{
-						VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
-						nullptr,                                // pNext
-						descriptor_set,                         // dstSet
-						uniform.location,                       // dstBinding
-						0,                                      // dstArrayElement
-						1,                                      // descriptorCount
-						VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,// descriptorType
-						nullptr,                                // pImageInfo
-						nullptr,                                // pBufferInfo
-						&buffer_view                            // pTexelBufferView
-					};
-
-					vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
-					attribute_location_mask |= (1ull << uniform.location);
+					bind_uniform(buffer_view, uniform.location, descriptor_set);
 					return;
 				}
 			}
