@@ -315,6 +315,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_shader_compile_notification.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_trophy_notification.cpp" />
     <ClCompile Include="Emu\RSX\RSXFIFO.cpp" />
+    <ClCompile Include="Emu\RSX\RSXOffload.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
     <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
     <ClCompile Include="Crypto\aes.cpp">
@@ -558,6 +559,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlays.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_controls.h" />
     <ClInclude Include="Emu\RSX\RSXFIFO.h" />
+    <ClInclude Include="Emu\RSX\RSXOffload.h" />
     <ClInclude Include="Emu\RSX\rsx_cache.h" />
     <ClInclude Include="Emu\RSX\rsx_decode.h" />
     <ClInclude Include="Emu\RSX\rsx_vertex_data.h" />
