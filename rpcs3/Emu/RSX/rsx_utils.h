@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <bitset>
+#include <chrono>
 
 extern "C"
 {
@@ -1080,6 +1081,34 @@ namespace rsx
 		const_iterator end() const
 		{
 			return _data ? _data + _size : nullptr;
+		}
+	};
+
+	struct profiling_timer
+	{
+		bool enabled = false;
+		std::chrono::time_point<steady_clock> last;
+
+		profiling_timer() = default;
+
+		void start()
+		{
+			if (UNLIKELY(enabled))
+			{
+				last = steady_clock::now();
+			}
+		}
+
+		s64 duration()
+		{
+			if (LIKELY(!enabled))
+			{
+				return 0ll;
+			}
+
+			auto old = last;
+			last = steady_clock::now();
+			return std::chrono::duration_cast<std::chrono::microseconds>(last - old).count();
 		}
 	};
 }

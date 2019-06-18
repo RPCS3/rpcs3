@@ -829,7 +829,7 @@ void VKGSRender::check_heap_status(u32 flags)
 
 	if (heap_critical)
 	{
-		std::chrono::time_point<steady_clock> submit_start = steady_clock::now();
+		m_profiler.start();
 
 		frame_context_t *target_frame = nullptr;
 		if (!m_queued_frames.empty())
@@ -863,8 +863,7 @@ void VKGSRender::check_heap_status(u32 flags)
 			frame_context_cleanup(target_frame, true);
 		}
 
-		std::chrono::time_point<steady_clock> submit_end = steady_clock::now();
-		m_flip_time += std::chrono::duration_cast<std::chrono::microseconds>(submit_end - submit_start).count();
+		m_flip_time += m_profiler.duration();
 	}
 }
 
@@ -954,7 +953,7 @@ void VKGSRender::begin()
 
 void VKGSRender::update_draw_state()
 {
-	std::chrono::time_point<steady_clock> start = steady_clock::now();
+	m_profiler.start();
 
 	float actual_line_width = rsx::method_registers.line_width();
 	vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
@@ -1010,8 +1009,7 @@ void VKGSRender::update_draw_state()
 
 	//TODO: Set up other render-state parameters into the program pipeline
 
-	std::chrono::time_point<steady_clock> stop = steady_clock::now();
-	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
+	m_setup_time += m_profiler.duration();
 }
 
 void VKGSRender::begin_render_pass()
@@ -1046,7 +1044,7 @@ void VKGSRender::close_render_pass()
 void VKGSRender::emit_geometry(u32 sub_index)
 {
 	auto &draw_call = rsx::method_registers.current_draw_clause;
-	//std::chrono::time_point<steady_clock> vertex_start = steady_clock::now();
+	m_profiler.start();
 
 	if (sub_index == 0)
 	{
@@ -1087,8 +1085,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		return;
 	}
 
-	//std::chrono::time_point<steady_clock> vertex_end = steady_clock::now();
-	//m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(vertex_end - vertex_start).count();
+	m_vertex_upload_time += m_profiler.duration();
 
 	auto persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
 	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
@@ -1145,8 +1142,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	// Bind the new set of descriptors for use with this draw call
 	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
 
-	//std::chrono::time_point<steady_clock> draw_start = steady_clock::now();
-	//m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_start - vertex_end).count();
+	m_setup_time += m_profiler.duration();
 
 	if (!upload_info.index_info)
 	{
@@ -1190,8 +1186,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		}
 	}
 
-	//std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
-	//m_draw_time += std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
+	m_draw_time += m_profiler.duration();
 }
 
 void VKGSRender::end()
@@ -1204,7 +1199,7 @@ void VKGSRender::end()
 		return;
 	}
 
-	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
+	m_profiler.start();
 
 	// Check for data casts
 	// NOTE: This is deprecated and will be removed soon. The memory barrier invoked before rendering does this better
@@ -1448,10 +1443,8 @@ void VKGSRender::end()
 		}
 	}
 
-	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
-	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
+	m_textures_upload_time += m_profiler.duration();
 
-	std::chrono::time_point<steady_clock> program_start = textures_end;
 	if (!load_program())
 	{
 		// Program is not ready, skip drawing this
@@ -1469,10 +1462,7 @@ void VKGSRender::end()
 	// Load program execution environment
 	load_program_env();
 
-	std::chrono::time_point<steady_clock> program_end = steady_clock::now();
-	m_setup_time += std::chrono::duration_cast<std::chrono::microseconds>(program_end - program_start).count();
-
-	textures_start = program_end;
+	m_setup_time += m_profiler.duration();
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -1675,8 +1665,7 @@ void VKGSRender::end()
 		}
 	}
 
-	textures_end = steady_clock::now();
-	m_textures_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
+	m_textures_upload_time += m_profiler.duration();
 
 	u32 occlusion_id = 0;
 	if (m_occlusion_query_active)
@@ -3128,7 +3117,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		reinitialize_swapchain();
 	}
 
-	std::chrono::time_point<steady_clock> flip_start = steady_clock::now();
+	m_profiler.start();
 
 	if (m_current_frame == &m_aux_frame_context)
 	{
@@ -3441,8 +3430,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 
 	queue_swap_request();
 
-	std::chrono::time_point<steady_clock> flip_end = steady_clock::now();
-	m_flip_time = std::chrono::duration_cast<std::chrono::microseconds>(flip_end - flip_start).count();
+	m_flip_time = m_profiler.duration();
 
 	//NOTE:Resource destruction is handled within the real swap handler
 

@@ -446,6 +446,9 @@ namespace rsx
 		// Draw call stats
 		u32 m_draw_calls = 0;
 
+		// Profiler
+		rsx::profiling_timer m_profiler;
+
 	public:
 		RsxDmaControl* ctrl = nullptr;
 		u32 restore_point = 0;
