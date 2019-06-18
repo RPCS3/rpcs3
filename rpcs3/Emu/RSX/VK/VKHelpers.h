@@ -891,7 +891,9 @@ private:
 		{
 			cb_has_occlusion_task = 1,
 			cb_has_blit_transfer = 2,
-			cb_has_dma_transfer = 4
+			cb_has_dma_transfer = 4,
+			cb_has_open_query = 8,
+			cb_load_occluson_task = 16
 		};
 		u32 flags = 0;
 
@@ -2725,7 +2727,7 @@ public:
 		VkQueryPool query_pool = VK_NULL_HANDLE;
 		vk::render_device* owner = nullptr;
 
-		std::deque<u32> available_slots;
+		std::stack<u32> available_slots;
 		std::vector<bool> query_active_status;
 	public:
 
@@ -2740,11 +2742,10 @@ public:
 			owner = &dev;
 
 			query_active_status.resize(num_entries, false);
-			available_slots.resize(num_entries);
 
 			for (u32 n = 0; n < num_entries; ++n)
 			{
-				available_slots[n] = n;
+				available_slots.push(n);
 			}
 		}
 
@@ -2807,7 +2808,7 @@ public:
 				vkCmdResetQueryPool(cmd, query_pool, index, 1);
 
 				query_active_status[index] = false;
-				available_slots.push_back(index);
+				available_slots.push(index);
 			}
 		}
 
@@ -2834,8 +2835,8 @@ public:
 				return ~0u;
 			}
 
-			u32 result = available_slots.front();
-			available_slots.pop_front();
+			u32 result = available_slots.top();
+			available_slots.pop();
 
 			verify(HERE), !query_active_status[result];
 			return result;

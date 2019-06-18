@@ -473,7 +473,9 @@ VKGSRender::VKGSRender() : GSRender()
 
 	//Occlusion
 	m_occlusion_query_pool.create((*m_device), OCCLUSION_MAX_POOL_SIZE);
-	for (int n = 0; n < 128; ++n)
+	m_occlusion_map.resize(occlusion_query_count);
+
+	for (int n = 0; n < occlusion_query_count; ++n)
 		m_occlusion_query_data[n].driver_handle = n;
 
 	//Generate frame contexts
@@ -1667,10 +1669,9 @@ void VKGSRender::end()
 
 	m_textures_upload_time += m_profiler.duration();
 
-	u32 occlusion_id = 0;
-	if (m_occlusion_query_active)
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
 	{
-		occlusion_id = m_occlusion_query_pool.find_free_slot();
+		u32 occlusion_id = m_occlusion_query_pool.find_free_slot();
 		if (occlusion_id == UINT32_MAX)
 		{
 			m_tsc += 100;
@@ -1683,20 +1684,20 @@ void VKGSRender::end()
 				if (m_current_task) m_current_task->result = 1;
 			}
 		}
+
+		// Begin query
+		m_occlusion_query_pool.begin_query(*m_current_command_buffer, occlusion_id);
+
+		auto &data = m_occlusion_map[m_active_query_info->driver_handle];
+		data.indices.push_back(occlusion_id);
+		data.command_buffer_to_wait = m_current_command_buffer;
+
+		m_current_command_buffer->flags &= ~vk::command_buffer::cb_load_occluson_task;
+		m_current_command_buffer->flags |= (vk::command_buffer::cb_has_occlusion_task | vk::command_buffer::cb_has_open_query);
 	}
 
 	bool primitive_emulated = false;
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
-
-	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
-	{
-		//Begin query
-		m_occlusion_query_pool.begin_query(*m_current_command_buffer, occlusion_id);
-		m_occlusion_map[m_active_query_info->driver_handle].indices.push_back(occlusion_id);
-		m_occlusion_map[m_active_query_info->driver_handle].command_buffer_to_wait = m_current_command_buffer;
-
-		m_current_command_buffer->flags |= vk::command_buffer::cb_has_occlusion_task;
-	}
 
 	// Apply write memory barriers
 	if (true)//g_cfg.video.strict_rendering_mode)
@@ -1767,12 +1768,6 @@ void VKGSRender::end()
 
 	close_render_pass();
 	vk::leave_uninterruptible();
-
-	if (m_occlusion_query_active && (occlusion_id != UINT32_MAX))
-	{
-		//End query
-		m_occlusion_query_pool.end_query(*m_current_command_buffer, occlusion_id);
-	}
 
 	m_rtts.on_write();
 
@@ -2126,7 +2121,6 @@ void VKGSRender::clear_surface(u32 mask)
 
 void VKGSRender::flush_command_queue(bool hard_sync)
 {
-	rsx::g_dma_manager.sync();
 	close_and_submit_command_buffer(m_current_command_buffer->submit_fence);
 
 	if (hard_sync)
@@ -2163,6 +2157,11 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 
 		// Just in case a queued frame holds a ref to this cb, drain the present queue
 		check_present_status();
+	}
+
+	if (m_occlusion_query_active)
+	{
+		m_current_command_buffer->flags |= vk::command_buffer::cb_load_occluson_task;
 	}
 
 	open_command_buffer();
@@ -2781,6 +2780,9 @@ void VKGSRender::write_buffers()
 
 void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
 {
+	// Wait before sync block below
+	rsx::g_dma_manager.sync();
+
 	if (m_attrib_ring_info.dirty() ||
 		m_fragment_env_ring_info.dirty() ||
 		m_vertex_env_ring_info.dirty() ||
@@ -2808,6 +2810,13 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 
 		m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(),
 			VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	}
+
+	// End open queries. Flags will be automatically reset by the submit routine
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
+	{
+		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
+		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
 	}
 
 	m_current_command_buffer->end();
@@ -3473,18 +3482,33 @@ bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst
 
 void VKGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
+	verify(HERE), !m_occlusion_query_active;
+
 	query->result = 0;
 	//query->sync_timestamp = get_system_time();
 	m_active_query_info = query;
 	m_occlusion_query_active = true;
+	m_current_command_buffer->flags |= vk::command_buffer::cb_load_occluson_task;
 }
 
 void VKGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	m_occlusion_query_active = false;
-	m_active_query_info = nullptr;
+	verify(HERE), query == m_active_query_info;
 
 	// NOTE: flushing the queue is very expensive, do not flush just because query stopped
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
+	{
+		// End query
+		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
+		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
+	}
+
+	// Clear occlusion load flag
+	m_current_command_buffer->flags &= ~vk::command_buffer::cb_load_occluson_task;
+
+	m_occlusion_query_active = false;
+	m_active_query_info = nullptr;
 }
 
 bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info* query)
@@ -3492,11 +3516,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 	if (!query->num_draws)
 		return true;
 
-	auto found = m_occlusion_map.find(query->driver_handle);
-	if (found == m_occlusion_map.end())
-		return true;
-
-	auto &data = found->second;
+	auto &data = m_occlusion_map[query->driver_handle];
 	if (data.indices.empty())
 		return true;
 
@@ -3522,11 +3542,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 
 void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* query)
 {
-	auto found = m_occlusion_map.find(query->driver_handle);
-	if (found == m_occlusion_map.end())
-		return;
-
-	auto &data = found->second;
+	auto &data = m_occlusion_map[query->driver_handle];
 	if (data.indices.empty())
 		return;
 
@@ -3561,27 +3577,22 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 	}
 
 	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
-	m_occlusion_map.erase(query->driver_handle);
+	data.indices.clear();
 }
 
 void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	if (m_active_query_info == query)
 	{
-		m_occlusion_query_active = false;
-		m_active_query_info = nullptr;
+		end_occlusion_query(query);
 	}
 
-	auto found = m_occlusion_map.find(query->driver_handle);
-	if (found == m_occlusion_map.end())
-		return;
-
-	auto &data = found->second;
+	auto &data = m_occlusion_map[query->driver_handle];
 	if (data.indices.empty())
 		return;
 
 	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
-	m_occlusion_map.erase(query->driver_handle);
+	data.indices.clear();
 }
 
 bool VKGSRender::on_decompiler_task()
