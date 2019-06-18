@@ -6,7 +6,6 @@
 #include "gcm_enums.h"
 
 #include <vector>
-#include <thread>
 
 namespace rsx
 {
@@ -44,7 +43,6 @@ namespace rsx
 
 		lf_queue<transport_packet> m_work_queue;
 		atomic_t<int> m_jobs_count;
-		std::thread m_worker_thread;
 		thread_state m_worker_state;
 
 		// TODO: Improved benchmarks here; value determined by profiling on a Ryzen CPU, rounded to the nearest 512 bytes

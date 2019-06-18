@@ -10,7 +10,7 @@ namespace rsx
 	void dma_manager::init()
 	{
 		m_worker_state = thread_state::created;
-		m_worker_thread = std::thread([this]()
+		thread_ctrl::spawn("RSX offloader", [this]()
 		{
 			if (!g_cfg.video.multithreaded_rsx)
 			{
@@ -23,17 +23,10 @@ namespace rsx
 				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
 			}
 
-			bool idle = false;
 			while (m_worker_state != thread_state::finished)
 			{
 				if (m_jobs_count)
 				{
-					if (idle)
-					{
-						thread_ctrl::set_native_priority(0);
-						idle = false;
-					}
-
 					for (auto slice = m_work_queue.pop_all(); slice; slice.pop_front())
 					{
 						auto task = *slice;
@@ -61,11 +54,11 @@ namespace rsx
 				}
 				else
 				{
-					idle = true;
-					thread_ctrl::set_native_priority(-1);
-					std::this_thread::yield();
+					thread_ctrl::wait_for(500);
 				}
 			}
+
+			m_jobs_count.store(0);
 		});
 	}
 
@@ -124,6 +117,6 @@ namespace rsx
 	void dma_manager::join()
 	{
 		m_worker_state = thread_state::finished;
-		m_worker_thread.join();
+		sync();
 	}
 }
