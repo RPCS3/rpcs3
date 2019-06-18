@@ -725,6 +725,24 @@
     <ClCompile Include="ds3_pad_handler.cpp">
       <Filter>Io\DS3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\gui_application.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gui_application.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_gui_application.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_gui_application.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gui_application.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="main_application.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -956,6 +974,12 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\osk_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\gui_application.h">
+      <Filter>Gui</Filter>
+    </CustomBuild>
+    <CustomBuild Include="main_application.h">
+      <Filter>rpcs3</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
