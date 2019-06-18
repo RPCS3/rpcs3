@@ -400,7 +400,7 @@ private:
 	vk::occlusion_query_pool m_occlusion_query_pool;
 	bool m_occlusion_query_active = false;
 	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
-	std::unordered_map<u32, occlusion_data> m_occlusion_map;
+	std::vector<occlusion_data> m_occlusion_map;
 
 	shared_mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
