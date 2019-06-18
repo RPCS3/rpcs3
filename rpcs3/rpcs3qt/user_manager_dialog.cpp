@@ -1,12 +1,13 @@
-#include "user_manager_dialog.h"
+﻿#include "user_manager_dialog.h"
 #include "table_item_delegate.h"
-#include "rpcs3_app.h"
+#include "main_application.h"
 
 #include "Utilities/StrUtil.h"
 
 #include <QRegExpValidator>
 #include <QInputDialog>
 #include <QScreen>
+#include <QKeyEvent>
 
 namespace
 {
@@ -362,7 +363,7 @@ void user_manager_dialog::OnUserLogin()
 	const u32 key = GetUserKey();
 	const std::string new_user = m_user_list[key].GetUserId();
 
-	if (!rpcs3_app::InitializeEmulator(new_user, false))
+	if (!main_application::InitializeEmulator(new_user, false))
 	{
 		LOG_FATAL(GENERAL, "Failed to login user! username=%s key=%d", new_user, key);
 		return;

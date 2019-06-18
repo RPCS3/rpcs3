@@ -1,4 +1,4 @@
-﻿// Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <QApplication>
@@ -6,11 +6,18 @@
 #include <QFileInfo>
 #include <QTimer>
 #include <QObject>
+#include <QMessageBox>
+#include <QTextDocument>
+
+#include "rpcs3qt/gui_application.h"
 
 #include "rpcs3_app.h"
 #include "Utilities/sema.h"
 #ifdef _WIN32
 #include <windows.h>
+#include "Utilities/dynamic_library.h"
+DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
+DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
 #endif
 
 #ifdef __linux__
@@ -90,15 +97,19 @@ static semaphore<> s_qt_mutex{};
 	std::abort();
 }
 
+const char* ARG_NO_GUI = "no-gui";
+
+QCoreApplication* createApplication(int& argc, char* argv[])
+{
+	for (int i = 1; i < argc; ++i)
+		if (!qstrcmp(argv[i], ARG_NO_GUI))
+			return new rpcs3_app(argc, argv);
+	return new gui_application(argc, argv);
+}
+
 int main(int argc, char** argv)
 {
 	logs::set_init();
-
-#if defined(_WIN32) || defined(__APPLE__)
-	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#else
-	setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 0);
-#endif
 
 #ifdef __linux__
 	struct ::rlimit rlim;
@@ -108,16 +119,10 @@ int main(int argc, char** argv)
 		std::fprintf(stderr, "Failed to set max open file limit (4096).");
 #endif
 
-	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-	QCoreApplication::setAttribute(Qt::AA_DisableWindowContextHelpButton);
-	QCoreApplication::setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
-
 	s_init.unlock();
 	s_qt_mutex.lock();
-	rpcs3_app app(argc, argv);
 
-	QCoreApplication::setApplicationVersion(qstr(rpcs3::version.to_string()));
-	QCoreApplication::setApplicationName("RPCS3");
+	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
 
 	// Command line args
 	QCommandLineParser parser;
@@ -125,16 +130,46 @@ int main(int argc, char** argv)
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
 
-	const QCommandLineOption helpOption = parser.addHelpOption();
+	const QCommandLineOption helpOption    = parser.addHelpOption();
 	const QCommandLineOption versionOption = parser.addVersionOption();
-	parser.parse(QCoreApplication::arguments());
-	parser.process(app);
+	parser.addOption(QCommandLineOption("no-gui"));
+	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(versionOption) || parser.isSet(helpOption))
 		return 0;
 
-	app.Init();
+	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
+	app->setApplicationName("RPCS3");
+
+	if (auto gui_app = qobject_cast<gui_application*>(app.get()))
+	{
+#if defined(_WIN32) || defined(__APPLE__)
+		app->setAttribute(Qt::AA_EnableHighDpiScaling);
+#else
+		setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 0);
+#endif
+		app->setAttribute(Qt::AA_UseHighDpiPixmaps);
+		app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
+		app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
+
+		gui_app->Init();
+	}
+	else if (auto non_gui_app = qobject_cast<rpcs3_app*>(app.get()))
+	{
+		non_gui_app->Init();
+	}
+
+#ifdef _WIN32
+	// Set 0.5 msec timer resolution for best performance
+	// - As QT5 timers (QTimer) sets the timer resolution to 1 msec, override it here.
+	// - Don't bother "unsetting" the timer resolution after the emulator stops as QT5 will still require the timer resolution to be set to 1 msec.
+	ULONG min_res, max_res, orig_res, new_res;
+	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0)
+	{
+		NtSetTimerResolution(max_res, TRUE, &new_res);
+	}
+#endif
 
 	QStringList args = parser.positionalArguments();
 
@@ -145,9 +180,11 @@ int main(int argc, char** argv)
 
 		if (args.length() > 1)
 		{
+			args.removeAll(ARG_NO_GUI);
+
 			argv.emplace_back();
 
-			for (int i = 1; i < args.length(); i++)
+			for (u32 i = 1; i < args.length(); i++)
 			{
 				argv.emplace_back(args[i].toStdString());
 			}
@@ -164,5 +201,7 @@ int main(int argc, char** argv)
 
 	s_qt_init.unlock();
 	s_qt_mutex.unlock();
-	return QCoreApplication::exec();
+
+	// run event loop (maybe only needed for the gui application)
+	return app->exec();
 }
