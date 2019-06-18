@@ -906,7 +906,7 @@ namespace rsx
 
 		void reserve(u32 size)
 		{
-			if (_capacity > size)
+			if (_capacity >= size)
 				return;
 
 			if (_data)
