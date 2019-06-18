@@ -34,12 +34,11 @@
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
 #define VERTEX_PARAMS_BIND_SLOT 0
-#define VERTEX_LAYOUT_BIND_SLOT 1
-#define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 2
-#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 3
-#define FRAGMENT_STATE_BIND_SLOT 4
-#define FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 5
-#define VERTEX_BUFFERS_FIRST_BIND_SLOT 6
+#define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 1
+#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
+#define FRAGMENT_STATE_BIND_SLOT 3
+#define FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 4
+#define VERTEX_BUFFERS_FIRST_BIND_SLOT 5
 #define TEXTURES_FIRST_BIND_SLOT 8
 #define VERTEX_TEXTURES_FIRST_BIND_SLOT 24 //8+16
 
@@ -3199,6 +3198,7 @@ public:
 			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorType type, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror = false);
 			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkBufferView &buffer_view, uint32_t binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 
 			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);

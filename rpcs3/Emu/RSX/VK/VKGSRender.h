@@ -379,6 +379,7 @@ private:
 
 	std::unique_ptr<vk::buffer_view> m_persistent_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
+	std::unique_ptr<vk::buffer_view> m_vertex_layout_storage;
 
 	resource_manager m_resource_manager;
 
@@ -432,9 +433,9 @@ private:
 
 	VkDescriptorBufferInfo m_vertex_env_buffer_info;
 	VkDescriptorBufferInfo m_fragment_env_buffer_info;
+	VkDescriptorBufferInfo m_vertex_layout_stream_info;
 	VkDescriptorBufferInfo m_vertex_constants_buffer_info;
 	VkDescriptorBufferInfo m_fragment_constants_buffer_info;
-	VkDescriptorBufferInfo m_vertex_layout_buffer_info;
 	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info;
 
 	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
@@ -512,7 +513,7 @@ private:
 
 	bool load_program();
 	void load_program_env();
-	void update_vertex_env(const vk::vertex_upload_info& vertex_info);
+	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);

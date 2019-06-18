@@ -279,7 +279,7 @@ namespace
 		size_t idx = 0;
 
 		// Vertex stream, one stream for cacheable data, one stream for transient data
-		for (int i = 0; i < 2; i++)
+		for (int i = 0; i < 3; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
 			bindings[idx].descriptorCount = 1;
@@ -319,13 +319,6 @@ namespace
 		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[idx].descriptorCount = 1;
 		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
-		bindings[idx].binding = VERTEX_LAYOUT_BIND_SLOT;
-
-		idx++;
-
-		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		bindings[idx].descriptorCount = 1;
-		bindings[idx].stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 		bindings[idx].binding = VERTEX_PARAMS_BIND_SLOT;
 
 		idx++;
@@ -350,6 +343,11 @@ namespace
 
 		verify(HERE), idx == VK_NUM_DESCRIPTOR_BINDINGS;
 
+		std::array<VkPushConstantRange, 1> push_constants;
+		push_constants[0].offset = 0;
+		push_constants[0].size = 16;
+		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		infos.pBindings = bindings.data();
@@ -362,6 +360,8 @@ namespace
 		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		layout_info.setLayoutCount = 1;
 		layout_info.pSetLayouts = &set_layout;
+		layout_info.pushConstantRangeCount = 1;
+		layout_info.pPushConstantRanges = push_constants.data();
 
 		VkPipelineLayout result;
 		CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &result));
@@ -491,7 +491,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment env buffer");
 	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
-	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer");
+	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer");
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
@@ -588,6 +588,7 @@ VKGSRender::~VKGSRender()
 
 	m_persistent_attribute_storage.reset();
 	m_volatile_attribute_storage.reset();
+	m_vertex_layout_storage.reset();
 
 	//Global resources
 	vk::destroy_global_resources();
@@ -1050,23 +1051,22 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	if (sub_index == 0)
 	{
 		analyse_inputs_interleaved(m_vertex_layout);
-	}
 
-	if (!m_vertex_layout.validate())
-	{
-		// No vertex inputs enabled
-		// Execute remainining pipeline barriers with NOP draw
-		do
+		if (!m_vertex_layout.validate())
 		{
-			draw_call.execute_pipeline_dependencies();
+			// No vertex inputs enabled
+			// Execute remainining pipeline barriers with NOP draw
+			do
+			{
+				draw_call.execute_pipeline_dependencies();
+			}
+			while (draw_call.next());
+
+			draw_call.end();
+			return;
 		}
-		while (draw_call.next());
-
-		draw_call.end();
-		return;
 	}
-
-	if (sub_index > 0 && draw_call.execute_pipeline_dependencies() & rsx::vertex_base_changed)
+	else if (draw_call.execute_pipeline_dependencies() & rsx::vertex_base_changed)
 	{
 		// Rebase vertex bases instead of 
 		for (auto &info : m_vertex_layout.interleaved_blocks)
@@ -1092,18 +1092,21 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	auto persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
 	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
+	auto layout_stream = m_vertex_layout_storage ? m_vertex_layout_storage->value : null_buffer_view->value;
 	bool update_descriptors = false;
 
 	if (sub_index == 0)
 	{
 		update_descriptors = true;
+
+		// Allocate stream layout memory for this batch
+		m_vertex_layout_stream_info.range = rsx::method_registers.current_draw_clause.pass_count() * 128;
+		m_vertex_layout_stream_info.offset = m_vertex_layout_ring_info.alloc<256>(m_vertex_layout_stream_info.range);
+		// m_vertex_layout_stream_info.buffer = m_vertex_layout_ring_info.heap->value;
 	}
-	else
+	else if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
 	{
-		// Vertex env update will change information in the descriptor set
-		// Make a copy for the next draw call
-		// TODO: Restructure program to allow use of push constants when possible
-		// NOTE: AMD has insuffecient push constants buffer memory which is unfortunate
+		// Need to update descriptors; make a copy for the next draw
 		VkDescriptorSet new_descriptor_set = allocate_descriptor_set();
 		std::array<VkCopyDescriptorSet, VK_NUM_DESCRIPTOR_BINDINGS> copy_set;
 
@@ -1126,20 +1129,17 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		vkUpdateDescriptorSets(*m_device, 0, 0, VK_NUM_DESCRIPTOR_BINDINGS, copy_set.data());
 		m_current_frame->descriptor_set = new_descriptor_set;
 
-		if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
-		{
-			// Rare event, we need to actually change the descriptors
-			update_descriptors = true;
-		}
+		update_descriptors = true;
 	}
 
 	// Update vertex fetch parameters
-	update_vertex_env(upload_info);
+	update_vertex_env(sub_index, upload_info);
 
 	if (update_descriptors)
 	{
-		m_program->bind_uniform(persistent_buffer, vk::glsl::program_input_type::input_type_texel_buffer, "persistent_input_stream", m_current_frame->descriptor_set);
-		m_program->bind_uniform(volatile_buffer, vk::glsl::program_input_type::input_type_texel_buffer, "volatile_input_stream", m_current_frame->descriptor_set);
+		m_program->bind_uniform(persistent_buffer, VERTEX_BUFFERS_FIRST_BIND_SLOT, m_current_frame->descriptor_set);
+		m_program->bind_uniform(volatile_buffer, VERTEX_BUFFERS_FIRST_BIND_SLOT + 1, m_current_frame->descriptor_set);
+		m_program->bind_uniform(layout_stream, VERTEX_BUFFERS_FIRST_BIND_SLOT + 2, m_current_frame->descriptor_set);
 	}
 
 	// Bind the new set of descriptors for use with this draw call
@@ -2736,22 +2736,40 @@ void VKGSRender::load_program_env()
 	m_graphics_state &= ~handled_flags;
 }
 
-void VKGSRender::update_vertex_env(const vk::vertex_upload_info& vertex_info)
+void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info)
 {
-	auto mem = m_vertex_layout_ring_info.alloc<256>(256);
-	auto buf = (u32*)m_vertex_layout_ring_info.map(mem, 128 + 16);
+	// Actual allocation must have been done previously
+	u32 base_offset;
 
-	buf[0] = vertex_info.vertex_index_base;
-	buf[1] = vertex_info.vertex_index_offset;
-	buf += 4;
+	if (!m_vertex_layout_storage ||
+		!m_vertex_layout_storage->in_range(m_vertex_layout_stream_info.offset, m_vertex_layout_stream_info.range, base_offset))
+	{
+		verify("Incompatible driver (MacOS?)" HERE), m_texbuffer_view_size >= m_vertex_layout_stream_info.range;
 
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.first_vertex, vertex_info.allocated_vertex_count, (s32*)buf,
+		if (m_vertex_layout_storage)
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_vertex_layout_storage));
+
+		// View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
+		const size_t view_size = (base_offset + m_texbuffer_view_size) > m_vertex_layout_ring_info.size() ? m_vertex_layout_ring_info.size() - base_offset : m_texbuffer_view_size;
+		m_vertex_layout_storage = std::make_unique<vk::buffer_view>(*m_device, m_vertex_layout_ring_info.heap->value, VK_FORMAT_R32G32_UINT, base_offset, view_size);
+		base_offset = 0;
+	}
+
+	u32 draw_info[4];
+	draw_info[0] = vertex_info.vertex_index_base;
+	draw_info[1] = vertex_info.vertex_index_offset;
+	draw_info[2] = id;
+	draw_info[3] = (id * 16) + (base_offset / 8);
+
+	vkCmdPushConstants(*m_current_command_buffer, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 16, draw_info);
+
+	const size_t data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
+	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
+
+	fill_vertex_layout_state(m_vertex_layout, vertex_info.first_vertex, vertex_info.allocated_vertex_count, (s32*)dst,
 		vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
 
 	m_vertex_layout_ring_info.unmap();
-	m_vertex_layout_buffer_info = { m_vertex_layout_ring_info.heap->value, mem, 128 + 16 };
-
-	m_program->bind_uniform(m_vertex_layout_buffer_info, VERTEX_LAYOUT_BIND_SLOT, m_current_frame->descriptor_set);
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
