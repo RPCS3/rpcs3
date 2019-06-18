@@ -436,8 +436,8 @@ namespace rsx
 		on_init_thread();
 
 		method_registers.init();
-
 		g_dma_manager.init();
+		m_profiler.enabled = !!g_cfg.video.overlay;
 
 		if (!zcull_ctrl)
 		{
