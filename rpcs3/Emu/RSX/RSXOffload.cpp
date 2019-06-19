@@ -4,12 +4,20 @@
 #include "Emu/System.h"
 #include "RSXOffload.h"
 
+#include <thread>
+
 namespace rsx
 {
 	// initialization
 	void dma_manager::init()
 	{
 		m_worker_state = thread_state::created;
+		m_enqueued_count.store(0);
+		m_processed_count = 0;
+
+		// Empty work queue in case of stale contents
+		m_work_queue.pop_all();
+
 		thread_ctrl::spawn("RSX offloader", [this]()
 		{
 			if (!g_cfg.video.multithreaded_rsx)
@@ -25,7 +33,7 @@ namespace rsx
 
 			while (m_worker_state != thread_state::finished)
 			{
-				if (m_jobs_count)
+				if (m_enqueued_count.load() != m_processed_count)
 				{
 					for (auto slice = m_work_queue.pop_all(); slice; slice.pop_front())
 					{
@@ -49,16 +57,17 @@ namespace rsx
 							fmt::throw_exception("Unreachable" HERE);
 						}
 
-						m_jobs_count--;
+						++m_processed_count;
 					}
 				}
 				else
 				{
-					thread_ctrl::wait_for(500);
+					// Yield
+					std::this_thread::yield();
 				}
 			}
 
-			m_jobs_count.store(0);
+			m_processed_count = m_enqueued_count.load();
 		});
 	}
 
@@ -71,7 +80,7 @@ namespace rsx
 		}
 		else
 		{
-			++m_jobs_count;
+			++m_enqueued_count;
 			m_work_queue.push(dst, src, length);
 		}
 	}
@@ -84,7 +93,7 @@ namespace rsx
 		}
 		else
 		{
-			++m_jobs_count;
+			++m_enqueued_count;
 			m_work_queue.push(dst, src, length);
 		}
 	}
@@ -99,7 +108,7 @@ namespace rsx
 		}
 		else
 		{
-			++m_jobs_count;
+			++m_enqueued_count;
 			m_work_queue.push(dst, primitive, count);
 		}
 	}
@@ -107,11 +116,14 @@ namespace rsx
 	// Synchronization
 	void dma_manager::sync()
 	{
-		if (g_cfg.video.multithreaded_rsx)
+		if (LIKELY(m_enqueued_count.load() == m_processed_count))
 		{
-			while (m_jobs_count)
-				_mm_lfence();
+			// Nothing to do
+			return;
 		}
+
+		while (m_enqueued_count.load() != m_processed_count)
+			_mm_lfence();
 	}
 
 	void dma_manager::join()

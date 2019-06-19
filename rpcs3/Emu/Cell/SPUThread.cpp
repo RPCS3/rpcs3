@@ -1797,7 +1797,7 @@ bool spu_thread::process_mfc_cmd()
 					break;
 				}
 
-				thread_ctrl::wait_for(100);
+				thread_ctrl::wait_for(500);
 			}
 
 			if (test_stopped())

@@ -2241,6 +2241,9 @@ namespace rsx
 		// Fragment constants may have been updated
 		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
+		// DMA sync; if you need this, don't use MTRSX
+		// g_dma_manager.sync();
+
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
 		//verify (HERE), async_tasks_pending.load() == 0;

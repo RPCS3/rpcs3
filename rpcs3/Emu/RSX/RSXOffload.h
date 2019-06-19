@@ -42,8 +42,9 @@ namespace rsx
 		};
 
 		lf_queue<transport_packet> m_work_queue;
-		atomic_t<int> m_jobs_count;
-		thread_state m_worker_state;
+		atomic_t<u64> m_enqueued_count{ 0 };
+		volatile u64 m_processed_count = 0;
+		thread_state m_worker_state = thread_state::detached;
 
 		// TODO: Improved benchmarks here; value determined by profiling on a Ryzen CPU, rounded to the nearest 512 bytes
 		const u32 max_immediate_transfer_size = 3584;
