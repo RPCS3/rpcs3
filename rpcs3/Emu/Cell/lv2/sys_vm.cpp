@@ -135,7 +135,7 @@ error_code sys_vm_return_memory(u32 addr, u32 size)
 
 	std::lock_guard lock(block->mutex);
 
-	if (block->psize < 0x100000 + size)
+	if (u64{block->psize} < u64{0x100000} + size)
 	{
 		return CELL_EBUSY;
 	}
@@ -156,7 +156,7 @@ error_code sys_vm_lock(u32 addr, u32 size)
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
 
-	if (!block || addr + size > block->addr + block->size)
+	if (!block || u64{addr} + size > u64{block->addr} + block->size)
 	{
 		return CELL_EINVAL;
 	}
@@ -175,7 +175,7 @@ error_code sys_vm_unlock(u32 addr, u32 size)
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
 
-	if (!block || addr + size > block->addr + block->size)
+	if (!block || u64{addr} + size > u64{block->addr} + block->size)
 	{
 		return CELL_EINVAL;
 	}
@@ -194,7 +194,7 @@ error_code sys_vm_touch(u32 addr, u32 size)
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
 
-	if (!block || addr + size > block->addr + block->size)
+	if (!block || u64{addr} + size > u64{block->addr} + block->size)
 	{
 		return CELL_EINVAL;
 	}
@@ -213,7 +213,7 @@ error_code sys_vm_flush(u32 addr, u32 size)
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
 
-	if (!block || addr + size > block->addr + block->size)
+	if (!block || u64{addr} + size > u64{block->addr} + block->size)
 	{
 		return CELL_EINVAL;
 	}
@@ -232,7 +232,7 @@ error_code sys_vm_invalidate(u32 addr, u32 size)
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
 
-	if (!block || addr + size > block->addr + block->size)
+	if (!block || u64{addr} + size > u64{block->addr} + block->size)
 	{
 		return CELL_EINVAL;
 	}
@@ -252,7 +252,7 @@ error_code sys_vm_store(u32 addr, u32 size)
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
 
-	if (!block || addr + size > block->addr + block->size)
+	if (!block || u64{addr} + size > u64{block->addr} + block->size)
 	{
 		return CELL_EINVAL;
 	}
@@ -271,7 +271,7 @@ error_code sys_vm_sync(u32 addr, u32 size)
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
 
-	if (!block || addr + size > block->addr + block->size)
+	if (!block || u64{addr} + size > u64{block->addr} + block->size)
 	{
 		return CELL_EINVAL;
 	}
@@ -285,7 +285,7 @@ error_code sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result)
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
 
-	if (!block || addr + size > block->addr + block->size)
+	if (!block || u64{addr} + size > u64{block->addr} + block->size)
 	{
 		return CELL_EINVAL;
 	}
