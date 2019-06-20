@@ -375,7 +375,7 @@ public:
 			verify(HERE), (m_buffer_size - m_offset) % sizeof(u32) == 0;
 			for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 			{
-				vdata[i] = se_storage<u32>::swap(vdata[i]); // WTF, cannot use be_t<> there?
+				vdata[i] = be_t<u32>{vdata[i]}.raw();
 			}
 
 			for (u32 i = 0; i < prog.ucodeSize / sizeof(u32); i++)
