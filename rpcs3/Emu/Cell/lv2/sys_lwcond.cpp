@@ -8,14 +8,14 @@
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 
-
-
 LOG_CHANNEL(sys_lwcond);
 
 extern u64 get_system_time();
 
-error_code _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
+error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_lwcond.warning("_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx, arg5=0x%x)", lwcond_id, lwmutex_id, control, name, arg5);
 
 	// Temporarily
@@ -33,8 +33,10 @@ error_code _sys_lwcond_create(vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sy
 	return CELL_EAGAIN;
 }
 
-error_code _sys_lwcond_destroy(u32 lwcond_id)
+error_code _sys_lwcond_destroy(ppu_thread& ppu, u32 lwcond_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_lwcond.warning("_sys_lwcond_destroy(lwcond_id=0x%x)", lwcond_id);
 
 	const auto cond = idm::withdraw<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> CellError
@@ -62,6 +64,8 @@ error_code _sys_lwcond_destroy(u32 lwcond_id)
 
 error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 ppu_thread_id, u32 mode)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_lwcond.trace("_sys_lwcond_signal(lwcond_id=0x%x, lwmutex_id=0x%x, ppu_thread_id=0x%x, mode=%d)", lwcond_id, lwmutex_id, ppu_thread_id, mode);
 
 	// Mode 1: lwmutex was initially owned by the calling thread
@@ -170,6 +174,8 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u32 mode)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_lwcond.trace("_sys_lwcond_signal_all(lwcond_id=0x%x, lwmutex_id=0x%x, mode=%d)", lwcond_id, lwmutex_id, mode);
 
 	// Mode 1: lwmutex was initially owned by the calling thread
@@ -252,6 +258,8 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_lwcond.trace("_sys_lwcond_queue_wait(lwcond_id=0x%x, lwmutex_id=0x%x, timeout=0x%llx)", lwcond_id, lwmutex_id, timeout);
 
 	ppu.gpr[3] = CELL_OK;

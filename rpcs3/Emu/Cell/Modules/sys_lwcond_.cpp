@@ -20,7 +20,7 @@ error_code sys_lwcond_create(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, vm::
 	attrs->pshared  = SYS_SYNC_NOT_PROCESS_SHARED;
 	attrs->name_u64 = attr->name_u64;
 
-	if (auto res = g_cfg.core.hle_lwmutex ? sys_cond_create(ppu, out_id, lwmutex->sleep_queue, attrs) : _sys_lwcond_create(out_id, lwmutex->sleep_queue, lwcond, attr->name_u64, 0))
+	if (auto res = g_cfg.core.hle_lwmutex ? sys_cond_create(ppu, out_id, lwmutex->sleep_queue, attrs) : _sys_lwcond_create(ppu, out_id, lwmutex->sleep_queue, lwcond, attr->name_u64, 0))
 	{
 		return res;
 	}
@@ -39,7 +39,7 @@ error_code sys_lwcond_destroy(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		return sys_cond_destroy(ppu, lwcond->lwcond_queue);
 	}
 
-	if (error_code res = _sys_lwcond_destroy(lwcond->lwcond_queue))
+	if (error_code res = _sys_lwcond_destroy(ppu, lwcond->lwcond_queue))
 	{
 		return res;
 	}
