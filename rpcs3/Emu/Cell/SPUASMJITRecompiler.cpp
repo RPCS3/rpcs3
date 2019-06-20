@@ -1534,7 +1534,16 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 			const u32 out = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
 
 			if (out > 1500)
+			{
+				_spu->state += cpu_flag::wait;
 				std::this_thread::yield();
+
+				if (_spu->test_stopped())
+				{
+					_spu->pc += 4;
+					spu_runtime::g_escape(_spu);
+				}
+			}
 
 			*_res = v128::from32r(out);
 		};

@@ -5200,7 +5200,14 @@ public:
 
 		if (res > 1500 && g_cfg.core.spu_loop_detection)
 		{
+			_spu->state += cpu_flag::wait;
 			std::this_thread::yield();
+
+			if (_spu->test_stopped())
+			{
+				_spu->pc += 4;
+				spu_runtime::g_escape(_spu);
+			}
 		}
 
 		return res;

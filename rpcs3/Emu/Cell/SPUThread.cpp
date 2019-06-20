@@ -2335,7 +2335,10 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		//Polling: We might as well hint to the scheduler to slot in another thread since this one is counting down
 		if (g_cfg.core.spu_loop_detection && out > spu::scheduler::native_jiffy_duration_us)
+		{
+			state += cpu_flag::wait;
 			std::this_thread::yield();
+		}
 
 		return out;
 	}
