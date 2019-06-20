@@ -379,22 +379,25 @@ void Emulator::Init()
 
 				// Initialize message dialog
 				std::shared_ptr<MsgDialogBase> dlg = Emu.GetCallbacks().get_msg_dialog();
-				dlg->type.se_normal = true;
-				dlg->type.bg_invisible = true;
-				dlg->type.progress_bar_count = 1;
-				dlg->on_close = [](s32 status)
+				if (dlg)
 				{
-					Emu.CallAfter([]()
+					dlg->type.se_normal = true;
+					dlg->type.bg_invisible = true;
+					dlg->type.progress_bar_count = 1;
+					dlg->on_close = [](s32 status)
 					{
-						// Abort everything
-						Emu.Stop();
-					});
-				};
+						Emu.CallAfter([]()
+						{
+							// Abort everything
+							Emu.Stop();
+						});
+					};
 
-				Emu.CallAfter([=]()
-				{
-					dlg->Create(+g_progr, +g_progr);
-				});
+					Emu.CallAfter([=]()
+					{
+						dlg->Create(+g_progr, +g_progr);
+					});
+				}
 
 				u64 ftotal = 0;
 				u64 fdone = 0;
@@ -432,9 +435,12 @@ void Emulator::Init()
 							if (ptotal)
 								fmt::append(progr, " module %u of %u", pdone, ptotal);
 
-							dlg->SetMsg(+g_progr);
-							dlg->ProgressBarSetMsg(0, progr);
-							dlg->ProgressBarInc(0, delta);
+							if (dlg)
+							{
+								dlg->SetMsg(+g_progr);
+								dlg->ProgressBarSetMsg(0, progr);
+								dlg->ProgressBarInc(0, delta);
+							}
 						});
 					}
 
@@ -453,10 +459,13 @@ void Emulator::Init()
 				g_progr_ptotal -= pdone;
 				g_progr_pdone  -= pdone;
 
-				Emu.CallAfter([=]
+				if (dlg)
 				{
-					dlg->Close(true);
-				});
+					Emu.CallAfter([=]
+					{
+						dlg->Close(true);
+					});
+				}
 			}
 		});
 

@@ -538,7 +538,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			lv2_obj::sleep(ppu);
 
 			// Display Save Data List asynchronously in the GUI thread.
-			selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, operation, listSet);
+			if (auto save_dialog = Emu.GetCallbacks().get_save_dialog())
+			{
+				selected = save_dialog->ShowSaveDataList(save_entries, focused, operation, listSet);
+			}
+			else
+			{
+				selected = -2;
+			}
 
 			// Reschedule
 			if (ppu.check_state())
