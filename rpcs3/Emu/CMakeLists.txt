@@ -11,6 +11,11 @@ target_link_libraries(rpcs3_emu
 	PUBLIC
 		3rdparty::libevdev)
 
+
+find_package(Threads REQUIRED)
+target_link_libraries(rpcs3_emu
+	PUBLIC Threads::Threads)
+
 # For stdafx.h
 target_include_directories(rpcs3_emu
 	PUBLIC

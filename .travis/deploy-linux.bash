@@ -13,7 +13,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	cp $(readlink -f /lib/x86_64-linux-gnu/libnsl.so.1) ./appdir/usr/lib/libnsl.so.1
 	export PATH=/rpcs3/build/squashfs-root/usr/bin/:${PATH}
 
-	# Embed newer libstdc++ for distros that don't come with it (ubuntu 14.04, 16.04)
+	# Embed newer libstdc++ for distros that don't come with it (ubuntu 16.04)
 	mkdir -p appdir/usr/optional/ ; mkdir -p appdir/usr/optional/libstdc++/
 	cp /usr/lib/x86_64-linux-gnu/libstdc++.so.6 ./appdir/usr/optional/libstdc++/
 	rm ./appdir/AppRun
