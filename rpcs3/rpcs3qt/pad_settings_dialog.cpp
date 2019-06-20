@@ -378,7 +378,7 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		LOG_NOTICE(HLE, "GetNextButtonPress: %s button %s pressed with value %d", m_handler->m_type, name, val);
+		LOG_NOTICE(HLE, "GetNextButtonPress: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
 		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 		{
 			m_cfg_entries[m_button_id].key  = name;
