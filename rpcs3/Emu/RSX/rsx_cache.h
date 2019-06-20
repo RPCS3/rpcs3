@@ -430,25 +430,28 @@ namespace rsx
 			virtual void create()
 			{
 				dlg = Emu.GetCallbacks().get_msg_dialog();
-				dlg->type.se_normal = true;
-				dlg->type.bg_invisible = true;
-				dlg->type.progress_bar_count = 2;
-				dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
-				dlg->on_close = [](s32 status)
+				if (dlg)
 				{
-					Emu.CallAfter([]()
+					dlg->type.se_normal          = true;
+					dlg->type.bg_invisible       = true;
+					dlg->type.progress_bar_count = 2;
+					dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
+					dlg->on_close = [](s32 status)
 					{
-						Emu.Stop();
+						Emu.CallAfter([]()
+						{
+							Emu.Stop();
+						});
+					};
+
+					ref_cnt++;
+
+					Emu.CallAfter([&]()
+					{
+						dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
+						ref_cnt--;
 					});
-				};
-
-				ref_cnt++;
-
-				Emu.CallAfter([&]()
-				{
-					dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
-					ref_cnt--;
-				});
+				}
 
 				while (ref_cnt.load() && !Emu.IsStopped())
 				{
@@ -458,6 +461,11 @@ namespace rsx
 
 			virtual void update_msg(u32 index, u32 processed, u32 entry_count)
 			{
+				if (!dlg)
+				{
+					return;
+				}
+
 				ref_cnt++;
 
 				Emu.CallAfter([&, index, processed, entry_count]()
@@ -470,6 +478,11 @@ namespace rsx
 
 			virtual void inc_value(u32 index, u32 value)
 			{
+				if (!dlg)
+				{
+					return;
+				}
+
 				ref_cnt++;
 
 				Emu.CallAfter([&, index, value]()
@@ -481,6 +494,11 @@ namespace rsx
 
 			virtual void set_limit(u32 index, u32 limit)
 			{
+				if (!dlg)
+				{
+					return;
+				}
+
 				ref_cnt++;
 
 				Emu.CallAfter([&, index, limit]()

@@ -394,9 +394,11 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	auto osk = _get_osk_dialog(true);
-	osk->use_seperate_windows = true;
-	osk->osk_continuous_mode = (CellOskDialogContinuousMode)(u32)windowOption->continuousMode;
+	if (auto osk = _get_osk_dialog(true))
+	{
+		osk->use_seperate_windows = true;
+		osk->osk_continuous_mode  = (CellOskDialogContinuousMode)(u32)windowOption->continuousMode;
+	}
 
 	return CELL_OK;
 }
@@ -523,8 +525,10 @@ error_code cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDial
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	auto osk = _get_osk_dialog(true);
-	osk->osk_confirm_callback = pCallback;
+	if (auto osk = _get_osk_dialog(true))
+	{
+		osk->osk_confirm_callback = pCallback;
+	}
 
 	return CELL_OK;
 }

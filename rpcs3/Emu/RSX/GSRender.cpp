@@ -6,7 +6,14 @@
 
 GSRender::GSRender()
 {
-	m_frame = Emu.GetCallbacks().get_gs_frame().release();
+	if (auto gs_frame = Emu.GetCallbacks().get_gs_frame())
+	{
+		m_frame = gs_frame.release();
+	}
+	else
+	{
+		m_frame = nullptr;
+	}
 }
 
 GSRender::~GSRender()

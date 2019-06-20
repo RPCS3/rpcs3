@@ -598,7 +598,10 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 			*details = SceNpTrophyDetails();
 		}
 
-		Emu.GetCallbacks().get_trophy_notification_dialog()->ShowTrophyNotification(*details, trophyIconData);
+		if (auto trophy_notification_dialog = Emu.GetCallbacks().get_trophy_notification_dialog())
+		{
+			trophy_notification_dialog->ShowTrophyNotification(*details, trophyIconData);
+		}
 	}
 
 	return CELL_OK;
