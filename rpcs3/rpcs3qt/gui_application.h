@@ -2,16 +2,16 @@
 
 #include "stdafx.h"
 
-#include "main_application.h"
+#include <QApplication>
+#include <QFontDatabase>
+#include <QIcon>
+
 #include "main_window.h"
+#include "main_application.h"
 #include "emu_settings.h"
 #include "gui_settings.h"
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
-
-#include <QApplication>
-#include <QFontDatabase>
-#include <QIcon>
 
 class gui_application : public QApplication, public main_application
 {

@@ -1,5 +1,6 @@
 ﻿#include "main_application.h"
 
+#include "pad_thread.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/Null/NullKeyboardHandler.h"
 #include "Emu/Io/Null/NullMouseHandler.h"
@@ -29,6 +30,16 @@
 #endif
 #ifdef HAVE_PULSE
 #include "Emu/Audio/Pulse/PulseBackend.h"
+#endif
+
+#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/Null/NullGSRender.h"
+#include "Emu/RSX/GL/GLGSRender.h"
+#ifdef _MSC_VER
+#include "Emu/RSX/D3D12/D3D12GSRender.h"
+#endif
+#if defined(_WIN32) || defined(HAVE_VULKAN)
+#include "Emu/RSX/VK/VKGSRender.h"
 #endif
 
 /** Emu.Init() wrapper for user manager */
