@@ -142,7 +142,7 @@ int main(int argc, char** argv)
 	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
 	app->setApplicationName("RPCS3");
 
-	if (auto gui_app = qobject_cast<gui_application*>(app.get()))
+	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
 #if defined(_WIN32) || defined(__APPLE__)
 		app->setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -155,7 +155,7 @@ int main(int argc, char** argv)
 
 		gui_app->Init();
 	}
-	else if (auto non_gui_app = qobject_cast<rpcs3_app*>(app.get()))
+	else if (auto non_gui_app = qobject_cast<rpcs3_app*>(app.data()))
 	{
 		non_gui_app->Init();
 	}

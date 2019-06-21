@@ -1,4 +1,9 @@
-﻿#include "user_manager_dialog.h"
+﻿#include <QRegExpValidator>
+#include <QInputDialog>
+#include <QKeyEvent>
+#include <QEvent>
+
+#include "user_manager_dialog.h"
 #include "table_item_delegate.h"
 #include "main_application.h"
 

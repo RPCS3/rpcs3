@@ -2,9 +2,9 @@
 
 #include "stdafx.h"
 
-#include "main_application.h"
-
 #include <QCoreApplication>
+
+#include "main_application.h"
 
 /** RPCS3 Application Class
  * The point of this class is to do application initialization and to hold onto the main window. The main thing I intend this class to do, for now, is to initialize callbacks and the main_window.
