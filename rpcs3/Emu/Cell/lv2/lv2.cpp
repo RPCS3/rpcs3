@@ -1042,16 +1042,20 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 		const u64 wait_until = start_time + timeout;
 
 		// Register timeout if necessary
-		for (auto it = g_waiting.begin(), end = g_waiting.end(); it != end; it++)
+		for (auto it = g_waiting.begin(), end = g_waiting.end();; it++)
 		{
+			if (it == end)
+			{
+				g_waiting.emplace_back(wait_until, &thread);
+				break;
+			}
+
 			if (it->first > wait_until)
 			{
 				g_waiting.emplace(it, wait_until, &thread);
-				return;
+				break;
 			}
 		}
-
-		g_waiting.emplace_back(wait_until, &thread);
 	}
 
 	schedule_all();
