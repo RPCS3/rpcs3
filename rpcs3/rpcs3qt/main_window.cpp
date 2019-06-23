@@ -666,7 +666,7 @@ extern void sysutil_send_system_cmd(u64 status, u64 param);
 void main_window::DecryptSPRXLibraries()
 {
 	QString path_last_SPRX = guiSettings->GetValue(gui::fd_decrypt_sprx).toString();
-	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select SPRX files"), path_last_SPRX, tr("SPRX files (*.sprx)"));
+	QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_SPRX, tr("BIN files (*.bin);;SELF files (*.self);;SPRX files (*.sprx);;All Binaries (*.bin *.self *.sprx);;All files (*.*)"));
 
 	if (modules.isEmpty())
 	{
@@ -678,44 +678,41 @@ void main_window::DecryptSPRXLibraries()
 
 	guiSettings->SetValue(gui::fd_decrypt_sprx, QFileInfo(modules.first()).path());
 
-	LOG_NOTICE(GENERAL, "Decrypting SPRX libraries...");
+	LOG_NOTICE(GENERAL, "Decrypting binaries...");
 
 	for (const QString& module : modules)
 	{
-		std::string prx_path = sstr(module);
-		const std::string& prx_dir = fs::get_parent_dir(prx_path);
+		const std::string old_path = sstr(module);
 
-		fs::file elf_file(prx_path);
+		fs::file elf_file(old_path);
 
 		if (elf_file && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
-			const std::size_t prx_ext_pos = prx_path.find_last_of('.');
-			const std::string& prx_name = prx_path.substr(prx_dir.size());
-
 			elf_file = decrypt_self(std::move(elf_file));
-
-			prx_path.erase(prx_path.size() - 4, 1); // change *.sprx to *.prx
 
 			if (elf_file)
 			{
-				if (fs::file new_file{ prx_path, fs::rewrite })
+				const std::string bin_ext  = module.toLower().endsWith(".sprx") ? ".prx" : ".elf";
+				const std::string new_path = old_path.substr(0, old_path.find_last_of(".")) + bin_ext;
+
+				if (fs::file new_file{new_path, fs::rewrite})
 				{
 					new_file.write(elf_file.to_string());
-					LOG_SUCCESS(GENERAL, "Decrypted %s", prx_dir + prx_name);
+					LOG_SUCCESS(GENERAL, "Decrypted %s", old_path);
 				}
 				else
 				{
-					LOG_ERROR(GENERAL, "Failed to create %s", prx_path);
+					LOG_ERROR(GENERAL, "Failed to create %s", new_path);
 				}
 			}
 			else
 			{
-				LOG_ERROR(GENERAL, "Failed to decrypt %s", prx_dir + prx_name);
+				LOG_ERROR(GENERAL, "Failed to decrypt %s", old_path);
 			}
 		}
 	}
 
-	LOG_NOTICE(GENERAL, "Finished decrypting all SPRX libraries.");
+	LOG_NOTICE(GENERAL, "Finished decrypting all binaries.");
 }
 
 /** Needed so that when a backup occurs of window state in guisettings, the state is current.
