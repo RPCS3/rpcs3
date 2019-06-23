@@ -569,7 +569,7 @@
   </action>
   <action name="toolsDecryptSprxLibsAct">
    <property name="text">
-    <string>SPRX Decryption</string>
+    <string>Decrypt PS3 Binaries</string>
    </property>
   </action>
   <action name="showDebuggerAct">
