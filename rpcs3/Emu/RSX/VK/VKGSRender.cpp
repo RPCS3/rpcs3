@@ -1091,7 +1091,6 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	auto persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
 	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
-	auto layout_stream = m_vertex_layout_storage ? m_vertex_layout_storage->value : null_buffer_view->value;
 	bool update_descriptors = false;
 
 	if (sub_index == 0)
@@ -1134,11 +1133,12 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	// Update vertex fetch parameters
 	update_vertex_env(sub_index, upload_info);
 
+	verify(HERE), m_vertex_layout_storage;
 	if (update_descriptors)
 	{
 		m_program->bind_uniform(persistent_buffer, VERTEX_BUFFERS_FIRST_BIND_SLOT, m_current_frame->descriptor_set);
 		m_program->bind_uniform(volatile_buffer, VERTEX_BUFFERS_FIRST_BIND_SLOT + 1, m_current_frame->descriptor_set);
-		m_program->bind_uniform(layout_stream, VERTEX_BUFFERS_FIRST_BIND_SLOT + 2, m_current_frame->descriptor_set);
+		m_program->bind_uniform(m_vertex_layout_storage->value, VERTEX_BUFFERS_FIRST_BIND_SLOT + 2, m_current_frame->descriptor_set);
 	}
 
 	// Bind the new set of descriptors for use with this draw call
