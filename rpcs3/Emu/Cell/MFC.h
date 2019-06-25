@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/types.h"
+
 enum MFC : u8
 {
 	MFC_PUT_CMD      = 0x20, MFC_PUTB_CMD     = 0x21, MFC_PUTF_CMD     = 0x22,

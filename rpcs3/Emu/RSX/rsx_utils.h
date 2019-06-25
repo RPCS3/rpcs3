@@ -1,16 +1,14 @@
-﻿#pragma once
+#pragma once
 
 #include "../System.h"
 #include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
 #include "Utilities/asm.h"
-#include "Utilities/VirtualMemory.h"
-#include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
-#include <atomic>
+
 #include <memory>
 #include <bitset>
-#include <optional>
+#include <chrono>
 
 extern "C"
 {
@@ -72,9 +70,37 @@ namespace rsx
 		}
 	};
 
+	namespace limits
+	{
+		enum
+		{
+			fragment_textures_count = 16,
+			vertex_textures_count = 4,
+			vertex_count = 16,
+			fragment_count = 32,
+			tiles_count = 15,
+			zculls_count = 8,
+			color_buffers_count = 4
+		};
+	}
+
+	namespace constants
+	{
+		static std::array<const char*, 16> fragment_texture_names =
+		{
+			"tex0", "tex1", "tex2", "tex3", "tex4", "tex5", "tex6", "tex7",
+			"tex8", "tex9", "tex10", "tex11", "tex12", "tex13", "tex14", "tex15",
+		};
+
+		static std::array<const char*, 4> vertex_texture_names =
+		{
+			"vtex0", "vtex1", "vtex2", "vtex3",
+		};
+	}
+
 	/**
-     * Holds information about a framebuffer
-     */
+	* Holds information about a framebuffer
+	*/
 	struct gcm_framebuffer_info
 	{
 		u32 address = 0;
@@ -880,7 +906,7 @@ namespace rsx
 
 		void reserve(u32 size)
 		{
-			if (_capacity > size)
+			if (_capacity >= size)
 				return;
 
 			if (_data)
@@ -1055,6 +1081,34 @@ namespace rsx
 		const_iterator end() const
 		{
 			return _data ? _data + _size : nullptr;
+		}
+	};
+
+	struct profiling_timer
+	{
+		bool enabled = false;
+		std::chrono::time_point<steady_clock> last;
+
+		profiling_timer() = default;
+
+		void start()
+		{
+			if (UNLIKELY(enabled))
+			{
+				last = steady_clock::now();
+			}
+		}
+
+		s64 duration()
+		{
+			if (LIKELY(!enabled))
+			{
+				return 0ll;
+			}
+
+			auto old = last;
+			last = steady_clock::now();
+			return std::chrono::duration_cast<std::chrono::microseconds>(last - old).count();
 		}
 	};
 }

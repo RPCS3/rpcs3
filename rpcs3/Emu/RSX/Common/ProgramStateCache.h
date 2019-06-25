@@ -2,11 +2,11 @@
 
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
-#include "Emu/Memory/vm.h"
 
 #include "Utilities/GSL.h"
 #include "Utilities/hash.h"
 #include "Utilities/mutex.h"
+#include "Utilities/Log.h"
 
 #include <deque>
 

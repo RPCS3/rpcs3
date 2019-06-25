@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-
+#include <Emu/Memory/vm_ptr.h>
 
 // Return codes
 enum CellSaveDataError : u32

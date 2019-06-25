@@ -385,7 +385,6 @@ struct cfg_root : cfg::node
 		cfg::_enum<spu_block_size_type> spu_block_size{this, "SPU Block Size", spu_block_size_type::safe};
 		cfg::_bool spu_accurate_getllar{this, "Accurate GETLLAR", false};
 		cfg::_bool spu_accurate_putlluc{this, "Accurate PUTLLUC", false};
-		cfg::_bool spu_accurate_putllc{this, "Accurate PUTLLC", false};
 		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
 		cfg::_bool spu_cache{this, "SPU Cache", true};
 		cfg::_enum<tsx_usage> enable_TSX{this, "Enable TSX", tsx_usage::enabled}; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
@@ -462,6 +461,7 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_asynchronous_shader_compiler{this, "Disable Asynchronous Shader Compiler", false};
 		cfg::_bool strict_texture_flushing{this, "Strict Texture Flushing", false};
 		cfg::_bool disable_native_float16{this, "Disable native float16 support", false};
+		cfg::_bool multithreaded_rsx{this, "Multithreaded RSX", false};
 		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
 		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
 		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};

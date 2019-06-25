@@ -3,7 +3,6 @@
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
-#include "../rsx_utils.h"
 
 namespace gl
 {
@@ -210,12 +209,18 @@ namespace gl
 	//Apply sampler state settings
 	void sampler_state::apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
 	{
-		const color4f border_color = rsx::decode_border_color(tex.border_color());
+		set_parameteri(GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
+		set_parameteri(GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
+		set_parameteri(GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
 
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
-		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+		if (const auto color = tex.border_color();
+			get_parameteri(GL_TEXTURE_BORDER_COLOR) != color)
+		{
+			m_propertiesi[GL_TEXTURE_BORDER_COLOR] = color;
+
+			const color4f border_color = rsx::decode_border_color(color);
+			glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+		}
 
 		if (sampled_image->upload_context != rsx::texture_upload_context::shader_read ||
 			tex.get_exact_mipmap_count() == 1)
@@ -238,23 +243,23 @@ namespace gl
 				}
 			}
 
-			glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, min_filter);
-			glSamplerParameterf(samplerHandle, GL_TEXTURE_LOD_BIAS, 0.f);
-			glSamplerParameterf(samplerHandle, GL_TEXTURE_MIN_LOD, -1000.f);
-			glSamplerParameterf(samplerHandle, GL_TEXTURE_MAX_LOD, 1000.f);
+			set_parameteri(GL_TEXTURE_MIN_FILTER, min_filter);
+			set_parameterf(GL_TEXTURE_LOD_BIAS, 0.f);
+			set_parameterf(GL_TEXTURE_MIN_LOD, -1000.f);
+			set_parameterf(GL_TEXTURE_MAX_LOD, 1000.f);
 		}
 		else
 		{
-			glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, tex_min_filter(tex.min_filter()));
-			glSamplerParameterf(samplerHandle, GL_TEXTURE_LOD_BIAS, tex.bias());
-			glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-			glSamplerParameteri(samplerHandle, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+			set_parameteri(GL_TEXTURE_MIN_FILTER, tex_min_filter(tex.min_filter()));
+			set_parameterf(GL_TEXTURE_LOD_BIAS, tex.bias());
+			set_parameteri(GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+			set_parameteri(GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
 		}
 
 		const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
 		f32 af_level = aniso_override ? g_cfg.video.anisotropic_level_override : max_aniso(tex.max_aniso());
-		glSamplerParameterf(samplerHandle, GL_TEXTURE_MAX_ANISOTROPY_EXT, af_level);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
+		set_parameterf(GL_TEXTURE_MAX_ANISOTROPY_EXT, af_level);
+		set_parameteri(GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
 
 		const u32 texture_format = tex.format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
 		if (texture_format == CELL_GCM_TEXTURE_DEPTH16 || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8 ||
@@ -271,40 +276,46 @@ namespace gl
 			case GL_LEQUAL: compare_mode = GL_GEQUAL; break;
 			}
 
-			glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-			glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_FUNC, compare_mode);
+			set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+			set_parameteri(GL_TEXTURE_COMPARE_FUNC, compare_mode);
 		}
 		else
-			glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+			set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 
 	void sampler_state::apply(const rsx::vertex_texture& tex, const rsx::sampled_image_descriptor_base* /*sampled_image*/)
 	{
-		const color4f border_color = rsx::decode_border_color(tex.border_color());
-		glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+		if (const auto color = tex.border_color();
+			get_parameteri(GL_TEXTURE_BORDER_COLOR) != color)
+		{
+			m_propertiesi[GL_TEXTURE_BORDER_COLOR] = color;
 
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glSamplerParameterf(samplerHandle, GL_TEXTURE_LOD_BIAS, tex.bias());
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+			const color4f border_color = rsx::decode_border_color(color);
+			glSamplerParameterfv(samplerHandle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
+		}
+
+		set_parameteri(GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
+		set_parameteri(GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
+		set_parameteri(GL_TEXTURE_WRAP_R, wrap_mode(tex.wrap_r()));
+		set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		set_parameterf(GL_TEXTURE_LOD_BIAS, tex.bias());
+		set_parameteri(GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
+		set_parameteri(GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+		set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 
 	void sampler_state::apply_defaults(GLenum default_filter)
 	{
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_WRAP_R, GL_REPEAT);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_FILTER, default_filter);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAG_FILTER, default_filter);
-		glSamplerParameterf(samplerHandle, GL_TEXTURE_LOD_BIAS, 0.f);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MIN_LOD, 0);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_MAX_LOD, 0);
-		glSamplerParameteri(samplerHandle, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+		set_parameteri(GL_TEXTURE_WRAP_S, GL_REPEAT);
+		set_parameteri(GL_TEXTURE_WRAP_T, GL_REPEAT);
+		set_parameteri(GL_TEXTURE_WRAP_R, GL_REPEAT);
+		set_parameteri(GL_TEXTURE_MIN_FILTER, default_filter);
+		set_parameteri(GL_TEXTURE_MAG_FILTER, default_filter);
+		set_parameterf(GL_TEXTURE_LOD_BIAS, 0.f);
+		set_parameteri(GL_TEXTURE_MIN_LOD, 0);
+		set_parameteri(GL_TEXTURE_MAX_LOD, 0);
+		set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 
 	bool is_compressed_format(u32 texture_format)

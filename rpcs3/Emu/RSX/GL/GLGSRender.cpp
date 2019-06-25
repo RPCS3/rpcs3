@@ -31,7 +31,7 @@ GLGSRender::GLGSRender() : GSRender()
 {
 	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.6");
 
-	if (g_cfg.video.disable_vertex_cache)
+	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
 		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
 	else
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
@@ -183,7 +183,7 @@ void GLGSRender::begin()
 
 void GLGSRender::end()
 {
-	std::chrono::time_point<steady_clock> state_check_start = steady_clock::now();
+	m_profiler.start();
 
 	if (skip_frame || !framebuffer_status_valid ||
 		(conditional_render_enabled && conditional_render_test_failed))
@@ -193,8 +193,7 @@ void GLGSRender::end()
 		return;
 	}
 
-	std::chrono::time_point<steady_clock> state_check_end = steady_clock::now();
-	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(state_check_end - state_check_start).count();
+	m_begin_time += m_profiler.duration();
 
 	const auto do_heap_cleanup = [this]()
 	{
@@ -233,7 +232,7 @@ void GLGSRender::end()
 
 	// Load textures
 	{
-		std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
+		m_profiler.start();
 
 		std::lock_guard lock(m_sampler_mutex);
 		bool  update_framebuffer_sourced = false;
@@ -296,11 +295,8 @@ void GLGSRender::end()
 
 		m_samplers_dirty.store(false);
 
-		std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
-		m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
+		m_textures_upload_time += m_profiler.duration();
 	}
-
-	std::chrono::time_point<steady_clock> program_start = steady_clock::now();
 
 	// NOTE: Due to common OpenGL driver architecture, vertex data has to be uploaded as far away from the draw as possible
 	// TODO: Implement shaders cache prediction to avoid uploading vertex data if draw is going to skip
@@ -317,12 +313,9 @@ void GLGSRender::end()
 	// Load program execution environment
 	load_program_env();
 
-	std::chrono::time_point<steady_clock> program_stop = steady_clock::now();
-	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(program_stop - program_start).count();
+	m_begin_time += m_profiler.duration();
 
 	//Bind textures and resolve external copy operations
-	std::chrono::time_point<steady_clock> textures_start = steady_clock::now();
-
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		if (current_fp_metadata.referenced_textures_mask & (1 << i))
@@ -394,10 +387,7 @@ void GLGSRender::end()
 		}
 	}
 
-	std::chrono::time_point<steady_clock> textures_end = steady_clock::now();
-	m_textures_upload_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(textures_end - textures_start).count();
-
-	std::chrono::time_point<steady_clock> draw_start = textures_end;
+	m_textures_upload_time += m_profiler.duration();
 
 	// Optionally do memory synchronization if the texture stage has not yet triggered this
 	if (true)//g_cfg.video.strict_rendering_mode)
@@ -647,8 +637,7 @@ void GLGSRender::end()
 	m_fragment_constants_buffer->notify();
 	m_transform_constants_buffer->notify();
 
-	std::chrono::time_point<steady_clock> draw_end = steady_clock::now();
-	m_draw_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(draw_end - draw_start).count();
+	m_draw_time += m_profiler.duration();
 
 	rsx::thread::end();
 }
@@ -1456,7 +1445,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 void GLGSRender::update_draw_state()
 {
-	std::chrono::time_point<steady_clock> then = steady_clock::now();
+	m_profiler.start();
 
 	bool color_mask_b = rsx::method_registers.color_mask_b();
 	bool color_mask_g = rsx::method_registers.color_mask_g();
@@ -1573,8 +1562,7 @@ void GLGSRender::update_draw_state()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	std::chrono::time_point<steady_clock> now = steady_clock::now();
-	m_begin_time += (u32)std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
+	m_begin_time += m_profiler.duration();
 }
 
 void GLGSRender::flip(int buffer, bool emu_flip)

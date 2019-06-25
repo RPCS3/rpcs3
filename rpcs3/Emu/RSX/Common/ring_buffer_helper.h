@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "Utilities/Log.h"
+
 /**
  * Ring buffer memory helper :
  * There are 2 "pointers" (offset inside a memory buffer to be provided by class derrivative)

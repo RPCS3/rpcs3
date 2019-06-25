@@ -1,5 +1,6 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_prx.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -8,7 +9,6 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
 #include "sys_fs.h"
-#include "sys_prx.h"
 
 
 

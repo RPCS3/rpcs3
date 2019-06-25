@@ -1140,14 +1140,14 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	const auto lwCond  = spurs.ptr(&CellSpurs::cond);
 
 	// Create a mutex to protect access to SPURS handler thread data
-	if (s32 rc = sys_lwmutex_create(lwMutex, vm::make_var(sys_lwmutex_attribute_t{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, "_spuPrv" })))
+	if (s32 rc = sys_lwmutex_create(ppu, lwMutex, vm::make_var(sys_lwmutex_attribute_t{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, "_spuPrv" })))
 	{
 		_spurs::finalize_spu(ppu, spurs);
 		return rollback(), rc;
 	}
 
 	// Create condition variable to signal the SPURS handler thread
-	if (s32 rc = sys_lwcond_create(lwCond, lwMutex, vm::make_var(sys_lwcond_attribute_t{ "_spuPrv" })))
+	if (s32 rc = sys_lwcond_create(ppu, lwCond, lwMutex, vm::make_var(sys_lwcond_attribute_t{ "_spuPrv" })))
 	{
 		sys_lwmutex_destroy(ppu, lwMutex);
 		_spurs::finalize_spu(ppu, spurs);
@@ -1165,7 +1165,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	// Create the SPURS event helper thread
 	if (s32 rc = _spurs::create_event_helper(ppu, spurs, ppuPriority))
 	{
-		sys_lwcond_destroy(lwCond);
+		sys_lwcond_destroy(ppu, lwCond);
 		sys_lwmutex_destroy(ppu, lwMutex);
 		_spurs::finalize_spu(ppu, spurs);
 		return rollback(), rc;
@@ -1175,7 +1175,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	if (s32 rc = _spurs::create_handler(spurs, ppuPriority))
 	{
 		_spurs::stop_event_helper(ppu, spurs);
-		sys_lwcond_destroy(lwCond);
+		sys_lwcond_destroy(ppu, lwCond);
 		sys_lwmutex_destroy(ppu, lwMutex);
 		_spurs::finalize_spu(ppu, spurs);
 		return rollback(), rc;
@@ -1187,7 +1187,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 		_spurs::signal_to_handler_thread(ppu, spurs);
 		_spurs::join_handler_thread(ppu, spurs);
 		_spurs::stop_event_helper(ppu, spurs);
-		sys_lwcond_destroy(lwCond);
+		sys_lwcond_destroy(ppu, lwCond);
 		sys_lwmutex_destroy(ppu, lwMutex);
 		_spurs::finalize_spu(ppu, spurs);
 		return rollback(), rc;

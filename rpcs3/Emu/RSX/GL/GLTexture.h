@@ -39,6 +39,8 @@ namespace gl
 	class sampler_state
 	{
 		GLuint samplerHandle = 0;
+		std::unordered_map<GLenum, GLuint> m_propertiesi;
+		std::unordered_map<GLenum, GLfloat> m_propertiesf;
 
 	public:
 
@@ -55,6 +57,44 @@ namespace gl
 		void bind(int index) const
 		{
 			glBindSampler(index, samplerHandle);
+		}
+
+		void set_parameteri(GLenum pname, GLuint value)
+		{
+			auto prop = m_propertiesi.find(pname);
+			if (prop != m_propertiesi.end() &&
+				prop->second == value)
+			{
+				return;
+			}
+
+			m_propertiesi[pname] = value;
+			glSamplerParameteri(samplerHandle, pname, value);
+		}
+
+		void set_parameterf(GLenum pname, GLfloat value)
+		{
+			auto prop = m_propertiesf.find(pname);
+			if (prop != m_propertiesf.end() &&
+				prop->second == value)
+			{
+				return;
+			}
+
+			m_propertiesf[pname] = value;
+			glSamplerParameterf(samplerHandle, pname, value);
+		}
+
+		GLuint get_parameteri(GLenum pname)
+		{
+			auto prop = m_propertiesi.find(pname);
+			return (prop == m_propertiesi.end()) ? 0 : prop->second;
+		}
+
+		GLfloat get_parameterf(GLenum pname)
+		{
+			auto prop = m_propertiesf.find(pname);
+			return (prop == m_propertiesf.end()) ? 0 : prop->second;
 		}
 
 		void apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image);

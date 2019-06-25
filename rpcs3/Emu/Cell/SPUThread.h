@@ -4,6 +4,8 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Memory/vm.h"
 #include "MFC.h"
+#include "Emu/Memory/vm.h"
+#include "Utilities/BEType.h"
 
 #include <map>
 
@@ -529,7 +531,7 @@ public:
 
 	// Reservation Data
 	u64 rtime = 0;
-	std::array<u128, 8> rdata{};
+	std::array<v128, 8> rdata{};
 	u32 raddr = 0;
 
 	u32 srr0;

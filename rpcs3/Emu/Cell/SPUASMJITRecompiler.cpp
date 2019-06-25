@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "SPUASMJITRecompiler.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -13,8 +14,6 @@
 #include <cmath>
 #include <mutex>
 #include <thread>
-
-#include "SPUASMJITRecompiler.h"
 
 #define SPU_OFF_128(x, ...) asmjit::x86::oword_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))
 #define SPU_OFF_64(x, ...) asmjit::x86::qword_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))
@@ -1349,6 +1348,12 @@ void spu_stop(spu_thread* _spu, u32 code)
 	{
 		spu_runtime::g_escape(_spu);
 	}
+
+	if (_spu->test_stopped())
+	{
+		_spu->pc += 4;
+		spu_runtime::g_escape(_spu);
+	}
 }
 
 void spu_recompiler::STOP(spu_opcode_t op)
@@ -1407,7 +1412,7 @@ void spu_recompiler::MFSPR(spu_opcode_t op)
 	c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 }
 
-static s64 spu_rdch(spu_thread* _spu, u32 ch)
+static u32 spu_rdch(spu_thread* _spu, u32 ch)
 {
 	const s64 result = _spu->get_ch_value(ch);
 
@@ -1416,7 +1421,13 @@ static s64 spu_rdch(spu_thread* _spu, u32 ch)
 		spu_runtime::g_escape(_spu);
 	}
 
-	return result;
+	if (_spu->test_stopped())
+	{
+		_spu->pc += 4;
+		spu_runtime::g_escape(_spu);
+	}
+
+	return static_cast<u32>(result & 0xffffffff);
 }
 
 void spu_recompiler::RDCH(spu_opcode_t op)
@@ -1522,7 +1533,16 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 			const u32 out = _spu->ch_dec_value - static_cast<u32>(get_timebased_time() - _spu->ch_dec_start_timestamp);
 
 			if (out > 1500)
+			{
+				_spu->state += cpu_flag::wait;
 				std::this_thread::yield();
+
+				if (_spu->test_stopped())
+				{
+					_spu->pc += 4;
+					spu_runtime::g_escape(_spu);
+				}
+			}
 
 			*_res = v128::from32r(out);
 		};
@@ -2319,12 +2339,24 @@ static void spu_wrch(spu_thread* _spu, u32 ch, u32 value)
 	{
 		spu_runtime::g_escape(_spu);
 	}
+
+	if (_spu->test_stopped())
+	{
+		_spu->pc += 4;
+		spu_runtime::g_escape(_spu);
+	}
 }
 
-static void spu_wrch_mfc(spu_thread* _spu, spu_function_t _ret)
+static void spu_wrch_mfc(spu_thread* _spu)
 {
 	if (!_spu->process_mfc_cmd())
 	{
+		spu_runtime::g_escape(_spu);
+	}
+
+	if (_spu->test_stopped())
+	{
+		_spu->pc += 4;
 		spu_runtime::g_escape(_spu);
 	}
 }

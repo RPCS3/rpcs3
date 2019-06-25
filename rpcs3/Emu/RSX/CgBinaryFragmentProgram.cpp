@@ -1,7 +1,7 @@
 #include "stdafx.h"
+#include "CgBinaryProgram.h"
 
 #include "Emu/System.h"
-#include "CgBinaryProgram.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 
 #include <algorithm>
@@ -228,7 +228,8 @@ void CgBinaryDisasm::TaskFP()
 	verify(HERE), ((m_buffer_size - m_offset) % sizeof(u32) == 0);
 	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 	{
-		data[i] = se_storage<u32>::swap(data[i]); // WTF, cannot use be_t<> there?
+		// Get BE data
+		data[i] = be_t<u32>{data[i]}.raw();
 	}
 
 	enum

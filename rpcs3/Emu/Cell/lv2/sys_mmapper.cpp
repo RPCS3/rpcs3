@@ -1,10 +1,12 @@
 ﻿#include "stdafx.h"
+#include "sys_mmapper.h"
+
 #include "Emu/Cell/PPUThread.h"
 #include "sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Memory/vm_var.h"
 #include "Utilities/VirtualMemory.h"
 #include "sys_memory.h"
-#include "sys_mmapper.h"
 
 LOG_CHANNEL(sys_mmapper);
 

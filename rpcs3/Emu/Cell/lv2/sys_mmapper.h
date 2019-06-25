@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include "sys_sync.h"
+
+#include "Emu/Memory/vm_ptr.h"
+
 #include <vector>
 
 struct lv2_memory_container;

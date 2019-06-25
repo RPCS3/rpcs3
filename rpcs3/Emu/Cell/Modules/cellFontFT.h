@@ -2,7 +2,7 @@
 
 #include "cellFont.h"
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 struct CellFontLibraryConfigFT
 {

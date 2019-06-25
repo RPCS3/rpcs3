@@ -1,7 +1,7 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/System.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
@@ -64,12 +64,10 @@ namespace rsx
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
-#ifdef IS_LE_MACHINE
-			arg = se_storage<u32>::swap(arg);
-			const auto& sema = vm::_ref<le_t<u32>>(addr);
-#else
-			const auto& sema = vm::_ref<u32>(addr);
-#endif
+			// Get raw BE value
+			arg = be_t<u32>{arg}.raw();
+			const auto& sema = vm::_ref<nse_t<u32>>(addr);
+
 			// TODO: Remove vblank semaphore hack
 			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
 
@@ -244,8 +242,8 @@ namespace rsx
 			{
 			case rsx::vertex_base_type::ub:
 			case rsx::vertex_base_type::ub256:
-				// One-way byteswap
-				arg = se_storage<u32>::swap(arg);
+				// Get BE data
+				arg = be_t<u32>{arg}.raw();
 				break;
 			}
 

@@ -3,6 +3,8 @@
 #include "Utilities/bit_set.h"
 #include "Utilities/mutex.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 #include <vector>
 #include <utility>
 #include <functional>

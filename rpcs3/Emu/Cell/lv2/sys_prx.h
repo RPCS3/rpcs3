@@ -1,7 +1,9 @@
 #pragma once
 
-#include "Emu/Cell/PPUAnalyser.h"
 #include "sys_sync.h"
+
+#include "Emu/Cell/PPUAnalyser.h"
+#include "Emu/Memory/vm_ptr.h"
 
 // Return codes
 enum CellPrxError : u32

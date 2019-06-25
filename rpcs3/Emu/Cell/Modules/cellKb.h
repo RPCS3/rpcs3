@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/BEType.h"
+
 enum CellKbError : u32
 {
 	CELL_KB_ERROR_FATAL                      = 0x80121001,

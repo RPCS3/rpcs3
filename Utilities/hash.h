@@ -1,5 +1,6 @@
 #pragma once
-#include <stdint.h>
+
+#include "Utilities/types.h"
 
 namespace rpcs3
 {

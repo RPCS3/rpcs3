@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Utilities/types.h"
 
 namespace rsx
@@ -138,6 +138,17 @@ namespace rsx
 	};
 
 	fog_mode to_fog_mode(u32 in);
+
+	/**
+	* Use an extra cubemap format
+	*/
+	enum class texture_dimension_extended : u8
+	{
+		texture_dimension_1d = 0,
+		texture_dimension_2d = 1,
+		texture_dimension_cubemap = 2,
+		texture_dimension_3d = 3,
+	};
 
 	enum class texture_dimension : u8
 	{

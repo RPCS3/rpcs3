@@ -4,6 +4,8 @@
 #include "../Common/ProgramStateCache.h"
 #include "D3D12VertexProgramDecompiler.h"
 #include "D3D12FragmentProgramDecompiler.h"
+#include "Utilities/File.h"
+
 
 struct D3D12PipelineProperties
 {
@@ -86,7 +88,7 @@ public:
 	//	void Decompile(RSXFragmentProgram& prog)
 
 	/** Compile the decompiled fragment shader into a format we can use with OpenGL. */
-	void Compile(const std::string &code, enum class SHADER_TYPE st);
+	void Compile(const std::string &code, enum SHADER_TYPE st);
 };
 
 static

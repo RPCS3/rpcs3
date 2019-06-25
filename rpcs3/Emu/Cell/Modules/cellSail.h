@@ -2,7 +2,7 @@
 
 #include "cellVpost.h"
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
 enum

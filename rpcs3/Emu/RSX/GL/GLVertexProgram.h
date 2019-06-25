@@ -1,8 +1,6 @@
 #pragma once
 #include "../Common/VertexProgramDecompiler.h"
 #include "Emu/RSX/RSXVertexProgram.h"
-#include "Utilities/Thread.h"
-#include "OpenGL.h"
 
 enum
 {

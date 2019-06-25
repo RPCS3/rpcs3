@@ -2,9 +2,9 @@
 
 #ifdef LLVM_AVAILABLE
 
-#include "../rpcs3/Emu/CPU/CPUTranslator.h"
-#include "../rpcs3/Emu/Cell/PPUOpcodes.h"
-#include "../rpcs3/Emu/Cell/PPUAnalyser.h"
+#include "Emu/CPU/CPUTranslator.h"
+#include "PPUOpcodes.h"
+#include "PPUAnalyser.h"
 
 class PPUTranslator final : public cpu_translator
 {

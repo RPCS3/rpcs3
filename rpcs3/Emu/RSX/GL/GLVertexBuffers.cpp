@@ -1,6 +1,5 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
-#include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
 #include "GLHelpers.h"
 
@@ -153,7 +152,7 @@ namespace
 
 gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 {
-	std::chrono::time_point<steady_clock> then = steady_clock::now();
+	m_profiler.start();
 
 	//Write index buffers and count verts
 	auto result = std::visit(draw_command_visitor(*m_index_ring_buffer, m_vertex_layout), get_draw_command(rsx::method_registers));
@@ -255,7 +254,6 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	//Write all the data
 	write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping.first, volatile_mapping.first);
 
-	std::chrono::time_point<steady_clock> now = steady_clock::now();
-	m_vertex_upload_time += std::chrono::duration_cast<std::chrono::microseconds>(now - then).count();
+	m_vertex_upload_time += m_profiler.duration();
 	return upload_info;
 }

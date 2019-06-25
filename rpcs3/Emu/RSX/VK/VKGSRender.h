@@ -9,9 +9,10 @@
 #include "VKProgramBuffer.h"
 #include "VKFramebuffer.h"
 #include "../GCM.h"
-#include "../rsx_utils.h"
+
 #include <thread>
 #include <atomic>
+#include <optional>
 
 namespace vk
 {
@@ -378,6 +379,7 @@ private:
 
 	std::unique_ptr<vk::buffer_view> m_persistent_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
+	std::unique_ptr<vk::buffer_view> m_vertex_layout_storage;
 
 	resource_manager m_resource_manager;
 
@@ -398,7 +400,7 @@ private:
 	vk::occlusion_query_pool m_occlusion_query_pool;
 	bool m_occlusion_query_active = false;
 	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
-	std::unordered_map<u32, occlusion_data> m_occlusion_map;
+	std::vector<occlusion_data> m_occlusion_map;
 
 	shared_mutex m_secondary_cb_guard;
 	vk::command_pool m_secondary_command_buffer_pool;
@@ -431,9 +433,9 @@ private:
 
 	VkDescriptorBufferInfo m_vertex_env_buffer_info;
 	VkDescriptorBufferInfo m_fragment_env_buffer_info;
+	VkDescriptorBufferInfo m_vertex_layout_stream_info;
 	VkDescriptorBufferInfo m_vertex_constants_buffer_info;
 	VkDescriptorBufferInfo m_fragment_constants_buffer_info;
-	VkDescriptorBufferInfo m_vertex_layout_buffer_info;
 	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info;
 
 	std::array<frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
@@ -511,7 +513,7 @@ private:
 
 	bool load_program();
 	void load_program_env();
-	void update_vertex_env(const vk::vertex_upload_info& vertex_info);
+	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);

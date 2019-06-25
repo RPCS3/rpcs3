@@ -1,12 +1,8 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
-
-#include "Emu/Cell/ErrorCodes.h"
-
 #include "sys_gamepad.h"
 
+#include "Emu/System.h"
+#include "Emu/IdManager.h"
 
 
 LOG_CHANNEL(sys_gamepad);

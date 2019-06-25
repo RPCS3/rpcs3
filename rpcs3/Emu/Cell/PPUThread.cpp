@@ -3,7 +3,7 @@
 #include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "PPUThread.h"
@@ -1064,11 +1064,12 @@ const auto ppu_stwcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.shr(args[0], 7);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.xor_(args[0].r32(), args[0].r32());
 	c.bswap(args[2].r32());
 	c.bswap(args[3].r32());
 
 	// Begin transaction
-	Label begin = build_transaction_enter(c, fall);
+	build_transaction_enter(c, fall, args[0], 16);
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, args[1]);
@@ -1184,11 +1185,12 @@ const auto ppu_stdcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
 	c.shr(args[0], 7);
 	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.xor_(args[0].r32(), args[0].r32());
 	c.bswap(args[2]);
 	c.bswap(args[3]);
 
 	// Begin transaction
-	Label begin = build_transaction_enter(c, fall);
+	build_transaction_enter(c, fall, args[0], 16);
 	c.mov(x86::rax, x86::qword_ptr(x86::r10));
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, args[1]);

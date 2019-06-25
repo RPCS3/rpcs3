@@ -1,7 +1,8 @@
 ﻿#include "stdafx.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_ptr.h"
+#include "Emu/Memory/vm_reservation.h"
 #include "Emu/System.h"
 
 #include "Emu/IdManager.h"
@@ -29,36 +30,39 @@ static const bool s_tsx_avx = utils::has_avx();
 // For special case
 static const bool s_tsx_haswell = utils::has_rtm() && !utils::has_mpx();
 
-#ifdef _MSC_VER
-bool operator ==(const u128& lhs, const u128& rhs)
+static FORCE_INLINE bool cmp_rdata(const decltype(spu_thread::rdata)& lhs, const decltype(spu_thread::rdata)& rhs)
 {
-	return lhs.lo == rhs.lo && lhs.hi == rhs.hi;
+	const v128 a = (lhs[0] ^ rhs[0]) | (lhs[1] ^ rhs[1]);
+	const v128 b = (lhs[2] ^ rhs[2]) | (lhs[3] ^ rhs[3]);
+	const v128 c = (lhs[4] ^ rhs[4]) | (lhs[5] ^ rhs[5]);
+	const v128 d = (lhs[6] ^ rhs[6]) | (lhs[7] ^ rhs[7]);
+	const v128 r = (a | b) | (c | d);
+	return !(r._u64[0] | r._u64[1]);
 }
-#endif
 
-static FORCE_INLINE void mov_rdata(u128* const dst, const u128* const src)
+static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const decltype(spu_thread::rdata)& src)
 {
 	{
-		const u128 data0 = src[0];
-		const u128 data1 = src[1];
-		const u128 data2 = src[2];
+		const v128 data0 = src[0];
+		const v128 data1 = src[1];
+		const v128 data2 = src[2];
 		dst[0] = data0;
 		dst[1] = data1;
 		dst[2] = data2;
 	}
 
 	{
-		const u128 data0 = src[3];
-		const u128 data1 = src[4];
-		const u128 data2 = src[5];
+		const v128 data0 = src[3];
+		const v128 data1 = src[4];
+		const v128 data2 = src[5];
 		dst[3] = data0;
 		dst[4] = data1;
 		dst[5] = data2;
 	}
 
 	{
-		const u128 data0 = src[6];
-		const u128 data1 = src[7];
+		const v128 data0 = src[6];
+		const v128 data1 = src[7];
 		dst[6] = data0;
 		dst[7] = data1;
 	}
@@ -182,13 +186,15 @@ namespace spu
 	}
 }
 
-const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const void* _old, const void* _new)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
 	Label fall = c.newLabel();
 	Label fail = c.newLabel();
 	Label _ret = c.newLabel();
+	Label skip = c.newLabel();
+	Label next = c.newLabel();
 
 	if (utils::has_avx() && !s_tsx_avx)
 	{
@@ -197,8 +203,6 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 
 	// Create stack frame if necessary (Windows ABI has only 6 volatile vector registers)
 	c.push(x86::rbp);
-	c.push(x86::r15);
-	c.push(x86::r14);
 	c.push(x86::r13);
 	c.push(x86::r12);
 	c.push(x86::rbx);
@@ -234,8 +238,6 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
-	c.mov(x86::r14, args[2]);
-	c.mov(x86::r15, args[3]);
 
 	// Prepare data
 	if (s_tsx_avx)
@@ -270,10 +272,13 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 	}
 
 	// Begin transaction
-	build_transaction_enter(c, fall);
+	build_transaction_enter(c, fall, x86::r12, 4);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 	c.and_(x86::rax, -128);
 	c.cmp(x86::rax, x86::r13);
+	c.jne(fail);
+	c.test(x86::qword_ptr(x86::rbx), 127);
+	c.jnz(skip);
 
 	if (s_tsx_avx)
 	{
@@ -329,24 +334,34 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 
 	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
-	c.xor_(x86::eax, x86::eax);
+	c.mov(x86::eax, 1);
 	c.jmp(_ret);
 
-	// Touch memory after transaction failure
+	c.bind(skip);
+	c.xor_(x86::eax, x86::eax);
+	c.xor_(x86::r12d, x86::r12d);
+	build_transaction_abort(c, 0);
+	//c.jmp(fall);
+
 	c.bind(fall);
 	c.sar(x86::eax, 24);
 	c.js(fail);
-	c.xor_(x86::rbp, 0xf80);
-	c.lock().add(x86::qword_ptr(x86::rbp), 0);
-	c.xor_(x86::rbp, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::rbx), 1);
-	c.mov(x86::r12d, 1);
+	c.lock().bts(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::wait));
+
+	// Touch memory if transaction failed without RETRY flag on the first attempt
+	c.cmp(x86::r12, 1);
+	c.jne(next);
+	c.xor_(x86::rbp, 0xf80);
+	c.lock().add(x86::dword_ptr(x86::rbp), 0);
+	c.xor_(x86::rbp, 0xf80);
 
 	Label fall2 = c.newLabel();
-	Label next2 = c.newLabel();
+	Label fail2 = c.newLabel();
 
 	// Lightened transaction: only compare and swap data
-	Label retry = build_transaction_enter(c, fall2);
+	c.bind(next);
+	build_transaction_enter(c, fall2, x86::r12, 666);
 
 	if (s_tsx_avx)
 	{
@@ -379,7 +394,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 		c.ptest(x86::xmm0, x86::xmm0);
 	}
 
-	c.jnz(fail);
+	c.jnz(fail2);
 
 	if (s_tsx_avx)
 	{
@@ -402,86 +417,24 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
-	c.mov(x86::rax, x86::r12);
+	c.mov(x86::eax, 1);
 	c.jmp(_ret);
 
-	// Touch memory after transaction failure
 	c.bind(fall2);
-	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
-
-	if (s_tsx_haswell || std::thread::hardware_concurrency() < 12)
-	{
-		// Call yield and restore data
-		c.call(imm_ptr(&std::this_thread::yield));
-
-		if (s_tsx_avx)
-		{
-			c.vmovups(x86::ymm0, x86::yword_ptr(x86::r14, 0));
-			c.vmovups(x86::ymm1, x86::yword_ptr(x86::r14, 32));
-			c.vmovups(x86::ymm2, x86::yword_ptr(x86::r14, 64));
-			c.vmovups(x86::ymm3, x86::yword_ptr(x86::r14, 96));
-			c.vmovups(x86::ymm4, x86::yword_ptr(x86::r15, 0));
-			c.vmovups(x86::ymm5, x86::yword_ptr(x86::r15, 32));
-			c.vmovups(x86::ymm6, x86::yword_ptr(x86::r15, 64));
-			c.vmovups(x86::ymm7, x86::yword_ptr(x86::r15, 96));
-		}
-		else
-		{
-			c.movaps(x86::xmm0, x86::oword_ptr(x86::r14, 0));
-			c.movaps(x86::xmm1, x86::oword_ptr(x86::r14, 16));
-			c.movaps(x86::xmm2, x86::oword_ptr(x86::r14, 32));
-			c.movaps(x86::xmm3, x86::oword_ptr(x86::r14, 48));
-			c.movaps(x86::xmm4, x86::oword_ptr(x86::r14, 64));
-			c.movaps(x86::xmm5, x86::oword_ptr(x86::r14, 80));
-			c.movaps(x86::xmm6, x86::oword_ptr(x86::r14, 96));
-			c.movaps(x86::xmm7, x86::oword_ptr(x86::r14, 112));
-			c.movaps(x86::xmm8, x86::oword_ptr(x86::r15, 0));
-			c.movaps(x86::xmm9, x86::oword_ptr(x86::r15, 16));
-			c.movaps(x86::xmm10, x86::oword_ptr(x86::r15, 32));
-			c.movaps(x86::xmm11, x86::oword_ptr(x86::r15, 48));
-			c.movaps(x86::xmm12, x86::oword_ptr(x86::r15, 64));
-			c.movaps(x86::xmm13, x86::oword_ptr(x86::r15, 80));
-			c.movaps(x86::xmm14, x86::oword_ptr(x86::r15, 96));
-			c.movaps(x86::xmm15, x86::oword_ptr(x86::r15, 112));
-		}
-	}
-	else
-	{
-		Label loop1 = c.newLabel();
-		c.mov(x86::eax, x86::r12d);
-		c.and_(x86::eax, 0xf);
-		c.shl(x86::eax, 3);
-		c.or_(x86::eax, 1);
-		c.bind(loop1);
-		c.pause();
-		c.dec(x86::eax);
-		c.jnz(loop1);
-	}
-
-	c.movzx(x86::eax, x86::r12b);
-	c.not_(x86::al);
-	c.shl(x86::eax, 4);
-	c.xor_(x86::rbp, x86::rax);
-	c.lock().add(x86::qword_ptr(x86::rbp), 0);
-	c.xor_(x86::rbp, x86::rax);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.and_(x86::rax, -128);
-	c.cmp(x86::rax, x86::r13);
-	c.jne(fail);
-	c.cmp(x86::r12, 16);
-	c.jb(retry);
-	c.mov(x86::rax, imm_ptr(&g_cfg.core.spu_accurate_putllc.get()));
-	c.test(x86::byte_ptr(x86::rax), 1);
-	c.jnz(retry);
+	c.sar(x86::eax, 24);
+	c.js(fail2);
+	c.mov(x86::eax, 2);
+	c.jmp(_ret);
 
 	c.bind(fail);
 	build_transaction_abort(c, 0xff);
-	c.test(x86::r12, x86::r12);
-	c.jz(next2);
+	c.xor_(x86::eax, x86::eax);
+	c.jmp(_ret);
+
+	c.bind(fail2);
+	build_transaction_abort(c, 0xff);
 	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
-	c.bind(next2);
-	c.mov(x86::rax, x86::r12);
-	c.not_(x86::rax);
+	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
 	c.bind(_ret);
@@ -516,13 +469,11 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, const
 	c.pop(x86::rbx);
 	c.pop(x86::r12);
 	c.pop(x86::r13);
-	c.pop(x86::r14);
-	c.pop(x86::r15);
 	c.pop(x86::rbp);
 	c.ret();
 });
 
-const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64* rtime)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -558,10 +509,9 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
-	c.mov(x86::qword_ptr(x86::rsp, 64), args[2]);
 
 	// Begin transaction
-	Label begin = build_transaction_enter(c, fall);
+	build_transaction_enter(c, fall, x86::r12, 16);
 	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
 
 	if (s_tsx_avx)
@@ -605,32 +555,12 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 	}
 
 	c.and_(x86::rax, -128);
-	c.mov(args[2], x86::qword_ptr(x86::rsp, 64));
-	c.mov(x86::qword_ptr(args[2]), x86::rax);
-	c.mov(x86::rax, x86::r12);
 	c.jmp(_ret);
 
-	// Touch memory after transaction failure
 	c.bind(fall);
-	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
+	c.mov(x86::eax, 1);
+	//c.jmp(_ret);
 
-	if (s_tsx_haswell || std::thread::hardware_concurrency() < 12)
-	{
-		c.call(imm_ptr(&std::this_thread::yield));
-	}
-	else
-	{
-		c.mov(args[0], 500);
-		c.call(imm_ptr(&::busy_wait));
-	}
-
-	c.xor_(x86::rbp, 0xf80);
-	c.xor_(x86::rbx, 0xf80);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbp));
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.xor_(x86::rbp, 0xf80);
-	c.xor_(x86::rbx, 0xf80);
-	c.jmp(begin);
 	c.bind(_ret);
 
 #ifdef _WIN32
@@ -654,7 +584,7 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata, u64*
 	c.ret();
 });
 
-const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u64* rtime)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_getll_inexact = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
@@ -691,7 +621,6 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
-	c.mov(x86::qword_ptr(x86::rsp, 64), args[2]);
 
 	// Begin copying
 	Label begin = c.newLabel();
@@ -719,14 +648,15 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 	}
 
 	// Verify and retry if necessary.
-	c.cmp(x86::rax, x86::qword_ptr(x86::rbx));
-	c.je(test0);
-	c.pause();
+	c.mov(args[0], x86::rax);
+	c.xor_(args[0], x86::qword_ptr(x86::rbx));
+	c.test(args[0], -128);
+	c.jz(test0);
 	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
 	c.jmp(begin);
 
 	c.bind(test0);
-	c.test(x86::eax, 0x7f);
+	c.test(x86::eax, 127);
 	c.jz(_ret);
 	c.and_(x86::rax, -128);
 
@@ -774,8 +704,6 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 
 	c.jz(_ret);
 	c.lea(x86::r12, x86::qword_ptr(x86::r12, 2));
-	c.mov(args[0], 500);
-	c.call(imm_ptr(&::busy_wait));
 	c.jmp(begin);
 
 	c.bind(_ret);
@@ -798,10 +726,6 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 		c.movaps(x86::oword_ptr(x86::r13, 96), x86::xmm6);
 		c.movaps(x86::oword_ptr(x86::r13, 112), x86::xmm7);
 	}
-
-	c.mov(args[2], x86::qword_ptr(x86::rsp, 64));
-	c.mov(x86::qword_ptr(args[2]), x86::rax);
-	c.mov(x86::rax, x86::r12);
 
 #ifdef _WIN32
 	if (!s_tsx_avx)
@@ -826,12 +750,14 @@ const auto spu_getll_fast = build_function_asm<u64(*)(u32 raddr, void* rdata, u6
 	c.ret();
 });
 
-const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rdata)>([](asmjit::X86Assembler& c, auto& args)
+const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rdata, spu_thread* _spu)>([](asmjit::X86Assembler& c, auto& args)
 {
 	using namespace asmjit;
 
 	Label fall = c.newLabel();
 	Label _ret = c.newLabel();
+	Label skip = c.newLabel();
+	Label next = c.newLabel();
 
 	if (utils::has_avx() && !s_tsx_avx)
 	{
@@ -884,7 +810,9 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	}
 
 	// Begin transaction
-	build_transaction_enter(c, fall);
+	build_transaction_enter(c, fall, x86::r12, 8);
+	c.test(x86::dword_ptr(x86::rbx), 127);
+	c.jnz(skip);
 
 	if (s_tsx_avx)
 	{
@@ -907,21 +835,31 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 
 	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
-	c.xor_(x86::eax, x86::eax);
+	c.mov(x86::eax, 1);
 	c.jmp(_ret);
 
-	// Touch memory after transaction failure
+	c.bind(skip);
+	c.xor_(x86::eax, x86::eax);
+	c.xor_(x86::r12d, x86::r12d);
+	build_transaction_abort(c, 0);
+	//c.jmp(fall);
+
 	c.bind(fall);
-	c.xor_(x86::rbp, 0xf80);
-	c.lock().add(x86::qword_ptr(x86::rbp), 0);
-	c.xor_(x86::rbp, 0xf80);
 	c.lock().add(x86::qword_ptr(x86::rbx), 1);
-	c.mov(x86::r12d, 1);
+	c.lock().bts(x86::dword_ptr(args[2], ::offset32(&spu_thread::state)), static_cast<u32>(cpu_flag::wait));
+
+	// Touch memory if transaction failed without RETRY flag on the first attempt
+	c.cmp(x86::r12, 1);
+	c.jne(next);
+	c.xor_(x86::rbp, 0xf80);
+	c.lock().add(x86::dword_ptr(x86::rbp), 0);
+	c.xor_(x86::rbp, 0xf80);
 
 	Label fall2 = c.newLabel();
 
 	// Lightened transaction
-	Label retry = build_transaction_enter(c, fall2);
+	c.bind(next);
+	build_transaction_enter(c, fall2, x86::r12, 666);
 
 	if (s_tsx_avx)
 	{
@@ -944,57 +882,12 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 
 	c.xend();
 	c.lock().add(x86::qword_ptr(x86::rbx), 127);
-	c.mov(x86::rax, x86::r12);
+	c.mov(x86::eax, 1);
 	c.jmp(_ret);
 
-	// Touch memory after transaction failure
 	c.bind(fall2);
-	c.lea(x86::r12, x86::qword_ptr(x86::r12, 1));
-
-	if (s_tsx_haswell || std::thread::hardware_concurrency() < 12)
-	{
-		// Call yield and restore data
-		c.call(imm_ptr(&std::this_thread::yield));
-
-		if (s_tsx_avx)
-		{
-			c.vmovups(x86::ymm0, x86::yword_ptr(x86::r13, 0));
-			c.vmovups(x86::ymm1, x86::yword_ptr(x86::r13, 32));
-			c.vmovups(x86::ymm2, x86::yword_ptr(x86::r13, 64));
-			c.vmovups(x86::ymm3, x86::yword_ptr(x86::r13, 96));
-		}
-		else
-		{
-			c.movaps(x86::xmm0, x86::oword_ptr(x86::r13, 0));
-			c.movaps(x86::xmm1, x86::oword_ptr(x86::r13, 16));
-			c.movaps(x86::xmm2, x86::oword_ptr(x86::r13, 32));
-			c.movaps(x86::xmm3, x86::oword_ptr(x86::r13, 48));
-			c.movaps(x86::xmm4, x86::oword_ptr(x86::r13, 64));
-			c.movaps(x86::xmm5, x86::oword_ptr(x86::r13, 80));
-			c.movaps(x86::xmm6, x86::oword_ptr(x86::r13, 96));
-			c.movaps(x86::xmm7, x86::oword_ptr(x86::r13, 112));
-		}
-	}
-	else
-	{
-		Label loop1 = c.newLabel();
-		c.mov(x86::eax, x86::r12d);
-		c.and_(x86::eax, 0xf);
-		c.shl(x86::eax, 3);
-		c.or_(x86::eax, 1);
-		c.bind(loop1);
-		c.pause();
-		c.dec(x86::eax);
-		c.jnz(loop1);
-	}
-
-	c.movzx(x86::eax, x86::r12b);
-	c.not_(x86::al);
-	c.shl(x86::eax, 4);
-	c.xor_(x86::rbp, x86::rax);
-	c.lock().add(x86::qword_ptr(x86::rbp), 0);
-	c.xor_(x86::rbp, x86::rax);
-	c.jmp(retry);
+	c.mov(x86::eax, 2);
+	//c.jmp(_ret);
 
 	c.bind(_ret);
 
@@ -1486,7 +1379,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 				while (size)
 				{
-					*reinterpret_cast<u128*>(dst) = *reinterpret_cast<const u128*>(src);
+					*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
 					dst += 16;
 					src += 16;
@@ -1501,7 +1394,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 			while (size >= 128)
 			{
-				mov_rdata(reinterpret_cast<u128*>(dst), reinterpret_cast<const u128*>(src));
+				mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
 
 				dst += 128;
 				src += 128;
@@ -1510,7 +1403,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 			while (size)
 			{
-				*reinterpret_cast<u128*>(dst) = *reinterpret_cast<const u128*>(src);
+				*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
 				dst += 16;
 				src += 16;
@@ -1556,7 +1449,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 	{
 		while (size >= 128)
 		{
-			mov_rdata(reinterpret_cast<u128*>(dst), reinterpret_cast<const u128*>(src));
+			mov_rdata(*reinterpret_cast<decltype(spu_thread::rdata)*>(dst), *reinterpret_cast<const decltype(spu_thread::rdata)*>(src));
 
 			dst += 128;
 			src += 128;
@@ -1565,7 +1458,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 
 		while (size)
 		{
-			*reinterpret_cast<u128*>(dst) = *reinterpret_cast<const u128*>(src);
+			*reinterpret_cast<v128*>(dst) = *reinterpret_cast<const v128*>(src);
 
 			dst += 16;
 			src += 16;
@@ -1690,7 +1583,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	if (raddr && addr == raddr)
 	{
 		// Last check for event before we clear the reservation
-		if ((vm::reservation_acquire(addr, 128) & -128) != rtime || rdata != vm::_ref<decltype(rdata)>(addr))
+		if ((vm::reservation_acquire(addr, 128) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(addr)))
 		{
 			ch_event_stat |= SPU_EVENT_LR;
 		}
@@ -1703,11 +1596,31 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	// Store unconditionally
 	if (LIKELY(g_use_rtm))
 	{
-		const u64 count = spu_putlluc_tx(addr, to_write.data());
+		const u32 result = spu_putlluc_tx(addr, to_write.data(), this);
 
-		if (count >= 10)
+		if (result == 2)
 		{
-			LOG_ERROR(SPU, "%s took too long: %u", args.cmd, count);
+			cpu_thread::suspend_all cpu_lock(this);
+
+			// Try to obtain bit 7 (+64)
+			if (!atomic_storage<u64>::bts(vm::reservation_acquire(addr, 128).raw(), 6))
+			{
+				auto& data = vm::_ref<decltype(rdata)>(addr);
+				mov_rdata(data, to_write);
+
+				// Keep checking written data against a rogue transaction sneak in
+				while (std::atomic_thread_fence(std::memory_order_seq_cst), !cmp_rdata(data, to_write))
+				{
+					mov_rdata(data, to_write);
+				}
+
+				vm::reservation_acquire(addr, 128) += 63;
+			}
+			else
+			{
+				// Give up if another PUTLLUC command took precedence
+				vm::reservation_acquire(addr, 128) -= 1;
+			}
 		}
 	}
 	else
@@ -1722,12 +1635,12 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
 			vm::writer_lock lock(addr);
-			mov_rdata(data.data(), to_write.data());
+			mov_rdata(data, to_write);
 			res.release(res.load() + 127);
 		}
 		else
 		{
-			mov_rdata(data.data(), to_write.data());
+			mov_rdata(data, to_write);
 			res.release(res.load() + 127);
 		}
 	}
@@ -1847,6 +1760,8 @@ bool spu_thread::process_mfc_cmd()
 	// Stall infinitely if MFC queue is full
 	while (UNLIKELY(mfc_size >= 16))
 	{
+		state += cpu_flag::wait;
+
 		if (is_stopped())
 		{
 			return false;
@@ -1873,24 +1788,51 @@ bool spu_thread::process_mfc_cmd()
 		{
 			rtime = vm::reservation_acquire(addr, 128) & -128;
 
-			while (rdata == data && (vm::reservation_acquire(addr, 128)) == rtime)
+			while (cmp_rdata(rdata, data) && (vm::reservation_acquire(addr, 128)) == rtime)
 			{
+				state += cpu_flag::wait;
+
 				if (is_stopped())
 				{
 					break;
 				}
 
-				thread_ctrl::wait_for(100);
+				thread_ctrl::wait_for(500);
+			}
+
+			if (test_stopped())
+			{
+				return false;
 			}
 		}
 
-		if (LIKELY(g_use_rtm))
+		if (LIKELY(g_use_rtm && !g_cfg.core.spu_accurate_getllar && raddr != addr))
 		{
-			const u64 count = g_cfg.core.spu_accurate_getllar ? spu_getll_tx(addr, dst.data(), &ntime) : spu_getll_fast(addr, dst.data(), &ntime);
+			// TODO: maybe always start from a transaction
+			ntime = spu_getll_inexact(addr, dst.data());
+		}
+		else if (g_use_rtm)
+		{
+			ntime = spu_getll_tx(addr, dst.data());
 
-			if (count >= 10)
+			if (ntime == 1)
 			{
-				LOG_ERROR(SPU, "%s took too long: %u", ch_mfc_cmd.cmd, count);
+				if (!g_cfg.core.spu_accurate_getllar)
+				{
+					ntime = spu_getll_inexact(addr, dst.data());
+				}
+				else
+				{
+					cpu_thread::suspend_all cpu_lock(this);
+
+					while (vm::reservation_acquire(addr, 128) & 127)
+					{
+						busy_wait(100);
+					}
+
+					ntime = vm::reservation_acquire(addr, 128);
+					mov_rdata(dst, data);
+				}
 			}
 		}
 		else
@@ -1907,37 +1849,37 @@ bool spu_thread::process_mfc_cmd()
 				vm::writer_lock lock(addr);
 
 				ntime = old_time;
-				mov_rdata(dst.data(), data.data());
+				mov_rdata(dst, data);
 				res.release(old_time);
 			}
 			else
 			{
 				ntime = old_time;
-				mov_rdata(dst.data(), data.data());
+				mov_rdata(dst, data);
 				res.release(old_time);
 			}
 		}
 
-		if (const u32 _addr = raddr)
+		if (raddr && raddr != addr)
 		{
 			// Last check for event before we replace the reservation with a new one
-			if ((vm::reservation_acquire(_addr, 128) & -128) != rtime || rdata != vm::_ref<decltype(rdata)>(_addr))
+			if ((vm::reservation_acquire(raddr, 128) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
 			{
 				ch_event_stat |= SPU_EVENT_LR;
-
-				if (_addr == addr)
-				{
-					// Lost current reservation
-					raddr = 0;
-					ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
-					return true;
-				}
+			}
+		}
+		else if (raddr == addr)
+		{
+			// Lost previous reservation on polling
+			if (ntime != rtime || !cmp_rdata(rdata, dst))
+			{
+				ch_event_stat |= SPU_EVENT_LR;
 			}
 		}
 
 		raddr = addr;
 		rtime = ntime;
-		mov_rdata(rdata.data(), dst.data());
+		mov_rdata(rdata, dst);
 
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 		return true;
@@ -1949,29 +1891,39 @@ bool spu_thread::process_mfc_cmd()
 		const u32 addr = ch_mfc_cmd.eal & -128u;
 		u32 result = 0;
 
-		if (raddr == addr && rtime == (vm::reservation_acquire(raddr, 128) & -128))
+		if (raddr == addr)
 		{
 			const auto& to_write = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 
 			if (LIKELY(g_use_rtm))
 			{
-				u64 count = spu_putllc_tx(addr, rtime, rdata.data(), to_write.data());
+				result = spu_putllc_tx(addr, rtime, rdata.data(), to_write.data());
 
-				if ((count >> 63) == 0)
+				if (result == 2)
 				{
-					result = 1;
-				}
-				else
-				{
-					count = ~count;
-				}
+					result = 0;
 
-				if (count >= 10)
-				{
-					LOG_ERROR(SPU, "%s took too long: %u (r=%u)", ch_mfc_cmd.cmd, count, result);
+					cpu_thread::suspend_all cpu_lock(this);
+
+					// Give up if other PUTLLC/PUTLLUC commands are in progress
+					if (!vm::reservation_acquire(addr, 128).try_dec(rtime + 1))
+					{
+						auto& data = vm::_ref<decltype(rdata)>(addr);
+
+						if ((vm::reservation_acquire(addr, 128) & -128) == rtime && cmp_rdata(rdata, data))
+						{
+							mov_rdata(data, to_write);
+							vm::reservation_acquire(addr, 128) += 127;
+							result = 1;
+						}
+						else
+						{
+							vm::reservation_acquire(addr, 128) -= 1;
+						}
+					}
 				}
 			}
-			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rdata == data)
+			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rtime == (vm::reservation_acquire(raddr, 128) & -128) && cmp_rdata(rdata, data))
 			{
 				auto& res = vm::reservation_lock(raddr, 128);
 				const u64 old_time = res.load() & -128;
@@ -1984,9 +1936,9 @@ bool spu_thread::process_mfc_cmd()
 					// TODO: vm::check_addr
 					vm::writer_lock lock(addr);
 
-					if (rdata == data)
+					if (cmp_rdata(rdata, data))
 					{
-						mov_rdata(data.data(), to_write.data());
+						mov_rdata(data, to_write);
 						res.release(old_time + 128);
 						result = 1;
 					}
@@ -2012,7 +1964,7 @@ bool spu_thread::process_mfc_cmd()
 			if (raddr)
 			{
 				// Last check for event before we clear the reservation
-				if (raddr == addr || rtime != (vm::reservation_acquire(raddr, 128) & -128) || rdata != vm::_ref<decltype(rdata)>(raddr))
+				if (raddr == addr || rtime != (vm::reservation_acquire(raddr, 128) & -128) || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr)))
 				{
 					ch_event_stat |= SPU_EVENT_LR;
 				}
@@ -2164,7 +2116,7 @@ u32 spu_thread::get_events(bool waiting)
 	}
 
 	// Check reservation status and set SPU_EVENT_LR if lost
-	if (raddr && ((vm::reservation_acquire(raddr, sizeof(rdata)) & -128) != rtime || rdata != vm::_ref<decltype(rdata)>(raddr)))
+	if (raddr && ((vm::reservation_acquire(raddr, sizeof(rdata)) & -128) != rtime || !cmp_rdata(rdata, vm::_ref<decltype(rdata)>(raddr))))
 	{
 		ch_event_stat |= SPU_EVENT_LR;
 		raddr = 0;
@@ -2256,6 +2208,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 	auto read_channel = [&](spu_channel& channel) -> s64
 	{
+		if (channel.get_count() == 0)
+		{
+			state += cpu_flag::wait;
+		}
+
 		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
 			busy_wait();
@@ -2273,6 +2230,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			thread_ctrl::wait();
 		}
 
+		check_state();
 		return out;
 	};
 
@@ -2284,6 +2242,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 	}
 	case SPU_RdInMbox:
 	{
+		if (ch_in_mbox.get_count() == 0)
+		{
+			state += cpu_flag::wait;
+		}
+
 		while (true)
 		{
 			for (int i = 0; i < 10 && ch_in_mbox.get_count() == 0; i++)
@@ -2300,6 +2263,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					int_ctrl[2].set(SPU_INT2_STAT_SPU_MAILBOX_THRESHOLD_INT);
 				}
 
+				check_state();
 				return out;
 			}
 
@@ -2372,7 +2336,10 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		//Polling: We might as well hint to the scheduler to slot in another thread since this one is counting down
 		if (g_cfg.core.spu_loop_detection && out > spu::scheduler::native_jiffy_duration_us)
+		{
+			state += cpu_flag::wait;
 			std::this_thread::yield();
+		}
 
 		return out;
 	}
@@ -2410,6 +2377,8 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			while (res = get_events(), !res)
 			{
+				state += cpu_flag::wait;
+
 				if (is_stopped())
 				{
 					return -1;
@@ -2418,11 +2387,14 @@ s64 spu_thread::get_ch_value(u32 ch)
 				pseudo_lock.wait(100);
 			}
 
+			check_state();
 			return res;
 		}
 
 		while (res = get_events(true), !res)
 		{
+			state += cpu_flag::wait;
+
 			if (is_stopped())
 			{
 				return -1;
@@ -2431,6 +2403,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			thread_ctrl::wait_for(100);
 		}
 
+		check_state();
 		return res;
 	}
 
@@ -2463,6 +2436,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 		{
 			while (!ch_out_intr_mbox.try_push(value))
 			{
+				state += cpu_flag::wait;
+
 				if (is_stopped())
 				{
 					return false;
@@ -2472,8 +2447,11 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			}
 
 			int_ctrl[2].set(SPU_INT2_STAT_MAILBOX_INT);
+			check_state();
 			return true;
 		}
+
+		state += cpu_flag::wait;
 
 		const u32 code = value >> 24;
 		{
@@ -2609,6 +2587,8 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	{
 		while (!ch_out_mbox.try_push(value))
 		{
+			state += cpu_flag::wait;
+
 			if (is_stopped())
 			{
 				return false;
@@ -2617,6 +2597,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 			thread_ctrl::wait();
 		}
 
+		check_state();
 		return true;
 	}
 
@@ -2770,6 +2751,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
+		state += cpu_flag::wait;
 		status.atomic_op([code](u32& status)
 		{
 			status = (status & 0xffff) | (code << 16);
@@ -2779,6 +2761,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		int_ctrl[2].set(SPU_INT2_STAT_SPU_STOP_AND_SIGNAL_INT);
 		state += cpu_flag::stop;
+		check_state();
 		return true;
 	}
 
@@ -2808,6 +2791,8 @@ bool spu_thread::stop_and_signal(u32 code)
 		// HACK: wait for executable code
 		while (!_ref<u32>(pc))
 		{
+			state += cpu_flag::wait;
+
 			if (is_stopped())
 			{
 				return false;
@@ -2816,12 +2801,15 @@ bool spu_thread::stop_and_signal(u32 code)
 			thread_ctrl::wait_for(1000);
 		}
 
+		check_state();
 		return false;
 	}
 
 	case 0x001:
 	{
+		state += cpu_flag::wait;
 		thread_ctrl::wait_for(1000); // hack
+		check_state();
 		return true;
 	}
 
@@ -2856,6 +2844,8 @@ bool spu_thread::stop_and_signal(u32 code)
 		}
 
 		std::shared_ptr<lv2_event_queue> queue;
+
+		state += cpu_flag::wait;
 
 		while (true)
 		{
@@ -2897,6 +2887,7 @@ bool spu_thread::stop_and_signal(u32 code)
 
 			if (!queue)
 			{
+				check_state();
 				return ch_in_mbox.set_values(1, CELL_EINVAL), true; // TODO: check error value
 			}
 
@@ -2927,6 +2918,7 @@ bool spu_thread::stop_and_signal(u32 code)
 				const auto data3 = static_cast<u32>(std::get<3>(event));
 				ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
 				queue->events.pop_front();
+				check_state();
 				return true;
 			}
 		}
@@ -2972,6 +2964,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			}
 		}
 
+		check_state();
 		return true;
 	}
 
@@ -3045,6 +3038,8 @@ bool spu_thread::stop_and_signal(u32 code)
 	{
 		/* ===== sys_spu_thread_group_exit ===== */
 
+		state += cpu_flag::wait;
+
 		u32 value = 0;
 
 		if (!ch_out_mbox.try_pop(value))
@@ -3069,12 +3064,15 @@ bool spu_thread::stop_and_signal(u32 code)
 		group->join_state = SYS_SPU_THREAD_GROUP_JOIN_GROUP_EXIT;
 
 		state += cpu_flag::stop;
+		check_state();
 		return true;
 	}
 
 	case 0x102:
 	{
 		/* ===== sys_spu_thread_exit ===== */
+
+		state += cpu_flag::wait;
 
 		if (!ch_out_mbox.get_count())
 		{
@@ -3084,6 +3082,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		LOG_TRACE(SPU, "sys_spu_thread_exit(status=0x%x)", ch_out_mbox.get_value());
 		status |= SPU_STATUS_STOPPED_BY_STOP;
 		state += cpu_flag::stop;
+		check_state();
 		return true;
 	}
 	}

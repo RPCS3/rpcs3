@@ -1,11 +1,11 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "SPUInterpreter.h"
+
 #include "Emu/System.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
 #include "Utilities/asm.h"
 #include "SPUThread.h"
-#include "SPUInterpreter.h"
 #include "Emu/Cell/Common.h"
 
 #include <cmath>
@@ -167,6 +167,13 @@ bool spu_interpreter::RDCH(spu_thread& spu, spu_opcode_t op)
 	}
 
 	spu.gpr[op.rt] = v128::from32r(static_cast<u32>(result));
+
+	if (spu.state)
+	{
+		spu.pc += 4;
+		return false;
+	}
+
 	return true;
 }
 
@@ -414,7 +421,18 @@ bool spu_interpreter::MTSPR(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::WRCH(spu_thread& spu, spu_opcode_t op)
 {
-	return spu.set_ch_value(op.ra, spu.gpr[op.rt]._u32[3]);
+	if (!spu.set_ch_value(op.ra, spu.gpr[op.rt]._u32[3]))
+	{
+		return false;
+	}
+
+	if (spu.state)
+	{
+		spu.pc += 4;
+		return false;
+	}
+
+	return true;
 }
 
 bool spu_interpreter::BIZ(spu_thread& spu, spu_opcode_t op)

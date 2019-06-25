@@ -1,7 +1,8 @@
 #include "stdafx.h"
+#include "sys_ss.h"
+
 #include "Emu/Cell/PPUThread.h"
 
-#include "sys_ss.h"
 
 #ifdef _WIN32
 #include <Windows.h>

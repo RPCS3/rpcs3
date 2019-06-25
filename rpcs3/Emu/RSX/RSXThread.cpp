@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -43,6 +43,7 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 	thread* g_current_renderer = nullptr;
+	dma_manager g_dma_manager;
 
 	u32 get_address(u32 offset, u32 location)
 	{
@@ -325,7 +326,7 @@ namespace rsx
 	{
 		//Endianness is swapped because common upload code expects input in BE
 		//TODO: Implement fast upload path for LE inputs and do away with this
-		element_push_buffer.push_back(se_storage<u32>::swap(index));
+		element_push_buffer.push_back(be_t<u32>{index}.raw());
 	}
 
 	u32 thread::get_push_buffer_index_count() const
@@ -435,6 +436,8 @@ namespace rsx
 		on_init_thread();
 
 		method_registers.init();
+		g_dma_manager.init();
+		m_profiler.enabled = !!g_cfg.video.overlay;
 
 		if (!zcull_ctrl)
 		{
@@ -572,6 +575,7 @@ namespace rsx
 	void thread::on_exit()
 	{
 		m_rsx_thread_exiting = true;
+		g_dma_manager.join();
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -2094,7 +2098,7 @@ namespace rsx
 				const u32 data_size = range.second * block.attribute_stride;
 				const u32 vertex_base = range.first * block.attribute_stride;
 
-				memcpy(persistent, (char*)vm::base(block.real_offset_address) + vertex_base, data_size);
+				g_dma_manager.copy(persistent, (char*)vm::base(block.real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}
 		}
@@ -2236,6 +2240,9 @@ namespace rsx
 
 		// Fragment constants may have been updated
 		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+
+		// DMA sync; if you need this, don't use MTRSX
+		// g_dma_manager.sync();
 
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently

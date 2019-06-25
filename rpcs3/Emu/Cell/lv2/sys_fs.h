@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Utilities/File.h"
 
 // Open Flags
 enum : s32

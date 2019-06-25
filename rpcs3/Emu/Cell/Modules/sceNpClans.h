@@ -1,6 +1,8 @@
 #pragma once
 
+#include "sceNp.h"
 
+#include "Utilities/BEType.h"
 
 // Return codes
 enum

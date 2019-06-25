@@ -1,11 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "../rsx_cache.h"
-#include "../rsx_utils.h"
 #include "texture_cache_predictor.h"
 #include "TextureUtils.h"
 
 #include <list>
+#include <unordered_set>
 #include <atomic>
 
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utilities/types.h"
+
 // SysCalls
 s32 sys_trace_create();
 s32 sys_trace_start();

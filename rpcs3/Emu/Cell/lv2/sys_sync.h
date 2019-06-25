@@ -4,7 +4,7 @@
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
 
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"

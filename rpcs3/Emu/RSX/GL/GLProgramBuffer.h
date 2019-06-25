@@ -3,6 +3,7 @@
 #include "GLFragmentProgram.h"
 #include "GLHelpers.h"
 #include "../Common/ProgramStateCache.h"
+#include "../rsx_utils.h"
 
 struct GLTraits
 {

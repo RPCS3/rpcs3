@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 struct sys_lwmutex_attribute_t
 {
 	be_t<u32> protocol;
@@ -74,9 +76,9 @@ class ppu_thread;
 
 // Syscalls
 
-error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, s32 has_name, u64 name);
-error_code _sys_lwmutex_destroy(u32 lwmutex_id);
+error_code _sys_lwmutex_create(ppu_thread& ppu, vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, s32 has_name, u64 name);
+error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id);
 error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout);
-error_code _sys_lwmutex_trylock(u32 lwmutex_id);
+error_code _sys_lwmutex_trylock(ppu_thread& ppu, u32 lwmutex_id);
 error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id);
-error_code _sys_lwmutex_unlock2(u32 lwmutex_id);
+error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id);

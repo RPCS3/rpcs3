@@ -60,7 +60,6 @@ namespace vk
 
 namespace
 {
-
 	std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType>> generate_emulating_index_buffer(
 		const rsx::draw_clause& clause, u32 vertex_count,
 		vk::data_heap& m_index_buffer_ring_info)
@@ -71,8 +70,7 @@ namespace
 		VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
 		void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
-		write_index_array_for_non_indexed_non_native_primitive_to_buffer(
-			reinterpret_cast<char*>(buf), clause.primitive, vertex_count);
+		rsx::g_dma_manager.emulate_as_indexed(buf, clause.primitive, vertex_count);
 
 		m_index_buffer_ring_info.unmap();
 		return std::make_tuple(

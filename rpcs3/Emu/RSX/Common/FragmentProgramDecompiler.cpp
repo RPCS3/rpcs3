@@ -807,7 +807,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::FUNCTION_DP3), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::FUNCTION_DP4), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::FUNCTION_DP2A), OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_MAD: SetDst("($0 * $1 + $2)"); return true;
+	case RSX_FP_OPCODE_MAD: SetDst("fma($0, $1, $2)", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_MAX: SetDst("max($0, $1)", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_MIN: SetDst("min($0, $1)", OPFLAGS::src_cast_f32); return true;
 	case RSX_FP_OPCODE_MOV: SetDst("$0"); return true;

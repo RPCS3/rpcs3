@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "PPUFunction.h"
+
 #include "PPUModule.h"
 
 extern std::string ppu_get_syscall_name(u64 code)

@@ -42,11 +42,12 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "	float z_far;\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, set = 0, binding = 1) uniform VertexLayoutBuffer\n";
+	OS << "layout(push_constant) uniform VertexLayoutBuffer\n";
 	OS << "{\n";
-	OS << "	uint  vertex_base_index;\n";
-	OS << " uint  vertex_index_offset;\n";
-	OS << "	uvec4 input_attributes_blob[16 / 2];\n";
+	OS << "	uint vertex_base_index;\n";
+	OS << "	uint vertex_index_offset;\n";
+	OS << "	uint draw_id;\n";
+	OS << "	uint layout_ptr_offset;\n";
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
@@ -55,16 +56,13 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	in.name = "VertexContextBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
 	inputs.push_back(in);
-
-	in.location = VERTEX_LAYOUT_BIND_SLOT;
-	in.name = "VertexLayoutBuffer";
-	inputs.push_back(in);
 }
 
 void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
-	OS << "layout(set=0, binding=6) uniform usamplerBuffer persistent_input_stream;\n";    //Data stream with persistent vertex data (cacheable)
-	OS << "layout(set=0, binding=7) uniform usamplerBuffer volatile_input_stream;\n";      //Data stream with per-draw data (registers and immediate draw data)
+	OS << "layout(set=0, binding=5) uniform usamplerBuffer persistent_input_stream;\n";    // Data stream with persistent vertex data (cacheable)
+	OS << "layout(set=0, binding=6) uniform usamplerBuffer volatile_input_stream;\n";      // Data stream with per-draw data (registers and immediate draw data)
+	OS << "layout(set=0, binding=7) uniform usamplerBuffer vertex_layout_stream;\n";       // Data stream defining vertex data layout
 
 	vk::glsl::program_input in;
 	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT;
@@ -78,11 +76,17 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 	in.name = "volatile_input_stream";
 	in.type = vk::glsl::input_type_texel_buffer;
 	this->inputs.push_back(in);
+
+	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT + 2;
+	in.domain = glsl::glsl_vertex_program;
+	in.name = "vertex_layout_stream";
+	in.type = vk::glsl::input_type_texel_buffer;
+	this->inputs.push_back(in);
 }
 
 void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
 {
-	OS << "layout(std140, set=0, binding = 2) uniform VertexConstantsBuffer\n";
+	OS << "layout(std140, set=0, binding = 1) uniform VertexConstantsBuffer\n";
 	OS << "{\n";
 	OS << "	vec4 vc[468];\n";
 	OS << "};\n\n";
@@ -193,15 +197,9 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	glsl::shader_properties properties2;
+	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
-	// Unused
-	properties2.require_depth_conversion = false;
-	properties2.require_wpos = false;
-	properties2.require_texture_ops = false;
-	properties2.emulate_shadow_compare = false;
-	properties2.low_precision_tests = false;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);

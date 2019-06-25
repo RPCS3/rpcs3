@@ -3,6 +3,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
@@ -1101,6 +1102,11 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 		try
 		{
+			if (cpu)
+			{
+				vm::temporary_unlock(*cpu);
+			}
+
 			handled = rsx::g_access_violation_handler(addr, is_writing);
 		}
 		catch (const std::exception& e)
@@ -1109,7 +1115,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			if (cpu)
 			{
-				vm::temporary_unlock(*cpu);
 				cpu->state += cpu_flag::dbg_pause;
 
 				if (cpu->test_stopped())
@@ -1130,6 +1135,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			}
 
 			return true;
+		}
+
+		if (cpu && cpu->test_stopped())
+		{
 		}
 	}
 

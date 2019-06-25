@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 enum
 {
 	SYS_SYNC_WAITER_SINGLE = 0x10000,

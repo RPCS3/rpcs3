@@ -1,11 +1,11 @@
-﻿#include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "stdafx.h"
+#include "sys_rsx.h"
+
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/GSRender.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "sys_rsx.h"
 #include "sys_event.h"
 
 

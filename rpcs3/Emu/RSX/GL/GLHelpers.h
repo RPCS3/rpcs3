@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <exception>
 #include <string>
@@ -14,6 +14,7 @@
 
 #include "Emu/System.h"
 #include "Utilities/geometry.h"
+#include "Utilities/Log.h"
 
 #define GL_FRAGMENT_TEXTURES_START 0
 #define GL_VERTEX_TEXTURES_START   GL_FRAGMENT_TEXTURES_START + 16

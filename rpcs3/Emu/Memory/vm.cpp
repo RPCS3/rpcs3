@@ -1,5 +1,10 @@
-﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "stdafx.h"
+#include "vm_locking.h"
+#include "vm_ptr.h"
+#include "vm_ref.h"
+#include "vm_reservation.h"
+#include "vm_var.h"
+
 #include "Utilities/mutex.h"
 #include "Utilities/cond.h"
 #include "Utilities/Thread.h"
@@ -172,6 +177,8 @@ namespace vm
 
 	void temporary_unlock(cpu_thread& cpu) noexcept
 	{
+		cpu.state += cpu_flag::wait;
+
 		if (g_tls_locked && g_tls_locked->compare_and_swap_test(&cpu, nullptr))
 		{
 			cpu.cpu_unmem();
@@ -715,7 +722,7 @@ namespace vm
 			shm = std::make_shared<utils::shm>(size);
 
 		// Search for an appropriate place (unoptimized)
-		for (u32 addr = ::align(this->addr, align); addr < this->addr + this->size - 1; addr += align)
+		for (u32 addr = ::align(this->addr, align); u64{addr} + size <= u64{this->addr} + this->size; addr += align)
 		{
 			if (try_alloc(addr, pflags, size, std::move(shm)))
 			{

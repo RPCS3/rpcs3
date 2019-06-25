@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include "Utilities/StrFmt.h"
+
 enum CPUDisAsmMode
 {
 	CPUDisAsm_DumpMode,

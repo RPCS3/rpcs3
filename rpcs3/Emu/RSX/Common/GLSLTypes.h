@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 namespace glsl
 {
@@ -22,9 +22,12 @@ namespace glsl
 		bool require_lit_emulation;
 
 		// Only relevant for fragment programs
+		bool fp32_outputs;
 		bool require_wpos;
 		bool require_depth_conversion;
 		bool require_texture_ops;
+		bool require_shadow_ops;
+		bool emulate_coverage_tests;
 		bool emulate_shadow_compare;
 		bool low_precision_tests;
 	};

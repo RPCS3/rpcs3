@@ -35,7 +35,7 @@ static u32 ppu_alloc_tls()
 		{
 			// Default (small) TLS allocation
 			addr = s_tls_area + i * s_tls_size;
-			break;			
+			break;
 		}
 	}
 
@@ -101,7 +101,7 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	lwa->protocol   = SYS_SYNC_PRIORITY;
 	lwa->recursive  = SYS_SYNC_RECURSIVE;
 	lwa->name_u64   = "atexit!\0"_u64;
-	sys_lwmutex_create(g_ppu_atexit_lwm, lwa);
+	sys_lwmutex_create(ppu, g_ppu_atexit_lwm, lwa);
 
 	vm::var<sys_mutex_attribute_t> attr;
 	attr->protocol  = SYS_SYNC_PRIORITY;
@@ -111,16 +111,16 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	attr->ipc_key   = 0;
 	attr->flags     = 0;
 	attr->name_u64  = "_lv2ppu\0"_u64;
-	sys_mutex_create(g_ppu_once_mutex, attr);
+	sys_mutex_create(ppu, g_ppu_once_mutex, attr);
 
 	attr->recursive = SYS_SYNC_RECURSIVE;
 	attr->name_u64  = "_lv2tls\0"_u64;
-	sys_mutex_create(g_ppu_exit_mutex, attr);
+	sys_mutex_create(ppu, g_ppu_exit_mutex, attr);
 
 	lwa->protocol   = SYS_SYNC_PRIORITY;
 	lwa->recursive  = SYS_SYNC_RECURSIVE;
 	lwa->name_u64   = "_lv2prx\0"_u64;
-	sys_lwmutex_create(g_ppu_prx_lwm, lwa);
+	sys_lwmutex_create(ppu, g_ppu_prx_lwm, lwa);
 	// TODO: missing prx initialization
 }
 
@@ -182,7 +182,7 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 	}
 
 	verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
-	
+
 	// Deallocate TLS
 	ppu_free_tls(vm::cast(ppu.gpr[13], HERE) - 0x7030);
 

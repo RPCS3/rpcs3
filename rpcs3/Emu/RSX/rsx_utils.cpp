@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "rsx_utils.h"
 #include "rsx_methods.h"
-#include "RSXThread.h"
 #include "Emu/RSX/GCM.h"
 #include "Common/BufferUtils.h"
 #include "Overlays/overlays.h"
