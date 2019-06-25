@@ -529,6 +529,14 @@ private:
 			get_physical_device_features(allow_extensions);
 
 			LOG_NOTICE(RSX, "Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
+
+			if (get_driver_vendor() == driver_vendor::RADV &&
+				get_name().find("LLVM 8") != std::string::npos)
+			{
+				// Serious driver bug causing black screens
+				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
+				LOG_FATAL(RSX, "RADV drivers have a major driver bug with LLVM 8 resulting in no visual output. Upgrade to LLVM 9 version of mesa to avoid this issue.");
+			}
 		}
 
 		std::string get_name() const
