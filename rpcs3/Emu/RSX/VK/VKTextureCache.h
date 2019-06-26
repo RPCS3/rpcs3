@@ -36,6 +36,7 @@ namespace vk
 
 		//DMA relevant data
 		VkEvent dma_fence = VK_NULL_HANDLE;
+		VkEvent prev_event = VK_NULL_HANDLE;
 		vk::render_device* m_device = nullptr;
 		vk::viewable_image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
@@ -73,7 +74,8 @@ namespace vk
 				{
 					// Reset fence
 					verify(HERE), m_device, dma_buffer, dma_fence != VK_NULL_HANDLE;
-					vkResetEvent(*m_device, dma_fence);
+					vkDestroyEvent(*m_device, dma_fence, nullptr);
+					dma_fence = VK_NULL_HANDLE;
 				}
 
 				synchronized = false;
@@ -96,6 +98,8 @@ namespace vk
 					vkDestroyEvent(*m_device, dma_fence, nullptr);
 					dma_fence = VK_NULL_HANDLE;
 				}
+
+				verify(HERE), prev_event == VK_NULL_HANDLE;
 			}
 		}
 
@@ -282,15 +286,26 @@ namespace vk
 				vkCmdCopyBuffer(cmd, mem_target->value, dma_buffer->value, 1, &copy);
 			}
 
-			if (LIKELY(!miss))
+			if (UNLIKELY(synchronized))
 			{
-				// If this is speculated, it should only occur once
-				verify(HERE), vkGetEventStatus(*m_device, dma_fence) == VK_EVENT_RESET;
+				// Save old event for deletion
+				verify(HERE), miss, prev_event == VK_NULL_HANDLE;
+				prev_event = dma_fence;
+
+				// Replace the wait event with a new one to avoid premature signaling!
+				VkEventCreateInfo createInfo = {};
+				createInfo.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
+				vkCreateEvent(*m_device, &createInfo, nullptr, &dma_fence);
 			}
 			else
 			{
-				// This is the only acceptable situation where a sync can occur twice, due to flush_always being set
+				// HACK
+				// Deletion of queued objects and subsequent driver reuse of handles is causing race conditions here
+				// TODO: Proper garbage collection for these things
 				vkResetEvent(*m_device, dma_fence);
+
+				// If this is speculated, it should only occur once
+				// verify(HERE), vkGetEventStatus(*m_device, dma_fence) == VK_EVENT_RESET;
 			}
 
 			cmd.set_flag(vk::command_buffer::cb_has_dma_transfer);
@@ -310,6 +325,13 @@ namespace vk
 			// Synchronize, reset dma_fence after waiting
 			vk::wait_for_event(dma_fence, GENERAL_WAIT_TIMEOUT);
 			vkResetEvent(*m_device, dma_fence);
+
+			if (prev_event)
+			{
+				// Remove the stale event if it still exists
+				vkDestroyEvent(*m_device, prev_event, nullptr);
+				prev_event = VK_NULL_HANDLE;
+			}
 
 			return dma_buffer->map(offset, size);
 		}
