@@ -224,7 +224,7 @@ namespace vk
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
 		default:
-			fmt::throw_exception("Unknown blend op: 0x%x" HERE, (u32)op);
+			//fmt::throw_exception("Unknown blend op: 0x%x" HERE, (u32)op);
 		}
 	}
 
