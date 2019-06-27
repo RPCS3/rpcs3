@@ -1,8 +1,14 @@
 ﻿#include "emu_settings.h"
 
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
+
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Utilities/Config.h"
+#include "Utilities/Thread.h"
 
 #include <QMessageBox>
 
@@ -146,25 +152,70 @@ emu_settings::Render_Creator::Render_Creator()
 #endif
 
 #if defined(WIN32) || defined(HAVE_VULKAN)
-	// check for vulkan adapters
-	vk::context device_enum_context;
-	u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
+	// Some drivers can get stuck when checking for vulkan-compatible gpus, f.ex. if they're waiting for one to get
+	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
+	// some idea about why the emulator window isn't showing up.
 
-	if (instance_handle > 0)
+	static std::atomic<bool> was_called = false;
+	if (was_called.exchange(true))
+		fmt::throw_exception("Render_Creator cannot be created more than once" HERE);
+
+	static std::mutex mtx;
+	static std::condition_variable cond;
+	static bool thread_running = true;
+	static volatile bool device_found = false;
+
+	static QStringList compatible_gpus;
+
+	thread_ctrl::spawn("Vulkan device enumeration", [&]
 	{
-		device_enum_context.makeCurrentInstance(instance_handle);
-		std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
+		thread_ctrl::set_native_priority(-1);
 
-		if (!gpus.empty())
+		vk::context device_enum_context;
+		u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
+
+		if (instance_handle > 0)
 		{
-			//A device with vulkan support found. Init data
-			supportsVulkan = true;
+			device_enum_context.makeCurrentInstance(instance_handle);
+			std::vector<vk::physical_device> &gpus = device_enum_context.enumerateDevices();
 
-			for (auto& gpu : gpus)
+			if (!gpus.empty())
 			{
-				vulkanAdapters.append(qstr(gpu.get_name()));
+				device_found = true;
+
+				for (auto &gpu : gpus)
+				{
+					compatible_gpus.append(qstr(gpu.get_name()));
+				}
 			}
 		}
+		std::scoped_lock{mtx}, thread_running = false;
+		cond.notify_all();
+	});
+
+	{
+		std::unique_lock lck(mtx);
+		cond.wait_for(lck, std::chrono::seconds(10), [&]{ return !thread_running; });
+	}
+
+	if (thread_running)
+	{
+		LOG_ERROR(GENERAL, "Vulkan device enumeration timed out");
+		auto button = QMessageBox::critical(nullptr, tr("Vulkan check timeout"),
+			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
+			"graphics drivers, reinstalling them could fix the issue.\n\n"
+			"Selecting ignore starts the emulator without Vulkan support."),
+			QMessageBox::Ignore | QMessageBox::Abort, QMessageBox::Abort);
+
+		if (button != QMessageBox::Ignore)
+			std::exit(1);
+
+		supportsVulkan = false;
+	}
+	else
+	{
+		supportsVulkan = device_found;
+		vulkanAdapters = std::move(compatible_gpus);
 	}
 #endif
 
