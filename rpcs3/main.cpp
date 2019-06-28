@@ -131,10 +131,8 @@ int main(int argc, char** argv)
 	parser.process(app);
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
-	if (parser.isSet(versionOption))
-		return true;
-	if (parser.isSet(helpOption))
-		return true;
+	if (parser.isSet(versionOption) || parser.isSet(helpOption))
+		return 0;
 
 	app.Init();
 

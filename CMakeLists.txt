@@ -2,20 +2,25 @@ cmake_minimum_required(VERSION 3.8.2)
 
 project(rpcs3)
 
+if(CMAKE_COMPILER_IS_GNUCXX)
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
+		message(FATAL_ERROR "RPCS3 requires at least gcc-8.")
+	endif()
+elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
+		message(FATAL_ERROR "RPCS3 requires at least clang-5.0.")
+	endif()
+endif()
+
 option(WITH_GDB "WITH_GDB" OFF)
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
-
 option(WITH_LLVM "Enable usage of LLVM library" ON)
 option(BUILD_LLVM_SUBMODULE "Build LLVM from git submodule" ON)
-
 option(USE_ALSA "ALSA audio backend" ON)
 option(USE_PULSE "PulseAudio audio backend" ON)
 option(USE_LIBEVDEV "libevdev-based joystick support" ON)
-
 option(USE_DISCORD_RPC "Discord rich presence integration" ON)
-
 option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
-
 option(USE_VULKAN "Vulkan render backend" ON)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/rpcs3/cmake_modules")
@@ -56,9 +61,14 @@ if(APPLE)
 	link_directories(/opt/local/lib)
 endif()
 
+# Warnings are silenced for 3rdparty code
+set(CMAKE_CXX_FLAGS -w)
+set(CMAKE_C_FLAGS -w)
 add_subdirectory(Vulkan EXCLUDE_FROM_ALL)
 add_subdirectory(asmjitsrc EXCLUDE_FROM_ALL)
 add_subdirectory(3rdparty)
+unset(CMAKE_CXX_FLAGS)
+unset(CMAKE_C_FLAGS)
 
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")

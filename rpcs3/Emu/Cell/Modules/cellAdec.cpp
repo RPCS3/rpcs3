@@ -428,7 +428,7 @@ next:
 	if (adecIsAtracX(adec.type) && !adec.reader.init)
 	{
 		OMAHeader oma(1 /* atrac3p id */, adec.sample_rate, adec.ch_cfg, adec.frame_size);
-		if (buf_size < sizeof(oma))
+		if (buf_size + 0u < sizeof(oma))
 		{
 			cellAdec.error("adecRead(): OMAHeader writing failed");
 			Emu.Pause();

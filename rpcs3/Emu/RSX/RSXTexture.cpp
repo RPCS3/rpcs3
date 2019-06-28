@@ -74,7 +74,7 @@ namespace rsx
 		}
 		else
 			max_mipmap_count = floor_log2(static_cast<u32>(std::max(width(), height()))) + 1;
-		
+
 		return std::min(verify(HERE, mipmap()), max_mipmap_count);
 	}
 
@@ -167,7 +167,7 @@ namespace rsx
 			if (remap_override)
 			{
 				auto r_component = (remap_ctl >> 2) & 3;
-				remap_ctl = remap_ctl & ~(3 << 4) | r_component << 4;
+				remap_ctl = (remap_ctl & ~(3 << 4)) | r_component << 4;
 			}
 
 			remap_ctl &= 0xFFFF;
@@ -181,7 +181,7 @@ namespace rsx
 			if (remap_override)
 			{
 				//Set remap lookup for A component to FORCE_ONE
-				remap_ctl = remap_ctl & ~(3 << 8) | (1 << 8);
+				remap_ctl = (remap_ctl & ~(3 << 8)) | (1 << 8);
 			}
 			break;
 		}
@@ -190,7 +190,7 @@ namespace rsx
 		}
 
 		//Remapping tables; format is A-R-G-B
-		//Remap input table. Contains channel index to read color from 
+		//Remap input table. Contains channel index to read color from
 		const std::array<u8, 4> remap_inputs =
 		{
 			static_cast<u8>(remap_ctl & 0x3),

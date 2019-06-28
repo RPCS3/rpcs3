@@ -1112,7 +1112,7 @@ void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 	const auto mh = noncast<u32[4]>((a >> 16) * (b >> 16));
 	const auto s = eval(ml + mh);
 	const auto s2 = eval(s + c);
-	const auto x = eval(s < ml | s2 < s);
+	const auto x = eval((s < ml) | (s2 < s));
 	set_vr(op.vd, select(x, splat<u32[4]>(-1), s2));
 	SetSat(IsNotZero(x.value));
 }

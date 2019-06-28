@@ -7,6 +7,8 @@
 #include <vector>
 #include <algorithm>
 
+static const size_t size_dropped = std::numeric_limits<size_t>::max();
+
 /*
 C-style format parser. Appends formatted string to `out`, returns number of characters written.
 `out`: mutable reference to std::string, std::vector<char> or other compatible container
@@ -41,7 +43,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 	const auto drop_sequence = [&]
 	{
 		out.insert(out.end(), fmt - ctx.size, fmt);
-		ctx.size = -1;
+		ctx.size = size_dropped;
 	};
 
 	const auto read_decimal = [&](uint result) -> uint
@@ -112,7 +114,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		ctx = {0};
 		out.push_back(ch);
 	}
-	else if (ctx.size == -1)
+	else if (ctx.size == size_dropped)
 	{
 		out.push_back(ch);
 	}
@@ -626,7 +628,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 	}
 
 	// Handle unfinished sequence
-	if (ctx.size && ctx.size != -1)
+	if (ctx.size && ctx.size != size_dropped)
 	{
 		fmt--, drop_sequence();
 	}

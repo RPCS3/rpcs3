@@ -1160,7 +1160,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 	};
 
-	if ((d_size | d_size + addr) >= 0x100000000ull)
+	if ((d_size | (d_size + addr)) >= 0x100000000ull)
 	{
 		LOG_ERROR(MEMORY, "Invalid d_size (0x%llx)", d_size);
 		report_opcode();
@@ -1170,7 +1170,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// get length of data being accessed
 	size_t a_size = get_x64_access_size(context, op, reg, d_size, i_size);
 
-	if ((a_size | a_size + addr) >= 0x100000000ull)
+	if ((a_size | (a_size + addr)) >= 0x100000000ull)
 	{
 		LOG_ERROR(MEMORY, "Invalid a_size (0x%llx)", a_size);
 		report_opcode();
@@ -1394,7 +1394,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			}
 
 			// Reschedule
-			cpu->test_stopped();
+			if (cpu->test_stopped())
+			{
+				//
+			}
 
 			if (Emu.IsStopped())
 			{
@@ -1692,7 +1695,7 @@ const bool s_exception_handler_set = []() -> bool
 #endif
 
 // TODO
-extern atomic_t<u32> g_thread_count(0);
+atomic_t<u32> g_thread_count(0);
 
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 

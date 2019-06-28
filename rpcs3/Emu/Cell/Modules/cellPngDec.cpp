@@ -769,9 +769,9 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 		// todo: commandptr
 		try
 		{
-			for (int j = 0; j < stream->passes; j++)
+			for (u32 j = 0; j < stream->passes; j++)
 			{
-				for (int i = 0; i < stream->out_param.outputHeight; ++i)
+				for (u32 i = 0; i < stream->out_param.outputHeight; ++i)
 				{
 					const u32 line = flip ? stream->out_param.outputHeight - i - 1 : i;
 					png_read_row(stream->png_ptr, &data[line*bytes_per_line], nullptr);

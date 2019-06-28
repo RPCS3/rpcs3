@@ -42,6 +42,8 @@ namespace vk
 			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
 			fmt::throw_exception("No hardware support for z24s8" HERE);
 		}
+		default:
+			break;
 		}
 		fmt::throw_exception("Invalid format (0x%x)" HERE, (u32)format);
 	}
@@ -57,6 +59,9 @@ namespace vk
 		case rsx::texture_minify_filter::nearest_linear: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 		case rsx::texture_minify_filter::linear_linear: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 		case rsx::texture_minify_filter::convolution_min: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+		default:
+			ASSUME(0);
+			break;
 		}
 		fmt::throw_exception("Invalid max filter" HERE);
 	}
@@ -68,6 +73,9 @@ namespace vk
 		case rsx::texture_magnify_filter::nearest: return VK_FILTER_NEAREST;
 		case rsx::texture_magnify_filter::linear: return VK_FILTER_LINEAR;
 		case rsx::texture_magnify_filter::convolution_mag: return VK_FILTER_LINEAR;
+		default:
+			ASSUME(0);
+			break;
 		}
 		fmt::throw_exception("Invalid mag filter (0x%x)" HERE, (u32)mag_filter);
 	}
@@ -119,6 +127,9 @@ namespace vk
 		case rsx::texture_wrap_mode::mirror_once_clamp_to_edge: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		case rsx::texture_wrap_mode::mirror_once_border: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		case rsx::texture_wrap_mode::mirror_once_clamp: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+		default:
+			ASSUME(0);
+			break;
 		}
 		fmt::throw_exception("unhandled texture clamp mode" HERE);
 	}
@@ -135,6 +146,9 @@ namespace vk
 		case rsx::texture_max_anisotropy::x10: return 10.0f;
 		case rsx::texture_max_anisotropy::x12: return 12.0f;
 		case rsx::texture_max_anisotropy::x16: return 16.0f;
+		default:
+			ASSUME(0);
+			break;
 		}
 
 		fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)" HERE, (u32)gcm_aniso);
@@ -188,7 +202,7 @@ namespace vk
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
-				
+
 		case CELL_GCM_TEXTURE_D8R8G8B8:
 			mapping = { VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A }; break;
 
@@ -209,7 +223,7 @@ namespace vk
 		default:
 			fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)" HERE, format);
 		}
-	
+
 		return mapping;
 	}
 
@@ -244,6 +258,8 @@ namespace vk
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return VK_FORMAT_R8G8_SNORM;
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return VK_FORMAT_B8G8R8A8_UNORM;
+		default:
+			break;
 		}
 		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)" HERE, format);
 	}
@@ -305,6 +321,8 @@ namespace vk
 		case VK_FORMAT_D32_SFLOAT_S8_UINT: //TODO: Translate to D24S8
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 			return 4;
+		default:
+			break;
 		}
 
 		fmt::throw_exception("Unexpected vkFormat 0x%X", (u32)format);
@@ -364,6 +382,8 @@ namespace vk
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 			return{ 4, 1 };
+		default:
+			break;
 		}
 
 		fmt::throw_exception("Unexpected vkFormat 0x%X", (u32)format);
@@ -414,6 +434,8 @@ namespace vk
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 			return{ true, 4 };
+		default:
+			break;
 		}
 
 		fmt::throw_exception("Unknown vkFormat 0x%x" HERE, (u32)format);

@@ -118,6 +118,8 @@ namespace rsx
 				return sizeof(u16) * size;
 			case 3:
 				return sizeof(u16) * 4;
+			default:
+				break;
 			}
 			fmt::throw_exception("Wrong vector size" HERE);
 		case vertex_base_type::f: return sizeof(f32) * size;
@@ -130,6 +132,8 @@ namespace rsx
 				return sizeof(f16) * size;
 			case 3:
 				return sizeof(f16) * 4;
+			default:
+				break;
 			}
 			fmt::throw_exception("Wrong vector size" HERE);
 		case vertex_base_type::ub:
@@ -141,10 +145,14 @@ namespace rsx
 				return sizeof(u8) * size;
 			case 3:
 				return sizeof(u8) * 4;
+			default:
+				break;
 			}
 			fmt::throw_exception("Wrong vector size" HERE);
 		case vertex_base_type::cmp: return 4;
 		case vertex_base_type::ub256: verify(HERE), (size == 4); return sizeof(u8) * 4;
+		default:
+			break;
 		}
 		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!" HERE, (u8)type);
 	}
@@ -2036,6 +2044,8 @@ namespace rsx
 				// These are single byte formats, but inverted order (BGRA vs ARGB) when passed via registers
 				to_swap_bytes = (layout.attribute_placement[index] == attribute_buffer_placement::transient);
 				break;
+			default:
+				break;
 			}
 
 			if (to_swap_bytes) attrib1 |= swap_storage_mask;
@@ -2451,6 +2461,8 @@ namespace rsx
 		case frame_limit_type::_60: limit = 60.; break;
 		case frame_limit_type::_30: limit = 30.; break;
 		case frame_limit_type::_auto: limit = fps_limit; break; // TODO
+		default:
+			break;
 		}
 
 		if (limit)

@@ -32,7 +32,7 @@ statichle_handler::~statichle_handler()
 
 bool statichle_handler::load_patterns()
 {
-	for (int i = 0; i < shle_patterns_list.size(); i++)
+	for (u32 i = 0; i < shle_patterns_list.size(); i++)
 	{
 		auto& pattern = shle_patterns_list[i];
 
@@ -77,7 +77,7 @@ bool statichle_handler::load_patterns()
 			return (hv << 4) | lv;
 		};
 
-		for (int j = 0; j < 32; j++)
+		for (u32 j = 0; j < 32; j++)
 			dapat.start_pattern[j] = char_to_u8(pattern[0][j * 2], pattern[0][(j * 2) + 1]);
 
 		dapat.crc16_length = char_to_u8(pattern[1][0], pattern[1][1]);

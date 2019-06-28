@@ -143,7 +143,7 @@ std::u16string ascii8_to_utf16(const std::string& ascii_string)
 
 	for (const auto& code : ascii_string)
 	{
-		out.push_back(code > 0xFF ? '#' : (char16_t)code);
+		out.push_back((char16_t)code);
 	}
 
 	out.push_back(0);

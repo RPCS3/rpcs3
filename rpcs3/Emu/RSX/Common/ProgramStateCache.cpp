@@ -155,7 +155,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			}
 			}
 
-			if (d3.end && (fast_exit || current_instrution >= instruction_range.second) ||
+			if ((d3.end && (fast_exit || current_instrution >= instruction_range.second)) ||
 				(current_instrution + 1) == 512)
 			{
 				break;

@@ -140,7 +140,7 @@ namespace vk
 			return managed_texture.get();
 		}
 
-		std::unique_ptr<vk::viewable_image>& get_texture() 
+		std::unique_ptr<vk::viewable_image>& get_texture()
 		{
 			return managed_texture;
 		}
@@ -914,6 +914,9 @@ namespace vk
 				image_view_type = VK_IMAGE_VIEW_TYPE_3D;
 				layer = 1;
 				break;
+			default:
+				ASSUME(0);
+				break;
 			}
 
 			switch (gcm_format)
@@ -990,6 +993,8 @@ namespace vk
 			case VK_FORMAT_D32_SFLOAT_S8_UINT:
 			case VK_FORMAT_D24_UNORM_S8_UINT:
 				subres_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+				break;
+			default:
 				break;
 			}
 

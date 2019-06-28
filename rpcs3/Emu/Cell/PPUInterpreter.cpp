@@ -10,7 +10,7 @@
 #include <cmath>
 
 #if !defined(_MSC_VER) && !defined(__SSSE3__)
-#define _mm_shuffle_epi8
+#define _mm_shuffle_epi8(opa, opb) opb
 #endif
 
 inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }

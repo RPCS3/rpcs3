@@ -410,7 +410,7 @@ s32 jstrnchk(vm::cptr<u8> src, s32 src_len)
 {
 	u8 r = 0;
 
-	for (u32 len = 0; len < src_len; len++)
+	for (s32 len = 0; len < src_len; len++)
 	{
 		if (src != vm::null)
 		{

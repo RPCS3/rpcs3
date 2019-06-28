@@ -1347,7 +1347,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				elf_file.open(decrypted_path);
 			}
 			// Decrypt SELF
-			else if (elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data()))
+			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data())))
 			{
 				if (true)
 				{

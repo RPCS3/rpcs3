@@ -212,6 +212,8 @@ namespace gl
 				case gl::texture::type::f32:
 					gcm_format = CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT;
 					break;
+				default:
+					break;
 				}
 			}
 		}

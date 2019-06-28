@@ -2817,7 +2817,7 @@ void spu_recompiler::FSMB(spu_opcode_t op)
 		c->pshufd(va, va, 0xfa);
 	}
 
-	c->movdqa(vm, XmmConst(_mm_set_epi8(128, 64, 32, 16, 8, 4, 2, 1, 128, 64, 32, 16, 8, 4, 2, 1)));
+	c->movdqa(vm, XmmConst(_mm_set_epi8(-128, 64, 32, 16, 8, 4, 2, 1, -128, 64, 32, 16, 8, 4, 2, 1)));
 	c->pand(va, vm);
 	c->pcmpeqb(va, vm);
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
