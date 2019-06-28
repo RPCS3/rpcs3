@@ -224,7 +224,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		if (target.length() > *dst_len) return DSTExhausted;
 		memcpy(dst, target.c_str(), target.length());
 	}
-	*dst_len = target.length();
+	*dst_len = ::narrow<s32>(target.size());
 
 	return ConversionOK;
 #else

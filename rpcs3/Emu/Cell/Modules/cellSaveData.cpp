@@ -451,7 +451,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 			case CELL_SAVEDATA_FOCUSPOS_LISTTAIL:
 			{
-				focused = save_entries.size() - 1;
+				focused = ::size32(save_entries) - 1;
 				break;
 			}
 			case CELL_SAVEDATA_FOCUSPOS_LATEST:
@@ -512,7 +512,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (!file.is_directory)
 				{
-					doneGet->sizeKB += ::align(file.size, 4096);
+					doneGet->sizeKB += static_cast<s32>(::align(file.size, 4096));
 
 					if (!fs::remove_file(del_path + file.name))
 					{

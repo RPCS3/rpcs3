@@ -257,7 +257,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	if (++group->init == group->max_num)
 	{
-		if (g_cfg.core.max_spurs_threads < 6 && group->max_num > g_cfg.core.max_spurs_threads)
+		if (g_cfg.core.max_spurs_threads < 6 && group->max_num > 0u + g_cfg.core.max_spurs_threads)
 		{
 			if (group->name.size() >= 20 && group->name.compare(group->name.size() - 20, 20, "CellSpursKernelGroup", 20) == 0)
 			{
