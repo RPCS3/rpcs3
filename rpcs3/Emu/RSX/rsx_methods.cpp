@@ -190,7 +190,7 @@ namespace rsx
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
-			const u32 offset = method_registers.semaphore_offset_4097() & -16u;
+			const u32 offset = method_registers.semaphore_offset_4097() & -16;
 			if (offset > 63 * 4 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
 			{
 				//
@@ -205,7 +205,7 @@ namespace rsx
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Full pipeline barrier
-			const u32 offset = method_registers.semaphore_offset_4097() & -16u;
+			const u32 offset = method_registers.semaphore_offset_4097() & -16;
 			if (offset > 63 * 4 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
 			{
 				//

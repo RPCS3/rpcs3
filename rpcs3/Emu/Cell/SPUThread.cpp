@@ -1390,7 +1390,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				break;
 			}
 
-			auto lock = vm::passive_lock(eal & -128u, ::align(eal + size, 128));
+			auto lock = vm::passive_lock(eal & -128, ::align(eal + size, 128));
 
 			while (size >= 128)
 			{
@@ -1578,7 +1578,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 
 void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 {
-	const u32 addr = args.eal & -128u;
+	const u32 addr = args.eal & -128;
 
 	if (raddr && addr == raddr)
 	{
@@ -1777,7 +1777,7 @@ bool spu_thread::process_mfc_cmd()
 	{
 	case MFC_GETLLAR_CMD:
 	{
-		const u32 addr = ch_mfc_cmd.eal & -128u;
+		const u32 addr = ch_mfc_cmd.eal & -128;
 		auto& data = vm::_ref<decltype(rdata)>(addr);
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 		u64 ntime;
@@ -1888,7 +1888,7 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_PUTLLC_CMD:
 	{
 		// Store conditionally
-		const u32 addr = ch_mfc_cmd.eal & -128u;
+		const u32 addr = ch_mfc_cmd.eal & -128;
 		u32 result = 0;
 
 		if (raddr == addr)

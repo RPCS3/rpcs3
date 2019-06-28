@@ -967,9 +967,9 @@ struct ppu_acontext
 		// Bit range: constant 0 = (0;0), constant 1 = (1;1), normalized undef = (0;1), unnormalized undef = (1;0)
 
 		u64 imin = 0ull; // Integral range begin
-		u64 imax = -1ull; // Integral range end
+		u64 imax = ~0ull; // Integral range end
 		u64 bmin = 0ull; // Bit range begin
-		u64 bmax = -1ull; // Bit range end
+		u64 bmax = ~0ull; // Bit range end
 
 		void set_undef()
 		{
