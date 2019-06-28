@@ -3,6 +3,7 @@
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
 #include "VKCompute.h"
+#include "VKResourceManager.h"
 #include "Emu/System.h"
 #include "../Common/TextureUtils.h"
 #include "Utilities/mutex.h"
@@ -36,7 +37,6 @@ namespace vk
 
 		//DMA relevant data
 		VkEvent dma_fence = VK_NULL_HANDLE;
-		VkEvent prev_event = VK_NULL_HANDLE;
 		vk::render_device* m_device = nullptr;
 		vk::viewable_image *vram_texture = nullptr;
 		std::unique_ptr<vk::buffer> dma_buffer;
@@ -73,9 +73,8 @@ namespace vk
 				if (!flushed)
 				{
 					// Reset fence
-					verify(HERE), m_device, dma_buffer, dma_fence != VK_NULL_HANDLE;
-					vkDestroyEvent(*m_device, dma_fence, nullptr);
-					dma_fence = VK_NULL_HANDLE;
+					verify(HERE), m_device, dma_buffer, dma_fence;
+					vk::get_resource_manager()->dispose(dma_fence);
 				}
 
 				synchronized = false;
@@ -91,15 +90,9 @@ namespace vk
 		{
 			if (dma_buffer)
 			{
-				dma_buffer.reset();
-
-				if (dma_fence != VK_NULL_HANDLE)
-				{
-					vkDestroyEvent(*m_device, dma_fence, nullptr);
-					dma_fence = VK_NULL_HANDLE;
-				}
-
-				verify(HERE), prev_event == VK_NULL_HANDLE;
+				auto gc = vk::get_resource_manager();
+				gc->dispose(dma_buffer);
+				gc->dispose(dma_fence);
 			}
 		}
 
@@ -288,11 +281,11 @@ namespace vk
 
 			if (UNLIKELY(synchronized))
 			{
-				// Save old event for deletion
-				verify(HERE), miss, prev_event == VK_NULL_HANDLE;
-				prev_event = dma_fence;
+				verify(HERE), miss;
 
 				// Replace the wait event with a new one to avoid premature signaling!
+				vk::get_resource_manager->dispose(dma_fence);
+
 				VkEventCreateInfo createInfo = {};
 				createInfo.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO;
 				vkCreateEvent(*m_device, &createInfo, nullptr, &dma_fence);
@@ -325,13 +318,6 @@ namespace vk
 			// Synchronize, reset dma_fence after waiting
 			vk::wait_for_event(dma_fence, GENERAL_WAIT_TIMEOUT);
 			vkResetEvent(*m_device, dma_fence);
-
-			if (prev_event)
-			{
-				// Remove the stale event if it still exists
-				vkDestroyEvent(*m_device, prev_event, nullptr);
-				prev_event = VK_NULL_HANDLE;
-			}
 
 			return dma_buffer->map(offset, size);
 		}
