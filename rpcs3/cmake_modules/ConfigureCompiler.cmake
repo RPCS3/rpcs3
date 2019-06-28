@@ -6,6 +6,13 @@ if(MSVC)
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
 
+	#TODO: Some of these could be cleaned up
+	add_compile_options(/wd4805) # Comparing boolean and int
+	add_compile_options(/wd4804) # Using integer operators with booleans
+
+	# MSVC 2017 uses iterator as base class internally, causing a lot of warning spam
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING=1")
+
 	# Increase stack limit to 8 MB
 	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:8388608,1048576")
 else()
