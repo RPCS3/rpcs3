@@ -8,6 +8,7 @@
 #include "VKFormats.h"
 #include "VKCommonDecompiler.h"
 #include "VKRenderPass.h"
+#include "VKResourceManager.h"
 
 namespace
 {
@@ -640,7 +641,6 @@ VKGSRender::~VKGSRender()
 	m_rtts.destroy();
 	m_texture_cache.destroy();
 
-	m_resource_manager.destroy();
 	m_stencil_mirror_sampler.reset();
 
 	//Overlay text handler
@@ -1372,7 +1372,7 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						fs_sampler_handles[i] = m_resource_manager.find_sampler(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+						fs_sampler_handles[i] = vk::get_resource_manager()->find_sampler(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
 					}
 				}
@@ -1422,7 +1422,7 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						vs_sampler_handles[i] = m_resource_manager.find_sampler(
+						vs_sampler_handles[i] = vk::get_resource_manager()->find_sampler(
 							*m_device,
 							VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 							unnormalized_coords,
@@ -2158,6 +2158,11 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		// Grab next cb in line and make it usable
 		m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
 		m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
+
+		if (!m_current_command_buffer->poke())
+		{
+			LOG_ERROR(RSX, "CB chain has run out of free entries!");
+		}
 
 		m_current_command_buffer->reset();
 

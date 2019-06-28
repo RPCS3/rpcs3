@@ -4,6 +4,7 @@
 #include "VKRenderPass.h"
 #include "VKFramebuffer.h"
 #include "VKResolveHelper.h"
+#include "VKResourceManager.h"
 #include "Utilities/mutex.h"
 
 namespace vk
@@ -247,6 +248,7 @@ namespace vk
 		vk::clear_renderpass_cache(dev);
 		vk::clear_framebuffer_cache();
 		vk::clear_resolve_helpers();
+		vk::get_resource_manager()->destroy();
 
 		g_null_texture.reset();
 		g_null_image_view.reset();
