@@ -988,7 +988,7 @@ namespace vm
 					continue;
 				}
 
-				if (must_be_empty && (!it->unique() || (*it)->imp_used(lock)))
+				if (must_be_empty && (it->use_count() != 1 || (*it)->imp_used(lock)))
 				{
 					return *it;
 				}

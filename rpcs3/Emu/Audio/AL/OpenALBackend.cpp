@@ -128,7 +128,7 @@ bool OpenALBackend::AddData(const void* src, u32 num_samples)
 	// Fail if there are no free buffers remaining
 	if (m_num_unqueued == 0)
 	{
-		LOG_WARNING(GENERAL, "XAudio2Backend : no unqueued buffers remaining");
+		LOG_WARNING(GENERAL, "OpenALBackend : no unqueued buffers remaining");
 		return false;
 	}
 

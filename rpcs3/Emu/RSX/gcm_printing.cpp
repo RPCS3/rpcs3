@@ -780,6 +780,7 @@ namespace
 		case rsx::vertex_base_type::cmp: return "CMP";
 		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
 		}
+		return "";
 	}
 
 	std::string unpack_vertex_format(u32 arg)

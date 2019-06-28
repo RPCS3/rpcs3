@@ -481,7 +481,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_occlusion_query_pool.create((*m_device), OCCLUSION_MAX_POOL_SIZE);
 	m_occlusion_map.resize(occlusion_query_count);
 
-	for (int n = 0; n < occlusion_query_count; ++n)
+	for (u32 n = 0; n < occlusion_query_count; ++n)
 		m_occlusion_query_data[n].driver_handle = n;
 
 	//Generate frame contexts

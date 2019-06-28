@@ -4543,7 +4543,7 @@ public:
 					{
 						(this->*g_decoder.decode(op))({op});
 					}
-					catch (const std::exception& e)
+					catch (const std::exception&)
 					{
 						std::string dump;
 						raw_string_ostream out(dump);
@@ -4762,7 +4762,7 @@ public:
 		// Create interpreter table
 		const auto if_type = get_ftype<void, u8*, u8*, u32, u32, u8*, u32, u8*>();
 		const auto if_pptr = if_type->getPointerTo()->getPointerTo();
-		m_function_table = new GlobalVariable(*m_module, ArrayType::get(if_type->getPointerTo(), 1u << m_interp_magn), true, GlobalValue::InternalLinkage, nullptr);
+		m_function_table = new GlobalVariable(*m_module, ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), true, GlobalValue::InternalLinkage, nullptr);
 
 		// Add return function
 		const auto ret_func = cast<Function>(module->getOrInsertFunction("spu_ret", if_type).getCallee());
@@ -4823,7 +4823,7 @@ public:
 
 		// Fill interpreter table
 		std::vector<llvm::Constant*> iptrs;
-		iptrs.reserve(1u << m_interp_magn);
+		iptrs.reserve(1ull << m_interp_magn);
 
 		m_block = nullptr;
 
@@ -4987,7 +4987,7 @@ public:
 						}
 					}
 				}
-				catch (const std::exception& e)
+				catch (const std::exception&)
 				{
 					std::string dump;
 					raw_string_ostream out(dump);
@@ -5011,7 +5011,7 @@ public:
 			}
 		}
 
-		m_function_table->setInitializer(ConstantArray::get(ArrayType::get(if_type->getPointerTo(), 1u << m_interp_magn), iptrs));
+		m_function_table->setInitializer(ConstantArray::get(ArrayType::get(if_type->getPointerTo(), 1ull << m_interp_magn), iptrs));
 		m_function_table = nullptr;
 
 		// Initialize pass manager

@@ -1239,7 +1239,7 @@
            <property name="title">
             <string>Disk cache</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_75">
+           <layout class="QVBoxLayout" name="verticalLayout_77">
             <item>
              <widget class="QCheckBox" name="enableCacheClearing">
               <property name="text">
