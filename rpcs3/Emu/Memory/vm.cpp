@@ -310,7 +310,7 @@ namespace vm
 	{
 		for (u64 i = 0;; i++)
 		{
-			if (LIKELY(!atomic_storage<u64>::bts(res.raw(), 0)))
+			if (LIKELY(!res.bts(0)))
 			{
 				break;
 			}
@@ -750,7 +750,7 @@ namespace vm
 		const u32 size = ::align(orig_size, min_page_size);
 
 		// return if addr or size is invalid
-		if (!size || size > this->size || addr < this->addr || addr + size - 1 > this->addr + this->size - 1 || flags & 0x10)
+		if (!size || addr < this->addr || addr + u64{size} > this->addr + this->size || flags & 0x10)
 		{
 			return 0;
 		}
@@ -823,7 +823,7 @@ namespace vm
 
 	std::pair<u32, std::shared_ptr<utils::shm>> block_t::get(u32 addr, u32 size)
 	{
-		if (addr < this->addr || std::max<u32>(size, addr - this->addr + size) >= this->size)
+		if (addr < this->addr || addr + u64{size} > this->addr + this->size)
 		{
 			return {addr, nullptr};
 		}

@@ -206,13 +206,13 @@ namespace rsx
 					}
 
 					// Memory partition check
-					if (mem_range.start >= 0xc0000000)
+					if (mem_range.start >= constants::local_mem_base)
 					{
-						if (e.first < 0xc0000000) continue;
+						if (e.first < constants::local_mem_base) continue;
 					}
 					else
 					{
-						if (e.first >= 0xc0000000) continue;
+						if (e.first >= constants::local_mem_base) continue;
 					}
 
 					// Pitch check

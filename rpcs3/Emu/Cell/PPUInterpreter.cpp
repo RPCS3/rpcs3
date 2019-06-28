@@ -1486,7 +1486,7 @@ bool ppu_interpreter_precise::VPKSHUS(ppu_thread& ppu, ppu_opcode_t op)
 	// Detect saturation
 	{
 		const u64 mask = 0xFF00FF00FF00FF00ULL;
-		const auto all_bits = v128::fromV(_mm_or_si128(a.vi, b.vi));
+		const auto all_bits = a | b;
 		if ((all_bits._u64[0] | all_bits._u64[1]) & mask)
 		{
 			ppu.sat = true;

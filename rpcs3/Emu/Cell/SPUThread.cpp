@@ -1335,8 +1335,8 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		}
 	}
 
-	u8* dst = (u8*)vm::base(eal);
-	u8* src = (u8*)vm::base(offset + lsa);
+	u8* dst = vm::_ptr<u8>(eal);
+	u8* src = vm::_ptr<u8>(offset + lsa);
 
 	if (UNLIKELY(!is_get && !g_use_rtm))
 	{
@@ -1603,7 +1603,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			cpu_thread::suspend_all cpu_lock(this);
 
 			// Try to obtain bit 7 (+64)
-			if (!atomic_storage<u64>::bts(vm::reservation_acquire(addr, 128).raw(), 6))
+			if (!vm::reservation_acquire(addr, 128).bts(6))
 			{
 				auto& data = vm::_ref<decltype(rdata)>(addr);
 				mov_rdata(data, to_write);

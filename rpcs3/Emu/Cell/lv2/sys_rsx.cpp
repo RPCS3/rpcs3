@@ -47,7 +47,7 @@ error_code sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_add
 	sys_rsx.warning("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
 	*mem_handle = 0x5a5a5a5b;
-	*mem_addr = vm::falloc(0xC0000000, size, vm::video);
+	*mem_addr = vm::falloc(rsx::constants::local_mem_base, size, vm::video);
 
 	return CELL_OK;
 }
@@ -145,10 +145,9 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
 	render->current_display_buffer = 0;
-	render->main_mem_addr = 0;
 	render->label_addr = *lpar_reports;
 	render->ctxt_addr = m_sysrsx->rsx_context_addr;
-	render->init(0, 0, *lpar_dma_control, 0xC0000000);
+	render->init(*lpar_dma_control);
 
 	return CELL_OK;
 }
@@ -176,8 +175,8 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 {
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
-	if (!size || io & 0xFFFFF || ea >= 0xC0000000 || ea & 0xFFFFF || size & 0xFFFFF ||
-		rsx::get_current_renderer()->main_mem_size < io + size)
+	if (!size || io & 0xFFFFF || ea + u64{size} >= rsx::constants::local_mem_base || ea & 0xFFFFF || size & 0xFFFFF ||
+		rsx::get_current_renderer()->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
 	}
@@ -213,7 +212,7 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 {
 	sys_rsx.warning("sys_rsx_context_iounmap(context_id=0x%x, io=0x%x, size=0x%x)", context_id, io, size);
 
-	if (!size || rsx::get_current_renderer()->main_mem_size < io + size)
+	if (!size || size & 0xFFFFF || io & 0xFFFFF || rsx::get_current_renderer()->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
 	}
