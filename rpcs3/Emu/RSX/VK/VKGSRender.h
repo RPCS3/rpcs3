@@ -471,6 +471,9 @@ public:
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
+	// External callback in case we need to suddenly submit a commandlist unexpectedly, e.g in a violation handler
+	void emergency_query_cleanup(vk::command_buffer* commands);
+
 protected:
 	void begin() override;
 	void end() override;

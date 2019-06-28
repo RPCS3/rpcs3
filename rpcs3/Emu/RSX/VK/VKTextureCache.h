@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "stdafx.h"
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
@@ -292,13 +292,8 @@ namespace vk
 			}
 			else
 			{
-				// HACK
-				// Deletion of queued objects and subsequent driver reuse of handles is causing race conditions here
-				// TODO: Proper garbage collection for these things
-				vkResetEvent(*m_device, dma_fence);
-
 				// If this is speculated, it should only occur once
-				// verify(HERE), vkGetEventStatus(*m_device, dma_fence) == VK_EVENT_RESET;
+				verify(HERE), vkGetEventStatus(*m_device, dma_fence) == VK_EVENT_RESET;
 			}
 
 			cmd.set_flag(vk::command_buffer::cb_has_dma_transfer);
@@ -1090,6 +1085,13 @@ namespace vk
 
 		void cleanup_after_dma_transfers(vk::command_buffer& cmd) override
 		{
+			bool occlusion_query_active = !!(cmd.flags & vk::command_buffer::cb_has_open_query);
+			if (occlusion_query_active)
+			{
+				// We really stepped in it
+				vk::do_query_cleanup(cmd);
+			}
+
 			// End recording
 			cmd.end();
 
@@ -1116,6 +1118,12 @@ namespace vk
 			}
 
 			verify(HERE), cmd.flags == 0;
+
+			if (occlusion_query_active)
+			{
+				verify(HERE), cmd.is_recording();
+				cmd.flags |= vk::command_buffer::cb_load_occluson_task;
+			}
 		}
 
 	public:

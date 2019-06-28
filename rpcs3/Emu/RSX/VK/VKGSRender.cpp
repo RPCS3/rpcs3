@@ -2828,6 +2828,7 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 	{
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
 		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 
 	m_current_command_buffer->end();
@@ -3604,6 +3605,18 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 
 	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
 	data.indices.clear();
+}
+
+void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
+{
+	verify("Command list mismatch" HERE), commands == static_cast<vk::command_buffer*>(m_current_command_buffer);
+
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
+	{
+		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
+		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
+	}
 }
 
 bool VKGSRender::on_decompiler_task()

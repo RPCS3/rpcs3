@@ -190,6 +190,10 @@ namespace vk
 	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
 	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
 
+	// Handle unexpected submit with dangling occlusion query
+	// TODO: Move queries out of the renderer!
+	void do_query_cleanup(vk::command_buffer& cmd);
+
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
 	struct memory_type_mapping
@@ -1007,6 +1011,9 @@ private:
 				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
 				return;
 			}
+
+			// Check for hanging queries to avoid driver hang
+			verify("close and submit of commandbuffer with a hanging query!" HERE), (flags & cb_has_open_query) == 0;
 
 			if (!fence)
 			{

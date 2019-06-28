@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "VKHelpers.h"
+#include "VKGSRender.h"
 #include "VKCompute.h"
 #include "VKRenderPass.h"
 #include "VKFramebuffer.h"
@@ -769,6 +770,14 @@ namespace vk
 			//std::this_thread::yield();
 			_mm_pause();
 		}
+	}
+
+	void do_query_cleanup(vk::command_buffer& cmd)
+	{
+		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_renderer());
+		verify(HERE), renderer;
+
+		renderer->emergency_query_cleanup(&cmd);
 	}
 
 	void die_with_error(const char* faulting_addr, VkResult error_code)
