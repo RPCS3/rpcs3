@@ -64,9 +64,16 @@ endif()
 # Warnings are silenced for 3rdparty code
 set(CMAKE_CXX_FLAGS -w)
 set(CMAKE_C_FLAGS -w)
+set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "")
+
+if(MSVC)
+	add_compile_options(/wd4530) # C++ exception handler used, but unwind semantics are not enabled
+endif()
+
 add_subdirectory(Vulkan EXCLUDE_FROM_ALL)
 add_subdirectory(asmjitsrc EXCLUDE_FROM_ALL)
 add_subdirectory(3rdparty)
+
 unset(CMAKE_CXX_FLAGS)
 unset(CMAKE_C_FLAGS)
 
