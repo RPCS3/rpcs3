@@ -53,8 +53,7 @@ namespace rsx
 		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 		case CELL_GCM_LOCATION_LOCAL:
 		{
-			// TODO: Don't use unnamed constants like 0xC0000000
-			return 0xC0000000 + offset;
+			return rsx::constants::local_mem_base + offset;
 		}
 
 		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
@@ -1747,12 +1746,9 @@ namespace rsx
 		rsx::method_registers.reset();
 	}
 
-	void thread::init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress)
+	void thread::init(u32 ctrlAddress)
 	{
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
-		this->ioAddress = ioAddress;
-		this->ioSize = ioSize;
-		local_mem_addr = localAddress;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 
 		memset(display_buffers, 0, sizeof(display_buffers));
@@ -1792,27 +1788,7 @@ namespace rsx
 			address = get_address(tile->offset, location);
 		}
 
-		return{ address, base, tile, (u8*)vm::base(address) };
-	}
-
-	u32 thread::ReadIO32(u32 addr)
-	{
-		if (u32 ea = RSXIOMem.RealAddr(addr))
-		{
-			return vm::read32(ea);
-		}
-
-		fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
-	}
-
-	void thread::WriteIO32(u32 addr, u32 value)
-	{
-		if (u32 ea = RSXIOMem.RealAddr(addr))
-		{
-			return vm::write32(ea, value);
-		}
-
-		fmt::throw_exception("%s(addr=0x%x): RSXIO memory not mapped" HERE, __FUNCTION__, addr);
+		return{ address, base, tile, vm::_ptr<u8>(address) };
 	}
 
 	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count)
@@ -2294,7 +2270,7 @@ namespace rsx
 
 	void thread::on_notify_memory_unmapped(u32 address, u32 size)
 	{
-		if (!m_rsx_thread_exiting && address < 0xC0000000)
+		if (!m_rsx_thread_exiting && address < rsx::constants::local_mem_base)
 		{
 			u32 ea = address >> 20, io = RSXIOMem.io[ea];
 

@@ -330,7 +330,7 @@ namespace rsx
 
 			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length);
 
-			const u8* src = (u8*)vm::base(src_addr);
+			const u8* src = vm::_ptr<u8>(src_addr);
 
 			frame_capture_data::memory_block block;
 			block.offset = src_offset;

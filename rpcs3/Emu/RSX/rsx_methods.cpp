@@ -124,10 +124,7 @@ namespace rsx
 				res &= -128;
 			}
 
-			if (addr >> 28 != 0x4)
-			{
-				vm::reservation_notifier(addr, 4).notify_all();
-			}
+			vm::reservation_notifier(addr, 4).notify_all();
 		}
 	}
 
@@ -1222,8 +1219,8 @@ namespace rsx
 			const auto read_address = get_address(src_offset, src_dma);
 			rsx->read_barrier(read_address, in_pitch * (line_count - 1) + line_length);
 
-			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
-			const u8 *src = (u8*)vm::base(read_address);
+			u8 *dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
+			const u8 *src = vm::_ptr<u8>(read_address);
 
 			if (in_pitch == out_pitch && out_pitch == line_length)
 			{

@@ -401,7 +401,7 @@ void Buffer::ShowWindowed()
 	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
-		u32 addr = render->local_mem_addr + buffers[id].offset; \
+		u32 addr = rsx::constants::local_mem_base + buffers[id].offset; \
 		if (vm::check_addr(addr) && buffers[id].width && buffers[id].height) \
 			memory_viewer_panel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
 		return; \
@@ -690,7 +690,7 @@ void rsx_debugger::GetBuffers()
 	for (u32 bufferId=0; bufferId < render->display_buffers_count; bufferId++)
 	{
 		auto buffers = render->display_buffers;
-		u32 RSXbuffer_addr = render->local_mem_addr + buffers[bufferId].offset;
+		u32 RSXbuffer_addr = rsx::constants::local_mem_base + buffers[bufferId].offset;
 
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;

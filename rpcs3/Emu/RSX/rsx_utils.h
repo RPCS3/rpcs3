@@ -96,6 +96,9 @@ namespace rsx
 		{
 			"vtex0", "vtex1", "vtex2", "vtex3",
 		};
+
+		// Local RSX memory base (known as constant)
+		static constexpr u32 local_mem_base = 0xC0000000;
 	}
 
 	/**

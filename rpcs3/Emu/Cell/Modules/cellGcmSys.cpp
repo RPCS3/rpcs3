@@ -374,8 +374,8 @@ s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 
 	if (!local_size && !local_addr)
 	{
 		local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
-		local_addr = 0xC0000000;
-		vm::falloc(0xC0000000, local_size, vm::video);
+		local_addr = rsx::constants::local_mem_base;
+		vm::falloc(local_addr, local_size, vm::video);
 	}
 
 	cellGcmSys.warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
@@ -446,11 +446,10 @@ s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 
 	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, 0, 1, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	render->intr_thread = idm::get<named_thread<ppu_thread>>(*_tid);
 	render->intr_thread->state -= cpu_flag::stop;
-	render->main_mem_addr = 0;
 	render->isHLE = true;
 	render->label_addr = m_config->gcm_info.label_addr;
 	render->ctxt_addr = m_config->gcm_info.context_addr;
-	render->init(ioAddress, ioSize, m_config->gcm_info.control_addr - 0x40, local_addr);
+	render->init(m_config->gcm_info.control_addr - 0x40);
 
 	return CELL_OK;
 }
@@ -945,7 +944,7 @@ s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 	// Address in local memory
 	if ((address >> 28) == 0xC)
 	{
-		result = address - 0xC0000000;
+		result = address - rsx::constants::local_mem_base;
 	}
 	// Address in main memory else check
 	else
@@ -1046,7 +1045,7 @@ s32 cellGcmMapLocalMemory(vm::ptr<u32> address, vm::ptr<u32> size)
 {
 	cellGcmSys.warning("cellGcmMapLocalMemory(address=*0x%x, size=*0x%x)", address, size);
 
-	if (!local_addr && !local_size && vm::falloc(local_addr = 0xC0000000, local_size = 0xf900000 /* TODO */, vm::video))
+	if (!local_addr && !local_size && vm::falloc(local_addr = rsx::constants::local_mem_base, local_size = 0xf900000 /* TODO */, vm::video))
 	{
 		*address = local_addr;
 		*size = local_size;
