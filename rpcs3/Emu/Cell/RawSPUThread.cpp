@@ -6,6 +6,8 @@
 
 #include "Emu/Cell/RawSPUThread.h"
 
+#include <atomic>
+
 // Originally, SPU MFC registers are accessed externally in a concurrent manner (don't mix with channels, SPU MFC channels are isolated)
 thread_local spu_mfc_cmd g_tls_mfc[8] = {};
 
@@ -173,7 +175,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 		case MFC_SYNC_CMD:
 		{
 			g_tls_mfc[index] = {};
-			_mm_mfence();
+			std::atomic_thread_fence(std::memory_order_seq_cst);
 			return true;
 		}
 		}

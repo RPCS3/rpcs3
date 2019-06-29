@@ -123,7 +123,7 @@ namespace rsx
 		}
 
 		while (m_enqueued_count.load() != m_processed_count)
-			_mm_lfence();
+			_mm_pause();
 	}
 
 	void dma_manager::join()

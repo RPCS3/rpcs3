@@ -1662,7 +1662,7 @@ void spu_thread::do_mfc(bool wait)
 			if (&args - mfc_queue <= removed)
 			{
 				// Remove barrier-class command if it's the first in the queue
-				_mm_mfence();
+				std::atomic_thread_fence(std::memory_order_seq_cst);
 				removed++;
 				return true;
 			}
@@ -2086,7 +2086,7 @@ bool spu_thread::process_mfc_cmd()
 	{
 		if (mfc_size == 0)
 		{
-			_mm_mfence();
+			std::atomic_thread_fence(std::memory_order_seq_cst);
 		}
 		else
 		{
@@ -3025,12 +3025,13 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	case 0x100:
 	{
+		// SPU thread group yield (TODO)
 		if (ch_out_mbox.get_count())
 		{
 			fmt::throw_exception("STOP code 0x100: Out_MBox is not empty" HERE);
 		}
 
-		_mm_mfence();
+		std::atomic_thread_fence(std::memory_order_seq_cst);
 		return true;
 	}
 

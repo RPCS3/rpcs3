@@ -8,6 +8,7 @@
 #include "Emu/RSX/GSRender.h"
 
 #include <map>
+#include <atomic>
 #include <exception>
 
 namespace rsx
@@ -179,7 +180,7 @@ namespace rsx
 		{
 			// Load registers while the RSX is still idle
 			method_registers = frame->reg_state;
-			_mm_mfence();
+			std::atomic_thread_fence(std::memory_order_seq_cst);
 
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);

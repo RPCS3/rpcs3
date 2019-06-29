@@ -284,7 +284,7 @@ public:
 	// push unconditionally (overwriting latest value), returns true if needs signaling
 	void push(cpu_thread& spu, u32 value)
 	{
-		value3 = value; _mm_sfence();
+		value3.store(value);
 
 		if (values.atomic_op([=](sync_var_t& data) -> bool
 		{
@@ -325,7 +325,6 @@ public:
 
 				data.value0 = data.value1;
 				data.value1 = data.value2;
-				_mm_lfence();
 				data.value2 = this->value3;
 			}
 			else

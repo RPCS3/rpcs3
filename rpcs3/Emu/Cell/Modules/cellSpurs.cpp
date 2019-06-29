@@ -15,6 +15,8 @@
 #include "sysPrxForUser.h"
 #include "cellSpurs.h"
 
+#include <atomic>
+
 LOG_CHANNEL(cellSpurs);
 
 error_code sys_spu_image_close(vm::ptr<sys_spu_image> img);
@@ -2575,7 +2577,7 @@ s32 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set
 		return CELL_SPURS_POLICY_MODULE_ERROR_STAT;
 	}
 
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_seq_cst);
 
 	if (s32 res = spurs->wklFlag.flag.atomic_op([spurs, wid, is_set](be_t<u32>& flag) -> s32
 	{

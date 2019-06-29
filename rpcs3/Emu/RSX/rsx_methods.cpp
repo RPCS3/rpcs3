@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Memory/vm_reservation.h"
@@ -10,6 +10,7 @@
 #include "Capture/rsx_capture.h"
 
 #include <thread>
+#include <atomic>
 
 template <>
 void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
@@ -66,13 +67,13 @@ namespace rsx
 
 			// Get raw BE value
 			arg = be_t<u32>{arg}.raw();
-			const auto& sema = vm::_ref<nse_t<u32>>(addr);
+			const auto& sema = vm::_ref<atomic_t<nse_t<u32>>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema.load() == arg || addr == rsx->ctxt_addr + 0x30) return;
 
 			u64 start = get_system_time();
-			while (sema != arg)
+			while (sema.load() != arg)
 			{
 				if (Emu.IsStopped())
 					return;
@@ -107,7 +108,7 @@ namespace rsx
 			rsx->performance_counters.idle_time += (get_system_time() - start);
 		}
 
-		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
+		void semaphore_release(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync();
 			rsx->sync_point_request = true;
@@ -115,7 +116,7 @@ namespace rsx
 
 			if (LIKELY(g_use_rtm))
 			{
-				vm::write32(addr, arg);
+				vm::_ref<atomic_t<u32>>(addr) = arg;
 			}
 			else
 			{

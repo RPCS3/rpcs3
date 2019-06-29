@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "sys_rsx.h"
 
+#include <atomic>
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/GSRender.h"
@@ -175,7 +176,7 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 {
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
-	if (!size || io & 0xFFFFF || ea + u64{size} >= rsx::constants::local_mem_base || ea & 0xFFFFF || size & 0xFFFFF ||
+	if (!size || io & 0xFFFFF || ea + u64{size} > rsx::constants::local_mem_base || ea & 0xFFFFF || size & 0xFFFFF ||
 		rsx::get_current_renderer()->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
@@ -195,8 +196,8 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	for (u32 i = 0; i < size; i++)
 	{
-		RSXIOMem.io[ea + i].release(io + i);
-		RSXIOMem.ea[io + i].release(ea + i);
+		RSXIOMem.io[ea + i].raw() = io + i;
+		RSXIOMem.ea[io + i].raw() = ea + i;
 	}
 
 	return CELL_OK;
@@ -220,10 +221,11 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 	const u32 end = (io >>= 20) + (size >>= 20);
 	for (u32 ea = RSXIOMem.ea[io]; io < end;)
 	{
-		RSXIOMem.io[ea++].release(0xFFFF);
-		RSXIOMem.ea[io++].release(0xFFFF);
+		RSXIOMem.io[ea++].raw() = 0xFFFF;
+		RSXIOMem.ea[io++].raw() = 0xFFFF;
 	}
 
+	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return CELL_OK;
 }
 

@@ -750,7 +750,7 @@ namespace vm
 		const u32 size = ::align(orig_size, min_page_size);
 
 		// return if addr or size is invalid
-		if (!size || addr < this->addr || addr + u64{size} > this->addr + this->size || flags & 0x10)
+		if (!size || addr < this->addr || addr + u64{size} > this->addr + u64{this->size} || flags & 0x10)
 		{
 			return 0;
 		}
@@ -823,7 +823,7 @@ namespace vm
 
 	std::pair<u32, std::shared_ptr<utils::shm>> block_t::get(u32 addr, u32 size)
 	{
-		if (addr < this->addr || addr + u64{size} > this->addr + this->size)
+		if (addr < this->addr || addr + u64{size} > this->addr + u64{this->size})
 		{
 			return {addr, nullptr};
 		}
@@ -852,7 +852,7 @@ namespace vm
 		}
 
 		// Range check
-		if (std::max<u32>(size, addr - found->first + size) > found->second.second->size())
+		if (addr + u64{size} > found->first + u64{found->second.second->size()})
 		{
 			return {addr, nullptr};
 		}
