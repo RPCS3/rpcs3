@@ -942,12 +942,6 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			LOG_WARNING(GENERAL, "TSX forced by User");
 		}
 
-		if (g_use_rtm && g_cfg.core.preferred_spu_threads)
-		{
-			g_cfg.core.preferred_spu_threads.set(0);
-			LOG_ERROR(GENERAL, "Preferred SPU Threads forcefully disabled - not compatible with TSX in this version.");
-		}
-
 		// Load patches from different locations
 		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
 
