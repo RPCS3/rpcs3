@@ -12,6 +12,7 @@
 #include "sysPrxForUser.h"
 
 #include <thread>
+#include <atomic>
 
 LOG_CHANNEL(cellGcmSys);
 
@@ -40,9 +41,10 @@ struct CellGcmSysConfig {
 };
 
 u64 system_mode = 0;
-u32 reserved_size = 0;
 u32 local_size = 0;
 u32 local_addr = 0;
+
+atomic_t<u32> reserved_size = 0;
 
 // Auxiliary functions
 
@@ -72,7 +74,7 @@ u32 gcmGetLocalMemorySize(u32 sdk_version)
 }
 
 CellGcmOffsetTable offsetTable;
-u16 IoMapTable[0xC00];
+atomic_t<u16> IoMapTable[0xC00]{};
 
 void InitOffsetTable()
 {
@@ -1013,8 +1015,6 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 
 	ea >>= 20, io >>= 20, size >>= 20;
 
-	IoMapTable[ea] = size;
-
 	// Fill the offset table
 	for (u32 i = 0; i < size; i++)
 	{
@@ -1022,6 +1022,7 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 		offsetTable.eaAddress[io + i] = ea + i;
 	}
 
+	IoMapTable[ea] = size;
 	return CELL_OK;
 }
 
@@ -1079,14 +1080,14 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 
 				ea >>= 20, size >>= 20;
 
-				IoMapTable[ea] = size;
-
 				// Fill the offset table
 				for (u32 i = 0; i < size; i++)
 				{
 					offsetTable.ioAddress[ea + i] = io + i;
 					offsetTable.eaAddress[io + i] = ea + i;
 				}
+
+				IoMapTable[ea] = size;
 
 				*offset = io << 20;
 				return CELL_OK;
@@ -1127,15 +1128,17 @@ s32 cellGcmUnmapEaIoAddress(u32 ea)
 {
 	cellGcmSys.trace("cellGcmUnmapEaIoAddress(ea=0x%x)", ea);
 
-	if (const u32 size = std::exchange(IoMapTable[ea >>= 20], 0))
+	if (const u32 size = IoMapTable[ea >>= 20].exchange(0))
 	{
 		const u32 io = offsetTable.ioAddress[ea];
 
 		for (u32 i = 0; i < size; i++)
 		{
-			RSXIOMem.io[ea + i].release(offsetTable.ioAddress[ea + i] = 0xFFFF);
-			RSXIOMem.ea[io + i].release(offsetTable.eaAddress[io + i] = 0xFFFF);
+			RSXIOMem.io[ea + i].raw() = offsetTable.ioAddress[ea + i] = 0xFFFF;
+			RSXIOMem.ea[io + i].raw() = offsetTable.eaAddress[io + i] = 0xFFFF;
 		}
+
+		std::atomic_thread_fence(std::memory_order_seq_cst);
 	}
 	else
 	{
@@ -1150,15 +1153,17 @@ s32 cellGcmUnmapIoAddress(u32 io)
 {
 	cellGcmSys.trace("cellGcmUnmapIoAddress(io=0x%x)", io);
 
-	if (u32 size = std::exchange(IoMapTable[RSXIOMem.ea[io >>= 20]], 0))
+	if (u32 size = IoMapTable[RSXIOMem.ea[io >>= 20]].exchange(0))
 	{
 		const u32 ea = offsetTable.eaAddress[io];
 
 		for (u32 i = 0; i < size; i++)
 		{
-			RSXIOMem.io[ea + i].release(offsetTable.ioAddress[ea + i] = 0xFFFF);
-			RSXIOMem.ea[io + i].release(offsetTable.eaAddress[io + i] = 0xFFFF);
+			RSXIOMem.io[ea + i].raw() = offsetTable.ioAddress[ea + i] = 0xFFFF;
+			RSXIOMem.ea[io + i].raw() = offsetTable.eaAddress[io + i] = 0xFFFF;
 		}
+
+		std::atomic_thread_fence(std::memory_order_seq_cst);
 	}
 	else
 	{

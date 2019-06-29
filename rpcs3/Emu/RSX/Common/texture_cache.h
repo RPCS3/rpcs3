@@ -2279,8 +2279,8 @@ namespace rsx
 			image_resource_type vram_texture = 0;
 			image_resource_type dest_texture = 0;
 
-			const u32 dst_address = (u32)((u64)dst.pixels - (u64)vm::base(0));
-			u32 src_address = (u32)((u64)src.pixels - (u64)vm::base(0));
+			const u32 dst_address = vm::get_addr(dst.pixels);
+			u32 src_address = vm::get_addr(src.pixels);
 
 			const f32 scale_x = fabsf(dst.scale_x);
 			const f32 scale_y = fabsf(dst.scale_y);

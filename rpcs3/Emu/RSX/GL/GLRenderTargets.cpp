@@ -491,7 +491,7 @@ void GLGSRender::read_buffers()
 					continue;
 
 				rsx::tiled_region color_buffer = get_tiled_address(offset, location & 0xf);
-				u32 texaddr = (u32)((u64)color_buffer.ptr - (u64)vm::base(0));
+				u32 texaddr = vm::get_addr(color_buffer.ptr);
 
 				const utils::address_range range = utils::address_range::start_length(texaddr, pitch * height);
 				bool success = m_gl_texture_cache.load_memory_from_cache(range, std::get<1>(m_rtts.m_bound_render_targets[i]));

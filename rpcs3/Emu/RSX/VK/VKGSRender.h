@@ -275,7 +275,6 @@ struct flush_request_task
 	{
 		while (num_waiters.load() != 0)
 		{
-			_mm_lfence();
 			_mm_pause();
 		}
 	}
@@ -284,7 +283,6 @@ struct flush_request_task
 	{
 		while (pending_state.load())
 		{
-			_mm_lfence();
 			std::this_thread::yield();
 		}
 	}

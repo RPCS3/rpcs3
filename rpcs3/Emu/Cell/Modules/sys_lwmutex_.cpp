@@ -8,6 +8,8 @@
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "sysPrxForUser.h"
 
+#include <atomic>
+
 extern logs::channel sysPrxForUser;
 
 error_code sys_lwmutex_create(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
@@ -128,7 +130,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		_mm_mfence();
+		std::atomic_thread_fence(std::memory_order_release);
 
 		return CELL_OK;
 	}
@@ -288,7 +290,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		_mm_mfence();
+		std::atomic_thread_fence(std::memory_order_release);
 
 		return CELL_OK;
 	}

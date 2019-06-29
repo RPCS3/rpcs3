@@ -1848,7 +1848,7 @@ void PPUTranslator::CRANDC(ppu_opcode_t op)
 
 void PPUTranslator::ISYNC(ppu_opcode_t op)
 {
-	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
+	m_ir->CreateFence(AtomicOrdering::Acquire);
 }
 
 void PPUTranslator::CRXOR(ppu_opcode_t op)
@@ -3105,7 +3105,9 @@ void PPUTranslator::LFSUX(ppu_opcode_t op)
 
 void PPUTranslator::SYNC(ppu_opcode_t op)
 {
-	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
+	// sync: Full seq cst barrier
+	// lwsync: Release barrier
+	m_ir->CreateFence(op.l10 ? AtomicOrdering::Release : AtomicOrdering::SequentiallyConsistent);
 }
 
 void PPUTranslator::LFDX(ppu_opcode_t op)

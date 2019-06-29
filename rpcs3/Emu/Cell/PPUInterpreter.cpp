@@ -8,6 +8,7 @@
 #include "Emu/Cell/Common.h"
 
 #include <cmath>
+#include <atomic>
 
 #if !defined(_MSC_VER) && !defined(__SSSE3__)
 #define _mm_shuffle_epi8(opa, opb) opb
@@ -2966,7 +2967,7 @@ bool ppu_interpreter::CRANDC(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ISYNC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_acquire);
 	return true;
 }
 
@@ -4046,7 +4047,7 @@ bool ppu_interpreter::LFSUX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::SYNC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return true;
 }
 
@@ -4280,7 +4281,7 @@ bool ppu_interpreter::SRADI(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::EIEIO(ppu_thread& ppu, ppu_opcode_t op)
 {
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return true;
 }
 
