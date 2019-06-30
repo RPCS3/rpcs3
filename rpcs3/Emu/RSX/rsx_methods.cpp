@@ -116,7 +116,7 @@ namespace rsx
 
 			if (LIKELY(g_use_rtm))
 			{
-				vm::_ref<atomic_t<u32>>(addr) = arg;
+				vm::_ref<atomic_be_t<u32>>(addr) = arg;
 			}
 			else
 			{
