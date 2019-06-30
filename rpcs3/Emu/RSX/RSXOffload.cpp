@@ -58,7 +58,7 @@ namespace rsx
 							fmt::throw_exception("Unreachable" HERE);
 						}
 
-						std::atomic_thresd_fence(std::memory_order_release);
+						std::atomic_thread_fence(std::memory_order_release);
 						++m_processed_count;
 					}
 				}
