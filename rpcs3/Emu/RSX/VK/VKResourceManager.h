@@ -7,16 +7,63 @@ namespace vk
 	u64 current_event_id();
 	void on_event_completed(u64 event_id);
 
+	struct eid_scope_t
+	{
+		u64 eid;
+		const vk::render_device* m_device;
+		std::vector<std::unique_ptr<vk::buffer>> m_disposed_buffers;
+		rsx::simple_array<VkEvent> m_disposed_events;
+
+		eid_scope_t(u64 _eid):
+			eid(_eid), m_device(vk::get_current_renderer())
+		{}
+
+		~eid_scope_t()
+		{
+			discard();
+		}
+
+		void discard()
+		{
+			if (!m_disposed_events.empty())
+			{
+				for (auto &ev : m_disposed_events)
+				{
+					vkDestroyEvent(*m_device, ev, nullptr);
+				}
+
+				m_disposed_events.clear();
+			}
+
+			m_disposed_buffers.clear();
+		}
+	};
+
 	class resource_manager
 	{
 	private:
 		std::unordered_multimap<u64, std::unique_ptr<vk::sampler>> m_sampler_pool;
-		std::unordered_map<u64, std::vector<std::unique_ptr<vk::buffer>>> m_buffers_pool;
-		std::unordered_map<u64, rsx::simple_array<VkEvent>> m_events_pool;
+		std::deque<eid_scope_t> m_eid_map;
 
 		bool value_compare(const f32& a, const f32& b)
 		{
 			return fabsf(a - b) < 0.0000001f;
+		}
+
+		eid_scope_t& get_current_eid_scope()
+		{
+			const auto eid = current_event_id();
+			if (!m_eid_map.empty())
+			{
+				// Elements are insterted in order, so just check the last entry for a match
+				if (auto &old = m_eid_map.back(); old.eid == eid)
+				{
+					return old;
+				}
+			}
+
+			m_eid_map.emplace_back(eid);
+			return m_eid_map.back();
 		}
 
 	public:
@@ -26,19 +73,8 @@ namespace vk
 
 		void destroy()
 		{
-			auto& dev = *vk::get_current_renderer();
-
-			for (auto &e : m_events_pool)
-			{
-				for (auto &ev : e.second)
-				{
-					vkDestroyEvent(dev, ev, nullptr);
-				}
-			}
-
+			m_eid_map.clear();
 			m_sampler_pool.clear();
-			m_buffers_pool.clear();
-			m_events_pool.clear();
 		}
 
 		vk::sampler* find_sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
@@ -81,45 +117,27 @@ namespace vk
 
 		void dispose(std::unique_ptr<vk::buffer>& buf)
 		{
-			m_buffers_pool[current_event_id()].emplace_back(std::move(buf));
+			get_current_eid_scope().m_disposed_buffers.emplace_back(std::move(buf));
 		}
 
 		void dispose(VkEvent& event)
 		{
-			m_events_pool[current_event_id()].push_back(event);
+			get_current_eid_scope().m_disposed_events.push_back(event);
 			event = VK_NULL_HANDLE;
 		}
 
 		void eid_completed(u64 eid)
 		{
-			auto& dev = *vk::get_current_renderer();
-
-			for (auto It = m_buffers_pool.begin(); It != m_buffers_pool.end();)
+			while (!m_eid_map.empty())
 			{
-				if (It->first <= eid)
+				auto& scope = m_eid_map.front();
+				if (scope.eid > eid)
 				{
-					It = m_buffers_pool.erase(It);
+					break;
 				}
 				else
 				{
-					++It;
-				}
-			}
-
-			for (auto It = m_events_pool.begin(); It != m_events_pool.end();)
-			{
-				if (It->first <= eid)
-				{
-					for (auto &ev : It->second)
-					{
-						vkDestroyEvent(dev, ev, nullptr);
-					}
-
-					It = m_events_pool.erase(It);
-				}
-				else
-				{
-					++It;
+					m_eid_map.pop_front();
 				}
 			}
 		}
