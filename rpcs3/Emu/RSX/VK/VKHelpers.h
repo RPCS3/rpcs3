@@ -1298,11 +1298,19 @@ private:
 				}
 			}
 
-			VkComponentMapping real_mapping = vk::apply_swizzle_remap
-			(
-				{native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
-				remap
-			);
+			VkComponentMapping real_mapping;
+			if (remap_encoding == 0xAAE4)
+			{
+				real_mapping = native_component_map;
+			}
+			else
+			{
+				real_mapping = vk::apply_swizzle_remap
+				(
+					{ native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
+					remap
+				);
+			}
 
 			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
 
