@@ -138,7 +138,7 @@ namespace vk
 			return fs_inputs;
 		}
 
-		virtual void get_dynamic_state_entries(VkDynamicState* state_descriptors, VkPipelineDynamicStateCreateInfo& info)
+		virtual void get_dynamic_state_entries(VkDynamicState* /*state_descriptors*/, VkPipelineDynamicStateCreateInfo& /*info*/)
 		{}
 
 		virtual std::vector<VkPushConstantRange> get_push_constants()

@@ -139,3 +139,8 @@ size_t get_texture_size(const rsx::vertex_texture &texture);
 * Get packed pitch
 */
 u32 get_format_packed_pitch(u32 format, u16 width);
+
+/**
+* Reverse encoding
+*/
+u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap);
