@@ -96,6 +96,14 @@ namespace vk
 			}
 		}
 
+		void dma_abort() override
+		{
+			// Called if a reset occurs, usually via reprotect path after a bad prediction.
+			// Discard the sync event, the next sync, if any, will properly recreate this.
+			verify(HERE), synchronized, !flushed, dma_fence;
+			vk::get_resource_manager()->dispose(dma_fence);
+		}
+
 		void destroy()
 		{
 			if (!exists())
