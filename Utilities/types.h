@@ -17,9 +17,24 @@
 #include <limits>
 #include <array>
 
-// Assume little-endian
+// See std::endian implementation
+#ifdef _WIN32
 #define IS_LE_MACHINE 1
 #define IS_BE_MACHINE 0
+#else
+#if ((__ORDER_LITTLE_ENDIAN__ == __BYTE_ORDER__) != (__ORDER_BIG_ENDIAN__ == __BYTE_ORDER__))
+#if __ORDER_LITTLE_ENDIAN__ == __BYTE_ORDER__
+#define IS_LE_MACHINE 1
+#define IS_BE_MACHINE 0
+#else
+#define IS_LE_MACHINE 0
+#define IS_BE_MACHINE 1
+#endif
+#else
+// If this is encountered add a case for it
+#error compiler does not support __BYTE_ORDER__ macros
+#endif
+#endif
 
 #ifndef __has_builtin
 	#define __has_builtin(x) 0
