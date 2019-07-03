@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_rsx.h"
 
 #include "Emu/System.h"

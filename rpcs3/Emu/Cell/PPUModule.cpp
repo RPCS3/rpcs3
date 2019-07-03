@@ -12,6 +12,7 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/PPUAnalyser.h"
 
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
@@ -33,8 +34,6 @@ extern void ppu_initialize(const ppu_module& info);
 extern void ppu_initialize();
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
-
-extern u32 g_ps3_sdk_version;
 
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
@@ -1064,6 +1063,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	s32 primary_prio = 1001;
 	u32 primary_stacksize = 0x100000;
 	u32 malloc_pagesize = 0x100000;
+	u32 ppc_seg = 0;
 
 	// Executable hash
 	sha1_context sha;
@@ -1219,6 +1219,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 					primary_stacksize = info.primary_stacksize;
 					malloc_pagesize = info.malloc_pagesize;
+					ppc_seg = info.ppc_seg;
 
 					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
 					LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
@@ -1472,7 +1473,24 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	_main->validate(0);
 
 	// Set SDK version
-	g_ps3_sdk_version = sdk_version;
+	g_ps3_process_info.sdk_ver = sdk_version;
+
+	// Set ppc fixed allocations segment permission
+	g_ps3_process_info.ppc_seg = ppc_seg;
+
+	if (ppc_seg != 0x0)
+	{
+		if (ppc_seg != 0x1)
+		{
+			LOG_TODO(LOADER, "Unknown ppc_seg flag value = 0x%x", ppc_seg);
+		}
+
+		// Additional segment for fixed allocations
+		if (!vm::map(0x30000000, 0x10000000, 0x200))
+		{
+			fmt::throw_exception("Failed to map ppc_seg's segment!" HERE);
+		}
+	}
 
 	// Initialize process arguments
 	auto args = vm::ptr<u64>::make(vm::alloc(u32{sizeof(u64)} * (::size32(Emu.argv) + ::size32(Emu.envp) + 2), vm::main));

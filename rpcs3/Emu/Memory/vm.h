@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <map>
 #include <memory>
@@ -116,7 +116,10 @@ namespace vm
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty = false);
 
 	// Get memory block associated with optionally specified memory location or optionally specified address
-	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0, u32 area_size = 0);
+	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
+
+	// Allocate segment at specified location, does nothing if exists already
+	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = 0x200);
 
 	// Get PS3/PSV virtual memory address from the provided pointer (nullptr always converted to 0)
 	inline vm::addr_t get_addr(const void* real_ptr)

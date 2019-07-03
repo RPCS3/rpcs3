@@ -943,6 +943,31 @@ namespace vm
 		return block;
 	}
 
+	static std::shared_ptr<block_t> _get_map(memory_location_t location, u32 addr)
+	{
+		if (location != any)
+		{
+			// return selected location
+			if (location < g_locations.size())
+			{
+				return g_locations[location];
+			}
+
+			return nullptr;
+		}
+
+		// search location by address
+		for (auto& block : g_locations)
+		{
+			if (block && addr >= block->addr && addr <= block->addr + block->size - 1)
+			{
+				return block;
+			}
+		}
+
+		return nullptr;
+	}
+
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
 		vm::writer_lock lock(0);
@@ -1008,50 +1033,48 @@ namespace vm
 		return nullptr;
 	}
 
-	std::shared_ptr<block_t> get(memory_location_t location, u32 addr, u32 area_size)
+	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
 	{
 		vm::reader_lock lock;
 
-		if (location != any)
+		return _get_map(location, addr);
+	}
+
+	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags)
+	{
+		vm::reader_lock lock;
+
+		auto area = _get_map(location, addr);
+
+		if (area)
+		{
+			return area;
+		}
+
+		lock.upgrade();
+
+		// Fixed allocation
+		if (addr)
+		{
+			// Recheck
+			area = _get_map(location, addr);
+
+			return !area ? _map(addr, area_size, flags) : area;
+		}
+
+		// Allocation on arbitrary address
+		if (location != any && location < g_locations.size())
 		{
 			// return selected location
-			if (location < g_locations.size())
+			auto& loc = g_locations[location];
+
+			if (!loc)
 			{
-				auto& loc = g_locations[location];
-
-				if (!loc && area_size)
-				{
-					if (location == vm::user64k || location == vm::user1m)
-					{
-						lock.upgrade();
-
-						if (!loc)
-						{
-							// Deferred allocation
-							loc = _find_map(area_size, 0x10000000, location == vm::user64k ? 0x201 : 0x401);
-						}
-					}
-				}
-
-				return loc;
+				// Deferred allocation
+				loc = _find_map(area_size, 0x10000000, flags);
 			}
 
-			return nullptr;
-		}
-
-		// search location by address
-		for (auto& block : g_locations)
-		{
-			if (block && addr >= block->addr && addr <= block->addr + block->size - 1)
-			{
-				return block;
-			}
-		}
-
-		if (area_size)
-		{
-			lock.upgrade();
-			return _map(addr, area_size, 0x200);
+			return loc;
 		}
 
 		return nullptr;
