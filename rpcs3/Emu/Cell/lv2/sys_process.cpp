@@ -28,7 +28,7 @@
 
 LOG_CHANNEL(sys_process);
 
-u32 g_ps3_sdk_version;
+ps3_process_info_t g_ps3_process_info;
 
 s32 process_getpid()
 {
@@ -182,7 +182,7 @@ s32 _sys_process_get_paramsfo(vm::ptr<char> buffer)
 s32 process_get_sdk_version(u32 pid, s32& ver)
 {
 	// get correct SDK version for selected pid
-	ver = g_ps3_sdk_version;
+	ver = g_ps3_process_info.sdk_ver;
 
 	return CELL_OK;
 }

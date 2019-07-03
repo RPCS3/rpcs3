@@ -16,8 +16,6 @@
 
 LOG_CHANNEL(cellSaveData);
 
-extern u32 g_ps3_sdk_version;
-
 template<>
 void fmt_class_string<CellSaveDataError>::format(std::string& out, u64 arg)
 {
@@ -140,7 +138,7 @@ static bool savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNa
 		}
 
 		if (!memchr(setList->dirNamePrefix.get_ptr(), '\0', CELL_SAVEDATA_PREFIX_SIZE)
-			|| (g_ps3_sdk_version > 0x3FFFFF && !setList->dirNamePrefix[0]))
+			|| (g_ps3_process_info.sdk_ver > 0x3FFFFF && !setList->dirNamePrefix[0]))
 		{
 			// ****** sysutil savedata parameter error : 17 ******
 			return false;
@@ -803,7 +801,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return CELL_SAVEDATA_ERROR_PARAM;
 			}
 
-			if (g_ps3_sdk_version > 0x36FFFF)
+			if (g_ps3_process_info.sdk_ver > 0x36FFFF)
 			{
 				for (u8 resv : statSet->setParam->reserved2)
 				{

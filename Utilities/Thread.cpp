@@ -1420,7 +1420,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			if (cpu->check_state())
 			{
 				// Hack: allocate memory in case the emulator is stopping
-				auto area = vm::get(vm::any, addr & -0x10000, 0x10000);
+				auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
 
 				if (area->flags & 0x100)
 				{
