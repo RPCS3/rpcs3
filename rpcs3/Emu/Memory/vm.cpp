@@ -514,9 +514,15 @@ namespace vm
 
 	bool check_addr(u32 addr, u32 size, u8 flags)
 	{
-		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
+		// Overflow checking
+		if (addr + size < addr && (addr + size) != 0)
 		{
-			if (UNLIKELY((g_pages[i % g_pages.size()].flags & flags) != flags))
+			return false;
+		}
+
+		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max; i++)
+		{
+			if (UNLIKELY((g_pages[i].flags & flags) != flags))
 			{
 				return false;
 			}
