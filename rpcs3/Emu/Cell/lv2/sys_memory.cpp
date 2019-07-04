@@ -7,6 +7,9 @@
 
 LOG_CHANNEL(sys_memory);
 
+//
+static shared_mutex s_memstats_mtx;
+
 lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
 	: size(size)
 	, align(align)
@@ -202,6 +205,8 @@ error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr
 
 	sys_memory.trace("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
+	vm::reader_lock rlock;
+
 	if (!vm::check_addr(addr))
 	{
 		return CELL_EINVAL;
@@ -240,6 +245,8 @@ error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	// Get "default" memory container
 	const auto dct = fxm::get<lv2_memory_container>();
 
+	::reader_lock lock(s_memstats_mtx);
+
 	mem_info->total_user_memory = dct->size;
 	mem_info->available_user_memory = dct->size - dct->used;
 
@@ -268,6 +275,8 @@ error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 
 	const auto dct = fxm::get<lv2_memory_container>();
 
+	std::lock_guard lock(s_memstats_mtx);
+
 	// Try to obtain "physical memory" from the default container
 	if (!dct->take(size))
 	{
@@ -285,6 +294,8 @@ error_code sys_memory_container_destroy(u32 cid)
 	vm::temporary_unlock();
 
 	sys_memory.warning("sys_memory_container_destroy(cid=0x%x)", cid);
+
+	std::lock_guard lock(s_memstats_mtx);
 
 	const auto ct = idm::withdraw<lv2_memory_container>(cid, [](lv2_memory_container& ct) -> CellError
 	{
