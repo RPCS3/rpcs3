@@ -1128,6 +1128,7 @@ namespace rsx
 					}
 
 					pixels_src = temp3.get();
+					in_pitch = out_pitch;
 				}
 
 				// It looks like rsx may ignore the requested swizzle size and just always
@@ -1146,10 +1147,8 @@ namespace rsx
 				u32 sw_width = next_pow2(out_w);
 				u32 sw_height = next_pow2(out_h);
 
-				temp3.reset(new u8[out_bpp * sw_width * sw_height]);
-
 				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = temp3.get();
+				u8* swizzled_pixels = pixels_dst;
 
 				// Check and pad texture out if we are given non power of 2 output
 				if (sw_width != out_w || sw_height != out_h)
@@ -1184,8 +1183,6 @@ namespace rsx
 					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
 					break;
 				}
-
-				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
 			}
 		}
 	}
