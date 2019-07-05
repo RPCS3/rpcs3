@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "../Common/surface_store.h"
 #include "GLHelpers.h"
 #include "../rsx_utils.h"
@@ -146,10 +146,11 @@ struct gl_render_target_traits
 
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
 			rsx::apply_resolution_scale((u16)height, true), (GLenum)internal_fmt));
-		result->set_native_pitch((u16)width * format.channel_count * format.channel_size * get_format_sample_count(antialias));
+
+		result->set_aa_mode(antialias);
+		result->set_native_pitch((u16)width * format.channel_count * format.channel_size * result->samples_x);
 		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
 		result->set_format(surface_color_format);
-		result->set_aa_mode(antialias);
 
 		std::array<GLenum, 4> native_layout = { (GLenum)format.swizzle.a, (GLenum)format.swizzle.r, (GLenum)format.swizzle.g, (GLenum)format.swizzle.b };
 		result->set_native_component_layout(native_layout);
@@ -173,16 +174,18 @@ struct gl_render_target_traits
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
 				rsx::apply_resolution_scale((u16)height, true), (GLenum)format.internal_format));
 
-		u16 native_pitch = (u16)width * 2 * get_format_sample_count(antialias);
+		result->set_aa_mode(antialias);
+		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
+		result->set_format(surface_depth_format);
+
+		u16 native_pitch = (u16)width * 2 * result->samples_x;
 		if (surface_depth_format == rsx::surface_depth_format::z24s8)
 			native_pitch *= 2;
 
-		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
 		result->set_native_pitch(native_pitch);
-		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
+
+		std::array<GLenum, 4> native_layout = { GL_RED, GL_RED, GL_RED, GL_RED };
 		result->set_native_component_layout(native_layout);
-		result->set_format(surface_depth_format);
-		result->set_aa_mode(antialias);
 
 		result->memory_usage_flags = rsx::surface_usage_flags::attachment;
 		result->state_flags = rsx::surface_state_flags::erase_bkgnd;
@@ -211,7 +214,7 @@ struct gl_render_target_traits
 			sink->format_info = ref->format_info;
 
 			sink->set_spp(ref->get_spp());
-			sink->set_native_pitch(prev.width * ref->get_bpp() * ref->get_spp());
+			sink->set_native_pitch(prev.width * ref->get_bpp() * ref->samples_x);
 			sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
 			sink->set_native_component_layout(ref->get_native_component_layout());
 			sink->queue_tag(address);
