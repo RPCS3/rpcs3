@@ -2274,6 +2274,7 @@ namespace rsx
 		{
 			u32 ea = address >> 20, io = RSXIOMem.io[ea];
 
+			// Send a gcm event if mapped
 			if (io < 512)
 			{
 				if (!isHLE)

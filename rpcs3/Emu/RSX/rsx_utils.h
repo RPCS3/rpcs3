@@ -212,6 +212,12 @@ namespace rsx
 		bool swizzled;
 	};
 
+	// Check if address is in bounds of RSX local memory (256mb long)
+	inline bool is_local_memory(u32 addr)
+	{
+		return addr >> 28 == rsx::constants::local_mem_base >> 28;
+	}
+
 	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
 	{
 		{ CELL_GCM_TEXTURE_REMAP_FROM_A, CELL_GCM_TEXTURE_REMAP_FROM_R, CELL_GCM_TEXTURE_REMAP_FROM_G, CELL_GCM_TEXTURE_REMAP_FROM_B },

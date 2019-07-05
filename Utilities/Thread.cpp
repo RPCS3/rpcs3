@@ -7,6 +7,7 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Thread.h"
 #include "sysinfo.h"
 #include <typeinfo>
@@ -1136,10 +1137,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			return true;
 		}
-
-		if (cpu && cpu->test_stopped())
-		{
-		}
 	}
 
 	auto code = (const u8*)RIP(context);
@@ -1175,6 +1172,50 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		LOG_ERROR(MEMORY, "Invalid a_size (0x%llx)", a_size);
 		report_opcode();
 		return false;
+	}
+
+	// Test if end boundery may be rsx memory
+	// This assumes d_size is less than/equal to the size of a page
+	if (d_size != 0 && (RSXIOMem.IsAddrMapped(addr + d_size - 1) || rsx::is_local_memory(addr + d_size - 1)) && rsx::g_access_violation_handler)
+	{
+		bool handled = false;
+
+		try
+		{
+			handled = rsx::g_access_violation_handler(addr + d_size - 1, is_writing);
+		}
+		catch (const std::exception& e)
+		{
+			LOG_FATAL(RSX, "g_access_violation_handler(0x%x, %d): %s", addr, is_writing, e.what());
+
+			if (cpu)
+			{
+				cpu->state += cpu_flag::dbg_pause;
+
+				if (cpu->test_stopped())
+				{
+					std::terminate();
+				}
+			}
+
+			return false;
+		}
+
+		if (handled)
+		{
+			g_tls_fault_rsx++;
+			if (cpu && cpu->test_stopped())
+			{
+				//
+			}
+
+			return true;
+		}
+	}
+
+	// Retrieve memory mutex if needed
+	if (cpu && rsx::g_access_violation_handler && cpu->test_stopped())
+	{
 	}
 
 	// check if address is RawSPU MMIO register

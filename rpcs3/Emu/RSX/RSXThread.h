@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <deque>
 #include <variant>
@@ -25,11 +25,11 @@ extern u64 get_system_time();
 struct RSXIOTable
 {
 	atomic_t<u16> ea[4096];
-	atomic_t<u16> io[3072];
+	atomic_t<u16> io[4096];
 
 	// try to get the real address given a mapped address
 	// return non zero on success
-	inline u32 RealAddr(u32 offs)
+	u32 RealAddr(u32 offs) const
 	{
 		u32 result = this->ea[offs >> 20].load();
 
@@ -43,6 +43,12 @@ struct RSXIOTable
 		ASSUME(result != 0);
 
 		return result;
+	}
+
+	// Test if real address is mapped
+	bool IsAddrMapped(u32 addr) const
+	{
+		return static_cast<s16>(this->io[addr >> 20].load()) >= 0;
 	}
 };
 

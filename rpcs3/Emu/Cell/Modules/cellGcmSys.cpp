@@ -944,7 +944,7 @@ s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 	u32 result;
 
 	// Address in local memory
-	if ((address >> 28) == 0xC)
+	if (rsx::is_local_memory(address))
 	{
 		result = address - rsx::constants::local_mem_base;
 	}
