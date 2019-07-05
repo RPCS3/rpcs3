@@ -3167,9 +3167,6 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 
 	if (skip_frame || swapchain_unavailable)
 	{
-		m_frame->flip(m_context);
-		rsx::thread::flip(buffer, emu_flip);
-
 		if (!skip_frame)
 		{
 			verify(HERE), swapchain_unavailable;
@@ -3186,6 +3183,8 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 			m_textures_upload_time = 0;
 		}
 
+		m_frame->flip(m_context);
+		rsx::thread::flip(buffer, emu_flip);
 		return;
 	}
 
