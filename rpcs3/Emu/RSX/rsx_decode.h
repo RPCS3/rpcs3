@@ -2012,6 +2012,7 @@ struct registers_decoder<NV4097_SET_SHADER_PROGRAM>
 	private:
 		union
 		{
+			bitfield_decoder_t<0, 31> address;
 			u32 raw_value;
 		} m_data;
 	public:
@@ -2019,7 +2020,7 @@ struct registers_decoder<NV4097_SET_SHADER_PROGRAM>
 
 		u32 shader_program_address() const
 		{
-			return m_data.raw_value;
+			return m_data.address;
 		}
 	};
 
