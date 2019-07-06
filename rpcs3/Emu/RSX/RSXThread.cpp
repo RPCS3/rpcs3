@@ -1363,7 +1363,12 @@ namespace rsx
 				}
 			}
 
-			result.interleaved_blocks.emplace_back(std::move(info));
+			if (info.attribute_stride)
+			{
+				// At least one array feed must be enabled for vertex input
+				result.interleaved_blocks.emplace_back(std::move(info));
+			}
+
 			return;
 		}
 
