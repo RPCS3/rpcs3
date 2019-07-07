@@ -77,6 +77,10 @@ add_subdirectory(3rdparty)
 unset(CMAKE_CXX_FLAGS)
 unset(CMAKE_C_FLAGS)
 
+if (NOT WIN32)
+	add_compile_options(-pthread)
+endif()
+
 # TODO: do real installation, including copying directory structure
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/bin")
