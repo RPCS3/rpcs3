@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include <limits>
 
 template<typename T, uint N>
 struct bf_base
@@ -15,11 +16,11 @@ struct bf_base
 	// Field bitsize
 	static constexpr uint bitsize = N;
 
-	// Value mask
-	static constexpr utype vmask = static_cast<utype>(~utype{} >> (bitmax - bitsize));
-
 	// All ones mask
-	static constexpr utype mask1 = static_cast<utype>(~utype{});
+	static constexpr utype mask1 = std::numeric_limits<utype>::max();
+
+	// Value mask
+	static constexpr utype vmask = mask1 >> (bitmax - bitsize);
 
 protected:
 	type m_data;

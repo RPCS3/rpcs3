@@ -131,6 +131,39 @@ using steady_clock = std::conditional<
     std::chrono::high_resolution_clock::is_steady,
     std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
 
+// Get unsigned integral type from type size
+template<size_t N>
+struct get_int_impl
+{
+};
+
+template<>
+struct get_int_impl<sizeof(u8)>
+{
+    using type = u8;
+};
+
+template<>
+struct get_int_impl<sizeof(u16)>
+{
+    using type = u16;
+};
+
+template<>
+struct get_int_impl<sizeof(u32)>
+{
+    using type = u32;
+};
+
+template<>
+struct get_int_impl<sizeof(u64)>
+{
+    using type = u64;
+};
+
+template <size_t N>
+using get_int_t = typename get_int_impl<N>::type;
+
 namespace gsl
 {
 	using std::byte;
@@ -854,4 +887,35 @@ inline void busy_wait(std::size_t cycles = 3000)
 {
 	const u64 s = __rdtsc();
 	do _mm_pause(); while (__rdtsc() - s < cycles);
+}
+
+// TODO: Remove when moving to c++20
+template <typename T>
+inline constexpr uintmax_t floor2(T value)
+{
+	value >>= 1;
+
+	for (uintmax_t i = 0;; i++, value >>= 1)
+	{
+		if (value == 0)
+		{
+			return i;
+		}
+	}
+}
+
+template <typename T>
+inline constexpr uintmax_t ceil2(T value)
+{
+	const uintmax_t ispow2 = value & (value - 1); // if power of 2 the result is 0
+
+	value >>= 1;
+
+	for (uintmax_t i = 0;; i++, value >>= 1)
+	{
+		if (value == 0)
+		{
+			return i + std::min<uintmax_t>(ispow2, 1);
+		}
+	}
 }

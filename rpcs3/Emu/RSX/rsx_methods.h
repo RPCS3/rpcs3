@@ -493,7 +493,7 @@ namespace rsx
 		using decoded_type = typename registers_decoder<opcode>::decoded_type;
 
 		template<u32 opcode>
-		decoded_type<opcode> decode() const
+		const decoded_type<opcode> decode() const
 		{
 			u32 register_value = registers[opcode];
 			return decoded_type<opcode>(register_value);
