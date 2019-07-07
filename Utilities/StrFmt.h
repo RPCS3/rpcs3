@@ -62,7 +62,7 @@ struct fmt_unveil<T, std::enable_if_t<std::is_floating_point<T>::value && sizeof
 	// Convert FP to f64 and reinterpret as u64
 	static inline u64 get(const f64& arg)
 	{
-		return *reinterpret_cast<const u64*>(reinterpret_cast<const u8*>(&arg));
+		return std::bit_cast<u64>(arg);
 	}
 };
 
