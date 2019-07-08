@@ -100,6 +100,8 @@ namespace gl
 			return std::make_tuple(GL_RGBA, GL_UNSIGNED_BYTE, false);
 		case texture::internal_format::r8:
 			return std::make_tuple(GL_RED, GL_UNSIGNED_BYTE, false);
+		case texture::internal_format::r16:
+			return std::make_tuple(GL_RED, GL_UNSIGNED_SHORT, true);
 		case texture::internal_format::r32f:
 			return std::make_tuple(GL_RED, GL_FLOAT, true);
 		case texture::internal_format::r5g6b5:
