@@ -33,6 +33,7 @@
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
+#define RESTRICT __restrict
 
 #else // not _MSC_VER
 
@@ -52,6 +53,7 @@
 #define SAFE_BUFFERS
 #define NEVER_INLINE __attribute__((noinline))
 #define FORCE_INLINE __attribute__((always_inline)) inline
+#define RESTRICT __restrict__
 
 #endif // _MSC_VER
 
