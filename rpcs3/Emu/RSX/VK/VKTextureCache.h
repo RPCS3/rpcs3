@@ -809,6 +809,14 @@ namespace vk
 					size, size, 1, 1, 6, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
 			}
+			else if (auto src = sections_to_copy[0].src; src && src->format() == dst_format)
+			{
+				image->set_native_component_layout(src->native_component_map);
+			}
+			else
+			{
+				image->set_native_component_layout({ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A });
+			}
 
 			auto view = image->get_view(0xAAE4, rsx::default_remap_vector);
 
@@ -852,6 +860,14 @@ namespace vk
 					dst_format,
 					width, height, depth, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+			}
+			else if (auto src = sections_to_copy[0].src; src && src->format() == dst_format)
+			{
+				image->set_native_component_layout(src->native_component_map);
+			}
+			else
+			{
+				image->set_native_component_layout({ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A });
 			}
 
 			auto view = image->get_view(0xAAE4, rsx::default_remap_vector);
