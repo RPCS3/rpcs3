@@ -23,6 +23,7 @@ else()
 	add_compile_options(-Wall)
 	add_compile_options(-fexceptions)
 	add_compile_options(-msse -msse2 -mcx16)
+	add_compile_options(-fno-strict-aliasing)
 
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-unused-variable)
