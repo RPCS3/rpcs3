@@ -178,12 +178,13 @@ namespace rsx
 			u16 width = 0;
 			u16 height = 0;
 			u16 depth = 1;
+			u16 slice_h = 1;
 			bool do_not_cache = false;
 
 			deferred_subresource() = default;
 
-			deferred_subresource(image_resource_type _res, deferred_request_command _op, u32 _addr, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h, u16 _d, texture_channel_remap_t _remap) :
-				external_handle(_res), op(_op), base_address(_addr), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h), depth(_d), remap(std::move(_remap))
+			deferred_subresource(image_resource_type _res, deferred_request_command _op, u32 _addr, u32 _fmt, u16 _x, u16 _y, u16 _w, u16 _h, u16 _d, u16 _s, texture_channel_remap_t _remap) :
+				external_handle(_res), op(_op), base_address(_addr), gcm_format(_fmt), x(_x), y(_y), width(_w), height(_h), depth(_d), slice_h(_s), remap(std::move(_remap))
 			{}
 		};
 
@@ -224,10 +225,11 @@ namespace rsx
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason, u32 base_address, u32 gcm_format,
-				u16 x_offset, u16 y_offset, u16 width, u16 height, u16 depth, texture_upload_context ctx, bool is_depth, f32 x_scale, f32 y_scale,
+				u16 x_offset, u16 y_offset, u16 width, u16 height, u16 depth, u16 slice_h,
+				texture_upload_context ctx, bool is_depth, f32 x_scale, f32 y_scale,
 				rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
 			{
-				external_subresource_desc = { external_handle, reason, base_address, gcm_format, x_offset, y_offset, width, height, depth, remap };
+				external_subresource_desc = { external_handle, reason, base_address, gcm_format, x_offset, y_offset, width, height, depth, slice_h, remap };
 
 				image_handle = 0;
 				upload_context = ctx;
@@ -1472,7 +1474,7 @@ namespace rsx
 					{
 						desc.external_handle,
 						surface_transform::identity,
-						0, (u16)(desc.height * n),
+						0, (u16)(desc.slice_h * n),
 						0, 0, n,
 						desc.width, desc.height,
 						desc.width, desc.height
@@ -1497,7 +1499,7 @@ namespace rsx
 					{
 						desc.external_handle,
 						surface_transform::identity,
-						0, (u16)(desc.height * n),
+						0, (u16)(desc.slice_h * n),
 						0, 0, n,
 						desc.width, desc.height,
 						desc.width, desc.height
@@ -1790,7 +1792,7 @@ namespace rsx
 
 		template<typename render_target_type>
 		bool check_framebuffer_resource(commandbuffer_type& cmd, render_target_type texptr,
-			u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch,
+			u16 tex_width, u16 tex_height, u16 tex_depth, u16 tex_pitch, u16 slice_h,
 			rsx::texture_dimension_extended extended_dimension)
 		{
 			if (!rsx::pitch_compatible(texptr, tex_pitch, tex_height))
@@ -1808,9 +1810,9 @@ namespace rsx
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				return (surface_width >= tex_width && surface_height >= tex_height);
 			case rsx::texture_dimension_extended::texture_dimension_3d:
-				return (surface_width >= tex_width && surface_height >= (tex_height * tex_depth));
+				return (surface_width >= tex_width && surface_height >= (slice_h * tex_depth));
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
-				return (surface_width == tex_height && surface_width >= tex_width && surface_height >= (tex_height * 6));
+				return (surface_width == tex_height && surface_width >= tex_width && surface_height >= (slice_h * 6));
 			}
 
 			return false;
@@ -1819,7 +1821,7 @@ namespace rsx
 		template <typename render_target_type>
 		sampled_image_descriptor process_framebuffer_resource_fast(commandbuffer_type& cmd, render_target_type texptr,
 			u32 texaddr, u32 format,
-			u16 tex_width, u16 tex_height, u16 tex_depth,
+			u16 tex_width, u16 tex_height, u16 tex_depth, u16 slice_h,
 			f32 scale_x, f32 scale_y,
 			rsx::texture_dimension_extended extended_dimension,
 			u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
@@ -1866,7 +1868,7 @@ namespace rsx
 					const auto scaled_h = rsx::apply_resolution_scale(tex_height, true);
 
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
-					return { texptr->get_surface(rsx::surface_access::read), command, texaddr, format, 0, 0, scaled_w, scaled_h, 1,
+					return { texptr->get_surface(rsx::surface_access::read), command, texaddr, format, 0, 0, scaled_w, scaled_h, 1, 0,
 							texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
 							extended_dimension, decoded_remap };
 				}
@@ -1886,14 +1888,14 @@ namespace rsx
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
 				return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::_3d_unwrap, texaddr, format, 0, 0,
-						scaled_w, scaled_h, tex_depth,
+						scaled_w, scaled_h, tex_depth, slice_h,
 						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 			}
 
 			verify(HERE), extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::cubemap_unwrap, texaddr, format, 0, 0,
-					scaled_w, scaled_h, 1,
+					scaled_w, scaled_h, 1, slice_h,
 					texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
 					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 		}
@@ -1934,7 +1936,7 @@ namespace rsx
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
 			{
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather, texaddr, format, 0, 0,
-						scaled_w, scaled_w, 1,
+						scaled_w, scaled_w, 1, slice_h,
 						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
 						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 
@@ -1945,7 +1947,7 @@ namespace rsx
 			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && tex_depth > 1)
 			{
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::_3d_gather, texaddr, format, 0, 0,
-					scaled_w, scaled_h, tex_depth,
+					scaled_w, scaled_h, tex_depth, slice_h,
 					texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
 					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 
@@ -1963,7 +1965,7 @@ namespace rsx
 			const auto h = fbos.empty()? tex_height : rsx::apply_resolution_scale(tex_height, true);
 
 			sampled_image_descriptor result = { nullptr, deferred_request_command::atlas_gather,
-					texaddr, format, 0, 0, w, h, 1, texture_upload_context::framebuffer_storage, is_depth,
+					texaddr, format, 0, 0, w, h, 1, slice_h, texture_upload_context::framebuffer_storage, is_depth,
 					scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
 
 			result.external_subresource_desc.sections_to_copy = gather_texture_slices(cmd, fbos, local, texaddr, tex_width, tex_height, 0, tex_pitch, 1, bpp, is_depth);
@@ -1987,19 +1989,26 @@ namespace rsx
 			u16 tex_pitch = (tex.format() & CELL_GCM_TEXTURE_LN)? (u16)tex.pitch() : get_format_packed_pitch(format, tex_width);
 
 			u16 depth;
+			u32 required_surface_height, slice_h;
 			switch (extended_dimension)
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
 				depth = 1;
+				slice_h = required_surface_height = 1;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				depth = 1;
+				slice_h = required_surface_height = tex_height;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
 				depth = 6;
+				required_surface_height = tex_range.length() / tex_pitch;
+				slice_h = required_surface_height / depth;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				depth = tex.depth();
+				required_surface_height = tex_range.length() / tex_pitch;
+				slice_h = required_surface_height / depth;
 				break;
 			}
 
@@ -2027,9 +2036,9 @@ namespace rsx
 			if (UNLIKELY(m_rtts.address_is_bound(texaddr)))
 			{
 				if (auto texptr = m_rtts.get_surface_at(texaddr);
-					check_framebuffer_resource(cmd, texptr, tex_width, tex_height, depth, tex_pitch, extended_dimension))
+					check_framebuffer_resource(cmd, texptr, tex_width, tex_height, depth, tex_pitch, slice_h, extended_dimension))
 				{
-					return process_framebuffer_resource_fast(cmd, texptr, texaddr, format, tex_width, tex_height, depth,
+					return process_framebuffer_resource_fast(cmd, texptr, texaddr, format, tex_width, tex_height, depth, slice_h,
 						scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), true);
 				}
 			}
@@ -2074,20 +2083,6 @@ namespace rsx
 				// Next, attempt to merge blit engine and surface store
 				// Blit sources contain info from any shader-read stuff in range
 				// NOTE: Compressed formats require a reupload, facilitated by blit synchronization and/or WCB and are not handled here
-				u32 required_surface_height, slice_h;
-				switch (extended_dimension)
-				{
-				case rsx::texture_dimension_extended::texture_dimension_3d:
-				case rsx::texture_dimension_extended::texture_dimension_cubemap:
-					// Account for padding between mipmaps for all layers
-					required_surface_height = tex_range.length() / tex_pitch;
-					slice_h = required_surface_height / depth;
-					break;
-				default:
-					// Ignore mipmaps and search for LOD0
-					required_surface_height = slice_h = tex_height;
-					break;
-				}
 
 				const auto bpp = get_format_block_size_in_bytes(format);
 				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch, bpp);
@@ -2117,7 +2112,7 @@ namespace rsx
 							u16 normalized_width = u16(last.width * last.surface->get_bpp()) / bpp;
 							if (normalized_width >= tex_width && last.height >= required_surface_height)
 							{
-								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, format, tex_width, tex_height, depth,
+								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, format, tex_width, tex_height, depth, slice_h,
 									scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), false);
 							}
 						}
@@ -2184,7 +2179,7 @@ namespace rsx
 							}
 
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, texaddr, gcm_format, 0, 0,
-									tex_width, tex_height, 1, last->get_context(), is_depth,
+									tex_width, tex_height, 1, 0, last->get_context(), is_depth,
 									scale_x, scale_y, extended_dimension, tex.decoded_remap() };
 						}
 					}
