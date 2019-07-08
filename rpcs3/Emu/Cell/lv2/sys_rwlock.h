@@ -14,8 +14,8 @@ struct sys_rwlock_attribute_t
 
 	union
 	{
-		char name[8];
-		u64 name_u64;
+		le_t<u64> name_u64;
+		char name[sizeof(u64)];
 	};
 };
 
