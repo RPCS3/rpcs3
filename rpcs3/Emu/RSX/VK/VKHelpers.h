@@ -541,6 +541,14 @@ private:
 				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
 				LOG_FATAL(RSX, "RADV drivers have a major driver bug with LLVM 8 resulting in no visual output. Upgrade to LLVM 9 version of mesa to avoid this issue.");
 			}
+
+#ifndef _WIN32
+			if (get_name().find("VEGA"))
+			{
+				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware for both RADV and AMDVLK. Using float32_t fallback instead.");
+				shader_types_support.allow_float16 = false;
+			}
+#endif
 		}
 
 		std::string get_name() const

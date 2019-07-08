@@ -309,21 +309,8 @@ namespace vk
 		switch (g_driver_vendor = g_current_renderer->gpu().get_driver_vendor())
 		{
 		case driver_vendor::AMD:
-			// Radeon proprietary driver does not properly handle fence reset and can segfault during vkResetFences
-			// Disable fence reset for proprietary driver and delete+initialize a new fence instead
-			g_drv_disable_fence_reset = true;
-			// Fall through
 		case driver_vendor::RADV:
-			// Radeon fails to properly handle degenerate primitives if primitive restart is enabled
-			// One has to choose between using degenerate primitives or primitive restart to break up lists but not both
-			// Polaris and newer will crash with ERROR_DEVICE_LOST
-			// Older GCN will work okay most of the time but also occasionally draws garbage without reason (proprietary driver only)
-			if (g_driver_vendor == driver_vendor::AMD ||
-				gpu_name.find("VEGA") != std::string::npos ||
-				gpu_name.find("POLARIS") != std::string::npos)
-			{
-				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
-			}
+			// Previous bugs with fence reset and primitive restart seem to have been fixed with newer drivers
 			break;
 		case driver_vendor::NVIDIA:
 			// Nvidia cards are easily susceptible to NaN poisoning
