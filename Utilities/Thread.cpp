@@ -2020,19 +2020,99 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 		case native_core_arrangement::amd_ccx:
 		{
 			u64 spu_mask, ppu_mask, rsx_mask;
-			if (thread_count >= 16)
+			const auto system_id = utils::get_system_info();
+			if (thread_count >= 32)
 			{
-				// Threadripper, R7
-				// Assign threads 8-16
-				// It appears some windows code is bound to lower core addresses, binding 8-16 is alot faster than 0-7
-				ppu_mask = spu_mask = 0b1111111100000000;
-				rsx_mask = all_cores_mask;
+				if (system_id.find("3950X") != std::string::npos)
+				{
+					// zen2
+					// Ryzen 9 3950X
+					// Assign threads 9-32
+					ppu_mask = 0b11111111000000000000000000000000;
+					spu_mask = 0b00000000111111110000000000000000;
+					rsx_mask = 0b00000000000000001111111100000000;
+				}
+				else if (system_id.find("2970WX") != std::string::npos)
+				{
+					// zen+
+					// Threadripper 2970WX
+					// Assign threads 9-24
+					ppu_mask = 0b000000111111000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b111111000000000000000000;
+				}
+				else
+				{
+					// zen(+)
+					// Threadripper 1950X/2950X/2990WX
+					// Assign threads 17-32
+					ppu_mask = 0b00000000111111110000000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b11111111000000000000000000000000;
+				}
+
+			}
+			else if (thread_count == 24)
+			{
+				if (system_id.find("3900X") != std::string::npos)
+				{
+					// zen2
+					// Ryzen 9 3900X
+					// Assign threads 7-22
+					ppu_mask = 0b111111000000000000000000;
+					spu_mask = 0b000000111111000000000000;
+					rsx_mask = 0b000000000000111111000000;
+				}
+				else
+				{
+					// zen(+)
+					// Threadripper 1920X/2920X
+					// Assign threads 13-24
+					ppu_mask = 0b000000111111000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b111111000000000000000000;
+				}
+			}
+			else if (thread_count == 16)
+			{
+				if (system_id.find("3700X") != std::string::npos || system_id.find("3800X") != std::string::npos)
+				{
+					// Ryzen 7 3700/3800 (x)
+					// Assign threads 1-16
+					ppu_mask = 0b0000000011110000;
+					spu_mask = 0b1111111100000000;
+					rsx_mask = 0b0000000000001111;
+				}
+				else
+				{
+					// zen(+)
+					// Ryzen 7, Threadripper 
+					// Assign threads 3-16
+					ppu_mask = 0b1111111100000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b0000000000111100;
+				}
 			}
 			else if (thread_count == 12)
 			{
-				// 1600/2600 (x)
-				ppu_mask = spu_mask = 0b111111000000;
-				rsx_mask = all_cores_mask;
+				if (system_id.find("3600") != std::string::npos)
+				{
+					// zen2
+					// R5 3600 (x)
+					// Assign threads 1-12
+					ppu_mask = 0b000000111000;
+					spu_mask = 0b111111000000;
+					rsx_mask = 0b000000000111;
+				}
+				else
+				{
+					// zen(+)
+					// R5 1600/2600 (x)
+					// Assign threads 3-12
+					ppu_mask = 0b111111000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b000000111100;
+				}
 			}
 			else
 			{
