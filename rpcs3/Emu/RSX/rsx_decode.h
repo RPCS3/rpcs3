@@ -3275,7 +3275,7 @@ struct registers_decoder<NV4097_SET_ZSTENCIL_CLEAR_VALUE>
 		u32 value;
 
 		u32 clear_z16() const { return bf_decoder<0, 16, u32>(value); }
-		u32 clear_z24() const { return bf_decoder<0, 24>(value); }
+		u32 clear_z24() const { return bf_decoder<8, 24>(value); }
 
 	public:
 		decoded_type(u32 value) : value(value) {}
