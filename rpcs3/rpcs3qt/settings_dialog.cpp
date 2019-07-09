@@ -249,7 +249,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				ppuBG->button(i)->setChecked(true);
 			}
 
-			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]()
+			connect(ppuBG->button(i), &QAbstractButton::clicked, [=]()
 			{
 				xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i]));
 			});
@@ -279,7 +279,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				spuBG->button(i)->setChecked(true);
 			}
 
-			connect(spuBG->button(i), &QAbstractButton::pressed, [=]()
+			connect(spuBG->button(i), &QAbstractButton::clicked, [=]()
 			{
 				xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i]));
 			});
@@ -329,7 +329,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				libModeBG->button(i)->setChecked(true);
 			}
 
-			connect(libModeBG->button(i), &QAbstractButton::pressed, [=]()
+			connect(libModeBG->button(i), &QAbstractButton::clicked, [=]()
 			{
 				xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i]));
 			});
@@ -907,7 +907,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				enterButtonAssignmentBG->button(i)->setChecked(true);
 			}
 
-			connect(enterButtonAssignmentBG->button(i), &QAbstractButton::pressed, [=]()
+			connect(enterButtonAssignmentBG->button(i), &QAbstractButton::clicked, [=]()
 			{
 				xemu_settings->SetSetting(emu_settings::EnterButtonAssignment, sstr(assignable_buttons[i]));
 			});
