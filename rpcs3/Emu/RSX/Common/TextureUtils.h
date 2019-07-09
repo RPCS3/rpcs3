@@ -98,6 +98,8 @@ struct rsx_subresource_layout
 	u16 width_in_block;
 	u16 height_in_block;
 	u16 depth;
+	u8  border;
+	u8  reserved;
 	u32 pitch_in_block;
 };
 
@@ -138,7 +140,7 @@ size_t get_texture_size(const rsx::vertex_texture &texture);
 /**
 * Get packed pitch
 */
-u32 get_format_packed_pitch(u32 format, u16 width);
+u32 get_format_packed_pitch(u32 format, u16 width, bool border = false, bool swizzled = false);
 
 /**
 * Reverse encoding
