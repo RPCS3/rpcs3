@@ -1110,10 +1110,19 @@ namespace rsx
 		{
 			layout.zeta_address = 0;
 		}
+		else if (packed_render)
+		{
+			layout.actual_zeta_pitch = (layout.width * depth_texel_size);
+		}
 		else
 		{
-			// Still exists? Unlikely to get discarded
-			layout.actual_zeta_pitch = packed_render? (layout.width * depth_texel_size) : layout.zeta_pitch;
+			const auto packed_zeta_pitch = (layout.width * depth_texel_size);
+			if (packed_zeta_pitch > layout.zeta_pitch)
+			{
+				layout.width = (layout.zeta_pitch / depth_texel_size);
+			}
+
+			layout.actual_zeta_pitch = layout.zeta_pitch;
 		}
 
 		for (const auto &index : rsx::utility::get_rtt_indexes(layout.target))
@@ -1159,7 +1168,21 @@ namespace rsx
 
 			verify(HERE), layout.color_addresses[index];
 
-			layout.actual_color_pitch[index] = packed_render? (layout.width * color_texel_size) : layout.color_pitch[index];
+			const auto packed_pitch = (layout.width * color_texel_size);
+			if (packed_render)
+			{
+				layout.actual_color_pitch[index] = packed_pitch;
+			}
+			else
+			{
+				if (packed_pitch > layout.color_pitch[index])
+				{
+					layout.width = (layout.color_pitch[index] / color_texel_size);
+				}
+
+				layout.actual_color_pitch[index] = layout.color_pitch[index];
+			}
+
 			framebuffer_status_valid = true;
 		}
 
