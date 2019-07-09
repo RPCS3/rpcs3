@@ -1982,11 +1982,12 @@ namespace rsx
 			const u32 format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			const bool is_compressed_format = is_compressed_gcm_format(format);
 			const bool unnormalized = (tex.format() & CELL_GCM_TEXTURE_UN) != 0;
+			const bool linear = !!(tex.format() & CELL_GCM_TEXTURE_LN);
 
 			const auto extended_dimension = tex.get_extended_texture_dimension();
 			u16 tex_width = tex.width();
 			u16 tex_height = tex.height();
-			u16 tex_pitch = (tex.format() & CELL_GCM_TEXTURE_LN)? (u16)tex.pitch() : get_format_packed_pitch(format, tex_width);
+			u16 tex_pitch = linear? (u16)tex.pitch() : get_format_packed_pitch(format, tex_width, !tex.border_type(), !linear);
 
 			u16 depth;
 			u32 required_surface_height, slice_h;
@@ -2018,7 +2019,7 @@ namespace rsx
 			if (!tex_pitch)
 			{
 				// Linear scanning with pitch of 0, read only texel (0,0)
-				tex_pitch = get_format_packed_pitch(format, tex_width);
+				tex_pitch = get_format_packed_pitch(format, tex_width, !tex.border_type(), !linear);
 				scale_x = 0.f;
 				scale_y = 0.f;
 			}

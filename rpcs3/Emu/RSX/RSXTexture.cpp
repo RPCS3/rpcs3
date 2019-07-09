@@ -293,7 +293,8 @@ namespace rsx
 
 	u8 vertex_texture::border_type() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 3) & 0x1);
+		// Border bit has no effect on vertex textures, it is always zero
+		return 1;
 	}
 
 	rsx::texture_dimension vertex_texture::dimension() const
