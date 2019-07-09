@@ -10,7 +10,7 @@ struct sys_lwcond_attribute_t
 {
 	union
 	{
-		le_t<u64> name_u64;
+		u64 name_u64;
 		char name[sizeof(u64)];
 	};
 };
