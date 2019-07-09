@@ -1410,6 +1410,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 		if (cpu->id_type() != 1)
 		{
+			LOG_NOTICE(GENERAL, "\n%s", cpu->dump());
 			LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 
 			// TODO:
@@ -1446,6 +1447,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	}
 
 	Emu.Pause();
+
+	if (cpu)
+	{
+		LOG_NOTICE(GENERAL, "\n%s", cpu->dump());
+	}
+
 	LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
 
 	while (Emu.IsPaused())
