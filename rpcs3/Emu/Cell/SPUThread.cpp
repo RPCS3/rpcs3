@@ -1027,32 +1027,32 @@ void spu_thread::cpu_init()
 	ch_tag_upd = 0;
 	ch_tag_mask = 0;
 	mfc_prxy_mask = 0;
-	ch_tag_stat.data.release({});
+	ch_tag_stat.data.raw() = {};
 	ch_stall_mask = 0;
-	ch_stall_stat.data.release({});
-	ch_atomic_stat.data.release({});
+	ch_stall_stat.data.raw() = {};
+	ch_atomic_stat.data.raw() = {};
 
 	ch_in_mbox.clear();
 
-	ch_out_mbox.data.release({});
-	ch_out_intr_mbox.data.release({});
+	ch_out_mbox.data.raw() = {};
+	ch_out_intr_mbox.data.raw() = {};
 
 	snr_config = 0;
 
-	ch_snr1.data.release({});
-	ch_snr2.data.release({});
+	ch_snr1.data.raw() = {};
+	ch_snr2.data.raw() = {};
 
-	ch_event_mask = 0;
-	ch_event_stat = 0;
-	interrupts_enabled = false;
+	ch_event_mask.raw() = 0;
+	ch_event_stat.raw() = 0;
+	interrupts_enabled.raw() = false;
 	raddr = 0;
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
 
-	run_ctrl.release(0);
-	status.release(0);
-	npc.release(0);
+	run_ctrl.raw() = 0;
+	status.raw() = 0;
+	npc.raw() = 0;
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -1488,6 +1488,7 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 				if ((mfc_queue[i].cmd & ~0xc) == MFC_BARRIER_CMD)
 				{
 					mfc_barrier |= -1;
+					mfc_fence |= utils::rol32(1, mfc_queue[i].tag);
 					continue;
 				}
 
@@ -1657,6 +1658,9 @@ void spu_thread::do_mfc(bool wait)
 	// Process enqueued commands
 	std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
 	{
+		// Select tag bit in the tag mask or the stall mask
+		const u32 mask = utils::rol32(1, args.tag);
+
 		if ((args.cmd & ~0xc) == MFC_BARRIER_CMD)
 		{
 			if (&args - mfc_queue <= removed)
@@ -1669,11 +1673,9 @@ void spu_thread::do_mfc(bool wait)
 
 			// Block all tags
 			barrier |= -1;
+			fence |= mask;
 			return false;
 		}
-
-		// Select tag bit in the tag mask or the stall mask
-		const u32 mask = utils::rol32(1, args.tag);
 
 		if (barrier & mask)
 		{
@@ -2092,6 +2094,7 @@ bool spu_thread::process_mfc_cmd()
 		{
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
 			mfc_barrier |= -1;
+			mfc_fence |= utils::rol32(1, ch_mfc_cmd.tag);
 		}
 
 		return true;
