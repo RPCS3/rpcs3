@@ -31,7 +31,7 @@ welcome_dialog::welcome_dialog(QWidget* parent) : QDialog(parent), ui(new Ui::we
 		settings->SetValue(gui::ib_show_welcome, QVariant(!checked));
 	});
 
-	connect(ui->okay, &QPushButton::pressed, this, &QDialog::accept);
+	connect(ui->okay, &QPushButton::clicked, this, &QDialog::accept);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 }
