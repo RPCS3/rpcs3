@@ -1744,9 +1744,9 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 		{
 			auto& ppu = static_cast<ppu_thread&>(*thread);
 
-			if (ppu.last_function)
+			if (ppu.current_function)
 			{
-				func = ppu.last_function;
+				func = ppu.current_function;
 			}
 		}
 	}
