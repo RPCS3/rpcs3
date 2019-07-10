@@ -54,6 +54,11 @@ error_code sys_overlay_unload_module(u32 ovlmid)
 
 	for (auto& seg : _main->segs)
 	{
+		if (seg.flags & 1)
+		{
+			utils::memory_decommit(vm::g_exec_addr + size_t{seg.addr} * 2, size_t{seg.size} * 2);
+		}
+
 		vm::dealloc(seg.addr);
 	}
 
