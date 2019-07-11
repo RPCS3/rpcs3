@@ -119,6 +119,15 @@ enum class move_handler
 	fake,
 };
 
+enum class microphone_handler
+{
+	null,
+	standard,
+	singstar,
+	real_singstar,
+	rocksmith,
+};
+
 enum class video_resolution
 {
 	_1080,
@@ -546,7 +555,8 @@ struct cfg_root : cfg::node
 		cfg::_int<1, 1000> sampling_period_multiplier{this, "Sampling Period Multiplier", 100};
 		cfg::_bool enable_time_stretching{this, "Enable Time Stretching", false};
 		cfg::_int<0, 100> time_stretching_threshold{this, "Time Stretching Threshold", 75};
-
+		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
+		cfg::string microphone_devices{ this, "Microphone Devices", ";;;;" };
 	} audio{this};
 
 	struct node_io : cfg::node
@@ -559,7 +569,6 @@ struct cfg_root : cfg::node
 		cfg::_enum<camera_handler> camera{this, "Camera", camera_handler::null};
 		cfg::_enum<fake_camera_type> camera_type{this, "Camera type", fake_camera_type::unknown};
 		cfg::_enum<move_handler> move{this, "Move", move_handler::null};
-
 	} io{this};
 
 	struct node_sys : cfg::node

@@ -1027,32 +1027,32 @@ void spu_thread::cpu_init()
 	ch_tag_upd = 0;
 	ch_tag_mask = 0;
 	mfc_prxy_mask = 0;
-	ch_tag_stat.data.release({});
+	ch_tag_stat.data.raw() = {};
 	ch_stall_mask = 0;
-	ch_stall_stat.data.release({});
-	ch_atomic_stat.data.release({});
+	ch_stall_stat.data.raw() = {};
+	ch_atomic_stat.data.raw() = {};
 
 	ch_in_mbox.clear();
 
-	ch_out_mbox.data.release({});
-	ch_out_intr_mbox.data.release({});
+	ch_out_mbox.data.raw() = {};
+	ch_out_intr_mbox.data.raw() = {};
 
 	snr_config = 0;
 
-	ch_snr1.data.release({});
-	ch_snr2.data.release({});
+	ch_snr1.data.raw() = {};
+	ch_snr2.data.raw() = {};
 
-	ch_event_mask = 0;
-	ch_event_stat = 0;
-	interrupts_enabled = false;
+	ch_event_mask.raw() = 0;
+	ch_event_stat.raw() = 0;
+	interrupts_enabled.raw() = false;
 	raddr = 0;
 
 	ch_dec_start_timestamp = get_timebased_time(); // ???
 	ch_dec_value = 0;
 
-	run_ctrl.release(0);
-	status.release(0);
-	npc.release(0);
+	run_ctrl.raw() = 0;
+	status.raw() = 0;
+	npc.raw() = 0;
 
 	int_ctrl[0].clear();
 	int_ctrl[1].clear();
@@ -1335,8 +1335,8 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		}
 	}
 
-	u8* dst = (u8*)vm::base(eal);
-	u8* src = (u8*)vm::base(offset + lsa);
+	u8* dst = vm::_ptr<u8>(eal);
+	u8* src = vm::_ptr<u8>(offset + lsa);
 
 	if (UNLIKELY(!is_get && !g_use_rtm))
 	{
@@ -1390,7 +1390,7 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 				break;
 			}
 
-			auto lock = vm::passive_lock(eal & -128u, ::align(eal + size, 128));
+			auto lock = vm::passive_lock(eal & -128, ::align(eal + size, 128));
 
 			while (size >= 128)
 			{
@@ -1488,6 +1488,7 @@ bool spu_thread::do_dma_check(const spu_mfc_cmd& args)
 				if ((mfc_queue[i].cmd & ~0xc) == MFC_BARRIER_CMD)
 				{
 					mfc_barrier |= -1;
+					mfc_fence |= utils::rol32(1, mfc_queue[i].tag);
 					continue;
 				}
 
@@ -1578,7 +1579,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 
 void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 {
-	const u32 addr = args.eal & -128u;
+	const u32 addr = args.eal & -128;
 
 	if (raddr && addr == raddr)
 	{
@@ -1603,7 +1604,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 			cpu_thread::suspend_all cpu_lock(this);
 
 			// Try to obtain bit 7 (+64)
-			if (!atomic_storage<u64>::bts(vm::reservation_acquire(addr, 128).raw(), 6))
+			if (!vm::reservation_acquire(addr, 128).bts(6))
 			{
 				auto& data = vm::_ref<decltype(rdata)>(addr);
 				mov_rdata(data, to_write);
@@ -1657,23 +1658,24 @@ void spu_thread::do_mfc(bool wait)
 	// Process enqueued commands
 	std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
 	{
+		// Select tag bit in the tag mask or the stall mask
+		const u32 mask = utils::rol32(1, args.tag);
+
 		if ((args.cmd & ~0xc) == MFC_BARRIER_CMD)
 		{
 			if (&args - mfc_queue <= removed)
 			{
 				// Remove barrier-class command if it's the first in the queue
-				_mm_mfence();
+				std::atomic_thread_fence(std::memory_order_seq_cst);
 				removed++;
 				return true;
 			}
 
 			// Block all tags
 			barrier |= -1;
+			fence |= mask;
 			return false;
 		}
-
-		// Select tag bit in the tag mask or the stall mask
-		const u32 mask = utils::rol32(1, args.tag);
 
 		if (barrier & mask)
 		{
@@ -1777,7 +1779,7 @@ bool spu_thread::process_mfc_cmd()
 	{
 	case MFC_GETLLAR_CMD:
 	{
-		const u32 addr = ch_mfc_cmd.eal & -128u;
+		const u32 addr = ch_mfc_cmd.eal & -128;
 		auto& data = vm::_ref<decltype(rdata)>(addr);
 		auto& dst = _ref<decltype(rdata)>(ch_mfc_cmd.lsa & 0x3ff80);
 		u64 ntime;
@@ -1888,7 +1890,7 @@ bool spu_thread::process_mfc_cmd()
 	case MFC_PUTLLC_CMD:
 	{
 		// Store conditionally
-		const u32 addr = ch_mfc_cmd.eal & -128u;
+		const u32 addr = ch_mfc_cmd.eal & -128;
 		u32 result = 0;
 
 		if (raddr == addr)
@@ -2086,12 +2088,13 @@ bool spu_thread::process_mfc_cmd()
 	{
 		if (mfc_size == 0)
 		{
-			_mm_mfence();
+			std::atomic_thread_fence(std::memory_order_seq_cst);
 		}
 		else
 		{
 			mfc_queue[mfc_size++] = ch_mfc_cmd;
 			mfc_barrier |= -1;
+			mfc_fence |= utils::rol32(1, ch_mfc_cmd.tag);
 		}
 
 		return true;
@@ -3025,12 +3028,13 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	case 0x100:
 	{
+		// SPU thread group yield (TODO)
 		if (ch_out_mbox.get_count())
 		{
 			fmt::throw_exception("STOP code 0x100: Out_MBox is not empty" HERE);
 		}
 
-		_mm_mfence();
+		std::atomic_thread_fence(std::memory_order_seq_cst);
 		return true;
 	}
 

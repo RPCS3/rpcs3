@@ -65,7 +65,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	setModal(true);
 
 	// Events
-	connect(button_ok, &QAbstractButton::pressed, [=]()
+	connect(button_ok, &QAbstractButton::clicked, [=]()
 	{
 		bool ok;
 		ulong opcode = m_instr->text().toULong(&ok, 16);
@@ -89,7 +89,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 
 		accept();
 	});
-	connect(button_cancel, &QAbstractButton::pressed, this, &instruction_editor_dialog::reject);
+	connect(button_cancel, &QAbstractButton::clicked, this, &instruction_editor_dialog::reject);
 	connect(m_instr, &QLineEdit::textChanged, this, &instruction_editor_dialog::updatePreview);
 
 	updatePreview();

@@ -8,6 +8,7 @@
 #include "VKFormats.h"
 #include "VKCommonDecompiler.h"
 #include "VKRenderPass.h"
+#include "VKResourceManager.h"
 
 namespace
 {
@@ -481,7 +482,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_occlusion_query_pool.create((*m_device), OCCLUSION_MAX_POOL_SIZE);
 	m_occlusion_map.resize(occlusion_query_count);
 
-	for (int n = 0; n < occlusion_query_count; ++n)
+	for (u32 n = 0; n < occlusion_query_count; ++n)
 		m_occlusion_query_data[n].driver_handle = n;
 
 	//Generate frame contexts
@@ -640,7 +641,6 @@ VKGSRender::~VKGSRender()
 	m_rtts.destroy();
 	m_texture_cache.destroy();
 
-	m_resource_manager.destroy();
 	m_stencil_mirror_sampler.reset();
 
 	//Overlay text handler
@@ -1372,7 +1372,7 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						fs_sampler_handles[i] = m_resource_manager.find_sampler(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
+						fs_sampler_handles[i] = vk::get_resource_manager()->find_sampler(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
 							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
 					}
 				}
@@ -1422,7 +1422,7 @@ void VKGSRender::end()
 
 					if (replace)
 					{
-						vs_sampler_handles[i] = m_resource_manager.find_sampler(
+						vs_sampler_handles[i] = vk::get_resource_manager()->find_sampler(
 							*m_device,
 							VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 							unnormalized_coords,
@@ -2159,6 +2159,11 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
 		m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
 
+		if (!m_current_command_buffer->poke())
+		{
+			LOG_ERROR(RSX, "CB chain has run out of free entries!");
+		}
+
 		m_current_command_buffer->reset();
 
 		// Just in case a queued frame holds a ref to this cb, drain the present queue
@@ -2823,6 +2828,7 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 	{
 		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
 		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
 
 	m_current_command_buffer->end();
@@ -3161,9 +3167,6 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 
 	if (skip_frame || swapchain_unavailable)
 	{
-		m_frame->flip(m_context);
-		rsx::thread::flip(buffer, emu_flip);
-
 		if (!skip_frame)
 		{
 			verify(HERE), swapchain_unavailable;
@@ -3180,6 +3183,8 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 			m_textures_upload_time = 0;
 		}
 
+		m_frame->flip(m_context);
+		rsx::thread::flip(buffer, emu_flip);
 		return;
 	}
 
@@ -3599,6 +3604,18 @@ void VKGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 
 	m_occlusion_query_pool.reset_queries(*m_current_command_buffer, data.indices);
 	data.indices.clear();
+}
+
+void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
+{
+	verify("Command list mismatch" HERE), commands == static_cast<vk::command_buffer*>(m_current_command_buffer);
+
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_open_query)
+	{
+		auto open_query = m_occlusion_map[m_active_query_info->driver_handle].indices.back();
+		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
+		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
+	}
 }
 
 bool VKGSRender::on_decompiler_task()

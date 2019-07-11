@@ -100,6 +100,8 @@ namespace gl
 			return std::make_tuple(GL_RGBA, GL_UNSIGNED_BYTE, false);
 		case texture::internal_format::r8:
 			return std::make_tuple(GL_RED, GL_UNSIGNED_BYTE, false);
+		case texture::internal_format::r16:
+			return std::make_tuple(GL_RED, GL_UNSIGNED_SHORT, true);
 		case texture::internal_format::r32f:
 			return std::make_tuple(GL_RED, GL_FLOAT, true);
 		case texture::internal_format::r5g6b5:
@@ -723,11 +725,16 @@ namespace gl
 		GLsizeiptr src_mem = src->width() * src->height();
 		GLsizeiptr dst_mem = dst->width() * dst->height();
 
+		GLenum buffer_copy_flag = GL_STATIC_COPY;
+		if (gl::get_driver_caps().vendor_MESA) buffer_copy_flag = GL_STREAM_COPY;
+		// NOTE: Mesa lacks acceleration for PBO unpacking and is currently fastest with GL_STREAM_COPY
+		// See https://bugs.freedesktop.org/show_bug.cgi?id=111043
+
 		auto max_mem = std::max(src_mem, dst_mem) * 16;
 		if (!g_typeless_transfer_buffer || max_mem > g_typeless_transfer_buffer.size())
 		{
 			if (g_typeless_transfer_buffer) g_typeless_transfer_buffer.remove();
-			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, GL_STATIC_COPY);
+			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer_copy_flag);
 		}
 
 		auto format_type = get_format_type(src->get_internal_format());

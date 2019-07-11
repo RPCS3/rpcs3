@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "types.h"
 #include <functional>
@@ -1162,5 +1162,15 @@ public:
 				return true;
 			}
 		}
+	}
+
+	bool bts(uint bit)
+	{
+		return atomic_storage<type>::bts(m_data, bit);
+	}
+
+	bool btr(uint bit)
+	{
+		return atomic_storage<type>::btr(m_data, bit);
 	}
 };

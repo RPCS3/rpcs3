@@ -440,7 +440,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	data->pclass_type = pad->m_class_type;
 	data->pclass_profile = 0x0;
 
-	return cellPadGetData(port_no, vm::get_addr(&data->cellpad_data));
+	return cellPadGetData(port_no, data.ptr(&CellPadPeriphData::cellpad_data));
 }
 
 error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)

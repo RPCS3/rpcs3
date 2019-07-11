@@ -1,9 +1,11 @@
 ﻿#include "stdafx.h"
 #include "VKHelpers.h"
+#include "VKGSRender.h"
 #include "VKCompute.h"
 #include "VKRenderPass.h"
 #include "VKFramebuffer.h"
 #include "VKResolveHelper.h"
+#include "VKResourceManager.h"
 #include "Utilities/mutex.h"
 
 namespace vk
@@ -247,6 +249,7 @@ namespace vk
 		vk::clear_renderpass_cache(dev);
 		vk::clear_framebuffer_cache();
 		vk::clear_resolve_helpers();
+		vk::get_resource_manager()->destroy();
 
 		g_null_texture.reset();
 		g_null_image_view.reset();
@@ -306,21 +309,8 @@ namespace vk
 		switch (g_driver_vendor = g_current_renderer->gpu().get_driver_vendor())
 		{
 		case driver_vendor::AMD:
-			// Radeon proprietary driver does not properly handle fence reset and can segfault during vkResetFences
-			// Disable fence reset for proprietary driver and delete+initialize a new fence instead
-			g_drv_disable_fence_reset = true;
-			// Fall through
 		case driver_vendor::RADV:
-			// Radeon fails to properly handle degenerate primitives if primitive restart is enabled
-			// One has to choose between using degenerate primitives or primitive restart to break up lists but not both
-			// Polaris and newer will crash with ERROR_DEVICE_LOST
-			// Older GCN will work okay most of the time but also occasionally draws garbage without reason (proprietary driver only)
-			if (g_driver_vendor == driver_vendor::AMD ||
-				gpu_name.find("VEGA") != std::string::npos ||
-				gpu_name.find("POLARIS") != std::string::npos)
-			{
-				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
-			}
+			// Previous bugs with fence reset and primitive restart seem to have been fixed with newer drivers
 			break;
 		case driver_vendor::NVIDIA:
 			// Nvidia cards are easily susceptible to NaN poisoning
@@ -767,6 +757,14 @@ namespace vk
 			//std::this_thread::yield();
 			_mm_pause();
 		}
+	}
+
+	void do_query_cleanup(vk::command_buffer& cmd)
+	{
+		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_renderer());
+		verify(HERE), renderer;
+
+		renderer->emergency_query_cleanup(&cmd);
 	}
 
 	void die_with_error(const char* faulting_addr, VkResult error_code)

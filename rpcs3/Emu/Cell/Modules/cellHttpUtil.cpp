@@ -26,11 +26,11 @@ s32 cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm::ptr<v
 		std::string password = URL.m_Password;
 
 		u32 schemeOffset = 0;
-		u32 hostOffset = scheme.length() + 1;
-		u32 pathOffset = hostOffset + host.length() + 1;
-		u32 usernameOffset = pathOffset + path.length() + 1;
-		u32 passwordOffset = usernameOffset + username.length() + 1;
-		u32 totalSize = passwordOffset + password.length() + 1;
+		u32 hostOffset = ::size32(scheme) + 1;
+		u32 pathOffset = hostOffset + ::size32(host) + 1;
+		u32 usernameOffset = pathOffset + ::size32(path) + 1;
+		u32 passwordOffset = usernameOffset + ::size32(username) + 1;
+		u32 totalSize = passwordOffset + ::size32(password) + 1;
 
 		//called twice, first to setup pool, then to populate.
 		if (!uri)

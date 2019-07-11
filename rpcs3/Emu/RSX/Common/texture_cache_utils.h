@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../rsx_cache.h"
 #include "texture_cache_predictor.h"
@@ -1114,6 +1114,9 @@ namespace rsx
 			invalidate_range();
 		}
 
+		virtual void dma_abort()
+		{}
+
 	public:
 		/**
 		 * Dirty/Unreleased Flag
@@ -1276,6 +1279,12 @@ namespace rsx
 
 		void reprotect(const utils::protection prot)
 		{
+			if (synchronized && !flushed)
+			{
+				// Abort enqueued transfer
+				dma_abort();
+			}
+
 			//Reset properties and protect again
 			flushed = false;
 			synchronized = false;
@@ -1286,6 +1295,12 @@ namespace rsx
 
 		void reprotect(const utils::protection prot, const std::pair<u32, u32>& range)
 		{
+			if (synchronized && !flushed)
+			{
+				// Abort enqueued transfer
+				dma_abort();
+			}
+
 			//Reset properties and protect again
 			flushed = false;
 			synchronized = false;

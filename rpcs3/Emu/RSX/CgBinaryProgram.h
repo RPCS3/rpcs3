@@ -308,7 +308,7 @@ public:
 
 				m_arb_shader += fmt::format("#%d ", i) + param_type + param_name + param_semantic + param_const + "\n";
 
-				offset += sizeof(CgBinaryParameter);
+				offset += u32{sizeof(CgBinaryParameter)};
 			}
 
 			m_arb_shader += "\n";
@@ -324,7 +324,7 @@ public:
 
 					size_t size = f.size();
 					vm::init();
-					ptr = vm::alloc(size, vm::main);
+					ptr = vm::alloc(static_cast<u32>(size), vm::main);
 					f.read(vm::base(ptr), size);
 				}
 
@@ -365,7 +365,7 @@ public:
 
 				m_arb_shader += fmt::format("#%d ", i) + param_type + param_name + param_semantic + param_const + "\n";
 
-				offset += sizeof(CgBinaryParameter);
+				offset += u32{sizeof(CgBinaryParameter)};
 			}
 
 			m_arb_shader += "\n";

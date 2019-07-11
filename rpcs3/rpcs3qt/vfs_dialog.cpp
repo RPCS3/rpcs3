@@ -36,19 +36,19 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 
 	// Create buttons
 	QPushButton* addDir = new QPushButton(tr("Add New Directory"));
-	connect(addDir, &QAbstractButton::pressed, [=]
+	connect(addDir, &QAbstractButton::clicked, [=]
 	{
 		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->AddNewDirectory();
 	});
 
 	QPushButton* reset = new QPushButton(tr("Reset"));
-	connect(reset, &QAbstractButton::pressed, [=]
+	connect(reset, &QAbstractButton::clicked, [=]
 	{
 		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->Reset();
 	});
 
 	QPushButton* resetAll = new QPushButton(tr("Reset All"));
-	connect(resetAll, &QAbstractButton::pressed, [=]
+	connect(resetAll, &QAbstractButton::clicked, [=]
 	{
 		for (int i = 0; i < tabs->count(); ++i)
 		{
@@ -60,7 +60,7 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	okay->setAutoDefault(true);
 	okay->setDefault(true);
 
-	connect(okay, &QAbstractButton::pressed, [=]
+	connect(okay, &QAbstractButton::clicked, [=]
 	{
 		for (int i = 0; i < tabs->count(); ++i)
 		{

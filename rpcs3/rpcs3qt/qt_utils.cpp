@@ -207,7 +207,7 @@ namespace gui
 			table->clearContents();
 			table->setRowCount(0);
 
-			for (u32 i = 0; i < item_count; ++i)
+			for (int i = 0; i < item_count; ++i)
 				table->insertRow(i);
 
 			if (table->horizontalScrollBar())

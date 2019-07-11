@@ -94,7 +94,7 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 			std::memcpy(vm::base(loc + seg.ls), vm::base(seg.addr), seg.size);
 			sha1_update(&sha, (uchar*)&seg.size, sizeof(seg.size));
 			sha1_update(&sha, (uchar*)&seg.ls, sizeof(seg.ls));
-			sha1_update(&sha, vm::g_base_addr + seg.addr, seg.size);
+			sha1_update(&sha, vm::_ptr<uchar>(seg.addr), seg.size);
 		}
 		else if (seg.type == SYS_SPU_SEGMENT_TYPE_FILL)
 		{
@@ -127,12 +127,12 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr + loc);
+	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::_ptr<u8>(loc));
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr + loc);
+		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::_ptr<u8>(loc));
 	}
 
 	LOG_NOTICE(LOADER, "Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
@@ -257,7 +257,7 @@ error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group_id, u32 spu_
 
 	if (++group->init == group->max_num)
 	{
-		if (g_cfg.core.max_spurs_threads < 6 && group->max_num > g_cfg.core.max_spurs_threads)
+		if (g_cfg.core.max_spurs_threads < 6 && group->max_num > 0u + g_cfg.core.max_spurs_threads)
 		{
 			if (group->name.size() >= 20 && group->name.compare(group->name.size() - 20, 20, "CellSpursKernelGroup", 20) == 0)
 			{

@@ -218,7 +218,7 @@ error_code sys_mmapper_free_address(u32 addr)
 		return {CELL_EINVAL, addr};
 	}
 
-	if (!area.unique())
+	if (area.use_count() != 1)
 	{
 		return CELL_EBUSY;
 	}

@@ -52,6 +52,9 @@
     <ClInclude Include="Emu\RSX\VK\VKResolveHelper.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKResourceManager.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\VK\VKFramebuffer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -94,6 +97,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp">

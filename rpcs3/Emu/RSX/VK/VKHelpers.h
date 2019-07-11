@@ -190,6 +190,10 @@ namespace vk
 	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
 	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
 
+	// Handle unexpected submit with dangling occlusion query
+	// TODO: Move queries out of the renderer!
+	void do_query_cleanup(vk::command_buffer& cmd);
+
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
 	struct memory_type_mapping
@@ -537,6 +541,14 @@ private:
 				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
 				LOG_FATAL(RSX, "RADV drivers have a major driver bug with LLVM 8 resulting in no visual output. Upgrade to LLVM 9 version of mesa to avoid this issue.");
 			}
+
+#ifndef _WIN32
+			if (get_name().find("VEGA"))
+			{
+				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware for both RADV and AMDVLK. Using float32_t fallback instead.");
+				shader_types_support.allow_float16 = false;
+			}
+#endif
 		}
 
 		std::string get_name() const
@@ -1008,6 +1020,9 @@ private:
 				return;
 			}
 
+			// Check for hanging queries to avoid driver hang
+			verify("close and submit of commandbuffer with a hanging query!" HERE), (flags & cb_has_open_query) == 0;
+
 			if (!fence)
 			{
 				fence = m_submit_fence;
@@ -1291,11 +1306,19 @@ private:
 				}
 			}
 
-			VkComponentMapping real_mapping = vk::apply_swizzle_remap
-			(
-				{native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
-				remap
-			);
+			VkComponentMapping real_mapping;
+			if (remap_encoding == 0xAAE4)
+			{
+				real_mapping = native_component_map;
+			}
+			else
+			{
+				real_mapping = vk::apply_swizzle_remap
+				(
+					{ native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
+					remap
+				);
+			}
 
 			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
 

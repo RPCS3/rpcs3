@@ -22,7 +22,7 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 	LoadSettings();
 	memset(&m_info, 0, sizeof(KbInfo));
 	m_info.max_connect = max_connect;
-	m_info.now_connect = std::min<size_t>(m_keyboards.size(), max_connect);
+	m_info.now_connect = std::min(::size32(m_keyboards), max_connect);
 	m_info.info = 0; // Ownership of keyboard data: 0=Application, 1=System
 	m_info.status[0] = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
 }

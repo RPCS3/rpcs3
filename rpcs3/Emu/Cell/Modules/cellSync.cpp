@@ -6,6 +6,8 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSync.h"
 
+#include <atomic>
+
 LOG_CHANNEL(cellSync);
 
 template<>
@@ -85,8 +87,7 @@ error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
 		}
 	}
 
-	_mm_mfence();
-
+	std::atomic_thread_fence(std::memory_order_release);
 	return CELL_OK;
 }
 
@@ -195,7 +196,7 @@ error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_release);
 
 	if (!barrier->ctrl.atomic_op<&CellSyncBarrier::try_notify>())
 	{
@@ -219,7 +220,7 @@ error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_release);
 
 	while (!barrier->ctrl.atomic_op<&CellSyncBarrier::try_wait>())
 	{
@@ -246,7 +247,7 @@ error_code cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_release);
 
 	if (!barrier->ctrl.atomic_op<&CellSyncBarrier::try_wait>())
 	{
@@ -280,7 +281,7 @@ error_code cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer,
 	rwm->size = buffer_size;
 	rwm->buffer = buffer;
 
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_release);
 
 	return CELL_OK;
 }
@@ -452,7 +453,7 @@ error_code cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buf
 	queue->depth = depth;
 	queue->buffer = buffer;
 
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_release);
 
 	return CELL_OK;
 }
@@ -865,7 +866,7 @@ error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<vo
 			}
 		}
 
-		_mm_mfence();
+		std::atomic_thread_fence(std::memory_order_release);
 	}
 	else
 	{
@@ -894,7 +895,7 @@ error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQue
 	{
 		while (true)
 		{
-			const auto old = queue->push1.load(); _mm_lfence();
+			const auto old = queue->push1.load();
 			auto push = old;
 
 			if (var1)
@@ -989,9 +990,10 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 
 	while (true)
 	{
-		const auto old = queue->push2.load(); _mm_lfence();
+		const auto old = queue->push2.load();
 		auto push2 = old;
 
+		// Loads must be in this order
 		const auto old2 = queue->push3.load();
 		auto push3 = old2;
 
@@ -1192,7 +1194,7 @@ error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueu
 	{
 		while (true)
 		{
-			const auto old = queue->pop1.load(); _mm_lfence();
+			const auto old = queue->pop1.load();
 			auto pop = old;
 
 			if (var1)
@@ -1288,9 +1290,10 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 
 	while (true)
 	{
-		const auto old = queue->pop2.load(); _mm_lfence();
+		const auto old = queue->pop2.load();
 		auto pop2 = old;
 
+		// Loads must be in this order
 		const auto old2 = queue->pop3.load();
 		auto pop3 = old2;
 
@@ -1489,9 +1492,10 @@ error_code cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 
 	while (true)
 	{
-		const auto old = queue->pop1.load(); _mm_lfence();
+		const auto old = queue->pop1.load();
 		auto pop = old;
 
+		// Loads must be in this order
 		const auto push = queue->push1.load();
 
 		s32 var1, var2;
@@ -1540,8 +1544,9 @@ error_code cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> size
 
 	while (true)
 	{
-		const auto old = queue->pop3.load(); _mm_lfence();
+		const auto old = queue->pop3.load();
 
+		// Loads must be in this order
 		u32 var1 = (u16)queue->pop1.load().m_h1;
 		u32 var2 = (u16)queue->push1.load().m_h5;
 

@@ -655,7 +655,7 @@ void trophy_manager_dialog::PopulateGameTable()
 	m_game_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 
 	m_game_table->clearContents();
-	m_game_table->setRowCount(m_trophies_db.size());
+	m_game_table->setRowCount(static_cast<int>(m_trophies_db.size()));
 
 	m_game_combo->clear();
 

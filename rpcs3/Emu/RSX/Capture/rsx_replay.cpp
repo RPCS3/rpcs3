@@ -8,6 +8,7 @@
 #include "Emu/RSX/GSRender.h"
 
 #include <map>
+#include <atomic>
 #include <exception>
 
 namespace rsx
@@ -32,27 +33,27 @@ namespace rsx
 		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
 		if (contextAddr == 0)
 			fmt::throw_exception("Capture Replay: context alloc failed");
-		const auto& contextInfo = vm::_ref<rsx_context>(contextAddr);
+		const auto contextInfo = vm::ptr<rsx_context>::make(contextAddr);
 
 		// 'fake' initialize usermemory
-		sys_memory_allocate(buffer_size, SYS_MEMORY_PAGE_SIZE_1M, vm::get_addr(&contextInfo.user_addr));
-		verify(HERE), (user_mem_addr = contextInfo.user_addr) != 0;
+		sys_memory_allocate(buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
+		verify(HERE), (user_mem_addr = contextInfo->user_addr) != 0;
 
-		if (sys_rsx_device_map(vm::get_addr(&contextInfo.dev_addr), vm::null, 0x8) != CELL_OK)
+		if (sys_rsx_device_map(contextInfo.ptr(&rsx_context::dev_addr), vm::null, 0x8) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
 
-		if (sys_rsx_memory_allocate(vm::get_addr(&contextInfo.mem_handle), vm::get_addr(&contextInfo.mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
+		if (sys_rsx_memory_allocate(contextInfo.ptr(&rsx_context::mem_handle), contextInfo.ptr(&rsx_context::mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_memory_allocate failed!");
 
-		if (sys_rsx_context_allocate(vm::get_addr(&contextInfo.context_id), vm::get_addr(&contextInfo.dma_addr), vm::get_addr(&contextInfo.driver_info), vm::get_addr(&contextInfo.reports_addr), contextInfo.mem_handle, 0) != CELL_OK)
+		if (sys_rsx_context_allocate(contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
 		get_current_renderer()->main_mem_size = buffer_size;
 
-		if (sys_rsx_context_iomap(contextInfo.context_id, 0, user_mem_addr, buffer_size, 0) != CELL_OK)
+		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
 
-		return contextInfo.context_id;
+		return contextInfo->context_id;
 	}
 
 	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id)
@@ -179,7 +180,7 @@ namespace rsx
 		{
 			// Load registers while the RSX is still idle
 			method_registers = frame->reg_state;
-			_mm_mfence();
+			std::atomic_thread_fence(std::memory_order_seq_cst);
 
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);

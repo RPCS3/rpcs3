@@ -349,7 +349,7 @@ error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_in
 	pOpt->info->modattribute = prx->module_info_attributes;
 	pOpt->info->start_entry = prx->start.addr();
 	pOpt->info->stop_entry = prx->stop.addr();
-	pOpt->info->all_segments_num = prx->segs.size();
+	pOpt->info->all_segments_num = ::size32(prx->segs);
 	if (pOpt->info->filename)
 	{
 		std::strncpy(pOpt->info->filename.get_ptr(), prx->name.c_str(), pOpt->info->filename_size);

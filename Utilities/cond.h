@@ -206,7 +206,7 @@ class shared_cond
 			m_slot = m_this->m_cvx32.atomic_op([](u64& cvx32)
 			{
 				// Combine used bits and invert to find least significant bit unused
-				const u32 slot = utils::cnttz64(~((cvx32 & 0xffffffff) | (cvx32 >> 32)), true);
+				const u32 slot = static_cast<u32>(utils::cnttz64(~((cvx32 & 0xffffffff) | (cvx32 >> 32)), true));
 
 				// Set lock bits (does nothing if all slots are used)
 				const u64 bit = (1ull << slot) & 0xffffffff;
@@ -259,7 +259,7 @@ public:
 	u32 count() const noexcept
 	{
 		const u64 cvx32 = m_cvx32;
-		return utils::popcnt32(cvx32 | (cvx32 >> 32));
+		return utils::popcnt32(static_cast<u32>(cvx32 | (cvx32 >> 32)));
 	}
 
 	bool wait(shared_lock const& lock, u64 usec_timeout = -1) noexcept

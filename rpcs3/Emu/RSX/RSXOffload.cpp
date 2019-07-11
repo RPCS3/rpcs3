@@ -5,6 +5,7 @@
 #include "RSXOffload.h"
 
 #include <thread>
+#include <atomic>
 
 namespace rsx
 {
@@ -57,6 +58,7 @@ namespace rsx
 							fmt::throw_exception("Unreachable" HERE);
 						}
 
+						std::atomic_thread_fence(std::memory_order_release);
 						++m_processed_count;
 					}
 				}
@@ -123,7 +125,7 @@ namespace rsx
 		}
 
 		while (m_enqueued_count.load() != m_processed_count)
-			_mm_lfence();
+			_mm_pause();
 	}
 
 	void dma_manager::join()

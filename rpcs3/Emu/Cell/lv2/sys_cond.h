@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
 #include "sys_mutex.h"
@@ -13,8 +13,8 @@ struct sys_cond_attribute_t
 
 	union
 	{
-		char name[8];
 		u64 name_u64;
+		char name[sizeof(u64)];
 	};
 };
 
