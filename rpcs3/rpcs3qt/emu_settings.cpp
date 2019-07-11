@@ -166,11 +166,11 @@ emu_settings::Render_Creator::Render_Creator()
 	static std::mutex mtx;
 	static std::condition_variable cond;
 	static bool thread_running = true;
-	static volatile bool device_found = false;
+	static bool device_found = false;
 
 	static QStringList compatible_gpus;
 
-	thread_ctrl::spawn("Vulkan device enumeration", [&]
+	std::thread enum_thread = std::thread([&]
 	{
 		thread_ctrl::set_native_priority(-1);
 
@@ -192,6 +192,7 @@ emu_settings::Render_Creator::Render_Creator()
 				}
 			}
 		}
+
 		std::scoped_lock{mtx}, thread_running = false;
 		cond.notify_all();
 	});
@@ -210,6 +211,7 @@ emu_settings::Render_Creator::Render_Creator()
 			"Selecting ignore starts the emulator without Vulkan support."),
 			QMessageBox::Ignore | QMessageBox::Abort, QMessageBox::Abort);
 
+		enum_thread.detach();
 		if (button != QMessageBox::Ignore)
 			std::exit(1);
 
@@ -219,6 +221,7 @@ emu_settings::Render_Creator::Render_Creator()
 	{
 		supportsVulkan = device_found;
 		vulkanAdapters = std::move(compatible_gpus);
+		enum_thread.join();
 	}
 #endif
 
