@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <deque>
 #include <variant>
@@ -549,7 +549,7 @@ namespace rsx
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
-		u64 vblank_count;
+		atomic_t<u64> vblank_count;
 
 	public:
 		bool invalid_command_interrupt_raised = false;

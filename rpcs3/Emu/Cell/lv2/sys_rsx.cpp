@@ -250,10 +250,6 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 
 	const auto render = rsx::get_current_renderer();
 
-	//hle protection
-	if (render->isHLE)
-		return CELL_OK;
-
 	auto m_sysrsx = fxm::get<SysRsxConfig>();
 
 	if (!m_sysrsx)

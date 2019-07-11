@@ -456,37 +456,59 @@ namespace rsx
 
 		last_flip_time = get_system_time() - 1000000;
 
+		vblank_count = 0;
+
 		thread_ctrl::spawn("VBlank Thread", [this]()
 		{
-			const u64 start_time = get_system_time();
+			// See sys_timer_usleep for details
+#ifdef __linux__
+			constexpr u32 host_min_quantum = 50;
+#else
+			constexpr u32 host_min_quantum = 500;
+#endif
+			u64 start_time = get_system_time();
 
-			vblank_count = 0;
+			const u64 period_time = 1000000 / g_cfg.video.vblank_rate;
+			const u64 wait_sleep = period_time - u64{period_time >= host_min_quantum} * host_min_quantum;
 
 			// TODO: exit condition
 			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
 			{
-				if (get_system_time() - start_time > vblank_count * 1000000 / 60)
+				if (get_system_time() - start_time >= period_time)
 				{
-					vblank_count++;
-					sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
-					if (vblank_handler)
+					do
 					{
-						intr_thread->cmd_list
-						({
-							{ ppu_cmd::set_args, 1 }, u64{1},
-							{ ppu_cmd::lle_call, vblank_handler },
-							{ ppu_cmd::sleep, 0 }
-						});
+						start_time += period_time;
 
-						thread_ctrl::notify(*intr_thread);
+						if (isHLE)
+						{
+							vblank_count++;
+
+							if (vblank_handler)
+							{
+								intr_thread->cmd_list
+								({
+									{ ppu_cmd::set_args, 1 }, u64{1},
+									{ ppu_cmd::lle_call, vblank_handler },
+									{ ppu_cmd::sleep, 0 }
+								});
+
+								thread_ctrl::notify(*intr_thread);
+							}
+						}
+						else
+						{
+							sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
+						}
 					}
+					while (get_system_time() - start_time >= period_time);
 
-					std::this_thread::sleep_for(16ms);
+					thread_ctrl::wait_for(wait_sleep);
 					continue;
 				}
 
 				while (Emu.IsPaused() && !m_rsx_thread_exiting)
-					std::this_thread::sleep_for(16ms);
+					thread_ctrl::wait_for(wait_sleep);
 
 				thread_ctrl::wait_for(100); // Hack
 			}
