@@ -98,11 +98,12 @@ static semaphore<> s_qt_mutex{};
 }
 
 const char* ARG_NO_GUI = "no-gui";
+const char* ARG_HI_DPI = "hidpi";
 
 QCoreApplication* createApplication(int& argc, char* argv[])
 {
 	for (int i = 1; i < argc; ++i)
-		if (!qstrcmp(argv[i], ARG_NO_GUI))
+		if (!strcmp(ARG_NO_GUI, argv[i]))
 			return new rpcs3_app(argc, argv);
 	return new gui_application(argc, argv);
 }
@@ -132,7 +133,8 @@ int main(int argc, char** argv)
 
 	const QCommandLineOption helpOption    = parser.addHelpOption();
 	const QCommandLineOption versionOption = parser.addVersionOption();
-	parser.addOption(QCommandLineOption("no-gui"));
+	parser.addOption(QCommandLineOption(ARG_NO_GUI, "Run RPCS3 without the GUI."));
+	parser.addOption(QCommandLineOption(ARG_HI_DPI, "Enables Qt High Dpi Scaling.", "enabled", "1"));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
@@ -144,11 +146,10 @@ int main(int argc, char** argv)
 
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
-#if defined(_WIN32) || defined(__APPLE__)
-		app->setAttribute(Qt::AA_EnableHighDpiScaling);
-#else
-		setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 0);
-#endif
+		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
+		const bool use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", parser.value(ARG_HI_DPI));
+
+		app->setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 		app->setAttribute(Qt::AA_UseHighDpiPixmaps);
 		app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
 		app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
@@ -180,8 +181,6 @@ int main(int argc, char** argv)
 
 		if (args.length() > 1)
 		{
-			args.removeAll(ARG_NO_GUI);
-
 			argv.emplace_back();
 
 			for (u32 i = 1; i < args.length(); i++)
