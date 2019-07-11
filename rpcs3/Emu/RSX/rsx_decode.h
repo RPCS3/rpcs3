@@ -3768,7 +3768,7 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR>
 			return bf_decoder<16, 16>(value);
 		}
 
-		u8 red8() const
+		u8 blue8() const
 		{
 			return bf_decoder<0, 8>(value);
 		}
@@ -3778,7 +3778,7 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR>
 			return bf_decoder<8, 8>(value);
 		}
 
-		u8 blue8() const
+		u8 red8() const
 		{
 			return bf_decoder<16, 8>(value);
 		}
