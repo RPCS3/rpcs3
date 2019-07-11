@@ -95,7 +95,7 @@ int main(int argc, char** argv)
 	logs::set_init();
 
 #if defined(_WIN32) || defined(__APPLE__)
-	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+	QCoreApplication::setAttribute(Qt::AA_DisableHighDpiScaling);
 #else
 	setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 0);
 #endif
