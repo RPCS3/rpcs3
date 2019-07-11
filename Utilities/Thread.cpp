@@ -1529,7 +1529,7 @@ static bool is_leaf_function(u64 rip)
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 {
 	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
-	const u64 exec64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr;
+	const u64 exec64 = (pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr) / 2;
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
@@ -1664,7 +1664,7 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 #endif
 
 	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
-	const u64 exec64 = (u64)info->si_addr - (u64)vm::g_exec_addr;
+	const u64 exec64 = ((u64)info->si_addr - (u64)vm::g_exec_addr) / 2;
 	const auto cause = is_writing ? "writing" : "reading";
 
 	if (addr64 < 0x100000000ull)
