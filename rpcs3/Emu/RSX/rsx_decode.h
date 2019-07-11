@@ -3791,8 +3791,8 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR>
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Blend color: 8b RGBA = " +
-			std::to_string(decoded_values.red8()) + ", " + std::to_string(decoded_values.green8()) + ", " + std::to_string(decoded_values.blue8()) + ", " + std::to_string(decoded_values.alpha8()) +
+		return "Blend color: 8b BGRA = " +
+			std::to_string(decoded_values.blue8()) + ", " + std::to_string(decoded_values.green8()) + ", " + std::to_string(decoded_values.red8()) + ", " + std::to_string(decoded_values.alpha8()) +
 			" 16b RG = " + std::to_string(decoded_values.red16()) + ", " + std::to_string(decoded_values.green16());
 	}
 };
