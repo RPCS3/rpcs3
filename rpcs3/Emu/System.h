@@ -375,7 +375,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, INT32_MAX> llvm_threads{this, "Max LLVM Compile Threads", 0};
 		cfg::_bool thread_scheduler_enabled{this, "Enable thread scheduler", thread_scheduler_enabled_def};
 		cfg::_bool set_daz_and_ftz{this, "Set DAZ and FTZ", false};
-		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::asmjit};
+		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::llvm};
 		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
 		cfg::_bool spu_debug{this, "SPU Debug"};
 		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
