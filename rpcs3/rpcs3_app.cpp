@@ -4,7 +4,7 @@
 
 #include "Emu/RSX/GSRender.h"
 
-// For now, a trivial constructor/destructor.  May add command line usage later.
+// For now, a trivial constructor/destructor. May add command line usage later.
 rpcs3_app::rpcs3_app(int& argc, char** argv) : QCoreApplication(argc, argv)
 {
 }
