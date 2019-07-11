@@ -13,6 +13,9 @@
 #include "gs_frame.h"
 #include "gl_gs_frame.h"
 
+/** RPCS3 GUI Application Class
+ * The main point of this class is to do application initialization, to hold the main and game windows and to initialize callbacks.
+ */
 class gui_application : public QApplication, public main_application
 {
 	Q_OBJECT
