@@ -543,7 +543,7 @@ private:
 			}
 
 #ifndef _WIN32
-			if (get_name().find("VEGA"))
+			if (get_name().find("VEGA") != std::string::npos)
 			{
 				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware for both RADV and AMDVLK. Using float32_t fallback instead.");
 				shader_types_support.allow_float16 = false;
