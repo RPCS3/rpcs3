@@ -205,20 +205,14 @@ namespace vk
 		cs_shuffle_base()
 		{
 			work_kernel =
-			{
 				"		value = data[index];\n"
-				"		data[index] = %f(value);\n"
-			};
+				"		data[index] = %f(value);\n";
 
 			loop_advance =
-			{
-				"		index++;\n"
-			};
+				"		index++;\n";
 
 			suffix =
-			{
-				"}\n"
-			};
+				"}\n";
 		}
 
 		void build(const char* function_name, u32 _kernel_size = 0)
@@ -229,7 +223,6 @@ namespace vk
 			kernel_size = _kernel_size? _kernel_size : optimal_kernel_size;
 
 			m_src =
-			{
 				"#version 430\n"
 				"layout(local_size_x=%ws, local_size_y=1, local_size_z=1) in;\n"
 				"layout(std430, set=0, binding=0) buffer ssbo{ uint data[]; };\n"
@@ -254,8 +247,7 @@ namespace vk
 				"	uint index = gl_GlobalInvocationID.x * KERNEL_SIZE;\n"
 				"	uint value;\n"
 				"	%vars"
-				"\n"
-			};
+				"\n";
 
 			const std::pair<std::string, std::string> syntax_replace[] =
 			{
@@ -413,15 +405,13 @@ namespace vk
 			uniform_inputs = true;
 
 			variables =
-			{
 				"	uint block_length = params[0].x >> 2;\n"
 				"	uint z_offset = params[0].y >> 2;\n"
 				"	uint s_offset = params[0].z >> 2;\n"
 				"	uint depth;\n"
 				"	uint stencil;\n"
 				"	uint stencil_shift;\n"
-				"	uint stencil_offset;\n"
-			};
+				"	uint stencil_offset;\n";
 		}
 
 		void bind_resources() override
@@ -450,7 +440,6 @@ namespace vk
 		cs_gather_d24x8()
 		{
 			work_kernel =
-			{
 				"		if (index >= block_length)\n"
 				"			return;\n"
 				"\n"
@@ -460,8 +449,7 @@ namespace vk
 				"		stencil = data[stencil_offset + s_offset];\n"
 				"		stencil = (stencil >> stencil_shift) & 0xFF;\n"
 				"		value = (depth << 8) | stencil;\n"
-				"		data[index] = value;\n"
-			};
+				"		data[index] = value;\n";
 
 			cs_shuffle_base::build("");
 		}
@@ -472,7 +460,6 @@ namespace vk
 		cs_gather_d32x8()
 		{
 			work_kernel =
-			{
 				"		if (index >= block_length)\n"
 				"			return;\n"
 				"\n"
@@ -482,8 +469,7 @@ namespace vk
 				"		stencil = data[stencil_offset + s_offset];\n"
 				"		stencil = (stencil >> stencil_shift) & 0xFF;\n"
 				"		value = (depth << 8) | stencil;\n"
-				"		data[index] = value;\n"
-			};
+				"		data[index] = value;\n";
 
 			cs_shuffle_base::build("");
 		}
@@ -494,7 +480,6 @@ namespace vk
 		cs_scatter_d24x8()
 		{
 			work_kernel =
-			{
 				"		if (index >= block_length)\n"
 				"			return;\n"
 				"\n"
@@ -503,8 +488,7 @@ namespace vk
 				"		stencil_offset = (index / 4);\n"
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = (value & 0xFF) << stencil_shift;\n"
-				"		data[stencil_offset + s_offset] |= stencil;\n"
-			};
+				"		data[stencil_offset + s_offset] |= stencil;\n";
 
 			cs_shuffle_base::build("");
 		}
@@ -515,7 +499,6 @@ namespace vk
 		cs_scatter_d32x8()
 		{
 			work_kernel =
-			{
 				"		if (index >= block_length)\n"
 				"			return;\n"
 				"\n"
@@ -524,8 +507,7 @@ namespace vk
 				"		stencil_offset = (index / 4);\n"
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = (value & 0xFF) << stencil_shift;\n"
-				"		data[stencil_offset + s_offset] |= stencil;\n"
-			};
+				"		data[stencil_offset + s_offset] |= stencil;\n";
 
 			cs_shuffle_base::build("");
 		}

@@ -685,7 +685,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 	ReactivateButtons();
 }
 
-void pad_settings_dialog::mouseMoveEvent(QMouseEvent*/* event*/)
+void pad_settings_dialog::mouseMoveEvent(QMouseEvent* /*event*/)
 {
 	if (m_handler->m_type != pad_handler::keyboard)
 	{

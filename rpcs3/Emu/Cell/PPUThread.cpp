@@ -448,13 +448,23 @@ std::string ppu_thread::dump() const
 	fmt::append(ret, "Joiner: %s\n", join_status(joiner.load()));
 	fmt::append(ret, "Commands: %u\n", cmd_queue.size());
 
-	const auto _func = last_function;
+	const char* _func = current_function;
 
 	if (_func)
 	{
-		ret += "Last function: ";
+		ret += "Current function: ";
 		ret += _func;
 		ret += '\n';
+	}
+	else if (is_paused())
+	{
+		if (const auto last_func = last_function)
+		{
+			_func = last_func;
+			ret += "Last function: ";
+			ret += _func;
+			ret += '\n';
+		}
 	}
 
 	if (const auto _time = start_time)
@@ -814,13 +824,13 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	const auto old_cia = cia;
 	const auto old_rtoc = gpr[2];
 	const auto old_lr = lr;
-	const auto old_func = last_function;
+	const auto old_func = current_function;
 	const auto old_fmt = g_tls_log_prefix;
 
 	cia = addr;
 	gpr[2] = rtoc;
 	lr = ppu_function_manager::addr + 8; // HLE stop address
-	last_function = nullptr;
+	current_function = nullptr;
 
 	g_tls_log_prefix = []
 	{
@@ -832,19 +842,19 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	{
 		if (std::uncaught_exceptions())
 		{
-			if (last_function)
+			if (current_function)
 			{
 				if (start_time)
 				{
-					LOG_WARNING(PPU, "'%s' aborted (%fs)", last_function, (get_system_time() - start_time) / 1000000.);
+					LOG_WARNING(PPU, "'%s' aborted (%fs)", current_function, (get_system_time() - start_time) / 1000000.);
 				}
 				else
 				{
-					LOG_WARNING(PPU, "'%s' aborted", last_function);
+					LOG_WARNING(PPU, "'%s' aborted", current_function);
 				}
 			}
 
-			last_function = old_func;
+			current_function = old_func;
 		}
 		else
 		{
@@ -852,7 +862,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 			cia = old_cia;
 			gpr[2] = old_rtoc;
 			lr = old_lr;
-			last_function = old_func;
+			current_function = old_func;
 			g_tls_log_prefix = old_fmt;
 		}
 	});

@@ -62,13 +62,13 @@ public:
 	}
 
 	// Test stopped state
-	bool is_stopped()
+	bool is_stopped() const
 	{
 		return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop));
 	}
 
 	// Test paused state
-	bool is_paused()
+	bool is_paused() const
 	{
 		return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
 	}

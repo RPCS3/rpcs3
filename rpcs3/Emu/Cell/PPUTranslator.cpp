@@ -1112,7 +1112,7 @@ void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 	const auto mh = noncast<u32[4]>((a >> 16) * (b >> 16));
 	const auto s = eval(ml + mh);
 	const auto s2 = eval(s + c);
-	const auto x = eval(s < ml | s2 < s);
+	const auto x = eval((s < ml) | (s2 < s));
 	set_vr(op.vd, select(x, splat<u32[4]>(-1), s2));
 	SetSat(IsNotZero(x.value));
 }
@@ -1848,7 +1848,7 @@ void PPUTranslator::CRANDC(ppu_opcode_t op)
 
 void PPUTranslator::ISYNC(ppu_opcode_t op)
 {
-	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
+	m_ir->CreateFence(AtomicOrdering::Acquire);
 }
 
 void PPUTranslator::CRXOR(ppu_opcode_t op)
@@ -3105,7 +3105,9 @@ void PPUTranslator::LFSUX(ppu_opcode_t op)
 
 void PPUTranslator::SYNC(ppu_opcode_t op)
 {
-	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
+	// sync: Full seq cst barrier
+	// lwsync: Release barrier
+	m_ir->CreateFence(op.l10 ? AtomicOrdering::Release : AtomicOrdering::SequentiallyConsistent);
 }
 
 void PPUTranslator::LFDX(ppu_opcode_t op)

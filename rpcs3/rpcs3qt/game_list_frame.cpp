@@ -1265,7 +1265,7 @@ void game_list_frame::BatchRemovePPUCaches()
 	{
 		serials.emplace(game->info.serial);
 	}
-	const u32 total = serials.size();
+	const u32 total = ::size32(serials);
 
 	if (total == 0)
 	{
@@ -1307,7 +1307,7 @@ void game_list_frame::BatchRemoveSPUCaches()
 	{
 		serials.emplace(game->info.serial);
 	}
-	const u32 total = serials.size();
+	const u32 total = ::size32(serials);
 
 	if (total == 0)
 	{
@@ -1352,7 +1352,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 			serials.emplace(game->info.serial);
 		}
 	}
-	const u32 total = serials.size();
+	const u32 total = ::size32(serials);
 
 	if (total == 0)
 	{
@@ -1398,7 +1398,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 			serials.emplace(game->info.serial);
 		}
 	}
-	const u32 total = serials.size();
+	const u32 total = ::size32(serials);
 
 	if (total == 0)
 	{
@@ -1441,7 +1441,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 	{
 		serials.emplace(game->info.serial);
 	}
-	const u32 total = serials.size();
+	const u32 total = ::size32(serials);
 
 	if (total == 0)
 	{

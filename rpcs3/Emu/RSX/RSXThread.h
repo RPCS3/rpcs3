@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <deque>
 #include <variant>
@@ -489,7 +489,6 @@ namespace rsx
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
 
-		u32 ioAddress, ioSize;
 		u32 flip_status;
 		int debug_level;
 
@@ -502,7 +501,7 @@ namespace rsx
 		u32 ctxt_addr;
 		u32 label_addr;
 
-		u32 local_mem_addr, main_mem_addr, main_mem_size{0};
+		u32 main_mem_size{0};
 
 		bool m_rtts_dirty;
 		bool m_textures_dirty[16];
@@ -550,7 +549,7 @@ namespace rsx
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
-		u64 vblank_count;
+		atomic_t<u64> vblank_count;
 
 	public:
 		bool invalid_command_interrupt_raised = false;
@@ -750,16 +749,13 @@ namespace rsx
 
 	public:
 		void reset();
-		void init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress);
+		void init(u32 ctrlAddress);
 
 		tiled_region get_tiled_address(u32 offset, u32 location);
 		GcmTileInfo *find_tile(u32 offset, u32 location);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		void request_emu_flip(u32 buffer);
-
-		u32 ReadIO32(u32 addr);
-		void WriteIO32(u32 addr, u32 value);
 
 		void pause();
 		void unpause();

@@ -8,9 +8,10 @@
 #include "Emu/Cell/Common.h"
 
 #include <cmath>
+#include <atomic>
 
 #if !defined(_MSC_VER) && !defined(__SSSE3__)
-#define _mm_shuffle_epi8
+#define _mm_shuffle_epi8(opa, opb) opb
 #endif
 
 inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }
@@ -1486,7 +1487,7 @@ bool ppu_interpreter_precise::VPKSHUS(ppu_thread& ppu, ppu_opcode_t op)
 	// Detect saturation
 	{
 		const u64 mask = 0xFF00FF00FF00FF00ULL;
-		const auto all_bits = v128::fromV(_mm_or_si128(a.vi, b.vi));
+		const auto all_bits = a | b;
 		if ((all_bits._u64[0] | all_bits._u64[1]) & mask)
 		{
 			ppu.sat = true;
@@ -2966,7 +2967,7 @@ bool ppu_interpreter::CRANDC(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::ISYNC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_acquire);
 	return true;
 }
 
@@ -4046,7 +4047,7 @@ bool ppu_interpreter::LFSUX(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::SYNC(ppu_thread& ppu, ppu_opcode_t op)
 {
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return true;
 }
 
@@ -4280,7 +4281,7 @@ bool ppu_interpreter::SRADI(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::EIEIO(ppu_thread& ppu, ppu_opcode_t op)
 {
-	_mm_mfence();
+	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return true;
 }
 

@@ -109,6 +109,8 @@ public:
 		AudioBufferDuration,
 		EnableTimeStretching,
 		TimeStretchingThreshold,
+		MicrophoneType,
+		MicrophoneDevices,
 
 		// Input / Output
 		PadHandler,
@@ -180,6 +182,17 @@ public:
 		Render_Creator();
 	};
 
+	struct Microphone_Creator
+	{
+		QStringList microphones_list;
+		QString mic_none = tr("None");
+		std::array<std::string, 4> sel_list;
+		std::string SetDevice(u32 num, QString& text);
+		void ParseDevices(std::string list);
+		void RefreshList();
+		Microphone_Creator();
+	};
+
 	std::set<SettingsType> m_broken_types; // list of broken settings
 
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
@@ -223,6 +236,9 @@ public:
 
 	/** Gets all the renderer info for gpu settings.*/
 	Render_Creator m_render_creator;
+
+	/** Gets a list of all the microphones available.*/
+	Microphone_Creator m_microphone_creator;
 
 	/** Loads the settings from path.*/
 	void LoadSettings(const std::string& title_id = "");
@@ -320,6 +336,8 @@ private:
 		{ AudioBufferDuration,     { "Audio", "Desired Audio Buffer Duration"}},
 		{ EnableTimeStretching,    { "Audio", "Enable Time Stretching"}},
 		{ TimeStretchingThreshold, { "Audio", "Time Stretching Threshold"}},
+		{ MicrophoneType,          { "Audio", "Microphone Type" }},
+		{ MicrophoneDevices,       { "Audio", "Microphone Devices" }},
 
 		// Input / Output
 		{ PadHandler,      { "Input/Output", "Pad"}},

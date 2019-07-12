@@ -442,7 +442,7 @@ s32 cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	for (size_t i = 0; i < 360; i++)
+	for (u32 i = 0; i < 360; i++)
 	{
 		hues[i] = true;
 	}
@@ -853,7 +853,7 @@ s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribu
 	const auto vc = *vc_attribute;
 
 	if (!vc_attribute || vc.version == 0 || vc.output_format == 0 ||
-		vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME && !vc.buffer_memory)
+		(vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME && !vc.buffer_memory))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -960,7 +960,7 @@ s32 cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	for (size_t i = 0; i < CELL_GEM_MAX_NUM; i++)
+	for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 	{
 		if (req_hues[i] == CELL_GEM_DONT_CARE_HUE)
 		{

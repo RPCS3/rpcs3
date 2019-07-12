@@ -36,7 +36,7 @@ namespace vm
 	{
 		auto& res = vm::reservation_acquire(addr, size);
 
-		if (UNLIKELY(atomic_storage<u64>::bts(res.raw(), 0)))
+		if (UNLIKELY(res.bts(0)))
 		{
 			reservation_lock_internal(res);
 		}

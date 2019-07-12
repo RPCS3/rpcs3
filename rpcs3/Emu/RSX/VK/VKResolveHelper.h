@@ -81,7 +81,7 @@ namespace vk
 			+ kernel +
 			"}\n";
 
-			LOG_ERROR(RSX, "Compute shader:\n%s", m_src);
+			LOG_NOTICE(RSX, "Compute shader:\n%s", m_src);
 		}
 
 		std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout() override
@@ -206,7 +206,7 @@ namespace vk
 					fs_src += kernel +
 				"}\n";
 
-			LOG_ERROR(RSX, "Resolve shader:\n%s", fs_src);
+			LOG_NOTICE(RSX, "Resolve shader:\n%s", fs_src);
 		}
 
 		std::vector<VkPushConstantRange> get_push_constants() override

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <exception>
 #include <string>
@@ -1443,6 +1443,7 @@ namespace gl
 			rgba8 = GL_RGBA8,
 			r5g6b5 = GL_RGB565,
 			r8 = GL_R8,
+			r16 = GL_R16,
 			r32f = GL_R32F,
 			rg8 = GL_RG8,
 			rg16 = GL_RG16,

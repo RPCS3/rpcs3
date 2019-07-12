@@ -277,7 +277,6 @@ namespace gl
 		depth_convert_pass()
 		{
 			vs_src =
-			{
 				"#version 420\n\n"
 				"uniform vec2 tex_scale;\n"
 				"out vec2 tc0;\n"
@@ -288,11 +287,9 @@ namespace gl
 				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
 				"	gl_Position = vec4(positions[gl_VertexID % 4], 0., 1.);\n"
 				"	tc0 = coords[gl_VertexID % 4] * tex_scale;\n"
-				"}\n"
-			};
+				"}\n";
 
 			fs_src =
-			{
 				"#version 420\n\n"
 				"in vec2 tc0;\n"
 				"layout(binding=31) uniform sampler2D fs0;\n"
@@ -301,8 +298,7 @@ namespace gl
 				"{\n"
 				"	vec4 rgba_in = texture(fs0, tc0);\n"
 				"	gl_FragDepth = rgba_in.w * 0.99609 + rgba_in.x * 0.00389 + rgba_in.y * 0.00002;\n"
-				"}\n"
-			};
+				"}\n";
 		}
 
 		void run(const areai& src_area, const areai& dst_area, gl::texture* source, gl::texture* target)
@@ -325,18 +321,15 @@ namespace gl
 		rgba8_unorm_rg16_sfloat_convert_pass()
 		{
 			vs_src =
-			{
 				"#version 420\n\n"
 				"\n"
 				"void main()\n"
 				"{\n"
 				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
 				"	gl_Position = vec4(positions[gl_VertexID % 4], 0., 1.);\n"
-				"}\n"
-			};
+				"}\n";
 
 			fs_src =
-			{
 				"#version 420\n\n"
 				"layout(binding=31) uniform sampler2D fs0;\n"
 				"layout(location=0) out vec4 ocol;\n"
@@ -345,8 +338,7 @@ namespace gl
 				"{\n"
 				"	uint value = packUnorm4x8(texelFetch(fs0, ivec2(gl_FragCoord.xy), 0).zyxw);\n"
 				"	ocol.xy = unpackHalf2x16(value);\n"
-				"}\n"
-			};
+				"}\n";
 		}
 
 		void run(u16 w, u16 h, GLuint target, GLuint source)
@@ -371,7 +363,6 @@ namespace gl
 		ui_overlay_renderer()
 		{
 			vs_src =
-			{
 				"#version 420\n\n"
 				"layout(location=0) in vec4 in_pos;\n"
 				"layout(location=0) out vec2 tc0;\n"
@@ -396,11 +387,9 @@ namespace gl
 				"	window_coord.y = (1. - window_coord.y); // Invert y axis\n"
 				"	vec4 pos = vec4(window_coord, 0., 1.);\n"
 				"	gl_Position = (pos + pos) - 1.;\n"
-				"}\n"
-			};
+				"}\n";
 
 			fs_src =
-			{
 				"#version 420\n\n"
 				"layout(binding=31) uniform sampler2D fs0;\n"
 				"layout(location=0) in vec2 tc0;\n"
@@ -482,8 +471,7 @@ namespace gl
 				"		ocol = sample_image(fs0, tc0) * diff_color;\n"
 				"	else\n"
 				"		ocol = diff_color;\n"
-				"}\n"
-			};
+				"}\n";
 
 			// Smooth filtering required for inputs
 			input_filter = GL_LINEAR;
@@ -682,7 +670,6 @@ namespace gl
 		video_out_calibration_pass()
 		{
 			vs_src =
-			{
 				"#version 420\n\n"
 				"layout(location=0) out vec2 tc0;\n"
 				"uniform float x_scale;\n"
@@ -697,11 +684,9 @@ namespace gl
 				"	tc0 = coords[gl_VertexID % 4];\n"
 				"	vec2 pos = positions[gl_VertexID % 4] * vec2(x_scale, y_scale) + (2. * vec2(x_offset, y_offset));\n"
 				"	gl_Position = vec4(pos, 0., 1.);\n"
-				"}\n"
-			};
+				"}\n";
 
 			fs_src =
-			{
 				"#version 420\n\n"
 				"layout(binding=31) uniform sampler2D fs0;\n"
 				"layout(location=0) in vec2 tc0;\n"
@@ -718,8 +703,7 @@ namespace gl
 				"		ocol = ((color * 220.) + 16.) / 255.;\n"
 				"	else\n"
 				"		ocol = color;\n"
-				"}\n"
-			};
+				"}\n";
 
 			input_filter = GL_LINEAR;
 		}

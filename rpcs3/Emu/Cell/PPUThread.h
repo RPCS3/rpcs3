@@ -180,7 +180,8 @@ public:
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 
 	u64 start_time{0}; // Sleep start timepoint
-	const char* last_function{}; // Last function name for diagnosis, optimized for speed.
+	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
+	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 
 	lf_value<std::string> ppu_name; // Thread name
 

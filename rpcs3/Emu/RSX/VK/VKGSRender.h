@@ -72,7 +72,7 @@ struct command_buffer_chunk: public vk::command_buffer
 	VkDevice m_device = VK_NULL_HANDLE;
 
 	std::atomic_bool pending = { false };
-	std::atomic<u64> last_sync = { 0 };
+	u64 eid_tag = 0;
 	shared_mutex guard_mutex;
 
 	command_buffer_chunk() = default;
@@ -96,7 +96,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	void tag()
 	{
-		last_sync = get_system_time();
+		eid_tag = vk::get_event_id();
 	}
 
 	void reset()
@@ -123,8 +123,11 @@ struct command_buffer_chunk: public vk::command_buffer
 
 			if (pending)
 			{
-				pending = false;
 				vk::reset_fence(&submit_fence);
+				vk::on_event_completed(eid_tag);
+
+				pending = false;
+				eid_tag = 0;
 			}
 		}
 
@@ -145,7 +148,10 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (pending)
 		{
 			vk::reset_fence(&submit_fence);
+			vk::on_event_completed(eid_tag);
+
 			pending = false;
+			eid_tag = 0;
 		}
 
 		return ret;
@@ -275,7 +281,6 @@ struct flush_request_task
 	{
 		while (num_waiters.load() != 0)
 		{
-			_mm_lfence();
 			_mm_pause();
 		}
 	}
@@ -284,69 +289,8 @@ struct flush_request_task
 	{
 		while (pending_state.load())
 		{
-			_mm_lfence();
 			std::this_thread::yield();
 		}
-	}
-};
-
-// TODO: This class will be expanded into a global allocator/collector eventually
-class resource_manager
-{
-private:
-	std::unordered_multimap<u64, std::unique_ptr<vk::sampler>> m_sampler_pool;
-
-	bool value_compare(const f32& a, const f32& b)
-	{
-		return fabsf(a - b) < 0.0000001f;
-	}
-
-public:
-
-	resource_manager() = default;
-	~resource_manager() = default;
-
-	void destroy()
-	{
-		m_sampler_pool.clear();
-	}
-
-	vk::sampler* find_sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
-		VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
-		VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
-		VkBool32 depth_compare = VK_FALSE, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
-	{
-		u64 key = u16(clamp_u) | u64(clamp_v) << 3 | u64(clamp_w) << 6;
-		key |= u64(unnormalized_coordinates) << 9; // 1 bit
-		key |= u64(min_filter) << 10 | u64(mag_filter) << 11; // 1 bit each
-		key |= u64(mipmap_mode) << 12; // 1 bit
-		key |= u64(border_color) << 13; // 3 bits
-		key |= u64(depth_compare) << 16; // 1 bit
-		key |= u64(depth_compare_mode) << 17; // 3 bits
-
-		const auto found = m_sampler_pool.equal_range(key);
-		for (auto It = found.first; It != found.second; ++It)
-		{
-			const auto& info = It->second->info;
-			if (!value_compare(info.mipLodBias, mipLodBias) ||
-				!value_compare(info.maxAnisotropy, max_anisotropy) ||
-				!value_compare(info.minLod, min_lod) ||
-				!value_compare(info.maxLod, max_lod))
-			{
-				continue;
-			}
-
-			return It->second.get();
-		}
-
-		auto result = std::make_unique<vk::sampler>(
-			dev, clamp_u, clamp_v, clamp_w, unnormalized_coordinates,
-			mipLodBias, max_anisotropy, min_lod, max_lod,
-			min_filter, mag_filter, mipmap_mode, border_color,
-			depth_compare, depth_compare_mode);
-
-		auto It = m_sampler_pool.emplace(key, std::move(result));
-		return It->second.get();
 	}
 };
 
@@ -380,8 +324,6 @@ private:
 	std::unique_ptr<vk::buffer_view> m_persistent_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_volatile_attribute_storage;
 	std::unique_ptr<vk::buffer_view> m_vertex_layout_storage;
-
-	resource_manager m_resource_manager;
 
 public:
 	//vk::fbo draw_fbo;
@@ -461,8 +403,6 @@ private:
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
 
-	std::atomic<u64> m_last_sync_event = { 0 };
-
 	bool m_render_pass_open = false;
 	u64  m_current_renderpass_key = 0;
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
@@ -530,6 +470,9 @@ public:
 	bool check_occlusion_query_status(rsx::reports::occlusion_query_info* query) override;
 	void get_occlusion_query_result(rsx::reports::occlusion_query_info* query) override;
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
+
+	// External callback in case we need to suddenly submit a commandlist unexpectedly, e.g in a violation handler
+	void emergency_query_cleanup(vk::command_buffer* commands);
 
 protected:
 	void begin() override;

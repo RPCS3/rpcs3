@@ -1347,7 +1347,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				elf_file.open(decrypted_path);
 			}
 			// Decrypt SELF
-			else if (elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data()))
+			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data())))
 			{
 				if (true)
 				{
@@ -1744,9 +1744,9 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 		{
 			auto& ppu = static_cast<ppu_thread&>(*thread);
 
-			if (ppu.last_function)
+			if (ppu.current_function)
 			{
-				func = ppu.last_function;
+				func = ppu.current_function;
 			}
 		}
 	}

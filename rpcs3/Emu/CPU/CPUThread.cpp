@@ -153,9 +153,9 @@ void cpu_thread::operator()()
 			}
 			catch (const std::exception& e)
 			{
+				Emu.Pause();
 				LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
 				LOG_NOTICE(GENERAL, "\n%s", dump());
-				Emu.Pause();
 				break;
 			}
 

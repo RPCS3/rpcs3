@@ -476,6 +476,9 @@ namespace vk
 					stretch_image_typeless_safe(src, dst, typeless_stencil->value, src_rect, dst_rect, depth_stencil, VK_IMAGE_ASPECT_STENCIL_BIT);
 					break;
 				}
+				default:
+					fmt::throw_exception("Unreachable" HERE);
+					break;
 				}
 			}
 		}

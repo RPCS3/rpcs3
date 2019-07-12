@@ -46,7 +46,6 @@ struct work_item
 	{
 		while (!processed)
 		{
-			_mm_lfence();
 			std::this_thread::yield();
 		}
 

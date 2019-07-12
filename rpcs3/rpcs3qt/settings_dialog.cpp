@@ -249,7 +249,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				ppuBG->button(i)->setChecked(true);
 			}
 
-			connect(ppuBG->button(i), &QAbstractButton::pressed, [=]()
+			connect(ppuBG->button(i), &QAbstractButton::clicked, [=]()
 			{
 				xemu_settings->SetSetting(emu_settings::PPUDecoder, sstr(ppu_list[i]));
 			});
@@ -279,7 +279,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				spuBG->button(i)->setChecked(true);
 			}
 
-			connect(spuBG->button(i), &QAbstractButton::pressed, [=]()
+			connect(spuBG->button(i), &QAbstractButton::clicked, [=]()
 			{
 				xemu_settings->SetSetting(emu_settings::SPUDecoder, sstr(spu_list[i]));
 			});
@@ -329,7 +329,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				libModeBG->button(i)->setChecked(true);
 			}
 
-			connect(libModeBG->button(i), &QAbstractButton::pressed, [=]()
+			connect(libModeBG->button(i), &QAbstractButton::clicked, [=]()
 			{
 				xemu_settings->SetSetting(emu_settings::LibLoadOptions, sstr(libmode_list[i]));
 			});
@@ -774,6 +774,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->timeStretchingThresholdLabel->setEnabled(enabled);
 		ui->timeStretchingThreshold->setEnabled(enabled);
 	};
+
 	auto EnableBufferingOptions = [this, EnableTimeStretchingOptions](bool enabled)
 	{
 		ui->audioBufferDuration->setEnabled(enabled);
@@ -781,11 +782,90 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->enableTimeStretching->setEnabled(enabled);
 		EnableTimeStretchingOptions(enabled && ui->enableTimeStretching->isChecked());
 	};
+
 	auto EnableBuffering = [this, EnableBufferingOptions](const QString& text)
 	{
 		const bool enabled = text == "XAudio2" || text == "OpenAL";
 		ui->enableBuffering->setEnabled(enabled);
 		EnableBufferingOptions(enabled && ui->enableBuffering->isChecked());
+	};
+
+	auto ChangeMicrophoneType = [=](QString text)
+	{
+		std::string s_standard, s_singstar, s_realsingstar, s_rocksmith;
+
+		auto enableMicsCombo = [=](u32 max)
+		{
+			ui->microphone1Box->setEnabled(true);
+
+			if (max == 1 || ui->microphone1Box->currentText() == xemu_settings->m_microphone_creator.mic_none)
+				return;
+
+			ui->microphone2Box->setEnabled(true);
+
+			if (max > 2 && ui->microphone2Box->currentText() != xemu_settings->m_microphone_creator.mic_none)
+			{
+				ui->microphone3Box->setEnabled(true);
+				if (ui->microphone3Box->currentText() != xemu_settings->m_microphone_creator.mic_none)
+				{
+					ui->microphone4Box->setEnabled(true);
+				}
+			}
+		};
+
+		ui->microphone1Box->setEnabled(false);
+		ui->microphone2Box->setEnabled(false);
+		ui->microphone3Box->setEnabled(false);
+		ui->microphone4Box->setEnabled(false);
+
+		fmt_class_string<microphone_handler>::format(s_standard, static_cast<u64>(microphone_handler::standard));
+		fmt_class_string<microphone_handler>::format(s_singstar, static_cast<u64>(microphone_handler::singstar));
+		fmt_class_string<microphone_handler>::format(s_realsingstar, static_cast<u64>(microphone_handler::real_singstar));
+		fmt_class_string<microphone_handler>::format(s_rocksmith, static_cast<u64>(microphone_handler::rocksmith));
+
+		if (text == s_standard.c_str())
+		{
+			enableMicsCombo(4);
+			return;
+		}
+		if (text == s_singstar.c_str())
+		{
+			enableMicsCombo(2);
+			return;
+		}
+		if (text == s_realsingstar.c_str() || text == s_rocksmith.c_str())
+		{
+			enableMicsCombo(1);
+			return;
+		}
+	};
+
+	auto PropagateUsedDevices = [=]()
+	{
+		for (u32 index = 0; index < 4; index++)
+		{
+			const QString cur_item = mics_combo[index]->currentText();
+			QStringList cur_list = xemu_settings->m_microphone_creator.microphones_list;
+			for (u32 subindex = 0; subindex < 4; subindex++)
+			{
+				if (subindex != index && mics_combo[subindex]->currentText() != xemu_settings->m_microphone_creator.mic_none)
+					cur_list.removeOne(mics_combo[subindex]->currentText());
+			}
+			mics_combo[index]->blockSignals(true);
+			mics_combo[index]->clear();
+			mics_combo[index]->addItems(cur_list);
+			mics_combo[index]->setCurrentText(cur_item);
+			mics_combo[index]->blockSignals(false);
+		}
+		ChangeMicrophoneType(ui->microphoneBox->currentText());
+	};
+	
+	auto ChangeMicrophoneDevice = [=](u32 next_index, QString text)
+	{
+		xemu_settings->SetSetting(emu_settings::MicrophoneDevices, xemu_settings->m_microphone_creator.SetDevice(next_index, text));
+		if (next_index < 4 && text == xemu_settings->m_microphone_creator.mic_none)
+			mics_combo[next_index]->setCurrentText(xemu_settings->m_microphone_creator.mic_none);
+		PropagateUsedDevices();
 	};
 
 	// Comboboxes
@@ -799,6 +879,36 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	// Change displayed backend names
 	ui->audioOutBox->setItemText(ui->renderBox->findData("Null"), tr("Disable Audio Output"));
 	connect(ui->audioOutBox, &QComboBox::currentTextChanged, EnableBuffering);
+
+	// Microphone Comboboxes
+	mics_combo[0] = ui->microphone1Box;
+	mics_combo[1] = ui->microphone2Box;
+	mics_combo[2] = ui->microphone3Box;
+	mics_combo[3] = ui->microphone4Box;
+	connect(mics_combo[0], &QComboBox::currentTextChanged, [=](const QString& text) { ChangeMicrophoneDevice(1, text); });
+	connect(mics_combo[1], &QComboBox::currentTextChanged, [=](const QString& text) { ChangeMicrophoneDevice(2, text); });
+	connect(mics_combo[2], &QComboBox::currentTextChanged, [=](const QString& text) { ChangeMicrophoneDevice(3, text); });
+	connect(mics_combo[3], &QComboBox::currentTextChanged, [=](const QString& text) { ChangeMicrophoneDevice(4, text); });
+	xemu_settings->m_microphone_creator.RefreshList();
+	PropagateUsedDevices(); // Fills comboboxes list
+
+	xemu_settings->m_microphone_creator.ParseDevices(xemu_settings->GetSetting(emu_settings::MicrophoneDevices));
+
+	for (s32 index = 3; index >= 0; index--)
+	{
+		if (xemu_settings->m_microphone_creator.sel_list[index] == "" || mics_combo[index]->findText(qstr(xemu_settings->m_microphone_creator.sel_list[index])) == -1)
+		{
+			mics_combo[index]->setCurrentText(xemu_settings->m_microphone_creator.mic_none);
+			ChangeMicrophoneDevice(index+1, xemu_settings->m_microphone_creator.mic_none); // Ensures the value is set in config
+		}
+		else
+			mics_combo[index]->setCurrentText(qstr(xemu_settings->m_microphone_creator.sel_list[index]));
+	}
+
+	xemu_settings->EnhanceComboBox(ui->microphoneBox, emu_settings::MicrophoneType);
+	SubscribeTooltip(ui->microphoneBox, json_audio["microphoneBox"].toString());
+	connect(ui->microphoneBox, &QComboBox::currentTextChanged, ChangeMicrophoneType);
+	PropagateUsedDevices(); // Enables/Disables comboboxes and checks values from config for sanity
 
 	// Checkboxes
 
@@ -907,7 +1017,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				enterButtonAssignmentBG->button(i)->setChecked(true);
 			}
 
-			connect(enterButtonAssignmentBG->button(i), &QAbstractButton::pressed, [=]()
+			connect(enterButtonAssignmentBG->button(i), &QAbstractButton::clicked, [=]()
 			{
 				xemu_settings->SetSetting(emu_settings::EnterButtonAssignment, sstr(assignable_buttons[i]));
 			});

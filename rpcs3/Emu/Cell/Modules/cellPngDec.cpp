@@ -465,7 +465,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	}
 
 	// We must indicate, that we allocated more memory
-	open_info->initSpaceAllocated += sizeof(PngBuffer);
+	open_info->initSpaceAllocated += u32{sizeof(PngBuffer)};
 
 	if (source->srcSelect == CELL_PNGDEC_BUFFER)
 	{
@@ -724,7 +724,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 
 		stream->cbDispParam->nextOutputImage = disp_param->nextOutputImage;
 
-		streamInfo->decodedStrmSize = stream->buffer->cursor;
+		streamInfo->decodedStrmSize = ::narrow<u32>(stream->buffer->cursor);
 		// push the rest of the buffer we have
 		if (stream->buffer->length > stream->buffer->cursor)
 		{
@@ -738,7 +738,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 				freeMem();
 				return CELL_PNGDEC_ERROR_FATAL;
 			}
-			streamInfo->decodedStrmSize = stream->buffer->length;
+			streamInfo->decodedStrmSize = ::narrow<u32>(stream->buffer->length);
 		}
 
 		// todo: commandPtr
@@ -769,9 +769,9 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 		// todo: commandptr
 		try
 		{
-			for (int j = 0; j < stream->passes; j++)
+			for (u32 j = 0; j < stream->passes; j++)
 			{
-				for (int i = 0; i < stream->out_param.outputHeight; ++i)
+				for (u32 i = 0; i < stream->out_param.outputHeight; ++i)
 				{
 					const u32 line = flip ? stream->out_param.outputHeight - i - 1 : i;
 					png_read_row(stream->png_ptr, &data[line*bytes_per_line], nullptr);

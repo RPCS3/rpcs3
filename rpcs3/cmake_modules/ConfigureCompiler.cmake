@@ -1,97 +1,84 @@
 # Check and configure compiler options for RPCS3
 
-if(CMAKE_COMPILER_IS_GNUCXX)
-	# GCC 8.1 or latter is required
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 8)
-		message(FATAL_ERROR "RPCS3 requires at least gcc-8.")
-	endif()
+if(MSVC)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _ENABLE_EXTENDED_ALIGNED_STORAGE=1")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
 
-	# Set compiler options here
+	#TODO: Some of these could be cleaned up
+	add_compile_options(/wd4805) # Comparing boolean and int
+	add_compile_options(/wd4804) # Using integer operators with booleans
 
-	# Warnings
+	# MSVC 2017 uses iterator as base class internally, causing a lot of warning spam
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING=1")
+
+	# Increase stack limit to 8 MB
+	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:8388608,1048576")
+else()
+	# Some distros have the compilers set to use PIE by default, but RPCS3 doesn't work with PIE, so we need to disable it.
+	CHECK_CXX_COMPILER_FLAG("-no-pie" HAS_NO_PIE)
+	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+
 	add_compile_options(-Wall)
-	add_compile_options(-Wno-attributes -Wno-enum-compare -Wno-invalid-offsetof)
-	add_compile_options(-Wno-unknown-pragmas -Wno-unused-variable -Wno-reorder -Wno-comment)
+	add_compile_options(-fexceptions)
+	add_compile_options(-msse -msse2 -mcx16)
+	add_compile_options(-fno-strict-aliasing)
 
-elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-	# Clang 5.0 or latter is required
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
-		message(FATAL_ERROR "RPCS3 requires at least clang-5.0.")
-	endif()
+	#TODO Clean the code so these are removed
+	add_compile_options(-Wno-unused-variable)
+	add_compile_options(-Wno-reorder)
+	add_compile_options(-Wno-unknown-pragmas)
+	add_compile_options(-Wno-invalid-offsetof)
+	add_compile_options(-Wno-unused-function)
+	add_compile_options(-Wno-attributes)
+	add_compile_options(-Wno-enum-compare)
+	add_compile_options(-Wno-comment)
+	add_compile_options(-Wno-overloaded-virtual)
+	add_compile_options(-Wno-missing-braces)
+	add_compile_options(-Wno-sign-compare)
 
-	# Set compiler options here
-
-	add_compile_options(-ftemplate-depth=1024)
-	add_compile_options(-Wunused-value -Wunused-comparison)
-	if(APPLE)
-		add_compile_options(-stdlib=libc++)
-	endif()
-endif()
-
-if(NOT MSVC)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-invalid-pch -fexceptions")
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument")
+		add_compile_options(-Wno-sometimes-uninitialized)
+		add_compile_options(-Wno-unused-lambda-capture)
+		add_compile_options(-Wno-unused-private-field)
+		add_compile_options(-Wno-self-assign)
+		add_compile_options(-Wno-pessimizing-move)
+		add_compile_options(-Wno-delete-non-virtual-dtor)
+		add_compile_options(-Wno-unused-command-line-argument)
+	elseif(CMAKE_COMPILER_IS_GNUCXX)
+		add_compile_options(-Wno-maybe-uninitialized)
+		add_compile_options(-Wno-strict-aliasing)
+		add_compile_options(-Wno-unused-but-set-variable)
+		add_compile_options(-Wno-class-memaccess)
 	endif()
 
-	# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
-	if(NOT APPLE)
+	if(USE_NATIVE_INSTRUCTIONS AND COMPILER_SUPPORTS_MARCH_NATIVE)
+		add_compile_options(-march=native)
+	endif()
+
+	if(NOT APPLE AND NOT WIN32)
+		# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--exclude-libs,ALL")
-	endif()
 
-	if(WIN32)
+		if(HAS_NO_PIE)
+			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
+		endif()
+	elseif(APPLE)
+		add_compile_options(-stdlib=libc++)
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no_pie")
+	elseif(WIN32)
 		set(CMAKE_RC_COMPILER_INIT windres)
 		enable_language(RC)
 		set(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> <FLAGS> -O coff <DEFINES> -i <SOURCE> -o <OBJECT>")
+
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS=1")
 
 		# Workaround for mingw64 (MSYS2)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--allow-multiple-definition")
 
 		# Increase stack limit to 8 MB
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wl,--stack -Wl,8388608")
-
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_FORMAT_MACROS=1")
-	endif()
-
-	add_compile_options(-msse -msse2 -mcx16)
-
-	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-		# This fixes 'some' of the st11range issues. See issue #2516
-		if(APPLE)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-image_base,0x10000 -Wl,-pagezero_size,0x10000")
-		else()
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -image-base=0x10000")
-		endif()
-	endif()
-
-	# Some distros have the compilers set to use PIE by default, but RPCS3 doesn't work with PIE, so we need to disable it.
-	if(APPLE)
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no_pie")
-	else()
-		CHECK_CXX_COMPILER_FLAG("-no-pie" HAS_NO_PIE)
-		CHECK_CXX_COMPILER_FLAG("-nopie" HAS_NOPIE)
-
-		if(HAS_NO_PIE)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
-		elseif(HAS_NOPIE)
-			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -nopie")
-		endif()
-	endif()
-else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:throwingNew /D _CRT_SECURE_NO_DEPRECATE=1 /D _CRT_NON_CONFORMING_SWPRINTFS=1 /D _SCL_SECURE_NO_WARNINGS=1")
-
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _ENABLE_EXTENDED_ALIGNED_STORAGE=1")
-
-	# Increase stack limit to 8 MB
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:8388608,1048576")
-
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:libc.lib /NODEFAULTLIB:libcmt.lib /NODEFAULTLIB:libcd.lib /NODEFAULTLIB:libcmtd.lib /NODEFAULTLIB:msvcrtd.lib")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /DYNAMICBASE:NO /BASE:0x10000 /FIXED")
-endif()
-
-if(USE_NATIVE_INSTRUCTIONS)
-	CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-	if(COMPILER_SUPPORTS_MARCH_NATIVE)
-		add_compile_options(-march=native)
 	endif()
 endif()

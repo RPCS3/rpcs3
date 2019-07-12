@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "Emu/Memory/vm_reservation.h"
@@ -10,6 +10,7 @@
 #include "Capture/rsx_capture.h"
 
 #include <thread>
+#include <atomic>
 
 template <>
 void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
@@ -66,13 +67,13 @@ namespace rsx
 
 			// Get raw BE value
 			arg = be_t<u32>{arg}.raw();
-			const auto& sema = vm::_ref<nse_t<u32>>(addr);
+			const auto& sema = vm::_ref<atomic_t<nse_t<u32>>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema.load() == arg || addr == rsx->ctxt_addr + 0x30) return;
 
 			u64 start = get_system_time();
-			while (sema != arg)
+			while (sema.load() != arg)
 			{
 				if (Emu.IsStopped())
 					return;
@@ -107,7 +108,7 @@ namespace rsx
 			rsx->performance_counters.idle_time += (get_system_time() - start);
 		}
 
-		void semaphore_release(thread* rsx, u32 _reg, u32 arg)
+		void semaphore_release(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync();
 			rsx->sync_point_request = true;
@@ -115,7 +116,7 @@ namespace rsx
 
 			if (LIKELY(g_use_rtm))
 			{
-				vm::write32(addr, arg);
+				vm::_ref<atomic_be_t<u32>>(addr) = arg;
 			}
 			else
 			{
@@ -124,10 +125,7 @@ namespace rsx
 				res &= -128;
 			}
 
-			if (addr >> 28 != 0x4)
-			{
-				vm::reservation_notifier(addr, 4).notify_all();
-			}
+			vm::reservation_notifier(addr, 4).notify_all();
 		}
 	}
 
@@ -192,7 +190,7 @@ namespace rsx
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
-			const u32 offset = method_registers.semaphore_offset_4097() & -16u;
+			const u32 offset = method_registers.semaphore_offset_4097() & -16;
 			if (offset > 63 * 4 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
 			{
 				//
@@ -207,7 +205,7 @@ namespace rsx
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Full pipeline barrier
-			const u32 offset = method_registers.semaphore_offset_4097() & -16u;
+			const u32 offset = method_registers.semaphore_offset_4097() & -16;
 			if (offset > 63 * 4 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
 			{
 				//
@@ -244,6 +242,8 @@ namespace rsx
 			case rsx::vertex_base_type::ub256:
 				// Get BE data
 				arg = be_t<u32>{arg}.raw();
+				break;
+			default:
 				break;
 			}
 
@@ -1128,6 +1128,7 @@ namespace rsx
 					}
 
 					pixels_src = temp3.get();
+					in_pitch = out_pitch;
 				}
 
 				// It looks like rsx may ignore the requested swizzle size and just always
@@ -1146,10 +1147,8 @@ namespace rsx
 				u32 sw_width = next_pow2(out_w);
 				u32 sw_height = next_pow2(out_h);
 
-				temp3.reset(new u8[out_bpp * sw_width * sw_height]);
-
 				u8* linear_pixels = pixels_src;
-				u8* swizzled_pixels = temp3.get();
+				u8* swizzled_pixels = pixels_dst;
 
 				// Check and pad texture out if we are given non power of 2 output
 				if (sw_width != out_w || sw_height != out_h)
@@ -1184,8 +1183,6 @@ namespace rsx
 					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
 					break;
 				}
-
-				std::memcpy(pixels_dst, swizzled_pixels, out_bpp * sw_width * sw_height);
 			}
 		}
 	}
@@ -1220,8 +1217,8 @@ namespace rsx
 			const auto read_address = get_address(src_offset, src_dma);
 			rsx->read_barrier(read_address, in_pitch * (line_count - 1) + line_length);
 
-			u8 *dst = (u8*)vm::base(get_address(dst_offset, dst_dma));
-			const u8 *src = (u8*)vm::base(read_address);
+			u8 *dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
+			const u8 *src = vm::_ptr<u8>(read_address);
 
 			if (in_pitch == out_pitch && out_pitch == line_length)
 			{
@@ -1301,16 +1298,16 @@ namespace rsx
 	void rsx_state::init()
 	{
 		// Special values set at initialization, these are not set by a context reset
-		registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | CELL_GCM_LOCATION_LOCAL + 1;
+		registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | (CELL_GCM_LOCATION_LOCAL + 1);
 
 		for (u32 i = 0; i < 16; i++)
 		{
-			registers[NV4097_SET_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_R5G6B5 | CELL_GCM_TEXTURE_SZ | CELL_GCM_TEXTURE_NR) << 8) | (2 << 4 /* 2D */) | CELL_GCM_LOCATION_LOCAL + 1;
+			registers[NV4097_SET_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_R5G6B5 | CELL_GCM_TEXTURE_SZ | CELL_GCM_TEXTURE_NR) << 8) | (2 << 4 /* 2D */) | (CELL_GCM_LOCATION_LOCAL + 1);
 		}
 
 		for (u32 i = 0; i < 4; i++)
 		{
-			registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_X32_FLOAT | CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_NR) << 8) | (2 << 4 /* 2D */) | CELL_GCM_LOCATION_LOCAL + 1;
+			registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (i * 8)] = (1 << 16 /* mipmap */) | ((CELL_GCM_TEXTURE_X32_FLOAT | CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_NR) << 8) | (2 << 4 /* 2D */) | (CELL_GCM_LOCATION_LOCAL + 1);
 		}
 
 		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_R;
