@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "overlays.h"
 
 namespace rsx
@@ -154,7 +154,7 @@ namespace rsx
 			return result;
 		}
 
-		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> listSet)
+		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 		{
 			std::vector<u8> icon;
 			std::vector<std::unique_ptr<overlay_element>> entries;
@@ -240,6 +240,8 @@ namespace rsx
 				m_no_saves = true;
 				m_list->set_cancel_only(true);
 			}
+
+			m_list->select_entry(focused);
 
 			static_cast<label*>(m_description.get())->auto_resize();
 

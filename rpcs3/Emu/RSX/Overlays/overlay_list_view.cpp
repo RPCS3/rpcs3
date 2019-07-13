@@ -91,24 +91,25 @@ namespace rsx
 			refresh();
 		}
 
-		void list_view::select_next(u16 count)
+		void list_view::select_entry(s32 entry)
 		{
-			const int max_entry = m_elements_count - 1;
+			const s32 max_entry = m_elements_count - 1;
 
-			if (m_selected_entry < max_entry)
+			if (m_selected_entry != entry)
 			{
-				m_selected_entry = std::min(m_selected_entry + count, max_entry);
+				m_selected_entry = std::max(0, std::min(entry, max_entry));
 				update_selection();
 			}
 		}
 
+		void list_view::select_next(u16 count)
+		{
+			select_entry(m_selected_entry + count);
+		}
+
 		void list_view::select_previous(u16 count)
 		{
-			if (m_selected_entry > 0)
-			{
-				m_selected_entry = std::max(0, m_selected_entry - count);
-				update_selection();
-			}
+			select_entry(m_selected_entry - count);
 		}
 
 		void list_view::add_entry(std::unique_ptr<overlay_element>& entry)
