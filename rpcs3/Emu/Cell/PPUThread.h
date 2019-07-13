@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "../CPU/CPUThread.h"
-#include "../Memory/vm_ref.h"
 #include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
 
@@ -253,20 +252,6 @@ struct ppu_gpr_cast_impl<vm::_ptr_base<T, AT>, void>
 	}
 
 	static inline vm::_ptr_base<T, AT> from(const u64 reg)
-	{
-		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
-	}
-};
-
-template<typename T, typename AT>
-struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>, void>
-{
-	static inline u64 to(const vm::_ref_base<T, AT>& value)
-	{
-		return ppu_gpr_cast_impl<AT>::to(value.addr());
-	}
-
-	static inline vm::_ref_base<T, AT> from(const u64 reg)
 	{
 		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
 	}

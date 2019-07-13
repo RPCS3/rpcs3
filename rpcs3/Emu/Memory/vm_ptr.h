@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Utilities/types.h"
-#include "vm_ref.h"
 
 class ppu_thread;
+#include "vm.h"
 
 namespace vm
 {
@@ -71,26 +71,6 @@ namespace vm
 		_ptr_base<ET> ptr(MT T2::*const mptr, u32 index) const
 		{
 			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr) + u32{sizeof(ET)} * index);
-		}
-
-		// Get vm reference to a struct member
-		template <typename MT, typename T2, typename = if_comparable_t<T, T2>>
-		_ref_base<MT> ref(MT T2::*const mptr) const
-		{
-			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr));
-		}
-
-		// Get vm reference to a struct member with array subscription
-		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
-		_ref_base<ET> ref(MT T2::*const mptr, u32 index) const
-		{
-			return vm::cast(vm::cast(m_addr, HERE) + offset32(mptr) + u32{sizeof(ET)} * index);
-		}
-
-		// Get vm reference
-		_ref_base<T, u32> ref() const
-		{
-			return vm::cast(m_addr, HERE);
 		}
 
 		T* get_ptr() const

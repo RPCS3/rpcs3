@@ -1251,23 +1251,22 @@ s32 UTF8toBIG5()
 	return 0;
 }
 
-s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8, vm::ref<s32> utf8_len)
+s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ptr<s32> utf16_len, vm::ptr<u8> utf8, vm::ptr<s32> utf8_len)
 {
-	cellL10n.error("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len.addr(), utf8, utf8_len.addr());
+	cellL10n.error("UTF16stoUTF8s(utf16=*0x%x, utf16_len=*0x%x, utf8=*0x%x, utf8_len=*0x%x)", utf16, utf16_len, utf8, utf8_len);
 
-	const u32 max_len = utf8_len; utf8_len = 0;
+	const u32 max_len = *utf8_len;
+	u32 len = 0;
 
-	for (u32 i = 0, len = 0; i < utf16_len; i++, utf8_len = len)
+	for (; len < *utf16_len; len++)
 	{
-		const u16 ch = utf16[i];
-
-		// increase required length (TODO)
-		len = len + 1;
+		const u16 ch = utf16[len];
 
 		// validate character (TODO)
 		//if ()
 		//{
-		//	utf16_len -= i;
+		//	*utf8_len = len;
+		//	*utf16_len -= i;
 		//	return SRCIllegal;
 		//}
 
@@ -1275,7 +1274,8 @@ s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8,
 		{
 			if (len > max_len)
 			{
-				utf16_len -= i;
+				*utf8_len = len;
+				*utf16_len -= len;
 				return DSTExhausted;
 			}
 
@@ -1290,6 +1290,7 @@ s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8,
 		}
 	}
 
+	*utf8_len = len;
 	return ConversionOK;
 }
 

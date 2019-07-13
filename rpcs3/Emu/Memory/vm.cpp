@@ -1,7 +1,6 @@
 ﻿#include "stdafx.h"
 #include "vm_locking.h"
 #include "vm_ptr.h"
-#include "vm_ref.h"
 #include "vm_reservation.h"
 #include "vm_var.h"
 

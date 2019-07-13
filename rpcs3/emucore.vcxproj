@@ -590,7 +590,6 @@
     <ClInclude Include="Emu\RSX\RSXVertexProgram.h" />
     <ClInclude Include="Emu\Memory\vm.h" />
     <ClInclude Include="Emu\Memory\vm_ptr.h" />
-    <ClInclude Include="Emu\Memory\vm_ref.h" />
     <ClInclude Include="Emu\Memory\vm_var.h" />
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
