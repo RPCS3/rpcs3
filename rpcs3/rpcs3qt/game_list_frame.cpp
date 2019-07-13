@@ -908,15 +908,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 			fs::remove_all(currGame.path);
 			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
-			if (m_isListLayout)
-			{
-				m_gameList->removeRow(m_gameList->currentItem()->row());
-			}
-			else
-			{
-				Refresh();
-			}
 			LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
+			Refresh(true);
 		}
 	});
 	connect(openGameFolder, &QAction::triggered, [=]()
