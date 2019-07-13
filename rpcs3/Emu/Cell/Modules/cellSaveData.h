@@ -186,7 +186,7 @@ struct CellSaveDataSystemFileParam
 	char subTitle[CELL_SAVEDATA_SYSP_SUBTITLE_SIZE];
 	char detail[CELL_SAVEDATA_SYSP_DETAIL_SIZE];
 	be_t<u32> attribute;
-	char reserved2[4];
+	be_t<u32> parental_level; // char reserved2[4] in firmware 3.70 or higher
 	char listParam[CELL_SAVEDATA_SYSP_LPARAM_SIZE];
 	char reserved[256];
 };

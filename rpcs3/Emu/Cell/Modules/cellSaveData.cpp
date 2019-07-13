@@ -825,6 +825,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		if (!psf.empty())
 		{
+			statGet->getParam.parental_level = psf.at("PARENTAL_LEVEL").as_integer();
 			statGet->getParam.attribute = psf.at("ATTRIBUTE").as_integer(); // ???
 			strcpy_trunc(statGet->getParam.title, save_entry.title = psf.at("TITLE").as_string());
 			strcpy_trunc(statGet->getParam.subTitle, save_entry.subtitle = psf.at("SUB_TITLE").as_string());
@@ -937,13 +938,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (g_ps3_process_info.sdk_ver > 0x36FFFF)
 			{
-				for (u8 resv : statSet->setParam->reserved2)
+				// In firmware 3.70 or higher parental_level was changed to reserved2 and has to zeroes
+				if (statSet->setParam->parental_level)
 				{
-					if (resv)
-					{
-						// ****** sysutil savedata parameter error : 58 ******
-						return CELL_SAVEDATA_ERROR_PARAM;
-					}
+					// ****** sysutil savedata parameter error : 58 ******
+					return CELL_SAVEDATA_ERROR_PARAM;
 				}
 			}
 
@@ -963,14 +962,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				{ "ACCOUNT_ID", psf::array(16, "0000000000000000") }, // ???
 				{ "ATTRIBUTE", statSet->setParam->attribute.value() },
 				{ "CATEGORY",  psf::string(4, "SD") }, // ???
-				{ "PARAMS", psf::string(16, {}) }, // ???
-				{ "PARAMS2", psf::string(16, {}) }, // ???
-				{ "PARENTAL_LEVEL", 0 }, // ???
-				{ "DETAIL", psf::string(1024, statSet->setParam->detail) },
-				{ "SAVEDATA_DIRECTORY", psf::string(256, save_entry.dirName) },
-				{ "SAVEDATA_LIST_PARAM", psf::string(8, statSet->setParam->listParam) },
-				{ "SUB_TITLE", psf::string(128, statSet->setParam->subTitle) },
-				{ "TITLE", psf::string(128, statSet->setParam->title) },
+				{ "PARAMS", psf::string(1024, {}) }, // ???
+				{ "PARAMS2", psf::string(12, {}) }, // ???
+				{ "PARENTAL_LEVEL", statSet->setParam->parental_level.value() },
+				{ "DETAIL", psf::string(CELL_SAVEDATA_SYSP_DETAIL_SIZE, statSet->setParam->detail) },
+				{ "SAVEDATA_DIRECTORY", psf::string(CELL_SAVEDATA_DIRNAME_SIZE, save_entry.dirName) },
+				{ "SAVEDATA_LIST_PARAM", psf::string(CELL_SAVEDATA_SYSP_LPARAM_SIZE, statSet->setParam->listParam) },
+				{ "SUB_TITLE", psf::string(CELL_SAVEDATA_SYSP_SUBTITLE_SIZE, statSet->setParam->subTitle) },
+				{ "TITLE", psf::string(CELL_SAVEDATA_SYSP_TITLE_SIZE, statSet->setParam->title) }
 			});
 
 			has_modified = true;
