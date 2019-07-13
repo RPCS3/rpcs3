@@ -188,7 +188,7 @@ namespace rsx
 		template <bool is_depth_surface>
 		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
-			auto scan_list = [&new_surface, address](const rsx::address_range& mem_range, u64 timestamp_check,
+			auto scan_list = [&new_surface, address](const rsx::address_range& mem_range,
 				std::unordered_map<u32, surface_storage_type>& data) -> std::vector<std::pair<u32, surface_type>>
 			{
 				std::vector<std::pair<u32, surface_type>> result;
@@ -196,8 +196,7 @@ namespace rsx
 				{
 					auto surface = Traits::get(e.second);
 
-					if (e.second->last_use_tag <= timestamp_check ||
-						new_surface == surface ||
+					if (new_surface == surface ||
 						address == e.first ||
 						e.second->dirty())
 					{
@@ -235,10 +234,8 @@ namespace rsx
 			};
 
 			const rsx::address_range mem_range = new_surface->get_memory_range();
-			const u64 timestamp_check = prev_surface ? prev_surface->last_use_tag : new_surface->last_use_tag;
-
-			auto list1 = scan_list(mem_range, timestamp_check, m_render_targets_storage);
-			auto list2 = scan_list(mem_range, timestamp_check, m_depth_stencil_storage);
+			auto list1 = scan_list(mem_range, m_render_targets_storage);
+			auto list2 = scan_list(mem_range, m_depth_stencil_storage);
 
 			if (prev_surface)
 			{
@@ -279,10 +276,10 @@ namespace rsx
 
 			if (UNLIKELY(surface_info.size() > 1))
 			{
-				// Sort with newest first for early exit
+				// Sort with oldest first for early exit
 				std::sort(surface_info.begin(), surface_info.end(), [](const auto& a, const auto& b)
 				{
-					return (a.second->last_use_tag > b.second->last_use_tag);
+					return (a.second->last_use_tag < b.second->last_use_tag);
 				});
 			}
 
@@ -313,6 +310,12 @@ namespace rsx
 					continue;
 				}
 
+				if (child_w == size.width && child_h == size.height && surface_info.size() > 1)
+				{
+					// If the write covers the whole area, discard anything older
+					new_surface->clear_rw_barrier();
+				}
+
 				// TODO: Eventually need to stack all the overlapping regions, but for now just do the latest rect in the space
 				deferred_clipped_region<surface_type> region;
 				region.src_x = src_offset.x;
@@ -325,7 +328,6 @@ namespace rsx
 				region.target = new_surface;
 
 				new_surface->set_old_contents_region(region, true);
-				break;
 			}
 		}
 
@@ -457,12 +459,22 @@ namespace rsx
 				}
 			}
 
-			// Check if old_surface is 'new' and avoid intersection
+			bool do_intersection_test = true;
+
+			// Check if old_surface is 'new' and hopefully avoid intersection
 			if (old_surface && old_surface->last_use_tag >= write_tag)
 			{
-				new_surface->set_old_contents(old_surface);
+				const auto new_area = new_surface->get_normalized_memory_area();
+				const auto old_area = old_surface->get_normalized_memory_area();
+
+				if (new_area.x2 <= old_area.x2 && new_area.y2 <= old_area.y2)
+				{
+					do_intersection_test = false;
+					new_surface->set_old_contents(old_surface);
+				}
 			}
-			else
+
+			if (do_intersection_test)
 			{
 				intersect_surface_region<depth>(command_list, address, new_surface, old_surface);
 			}

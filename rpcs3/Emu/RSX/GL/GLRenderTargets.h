@@ -269,7 +269,7 @@ struct gl_render_target_traits
 	static
 	void notify_surface_invalidated(const std::unique_ptr<gl::render_target>& surface)
 	{
-		if (surface->old_contents)
+		if (!surface->old_contents.empty())
 		{
 			// TODO: Retire the deferred writes
 			surface->clear_rw_barrier();

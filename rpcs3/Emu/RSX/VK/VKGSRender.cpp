@@ -1212,8 +1212,8 @@ void VKGSRender::end()
 	// Check for data casts
 	// NOTE: This is deprecated and will be removed soon. The memory barrier invoked before rendering does this better
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-	if (ds && ds->old_contents &&
-		ds->old_contents.source->info.format == VK_FORMAT_B8G8R8A8_UNORM)
+	if (ds && ds->old_contents.size() == 1 &&
+		ds->old_contents[0].source->info.format == VK_FORMAT_B8G8R8A8_UNORM)
 	{
 		auto key = vk::get_renderpass_key(ds->info.format);
 		auto render_pass = vk::get_renderpass(*m_device, key);
@@ -1223,7 +1223,7 @@ void VKGSRender::end()
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
 
 		// Initialize source
-		auto src = vk::as_rtt(ds->old_contents.source);
+		auto src = vk::as_rtt(ds->old_contents[0].source);
 		src->read_barrier(*m_current_command_buffer);
 
 		switch (src->current_layout)
@@ -1244,10 +1244,10 @@ void VKGSRender::end()
 		if (!preinitialized) ds->pop_layout(*m_current_command_buffer);
 
 		// TODO: Stencil transfer
-		ds->old_contents.init_transfer(ds);
+		ds->old_contents[0].init_transfer(ds);
 		m_depth_converter->run(*m_current_command_buffer,
-			ds->old_contents.src_rect(),
-			ds->old_contents.dst_rect(),
+			ds->old_contents[0].src_rect(),
+			ds->old_contents[0].dst_rect(),
 			src->get_view(0xAAE4, rsx::default_remap_vector),
 			ds, render_pass);
 
