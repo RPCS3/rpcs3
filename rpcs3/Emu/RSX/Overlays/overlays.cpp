@@ -323,7 +323,10 @@ namespace rsx
 			pad::SetIntercepted(false);
 
 			if (on_close && use_callback)
+			{
+				g_last_user_response = return_code;
 				on_close(return_code);
+			}
 		}
 
 		void overlay::refresh()

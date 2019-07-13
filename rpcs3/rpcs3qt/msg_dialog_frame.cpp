@@ -93,12 +93,14 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 
 		connect(m_button_yes, &QAbstractButton::clicked, [=]
 		{
+			g_last_user_response = CELL_MSGDIALOG_BUTTON_YES;
 			on_close(CELL_MSGDIALOG_BUTTON_YES);
 			m_dialog->accept();
 		});
 
 		connect(m_button_no, &QAbstractButton::clicked, [=]
 		{
+			g_last_user_response = CELL_MSGDIALOG_BUTTON_NO;
 			on_close(CELL_MSGDIALOG_BUTTON_NO);
 			m_dialog->accept();
 		});
@@ -123,6 +125,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 
 		connect(m_button_ok, &QAbstractButton::clicked, [=]
 		{
+			g_last_user_response = CELL_MSGDIALOG_BUTTON_OK;
 			on_close(CELL_MSGDIALOG_BUTTON_OK);
 			m_dialog->accept();
 		});
@@ -134,6 +137,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	{
 		if (!type.disable_cancel)
 		{
+			g_last_user_response = CELL_MSGDIALOG_BUTTON_ESCAPE;
 			on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
 		}
 	});
