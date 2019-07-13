@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <Emu/Memory/vm_ptr.h>
 
@@ -297,12 +297,12 @@ struct SaveDataEntry
 	std::string title;
 	std::string subtitle;
 	std::string details;
-	u64 size;
-	s64 atime;
-	s64 mtime;
-	s64 ctime;
+	u64 size{0};
+	s64 atime{0};
+	s64 mtime{0};
+	s64 ctime{0};
 	std::vector<uchar> iconBuf;
-	bool isNew;
+	bool isNew{false};
 };
 
 class SaveDialogBase

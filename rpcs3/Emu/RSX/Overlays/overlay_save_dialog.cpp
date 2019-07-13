@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlays.h"
 
 namespace rsx
@@ -179,7 +179,7 @@ namespace rsx
 				m_description->set_text("Save");
 			}
 
-			const bool newpos_head = listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
+			const bool newpos_head = listSet && listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
 
 			if (!newpos_head)
 			{
@@ -189,7 +189,7 @@ namespace rsx
 				}
 			}
 
-			if (listSet->newData)
+			if (listSet && listSet->newData)
 			{
 				std::unique_ptr<overlay_element> new_stub;
 
