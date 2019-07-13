@@ -160,7 +160,7 @@ static bool savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNa
 	}
 
 	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_FIXED_DELETE)
-	{	
+	{
 		if (setBuf->dirListMax > CELL_SAVEDATA_DIRLIST_MAX)
 		{
 			// ****** sysutil savedata parameter error : 8 ******
@@ -329,8 +329,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						save_entry2.title = psf.at("TITLE").as_string();
 						save_entry2.subtitle = psf.at("SUB_TITLE").as_string();
 						save_entry2.details = psf.at("DETAIL").as_string();
-
-						save_entry2.size = 0;
 
 						for (const auto entry2 : fs::dir(base_dir + entry.name))
 						{
