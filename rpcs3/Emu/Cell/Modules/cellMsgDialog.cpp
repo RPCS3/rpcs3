@@ -32,6 +32,9 @@ MsgDialogBase::~MsgDialogBase()
 {
 }
 
+// variable used to immediately get the response from auxiliary message dialogs (callbacks would be async)
+atomic_t<s32> g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
+
 // forward declaration for open_msg_dialog
 error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam);
 
@@ -129,7 +132,6 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 		break;
 	}
-
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
 	{
 		if (_type.default_cursor > 1 || _type.progress_bar_count)
@@ -139,7 +141,6 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 		break;
 	}
-
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
 	{
 		if (_type.default_cursor || _type.progress_bar_count)
@@ -149,7 +150,6 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 		break;
 	}
-
 	default: return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
@@ -173,6 +173,8 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 		{
 			return CELL_SYSUTIL_ERROR_BUSY;
 		}
+
+		g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
 
 		const auto res = manager->create<rsx::overlays::message_dialog>()->show(msgString.get_ptr(), _type, [callback, userData](s32 status)
 		{
@@ -227,6 +229,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 	// Run asynchronously in GUI thread
 	Emu.CallAfter([&]()
 	{
+		g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
 		dlg->Create(msgString.get_ptr());
 		lv2_obj::awake(&ppu);
 	});

@@ -6,6 +6,7 @@
 #include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "cellSaveData.h"
+#include "cellMsgDialog.h"
 
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
@@ -88,6 +89,134 @@ namespace
 vm::gvar<savedata_context> g_savedata_context;
 
 std::mutex g_savedata_mutex;
+
+static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
+{
+	std::vector<SaveDataEntry> save_entries;
+
+	if (base_dir.empty() || prefix.empty())
+	{
+		return save_entries;
+	}
+
+	// get the saves matching the supplied prefix
+	for (auto&& entry : fs::dir(base_dir))
+	{
+		if (!entry.is_directory || entry.name == "." || entry.name == "..")
+		{
+			continue;
+		}
+
+		entry.name = vfs::unescape(entry.name);
+
+		if (entry.name.substr(0, prefix.size()) != prefix)
+		{
+			continue;
+		}
+
+		// PSF parameters
+		const psf::registry psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+
+		if (psf.empty())
+		{
+			continue;
+		}
+
+		SaveDataEntry save_entry;
+		save_entry.dirName   = psf.at("SAVEDATA_DIRECTORY").as_string();
+		save_entry.listParam = psf.at("SAVEDATA_LIST_PARAM").as_string();
+		save_entry.title     = psf.at("TITLE").as_string();
+		save_entry.subtitle  = psf.at("SUB_TITLE").as_string();
+		save_entry.details   = psf.at("DETAIL").as_string();
+
+		for (const auto entry2 : fs::dir(base_dir + entry.name))
+		{
+			save_entry.size += entry2.size;
+		}
+
+		save_entry.atime = entry.atime;
+		save_entry.mtime = entry.mtime;
+		save_entry.ctime = entry.ctime;
+		if (fs::file icon{base_dir + entry.name + "/ICON0.PNG"})
+			save_entry.iconBuf = icon.to_vector<uchar>();
+		save_entry.isNew = false;
+		save_entries.emplace_back(save_entry);
+	}
+
+	return save_entries;
+}
+
+static error_code select_and_delete(ppu_thread& ppu)
+{
+	std::unique_lock lock(g_savedata_mutex, std::try_to_lock);
+
+	if (!lock)
+	{
+		return CELL_SAVEDATA_ERROR_BUSY;
+	}
+
+	const std::string base_dir = vfs::get(fmt::format("/dev_hdd0/home/%08u/savedata/", Emu.GetUsrId()));
+
+	auto save_entries = get_save_entries(base_dir, Emu.GetTitleID());
+
+	s32 selected = -1;
+	s32 focused  = -1;
+
+	while (true)
+	{
+		// Yield
+		lv2_obj::sleep(ppu);
+
+		// Display Save Data List asynchronously in the GUI thread.
+		selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, SAVEDATA_OP_LIST_DELETE, vm::null);
+
+		// Reschedule
+		if (ppu.check_state())
+		{
+			return 0;
+		}
+
+		// Abort if dialog was canceled
+		if (selected == -2)
+		{
+			return CELL_CANCEL;
+		}
+
+		// Set focused entry for the next iteration
+		focused = save_entries.empty() ? -1 : selected;
+
+		// Get information from the selected entry
+		SaveDataEntry entry    = save_entries[selected];
+		const std::string info = entry.title + "\n" + entry.subtitle + "\n" + entry.details;
+
+		// Get user confirmation
+		std::string msg = "Do you really want to delete this entry?\n\n" + info;
+		error_code res  = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg));
+
+		if (res != CELL_OK)
+		{
+			return CELL_SAVEDATA_ERROR_INTERNAL;
+		}
+
+		if (g_last_user_response.load() == CELL_MSGDIALOG_BUTTON_YES)
+		{
+			// Remove directory
+			const std::string path = base_dir + save_entries[selected].dirName;
+			fs::remove_all(path);
+
+			// Remove entry from the list and reset the selection
+			save_entries.erase(save_entries.cbegin() + selected);
+			selected = -1;
+
+			// Display success message (return value should be irrelevant here)
+			msg = "Successfully removed entry!\n\n" + info;
+			cellSaveData.success("%s", msg);
+			res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(msg));
+		}
+	}
+
+	return CELL_CANCEL;
+}
 
 static bool savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirName,
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
@@ -1333,18 +1462,18 @@ error_code cellSaveDataListAutoLoad(ppu_thread& ppu, u32 version, u32 errDialog,
 	return savedata_op(ppu, SAVEDATA_OP_LIST_AUTO_LOAD, version, vm::null, errDialog, setList, setBuf, vm::null, funcFixed, funcStat, funcFile, container, 2, userdata, 0, vm::null);
 }
 
-error_code cellSaveDataDelete2(u32 container)
+error_code cellSaveDataDelete(ppu_thread& ppu, u32 container)
 {
-	cellSaveData.todo("cellSaveDataDelete2(container=0x%x)", container);
+	cellSaveData.warning("cellSaveDataDelete(container=0x%x)", container);
 
-	return CELL_CANCEL;
+	return select_and_delete(ppu);
 }
 
-error_code cellSaveDataDelete(u32 container)
+error_code cellSaveDataDelete2(ppu_thread& ppu, u32 container)
 {
-	cellSaveData.todo("cellSaveDataDelete(container=0x%x)", container);
+	cellSaveData.warning("cellSaveDataDelete2(container=0x%x)", container);
 
-	return CELL_CANCEL;
+	return select_and_delete(ppu);
 }
 
 error_code cellSaveDataFixedDelete(ppu_thread& ppu, PSetList setList, PSetBuf setBuf, PFuncFixed funcFixed, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
