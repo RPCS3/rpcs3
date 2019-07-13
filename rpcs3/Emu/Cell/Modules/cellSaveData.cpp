@@ -298,7 +298,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		// get the saves matching the supplied prefix
 		for (auto&& entry : fs::dir(base_dir))
 		{
-			if (!entry.is_directory)
+			if (!entry.is_directory || entry.name == "." || entry.name == "..")
 			{
 				continue;
 			}
