@@ -281,13 +281,7 @@ namespace vk
 				get_resolve_target();
 			}
 
-			if (old_contents && !rsx::pitch_compatible(this, static_cast<vk::render_target*>(old_contents.source)))
-			{
-				LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
-				clear_rw_barrier();
-			}
-
-			if (LIKELY(!old_contents))
+			if (LIKELY(old_contents.empty()))
 			{
 				if (state_flags & rsx::surface_state_flags::erase_bkgnd)
 				{
@@ -321,76 +315,82 @@ namespace vk
 				return;
 			}
 
-			auto src_texture = static_cast<vk::render_target*>(old_contents.source);
-			src_texture->read_barrier(cmd);
-
-			const auto src_bpp = src_texture->get_bpp();
-			const auto dst_bpp = get_bpp();
-			rsx::typeless_xfer typeless_info{};
-
-			if (src_texture->info.format == info.format)
+			bool optimize_copy = true;
+			for (auto &section : old_contents)
 			{
-				verify(HERE), src_bpp == dst_bpp;
-			}
-			else
-			{
-				if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
-					src_texture->aspect() != aspect())
+				auto src_texture = static_cast<vk::render_target*>(section.source);
+				src_texture->read_barrier(cmd);
+
+				const auto src_bpp = src_texture->get_bpp();
+				const auto dst_bpp = get_bpp();
+				rsx::typeless_xfer typeless_info{};
+
+				if (src_texture->info.format == info.format)
 				{
-					typeless_info.src_is_typeless = true;
-					typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
-					typeless_info.src_native_format_override = (u32)info.format;
-					typeless_info.src_is_depth = src_texture->is_depth_surface();
-					typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
+					verify(HERE), src_bpp == dst_bpp;
 				}
+				else
+				{
+					if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
+						src_texture->aspect() != aspect())
+					{
+						typeless_info.src_is_typeless = true;
+						typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
+						typeless_info.src_native_format_override = (u32)info.format;
+						typeless_info.src_is_depth = src_texture->is_depth_surface();
+						typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
+					}
+				}
+
+				vk::blitter hw_blitter;
+				section.init_transfer(this);
+
+				auto src_area = section.src_rect();
+				auto dst_area = section.dst_rect();
+
+				if (g_cfg.video.antialiasing_level != msaa_level::none)
+				{
+					src_texture->transform_pixels_to_samples(src_area);
+					this->transform_pixels_to_samples(dst_area);
+				}
+
+				vk::image *target_image = (samples() > 1) ? get_resolve_target() : this;
+				bool memory_load = true;
+				if (dst_area.x1 == 0 && dst_area.y1 == 0 &&
+					unsigned(dst_area.x2) == target_image->width() && unsigned(dst_area.y2) == target_image->height())
+				{
+					// Skip a bunch of useless work
+					state_flags &= ~(rsx::surface_state_flags::erase_bkgnd);
+					msaa_flags = rsx::surface_state_flags::ready;
+
+					memory_load = false;
+					stencil_init_flags = src_texture->stencil_init_flags;
+				}
+				else if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+				{
+					clear_surface_impl(target_image);
+
+					state_flags &= ~(rsx::surface_state_flags::erase_bkgnd);
+					msaa_flags = rsx::surface_state_flags::ready;
+				}
+				else if (msaa_flags & rsx::surface_state_flags::require_resolve)
+				{
+					// Need to forward resolve this
+					resolve(cmd);
+				}
+
+				hw_blitter.scale_image(
+					cmd,
+					src_texture->get_surface(rsx::surface_access::read),
+					this->get_surface(rsx::surface_access::transfer),
+					src_area,
+					dst_area,
+					/*linear?*/false, /*depth?(unused)*/false, typeless_info);
+
+				optimize_copy = optimize_copy && !memory_load;
 			}
 
-			vk::blitter hw_blitter;
-			old_contents.init_transfer(this);
-
-			auto src_area = old_contents.src_rect();
-			auto dst_area = old_contents.dst_rect();
-
-			if (g_cfg.video.antialiasing_level != msaa_level::none)
-			{
-				src_texture->transform_pixels_to_samples(src_area);
-				this->transform_pixels_to_samples(dst_area);
-			}
-
-			vk::image *target_image = (samples() > 1) ? get_resolve_target() : this;
-			bool memory_load = true;
-			if (dst_area.x1 == 0 && dst_area.y1 == 0 &&
-				unsigned(dst_area.x2) == target_image->width() && unsigned(dst_area.y2) == target_image->height())
-			{
-				// Skip a bunch of useless work
-				state_flags &= ~(rsx::surface_state_flags::erase_bkgnd);
-				msaa_flags = rsx::surface_state_flags::ready;
-
-				memory_load = false;
-				stencil_init_flags = src_texture->stencil_init_flags;
-			}
-			else if (state_flags & rsx::surface_state_flags::erase_bkgnd)
-			{
-				clear_surface_impl(target_image);
-
-				state_flags &= ~(rsx::surface_state_flags::erase_bkgnd);
-				msaa_flags = rsx::surface_state_flags::ready;
-			}
-			else if (msaa_flags & rsx::surface_state_flags::require_resolve)
-			{
-				// Need to forward resolve this
-				resolve(cmd);
-			}
-
-			hw_blitter.scale_image(
-				cmd,
-				src_texture->get_surface(rsx::surface_access::read),
-				this->get_surface(rsx::surface_access::transfer),
-				src_area,
-				dst_area,
-				/*linear?*/false, /*depth?(unused)*/false, typeless_info);
-
-			on_write_copy(0, !memory_load);
+			on_write_copy(0, optimize_copy);
 
 			if (!read_access && samples() > 1)
 			{
@@ -639,7 +639,7 @@ namespace rsx
 			surface->frame_tag = vk::get_current_frame_id();
 			if (!surface->frame_tag) surface->frame_tag = 1;
 
-			if (surface->old_contents)
+			if (!surface->old_contents.empty())
 			{
 				// TODO: Retire the deferred writes
 				surface->clear_rw_barrier();
