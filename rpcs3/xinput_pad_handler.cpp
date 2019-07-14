@@ -415,28 +415,28 @@ void xinput_pad_handler::ThreadProc()
 
 			// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 			// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-			int idx_l = profile->switch_vibration_motors ? 1 : 0;
-			int idx_s = profile->switch_vibration_motors ? 0 : 1;
+			size_t idx_l = profile->switch_vibration_motors ? 1 : 0;
+			size_t idx_s = profile->switch_vibration_motors ? 0 : 1;
 
-			int speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
-			int speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
+			u16 speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : static_cast<u16>(vibration_min);
+			u16 speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : static_cast<u16>(vibration_min);
 
-			m_dev->newVibrateData = m_dev->newVibrateData || m_dev->largeVibrate != speed_large || m_dev->smallVibrate != speed_small;
+			m_dev->newVibrateData |= m_dev->largeVibrate != speed_large || m_dev->smallVibrate != speed_small;
 
 			m_dev->largeVibrate = speed_large;
 			m_dev->smallVibrate = speed_small;
 
 			// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
-			if (m_dev->newVibrateData && (clock() - m_dev->last_vibration > 20))
+			if (m_dev->newVibrateData && (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_dev->last_vibration) > 20ms))
 			{
 				XINPUT_VIBRATION vibrate;
-				vibrate.wLeftMotorSpeed = speed_large;
-				vibrate.wRightMotorSpeed = speed_small;
+				vibrate.wLeftMotorSpeed = speed_large * 257;
+				vibrate.wRightMotorSpeed = speed_small * 257;
 
 				if ((*xinputSetState)(padnum, &vibrate) == ERROR_SUCCESS)
 				{
 					m_dev->newVibrateData = false;
-					m_dev->last_vibration = clock();
+					m_dev->last_vibration = std::chrono::high_resolution_clock::now();
 				}
 			}
 			break;
