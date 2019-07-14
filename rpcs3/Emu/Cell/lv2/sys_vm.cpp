@@ -1,5 +1,7 @@
 ﻿#include "stdafx.h"
 #include "sys_vm.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Memory/vm_locking.h"
 
 sys_vm_t::sys_vm_t(const std::shared_ptr<vm::block_t>& area, const std::shared_ptr<lv2_memory_container>& ct, u32 psize)
 	: ct(ct)
@@ -25,8 +27,10 @@ sys_vm_t::~sys_vm_t()
 
 LOG_CHANNEL(sys_vm);
 
-error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
+error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.error("sys_vm_memory_map(vsize=0x%x, psize=0x%x, cid=0x%x, flags=0x%llx, policy=0x%llx, addr=*0x%x)", vsize, psize, cid, flag, policy, addr);
 
 	if (!vsize || !psize || vsize % 0x2000000 || vsize > 0x10000000 || psize > 0x10000000 || policy != SYS_VM_POLICY_AUTO_RECOMMENDED)
@@ -63,16 +67,20 @@ error_code sys_vm_memory_map(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy
 	return CELL_ENOMEM;
 }
 
-error_code sys_vm_memory_map_different(u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
+error_code sys_vm_memory_map_different(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_memory_map_different(vsize=0x%x, psize=0x%x, cid=0x%x, flags=0x%llx, policy=0x%llx, addr=*0x%x)", vsize, psize, cid, flag, policy, addr);
 	// TODO: if needed implement different way to map memory, unconfirmed.
 
-	return sys_vm_memory_map(vsize, psize, cid, flag, policy, addr);
+	return sys_vm_memory_map(ppu, vsize, psize, cid, flag, policy, addr);
 }
 
-error_code sys_vm_unmap(u32 addr)
+error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_unmap(addr=0x%x)", addr);
 
 	// Special case, check if its a start address by alignment
@@ -90,8 +98,10 @@ error_code sys_vm_unmap(u32 addr)
 	return CELL_OK;
 }
 
-error_code sys_vm_append_memory(u32 addr, u32 size)
+error_code sys_vm_append_memory(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_append_memory(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size || size % 0x100000)
@@ -117,8 +127,10 @@ error_code sys_vm_append_memory(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_return_memory(u32 addr, u32 size)
+error_code sys_vm_return_memory(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_return_memory(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size || size % 0x100000)
@@ -145,8 +157,10 @@ error_code sys_vm_return_memory(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_lock(u32 addr, u32 size)
+error_code sys_vm_lock(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_lock(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size)
@@ -164,8 +178,10 @@ error_code sys_vm_lock(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_unlock(u32 addr, u32 size)
+error_code sys_vm_unlock(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_unlock(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size)
@@ -183,8 +199,10 @@ error_code sys_vm_unlock(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_touch(u32 addr, u32 size)
+error_code sys_vm_touch(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_touch(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size)
@@ -202,8 +220,10 @@ error_code sys_vm_touch(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_flush(u32 addr, u32 size)
+error_code sys_vm_flush(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_flush(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size)
@@ -221,8 +241,10 @@ error_code sys_vm_flush(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_invalidate(u32 addr, u32 size)
+error_code sys_vm_invalidate(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_invalidate(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size)
@@ -241,8 +263,10 @@ error_code sys_vm_invalidate(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_store(u32 addr, u32 size)
+error_code sys_vm_store(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_store(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size)
@@ -260,8 +284,10 @@ error_code sys_vm_store(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_sync(u32 addr, u32 size)
+error_code sys_vm_sync(ppu_thread& ppu, u32 addr, u32 size)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_sync(addr=0x%x, size=0x%x)", addr, size);
 
 	if (!size)
@@ -279,8 +305,10 @@ error_code sys_vm_sync(u32 addr, u32 size)
 	return CELL_OK;
 }
 
-error_code sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result)
+error_code sys_vm_test(ppu_thread& ppu, u32 addr, u32 size, vm::ptr<u64> result)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_test(addr=0x%x, size=0x%x, result=*0x%x)", addr, size, result);
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
@@ -295,8 +323,10 @@ error_code sys_vm_test(u32 addr, u32 size, vm::ptr<u64> result)
 	return CELL_OK;
 }
 
-error_code sys_vm_get_statistics(u32 addr, vm::ptr<sys_vm_statistics_t> stat)
+error_code sys_vm_get_statistics(ppu_thread& ppu, u32 addr, vm::ptr<sys_vm_statistics_t> stat)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_vm.warning("sys_vm_get_statistics(addr=0x%x, stat=*0x%x)", addr, stat);
 
 	const auto block = idm::get<sys_vm_t>(sys_vm_t::find_id(addr));
