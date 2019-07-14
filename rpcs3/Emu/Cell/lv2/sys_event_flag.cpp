@@ -14,8 +14,6 @@ LOG_CHANNEL(sys_event_flag);
 
 template<> DECLARE(ipc_manager<lv2_event_flag, u64>::g_ipc) {};
 
-extern u64 get_system_time();
-
 error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
 	vm::temporary_unlock(ppu);
@@ -171,9 +169,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(flag->mutex);
 
@@ -188,8 +184,6 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 				ppu.gpr[6] = flag->pattern;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{

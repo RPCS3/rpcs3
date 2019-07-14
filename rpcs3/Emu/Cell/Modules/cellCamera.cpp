@@ -1259,7 +1259,7 @@ void camera_context::operator()()
 			continue;
 		}
 
-		const u64 frame_start = get_system_time();
+		const u64 frame_start = get_guest_system_time();
 
 		std::unique_lock lock(mutex_notify_data_map);
 
@@ -1304,7 +1304,7 @@ void camera_context::operator()()
 
 		for (const u64 frame_target_time = 1000000u / fps;;)
 		{
-			const u64 time_passed = get_system_time() - frame_start;
+			const u64 time_passed = get_guest_system_time() - frame_start;
 			if (time_passed >= frame_target_time)
 				break;
 

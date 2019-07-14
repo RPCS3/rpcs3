@@ -113,16 +113,16 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 	picInfo->reserved1 = 0;
 	picInfo->reserved2 = 0;
 
-	//u64 stamp0 = get_system_time();
+	//u64 stamp0 = get_guest_system_time();
 	std::unique_ptr<u8[]> pA(new u8[w*h]);
 
 	memset(pA.get(), ctrlParam->outAlpha, w*h);
 
-	//u64 stamp1 = get_system_time();
+	//u64 stamp1 = get_guest_system_time();
 
 	vpost->sws = sws_getCachedContext(vpost->sws, w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
 
-	//u64 stamp2 = get_system_time();
+	//u64 stamp2 = get_guest_system_time();
 
 	const u8* in_data[4] = { &inPicBuff[0], &inPicBuff[w * h], &inPicBuff[w * h * 5 / 4], pA.get() };
 	int in_line[4] = { w, w/2, w/2, w };
@@ -132,7 +132,7 @@ s32 cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostCtrlPara
 	sws_scale(vpost->sws, in_data, in_line, 0, h, out_data, out_line);
 
 	//ConLog.Write("cellVpostExec() perf (access=%d, getContext=%d, scale=%d, finalize=%d)",
-		//stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_system_time() - stamp3);
+		//stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2, get_guest_system_time() - stamp3);
 	return CELL_OK;
 }
 

@@ -276,6 +276,22 @@ void fmt_class_string<tsx_usage>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<sleep_timers_accuracy_level>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](sleep_timers_accuracy_level value)
+	{
+		switch (value)
+		{
+		case sleep_timers_accuracy_level::_as_host: return "Host";
+		case sleep_timers_accuracy_level::_usleep: return "Usleep";
+		case sleep_timers_accuracy_level::_all_timers: return "All";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<enter_button_assign>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](enter_button_assign value)

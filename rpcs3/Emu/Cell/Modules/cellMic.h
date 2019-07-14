@@ -254,7 +254,7 @@ public:
 	std::unordered_map<u8, microphone_device> mic_list;
 
 protected:
-	const u64 start_time = get_system_time();
+	const u64 start_time = get_guest_system_time();
 	u64 m_counter        = 0;
 
 	//	u32 signalStateLocalTalk = 9; // value is in range 0-10. 10 indicates talking, 0 indicating none.

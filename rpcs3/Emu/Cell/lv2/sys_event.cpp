@@ -14,8 +14,6 @@ LOG_CHANNEL(sys_event);
 
 template<> DECLARE(ipc_manager<lv2_event_queue, u64>::g_ipc) {};
 
-extern u64 get_system_time();
-
 std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 {
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
@@ -284,9 +282,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(queue->mutex);
 
@@ -299,8 +295,6 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
