@@ -19,8 +19,10 @@ lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2
 {
 }
 
-error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
+error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.error("sys_mmapper_allocate_address(size=0x%llx, flags=0x%llx, alignment=0x%llx, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
 
 	if (size % 0x10000000)
@@ -60,8 +62,10 @@ error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::
 	return CELL_EALIGN;
 }
 
-error_code sys_mmapper_allocate_fixed_address()
+error_code sys_mmapper_allocate_fixed_address(ppu_thread& ppu)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.error("sys_mmapper_allocate_fixed_address()");
 
 	if (!vm::map(0xB0000000, 0x10000000, SYS_MEMORY_PAGE_SIZE_1M))
@@ -72,8 +76,10 @@ error_code sys_mmapper_allocate_fixed_address()
 	return CELL_OK;
 }
 
-error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.warning("sys_mmapper_allocate_shared_memory(0x%llx, size=0x%x, flags=0x%llx, mem_id=*0x%x)", unk, size, flags, mem_id);
 
 	// Check page granularity
@@ -120,8 +126,10 @@ error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::
 	return CELL_OK;
 }
 
-error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.error("sys_mmapper_allocate_shared_memory_from_container(0x%llx, size=0x%x, cid=0x%x, flags=0x%llx, mem_id=*0x%x)", unk, size, cid, flags, mem_id);
 
 	// Check page granularity.
@@ -181,15 +189,19 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 	return CELL_OK;
 }
 
-error_code sys_mmapper_change_address_access_right(u32 addr, u64 flags)
+error_code sys_mmapper_change_address_access_right(ppu_thread& ppu, u32 addr, u64 flags)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.todo("sys_mmapper_change_address_access_right(addr=0x%x, flags=0x%llx)", addr, flags);
 
 	return CELL_OK;
 }
 
-error_code sys_mmapper_free_address(u32 addr)
+error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.error("sys_mmapper_free_address(addr=0x%x)", addr);
 
 	if (addr < 0x20000000 || addr >= 0xC0000000)
@@ -243,8 +255,10 @@ error_code sys_mmapper_free_address(u32 addr)
 	return CELL_OK;
 }
 
-error_code sys_mmapper_free_shared_memory(u32 mem_id)
+error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.warning("sys_mmapper_free_shared_memory(mem_id=0x%x)", mem_id);
 
 	// Conditionally remove memory ID
@@ -274,8 +288,10 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 	return CELL_OK;
 }
 
-error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
+error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, u64 flags)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.warning("sys_mmapper_map_shared_memory(addr=0x%x, mem_id=0x%x, flags=0x%llx)", addr, mem_id, flags);
 
 	const auto area = vm::get(vm::any, addr);
@@ -322,8 +338,10 @@ error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
 	return CELL_OK;
 }
 
-error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
+error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
 
 	const auto area = vm::get(vm::any, start_addr);
@@ -355,8 +373,10 @@ error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm:
 	return CELL_OK;
 }
 
-error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
+error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u32> mem_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.warning("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
 
 	const auto area = vm::get(vm::any, addr);
@@ -402,8 +422,10 @@ error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
 	return CELL_OK;
 }
 
-error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_queue_id)
+error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start_addr, u32 event_queue_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_mmapper.warning("sys_mmapper_enable_page_fault_notification(start_addr=0x%x, event_queue_id=0x%x)", start_addr, event_queue_id);
 
 	auto mem = vm::get(vm::any, start_addr);
