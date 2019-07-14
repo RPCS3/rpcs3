@@ -67,8 +67,10 @@ void lv2_timer_context::on_abort()
 	state = -1;
 }
 
-error_code sys_timer_create(vm::ptr<u32> timer_id)
+error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_timer.warning("sys_timer_create(timer_id=*0x%x)", timer_id);
 
 	if (const u32 id = idm::make<lv2_obj, lv2_timer>("Timer Thread"))
@@ -80,8 +82,10 @@ error_code sys_timer_create(vm::ptr<u32> timer_id)
 	return CELL_EAGAIN;
 }
 
-error_code sys_timer_destroy(u32 timer_id)
+error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_timer.warning("sys_timer_destroy(timer_id=0x%x)", timer_id);
 
 	const auto timer = idm::withdraw<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
@@ -109,8 +113,10 @@ error_code sys_timer_destroy(u32 timer_id)
 	return CELL_OK;
 }
 
-error_code sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info)
+error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_timer_information_t> info)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_timer.trace("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer)
@@ -130,8 +136,10 @@ error_code sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information
 	return CELL_OK;
 }
 
-error_code _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
+error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 period)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_timer.trace("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
 	const u64 start_time = get_system_time();
@@ -185,8 +193,10 @@ error_code _sys_timer_start(u32 timer_id, u64 base_time, u64 period)
 	return CELL_OK;
 }
 
-error_code sys_timer_stop(u32 timer_id)
+error_code sys_timer_stop(ppu_thread& ppu, u32 timer_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_timer.trace("sys_timer_stop()");
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [](lv2_timer& timer)
@@ -204,8 +214,10 @@ error_code sys_timer_stop(u32 timer_id)
 	return CELL_OK;
 }
 
-error_code sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2)
+error_code sys_timer_connect_event_queue(ppu_thread& ppu, u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_timer.warning("sys_timer_connect_event_queue(timer_id=0x%x, queue_id=0x%x, name=0x%llx, data1=0x%llx, data2=0x%llx)", timer_id, queue_id, name, data1, data2);
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
@@ -245,8 +257,10 @@ error_code sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u
 	return CELL_OK;
 }
 
-error_code sys_timer_disconnect_event_queue(u32 timer_id)
+error_code sys_timer_disconnect_event_queue(ppu_thread& ppu, u32 timer_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_timer.warning("sys_timer_disconnect_event_queue(timer_id=0x%x)", timer_id);
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [](lv2_timer& timer) -> CellError
@@ -322,7 +336,7 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 				// Do not wait for the last quantum to avoid loss of accuracy
 				thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
 #else
-				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus 
+				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
 				thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
 #endif
 			}

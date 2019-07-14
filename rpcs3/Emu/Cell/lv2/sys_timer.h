@@ -46,12 +46,12 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_timer_create(vm::ptr<u32> timer_id);
-error_code sys_timer_destroy(u32 timer_id);
-error_code sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info);
-error_code _sys_timer_start(u32 timer_id, u64 basetime, u64 period); // basetime type changed from s64
-error_code sys_timer_stop(u32 timer_id);
-error_code sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);
-error_code sys_timer_disconnect_event_queue(u32 timer_id);
+error_code sys_timer_create(ppu_thread&, vm::ptr<u32> timer_id);
+error_code sys_timer_destroy(ppu_thread&, u32 timer_id);
+error_code sys_timer_get_information(ppu_thread&, u32 timer_id, vm::ptr<sys_timer_information_t> info);
+error_code _sys_timer_start(ppu_thread&, u32 timer_id, u64 basetime, u64 period); // basetime type changed from s64
+error_code sys_timer_stop(ppu_thread&, u32 timer_id);
+error_code sys_timer_connect_event_queue(ppu_thread&, u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);
+error_code sys_timer_disconnect_event_queue(ppu_thread&, u32 timer_id);
 error_code sys_timer_sleep(ppu_thread&, u32 sleep_time);
 error_code sys_timer_usleep(ppu_thread&, u64 sleep_time);
