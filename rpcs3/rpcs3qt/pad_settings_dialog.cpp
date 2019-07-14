@@ -888,6 +888,7 @@ std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type
 		break;
 #ifdef _WIN32
 	case pad_handler::xinput:
+	case pad_handler::xinput_scp:
 		ret_handler = std::make_unique<xinput_pad_handler>(type);
 		break;
 	case pad_handler::mm:
@@ -937,6 +938,7 @@ void pad_settings_dialog::ChangeInputType()
 	{
 #ifdef _WIN32
 	case pad_handler::xinput:
+	case pad_handler::xinput_scp:
 #endif
 	case pad_handler::ds3:
 	case pad_handler::ds4:
@@ -1059,6 +1061,7 @@ void pad_settings_dialog::ChangeProfile()
 		break;
 #ifdef _WIN32
 	case pad_handler::xinput:
+	case pad_handler::xinput_scp:
 		((xinput_pad_handler*)m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 	case pad_handler::mm:

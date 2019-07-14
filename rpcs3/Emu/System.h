@@ -76,6 +76,7 @@ enum class pad_handler
 	ds4,
 #ifdef _WIN32
 	xinput,
+	xinput_scp,
 	mm,
 #endif
 #ifdef HAVE_LIBEVDEV

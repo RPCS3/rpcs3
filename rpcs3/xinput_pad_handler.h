@@ -55,6 +55,7 @@ class xinput_pad_handler final : public PadHandlerBase
 
 	friend class xinput_pad_processor_base; // Processors need access to XInputKeyCodes
 	friend class xinput_pad_processor_xi;
+	friend class xinput_pad_processor_scp;
 
 public:
 	xinput_pad_handler(pad_handler handler);

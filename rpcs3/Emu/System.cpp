@@ -104,6 +104,7 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 		case pad_handler::ds4: return "DualShock 4";
 #ifdef _WIN32
 		case pad_handler::xinput: return "XInput";
+		case pad_handler::xinput_scp: return "XInput (ScpToolkit)";
 		case pad_handler::mm: return "MMJoystick";
 #endif
 #ifdef HAVE_LIBEVDEV

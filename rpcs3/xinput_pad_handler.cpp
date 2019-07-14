@@ -6,6 +6,40 @@
 #include <Windows.h>
 #include <Xinput.h>
 
+// ScpToolkit defined structure for pressure sensitive button query
+typedef struct
+{
+	float SCP_UP;
+	float SCP_RIGHT;
+	float SCP_DOWN;
+	float SCP_LEFT;
+
+	float SCP_LX;
+	float SCP_LY;
+
+	float SCP_L1;
+	float SCP_L2;
+	float SCP_L3;
+
+	float SCP_RX;
+	float SCP_RY;
+
+	float SCP_R1;
+	float SCP_R2;
+	float SCP_R3;
+
+	float SCP_T;
+	float SCP_C;
+	float SCP_X;
+	float SCP_S;
+
+	float SCP_SELECT;
+	float SCP_START;
+
+	float SCP_PS;
+
+} SCP_EXTN;
+
 class xinput_pad_processor_base
 {
 protected:
@@ -23,6 +57,7 @@ public:
 	union XInputStateUnion
 	{
 		XINPUT_STATE xiState;
+		SCP_EXTN scpState;
 	};
 
 public:
@@ -201,6 +236,147 @@ public:
 		values[xinput_pad_handler::XInputKeyCodes::Start] = buttons & XINPUT_GAMEPAD_START ? 255 : 0;
 		values[xinput_pad_handler::XInputKeyCodes::Back]  = buttons & XINPUT_GAMEPAD_BACK ? 255 : 0;
 		values[xinput_pad_handler::XInputKeyCodes::Guide] = buttons & GUIDE_BUTTON ? 255 : 0;
+
+		return values;
+	}
+};
+
+class xinput_pad_processor_scp final : public xinput_pad_processor_base
+{
+	typedef DWORD(WINAPI* PFN_XINPUTGETEXTENDED)(DWORD, SCP_EXTN*);
+
+private:
+	PFN_XINPUTGETEXTENDED xinputGetExtended{nullptr};
+
+public:
+	virtual pad_handler GetHandlerType() const override
+	{
+		return pad_handler::xinput_scp;
+	}
+
+	virtual const char* GetNameString() const override
+	{
+		return "DS3 Pad #";
+	}
+
+	virtual const std::unordered_map<u32, std::string>& GetButtonList() const override
+	{
+		static const std::unordered_map<u32, std::string> button_list =
+		{
+			{ xinput_pad_handler::XInputKeyCodes::A,      "Triangle" },
+			{ xinput_pad_handler::XInputKeyCodes::B,      "Circle" },
+			{ xinput_pad_handler::XInputKeyCodes::X,      "Cross" },
+			{ xinput_pad_handler::XInputKeyCodes::Y,      "Square" },
+			{ xinput_pad_handler::XInputKeyCodes::Left,   "Left" },
+			{ xinput_pad_handler::XInputKeyCodes::Right,  "Right" },
+			{ xinput_pad_handler::XInputKeyCodes::Up,     "Up" },
+			{ xinput_pad_handler::XInputKeyCodes::Down,   "Down" },
+			{ xinput_pad_handler::XInputKeyCodes::LB,     "R1" },
+			{ xinput_pad_handler::XInputKeyCodes::RB,     "R2" },
+			{ xinput_pad_handler::XInputKeyCodes::Back,   "R3" },
+			{ xinput_pad_handler::XInputKeyCodes::Start,  "Start" },
+			{ xinput_pad_handler::XInputKeyCodes::LS,     "Select" },
+			{ xinput_pad_handler::XInputKeyCodes::RS,     "PS Button" },
+			{ xinput_pad_handler::XInputKeyCodes::Guide,  "L1" },
+			{ xinput_pad_handler::XInputKeyCodes::LT,     "L2" },
+			{ xinput_pad_handler::XInputKeyCodes::RT,     "L3" },
+			{ xinput_pad_handler::XInputKeyCodes::LSXNeg, "LS X-" },
+			{ xinput_pad_handler::XInputKeyCodes::LSXPos, "LS X+" },
+			{ xinput_pad_handler::XInputKeyCodes::LSYPos, "LS Y+" },
+			{ xinput_pad_handler::XInputKeyCodes::LSYNeg, "LS Y-" },
+			{ xinput_pad_handler::XInputKeyCodes::RSXNeg, "RS X-" },
+			{ xinput_pad_handler::XInputKeyCodes::RSXPos, "RS X+" },
+			{ xinput_pad_handler::XInputKeyCodes::RSYPos, "RS Y+" },
+			{ xinput_pad_handler::XInputKeyCodes::RSYNeg, "RS Y-" }
+		};
+		return button_list;
+	}
+
+	bool Init() override
+	{
+		if (is_init)
+			return true;
+
+		library = LoadLibrary(L"XInput1_3.dll");
+		if (library)
+		{
+			xinputGetExtended           = reinterpret_cast<PFN_XINPUTGETEXTENDED>(GetProcAddress(library, "XInputGetExtended"));
+			xinputSetState              = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
+			xinputGetBatteryInformation = reinterpret_cast<PFN_XINPUTGETBATTERYINFORMATION>(GetProcAddress(library, "XInputGetBatteryInformation"));
+
+			if (xinputGetExtended && xinputSetState && xinputGetBatteryInformation)
+			{
+				is_init = true;
+				return true;
+			}
+
+			FreeLibrary(library);
+			library                     = nullptr;
+			xinputGetExtended           = nullptr;
+			xinputGetBatteryInformation = nullptr;
+		}
+
+		return false;
+	}
+
+	DWORD GetState(DWORD userIndex, XInputStateUnion* state) override
+	{
+		return xinputGetExtended(userIndex, &state->scpState);
+	}
+
+	std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> GetButtonValues(const XInputStateUnion& s) override
+	{
+		const SCP_EXTN& state = s.scpState;
+		std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> values;
+
+		// Triggers
+		values[xinput_pad_handler::XInputKeyCodes::LT] = static_cast<u16>(state.SCP_L2 * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::RT] = static_cast<u16>(state.SCP_R2 * 255.0f);
+
+		// Sticks
+		float lx = state.SCP_LX;
+		float ly = state.SCP_LY;
+		float rx = state.SCP_RX;
+		float ry = state.SCP_RY;
+
+		// Left Stick X Axis
+		values[xinput_pad_handler::XInputKeyCodes::LSXNeg] = lx < 0.0f ? static_cast<u16>(lx * -32768.0f) : 0;
+		values[xinput_pad_handler::XInputKeyCodes::LSXPos] = lx > 0.0f ? static_cast<u16>(lx * 32767.0f) : 0;
+
+		// Left Stick Y Axis
+		values[xinput_pad_handler::XInputKeyCodes::LSYNeg] = ly < 0.0f ? static_cast<u16>(ly * -32768.0f) : 0;
+		values[xinput_pad_handler::XInputKeyCodes::LSYPos] = ly > 0.0f ? static_cast<u16>(ly * 32767.0f) : 0;
+
+		// Right Stick X Axis
+		values[xinput_pad_handler::XInputKeyCodes::RSXNeg] = rx < 0.0f ? static_cast<u16>(rx * -32768.0f) : 0;
+		values[xinput_pad_handler::XInputKeyCodes::RSXPos] = rx > 0.0f ? static_cast<u16>(rx * 32767.0f) : 0;
+
+		// Right Stick Y Axis
+		values[xinput_pad_handler::XInputKeyCodes::RSYNeg] = ry < 0.0f ? static_cast<u16>(ry * -32768.0f) : 0;
+		values[xinput_pad_handler::XInputKeyCodes::RSYPos] = ry > 0.0f ? static_cast<u16>(ry * 32767.0f) : 0;
+
+		// A, B, X, Y
+		values[xinput_pad_handler::XInputKeyCodes::A] = static_cast<u16>(state.SCP_X * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::B] = static_cast<u16>(state.SCP_C * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::X] = static_cast<u16>(state.SCP_S * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::Y] = static_cast<u16>(state.SCP_T * 255.0f);
+
+		// D-Pad
+		values[xinput_pad_handler::XInputKeyCodes::Left]  = static_cast<u16>(state.SCP_LEFT * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::Right] = static_cast<u16>(state.SCP_RIGHT * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::Up]    = static_cast<u16>(state.SCP_UP * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::Down]  = static_cast<u16>(state.SCP_DOWN * 255.0f);
+
+		// LB, RB, LS, RS
+		values[xinput_pad_handler::XInputKeyCodes::LB] = static_cast<u16>(state.SCP_L1 * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::RB] = static_cast<u16>(state.SCP_R1 * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::LS] = static_cast<u16>(state.SCP_L3 * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::RS] = static_cast<u16>(state.SCP_R3 * 255.0f);
+
+		// Start, Back, Guide
+		values[xinput_pad_handler::XInputKeyCodes::Start] = static_cast<u16>(state.SCP_START * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::Back]  = static_cast<u16>(state.SCP_SELECT * 255.0f);
+		values[xinput_pad_handler::XInputKeyCodes::Guide] = static_cast<u16>(state.SCP_PS * 255.0f);
 
 		return values;
 	}
@@ -627,6 +803,9 @@ std::unique_ptr<xinput_pad_processor_base> xinput_pad_handler::makeProcessorFrom
 	{
 	case pad_handler::xinput:
 		result = std::make_unique<xinput_pad_processor_xi>();
+		break;
+	case pad_handler::xinput_scp:
+		result = std::make_unique<xinput_pad_processor_scp>();
 		break;
 	}
 
