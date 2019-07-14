@@ -445,7 +445,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 
 	vm::var<u32> port_id(0);
 	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
-	sys_event_port_connect_local(port_id->value(), event_queue_id);
+	sys_event_port_connect_local(*port_id, event_queue_id);
 
 	if (res == CELL_EAGAIN)
 	{ // Not enough system resources.
@@ -461,8 +461,8 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 		if (entry.start_addr == start_addr)
 		{
 			lock.unlock();
-			sys_event_port_disconnect(port_id->value());
-			sys_event_port_destroy(port_id->value());
+			sys_event_port_disconnect(ppu, *port_id);
+			sys_event_port_destroy(ppu, *port_id);
 			return CELL_EBUSY;
 		}
 	}

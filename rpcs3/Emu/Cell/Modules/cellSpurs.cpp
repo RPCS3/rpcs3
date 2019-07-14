@@ -705,7 +705,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			events[0].data2 = event_data2;
 			events[0].data3 = event_data3;
 
-			if (sys_event_queue_tryreceive(spurs->eventQueue, events + 1, 7, count) != CELL_OK)
+			if (sys_event_queue_tryreceive(ppu, spurs->eventQueue, events + 1, 7, count) != CELL_OK)
 			{
 				continue;
 			}
@@ -783,7 +783,7 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 
 	if (s32 rc = sys_event_port_connect_local(spurs->eventPort, spurs->eventQueue))
 	{
-		sys_event_port_destroy(spurs->eventPort);
+		sys_event_port_destroy(ppu, spurs->eventPort);
 
 		if (s32 rc2 = _spurs::detach_lv2_eq(spurs, spurs->spuPort, true))
 		{
@@ -808,8 +808,8 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 
 	//if (!eht)
 	{
-		sys_event_port_disconnect(spurs->eventPort);
-		sys_event_port_destroy(spurs->eventPort);
+		sys_event_port_disconnect(ppu, spurs->eventPort);
+		sys_event_port_destroy(ppu, spurs->eventPort);
 
 		if (s32 rc = _spurs::detach_lv2_eq(spurs, spurs->spuPort, true))
 		{
@@ -894,8 +894,8 @@ s32 _spurs::stop_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 	spurs->ppu1 = 0xFFFFFFFF;
 
-	CHECK_SUCCESS(sys_event_port_disconnect(spurs->eventPort));
-	CHECK_SUCCESS(sys_event_port_destroy(spurs->eventPort));
+	CHECK_SUCCESS(sys_event_port_disconnect(ppu, spurs->eventPort));
+	CHECK_SUCCESS(sys_event_port_destroy(ppu, spurs->eventPort));
 	CHECK_SUCCESS(_spurs::detach_lv2_eq(spurs, spurs->spuPort, true));
 	CHECK_SUCCESS(sys_event_queue_destroy(ppu, spurs->eventQueue, SYS_EVENT_QUEUE_DESTROY_FORCE));
 
@@ -3071,7 +3071,7 @@ s32 cellSpursEventFlagAttachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 				return success(), CELL_OK;
 			}
 
-			sys_event_port_destroy(*eventPortId);
+			sys_event_port_destroy(ppu, *eventPortId);
 		}
 
 		if (_spurs::detach_lv2_eq(spurs, *port, true) == CELL_OK)
@@ -3132,8 +3132,8 @@ s32 cellSpursEventFlagDetachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 
 	if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 	{
-		sys_event_port_disconnect(eventFlag->eventPortId);
-		sys_event_port_destroy(eventFlag->eventPortId);
+		sys_event_port_disconnect(ppu, eventFlag->eventPortId);
+		sys_event_port_destroy(ppu, eventFlag->eventPortId);
 	}
 
 	s32 rc = _spurs::detach_lv2_eq(spurs, port, true);
