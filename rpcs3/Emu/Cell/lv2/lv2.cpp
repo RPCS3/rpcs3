@@ -999,7 +999,7 @@ extern ppu_function_t ppu_get_syscall(u64 code)
 	return nullptr;
 }
 
-extern u64 get_system_time();
+extern u64 get_guest_system_time();
 
 DECLARE(lv2_obj::g_mutex);
 DECLARE(lv2_obj::g_ppu);
@@ -1010,7 +1010,7 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 {
 	std::lock_guard lock(g_mutex);
 
-	const u64 start_time = get_system_time();
+	const u64 start_time = get_guest_system_time();
 
 	if (auto ppu = static_cast<ppu_thread*>(thread.id_type() == 1 ? &thread : nullptr))
 	{
@@ -1040,7 +1040,7 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 		ppu->start_time = start_time;
 	}
 
-	if (timeout)
+	if (timeout && g_cfg.core.sleep_timers_accuracy != sleep_timers_accuracy_level::_all_timers)
 	{
 		const u64 wait_until = start_time + timeout;
 
@@ -1078,7 +1078,7 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	else if (prio == -4)
 	{
 		// Yield command
-		const u64 start_time = get_system_time();
+		const u64 start_time = get_guest_system_time();
 
 		for (std::size_t i = 0, pos = -1; i < g_ppu.size(); i++)
 		{
@@ -1184,7 +1184,7 @@ void lv2_obj::schedule_all()
 	{
 		auto& pair = g_waiting.front();
 
-		if (pair.first <= get_system_time())
+		if (pair.first <= get_guest_system_time())
 		{
 			pair.second->notify();
 			g_waiting.pop_front();

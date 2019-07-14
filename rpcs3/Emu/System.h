@@ -8,6 +8,7 @@
 #include <string>
 
 u64 get_system_time();
+u64 get_guest_system_time();
 
 enum class system_state
 {
@@ -45,6 +46,13 @@ enum class lib_loading_type
 	manual,
 	both,
 	liblv2only
+};
+
+enum sleep_timers_accuracy_level : u32
+{
+	_as_host = 0,
+	_usleep,
+	_all_timers,
 };
 
 enum class keyboard_handler
@@ -406,6 +414,8 @@ struct cfg_root : cfg::node
 		cfg::set_entry load_libraries{this, "Load libraries"};
 		cfg::_bool hle_lwmutex{this, "HLE lwmutex"}; // Force alternative lwmutex/lwcond implementation
 
+		cfg::_int<10, 1000> clocks_scale{this, "Clocks scale", 100}; // Changing this from 100 (percentage) may affect game speed in unexpected ways
+		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{this, "Sleep timers accuracy", sleep_timers_accuracy_level::_as_host}; // Affects sleep timers accuracy (to fix host's sleep accuracy)
 	} core{this};
 
 	struct node_vfs : cfg::node
@@ -477,7 +487,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 16> anisotropic_level_override{this, "Anisotropic Filter Override", 0};
 		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16};
 		cfg::_int<0, 30000000> driver_recovery_timeout{this, "Driver Recovery Timeout", 1000000};
-		cfg::_int<1, 500> vblank_rate{this, "Vblank Rate", 60}; // Changing this from 60 may affect game speed unexpected ways
+		cfg::_int<1, 500> vblank_rate{this, "Vblank Rate", 60}; // Changing this from 60 may affect game speed in unexpected ways
 
 		struct node_d3d12 : cfg::node
 		{

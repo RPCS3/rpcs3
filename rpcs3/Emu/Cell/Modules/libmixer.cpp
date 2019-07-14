@@ -346,7 +346,7 @@ struct surmixer_thread : ppu_thread
 
 			if (port.state == audio_port_state::started)
 			{
-				//u64 stamp0 = get_system_time();
+				//u64 stamp0 = get_guest_system_time();
 
 				memset(g_surmx.mixdata, 0, sizeof(g_surmx.mixdata));
 				if (g_surmx.cb)
@@ -355,7 +355,7 @@ struct surmixer_thread : ppu_thread
 					lv2_obj::sleep(*this);
 				}
 
-				//u64 stamp1 = get_system_time();
+				//u64 stamp1 = get_guest_system_time();
 
 				{
 					std::lock_guard lock(g_surmx.mutex);
@@ -434,7 +434,7 @@ struct surmixer_thread : ppu_thread
 					}
 				}
 
-				//u64 stamp2 = get_system_time();
+				//u64 stamp2 = get_guest_system_time();
 
 				auto buf = vm::_ptr<f32>(port.addr.addr() + (g_surmx.mixcount % port.num_blocks) * port.num_channels * AUDIO_BUFFER_SAMPLES * sizeof(float));
 
@@ -444,7 +444,7 @@ struct surmixer_thread : ppu_thread
 					*buf++ = mixdata;
 				}
 
-				//u64 stamp3 = get_system_time();
+				//u64 stamp3 = get_guest_system_time();
 
 				//ConLog.Write("Libmixer perf: start=%lld (cb=%lld, ssp=%lld, finalize=%lld)", stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2);
 			}

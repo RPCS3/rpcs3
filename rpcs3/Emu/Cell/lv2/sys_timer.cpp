@@ -13,7 +13,7 @@
 
 LOG_CHANNEL(sys_timer);
 
-extern u64 get_system_time();
+extern u64 get_guest_system_time();
 
 void lv2_timer_context::operator()()
 {
@@ -23,7 +23,7 @@ void lv2_timer_context::operator()()
 
 		if (_state == SYS_TIMER_STATE_RUN)
 		{
-			const u64 _now = get_system_time();
+			const u64 _now = get_guest_system_time();
 			const u64 next = expire;
 
 			if (_now >= next)
@@ -48,7 +48,7 @@ void lv2_timer_context::operator()()
 			}
 
 			// TODO: use single global dedicated thread for busy waiting, no timer threads
-			thread_ctrl::wait_for(next - _now);
+			lv2_obj::wait_timeout(next - _now);
 		}
 		else if (_state == SYS_TIMER_STATE_STOP)
 		{
@@ -142,7 +142,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 
 	sys_timer.trace("_sys_timer_start(timer_id=0x%x, base_time=0x%llx, period=0x%llx)", timer_id, base_time, period);
 
-	const u64 start_time = get_system_time();
+	const u64 start_time = get_guest_system_time();
 
 	if (!period && start_time >= base_time)
 	{
@@ -307,46 +307,13 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 	if (sleep_time)
 	{
-#ifdef __linux__
-		// TODO: Confirm whether Apple or any BSD can benefit from this as well
-		constexpr u32 host_min_quantum = 50;
-#else
-		// Host scheduler quantum for windows (worst case)
-		// NOTE: On ps3 this function has very high accuracy
-		constexpr u32 host_min_quantum = 500;
-#endif
+		lv2_obj::sleep(ppu, 0);
 
-		u64 passed = 0;
-		u64 remaining;
+		lv2_obj::wait_timeout<true>(sleep_time);
 
-		lv2_obj::sleep(ppu, sleep_time);
-
-		while (sleep_time >= passed)
+		if (ppu.is_stopped())
 		{
-			if (ppu.is_stopped())
-			{
-				return 0;
-			}
-
-			remaining = sleep_time - passed;
-
-			if (remaining > host_min_quantum)
-			{
-#ifdef __linux__
-				// Do not wait for the last quantum to avoid loss of accuracy
-				thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
-#else
-				// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
-				thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
-#endif
-			}
-			else
-			{
-				// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure
-				std::this_thread::yield();
-			}
-
-			passed = (get_system_time() - ppu.start_time);
+			return 0;
 		}
 	}
 	else

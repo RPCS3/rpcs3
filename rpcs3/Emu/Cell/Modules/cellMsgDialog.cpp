@@ -332,8 +332,8 @@ error_code cellMsgDialogClose(f32 delay)
 {
 	cellSysutil.warning("cellMsgDialogClose(delay=%f)", delay);
 
-	extern u64 get_system_time();
-	const u64 wait_until = get_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
+	extern u64 get_guest_system_time();
+	const u64 wait_until = get_guest_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
 
 	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
@@ -341,7 +341,7 @@ error_code cellMsgDialogClose(f32 delay)
 		{
 			thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]
 			{
-				while (get_system_time() < wait_until)
+				while (get_guest_system_time() < wait_until)
 				{
 					if (Emu.IsStopped())
 						return;
@@ -368,7 +368,7 @@ error_code cellMsgDialogClose(f32 delay)
 
 	thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]()
 	{
-		while (dlg->state == MsgDialogState::Open && get_system_time() < wait_until)
+		while (dlg->state == MsgDialogState::Open && get_guest_system_time() < wait_until)
 		{
 			if (Emu.IsStopped()) return;
 

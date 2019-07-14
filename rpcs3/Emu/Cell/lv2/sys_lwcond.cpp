@@ -10,8 +10,6 @@
 
 LOG_CHANNEL(sys_lwcond);
 
-extern u64 get_system_time();
-
 error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
 {
 	vm::temporary_unlock(ppu);
@@ -313,9 +311,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(cond->mutex);
 
@@ -330,8 +326,6 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{

@@ -30,8 +30,6 @@ static std::vector<ppu_thread*> s_to_awake;
 
 static shared_mutex s_nw_mutex;
 
-extern u64 get_system_time();
-
 // Error helper functions
 static s32 get_last_error(bool is_blocking, int native_error = 0)
 {
@@ -1613,9 +1611,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard nw_lock(s_nw_mutex);
 
@@ -1628,8 +1624,6 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 				network_clear_queue(ppu);
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
@@ -1814,9 +1808,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard nw_lock(s_nw_mutex);
 
@@ -1829,8 +1821,6 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 				network_clear_queue(ppu);
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{

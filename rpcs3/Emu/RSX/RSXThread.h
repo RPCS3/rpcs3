@@ -20,6 +20,7 @@
 
 #include "Emu/Cell/lv2/sys_rsx.h"
 
+extern u64 get_guest_system_time();
 extern u64 get_system_time();
 
 struct RSXIOTable

@@ -38,7 +38,7 @@ void mic_context::operator()()
 			continue;
 		}
 
-		const u64 stamp0   = get_system_time();
+		const u64 stamp0   = get_guest_system_time();
 		const u64 time_pos = stamp0 - start_time - Emu.GetPauseTime();
 
 		const u64 expected_time = m_counter * 256 * 1000000 / 48000;
