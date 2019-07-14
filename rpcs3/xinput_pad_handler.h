@@ -5,7 +5,7 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <Xinput.h>
-#include <ctime>
+#include <chrono>
 
 namespace XINPUT_INFO
 {
@@ -91,9 +91,9 @@ class xinput_pad_handler final : public PadHandlerBase
 	{
 		u32 deviceNumber{ 0 };
 		bool newVibrateData{ true };
-		u8 largeVibrate{ 0 };
-		u8 smallVibrate{ 0 };
-		clock_t last_vibration{ 0 };
+		u16 largeVibrate{ 0 };
+		u16 smallVibrate{ 0 };
+		std::chrono::high_resolution_clock::time_point last_vibration;
 		pad_config* config{ nullptr };
 	};
 
