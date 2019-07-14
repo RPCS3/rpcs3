@@ -957,25 +957,25 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	// Intialise SPURS context
 	const bool isSecond = (flags & SAF_SECOND_VERSION) != 0;
 
-	auto rollback = [=]
+	auto rollback = [&]
 	{
 		if (spurs->semPrv)
 		{
-			sys_semaphore_destroy((u32)spurs->semPrv);
+			sys_semaphore_destroy(ppu, ::narrow<u32>(+spurs->semPrv));
 		}
 
 		for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 		{
 			if (spurs->wklF1[i].sem)
 			{
-				sys_semaphore_destroy((u32)spurs->wklF1[i].sem);
+				sys_semaphore_destroy(ppu, ::narrow<u32>(+spurs->wklF1[i].sem));
 			}
 
 			if (isSecond)
 			{
 				if (spurs->wklF2[i].sem)
 				{
-					sys_semaphore_destroy((u32)spurs->wklF2[i].sem);
+					sys_semaphore_destroy(ppu, ::narrow<u32>(+spurs->wklF2[i].sem));
 				}
 			}
 		}
@@ -1018,7 +1018,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 	for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 	{
-		if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
+		if (s32 rc = sys_semaphore_create(ppu, sem, semAttr, 0, 1))
 		{
 			return rollback(), rc;
 		}
@@ -1027,7 +1027,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 		if (isSecond)
 		{
-			if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
+			if (s32 rc = sys_semaphore_create(ppu, sem, semAttr, 0, 1))
 			{
 				return rollback(), rc;
 			}
@@ -1038,7 +1038,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 	// Create semaphore
 	semAttr->name_u64 = "_spuPrv\0"_u64;
-	if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
+	if (s32 rc = sys_semaphore_create(ppu, sem, semAttr, 0, 1))
 	{
 		return rollback(), rc;
 	}
