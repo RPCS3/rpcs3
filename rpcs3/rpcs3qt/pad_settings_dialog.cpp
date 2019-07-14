@@ -888,7 +888,7 @@ std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type
 		break;
 #ifdef _WIN32
 	case pad_handler::xinput:
-		ret_handler = std::make_unique<xinput_pad_handler>();
+		ret_handler = std::make_unique<xinput_pad_handler>(type);
 		break;
 	case pad_handler::mm:
 		ret_handler = std::make_unique<mm_joystick_handler>();

@@ -103,7 +103,7 @@ void pad_thread::Init()
 				break;
 #ifdef _WIN32
 			case pad_handler::xinput:
-				cur_pad_handler = std::make_shared<xinput_pad_handler>();
+				cur_pad_handler = std::make_shared<xinput_pad_handler>(handler_type);
 				break;
 			case pad_handler::mm:
 				cur_pad_handler = std::make_shared<mm_joystick_handler>();

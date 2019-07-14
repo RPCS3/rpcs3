@@ -2,24 +2,7 @@
 
 #include "Utilities/Config.h"
 #include "Emu/Io/PadHandler.h"
-#define NOMINMAX
-#include <Windows.h>
-#include <Xinput.h>
 #include <chrono>
-
-namespace XINPUT_INFO
-{
-	const DWORD THREAD_TIMEOUT = 1000;
-	const DWORD THREAD_SLEEP = 10;
-	const DWORD THREAD_SLEEP_INACTIVE = 100;
-	const DWORD GUIDE_BUTTON = 0x0400;
-	const LPCWSTR LIBRARY_FILENAMES[] = {
-		L"xinput1_4.dll",
-		L"xinput1_3.dll",
-		L"xinput1_2.dll",
-		L"xinput9_1_0.dll"
-	};
-}
 
 class xinput_pad_handler final : public PadHandlerBase
 {
@@ -57,35 +40,6 @@ class xinput_pad_handler final : public PadHandlerBase
 		KeyCodeCount
 	};
 
-	// Unique names for the config files and our pad settings dialog
-	const std::unordered_map<u32, std::string> button_list =
-	{
-		{ XInputKeyCodes::A,      "A" },
-		{ XInputKeyCodes::B,      "B" },
-		{ XInputKeyCodes::X,      "X" },
-		{ XInputKeyCodes::Y,      "Y" },
-		{ XInputKeyCodes::Left,   "Left" },
-		{ XInputKeyCodes::Right,  "Right" },
-		{ XInputKeyCodes::Up,     "Up" },
-		{ XInputKeyCodes::Down,   "Down" },
-		{ XInputKeyCodes::LB,     "LB" },
-		{ XInputKeyCodes::RB,     "RB" },
-		{ XInputKeyCodes::Back,   "Back" },
-		{ XInputKeyCodes::Start,  "Start" },
-		{ XInputKeyCodes::LS,     "LS" },
-		{ XInputKeyCodes::RS,     "RS" },
-		{ XInputKeyCodes::Guide,  "Guide" },
-		{ XInputKeyCodes::LT,     "LT" },
-		{ XInputKeyCodes::RT,     "RT" },
-		{ XInputKeyCodes::LSXNeg, "LS X-" },
-		{ XInputKeyCodes::LSXPos, "LS X+" },
-		{ XInputKeyCodes::LSYPos, "LS Y+" },
-		{ XInputKeyCodes::LSYNeg, "LS Y-" },
-		{ XInputKeyCodes::RSXNeg, "RS X-" },
-		{ XInputKeyCodes::RSXPos, "RS X+" },
-		{ XInputKeyCodes::RSYPos, "RS Y+" },
-		{ XInputKeyCodes::RSYNeg, "RS Y-" }
-	};
 
 	struct XInputDevice
 	{
@@ -97,12 +51,16 @@ class xinput_pad_handler final : public PadHandlerBase
 		pad_config* config{ nullptr };
 	};
 
+	union XInputState; // Defined in .cpp
+
+	friend class xinput_pad_processor_base; // Processors need access to XInputKeyCodes
+	friend class xinput_pad_processor_xi;
+
 public:
-	xinput_pad_handler();
-	~xinput_pad_handler();
+	xinput_pad_handler(pad_handler handler);
+	~xinput_pad_handler() override;
 
 	bool Init() override;
-	void Close();
 
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
@@ -111,29 +69,19 @@ public:
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
-private:
-	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
-	typedef DWORD (WINAPI * PFN_XINPUTGETSTATE)(DWORD, XINPUT_STATE *);
-	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
-	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
 private:
+	static std::unique_ptr<class xinput_pad_processor_base> makeProcessorFromType(pad_handler type);
+
 	int GetDeviceNumber(const std::string& padId);
-	std::array<u16, XInputKeyCodes::KeyCodeCount> GetButtonValues(const XINPUT_STATE& state);
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 
-	bool is_init{ false };
-	HMODULE library{ nullptr };
-	PFN_XINPUTGETSTATE xinputGetState{ nullptr };
-	PFN_XINPUTSETSTATE xinputSetState{ nullptr };
-	PFN_XINPUTENABLE xinputEnable{ nullptr };
-	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{ nullptr };
+	std::unique_ptr<class xinput_pad_processor_base> m_processor;
 
 	std::vector<u32> blacklist;
 	std::vector<std::pair<std::shared_ptr<XInputDevice>, std::shared_ptr<Pad>>> bindings;
 	std::shared_ptr<XInputDevice> m_dev;
 
-	// holds internal controller state change
-	XINPUT_STATE state;
-	DWORD result{ 0 };
+	// Unique names for the config files and our pad settings dialog
+	const std::unordered_map<u32, std::string> button_list;
 };

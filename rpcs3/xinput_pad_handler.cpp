@@ -2,7 +2,214 @@
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 
-xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
+#define NOMINMAX
+#include <Windows.h>
+#include <Xinput.h>
+
+class xinput_pad_processor_base
+{
+protected:
+	typedef DWORD(WINAPI* PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION*);
+	typedef DWORD(WINAPI* PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION*);
+
+protected:
+	bool is_init{false};
+	HMODULE library{nullptr};
+	PFN_XINPUTSETSTATE xinputSetState{nullptr};
+	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{nullptr};
+
+public:
+	// This union should hold state structures of all implemented children of xinput_pad_processor_base
+	union XInputStateUnion
+	{
+		XINPUT_STATE xiState;
+	};
+
+public:
+	virtual ~xinput_pad_processor_base()
+	{
+		if (library)
+		{
+			FreeLibrary(library);
+		}
+	}
+
+	virtual pad_handler GetHandlerType() const = 0;
+	virtual const char* GetNameString() const = 0;
+	virtual const std::unordered_map<u32, std::string>& GetButtonList() const = 0;
+	virtual bool Init() = 0;
+	virtual DWORD GetState(DWORD userIndex, XInputStateUnion* state) = 0;
+	virtual std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> GetButtonValues(const XInputStateUnion& state) = 0;
+
+	DWORD SetState(DWORD userIndex, u16 leftMotor, u16 rightMotor)
+	{
+		XINPUT_VIBRATION state { leftMotor, rightMotor };
+		return xinputSetState(userIndex, &state);
+	}
+
+	DWORD GetBatteryInformation(DWORD userIndex, BYTE devType, XINPUT_BATTERY_INFORMATION* batteryInformation)
+	{
+		return xinputGetBatteryInformation(userIndex, devType, batteryInformation);
+	}
+};
+
+class xinput_pad_processor_xi final : public xinput_pad_processor_base
+{
+	static constexpr DWORD GUIDE_BUTTON          = 0x0400;
+	static constexpr LPCWSTR LIBRARY_FILENAMES[] = {L"xinput1_4.dll", L"xinput1_3.dll", L"xinput9_1_0.dll"};
+
+	typedef DWORD(WINAPI* PFN_XINPUTGETSTATE)(DWORD, XINPUT_STATE*);
+
+private:
+	PFN_XINPUTGETSTATE xinputGetState{nullptr};
+
+public:
+	virtual pad_handler GetHandlerType() const override
+	{
+		return pad_handler::xinput;
+	}
+
+	virtual const char* GetNameString() const override
+	{
+		return "XInput Pad #";
+	}
+
+	virtual const std::unordered_map<u32, std::string>& GetButtonList() const override
+	{
+		static const std::unordered_map<u32, std::string> button_list =
+		{
+			{ xinput_pad_handler::XInputKeyCodes::A,      "A" },
+			{ xinput_pad_handler::XInputKeyCodes::B,      "B" },
+			{ xinput_pad_handler::XInputKeyCodes::X,      "X" },
+			{ xinput_pad_handler::XInputKeyCodes::Y,      "Y" },
+			{ xinput_pad_handler::XInputKeyCodes::Left,   "Left" },
+			{ xinput_pad_handler::XInputKeyCodes::Right,  "Right" },
+			{ xinput_pad_handler::XInputKeyCodes::Up,     "Up" },
+			{ xinput_pad_handler::XInputKeyCodes::Down,   "Down" },
+			{ xinput_pad_handler::XInputKeyCodes::LB,     "LB" },
+			{ xinput_pad_handler::XInputKeyCodes::RB,     "RB" },
+			{ xinput_pad_handler::XInputKeyCodes::Back,   "Back" },
+			{ xinput_pad_handler::XInputKeyCodes::Start,  "Start" },
+			{ xinput_pad_handler::XInputKeyCodes::LS,     "LS" },
+			{ xinput_pad_handler::XInputKeyCodes::RS,     "RS" },
+			{ xinput_pad_handler::XInputKeyCodes::Guide,  "Guide" },
+			{ xinput_pad_handler::XInputKeyCodes::LT,     "LT" },
+			{ xinput_pad_handler::XInputKeyCodes::RT,     "RT" },
+			{ xinput_pad_handler::XInputKeyCodes::LSXNeg, "LS X-" },
+			{ xinput_pad_handler::XInputKeyCodes::LSXPos, "LS X+" },
+			{ xinput_pad_handler::XInputKeyCodes::LSYPos, "LS Y+" },
+			{ xinput_pad_handler::XInputKeyCodes::LSYNeg, "LS Y-" },
+			{ xinput_pad_handler::XInputKeyCodes::RSXNeg, "RS X-" },
+			{ xinput_pad_handler::XInputKeyCodes::RSXPos, "RS X+" },
+			{ xinput_pad_handler::XInputKeyCodes::RSYPos, "RS Y+" },
+			{ xinput_pad_handler::XInputKeyCodes::RSYNeg, "RS Y-" }
+		};
+		return button_list;
+	}
+
+	bool Init() override
+	{
+		if (is_init)
+			return true;
+
+		for (auto it : LIBRARY_FILENAMES)
+		{
+			library = LoadLibrary(it);
+			if (library)
+			{
+				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, reinterpret_cast<LPCSTR>(100)));
+				if (!xinputGetState)
+					xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
+
+				xinputSetState              = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
+				xinputGetBatteryInformation = reinterpret_cast<PFN_XINPUTGETBATTERYINFORMATION>(GetProcAddress(library, "XInputGetBatteryInformation"));
+
+				if (xinputGetState && xinputSetState && xinputGetBatteryInformation)
+				{
+					is_init = true;
+					break;
+				}
+
+				FreeLibrary(library);
+				library                     = nullptr;
+				xinputGetState              = nullptr;
+				xinputGetBatteryInformation = nullptr;
+			}
+		}
+
+		return is_init;
+	}
+
+	DWORD GetState(DWORD userIndex, XInputStateUnion* state) override
+	{
+		return xinputGetState(userIndex, &state->xiState);
+	}
+
+	std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> GetButtonValues(const XInputStateUnion& s) override
+	{
+		const XINPUT_STATE& state = s.xiState;
+		std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> values;
+
+		// Triggers
+		values[xinput_pad_handler::XInputKeyCodes::LT] = state.Gamepad.bLeftTrigger;
+		values[xinput_pad_handler::XInputKeyCodes::RT] = state.Gamepad.bRightTrigger;
+
+		// Sticks
+		int lx = state.Gamepad.sThumbLX;
+		int ly = state.Gamepad.sThumbLY;
+		int rx = state.Gamepad.sThumbRX;
+		int ry = state.Gamepad.sThumbRY;
+
+		// Left Stick X Axis
+		values[xinput_pad_handler::XInputKeyCodes::LSXNeg] = lx < 0 ? -lx : 0;
+		values[xinput_pad_handler::XInputKeyCodes::LSXPos] = lx > 0 ? lx : 0;
+
+		// Left Stick Y Axis
+		values[xinput_pad_handler::XInputKeyCodes::LSYNeg] = ly < 0 ? -ly : 0;
+		values[xinput_pad_handler::XInputKeyCodes::LSYPos] = ly > 0 ? ly : 0;
+
+		// Right Stick X Axis
+		values[xinput_pad_handler::XInputKeyCodes::RSXNeg] = rx < 0 ? -rx : 0;
+		values[xinput_pad_handler::XInputKeyCodes::RSXPos] = rx > 0 ? rx : 0;
+
+		// Right Stick Y Axis
+		values[xinput_pad_handler::XInputKeyCodes::RSYNeg] = ry < 0 ? -ry : 0;
+		values[xinput_pad_handler::XInputKeyCodes::RSYPos] = ry > 0 ? ry : 0;
+
+		// Buttons
+		const WORD buttons = state.Gamepad.wButtons;
+
+		// A, B, X, Y
+		values[xinput_pad_handler::XInputKeyCodes::A] = buttons & XINPUT_GAMEPAD_A ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::B] = buttons & XINPUT_GAMEPAD_B ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::X] = buttons & XINPUT_GAMEPAD_X ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::Y] = buttons & XINPUT_GAMEPAD_Y ? 255 : 0;
+
+		// D-Pad
+		values[xinput_pad_handler::XInputKeyCodes::Left]  = buttons & XINPUT_GAMEPAD_DPAD_LEFT ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::Right] = buttons & XINPUT_GAMEPAD_DPAD_RIGHT ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::Up]    = buttons & XINPUT_GAMEPAD_DPAD_UP ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::Down]  = buttons & XINPUT_GAMEPAD_DPAD_DOWN ? 255 : 0;
+
+		// LB, RB, LS, RS
+		values[xinput_pad_handler::XInputKeyCodes::LB] = buttons & XINPUT_GAMEPAD_LEFT_SHOULDER ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::RB] = buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::LS] = buttons & XINPUT_GAMEPAD_LEFT_THUMB ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::RS] = buttons & XINPUT_GAMEPAD_RIGHT_THUMB ? 255 : 0;
+
+		// Start, Back, Guide
+		values[xinput_pad_handler::XInputKeyCodes::Start] = buttons & XINPUT_GAMEPAD_START ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::Back]  = buttons & XINPUT_GAMEPAD_BACK ? 255 : 0;
+		values[xinput_pad_handler::XInputKeyCodes::Guide] = buttons & GUIDE_BUTTON ? 255 : 0;
+
+		return values;
+	}
+};
+
+xinput_pad_handler::xinput_pad_handler(pad_handler handler)
+    : PadHandlerBase(handler)
+    , m_processor(makeProcessorFromType(handler))
+    , button_list(m_processor->GetButtonList())
 {
 	init_configs();
 
@@ -19,7 +226,7 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 	b_has_rumble = true;
 	b_has_deadzones = true;
 
-	m_name_string = "XInput Pad #";
+	m_name_string = m_processor->GetNameString();
 	m_max_devices = XUSER_MAX_COUNT;
 
 	m_trigger_threshold = trigger_max / 2;
@@ -28,7 +235,6 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 
 xinput_pad_handler::~xinput_pad_handler()
 {
-	Close();
 }
 
 void xinput_pad_handler::init_config(pad_config* cfg, const std::string& name)
@@ -83,12 +289,10 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	if (device_number < 0)
 		return fail_callback(padId);
 
-	DWORD dwResult;
-	XINPUT_STATE state;
-	ZeroMemory(&state, sizeof(XINPUT_STATE));
+	xinput_pad_processor_base::XInputStateUnion state;
 
 	// Simply get the state of the controller from XInput.
-	dwResult = (*xinputGetState)(static_cast<u32>(device_number), &state);
+	DWORD dwResult = m_processor->GetState(static_cast<u32>(device_number), &state);
 	if (dwResult != ERROR_SUCCESS)
 		return fail_callback(padId);
 
@@ -96,7 +300,7 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
 	// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
 	std::pair<u16, std::string> pressed_button = { 0, "" };
-	auto data = GetButtonValues(state);
+	auto data = m_processor->GetButtonValues(state);
 	for (const auto& button : button_list)
 	{
 		u32 keycode = button.first;
@@ -144,12 +348,7 @@ void xinput_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u3
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects.
-	XINPUT_VIBRATION vibrate;
-
-	vibrate.wLeftMotorSpeed = largeMotor;  // between 0 to 65535
-	vibrate.wRightMotorSpeed = smallMotor; // between 0 to 65535
-
-	(*xinputSetState)(static_cast<u32>(device_number), &vibrate);
+	m_processor->SetState(static_cast<u32>(device_number), static_cast<u16>(largeMotor), static_cast<u16>(smallMotor));
 }
 
 void xinput_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold)
@@ -197,120 +396,16 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	if (pos == std::string::npos)
 		return -1;
 
-	int device_number = std::stoul(padId.substr(pos + 12)) - 1; // Controllers 1-n in GUI
+	int device_number = std::stoul(padId.substr(pos + m_name_string.length())) - 1; // Controllers 1-n in GUI
 	if (device_number >= XUSER_MAX_COUNT)
 		return -1;
 
 	return device_number;
 }
 
-std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> xinput_pad_handler::GetButtonValues(const XINPUT_STATE& state)
-{
-	std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> values;
-
-	// Triggers
-	values[XInputKeyCodes::LT] = state.Gamepad.bLeftTrigger;
-	values[XInputKeyCodes::RT] = state.Gamepad.bRightTrigger;
-
-	// Sticks
-	int lx = state.Gamepad.sThumbLX;
-	int ly = state.Gamepad.sThumbLY;
-	int rx = state.Gamepad.sThumbRX;
-	int ry = state.Gamepad.sThumbRY;
-
-	// Left Stick X Axis
-	values[XInputKeyCodes::LSXNeg] = lx < 0 ? abs(lx) - 1 : 0;
-	values[XInputKeyCodes::LSXPos] = lx > 0 ? lx : 0;
-
-	// Left Stick Y Axis
-	values[XInputKeyCodes::LSYNeg] = ly < 0 ? abs(ly) - 1 : 0;
-	values[XInputKeyCodes::LSYPos] = ly > 0 ? ly : 0;
-
-	// Right Stick X Axis
-	values[XInputKeyCodes::RSXNeg] = rx < 0 ? abs(rx) - 1 : 0;
-	values[XInputKeyCodes::RSXPos] = rx > 0 ? rx : 0;
-
-	// Right Stick Y Axis
-	values[XInputKeyCodes::RSYNeg] = ry < 0 ? abs(ry) - 1 : 0;
-	values[XInputKeyCodes::RSYPos] = ry > 0 ? ry : 0;
-
-	// Buttons
-	WORD buttons = state.Gamepad.wButtons;
-
-	// A, B, X, Y
-	values[XInputKeyCodes::A] = buttons & XINPUT_GAMEPAD_A ? 255 : 0;
-	values[XInputKeyCodes::B] = buttons & XINPUT_GAMEPAD_B ? 255 : 0;
-	values[XInputKeyCodes::X] = buttons & XINPUT_GAMEPAD_X ? 255 : 0;
-	values[XInputKeyCodes::Y] = buttons & XINPUT_GAMEPAD_Y ? 255 : 0;
-
-	// D-Pad
-	values[XInputKeyCodes::Left]  = buttons & XINPUT_GAMEPAD_DPAD_LEFT ? 255 : 0;
-	values[XInputKeyCodes::Right] = buttons & XINPUT_GAMEPAD_DPAD_RIGHT ? 255 : 0;
-	values[XInputKeyCodes::Up]    = buttons & XINPUT_GAMEPAD_DPAD_UP ? 255 : 0;
-	values[XInputKeyCodes::Down]  = buttons & XINPUT_GAMEPAD_DPAD_DOWN ? 255 : 0;
-
-	// LB, RB, LS, RS
-	values[XInputKeyCodes::LB] = buttons & XINPUT_GAMEPAD_LEFT_SHOULDER ? 255 : 0;
-	values[XInputKeyCodes::RB] = buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER ? 255 : 0;
-	values[XInputKeyCodes::LS] = buttons & XINPUT_GAMEPAD_LEFT_THUMB ? 255 : 0;
-	values[XInputKeyCodes::RS] = buttons & XINPUT_GAMEPAD_RIGHT_THUMB ? 255 : 0;
-
-	// Start, Back, Guide
-	values[XInputKeyCodes::Start] = buttons & XINPUT_GAMEPAD_START ? 255 : 0;
-	values[XInputKeyCodes::Back]  = buttons & XINPUT_GAMEPAD_BACK ? 255 : 0;
-	values[XInputKeyCodes::Guide] = buttons & XINPUT_INFO::GUIDE_BUTTON ? 255 : 0;
-
-	return values;
-}
-
 bool xinput_pad_handler::Init()
 {
-	if (is_init)
-		return true;
-
-	for (auto it : XINPUT_INFO::LIBRARY_FILENAMES)
-	{
-		library = LoadLibrary(it);
-		if (library)
-		{
-			xinputEnable = reinterpret_cast<PFN_XINPUTENABLE>(GetProcAddress(library, "XInputEnable"));
-			xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, reinterpret_cast<LPCSTR>(100)));
-			if (!xinputGetState)
-				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
-
-			xinputSetState = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
-			xinputGetBatteryInformation = reinterpret_cast<PFN_XINPUTGETBATTERYINFORMATION>(GetProcAddress(library, "XInputGetBatteryInformation"));
-
-			if (xinputEnable && xinputGetState && xinputSetState && xinputGetBatteryInformation)
-			{
-				is_init = true;
-				break;
-			}
-
-			FreeLibrary(library);
-			library = nullptr;
-			xinputEnable = nullptr;
-			xinputGetState = nullptr;
-			xinputGetBatteryInformation = nullptr;
-		}
-	}
-
-	if (!is_init)
-		return false;
-
-	return true;
-}
-
-void xinput_pad_handler::Close()
-{
-	if (library)
-	{
-		FreeLibrary(library);
-		library = nullptr;
-		xinputGetState = nullptr;
-		xinputEnable = nullptr;
-		xinputGetBatteryInformation = nullptr;
-	}
+	return m_processor->Init();
 }
 
 void xinput_pad_handler::ThreadProc()
@@ -323,7 +418,8 @@ void xinput_pad_handler::ThreadProc()
 		auto profile = m_dev->config;
 		auto pad = bind.second;
 
-		result = (*xinputGetState)(padnum, &state);
+		xinput_pad_processor_base::XInputStateUnion state;
+		DWORD result = m_processor->GetState(padnum, &state);
 
 		switch (result)
 		{
@@ -350,7 +446,7 @@ void xinput_pad_handler::ThreadProc()
 				connected++;
 			}
 
-			std::array<u16, XInputKeyCodes::KeyCodeCount> button_values = GetButtonValues(state);
+			std::array<u16, XInputKeyCodes::KeyCodeCount> button_values = m_processor->GetButtonValues(state);
 
 			// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 			for (auto& btn : pad->m_buttons)
@@ -409,9 +505,11 @@ void xinput_pad_handler::ThreadProc()
 
 			// Receive Battery Info. If device is not on cable, get battery level, else assume full
 			XINPUT_BATTERY_INFORMATION battery_info;
-			(*xinputGetBatteryInformation)(padnum, BATTERY_DEVTYPE_GAMEPAD, &battery_info);
-			pad->m_cable_state = battery_info.BatteryType == BATTERY_TYPE_WIRED ? 1 : 0;
-			pad->m_battery_level = pad->m_cable_state ? BATTERY_LEVEL_FULL : battery_info.BatteryLevel;
+			if (m_processor->GetBatteryInformation(padnum, BATTERY_DEVTYPE_GAMEPAD, &battery_info) == ERROR_SUCCESS)
+			{
+				pad->m_cable_state = battery_info.BatteryType == BATTERY_TYPE_WIRED ? 1 : 0;
+				pad->m_battery_level = pad->m_cable_state ? BATTERY_LEVEL_FULL : battery_info.BatteryLevel;
+			}
 
 			// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 			// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
@@ -429,11 +527,7 @@ void xinput_pad_handler::ThreadProc()
 			// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
 			if (m_dev->newVibrateData && (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - m_dev->last_vibration) > 20ms))
 			{
-				XINPUT_VIBRATION vibrate;
-				vibrate.wLeftMotorSpeed = speed_large * 257;
-				vibrate.wRightMotorSpeed = speed_small * 257;
-
-				if ((*xinputSetState)(padnum, &vibrate) == ERROR_SUCCESS)
+				if (m_processor->SetState(padnum, speed_large * 257, speed_small * 257) == ERROR_SUCCESS)
 				{
 					m_dev->newVibrateData = false;
 					m_dev->last_vibration = std::chrono::high_resolution_clock::now();
@@ -456,9 +550,8 @@ std::vector<std::string> xinput_pad_handler::ListDevices()
 
 	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++)
 	{
-		XINPUT_STATE state;
-		DWORD result = (*xinputGetState)(i, &state);
-		if (result == ERROR_SUCCESS)
+		xinput_pad_processor_base::XInputStateUnion state;
+		if (m_processor->GetState(i, &state) == ERROR_SUCCESS)
 			xinput_pads_list.push_back(m_name_string + std::to_string(i + 1)); // Controllers 1-n in GUI
 	}
 	return xinput_pads_list;
@@ -524,6 +617,20 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	bindings.emplace_back(x_device, pad);
 
 	return true;
+}
+
+std::unique_ptr<xinput_pad_processor_base> xinput_pad_handler::makeProcessorFromType(pad_handler type)
+{
+	std::unique_ptr<xinput_pad_processor_base> result;
+
+	switch (type)
+	{
+	case pad_handler::xinput:
+		result = std::make_unique<xinput_pad_processor_xi>();
+		break;
+	}
+
+	return result;
 }
 
 #endif
