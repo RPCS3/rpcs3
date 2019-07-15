@@ -297,7 +297,11 @@ void spu_cache::add(const std::vector<u32>& func)
 void spu_cache::initialize()
 {
 	spu_runtime::g_interpreter = spu_runtime::g_gateway;
-	*spu_runtime::g_dispatcher = spu_runtime::tr_interpreter;
+
+	if (g_cfg.core.spu_decoder == spu_decoder_type::precise || g_cfg.core.spu_decoder == spu_decoder_type::fast)
+	{
+		*spu_runtime::g_dispatcher = spu_runtime::tr_interpreter;
+	}
 
 	const std::string ppu_cache = Emu.PPUCache();
 
