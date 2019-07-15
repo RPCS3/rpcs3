@@ -70,6 +70,9 @@ public:
 	// Trampoline to spu_recompiler_base::branch
 	static const spu_function_t tr_branch;
 
+	// Trampoline to legacy interpreter
+	static const spu_function_t tr_interpreter;
+
 public:
 	spu_runtime();
 
@@ -355,6 +358,9 @@ public:
 
 	// Target for the unresolved patch point (second arg is unused)
 	static void branch(spu_thread&, void*, u8* rip);
+
+	// Legacy interpreter loop
+	static void old_interpreter(spu_thread&, void* ls, u8*);
 
 	// Get the function data at specified address
 	const std::vector<u32>& analyse(const be_t<u32>* ls, u32 lsa);

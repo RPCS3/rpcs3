@@ -24,6 +24,9 @@ const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
 const spu_decoder<spu_iflag> s_spu_iflag;
 
+extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise;
+extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
+
 extern u64 get_timebased_time();
 
 // Move 4 args for calling native function from a GHC calling convention function
@@ -70,6 +73,18 @@ DECLARE(spu_runtime::tr_branch) = []
 	*raw++ = 0x25;
 	std::memset(raw, 0, 4);
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::branch);
+	std::memcpy(raw + 4, &target, 8);
+	return reinterpret_cast<spu_function_t>(trptr);
+}();
+
+DECLARE(spu_runtime::tr_interpreter) = []
+{
+	u8* const trptr = jit_runtime::alloc(32, 16);
+	u8* raw = move_args_ghc_to_native(trptr);
+	*raw++ = 0xff; // jmp [rip]
+	*raw++ = 0x25;
+	std::memset(raw, 0, 4);
+	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::old_interpreter);
 	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
 }();
@@ -281,7 +296,8 @@ void spu_cache::add(const std::vector<u32>& func)
 
 void spu_cache::initialize()
 {
-	spu_runtime::g_interpreter = nullptr;
+	spu_runtime::g_interpreter = spu_runtime::g_gateway;
+	*spu_runtime::g_dispatcher = spu_runtime::tr_interpreter;
 
 	const std::string ppu_cache = Emu.PPUCache();
 
@@ -1143,6 +1159,37 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	}
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
+}
+
+void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) try
+{
+	// Select opcode table
+	const auto& table = *(
+		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
+		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
+		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
+
+	// LS pointer
+	const auto base = static_cast<const u8*>(ls);
+
+	while (true)
+	{
+		if (UNLIKELY(spu.state))
+		{
+			if (spu.check_state())
+				break;
+		}
+
+		const u32 op = *reinterpret_cast<const be_t<u32>*>(base + spu.pc);
+		if (table[spu_decode(op)](spu, {op}))
+			spu.pc += 4;
+	}
+}
+catch (const std::exception& e)
+{
+	Emu.Pause();
+	LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
+	LOG_NOTICE(GENERAL, "\n%s", spu.dump());
 }
 
 const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
@@ -4713,8 +4760,6 @@ public:
 
 	static void interp_check(spu_thread* _spu, bool after)
 	{
-		static const spu_decoder<spu_interpreter_fast> s_dec;
-
 		static thread_local std::array<v128, 128> s_gpr;
 
 		if (!after)
@@ -4724,7 +4769,7 @@ public:
 
 			// Execute interpreter instruction
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(_spu->_ptr<u8>(0) + _spu->pc);
-			if (!s_dec.decode(op)(*_spu, {op}))
+			if (!g_spu_interpreter_fast.decode(op)(*_spu, {op}))
 				LOG_FATAL(SPU, "Bad instruction" HERE);
 
 			// Swap state
