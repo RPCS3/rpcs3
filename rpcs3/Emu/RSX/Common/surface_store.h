@@ -198,8 +198,7 @@ namespace rsx
 
 					if (new_surface->last_use_tag > surface->last_use_tag ||
 						new_surface == surface ||
-						address == e.first ||
-						e.second->dirty())
+						address == e.first)
 					{
 						// Do not bother synchronizing with uninitialized data
 						continue;
@@ -292,10 +291,36 @@ namespace rsx
 			const auto pitch = new_surface->get_rsx_pitch();
 			for (const auto &e: surface_info)
 			{
-				const auto parent_region = e.second->get_normalized_memory_area();
+				auto this_address = e.first;
+				auto surface = e.second;
+
+				if (UNLIKELY(surface->old_contents.size() == 1))
+				{
+					// Dirty zombies are possible with unused pixel storage subslices and are valid
+					// Avoid double transfer if possible
+					// This is an optional optimization that can be safely disabled
+					surface = dynamic_cast<decltype(surface)>(surface->old_contents[0].source);
+					this_address = surface->memory_tag_samples[0].first;
+					verify(HERE), surface, this_address;
+
+					// If this surface has already been added via another descendant, just ignore it
+					bool ignore = false;
+					for (auto &slice : new_surface->old_contents)
+					{
+						if (slice.source == surface)
+						{
+							ignore = true;
+							break;
+						}
+					}
+
+					if (ignore) continue;
+				}
+
+				const auto parent_region = surface->get_normalized_memory_area();
 				const auto parent_w = parent_region.width();
 				const auto parent_h = parent_region.height();
-				const auto rect = rsx::intersect_region(e.first, parent_w, parent_h, 1, address, child_w, child_h, 1, pitch);
+				const auto rect = rsx::intersect_region(this_address, parent_w, parent_h, 1, address, child_w, child_h, 1, pitch);
 
 				const auto src_offset = std::get<0>(rect);
 				const auto dst_offset = std::get<1>(rect);
@@ -325,7 +350,7 @@ namespace rsx
 				region.dst_y = dst_offset.y;
 				region.width = size.width;
 				region.height = size.height;
-				region.source = e.second;
+				region.source = surface;
 				region.target = new_surface;
 
 				new_surface->set_old_contents_region(region, true);
