@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "../CPU/CPUThread.h"
-#include "../Memory/vm_ref.h"
 #include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
 
