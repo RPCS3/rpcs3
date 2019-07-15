@@ -590,6 +590,20 @@ namespace rsx
 
 			sink->rsx_pitch = ref->get_rsx_pitch();
 			sink->sync_tag();
+
+			if (!sink->old_contents.empty())
+			{
+				// Deal with this, likely only needs to clear
+				if (sink->surface_width > prev.width || sink->surface_height > prev.height)
+				{
+					sink->write_barrier(cmd);
+				}
+				else
+				{
+					sink->clear_rw_barrier();
+				}
+			}
+
 			sink->set_old_contents_region(prev, false);
 			sink->last_use_tag = ref->last_use_tag;
 		}
