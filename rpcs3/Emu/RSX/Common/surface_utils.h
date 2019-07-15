@@ -51,9 +51,6 @@ namespace rsx
 	template <typename surface_type>
 	struct deferred_clipped_region
 	{
-		// Chain
-		deferred_clipped_region<surface_type>* next_ptr = nullptr;
-
 		u16 src_x, src_y, dst_x, dst_y, width, height;
 		f32 transfer_scale_x, transfer_scale_y;
 		surface_type target;
