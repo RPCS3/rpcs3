@@ -160,10 +160,11 @@ void pad_thread::SetIntercepted(bool intercepted)
 	if (intercepted)
 	{
 		m_info.system_info |= CELL_PAD_INFO_INTERCEPTED;
+		m_is_intercepted = true;
 	}
 	else
 	{
-		m_info.system_info &= ~CELL_PAD_INFO_INTERCEPTED;
+		m_is_intercepted = false;
 	}
 }
 
@@ -177,17 +178,60 @@ void pad_thread::ThreadFunc()
 			std::this_thread::sleep_for(1ms);
 			continue;
 		}
+
 		if (reset && reset.exchange(false))
 		{
 			Init();
 		}
+
 		u32 connected = 0;
+
 		for (auto& cur_pad_handler : handlers)
 		{
 			cur_pad_handler.second->ThreadProc();
 			connected += cur_pad_handler.second->connected;
 		}
+
 		m_info.now_connect = connected;
+
+		// The following section is only reached when a dialog was closed and the pads are still intercepted.
+		// As long as any of the listed buttons is pressed the interception stays active.
+		if (!m_is_intercepted && (m_info.system_info & CELL_PAD_INFO_INTERCEPTED))
+		{
+			bool any_button_pressed = false;
+
+			for (const auto& pad : m_pads)
+			{
+				if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
+				{
+					for (const auto& button : pad->m_buttons)
+					{
+						if (button.m_pressed && (
+							button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
+							button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+							button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+							button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
+							button.m_outKeyCode == CELL_PAD_CTRL_START ||
+							button.m_outKeyCode == CELL_PAD_CTRL_SELECT))
+						{
+							any_button_pressed = true;
+							break;
+						}
+					}
+
+					if (any_button_pressed)
+					{
+						break;
+					}
+				}
+			}
+
+			if (!any_button_pressed)
+			{
+				m_info.system_info &= ~CELL_PAD_INFO_INTERCEPTED;
+			}
+		}
+
 		std::this_thread::sleep_for(1ms);
 	}
 }
