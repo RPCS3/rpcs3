@@ -299,9 +299,13 @@ namespace rsx
 					// Dirty zombies are possible with unused pixel storage subslices and are valid
 					// Avoid double transfer if possible
 					// This is an optional optimization that can be safely disabled
-					surface = dynamic_cast<decltype(surface)>(surface->old_contents[0].source);
-					this_address = surface->memory_tag_samples[0].first;
-					verify(HERE), surface, this_address;
+					surface = static_cast<decltype(surface)>(surface->old_contents[0].source);
+
+					// Ignore self-reference
+					if (new_surface == surface)
+					{
+						continue;
+					}
 
 					// If this surface has already been added via another descendant, just ignore it
 					bool ignore = false;
@@ -315,6 +319,9 @@ namespace rsx
 					}
 
 					if (ignore) continue;
+
+					this_address = surface->memory_tag_samples[0].first;
+					verify(HERE), this_address;
 				}
 
 				const auto parent_region = surface->get_normalized_memory_area();

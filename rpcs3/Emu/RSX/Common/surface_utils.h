@@ -337,7 +337,7 @@ namespace rsx
 		void set_old_contents_region(const T& region, bool normalized)
 		{
 			// NOTE: This method will not perform pitch verification!
-			verify(HERE), region.source, region.source != this;
+			verify(HERE), region.source, region.source != static_cast<decltype(region.source)>(this);
 
 			old_contents.push_back(region.template cast<image_storage_type>());
 			auto &slice = old_contents.back();
