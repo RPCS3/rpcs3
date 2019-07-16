@@ -623,11 +623,15 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 		return;
 	}
 
-	for (auto &section : old_contents)
+	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
+	const auto dst_bpp = get_bpp();
+	unsigned first = prepare_rw_barrier_for_transfer(this);
+
+	for (auto i = first; i < old_contents.size(); ++i)
 	{
+		auto &section = old_contents[i];
 		auto src_texture = gl::as_rtt(section.source);
 		const auto src_bpp = src_texture->get_bpp();
-		const auto dst_bpp = get_bpp();
 		rsx::typeless_xfer typeless_info{};
 
 		if (get_internal_format() == src_texture->get_internal_format())
@@ -649,7 +653,6 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 			}
 		}
 
-		const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
 		section.init_transfer(this);
 
 		if (state_flags & rsx::surface_state_flags::erase_bkgnd)

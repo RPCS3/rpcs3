@@ -315,14 +315,20 @@ namespace vk
 				return;
 			}
 
+			// Memory transfers
+			vk::image *target_image = (samples() > 1) ? get_resolve_target() : this;
+			vk::blitter hw_blitter;
 			bool optimize_copy = true;
-			for (auto &section : old_contents)
+			const auto dst_bpp = get_bpp();
+			unsigned first = prepare_rw_barrier_for_transfer(this);
+
+			for (auto i = first; i < old_contents.size(); ++i)
 			{
+				auto &section = old_contents[i];
 				auto src_texture = static_cast<vk::render_target*>(section.source);
 				src_texture->read_barrier(cmd);
 
 				const auto src_bpp = src_texture->get_bpp();
-				const auto dst_bpp = get_bpp();
 				rsx::typeless_xfer typeless_info{};
 
 				if (src_texture->info.format == info.format)
@@ -342,9 +348,7 @@ namespace vk
 					}
 				}
 
-				vk::blitter hw_blitter;
 				section.init_transfer(this);
-
 				auto src_area = section.src_rect();
 				auto dst_area = section.dst_rect();
 
@@ -354,7 +358,6 @@ namespace vk
 					this->transform_pixels_to_samples(dst_area);
 				}
 
-				vk::image *target_image = (samples() > 1) ? get_resolve_target() : this;
 				bool memory_load = true;
 				if (dst_area.x1 == 0 && dst_area.y1 == 0 &&
 					unsigned(dst_area.x2) == target_image->width() && unsigned(dst_area.y2) == target_image->height())

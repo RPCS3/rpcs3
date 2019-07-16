@@ -318,6 +318,37 @@ namespace rsx
 			old_contents.clear();
 		}
 
+		template <typename T>
+		u32 prepare_rw_barrier_for_transfer(T *target)
+		{
+			if (old_contents.size() <= 1)
+				return 0;
+
+			// Sort here before doing transfers since surfaces may have been updated in the meantime
+			std::sort(old_contents.begin(), old_contents.end(), [](auto& a, auto &b)
+			{
+				auto _a = static_cast<T*>(a.source);
+				auto _b = static_cast<T*>(b.source);
+				return (_a->last_use_tag < _b->last_use_tag);
+			});
+
+			// Try and optimize by omitting possible overlapped transfers
+			for (size_t i = old_contents.size() - 1; i > 0 /* Intentional */; i--)
+			{
+				old_contents[i].init_transfer(target);
+
+				const auto dst_area = old_contents[i].dst_rect();
+				if (unsigned(dst_area.x2) == target->width() && unsigned(dst_area.y2) == target->height() &&
+					!dst_area.x1 && !dst_area.y1)
+				{
+					// This transfer will overwrite everything older
+					return u32(i);
+				}
+			}
+
+			return 0;
+		}
+
 		template<typename T>
 		void set_old_contents(T* other)
 		{
