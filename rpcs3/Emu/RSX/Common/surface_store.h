@@ -196,7 +196,7 @@ namespace rsx
 				{
 					auto surface = Traits::get(e.second);
 
-					if (new_surface->last_use_tag > surface->last_use_tag ||
+					if (new_surface->last_use_tag >= surface->last_use_tag ||
 						new_surface == surface ||
 						address == e.first)
 					{
@@ -274,15 +274,6 @@ namespace rsx
 				for (const auto& e : list2) surface_info.push_back(e);
 			}
 
-			if (UNLIKELY(surface_info.size() > 1))
-			{
-				// Sort with oldest first for early exit
-				std::sort(surface_info.begin(), surface_info.end(), [](const auto& a, const auto& b)
-				{
-					return (a.second->last_use_tag < b.second->last_use_tag);
-				});
-			}
-
 			// TODO: Modify deferred_clip_region::direct_copy() to take a few more things into account!
 			const areau child_region = new_surface->get_normalized_memory_area();
 			const auto child_w = child_region.width();
@@ -341,12 +332,6 @@ namespace rsx
 				if (dst_offset.x >= child_w || dst_offset.y >= child_h)
 				{
 					continue;
-				}
-
-				if (child_w == size.width && child_h == size.height && surface_info.size() > 1)
-				{
-					// If the write covers the whole area, discard anything older
-					new_surface->clear_rw_barrier();
 				}
 
 				// TODO: Eventually need to stack all the overlapping regions, but for now just do the latest rect in the space
