@@ -407,7 +407,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
-				if (entry.name == "." || entry.name == "..")
+				if (!entry.is_directory || entry.name == "." || entry.name == "..")
 				{
 					continue;
 				}
@@ -418,7 +418,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				{
 					add_disc_dir(entry_path);
 				}
-				else if (entry.is_directory)
+				else
 				{
 					path_list.emplace_back(entry_path);
 				}
