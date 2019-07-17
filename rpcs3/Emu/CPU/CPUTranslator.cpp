@@ -1,6 +1,7 @@
 #ifdef LLVM_AVAILABLE
 
 #include "CPUTranslator.h"
+#include "Utilities/sysinfo.h"
 
 llvm::LLVMContext g_llvm_ctx;
 
@@ -15,25 +16,7 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 {
 	m_context = context;
 	m_engine = &engine;
-
-	const auto cpu = m_engine->getTargetMachine()->getTargetCPU();
-
-	m_use_ssse3 = true;
-
-	// Test SSSE3 feature (TODO)
-	if (cpu == "generic" ||
-		cpu == "k8" ||
-		cpu == "opteron" ||
-		cpu == "athlon64" ||
-		cpu == "athlon-fx" ||
-		cpu == "k8-sse3" ||
-		cpu == "opteron-sse3" ||
-		cpu == "athlon64-sse3" ||
-		cpu == "amdfam10" ||
-		cpu == "barcelona")
-	{
-		m_use_ssse3 = false;
-	}
+	m_use_ssse3 = utils::has_ssse3();
 }
 
 llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type)
