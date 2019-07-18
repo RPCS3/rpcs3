@@ -36,6 +36,7 @@ GLGSRender::GLGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
+	supports_hw_a2c = false;
 	supports_multidraw = true;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
 }
@@ -1545,6 +1546,12 @@ void GLGSRender::update_draw_state()
 	}
 
 	gl_state.front_face(front_face(rsx::method_registers.front_face_mode()));
+
+	// Sample control
+	// TODO: MinSampleShading
+	//gl_state.enable(rsx::method_registers.msaa_enabled(), GL_MULTISAMPLE);
+	//gl_state.enable(rsx::method_registers.msaa_alpha_to_coverage_enabled(), GL_SAMPLE_ALPHA_TO_COVERAGE);
+	//gl_state.enable(rsx::method_registers.msaa_alpha_to_one_enabled(), GL_SAMPLE_ALPHA_TO_ONE);
 
 	//TODO
 	//NV4097_SET_ANISO_SPREAD
