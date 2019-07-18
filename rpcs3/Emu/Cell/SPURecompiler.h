@@ -84,6 +84,12 @@ public:
 	// Add compiled function and generate trampoline if necessary
 	bool add(u64 last_reset_count, void* where, spu_function_t compiled);
 
+private:
+	spu_function_t rebuild_ubertrampoline();
+
+	friend class spu_cache;
+public:
+
 	// Return opaque pointer for add()
 	void* find(u64 last_reset_count, const std::vector<u32>&);
 

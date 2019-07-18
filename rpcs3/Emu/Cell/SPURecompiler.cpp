@@ -463,6 +463,9 @@ void spu_cache::initialize()
 
 	if (compilers.size() && !func_list.empty())
 	{
+		LOG_NOTICE(SPU, "SPU Runtime: Building trampoline...");
+		spu_runtime::g_dispatcher[0] = compilers[0]->get_runtime().rebuild_ubertrampoline();
+
 		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());
 	}
 
@@ -564,6 +567,26 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	// Register function in PIC map
 	m_pic_map[{func.data() + _off, func.size() - _off}] = compiled;
 
+	if (fxm::check_unlocked<spu_cache>())
+	{
+		// Rebuild trampolines if necessary
+		if (const auto new_tr = rebuild_ubertrampoline())
+		{
+			g_dispatcher[0] = new_tr;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	// Notify in lock destructor
+	lock.notify = true;
+	return true;
+}
+
+spu_function_t spu_runtime::rebuild_ubertrampoline()
+{
 	// Prepare sorted list
 	m_flat_list.clear();
 	m_flat_list.assign(m_pic_map.cbegin(), m_pic_map.cend());
@@ -586,18 +609,14 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	const auto _end = m_flat_list.end();
 	const u32 size0 = ::size32(m_flat_list);
 
-	if (size0 == 1)
-	{
-		g_dispatcher[0] = compiled;
-	}
-	else
+	if (size0 != 1)
 	{
 		// Allocate some writable executable memory
 		u8* const wxptr = jit_runtime::alloc(size0 * 22 + 14, 16);
 
 		if (!wxptr)
 		{
-			return false;
+			return nullptr;
 		}
 
 		// Raw assembly pointer
@@ -728,7 +747,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 			if (w.level >= w.beg->first.size() || w.level >= it->first.size())
 			{
 				// If functions cannot be compared, assume smallest function
-				LOG_ERROR(SPU, "Trampoline simplified at 0x%x (level=%u)", func[0], w.level);
+				LOG_ERROR(SPU, "Trampoline simplified at ??? (level=%u)", w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -760,7 +779,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 
 			if (it == m_flat_list.end())
 			{
-				LOG_ERROR(SPU, "Trampoline simplified (II) at 0x%x (level=%u)", func[0], w.level);
+				LOG_ERROR(SPU, "Trampoline simplified (II) at ??? (level=%u)", w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -871,12 +890,11 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 		}
 
 		workload.clear();
-		g_dispatcher[0] = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
+		return reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
 	}
 
-	// Notify in lock destructor
-	lock.notify = true;
-	return true;
+	// No trampoline required
+	return beg->second;
 }
 
 void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
