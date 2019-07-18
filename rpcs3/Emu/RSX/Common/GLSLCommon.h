@@ -571,12 +571,13 @@ namespace glsl
 			// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
 			// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
 			// Helps to avoid A2C tested foliage disappearing in the distance
+			// TODO: Fix dithering when mipmap gather is finished to remove muddy appearance. Alpha boost is only present to hide far LOD issues in titles like RDR
 			OS <<
 			"bool coverage_test_passes(/*inout*/in vec4 _sample, uint control)\n"
 			"{\n"
 			"	if ((control & 0x1) == 0) return false;\n"
 			"\n"
-			"	float samples = ((control & 0x2) != 0)? 4.f : 2.f;\n"
+			"	float samples = float(control & 0x6) * 0.5f + 1.f;\n"
 			"	float hash    = _saturate(_rand(gl_FragCoord) + 0.5f) * 0.9f;\n"
 			"	float epsilon = hash / samples;\n"
 			"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"

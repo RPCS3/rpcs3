@@ -575,6 +575,9 @@ VKGSRender::VKGSRender() : GSRender()
 
 	supports_multidraw = true;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
+	// NOTE: We do not actually need multiple sample support for A2C to work
+	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
+	supports_hw_a2c = (g_cfg.video.antialiasing_level != msaa_level::none);
 }
 
 VKGSRender::~VKGSRender()
@@ -2552,7 +2555,7 @@ bool VKGSRender::load_program()
 	}
 
 	const auto rasterization_samples = u8((m_current_renderpass_key >> 16) & 0xF);
-	if (rasterization_samples > 1)
+	if (supports_hw_a2c || rasterization_samples > 1)
 	{
 		properties.state.set_multisample_state(
 			rasterization_samples,

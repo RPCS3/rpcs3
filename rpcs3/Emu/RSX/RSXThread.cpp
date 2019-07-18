@@ -691,19 +691,28 @@ namespace rsx
 		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
-			g_cfg.video.antialiasing_level == msaa_level::none)
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !supports_hw_a2c)
 		{
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
 			// Simulated using combined alpha blend and alpha test
 			const u32 mask_bit = rsx::method_registers.msaa_sample_mask() ? 1u : 0u;
-			const u32 samples_bit = rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::diagonal_centered_2_samples ? 1u : 0u;
 
 			rop_control |= (1u << 4);                 // CSAA enable bit
 			rop_control |= (mask_bit << 5);           // MSAA mask enable bit
-			rop_control |= (samples_bit << 6);        // Sample configuration bit
+
+			// Sample configuration bits
+			switch (rsx::method_registers.surface_antialias())
+			{
+				case rsx::surface_antialiasing::center_1_sample:
+					break;
+				case rsx::surface_antialiasing::diagonal_centered_2_samples:
+					rop_control |= 1u << 6;
+					break;
+				default:
+					rop_control |= 3u << 6;
+					break;
+			}
 		}
 
 		const f32 fog0 = rsx::method_registers.fog_params_0();
