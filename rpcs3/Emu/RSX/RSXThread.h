@@ -520,6 +520,7 @@ namespace rsx
 		u32 get_zeta_surface_address() const;
 
 		framebuffer_layout get_framebuffer_layout(rsx::framebuffer_creation_context context);
+		bool get_scissor(areau& region);
 
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
