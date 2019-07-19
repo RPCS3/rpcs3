@@ -32,14 +32,11 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, const QIcon& app
 {
 	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
 
-	// Workaround for a Qt bug affecting 5.11.1 binaries
-	//m_use_5_11_1_workaround = QLibraryInfo::version() == QVersionNumber(5, 11, 1);
-
-	//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
+	// Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
 	std::string version = rpcs3::version.to_string();
 	version = version.substr(0 , version.find_last_of('-'));
 
-	//Add branch and commit hash to version on frame , unless it's master.
+	// Add branch and commit hash to version on frame unless it's master.
 	if ((rpcs3::get_branch().compare("master") != 0) && (rpcs3::get_branch().compare("HEAD") != 0))
 	{
 		version = version + "-" + rpcs3::version.to_string().substr((rpcs3::version.to_string().find_last_of('-') + 1), 8) + "-" + rpcs3::get_branch();
