@@ -932,13 +932,6 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
 
-		for (auto& c : m_title)
-		{
-			// Replace newlines with spaces
-			if (c == '\n')
-				c = ' ';
-		}
-
 		if (!_psf.empty() && m_cat.empty())
 		{
 			LOG_FATAL(LOADER, "Corrupted PARAM.SFO found! Assuming category GD. Try reinstalling the game.");
@@ -1353,6 +1346,27 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			// Booting game update
 			LOG_SUCCESS(LOADER, "Updates found at /dev_hdd0/game/%s/!", m_title_id);
 			return m_path = hdd0_boot, Load();
+		}
+
+		// Set title to actual disc title if necessary
+		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
+
+		if (!disc_sfo_dir.empty() && fs::is_file(disc_sfo_dir))
+		{
+			const std::string bdvd_title = psf::get_string(psf::load_object(fs::file{ disc_sfo_dir }), "TITLE");
+
+			if (!bdvd_title.empty() && bdvd_title != m_title)
+			{
+				LOG_NOTICE(LOADER, "Title was set from %s to %s", m_title, bdvd_title);
+				m_title = bdvd_title;
+			}
+		}
+
+		for (auto& c : m_title)
+		{
+			// Replace newlines with spaces
+			if (c == '\n')
+				c = ' ';
 		}
 
 		// Mount /host_root/ if necessary (special value)
