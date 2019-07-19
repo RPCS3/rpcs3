@@ -70,6 +70,9 @@ public:
 	// Trampoline to spu_recompiler_base::branch
 	static const spu_function_t tr_branch;
 
+	// Trampoline to legacy interpreter
+	static const spu_function_t tr_interpreter;
+
 public:
 	spu_runtime();
 
@@ -80,6 +83,12 @@ public:
 
 	// Add compiled function and generate trampoline if necessary
 	bool add(u64 last_reset_count, void* where, spu_function_t compiled);
+
+private:
+	spu_function_t rebuild_ubertrampoline();
+
+	friend class spu_cache;
+public:
 
 	// Return opaque pointer for add()
 	void* find(u64 last_reset_count, const std::vector<u32>&);
@@ -355,6 +364,9 @@ public:
 
 	// Target for the unresolved patch point (second arg is unused)
 	static void branch(spu_thread&, void*, u8* rip);
+
+	// Legacy interpreter loop
+	static void old_interpreter(spu_thread&, void* ls, u8*);
 
 	// Get the function data at specified address
 	const std::vector<u32>& analyse(const be_t<u32>* ls, u32 lsa);

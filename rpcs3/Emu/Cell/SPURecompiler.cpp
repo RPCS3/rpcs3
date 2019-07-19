@@ -24,6 +24,9 @@ const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
 const spu_decoder<spu_iflag> s_spu_iflag;
 
+extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise;
+extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
+
 extern u64 get_timebased_time();
 
 // Move 4 args for calling native function from a GHC calling convention function
@@ -70,6 +73,18 @@ DECLARE(spu_runtime::tr_branch) = []
 	*raw++ = 0x25;
 	std::memset(raw, 0, 4);
 	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::branch);
+	std::memcpy(raw + 4, &target, 8);
+	return reinterpret_cast<spu_function_t>(trptr);
+}();
+
+DECLARE(spu_runtime::tr_interpreter) = []
+{
+	u8* const trptr = jit_runtime::alloc(32, 16);
+	u8* raw = move_args_ghc_to_native(trptr);
+	*raw++ = 0xff; // jmp [rip]
+	*raw++ = 0x25;
+	std::memset(raw, 0, 4);
+	const u64 target = reinterpret_cast<u64>(&spu_recompiler_base::old_interpreter);
 	std::memcpy(raw + 4, &target, 8);
 	return reinterpret_cast<spu_function_t>(trptr);
 }();
@@ -281,7 +296,12 @@ void spu_cache::add(const std::vector<u32>& func)
 
 void spu_cache::initialize()
 {
-	spu_runtime::g_interpreter = nullptr;
+	spu_runtime::g_interpreter = spu_runtime::g_gateway;
+
+	if (g_cfg.core.spu_decoder == spu_decoder_type::precise || g_cfg.core.spu_decoder == spu_decoder_type::fast)
+	{
+		*spu_runtime::g_dispatcher = spu_runtime::tr_interpreter;
+	}
 
 	const std::string ppu_cache = Emu.PPUCache();
 
@@ -443,6 +463,9 @@ void spu_cache::initialize()
 
 	if (compilers.size() && !func_list.empty())
 	{
+		LOG_NOTICE(SPU, "SPU Runtime: Building trampoline...");
+		spu_runtime::g_dispatcher[0] = compilers[0]->get_runtime().rebuild_ubertrampoline();
+
 		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());
 	}
 
@@ -544,6 +567,26 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	// Register function in PIC map
 	m_pic_map[{func.data() + _off, func.size() - _off}] = compiled;
 
+	if (fxm::check_unlocked<spu_cache>())
+	{
+		// Rebuild trampolines if necessary
+		if (const auto new_tr = rebuild_ubertrampoline())
+		{
+			g_dispatcher[0] = new_tr;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	// Notify in lock destructor
+	lock.notify = true;
+	return true;
+}
+
+spu_function_t spu_runtime::rebuild_ubertrampoline()
+{
 	// Prepare sorted list
 	m_flat_list.clear();
 	m_flat_list.assign(m_pic_map.cbegin(), m_pic_map.cend());
@@ -566,18 +609,14 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	const auto _end = m_flat_list.end();
 	const u32 size0 = ::size32(m_flat_list);
 
-	if (size0 == 1)
-	{
-		g_dispatcher[0] = compiled;
-	}
-	else
+	if (size0 != 1)
 	{
 		// Allocate some writable executable memory
 		u8* const wxptr = jit_runtime::alloc(size0 * 22 + 14, 16);
 
 		if (!wxptr)
 		{
-			return false;
+			return nullptr;
 		}
 
 		// Raw assembly pointer
@@ -708,7 +747,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 			if (w.level >= w.beg->first.size() || w.level >= it->first.size())
 			{
 				// If functions cannot be compared, assume smallest function
-				LOG_ERROR(SPU, "Trampoline simplified at 0x%x (level=%u)", func[0], w.level);
+				LOG_ERROR(SPU, "Trampoline simplified at ??? (level=%u)", w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -740,7 +779,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 
 			if (it == m_flat_list.end())
 			{
-				LOG_ERROR(SPU, "Trampoline simplified (II) at 0x%x (level=%u)", func[0], w.level);
+				LOG_ERROR(SPU, "Trampoline simplified (II) at ??? (level=%u)", w.level);
 				make_jump(0xe9, w.beg->second); // jmp rel32
 				continue;
 			}
@@ -851,12 +890,11 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 		}
 
 		workload.clear();
-		g_dispatcher[0] = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
+		return reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
 	}
 
-	// Notify in lock destructor
-	lock.notify = true;
-	return true;
+	// No trampoline required
+	return beg->second;
 }
 
 void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
@@ -1143,6 +1181,37 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	}
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
+}
+
+void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) try
+{
+	// Select opcode table
+	const auto& table = *(
+		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
+		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
+		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
+
+	// LS pointer
+	const auto base = static_cast<const u8*>(ls);
+
+	while (true)
+	{
+		if (UNLIKELY(spu.state))
+		{
+			if (spu.check_state())
+				break;
+		}
+
+		const u32 op = *reinterpret_cast<const be_t<u32>*>(base + spu.pc);
+		if (table[spu_decode(op)](spu, {op}))
+			spu.pc += 4;
+	}
+}
+catch (const std::exception& e)
+{
+	Emu.Pause();
+	LOG_FATAL(GENERAL, "%s thrown: %s", typeid(e).name(), e.what());
+	LOG_NOTICE(GENERAL, "\n%s", spu.dump());
 }
 
 const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
@@ -4713,8 +4782,6 @@ public:
 
 	static void interp_check(spu_thread* _spu, bool after)
 	{
-		static const spu_decoder<spu_interpreter_fast> s_dec;
-
 		static thread_local std::array<v128, 128> s_gpr;
 
 		if (!after)
@@ -4724,7 +4791,7 @@ public:
 
 			// Execute interpreter instruction
 			const u32 op = *reinterpret_cast<const be_t<u32>*>(_spu->_ptr<u8>(0) + _spu->pc);
-			if (!s_dec.decode(op)(*_spu, {op}))
+			if (!g_spu_interpreter_fast.decode(op)(*_spu, {op}))
 				LOG_FATAL(SPU, "Bad instruction" HERE);
 
 			// Swap state

@@ -50,4 +50,6 @@ namespace utils
 	std::string get_firmware_version();
 
 	std::string get_OS_version();
+
+	ullong get_tsc_freq();
 }

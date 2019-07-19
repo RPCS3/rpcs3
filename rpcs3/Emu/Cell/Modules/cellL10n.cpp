@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Memory/vm_ref.h"
 
 #ifdef _WIN32
 #include <Windows.h>

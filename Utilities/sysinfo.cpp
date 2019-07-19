@@ -110,6 +110,15 @@ std::string utils::get_system_info()
 
 	fmt::append(result, "%s | %d Threads | %.2f GiB RAM", brand, num_proc, mem_total / (1024.0f * 1024 * 1024));
 
+	if (const ullong tsc_freq = get_tsc_freq())
+	{
+		fmt::append(result, " | TSC: %.02fGHz", tsc_freq / 1000000000.);
+	}
+	else
+	{
+		fmt::append(result, " | TSC: Bad");
+	}
+
 	if (has_avx())
 	{
 		result += " | AVX";
@@ -138,7 +147,7 @@ std::string utils::get_system_info()
 		{
 			result += "-FA";
 		}
-		
+
 		if (!has_mpx())
 		{
 			result += " disabled by default";
@@ -213,4 +222,17 @@ std::string utils::get_OS_version()
 	}
 #endif
 	return output;
+}
+
+ullong utils::get_tsc_freq()
+{
+#ifdef _WIN32
+	LARGE_INTEGER freq;
+	if (!QueryPerformanceFrequency(&freq) || freq.QuadPart > 9'999'999)
+		return 0;
+	return freq.QuadPart * 1024;
+#else
+	// TODO
+	return 0;
+#endif
 }

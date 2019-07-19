@@ -188,7 +188,7 @@ namespace rsx
 		template <bool is_depth_surface>
 		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
-			auto scan_list = [&new_surface, address](const rsx::address_range& mem_range, u64 timestamp_check,
+			auto scan_list = [&new_surface, address](const rsx::address_range& mem_range,
 				std::unordered_map<u32, surface_storage_type>& data) -> std::vector<std::pair<u32, surface_type>>
 			{
 				std::vector<std::pair<u32, surface_type>> result;
@@ -196,10 +196,9 @@ namespace rsx
 				{
 					auto surface = Traits::get(e.second);
 
-					if (e.second->last_use_tag <= timestamp_check ||
+					if (new_surface->last_use_tag >= surface->last_use_tag ||
 						new_surface == surface ||
-						address == e.first ||
-						e.second->dirty())
+						address == e.first)
 					{
 						// Do not bother synchronizing with uninitialized data
 						continue;
@@ -235,10 +234,8 @@ namespace rsx
 			};
 
 			const rsx::address_range mem_range = new_surface->get_memory_range();
-			const u64 timestamp_check = prev_surface ? prev_surface->last_use_tag : new_surface->last_use_tag;
-
-			auto list1 = scan_list(mem_range, timestamp_check, m_render_targets_storage);
-			auto list2 = scan_list(mem_range, timestamp_check, m_depth_stencil_storage);
+			auto list1 = scan_list(mem_range, m_render_targets_storage);
+			auto list2 = scan_list(mem_range, m_depth_stencil_storage);
 
 			if (prev_surface)
 			{
@@ -277,15 +274,6 @@ namespace rsx
 				for (const auto& e : list2) surface_info.push_back(e);
 			}
 
-			if (UNLIKELY(surface_info.size() > 1))
-			{
-				// Sort with newest first for early exit
-				std::sort(surface_info.begin(), surface_info.end(), [](const auto& a, const auto& b)
-				{
-					return (a.second->last_use_tag > b.second->last_use_tag);
-				});
-			}
-
 			// TODO: Modify deferred_clip_region::direct_copy() to take a few more things into account!
 			const areau child_region = new_surface->get_normalized_memory_area();
 			const auto child_w = child_region.width();
@@ -294,10 +282,43 @@ namespace rsx
 			const auto pitch = new_surface->get_rsx_pitch();
 			for (const auto &e: surface_info)
 			{
-				const auto parent_region = e.second->get_normalized_memory_area();
+				auto this_address = e.first;
+				auto surface = e.second;
+
+				if (UNLIKELY(surface->old_contents.size() == 1))
+				{
+					// Dirty zombies are possible with unused pixel storage subslices and are valid
+					// Avoid double transfer if possible
+					// This is an optional optimization that can be safely disabled
+					surface = static_cast<decltype(surface)>(surface->old_contents[0].source);
+
+					// Ignore self-reference
+					if (new_surface == surface)
+					{
+						continue;
+					}
+
+					// If this surface has already been added via another descendant, just ignore it
+					bool ignore = false;
+					for (auto &slice : new_surface->old_contents)
+					{
+						if (slice.source == surface)
+						{
+							ignore = true;
+							break;
+						}
+					}
+
+					if (ignore) continue;
+
+					this_address = surface->memory_tag_samples[0].first;
+					verify(HERE), this_address;
+				}
+
+				const auto parent_region = surface->get_normalized_memory_area();
 				const auto parent_w = parent_region.width();
 				const auto parent_h = parent_region.height();
-				const auto rect = rsx::intersect_region(e.first, parent_w, parent_h, 1, address, child_w, child_h, 1, pitch);
+				const auto rect = rsx::intersect_region(this_address, parent_w, parent_h, 1, address, child_w, child_h, 1, pitch);
 
 				const auto src_offset = std::get<0>(rect);
 				const auto dst_offset = std::get<1>(rect);
@@ -321,11 +342,10 @@ namespace rsx
 				region.dst_y = dst_offset.y;
 				region.width = size.width;
 				region.height = size.height;
-				region.source = e.second;
+				region.source = surface;
 				region.target = new_surface;
 
 				new_surface->set_old_contents_region(region, true);
-				break;
 			}
 		}
 
@@ -367,12 +387,6 @@ namespace rsx
 				surface_storage_type &surface = It->second;
 				const bool pitch_compatible = Traits::surface_is_pitch_compatible(surface, pitch);
 
-				if (pitch_compatible)
-				{
-					// Preserve memory outside the area to be inherited if needed
-					split_surface_region<depth>(command_list, address, Traits::get(surface), (u16)width, (u16)height, bpp, antialias);
-				}
-
 				if (Traits::surface_matches_properties(surface, format, width, height, antialias))
 				{
 					if (pitch_compatible)
@@ -386,6 +400,12 @@ namespace rsx
 				}
 				else
 				{
+					if (pitch_compatible)
+					{
+						// Preserve memory outside the area to be inherited if needed
+						split_surface_region<depth>(command_list, address, Traits::get(surface), (u16)width, (u16)height, bpp, antialias);
+					}
+
 					old_surface = Traits::get(surface);
 					old_surface_storage = std::move(surface);
 					primary_storage->erase(It);
@@ -457,12 +477,22 @@ namespace rsx
 				}
 			}
 
-			// Check if old_surface is 'new' and avoid intersection
+			bool do_intersection_test = true;
+
+			// Check if old_surface is 'new' and hopefully avoid intersection
 			if (old_surface && old_surface->last_use_tag >= write_tag)
 			{
-				new_surface->set_old_contents(old_surface);
+				const auto new_area = new_surface->get_normalized_memory_area();
+				const auto old_area = old_surface->get_normalized_memory_area();
+
+				if (new_area.x2 <= old_area.x2 && new_area.y2 <= old_area.y2)
+				{
+					do_intersection_test = false;
+					new_surface->set_old_contents(old_surface);
+				}
 			}
-			else
+
+			if (do_intersection_test)
 			{
 				intersect_surface_region<depth>(command_list, address, new_surface, old_surface);
 			}

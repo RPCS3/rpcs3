@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../System.h"
 #include "Utilities/address_range.h"
@@ -606,7 +606,7 @@ namespace rsx
 	template <typename SurfaceType>
 	std::tuple<u16, u16, u16, u16> get_transferable_region(const SurfaceType* surface)
 	{
-		auto src = static_cast<const SurfaceType*>(surface->old_contents.source);
+		auto src = static_cast<const SurfaceType*>(surface->old_contents[0].source);
 		auto area1 = src->get_normalized_memory_area();
 		auto area2 = surface->get_normalized_memory_area();
 

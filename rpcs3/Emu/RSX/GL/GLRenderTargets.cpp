@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/System.h"
 
@@ -609,7 +609,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
 	};
 
-	if (!old_contents)
+	if (old_contents.empty())
 	{
 		// No memory to inherit
 		if (dirty() && (force_init || state_flags & rsx::surface_state_flags::erase_bkgnd))
@@ -623,58 +623,56 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 		return;
 	}
 
-	auto src_texture = gl::as_rtt(old_contents.source);
-	if (!rsx::pitch_compatible(this, src_texture))
-	{
-		LOG_TRACE(RSX, "Pitch mismatch, could not transfer inherited memory");
-
-		clear_rw_barrier();
-		return;
-	}
-
-	const auto src_bpp = src_texture->get_bpp();
-	const auto dst_bpp = get_bpp();
-	rsx::typeless_xfer typeless_info{};
-
-	if (get_internal_format() == src_texture->get_internal_format())
-	{
-		// Copy data from old contents onto this one
-		verify(HERE), src_bpp == dst_bpp;
-	}
-	else
-	{
-		// Mem cast, generate typeless xfer info
-		if (!formats_are_bitcast_compatible((GLenum)get_internal_format(), (GLenum)src_texture->get_internal_format()) ||
-			aspect() != src_texture->aspect())
-		{
-			typeless_info.src_is_typeless = true;
-			typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
-			typeless_info.src_native_format_override = (u32)get_internal_format();
-			typeless_info.src_is_depth = !!(src_texture->aspect() & gl::image_aspect::depth);
-			typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
-		}
-	}
-
 	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
-	old_contents.init_transfer(this);
+	const auto dst_bpp = get_bpp();
+	unsigned first = prepare_rw_barrier_for_transfer(this);
 
-	if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+	for (auto i = first; i < old_contents.size(); ++i)
 	{
-		const auto area = old_contents.dst_rect();
-		if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
+		auto &section = old_contents[i];
+		auto src_texture = gl::as_rtt(section.source);
+		const auto src_bpp = src_texture->get_bpp();
+		rsx::typeless_xfer typeless_info{};
+
+		if (get_internal_format() == src_texture->get_internal_format())
 		{
-			clear_surface_impl();
+			// Copy data from old contents onto this one
+			verify(HERE), src_bpp == dst_bpp;
 		}
 		else
 		{
-			state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+			// Mem cast, generate typeless xfer info
+			if (!formats_are_bitcast_compatible((GLenum)get_internal_format(), (GLenum)src_texture->get_internal_format()) ||
+				aspect() != src_texture->aspect())
+			{
+				typeless_info.src_is_typeless = true;
+				typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
+				typeless_info.src_native_format_override = (u32)get_internal_format();
+				typeless_info.src_is_depth = !!(src_texture->aspect() & gl::image_aspect::depth);
+				typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
+			}
 		}
-	}
 
-	gl::g_hw_blitter->scale_image(cmd, old_contents.source, this,
-		old_contents.src_rect(),
-		old_contents.dst_rect(),
-		!dst_is_depth, dst_is_depth, typeless_info);
+		section.init_transfer(this);
+
+		if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+		{
+			const auto area = section.dst_rect();
+			if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
+			{
+				clear_surface_impl();
+			}
+			else
+			{
+				state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+			}
+		}
+
+		gl::g_hw_blitter->scale_image(cmd, section.source, this,
+			section.src_rect(),
+			section.dst_rect(),
+			!dst_is_depth, dst_is_depth, typeless_info);
+	}
 
 	// Memory has been transferred, discard old contents and update memory flags
 	// TODO: Preserve memory outside surface clip region

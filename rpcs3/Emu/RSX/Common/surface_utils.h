@@ -130,8 +130,7 @@ namespace rsx
 		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
 		std::array<std::pair<u32, u64>, 5> memory_tag_samples;
 
-		// Obsolete, requires updating
-		deferred_clipped_region<image_storage_type> old_contents{};
+		std::vector<deferred_clipped_region<image_storage_type>> old_contents;
 
 		// Surface properties
 		u16 rsx_pitch = 0;
@@ -161,7 +160,7 @@ namespace rsx
 
 		virtual ~render_target_descriptor()
 		{
-			if (old_contents)
+			if (!old_contents.empty())
 			{
 				// Cascade resource derefs
 				LOG_ERROR(RSX, "Resource was destroyed whilst holding a resource reference!");
@@ -284,7 +283,7 @@ namespace rsx
 
 		bool dirty() const
 		{
-			return (state_flags != rsx::surface_state_flags::ready) || old_contents;
+			return (state_flags != rsx::surface_state_flags::ready) || !old_contents.empty();
 		}
 
 		bool test() const
@@ -311,45 +310,68 @@ namespace rsx
 
 		void clear_rw_barrier()
 		{
-			release_ref(old_contents.source);
-			old_contents = {};
+			for (auto &e : old_contents)
+			{
+				release_ref(e.source);
+			}
+
+			old_contents.clear();
+		}
+
+		template <typename T>
+		u32 prepare_rw_barrier_for_transfer(T *target)
+		{
+			if (old_contents.size() <= 1)
+				return 0;
+
+			// Sort here before doing transfers since surfaces may have been updated in the meantime
+			std::sort(old_contents.begin(), old_contents.end(), [](auto& a, auto &b)
+			{
+				auto _a = static_cast<T*>(a.source);
+				auto _b = static_cast<T*>(b.source);
+				return (_a->last_use_tag < _b->last_use_tag);
+			});
+
+			// Try and optimize by omitting possible overlapped transfers
+			for (size_t i = old_contents.size() - 1; i > 0 /* Intentional */; i--)
+			{
+				old_contents[i].init_transfer(target);
+
+				const auto dst_area = old_contents[i].dst_rect();
+				if (unsigned(dst_area.x2) == target->width() && unsigned(dst_area.y2) == target->height() &&
+					!dst_area.x1 && !dst_area.y1)
+				{
+					// This transfer will overwrite everything older
+					return u32(i);
+				}
+			}
+
+			return 0;
 		}
 
 		template<typename T>
 		void set_old_contents(T* other)
 		{
-			verify(HERE), !old_contents;
+			verify(HERE), old_contents.empty();
 
 			if (!other || other->get_rsx_pitch() != this->get_rsx_pitch())
 			{
-				old_contents = {};
 				return;
 			}
 
-			old_contents = {};
-			old_contents.source = other;
+			old_contents.emplace_back();
+			old_contents.back().source = other;
 			other->add_ref();
 		}
 
 		template<typename T>
 		void set_old_contents_region(const T& region, bool normalized)
 		{
-			if (old_contents)
-			{
-				// This can happen when doing memory splits
-				auto old_surface = static_cast<decltype(region.source)>(old_contents.source);
-				if (old_surface->last_use_tag > region.source->last_use_tag)
-				{
-					return;
-				}
-
-				clear_rw_barrier();
-			}
-
 			// NOTE: This method will not perform pitch verification!
-			verify(HERE), !old_contents, region.source, region.source != this;
+			verify(HERE), region.source, region.source != static_cast<decltype(region.source)>(this);
 
-			old_contents = region.template cast<image_storage_type>();
+			old_contents.push_back(region.template cast<image_storage_type>());
+			auto &slice = old_contents.back();
 			region.source->add_ref();
 
 			// Reverse normalization process if needed
@@ -357,39 +379,39 @@ namespace rsx
 			{
 				const u16 bytes_to_texels_x = region.source->get_bpp() * region.source->samples_x;
 				const u16 rows_to_texels_y = region.source->samples_y;
-				old_contents.src_x /= bytes_to_texels_x;
-				old_contents.src_y /= rows_to_texels_y;
-				old_contents.width /= bytes_to_texels_x;
-				old_contents.height /= rows_to_texels_y;
+				slice.src_x /= bytes_to_texels_x;
+				slice.src_y /= rows_to_texels_y;
+				slice.width /= bytes_to_texels_x;
+				slice.height /= rows_to_texels_y;
 
 				const u16 bytes_to_texels_x2 = (get_bpp() * samples_x);
 				const u16 rows_to_texels_y2 = samples_y;
-				old_contents.dst_x /= bytes_to_texels_x2;
-				old_contents.dst_y /= rows_to_texels_y2;
+				slice.dst_x /= bytes_to_texels_x2;
+				slice.dst_y /= rows_to_texels_y2;
 
-				old_contents.transfer_scale_x = f32(bytes_to_texels_x) / bytes_to_texels_x2;
-				old_contents.transfer_scale_y = f32(rows_to_texels_y) / rows_to_texels_y2;
+				slice.transfer_scale_x = f32(bytes_to_texels_x) / bytes_to_texels_x2;
+				slice.transfer_scale_y = f32(rows_to_texels_y) / rows_to_texels_y2;
 			}
 
 			// Apply resolution scale if needed
 			if (g_cfg.video.resolution_scale_percent != 100)
 			{
-				auto src_width = rsx::apply_resolution_scale(old_contents.width, true, old_contents.source->width());
-				auto src_height = rsx::apply_resolution_scale(old_contents.height, true, old_contents.source->height());
+				auto src_width = rsx::apply_resolution_scale(slice.width, true, slice.source->width());
+				auto src_height = rsx::apply_resolution_scale(slice.height, true, slice.source->height());
 
-				auto dst_width = rsx::apply_resolution_scale(old_contents.width, true, old_contents.target->width());
-				auto dst_height = rsx::apply_resolution_scale(old_contents.height, true, old_contents.target->height());
+				auto dst_width = rsx::apply_resolution_scale(slice.width, true, slice.target->width());
+				auto dst_height = rsx::apply_resolution_scale(slice.height, true, slice.target->height());
 
-				old_contents.transfer_scale_x *= f32(dst_width) / src_width;
-				old_contents.transfer_scale_y *= f32(dst_height) / src_height;
+				slice.transfer_scale_x *= f32(dst_width) / src_width;
+				slice.transfer_scale_y *= f32(dst_height) / src_height;
 
-				old_contents.width = src_width;
-				old_contents.height = src_height;
+				slice.width = src_width;
+				slice.height = src_height;
 
-				old_contents.src_x = rsx::apply_resolution_scale(old_contents.src_x, false, old_contents.source->width());
-				old_contents.src_y = rsx::apply_resolution_scale(old_contents.src_y, false, old_contents.source->height());
-				old_contents.dst_x = rsx::apply_resolution_scale(old_contents.dst_x, false, old_contents.target->width());
-				old_contents.dst_y = rsx::apply_resolution_scale(old_contents.dst_y, false, old_contents.target->height());
+				slice.src_x = rsx::apply_resolution_scale(slice.src_x, false, slice.source->width());
+				slice.src_y = rsx::apply_resolution_scale(slice.src_y, false, slice.source->height());
+				slice.dst_x = rsx::apply_resolution_scale(slice.dst_x, false, slice.target->width());
+				slice.dst_y = rsx::apply_resolution_scale(slice.dst_y, false, slice.target->height());
 			}
 		}
 
@@ -457,7 +479,7 @@ namespace rsx
 				msaa_flags = resolve_flags;
 			}
 
-			if (old_contents.source)
+			if (!old_contents.empty())
 			{
 				clear_rw_barrier();
 			}

@@ -1084,12 +1084,12 @@ namespace vm
 	}
 }
 
-void fmt_class_string<vm::_ptr_base<const void>>::format(std::string& out, u64 arg)
+void fmt_class_string<vm::_ptr_base<const void, u32>>::format(std::string& out, u64 arg)
 {
 	fmt_class_string<u32>::format(out, arg);
 }
 
-void fmt_class_string<vm::_ptr_base<const char>>::format(std::string& out, u64 arg)
+void fmt_class_string<vm::_ptr_base<const char, u32>>::format(std::string& out, u64 arg)
 {
 	// Special case (may be allowed for some arguments)
 	if (arg == 0)
@@ -1111,7 +1111,7 @@ void fmt_class_string<vm::_ptr_base<const char>>::format(std::string& out, u64 a
 
 	out += u8"“";
 
-	for (vm::_ptr_base<const volatile char> ptr = vm::cast(arg);; ptr++)
+	for (vm::_ptr_base<const volatile char, u32> ptr = vm::cast(arg);; ptr++)
 	{
 		if (!vm::check_addr(ptr.addr()))
 		{

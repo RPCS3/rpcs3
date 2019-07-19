@@ -196,7 +196,7 @@ struct gl_render_target_traits
 
 	static
 	void clone_surface(
-		gl::command_context&,
+		gl::command_context& cmd,
 		std::unique_ptr<gl::render_target>& sink, gl::render_target* ref,
 		u32 address, barrier_descriptor_t& prev)
 	{
@@ -227,6 +227,20 @@ struct gl_render_target_traits
 		prev.target = sink.get();
 
 		sink->sync_tag();
+
+		if (!sink->old_contents.empty())
+		{
+			// Deal with this, likely only needs to clear
+			if (sink->surface_width > prev.width || sink->surface_height > prev.height)
+			{
+				sink->write_barrier(cmd);
+			}
+			else
+			{
+				sink->clear_rw_barrier();
+			}
+		}
+
 		sink->set_old_contents_region(prev, false);
 		sink->last_use_tag = ref->last_use_tag;
 	}
@@ -269,7 +283,7 @@ struct gl_render_target_traits
 	static
 	void notify_surface_invalidated(const std::unique_ptr<gl::render_target>& surface)
 	{
-		if (surface->old_contents)
+		if (!surface->old_contents.empty())
 		{
 			// TODO: Retire the deferred writes
 			surface->clear_rw_barrier();

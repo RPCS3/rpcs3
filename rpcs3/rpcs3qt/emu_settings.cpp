@@ -205,7 +205,7 @@ emu_settings::Render_Creator::Render_Creator()
 	if (thread_running)
 	{
 		LOG_ERROR(GENERAL, "Vulkan device enumeration timed out");
-		auto button = QMessageBox::critical(nullptr, tr("Vulkan check timeout"),
+		auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
 			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
 			"graphics drivers, reinstalling them could fix the issue.\n\n"
 			"Selecting ignore starts the emulator without Vulkan support."),

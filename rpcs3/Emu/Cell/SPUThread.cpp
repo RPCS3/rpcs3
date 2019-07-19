@@ -71,10 +71,6 @@ static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const declt
 extern u64 get_timebased_time();
 extern u64 get_system_time();
 
-extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise;
-
-extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
-
 extern thread_local u64 g_tls_fault_spu;
 
 template <>
@@ -1156,12 +1152,11 @@ void spu_thread::cpu_task()
 
 		// Print some stats
 		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
-		cpu_stop();
-		return;
 	}
-
-	if (spu_runtime::g_interpreter)
+	else
 	{
+		ASSERT(spu_runtime::g_interpreter);
+
 		while (true)
 		{
 			if (UNLIKELY(state))
@@ -1172,31 +1167,6 @@ void spu_thread::cpu_task()
 
 			spu_runtime::g_interpreter(*this, vm::_ptr<u8>(offset), nullptr);
 		}
-
-		cpu_stop();
-		return;
-	}
-
-	// Select opcode table
-	const auto& table = *(
-		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
-		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
-		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
-
-	// LS pointer
-	const auto base = vm::_ptr<const u8>(offset);
-
-	while (true)
-	{
-		if (UNLIKELY(state))
-		{
-			if (check_state())
-				break;
-		}
-
-		const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
-		if (table[spu_decode(op)](*this, {op}))
-			pc += 4;
 	}
 
 	cpu_stop();

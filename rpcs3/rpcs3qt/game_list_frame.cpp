@@ -407,7 +407,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
-				if (entry.name == "." || entry.name == "..")
+				if (!entry.is_directory || entry.name == "." || entry.name == "..")
 				{
 					continue;
 				}
@@ -418,7 +418,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				{
 					add_disc_dir(entry_path);
 				}
-				else if (entry.is_directory)
+				else
 				{
 					path_list.emplace_back(entry_path);
 				}
@@ -1064,7 +1064,7 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, gam
 
 bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, game_info game, bool is_interactive)
 {
-	const std::string config_dir = Emulator::GetCustomConfigPath(title_id);
+	const std::string config_dir = Emulator::GetCustomInputConfigDir(title_id);
 
 	if (!fs::is_dir(config_dir))
 		return true;
@@ -1534,10 +1534,13 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
 
 	if (!m_isListLayout)
 	{
+		const QString custom_title = m_titles[QString::fromStdString(game->info.serial)];
+		const QString title = custom_title.isEmpty() ? qstr(game->info.name) : custom_title;
 		const QColor color = getGridCompatibilityColor(game->compat.color);
+
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 		int r = m_xgrid->currentItem()->row(), c = m_xgrid->currentItem()->column();
-		m_xgrid->addItem(game->pxmap, qstr(game->info.name).simplified(), r, c);
+		m_xgrid->addItem(game->pxmap, title.simplified(), r, c);
 		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(game));
 	}
 	else if (game->hasCustomConfig && game->hasCustomPadConfig)
@@ -1547,7 +1550,7 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
 	else if (game->hasCustomPadConfig)
 		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/controllers.png"));
 	else
-		m_gameList->setItem(item->row(), gui::column_name, new custom_table_widget_item(game->info.name));
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon());
 }
 
 void game_list_frame::ResizeIcons(const int& sliderPos)
