@@ -1799,37 +1799,13 @@ void VKGSRender::set_viewport()
 
 void VKGSRender::set_scissor()
 {
-	if (m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty)
+	areau scissor;
+	if (get_scissor(scissor))
 	{
-		// Optimistic that the new config will allow us to render
-		framebuffer_status_valid = true;
-	}
-	else if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
-	{
-		// Nothing to do
-		return;
-	}
-
-	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_invalid);
-
-	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
-	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
-	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
-	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
-
-	m_scissor.extent.height = scissor_h;
-	m_scissor.extent.width = scissor_w;
-	m_scissor.offset.x = scissor_x;
-	m_scissor.offset.y = scissor_y;
-
-	if (scissor_x >= m_viewport.width || scissor_y >= m_viewport.height || scissor_w == 0 || scissor_h == 0)
-	{
-		if (!g_cfg.video.strict_rendering_mode)
-		{
-			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
-			framebuffer_status_valid = false;
-			return;
-		}
+		m_scissor.extent.height = scissor.height();
+		m_scissor.extent.width = scissor.width();
+		m_scissor.offset.x = scissor.x1;
+		m_scissor.offset.y = scissor.y1;
 	}
 }
 

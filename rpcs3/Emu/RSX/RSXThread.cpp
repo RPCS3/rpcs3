@@ -1302,6 +1302,56 @@ namespace rsx
 		return layout;
 	}
 
+	bool thread::get_scissor(areau& region)
+	{
+		if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
+		{
+			// Nothing to do
+			return false;
+		}
+
+		m_graphics_state &= ~rsx::pipeline_state::scissor_config_state_dirty;
+
+		u16 scissor_x = rsx::method_registers.scissor_origin_x();
+		u16 scissor_w = rsx::method_registers.scissor_width();
+		u16 scissor_y = rsx::method_registers.scissor_origin_y();
+		u16 scissor_h = rsx::method_registers.scissor_height();
+
+		u16 raster_x = rsx::method_registers.viewport_origin_x();
+		u16 raster_w = rsx::method_registers.viewport_width();
+		u16 raster_y = rsx::method_registers.viewport_origin_y();
+		u16 raster_h = rsx::method_registers.viewport_height();
+
+		// Get the minimum area between these two
+		u16 x1 = std::max(scissor_x, raster_x);
+		u16 y1 = std::max(scissor_y, raster_y);
+		u16 x2 = std::min(scissor_x + scissor_w, raster_x + raster_w);
+		u16 y2 = std::min(scissor_y + scissor_h, raster_y + raster_h);
+
+		if (x2 <= x1 ||
+			y2 <= y1 ||
+			x1 >= rsx::method_registers.window_clip_horizontal() ||
+			y1 >= rsx::method_registers.window_clip_vertical())
+		{
+			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
+			framebuffer_status_valid = false;
+			return false;
+		}
+
+		if (m_graphics_state & rsx::pipeline_state::scissor_setup_invalid)
+		{
+			m_graphics_state &= ~rsx::pipeline_state::scissor_setup_invalid;
+			framebuffer_status_valid = true;
+		}
+
+		region.x1 = rsx::apply_resolution_scale(x1, false);
+		region.x2 = rsx::apply_resolution_scale(x2, true);
+		region.y1 = rsx::apply_resolution_scale(y1, false);
+		region.y2 = rsx::apply_resolution_scale(y2, true);
+
+		return true;
+	}
+
 	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures, bool skip_vertex_inputs)
 	{
 		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_dirty))
