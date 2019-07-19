@@ -492,6 +492,41 @@ const bool Emulator::SetUsr(const std::string& user)
 	return true;
 }
 
+const std::string Emulator::GetBackgroundPicturePath() const
+{
+	std::string path = m_sfo_dir + "/PIC1.PNG";
+
+	if (!fs::exists(path))
+	{
+		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
+
+		if (disc_dir.empty())
+		{
+			// Fallback to ICON0.PNG
+			path = m_sfo_dir + "/ICON0.PNG";
+		}
+		else
+		{
+			// Fallback to PIC1.PNG in disc dir
+			path = disc_dir + "/PIC1.PNG";
+
+			if (!fs::exists(path))
+			{
+				// Fallback to ICON0.PNG in update dir
+				path = m_sfo_dir + "/ICON0.PNG";
+
+				if (!fs::exists(path))
+				{
+					// Fallback to ICON0.PNG in disc dir
+					path = disc_dir + "/ICON0.PNG";
+				}
+			}
+		}
+	}
+
+	return path;
+}
+
 std::string Emulator::PPUCache() const
 {
 	const auto _main = fxm::check_unlocked<ppu_module>();
