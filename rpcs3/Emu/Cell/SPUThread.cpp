@@ -1526,7 +1526,7 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 	// Amount of elements to fetch in one go
 	constexpr u32 fetch_size = 6;
 
-	struct list_element
+	struct alignas(8) list_element
 	{
 		be_t<u16> sb; // Stall-and-Notify bit (0x8000)
 		be_t<u16> ts; // List Transfer Size
@@ -1536,8 +1536,8 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 	union
 	{
 		list_element items[fetch_size];
-		u64 items_u64[sizeof(items) / sizeof(u64)];
-		u128 items_u128[sizeof(items) / sizeof(u128)];
+		u64 items64[fetch_size];
+		u128 items128[fetch_size / 2];
 	};
 
 	spu_mfc_cmd transfer;
@@ -1556,21 +1556,21 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 		if (index == fetch_size)
 		{
 			const auto src = _ptr<void>(args.eal & 0x3fff8);
-			if ((uptr)src % 0x10)
+			if ((uptr)src % alignof(u128))
 			{
 				// Unaligned
-				items_u64[0] = ((u64*)src)[0];
-				items_u64[1] = ((u64*)src)[1];
-				items_u64[2] = ((u64*)src)[2];
-				items_u64[3] = ((u64*)src)[3];
-				items_u64[4] = ((u64*)src)[4];	
-				items_u64[5] = ((u64*)src)[5];				
+				items64[0] = ((u64*)src)[0];
+				items64[1] = ((u64*)src)[1];
+				items64[2] = ((u64*)src)[2];
+				items64[3] = ((u64*)src)[3];
+				items64[4] = ((u64*)src)[4];	
+				items64[5] = ((u64*)src)[5];				
 			}
 			else
 			{
-				items_u128[0] = ((u128*)src)[0];
-				items_u128[1] = ((u128*)src)[1];
-				items_u128[2] = ((u128*)src)[2];
+				items128[0] = ((u128*)src)[0];
+				items128[1] = ((u128*)src)[1];
+				items128[2] = ((u128*)src)[2];
 			}
 
 			// Reset to elements array head
