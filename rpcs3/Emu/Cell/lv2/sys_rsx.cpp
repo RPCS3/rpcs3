@@ -14,6 +14,8 @@ LOG_CHANNEL(sys_rsx);
 
 extern u64 get_timebased_time();
 
+static shared_mutex s_rsxmem_mtx;
+
 u64 rsxTimeStamp()
 {
 	return get_timebased_time();
@@ -194,6 +196,8 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	io >>= 20, ea >>= 20, size >>= 20;
 
+	std::scoped_lock lock(s_rsxmem_mtx);
+
 	for (u32 i = 0; i < size; i++)
 	{
 		RSXIOMem.io[ea + i].raw() = io + i;
@@ -218,6 +222,8 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 		return CELL_EINVAL;
 	}
 
+	std::scoped_lock lock(s_rsxmem_mtx);
+
 	const u32 end = (io >>= 20) + (size >>= 20);
 
 	while (io < end)
@@ -226,7 +232,6 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 		if (ea_entry < 512) RSXIOMem.io[ea_entry].raw() = 0xFFFF;
 	}
 
-	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return CELL_OK;
 }
 
