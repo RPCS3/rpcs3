@@ -219,10 +219,11 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 	}
 
 	const u32 end = (io >>= 20) + (size >>= 20);
-	for (u32 ea = RSXIOMem.ea[io]; io < end;)
+
+	while (io < end)
 	{
-		RSXIOMem.io[ea++].raw() = 0xFFFF;
-		RSXIOMem.ea[io++].raw() = 0xFFFF;
+		const u32 ea_entry = std::exchange(RSXIOMem.ea[io++].raw(), 0xFFFF);
+		if (ea_entry < 512) RSXIOMem.io[ea_entry].raw() = 0xFFFF;
 	}
 
 	std::atomic_thread_fence(std::memory_order_seq_cst);
