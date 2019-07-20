@@ -268,5 +268,10 @@ namespace vm
 	}
 
 	void close();
-}
 
+	template <typename T, typename AT>
+	class _ptr_base;
+
+	template <typename T, typename AT>
+	class _ref_base;
+}

@@ -691,19 +691,28 @@ namespace rsx
 		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() &&
-			rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
-			g_cfg.video.antialiasing_level == msaa_level::none)
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !supports_hw_a2c)
 		{
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
 			// Simulated using combined alpha blend and alpha test
 			const u32 mask_bit = rsx::method_registers.msaa_sample_mask() ? 1u : 0u;
-			const u32 samples_bit = rsx::method_registers.surface_antialias() != rsx::surface_antialiasing::diagonal_centered_2_samples ? 1u : 0u;
 
 			rop_control |= (1u << 4);                 // CSAA enable bit
 			rop_control |= (mask_bit << 5);           // MSAA mask enable bit
-			rop_control |= (samples_bit << 6);        // Sample configuration bit
+
+			// Sample configuration bits
+			switch (rsx::method_registers.surface_antialias())
+			{
+				case rsx::surface_antialiasing::center_1_sample:
+					break;
+				case rsx::surface_antialiasing::diagonal_centered_2_samples:
+					rop_control |= 1u << 6;
+					break;
+				default:
+					rop_control |= 3u << 6;
+					break;
+			}
 		}
 
 		const f32 fog0 = rsx::method_registers.fog_params_0();
@@ -1291,6 +1300,73 @@ namespace rsx
 
 		layout.ignore_change = false;
 		return layout;
+	}
+
+	bool thread::get_scissor(areau& region, bool clip_viewport)
+	{
+		if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
+		{
+			if (clip_viewport == !!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped))
+			{
+				// Nothing to do
+				return false;
+			}
+		}
+
+		m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_clipped);
+
+		u16 x1, x2, y1, y2;
+
+		u16 scissor_x = rsx::method_registers.scissor_origin_x();
+		u16 scissor_w = rsx::method_registers.scissor_width();
+		u16 scissor_y = rsx::method_registers.scissor_origin_y();
+		u16 scissor_h = rsx::method_registers.scissor_height();
+
+		if (clip_viewport)
+		{
+			u16 raster_x = rsx::method_registers.viewport_origin_x();
+			u16 raster_w = rsx::method_registers.viewport_width();
+			u16 raster_y = rsx::method_registers.viewport_origin_y();
+			u16 raster_h = rsx::method_registers.viewport_height();
+
+			// Get the minimum area between these two
+			x1 = std::max(scissor_x, raster_x);
+			y1 = std::max(scissor_y, raster_y);
+			x2 = std::min(scissor_x + scissor_w, raster_x + raster_w);
+			y2 = std::min(scissor_y + scissor_h, raster_y + raster_h);
+
+			m_graphics_state |= rsx::pipeline_state::scissor_setup_clipped;
+		}
+		else
+		{
+			x1 = scissor_x;
+			x2 = scissor_x + scissor_w;
+			y1 = scissor_y;
+			y2 = scissor_y + scissor_h;
+		}
+
+		if (x2 <= x1 ||
+			y2 <= y1 ||
+			x1 >= rsx::method_registers.window_clip_horizontal() ||
+			y1 >= rsx::method_registers.window_clip_vertical())
+		{
+			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
+			framebuffer_status_valid = false;
+			return false;
+		}
+
+		if (m_graphics_state & rsx::pipeline_state::scissor_setup_invalid)
+		{
+			m_graphics_state &= ~rsx::pipeline_state::scissor_setup_invalid;
+			framebuffer_status_valid = true;
+		}
+
+		region.x1 = rsx::apply_resolution_scale(x1, false);
+		region.x2 = rsx::apply_resolution_scale(x2, true);
+		region.y1 = rsx::apply_resolution_scale(y1, false);
+		region.y2 = rsx::apply_resolution_scale(y2, true);
+
+		return true;
 	}
 
 	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures, bool skip_vertex_inputs)

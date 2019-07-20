@@ -36,6 +36,7 @@ GLGSRender::GLGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
+	supports_hw_a2c = false;
 	supports_multidraw = true;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
 }
@@ -213,19 +214,18 @@ void GLGSRender::end()
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 
 	// Handle special memory barrier for ARGB8->D24S8 in an active DSV
-	if (ds && ds->old_contents &&
-		ds->old_contents.source->get_internal_format() == gl::texture::internal_format::rgba8 &&
-		rsx::pitch_compatible(ds, gl::as_rtt(ds->old_contents.source)))
+	if (ds && ds->old_contents.size() == 1 &&
+		ds->old_contents[0].source->get_internal_format() == gl::texture::internal_format::rgba8)
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
 		// TODO: Stencil transfer
 		gl::g_hw_blitter->fast_clear_image(cmd, ds, 1.f, 0xFF);
-		ds->old_contents.init_transfer(ds);
+		ds->old_contents[0].init_transfer(ds);
 
-		m_depth_converter.run(ds->old_contents.src_rect(),
-			ds->old_contents.dst_rect(),
-			ds->old_contents.source, ds);
+		m_depth_converter.run(ds->old_contents[0].src_rect(),
+			ds->old_contents[0].dst_rect(),
+			ds->old_contents[0].source, ds);
 
 		ds->on_write();
 	}
@@ -650,45 +650,16 @@ void GLGSRender::set_viewport()
 	glViewport(0, 0, clip_width, clip_height);
 }
 
-void GLGSRender::set_scissor()
+void GLGSRender::set_scissor(bool clip_viewport)
 {
-	if (m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty)
+	areau scissor;
+	if (get_scissor(scissor, clip_viewport))
 	{
-		// Optimistic that the new config will allow us to render
-		framebuffer_status_valid = true;
+		// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
+		// See LIMBO [NPUB-30373] which uses shader window origin = top
+		glScissor(scissor.x1, scissor.y1, scissor.width(), scissor.height());
+		gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 	}
-	else if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
-	{
-		// Nothing to do
-		return;
-	}
-
-	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_invalid);
-
-	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
-	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
-
-	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
-	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
-	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
-	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
-
-	// Do not bother drawing anything if output is zero sized
-	// TODO: Clip scissor region
-	if (scissor_x >= clip_width || scissor_y >= clip_height || scissor_w == 0 || scissor_h == 0)
-	{
-		if (!g_cfg.video.strict_rendering_mode)
-		{
-			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
-			framebuffer_status_valid = false;
-			return;
-		}
-	}
-
-	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
-	// See LIMBO [NPUB-30373] which uses shader window origin = top
-	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
-	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 }
 
 void GLGSRender::on_init_thread()
@@ -1547,6 +1518,12 @@ void GLGSRender::update_draw_state()
 
 	gl_state.front_face(front_face(rsx::method_registers.front_face_mode()));
 
+	// Sample control
+	// TODO: MinSampleShading
+	//gl_state.enable(rsx::method_registers.msaa_enabled(), GL_MULTISAMPLE);
+	//gl_state.enable(rsx::method_registers.msaa_alpha_to_coverage_enabled(), GL_SAMPLE_ALPHA_TO_COVERAGE);
+	//gl_state.enable(rsx::method_registers.msaa_alpha_to_one_enabled(), GL_SAMPLE_ALPHA_TO_ONE);
+
 	//TODO
 	//NV4097_SET_ANISO_SPREAD
 	//NV4097_SET_SPECULAR_ENABLE
@@ -1807,7 +1784,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		// Always restore the active framebuffer
 		m_draw_fbo->bind();
 		set_viewport();
-		set_scissor();
+		set_scissor(!!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped));
 	}
 
 	// If we are skipping the next frame, do not reset perf counters

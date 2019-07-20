@@ -71,10 +71,6 @@ static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const declt
 extern u64 get_timebased_time();
 extern u64 get_system_time();
 
-extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise;
-
-extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
-
 extern thread_local u64 g_tls_fault_spu;
 
 template <>
@@ -117,13 +113,15 @@ namespace spu
 		std::array<std::atomic<u8>, 65536> atomic_instruction_table = {};
 		constexpr u32 native_jiffy_duration_us = 1500; //About 1ms resolution with a half offset
 
-		void acquire_pc_address(u32 pc, u32 timeout_ms = 3)
+		void acquire_pc_address(spu_thread& spu, u32 pc, u32 timeout_ms = 3)
 		{
 			const u8 max_concurrent_instructions = (u8)g_cfg.core.preferred_spu_threads;
 			const u32 pc_offset = pc >> 2;
 
 			if (atomic_instruction_table[pc_offset].load(std::memory_order_consume) >= max_concurrent_instructions)
 			{
+				spu.state += cpu_flag::wait;
+
 				if (timeout_ms > 0)
 				{
 					const u64 timeout = timeout_ms * 1000u; //convert to microseconds
@@ -150,6 +148,11 @@ namespace spu
 					const auto count = atomic_instruction_table[pc_offset].load(std::memory_order_consume) * 100ull;
 					busy_wait(count);
 				}
+
+				if (spu.test_stopped())
+				{
+					spu_runtime::g_escape(&spu);
+				}
 			}
 
 			atomic_instruction_table[pc_offset]++;
@@ -172,7 +175,7 @@ namespace spu
 			{
 				if (g_cfg.core.preferred_spu_threads > 0)
 				{
-					acquire_pc_address(pc, (u32)g_cfg.core.spu_delay_penalty);
+					acquire_pc_address(spu, pc, (u32)g_cfg.core.spu_delay_penalty);
 					active = true;
 				}
 			}
@@ -1149,12 +1152,11 @@ void spu_thread::cpu_task()
 
 		// Print some stats
 		LOG_NOTICE(SPU, "Stats: Block Weight: %u (Retreats: %u);", block_counter, block_failure);
-		cpu_stop();
-		return;
 	}
-
-	if (spu_runtime::g_interpreter)
+	else
 	{
+		ASSERT(spu_runtime::g_interpreter);
+
 		while (true)
 		{
 			if (UNLIKELY(state))
@@ -1165,31 +1167,6 @@ void spu_thread::cpu_task()
 
 			spu_runtime::g_interpreter(*this, vm::_ptr<u8>(offset), nullptr);
 		}
-
-		cpu_stop();
-		return;
-	}
-
-	// Select opcode table
-	const auto& table = *(
-		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
-		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
-		(fmt::throw_exception<std::logic_error>("Invalid SPU decoder"), nullptr));
-
-	// LS pointer
-	const auto base = vm::_ptr<const u8>(offset);
-
-	while (true)
-	{
-		if (UNLIKELY(state))
-		{
-			if (check_state())
-				break;
-		}
-
-		const u32 op = *reinterpret_cast<const be_t<u32>*>(base + pc);
-		if (table[spu_decode(op)](*this, {op}))
-			pc += 4;
 	}
 
 	cpu_stop();

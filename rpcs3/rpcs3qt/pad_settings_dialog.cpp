@@ -187,9 +187,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	// Set up first tab
 	OnTabChanged(0);
 
-	// repaint and resize controller image
+	// repaint controller image
 	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(*ui->l_controller->pixmap(), QColor(), gui::utils::get_label_color("l_controller"), false, true));
-	ui->l_controller->setMaximumSize(ui->gb_description->sizeHint().width(), ui->l_controller->maximumHeight() * ui->gb_description->sizeHint().width() / ui->l_controller->maximumWidth());
 
 	// set tab layout constraint to the first tab
 	m_tabs->widget(0)->layout()->setSizeConstraint(QLayout::SetFixedSize);

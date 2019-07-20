@@ -575,6 +575,9 @@ VKGSRender::VKGSRender() : GSRender()
 
 	supports_multidraw = true;
 	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
+	// NOTE: We do not actually need multiple sample support for A2C to work
+	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
+	supports_hw_a2c = (g_cfg.video.antialiasing_level != msaa_level::none);
 }
 
 VKGSRender::~VKGSRender()
@@ -1212,8 +1215,8 @@ void VKGSRender::end()
 	// Check for data casts
 	// NOTE: This is deprecated and will be removed soon. The memory barrier invoked before rendering does this better
 	auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-	if (ds && ds->old_contents &&
-		ds->old_contents.source->info.format == VK_FORMAT_B8G8R8A8_UNORM)
+	if (ds && ds->old_contents.size() == 1 &&
+		ds->old_contents[0].source->info.format == VK_FORMAT_B8G8R8A8_UNORM)
 	{
 		auto key = vk::get_renderpass_key(ds->info.format);
 		auto render_pass = vk::get_renderpass(*m_device, key);
@@ -1223,7 +1226,7 @@ void VKGSRender::end()
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 };
 
 		// Initialize source
-		auto src = vk::as_rtt(ds->old_contents.source);
+		auto src = vk::as_rtt(ds->old_contents[0].source);
 		src->read_barrier(*m_current_command_buffer);
 
 		switch (src->current_layout)
@@ -1244,10 +1247,10 @@ void VKGSRender::end()
 		if (!preinitialized) ds->pop_layout(*m_current_command_buffer);
 
 		// TODO: Stencil transfer
-		ds->old_contents.init_transfer(ds);
+		ds->old_contents[0].init_transfer(ds);
 		m_depth_converter->run(*m_current_command_buffer,
-			ds->old_contents.src_rect(),
-			ds->old_contents.dst_rect(),
+			ds->old_contents[0].src_rect(),
+			ds->old_contents[0].dst_rect(),
 			src->get_view(0xAAE4, rsx::default_remap_vector),
 			ds, render_pass);
 
@@ -1794,39 +1797,15 @@ void VKGSRender::set_viewport()
 	m_viewport.maxDepth = 1.f;
 }
 
-void VKGSRender::set_scissor()
+void VKGSRender::set_scissor(bool clip_viewport)
 {
-	if (m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty)
+	areau scissor;
+	if (get_scissor(scissor, clip_viewport))
 	{
-		// Optimistic that the new config will allow us to render
-		framebuffer_status_valid = true;
-	}
-	else if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
-	{
-		// Nothing to do
-		return;
-	}
-
-	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_invalid);
-
-	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
-	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
-	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
-	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
-
-	m_scissor.extent.height = scissor_h;
-	m_scissor.extent.width = scissor_w;
-	m_scissor.offset.x = scissor_x;
-	m_scissor.offset.y = scissor_y;
-
-	if (scissor_x >= m_viewport.width || scissor_y >= m_viewport.height || scissor_w == 0 || scissor_h == 0)
-	{
-		if (!g_cfg.video.strict_rendering_mode)
-		{
-			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
-			framebuffer_status_valid = false;
-			return;
-		}
+		m_scissor.extent.height = scissor.height();
+		m_scissor.extent.width = scissor.width();
+		m_scissor.offset.x = scissor.x1;
+		m_scissor.offset.y = scissor.y1;
 	}
 }
 
@@ -2576,7 +2555,7 @@ bool VKGSRender::load_program()
 	}
 
 	const auto rasterization_samples = u8((m_current_renderpass_key >> 16) & 0xF);
-	if (rasterization_samples > 1)
+	if (supports_hw_a2c || rasterization_samples > 1)
 	{
 		properties.state.set_multisample_state(
 			rasterization_samples,
@@ -2845,11 +2824,12 @@ void VKGSRender::open_command_buffer()
 
 void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 {
+	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
 	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)
 	{
 		// Fast path
 		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
-		set_scissor();
+		set_scissor(clipped_scissor);
 		return;
 	}
 
@@ -2867,7 +2847,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
-		set_scissor();
+		set_scissor(clipped_scissor);
 		return;
 	}
 
@@ -3043,7 +3023,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_draw_fbo->add_ref();
 
 	set_viewport();
-	set_scissor();
+	set_scissor(clipped_scissor);
 
 	check_zcull_status(true);
 }

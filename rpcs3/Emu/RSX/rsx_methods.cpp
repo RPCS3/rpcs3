@@ -2790,6 +2790,8 @@ namespace rsx
 		bind<NV4097_SET_FOG_MODE, nv4097::set_ROP_state_dirty_bit>();
 		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
 		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::set_scissor_dirty_bit>();
+		bind<NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
+		bind<NV4097_SET_VIEWPORT_VERTICAL, nv4097::set_scissor_dirty_bit>();
 		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();

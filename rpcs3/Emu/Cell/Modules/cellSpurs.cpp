@@ -19,7 +19,7 @@
 
 LOG_CHANNEL(cellSpurs);
 
-error_code sys_spu_image_close(vm::ptr<sys_spu_image> img);
+error_code sys_spu_image_close(ppu_thread&, vm::ptr<sys_spu_image> img);
 
 // TODO
 struct cell_error_t
@@ -125,7 +125,7 @@ namespace _spurs
 //s32 cellSpursDetachLv2EventQueue(vm::ptr<CellSpurs> spurs, u8 port);
 
 // Enable the SPU exception event handler
-s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, b8 flag);
+s32 cellSpursEnableExceptionEventHandler(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, b8 flag);
 
 //s32 cellSpursSetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs, vm::ptr<CellSpursGlobalExceptionEventHandler> eaHandler, vm::ptr<void> arg);
 //s32 cellSpursUnsetGlobalExceptionEventHandler(vm::ptr<CellSpurs> spurs);
@@ -427,7 +427,7 @@ s32 _spurs::attach_lv2_eq(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 queue, 
 		portMask |= 1ull << (i);
 	}
 
-	if (s32 res = sys_spu_thread_group_connect_event_all_threads(spurs->spuTG, queue, portMask, port))
+	if (s32 res = sys_spu_thread_group_connect_event_all_threads(ppu, spurs->spuTG, queue, portMask, port))
 	{
 		if (res == CELL_EISCONN)
 		{
@@ -705,7 +705,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			events[0].data2 = event_data2;
 			events[0].data3 = event_data3;
 
-			if (sys_event_queue_tryreceive(spurs->eventQueue, events + 1, 7, count) != CELL_OK)
+			if (sys_event_queue_tryreceive(ppu, spurs->eventQueue, events + 1, 7, count) != CELL_OK)
 			{
 				continue;
 			}
@@ -783,7 +783,7 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 
 	if (s32 rc = sys_event_port_connect_local(spurs->eventPort, spurs->eventQueue))
 	{
-		sys_event_port_destroy(spurs->eventPort);
+		sys_event_port_destroy(ppu, spurs->eventPort);
 
 		if (s32 rc2 = _spurs::detach_lv2_eq(spurs, spurs->spuPort, true))
 		{
@@ -808,8 +808,8 @@ s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 p
 
 	//if (!eht)
 	{
-		sys_event_port_disconnect(spurs->eventPort);
-		sys_event_port_destroy(spurs->eventPort);
+		sys_event_port_disconnect(ppu, spurs->eventPort);
+		sys_event_port_destroy(ppu, spurs->eventPort);
 
 		if (s32 rc = _spurs::detach_lv2_eq(spurs, spurs->spuPort, true))
 		{
@@ -849,7 +849,7 @@ s32 _spurs::finalize_spu(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 		{
 			CHECK_SUCCESS(sys_spu_thread_group_join(ppu, spurs->spuTG, vm::null, vm::null));
 
-			if (s32 rc = sys_spu_thread_group_destroy(spurs->spuTG))
+			if (s32 rc = sys_spu_thread_group_destroy(ppu, spurs->spuTG))
 			{
 				if (rc == CELL_EBUSY)
 				{
@@ -864,13 +864,13 @@ s32 _spurs::finalize_spu(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 	}
 	else
 	{
-		if (s32 rc = sys_spu_thread_group_destroy(spurs->spuTG))
+		if (s32 rc = sys_spu_thread_group_destroy(ppu, spurs->spuTG))
 		{
 			return rc;
 		}
 	}
 
-	CHECK_SUCCESS(sys_spu_image_close(spurs.ptr(&CellSpurs::spuImg)));
+	CHECK_SUCCESS(sys_spu_image_close(ppu, spurs.ptr(&CellSpurs::spuImg)));
 
 	return CELL_OK;
 }
@@ -894,8 +894,8 @@ s32 _spurs::stop_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 	spurs->ppu1 = 0xFFFFFFFF;
 
-	CHECK_SUCCESS(sys_event_port_disconnect(spurs->eventPort));
-	CHECK_SUCCESS(sys_event_port_destroy(spurs->eventPort));
+	CHECK_SUCCESS(sys_event_port_disconnect(ppu, spurs->eventPort));
+	CHECK_SUCCESS(sys_event_port_destroy(ppu, spurs->eventPort));
 	CHECK_SUCCESS(_spurs::detach_lv2_eq(spurs, spurs->spuPort, true));
 	CHECK_SUCCESS(sys_event_queue_destroy(ppu, spurs->eventQueue, SYS_EVENT_QUEUE_DESTROY_FORCE));
 
@@ -957,25 +957,25 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	// Intialise SPURS context
 	const bool isSecond = (flags & SAF_SECOND_VERSION) != 0;
 
-	auto rollback = [=]
+	auto rollback = [&]
 	{
 		if (spurs->semPrv)
 		{
-			sys_semaphore_destroy((u32)spurs->semPrv);
+			sys_semaphore_destroy(ppu, ::narrow<u32>(+spurs->semPrv));
 		}
 
 		for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 		{
 			if (spurs->wklF1[i].sem)
 			{
-				sys_semaphore_destroy((u32)spurs->wklF1[i].sem);
+				sys_semaphore_destroy(ppu, ::narrow<u32>(+spurs->wklF1[i].sem));
 			}
 
 			if (isSecond)
 			{
 				if (spurs->wklF2[i].sem)
 				{
-					sys_semaphore_destroy((u32)spurs->wklF2[i].sem);
+					sys_semaphore_destroy(ppu, ::narrow<u32>(+spurs->wklF2[i].sem));
 				}
 			}
 		}
@@ -1018,7 +1018,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 	for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 	{
-		if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
+		if (s32 rc = sys_semaphore_create(ppu, sem, semAttr, 0, 1))
 		{
 			return rollback(), rc;
 		}
@@ -1027,7 +1027,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 		if (isSecond)
 		{
-			if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
+			if (s32 rc = sys_semaphore_create(ppu, sem, semAttr, 0, 1))
 			{
 				return rollback(), rc;
 			}
@@ -1038,7 +1038,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 
 	// Create semaphore
 	semAttr->name_u64 = "_spuPrv\0"_u64;
-	if (s32 rc = sys_semaphore_create(sem, semAttr, 0, 1))
+	if (s32 rc = sys_semaphore_create(ppu, sem, semAttr, 0, 1))
 	{
 		return rollback(), rc;
 	}
@@ -1090,9 +1090,9 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	if (flags & SAF_UNKNOWN_FLAG_9)          spuTgAttr->type |= 0x0800;
 	if (flags & SAF_SYSTEM_WORKLOAD_ENABLED) spuTgAttr->type |= SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM;
 
-	if (s32 rc = sys_spu_thread_group_create(spurs.ptr(&CellSpurs::spuTG), nSpus, spuPriority, spuTgAttr))
+	if (s32 rc = sys_spu_thread_group_create(ppu, spurs.ptr(&CellSpurs::spuTG), nSpus, spuPriority, spuTgAttr))
 	{
-		sys_spu_image_close(spurs.ptr(&CellSpurs::spuImg));
+		sys_spu_image_close(ppu, spurs.ptr(&CellSpurs::spuImg));
 		return rollback(), rc;
 	}
 
@@ -1112,10 +1112,10 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 		spuThArgs->arg1                    = (u64)num << 32;
 		spuThArgs->arg2                    = (u64)spurs.addr();
 
-		if (s32 rc = sys_spu_thread_initialize(spurs.ptr(&CellSpurs::spus, num), spurs->spuTG, num, spurs.ptr(&CellSpurs::spuImg), spuThAttr, spuThArgs))
+		if (s32 rc = sys_spu_thread_initialize(ppu, spurs.ptr(&CellSpurs::spus, num), spurs->spuTG, num, spurs.ptr(&CellSpurs::spuImg), spuThAttr, spuThArgs))
 		{
-			sys_spu_thread_group_destroy(spurs->spuTG);
-			sys_spu_image_close(spurs.ptr(&CellSpurs::spuImg));
+			sys_spu_thread_group_destroy(ppu, spurs->spuTG);
+			sys_spu_image_close(ppu, spurs.ptr(&CellSpurs::spuImg));
 			return rollback(), rc;
 		}
 
@@ -1184,7 +1184,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	}
 
 	// Enable SPURS exception handler
-	if (s32 rc = cellSpursEnableExceptionEventHandler(spurs, true /*enable*/))
+	if (s32 rc = cellSpursEnableExceptionEventHandler(ppu, spurs, true /*enable*/))
 	{
 		_spurs::signal_to_handler_thread(ppu, spurs);
 		_spurs::join_handler_thread(ppu, spurs);
@@ -1717,7 +1717,7 @@ s32 cellSpursDetachLv2EventQueue(vm::ptr<CellSpurs> spurs, u8 port)
 	return _spurs::detach_lv2_eq(spurs, port, false);
 }
 
-s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, b8 flag)
+s32 cellSpursEnableExceptionEventHandler(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, b8 flag)
 {
 	cellSpurs.warning("cellSpursEnableExceptionEventHandler(spurs=*0x%x, flag=%d)", spurs, flag);
 
@@ -1737,14 +1737,14 @@ s32 cellSpursEnableExceptionEventHandler(vm::ptr<CellSpurs> spurs, b8 flag)
 	{
 		if (oldEnableEH == 0)
 		{
-			rc = sys_spu_thread_group_connect_event(spurs->spuTG, spurs->eventQueue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION);
+			rc = sys_spu_thread_group_connect_event(ppu, spurs->spuTG, spurs->eventQueue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION);
 		}
 	}
 	else
 	{
 		if (oldEnableEH == 1)
 		{
-			rc = sys_spu_thread_group_disconnect_event(spurs->eventQueue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION);
+			rc = sys_spu_thread_group_disconnect_event(ppu, spurs->eventQueue, SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION);
 		}
 	}
 
@@ -3071,7 +3071,7 @@ s32 cellSpursEventFlagAttachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 				return success(), CELL_OK;
 			}
 
-			sys_event_port_destroy(*eventPortId);
+			sys_event_port_destroy(ppu, *eventPortId);
 		}
 
 		if (_spurs::detach_lv2_eq(spurs, *port, true) == CELL_OK)
@@ -3132,8 +3132,8 @@ s32 cellSpursEventFlagDetachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 
 	if (eventFlag->direction == CELL_SPURS_EVENT_FLAG_ANY2ANY)
 	{
-		sys_event_port_disconnect(eventFlag->eventPortId);
-		sys_event_port_destroy(eventFlag->eventPortId);
+		sys_event_port_disconnect(ppu, eventFlag->eventPortId);
+		sys_event_port_destroy(ppu, eventFlag->eventPortId);
 	}
 
 	s32 rc = _spurs::detach_lv2_eq(spurs, port, true);
