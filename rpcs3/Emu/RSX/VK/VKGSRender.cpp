@@ -1797,10 +1797,10 @@ void VKGSRender::set_viewport()
 	m_viewport.maxDepth = 1.f;
 }
 
-void VKGSRender::set_scissor()
+void VKGSRender::set_scissor(bool clip_viewport)
 {
 	areau scissor;
-	if (get_scissor(scissor))
+	if (get_scissor(scissor, clip_viewport))
 	{
 		m_scissor.extent.height = scissor.height();
 		m_scissor.extent.width = scissor.width();
@@ -2824,11 +2824,12 @@ void VKGSRender::open_command_buffer()
 
 void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 {
+	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
 	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)
 	{
 		// Fast path
 		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
-		set_scissor();
+		set_scissor(clipped_scissor);
 		return;
 	}
 
@@ -2846,7 +2847,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
-		set_scissor();
+		set_scissor(clipped_scissor);
 		return;
 	}
 
@@ -3022,7 +3023,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_draw_fbo->add_ref();
 
 	set_viewport();
-	set_scissor();
+	set_scissor(clipped_scissor);
 
 	check_zcull_status(true);
 }

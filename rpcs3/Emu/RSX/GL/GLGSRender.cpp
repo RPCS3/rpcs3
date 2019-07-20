@@ -650,10 +650,10 @@ void GLGSRender::set_viewport()
 	glViewport(0, 0, clip_width, clip_height);
 }
 
-void GLGSRender::set_scissor()
+void GLGSRender::set_scissor(bool clip_viewport)
 {
 	areau scissor;
-	if (get_scissor(scissor))
+	if (get_scissor(scissor, clip_viewport))
 	{
 		// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
 		// See LIMBO [NPUB-30373] which uses shader window origin = top
@@ -1784,7 +1784,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		// Always restore the active framebuffer
 		m_draw_fbo->bind();
 		set_viewport();
-		set_scissor();
+		set_scissor(!!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped));
 	}
 
 	// If we are skipping the next frame, do not reset perf counters
