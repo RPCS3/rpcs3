@@ -469,7 +469,11 @@ namespace rsx
 				auto aliased_surface = secondary_storage->find(address);
 				if (aliased_surface != secondary_storage->end())
 				{
-					old_surface = Traits::get(aliased_surface->second);
+					if (Traits::surface_is_pitch_compatible(aliased_surface->second, pitch))
+					{
+						old_surface = Traits::get(aliased_surface->second);
+						split_surface_region<!depth>(command_list, address, old_surface, (u16)width, (u16)height, bpp, antialias);
+					}
 
 					Traits::notify_surface_invalidated(aliased_surface->second);
 					invalidated_resources.push_back(std::move(aliased_surface->second));
