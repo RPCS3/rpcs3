@@ -1302,31 +1302,48 @@ namespace rsx
 		return layout;
 	}
 
-	bool thread::get_scissor(areau& region)
+	bool thread::get_scissor(areau& region, bool clip_viewport)
 	{
 		if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
 		{
-			// Nothing to do
-			return false;
+			if (clip_viewport == !!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped))
+			{
+				// Nothing to do
+				return false;
+			}
 		}
 
-		m_graphics_state &= ~rsx::pipeline_state::scissor_config_state_dirty;
+		m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_clipped);
+
+		u16 x1, x2, y1, y2;
 
 		u16 scissor_x = rsx::method_registers.scissor_origin_x();
 		u16 scissor_w = rsx::method_registers.scissor_width();
 		u16 scissor_y = rsx::method_registers.scissor_origin_y();
 		u16 scissor_h = rsx::method_registers.scissor_height();
 
-		u16 raster_x = rsx::method_registers.viewport_origin_x();
-		u16 raster_w = rsx::method_registers.viewport_width();
-		u16 raster_y = rsx::method_registers.viewport_origin_y();
-		u16 raster_h = rsx::method_registers.viewport_height();
+		if (clip_viewport)
+		{
+			u16 raster_x = rsx::method_registers.viewport_origin_x();
+			u16 raster_w = rsx::method_registers.viewport_width();
+			u16 raster_y = rsx::method_registers.viewport_origin_y();
+			u16 raster_h = rsx::method_registers.viewport_height();
 
-		// Get the minimum area between these two
-		u16 x1 = std::max(scissor_x, raster_x);
-		u16 y1 = std::max(scissor_y, raster_y);
-		u16 x2 = std::min(scissor_x + scissor_w, raster_x + raster_w);
-		u16 y2 = std::min(scissor_y + scissor_h, raster_y + raster_h);
+			// Get the minimum area between these two
+			x1 = std::max(scissor_x, raster_x);
+			y1 = std::max(scissor_y, raster_y);
+			x2 = std::min(scissor_x + scissor_w, raster_x + raster_w);
+			y2 = std::min(scissor_y + scissor_h, raster_y + raster_h);
+
+			m_graphics_state |= rsx::pipeline_state::scissor_setup_clipped;
+		}
+		else
+		{
+			x1 = scissor_x;
+			x2 = scissor_x + scissor_w;
+			y1 = scissor_y;
+			y2 = scissor_y + scissor_h;
+		}
 
 		if (x2 <= x1 ||
 			y2 <= y1 ||

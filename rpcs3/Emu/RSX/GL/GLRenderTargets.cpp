@@ -172,11 +172,12 @@ namespace
 
 void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
+	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
 	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)
 	{
 		// Fast path
 		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
-		set_scissor();
+		set_scissor(clipped_scissor);
 		return;
 	}
 
@@ -196,7 +197,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		// Update flags to match current
 		m_draw_fbo->bind();
 		set_viewport();
-		set_scissor();
+		set_scissor(clipped_scissor);
 
 		return;
 	}
@@ -364,7 +365,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	check_zcull_status(true);
 	set_viewport();
-	set_scissor();
+	set_scissor(clipped_scissor);
 
 	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
 
