@@ -77,6 +77,7 @@ namespace rsx
 		scissor_config_state_dirty = 0x200,  // Scissor region changed
 
 		scissor_setup_invalid = 0x400,       // Scissor configuration is broken
+		scissor_setup_clipped = 0x800,       // Scissor region is cropped by viewport constraint
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
@@ -422,8 +423,9 @@ namespace rsx
 		s32 m_skip_frame_ctr = 0;
 		bool skip_frame = false;
 
-		bool supports_multidraw = false;
-		bool supports_native_ui = false;
+		bool supports_multidraw = false;  // Draw call batching
+		bool supports_native_ui = false;  // Native UI rendering
+		bool supports_hw_a2c = false;     // Alpha to coverage
 
 		// FIFO
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
@@ -521,6 +523,7 @@ namespace rsx
 		u32 get_zeta_surface_address() const;
 
 		framebuffer_layout get_framebuffer_layout(rsx::framebuffer_creation_context context);
+		bool get_scissor(areau& region, bool clip_viewport);
 
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks

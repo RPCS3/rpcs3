@@ -460,7 +460,7 @@ public:
 	void read_buffers();
 	void write_buffers();
 	void set_viewport();
-	void set_scissor();
+	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
 	void sync_hint(rsx::FIFO_hint hint) override;
