@@ -76,6 +76,7 @@ namespace rsx
 		scissor_config_state_dirty = 0x200,  // Scissor region changed
 
 		scissor_setup_invalid = 0x400,       // Scissor configuration is broken
+		scissor_setup_clipped = 0x800,       // Scissor region is cropped by viewport constraint
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
@@ -521,7 +522,7 @@ namespace rsx
 		u32 get_zeta_surface_address() const;
 
 		framebuffer_layout get_framebuffer_layout(rsx::framebuffer_creation_context context);
-		bool get_scissor(areau& region);
+		bool get_scissor(areau& region, bool clip_viewport);
 
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks

@@ -2002,13 +2002,13 @@ void thread_ctrl::detect_cpu_layout()
 	}
 }
 
-u16 thread_ctrl::get_affinity_mask(thread_class group)
+u64 thread_ctrl::get_affinity_mask(thread_class group)
 {
 	detect_cpu_layout();
 
 	if (const auto thread_count = std::thread::hardware_concurrency())
 	{
-		const u16 all_cores_mask = thread_count < 16 ? (u16)(~(UINT16_MAX << thread_count)): UINT16_MAX;
+		const u64 all_cores_mask = thread_count < 64 ? UINT64_MAX >> (64 - thread_count): UINT64_MAX;
 
 		switch (g_native_core_layout)
 		{
@@ -2019,7 +2019,7 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 		case native_core_arrangement::amd_ccx:
 		{
-			u16 spu_mask, ppu_mask, rsx_mask;
+			u64 spu_mask, ppu_mask, rsx_mask;
 			if (thread_count >= 16)
 			{
 				// Threadripper, R7
@@ -2077,7 +2077,7 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 	}
 
-	return UINT16_MAX;
+	return UINT64_MAX;
 }
 
 void thread_ctrl::set_native_priority(int priority)
@@ -2113,24 +2113,32 @@ void thread_ctrl::set_native_priority(int priority)
 #endif
 }
 
-void thread_ctrl::set_thread_affinity_mask(u16 mask)
+void thread_ctrl::set_thread_affinity_mask(u64 mask)
 {
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
-	SetThreadAffinityMask(_this_thread, (DWORD_PTR)mask);
+	SetThreadAffinityMask(_this_thread, mask);
 #elif __APPLE__
-	thread_affinity_policy_data_t policy = { static_cast<integer_t>(mask) };
+	// Supports only one core
+	thread_affinity_policy_data_t policy = { static_cast<integer_t>(utils::cnttz64(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
 #elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
 
-	for (u32 core = 0; core < 16u; ++core)
+	for (u32 core = 0; core < 64u; ++core)
 	{
-		if ((u32)mask & (1u << core))
+		const u64 shifted = mask >> core;
+
+		if (shifted & 1)
 		{
 			CPU_SET(core, &cs);
+		}
+
+		if (shifted <= 1)
+		{
+			break;
 		}
 	}
 

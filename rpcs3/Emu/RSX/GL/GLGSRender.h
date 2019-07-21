@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
@@ -373,7 +373,7 @@ private:
 public:
 	void read_buffers();
 	void set_viewport();
-	void set_scissor();
+	void set_scissor(bool clip_viewport);
 
 	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
