@@ -23,7 +23,7 @@ class vfs_dialog_tab : public QWidget
 	Q_OBJECT
 
 public:
-	explicit vfs_dialog_tab(const vfs_settings_info& info, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent = nullptr);
+	explicit vfs_dialog_tab(vfs_settings_info info, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent = nullptr);
 
 	void SetSettings();
 	void AddNewDirectory();
