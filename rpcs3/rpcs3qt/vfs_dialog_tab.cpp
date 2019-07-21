@@ -2,11 +2,12 @@
 
 #include <QFileDialog>
 #include <QCoreApplication>
+#include <QPushButton>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
-	: QWidget(parent), m_info(settingsInfo), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
+vfs_dialog_tab::vfs_dialog_tab(vfs_settings_info settingsInfo, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
+	: QWidget(parent), m_info(std::move(settingsInfo)), m_gui_settings(std::move(guiSettings)), m_emu_settings(std::move(emuSettings))
 {
 	m_dirList = new QListWidget(this);
 
@@ -30,11 +31,22 @@ vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, std::share
 
 	m_dirList->setMinimumWidth(m_dirList->sizeHintForColumn(0));
 
+	QPushButton* addDir = new QPushButton(tr("+"));
+	addDir->setFixedWidth(addDir->sizeHint().height()); // Make button square
+	connect(addDir, &QAbstractButton::clicked, this, &vfs_dialog_tab::AddNewDirectory);
+
+	QPushButton* removeDir = new QPushButton(tr("-"));
+	removeDir->setFixedWidth(removeDir->sizeHint().height()); // Make button square
+	removeDir->setEnabled(false);
+	connect(removeDir, &QAbstractButton::clicked, this, &vfs_dialog_tab::RemoveDirectory);
+
 	QHBoxLayout* selectedConfigLayout = new QHBoxLayout;
 	m_selectedConfigLabel = new QLabel(current_dir.isEmpty() ? EmptyPath : current_dir);
 	selectedConfigLayout->addWidget(new QLabel(m_info.name + tr(" directory:")));
 	selectedConfigLayout->addWidget(m_selectedConfigLabel);
 	selectedConfigLayout->addStretch();
+	selectedConfigLayout->addWidget(addDir);
+	selectedConfigLayout->addWidget(removeDir);
 
 	QVBoxLayout* vbox = new QVBoxLayout;
 	vbox->addWidget(m_dirList);
@@ -48,6 +60,12 @@ vfs_dialog_tab::vfs_dialog_tab(const vfs_settings_info& settingsInfo, std::share
 			return;
 
 		m_selectedConfigLabel->setText(current->text().isEmpty() ? EmptyPath : current->text());
+	});
+
+	connect(m_dirList, &QListWidget::currentRowChanged, [this, removeDir](int row)
+	{
+		SetCurrentRow(row);
+		removeDir->setEnabled(row > 0);
 	});
 }
 
@@ -82,4 +100,10 @@ void vfs_dialog_tab::AddNewDirectory()
 		dir += '/';
 
 	m_dirList->setCurrentItem(new QListWidgetItem(dir, m_dirList));
+}
+
+void vfs_dialog_tab::RemoveDirectory()
+{
+	QListWidgetItem* item = m_dirList->takeItem(m_currentRow);
+	delete item;
 }
