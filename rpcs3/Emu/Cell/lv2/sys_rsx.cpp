@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "sys_rsx.h"
 
-#include <atomic>
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/GSRender.h"
@@ -229,7 +228,7 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 	while (io < end)
 	{
 		const u32 ea_entry = std::exchange(RSXIOMem.ea[io++].raw(), 0xFFFF);
-		if (ea_entry < 512) RSXIOMem.io[ea_entry].raw() = 0xFFFF;
+		if (ea_entry < 0xC00) RSXIOMem.io[ea_entry].raw() = 0xFFFF;
 	}
 
 	return CELL_OK;
