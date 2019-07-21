@@ -43,6 +43,7 @@ protected:
 	atomic_t<bool> active{ false };
 	atomic_t<bool> reset{ false };
 	atomic_t<bool> is_enabled{ true };
+	atomic_t<bool> m_is_intercepted{ false };
 	std::shared_ptr<std::thread> thread;
 };
 
