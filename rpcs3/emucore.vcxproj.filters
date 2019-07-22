@@ -779,6 +779,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_config.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -1521,6 +1524,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\Null\NullAudioBackend.h">
       <Filter>Emu\Audio\Null</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_config.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\surface_utils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "sys_rsx.h"
 
-#include <atomic>
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/GSRender.h"
@@ -13,6 +12,8 @@
 LOG_CHANNEL(sys_rsx);
 
 extern u64 get_timebased_time();
+
+static shared_mutex s_rsxmem_mtx;
 
 u64 rsxTimeStamp()
 {
@@ -194,10 +195,13 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	io >>= 20, ea >>= 20, size >>= 20;
 
+	std::scoped_lock lock(s_rsxmem_mtx);
+
 	for (u32 i = 0; i < size; i++)
 	{
+		const u32 prev_ea = std::exchange(RSXIOMem.ea[io + i].raw(), ea + i);
+		if (prev_ea < 0xC00) RSXIOMem.io[prev_ea].raw() = 0xFFFF; // Clear previous mapping if exists
 		RSXIOMem.io[ea + i].raw() = io + i;
-		RSXIOMem.ea[io + i].raw() = ea + i;
 	}
 
 	return CELL_OK;
@@ -218,14 +222,16 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 		return CELL_EINVAL;
 	}
 
+	std::scoped_lock lock(s_rsxmem_mtx);
+
 	const u32 end = (io >>= 20) + (size >>= 20);
-	for (u32 ea = RSXIOMem.ea[io]; io < end;)
+
+	while (io < end)
 	{
-		RSXIOMem.io[ea++].raw() = 0xFFFF;
-		RSXIOMem.ea[io++].raw() = 0xFFFF;
+		const u32 ea_entry = std::exchange(RSXIOMem.ea[io++].raw(), 0xFFFF);
+		if (ea_entry < 0xC00) RSXIOMem.io[ea_entry].raw() = 0xFFFF;
 	}
 
-	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return CELL_OK;
 }
 

@@ -1,11 +1,12 @@
 #include "vfs_dialog.h"
 
 #include <QPushButton>
+#include <QMessageBox>
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
-	: QDialog(parent), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
+	: QDialog(parent), m_gui_settings(std::move(guiSettings)), m_emu_settings(std::move(emuSettings))
 {
 	QTabWidget* tabs = new QTabWidget();
 	tabs->setUsesScrollButtons(false);
@@ -35,32 +36,23 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	tabs->addTab(dev_usb000_tab, "dev_usb000");
 
 	// Create buttons
-	QPushButton* addDir = new QPushButton(tr("Add New Directory"));
-	connect(addDir, &QAbstractButton::clicked, [=]
-	{
-		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->AddNewDirectory();
-	});
-
-	QPushButton* reset = new QPushButton(tr("Reset"));
-	connect(reset, &QAbstractButton::clicked, [=]
-	{
-		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->Reset();
-	});
-
-	QPushButton* resetAll = new QPushButton(tr("Reset All"));
+	QPushButton* resetAll = new QPushButton(tr("Reset Directories"));
 	connect(resetAll, &QAbstractButton::clicked, [=]
 	{
+		if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all file system directories?")) != QMessageBox::Yes)
+			return;
+
 		for (int i = 0; i < tabs->count(); ++i)
 		{
 			static_cast<vfs_dialog_tab*>(tabs->widget(i))->Reset();
 		}
 	});
 
-	QPushButton* okay = new QPushButton(tr("Okay"));
-	okay->setAutoDefault(true);
-	okay->setDefault(true);
+	QPushButton* save = new QPushButton(tr("Save"));
+	save->setAutoDefault(true);
+	save->setDefault(true);
 
-	connect(okay, &QAbstractButton::clicked, [=]
+	connect(save, &QAbstractButton::clicked, [=]
 	{
 		for (int i = 0; i < tabs->count(); ++i)
 		{
@@ -70,12 +62,14 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 		accept();
 	});
 
+	QPushButton* close = new QPushButton(tr("Close"));
+	connect(close, &QAbstractButton::clicked, this, &QDialog::reject);
+
 	QHBoxLayout* buttons = new QHBoxLayout;
-	buttons->addWidget(addDir);
-	buttons->addWidget(reset);
 	buttons->addWidget(resetAll);
 	buttons->addStretch();
-	buttons->addWidget(okay);
+	buttons->addWidget(save);
+	buttons->addWidget(close);
 
 	QVBoxLayout* vbox = new QVBoxLayout;
 	vbox->addWidget(tabs);
