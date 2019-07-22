@@ -199,8 +199,9 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	for (u32 i = 0; i < size; i++)
 	{
+		const u32 prev_ea = std::exchange(RSXIOMem.ea[io + i].raw(), ea + i);
+		if (prev_ea < 0xC00) RSXIOMem.io[prev_ea].raw() = 0xFFFF; // Clear previous mapping if exists
 		RSXIOMem.io[ea + i].raw() = io + i;
-		RSXIOMem.ea[io + i].raw() = ea + i;
 	}
 
 	return CELL_OK;
