@@ -2,7 +2,6 @@
 
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"
-#include "../Utilities/cond.h"
 
 // Thread state flags
 enum class cpu_flag : u32
@@ -106,8 +105,6 @@ public:
 	// Thread locker
 	class suspend_all
 	{
-		decltype(std::declval<shared_cond&>().try_shared_lock()) m_lock;
-
 		cpu_thread* m_this;
 
 	public:
