@@ -12,8 +12,6 @@ LOG_CHANNEL(sys_rwlock);
 
 template<> DECLARE(ipc_manager<lv2_rwlock, u64>::g_ipc) {};
 
-extern u64 get_system_time();
-
 error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
 	vm::temporary_unlock(ppu);
@@ -140,9 +138,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(rwlock->mutex);
 
@@ -155,8 +151,6 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
@@ -341,9 +335,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(rwlock->mutex);
 
@@ -371,8 +363,6 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{

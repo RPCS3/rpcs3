@@ -35,6 +35,7 @@
 #include "sys_gamepad.h"
 #include "sys_ss.h"
 #include "sys_gpio.h"
+#include "sys_config.h"
 
 extern std::string ppu_get_syscall_name(u64 code);
 
@@ -490,16 +491,16 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_hid_manager_...)              //513 (0x201)
 	null_func,//BIND_FUNC(sys_hid_manager_...)              //514 (0x202)
 	uns_func,                                               //515 (0x203)  UNS
-	null_func,//BIND_FUNC(sys_config_open)                  //516 (0x204)
-	null_func,//BIND_FUNC(sys_config_close)                 //517 (0x205)
-	null_func,//BIND_FUNC(sys_config_get_service_event)     //518 (0x206)
-	null_func,//BIND_FUNC(sys_config_add_service_listener)  //519 (0x207)
-	null_func,//BIND_FUNC(sys_config_remove_service_listener) //520 (0x208)
-	null_func,//BIND_FUNC(sys_config_register_service)      //521 (0x209)
-	null_func,//BIND_FUNC(sys_config_unregister_service)    //522 (0x20A)
-	null_func,//BIND_FUNC(sys_config_io_event)              //523 (0x20B)
-	null_func,//BIND_FUNC(sys_config_register_io_error_listener) //524 (0x20C)
-	null_func,//BIND_FUNC(sys_config_unregister_io_error_listener) //525 (0x20D)
+	BIND_FUNC(sys_config_open),                             //516 (0x204)
+	BIND_FUNC(sys_config_close),                            //517 (0x205)
+	BIND_FUNC(sys_config_get_service_event),                //518 (0x206)
+	BIND_FUNC(sys_config_add_service_listener),             //519 (0x207)
+	BIND_FUNC(sys_config_remove_service_listener),          //520 (0x208)
+	BIND_FUNC(sys_config_register_service),                 //521 (0x209)
+	BIND_FUNC(sys_config_unregister_service),               //522 (0x20A)
+	BIND_FUNC(sys_config_get_io_event),                     //523 (0x20B)
+	BIND_FUNC(sys_config_register_io_error_listener),       //524 (0x20C)
+	BIND_FUNC(sys_config_unregister_io_error_listener),     //525 (0x20D)
 	uns_func, uns_func, uns_func, uns_func,                 //526-529  UNS
 	BIND_FUNC(sys_usbd_initialize),                         //530 (0x212)
 	BIND_FUNC(sys_usbd_finalize),                           //531 (0x213)
@@ -998,7 +999,7 @@ extern ppu_function_t ppu_get_syscall(u64 code)
 	return nullptr;
 }
 
-extern u64 get_system_time();
+extern u64 get_guest_system_time();
 
 DECLARE(lv2_obj::g_mutex);
 DECLARE(lv2_obj::g_ppu);
@@ -1009,7 +1010,7 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 {
 	std::lock_guard lock(g_mutex);
 
-	const u64 start_time = get_system_time();
+	const u64 start_time = get_guest_system_time();
 
 	if (auto ppu = static_cast<ppu_thread*>(thread.id_type() == 1 ? &thread : nullptr))
 	{
@@ -1039,7 +1040,7 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 		ppu->start_time = start_time;
 	}
 
-	if (timeout)
+	if (timeout && g_cfg.core.sleep_timers_accuracy != sleep_timers_accuracy_level::_all_timers)
 	{
 		const u64 wait_until = start_time + timeout;
 
@@ -1077,7 +1078,7 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	else if (prio == -4)
 	{
 		// Yield command
-		const u64 start_time = get_system_time();
+		const u64 start_time = get_guest_system_time();
 
 		for (std::size_t i = 0, pos = -1; i < g_ppu.size(); i++)
 		{
@@ -1183,7 +1184,7 @@ void lv2_obj::schedule_all()
 	{
 		auto& pair = g_waiting.front();
 
-		if (pair.first <= get_system_time())
+		if (pair.first <= get_guest_system_time())
 		{
 			pair.second->notify();
 			g_waiting.pop_front();

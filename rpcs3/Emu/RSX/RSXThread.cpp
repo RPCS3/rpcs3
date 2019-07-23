@@ -799,7 +799,7 @@ namespace rsx
 	u64 thread::timestamp()
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds
-		const u64 t = get_system_time() * 1000;
+		const u64 t = get_guest_system_time() * 1000;
 		if (t != timestamp_ctrl)
 		{
 			timestamp_ctrl = t;

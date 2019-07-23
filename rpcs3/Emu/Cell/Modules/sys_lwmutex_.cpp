@@ -214,7 +214,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 				return CELL_OK;
 			}
 
-			const u64 time0 = timeout ? get_system_time() : 0;
+			const u64 time0 = timeout ? get_guest_system_time() : 0;
 
 			const error_code res_ = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
 
@@ -229,7 +229,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 			}
 			else if (timeout && res_ != CELL_ETIMEDOUT)
 			{
-				const u64 time_diff = get_system_time() - time0;
+				const u64 time_diff = get_guest_system_time() - time0;
 
 				if (timeout <= time_diff)
 				{

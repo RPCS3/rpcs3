@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_time.h"
 
 #include "Emu/System.h"
@@ -102,11 +102,9 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 
 #endif
 
-
-
 LOG_CHANNEL(sys_time);
 
-static const u64 g_timebase_freq = /*79800000*/ 80000000; // 80 Mhz
+static constexpr u64 g_timebase_freq = /*79800000*/ 80000000ull; // 80 Mhz
 
 // Auxiliary functions
 u64 get_timebased_time()
@@ -118,12 +116,12 @@ u64 get_timebased_time()
 	const u64 time = count.QuadPart;
 	const u64 freq = s_time_aux_info.perf_freq;
 
-	return time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq;
+	return (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
 #else
 	struct timespec ts;
 	verify(HERE), ::clock_gettime(CLOCK_MONOTONIC, &ts) == 0;
 
-	return static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000u;
+	return (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
 #endif
 }
 
@@ -139,16 +137,22 @@ u64 get_system_time()
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
 
-		const u64 result = time / freq * 1000000u + (time % freq) * 1000000u / freq;
+		const u64 result = time / freq * 1000000ull + (time % freq) * 1000000ull / freq;
 #else
 		struct timespec ts;
 		verify(HERE), ::clock_gettime(CLOCK_MONOTONIC, &ts) == 0;
 
-		const u64 result = static_cast<u64>(ts.tv_sec) * 1000000u + static_cast<u64>(ts.tv_nsec) / 1000u;
+		const u64 result = static_cast<u64>(ts.tv_sec) * 1000000ull + static_cast<u64>(ts.tv_nsec) / 1000u;
 #endif
 
 		if (result) return result;
 	}
+}
+
+// As get_system_time but obeys Clocks scaling setting
+u64 get_guest_system_time()
+{
+	return get_system_time() * g_cfg.core.clocks_scale / 100;
 }
 
 // Functions
@@ -171,24 +175,24 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	verify(HERE), QueryPerformanceCounter(&count);
 
 	// get time difference in nanoseconds
-	const u64 diff = (count.QuadPart - s_time_aux_info.start_time) * 1000000000u / s_time_aux_info.perf_freq;
+	const u64 diff = (count.QuadPart - s_time_aux_info.start_time) * 1000000000ull / s_time_aux_info.perf_freq;
 
 	// get time since Epoch in nanoseconds
-	const u64 time = s_time_aux_info.start_ftime * 100u + diff;
+	const u64 time = (s_time_aux_info.start_ftime * 100u + diff) * g_cfg.core.clocks_scale / 100u;
 
 	if (!sec)
 	{
 		return CELL_EFAULT;
 	}
 
-	*sec  = time / 1000000000u;
+	*sec  = time / 1000000000ull;
 
 	if (!nsec)
 	{
 		return CELL_EFAULT;
 	}
 
-	*nsec = time % 1000000000u;
+	*nsec = time % 1000000000ull;
 #else
 	struct timespec ts;
 	verify(HERE), ::clock_gettime(CLOCK_REALTIME, &ts) == 0;
@@ -198,14 +202,14 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 		return CELL_EFAULT;
 	}
 
-	*sec  = ts.tv_sec;
+	*sec  = (ts.tv_sec * g_cfg.core.clocks_scale / 100u) + (ts.tv_nsec * g_cfg.core.clocks_scale / (1000000000ull * 100));
 
 	if (!nsec)
 	{
 		return CELL_EFAULT;
 	}
 
-	*nsec = ts.tv_nsec;
+	*nsec = (ts.tv_nsec * g_cfg.core.clocks_scale / 100u) % 1000000000ull;
 #endif
 
 	return CELL_OK;

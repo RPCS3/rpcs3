@@ -64,7 +64,7 @@ const bool s_use_ssse3 =
 #define _mm_shuffle_epi8
 #endif
 
-extern u64 get_system_time();
+extern u64 get_guest_system_time();
 
 extern atomic_t<const char*> g_progr;
 extern atomic_t<u64> g_progr_ptotal;
@@ -469,7 +469,7 @@ std::string ppu_thread::dump() const
 
 	if (const auto _time = start_time)
 	{
-		fmt::append(ret, "Waiting: %fs\n", (get_system_time() - _time) / 1000000.);
+		fmt::append(ret, "Waiting: %fs\n", (get_guest_system_time() - _time) / 1000000.);
 	}
 	else
 	{
@@ -721,7 +721,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, prio(prio)
 	, stack_size(param.stack_size)
 	, stack_addr(param.stack_addr)
-	, start_time(get_system_time())
+	, start_time(get_guest_system_time())
 	, joiner(-!!detached)
 	, ppu_name(name)
 {
@@ -846,7 +846,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 			{
 				if (start_time)
 				{
-					LOG_WARNING(PPU, "'%s' aborted (%fs)", current_function, (get_system_time() - start_time) / 1000000.);
+					LOG_WARNING(PPU, "'%s' aborted (%fs)", current_function, (get_guest_system_time() - start_time) / 1000000.);
 				}
 				else
 				{

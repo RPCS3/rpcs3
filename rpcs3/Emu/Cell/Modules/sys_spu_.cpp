@@ -10,8 +10,6 @@
 
 extern logs::channel sysPrxForUser;
 
-extern u64 get_system_time();
-
 spu_printf_cb_t g_spu_printf_agcb;
 spu_printf_cb_t g_spu_printf_dgcb;
 spu_printf_cb_t g_spu_printf_atcb;
