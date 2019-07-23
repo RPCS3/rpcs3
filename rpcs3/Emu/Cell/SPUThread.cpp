@@ -1531,26 +1531,17 @@ bool spu_thread::do_list_transfer(spu_mfc_cmd& args)
 		// Check if fetching is needed
 		if (index == fetch_size)
 		{
-			const auto src = _ptr<void>(args.eal & 0x3fff8);
-			if ((uptr)src % alignof(v128))
-			{
-				// Unaligned
-				((u64*)+bufitems)[0] = ((u64*)src)[0];
-				((u64*)+bufitems)[1] = ((u64*)src)[1];
-				((u64*)+bufitems)[2] = ((u64*)src)[2];
-				((u64*)+bufitems)[3] = ((u64*)src)[3];
-				((u64*)+bufitems)[4] = ((u64*)src)[4];	
-				((u64*)+bufitems)[5] = ((u64*)src)[5];				
-			}
-			else
-			{
-				((v128*)+bufitems)[0] = ((v128*)src)[0];
-				((v128*)+bufitems)[1] = ((v128*)src)[1];
-				((v128*)+bufitems)[2] = ((v128*)src)[2];
-			}
-
 			// Reset to elements array head
-			index = 0; 
+			index = 0;
+
+			const auto src = _ptr<const __m128i>(args.eal & 0x3fff8);
+			const v128 data0 = v128::fromV(_mm_loadu_si128(src + 0));
+			const v128 data1 = v128::fromV(_mm_loadu_si128(src + 1));
+			const v128 data2 = v128::fromV(_mm_loadu_si128(src + 2));
+
+			((v128*)+bufitems)[0] = data0;
+			((v128*)+bufitems)[1] = data1;
+			((v128*)+bufitems)[2] = data2;
 		}
 
 		const u32 size = items[index].ts & 0x7fff;
