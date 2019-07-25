@@ -1308,7 +1308,7 @@ void camera_context::operator()()
 			if (time_passed >= frame_target_time)
 				break;
 
-			thread_ctrl::wait_for(frame_target_time - time_passed);
+			lv2_obj::wait_timeout(frame_target_time - time_passed);
 		}
 	}
 }
