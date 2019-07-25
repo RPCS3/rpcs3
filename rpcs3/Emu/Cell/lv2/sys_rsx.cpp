@@ -222,6 +222,8 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 		return CELL_EINVAL;
 	}
 
+	vm::reader_lock rlock;
+
 	std::scoped_lock lock(s_rsxmem_mtx);
 
 	const u32 end = (io >>= 20) + (size >>= 20);
