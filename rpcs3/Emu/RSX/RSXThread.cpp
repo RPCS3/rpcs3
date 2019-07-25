@@ -2398,23 +2398,43 @@ namespace rsx
 	{
 		if (!m_rsx_thread_exiting && address < rsx::constants::local_mem_base)
 		{
-			u32 ea = address >> 20, io = RSXIOMem.io[ea];
-
-			if (io < 512)
+			if (!isHLE)
 			{
-				if (!isHLE)
+				// Each bit represents io entry to be unmapped
+				u64 unmap_status[512 / 64]{};
+
+				for (u32 ea = address >> 20, end = ea + size >> 20; ea < end; ea++)
 				{
-					const u64 unmap_key = u64((1ull << (size >> 20)) - 1) << (io & 0x3f);
-					const u64 gcm_flag = 0x100000000ull << (io >> 6);
-					sys_event_port_send(fxm::get<SysRsxConfig>()->rsx_event_port, 0, gcm_flag, unmap_key);
-				}
-				else
-				{
-					for (const u32 end = ea + (size >> 20); ea < end;)
+					u32 io = RSXIOMem.io[ea];
+
+					if (io < 512)
 					{
-						offsetTable.ioAddress[ea++] = 0xFFFF;
-						offsetTable.eaAddress[io++] = 0xFFFF;
+						unmap_status[io / 64] |= 1ull << (io & 63);
+						RSXIOMem.ea[io].raw() = 0xFFFF;
+						RSXIOMem.io[ea].raw() = 0xFFFF;
 					}
+				}
+
+				for (u32 i = 0; i < std::size(unmap_status); i++)
+				{
+					// TODO: Check order when sending multiple events
+					if (u64 to_unmap = unmap_status[i])
+					{
+						// Each 64 entries are grouped by a bit 
+						const u64 io_event = 0x100000000ull << i;
+						sys_event_port_send(fxm::get<SysRsxConfig>()->rsx_event_port, 0, io_event, to_unmap);
+					}
+				}
+			}
+			else
+			{
+				// TODO: Fix this
+				u32 ea = address >> 20, io = RSXIOMem.io[ea];
+
+				for (const u32 end = ea + (size >> 20); ea < end;)
+				{
+					offsetTable.ioAddress[ea++] = 0xFFFF;
+					offsetTable.eaAddress[io++] = 0xFFFF;
 				}
 			}
 
