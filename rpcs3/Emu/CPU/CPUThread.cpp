@@ -46,14 +46,8 @@ void fmt_class_string<bs_t<cpu_flag>>::format(std::string& out, u64 arg)
 
 thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
 
-// For coordination and notification
-alignas(64) shared_cond g_cpu_array_lock;
-
-// For cpu_flag::pause bit setting/removing
-alignas(64) shared_mutex g_cpu_pause_lock;
-
-// For cpu_flag::pause
-alignas(64) atomic_t<u64> g_cpu_pause_ctr{0};
+// For synchronizing suspend_all operation
+alignas(64) shared_mutex g_cpu_suspend_lock;
 
 // Semaphore for global thread array (global counter)
 alignas(64) atomic_t<u32> g_cpu_array_sema{0};
@@ -135,7 +129,7 @@ void cpu_thread::operator()()
 	verify("g_cpu_array[...] -> this" HERE), g_cpu_array[array_slot].exchange(this) == nullptr;
 
 	state += cpu_flag::wait;
-	g_cpu_array_lock.wait_all();
+	g_cpu_suspend_lock.lock_unlock();
 
 	// Check thread status
 	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)))
@@ -171,7 +165,7 @@ void cpu_thread::operator()()
 	verify("g_cpu_array[...] -> null" HERE), g_cpu_array[array_slot].exchange(nullptr) == this;
 	g_cpu_array_bits[array_slot / 64] &= ~(1ull << (array_slot % 64));
 	g_cpu_array_sema--;
-	g_cpu_array_lock.wait_all();
+	g_cpu_suspend_lock.lock_unlock();
 }
 
 void cpu_thread::on_abort()
@@ -294,7 +288,7 @@ bool cpu_thread::check_state() noexcept
 		else
 		{
 			// If only cpu_flag::pause was set, notification won't arrive
-			g_cpu_array_lock.wait_all();
+			g_cpu_suspend_lock.lock_unlock();
 		}
 	}
 
@@ -336,25 +330,14 @@ std::string cpu_thread::dump() const
 }
 
 cpu_thread::suspend_all::suspend_all(cpu_thread* _this) noexcept
-	: m_lock(g_cpu_array_lock.try_shared_lock())
-	, m_this(_this)
+	: m_this(_this)
 {
-	// TODO
-	if (!m_lock)
-	{
-		LOG_FATAL(GENERAL, "g_cpu_array_lock: too many concurrent accesses");
-		Emu.Pause();
-		return;
-	}
-
 	if (m_this)
 	{
 		m_this->state += cpu_flag::wait;
 	}
 
-	g_cpu_pause_ctr++;
-
-	reader_lock lock(g_cpu_pause_lock);
+	g_cpu_suspend_lock.lock_vip();
 
 	for_all_cpu([](cpu_thread* cpu)
 	{
@@ -387,33 +370,18 @@ cpu_thread::suspend_all::suspend_all(cpu_thread* _this) noexcept
 cpu_thread::suspend_all::~suspend_all()
 {
 	// Make sure the latest thread does the cleanup and notifies others
-	u64 pause_ctr = 0;
-
-	while ((pause_ctr = g_cpu_pause_ctr), !g_cpu_array_lock.wait_all(m_lock))
+	if (g_cpu_suspend_lock.downgrade_unique_vip_lock_to_low_or_unlock())
 	{
-		if (pause_ctr)
+		for_all_cpu([&](cpu_thread* cpu)
 		{
-			std::lock_guard lock(g_cpu_pause_lock);
+			cpu->state -= cpu_flag::pause;
+		});
 
-			// Detect possible unfortunate reordering of flag clearing after suspend_all's reader lock
-			if (g_cpu_pause_ctr != pause_ctr)
-			{
-				continue;
-			}
-
-			for_all_cpu([&](cpu_thread* cpu)
-			{
-				if (g_cpu_pause_ctr == pause_ctr)
-				{
-					cpu->state -= cpu_flag::pause;
-				}
-			});
-		}
-
-		if (g_cpu_array_lock.notify_all(m_lock))
-		{
-			break;
-		}
+		g_cpu_suspend_lock.unlock_low();
+	}
+	else
+	{
+		g_cpu_suspend_lock.lock_unlock();
 	}
 
 	if (m_this)
