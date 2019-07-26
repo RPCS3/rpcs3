@@ -2,8 +2,7 @@
 
 #include "vm.h"
 #include "Utilities/cond.h"
-
-#include "Utilities/Atomic.h"
+#include "util/atomic.hpp"
 
 class notifier;
 

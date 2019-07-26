@@ -3,7 +3,7 @@
 #include "types.h"
 #include "mutex.h"
 #include "cond.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 #include "VirtualMemory.h"
 #include <memory>
 

@@ -3,7 +3,7 @@
 /* For internal use. Don't include. */
 
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 #include "dynamic_library.h"
 
 #ifdef _WIN32

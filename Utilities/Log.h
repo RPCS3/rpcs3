@@ -1,7 +1,7 @@
 #pragma once
 
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 #include "StrFmt.h"
 #include <climits>
 

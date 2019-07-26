@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Atomic.h"
+#include "util/atomic.hpp"
 #include <memory>
 #include <cstddef>
 

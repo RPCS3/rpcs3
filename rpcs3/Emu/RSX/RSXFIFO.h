@@ -1,7 +1,7 @@
 ﻿#pragma once
 
-#include <Utilities/types.h>
-#include <Utilities/Atomic.h>
+#include "Utilities/types.h"
+#include "util/atomic.hpp"
 
 #include "rsx_utils.h"
 #include "Emu/Cell/lv2/sys_rsx.h"

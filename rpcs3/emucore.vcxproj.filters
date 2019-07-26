@@ -1012,7 +1012,10 @@
     <ClInclude Include="Emu\Cell\SPUAnalyser.h">
       <Filter>Emu\Cell</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\Atomic.h">
+    <ClInclude Include="util\atomic.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\TextureUtils.h">

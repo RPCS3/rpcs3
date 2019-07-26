@@ -3,7 +3,7 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "gcm_enums.h"
 #include "gcm_printing.h"
-#include "Utilities/Atomic.h"
+#include "util/atomic.hpp"
 
 
 struct CellGcmControl

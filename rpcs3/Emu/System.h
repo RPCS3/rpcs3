@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "VFS.h"
-#include "Utilities/Atomic.h"
+#include "util/atomic.hpp"
 #include "Utilities/Config.h"
 #include <functional>
 #include <memory>

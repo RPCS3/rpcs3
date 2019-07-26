@@ -1,11 +1,23 @@
 ﻿#pragma once
 
-#include "types.h"
+#include "Utilities/types.h"
 #include <functional>
 
 #ifdef _MSC_VER
 #include <atomic>
 #endif
+
+// Helper for waitable atomics (as in C++20 std::atomic)
+struct atomic_storage_futex
+{
+private:
+	template <typename T>
+	friend class atomic_t;
+
+	static void wait(const void* data, std::size_t size, u64 old_value);
+	static void notify_one(const void* data);
+	static void notify_all(const void* data);
+};
 
 // Helper class, provides access to compiler-specific atomic intrinsics
 template <typename T, std::size_t Size = sizeof(T)>
@@ -1172,5 +1184,20 @@ public:
 	bool btr(uint bit)
 	{
 		return atomic_storage<type>::btr(m_data, bit);
+	}
+
+	void wait(type old_value) const noexcept
+	{
+		atomic_storage_futex::wait(&m_data, sizeof(T), std::bit_cast<get_uint_t<sizeof(T)>>(old_value));
+	}
+
+	void notify_one() noexcept
+	{
+		atomic_storage_futex::notify_one(&m_data);
+	}
+
+	void notify_all() noexcept
+	{
+		atomic_storage_futex::notify_all(&m_data);
 	}
 };

@@ -4,7 +4,7 @@
 #include <deque>
 #include <list>
 
-#include "Atomic.h"
+#include "util/atomic.hpp"
 
 template <typename T, T Mod = T::__state_enum_max, typename Under = std::underlying_type_t<T>>
 T operator ++(T& value, int)

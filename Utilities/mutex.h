@@ -2,7 +2,7 @@
 
 #include <mutex>
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 
 // Shared mutex with small size (u32).
 class shared_mutex final
