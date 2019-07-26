@@ -180,9 +180,11 @@ namespace rsx
 				return;
 			}
 
-			auto& notify = vm::_ref<RsxNotify>(verify(HERE, RSXIOMem.RealAddr(0xf100000 + (index * 0x40))));
-			notify.zero = 0;
-			notify.timestamp = rsx->timestamp();
+			vm::_ref<atomic_t<RsxNotify>>(verify(HERE, RSXIOMem.RealAddr(0xf100000 + (index * 0x40)))).store(
+			{
+				rsx->timestamp(),
+				0
+			});
 		}
 
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -196,10 +198,12 @@ namespace rsx
 				//
 			}
 
-			auto& sema = vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097()));
-			sema.val = arg;
-			sema.pad = 0;
-			sema.timestamp = rsx->timestamp();
+			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
+			{
+				arg,
+				0,
+				rsx->timestamp()
+			});
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -213,10 +217,12 @@ namespace rsx
 
 			rsx->sync();
 			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			auto& sema = vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097()));
-			sema.val = val;
-			sema.pad = 0;
-			sema.timestamp = rsx->timestamp();
+			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
+			{
+				val,
+				0,
+				rsx->timestamp()
+			});
 		}
 
 		/**
@@ -509,8 +515,6 @@ namespace rsx
 				return;
 			}
 
-			vm::ptr<CellGcmReportData> result = address_ptr;
-
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
@@ -522,8 +526,12 @@ namespace rsx
 				break;
 			default:
 				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
-				result->timer = rsx->timestamp();
-				result->padding = 0;
+
+				vm::_ref<atomic_t<CellGcmReportData>>(address_ptr).atomic_op([&](CellGcmReportData& data)
+				{
+					data.timer = rsx->timestamp();
+					data.padding = 0;
+				});
 				break;
 			}
 		}

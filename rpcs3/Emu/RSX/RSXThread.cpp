@@ -2340,10 +2340,7 @@ namespace rsx
 			}
 		}
 
-		vm::ptr<CellGcmReportData> result = sink;
-		result->value = value;
-		result->padding = 0;
-		result->timer = timestamp();
+		vm::_ref<atomic_t<CellGcmReportData>>(sink).store({ timestamp(), value, 0});
 	}
 
 	void thread::sync()
@@ -2819,7 +2816,7 @@ namespace rsx
 			m_cycles_delay = max_zcull_delay_us;
 		}
 
-		void ZCULL_control::write(vm::addr_t sink, u32 timestamp, u32 type, u32 value)
+		void ZCULL_control::write(vm::addr_t sink, u64 timestamp, u32 type, u32 value)
 		{
 			verify(HERE), sink;
 
@@ -2840,10 +2837,7 @@ namespace rsx
 				break;
 			}
 
-			vm::ptr<CellGcmReportData> out = sink;
-			out->value = value;
-			out->timer = timestamp;
-			out->padding = 0;
+			vm::_ref<atomic_t<CellGcmReportData>>(sink).store({ timestamp, value, 0});
 		}
 
 		void ZCULL_control::sync(::rsx::thread* ptimer)
@@ -2888,7 +2882,7 @@ namespace rsx
 
 					if (!writer.forwarder)
 						//No other queries in the chain, write result
-						write(writer.sink, (u32)ptimer->timestamp(), writer.type, result);
+						write(writer.sink, ptimer->timestamp(), writer.type, result);
 
 					processed++;
 				}
@@ -3049,7 +3043,7 @@ namespace rsx
 				//only zpass supported right now
 				if (!writer.forwarder)
 					//No other queries in the chain, write result
-					write(writer.sink, (u32)ptimer->timestamp(), writer.type, result);
+					write(writer.sink, ptimer->timestamp(), writer.type, result);
 
 				processed++;
 			}
