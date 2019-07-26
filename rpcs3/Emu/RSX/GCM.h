@@ -65,7 +65,7 @@ struct CellGcmSurface
 	be_t<u16> y;
 };
 
-struct CellGcmReportData
+struct alignas(16) CellGcmReportData
 {
 	be_t<u64> timer;
 	be_t<u32> value;

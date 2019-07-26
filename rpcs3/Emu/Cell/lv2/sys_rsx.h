@@ -68,20 +68,20 @@ struct RsxDmaControl
 	be_t<u32> unk1;
 };
 
-struct RsxSemaphore
+struct alignas(16) RsxSemaphore
 {
 	be_t<u32> val;
 	be_t<u32> pad;
 	be_t<u64> timestamp;
 };
 
-struct RsxNotify
+struct alignas(16) RsxNotify
 {
 	be_t<u64> timestamp;
 	be_t<u64> zero;
 };
 
-struct RsxReport
+struct alignas(16) RsxReport
 {
 	be_t<u64> timestamp;
 	be_t<u32> val;

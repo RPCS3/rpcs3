@@ -371,7 +371,7 @@ namespace rsx
 			void set_enabled(class ::rsx::thread* ptimer, bool state);
 			void set_active(class ::rsx::thread* ptimer, bool state);
 
-			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
+			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
 
 			// Read current zcull statistics into the address provided
 			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
