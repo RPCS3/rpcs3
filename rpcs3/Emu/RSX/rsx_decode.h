@@ -68,7 +68,7 @@ struct registers_decoder
 {};
 
 // Use the smallest type by default
-template<u32 I, u32 N, typename T = get_int_t<std::max<size_t>(static_cast<size_t>((UINTMAX_C(1) << ::ceil2(N)) / CHAR_BIT), 1)>>
+template <u32 I, u32 N, typename T = get_uint_t<std::max<size_t>(static_cast<size_t>((UINTMAX_C(1) << ::ceil2(N)) / CHAR_BIT), 1)>>
 static constexpr inline T bf_decoder(const u32& bits)
 {
 	return static_cast<T>(bf_t<u32, I, N>::extract(bits));
@@ -2320,7 +2320,7 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_FAIL>
 	{
 	private:
 		u32 value;
-	
+
 	public:
 		decoded_type(u32 value) : value(value) {}
 
@@ -2508,7 +2508,7 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC_MASK>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u8 stencil_func_mask() const 
+		u8 stencil_func_mask() const
 		{
 			return bf_decoder<0, 8>(value);
 		}
@@ -2531,7 +2531,7 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC_MASK>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u8 back_stencil_func_mask() const 
+		u8 back_stencil_func_mask() const
 		{
 			return bf_decoder<0, 8>(value);
 		}
@@ -2556,7 +2556,7 @@ struct registers_decoder<NV4097_SET_ALPHA_REF>
 
 		u8 alpha_ref() const
 		{
-			return bf_decoder<0, 8>(value); 
+			return bf_decoder<0, 8>(value);
 		}
 	};
 
@@ -2914,7 +2914,7 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_SFACTOR>
 	{
 	private:
 		u32 value;
-		
+
 		u16 src_blend_rgb_raw() const
 		{
 			return bf_decoder<0, 16>(value);
@@ -2952,7 +2952,7 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_DFACTOR>
 	{
 	private:
 		u32 value;
-		
+
 		u16 dst_blend_rgb_raw() const
 		{
 			return bf_decoder<0, 16>(value);
@@ -3814,7 +3814,7 @@ struct registers_decoder<NV3089_IMAGE_IN>
 		{
 			return bf_decoder<16, 16, u32>(value);
 		}
-	
+
 	public:
 		decoded_type(u32 value) : value(value) {}
 
