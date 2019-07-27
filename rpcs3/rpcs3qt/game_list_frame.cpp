@@ -459,85 +459,85 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 			try
 			{
-			const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir, Emu.GetUsr());
-			const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
-			if (!sfo_file)
+				const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir, Emu.GetUsr());
+				const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
+				if (!sfo_file)
+				{
+					return;
+				}
+
+				const auto psf = psf::load_object(sfo_file);
+
+				GameInfo game;
+				game.path         = dir;
+				game.serial       = psf::get_string(psf, "TITLE_ID", "");
+				game.name         = psf::get_string(psf, "TITLE", cat_unknown);
+				game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown);
+				game.version      = psf::get_string(psf, "VERSION", cat_unknown);
+				game.category     = psf::get_string(psf, "CATEGORY", cat_unknown);
+				game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown);
+				game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
+				game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
+				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
+				game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
+				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
+
+				// Detect duplication
+				if (!serial_cat_name[game.serial].emplace(game.category + game.name).second)
+				{
+					return;
+				}
+
+				QString serial = qstr(game.serial);
+				m_notes[serial] = m_gui_settings->GetValue(gui::notes, serial, "").toString();
+				m_titles[serial] = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
+				serials.insert(serial);
+
+				auto cat = category::cat_boot.find(game.category);
+				if (cat != category::cat_boot.end())
+				{
+					game.icon_path = sfo_dir + "/ICON0.PNG";
+					game.category = sstr(cat->second);
+				}
+				else if ((cat = category::cat_data.find(game.category)) != category::cat_data.end())
+				{
+					game.icon_path = sfo_dir + "/ICON0.PNG";
+					game.category = sstr(cat->second);
+				}
+				else if (game.category == cat_unknown)
+				{
+					game.icon_path = sfo_dir + "/ICON0.PNG";
+				}
+				else
+				{
+					game.icon_path = sfo_dir + "/ICON0.PNG";
+					game.category = sstr(category::other);
+				}
+
+				// Load ICON0.PNG
+				QPixmap icon;
+
+				if (game.icon_path.empty() || !icon.load(qstr(game.icon_path)))
+				{
+					LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
+				}
+
+				const auto compat = m_game_compat->GetCompatibility(game.serial);
+
+				const bool hasCustomConfig = fs::is_file(Emulator::GetCustomConfigPath(game.serial)) || fs::is_file(Emulator::GetCustomConfigPath(game.serial, true));
+				const bool hasCustomPadConfig = fs::is_file(Emulator::GetCustomInputConfigPath(game.serial));
+
+				const QColor color = getGridCompatibilityColor(compat.color);
+				const QPixmap pxmap = PaintedPixmap(icon, hasCustomConfig, hasCustomPadConfig, color);
+
+				m_game_data.push_back(game_info(new gui_game_info{ game, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig }));
+			}
+			catch (const std::exception& e)
 			{
+				LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
 				return;
+				// Blame MSVC for double }}
 			}
-
-			const auto psf = psf::load_object(sfo_file);
-
-			GameInfo game;
-			game.path         = dir;
-			game.serial       = psf::get_string(psf, "TITLE_ID", "");
-			game.name         = psf::get_string(psf, "TITLE", cat_unknown);
-			game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown);
-			game.version      = psf::get_string(psf, "VERSION", cat_unknown);
-			game.category     = psf::get_string(psf, "CATEGORY", cat_unknown);
-			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown);
-			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
-			game.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
-			game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
-			game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
-			game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
-
-			// Detect duplication
-			if (!serial_cat_name[game.serial].emplace(game.category + game.name).second)
-			{
-				return;
-			}
-
-			QString serial = qstr(game.serial);
-			m_notes[serial] = m_gui_settings->GetValue(gui::notes, serial, "").toString();
-			m_titles[serial] = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
-			serials.insert(serial);
-
-			auto cat = category::cat_boot.find(game.category);
-			if (cat != category::cat_boot.end())
-			{
-				game.icon_path = sfo_dir + "/ICON0.PNG";
-				game.category = sstr(cat->second);
-			}
-			else if ((cat = category::cat_data.find(game.category)) != category::cat_data.end())
-			{
-				game.icon_path = sfo_dir + "/ICON0.PNG";
-				game.category = sstr(cat->second);
-			}
-			else if (game.category == cat_unknown)
-			{
-				game.icon_path = sfo_dir + "/ICON0.PNG";
-			}
-			else
-			{
-				game.icon_path = sfo_dir + "/ICON0.PNG";
-				game.category = sstr(category::other);
-			}
-
-			// Load ICON0.PNG
-			QPixmap icon;
-
-			if (game.icon_path.empty() || !icon.load(qstr(game.icon_path)))
-			{
-				LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
-			}
-
-			const auto compat = m_game_compat->GetCompatibility(game.serial);
-
-			const bool hasCustomConfig = fs::is_file(Emulator::GetCustomConfigPath(game.serial)) || fs::is_file(Emulator::GetCustomConfigPath(game.serial, true));
-			const bool hasCustomPadConfig = fs::is_file(Emulator::GetCustomInputConfigPath(game.serial));
-
-			const QColor color = getGridCompatibilityColor(compat.color);
-			const QPixmap pxmap = PaintedPixmap(icon, hasCustomConfig, hasCustomPadConfig, color);
-
-			m_game_data.push_back(game_info(new gui_game_info{game, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig}));
-		}
-		catch (const std::exception& e)
-		{
-			LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
-			return;
-			// Blame MSVC for double }}
-		}
 		});
 
 		// Try to update the app version for disc games if there is a patch
