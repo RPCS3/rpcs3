@@ -449,13 +449,21 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		QSet<QString> serials;
 
-		for (const auto& dir : path_list) { try
+		QList<int> indices;
+		for (int i = 0; i < path_list.size(); ++i)
+			indices.append(i);
+
+		QtConcurrent::blockingMap(indices, [&](int& i)
 		{
+			const std::string dir = path_list[i];
+
+			try
+			{
 			const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir, Emu.GetUsr());
 			const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
 			if (!sfo_file)
 			{
-				continue;
+				return;
 			}
 
 			const auto psf = psf::load_object(sfo_file);
@@ -477,7 +485,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			// Detect duplication
 			if (!serial_cat_name[game.serial].emplace(game.category + game.name).second)
 			{
-				continue;
+				return;
 			}
 
 			QString serial = qstr(game.serial);
@@ -527,9 +535,10 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		catch (const std::exception& e)
 		{
 			LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
-			continue;
+			return;
 			// Blame MSVC for double }}
-		}}
+		}
+		});
 
 		// Try to update the app version for disc games if there is a patch
 		for (const auto& entry : m_game_data)
