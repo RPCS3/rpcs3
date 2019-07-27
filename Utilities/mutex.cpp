@@ -1,7 +1,4 @@
 #include "mutex.h"
-#include "sync.h"
-
-#include <climits>
 
 void shared_mutex::imp_lock_shared(u32 val)
 {
@@ -122,24 +119,32 @@ void shared_mutex::imp_unlock_vip(u32 old)
 
 void shared_mutex::imp_wait()
 {
-	while (!balanced_wait_until(m_value, -1, [&](u32& value, auto...)
+	while (true)
 	{
-		if (value >= c_sig)
+		const auto [old, ok] = m_value.fetch_op([](u32& value)
 		{
-			value -= c_sig;
-			return true;
+			if (value >= c_sig)
+			{
+				value -= c_sig;
+				return true;
+			}
+
+			return false;
+		});
+
+		if (ok)
+		{
+			break;
 		}
 
-		return false;
-	}))
-	{
+		m_value.wait(old);
 	}
 }
 
 void shared_mutex::imp_signal()
 {
 	m_value += c_sig;
-	balanced_awaken(m_value, 1);
+	m_value.notify_one();
 }
 
 void shared_mutex::imp_lock(u32 val)
