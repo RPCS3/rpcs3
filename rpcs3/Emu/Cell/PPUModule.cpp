@@ -1544,7 +1544,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	case 0x70: primary_stacksize = 1024 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_1M
 	default:
 	{
-		primary_stacksize = sz >= 4096 ? ::align(std::min<u32>(sz, 0x100000), 4096) : 0x4000;
+		primary_stacksize = ::align<u32>(std::clamp<u32>(sz, 0x10000, 0x100000), 4096);
 		break;
 	}
 	}
