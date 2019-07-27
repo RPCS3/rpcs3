@@ -2400,7 +2400,7 @@ namespace rsx
 				// Each bit represents io entry to be unmapped
 				u64 unmap_status[512 / 64]{};
 
-				for (u32 ea = address >> 20, end = ea + size >> 20; ea < end; ea++)
+				for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
 				{
 					u32 io = RSXIOMem.io[ea];
 
