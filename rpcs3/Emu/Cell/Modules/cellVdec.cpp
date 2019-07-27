@@ -63,9 +63,9 @@ struct vdec_frame
 
 struct vdec_context final
 {
-	static constexpr u32 id_base = 0xf0000000;
-	static constexpr u32 id_step = 0x00000100;
-	static constexpr u32 id_count = 1024;
+	static const u32 id_base = 0xf0000000;
+	static const u32 id_step = 0x00000100;
+	static const u32 id_count = 1024;
 
 	AVCodec* codec{};
 	AVCodecContext* ctx{};

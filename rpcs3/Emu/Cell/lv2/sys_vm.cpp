@@ -16,7 +16,7 @@ sys_vm_t::sys_vm_t(const std::shared_ptr<vm::block_t>& area, const std::shared_p
 sys_vm_t::~sys_vm_t()
 {
 	// Free ID
-	g_ids[addr >> 28].release(0);
+	g_ids[addr >> 28].release(id_manager::id_traits<sys_vm_t>::invalid);
 
 	// Free block
 	verify(HERE), vm::unmap(addr);
