@@ -504,10 +504,10 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				game.category = sstr(category::other);
 			}
 
-			// Load Image
-			QImage img;
+			// Load ICON0.PNG
+			QPixmap icon;
 
-			if (game.icon_path.empty() || !img.load(qstr(game.icon_path)))
+			if (game.icon_path.empty() || !icon.load(qstr(game.icon_path)))
 			{
 				LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
@@ -518,9 +518,9 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			const bool hasCustomPadConfig = fs::is_file(Emulator::GetCustomInputConfigPath(game.serial));
 
 			const QColor color = getGridCompatibilityColor(compat.color);
-			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, hasCustomPadConfig, color);
+			const QPixmap pxmap = PaintedPixmap(icon, hasCustomConfig, hasCustomPadConfig, color);
 
-			m_game_data.push_back(game_info(new gui_game_info{game, compat, img, pxmap, hasCustomConfig, hasCustomPadConfig}));
+			m_game_data.push_back(game_info(new gui_game_info{game, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig}));
 		}
 		catch (const std::exception& e)
 		{
@@ -1469,20 +1469,20 @@ void game_list_frame::BatchRemoveShaderCaches()
 	QApplication::beep();
 }
 
-QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
+QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
 	const int device_pixel_ratio = devicePixelRatio();
-	const QSize original_size = img.size();
+	const QSize original_size = icon.size();
 
-	QImage image = QImage(original_size * device_pixel_ratio, QImage::Format_ARGB32);
-	image.setDevicePixelRatio(device_pixel_ratio);
-	image.fill(m_Icon_Color);
+	QPixmap canvas = QPixmap(original_size * device_pixel_ratio);
+	canvas.setDevicePixelRatio(device_pixel_ratio);
+	canvas.fill(m_Icon_Color);
 
-	QPainter painter(&image);
+	QPainter painter(&canvas);
 
-	if (!img.isNull())
+	if (!icon.isNull())
 	{
-		painter.drawImage(QPoint(0, 0), img);
+		painter.drawPixmap(QPoint(0, 0), icon);
 	}
 
 	if (!m_isListLayout && (paint_config_icon || paint_pad_config_icon))
@@ -1504,9 +1504,9 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 			icon_path = ":/Icons/controllers_2.png";
 		}
 
-		QImage custom_config_icon(icon_path);
+		QPixmap custom_config_icon(icon_path);
 		custom_config_icon.setDevicePixelRatio(device_pixel_ratio);
-		painter.drawImage(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		painter.drawPixmap(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
 	if (compatibility_color.isValid())
@@ -1521,7 +1521,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 
 	painter.end();
 
-	return QPixmap::fromImage(image.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	return canvas.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 }
 
 void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)

@@ -168,7 +168,7 @@ struct gui_game_info
 {
 	GameInfo info;
 	compat_status compat;
-	QImage icon;
+	QPixmap icon;
 	QPixmap pxmap;
 	bool hasCustomConfig;
 	bool hasCustomPadConfig;
@@ -236,7 +236,7 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
+	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
 	QColor getGridCompatibilityColor(const QString& string);
 	void ShowCustomConfigIcon(QTableWidgetItem* item);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
