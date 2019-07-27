@@ -709,7 +709,7 @@ namespace vm
 		}
 
 		// Return if size is invalid
-		if (!orig_size || !size || size > this->size)
+		if (!orig_size || !size || orig_size > size || size > this->size)
 		{
 			return 0;
 		}
@@ -764,7 +764,7 @@ namespace vm
 		const u32 size = ::align(orig_size, min_page_size);
 
 		// return if addr or size is invalid
-		if (!size || addr < this->addr || addr + u64{size} > this->addr + u64{this->size} || flags & 0x10)
+		if (!size || addr < this->addr || orig_size > size || addr + u64{size} > this->addr + u64{this->size} || flags & 0x10)
 		{
 			return 0;
 		}
