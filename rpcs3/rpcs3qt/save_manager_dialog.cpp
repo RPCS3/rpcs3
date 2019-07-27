@@ -245,8 +245,8 @@ void save_manager_dialog::UpdateList()
 	}
 
 	QList<int> indices;
-	for (int i = 0; i < m_save_entries.size(); ++i)
-		indices.append(i);
+	for (size_t i = 0; i < m_save_entries.size(); ++i)
+		indices.append(static_cast<int>(i));
 
 	QtConcurrent::blockingMap(indices, [this, currNotes](int& row)
 	{

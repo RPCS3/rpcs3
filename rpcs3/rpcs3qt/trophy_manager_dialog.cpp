@@ -17,6 +17,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include <QtConcurrent>
+#include <QFutureWatcher>
 #include <QHeaderView>
 #include <QVBoxLayout>
 #include <QCheckBox>
@@ -332,20 +333,11 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 	RepaintUI(true);
 
-	StartTrophyLoadThread();
+	StartTrophyLoadThreads();
 }
 
 trophy_manager_dialog::~trophy_manager_dialog()
 {
-	if (m_thread_state != TrophyThreadState::CLOSED)
-	{
-		TrophyThreadState expected = TrophyThreadState::RUNNING;
-		m_thread_state.compare_exchange_strong(expected, TrophyThreadState::CLOSING);
-		while (m_thread_state != TrophyThreadState::CLOSED)
-		{
-			std::this_thread::yield();
-		}
-	}
 }
 
 bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
@@ -652,46 +644,45 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
 	menu->exec(globalPos);
 }
 
-void trophy_manager_dialog::StartTrophyLoadThread()
+void trophy_manager_dialog::StartTrophyLoadThreads()
 {
-	auto progressDialog = new QProgressDialog(
-		tr("Loading trophy data, please wait..."), tr("Cancel"), 0, 1, this,
-		Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
-	progressDialog->setWindowTitle(tr("Loading trophies"));
-	connect(progressDialog, &QProgressDialog::canceled, [this]()
-	{
-		TrophyThreadState expected = TrophyThreadState::RUNNING;
-		m_thread_state.compare_exchange_strong(expected, TrophyThreadState::CLOSING);
-		this->close(); // It's pointless to show an empty window
-	});
-	progressDialog->show();
+	m_trophies_db.clear();
 
-	auto trophyThread = new trophy_manager_dialog::trophy_load_thread(this);
-	connect(trophyThread, &QThread::finished, trophyThread, &QThread::deleteLater);
-	connect(trophyThread, &QThread::finished, progressDialog, &QProgressDialog::deleteLater);
-	connect(trophyThread, &trophy_manager_dialog::trophy_load_thread::TotalCountChanged, progressDialog, &QProgressDialog::setMaximum);
-	connect(trophyThread, &trophy_manager_dialog::trophy_load_thread::ProcessedCountChanged, progressDialog, &QProgressDialog::setValue);
-	connect(trophyThread, &trophy_manager_dialog::trophy_load_thread::FinishedSuccessfully, [this]() { RepaintUI(true); });
-	m_thread_state = TrophyThreadState::RUNNING;
-	trophyThread->start();
-}
-
-void trophy_manager_dialog::trophy_load_thread::run()
-{
-	m_manager->m_trophies_db.clear();
-
-	QDir trophy_dir(qstr(vfs::get(m_manager->m_trophy_dir)));
+	QDir trophy_dir(qstr(vfs::get(m_trophy_dir)));
 	const auto folder_list = trophy_dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 	const int count = folder_list.count();
-	Q_EMIT TotalCountChanged(count);
 
-	for (int i = 0; m_manager->m_thread_state == TrophyThreadState::RUNNING && i < count; i++)
+	if (count <= 0)
 	{
-		std::string dir_name = sstr(folder_list.value(i));
+		RepaintUI(true);
+		return;
+	}
+
+	QList<int> indices;
+	for (int i = 0; i < count; ++i)
+		indices.append(i);
+
+	QFutureWatcher<void> futureWatcher;
+
+	QProgressDialog progressDialog(tr("Loading trophy data, please wait..."), tr("Cancel"), 0, 1, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+	progressDialog.setWindowTitle(tr("Loading trophies"));
+
+	connect(&futureWatcher, &QFutureWatcher<void>::progressRangeChanged, &progressDialog, &QProgressDialog::setRange);
+	connect(&futureWatcher, &QFutureWatcher<void>::progressValueChanged, &progressDialog, &QProgressDialog::setValue);
+	connect(&futureWatcher, &QFutureWatcher<void>::finished, [this]() { RepaintUI(true); });
+	connect(&progressDialog, &QProgressDialog::canceled, [this, &futureWatcher]()
+	{
+		futureWatcher.cancel();
+		this->close(); // It's pointless to show an empty window
+	});
+
+	futureWatcher.setFuture(QtConcurrent::map(indices, [this, folder_list, &progressDialog](const int& i)
+	{
+		const std::string dir_name = sstr(folder_list.value(i));
 		LOG_TRACE(GENERAL, "Loading trophy dir: %s", dir_name);
 		try
 		{
-			m_manager->LoadTrophyFolderToDB(dir_name);
+			LoadTrophyFolderToDB(dir_name);
 		}
 		catch (const std::exception& e)
 		{
@@ -699,15 +690,11 @@ void trophy_manager_dialog::trophy_load_thread::run()
 			// Also add a way of showing the number of corrupted/invalid folders in UI somewhere.
 			LOG_ERROR(GENERAL, "Exception occurred while parsing folder %s for trophies: %s", dir_name, e.what());
 		}
-		Q_EMIT ProcessedCountChanged(i + 1);
-	}
+	}));
 
-	if (m_manager->m_thread_state == TrophyThreadState::RUNNING)
-	{
-		Q_EMIT FinishedSuccessfully();
-	}
+	progressDialog.exec();
 
-	m_manager->m_thread_state = TrophyThreadState::CLOSED;
+	futureWatcher.waitForFinished();
 }
 
 void trophy_manager_dialog::PopulateGameTable()
@@ -721,15 +708,16 @@ void trophy_manager_dialog::PopulateGameTable()
 
 	QList<QString> names;
 	QList<int> indices;
-	for (int i = 0; i < m_trophies_db.size(); ++i)
+	for (size_t i = 0; i < m_trophies_db.size(); ++i)
 	{
+		const int index = static_cast<int>(i);
 		const QString name = qstr(m_trophies_db[i]->game_name).simplified();
-		m_game_combo->addItem(name, i);
+		m_game_combo->addItem(name, index);
 		names.append(name);
-		indices.append(i);
+		indices.append(index);
 	}
 
-	QtConcurrent::blockingMap(indices, [this, names](int& i)
+	QtConcurrent::blockingMap(indices, [this, &names](int& i)
 	{
 		const int all_trophies = m_trophies_db[i]->trop_usr->GetTrophiesCount();
 		const int unlocked_trophies = m_trophies_db[i]->trop_usr->GetUnlockedTrophiesCount();
