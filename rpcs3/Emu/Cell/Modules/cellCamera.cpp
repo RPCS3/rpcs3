@@ -1126,11 +1126,6 @@ s32 cellCameraSetNotifyEventQueue(u64 key)
 {
 	cellCamera.todo("cellCameraSetNotifyEventQueue(key=0x%x)", key);
 
-	if (g_cfg.io.camera == camera_handler::null)
-	{
-		return CELL_OK;
-	}
-
 	const auto g_camera = fxm::get<camera_thread>();
 	if (!g_camera)
 	{
