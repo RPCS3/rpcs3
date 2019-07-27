@@ -32,7 +32,8 @@ namespace id_manager
 		static const u32 count   = T::id_count;
 		static const u32 invalid = base > 0 ? 0 : -1;
 
-		static_assert(u64{step} * count + base < UINT32_MAX, "ID traits: invalid object range");
+		// Note: full 32 bits range cannot be used at current implementation
+		static_assert(count > 0 && step > 0 && u64{step} * count + base < u64{UINT32_MAX} + (base != 0 ? 1 : 0), "ID traits: invalid object range");
 	};
 
 	// Correct usage testing
@@ -135,7 +136,19 @@ class idm
 	template <typename T>
 	static constexpr u32 get_index(u32 id)
 	{
-		return (id - id_manager::id_traits<T>::base) / id_manager::id_traits<T>::step;
+		using traits = id_manager::id_traits<T>;
+
+		// Note: if id is lower than base, diff / step will be higher than count 
+		u32 diff = id - traits::base;
+
+		if (diff % traits::step)
+		{
+			// id is invalid, return invalid index
+			return traits::count;
+		}
+
+		// Get actual index
+		return diff / traits::step;
 	}
 
 	// Helper
@@ -217,9 +230,14 @@ class idm
 
 		const u32 index = get_index<Type>(id);
 
+		if (index >= id_manager::id_traits<Type>::count)
+		{
+			return nullptr;
+		}
+
 		auto& vec = g_map[get_type<T>()];
 
-		if (index >= vec.size() || index >= id_manager::id_traits<Type>::count)
+		if (index >= vec.size())
 		{
 			return nullptr;
 		}
