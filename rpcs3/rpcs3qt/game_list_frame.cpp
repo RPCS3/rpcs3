@@ -17,6 +17,7 @@
 #include <set>
 #include <regex>
 
+#include <QtConcurrent>
 #include <QDesktopServices>
 #include <QHeaderView>
 #include <QMenuBar>
@@ -1601,11 +1602,16 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 		}
 	}
 
-	for (auto& game : m_game_data)
+	QList<int> indices;
+	for (int i = 0; i < m_game_data.size(); ++i)
+		indices.append(i);
+
+	QtConcurrent::blockingMap(indices, [this](int& i)
 	{
+		auto game = m_game_data[i];
 		QColor color = getGridCompatibilityColor(game->compat.color);
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
-	}
+	});
 
 	Refresh();
 }
