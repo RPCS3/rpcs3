@@ -449,11 +449,11 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		QSet<QString> serials;
 
-		QList<int> indices;
-		for (int i = 0; i < path_list.size(); ++i)
+		QList<size_t> indices;
+		for (size_t i = 0; i < path_list.size(); ++i)
 			indices.append(i);
 
-		QtConcurrent::blockingMap(indices, [&](int& i)
+		QtConcurrent::blockingMap(indices, [&](size_t& i)
 		{
 			const std::string dir = path_list[i];
 
@@ -536,7 +536,6 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			{
 				LOG_FATAL(GENERAL, "Failed to update game list at %s\n%s thrown: %s", dir, typeid(e).name(), e.what());
 				return;
-				// Blame MSVC for double }}
 			}
 		});
 
