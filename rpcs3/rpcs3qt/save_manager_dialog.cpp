@@ -8,6 +8,7 @@
 #include "Emu/VFS.h"
 #include "Loader/PSF.h"
 
+#include <QtConcurrent>
 #include <QDateTime>
 #include <QIcon>
 #include <QHBoxLayout>
@@ -243,9 +244,13 @@ void save_manager_dialog::UpdateList()
 		m_icon_color = gui::utils::get_label_color("save_manager_icon_background_color");
 	}
 
-	int row = 0;
-	for (const SaveDataEntry& entry : m_save_entries)
+	QList<int> indices;
+	for (int i = 0; i < m_save_entries.size(); ++i)
+		indices.append(i);
+
+	QtConcurrent::blockingMap(indices, [this, currNotes](int& row)
 	{
+		const auto& entry = m_save_entries[row];
 		QPixmap icon = QPixmap(320, 176);
 		if (!icon.loadFromData(entry.iconBuf.data(), static_cast<uint>(entry.iconBuf.size())))
 		{
@@ -283,10 +288,8 @@ void save_manager_dialog::UpdateList()
 		}
 		m_list->setItem(row, 4, noteItem);
 
-		++row;
-	}
-
-	UpdateIcons();
+		UpdateIcon(row);
+	});
 
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
@@ -313,28 +316,39 @@ void save_manager_dialog::HandleRepaintUiRequest()
 	resize(window_size);
 }
 
-void save_manager_dialog::UpdateIcons()
+void save_manager_dialog::UpdateIcon(int i)
 {
 	const int dpr = devicePixelRatio();
 	const int width = m_icon_size.width() * dpr;
 	const int height = m_icon_size.height() * dpr * 176 / 320;
-	for (int i = 0; i < m_list->rowCount(); i++)
+
+	QTableWidgetItem* item = m_list->item(i, 0);
+	if (!item)
 	{
-		QTableWidgetItem* item = m_list->item(i, 0);
-		if (!item)
-		{
-			continue;
-		}
-		QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
-
-		QPixmap icon = QPixmap(data.size() * dpr);
-		icon.setDevicePixelRatio(dpr);
-		icon.fill(m_icon_color);
-
-		QPainter painter(&icon);
-		painter.drawPixmap(0, 0, data);
-		item->setData(Qt::DecorationRole, icon.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+		return;
 	}
+	QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
+
+	QPixmap icon = QPixmap(data.size() * dpr);
+	icon.setDevicePixelRatio(dpr);
+	icon.fill(m_icon_color);
+
+	QPainter painter(&icon);
+	painter.drawPixmap(0, 0, data);
+	item->setData(Qt::DecorationRole, icon.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+}
+
+void save_manager_dialog::UpdateIcons()
+{
+	QList<int> indices;
+	for (int i = 0; i < m_list->rowCount(); ++i)
+		indices.append(i);
+
+	QtConcurrent::blockingMap(indices, [this](int& i)
+	{
+		UpdateIcon(i);
+	});
+
 	m_list->resizeRowsToContents();
 	m_list->resizeColumnToContents(0);
 }
