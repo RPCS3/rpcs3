@@ -3,11 +3,11 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Memory/vm_locking.h"
 
-sys_vm_t::sys_vm_t(const std::shared_ptr<vm::block_t>& area, const std::shared_ptr<lv2_memory_container>& ct, u32 psize)
+sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, const std::shared_ptr<lv2_memory_container>& ct, u32 psize)
 	: ct(ct)
 	, psize(psize)
-	, addr(area->addr)
-	, size(area->size)
+	, addr(_addr)
+	, size(vsize)
 {
 	// Write ID
 	g_ids[addr >> 28].release(idm::last_id());
@@ -56,7 +56,7 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 		// Alloc all memory (shall not fail)
 		verify(HERE), area->alloc(vsize);
 
-		idm::make<sys_vm_t>(area, ct, psize);
+		idm::make<sys_vm_t>(area->addr, vsize, ct, psize);
 
 		// Write a pointer for the allocated memory
 		*addr = area->addr;

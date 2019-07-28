@@ -41,7 +41,7 @@ struct sys_vm_t
 	u32 psize;
 	shared_mutex mutex;
 
-	sys_vm_t(const std::shared_ptr<vm::block_t>& area, const std::shared_ptr<lv2_memory_container>& ct, u32 psize);
+	sys_vm_t(u32 addr, u32 vsize, const std::shared_ptr<lv2_memory_container>& ct, u32 psize);
 	~sys_vm_t();
 
 	static std::array<atomic_t<u32>, id_count> g_ids;
