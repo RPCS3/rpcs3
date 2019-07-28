@@ -346,19 +346,32 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 
 	const auto area = vm::get(vm::any, start_addr);
 
-	if (!area || start_addr < 0x20000000 || start_addr >= 0xC0000000)
+	if (!area || start_addr != area->addr || start_addr < 0x20000000 || start_addr >= 0xC0000000)
 	{
 		return {CELL_EINVAL, start_addr};
 	}
 
-	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem)
+	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
+		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
+
+		if (mem.align < page_alignment)
+		{
+			return CELL_EALIGN;
+		}
+
 		mem.counter++;
+		return {};
 	});
 
 	if (!mem)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (mem.ret)
+	{
+		return mem.ret;
 	}
 
 	const u32 addr = area->alloc(mem->size, mem->align, &mem->shm, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M);
