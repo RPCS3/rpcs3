@@ -8,6 +8,12 @@ static constexpr std::uintptr_t s_hashtable_size = 1u << 21;
 // TODO: it's probably better to implement more effective futex emulation for OSX/BSD here.
 static atomic_t<s64> s_hashtable[s_hashtable_size];
 
+// Max number of waiters (16383)
+static constexpr s64 s_waiter_mask = 0x3fff;
+
+// Implementation detail (remaining bits out of 32)
+static constexpr s64 s_signal_mask = 0xffffffff & ~s_waiter_mask;
+
 static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value)
 {
 	switch (size)
@@ -39,7 +45,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	const auto [_, ok] = entry.fetch_op([&](s64& value)
 	{
-		if ((value & 0xffff) == 0xffff || (value & 0xffff0000) == s64{0xffff0000})
+		if ((value & s_waiter_mask) == s_waiter_mask || (value & s_signal_mask) == s_signal_mask)
 		{
 			// Return immediately on waiter overflow or signal overflow
 			return false;
@@ -56,7 +62,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			value &= 0xffffffff;
 		}
 
-		new_value = static_cast<u32>(++value);
+		new_value = static_cast<u32>(value += 1);
 		return true;
 	});
 
@@ -80,11 +86,11 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		// Try to decrement
 		const auto [prev, ok] = entry.fetch_op([&](s64& value)
 		{
-			if (value & 0xffff)
+			if (value & s_waiter_mask)
 			{
-				value--;
+				value -= 1;
 
-				if ((value & 0xffff) == 0)
+				if ((value & s_waiter_mask) == 0)
 				{
 					// Reset on last waiter
 					value = 0;
@@ -131,25 +137,25 @@ void atomic_storage_futex::notify_one(const void* data)
 
 	const auto [prev, ok] = entry.fetch_op([&](s64& value)
 	{
-		if (value & 0xffff && (value >> 32) == (iptr >> 16))
+		if (value & s_waiter_mask && (value >> 32) == (iptr >> 16))
 		{
 #ifdef _WIN32
 			// Try to decrement if no collision
-			value--;
+			value -= 1;
 
-			if ((value & 0xffff) == 0)
+			if ((value & s_waiter_mask) == 0)
 			{
 				// Reset on last waiter
 				value = 0;
 			}
 #else
-			if ((value & 0xffff0000) == s64{0xffff0000})
+			if ((value & s_signal_mask) == s_signal_mask)
 			{
 				// Signal overflow, do nothing
 				return false;
 			}
 
-			value += 0x10000;
+			value += s_signal_mask & -s_signal_mask;
 #endif
 
 			return true;
@@ -192,22 +198,22 @@ void atomic_storage_futex::notify_all(const void* data)
 
 	// Consume everything
 #ifdef _WIN32
-	for (uint count = static_cast<u16>(entry.exchange(0)); count; count--)
+	for (s64 count = entry.exchange(0) & s_waiter_mask; count; count--)
 	{
 		NtReleaseKeyedEvent(nullptr, &entry, false, nullptr);
 	}
 #else
 	const auto [_, ok] = entry.fetch_op([&](s64& value)
 	{
-		if (value & 0xffff)
+		if (value & s_waiter_mask)
 		{
-			if ((value & 0xffff0000) == s64{0xffff0000})
+			if ((value & s_signal_mask) == s_signal_mask)
 			{
 				// Signal overflow, do nothing
 				return false;
 			}
 
-			value += 0x10000;
+			value += s_signal_mask & -s_signal_mask;
 			return true;
 		}
 
