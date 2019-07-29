@@ -2,11 +2,8 @@
 
 #include "Utilities/sync.h"
 
-// Should be at least 65536, currently 1048576.
-static constexpr std::uintptr_t s_hashtable_size = 1u << 20;
-
-// ^2 means adjacent addresses within the same aligned u32 word will always collide.
-static constexpr uint s_ignored_lsbits = 2;
+// Should be at least 65536, currently 2097152.
+static constexpr std::uintptr_t s_hashtable_size = 1u << 21;
 
 // TODO: it's probably better to implement more effective futex emulation for OSX/BSD here.
 static atomic_t<s64> s_hashtable[s_hashtable_size];
@@ -36,7 +33,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
 
-	atomic_t<s64>& entry = s_hashtable[(iptr >> s_ignored_lsbits) % s_hashtable_size];
+	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
 
 	u32 new_value = 0;
 
@@ -130,7 +127,7 @@ void atomic_storage_futex::notify_one(const void* data)
 
 	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
 
-	atomic_t<s64>& entry = s_hashtable[(iptr >> s_ignored_lsbits) % s_hashtable_size];
+	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
 
 	const auto [prev, ok] = entry.fetch_op([&](s64& value)
 	{
@@ -191,7 +188,7 @@ void atomic_storage_futex::notify_all(const void* data)
 
 	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
 
-	atomic_t<s64>& entry = s_hashtable[(iptr >> s_ignored_lsbits) % s_hashtable_size];
+	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
 
 	// Consume everything
 #ifdef _WIN32
