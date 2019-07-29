@@ -329,7 +329,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 520: return "sys_config_remove_service_listener";
 	case 521: return "sys_config_register_service";
 	case 522: return "sys_config_unregister_service";
-	case 523: return "sys_config_io_event";
+	case 523: return "sys_config_get_io_event";
 	case 524: return "sys_config_register_io_error_listener";
 	case 525: return "sys_config_unregister_io_error_listener";
 	case 530: return "sys_usbd_initialize";
