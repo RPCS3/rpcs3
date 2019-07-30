@@ -397,6 +397,9 @@ namespace rsx
 			// Check for pending writes
 			bool has_pending() const { return !m_pending_writes.empty(); }
 
+			// Search for query synchronized at address
+			occlusion_query_info* find_query(vm::addr_t sink_address);
+
 			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
@@ -614,7 +617,7 @@ namespace rsx
 		// sync
 		void sync();
 		void read_barrier(u32 memory_address, u32 memory_range);
-		virtual void sync_hint(FIFO_hint /*hint*/) {}
+		virtual void sync_hint(FIFO_hint /*hint*/, u32 /*arg*/) {}
 
 		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;

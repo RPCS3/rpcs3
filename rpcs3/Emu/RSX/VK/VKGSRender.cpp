@@ -2157,15 +2157,26 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 	open_command_buffer();
 }
 
-void VKGSRender::sync_hint(rsx::FIFO_hint hint)
+void VKGSRender::sync_hint(rsx::FIFO_hint hint, u32 arg)
 {
+	// Occlusion test result evaluation is coming up, avoid a hard sync
 	if (hint == rsx::FIFO_hint::hint_conditional_render_eval)
 	{
-		if (m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task)
+		// Occlusion queries not enabled, do nothing
+		if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
+			return;
+
+		// If a flush request is already enqueued, do nothing
+		if (m_flush_requests.pending())
+			return;
+
+		// Check if the required report is synced to this CB
+		if (auto occlusion_info = zcull_ctrl->find_query(vm::cast(arg)))
 		{
-			// Occlusion test result evaluation is coming up, avoid a hard sync
-			if (!m_flush_requests.pending())
+			auto& data = m_occlusion_map[occlusion_info->driver_handle];
+			if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
 			{
+				// Confirmed hard sync coming up, post a sync request
 				m_flush_requests.post(false);
 				m_flush_requests.remove_one();
 			}
