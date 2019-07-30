@@ -307,7 +307,7 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 
 	if (sleep_time)
 	{
-		lv2_obj::sleep(ppu, 0);
+		lv2_obj::sleep(ppu, sleep_time);
 
 		lv2_obj::wait_timeout<true>(sleep_time);
 
