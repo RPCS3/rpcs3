@@ -4735,14 +4735,18 @@ bool ppu_interpreter::FRSP(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCTIW(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsd_si32(_mm_load_sd(&ppu.fpr[op.frb])));
+	const f64 b = ppu.fpr[op.frb];
+	const s32 res = b >= f64(INT32_MAX) ? INT32_MAX : _mm_cvtsd_si32(_mm_load_sd(&b));
+	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(res);
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
 bool ppu_interpreter::FCTIWZ(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvttsd_si32(_mm_load_sd(&ppu.fpr[op.frb])));
+	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
+	const auto res = _mm_xor_si128(_mm_cvttpd_epi32(b), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(0x80000000))));
+	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_extract_epi32(res, 0));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -4859,14 +4863,18 @@ bool ppu_interpreter::FABS(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::FCTID(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsd_si64(_mm_load_sd(&ppu.fpr[op.frb])));
+	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
+	const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvtsd_si64(b)), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(f64(1ull << 63)))));
+	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_extract_epi64(res, 0));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
 
 bool ppu_interpreter::FCTIDZ(ppu_thread& ppu, ppu_opcode_t op)
 {
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvttsd_si64(_mm_load_sd(&ppu.fpr[op.frb])));
+	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
+	const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvtsd_si64(b)), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(f64(1ull << 63)))));
+	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_extract_epi64(res, 0));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
