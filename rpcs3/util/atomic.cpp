@@ -2,6 +2,10 @@
 
 #include "Utilities/sync.h"
 
+#include <map>
+#include <mutex>
+#include <condition_variable>
+
 // Should be at least 65536, currently 2097152.
 static constexpr std::uintptr_t s_hashtable_size = 1u << 21;
 
@@ -26,6 +30,113 @@ static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value)
 
 	return false;
 }
+
+// Fallback implementation
+namespace
+{
+	struct waiter
+	{
+		std::condition_variable cond;
+		void* const tls_ptr;
+
+		explicit waiter(void* tls_ptr)
+			: tls_ptr(tls_ptr)
+		{
+		}
+	};
+
+	struct waiter_map
+	{
+		std::mutex mutex;
+		std::multimap<const void*, waiter> list;
+	};
+
+	// Thread's unique node to insert without allocation
+	thread_local std::multimap<const void*, waiter>::node_type s_tls_waiter = []()
+	{
+		// Initialize node from a dummy container (there is no separate node constructor)
+		std::multimap<const void*, waiter> dummy;
+		return dummy.extract(dummy.emplace(nullptr, &s_tls_waiter));
+	}();
+
+	waiter_map& get_fallback_map(const void* ptr)
+	{
+		static waiter_map s_waiter_maps[4096];
+
+		return s_waiter_maps[std::hash<const void*>()(ptr) % std::size(s_waiter_maps)];
+	}
+
+	void fallback_wait(const void* data, std::size_t size, u64 old_value)
+	{
+		auto& wmap = get_fallback_map(data);
+
+		// Update node key
+		s_tls_waiter.key() = data;
+
+		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value))
+		{
+			// Add node to the waiter list
+			std::condition_variable& cond = wmap.list.insert(std::move(s_tls_waiter))->second.cond;
+
+			// Wait until the node is returned to its TLS location
+			while (!s_tls_waiter)
+			{
+				cond.wait(lock);
+			}
+		}
+	}
+
+	void fallback_notify(waiter_map& wmap, std::multimap<const void*, waiter>::iterator found)
+	{
+		// Return notified node to its TLS location
+		const auto ptls = static_cast<std::multimap<const void*, waiter>::node_type*>(found->second.tls_ptr);
+		*ptls = wmap.list.extract(found);
+		ptls->mapped().cond.notify_one();
+	}
+
+	void fallback_notify_one(const void* data)
+	{
+		auto& wmap = get_fallback_map(data);
+
+		std::lock_guard lock(wmap.mutex);
+
+		if (auto found = wmap.list.find(data); found != wmap.list.end())
+		{
+			fallback_notify(wmap, found);
+		}
+	}
+
+	void fallback_notify_all(const void* data)
+	{
+		auto& wmap = get_fallback_map(data);
+
+		std::lock_guard lock(wmap.mutex);
+
+		for (auto it = wmap.list.lower_bound(data); it != wmap.list.end() && it->first == data;)
+		{
+			fallback_notify(wmap, it++);
+		}
+	}
+}
+
+#if !defined(_WIN32) && !defined(__linux__)
+
+void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value)
+{
+	fallback_wait(data, size, old_value);
+}
+
+void atomic_storage_futex::notify_one(const void* data)
+{
+	fallback_notify_one(data);
+}
+
+void atomic_storage_futex::notify_all(const void* data)
+{
+	fallback_notify_all(data);
+}
+
+#else
 
 void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value)
 {
@@ -226,3 +337,5 @@ void atomic_storage_futex::notify_all(const void* data)
 	}
 #endif
 }
+
+#endif
