@@ -102,6 +102,23 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 
 #endif
 
+#ifndef _WIN32
+
+static struct timespec start_time = []()
+{
+	struct timespec ts;
+
+	if (::clock_gettime(CLOCK_REALTIME, &ts) != 0)
+	{
+		// Fatal error
+		std::terminate();
+	}
+
+	return ts;
+}();
+
+#endif
+
 LOG_CHANNEL(sys_time);
 
 static constexpr u64 g_timebase_freq = /*79800000*/ 80000000ull; // 80 Mhz
@@ -170,6 +187,11 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 {
 	sys_time.trace("sys_time_get_current_time(sec=*0x%x, nsec=*0x%x)", sec, nsec);
 
+	if (!sec)
+	{
+		return CELL_EFAULT;
+	}
+
 #ifdef _WIN32
 	LARGE_INTEGER count;
 	verify(HERE), QueryPerformanceCounter(&count);
@@ -178,12 +200,7 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	const u64 diff = (count.QuadPart - s_time_aux_info.start_time) * 1000000000ull / s_time_aux_info.perf_freq;
 
 	// get time since Epoch in nanoseconds
-	const u64 time = (s_time_aux_info.start_ftime * 100u + diff) * g_cfg.core.clocks_scale / 100u;
-
-	if (!sec)
-	{
-		return CELL_EFAULT;
-	}
+	const u64 time = s_time_aux_info.start_ftime * 100u + (diff * g_cfg.core.clocks_scale / 100u);
 
 	*sec  = time / 1000000000ull;
 
@@ -197,19 +214,49 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	struct timespec ts;
 	verify(HERE), ::clock_gettime(CLOCK_REALTIME, &ts) == 0;
 
-	if (!sec)
+	if (g_cfg.core.clocks_scale == 100)
 	{
-		return CELL_EFAULT;
+		*sec  = ts.tv_sec;
+
+		if (!nsec)
+		{
+			return CELL_EFAULT;
+		}
+
+		*nsec = ts.tv_nsec;
+		return CELL_OK;
 	}
 
-	*sec  = (ts.tv_sec * g_cfg.core.clocks_scale / 100u) + (ts.tv_nsec * g_cfg.core.clocks_scale / (1000000000ull * 100));
+	u64 tv_sec = ts.tv_sec, stv_sec = start_time.tv_sec;
+	u64 tv_nsec = ts.tv_nsec, stv_nsec = start_time.tv_nsec;
+
+	// Substruct time since Epoch and since start time
+	tv_sec -= stv_sec;
+
+	if (tv_nsec < stv_nsec)
+	{
+		// Correct value if borrow encountered
+		tv_sec -= 1;
+		tv_nsec = 1'000'000'000ull - (stv_nsec - tv_nsec);	
+	}
+	else
+	{
+		tv_nsec -= stv_nsec;
+	}
+
+	// Scale nanocseconds
+	tv_nsec = stv_nsec + (tv_nsec * g_cfg.core.clocks_scale / 100);
+
+	// Scale seconds and add from nanoseconds / 1'000'000'000
+	*sec  = stv_sec + (tv_sec * g_cfg.core.clocks_scale / 100u) + (tv_nsec / 1000000000ull);
 
 	if (!nsec)
 	{
 		return CELL_EFAULT;
 	}
 
-	*nsec = (ts.tv_nsec * g_cfg.core.clocks_scale / 100u) % 1000000000ull;
+	// Set nanoseconds
+	*nsec = tv_nsec % 1000000000ull;
 #endif
 
 	return CELL_OK;
