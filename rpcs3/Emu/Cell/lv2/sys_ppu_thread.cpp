@@ -434,12 +434,7 @@ error_code sys_ppu_thread_recover_page_fault(u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	if (auto res = mmapper_thread_recover_page_fault(thread_id))
-	{
-		return res;
-	}
-
-	return CELL_OK;
+	return mmapper_thread_recover_page_fault(thread_id);
 }
 
 error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt)
