@@ -486,7 +486,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 	return CELL_OK;
 }
 
-CellError mmapper_thread_recover_page_fault(u32 id)
+error_code mmapper_thread_recover_page_fault(u32 id)
 {
 	// We can only wake a thread if it is being suspended for a page fault.
 	auto pf_events = fxm::get_always<page_fault_event_entries>();
@@ -504,5 +504,5 @@ CellError mmapper_thread_recover_page_fault(u32 id)
 	}
 
 	pf_events->cond.notify_all();
-	return CellError(CELL_OK);
+	return CELL_OK;
 }

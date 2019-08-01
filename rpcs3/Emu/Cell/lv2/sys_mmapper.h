@@ -62,7 +62,7 @@ struct page_fault_event_entries
 // Aux
 class ppu_thread;
 
-CellError mmapper_thread_recover_page_fault(u32 id);
+error_code mmapper_thread_recover_page_fault(u32 id);
 
 // SysCalls
 error_code sys_mmapper_allocate_address(ppu_thread&, u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr);
