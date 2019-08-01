@@ -913,7 +913,7 @@ namespace vm
 
 	static std::shared_ptr<block_t> _find_map(u32 size, u32 align, u64 flags)
 	{
-		for (u32 addr = ::align<u32>(0x20000000, align); addr < 0xC0000000; addr += align)
+		for (u32 addr = ::align<u32>(0x20000000, align); addr - 1 < 0xC0000000 - 1; addr += align)
 		{
 			if (_test_map(addr, size))
 			{
