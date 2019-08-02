@@ -66,7 +66,7 @@ namespace vm
 	atomic_t<u32> g_addr_lock = 0;
 
 	// Memory mutex: passive locks
-	std::array<atomic_t<cpu_thread*>, 4> g_locks{};
+	std::array<atomic_t<cpu_thread*>, g_cfg.core.ppu_threads.max> g_locks{};
 	std::array<atomic_t<u64>, 6> g_range_locks{};
 
 	static void _register_lock(cpu_thread* _cpu)

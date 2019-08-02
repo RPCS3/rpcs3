@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/types.h"
 #include "Utilities/StrFmt.h"
@@ -234,6 +234,10 @@ namespace cfg
 
 	public:
 		int_type def;
+
+		// Expose range
+		static const s64 max = Max;
+		static const s64 min = Min;
 
 		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)))
 			: _base(type::_int, owner, name)
