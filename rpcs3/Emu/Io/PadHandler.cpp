@@ -1,5 +1,6 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "PadHandler.h"
+#include "pad_thread.h"
 
 cfg_input g_cfg_input;
 
@@ -129,14 +130,14 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold)
 
 // normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 // the input values must lie in 0+
-u16 PadHandlerBase::NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 maximum)
+u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum)
 {
 	if (threshold >= maximum || maximum <= 0)
 	{
 		return static_cast<u16>(0);
 	}
 
-	float val = float(std::clamp(static_cast<s32>(raw_value), 0, maximum)) / float(maximum); // value based on max range converted to [0, 1]
+	float val = float(std::clamp(raw_value, 0, maximum)) / float(maximum); // value based on max range converted to [0, 1]
 
 	if (threshold <= 0)
 	{
@@ -149,15 +150,17 @@ u16 PadHandlerBase::NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 max
 	}
 }
 
-u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, bool ignore_threshold)
+u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold)
 {
+	const s32 scaled_value = (multiplier * raw_value) / 100;
+
 	if (ignore_threshold)
 	{
-		return static_cast<u16>(ScaleStickInput(raw_value, 0, thumb_max));
+		return static_cast<u16>(ScaleStickInput(scaled_value, 0, thumb_max));
 	}
 	else
 	{
-		return NormalizeDirectedInput(raw_value, threshold, thumb_max);
+		return NormalizeDirectedInput(scaled_value, threshold, thumb_max);
 	}
 }
 
@@ -263,13 +266,30 @@ bool PadHandlerBase::has_deadzones()
 	return b_has_deadzones;
 }
 
-std::string PadHandlerBase::get_config_dir(pad_handler type)
+bool PadHandlerBase::has_led()
 {
+	return b_has_led;
+}
+
+std::string PadHandlerBase::get_config_dir(pad_handler type, const std::string& title_id)
+{
+	if (!title_id.empty())
+	{
+		return Emulator::GetCustomInputConfigDir(title_id) + fmt::format("%s", type) + "/";
+	}
 	return fs::get_config_dir() + "/InputConfigs/" + fmt::format("%s", type) + "/";
 }
 
-std::string PadHandlerBase::get_config_filename(int i)
+std::string PadHandlerBase::get_config_filename(int i, const std::string& title_id)
 {
+	if (!title_id.empty() && fs::is_file(Emulator::GetCustomInputConfigPath(title_id)))
+	{
+		const std::string path = Emulator::GetCustomInputConfigDir(title_id) + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
+		if (fs::is_file(path))
+		{
+			return path;
+		}
+	}
 	return fs::get_config_dir() + "/InputConfigs/" + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
 }
 
@@ -281,7 +301,7 @@ void PadHandlerBase::init_configs()
 	{
 		if (g_cfg_input.player[i]->handler == m_type)
 		{
-			init_config(&m_pad_configs[index], get_config_filename(i));
+			init_config(&m_pad_configs[index], get_config_filename(i, pad::g_title_id));
 			index++;
 		}
 	}

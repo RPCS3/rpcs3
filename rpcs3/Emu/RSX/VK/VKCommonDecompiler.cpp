@@ -94,19 +94,19 @@ namespace vk
 		rsc.maxCombinedClipAndCullDistances = 8;
 		rsc.maxSamples = 4;
 
-		rsc.limits.nonInductiveForLoops = 1;
-		rsc.limits.whileLoops = 1;
-		rsc.limits.doWhileLoops = 1;
-		rsc.limits.generalUniformIndexing = 1;
-		rsc.limits.generalAttributeMatrixVectorIndexing = 1;
-		rsc.limits.generalVaryingIndexing = 1;
-		rsc.limits.generalSamplerIndexing = 1;
-		rsc.limits.generalVariableIndexing = 1;
-		rsc.limits.generalConstantMatrixVectorIndexing = 1;
+		rsc.limits.nonInductiveForLoops = true;
+		rsc.limits.whileLoops = true;
+		rsc.limits.doWhileLoops = true;
+		rsc.limits.generalUniformIndexing = true;
+		rsc.limits.generalAttributeMatrixVectorIndexing = true;
+		rsc.limits.generalVaryingIndexing = true;
+		rsc.limits.generalSamplerIndexing = true;
+		rsc.limits.generalVariableIndexing = true;
+		rsc.limits.generalConstantMatrixVectorIndexing = true;
 	}
 
-	static const varying_register_t varying_regs[] =
-	{
+	static constexpr std::array<std::pair<std::string_view, int>, 18> varying_registers =
+	{{
 		{ "tc0", 0 },
 		{ "tc1", 1 },
 		{ "tc2", 2 },
@@ -125,17 +125,19 @@ namespace vk
 		{ "front_spec_color", 13 },
 		{ "fog_c", 14 },
 		{ "fogc", 14 }
-	};
+	}};
 
-	const varying_register_t & get_varying_register(const std::string & name)
+	int get_varying_register_location(std::string_view varying_register_name)
 	{
-		for (const auto&t : varying_regs)
+		for (const auto& varying_register : varying_registers)
 		{
-			if (t.name == name)
-				return t;
+			if (varying_register.first == varying_register_name)
+			{
+				return varying_register.second;
+			}
 		}
 
-		fmt::throw_exception("Unknown register name: %s" HERE, name);
+		fmt::throw_exception("Unknown register name: %s" HERE, varying_register_name);
 	}
 
 	bool compile_glsl_to_spv(std::string& shader, program_domain domain, std::vector<u32>& spv)
@@ -149,7 +151,7 @@ namespace vk
 		shader_object.setEnvInput(glslang::EShSourceGlsl, lang, glslang::EShClientVulkan, 100);
 		shader_object.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetClientVersion::EShTargetVulkan_1_0);
 		shader_object.setEnvTarget(glslang::EshTargetSpv, glslang::EShTargetLanguageVersion::EShTargetSpv_1_0);
-		
+
 		bool success = false;
 		const char *shader_text = shader.data();
 

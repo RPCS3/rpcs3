@@ -1,5 +1,6 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_prx.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Crypto/unself.h"
@@ -8,7 +9,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
 #include "sys_fs.h"
-#include "sys_prx.h"
+#include "sys_process.h"
 
 
 
@@ -83,6 +84,21 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 
 static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, fs::file src = {})
 {
+	if (flags != 0)
+	{
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_INVALIDMASK)
+		{
+			return CELL_EINVAL;
+		}
+
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !g_ps3_process_info.ppc_seg)
+		{
+			return CELL_ENOSYS;
+		}
+
+		fmt::throw_exception("sys_prx: Unimplemented fixed address allocations" HERE);
+	}
+
 	std::string name = vpath.substr(vpath.find_last_of('/') + 1);
 	std::string path = vfs::get(vpath);
 
@@ -236,10 +252,9 @@ error_code _sys_prx_start_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_m
 		return CELL_ESRCH;
 	}
 
-	//if (prx->is_started)
-	//	return CELL_PRX_ERROR_ALREADY_STARTED;
+	if (prx->is_started.exchange(true))
+		return not_an_error(CELL_PRX_ERROR_ALREADY_STARTED);
 
-	//prx->is_started = true;
 	pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
 	pOpt->entry2.set(prx->prologue ? prx->prologue.addr() : ~0ull);
 	return CELL_OK;
@@ -256,10 +271,9 @@ error_code _sys_prx_stop_module(u32 id, u64 flags, vm::ptr<sys_prx_start_stop_mo
 		return CELL_ESRCH;
 	}
 
-	//if (!prx->is_started)
-	//	return CELL_PRX_ERROR_ALREADY_STOPPED;
+	if (!prx->is_started.exchange(false))
+		return not_an_error(CELL_PRX_ERROR_ALREADY_STOPPED);
 
-	//prx->is_started = false;
 	pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
 	pOpt->entry2.set(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 
@@ -351,7 +365,7 @@ error_code _sys_prx_get_module_info(u32 id, u64 flags, vm::ptr<sys_prx_module_in
 	pOpt->info->modattribute = prx->module_info_attributes;
 	pOpt->info->start_entry = prx->start.addr();
 	pOpt->info->stop_entry = prx->stop.addr();
-	pOpt->info->all_segments_num = prx->segs.size();
+	pOpt->info->all_segments_num = ::size32(prx->segs);
 	if (pOpt->info->filename)
 	{
 		std::strncpy(pOpt->info->filename.get_ptr(), prx->name.c_str(), pOpt->info->filename_size);

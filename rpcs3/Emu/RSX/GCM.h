@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_ptr.h"
 #include "gcm_enums.h"
 #include "gcm_printing.h"
+#include "util/atomic.hpp"
 
 
 struct CellGcmControl
@@ -24,7 +25,7 @@ struct CellGcmConfig
 
 struct CellGcmContextData;
 
-typedef s32(CellGcmContextCallback)(vm::ptr<CellGcmContextData>, u32);
+using CellGcmContextCallback = s32 (vm::ptr<CellGcmContextData>, u32);
 
 struct CellGcmContextData
 {
@@ -64,7 +65,7 @@ struct CellGcmSurface
 	be_t<u16> y;
 };
 
-struct CellGcmReportData
+struct alignas(16) CellGcmReportData
 {
 	be_t<u64> timer;
 	be_t<u32> value;
@@ -73,12 +74,12 @@ struct CellGcmReportData
 
 struct CellGcmZcullInfo
 {
-	u32 region;
-	u32 size;
-	u32 start;
-	u32 offset;
-	u32 status0;
-	u32 status1;
+	be_t<u32> region;
+	be_t<u32> size;
+	be_t<u32> start;
+	be_t<u32> offset;
+	be_t<u32> status0;
+	be_t<u32> status1;
 };
 
 struct CellGcmDisplayInfo

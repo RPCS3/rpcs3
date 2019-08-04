@@ -1,9 +1,11 @@
-#pragma once
+﻿#pragma once
 
-#include "Emu/Cell/Common.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
+#include "Emu/Memory/vm.h"
 #include "MFC.h"
+#include "Emu/Memory/vm.h"
+#include "Utilities/BEType.h"
 
 #include <map>
 
@@ -244,12 +246,7 @@ public:
 
 	void set_value(u32 value, bool count = true)
 	{
-		const u64 new_data = u64{count} << off_count | value;
-#ifdef _MSC_VER
-		const_cast<volatile u64&>(data.raw()) = new_data;
-#else
-		__atomic_store_n(&data.raw(), new_data, __ATOMIC_RELAXED);
-#endif
+		data.release(u64{count} << off_count | value);
 	}
 
 	u32 get_value()
@@ -280,14 +277,14 @@ struct spu_channel_4_t
 public:
 	void clear()
 	{
-		values.store({});
-		value3 = 0;
+		values.release({});
+		value3.release(0);
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
 	void push(cpu_thread& spu, u32 value)
 	{
-		value3 = value; _mm_sfence();
+		value3.store(value);
 
 		if (values.atomic_op([=](sync_var_t& data) -> bool
 		{
@@ -328,7 +325,6 @@ public:
 
 				data.value0 = data.value1;
 				data.value1 = data.value2;
-				_mm_lfence();
 				data.value2 = this->value3;
 			}
 			else
@@ -368,8 +364,8 @@ struct spu_int_ctrl_t
 
 	void clear()
 	{
-		mask = 0;
-		stat = 0;
+		mask.release(0);
+		stat.release(0);
 		tag = nullptr;
 	}
 };
@@ -534,7 +530,7 @@ public:
 
 	// Reservation Data
 	u64 rtime = 0;
-	std::array<u128, 8> rdata{};
+	std::array<v128, 8> rdata{};
 	u32 raddr = 0;
 
 	u32 srr0;
@@ -583,7 +579,9 @@ public:
 	u64 block_recover = 0;
 	u64 block_failure = 0;
 
-	std::array<spu_function_t, 0x10000> jit_dispatcher; // Dispatch table for indirect calls
+	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
+
+	u8* memory_base_addr = vm::g_base_addr;
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
@@ -595,7 +593,7 @@ public:
 	void do_mfc(bool wait = true);
 	u32 get_mfc_completed();
 
-	bool process_mfc_cmd(spu_mfc_cmd args);
+	bool process_mfc_cmd();
 	u32 get_events(bool waiting = false);
 	void set_events(u32 mask);
 	void set_interrupt_status(bool enable);

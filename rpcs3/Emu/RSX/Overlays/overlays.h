@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "overlay_controls.h"
 
 #include "../../../Utilities/date_time.h"
@@ -11,10 +11,15 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
+#include "Emu/Cell/Modules/cellOskDialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 #include "Utilities/CPUStats.h"
 #include "Utilities/Timer.h"
 
+// Utils
+std::string utf8_to_ascii8(const std::string& utf8_string);
+std::string utf16_to_ascii8(const std::u16string& utf16_string);
+std::u16string ascii8_to_utf16(const std::string& ascii_string);
 extern u64 get_system_time();
 
 // Definition of user interface implementations
@@ -44,7 +49,7 @@ namespace rsx
 		// Interactable UI element
 		struct user_interface : overlay
 		{
-			//Move this somewhere to avoid duplication
+			// Move this somewhere to avoid duplication
 			enum selection_code
 			{
 				new_save = -1,
@@ -58,10 +63,16 @@ namespace rsx
 				dpad_down,
 				dpad_left,
 				dpad_right,
+				select,
+				start,
 				triangle,
 				circle,
 				square,
-				cross
+				cross,
+				L1,
+				R1,
+
+				pad_button_max_enum
 			};
 
 			Timer input_timer;
@@ -70,149 +81,25 @@ namespace rsx
 			s32 return_code = CELL_OK;
 			std::function<void(s32 status)> on_close;
 
-			virtual void update() override {}
-			virtual compiled_resource get_compiled() override = 0;
+			void update() override {}
+			compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/)
 			{
 				close();
 			}
 
-			void close();
+			void close(bool use_callback = true);
 
-			s32 run_input_loop()
-			{
-				const auto handler = fxm::get<pad_thread>();
-				if (!handler)
-				{
-					LOG_ERROR(RSX, "Pad handler expected but none initialized!");
-					return selection_code::error;
-				}
-
-				const PadInfo& rinfo = handler->GetInfo();
-				if (rinfo.max_connect == 0)
-					return selection_code::error;
-
-				std::array<std::chrono::steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
-				timestamp.fill(std::chrono::steady_clock::now());
-
-				std::array<std::array<bool, 8>, CELL_PAD_MAX_PORT_NUM> button_state;
-				for (auto& state : button_state)
-				{
-					state.fill(true);
-				}
-
-				input_timer.Start();
-
-				while (!exit)
-				{
-					if (Emu.IsStopped())
-						return selection_code::canceled;
-
-					if (Emu.IsPaused() || !rinfo.now_connect)
-					{
-						std::this_thread::sleep_for(10ms);
-						continue;
-					}
-
-					int pad_index = -1;
-					for (const auto &pad : handler->GetPads())
-					{
-						if (++pad_index >= CELL_PAD_MAX_PORT_NUM)
-						{
-							LOG_FATAL(RSX, "The native overlay cannot handle more than 7 pads! Current number of pads: %d", pad_index + 1);
-							continue;
-						}
-
-						for (auto &button : pad->m_buttons)
-						{
-							u8 button_id = 255;
-							if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
-							{
-								switch (button.m_outKeyCode)
-								{
-								case CELL_PAD_CTRL_LEFT:
-									button_id = pad_button::dpad_left;
-									break;
-								case CELL_PAD_CTRL_RIGHT:
-									button_id = pad_button::dpad_right;
-									break;
-								case CELL_PAD_CTRL_DOWN:
-									button_id = pad_button::dpad_down;
-									break;
-								case CELL_PAD_CTRL_UP:
-									button_id = pad_button::dpad_up;
-									break;
-								}
-							}
-							else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-							{
-								switch (button.m_outKeyCode)
-								{
-								case CELL_PAD_CTRL_TRIANGLE:
-									button_id = pad_button::triangle;
-									break;
-								case CELL_PAD_CTRL_CIRCLE:
-									button_id = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::cross : pad_button::circle;
-									break;
-								case CELL_PAD_CTRL_SQUARE:
-									button_id = pad_button::square;
-									break;
-								case CELL_PAD_CTRL_CROSS:
-									button_id = g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? pad_button::circle : pad_button::cross;
-									break;
-								}
-							}
-
-							if (button_id < 255)
-							{
-								if (button.m_pressed)
-								{
-									if (button_id < 4) // d-pad button
-									{
-										if (!button_state[pad_index][button_id] || input_timer.GetMsSince(timestamp[pad_index]) > 400)
-										{
-											// d-pad button was not pressed, or was pressed more than 400ms ago
-											timestamp[pad_index] = std::chrono::steady_clock::now();
-											on_button_pressed(static_cast<pad_button>(button_id));
-										}
-									}
-									else if (!button_state[pad_index][button_id])
-									{
-										// button was not pressed
-										on_button_pressed(static_cast<pad_button>(button_id));
-									}
-								}
-
-								button_state[pad_index][button_id] = button.m_pressed;
-							}
-
-							if (button.m_flush)
-							{
-								button.m_pressed = false;
-								button.m_flush = false;
-								button.m_value = 0;
-							}
-
-							if (exit)
-								return 0;
-						}
-					}
-
-					refresh();
-				}
-
-				// Unreachable
-				return 0;
-			}
+			s32 run_input_loop();
 		};
 
 		class display_manager
 		{
 		private:
 			atomic_t<u32> m_uid_ctr { 0u };
-			std::vector<std::unique_ptr<overlay>> m_iface_list;
-			std::vector<std::unique_ptr<overlay>> m_dirty_list;
+			std::vector<std::shared_ptr<overlay>> m_iface_list;
+			std::vector<std::shared_ptr<overlay>> m_dirty_list;
 
 			shared_mutex m_list_mutex;
 			std::vector<u32> m_uids_to_remove;
@@ -271,44 +158,42 @@ namespace rsx
 			}
 
 		public:
-			display_manager() {}
-			~display_manager() {}
+			display_manager() = default;
+			~display_manager() = default;
 
 			// Adds an object to the internal list. Optionally removes other objects of the same type.
 			// Original handle loses ownership but a usable pointer is returned
 			template <typename T>
-			T* add(std::unique_ptr<T>& entry, bool remove_existing = true)
+			std::shared_ptr<T> add(std::shared_ptr<T>& entry, bool remove_existing = true)
 			{
 				std::lock_guard lock(m_list_mutex);
 
-				T* e = entry.get();
-				e->uid = m_uid_ctr.fetch_add(1);
-				e->type_index = id_manager::typeinfo::get_index<T>();
+				entry->uid = m_uid_ctr.fetch_add(1);
+				entry->type_index = id_manager::typeinfo::get_index<T>();
 
 				if (remove_existing)
 				{
 					for (auto It = m_iface_list.begin(); It != m_iface_list.end(); It++)
 					{
-						if (It->get()->type_index == e->type_index)
+						if (It->get()->type_index == entry->type_index)
 						{
 							// Replace
 							m_dirty_list.push_back(std::move(*It));
-							It->reset(e);
-							entry.reset();
-							return e;
+							*It = std::move(entry);
+							return std::static_pointer_cast<T>(*It);
 						}
 					}
 				}
 
 				m_iface_list.push_back(std::move(entry));
-				return e;
+				return std::static_pointer_cast<T>(m_iface_list.back());
 			}
 
 			// Allocates object and adds to internal list. Returns pointer to created object
 			template <typename T, typename ...Args>
-			T* create(Args&&... args)
+			std::shared_ptr<T> create(Args&&... args)
 			{
-				std::unique_ptr<T> object = std::make_unique<T>(std::forward<Args>(args)...);
+				auto object = std::make_shared<T>(std::forward<Args>(args)...);
 				return add(object);
 			}
 
@@ -355,14 +240,14 @@ namespace rsx
 			}
 
 			// Returns current list for reading. Caller must ensure synchronization by first locking the list
-			const std::vector<std::unique_ptr<overlay>>& get_views() const
+			const std::vector<std::shared_ptr<overlay>>& get_views() const
 			{
 				return m_iface_list;
 			}
 
 			// Returns current list of removed objects not yet deallocated for reading.
 			// Caller must ensure synchronization by first locking the list
-			const std::vector<std::unique_ptr<overlay>>& get_dirty() const
+			const std::vector<std::shared_ptr<overlay>>& get_dirty() const
 			{
 				return m_dirty_list;
 			}
@@ -379,7 +264,7 @@ namespace rsx
 
 				m_dirty_list.erase
 				(
-					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::unique_ptr<overlay>& e)
+					std::remove_if(m_dirty_list.begin(), m_dirty_list.end(), [&uids](std::shared_ptr<overlay>& e)
 					{
 						return std::find(uids.begin(), uids.end(), e->uid) != uids.end();
 					}),
@@ -388,22 +273,22 @@ namespace rsx
 			}
 
 			// Returns pointer to the object matching the given uid
-			overlay* get(u32 uid)
+			std::shared_ptr<overlay> get(u32 uid)
 			{
 				reader_lock lock(m_list_mutex);
 
 				for (const auto& iface : m_iface_list)
 				{
 					if (iface->uid == uid)
-						return iface.get();
+						return iface;
 				}
 
-				return nullptr;
+				return {};
 			}
 
 			// Returns pointer to the first object matching the given type
 			template <typename T>
-			T* get()
+			std::shared_ptr<T> get()
 			{
 				reader_lock lock(m_list_mutex);
 
@@ -412,11 +297,11 @@ namespace rsx
 				{
 					if (iface->type_index == type_id)
 					{
-						return static_cast<T*>(iface.get());
+						return std::static_pointer_cast<T>(iface);
 					}
 				}
 
-				return nullptr;
+				return {};
 			}
 
 			// Lock for read-only access (BasicLockable)
@@ -444,7 +329,7 @@ namespace rsx
 			/*
 			   minimal - fps
 			   low - fps, total cpu usage
-			   medium  - fps, detailed cpu usage
+			   medium - fps, detailed cpu usage
 			   high - fps, frametime, detailed cpu usage, thread number, rsx load
 			 */
 			detail_level m_detail;
@@ -463,7 +348,7 @@ namespace rsx
 			u32 m_font_size;
 			u32 m_margin_x; // horizontal distance to the screen border relative to the screen_quadrant in px
 			u32 m_margin_y; // vertical distance to the screen border relative to the screen_quadrant in px
-			f32 m_opacity;	// 0..1
+			f32 m_opacity;  // 0..1
 
 			bool m_force_update;
 			bool m_is_initialised{ false };
@@ -482,7 +367,7 @@ namespace rsx
 			void init();
 
 			void set_detail_level(detail_level level);
-			void set_position(screen_quadrant pos);
+			void set_position(screen_quadrant quadrant);
 			void set_update_interval(u32 update_interval);
 			void set_font(std::string font);
 			void set_font_size(u32 font_size);
@@ -500,6 +385,108 @@ namespace rsx
 			}
 		};
 
+		struct osk_dialog : public user_interface, public OskDialogBase
+		{
+			using callback_t = std::function<void(const std::string&)>;
+
+			enum border_flags
+			{
+				top = 1,
+				bottom = 2,
+				left = 4,
+				right = 8,
+
+				start_cell = top | bottom | left,
+				end_cell = top | bottom | right,
+				middle_cell = top | bottom,
+				default_cell = top | bottom | left | right
+			};
+
+			enum button_flags
+			{
+				_default = 0,
+				_return = 1,
+				_space = 2
+			};
+
+			struct cell
+			{
+				position2u pos;
+				color4f backcolor{};
+				border_flags flags = default_cell;
+				bool selected = false;
+				bool enabled = false;
+
+				std::vector<std::string> outputs;
+				callback_t callback;
+			};
+
+			struct grid_entry_ctor
+			{
+				std::vector<std::string> outputs;
+				color4f color;
+				u32 num_cell_hz;
+				button_flags type_flags;
+				callback_t callback;
+			};
+
+			// Base UI
+			overlay_element m_frame;
+			overlay_element m_background;
+			label m_title;
+			edit_text m_preview;
+			image_button m_btn_accept;
+			image_button m_btn_cancel;
+			image_button m_btn_shift;
+			image_button m_btn_space;
+			image_button m_btn_delete;
+
+			// Grid
+			u32 cell_size_x = 0;
+			u32 cell_size_y = 0;
+			u32 num_columns = 0;
+			u32 num_rows = 0;
+			u32 num_layers = 0;
+			u32 selected_x = 0;
+			u32 selected_y = 0;
+			u32 selected_z = 0;
+
+			std::vector<cell> m_grid;
+
+			bool m_visible = false;
+			bool m_update = true;
+			compiled_resource m_cached_resource;
+
+			u32 flags = 0;
+			u32 char_limit = UINT32_MAX;
+
+			osk_dialog() = default;
+			~osk_dialog() override = default;
+
+			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override = 0;
+			void Close(bool ok) override;
+
+			void initialize_layout(const std::vector<grid_entry_ctor>& layout, const std::string& title, const std::string& initial_text);
+
+			void on_button_pressed(pad_button button_press) override;
+			void on_text_changed();
+
+			void on_default_callback(const std::string&);
+			void on_shift(const std::string&);
+			void on_space(const std::string&);
+			void on_backspace(const std::string&);
+			void on_enter(const std::string&);
+
+			compiled_resource get_compiled() override;
+		};
+
+		struct osk_enUS : osk_dialog
+		{
+			using osk_dialog::osk_dialog;
+
+			void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options) override;
+		};
+
 		struct save_dialog : public user_interface
 		{
 		private:
@@ -509,60 +496,7 @@ namespace rsx
 				std::unique_ptr<image_info> icon_data;
 
 			public:
-				save_dialog_entry(const char* text1, const char* text2, u8 resource_id, const std::vector<u8>& icon_buf)
-				{
-					std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
-					image->set_size(160, 110);
-					image->set_padding(36, 36, 11, 11); //Square image, 88x88
-
-					if (resource_id != image_resource_id::raw_image)
-					{
-						static_cast<image_view*>(image.get())->set_image_resource(resource_id);
-					}
-					else if (icon_buf.size())
-					{
-						image->set_padding(0, 0, 11, 11); //Half sized icon, 320x176->160x88
-						icon_data = std::make_unique<image_info>(icon_buf);
-						static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
-					}
-					else
-					{
-						// Fallback
-						static_cast<image_view*>(image.get())->set_image_resource(resource_config::standard_image_resource::save);
-					}
-
-					std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
-					std::unique_ptr<overlay_element> padding = std::make_unique<spacer>();
-					std::unique_ptr<overlay_element> header_text = std::make_unique<label>(text1);
-					std::unique_ptr<overlay_element> subtext = std::make_unique<label>(text2);
-
-					padding->set_size(1, 1);
-					header_text->set_size(800, 40);
-					header_text->set_text(text1);
-					header_text->set_font("Arial", 16);
-					header_text->set_wrap_text(true);
-					subtext->set_size(800, 40);
-					subtext->set_text(text2);
-					subtext->set_font("Arial", 14);
-					subtext->set_wrap_text(true);
-
-					// Auto-resize save details label
-					static_cast<label*>(subtext.get())->auto_resize(true);
-
-					// Make back color transparent for text
-					header_text->back_color.a = 0.f;
-					subtext->back_color.a = 0.f;
-
-					static_cast<vertical_layout*>(text_stack.get())->pack_padding = 5;
-					static_cast<vertical_layout*>(text_stack.get())->add_element(padding);
-					static_cast<vertical_layout*>(text_stack.get())->add_element(header_text);
-					static_cast<vertical_layout*>(text_stack.get())->add_element(subtext);
-
-					// Pack
-					this->pack_padding = 15;
-					add_element(image);
-					add_element(text_stack);
-				}
+				save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf);
 			};
 
 			std::unique_ptr<overlay_element> m_dim_background;
@@ -574,178 +508,14 @@ namespace rsx
 			bool m_no_saves = false;
 
 		public:
-			save_dialog()
-			{
-				m_dim_background = std::make_unique<overlay_element>();
-				m_dim_background->set_size(1280, 720);
+			save_dialog();
 
-				m_list = std::make_unique<list_view>(1240, 540);
-				m_description = std::make_unique<label>();
-				m_time_thingy = std::make_unique<label>();
+			void update() override;
+			void on_button_pressed(pad_button button_press) override;
 
-				m_list->set_pos(20, 85);
+			compiled_resource get_compiled() override;
 
-				m_description->set_font("Arial", 20);
-				m_description->set_pos(20, 37);
-				m_description->set_text("Save Dialog");
-
-				m_time_thingy->set_font("Arial", 14);
-				m_time_thingy->set_pos(1000, 30);
-				m_time_thingy->set_text(date_time::current_time());
-
-				static_cast<label*>(m_description.get())->auto_resize();
-				static_cast<label*>(m_time_thingy.get())->auto_resize();
-
-				m_dim_background->back_color.a = 0.8f;
-				m_description->back_color.a = 0.f;
-				m_time_thingy->back_color.a = 0.f;
-
-				return_code = selection_code::canceled;
-			}
-
-			void on_button_pressed(pad_button button_press) override
-			{
-				switch (button_press)
-				{
-				case pad_button::cross:
-					if (m_no_saves)
-						break;
-					return_code = m_list->get_selected_index();
-					// Fall through
-				case pad_button::circle:
-					close();
-					break;
-				case pad_button::dpad_up:
-					m_list->select_previous();
-					break;
-				case pad_button::dpad_down:
-					m_list->select_next();
-					break;
-				default:
-					LOG_TRACE(RSX, "[ui] Button %d pressed", (u8)button_press);
-				}
-			}
-
-			compiled_resource get_compiled() override
-			{
-				compiled_resource result;
-				result.add(m_dim_background->get_compiled());
-				result.add(m_list->get_compiled());
-				result.add(m_description->get_compiled());
-				result.add(m_time_thingy->get_compiled());
-
-				if (m_no_saves)
-					result.add(m_no_saves_text->get_compiled());
-
-				return result;
-			}
-
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> listSet)
-			{
-				std::vector<u8> icon;
-				std::vector<std::unique_ptr<overlay_element>> entries;
-
-				for (auto& entry : save_entries)
-				{
-					std::unique_ptr<overlay_element> e;
-					e = std::make_unique<save_dialog_entry>(entry.title.c_str(), (entry.subtitle + " - " + entry.details).c_str(), image_resource_id::raw_image, entry.iconBuf);
-					entries.emplace_back(std::move(e));
-				}
-
-				if (op >= 8)
-				{
-					m_description->set_text("Delete Save");
-				}
-				else if (op & 1)
-				{
-					m_description->set_text("Load Save");
-				}
-				else
-				{
-					m_description->set_text("Save");
-				}
-
-				const bool newpos_head = listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
-
-				if (!newpos_head)
-				{
-					for (auto& entry : entries)
-					{
-						m_list->add_entry(entry);
-					}
-				}
-
-				if (listSet->newData)
-				{
-					std::unique_ptr<overlay_element> new_stub;
-
-					const char* title = "Create New";
-
-					int id = resource_config::standard_image_resource::new_entry;
-
-					if (auto picon = +listSet->newData->icon)
-					{
-						if (picon->title)
-							title = picon->title.get_ptr();
-
-						if (picon->iconBuf && picon->iconBufSize && picon->iconBufSize <= 225280)
-						{
-							const auto iconBuf = static_cast<u8*>(picon->iconBuf.get_ptr());
-							const auto iconEnd = iconBuf + picon->iconBufSize;
-							icon.assign(iconBuf, iconEnd);
-						}
-					}
-
-					if (!icon.empty())
-					{
-						id = image_resource_id::raw_image;
-					}
-
-					new_stub = std::make_unique<save_dialog_entry>(title, "Select to create a new entry", id, icon);
-
-					m_list->add_entry(new_stub);
-				}
-
-				if (newpos_head)
-				{
-					for (auto& entry : entries)
-					{
-						m_list->add_entry(entry);
-					}
-				}
-
-				if (!m_list->m_items.size())
-				{
-					m_no_saves_text = std::make_unique<label>();
-					m_no_saves_text->set_font("Arial", 20);
-					m_no_saves_text->align_text(overlay_element::text_align::center);
-					m_no_saves_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
-					m_no_saves_text->set_size(m_list->w, 30);
-					m_no_saves_text->set_text("There is no saved data.");
-					m_no_saves_text->back_color.a = 0;
-
-					m_no_saves = true;
-					m_list->set_cancel_only(true);
-				}
-
-				static_cast<label*>(m_description.get())->auto_resize();
-
-				if (auto err = run_input_loop())
-					return err;
-
-				if (return_code == entries.size() && !newpos_head)
-					return selection_code::new_save;
-				if (return_code >= 0 && newpos_head)
-					return return_code - 1;
-
-				return return_code;
-			}
-
-			void update() override
-			{
-				m_time_thingy->set_text(date_time::current_time());
-				static_cast<label*>(m_time_thingy.get())->auto_resize();
-			}
+			s32 show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> listSet);
 		};
 
 		struct message_dialog : public user_interface
@@ -769,303 +539,20 @@ namespace rsx
 			std::unique_ptr<image_info> background_image;
 
 		public:
-			message_dialog(bool use_custom_background = false)
-			{
-				background.set_size(1280, 720);
-				background.back_color.a = 0.85f;
+			message_dialog(bool use_custom_background = false);
 
-				text_display.set_size(1100, 40);
-				text_display.set_pos(90, 364);
-				text_display.set_font("Arial", 16);
-				text_display.align_text(overlay_element::text_align::center);
-				text_display.set_wrap_text(true);
-				text_display.back_color.a = 0.f;
+			compiled_resource get_compiled() override;
 
-				bottom_bar.back_color = color4f(1.f, 1.f, 1.f, 1.f);
-				bottom_bar.set_size(1200, 2);
-				bottom_bar.set_pos(40, 400);
+			void on_button_pressed(pad_button button_press) override;
 
-				progress_1.set_size(800, 4);
-				progress_2.set_size(800, 4);
-				progress_1.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
-				progress_2.back_color = color4f(0.25f, 0.f, 0.f, 0.85f);
+			error_code show(const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);
 
-				btn_ok.set_text("Yes");
-				btn_ok.set_size(140, 30);
-				btn_ok.set_pos(545, 420);
-				btn_ok.set_font("Arial", 16);
-
-				btn_cancel.set_text("No");
-				btn_cancel.set_size(140, 30);
-				btn_cancel.set_pos(685, 420);
-				btn_cancel.set_font("Arial", 16);
-
-				if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
-				{
-					btn_ok.set_image_resource(resource_config::standard_image_resource::circle);
-					btn_cancel.set_image_resource(resource_config::standard_image_resource::cross);
-				}
-				else
-				{
-					btn_ok.set_image_resource(resource_config::standard_image_resource::cross);
-					btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
-				}
-
-				if (use_custom_background)
-				{
-					std::string root_path = Emu.GetBoot();
-					root_path = root_path.substr(0, root_path.find_last_of("/"));
-
-					auto icon_path = root_path + "/../PIC1.PNG";
-					if (!fs::exists(icon_path))
-					{
-						// Fallback path
-						icon_path = root_path + "/../ICON0.PNG";
-					}
-
-					if (fs::exists(icon_path))
-					{
-						background_image = std::make_unique<image_info>(icon_path.c_str());
-						if (background_image->data)
-						{
-							f32 color = (100 - g_cfg.video.shader_preloading_dialog.darkening_strength) / 100.f;
-							background_poster.fore_color = color4f(color, color, color, 1.);
-							background.back_color.a = 0.f;
-
-							background_poster.set_size(1280, 720);
-							background_poster.set_raw_image(background_image.get());
-							background_poster.set_blur_strength((u8)g_cfg.video.shader_preloading_dialog.blur_strength);
-						}
-					}
-				}
-
-				return_code = CELL_MSGDIALOG_BUTTON_NONE;
-			}
-
-			compiled_resource get_compiled() override
-			{
-				compiled_resource result;
-
-				if (background_image && background_image->data)
-				{
-					result.add(background_poster.get_compiled());
-				}
-
-				result.add(background.get_compiled());
-				result.add(text_display.get_compiled());
-
-				if (num_progress_bars > 0)
-				{
-					result.add(progress_1.get_compiled());
-				}
-
-				if (num_progress_bars > 1)
-				{
-					result.add(progress_2.get_compiled());
-				}
-
-				if (interactive)
-				{
-					if (!num_progress_bars)
-						result.add(bottom_bar.get_compiled());
-
-					if (!cancel_only)
-						result.add(btn_ok.get_compiled());
-
-					if (!ok_only)
-						result.add(btn_cancel.get_compiled());
-				}
-
-				return result;
-			}
-
-			void on_button_pressed(pad_button button_press) override
-			{
-				switch (button_press)
-				{
-				case pad_button::cross:
-				{
-					if (ok_only)
-					{
-						return_code = CELL_MSGDIALOG_BUTTON_OK;
-					}
-					else if (cancel_only)
-					{
-						// Do not accept for cancel-only dialogs
-						return;
-					}
-					else
-					{
-						return_code = CELL_MSGDIALOG_BUTTON_YES;
-					}
-
-					break;
-				}
-				case pad_button::circle:
-				{
-					if (ok_only)
-					{
-						// Ignore cancel operation for Ok-only
-						return;
-					}
-					else if (cancel_only)
-					{
-						return_code = CELL_MSGDIALOG_BUTTON_ESCAPE;
-					}
-					else
-					{
-						return_code = CELL_MSGDIALOG_BUTTON_NO;
-					}
-
-					break;
-				}
-				default:
-					return;
-				}
-
-				close();
-			}
-
-			s32 show(std::string text, const MsgDialogType &type, std::function<void(s32 status)> on_close)
-			{
-				num_progress_bars = type.progress_bar_count;
-				if (num_progress_bars)
-				{
-					u16 offset = 58;
-					progress_1.set_pos(240, 412);
-
-					if (num_progress_bars > 1)
-					{
-						progress_2.set_pos(240, 462);
-						offset = 98;
-					}
-
-					// Push the other stuff down
-					bottom_bar.translate(0, offset);
-					btn_ok.translate(0, offset);
-					btn_cancel.translate(0, offset);
-				}
-
-				text_display.set_text(text.c_str());
-
-				u16 text_w, text_h;
-				text_display.measure_text(text_w, text_h);
-				text_display.translate(0, -(text_h - 16));
-
-				switch (type.button_type.unshifted())
-				{
-				case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_NONE:
-					interactive = !type.disable_cancel;
-					if (interactive)
-					{
-						btn_cancel.set_pos(585, btn_cancel.y);
-						btn_cancel.set_text("Cancel");
-						cancel_only = true;
-					}
-					break;
-				case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
-					btn_ok.set_pos(600, btn_ok.y);
-					btn_ok.set_text("OK");
-					interactive = true;
-					ok_only = true;
-					break;
-				case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
-					interactive = true;
-					break;
-				}
-
-				this->on_close = on_close;
-				if (interactive)
-				{
-					thread_ctrl::spawn("dialog input thread", [&]
-					{
-						if (auto error = run_input_loop())
-						{
-							LOG_ERROR(RSX, "Dialog input loop exited with error code=%d", error);
-						}
-					});
-				}
-
-				return CELL_OK;
-			}
-
-			u32 progress_bar_count()
-			{
-				return num_progress_bars;
-			}
-
-			void progress_bar_set_taskbar_index(s32 index)
-			{
-				taskbar_index = index;
-			}
-
-			s32 progress_bar_set_message(u32 index, const std::string& msg)
-			{
-				if (index >= num_progress_bars)
-					return CELL_MSGDIALOG_ERROR_PARAM;
-
-				if (index == 0)
-					progress_1.set_text(msg);
-				else
-					progress_2.set_text(msg);
-
-				return CELL_OK;
-			}
-
-			s32 progress_bar_increment(u32 index, f32 value)
-			{
-				if (index >= num_progress_bars)
-					return CELL_MSGDIALOG_ERROR_PARAM;
-
-				if (index == 0)
-					progress_1.inc(value);
-				else
-					progress_2.inc(value);
-
-				if (index == taskbar_index || taskbar_index == -1)
-					Emu.GetCallbacks().handle_taskbar_progress(1, (s32)value);
-
-				return CELL_OK;
-			}
-
-			s32 progress_bar_reset(u32 index)
-			{
-				if (index >= num_progress_bars)
-					return CELL_MSGDIALOG_ERROR_PARAM;
-
-				if (index == 0)
-					progress_1.set_value(0.f);
-				else
-					progress_2.set_value(0.f);
-
-				Emu.GetCallbacks().handle_taskbar_progress(0, 0);
-
-				return CELL_OK;
-			}
-
-			s32 progress_bar_set_limit(u32 index, u32 limit)
-			{
-				if (index >= num_progress_bars)
-					return CELL_MSGDIALOG_ERROR_PARAM;
-
-				if (index == 0)
-					progress_1.set_limit((float)limit);
-				else
-					progress_2.set_limit((float)limit);
-
-				if (index == taskbar_index)
-				{
-					taskbar_limit = limit;
-					Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);
-				}
-				else if (taskbar_index == -1)
-				{
-					taskbar_limit += limit;
-					Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);
-				}
-
-				return CELL_OK;
-			}
+			u32 progress_bar_count();
+			void progress_bar_set_taskbar_index(s32 index);
+			error_code progress_bar_set_message(u32 index, const std::string& msg);
+			error_code progress_bar_increment(u32 index, f32 value);
+			error_code progress_bar_reset(u32 index);
+			error_code progress_bar_set_limit(u32 index, u32 limit);
 		};
 
 		struct trophy_notification : public user_interface
@@ -1079,68 +566,13 @@ namespace rsx
 			std::unique_ptr<image_info> icon_info;
 
 		public:
-			trophy_notification()
-			{
-				frame.set_pos(0, 0);
-				frame.set_size(260, 80);
-				frame.back_color.a = 0.85f;
+			trophy_notification();
 
-				image.set_pos(8, 8);
-				image.set_size(64, 64);
-				image.back_color.a = 0.f;
+			void update() override;
 
-				text_view.set_pos(85, 0);
-				text_view.set_padding(0, 0, 24, 0);
-				text_view.set_font("Arial", 8);
-				text_view.align_text(overlay_element::text_align::center);
-				text_view.back_color.a = 0.f;
-			}
+			compiled_resource get_compiled() override;
 
-			void update() override
-			{
-				u64 t = get_system_time();
-				if (((t - creation_time) / 1000) > 7500)
-					close();
-			}
-
-			compiled_resource get_compiled() override
-			{
-				auto result = frame.get_compiled();
-				result.add(image.get_compiled());
-				result.add(text_view.get_compiled());
-
-				return result;
-			}
-
-			s32 show(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer)
-			{
-				if (trophy_icon_buffer.size())
-				{
-					icon_info = std::make_unique<image_info>(trophy_icon_buffer);
-					image.set_raw_image(icon_info.get());
-				}
-
-				std::string trophy_message;
-				switch (trophy.trophyGrade)
-				{
-				case SCE_NP_TROPHY_GRADE_BRONZE: trophy_message = "bronze"; break;
-				case SCE_NP_TROPHY_GRADE_SILVER: trophy_message = "silver"; break;
-				case SCE_NP_TROPHY_GRADE_GOLD: trophy_message = "gold"; break;
-				case SCE_NP_TROPHY_GRADE_PLATINUM: trophy_message = "platinum"; break;
-				default: break;
-				}
-
-				trophy_message = "You have earned the " + trophy_message + " trophy\n" + trophy.name;
-				text_view.set_text(trophy_message);
-				text_view.auto_resize();
-
-				//Resize background to cover the text
-				u16 margin_sz = text_view.x - image.w - image.x;
-				frame.w = text_view.x + text_view.w + margin_sz;
-
-				creation_time = get_system_time();
-				return CELL_OK;
-			}
+			s32 show(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer);
 		};
 
 		struct shader_compile_notification : user_interface
@@ -1151,91 +583,16 @@ namespace rsx
 			u8 current_dot = 255;
 
 			u64 creation_time = 0;
-			u64 expire_time = 0; //Time to end the prompt
-			u64 urgency_ctr = 0; //How critical it is to show to the user
+			u64 expire_time = 0; // Time to end the prompt
+			u64 urgency_ctr = 0; // How critical it is to show to the user
 
-			shader_compile_notification()
-			{
-				const u16 pos_x = g_cfg.video.shader_compilation_hint.pos_x;
-				const u16 pos_y = g_cfg.video.shader_compilation_hint.pos_y;
+			shader_compile_notification();
 
-				m_text.set_font("Arial", 16);
-				m_text.set_text("Compiling shaders");
-				m_text.auto_resize();
-				m_text.set_pos(pos_x, pos_y);
+			void update_animation(u64 t);
+			void touch();
+			void update() override;
 
-				m_text.back_color.a = 0.f;
-
-				for (int n = 0; n < 3; ++n)
-				{
-					dots[n].set_size(2, 2);
-					dots[n].back_color = color4f(1.f, 1.f, 1.f, 1.f);
-					dots[n].set_pos(m_text.w + pos_x + 5 + (6 * n), pos_y + 20);
-				}
-
-				creation_time = get_system_time();
-				expire_time = creation_time + 1000000;
-
-				// Disable forced refresh unless fps dips below 4
-				min_refresh_duration_us = 250000;
-			}
-
-			void update_animation(u64 t)
-			{
-				// Update rate is twice per second
-				auto elapsed = t - creation_time;
-				elapsed /= 500000;
-
-				auto old_dot = current_dot;
-				current_dot = elapsed % 3;
-
-				if (old_dot != current_dot)
-				{
-					if (old_dot != 255)
-					{
-						dots[old_dot].set_size(2, 2);
-						dots[old_dot].translate(0, 1);
-					}
-
-					dots[current_dot].translate(0, -1);
-					dots[current_dot].set_size(3, 3);
-				}
-			}
-
-			// Extends visible time by half a second. Also updates the screen
-			void touch()
-			{
-				if (urgency_ctr == 0 || urgency_ctr > 8)
-				{
-					refresh();
-					urgency_ctr = 0;
-				}
-
-				expire_time = get_system_time() + 500000;
-				urgency_ctr++;
-			}
-
-			void update() override
-			{
-				auto current_time = get_system_time();
-				if (current_time > expire_time)
-					close();
-
-				update_animation(current_time);
-
-				// Usually this method is called during a draw-to-screen operation. Reset urgency ctr
-				urgency_ctr = 1;
-			}
-
-			compiled_resource get_compiled() override
-			{
-				auto compiled = m_text.get_compiled();
-				compiled.add(dots[0].get_compiled());
-				compiled.add(dots[1].get_compiled());
-				compiled.add(dots[2].get_compiled());
-
-				return compiled;
-			}
+			compiled_resource get_compiled() override;
 		};
 	}
 }

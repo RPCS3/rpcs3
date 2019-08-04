@@ -68,10 +68,10 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Emu\Audio\AL\OpenALThread.cpp" />
+    <ClCompile Include="Emu\Audio\AL\OpenALBackend.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Emu\Audio\AL\OpenALThread.h" />
+    <ClInclude Include="Emu\Audio\AL\OpenALBackend.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="emucore.vcxproj">

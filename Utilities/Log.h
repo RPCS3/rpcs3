@@ -1,7 +1,7 @@
 #pragma once
 
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 #include "StrFmt.h"
 #include <climits>
 
@@ -110,7 +110,7 @@ namespace logs
 	void set_level(const std::string&, level);
 }
 
-#define LOG_CHANNEL(ch, ...) ::logs::channel ch(#ch, ##__VA_ARGS__);
+#define LOG_CHANNEL(ch, ...) ::logs::channel ch(#ch, ##__VA_ARGS__)
 
 // Legacy:
 

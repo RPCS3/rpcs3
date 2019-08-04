@@ -1,9 +1,10 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "VKVertexProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
+#include "../Common/GLSLCommon.h"
 
 std::string VKVertexDecompilerThread::getFloatTypeName(size_t elementCount)
 {
@@ -28,33 +29,40 @@ std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::stri
 void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 {
 	OS << "#version 450\n\n";
-	OS << "#extension GL_ARB_separate_shader_objects : enable\n";
+	OS << "#extension GL_ARB_separate_shader_objects : enable\n\n";
+
 	OS << "layout(std140, set = 0, binding = 0) uniform VertexContextBuffer\n";
 	OS << "{\n";
 	OS << "	mat4 scale_offset_mat;\n";
 	OS << "	ivec4 user_clip_enabled[2];\n";
 	OS << "	vec4 user_clip_factor[2];\n";
 	OS << "	uint transform_branch_bits;\n";
-	OS << "	uint vertex_base_index;\n";
 	OS << "	float point_size;\n";
 	OS << "	float z_near;\n";
 	OS << "	float z_far;\n";
-	OS << "	ivec4 input_attributes[16];\n";
-	OS << "};\n";
+	OS << "};\n\n";
+
+	OS << "layout(push_constant) uniform VertexLayoutBuffer\n";
+	OS << "{\n";
+	OS << "	uint vertex_base_index;\n";
+	OS << "	uint vertex_index_offset;\n";
+	OS << "	uint draw_id;\n";
+	OS << "	uint layout_ptr_offset;\n";
+	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = SCALE_OFFSET_BIND_SLOT;
+	in.location = VERTEX_PARAMS_BIND_SLOT;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "VertexContextBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
-
 	inputs.push_back(in);
 }
 
 void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
 {
-	OS << "layout(set=0, binding=3) uniform usamplerBuffer persistent_input_stream;\n";    //Data stream with persistent vertex data (cacheable)
-	OS << "layout(set=0, binding=4) uniform usamplerBuffer volatile_input_stream;\n";      //Data stream with per-draw data (registers and immediate draw data)
+	OS << "layout(set=0, binding=5) uniform usamplerBuffer persistent_input_stream;\n";    // Data stream with persistent vertex data (cacheable)
+	OS << "layout(set=0, binding=6) uniform usamplerBuffer volatile_input_stream;\n";      // Data stream with per-draw data (registers and immediate draw data)
+	OS << "layout(set=0, binding=7) uniform usamplerBuffer vertex_layout_stream;\n";       // Data stream defining vertex data layout
 
 	vk::glsl::program_input in;
 	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT;
@@ -66,6 +74,12 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::v
 	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT + 1;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "volatile_input_stream";
+	in.type = vk::glsl::input_type_texel_buffer;
+	this->inputs.push_back(in);
+
+	in.location = VERTEX_BUFFERS_FIRST_BIND_SLOT + 2;
+	in.domain = glsl::glsl_vertex_program;
+	in.name = "vertex_layout_stream";
 	in.type = vk::glsl::input_type_texel_buffer;
 	this->inputs.push_back(in);
 }
@@ -86,7 +100,7 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 	inputs.push_back(in);
 
 
-	int location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
+	u32 location = VERTEX_TEXTURES_FIRST_BIND_SLOT;
 	for (const ParamType &PT : constants)
 	{
 		for (const ParamItem &PI : PT.items)
@@ -161,8 +175,7 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 			if (i.name == "front_spec_color")
 				insert_front_specular = false;
 
-			const vk::varying_register_t &reg = vk::get_varying_register(i.name);
-			OS << "layout(location=" << reg.reg_location << ") out vec4 " << i.name << ";\n";
+			OS << "layout(location=" << vk::get_varying_register_location(i.name) << ") out vec4 " << i.name << ";\n";
 		}
 		else
 		{
@@ -170,25 +183,28 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::
 			//NOTE: Registers that can be skept will not have their check_mask_value set
 			if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
 			{
-				const vk::varying_register_t &reg = vk::get_varying_register(i.name);
-				OS << "layout(location=" << reg.reg_location << ") out vec4 " << i.name << ";\n";
+				OS << "layout(location=" << vk::get_varying_register_location(i.name) << ") out vec4 " << i.name << ";\n";
 			}
 		}
 	}
 
 	if (insert_back_diffuse && insert_front_diffuse)
-		OS << "layout(location=" << vk::get_varying_register("front_diff_color").reg_location << ") out vec4 front_diff_color;\n";
+		OS << "layout(location=" << vk::get_varying_register_location("front_diff_color") << ") out vec4 front_diff_color;\n";
 
 	if (insert_back_specular && insert_front_specular)
-		OS << "layout(location=" << vk::get_varying_register("front_spec_color").reg_location << ") out vec4 front_spec_color;\n";
+		OS << "layout(location=" << vk::get_varying_register_location("front_spec_color") << ") out vec4 front_spec_color;\n";
 }
 
 void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	glsl::insert_glsl_legacy_function(OS, glsl::glsl_vertex_program, properties.has_lit_op);
-	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_rpirv);
+	glsl::shader_properties properties2{};
+	properties2.domain = glsl::glsl_vertex_program;
+	properties2.require_lit_emulation = properties.has_lit_op;
 
-	std::string parameters = "";
+	glsl::insert_glsl_legacy_function(OS, properties2);
+	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
+
+	std::string parameters;
 	for (int i = 0; i < 16; ++i)
 	{
 		std::string reg_name = "dst_reg" + std::to_string(i);
@@ -205,7 +221,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "{\n";
 
 	//Declare temporary registers, ignoring those mapped to outputs
-	for (const ParamType PT : m_parr.params[PF_PARAM_NONE])
+	for (const ParamType &PT : m_parr.params[PF_PARAM_NONE])
 	{
 		for (const ParamItem &PI : PT.items)
 		{
@@ -236,7 +252,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main ()\n";
 	OS << "{\n";
 
-	std::string parameters = "";
+	std::string parameters;
 
 	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{
@@ -325,9 +341,7 @@ void VKVertexDecompilerThread::Task()
 	vk_prog->SetInputs(inputs);
 }
 
-VKVertexProgram::VKVertexProgram()
-{
-}
+VKVertexProgram::VKVertexProgram() = default;
 
 VKVertexProgram::~VKVertexProgram()
 {
@@ -345,7 +359,8 @@ void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 
 void VKVertexProgram::Compile()
 {
-	fs::file(fs::get_config_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
+	if (g_cfg.video.log_programs)
+		fs::file(fs::get_cache_dir() + "shaderlog/VertexProgram" + std::to_string(id) + ".spirv", fs::rewrite).write(shader.get_source());
 	handle = shader.compile();
 }
 

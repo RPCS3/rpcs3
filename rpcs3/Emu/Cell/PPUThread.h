@@ -1,8 +1,7 @@
-#pragma once
+﻿#pragma once
 
-#include "Common.h"
 #include "../CPU/CPUThread.h"
-#include "../Memory/vm.h"
+#include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
 
 enum class ppu_cmd : u32
@@ -59,47 +58,64 @@ public:
 	f64 fpr[32] = {}; // Floating Point Registers
 	v128 vr[32] = {}; // Vector Registers
 
-	alignas(16) bool cr[32] = {}; // Condition Registers (unpacked)
-
-	alignas(16) struct // Floating-Point Status and Control Register (unpacked)
+	struct cr_bits
 	{
-		// TODO
-		bool _start[16]{};
-		bool fl{}; // FPCC.FL
-		bool fg{}; // FPCC.FG
-		bool fe{}; // FPCC.FE
-		bool fu{}; // FPCC.FU
-		bool _end[12]{};
+		alignas(16) u8 bits[32];
+
+		u8& operator [](std::size_t i)
+		{
+			return bits[i];
+		}
+
+		// Pack CR bits
+		u32 pack() const
+		{
+			u32 result{};
+
+			for (u32 bit : bits)
+			{
+				result <<= 1;
+				result |= bit;
+			}
+
+			return result;
+		}
+
+		// Unpack CR bits
+		void unpack(u32 value)
+		{
+			for (u8& b : bits)
+			{
+				b = value & 0x1;
+				value >>= 1;
+			}
+		}
+	};
+
+	cr_bits cr{}; // Condition Registers (unpacked)
+
+	// Floating-Point Status and Control Register (unpacked)
+	union
+	{
+		struct
+		{
+			// TODO
+			bool _start[16];
+			bool fl; // FPCC.FL
+			bool fg; // FPCC.FG
+			bool fe; // FPCC.FE
+			bool fu; // FPCC.FU
+			bool _end[12];
+		};
+
+		cr_bits bits;
 	}
-	fpscr;
+	fpscr{};
 
 	u64 lr{}; // Link Register
 	u64 ctr{}; // Counter Register
 	u32 vrsave{0xffffffff}; // VR Save Register
 	u32 cia{}; // Current Instruction Address
-
-	// Pack CR bits
-	u32 cr_pack() const
-	{
-		u32 result{};
-
-		for (u32 bit : cr)
-		{
-			result = (result << 1) | bit;
-		}
-
-		return result;
-	}
-
-	// Unpack CR bits
-	void cr_unpack(u32 value)
-	{
-		for (bool& b : cr)
-		{
-			b = (value & 0x1) != 0;
-			value >>= 1;
-		}
-	}
 
 	// Fixed-Point Exception Register (abstract representation)
 	struct
@@ -142,7 +158,7 @@ public:
 			exception, the corresponding element in the target vr is cleared to '0'. In both cases, the '0'
 			has the same sign as the denormalized or underflowing value.
 	*/
-	bool nj = true;
+	bool nj = false;
 
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
@@ -163,7 +179,8 @@ public:
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 
 	u64 start_time{0}; // Sleep start timepoint
-	const char* last_function{}; // Last function name for diagnosis, optimized for speed.
+	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
+	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 
 	lf_value<std::string> ppu_name; // Thread name
 

@@ -3,12 +3,12 @@
 #include "stdafx.h"
 #include <exception>
 #include <string>
-#include <cstring>
 #include <functional>
 #include <vector>
 #include <memory>
 #include <unordered_map>
 #include <variant>
+#include <stack>
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <X11/Xutil.h>
@@ -19,9 +19,8 @@
 #include "VulkanAPI.h"
 #include "VKCommonDecompiler.h"
 #include "../GCM.h"
-#include "../Common/TextureUtils.h"
 #include "../Common/ring_buffer_helper.h"
-#include "../rsx_cache.h"
+#include "../Common/TextureUtils.h"
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 
@@ -31,14 +30,22 @@
 #define VK_DISABLE_COMPONENT_SWIZZLE 0
 #endif
 
-#define DESCRIPTOR_MAX_DRAW_CALLS 4096
+#define DESCRIPTOR_MAX_DRAW_CALLS 16384
+#define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
-#define VERTEX_BUFFERS_FIRST_BIND_SLOT 3
-#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
+#define VERTEX_PARAMS_BIND_SLOT 0
 #define VERTEX_CONSTANT_BUFFERS_BIND_SLOT 1
-#define SCALE_OFFSET_BIND_SLOT 0
-#define TEXTURES_FIRST_BIND_SLOT 19
-#define VERTEX_TEXTURES_FIRST_BIND_SLOT 35 //19+16
+#define FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 2
+#define FRAGMENT_STATE_BIND_SLOT 3
+#define FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 4
+#define VERTEX_BUFFERS_FIRST_BIND_SLOT 5
+#define TEXTURES_FIRST_BIND_SLOT 8
+#define VERTEX_TEXTURES_FIRST_BIND_SLOT 24 //8+16
+
+#define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
+
+#define FRAME_PRESENT_TIMEOUT 1000000ull // 1 second
+#define GENERAL_WAIT_TIMEOUT  100000ull  // 100ms
 
 namespace rsx
 {
@@ -69,7 +76,8 @@ namespace vk
 		unknown,
 		AMD,
 		NVIDIA,
-		RADV
+		RADV,
+		INTEL
 	};
 
 	class context;
@@ -77,9 +85,10 @@ namespace vk
 	class swap_chain_image;
 	class physical_device;
 	class command_buffer;
-	struct image;
+	class image;
+	struct image_view;
 	struct buffer;
-	struct vk_data_heap;
+	struct data_heap;
 	class mem_allocator_base;
 	struct memory_type_mapping;
 	struct gpu_formats_support;
@@ -106,8 +115,8 @@ namespace vk
 	VkImageAspectFlags get_aspect_flags(VkFormat format);
 
 	VkSampler null_sampler();
-	VkImageView null_image_view(vk::command_buffer&);
-	image* get_typeless_helper(VkFormat format);
+	image_view* null_image_view(vk::command_buffer&);
+	image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height);
 	buffer* get_scratch_buffer();
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
@@ -122,6 +131,7 @@ namespace vk
 	void reset_compute_tasks();
 
 	void destroy_global_resources();
+	void reset_global_resources();
 
 	/**
 	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
@@ -130,14 +140,17 @@ namespace vk
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::vk_data_heap &upload_heap);
+		VkImageAspectFlags flags, vk::data_heap &upload_heap);
 
 	//Other texture management helpers
-	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
-	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range);
+	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range);
+	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
-	void copy_image_typeless(const command_buffer &cmd, const image *src, const image *dst, const areai& src_rect, const areai& dst_rect,
+	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region);
+	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
+
+	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,
 		u32 mipmaps, VkImageAspectFlags src_aspect, VkImageAspectFlags dst_aspect,
 		VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
@@ -146,18 +159,21 @@ namespace vk
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
 	void copy_scaled_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkImageLayout srcLayout, VkImageLayout dstLayout,
-			u32 src_x_offset, u32 src_y_offset, u32 src_width, u32 src_height, u32 dst_x_offset, u32 dst_y_offset, u32 dst_width, u32 dst_height, u32 mipmaps,
-			VkImageAspectFlags aspect, bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
+			const areai& src_rect, const areai& dst_rect, u32 mipmaps, VkImageAspectFlags aspect, bool compatible_formats,
+			VkFilter filter = VK_FILTER_LINEAR, VkFormat src_format = VK_FORMAT_UNDEFINED, VkFormat dst_format = VK_FORMAT_UNDEFINED);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
-	size_t get_render_pass_location(VkFormat color_surface_format, VkFormat depth_stencil_format, u8 color_surface_count);
 
 	//Texture barrier applies to a texture to ensure writes to it are finished before any reads are attempted to avoid RAW hazards
-	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range);
-	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image);
+	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range);
+	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length,
 			VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask);
+
+	void insert_image_memory_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout,
+		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask,
+		const VkImageSubresourceRange& range);
 
 	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
 	void enter_uninterruptible();
@@ -169,9 +185,14 @@ namespace vk
 	const u64 get_current_frame_id();
 	const u64 get_last_completed_frame_id();
 
-	//Fence reset with driver workarounds in place
+	// Fence reset with driver workarounds in place
 	void reset_fence(VkFence *pFence);
-	void wait_for_fence(VkFence pFence);
+	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
+	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
+
+	// Handle unexpected submit with dangling occlusion query
+	// TODO: Move queries out of the renderer!
+	void do_query_cleanup(vk::command_buffer& cmd);
 
 	void die_with_error(const char* faulting_addr, VkResult error_code);
 
@@ -188,6 +209,12 @@ namespace vk
 		bool bgra8_linear;
 	};
 
+	struct gpu_shader_types_support
+	{
+		bool allow_float16;
+		bool allow_int8;
+	};
+
 	// Memory Allocator - base class
 
 	class mem_allocator_base
@@ -196,7 +223,7 @@ namespace vk
 		using mem_handle_t = void *;
 
 		mem_allocator_base(VkDevice dev, VkPhysicalDevice /*pdev*/) : m_device(dev) {}
-		virtual ~mem_allocator_base() {}
+		virtual ~mem_allocator_base() = default;
 
 		virtual void destroy() = 0;
 
@@ -212,7 +239,7 @@ namespace vk
 	private:
 	};
 
-	// Memory Allocator - Vulkan Memory Allocator 
+	// Memory Allocator - Vulkan Memory Allocator
 	// https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
 
 	class mem_allocator_vma : public mem_allocator_base
@@ -227,7 +254,7 @@ namespace vk
 			vmaCreateAllocator(&allocatorInfo, &m_allocator);
 		}
 
-		~mem_allocator_vma() {};
+		~mem_allocator_vma() override = default;
 
 		void destroy() override
 		{
@@ -294,10 +321,10 @@ namespace vk
 	class mem_allocator_vk : public mem_allocator_base
 	{
 	public:
-		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {};
-		~mem_allocator_vk() {};
+		mem_allocator_vk(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev) {}
+		~mem_allocator_vk() override = default;
 
-		void destroy() override {};
+		void destroy() override {}
 
 		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, uint32_t memory_type_index) override
 		{
@@ -383,25 +410,145 @@ namespace vk
 		mem_allocator_base::mem_handle_t m_mem_handle;
 	};
 
+	class supported_extensions
+	{
+	private:
+		std::vector<VkExtensionProperties> m_vk_exts;
+
+	public:
+		enum enumeration_class
+		{
+			instance = 0,
+			device = 1
+		};
+
+		supported_extensions(enumeration_class _class, const char* layer_name = nullptr, VkPhysicalDevice pdev = VK_NULL_HANDLE)
+		{
+			uint32_t count;
+			if (_class == enumeration_class::instance)
+			{
+				if (vkEnumerateInstanceExtensionProperties(layer_name, &count, nullptr) != VK_SUCCESS)
+					return;
+			}
+			else
+			{
+				verify(HERE), pdev;
+				if (vkEnumerateDeviceExtensionProperties(pdev, layer_name, &count, nullptr) != VK_SUCCESS)
+					return;
+			}
+
+			m_vk_exts.resize(count);
+			if (_class == enumeration_class::instance)
+			{
+				vkEnumerateInstanceExtensionProperties(layer_name, &count, m_vk_exts.data());
+			}
+			else
+			{
+				vkEnumerateDeviceExtensionProperties(pdev, layer_name, &count, m_vk_exts.data());
+			}
+		}
+
+		bool is_supported(const char *ext)
+		{
+			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
+				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
+		}
+	};
+
 	class physical_device
 	{
-		VkPhysicalDevice dev = nullptr;
+		VkInstance parent = VK_NULL_HANDLE;
+		VkPhysicalDevice dev = VK_NULL_HANDLE;
 		VkPhysicalDeviceProperties props;
+		VkPhysicalDeviceFeatures features;
 		VkPhysicalDeviceMemoryProperties memory_properties;
 		std::vector<VkQueueFamilyProperties> queue_props;
 
+		std::unordered_map<VkFormat, VkFormatProperties> format_properties;
+		gpu_shader_types_support shader_types_support{};
+		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
+		bool stencil_export_support = false;
+
+		friend class render_device;
+private:
+		void get_physical_device_features(bool allow_extensions)
+		{
+			if (!allow_extensions)
+			{
+				vkGetPhysicalDeviceFeatures(dev, &features);
+				return;
+			}
+
+			supported_extensions instance_extensions(supported_extensions::instance);
+			supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
+
+			if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+			{
+				vkGetPhysicalDeviceFeatures(dev, &features);
+			}
+			else
+			{
+				VkPhysicalDeviceFeatures2KHR features2;
+				features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+				features2.pNext = nullptr;
+
+				VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+
+				if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
+				{
+					shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+					features2.pNext = &shader_support_info;
+				}
+
+				if (device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
+				{
+					driver_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
+					driver_properties.pNext = features2.pNext;
+					features2.pNext = &driver_properties;
+				}
+
+				auto getPhysicalDeviceFeatures2KHR = (PFN_vkGetPhysicalDeviceFeatures2KHR)vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR");
+				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
+				getPhysicalDeviceFeatures2KHR(dev, &features2);
+
+				shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
+				shader_types_support.allow_int8 = !!shader_support_info.shaderInt8;
+				features = features2.features;
+			}
+
+			stencil_export_support = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
+		}
+
 	public:
 
-		physical_device() {}
-		~physical_device() {}
+		physical_device() = default;
+		~physical_device() = default;
 
-		void set_device(VkPhysicalDevice pdev)
+		void create(VkInstance context, VkPhysicalDevice pdev, bool allow_extensions)
 		{
 			dev = pdev;
+			parent = context;
 			vkGetPhysicalDeviceProperties(pdev, &props);
 			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+			get_physical_device_features(allow_extensions);
 
 			LOG_NOTICE(RSX, "Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
+
+			if (get_driver_vendor() == driver_vendor::RADV &&
+				get_name().find("LLVM 8.0.0") != std::string::npos)
+			{
+				// Serious driver bug causing black screens
+				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
+				LOG_FATAL(RSX, "RADV drivers have a major driver bug with LLVM 8.0.0 resulting in no visual output. Upgrade to LLVM version 8.0.1 or greater to avoid this issue.");
+			}
+
+#ifndef _WIN32
+			if (get_name().find("VEGA") != std::string::npos)
+			{
+				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware for both RADV and AMDVLK. Using float32_t fallback instead.");
+				shader_types_support.allow_float16 = false;
+			}
+#endif
 		}
 
 		std::string get_name() const
@@ -411,23 +558,50 @@ namespace vk
 
 		driver_vendor get_driver_vendor() const
 		{
-			const auto gpu_name = get_name();
-			if (gpu_name.find("Radeon") != std::string::npos)
+			if (!driver_properties.driverID)
 			{
-				return driver_vendor::AMD;
-			}
+				const auto gpu_name = get_name();
+				if (gpu_name.find("Radeon") != std::string::npos)
+				{
+					return driver_vendor::AMD;
+				}
 
-			if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
+				if (gpu_name.find("NVIDIA") != std::string::npos || gpu_name.find("GeForce") != std::string::npos)
+				{
+					return driver_vendor::NVIDIA;
+				}
+
+				if (gpu_name.find("RADV") != std::string::npos)
+				{
+					return driver_vendor::RADV;
+				}
+
+				if (gpu_name.find("Intel") != std::string::npos)
+				{
+					return driver_vendor::INTEL;
+				}
+
+				return driver_vendor::unknown;
+			}
+			else
 			{
-				return driver_vendor::NVIDIA;
+				switch (driver_properties.driverID)
+				{
+				case VK_DRIVER_ID_AMD_PROPRIETARY_KHR:
+				case VK_DRIVER_ID_AMD_OPEN_SOURCE_KHR:
+					return driver_vendor::AMD;
+				case VK_DRIVER_ID_MESA_RADV_KHR:
+					return driver_vendor::RADV;
+				case VK_DRIVER_ID_NVIDIA_PROPRIETARY_KHR:
+					return driver_vendor::NVIDIA;
+				case VK_DRIVER_ID_INTEL_PROPRIETARY_WINDOWS_KHR:
+				case VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA_KHR:
+					return driver_vendor::INTEL;
+				default:
+					// Mobile
+					return driver_vendor::unknown;
+				}
 			}
-
-			if (gpu_name.find("RADV") != std::string::npos)
-			{
-				return driver_vendor::RADV;
-			}
-
-			return driver_vendor::unknown;
 		}
 
 		std::string get_driver_version() const
@@ -457,7 +631,7 @@ namespace vk
 
 		uint32_t get_queue_count() const
 		{
-			if (queue_props.size())
+			if (!queue_props.empty())
 				return (u32)queue_props.size();
 
 			uint32_t count = 0;
@@ -468,7 +642,7 @@ namespace vk
 
 		VkQueueFamilyProperties get_queue_properties(uint32_t queue)
 		{
-			if (!queue_props.size())
+			if (queue_props.empty())
 			{
 				uint32_t count = 0;
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
@@ -495,6 +669,11 @@ namespace vk
 		{
 			return dev;
 		}
+
+		operator VkInstance() const
+		{
+			return parent;
+		}
 	};
 
 	class render_device
@@ -506,11 +685,8 @@ namespace vk
 		VkDevice dev = VK_NULL_HANDLE;
 
 	public:
-		render_device()
-		{}
-
-		~render_device()
-		{}
+		render_device() = default;
+		~render_device() = default;
 
 		void create(vk::physical_device &pdev, uint32_t graphics_queue_idx)
 		{
@@ -524,19 +700,22 @@ namespace vk
 			queue.queueCount = 1;
 			queue.pQueuePriorities = queue_priorities;
 
-			//Set up instance information
-			const char *requested_extensions[] =
+			// Set up instance information
+			std::vector<const char *>requested_extensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME
 			};
 
-			//Enable hardware features manually
-			//Currently we require:
-			//1. Anisotropic sampling
-			//2. DXT support
-			//3. Indexable storage buffers
-			VkPhysicalDeviceFeatures available_features;
-			vkGetPhysicalDeviceFeatures(*pgpu, &available_features);
+			// Enable hardware features manually
+			// Currently we require:
+			// 1. Anisotropic sampling
+			// 2. DXT support
+			// 3. Indexable storage buffers
+			VkPhysicalDeviceFeatures available_features = pgpu->features;
+			if (pgpu->shader_types_support.allow_float16)
+			{
+				requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
+			}
 
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
@@ -544,14 +723,29 @@ namespace vk
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-			device.pNext = NULL;
+			device.pNext = nullptr;
 			device.queueCreateInfoCount = 1;
 			device.pQueueCreateInfos = &queue;
 			device.enabledLayerCount = 0;
 			device.ppEnabledLayerNames = nullptr; // Deprecated
-			device.enabledExtensionCount = 1;
-			device.ppEnabledExtensionNames = requested_extensions;
+			device.enabledExtensionCount = (u32)requested_extensions.size();
+			device.ppEnabledExtensionNames = requested_extensions.data();
 			device.pEnabledFeatures = &available_features;
+
+			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+			if (pgpu->shader_types_support.allow_float16)
+			{
+				// Allow use of f16 type in shaders if possible
+				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+				shader_support_info.shaderFloat16 = VK_TRUE;
+				device.pNext = &shader_support_info;
+
+				LOG_NOTICE(RSX, "GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
+			}
+			else
+			{
+				LOG_NOTICE(RSX, "GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
+			}
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
 
@@ -579,6 +773,19 @@ namespace vk
 				memory_map = {};
 				m_formats_support = {};
 			}
+		}
+
+		const VkFormatProperties get_format_properties(VkFormat format)
+		{
+			auto found = pgpu->format_properties.find(format);
+			if (found != pgpu->format_properties.end())
+			{
+				return found->second;
+			}
+
+			auto& props = pgpu->format_properties[format];
+			vkGetPhysicalDeviceFormatProperties(*pgpu, format, &props);
+			return props;
 		}
 
 		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32 *type_index) const
@@ -621,6 +828,16 @@ namespace vk
 			return m_formats_support;
 		}
 
+		const gpu_shader_types_support& get_shader_types_support() const
+		{
+			return pgpu->shader_types_support;
+		}
+
+		bool get_shader_stencil_export_support() const
+		{
+			return pgpu->stencil_export_support;
+		}
+
 		mem_allocator_base* get_allocator() const
 		{
 			return m_allocator.get();
@@ -632,8 +849,218 @@ namespace vk
 		}
 	};
 
-	struct image
+	class command_pool
 	{
+		vk::render_device *owner = nullptr;
+		VkCommandPool pool = nullptr;
+
+	public:
+		command_pool() = default;
+		~command_pool() = default;
+
+		void create(vk::render_device &dev)
+		{
+			owner = &dev;
+			VkCommandPoolCreateInfo infos = {};
+			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+
+			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
+		}
+
+		void destroy()
+		{
+			if (!pool)
+				return;
+
+			vkDestroyCommandPool((*owner), pool, nullptr);
+			pool = nullptr;
+		}
+
+		vk::render_device& get_owner()
+		{
+			return (*owner);
+		}
+
+		operator VkCommandPool()
+		{
+			return pool;
+		}
+	};
+
+	class command_buffer
+	{
+	private:
+		bool is_open = false;
+		bool is_pending = false;
+		VkFence m_submit_fence = VK_NULL_HANDLE;
+
+	protected:
+		vk::command_pool *pool = nullptr;
+		VkCommandBuffer commands = nullptr;
+
+	public:
+		enum access_type_hint
+		{
+			flush_only, //Only to be submitted/opened/closed via command flush
+			all         //Auxiliary, can be submitted/opened/closed at any time
+		}
+		access_hint = flush_only;
+
+		enum command_buffer_data_flag : u32
+		{
+			cb_has_occlusion_task = 1,
+			cb_has_blit_transfer = 2,
+			cb_has_dma_transfer = 4,
+			cb_has_open_query = 8,
+			cb_load_occluson_task = 16
+		};
+		u32 flags = 0;
+
+	public:
+		command_buffer() = default;
+		~command_buffer() = default;
+
+		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
+		{
+			VkCommandBufferAllocateInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			infos.commandBufferCount = 1;
+			infos.commandPool = (VkCommandPool)cmd_pool;
+			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
+
+			if (auto_reset)
+			{
+				VkFenceCreateInfo info = {};
+				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
+			}
+
+			pool = &cmd_pool;
+		}
+
+		void destroy()
+		{
+			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
+
+			if (m_submit_fence)
+			{
+				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+			}
+		}
+
+		vk::command_pool& get_command_pool() const
+		{
+			return *pool;
+		}
+
+		void clear_flags()
+		{
+			flags = 0;
+		}
+
+		void set_flag(command_buffer_data_flag flag)
+		{
+			flags |= flag;
+		}
+
+		operator VkCommandBuffer() const
+		{
+			return commands;
+		}
+
+		bool is_recording() const
+		{
+			return is_open;
+		}
+
+		void begin()
+		{
+			if (m_submit_fence && is_pending)
+			{
+				wait_for_fence(m_submit_fence);
+				is_pending = false;
+
+				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+			}
+
+			if (is_open)
+				return;
+
+			VkCommandBufferInheritanceInfo inheritance_info = {};
+			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+
+			VkCommandBufferBeginInfo begin_infos = {};
+			begin_infos.pInheritanceInfo = &inheritance_info;
+			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
+			is_open = true;
+		}
+
+		void end()
+		{
+			if (!is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
+				return;
+			}
+
+			CHECK_RESULT(vkEndCommandBuffer(commands));
+			is_open = false;
+		}
+
+		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		{
+			if (is_open)
+			{
+				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
+				return;
+			}
+
+			// Check for hanging queries to avoid driver hang
+			verify("close and submit of commandbuffer with a hanging query!" HERE), (flags & cb_has_open_query) == 0;
+
+			if (!fence)
+			{
+				fence = m_submit_fence;
+				is_pending = (fence != VK_NULL_HANDLE);
+			}
+
+			VkSubmitInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			infos.commandBufferCount = 1;
+			infos.pCommandBuffers = &commands;
+			infos.pWaitDstStageMask = &pipeline_stage_flags;
+
+			if (wait_semaphore)
+			{
+				infos.waitSemaphoreCount = 1;
+				infos.pWaitSemaphores = &wait_semaphore;
+			}
+
+			if (signal_semaphore)
+			{
+				infos.signalSemaphoreCount = 1;
+				infos.pSignalSemaphores = &signal_semaphore;
+			}
+
+			acquire_global_submit_lock();
+			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
+			release_global_submit_lock();
+
+			clear_flags();
+		}
+	};
+
+	class image
+	{
+		std::stack<VkImageLayout> m_layout_stack;
+		VkImageAspectFlags m_storage_aspect = 0;
+
+	public:
 		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
 		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -652,7 +1079,7 @@ namespace vk
 			VkImageTiling tiling,
 			VkImageUsageFlags usage,
 			VkImageCreateFlags image_flags)
-			: m_device(dev)
+			: m_device(dev), current_layout(initial_layout)
 		{
 			info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 			info.imageType = image_type;
@@ -682,11 +1109,13 @@ namespace vk
 
 			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index);
 			CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
+
+			m_storage_aspect = get_aspect_flags(format);
 		}
 
 		// TODO: Ctor that uses a provided memory heap
 
-		~image()
+		virtual ~image()
 		{
 			vkDestroyImage(m_device, value, nullptr);
 		}
@@ -707,6 +1136,45 @@ namespace vk
 		u32 depth() const
 		{
 			return info.extent.depth;
+		}
+
+		u8 samples() const
+		{
+			return u8(info.samples);
+		}
+
+		VkFormat format() const
+		{
+			return info.format;
+		}
+
+		VkImageAspectFlags aspect() const
+		{
+			return m_storage_aspect;
+		}
+
+		void push_layout(VkCommandBuffer cmd, VkImageLayout layout)
+		{
+			m_layout_stack.push(current_layout);
+			change_image_layout(cmd, this, layout);
+		}
+
+		void pop_layout(VkCommandBuffer cmd)
+		{
+			verify(HERE), !m_layout_stack.empty();
+
+			auto layout = m_layout_stack.top();
+			m_layout_stack.pop();
+			change_image_layout(cmd, this, layout);
+		}
+
+		void change_layout(command_buffer& cmd, VkImageLayout new_layout)
+		{
+			if (current_layout == new_layout)
+				return;
+
+			verify(HERE), m_layout_stack.empty();
+			change_image_layout(cmd, this, new_layout);
 		}
 
 	private:
@@ -740,7 +1208,7 @@ namespace vk
 		image_view(VkDevice dev, vk::image* resource,
 			const VkComponentMapping mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
 			const VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1})
-			: m_device(dev)
+			: m_device(dev), m_resource(resource)
 		{
 			info.format = resource->info.format;
 			info.image = resource->value;
@@ -761,6 +1229,9 @@ namespace vk
 				break;
 			case VK_IMAGE_TYPE_3D:
 				info.viewType = VK_IMAGE_VIEW_TYPE_3D;
+				break;
+			default:
+				ASSUME(0);
 				break;
 			}
 
@@ -786,11 +1257,17 @@ namespace vk
 #endif
 		}
 
+		vk::image* image() const
+		{
+			return m_resource;
+		}
+
 		image_view(const image_view&) = delete;
 		image_view(image_view&&) = delete;
 
 	private:
 		VkDevice m_device;
+		vk::image* m_resource = nullptr;
 
 		void create_impl()
 		{
@@ -817,7 +1294,7 @@ namespace vk
 	public:
 		using image::image;
 
-		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
+		virtual image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
 		{
 			auto found = views.equal_range(remap_encoding);
@@ -829,13 +1306,23 @@ namespace vk
 				}
 			}
 
-			VkComponentMapping real_mapping = vk::apply_swizzle_remap
-			(
-				{native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
-				remap
-			);
+			VkComponentMapping real_mapping;
+			if (remap_encoding == 0xAAE4)
+			{
+				real_mapping = native_component_map;
+			}
+			else
+			{
+				real_mapping = vk::apply_swizzle_remap
+				(
+					{ native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
+					remap
+				);
+			}
 
-			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, get_aspect_flags(info.format) & mask);
+			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
+
+			verify(HERE), range.aspectMask;
 			auto view = std::make_unique<vk::image_view>(*get_current_renderer(), this, real_mapping, range);
 
 			auto result = view.get();
@@ -885,7 +1372,7 @@ namespace vk
 					fmt::throw_exception("No compatible memory type was found!" HERE);
 			}
 
-			memory.reset(new memory_block(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index));
+			memory = std::make_unique<memory_block>(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index);
 			vkBindBufferMemory(dev, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset());
 		}
 
@@ -974,7 +1461,6 @@ namespace vk
 			VkBool32 depth_compare = false, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
 			: m_device(dev)
 		{
-			VkSamplerCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 			info.addressModeU = clamp_u;
 			info.addressModeV = clamp_v;
@@ -1094,172 +1580,6 @@ namespace vk
 		VkDevice m_device;
 	};
 
-	class command_pool
-	{
-		vk::render_device *owner = nullptr;
-		VkCommandPool pool = nullptr;
-
-	public:
-		command_pool() {}
-		~command_pool() {}
-
-		void create(vk::render_device &dev)
-		{
-			owner = &dev;
-			VkCommandPoolCreateInfo infos = {};
-			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-
-			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
-		}
-
-		void destroy()
-		{
-			if (!pool)
-				return;
-
-			vkDestroyCommandPool((*owner), pool, nullptr);
-			pool = nullptr;
-		}
-
-		vk::render_device& get_owner()
-		{
-			return (*owner);
-		}
-
-		operator VkCommandPool()
-		{
-			return pool;
-		}
-	};
-
-	class command_buffer
-	{
-	private:
-		bool is_open = false;
-		bool is_pending = false;
-		VkFence m_submit_fence = VK_NULL_HANDLE;
-
-	protected:
-		vk::command_pool *pool = nullptr;
-		VkCommandBuffer commands = nullptr;
-
-	public:
-		enum access_type_hint
-		{
-			flush_only, //Only to be submitted/opened/closed via command flush
-			all         //Auxiliary, can be submitted/opened/closed at any time
-		}
-		access_hint = flush_only;
-
-	public:
-		command_buffer() {}
-		~command_buffer() {}
-
-		void create(vk::command_pool &cmd_pool, bool auto_reset = false)
-		{
-			VkCommandBufferAllocateInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-			infos.commandBufferCount = 1;
-			infos.commandPool = (VkCommandPool)cmd_pool;
-			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
-
-			if (auto_reset)
-			{
-				VkFenceCreateInfo info = {};
-				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
-			}
-
-			pool = &cmd_pool;
-		}
-
-		void destroy()
-		{
-			vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
-
-			if (m_submit_fence)
-			{
-				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
-			}
-		}
-
-		vk::command_pool& get_command_pool() const
-		{
-			return *pool;
-		}
-
-		operator VkCommandBuffer() const
-		{
-			return commands;
-		}
-
-		void begin()
-		{
-			if (m_submit_fence && is_pending)
-			{
-				wait_for_fence(m_submit_fence);
-				is_pending = false;
-
-				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
-				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
-			}
-
-			if (is_open)
-				return;
-
-			VkCommandBufferInheritanceInfo inheritance_info = {};
-			inheritance_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-
-			VkCommandBufferBeginInfo begin_infos = {};
-			begin_infos.pInheritanceInfo = &inheritance_info;
-			begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-			CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
-			is_open = true;
-		}
-
-		void end()
-		{
-			if (!is_open)
-			{
-				LOG_ERROR(RSX, "commandbuffer->end was called but commandbuffer is not in a recording state");
-				return;
-			}
-
-			CHECK_RESULT(vkEndCommandBuffer(commands));
-			is_open = false;
-		}
-
-		void submit(VkQueue queue, const std::vector<VkSemaphore> &semaphores, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
-		{
-			if (is_open)
-			{
-				LOG_ERROR(RSX, "commandbuffer->submit was called whilst the command buffer is in a recording state");
-				return;
-			}
-
-			if (fence == VK_NULL_HANDLE)
-			{
-				fence = m_submit_fence;
-				is_pending = (fence != VK_NULL_HANDLE);
-			}
-
-			VkSubmitInfo infos = {};
-			infos.commandBufferCount = 1;
-			infos.pCommandBuffers = &commands;
-			infos.pWaitDstStageMask = &pipeline_stage_flags;
-			infos.pWaitSemaphores = semaphores.data();
-			infos.waitSemaphoreCount = static_cast<uint32_t>(semaphores.size());
-			infos.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-			acquire_global_submit_lock();
-			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
-			release_global_submit_lock();
-		}
-	};
-
 	class swapchain_image_WSI
 	{
 		VkImageView view = nullptr;
@@ -1268,7 +1588,7 @@ namespace vk
 		vk::render_device *owner = nullptr;
 
 	public:
-		swapchain_image_WSI() {}
+		swapchain_image_WSI() = default;
 
 		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
 		{
@@ -1396,7 +1716,7 @@ public:
 			m_surface_format = format;
 		}
 
-		virtual ~swapchain_base() {}
+		virtual ~swapchain_base() = default;
 
 		virtual void create(display_handle_t& handle) = 0;
 		virtual void destroy(bool full = true) = 0;
@@ -1406,8 +1726,13 @@ public:
 		virtual VkImage& get_image(u32 index) = 0;
 		virtual VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) = 0;
 		virtual void end_frame(command_buffer& cmd, u32 index) = 0;
-		virtual VkResult present(u32 index) = 0;
+		virtual VkResult present(VkSemaphore semaphore, u32 index) = 0;
 		virtual VkImageLayout get_optimal_present_layout() = 0;
+
+		virtual bool supports_automatic_wm_reports() const
+		{
+			return false;
+		}
 
 		virtual bool init(u32 w, u32 h)
 		{
@@ -1453,8 +1778,7 @@ public:
 		: swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~abstract_swapchain_impl()
-		{}
+		~abstract_swapchain_impl() override = default;
 
 		u32 get_swap_image_count() const override
 		{
@@ -1533,7 +1857,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 image) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 image) override
 		{
 			auto& src = swapchain_images[image];
 			GdiFlush();
@@ -1590,7 +1914,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 index) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
 		{
 			fmt::throw_exception("Native macOS swapchain is not implemented yet!");
 		}
@@ -1609,7 +1933,7 @@ public:
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
-		~swapchain_X11(){}
+		~swapchain_X11() override = default;
 
 		bool init() override
 		{
@@ -1678,7 +2002,7 @@ public:
 				dev.destroy();
 		}
 
-		VkResult present(u32 index) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
 		{
 			auto& src = swapchain_images[index];
 			if (pixmap)
@@ -1722,7 +2046,7 @@ public:
 
 		VkImage& get_image(u32 index) override
 		{
-			return (VkImage&)(*swapchain_images[index].second.get());
+			return (VkImage&)(*swapchain_images[index].second);
 		}
 
 		VkImageLayout get_optimal_present_layout() override
@@ -1753,6 +2077,8 @@ public:
 		PFN_vkGetSwapchainImagesKHR getSwapchainImagesKHR = nullptr;
 		PFN_vkAcquireNextImageKHR acquireNextImageKHR = nullptr;
 		PFN_vkQueuePresentKHR queuePresentKHR = nullptr;
+
+		bool m_wm_reports_flag = false;
 
 	protected:
 		void init_swapchain_images(render_device& dev, u32 /*preferred_count*/ = 0) override
@@ -1785,10 +2111,22 @@ public:
 
 			m_surface = surface;
 			m_color_space = color_space;
+
+			switch (gpu.get_driver_vendor())
+			{
+			case driver_vendor::AMD:
+				break;
+			case driver_vendor::NVIDIA:
+			case driver_vendor::INTEL:
+			case driver_vendor::RADV:
+				m_wm_reports_flag = true;
+				break;
+			default:
+				break;
+			}
 		}
 
-		~swapchain_WSI()
-		{}
+		~swapchain_WSI() override = default;
 
 		void create(display_handle_t&) override
 		{}
@@ -1865,11 +2203,7 @@ public:
 			{
 				// List of preferred modes in decreasing desirability
 				// NOTE: Always picks "triple-buffered vsync" types if possible
-				if (g_cfg.video.vsync)
-				{
-					preferred_modes = { VK_PRESENT_MODE_MAILBOX_KHR };
-				}
-				else
+				if (!g_cfg.video.vsync)
 				{
 					preferred_modes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR };
 				}
@@ -1893,7 +2227,7 @@ public:
 					break;
 			}
 
-			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", (s32&)swapchain_present_mode);
+			LOG_NOTICE(RSX, "Swapchain: present mode %d in use.", static_cast<int>(swapchain_present_mode));
 
 			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
 			if (surface_descriptors.maxImageCount > 0)
@@ -1929,19 +2263,19 @@ public:
 			swap_info.oldSwapchain = old_swapchain;
 			swap_info.clipped = true;
 
-			swap_info.imageExtent.width = m_width;
-			swap_info.imageExtent.height = m_height;
+			swap_info.imageExtent.width = std::max(m_width, surface_descriptors.minImageExtent.width);
+			swap_info.imageExtent.height = std::max(m_height, surface_descriptors.minImageExtent.height);
 
 			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
 
 			if (old_swapchain)
 			{
-				if (swapchain_images.size())
+				if (!swapchain_images.empty())
 				{
 					for (auto &img : swapchain_images)
 						img.discard(dev);
 
-					swapchain_images.resize(0);
+					swapchain_images.clear();
 				}
 
 				destroySwapchainKHR(dev, old_swapchain, nullptr);
@@ -1949,6 +2283,11 @@ public:
 
 			init_swapchain_images(dev);
 			return true;
+		}
+
+		bool supports_automatic_wm_reports() const override
+		{
+			return m_wm_reports_flag;
 		}
 
 		VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) override
@@ -1960,7 +2299,7 @@ public:
 		{
 		}
 
-		VkResult present(u32 image) override
+		VkResult present(VkSemaphore semaphore, u32 image) override
 		{
 			VkPresentInfoKHR present = {};
 			present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1968,6 +2307,8 @@ public:
 			present.swapchainCount = 1;
 			present.pSwapchains = &m_vk_swapchain;
 			present.pImageIndices = &image;
+			present.waitSemaphoreCount = 1;
+			present.pWaitSemaphores = &semaphore;
 
 			return queuePresentKHR(vk_present_queue, &present);
 		}
@@ -1983,29 +2324,6 @@ public:
 		}
 	};
 
-	class supported_extensions
-	{
-	private:
-		std::vector<VkExtensionProperties> m_vk_exts;
-
-	public:
-		supported_extensions()
-		{
-			uint32_t count;
-			if (vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr) != VK_SUCCESS)
-				return;
-
-			m_vk_exts.resize(count);
-			vkEnumerateInstanceExtensionProperties(nullptr, &count, m_vk_exts.data());
-		}
-
-		bool is_supported(const char *ext)
-		{
-			return std::any_of(m_vk_exts.cbegin(), m_vk_exts.cend(),
-				[&](const VkExtensionProperties& p) { return std::strcmp(p.extensionName, ext) == 0; });
-		}
-	};
-
 	class context
 	{
 	private:
@@ -2018,27 +2336,24 @@ public:
 		PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = nullptr;
 		VkDebugReportCallbackEXT m_debugger = nullptr;
 
-		bool loader_exists = false;
+		bool extensions_loaded = false;
 
 	public:
 
 		context()
 		{
 			m_instance = nullptr;
-
-			//Check that some critical entry-points have been loaded into memory indicating presence of a loader
-			loader_exists = (vkCreateInstance != nullptr);
 		}
 
 		~context()
 		{
-			if (m_instance || m_vk_instances.size())
+			if (m_instance || !m_vk_instances.empty())
 				close();
 		}
 
 		void close()
 		{
-			if (!m_vk_instances.size()) return;
+			if (m_vk_instances.empty()) return;
 
 			if (m_debugger)
 			{
@@ -2052,7 +2367,7 @@ public:
 			}
 
 			m_instance = nullptr;
-			m_vk_instances.resize(0);
+			m_vk_instances.clear();
 		}
 
 		void enable_debugging()
@@ -2074,8 +2389,6 @@ public:
 
 		uint32_t createInstance(const char *app_name, bool fast = false)
 		{
-			if (!loader_exists) return 0;
-
 			//Initialize a vulkan instance
 			VkApplicationInfo app = {};
 
@@ -2084,7 +2397,7 @@ public:
 			app.applicationVersion = 0;
 			app.pEngineName = app_name;
 			app.engineVersion = 0;
-			app.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+			app.apiVersion = VK_API_VERSION_1_0;
 
 			//Set up instance information
 
@@ -2093,12 +2406,18 @@ public:
 
 			if (!fast)
 			{
-				supported_extensions support;
+				extensions_loaded = true;
+				supported_extensions support(supported_extensions::instance);
 
 				extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 				if (support.is_supported(VK_EXT_DEBUG_REPORT_EXTENSION_NAME))
 				{
 					extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				}
+
+				if (support.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -2125,7 +2444,7 @@ public:
 				}
 #endif //(WIN32, __APPLE__)
 				if (g_cfg.video.debug_output)
-					layers.push_back("VK_LAYER_LUNARG_standard_validation");
+					layers.push_back("VK_LAYER_KHRONOS_validation");
 			}
 
 			VkInstanceCreateInfo instance_info = {};
@@ -2175,9 +2494,6 @@ public:
 
 		std::vector<physical_device>& enumerateDevices()
 		{
-			if (!loader_exists)
-				return gpus;
-
 			uint32_t num_gpus;
 			// This may fail on unsupported drivers, so just assume no devices
 			if (vkEnumeratePhysicalDevices(m_instance, &num_gpus, nullptr) != VK_SUCCESS)
@@ -2191,7 +2507,7 @@ public:
 				CHECK_RESULT(vkEnumeratePhysicalDevices(m_instance, &num_gpus, pdevs.data()));
 
 				for (u32 i = 0; i < num_gpus; ++i)
-					gpus[i].set_device(pdevs[i]);
+					gpus[i].create(m_instance, pdevs[i], extensions_loaded);
 			}
 
 			return gpus;
@@ -2368,43 +2684,66 @@ public:
 
 	class descriptor_pool
 	{
-		VkDescriptorPool pool = nullptr;
-		const vk::render_device *owner = nullptr;
+		const vk::render_device *m_owner = nullptr;
+
+		std::vector<VkDescriptorPool> m_device_pools;
+		VkDescriptorPool m_current_pool_handle = VK_NULL_HANDLE;
+		u32 m_current_pool_index = 0;
 
 	public:
-		descriptor_pool() {}
-		~descriptor_pool() {}
+		descriptor_pool() = default;
+		~descriptor_pool() = default;
 
-		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count)
+		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 		{
+			verify(HERE), subpool_count;
+
 			VkDescriptorPoolCreateInfo infos = {};
 			infos.flags = 0;
-			infos.maxSets = DESCRIPTOR_MAX_DRAW_CALLS;
+			infos.maxSets = max_sets;
 			infos.poolSizeCount = size_descriptors_count;
 			infos.pPoolSizes = sizes;
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 
-			owner = &dev;
-			CHECK_RESULT(vkCreateDescriptorPool(dev, &infos, nullptr, &pool));
+			m_owner = &dev;
+			m_device_pools.resize(subpool_count);
+
+			for (auto &pool : m_device_pools)
+			{
+				CHECK_RESULT(vkCreateDescriptorPool(dev, &infos, nullptr, &pool));
+			}
+
+			m_current_pool_handle = m_device_pools[0];
 		}
 
 		void destroy()
 		{
-			if (!pool) return;
+			if (m_device_pools.empty()) return;
 
-			vkDestroyDescriptorPool((*owner), pool, nullptr);
-			owner = nullptr;
-			pool = nullptr;
+			for (auto &pool : m_device_pools)
+			{
+				vkDestroyDescriptorPool((*m_owner), pool, nullptr);
+				pool = VK_NULL_HANDLE;
+			}
+
+			m_owner = nullptr;
 		}
 
 		bool valid()
 		{
-			return (pool != nullptr);
+			return (!m_device_pools.empty());
 		}
 
 		operator VkDescriptorPool()
 		{
-			return pool;
+			return m_current_pool_handle;
+		}
+
+		void reset(VkDescriptorPoolResetFlags flags)
+		{
+			m_current_pool_index = (m_current_pool_index + 1) % u32(m_device_pools.size());
+			m_current_pool_handle = m_device_pools[m_current_pool_index];
+			CHECK_RESULT(vkResetDescriptorPool(*m_owner, m_current_pool_handle, flags));
 		}
 	};
 
@@ -2413,8 +2752,8 @@ public:
 		VkQueryPool query_pool = VK_NULL_HANDLE;
 		vk::render_device* owner = nullptr;
 
+		std::stack<u32> available_slots;
 		std::vector<bool> query_active_status;
-
 	public:
 
 		void create(vk::render_device &dev, u32 num_entries)
@@ -2428,6 +2767,11 @@ public:
 			owner = &dev;
 
 			query_active_status.resize(num_entries, false);
+
+			for (u32 n = 0; n < num_entries; ++n)
+			{
+				available_slots.push(n);
+			}
 		}
 
 		void destroy()
@@ -2484,11 +2828,17 @@ public:
 
 		void reset_query(vk::command_buffer &cmd, u32 index)
 		{
-			vkCmdResetQueryPool(cmd, query_pool, index, 1);
-			query_active_status[index] = false;
+			if (query_active_status[index])
+			{
+				vkCmdResetQueryPool(cmd, query_pool, index, 1);
+
+				query_active_status[index] = false;
+				available_slots.push(index);
+			}
 		}
 
-		void reset_queries(vk::command_buffer &cmd, std::vector<u32> &list)
+		template<template<class> class _List>
+		void reset_queries(vk::command_buffer &cmd, _List<u32> &list)
 		{
 			for (const auto index : list)
 				reset_query(cmd, index);
@@ -2505,13 +2855,16 @@ public:
 
 		u32 find_free_slot()
 		{
-			for (u32 n = 0; n < query_active_status.size(); n++)
+			if (available_slots.empty())
 			{
-				if (query_active_status[n] == false)
-					return n;
+				return ~0u;
 			}
 
-			return UINT32_MAX;
+			u32 result = available_slots.top();
+			available_slots.pop();
+
+			verify(HERE), !query_active_status[result];
+			return result;
 		}
 	};
 
@@ -2523,6 +2876,13 @@ public:
 		VkPipelineColorBlendAttachmentState att_state[4];
 		VkPipelineColorBlendStateCreateInfo cs;
 		VkPipelineRasterizationStateCreateInfo rs;
+		VkPipelineMultisampleStateCreateInfo ms;
+
+		struct extra_parameters
+		{
+			VkSampleMask msaa_sample_mask;
+		}
+		temp_storage;
 
 		graphics_pipeline_state()
 		{
@@ -2538,6 +2898,10 @@ public:
 			rs.cullMode = VK_CULL_MODE_NONE;
 			rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 			rs.lineWidth = 1.f;
+
+			ms.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+			ms.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+			temp_storage.msaa_sample_mask = 0xFFFFFFFF;
 		}
 
 		graphics_pipeline_state(const graphics_pipeline_state& other)
@@ -2552,8 +2916,7 @@ public:
 			}
 		}
 
-		~graphics_pipeline_state()
-		{}
+		~graphics_pipeline_state() = default;
 
 		graphics_pipeline_state& operator = (const graphics_pipeline_state& other)
 		{
@@ -2698,16 +3061,39 @@ public:
 			cs.attachmentCount = count;
 			cs.pAttachments = att_state;
 		}
+
+		void set_multisample_state(u8 sample_count, u32 sample_mask, bool msaa_enabled, bool alpha_to_coverage, bool alpha_to_one)
+		{
+			temp_storage.msaa_sample_mask = sample_mask;
+
+			ms.rasterizationSamples = static_cast<VkSampleCountFlagBits>(sample_count);
+			ms.alphaToCoverageEnable = alpha_to_coverage;
+			ms.alphaToOneEnable = alpha_to_one;
+
+			if (!msaa_enabled)
+			{
+				// This register is likely glMinSampleShading but in reverse; probably sets max sample shading rate of 1
+				// I (kd-11) suspect its what the control panel setting affects when MSAA is set to disabled
+			}
+		}
+
+		void set_multisample_shading_rate(float shading_rate)
+		{
+			ms.sampleShadingEnable = VK_TRUE;
+			ms.minSampleShading = shading_rate;
+		}
 	};
 
 	namespace glsl
 	{
-		enum program_input_type
+		enum program_input_type : u32
 		{
 			input_type_uniform_buffer = 0,
 			input_type_texel_buffer = 1,
 			input_type_texture = 2,
-			input_type_storage_buffer = 3
+			input_type_storage_buffer = 3,
+
+			input_type_max_enum = 4
 		};
 
 		struct bound_sampler
@@ -2733,7 +3119,7 @@ public:
 			bound_buffer as_buffer;
 			bound_sampler as_sampler;
 
-			int location;
+			u32 location;
 			std::string name;
 		};
 
@@ -2745,11 +3131,8 @@ public:
 			std::vector<u32> m_compiled;
 
 		public:
-			shader()
-			{}
-
-			~shader()
-			{}
+			shader() = default;
+			~shader() = default;
 
 			void create(::glsl::program_domain domain, const std::string& source)
 			{
@@ -2813,24 +3196,36 @@ public:
 
 		class program
 		{
-			std::vector<program_input> uniforms;
+			std::array<std::vector<program_input>, input_type_max_enum> uniforms;
 			VkDevice m_device;
+
+			std::array<u32, 16> fs_texture_bindings;
+			std::array<u32, 16> fs_texture_mirror_bindings;
+			std::array<u32, 4>  vs_texture_bindings;
+			bool linked;
+
+			void create_impl();
+
 		public:
 			VkPipeline pipeline;
 			u64 attribute_location_mask;
 			u64 vertex_attributes_mask;
 
 			program(VkDevice dev, VkPipeline p, const std::vector<program_input> &vertex_input, const std::vector<program_input>& fragment_inputs);
+			program(VkDevice dev, VkPipeline p);
 			program(const program&) = delete;
 			program(program&& other) = delete;
 			~program();
 
-			program& load_uniforms(::glsl::program_domain domain, const std::vector<program_input>& inputs);
+			program& load_uniforms(const std::vector<program_input>& inputs);
+			program& link();
 
-			bool has_uniform(std::string uniform_name);
-			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, std::string uniform_name, VkDescriptorSet &descriptor_set);
+			bool has_uniform(program_input_type type, const std::string &uniform_name);
+			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorType type, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror = false);
 			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
-			void bind_uniform(const VkBufferView &buffer_view, const std::string &binding_name, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkBufferView &buffer_view, uint32_t binding_point, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 
 			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);
 
@@ -2838,7 +3233,7 @@ public:
 		};
 	}
 
-	struct vk_data_heap : public data_heap
+	struct data_heap : public ::data_heap
 	{
 		std::unique_ptr<buffer> heap;
 		bool mapped = false;
@@ -2853,7 +3248,7 @@ public:
 
 		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
 		{
-			data_heap::init(size, name, guard);
+			::data_heap::init(size, name, guard);
 
 			const auto device = get_current_renderer();
 			const auto memory_map = device->get_memory_mapping();
@@ -2865,13 +3260,13 @@ public:
 			{
 				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", (u32)usage);
 
-				shadow.reset(new buffer(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0));
+				shadow = std::make_unique<buffer>(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0);
 				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 				memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 				memory_index = memory_map.device_local;
 			}
 
-			heap.reset(new buffer(*device, size, memory_index, memory_flags, usage, 0));
+			heap = std::make_unique<buffer>(*device, size, memory_index, memory_flags, usage, 0);
 		}
 
 		void destroy()
@@ -2907,7 +3302,7 @@ public:
 
 		void unmap(bool force = false)
 		{
-			if (force || g_cfg.video.disable_vulkan_mem_allocator)
+			if (force)
 			{
 				if (shadow)
 					shadow->unmap();
@@ -2930,12 +3325,17 @@ public:
 			{
 				verify (HERE), shadow, heap;
 				vkCmdCopyBuffer(cmd, shadow->value, heap->value, (u32)dirty_ranges.size(), dirty_ranges.data());
-				dirty_ranges.resize(0);
+				dirty_ranges.clear();
 
 				insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
 		}
+	};
+
+	struct blitter
+	{
+		void scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, bool /*is_depth*/, const rsx::typeless_xfer& xfer_info);
 	};
 }

@@ -8,7 +8,7 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	m_mice.emplace_back(Mouse());
 	memset(&m_info, 0, sizeof(MouseInfo));
 	m_info.max_connect = max_connect;
-	m_info.now_connect = std::min(m_mice.size(), (size_t)max_connect);
+	m_info.now_connect = std::min(::size32(m_mice), max_connect);
 	m_info.info = 0; // Ownership of mouse data: 0=Application, 1=System
 	for (u32 i = 1; i < max_connect; i++)
 	{

@@ -1,60 +1,44 @@
 #pragma once
 
 #include "Utilities/JIT.h"
-#include "Utilities/mutex.h"
 #include "SPURecompiler.h"
 
 #include <functional>
 
-// SPU ASMJIT Runtime object (global)
-class spu_runtime
-{
-	shared_mutex m_mutex;
-
-	asmjit::JitRuntime m_jitrt;
-
-	// All functions
-	std::map<std::vector<u32>, spu_function_t> m_map;
-
-	// All dispatchers
-	std::array<atomic_t<spu_function_t>, 0x10000> m_dispatcher;
-
-	// Debug module output location
-	std::string m_cache_path;
-
-	friend class spu_recompiler;
-
-public:
-	spu_runtime();
-};
-
 // SPU ASMJIT Recompiler
 class spu_recompiler : public spu_recompiler_base
 {
-	std::shared_ptr<spu_runtime> m_spurt;
-
 public:
 	spu_recompiler();
 
 	virtual void init() override;
 
-	virtual spu_function_t get(u32 lsa) override;
-
-	virtual spu_function_t compile(std::vector<u32>&&) override;
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&) override;
 
 private:
+	// ASMJIT runtime
+	::jit_runtime m_asmrt;
+
+	u32 m_base;
+
 	// emitter:
 	asmjit::X86Assembler* c;
 
 	// arguments:
 	const asmjit::X86Gp* cpu;
 	const asmjit::X86Gp* ls;
+	const asmjit::X86Gp* rip;
+	const asmjit::X86Gp* pc0;
+
+	// Native args or temp variables:
+	const asmjit::X86Gp* arg0;
+	const asmjit::X86Gp* arg1;
 	const asmjit::X86Gp* qw0;
 	const asmjit::X86Gp* qw1;
 
 	// temporary:
 	const asmjit::X86Gp* addr;
-	std::array<const asmjit::X86Xmm*, 6> vec;
+	std::array<const asmjit::X86Xmm*, 16> vec;
 
 	// workload for the end of function:
 	std::vector<std::function<void()>> after;
@@ -105,12 +89,11 @@ private:
 	asmjit::X86Mem XmmConst(__m128 data);
 	asmjit::X86Mem XmmConst(__m128i data);
 
-	void branch_fixed(u32 target);
+	asmjit::X86Mem get_pc(u32 addr);
+	void branch_fixed(u32 target, bool absolute = false);
 	void branch_indirect(spu_opcode_t op, bool jt = false, bool ret = true);
 	void branch_set_link(u32 target);
 	void fall(spu_opcode_t op);
-	void save_rcx();
-	void load_rcx();
 
 	void get_events();
 

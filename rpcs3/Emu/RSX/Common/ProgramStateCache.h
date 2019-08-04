@@ -2,11 +2,11 @@
 
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
-#include "Emu/Memory/vm.h"
 
 #include "Utilities/GSL.h"
 #include "Utilities/hash.h"
 #include "Utilities/mutex.h"
+#include "Utilities/Log.h"
 
 #include <deque>
 
@@ -146,8 +146,8 @@ public:
 		const fragment_program_type& fp;
 		pipeline_properties props;
 
-		async_link_task_entry(const vertex_program_type& _V, const fragment_program_type& _F, const pipeline_properties& _P)
-			: vp(_V), fp(_F), props(_P)
+		async_link_task_entry(const vertex_program_type& _V, const fragment_program_type& _F, pipeline_properties _P)
+			: vp(_V), fp(_F), props(std::move(_P))
 		{}
 	};
 
@@ -159,8 +159,8 @@ public:
 
 		std::vector<u8> tmp_cache;
 
-		async_decompile_task_entry(const RSXVertexProgram& _V)
-			: vp(_V), is_fp(false)
+		async_decompile_task_entry(RSXVertexProgram _V)
+			: vp(std::move(_V)), is_fp(false)
 		{
 		}
 
@@ -254,8 +254,7 @@ public:
 			f32 fp_value;
 		};
 
-		program_buffer_patch_entry()
-		{}
+		program_buffer_patch_entry() = default;
 
 		program_buffer_patch_entry(f32& key, f32& value)
 		{
@@ -271,11 +270,11 @@ public:
 
 		bool test_and_set(f32 value, f32* dst) const
 		{
-			u32 hex = (u32&)value;
+			u32 hex = std::bit_cast<u32>(value);
 			if ((hex & 0x7FFFFFFF) == (hex_key & 0x7FFFFFFF))
 			{
 				hex = (hex & ~0x7FFFFFF) | hex_value;
-				*dst = (f32&)hex;
+				*dst = std::bit_cast<f32>(hex);
 				return true;
 			}
 
@@ -304,7 +303,7 @@ public:
 
 		bool is_empty() const
 		{
-			return db.size() == 0;
+			return db.empty();
 		}
 	}
 	patch_table;
@@ -317,7 +316,7 @@ public:
 		{
 			free(pair.first.addr);
 		}
-	};
+	}
 
 	const vertex_program_type& get_transform_program(const RSXVertexProgram& rsx_vp) const
 	{
@@ -560,14 +559,14 @@ public:
 			else if (sanitize)
 			{
 				//Convert NaNs and Infs to 0
-				const auto masked = _mm_and_si128((__m128i&)shuffled_vector, _mm_set1_epi32(0x7fffffff));
+				const auto masked = _mm_and_si128(shuffled_vector, _mm_set1_epi32(0x7fffffff));
 				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
-				const auto result = _mm_and_si128((__m128i&)shuffled_vector, valid);
-				_mm_stream_si128((__m128i*)dst, (__m128i&)result);
+				const auto result = _mm_and_si128(shuffled_vector, valid);
+				_mm_stream_si128(std::bit_cast<__m128i*>(dst), result);
 			}
 			else
 			{
-				_mm_stream_si128((__m128i*)dst, shuffled_vector);
+				_mm_stream_si128(std::bit_cast<__m128i*>(dst), shuffled_vector);
 			}
 
 			dst += 4;

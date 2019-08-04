@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 #include "Utilities/BitField.h"
 
 // Return Codes
@@ -89,7 +91,7 @@ struct CellSyncBarrier
 		}
 
 		return true;
-	};
+	}
 
 	static inline bool try_wait(ctrl_t& ctrl)
 	{

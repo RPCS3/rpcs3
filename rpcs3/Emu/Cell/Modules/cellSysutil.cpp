@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -6,42 +6,46 @@
 #include "cellSysutil.h"
 
 #include "Utilities/StrUtil.h"
-
-#include <mutex>
-#include <queue>
+#include "Utilities/lockless.h"
 
 LOG_CHANNEL(cellSysutil);
 
-struct sysutil_cb_manager
+template<>
+void fmt_class_string<CellSysutilError>::format(std::string& out, u64 arg)
 {
-	std::mutex mutex;
-
-	std::array<std::pair<vm::ptr<CellSysutilCallback>, vm::ptr<void>>, 4> callbacks;
-
-	std::queue<std::function<s32(ppu_thread&)>> registered;
-
-	std::function<s32(ppu_thread&)> get_cb()
+	format_enum(out, arg, [](auto error)
 	{
-		std::lock_guard lock(mutex);
-
-		if (registered.empty())
+		switch (error)
 		{
-			return nullptr;
+			STR_CASE(CELL_SYSUTIL_ERROR_TYPE);
+			STR_CASE(CELL_SYSUTIL_ERROR_VALUE);
+			STR_CASE(CELL_SYSUTIL_ERROR_SIZE);
+			STR_CASE(CELL_SYSUTIL_ERROR_NUM);
+			STR_CASE(CELL_SYSUTIL_ERROR_BUSY);
+			STR_CASE(CELL_SYSUTIL_ERROR_STATUS);
+			STR_CASE(CELL_SYSUTIL_ERROR_MEMORY);
 		}
 
-		auto func = std::move(registered.front());
+		return unknown;
+	});
+}
 
-		registered.pop();
+struct sysutil_cb_manager
+{
+	struct alignas(8) registered_cb
+	{
+		vm::ptr<CellSysutilCallback> first;
+		vm::ptr<void> second;
+	};
 
-		return func;
-	}
+	atomic_t<registered_cb> callbacks[4]{};
+
+	lf_queue<std::function<s32(ppu_thread&)>> registered;
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
-
-	std::lock_guard lock(cbm->mutex);
 
 	cbm->registered.push(std::move(cb));
 }
@@ -50,12 +54,10 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 {
 	if (const auto cbm = fxm::get<sysutil_cb_manager>())
 	{
-		for (auto& cb : cbm->callbacks)
+		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
 			if (cb.first)
 			{
-				std::lock_guard lock(cbm->mutex);
-
 				cbm->registered.push([=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
@@ -122,12 +124,19 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD: return "ID_JAPANESE_KEYBOARD_ENTRY_METHOD";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD: return "ID_CHINESE_KEYBOARD_ENTRY_METHOD";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF: return "ID_PAD_AUTOOFF";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_MAGNETOMETER: return "ID_MAGNETOMETER";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME: return "ID_NICKNAME";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME: return "ID_CURRENT_USERNAME";
 		}
 
 		return unknown;
 	});
+}
+
+s32 _cellSysutilGetSystemParamInt()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
 }
 
 s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
@@ -232,16 +241,23 @@ s32 cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> buf, u3
 	return CELL_OK;
 }
 
+// Note: the way we do things here is inaccurate(but maybe sufficient)
+// The real function goes over a table of 0x20 entries[ event_code:u32 callback_addr:u32 ]
+// Those callbacks are registered through cellSysutilRegisterCallbackDispatcher(u32 event_code, vm::ptr<void> func_addr)
+// The function goes through all the callback looking for one callback associated with event 0x100, if any is found it is called with parameters r3=0x101 r4=0
+// This particular CB seems to be associated with sysutil itself
+// Then it checks for events on an event_queue associated with sysutil, checks if any cb is associated with that event and calls them with parameters that come from the event
 error_code cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	while (auto func = cbm->get_cb())
+	for (auto&& func : cbm->registered.pop_all())
 	{
 		if (s32 res = func(ppu))
 		{
+			// Currently impossible
 			return not_an_error(res);
 		}
 
@@ -265,7 +281,7 @@ s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm:
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	cbm->callbacks[slot] = std::make_pair(func, userdata);
+	cbm->callbacks[slot].store({func, userdata});
 
 	return CELL_OK;
 }
@@ -281,14 +297,13 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 
 	const auto cbm = fxm::get_always<sysutil_cb_manager>();
 
-	cbm->callbacks[slot] = std::make_pair(vm::null, vm::null);
+	cbm->callbacks[slot].store({});
 
 	return CELL_OK;
 }
 
 s32 cellSysCacheClear()
 {
-
 	cellSysutil.warning("cellSysCacheClear()");
 
 	// Get the param as a shared ptr, then decipher the cacheid from it
@@ -320,15 +335,18 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
 	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
 
-	const std::string& cache_id = param->cacheId;
-	verify(HERE), cache_id.size() < sizeof(param->cacheId);
+	if (!param || !memchr(param->cacheId, '\0', CELL_SYSCACHE_ID_SIZE))
+	{
+		return CELL_SYSCACHE_ERROR_PARAM;
+	}
 
+	const std::string& cache_id = param->cacheId;
 	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
 	// TODO: implement (what?)
 	fxm::make_always<CellSysCacheParam>(*param);
-	if (!fs::create_dir(vfs::get(cache_path)))
+	if (!fs::create_dir(vfs::get(cache_path)) && !cache_id.empty())
 	{
 		return CELL_SYSCACHE_RET_OK_RELAYED;
 	}
@@ -474,6 +492,11 @@ s32 cellSysutilSharedMemoryFree()
 	fmt::throw_exception("Unimplemented" HERE);
 }
 
+s32 cellSysutilNotification()
+{
+	fmt::throw_exception("Unimplemented" HERE);
+}
+
 s32 _ZN4cxml7Element11AppendChildERS0_()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -594,6 +617,12 @@ s32 _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf()
 	return CELL_OK;
 }
 
+s32 _ZN8cxmlutil8SetFloatERKN4cxml7ElementEPKcf()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
 s32 _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
@@ -685,6 +714,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	cellSysutil_AudioOut_init(); // cellAudioOut functions
 	cellSysutil_VideoOut_init(); // cellVideoOut functions
 
+	REG_FUNC(cellSysutil, _cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);
 
@@ -719,6 +749,8 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilSharedMemoryAlloc);
 	REG_FUNC(cellSysutil, cellSysutilSharedMemoryFree);
 
+	REG_FUNC(cellSysutil, cellSysutilNotification);
+
 	REG_FUNC(cellSysutil, _ZN4cxml7Element11AppendChildERS0_);
 
 	REG_FUNC(cellSysutil, _ZN4cxml8DocumentC1Ev);
@@ -742,6 +774,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil7SetFileERKN4cxml7ElementEPKcRKNS0_4FileE);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil8SetFloatERKN4cxml7ElementEPKcf);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc);

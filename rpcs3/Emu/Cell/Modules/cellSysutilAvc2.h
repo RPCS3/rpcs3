@@ -1,6 +1,8 @@
 #pragma once
 
+#include "sceNp2.h"
 
+#include "Emu/Memory/vm_ptr.h"
 
 // Error codes
 enum CellSysutilAvc2Error : u32

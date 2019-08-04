@@ -8,10 +8,20 @@
 #include <unordered_map>
 #include <algorithm>
 
-#include "OpenGL.h"
+#include "GLExecutionState.h"
 #include "../GCM.h"
+#include "../Common/TextureUtils.h"
 
+#include "Emu/System.h"
 #include "Utilities/geometry.h"
+#include "Utilities/Log.h"
+
+#define GL_FRAGMENT_TEXTURES_START 0
+#define GL_VERTEX_TEXTURES_START   GL_FRAGMENT_TEXTURES_START + 16
+#define GL_STENCIL_MIRRORS_START   GL_VERTEX_TEXTURES_START + 4
+#define GL_STREAM_BUFFER_START     GL_STENCIL_MIRRORS_START + 16
+
+inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
 
 namespace gl
 {
@@ -94,15 +104,28 @@ namespace gl
 		bool ARB_depth_buffer_float_supported = false;
 		bool ARB_texture_barrier_supported = false;
 		bool NV_texture_barrier_supported = false;
+		bool NV_gpu_shader5_supported = false;
+		bool AMD_gpu_shader_half_float_supported = false;
 		bool initialized = false;
-		bool vendor_INTEL = false;  //has broken GLSL compiler
-		bool vendor_AMD = false;    //has broken ARB_multidraw
-		bool vendor_NVIDIA = false; //has NaN poisoning issues
-		bool vendor_MESA = false;   //requires CLIENT_STORAGE bit set for streaming buffers
+		bool vendor_INTEL = false;  // has broken GLSL compiler
+		bool vendor_AMD = false;    // has broken ARB_multidraw
+		bool vendor_NVIDIA = false; // has NaN poisoning issues
+		bool vendor_MESA = false;   // requires CLIENT_STORAGE bit set for streaming buffers
+
+		bool check(const std::string& ext_name, const char* test)
+		{
+			if (ext_name == test)
+			{
+				LOG_NOTICE(RSX, "Extension %s is supported", ext_name);
+				return true;
+			}
+
+			return false;
+		}
 
 		void initialize()
 		{
-			int find_count = 8;
+			int find_count = 10;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -112,64 +135,78 @@ namespace gl
 
 				const std::string ext_name = reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i));
 
-				if (ext_name == "GL_ARB_shader_draw_parameters")
+				if (check(ext_name, "GL_ARB_shader_draw_parameters"))
 				{
 					ARB_shader_draw_parameters_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_EXT_direct_state_access")
+				if (check(ext_name, "GL_EXT_direct_state_access"))
 				{
 					EXT_dsa_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_direct_state_access")
+				if (check(ext_name, "GL_ARB_direct_state_access"))
 				{
 					ARB_dsa_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_buffer_storage")
+				if (check(ext_name, "GL_ARB_buffer_storage"))
 				{
 					ARB_buffer_storage_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_texture_buffer_object")
+				if (check(ext_name, "GL_ARB_texture_buffer_object"))
 				{
 					ARB_texture_buffer_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_depth_buffer_float")
+				if (check(ext_name, "GL_ARB_depth_buffer_float"))
 				{
 					ARB_depth_buffer_float_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_ARB_texture_barrier")
+				if (check(ext_name, "GL_ARB_texture_barrier"))
 				{
 					ARB_texture_barrier_supported = true;
 					find_count--;
 					continue;
 				}
 
-				if (ext_name == "GL_NV_texture_barrier")
+				if (check(ext_name, "GL_NV_texture_barrier"))
 				{
 					NV_texture_barrier_supported = true;
 					find_count--;
 					continue;
 				}
+
+				if (check(ext_name, "GL_NV_gpu_shader5"))
+				{
+					NV_gpu_shader5_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (check(ext_name, "GL_AMD_gpu_shader_half_float"))
+				{
+					AMD_gpu_shader_half_float_supported = true;
+					find_count--;
+					continue;
+				}
 			}
 
-			//Workaround for intel drivers which have terrible capability reporting
+			// Workaround for intel drivers which have terrible capability reporting
 			std::string vendor_string = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
 			if (!vendor_string.empty())
 			{
@@ -232,8 +269,8 @@ namespace gl
 
 	public:
 
-		fence() {}
-		~fence() {}
+		fence() = default;
+		~fence() = default;
 
 		void create()
 		{
@@ -812,7 +849,7 @@ namespace gl
 			return created();
 		}
 
-		void map(std::function<void(GLubyte*)> impl, access access_)
+		void map(const std::function<void(GLubyte*)>& impl, access access_)
 		{
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
@@ -1084,8 +1121,7 @@ namespace gl
 			: m_buffer(_buffer), m_offset(offset), m_range(range), m_format(format)
 		{}
 
-		buffer_view()
-		{}
+		buffer_view() = default;
 
 		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
 		{
@@ -1314,6 +1350,13 @@ namespace gl
 		}
 	};
 
+	enum image_aspect : u32
+	{
+		color = 1,
+		depth = 2,
+		stencil = 4
+	};
+
 	class texture
 	{
 	public:
@@ -1375,8 +1418,7 @@ namespace gl
 
 		enum class internal_format
 		{
-			red = GL_RED,
-			r = GL_R,
+			r = GL_RED,
 			rg = GL_RG,
 			rgb = GL_RGB,
 			rgba = GL_RGBA,
@@ -1401,8 +1443,11 @@ namespace gl
 			rgba8 = GL_RGBA8,
 			r5g6b5 = GL_RGB565,
 			r8 = GL_R8,
-			rg8 = GL_RG8,
+			r16 = GL_R16,
 			r32f = GL_R32F,
+			rg8 = GL_RG8,
+			rg16 = GL_RG16,
+			rg16f = GL_RG16F,
 			rgba16f = GL_RGBA16F,
 			rgba32f = GL_RGBA32F
 		};
@@ -1472,6 +1517,7 @@ namespace gl
 		GLuint m_mipmaps = 0;
 		GLuint m_pitch = 0;
 		GLuint m_compressed = GL_FALSE;
+		GLuint m_aspect_flags = 0;
 
 		target m_target = target::texture2D;
 		internal_format m_internal_format = internal_format::rgba8;
@@ -1556,48 +1602,55 @@ namespace gl
 				m_height = height;
 				m_depth = depth;
 				m_mipmaps = mipmaps;
+				m_aspect_flags = image_aspect::color;
 
-				GLenum query_target = (target == GL_TEXTURE_CUBE_MAP) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : target;
-				glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_COMPRESSED, (GLint*)&m_compressed);
-
-				if (m_compressed)
+				switch (sized_format)
 				{
-					GLint compressed_size;
-					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &compressed_size);
-					m_pitch = compressed_size / height;
+				case GL_DEPTH_COMPONENT16:
+				{
+					m_pitch = width * 2;
+					m_aspect_flags = image_aspect::depth;
+					break;
 				}
-				else
+				case GL_DEPTH_COMPONENT32: // Unimplemented decode
+				case GL_DEPTH24_STENCIL8:
+				case GL_DEPTH32F_STENCIL8:
 				{
-					switch (sized_format)
-					{
-					case GL_DEPTH_COMPONENT16:
-					{
-						m_pitch = width * 2;
-						break;
-					}
-					case GL_DEPTH24_STENCIL8:
-					case GL_DEPTH32F_STENCIL8:
-					{
-						m_pitch = width * 4;
-						break;
-					}
-					default:
-					{
-						GLint r, g, b, a;
-						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_RED_SIZE, &r);
-						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_GREEN_SIZE, &g);
-						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_BLUE_SIZE, &b);
-						glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_ALPHA_SIZE, &a);
+					m_pitch = width * 4;
+					m_aspect_flags = image_aspect::depth | image_aspect::stencil;
+					break;
+				}
+				case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+				{
+					m_compressed = true;
+					m_pitch = width / 2;
+					break;
+				}
+				case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+				case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+				{
+					m_compressed = true;
+					m_pitch = width;
+					break;
+				}
+				default:
+				{
+					GLenum query_target = (target == GL_TEXTURE_CUBE_MAP) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : target;
+					GLint r, g, b, a;
 
-						m_pitch = width * (r + g + b + a) / 8;
-						break;
-					}
-					}
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_RED_SIZE, &r);
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_GREEN_SIZE, &g);
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_BLUE_SIZE, &b);
+					glGetTexLevelParameteriv(query_target, 0, GL_TEXTURE_ALPHA_SIZE, &a);
 
-					if (!m_pitch)
-					{
-						fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
-					}
+					m_pitch = width * (r + g + b + a) / 8;
+					break;
+				}
+				}
+
+				if (!m_pitch)
+				{
+					fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
 				}
 			}
 
@@ -1606,7 +1659,7 @@ namespace gl
 			m_component_layout = { GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 		}
 
-		~texture()
+		virtual ~texture()
 		{
 			glDeleteTextures(1, &m_id);
 		}
@@ -1676,6 +1729,11 @@ namespace gl
 		GLboolean compressed() const
 		{
 			return m_compressed;
+		}
+
+		GLuint aspect() const
+		{
+			return m_aspect_flags;
 		}
 
 		sizei size2D() const
@@ -1795,15 +1853,17 @@ namespace gl
 		GLuint m_id = 0;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
+		GLenum m_aspect_flags = 0;
 		texture *m_image_data = nullptr;
 
 		GLenum component_swizzle[4];
 
-		void create(texture* data, GLenum target, GLenum sized_format, const GLenum* argb_swizzle = nullptr)
+		void create(texture* data, GLenum target, GLenum sized_format, GLenum aspect_flags, const GLenum* argb_swizzle = nullptr)
 		{
 			m_target = target;
 			m_format = sized_format;
 			m_image_data = data;
+			m_aspect_flags = aspect_flags;
 
 			const auto num_levels = data->levels();
 			const auto num_layers = (target != GL_TEXTURE_CUBE_MAP) ? 1 : 6;
@@ -1828,22 +1888,34 @@ namespace gl
 				component_swizzle[2] = GL_BLUE;
 				component_swizzle[3] = GL_ALPHA;
 			}
+
+			if (aspect_flags & image_aspect::stencil)
+			{
+				constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
+				verify("Invalid aspect mask combination" HERE), (aspect_flags & depth_stencil_mask) != depth_stencil_mask;
+
+				glBindTexture(m_target, m_id);
+				glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
+			}
 		}
 
 	public:
 		texture_view(const texture_view&) = delete;
 		texture_view(texture_view&&) = delete;
 
-		texture_view(texture* data, GLenum target, GLenum sized_format, const GLenum* argb_swizzle = nullptr)
+		texture_view(texture* data, GLenum target, GLenum sized_format,
+			const GLenum* argb_swizzle = nullptr,
+			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
-			create(data, target, sized_format, argb_swizzle);
+			create(data, target, sized_format, aspect_flags, argb_swizzle);
 		}
 
-		texture_view(texture* data, const GLenum* argb_swizzle = nullptr)
+		texture_view(texture* data, const GLenum* argb_swizzle = nullptr,
+			GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
 			GLenum target = (GLenum)data->get_target();
 			GLenum sized_format = (GLenum)data->get_internal_format();
-			create(data, target, sized_format, argb_swizzle);
+			create(data, target, sized_format, aspect_flags, argb_swizzle);
 		}
 
 		~texture_view()
@@ -1866,7 +1938,12 @@ namespace gl
 			return m_format;
 		}
 
-		bool compare_swizzle(GLenum* argb_swizzle) const
+		GLenum aspect() const
+		{
+			return m_aspect_flags;
+		}
+
+		bool compare_swizzle(const GLenum* argb_swizzle) const
 		{
 			return (argb_swizzle[0] == component_swizzle[3] &&
 				argb_swizzle[1] == component_swizzle[0] &&
@@ -1898,23 +1975,27 @@ namespace gl
 
 	class viewable_image : public texture
 	{
-		std::unordered_map<u32, std::unique_ptr<texture_view>> views;
+		std::unordered_multimap<u32, std::unique_ptr<texture_view>> views;
 
 public:
 		using texture::texture;
 
-		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
+		texture_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, GLenum aspect_flags = image_aspect::color | image_aspect::depth)
 		{
-			auto found = views.find(remap_encoding);
-			if (found != views.end())
+			auto found = views.equal_range(remap_encoding);
+			for (auto It = found.first; It != found.second; ++It)
 			{
-				return found->second.get();
+				if (It->second->aspect() & aspect_flags)
+				{
+					return It->second.get();
+				}
 			}
 
+			verify(HERE), aspect() & aspect_flags;
 			auto mapping = apply_swizzle_remap(get_native_component_layout(), remap);
-			auto view = std::make_unique<texture_view>(this, mapping.data());
+			auto view = std::make_unique<texture_view>(this, mapping.data(), aspect_flags);
 			auto result = view.get();
-			views[remap_encoding] = std::move(view);
+			views.emplace(remap_encoding, std::move(view));
 			return result;
 		}
 
@@ -2218,8 +2299,8 @@ public:
 		void clear(buffers buffers_) const;
 		void clear(buffers buffers_, color4f color_value, double depth_value, u8 stencil_value) const;
 
-		void copy_from(const void* pixels, sizei size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
-		void copy_from(const buffer& buf, sizei size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
+		void copy_from(const void* pixels, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
+		void copy_from(const buffer& buf, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings = pixel_unpack_settings()) const;
 
 		void copy_to(void* pixels, coordi coord, gl::texture::format format_, gl::texture::type type_, class pixel_pack_settings pixel_settings = pixel_pack_settings()) const;
 		void copy_to(const buffer& buf, coordi coord, gl::texture::format format_, gl::texture::type type_, class pixel_pack_settings pixel_settings = pixel_pack_settings()) const;
@@ -2231,7 +2312,7 @@ public:
 		GLuint id() const;
 		void set_id(GLuint id);
 
-		void set_extents(size2i extents);
+		void set_extents(const size2i& extents);
 		size2i get_extents() const;
 
 		bool matches(const std::array<GLuint, 4>& color_targets, GLuint depth_stencil_target) const;
@@ -2342,7 +2423,7 @@ public:
 			{
 				const char* str = src.c_str();
 				const GLint length = (GLint)src.length();
-
+				if (g_cfg.video.log_programs)
 				{
 					std::string base_name;
 					switch (shader_type)
@@ -2358,7 +2439,7 @@ public:
 						break;
 					}
 
-					fs::file(fs::get_config_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
+					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
 				}
 
 				glShaderSource(m_id, 1, &str, &length);
@@ -2753,4 +2834,45 @@ public:
 			}
 		};
 	}
+
+	class blitter
+	{
+		struct save_binding_state
+		{
+			GLuint old_fbo;
+
+			save_binding_state()
+			{
+				glGetIntegerv(GL_FRAMEBUFFER_BINDING, (GLint*)&old_fbo);
+			}
+
+			~save_binding_state()
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, old_fbo);
+			}
+		};
+
+		fbo blit_src;
+		fbo blit_dst;
+
+	public:
+
+		void init()
+		{
+			blit_src.create();
+			blit_dst.create();
+		}
+
+		void destroy()
+		{
+			blit_dst.remove();
+			blit_src.remove();
+		}
+
+		void scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
+			bool is_depth_copy, const rsx::typeless_xfer& xfer_info);
+
+		void fast_clear_image(gl::command_context& cmd, const texture* dst, const color4f& color);
+		void fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil);
+	};
 }

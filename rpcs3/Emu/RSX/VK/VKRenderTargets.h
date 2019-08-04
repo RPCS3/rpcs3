@@ -1,68 +1,44 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "VKHelpers.h"
+#include "VKFormats.h"
 #include "../GCM.h"
 #include "../Common/surface_store.h"
 #include "../Common/TextureUtils.h"
-#include "VKFormats.h"
-#include "../rsx_utils.h"
+#include "../Common/texture_cache_utils.h"
 
 namespace vk
 {
-	struct render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::image*>
+	void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
+	void unresolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
+
+	struct render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<vk::viewable_image*>
 	{
-		u16 native_pitch = 0;
-		u16 rsx_pitch = 0;
+		u64 frame_tag = 0; // frame id when invalidated, 0 if not invalid
 
-		u16 surface_width = 0;
-		u16 surface_height = 0;
+		using viewable_image::viewable_image;
 
-		VkImageAspectFlags attachment_aspect_flag = VK_IMAGE_ASPECT_COLOR_BIT;
-		std::unordered_multimap<u32, std::unique_ptr<vk::image_view>> views;
-
-		u64 frame_tag = 0; //frame id when invalidated, 0 if not invalid
-
-		render_target(vk::render_device &dev,
-			uint32_t memory_type_index,
-			uint32_t access_flags,
-			VkImageType image_type,
-			VkFormat format,
-			uint32_t width, uint32_t height, uint32_t depth,
-			uint32_t mipmaps, uint32_t layers,
-			VkSampleCountFlagBits samples,
-			VkImageLayout initial_layout,
-			VkImageTiling tiling,
-			VkImageUsageFlags usage,
-			VkImageCreateFlags image_flags)
-
-			: viewable_image(dev, memory_type_index, access_flags, image_type, format, width, height, depth,
-					mipmaps, layers, samples, initial_layout, tiling, usage, image_flags)
-		{}
-
-		vk::image* get_surface() override
+		vk::viewable_image* get_surface(rsx::surface_access access_type) override
 		{
-			return (vk::image*)this;
+			if (samples() == 1 || access_type == rsx::surface_access::write)
+			{
+				return this;
+			}
+
+			// A read barrier should have been called before this!
+			verify("Read access without explicit barrier" HERE), resolve_surface, !(msaa_flags & rsx::surface_state_flags::require_resolve);
+			return resolve_surface.get();
 		}
 
-		u16 get_surface_width() const override
+		bool is_depth_surface() const override
 		{
-			return surface_width;
+			return !!(aspect() & VK_IMAGE_ASPECT_DEPTH_BIT);
 		}
 
-		u16 get_surface_height() const override
+		void release_ref(vk::viewable_image* t) const override
 		{
-			return surface_height;
-		}
-
-		u16 get_rsx_pitch() const override
-		{
-			return rsx_pitch;
-		}
-
-		u16 get_native_pitch() const override
-		{
-			return native_pitch;
+			static_cast<vk::render_target*>(t)->release();
 		}
 
 		bool matches_dimensions(u16 _width, u16 _height) const
@@ -70,18 +46,370 @@ namespace vk
 			//Use forward scaling to account for rounding and clamping errors
 			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
 		}
+
+		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
+			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT) override
+		{
+			if (remap_encoding != 0xDEADBEEF && resolve_surface)
+			{
+				return resolve_surface->get_view(remap_encoding, remap, mask);
+			}
+			else
+			{
+				if (remap_encoding == 0xDEADBEEF)
+				{
+					// Special encoding to skip the resolve target fetch
+					remap_encoding = 0xAAE4;
+				}
+
+				return vk::viewable_image::get_view(remap_encoding, remap, mask);
+			}
+		}
+
+		void resolve(vk::command_buffer& cmd)
+		{
+			VkImageSubresourceRange range = { aspect(), 0, 1, 0, 1 };
+
+			// NOTE: This surface can only be in the ATTACHMENT_OPTIMAL layout
+			// The resolve surface can be in any type of access, but we have to assume it is likely in read-only mode like shader read-only
+
+			if (LIKELY(!is_depth_surface()))
+			{
+				verify(HERE), current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				// This is the source; finish writing before reading
+				vk::insert_image_memory_barrier(
+					cmd, this->value,
+					this->current_layout, VK_IMAGE_LAYOUT_GENERAL,
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					VK_ACCESS_SHADER_READ_BIT,
+					range);
+
+				// This is the target; finish reading before writing
+				vk::insert_image_memory_barrier(
+					cmd, resolve_surface->value,
+					resolve_surface->current_layout, VK_IMAGE_LAYOUT_GENERAL,
+					VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_SHADER_READ_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT,
+					range);
+
+				this->current_layout = VK_IMAGE_LAYOUT_GENERAL;
+				resolve_surface->current_layout = VK_IMAGE_LAYOUT_GENERAL;
+			}
+			else
+			{
+				this->push_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				resolve_surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			}
+
+			vk::resolve_image(cmd, resolve_surface.get(), this);
+
+			if (LIKELY(!is_depth_surface()))
+			{
+				vk::insert_image_memory_barrier(
+					cmd, this->value,
+					this->current_layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					VK_ACCESS_SHADER_READ_BIT,
+					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					range);
+
+				vk::insert_image_memory_barrier(
+					cmd, resolve_surface->value,
+					VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT,
+					VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
+					range);
+
+				this->current_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				resolve_surface->current_layout = VK_IMAGE_LAYOUT_GENERAL;
+			}
+			else
+			{
+				this->pop_layout(cmd);
+				resolve_surface->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
+			}
+
+			msaa_flags &= ~(rsx::surface_state_flags::require_resolve);
+		}
+
+		void unresolve(vk::command_buffer& cmd)
+		{
+			verify(HERE), !(msaa_flags & rsx::surface_state_flags::require_resolve);
+			VkImageSubresourceRange range = { aspect(), 0, 1, 0, 1 };
+
+			if (LIKELY(!is_depth_surface()))
+			{
+				verify(HERE), current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				// This is the dest; finish reading before writing
+				vk::insert_image_memory_barrier(
+					cmd, this->value,
+					this->current_layout, VK_IMAGE_LAYOUT_GENERAL,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_SHADER_READ_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT,
+					range);
+
+				// This is the source; finish writing before reading
+				vk::insert_image_memory_barrier(
+					cmd, resolve_surface->value,
+					resolve_surface->current_layout, VK_IMAGE_LAYOUT_GENERAL,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT,
+					VK_ACCESS_SHADER_READ_BIT,
+					range);
+
+				this->current_layout = VK_IMAGE_LAYOUT_GENERAL;
+				resolve_surface->current_layout = VK_IMAGE_LAYOUT_GENERAL;
+			}
+			else
+			{
+				this->push_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+				resolve_surface->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
+
+			vk::unresolve_image(cmd, this, resolve_surface.get());
+
+			if (LIKELY(!is_depth_surface()))
+			{
+				vk::insert_image_memory_barrier(
+					cmd, this->value,
+					this->current_layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					VK_ACCESS_SHADER_WRITE_BIT,
+					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT,
+					range);
+
+				vk::insert_image_memory_barrier(
+					cmd, resolve_surface->value,
+					VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_SHADER_READ_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT,
+					range);
+
+				this->current_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				resolve_surface->current_layout = VK_IMAGE_LAYOUT_GENERAL;
+			}
+			else
+			{
+				this->pop_layout(cmd);
+				resolve_surface->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
+			}
+
+			msaa_flags &= ~(rsx::surface_state_flags::require_unresolve);
+		}
+
+		void memory_barrier(vk::command_buffer& cmd, rsx::surface_access access)
+		{
+			// Helper to optionally clear/initialize memory contents depending on barrier type
+			auto clear_surface_impl = [&cmd, this](vk::image* surface)
+			{
+				const auto optimal_layout = (surface->current_layout == VK_IMAGE_LAYOUT_GENERAL) ?
+					VK_IMAGE_LAYOUT_GENERAL :
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+				surface->push_layout(cmd, optimal_layout);
+
+				VkImageSubresourceRange range{ surface->aspect(), 0, 1, 0, 1 };
+				if (surface->aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					VkClearColorValue color = { 0.f, 0.f, 0.f, 1.f };
+					vkCmdClearColorImage(cmd, surface->value, surface->current_layout, &color, 1, &range);
+				}
+				else
+				{
+					VkClearDepthStencilValue clear{ 1.f, 255 };
+					vkCmdClearDepthStencilImage(cmd, surface->value, surface->current_layout, &clear, 1, &range);
+				}
+
+				surface->pop_layout(cmd);
+
+				if (surface == this)
+				{
+					state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+				}
+			};
+
+			auto get_resolve_target = [&]()
+			{
+				if (!resolve_surface)
+				{
+					// Create a resolve surface
+					auto pdev = vk::get_current_renderer();
+					const auto resolve_w = width() * samples_x;
+					const auto resolve_h = height() * samples_y;
+
+					VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+					usage |= (this->info.usage & (VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
+
+					resolve_surface.reset(new vk::viewable_image(
+						*pdev,
+						pdev->get_memory_mapping().device_local,
+						VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+						VK_IMAGE_TYPE_2D,
+						format(),
+						resolve_w, resolve_h, 1, 1, 1,
+						VK_SAMPLE_COUNT_1_BIT,
+						VK_IMAGE_LAYOUT_UNDEFINED,
+						VK_IMAGE_TILING_OPTIMAL,
+						usage,
+						0));
+
+					resolve_surface->native_component_map = native_component_map;
+					resolve_surface->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
+				}
+
+				return resolve_surface.get();
+			};
+
+			const bool read_access = (access != rsx::surface_access::write);
+			if (samples() > 1 && read_access)
+			{
+				get_resolve_target();
+			}
+
+			if (LIKELY(old_contents.empty()))
+			{
+				if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+				{
+					clear_surface_impl(this);
+
+					if (resolve_surface && read_access)
+					{
+						// Only clear the resolve surface if reading from it, otherwise it's a waste
+						clear_surface_impl(resolve_surface.get());
+					}
+
+					on_write(rsx::get_shared_tag(), rsx::surface_state_flags::ready);
+				}
+				else if (msaa_flags & rsx::surface_state_flags::require_resolve)
+				{
+					if (read_access)
+					{
+						// Only do this step when read access is required
+						resolve(cmd);
+					}
+				}
+				else if (msaa_flags & rsx::surface_state_flags::require_unresolve)
+				{
+					if (!read_access)
+					{
+						// Only do this step when it is needed to start rendering
+						unresolve(cmd);
+					}
+				}
+
+				return;
+			}
+
+			// Memory transfers
+			vk::image *target_image = (samples() > 1) ? get_resolve_target() : this;
+			vk::blitter hw_blitter;
+			bool optimize_copy = true;
+			const auto dst_bpp = get_bpp();
+			unsigned first = prepare_rw_barrier_for_transfer(this);
+
+			for (auto i = first; i < old_contents.size(); ++i)
+			{
+				auto &section = old_contents[i];
+				auto src_texture = static_cast<vk::render_target*>(section.source);
+				src_texture->read_barrier(cmd);
+
+				const auto src_bpp = src_texture->get_bpp();
+				rsx::typeless_xfer typeless_info{};
+
+				if (src_texture->info.format == info.format)
+				{
+					verify(HERE), src_bpp == dst_bpp;
+				}
+				else
+				{
+					if (!formats_are_bitcast_compatible(format(), src_texture->format()) ||
+						src_texture->aspect() != aspect())
+					{
+						typeless_info.src_is_typeless = true;
+						typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
+						typeless_info.src_native_format_override = (u32)info.format;
+						typeless_info.src_is_depth = src_texture->is_depth_surface();
+						typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
+					}
+				}
+
+				section.init_transfer(this);
+				auto src_area = section.src_rect();
+				auto dst_area = section.dst_rect();
+
+				if (g_cfg.video.antialiasing_level != msaa_level::none)
+				{
+					src_texture->transform_pixels_to_samples(src_area);
+					this->transform_pixels_to_samples(dst_area);
+				}
+
+				bool memory_load = true;
+				if (dst_area.x1 == 0 && dst_area.y1 == 0 &&
+					unsigned(dst_area.x2) == target_image->width() && unsigned(dst_area.y2) == target_image->height())
+				{
+					// Skip a bunch of useless work
+					state_flags &= ~(rsx::surface_state_flags::erase_bkgnd);
+					msaa_flags = rsx::surface_state_flags::ready;
+
+					memory_load = false;
+					stencil_init_flags = src_texture->stencil_init_flags;
+				}
+				else if (state_flags & rsx::surface_state_flags::erase_bkgnd)
+				{
+					clear_surface_impl(target_image);
+
+					state_flags &= ~(rsx::surface_state_flags::erase_bkgnd);
+					msaa_flags = rsx::surface_state_flags::ready;
+				}
+				else if (msaa_flags & rsx::surface_state_flags::require_resolve)
+				{
+					// Need to forward resolve this
+					resolve(cmd);
+				}
+
+				hw_blitter.scale_image(
+					cmd,
+					src_texture->get_surface(rsx::surface_access::read),
+					this->get_surface(rsx::surface_access::transfer),
+					src_area,
+					dst_area,
+					/*linear?*/false, /*depth?(unused)*/false, typeless_info);
+
+				optimize_copy = optimize_copy && !memory_load;
+			}
+
+			on_write_copy(0, optimize_copy);
+
+			if (!read_access && samples() > 1)
+			{
+				// Write barrier, must initialize
+				unresolve(cmd);
+			}
+		}
+
+		void read_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, rsx::surface_access::read); }
+		void write_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, rsx::surface_access::write); }
 	};
 
-	struct framebuffer_holder: public vk::framebuffer, public rsx::ref_counted
+	static inline vk::render_target* as_rtt(vk::image* t)
 	{
-		framebuffer_holder(VkDevice dev,
-			VkRenderPass pass,
-			u32 width, u32 height,
-			std::vector<std::unique_ptr<vk::image_view>> &&atts)
-
-			: framebuffer(dev, pass, width, height, std::move(atts))
-		{}
-	};
+		return static_cast<vk::render_target*>(t);
+	}
 }
 
 namespace rsx
@@ -90,210 +418,301 @@ namespace rsx
 	{
 		using surface_storage_type = std::unique_ptr<vk::render_target>;
 		using surface_type = vk::render_target*;
-		using command_list_type = vk::command_buffer*;
+		using command_list_type = vk::command_buffer&;
 		using download_buffer_object = void*;
+		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
-			u32 /*address*/,
+			u32 address,
 			surface_color_format format,
-			size_t width, size_t height,
-			vk::render_target* old_surface,
-			vk::render_device &device, vk::command_buffer *cmd)
+			size_t width, size_t height, size_t pitch,
+			rsx::surface_antialiasing antialias,
+			vk::render_device &device, vk::command_buffer& cmd)
 		{
-			auto fmt = vk::get_compatible_surface_format(format);
+			const auto fmt = vk::get_compatible_surface_format(format);
 			VkFormat requested_format = fmt.first;
 
+			u8 samples;
+			surface_sample_layout sample_layout;
+			if (g_cfg.video.antialiasing_level == msaa_level::_auto)
+			{
+				samples = get_format_sample_count(antialias);
+				sample_layout = surface_sample_layout::ps3;
+			}
+			else
+			{
+				samples = 1;
+				sample_layout = surface_sample_layout::null;
+			}
+
+			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			if (LIKELY(samples == 1))
+			{
+				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			}
+			else
+			{
+				usage_flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+			}
+
 			std::unique_ptr<vk::render_target> rtt;
-			rtt.reset(new vk::render_target(device, device.get_memory_mapping().device_local,
+			rtt = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
 				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
-				VK_SAMPLE_COUNT_1_BIT,
+				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,
-				0));
+				usage_flags,
+				0);
 
-			change_image_layout(*cmd, rtt.get(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_COLOR_BIT));
+			rtt->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+			rtt->set_format(format);
+			rtt->set_aa_mode(antialias);
+			rtt->sample_layout = sample_layout;
+			rtt->memory_usage_flags = rsx::surface_usage_flags::attachment;
+			rtt->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			rtt->native_component_map = fmt.second;
-			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format);
+			rtt->rsx_pitch = (u16)pitch;
+			rtt->native_pitch = (u16)width * get_format_block_size_in_bytes(format) * rtt->samples_x;
 			rtt->surface_width = (u16)width;
 			rtt->surface_height = (u16)height;
-			rtt->dirty = true;
+			rtt->queue_tag(address);
 
-			if (old_surface != nullptr && old_surface->info.format == requested_format)
-				rtt->old_contents = old_surface;
-
+			rtt->add_ref();
 			return rtt;
 		}
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
-			u32 /* address */,
+			u32 address,
 			surface_depth_format format,
-			size_t width, size_t height,
-			vk::render_target* old_surface,
-			vk::render_device &device, vk::command_buffer *cmd)
+			size_t width, size_t height, size_t pitch,
+			rsx::surface_antialiasing antialias,
+			vk::render_device &device, vk::command_buffer& cmd)
 		{
-			VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, VK_IMAGE_ASPECT_DEPTH_BIT);
+			const VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
+			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-			if (requested_format != VK_FORMAT_D16_UNORM)
-				range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+			u8 samples;
+			surface_sample_layout sample_layout;
+			if (g_cfg.video.antialiasing_level == msaa_level::_auto)
+			{
+				samples = get_format_sample_count(antialias);
+				sample_layout = surface_sample_layout::ps3;
+			}
+			else
+			{
+				samples = 1;
+				sample_layout = surface_sample_layout::null;
+			}
 
-			const auto scale = rsx::get_resolution_scale();
+			if (LIKELY(samples == 1))
+			{
+				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			}
 
 			std::unique_ptr<vk::render_target> ds;
-			ds.reset(new vk::render_target(device, device.get_memory_mapping().device_local,
+			ds = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
 				static_cast<uint32_t>(rsx::apply_resolution_scale((u16)width, true)), static_cast<uint32_t>(rsx::apply_resolution_scale((u16)height, true)), 1, 1, 1,
-				VK_SAMPLE_COUNT_1_BIT,
+				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
-				VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT| VK_IMAGE_USAGE_TRANSFER_SRC_BIT| VK_IMAGE_USAGE_TRANSFER_DST_BIT|VK_IMAGE_USAGE_SAMPLED_BIT,
-				0));
+				usage_flags,
+				0);
 
+			ds->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+			ds->set_format(format);
+			ds->set_aa_mode(antialias);
+			ds->sample_layout = sample_layout;
+			ds->memory_usage_flags= rsx::surface_usage_flags::attachment;
+			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
-			change_image_layout(*cmd, ds.get(), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
 
-			ds->native_pitch = (u16)width * 2;
+			ds->native_pitch = (u16)width * 2 * ds->samples_x;
 			if (format == rsx::surface_depth_format::z24s8)
 				ds->native_pitch *= 2;
 
-			ds->attachment_aspect_flag = range.aspectMask;
+			ds->rsx_pitch = (u16)pitch;
 			ds->surface_width = (u16)width;
 			ds->surface_height = (u16)height;
-			ds->dirty = true;
+			ds->queue_tag(address);
 
-			if (old_surface != nullptr && old_surface->info.format == requested_format)
-				ds->old_contents = old_surface;
-
+			ds->add_ref();
 			return ds;
 		}
 
-		static
-		void get_surface_info(vk::render_target *surface, rsx::surface_format_info *info)
+		static void clone_surface(
+			vk::command_buffer& cmd,
+			std::unique_ptr<vk::render_target>& sink, vk::render_target* ref,
+			u32 address, barrier_descriptor_t& prev)
 		{
-			info->rsx_pitch = surface->rsx_pitch;
-			info->native_pitch = surface->native_pitch;
-			info->surface_width = surface->get_surface_width();
-			info->surface_height = surface->get_surface_height();
-			info->bpp = static_cast<u8>(info->native_pitch / info->surface_width);
-		}
-
-		static void prepare_rtt_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
-		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, range);
-
-			//Reset deref count
-			surface->deref_count = 0;
-			surface->frame_tag = 0;
-		}
-
-		static void prepare_rtt_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
-		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
-		}
-
-		static void prepare_ds_for_drawing(vk::command_buffer* pcmd, vk::render_target *surface)
-		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, range);
-
-			//Reset deref count
-			surface->deref_count = 0;
-			surface->frame_tag = 0;
-		}
-
-		static void prepare_ds_for_sampling(vk::command_buffer* pcmd, vk::render_target *surface)
-		{
-			VkImageSubresourceRange range = vk::get_image_subresource_range(0, 0, 1, 1, surface->attachment_aspect_flag);
-			change_image_layout(*pcmd, surface, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
-		}
-
-		static
-		void invalidate_surface_contents(vk::command_buffer* /*pcmd*/, vk::render_target *surface, vk::render_target *old_surface)
-		{
-			surface->old_contents = old_surface;
-			surface->dirty = true;
-			surface->reset_aa_mode();
-		}
-
-		static
-		void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
-		{
-			surface->frame_tag = vk::get_current_frame_id();
-			if (!surface->frame_tag) surface->frame_tag = 1;
-		}
-
-		static
-		void notify_surface_persist(const std::unique_ptr<vk::render_target> &surface)
-		{
-			surface->save_aa_mode();
-		}
-
-		static bool rtt_has_format_width_height(const std::unique_ptr<vk::render_target> &rtt, surface_color_format format, size_t width, size_t height, bool check_refs=false)
-		{
-			if (check_refs && rtt->deref_count == 0) //Surface may still have read refs from data 'copy'
-				return false;
-
-			VkFormat fmt = vk::get_compatible_surface_format(format).first;
-
-			if (rtt->info.format == fmt &&
-				rtt->matches_dimensions((u16)width, (u16)height))
-				return true;
-
-			return false;
-		}
-
-		static bool ds_has_format_width_height(const std::unique_ptr<vk::render_target> &ds, surface_depth_format format, size_t width, size_t height, bool check_refs=false)
-		{
-			if (check_refs && ds->deref_count == 0) //Surface may still have read refs from data 'copy'
-				return false;
-
-			if (ds->matches_dimensions((u16)width, (u16)height))
+			if (!sink)
 			{
-				//Check format
-				switch (ds->info.format)
+				const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width(rsx::surface_metrics::pixels));
+				const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height(rsx::surface_metrics::pixels));
+
+				auto& dev = cmd.get_command_pool().get_owner();
+				sink = std::make_unique<vk::render_target>(dev, dev.get_memory_mapping().device_local,
+					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					VK_IMAGE_TYPE_2D,
+					ref->format(),
+					new_w, new_h, 1, 1, 1,
+					static_cast<VkSampleCountFlagBits>(ref->samples()),
+					VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_TILING_OPTIMAL,
+					ref->info.usage,
+					ref->info.flags);
+
+				sink->add_ref();
+				sink->set_spp(ref->get_spp());
+				sink->format_info = ref->format_info;
+				sink->memory_usage_flags = rsx::surface_usage_flags::storage;
+				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
+				sink->native_component_map = ref->native_component_map;
+				sink->sample_layout = ref->sample_layout;
+				sink->stencil_init_flags = ref->stencil_init_flags;
+				sink->native_pitch = u16(prev.width * ref->get_bpp() * ref->samples_x);
+				sink->surface_width = prev.width;
+				sink->surface_height = prev.height;
+				sink->queue_tag(address);
+
+				const auto best_layout = (ref->info.usage & VK_IMAGE_USAGE_SAMPLED_BIT) ?
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL :
+					ref->current_layout;
+
+				sink->change_layout(cmd, best_layout);
+			}
+
+			prev.target = sink.get();
+
+			sink->rsx_pitch = ref->get_rsx_pitch();
+			sink->sync_tag();
+
+			if (!sink->old_contents.empty())
+			{
+				// Deal with this, likely only needs to clear
+				if (sink->surface_width > prev.width || sink->surface_height > prev.height)
 				{
-				case VK_FORMAT_D16_UNORM:
-					return format == surface_depth_format::z16;
-				case VK_FORMAT_D24_UNORM_S8_UINT:
-				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-					return format == surface_depth_format::z24s8;
+					sink->write_barrier(cmd);
+				}
+				else
+				{
+					sink->clear_rw_barrier();
 				}
 			}
 
-			return false;
+			sink->set_old_contents_region(prev, false);
+			sink->last_use_tag = ref->last_use_tag;
 		}
 
-		static download_buffer_object issue_download_command(surface_type, surface_color_format, size_t /*width*/, size_t /*height*/, ...)
+		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 sample_count)
 		{
-			return nullptr;
+			return (surface->format() == ref->format() &&
+					surface->get_spp() == sample_count &&
+					surface->get_surface_width() >= width &&
+					surface->get_surface_height() >= height);
 		}
 
-		static download_buffer_object issue_depth_download_command(surface_type, surface_depth_format, size_t /*width*/, size_t /*height*/, ...)
+		static void prepare_surface_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
 		{
-			return nullptr;
+			if (surface->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
+			{
+				surface->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			}
+			else
+			{
+				surface->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			}
+
+			surface->frame_tag = 0;
+			surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
 		}
 
-		static download_buffer_object issue_stencil_download_command(surface_type, surface_depth_format, size_t /*width*/, size_t /*height*/, ...)
+		static void prepare_surface_for_sampling(vk::command_buffer& /*cmd*/, vk::render_target* /*surface*/)
+		{}
+
+		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target> &surface, size_t pitch)
 		{
-			return nullptr;
+			return surface->rsx_pitch == pitch;
 		}
 
-		gsl::span<const gsl::byte> map_downloaded_buffer(download_buffer_object, ...)
+		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target *surface, u32 address, size_t pitch)
 		{
-			return {};
+			surface->rsx_pitch = (u16)pitch;
+			surface->queue_tag(address);
+			surface->last_use_tag = 0;
+			surface->stencil_init_flags = 0;
+			surface->memory_usage_flags = rsx::surface_usage_flags::unknown;
 		}
 
-		static void unmap_downloaded_buffer(download_buffer_object, ...)
+		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
 		{
+			surface->frame_tag = vk::get_current_frame_id();
+			if (!surface->frame_tag) surface->frame_tag = 1;
+
+			if (!surface->old_contents.empty())
+			{
+				// TODO: Retire the deferred writes
+				surface->clear_rw_barrier();
+			}
+
+			surface->release();
+		}
+
+		static void notify_surface_persist(const std::unique_ptr<vk::render_target>& /*surface*/)
+		{}
+
+		static void notify_surface_reused(const std::unique_ptr<vk::render_target> &surface)
+		{
+			surface->state_flags |= rsx::surface_state_flags::erase_bkgnd;
+			surface->add_ref();
+		}
+
+		static bool int_surface_matches_properties(
+			const std::unique_ptr<vk::render_target> &surface,
+			VkFormat format,
+			size_t width, size_t height,
+			rsx::surface_antialiasing antialias,
+			bool check_refs)
+		{
+			if (check_refs && surface->has_refs())
+			{
+				// Surface may still have read refs from data 'copy'
+				return false;
+			}
+
+			return (surface->info.format == format &&
+				surface->get_spp() == get_format_sample_count(antialias) &&
+				surface->matches_dimensions((u16)width, (u16)height));
+		}
+
+		static bool surface_matches_properties(
+			const std::unique_ptr<vk::render_target> &surface,
+			surface_color_format format,
+			size_t width, size_t height,
+			rsx::surface_antialiasing antialias,
+			bool check_refs = false)
+		{
+			VkFormat vk_format = vk::get_compatible_surface_format(format).first;
+			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
+		}
+
+		static bool surface_matches_properties(
+			const std::unique_ptr<vk::render_target> &surface,
+			surface_depth_format format,
+			size_t width, size_t height,
+			rsx::surface_antialiasing antialias,
+			bool check_refs = false)
+		{
+			auto device = vk::get_current_renderer();
+			VkFormat vk_format = vk::get_compatible_depth_surface_format(device->get_formats_support(), format);
+			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
 		}
 
 		static vk::render_target *get(const std::unique_ptr<vk::render_target> &tex)
@@ -306,8 +725,7 @@ namespace rsx
 	{
 		void destroy()
 		{
-			m_render_targets_storage.clear();
-			m_depth_stencil_storage.clear();
+			invalidate_all();
 			invalidated_resources.clear();
 		}
 
@@ -318,10 +736,9 @@ namespace rsx
 			{
 				verify(HERE), rtt->frame_tag != 0;
 
-				if (rtt->deref_count >= 2 && rtt->frame_tag < last_finished_frame)
+				if (rtt->unused_check_count() >= 2 && rtt->frame_tag < last_finished_frame)
 					return true;
 
-				rtt->deref_count++;
 				return false;
 			});
 		}

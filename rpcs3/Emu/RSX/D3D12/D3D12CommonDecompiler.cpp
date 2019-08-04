@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12CommonDecompiler.h"
@@ -114,6 +114,8 @@ std::string compareFunctionImp(COMPARE f, const std::string &Op0, const std::str
 
 void insert_d3d12_legacy_function(std::ostream& OS, bool is_fragment_program)
 {
+	OS << "#define _select lerp\n\n";
+
 	OS << "float4 lit_legacy(float4 val)";
 	OS << "{\n";
 	OS << "	float4 clamped_val = val;\n";
@@ -130,7 +132,7 @@ void insert_d3d12_legacy_function(std::ostream& OS, bool is_fragment_program)
 	if (!is_fragment_program)
 		return;
 
-	program_common::insert_compare_op(OS);
+	program_common::insert_compare_op(OS, false);
 
 	OS << "uint packSnorm2x16(float2 val)";
 	OS << "{\n";

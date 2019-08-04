@@ -1,4 +1,4 @@
-#include "rpcs3_app.h"
+﻿#include "rpcs3_app.h"
 
 #include "rpcs3qt/qt_utils.h"
 
@@ -36,8 +36,8 @@
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
-#include "Emu/Audio/Null/NullAudioThread.h"
-#include "Emu/Audio/AL/OpenALThread.h"
+#include "Emu/Audio/Null/NullAudioBackend.h"
+#include "Emu/Audio/AL/OpenALBackend.h"
 #ifdef _MSC_VER
 #include "Emu/RSX/D3D12/D3D12GSRender.h"
 #endif
@@ -45,13 +45,13 @@
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
 #ifdef _WIN32
-#include "Emu/Audio/XAudio2/XAudio2Thread.h"
+#include "Emu/Audio/XAudio2/XAudio2Backend.h"
 #endif
 #ifdef HAVE_ALSA
-#include "Emu/Audio/ALSA/ALSAThread.h"
+#include "Emu/Audio/ALSA/ALSABackend.h"
 #endif
 #ifdef HAVE_PULSE
-#include "Emu/Audio/Pulse/PulseThread.h"
+#include "Emu/Audio/Pulse/PulseBackend.h"
 #endif
 
 #ifdef _WIN32
@@ -142,6 +142,15 @@ void rpcs3_app::InitializeCallbacks()
 		RequestCallAfter(std::move(func));
 	};
 
+	callbacks.reset_pads = [this](const std::string& title_id = "")
+	{
+		pad::get_current_handler()->Reset(title_id);
+	};
+	callbacks.enable_pads = [this](bool enable)
+	{
+		pad::get_current_handler()->SetEnabled(enable);
+	};
+
 	callbacks.get_kb_handler = [=]() -> std::shared_ptr<KeyboardHandlerBase>
 	{
 		switch (keyboard_handler type = g_cfg.io.keyboard)
@@ -174,9 +183,9 @@ void rpcs3_app::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_pad_handler = [this]() -> std::shared_ptr<pad_thread>
+	callbacks.get_pad_handler = [this](const std::string& title_id) -> std::shared_ptr<pad_thread>
 	{
-		return std::make_shared<pad_thread>(thread(), gameWindow);
+		return std::make_shared<pad_thread>(thread(), gameWindow, title_id);
 	};
 
 	callbacks.get_gs_frame = [this]() -> std::unique_ptr<GSFrameBase>
@@ -193,7 +202,6 @@ void rpcs3_app::InitializeCallbacks()
 			h = guiSettings->GetValue(gui::gs_height).toInt();
 		}
 
-		bool disableMouse = guiSettings->GetValue(gui::gs_disableMouse).toBool();
 		auto frame_geometry = gui::utils::create_centered_window_geometry(RPCS3MainWin->geometry(), w, h);
 
 		gs_frame* frame;
@@ -202,23 +210,23 @@ void rpcs3_app::InitializeCallbacks()
 		{
 		case video_renderer::null:
 		{
-			frame = new gs_frame("Null", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gs_frame("Null", frame_geometry, RPCS3MainWin->GetAppIcon(), guiSettings);
 			break;
 		}
 		case video_renderer::opengl:
 		{
-			frame = new gl_gs_frame(frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gl_gs_frame(frame_geometry, RPCS3MainWin->GetAppIcon(), guiSettings);
 			break;
 		}
 		case video_renderer::vulkan:
 		{
-			frame = new gs_frame("Vulkan", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gs_frame("Vulkan", frame_geometry, RPCS3MainWin->GetAppIcon(), guiSettings);
 			break;
 		}
 #ifdef _MSC_VER
 		case video_renderer::dx12:
 		{
-			frame = new gs_frame("DirectX 12", frame_geometry, RPCS3MainWin->GetAppIcon(), disableMouse);
+			frame = new gs_frame("DirectX 12", frame_geometry, RPCS3MainWin->GetAppIcon(), guiSettings);
 			break;
 		}
 #endif
@@ -246,22 +254,22 @@ void rpcs3_app::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_audio = []() -> std::shared_ptr<AudioThread>
+	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
 	{
 		switch (audio_renderer type = g_cfg.audio.renderer)
 		{
-		case audio_renderer::null: return std::make_shared<NullAudioThread>();
+		case audio_renderer::null: return std::make_shared<NullAudioBackend>();
 #ifdef _WIN32
-		case audio_renderer::xaudio: return std::make_shared<XAudio2Thread>();
+		case audio_renderer::xaudio: return std::make_shared<XAudio2Backend>();
 #endif
 #ifdef HAVE_ALSA
-		case audio_renderer::alsa: return std::make_shared<ALSAThread>();
+		case audio_renderer::alsa: return std::make_shared<ALSABackend>();
 #endif
 #ifdef HAVE_PULSE
-		case audio_renderer::pulse: return std::make_shared<PulseThread>();
+		case audio_renderer::pulse: return std::make_shared<PulseBackend>();
 #endif
 
-		case audio_renderer::openal: return std::make_shared<OpenALThread>();
+		case audio_renderer::openal: return std::make_shared<OpenALBackend>();
 		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
 		}
 	};
@@ -269,6 +277,11 @@ void rpcs3_app::InitializeCallbacks()
 	callbacks.get_msg_dialog = [=]() -> std::shared_ptr<MsgDialogBase>
 	{
 		return std::make_shared<msg_dialog_frame>(RPCS3MainWin->windowHandle());
+	};
+
+	callbacks.get_osk_dialog = [=]() -> std::shared_ptr<OskDialogBase>
+	{
+		return std::make_shared<osk_dialog_frame>();
 	};
 
 	callbacks.get_save_dialog = [=]() -> std::unique_ptr<SaveDialogBase>
@@ -377,7 +390,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 
 		// dock widget
 		"QDockWidget{ background: transparent; color: black; }"
-		"[floating = \"true\"]{ background: white; }"
+		"[floating=\"true\"]{ background: white; }"
 		"QDockWidget::title{ background: #e3e3e3; border: none; padding-top: 0.2em; padding-left: 0.2em; }"
 		"QDockWidget::close-button, QDockWidget::float-button{ background-color: #e3e3e3; }"
 
@@ -422,9 +435,13 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 
 	QFile file(path);
 
-#if !defined(_WIN32) && !defined(__APPLE__)
-	// If we can't open the file, try the /share folder
+	// If we can't open the file, try the /share or /Resources folder
+#if !defined(_WIN32)
+#ifdef __APPLE__
+	QString share_dir = QCoreApplication::applicationDirPath() + "/../Resources/";
+#else
 	QString share_dir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
+#endif
 	QFile share_file(share_dir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
 #endif
 
@@ -451,7 +468,7 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 		setStyleSheet(file.readAll());
 		file.close();
 	}
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if !defined(_WIN32)
 	else if (share_file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{
 		QDir::setCurrent(share_dir);

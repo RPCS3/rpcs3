@@ -15,6 +15,7 @@
 #include "Emu/Cell/lv2/sys_event_flag.h"
 #include "Emu/Cell/lv2/sys_rwlock.h"
 #include "Emu/Cell/lv2/sys_prx.h"
+#include "Emu/Cell/lv2/sys_overlay.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_spu.h"
@@ -55,7 +56,7 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
 
 	Update();
-};
+}
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -63,7 +64,7 @@ void kernel_explorer::Update()
 {
 	m_tree->clear();
 
-	const auto dct = fxm::get_always<lv2_memory_container>();
+	const auto dct = fxm::get<lv2_memory_container>();
 
 	if (!dct)
 	{
@@ -125,8 +126,9 @@ void kernel_explorer::Update()
 	lv2_types[SYS_EVENT_PORT_OBJECT] =					l_addTreeChild(root, "Event Ports");
 	lv2_types[SYS_TRACE_OBJECT] =								l_addTreeChild(root, "Traces");
 	lv2_types[SYS_SPUIMAGE_OBJECT] =						l_addTreeChild(root, "SPU Images");
-	lv2_types[SYS_PRX_OBJECT] =									l_addTreeChild(root, "Modules");
+	lv2_types[SYS_PRX_OBJECT] =									l_addTreeChild(root, "PRX Modules");
 	lv2_types[SYS_SPUPORT_OBJECT] =							l_addTreeChild(root, "SPU Ports");
+	lv2_types[SYS_OVERLAY_OBJECT] =						 l_addTreeChild(root, "Overlay Modules");
 	lv2_types[SYS_LWMUTEX_OBJECT] =							l_addTreeChild(root, "Light Weight Mutexes");
 	lv2_types[SYS_TIMER_OBJECT] =								l_addTreeChild(root, "Timers");
 	lv2_types[SYS_SEMAPHORE_OBJECT] =						l_addTreeChild(root, "Semaphores");
@@ -212,6 +214,12 @@ void kernel_explorer::Update()
 			l_addTreeChild(node, qstr(fmt::format("SPU Port: ID = 0x%08x", id)));
 			break;
 		}
+		case SYS_OVERLAY_OBJECT:
+		{
+			auto& ovl = static_cast<lv2_overlay&>(obj);
+			l_addTreeChild(node, qstr(fmt::format("OVL: ID = 0x%08x '%s'", id, ovl.name)));
+			break;
+		}
 		case SYS_LWMUTEX_OBJECT:
 		{
 			auto& lwm = static_cast<lv2_lwmutex&>(obj);
@@ -233,7 +241,7 @@ void kernel_explorer::Update()
 		}
 		case SYS_LWCOND_OBJECT:
 		{
-			auto& lwc = static_cast<lv2_cond&>(obj);
+			auto& lwc = static_cast<lv2_lwcond&>(obj);
 			l_addTreeChild(node, qstr(fmt::format("LWCond: ID = 0x%08x \"%s\", Waiters = %zu", id, +name64(lwc.name), +lwc.waiters)));
 			break;
 		}

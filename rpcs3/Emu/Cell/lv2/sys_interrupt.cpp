@@ -1,12 +1,12 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_interrupt.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUOpcodes.h"
-#include "sys_interrupt.h"
 
 LOG_CHANNEL(sys_interrupt);
 
@@ -37,8 +37,10 @@ void lv2_int_serv::join()
 	(*thread)();
 }
 
-error_code sys_interrupt_tag_destroy(u32 intrtag)
+error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_interrupt.warning("sys_interrupt_tag_destroy(intrtag=0x%x)", intrtag);
 
 	const auto tag = idm::withdraw<lv2_obj, lv2_int_tag>(intrtag, [](lv2_int_tag& tag) -> CellError
@@ -64,8 +66,10 @@ error_code sys_interrupt_tag_destroy(u32 intrtag)
 	return CELL_OK;
 }
 
-error_code _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 intrthread, u64 arg1, u64 arg2)
+error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32 intrtag, u32 intrthread, u64 arg1, u64 arg2)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_interrupt.warning("_sys_interrupt_thread_establish(ih=*0x%x, intrtag=0x%x, intrthread=0x%x, arg1=0x%llx, arg2=0x%llx)", ih, intrtag, intrthread, arg1, arg2);
 
 	CellError error = CELL_EAGAIN;
@@ -124,6 +128,8 @@ error_code _sys_interrupt_thread_establish(vm::ptr<u32> ih, u32 intrtag, u32 int
 
 error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u64> r13)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_interrupt.warning("_sys_interrupt_thread_disestablish(ih=0x%x, r13=*0x%x)", ih, r13);
 
 	const auto handler = idm::withdraw<lv2_obj, lv2_int_serv>(ih);

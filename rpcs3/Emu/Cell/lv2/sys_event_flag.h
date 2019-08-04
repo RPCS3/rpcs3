@@ -1,6 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
+
+#include "Emu/Memory/vm_ptr.h"
 
 enum
 {
@@ -24,8 +26,8 @@ struct sys_event_flag_attribute_t
 
 	union
 	{
-		char name[8];
 		u64 name_u64;
+		char name[sizeof(u64)];
 	};
 };
 
@@ -40,7 +42,7 @@ struct lv2_event_flag final : lv2_obj
 	const s32 type;
 	const u64 name;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<u32> waiters{0};
 	atomic_t<u64> pattern;
 	std::deque<cpu_thread*> sq;
@@ -112,11 +114,11 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_event_flag_create(vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init);
-error_code sys_event_flag_destroy(u32 id);
+error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init);
+error_code sys_event_flag_destroy(ppu_thread& ppu, u32 id);
 error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result, u64 timeout);
-error_code sys_event_flag_trywait(u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result);
+error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm::ptr<u64> result);
 error_code sys_event_flag_set(u32 id, u64 bitptn);
-error_code sys_event_flag_clear(u32 id, u64 bitptn);
+error_code sys_event_flag_clear(ppu_thread& ppu, u32 id, u64 bitptn);
 error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num);
-error_code sys_event_flag_get(u32 id, vm::ptr<u64> flags);
+error_code sys_event_flag_get(ppu_thread& ppu, u32 id, vm::ptr<u64> flags);

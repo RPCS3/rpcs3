@@ -2,6 +2,9 @@
 #include "D3D12Utils.h"
 #include "d3dx12.h"
 #include "../Common/ring_buffer_helper.h"
+
+#include "Utilities/mutex.h"
+
 #include <list>
 #include <mutex>
 

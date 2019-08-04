@@ -1,26 +1,26 @@
-#include "stdafx.h"
-#include <set>
-#include "Emu/Memory/vm.h"
-#include "Emu/System.h"
+﻿#include "stdafx.h"
 #include "GLFragmentProgram.h"
-#include "../Common/ProgramStateCache.h"
+
+#include "Emu/System.h"
+#include "GLHelpers.h"
+#include "GLFragmentProgram.h"
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
-
+#include "../Common/GLSLCommon.h"
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
+std::string GLFragmentDecompilerThread::getHalfTypeName(size_t elementCount)
+{
+	return glsl::getHalfTypeNameImpl(elementCount);
+}
+
 std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 {
 	return glsl::getFunctionImpl(f);
-}
-
-std::string GLFragmentDecompilerThread::saturate(const std::string & code)
-{
-	return "clamp(" + code + ", 0., 1.)";
 }
 
 std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
@@ -31,6 +31,19 @@ std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::st
 void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
 	OS << "#version 430\n";
+
+	if (device_props.has_native_half_support)
+	{
+		const auto driver_caps = gl::get_driver_caps();
+		if (driver_caps.NV_gpu_shader5_supported)
+		{
+			OS << "#extension GL_NV_gpu_shader5: require\n";
+		}
+		else if (driver_caps.AMD_gpu_shader_half_float_supported)
+		{
+			OS << "#extension GL_AMD_gpu_shader_half_float: require\n";
+		}
+	}
 }
 
 void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
@@ -67,12 +80,12 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 	{
 		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
 		{
-			inputs_to_declare.push_back("front_diff_color");
+			inputs_to_declare.emplace_back("front_diff_color");
 		}
 
 		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
 		{
-			inputs_to_declare.push_back("front_spec_color");
+			inputs_to_declare.emplace_back("front_spec_color");
 		}
 	}
 
@@ -92,9 +105,11 @@ void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
+	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
+	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
 	for (int i = 0; i < std::size(table); ++i)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", table[i].second))
+		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
 			OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";
 	}
 }
@@ -112,11 +127,16 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		for (const ParamItem& PI : PT.items)
 		{
 			std::string samplerType = PT.type;
-			int index = atoi(&PI.name.data()[3]);
+			int index = atoi(&PI.name[3]);
 
 			const auto mask = (1 << index);
 
-			if (m_prog.shadow_textures & mask)
+			if (m_prog.redirected_textures & mask)
+			{
+				// Provide a stencil view of the main resource for the S channel
+				OS << "uniform u" << samplerType << " " << PI.name << "_stencil;\n";
+			}
+			else if (m_prog.shadow_textures & mask)
 			{
 				if (m_shadow_sampled_textures & mask)
 				{
@@ -132,9 +152,8 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	}
 
 	OS << "\n";
-	OS << "layout(std140, binding = 2) uniform FragmentConstantsBuffer\n";
-	OS << "{\n";
 
+	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
 	{
 		if (PT.type == "sampler1D" ||
@@ -144,10 +163,21 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			continue;
 
 		for (const ParamItem& PI : PT.items)
-			OS << "	" << PT.type << " " << PI.name << ";\n";
+		{
+			constants_block += "	" + PT.type + " " + PI.name + ";\n";
+		}
 	}
 
-	// Fragment state parameters
+	if (!constants_block.empty())
+	{
+		OS << "layout(std140, binding = 3) uniform FragmentConstantsBuffer\n";
+		OS << "{\n";
+		OS << constants_block;
+		OS << "};\n\n";
+	}
+
+	OS << "layout(std140, binding = 4) uniform FragmentStateBuffer\n";
+	OS << "{\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
 	OS << "	uint rop_control;\n";
@@ -156,13 +186,29 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	uint fog_mode;\n";
 	OS << "	float wpos_scale;\n";
 	OS << "	float wpos_bias;\n";
+	OS << "};\n\n";
+
+	OS << "layout(std140, binding = 5) uniform TextureParametersBuffer\n";
+	OS << "{\n";
 	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
-	OS << "};\n";
+	OS << "};\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
-	glsl::insert_glsl_legacy_function(OS, glsl::glsl_fragment_program, properties.has_lit_op, m_prog.redirected_textures != 0, properties.has_wpos_input);
+	glsl::shader_properties properties2;
+	properties2.domain = glsl::glsl_fragment_program;
+	properties2.require_lit_emulation = properties.has_lit_op;
+	properties2.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
+	properties2.require_depth_conversion = m_prog.redirected_textures != 0;
+	properties2.require_wpos = properties.has_wpos_input;
+	properties2.require_texture_ops = properties.has_tex_op;
+	properties2.require_shadow_ops = m_prog.shadow_textures != 0;
+	properties2.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
+	properties2.emulate_shadow_compare = device_props.emulate_depth_compare;
+	properties2.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
+
+	glsl::insert_glsl_legacy_function(OS, properties2);
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -186,15 +232,17 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		"h0", "h2", "h4", "h6", "h8"
 	};
 
-	std::string parameters = "";
+	std::string parameters;
+	const auto half4 = getHalfTypeName(4);
 	for (auto &reg_name : output_values)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
+		if (m_parr.HasParam(PF_PARAM_NONE, type, reg_name))
 		{
 			if (parameters.length())
 				parameters += ", ";
 
-			parameters += "inout vec4 " + reg_name;
+			parameters += "inout " + type + " " + reg_name;
 		}
 	}
 
@@ -287,22 +335,29 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	std::string parameters = "";
+	std::string parameters;
+	const auto half4 = getHalfTypeName(4);
+
 	for (auto &reg_name : output_values)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", reg_name))
+		const std::string type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
+		if (m_parr.HasParam(PF_PARAM_NONE, type, reg_name))
 		{
 			if (parameters.length())
 				parameters += ", ";
 
 			parameters += reg_name;
-			OS << "	vec4 " << reg_name << " = vec4(0.);\n";
+			OS << "	" << type << " " << reg_name << " = " << type << "(0.);\n";
 		}
 	}
 
 	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
 
-	glsl::insert_rop(OS, !!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS));
+	glsl::insert_rop(
+		OS,
+		!!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS),
+		device_props.has_native_half_support,
+		g_cfg.video.antialiasing_level == msaa_level::none);
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
@@ -327,9 +382,7 @@ void GLFragmentDecompilerThread::Task()
 	m_shader = Decompile();
 }
 
-GLFragmentProgram::GLFragmentProgram()
-{
-}
+GLFragmentProgram::GLFragmentProgram() = default;
 
 GLFragmentProgram::~GLFragmentProgram()
 {
@@ -340,7 +393,15 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 {
 	u32 size;
 	GLFragmentDecompilerThread decompiler(shader, parr, prog, size);
+
+	if (!g_cfg.video.disable_native_float16)
+	{
+		const auto driver_caps = gl::get_driver_caps();
+		decompiler.device_props.has_native_half_support = driver_caps.NV_gpu_shader5_supported || driver_caps.AMD_gpu_shader_half_float_supported;
+	}
+
 	decompiler.Task();
+
 	for (const ParamType& PT : decompiler.m_parr.params[PF_PARAM_UNIFORM])
 	{
 		for (const ParamItem& PI : PT.items)
@@ -369,7 +430,7 @@ void GLFragmentProgram::Compile()
 	const char* str = shader.c_str();
 	const int strlen = ::narrow<int>(shader.length());
 
-	fs::file(fs::get_config_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
+	fs::file(fs::get_cache_dir() + "shaderlog/FragmentProgram" + std::to_string(id) + ".glsl", fs::rewrite).write(str);
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);

@@ -7,7 +7,7 @@
 
 tar_object::tar_object(const fs::file& file, size_t offset)
 	: m_file(file)
-	, initial_offset(offset)
+	, initial_offset(static_cast<int>(offset))
 {
 	m_file.seek(initial_offset);
 	largest_offset = initial_offset;

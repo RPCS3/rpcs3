@@ -214,7 +214,7 @@ QComboBox::disabled {
 }
 
 /* Spin Boxes */
-QSpinBox {
+QSpinBox, QDoubleSpinBox {
 	background: transparent;
 	border: 0.05em solid #4d4940;
 	border-radius: 0.10em;
@@ -254,6 +254,13 @@ QTableWidget#game_grid {
 	font-weight: 600;
 	font-size: 8pt;
 	font-family: Lucida Grande;
+	selection-color: #e6e6e6;
+}
+QTableWidget#game_grid::item:selected:active {
+	selection-background-color: #4c4b4b;
+}
+QTableWidget#game_grid::item:selected:!active {
+	selection-background-color: #3d3d3d;
 }
 
 /* Set Toolbar Slider Size */

@@ -1,6 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
+
+#include "Emu/Memory/vm_ptr.h"
 
 class cpu_thread;
 
@@ -57,8 +59,8 @@ struct sys_event_queue_attribute_t
 
 	union
 	{
-		char name[8];
 		u64 name_u64;
+		char name[sizeof(u64)];
 	};
 };
 
@@ -83,7 +85,7 @@ struct lv2_event_queue final : public lv2_obj
 	const u64 key;
 	const s32 size;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	std::deque<lv2_event> events;
 	std::deque<cpu_thread*> sq;
 
@@ -130,12 +132,12 @@ class ppu_thread;
 error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
 error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode);
 error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout);
-error_code sys_event_queue_tryreceive(u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number);
-error_code sys_event_queue_drain(u32 event_queue_id);
+error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number);
+error_code sys_event_queue_drain(ppu_thread& ppu, u32 event_queue_id);
 
 error_code sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name);
-error_code sys_event_port_destroy(u32 eport_id);
+error_code sys_event_port_destroy(ppu_thread& ppu, u32 eport_id);
 error_code sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
-error_code sys_event_port_connect_ipc(u32 eport_id, u64 ipc_key);
-error_code sys_event_port_disconnect(u32 eport_id);
+error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key);
+error_code sys_event_port_disconnect(ppu_thread& ppu, u32 eport_id);
 error_code sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);

@@ -1,71 +1,72 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "rsx_replay.h"
 
 #include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GSRender.h"
 
 #include <map>
+#include <atomic>
 #include <exception>
 
 namespace rsx
 {
 	be_t<u32> rsx_replay_thread::allocate_context()
 	{
-		// 'fake' initialize usermemory
-		// todo: seriously, need to probly watch the replay memory map and just make sure its mapped before we copy rather than do this
-		user_mem_addr = vm::falloc(vm::get(vm::user1m)->addr, 0x10000000);
-		verify(HERE), user_mem_addr != 0;
-
-		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
-		if (contextAddr == 0)
-			fmt::throw_exception("Capture Replay: context alloc failed");
-		const auto& contextInfo = vm::_ref<rsx_context>(contextAddr);
-
-		if (sys_rsx_device_map(vm::get_addr(&contextInfo.dev_addr), vm::null, 0x8) != CELL_OK)
-			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
-
-		if (sys_rsx_memory_allocate(vm::get_addr(&contextInfo.mem_handle), vm::get_addr(&contextInfo.mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
-			fmt::throw_exception("Capture Replay: sys_rsx_memory_allocate failed!");
-
-		if (sys_rsx_context_allocate(vm::get_addr(&contextInfo.context_id), vm::get_addr(&contextInfo.dma_addr), vm::get_addr(&contextInfo.driver_info), vm::get_addr(&contextInfo.reports_addr), contextInfo.mem_handle, 0) != CELL_OK)
-			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
-
-		// 1024Mb, the extra 512Mb memory is needed to allocate FIFO commands on
-		// So there wont be any conflicts with memory used in the capture
-		get_current_renderer()->main_mem_size = 0x40000000;
-
-		return contextInfo.context_id;
-	}
-
-	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id)
-	{
-		u32 fifo_size = 4;
+		u32 buffer_size = 4;
 
 		// run through replay commands to figure out how big command buffer needs to be
 		for (const auto& rc : frame->replay_commands)
 		{
 			const u32 count = (rc.rsx_command.first >> 18) & 0x7ff;
 			// allocate for register plus w/e number of arguments it has
-			fifo_size += (count * 4) + 4;
+			buffer_size += (count * 4) + 4;
 		}
 
-		fifo_size = ::align<u32>(fifo_size, 0x100000);
+		// User memory + fifo size
+		buffer_size = ::align<u32>(buffer_size, 0x100000) + 0x10000000;
+		// We are not allowed to drain all memory so add a little 
+		fxm::make_always<lv2_memory_container>(buffer_size + 0x1000000);
 
-		const u32 fifo_mem = vm::alloc(fifo_size, vm::main, 0x100000);
-		if (fifo_mem == 0)
-			fmt::throw_exception("Capture Replay: fifo alloc failed! size: 0x%x", fifo_size);
+		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
+		if (contextAddr == 0)
+			fmt::throw_exception("Capture Replay: context alloc failed");
+		const auto contextInfo = vm::ptr<rsx_context>::make(contextAddr);
 
+		// 'fake' initialize usermemory
+		sys_memory_allocate(buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
+		verify(HERE), (user_mem_addr = contextInfo->user_addr) != 0;
+
+		if (sys_rsx_device_map(contextInfo.ptr(&rsx_context::dev_addr), vm::null, 0x8) != CELL_OK)
+			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
+
+		if (sys_rsx_memory_allocate(contextInfo.ptr(&rsx_context::mem_handle), contextInfo.ptr(&rsx_context::mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
+			fmt::throw_exception("Capture Replay: sys_rsx_memory_allocate failed!");
+
+		if (sys_rsx_context_allocate(contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
+			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
+
+		get_current_renderer()->main_mem_size = buffer_size;
+
+		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0) != CELL_OK)
+			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
+
+		return contextInfo->context_id;
+	}
+
+	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id)
+	{
 		// copy commands into fifo buffer
 		// todo: could change rsx_command to just be values to avoid this loop,
-		auto fifo_addr = vm::ptr<u32>::make(fifo_mem);
+		auto fifo_addr = vm::ptr<u32>::make(user_mem_addr + 0x10000000);
 		u32 count = 0;
 		std::vector<u32> fifo_stops;
-		u32 currentOffset = 0x20000000;
+		u32 currentOffset = 0x10000000;
 		for (const auto& rc : frame->replay_commands)
 		{
-			bool hasState = (rc.memory_state.size() > 0) || (rc.display_buffer_state != 0) || (rc.tile_state != 0);
+			bool hasState = (!rc.memory_state.empty()) || (rc.display_buffer_state != 0) || (rc.tile_state != 0);
 			if (hasState)
 			{
 				if (count != 0)
@@ -97,10 +98,6 @@ namespace rsx
 		}
 
 		fifo_stops.emplace_back(currentOffset);
-
-		if (sys_rsx_context_iomap(context_id, 0x20000000, fifo_mem, fifo_size, 0) != CELL_OK)
-			fmt::throw_exception("Capture Replay: fifo mapping failed");
-
 		return fifo_stops;
 	}
 
@@ -113,16 +110,13 @@ namespace rsx
 			if (it == frame->memory_map.end())
 				fmt::throw_exception("requested memory state for command not found in memory_map");
 
-			if (it->second.data_state != 0)
-			{
-				const auto& memblock = it->second;
-				auto it_data = frame->memory_data_map.find(it->second.data_state);
-				if (it_data == frame->memory_data_map.end())
-					fmt::throw_exception("requested memory data state for command not found in memory_data_map");
+			const auto& memblock = it->second;
+			auto it_data = frame->memory_data_map.find(it->second.data_state);
+			if (it_data == frame->memory_data_map.end())
+				fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
-				const auto& data_block = it_data->second;
-				std::memcpy(vm::base(get_address(memblock.ioOffset + memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
-			}
+			const auto& data_block = it_data->second;
+			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
 		}
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
@@ -154,50 +148,22 @@ namespace rsx
 			const auto& tstate = it->second;
 			for (u32 i = 0; i < limits::tiles_count; ++i)
 			{
-				const auto& tstile = tstate.tiles[i];
-				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.tiles[i], &tstile, sizeof(rsx::frame_capture_data::tile_info)) == 0)
+				const auto& ti = tstate.tiles[i];
+				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.tiles[i], &ti, sizeof(rsx::frame_capture_data::tile_info)) == 0)
 					continue;
 
-				cs.tile_state.tiles[i] = tstile;
-
-				GcmTileInfo t;
-				t.bank = tstile.bank;
-				t.base = tstile.base;
-				t.binded = tstile.binded;
-				t.comp = tstile.comp;
-				t.location = tstile.location;
-				t.offset = tstile.offset;
-				t.pitch = tstile.pitch;
-				t.size = tstile.size;
-
-				const auto& ti = t.pack();
-				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, t.binded ? (u64)ti.pitch << 32 | ti.format : 0, 0);
+				cs.tile_state.tiles[i] = ti;
+				sys_rsx_context_attribute(context_id, 0x300, i, (u64)ti.tile << 32 | ti.limit, (u64)ti.pitch << 32 | ti.format, 0);
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
 			{
-				const auto& zctile = tstate.zculls[i];
-				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.zculls[i], &zctile, sizeof(rsx::frame_capture_data::zcull_info)) == 0)
+				const auto& zci = tstate.zculls[i];
+				if (cs.tile_hash != 0 && memcmp(&cs.tile_state.zculls[i], &zci, sizeof(rsx::frame_capture_data::zcull_info)) == 0)
 					continue;
 
-				cs.tile_state.zculls[i] = zctile;
-
-				GcmZcullInfo zc;
-				zc.aaFormat = zctile.aaFormat;
-				zc.binded = zctile.binded;
-				zc.cullStart = zctile.cullStart;
-				zc.height = zctile.height;
-				zc.offset = zctile.offset;
-				zc.sFunc = zctile.sFunc;
-				zc.sMask = zctile.sMask;
-				zc.sRef = zctile.sRef;
-				zc.width = zctile.width;
-				zc.zcullDir = zctile.zcullDir;
-				zc.zcullFormat = zctile.zcullFormat;
-				zc.zFormat = zctile.zFormat;
-
-				const auto& zci = zc.pack();
-				sys_rsx_context_attribute(context_id, 0x301, i, (u64)zci.region << 32 | zci.size, (u64)zci.start << 32 | zci.offset, zc.binded ? (u64)zci.status0 << 32 | zci.status1 : 0);
+				cs.tile_state.zculls[i] = zci;
+				sys_rsx_context_attribute(context_id, 0x301, i, (u64)zci.region << 32 | zci.size, (u64)zci.start << 32 | zci.offset, (u64)zci.status0 << 32 | zci.status1);
 			}
 
 			cs.tile_hash = replay_cmd.tile_state;
@@ -210,35 +176,17 @@ namespace rsx
 
 		auto fifo_stops = alloc_write_fifo(context_id);
 
-		// map game io
-		for (const auto it : frame->memory_map)
-		{
-			const auto& memblock = it.second;
-			if (memblock.location == CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN)
-			{
-				// Special area for reports
-				if (sys_rsx_context_iomap(context_id, (memblock.ioOffset & ~0xFFFFF) + 0x0e000000, (memblock.ioOffset & ~0xFFFFF) + user_mem_addr + 0x0e000000, 0x100000, 0) != CELL_OK)
-					fmt::throw_exception("rsx io map failed for block");
-				continue;
-			}
-
-			if (const u32 location = memblock.location; location != CELL_GCM_LOCATION_MAIN && location != CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER)
-				continue;
-
-			if (sys_rsx_context_iomap(context_id, memblock.ioOffset & ~0xFFFFF, user_mem_addr + (memblock.ioOffset & ~0xFFFFF), ::align<u32>(memblock.size + memblock.offset, 0x100000), 0) != CELL_OK)
-				fmt::throw_exception("rsx io map failed for block");
-		}
-
 		while (!Emu.IsStopped())
 		{
 			// Load registers while the RSX is still idle
 			method_registers = frame->reg_state;
-			_mm_mfence();
+			std::atomic_thread_fence(std::memory_order_seq_cst);
 
 			// start up fifo buffer by dumping the put ptr to first stop
-			sys_rsx_context_attribute(context_id, 0x001, 0x20000000, fifo_stops[0], 0, 0);
+			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
 
 			auto render = get_current_renderer();
+			auto last_flip = render->int_flip_index;
 
 			size_t stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
@@ -250,7 +198,7 @@ namespace rsx
 					break;
 
 				// Loop and hunt down our next state change that needs to be done
-				if (!((replay_cmd.memory_state.size() > 0) || (replay_cmd.display_buffer_state != 0) || (replay_cmd.tile_state != 0)))
+				if (!(!replay_cmd.memory_state.empty() || (replay_cmd.display_buffer_state != 0) || (replay_cmd.tile_state != 0)))
 					continue;
 
 				// wait until rsx idle and at our first 'stop' to apply state
@@ -280,6 +228,13 @@ namespace rsx
 			{
 				while (Emu.IsPaused())
 					std::this_thread::sleep_for(10ms);
+			}
+
+			// Check if the captured application used syscall instead of a gcm command to flip
+			if (render->int_flip_index == last_flip)
+			{
+				// Capture did not include a display flip, flip manually
+				render->request_emu_flip(1u);
 			}
 
 			// random pause to not destroy gpu

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -11,8 +11,13 @@
 
 #include "sceNp.h"
 #include "sceNpTrophy.h"
+#include "cellSysutil.h"
 
 #include "Utilities/StrUtil.h"
+
+#include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_timer.h"
 
 LOG_CHANNEL(sceNpTrophy);
 
@@ -137,6 +142,12 @@ error_code sceNpTrophyDestroyHandle(u32 handle)
 
 	idm::remove<trophy_handle_t>(handle);
 
+	return CELL_OK;
+}
+
+error_code sceNpTrophyGetGameDetails()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
 	return CELL_OK;
 }
 
@@ -316,17 +327,45 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	// * Installed
 	// We will go with the easy path of Installed, and that's it.
 
-	auto statuses = {SCE_NP_TROPHY_STATUS_NOT_INSTALLED,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_SETUP,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE,
-					 SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE};
+	// The callback is called once and then if it returns >= 0 the cb is called through events(coming from vsh) that are passed to the CB through cellSysutilCheckCallback
+	if (statusCb(ppu, context, SCE_NP_TROPHY_STATUS_INSTALLED, 100, 100, arg) < 0)
+	{
+		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+	}
 
+	// This emulates vsh sending the events and ensures that not 2 events are processed at once
+	const std::pair<u32, u32> statuses[] =
+	{
+		{ SCE_NP_TROPHY_STATUS_PROCESSING_SETUP, 3 },
+		{ SCE_NP_TROPHY_STATUS_PROCESSING_PROGRESS, tropusr->GetTrophiesCount() },
+		{ SCE_NP_TROPHY_STATUS_PROCESSING_FINALIZE, 4 },
+		{ SCE_NP_TROPHY_STATUS_PROCESSING_COMPLETE, 0 }
+	};
+
+	static atomic_t<u32> queued;
+
+	queued = 0;
 	for (auto status : statuses)
 	{
-		if (statusCb(ppu, context, status, 100, 100, arg) < 0)
+		// One status max per cellSysutilCheckCallback call
+		queued += status.second;
+		for (u32 completed = 0; completed <= status.second; completed++)
 		{
-			return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
+			sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+			{
+				statusCb(cb_ppu, context, status.first, completed, status.second, arg);
+				queued--;
+				return 0;
+			});
+		}
+
+		u32 passed_time=0;
+		while (queued)
+		{
+			sys_timer_usleep(ppu, 5000);
+			passed_time += 5;
+			// If too much time passes just send the rest of the events anyway
+			if (passed_time > 300) break;
 		}
 	}
 
@@ -490,6 +529,12 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 	return CELL_OK;
 }
 
+error_code sceNpTrophyGetLatestTrophies()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	return CELL_OK;
+}
+
 error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::ptr<u32> platinumId)
 {
 	sceNpTrophy.error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
@@ -596,6 +641,12 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 			flags->flag_bits[id / 32] &= ~(1 << (id % 32));
 	}
 
+	return CELL_OK;
+}
+
+error_code sceNpTrophyGetTrophyDetails()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
 	return CELL_OK;
 }
 
@@ -784,6 +835,12 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 	return CELL_OK;
 }
 
+error_code sceNpTrophyGetUserInfo()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	return CELL_OK;
+}
+
 error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::ptr<void> buffer, vm::ptr<u32> size)
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
@@ -850,11 +907,15 @@ DECLARE(ppu_module_manager::sceNpTrophy)("sceNpTrophy", []()
 	REG_FUNC(sceNpTrophy, sceNpTrophyAbortHandle);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyDestroyHandle);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameDetails);
 	REG_FUNC(sceNpTrophy, sceNpTrophyUnlockTrophy);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetLatestTrophies);
 	REG_FUNC(sceNpTrophy, sceNpTrophyTerm);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyUnlockState);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetUserInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyIcon);
 	REG_FUNC(sceNpTrophy, sceNpTrophyCreateContext);
+	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyDetails);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameIcon);
 });

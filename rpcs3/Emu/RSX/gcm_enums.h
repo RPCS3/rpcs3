@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Utilities/types.h"
 
 namespace rsx
@@ -60,6 +60,12 @@ namespace rsx
 	};
 
 	surface_depth_format to_surface_depth_format(u8 in);
+
+	enum class surface_raster_type : u8
+	{
+		linear = 1,
+		swizzle = 2,
+	};
 
 	enum class surface_antialiasing : u8
 	{
@@ -132,6 +138,17 @@ namespace rsx
 	};
 
 	fog_mode to_fog_mode(u32 in);
+
+	/**
+	* Use an extra cubemap format
+	*/
+	enum class texture_dimension_extended : u8
+	{
+		texture_dimension_1d = 0,
+		texture_dimension_2d = 1,
+		texture_dimension_cubemap = 2,
+		texture_dimension_3d = 3,
+	};
 
 	enum class texture_dimension : u8
 	{
@@ -444,6 +461,8 @@ enum
 	CELL_GCM_TEXTURE_COMPRESSED_DXT23 = 0x87,
 	CELL_GCM_TEXTURE_COMPRESSED_DXT45 = 0x88,
 	CELL_GCM_TEXTURE_G8B8 = 0x8B,
+	CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 = 0x8D,
+	CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 = 0x8E,
 	CELL_GCM_TEXTURE_R6G5B5 = 0x8F,
 	CELL_GCM_TEXTURE_DEPTH24_D8 = 0x90,
 	CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT = 0x91,
@@ -460,8 +479,6 @@ enum
 	CELL_GCM_TEXTURE_D1R5G5B5 = 0x9D,
 	CELL_GCM_TEXTURE_D8R8G8B8 = 0x9E,
 	CELL_GCM_TEXTURE_Y16_X16_FLOAT = 0x9F,
-	CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 = 0xAD,
-	CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 = 0xAE,
 
 	// Swizzle Flag
 	CELL_GCM_TEXTURE_SZ = 0x00,
@@ -1047,16 +1064,20 @@ enum Method
 	RSX_METHOD_NON_INCREMENT_COUNT_SHIFT = 18,
 	RSX_METHOD_NON_INCREMENT_METHOD_MASK = 0x0000fffc,
 
-	RSX_METHOD_NEW_JUMP_CMD_MASK = 0x00000003,
+	RSX_METHOD_NEW_JUMP_CMD_MASK = 0xe0000003,
 	RSX_METHOD_NEW_JUMP_CMD = 0x00000001,
 	RSX_METHOD_NEW_JUMP_OFFSET_MASK = 0xfffffffc,
 
 	RSX_METHOD_CALL_CMD_MASK = 0x00000003,
 	RSX_METHOD_CALL_CMD = 0x00000002,
-	RSX_METHOD_CALL_OFFSET_MASK = 0xfffffffc,
+	RSX_METHOD_CALL_OFFSET_MASK = 0x1ffffffc,
 
 	RSX_METHOD_NON_METHOD_CMD_MASK = 0xa0030003, 
 	RSX_METHOD_RETURN_CMD = 0x00020000,
+	RSX_METHOD_RETURN_MASK = 0xffff0003,
+
+	RSX_METHOD_NOP_CMD = 0x00000000,
+	RSX_METHOD_NOP_MASK = 0xbfff0003,
 };
 
 //Fog

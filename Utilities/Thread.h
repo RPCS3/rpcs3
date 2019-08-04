@@ -1,7 +1,7 @@
 #pragma once
 
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 
 #include <string>
 #include <memory>
@@ -258,13 +258,13 @@ public:
 	static void detect_cpu_layout();
 
 	// Returns a core affinity mask. Set whether to generate the high priority set or not
-	static u16 get_affinity_mask(thread_class group);
+	static u64 get_affinity_mask(thread_class group);
 
 	// Sets the native thread priority
 	static void set_native_priority(int priority);
 
 	// Sets the preferred affinity mask for this thread
-	static void set_thread_affinity_mask(u16 mask);
+	static void set_thread_affinity_mask(u64 mask);
 
 	// Spawn a detached named thread
 	template <typename F>

@@ -1,9 +1,14 @@
 ﻿#include "stdafx.h"
-#include "Utilities/VirtualMemory.h"
-#include "Emu/IdManager.h"
 #include "sys_memory.h"
 
+#include "Utilities/VirtualMemory.h"
+#include "Emu/Memory/vm_locking.h"
+#include "Emu/IdManager.h"
+
 LOG_CHANNEL(sys_memory);
+
+//
+static shared_mutex s_memstats_mtx;
 
 lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
 	: size(size)
@@ -18,6 +23,8 @@ lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::
 
 error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 {
+	vm::temporary_unlock();
+
 	sys_memory.warning("sys_memory_allocate(size=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, flags, alloc_addr);
 
 	// Check allocation size
@@ -37,7 +44,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	}
 
 	// Get "default" memory container
-	const auto dct = fxm::get_always<lv2_memory_container>();
+	const auto dct = fxm::get<lv2_memory_container>();
 
 	// Try to get "physical memory"
 	if (!dct->take(size))
@@ -45,20 +52,30 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 		return CELL_ENOMEM;
 	}
 
-	if (!alloc_addr)
+	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000), 0x401))
 	{
-		dct->used -= size;
-		return CELL_EFAULT;
+		if (u32 addr = area->alloc(size, align))
+		{
+			if (alloc_addr)
+			{
+				*alloc_addr = addr;
+				return CELL_OK;
+			}
+
+			// Dealloc using the syscall
+			sys_memory_free(addr);
+			return CELL_EFAULT;
+		}
 	}
 
-	// Allocate memory, write back the start address of the allocated area
-	*alloc_addr = verify(HERE, vm::alloc(size, align == 0x10000 ? vm::user64k : vm::user1m, align));
-
-	return CELL_OK;
+	dct->used -= size;
+	return CELL_ENOMEM;
 }
 
 error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr)
 {
+	vm::temporary_unlock();
+
 	sys_memory.warning("sys_memory_allocate_from_container(size=0x%x, cid=0x%x, flags=0x%llx, alloc_addr=*0x%x)", size, cid, flags, alloc_addr);
 
 	// Check allocation size
@@ -98,23 +115,34 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 		return ct.ret;
 	}
 
-	if (!alloc_addr)
-	{
-		ct->used -= size;
-		return CELL_EFAULT;
-	}
-
 	// Create phantom memory object
 	const auto mem = idm::make_ptr<lv2_memory_alloca>(size, align, flags, ct.ptr);
 
-	// Allocate memory
-	*alloc_addr = verify(HERE, vm::get(align == 0x10000 ? vm::user64k : vm::user1m)->alloc(size, mem->align, &mem->shm));
+	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000), 0x401))
+	{
+		if (u32 addr = area->alloc(size, mem->align, &mem->shm))
+		{
+			if (alloc_addr)
+			{
+				*alloc_addr = addr;
+				return CELL_OK;
+			}
 
-	return CELL_OK;
+			// Dealloc using the syscall
+			sys_memory_free(addr);
+			return CELL_EFAULT;
+		}
+	}
+
+	idm::remove<lv2_memory_alloca>(idm::last_id());
+	ct->used -= size;
+	return CELL_ENOMEM;
 }
 
 error_code sys_memory_free(u32 addr)
 {
+	vm::temporary_unlock();
+
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
 	const auto area = vm::get(vm::any, addr);
@@ -151,7 +179,7 @@ error_code sys_memory_free(u32 addr)
 		}
 
 		// Return "physical memory" to the default container
-		fxm::get_always<lv2_memory_container>()->used -= shm.second->size();
+		fxm::get<lv2_memory_container>()->used -= shm.second->size();
 
 		return CELL_OK;
 	}
@@ -173,7 +201,11 @@ error_code sys_memory_free(u32 addr)
 
 error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
+	vm::temporary_unlock();
+
 	sys_memory.trace("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
+
+	vm::reader_lock rlock;
 
 	if (!vm::check_addr(addr))
 	{
@@ -206,10 +238,14 @@ error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr
 
 error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 {
+	vm::temporary_unlock();
+
 	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
 
 	// Get "default" memory container
-	const auto dct = fxm::get_always<lv2_memory_container>();
+	const auto dct = fxm::get<lv2_memory_container>();
+
+	::reader_lock lock(s_memstats_mtx);
 
 	mem_info->total_user_memory = dct->size;
 	mem_info->available_user_memory = dct->size - dct->used;
@@ -225,6 +261,8 @@ error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 
 error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 {
+	vm::temporary_unlock();
+
 	sys_memory.warning("sys_memory_container_create(cid=*0x%x, size=0x%x)", cid, size);
 
 	// Round down to 1 MB granularity
@@ -235,7 +273,9 @@ error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 		return CELL_ENOMEM;
 	}
 
-	const auto dct = fxm::get_always<lv2_memory_container>();
+	const auto dct = fxm::get<lv2_memory_container>();
+
+	std::lock_guard lock(s_memstats_mtx);
 
 	// Try to obtain "physical memory" from the default container
 	if (!dct->take(size))
@@ -244,14 +284,23 @@ error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	}
 
 	// Create the memory container
-	*cid = idm::make<lv2_memory_container>(size);
+	if (const u32 id = idm::make<lv2_memory_container>(size))
+	{
+		*cid = id;
+		return CELL_OK;
+	}
 
-	return CELL_OK;
+	dct->used -= size;
+	return CELL_EAGAIN;
 }
 
 error_code sys_memory_container_destroy(u32 cid)
 {
+	vm::temporary_unlock();
+
 	sys_memory.warning("sys_memory_container_destroy(cid=0x%x)", cid);
+
+	std::lock_guard lock(s_memstats_mtx);
 
 	const auto ct = idm::withdraw<lv2_memory_container>(cid, [](lv2_memory_container& ct) -> CellError
 	{
@@ -282,6 +331,8 @@ error_code sys_memory_container_destroy(u32 cid)
 
 error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid)
 {
+	vm::temporary_unlock();
+
 	sys_memory.warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
 
 	const auto ct = idm::get<lv2_memory_container>(cid);

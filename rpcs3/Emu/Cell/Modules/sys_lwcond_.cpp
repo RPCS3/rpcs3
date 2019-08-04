@@ -11,7 +11,7 @@
 
 extern logs::channel sysPrxForUser;
 
-error_code sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr)
+error_code sys_lwcond_create(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwcond_attribute_t> attr)
 {
 	sysPrxForUser.trace("sys_lwcond_create(lwcond=*0x%x, lwmutex=*0x%x, attr=*0x%x)", lwcond, lwmutex, attr);
 
@@ -20,7 +20,7 @@ error_code sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t
 	attrs->pshared  = SYS_SYNC_NOT_PROCESS_SHARED;
 	attrs->name_u64 = attr->name_u64;
 
-	if (auto res = g_cfg.core.hle_lwmutex ? sys_cond_create(out_id, lwmutex->sleep_queue, attrs) : _sys_lwcond_create(out_id, lwmutex->sleep_queue, lwcond, attr->name_u64, 0))
+	if (auto res = g_cfg.core.hle_lwmutex ? sys_cond_create(ppu, out_id, lwmutex->sleep_queue, attrs) : _sys_lwcond_create(ppu, out_id, lwmutex->sleep_queue, lwcond, attr->name_u64, 0))
 	{
 		return res;
 	}
@@ -30,16 +30,16 @@ error_code sys_lwcond_create(vm::ptr<sys_lwcond_t> lwcond, vm::ptr<sys_lwmutex_t
 	return CELL_OK;
 }
 
-error_code sys_lwcond_destroy(vm::ptr<sys_lwcond_t> lwcond)
+error_code sys_lwcond_destroy(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 {
 	sysPrxForUser.trace("sys_lwcond_destroy(lwcond=*0x%x)", lwcond);
 
 	if (g_cfg.core.hle_lwmutex)
 	{
-		return sys_cond_destroy(lwcond->lwcond_queue);
+		return sys_cond_destroy(ppu, lwcond->lwcond_queue);
 	}
 
-	if (error_code res = _sys_lwcond_destroy(lwcond->lwcond_queue))
+	if (error_code res = _sys_lwcond_destroy(ppu, lwcond->lwcond_queue))
 	{
 		return res;
 	}
@@ -296,6 +296,11 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 
 	// call the syscall
 	const error_code res = _sys_lwcond_queue_wait(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, timeout);
+
+	if (ppu.test_stopped())
+	{
+		return 0;
+	}
 
 	if (res == CELL_OK || res == CELL_ESRCH)
 	{

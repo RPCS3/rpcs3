@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Utilities/types.h"
+#include "Utilities/File.h"
+
 struct WAVHeader
 {
 	struct RIFFHeader

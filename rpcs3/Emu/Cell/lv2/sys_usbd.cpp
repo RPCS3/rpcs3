@@ -1,9 +1,9 @@
 #include "stdafx.h"
-#include "Emu/Memory/vm.h"
+#include "sys_usbd.h"
+
 #include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
-#include "sys_usbd.h"
 #include "sys_ppu_thread.h"
 
 
@@ -52,7 +52,7 @@ s32 sys_usbd_get_device_list(u32 handle, vm::ptr<DeviceListUnknownDataType> devi
 	{
 		device_list[i] = devices[i].basicDevice;
 	}
-	return devices.size();
+	return ::size32(devices);
 }
 
 s32 sys_usbd_register_extra_ldd(u32 handle, vm::ptr<void> lddOps, u16 strLen, u16 vendorID, u16 productID, u16 unk1)

@@ -6,12 +6,11 @@ image: Visual Studio 2017
 environment:
   QTDIR: C:\Qt\5.11\msvc2017_64
   LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z
-  GLSLANG: https://drive.google.com/uc?export=download&id=1nJK_NEeRzJ_r_u4zWLySwLmMrV8ZO_wL
+  GLSLANG: https://dl.dropboxusercontent.com/s/ku2qgwmtfptzbvx/glslang.7z
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
-  VULKAN_SDK: "C:\\VulkanSDK\\1.1.73.0"
-  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.73.0/windows/VulkanSDK-1.1.73.0-Installer.exe
-  VULKAN_SDK_MIRROR: https://obk.ee/rpcs3/VulkanSDK-1.1.73.0-Installer.exe
-  VULKAN_SDK_SHA: a5d193f97db4de97e6b4fdd81f00ff6a603f66bb17dc3cf8ac0fe9aec58497c7
+  VULKAN_SDK: "C:\\VulkanSDK\\1.1.106.0"
+  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.106.0/windows/VulkanSDK-1.1.106.0-Installer.exe
+  VULKAN_SDK_SHA: 24b5c9d415912c0fb07f973f10f671a488b0e33ca991409bcabf1d4bebf0b804
 
 cache:
 - glslang.7z -> appveyor.yml
@@ -49,6 +48,7 @@ install:
       3rdparty/GSL `
       3rdparty/hidapi `
       3rdparty/libpng `
+      3rdparty/libusb `
       3rdparty/pugixml `
       3rdparty/xxHash `
       3rdparty/yaml-cpp `
@@ -68,7 +68,6 @@ build:
 before_build:
 - ps: | # initialize mirror arrays and fetch precompiled build dependencies
     $VULKAN_SDK_URLS = @(
-        $env:VULKAN_SDK_MIRROR;
         $env:VULKAN_SDK_URL;
         "$($env:VULKAN_SDK_URL)?Human=true";
     )

@@ -724,7 +724,7 @@ public:
 	}
 	void STQA(spu_opcode_t op)
 	{
-		DisAsm("stqa", spu_reg_name[op.rt], DisAsmBranchTarget(op.i16));
+		DisAsm("stqa", spu_reg_name[op.rt], DisAsmBranchTarget(op.i16 - dump_pc / 4));
 	}
 	void BRNZ(spu_opcode_t op)
 	{
@@ -744,15 +744,15 @@ public:
 	}
 	void BRA(spu_opcode_t op)
 	{
-		DisAsm("bra", DisAsmBranchTarget(op.i16));
+		DisAsm("bra", DisAsmBranchTarget(op.i16 - dump_pc / 4));
 	}
 	void LQA(spu_opcode_t op)
 	{
-		DisAsm("lqa", spu_reg_name[op.rt], DisAsmBranchTarget(op.i16));
+		DisAsm("lqa", spu_reg_name[op.rt], DisAsmBranchTarget(op.i16 - dump_pc / 4));
 	}
 	void BRASL(spu_opcode_t op)
 	{
-		DisAsm("brasl", spu_reg_name[op.rt], DisAsmBranchTarget(op.i16));
+		DisAsm("brasl", spu_reg_name[op.rt], DisAsmBranchTarget(op.i16 - dump_pc / 4));
 	}
 	void BR(spu_opcode_t op)
 	{
@@ -908,7 +908,7 @@ public:
 	//0 - 6
 	void HBRA(spu_opcode_t op)
 	{
-		DisAsm("hbra", DisAsmBranchTarget((op.r0h << 7) | op.rt), DisAsmBranchTarget(op.i16));
+		DisAsm("hbra", DisAsmBranchTarget((op.r0h << 7) | op.rt), DisAsmBranchTarget(op.i16 - dump_pc / 4));
 	}
 	void HBRR(spu_opcode_t op)
 	{

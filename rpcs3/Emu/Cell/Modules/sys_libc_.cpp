@@ -58,8 +58,7 @@ struct ps3_fmt_src
 template <>
 f64 ps3_fmt_src::get<f64>(std::size_t index) const
 {
-	const u64 value = get<u64>(index);
-	return *reinterpret_cast<const f64*>(reinterpret_cast<const u8*>(&value));
+	return std::bit_cast<f64>(get<u64>(index));
 }
 
 static std::string ps3_fmt(ppu_thread& context, vm::cptr<char> fmt, u32 g_count)

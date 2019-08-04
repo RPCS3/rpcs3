@@ -177,7 +177,7 @@ protected:
 	virtual void do_local_task(rsx::FIFO_state state) override;
 	virtual bool do_method(u32 cmd, u32 arg) override;
 	virtual void end() override;
-	virtual void flip(int buffer) override;
+	virtual void flip(int buffer, bool emu_flip = false) override;
 
 	virtual bool on_access_violation(u32 address, bool is_writing) override;
 

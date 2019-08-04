@@ -4,13 +4,11 @@
 #include "Utilities/address_range.h"
 #include "Utilities/geometry.h"
 #include "Utilities/asm.h"
-#include "Utilities/VirtualMemory.h"
-#include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
-#include <atomic>
+
 #include <memory>
 #include <bitset>
-#include <optional>
+#include <chrono>
 
 extern "C"
 {
@@ -27,56 +25,159 @@ namespace rsx
 	using utils::page_end;
 	using utils::next_page;
 
+	using flags64_t = uint64_t;
+	using flags32_t = uint32_t;
+	using flags16_t = uint16_t;
+	using flags8_t = uint8_t;
+
 	// Definitions
 	class thread;
 	extern thread* g_current_renderer;
+	extern atomic_t<u64> g_rsx_shared_tag;
 
 	//Base for resources with reference counting
-	struct ref_counted
+	class ref_counted
 	{
-		u8 deref_count = 0;
+		atomic_t<s32> ref_count{ 0 }; // References held
+		atomic_t<u8> idle_time{ 0 };  // Number of times the resource has been tagged idle
 
-		void reset_refs() { deref_count = 0; }
+	public:
+		void add_ref()
+		{
+			ref_count++;
+			idle_time = 0;
+		}
+
+		void release()
+		{
+			ref_count--;
+		}
+
+		bool has_refs()
+		{
+			return (ref_count > 0);
+		}
+
+		// Returns number of times the resource has been checked without being used in-between checks
+		u8 unused_check_count()
+		{
+			if (ref_count)
+			{
+				return 0;
+			}
+
+			return idle_time++;
+		}
 	};
 
+	namespace limits
+	{
+		enum
+		{
+			fragment_textures_count = 16,
+			vertex_textures_count = 4,
+			vertex_count = 16,
+			fragment_count = 32,
+			tiles_count = 15,
+			zculls_count = 8,
+			color_buffers_count = 4
+		};
+	}
+
+	namespace constants
+	{
+		static std::array<const char*, 16> fragment_texture_names =
+		{
+			"tex0", "tex1", "tex2", "tex3", "tex4", "tex5", "tex6", "tex7",
+			"tex8", "tex9", "tex10", "tex11", "tex12", "tex13", "tex14", "tex15",
+		};
+
+		static std::array<const char*, 4> vertex_texture_names =
+		{
+			"vtex0", "vtex1", "vtex2", "vtex3",
+		};
+
+		// Local RSX memory base (known as constant)
+		static constexpr u32 local_mem_base = 0xC0000000;
+	}
+
 	/**
-     * Holds information about a framebuffer
-     */
+	* Holds information about a framebuffer
+	*/
 	struct gcm_framebuffer_info
 	{
 		u32 address = 0;
 		u32 pitch = 0;
 
-		bool is_depth_surface;
-
 		rsx::surface_color_format color_format;
 		rsx::surface_depth_format depth_format;
 
-		u16 width;
-		u16 height;
+		u16 width = 0;
+		u16 height = 0;
+		u8  bpp = 0;
+		u8  samples = 0;
 
-		gcm_framebuffer_info()
+		address_range range{};
+
+		gcm_framebuffer_info() = default;
+
+		void calculate_memory_range(u32 aa_factor_u, u32 aa_factor_v)
 		{
-			address = 0;
-			pitch = 0;
+			// Account for the last line of the block not reaching the end
+			const u32 block_size = pitch * (height - 1) * aa_factor_v;
+			const u32 line_size = width * aa_factor_u * bpp;
+			range = address_range::start_length(address, block_size + line_size);
 		}
 
-		gcm_framebuffer_info(const u32 address_, const u32 pitch_, bool is_depth_, const rsx::surface_color_format fmt_, const rsx::surface_depth_format dfmt_, const u16 w, const u16 h)
-			:address(address_), pitch(pitch_), is_depth_surface(is_depth_), color_format(fmt_), depth_format(dfmt_), width(w), height(h)
-		{}
-
-		address_range get_memory_range(u32 aa_factor = 1) const
+		address_range get_memory_range(const u32* aa_factors)
 		{
-			return address_range::start_length(address, pitch * height * aa_factor);
+			calculate_memory_range(aa_factors[0], aa_factors[1]);
+			return range;
+		}
+
+		address_range get_memory_range() const
+		{
+			verify(HERE), range.start == address;
+			return range;
 		}
 	};
 
 	struct avconf
 	{
-		u8 format = 0; //XRGB
-		u8 aspect = 0; //AUTO
-		u32 scanline_pitch = 0; //PACKED
-		f32 gamma = 1.f; //NO GAMMA CORRECTION
+		u8 format = 0;             // XRGB
+		u8 aspect = 0;             // AUTO
+		u32 scanline_pitch = 0;    // PACKED
+		f32 gamma = 1.f;           // NO GAMMA CORRECTION
+		u32 resolution_x = 1280;   // X RES
+		u32 resolution_y = 720;    // Y RES
+
+		u32 get_compatible_gcm_format()
+		{
+			switch (format)
+			{
+			default:
+				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+				return CELL_GCM_TEXTURE_A8R8G8B8;
+			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+				return CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT;
+			}
+		}
+
+		u8 get_bpp()
+		{
+			switch (format)
+			{
+			default:
+				LOG_ERROR(RSX, "Invalid AV format 0x%x", format);
+			case 0: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
+			case 1: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8B8G8R8:
+				return 4;
+			case 2: // CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_R16G16B16X16_FLOAT:
+				return 8;
+			}
+		}
 	};
 
 	struct blit_src_info
@@ -87,13 +188,9 @@ namespace rsx
 		u16 offset_y;
 		u16 width;
 		u16 height;
-		u16 slice_h;
 		u16 pitch;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
 		u32 rsx_address;
+		void *pixels;
 	};
 
 	struct blit_dst_info
@@ -108,16 +205,11 @@ namespace rsx
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
-		u16 max_tile_h;
 		f32 scale_x;
 		f32 scale_y;
-
-		bool swizzled;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
 		u32  rsx_address;
+		void *pixels;
+		bool swizzled;
 	};
 
 	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
@@ -161,25 +253,57 @@ namespace rsx
 		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
 	}
 
-	// Returns interleaved bits of X|Y|Z used as Z-order curve indices
-	static inline u32 calculate_z_index(u32 x, u32 y, u32 z)
+	// Returns an ever-increasing tag value
+	static inline u64 get_shared_tag()
 	{
-		//Result = X' | Y' | Z' which are x,y,z bits interleaved
-		u32 shift_size = 0;
-		u32 result = 0;
+		return g_rsx_shared_tag++;
+	}
 
-		while (x | y | z)
+	// Copy memory in inverse direction from source
+	// Used to scale negatively x axis while transfering image data
+	template <typename Ts = u8, typename Td = Ts>
+	static void memcpy_r(void* dst, void* src, std::size_t size)
+	{
+		for (u32 i = 0; i < size; i++)
 		{
-			result |= (x & 0x1) << shift_size++;
-			result |= (y & 0x1) << shift_size++;
-			result |= (z & 0x1) << shift_size++;
-
-			x >>= 1;
-			y >>= 1;
-			z >>= 1;
+			*((Td*)dst + i) = *((Ts*)src - i);
 		}
+	}
 
-		return result;
+	// Returns interleaved bits of X|Y|Z used as Z-order curve indices
+	static inline u32 calculate_z_index(u32 x, u32 y, u32 z, u32 log2_width, u32 log2_height, u32 log2_depth)
+	{
+		AUDIT(x < (1u << log2_width) && y < (1u << log2_height) && z < (1u << log2_depth));
+
+		// offset = X' | Y' | Z' which are x,y,z bits interleaved
+		u32 offset = 0;
+		u32 shift_count = 0;
+		do
+		{
+			if (log2_width)
+			{
+				offset |= (x & 0x1) << shift_count++;
+				x >>= 1;
+				log2_width--;
+			}
+
+			if (log2_height)
+			{
+				offset |= (y & 0x1) << shift_count++;
+				y >>= 1;
+				log2_height--;
+			}
+
+			if (log2_depth)
+			{
+				offset |= (z & 0x1) << shift_count++;
+				z >>= 1;
+				log2_depth--;
+			}
+		}
+		while (x | y | z);
+
+		return offset;
 	}
 
 	/*   Note: What the ps3 calls swizzling in this case is actually z-ordering / morton ordering of pixels
@@ -279,24 +403,25 @@ namespace rsx
 		T *src = static_cast<T*>(input_pixels);
 		T *dst = static_cast<T*>(output_pixels);
 
+		const u32 log2_w = ceil_log2(width);
+		const u32 log2_h = ceil_log2(height);
+		const u32 log2_d = ceil_log2(depth);
+	
 		for (u32 z = 0; z < depth; ++z)
 		{
 			for (u32 y = 0; y < height; ++y)
 			{
 				for (u32 x = 0; x < width; ++x)
 				{
-					*dst++ = src[calculate_z_index(x, y, z)];
+					*dst++ = src[calculate_z_index(x, y, z, log2_w, log2_h, log2_d)];
 				}
 			}
 		}
 	}
 
-	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 pixel_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
+	void scale_image_nearest(void* dst, const void* src, u16 src_width, u16 src_height, u16 dst_pitch, u16 src_pitch, u8 element_size, u8 samples_u, u8 samples_v, bool swap_bytes = false);
 
 	void convert_scale_image(u8 *dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
-		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
-
-	void convert_scale_image(std::unique_ptr<u8[]>& dst, AVPixelFormat dst_format, int dst_width, int dst_height, int dst_pitch,
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
 
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
@@ -401,6 +526,40 @@ namespace rsx
 		return std::make_tuple(x, y, width, height);
 	}
 
+	/**
+	 * Extracts from 'parent' a region that fits in 'child'
+	 */
+	static inline std::tuple<position2u, position2u, size2u> intersect_region(
+		u32 parent_address, u16 parent_w, u16 parent_h, u16 parent_bpp,
+		u32 child_address, u16 child_w, u16 child_h, u32 child_bpp,
+		u32 pitch)
+	{
+		if (child_address < parent_address)
+		{
+			const auto offset = parent_address - child_address;
+			const auto src_x = 0u;
+			const auto src_y = 0u;
+			const auto dst_y = (offset / pitch);
+			const auto dst_x = (offset % pitch) / child_bpp;
+			const auto w = std::min<u32>(parent_w, child_w - dst_x);
+			const auto h = std::min<u32>(parent_h, child_h - dst_y);
+
+			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
+		}
+		else
+		{
+			const auto offset = child_address - parent_address;
+			const auto src_y = (offset / pitch);
+			const auto src_x = (offset % pitch) / parent_bpp;
+			const auto dst_x = 0u;
+			const auto dst_y = 0u;
+			const auto w = std::min<u32>(child_w, parent_w - src_x);
+			const auto h = std::min<u32>(child_h, parent_h - src_y);
+
+			return std::make_tuple<position2u, position2u, size2u>({ src_x, src_y }, { dst_x, dst_y }, { w, h });
+		}
+	}
+
 	static inline const f32 get_resolution_scale()
 	{
 		return g_cfg.video.strict_rendering_mode? 1.f : ((f32)g_cfg.video.resolution_scale_percent / 100.f);
@@ -411,10 +570,14 @@ namespace rsx
 		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
 	}
 
-	static inline const u16 apply_resolution_scale(u16 value, bool clamp)
+	static inline const u16 apply_resolution_scale(u16 value, bool clamp, u16 ref = 0)
 	{
-		if (value <= g_cfg.video.min_scalable_dimension)
+		if (ref == 0)
+			ref = value;
+
+		if (ref <= g_cfg.video.min_scalable_dimension)
 			return value;
+
 		else if (clamp)
 			return (u16)std::max((get_resolution_scale_percent() * value) / 100, 1);
 		else
@@ -438,48 +601,55 @@ namespace rsx
 
 	/**
 	 * Calculates the regions used for memory transfer between rendertargets on succession events
+	 * Returns <src_w, src_h, dst_w, dst_h>
 	 */
 	template <typename SurfaceType>
-	std::tuple<u16, u16, u16, u16> get_transferable_region(SurfaceType* surface)
+	std::tuple<u16, u16, u16, u16> get_transferable_region(const SurfaceType* surface)
 	{
-		const u16 src_w = surface->old_contents->width();
-		const u16 src_h = surface->old_contents->height();
-		u16 dst_w = src_w;
-		u16 dst_h = src_h;
+		auto src = static_cast<const SurfaceType*>(surface->old_contents[0].source);
+		auto area1 = src->get_normalized_memory_area();
+		auto area2 = surface->get_normalized_memory_area();
 
-		switch (static_cast<SurfaceType*>(surface->old_contents)->read_aa_mode)
+		auto w = std::min(area1.x2, area2.x2);
+		auto h = std::min(area1.y2, area2.y2);
+
+		const auto src_scale_x = src->get_bpp() * src->samples_x;
+		const auto src_scale_y = src->samples_y;
+		const auto dst_scale_x = surface->get_bpp() * surface->samples_x;
+		const auto dst_scale_y = surface->samples_y;
+
+		const u16 src_w = u16(w / src_scale_x);
+		const u16 src_h = u16(h / src_scale_y);
+		const u16 dst_w = u16(w / dst_scale_x);
+		const u16 dst_h = u16(h / dst_scale_y);
+
+		return std::make_tuple(src_w, src_h, dst_w, dst_h);
+	}
+
+	template <typename SurfaceType>
+	inline bool pitch_compatible(const SurfaceType* a, const SurfaceType* b)
+	{
+		if (a->get_surface_height() == 1 || b->get_surface_height() == 1)
+			return true;
+
+		return (a->get_rsx_pitch() == b->get_rsx_pitch());
+	}
+
+	template <bool __is_surface = true, typename SurfaceType>
+	inline bool pitch_compatible(const SurfaceType* surface, u16 pitch_required, u16 height_required)
+	{
+		if constexpr (__is_surface)
 		{
-		case rsx::surface_antialiasing::center_1_sample:
-			break;
-		case rsx::surface_antialiasing::diagonal_centered_2_samples:
-			dst_w *= 2;
-			break;
-		case rsx::surface_antialiasing::square_centered_4_samples:
-		case rsx::surface_antialiasing::square_rotated_4_samples:
-			dst_w *= 2;
-			dst_h *= 2;
-			break;
+			if (height_required == 1 || surface->get_surface_height() == 1)
+				return true;
+		}
+		else
+		{
+			if (height_required == 1 || surface->get_height() == 1)
+				return true;
 		}
 
-		switch (surface->write_aa_mode)
-		{
-		case rsx::surface_antialiasing::center_1_sample:
-			break;
-		case rsx::surface_antialiasing::diagonal_centered_2_samples:
-			dst_w /= 2;
-			break;
-		case rsx::surface_antialiasing::square_centered_4_samples:
-		case rsx::surface_antialiasing::square_rotated_4_samples:
-			dst_w /= 2;
-			dst_h /= 2;
-			break;
-		}
-
-		const f32 scale_x = (f32)dst_w / src_w;
-		const f32 scale_y = (f32)dst_h / src_h;
-
-		std::tie(std::ignore, std::ignore, dst_w, dst_h) = clip_region<u16>(dst_w, dst_h, 0, 0, surface->width(), surface->height(), true);
-		return std::make_tuple(u16(dst_w / scale_x), u16(dst_h / scale_y), dst_w, dst_h);
+		return (surface->get_rsx_pitch() == pitch_required);
 	}
 
 	/**
@@ -619,8 +789,8 @@ namespace rsx
 		atomic_t<bitmask_type> m_data;
 
 	public:
-		atomic_bitmask_t() { m_data.store(0); };
-		~atomic_bitmask_t() {}
+		atomic_bitmask_t() { m_data.store(0); }
+		~atomic_bitmask_t() = default;
 
 		T load() const
 		{
@@ -661,6 +831,287 @@ namespace rsx
 		void clear()
 		{
 			m_data.store(0);
+		}
+	};
+
+	template <typename Ty>
+	struct simple_array
+	{
+	public:
+		using iterator = Ty * ;
+		using const_iterator = Ty * const;
+
+	private:
+		u32 _capacity = 0;
+		u32 _size = 0;
+		Ty* _data = nullptr;
+
+		inline u64 offset(const_iterator pos)
+		{
+			return (_data) ? u64(pos - _data) : 0ull;
+		}
+
+	public:
+		simple_array() = default;
+
+		simple_array(u32 initial_size, const Ty val = {})
+		{
+			reserve(initial_size);
+			_size = initial_size;
+
+			for (int n = 0; n < initial_size; ++n)
+			{
+				_data[n] = val;
+			}
+		}
+
+		simple_array(const std::initializer_list<Ty>& args)
+		{
+			reserve(args.size());
+
+			for (const auto& arg : args)
+			{
+				push_back(arg);
+			}
+		}
+
+		simple_array(const simple_array<Ty>& other)
+		{
+			_capacity = other._capacity;
+			_size = other._size;
+
+			const auto size_bytes = sizeof(Ty) * _capacity;
+			_data = (Ty*)malloc(size_bytes);
+			std::memcpy(_data, other._data, size_bytes);
+		}
+
+		simple_array(simple_array<Ty>&& other) noexcept
+		{
+			swap(other);
+		}
+
+		~simple_array()
+		{
+			if (_data)
+			{
+				free(_data);
+				_data = nullptr;
+				_size = _capacity = 0;
+			}
+		}
+
+		void swap(simple_array<Ty>& other) noexcept
+		{
+			std::swap(_capacity, other._capacity);
+			std::swap(_size, other._size);
+			std::swap(_data, other._data);
+		}
+
+		void reserve(u32 size)
+		{
+			if (_capacity >= size)
+				return;
+
+			if (_data)
+			{
+				_data = (Ty*)realloc(_data, sizeof(Ty) * size);
+			}
+			else
+			{
+				_data = (Ty*)malloc(sizeof(Ty) * size);
+			}
+
+			_capacity = size;
+		}
+
+		void resize(u32 size)
+		{
+			reserve(size);
+			_size = size;
+		}
+
+		void push_back(const Ty& val)
+		{
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+			}
+
+			_data[_size++] = val;
+		}
+
+		void push_back(Ty&& val)
+		{
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+			}
+
+			_data[_size++] = val;
+		}
+
+		iterator insert(iterator pos, const Ty& val)
+		{
+			verify(HERE), pos >= _data;
+			const auto _loc = offset(pos);
+
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+				pos = _data + _loc;
+			}
+
+			if (_loc >= _size)
+			{
+				_data[_size++] = val;
+				return pos;
+			}
+
+			verify(HERE), _loc < _size;
+
+			const auto remaining = (_size - _loc);
+			memmove(pos + 1, pos, remaining * sizeof(Ty));
+
+			*pos = val;
+			_size++;
+
+			return pos;
+		}
+
+		iterator insert(iterator pos, Ty&& val)
+		{
+			verify(HERE), pos >= _data;
+			const auto _loc = offset(pos);
+
+			if (_size >= _capacity)
+			{
+				reserve(_capacity + 16);
+				pos = _data + _loc;
+			}
+
+			if (_loc >= _size)
+			{
+				_data[_size++] = val;
+				return pos;
+			}
+
+			verify(HERE), _loc < _size;
+
+			const u32 remaining = (_size - _loc);
+			memmove(pos + 1, pos, remaining * sizeof(Ty));
+
+			*pos = val;
+			_size++;
+
+			return pos;
+		}
+
+		void clear()
+		{
+			_size = 0;
+		}
+
+		bool empty() const
+		{
+			return _size == 0;
+		}
+
+		u32 size() const
+		{
+			return _size;
+		}
+
+		u32 capacity() const
+		{
+			return _capacity;
+		}
+
+		Ty& operator[] (u32 index)
+		{
+			return _data[index];
+		}
+
+		const Ty& operator[] (u32 index) const
+		{
+			return _data[index];
+		}
+
+		Ty* data()
+		{
+			return _data;
+		}
+
+		const Ty* data() const
+		{
+			return _data;
+		}
+
+		Ty& back()
+		{
+			return _data[_size - 1];
+		}
+
+		const Ty& back() const
+		{
+			return _data[_size - 1];
+		}
+
+		Ty& front()
+		{
+			return _data[0];
+		}
+
+		const Ty& front() const
+		{
+			return _data[0];
+		}
+
+		iterator begin()
+		{
+			return _data;
+		}
+
+		iterator end()
+		{
+			return _data ? _data + _size : nullptr;
+		}
+
+		const_iterator begin() const
+		{
+			return _data;
+		}
+
+		const_iterator end() const
+		{
+			return _data ? _data + _size : nullptr;
+		}
+	};
+
+	struct profiling_timer
+	{
+		bool enabled = false;
+		std::chrono::time_point<steady_clock> last;
+
+		profiling_timer() = default;
+
+		void start()
+		{
+			if (UNLIKELY(enabled))
+			{
+				last = steady_clock::now();
+			}
+		}
+
+		s64 duration()
+		{
+			if (LIKELY(!enabled))
+			{
+				return 0ll;
+			}
+
+			auto old = last;
+			last = steady_clock::now();
+			return std::chrono::duration_cast<std::chrono::microseconds>(last - old).count();
 		}
 	};
 }

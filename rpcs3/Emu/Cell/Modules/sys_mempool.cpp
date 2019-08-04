@@ -88,7 +88,7 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	attr->flags = 0; //  Also no idea what this is.
 	strcpy_trunc(attr->name, "mp_m" + std::to_string(*mempool));
 
-	error_code ret = sys_mutex_create(mutexid, attr);
+	error_code ret = sys_mutex_create(ppu, mutexid, attr);
 	if (ret != 0)
 	{ // TODO: Better exception handling.
 		fmt::throw_exception("mempool %x failed to create mutex", mempool);
@@ -102,7 +102,7 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	condAttr->ipc_key = 0; // Also no idea what this is
 	strcpy_trunc(condAttr->name, "mp_c" + std::to_string(*mempool));
 
-	ret = sys_cond_create(condid, *mutexid, condAttr);
+	ret = sys_cond_create(ppu, condid, *mutexid, condAttr);
 	if (ret != CELL_OK)
 	{  // TODO: Better exception handling.
 		fmt::throw_exception("mempool %x failed to create condition variable", mempool);
@@ -125,8 +125,8 @@ void sys_mempool_destroy(ppu_thread& ppu, sys_mempool_t mempool)
 		sys_mutex_lock(ppu, memory_pool->mutexid, 0);
 		idm::remove<memory_pool_t>(mempool);
 		sys_mutex_unlock(ppu, mutexid);
-		sys_mutex_destroy(mutexid);
-		sys_cond_destroy(condid);
+		sys_mutex_destroy(ppu, mutexid);
+		sys_cond_destroy(ppu, condid);
 	}
 	else
 	{
@@ -184,7 +184,7 @@ vm::ptr<void> sys_mempool_allocate_block(ppu_thread& ppu, sys_mempool_t mempool)
 	}
 	sys_mutex_lock(ppu, memory_pool->mutexid, 0);
 
-	while (memory_pool->free_blocks.size() == 0) // while is to guard against spurious wakeups
+	while (memory_pool->free_blocks.empty()) // while is to guard against spurious wakeups
 	{
 		sys_cond_wait(ppu, memory_pool->condid, 0);
 		memory_pool = idm::get<memory_pool_t>(mempool);
@@ -206,7 +206,7 @@ vm::ptr<void> sys_mempool_try_allocate_block(ppu_thread& ppu, sys_mempool_t memp
 
 	auto memory_pool = idm::get<memory_pool_t>(mempool);
 
-	if (!memory_pool || memory_pool->free_blocks.size() == 0)
+	if (!memory_pool || memory_pool->free_blocks.empty())
 	{
 		return vm::null;
 	}

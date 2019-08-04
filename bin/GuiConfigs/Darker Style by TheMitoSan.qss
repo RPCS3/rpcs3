@@ -204,6 +204,9 @@ QTableWidget#game_grid {
 	font-family: Lucida Grande;
 	color: #FFF;
 }
+QTableWidget#game_grid::item:selected:!active {
+	selection-background-color: #313f4e;
+}
 
 /* Slider on toolbar */
 QWidget#sizeSliderContainer {

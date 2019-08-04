@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12GSRender.h"
@@ -42,7 +42,7 @@ D3D12_SAMPLER_DESC get_sampler_desc(const rsx::fragment_texture &texture)
 	samplerDesc.AddressU = get_texture_wrap_mode(texture.wrap_s());
 	samplerDesc.AddressV = get_texture_wrap_mode(texture.wrap_t());
 	samplerDesc.AddressW = get_texture_wrap_mode(texture.wrap_r());
-	samplerDesc.ComparisonFunc = get_sampler_compare_func[texture.zfunc()];
+	samplerDesc.ComparisonFunc = get_sampler_compare_func[static_cast<u8>(texture.zfunc())];
 	samplerDesc.MaxAnisotropy = get_texture_max_aniso(texture.max_aniso());
 	samplerDesc.MipLODBias = texture.bias();
 	samplerDesc.BorderColor[0] = (FLOAT)texture.border_color();
@@ -304,8 +304,6 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 		case CELL_GCM_TEXTURE_A1R5G5B5:
 		case CELL_GCM_TEXTURE_A4R4G4B4:
 		case CELL_GCM_TEXTURE_R5G6B5:
-		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 			shared_resource_view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			break;
 
@@ -391,8 +389,8 @@ void D3D12GSRender::upload_textures(ID3D12GraphicsCommandList *command_list, siz
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1);
 			break;
 
-		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		case ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN) & CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 			shared_resource_view_desc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
 				D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,

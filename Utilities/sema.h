@@ -2,7 +2,7 @@
 
 #include <mutex>
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 
 // Lightweight semaphore helper class
 class semaphore_base

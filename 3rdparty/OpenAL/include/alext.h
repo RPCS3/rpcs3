@@ -97,6 +97,31 @@ extern "C" {
 
 #ifndef AL_EXT_MCFORMATS
 #define AL_EXT_MCFORMATS 1
+/* Provides support for surround sound buffer formats with 8, 16, and 32-bit
+ * samples.
+ *
+ * QUAD8: Unsigned 8-bit, Quadraphonic (Front Left, Front Right, Rear Left,
+ *        Rear Right).
+ * QUAD16: Signed 16-bit, Quadraphonic.
+ * QUAD32: 32-bit float, Quadraphonic.
+ * REAR8: Unsigned 8-bit, Rear Stereo (Rear Left, Rear Right).
+ * REAR16: Signed 16-bit, Rear Stereo.
+ * REAR32: 32-bit float, Rear Stereo.
+ * 51CHN8: Unsigned 8-bit, 5.1 Surround (Front Left, Front Right, Front Center,
+ *         LFE, Side Left, Side Right). Note that some audio systems may label
+ *         5.1's Side channels as Rear or Surround; they are equivalent for the
+ *         purposes of this extension.
+ * 51CHN16: Signed 16-bit, 5.1 Surround.
+ * 51CHN32: 32-bit float, 5.1 Surround.
+ * 61CHN8: Unsigned 8-bit, 6.1 Surround (Front Left, Front Right, Front Center,
+ *         LFE, Rear Center, Side Left, Side Right).
+ * 61CHN16: Signed 16-bit, 6.1 Surround.
+ * 61CHN32: 32-bit float, 6.1 Surround.
+ * 71CHN8: Unsigned 8-bit, 7.1 Surround (Front Left, Front Right, Front Center,
+ *         LFE, Rear Left, Rear Right, Side Left, Side Right).
+ * 71CHN16: Signed 16-bit, 7.1 Surround.
+ * 71CHN32: 32-bit float, 7.1 Surround.
+ */
 #define AL_FORMAT_QUAD8                          0x1204
 #define AL_FORMAT_QUAD16                         0x1205
 #define AL_FORMAT_QUAD32                         0x1206
@@ -395,6 +420,16 @@ ALC_API void ALC_APIENTRY alcDeviceResumeSOFT(ALCdevice *device);
 
 #ifndef AL_EXT_BFORMAT
 #define AL_EXT_BFORMAT 1
+/* Provides support for B-Format ambisonic buffers (first-order, FuMa scaling
+ * and layout).
+ *
+ * BFORMAT2D_8: Unsigned 8-bit, 3-channel non-periphonic (WXY).
+ * BFORMAT2D_16: Signed 16-bit, 3-channel non-periphonic (WXY).
+ * BFORMAT2D_FLOAT32: 32-bit float, 3-channel non-periphonic (WXY).
+ * BFORMAT3D_8: Unsigned 8-bit, 4-channel periphonic (WXYZ).
+ * BFORMAT3D_16: Signed 16-bit, 4-channel periphonic (WXYZ).
+ * BFORMAT3D_FLOAT32: 32-bit float, 4-channel periphonic (WXYZ).
+ */
 #define AL_FORMAT_BFORMAT2D_8                    0x20021
 #define AL_FORMAT_BFORMAT2D_16                   0x20022
 #define AL_FORMAT_BFORMAT2D_FLOAT32              0x20023
@@ -457,6 +492,21 @@ AL_API const ALchar* AL_APIENTRY alGetStringiSOFT(ALenum pname, ALsizei index);
 #ifndef ALC_SOFT_output_limiter
 #define ALC_SOFT_output_limiter
 #define ALC_OUTPUT_LIMITER_SOFT                  0x199A
+#endif
+
+#ifndef ALC_SOFT_device_clock
+#define ALC_SOFT_device_clock 1
+typedef int64_t ALCint64SOFT;
+typedef uint64_t ALCuint64SOFT;
+#define ALC_DEVICE_CLOCK_SOFT                    0x1600
+#define ALC_DEVICE_LATENCY_SOFT                  0x1601
+#define ALC_DEVICE_CLOCK_LATENCY_SOFT            0x1602
+#define AL_SAMPLE_OFFSET_CLOCK_SOFT              0x1202
+#define AL_SEC_OFFSET_CLOCK_SOFT                 0x1203
+typedef void (ALC_APIENTRY*LPALCGETINTEGER64VSOFT)(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values);
+#ifdef AL_ALEXT_PROTOTYPES
+ALC_API void ALC_APIENTRY alcGetInteger64vSOFT(ALCdevice *device, ALCenum pname, ALsizei size, ALCint64SOFT *values);
+#endif
 #endif
 
 #ifdef __cplusplus

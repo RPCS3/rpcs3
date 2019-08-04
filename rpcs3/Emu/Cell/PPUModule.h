@@ -1,9 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "PPUFunction.h"
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
 #include <typeinfo>
+#include "Emu/Memory/vm_var.h"
 
 // Helper function
 constexpr const char* ppu_select_name(const char* name, u32 id)
@@ -177,6 +178,7 @@ public:
 	static const ppu_static_module cellCrossController;
 	static const ppu_static_module cellDaisy;
 	static const ppu_static_module cellDmux;
+	static const ppu_static_module cellDtcpIpUtility;
 	static const ppu_static_module cellFiber;
 	static const ppu_static_module cellFont;
 	static const ppu_static_module cellFontFT;
@@ -200,10 +202,12 @@ public:
 	static const ppu_static_module cellMusic;
 	static const ppu_static_module cellMusicDecode;
 	static const ppu_static_module cellMusicExport;
+	static const ppu_static_module cellNetAoi;
 	static const ppu_static_module cellNetCtl;
 	static const ppu_static_module cellOskDialog;
 	static const ppu_static_module cellOvis;
 	static const ppu_static_module cellPamf;
+	static const ppu_static_module cellPesmUtility;
 	static const ppu_static_module cellPhotoDecode;
 	static const ppu_static_module cellPhotoExport;
 	static const ppu_static_module cellPhotoImportUtil;
@@ -234,8 +238,8 @@ public:
 	static const ppu_static_module cellSysmodule;
 	static const ppu_static_module cellSysutil;
 	static const ppu_static_module cellSysutilAp;
-	static const ppu_static_module cellSysutilAvc;
 	static const ppu_static_module cellSysutilAvc2;
+	static const ppu_static_module cellSysutilAvcExt;
 	static const ppu_static_module cellSysutilNpEula;
 	static const ppu_static_module cellSysutilMisc;
 	static const ppu_static_module cellUsbd;
@@ -243,9 +247,12 @@ public:
 	static const ppu_static_module cellUserInfo;
 	static const ppu_static_module cellVdec;
 	static const ppu_static_module cellVideoExport;
+	static const ppu_static_module cellVideoPlayerUtility;
 	static const ppu_static_module cellVideoUpload;
 	static const ppu_static_module cellVoice;
 	static const ppu_static_module cellVpost;
+	static const ppu_static_module libad_async;
+	static const ppu_static_module libad_core;
 	static const ppu_static_module libmedi;
 	static const ppu_static_module libmixer;
 	static const ppu_static_module libsnd3;
@@ -264,6 +271,7 @@ public:
 	static const ppu_static_module sysPrxForUser;
 	static const ppu_static_module sys_libc;
 	static const ppu_static_module sys_lv2dbg;
+	static const ppu_static_module static_hle;
 };
 
 template <auto* Func>

@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12RenderTargetSets.h"
@@ -125,12 +125,12 @@ void D3D12GSRender::clear_surface(u32 arg)
 			u32 clear_depth = rsx::method_registers.z_clear_value(depth_format == rsx::surface_depth_format::z24s8);
 			u32 max_depth_value = get_max_depth_value(depth_format);
 			get_current_resource_storage().command_list->ClearDepthStencilView(m_rtts.current_ds_handle, D3D12_CLEAR_FLAG_DEPTH, clear_depth / (float)max_depth_value, 0,
-				1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
+				1, &::get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 		}
 
 		if (arg & 0x2)
 			get_current_resource_storage().command_list->ClearDepthStencilView(m_rtts.current_ds_handle, D3D12_CLEAR_FLAG_STENCIL, 0.f, get_clear_stencil(rsx::method_registers.stencil_clear_value()),
-				1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
+				1, &::get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 	}
 
 	if (arg & 0xF0)
@@ -147,7 +147,7 @@ void D3D12GSRender::clear_surface(u32 arg)
 		};
 		for (unsigned i = 0; i < rtt_index; i++)
 			get_current_resource_storage().command_list->ClearRenderTargetView(handle.Offset(i, m_descriptor_stride_rtv), clear_color.data(),
-				1, &get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
+				1, &::get_scissor(rsx::method_registers.scissor_origin_x(), rsx::method_registers.scissor_origin_y(), rsx::method_registers.scissor_width(), rsx::method_registers.scissor_height()));
 	}
 
 	std::chrono::time_point<steady_clock> end_duration = steady_clock::now();
@@ -177,20 +177,17 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 		rsx::method_registers.clear_color_a() / 255.f,
 	};
 
-	u32 clip_width = rsx::method_registers.surface_clip_width();
-	u32 clip_height = rsx::method_registers.surface_clip_height();
-
-	if (clip_height == 0 || clip_width == 0)
+	const auto layout = get_framebuffer_layout(rsx::framebuffer_creation_context::context_draw);
+	if (!framebuffer_status_valid)
 		return;
 
 	m_rtts.prepare_render_target(copycmdlist,
-		rsx::method_registers.surface_color(), rsx::method_registers.surface_depth_fmt(),
-		clip_width, clip_height,
-		rsx::method_registers.surface_color_target(),
-		get_color_surface_addresses(), get_zeta_surface_address(),
+		layout.color_format, layout.depth_format,
+		layout.width, layout.height,
+		layout.target, layout.aa_mode,
+		layout.color_addresses, layout.zeta_address,
+		layout.actual_color_pitch, layout.actual_zeta_pitch,
 		m_device.Get(), clear_color, 1.f, 0);
-
-	framebuffer_status_valid = true;
 
 	// write descriptors
 	DXGI_FORMAT dxgi_format = get_color_surface_format(rsx::method_registers.surface_color());

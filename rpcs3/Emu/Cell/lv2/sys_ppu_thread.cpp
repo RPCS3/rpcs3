@@ -1,11 +1,11 @@
-#include "stdafx.h"
-#include "Emu/Memory/vm.h"
+﻿#include "stdafx.h"
+#include "sys_ppu_thread.h"
+
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_ppu_thread.h"
 #include "sys_event.h"
 #include "sys_mmapper.h"
 
@@ -120,19 +120,21 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	// Wait for cleanup
 	(*thread.ptr)();
 
-	// Get the exit status from the register
-	if (vptr)
+	if (ppu.test_stopped())
 	{
-		if (ppu.test_stopped())
-		{
-			return 0;
-		}
-
-		*vptr = thread->gpr[3];
+		return 0;
 	}
 
 	// Cleanup
 	idm::remove<named_thread<ppu_thread>>(thread->id);
+
+	if (!vptr)
+	{
+		return CELL_EFAULT;
+	}
+
+	// Get the exit status from the register
+	*vptr = thread->gpr[3];
 	return CELL_OK;
 }
 
@@ -188,11 +190,17 @@ error_code sys_ppu_thread_detach(u32 thread_id)
 	return CELL_OK;
 }
 
-void sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable)
+error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_get_join_state(isjoinable=*0x%x)", isjoinable);
 
+	if (!isjoinable)
+	{
+		return CELL_EFAULT;
+	}
+
 	*isjoinable = ppu.joiner != -1;
+	return CELL_OK;
 }
 
 error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
@@ -280,6 +288,14 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=%s)",
 		thread_id, param, arg, unk, prio, _stacksz, flags, threadname);
 
+	// thread_id is checked for null in stub -> CELL_ENOMEM
+	// unk is set to 0 in sys_ppu_thread_create stub
+
+	if (!param || !param->entry)
+	{
+		return CELL_EFAULT;
+	}
+
 	if (prio < 0 || prio > 3071)
 	{
 		return CELL_EINVAL;
@@ -326,6 +342,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 
 	if (!tid)
 	{
+		vm::dealloc(stack_base);
 		return CELL_EAGAIN;
 	}
 
@@ -396,6 +413,11 @@ error_code sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name)
 		return CELL_ESRCH;
 	}
 
+	if (!name)
+	{
+		return CELL_EFAULT;
+	}
+
 	// thread_ctrl name is not changed (TODO)
 	thread->ppu_name.assign(name.get_ptr());
 	return CELL_OK;
@@ -412,27 +434,11 @@ error_code sys_ppu_thread_recover_page_fault(u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	// We can only wake a thread if it is being suspended for a page fault.
-	auto pf_events = fxm::get_always<page_fault_event_entries>();
-	auto pf_event_ind = pf_events->events.begin();
-
-	for (auto event_ind = pf_events->events.begin(); event_ind != pf_events->events.end(); ++event_ind)
+	if (auto res = mmapper_thread_recover_page_fault(thread_id))
 	{
-		if (event_ind->thread_id == thread_id)
-		{
-			pf_event_ind = event_ind;
-			break;
-		}
+		return res;
 	}
 
-	if (pf_event_ind == pf_events->events.end())
-	{ // if not found...
-		return CELL_EINVAL;
-	}
-
-	pf_events->events.erase(pf_event_ind);
-
-	lv2_obj::awake(*thread);
 	return CELL_OK;
 }
 
@@ -449,17 +455,10 @@ error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_
 
 	// We can only get a context if the thread is being suspended for a page fault.
 	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	std::shared_lock lock(pf_events->pf_mutex);
 
-	bool found = false;
-	for (const auto& ev : pf_events->events)
-	{
-		if (ev.thread_id == thread_id)
-		{
-			found = true;
-			break;
-		}
-	}
-	if (!found)
+	const auto evt = pf_events->events.find(thread_id);
+	if (evt == pf_events->events.end())
 	{
 		return CELL_EINVAL;
 	}

@@ -75,7 +75,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			d3.HEX = instruction->word[3];
 
 			// Touch current instruction
-			result.instruction_mask[current_instrution] = 1;
+			result.instruction_mask[current_instrution] = true;
 			instruction_range.first = std::min(current_instrution, instruction_range.first);
 			instruction_range.second = std::max(current_instrution, instruction_range.second);
 
@@ -155,7 +155,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			}
 			}
 
-			if (d3.end && (fast_exit || current_instrution >= instruction_range.second) ||
+			if ((d3.end && (fast_exit || current_instrution >= instruction_range.second)) ||
 				(current_instrution + 1) == 512)
 			{
 				break;
@@ -175,7 +175,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 	if (g_cfg.video.log_programs)
 	{
-		fs::file dump(fs::get_config_dir() + "shaderlog/vp_analyser.bin", fs::rewrite);
+		fs::file dump(fs::get_cache_dir() + "shaderlog/vp_analyser.bin", fs::rewrite);
 		dump.write(&entry, 4);
 		dump.write(data, 512 * 16);
 		dump.close();

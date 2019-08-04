@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 typedef void(CellSysconfCallback)(s32 result, vm::ptr<void> userdata);
 

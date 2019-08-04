@@ -133,7 +133,7 @@ namespace cfg
 			return m_value;
 		}
 
-		bool get() const
+		const bool& get() const
 		{
 			return m_value;
 		}
@@ -184,7 +184,7 @@ namespace cfg
 			return m_value;
 		}
 
-		T get() const
+		const T& get() const
 		{
 			return m_value;
 		}
@@ -247,7 +247,7 @@ namespace cfg
 			return m_value;
 		}
 
-		int_type get() const
+		const int_type& get() const
 		{
 			return m_value;
 		}
@@ -347,7 +347,7 @@ namespace cfg
 		{
 		}
 
-		std::set<std::string> get_set() const
+		const std::set<std::string>& get_set() const
 		{
 			return m_set;
 		}
@@ -382,7 +382,7 @@ namespace cfg
 		{
 		}
 
-		std::map<std::string, logs::level> get_map() const
+		const std::map<std::string, logs::level>& get_map() const
 		{
 			return m_map;
 		}

@@ -1,4 +1,6 @@
 #include "stdafx.h"
+#include "PPUFunction.h"
+
 #include "PPUModule.h"
 
 extern std::string ppu_get_syscall_name(u64 code)
@@ -93,6 +95,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 114: return "sys_semaphore_get_value";
 	case 115: return "_sys_lwcond_signal";
 	case 116: return "_sys_lwcond_signal_all";
+	case 117: return "_sys_lwmutex_unlock2";
 	case 118: return "sys_event_flag_clear";
 	case 119: return "sys_time_get_rtc";
 	case 120: return "sys_rwlock_create";
@@ -326,7 +329,7 @@ extern std::string ppu_get_syscall_name(u64 code)
 	case 520: return "sys_config_remove_service_listener";
 	case 521: return "sys_config_register_service";
 	case 522: return "sys_config_unregister_service";
-	case 523: return "sys_config_io_event";
+	case 523: return "sys_config_get_io_event";
 	case 524: return "sys_config_register_io_error_listener";
 	case 525: return "sys_config_unregister_io_error_listener";
 	case 530: return "sys_usbd_initialize";
@@ -2523,12 +2526,14 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 		{
 			LOG_ERROR(PPU, "Unregistered function called (LR=0x%x)", ppu.lr);
 			ppu.gpr[3] = 0;
-			return true;
+			ppu.cia = (u32)ppu.lr & ~3;
+			return false;
 		},
 		[](ppu_thread& ppu) -> bool
 		{
 			ppu.state += cpu_flag::ret;
-			return true;
+			ppu.cia += 4;
+			return false;
 		},
 	};
 

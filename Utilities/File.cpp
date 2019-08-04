@@ -125,6 +125,7 @@ static fs::error to_error(DWORD e)
 #include <sys/types.h>
 #include <sys/statvfs.h>
 #include <sys/file.h>
+#include <sys/uio.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -135,10 +136,12 @@ static fs::error to_error(DWORD e)
 #if defined(__APPLE__)
 #include <copyfile.h>
 #include <mach-o/dyld.h>
-#elif defined(__DragonFly__) || defined(__FreeBSD__)
-#include <sys/socket.h> // sendfile
 #elif defined(__linux__) || defined(__sun)
 #include <sys/sendfile.h>
+#include <sys/syscall.h>
+#include <linux/fs.h>
+#else
+#include <fstream>
 #endif
 
 static fs::error to_error(int e)
@@ -190,6 +193,43 @@ namespace fs
 	void file_base::sync()
 	{
 		// Do notning
+	}
+
+	fs::native_handle fs::file_base::get_handle()
+	{
+#ifdef _WIN32
+		return INVALID_HANDLE_VALUE;
+#else
+		return -1;
+#endif
+	}
+
+	u64 file_base::write_gather(const iovec_clone* buffers, u64 buf_count)
+	{
+		u64 total = 0;
+
+		for (u64 i = 0; i < buf_count; i++)
+		{
+			if (!buffers[i].iov_base || buffers[i].iov_len + total < total)
+			{
+				g_tls_error = error::inval;
+				return -1;
+			}
+
+			total += buffers[i].iov_len;
+		}
+
+		const auto buf = std::make_unique<uchar[]>(total);
+
+		u64 copied = 0;
+
+		for (u64 i = 0; i < buf_count; i++)
+		{
+			std::memcpy(buf.get() + copied, buffers[i].iov_base, buffers[i].iov_len);
+			copied += buffers[i].iov_len;
+		}
+
+		return this->write(buf.get(), total);
 	}
 
 	dir_base::~dir_base()
@@ -600,6 +640,21 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 
 	return true;
 #else
+
+#ifdef __linux__
+	if (syscall(SYS_renameat2, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), overwrite ? 0 : 1 /* RENAME_NOREPLACE */) == 0)
+	{
+		return true;
+	}
+
+	// If the filesystem doesn't support RENAME_NOREPLACE, it returns EINVAL. Retry with fallback method in that case.
+	if (errno != EINVAL || overwrite)
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+#endif
+
 	if (!overwrite && exists(to))
 	{
 		g_tls_error = fs::error::exist;
@@ -633,7 +688,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	}
 
 	return true;
-#else
+#elif defined(__APPLE__) || defined(__linux__) || defined(__sun)
 	/* Source: http://stackoverflow.com/questions/2180079/how-can-i-copy-a-file-on-unix-using-c */
 
 	const int input = ::open(from.c_str(), O_RDONLY);
@@ -657,17 +712,13 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 #if defined(__APPLE__)
 	// fcopyfile works on OS X 10.5+
 	if (::fcopyfile(input, output, 0, COPYFILE_ALL))
-#elif defined(__DragonFly__) || defined(__FreeBSD__)
-	if (::sendfile(input, output, 0, 0, NULL, NULL, 0))
 #elif defined(__linux__) || defined(__sun)
 	// sendfile will work with non-socket output (i.e. regular file) on Linux 2.6.33+
 	off_t bytes_copied = 0;
 	struct ::stat fileinfo = { 0 };
 	if (::fstat(input, &fileinfo) || ::sendfile(output, input, &bytes_copied, fileinfo.st_size))
-#else // NetBSD, OpenBSD, etc.
-	fmt::throw_exception("fs::copy_file() isn't implemented for this platform.\nFrom: %s\nTo: %s", from, to);
-	errno = 0;
-	if (true)
+#else
+#error "Native file copy implementation is missing"
 #endif
 	{
 		const int err = errno;
@@ -680,6 +731,31 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 
 	::close(input);
 	::close(output);
+	return true;
+#else // fallback
+	{
+		std::ifstream out{to, std::ios::binary};
+		if (out.good() && !overwrite)
+		{
+			g_tls_error = to_error(EEXIST);
+			return false;
+		}
+	}
+
+	std::ifstream in{from, std::ios::binary};
+	std::ofstream out{to,  std::ios::binary};
+
+	if (!in.good() || !out.good())
+	{
+		g_tls_error = to_error(errno);
+		return false;
+	}
+
+	std::istreambuf_iterator<char> bin(in);
+	std::istreambuf_iterator<char> ein;
+	std::ostreambuf_iterator<char> bout(out);
+	std::copy(bin, ein, bout);
+
 	return true;
 #endif
 }
@@ -863,7 +939,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	class windows_file final : public file_base, public get_native_handle
+	class windows_file final : public file_base
 	{
 		const HANDLE m_handle;
 
@@ -966,7 +1042,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return size.QuadPart;
 		}
 
-		native_handle get() override
+		native_handle get_handle() override
 		{
 			return m_handle;
 		}
@@ -1013,7 +1089,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		::ftruncate(fd, 0);
 	}
 
-	class unix_file final : public file_base, public get_native_handle
+	class unix_file final : public file_base
 	{
 		const int m_fd;
 
@@ -1106,9 +1182,20 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return file_info.st_size;
 		}
 
-		native_handle get() override
+		native_handle get_handle() override
 		{
 			return m_fd;
+		}
+
+		u64 write_gather(const iovec_clone* buffers, u64 buf_count) override
+		{
+			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
+			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
+
+			const auto result = ::writev(m_fd, (const iovec*)buffers, buf_count);
+			verify("file::write_gather" HERE), result != -1;
+
+			return result;
 		}
 	};
 
@@ -1187,9 +1274,9 @@ fs::file::file(const void* ptr, std::size_t size)
 
 fs::native_handle fs::file::get_handle() const
 {
-	if (auto getter = dynamic_cast<get_native_handle*>(m_file.get()))
+	if (m_file)
 	{
-		return getter->get();
+		return m_file->get_handle();
 	}
 
 #ifdef _WIN32
@@ -1198,6 +1285,15 @@ fs::native_handle fs::file::get_handle() const
 	return -1;
 #endif
 }
+
+#ifdef _WIN32
+bool fs::file::set_delete(bool autodelete) const
+{
+	FILE_DISPOSITION_INFO disp;
+	disp.DeleteFileW = autodelete;
+	return SetFileInformationByHandle(get_handle(), FileDispositionInfo, &disp, sizeof(disp)) != 0;
+}
+#endif
 
 void fs::dir::xnull() const
 {
@@ -1363,8 +1459,10 @@ const std::string& fs::get_config_dir()
 		std::string dir;
 
 #ifdef _WIN32
-		wchar_t buf[2048];
-		if (GetModuleFileName(NULL, buf, ::size32(buf)) - 1 >= ::size32(buf) - 1)
+		wchar_t buf[32768];
+		constexpr DWORD size = static_cast<DWORD>(std::size(buf));
+		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, size) - 1 >= size - 1 &&
+			GetModuleFileName(NULL, buf, size) - 1 >= size - 1)
 		{
 			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 			return dir; // empty
@@ -1376,10 +1474,16 @@ const std::string& fs::get_config_dir()
 
 		dir.resize(dir.rfind('/') + 1);
 #else
-		if (const char* home = ::getenv("XDG_CONFIG_HOME"))
-			dir = home;
+
+#ifdef __APPLE__
+		if (const char* home = ::getenv("HOME"))
+			dir = home + "/Library/Application Support"s;
+#else
+		if (const char* conf = ::getenv("XDG_CONFIG_HOME"))
+			dir = conf;
 		else if (const char* home = ::getenv("HOME"))
 			dir = home + "/.config"s;
+#endif
 		else // Just in case
 			dir = "./config";
 
@@ -1397,73 +1501,42 @@ const std::string& fs::get_config_dir()
 	return s_dir;
 }
 
-std::string fs::get_data_dir(const std::string& prefix, const std::string& location, const std::string& suffix)
+const std::string& fs::get_cache_dir()
 {
 	static const std::string s_dir = []
 	{
-		const std::string dir = get_config_dir() + "data/";
+		std::string dir;
+
+#ifdef _WIN32
+		dir = get_config_dir();
+#else
+
+#ifdef __APPLE__
+		if (const char* home = ::getenv("HOME"))
+			dir = home + "/Library/Caches"s;
+#else
+		if (const char* cache = ::getenv("XDG_CACHE_HOME"))
+			dir = cache;
+		else if (const char* conf = ::getenv("XDG_CONFIG_HOME"))
+			dir = conf;
+		else if (const char* home = ::getenv("HOME"))
+			dir = home + "/.cache"s;
+#endif
+		else // Just in case
+			dir = "./cache";
+
+		dir += "/rpcs3/";
 
 		if (!create_path(dir))
 		{
-			return get_config_dir();
+			std::printf("Failed to create configuration directory '%s' (%d).\n", dir.c_str(), errno);
 		}
+#endif
 
 		return dir;
 	}();
 
-	std::vector<u8> buf;
-	buf.reserve(location.size() + 1);
-
-	// Normalize location
-	for (char c : location)
-	{
-#ifdef _WIN32
-		if (c == '/' || c == '\\')
-#else
-		if (c == '/')
-#endif
-		{
-			if (buf.empty() || buf.back() != '/')
-			{
-				buf.push_back('/');
-			}
-
-			continue;
-		}
-
-		buf.push_back(c);
-	}
-
-	// Calculate hash
-	u8 hash[20];
-	sha1(buf.data(), buf.size(), hash);
-
-	// Concatenate
-	std::string result = fmt::format("%s%s/%016llx%08x-%s/", s_dir, prefix, reinterpret_cast<be_t<u64>&>(hash[0]), reinterpret_cast<be_t<u32>&>(hash[8]), suffix);
-
-	// Create dir if necessary
-	if (create_path(result))
-	{
-		// Acknowledge original location
-		file(result + ".location", rewrite).write(buf);
-	}
-
-	return result;
-}
-
-std::string fs::get_data_dir(const std::string& prefix, const std::string& path)
-{
-#ifdef _WIN32
-	const auto& delim = "/\\";
-#else
-	const auto& delim = "/";
-#endif
-
-	// Extract file name and location
-	const std::string& location = fs::get_parent_dir(path);
-	const std::size_t name_pos = path.find_first_not_of(delim, location.size());
-
-	return fs::get_data_dir(prefix, location, name_pos == -1 ? std::string{} : path.substr(name_pos));
+	return s_dir;
 }
 
 void fs::remove_all(const std::string& path, bool remove_root)

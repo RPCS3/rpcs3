@@ -1,8 +1,8 @@
 #pragma once
 
-
-
 #include "cellRtc.h"
+
+#include "Utilities/BEType.h"
 
 // Error Codes
 enum

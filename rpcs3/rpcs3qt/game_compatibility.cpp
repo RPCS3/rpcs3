@@ -1,4 +1,4 @@
-#include "game_compatibility.h"
+﻿#include "game_compatibility.h"
 
 #include <QLabel>
 #include <QMessageBox>
@@ -73,6 +73,9 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 		// Add date if possible
 		status.date = json_result.value("date").toString();
 
+		// Add version if possible
+		status.version = json_result.value("update").toString();
+
 		// Add status to map
 		m_compat_database.emplace(std::pair<std::string, compat_status>(sstr(key), status));
 	}
@@ -124,7 +127,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	QNetworkReply* network_reply = m_network_access_manager->get(m_network_request);
 
 	// Show Progress
-	m_progress_dialog.reset(new progress_dialog(tr(".Please wait."), tr("Abort"), 0, 100));
+	m_progress_dialog = new progress_dialog(tr(".Please wait."), tr("Abort"), 0, 100);
 	m_progress_dialog->setWindowTitle(tr("Downloading Database"));
 	m_progress_dialog->setFixedWidth(QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width());
 	m_progress_dialog->setValue(0);
@@ -151,7 +154,8 @@ void game_compatibility::RequestCompatibility(bool online)
 	m_progress_timer->start(500);
 
 	// Handle abort
-	connect(m_progress_dialog.get(), &QProgressDialog::canceled, network_reply, &QNetworkReply::abort);
+	connect(m_progress_dialog, &QProgressDialog::canceled, network_reply, &QNetworkReply::abort);
+	connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
 
 	// Handle progress
 	connect(network_reply, &QNetworkReply::downloadProgress, [&](qint64 bytesReceived, qint64 bytesTotal)

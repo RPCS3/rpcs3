@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/Memory/vm_ptr.h"
 
 #include "Emu/Cell/PPUFunction.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -15,6 +16,7 @@
 #include "sys_memory.h"
 #include "sys_mmapper.h"
 #include "sys_net.h"
+#include "sys_overlay.h"
 #include "sys_ppu_thread.h"
 #include "sys_process.h"
 #include "sys_prx.h"
@@ -33,6 +35,7 @@
 #include "sys_gamepad.h"
 #include "sys_ss.h"
 #include "sys_gpio.h"
+#include "sys_config.h"
 
 extern std::string ppu_get_syscall_name(u64 code);
 
@@ -176,7 +179,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_semaphore_get_value),                     //114 (0x072)
 	BIND_FUNC(_sys_lwcond_signal),                          //115 (0x073)
 	BIND_FUNC(_sys_lwcond_signal_all),                      //116 (0x074)
-	null_func,//BIND_FUNC(sys_semaphore_...)                //117 (0x075) // internal, used by sys_lwmutex_unlock
+	BIND_FUNC(_sys_lwmutex_unlock2),                        //117 (0x075)
 	BIND_FUNC(sys_event_flag_clear),                        //118 (0x076)
 	null_func,//BIND_FUNC(sys_time_get_rtc)                 //119 (0x077)  ROOT
 	BIND_FUNC(sys_rwlock_create),                           //120 (0x078)
@@ -257,8 +260,8 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	uns_func,                                               //195 (0x0C3)  UNS
 	BIND_FUNC(sys_raw_spu_set_spu_cfg),                     //196 (0x0C4)
 	BIND_FUNC(sys_raw_spu_get_spu_cfg),                     //197 (0x0C5)
-	null_func,//BIND_FUNC(sys_spu_thread_recover_page_fault)//198 (0x0C6)
-	null_func,//BIND_FUNC(sys_raw_spu_recover_page_fault)   //199 (0x0C7)
+	BIND_FUNC(sys_spu_thread_recover_page_fault),           //198 (0x0C6)
+	BIND_FUNC(sys_raw_spu_recover_page_fault),              //199 (0x0C7)
 
 	null_func, null_func, null_func, null_func, null_func,  //204  UNS?
 	null_func, null_func, null_func, null_func, null_func,  //209  UNS?
@@ -422,11 +425,11 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //430-439  UNS
 	uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, uns_func, //440-449  UNS
 
-	null_func,//BIND_FUNC(sys_overlay_load_module)          //450 (0x1C2)
-	null_func,//BIND_FUNC(sys_overlay_unload_module)        //451 (0x1C3)
+	BIND_FUNC(sys_overlay_load_module),                     //450 (0x1C2)
+	BIND_FUNC(sys_overlay_unload_module),                   //451 (0x1C3)
 	null_func,//BIND_FUNC(sys_overlay_get_module_list)      //452 (0x1C4)
 	null_func,//BIND_FUNC(sys_overlay_get_module_info)      //453 (0x1C5)
-	null_func,//BIND_FUNC(sys_overlay_load_module_by_fd)    //454 (0x1C6)
+	BIND_FUNC(sys_overlay_load_module_by_fd),               //454 (0x1C6)
 	null_func,//BIND_FUNC(sys_overlay_get_module_info2)     //455 (0x1C7)
 	null_func,//BIND_FUNC(sys_overlay_get_sdk_version)      //456 (0x1C8)
 	null_func,//BIND_FUNC(sys_overlay_get_module_dbg_info)  //457 (0x1C9)
@@ -488,16 +491,16 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_hid_manager_...)              //513 (0x201)
 	null_func,//BIND_FUNC(sys_hid_manager_...)              //514 (0x202)
 	uns_func,                                               //515 (0x203)  UNS
-	null_func,//BIND_FUNC(sys_config_open)                  //516 (0x204)
-	null_func,//BIND_FUNC(sys_config_close)                 //517 (0x205)
-	null_func,//BIND_FUNC(sys_config_get_service_event)     //518 (0x206)
-	null_func,//BIND_FUNC(sys_config_add_service_listener)  //519 (0x207)
-	null_func,//BIND_FUNC(sys_config_remove_service_listener) //520 (0x208)
-	null_func,//BIND_FUNC(sys_config_register_service)      //521 (0x209)
-	null_func,//BIND_FUNC(sys_config_unregister_service)    //522 (0x20A)
-	null_func,//BIND_FUNC(sys_config_io_event)              //523 (0x20B)
-	null_func,//BIND_FUNC(sys_config_register_io_error_listener) //524 (0x20C)
-	null_func,//BIND_FUNC(sys_config_unregister_io_error_listener) //525 (0x20D)
+	BIND_FUNC(sys_config_open),                             //516 (0x204)
+	BIND_FUNC(sys_config_close),                            //517 (0x205)
+	BIND_FUNC(sys_config_get_service_event),                //518 (0x206)
+	BIND_FUNC(sys_config_add_service_listener),             //519 (0x207)
+	BIND_FUNC(sys_config_remove_service_listener),          //520 (0x208)
+	BIND_FUNC(sys_config_register_service),                 //521 (0x209)
+	BIND_FUNC(sys_config_unregister_service),               //522 (0x20A)
+	BIND_FUNC(sys_config_get_io_event),                     //523 (0x20B)
+	BIND_FUNC(sys_config_register_io_error_listener),       //524 (0x20C)
+	BIND_FUNC(sys_config_unregister_io_error_listener),     //525 (0x20D)
 	uns_func, uns_func, uns_func, uns_func,                 //526-529  UNS
 	BIND_FUNC(sys_usbd_initialize),                         //530 (0x212)
 	BIND_FUNC(sys_usbd_finalize),                           //531 (0x213)
@@ -911,6 +914,7 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 		STR_CASE(CELL_ETIMEDOUT);
 		STR_CASE(CELL_EABORT);
 		STR_CASE(CELL_EFAULT);
+		STR_CASE(CELL_ENOCHILD);
 		STR_CASE(CELL_ESTAT);
 		STR_CASE(CELL_EALIGN);
 		STR_CASE(CELL_EKRESOURCE);
@@ -995,7 +999,7 @@ extern ppu_function_t ppu_get_syscall(u64 code)
 	return nullptr;
 }
 
-extern u64 get_system_time();
+extern u64 get_guest_system_time();
 
 DECLARE(lv2_obj::g_mutex);
 DECLARE(lv2_obj::g_ppu);
@@ -1006,7 +1010,7 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 {
 	std::lock_guard lock(g_mutex);
 
-	const u64 start_time = get_system_time();
+	const u64 start_time = get_guest_system_time();
 
 	if (auto ppu = static_cast<ppu_thread*>(thread.id_type() == 1 ? &thread : nullptr))
 	{
@@ -1041,16 +1045,14 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 		const u64 wait_until = start_time + timeout;
 
 		// Register timeout if necessary
-		for (auto it = g_waiting.begin(), end = g_waiting.end(); it != end; it++)
+		for (auto it = g_waiting.cbegin(), end = g_waiting.cend();; it++)
 		{
-			if (it->first > wait_until)
+			if (it == end || it->first > wait_until)
 			{
 				g_waiting.emplace(it, wait_until, &thread);
-				return;
+				break;
 			}
 		}
-
-		g_waiting.emplace_back(wait_until, &thread);
 	}
 
 	schedule_all();
@@ -1074,7 +1076,7 @@ void lv2_obj::awake(cpu_thread& cpu, u32 prio)
 	else if (prio == -4)
 	{
 		// Yield command
-		const u64 start_time = get_system_time();
+		const u64 start_time = get_guest_system_time();
 
 		for (std::size_t i = 0, pos = -1; i < g_ppu.size(); i++)
 		{
@@ -1180,7 +1182,7 @@ void lv2_obj::schedule_all()
 	{
 		auto& pair = g_waiting.front();
 
-		if (pair.first <= get_system_time())
+		if (pair.first <= get_guest_system_time())
 		{
 			pair.second->notify();
 			g_waiting.pop_front();

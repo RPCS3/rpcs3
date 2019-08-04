@@ -6,7 +6,7 @@
 
 s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 {
-	//TODO: Install native shell as an Emu callback
+	// TODO: Install native shell as an Emu callback
 	if (auto manager = fxm::get<rsx::overlays::display_manager>())
 	{
 		auto result = manager->create<rsx::overlays::save_dialog>()->show(save_entries, op, listSet);
@@ -14,9 +14,11 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 			return result;
 	}
 
-	//Fall back to front-end GUI
+	// Fall back to front-end GUI
 	atomic_t<bool> dlg_result(false);
 	atomic_t<s32> selection;
+
+	pad::SetIntercepted(true);
 
 	Emu.CallAfter([&]()
 	{
@@ -30,6 +32,8 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 	{
 		thread_ctrl::wait_for(1000);
 	}
+
+	pad::SetIntercepted(false);
 
 	return selection.load();
 }

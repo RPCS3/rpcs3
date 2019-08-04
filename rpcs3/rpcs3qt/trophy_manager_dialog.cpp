@@ -1,4 +1,4 @@
-#include "trophy_manager_dialog.h"
+﻿#include "trophy_manager_dialog.h"
 #include "custom_table_widget_item.h"
 #include "table_item_delegate.h"
 #include "qt_utils.h"
@@ -56,7 +56,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_show_platinum_trophies = m_gui_settings->GetValue(gui::tr_show_platinum).toBool();
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
-	vfs::mount("/dev_hdd0", Emu.GetHddDir());
+	vfs::mount("/dev_hdd0", Emulator::GetHddDir());
 
 	// Get the currently selected user's trophy path.
 	m_trophy_dir = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/";
@@ -470,23 +470,22 @@ void trophy_manager_dialog::HandleRepaintUiRequest()
 void trophy_manager_dialog::ResizeGameIcon(int index)
 {
 	QTableWidgetItem* item = m_game_table->item(index, GameColumns::GameIcon);
-	const QPixmap pixmap = item->data(Qt::UserRole).value<QPixmap>();
-	const QSize original_size = pixmap.size();
+	const QPixmap icon = item->data(Qt::UserRole).value<QPixmap>();
+	const int dpr = devicePixelRatio();
 
-	QPixmap new_pixmap = QPixmap(original_size);
-	new_pixmap.fill(m_game_icon_color);
+	QPixmap new_icon = QPixmap(icon.size() * dpr);
+	new_icon.setDevicePixelRatio(dpr);
+	new_icon.fill(m_game_icon_color);
 
-	QPainter painter(&new_pixmap);
-
-	if (!pixmap.isNull())
+	if (!icon.isNull())
 	{
-		painter.drawPixmap(QPoint(0, 0), pixmap);
+		QPainter painter(&new_icon);
+		painter.drawPixmap(QPoint(0, 0), icon);
+		painter.end();
 	}
 
-	painter.end();
-
-	const QPixmap scaled = new_pixmap.scaled(m_game_icon_size, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
-	item->setData(Qt::DecorationRole, scaled);
+	const QPixmap scaled_icon = new_icon.scaled(m_game_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
+	item->setData(Qt::DecorationRole, scaled_icon);
 }
 
 void trophy_manager_dialog::ResizeGameIcons()
@@ -507,12 +506,27 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 	if (m_game_combo->count() <= 0)
 		return;
 
-	int db_pos = m_game_combo->currentData().toInt();
+	const int db_pos = m_game_combo->currentData().toInt();
+	const int dpr = devicePixelRatio();
+	const int new_height = m_icon_height * dpr;
 
 	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
 	{
-		int trophy_id = m_trophy_table->item(i, TrophyColumns::Id)->text().toInt();
-		QPixmap scaled = m_trophies_db[db_pos]->trophy_images[trophy_id].scaledToHeight(m_icon_height, Qt::SmoothTransformation);
+		const int trophy_id = m_trophy_table->item(i, TrophyColumns::Id)->text().toInt();
+		const QPixmap icon = m_trophies_db[db_pos]->trophy_images[trophy_id];
+
+		QPixmap new_icon = QPixmap(icon.size() * dpr);
+		new_icon.setDevicePixelRatio(dpr);
+		new_icon.fill(m_game_icon_color);
+
+		if (!icon.isNull())
+		{
+			QPainter painter(&new_icon);
+			painter.drawPixmap(QPoint(0, 0), icon);
+			painter.end();
+		}
+
+		const QPixmap scaled = new_icon.scaledToHeight(new_height, Qt::SmoothTransformation);
 		m_trophy_table->item(i, TrophyColumns::Icon)->setData(Qt::DecorationRole, scaled);
 	}
 
@@ -655,7 +669,7 @@ void trophy_manager_dialog::PopulateGameTable()
 	m_game_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 
 	m_game_table->clearContents();
-	m_game_table->setRowCount(m_trophies_db.size());
+	m_game_table->setRowCount(static_cast<int>(m_trophies_db.size()));
 
 	m_game_combo->clear();
 

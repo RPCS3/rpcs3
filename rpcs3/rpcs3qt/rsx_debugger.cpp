@@ -1,4 +1,4 @@
-
+﻿
 #include "rsx_debugger.h"
 #include "qt_utils.h"
 
@@ -371,7 +371,7 @@ Buffer::Buffer(bool isTex, u32 id, const QString& name, QWidget* parent)
 	setLayout(layout);
 
 	installEventFilter(parent);
-};
+}
 
 // Draws a formatted and buffered <image> inside the Buffer Widget
 void Buffer::showImage(const QImage& image)
@@ -401,7 +401,7 @@ void Buffer::ShowWindowed()
 	// TODO: Is there any better way to choose the color buffers
 #define SHOW_BUFFER(id) \
 	{ \
-		u32 addr = render->local_mem_addr + buffers[id].offset; \
+		u32 addr = rsx::constants::local_mem_base + buffers[id].offset; \
 		if (vm::check_addr(addr) && buffers[id].width && buffers[id].height) \
 			memory_viewer_panel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
 		return; \
@@ -440,7 +440,7 @@ namespace
 		{
 			be_t<u32> stored_val = as_const_span<const be_t<u32>>(orig_buffer)[idx];
 			u32 swapped_val = stored_val;
-			f32 float_val = (f32&)swapped_val;
+			f32 float_val = std::bit_cast<f32>(swapped_val);
 			u8 val = float_val * 255.f;
 			return{ val, val, val };
 		}
@@ -500,7 +500,7 @@ namespace
 		}
 		return buffer;
 	}
-};
+}
 
 void rsx_debugger::OnClickDrawCalls()
 {
@@ -633,9 +633,9 @@ void rsx_debugger::GetMemory()
 	int item_count = m_list_commands->rowCount();
 
 	// Write information
-	for(u32 i=0, addr = m_addr; i < item_count; i++, addr += 4)
+	for (int i = 0, addr = m_addr; i < item_count; i++, addr += 4)
 	{
-		QTableWidgetItem* address_item = new QTableWidgetItem(qstr(fmt::format("%08x", addr)));
+		QTableWidgetItem* address_item = new QTableWidgetItem(qstr(fmt::format("%07x", addr)));
 		address_item->setData(Qt::UserRole, addr);
 		m_list_commands->setItem(i, 0, address_item);
 
@@ -671,7 +671,7 @@ void rsx_debugger::GetMemory()
 		dump += '\n';
 	}
 
-	fs::file(fs::get_config_dir() + "command_dump.log", fs::rewrite).write(dump);
+	fs::file(fs::get_cache_dir() + "command_dump.log", fs::rewrite).write(dump);
 
 	for (u32 i = 0;i < frame_debug.draw_calls.size(); i++)
 		m_list_captured_draw_calls->setItem(i, 0, new QTableWidgetItem(qstr(frame_debug.draw_calls[i].name)));
@@ -690,7 +690,7 @@ void rsx_debugger::GetBuffers()
 	for (u32 bufferId=0; bufferId < render->display_buffers_count; bufferId++)
 	{
 		auto buffers = render->display_buffers;
-		u32 RSXbuffer_addr = render->local_mem_addr + buffers[bufferId].offset;
+		u32 RSXbuffer_addr = rsx::constants::local_mem_base + buffers[bufferId].offset;
 
 		if(!vm::check_addr(RSXbuffer_addr))
 			continue;
@@ -1085,31 +1085,38 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 	std::string disasm;
 
 #define DISASM(string, ...) { if(disasm.empty()) disasm = fmt::format((string), ##__VA_ARGS__); else disasm += (' ' + fmt::format((string), ##__VA_ARGS__)); }
-	if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-	{
-		u32 jumpAddr = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
-		DISASM("JUMP: %08x -> %08x", ioAddr, jumpAddr);
-	}
-	else if((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-	{
-		u32 jumpAddr = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
-		DISASM("JUMP: %08x -> %08x", ioAddr, jumpAddr);
-	}
-	else if((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
-	{
-		u32 callAddr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
-		DISASM("CALL: %08x -> %08x", ioAddr, callAddr);
-	}
-	if((cmd & ~0xfffc) == RSX_METHOD_RETURN_CMD)
-	{
-		DISASM("RETURN");
-	}
 
-	if((cmd & ~(RSX_METHOD_NON_INCREMENT_CMD | 0xfffc)) == 0)
+	if (cmd & RSX_METHOD_NON_METHOD_CMD_MASK)
+	{
+		if((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
+		{
+			u32 jumpAddr = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
+			DISASM("JUMP to 0x%07x", jumpAddr);
+		}
+		else if((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
+		{
+			u32 jumpAddr = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
+			DISASM("JUMP to 0x%07x", jumpAddr);
+		}
+		else if((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
+		{
+			u32 callAddr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
+			DISASM("CALL to 0x%07x", callAddr);
+		}
+		else if((cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
+		{
+			DISASM("RETURN");
+		}
+		else
+		{
+			DISASM("Not a command");
+		}
+	}
+	else if ((cmd & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD)
 	{
 		DISASM("NOP");
 	}
-	else if (!(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
+	else
 	{
 		auto args = vm::get_super_ptr<u32>(RSXIOMem.RealAddr(ioAddr + 4));
 
@@ -1121,7 +1128,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		break;
 
 		case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
-			DISASM("Texture Offset[%d]: %08x", index, (u32)args[0]);
+			DISASM("Texture Offset[%d]: %07x", index, (u32)args[0]);
 			switch ((args[1] & 0x3) - 1)
 			{
 			case CELL_GCM_LOCATION_LOCAL: DISASM("(Local memory);");  break;
@@ -1145,12 +1152,12 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		}
 		}
 
-		if((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD)
+		if((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD && count > 1)
 		{
 			DISASM("Non Increment cmd");
 		}
 
-		DISASM("[0x%08x(", cmd);
+		DISASM("(");
 
 		for(uint i=0; i<count; ++i)
 		{
@@ -1158,7 +1165,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 			disasm += fmt::format("0x%x", (u32)args[i]);
 		}
 
-		disasm += ")]";
+		disasm += ")";
 	}
 #undef DISASM
 

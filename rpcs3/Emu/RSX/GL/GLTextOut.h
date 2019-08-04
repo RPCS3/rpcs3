@@ -79,9 +79,8 @@ namespace gl
 
 	public:
 
-		text_writer() {}
-
-		~text_writer(){}
+		text_writer() = default;
+		~text_writer() = default;
 
 		void init()
 		{

@@ -1,7 +1,10 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
 #include "Utilities/sysinfo.h"
+#include "../RSXThread.h"
+
+#include <limits>
 
 #define DEBUG_VERTEX_STREAMING 0
 
@@ -12,7 +15,7 @@ const bool s_use_ssse3 =
 	true;
 #else
 	false;
-#define _mm_shuffle_epi8
+#define _mm_shuffle_epi8(opa, opb) opb
 #endif
 
 namespace
@@ -538,139 +541,307 @@ void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::s
 
 namespace
 {
-template<typename T>
-std::tuple<u32, u32, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<u32> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
-{
-	u32 min_index = -1;
-	u32 max_index = 0;
-
-	verify(HERE), (dst.size_bytes() >= src.size_bytes());
-
-	u32 dst_idx = 0;
-	for (T index : src)
+	template <typename T>
+	constexpr T index_limit()
 	{
-		if (is_primitive_restart_enabled && (u32)index == primitive_restart_index)
-		{
-			// List types do not need primitive restart. Just skip over this instead
-			if (rsx::method_registers.current_draw_clause.is_disjoint_primitive)
-				continue;
+		return std::numeric_limits<T>::max();
+	}
 
-			dst[dst_idx++] = -1u;
+	template <typename T>
+	const T& min_max(T& min, T& max, const T& value)
+	{
+		if (value < min)
+			min = value;
+
+		if (value > max)
+			max = value;
+
+		return value;
+	}
+
+	struct untouched_impl
+	{
+		static
+		std::tuple<u16, u16, u32> upload_u16_swapped(const void *src, void *dst, u32 count)
+		{
+			const __m128i mask = _mm_set_epi8(
+				0xE, 0xF, 0xC, 0xD,
+				0xA, 0xB, 0x8, 0x9,
+				0x6, 0x7, 0x4, 0x5,
+				0x2, 0x3, 0x0, 0x1);
+
+			auto src_stream = (const __m128i*)src;
+			auto dst_stream = (__m128i*)dst;
+
+			__m128i min = _mm_set1_epi16(0xFFFF);
+			__m128i max = _mm_set1_epi16(0);
+
+			const auto iterations = count / 8;
+			for (unsigned n = 0; n < iterations; ++n)
+			{
+				const __m128i raw = _mm_loadu_si128(src_stream++);
+				const __m128i value = _mm_shuffle_epi8(raw, mask);
+				max = _mm_max_epu16(max, value);
+				min = _mm_min_epu16(min, value);
+				_mm_storeu_si128(dst_stream++, value);
+			}
+
+			const __m128i mask_step1 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
+
+			const __m128i mask_step2 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
+
+			const __m128i mask_step3 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0x3, 0x2);
+
+			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step2);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step3);
+			min = _mm_min_epu16(min, tmp);
+
+			tmp = _mm_shuffle_epi8(max, mask_step1);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step2);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step3);
+			max = _mm_max_epu16(max, tmp);
+
+			const u16 min_index = u16(_mm_cvtsi128_si32(min) & 0xFFFF);
+			const u16 max_index = u16(_mm_cvtsi128_si32(max) & 0xFFFF);
+
+			return std::make_tuple(min_index, max_index, count);
+		}
+
+		static
+		std::tuple<u32, u32, u32> upload_u32_swapped(const void *src, void *dst, u32 count)
+		{
+			const __m128i mask = _mm_set_epi8(
+				0xC, 0xD, 0xE, 0xF,
+				0x8, 0x9, 0xA, 0xB,
+				0x4, 0x5, 0x6, 0x7,
+				0x0, 0x1, 0x2, 0x3);
+
+			auto src_stream = (const __m128i*)src;
+			auto dst_stream = (__m128i*)dst;
+
+			__m128i min = _mm_set1_epi32(~0u);
+			__m128i max = _mm_set1_epi32(0);
+
+			const auto iterations = count / 4;
+			for (unsigned n = 0; n < iterations; ++n)
+			{
+				const __m128i raw = _mm_loadu_si128(src_stream++);
+				const __m128i value = _mm_shuffle_epi8(raw, mask);
+				max = _mm_max_epu32(max, value);
+				min = _mm_min_epu32(min, value);
+				_mm_storeu_si128(dst_stream++, value);
+			}
+
+			// Aggregate min-max
+			const __m128i mask_step1 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
+
+			const __m128i mask_step2 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
+
+			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step2);
+			min = _mm_min_epu16(min, tmp);
+
+			tmp = _mm_shuffle_epi8(max, mask_step1);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step2);
+			max = _mm_max_epu16(max, tmp);
+
+			const u32 min_index = u32(_mm_cvtsi128_si32(min));
+			const u32 max_index = u32(_mm_cvtsi128_si32(max));
+
+			return std::make_tuple(min_index, max_index, count);
+		}
+
+		template<typename T>
+		static
+		std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst)
+		{
+			T min_index, max_index;
+			u32 written;
+			u32 remaining = src.size();
+
+			if (s_use_ssse3 && remaining >= 32)
+			{
+				if constexpr (std::is_same<T, u32>::value)
+				{
+					const auto count = (remaining & ~0x3);
+					std::tie(min_index, max_index, written) = upload_u32_swapped(src.data(), dst.data(), count);
+				}
+				else if constexpr (std::is_same<T, u16>::value)
+				{
+					const auto count = (remaining & ~0x7);
+					std::tie(min_index, max_index, written) = upload_u16_swapped(src.data(), dst.data(), count);
+				}
+
+				remaining -= written;
+			}
+			else
+			{
+				min_index = index_limit<T>();
+				max_index = 0;
+				written = 0;
+			}
+
+			while (remaining--)
+			{
+				T index = src[written];
+				dst[written++] = min_max(min_index, max_index, index);
+			}
+
+			return std::make_tuple(min_index, max_index, written);
+		}
+	};
+
+	struct primitive_restart_impl
+	{
+		template<typename T>
+		static
+		std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, u32 restart_index, bool skip_restart)
+		{
+			T min_index = index_limit<T>(), max_index = 0;
+			u32 dst_index = 0;
+
+			for (const T index : src)
+			{
+				if (index == restart_index)
+				{
+					if (!skip_restart)
+					{
+						dst[dst_index++] = index_limit<T>();
+					}
+				}
+				else
+				{
+					dst[dst_index++] = min_max(min_index, max_index, index);
+				}
+			}
+
+			return std::make_tuple(min_index, max_index, dst_index);
+		}
+	};
+
+	template<typename T>
+	std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, rsx::primitive_type draw_mode, bool is_primitive_restart_enabled, u32 primitive_restart_index)
+	{
+		if (LIKELY(!is_primitive_restart_enabled))
+		{
+			return untouched_impl::upload_untouched(src, dst);
 		}
 		else
 		{
-			const u32 new_index = rsx::get_index_from_base((u32)index, base_index);
-			max_index = std::max(max_index, new_index);
-			min_index = std::min(min_index, new_index);
-			dst[dst_idx++] = new_index;
+			return primitive_restart_impl::upload_untouched(src, dst, primitive_restart_index, is_primitive_disjointed(draw_mode));
 		}
 	}
-	return std::make_tuple(min_index, max_index, dst_idx);
-}
 
-template<typename T>
-std::tuple<u32, u32, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<u32> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
-{
-	const u32 invalid_index = -1u;
-
-	u32 min_index = invalid_index;
-	u32 max_index = 0;
-
-	verify(HERE), (dst.size() >= 3 * (src.size() - 2));
-
-	u32 dst_idx = 0;
-	u32 src_idx = 0;
-
-	bool needs_anchor = true;
-	u32 anchor = invalid_index;
-	u32 last_index = invalid_index;
-
-	for (size_t src_idx = 0; src_idx < src.size(); ++src_idx)
+	template<typename T>
+	std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
-		u32 index = src[src_idx];
-		index = rsx::get_index_from_base(index, base_index);
+		const T invalid_index = index_limit<T>();
 
-		if (needs_anchor)
+		T min_index = invalid_index;
+		T max_index = 0;
+
+		verify(HERE), (dst.size() >= 3 * (src.size() - 2));
+
+		u32 dst_idx = 0;
+		u32 src_idx = 0;
+
+		bool needs_anchor = true;
+		T anchor = invalid_index;
+		T last_index = invalid_index;
+
+		for (const T index : src)
 		{
-			if (is_primitive_restart_enabled && (u32)src[src_idx] == primitive_restart_index)
+			if (needs_anchor)
+			{
+				if (is_primitive_restart_enabled && index == primitive_restart_index)
+					continue;
+
+				anchor = index;
+				needs_anchor = false;
 				continue;
+			}
 
-			anchor = index;
-			needs_anchor = false;
-			continue;
-		}
+			if (is_primitive_restart_enabled && index == primitive_restart_index)
+			{
+				needs_anchor = true;
+				last_index = invalid_index;
+				continue;
+			}
 
-		if (is_primitive_restart_enabled && (u32)src[src_idx] == primitive_restart_index)
-		{
-			needs_anchor = true;
-			last_index = invalid_index;
-			continue;
-		}
+			if (last_index == invalid_index)
+			{
+				//Need at least one anchor and one outer index to create a triangle
+				last_index = index;
+				continue;
+			}
 
-		max_index = std::max(max_index, index);
-		min_index = std::min(min_index, index);
+			dst[dst_idx++] = anchor;
+			dst[dst_idx++] = last_index;
+			dst[dst_idx++] = min_max(min_index, max_index, index);
 
-		if (last_index == invalid_index)
-		{
-			//Need at least one anchor and one outer index to create a triangle
 			last_index = index;
-			continue;
 		}
 
-		dst[dst_idx++] = anchor;
-		dst[dst_idx++] = last_index;
-		dst[dst_idx++] = index;
-
-		last_index = index;
+		return std::make_tuple(min_index, max_index, dst_idx);
 	}
 
-	return std::make_tuple(min_index, max_index, dst_idx);
-}
-
-template<typename T>
-std::tuple<u32, u32, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<u32> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index, u32 base_index)
-{
-	u32 min_index = -1;
-	u32 max_index = 0;
-
-	verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
-
-	u32 dst_idx = 0;
-	u8 set_size = 0;
-	u32 tmp_indices[4];
-
-	for (int src_idx = 0; src_idx < src.size(); ++src_idx)
+	template<typename T>
+	std::tuple<T, T, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
-		u32 index = src[src_idx];
-		index = rsx::get_index_from_base(index, base_index);
-		if (is_primitive_restart_enabled && (u32)src[src_idx] == primitive_restart_index)
+		T min_index = index_limit<T>();
+		T max_index = 0;
+
+		verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
+
+		u32 dst_idx = 0;
+		u8 set_size = 0;
+		T tmp_indices[4];
+
+		for (const T index : src)
 		{
-			//empty temp buffer
-			set_size = 0;
-			continue;
+			if (is_primitive_restart_enabled && index == primitive_restart_index)
+			{
+				//empty temp buffer
+				set_size = 0;
+				continue;
+			}
+
+			tmp_indices[set_size++] = min_max(min_index, max_index, index);
+
+			if (set_size == 4)
+			{
+				// First triangle
+				dst[dst_idx++] = tmp_indices[0];
+				dst[dst_idx++] = tmp_indices[1];
+				dst[dst_idx++] = tmp_indices[2];
+				// Second triangle
+				dst[dst_idx++] = tmp_indices[2];
+				dst[dst_idx++] = tmp_indices[3];
+				dst[dst_idx++] = tmp_indices[0];
+
+				set_size = 0;
+			}
 		}
 
-		tmp_indices[set_size++] = index;
-		max_index = std::max(max_index, index);
-		min_index = std::min(min_index, index);
-
-		if (set_size == 4)
-		{
-			// First triangle
-			dst[dst_idx++] = tmp_indices[0];
-			dst[dst_idx++] = tmp_indices[1];
-			dst[dst_idx++] = tmp_indices[2];
-			// Second triangle
-			dst[dst_idx++] = tmp_indices[2];
-			dst[dst_idx++] = tmp_indices[3];
-			dst[dst_idx++] = tmp_indices[0];
-
-			set_size = 0;
-		}
+		return std::make_tuple(min_index, max_index, dst_idx);
 	}
-
-	return std::make_tuple(min_index, max_index, dst_idx);
-}
 }
 
 // Only handle quads and triangle fan now
@@ -697,10 +868,21 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 	fmt::throw_exception("Wrong primitive type" HERE);
 }
 
-/** We assume that polygon is convex in polygon mode (constraints in OpenGL)
- *In such case polygon triangulation equates to triangle fan with arbitrary start vertex
- * see http://www.gamedev.net/page/resources/_/technical/graphics-programming-and-theory/polygon-triangulation-r3334
- */
+bool is_primitive_disjointed(rsx::primitive_type draw_mode)
+{
+	switch (draw_mode)
+	{
+	case rsx::primitive_type::line_loop:
+	case rsx::primitive_type::line_strip:
+	case rsx::primitive_type::polygon:
+	case rsx::primitive_type::quad_strip:
+	case rsx::primitive_type::triangle_fan:
+	case rsx::primitive_type::triangle_strip:
+		return false;
+	default:
+		return true;
+	}
+}
 
 u32 get_index_count(rsx::primitive_type draw_mode, u32 initial_index_count)
 {
@@ -791,54 +973,61 @@ namespace
 		return std::make_tuple(first, count);
 	}
 
-
-	// TODO: Unify indexed and non indexed primitive expansion ?
 	template<typename T>
-	std::tuple<u32, u32, u32> write_index_array_data_to_buffer_impl(gsl::span<u32> dst,
+	std::tuple<T, T, u32> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
 		gsl::span<const be_t<T>> src,
-		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
-		u32 base_index, std::function<bool(rsx::primitive_type)> expands)
+		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
+		const std::function<bool(rsx::primitive_type)>& expands)
 	{
-		u32 first;
-		u32 count;
-		std::tie(first, count) = get_first_count_from_draw_indexed_clause(first_count_arguments);
-
-		if (!expands(draw_mode)) return upload_untouched<T>(src, dst, restart_index_enabled, restart_index, base_index);
+		if (LIKELY(!expands(draw_mode)))
+		{
+			return upload_untouched<T>(src, dst, draw_mode, restart_index_enabled, restart_index);
+		}
 
 		switch (draw_mode)
 		{
 		case rsx::primitive_type::line_loop:
 		{
-			const auto &returnvalue = upload_untouched<T>(src, dst, restart_index_enabled, restart_index, base_index);
-			dst[count] = src[0];
+			const auto &returnvalue = upload_untouched<T>(src, dst, draw_mode, restart_index_enabled, restart_index);
+			const auto index_count = dst.size_bytes() / sizeof(T);
+			dst[index_count] = src[0];
 			return returnvalue;
 		}
 		case rsx::primitive_type::polygon:
 		case rsx::primitive_type::triangle_fan:
-			return expand_indexed_triangle_fan<T>(src, dst, restart_index_enabled, restart_index, base_index);
+		{
+			return expand_indexed_triangle_fan<T>(src, dst, restart_index_enabled, restart_index);
+		}
 		case rsx::primitive_type::quads:
-			return expand_indexed_quads<T>(src, dst, restart_index_enabled, restart_index, base_index);
+		{
+			return expand_indexed_quads<T>(src, dst, restart_index_enabled, restart_index);
+		}
 		default:
 			fmt::throw_exception("Unknown draw mode (0x%x)" HERE, (u32)draw_mode);
 		}
 	}
 }
 
-std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst,
-	gsl::span<const gsl::byte> src,
-	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index, const std::vector<std::pair<u32, u32> > &first_count_arguments,
-	u32 base_index, std::function<bool(rsx::primitive_type)> expands)
+std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst_ptr,
+	gsl::span<const gsl::byte> src_ptr,
+	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
+	const std::function<bool(rsx::primitive_type)>& expands)
 {
 	switch (type)
 	{
 	case rsx::index_array_type::u16:
-		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u32>(dst),
-			as_const_span<const be_t<u16>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, base_index, expands);
-	case rsx::index_array_type::u32:
-		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst),
-			as_const_span<const be_t<u32>>(src), draw_mode, restart_index_enabled, restart_index, first_count_arguments, base_index, expands);
+	{
+		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst_ptr),
+			as_const_span<const be_t<u16>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
 	}
-	fmt::throw_exception("Unknown index type" HERE);
+	case rsx::index_array_type::u32:
+	{
+		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst_ptr),
+			as_const_span<const be_t<u32>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
+	}
+	default:
+		fmt::throw_exception("Unreachable" HERE);
+	}
 }
 
 void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
@@ -849,7 +1038,7 @@ void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
 
 void stream_vector(void *dst, f32 x, f32 y, f32 z, f32 w)
 {
-	stream_vector(dst, (u32&)x, (u32&)y, (u32&)z, (u32&)w);
+	stream_vector(dst, std::bit_cast<u32>(x), std::bit_cast<u32>(y), std::bit_cast<u32>(z), std::bit_cast<u32>(w));
 }
 void stream_vector_from_memory(void *dst, void *src)
 {

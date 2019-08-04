@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -10,6 +10,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cstring>
 #include <type_traits>
 #include <utility>
 #include <chrono>
@@ -20,6 +21,10 @@
 #define IS_LE_MACHINE 1
 #define IS_BE_MACHINE 0
 
+#ifndef __has_builtin
+	#define __has_builtin(x) 0
+#endif
+
 #ifdef _MSC_VER
 
 #define ASSUME(...) __assume(__VA_ARGS__) // MSVC __assume ignores side-effects
@@ -28,6 +33,7 @@
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
+#define RESTRICT __restrict
 
 #else // not _MSC_VER
 
@@ -47,6 +53,7 @@
 #define SAFE_BUFFERS
 #define NEVER_INLINE __attribute__((noinline))
 #define FORCE_INLINE __attribute__((always_inline)) inline
+#define RESTRICT __restrict__
 
 #endif // _MSC_VER
 
@@ -79,6 +86,22 @@
 #define AUDIT(...) ((void)0)
 #endif
 
+#if defined(__cpp_lib_bit_cast) && (__cpp_lib_bit_cast >= 201806L)
+#include <bit>
+#else
+namespace std
+{
+	template <class To, class From, typename = std::enable_if_t<sizeof(To) == sizeof(From)>>
+	constexpr To bit_cast(const From& from) noexcept
+	{
+		static_assert(sizeof(To) == sizeof(From), "std::bit_cast<>: incompatible type size");
+
+		To result;
+		std::memcpy(&result, &from, sizeof(From));
+		return result;
+	}
+}
+#endif
 
 using schar  = signed char;
 using uchar  = unsigned char;
@@ -107,6 +130,46 @@ using s64 = std::int64_t;
 using steady_clock = std::conditional<
     std::chrono::high_resolution_clock::is_steady,
     std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
+
+// Get integral type from type size
+template <std::size_t N>
+struct get_int_impl
+{
+};
+
+template <>
+struct get_int_impl<sizeof(u8)>
+{
+	using utype = u8;
+	using stype = s8;
+};
+
+template <>
+struct get_int_impl<sizeof(u16)>
+{
+	using utype = u16;
+	using stype = s16;
+};
+
+template <>
+struct get_int_impl<sizeof(u32)>
+{
+	using utype = u32;
+	using stype = s32;
+};
+
+template <>
+struct get_int_impl<sizeof(u64)>
+{
+	using utype = u64;
+	using stype = s64;
+};
+
+template <std::size_t N>
+using get_uint_t = typename get_int_impl<N>::utype;
+
+template <std::size_t N>
+using get_sint_t = typename get_int_impl<N>::stype;
 
 namespace gsl
 {
@@ -361,6 +424,9 @@ struct alignas(16) s128
 CHECK_SIZE_ALIGN(u128, 16, 16);
 CHECK_SIZE_ALIGN(s128, 16, 16);
 
+using f32 = float;
+using f64 = double;
+
 union alignas(2) f16
 {
 	u16 _u16;
@@ -371,21 +437,19 @@ union alignas(2) f16
 		_u16 = raw;
 	}
 
-	explicit operator float() const
+	explicit operator f32() const
 	{
 		// See http://stackoverflow.com/a/26779139
 		// The conversion doesn't handle NaN/Inf
 		u32 raw = ((_u16 & 0x8000) << 16) |             // Sign (just moved)
 		          (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
 		          ((_u16 & 0x03FF) << 13);              // Mantissa
-		return (float&)raw;
+
+		return std::bit_cast<f32>(raw);
 	}
 };
 
 CHECK_SIZE_ALIGN(f16, 2, 2);
-
-using f32 = float;
-using f64 = double;
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
 constexpr T align(const T& value, ullong align)
@@ -397,13 +461,11 @@ template <typename T, typename T2>
 inline u32 offset32(T T2::*const mptr)
 {
 #ifdef _MSC_VER
-	static_assert(sizeof(mptr) == sizeof(u32), "Invalid pointer-to-member size");
-	return reinterpret_cast<const u32&>(mptr);
+	return std::bit_cast<u32>(mptr);
 #elif __GNUG__
-	static_assert(sizeof(mptr) == sizeof(std::size_t), "Invalid pointer-to-member size");
-	return static_cast<u32>(reinterpret_cast<const std::size_t&>(mptr));
+	return std::bit_cast<std::size_t>(mptr);
 #else
-	static_assert(sizeof(mptr) == 0, "Invalid pointer-to-member size");
+	static_assert(sizeof(mptr) == 0, "Unsupported pointer-to-member size");
 #endif
 }
 
@@ -832,4 +894,35 @@ inline void busy_wait(std::size_t cycles = 3000)
 {
 	const u64 s = __rdtsc();
 	do _mm_pause(); while (__rdtsc() - s < cycles);
+}
+
+// TODO: Remove when moving to c++20
+template <typename T>
+inline constexpr uintmax_t floor2(T value)
+{
+	value >>= 1;
+
+	for (uintmax_t i = 0;; i++, value >>= 1)
+	{
+		if (value == 0)
+		{
+			return i;
+		}
+	}
+}
+
+template <typename T>
+inline constexpr uintmax_t ceil2(T value)
+{
+	const uintmax_t ispow2 = value & (value - 1); // if power of 2 the result is 0
+
+	value >>= 1;
+
+	for (uintmax_t i = 0;; i++, value >>= 1)
+	{
+		if (value == 0)
+		{
+			return i + std::min<uintmax_t>(ispow2, 1);
+		}
+	}
 }

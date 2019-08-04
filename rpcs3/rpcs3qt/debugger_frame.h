@@ -26,7 +26,7 @@
 
 class debugger_frame : public custom_dock_widget
 {
-	Q_OBJECT;
+	Q_OBJECT
 
 	const QString NoThreadString = tr("No Thread");
 	const QString RunString = tr("Run");
@@ -100,4 +100,4 @@ private Q_SLOTS:
 	void EnableUpdateTimer(bool state);
 };
 
-Q_DECLARE_METATYPE(u32);
+Q_DECLARE_METATYPE(u32)

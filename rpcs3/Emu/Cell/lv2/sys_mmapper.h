@@ -1,6 +1,9 @@
-#pragma once
+﻿#pragma once
 
 #include "sys_sync.h"
+
+#include "Emu/Memory/vm_ptr.h"
+
 #include <vector>
 
 struct lv2_memory_container;
@@ -45,29 +48,31 @@ struct page_fault_notification_entry
 struct page_fault_notification_entries
 {
 	std::vector<page_fault_notification_entry> entries;
-};
-
-struct page_fault_event
-{
-	u32 thread_id;
-	u32 fault_addr;
+	shared_mutex mutex;
 };
 
 struct page_fault_event_entries
 {
-	std::vector<page_fault_event> events;
-	semaphore<> pf_mutex;
+	// First = thread id, second = addr
+	std::unordered_map<u32, u32> events;
+	shared_mutex pf_mutex;
+	cond_variable cond;
 };
 
+// Aux
+class ppu_thread;
+
+CellError mmapper_thread_recover_page_fault(u32 id);
+
 // SysCalls
-error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr);
-error_code sys_mmapper_allocate_fixed_address();
-error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id);
-error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id);
-error_code sys_mmapper_change_address_access_right(u32 addr, u64 flags);
-error_code sys_mmapper_free_address(u32 addr);
-error_code sys_mmapper_free_shared_memory(u32 mem_id);
-error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags);
-error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr);
-error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id);
-error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_queue_id);
+error_code sys_mmapper_allocate_address(ppu_thread&, u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr);
+error_code sys_mmapper_allocate_fixed_address(ppu_thread&);
+error_code sys_mmapper_allocate_shared_memory(ppu_thread&, u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread&, u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id);
+error_code sys_mmapper_change_address_access_right(ppu_thread&, u32 addr, u64 flags);
+error_code sys_mmapper_free_address(ppu_thread&, u32 addr);
+error_code sys_mmapper_free_shared_memory(ppu_thread&, u32 mem_id);
+error_code sys_mmapper_map_shared_memory(ppu_thread&, u32 addr, u32 mem_id, u64 flags);
+error_code sys_mmapper_search_and_map(ppu_thread&, u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr);
+error_code sys_mmapper_unmap_shared_memory(ppu_thread&, u32 addr, vm::ptr<u32> mem_id);
+error_code sys_mmapper_enable_page_fault_notification(ppu_thread&, u32 start_addr, u32 event_queue_id);

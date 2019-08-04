@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "Emu/GameInfo.h"
@@ -20,7 +20,10 @@
 enum Category
 {
 	Disc_Game,
-	Non_Disc_Game,
+	HDD_Game,
+	PS1_Game,
+	PS2_Game,
+	PSP_Game,
 	Home,
 	Media,
 	Data,
@@ -79,14 +82,14 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 		{ "HM", home      }, // home
 		{ "CB", network   }, // other
 		{ "SF", store_fe  }, // other
-		{ "DG", disc_game }, // disc_Game
-		{ "HG", hdd_game  }, // non_disc_games
-		{ "2P", ps2_game  }, // non_disc_games
-		{ "2G", ps2_inst  }, // non_disc_games
-		{ "1P", ps1_game  }, // non_disc_games
-		{ "PP", psp_game  }, // non_disc_games
-		{ "MN", psp_mini  }, // non_disc_games
-		{ "PE", psp_rema  }, // non_disc_games
+		{ "DG", disc_game }, // disc_game
+		{ "HG", hdd_game  }, // hdd_game
+		{ "2P", ps2_game  }, // ps2_games
+		{ "2G", ps2_inst  }, // ps2_games
+		{ "1P", ps1_game  }, // ps1_game
+		{ "PP", psp_game  }, // psp_games
+		{ "MN", psp_mini  }, // psp_games
+		{ "PE", psp_rema  }, // psp_games
 	};
 	const q_from_char cat_data =
 	{
@@ -96,7 +99,8 @@ namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 		{ "MS", psp_save }  // data
 	};
 
-	const QStringList non_disc_games = { hdd_game, ps2_game, ps2_inst, ps1_game, psp_game, psp_mini, psp_rema };
+	const QStringList ps2_games = { ps2_game, ps2_inst };
+	const QStringList psp_games = { psp_game, psp_mini, psp_rema };
 	const QStringList media = { app_photo, app_video, bc_video, app_music, app_tv, web_tv };
 	const QStringList data = { ps3_data, ps2_data, ps3_save, psp_save };
 	const QStringList others = { network, store_fe, trophy, other };
@@ -164,9 +168,10 @@ struct gui_game_info
 {
 	GameInfo info;
 	compat_status compat;
-	QImage icon;
+	QPixmap icon;
 	QPixmap pxmap;
 	bool hasCustomConfig;
+	bool hasCustomPadConfig;
 };
 
 typedef std::shared_ptr<gui_game_info> game_info;
@@ -207,21 +212,23 @@ public:
 	void SetShowHidden(bool show);
 
 public Q_SLOTS:
+	void BatchCreatePPUCaches();
+	void BatchRemovePPUCaches();
+	void BatchRemoveSPUCaches();
+	void BatchRemoveCustomConfigurations();
+	void BatchRemoveCustomPadConfigurations();
+	void BatchRemoveShaderCaches();
 	void SetListMode(const bool& isList);
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
 
 private Q_SLOTS:
-	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
-	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
-	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
-	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
 Q_SIGNALS:
 	void GameListFrameClosed();
-	void RequestBoot(const std::string& path);
+	void RequestBoot(const game_info& game, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
@@ -229,9 +236,9 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paint_config_icon = false, const QColor& color = QColor());
+	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
 	QColor getGridCompatibilityColor(const QString& string);
-	void ShowCustomConfigIcon(QTableWidgetItem* item, bool enabled);
+	void ShowCustomConfigIcon(QTableWidgetItem* item);
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
 	void SortGameList();
@@ -239,6 +246,15 @@ private:
 	int PopulateGameList();
 	bool SearchMatchesApp(const std::string& name, const std::string& serial);
 
+	bool RemoveCustomConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
+	bool RemoveCustomPadConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
+	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
+	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
+	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
+	bool CreatePPUCache(const game_info& game);
+
+	std::string GetCacheDirBySerial(const std::string& serial);
+	std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionIconPath();
 	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
@@ -258,6 +274,7 @@ private:
 	Qt::SortOrder m_colSortOrder;
 	int m_sortColumn;
 	QMap<QString, QString> m_notes;
+	QMap<QString, QString> m_titles;
 
 	// Categories
 	QStringList m_categoryFilters;
@@ -284,5 +301,5 @@ private:
 	QSize m_Icon_Size = gui::gl_icon_size_min; // ensure a valid size
 	qreal m_Margin_Factor;
 	qreal m_Text_Factor;
-	bool m_drawCompatStatusToGrid;
+	bool m_drawCompatStatusToGrid = false;
 };

@@ -86,13 +86,13 @@ void patch_engine::append(const std::string& patch)
 				case patch_type::bef32:
 				case patch_type::lef32:
 				{
-					info.value_as<f32>() = patch[2].as<f32>();
+					info.value = std::bit_cast<u32>(patch[2].as<f32>());
 					break;
 				}
 				case patch_type::bef64:
 				case patch_type::lef64:
 				{
-					info.value_as<f64>() = patch[2].as<f64>();
+					info.value = std::bit_cast<u64>(patch[2].as<f64>());
 					break;
 				}
 				default:

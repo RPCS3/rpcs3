@@ -1,14 +1,15 @@
 #include "save_manager_dialog.h"
 
 #include "save_data_info_dialog.h"
+#include "custom_table_widget_item.h"
 
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Loader/PSF.h"
 
+#include <QDateTime>
 #include <QIcon>
 #include <QHBoxLayout>
-#include <QPushButton>
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
@@ -16,12 +17,19 @@
 #include <QApplication>
 #include <QUrl>
 #include <QDesktopServices>
+#include <QPainter>
 
 namespace
 {
 	// Helper converters
 	constexpr auto qstr = QString::fromStdString;
 	inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+
+	QString FormatTimestamp(u64 time) {
+		QDateTime dateTime;
+		dateTime.setTime_t(time);
+		return dateTime.toString("yyyy-MM-dd HH:mm:ss");
+	}
 
 	/**
 	* This certainly isn't ideal for this code, as it essentially copies cellSaveData.  But, I have no other choice without adding public methods to cellSaveData.
@@ -33,7 +41,7 @@ namespace
 		// get the saves matching the supplied prefix
 		for (const auto& entry : fs::dir(base_dir))
 		{
-			if (!entry.is_directory)
+			if (!entry.is_directory || entry.name == "." || entry.name == "..")
 			{
 				continue;
 			}
@@ -43,6 +51,7 @@ namespace
 
 			if (psf.empty())
 			{
+				LOG_ERROR(LOADER, "Failed to load savedata: %s", base_dir + "/" + entry.name);
 				continue;
 			}
 
@@ -99,54 +108,109 @@ void save_manager_dialog::Init(std::string dir)
 	m_list->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
-	m_list->setColumnCount(4);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Title") << tr("Subtitle") << tr("Save ID") << tr("Entry Notes"));
+	m_list->setColumnCount(5);
+	m_list->setHorizontalHeaderLabels(QStringList() << tr("Icon") << tr("Title & Subtitle") << tr("Last Modified") << tr("Save ID") << tr("Notes"));
+	m_list->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
+	m_list->horizontalHeader()->setStretchLastSection(true);
 
-	QPushButton* push_remove_entries = new QPushButton(tr("Delete Selection"), this);
-
+	// Bottom bar
+	int icon_size = m_gui_settings->GetValue(gui::sd_icon_size).toInt();
+	m_icon_size = QSize(icon_size, icon_size);
+	QLabel* label_icon_size = new QLabel("Icon size:", this);
+	QSlider* slider_icon_size = new QSlider(Qt::Horizontal, this);
+	slider_icon_size->setMinimum(60);
+	slider_icon_size->setMaximum(225);
+	slider_icon_size->setValue(m_icon_size.height());
 	QPushButton* push_close = new QPushButton(tr("&Close"), this);
 	push_close->setAutoDefault(true);
 
-	// Button Layout
+	// Details
+	m_details_icon = new QLabel(this);
+	m_details_icon->setMinimumSize(320, 176);
+	m_details_title = new QLabel(tr("Select an item to view details"), this);
+	m_details_title->setWordWrap(true);
+	m_details_subtitle = new QLabel(this);
+	m_details_subtitle->setWordWrap(true);
+	m_details_modified = new QLabel(this);
+	m_details_modified->setWordWrap(true);
+	m_details_details = new QLabel(this);
+	m_details_details->setWordWrap(true);
+	m_details_note = new QLabel(this);
+	m_details_note->setWordWrap(true);
+	m_button_delete = new QPushButton(tr("Delete Selection"), this);
+	m_button_delete->setDisabled(true);
+	m_button_folder = new QPushButton(tr("View Folder"), this);
+	m_button_delete->setDisabled(true);
+
+	// Details layout
+	QVBoxLayout *vbox_details = new QVBoxLayout();
+	vbox_details->addWidget(m_details_icon);
+	vbox_details->addWidget(m_details_title);
+	vbox_details->addWidget(m_details_subtitle);
+	vbox_details->addWidget(m_details_modified);
+	vbox_details->addWidget(m_details_details);
+	vbox_details->addWidget(m_details_note);
+	vbox_details->addStretch();
+	vbox_details->addWidget(m_button_delete);
+	vbox_details->setAlignment(m_button_delete, Qt::AlignHCenter);
+	vbox_details->addWidget(m_button_folder);
+	vbox_details->setAlignment(m_button_folder, Qt::AlignHCenter);
+
+	// List + Details
+	QHBoxLayout *hbox_content = new QHBoxLayout();
+	hbox_content->addWidget(m_list);
+	hbox_content->addLayout(vbox_details);
+
+	// Items below list
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
-	hbox_buttons->addWidget(push_remove_entries);
+	hbox_buttons->addWidget(label_icon_size);
+	hbox_buttons->addWidget(slider_icon_size);
 	hbox_buttons->addStretch();
 	hbox_buttons->addWidget(push_close);
 
 	// main layout
 	QVBoxLayout* vbox_main = new QVBoxLayout();
 	vbox_main->setAlignment(Qt::AlignCenter);
-	vbox_main->addWidget(m_list);
+	vbox_main->addLayout(hbox_content);
 	vbox_main->addLayout(hbox_buttons);
 	setLayout(vbox_main);
 
 	UpdateList();
+	m_list->sortByColumn(1, Qt::AscendingOrder);
 
 	if (restoreGeometry(m_gui_settings->GetValue(gui::sd_geometry).toByteArray()))
 		resize(size().expandedTo(QDesktopWidget().availableGeometry().size() * 0.5));
 
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
-	connect(push_remove_entries, &QAbstractButton::clicked, this, &save_manager_dialog::OnEntriesRemove);
+	connect(m_button_delete, &QAbstractButton::clicked, this, &save_manager_dialog::OnEntriesRemove);
+	connect(m_button_folder, &QAbstractButton::clicked, [=]()
+	{
+		int idx = m_list->currentRow();
+		int idx_real = m_list->item(idx, 1)->data(Qt::UserRole).toInt();
+		QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
+		QDesktopServices::openUrl(QUrl("file:///" + path));
+	});
+	connect(slider_icon_size, &QAbstractSlider::valueChanged, this, &save_manager_dialog::SetIconSize);
 	connect(m_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &save_manager_dialog::OnSort);
-	connect(m_list, &QTableWidget::itemDoubleClicked, this, &save_manager_dialog::OnEntryInfo);
 	connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_manager_dialog::ShowContextMenu);
 	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col)
 	{
-		int originalIndex = m_list->item(row, 0)->data(Qt::UserRole).toInt();
+		int originalIndex = m_list->item(row, 1)->data(Qt::UserRole).toInt();
 		SaveDataEntry originalEntry = m_save_entries[originalIndex];
 		QString originalDirName = qstr(originalEntry.dirName);
 		QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
 		currNotes[originalDirName] = m_list->item(row, col)->text();
 		m_gui_settings->SetValue(gui::m_saveNotes, currNotes);
 	});
+	connect(m_list, &QTableWidget::itemSelectionChanged, this, &save_manager_dialog::UpdateDetails);
 }
 
 void save_manager_dialog::UpdateList()
 {
 	if (m_dir == "")
 	{
-		m_dir = Emu.GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
+		m_dir = Emulator::GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
 	}
 
 	m_save_entries = GetSaveEntries(m_dir);
@@ -159,34 +223,46 @@ void save_manager_dialog::UpdateList()
 	int row = 0;
 	for (const SaveDataEntry& entry : m_save_entries)
 	{
-		QString title = qstr(entry.title);
-		QString subtitle = qstr(entry.subtitle);
+		QPixmap icon = QPixmap(320, 176);
+		if (!icon.loadFromData(entry.iconBuf.data(), static_cast<uint>(entry.iconBuf.size())))
+		{
+			LOG_WARNING(GENERAL, "Loading icon for save %s failed", entry.dirName);
+			icon.fill(Qt::transparent);
+		}
+
+		QString title = qstr(entry.title) + QStringLiteral("\n") + qstr(entry.subtitle);
 		QString dirName = qstr(entry.dirName);
+
+		custom_table_widget_item* iconItem = new custom_table_widget_item;
+		iconItem->setData(Qt::UserRole, icon);
+		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
+		m_list->setItem(row, 0, iconItem);
 
 		QTableWidgetItem* titleItem = new QTableWidgetItem(title);
 		titleItem->setData(Qt::UserRole, row); // For sorting to work properly
 		titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
+		m_list->setItem(row, 1, titleItem);
 
-		m_list->setItem(row, 0, titleItem);
-		QTableWidgetItem* subtitleItem = new QTableWidgetItem(subtitle);
-		subtitleItem->setFlags(subtitleItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(row, 1, subtitleItem);
+		QTableWidgetItem* timeItem = new QTableWidgetItem(FormatTimestamp(entry.mtime));
+		timeItem->setFlags(timeItem->flags() & ~Qt::ItemIsEditable);
+		m_list->setItem(row, 2, timeItem);
 
 		QTableWidgetItem* dirNameItem = new QTableWidgetItem(dirName);
 		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(row, 2, dirNameItem);
+		m_list->setItem(row, 3, dirNameItem);
 
 		QTableWidgetItem* noteItem = new QTableWidgetItem();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
-
 		if (currNotes.contains(dirName))
 		{
 			noteItem->setText(currNotes[dirName].toString());
 		}
+		m_list->setItem(row, 4, noteItem);
 
-		m_list->setItem(row, 3, noteItem);
 		++row;
 	}
+
+	UpdateIcons();
 
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
@@ -200,6 +276,28 @@ void save_manager_dialog::UpdateList()
 	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6));
 
 	resize(preferredSize.boundedTo(maxSize));
+}
+
+void save_manager_dialog::UpdateIcons()
+{
+	const int dpr = devicePixelRatio();
+	const int width = m_icon_size.width() * dpr;
+	const int height = m_icon_size.height() * dpr * 176 / 320;
+	for (int i = 0; i < m_list->rowCount(); i++)
+	{
+		QTableWidgetItem* item = m_list->item(i, 0);
+		QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
+
+		QPixmap icon = QPixmap(data.size() * dpr);
+		icon.setDevicePixelRatio(dpr);
+		icon.fill(Qt::transparent);
+
+		QPainter painter(&icon);
+		painter.drawPixmap(0, 0, data);
+		item->setData(Qt::DecorationRole, icon.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+	}
+	m_list->resizeRowsToContents();
+	m_list->resizeColumnToContents(0);
 }
 
 /**
@@ -223,28 +321,13 @@ void save_manager_dialog::OnSort(int logicalIndex)
 	}
 }
 
-/**
- *Display info dialog directly. Copied from save_data_list_dialog
- */
-void save_manager_dialog::OnEntryInfo()
-{
-	int idx = m_list->currentRow();
-	if (idx != -1)
-	{
-		idx = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
-		save_data_info_dialog* infoDialog = new save_data_info_dialog(m_save_entries[idx], this);
-		infoDialog->setModal(true);
-		infoDialog->show();
-	}
-}
-
-//Remove a save file, need to be confirmed.
+// Remove a save file, need to be confirmed.
 void save_manager_dialog::OnEntryRemove()
 {
 	int idx = m_list->currentRow();
 	if (idx != -1)
 	{
-		int idx_real = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
+		int idx_real = m_list->item(idx, 1)->data(Qt::UserRole).toInt();
 		if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete:\n%1?").arg(qstr(m_save_entries[idx_real].title)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 		{
 			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
@@ -256,7 +339,7 @@ void save_manager_dialog::OnEntryRemove()
 void save_manager_dialog::OnEntriesRemove()
 {
 	QModelIndexList selection(m_list->selectionModel()->selectedRows());
-	if (selection.size() == 0)
+	if (selection.empty())
 	{
 		return;
 	}
@@ -272,14 +355,14 @@ void save_manager_dialog::OnEntriesRemove()
 		qSort(selection.begin(), selection.end(), qGreater<QModelIndex>());
 		for (QModelIndex index : selection)
 		{
-			int idx_real = m_list->item(index.row(), 0)->data(Qt::UserRole).toInt();
+			int idx_real = m_list->item(index.row(), 1)->data(Qt::UserRole).toInt();
 			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
 			m_list->removeRow(index.row());
 		}
 	}
 }
 
-//Pop-up a small context-menu, being a replacement for save_data_manage_dialog
+// Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
 	bool selectedItems = m_list->selectionModel()->selectedRows().size() > 1;
@@ -292,46 +375,32 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 		return;
 	}
 
-	QAction* saveIDAct = new QAction(tr("SaveID"), this);
-	QAction* titleAct = new QAction(tr("Title"), this);
-	QAction* subtitleAct = new QAction(tr("Subtitle"), this);
-
 	QAction* removeAct = new QAction(tr("&Remove"), this);
-	QAction* infoAct = new QAction(tr("&Info"), this);
 	QAction* showDirAct = new QAction(tr("&Open Save Directory"), this);
 
-	//This is also a stub for the sort setting. Ids are set accordingly to their sort-type integer.
-	// TODO: add more sorting types.
-	m_sort_options = new QMenu(tr("&Sort By"));
-	m_sort_options->addAction(titleAct);
-	m_sort_options->addAction(subtitleAct);
-	m_sort_options->addAction(saveIDAct);
-
-	menu->addMenu(m_sort_options);
-	menu->addSeparator();
 	menu->addAction(removeAct);
-	menu->addAction(infoAct);
 	menu->addAction(showDirAct);
 
-	infoAct->setEnabled(!selectedItems);
 	showDirAct->setEnabled(!selectedItems);
 	removeAct->setEnabled(idx != -1);
 
 	// Events
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
-	connect(infoAct, &QAction::triggered, this, &save_manager_dialog::OnEntryInfo);
 	connect(showDirAct, &QAction::triggered, [=]()
 	{
-		int idx_real = m_list->item(idx, 0)->data(Qt::UserRole).toInt();
+		int idx_real = m_list->item(idx, 1)->data(Qt::UserRole).toInt();
 		QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
 		QDesktopServices::openUrl(QUrl("file:///" + path));
 	});
 
-	connect(titleAct, &QAction::triggered, this, [=] {OnSort(0); });
-	connect(subtitleAct, &QAction::triggered, this, [=] {OnSort(1); });
-	connect(saveIDAct, &QAction::triggered, this, [=] {OnSort(2); });
-
 	menu->exec(globalPos);
+}
+
+void save_manager_dialog::SetIconSize(int size)
+{
+	m_icon_size = QSize(size, size);
+	UpdateIcons();
+	m_gui_settings->SetValue(gui::sd_icon_size, size);
 }
 
 void save_manager_dialog::closeEvent(QCloseEvent *event)
@@ -339,4 +408,50 @@ void save_manager_dialog::closeEvent(QCloseEvent *event)
 	m_gui_settings->SetValue(gui::sd_geometry, saveGeometry());
 
 	QDialog::closeEvent(event);
+}
+
+void save_manager_dialog::UpdateDetails()
+{
+	int selected = m_list->selectionModel()->selectedRows().size();
+
+	if (selected != 1)
+	{
+		m_details_icon->setPixmap(QPixmap());
+		m_details_subtitle->setText("");
+		m_details_modified->setText("");
+		m_details_details->setText("");
+		m_details_note->setText("");
+
+		if (selected > 1)
+		{
+			m_button_delete->setDisabled(false);
+			m_details_title->setText(tr("%1 items selected").arg(selected));
+		}
+		else
+		{
+			m_button_delete->setDisabled(true);
+			m_details_title->setText(tr("Select an item to view details"));
+		}
+		m_button_folder->setDisabled(true);
+	}
+	else
+	{
+		const int row = m_list->currentRow();
+		const int idx = m_list->item(row, 1)->data(Qt::UserRole).toInt();
+		const SaveDataEntry& save = m_save_entries[idx];
+
+		m_details_icon->setPixmap(m_list->item(row, 0)->data(Qt::UserRole).value<QPixmap>());
+		m_details_title->setText(qstr(save.title));
+		m_details_subtitle->setText(qstr(save.subtitle));
+		m_details_modified->setText(tr("Last modified: %1").arg(FormatTimestamp(save.mtime)));
+		m_details_details->setText(tr("Details:\n").append(qstr(save.details)));
+		QString note = tr("Note:\n");
+		QVariantMap map = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
+		if (map.contains(qstr(save.dirName)))
+			note.append(map[qstr(save.dirName)].toString());
+		m_details_note->setText(note);
+
+		m_button_delete->setDisabled(false);
+		m_button_folder->setDisabled(false);
+	}
 }

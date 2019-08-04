@@ -1,4 +1,4 @@
-// This makes debugging on windows less painful
+﻿// This makes debugging on windows less painful
 //#define HAVE_LIBEVDEV
 
 #ifdef HAVE_LIBEVDEV
@@ -257,7 +257,7 @@ evdev_joystick_handler::EvdevDevice* evdev_joystick_handler::get_device(const st
 	return &dev;
 }
 
-void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -265,7 +265,7 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	// Get our evdev device
 	EvdevDevice* device = get_device(padId);
 	if (device == nullptr || device->device == nullptr)
-		return;
+		return fail_callback(padId);
 	libevdev* dev = device->device;
 
 	// Try to query the latest event from the joystick.
@@ -276,11 +276,36 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 	if (ret == LIBEVDEV_READ_STATUS_SYNC)
 		ret = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &evt);
 
+	auto data = GetButtonValues(*device);
+
+	auto find_value = [=](const std::string& name)
+	{
+		int key = FindKeyCodeByString(rev_axis_list, name, false);
+		bool dir = key >= 0;
+		if (key < 0)
+			key = FindKeyCodeByString(axis_list, name, false);
+		if (key < 0)
+			key = FindKeyCodeByString(button_list, name);
+		auto it = data.find(static_cast<u64>(key));
+		return it != data.end() && dir == it->second.second ? it->second.first : 0;
+	};
+
+	int preview_values[6] = {0, 0, 0, 0, 0, 0};
+
+	if (buttons.size() == 10)
+	{
+		preview_values[0] = find_value(buttons[0]);                          // Left Trigger
+		preview_values[1] = find_value(buttons[1]);                          // Right Trigger
+		preview_values[2] = find_value(buttons[3]) - find_value(buttons[2]); // Left Stick X
+		preview_values[3] = find_value(buttons[5]) - find_value(buttons[4]); // Left Stick Y
+		preview_values[4] = find_value(buttons[7]) - find_value(buttons[6]); // Right Stick X
+		preview_values[5] = find_value(buttons[9]) - find_value(buttons[8]); // Right Stick Y
+	}
+
 	// return if nothing new has happened. ignore this to get the current state for blacklist
 	if (!get_blacklist && ret < 0)
-		return;
+		return callback(0, "", padId, preview_values);
 
-	auto data = GetButtonValues(*device);
 	std::pair<u16, std::string> pressed_button = { 0, "" };
 
 	for (const auto& button : button_list)
@@ -364,37 +389,15 @@ void evdev_joystick_handler::GetNextButtonPress(const std::string& padId, const 
 
 	if (get_blacklist)
 	{
-		if (blacklist.size() <= 0)
+		if (blacklist.empty())
 			LOG_SUCCESS(HLE, "Evdev Calibration: Blacklist is clear. No input spam detected");
 		return;
 	}
 
-	auto find_value = [=](const std::string& name)
-	{
-		int key = FindKeyCodeByString(rev_axis_list, name, false);
-		bool dir = key >= 0;
-		if (key < 0)
-			key = FindKeyCodeByString(axis_list, name, false);
-		if (key < 0)
-			key = FindKeyCodeByString(button_list, name);
-		auto it = data.find(static_cast<u64>(key));
-		return it != data.end() && dir == it->second.second ? it->second.first : 0;
-	};
-
-	int preview_values[6] =
-	{
-		find_value(buttons[0]),                          // Left Trigger
-		find_value(buttons[1]),                          // Right Trigger
-		find_value(buttons[3]) - find_value(buttons[2]), // Left Stick X
-		find_value(buttons[5]) - find_value(buttons[4]), // Left Stick Y
-		find_value(buttons[7]) - find_value(buttons[6]), // Right Stick X
-		find_value(buttons[9]) - find_value(buttons[8]), // Right Stick Y
-	};
-
 	if (pressed_button.first > 0)
-		return callback(pressed_button.first, pressed_button.second, preview_values);
+		return callback(pressed_button.first, pressed_button.second, padId, preview_values);
 	else
-		return callback(0, "", preview_values);
+		return callback(0, "", padId, preview_values);
 }
 
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/ControllerInterface/evdev/evdev.cpp
@@ -477,7 +480,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	device->force_small = small;
 }
 
-void evdev_joystick_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
+void evdev_joystick_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32/* b*/)
 {
 	// Get our evdev device
 	EvdevDevice* dev = get_device(padId);
@@ -524,12 +527,12 @@ void evdev_joystick_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u1
 	else if (checkButtons(m_dev.axis_left))
 	{
 		pressed = value > (ignore_threshold ? 0 : profile->lstickdeadzone);
-		value = pressed ? NormalizeStickInput(value, profile->lstickdeadzone, ignore_threshold) : 0;
+		value = pressed ? NormalizeStickInput(value, profile->lstickdeadzone, profile->lstickmultiplier, ignore_threshold) : 0;
 	}
 	else if (checkButtons(m_dev.axis_right))
 	{
 		pressed = value > (ignore_threshold ? 0 : profile->rstickdeadzone);
-		value = pressed ? NormalizeStickInput(value, profile->rstickdeadzone, ignore_threshold) : 0;
+		value = pressed ? NormalizeStickInput(value, profile->rstickdeadzone, profile->rstickmultiplier, ignore_threshold) : 0;
 	}
 	else // normal button (should in theory also support sensitive buttons)
 	{
@@ -551,8 +554,11 @@ int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const EvdevDev
 		m_is_button_or_trigger = true;
 
 		// get the button value and return its code
-		if (code < BTN_MISC)
+		if (button_list.find(code) == button_list.end())
+		{
+			LOG_ERROR(GENERAL, "Evdev button %s (%d) is unknown. Please add it to the button list.", libevdev_event_code_get_name(EV_KEY, code), code);
 			return -1;
+		}
 
 		value = val > 0 ? 255 : 0;
 		return code;
@@ -883,7 +889,7 @@ int evdev_joystick_handler::FindAxisDirection(const std::unordered_map<int, bool
 		return -1;
 	else
 		return it->second;
-};
+}
 
 bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
 {
@@ -938,9 +944,9 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	pad->Init
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
-		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
-		CELL_PAD_DEV_TYPE_STANDARD
+		CELL_PAD_DEV_TYPE_STANDARD,
+		p_profile->device_class_type
 	);
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->triangle), CELL_PAD_CTRL_TRIANGLE);

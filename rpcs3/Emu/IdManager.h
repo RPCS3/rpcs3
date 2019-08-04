@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/types.h"
 #include "Utilities/mutex.h"
@@ -633,8 +633,8 @@ public:
 	}
 
 	// Emplace the object returned by provider() and return it if no object exists
-	template <typename T, typename F>
-	static auto import(F&& provider) -> decltype(static_cast<std::shared_ptr<T>>(provider()))
+	template <typename T, typename F, typename... Args>
+	static auto import(F&& provider, Args&&... args) -> decltype(static_cast<std::shared_ptr<T>>(provider(std::forward<Args>(args)...)))
 	{
 		std::shared_ptr<T> ptr;
 		{
@@ -644,7 +644,7 @@ public:
 
 			if (!cur)
 			{
-				ptr = provider();
+				ptr = provider(std::forward<Args>(args)...);
 
 				if (ptr)
 				{
@@ -662,8 +662,8 @@ public:
 	}
 
 	// Emplace the object return by provider() (old object will be removed if it exists)
-	template <typename T, typename F>
-	static auto import_always(F&& provider) -> decltype(static_cast<std::shared_ptr<T>>(provider()))
+	template <typename T, typename F, typename... Args>
+	static auto import_always(F&& provider, Args&&... args) -> decltype(static_cast<std::shared_ptr<T>>(provider(std::forward<Args>(args)...)))
 	{
 		std::shared_ptr<T> ptr;
 		std::shared_ptr<void> old;
@@ -672,7 +672,7 @@ public:
 
 			auto& cur = g_vec[get_type<T>()];
 
-			ptr = provider();
+			ptr = provider(std::forward<Args>(args)...);
 
 			if (ptr)
 			{

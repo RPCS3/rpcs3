@@ -1,5 +1,6 @@
-#include "stdafx.h"
-#include "Emu/Memory/vm.h"
+﻿#include "stdafx.h"
+#include "sys_process.h"
+#include "Emu/Memory/vm_ptr.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 
@@ -16,18 +17,18 @@
 #include "sys_memory.h"
 #include "sys_mmapper.h"
 #include "sys_prx.h"
+#include "sys_overlay.h"
 #include "sys_rwlock.h"
 #include "sys_semaphore.h"
 #include "sys_timer.h"
 #include "sys_trace.h"
 #include "sys_fs.h"
-#include "sys_process.h"
 
 
 
 LOG_CHANNEL(sys_process);
 
-u32 g_ps3_sdk_version;
+ps3_process_info_t g_ps3_process_info;
 
 s32 process_getpid()
 {
@@ -71,6 +72,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_SPUIMAGE_OBJECT: fmt::throw_exception("SYS_SPUIMAGE_OBJECT" HERE);
 	case SYS_PRX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_prx>(); break;
 	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
+	case SYS_OVERLAY_OBJECT: *nump = idm_get_count<lv2_obj, lv2_overlay>(); break;
 	case SYS_LWMUTEX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_lwmutex>(); break;
 	case SYS_TIMER_OBJECT: *nump = idm_get_count<lv2_obj, lv2_timer>(); break;
 	case SYS_SEMAPHORE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_sema>(); break;
@@ -118,6 +120,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_SPUIMAGE_OBJECT: fmt::throw_exception("SYS_SPUIMAGE_OBJECT" HERE);
 	case SYS_PRX_OBJECT: idm_get_set<lv2_obj, lv2_prx>(objects); break;
 	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
+	case SYS_OVERLAY_OBJECT: idm_get_set<lv2_obj, lv2_overlay>(objects); break;
 	case SYS_LWMUTEX_OBJECT: idm_get_set<lv2_obj, lv2_lwmutex>(objects); break;
 	case SYS_TIMER_OBJECT: idm_get_set<lv2_obj, lv2_timer>(objects); break;
 	case SYS_SEMAPHORE_OBJECT: idm_get_set<lv2_obj, lv2_sema>(objects); break;
@@ -179,7 +182,7 @@ s32 _sys_process_get_paramsfo(vm::ptr<char> buffer)
 s32 process_get_sdk_version(u32 pid, s32& ver)
 {
 	// get correct SDK version for selected pid
-	ver = g_ps3_sdk_version;
+	ver = g_ps3_process_info.sdk_ver;
 
 	return CELL_OK;
 }
@@ -311,7 +314,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		}
 
 		Emu.SetForceBoot(true);
-		Emu.BootGame(path, true);
+		Emu.BootGame(path, "", true);
 	});
 
 	ppu.state += cpu_flag::dbg_global_stop;

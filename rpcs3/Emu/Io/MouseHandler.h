@@ -1,7 +1,7 @@
 #pragma once
 
 #include <list>
-#include "Utilities/sema.h"
+#include "Utilities/mutex.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
@@ -63,6 +63,7 @@ struct MouseRawData
 
 	MouseRawData()
 		: len(0)
+		, data()
 	{
 	}
 };
@@ -94,11 +95,8 @@ struct MouseTabletData
 
 	MouseTabletData()
 		: len(0)
+		, data()
 	{
-		for (auto d : data)
-		{
-			d = 0;
-		}
 	}
 };
 
@@ -116,11 +114,13 @@ struct Mouse
 	MouseRawData m_rawdata;
 
 	Mouse()
-		: m_datalist()
+		: x_pos(0)
+		, y_pos(0)
+		, buttons(0)
+		, m_tablet_datalist()
+		, m_datalist()
 		, m_rawdata()
 	{
-		x_pos = 0;
-		y_pos = 0;
 	}
 };
 
@@ -145,7 +145,7 @@ protected:
 	}
 
 public:
-	semaphore<> mutex;
+	shared_mutex mutex;
 
 	virtual void Init(const u32 max_connect) = 0;
 	virtual ~MouseHandlerBase() = default;

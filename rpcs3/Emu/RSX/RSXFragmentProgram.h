@@ -1,6 +1,7 @@
-#pragma once
-#include "GCM.h"
-#include "RSXTexture.h"
+﻿#pragma once
+
+#include "gcm_enums.h"
+#include "Utilities/types.h"
 
 enum register_type
 {
@@ -8,6 +9,16 @@ enum register_type
 	RSX_FP_REGISTER_TYPE_INPUT = 1,
 	RSX_FP_REGISTER_TYPE_CONSTANT = 2,
 	RSX_FP_REGISTER_TYPE_UNKNOWN = 3,
+};
+
+enum register_precision
+{
+	RSX_FP_PRECISION_REAL = 0,
+	RSX_FP_PRECISION_HALF = 1,
+	RSX_FP_PRECISION_FIXED12 = 2,
+	RSX_FP_PRECISION_FIXED9 = 3,
+	RSX_FP_PRECISION_SATURATE = 4,
+	RSX_FP_PRECISION_UNKNOWN = 5 // Unknown what this actually does; seems to do nothing on hwtests but then why would their compiler emit it?
 };
 
 enum fp_opcode
@@ -230,7 +241,7 @@ struct RSXFragmentProgram
 	bool front_color_specular_output : 1;
 	u32 texture_dimensions;
 
-	std::array<float, 4> texture_scale[16];
+	float texture_scale[16][4];
 	u8 textures_alpha_kill[16];
 	u8 textures_zfunc[16];
 

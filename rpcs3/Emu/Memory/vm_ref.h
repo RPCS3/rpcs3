@@ -1,11 +1,15 @@
 #pragma once
 
+#include <type_traits>
+#include "Utilities/BEType.h"
+#include "vm.h"
+
 namespace vm
 {
-	template<typename T, typename AT>
+	template <typename T, typename AT>
 	class _ptr_base;
 
-	template<typename T, typename AT = u32>
+	template <typename T, typename AT>
 	class _ref_base
 	{
 		AT m_addr;

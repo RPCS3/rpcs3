@@ -5,8 +5,6 @@
 
 #include "Emu/Io/MouseHandler.h"
 
-#include "Utilities/sema.h"
-
 #include "cellMouse.h"
 
 extern logs::channel sys_io;
@@ -175,7 +173,7 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 	MouseDataList& data_list = handler->GetDataList(port_no);
 
-	if (data_list.size() == 0)
+	if (data_list.empty())
 	{
 		*data = {};
 		return CELL_OK;

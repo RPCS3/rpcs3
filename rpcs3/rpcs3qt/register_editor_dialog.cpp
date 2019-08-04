@@ -1,4 +1,4 @@
-
+﻿
 #include "register_editor_dialog.h"
 
 constexpr auto qstr = QString::fromStdString;
@@ -73,8 +73,8 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, u32 _pc, const s
 	setModal(true);
 
 	// Events
-	connect(button_ok, &QAbstractButton::pressed, this, [=](){OnOkay(_cpu); accept();});
-	connect(button_cancel, &QAbstractButton::pressed, this, &register_editor_dialog::reject);
+	connect(button_ok, &QAbstractButton::clicked, this, [=](){OnOkay(_cpu); accept();});
+	connect(button_cancel, &QAbstractButton::clicked, this, &register_editor_dialog::reject);
 	connect(m_register_combo, &QComboBox::currentTextChanged, this, &register_editor_dialog::updateRegister);
 
 	updateRegister(m_register_combo->currentText());
@@ -101,11 +101,11 @@ void register_editor_dialog::updateRegister(const QString& text)
 		if (first_brk != -1)
 		{
 			long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-			if (reg.find("GPR") == 0) str = fmt::format("%016llx", ppu.gpr[reg_index]);
-			if (reg.find("FPR") == 0) str = fmt::format("%016llx", ppu.fpr[reg_index]);
-			if (reg.find("VR") == 0)  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
+			if (reg.compare(0, 3, "GPR") == 0) str = fmt::format("%016llx", ppu.gpr[reg_index]);
+			if (reg.compare(0, 3, "FPR") == 0) str = fmt::format("%016llx", ppu.fpr[reg_index]);
+			if (reg.compare(0, 2, "VR") == 0)  str = fmt::format("%016llx%016llx", ppu.vr[reg_index]._u64[1], ppu.vr[reg_index]._u64[0]);
 		}
-		if (reg == "CR")  str = fmt::format("%08x", ppu.cr_pack());
+		if (reg == "CR")  str = fmt::format("%08x", ppu.cr.pack());
 		if (reg == "LR")  str = fmt::format("%016llx", ppu.lr);
 		if (reg == "CTR") str = fmt::format("%016llx", ppu.ctr);
 	}
@@ -118,7 +118,7 @@ void register_editor_dialog::updateRegister(const QString& text)
 		{
 			long reg_index;
 			reg_index = atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-			if (reg.find("GPR") == 0) str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
+			if (reg.compare(0, 3, "GPR") == 0) str = fmt::format("%016llx%016llx", spu.gpr[reg_index]._u64[1], spu.gpr[reg_index]._u64[0]);
 		}
 	}
 
@@ -143,14 +143,14 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 			if (first_brk != -1)
 			{
 				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - first_brk - 2).c_str());
-				if (reg.find("GPR") == 0 || reg.find("FPR") == 0)
+				if (reg.compare(0, 3, "GPR") == 0 || reg.compare(0, 3, "FPR") == 0)
 				{
 					const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-					if (reg.find("GPR") == 0) ppu.gpr[reg_index] = (u64)reg_value;
-					if (reg.find("FPR") == 0) (u64&)ppu.fpr[reg_index] = (u64)reg_value;
+					if (reg.compare(0, 3, "GPR") == 0) ppu.gpr[reg_index] = (u64)reg_value;
+					if (reg.compare(0, 3, "FPR") == 0) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
 					return;
 				}
-				if (reg.find("VR") == 0)
+				if (reg.compare(0, 2, "VR") == 0)
 				{
 					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
@@ -169,7 +169,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 			if (reg == "CR")
 			{
 				const ullong reg_value = std::stoull(value.substr(24, 31), 0, 16);
-				if (reg == "CR") ppu.cr_unpack((u32)reg_value);
+				if (reg == "CR") ppu.cr.unpack((u32)reg_value);
 				return;
 			}
 		}
@@ -188,7 +188,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 			if (first_brk != -1)
 			{
 				const long reg_index = std::atol(reg.substr(first_brk + 1, reg.length() - 2).c_str());
-				if (reg.find("GPR") == 0)
+				if (reg.compare(0, 3, "GPR") == 0)
 				{
 					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);

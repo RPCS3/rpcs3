@@ -1,9 +1,9 @@
-﻿#pragma once
+#pragma once
 
-
+#include <Emu/Memory/vm_ptr.h>
 
 // Return codes
-enum
+enum CellSaveDataError : u32
 {
 	CELL_SAVEDATA_ERROR_CBRESULT        = 0x8002b401,
 	CELL_SAVEDATA_ERROR_ACCESS_ERROR    = 0x8002b402,
@@ -86,12 +86,16 @@ enum
 	CELL_SAVEDATA_FILETYPE_CONTENT_PIC1   = 4,
 	CELL_SAVEDATA_FILETYPE_CONTENT_SND0   = 5,
 
+	// CellSaveDataSystemFileParam attribute
+	CELL_SAVEDATA_ATTR_NORMAL              = 0,
+	CELL_SAVEDATA_ATTR_NODUPLICATE         = 1,
+
 	// reCreateMode
 	CELL_SAVEDATA_RECREATE_NO              = 0,
 	CELL_SAVEDATA_RECREATE_NO_NOBROKEN     = 1,
 	CELL_SAVEDATA_RECREATE_YES             = 2,
 	CELL_SAVEDATA_RECREATE_YES_RESET_OWNER = 3,
-	CELL_SAVEDATA_RECREATE_MASK            = 0xffff,
+	CELL_SAVEDATA_RECREATE_MASK            = 0xfffeffff,
 
 	// Version
 	CELL_SAVEDATA_VERSION_OLD = 0,

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <cmath>
 #include <vector>
@@ -7,8 +7,14 @@
 #include "Utilities/Config.h"
 #include "Utilities/types.h"
 #include "Emu/System.h"
+#include "Emu/GameInfo.h"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
+
+enum SystemInfo
+{
+	CELL_PAD_INFO_INTERCEPTED = 0x00000001
+};
 
 enum PortStatus
 {
@@ -162,14 +168,14 @@ struct Pad
 {
 	bool m_buffer_cleared;
 	u32 m_port_status;
-	u32 m_port_setting;
 	u32 m_device_capability;
 	u32 m_device_type;
+	u32 m_class_type;
 
 	// Cable State:   0 - 1  plugged in ?
 	u8 m_cable_state;
 
-	// DS4: 0 - 9  while unplugged, 0 - 10 while plugged in, 11 charge complete
+	// DS4: 0 - 9 while unplugged, 0 - 10 while plugged in, 11 charge complete
 	// XInput: 0 = Empty, 1 = Low, 2 = Medium, 3 = Full
 	u8 m_battery_level;
 
@@ -208,20 +214,22 @@ struct Pad
 	u16 m_sensor_z;
 	u16 m_sensor_g;
 
-	void Init(u32 port_status, u32 port_setting, u32 device_capability, u32 device_type)
+	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type)
 	{
 		m_port_status = port_status;
-		m_port_setting = port_setting;
 		m_device_capability = device_capability;
 		m_device_type = device_type;
+		m_class_type = class_type;
 	}
 
-	Pad(u32 port_status, u32 port_setting, u32 device_capability, u32 device_type)
+	Pad(u32 port_status, u32 device_capability, u32 device_type)
 		: m_buffer_cleared(true)
 		, m_port_status(port_status)
-		, m_port_setting(port_setting)
 		, m_device_capability(device_capability)
 		, m_device_type(device_type)
+		, m_class_type(0)
+		, m_cable_state(0)
+		, m_battery_level(0)
 
 		, m_digital_1(0)
 		, m_digital_2(0)
@@ -255,7 +263,7 @@ struct Pad
 struct cfg_player final : cfg::node
 {
 	pad_handler def_handler = pad_handler::null;
-	cfg_player(node* owner, const std::string& name, pad_handler type) : cfg::node(owner, name), def_handler(type) {};
+	cfg_player(node* owner, const std::string& name, pad_handler type) : cfg::node(owner, name), def_handler(type) {}
 
 	cfg::_enum<pad_handler> handler{ this, "Handler", def_handler };
 	cfg::string device{ this, "Device", handler.to_string() };
@@ -264,7 +272,7 @@ struct cfg_player final : cfg::node
 
 struct cfg_input final : cfg::node
 {
-	const std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
+	std::string cfg_name = fs::get_config_dir() + "/config_input.yml";
 
 	cfg_player player1{ this, "Player 1 Input", pad_handler::keyboard };
 	cfg_player player2{ this, "Player 2 Input", pad_handler::null };
@@ -276,20 +284,34 @@ struct cfg_input final : cfg::node
 
 	cfg_player *player[7]{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc! 
 
-	bool load()
+	bool load(const std::string& title_id = "")
 	{
-		if (fs::file cfg_file{ cfg_name, fs::read })
+		cfg_name = Emulator::GetCustomInputConfigPath(title_id);
+
+		if (!fs::is_file(cfg_name))
+		{
+			cfg_name = fs::get_config_dir() + "/config_input.yml";
+		}
+
+		if (fs::file cfg_file{cfg_name, fs::read})
 		{
 			return from_string(cfg_file.to_string());
 		}
-
 		return false;
-	};
+	}
 
-	void save()
+	void save(const std::string& title_id = "")
 	{
+		if (title_id.empty())
+		{
+			cfg_name = fs::get_config_dir() + "/config_input.yml";
+		}
+		else
+		{
+			cfg_name = Emulator::GetCustomInputConfigPath(title_id);
+		}
 		fs::file(cfg_name, fs::rewrite).write(to_string());
-	};
+	}
 };
 
 extern cfg_input g_cfg_input;
@@ -324,6 +346,8 @@ struct pad_config final : cfg::node
 	cfg::string l2      { this, "L2", "" };
 	cfg::string l3      { this, "L3", "" };
 
+	cfg::_int<0, 200> lstickmultiplier{this, "Left Stick Multiplier", 100};
+	cfg::_int<0, 200> rstickmultiplier{this, "Right Stick Multiplier", 100};
 	cfg::_int<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
 	cfg::_int<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
@@ -337,6 +361,16 @@ struct pad_config final : cfg::node
 	cfg::_bool enable_vibration_motor_large{ this, "Enable Large Vibration Motor", true };
 	cfg::_bool enable_vibration_motor_small{ this, "Enable Small Vibration Motor", true };
 	cfg::_bool switch_vibration_motors{ this, "Switch Vibration Motors", false };
+
+	cfg::_int<0, 255> mouse_deadzone_x{ this, "Mouse Deadzone X Axis", 60 };
+	cfg::_int<0, 255> mouse_deadzone_y{ this, "Mouse Deadzone Y Axis", 60 };
+	cfg::_int<0, 1000> mouse_acceleration_x{ this, "Mouse Acceleration X Axis", 200 };
+	cfg::_int<0, 1000> mouse_acceleration_y{ this, "Mouse Acceleration Y Axis", 250 };
+
+	cfg::_int<0, 100> l_stick_lerp_factor{ this, "Left Stick Lerp Factor", 100 };
+	cfg::_int<0, 100> r_stick_lerp_factor{ this, "Right Stick Lerp Factor", 100 };
+
+	cfg::_int<0, 5> device_class_type{ this, "Device Class Type", 0 };
 
 	bool load()
 	{
@@ -371,6 +405,7 @@ protected:
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
 
+	bool b_has_led = false;
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
 	bool b_has_config = false;
@@ -404,9 +439,9 @@ protected:
 
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 	// the input values must lie in 0+
-	u16 NormalizeDirectedInput(u16 raw_value, s32 threshold, s32 maximum);
+	u16 NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 maximum);
 
-	u16 NormalizeStickInput(u16 raw_value, int threshold, bool ignore_threshold = false);
+	u16 NormalizeStickInput(u16 raw_value, int threshold, int multiplier, bool ignore_threshold = false);
 
 	// This function normalizes stick deadzone based on the DS3's deadzone, which is ~13%
 	// X and Y is expected to be in (-255) to 255 range, deadzone should be in terms of thumb stick range
@@ -443,16 +478,17 @@ public:
 	bool has_config();
 	bool has_rumble();
 	bool has_deadzones();
+	bool has_led();
 
-	static std::string get_config_dir(pad_handler type);
-	static std::string get_config_filename(int i);
+	static std::string get_config_dir(pad_handler type, const std::string& title_id = "");
+	static std::string get_config_filename(int i, const std::string& title_id = "");
 
-	virtual bool Init() { return true; };
+	virtual bool Init() { return true; }
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	//Sets window to config the controller(optional)
-	virtual void GetNextButtonPress(const std::string& /*padId*/, const std::function<void(u16, std::string, int[])>& /*callback*/, bool /*get_blacklist*/ = false, std::vector<std::string> /*buttons*/ = {}) {};
-	virtual void TestVibration(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/) {};
+	virtual void GetNextButtonPress(const std::string& /*padId*/, const std::function<void(u16, std::string, std::string, int[])>& /*callback*/, const std::function<void(std::string)>& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) {}
+	virtual void SetPadData(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/) {}
 	//Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	//Callback called during pad_thread::ThreadFunc
@@ -462,7 +498,7 @@ public:
 	virtual void init_config(pad_config* /*cfg*/, const std::string& /*name*/) = 0;
 
 private:
-	virtual void TranslateButtonPress(u64 /*keyCode*/, bool& /*pressed*/, u16& /*val*/, bool /*ignore_threshold*/ = false) {};
+	virtual void TranslateButtonPress(u64 /*keyCode*/, bool& /*pressed*/, u16& /*val*/, bool /*ignore_threshold*/ = false) {}
 
 protected:
 	void init_configs();

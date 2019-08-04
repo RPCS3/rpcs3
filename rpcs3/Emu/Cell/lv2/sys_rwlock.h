@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 struct sys_rwlock_attribute_t
 {
 	be_t<u32> protocol;
@@ -12,8 +14,8 @@ struct sys_rwlock_attribute_t
 
 	union
 	{
-		char name[8];
 		u64 name_u64;
+		char name[sizeof(u64)];
 	};
 };
 
@@ -27,7 +29,7 @@ struct lv2_rwlock final : lv2_obj
 	const u64 name;
 	const s32 flags;
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<s64> owner{0};
 	std::deque<cpu_thread*> rq;
 	std::deque<cpu_thread*> wq;
@@ -47,10 +49,10 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr);
-error_code sys_rwlock_destroy(u32 rw_lock_id);
+error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr);
+error_code sys_rwlock_destroy(ppu_thread& ppu, u32 rw_lock_id);
 error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout);
-error_code sys_rwlock_tryrlock(u32 rw_lock_id);
+error_code sys_rwlock_tryrlock(ppu_thread& ppu, u32 rw_lock_id);
 error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id);
 error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout);
 error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id);

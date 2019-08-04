@@ -1,8 +1,9 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/types.h"
 #include "Utilities/BitField.h"
 #include "Utilities/StrFmt.h"
 #include <tuple>
+#include <climits>
 #include "gcm_enums.h"
 #pragma warning(disable:4503)
 
@@ -66,8 +67,12 @@ template<uint32_t Register>
 struct registers_decoder
 {};
 
-template<u32 I, u32 N>
-using bitfield_decoder_t = bf_t<u32, I, N>;
+// Use the smallest type by default
+template <u32 I, u32 N, typename T = get_uint_t<std::max<size_t>(static_cast<size_t>((UINTMAX_C(1) << ::ceil2(N)) / CHAR_BIT), 1)>>
+static constexpr inline T bf_decoder(const u32& bits)
+{
+	return static_cast<T>(bf_t<u32, I, N>::extract(bits));
+}
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_HORIZONTAL>
@@ -75,23 +80,19 @@ struct registers_decoder<NV4097_SET_VIEWPORT_HORIZONTAL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> origin_x;
-			bitfield_decoder_t<16, 16> width;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 origin_x() const
 		{
-			return m_data.origin_x;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 width() const
 		{
-			return m_data.width;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -107,23 +108,19 @@ struct registers_decoder<NV4097_SET_VIEWPORT_VERTICAL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> origin_y;
-			bitfield_decoder_t<16, 16> height;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 origin_y() const
 		{
-			return m_data.origin_y;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 height() const
 		{
-			return m_data.height;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -139,23 +136,19 @@ struct registers_decoder<NV4097_SET_SCISSOR_HORIZONTAL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> origin_x;
-			bitfield_decoder_t<16, 16> width;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 origin_x() const
 		{
-			return m_data.origin_x;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 width() const
 		{
-			return m_data.width;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -171,23 +164,19 @@ struct registers_decoder<NV4097_SET_SCISSOR_VERTICAL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> origin_y;
-			bitfield_decoder_t<16, 16> height;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 origin_y() const
 		{
-			return m_data.origin_y;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 height() const
 		{
-			return m_data.height;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -203,23 +192,19 @@ struct registers_decoder<NV4097_SET_SURFACE_CLIP_HORIZONTAL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> origin_x;
-			bitfield_decoder_t<16, 16> width;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 origin_x() const
 		{
-			return m_data.origin_x;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 width() const
 		{
-			return m_data.width;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -235,23 +220,19 @@ struct registers_decoder< NV4097_SET_SURFACE_CLIP_VERTICAL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> origin_y;
-			bitfield_decoder_t<16, 16> height;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 origin_y() const
 		{
-			return m_data.origin_y;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 height() const
 		{
-			return m_data.height;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -267,23 +248,19 @@ struct registers_decoder<NV4097_SET_CLEAR_RECT_HORIZONTAL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> origin_x;
-			bitfield_decoder_t<16, 16> width;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 origin_x() const
 		{
-			return m_data.origin_x;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 width() const
 		{
-			return m_data.width;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -299,23 +276,19 @@ struct registers_decoder<NV4097_SET_CLEAR_RECT_VERTICAL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> origin_y;
-			bitfield_decoder_t<16, 16> height;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 origin_y() const
 		{
-			return m_data.origin_y;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 height() const
 		{
-			return m_data.height;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -331,23 +304,19 @@ struct registers_decoder< NV3089_CLIP_POINT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> clip_x;
-			bitfield_decoder_t<16, 16> clip_y;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 clip_x() const
 		{
-			return m_data.clip_x;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 clip_y() const
 		{
-			return m_data.clip_y;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -363,23 +332,19 @@ struct registers_decoder<NV3089_CLIP_SIZE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> width;
-			bitfield_decoder_t<16, 16> height;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 clip_width() const
 		{
-			return m_data.width;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 clip_height() const
 		{
-			return m_data.height;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -395,23 +360,19 @@ struct registers_decoder<NV3089_IMAGE_OUT_POINT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> x;
-			bitfield_decoder_t<16, 16> y;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 x() const
 		{
-			return m_data.x;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 y() const
 		{
-			return m_data.y;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -427,23 +388,19 @@ struct registers_decoder<NV4097_SET_WINDOW_OFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> window_offset_x;
-			bitfield_decoder_t<16, 16> window_offset_y;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 window_offset_x() const
 		{
-			return m_data.window_offset_x;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 window_offset_y() const
 		{
-			return m_data.window_offset_y;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -460,23 +417,19 @@ struct registers_decoder<NV3089_IMAGE_OUT_SIZE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> width;
-			bitfield_decoder_t<16, 16> height;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 width() const
 		{
-			return m_data.width;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 height() const
 		{
-			return m_data.height;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -492,23 +445,19 @@ struct registers_decoder<NV3089_IMAGE_IN_SIZE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> width;
-			bitfield_decoder_t<16, 16> height;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 width() const
 		{
-			return m_data.width;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 height() const
 		{
-			return m_data.height;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -524,23 +473,19 @@ struct registers_decoder<NV3062_SET_PITCH>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> alignment;
-			bitfield_decoder_t<16, 16> pitch;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 alignment() const
 		{
-			return m_data.alignment;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 pitch() const
 		{
-			return m_data.pitch;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -556,23 +501,19 @@ struct registers_decoder< NV308A_POINT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> x;
-			bitfield_decoder_t<16, 16> y;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 x() const
 		{
-			return m_data.x;
+			return bf_decoder<0, 16>(value);
 		}
 
 		u16 y() const
 		{
-			return m_data.y;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -588,16 +529,14 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_INPUT_MASK>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 mask() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -626,16 +565,14 @@ struct registers_decoder<NV4097_SET_FREQUENCY_DIVIDER_OPERATION>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 frequency_divider_operation_mask() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -655,17 +592,14 @@ struct registers_decoder<NV4097_SET_DEPTH_TEST_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> depth_test_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool depth_test_enabled() const
 		{
-			return bool(m_data.depth_test_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -681,17 +615,14 @@ struct registers_decoder<NV4097_SET_DEPTH_MASK>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> depth_write_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool depth_write_enabled() const
 		{
-			return bool(m_data.depth_write_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -707,29 +638,24 @@ struct registers_decoder<NV4097_SET_ZMIN_MAX_CONTROL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 4> depth_clip_enabled;
-			bitfield_decoder_t<4, 4> depth_clamp_enabled;
-			bitfield_decoder_t<8, 4> depth_clip_ignore_w;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		bool depth_clip_enabled() const
 		{
-			return bool(m_data.depth_clip_enabled);
+			return bf_decoder<0, 4, bool>(value);
 		}
 
 		bool depth_clamp_enabled() const
 		{
-			return bool(m_data.depth_clamp_enabled);
+			return bf_decoder<4, 4, bool>(value);
 		}
 
 		bool depth_clip_ignore_w() const
 		{
-			return bool(m_data.depth_clip_ignore_w);
+			return bf_decoder<8, 4, bool>(value);
 		}
 	};
 
@@ -747,17 +673,14 @@ struct registers_decoder<NV4097_SET_ALPHA_TEST_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> alpha_test_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool alpha_test_enabled() const
 		{
-			return bool(m_data.alpha_test_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -773,17 +696,14 @@ struct registers_decoder<NV4097_SET_STENCIL_TEST_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> stencil_test_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool stencil_test_enabled() const
 		{
-			return bool(m_data.stencil_test_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -799,17 +719,14 @@ struct registers_decoder<NV4097_SET_RESTART_INDEX_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> restart_index_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool restart_index_enabled() const
 		{
-			return bool(m_data.restart_index_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -825,17 +742,14 @@ struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> depth_bound_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool depth_bound_enabled() const
 		{
-			return bool(m_data.depth_bound_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -851,17 +765,14 @@ struct registers_decoder<NV4097_SET_LOGIC_OP_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> logic_op_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool logic_op_enabled() const
 		{
-			return bool(m_data.logic_op_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -877,17 +788,14 @@ struct registers_decoder<NV4097_SET_DITHER_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> dither_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool dither_enabled() const
 		{
-			return bool(m_data.dither_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -903,17 +811,14 @@ struct registers_decoder<NV4097_SET_BLEND_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> blend_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool blend_enabled() const
 		{
-			return bool(m_data.blend_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -929,17 +834,14 @@ struct registers_decoder<NV4097_SET_LINE_SMOOTH_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> line_smooth_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool line_smooth_enabled() const
 		{
-			return bool(m_data.line_smooth_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -955,17 +857,14 @@ struct registers_decoder<NV4097_SET_POLY_OFFSET_POINT_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> poly_offset_point_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool poly_offset_point_enabled() const
 		{
-			return bool(m_data.poly_offset_point_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -981,17 +880,14 @@ struct registers_decoder<NV4097_SET_POLY_OFFSET_LINE_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> poly_offset_line_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool poly_offset_line_enabled() const
 		{
-			return bool(m_data.poly_offset_line_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -1007,17 +903,14 @@ struct registers_decoder<NV4097_SET_POLY_OFFSET_FILL_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> poly_offset_fill_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool poly_offset_fill_enabled() const
 		{
-			return bool(m_data.poly_offset_fill_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -1033,17 +926,14 @@ struct registers_decoder<NV4097_SET_CULL_FACE_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> cull_face_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool cull_face_enabled() const
 		{
-			return bool(m_data.cull_face_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -1059,17 +949,14 @@ struct registers_decoder<NV4097_SET_POLY_SMOOTH_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> poly_smooth_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool poly_smooth_enabled() const
 		{
-			return bool(m_data.poly_smooth_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -1085,17 +972,14 @@ struct registers_decoder<NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> two_sided_stencil_test_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool two_sided_stencil_test_enabled() const
 		{
-			return bool(m_data.two_sided_stencil_test_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -1111,17 +995,14 @@ struct registers_decoder<NV4097_SET_TWO_SIDE_LIGHT_EN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> two_sided_lighting_enabled;
-		} m_data;
+		u32 enabled;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : enabled(value) {}
 
 		bool two_sided_lighting_enabled() const
 		{
-			return bool(m_data.two_sided_lighting_enabled);
+			return bool(enabled);
 		}
 	};
 
@@ -1137,17 +1018,14 @@ struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_MIN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> depth_bound_min;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 depth_bound_min() const
 		{
-			return reinterpret_cast<const f32&>(m_data.depth_bound_min);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1163,17 +1041,14 @@ struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_MAX>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> depth_bound_max;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 depth_bound_max() const
 		{
-			return reinterpret_cast<const f32&>(m_data.depth_bound_max);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1189,17 +1064,14 @@ struct registers_decoder<NV4097_SET_FOG_PARAMS>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> fog_param_0;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 fog_param_0() const
 		{
-			return reinterpret_cast<const f32&>(m_data.fog_param_0);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1215,17 +1087,14 @@ struct registers_decoder<NV4097_SET_FOG_PARAMS + 1>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> fog_param_1;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 fog_param_1() const
 		{
-			return reinterpret_cast<const f32&>(m_data.fog_param_1);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1241,17 +1110,14 @@ struct registers_decoder<NV4097_SET_CLIP_MIN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> clip_min;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 clip_min() const
 		{
-			return reinterpret_cast<const f32&>(m_data.clip_min);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1267,17 +1133,14 @@ struct registers_decoder<NV4097_SET_CLIP_MAX>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> clip_max;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 clip_max() const
 		{
-			return reinterpret_cast<const f32&>(m_data.clip_max);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1293,17 +1156,14 @@ struct registers_decoder<NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> polygon_offset_scale_factor;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 polygon_offset_scale_factor() const
 		{
-			return reinterpret_cast<const f32&>(m_data.polygon_offset_scale_factor);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1319,17 +1179,14 @@ struct registers_decoder<NV4097_SET_POLYGON_OFFSET_BIAS>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> polygon_offset_scale_bias;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 polygon_offset_scale_bias() const
 		{
-			return reinterpret_cast<const f32&>(m_data.polygon_offset_scale_bias);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1345,17 +1202,14 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> viewport_scale_x;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 viewport_scale_x() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_scale_x);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1371,17 +1225,14 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 1>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> viewport_scale_y;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 viewport_scale_y() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_scale_y);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1397,17 +1248,14 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 2>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> viewport_scale_z;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 viewport_scale_z() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_scale_z);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1423,17 +1271,14 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 3>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> viewport_scale_w;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 viewport_scale_w() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_scale_w);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1449,17 +1294,14 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> viewport_offset_x;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 viewport_offset_x() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_offset_x);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1475,17 +1317,14 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 1>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> viewport_offset_y;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 viewport_offset_y() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_offset_y);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1501,17 +1340,14 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 2>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> viewport_offset_z;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 viewport_offset_z() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_offset_z);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1527,17 +1363,14 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 3>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> viewport_offset_w;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 viewport_offset_w() const
 		{
-			return reinterpret_cast<const f32&>(m_data.viewport_offset_w);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -1553,16 +1386,14 @@ struct registers_decoder<NV4097_SET_RESTART_INDEX>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 restart_index() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1578,16 +1409,14 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_AOFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_a_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1603,16 +1432,14 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_BOFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_b_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1628,16 +1455,14 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_COFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_c_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1653,16 +1478,14 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_DOFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_d_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1678,16 +1501,14 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_A>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_a_pitch() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1703,16 +1524,14 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_B>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_b_pitch() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1728,16 +1547,14 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_C>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_c_pitch() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1753,16 +1570,14 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_D>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_d_pitch() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1778,16 +1593,14 @@ struct registers_decoder<NV4097_SET_SURFACE_ZETA_OFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_z_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1803,16 +1616,14 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_Z>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 surface_z_pitch() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1828,16 +1639,14 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 output_mask() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1882,16 +1691,14 @@ struct registers_decoder<NV4097_SET_SHADER_CONTROL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 shader_ctrl() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1910,16 +1717,14 @@ struct registers_decoder<NV4097_SET_SHADER_PACKER>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		bool srgb_output_enabled() const
 		{
-			return !!m_data.raw_value;
+			return !!value;
 		}
 	};
 
@@ -1935,16 +1740,14 @@ struct registers_decoder<NV4097_SET_VERTEX_DATA_BASE_OFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 vertex_data_base_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1960,16 +1763,14 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_ADDRESS>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 index_array_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -1985,16 +1786,14 @@ struct registers_decoder<NV4097_SET_VERTEX_DATA_BASE_INDEX>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 vertex_data_base_index() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2010,16 +1809,14 @@ struct registers_decoder<NV4097_SET_SHADER_PROGRAM>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 shader_program_address() const
 		{
-			return m_data.raw_value;
+			return bf_decoder<0, 31>(value);
 		}
 	};
 
@@ -2035,16 +1832,14 @@ struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM_START>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 transform_program_start() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2060,16 +1855,14 @@ struct registers_decoder<NV406E_SET_CONTEXT_DMA_SEMAPHORE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 context_dma() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2086,16 +1879,14 @@ struct registers_decoder<NV406E_SEMAPHORE_OFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 semaphore_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2106,21 +1897,42 @@ struct registers_decoder<NV406E_SEMAPHORE_OFFSET>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_CONTEXT_DMA_SEMAPHORE>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		u32 context_dma() const
+		{
+			return value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return "NV4097 semaphore: context = " + std::to_string(decoded_values.context_dma());
+	}
+};
+
+template<>
 struct registers_decoder<NV4097_SET_SEMAPHORE_OFFSET>
 {
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 semaphore_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2136,16 +1948,14 @@ struct registers_decoder<NV3089_IMAGE_IN_OFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 input_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2161,16 +1971,14 @@ struct registers_decoder<NV3062_SET_OFFSET_DESTIN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 output_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2186,16 +1994,14 @@ struct registers_decoder<NV309E_SET_OFFSET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2211,16 +2017,27 @@ struct registers_decoder<NV3089_DS_DX>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
-	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		u32 value;
 
-		u32 ds_dx() const
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		// Convert signed fixed point 32-bit format
+		f32 ds_dx() const
 		{
-			return m_data.raw_value;
+			const u32 val = value;
+
+			if ((val & ~(1<<31)) == 0)
+			{
+				return 0;
+			}
+
+			if ((s32)val < 0)
+			{
+				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
+			}
+
+			return 1048576.f / val;
 		}
 	};
 
@@ -2236,16 +2053,27 @@ struct registers_decoder<NV3089_DT_DY>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
-	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		u32 value;
 
-		u32 dt_dy() const
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		// Convert signed fixed point 32-bit format
+		f32 dt_dy() const
 		{
-			return m_data.raw_value;
+		    const u32 val = value;
+
+			if ((val & ~(1<<31)) == 0)
+			{
+				return 0;
+			}
+
+			if ((s32)val < 0)
+			{
+				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
+			}
+
+			return 1048576.f / val;
 		}
 	};
 
@@ -2261,16 +2089,14 @@ struct registers_decoder<NV0039_PITCH_IN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 input_pitch() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2286,16 +2112,14 @@ struct registers_decoder<NV0039_PITCH_OUT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 output_pitch() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2311,16 +2135,14 @@ struct registers_decoder<NV0039_LINE_LENGTH_IN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 input_line_length() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2336,16 +2158,14 @@ struct registers_decoder<NV0039_LINE_COUNT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 line_count() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2361,16 +2181,14 @@ struct registers_decoder<NV0039_OFFSET_OUT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 output_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2386,16 +2204,14 @@ struct registers_decoder<NV0039_OFFSET_IN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 input_offset() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -2411,17 +2227,14 @@ struct registers_decoder<NV4097_SET_DEPTH_FUNC>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> depth_func;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::comparison_function depth_func() const
 		{
-			return to_comparison_function(m_data.depth_func);
+			return to_comparison_function(value);
 		}
 	};
 
@@ -2437,17 +2250,14 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> stencil_func;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::comparison_function stencil_func() const
 		{
-			return to_comparison_function(m_data.stencil_func);
+			return to_comparison_function(value);
 		}
 	};
 
@@ -2463,17 +2273,14 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> back_stencil_func;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::comparison_function back_stencil_func() const
 		{
-			return to_comparison_function(m_data.back_stencil_func);
+			return to_comparison_function(value);
 		}
 	};
 
@@ -2489,17 +2296,14 @@ struct registers_decoder<NV4097_SET_ALPHA_FUNC>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> alpha_func;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::comparison_function alpha_func() const
 		{
-			return to_comparison_function(m_data.alpha_func);
+			return to_comparison_function(value);
 		}
 	};
 
@@ -2515,17 +2319,14 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_FAIL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> fail;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::stencil_op fail() const
 		{
-			return to_stencil_op(m_data.fail);
+			return to_stencil_op(value);
 		}
 	};
 
@@ -2541,17 +2342,14 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_ZFAIL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> zfail;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::stencil_op zfail() const
 		{
-			return to_stencil_op(m_data.zfail);
+			return to_stencil_op(value);
 		}
 	};
 
@@ -2567,17 +2365,14 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_ZPASS>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> zpass;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::stencil_op zpass() const
 		{
-			return to_stencil_op(m_data.zpass);
+			return to_stencil_op(value);
 		}
 	};
 
@@ -2593,17 +2388,14 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_FAIL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> back_fail;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::stencil_op back_fail() const
 		{
-			return to_stencil_op(m_data.back_fail);
+			return to_stencil_op(value);
 		}
 	};
 
@@ -2619,17 +2411,14 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_ZFAIL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> back_zfail;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::stencil_op back_zfail() const
 		{
-			return to_stencil_op(m_data.back_zfail);
+			return to_stencil_op(value);
 		}
 	};
 
@@ -2645,17 +2434,14 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_ZPASS>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> back_zpass;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		rsx::stencil_op back_zpass() const
 		{
-			return to_stencil_op(m_data.back_zpass);
+			return to_stencil_op(value);
 		}
 	};
 
@@ -2671,16 +2457,15 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC_REF>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 8> stencil_func_ref;
-		} m_data;
+		u32 value;
 
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
-		u8 stencil_func_ref() const { return m_data.stencil_func_ref; }
+		u8 stencil_func_ref() const
+		{
+			return bf_decoder<0, 8>(value);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -2695,16 +2480,15 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC_REF>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 8> back_stencil_func_ref;
-		} m_data;
+		u32 value;
 
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
-		u8 back_stencil_func_ref() const { return m_data.back_stencil_func_ref; }
+		u8 back_stencil_func_ref() const
+		{
+			return bf_decoder<0, 8>(value);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -2719,16 +2503,15 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC_MASK>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 8> stencil_func_mask;
-		} m_data;
+		u32 value;
 
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
-		u8 stencil_func_mask() const { return m_data.stencil_func_mask; }
+		u8 stencil_func_mask() const
+		{
+			return bf_decoder<0, 8>(value);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -2743,16 +2526,15 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC_MASK>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 8> back_stencil_func_mask;
-		} m_data;
+		u32 value;
 
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
-		u8 back_stencil_func_mask() const { return m_data.back_stencil_func_mask; }
+		u8 back_stencil_func_mask() const
+		{
+			return bf_decoder<0, 8>(value);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -2767,16 +2549,15 @@ struct registers_decoder<NV4097_SET_ALPHA_REF>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 8> alpha_ref;
-		} m_data;
+		u32 value;
 
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
-		u8 alpha_ref() const { return m_data.alpha_ref; }
+		u8 alpha_ref() const
+		{
+			return bf_decoder<0, 8>(value);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -2791,22 +2572,15 @@ struct registers_decoder<NV4097_SET_COLOR_CLEAR_VALUE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 8> blue;
-			bitfield_decoder_t<8, 8> green;
-			bitfield_decoder_t<16, 8> red;
-			bitfield_decoder_t<24, 8> alpha;
-		} m_data;
+		u32 value;
 
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
-		u8 red() const { return m_data.red; }
-		u8 green() const { return m_data.green; }
-		u8 blue() const { return m_data.blue; }
-		u8 alpha() const { return m_data.alpha; }
+		u8 blue() const { return bf_decoder<0, 8>(value); }
+		u8 green() const { return bf_decoder<8, 8>(value); }
+		u8 red() const { return bf_decoder<16, 8>(value); }
+		u8 alpha() const { return bf_decoder<24, 8>(value); }
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -2824,16 +2598,15 @@ struct registers_decoder<NV4097_SET_STENCIL_MASK>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 8> stencil_mask;
-		} m_data;
+		u32 value;
 
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
-		u8 stencil_mask() const { return m_data.stencil_mask; }
+		u8 stencil_mask() const
+		{
+			return bf_decoder<0, 8>(value);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -2847,16 +2620,16 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_MASK>
 {
 	struct decoded_type
 	{
-private:
-	union
-	{
-		u32 raw_value;
-		bitfield_decoder_t<0, 8> back_stencil_mask;
-	} m_data;
-public:
-	decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+	private:
+		u32 value;
 
-	u8 back_stencil_mask() const { return m_data.back_stencil_mask; }
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		u8 back_stencil_mask() const
+		{
+			return bf_decoder<0, 8>(value);
+		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
@@ -2871,17 +2644,14 @@ struct registers_decoder<NV4097_SET_LOGIC_OP>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> logic_operation;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		logic_op logic_operation() const
 		{
-			return to_logic_op(m_data.logic_operation);
+			return to_logic_op(value);
 		}
 	};
 
@@ -2897,17 +2667,14 @@ struct registers_decoder<NV4097_SET_FRONT_FACE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> front_face_mode;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		front_face front_face_mode() const
 		{
-			return to_front_face(m_data.front_face_mode);
+			return to_front_face(value);
 		}
 	};
 
@@ -2924,16 +2691,14 @@ struct registers_decoder<NV4097_SET_CULL_FACE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		cull_face cull_face_mode() const
 		{
-			return static_cast<cull_face>(m_data.raw_value);
+			return static_cast<cull_face>(value);
 		}
 	};
 
@@ -2949,17 +2714,14 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_TARGET>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> target;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		surface_target target() const
 		{
-			return to_surface_target(m_data.target);
+			return to_surface_target(value);
 		}
 	};
 
@@ -2975,17 +2737,14 @@ struct registers_decoder<NV4097_SET_FOG_MODE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> fog_equation;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		fog_mode fog_equation() const
 		{
-			return to_fog_mode(m_data.fog_equation);
+			return to_fog_mode(value);
 		}
 	};
 
@@ -3001,17 +2760,14 @@ struct registers_decoder<NV4097_SET_BEGIN_END>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> primitive;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		primitive_type primitive() const
 		{
-			return to_primitive_type(m_data.primitive);
+			return to_primitive_type(value);
 		}
 	};
 
@@ -3027,17 +2783,14 @@ struct registers_decoder<NV3089_SET_OPERATION>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> transfer_op;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blit_engine::transfer_operation transfer_op() const
 		{
-			return blit_engine::to_transfer_operation(m_data.transfer_op);
+			return blit_engine::to_transfer_operation(value);
 		}
 	};
 
@@ -3053,17 +2806,14 @@ struct registers_decoder<NV3089_SET_COLOR_FORMAT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> transfer_source_fmt;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blit_engine::transfer_source_format transfer_source_fmt() const
 		{
-			return blit_engine::to_transfer_source_format(m_data.transfer_source_fmt);
+			return blit_engine::to_transfer_source_format(value);
 		}
 	};
 
@@ -3079,17 +2829,14 @@ struct registers_decoder<NV3089_SET_CONTEXT_SURFACE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> ctx_surface;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blit_engine::context_surface ctx_surface() const
 		{
-			return blit_engine::to_context_surface(m_data.ctx_surface);
+			return blit_engine::to_context_surface(value);
 		}
 	};
 
@@ -3105,17 +2852,14 @@ struct registers_decoder<NV3062_SET_COLOR_FORMAT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> transfer_dest_fmt;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blit_engine::transfer_destination_format transfer_dest_fmt() const
 		{
-			return blit_engine::to_transfer_destination_format(m_data.transfer_dest_fmt);
+			return blit_engine::to_transfer_destination_format(value);
 		}
 	};
 
@@ -3131,23 +2875,28 @@ struct registers_decoder<NV4097_SET_BLEND_EQUATION>
 	struct decoded_type
 	{
 	private:
-		union
+		u32 value;
+
+		u16 blend_rgb_raw() const
 		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> blend_rgb;
-			bitfield_decoder_t<16, 16> blend_a;
-		} m_data;
+			return bf_decoder<0, 16>(value);
+		}
+
+		u16 blend_a_raw() const
+		{
+			return bf_decoder<16, 16>(value);
+		}
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blend_equation blend_rgb() const
 		{
-			return to_blend_equation(m_data.blend_rgb);
+			return to_blend_equation(blend_rgb_raw());
 		}
 
 		blend_equation blend_a() const
 		{
-			return to_blend_equation(m_data.blend_a);
+			return to_blend_equation(blend_a_raw());
 		}
 	};
 
@@ -3164,23 +2913,28 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_SFACTOR>
 	struct decoded_type
 	{
 	private:
-		union
+		u32 value;
+
+		u16 src_blend_rgb_raw() const
 		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> src_blend_rgb;
-			bitfield_decoder_t<16, 16> src_blend_a;
-		} m_data;
+			return bf_decoder<0, 16>(value);
+		}
+
+		u16 src_blend_a_raw() const
+		{
+			return bf_decoder<16, 16>(value);
+		}
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blend_factor src_blend_rgb() const
 		{
-			return to_blend_factor(m_data.src_blend_rgb);
+			return to_blend_factor(src_blend_rgb_raw());
 		}
 
 		blend_factor src_blend_a() const
 		{
-			return to_blend_factor(m_data.src_blend_a);
+			return to_blend_factor(src_blend_a_raw());
 		}
 	};
 
@@ -3197,23 +2951,28 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_DFACTOR>
 	struct decoded_type
 	{
 	private:
-		union
+		u32 value;
+
+		u16 dst_blend_rgb_raw() const
 		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> dst_blend_rgb;
-			bitfield_decoder_t<16, 16> dst_blend_a;
-		} m_data;
+			return bf_decoder<0, 16>(value);
+		}
+
+		u16 dst_blend_a_raw() const
+		{
+			return bf_decoder<16, 16>(value);
+		}
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blend_factor dst_blend_rgb() const
 		{
-			return to_blend_factor(m_data.dst_blend_rgb);
+			return to_blend_factor(dst_blend_rgb_raw());
 		}
 
 		blend_factor dst_blend_a() const
 		{
-			return to_blend_factor(m_data.dst_blend_a);
+			return to_blend_factor(dst_blend_a_raw());
 		}
 	};
 
@@ -3230,40 +2989,34 @@ struct registers_decoder<NV4097_SET_COLOR_MASK>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_data;
-			bitfield_decoder_t<0, 8> color_b;
-			bitfield_decoder_t<8, 8> color_g;
-			bitfield_decoder_t<16, 8> color_r;
-			bitfield_decoder_t<24, 8> color_a;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		bool color_b() const
 		{
-			return bool(m_data.color_b);
+			return bf_decoder<0, 8, bool>(value);
 		}
 
 		bool color_g() const
 		{
-			return bool(m_data.color_g);
+			return bf_decoder<8, 8, bool>(value);
 		}
 
 		bool color_r() const
 		{
-			return bool(m_data.color_r);
+			return bf_decoder<16, 8, bool>(value);
 		}
 
 		bool color_a() const
 		{
-			return bool(m_data.color_a);
+			return bf_decoder<24, 8, bool>(value);
 		}
 
 		bool color_write_enabled() const
 		{
-			return m_data.raw_data != 0;
+			return value != 0;
 		}
 	};
 
@@ -3282,29 +3035,27 @@ struct registers_decoder<NV4097_SET_SHADER_WINDOW>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 12> window_shader_height;
-			bitfield_decoder_t<12, 4> window_shader_origin;
-			bitfield_decoder_t<16, 4> window_shader_pixel_center;
-		} m_data;
+		u32 value;
+
+		u8 window_shader_origin_raw() const { return bf_decoder<12, 4>(value); }
+		u8 window_shader_pixel_center_raw() const { return bf_decoder<16, 4>(value); }
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		window_origin window_shader_origin() const
 		{
-			return to_window_origin(m_data.window_shader_origin);
+			return to_window_origin(window_shader_origin_raw());
 		}
 
 		window_pixel_center window_shader_pixel_center() const
 		{
-			return to_window_pixel_center(m_data.window_shader_pixel_center);
+			return to_window_pixel_center(window_shader_pixel_center_raw());
 		}
 
 		u16 window_shader_height() const
 		{
-			return m_data.window_shader_height;
+			return bf_decoder<0, 12>(value);
 		}
 	};
 
@@ -3322,29 +3073,24 @@ struct registers_decoder<NV4097_SET_BLEND_ENABLE_MRT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_data;
-			bitfield_decoder_t<1, 1> blend_surface_b;
-			bitfield_decoder_t<2, 1> blend_surface_c;
-			bitfield_decoder_t<3, 1> blend_surface_d;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		bool blend_surface_b() const
 		{
-			return bool(m_data.blend_surface_b);
+			return bf_decoder<1, 1, bool>(value);
 		}
 
 		bool blend_surface_c() const
 		{
-			return bool(m_data.blend_surface_c);
+			return bf_decoder<2, 1, bool>(value);
 		}
 
 		bool blend_surface_d() const
 		{
-			return bool(m_data.blend_surface_d);
+			return bf_decoder<3, 1, bool>(value);
 		}
 	};
 
@@ -3363,47 +3109,46 @@ struct registers_decoder<NV4097_SET_USER_CLIP_PLANE_CONTROL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_data;
-			bitfield_decoder_t<0, 4> clip_plane0;
-			bitfield_decoder_t<4, 4> clip_plane1;
-			bitfield_decoder_t<8, 4> clip_plane2;
-			bitfield_decoder_t<12, 4> clip_plane3;
-			bitfield_decoder_t<16, 4> clip_plane4;
-			bitfield_decoder_t<20, 4> clip_plane5;
-		} m_data;
+		u32 value;
+
+		u8 clip_plane0_raw() const { return bf_decoder<0, 4>(value); }
+		u8 clip_plane1_raw() const { return bf_decoder<4, 4>(value); }
+		u8 clip_plane2_raw() const { return bf_decoder<8, 4>(value); }
+		u8 clip_plane3_raw() const { return bf_decoder<12, 4>(value); }
+		u8 clip_plane4_raw() const { return bf_decoder<16, 4>(value); }
+		u8 clip_plane5_raw() const { return bf_decoder<20, 4>(value); }
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		user_clip_plane_op clip_plane0() const
 		{
-			return to_user_clip_plane_op(m_data.clip_plane0);
+			return to_user_clip_plane_op(clip_plane0_raw());
 		}
 
 		user_clip_plane_op clip_plane1() const
 		{
-			return to_user_clip_plane_op(m_data.clip_plane1);
+			return to_user_clip_plane_op(clip_plane1_raw());
 		}
 
 		user_clip_plane_op clip_plane2() const
 		{
-			return to_user_clip_plane_op(m_data.clip_plane2);
+			return to_user_clip_plane_op(clip_plane2_raw());
 		}
 
 		user_clip_plane_op clip_plane3() const
 		{
-			return to_user_clip_plane_op(m_data.clip_plane3);
+			return to_user_clip_plane_op(clip_plane3_raw());
 		}
 
 		user_clip_plane_op clip_plane4() const
 		{
-			return to_user_clip_plane_op(m_data.clip_plane4);
+			return to_user_clip_plane_op(clip_plane4_raw());
 		}
 
 		user_clip_plane_op clip_plane5() const
 		{
-			return to_user_clip_plane_op(m_data.clip_plane5);
+			return to_user_clip_plane_op(clip_plane5_raw());
 		}
 	};
 
@@ -3424,16 +3169,14 @@ struct registers_decoder<NV4097_SET_LINE_WIDTH>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_data;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 line_width() const
 		{
-			return (m_data.raw_data >> 3) + (m_data.raw_data & 7) / 8.f;
+			return (value >> 3) + (value & 7) / 8.f;
 		}
 	};
 
@@ -3449,16 +3192,14 @@ struct registers_decoder<NV4097_SET_POINT_SIZE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_data;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_data = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 point_size() const
 		{
-			return (f32&)m_data.raw_data;
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -3474,41 +3215,44 @@ struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 5> color_fmt;
-			bitfield_decoder_t<5, 3> depth_fmt;
-			bitfield_decoder_t<12, 4> antialias;
-			bitfield_decoder_t<16, 8> log2width;
-			bitfield_decoder_t<24, 8> log2height;
-		} m_data;
+		u32 value;
+
+		u8 color_fmt_raw() const { return bf_decoder<0, 5>(value); }
+		u8 depth_fmt_raw() const { return bf_decoder<5, 3>(value); }
+		u8 type_raw() const { return bf_decoder<8, 4>(value); }
+		u8 antialias_raw() const { return bf_decoder<12, 4>(value); }
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		surface_color_format color_fmt() const
 		{
-			return to_surface_color_format(m_data.color_fmt);
+			return to_surface_color_format(color_fmt_raw());
 		}
 
 		surface_depth_format depth_fmt() const
 		{
-			return to_surface_depth_format(m_data.depth_fmt);
+			return to_surface_depth_format(depth_fmt_raw());
+		}
+
+		surface_raster_type type() const
+		{
+			return static_cast<surface_raster_type>(type_raw());
 		}
 
 		surface_antialiasing antialias() const
 		{
-			return to_surface_antialiasing(m_data.antialias);
+			return to_surface_antialiasing(antialias_raw());
 		}
 
 		u8 log2width() const
 		{
-			return bitfield_decoder_t<16, 8>(m_data.log2width);
+			return bf_decoder<16, 8>(value);
 		}
 
 		u8 log2height() const
 		{
-			return bitfield_decoder_t<24, 8>(m_data.log2height);
+			return bf_decoder<24, 8>(value);
 		}
 	};
 
@@ -3528,27 +3272,25 @@ struct registers_decoder<NV4097_SET_ZSTENCIL_CLEAR_VALUE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> clear_z16;
-			bitfield_decoder_t<8, 24> clear_z24;
-			bitfield_decoder_t<0, 8> clear_stencil;
-		} m_data;
+		u32 value;
+
+		u32 clear_z16() const { return bf_decoder<0, 16, u32>(value); }
+		u32 clear_z24() const { return bf_decoder<8, 24>(value); }
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u8 clear_stencil() const
 		{
-			return m_data.clear_stencil;
+			return bf_decoder<0, 8>(value);
 		}
 
 		u32 clear_z(bool is_depth_stencil) const
 		{
 			if (is_depth_stencil)
-				return m_data.clear_z24;
-			
-			return m_data.clear_z16;
+				return clear_z24();
+
+			return clear_z16();
 		}
 	};
 
@@ -3566,23 +3308,22 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 4> index_dma;
-			bitfield_decoder_t<4, 28> type;
-		} m_data;
+		u32 value;
+
+		u32 type_raw() const { return bf_decoder<4, 28>(value); }
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u8 index_dma() const
 		{
-			return m_data.index_dma;
+			return bf_decoder<0, 4>(value);
 		}
 
 		index_array_type type() const
 		{
-			return to_index_array_type(m_data.type);
+			// Why truncate??
+			return to_index_array_type(static_cast<u8>(type_raw()));
 		}
 	};
 
@@ -3599,17 +3340,14 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_A>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> dma_surface_a;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 dma_surface_a() const
 		{
-			return m_data.dma_surface_a;
+			return value;
 		}
 	};
 
@@ -3625,17 +3363,14 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_B>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> dma_surface_b;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 dma_surface_b() const
 		{
-			return m_data.dma_surface_b;
+			return value;
 		}
 	};
 
@@ -3651,17 +3386,14 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_C>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> dma_surface_c;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 dma_surface_c() const
 		{
-			return m_data.dma_surface_c;
+			return value;
 		}
 	};
 
@@ -3677,17 +3409,14 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_D>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> dma_surface_d;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 dma_surface_d() const
 		{
-			return m_data.dma_surface_d;
+			return value;
 		}
 	};
 
@@ -3703,17 +3432,14 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_ZETA>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> dma_surface_z;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 dma_surface_z() const
 		{
-			return m_data.dma_surface_z;
+			return value;
 		}
 	};
 
@@ -3729,17 +3455,14 @@ struct registers_decoder<NV3089_SET_CONTEXT_DMA_IMAGE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> context_dma;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 context_dma() const
 		{
-			return m_data.context_dma;
+			return value;
 		}
 	};
 
@@ -3755,17 +3478,14 @@ struct registers_decoder<NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> output_dma;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 output_dma() const
 		{
-			return m_data.output_dma;
+			return value;
 		}
 	};
 
@@ -3781,17 +3501,14 @@ struct registers_decoder<NV309E_SET_CONTEXT_DMA_IMAGE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> context_dma;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 context_dma() const
 		{
-			return m_data.context_dma;
+			return value;
 		}
 	};
 
@@ -3807,17 +3524,14 @@ struct registers_decoder<NV0039_SET_CONTEXT_DMA_BUFFER_OUT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> output_dma;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 output_dma() const
 		{
-			return m_data.output_dma;
+			return value;
 		}
 	};
 
@@ -3833,17 +3547,14 @@ struct registers_decoder<NV0039_SET_CONTEXT_DMA_BUFFER_IN>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> input_dma;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 input_dma() const
 		{
-			return m_data.input_dma;
+			return value;
 		}
 	};
 
@@ -3859,17 +3570,14 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_REPORT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> context_dma_report;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blit_engine::context_dma context_dma_report() const
 		{
-			return blit_engine::to_context_dma(m_data.context_dma_report);
+			return blit_engine::to_context_dma(value);
 		}
 	};
 
@@ -3880,34 +3588,55 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_REPORT>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_CONTEXT_DMA_NOTIFIES>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		u32 context_dma_notify() const
+		{
+			return value;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		return fmt::format("NOTIFY: context DMA = 0x%x, index=%d", decoded_values.context_dma_notify(), (decoded_values.context_dma_notify() & 7) ^ 7);
+	}
+};
+
+template<>
 struct registers_decoder<NV3089_IMAGE_IN_FORMAT>
 {
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> format;
-			bitfield_decoder_t<16, 8> transfer_origin;
-			bitfield_decoder_t<24, 8> transfer_interpolator;
-		} m_data;
+		u32 value;
+
+		u8 transfer_origin_raw() const { return bf_decoder<16, 8>(value); }
+		u8 transfer_interpolator_raw() const { return bf_decoder<24, 8>(value); }
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 format() const
 		{
-			return m_data.format;
+			return bf_decoder<0, 16>(value);
 		}
 
 		blit_engine::transfer_origin transfer_origin() const
 		{
-			return blit_engine::to_transfer_origin(m_data.transfer_origin);
+			return blit_engine::to_transfer_origin(transfer_origin_raw());
 		}
 
 		blit_engine::transfer_interpolator transfer_interpolator() const
 		{
-			return blit_engine::to_transfer_interpolator(m_data.transfer_interpolator);
+			return blit_engine::to_transfer_interpolator(transfer_interpolator_raw());
 		}
 	};
 
@@ -3925,29 +3654,26 @@ struct registers_decoder<NV309E_SET_FORMAT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> transfer_destination_fmt;
-			bitfield_decoder_t<16, 8> sw_height_log2;
-			bitfield_decoder_t<24, 8> sw_width_log2;
-		} m_data;
+		u32 value;
+
+		u32 transfer_destination_fmt() const { return bf_decoder<0, 16, u32>(value); }
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		blit_engine::transfer_destination_format format() const
 		{
-			return blit_engine::to_transfer_destination_format(m_data.transfer_destination_fmt);
+			// Why truncate??
+			return blit_engine::to_transfer_destination_format(static_cast<u8>(transfer_destination_fmt()));
 		}
 
 		u8 sw_height_log2() const
 		{
-			return m_data.sw_height_log2;
+			return bf_decoder<16, 8>(value);
 		}
 
 		u8 sw_width_log2() const
 		{
-			return m_data.sw_width_log2;
+			return bf_decoder<24, 8>(value);
 		}
 	};
 
@@ -3965,23 +3691,19 @@ struct registers_decoder<NV0039_FORMAT>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 8> input_fmt;
-			bitfield_decoder_t<8, 8> output_fmt;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u8 input_format() const
 		{
-			return m_data.input_fmt;
+			return bf_decoder<0, 8>(value);
 		}
 
 		u8 output_format() const
 		{
-			return m_data.output_fmt;
+			return bf_decoder<8, 8>(value);
 		}
 	};
 
@@ -4002,23 +3724,19 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR2>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> blue;
-			bitfield_decoder_t<16, 16> alpha;
-		} m_data;
-	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		u32 value;
 
-		u8 blue() const
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		u16 blue() const
 		{
-			return m_data.blue;
+			return bf_decoder<0, 16>(value);
 		}
 
-		u8 alpha() const
+		u16 alpha() const
 		{
-			return m_data.alpha;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -4035,54 +3753,46 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> red16;
-			bitfield_decoder_t<16, 16> green16;
-			bitfield_decoder_t<0, 8> red8;
-			bitfield_decoder_t<8, 8> green8;
-			bitfield_decoder_t<16, 8> blue8;
-			bitfield_decoder_t<24, 8> alpha8;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
-		u8 red16() const
+		u16 red16() const
 		{
-			return m_data.red16;
+			return bf_decoder<0, 16>(value);
 		}
 
-		u8 green16() const
+		u16 green16() const
 		{
-			return m_data.green16;
-		}
-
-		u8 red8() const
-		{
-			return m_data.red8;
-		}
-
-		u8 green8() const
-		{
-			return m_data.green8;
+			return bf_decoder<16, 16>(value);
 		}
 
 		u8 blue8() const
 		{
-			return m_data.blue8;
+			return bf_decoder<0, 8>(value);
+		}
+
+		u8 green8() const
+		{
+			return bf_decoder<8, 8>(value);
+		}
+
+		u8 red8() const
+		{
+			return bf_decoder<16, 8>(value);
 		}
 
 		u8 alpha8() const
 		{
-			return m_data.alpha8;
+			return bf_decoder<24, 8>(value);
 		}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Blend color: 8b RGBA = " +
-			std::to_string(decoded_values.red8()) + ", " + std::to_string(decoded_values.green8()) + ", " + std::to_string(decoded_values.blue8()) + ", " + std::to_string(decoded_values.alpha8()) +
+		return "Blend color: 8b BGRA = " +
+			std::to_string(decoded_values.blue8()) + ", " + std::to_string(decoded_values.green8()) + ", " + std::to_string(decoded_values.red8()) + ", " + std::to_string(decoded_values.alpha8()) +
 			" 16b RG = " + std::to_string(decoded_values.red16()) + ", " + std::to_string(decoded_values.green16());
 	}
 };
@@ -4093,25 +3803,31 @@ struct registers_decoder<NV3089_IMAGE_IN>
 	struct decoded_type
 	{
 	private:
-		union
+		u32 value;
+
+		u32 x_raw() const
 		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 16> x;
-			bitfield_decoder_t<16, 16> y;
-		} m_data;
+			return bf_decoder<0, 16, u32>(value);
+		}
+
+		u32 y_raw() const
+		{
+			return bf_decoder<16, 16, u32>(value);
+		}
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		// x and y given as 16 bit fixed point
 
 		f32 x() const
 		{
-			return m_data.x / 16.f;
+			return x_raw() / 16.f;
 		}
 
 		f32 y() const
 		{
-			return m_data.y / 16.f;
+			return y_raw() / 16.f;
 		}
 	};
 
@@ -4127,7 +3843,7 @@ struct registers_decoder<NV4097_NO_OPERATION>
 {
 	struct decoded_type
 	{
-		decoded_type(u32) {};
+		decoded_type(u32) {}
 	};
 
 	static std::string dump(u32 &&)
@@ -4141,7 +3857,7 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_CACHE_FILE>
 {
 	struct decoded_type
 	{
-		decoded_type(u32) {};
+		decoded_type(u32) {}
 	};
 
 	static std::string dump(u32 &&)
@@ -4155,7 +3871,7 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_FILE>
 {
 	struct decoded_type
 	{
-		decoded_type(u32) {};
+		decoded_type(u32) {}
 	};
 
 	static std::string dump(u32 &&)
@@ -4170,35 +3886,29 @@ struct registers_decoder<NV4097_SET_ANTI_ALIASING_CONTROL>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 1> msaa_enabled;
-			bitfield_decoder_t<4, 1> msaa_alpha_to_coverage;
-			bitfield_decoder_t<8, 1> msaa_alpha_to_one;
-			bitfield_decoder_t<16, 16> msaa_sample_mask;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		bool msaa_enabled() const
 		{
-			return bool(m_data.msaa_enabled);
+			return bf_decoder<0, 1, bool>(value);
 		}
 
 		bool msaa_alpha_to_coverage() const
 		{
-			return bool(m_data.msaa_alpha_to_coverage);
+			return bf_decoder<4, 1, bool>(value);
 		}
 
 		bool msaa_alpha_to_one() const
 		{
-			return bool(m_data.msaa_alpha_to_one);
+			return bf_decoder<8, 1, bool>(value);
 		}
 
 		u16 msaa_sample_mask() const
 		{
-			return m_data.msaa_sample_mask;
+			return bf_decoder<16, 16>(value);
 		}
 	};
 
@@ -4217,17 +3927,14 @@ struct registers_decoder<NV4097_SET_SHADE_MODE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> shading;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		shading_mode shading() const
 		{
-			return to_shading_mode(m_data.shading);
+			return to_shading_mode(value);
 		}
 	};
 
@@ -4243,17 +3950,14 @@ struct registers_decoder<NV4097_SET_FRONT_POLYGON_MODE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> front_polygon_mode;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		polygon_mode front_polygon_mode() const
 		{
-			return to_polygon_mode(m_data.front_polygon_mode);
+			return to_polygon_mode(value);
 		}
 	};
 
@@ -4269,17 +3973,14 @@ struct registers_decoder<NV4097_SET_BACK_POLYGON_MODE>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> back_polygon_mode;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		polygon_mode back_polygon_mode() const
 		{
-			return to_polygon_mode(m_data.back_polygon_mode);
+			return to_polygon_mode(value);
 		}
 	};
 
@@ -4295,16 +3996,14 @@ struct registers_decoder<NV4097_SET_TRANSFORM_CONSTANT_LOAD>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 transform_constant_load() const
 		{
-			return m_data.raw_value;
+			return value;
 		}
 	};
 
@@ -4359,16 +4058,14 @@ struct transform_constant_helper
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		f32 constant_value() const
 		{
-			return reinterpret_cast<const f32&>(m_data.raw_value);
+			return std::bit_cast<f32>(value);
 		}
 	};
 
@@ -4391,23 +4088,14 @@ struct transform_program_helper
 {
 	struct decoded_type
 	{
-	private:
-		union
-		{
-			u32 raw_value;
-		} m_data;
-	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		const u32 value;
 
-		u32 value() const
-		{
-			return m_data.raw_value;
-		}
+		decoded_type(u32 value) : value(value) {}
 	};
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Transform Program (" + std::to_string(index) + "):"+ std::to_string(decoded_values.value());
+		return "Transform Program (" + std::to_string(index) + "):"+ std::to_string(decoded_values.value);
 	}
 };
 
@@ -4417,17 +4105,14 @@ struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM_LOAD>
 	struct decoded_type
 	{
 	private:
-		union
-		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 32> transform_program_load;
-		} m_data;
+		u32 value;
+
 	public:
-		decoded_type(u32 raw_value) { m_data.raw_value = raw_value; }
+		decoded_type(u32 value) : value(value) {}
 
 		u32 transform_program_load() const
 		{
-			return m_data.transform_program_load;
+			return value;
 		}
 	};
 
@@ -4443,26 +4128,24 @@ struct registers_decoder<NV4097_DRAW_ARRAYS>
 	struct decoded_type
 	{
 	private:
-		union {
-			u32 raw_value;
-			bitfield_decoder_t<0, 24> start;
-			bitfield_decoder_t<24, 8> count;
-		} m_data;
+		u32 value;
+
+		u16 count_raw() const
+		{
+			return bf_decoder<24, 8>(value);
+		}
 
 	public:
-		decoded_type(u32 raw_value)
-		{
-			m_data.raw_value = raw_value;
-		}
+		decoded_type(u32 value) : value(value) {}
 
 		u32 start() const
 		{
-			return m_data.start;
+			return bf_decoder<0, 24>(value);
 		}
 
 		u16 count() const
 		{
-			return m_data.count + 1;
+			return count_raw() + 1;
 		}
 	};
 
@@ -4479,26 +4162,19 @@ struct registers_decoder<NV4097_DRAW_INDEX_ARRAY>
 	struct decoded_type
 	{
 	private:
-		union {
-			u32 raw_value;
-			bitfield_decoder_t<0, 24> start;
-			bitfield_decoder_t<24, 8> count;
-		} m_data;
+		u32 value;
 
 	public:
-		decoded_type(u32 raw_value)
-		{
-			m_data.raw_value = raw_value;
-		}
+		decoded_type(u32 value) : value(value) {}
 
 		u32 start() const
 		{
-			return m_data.start;
+			return bf_decoder<0, 24>(value);
 		}
 
 		u16 count() const
 		{
-			return m_data.count + 1;
+			return static_cast<u16>(bf_decoder<24, 8>(value) + 1);
 		}
 	};
 
@@ -4519,35 +4195,33 @@ struct vertex_array_helper
 	struct decoded_type
 	{
 	private:
-		union
+		u32 value;
+
+		u8 type_raw() const
 		{
-			u32 raw_value;
-			bitfield_decoder_t<0, 4> type;
-			bitfield_decoder_t<4, 4> size;
-			bitfield_decoder_t<8, 8> stride;
-			bitfield_decoder_t<16, 16> frequency;
-		} m_data;
+			return bf_decoder<0, 3>(value);
+		}
 	public:
-		decoded_type(u32 v) { m_data.raw_value = v; }
+		decoded_type(u32 value) : value(value) {}
 
 		u16 frequency() const
 		{
-			return m_data.frequency;
+			return bf_decoder<16, 16>(value);
 		}
 
 		u8 stride() const
 		{
-			return m_data.stride;
+			return bf_decoder<8, 8>(value);
 		}
 
 		u8 size() const
 		{
-			return m_data.size;
+			return bf_decoder<4, 4>(value);
 		}
 
 		rsx::vertex_base_type type() const
 		{
-			return rsx::to_vertex_base_type(m_data.type);
+			return rsx::to_vertex_base_type(type_raw());
 		}
 	};
 
@@ -4574,13 +4248,13 @@ struct vertex_array_offset_helper
 	struct decoded_type
 	{
 	private:
-		u32 raw_value;
+		u32 value;
 	public:
-		decoded_type(u32 v) : raw_value(v) {}
+		decoded_type(u32 value) : value(value) {}
 
 		u32 offset() const
 		{
-			return raw_value;
+			return value;
 		}
 	};
 
@@ -4608,7 +4282,7 @@ struct register_vertex_printer<f32, count>
 
 	static std::string value(u32 v)
 	{
-		return std::to_string(reinterpret_cast<f32&>(v));
+		return std::to_string(std::bit_cast<f32>(v));
 	}
 };
 
@@ -4645,24 +4319,19 @@ struct register_vertex_helper
 {
 	struct decoded_type
 	{
-	private:
-		u32 m_raw_value;
-	public:
-		decoded_type(u32 v) : m_raw_value(v) {}
+		const u32 value;
 
-		u32 value() const
-		{
-			return m_raw_value;
-		}
+		decoded_type(u32 value) : value(value) {}
 	};
-	static const size_t increment_per_array_index = (count * sizeof(type)) / sizeof(u32);
-	static const size_t attribute_index = index / increment_per_array_index;
-	static const size_t vertex_subreg = index % increment_per_array_index;
+
+	static constexpr size_t increment_per_array_index = (count * sizeof(type)) / sizeof(u32);
+	static constexpr size_t attribute_index = index / increment_per_array_index;
+	static constexpr size_t vertex_subreg = index % increment_per_array_index;
 
 	static std::string dump(decoded_type&& decoded_values)
 	{
 		return "register vertex " + std::to_string(attribute_index) + " as " + register_vertex_printer<type, count>::type() + ": " +
-			register_vertex_printer<type, count>::value(decoded_values.value());
+			register_vertex_printer<type, count>::value(decoded_values.value);
 	}
 };
 

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "sceNp.h"
 
+#include "Emu/Memory/vm_ptr.h"
 
 // Error codes
 enum

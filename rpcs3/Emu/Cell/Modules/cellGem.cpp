@@ -140,22 +140,17 @@ static bool check_gem_num(const u32 gem_num)
  */
 static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
-	const auto handler = fxm::get<pad_thread>();
+	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (!handler)
-	{
-		return false;
-	}
+	const auto handler = pad::get_current_handler();
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (port_no >= rinfo.max_connect || port_no >= rinfo.now_connect)
-	{
-		return false;
-	}
-
 	auto& pads = handler->GetPads();
 	auto pad = pads[port_no];
+
+	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+		return false;
 
 	for (Button& button : pad->m_buttons)
 	{
@@ -240,29 +235,18 @@ static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t
  */
 static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
 {
-	const auto handler = fxm::get<pad_thread>();
+	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (!handler)
-	{
-		return false;
-	}
+	const auto handler = pad::get_current_handler();
 
 	auto& pads = handler->GetPads();
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (port_no >= rinfo.max_connect)
-	{
-		return false;
-	}
-
-	//We have a choice here of NO_DEVICE or READ_FAILED...lets try no device for now
-	if (port_no >= rinfo.now_connect)
-	{
-		return false;
-	}
-
 	auto pad = pads[port_no];
+
+	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+		return false;
 
 	ext.status = 0; // CELL_GEM_EXT_CONNECTED | CELL_GEM_EXT_EXT0 | CELL_GEM_EXT_EXT1
 	ext.analog_left_x = pad->m_analog_left_x;
@@ -384,6 +368,12 @@ s32 cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 	return CELL_OK;
 }
 
+s32 cellGemEnableMagnetometer2()
+{
+	UNIMPLEMENTED_FUNC(cellGem);
+	return CELL_OK;
+}
+
 s32 cellGemEnd()
 {
 	cellGem.warning("cellGemEnd()");
@@ -452,7 +442,7 @@ s32 cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	for (size_t i = 0; i < 360; i++)
+	for (u32 i = 0; i < 360; i++)
 	{
 		hues[i] = true;
 	}
@@ -863,7 +853,7 @@ s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribu
 	const auto vc = *vc_attribute;
 
 	if (!vc_attribute || vc.version == 0 || vc.output_format == 0 ||
-		vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME && !vc.buffer_memory)
+		(vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME && !vc.buffer_memory))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
@@ -970,7 +960,7 @@ s32 cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	for (size_t i = 0; i < CELL_GEM_MAX_NUM; i++)
+	for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 	{
 		if (req_hues[i] == CELL_GEM_DONT_CARE_HUE)
 		{
@@ -1050,6 +1040,7 @@ DECLARE(ppu_module_manager::cellGem)("libgem", []()
 	REG_FUNC(libgem, cellGemConvertVideoStart);
 	REG_FUNC(libgem, cellGemEnableCameraPitchAngleCorrection);
 	REG_FUNC(libgem, cellGemEnableMagnetometer);
+	REG_FUNC(libgem, cellGemEnableMagnetometer2);
 	REG_FUNC(libgem, cellGemEnd);
 	REG_FUNC(libgem, cellGemFilterState);
 	REG_FUNC(libgem, cellGemForceRGB);

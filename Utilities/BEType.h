@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include <cstring>
 
 // 128-bit vector type and also se_storage<> storage type
 union alignas(16) v128
@@ -361,16 +362,6 @@ struct se_storage
 		reverse(reinterpret_cast<u8*>(&result), reinterpret_cast<const u8*>(&src));
 		return result;
 	}
-
-	static type copy(const type& src)
-	{
-		type result;
-		for (std::size_t i = 0; i < Size; i++)
-		{
-			reinterpret_cast<u8*>(&result)[i] = reinterpret_cast<const u8*>(&src)[i];
-		}
-		return result;
-	}
 };
 
 template <typename T>
@@ -389,18 +380,12 @@ struct se_storage<T, 2, 2>
 
 	static inline u16 to(const T& src)
 	{
-		return swap(reinterpret_cast<const u16&>(src));
+		return swap(std::bit_cast<u16>(src));
 	}
 
 	static inline T from(u16 src)
 	{
-		const u16 result = swap(src);
-		return reinterpret_cast<const T&>(result);
-	}
-
-	static inline T copy(const T& src)
-	{
-		return src;
+		return std::bit_cast<T, u16>(swap(src));
 	}
 };
 
@@ -420,18 +405,12 @@ struct se_storage<T, 4, 4>
 
 	static inline u32 to(const T& src)
 	{
-		return swap(reinterpret_cast<const u32&>(src));
+		return swap(std::bit_cast<u32>(src));
 	}
 
 	static inline T from(u32 src)
 	{
-		const u32 result = swap(src);
-		return reinterpret_cast<const T&>(result);
-	}
-
-	static inline T copy(const T& src)
-	{
-		return src;
+		return std::bit_cast<T, u32>(swap(src));
 	}
 };
 
@@ -451,18 +430,12 @@ struct se_storage<T, 8, 8>
 
 	static inline u64 to(const T& src)
 	{
-		return swap(reinterpret_cast<const u64&>(src));
+		return swap(std::bit_cast<u64>(src));
 	}
 
 	static inline T from(u64 src)
 	{
-		const u64 result = swap(src);
-		return reinterpret_cast<const T&>(result);
-	}
-
-	static inline T copy(const T& src)
-	{
-		return src;
+		return std::bit_cast<T, u64>(swap(src));
 	}
 };
 
@@ -478,18 +451,12 @@ struct se_storage<T, 16, 16>
 
 	static inline v128 to(const T& src)
 	{
-		return swap(reinterpret_cast<const v128&>(src));
+		return swap(std::bit_cast<v128>(src));
 	}
 
 	static inline T from(const v128& src)
 	{
-		const v128 result = swap(src);
-		return reinterpret_cast<const T&>(result);
-	}
-
-	static inline T copy(const T& src)
-	{
-		return src;
+		return std::bit_cast<T, v128>(swap(src));
 	}
 };
 
@@ -521,6 +488,11 @@ public:
 	type value() const
 	{
 		return storage::from(m_data);
+	}
+
+	stype& raw()
+	{
+		return m_data;
 	}
 
 	se_t& operator=(const se_t&) = default;
@@ -557,27 +529,33 @@ public:
 	se_t() = default;
 
 	se_t(type value)
-		: m_data(reinterpret_cast<const stype&>(value))
+		: m_data(std::bit_cast<stype>(value))
 	{
 	}
 
 	type value() const
 	{
-		return storage::copy(reinterpret_cast<const type&>(m_data));
+		return std::bit_cast<type>(m_data);
+	}
+
+	stype& raw()
+	{
+		return m_data;
 	}
 
 	se_t& operator=(const se_t& value) = default;
 
 	se_t& operator=(type value)
 	{
-		return m_data = reinterpret_cast<const stype&>(value), *this;
+		m_data = std::bit_cast<stype>(value);
+		return *this;
 	}
 
 	using simple_type = simple_t<T>;
 
 	operator type() const
 	{
-		return storage::copy(reinterpret_cast<const type&>(m_data));
+		return value();
 	}
 };
 

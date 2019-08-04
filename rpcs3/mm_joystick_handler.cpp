@@ -1,4 +1,4 @@
-#ifdef _WIN32
+﻿#ifdef _WIN32
 #include "mm_joystick_handler.h"
 
 mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
@@ -147,9 +147,9 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 	pad->Init
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
-		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
-		CELL_PAD_DEV_TYPE_STANDARD
+		CELL_PAD_DEV_TYPE_STANDARD,
+		p_profile->device_class_type
 	);
 
 	joy_device->trigger_left  = find_key(p_profile->l2);
@@ -163,23 +163,23 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 	joy_device->axis_right[2] = find_key(p_profile->rs_down);
 	joy_device->axis_right[3] = find_key(p_profile->rs_up);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->circle),   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->square),   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, joy_device->trigger_left,      CELL_PAD_CTRL_L2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, joy_device->trigger_right,     CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->l1),       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->r1),       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->start),    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->l3),       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->r3),       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->up),       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->down),     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->left),     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->triangle),   CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->circle),     CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->cross),      CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->square),     CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, (u32) joy_device->trigger_left,  CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, (u32) joy_device->trigger_right, CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->l1),         CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->r1),         CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->start),      CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->select),     CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->l3),         CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->r3),         CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->ps),         0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->up),         CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->down),       CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->left),       CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->right),      CELL_PAD_CTRL_RIGHT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
 
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  joy_device->axis_left[0],  joy_device->axis_left[1]);
@@ -244,7 +244,7 @@ void mm_joystick_handler::ThreadProc()
 			TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
 		}
 
-		s32 stick_val[4];
+		s32 stick_val[4]{0};
 
 		// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 		for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
@@ -284,25 +284,25 @@ void mm_joystick_handler::ThreadProc()
 	}
 }
 
-void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
 
 	if (!Init())
-		return;
+		return fail_callback(padId);
 
 	static std::string cur_pad = "";
 	static int id = -1;
 
 	if (cur_pad != padId)
 	{
-		cur_pad == padId;
+		cur_pad = padId;
 		id = GetIDByName(padId);
 		if (id < 0)
 		{
 			LOG_ERROR(GENERAL, "MMJOY GetNextButtonPress for device [%s] failed with id = %d", padId, id);
-			return;
+			return fail_callback(padId);
 		}
 	}
 
@@ -317,9 +317,11 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 	switch (status)
 	{
 	case JOYERR_UNPLUGGED:
-		break;
-
+	{
+		return fail_callback(padId);
+	}
 	case JOYERR_NOERROR:
+	{
 		auto data = GetButtonValues(js_info, js_caps);
 
 		// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
@@ -389,7 +391,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 
 		if (get_blacklist)
 		{
-			if (blacklist.size() <= 0)
+			if (blacklist.empty())
 				LOG_SUCCESS(HLE, "MMJOY Calibration: Blacklist is clear. No input spam detected");
 			return;
 		}
@@ -404,21 +406,25 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 			return static_cast<u64>(key);
 		};
 
-		int preview_values[6] = 
+		int preview_values[6] = { 0, 0, 0, 0, 0, 0 };
+		if (buttons.size() == 10)
 		{
-			data[find_key(buttons[0])],
-			data[find_key(buttons[1])],
-			data[find_key(buttons[3])] - data[find_key(buttons[2])],
-			data[find_key(buttons[5])] - data[find_key(buttons[4])],
-			data[find_key(buttons[7])] - data[find_key(buttons[6])],
-			data[find_key(buttons[9])] - data[find_key(buttons[8])],
-		};
+			preview_values[0] = data[find_key(buttons[0])];
+			preview_values[1] = data[find_key(buttons[1])];
+			preview_values[2] = data[find_key(buttons[3])] - data[find_key(buttons[2])];
+			preview_values[3] = data[find_key(buttons[5])] - data[find_key(buttons[4])];
+			preview_values[4] = data[find_key(buttons[7])] - data[find_key(buttons[6])];
+			preview_values[5] = data[find_key(buttons[9])] - data[find_key(buttons[8])];
+		}
 
 		if (pressed_button.first > 0)
-			return callback(pressed_button.first, pressed_button.second, preview_values);
+			return callback(pressed_button.first, pressed_button.second, padId, preview_values);
 		else
-			return callback(0, "", preview_values);
+			return callback(0, "", padId, preview_values);
 
+		break;
+	}
+	default:
 		break;
 	}
 }
@@ -442,12 +448,12 @@ void mm_joystick_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& 
 	else if (std::find(m_dev->axis_left.begin(), m_dev->axis_left.end(), keyCode) != m_dev->axis_left.end())
 	{
 		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, p_profile->lstickmultiplier, ignore_threshold) : 0;
 	}
 	else if (std::find(m_dev->axis_right.begin(), m_dev->axis_right.end(), keyCode) != m_dev->axis_right.end())
 	{
 		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, p_profile->rstickmultiplier, ignore_threshold) : 0;
 	}
 	else // normal button (should in theory also support sensitive buttons)
 	{
@@ -580,7 +586,7 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 	LOG_NOTICE(GENERAL, "Joystick nr.%d found. Driver: %s", index, drv);
 
 	dev->device_id = index;
-	dev->device_name = m_name_string + std::to_string(index);
+	dev->device_name = m_name_string + std::to_string(index + 1); // Controllers 1-n in GUI
 	dev->device_info = js_info;
 	dev->device_caps = js_caps;
 

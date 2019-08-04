@@ -81,6 +81,9 @@ class evdev_joystick_handler final : public PadHandlerBase
 	// Unique button names for the config files and our pad settings dialog
 	const std::unordered_map<u32, std::string> button_list =
 	{
+		// Xbox One S Controller returns some buttons as key when connected through bluetooth
+		{ KEY_BACK            , "Back Key"    },
+		{ KEY_HOMEPAGE        , "Homepage Key"},
 		//{ BTN_MISC            , "Misc"        }, same as BTN_0
 		{ BTN_0               , "0"           },
 		{ BTN_1               , "1"           },
@@ -198,10 +201,7 @@ class evdev_joystick_handler final : public PadHandlerBase
 		{ BTN_TRIGGER_HAPPY37 , "Happy 37"    },
 		{ BTN_TRIGGER_HAPPY38 , "Happy 38"    },
 		{ BTN_TRIGGER_HAPPY39 , "Happy 39"    },
-		{ BTN_TRIGGER_HAPPY40 , "Happy 40"    },
-		// Xbox One S Controller returns some buttons as key when connected through bluetooth
-		{ KEY_BACK            , "Back Key"    },
-		{ KEY_HOMEPAGE        , "Homepage Key"},
+		{ BTN_TRIGGER_HAPPY40 , "Happy 40"    }
 	};
 
 	// Unique positive axis names for the config files and our pad settings dialog
@@ -338,8 +338,8 @@ public:
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 	void Close();
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist = false, std::vector<std::string> buttons = {}) override;
-	void TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor) override;
+	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
+	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b) override;
 
 private:
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& value, bool ignore_threshold = false) override;

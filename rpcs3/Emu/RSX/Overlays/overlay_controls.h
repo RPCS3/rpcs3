@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 #include "Utilities/types.h"
 #include "Utilities/geometry.h"
+#include "Utilities/File.h"
 #include "Emu/System.h"
 
 #include <string>
@@ -13,6 +14,14 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <libgen.h>
+#endif
+
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/sysctl.h>
 #endif
 
 // STB_IMAGE_IMPLEMENTATION and STB_TRUETYPE_IMPLEMENTATION defined externally
@@ -38,7 +47,7 @@ namespace rsx
 		{
 			float values[4];
 
-			vertex() {}
+			vertex() = default;
 
 			vertex(float x, float y)
 			{
@@ -121,272 +130,15 @@ namespace rsx
 			std::vector<u8> glyph_data;
 			bool initialized = false;
 
-			font(const char *ttf_name, f32 size)
-			{
-				// Init glyph
-				std::vector<u8> bytes;
-				std::vector<std::string> font_dirs;
-				std::vector<std::string> fallback_fonts;
-#ifdef _WIN32
-				font_dirs.push_back("C:/Windows/Fonts/");
-				fallback_fonts.push_back("C:/Windows/Fonts/Arial.ttf");
-#else
-				char *home = getenv("HOME");
-				if (home == nullptr)
-					home = getpwuid(getuid())->pw_dir;
+			font(const char* ttf_name, f32 size);
 
-				font_dirs.push_back(home);
-				if (home[font_dirs[0].length() - 1] == '/')
-					font_dirs[0] += ".fonts/";
-				else
-					font_dirs[0] += "/.fonts/";
+			stbtt_aligned_quad get_char(char c, f32& x_advance, f32& y_advance);
 
-				fallback_fonts.push_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //ubuntu
-				fallback_fonts.push_back("/usr/share/fonts/TTF/DejaVuSans.ttf"); //arch
-#endif
-				// Search dev_flash for the font too
-				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
-				font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
+			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char* text, u32 char_limit, u16 max_width, bool wrap);
 
-				// Attempt to load a font from dev_flash as a last resort
-				fallback_fonts.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SCE-PS3-VR-R-LATIN.TTF");
+			std::vector<vertex> render_text(const char* text, u16 max_width = UINT16_MAX, bool wrap = false);
 
-				// Attemt to load requested font
-				std::string file_path;
-				bool font_found = false;
-				for (auto& font_dir : font_dirs)
-				{
-					std::string requested_file = font_dir + ttf_name;
-
-					// Append ".ttf" if not present
-					std::string font_lower(requested_file);
-
-					std::transform(requested_file.begin(), requested_file.end(), font_lower.begin(), ::tolower);
-					if (font_lower.substr(font_lower.size() - 4) != ".ttf")
-						requested_file += ".ttf";
-
-					file_path = requested_file;
-
-					if (fs::is_file(requested_file))
-					{
-						font_found = true;
-						break;
-					}
-				}
-
-				// Attemt to load a fallback if request font wasn't found
-				if (!font_found)
-				{
-					for (auto &fallback_font : fallback_fonts)
-					{
-						if (fs::is_file(fallback_font))
-						{
-							file_path = fallback_font;
-							font_found = true;
-
-							LOG_NOTICE(RSX, "Found font file '%s' as a replacement for '%s'", fallback_font.c_str(), ttf_name);
-							break;
-						}
-					}
-				}
-
-				// Read font
-				if (font_found)
-				{
-					fs::file f(file_path);
-					f.read(bytes, f.size());
-				}
-				else
-				{
-					LOG_ERROR(RSX, "Failed to initialize font '%s.ttf'", ttf_name);
-					return;
-				}
-
-				glyph_data.resize(width * height);
-				pack_info.resize(256);
-
-				stbtt_pack_context context;
-				if (!stbtt_PackBegin(&context, glyph_data.data(), width, height, 0, 1, nullptr))
-				{
-					LOG_ERROR(RSX, "Font packing failed");
-					return;
-				}
-
-				stbtt_PackSetOversampling(&context, oversample, oversample);
-
-				// Convert pt to px
-				size_px = ceilf((f32)size * 96.f / 72.f);
-				size_pt = size;
-
-				if (!stbtt_PackFontRange(&context, bytes.data(), 0, size_px, 0, 256, pack_info.data()))
-				{
-					LOG_ERROR(RSX, "Font packing failed");
-					stbtt_PackEnd(&context);
-					return;
-				}
-
-				stbtt_PackEnd(&context);
-
-				font_name = ttf_name;
-				initialized = true;
-
-				f32 unused;
-				get_char('m', em_size, unused);
-			}
-
-			stbtt_aligned_quad get_char(char c, f32 &x_advance, f32 &y_advance)
-			{
-				if (!initialized)
-					return{};
-
-				stbtt_aligned_quad quad;
-				stbtt_GetPackedQuad(pack_info.data(), width, height, c, &x_advance, &y_advance, &quad, true);
-				return quad;
-			}
-
-			std::vector<vertex> render_text(const char *text, u16 text_limit = UINT16_MAX, bool wrap = false)
-			{
-				if (!initialized)
-				{
-					return{};
-				}
-
-				std::vector<vertex> result;
-
-				int i = 0;
-				f32 x_advance = 0.f, y_advance = 0.f;
-				bool skip_whitespace = false;
-
-				while (true)
-				{
-					if (char c = text[i++])
-					{
-						if ((u32)c >= char_count)
-						{
-							// Unsupported glyph, render null for now
-							c = ' ';
-						}
-
-						switch (c)
-						{
-						case '\n':
-						{
-							y_advance += size_px + 2.f;
-							x_advance = 0.f;
-							continue;
-						}
-						case '\r':
-						{
-							x_advance = 0.f;
-							continue;
-						}
-						default:
-						{
-							stbtt_aligned_quad quad;
-							if (skip_whitespace && text[i - 1] == ' ')
-							{
-								quad = {};
-							}
-							else
-							{
-								quad = get_char(c, x_advance, y_advance);
-								skip_whitespace = false;
-							}
-
-							if (quad.x1 > text_limit)
-							{
-								bool wrapped = false;
-								bool non_whitespace_break = false;
-
-								if (wrap)
-								{
-									// scan previous chars
-									for (int j = i - 1, nb_chars = 0; j > 0; j--, nb_chars++)
-									{
-										if (text[j] == '\n')
-											break;
-
-										if (text[j] == ' ')
-										{
-											non_whitespace_break = true;
-											continue;
-										}
-
-										if (non_whitespace_break)
-										{
-											if (nb_chars > 1)
-											{
-												nb_chars--;
-
-												auto first_affected = result.size() - (nb_chars * 4);
-												f32 base_x = result[first_affected].values[0];
-
-												for (size_t n = first_affected; n < result.size(); ++n)
-												{
-													auto char_index = n / 4;
-													if (text[char_index] == ' ')
-													{
-														// Skip character
-														result[n++].vec2(0.f, 0.f);
-														result[n++].vec2(0.f, 0.f);
-														result[n++].vec2(0.f, 0.f);
-														result[n].vec2(0.f, 0.f);
-														continue;
-													}
-
-													result[n].values[0] -= base_x;
-													result[n].values[1] += size_px + 2.f;
-												}
-
-												x_advance = result.back().values[0];
-											}
-											else
-											{
-												x_advance = 0.f;
-											}
-
-											wrapped = true;
-											y_advance += size_px + 2.f;
-
-											if (text[i - 1] == ' ')
-											{
-												quad = {};
-												skip_whitespace = true;
-											}
-											else
-											{
-												quad = get_char(c, x_advance, y_advance);
-											}
-
-											break;
-										}
-									}
-								}
-
-								if (!wrapped)
-								{
-									// TODO: Ellipsize
-									break;
-								}
-							}
-
-							result.push_back({ quad.x0, quad.y0, quad.s0, quad.t0 });
-							result.push_back({ quad.x1, quad.y0, quad.s1, quad.t0 });
-							result.push_back({ quad.x0, quad.y1, quad.s0, quad.t1 });
-							result.push_back({ quad.x1, quad.y1, quad.s1, quad.t1 });
-							break;
-						}
-						} // switch
-					}
-					else
-					{
-						break;
-					}
-				}
-
-				return result;
-			}
-
+			std::pair<f32, f32> get_char_offset(const char* text, u16 max_length, u16 max_width = UINT16_MAX, bool wrap = false);
 		};
 
 		// TODO: Singletons are cancer
@@ -411,7 +163,7 @@ namespace rsx
 
 		public:
 
-			fontmgr() {}
+			fontmgr() = default;
 			~fontmgr()
 			{
 				if (m_instance)
@@ -471,10 +223,16 @@ namespace rsx
 			{
 				fade_top = 1,
 				fade_bottom,
+				select,
+				start,
 				cross,
 				circle,
 				triangle,
 				square,
+				L1,
+				R1,
+				L2,
+				R2,
 				save,
 				new_entry
 			};
@@ -485,14 +243,20 @@ namespace rsx
 
 			resource_config()
 			{
-				texture_resource_files.push_back("fade_top.png");
-				texture_resource_files.push_back("fade_bottom.png");
-				texture_resource_files.push_back("cross.png");
-				texture_resource_files.push_back("circle.png");
-				texture_resource_files.push_back("triangle.png");
-				texture_resource_files.push_back("square.png");
-				texture_resource_files.push_back("save.png");
-				texture_resource_files.push_back("new.png");
+				texture_resource_files.emplace_back("fade_top.png");
+				texture_resource_files.emplace_back("fade_bottom.png");
+				texture_resource_files.emplace_back("select.png");
+				texture_resource_files.emplace_back("start.png");
+				texture_resource_files.emplace_back("cross.png");
+				texture_resource_files.emplace_back("circle.png");
+				texture_resource_files.emplace_back("triangle.png");
+				texture_resource_files.emplace_back("square.png");
+				texture_resource_files.emplace_back("L1.png");
+				texture_resource_files.emplace_back("R1.png");
+				texture_resource_files.emplace_back("L2.png");
+				texture_resource_files.emplace_back("R2.png");
+				texture_resource_files.emplace_back("save.png");
+				texture_resource_files.emplace_back("new.png");
 			}
 
 			void load_files()
@@ -505,24 +269,54 @@ namespace rsx
 					if (info->data == nullptr)
 					{
 						// Resource was not found in config dir, try and grab from relative path (linux)
-						info = std::make_unique<image_info>(("Icons/ui/" + res).c_str());
+						auto src = "Icons/ui/" + res;
+						info = std::make_unique<image_info>(src.c_str());
 #ifndef _WIN32
-						// Check for Icons in ../share/rpcs3 for AppImages and /usr/bin/
+						// Check for Icons in ../share/rpcs3 for AppImages,
+						// in rpcs3.app/Contents/Resources for App Bundles, and /usr/bin.
 						if (info->data == nullptr)
 						{
 							char result[ PATH_MAX ];
-#ifdef __linux__
-							ssize_t count = readlink( "/proc/self/exe", result, PATH_MAX );
+#if defined(__APPLE__)
+							uint32_t bufsize = PATH_MAX;
+							bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
+#elif defined(KERN_PROC_PATHNAME)
+							size_t bufsize = PATH_MAX;
+							int mib[] = {
+								CTL_KERN,
+#if defined(__NetBSD__)
+								KERN_PROC_ARGS,
+								-1,
+								KERN_PROC_PATHNAME,
 #else
-							ssize_t count = readlink( "/proc/curproc/file", result, PATH_MAX );
+								KERN_PROC,
+								KERN_PROC_PATHNAME,
+								-1,
 #endif
-							std::string executablePath = dirname(result);
-							info = std::make_unique<image_info>((executablePath + "/../share/rpcs3/Icons/ui/" + res).c_str());
-
-							// Check if the icons are in the same directory as the executable (local builds)
-							if (info->data == nullptr)
+							};
+							bool success = sysctl(mib, sizeof(mib)/sizeof(mib[0]), result, &bufsize, NULL, 0) >= 0;
+#elif defined(__linux__)
+							bool success = readlink( "/proc/self/exe", result, PATH_MAX ) >= 0;
+#elif defined(__sun)
+							bool success = readlink( "/proc/self/path/a.out", result, PATH_MAX ) >= 0;
+#else
+							bool success = readlink( "/proc/curproc/file", result, PATH_MAX ) >= 0;
+#endif
+							if (success)
 							{
-								info = std::make_unique<image_info>((executablePath + "/Icons/ui/" + res).c_str());
+								std::string executablePath = dirname(result);
+#ifdef __APPLE__
+								src = executablePath + "/../Resources/Icons/ui/" + res;
+#else
+								src = executablePath + "/../share/rpcs3/Icons/ui/" + res;
+#endif
+								info = std::make_unique<image_info>(src.c_str());
+								// Check if the icons are in the same directory as the executable (local builds)
+								if (info->data == nullptr)
+								{
+									src = executablePath + "/Icons/ui/" + res;
+									info = std::make_unique<image_info>(src.c_str());
+								}
 							}
 						}
 #endif
@@ -530,7 +324,6 @@ namespace rsx
 						{
 							// Install the image to config dir
 							auto dst_dir = fs::get_config_dir() + "Icons/ui/";
-							auto src = "Icons/ui/" + res;
 							auto dst = dst_dir + res;
 
 							if (!fs::is_dir(dst_dir))
@@ -572,7 +365,7 @@ namespace rsx
 
 				u8 blur_strength = 0;
 
-				command_config() {}
+				command_config() = default;
 
 				void set_image_resource(u8 ref)
 				{
@@ -690,7 +483,7 @@ namespace rsx
 			u16 margin_left = 0;
 			u16 margin_top = 0;
 
-			overlay_element() {}
+			overlay_element() = default;
 			overlay_element(u16 _w, u16 _h) : w(_w), h(_h) {}
 			virtual ~overlay_element() = default;
 
@@ -799,17 +592,20 @@ namespace rsx
 				is_compiled = false;
 			}
 
+			virtual font* get_font() const
+			{
+				return font_ref ? font_ref : fontmgr::get("Arial", 12);
+			}
+
 			virtual std::vector<vertex> render_text(const char *string, f32 x, f32 y)
 			{
-				auto renderer = font_ref;
-				if (!renderer)
-					renderer = fontmgr::get("Arial", 12);
+				auto renderer = get_font();
 
 				f32 text_extents_w = 0.f;
 				u16 clip_width = clip_text ? w : UINT16_MAX;
 				std::vector<vertex> result = renderer->render_text(string, clip_width, wrap_text);
 
-				if (result.size() > 0)
+				if (!result.empty())
 				{
 					for (auto &v : result)
 					{
@@ -838,7 +634,7 @@ namespace rsx
 							case '\r':
 								continue;
 							case '\n':
-								lines.push_back({ line_begin, ctr });
+								lines.emplace_back(line_begin, ctr);
 								line_begin = ctr;
 								continue;
 							default:
@@ -846,7 +642,7 @@ namespace rsx
 							}
 						}
 
-						lines.push_back({ line_begin, ctr });
+						lines.emplace_back(line_begin, ctr);
 						const auto max_region_w = std::max<f32>(text_extents_w, w);
 
 						for (auto p : lines)
@@ -855,7 +651,7 @@ namespace rsx
 								continue;
 
 							const f32 line_length = result[p.second - 1].values[0] - result[p.first].values[0];
-							const bool wrapped = fabs(result[p.second - 1].values[1] - result[p.first + 3].values[1]) >= (renderer->size_px * 0.5f);
+							const bool wrapped = std::fabs(result[p.second - 1].values[1] - result[p.first + 3].values[1]) >= (renderer->size_px * 0.5f);
 
 							if (wrapped)
 								continue;
@@ -907,7 +703,7 @@ namespace rsx
 						cmd_text.config.color = fore_color;
 						cmd_text.verts = render_text(text.c_str(), (f32)x, (f32)y);
 
-						if (cmd_text.verts.size() > 0)
+						if (!cmd_text.verts.empty())
 							compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
 					}
 
@@ -925,8 +721,7 @@ namespace rsx
 					return;
 				}
 
-				auto renderer = font_ref;
-				if (!renderer) renderer = fontmgr::get("Arial", 12);
+				auto renderer = get_font();
 
 				f32 text_width = 0.f;
 				f32 unused = 0.f;
@@ -950,7 +745,7 @@ namespace rsx
 						last_word = text_width;
 					}
 
-					if ((u32)c > renderer->char_count)
+					if (u8(c) > renderer->char_count)
 					{
 						// Non-existent glyph
 						text_width += renderer->em_size;
@@ -974,7 +769,6 @@ namespace rsx
 				max_w = std::max(max_w, text_width);
 				width = (u16)ceilf(max_w);
 			}
-
 		};
 
 		struct animation_base
@@ -1255,7 +1049,8 @@ namespace rsx
 		struct image_button : public image_view
 		{
 			const u16 text_horizontal_offset = 25;
-			u16 m_text_offset = 0;
+			u16 m_text_offset_x = 0;
+			s16 m_text_offset_y = 0;
 
 			image_button()
 			{
@@ -1270,10 +1065,15 @@ namespace rsx
 				set_size(_w, _h);
 			}
 
+			void set_text_vertical_adjust(s16 offset)
+			{
+				m_text_offset_y = offset;
+			}
+
 			void set_size(u16 /*w*/, u16 h) override
 			{
 				image_view::set_size(h, h);
-				m_text_offset = (h / 2) + text_horizontal_offset; // By default text is at the horizontal center
+				m_text_offset_x = (h / 2) + text_horizontal_offset; // By default text is at the horizontal center
 			}
 
 			compiled_resource& get_compiled() override
@@ -1288,7 +1088,8 @@ namespace rsx
 							// Text, translate geometry to the right
 							for (auto &v : cmd.verts)
 							{
-								v.values[0] += m_text_offset;
+								v.values[0] += m_text_offset_x;
+								v.values[1] += m_text_offset_y;
 							}
 						}
 					}
@@ -1300,9 +1101,9 @@ namespace rsx
 
 		struct label : public overlay_element
 		{
-			label() {}
+			label() = default;
 
-			label(const char *text)
+			label(const std::string& text)
 			{
 				this->text = text;
 			}
@@ -1343,99 +1144,18 @@ namespace rsx
 			f32 m_value = 0.f;
 
 		public:
-			progress_bar()
-			{
-				text_view.back_color = { 0.f, 0.f, 0.f, 0.f };
-			}
+			progress_bar();
+			void inc(f32 value);
+			void dec(f32 value);
+			void set_limit(f32 limit);
+			void set_value(f32 value);
+			void set_pos(u16 _x, u16 _y) override;
+			void set_size(u16 _w, u16 _h) override;
+			void translate(s16 dx, s16 dy) override;
+			void set_text(const char* str) override;
+			void set_text(const std::string& str) override;
 
-			void inc(f32 value)
-			{
-				set_value(m_value + value);
-			}
-
-			void dec(f32 value)
-			{
-				set_value(m_value - value);
-			}
-
-			void set_limit(f32 limit)
-			{
-				m_limit = limit;
-				is_compiled = false;
-			}
-
-			void set_value(f32 value)
-			{
-				m_value = std::clamp(value, 0.f, m_limit);
-
-				f32 indicator_width = (w * m_value) / m_limit;
-				indicator.set_size((u16)indicator_width, h);
-				is_compiled = false;
-			}
-
-			void set_pos(u16 _x, u16 _y) override
-			{
-				u16 text_w, text_h;
-				text_view.measure_text(text_w, text_h);
-				text_h += 13;
-
-				overlay_element::set_pos(_x, _y + text_h);
-				indicator.set_pos(_x, _y + text_h);
-				text_view.set_pos(_x, _y);
-			}
-
-			void set_size(u16 _w, u16 _h) override
-			{
-				overlay_element::set_size(_w, _h);
-				text_view.set_size(_w, text_view.h);
-				set_value(m_value);
-			}
-
-			void translate(s16 dx, s16 dy) override
-			{
-				set_pos(x + dx, y + dy);
-			}
-
-			void set_text(const char* str) override
-			{
-				text_view.set_text(str);
-				text_view.align_text(text_align::center);
-
-				u16 text_w, text_h;
-				text_view.measure_text(text_w, text_h);
-				text_view.set_size(w, text_h);
-
-				set_pos(text_view.x, text_view.y);
-				is_compiled = false;
-			}
-
-			void set_text(const std::string& str) override
-			{
-				text_view.set_text(str);
-				text_view.align_text(text_align::center);
-
-				u16 text_w, text_h;
-				text_view.measure_text(text_w, text_h);
-				text_view.set_size(w, text_h);
-
-				set_pos(text_view.x, text_view.y);
-				is_compiled = false;
-			}
-
-			compiled_resource& get_compiled() override
-			{
-				if (!is_compiled)
-				{
-					auto& compiled = overlay_element::get_compiled();
-					compiled.add(text_view.get_compiled());
-
-					indicator.back_color = fore_color;
-					indicator.refresh();
-					compiled.add(indicator.get_compiled());
-				}
-
-				return compiled_resources;
-			}
+			compiled_resource& get_compiled() override;
 		};
 
 		struct list_view : public vertical_layout
@@ -1454,181 +1174,45 @@ namespace rsx
 			bool m_cancel_only = false;
 
 		public:
-			list_view(u16 width, u16 height)
+			list_view(u16 width, u16 height);
+
+			void update_selection();
+
+			void select_next(u16 count = 1);
+			void select_previous(u16 count = 1);
+
+			void add_entry(std::unique_ptr<overlay_element>& entry);
+
+			int get_selected_index();
+
+			std::string get_selected_item();
+
+			void set_cancel_only(bool cancel_only);
+			void translate(s16 _x, s16 _y) override;
+
+			compiled_resource& get_compiled() override;
+		};
+
+		struct edit_text : public label
+		{
+			enum direction
 			{
-				w = width;
-				h = height;
+				up,
+				down,
+				left,
+				right
+			};
 
-				m_scroll_indicator_top = std::make_unique<image_view>(width, 5);
-				m_scroll_indicator_bottom = std::make_unique<image_view>(width, 5);
-				m_accept_btn = std::make_unique<image_button>(120, 20);
-				m_cancel_btn = std::make_unique<image_button>(120, 20);
-				m_highlight_box = std::make_unique<overlay_element>(width, 0);
+			u16 caret_position = 0;
+			u16 vertical_scroll_offset = 0;
 
-				m_scroll_indicator_top->set_size(width, 40);
-				m_scroll_indicator_bottom->set_size(width, 40);
-				m_accept_btn->set_size(120, 30);
-				m_cancel_btn->set_size(120, 30);
+			using label::label;
 
-				m_scroll_indicator_top->set_image_resource(resource_config::standard_image_resource::fade_top);
-				m_scroll_indicator_bottom->set_image_resource(resource_config::standard_image_resource::fade_bottom);
+			void move_caret(direction dir);
+			void insert_text(const std::string& str);
+			void erase();
 
-				if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
-				{
-					m_accept_btn->set_image_resource(resource_config::standard_image_resource::circle);
-					m_cancel_btn->set_image_resource(resource_config::standard_image_resource::cross);
-				}
-				else
-				{
-					m_accept_btn->set_image_resource(resource_config::standard_image_resource::cross);
-					m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
-				}
-
-				m_scroll_indicator_bottom->set_pos(0, height - 40);
-				m_accept_btn->set_pos(30, height + 20);
-				m_cancel_btn->set_pos(180, height + 20);
-
-				m_accept_btn->set_text("Select");
-				m_cancel_btn->set_text("Cancel");
-
-				m_accept_btn->set_font("Arial", 16);
-				m_cancel_btn->set_font("Arial", 16);
-
-				auto_resize = false;
-				back_color = { 0.15f, 0.15f, 0.15f, 0.8f };
-
-				m_highlight_box->back_color = { .5f, .5f, .8f, 0.2f };
-				m_highlight_box->pulse_effect_enabled = true;
-				m_scroll_indicator_top->fore_color.a = 0.f;
-				m_scroll_indicator_bottom->fore_color.a = 0.f;
-			}
-
-			void update_selection()
-			{
-				auto current_element = m_items[m_selected_entry * 2].get();
-
-				// Calculate bounds
-				auto min_y = current_element->y - y;
-				auto max_y = current_element->y + current_element->h + pack_padding + 2 - y;
-
-				if (min_y < scroll_offset_value)
-				{
-					scroll_offset_value = min_y;
-				}
-				else if (max_y > (h + scroll_offset_value))
-				{
-					scroll_offset_value = max_y - h - 2;
-				}
-
-				if ((scroll_offset_value + h + 2) >= m_elements_height)
-					m_scroll_indicator_bottom->fore_color.a = 0.f;
-				else
-					m_scroll_indicator_bottom->fore_color.a = 0.5f;
-
-				if (scroll_offset_value == 0)
-					m_scroll_indicator_top->fore_color.a = 0.f;
-				else
-					m_scroll_indicator_top->fore_color.a = 0.5f;
-
-				m_highlight_box->set_pos(current_element->x, current_element->y);
-				m_highlight_box->h = current_element->h + pack_padding;
-				m_highlight_box->y -= scroll_offset_value;
-
-				m_highlight_box->refresh();
-				m_scroll_indicator_top->refresh();
-				m_scroll_indicator_bottom->refresh();
-				refresh();
-			}
-
-			void select_next()
-			{
-				if (m_selected_entry < (m_elements_count - 1))
-				{
-					m_selected_entry++;
-					update_selection();
-				}
-			}
-
-			void select_previous()
-			{
-				if (m_selected_entry > 0)
-				{
-					m_selected_entry--;
-					update_selection();
-				}
-			}
-
-			void add_entry(std::unique_ptr<overlay_element>& entry)
-			{
-				// Add entry view
-				add_element(entry);
-				m_elements_count++;
-
-				// Add separator
-				auto separator = std::make_unique<overlay_element>();
-				separator->back_color = fore_color;
-				separator->w = w;
-				separator->h = 2;
-				add_element(separator);
-
-				if (m_selected_entry < 0)
-					m_selected_entry = 0;
-
-				m_elements_height = advance_pos;
-				update_selection();
-			}
-
-			int get_selected_index()
-			{
-				return m_selected_entry;
-			}
-
-			std::string get_selected_item()
-			{
-				if (m_selected_entry < 0)
-					return{};
-
-				return m_items[m_selected_entry]->text;
-			}
-
-			void set_cancel_only(bool cancel_only)
-			{
-				if (cancel_only)
-					m_cancel_btn->set_pos(x + 30, y + h + 20);
-				else
-					m_cancel_btn->set_pos(x + 180, y + h + 20);
-
-				m_cancel_only = cancel_only;
-				is_compiled = false;
-			}
-
-			void translate(s16 _x, s16 _y) override
-			{
-				layout_container::translate(_x, _y);
-				m_scroll_indicator_top->translate(_x, _y);
-				m_scroll_indicator_bottom->translate(_x, _y);
-				m_accept_btn->translate(_x, _y);
-				m_cancel_btn->translate(_x, _y);
-			}
-
-			compiled_resource& get_compiled() override
-			{
-				if (!is_compiled)
-				{
-					auto compiled = vertical_layout::get_compiled();
-					compiled.add(m_highlight_box->get_compiled());
-					compiled.add(m_scroll_indicator_top->get_compiled());
-					compiled.add(m_scroll_indicator_bottom->get_compiled());
-					compiled.add(m_cancel_btn->get_compiled());
-
-					if (!m_cancel_only)
-						compiled.add(m_accept_btn->get_compiled());
-
-					compiled_resources = compiled;
-				}
-
-				return compiled_resources;
-			}
+			compiled_resource& get_compiled() override;
 		};
 	}
 }

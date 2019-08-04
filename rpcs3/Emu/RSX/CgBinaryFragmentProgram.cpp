@@ -1,7 +1,7 @@
 #include "stdafx.h"
+#include "CgBinaryProgram.h"
 
 #include "Emu/System.h"
-#include "CgBinaryProgram.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 
 #include <algorithm>
@@ -9,7 +9,7 @@
 void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 {
 	verify(HERE), (m_opcode < 70);
-	std::string op_name = "";
+	std::string op_name;
 
 	if (dst.dest_reg == 63)
 	{
@@ -34,8 +34,8 @@ void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 	case RSX_FP_OPCODE_LOOP:
 	case RSX_FP_OPCODE_NOP:
 	case RSX_FP_OPCODE_REP:
-	case RSX_FP_OPCODE_RET: 
-		m_dst_reg_name = "";
+	case RSX_FP_OPCODE_RET:
+		m_dst_reg_name.clear();
 		op_name = rsx_fp_op_names[m_opcode] + std::string(dst.fp16 ? "H" : "R");
 		break;
 
@@ -77,7 +77,7 @@ std::string CgBinaryDisasm::AddConstDisAsm()
 	const u32 z = GetData(data[2]);
 	const u32 w = GetData(data[3]);
 
-	return fmt::format("{0x%08x(%g), 0x%08x(%g), 0x%08x(%g), 0x%08x(%g)}", x, (float&)x, y, (float&)y, z, (float&)z, w, (float&)w);
+	return fmt::format("{0x%08x(%g), 0x%08x(%g), 0x%08x(%g), 0x%08x(%g)}", x, std::bit_cast<f32>(x), y, std::bit_cast<f32>(y), z, std::bit_cast<f32>(z), w, std::bit_cast<f32>(w));
 }
 
 std::string CgBinaryDisasm::AddTexDisAsm()
@@ -202,7 +202,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 
 	static const char f[4] = { 'x', 'y', 'z', 'w' };
 
-	std::string swizzle = "";
+	std::string swizzle;
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
 	swizzle += f[src.swizzle_z];
@@ -228,7 +228,8 @@ void CgBinaryDisasm::TaskFP()
 	verify(HERE), ((m_buffer_size - m_offset) % sizeof(u32) == 0);
 	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 	{
-		data[i] = se_storage<u32>::swap(data[i]); // WTF, cannot use be_t<> there?
+		// Get BE data
+		data[i] = be_t<u32>{data[i]}.raw();
 	}
 
 	enum

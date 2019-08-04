@@ -1,8 +1,15 @@
 ﻿#include "emu_settings.h"
 
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
+
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Utilities/Config.h"
+#include "Utilities/Thread.h"
+#include "Utilities/StrUtil.h"
 
 #include <QMessageBox>
 
@@ -17,6 +24,8 @@
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKHelpers.h"
 #endif
+
+#include "3rdparty/OpenAL/include/alext.h"
 
 extern std::string g_cfg_defaults; //! Default settings grabbed from Utilities/Config.h
 
@@ -98,7 +107,7 @@ namespace cfg_adapter
 	{
 		return get_node(node, loc.cbegin(), loc.cend());
 	}
-};
+}
 
 /** Returns possible options for values for some particular setting.*/
 static QStringList getOptions(cfg_location location)
@@ -146,25 +155,73 @@ emu_settings::Render_Creator::Render_Creator()
 #endif
 
 #if defined(WIN32) || defined(HAVE_VULKAN)
-	// check for vulkan adapters
-	vk::context device_enum_context;
-	u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
+	// Some drivers can get stuck when checking for vulkan-compatible gpus, f.ex. if they're waiting for one to get
+	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
+	// some idea about why the emulator window isn't showing up.
 
-	if (instance_handle > 0)
+	static std::atomic<bool> was_called = false;
+	if (was_called.exchange(true))
+		fmt::throw_exception("Render_Creator cannot be created more than once" HERE);
+
+	static std::mutex mtx;
+	static std::condition_variable cond;
+	static bool thread_running = true;
+	static bool device_found = false;
+
+	static QStringList compatible_gpus;
+
+	std::thread enum_thread = std::thread([&]
 	{
-		device_enum_context.makeCurrentInstance(instance_handle);
-		std::vector<vk::physical_device>& gpus = device_enum_context.enumerateDevices();
+		thread_ctrl::set_native_priority(-1);
 
-		if (gpus.size() > 0)
+		vk::context device_enum_context;
+		u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
+
+		if (instance_handle > 0)
 		{
-			//A device with vulkan support found. Init data
-			supportsVulkan = true;
+			device_enum_context.makeCurrentInstance(instance_handle);
+			std::vector<vk::physical_device> &gpus = device_enum_context.enumerateDevices();
 
-			for (auto& gpu : gpus)
+			if (!gpus.empty())
 			{
-				vulkanAdapters.append(qstr(gpu.get_name()));
+				device_found = true;
+
+				for (auto &gpu : gpus)
+				{
+					compatible_gpus.append(qstr(gpu.get_name()));
+				}
 			}
 		}
+
+		std::scoped_lock{mtx}, thread_running = false;
+		cond.notify_all();
+	});
+
+	{
+		std::unique_lock lck(mtx);
+		cond.wait_for(lck, std::chrono::seconds(10), [&]{ return !thread_running; });
+	}
+
+	if (thread_running)
+	{
+		LOG_ERROR(GENERAL, "Vulkan device enumeration timed out");
+		auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
+			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
+			"graphics drivers, reinstalling them could fix the issue.\n\n"
+			"Selecting ignore starts the emulator without Vulkan support."),
+			QMessageBox::Ignore | QMessageBox::Abort, QMessageBox::Abort);
+
+		enum_thread.detach();
+		if (button != QMessageBox::Ignore)
+			std::exit(1);
+
+		supportsVulkan = false;
+	}
+	else
+	{
+		supportsVulkan = device_found;
+		vulkanAdapters = std::move(compatible_gpus);
+		enum_thread.join();
 	}
 #endif
 
@@ -177,6 +234,58 @@ emu_settings::Render_Creator::Render_Creator()
 	renderers = { &D3D12, &Vulkan, &OpenGL, &NullRender };
 }
 
+emu_settings::Microphone_Creator::Microphone_Creator()
+{
+	RefreshList();
+}
+
+void emu_settings::Microphone_Creator::RefreshList()
+{
+	microphones_list.clear();
+	microphones_list.append(mic_none);
+
+	if (alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT") == AL_TRUE)
+	{
+		const char *devices = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
+
+		while (*devices != 0)
+		{
+			microphones_list.append(qstr(devices));
+			devices += strlen(devices) + 1;
+		}
+	}
+	else
+	{
+		// Without enumeration we can only use one device
+		microphones_list.append(qstr(alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER)));
+	}
+}
+
+std::string emu_settings::Microphone_Creator::SetDevice(u32 num, QString& text)
+{
+	if (text == mic_none)
+		sel_list[num-1] = "";
+	else
+		sel_list[num-1] = text.toStdString();
+
+	const std::string final_list = sel_list[0] + "@@@" + sel_list[1] + "@@@" + sel_list[2] + "@@@" + sel_list[3] + "@@@";
+	return final_list;
+}
+
+void emu_settings::Microphone_Creator::ParseDevices(std::string list)
+{
+	for (u32 index = 0; index < 4; index++)
+	{
+		sel_list[index] = "";
+	}
+
+	const auto devices_list = fmt::split(list, { "@@@" });
+	for (u32 index = 0; index < std::min((u32)4, (u32)devices_list.size()); index++)
+	{
+		sel_list[index] = devices_list[index];
+	}
+}
+
 emu_settings::emu_settings() : QObject()
 {
 }
@@ -185,12 +294,12 @@ emu_settings::~emu_settings()
 {
 }
 
-void emu_settings::LoadSettings(const std::string& path)
+void emu_settings::LoadSettings(const std::string& title_id)
 {
-	m_path = path;
+	m_title_id = title_id;
 
 	// Create config path if necessary
-	fs::create_path(fs::get_config_dir() + path);
+	fs::create_path(title_id.empty() ? fs::get_config_dir() : Emulator::GetCustomConfigDir());
 
 	// Load default config
 	m_defaultSettings = YAML::Load(g_cfg_defaults);
@@ -202,11 +311,23 @@ void emu_settings::LoadSettings(const std::string& path)
 	config.close();
 
 	// Add game config
-	if (!path.empty() && fs::is_file(fs::get_config_dir() + path + "/config.yml"))
+	if (!title_id.empty())
 	{
-		config = fs::file(fs::get_config_dir() + path + "/config.yml", fs::read + fs::write);
-		m_currentSettings += YAML::Load(config.to_string());
-		config.close();
+		const std::string config_path_new = Emulator::GetCustomConfigPath(m_title_id);
+		const std::string config_path_old = Emulator::GetCustomConfigPath(m_title_id, true);
+
+		if (fs::is_file(config_path_new))
+		{
+			config = fs::file(config_path_new, fs::read + fs::write);
+			m_currentSettings += YAML::Load(config.to_string());
+			config.close();
+		}
+		else if (fs::is_file(config_path_old))
+		{
+			config = fs::file(config_path_old, fs::read + fs::write);
+			m_currentSettings += YAML::Load(config.to_string());
+			config.close();
+		}
 	}
 }
 
@@ -216,9 +337,9 @@ void emu_settings::SaveSettings()
 	YAML::Emitter out;
 	emitData(out, m_currentSettings);
 
-	if (!m_path.empty())
+	if (!m_title_id.empty())
 	{
-		config = fs::file(fs::get_config_dir() + m_path + "/config.yml", fs::read + fs::write + fs::create);
+		config = fs::file(Emulator::GetCustomConfigPath(m_title_id), fs::read + fs::write + fs::create);
 	}
 	else
 	{
@@ -232,7 +353,7 @@ void emu_settings::SaveSettings()
 	config.close();
 }
 
-void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged, bool use_max, int max)
+void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged, bool use_max, int max, bool sorted)
 {
 	if (!combobox)
 	{
@@ -242,6 +363,11 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 
 	if (is_ranged)
 	{
+		if (sorted)
+		{
+			LOG_WARNING(GENERAL, "EnhanceCombobox '%s': ignoring sorting request on ranged combo box", GetSettingName(type));
+		}
+
 		QStringList range = GetSettingOptions(type);
 
 		int max_item = use_max ? max : range.last().toInt();
@@ -253,7 +379,14 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, SettingsType type, bool 
 	}
 	else
 	{
-		for (QString setting : GetSettingOptions(type))
+		QStringList settings = GetSettingOptions(type);
+
+		if (sorted)
+		{
+			settings.sort();
+		}
+
+		for (QString setting : settings)
 		{
 			combobox->addItem(tr(setting.toStdString().c_str()), QVariant(setting));
 		}

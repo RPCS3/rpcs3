@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Utilities/VirtualMemory.h"
 #include "Utilities/hash.h"
+#include "Utilities/File.h"
 #include "Emu/Memory/vm.h"
 #include "gcm_enums.h"
 #include "Common/ProgramStateCache.h"
@@ -10,6 +11,7 @@
 
 #include "rsx_utils.h"
 #include <thread>
+#include <chrono>
 
 namespace rsx
 {
@@ -83,8 +85,8 @@ namespace rsx
 
 	public:
 
-		buffered_section() {};
-		~buffered_section() {};
+		buffered_section() = default;
+		~buffered_section() = default;
 
 		void reset(const address_range &memory_range)
 		{
@@ -225,12 +227,22 @@ namespace rsx
 			return get_bounds(bounds).overlaps(other);
 		}
 
+		inline bool overlaps(const address_range_vector &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).overlaps(other);
+		}
+
 		inline bool overlaps(const buffered_section &other, section_bounds bounds) const
 		{
 			return get_bounds(bounds).overlaps(other.get_bounds(bounds));
 		}
 
 		inline bool inside(const address_range &other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).inside(other);
+		}
+
+		inline bool inside(const address_range_vector &other, section_bounds bounds) const
 		{
 			return get_bounds(bounds).inside(other);
 		}
@@ -316,7 +328,7 @@ namespace rsx
 		 * Super Pointer
 		 */
 		template <typename T = void>
-		inline T* get_ptr(u32 address)
+		inline T* get_ptr(u32 address) const
 		{
 			return reinterpret_cast<T*>(vm::g_sudo_addr + address);
 		}
@@ -448,7 +460,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, processed, entry_count]()
 				{
 					const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 					dlg->ProgressBarSetMsg(index, fmt::format(text, processed, entry_count));
@@ -460,7 +472,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, value]()
 				{
 					dlg->ProgressBarInc(index, value);
 					ref_cnt--;
@@ -471,7 +483,7 @@ namespace rsx
 			{
 				ref_cnt++;
 
-				Emu.CallAfter([&]()
+				Emu.CallAfter([&, index, limit]()
 				{
 					dlg->ProgressBarSetLimit(index, limit);
 					ref_cnt--;
@@ -479,7 +491,7 @@ namespace rsx
 			}
 
 			virtual void refresh()
-			{};
+			{}
 
 			virtual void close()
 			{
@@ -491,17 +503,20 @@ namespace rsx
 		};
 
 		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
-			: version_prefix(version_prefix_str)
-			, pipeline_class_name(pipeline_class)
+			: version_prefix(std::move(version_prefix_str))
+			, pipeline_class_name(std::move(pipeline_class))
 			, m_storage(storage)
 		{
-			root_path = Emu.GetCachePath() + "/shaders_cache";
+			if (!g_cfg.video.disable_on_disk_shader_cache)
+			{
+				root_path = Emu.PPUCache() + "shaders_cache";
+			}
 		}
 
 		template <typename... Args>
 		void load(progress_dialog_helper* dlg, Args&& ...args)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
+			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
 				return;
 			}
@@ -558,7 +573,7 @@ namespace rsx
 
 			// Preload everything needed to compile the shaders
 			// Can probably be parallelized too, but since it's mostly reading files it's probably not worth it
-			std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>> unpackeds;
+			std::vector<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>> unpacked;
 			std::chrono::time_point<steady_clock> last_update;
 			u32 processed_since_last_update = 0;
 
@@ -577,9 +592,9 @@ namespace rsx
 				}
 				f.read<u8>(bytes, f.size());
 
-				auto unpacked = unpack(*(pipeline_data*)bytes.data());
-				m_storage.preload_programs(std::get<1>(unpacked), std::get<2>(unpacked));
-				unpackeds.push_back(unpacked);
+				auto entry = unpack(*(pipeline_data*)bytes.data());
+				m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
+				unpacked.push_back(entry);
 
 				// Only update the screen at about 10fps since updating it everytime slows down the process
 				std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
@@ -593,14 +608,17 @@ namespace rsx
 				}
 			}
 
+			// Account for any invalid entries
+			entry_count = u32(unpacked.size());
+
 			atomic_t<u32> processed(0);
 			std::function<void(u32)> shader_comp_worker = [&](u32 index)
 			{
 				u32 pos;
 				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
 				{
-					auto unpacked = unpackeds[pos];
-					m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
+					auto& entry = unpacked[pos];
+					m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
 				}
 			};
 
@@ -640,8 +658,8 @@ namespace rsx
 				u32 pos;
 				while (((pos = processed++) < entry_count) && !Emu.IsStopped())
 				{
-					auto unpacked = unpackeds[pos];
-					m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
+					auto& entry = unpacked[pos];
+					m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
 
 					// Update screen at about 10fps
 					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
@@ -672,7 +690,7 @@ namespace rsx
 
 		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache || Emu.GetCachePath() == "")
+			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
 				return;
 			}
@@ -850,7 +868,7 @@ namespace rsx
 		class default_vertex_cache
 		{
 		public:
-			virtual ~default_vertex_cache() {};
+			virtual ~default_vertex_cache() = default;
 			virtual storage_type* find_vertex_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
 			virtual void store_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
 			virtual void purge() {}
@@ -880,8 +898,11 @@ namespace rsx
 
 			storage_type* find_vertex_range(uintptr_t local_addr, upload_format fmt, u32 data_length) override
 			{
+				const auto data_end = local_addr + data_length;
+
 				for (auto &v : vertex_ranges[local_addr])
 				{
+					// NOTE: This has to match exactly. Using sized shortcuts such as >= comparison causes artifacting in some applications (UC1)
 					if (v.buffer_format == fmt && v.data_length == data_length)
 						return &v;
 				}

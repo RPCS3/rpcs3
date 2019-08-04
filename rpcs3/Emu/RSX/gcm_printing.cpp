@@ -734,7 +734,7 @@ std::string rsx::get_method_name(const u32 id)
 		return std::string("CELL_GCM_") + found->second;
 	}
 
-	return fmt::format("Unknown/illegal method [0x%08x]", id << 2);
+	return fmt::format("Unknown/illegal method [0x%04x]", id << 2);
 }
 
 // Various parameter pretty printing function
@@ -780,6 +780,7 @@ namespace
 		case rsx::vertex_base_type::cmp: return "CMP";
 		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
 		}
+		return "";
 	}
 
 	std::string unpack_vertex_format(u32 arg)
@@ -797,7 +798,7 @@ namespace
 	std::string transform_constant(size_t index, u32 arg)
 	{
 		return "Transform constant " + std::to_string(index) + ": " + std::to_string(arg) + "/" +
-		       std::to_string((float&)arg);
+		       std::to_string(std::bit_cast<f32>(arg));
 	}
 
 	std::string texture_offset(size_t index, u32 arg)

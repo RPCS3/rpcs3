@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "GLHelpers.h"
+#include "GLTexture.h"
 #include "Utilities/Log.h"
 
 namespace gl
@@ -236,14 +237,14 @@ namespace gl
 		clear(buffers_);
 	}
 
-	void fbo::copy_from(const void* pixels, sizei size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
+	void fbo::copy_from(const void* pixels, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
 	{
 		save_binding_state save(*this);
 		pixel_settings.apply();
 		glDrawPixels(size.width, size.height, (GLenum)format_, (GLenum)type_, pixels);
 	}
 
-	void fbo::copy_from(const buffer& buf, sizei size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
+	void fbo::copy_from(const buffer& buf, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
 	{
 		save_binding_state save(*this);
 		buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
@@ -300,7 +301,7 @@ namespace gl
 		m_id = id;
 	}
 
-	void fbo::set_extents(size2i extents)
+	void fbo::set_extents(const size2i& extents)
 	{
 		m_size = extents;
 	}
@@ -359,5 +360,150 @@ namespace gl
 	attrib_t vao::operator[](u32 index) const noexcept
 	{
 		return attrib_t(index);
+	}
+
+	void blitter::scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
+		bool is_depth_copy, const rsx::typeless_xfer& xfer_info)
+	{
+		std::unique_ptr<texture> typeless_src;
+		std::unique_ptr<texture> typeless_dst;
+		const gl::texture* real_src = src;
+		const gl::texture* real_dst = dst;
+
+		if (xfer_info.src_is_typeless)
+		{
+			const auto internal_width = (u16)(src->width() * xfer_info.src_scaling_hint);
+			const auto internal_fmt = xfer_info.src_native_format_override ?
+				GLenum(xfer_info.src_native_format_override) :
+				get_sized_internal_format(xfer_info.src_gcm_format);
+
+			typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
+			copy_typeless(typeless_src.get(), src);
+
+			real_src = typeless_src.get();
+			src_rect.x1 = (u16)(src_rect.x1 * xfer_info.src_scaling_hint);
+			src_rect.x2 = (u16)(src_rect.x2 * xfer_info.src_scaling_hint);
+		}
+
+		if (xfer_info.dst_is_typeless)
+		{
+			const auto internal_width = (u16)(dst->width() * xfer_info.dst_scaling_hint);
+			const auto internal_fmt = xfer_info.dst_native_format_override ?
+				GLenum(xfer_info.dst_native_format_override) :
+				get_sized_internal_format(xfer_info.dst_gcm_format);
+
+			typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
+			copy_typeless(typeless_dst.get(), dst);
+
+			real_dst = typeless_dst.get();
+			dst_rect.x1 = (u16)(dst_rect.x1 * xfer_info.dst_scaling_hint);
+			dst_rect.x2 = (u16)(dst_rect.x2 * xfer_info.dst_scaling_hint);
+		}
+
+		filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
+		GLenum attachment;
+		gl::buffers target;
+
+		if (is_depth_copy)
+		{
+			verify(HERE), real_src->aspect() == real_dst->aspect();
+			if (real_dst->aspect() & gl::image_aspect::stencil)
+			{
+				attachment = GL_DEPTH_STENCIL_ATTACHMENT;
+				target = gl::buffers::depth_stencil;
+			}
+			else
+			{
+				attachment = GL_DEPTH_ATTACHMENT;
+				target = gl::buffers::depth;
+			}
+		}
+		else
+		{
+			attachment = GL_COLOR_ATTACHMENT0;
+			target = gl::buffers::color;
+		}
+
+		cmd.drv->enable(GL_FALSE, GL_SCISSOR_TEST);
+
+		save_binding_state saved;
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, blit_src.id());
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_src->id(), 0);
+
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, blit_dst.id());
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, real_dst->id(), 0);
+
+		if (xfer_info.flip_horizontal)
+		{
+			src_rect.flip_horizontal();
+		}
+
+		if (xfer_info.flip_vertical)
+		{
+			src_rect.flip_vertical();
+		}
+
+		glBlitFramebuffer(src_rect.x1, src_rect.y1, src_rect.x2, src_rect.y2,
+			dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2,
+			(GLbitfield)target, (GLenum)interp);
+
+		if (xfer_info.dst_is_typeless)
+		{
+			// Transfer contents from typeless dst back to original dst
+			copy_typeless(dst, typeless_dst.get());
+		}
+
+		// Release the attachments explicitly (not doing so causes glitches, e.g Journey Menu)
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+		glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
+	}
+
+	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, const color4f& color)
+	{
+		save_binding_state saved;
+
+		blit_dst.bind();
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dst->id(), 0);
+		blit_dst.check();
+
+		cmd.drv->clear_color(color);
+		cmd.drv->color_mask(true, true, true, true);
+
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+
+	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil)
+	{
+		GLenum attachment;
+		GLbitfield clear_mask;
+
+		switch (const auto fmt = dst->get_internal_format())
+		{
+		case texture::internal_format::depth:
+		case texture::internal_format::depth16:
+			clear_mask = GL_DEPTH_BUFFER_BIT;
+			attachment = GL_DEPTH_ATTACHMENT;
+			break;
+		case texture::internal_format::depth_stencil:
+		case texture::internal_format::depth24_stencil8:
+		case texture::internal_format::depth32f_stencil8:
+			clear_mask = GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+			attachment = GL_DEPTH_STENCIL_ATTACHMENT;
+			break;
+		default:
+			fmt::throw_exception("Invalid texture passed to clear depth function, format=0x%x", (u32)fmt);
+		}
+
+		save_binding_state saved;
+
+		blit_dst.bind();
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, dst->id(), 0);
+		blit_dst.check();
+
+		cmd.drv->depth_mask(GL_TRUE);
+		cmd.drv->stencil_mask(0xFF);
+
+		glClear(clear_mask);
 	}
 }

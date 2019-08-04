@@ -50,6 +50,12 @@ QTableWidget#game_grid {
 	font-family:Lucida Grande;
 	color: rgba(51,51,51,255);
 }
+QTableWidget#game_grid::item:selected:active {
+	selection-background-color: #0078D7;
+}
+QTableWidget#game_grid::item:selected:!active {
+	selection-background-color: #008cff;
+}
 
 /* log stylesheet */
 QTextEdit#tty_frame {

@@ -6,10 +6,11 @@ using ppu_function_t = bool(*)(ppu_thread&);
 
 // BIND_FUNC macro "converts" any appropriate HLE function to ppu_function_t, binding it to PPU thread context.
 #define BIND_FUNC(func, ...) (static_cast<ppu_function_t>([](ppu_thread& ppu) -> bool {\
-	const auto old_f = ppu.last_function;\
-	ppu.last_function = #func;\
+	const auto old_f = ppu.current_function;\
+	if (!old_f) ppu.last_function = #func;\
+	ppu.current_function = #func;\
 	ppu_func_detail::do_call(ppu, func);\
-	ppu.last_function = old_f;\
+	ppu.current_function = old_f;\
 	ppu.cia += 4;\
 	__VA_ARGS__;\
 	return false;\

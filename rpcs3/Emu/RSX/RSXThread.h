@@ -1,14 +1,12 @@
 ﻿#pragma once
 
-#include <stack>
 #include <deque>
-#include <set>
-#include <mutex>
-#include <atomic>
 #include <variant>
 #include "GCM.h"
 #include "rsx_cache.h"
+#include "RSXFIFO.h"
 #include "RSXTexture.h"
+#include "RSXOffload.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
 #include "rsx_methods.h"
@@ -22,63 +20,41 @@
 
 #include "Emu/Cell/lv2/sys_rsx.h"
 
+extern u64 get_guest_system_time();
 extern u64 get_system_time();
 
 struct RSXIOTable
 {
-	u16 ea[4096];
-	u16 io[3072];
+	atomic_t<u16> ea[4096];
+	atomic_t<u16> io[3072];
 
 	// try to get the real address given a mapped address
 	// return non zero on success
 	inline u32 RealAddr(u32 offs)
 	{
-		const u32 upper = this->ea[offs >> 20];
+		u32 result = this->ea[offs >> 20].load();
 
-		if (static_cast<s16>(upper) < 0)
+		if (static_cast<s16>(result) < 0)
 		{
 			return 0;
 		}
 
-		return (upper << 20) | (offs & 0xFFFFF);
+		result <<= 20; result |= (offs & 0xFFFFF);
+
+		ASSUME(result != 0);
+
+		return result;
 	}
 };
 
 extern bool user_asked_for_frame_capture;
+extern bool capture_current_frame;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
 extern RSXIOTable RSXIOMem;
 
 namespace rsx
 {
-	namespace limits
-	{
-		enum
-		{
-			fragment_textures_count = 16,
-			vertex_textures_count = 4,
-			vertex_count = 16,
-			fragment_count = 32,
-			tiles_count = 15,
-			zculls_count = 8,
-			color_buffers_count = 4
-		};
-	}
-
-	namespace constants
-	{
-		static std::array<const char*, 16> fragment_texture_names =
-		{
-			"tex0", "tex1", "tex2", "tex3", "tex4", "tex5", "tex6", "tex7",
-			"tex8", "tex9", "tex10", "tex11", "tex12", "tex13", "tex14", "tex15",
-		};
-
-		static std::array<const char*, 4> vertex_texture_names =
-		{
-			"vtex0", "vtex1", "vtex2", "vtex3",
-		};
-	}
-
 	enum framebuffer_creation_context : u8
 	{
 		context_draw = 0,
@@ -87,18 +63,25 @@ namespace rsx
 		context_clear_all = context_clear_color | context_clear_depth
 	};
 
-	enum pipeline_state : u8
+	enum pipeline_state : u32
 	{
-		fragment_program_dirty = 1,
-		vertex_program_dirty = 2,
-		fragment_state_dirty = 4,
-		vertex_state_dirty = 8,
-		transform_constants_dirty = 16,
-		framebuffer_reads_dirty = 32,
+		fragment_program_dirty = 0x1,        // Fragment program changed
+		vertex_program_dirty = 0x2,          // Vertex program changed
+		fragment_state_dirty = 0x4,          // Fragment state changed (alpha test, etc)
+		vertex_state_dirty = 0x8,            // Vertex state changed (scale_offset, clip planes, etc)
+		transform_constants_dirty = 0x10,    // Transform constants changed
+		fragment_constants_dirty = 0x20,     // Fragment constants changed
+		framebuffer_reads_dirty = 0x40,      // Framebuffer contents changed
+		fragment_texture_state_dirty = 0x80, // Fragment texture parameters changed
+		vertex_texture_state_dirty = 0x100,  // Fragment texture parameters changed
+		scissor_config_state_dirty = 0x200,  // Scissor region changed
+
+		scissor_setup_invalid = 0x400,       // Scissor configuration is broken
+		scissor_setup_clipped = 0x800,       // Scissor region is cropped by viewport constraint
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
-		all_dirty = 255
+		all_dirty = ~0u
 	};
 
 	enum FIFO_state : u8
@@ -155,39 +138,84 @@ namespace rsx
 
 	struct draw_array_command
 	{
-		/**
-		* First and count of index subranges.
-		*/
-		std::vector<std::pair<u32, u32>> indexes_range;
+		u32 __dummy;
 	};
 
 	struct draw_indexed_array_command
 	{
-		/**
-		* First and count of subranges to fetch in index buffer.
-		*/
-		std::vector<std::pair<u32, u32>> ranges_to_fetch_in_index_buffer;
-
 		gsl::span<const gsl::byte> raw_index_buffer;
 	};
 
 	struct draw_inlined_array
 	{
-		std::vector<u32> inline_vertex_array;
+		u32 __dummy;
+		u32 __dummy2;
+	};
+
+	struct interleaved_attribute_t
+	{
+		u8 index;
+		bool modulo;
+		u16 frequency;
 	};
 
 	struct interleaved_range_info
 	{
 		bool interleaved = false;
-		bool all_modulus = false;
 		bool single_vertex = false;
 		u32  base_offset = 0;
 		u32  real_offset_address = 0;
 		u8   memory_location = 0;
 		u8   attribute_stride = 0;
-		u16  min_divisor = 0;
 
-		std::vector<u8> locations;
+		rsx::simple_array<interleaved_attribute_t> locations;
+
+		// Check if we need to upload a full unoptimized range, i.e [0-max_index]
+		std::pair<u32, u32> calculate_required_range(u32 first, u32 count) const
+		{
+			if (single_vertex)
+			{
+				return { 0, 1 };
+			}
+
+			const u32 max_index = (first + count) - 1;
+			u32 _max_index = 0;
+			u32 _min_index = first;
+
+			for (const auto &attrib : locations)
+			{
+				if (LIKELY(attrib.frequency <= 1))
+				{
+					_max_index = max_index;
+				}
+				else
+				{
+					if (attrib.modulo)
+					{
+						if (max_index >= attrib.frequency)
+						{
+							// Actually uses the modulo operator, cannot safely optimize
+							_min_index = 0;
+							_max_index = std::max<u32>(_max_index, attrib.frequency - 1);
+						}
+						else
+						{
+							// Same as having no modulo
+							_max_index = max_index;
+						}
+					}
+					else
+					{
+						// Division operator
+						_min_index = std::min(_min_index, first / attrib.frequency);
+						_max_index = std::max<u32>(_max_index, max_index / attrib.frequency);
+					}
+				}
+			}
+
+			verify(HERE), _max_index >= _min_index;
+			return { _min_index, (_max_index - _min_index) + 1 };
+		}
 	};
 
 	enum attribute_buffer_placement : u8
@@ -200,14 +228,21 @@ namespace rsx
 	struct vertex_input_layout
 	{
 		std::vector<interleaved_range_info> interleaved_blocks;  // Interleaved blocks to be uploaded as-is
-		std::vector<std::pair<u8, u32>> volatile_blocks;  // Volatile data blocks (immediate draw vertex data for example)
-		std::vector<u8> referenced_registers;  // Volatile register data
+		std::vector<std::pair<u8, u32>> volatile_blocks;         // Volatile data blocks (immediate draw vertex data for example)
+		rsx::simple_array<u8> referenced_registers;              // Volatile register data
 
 		std::array<attribute_buffer_placement, 16> attribute_placement;
 
 		vertex_input_layout()
 		{
 			attribute_placement.fill(attribute_buffer_placement::none);
+		}
+
+		void clear()
+		{
+			interleaved_blocks.clear();
+			volatile_blocks.clear();
+			referenced_registers.clear();
 		}
 
 		bool validate() const
@@ -250,6 +285,18 @@ namespace rsx
 			}
 
 			return false;
+		}
+
+		u32 calculate_interleaved_memory_requirements(u32 first_vertex, u32 vertex_count) const
+		{
+			u32 mem = 0;
+			for (auto &block : interleaved_blocks)
+			{
+				const auto range = block.calculate_required_range(first_vertex, vertex_count);
+				mem += range.second * block.attribute_stride;
+			}
+
+			return mem;
 		}
 	};
 
@@ -318,13 +365,13 @@ namespace rsx
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
 
-			ZCULL_control() {}
-			~ZCULL_control() {}
+			ZCULL_control() = default;
+			~ZCULL_control() = default;
 
-			void set_enabled(class ::rsx::thread* ptimer, bool enabled);
-			void set_active(class ::rsx::thread* ptimer, bool active);
+			void set_enabled(class ::rsx::thread* ptimer, bool state);
+			void set_active(class ::rsx::thread* ptimer, bool state);
 
-			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
+			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
 
 			// Read current zcull statistics into the address provided
 			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
@@ -348,7 +395,10 @@ namespace rsx
 			void on_draw();
 
 			// Check for pending writes
-			bool has_pending() const { return (m_pending_writes.size() != 0); }
+			bool has_pending() const { return !m_pending_writes.empty(); }
+
+			// Search for query synchronized at address
+			occlusion_query_info* find_query(vm::addr_t sink_address);
 
 			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
@@ -369,15 +419,20 @@ namespace rsx
 	protected:
 		std::thread::id m_rsx_thread;
 		atomic_t<bool> m_rsx_thread_exiting{true};
-		s32 m_return_addr{-1}, restore_ret_addr{-1};
+		s32 m_return_addr{-1}, restore_ret{-1};
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
 
 		s32 m_skip_frame_ctr = 0;
 		bool skip_frame = false;
 
-		bool supports_multidraw = false;
-		bool supports_native_ui = false;
+		bool supports_multidraw = false;  // Draw call batching
+		bool supports_native_ui = false;  // Native UI rendering
+		bool supports_hw_a2c = false;     // Alpha to coverage
+
+		// FIFO
+		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+		FIFO::flattening_helper m_flattener;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -394,10 +449,15 @@ namespace rsx
 		// Invalidated memory range
 		address_range m_invalidated_memory_range;
 
+		// Draw call stats
+		u32 m_draw_calls = 0;
+
+		// Profiler
+		rsx::profiling_timer m_profiler;
+
 	public:
 		RsxDmaControl* ctrl = nullptr;
-		atomic_t<u32> internal_get{ 0 };
-		atomic_t<u32> restore_point{ 0 };
+		u32 restore_point = 0;
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
 
@@ -427,7 +487,6 @@ namespace rsx
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
-		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
 
 	public:
@@ -436,7 +495,6 @@ namespace rsx
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
 
-		u32 ioAddress, ioSize;
 		u32 flip_status;
 		int debug_level;
 
@@ -449,13 +507,13 @@ namespace rsx
 		u32 ctxt_addr;
 		u32 label_addr;
 
-		u32 local_mem_addr, main_mem_addr, main_mem_size{0};
+		u32 main_mem_size{0};
 
 		bool m_rtts_dirty;
 		bool m_textures_dirty[16];
 		bool m_vertex_textures_dirty[4];
 		bool m_framebuffer_state_contested = false;
-		rsx::framebuffer_creation_context m_framebuffer_contest_type = rsx::framebuffer_creation_context::context_draw;
+		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
 
 		u32  m_graphics_state = 0;
 		u64  ROP_sync_timestamp = 0;
@@ -468,11 +526,12 @@ namespace rsx
 		u32 get_zeta_surface_address() const;
 
 		framebuffer_layout get_framebuffer_layout(rsx::framebuffer_creation_context context);
+		bool get_scissor(areau& region, bool clip_viewport);
 
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
 		 */
-		vertex_input_layout analyse_inputs_interleaved() const;
+		void analyse_inputs_interleaved(vertex_input_layout&) const;
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
@@ -485,7 +544,7 @@ namespace rsx
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
-		void get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info);
+		void get_current_fragment_program_legacy(const std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)>& get_surface_info);
 
 	public:
 		double fps_limit = 59.94;
@@ -497,7 +556,7 @@ namespace rsx
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
-		u64 vblank_count;
+		atomic_t<u64> vblank_count;
 
 	public:
 		bool invalid_command_interrupt_raised = false;
@@ -531,14 +590,19 @@ namespace rsx
 		virtual void on_decompiler_exit() {}
 		virtual bool on_decompiler_task() { return false; }
 
+		virtual void emit_geometry(u32) {}
+
+		void run_FIFO();
+
 	public:
 		virtual void begin();
 		virtual void end();
+		virtual void execute_nop_draw();
 
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
 		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
-		virtual void flip(int buffer) = 0;
+		virtual void flip(int buffer, bool emu_flip = false) = 0;
 		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 		virtual void on_invalidate_memory_range(const address_range & /*range*/) {}
@@ -553,13 +617,13 @@ namespace rsx
 		// sync
 		void sync();
 		void read_barrier(u32 memory_address, u32 memory_range);
-		virtual void sync_hint(FIFO_hint hint) {}
+		virtual void sync_hint(FIFO_hint /*hint*/, u32 /*arg*/) {}
 
-		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
-		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
+		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const;
+		get_vertex_buffers(const rsx::rsx_state& state, u64 consumed_attrib_mask) const;
 
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
@@ -581,12 +645,12 @@ namespace rsx
 		 * result.first contains persistent memory requirements
 		 * result.second contains volatile memory requirements
 		 */
-		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count);
+		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count);
 
 		/**
 		 * Generates vertex input descriptors as an array of 16x4 s32s
 		 */
-		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
+		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
 
 		/**
 		 * Uploads vertex data described in the layout descriptor
@@ -602,7 +666,7 @@ namespace rsx
 			std::function<bool()> callback;
 			//std::promise<void> promise;
 
-			internal_task_entry(std::function<bool()> callback) : callback(callback)
+			internal_task_entry(std::function<bool()> callback) : callback(std::move(callback))
 			{
 			}
 		};
@@ -641,6 +705,11 @@ namespace rsx
 		void fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program);
 
 		/**
+		 * Fill buffer with fragment texture parameter constants (texture matrix)
+		 */
+		void fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program);
+
+		/**
 		 * Write inlined array data to buffer.
 		 * The storage of inlined data looks different from memory stored arrays.
 		 * There is no swapping required except for 4 u8 (according to Bleach Soul Resurection)
@@ -670,8 +739,8 @@ namespace rsx
 		 * TODO: It's more efficient to combine multiple call of this function into one.
 		 */
 		virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() {
-			return  std::array<std::vector<gsl::byte>, 4>();
-		};
+			return std::array<std::vector<gsl::byte>, 4>();
+		}
 
 		/**
 		* Copy depth and stencil content to buffers.
@@ -679,24 +748,21 @@ namespace rsx
 		*/
 		virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() {
 			return std::array<std::vector<gsl::byte>, 2>();
-		};
+		}
 
-		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
+		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
 
-		virtual bool scaled_image_from_memory(blit_src_info& /*src_info*/, blit_dst_info& /*dst_info*/, bool /*interpolate*/){ return false;  }
+		virtual bool scaled_image_from_memory(blit_src_info& /*src_info*/, blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
 
 	public:
 		void reset();
-		void init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress);
+		void init(u32 ctrlAddress);
 
 		tiled_region get_tiled_address(u32 offset, u32 location);
 		GcmTileInfo *find_tile(u32 offset, u32 location);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		void request_emu_flip(u32 buffer);
-
-		u32 ReadIO32(u32 addr);
-		void WriteIO32(u32 addr, u32 value);
 
 		void pause();
 		void unpause();

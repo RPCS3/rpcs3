@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "VertexProgramDecompiler.h"
@@ -37,45 +37,58 @@ std::string VertexProgramDecompiler::GetScaMask()
 	return GetMask(true);
 }
 
-std::string VertexProgramDecompiler::GetDST(bool isSca)
+std::string VertexProgramDecompiler::GetDST(bool is_sca)
 {
 	std::string ret;
-	std::string mask = GetMask(isSca);
+	const std::string mask = GetMask(is_sca);
 
 	// ARL writes to special integer registers
-	const bool is_address_reg = !isSca && (d1.vec_opcode == RSX_VEC_OPCODE_ARL);
+	const bool is_address_reg = !is_sca && (d1.vec_opcode == RSX_VEC_OPCODE_ARL);
+	const auto tmp_index = is_sca ? d3.sca_dst_tmp : d0.dst_tmp;
+	const bool is_result = is_sca ? (tmp_index == 0x3f) : d0.vec_result;
 
-	switch ((isSca && d3.sca_dst_tmp != 0x3f) ? 0x1f : d3.dst)
+	if (is_result)
 	{
-	case 0x1f:
+		// Write to output result register
+		// vec_result can mask out the VEC op from writing to o[] if SCA is writing to o[]
+
+		if (d3.dst != 0x1f)
+		{
+			if (d3.dst > 15)
+			{
+				LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
+			}
+
+			if (is_address_reg)
+			{
+				LOG_ERROR(RSX, "ARL opcode writing to output register!");
+			}
+
+			const auto reg_type = getFloatTypeName(4);
+			const auto reg_name = std::string("dst_reg") + std::to_string(d3.dst);
+			const auto default_value = (d3.dst == 0 ? reg_type + "(0.0f, 0.0f, 0.0f, 1.0f)" : reg_type + "(0.0, 0.0, 0.0, 0.0)");
+			ret += m_parr.AddParam(PF_PARAM_OUT, reg_type, reg_name, default_value) + mask;
+		}
+	}
+
+	if (tmp_index != 0x3f)
 	{
+		if (!ret.empty())
+		{
+			// Double assignment. Only possible for vector ops
+			verify(HERE), !is_sca;
+			ret += " = ";
+		}
+
 		const std::string reg_type = (is_address_reg) ? getIntTypeName(4) : getFloatTypeName(4);
 		const std::string reg_sel = (is_address_reg) ? "a" : "tmp";
-		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(isSca ? d3.sca_dst_tmp : d0.dst_tmp)) + mask;
-		break;
+		ret += m_parr.AddParam(PF_PARAM_NONE, reg_type, reg_sel + std::to_string(tmp_index)) + mask;
 	}
-	default:
+	else if (!is_result)
 	{
-		if (is_address_reg)
-		{
-			LOG_ERROR(RSX, "ARL opcode writing to output register!");
-		}
-
-		if (d3.dst > 15)
-		{
-			LOG_ERROR(RSX, "dst index out of range: %u", d3.dst);
-		}
-
-		ret += m_parr.AddParam(PF_PARAM_OUT, getFloatTypeName(4), std::string("dst_reg") + std::to_string(d3.dst), d3.dst == 0 ? getFloatTypeName(4) + "(0.0f, 0.0f, 0.0f, 1.0f)" : getFloatTypeName(4) + "(0.0, 0.0, 0.0, 0.0)") + mask;
-
-		if (d0.dst_tmp != 0x3f)
-		{
-			// Handle double destination register as 'dst_reg = tmp'
-			ret += " = " + m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), std::string("tmp") + std::to_string(d0.dst_tmp)) + mask;
-		}
-
-		break;
-	}
+		// Not writing to result register, but not writing to a tmp register either
+		// Write to CC instead (Far Cry 2)
+		ret = AddCondReg() + mask;
 	}
 
 	return ret;
@@ -152,20 +165,12 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 {
 	if (d0.cond == 0) return;
 
-	enum
-	{
-		lt = 0x1,
-		eq = 0x2,
-		gt = 0x4,
-	};
-
-	std::string mask = GetMask(is_sca);
-
 	if (is_sca)
 	{
 		value = getFloatTypeName(4) + "(" + value + ")";
 	}
 
+	std::string mask = GetMask(is_sca);
 	value += mask;
 
 	if (d0.staturate)
@@ -175,20 +180,21 @@ void VertexProgramDecompiler::SetDST(bool is_sca, std::string value)
 
 	std::string dest;
 
-	if (d0.cond_update_enable_0 || d0.cond_update_enable_1)
-	{
-		dest = AddCondReg() + mask;
-	}
-	else if (d3.dst != 0x1f || (is_sca ? d3.sca_dst_tmp != 0x3f : d0.dst_tmp != 0x3f))
+	if (const auto tmp_reg = is_sca? d3.sca_dst_tmp: d0.dst_tmp;
+		d3.dst != 0x1f || tmp_reg != 0x3f)
 	{
 		dest = GetDST(is_sca);
 	}
-
-	//std::string code;
-	//if (d0.cond_test_enable)
-	//	code += "$ifcond ";
-	//code += dest + value;
-	//AddCode(code + ";");
+	else if (d0.cond_update_enable_0 || d0.cond_update_enable_1)
+	{
+		dest = AddCondReg() + mask;
+	}
+	else
+	{
+		// Broken instruction?
+		LOG_ERROR(RSX, "Operation has no output defined! (0x%x, 0x%x, 0x%x, 0x%x)", d0.HEX, d1.HEX, d2.HEX, d3.HEX);
+		dest = " //";
+	}
 
 	AddCodeCond(Format(dest), value);
 }
@@ -225,7 +231,7 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 		{ "$2", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 2) },
 		{ "$s", std::bind(std::mem_fn(&VertexProgramDecompiler::GetSRC), this, 2) },
 		{ "$a", std::bind(std::mem_fn(&VertexProgramDecompiler::AddAddrReg), this) },
-		{ "$t", std::bind(std::mem_fn(&VertexProgramDecompiler::GetTex), this) },
+		{ "$t", [this]() -> std::string { return "vtex" + std::to_string(d2.tex_num); } },
 		{ "$ifcond ", [this]() -> std::string
 			{
 				const std::string& cond = GetCond();
@@ -234,24 +240,15 @@ std::string VertexProgramDecompiler::Format(const std::string& code)
 			}
 		},
 		{ "$cond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetCond), this) },
-		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) }
+		{ "$ifbcond", std::bind(std::mem_fn(&VertexProgramDecompiler::GetOptionalBranchCond), this) },
+		{ "$Ty", [this](){ return getFloatTypeName(4); } }
 	};
 
 	return fmt::replace_all(code, repl_list);
 }
 
-std::string VertexProgramDecompiler::GetCond()
+std::string VertexProgramDecompiler::GetRawCond()
 {
-	enum
-	{
-		lt = 0x1,
-		eq = 0x2,
-		gt = 0x4,
-	};
-
-	if (d0.cond == 0) return "false";
-	if (d0.cond == (lt | gt | eq)) return "true";
-
 	static const COMPARE cond_string_table[(lt | gt | eq) + 1] =
 	{
 		COMPARE::FUNCTION_SLT, // "error"
@@ -272,7 +269,15 @@ std::string VertexProgramDecompiler::GetCond()
 	swizzle += f[d0.mask_w];
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-	return "any(" + compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle) + ")";
+	return compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle);
+}
+
+std::string VertexProgramDecompiler::GetCond()
+{
+	if (d0.cond == 0) return "false";
+	if (d0.cond == (lt | gt | eq)) return "true";
+
+	return "any(" + GetRawCond() + ")";
 }
 
 std::string VertexProgramDecompiler::GetOptionalBranchCond()
@@ -292,7 +297,6 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 		gt = 0x4,
 	};
 
-
 	if (!d0.cond_test_enable || d0.cond == (lt | gt | eq))
 	{
 		AddCode(dst + " = " + src + ";");
@@ -305,58 +309,9 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 		return;
 	}
 
-	static const COMPARE cond_string_table[(lt | gt | eq) + 1] =
-	{
-		COMPARE::FUNCTION_SLT, // "error"
-		COMPARE::FUNCTION_SLT,
-		COMPARE::FUNCTION_SEQ,
-		COMPARE::FUNCTION_SLE,
-		COMPARE::FUNCTION_SGT,
-		COMPARE::FUNCTION_SNE,
-		COMPARE::FUNCTION_SGE,
-	};
-
-	ShaderVariable dst_var(dst);
-	dst_var.simplify();
-
-	static const char f[4] = { 'x', 'y', 'z', 'w' };
-	const u32 mask_index[4] = { d0.mask_x, d0.mask_y, d0.mask_z, d0.mask_w };
-
-	auto get_masked_dst = [](const std::string& dest, const char mask)
-	{
-		const auto selector = std::string(".") + mask;
-		const auto pos = dest.find('=');
-
-		std::string result = dest + selector;
-
-		if (pos != std::string::npos)
-		{
-			result.insert(pos - 1, selector);
-		}
-
-		return result;
-	};
-
-	auto get_cond_func = [this, &mask_index](COMPARE op, int index)
-	{
-		// Condition reg check for single element (x,y,z,w)
-		const auto cond_mask = f[mask_index[index]];
-		return compareFunction(op, AddCondReg() + "." + cond_mask, "0.", true);
-	};
-
-	if (dst_var.swizzles[0].length() == 1)
-	{
-		const std::string cond = get_cond_func(cond_string_table[d0.cond], 0);
-		AddCode("if (" + cond + ") " + dst + " = " + src + ";");
-	}
-	else
-	{
-		for (int i = 0; i < dst_var.swizzles[0].length(); ++i)
-		{
-			const std::string cond = get_cond_func(cond_string_table[d0.cond], i);
-			AddCode("if (" + cond + ") " + get_masked_dst(dst, f[i]) + " = " + src + "." + f[i] + ";");
-		}
-	}
+	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
+	const auto cond = ShaderVariable(dst).match_size(GetRawCond());
+	AddCode(dst + " = _select(" + dst + ", " + src + ", " + cond + ");");
 }
 
 std::string VertexProgramDecompiler::AddAddrReg()
@@ -418,9 +373,9 @@ std::string VertexProgramDecompiler::BuildCode()
 			lvl++;
 		}
 
-		for (uint j = 0; j < m_instructions[i].body.size(); ++j)
+		for (const auto& instruction_body : m_instructions[i].body)
 		{
-			main_body.append(lvl, '\t') += m_instructions[i].body[j] + "\n";
+			main_body.append(lvl, '\t') += instruction_body + "\n";
 		}
 
 		lvl += m_instructions[i].open_scopes;
@@ -465,17 +420,17 @@ std::string VertexProgramDecompiler::Decompile()
 	u32 i = 1;
 	u32 last_label_addr = 0;
 
-	for (unsigned i = 0; i < PF_PARAM_COUNT; i++)
+	for (auto& param : m_parr.params)
 	{
-		m_parr.params[i].clear();
+		param.clear();
 	}
 
-	for (int i = 0; i < m_max_instr_count; ++i)
+	for (auto& instruction : m_instructions)
 	{
-		m_instructions[i].reset();
+		instruction.reset();
 	}
 
-	if (m_prog.jump_table.size())
+	if (!m_prog.jump_table.empty())
 	{
 		last_label_addr = *m_prog.jump_table.rbegin();
 	}
@@ -613,7 +568,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_MOV: SetDSTVec("$0"); break;
 		case RSX_VEC_OPCODE_MUL: SetDSTVec("($0 * $1)"); break;
 		case RSX_VEC_OPCODE_ADD: SetDSTVec("($0 + $2)"); break;
-		case RSX_VEC_OPCODE_MAD: SetDSTVec("($0 * $1 + $2)"); break;
+		case RSX_VEC_OPCODE_MAD: SetDSTVec("fma($0, $1, $2)"); break;
 		case RSX_VEC_OPCODE_DP3: SetDSTVec(getFunction(FUNCTION::FUNCTION_DP3)); break;
 		case RSX_VEC_OPCODE_DPH: SetDSTVec(getFunction(FUNCTION::FUNCTION_DPH)); break;
 		case RSX_VEC_OPCODE_DP4: SetDSTVec(getFunction(FUNCTION::FUNCTION_DP4)); break;
@@ -634,6 +589,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_VEC_OPCODE_SSG: SetDSTVec("sign($0)"); break;
 		case RSX_VEC_OPCODE_TXL:
 		{
+			GetTex();
 			switch (m_prog.get_texture_dimension(d2.tex_num))
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:

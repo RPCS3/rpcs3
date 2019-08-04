@@ -1,4 +1,6 @@
-﻿#include "types.h"
+﻿#pragma once
+
+#include "types.h"
 #include "StrFmt.h"
 #include <vector>
 
@@ -58,12 +60,12 @@ namespace utils
 			return (start1 >= start2 && end1 <= end2);
 		}
 
-		address_range(u32 _start, u32 _end) : start(_start), end(_end) {};
+		address_range(u32 _start, u32 _end) : start(_start), end(_end) {}
 
 	public:
 		// Constructors
 		address_range() = default;
-		address_range(const address_range &other) : start(other.start), end(other.end) {};
+		address_range(const address_range &other) : start(other.start), end(other.end) {}
 
 		static inline address_range start_length(u32 _start, u32 _length)
 		{
@@ -376,7 +378,7 @@ namespace utils
 
 			// We use index access because we might have to push_back within the loop, which could invalidate the iterators
 			size_type _size = data.size();
-			for (int n = 0; n < _size; ++n)
+			for (size_type n = 0; n < _size; ++n)
 			{
 				address_range &existing = data[n];
 
@@ -453,7 +455,7 @@ namespace utils
 		{
 			size_t _size = data.size();
 
-			for (int i = 0; i < _size; ++i)
+			for (size_t i = 0; i < _size; ++i)
 			{
 				const auto &r1 = data[i];
 				if (!r1.valid())
@@ -461,7 +463,7 @@ namespace utils
 					continue;
 				}
 
-				for (int j = i + 1; j < _size; ++j)
+				for (size_t j = i + 1; j < _size; ++j)
 				{
 					const auto &r2 = data[j];
 					if (!r2.valid())
@@ -572,7 +574,7 @@ namespace utils
 		return vec.overlaps(*this);
 	}
 
-}; // namespace utils
+} // namespace utils
 
 
 namespace std {
@@ -587,4 +589,4 @@ namespace std {
 			return (size_t{ k.start } << 32) | size_t{ k.end };
 		}
 	};
-};
+}

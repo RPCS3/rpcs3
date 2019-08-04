@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -165,6 +165,18 @@
      <addaction name="freezeRecentAct"/>
      <addaction name="separator"/>
     </widget>
+    <widget class="QMenu" name="menuBatch">
+     <property name="title">
+      <string>All Titles</string>
+     </property>
+     <addaction name="batchCreatePPUCachesAct"/>
+     <addaction name="separator"/>
+     <addaction name="batchRemoveCustomConfigurationsAct"/>
+     <addaction name="batchRemoveCustomPadConfigurationsAct"/>
+     <addaction name="batchRemovePPUCachesAct"/>
+     <addaction name="batchRemoveSPUCachesAct"/>
+     <addaction name="batchRemoveShaderCachesAct"/>
+    </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
     <addaction name="bootRecentMenu"/>
@@ -173,6 +185,8 @@
     <addaction name="separator"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
+    <addaction name="separator"/>
+    <addaction name="menuBatch"/>
     <addaction name="separator"/>
     <addaction name="exitAct"/>
    </widget>
@@ -251,6 +265,9 @@
      </property>
      <addaction name="showCatHDDGameAct"/>
      <addaction name="showCatDiscGameAct"/>
+     <addaction name="showCatPS1GamesAct"/>
+     <addaction name="showCatPS2GamesAct"/>
+     <addaction name="showCatPSPGamesAct"/>
      <addaction name="showCatHomeAct"/>
      <addaction name="showCatAudioVideoAct"/>
      <addaction name="showCatGameDataAct"/>
@@ -260,6 +277,7 @@
     <addaction name="showDebuggerAct"/>
     <addaction name="showLogAct"/>
     <addaction name="separator"/>
+    <addaction name="showTitleBarsAct"/>
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
@@ -551,7 +569,7 @@
   </action>
   <action name="toolsDecryptSprxLibsAct">
    <property name="text">
-    <string>SPRX Decryption</string>
+    <string>Decrypt PS3 Binaries</string>
    </property>
   </action>
   <action name="showDebuggerAct">
@@ -731,6 +749,39 @@
     <string>Disc Games</string>
    </property>
   </action>
+  <action name="showCatPS1GamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PS1 Games</string>
+   </property>
+  </action>
+  <action name="showCatPS2GamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PS2 Games</string>
+   </property>
+  </action>
+  <action name="showCatPSPGamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PSP Games</string>
+   </property>
+  </action>
   <action name="showCatHomeAct">
    <property name="checkable">
     <bool>true</bool>
@@ -778,13 +829,13 @@
   <action name="toolbar_start">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
+     <normaloff>:/Icons/play.png</normaloff>:/Icons/play.png</iconset>
    </property>
    <property name="text">
     <string>Start</string>
    </property>
    <property name="toolTip">
-    <string>Pause emulation</string>
+    <string>Start emulation</string>
    </property>
   </action>
   <action name="toolbar_stop">
@@ -808,7 +859,7 @@
     <string>Config</string>
    </property>
    <property name="toolTip">
-    <string>Configuration</string>
+    <string>Configure the emulator</string>
    </property>
   </action>
   <action name="toolbar_controls">
@@ -894,14 +945,6 @@
     <string>Other</string>
    </property>
   </action>
-  <action name="showGameToolBarAct">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Show Game Tool Bar</string>
-   </property>
-  </action>
   <action name="showHiddenEntriesAct">
    <property name="checkable">
     <bool>true</bool>
@@ -918,6 +961,44 @@
   <action name="addGamesAct">
    <property name="text">
     <string>Add Games</string>
+   </property>
+  </action>
+  <action name="showTitleBarsAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Title Bars</string>
+   </property>
+  </action>
+  <action name="batchCreatePPUCachesAct">
+   <property name="text">
+    <string>Create PPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveCustomConfigurationsAct">
+   <property name="text">
+    <string>Remove Custom Configurations</string>
+   </property>
+  </action>
+  <action name="batchRemovePPUCachesAct">
+   <property name="text">
+    <string>Remove PPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveSPUCachesAct">
+   <property name="text">
+    <string>Remove SPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveShaderCachesAct">
+   <property name="text">
+    <string>Remove Shader Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveCustomPadConfigurationsAct">
+   <property name="text">
+    <string>Remove Custom Pad Configurations</string>
    </property>
   </action>
  </widget>

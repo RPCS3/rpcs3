@@ -1,6 +1,11 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VKHelpers.h"
+#include "VKGSRender.h"
 #include "VKCompute.h"
+#include "VKRenderPass.h"
+#include "VKFramebuffer.h"
+#include "VKResolveHelper.h"
+#include "VKResourceManager.h"
 #include "Utilities/mutex.h"
 
 namespace vk
@@ -14,11 +19,14 @@ namespace vk
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 
+	// Garbage collection
+	std::vector<std::unique_ptr<image>> g_deleted_typeless_textures;
+
 	VkSampler g_null_sampler = nullptr;
 
 	atomic_t<bool> g_cb_no_interrupt_flag { false };
 
-	//Driver compatibility workarounds
+	// Driver compatibility workarounds
 	VkFlags g_heap_compatible_buffer_types = 0;
 	driver_vendor g_driver_vendor = driver_vendor::unknown;
 	bool g_drv_no_primitive_restart_flag = false;
@@ -28,7 +36,7 @@ namespace vk
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
 
-	//global submit guard to prevent race condition on queue submit
+	// global submit guard to prevent race condition on queue submit
 	shared_mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
@@ -66,8 +74,9 @@ namespace vk
 
 	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
 	{
+		VkPhysicalDevice pdev = dev;
 		VkPhysicalDeviceMemoryProperties memory_properties;
-		vkGetPhysicalDeviceMemoryProperties((VkPhysicalDevice&)dev, &memory_properties);
+		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 
 		memory_type_mapping result;
 		result.device_local = VK_MAX_MEMORY_TYPES;
@@ -148,18 +157,16 @@ namespace vk
 		return g_null_sampler;
 	}
 
-	VkImageView null_image_view(vk::command_buffer &cmd)
+	vk::image_view* null_image_view(vk::command_buffer &cmd)
 	{
 		if (g_null_image_view)
-			return g_null_image_view->value;
+			return g_null_image_view.get();
 
-		g_null_texture.reset(new image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		g_null_texture = std::make_unique<image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			VK_IMAGE_TYPE_2D, VK_FORMAT_B8G8R8A8_UNORM, 4, 4, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0));
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
 
-		g_null_image_view.reset(new image_view(*g_current_renderer, g_null_texture->value, VK_IMAGE_VIEW_TYPE_2D,
-			VK_FORMAT_B8G8R8A8_UNORM, {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
-			{VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1}));
+		g_null_image_view = std::make_unique<image_view>(*g_current_renderer, g_null_texture.get());
 
 		// Initialize memory to transparent black
 		VkClearColorValue clear_color = {};
@@ -169,23 +176,31 @@ namespace vk
 
 		// Prep for shader access
 		change_image_layout(cmd, g_null_texture.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
-		return g_null_image_view->value;
+		return g_null_image_view.get();
 	}
 
-	vk::image* get_typeless_helper(VkFormat format)
+	vk::image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height)
 	{
 		auto create_texture = [&]()
 		{
+			u32 new_width = align(requested_width, 1024u);
+			u32 new_height = align(requested_height, 1024u);
+
 			return new vk::image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				VK_IMAGE_TYPE_2D, format, 4096, 4096, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_TYPE_2D, format, new_width, new_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 		};
 
 		auto &ptr = g_typeless_textures[(u32)format];
-		if (!ptr)
+		if (!ptr || ptr->width() < requested_width || ptr->height() < requested_height)
 		{
-			auto _img = create_texture();
-			ptr.reset(_img);
+			if (ptr)
+			{
+				// Safely move to deleted pile
+				g_deleted_typeless_textures.emplace_back(std::move(ptr));
+			}
+
+			ptr.reset(create_texture());
 		}
 
 		return ptr.get();
@@ -195,8 +210,8 @@ namespace vk
 	{
 		if (!g_scratch_buffer)
 		{
-			// 32M disposable scratch memory
-			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 64 * 0x100000,
+			// 128M disposable scratch memory
+			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, 128 * 0x100000,
 				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
 		}
@@ -222,18 +237,32 @@ namespace vk
 		}
 	}
 
+	void reset_global_resources()
+	{
+		vk::reset_compute_tasks();
+		vk::reset_resolve_resources();
+	}
+
 	void destroy_global_resources()
 	{
+		VkDevice dev = *g_current_renderer;
+		vk::clear_renderpass_cache(dev);
+		vk::clear_framebuffer_cache();
+		vk::clear_resolve_helpers();
+		vk::get_resource_manager()->destroy();
+
 		g_null_texture.reset();
 		g_null_image_view.reset();
 		g_scratch_buffer.reset();
 
 		g_typeless_textures.clear();
+		g_deleted_typeless_textures.clear();
 
 		if (g_null_sampler)
-			vkDestroySampler(*g_current_renderer, g_null_sampler, nullptr);
-
-		g_null_sampler = nullptr;
+		{
+			vkDestroySampler(dev, g_null_sampler, nullptr);
+			g_null_sampler = nullptr;
+		}
 
 		for (const auto& p : g_compute_tasks)
 		{
@@ -280,26 +309,14 @@ namespace vk
 		switch (g_driver_vendor = g_current_renderer->gpu().get_driver_vendor())
 		{
 		case driver_vendor::AMD:
-			// Radeon proprietary driver does not properly handle fence reset and can segfault during vkResetFences
-			// Disable fence reset for proprietary driver and delete+initialize a new fence instead
-			g_drv_disable_fence_reset = true;
-			// Fall through
 		case driver_vendor::RADV:
-			// Radeon fails to properly handle degenerate primitives if primitive restart is enabled
-			// One has to choose between using degenerate primitives or primitive restart to break up lists but not both
-			// Polaris and newer will crash with ERROR_DEVICE_LOST
-			// Older GCN will work okay most of the time but also occasionally draws garbage without reason (proprietary driver only)
-			if (g_driver_vendor == driver_vendor::AMD ||
-				gpu_name.find("VEGA") != std::string::npos ||
-				gpu_name.find("POLARIS") != std::string::npos)
-			{
-				g_drv_no_primitive_restart_flag = !g_cfg.video.vk.force_primitive_restart;
-			}
+			// Previous bugs with fence reset and primitive restart seem to have been fixed with newer drivers
 			break;
 		case driver_vendor::NVIDIA:
 			// Nvidia cards are easily susceptible to NaN poisoning
 			g_drv_sanitize_fp_values = true;
 			break;
+		case driver_vendor::INTEL:
 		default:
 			LOG_WARNING(RSX, "Unsupported device: %s", gpu_name);
 		}
@@ -333,7 +350,7 @@ namespace vk
 			{
 				info.usage = usage;
 				CHECK_RESULT(vkCreateBuffer(*g_current_renderer, &info, nullptr, &tmp));
-				
+
 				vkGetBufferMemoryRequirements(*g_current_renderer, tmp, &memory_reqs);
 				if (g_current_renderer->get_compatible_memory_type(memory_reqs.memoryTypeBits, memory_flags, nullptr))
 				{
@@ -397,7 +414,28 @@ namespace vk
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
 	}
 
-	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
+	void insert_image_memory_barrier(
+		VkCommandBuffer cmd, VkImage image,
+		VkImageLayout current_layout, VkImageLayout new_layout,
+		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
+		VkAccessFlags src_mask, VkAccessFlags dst_mask,
+		const VkImageSubresourceRange& range)
+	{
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.newLayout = new_layout;
+		barrier.oldLayout = current_layout;
+		barrier.image = image;
+		barrier.srcAccessMask = src_mask;
+		barrier.dstAccessMask = dst_mask;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.subresourceRange = range;
+
+		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+	}
+
+	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range)
 	{
 		//Prepare an image to match the new layout..
 		VkImageMemoryBarrier barrier = {};
@@ -416,6 +454,25 @@ namespace vk
 
 		switch (new_layout)
 		{
+		case VK_IMAGE_LAYOUT_GENERAL:
+			// Avoid this layout as it is unoptimized
+			barrier.dstAccessMask =
+			{
+				VK_ACCESS_TRANSFER_READ_BIT |
+				VK_ACCESS_TRANSFER_WRITE_BIT |
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+				VK_ACCESS_SHADER_READ_BIT |
+				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
+			};
+			dst_stage =
+			{
+				VK_PIPELINE_STAGE_TRANSFER_BIT |
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+			};
+			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -437,10 +494,57 @@ namespace vk
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
 			dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			break;
+		default:
+		case VK_IMAGE_LAYOUT_UNDEFINED:
+		case VK_IMAGE_LAYOUT_PREINITIALIZED:
+			fmt::throw_exception("Attempted to transition to an invalid layout");
 		}
 
 		switch (current_layout)
 		{
+		case VK_IMAGE_LAYOUT_GENERAL:
+			// Avoid this layout as it is unoptimized
+			if (new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
+				new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+			{
+				if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+					src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+				}
+				else
+				{
+					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+					src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+				}
+			}
+			else if (new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
+					 new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+			{
+				// Finish reading before writing
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
+				src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			}
+			else
+			{
+				barrier.srcAccessMask =
+				{
+					VK_ACCESS_TRANSFER_READ_BIT |
+					VK_ACCESS_TRANSFER_WRITE_BIT |
+					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+					VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+					VK_ACCESS_SHADER_READ_BIT |
+					VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
+				};
+				src_stage =
+				{
+					VK_PIPELINE_STAGE_TRANSFER_BIT |
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+					VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
+					VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+				};
+			}
+			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -462,12 +566,14 @@ namespace vk
 			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
 			src_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			break;
+		default:
+			break; //TODO Investigate what happens here
 		}
 
 		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, VkImageSubresourceRange range)
+	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, const VkImageSubresourceRange& range)
 	{
 		if (image->current_layout == new_layout) return;
 
@@ -479,50 +585,66 @@ namespace vk
 	{
 		if (image->current_layout == new_layout) return;
 
-		VkImageAspectFlags flags = get_aspect_flags(image->info.format);
-		change_image_layout(cmd, image->value, image->current_layout, new_layout, { flags, 0, 1, 0, 1 });
+		change_image_layout(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
 		image->current_layout = new_layout;
 	}
 
-	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout layout, VkImageSubresourceRange range)
+	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
 	{
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.newLayout = layout;
-		barrier.oldLayout = layout;
-		barrier.image = image;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.subresourceRange = range;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		// NOTE: Sampling from an attachment in ATTACHMENT_OPTIMAL layout on some hw ends up with garbage output
+		// Transition to GENERAL if this resource is both input and output
+		// TODO: This implicitly makes the target incompatible with the renderpass declaration; investigate a proper workaround
+		// TODO: This likely throws out hw optimizations on the rest of the renderpass, manage carefully
 
+		VkAccessFlags src_access;
 		VkPipelineStageFlags src_stage;
 		if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
 		{
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			if (!rsx::method_registers.color_write_enabled() && current_layout == new_layout)
+			{
+				// Nothing to do
+				return;
+			}
+
+			src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		}
 		else
 		{
-			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			if (!rsx::method_registers.depth_write_enabled() && current_layout == new_layout)
+			{
+				// Nothing to do
+				return;
+			}
+
+			src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 		}
+
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.newLayout = new_layout;
+		barrier.oldLayout = current_layout;
+		barrier.image = image;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.subresourceRange = range;
+		barrier.srcAccessMask = src_access;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 		vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
-	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image)
+	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout)
 	{
-		if (image->info.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+		if (image->samples() > 1)
 		{
-			VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-			if (image->info.format != VK_FORMAT_D16_UNORM) aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
-			insert_texture_barrier(cmd, image->value, image->current_layout, { aspect, 0, 1, 0, 1 });
+			// This barrier is pointless for multisampled images as they require a resolve operation before access anyway
+			return;
 		}
-		else
-		{
-			insert_texture_barrier(cmd, image->value, image->current_layout, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
-		}
+
+		insert_texture_barrier(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
+		image->current_layout = new_layout;
 	}
 
 	void enter_uninterruptible()
@@ -577,19 +699,72 @@ namespace vk
 		}
 	}
 
-	void wait_for_fence(VkFence fence)
+	VkResult wait_for_fence(VkFence fence, u64 timeout)
 	{
-		while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
+		if (timeout)
 		{
-			switch (status)
+			return vkWaitForFences(*g_current_renderer, 1, &fence, VK_FALSE, timeout * 1000ull);
+		}
+		else
+		{
+			while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
 			{
-			case VK_NOT_READY:
-				continue;
+				switch (status)
+				{
+				case VK_NOT_READY:
+					continue;
+				default:
+					die_with_error(HERE, status);
+					return status;
+				}
+			}
+
+			return VK_SUCCESS;
+		}
+	}
+
+	VkResult wait_for_event(VkEvent event, u64 timeout)
+	{
+		u64 t = 0;
+		while (true)
+		{
+			switch (const auto status = vkGetEventStatus(*g_current_renderer, event))
+			{
+			case VK_EVENT_SET:
+				return VK_SUCCESS;
+			case VK_EVENT_RESET:
+				break;
 			default:
 				die_with_error(HERE, status);
-				return;
+				return status;
 			}
+
+			if (timeout)
+			{
+				if (!t)
+				{
+					t = get_system_time();
+					continue;
+				}
+
+				if ((get_system_time() - t) > timeout)
+				{
+					LOG_ERROR(RSX, "[vulkan] vk::wait_for_event has timed out!");
+					return VK_TIMEOUT;
+				}
+			}
+
+			//std::this_thread::yield();
+			_mm_pause();
 		}
+	}
+
+	void do_query_cleanup(vk::command_buffer& cmd)
+	{
+		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_renderer());
+		verify(HERE), renderer;
+
+		renderer->emergency_query_cleanup(&cmd);
 	}
 
 	void die_with_error(const char* faulting_addr, VkResult error_code)
@@ -676,16 +851,19 @@ namespace vk
 			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
 			break;
 		default:
-			error_message = fmt::format("Unknown Code (%Xh, %d)%s", (s32)error_code, (s32&)error_code, faulting_addr);
+			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), faulting_addr);
 			break;
 		}
 
 		switch (severity)
 		{
+		default:
 		case 0:
 			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message.c_str(), faulting_addr);
 		case 1:
 			LOG_ERROR(RSX, "Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
+			break;
+		case 2:
 			break;
 		}
 	}
@@ -696,6 +874,8 @@ namespace vk
 	{
 		if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
 		{
+			if (strstr(pMsg, "IMAGE_VIEW_TYPE_1D")) return false;
+
 			LOG_ERROR(RSX, "ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
 		}
 		else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT)

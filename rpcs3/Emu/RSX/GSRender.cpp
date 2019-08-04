@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
@@ -41,8 +41,6 @@ void GSRender::on_exit()
 {
 	if (m_frame)
 	{
-		m_frame->disable_wm_event_queue();
-		m_frame->clear_wm_events();
 		m_frame->delete_context(m_context);
 		m_context = nullptr;
 	}
@@ -50,7 +48,7 @@ void GSRender::on_exit()
 	rsx::thread::on_exit();
 }
 
-void GSRender::flip(int buffer)
+void GSRender::flip(int buffer, bool emu_flip)
 {
 	if (m_frame)
 	{

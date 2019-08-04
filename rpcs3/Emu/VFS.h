@@ -17,4 +17,14 @@ namespace vfs
 
 	// Invert escape operation
 	std::string unescape(std::string_view path);
+
+	// Functions in this namespace operate on host filepaths, similar to fs::
+	namespace host
+	{
+		// Call fs::rename with retry on access error
+		bool rename(const std::string& from, const std::string& to, bool overwrite);
+
+		// Delete file without deleting its contents, emulated with MoveFileEx on Windows
+		bool unlink(const std::string&);
+	}
 }

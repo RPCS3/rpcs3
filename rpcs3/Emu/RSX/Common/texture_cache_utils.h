@@ -1,10 +1,11 @@
 ﻿#pragma once
 
 #include "../rsx_cache.h"
-#include "../rsx_utils.h"
+#include "texture_cache_predictor.h"
 #include "TextureUtils.h"
 
 #include <list>
+#include <unordered_set>
 #include <atomic>
 
 
@@ -41,93 +42,86 @@ namespace rsx
 	};
 
 	struct invalidation_cause {
-		enum enum_type {
+		enum enum_type
+		{
 			invalid = 0,
 			read,
 			deferred_read,
 			write,
 			deferred_write,
-			unmap
+			unmap, // fault range is being unmapped
+			reprotect, // we are going to reprotect the fault range
+			superseded_by_fbo, // used by texture_cache::locked_memory_region
+			committed_as_fbo   // same as superseded_by_fbo but without locking or preserving page flags
 		} cause;
 
-		bool valid() const
+		constexpr bool valid() const
 		{
 			return cause != invalid;
 		}
 
-		bool is_read() const
+		constexpr bool is_read() const
 		{
 			AUDIT(valid());
 			return (cause == read || cause == deferred_read);
 		}
 
-		bool is_write() const
-		{
-			AUDIT(valid());
-			return (cause == write || cause == deferred_write || cause == unmap);
-		}
-
-		bool is_deferred() const
+		constexpr bool deferred_flush() const
 		{
 			AUDIT(valid());
 			return (cause == deferred_read || cause == deferred_write);
 		}
 
-		bool allow_flush() const
+		constexpr bool destroy_fault_range() const
 		{
-			return (cause == read || cause == write || cause == unmap);
-		}
-
-		bool exclude_fault_range() const
-		{
+			AUDIT(valid());
 			return (cause == unmap);
 		}
 
-		invalidation_cause undefer() const
+		constexpr bool keep_fault_range_protection() const
 		{
-			AUDIT(is_deferred());
-			if (is_read())
+			AUDIT(valid());
+			return (cause == unmap || cause == reprotect || cause == superseded_by_fbo);
+		}
+
+		constexpr bool skip_fbos() const
+		{
+			AUDIT(valid());
+			return (cause == superseded_by_fbo || cause == committed_as_fbo);
+		}
+
+		constexpr bool skip_flush() const
+		{
+			AUDIT(valid());
+			return (cause == unmap) || (!g_cfg.video.strict_texture_flushing && cause == superseded_by_fbo);
+		}
+
+		constexpr invalidation_cause undefer() const
+		{
+			AUDIT(deferred_flush());
+			if (cause == deferred_read)
 				return read;
-			else if (is_write())
+			else if (cause == deferred_write)
 				return write;
 			else
 				fmt::throw_exception("Unreachable " HERE);
 		}
 
-		invalidation_cause() : cause(invalid) {}
-		invalidation_cause(enum_type _cause) : cause(_cause) {}
-		operator enum_type&() { return cause; }
-		operator enum_type() const { return cause; }
-	};
-
-	struct typeless_xfer
-	{
-		bool src_is_typeless = false;
-		bool dst_is_typeless = false;
-		bool src_is_depth = false;
-		bool dst_is_depth = false;
-		u32 src_gcm_format = 0;
-		u32 dst_gcm_format = 0;
-		f32 src_scaling_hint = 1.f;
-		f32 dst_scaling_hint = 1.f;
-		texture_upload_context src_context = texture_upload_context::blit_engine_src;
-		texture_upload_context dst_context = texture_upload_context::blit_engine_dst;
-
-		void analyse()
+		constexpr invalidation_cause defer() const
 		{
-			if (src_is_typeless && dst_is_typeless)
-			{
-				if (src_scaling_hint == dst_scaling_hint &&
-					src_scaling_hint != 1.f)
-				{
-					if (src_is_depth == dst_is_depth)
-					{
-						src_is_typeless = dst_is_typeless = false;
-						src_scaling_hint = dst_scaling_hint = 1.f;
-					}
-				}
-			}
+			AUDIT(!deferred_flush());
+			if (cause == read)
+				return deferred_read;
+			else if (cause == write)
+				return deferred_write;
+			else
+				fmt::throw_exception("Unreachable " HERE);
 		}
+
+		constexpr invalidation_cause() : cause(invalid) {}
+		constexpr invalidation_cause(enum_type _cause) : cause(_cause) {}
+		operator enum_type&() { return cause; }
+		constexpr operator enum_type() const { return cause; }
 	};
 
 
@@ -180,14 +174,14 @@ namespace rsx
 
 			inline void next()
 			{
-				idx++;
+				++idx;
 				if (idx >= block->size())
 				{
 					idx = UINT32_MAX;
 					return;
 				}
 
-				array_idx++;
+				++array_idx;
 				if (array_idx >= array_size)
 				{
 					array_idx = 0;
@@ -269,7 +263,7 @@ namespace rsx
 			m_size = 0;
 			m_array_idx = 0;
 			m_capacity = 0;
-			m_data.resize(0);
+			m_data.clear();
 			m_data_it = m_data.end();
 		}
 
@@ -293,25 +287,15 @@ namespace rsx
 
 			value_type *dest = &((*m_data_it)[m_array_idx++]);
 			new (dest) value_type(std::forward<Args>(args)...);
-			m_size++;
+			++m_size;
 			return *dest;
 		}
 	};
 
 
-
 	/**
 	 * Ranged storage
 	 */
-	template <typename section_storage_type>
-	class texture_cache_base
-	{
-	public:
-		virtual void on_memory_read_flags_changed(section_storage_type &section, rsx::memory_read_flags flags) = 0;
-		virtual void on_section_destroyed(section_storage_type & /*section*/) {};
-	};
-
-
 	template <typename _ranged_storage_type>
 	class ranged_storage_block
 	{
@@ -417,6 +401,9 @@ namespace rsx
 		{
 			for (auto &section : *this)
 			{
+				if (section.is_locked())
+					section.unprotect();
+
 				section.destroy();
 			}
 
@@ -559,7 +546,7 @@ namespace rsx
 	};
 
 
-	template <typename _section_storage_type>
+	template <typename traits>
 	class ranged_storage
 	{
 	public:
@@ -568,9 +555,9 @@ namespace rsx
 		static constexpr u32 num_blocks = u32{0x1'0000'0000ull / block_size};
 		static_assert((num_blocks > 0) && (u64{num_blocks} *block_size == 0x1'0000'0000ull), "Invalid block_size/num_blocks");
 
-		using section_storage_type = _section_storage_type;
-		using texture_cache_type = texture_cache_base<section_storage_type>;
-		using block_type = ranged_storage_block<ranged_storage>;
+		using section_storage_type = typename traits::section_storage_type;
+		using texture_cache_type   = typename traits::texture_cache_base_type;
+		using block_type           = ranged_storage_block<ranged_storage>;
 
 	private:
 		block_type blocks[num_blocks];
@@ -580,7 +567,7 @@ namespace rsx
 
 	public:
 		std::atomic<u32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
-		std::atomic<u32> m_texture_memory_in_use = { 0 };
+		std::atomic<u64> m_texture_memory_in_use = { 0 };
 
 		// Constructor
 		ranged_storage(texture_cache_type *tex_cache) :
@@ -716,8 +703,8 @@ namespace rsx
 
 		void on_section_resources_destroyed(const section_storage_type &section)
 		{
-			u32 size = section.get_section_size();
-			u32 prev_size = m_texture_memory_in_use.fetch_sub(size);
+			u64 size = section.get_section_size();
+			u64 prev_size = m_texture_memory_in_use.fetch_sub(size);
 			ASSERT(prev_size >= size);
 		}
 
@@ -792,7 +779,7 @@ namespace rsx
 						auto blk_end = block->unowned_end();
 						if (iterate && unowned_it != blk_end)
 						{
-							unowned_it++;
+							++unowned_it;
 						}
 
 						if (unowned_it != blk_end)
@@ -822,7 +809,7 @@ namespace rsx
 						auto blk_end = block->end();
 						if (iterate && cur_block_it != blk_end)
 						{
-							cur_block_it++;
+							++cur_block_it;
 						}
 
 						if (cur_block_it != blk_end)
@@ -949,13 +936,16 @@ namespace rsx
 	/**
 	 * Cached Texture Section
 	 */
-	template <typename derived_type>
+	template <typename derived_type, typename traits>
 	class cached_texture_section : public rsx::buffered_section
 	{
 	public:
-		using ranged_storage_type = ranged_storage<derived_type>;
+		using ranged_storage_type       = ranged_storage<traits>;
 		using ranged_storage_block_type = ranged_storage_block<ranged_storage_type>;
-		using texture_cache_type = typename ranged_storage_type::texture_cache_type;
+		using texture_cache_type        = typename traits::texture_cache_base_type;
+		using predictor_type            = texture_cache_predictor<traits>;
+		using predictor_key_type        = typename predictor_type::key_type;
+		using predictor_entry_type      = typename predictor_type::mapped_type;
 
 	protected:
 		ranged_storage_type *m_storage = nullptr;
@@ -993,14 +983,18 @@ namespace rsx
 		u64 sync_timestamp = 0;
 		bool synchronized = false;
 		bool flushed = false;
-
-		u32 num_writes = 0;
-		std::deque<u32> read_history;
+		bool speculatively_flushed = false;
 
 		rsx::memory_read_flags readback_behaviour = rsx::memory_read_flags::flush_once;
 		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = rsx::texture_dimension_extended::texture_dimension_2d;
+
+		address_range_vector flush_exclusions; // Address ranges that will be skipped during flush
+
+		predictor_type *m_predictor = nullptr;
+		size_t m_predictor_key_hash = 0;
+		predictor_entry_type *m_predictor_entry = nullptr;
 
 	public:
 		u64 cache_tag = 0;
@@ -1012,9 +1006,9 @@ namespace rsx
 		}
 
 		cached_texture_section() = default;
-		cached_texture_section(ranged_storage_block_type *block) : m_block(block), m_storage(&block->get_storage()), m_tex_cache(&block->get_texture_cache())
+		cached_texture_section(ranged_storage_block_type *block)
 		{
-			update_unreleased();
+			initialize(block);
 		}
 
 		void initialize(ranged_storage_block_type *block)
@@ -1023,6 +1017,7 @@ namespace rsx
 			m_block = block;
 			m_storage = &block->get_storage();
 			m_tex_cache = &block->get_texture_cache();
+			m_predictor = &m_tex_cache->get_predictor();
 
 			update_unreleased();
 		}
@@ -1036,8 +1031,8 @@ namespace rsx
 			AUDIT(memory_range.valid());
 			AUDIT(!is_locked());
 
-			// Invalidate if necessary
-			invalidate_range();
+			// Destroy if necessary
+			destroy();
 
 			// Superclass
 			rsx::buffered_section::reset(memory_range);
@@ -1057,17 +1052,19 @@ namespace rsx
 			sync_timestamp = 0ull;
 			synchronized = false;
 			flushed = false;
+			speculatively_flushed = false;
 
 			cache_tag = 0ull;
 			last_write_tag = 0ull;
 
-			num_writes = 0;
-			read_history.clear();
+			m_predictor_entry = nullptr;
 
 			readback_behaviour = rsx::memory_read_flags::flush_once;
 			view_flags = rsx::texture_create_flags::default_component_order;
 			context = rsx::texture_upload_context::shader_read;
 			image_type = rsx::texture_dimension_extended::texture_dimension_2d;
+
+			flush_exclusions.clear();
 
 			// Set to dirty
 			set_dirty(true);
@@ -1082,10 +1079,6 @@ namespace rsx
 		 * Destroyed Flag
 		 */
 		inline bool is_destroyed() const { return !exists(); } // this section is currently destroyed
-
-		inline bool can_destroy() const {
-			return !is_destroyed() && is_tracked();
-		} // This section may be destroyed
 
 	protected:
 		void on_section_resources_created()
@@ -1107,15 +1100,11 @@ namespace rsx
 			triggered_exists_callbacks = false;
 
 			AUDIT(valid_range());
+			ASSERT(!is_locked());
+			ASSERT(is_managed());
 
 			// Set dirty
 			set_dirty(true);
-
-			// Unlock
-			if (is_locked())
-			{
-				unprotect();
-			}
 
 			// Trigger callbacks
 			m_block->on_section_resources_destroyed(*derived());
@@ -1124,6 +1113,9 @@ namespace rsx
 			// Invalidate range
 			invalidate_range();
 		}
+
+		virtual void dma_abort()
+		{}
 
 	public:
 		/**
@@ -1197,6 +1189,8 @@ namespace rsx
 			m_block->on_section_range_invalid(*derived());
 			//m_storage->on_section_range_invalid(*derived());
 
+			m_predictor_entry = nullptr;
+			speculatively_flushed = false;
 			buffered_section::invalidate_range();
 		}
 
@@ -1204,14 +1198,9 @@ namespace rsx
 		/**
 		 * Misc.
 		 */
-		bool is_tracked() const
-		{
-			return !exists() || (get_context() != framebuffer_storage);
-		}
-
 		bool is_unreleased() const
 		{
-			return is_tracked() && exists() && is_dirty() && !is_locked();
+			return exists() && is_dirty() && !is_locked();
 		}
 
 		bool can_be_reused() const
@@ -1290,6 +1279,12 @@ namespace rsx
 
 		void reprotect(const utils::protection prot)
 		{
+			if (synchronized && !flushed)
+			{
+				// Abort enqueued transfer
+				dma_abort();
+			}
+
 			//Reset properties and protect again
 			flushed = false;
 			synchronized = false;
@@ -1300,6 +1295,12 @@ namespace rsx
 
 		void reprotect(const utils::protection prot, const std::pair<u32, u32>& range)
 		{
+			if (synchronized && !flushed)
+			{
+				// Abort enqueued transfer
+				dma_abort();
+			}
+
 			//Reset properties and protect again
 			flushed = false;
 			synchronized = false;
@@ -1308,25 +1309,218 @@ namespace rsx
 			protect(prot, range);
 		}
 
+		/**
+		 * Prediction
+		 */
+		bool tracked_by_predictor() const
+		{
+			// We do not update the predictor statistics for flush_always sections
+			return get_context() != texture_upload_context::shader_read && get_memory_read_flags() != memory_read_flags::flush_always;
+		}
+
+		void on_flush()
+		{
+			speculatively_flushed = false;
+
+			m_tex_cache->on_flush();
+
+			if (tracked_by_predictor())
+			{
+				get_predictor_entry().on_flush();
+			}
+
+			flush_exclusions.clear();
+		}
+
+		void on_speculative_flush()
+		{
+			speculatively_flushed = true;
+
+			m_tex_cache->on_speculative_flush();
+		}
+
+		void on_miss()
+		{
+			LOG_WARNING(RSX, "Cache miss at address 0x%X. This is gonna hurt...", get_section_base());
+			m_tex_cache->on_miss(*derived());
+		}
+
+		void touch(u64 tag)
+		{
+			last_write_tag = tag;
+
+			if (tracked_by_predictor())
+			{
+				get_predictor_entry().on_write(speculatively_flushed);
+			}
+
+			if (speculatively_flushed)
+			{
+				m_tex_cache->on_misprediction();
+			}
+
+			flush_exclusions.clear();
+		}
+
+
+		/**
+		 * Flush
+		 */
+	private:
+		void imp_flush_memcpy(u32 vm_dst, u8* src, u32 len) const
+		{
+			u8 *dst = get_ptr<u8>(vm_dst);
+			address_range copy_range = address_range::start_length(vm_dst, len);
+
+			if (flush_exclusions.empty() || !copy_range.overlaps(flush_exclusions))
+			{
+				// Normal case = no flush exclusions, or no overlap
+				memcpy(dst, src, len);
+				return;
+			}
+			else if (copy_range.inside(flush_exclusions))
+			{
+				// Nothing to copy
+				return;
+			}
+
+			// Otherwise, we need to filter the memcpy with our flush exclusions
+			// Should be relatively rare
+			address_range_vector vec;
+			vec.merge(copy_range);
+			vec.exclude(flush_exclusions);
+
+			for (const auto& rng : vec)
+			{
+				if (!rng.valid())
+					continue;
+
+				AUDIT(rng.inside(copy_range));
+				u32 offset = rng.start - vm_dst;
+				memcpy(dst + offset, src + offset, rng.length());
+			}
+		}
+
+		void imp_flush()
+		{
+			AUDIT(synchronized);
+
+			ASSERT(real_pitch > 0);
+
+			// Calculate valid range
+			const auto valid_range  = get_confirmed_range();
+			AUDIT(valid_range.valid());
+			const auto valid_length = valid_range.length();
+			const auto valid_offset = valid_range.start - get_section_base();
+			AUDIT(valid_length > 0);
+
+			// In case of pitch mismatch, match the offset point to the correct point
+			u32 mapped_offset, mapped_length;
+			if (real_pitch != rsx_pitch)
+			{
+				if (LIKELY(!valid_offset))
+				{
+					mapped_offset = 0;
+				}
+				else if (valid_offset)
+				{
+					const u32 offset_in_x = valid_offset % rsx_pitch;
+					const u32 offset_in_y = valid_offset / rsx_pitch;
+					mapped_offset = (offset_in_y * real_pitch) + offset_in_x;
+				}
+
+				const u32 available_vmem = (get_section_size() / rsx_pitch) * real_pitch + std::min<u32>(get_section_size() % rsx_pitch, real_pitch);
+				mapped_length = std::min(available_vmem - mapped_offset, valid_length);
+			}
+			else
+			{
+				mapped_offset = valid_offset;
+				mapped_length = valid_length;
+			}
+
+			// Obtain pointers to the source and destination memory regions
+			u8 *src = static_cast<u8*>(derived()->map_synchronized(mapped_offset, mapped_length));
+			u32 dst = valid_range.start;
+			ASSERT(src != nullptr);
+
+			// Copy from src to dst
+			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
+			{
+				imp_flush_memcpy(dst, src, valid_length);
+			}
+			else
+			{
+				u8 *_src = src;
+				u32 _dst = dst;
+
+				const auto num_exclusions = flush_exclusions.size();
+				if (num_exclusions > 0)
+				{
+					LOG_WARNING(RSX, "Slow imp_flush path triggered with non-empty flush_exclusions (%d exclusions, %d bytes), performance might suffer", num_exclusions, valid_length);
+				}
+
+				for (s32 remaining = s32(valid_length); remaining > 0; remaining -= rsx_pitch)
+				{
+					imp_flush_memcpy(_dst, _src, real_pitch);
+					_src += real_pitch;
+					_dst += rsx_pitch;
+				}
+			}
+		}
+
+
+	public:
+		// Returns false if there was a cache miss
+		void flush()
+		{
+			if (flushed) return;
+
+			// Sanity checks
+			ASSERT(exists());
+			AUDIT(is_locked());
+
+			// If we are fully inside the flush exclusions regions, we just mark ourselves as flushed and return
+			if (get_confirmed_range().inside(flush_exclusions))
+			{
+				flushed = true;
+				flush_exclusions.clear();
+				on_flush();
+				return;
+			}
+
+			// NOTE: Hard faults should have been pre-processed beforehand
+			ASSERT(synchronized);
+
+			// Copy flush result to guest memory
+			imp_flush();
+
+			// Finish up
+			// Its highly likely that this surface will be reused, so we just leave resources in place
+			flushed = true;
+			derived()->finish_flush();
+			flush_exclusions.clear();
+			on_flush();
+		}
+
+		void add_flush_exclusion(const address_range& rng)
+		{
+			AUDIT(exists() && is_locked() && is_flushable());
+			const auto _rng = rng.get_intersect(get_section_range());
+			flush_exclusions.merge(_rng);
+		}
 
 		/**
 		 * Misc
 		 */
-		void touch(u64 tag)
+	public:
+		predictor_entry_type& get_predictor_entry()
 		{
-			num_writes++;
-			last_write_tag = tag;
-		}
-
-		void reset_write_statistics()
-		{
-			if (read_history.size() == 16)
+			// If we don't have a predictor entry, or the key has changed
+			if (m_predictor_entry == nullptr || !m_predictor_entry->key_matches(*derived()))
 			{
-				read_history.pop_back();
+				m_predictor_entry = &((*m_predictor)[*derived()]);
 			}
-
-			read_history.push_front(num_writes);
-			num_writes = 0;
+			return *m_predictor_entry;
 		}
 
 		void set_view_flags(rsx::texture_create_flags flags)
@@ -1422,52 +1616,6 @@ namespace rsx
 			return readback_behaviour;
 		}
 
-		bool writes_likely_completed() const
-		{
-			// TODO: Move this to the miss statistics block
-			const auto num_records = read_history.size();
-
-			if (num_records == 0)
-			{
-				return false;
-			}
-			else if (num_records == 1)
-			{
-				return num_writes >= read_history.front();
-			}
-			else
-			{
-				const u32 last = read_history.front();
-				const u32 prev_last = read_history[1];
-
-				if (last == prev_last && num_records <= 3)
-				{
-					return num_writes >= last;
-				}
-
-				u32 compare = UINT32_MAX;
-				for (u32 n = 1; n < num_records; n++)
-				{
-					if (read_history[n] == last)
-					{
-						// Uncertain, but possible
-						compare = read_history[n - 1];
-
-						if (num_records > (n + 1))
-						{
-							if (read_history[n + 1] == prev_last)
-							{
-								// Confirmed with 2 values
-								break;
-							}
-						}
-					}
-				}
-
-				return num_writes >= compare;
-			}
-		}
-
 		u64 get_sync_timestamp() const
 		{
 			return sync_timestamp;
@@ -1504,7 +1652,7 @@ namespace rsx
 			return true;
 		}
 
-		bool matches(u32 rsx_address, u32 width, u32 height, u32 depth, u32 mipmaps)
+		bool matches(u32 rsx_address, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
 		{
 			if (!valid_range())
 				return false;
@@ -1512,15 +1660,21 @@ namespace rsx
 			if (rsx_address != get_section_base())
 				return false;
 
+			if ((gcm_format & format) != format)
+				return false;
+
 			return matches_dimensions(width, height, depth, mipmaps);
 		}
 
-		bool matches(const address_range& memory_range, u32 width, u32 height, u32 depth, u32 mipmaps)
+		bool matches(const address_range& memory_range, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
 		{
 			if (!valid_range())
 				return false;
 
 			if (!rsx::buffered_section::matches(memory_range))
+				return false;
+
+			if ((gcm_format & format) != format)
 				return false;
 
 			return matches_dimensions(width, height, depth, mipmaps);
@@ -1530,12 +1684,17 @@ namespace rsx
 		/**
 		 * Derived wrappers
 		 */
-		inline void destroy()
+		void destroy()
 		{
 			derived()->destroy();
 		}
 
-		inline bool exists() const
+		bool is_managed() const
+		{
+			return derived()->is_managed();
+		}
+
+		bool exists() const
 		{
 			return derived()->exists();
 		}

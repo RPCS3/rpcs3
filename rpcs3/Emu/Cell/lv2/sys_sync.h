@@ -1,16 +1,18 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
 #include "Utilities/cond.h"
 
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
+#include "Emu/System.h"
 
 #include <deque>
+#include <thread>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -213,9 +215,75 @@ struct lv2_obj
 		}
 	}
 
+	template<bool is_usleep = false>
+	static bool wait_timeout(u64 usec, cpu_thread* const cpu = nullptr)
+	{
+		// Clamp to max timeout accepted (also solves potential oveflows when scaling)
+		if (usec > cond_variable::max_timeout) usec = cond_variable::max_timeout;
+
+		// Now scale the result
+		usec = (usec * g_cfg.core.clocks_scale) / 100;
+
+#ifdef __linux__
+		// TODO: Confirm whether Apple or any BSD can benefit from this as well
+		constexpr u32 host_min_quantum = 50;
+#else
+		// Host scheduler quantum for windows (worst case)
+		// NOTE: On ps3 this function has very high accuracy
+		constexpr u32 host_min_quantum = 500;
+#endif
+		extern u64 get_system_time();
+
+		u64 passed = 0;
+		u64 remaining;
+
+		const u64 start_time = get_system_time();
+		while (usec >= passed)
+		{
+			remaining = usec - passed;
+
+			if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
+			{
+				thread_ctrl::wait_for(remaining);
+			}
+			else
+			{
+				if (remaining > host_min_quantum)
+				{
+#ifdef __linux__
+					// Do not wait for the last quantum to avoid loss of accuracy
+					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
+#else
+					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus 
+					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
+#endif
+				}
+				else
+				{
+					// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure
+					std::this_thread::yield();
+				}
+			}
+
+			if (Emu.IsStopped())
+			{
+				return false;
+			}
+
+			if (cpu && cpu->state & cpu_flag::signal)
+			{
+				return false;
+			}
+
+			passed = get_system_time() - start_time;
+		}
+
+		return true;
+	}
+
 private:
 	// Scheduler mutex
-	static semaphore<> g_mutex;
+	static shared_mutex g_mutex;
 
 	// Scheduler queue for active PPU threads
 	static std::deque<class ppu_thread*> g_ppu;

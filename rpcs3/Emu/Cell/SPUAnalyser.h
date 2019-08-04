@@ -1,22 +1,21 @@
 #pragma once
 
+#include "Utilities/types.h"
+
 // SPU Instruction Type
 struct spu_itype
 {
-	enum
-	{
-		memory   = 1 << 8,  // Memory Load/Store Instructions
-		constant = 1 << 9,  // Constant Formation Instructions
-		integer  = 1 << 10, // Integer and Logical Instructions
-		shiftrot = 1 << 11, // Shift and Rotate Instructions
-		compare  = 1 << 12, // Compare Instructions
-		branch   = 1 << 13, // Branch Instructions
-		floating = 1 << 14, // Floating-Point Instructions
+	static constexpr struct memory_tag{} memory{}; // Memory Load/Store Instructions
+	static constexpr struct constant_tag{} constant{}; // Constant Formation Instructions
+	static constexpr struct integer_tag{} integer{}; // Integer and Logical Instructions
+	static constexpr struct shiftrot_tag{} shiftrot{}; // Shift and Rotate Instructions
+	static constexpr struct compare_tag{} compare{}; // Compare Instructions
+	static constexpr struct branch_tag{} branch{}; // Branch Instructions
+	static constexpr struct floating_tag{} floating{}; // Floating-Point Instructions
+	static constexpr struct quadrop_tag{} _quadrop{}; // 4-op Instructions
+	static constexpr struct xfloat_tag{} xfloat{}; // Instructions producing xfloat values
 
-		_quadrop = 1 << 15, // 4-op Instructions
-	};
-
-	enum type
+	enum type : unsigned char
 	{
 		UNK = 0,
 
@@ -43,16 +42,33 @@ struct spu_itype
 		RCHCNT,
 		WRCH,
 
-		LQD = memory,
+		BR, // branch_tag first
+		BRA,
+		BRNZ,
+		BRZ,
+		BRHNZ,
+		BRHZ,
+		BRSL,
+		BRASL,
+		IRET,
+		BI,
+		BISLED,
+		BISL,
+		BIZ,
+		BINZ,
+		BIHZ,
+		BIHNZ, // branch_tag last
+
+		LQD, // memory_tag first
 		LQX,
 		LQA,
 		LQR,
 		STQD,
 		STQX,
 		STQA,
-		STQR,
+		STQR, // memory_tag last
 
-		CBD = constant,
+		CBD, // constant_tag first
 		CBX,
 		CHD,
 		CHX,
@@ -65,9 +81,9 @@ struct spu_itype
 		IL,
 		ILA,
 		IOHL,
-		FSMBI,
+		FSMBI, // constant_tag last
 
-		AH = integer,
+		AH, // integer_tag first
 		AHI,
 		A,
 		AI,
@@ -124,11 +140,49 @@ struct spu_itype
 		NOR,
 		EQV,
 
-		MPYA = integer | _quadrop,
+		MPYA, // quadrop_tag first
 		SELB,
-		SHUFB,
+		SHUFB, // integer_tag last
 
-		SHLH = shiftrot,
+		FMA, // floating_tag first
+		FNMS,
+		FMS, // quadrop_tag last
+
+		FA,
+		FS,
+		FM,
+		FREST,
+		FRSQEST,
+		FI,
+		CSFLT,
+		CUFLT,
+		FRDS, // xfloat_tag last
+
+		DFA,
+		DFS,
+		DFM,
+		DFMA,
+		DFNMS,
+		DFMS,
+		DFNMA,
+		FESD,
+
+		CFLTS,
+		CFLTU,
+		FCEQ,
+		FCMEQ,
+		FCGT,
+		FCMGT,
+		FSCRWR,
+		FSCRRD,
+
+		DFCEQ,
+		DFCMEQ,
+		DFCGT,
+		DFCMGT,
+		DFTSV, // floating_tag last
+
+		SHLH, // shiftrot_tag first
 		SHLHI,
 		SHL,
 		SHLI,
@@ -158,9 +212,9 @@ struct spu_itype
 		ROTMAH,
 		ROTMAHI,
 		ROTMA,
-		ROTMAI,
+		ROTMAI, // shiftrot_tag last
 
-		CEQB = compare,
+		CEQB, // compare_tag first
 		CEQBI,
 		CEQH,
 		CEQHI,
@@ -177,64 +231,260 @@ struct spu_itype
 		CLGTH,
 		CLGTHI,
 		CLGT,
-		CLGTI,
+		CLGTI, // compare_tag last
+	};
 
-		BR = branch,
+	// Enable address-of operator for spu_decoder<>
+	friend constexpr type operator &(type value)
+	{
+		return value;
+	}
+
+	// Test for branch instruction
+	friend constexpr bool operator &(type value, branch_tag)
+	{
+		return value >= BR && value <= BIHNZ;
+	}
+
+	// Test for floating point instruction
+	friend constexpr bool operator &(type value, floating_tag)
+	{
+		return value >= FMA && value <= DFTSV;
+	}
+
+	// Test for 4-op instruction
+	friend constexpr bool operator &(type value, quadrop_tag)
+	{
+		return value >= MPYA && value <= FMS;
+	}
+
+	// Test for xfloat instruction
+	friend constexpr bool operator &(type value, xfloat_tag)
+	{
+		return value >= FMA && value <= FRDS;
+	}
+};
+
+struct spu_iflag
+{
+	enum
+	{
+		use_ra = 1 << 8,
+		use_rb = 1 << 9,
+		use_rc = 1 << 10,
+	};
+
+	enum flag
+	{
+		UNK = 0,
+		HBR,
+		HBRA,
+		HBRR,
+		STOP,
+		STOPD,
+		LNOP,
+		NOP,
+		SYNC,
+		DSYNC,
+		MFSPR,
+		MTSPR,
+		DFCEQ,
+		DFCMEQ,
+		DFCGT,
+		DFCMGT,
+		DFTSV,
+		RDCH,
+		RCHCNT,
+		LQA,
+		LQR,
+		ILH,
+		ILHU,
+		IL,
+		ILA,
+		FSMBI,
+		BR,
 		BRA,
 		BRSL,
 		BRASL,
-		BI,
 		IRET,
-		BISLED,
-		BISL,
+		FSCRRD,
+
+		WRCH = use_rc,
+		IOHL,
+		STQA,
+		STQR,
 		BRNZ,
 		BRZ,
 		BRHNZ,
 		BRHZ,
+
+		STQD = use_ra | use_rc,
 		BIZ,
 		BINZ,
 		BIHZ,
 		BIHNZ,
 
-		FA = floating,
-		DFA,
-		FS,
-		DFS,
-		FM,
-		DFM,
+		STQX = use_ra | use_rb | use_rc,
+		ADDX,
+		CGX,
+		SFX,
+		BGX,
+		MPYHHA,
+		MPYHHAU,
+		MPYA,
+		SELB,
+		SHUFB,
 		DFMA,
 		DFNMS,
 		DFMS,
 		DFNMA,
+		FMA,
+		FNMS,
+		FMS,
+
+		HEQI = use_ra,
+		HGTI,
+		HLGTI,
+		LQD,
+		CBD,
+		CHD,
+		CWD,
+		CDD,
+		AHI,
+		AI,
+		SFHI,
+		SFI,
+		MPYI,
+		MPYUI,
+		CLZ,
+		CNTB,
+		FSMB,
+		FSMH,
+		FSM,
+		GBB,
+		GBH,
+		GB,
+		XSBH,
+		XSHW,
+		XSWD,
+		ANDBI,
+		ANDHI,
+		ANDI,
+		ORBI,
+		ORHI,
+		ORI,
+		ORX,
+		XORBI,
+		XORHI,
+		XORI,
+		SHLHI,
+		SHLI,
+		SHLQBII,
+		SHLQBYI,
+		ROTHI,
+		ROTI,
+		ROTQBYI,
+		ROTQBII,
+		ROTHMI,
+		ROTMI,
+		ROTQMBYI,
+		ROTQMBII,
+		ROTMAHI,
+		ROTMAI,
+		CEQBI,
+		CEQHI,
+		CEQI,
+		CGTBI,
+		CGTHI,
+		CGTI,
+		CLGTBI,
+		CLGTHI,
+		CLGTI,
+		BI,
+		BISLED,
+		BISL,
 		FREST,
 		FRSQEST,
-		FI,
 		CSFLT,
 		CFLTS,
 		CUFLT,
 		CFLTU,
 		FRDS,
 		FESD,
+		FSCRWR,
+
+		HEQ = use_ra | use_rb,
+		HGT,
+		HLGT,
+		LQX,
+		CBX,
+		CHX,
+		CWX,
+		CDX,
+		AH,
+		A,
+		SFH,
+		SF,
+		CG,
+		BG,
+		MPYHHU,
+		MPY,
+		MPYU,
+		MPYH,
+		MPYS,
+		MPYHH,
+		AVGB,
+		ABSDB,
+		SUMB,
+		AND,
+		ANDC,
+		OR,
+		ORC,
+		XOR,
+		NAND,
+		NOR,
+		EQV,
+		SHLH,
+		SHL,
+		SHLQBI,
+		SHLQBY,
+		SHLQBYBI,
+		ROTH,
+		ROT,
+		ROTQBY,
+		ROTQBYBI,
+		ROTQBI,
+		ROTHM,
+		ROTM,
+		ROTQMBY,
+		ROTQMBYBI,
+		ROTQMBI,
+		ROTMAH,
+		ROTMA,
+		CEQB,
+		CEQH,
+		CEQ,
+		CGTB,
+		CGTH,
+		CGT,
+		CLGTB,
+		CLGTH,
+		CLGT,
+		FA,
+		DFA,
+		FS,
+		DFS,
+		FM,
+		DFM,
+		FI,
 		FCEQ,
 		FCMEQ,
 		FCGT,
 		FCMGT,
-		FSCRWR,
-		FSCRRD,
-
-		DFCEQ,
-		DFCMEQ,
-		DFCGT,
-		DFCMGT,
-		DFTSV,
-
-		FMA = floating | _quadrop,
-		FNMS,
-		FMS,
 	};
 
 	// Enable address-of operator for spu_decoder<>
-	friend constexpr type operator &(type value)
+	friend constexpr flag operator &(flag value)
 	{
 		return value;
 	}

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <stdio.h>
-#include <string.h>
 #include <array>
 
 #include "utils.h"
+
+#include "Utilities/File.h"
 
 constexpr u32 SDAT_FLAG = 0x01000000;
 constexpr u32 EDAT_COMPRESSED_FLAG = 0x00000001;
@@ -95,7 +95,7 @@ public:
 	bool trunc(u64 length) override 
 	{
 		return true;
-	};
+	}
 	u64 read(void* buffer, u64 size) override
 	{
 		u64 bytesRead = ReadData(pos, (u8*)buffer, size);

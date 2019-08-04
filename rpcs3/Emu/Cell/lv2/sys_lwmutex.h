@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 struct sys_lwmutex_attribute_t
 {
 	be_t<u32> protocol;
@@ -9,8 +11,8 @@ struct sys_lwmutex_attribute_t
 
 	union
 	{
-		char name[8];
 		u64 name_u64;
+		char name[sizeof(u64)];
 	};
 };
 
@@ -57,8 +59,8 @@ struct lv2_lwmutex final : lv2_obj
 	const vm::ptr<sys_lwmutex_t> control;
 	const u64 name;
 
-	semaphore<> mutex;
-	atomic_t<u32> signaled{0};
+	shared_mutex mutex;
+	atomic_t<s32> signaled{0};
 	std::deque<cpu_thread*> sq;
 
 	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name)
@@ -74,8 +76,9 @@ class ppu_thread;
 
 // Syscalls
 
-error_code _sys_lwmutex_create(vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, u32 arg4, u64 name, u32 arg6);
-error_code _sys_lwmutex_destroy(u32 lwmutex_id);
+error_code _sys_lwmutex_create(ppu_thread& ppu, vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, s32 has_name, u64 name);
+error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id);
 error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout);
-error_code _sys_lwmutex_trylock(u32 lwmutex_id);
+error_code _sys_lwmutex_trylock(ppu_thread& ppu, u32 lwmutex_id);
 error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id);
+error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id);

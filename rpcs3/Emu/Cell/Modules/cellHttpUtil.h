@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // libHttp_Util: 0x80711001 - 0x807110ff
 

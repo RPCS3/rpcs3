@@ -1,4 +1,4 @@
-#include "ds4_pad_handler.h"
+﻿#include "ds4_pad_handler.h"
 
 #include <thread>
 
@@ -95,8 +95,10 @@ ds4_pad_handler::ds4_pad_handler() : PadHandlerBase(pad_handler::ds4)
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
+	b_has_led = true;
 
-	m_name_string = "Ds4 Pad #";
+	m_name_string = "DS4 Pad #";
+	m_max_devices = CELL_PAD_MAX_PORT_NUM;
 
 	m_trigger_threshold = trigger_max / 2;
 	m_thumb_threshold = thumb_max / 2;
@@ -150,14 +152,14 @@ void ds4_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->from_default();
 }
 
-void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, int[])>& callback, bool get_blacklist, std::vector<std::string> buttons)
+void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
 
-	std::shared_ptr<DS4Device> device = GetDevice(padId);
+	std::shared_ptr<DS4Device> device = GetDevice(padId, true);
 	if (device == nullptr || device->hidDevice == nullptr)
-		return;
+		return fail_callback(padId);
 
 	// Now that we have found a device, get its status
 	DS4DataStatus status = GetRawData(device);
@@ -167,7 +169,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
 		hid_close(device->hidDevice);
 		device->hidDevice = nullptr;
-		return;
+		return fail_callback(padId);
 	}
 
 	// return if nothing new has happened. ignore this to get the current state for blacklist
@@ -207,7 +209,7 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 
 	if (get_blacklist)
 	{
-		if (blacklist.size() <= 0)
+		if (blacklist.empty())
 			LOG_SUCCESS(HLE, "DS4 Calibration: Blacklist is clear. No input spam detected");
 		return;
 	}
@@ -215,12 +217,12 @@ void ds4_pad_handler::GetNextButtonPress(const std::string& padId, const std::fu
 	int preview_values[6] = { data[L2], data[R2], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
 
 	if (pressed_button.first > 0)
-		return callback(pressed_button.first, pressed_button.second, preview_values);
+		return callback(pressed_button.first, pressed_button.second, padId, preview_values);
 	else
-		return callback(0, "", preview_values);
+		return callback(0, "", padId, preview_values);
 }
 
-void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u32 smallMotor)
+void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b)
 {
 	std::shared_ptr<DS4Device> device = GetDevice(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -245,11 +247,19 @@ void ds4_pad_handler::TestVibration(const std::string& padId, u32 largeMotor, u3
 		}
 	}
 
+	// Set new LED color
+	if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
+	{
+		device->config->colorR.set(r);
+		device->config->colorG.set(g);
+		device->config->colorB.set(b);
+	}
+
 	// Start/Stop the engines :)
 	SendVibrateData(device);
 }
 
-std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std::string& padId)
+std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std::string& padId, bool try_reconnect)
 {
 	if (!Init())
 		return nullptr;
@@ -261,11 +271,22 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDevice(const std
 	std::string pad_serial = padId.substr(pos + 9);
 	std::shared_ptr<DS4Device> device = nullptr;
 
+	int i = 0; // Controllers 1-n in GUI
 	for (auto& cur_control : controllers)
 	{
-		if (pad_serial == cur_control.first)
+		if (pad_serial == std::to_string(++i) || pad_serial == cur_control.first)
 		{
 			device = cur_control.second;
+
+			if (try_reconnect && device && !device->hidDevice)
+			{
+				device->hidDevice = hid_open_path(device->path.c_str());
+				if (device->hidDevice)
+				{
+					hid_set_nonblocking(device->hidDevice, 1);
+					LOG_NOTICE(HLE, "DS4 device %d reconnected", i);
+				}
+			}
 			break;
 		}
 	}
@@ -293,14 +314,14 @@ void ds4_pad_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val,
 	case DS4KeyCodes::LSYNeg:
 	case DS4KeyCodes::LSYPos:
 		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, p_profile->lstickmultiplier, ignore_threshold) : 0;
 		break;
 	case DS4KeyCodes::RSXNeg:
 	case DS4KeyCodes::RSXPos:
 	case DS4KeyCodes::RSYNeg:
 	case DS4KeyCodes::RSYPos:
 		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, ignore_threshold) : 0;
+		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, p_profile->rstickmultiplier, ignore_threshold) : 0;
 		break;
 	default: // normal button (should in theory also support sensitive buttons)
 		pressed = val > 0;
@@ -447,7 +468,7 @@ void ds4_pad_handler::ProcessDataToPad(const std::shared_ptr<DS4Device>& device,
 #endif
 
 	// used to get the absolute value of an axis
-	s32 stick_val[4];
+	s32 stick_val[4]{0};
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
 	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
@@ -733,6 +754,7 @@ bool ds4_pad_handler::Init()
 		fmt::throw_exception("hidapi-init error.threadproc");
 
 	// get all the possible controllers at start
+	bool warn_about_drivers = false;
 	for (auto pid : ds4Pids)
 	{
 		hid_device_info* devInfo = hid_enumerate(DS4_VID, pid);
@@ -744,18 +766,34 @@ bool ds4_pad_handler::Init()
 
 			hid_device* dev = hid_open_path(devInfo->path);
 			if (dev)
+			{
 				CheckAddDevice(dev, devInfo);
+			}
 			else
+			{
 				LOG_ERROR(HLE, "[DS4] hid_open_path failed! Reason: %s", hid_error(dev));
+				warn_about_drivers = true;
+			}
 			devInfo = devInfo->next;
 		}
 		hid_free_enumeration(head);
 	}
 
-	if (controllers.size() == 0)
+	if (warn_about_drivers)
+	{
+		LOG_ERROR(HLE, "[DS4] One or more DS4 pads were detected but couldn't be interacted with directly");
+#if defined(_WIN32) || defined(__linux__)
+		LOG_ERROR(HLE, "[DS4] Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
+#endif
+	}
+	else if (controllers.empty())
+	{
 		LOG_WARNING(HLE, "[DS4] No controllers found!");
+	}
 	else
+	{
 		LOG_SUCCESS(HLE, "[DS4] Controllers found: %d", controllers.size());
+	}
 
 	is_init = true;
 	return true;
@@ -768,9 +806,9 @@ std::vector<std::string> ds4_pad_handler::ListDevices()
 	if (!Init())
 		return ds4_pads_list;
 
-	for (auto& pad : controllers)
+	for (size_t i = 1; i <= controllers.size(); ++i) // Controllers 1-n in GUI
 	{
-		ds4_pads_list.emplace_back(m_name_string + pad.first);
+		ds4_pads_list.emplace_back(m_name_string + std::to_string(i));
 	}
 
 	return ds4_pads_list;
@@ -792,9 +830,9 @@ bool ds4_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::strin
 	pad->Init
 	(
 		CELL_PAD_STATUS_DISCONNECTED,
-		CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
-		CELL_PAD_DEV_TYPE_STANDARD
+		CELL_PAD_DEV_TYPE_STANDARD,
+		p_profile->device_class_type
 	);
 
 	// 'keycode' here is just 0 as we have to manually calculate this

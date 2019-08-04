@@ -1,7 +1,9 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
@@ -14,6 +16,7 @@
 #include <Windows.h>
 #include <Psapi.h>
 #include <process.h>
+#include <sysinfoapi.h>
 #else
 #ifdef __APPLE__
 #define _XOPEN_SOURCE
@@ -27,7 +30,9 @@
 #endif
 #include <errno.h>
 #include <signal.h>
+#ifndef __OpenBSD__
 #include <ucontext.h>
+#endif
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -800,7 +805,7 @@ register_t* freebsd_x64reg(x64_context *context, int reg)
 
 long* openbsd_x64reg(x64_context *context, int reg)
 {
-	auto *state = &context->uc_mcontext;
+	auto *state = &context;
 	switch(reg)
 	{
 	case 0: return &state->sc_rax;
@@ -840,7 +845,7 @@ static const decltype(_REG_RAX) reg_table[] =
 
 #else
 
-static const decltype(REG_RAX) reg_table[] =
+static const int reg_table[] =
 {
 	REG_RAX, REG_RCX, REG_RDX, REG_RBX, REG_RSP, REG_RBP, REG_RSI, REG_RDI,
 	REG_R8, REG_R9, REG_R10, REG_R11, REG_R12, REG_R13, REG_R14, REG_R15, REG_RIP
@@ -1097,6 +1102,11 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 		try
 		{
+			if (cpu)
+			{
+				vm::temporary_unlock(*cpu);
+			}
+
 			handled = rsx::g_access_violation_handler(addr, is_writing);
 		}
 		catch (const std::exception& e)
@@ -1105,7 +1115,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 			if (cpu)
 			{
-				vm::temporary_unlock(*cpu);
 				cpu->state += cpu_flag::dbg_pause;
 
 				if (cpu->test_stopped())
@@ -1122,10 +1131,14 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			g_tls_fault_rsx++;
 			if (cpu && cpu->test_stopped())
 			{
-				std::terminate();
+				//
 			}
 
 			return true;
+		}
+
+		if (cpu && cpu->test_stopped())
+		{
 		}
 	}
 
@@ -1147,7 +1160,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 	};
 
-	if ((d_size | d_size + addr) >= 0x100000000ull)
+	if ((d_size | (d_size + addr)) >= 0x100000000ull)
 	{
 		LOG_ERROR(MEMORY, "Invalid d_size (0x%llx)", d_size);
 		report_opcode();
@@ -1157,7 +1170,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	// get length of data being accessed
 	size_t a_size = get_x64_access_size(context, op, reg, d_size, i_size);
 
-	if ((a_size | a_size + addr) >= 0x100000000ull)
+	if ((a_size | (a_size + addr)) >= 0x100000000ull)
 	{
 		LOG_ERROR(MEMORY, "Invalid a_size (0x%llx)", a_size);
 		report_opcode();
@@ -1264,7 +1277,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	{
 		if (cpu && cpu->test_stopped())
 		{
-			std::terminate();
+			//
 		}
 
 		return true;
@@ -1272,67 +1285,184 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 	if (cpu)
 	{
-		if (fxm::check<page_fault_notification_entries>())
+		u32 pf_port_id = 0;
+
+		if (auto pf_entries = fxm::get<page_fault_notification_entries>())
 		{
-			for (const auto& entry : fxm::get<page_fault_notification_entries>()->entries)
+			if (auto mem = vm::get(vm::any, addr))
 			{
-				auto mem = vm::get(vm::any, entry.start_addr);
-				if (!mem)
+				std::shared_lock lock(pf_entries->mutex);
+
+				for (const auto& entry : pf_entries->entries)
 				{
-					continue;
-				}
-				if (entry.start_addr <= addr && addr <= addr + mem->size - 1)
-				{
-					// Place the page fault event onto table so that other functions [sys_mmapper_free_address and ppu pagefault funcs]
-					// know that this thread is page faulted and where.
-
-					auto pf_entries = fxm::get_always<page_fault_event_entries>();
+					if (entry.start_addr == mem->addr)
 					{
-						std::lock_guard pf_lock(pf_entries->pf_mutex);
-						page_fault_event pf_event{ cpu->id, addr };
-						pf_entries->events.emplace_back(pf_event);
+						pf_port_id = entry.port_id;
+						break;
 					}
-
-					// Now, we notify the game that a page fault occurred so it can rectify it.
-					// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
-					u64 data1 = addr;
-					u64 data2 = ((u64)SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) + cpu->id; // TODO: fix hack for now that assumes PPU thread always.
-					u64 data3 = vm::check_addr(addr, a_size, vm::page_readable) ? SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY : SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
-
-					LOG_ERROR(MEMORY, "Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
-						addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
-
-					error_code sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
-
-					// If we fail due to being busy, wait a bit and try again.
-					while (sending_error == CELL_EBUSY)
-					{
-						lv2_obj::sleep(*cpu, 1000);
-						thread_ctrl::wait_for(1000);
-						sending_error = sys_event_port_send(entry.port_id, data1, data2, data3);
-					}
-
-					if (sending_error)
-					{
-						fmt::throw_exception("Unknown error %x while trying to pass page fault.", sending_error.value);
-					}
-
-					lv2_obj::sleep(*cpu);
-					thread_ctrl::wait();
-					return true;
 				}
 			}
 		}
 
-		vm::temporary_unlock(*cpu);
-		LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
-		cpu->state += cpu_flag::dbg_pause;
-		cpu->check_state();
-
-		if (cpu->test_stopped())
+		if (pf_port_id)
 		{
-			std::terminate();
+			// We notify the game that a page fault occurred so it can rectify it.
+			// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
+			u64 data1 = addr;
+			u64 data2;
+
+			if (cpu->id_type() == 1)
+			{
+				data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) | cpu->id;
+			}
+			else if (static_cast<spu_thread*>(cpu)->group)
+			{
+				data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD << 32) | cpu->id;
+			}
+			else
+			{
+				// Index is the correct ID in RawSPU
+				data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU << 32) | static_cast<spu_thread*>(cpu)->index;
+			}
+
+			u64 data3;
+			{
+				vm::reader_lock rlock;
+				if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | (is_writing ? vm::page_writable : vm::page_readable)))
+				{
+					// Memory was allocated inbetween, retry
+					return true;
+				}
+				else if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | vm::page_readable))
+				{
+					data3 = SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY; // TODO
+				}
+				else
+				{
+					data3 = SYS_MEMORY_PAGE_FAULT_CAUSE_NON_MAPPED;
+				}
+			}
+
+			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
+			// know that this thread is page faulted and where.
+
+			auto pf_events = fxm::get_always<page_fault_event_entries>();
+			{
+				std::lock_guard pf_lock(pf_events->pf_mutex);
+				pf_events->events.emplace(static_cast<u32>(data2), addr);
+			}
+
+			LOG_ERROR(MEMORY, "Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
+				addr, data3 == SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY ? "writing read-only" : "using unmapped");
+
+			error_code sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+
+			// If we fail due to being busy, wait a bit and try again.
+			while (sending_error == CELL_EBUSY)
+			{
+				if (cpu->id_type() == 1)
+				{
+					lv2_obj::sleep(*cpu, 1000);
+				}
+
+				thread_ctrl::wait_for(1000);
+				sending_error = sys_event_port_send(pf_port_id, data1, data2, data3);
+			}
+
+			if (sending_error)
+			{
+				fmt::throw_exception("Unknown error %x while trying to pass page fault.", sending_error.value);
+			}
+
+			if (cpu->id_type() == 1)
+			{
+				// Deschedule
+				lv2_obj::sleep(*cpu);
+			}
+
+			// Wait until the thread is recovered
+			for (std::shared_lock pf_lock(pf_events->pf_mutex);
+				pf_events->events.find(static_cast<u32>(data2)) != pf_events->events.end();)
+			{
+				if (Emu.IsStopped())
+				{
+					break;
+				}
+
+				// Timeout in case the emulator is stopping
+				pf_events->cond.wait(pf_lock, 10000);
+			}
+
+			// Reschedule
+			if (cpu->test_stopped())
+			{
+				//
+			}
+
+			if (Emu.IsStopped())
+			{
+				// Hack: allocate memory in case the emulator is stopping
+				vm::falloc(addr & -0x10000, 0x10000);
+			}
+
+			return true;
 		}
+
+		if (cpu->id_type() != 1)
+		{
+			LOG_NOTICE(GENERAL, "\n%s", cpu->dump());
+			LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
+
+			// TODO:
+			// RawSPU: Send appropriate interrupt
+			// SPUThread: Send sys_spu exception event
+			cpu->state += cpu_flag::dbg_pause;
+			if (cpu->check_state())
+			{
+				// Hack: allocate memory in case the emulator is stopping
+				auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
+
+				if (area->flags & 0x100)
+				{
+					// For 4kb pages
+					utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
+				}
+				else
+				{
+					area->falloc(addr & -0x10000, 0x10000);
+				}
+
+				return true;
+			}
+		}
+		else
+		{
+			if (auto last_func = static_cast<ppu_thread*>(cpu)->current_function)
+			{
+				LOG_FATAL(PPU, "Function aborted: %s", last_func);
+			}
+
+			lv2_obj::sleep(*cpu);
+		}
+	}
+
+	Emu.Pause();
+
+	if (cpu)
+	{
+		LOG_NOTICE(GENERAL, "\n%s", cpu->dump());
+	}
+
+	LOG_FATAL(MEMORY, "Access violation %s location 0x%x", is_writing ? "writing" : "reading", addr);
+
+	while (Emu.IsPaused())
+	{
+		thread_ctrl::wait();
+	}
+
+	if (Emu.IsStopped())
+	{
+		std::terminate();
 	}
 
 	return true;
@@ -1399,7 +1529,7 @@ static bool is_leaf_function(u64 rip)
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 {
 	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
-	const u64 exec64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr;
+	const u64 exec64 = (pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr) / 2;
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
@@ -1534,7 +1664,7 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 #endif
 
 	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
-	const u64 exec64 = (u64)info->si_addr - (u64)vm::g_exec_addr;
+	const u64 exec64 = ((u64)info->si_addr - (u64)vm::g_exec_addr) / 2;
 	const auto cause = is_writing ? "writing" : "reading";
 
 	if (addr64 < 0x100000000ull)
@@ -1577,7 +1707,7 @@ const bool s_exception_handler_set = []() -> bool
 #endif
 
 // TODO
-extern atomic_t<u32> g_thread_count(0);
+atomic_t<u32> g_thread_count(0);
 
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
@@ -1823,17 +1953,62 @@ void thread_ctrl::detect_cpu_layout()
 	{
 		g_native_core_layout.store(native_core_arrangement::amd_ccx);
 	}
+	else if (system_id.find("Intel") != std::string::npos)
+	{
+#ifdef _WIN32
+		const LOGICAL_PROCESSOR_RELATIONSHIP relationship = LOGICAL_PROCESSOR_RELATIONSHIP::RelationProcessorCore;
+		DWORD buffer_size = 0;
 
-	// TODO: Detect hyperthreaded intel CPUs
+		// If buffer size is set to 0 bytes, it will be overwritten with the required size
+		if (GetLogicalProcessorInformationEx(relationship, nullptr, &buffer_size))
+		{
+			LOG_ERROR(GENERAL, "GetLogicalProcessorInformationEx returned 0 bytes");
+			return;
+		}
+		DWORD error_code = GetLastError();
+		if (error_code != ERROR_INSUFFICIENT_BUFFER)
+		{
+			LOG_ERROR(GENERAL, "Unexpected windows error code when detecting CPU layout: %u", error_code);
+			return;
+		}
+
+		std::vector<u8> buffer(buffer_size);
+
+		if (!GetLogicalProcessorInformationEx(relationship,
+			reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *>(buffer.data()), &buffer_size))
+		{
+			LOG_ERROR(GENERAL, "GetLogicalProcessorInformationEx failed (size=%u, error=%u)", buffer_size, GetLastError());
+		}
+		else
+		{
+			// Iterate through the buffer until a core with hyperthreading is found
+			auto ptr = reinterpret_cast<std::uintptr_t>(buffer.data());
+			const std::uintptr_t end = ptr + buffer_size;
+
+			while (ptr < end)
+			{
+				auto info = reinterpret_cast<SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *>(ptr);
+				if (info->Relationship == relationship && info->Processor.Flags == LTP_PC_SMT)
+				{
+					g_native_core_layout.store(native_core_arrangement::intel_ht);
+					break;
+				}
+				ptr += info->Size;
+			}
+		}
+#else
+		LOG_TODO(GENERAL, "Thread scheduler is not implemented for Intel and this OS");
+#endif
+	}
 }
 
-u16 thread_ctrl::get_affinity_mask(thread_class group)
+u64 thread_ctrl::get_affinity_mask(thread_class group)
 {
 	detect_cpu_layout();
 
 	if (const auto thread_count = std::thread::hardware_concurrency())
 	{
-		const u16 all_cores_mask = thread_count < 16 ? (u16)(~(UINT16_MAX << thread_count)): UINT16_MAX;
+		const u64 all_cores_mask = thread_count < 64 ? UINT64_MAX >> (64 - thread_count): UINT64_MAX;
 
 		switch (g_native_core_layout)
 		{
@@ -1844,20 +2019,100 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 		case native_core_arrangement::amd_ccx:
 		{
-			u16 spu_mask, ppu_mask, rsx_mask;
-			if (thread_count >= 16)
+			u64 spu_mask, ppu_mask, rsx_mask;
+			const auto system_id = utils::get_system_info();
+			if (thread_count >= 32)
 			{
-				// Threadripper, R7
-				// Assign threads 8-16
-				// It appears some windows code is bound to lower core addresses, binding 8-16 is alot faster than 0-7
-				ppu_mask = spu_mask = 0b1111111100000000;
-				rsx_mask = all_cores_mask;
+				if (system_id.find("3950X") != std::string::npos)
+				{
+					// zen2
+					// Ryzen 9 3950X
+					// Assign threads 9-32
+					ppu_mask = 0b11111111000000000000000000000000;
+					spu_mask = 0b00000000111111110000000000000000;
+					rsx_mask = 0b00000000000000001111111100000000;
+				}
+				else if (system_id.find("2970WX") != std::string::npos)
+				{
+					// zen+
+					// Threadripper 2970WX
+					// Assign threads 9-24
+					ppu_mask = 0b000000111111000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b111111000000000000000000;
+				}
+				else
+				{
+					// zen(+)
+					// Threadripper 1950X/2950X/2990WX
+					// Assign threads 17-32
+					ppu_mask = 0b00000000111111110000000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b11111111000000000000000000000000;
+				}
+
+			}
+			else if (thread_count == 24)
+			{
+				if (system_id.find("3900X") != std::string::npos)
+				{
+					// zen2
+					// Ryzen 9 3900X
+					// Assign threads 7-22
+					ppu_mask = 0b111111000000000000000000;
+					spu_mask = 0b000000111111000000000000;
+					rsx_mask = 0b000000000000111111000000;
+				}
+				else
+				{
+					// zen(+)
+					// Threadripper 1920X/2920X
+					// Assign threads 13-24
+					ppu_mask = 0b000000111111000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b111111000000000000000000;
+				}
+			}
+			else if (thread_count == 16)
+			{
+				if (system_id.find("3700X") != std::string::npos || system_id.find("3800X") != std::string::npos)
+				{
+					// Ryzen 7 3700/3800 (x)
+					// Assign threads 1-16
+					ppu_mask = 0b0000000011110000;
+					spu_mask = 0b1111111100000000;
+					rsx_mask = 0b0000000000001111;
+				}
+				else
+				{
+					// zen(+)
+					// Ryzen 7, Threadripper 
+					// Assign threads 3-16
+					ppu_mask = 0b1111111100000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b0000000000111100;
+				}
 			}
 			else if (thread_count == 12)
 			{
-				// 1600/2600 (x)
-				ppu_mask = spu_mask = 0b111111000000;
-				rsx_mask = all_cores_mask;
+				if (system_id.find("3600") != std::string::npos)
+				{
+					// zen2
+					// R5 3600 (x)
+					// Assign threads 1-12
+					ppu_mask = 0b000000111000;
+					spu_mask = 0b111111000000;
+					rsx_mask = 0b000000000111;
+				}
+				else
+				{
+					// zen(+)
+					// R5 1600/2600 (x)
+					// Assign threads 3-12
+					ppu_mask = 0b111111000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b000000111100;
+				}
 			}
 			else
 			{
@@ -1880,6 +2135,7 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 		case native_core_arrangement::intel_ht:
 		{
+			/* This has been disabled as it seems to degrade performance instead of improving it.
 			if (thread_count <= 4)
 			{
 				//i3 or worse
@@ -1894,13 +2150,14 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 					return all_cores_mask;
 				}
 			}
+			*/
 
 			return all_cores_mask;
 		}
 		}
 	}
 
-	return UINT16_MAX;
+	return UINT64_MAX;
 }
 
 void thread_ctrl::set_native_priority(int priority)
@@ -1936,24 +2193,32 @@ void thread_ctrl::set_native_priority(int priority)
 #endif
 }
 
-void thread_ctrl::set_thread_affinity_mask(u16 mask)
+void thread_ctrl::set_thread_affinity_mask(u64 mask)
 {
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
-	SetThreadAffinityMask(_this_thread, (DWORD_PTR)mask);
+	SetThreadAffinityMask(_this_thread, mask);
 #elif __APPLE__
-	thread_affinity_policy_data_t policy = { static_cast<integer_t>(mask) };
+	// Supports only one core
+	thread_affinity_policy_data_t policy = { static_cast<integer_t>(utils::cnttz64(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
 #elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
 
-	for (u32 core = 0; core < 16u; ++core)
+	for (u32 core = 0; core < 64u; ++core)
 	{
-		if ((u32)mask & (1u << core))
+		const u64 shifted = mask >> core;
+
+		if (shifted & 1)
 		{
 			CPU_SET(core, &cs);
+		}
+
+		if (shifted <= 1)
+		{
+			break;
 		}
 	}
 

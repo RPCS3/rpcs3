@@ -10,8 +10,6 @@
 
 extern logs::channel sysPrxForUser;
 
-extern u64 get_system_time();
-
 spu_printf_cb_t g_spu_printf_agcb;
 spu_printf_cb_t g_spu_printf_dgcb;
 spu_printf_cb_t g_spu_printf_atcb;
@@ -271,7 +269,7 @@ error_code sys_spu_elf_get_segments(u32 elf_img, vm::ptr<sys_spu_segment> segmen
 	return CELL_OK;
 }
 
-error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
+error_code sys_spu_image_import(ppu_thread& ppu, vm::ptr<sys_spu_image> img, u32 src, u32 type)
 {
 	sysPrxForUser.warning("sys_spu_image_import(img=*0x%x, src=0x%x, type=%d)", img, src, type);
 
@@ -324,7 +322,7 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 			img_size = std::max<u32>(img_size, static_cast<u32>(p.p_offset + p.p_filesz));
 		}
 
-		return _sys_spu_image_import(img, src, img_size, 0);
+		return _sys_spu_image_import(ppu, img, src, img_size, 0);
 	}
 	else
 	{
@@ -357,7 +355,7 @@ error_code sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 type)
 	}
 }
 
-error_code sys_spu_image_close(vm::ptr<sys_spu_image> img)
+error_code sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.warning("sys_spu_image_close(img=*0x%x)", img);
 
@@ -369,7 +367,7 @@ error_code sys_spu_image_close(vm::ptr<sys_spu_image> img)
 	else if (img->type == SYS_SPU_IMAGE_TYPE_KERNEL)
 	{
 		// Call the syscall
-		return _sys_spu_image_close(img);
+		return _sys_spu_image_close(ppu, img);
 	}
 	else
 	{

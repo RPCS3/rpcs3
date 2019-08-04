@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -64,13 +64,17 @@ s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<float> addr
 	switch (type)
 	{
 	case CELL_SURMIXER_CHSTRIP_TYPE1A:
-		if (port >= g_surmx.ch_strips_1) type = 0; break;
+		if (port >= g_surmx.ch_strips_1) type = 0;
+		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE2A:
-		if (port >= g_surmx.ch_strips_2) type = 0; break;
+		if (port >= g_surmx.ch_strips_2) type = 0;
+		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE6A:
-		if (port >= g_surmx.ch_strips_6) type = 0; break;
+		if (port >= g_surmx.ch_strips_6) type = 0;
+		break;
 	case CELL_SURMIXER_CHSTRIP_TYPE8A:
-		if (port >= g_surmx.ch_strips_8) type = 0; break;
+		if (port >= g_surmx.ch_strips_8) type = 0;
+		break;
 	default:
 		type = 0; break;
 	}
@@ -328,13 +332,13 @@ struct surmixer_thread : ppu_thread
 
 	void non_task()
 	{
-		const auto g_audio = fxm::get<audio_config>();
+		const auto g_audio = fxm::get<cell_audio>();
 
 		audio_port& port = g_audio->ports[g_surmx.audio_port];
 
 		while (port.state != audio_port_state::closed)
 		{
-			if (g_surmx.mixcount > (port.tag + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
+			if (g_surmx.mixcount > (port.active_counter + 0)) // adding positive value (1-15): preemptive buffer filling (hack)
 			{
 				thread_ctrl::wait_for(1000); // hack
 				continue;
@@ -342,7 +346,7 @@ struct surmixer_thread : ppu_thread
 
 			if (port.state == audio_port_state::started)
 			{
-				//u64 stamp0 = get_system_time();
+				//u64 stamp0 = get_guest_system_time();
 
 				memset(g_surmx.mixdata, 0, sizeof(g_surmx.mixdata));
 				if (g_surmx.cb)
@@ -351,7 +355,7 @@ struct surmixer_thread : ppu_thread
 					lv2_obj::sleep(*this);
 				}
 
-				//u64 stamp1 = get_system_time();
+				//u64 stamp1 = get_guest_system_time();
 
 				{
 					std::lock_guard lock(g_surmx.mutex);
@@ -430,9 +434,9 @@ struct surmixer_thread : ppu_thread
 					}
 				}
 
-				//u64 stamp2 = get_system_time();
+				//u64 stamp2 = get_guest_system_time();
 
-				auto buf = vm::_ptr<f32>(port.addr.addr() + (g_surmx.mixcount % port.block) * port.channel * AUDIO_SAMPLES * sizeof(float));
+				auto buf = vm::_ptr<f32>(port.addr.addr() + (g_surmx.mixcount % port.num_blocks) * port.num_channels * AUDIO_BUFFER_SAMPLES * sizeof(float));
 
 				for (auto& mixdata : g_surmx.mixdata)
 				{
@@ -440,7 +444,7 @@ struct surmixer_thread : ppu_thread
 					*buf++ = mixdata;
 				}
 
-				//u64 stamp3 = get_system_time();
+				//u64 stamp3 = get_guest_system_time();
 
 				//ConLog.Write("Libmixer perf: start=%lld (cb=%lld, ssp=%lld, finalize=%lld)", stamp0 - m_config.start_time, stamp1 - stamp0, stamp2 - stamp1, stamp3 - stamp2);
 			}
@@ -456,7 +460,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 {
 	libmixer.warning("cellSurMixerCreate(config=*0x%x)", config);
 
-	const auto g_audio = fxm::get<audio_config>();
+	const auto g_audio = fxm::get<cell_audio>();
 
 	const auto port = g_audio->open_port();
 
@@ -472,11 +476,10 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 	g_surmx.ch_strips_6 = config->chStrips6;
 	g_surmx.ch_strips_8 = config->chStrips8;
 
-	port->channel = 8;
-	port->block = 16;
+	port->num_channels = 8;
+	port->num_blocks = 16;
 	port->attr = 0;
-	port->size = port->channel * port->block * AUDIO_SAMPLES * sizeof(float);
-	port->tag = 0;
+	port->size = port->num_channels * port->num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(float);
 	port->level = 1.0f;
 	port->level_set.store({ 1.0f, 0.0f });
 
@@ -541,7 +544,7 @@ s32 cellSurMixerStart()
 {
 	libmixer.warning("cellSurMixerStart()");
 
-	const auto g_audio = fxm::get<audio_config>();
+	const auto g_audio = fxm::get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -563,7 +566,7 @@ s32 cellSurMixerFinalize()
 {
 	libmixer.warning("cellSurMixerFinalize()");
 
-	const auto g_audio = fxm::get<audio_config>();
+	const auto g_audio = fxm::get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -608,7 +611,7 @@ s32 cellSurMixerPause(u32 type)
 {
 	libmixer.warning("cellSurMixerPause(type=%d)", type);
 
-	const auto g_audio = fxm::get<audio_config>();
+	const auto g_audio = fxm::get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -630,10 +633,12 @@ s32 cellSurMixerGetCurrentBlockTag(vm::ptr<u64> tag)
 
 s32 cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 {
-	libmixer.trace("cellSurMixerGetTimestamp(tag=0x%llx, stamp=*0x%x)", tag, stamp);
+	libmixer.error("cellSurMixerGetTimestamp(tag=0x%llx, stamp=*0x%x)", tag, stamp);
 
-	const auto g_audio = fxm::get<audio_config>();
-	*stamp = g_audio->start_time + (tag) * 256000000 / 48000; // ???
+	const auto g_audio = fxm::get<cell_audio>();
+
+	*stamp = g_audio->m_start_time + tag * AUDIO_BUFFER_SAMPLES * 1'000'000 / g_audio->cfg.audio_sampling_rate;
+
 	return CELL_OK;
 }
 

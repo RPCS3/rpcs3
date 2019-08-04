@@ -1,4 +1,4 @@
-// Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+﻿// Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <QApplication>
@@ -16,6 +16,10 @@
 #ifdef __linux__
 #include <sys/time.h>
 #include <sys/resource.h>
+#endif
+
+#ifdef __APPLE__
+#include <dispatch/dispatch.h>
 #endif
 
 #include "rpcs3_version.h"
@@ -50,23 +54,38 @@ static semaphore<> s_qt_mutex{};
 		static QApplication app0{argc, argv};
 	}
 
-	QMessageBox msg;
-	msg.setWindowTitle(tr("RPCS3: Fatal Error"));
-	msg.setIcon(QMessageBox::Critical);
-	msg.setTextFormat(Qt::RichText);
-	msg.setText(QString(R"(
-		<p style="white-space: nowrap;">
-			%1<br>
-			%2<br>
-			<a href='https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support'>https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support</a><br>
-			%3<br>
-		</p>
-		)")
-		.arg(Qt::convertFromPlainText(QString::fromStdString(text)))
-		.arg(tr("HOW TO REPORT ERRORS:"))
-		.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
-	msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
-	msg.exec();
+	auto show_report = [](const std::string& text)
+	{
+		QMessageBox msg;
+		msg.setWindowTitle(tr("RPCS3: Fatal Error"));
+		msg.setIcon(QMessageBox::Critical);
+		msg.setTextFormat(Qt::RichText);
+		msg.setText(QString(R"(
+			<p style="white-space: nowrap;">
+				%1<br>
+				%2<br>
+				<a href='https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support'>https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support</a><br>
+				%3<br>
+			</p>
+			)")
+			.arg(Qt::convertFromPlainText(QString::fromStdString(text)))
+			.arg(tr("HOW TO REPORT ERRORS:"))
+			.arg(tr("Please, don't send incorrect reports. Thanks for understanding.")));
+		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
+		msg.exec();
+	};
+
+#ifdef __APPLE__
+	// Cocoa access is not allowed outside of the main thread
+	if (!pthread_main_np())
+	{
+		dispatch_sync(dispatch_get_main_queue(), ^ { show_report(text); });
+	}
+	else
+#endif
+	{
+		show_report(text);
+	}
 
 	std::abort();
 }
@@ -75,14 +94,10 @@ int main(int argc, char** argv)
 {
 	logs::set_init();
 
-#ifdef _WIN32
-	// use this instead of SetProcessDPIAware if Qt ever fully supports this on windows
-	// at the moment it can't display QCombobox frames for example
-	// I think there was an issue with gsframe if I recall correctly, so look out for that
-	//QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-	SetProcessDPIAware();
+#if defined(_WIN32) || defined(__APPLE__)
+	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #else
-	qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1");
+	setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 0);
 #endif
 
 #ifdef __linux__
@@ -101,8 +116,8 @@ int main(int argc, char** argv)
 	s_qt_mutex.lock();
 	rpcs3_app app(argc, argv);
 
-	app.setApplicationVersion(qstr(rpcs3::version.to_string()));
-	app.setApplicationName("RPCS3");
+	QCoreApplication::setApplicationVersion(qstr(rpcs3::version.to_string()));
+	QCoreApplication::setApplicationName("RPCS3");
 
 	// Command line args
 	QCommandLineParser parser;
@@ -116,10 +131,8 @@ int main(int argc, char** argv)
 	parser.process(app);
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
-	if (parser.isSet(versionOption))
-		return true;
-	if (parser.isSet(helpOption))
-		return true;
+	if (parser.isSet(versionOption) || parser.isSet(helpOption))
+		return 0;
 
 	app.Init();
 
@@ -145,11 +158,11 @@ int main(int argc, char** argv)
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
-			Emu.BootGame(path, true);
+			Emu.BootGame(path, "", true);
 		});
 	}
 
 	s_qt_init.unlock();
 	s_qt_mutex.unlock();
-	return app.exec();
+	return QCoreApplication::exec();
 }

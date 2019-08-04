@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
@@ -45,13 +45,15 @@ public:
 		SetDAZandFTZ,
 		SPUBlockSize,
 		SPUCache,
-		SPUVerification,
+		DebugConsoleMode,
+		MaxSPURSThreads,
 
 		// Graphics
 		Renderer,
 		Resolution,
 		AspectRatio,
 		FrameLimit,
+		MSAA,
 		LogShaderPrograms,
 		WriteDepthBuffer,
 		WriteColorBuffers,
@@ -70,6 +72,7 @@ public:
 		DisableVertexCache,
 		DisableOcclusionQueries,
 		DisableFIFOReordering,
+		StrictTextureFlushing,
 		AnisotropicFilterOverride,
 		ResolutionScale,
 		MinimumScalableDimension,
@@ -77,6 +80,7 @@ public:
 		DisableOnDiskShaderCache,
 		DisableVulkanMemAllocator,
 		DisableAsyncShaderCompiler,
+		MultithreadedRSX,
 
 		// Performance Overlay
 		PerfOverlayEnabled,
@@ -101,6 +105,12 @@ public:
 		ConvertTo16Bit,
 		DownmixStereo,
 		MasterVolume,
+		EnableBuffering,
+		AudioBufferDuration,
+		EnableTimeStretching,
+		TimeStretchingThreshold,
+		MicrophoneType,
+		MicrophoneDevices,
 
 		// Input / Output
 		PadHandler,
@@ -127,6 +137,8 @@ public:
 		Language,
 		EnterButtonAssignment,
 		EnableHostRoot,
+		LimitCacheSize,
+		MaximumCacheSize,
 
 		// Virtual File System
 		emulatorLocation,
@@ -141,14 +153,14 @@ public:
 		QString name;
 		QString old_adapter;
 		QStringList adapters;
-		SettingsType type;
+		SettingsType type = VulkanAdapter;
 		bool supported = true;
 		bool has_adapters = true;
 
-		Render_Info() {};
-		Render_Info(const QString& name) : name(name), has_adapters(false) {};
+		Render_Info() {}
+		Render_Info(const QString& name) : name(name), has_adapters(false) {}
 		Render_Info(const QString& name, const QStringList& adapters, bool supported, SettingsType type)
-			: name(name), adapters(adapters), supported(supported), type(type) {};
+			: name(name), adapters(adapters), supported(supported), type(type) {}
 	};
 
 	struct Render_Creator
@@ -157,7 +169,7 @@ public:
 		bool supportsVulkan = false;
 		QStringList D3D12Adapters;
 		QStringList vulkanAdapters;
-		QString name_Null = tr("Null");
+		QString name_Null = tr("Disable Video Output");
 		QString name_Vulkan = tr("Vulkan");
 		QString name_D3D12 = tr("D3D12[DO NOT USE]");
 		QString name_OpenGL = tr("OpenGL");
@@ -170,6 +182,17 @@ public:
 		Render_Creator();
 	};
 
+	struct Microphone_Creator
+	{
+		QStringList microphones_list;
+		QString mic_none = tr("None");
+		std::array<std::string, 4> sel_list;
+		std::string SetDevice(u32 num, QString& text);
+		void ParseDevices(std::string list);
+		void RefreshList();
+		Microphone_Creator();
+	};
+
 	std::set<SettingsType> m_broken_types; // list of broken settings
 
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
@@ -179,7 +202,7 @@ public:
 	~emu_settings();
 
 	/** Connects a combo box with the target settings type*/
-	void EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged = false, bool use_max = false, int max = 0);
+	void EnhanceComboBox(QComboBox* combobox, SettingsType type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false);
 
 	/** Connects a check box with the target settings type*/
 	void EnhanceCheckBox(QCheckBox* checkbox, SettingsType type);
@@ -214,8 +237,11 @@ public:
 	/** Gets all the renderer info for gpu settings.*/
 	Render_Creator m_render_creator;
 
+	/** Gets a list of all the microphones available.*/
+	Microphone_Creator m_microphone_creator;
+
 	/** Loads the settings from path.*/
-	void LoadSettings(const std::string& path = "");
+	void LoadSettings(const std::string& title_id = "");
 
 	/** Fixes all registered invalid settings after asking the user for permission.*/
 	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
@@ -246,13 +272,15 @@ private:
 		{ SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
 		{ SPUBlockSize,             { "Core", "SPU Block Size"}},
 		{ SPUCache,                 { "Core", "SPU Cache"}},
-		{ SPUVerification,          { "Core", "SPU Verification"}},
+		{ DebugConsoleMode,         { "Core", "Debug Console Mode"}},
+		{ MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
 
 		// Graphics Tab
 		{ Renderer,                   { "Video", "Renderer"}},
 		{ Resolution,                 { "Video", "Resolution"}},
 		{ AspectRatio,                { "Video", "Aspect ratio"}},
 		{ FrameLimit,                 { "Video", "Frame limit"}},
+		{ MSAA,                       { "Video", "MSAA"}},
 		{ LogShaderPrograms,          { "Video", "Log shader programs"}},
 		{ WriteDepthBuffer,           { "Video", "Write Depth Buffer"}},
 		{ WriteColorBuffers,          { "Video", "Write Color Buffers"}},
@@ -269,10 +297,12 @@ private:
 		{ DisableVertexCache,         { "Video", "Disable Vertex Cache"}},
 		{ DisableOcclusionQueries,    { "Video", "Disable ZCull Occlusion Queries"}},
 		{ DisableFIFOReordering,      { "Video", "Disable FIFO Reordering"}},
+		{ StrictTextureFlushing,      { "Video", "Strict Texture Flushing"}},
 		{ ForceCPUBlitEmulation,      { "Video", "Force CPU Blit"}},
 		{ DisableOnDiskShaderCache,   { "Video", "Disable On-Disk Shader Cache"}},
 		{ DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
 		{ DisableAsyncShaderCompiler, { "Video", "Disable Asynchronous Shader Compiler"}},
+		{ MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
 		{ AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
 		{ ResolutionScale,            { "Video", "Resolution Scale"}},
 		{ MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
@@ -297,11 +327,17 @@ private:
 		{ ShaderLoadBgBlur,         { "Video", "Shader Loading Dialog", "Blur effect strength" } },
 
 		// Audio
-		{ AudioRenderer,  { "Audio", "Renderer"}},
-		{ DumpToFile,     { "Audio", "Dump to file"}},
-		{ ConvertTo16Bit, { "Audio", "Convert to 16 bit"}},
-		{ DownmixStereo,  { "Audio", "Downmix to Stereo"}},
-		{ MasterVolume,   { "Audio", "Master Volume"}},
+		{ AudioRenderer,           { "Audio", "Renderer"}},
+		{ DumpToFile,              { "Audio", "Dump to file"}},
+		{ ConvertTo16Bit,          { "Audio", "Convert to 16 bit"}},
+		{ DownmixStereo,           { "Audio", "Downmix to Stereo"}},
+		{ MasterVolume,            { "Audio", "Master Volume"}},
+		{ EnableBuffering,         { "Audio", "Enable Buffering"}},
+		{ AudioBufferDuration,     { "Audio", "Desired Audio Buffer Duration"}},
+		{ EnableTimeStretching,    { "Audio", "Enable Time Stretching"}},
+		{ TimeStretchingThreshold, { "Audio", "Time Stretching Threshold"}},
+		{ MicrophoneType,          { "Audio", "Microphone Type" }},
+		{ MicrophoneDevices,       { "Audio", "Microphone Devices" }},
 
 		// Input / Output
 		{ PadHandler,      { "Input/Output", "Pad"}},
@@ -328,6 +364,8 @@ private:
 		{ Language,              { "System", "Language"}},
 		{ EnterButtonAssignment, { "System", "Enter button assignment"}},
 		{ EnableHostRoot,        { "VFS", "Enable /host_root/"}},
+		{ LimitCacheSize,        { "VFS", "Limit disk cache size"}},
+		{ MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
 
 		// Virtual File System
 		{ emulatorLocation,   { "VFS", "$(EmulatorDir)"}},
@@ -339,5 +377,5 @@ private:
 
 	YAML::Node m_defaultSettings; // The default settings as a YAML node.
 	YAML::Node m_currentSettings; // The current settings as a YAML node.
-	std::string m_path;
+	std::string m_title_id;
 };

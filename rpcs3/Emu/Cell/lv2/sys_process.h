@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 // Process Local Object Type
 enum : u32
 {
@@ -15,6 +17,7 @@ enum : u32
 	SYS_SPUIMAGE_OBJECT              = 0x22,
 	SYS_PRX_OBJECT                   = 0x23,
 	SYS_SPUPORT_OBJECT               = 0x24,
+	SYS_OVERLAY_OBJECT               = 0x25,
 	SYS_LWMUTEX_OBJECT               = 0x95,
 	SYS_TIMER_OBJECT                 = 0x11,
 	SYS_SEMAPHORE_OBJECT             = 0x96,
@@ -32,6 +35,14 @@ struct sys_exit2_param
 	be_t<u64> flags;
 	vm::bpptr<char, u64, u64> args;
 };
+
+struct ps3_process_info_t 
+{
+	u32 sdk_ver;
+	u32 ppc_seg;
+};
+
+extern ps3_process_info_t  g_ps3_process_info;
 
 // Auxiliary functions
 s32 process_getpid();

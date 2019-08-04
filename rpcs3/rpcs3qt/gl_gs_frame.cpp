@@ -6,8 +6,8 @@
 #include <qoffscreensurface.h>
 #include <QWindow>
 
-gl_gs_frame::gl_gs_frame(const QRect& geometry, QIcon appIcon, bool disableMouse)
-	: gs_frame("OpenGL", geometry, appIcon, disableMouse)
+gl_gs_frame::gl_gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
+	: gs_frame("OpenGL", geometry, appIcon, gui_settings)
 {
 	setSurfaceType(QSurface::OpenGLSurface);
 

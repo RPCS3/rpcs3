@@ -1,8 +1,8 @@
-#include "stdafx.h"
-#include "Emu/Memory/vm.h"
-#include "RSXThread.h"
+﻿#include "stdafx.h"
 #include "RSXTexture.h"
+
 #include "rsx_methods.h"
+#include "rsx_utils.h"
 
 namespace rsx
 {
@@ -74,7 +74,7 @@ namespace rsx
 		}
 		else
 			max_mipmap_count = floor_log2(static_cast<u32>(std::max(width(), height()))) + 1;
-		
+
 		return std::min(verify(HERE, mipmap()), max_mipmap_count);
 	}
 
@@ -93,14 +93,14 @@ namespace rsx
 		return rsx::to_texture_wrap_mode((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 16) & 0xf);
 	}
 
+	rsx::comparison_function fragment_texture::zfunc() const
+	{
+		return static_cast<rsx::comparison_function>((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
+	}
+
 	u8 fragment_texture::unsigned_remap() const
 	{
 		return ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 12) & 0xf);
-	}
-
-	u8 fragment_texture::zfunc() const
-	{
-		return ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 28) & 0xf);
 	}
 
 	u8 fragment_texture::gamma() const
@@ -167,7 +167,7 @@ namespace rsx
 			if (remap_override)
 			{
 				auto r_component = (remap_ctl >> 2) & 3;
-				remap_ctl = remap_ctl & ~(3 << 4) | r_component << 4;
+				remap_ctl = (remap_ctl & ~(3 << 4)) | r_component << 4;
 			}
 
 			remap_ctl &= 0xFFFF;
@@ -181,7 +181,7 @@ namespace rsx
 			if (remap_override)
 			{
 				//Set remap lookup for A component to FORCE_ONE
-				remap_ctl = remap_ctl & ~(3 << 8) | (1 << 8);
+				remap_ctl = (remap_ctl & ~(3 << 8)) | (1 << 8);
 			}
 			break;
 		}
@@ -190,7 +190,7 @@ namespace rsx
 		}
 
 		//Remapping tables; format is A-R-G-B
-		//Remap input table. Contains channel index to read color from 
+		//Remap input table. Contains channel index to read color from
 		const std::array<u8, 4> remap_inputs =
 		{
 			static_cast<u8>(remap_ctl & 0x3),
@@ -293,7 +293,8 @@ namespace rsx
 
 	u8 vertex_texture::border_type() const
 	{
-		return ((registers[NV4097_SET_VERTEX_TEXTURE_FORMAT + (m_index * 8)] >> 3) & 0x1);
+		// Border bit has no effect on vertex textures, it is always zero
+		return 1;
 	}
 
 	rsx::texture_dimension vertex_texture::dimension() const

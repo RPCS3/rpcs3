@@ -7,8 +7,8 @@
 #include "GLProgramBuffer.h"
 #include "GLTextOut.h"
 #include "GLOverlays.h"
-#include "../rsx_utils.h"
-#include "../rsx_cache.h"
+
+#include <optional>
 
 #pragma comment(lib, "opengl32.lib")
 
@@ -24,7 +24,9 @@ namespace gl
 	{
 		u32 vertex_draw_count;
 		u32 allocated_vertex_count;
+		u32 first_vertex;
 		u32 vertex_index_base;
+		u32 vertex_index_offset;
 		u32 persistent_mapping_offset;
 		u32 volatile_mapping_offset;
 		std::optional<std::tuple<GLenum, u32> > index_info;
@@ -44,7 +46,6 @@ struct work_item
 	{
 		while (!processed)
 		{
-			_mm_lfence();
 			std::this_thread::yield();
 		}
 
@@ -133,7 +134,7 @@ struct driver_state
 
 	void clear_depth(GLfloat depth)
 	{
-		u32 value = (u32&)depth;
+		u32 value = std::bit_cast<u32>(depth);
 		if (!test_property(GL_DEPTH_CLEAR_VALUE, value))
 		{
 			glClearDepth(depth);
@@ -152,7 +153,7 @@ struct driver_state
 
 	void clear_stencil(GLint stencil)
 	{
-		u32 value = (u32&)stencil;
+		u32 value = std::bit_cast<u32>(stencil);
 		if (!test_property(GL_STENCIL_CLEAR_VALUE, value))
 		{
 			glClearStencil(stencil);
@@ -192,8 +193,8 @@ struct driver_state
 
 	void depth_bounds(float min, float max)
 	{
-		u32 depth_min = (u32&)min;
-		u32 depth_max = (u32&)max;
+		u32 depth_min = std::bit_cast<u32>(min);
+		u32 depth_max = std::bit_cast<u32>(max);
 
 		if (!test_property(DEPTH_BOUNDS_MIN, depth_min) || !test_property(DEPTH_BOUNDS_MAX, depth_max))
 		{
@@ -206,8 +207,8 @@ struct driver_state
 
 	void depth_range(float min, float max)
 	{
-		u32 depth_min = (u32&)min;
-		u32 depth_max = (u32&)max;
+		u32 depth_min = std::bit_cast<u32>(min);
+		u32 depth_max = std::bit_cast<u32>(max);
 
 		if (!test_property(DEPTH_RANGE_MIN, depth_min) || !test_property(DEPTH_RANGE_MAX, depth_max))
 		{
@@ -229,7 +230,7 @@ struct driver_state
 
 	void line_width(GLfloat width)
 	{
-		u32 value = (u32&)width;
+		u32 value = std::bit_cast<u32>(width);
 
 		if (!test_property(GL_LINE_WIDTH, value))
 		{
@@ -258,8 +259,8 @@ struct driver_state
 
 	void polygon_offset(float factor, float units)
 	{
-		u32 _units = (u32&)units;
-		u32 _factor = (u32&)factor;
+		u32 _units = std::bit_cast<u32>(units);
+		u32 _factor = std::bit_cast<u32>(factor);
 
 		if (!test_property(GL_POLYGON_OFFSET_UNITS, _units) || !test_property(GL_POLYGON_OFFSET_FACTOR, _factor))
 		{
@@ -277,8 +278,9 @@ private:
 	GLFragmentProgram m_fragment_prog;
 	GLVertexProgram m_vertex_prog;
 
-	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];
-	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];
+	gl::sampler_state m_fs_sampler_states[rsx::limits::fragment_textures_count];         // Fragment textures
+	gl::sampler_state m_fs_sampler_mirror_states[rsx::limits::fragment_textures_count];  // Alternate views of fragment textures with different format (e.g Depth vs Stencil for D24S8)
+	gl::sampler_state m_vs_sampler_states[rsx::limits::vertex_textures_count];           // Vertex textures
 
 	gl::glsl::program *m_program;
 
@@ -294,13 +296,15 @@ private:
 	std::unique_ptr<gl::ring_buffer> m_attrib_ring_buffer;
 	std::unique_ptr<gl::ring_buffer> m_fragment_constants_buffer;
 	std::unique_ptr<gl::ring_buffer> m_transform_constants_buffer;
-	std::unique_ptr<gl::ring_buffer> m_vertex_state_buffer;
+	std::unique_ptr<gl::ring_buffer> m_fragment_env_buffer;
+	std::unique_ptr<gl::ring_buffer> m_vertex_env_buffer;
+	std::unique_ptr<gl::ring_buffer> m_texture_parameters_buffer;
+	std::unique_ptr<gl::ring_buffer> m_vertex_layout_buffer;
 	std::unique_ptr<gl::ring_buffer> m_index_ring_buffer;
 
 	// Identity buffer used to fix broken gl_VertexID on ATI stack
 	std::unique_ptr<gl::buffer> m_identity_index_buffer;
 
-	u32 m_draw_calls = 0;
 	s64 m_begin_time = 0;
 	s64 m_draw_time = 0;
 	s64 m_vertex_upload_time = 0;
@@ -346,12 +350,12 @@ private:
 	std::vector<u8> m_scratch_buffer;
 
 public:
-	u64 get_cycles() override final;
+	u64 get_cycles() final;
 	GLGSRender();
 
 private:
 
-	driver_state gl_state;
+	gl::driver_state gl_state;
 
 	// Return element to draw and in case of indexed draw index type and offset in index buffer
 	gl::vertex_upload_info set_vertex_buffer();
@@ -361,13 +365,15 @@ private:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool load_program();
-	void load_program_env(const gl::vertex_upload_info& upload_info);
+	void load_program_env();
+	void update_vertex_env(const gl::vertex_upload_info& upload_info);
 
 	void update_draw_state();
 
 public:
 	void read_buffers();
 	void set_viewport();
+	void set_scissor(bool clip_viewport);
 
 	work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
@@ -385,8 +391,8 @@ protected:
 
 	void on_init_thread() override;
 	void on_exit() override;
-	bool do_method(u32 id, u32 arg) override;
-	void flip(int buffer) override;
+	bool do_method(u32 cmd, u32 arg) override;
+	void flip(int buffer, bool emu_flip = false) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Memory/vm_ptr.h"
 
 //Syscalls
 

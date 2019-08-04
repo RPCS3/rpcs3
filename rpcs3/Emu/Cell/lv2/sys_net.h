@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Utilities/bit_set.h"
-#include "Utilities/sema.h"
+#include "Utilities/mutex.h"
+
+#include "Emu/Memory/vm_ptr.h"
 
 #include <vector>
 #include <utility>
@@ -324,7 +326,7 @@ struct lv2_socket final
 	lv2_socket(socket_type s);
 	~lv2_socket();
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 
 #ifdef _WIN32
 	// Remember events (WSAEnumNetworkEvents)

@@ -109,6 +109,13 @@ void gui_settings::Reset(bool removeMeta)
 	}
 }
 
+void gui_settings::RemoveValue(const QString& key, const QString& name)
+{
+	m_settings.beginGroup(key);
+	m_settings.remove(name);
+	m_settings.endGroup();
+}
+
 QVariant gui_settings::GetValue(const gui_save& entry)
 {
 	return m_settings.value(entry.key + "/" + entry.name, entry.def);
@@ -153,8 +160,11 @@ void gui_settings::SetValue(const QString& key, const QString& name, const QVari
 QStringList gui_settings::GetGameListCategoryFilters()
 {
 	QStringList filterList;
-	if (GetCategoryVisibility(Category::Non_Disc_Game)) filterList.append(category::non_disc_games);
+	if (GetCategoryVisibility(Category::HDD_Game)) filterList.append(category::hdd_game);
 	if (GetCategoryVisibility(Category::Disc_Game)) filterList.append(category::disc_game);
+	if (GetCategoryVisibility(Category::PS1_Game)) filterList.append(category::ps1_game);
+	if (GetCategoryVisibility(Category::PS2_Game)) filterList.append(category::ps2_games);
+	if (GetCategoryVisibility(Category::PSP_Game)) filterList.append(category::psp_games);
 	if (GetCategoryVisibility(Category::Home)) filterList.append(category::home);
 	if (GetCategoryVisibility(Category::Media)) filterList.append(category::media);
 	if (GetCategoryVisibility(Category::Data)) filterList.append(category::data);
@@ -169,10 +179,16 @@ bool gui_settings::GetCategoryVisibility(int cat)
 
 	switch (cat)
 	{
-	case Category::Non_Disc_Game:
+	case Category::HDD_Game:
 		value = gui::cat_hdd_game; break;
 	case Category::Disc_Game:
 		value = gui::cat_disc_game; break;
+	case Category::PS1_Game:
+		value = gui::cat_ps1_game; break;
+	case Category::PS2_Game:
+		value = gui::cat_ps2_game; break;
+	case Category::PSP_Game:
+		value = gui::cat_psp_game; break;
 	case Category::Home:
 		value = gui::cat_home; break;
 	case Category::Media:
@@ -197,12 +213,18 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 
 	switch (cat)
 	{
-	case Category::Non_Disc_Game:
+	case Category::HDD_Game:
 		value = gui::cat_hdd_game; break;
 	case Category::Disc_Game:
 		value = gui::cat_disc_game; break;
 	case Category::Home:
 		value = gui::cat_home; break;
+	case Category::PS1_Game:
+		value = gui::cat_ps1_game; break;
+	case Category::PS2_Game:
+		value = gui::cat_ps2_game; break;
+	case Category::PSP_Game:
+		value = gui::cat_psp_game; break;
 	case Category::Media:
 		value = gui::cat_audio_video; break;
 	case Category::Data:
@@ -219,21 +241,49 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 	SetValue(value, val);
 }
 
-void gui_settings::ShowInfoBox(const gui_save& entry, const QString& title, const QString& text, QWidget* parent)
+void gui_settings::ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, bool always_on_top = false)
 {
-	if (GetValue(entry).toBool())
+	const std::string dialog_type = confirm ? "Confirmation" : "Info";
+
+	if (entry.name.isEmpty() || GetValue(entry).toBool())
 	{
-		QMessageBox* mb = new QMessageBox(QMessageBox::Information, title, text, QMessageBox::Ok, parent);
-		mb->setCheckBox(new QCheckBox(tr("Don't show again")));
+		const QFlags<QMessageBox::StandardButton> buttons = confirm ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
+		const QMessageBox::Icon icon = confirm ? QMessageBox::Question : QMessageBox::Information;
+
+		QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
 		mb->deleteLater();
-		mb->exec();
-		if (mb->checkBox()->isChecked())
+
+		if (!entry.name.isEmpty())
 		{
-			SetValue(entry, false);
-			LOG_NOTICE(GENERAL, "Info Box for Entry %s is now disabled", sstr(entry.name));
+			mb->setCheckBox(new QCheckBox(tr("Don't show again")));
 		}
+
+		connect(mb, &QMessageBox::finished, [&](int res)
+		{
+			if (result)
+			{
+				*result = res;
+			}
+			if (!entry.name.isEmpty() && mb->checkBox()->isChecked())
+			{
+				SetValue(entry, false);
+				LOG_NOTICE(GENERAL, "%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
+			}
+		});
+
+		mb->exec();
 	}
-	else LOG_NOTICE(GENERAL, "Info Box for Entry %s was ignored", sstr(entry.name));
+	else LOG_NOTICE(GENERAL, "%s Dialog for Entry %s was ignored", dialog_type, sstr(entry.name));
+}
+
+void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
+{
+	ShowBox(true, title, text, entry, result, parent, true);
+}
+
+void gui_settings::ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent = nullptr)
+{
+	ShowBox(false, title, text, entry, nullptr, parent, false);
 }
 
 void gui_settings::SetGamelistColVisibility(int col, bool val)
@@ -316,10 +366,14 @@ QStringList gui_settings::GetStylesheetEntries()
 {
 	QStringList nameFilter = QStringList("*.qss");
 	QStringList res = gui::utils::get_dir_entries(m_settingsDir, nameFilter);
-#if !defined(_WIN32) && !defined(__APPLE__)
-	// Makes stylesheets load if using AppImage or installed to /usr/bin
-	QDir linuxStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
-	res.append(gui::utils::get_dir_entries(linuxStylesheetDir, nameFilter));
+#if !defined(_WIN32)
+	// Makes stylesheets load if using AppImage (App Bundle) or installed to /usr/bin
+#ifdef __APPLE__
+	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
+#else
+	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+#endif
+	res.append(gui::utils::get_dir_entries(platformStylesheetDir, nameFilter));
 	res.removeDuplicates();
 #endif
 	res.sort(Qt::CaseInsensitive);

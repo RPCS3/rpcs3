@@ -1,7 +1,9 @@
 #pragma once
 
-#include "Emu/Cell/PPUAnalyser.h"
 #include "sys_sync.h"
+
+#include "Emu/Cell/PPUAnalyser.h"
+#include "Emu/Memory/vm_ptr.h"
 
 // Return codes
 enum CellPrxError : u32
@@ -119,7 +121,7 @@ struct lv2_prx final : lv2_obj, ppu_module
 {
 	static const u32 id_base = 0x23000000;
 
-	bool is_started = false;
+	atomic_t<bool> is_started = false;
 
 	std::unordered_map<u32, u32> specials;
 	std::unordered_map<u32, void*> imports;
@@ -133,6 +135,12 @@ struct lv2_prx final : lv2_obj, ppu_module
 	char module_info_name[28];
 	u8 module_info_version[2];
 	be_t<u16> module_info_attributes;
+};
+
+enum : u64
+{
+	SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR = 0x1ull,
+	SYS_PRX_LOAD_MODULE_FLAGS_INVALIDMASK = ~SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR,
 };
 
 // SysCalls

@@ -8,11 +8,14 @@ enum class cpu_flag : u32
 {
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
+	wait, // Indicates waiting state, set by the thread itself
+	pause, // Thread suspended by suspend_all technique
 	suspend, // Thread suspended
 	ret, // Callback return requested
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
 
+	jit_return, // JIT compiler event (forced return)
 	dbg_global_pause, // Emulation paused
 	dbg_global_stop, // Emulation stopped
 	dbg_pause, // Thread paused
@@ -38,15 +41,15 @@ public:
 	const u32 id;
 
 	// Public thread state
-	atomic_bs_t<cpu_flag> state{+cpu_flag::stop};
+	atomic_bs_t<cpu_flag> state{cpu_flag::stop + cpu_flag::wait};
 
 	// Process thread state, return true if the checker must return
-	bool check_state();
+	bool check_state() noexcept;
 
 	// Process thread state (pause)
 	[[nodiscard]] bool test_stopped()
 	{
-		if (UNLIKELY(state))
+		if (state)
 		{
 			if (check_state())
 			{
@@ -58,13 +61,13 @@ public:
 	}
 
 	// Test stopped state
-	bool is_stopped()
+	bool is_stopped() const
 	{
-		return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::dbg_global_stop));
+		return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop));
 	}
 
 	// Test paused state
-	bool is_paused()
+	bool is_paused() const
 	{
 		return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
 	}
@@ -98,6 +101,18 @@ public:
 
 	// Callback for vm::temporary_unlock
 	virtual void cpu_unmem() {}
+
+	// Thread locker
+	class suspend_all
+	{
+		cpu_thread* m_this;
+
+	public:
+		suspend_all(cpu_thread* _this) noexcept;
+		suspend_all(const suspend_all&) = delete;
+		suspend_all& operator=(const suspend_all&) = delete;
+		~suspend_all();
+	};
 };
 
 inline cpu_thread* get_current_cpu_thread() noexcept

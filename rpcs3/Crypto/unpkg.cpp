@@ -201,7 +201,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	bool was_null = true;
 
 	// Get full path and create the directory
-	const std::string dir = Emu.GetHddDir() + "game/" + install_id + '/';
+	const std::string dir = Emulator::GetHddDir() + "game/" + install_id + '/';
 
 	if (!fs::create_dir(dir))
 	{

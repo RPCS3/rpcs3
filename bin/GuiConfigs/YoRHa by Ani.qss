@@ -236,7 +236,8 @@ QPushButton::disabled {
 
 
 /* QSpinBox (Settings -> Emulator -> width/height) */
-QSpinBox {
+/* QDoubleSpinBox (Pads -> Mouse Acceleration -> x/y) */ 
+QSpinBox, QDoubleSpinBox {
 	/* background: transparent; - This hits a weird bug in Qt where background flickers */
 	background-color: #b3ac98;
 	border: 0.05em solid #4d4940;
@@ -343,6 +344,13 @@ QTableWidget#game_grid {
 	font-weight: 600;
 	color: #4d4940;
 	text-transform: uppercase;
+	selection-color: #aea993;
+}
+QTableWidget#game_grid::item:selected:active {
+	selection-background-color: #4d4940;
+}
+QTableWidget#game_grid::item:selected:!active {
+	selection-background-color: #615c51;
 }
 
 

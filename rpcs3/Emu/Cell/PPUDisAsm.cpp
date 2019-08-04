@@ -1030,13 +1030,14 @@ void PPUDisAsm::RLWNM(ppu_opcode_t op)
 void PPUDisAsm::ORI(ppu_opcode_t op)
 {
 	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
-	DisAsm_R2_IMM("ori", op.rs, op.ra, op.uimm16);
+	if (op.uimm16 == 0) return DisAsm_R2("mr", op.ra, op.rs);
+	DisAsm_R2_IMM("ori", op.ra, op.rs, op.uimm16);
 }
 
 void PPUDisAsm::ORIS(ppu_opcode_t op)
 {
 	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
-	DisAsm_R2_IMM("oris", op.rs, op.ra, op.uimm16);
+	DisAsm_R2_IMM("oris", op.ra, op.rs, op.uimm16);
 }
 
 void PPUDisAsm::XORI(ppu_opcode_t op)
