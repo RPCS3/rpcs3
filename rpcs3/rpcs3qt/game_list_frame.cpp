@@ -1135,7 +1135,7 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 		{
 			if (QDir(filepath).removeRecursively())
 			{
-				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
+				LOG_SUCCESS(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
 			}
 			else
 			{
