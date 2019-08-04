@@ -1040,21 +1040,19 @@ void lv2_obj::sleep_timeout(cpu_thread& thread, u64 timeout)
 		ppu->start_time = start_time;
 	}
 
-	if (timeout && g_cfg.core.sleep_timers_accuracy != sleep_timers_accuracy_level::_all_timers)
+	if (timeout)
 	{
 		const u64 wait_until = start_time + timeout;
 
 		// Register timeout if necessary
-		for (auto it = g_waiting.begin(), end = g_waiting.end(); it != end; it++)
+		for (auto it = g_waiting.cbegin(), end = g_waiting.cend();; it++)
 		{
-			if (it->first > wait_until)
+			if (it == end || it->first > wait_until)
 			{
 				g_waiting.emplace(it, wait_until, &thread);
-				return;
+				break;
 			}
 		}
-
-		g_waiting.emplace_back(wait_until, &thread);
 	}
 
 	schedule_all();
