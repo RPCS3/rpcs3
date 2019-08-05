@@ -971,7 +971,7 @@
          <property name="title">
           <string>Microphone Settings</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout_76">
+         <layout class="QVBoxLayout" name="verticalLayout_82">
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_7">
             <item>
@@ -1005,7 +1005,7 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_6">
             <item>
-             <layout class="QVBoxLayout" name="verticalLayout_77">
+             <layout class="QVBoxLayout" name="verticalLayout_81">
               <item>
                <widget class="QLabel" name="label_3">
                 <property name="sizePolicy">
