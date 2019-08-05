@@ -129,6 +129,7 @@ public:
 		ShowWelcomeScreen,
 		UseNativeInterface,
 		ShowShaderCompilationHint,
+		LockMouseToWindow,
 
 		// Network
 		ConnectionStatus,
@@ -356,6 +357,7 @@ private:
 		{ ShowWelcomeScreen,         { "Miscellaneous", "Show Welcome Screen"}},
 		{ UseNativeInterface,        { "Miscellaneous", "Use native user interface"}},
 		{ ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
+		{ LockMouseToWindow,         { "Miscellaneous", "Lock mouse cursor to window in fullscreen"}},
 
 		// Networking
 		{ ConnectionStatus, { "Net", "Connection status"}},

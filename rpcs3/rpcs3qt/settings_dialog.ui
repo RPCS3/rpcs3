@@ -1616,6 +1616,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="lockMouseToWindow">
+                <property name="text">
+                 <string>Lock mouse cursor to window in fullscreen</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <spacer name="verticalSpacer_13">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>

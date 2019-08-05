@@ -154,17 +154,41 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	}
 }
 
+void gs_frame::set_cursor_lock(bool locked)
+{
+#ifdef _WIN32
+	if (locked)
+	{
+		RECT rect;
+		if (!GetWindowRect(handle(), &rect) || !ClipCursor(&rect))
+		{
+			LOG_ERROR(GENERAL, "Could not confine cursor to window (%lu)", GetLastError());
+		}
+	}
+	else
+	{
+		ClipCursor(NULL);
+	}
+#endif
+}
+
 void gs_frame::toggle_fullscreen()
 {
 	auto l_setFullScreenVis = [&]()
 	{
-		if (visibility() == FullScreen)
+		const bool was_fs = visibility() == FullScreen;
+
+		if (was_fs)
 		{
 			setVisibility(Windowed);
 		}
 		else
 		{
 			setVisibility(FullScreen);
+		}
+		if (g_cfg.misc.lock_mouse_in_fullscreen)
+		{
+			set_cursor_lock(!was_fs);
 		}
 	};
 
@@ -347,6 +371,14 @@ bool gs_frame::event(QEvent* ev)
 			}
 		}
 		close();
+	}
+#ifdef X_PROTOCOL // FocusIn is a macro used by XFocusChangeEvent struct
+	else if (g_cfg.misc.lock_mouse_in_fullscreen && visibility() == FullScreen && ev->type() == 8)
+#else
+	else if (g_cfg.misc.lock_mouse_in_fullscreen && visibility() == FullScreen && ev->type() == QEvent::FocusIn)
+#endif
+	{
+		set_cursor_lock(true);
 	}
 	return QWindow::event(ev);
 }

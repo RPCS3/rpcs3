@@ -23,6 +23,8 @@ class gs_frame : public QWindow, public GSFrameBase
 	Q_OBJECT
 
 private:
+	void set_cursor_lock(bool locked);
+
 	// taskbar progress
 	int m_gauge_max = 100;
 #ifdef _WIN32

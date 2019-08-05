@@ -613,6 +613,7 @@ struct cfg_root : cfg::node
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
 		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
+		cfg::_bool lock_mouse_in_fullscreen{ this, "Lock mouse cursor to window in fullscreen", false };
 		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
 
 	} misc{this};

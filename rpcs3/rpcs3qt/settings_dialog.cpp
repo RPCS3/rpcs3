@@ -1078,6 +1078,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, json_emu_misc["showShaderCompilationHint"].toString());
 
+#ifdef _WIN32
+	xemu_settings->EnhanceCheckBox(ui->lockMouseToWindow, emu_settings::LockMouseToWindow);
+	SubscribeTooltip(ui->lockMouseToWindow, json_emu_misc["lockMouseInFullscreen"].toString());
+#else
+	ui->lockMouseToWindow->setDisabled(true);
+	SubscribeTooltip(ui->lockMouseToWindow, tr("This setting has not been implemented for your OS."));
+#endif
+
 	xemu_settings->EnhanceCheckBox(ui->perfOverlayCenterX, emu_settings::PerfOverlayCenterX);
 	SubscribeTooltip(ui->perfOverlayCenterX, json_emu_overlay["perfOverlayCenterX"].toString());
 	connect(ui->perfOverlayCenterX, &QCheckBox::clicked, [this](bool checked)
