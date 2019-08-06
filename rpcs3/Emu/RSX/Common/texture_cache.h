@@ -1609,8 +1609,6 @@ namespace rsx
 					return;
 				}
 
-				section.surface->read_barrier(cmd);
-
 				// How much of this slice to read?
 				int rebased = int(section.dst_y) - slice_begin;
 				const auto src_x = section.src_x;
@@ -2444,8 +2442,6 @@ namespace rsx
 
 			if (src_is_render_target)
 			{
-				src_subres.surface->read_barrier(cmd);
-
 				const auto surf = src_subres.surface;
 				const auto bpp = surf->get_bpp();
 				if (bpp != src_bpp)
@@ -2460,9 +2456,6 @@ namespace rsx
 
 			if (dst_is_render_target)
 			{
-				// Full barrier is required in case of partial transfers
-				dst_subres.surface->read_barrier(cmd);
-
 				auto bpp = dst_subres.surface->get_bpp();
 				if (bpp != dst_bpp)
 				{

@@ -510,7 +510,7 @@ namespace vk
 
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::data_heap &upload_heap)
+		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align)
 	{
 		u32 mipmap_level = 0;
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
@@ -518,7 +518,8 @@ namespace vk
 
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{
-			u32 row_pitch = align(layout.width_in_block * block_size_in_bytes, 256);
+			u32 row_pitch = (((layout.width_in_block * block_size_in_bytes) + heap_align - 1) / heap_align) * heap_align;
+			if (heap_align != 256) verify(HERE), row_pitch == heap_align;
 			u32 image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 
 			//Map with extra padding bytes in case of realignment
@@ -527,7 +528,7 @@ namespace vk
 			VkBuffer buffer_handle = upload_heap.heap->value;
 
 			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
-			upload_texture_subresource(mapped, layout, format, is_swizzled, false, 256);
+			upload_texture_subresource(mapped, layout, format, is_swizzled, false, heap_align);
 			upload_heap.unmap();
 
 			VkBufferImageCopy copy_info = {};

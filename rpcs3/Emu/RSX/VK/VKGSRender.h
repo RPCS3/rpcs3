@@ -458,8 +458,6 @@ private:
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
-	void read_buffers();
-	void write_buffers();
 	void set_viewport();
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();

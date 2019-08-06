@@ -897,3 +897,56 @@ u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& re
 	encode |= (remap.second[3] << 14);
 	return encode;
 }
+
+std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format)
+{
+	switch (format)
+	{
+	case rsx::surface_color_format::r5g6b5:
+		return{ CELL_GCM_TEXTURE_R5G6B5, false };
+
+	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
+	case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
+	case rsx::surface_color_format::a8r8g8b8:
+		return{ CELL_GCM_TEXTURE_A8R8G8B8, true }; //verified
+
+	case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+	case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
+	case rsx::surface_color_format::a8b8g8r8:
+		return{ CELL_GCM_TEXTURE_A8R8G8B8, false };
+
+	case rsx::surface_color_format::w16z16y16x16:
+		return{ CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT, true };
+
+	case rsx::surface_color_format::w32z32y32x32:
+		return{ CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT, true };
+
+	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
+	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
+		return{ CELL_GCM_TEXTURE_A1R5G5B5, false };
+
+	case rsx::surface_color_format::b8:
+		return{ CELL_GCM_TEXTURE_B8, false };
+
+	case rsx::surface_color_format::g8b8:
+		return{ CELL_GCM_TEXTURE_G8B8, true };
+
+	case rsx::surface_color_format::x32:
+		return{ CELL_GCM_TEXTURE_X32_FLOAT, true }; //verified
+	default:
+		fmt::throw_exception("Unhandled surface format 0x%x", (u32)format);
+	}
+}
+
+std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format format)
+{
+	switch (format)
+	{
+	case rsx::surface_depth_format::z16:
+		return{ CELL_GCM_TEXTURE_DEPTH16, true };
+	case rsx::surface_depth_format::z24s8:
+		return{ CELL_GCM_TEXTURE_DEPTH24_D8, true };
+	default:
+		ASSUME(0);
+	}
+}
