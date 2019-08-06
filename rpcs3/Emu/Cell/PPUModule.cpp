@@ -50,6 +50,7 @@ void fmt_class_string<lib_loading_type>::format(std::string& out, u64 arg)
 		case lib_loading_type::both: return "Load automatic and manual selection";
 		case lib_loading_type::liblv2only: return "Load liblv2.sprx only";
 		case lib_loading_type::liblv2both: return "Load liblv2.sprx and manual selection";
+		case lib_loading_type::liblv2list: return "Load liblv2.sprx and strict selection";
 		}
 
 		return unknown;
@@ -1282,7 +1283,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
 		load_libs = g_cfg.core.load_libraries.get_set();
 	}
-	else if (g_cfg.core.lib_loading == lib_loading_type::liblv2only || g_cfg.core.lib_loading == lib_loading_type::liblv2both)
+	else if (g_cfg.core.lib_loading >= lib_loading_type::liblv2only && g_cfg.core.lib_loading <= lib_loading_type::liblv2list)
 	{
 		// Load only liblv2.sprx
 		load_libs.emplace("liblv2.sprx");

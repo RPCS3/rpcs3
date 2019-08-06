@@ -47,6 +47,7 @@ enum class lib_loading_type
 	both,
 	liblv2only,
 	liblv2both,
+	liblv2list,
 };
 
 enum sleep_timers_accuracy_level : u32

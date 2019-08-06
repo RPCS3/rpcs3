@@ -29,6 +29,7 @@
 			"manual": "Allows the user to manually choose the LLE libraries to load.\nIf unsure, don't use this option. Nothing will work if you use this.",
 			"both": "Automatically selects the LLE libraries to load and allows the user to choose additional libraries manually.\nIf unsure, don't use this option.",
 			"liblv2both": "Loads liblv2.sprx and chosen list of libraries.\nIf unsure, don't use this option.",
+			"liblv2list": "Loads liblv2.sprx and nothing but selected libraries.\nDon't use this option.",
 			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"checkboxes": {

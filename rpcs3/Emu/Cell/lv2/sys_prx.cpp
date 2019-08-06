@@ -117,7 +117,19 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		return CELL_PRX_ERROR_LIBRARY_FOUND;
 	}
 
-	bool ignore = s_prx_ignore.count(vpath) != 0;
+	bool ignore = false;
+
+	if (g_cfg.core.lib_loading == lib_loading_type::liblv2list)
+	{
+		if (vpath.compare(0, 24, "/dev_flash/sys/external/") == 0 && vpath != "/dev_flash/sys/external/libsysmodule.sprx"sv)
+		{
+			ignore = g_cfg.core.load_libraries.get_set().count(name) == 0;
+		}
+	}
+	else
+	{
+		ignore = s_prx_ignore.count(vpath) != 0;
+	}
 
 	if (ignore && (g_cfg.core.lib_loading == lib_loading_type::both || g_cfg.core.lib_loading == lib_loading_type::liblv2both))
 	{
