@@ -1297,7 +1297,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	if (g_cfg.core.lib_loading == lib_loading_type::automatic || g_cfg.core.lib_loading == lib_loading_type::both)
 	{
-		if (g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
+		if (g_cfg.core.lib_loading == lib_loading_type::both && g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
 		{
 			// Will load libsysmodule.sprx internally
 			load_libs.emplace("liblv2.sprx");
