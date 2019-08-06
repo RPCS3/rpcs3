@@ -119,7 +119,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	bool ignore = s_prx_ignore.count(vpath) != 0;
 
-	if (ignore && g_cfg.core.lib_loading == lib_loading_type::both)
+	if (ignore && (g_cfg.core.lib_loading == lib_loading_type::both || g_cfg.core.lib_loading == lib_loading_type::liblv2both))
 	{
 		// Ignore ignore list if the library is selected in 'both' mode
 		if (g_cfg.core.load_libraries.get_set().count(name) != 0)

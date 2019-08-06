@@ -309,6 +309,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->lib_manu, json_cpu_lib["manual"].toString());
 	SubscribeTooltip(ui->lib_both, json_cpu_lib["both"].toString());
 	SubscribeTooltip(ui->lib_lv2,  json_cpu_lib["liblv2"].toString());
+	SubscribeTooltip(ui->lib_lv2b, json_cpu_lib["liblv2both"].toString());
 
 	// creating this in ui file keeps scrambling the order...
 	QButtonGroup *libModeBG = new QButtonGroup(this);
@@ -316,6 +317,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	libModeBG->addButton(ui->lib_manu, (int)lib_loading_type::manual);
 	libModeBG->addButton(ui->lib_both, (int)lib_loading_type::both);
 	libModeBG->addButton(ui->lib_lv2,  (int)lib_loading_type::liblv2only);
+	libModeBG->addButton(ui->lib_lv2b, (int)lib_loading_type::liblv2both);
 
 	{// Handle lib loading options
 		QString selectedLib = qstr(xemu_settings->GetSetting(emu_settings::LibLoadOptions));
@@ -387,7 +389,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	auto l_OnLibButtonClicked = [=](int ind)
 	{
-		if (ind == (int)lib_loading_type::manual || ind == (int)lib_loading_type::both)
+		if (ind == (int)lib_loading_type::manual || ind == (int)lib_loading_type::both || ind == (int)lib_loading_type::liblv2both)
 		{
 			ui->searchBox->setEnabled(true);
 			ui->lleList->setEnabled(true);
@@ -860,7 +862,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		}
 		ChangeMicrophoneType(ui->microphoneBox->currentText());
 	};
-	
+
 	auto ChangeMicrophoneDevice = [=](u32 next_index, QString text)
 	{
 		xemu_settings->SetSetting(emu_settings::MicrophoneDevices, xemu_settings->m_microphone_creator.SetDevice(next_index, text));
