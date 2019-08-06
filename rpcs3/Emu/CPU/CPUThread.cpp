@@ -229,15 +229,15 @@ bool cpu_thread::check_state() noexcept
 
 		const auto [state0, escape] = state.fetch_op([&](bs_t<cpu_flag>& flags)
 		{
-			// Check pause flags which hold thread inside check_state
-			if (flags & (cpu_flag::pause + cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause))
-			{
-				return false;
-			}
-
 			// Atomically clean wait flag and escape
 			if (!(flags & (cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop + cpu_flag::ret + cpu_flag::stop)))
 			{
+				// Check pause flags which hold thread inside check_state
+				if (flags & (cpu_flag::pause + cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause))
+				{
+					return false;
+				}
+
 				flags -= cpu_flag::wait;
 			}
 

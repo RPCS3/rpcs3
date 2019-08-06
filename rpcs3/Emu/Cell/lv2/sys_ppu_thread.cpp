@@ -342,6 +342,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 
 	if (!tid)
 	{
+		vm::dealloc(stack_base);
 		return CELL_EAGAIN;
 	}
 

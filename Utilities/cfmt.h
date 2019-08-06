@@ -412,10 +412,10 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		}
 
 		const u64 mask =
-			ctx.type == 1 ? u64{std::numeric_limits<get_int_t<1>>::max()} :
-			ctx.type == 2 ? u64{std::numeric_limits<get_int_t<2>>::max()} :
-			ctx.type == 4 ? u64{std::numeric_limits<get_int_t<4>>::max()} : 
-			u64{std::numeric_limits<get_int_t<8>>::max()};
+			ctx.type == 1 ? 0xff :
+			ctx.type == 2 ? 0xffff :
+			ctx.type == 4 ? 0xffff'ffffu :
+			0xffff'ffff'ffff'ffffu;
 
 		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;
@@ -469,10 +469,10 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		}
 
 		const u64 mask =
-			ctx.type == 1 ? u64{std::numeric_limits<get_int_t<1>>::max()} :
-			ctx.type == 2 ? u64{std::numeric_limits<get_int_t<2>>::max()} :
-			ctx.type == 4 ? u64{std::numeric_limits<get_int_t<4>>::max()} : 
-			u64{std::numeric_limits<get_int_t<8>>::max()};
+			ctx.type == 1 ? 0xff :
+			ctx.type == 2 ? 0xffff :
+			ctx.type == 4 ? 0xffff'ffffu :
+			0xffff'ffff'ffff'ffffu;
 
 		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;
@@ -533,10 +533,10 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		}
 
 		const u64 mask =
-			ctx.type == 1 ? u64{std::numeric_limits<get_int_t<1>>::max()} :
-			ctx.type == 2 ? u64{std::numeric_limits<get_int_t<2>>::max()} :
-			ctx.type == 4 ? u64{std::numeric_limits<get_int_t<4>>::max()} : 
-			u64{std::numeric_limits<get_int_t<8>>::max()};
+			ctx.type == 1 ? 0xff :
+			ctx.type == 2 ? 0xffff :
+			ctx.type == 4 ? 0xffff'ffffu :
+			0xffff'ffff'ffff'ffffu;
 
 		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;

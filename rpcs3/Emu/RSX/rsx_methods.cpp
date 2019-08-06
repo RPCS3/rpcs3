@@ -581,7 +581,7 @@ namespace rsx
 			}
 
 			// Defer conditional render evaluation
-			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval);
+			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval, address_ptr);
 			rsx->conditional_render_test_address = address_ptr;
 			rsx->conditional_render_test_failed = false;
 		}

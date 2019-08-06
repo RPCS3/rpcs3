@@ -3095,5 +3095,16 @@ namespace rsx
 				update(ptimer, sync_address);
 			}
 		}
+
+		occlusion_query_info* ZCULL_control::find_query(vm::addr_t sink_address)
+		{
+			for (auto &writer : m_pending_writes)
+			{
+				if (writer.sink == sink_address)
+					return writer.query;
+			}
+
+			return nullptr;
+		}
 	}
 }

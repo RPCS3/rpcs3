@@ -218,6 +218,10 @@ struct lv2_obj
 	template<bool is_usleep = false>
 	static bool wait_timeout(u64 usec, cpu_thread* const cpu = nullptr)
 	{
+		// Clamp to max timeout accepted (also solves potential oveflows when scaling)
+		if (usec > cond_variable::max_timeout) usec = cond_variable::max_timeout;
+
+		// Now scale the result
 		usec = (usec * g_cfg.core.clocks_scale) / 100;
 
 #ifdef __linux__

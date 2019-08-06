@@ -1386,6 +1386,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{ "__stvlx", s_use_ssse3 ? (u64)&sse_cellbe_stvlx : (u64)&sse_cellbe_stvlx_v0 },
 			{ "__stvrx", s_use_ssse3 ? (u64)&sse_cellbe_stvrx : (u64)&sse_cellbe_stvrx_v0 },
 			{ "__resupdate", (u64)&vm::reservation_update },
+			{ "sys_config_io_event", (u64)ppu_get_syscall(523) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)

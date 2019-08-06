@@ -657,7 +657,24 @@ void game_list_frame::SaveSettings()
 static void open_dir(const std::string& spath)
 {
 	fs::create_dir(spath);
-	QString path = qstr(spath);
+	const QString path = qstr(spath);
+
+	if (fs::is_file(spath))
+	{
+		// open directory and select file
+		// https://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
+#ifdef _WIN32
+		QProcess::startDetached("explorer.exe", { "/select,", QDir::toNativeSeparators(path) });
+#elif defined(__APPLE__)
+		QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
+		QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
+#else
+		// open parent directory
+		QDesktopServices::openUrl(QUrl("file:///" + qstr(fs::get_parent_dir(spath))));
+#endif
+		return;
+	}
+
 	QDesktopServices::openUrl(QUrl("file:///" + path));
 }
 
@@ -807,11 +824,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = myMenu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [=]()
 		{
-			if (fs::is_file(Emulator::GetCustomConfigPath(currGame.serial)))
-				open_dir(Emulator::GetCustomConfigDir());
+			const std::string new_config_path = Emulator::GetCustomConfigPath(currGame.serial);
 
-			if (fs::is_file(Emulator::GetCustomConfigPath(currGame.serial, true)))
-				open_dir(data_base_dir);
+			if (fs::is_file(new_config_path))
+				open_dir(new_config_path);
+
+			const std::string old_config_path = Emulator::GetCustomConfigPath(currGame.serial, true);
+
+			if (fs::is_file(old_config_path))
+				open_dir(old_config_path);
 		});
 	}
 	if (fs::is_dir(data_base_dir))
@@ -1114,7 +1135,7 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 		{
 			if (QDir(filepath).removeRecursively())
 			{
-				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
+				LOG_SUCCESS(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
 			}
 			else
 			{

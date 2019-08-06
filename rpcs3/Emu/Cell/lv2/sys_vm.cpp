@@ -259,7 +259,6 @@ error_code sys_vm_invalidate(ppu_thread& ppu, u32 addr, u32 size)
 		return CELL_EINVAL;
 	}
 
-	std::memset(vm::base(addr), 0, size);
 	return CELL_OK;
 }
 

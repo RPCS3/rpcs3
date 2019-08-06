@@ -16,13 +16,24 @@ error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmut
 
 	sys_lwcond.warning("_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx, arg5=0x%x)", lwcond_id, lwmutex_id, control, name, arg5);
 
-	// Temporarily
-	if (!idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id))
+	u32 protocol;
+
+	// Extract protocol from lwmutex
+	if (!idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&protocol](lv2_lwmutex& mutex)
+	{
+		protocol = mutex.protocol;
+	}))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (const u32 id = idm::make<lv2_obj, lv2_lwcond>(name, lwmutex_id, control))
+	if (protocol == SYS_SYNC_RETRY)
+	{
+		// Lwcond can't have SYS_SYNC_RETRY protocol 
+		protocol = SYS_SYNC_PRIORITY;
+	}
+
+	if (const u32 id = idm::make<lv2_obj, lv2_lwcond>(name, lwmutex_id, protocol, control))
 	{
 		*lwcond_id = id;
 		return CELL_OK;
@@ -114,7 +125,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 			}
 			else
 			{
-				result = cond.schedule<ppu_thread>(cond.sq, cond.control->lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK);
+				result = cond.schedule<ppu_thread>(cond.sq, cond.protocol);
 			}
 
 			if (result)
@@ -206,7 +217,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 			u32 result = 0;
 
-			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.control->lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK))
+			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.protocol))
 			{
 				cond.waiters--;
 
