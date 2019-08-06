@@ -19,6 +19,10 @@ namespace vk
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 
+	// General purpose upload heap
+	// TODO: Clean this up and integrate cleanly with VKGSRender
+	data_heap g_upload_heap;
+
 	// Garbage collection
 	std::vector<std::unique_ptr<image>> g_deleted_typeless_textures;
 
@@ -219,6 +223,16 @@ namespace vk
 		return g_scratch_buffer.get();
 	}
 
+	data_heap* get_upload_heap()
+	{
+		if (!g_upload_heap.heap)
+		{
+			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap");
+		}
+
+		return &g_upload_heap;
+	}
+
 	void acquire_global_submit_lock()
 	{
 		g_submit_mutex.lock();
@@ -241,6 +255,8 @@ namespace vk
 	{
 		vk::reset_compute_tasks();
 		vk::reset_resolve_resources();
+
+		g_upload_heap.reset_allocation_stats();
 	}
 
 	void destroy_global_resources()
@@ -254,6 +270,7 @@ namespace vk
 		g_null_texture.reset();
 		g_null_image_view.reset();
 		g_scratch_buffer.reset();
+		g_upload_heap.destroy();
 
 		g_typeless_textures.clear();
 		g_deleted_typeless_textures.clear();

@@ -311,7 +311,7 @@ namespace rsx
 
 					if (ignore) continue;
 
-					this_address = surface->memory_tag_samples[0].first;
+					this_address = surface->base_addr;
 					verify(HERE), this_address;
 				}
 
@@ -363,6 +363,7 @@ namespace rsx
 			surface_storage_type new_surface_storage;
 			surface_type old_surface = nullptr;
 			surface_type new_surface = nullptr;
+			bool do_intersection_test = true;
 			bool store = true;
 
 			address_range *storage_bounds;
@@ -404,10 +405,13 @@ namespace rsx
 					{
 						// Preserve memory outside the area to be inherited if needed
 						split_surface_region<depth>(command_list, address, Traits::get(surface), (u16)width, (u16)height, bpp, antialias);
+						old_surface = Traits::get(surface);
 					}
 
-					old_surface = Traits::get(surface);
+					// This will be unconditionally moved to invalidated list shortly
+					Traits::notify_surface_invalidated(surface);
 					old_surface_storage = std::move(surface);
+
 					primary_storage->erase(It);
 				}
 			}
@@ -428,10 +432,9 @@ namespace rsx
 						new_surface_storage = std::move(surface);
 						Traits::notify_surface_reused(new_surface_storage);
 
-						if (old_surface)
+						if (old_surface_storage)
 						{
 							// Exchange this surface with the invalidated one
-							Traits::notify_surface_invalidated(old_surface_storage);
 							surface = std::move(old_surface_storage);
 						}
 						else
@@ -449,10 +452,9 @@ namespace rsx
 			}
 
 			// Check for stale storage
-			if (old_surface != nullptr && new_surface == nullptr)
+			if (old_surface_storage)
 			{
 				// This was already determined to be invalid and is excluded from testing above
-				Traits::notify_surface_invalidated(old_surface_storage);
 				invalidated_resources.push_back(std::move(old_surface_storage));
 			}
 
@@ -463,36 +465,46 @@ namespace rsx
 				new_surface = Traits::get(new_surface_storage);
 			}
 
-			if (!old_surface)
+			// Remove and preserve if possible any overlapping/replaced surface from the other pool
+			auto aliased_surface = secondary_storage->find(address);
+			if (aliased_surface != secondary_storage->end())
 			{
-				// Remove and preserve if possible any overlapping/replaced surface from the other pool
-				auto aliased_surface = secondary_storage->find(address);
-				if (aliased_surface != secondary_storage->end())
+				if (Traits::surface_is_pitch_compatible(aliased_surface->second, pitch))
 				{
-					if (Traits::surface_is_pitch_compatible(aliased_surface->second, pitch))
-					{
-						old_surface = Traits::get(aliased_surface->second);
-						split_surface_region<!depth>(command_list, address, old_surface, (u16)width, (u16)height, bpp, antialias);
-					}
+					auto surface = Traits::get(aliased_surface->second);
+					split_surface_region<!depth>(command_list, address, surface, (u16)width, (u16)height, bpp, antialias);
 
-					Traits::notify_surface_invalidated(aliased_surface->second);
-					invalidated_resources.push_back(std::move(aliased_surface->second));
-					secondary_storage->erase(aliased_surface);
+					if (!old_surface || old_surface->last_use_tag < surface->last_use_tag)
+					{
+						// TODO: This can leak data outside inherited bounds
+						old_surface = surface;
+					}
 				}
+
+				Traits::notify_surface_invalidated(aliased_surface->second);
+				invalidated_resources.push_back(std::move(aliased_surface->second));
+				secondary_storage->erase(aliased_surface);
 			}
 
-			bool do_intersection_test = true;
-
 			// Check if old_surface is 'new' and hopefully avoid intersection
-			if (old_surface && old_surface->last_use_tag >= write_tag)
+			if (old_surface)
 			{
-				const auto new_area = new_surface->get_normalized_memory_area();
-				const auto old_area = old_surface->get_normalized_memory_area();
-
-				if (new_area.x2 <= old_area.x2 && new_area.y2 <= old_area.y2)
+				if (old_surface->last_use_tag < new_surface->last_use_tag)
 				{
-					do_intersection_test = false;
-					new_surface->set_old_contents(old_surface);
+					// Can happen if aliasing occurs; a probable condition due to memory splitting
+					// This is highly unlikely but is possible in theory
+					old_surface = nullptr;
+				}
+				else if (old_surface->last_use_tag >= write_tag)
+				{
+					const auto new_area = new_surface->get_normalized_memory_area();
+					const auto old_area = old_surface->get_normalized_memory_area();
+
+					if (new_area.x2 <= old_area.x2 && new_area.y2 <= old_area.y2)
+					{
+						do_intersection_test = false;
+						new_surface->set_old_contents(old_surface);
+					}
 				}
 			}
 
@@ -507,7 +519,7 @@ namespace rsx
 				(*primary_storage)[address] = std::move(new_surface_storage);
 			}
 
-			verify(HERE), new_surface->get_spp() == get_format_sample_count(antialias);
+			verify(HERE), !old_surface_storage, new_surface->get_spp() == get_format_sample_count(antialias);
 			return new_surface;
 		}
 
@@ -831,7 +843,7 @@ namespace rsx
 			return result;
 		}
 
-		void on_write(u32 address = 0)
+		void on_write(bool color, bool z, u32 address = 0)
 		{
 			if (!address)
 			{
@@ -839,14 +851,17 @@ namespace rsx
 				{
 					if (m_invalidate_on_write)
 					{
-						for (int i = m_bound_render_targets_config.first, count = 0;
-							count < m_bound_render_targets_config.second;
-							++i, ++count)
+						if (color)
 						{
-							m_bound_render_targets[i].second->on_invalidate_children();
+							for (int i = m_bound_render_targets_config.first, count = 0;
+								count < m_bound_render_targets_config.second;
+								++i, ++count)
+							{
+								m_bound_render_targets[i].second->on_invalidate_children();
+							}
 						}
 
-						if (m_bound_depth_stencil.first)
+						if (z && m_bound_depth_stencil.first)
 						{
 							m_bound_depth_stencil.second->on_invalidate_children();
 						}
@@ -860,33 +875,39 @@ namespace rsx
 				}
 
 				// Tag all available surfaces
-				for (int i = m_bound_render_targets_config.first, count = 0;
-					count < m_bound_render_targets_config.second;
-					++i, ++count)
+				if (color)
 				{
-					m_bound_render_targets[i].second->on_write(write_tag);
+					for (int i = m_bound_render_targets_config.first, count = 0;
+						count < m_bound_render_targets_config.second;
+						++i, ++count)
+					{
+						m_bound_render_targets[i].second->on_write(write_tag);
+					}
 				}
 
-				if (m_bound_depth_stencil.first)
+				if (z && m_bound_depth_stencil.first)
 				{
 					m_bound_depth_stencil.second->on_write(write_tag);
 				}
 			}
 			else
 			{
-				for (int i = m_bound_render_targets_config.first, count = 0;
-					count < m_bound_render_targets_config.second;
-					++i, ++count)
+				if (color)
 				{
-					if (m_bound_render_targets[i].first != address)
+					for (int i = m_bound_render_targets_config.first, count = 0;
+						count < m_bound_render_targets_config.second;
+						++i, ++count)
 					{
-						continue;
-					}
+						if (m_bound_render_targets[i].first != address)
+						{
+							continue;
+						}
 
-					m_bound_render_targets[i].second->on_write(write_tag);
+						m_bound_render_targets[i].second->on_write(write_tag);
+					}
 				}
 
-				if (m_bound_depth_stencil.first == address)
+				if (z && m_bound_depth_stencil.first == address)
 				{
 					m_bound_depth_stencil.second->on_write(write_tag);
 				}

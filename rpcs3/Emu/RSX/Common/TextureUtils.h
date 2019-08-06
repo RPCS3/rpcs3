@@ -146,3 +146,9 @@ u32 get_format_packed_pitch(u32 format, u16 width, bool border = false, bool swi
 * Reverse encoding
 */
 u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap);
+
+/**
+ * Get gcm texel layout. Returns <format, byteswapped>
+ */
+std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format);
+std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format format);

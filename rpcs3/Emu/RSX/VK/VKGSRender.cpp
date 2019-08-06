@@ -122,51 +122,6 @@ namespace vk
 		}
 	}
 
-	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format color_format)
-	{
-		switch (color_format)
-		{
-		case rsx::surface_color_format::r5g6b5:
-			return{ CELL_GCM_TEXTURE_R5G6B5, false };
-
-		case rsx::surface_color_format::a8r8g8b8:
-			return{ CELL_GCM_TEXTURE_A8R8G8B8, true }; //verified
-
-		case rsx::surface_color_format::a8b8g8r8:
-			return{ CELL_GCM_TEXTURE_A8R8G8B8, false };
-
-		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
-		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
-			return{ CELL_GCM_TEXTURE_A8R8G8B8, true };
-
-		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
-		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
-			return{ CELL_GCM_TEXTURE_A8R8G8B8, false };
-
-		case rsx::surface_color_format::w16z16y16x16:
-			return{ CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT, true };
-
-		case rsx::surface_color_format::w32z32y32x32:
-			return{ CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT, true };
-
-		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			return{ CELL_GCM_TEXTURE_A1R5G5B5, false };
-
-		case rsx::surface_color_format::b8:
-			return{ CELL_GCM_TEXTURE_B8, false };
-
-		case rsx::surface_color_format::g8b8:
-			return{ CELL_GCM_TEXTURE_G8B8, true };
-
-		case rsx::surface_color_format::x32:
-			return{ CELL_GCM_TEXTURE_X32_FLOAT, true }; //verified
-
-		default:
-			return{ CELL_GCM_TEXTURE_A8R8G8B8, false };
-		}
-	}
-
 	VkLogicOp get_logic_op(rsx::logic_op op)
 	{
 		switch (op)
@@ -1778,7 +1733,7 @@ void VKGSRender::end()
 	close_render_pass();
 	vk::leave_uninterruptible();
 
-	m_rtts.on_write();
+	m_rtts.on_write(rsx::method_registers.color_write_enabled(), rsx::method_registers.depth_write_enabled());
 
 	rsx::thread::end();
 }
@@ -2079,7 +2034,7 @@ void VKGSRender::clear_surface(u32 mask)
 					if (const auto address = rtt.first)
 					{
 						if (require_mem_load) rtt.second->write_barrier(*m_current_command_buffer);
-						m_rtts.on_write(address);
+						m_rtts.on_write(true, false, address);
 					}
 				}
 			}
@@ -2088,10 +2043,10 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (depth_stencil_mask)
 	{
-		if (const auto address = m_rtts.m_bound_depth_stencil.first)
+		if (m_rtts.m_bound_depth_stencil.first)
 		{
 			if (require_mem_load) m_rtts.m_bound_depth_stencil.second->write_barrier(*m_current_command_buffer);
-			m_rtts.on_write(address);
+			m_rtts.on_write(false, true);
 			clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
 		}
 	}
@@ -2762,22 +2717,9 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	m_vertex_layout_ring_info.unmap();
 }
 
-void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
+void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
 {
 	prepare_rtts(context);
-
-	if (!skip_reading)
-	{
-		read_buffers();
-	}
-}
-
-void VKGSRender::read_buffers()
-{
-}
-
-void VKGSRender::write_buffers()
-{
 }
 
 void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
@@ -2948,7 +2890,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		flush_command_queue();
 	}
 
-	const auto color_fmt_info = vk::get_compatible_gcm_format(layout.color_format);
+	const auto color_fmt_info = get_compatible_gcm_format(layout.color_format);
 	for (u8 index : m_draw_buffers)
 	{
 		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
@@ -3003,7 +2945,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 				{
 					if (!g_cfg.video.write_color_buffers) continue;
 
-					auto info = vk::get_compatible_gcm_format(surface->get_surface_color_format());
+					auto info = get_compatible_gcm_format(surface->get_surface_color_format());
 					gcm_format = info.first;
 					swap_bytes = info.second;
 				}

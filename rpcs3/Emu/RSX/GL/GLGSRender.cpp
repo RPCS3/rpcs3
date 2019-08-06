@@ -626,7 +626,7 @@ void GLGSRender::end()
 		}
 	} while (rsx::method_registers.current_draw_clause.next());
 
-	m_rtts.on_write();
+	m_rtts.on_write(rsx::method_registers.color_write_enabled(), rsx::method_registers.depth_write_enabled());
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
@@ -1152,7 +1152,7 @@ void GLGSRender::clear_surface(u32 arg)
 			if (require_mem_load) ds->write_barrier(cmd);
 
 			// Memory has been initialized
-			m_rtts.on_write(std::get<0>(m_rtts.m_bound_depth_stencil));
+			m_rtts.on_write(false, true);
 		}
 	}
 
@@ -1189,7 +1189,7 @@ void GLGSRender::clear_surface(u32 arg)
 				if (const auto address = rtt.first)
 				{
 					if (require_mem_load) rtt.second->write_barrier(cmd);
-					m_rtts.on_write(address);
+					m_rtts.on_write(true, false, address);
 				}
 			}
 

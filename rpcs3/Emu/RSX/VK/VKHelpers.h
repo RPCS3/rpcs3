@@ -118,6 +118,7 @@ namespace vk
 	image_view* null_image_view(vk::command_buffer&);
 	image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height);
 	buffer* get_scratch_buffer();
+	data_heap* get_upload_heap();
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
@@ -140,7 +141,7 @@ namespace vk
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::data_heap &upload_heap);
+		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align = 256);
 
 	//Other texture management helpers
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range);
