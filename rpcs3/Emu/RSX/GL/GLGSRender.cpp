@@ -1629,7 +1629,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 			else
 			{
 				gl::command_context cmd = { gl_state };
-				const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, absolute_address, buffer_width, buffer_height, buffer_pitch, render_target_texture->get_bpp());
+				const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, absolute_address, buffer_width, buffer_height, buffer_pitch, render_target_texture->get_bpp(), rsx::surface_access::read);
 
 				if (!overlap_info.empty() && overlap_info.back().surface == render_target_texture)
 				{

@@ -2084,7 +2084,7 @@ namespace rsx
 				// NOTE: Compressed formats require a reupload, facilitated by blit synchronization and/or WCB and are not handled here
 
 				const auto bpp = get_format_block_size_in_bytes(format);
-				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch, bpp);
+				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch, bpp, rsx::surface_access::read);
 
 				if (!overlapping_fbos.empty() || !overlapping_locals.empty())
 				{
@@ -2342,7 +2342,7 @@ namespace rsx
 
 			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
 			{
-				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp);
+				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp, rsx::surface_access::transfer);
 				if (list.empty())
 				{
 					return {};

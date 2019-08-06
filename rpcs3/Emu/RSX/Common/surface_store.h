@@ -716,7 +716,7 @@ namespace rsx
 		}
 
 		template <typename commandbuffer_type>
-		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp)
+		std::vector<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
 		{
 			std::vector<surface_overlap_info> result;
 			std::vector<std::pair<u32, bool>> dirty;
@@ -738,12 +738,6 @@ namespace rsx
 					const auto texture_size = pitch * surface->get_surface_height(rsx::surface_metrics::samples);
 					if ((this_address + texture_size) <= texaddr)
 						continue;
-
-					if (surface->read_barrier(cmd); !surface->test())
-					{
-						dirty.emplace_back(this_address, is_depth);
-						continue;
-					}
 
 					surface_overlap_info info;
 					info.surface = surface;
@@ -787,6 +781,13 @@ namespace rsx
 						info.dst_y = 0;
 						info.width = std::min<u32>(required_width, normalized_surface_width - info.src_x);
 						info.height = std::min<u32>(required_height, normalized_surface_height - info.src_y);
+					}
+
+					// Delay this as much as possible to avoid side-effects of spamming barrier
+					if (surface->memory_barrier(cmd, access); !surface->test())
+					{
+						dirty.emplace_back(this_address, is_depth);
+						continue;
 					}
 
 					info.is_clipped = (info.width < required_width || info.height < required_height);
@@ -941,6 +942,27 @@ namespace rsx
 			for (auto &rtt : m_bound_render_targets)
 			{
 				rtt = std::make_pair(0, nullptr);
+			}
+		}
+
+		void invalidate_range(const rsx::address_range& range)
+		{
+			for (auto &rtt : m_render_targets_storage)
+			{
+				if (range.overlaps(rtt.second->get_memory_range()))
+				{
+					rtt.second->clear_rw_barrier();
+					rtt.second->state_flags |= rsx::surface_state_flags::erase_bkgnd;
+				}
+			}
+
+			for (auto &ds : m_depth_stencil_storage)
+			{
+				if (range.overlaps(ds.second->get_memory_range()))
+				{
+					ds.second->clear_rw_barrier();
+					ds.second->state_flags |= rsx::surface_state_flags::erase_bkgnd;
+				}
 			}
 		}
 	};

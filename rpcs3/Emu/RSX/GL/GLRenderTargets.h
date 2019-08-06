@@ -223,8 +223,6 @@ struct gl_render_target_traits
 
 		prev.target = sink.get();
 
-		sink->sync_tag();
-
 		if (!sink->old_contents.empty())
 		{
 			// Deal with this, likely only needs to clear
