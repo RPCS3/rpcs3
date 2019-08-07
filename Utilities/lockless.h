@@ -388,27 +388,13 @@ public:
 
 	// Apply func(data) to each element, return the total length
 	template <typename F>
-	std::size_t apply(F&& func)
+	std::size_t apply(F func)
 	{
 		std::size_t count = 0;
 
 		for (auto slice = pop_all(); slice; slice.pop_front())
 		{
-			std::invoke(std::forward<F>(func), *slice);
-		}
-
-		return count;
-	}
-
-	// apply() overload for callable template argument
-	template <auto F>
-	std::size_t apply()
-	{
-		std::size_t count = 0;
-
-		for (auto slice = pop_all(); slice; slice.pop_front())
-		{
-			std::invoke(F, *slice);
+			std::invoke(func, *slice);
 		}
 
 		return count;
