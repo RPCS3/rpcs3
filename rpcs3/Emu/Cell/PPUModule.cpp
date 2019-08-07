@@ -1295,8 +1295,16 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	if (g_cfg.core.lib_loading == lib_loading_type::automatic || g_cfg.core.lib_loading == lib_loading_type::both)
 	{
-		// Load only libsysmodule.sprx
-		load_libs.emplace("libsysmodule.sprx");
+		if (g_cfg.core.lib_loading == lib_loading_type::both && g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
+		{
+			// Will load libsysmodule.sprx internally
+			load_libs.emplace("liblv2.sprx");
+		}
+		else
+		{
+			// Load only libsysmodule.sprx
+			load_libs.emplace("libsysmodule.sprx");
+		}
 	}
 	else if (0)
 	{
@@ -1422,6 +1430,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 	}
 
+	// Program entry
+	u32 entry = 0;
+
 	if (!load_libs.empty())
 	{
 		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
@@ -1453,7 +1464,15 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					prx->validate(prx->funcs[0].addr);
 				}
 
-				loaded_modules.emplace_back(std::move(prx));
+				if (name == "liblv2.sprx")
+				{
+ 					// Run liblv2.sprx entry point (TODO)
+					entry = prx->start.addr();
+				}
+				else
+				{
+					loaded_modules.emplace_back(std::move(prx));
+				}
 			}
 			else
 			{
@@ -1588,10 +1607,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
-	// TODO: adjust for liblv2 loading option
-	u32 entry = static_cast<u32>(elf.header.e_entry);
-
-	if (g_cfg.core.lib_loading != lib_loading_type::liblv2only)
+	if (!entry)
 	{
 		// Set TLS args, call sys_initialize_tls
 		ppu->cmd_list
@@ -1599,13 +1615,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ ppu_cmd::set_args, 4 }, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 			{ ppu_cmd::hle_call, FIND_FUNC(sys_initialize_tls) },
 		});
-	}
-	else
-	{
-		// Run liblv2.sprx entry point (TODO)
-		entry = loaded_modules[0]->start.addr();
 
-		loaded_modules.clear();
+		entry = static_cast<u32>(elf.header.e_entry); // Run entry from elf
 	}
 
 	// Run start functions
