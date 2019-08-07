@@ -45,9 +45,8 @@ void fmt_class_string<lib_loading_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case lib_loading_type::automatic: return "Automatically load required libraries";
 		case lib_loading_type::manual: return "Manually load selected libraries";
-		case lib_loading_type::both: return "Load automatic and manual selection";
+		case lib_loading_type::hybrid: return "Load automatic and manual selection";
 		case lib_loading_type::liblv2only: return "Load liblv2.sprx only";
 		case lib_loading_type::liblv2both: return "Load liblv2.sprx and manual selection";
 		case lib_loading_type::liblv2list: return "Load liblv2.sprx and strict selection";
@@ -1283,15 +1282,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
 		load_libs = g_cfg.core.load_libraries.get_set();
 	}
-	else if (g_cfg.core.lib_loading >= lib_loading_type::liblv2only && g_cfg.core.lib_loading <= lib_loading_type::liblv2list)
+	else
 	{
-		// Load only liblv2.sprx
-		load_libs.emplace("liblv2.sprx");
-	}
-
-	if (g_cfg.core.lib_loading == lib_loading_type::automatic || g_cfg.core.lib_loading == lib_loading_type::both)
-	{
-		if (g_cfg.core.lib_loading == lib_loading_type::both && g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
+		if (g_cfg.core.lib_loading != lib_loading_type::hybrid || g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
 		{
 			// Will load libsysmodule.sprx internally
 			load_libs.emplace("liblv2.sprx");
@@ -1300,129 +1293,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		{
 			// Load only libsysmodule.sprx
 			load_libs.emplace("libsysmodule.sprx");
-		}
-	}
-	else if (0)
-	{
-		// Load recommended set of modules: Module name -> SPRX
-		std::unordered_multimap<std::string, std::string> sprx_map
-		{
-			{ "cellAdec", "libadec.sprx" }, // cellSpurs|cell_libac3dec|cellAtrac3dec|cellAtracXdec|cellCelpDec|cellDTSdec|cellM2AACdec|cellM2BCdec|cellM4AacDec|cellMP3dec|cellTRHDdec|cellWMAdec|cellDTSLBRdec|cellDDPdec|cellM4AacDec2ch|cellDTSHDdec|cellMPL1dec|cellMP3Sdec|cellM4AacDec2chmod|cellCelp8Dec|cellWMAPROdec|cellWMALSLdec|cellDTSHDCOREdec|cellAtrac3multidec
-			{ "cellAdec", "libsre.sprx" },
-			{ "cellAdec", "libac3dec.sprx" },
-			{ "cellAdec", "libat3dec.sprx" },
-			{ "cellAdec", "libat3multidec.sprx" },
-			{ "cellAdec", "libatxdec.sprx" },
-			{ "cellAdec", "libcelp8dec.sprx" },
-			{ "cellAdec", "libcelpdec.sprx" },
-			{ "cellAdec", "libddpdec.sprx" },
-			{ "cellAdec", "libm2bcdec.sprx" },
-			{ "cellAdec", "libm4aacdec.sprx" },
-			{ "cellAdec", "libm4aacdec2ch.sprx" },
-			{ "cellAdec", "libmp3dec.sprx" },
-			{ "cellAdec", "libmpl1dec.sprx" },
-			{ "cellAdec", "libwmadec.sprx" },
-			{ "cellAtrac", "libatrac3plus.sprx" },
-			{ "cellAtrac", "cellAdec" },
-			{ "cellAtracMulti", "libatrac3multi.sprx" },
-			{ "cellAtracMulti", "cellAdec" },
-			{ "cellCelp8Enc", "libcelp8enc.sprx" },
-			{ "cellCelp8Enc", "libsre.sprx" },
-			{ "cellCelpEnc", "libcelpenc.sprx" },
-			{ "cellCelpEnc", "libsre.sprx" },
-			{ "cellDmux", "libdmux.sprx" },
-			{ "cellDmux", "libdmuxpamf.sprx" },
-			{ "cellDmux", "libsre.sprx" },
-			{ "cellFiber", "libfiber.sprx" },
-			{ "cellFont", "libfont.sprx" },
-			{ "cellFontFT", "libfontFT.sprx" },
-			{ "cellFontFT", "libfreetype.sprx" },
-			{ "cellGcmSys", "libgcm_sys.sprx" },
-			{ "cellGifDec", "libgifdec.sprx" },
-			{ "cellGifDec", "libsre.sprx" },
-			{ "cellJpgDec", "libjpgdec.sprx" },
-			{ "cellJpgDec", "libsre.sprx" },
-			{ "cellJpgEnc", "libjpgenc.sprx" },
-			{ "cellJpgEnc", "libsre.sprx" },
-			{ "cellKey2char", "libkey2char.sprx" },
-			{ "cellL10n", "libl10n.sprx" },
-			{ "cellM4hdEnc", "libm4hdenc.sprx" },
-			{ "cellM4hdEnc", "libsre.sprx" },
-			{ "cellPamf", "libpamf.sprx" },
-			{ "cellPngDec", "libpngdec.sprx" },
-			{ "cellPngDec", "libsre.sprx" },
-			{ "cellPngEnc", "libpngenc.sprx" },
-			{ "cellPngEnc", "libsre.sprx" },
-			{ "cellResc", "libresc.sprx" },
-			{ "cellRtc", "librtc.sprx" },
-			{ "cellSsl", "libssl.sprx" },
-			{ "cellSsl", "librtc.sprx" },
-			{ "cellHttp", "libhttp.sprx" },
-			{ "cellHttp", "cellSsl" },
-			{ "cellHttpUtil", "libhttp.sprx" },
-			{ "cellHttpUtil", "cellSsl" },
-			{ "cellSail", "libsail.sprx" },
-			{ "cellSail", "libsre.sprx" },
-			{ "cellSail", "libmp4.sprx" },
-			{ "cellSail", "libpamf.sprx" },
-			{ "cellSail", "libdmux.sprx" },
-			{ "cellSail", "libdmuxpamf.sprx" },
-			{ "cellSail", "libapostsrc_mini.sprx" },
-			{ "cellSail", "libsail_avi.sprx" },
-			{ "cellSail", "libvpost.sprx" },
-			{ "cellSail", "cellAdec" },
-			{ "cellSpursJq", "libspurs_jq.sprx" },
-			{ "cellSpursJq", "libsre.sprx" },
-			{ "cellSync", "libsre.sprx" },
-			{ "cellSheap", "libsre.sprx" },
-			{ "cellOvis", "libsre.sprx" },
-			{ "cellSpurs", "libsre.sprx" },
-			{ "cellDaisy", "libsre.sprx" },
-			{ "cellSpudll", "libsre.sprx" },
-			{ "cellSync2", "libsync2.sprx" },
-			{ "cellSync2", "libsre.sprx" },
-			{ "cellVpost", "libvpost.sprx" },
-			{ "cellVpost", "libsre.sprx" },
-			{ "sys_fs", "libfs.sprx" },
-		};
-
-		// Expand dependencies
-		for (bool repeat = true; repeat;)
-		{
-			repeat = false;
-
-			for (auto it = sprx_map.begin(), end = sprx_map.end(); it != end; ++it)
-			{
-				auto range = sprx_map.equal_range(it->second);
-
-				if (range.first != range.second)
-				{
-					decltype(sprx_map) add;
-
-					for (; range.first != range.second; ++range.first)
-					{
-						add.emplace(it->first, range.first->second);
-					}
-
-					sprx_map.erase(it);
-					sprx_map.insert(add.begin(), add.end());
-					repeat = true;
-					break;
-				}
-			}
-		}
-
-		for (const auto& pair : link->modules)
-		{
-			if (!pair.second.imported)
-			{
-				continue;
-			}
-
-			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second; ++range.first)
-			{
-				load_libs.emplace(range.first->second);
-			}
 		}
 	}
 

@@ -42,9 +42,8 @@ enum class spu_block_size_type
 
 enum class lib_loading_type
 {
-	automatic,
 	manual,
-	both,
+	hybrid,
 	liblv2only,
 	liblv2both,
 	liblv2list,
