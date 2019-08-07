@@ -1282,8 +1282,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Get LLE module list
 	std::set<std::string> load_libs;
 
-	std::size_t liblv2_module_idx = -1;
-
 	if (g_cfg.core.lib_loading == lib_loading_type::manual)
 	{
 		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
@@ -1432,6 +1430,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 	}
 
+	// Program entry
+	u32 entry = 0;
+
 	if (!load_libs.empty())
 	{
 		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
@@ -1465,10 +1466,13 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				if (name == "liblv2.sprx")
 				{
-					liblv2_module_idx = loaded_modules.size();
+ 					// Run liblv2.sprx entry point (TODO)
+					entry = prx->start.addr();
 				}
-
-				loaded_modules.emplace_back(std::move(prx));
+				else
+				{
+					loaded_modules.emplace_back(std::move(prx));
+				}
 			}
 			else
 			{
@@ -1603,10 +1607,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
-	// TODO: adjust for liblv2 loading option
-	u32 entry = static_cast<u32>(elf.header.e_entry);
-
-	if (liblv2_module_idx == -1)
+	if (!entry)
 	{
 		// Set TLS args, call sys_initialize_tls
 		ppu->cmd_list
@@ -1614,13 +1615,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ ppu_cmd::set_args, 4 }, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 			{ ppu_cmd::hle_call, FIND_FUNC(sys_initialize_tls) },
 		});
-	}
-	else
-	{
-		// Run liblv2.sprx entry point (TODO)
-		entry = loaded_modules[liblv2_module_idx]->start.addr();
 
-		loaded_modules.erase(loaded_modules.begin() + liblv2_module_idx);
+		entry = static_cast<u32>(elf.header.e_entry); // Run entry from elf
 	}
 
 	// Run start functions
