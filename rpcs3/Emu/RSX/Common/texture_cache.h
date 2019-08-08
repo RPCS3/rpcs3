@@ -2394,8 +2394,21 @@ namespace rsx
 			};
 
 			// Check if src/dst are parts of render targets
-			auto dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, dst_bpp, false);
-			dst_is_render_target = dst_subres.surface != nullptr;
+			typename surface_store_type::surface_overlap_info dst_subres;
+			if (dst_address > 0xc0000000)
+			{
+				// TODO: HACK
+				// After writing, it is required to lock the memory range from access!
+				dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, dst_bpp, false);
+				dst_is_render_target = dst_subres.surface != nullptr;
+			}
+			else
+			{
+				// Surface exists in local memory.
+				// 1. Invalidate surfaces in range
+				// 2. Proceed as normal, blit into a 'normal' surface and any upload routines should catch it
+				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch * dst_h));
+			}
 
 			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
 			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, false);
@@ -2743,6 +2756,29 @@ namespace rsx
 				src_area.y2 += scaled_clip_offset_y;
 			}
 
+			// Calculate number of bytes actually modified
+			u32 mem_base, mem_length;
+			if (dst_is_render_target)
+			{
+				mem_base = dst_address - dst_subres.base_address;
+			}
+			else
+			{
+				mem_base = dst_address - dst.rsx_address;
+			}
+
+			if (dst.clip_height == 1)
+			{
+				mem_length = dst.clip_width * dst_bpp;
+			}
+			else
+			{
+				const u32 mem_excess = mem_base % dst.pitch;
+				mem_length = (dst.pitch * dst.clip_height) - mem_excess;
+			}
+
+			const auto modified_range = utils::address_range::start_length(dst_address, mem_length);
+
 			if (dest_texture == 0)
 			{
 				verify(HERE), !dst_is_render_target;
@@ -2755,13 +2791,6 @@ namespace rsx
 				const u32 section_length = std::max(write_end, expected_end) - dst.rsx_address;
 				dst_dimensions.height = section_length / dst.pitch;
 
-				lock.upgrade();
-
-				// NOTE: Invalidating for read also flushes framebuffers locked in the range and invalidates them (obj->test() will fail)
-				const auto rsx_range = address_range::start_length(dst.rsx_address, section_length);
-				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
-				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
-
 				// render target data is already in correct swizzle layout
 				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
 					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
@@ -2773,6 +2802,12 @@ namespace rsx
 				dst_area.y1 += dst.offset_y;
 				dst_area.y2 += dst.offset_y;
 
+				lock.upgrade();
+
+				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
+				const auto rsx_range = address_range::start_length(dst.rsx_address, section_length);
+				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
+
 				if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
 				{
 					cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
@@ -2781,6 +2816,11 @@ namespace rsx
 				}
 				else
 				{
+					// HACK: workaround for data race with Cell
+					// Pre-lock the memory range we'll be touching, then load with super_ptr
+					const auto prot_range = modified_range.to_page_range();
+					utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
+
 					const u16 pitch_in_block = dst.pitch / dst_bpp;
 					std::vector<rsx_subresource_layout> subresource_layout;
 					rsx_subresource_layout subres = {};
@@ -2788,7 +2828,7 @@ namespace rsx
 					subres.height_in_block = dst_dimensions.height;
 					subres.pitch_in_block = pitch_in_block;
 					subres.depth = 1;
-					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(dst.rsx_address)), dst.pitch * dst_dimensions.height };
+					subres.data = { reinterpret_cast<const gsl::byte*>(vm::get_super_ptr(dst.rsx_address)), dst.pitch * dst_dimensions.height };
 					subresource_layout.push_back(subres);
 
 					cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
@@ -2804,29 +2844,8 @@ namespace rsx
 
 			verify(HERE), cached_dest || dst_is_render_target;
 
-			// Calculate number of bytes actually modified
-			u32 mem_base, mem_length;
-			if (dst_is_render_target)
-			{
-				mem_base = dst_address - dst_subres.base_address;
-			}
-			else
-			{
-				mem_base = dst_address - cached_dest->get_section_base();
-			}
-
-			if (dst.clip_height == 1)
-			{
-				mem_length = dst.clip_width * dst_bpp;
-			}
-			else
-			{
-				const u32 mem_excess = mem_base % dst.pitch;
-				mem_length = (dst.pitch * dst.clip_height) - mem_excess;
-			}
-
 			// Invalidate any cached subresources in modified range
-			notify_surface_changed(utils::address_range::start_length(dst_address, mem_length));
+			notify_surface_changed(modified_range);
 
 			if (cached_dest)
 			{
@@ -2840,6 +2859,8 @@ namespace rsx
 			}
 			else
 			{
+				// NOTE: This doesn't work very well in case of Cell access
+				// Need to lock the affected memory range and actually attach this subres to a locked_region
 				dst_subres.surface->on_write_copy(rsx::get_shared_tag());
 				m_rtts.notify_memory_structure_changed();
 			}
