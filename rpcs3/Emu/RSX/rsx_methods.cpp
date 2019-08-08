@@ -1018,17 +1018,18 @@ namespace rsx
 					return;
 			}
 
-			std::unique_ptr<u8[]> temp1, temp2, temp3, sw_temp;
+			std::vector<u8> temp1, temp2, temp3, sw_temp;
 
 			if (scale_y < 0 || scale_x < 0)
 			{
-				temp1.reset(new u8[in_pitch * (in_h - 1) + (in_bpp * in_w)]);
+				const auto packed_pitch = in_w * in_bpp;
+				temp1.resize(packed_pitch * in_h);
 
 				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch;
 
 				for (u32 y = 0; y < in_h; ++y)
 				{
-					u8 *dst = temp1.get() + (in_pitch * y);
+					u8 *dst = temp1.data() + (packed_pitch * y);
 					u8 *src = pixels_src + (y * stride_y);
 
 					if (scale_x < 0)
@@ -1044,11 +1045,12 @@ namespace rsx
 					}
 					else
 					{
-						std::memcpy(dst, src, in_bpp * in_w);
+						std::memcpy(dst, src, packed_pitch);
 					}
 				}
 
-				pixels_src = temp1.get();
+				pixels_src = temp1.data();
+				in_pitch = packed_pitch;
 			}
 
 			const AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
@@ -1061,7 +1063,7 @@ namespace rsx
 				convert_w != out_w || convert_h != out_h;
 
 			const bool need_convert = out_format != in_format || std::abs(scale_x) != 1.0 || std::abs(scale_y) != 1.0;
-			const u32  slice_h = std::ceil(f32(clip_h + clip_y) / scale_x);
+			const u32  slice_h = std::ceil(f32(clip_h + clip_y) / scale_y);
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
@@ -1071,12 +1073,12 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							temp2.reset(new u8[out_pitch * (std::max(convert_h, (u32)clip_h) - 1) + (out_bpp * std::max(convert_w, (u32)clip_w))]);
+							temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
 
-							convert_scale_image(temp2.get(), out_format, convert_w, convert_h, out_pitch,
+							convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(pixels_dst, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(pixels_dst, temp2.data(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
@@ -1115,27 +1117,27 @@ namespace rsx
 					{
 						if (need_convert)
 						{
-							temp2.reset(new u8[out_pitch * (std::max(convert_h, (u32)clip_h) - 1) + (out_bpp * std::max(convert_w, (u32)clip_w))]);
+							temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
 
-							convert_scale_image(temp2.get(), out_format, convert_w, convert_h, out_pitch,
+							convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(temp3, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(temp3.data(), temp2.data(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
-							clip_image(temp3, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							clip_image(temp3.data(), pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
 						}
 					}
 					else
 					{
-						temp3.reset(new u8[out_pitch * (out_h - 1) + (out_bpp * out_w)]);
+						temp3.resize(out_pitch * out_h);
 
-						convert_scale_image(temp3.get(), out_format, out_w, out_h, out_pitch,
+						convert_scale_image(temp3.data(), out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 
-					pixels_src = temp3.get();
+					pixels_src = temp3.data();
 					in_pitch = out_pitch;
 				}
 
@@ -1161,22 +1163,22 @@ namespace rsx
 				// Check and pad texture out if we are given non power of 2 output
 				if (sw_width != out_w || sw_height != out_h)
 				{
-					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
+					sw_temp.resize(out_bpp * sw_width * sw_height);
 
 					switch (out_bpp)
 					{
 					case 1:
-						pad_texture<u8>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u8>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 						break;
 					case 2:
-						pad_texture<u16>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u16>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 						break;
 					case 4:
-						pad_texture<u32>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u32>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 						break;
 					}
 
-					linear_pixels = sw_temp.get();
+					linear_pixels = sw_temp.data();
 				}
 
 				switch (out_bpp)
