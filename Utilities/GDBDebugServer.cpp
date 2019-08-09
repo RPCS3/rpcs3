@@ -541,7 +541,7 @@ bool GDBDebugServer::cmd_read_memory(gdb_cmd & cmd)
 	std::string result;
 	result.reserve(len * 2);
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr, 1, vm::page_allocated | vm::page_readable)) {
+		if (vm::check_addr(addr)) {
 			result += to_hexbyte(vm::read8(addr + i));
 		} else {
 			break;
