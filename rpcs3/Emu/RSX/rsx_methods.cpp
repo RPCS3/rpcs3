@@ -1115,6 +1115,8 @@ namespace rsx
 				{
 					if (need_clip)
 					{
+						temp3.resize(out_pitch * clip_h);
+
 						if (need_convert)
 						{
 							temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
