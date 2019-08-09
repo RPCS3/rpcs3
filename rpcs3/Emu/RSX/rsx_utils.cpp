@@ -38,13 +38,6 @@ namespace rsx
 		}
 	}
 
-	void clip_image(std::unique_ptr<u8[]>& dst, const u8 *src,
-		int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch)
-	{
-		dst.reset(new u8[clip_h * dst_pitch]);
-		clip_image(dst.get(), src, clip_x, clip_y, clip_w, clip_h, bpp, src_pitch, dst_pitch);
-	}
-
 	//Convert decoded integer values for CONSTANT_BLEND_FACTOR into f32 array in 0-1 range
 	std::array<float, 4> get_constant_blend_colors()
 	{
