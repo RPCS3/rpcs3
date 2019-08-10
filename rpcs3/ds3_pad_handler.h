@@ -106,7 +106,7 @@ class ds3_pad_handler final : public PadHandlerBase
 		std::string device = {};
 		hid_device *handle = nullptr;
 		pad_config* config{ nullptr };
-		u8 buf[64];
+		u8 buf[64]{ 0 };
 		u8 large_motor = 0;
 		u8 small_motor = 0;
 		u8 status = DS3Status::Disconnected;

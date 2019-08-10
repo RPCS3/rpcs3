@@ -369,7 +369,13 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 		"QLabel#thumbnail_icon_color { color: rgba(0, 100, 231, 255); }"
 
 		// game list icon color
-		"QLabel#gamelist_icon_background_color { color: rgba(36, 36, 36, 255); }"
+		"QLabel#gamelist_icon_background_color { color: rgba(240, 240, 240, 255); }"
+
+		// save manager icon color
+		"QLabel#save_manager_icon_background_color { color: rgba(240, 240, 240, 255); }"
+
+		// trophy manager icon color
+		"QLabel#trophy_manager_icon_background_color { color: rgba(240, 240, 240, 255); }"
 
 		// tables
 		"QTableWidget { alternate-background-color: #f2f2f2; background-color: #fff; border: none; }"

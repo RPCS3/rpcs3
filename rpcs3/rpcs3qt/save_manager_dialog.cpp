@@ -1,7 +1,8 @@
-#include "save_manager_dialog.h"
+﻿#include "save_manager_dialog.h"
 
 #include "save_data_info_dialog.h"
 #include "custom_table_widget_item.h"
+#include "qt_utils.h"
 
 #include "Emu/System.h"
 #include "Emu/VFS.h"
@@ -26,7 +27,8 @@ namespace
 	constexpr auto qstr = QString::fromStdString;
 	inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-	QString FormatTimestamp(u64 time) {
+	QString FormatTimestamp(u64 time)
+	{
 		QDateTime dateTime;
 		dateTime.setTime_t(time);
 		return dateTime.toString("yyyy-MM-dd HH:mm:ss");
@@ -187,9 +189,14 @@ void save_manager_dialog::Init(std::string dir)
 	connect(m_button_delete, &QAbstractButton::clicked, this, &save_manager_dialog::OnEntriesRemove);
 	connect(m_button_folder, &QAbstractButton::clicked, [=]()
 	{
-		int idx = m_list->currentRow();
-		int idx_real = m_list->item(idx, 1)->data(Qt::UserRole).toInt();
-		QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
+		const int idx = m_list->currentRow();
+		QTableWidgetItem* item = m_list->item(idx, 1);
+		if (!item)
+		{
+			return;
+		}
+		const int idx_real = item->data(Qt::UserRole).toInt();
+		const QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
 		QDesktopServices::openUrl(QUrl("file:///" + path));
 	});
 	connect(slider_icon_size, &QAbstractSlider::valueChanged, this, &save_manager_dialog::SetIconSize);
@@ -197,11 +204,17 @@ void save_manager_dialog::Init(std::string dir)
 	connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_manager_dialog::ShowContextMenu);
 	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col)
 	{
-		int originalIndex = m_list->item(row, 1)->data(Qt::UserRole).toInt();
-		SaveDataEntry originalEntry = m_save_entries[originalIndex];
-		QString originalDirName = qstr(originalEntry.dirName);
+		QTableWidgetItem* user_item = m_list->item(row, 1);
+		QTableWidgetItem* text_item = m_list->item(row, col);
+		if (!user_item || !text_item)
+		{
+			return;
+		}
+		const int originalIndex = user_item->data(Qt::UserRole).toInt();
+		const SaveDataEntry originalEntry = m_save_entries[originalIndex];
+		const QString originalDirName = qstr(originalEntry.dirName);
 		QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
-		currNotes[originalDirName] = m_list->item(row, col)->text();
+		currNotes[originalDirName] = text_item->text();
 		m_gui_settings->SetValue(gui::m_saveNotes, currNotes);
 	});
 	connect(m_list, &QTableWidget::itemSelectionChanged, this, &save_manager_dialog::UpdateDetails);
@@ -221,6 +234,15 @@ void save_manager_dialog::UpdateList()
 
 	QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
 
+	if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
+	{
+		m_icon_color = m_gui_settings->GetValue(gui::sd_icon_color).value<QColor>();
+	}
+	else
+	{
+		m_icon_color = gui::utils::get_label_color("save_manager_icon_background_color");
+	}
+
 	int row = 0;
 	for (const SaveDataEntry& entry : m_save_entries)
 	{
@@ -228,7 +250,8 @@ void save_manager_dialog::UpdateList()
 		if (!icon.loadFromData(entry.iconBuf.data(), static_cast<uint>(entry.iconBuf.size())))
 		{
 			LOG_WARNING(GENERAL, "Loading icon for save %s failed", entry.dirName);
-			icon.fill(Qt::transparent);
+			icon = QPixmap(320, 176);
+			icon.fill(m_icon_color);
 		}
 
 		QString title = qstr(entry.title) + QStringLiteral("\n") + qstr(entry.subtitle);
@@ -279,6 +302,17 @@ void save_manager_dialog::UpdateList()
 	resize(preferredSize.boundedTo(maxSize));
 }
 
+void save_manager_dialog::HandleRepaintUiRequest()
+{
+	const QSize window_size = size();
+	const Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
+
+	UpdateList();
+
+	m_list->sortByColumn(m_sort_column, sort_order);
+	resize(window_size);
+}
+
 void save_manager_dialog::UpdateIcons()
 {
 	const int dpr = devicePixelRatio();
@@ -287,11 +321,15 @@ void save_manager_dialog::UpdateIcons()
 	for (int i = 0; i < m_list->rowCount(); i++)
 	{
 		QTableWidgetItem* item = m_list->item(i, 0);
+		if (!item)
+		{
+			continue;
+		}
 		QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
 
 		QPixmap icon = QPixmap(data.size() * dpr);
 		icon.setDevicePixelRatio(dpr);
-		icon.fill(Qt::transparent);
+		icon.fill(m_icon_color);
 
 		QPainter painter(&icon);
 		painter.drawPixmap(0, 0, data);
@@ -328,7 +366,12 @@ void save_manager_dialog::OnEntryRemove()
 	int idx = m_list->currentRow();
 	if (idx != -1)
 	{
-		int idx_real = m_list->item(idx, 1)->data(Qt::UserRole).toInt();
+		QTableWidgetItem* item = m_list->item(idx, 1);
+		if (!item)
+		{
+			return;
+		}
+		const int idx_real = item->data(Qt::UserRole).toInt();
 		if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete:\n%1?").arg(qstr(m_save_entries[idx_real].title)), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 		{
 			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
@@ -356,7 +399,12 @@ void save_manager_dialog::OnEntriesRemove()
 		std::sort(selection.rbegin(), selection.rend());
 		for (QModelIndex index : selection)
 		{
-			int idx_real = m_list->item(index.row(), 1)->data(Qt::UserRole).toInt();
+			QTableWidgetItem* item = m_list->item(index.row(), 1);
+			if (!item)
+			{
+				continue;
+			}
+			const int idx_real = item->data(Qt::UserRole).toInt();
 			fs::remove_all(m_dir + m_save_entries[idx_real].dirName + "/");
 			m_list->removeRow(index.row());
 		}
@@ -389,8 +437,13 @@ void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
 	connect(showDirAct, &QAction::triggered, [=]()
 	{
-		int idx_real = m_list->item(idx, 1)->data(Qt::UserRole).toInt();
-		QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
+		QTableWidgetItem* item = m_list->item(idx, 1);
+		if (!item)
+		{
+			return;
+		}
+		const int idx_real = item->data(Qt::UserRole).toInt();
+		const QString path = qstr(m_dir + m_save_entries[idx_real].dirName + "/");
 		QDesktopServices::openUrl(QUrl("file:///" + path));
 	});
 
@@ -438,10 +491,18 @@ void save_manager_dialog::UpdateDetails()
 	else
 	{
 		const int row = m_list->currentRow();
-		const int idx = m_list->item(row, 1)->data(Qt::UserRole).toInt();
+		QTableWidgetItem* item = m_list->item(row, 1);
+		QTableWidgetItem* icon_item = m_list->item(row, 0);
+
+		if (!item || !icon_item)
+		{
+			return;
+		}
+
+		const int idx = item->data(Qt::UserRole).toInt();
 		const SaveDataEntry& save = m_save_entries[idx];
 
-		m_details_icon->setPixmap(m_list->item(row, 0)->data(Qt::UserRole).value<QPixmap>());
+		m_details_icon->setPixmap(icon_item->data(Qt::UserRole).value<QPixmap>());
 		m_details_title->setText(qstr(save.title));
 		m_details_subtitle->setText(qstr(save.subtitle));
 		m_details_modified->setText(tr("Last modified: %1").arg(FormatTimestamp(save.mtime)));

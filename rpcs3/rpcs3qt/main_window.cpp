@@ -1323,8 +1323,9 @@ void main_window::CreateConnects()
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, [=]
 	{
-		save_manager_dialog* sdid = new save_manager_dialog(guiSettings);
-		sdid->show();
+		save_manager_dialog* save_manager = new save_manager_dialog(guiSettings);
+		connect(this, &main_window::RequestTrophyManagerRepaint, save_manager, &save_manager_dialog::HandleRepaintUiRequest);
+		save_manager->show();
 	});
 
 	connect(ui->actionManage_Trophy_Data, &QAction::triggered, [=]

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "rpcs3/Loader/TROPUSR.h"
@@ -64,7 +64,7 @@ class trophy_manager_dialog : public QWidget
 public:
 	explicit trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings);
 	~trophy_manager_dialog() override;
-	void RepaintUI();
+	void RepaintUI(bool restore_layout = true);
 
 public Q_SLOTS:
 	void HandleRepaintUiRequest();
