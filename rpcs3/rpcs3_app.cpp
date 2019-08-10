@@ -1,4 +1,4 @@
-#include "rpcs3_app.h"
+﻿#include "rpcs3_app.h"
 
 #include "rpcs3qt/qt_utils.h"
 
@@ -370,6 +370,9 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 
 		// game list icon color
 		"QLabel#gamelist_icon_background_color { color: rgba(240, 240, 240, 255); }"
+
+		// save manager icon color
+		"QLabel#save_manager_icon_background_color { color: rgba(240, 240, 240, 255); }"
 
 		// tables
 		"QTableWidget { alternate-background-color: #f2f2f2; background-color: #fff; border: none; }"

@@ -1,7 +1,8 @@
-#include "save_manager_dialog.h"
+﻿#include "save_manager_dialog.h"
 
 #include "save_data_info_dialog.h"
 #include "custom_table_widget_item.h"
+#include "qt_utils.h"
 
 #include "Emu/System.h"
 #include "Emu/VFS.h"
@@ -232,6 +233,15 @@ void save_manager_dialog::UpdateList()
 
 	QVariantMap currNotes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
 
+	if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
+	{
+		m_icon_color = m_gui_settings->GetValue(gui::sd_icon_color).value<QColor>();
+	}
+	else
+	{
+		m_icon_color = gui::utils::get_label_color("save_manager_icon_background_color");
+	}
+
 	int row = 0;
 	for (const SaveDataEntry& entry : m_save_entries)
 	{
@@ -239,7 +249,8 @@ void save_manager_dialog::UpdateList()
 		if (!icon.loadFromData(entry.iconBuf.data(), static_cast<uint>(entry.iconBuf.size())))
 		{
 			LOG_WARNING(GENERAL, "Loading icon for save %s failed", entry.dirName);
-			icon.fill(Qt::transparent);
+			icon = QPixmap(320, 176);
+			icon.fill(m_icon_color);
 		}
 
 		QString title = qstr(entry.title) + QStringLiteral("\n") + qstr(entry.subtitle);
@@ -290,6 +301,17 @@ void save_manager_dialog::UpdateList()
 	resize(preferredSize.boundedTo(maxSize));
 }
 
+void save_manager_dialog::HandleRepaintUiRequest()
+{
+	const QSize window_size = size();
+	const Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
+
+	UpdateList();
+
+	m_list->sortByColumn(m_sort_column, sort_order);
+	resize(window_size);
+}
+
 void save_manager_dialog::UpdateIcons()
 {
 	const int dpr = devicePixelRatio();
@@ -306,7 +328,7 @@ void save_manager_dialog::UpdateIcons()
 
 		QPixmap icon = QPixmap(data.size() * dpr);
 		icon.setDevicePixelRatio(dpr);
-		icon.fill(Qt::transparent);
+		icon.fill(m_icon_color);
 
 		QPainter painter(&icon);
 		painter.drawPixmap(0, 0, data);

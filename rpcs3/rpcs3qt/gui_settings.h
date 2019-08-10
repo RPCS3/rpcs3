@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/Log.h"
 
@@ -225,8 +225,9 @@ namespace gui
 	const gui_save tr_games_state   = gui_save(trophy, "games_state",   QByteArray());
 	const gui_save tr_trophy_state  = gui_save(trophy, "trophy_state",  QByteArray());
 
-	const gui_save sd_geometry  = gui_save(savedata, "geometry", QByteArray());
-	const gui_save sd_icon_size = gui_save(savedata, "icon_size", 60);
+	const gui_save sd_geometry   = gui_save(savedata, "geometry",   QByteArray());
+	const gui_save sd_icon_size  = gui_save(savedata, "icon_size",  60);
+	const gui_save sd_icon_color = gui_save(savedata, "icon_color", gl_icon_color);
 
 	const gui_save um_geometry    = gui_save(users, "geometry",    QByteArray());
 	const gui_save um_active_user = gui_save(users, "active_user", "00000001");
