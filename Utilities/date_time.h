@@ -25,11 +25,20 @@ namespace date_time
 		return str;
 	}
 
+	template<char separator = 0>
 	static inline std::string current_time_narrow()
 	{
 		char str[80];
 		tm now = get_time(0);
-		strftime(str, sizeof(str), "%Y%m%d%H%M%S", &now);
+
+		std::string parse_buf;
+
+		if constexpr(separator != 0)
+			parse_buf = std::string("%Y") + separator + "%m" + separator + "%d" + separator + "%H" + separator + "%M" + separator + "%S";
+		else
+			parse_buf = "%Y%m%d%H%M%S";
+
+		strftime(str, sizeof(str), parse_buf.c_str(), &now);
 		return str;
 	}
 }

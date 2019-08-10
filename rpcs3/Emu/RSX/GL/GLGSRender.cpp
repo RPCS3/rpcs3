@@ -1681,6 +1681,26 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 			image = m_flip_tex_color->id();
 		}
 
+		if (m_frame->screenshot_toggle == true)
+		{
+			m_frame->screenshot_toggle = false;
+
+			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
+
+			gl::pixel_pack_settings pack_settings{};
+			pack_settings.apply();
+
+			if (gl::get_driver_caps().ARB_dsa_supported)
+				glGetTextureImage(image, 0, GL_BGRA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
+			else
+				glGetTextureImageEXT(image, GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, sshot_frame.data());
+
+			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
+				LOG_ERROR(GENERAL, "[Screenshot] Failed to capture image: 0x%x", err);
+			else
+				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
+		}
+
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
 
 		if (g_cfg.video.full_rgb_range_output && (!avconfig || avconfig->gamma == 1.f))

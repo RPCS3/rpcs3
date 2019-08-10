@@ -2,6 +2,7 @@
 
 #include "Utilities/Config.h"
 #include "Utilities/Timer.h"
+#include "Utilities/date_time.h"
 #include "Emu/System.h"
 
 #include <QKeyEvent>
@@ -12,6 +13,8 @@
 #include <string>
 
 #include "rpcs3_version.h"
+
+#include "png.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -151,6 +154,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			else if (Emu.IsPaused()) { Emu.Resume(); return; }
 		}
 		break;
+	case Qt::Key_F12: screenshot_toggle = true; break;
 	}
 }
 
@@ -297,6 +301,68 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 			fps_t.Start();
 		}
 	}
+}
+
+void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height)
+{
+	std::thread(
+	    [sshot_width, sshot_height](const std::vector<u8> sshot_data) {
+		    std::string screen_path = fs::get_config_dir() + "/screenshots/";
+
+		    if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
+		    {
+			    LOG_ERROR(GENERAL, "Failed to create screenshot path \"%s\" : %s", screen_path, fs::g_tls_error);
+			    return;
+		    }
+
+		    std::string filename = screen_path + "screenshot-" + date_time::current_time_narrow<'_'>() + ".png";
+
+		    fs::file sshot_file(filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
+		    if (!sshot_file)
+		    {
+			    LOG_ERROR(GENERAL, "[Screenshot] Failed to save screenshot \"%s\" : %s", filename, fs::g_tls_error);
+			    return;
+		    }
+
+		    std::vector<u8> sshot_data_alpha(sshot_data.size());
+		    const u32* sshot_ptr = (const u32*)sshot_data.data();
+		    u32* alpha_ptr    = (u32*)sshot_data_alpha.data();
+
+		    for (size_t index = 0; index < sshot_data.size() / sizeof(u32); index++)
+		    {
+			    alpha_ptr[index] = ((sshot_ptr[index] & 0xFF) << 16) | (sshot_ptr[index] & 0xFF00) | ((sshot_ptr[index] & 0xFF0000) >> 16) | 0xFF000000;
+		    }
+
+		    std::vector<u8> encoded_png;
+
+		    png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+		    png_infop info_ptr    = png_create_info_struct(write_ptr);
+		    png_set_IHDR(write_ptr, info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
+		    std::vector<u8*> rows(sshot_height);
+		    for (size_t y = 0; y < sshot_height; y++)
+			    rows[y] = (u8*)sshot_data_alpha.data() + y * sshot_width * 4;
+
+		    png_set_rows(write_ptr, info_ptr, &rows[0]);
+		    png_set_write_fn(write_ptr, &encoded_png,
+		        [](png_structp png_ptr, png_bytep data, png_size_t length) {
+			        std::vector<u8>* p = (std::vector<u8>*)png_get_io_ptr(png_ptr);
+			        p->insert(p->end(), data, data + length);
+		        },
+		        nullptr);
+
+		    png_write_png(write_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
+
+		    png_free_data(write_ptr, info_ptr, PNG_FREE_ALL, -1);
+		    png_destroy_write_struct(&write_ptr, nullptr);
+
+		    sshot_file.write(encoded_png.data(), encoded_png.size());
+
+		    LOG_SUCCESS(GENERAL, "[Screenshot] Successfully saved screenshot to %s", filename);
+		    return;
+	    },
+	    std::move(sshot_data))
+	    .detach();
 }
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
