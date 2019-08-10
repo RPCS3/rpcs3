@@ -2049,6 +2049,13 @@
                  </widget>
                 </item>
                 <item>
+                 <widget class="QPushButton" name="pb_sd_icon_color">
+                  <property name="text">
+                   <string>Save manager icons</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
                  <spacer name="verticalSpacer_5">
                   <property name="orientation">
                    <enum>Qt::Vertical</enum>

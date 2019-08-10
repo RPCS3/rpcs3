@@ -1280,6 +1280,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		auto AddColoredIcons = [=]()
 		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(gui::gl_iconColor).value<QColor>());
+			addColoredIcon(ui->pb_sd_icon_color, xgui_settings->GetValue(gui::sd_icon_color).value<QColor>());
 		};
 		AddColoredIcons();
 
@@ -1292,6 +1293,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
 		ui->pb_gl_icon_color->setEnabled(enableUIColors);
+		ui->pb_sd_icon_color->setEnabled(enableUIColors);
 
 		auto ApplyGuiOptions = [&](bool reset = false)
 		{
@@ -1367,6 +1369,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			xgui_settings->SetValue(gui::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
+			ui->pb_sd_icon_color->setEnabled(val);
 			Q_EMIT GuiRepaintRequest();
 		});
 		auto colorDialog = [&](const gui_save& color, const QString& title, QPushButton *button)
@@ -1394,6 +1397,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
 		{
 			colorDialog(gui::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
+		});
+		connect(ui->pb_sd_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(gui::sd_icon_color, tr("Choose save manager icon color"), ui->pb_sd_icon_color);
 		});
 
 		AddConfigs();
