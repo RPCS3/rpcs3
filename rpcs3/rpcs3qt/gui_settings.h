@@ -131,7 +131,7 @@ namespace gui
 	const QString notes       = "Notes";
 	const QString titles      = "Titles";
 
-	const QColor gl_icon_color = QColor(36, 36, 36, 255);
+	const QColor gl_icon_color = QColor(240, 240, 240, 255);
 
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
 	const gui_save rg_entries = gui_save(main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));
