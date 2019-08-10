@@ -25,7 +25,8 @@ namespace
 	constexpr auto qstr = QString::fromStdString;
 	inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-	QString FormatTimestamp(u64 time) {
+	QString FormatTimestamp(u64 time)
+	{
 		QDateTime dateTime;
 		dateTime.setTime_t(time);
 		return dateTime.toString("yyyy-MM-dd HH:mm:ss");

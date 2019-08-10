@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // I just want the struct for the save data.
 #include "stdafx.h"
@@ -35,9 +35,9 @@ private:
 	void UpdateList(void);
 
 	s32 m_entry;
-	QLabel* m_entry_label;
+	QLabel* m_entry_label = nullptr;
 
-	QTableWidget* m_list;
+	QTableWidget* m_list = nullptr;
 	std::vector<SaveDataEntry> m_save_entries;
 
 	std::shared_ptr<gui_settings> m_gui_settings;

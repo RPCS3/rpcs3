@@ -318,7 +318,7 @@ std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_device(const s
 
 	int pad_number = std::stoi(padId.substr(pos + 9));
 	if (pad_number > 0 && pad_number <= controllers.size())
-		return controllers[pad_number - 1];
+		return controllers[static_cast<size_t>(pad_number) - 1];
 
 	return nullptr;
 }
