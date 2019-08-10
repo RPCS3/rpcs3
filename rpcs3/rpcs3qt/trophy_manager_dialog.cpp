@@ -785,7 +785,6 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		QString unlockstate = data->trop_usr->GetTrophyUnlockState(trophy_id) ? tr("Unlocked") : tr("Locked");
 
 		custom_table_widget_item* icon_item = new custom_table_widget_item();
-		icon_item->setData(Qt::DecorationRole, data->trophy_images[trophy_id].scaledToHeight(m_icon_height, Qt::SmoothTransformation));
 		icon_item->setData(Qt::UserRole, hidden, true);
 
 		custom_table_widget_item* type_item = new custom_table_widget_item(trophy_type);
@@ -803,7 +802,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 
 	m_trophy_table->setSortingEnabled(true); // Re-enable sorting after using setItem calls
 
-	ReadjustTrophyTable();
+	ResizeTrophyIcons();
 }
 
 void trophy_manager_dialog::ReadjustGameTable()
