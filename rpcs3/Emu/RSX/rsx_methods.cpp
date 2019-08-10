@@ -1067,45 +1067,91 @@ namespace rsx
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
-				if (need_convert || need_clip)
+				if (!need_convert)
 				{
-					if (need_clip)
+					const bool is_overlapping = scale_x > 0 && scale_y > 0 && dst_dma == src_dma && [&]() -> bool
 					{
-						if (need_convert)
+						const u32 src_max = src_offset + in_pitch * (in_h - 1) + (in_bpp * in_w);
+						const u32 dst_max = dst_offset + out_pitch * (out_h - 1) + (out_bpp * out_w);
+						return (src_offset >= dst_offset && src_offset < dst_max) ||
+						 (dst_offset >= src_offset && dst_offset < src_max);
+					}();
+
+					if (is_overlapping)
+					{
+						if (need_clip)
 						{
-							temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
+							temp2.resize(out_pitch * clip_h);
 
-							convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
-								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
+							clip_image_may_overlap(pixels_dst, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch, temp2.data());
+						}
+						else if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
+						{
+							const u32 buffer_pitch = out_bpp * out_w;
+							temp2.resize(buffer_pitch * out_h);
+							std::add_pointer_t<u8> buf = temp2.data(), pixels = pixels_src;
 
-							clip_image(pixels_dst, temp2.data(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							// Read the whole buffer from source
+							for (u32 y = 0; y < out_h; ++y)
+							{
+								std::memcpy(buf, pixels, buffer_pitch);
+								pixels += in_pitch;
+								buf += buffer_pitch;
+							}
+
+							buf = temp2.data(), pixels = pixels_dst;
+
+							// Write to destination
+							for (u32 y = 0; y < out_h; ++y)
+							{
+								std::memcpy(pixels, buf, buffer_pitch);
+								pixels += out_pitch;
+								buf += buffer_pitch;
+							}
 						}
 						else
 						{
+							std::memmove(pixels_dst, pixels_src, out_pitch * out_h);
+						}
+					}
+					else
+					{
+						if (need_clip)
+						{
 							clip_image(pixels_dst, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
 						}
+						else if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
+						{
+							u8 *dst = pixels_dst, *src = pixels_src;
+
+							for (u32 y = 0; y < out_h; ++y)
+							{
+								std::memcpy(dst, src, out_w * out_bpp);
+								dst += out_pitch;
+								src += in_pitch;
+							}
+						}
+						else
+						{
+							std::memcpy(pixels_dst, pixels_src, out_pitch * out_h);
+						}
+					}
+				}
+				else
+				{
+					if (need_clip)
+					{
+						temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
+
+						convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
+							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
+
+						clip_image(pixels_dst, temp2.data(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 					}
 					else
 					{
 						convert_scale_image(pixels_dst, out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
-					}
-				}
-				else
-				{
-					if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
-					{
-						for (u32 y = 0; y < out_h; ++y)
-						{
-							u8 *dst = pixels_dst + out_pitch * y;
-							u8 *src = pixels_src + in_pitch * y;
-
-							std::memmove(dst, src, out_w * out_bpp);
-						}
-					}
-					else
-					{
-						std::memmove(pixels_dst, pixels_src, out_pitch * out_h);
 					}
 				}
 			}
