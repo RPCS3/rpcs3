@@ -211,6 +211,7 @@ namespace gui
 	const gui_save gs_width        = gui_save(gs_frame, "width",        1280);
 	const gui_save gs_height       = gui_save(gs_frame, "height",       720);
 
+	const gui_save tr_icon_color    = gui_save(trophy, "icon_color",    gl_icon_color);
 	const gui_save tr_icon_height   = gui_save(trophy, "icon_height",   75);
 	const gui_save tr_game_iconSize = gui_save(trophy, "game_iconSize", 25);
 	const gui_save tr_show_locked   = gui_save(trophy, "show_locked",   true);

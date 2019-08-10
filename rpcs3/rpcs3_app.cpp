@@ -374,6 +374,9 @@ void rpcs3_app::OnChangeStyleSheetRequest(const QString& path)
 		// save manager icon color
 		"QLabel#save_manager_icon_background_color { color: rgba(240, 240, 240, 255); }"
 
+		// trophy manager icon color
+		"QLabel#trophy_manager_icon_background_color { color: rgba(240, 240, 240, 255); }"
+
 		// tables
 		"QTableWidget { alternate-background-color: #f2f2f2; background-color: #fff; border: none; }"
 		"QTableWidget#game_grid { alternate-background-color: #f2f2f2; background-color: #fff; font-weight: 600; font-size: 8pt; font-family: Lucida Grande; color: rgba(51, 51, 51, 255); border: 0em solid white; }"
