@@ -941,7 +941,7 @@ namespace rsx
 			}
 
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
-			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
+			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
 			const u32 src_address = get_address(src_offset, src_dma);
 			const u32 dst_address = get_address(dst_offset, dst_dma);
@@ -1022,15 +1022,15 @@ namespace rsx
 
 			if (scale_y < 0 || scale_x < 0)
 			{
-				const auto packed_pitch = in_w * in_bpp;
+				const u32 packed_pitch = in_w * in_bpp;
 				temp1.resize(packed_pitch * in_h);
 
-				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch;
+				const s32 stride_y = (scale_y < 0 ? -1 : 1) * (s32)in_pitch;
 
 				for (u32 y = 0; y < in_h; ++y)
 				{
 					u8 *dst = temp1.data() + (packed_pitch * y);
-					u8 *src = pixels_src + (y * stride_y);
+					u8 *src = pixels_src + ((s32)y * stride_y);
 
 					if (scale_x < 0)
 					{
