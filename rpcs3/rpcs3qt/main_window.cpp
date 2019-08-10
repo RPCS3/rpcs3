@@ -35,6 +35,8 @@
 
 #include <thread>
 
+#include <QScreen>
+
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
@@ -1592,7 +1594,7 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	{
 		// By default, set the window to 70% of the screen and the debugger frame is hidden.
 		m_debuggerFrame->hide();
-		resize(QDesktopWidget().availableGeometry().size() * 0.7);
+		resize(QGuiApplication::primaryScreen()->availableSize() * 0.7);
 	}
 
 	restoreState(guiSettings->GetValue(gui::mw_windowState).toByteArray());

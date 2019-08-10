@@ -8,6 +8,7 @@
 #include <QMenu>
 #include <QDesktopWidget>
 #include <QApplication>
+#include <QScreen>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -225,7 +226,7 @@ void save_data_list_dialog::UpdateList()
 
 	QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
 
-	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6));
+	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QGuiApplication::primaryScreen()->geometry().height() * 0.6));
 
 	resize(preferredSize.boundedTo(maxSize));
 }

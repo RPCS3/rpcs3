@@ -70,8 +70,8 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 	breakpointItemText.remove(10, 13);
 
 	QListWidgetItem* breakpointItem = new QListWidgetItem(breakpointItemText);
-	breakpointItem->setTextColor(m_text_color_bp);
-	breakpointItem->setBackgroundColor(m_color_bp);
+	breakpointItem->setForeground(m_text_color_bp);
+	breakpointItem->setBackground(m_color_bp);
 	QVariant pcVariant;
 	pcVariant.setValue(pc);
 	breakpointItem->setData(Qt::UserRole, pcVariant);

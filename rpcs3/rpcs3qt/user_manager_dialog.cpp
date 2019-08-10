@@ -6,6 +6,7 @@
 
 #include <QRegExpValidator>
 #include <QInputDialog>
+#include <QScreen>
 
 namespace
 {
@@ -209,7 +210,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 		m_table->horizontalHeader()->height() + m_table->verticalHeader()->length() + m_table->frameWidth() * 2);
 
 	QSize preferred_size = minimumSize().expandedTo(sizeHint() - m_table->sizeHint() + table_size).expandedTo(size());
-	QSize max_size = QSize(preferred_size.width(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6));
+	QSize max_size = QSize(preferred_size.width(), static_cast<int>(QGuiApplication::primaryScreen()->size().height() * 0.6));
 
 	resize(preferred_size.boundedTo(max_size));
 }
