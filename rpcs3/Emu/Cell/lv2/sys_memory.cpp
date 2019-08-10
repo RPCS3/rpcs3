@@ -233,6 +233,7 @@ error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr
 		attr->page_size = 4096;
 	}
 
+	attr->pad = 0; // Always write 0
 	return CELL_OK;
 }
 
