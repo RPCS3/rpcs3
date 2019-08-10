@@ -1260,10 +1260,17 @@ namespace rsx
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
 			if (in_format != 0x01 || out_format != 0x01)
 			{
-				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
+				LOG_ERROR(RSX, "NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
-			LOG_TRACE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+			if (!line_count || !line_length)
+			{
+				LOG_WARNING(RSX, "NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+					in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
+				return;
+			}
+
+			LOG_TRACE(RSX, "NV0039_BUFFER_NOTIFY: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 
 			u32 src_offset = method_registers.nv0039_input_offset();
@@ -1278,17 +1285,56 @@ namespace rsx
 			u8 *dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
 			const u8 *src = vm::_ptr<u8>(read_address);
 
-			if (in_pitch == out_pitch && out_pitch == line_length)
+			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
-				std::memcpy(dst, src, line_length * line_count);
+				const u32 src_max = src_offset + (in_pitch * (line_count - 1) + line_length);
+				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
+				return (src_offset >= dst_offset && src_offset < dst_max) ||
+				 (dst_offset >= src_offset && dst_offset < src_max);
+			}();
+
+			if (is_overlapping)
+			{
+				if (in_pitch == out_pitch && out_pitch == line_length)
+				{
+					std::memmove(dst, src, line_length * line_count);
+				}
+				else
+				{
+					std::vector<u8> temp(line_length * line_count);
+					u8* buf = temp.data(); 
+
+					for (u32 y = 0; y < line_count; ++y)
+					{
+						std::memcpy(buf, src, line_length);
+						buf += line_length;
+						src += in_pitch;
+					}
+
+					buf = temp.data(); 
+
+					for (u32 y = 0; y < line_count; ++y)
+					{
+						std::memcpy(dst, buf, line_length);
+						buf += line_length;
+						dst += out_pitch;
+					}
+				}
 			}
 			else
 			{
-				for (u32 i = 0; i < line_count; ++i)
+				if (in_pitch == out_pitch && out_pitch == line_length)
 				{
-					std::memcpy(dst, src, line_length);
-					dst += out_pitch;
-					src += in_pitch;
+					std::memcpy(dst, src, line_length * line_count);
+				}
+				else
+				{
+					for (u32 i = 0; i < line_count; ++i)
+					{
+						std::memcpy(dst, src, line_length);
+						dst += out_pitch;
+						src += in_pitch;
+					}
 				}
 			}
 		}
