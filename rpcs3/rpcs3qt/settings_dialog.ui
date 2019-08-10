@@ -1390,7 +1390,7 @@
            <property name="title">
             <string>Disk cache</string>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_77">
+           <layout class="QVBoxLayout" name="verticalLayout_81">
             <item>
              <widget class="QCheckBox" name="enableCacheClearing">
               <property name="text">
@@ -2495,7 +2495,7 @@
               <property name="title">
                <string>Maximum Number of SPURS Threads</string>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_76">
+              <layout class="QVBoxLayout" name="verticalLayout_82">
                <item>
                 <widget class="QComboBox" name="maxSPURSThreads"/>
                </item>

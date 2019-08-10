@@ -1,4 +1,4 @@
-#include "game_list_grid_delegate.h"
+﻿#include "game_list_grid_delegate.h"
 
 game_list_grid_delegate::game_list_grid_delegate(const QSize& size, const qreal& margin_factor, const qreal& text_factor, QObject *parent)
 	 : QStyledItemDelegate(parent), m_size(size), m_margin_factor(margin_factor), m_text_factor(text_factor)
@@ -11,6 +11,8 @@ game_list_grid_delegate::~game_list_grid_delegate()
 
 void game_list_grid_delegate::initStyleOption(QStyleOptionViewItem * option, const QModelIndex & index) const
 {
+	Q_UNUSED(index);
+
 	// Remove the focus frame around selected items
 	option->state &= ~QStyle::State_HasFocus;
 
