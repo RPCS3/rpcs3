@@ -3373,6 +3373,43 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, present_layout, range);
 	}
 
+	if (m_frame->screenshot_toggle == true)
+	{
+		m_frame->screenshot_toggle = false;
+
+		const size_t sshot_size = buffer_height * buffer_width * 4;
+
+		vk::buffer sshot_vkbuf(*m_device, align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		    VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+
+		VkBufferImageCopy copy_info;
+		copy_info.bufferOffset                    = 0;
+		copy_info.bufferRowLength                 = 0;
+		copy_info.bufferImageHeight               = 0;
+		copy_info.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+		copy_info.imageSubresource.baseArrayLayer = 0;
+		copy_info.imageSubresource.layerCount     = 1;
+		copy_info.imageSubresource.mipLevel       = 0;
+		copy_info.imageOffset.x                   = 0;
+		copy_info.imageOffset.y                   = 0;
+		copy_info.imageOffset.z                   = 0;
+		copy_info.imageExtent.width               = buffer_width;
+		copy_info.imageExtent.height              = buffer_height;
+		copy_info.imageExtent.depth               = 1;
+
+		image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vk::copy_image_to_buffer(*m_current_command_buffer, image_to_flip, &sshot_vkbuf, copy_info);
+		image_to_flip->pop_layout(*m_current_command_buffer);
+
+		flush_command_queue(true);
+		auto src = sshot_vkbuf.map(0, sshot_size);
+		std::vector<u8> sshot_frame(sshot_size);
+		memcpy(sshot_frame.data(), src, sshot_size);
+		sshot_vkbuf.unmap();
+
+		m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
+	}
+
 	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
 	if (g_cfg.video.overlay || has_overlay)
 	{
