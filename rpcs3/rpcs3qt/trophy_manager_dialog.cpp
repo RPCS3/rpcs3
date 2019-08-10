@@ -30,6 +30,8 @@
 #include <QScrollBar>
 #include <QWheelEvent>
 #include <QProgressDialog>
+#include <QGuiApplication>
+#include <QScreen>
 
 namespace
 {
@@ -431,7 +433,7 @@ void trophy_manager_dialog::RepaintUI(bool restore_layout)
 
 	if (restore_layout && !restoreGeometry(m_gui_settings->GetValue(gui::tr_geometry).toByteArray()))
 	{
-		resize(QDesktopWidget().availableGeometry().size() * 0.7);
+		resize(QGuiApplication::primaryScreen()->availableSize() * 0.7);
 	}
 
 	if (restore_layout && !m_splitter->restoreState(m_gui_settings->GetValue(gui::tr_splitterState).toByteArray()))

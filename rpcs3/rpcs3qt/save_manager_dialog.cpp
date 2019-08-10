@@ -19,6 +19,7 @@
 #include <QUrl>
 #include <QDesktopServices>
 #include <QPainter>
+#include <QScreen>
 
 namespace
 {
@@ -181,7 +182,7 @@ void save_manager_dialog::Init(std::string dir)
 	m_list->sortByColumn(1, Qt::AscendingOrder);
 
 	if (restoreGeometry(m_gui_settings->GetValue(gui::sd_geometry).toByteArray()))
-		resize(size().expandedTo(QDesktopWidget().availableGeometry().size() * 0.5));
+		resize(size().expandedTo(QGuiApplication::primaryScreen()->availableSize() * 0.5));
 
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &save_manager_dialog::close);
@@ -296,7 +297,7 @@ void save_manager_dialog::UpdateList()
 
 	QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
 
-	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6));
+	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QGuiApplication::primaryScreen()->geometry().height() * 0.6));
 
 	resize(preferredSize.boundedTo(maxSize));
 }
@@ -395,7 +396,7 @@ void save_manager_dialog::OnEntriesRemove()
 
 	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %1 items?").arg(selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
-		qSort(selection.begin(), selection.end(), qGreater<QModelIndex>());
+		std::sort(selection.rbegin(), selection.rend());
 		for (QModelIndex index : selection)
 		{
 			QTableWidgetItem* item = m_list->item(index.row(), 1);

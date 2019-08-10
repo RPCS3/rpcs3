@@ -12,6 +12,7 @@
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QTimer>
+#include <QScreen>
 
 #include "qt_utils.h"
 #include "settings_dialog.h"
@@ -1173,7 +1174,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->gs_width->setEnabled(enableButtons);
 		ui->gs_height->setEnabled(enableButtons);
 
-		QRect screen = QApplication::desktop()->screenGeometry();
+		QRect screen = QGuiApplication::primaryScreen()->geometry();
 		int width = xgui_settings->GetValue(gui::gs_width).toInt();
 		int height = xgui_settings->GetValue(gui::gs_height).toInt();
 		ui->gs_width->setValue(std::min(width, screen.width()));
@@ -1187,12 +1188,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		});
 		connect(ui->gs_width, &QSpinBox::editingFinished, [=]()
 		{
-			ui->gs_width->setValue(std::min(ui->gs_width->value(), QApplication::desktop()->screenGeometry().width()));
+			ui->gs_width->setValue(std::min(ui->gs_width->value(), QGuiApplication::primaryScreen()->size().width()));
 			xgui_settings->SetValue(gui::gs_width, ui->gs_width->value());
 		});
 		connect(ui->gs_height, &QSpinBox::editingFinished, [=]()
 		{
-			ui->gs_height->setValue(std::min(ui->gs_height->value(), QApplication::desktop()->screenGeometry().height()));
+			ui->gs_height->setValue(std::min(ui->gs_height->value(), QGuiApplication::primaryScreen()->size().height()));
 			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
 		});
 	}

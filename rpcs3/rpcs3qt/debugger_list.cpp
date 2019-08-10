@@ -92,18 +92,18 @@ void debugger_list::ShowAddress(u32 addr)
 
 			if (cpu->is_paused() && m_pc == GetPc())
 			{
-				item(i)->setTextColor(m_text_color_pc);
-				item(i)->setBackgroundColor(m_color_pc);
+				item(i)->setForeground(m_text_color_pc);
+				item(i)->setBackground(m_color_pc);
 			}
 			else if (IsBreakpoint(m_pc))
 			{
-				item(i)->setTextColor(m_text_color_bp);
-				item(i)->setBackgroundColor(m_color_bp);
+				item(i)->setForeground(m_text_color_bp);
+				item(i)->setBackground(m_color_bp);
 			}
 			else
 			{
-				item(i)->setTextColor(palette().color(foregroundRole()));
-				item(i)->setBackgroundColor(palette().color(backgroundRole()));
+				item(i)->setForeground(palette().color(foregroundRole()));
+				item(i)->setBackground(palette().color(backgroundRole()));
 			}
 		}
 	}
