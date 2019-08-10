@@ -319,7 +319,12 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		{
 			return;
 		}
-		m_game_combo->setCurrentText(m_game_table->item(m_game_table->selectedItems().first()->row(), GameColumns::GameName)->text());
+		QTableWidgetItem* item = m_game_table->item(m_game_table->selectedItems().first()->row(), GameColumns::GameName);
+		if (!item)
+		{
+			return;
+		}
+		m_game_combo->setCurrentText(item->text());
 	});
 
 	RepaintUI();
@@ -470,6 +475,10 @@ void trophy_manager_dialog::HandleRepaintUiRequest()
 void trophy_manager_dialog::ResizeGameIcon(int index)
 {
 	QTableWidgetItem* item = m_game_table->item(index, GameColumns::GameIcon);
+	if (!item)
+	{
+		return;
+	}
 	const QPixmap icon = item->data(Qt::UserRole).value<QPixmap>();
 	const int dpr = devicePixelRatio();
 
@@ -512,7 +521,13 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 
 	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
 	{
-		const int trophy_id = m_trophy_table->item(i, TrophyColumns::Id)->text().toInt();
+		QTableWidgetItem* item = m_trophy_table->item(i, TrophyColumns::Id);
+		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
+		if (!item || !icon_item)
+		{
+			continue;
+		}
+		const int trophy_id = item->text().toInt();
 		const QPixmap icon = m_trophies_db[db_pos]->trophy_images[trophy_id];
 
 		QPixmap new_icon = QPixmap(icon.size() * dpr);
@@ -527,7 +542,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 		}
 
 		const QPixmap scaled = new_icon.scaledToHeight(new_height, Qt::SmoothTransformation);
-		m_trophy_table->item(i, TrophyColumns::Icon)->setData(Qt::DecorationRole, scaled);
+		icon_item->setData(Qt::DecorationRole, scaled);
 	}
 
 	ReadjustTrophyTable();
@@ -542,11 +557,20 @@ void trophy_manager_dialog::ApplyFilter()
 
 	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
 	{
-		int trophy_id = m_trophy_table->item(i, TrophyColumns::Id)->text().toInt();
-		QString trophy_type = m_trophy_table->item(i, TrophyColumns::Type)->text();
+		QTableWidgetItem* item = m_trophy_table->item(i, TrophyColumns::Id);
+		QTableWidgetItem* type_item = m_trophy_table->item(i, TrophyColumns::Type);
+		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
+
+		if (!item || !type_item || !icon_item)
+		{
+			continue;
+		}
+
+		const int trophy_id = item->text().toInt();
+		const QString trophy_type = type_item->text();
 
 		// I could use boolean logic and reduce this to something much shorter and also much more confusing...
-		bool hidden = m_trophy_table->item(i, TrophyColumns::Icon)->data(Qt::UserRole).toBool();
+		bool hidden = icon_item->data(Qt::UserRole).toBool();
 		bool trophy_unlocked = m_trophies_db[db_pos]->trop_usr->GetTrophyUnlockState(trophy_id);
 
 		bool hide = false;
