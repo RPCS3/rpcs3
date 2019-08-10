@@ -135,5 +135,5 @@ private:
 
 	// holds internal controller state change
 	XINPUT_STATE state;
-	DWORD result;
+	DWORD result{ 0 };
 };
