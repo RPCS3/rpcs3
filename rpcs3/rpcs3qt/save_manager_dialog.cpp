@@ -248,7 +248,7 @@ void save_manager_dialog::UpdateList()
 	for (size_t i = 0; i < m_save_entries.size(); ++i)
 		indices.append(static_cast<int>(i));
 
-	QtConcurrent::blockingMap(indices, [this, currNotes](int& row)
+	std::function<QPixmap(const int&)> get_icon = [this](const int& row)
 	{
 		const auto& entry = m_save_entries[row];
 		QPixmap icon = QPixmap(320, 176);
@@ -258,27 +258,35 @@ void save_manager_dialog::UpdateList()
 			icon = QPixmap(320, 176);
 			icon.fill(m_icon_color);
 		}
+		return icon;
+	};
+
+	QList<QPixmap> icons = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_icon);
+
+	for (int i = 0; i < icons.count(); ++i)
+	{
+		const auto& entry = m_save_entries[i];
 
 		QString title = qstr(entry.title) + QStringLiteral("\n") + qstr(entry.subtitle);
 		QString dirName = qstr(entry.dirName);
 
 		custom_table_widget_item* iconItem = new custom_table_widget_item;
-		iconItem->setData(Qt::UserRole, icon);
+		iconItem->setData(Qt::UserRole, icons[i]);
 		iconItem->setFlags(iconItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(row, 0, iconItem);
+		m_list->setItem(i, 0, iconItem);
 
 		QTableWidgetItem* titleItem = new QTableWidgetItem(title);
-		titleItem->setData(Qt::UserRole, row); // For sorting to work properly
+		titleItem->setData(Qt::UserRole, i); // For sorting to work properly
 		titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(row, 1, titleItem);
+		m_list->setItem(i, 1, titleItem);
 
 		QTableWidgetItem* timeItem = new QTableWidgetItem(FormatTimestamp(entry.mtime));
 		timeItem->setFlags(timeItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(row, 2, timeItem);
+		m_list->setItem(i, 2, timeItem);
 
 		QTableWidgetItem* dirNameItem = new QTableWidgetItem(dirName);
 		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(row, 3, dirNameItem);
+		m_list->setItem(i, 3, dirNameItem);
 
 		QTableWidgetItem* noteItem = new QTableWidgetItem();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
@@ -286,10 +294,10 @@ void save_manager_dialog::UpdateList()
 		{
 			noteItem->setText(currNotes[dirName].toString());
 		}
-		m_list->setItem(row, 4, noteItem);
+		m_list->setItem(i, 4, noteItem);
+	}
 
-		UpdateIcon(row);
-	});
+	UpdateIcons();
 
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
@@ -316,7 +324,7 @@ void save_manager_dialog::HandleRepaintUiRequest()
 	resize(window_size);
 }
 
-void save_manager_dialog::UpdateIcon(int i)
+QPixmap save_manager_dialog::GetResizedIcon(int i)
 {
 	const int dpr = devicePixelRatio();
 	const int width = m_icon_size.width() * dpr;
@@ -325,7 +333,7 @@ void save_manager_dialog::UpdateIcon(int i)
 	QTableWidgetItem* item = m_list->item(i, 0);
 	if (!item)
 	{
-		return;
+		return QPixmap();
 	}
 	QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
 
@@ -335,7 +343,7 @@ void save_manager_dialog::UpdateIcon(int i)
 
 	QPainter painter(&icon);
 	painter.drawPixmap(0, 0, data);
-	item->setData(Qt::DecorationRole, icon.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+	return icon.scaled(width, height, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
 
 void save_manager_dialog::UpdateIcons()
@@ -344,10 +352,19 @@ void save_manager_dialog::UpdateIcons()
 	for (int i = 0; i < m_list->rowCount(); ++i)
 		indices.append(i);
 
-	QtConcurrent::blockingMap(indices, [this](int& i)
+	std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
 	{
-		UpdateIcon(i);
-	});
+		return GetResizedIcon(i);
+	};
+
+	QList<QPixmap> scaled = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_scaled);
+
+	for (int i = 0; i < m_list->rowCount() && i < scaled.count(); ++i)
+	{
+		QTableWidgetItem* icon_item = m_list->item(i, 0);
+		if (icon_item)
+			icon_item->setData(Qt::DecorationRole, scaled[i]);
+	}
 
 	m_list->resizeRowsToContents();
 	m_list->resizeColumnToContents(0);

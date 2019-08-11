@@ -63,7 +63,7 @@ public Q_SLOTS:
 	void HandleRepaintUiRequest();
 
 private Q_SLOTS:
-	void ResizeGameIcon(int index);
+	QPixmap GetResizedGameIcon(int index);
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
 	void ApplyFilter();
