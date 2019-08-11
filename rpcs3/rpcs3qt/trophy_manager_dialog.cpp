@@ -478,12 +478,12 @@ void trophy_manager_dialog::HandleRepaintUiRequest()
 	resize(window_size);
 }
 
-void trophy_manager_dialog::ResizeGameIcon(int index)
+QPixmap trophy_manager_dialog::GetResizedGameIcon(int index)
 {
 	QTableWidgetItem* item = m_game_table->item(index, GameColumns::GameIcon);
 	if (!item)
 	{
-		return;
+		return QPixmap();
 	}
 	const QPixmap icon = item->data(Qt::UserRole).value<QPixmap>();
 	const int dpr = devicePixelRatio();
@@ -499,8 +499,7 @@ void trophy_manager_dialog::ResizeGameIcon(int index)
 		painter.end();
 	}
 
-	const QPixmap scaled_icon = new_icon.scaled(m_game_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
-	item->setData(Qt::DecorationRole, scaled_icon);
+	return new_icon.scaled(m_game_icon_size * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 }
 
 void trophy_manager_dialog::ResizeGameIcons()
@@ -512,10 +511,19 @@ void trophy_manager_dialog::ResizeGameIcons()
 	for (int i = 0; i < m_game_table->rowCount(); ++i)
 		indices.append(i);
 
-	QtConcurrent::blockingMap(indices, [this](int& i)
+	std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
 	{
-		ResizeGameIcon(i);
-	});
+		return GetResizedGameIcon(i);
+	};
+
+	QList<QPixmap> scaled = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_scaled);
+
+	for (int i = 0; i < m_game_table->rowCount() && i < scaled.count(); ++i)
+	{
+		QTableWidgetItem* icon_item = m_game_table->item(i, TrophyColumns::Icon);
+		if (icon_item)
+			icon_item->setData(Qt::DecorationRole, scaled[i]);
+	}
 
 	ReadjustGameTable();
 }
@@ -533,13 +541,13 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
 		indices.append(i);
 
-	QtConcurrent::blockingMap(indices, [this, db_pos, dpr, new_height](int& i)
+	std::function<QPixmap(const int&)> get_scaled = [this, db_pos, dpr, new_height](const int& i)
 	{
 		QTableWidgetItem* item = m_trophy_table->item(i, TrophyColumns::Id);
 		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
 		if (!item || !icon_item)
 		{
-			return;
+			return QPixmap();
 		}
 		const int trophy_id = item->text().toInt();
 		const QPixmap icon = m_trophies_db[db_pos]->trophy_images[trophy_id];
@@ -555,9 +563,17 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 			painter.end();
 		}
 
-		const QPixmap scaled = new_icon.scaledToHeight(new_height, Qt::SmoothTransformation);
-		icon_item->setData(Qt::DecorationRole, scaled);
-	});
+		return new_icon.scaledToHeight(new_height, Qt::SmoothTransformation);
+	};
+
+	QList<QPixmap> scaled = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_scaled);
+
+	for (int i = 0; i < m_trophy_table->rowCount() && i < scaled.count(); ++i)
+	{
+		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
+		if (icon_item)
+			icon_item->setData(Qt::DecorationRole, scaled[i]);
+	}
 
 	ReadjustTrophyTable();
 }
@@ -706,41 +722,44 @@ void trophy_manager_dialog::PopulateGameTable()
 
 	m_game_combo->clear();
 
-	QList<QString> names;
 	QList<int> indices;
 	for (size_t i = 0; i < m_trophies_db.size(); ++i)
-	{
-		const int index = static_cast<int>(i);
-		const QString name = qstr(m_trophies_db[i]->game_name).simplified();
-		m_game_combo->addItem(name, index);
-		names.append(name);
-		indices.append(index);
-	}
+		indices.append(static_cast<int>(i));
 
-	QtConcurrent::blockingMap(indices, [this, &names](int& i)
+	std::function<QPixmap(const int&)> get_icon = [this](const int& i)
 	{
-		const int all_trophies = m_trophies_db[i]->trop_usr->GetTrophiesCount();
-		const int unlocked_trophies = m_trophies_db[i]->trop_usr->GetUnlockedTrophiesCount();
-		const int percentage = 100 * unlocked_trophies / all_trophies;
-		const std::string icon_path = m_trophies_db[i]->path + "/ICON0.PNG";
-		const QString progress = QString("%0% (%1/%2)").arg(percentage).arg(unlocked_trophies).arg(all_trophies);
-
 		// Load game icon
 		QPixmap icon;
+		const std::string icon_path = m_trophies_db[i]->path + "ICON0.PNG";
 		if (!icon.load(qstr(icon_path)))
 		{
 			LOG_WARNING(GENERAL, "Could not load trophy game icon from path %s", icon_path);
 		}
+		return icon;
+	};
+
+	QList<QPixmap> icons = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_icon);
+
+	for (int i = 0; i < indices.count(); ++i)
+	{
+		const int all_trophies = m_trophies_db[i]->trop_usr->GetTrophiesCount();
+		const int unlocked_trophies = m_trophies_db[i]->trop_usr->GetUnlockedTrophiesCount();
+		const int percentage = 100 * unlocked_trophies / all_trophies;
+		const QString progress = QString("%0% (%1/%2)").arg(percentage).arg(unlocked_trophies).arg(all_trophies);
+		const QString name = qstr(m_trophies_db[i]->game_name).simplified();
 
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
-		icon_item->setData(Qt::UserRole, icon);
+		if (icons.count() > i)
+			icon_item->setData(Qt::UserRole, icons[i]);
 
 		m_game_table->setItem(i, GameColumns::GameIcon, icon_item);
-		m_game_table->setItem(i, GameColumns::GameName, new custom_table_widget_item(names[i]));
+		m_game_table->setItem(i, GameColumns::GameName, new custom_table_widget_item(name));
 		m_game_table->setItem(i, GameColumns::GameProgress, new custom_table_widget_item(progress, Qt::UserRole, percentage));
 
-		ResizeGameIcon(i);
-	});
+		m_game_combo->addItem(name, i);
+	}
+
+	ResizeGameIcons();
 
 	m_game_table->setSortingEnabled(true); // Enable sorting only after using setItem calls
 
