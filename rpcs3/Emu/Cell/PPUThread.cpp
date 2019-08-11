@@ -271,6 +271,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 
 	// Register executable range at
 	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
+	vm::page_protect(addr, align(size, 0x10000), 0, vm::page_executable);
 
 	const u32 fallback = ::narrow<u32>(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ?
 	reinterpret_cast<uptr>(ppu_recompiler_fallback) : reinterpret_cast<uptr>(ppu_fallback));
