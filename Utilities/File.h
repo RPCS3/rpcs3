@@ -503,7 +503,7 @@ namespace fs
 	const std::string& get_cache_dir();
 
 	// Delete directory and all its contents recursively
-	void remove_all(const std::string& path, bool remove_root = true);
+	bool remove_all(const std::string& path, bool remove_root = true);
 
 	// Get size of all files recursively
 	u64 get_dir_size(const std::string& path);

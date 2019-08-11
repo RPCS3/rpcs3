@@ -1539,7 +1539,7 @@ const std::string& fs::get_cache_dir()
 	return s_dir;
 }
 
-void fs::remove_all(const std::string& path, bool remove_root)
+bool fs::remove_all(const std::string& path, bool remove_root)
 {
 	for (const auto& entry : dir(path))
 	{
@@ -1550,19 +1550,27 @@ void fs::remove_all(const std::string& path, bool remove_root)
 
 		if (entry.is_directory == false)
 		{
-			remove_file(path + '/' + entry.name);
+			if (!remove_file(path + '/' + entry.name))
+			{
+				return false;
+			}
 		}
 
 		if (entry.is_directory == true)
 		{
-			remove_all(path + '/' + entry.name);
+			if (!remove_all(path + '/' + entry.name))
+			{
+				return false;
+			}
 		}
 	}
 
 	if (remove_root)
 	{
-		remove_dir(path);
+		return remove_dir(path);
 	}
+
+	return true;
 }
 
 u64 fs::get_dir_size(const std::string& path)
