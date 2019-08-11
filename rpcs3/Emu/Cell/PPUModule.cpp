@@ -1035,12 +1035,6 @@ void ppu_unload_prx(const lv2_prx& prx)
 
 	for (auto& seg : prx.segs)
 	{
-		if (seg.flags & 1)
-		{
-			// Segment was considered executable thus needing to free exec data
-			utils::memory_decommit(vm::g_exec_addr + size_t{seg.addr} * 2, size_t{seg.size} * 2);
-		}
-
 		vm::dealloc(seg.addr, vm::main);
 	}
 }

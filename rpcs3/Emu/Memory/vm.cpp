@@ -371,6 +371,7 @@ namespace vm
 
 		if (flags & page_executable)
 		{
+			// TODO
 			utils::memory_commit(g_exec_addr + addr * 2, size * 2);
 		}
 
@@ -424,10 +425,12 @@ namespace vm
 
 			if (i < end)
 			{
-				g_pages[i].flags |= flags_set;
-				g_pages[i].flags &= ~flags_clear;
+				new_val = g_pages[i].flags;
+				new_val |= flags_set;
+				new_val &= ~flags_clear;
 
-				new_val = g_pages[i].flags & (page_readable | page_writable);
+				g_pages[i].flags.release(new_val);
+				new_val &= (page_readable | page_writable);
 			}
 
 			if (new_val != start_value)
@@ -464,9 +467,14 @@ namespace vm
 				break;
 			}
 
-			if (g_pages[i].flags & page_executable)
+			if (size == 0)
 			{
-				is_exec = true;
+				is_exec = !!(g_pages[i].flags & page_executable);
+			}
+			else
+			{
+				// Must be consistent
+				verify(HERE), is_exec == !!(g_pages[i].flags & page_executable);
 			}
 
 			size += 4096;
