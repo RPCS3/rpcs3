@@ -52,7 +52,7 @@ namespace vm
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check flags for specified memory range (unsafe)
-	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_allocated | page_readable);
+	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_readable);
 
 	// Search and map memory in specified memory location (min alignment is 0x10000)
 	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);

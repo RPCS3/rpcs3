@@ -1273,7 +1273,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		return true;
 	}
 
-	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | (is_writing ? vm::page_writable : vm::page_readable)))
+	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), is_writing ? vm::page_writable : vm::page_readable))
 	{
 		if (cpu && cpu->test_stopped())
 		{
@@ -1328,12 +1328,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			u64 data3;
 			{
 				vm::reader_lock rlock;
-				if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | (is_writing ? vm::page_writable : vm::page_readable)))
+				if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), is_writing ? vm::page_writable : vm::page_readable))
 				{
 					// Memory was allocated inbetween, retry
 					return true;
 				}
-				else if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | vm::page_readable))
+				else if (vm::check_addr(addr, std::max<std::size_t>(1, d_size)))
 				{
 					data3 = SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY; // TODO
 				}
@@ -2086,7 +2086,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 				else
 				{
 					// zen(+)
-					// Ryzen 7, Threadripper 
+					// Ryzen 7, Threadripper
 					// Assign threads 3-16
 					ppu_mask = 0b1111111100000000;
 					spu_mask = ppu_mask;

@@ -528,6 +528,9 @@ namespace vm
 			return false;
 		}
 
+		// Always check this flag
+		flags |= page_allocated;
+
 		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max; i++)
 		{
 			if (UNLIKELY((g_pages[i].flags & flags) != flags))
