@@ -23,18 +23,24 @@ void lv2_int_serv::exec()
 	thread_ctrl::notify(*thread);
 }
 
+bool interrupt_thread_exit(ppu_thread& ppu)
+{
+	ppu.state += cpu_flag::exit;
+	return false;
+}
+
 void lv2_int_serv::join()
 {
-	// Enqueue _sys_ppu_thread_exit call
 	thread->cmd_list
 	({
-		{ ppu_cmd::set_args, 1 }, u64{0},
-		{ ppu_cmd::set_gpr, 11 }, u64{41},
-		{ ppu_cmd::opcode, ppu_instructions::SC(0) },
+		{ ppu_cmd::ptr_call, 0 },
+		std::bit_cast<u64>(&interrupt_thread_exit)
 	});
 
 	thread_ctrl::notify(*thread);
 	(*thread)();
+
+	idm::remove<named_thread<ppu_thread>>(thread->id);
 }
 
 error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)
