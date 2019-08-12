@@ -1541,30 +1541,37 @@ const std::string& fs::get_cache_dir()
 
 bool fs::remove_all(const std::string& path, bool remove_root)
 {
-	for (const auto& entry : dir(path))
+	if (const auto root_dir = dir(path))
 	{
-		if (entry.name == "." || entry.name == "..")
+		for (const auto& entry : root_dir)
 		{
-			continue;
-		}
-
-		if (entry.is_directory == false)
-		{
-			if (!remove_file(path + '/' + entry.name))
+			if (entry.name == "." || entry.name == "..")
 			{
-				return false;
+				continue;
 			}
-		}
 
-		if (entry.is_directory == true)
-		{
-			if (!remove_all(path + '/' + entry.name))
+			if (entry.is_directory == false)
 			{
-				return false;
+				if (!remove_file(path + '/' + entry.name))
+				{
+					return false;
+				}
+			}
+
+			if (entry.is_directory == true)
+			{
+				if (!remove_all(path + '/' + entry.name))
+				{
+					return false;
+				}
 			}
 		}
 	}
-
+	else
+	{
+		return false;
+	}
+	
 	if (remove_root)
 	{
 		return remove_dir(path);
