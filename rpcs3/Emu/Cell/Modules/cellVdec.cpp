@@ -395,7 +395,7 @@ static void vdecEntry(ppu_thread& ppu, u32 vid)
 {
 	idm::get<vdec_context>(vid)->exec(ppu, vid);
 
-	_sys_ppu_thread_exit(ppu, 0);
+	ppu.state += cpu_flag::exit;
 }
 
 static u32 vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, vm::ptr<CellVdecAttr> attr)
