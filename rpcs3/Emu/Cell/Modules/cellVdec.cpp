@@ -594,7 +594,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	if (notify)
 	{
 		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
-		thread_ctrl::notify(*vdec_ppu);
+		if (vdec_ppu) thread_ctrl::notify(*vdec_ppu);
 	}
 
 	if (outBuff)
