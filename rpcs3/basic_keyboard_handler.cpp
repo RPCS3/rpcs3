@@ -1,9 +1,13 @@
-#include "basic_keyboard_handler.h"
+﻿#include "basic_keyboard_handler.h"
 
 #include <QApplication>
 #include <QKeyEvent>
 
 #include "Emu/System.h"
+
+#ifdef _WIN32
+#include "windows.h"
+#endif
 
 void basic_keyboard_handler::Init(const u32 max_connect)
 {
@@ -50,6 +54,11 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 
 bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 {
+	if (!ev)
+	{
+		return false;
+	}
+
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
 	if (!m_target || !m_target->isVisible() || target == m_target)
@@ -68,22 +77,71 @@ bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 
 void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 {
+	if (!keyEvent)
+	{
+		return;
+	}
+
 	if (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat)
 	{
 		keyEvent->ignore();
 		return;
 	}
-	Key(keyEvent->key(), true);
+
+	const int key = getUnmodifiedKey(keyEvent);
+
+	if (key >= 0)
+	{
+		Key(static_cast<u32>(key), true);
+	}
 }
 
 void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 {
+	if (!keyEvent)
+	{
+		return;
+	}
+
 	if (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat)
 	{
 		keyEvent->ignore();
 		return;
 	}
-	Key(keyEvent->key(), false);
+
+	const int key = getUnmodifiedKey(keyEvent);
+
+	if (key >= 0)
+	{
+		Key(static_cast<u32>(key), false);
+	}
+}
+
+// This should get the actual unmodified key without getting too crazy.
+// key() only shows the modifiers and the modified key (e.g. no easy way of knowing that - was pressed in 'SHIFT+-' in order to get _)
+int basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
+{
+	if (!keyEvent)
+	{
+		return -1;
+	}
+
+	int key = keyEvent->key();
+
+#ifdef _WIN32
+	if (keyEvent->modifiers() != Qt::NoModifier && !keyEvent->text().isEmpty())
+	{
+		const auto virtual_key = keyEvent->nativeVirtualKey();
+		const auto mapped_key = (int)MapVirtualKeyA((UINT)virtual_key, MAPVK_VK_TO_CHAR);
+		if (key != mapped_key)
+		{
+			LOG_NOTICE(HLE, "basic_keyboard_handler: converted key %s (%d) to (%d)", keyEvent->text().toStdString(), key, mapped_key);
+			key = mapped_key;
+		}
+	}
+#endif
+
+	return key;
 }
 
 void basic_keyboard_handler::LoadSettings()
