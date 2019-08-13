@@ -1619,6 +1619,11 @@ namespace rsx
 		{
 			return decode<NV4097_SET_SHADER_PACKER>().srgb_output_enabled();
 		}
+
+		bool depth_buffer_float_enabled()
+		{
+			return decode<NV4097_SET_CONTROL0>().depth_float();
+		}
 	};
 
 	extern rsx_state method_registers;

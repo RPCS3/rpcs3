@@ -212,12 +212,12 @@ namespace rsx
 
 			sampled_image_descriptor() = default;
 
-			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, bool is_depth,
+			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, format_type ftype,
 				f32 x_scale, f32 y_scale, rsx::texture_dimension_extended type, bool cyclic_reference = false)
 			{
 				image_handle = handle;
 				upload_context = ctx;
-				is_depth_texture = is_depth;
+				format_class = ftype;
 				is_cyclic_reference = cyclic_reference;
 				scale_x = x_scale;
 				scale_y = y_scale;
@@ -226,14 +226,14 @@ namespace rsx
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason, u32 base_address, u32 gcm_format,
 				u16 x_offset, u16 y_offset, u16 width, u16 height, u16 depth, u16 slice_h,
-				texture_upload_context ctx, bool is_depth, f32 x_scale, f32 y_scale,
+				texture_upload_context ctx, format_type ftype, f32 x_scale, f32 y_scale,
 				rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
 			{
 				external_subresource_desc = { external_handle, reason, base_address, gcm_format, x_offset, y_offset, width, height, depth, slice_h, remap };
 
 				image_handle = 0;
 				upload_context = ctx;
-				is_depth_texture = is_depth;
+				format_class = ftype;
 				scale_x = x_scale;
 				scale_y = y_scale;
 				image_type = type;
@@ -1006,6 +1006,21 @@ namespace rsx
 			case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 			case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 				return true;
+			}
+		}
+
+		inline format_type get_format_class(u32 gcm_format)
+		{
+			switch (gcm_format)
+			{
+			default:
+				return format_type::color;
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+				return format_type::depth_uint;
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+				return format_type::depth_float;
 			}
 		}
 
@@ -1865,9 +1880,10 @@ namespace rsx
 					const auto scaled_w = rsx::apply_resolution_scale(tex_width, true);
 					const auto scaled_h = rsx::apply_resolution_scale(tex_height, true);
 
+					const auto format_class = (force_convert) ? get_format_class(format): texptr->get_format_type();
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 					return { texptr->get_surface(rsx::surface_access::read), command, texaddr, format, 0, 0, scaled_w, scaled_h, 1, 0,
-							texture_upload_context::framebuffer_storage, is_depth, scale_x, scale_y,
+							texture_upload_context::framebuffer_storage, format_class, scale_x, scale_y,
 							extended_dimension, decoded_remap };
 				}
 
@@ -1877,7 +1893,7 @@ namespace rsx
 				}
 
 				return{ texptr->get_view(encoded_remap, decoded_remap), texture_upload_context::framebuffer_storage,
-					is_depth, scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
+					texptr->get_format_type(), scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
 			}
 
 			const auto scaled_w = rsx::apply_resolution_scale(tex_width, true);
@@ -1887,14 +1903,14 @@ namespace rsx
 			{
 				return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::_3d_unwrap, texaddr, format, 0, 0,
 						scaled_w, scaled_h, tex_depth, slice_h,
-						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+						texture_upload_context::framebuffer_storage, texptr->get_format_type(), 1.f, 1.f,
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 			}
 
 			verify(HERE), extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap;
 			return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::cubemap_unwrap, texaddr, format, 0, 0,
 					scaled_w, scaled_h, 1, slice_h,
-					texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+					texture_upload_context::framebuffer_storage, texptr->get_format_type(), 1.f, 1.f,
 					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 		}
 
@@ -1930,12 +1946,13 @@ namespace rsx
 			auto scaled_h = rsx::apply_resolution_scale(tex_height, true);
 
 			const auto bpp = get_format_block_size_in_bytes(format);
+			const auto format_class = get_format_class(format);
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
 			{
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather, texaddr, format, 0, 0,
 						scaled_w, scaled_w, 1, slice_h,
-						texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+						texture_upload_context::framebuffer_storage, format_class, 1.f, 1.f,
 						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 
 				u16 padding = u16(slice_h - tex_width);
@@ -1946,7 +1963,7 @@ namespace rsx
 			{
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::_3d_gather, texaddr, format, 0, 0,
 					scaled_w, scaled_h, tex_depth, slice_h,
-					texture_upload_context::framebuffer_storage, is_depth, 1.f, 1.f,
+					texture_upload_context::framebuffer_storage, format_class, 1.f, 1.f,
 					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 
 				u16 padding = u16(slice_h - tex_height);
@@ -1963,7 +1980,7 @@ namespace rsx
 			const auto h = fbos.empty()? tex_height : rsx::apply_resolution_scale(tex_height, true);
 
 			sampled_image_descriptor result = { nullptr, deferred_request_command::atlas_gather,
-					texaddr, format, 0, 0, w, h, 1, slice_h, texture_upload_context::framebuffer_storage, is_depth,
+					texaddr, format, 0, 0, w, h, 1, slice_h, texture_upload_context::framebuffer_storage, format_class,
 					scale_x, scale_y, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
 
 			result.external_subresource_desc.sections_to_copy = gather_texture_slices(cmd, fbos, local, texaddr, tex_width, tex_height, 0, tex_pitch, 1, bpp, is_depth);
@@ -2049,7 +2066,7 @@ namespace rsx
 				// Most mesh textures are stored as compressed to make the most of the limited memory
 				if (auto cached_texture = find_texture_from_dimensions(texaddr, format, tex_width, tex_height, depth))
 				{
-					return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
+					return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->get_format_type(), scale_x, scale_y, cached_texture->get_image_type() };
 				}
 			}
 			else
@@ -2075,7 +2092,7 @@ namespace rsx
 				{
 					if (cached_texture->matches(texaddr, format, tex_width, tex_height, depth, 0))
 					{
-						return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->is_depth_texture(), scale_x, scale_y, cached_texture->get_image_type() };
+						return{ cached_texture->get_view(tex.remap(), tex.decoded_remap()), cached_texture->get_context(), cached_texture->get_format_type(), scale_x, scale_y, cached_texture->get_image_type() };
 					}
 				}
 
@@ -2178,7 +2195,7 @@ namespace rsx
 							}
 
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, texaddr, gcm_format, 0, 0,
-									tex_width, tex_height, 1, 0, last->get_context(), is_depth,
+									tex_width, tex_height, 1, 0, last->get_context(), last->get_format_type(),
 									scale_x, scale_y, extended_dimension, tex.decoded_remap() };
 						}
 					}
@@ -2235,14 +2252,19 @@ namespace rsx
 			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 			auto subresources_layout = get_subresources_layout(tex);
 
-			bool is_depth_format = false;
+			rsx::format_type format_class;
 			switch (format)
 			{
+			default:
+				format_class = rsx::format_type::color;
+				break;
 			case CELL_GCM_TEXTURE_DEPTH16:
-			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 			case CELL_GCM_TEXTURE_DEPTH24_D8:
+				format_class = rsx::format_type::depth_uint;
+				break;
 			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-				is_depth_format = true;
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+				format_class = rsx::format_type::depth_float;
 				break;
 			}
 
@@ -2254,7 +2276,7 @@ namespace rsx
 			//NOTE: SRGB correction is to be handled in the fragment shader; upload as linear RGB
 			return{ upload_image_from_cpu(cmd, tex_range, tex_width, tex_height, depth, tex.get_exact_mipmap_count(), tex_pitch, format,
 				texture_upload_context::shader_read, subresources_layout, extended_dimension, is_swizzled)->get_view(tex.remap(), tex.decoded_remap()),
-				texture_upload_context::shader_read, is_depth_format, scale_x, scale_y, extended_dimension };
+				texture_upload_context::shader_read, format_class, scale_x, scale_y, extended_dimension };
 		}
 
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
