@@ -79,7 +79,7 @@
 			"gs_disableMouse": "Disables the activation of fullscreen mode per double-click while the game screen is active.\nCheck this if you want to play with mouse and keyboard (for example with UCR).",
 			"maxLLVMThreads": "Limits the maximum number of threads used for PPU Module compilation.\nLower this in order to increase performance of other open applications.\nThe default uses all available threads.",
 			"showShaderCompilationHint": "Show shader compilation hints using the native overlay.",
-			"useNativeInterface": "Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, only the English language is supported."
+			"useNativeInterface": "Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, only Latin characters are supported."
 		},
 		"overlay": {
 			"perfOverlayEnabled": "Enables or disables the performance overlay.",
