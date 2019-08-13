@@ -1441,7 +1441,8 @@ namespace gl
 
 			//Sized internal formats, see opengl spec document on glTexImage2D, table 3
 			rgba8 = GL_RGBA8,
-			r5g6b5 = GL_RGB565,
+			rgb565 = GL_RGB565,
+			rgb5a1 = GL_RGB5_A1,
 			rgba4 = GL_RGBA4,
 			r8 = GL_R8,
 			r16 = GL_R16,
