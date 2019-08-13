@@ -21,9 +21,8 @@ struct color_format
 {
 	gl::texture::type type;
 	gl::texture::format format;
+	gl::texture::internal_format internal_format;
 	bool swap_bytes;
-	int channel_count;
-	int channel_size;
 	color_swizzle swizzle;
 };
 
@@ -38,7 +37,6 @@ namespace rsx
 {
 	namespace internals
 	{
-		::gl::texture::internal_format sized_internal_format(rsx::surface_color_format color_format);
 		color_format surface_color_format_to_gl(rsx::surface_color_format color_format);
 		depth_format surface_depth_format_to_gl(rsx::surface_depth_format depth_format);
 		u8 get_pixel_size(rsx::surface_depth_format format);
@@ -142,13 +140,12 @@ struct gl_render_target_traits
 	)
 	{
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
-		auto internal_fmt = rsx::internals::sized_internal_format(surface_color_format);
 
 		std::unique_ptr<gl::render_target> result(new gl::render_target(rsx::apply_resolution_scale((u16)width, true),
-			rsx::apply_resolution_scale((u16)height, true), (GLenum)internal_fmt));
+			rsx::apply_resolution_scale((u16)height, true), (GLenum)format.internal_format));
 
 		result->set_aa_mode(antialias);
-		result->set_native_pitch((u16)width * format.channel_count * format.channel_size * result->samples_x);
+		result->set_native_pitch((u16)width * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
 		result->set_surface_dimensions((u16)width, (u16)height, (u16)pitch);
 		result->set_format(surface_color_format);
 
@@ -327,7 +324,7 @@ struct gl_render_target_traits
 		rsx::surface_antialiasing antialias,
 		bool check_refs=false)
 	{
-		const auto internal_fmt = rsx::internals::sized_internal_format(format);
+		const auto internal_fmt = rsx::internals::surface_color_format_to_gl(format).internal_format;
 		return int_surface_matches_properties(surface, internal_fmt, width, height, antialias, check_refs);
 	}
 

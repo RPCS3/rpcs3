@@ -915,7 +915,7 @@ namespace gl
 			case CELL_GCM_TEXTURE_X32_FLOAT:
 				return (ifmt == gl::texture::internal_format::r32f);
 			case CELL_GCM_TEXTURE_R5G6B5:
-				return (ifmt == gl::texture::internal_format::r5g6b5);
+				return (ifmt == gl::texture::internal_format::rgb565);
 			case CELL_GCM_TEXTURE_A8R8G8B8:
 				return (ifmt == gl::texture::internal_format::rgba8 ||
 						ifmt == gl::texture::internal_format::depth24_stencil8 ||
