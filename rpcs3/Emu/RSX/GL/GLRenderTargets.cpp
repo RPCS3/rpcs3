@@ -215,6 +215,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
+		ds->set_depth_render_mode(!layout.depth_float);
 
 		verify("Pitch mismatch!" HERE), std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == layout.actual_zeta_pitch;
 
@@ -223,8 +224,10 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_depth_surface_info.width = layout.width;
 		m_depth_surface_info.height = layout.height;
 		m_depth_surface_info.depth_format = layout.depth_format;
+		m_depth_surface_info.depth_buffer_float = layout.depth_float;
 		m_depth_surface_info.bpp = (layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
 		m_depth_surface_info.samples = samples;
+
 		m_gl_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
 	}
 	else

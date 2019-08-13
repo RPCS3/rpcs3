@@ -603,9 +603,14 @@ namespace glsl
 			//NOTE: Memory layout is fetched as byteswapped BGRA [GBAR] (GOW collection, DS2, DeS)
 			//The A component (Z) is useless (should contain stencil8 or just 1)
 			OS <<
-			"vec4 decodeLinearDepth(float depth_value)\n"
+			"vec4 decode_depth24(float depth_value, uint depth_float)\n"
 			"{\n"
-			"	uint value = uint(depth_value * 16777215.);\n"
+			"	uint value;\n"
+			"	if (depth_float == 0)\n"
+			"		value = uint(depth_value * 16777215.);\n"
+			"	else\n"
+			"		value = (floatBitsToUint(depth_value) >> 7) & 0xffffff;\n"
+			"\n"
 			"	uint b = (value & 0xff);\n"
 			"	uint g = (value >> 8) & 0xff;\n"
 			"	uint r = (value >> 16) & 0xff;\n"
@@ -625,9 +630,10 @@ namespace glsl
 
 			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, vec2 coord, float remap)\n"
 			"{\n"
-			"	vec4 result = decodeLinearDepth(texture(tex, coord.xy).r);\n"
+			"	uint control_bits = floatBitsToUint(remap);\n"
+			"	vec4 result = decode_depth24(texture(tex, coord.xy).r, control_bits >> 16);\n"
 			"	result.z = float(texture(stencil_tex, coord.xy).x) / 255.f;\n"
-			"	uint remap_vector = floatBitsToUint(remap) & 0xFF;\n"
+			"	uint remap_vector = control_bits & 0xFF;\n"
 			"	if (remap_vector == 0xE4) return result;\n\n"
 			"	vec4 tmp;\n"
 			"	uint remap_a = remap_vector & 0x3;\n"

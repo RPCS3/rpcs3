@@ -1049,6 +1049,7 @@ namespace rsx
 
 		layout.color_format = rsx::method_registers.surface_color();
 		layout.depth_format = rsx::method_registers.surface_depth_fmt();
+		layout.depth_float = rsx::method_registers.depth_buffer_float_enabled();
 		layout.target = rsx::method_registers.surface_color_target();
 
 		const auto aa_mode = rsx::method_registers.surface_antialias();
@@ -1259,6 +1260,7 @@ namespace rsx
 			{
 				if (m_surface_info[i].width != layout.width ||
 					m_surface_info[i].height != layout.height ||
+					m_surface_info[i].color_format != layout.color_format ||
 					m_surface_info[i].samples != sample_count)
 				{
 					really_changed = true;
@@ -1270,6 +1272,8 @@ namespace rsx
 		if (!really_changed)
 		{
 			if (layout.zeta_address == m_depth_surface_info.address &&
+				layout.depth_format == m_depth_surface_info.depth_format &&
+				layout.depth_float == m_depth_surface_info.depth_buffer_float &&
 				sample_count == m_depth_surface_info.samples)
 			{
 				// Same target is reused
@@ -1650,7 +1654,7 @@ namespace rsx
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 					result.unnormalized_coords |= (1 << i);
 
-				if (sampler_descriptors[i]->is_depth_texture)
+				if (sampler_descriptors[i]->format_class != format_type::color)
 				{
 					switch (format)
 					{
@@ -1664,9 +1668,10 @@ namespace rsx
 					{
 						// Reading depth data as XRGB8 is supported with in-shader conversion
 						// TODO: Optionally add support for 16-bit formats (not necessary since type casts are easy with that)
-						u32 remap = tex.remap();
+						u32 control_bits = sampler_descriptors[i]->format_class == format_type::depth_float? (1u << 16) : 0u;
+						control_bits |= tex.remap() & 0xFFFF;
 						result.redirected_textures |= (1 << i);
-						result.texture_scale[i][2] = std::bit_cast<f32>(remap);
+						result.texture_scale[i][2] = std::bit_cast<f32>(control_bits);
 						break;
 					}
 					case CELL_GCM_TEXTURE_DEPTH16:

@@ -1309,7 +1309,7 @@ void VKGSRender::end()
 
 					// Check if non-point filtering can even be used on this format
 					bool can_sample_linear;
-					if (LIKELY(!sampler_state->is_depth_texture))
+					if (LIKELY(sampler_state->format_class == rsx::format_type::color))
 					{
 						// Most PS3-like formats can be linearly filtered without problem
 						can_sample_linear = true;
@@ -2887,6 +2887,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.width = layout.width;
 		m_depth_surface_info.height = layout.height;
 		m_depth_surface_info.depth_format = layout.depth_format;
+		m_depth_surface_info.depth_buffer_float = layout.depth_float;
 		m_depth_surface_info.bpp = (layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
 		m_depth_surface_info.samples = samples;
 	}
@@ -2914,6 +2915,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
+		ds->set_depth_render_mode(!layout.depth_float);
 		m_fbo_images.push_back(ds);
 
 		m_depth_surface_info.address = layout.zeta_address;

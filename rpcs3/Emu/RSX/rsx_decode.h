@@ -4185,6 +4185,29 @@ struct registers_decoder<NV4097_DRAW_INDEX_ARRAY>
 	}
 };
 
+template <>
+struct registers_decoder<NV4097_SET_CONTROL0>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool depth_float() const
+		{
+			return bf_decoder<12, 1>(value) != 0;
+		}
+	};
+
+	static std::string dump(decoded_type&& decoded_values)
+	{
+		return "Depth float enabled: " + decoded_values.depth_float() ? "true" : "false";
+	}
+};
+
 #define TRANSFORM_PROGRAM(index) template<> struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM + index> : public transform_program_helper<index> {};
 #define DECLARE_TRANSFORM_PROGRAM(index) NV4097_SET_TRANSFORM_PROGRAM + index,
 EXPAND_RANGE_512(0, TRANSFORM_PROGRAM)

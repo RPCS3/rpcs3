@@ -316,6 +316,7 @@ namespace rsx
 		rsx::surface_depth_format depth_format;
 		rsx::surface_antialiasing aa_mode;
 		u32 aa_factors[2];
+		bool depth_float;
 		bool ignore_change;
 	};
 
