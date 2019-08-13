@@ -4248,7 +4248,7 @@ void PPUTranslator::FABS(ppu_opcode_t op)
 void PPUTranslator::FCTID(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(31.))), GetType<s64>());
+	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(63.))), GetType<s64>());
 
 	// fix result saturation (0x8000000000000000 -> 0x7fffffffffffffff)
 	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.x86.sse2.cvtsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
@@ -4264,7 +4264,7 @@ void PPUTranslator::FCTID(ppu_opcode_t op)
 void PPUTranslator::FCTIDZ(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(31.))), GetType<s64>());
+	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(63.))), GetType<s64>());
 
 	// fix result saturation (0x8000000000000000 -> 0x7fffffffffffffff)
 	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.x86.sse2.cvttsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
