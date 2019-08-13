@@ -615,7 +615,7 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 {
 	if (m_broken_types.size() && QMessageBox::question(parent, tr("Fix invalid settings?"),
 		tr(
-			"Your config file contained one or more unrecognized settings.\n"
+			"Your config file contained one or more unrecognized values for settings.\n"
 			"Their default value will be used until they are corrected.\n"
 			"Consider that a correction might render them invalid for other versions of RPCS3.\n"
 			"\n"
