@@ -32,9 +32,35 @@ namespace rsx
 
 		for (int y = 0; y < clip_h; ++y)
 		{
-			std::memmove(pixels_dst, pixels_src, row_length);
+			std::memcpy(pixels_dst, pixels_src, row_length);
 			pixels_src += src_pitch;
 			pixels_dst += dst_pitch;
+		}
+	}
+
+	void clip_image_may_overlap(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch, u8 *buffer)
+	{
+		src += clip_y * src_pitch + clip_x * bpp;
+
+		const u32 buffer_pitch = bpp * clip_w;
+		u8* buf = buffer;
+
+		// Read the whole buffer from source
+		for (u32 y = 0; y < clip_h; ++y)
+		{
+			std::memcpy(buf, src, buffer_pitch);
+			src += src_pitch;
+			buf += buffer_pitch;
+		}
+
+		buf = buffer;
+
+		// Write to destination
+		for (u32 y = 0; y < clip_h; ++y)
+		{
+			std::memcpy(dst, buf, buffer_pitch);
+			dst += dst_pitch;
+			buf += buffer_pitch;
 		}
 	}
 
