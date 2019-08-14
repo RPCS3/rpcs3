@@ -72,7 +72,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_TRACE_OBJECT: sys_process.error("sys_process_get_number_of_object: object = SYS_TRACE_OBJECT"); *nump = 0; break;
 	case SYS_SPUIMAGE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_spu_image>(); break;
 	case SYS_PRX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_prx>(); break;
-	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
+	case SYS_SPUPORT_OBJECT: sys_process.error("sys_process_get_number_of_object: object = SYS_SPUPORT_OBJECT"); *nump = 0; break;
 	case SYS_OVERLAY_OBJECT: *nump = idm_get_count<lv2_obj, lv2_overlay>(); break;
 	case SYS_LWMUTEX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_lwmutex>(); break;
 	case SYS_TIMER_OBJECT: *nump = idm_get_count<lv2_obj, lv2_timer>(); break;
@@ -120,7 +120,6 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT" HERE);
 	case SYS_SPUIMAGE_OBJECT: idm_get_set<lv2_obj, lv2_spu_image>(objects); break;
 	case SYS_PRX_OBJECT: idm_get_set<lv2_obj, lv2_prx>(objects); break;
-	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
 	case SYS_OVERLAY_OBJECT: idm_get_set<lv2_obj, lv2_overlay>(objects); break;
 	case SYS_LWMUTEX_OBJECT: idm_get_set<lv2_obj, lv2_lwmutex>(objects); break;
 	case SYS_TIMER_OBJECT: idm_get_set<lv2_obj, lv2_timer>(objects); break;
@@ -129,6 +128,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_LWCOND_OBJECT: idm_get_set<lv2_obj, lv2_lwcond>(objects); break;
 	case SYS_EVENT_FLAG_OBJECT: idm_get_set<lv2_obj, lv2_event_flag>(objects); break;
 
+	case SYS_SPUPORT_OBJECT: // Unallowed
 	default:
 	{
 		return CELL_EINVAL;
