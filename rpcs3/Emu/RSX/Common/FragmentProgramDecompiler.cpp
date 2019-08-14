@@ -460,7 +460,9 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 	}
 
 	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
-	const auto cond = ShaderVariable(dst).match_size(GetRawCond());
+	const auto dst_var = ShaderVariable(dst);
+	const auto raw_cond = dst_var.add_mask(GetRawCond());
+	const auto cond = dst_var.match_size(raw_cond);
 	AddCode(dst + " = _select(" + dst + ", " + src_prefix + src + ", " + cond + ");");
 }
 
