@@ -326,21 +326,6 @@
     <ClCompile Include="xinput_pad_handler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3_app.cpp">
-      <Filter>rpcs3</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_rpcs3_app.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_rpcs3_app.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_rpcs3_app.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rpcs3_app.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_msg_dialog_frame.cpp">
       <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
@@ -743,6 +728,21 @@
     <ClCompile Include="main_application.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_headless_application.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_headless_application.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_headless_application.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_headless_application.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="headless_application.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -842,9 +842,6 @@
     </CustomBuild>
     <CustomBuild Include="basic_mouse_handler.h">
       <Filter>Io\Basic</Filter>
-    </CustomBuild>
-    <CustomBuild Include="rpcs3_app.h">
-      <Filter>rpcs3</Filter>
     </CustomBuild>
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
@@ -979,6 +976,9 @@
       <Filter>Gui</Filter>
     </CustomBuild>
     <CustomBuild Include="main_application.h">
+      <Filter>rpcs3</Filter>
+    </CustomBuild>
+    <CustomBuild Include="headless_application.h">
       <Filter>rpcs3</Filter>
     </CustomBuild>
   </ItemGroup>

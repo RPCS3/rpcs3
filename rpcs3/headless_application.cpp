@@ -1,15 +1,15 @@
-﻿#include "rpcs3_app.h"
+﻿#include "headless_application.h"
 
 #include "Emu/System.h"
 
 #include "Emu/RSX/GSRender.h"
 
 // For now, a trivial constructor/destructor. May add command line usage later.
-rpcs3_app::rpcs3_app(int& argc, char** argv) : QCoreApplication(argc, argv)
+headless_application::headless_application(int& argc, char** argv) : QCoreApplication(argc, argv)
 {
 }
 
-void rpcs3_app::Init()
+void headless_application::Init()
 {
 	// Force init the emulator
 	InitializeEmulator("1", true); // TODO: get user from cli args if possible
@@ -21,14 +21,14 @@ void rpcs3_app::Init()
 	InitializeConnects();
 }
 
-void rpcs3_app::InitializeConnects()
+void headless_application::InitializeConnects()
 {
 	qRegisterMetaType<std::function<void()>>("std::function<void()>");
-	connect(this, &rpcs3_app::RequestCallAfter, this, &rpcs3_app::HandleCallAfter);
+	connect(this, &headless_application::RequestCallAfter, this, &headless_application::HandleCallAfter);
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
-void rpcs3_app::InitializeCallbacks()
+void headless_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
@@ -59,7 +59,7 @@ void rpcs3_app::InitializeCallbacks()
 /**
  * Using connects avoids timers being unable to be used in a non-qt thread. So, even if this looks stupid to just call func, it's succinct.
  */
-void rpcs3_app::HandleCallAfter(const std::function<void()>& func)
+void headless_application::HandleCallAfter(const std::function<void()>& func)
 {
 	func();
 }

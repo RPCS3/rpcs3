@@ -6,15 +6,15 @@
 
 #include "main_application.h"
 
-/** RPCS3 Application Class
+/** Headless RPCS3 Application Class
  * The main point of this class is to do application initialization and initialize callbacks.
 */
 
-class rpcs3_app : public QCoreApplication, public main_application
+class headless_application : public QCoreApplication, public main_application
 {
 	Q_OBJECT
 public:
-	rpcs3_app(int& argc, char** argv);
+	headless_application(int& argc, char** argv);
 
 	/** Call this method before calling app.exec */
 	void Init() override;
