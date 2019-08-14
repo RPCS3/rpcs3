@@ -311,6 +311,16 @@ public:
 			return result;
 		}
 	}
+
+	std::string add_mask(const std::string& other_var) const
+	{
+		if (swizzles.back() != "xyzw")
+		{
+			return other_var + "." + swizzles.back();
+		}
+
+		return other_var;
+	}
 };
 
 struct vertex_reg_info
