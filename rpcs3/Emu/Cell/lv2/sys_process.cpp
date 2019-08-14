@@ -68,7 +68,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_INTR_SERVICE_HANDLE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_int_serv>(); break;
 	case SYS_EVENT_QUEUE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_event_queue>(); break;
 	case SYS_EVENT_PORT_OBJECT: *nump = idm_get_count<lv2_obj, lv2_event_port>(); break;
-	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT" HERE);
+	case SYS_TRACE_OBJECT: sys_process.error("sys_process_get_number_of_object: object = SYS_TRACE_OBJECT"); *nump = 0; break;
 	case SYS_SPUIMAGE_OBJECT: fmt::throw_exception("SYS_SPUIMAGE_OBJECT" HERE);
 	case SYS_PRX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_prx>(); break;
 	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
