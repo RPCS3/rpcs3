@@ -23,6 +23,7 @@
 #include "sys_timer.h"
 #include "sys_trace.h"
 #include "sys_fs.h"
+#include "sys_spu.h"
 
 
 
@@ -69,7 +70,7 @@ s32 sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 	case SYS_EVENT_QUEUE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_event_queue>(); break;
 	case SYS_EVENT_PORT_OBJECT: *nump = idm_get_count<lv2_obj, lv2_event_port>(); break;
 	case SYS_TRACE_OBJECT: sys_process.error("sys_process_get_number_of_object: object = SYS_TRACE_OBJECT"); *nump = 0; break;
-	case SYS_SPUIMAGE_OBJECT: fmt::throw_exception("SYS_SPUIMAGE_OBJECT" HERE);
+	case SYS_SPUIMAGE_OBJECT: *nump = idm_get_count<lv2_obj, lv2_spu_image>(); break;
 	case SYS_PRX_OBJECT: *nump = idm_get_count<lv2_obj, lv2_prx>(); break;
 	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
 	case SYS_OVERLAY_OBJECT: *nump = idm_get_count<lv2_obj, lv2_overlay>(); break;
@@ -117,7 +118,7 @@ s32 sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> s
 	case SYS_EVENT_QUEUE_OBJECT: idm_get_set<lv2_obj, lv2_event_queue>(objects); break;
 	case SYS_EVENT_PORT_OBJECT: idm_get_set<lv2_obj, lv2_event_port>(objects); break;
 	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT" HERE);
-	case SYS_SPUIMAGE_OBJECT: fmt::throw_exception("SYS_SPUIMAGE_OBJECT" HERE);
+	case SYS_SPUIMAGE_OBJECT: idm_get_set<lv2_obj, lv2_spu_image>(objects); break;
 	case SYS_PRX_OBJECT: idm_get_set<lv2_obj, lv2_prx>(objects); break;
 	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
 	case SYS_OVERLAY_OBJECT: idm_get_set<lv2_obj, lv2_overlay>(objects); break;

@@ -43,11 +43,14 @@ void sys_spu_image::load(const fs::file& stream)
 	}
 
 	type        = SYS_SPU_IMAGE_TYPE_KERNEL;
-	entry_point = obj.header.e_entry;
+	
 	nsegs       = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
 	segs        = vm::cast(vm::alloc(mem_size, vm::main));
+
+	// Write ID and save entry
+	entry_point = idm::make<lv2_obj, lv2_spu_image>(+obj.header.e_entry);
 
 	const u32 src = segs.addr() + nsegs * sizeof(sys_spu_segment);
 
@@ -158,7 +161,19 @@ error_code _sys_spu_image_get_information(ppu_thread& ppu, vm::ptr<sys_spu_image
 
 	sys_spu.warning("_sys_spu_image_get_information(img=*0x%x, entry_point=*0x%x, nsegs=*0x%x)", img, entry_point, nsegs);
 
-	*entry_point = img->entry_point;
+	if (img->type != SYS_SPU_IMAGE_TYPE_KERNEL)
+	{
+		return CELL_EINVAL;
+	}
+
+	const auto image = idm::get<lv2_obj, lv2_spu_image>(img->entry_point);
+
+	if (!image)
+	{
+		return CELL_ESRCH;
+	}
+
+	*entry_point = image->e_entry;
 	*nsegs       = img->nsegs;
 	return CELL_OK;
 }
@@ -178,7 +193,6 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 	}
 
 	img->load(elf_file);
-
 	return CELL_OK;
 }
 
@@ -197,6 +211,16 @@ error_code _sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 	vm::temporary_unlock(ppu);
 
 	sys_spu.warning("_sys_spu_image_close(img=*0x%x)", img);
+
+	if (img->type != SYS_SPU_IMAGE_TYPE_KERNEL)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (!idm::remove<lv2_obj, lv2_spu_image>(img->entry_point))
+	{
+		return CELL_ESRCH;
+	}
 
 	vm::dealloc(img->segs.addr(), vm::main);
 	return CELL_OK;
@@ -236,9 +260,29 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return CELL_EINVAL;
 	}
 
+	if (img->type != SYS_SPU_IMAGE_TYPE_KERNEL && img->type != SYS_SPU_IMAGE_TYPE_USER)
+	{
+		return CELL_EINVAL;
+	}
+
 	if (group->threads[spu_num] || group->run_state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 	{
 		return CELL_EBUSY;
+	}
+
+	sys_spu_image image = *img;
+
+	if (img->type == SYS_SPU_IMAGE_TYPE_KERNEL)
+	{
+		const auto handle = idm::get<lv2_obj, lv2_spu_image>(img->entry_point);
+
+		if (!handle)
+		{
+			return CELL_ESRCH;
+		}
+
+		// Save actual entry point
+		image.entry_point = handle->e_entry;
 	}
 
 	if (u32 option = attr->option)
@@ -266,7 +310,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	*thread = tid;
 
 	group->args[spu_num] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
-	group->imgs[spu_num] = std::make_pair(*img, std::vector<sys_spu_segment>());
+	group->imgs[spu_num] = std::make_pair(image, std::vector<sys_spu_segment>());
 	group->imgs[spu_num].second.assign(img->segs.get_ptr(), img->segs.get_ptr() + img->nsegs);
 
 	if (++group->init == group->max_num)

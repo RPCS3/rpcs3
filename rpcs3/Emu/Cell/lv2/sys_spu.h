@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "sys_sync.h"
 #include "sys_event.h"
 #include "Emu/Cell/SPUThread.h"
 
@@ -112,7 +113,7 @@ enum : u32
 struct sys_spu_image
 {
 	be_t<u32> type; // user, kernel
-	be_t<u32> entry_point;
+	be_t<u32> entry_point; // Note: in kernel mode it's used to store id
 	vm::bptr<sys_spu_segment> segs;
 	be_t<s32> nsegs;
 
@@ -208,6 +209,18 @@ enum : u32
 {
 	SYS_SPU_IMAGE_PROTECT = 0,
 	SYS_SPU_IMAGE_DIRECT  = 1,
+};
+
+struct lv2_spu_image : lv2_obj
+{
+	static const u32 id_base = 0x22000000;
+
+	const u32 e_entry;
+
+	lv2_spu_image(u32 entry)
+		: e_entry(entry)
+	{
+	}
 };
 
 struct lv2_spu_group
