@@ -35,21 +35,6 @@ namespace utils
 		ullong stamp;
 	};
 
-	// Detect shared type: id_share tag type can specify any type
-	template <typename T, typename = void>
-	struct typeinfo_share
-	{
-		static constexpr bool is_shared = false;
-	};
-
-	template <typename T>
-	struct typeinfo_share<T, std::void_t<typename std::decay_t<T>::id_share>>
-	{
-		using share = std::decay_t<typename std::decay_t<T>::id_share>;
-
-		static constexpr bool is_shared = true;
-	};
-
 	// Detect id transformation trait (multiplier)
 	template <typename T, typename = void>
 	struct typeinfo_step
@@ -70,12 +55,6 @@ namespace utils
 		static constexpr uint bias = 0;
 	};
 
-	// template <typename T>
-	// struct typeinfo_bias<T, std::void_t<decltype(std::decay_t<T>::id_bias)>>
-	// {
-	// 	static constexpr uint bias = uint{std::decay_t<T>::id_bias};
-	// };
-
 	template <typename T>
 	struct typeinfo_bias<T, std::void_t<decltype(std::decay_t<T>::id_base)>>
 	{
@@ -92,23 +71,7 @@ namespace utils
 	template <typename T>
 	struct typeinfo_count<T, std::void_t<decltype(std::decay_t<T>::id_count)>>
 	{
-		static constexpr uint get_max()
-		{
-			// Use count of the "shared" tag type, it should be a public base of T in this case
-			if constexpr (typeinfo_share<T>::is_shared)
-			{
-				using shared = typename typeinfo_share<T>::share;
-
-				if constexpr (!std::is_same_v<std::decay_t<T>, shared>)
-				{
-					return typeinfo_count<shared>::max_count;
-				}
-			}
-
-			return uint{std::decay_t<T>::id_count};
-		}
-
-		static constexpr uint max_count = get_max();
+		static constexpr uint max_count = uint{std::decay_t<T>::id_count};
 
 		static_assert(ullong{max_count} * typeinfo_step<T>::step <= 0x1'0000'0000ull);
 	};
@@ -134,7 +97,6 @@ namespace utils
 		uint align = 0;
 		uint count = 0;
 		void(*clean)(class typemap_block*) = 0;
-		const typeinfo_base* base = 0;
 
 		constexpr typeinfo_base() noexcept = default;
 
@@ -215,32 +177,6 @@ namespace utils
 			g_typecounter.next->next = this;
 			g_typecounter.next       = this;
 			g_typecounter.last       = this;
-		}
-
-		if constexpr (typeinfo_share<T>::is_shared)
-		{
-			// Store additional information for shared types
-			using shared = typename typeinfo_share<T>::share;
-
-			// Bind
-			this->base = &g_sh<shared>;
-
-			if (this != &g_typeinfo<T>)
-			{
-				return;
-			}
-
-			// Use smallest type id (void tag can reuse id 0)
-			if (g_sh<shared>.type == 0 && !std::is_void_v<shared>)
-				g_sh<shared>.type = this->type;
-
-			// Update max size and alignment
-			if (g_sh<shared>.size < this->size)
-				g_sh<shared>.size = this->size;
-			if (g_sh<shared>.align < this->align)
-				g_sh<shared>.align = this->align;
-			if (g_sh<shared>.count < this->count)
-				g_sh<shared>.count = this->count;
 		}
 	}
 
@@ -651,15 +587,7 @@ namespace utils
 		typemap_head* get_head() const
 		{
 			using _type = std::decay_t<T>;
-
-			if constexpr (typeinfo_share<T>::is_shared)
-			{
-				return &m_map[g_sh<_type>.type];
-			}
-			else
-			{
-				return &m_map[g_typeinfo<_type>.type];
-			}
+			return &m_map[g_typeinfo<_type>.type];
 		}
 
 	public:
@@ -740,22 +668,19 @@ namespace utils
 
 				for (uint i = 0; type; i++, type = type->next)
 				{
-					// Use base info if provided
-					const auto base = type->base ? type->base : type;
-
-					const uint align = base->align;
-					const uint ssize = ::align<uint>(sizeof(typemap_block), align) + ::align(base->size, align);
-					const auto total = std::size_t{ssize} * base->count;
+					const uint align = type->align;
+					const uint ssize = ::align<uint>(sizeof(typemap_block), align) + ::align(type->size, align);
+					const auto total = std::size_t{ssize} * type->count;
 					const auto start = std::uintptr_t{::align(m_total, align)};
 
-					if (total && type->type == base->type)
+					if (total)
 					{
 						// Move forward hoping there are no usable gaps wasted
 						m_total = start + total;
 
 						// Store storage size and object count
 						m_map[i].m_ssize = ssize;
-						m_map[i].m_count = base->count;
+						m_map[i].m_count = type->count;
 						m_map[i].m_ptr   = reinterpret_cast<uchar*>(start);
 					}
 
@@ -860,14 +785,6 @@ namespace utils
 							block = nullptr;
 						}
 					}
-					else if constexpr (typeinfo_share<Type>::is_shared)
-					{
-						// id_any/id_always allows either null or matching type
-						if (UNLIKELY(block->m_type && block->m_type != type_id))
-						{
-							block = nullptr;
-						}
-					}
 				}
 			}
 			else if constexpr (std::is_invocable_r_v<bool, const Arg&, const Type&>)
@@ -908,13 +825,6 @@ namespace utils
 				{
 					block = nullptr;
 				}
-				else if constexpr (typeinfo_share<Type>::is_shared)
-				{
-					if (UNLIKELY(block->m_type != type_id))
-					{
-						block = nullptr;
-					}
-				}
 				else
 				{
 					if (UNLIKELY(block->m_type == 0))
@@ -942,36 +852,13 @@ namespace utils
 				// No action for id_new
 				return;
 			}
-			else if constexpr (std::is_same_v<id_tag, id_any_t> && !typeinfo_share<Type>::is_shared)
-			{
-				// No action for unshared id_any
-				return;
-			}
 			else if constexpr (std::is_same_v<id_tag, id_any_t>)
 			{
-				// Possibly shared id_any
-				if (LIKELY(!block || block->m_type == type_id || block->m_type == 0))
-				{
-					return;
-				}
+				// No action for id_any
+				return;
 			}
 			else if constexpr (std::is_same_v<id_tag, id_always_t>)
 			{
-				if constexpr (typeinfo_share<Type>::is_shared)
-				{
-					if (!block)
-					{
-						return;
-					}
-
-					if (block->m_type && block->m_type != type_id)
-					{
-						block->m_mutex.unlock();
-						block = nullptr;
-						return;
-					}
-				}
-
 				if (block->m_type == 0 && block->m_type.compare_and_swap_test(0, type_id))
 				{
 					// Initialize object if necessary
@@ -999,19 +886,9 @@ namespace utils
 			}
 			else if (block)
 			{
-				if constexpr (!typeinfo_share<Type>::is_shared)
+				if (LIKELY(block->m_type))
 				{
-					if (LIKELY(block->m_type))
-					{
-						return;
-					}
-				}
-				else
-				{
-					if (LIKELY(block->m_type == type_id))
-					{
-						return;
-					}
+					return;
 				}
 			}
 			else
