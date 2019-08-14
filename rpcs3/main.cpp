@@ -11,7 +11,7 @@
 
 #include "rpcs3qt/gui_application.h"
 
-#include "rpcs3_app.h"
+#include "headless_application.h"
 #include "Utilities/sema.h"
 #ifdef _WIN32
 #include <windows.h>
@@ -104,7 +104,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 {
 	for (int i = 1; i < argc; ++i)
 		if (!strcmp(ARG_NO_GUI, argv[i]))
-			return new rpcs3_app(argc, argv);
+			return new headless_application(argc, argv);
 	return new gui_application(argc, argv);
 }
 
@@ -156,7 +156,7 @@ int main(int argc, char** argv)
 
 		gui_app->Init();
 	}
-	else if (auto non_gui_app = qobject_cast<rpcs3_app*>(app.data()))
+	else if (auto non_gui_app = qobject_cast<headless_application*>(app.data()))
 	{
 		non_gui_app->Init();
 	}

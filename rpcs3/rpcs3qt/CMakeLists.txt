@@ -1,4 +1,4 @@
-set(SRC_FILES
+﻿set(SRC_FILES
 	about_dialog.cpp
 	auto_pause_settings_dialog.cpp
 	breakpoint_handler.cpp
@@ -14,6 +14,7 @@ set(SRC_FILES
 	game_list_frame.cpp
 	game_list_grid.cpp
 	game_list_grid_delegate.cpp
+	gui_application.cpp
 	gl_gs_frame.cpp
 	gs_frame.cpp
 	gui_settings.cpp
