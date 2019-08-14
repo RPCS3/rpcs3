@@ -113,21 +113,6 @@ namespace utils
 		static_assert(ullong{max_count} * typeinfo_step<T>::step <= 0x1'0000'0000ull);
 	};
 
-	// Detect polymorphic type enablement
-	template <typename T, typename = void>
-	struct typeinfo_poly
-	{
-		static constexpr bool is_poly = false;
-	};
-
-	template <typename T>
-	struct typeinfo_poly<T, std::void_t<decltype(std::decay_t<T>::id_poly)>>
-	{
-		static constexpr bool is_poly = true;
-
-		static_assert(std::has_virtual_destructor_v<std::decay_t<T>>);
-	};
-
 	// Detect operator ->
 	template <typename T, typename = void>
 	struct typeinfo_pointer
@@ -202,26 +187,11 @@ namespace utils
 		static void call_destructor(class typemap_block* ptr);
 
 		typeinfo();
-
-		template <typename, typename B>
-		friend struct typepoly;
 	};
 
 	// Type information for each used type
 	template <typename T>
 	inline const typeinfo<T> g_typeinfo{};
-
-	template <typename T, typename B>
-	struct typepoly
-	{
-		uint type = 0;
-
-		typepoly();
-	};
-
-	// Polymorphic type helper
-	template <typename T, typename B>
-	inline const typepoly<T, B> g_typepoly{};
 
 	template <typename T>
 	typeinfo<T>::typeinfo()
@@ -274,43 +244,6 @@ namespace utils
 		}
 	}
 
-	template <typename T, typename B>
-	typepoly<T, B>::typepoly()
-	{
-		static_assert(alignof(T) < 4096);
-
-		if (this != &g_typepoly<T, B>)
-		{
-			// Protect global state against unrelated constructions of typepoly<> objects
-			return;
-		}
-
-		// Set min align 16 to make some space for a pointer
-		const uint size{sizeof(T) < 16 ? 16 : sizeof(T)};
-		const uint align{alignof(T) < 16 ? 16 : alignof(T)};
-
-		typeinfo_base& info = const_cast<typeinfo<B>&>(g_typeinfo<B>);
-
-		this->type = info.type;
-
-		// Update max size and alignment of the base class typeinfo
-		if (info.size < size)
-			info.size = size;
-		if (info.align < align)
-			info.align = align;
-
-		if constexpr (typeinfo_share<B>::is_shared)
-		{
-			typeinfo_base& base = const_cast<typeinfo_base&>(*info.base);
-
-			// Update max size and alignment of the shared type
-			if (base.size < size)
-				base.size = size;
-			if (base.align < align)
-				base.align = align;
-		}
-	}
-
 	// Internal, control block for a particular object
 	class typemap_block
 	{
@@ -341,16 +274,7 @@ namespace utils
 	template <typename T>
 	void typeinfo<T>::call_destructor(typemap_block* ptr)
 	{
-		// Choose cleanup routine
-		if constexpr (typeinfo_poly<T>::is_poly)
-		{
-			// Read actual pointer to the base class
-			(*ptr->get_ptr<T*>())->~T();
-		}
-		else
-		{
-			ptr->get_ptr<T>()->~T();
-		}
+		ptr->get_ptr<T>()->~T();
 	}
 
 	// An object of type T paired with atomic refcounter
@@ -584,15 +508,7 @@ namespace utils
 		auto get() const noexcept
 		{
 			ASSUME(m_block->m_type != 0);
-
-			if constexpr (std::is_lvalue_reference_v<T>)
-			{
-				return static_cast<D*>(*m_block->get_ptr<std::remove_reference_t<T>*>());
-			}
-			else
-			{
-				return m_block->get_ptr<T>();
-			}
+			return m_block->get_ptr<T>();
 		}
 
 		auto operator->() const noexcept
@@ -648,19 +564,7 @@ namespace utils
 				}
 			}
 
-			if constexpr (std::is_lvalue_reference_v<T>)
-			{
-				using base = std::remove_reference_t<T>;
-
-				if (m_block->m_type.exchange(g_typepoly<New, base>.type) != 0)
-				{
-					(*m_block->get_ptr<base*>())->~base();
-					m_head->m_destroy_count++;
-				}
-
-				*m_block->get_ptr<base*>() = new (m_block->get_ptr<New, 16>()) New(std::forward<Args>(args)...);
-			}
-			else
+			if constexpr (true)
 			{
 				static_assert(std::is_same_v<New, T>);
 
@@ -688,16 +592,7 @@ namespace utils
 				return;
 			}
 
-			if constexpr (std::is_lvalue_reference_v<T>)
-			{
-				using base = std::remove_reference_t<T>;
-				(*m_block->get_ptr<base*>())->~base();
-			}
-			else
-			{
-				m_block->get_ptr<T>()->~T();
-			}
-
+			m_block->get_ptr<T>()->~T();
 			m_head->m_destroy_count++;
 		}
 
@@ -988,14 +883,7 @@ namespace utils
 
 						if (block->m_type == type_id)
 						{
-							if constexpr (std::is_lvalue_reference_v<Type>)
-							{
-								if (std::invoke(std::forward<Arg>(id), std::as_const(**block->get_ptr<std::remove_reference_t<Type>*>())))
-								{
-									break;
-								}
-							}
-							else if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
+							if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
 							{
 								break;
 							}
@@ -1089,16 +977,7 @@ namespace utils
 					// Initialize object if necessary
 					static_assert(!std::is_const_v<std::remove_reference_t<Type>>);
 					static_assert(!std::is_volatile_v<std::remove_reference_t<Type>>);
-
-					if constexpr (std::is_lvalue_reference_v<Type>)
-					{
-						using base = std::remove_reference_t<Type>;
-						*block->get_ptr<base*>() = new (block->get_ptr<base, 16>()) base();
-					}
-					else
-					{
-						new (block->get_ptr<Type>) Type();
-					}
+					new (block->get_ptr<Type>) Type();
 				}
 
 				return;
@@ -1112,14 +991,7 @@ namespace utils
 
 				if (LIKELY(block->m_type == type_id))
 				{
-					if constexpr (std::is_lvalue_reference_v<Type>)
-					{
-						if (std::invoke(std::forward<Arg>(id), std::as_const(**block->get_ptr<std::remove_reference_t<Type>*>())))
-						{
-							return;
-						}
-					}
-					else if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
+					if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
 					{
 						return;
 					}
@@ -1293,7 +1165,7 @@ namespace utils
 		template <typename... Types, typename... Args, typename = std::enable_if_t<sizeof...(Types) == sizeof...(Args)>>
 		auto lock(Args&&... ids) const
 		{
-			static_assert(((!std::is_lvalue_reference_v<Types> == !typeinfo_poly<Types>::is_poly) && ...));
+			static_assert(((!std::is_lvalue_reference_v<Types>) && ...));
 			static_assert(((!std::is_array_v<Types>) && ...));
 			static_assert(((!std::is_void_v<Types>) && ...));
 
@@ -1332,7 +1204,7 @@ namespace utils
 		template <typename Type, typename... Types, typename F>
 		ullong apply(F&& func)
 		{
-			static_assert(!std::is_lvalue_reference_v<Type> == !typeinfo_poly<Type>::is_poly);
+			static_assert(!std::is_lvalue_reference_v<Type>);
 			static_assert(!std::is_array_v<Type>);
 			static_assert(!std::is_void_v<Type>);
 
@@ -1352,14 +1224,7 @@ namespace utils
 
 					if (block->m_type == type_id)
 					{
-						if constexpr (std::is_lvalue_reference_v<Type>)
-						{
-							std::invoke(std::forward<F>(func), **block->get_ptr<std::remove_reference_t<Type>*>());
-						}
-						else
-						{
-							std::invoke(std::forward<F>(func), *block->get_ptr<decode_t<Type>>());
-						}
+						std::invoke(std::forward<F>(func), *block->get_ptr<decode_t<Type>>());
 					}
 				}
 			}
