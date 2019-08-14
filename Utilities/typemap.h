@@ -4,6 +4,7 @@
 #include "mutex.h"
 #include "cond.h"
 #include "util/atomic.hpp"
+#include "util/typeindices.hpp"
 #include "VirtualMemory.h"
 #include <memory>
 
@@ -92,7 +93,6 @@ namespace utils
 	// Type information
 	struct typeinfo_base
 	{
-		uint type = 0;
 		uint size = 0;
 		uint align = 0;
 		uint count = 0;
@@ -100,84 +100,27 @@ namespace utils
 
 		constexpr typeinfo_base() noexcept = default;
 
-	protected:
-		// Next typeinfo in linked list
-		typeinfo_base* next = 0;
+		template <typename T>
+		static void call_destructor(typemap_block* ptr) noexcept;
 
 		template <typename T>
-		friend struct typeinfo;
-
-		friend class typecounter;
-
-		friend class typemap_block;
-		friend class typemap;
-	};
-
-	template <typename T>
-	inline typeinfo_base g_sh{};
-
-	// Class for automatic type registration
-	class typecounter
-	{
-		// Linked list built at global initialization time
-		typeinfo_base* first = &g_sh<void>;
-		typeinfo_base* next  = first;
-		typeinfo_base* last  = first;
-
-		template <typename T>
-		friend struct typeinfo;
-
-		friend class typemap_block;
-		friend class typemap;
-
-	public:
-		constexpr typecounter() noexcept = default;
-
-		// Get next type id, or total type count
-		operator uint() const
+		static constexpr typeinfo_base make_typeinfo() noexcept
 		{
-			return last->type + 1;
+			static_assert(alignof(T) < 4096);
+
+			typeinfo_base r;
+			r.size  = uint{sizeof(T)};
+			r.align = uint{alignof(T)};
+			r.count = typeinfo_count<T>::max_count;
+			r.clean = &call_destructor<T>;
+			return r;
 		}
 	};
 
-	// Global typecounter instance
-	inline typecounter g_typecounter{};
-
 	template <typename T>
-	struct typeinfo : typeinfo_base
+	uint get_typeid() noexcept
 	{
-		static void call_destructor(class typemap_block* ptr);
-
-		typeinfo();
-	};
-
-	// Type information for each used type
-	template <typename T>
-	inline const typeinfo<T> g_typeinfo{};
-
-	template <typename T>
-	typeinfo<T>::typeinfo()
-	{
-		static_assert(alignof(T) < 4096);
-
-		this->type  = g_typecounter;
-		this->size  = uint{sizeof(T)};
-		this->align = uint{alignof(T)};
-		this->count = typeinfo_count<T>::max_count;
-		this->clean = &call_destructor;
-
-		if (this != &g_typeinfo<T>)
-		{
-			// Protect global state against unrelated constructions of typeinfo<> objects
-			this->type = g_typeinfo<T>.type;
-		}
-		else
-		{
-			// Update linked list
-			g_typecounter.next->next = this;
-			g_typecounter.next       = this;
-			g_typecounter.last       = this;
-		}
+		return stx::type_counter<typeinfo_base>::type<std::decay_t<T>>.index();
 	}
 
 	// Internal, control block for a particular object
@@ -208,7 +151,7 @@ namespace utils
 	static_assert(sizeof(typemap_block) == 8);
 
 	template <typename T>
-	void typeinfo<T>::call_destructor(typemap_block* ptr)
+	void typeinfo_base::call_destructor(typemap_block* ptr) noexcept
 	{
 		ptr->get_ptr<T>()->~T();
 	}
@@ -557,7 +500,7 @@ namespace utils
 
 		static uint type_index()
 		{
-			return g_typeinfo<std::decay_t<T>>.type;
+			return get_typeid<T>();
 		}
 
 		static constexpr bool type_const()
@@ -586,8 +529,7 @@ namespace utils
 		template <typename T>
 		typemap_head* get_head() const
 		{
-			using _type = std::decay_t<T>;
-			return &m_map[g_typeinfo<_type>.type];
+			return &m_map[get_typeid<T>() - 1];
 		}
 
 	public:
@@ -619,10 +561,7 @@ namespace utils
 		// Recreate, also required if constructed without initialization.
 		void init()
 		{
-			// Kill the ability to register more types (should segfault on attempt)
-			g_typecounter.next = nullptr;
-
-			if (g_typecounter <= 1)
+			if (!stx::typeinfo_v<typeinfo_base>.count())
 			{
 				return;
 			}
@@ -630,13 +569,14 @@ namespace utils
 			// Recreate and copy some type information
 			if (m_map == nullptr)
 			{
-				m_map = new typemap_head[g_typecounter]();
+				m_map = new typemap_head[stx::typeinfo_v<typeinfo_base>.count()]();
 			}
 			else
 			{
-				auto type = g_typecounter.first;
+				auto type = stx::typeinfo_v<typeinfo_base>.begin();
+				auto _end = stx::typeinfo_v<typeinfo_base>.end();
 
-				for (uint i = 0; type; i++, type = type->next)
+				for (uint i = 0; type != _end; i++, ++type)
 				{
 					// Delete objects (there shall be no threads accessing them)
 					const uint lim = m_map[i].m_count != 1 ? +m_map[i].m_limit : 1;
@@ -647,7 +587,7 @@ namespace utils
 
 						if (const uint type_id = block->m_type)
 						{
-							m_map[type_id].clean(block);
+							m_map[type_id - 1].clean(block);
 						}
 					}
 
@@ -664,9 +604,10 @@ namespace utils
 			if (m_memory == nullptr)
 			{
 				// Determine total size, copy typeinfo
-				auto type = g_typecounter.first;
+				auto type = stx::typeinfo_v<typeinfo_base>.begin();
+				auto _end = stx::typeinfo_v<typeinfo_base>.end();
 
-				for (uint i = 0; type; i++, type = type->next)
+				for (uint i = 0; type != _end; i++, ++type)
 				{
 					const uint align = type->align;
 					const uint ssize = ::align<uint>(sizeof(typemap_block), align) + ::align(type->size, align);
@@ -693,7 +634,7 @@ namespace utils
 				utils::memory_commit(m_memory, m_total);
 
 				// Update pointers
-				for (uint i = 0, n = g_typecounter; i < n; i++)
+				for (uint i = 0, n = stx::typeinfo_v<typeinfo_base>.count(); i < n; i++)
 				{
 					if (m_map[i].m_count)
 					{
@@ -725,7 +666,7 @@ namespace utils
 				return {};
 			}
 
-			const uint type_id = g_typeinfo<std::decay_t<Type>>.type;
+			const uint type_id = get_typeid<Type>();
 
 			using id_tag = std::decay_t<Arg>;
 
@@ -845,7 +786,7 @@ namespace utils
 		{
 			using id_tag = std::decay_t<Arg>;
 
-			const uint type_id = g_typeinfo<std::decay_t<Type>>.type;
+			const uint type_id = get_typeid<Type>();
 
 			if constexpr (std::is_same_v<id_tag, id_new_t>)
 			{
@@ -1085,7 +1026,7 @@ namespace utils
 			static_assert(!std::is_array_v<Type>);
 			static_assert(!std::is_void_v<Type>);
 
-			const uint type_id = g_typeinfo<std::decay_t<decode_t<Type>>>.type;
+			const uint type_id = get_typeid<decode_t<Type>>();
 
 			typemap_head* head = get_head<decode_t<Type>>();
 
