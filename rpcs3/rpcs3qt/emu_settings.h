@@ -47,6 +47,8 @@ public:
 		SPUCache,
 		DebugConsoleMode,
 		MaxSPURSThreads,
+		SleepTimersAccuracy,
+		ClocksScale,
 
 		// Graphics
 		Renderer,
@@ -81,6 +83,7 @@ public:
 		DisableVulkanMemAllocator,
 		DisableAsyncShaderCompiler,
 		MultithreadedRSX,
+		VBlankRate,
 
 		// Performance Overlay
 		PerfOverlayEnabled,
@@ -274,6 +277,8 @@ private:
 		{ SPUCache,                 { "Core", "SPU Cache"}},
 		{ DebugConsoleMode,         { "Core", "Debug Console Mode"}},
 		{ MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
+		{ SleepTimersAccuracy,      { "Core", "Sleep Timers Accuracy"}},
+		{ ClocksScale,              { "Core", "Clocks scale"}},
 
 		// Graphics Tab
 		{ Renderer,                   { "Video", "Renderer"}},
@@ -308,6 +313,7 @@ private:
 		{ MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
 		{ D3D12Adapter,               { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,              { "Video", "Vulkan", "Adapter"}},
+		{ VBlankRate,                 { "Video", "Vblank Rate"}},
 
 		// Performance Overlay
 		{ PerfOverlayEnabled,       { "Video", "Performance Overlay", "Enabled" } },

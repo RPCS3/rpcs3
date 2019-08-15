@@ -45,11 +45,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xgui_settings->SetValue(gui::m_showDebugTab, showDebugTab);
 	if (!showDebugTab)
 	{
-		ui->tab_widget_settings->removeTab(8);
+		ui->tab_widget_settings->removeTab(9);
 	}
 	if (game)
 	{
-		ui->tab_widget_settings->removeTab(7);
+		ui->tab_widget_settings->removeTab(8);
 	}
 
 	// Add description labels
@@ -59,6 +59,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeDescription(ui->description_io);
 	SubscribeDescription(ui->description_system);
 	SubscribeDescription(ui->description_network);
+	SubscribeDescription(ui->description_advanced);
 	SubscribeDescription(ui->description_emulator);
 	if (!game)
 	{
@@ -88,6 +89,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_input = json_obj.value("input").toObject();
 	QJsonObject json_sys   = json_obj.value("system").toObject();
 	QJsonObject json_net   = json_obj.value("network").toObject();
+
+	QJsonObject json_advanced = json_obj.value("advanced").toObject();
 
 	QJsonObject json_emu         = json_obj.value("emulator").toObject();
 	QJsonObject json_emu_misc    = json_emu.value("misc").toObject();
@@ -1039,6 +1042,72 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::ConnectionStatus);
 	SubscribeTooltip(ui->netStatusBox, json_net["netStatusBox"].toString());
 
+
+	//                _                               _   _______    _
+	//       /\      | |                             | | |__   __|  | |
+	//      /  \   __| |_   ____ _ _ __   ___ ___  __| |    | | __ _| |__
+	//     / /\ \ / _` \ \ / / _` | '_ \ / __/ _ \/ _` |    | |/ _` | '_ \
+	//    / ____ \ (_| |\ V / (_| | | | | (_|  __/ (_| |    | | (_| | |_) |
+	//   /_/    \_\__,_| \_/ \__,_|_| |_|\___\___|\__,_|    |_|\__,_|_.__/
+
+
+	// Checkboxes
+
+	xemu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
+	SubscribeTooltip(ui->debugConsoleMode, json_advanced["debugConsoleMode"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
+	SubscribeTooltip(ui->readColor, json_advanced["readColor"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
+	SubscribeTooltip(ui->readDepth, json_advanced["readDepth"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
+	SubscribeTooltip(ui->dumpDepth, json_advanced["dumpDepth"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
+	SubscribeTooltip(ui->disableOnDiskShaderCache, json_advanced["disableOnDiskShaderCache"].toString());
+
+	// Comboboxes
+
+	xemu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings::MaxSPURSThreads, true);
+	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData("6"), tr("Unlimited (Default)"));
+	SubscribeTooltip(ui->maxSPURSThreads, json_advanced["maxSPURSThreads"].toString());
+
+	xemu_settings->EnhanceComboBox(ui->sleepTimersAccuracy, emu_settings::SleepTimersAccuracy);
+	SubscribeTooltip(ui->sleepTimersAccuracy, json_advanced["sleepTimersAccuracy"].toString());
+
+	// Sliders
+
+	EnhanceSlider(emu_settings::VBlankRate, ui->vblank, ui->vblankText, tr("%0 Hz"));
+	int vblankDef = stoi(xemu_settings->GetSettingDefault(emu_settings::VBlankRate));
+	connect(ui->vblankReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->vblank->setValue(vblankDef);
+	});
+
+	EnhanceSlider(emu_settings::ClocksScale, ui->clockScale, ui->clockScaleText, tr("%0 %"));
+	int clocksScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
+	connect(ui->clockScaleReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->clockScale->setValue(clocksScaleDef);
+	});
+
+	if (!game) // Prevent users from doing dumb things
+	{
+		ui->vblank->setDisabled(true);
+		ui->vblankReset->setDisabled(true);
+		SubscribeTooltip(ui->vblank, json_advanced["disabledFromGlobal"].toString());
+		ui->clockScale->setDisabled(true);
+		ui->clockScaleReset->setDisabled(true);
+		SubscribeTooltip(ui->clockScale, json_advanced["disabledFromGlobal"].toString());
+	}
+	else
+	{
+		SubscribeTooltip(ui->vblank, json_advanced["vblankRate"].toString());
+		SubscribeTooltip(ui->clockScale, json_advanced["clocksScale"].toString());
+	}
+
 	//    ______                 _       _               _______    _
 	//   |  ____|               | |     | |             |__   __|  | |
 	//   | |__   _ __ ___  _   _| | __ _| |_ ___  _ __     | | __ _| |__
@@ -1442,23 +1511,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->logProg, emu_settings::LogShaderPrograms);
 	SubscribeTooltip(ui->logProg, json_debug["logProg"].toString());
 
-	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
-	SubscribeTooltip(ui->readColor, json_debug["readColor"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
-	SubscribeTooltip(ui->dumpDepth, json_debug["dumpDepth"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
-	SubscribeTooltip(ui->readDepth, json_debug["readDepth"].toString());
-
 	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
 	SubscribeTooltip(ui->disableHwOcclusionQueries, json_debug["disableOcclusionQueries"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->forceCpuBlitEmulation, emu_settings::ForceCPUBlitEmulation);
 	SubscribeTooltip(ui->forceCpuBlitEmulation, json_debug["forceCpuBlitEmulation"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
-	SubscribeTooltip(ui->disableOnDiskShaderCache, json_debug["disableOnDiskShaderCache"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->disableVulkanMemAllocator, emu_settings::DisableVulkanMemAllocator);
 	SubscribeTooltip(ui->disableVulkanMemAllocator, json_debug["disableVulkanMemAllocator"].toString());
@@ -1490,14 +1547,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, json_debug["hookStFunc"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
-	SubscribeTooltip(ui->debugConsoleMode, json_debug["debugConsoleMode"].toString());
-
-	// Comboboxes
-	xemu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings::MaxSPURSThreads, true);
-	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData("6"), tr("Unlimited (Default)"));
-	SubscribeTooltip(ui->maxSPURSThreads, json_debug["maxSPURSThreads"].toString());
 
 	// Layout fix for High Dpi
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
