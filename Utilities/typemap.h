@@ -117,12 +117,6 @@ namespace utils
 		}
 	};
 
-	template <typename T>
-	uint get_typeid() noexcept
-	{
-		return stx::type_counter<typeinfo_base>::type<std::decay_t<T>>.index();
-	}
-
 	// Internal, control block for a particular object
 	class typemap_block
 	{
@@ -448,7 +442,7 @@ namespace utils
 				static_assert(std::is_same_v<New, T>);
 
 				// Set type; zero value shall not be observed in the case of recreation
-				if (m_block->m_type.exchange(type_index()) != 0)
+				if (m_block->m_type.exchange(1) != 0)
 				{
 					// Destroy object if it exists
 					m_block->get_ptr<T>()->~T();
@@ -492,17 +486,6 @@ namespace utils
 			return static_cast<uint>(quot) * step + bias;
 		}
 
-		// Get current type
-		uint get_type() const
-		{
-			return m_block->m_type;
-		}
-
-		static uint type_index()
-		{
-			return get_typeid<T>();
-		}
-
 		static constexpr bool type_const()
 		{
 			return std::is_const_v<std::remove_reference_t<T>>;
@@ -529,7 +512,7 @@ namespace utils
 		template <typename T>
 		typemap_head* get_head() const
 		{
-			return &m_map[get_typeid<T>() - 1];
+			return &m_map[stx::type_counter<typeinfo_base>::type<std::decay_t<T>>.index()];
 		}
 
 	public:
@@ -585,9 +568,9 @@ namespace utils
 					{
 						const auto block = reinterpret_cast<typemap_block*>(m_map[i].m_ptr + j * m_map[i].m_ssize);
 
-						if (const uint type_id = block->m_type)
+						if (block->m_type)
 						{
-							m_map[type_id - 1].clean(block);
+							m_map[i].clean(block);
 						}
 					}
 
@@ -666,8 +649,6 @@ namespace utils
 				return {};
 			}
 
-			const uint type_id = get_typeid<Type>();
-
 			using id_tag = std::decay_t<Arg>;
 
 			typemap_head* head = get_head<Type>();
@@ -735,11 +716,11 @@ namespace utils
 				{
 					block = reinterpret_cast<typemap_block*>(head->m_ptr + j * head->m_ssize);
 
-					if (block->m_type == type_id)
+					if (block->m_type)
 					{
 						std::lock_guard lock(block->m_mutex);
 
-						if (block->m_type == type_id)
+						if (block->m_type)
 						{
 							if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
 							{
@@ -786,8 +767,6 @@ namespace utils
 		{
 			using id_tag = std::decay_t<Arg>;
 
-			const uint type_id = get_typeid<Type>();
-
 			if constexpr (std::is_same_v<id_tag, id_new_t>)
 			{
 				// No action for id_new
@@ -800,7 +779,7 @@ namespace utils
 			}
 			else if constexpr (std::is_same_v<id_tag, id_always_t>)
 			{
-				if (block->m_type == 0 && block->m_type.compare_and_swap_test(0, type_id))
+				if (block->m_type == 0 && block->m_type.compare_and_swap_test(0, 1))
 				{
 					// Initialize object if necessary
 					static_assert(!std::is_const_v<std::remove_reference_t<Type>>);
@@ -817,7 +796,7 @@ namespace utils
 					return;
 				}
 
-				if (LIKELY(block->m_type == type_id))
+				if (LIKELY(block->m_type))
 				{
 					if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
 					{
@@ -1026,8 +1005,6 @@ namespace utils
 			static_assert(!std::is_array_v<Type>);
 			static_assert(!std::is_void_v<Type>);
 
-			const uint type_id = get_typeid<decode_t<Type>>();
-
 			typemap_head* head = get_head<decode_t<Type>>();
 
 			const ullong ix = head->m_create_count;
@@ -1036,11 +1013,11 @@ namespace utils
 			{
 				const auto block = reinterpret_cast<typemap_block*>(head->m_ptr + j * head->m_ssize);
 
-				if (block->m_type == type_id)
+				if (block->m_type)
 				{
 					std::lock_guard lock(block->m_mutex);
 
-					if (block->m_type == type_id)
+					if (block->m_type)
 					{
 						std::invoke(std::forward<F>(func), *block->get_ptr<decode_t<Type>>());
 					}

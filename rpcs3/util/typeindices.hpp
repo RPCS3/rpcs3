@@ -9,8 +9,8 @@ namespace stx
 	template <typename Info>
 	class type_info final : public Info
 	{
-		// Current type id (non-zero)
-		unsigned type = 0;
+		// Current type id (starts from 0)
+		unsigned type = 0u - 1;
 
 		// Next typeinfo in linked list
 		type_info* next = nullptr;
@@ -45,7 +45,7 @@ namespace stx
 
 		unsigned count() const
 		{
-			return next->index();
+			return next->index() + 1;
 		}
 
 		class const_iterator
@@ -114,7 +114,7 @@ namespace stx
 	template <typename Info>
 	type_info<Info>::type_info(Info info, decltype(sizeof(int))) noexcept
 		: Info(info)
-		, type(typeinfo_v<Info>.count() + 1)
+		, type(typeinfo_v<Info>.count())
 	{
 		// Update linked list
 		typeinfo_v<Info>.next->next = this;
