@@ -970,6 +970,56 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 				continue;
 			}
 
+			if (ptr + 0x7 <= fend &&
+				ptr[0] == STD(r2, r1, 0x28) &&
+				(ptr[1] & 0xffff0000) == ADDIS(r2, r2, {}) &&
+				(ptr[2] & 0xffff0000) == ADDI(r2, r2, {}) &&
+				(ptr[3] & 0xffff0000) == LIS(r11, {}) &&
+				(ptr[4] & 0xffff0000) == ADDI(r11, r11, {}) &&
+				ptr[5] == MTCTR(r11) &&
+				ptr[6] == BCTR())
+			{
+				// Trampoline with TOC
+				const u32 target = (ptr[3] << 16) + s16(ptr[4]);
+				const u32 toc_add = (ptr[1] << 16) + s16(ptr[2]);
+
+				if (target >= start && target < end)
+				{
+					auto& new_func = add_func(target, 0, func.addr);
+
+					if (func.toc && func.toc != -1 && new_func.toc == 0)
+					{
+						const u32 toc = func.toc + toc_add;
+						add_toc(toc);
+						add_func(new_func.addr, toc, 0);
+					}
+					else if (new_func.toc && new_func.toc != -1 && func.toc == 0)
+					{
+						const u32 toc = new_func.toc - toc_add;
+						add_toc(toc);
+						add_func(func.addr, toc, 0);
+					}
+					else if (new_func.toc - func.toc != toc_add)
+					{
+						//func.toc = -1;
+						//new_func.toc = -1;
+					}
+
+					if (new_func.blocks.empty())
+					{
+						func_queue.emplace_back(func);
+						continue;
+					}
+
+					func.size = 0x1C;
+					func.blocks.emplace(func.addr, func.size);
+					func.attr += new_func.attr & ppu_attr::no_return;
+					func.calls.emplace(target);
+					func.trampoline = toc_add;
+					continue;
+				}
+			}
+	
 			if (ptr + 4 <= fend &&
 				ptr[0] == STD(r2, r1, 0x28) &&
 				(ptr[1] & 0xffff0000) == ADDIS(r2, r2, {}) &&
