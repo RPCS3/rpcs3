@@ -2230,6 +2230,7 @@ void VKGSRender::present(frame_context_t *ctx)
 		case VK_SUCCESS:
 			break;
 		case VK_SUBOPTIMAL_KHR:
+			should_reinitialize_swapchain = true;
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			swapchain_unavailable = true;
@@ -3110,6 +3111,7 @@ void VKGSRender::reinitialize_swapchain()
 	open_command_buffer();
 
 	swapchain_unavailable = false;
+	should_reinitialize_swapchain = false;
 }
 
 void VKGSRender::flip(int buffer, bool emu_flip)
@@ -3124,7 +3126,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		}
 	}
 
-	if (swapchain_unavailable)
+	if (swapchain_unavailable || should_reinitialize_swapchain)
 	{
 		reinitialize_swapchain();
 	}
@@ -3249,6 +3251,9 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 			check_present_status();
 			continue;
 		}
+		case VK_SUBOPTIMAL_KHR:
+			should_reinitialize_swapchain = true;
+			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
 			LOG_WARNING(RSX, "vkAcquireNextImageKHR failed with VK_ERROR_OUT_OF_DATE_KHR. Flip request ignored until surface is recreated.");
 			swapchain_unavailable = true;
