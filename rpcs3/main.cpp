@@ -118,6 +118,8 @@ int main(int argc, char** argv)
 	rlim.rlim_max = 4096;
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
 		std::fprintf(stderr, "Failed to set max open file limit (4096).");
+	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
+	setenv( "KDE_DEBUG", "1", 0 );
 #endif
 
 	s_init.unlock();
