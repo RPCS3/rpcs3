@@ -29,7 +29,7 @@ error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmut
 
 	if (protocol == SYS_SYNC_RETRY)
 	{
-		// Lwcond can't have SYS_SYNC_RETRY protocol 
+		// Lwcond can't have SYS_SYNC_RETRY protocol
 		protocol = SYS_SYNC_PRIORITY;
 	}
 
@@ -195,6 +195,8 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
+	bool need_awake = false;
+
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
 	{
 		lv2_lwmutex* mutex;
@@ -233,6 +235,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				else
 				{
 					lv2_obj::append(cpu);
+					need_awake = true;
 				}
 
 				result++;
@@ -249,7 +252,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		return CELL_ESRCH;
 	}
 
-	if (mode == 2)
+	if (need_awake)
 	{
 		lv2_obj::awake_all();
 	}
