@@ -1,4 +1,4 @@
-﻿#include "basic_keyboard_handler.h"
+#include "basic_keyboard_handler.h"
 
 #include <QApplication>
 #include <QKeyEvent>
@@ -15,10 +15,7 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 	{
 		Keyboard kb = Keyboard();
 
-		// Only differentiate between japanese and us layouts right now
-		kb.m_config.arrange = g_cfg.sys.language == 0 // CELL_SYSUTIL_LANG_JAPANESE
-			? CELL_KB_MAPPING_106
-			: CELL_KB_MAPPING_101;
+		kb.m_config.arrange = g_cfg.sys.keyboard_type;
 
 		m_keyboards.emplace_back();
 	}

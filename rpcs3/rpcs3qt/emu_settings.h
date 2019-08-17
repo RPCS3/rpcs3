@@ -138,6 +138,7 @@ public:
 
 		// System
 		Language,
+		KeyboardType,
 		EnterButtonAssignment,
 		EnableHostRoot,
 		LimitCacheSize,
@@ -368,6 +369,7 @@ private:
 
 		// System
 		{ Language,              { "System", "Language"}},
+		{ KeyboardType,          { "System", "Keyboard Type"} },
 		{ EnterButtonAssignment, { "System", "Enter button assignment"}},
 		{ EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 		{ LimitCacheSize,        { "VFS", "Limit disk cache size"}},

@@ -1,4 +1,4 @@
-add_library(rpcs3_emu
+﻿add_library(rpcs3_emu
 	IdManager.cpp
 	System.cpp
 	VFS.cpp
@@ -298,6 +298,7 @@ target_link_libraries(rpcs3_emu
 
 # Io
 target_sources(rpcs3_emu PRIVATE
+	Io/KeyboardHandler.cpp
 	Io/PadHandler.cpp
 )
 

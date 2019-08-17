@@ -986,6 +986,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceComboBox(ui->sysLangBox, emu_settings::Language, false, false, 0, true);
 	SubscribeTooltip(ui->sysLangBox, json_sys["sysLangBox"].toString());
 
+	xemu_settings->EnhanceComboBox(ui->keyboardType, emu_settings::KeyboardType, false, false, 0, true);
+	SubscribeTooltip(ui->keyboardType, json_sys["keyboardType"].toString());
+
 	// Checkboxes
 
 	xemu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings::EnableHostRoot);

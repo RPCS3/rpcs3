@@ -1306,7 +1306,7 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="1,1,1">
          <item>
-          <widget class="QGroupBox" name="groupBox_34">
+          <widget class="QGroupBox" name="gb_sysLang">
            <property name="title">
             <string>Console Language</string>
            </property>
@@ -1318,7 +1318,19 @@
           </widget>
          </item>
          <item>
-          <widget class="QGroupBox" name="groupBox">
+          <widget class="QGroupBox" name="gb_keyboardType">
+           <property name="title">
+            <string>Keyboard Type</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_keyboardType">
+            <item>
+             <widget class="QComboBox" name="keyboardType"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="gb_homebrew">
            <property name="title">
             <string>Homebrew</string>
            </property>
@@ -1332,9 +1344,6 @@
             </item>
            </layout>
           </widget>
-         </item>
-         <item>
-          <widget class="QWidget" name="widget_3" native="true"/>
          </item>
         </layout>
        </item>
