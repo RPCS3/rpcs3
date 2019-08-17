@@ -25,7 +25,7 @@ aea993
 
 /* Every widget */
 QWidget {
-	font-family: SCE-PS3 Rodin LATIN, Arial;
+	font-family: SCE-PS3 Rodin LATIN;
 	font-size: 9.00pt;
 
 	color: #292929;
