@@ -358,6 +358,7 @@ target_sources(rpcs3_emu PRIVATE
 if(TARGET 3rdparty_vulkan)
 	target_sources(rpcs3_emu PRIVATE
 		RSX/VK/VKCommonDecompiler.cpp
+		RSX/VK/VKDMA.cpp
 		RSX/VK/VKFormats.cpp
 		RSX/VK/VKFragmentProgram.cpp
 		RSX/VK/VKFramebuffer.cpp
