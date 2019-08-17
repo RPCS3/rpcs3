@@ -1540,5 +1540,8 @@
     <ClInclude Include="Emu\RSX\RSXOffload.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\Keyboard.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
