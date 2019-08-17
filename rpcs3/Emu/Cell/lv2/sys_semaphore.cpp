@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_semaphore.h"
 
 #include "Emu/System.h"
@@ -32,7 +32,7 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 	const u32 protocol = attr->protocol;
 
 	if (protocol == SYS_SYNC_PRIORITY_INHERIT)
-		sys_semaphore.todo("sys_semaphore_create(): SYS_SYNC_PRIORITY_INHERIT");
+		sys_semaphore.warning("sys_semaphore_create(): SYS_SYNC_PRIORITY_INHERIT");
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
 	{

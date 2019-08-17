@@ -28,7 +28,7 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 	case SYS_SYNC_FIFO: break;
 	case SYS_SYNC_PRIORITY: break;
 	case SYS_SYNC_PRIORITY_INHERIT:
-		sys_mutex.fatal("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT");
+		sys_mutex.warning("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT");
 		break;
 	default:
 	{
