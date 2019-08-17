@@ -1922,18 +1922,25 @@ void VKGSRender::clear_surface(u32 mask)
 			{
 				verify(HERE), depth_stencil_mask;
 
-				// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
-				if (mask == 1)
+				if (!g_cfg.video.read_depth_buffer)
 				{
-					// Depth was cleared, initialize stencil
-					depth_stencil_clear_values.depthStencil.stencil = 0xFF;
-					depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
+					if (mask == 1)
+					{
+						// Depth was cleared, initialize stencil
+						depth_stencil_clear_values.depthStencil.stencil = 0xFF;
+						depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					}
+					else
+					{
+						// Stencil was cleared, initialize depth
+						depth_stencil_clear_values.depthStencil.depth = 1.f;
+						depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+					}
 				}
 				else
 				{
-					// Stencil was cleared, initialize depth
-					depth_stencil_clear_values.depthStencil.depth = 1.f;
-					depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+					ds->write_barrier(*m_current_command_buffer);
 				}
 			}
 		}
