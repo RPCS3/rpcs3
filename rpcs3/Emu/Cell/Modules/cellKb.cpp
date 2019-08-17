@@ -156,7 +156,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 		if (rawcode == CELL_KEYC_PERIOD)                return get_ascii('.', '>');
 		if (rawcode == CELL_KEYC_SLASH)                 return get_ascii('/', '?');
 		if (rawcode == CELL_KEYC_BACKSLASH_106)         return get_ascii('\\', '_');
-		if (rawcode == CELL_KEYC_YEN_106)               return get_ascii('¥', '|');
+		if (rawcode == CELL_KEYC_YEN_106)               return get_ascii(190, '|'); // ¥
 	}
 	else if (arrange == CELL_KB_MAPPING_101) // (US)
 	{
@@ -187,7 +187,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	{
 		if (rawcode == CELL_KEYC_1) return get_ascii('1', '!');
 		if (rawcode == CELL_KEYC_2) return get_ascii('2', '"');
-		if (rawcode == CELL_KEYC_3) return get_ascii('3', '§');
+		if (rawcode == CELL_KEYC_3) return get_ascii('3', 245); // §
 		if (rawcode == CELL_KEYC_4) return get_ascii('4', '$');
 		if (rawcode == CELL_KEYC_5) return get_ascii('5', '%');
 		if (rawcode == CELL_KEYC_6) return get_ascii('6', '&');
@@ -197,14 +197,14 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 		if (rawcode == CELL_KEYC_0) return get_ascii('0', '=', '}');
 
 		if (rawcode == CELL_KEYC_MINUS)                 return get_ascii('-', '_');
-		if (rawcode == CELL_KEYC_ACCENT_CIRCONFLEX_106) return get_ascii('^', '°');
+		if (rawcode == CELL_KEYC_ACCENT_CIRCONFLEX_106) return get_ascii('^', 248); // °
 		if (rawcode == CELL_KEYC_COMMA)                 return get_ascii(',', ';');
 		if (rawcode == CELL_KEYC_PERIOD)                return get_ascii('.', ':');
 		if (rawcode == CELL_KEYC_KPAD_PLUS)             return get_ascii('+', '*', '~');
 		if (rawcode == CELL_KEYC_LESS)                  return get_ascii('<', '>', '|');
 		if (rawcode == CELL_KEYC_HASHTAG)               return get_ascii('#', '\'');
-		if (rawcode == CELL_KEYC_SSHARP)                return get_ascii('ß', '?', '\\');
-		if (rawcode == CELL_KEYC_BACK_QUOTE)            return get_ascii('´', '`');
+		if (rawcode == CELL_KEYC_SSHARP)                return get_ascii(225, '?', '\\'); // ß
+		if (rawcode == CELL_KEYC_BACK_QUOTE)            return get_ascii(239, '`'); // ´
 		if (rawcode == CELL_KEYC_Q)                     return get_ascii('q', 'Q', '@');
 	}
 
