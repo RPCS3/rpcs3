@@ -4,6 +4,7 @@
 #include "VKGSRender.h"
 #include "VKCompute.h"
 #include "VKResourceManager.h"
+#include "VKDMA.h"
 #include "Emu/System.h"
 #include "../Common/TextureUtils.h"
 #include "Utilities/mutex.h"
@@ -39,7 +40,6 @@ namespace vk
 		VkEvent dma_fence = VK_NULL_HANDLE;
 		vk::render_device* m_device = nullptr;
 		vk::viewable_image *vram_texture = nullptr;
-		std::unique_ptr<vk::buffer> dma_buffer;
 
 	public:
 		using baseclass::cached_texture_section;
@@ -73,7 +73,7 @@ namespace vk
 				if (!flushed)
 				{
 					// Reset fence
-					verify(HERE), m_device, dma_buffer, dma_fence;
+					verify(HERE), m_device, dma_fence;
 					vk::get_resource_manager()->dispose(dma_fence);
 				}
 
@@ -88,10 +88,9 @@ namespace vk
 
 		void release_dma_resources()
 		{
-			if (dma_buffer)
+			if (dma_fence)
 			{
 				auto gc = vk::get_resource_manager();
-				gc->dispose(dma_buffer);
 				gc->dispose(dma_fence);
 			}
 		}
@@ -187,12 +186,6 @@ namespace vk
 				vkCreateEvent(*m_device, &createInfo, nullptr, &dma_fence);
 			}
 
-			if (!dma_buffer)
-			{
-				auto memory_type = m_device->get_memory_mapping().host_visible_coherent;
-				dma_buffer = std::make_unique<vk::buffer>(*m_device, align(get_section_size(), 256), memory_type, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
-			}
-
 			vk::image *locked_resource = vram_texture;
 			u32 transfer_width = width;
 			u32 transfer_height = height;
@@ -230,21 +223,52 @@ namespace vk
 
 			verify(HERE), target->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 
-			// Handle any format conversions using compute tasks
-			vk::cs_shuffle_base *shuffle_kernel = nullptr;
+			// TODO: Read back stencil values (is this really necessary?)
+			const auto internal_bpp = vk::get_format_texel_width(vram_texture->format());
+			const auto valid_range = get_confirmed_range();
+			real_pitch = internal_bpp * transfer_width;
 
-			if (vram_texture->format() == VK_FORMAT_D24_UNORM_S8_UINT)
+			u32 transfer_x = 0, transfer_y = 0;
+			if (const auto section_range = get_section_range(); section_range != valid_range)
 			{
-				shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_se_d24x8>();
+				if (const auto offset = (valid_range.start - get_section_base()))
+				{
+					transfer_y = offset / rsx_pitch;
+					transfer_x = (offset % rsx_pitch) / internal_bpp;
+
+					verify(HERE), transfer_width >= transfer_x, transfer_height >= transfer_y;
+					transfer_width -= transfer_x;
+					transfer_height -= transfer_y;
+				}
+
+				if (const auto tail = (section_range.end - valid_range.end))
+				{
+					const auto row_count = tail / rsx_pitch;
+
+					verify(HERE), transfer_height >= row_count;
+					transfer_height -= row_count;
+				}
 			}
-			else if (vram_texture->format() == VK_FORMAT_D32_SFLOAT_S8_UINT)
+
+			if ((vram_texture->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) ||
+				pack_unpack_swap_bytes)
 			{
-				shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_se_f32_d24x8>();
-			}
-			else if (pack_unpack_swap_bytes)
-			{
+				const auto section_length = valid_range.length();
+				const auto transfer_pitch = transfer_width * internal_bpp;
+				const auto task_length = transfer_pitch * transfer_height;
+
+				auto working_buffer = vk::get_scratch_buffer();
+				auto final_mapping = vk::map_dma(cmd, valid_range.start, section_length);
+
+				VkBufferImageCopy region = {};
+				region.imageSubresource = { vram_texture->aspect(), 0, 0, 1 };
+				region.imageOffset = { (s32)transfer_x, (s32)transfer_y, 0 };
+				region.imageExtent = { transfer_width, transfer_height, 1 };
+				vk::copy_image_to_buffer(cmd, target, working_buffer, region);
+
 				const auto texel_layout = vk::get_format_element_size(vram_texture->format());
 				const auto elem_size = texel_layout.first;
+				vk::cs_shuffle_base *shuffle_kernel;
 
 				if (elem_size == 2)
 				{
@@ -254,38 +278,60 @@ namespace vk
 				{
 					shuffle_kernel = vk::get_compute_task<vk::cs_shuffle_32>();
 				}
-			}
+				else
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
 
-			// Do not run the compute task on host visible memory
-			vk::buffer* mem_target = shuffle_kernel ? vk::get_scratch_buffer() : dma_buffer.get();
-
-			// TODO: Read back stencil values (is this really necessary?)
-			VkBufferImageCopy region = {};
-			region.imageSubresource = {vram_texture->aspect() & ~(VK_IMAGE_ASPECT_STENCIL_BIT), 0, 0, 1};
-			region.imageExtent = {transfer_width, transfer_height, 1};
-			vkCmdCopyImageToBuffer(cmd, target->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mem_target->value, 1, &region);
-
-			locked_resource->pop_layout(cmd);
-			real_pitch = vk::get_format_texel_width(vram_texture->format()) * transfer_width;
-
-			if (shuffle_kernel)
-			{
-				verify (HERE), mem_target->value != dma_buffer->value;
-
-				vk::insert_buffer_memory_barrier(cmd, mem_target->value, 0, get_section_size(),
+				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-				shuffle_kernel->run(cmd, mem_target, get_section_size());
+				shuffle_kernel->run(cmd, working_buffer, task_length);
 
-				vk::insert_buffer_memory_barrier(cmd, mem_target->value, 0, get_section_size(),
+				vk::insert_buffer_memory_barrier(cmd, working_buffer->value, 0, task_length,
 					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-				VkBufferCopy copy = {};
-				copy.size = get_section_size();
-				vkCmdCopyBuffer(cmd, mem_target->value, dma_buffer->value, 1, &copy);
+				if (LIKELY(rsx_pitch == real_pitch))
+				{
+					VkBufferCopy copy = {};
+					copy.dstOffset = final_mapping.first;
+					copy.size = section_length;
+					vkCmdCopyBuffer(cmd, working_buffer->value, final_mapping.second->value, 1, &copy);
+				}
+				else
+				{
+					std::vector<VkBufferCopy> copy;
+					copy.reserve(transfer_height);
+
+					u32 dst_offset = final_mapping.first;
+					u32 src_offset = 0;
+
+					for (unsigned row = 0; row < transfer_height; ++row)
+					{
+						copy.push_back({src_offset, dst_offset, transfer_pitch});
+						src_offset += real_pitch;
+						dst_offset += rsx_pitch;
+					}
+
+					vkCmdCopyBuffer(cmd, working_buffer->value, final_mapping.second->value, transfer_height, copy.data());
+				}
 			}
+			else
+			{
+				VkBufferImageCopy region = {};
+				region.bufferRowLength = (rsx_pitch / internal_bpp);
+				region.imageSubresource = { vram_texture->aspect(), 0, 0, 1 };
+				region.imageOffset = { (s32)transfer_x, (s32)transfer_y, 0 };
+				region.imageExtent = { transfer_width, transfer_height, 1 };
+
+				auto mapping = vk::map_dma(cmd, valid_range.start, valid_range.length());
+				region.bufferOffset = mapping.first;
+				vkCmdCopyImageToBuffer(cmd, target->value, target->current_layout, mapping.second->value, 1, &region);
+			}
+
+			locked_resource->pop_layout(cmd);
 
 			if (UNLIKELY(synchronized))
 			{
@@ -314,7 +360,7 @@ namespace vk
 		/**
 		 * Flush
 		 */
-		void* map_synchronized(u32 offset, u32 size)
+		void imp_flush() override
 		{
 			AUDIT(synchronized);
 
@@ -322,12 +368,8 @@ namespace vk
 			vk::wait_for_event(dma_fence, GENERAL_WAIT_TIMEOUT);
 			vkResetEvent(*m_device, dma_fence);
 
-			return dma_buffer->map(offset, size);
-		}
-
-		void finish_flush()
-		{
-			dma_buffer->unmap();
+			const auto range = get_confirmed_range();
+			vk::flush_dma(range.start, range.length());
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
@@ -336,6 +378,11 @@ namespace vk
 			}
 		}
 
+		void *map_synchronized(u32, u32)
+		{ return nullptr; }
+
+		void finish_flush()
+		{}
 
 		/**
 		 * Misc

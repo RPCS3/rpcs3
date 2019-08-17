@@ -58,6 +58,9 @@
     <ClInclude Include="Emu\RSX\VK\VKFramebuffer.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKDMA.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp">
@@ -103,6 +106,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\VKDMA.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

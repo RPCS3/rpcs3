@@ -1401,7 +1401,7 @@ namespace rsx
 			}
 		}
 
-		void imp_flush()
+		virtual void imp_flush()
 		{
 			AUDIT(synchronized);
 
