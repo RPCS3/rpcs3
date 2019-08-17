@@ -6,8 +6,6 @@
 #include "Emu/Io/KeyboardHandler.h"
 #include "cellKb.h"
 
-
-
 extern logs::channel sys_io;
 
 template<>
@@ -93,7 +91,7 @@ error_code cellKbClearBuf(u32 port_no)
 
 u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 {
-	sys_io.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=%d)", arrange, mkey, led, rawcode);
+	sys_io.trace("cellKbCnvRawCode(arrange=%d, mkey=%d, led=%d, rawcode=0x%x)", arrange, mkey, led, rawcode);
 
 	// CELL_KB_RAWDAT
 	if (rawcode <= 0x03 || rawcode == 0x29 || rawcode == 0x35 || (rawcode >= 0x39 && rawcode <= 0x53) || rawcode == 0x65 || rawcode == 0x88 || rawcode == 0x8A || rawcode == 0x8B)
@@ -101,94 +99,113 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 		return rawcode | 0x8000;
 	}
 
+	const bool is_alt = mkey & (CELL_KB_MKEY_L_ALT | CELL_KB_MKEY_R_ALT);
+	const bool is_shift = mkey & (CELL_KB_MKEY_L_SHIFT | CELL_KB_MKEY_R_SHIFT);
+	const bool is_caps_lock = led & (CELL_KB_LED_CAPS_LOCK);
+	const bool is_num_lock = led & (CELL_KB_LED_NUM_LOCK);
+
 	// CELL_KB_NUMPAD
-	if (rawcode >= 0x59 && rawcode <= 0x61) return (rawcode - 0x28) | 0x4000; // '1' - '9'
-	if (rawcode == 0x62) return 0x30 | 0x4000;                                // '0'
-	if (rawcode == 0x53) return 0x00 | 0x4000;                                // 'Num Lock'
-	if (rawcode == 0x54) return 0x2F | 0x4000;                                // '/'
-	if (rawcode == 0x55) return 0x2A | 0x4000;                                // '*'
-	if (rawcode == 0x56) return 0x2D | 0x4000;                                // '-'
-	if (rawcode == 0x57) return 0x2B | 0x4000;                                // '+'
-	if (rawcode == 0x58) return 0x0A | 0x4000;                                // '\n'
+
+	if (is_num_lock)
+	{
+		if (rawcode == CELL_KEYC_KPAD_NUMLOCK)  return 0x00 | 0x4000;                                     // 'Num Lock'
+		if (rawcode == CELL_KEYC_KPAD_SLASH)    return 0x2F | 0x4000;                                     // '/'
+		if (rawcode == CELL_KEYC_KPAD_ASTERISK) return 0x2A | 0x4000;                                     // '*'
+		if (rawcode == CELL_KEYC_KPAD_MINUS)    return 0x2D | 0x4000;                                     // '-'
+		if (rawcode == CELL_KEYC_KPAD_PLUS)     return 0x2B | 0x4000;                                     // '+'
+		if (rawcode == CELL_KEYC_KPAD_ENTER)    return 0x0A | 0x4000;                                     // '\n'
+		if (rawcode == CELL_KEYC_KPAD_0)        return 0x30 | 0x4000;                                     // '0'
+		if (rawcode >= CELL_KEYC_KPAD_1 && rawcode <= CELL_KEYC_KPAD_9) return (rawcode - 0x28) | 0x4000; // '1' - '9'
+	}
 
 	// ASCII
 
-	const bool is_shift = mkey & (CELL_KB_MKEY_L_SHIFT | CELL_KB_MKEY_R_SHIFT);
-	const bool is_caps_lock = led & (CELL_KB_LED_CAPS_LOCK);
-
-	auto get_ascii = [is_shift, is_caps_lock](u16 lower, u16 upper)
+	const auto get_ascii = [is_alt, is_shift, is_caps_lock](u16 raw, u16 shifted = 0, u16 altered = 0)
 	{
-		return is_shift || is_caps_lock ? upper : lower;
+		if ((is_shift || is_caps_lock) && shifted)
+		{
+			return shifted;
+		}
+		else if (is_alt && altered)
+		{
+			return altered;
+		}
+		return raw;
 	};
 
 	if (arrange == CELL_KB_MAPPING_106) // (Japanese)
 	{
-		if (rawcode == 0x1E) return get_ascii(rawcode + 0x13, 0x21);            // '1' or '!'
-		if (rawcode == 0x1F) return get_ascii(rawcode + 0x13, 0x22);            // '2' or '"'
-		if (rawcode == 0x20) return get_ascii(rawcode + 0x13, 0x23);            // '3' or '#'
-		if (rawcode == 0x21) return get_ascii(rawcode + 0x13, 0x24);            // '4' or '$'
-		if (rawcode == 0x22) return get_ascii(rawcode + 0x13, 0x25);            // '5' or '%'
-		if (rawcode == 0x23) return get_ascii(rawcode + 0x13, 0x26);            // '6' or '&'
-		if (rawcode == 0x24) return get_ascii(rawcode + 0x13, 0x27);            // '7' or '''
-		if (rawcode == 0x25) return get_ascii(rawcode + 0x13, 0x28);            // '8' or '('
-		if (rawcode == 0x26) return get_ascii(rawcode + 0x13, 0x29);            // '9' or ')'
-		if (rawcode == 0x27) return get_ascii(0x303, 0x7E);                     // '0' or '~'
+		if (rawcode == CELL_KEYC_1) return get_ascii('1', '!');
+		if (rawcode == CELL_KEYC_2) return get_ascii('2', '"');
+		if (rawcode == CELL_KEYC_3) return get_ascii('3', '#');
+		if (rawcode == CELL_KEYC_4) return get_ascii('4', '$');
+		if (rawcode == CELL_KEYC_5) return get_ascii('5', '%');
+		if (rawcode == CELL_KEYC_6) return get_ascii('6', '&');
+		if (rawcode == CELL_KEYC_7) return get_ascii('7', '\'');
+		if (rawcode == CELL_KEYC_8) return get_ascii('8', '(');
+		if (rawcode == CELL_KEYC_9) return get_ascii('9', ')');
+		if (rawcode == CELL_KEYC_0) return get_ascii('0', '~');
 
-		if (rawcode == 0x2E) return get_ascii(0x5E, 0x7E);                      // '^' or '~'
-		if (rawcode == 0x2F) return get_ascii(0x40, 0x60);                      // '@' or '`'
-		if (rawcode == 0x30) return get_ascii(0x5B, 0x7B);                      // '[' or '{'
-		if (rawcode == 0x32) return get_ascii(0x5D, 0x7D);                      // ']' or '}'
-		if (rawcode == 0x33) return get_ascii(0x3B, 0x2B);                      // ';' or '+'
-		if (rawcode == 0x34) return get_ascii(0x3A, 0x2A);                      // ':' or '*'
-		if (rawcode == 0x87) return get_ascii(rawcode, 0x5F);                   // '\' or '_'
-		if (rawcode == 0x36) return get_ascii(0x2C, 0x3C);                      // ',' or '<'
-		if (rawcode == 0x37) return get_ascii(0x2E, 0x3E);                      // '.' or '>'
-		if (rawcode == 0x38) return get_ascii(0x2F, 0x3F);                      // '/' or '?'
-		if (rawcode == 0x89) return get_ascii(0xBE, 0x7C);                      // '&yen;' or '|'
+		if (rawcode == CELL_KEYC_ACCENT_CIRCONFLEX_106) return get_ascii('^', '~');
+		if (rawcode == CELL_KEYC_ATMARK_106)            return get_ascii('@', '`');
+		if (rawcode == CELL_KEYC_LEFT_BRACKET_106)      return get_ascii('[', '{');
+		if (rawcode == CELL_KEYC_RIGHT_BRACKET_106)     return get_ascii(']', '}');
+		if (rawcode == CELL_KEYC_SEMICOLON)             return get_ascii(';', '+');
+		if (rawcode == CELL_KEYC_COLON_106)             return get_ascii(':', '*');
+		if (rawcode == CELL_KEYC_COMMA)                 return get_ascii(',', '<');
+		if (rawcode == CELL_KEYC_PERIOD)                return get_ascii('.', '>');
+		if (rawcode == CELL_KEYC_SLASH)                 return get_ascii('/', '?');
+		if (rawcode == CELL_KEYC_BACKSLASH_106)         return get_ascii('\\', '_');
+		if (rawcode == CELL_KEYC_YEN_106)               return get_ascii('¥', '|');
 	}
 	else if (arrange == CELL_KB_MAPPING_101) // (US)
 	{
-		if (rawcode == 0x1E) return get_ascii(rawcode + 0x13, 0x21);            // '1' or '!'
-		if (rawcode == 0x1F) return get_ascii(rawcode + 0x13, 0x40);            // '2' or '@'
-		if (rawcode == 0x20) return get_ascii(rawcode + 0x13, 0x23);            // '3' or '#'
-		if (rawcode == 0x21) return get_ascii(rawcode + 0x13, 0x24);            // '4' or '$'
-		if (rawcode == 0x22) return get_ascii(rawcode + 0x13, 0x25);            // '5' or '%'
-		if (rawcode == 0x23) return get_ascii(rawcode + 0x13, 0x5E);            // '6' or '^'
-		if (rawcode == 0x24) return get_ascii(rawcode + 0x13, 0x26);            // '7' or '&'
-		if (rawcode == 0x25) return get_ascii(rawcode + 0x13, 0x2A);            // '8' or '*'
-		if (rawcode == 0x26) return get_ascii(rawcode + 0x13, 0x28);            // '9' or '('
-		if (rawcode == 0x27) return get_ascii(0x303, 0x29);                     // '0' or ')'
+		if (rawcode == CELL_KEYC_1) return get_ascii('1', '!');
+		if (rawcode == CELL_KEYC_2) return get_ascii('2', '@');
+		if (rawcode == CELL_KEYC_3) return get_ascii('3', '#');
+		if (rawcode == CELL_KEYC_4) return get_ascii('4', '$');
+		if (rawcode == CELL_KEYC_5) return get_ascii('5', '%');
+		if (rawcode == CELL_KEYC_6) return get_ascii('6', '^');
+		if (rawcode == CELL_KEYC_7) return get_ascii('7', '&');
+		if (rawcode == CELL_KEYC_8) return get_ascii('8', '*');
+		if (rawcode == CELL_KEYC_9) return get_ascii('9', '(');
+		if (rawcode == CELL_KEYC_0) return get_ascii('0', ')');
 
-		if (rawcode == 0x2D) return get_ascii(0x2D, 0x5F);                      // '-' or '_'
-		if (rawcode == 0x2E) return get_ascii(0x3D, 0x2B);                      // '=' or '+'
-		if (rawcode == 0x2F) return get_ascii(0x5B, 0x7B);                      // '[' or '{'
-		if (rawcode == 0x30) return get_ascii(0x5D, 0x7D);                      // ']' or '}'
-		if (rawcode == 0x31) return get_ascii(0x5C, 0x7C);                      // '\' or '|'
-		if (rawcode == 0x33) return get_ascii(0x3B, 0x3A);                      // ';' or ':'
-		if (rawcode == 0x34) return get_ascii(0x27, 0x22);                      // ''' or '"'
-		if (rawcode == 0x36) return get_ascii(0x2C, 0x3C);                      // ',' or '<'
-		if (rawcode == 0x37) return get_ascii(0x2E, 0x3E);                      // '.' or '>'
-		if (rawcode == 0x38) return get_ascii(0x2F, 0x3F);                      // '/' or '?'
+		if (rawcode == CELL_KEYC_MINUS)             return get_ascii('-', '_');
+		if (rawcode == CELL_KEYC_EQUAL_101)         return get_ascii('=', '+');
+		if (rawcode == CELL_KEYC_LEFT_BRACKET_101)  return get_ascii('[', '{');
+		if (rawcode == CELL_KEYC_RIGHT_BRACKET_101) return get_ascii(']', '}');
+		if (rawcode == CELL_KEYC_BACKSLASH_101)     return get_ascii('\\', '|');
+		if (rawcode == CELL_KEYC_SEMICOLON)         return get_ascii(';', ':');
+		if (rawcode == CELL_KEYC_QUOTATION_101)     return get_ascii('\'', '"');
+		if (rawcode == CELL_KEYC_COMMA)             return get_ascii(',', '<');
+		if (rawcode == CELL_KEYC_PERIOD)            return get_ascii('.', '>');
+		if (rawcode == CELL_KEYC_SLASH)             return get_ascii('/', '?');
+		if (rawcode == CELL_KEYC_BACK_QUOTE)        return get_ascii('`', '~');
 	}
 	else if (arrange == CELL_KB_MAPPING_GERMAN_GERMANY)
 	{
-		if (rawcode == 0x1E) return get_ascii(rawcode + 0x13, 0x21);            // '1' or '!'
-		if (rawcode == 0x1F) return get_ascii(rawcode + 0x13, 0x22);            // '2' or '"'
-		if (rawcode == 0x20) return rawcode + 0x13;                             // '3' (or '�')
-		if (rawcode == 0x21) return get_ascii(rawcode + 0x13, 0x24);            // '4' or '$'
-		if (rawcode == 0x22) return get_ascii(rawcode + 0x13, 0x25);            // '5' or '%'
-		if (rawcode == 0x23) return get_ascii(rawcode + 0x13, 0x26);            // '6' or '&'
-		if (rawcode == 0x24) return get_ascii(rawcode + 0x13, 0x2F);            // '7' or '/'
-		if (rawcode == 0x25) return get_ascii(rawcode + 0x13, 0x28);            // '8' or '('
-		if (rawcode == 0x26) return get_ascii(rawcode + 0x13, 0x29);            // '9' or ')'
-		if (rawcode == 0x27) return get_ascii(0x303, 0x3D);                     // '0' or '='
+		if (rawcode == CELL_KEYC_1) return get_ascii('1', '!');
+		if (rawcode == CELL_KEYC_2) return get_ascii('2', '"');
+		if (rawcode == CELL_KEYC_3) return get_ascii('3', '§');
+		if (rawcode == CELL_KEYC_4) return get_ascii('4', '$');
+		if (rawcode == CELL_KEYC_5) return get_ascii('5', '%');
+		if (rawcode == CELL_KEYC_6) return get_ascii('6', '&');
+		if (rawcode == CELL_KEYC_7) return get_ascii('7', '/', '{');
+		if (rawcode == CELL_KEYC_8) return get_ascii('8', '(', '[');
+		if (rawcode == CELL_KEYC_9) return get_ascii('9', ')', ']');
+		if (rawcode == CELL_KEYC_0) return get_ascii('0', '=', '}');
 
-		if (rawcode == 0x2D) return get_ascii(0x2D, 0x5F);                      // '-' or '_'
-		if (rawcode == 0x2E) return 0x5E;                                       // '^' (or '�')
-		if (rawcode == 0x36) return get_ascii(0x2C, 0x3B);                      // ',' or ';'
-		if (rawcode == 0x37) return get_ascii(0x2E, 0x3A);                      // '.' or ':'
-
-		// TODO: <>#'+*~[]{}\|
+		if (rawcode == CELL_KEYC_MINUS)                 return get_ascii('-', '_');
+		if (rawcode == CELL_KEYC_ACCENT_CIRCONFLEX_106) return get_ascii('^', '°');
+		if (rawcode == CELL_KEYC_COMMA)                 return get_ascii(',', ';');
+		if (rawcode == CELL_KEYC_PERIOD)                return get_ascii('.', ':');
+		if (rawcode == CELL_KEYC_KPAD_PLUS)             return get_ascii('+', '*', '~');
+		if (rawcode == CELL_KEYC_LESS)                  return get_ascii('<', '>', '|');
+		if (rawcode == CELL_KEYC_HASHTAG)               return get_ascii('#', '\'');
+		if (rawcode == CELL_KEYC_SSHARP)                return get_ascii('ß', '?', '\\');
+		if (rawcode == CELL_KEYC_BACK_QUOTE)            return get_ascii('´', '`');
+		if (rawcode == CELL_KEYC_Q)                     return get_ascii('q', 'Q', '@');
 	}
 
 	if (rawcode >= 0x04 && rawcode <= 0x1D)                                   // 'A' - 'Z'
@@ -207,7 +224,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	if (rawcode == 0x2B) return 0x09;                                         // '\t'
 	if (rawcode == 0x2C) return 0x20;                                         // 'space'
 
-	// TODO: Add more cases (e.g. what about '`' and '~' on english layouts) and layouts (e.g. german)
+	// TODO: Add more keys and layouts
 
 	return 0x0000;
 }

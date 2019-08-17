@@ -250,7 +250,6 @@ void basic_keyboard_handler::LoadSettings()
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_9, CELL_KEYC_9);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_0, CELL_KEYC_0);
 
-
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Return, CELL_KEYC_ENTER);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Backspace, CELL_KEYC_BS);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Tab, CELL_KEYC_TAB);
@@ -265,11 +264,18 @@ void basic_keyboard_handler::LoadSettings()
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Backslash, CELL_KEYC_BACKSLASH_101);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_BracketRight, CELL_KEYC_RIGHT_BRACKET_106);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Semicolon, CELL_KEYC_SEMICOLON);
-	m_keyboards[0].m_buttons.emplace_back(Qt::Key_QuoteDbl, CELL_KEYC_QUOTATION_101);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Apostrophe, CELL_KEYC_QUOTATION_101);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Colon, CELL_KEYC_COLON_106);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Comma, CELL_KEYC_COMMA);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Period, CELL_KEYC_PERIOD);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Slash, CELL_KEYC_SLASH);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Backslash, CELL_KEYC_BACKSLASH_106);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_yen, CELL_KEYC_YEN_106);
+
+	// Made up helper buttons
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Less, CELL_KEYC_LESS);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_NumberSign, CELL_KEYC_HASHTAG);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_ssharp, CELL_KEYC_SSHARP);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_QuoteLeft, CELL_KEYC_BACK_QUOTE);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_acute, CELL_KEYC_BACK_QUOTE);
 }

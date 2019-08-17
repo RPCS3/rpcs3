@@ -372,6 +372,7 @@
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
+    <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="..\Utilities\AtomicPtr.h" />
     <ClInclude Include="..\Utilities\BEType.h" />

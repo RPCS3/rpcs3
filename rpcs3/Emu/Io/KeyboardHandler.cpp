@@ -89,7 +89,7 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 					}
 					else
 					{
-						data.keycode[data.len % KB_MAX_KEYCODES] = { CELL_KEYC_NO_EVENT, button.m_outKeyCode };
+						data.keycode[data.len % CELL_KB_MAX_KEYCODES] = { CELL_KEYC_NO_EVENT, button.m_outKeyCode };
 					}
 				}
 				else
@@ -107,11 +107,11 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 					}
 					else
 					{
-						data.keycode[data.len % KB_MAX_KEYCODES] = { kcode, 0 };
+						data.keycode[data.len % CELL_KB_MAX_KEYCODES] = { kcode, 0 };
 					}
 				}
 
-				data.len = std::min(data.len + 1, (int)KB_MAX_KEYCODES);
+				data.len = std::min(data.len + 1, (int)CELL_KB_MAX_KEYCODES);
 			}
 			else
 			{
