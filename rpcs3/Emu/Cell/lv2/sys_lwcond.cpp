@@ -282,7 +282,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		if (!mutex)
 		{
-			return nullptr;
+			return;
 		}
 
 		std::lock_guard lock(cond.mutex);
