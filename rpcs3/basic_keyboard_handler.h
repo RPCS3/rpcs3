@@ -18,7 +18,7 @@ public:
 	bool eventFilter(QObject* obj, QEvent* ev) override;
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
-	int getUnmodifiedKey(QKeyEvent* event);
+	s32 getUnmodifiedKey(QKeyEvent* event);
 	void LoadSettings();
 private:
 	QWindow* m_target = nullptr;

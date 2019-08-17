@@ -1,4 +1,4 @@
-#include "basic_keyboard_handler.h"
+﻿#include "basic_keyboard_handler.h"
 
 #include <QApplication>
 #include <QKeyEvent>
@@ -116,29 +116,39 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 
 // This should get the actual unmodified key without getting too crazy.
 // key() only shows the modifiers and the modified key (e.g. no easy way of knowing that - was pressed in 'SHIFT+-' in order to get _)
-int basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
+s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
 {
 	if (!keyEvent)
 	{
 		return -1;
 	}
 
-	int key = keyEvent->key();
+	const int key = keyEvent->key();
+
+	if (key < 0)
+	{
+		return key;
+	}
+
+	UINT raw_key = static_cast<UINT>(key);
 
 #ifdef _WIN32
 	if (keyEvent->modifiers() != Qt::NoModifier && !keyEvent->text().isEmpty())
 	{
-		const auto virtual_key = keyEvent->nativeVirtualKey();
-		const auto mapped_key = (int)MapVirtualKeyA((UINT)virtual_key, MAPVK_VK_TO_CHAR);
-		if (key != mapped_key)
+		UINT mapped_key = MapVirtualKeyA((UINT)keyEvent->nativeVirtualKey(), MAPVK_VK_TO_CHAR);
+
+		if (raw_key != mapped_key)
 		{
-			LOG_NOTICE(HLE, "basic_keyboard_handler: converted key %s (%d) to (%d)", keyEvent->text().toStdString(), key, mapped_key);
-			key = mapped_key;
+			if (mapped_key > 0x80000000) // diacritics
+			{
+				mapped_key -= 0x80000000;
+			}
+			raw_key = mapped_key;
 		}
 	}
 #endif
 
-	return key;
+	return static_cast<s32>(raw_key);
 }
 
 void basic_keyboard_handler::LoadSettings()
