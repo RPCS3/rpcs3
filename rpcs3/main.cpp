@@ -185,7 +185,7 @@ int main(int argc, char** argv)
 		{
 			argv.emplace_back();
 
-			for (u32 i = 1; i < args.length(); i++)
+			for (int i = 1; i < args.length(); i++)
 			{
 				argv.emplace_back(args[i].toStdString());
 			}

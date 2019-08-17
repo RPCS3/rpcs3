@@ -130,12 +130,12 @@ s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
 		return key;
 	}
 
-	UINT raw_key = static_cast<UINT>(key);
+	u32 raw_key = static_cast<u32>(key);
 
 #ifdef _WIN32
 	if (keyEvent->modifiers() != Qt::NoModifier && !keyEvent->text().isEmpty())
 	{
-		UINT mapped_key = MapVirtualKeyA((UINT)keyEvent->nativeVirtualKey(), MAPVK_VK_TO_CHAR);
+		u32 mapped_key = (u32)MapVirtualKeyA((UINT)keyEvent->nativeVirtualKey(), MAPVK_VK_TO_CHAR);
 
 		if (raw_key != mapped_key)
 		{
