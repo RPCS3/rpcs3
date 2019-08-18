@@ -43,8 +43,8 @@ void fmt_class_string<sys_config_service_listener_type>::format(std::string& out
 	{
 		switch (value)
 		{
-			STR_CASE(SYS_CONFIG_EVENT_SOURCE_SERVICE);
-			STR_CASE(SYS_CONFIG_EVENT_SOURCE_IO);
+			STR_CASE(SYS_CONFIG_SERVICE_LISTENER_ONCE);
+			STR_CASE(SYS_CONFIG_SERVICE_LISTENER_REPEATING);
 		}
 
 		return unknown;
