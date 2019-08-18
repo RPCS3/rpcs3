@@ -354,7 +354,7 @@ std::string GDBDebugServer::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
 	case 65:
 		return std::string(16, 'x');
 	case 66:
-		return u32_to_padded_hex(thread->cr_pack());
+		return u32_to_padded_hex(thread->cr.pack());
 	case 67:
 		return u64_to_padded_hex(thread->lr);
 	case 68:
@@ -368,7 +368,7 @@ std::string GDBDebugServer::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
 	default:
 		if (rid > 70) return "";
 		return (rid > 31)
-			? u64_to_padded_hex(reinterpret_cast<u64&>(thread->fpr[rid - 32])) //fpr
+			? u64_to_padded_hex(std::bit_cast<u64>(thread->fpr[rid - 32])) //fpr
 			: u64_to_padded_hex(thread->gpr[rid]); //gpr
 	}
 }
@@ -383,7 +383,7 @@ bool GDBDebugServer::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::s
 	case 65:
 		return true;
 	case 66:
-		thread->cr_unpack(hex_to_u32(value));
+		thread->cr.unpack(hex_to_u32(value));
 		return true;
 	case 67:
 		thread->lr = hex_to_u64(value);
@@ -401,7 +401,7 @@ bool GDBDebugServer::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::s
 		if (rid > 70) return false;
 		if (rid > 31) {
 			u64 val = hex_to_u64(value);
-			thread->fpr[rid - 32] = reinterpret_cast<f64&>(val);
+			thread->fpr[rid - 32] = std::bit_cast<f64>(val);
 		} else {
 			thread->gpr[rid] = hex_to_u64(value);
 		}
