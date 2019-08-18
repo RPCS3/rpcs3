@@ -237,12 +237,17 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 		}
 
 		// Wake threads
-		for (s32 i = std::min<s32>(-std::min<s32>(val, 0), count); i > 0; i--)
+		const s32 to_awake = std::min<s32>(-std::min<s32>(val, 0), count);
+
+		for (s32 i = 0; i < to_awake; i++)
 		{
 			sem->append(verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol)));
 		}
 
-		lv2_obj::awake_all();
+		if (to_awake > 0)
+		{
+			lv2_obj::awake_all();
+		}
 	}
 
 	return CELL_OK;

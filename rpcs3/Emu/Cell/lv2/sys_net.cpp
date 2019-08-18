@@ -206,7 +206,10 @@ extern void network_thread_init()
 				lv2_obj::append(ppu);
 			}
 
-			lv2_obj::awake_all();
+			if (!s_to_awake.empty())
+			{
+				lv2_obj::awake_all();
+			}
 
 			s_to_awake.clear();
 			socklist.clear();
