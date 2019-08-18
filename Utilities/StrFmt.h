@@ -140,18 +140,9 @@ struct fmt_class_string
 	// Enum -> string function type
 	using convert_t = const char*(*)(T value);
 
-	// Enum -> string function registered
-	static convert_t convert_enum;
-
 	// Helper function (safely converts arg to enum value)
 	static SAFE_BUFFERS FORCE_INLINE void format_enum(std::string& out, u64 arg, convert_t convert)
 	{
-		// Save convert function
-		if (convert_enum == nullptr)
-		{
-			convert_enum = convert;
-		}
-
 		const auto value = static_cast<std::underlying_type_t<T>>(arg);
 
 		// Check narrowing
@@ -202,9 +193,6 @@ struct fmt_class_string
 	// Helper constant (may be used in format_enum as lambda return value)
 	static constexpr const char* unknown = nullptr;
 };
-
-template <typename T, typename V>
-const char*(*fmt_class_string<T, V>::convert_enum)(T) = nullptr;
 
 template <>
 struct fmt_class_string<const void*, void>
