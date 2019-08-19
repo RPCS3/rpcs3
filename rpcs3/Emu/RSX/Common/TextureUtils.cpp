@@ -533,6 +533,8 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 		break;
 	}
 
+	case CELL_GCM_TEXTURE_A8R8G8B8:
+	case CELL_GCM_TEXTURE_D8R8G8B8:
 	case CELL_GCM_TEXTURE_DEPTH24_D8:
 	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: // Untested
 	{
@@ -540,16 +542,6 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of));
 		else
 			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
-		break;
-	}
-
-	case CELL_GCM_TEXTURE_A8R8G8B8:
-	case CELL_GCM_TEXTURE_D8R8G8B8:
-	{
-		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of));
-		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
 		break;
 	}
 
