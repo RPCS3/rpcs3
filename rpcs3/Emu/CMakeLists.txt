@@ -85,6 +85,7 @@ target_sources(rpcs3_emu PRIVATE
 	Audio/XAudio2/XAudio27Backend.cpp
 	Audio/XAudio2/XAudio28Backend.cpp
 	Audio/XAudio2/XAudio2Backend.cpp
+	Audio/FAudio/FAudioBackend.cpp
 )
 
 if(WIN32)
@@ -94,7 +95,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
 	PUBLIC
-		3rdparty::alsa 3rdparty::pulse 3rdparty::openal)
+		3rdparty::alsa 3rdparty::pulse 3rdparty::openal 3rdparty::faudio)
 
 
 # Cell
