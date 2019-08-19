@@ -347,6 +347,27 @@ namespace rsx
 				region.target = new_surface;
 
 				new_surface->set_old_contents_region(region, true);
+
+				if (surface->memory_usage_flags == surface_usage_flags::storage &&
+					region.width == parent_w &&
+					region.height == parent_h &&
+					surface != prev_surface &&
+					surface == e.second)
+				{
+					// This has been 'swallowed' by the new surface and can be safely freed
+					auto &storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
+					auto &object = storage[e.first];
+
+					verify(HERE), !src_offset.x, !src_offset.y, object;
+					if (UNLIKELY(!surface->old_contents.empty()))
+					{
+						surface->read_barrier(cmd);
+					}
+
+					Traits::notify_surface_invalidated(object);
+					invalidated_resources.push_back(std::move(object));
+					storage.erase(e.first);
+				}
 			}
 		}
 

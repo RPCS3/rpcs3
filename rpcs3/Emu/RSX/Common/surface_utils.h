@@ -130,7 +130,7 @@ namespace rsx
 	struct render_target_descriptor
 	{
 		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
-		u64 base_addr = 0;
+		u32 base_addr = 0;
 
 #if (ENABLE_SURFACE_CACHE_DEBUG)
 		u64 memory_hash = 0;
