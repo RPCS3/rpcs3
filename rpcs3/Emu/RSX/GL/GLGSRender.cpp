@@ -1676,8 +1676,11 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 				m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, buffer_width, buffer_height, 1, 1, GL_RGBA8);
 			}
 
-			m_flip_tex_color->copy_from(vm::base(absolute_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
+			gl::command_context cmd{ gl_state };
+			const auto range = utils::address_range::start_length(absolute_address, buffer_pitch * buffer_height);
+			m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
+			m_flip_tex_color->copy_from(vm::base(absolute_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
 			image = m_flip_tex_color->id();
 		}
 
