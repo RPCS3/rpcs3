@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 
@@ -357,23 +357,50 @@ namespace gl
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
-			// Shuffle
-			bool require_manual_shuffle = false;
-			if (pack_unpack_swap_bytes)
-			{
-				if (type == gl::texture::type::sbyte || type == gl::texture::type::ubyte)
-					require_manual_shuffle = true;
-			}
-
 			const auto valid_range = get_confirmed_range_delta();
 			const u32 valid_offset = valid_range.first;
 			const u32 valid_length = valid_range.second;
 			void *dst = get_ptr(get_section_base() + valid_offset);
 
-			if (require_manual_shuffle)
+			if (pack_unpack_swap_bytes)
 			{
-				//byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-				rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, align(valid_length, rsx_pitch) / rsx_pitch);
+				// Shuffle
+				// TODO: Do this with a compute shader
+				switch (type)
+				{
+				case gl::texture::type::sbyte:
+				case gl::texture::type::ubyte:
+				{
+					if (pack_unpack_swap_bytes)
+					{
+						// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
+						rsx::shuffle_texel_data_wzyx<u8>(dst, rsx_pitch, width, align(valid_length, rsx_pitch) / rsx_pitch);
+					}
+					break;
+				}
+				case gl::texture::type::uint_24_8:
+				{
+					verify(HERE), pack_unpack_swap_bytes == false;
+					verify(HERE), real_pitch == (width * 4);
+					if (LIKELY(rsx_pitch == real_pitch))
+					{
+						rsx::convert_le_d24x8_to_be_d24x8(dst, dst, valid_length / 4, 1);
+					}
+					else
+					{
+						const u32 num_rows = align(valid_length, rsx_pitch) / rsx_pitch;
+						u8* data = static_cast<u8*>(dst);
+						for (u32 row = 0; row < num_rows; ++row)
+						{
+							rsx::convert_le_d24x8_to_be_d24x8(data, data, width, 1);
+							data += rsx_pitch;
+						}
+					}
+					break;
+				}
+				default:
+					break;
+				}
 			}
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)

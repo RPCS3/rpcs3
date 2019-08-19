@@ -380,7 +380,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 					const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(surface->get_surface_depth_format());
 					format = depth_format_gl.format;
 					type = depth_format_gl.type;
-					swap_bytes = true;
+					swap_bytes = (type != gl::texture::type::uint_24_8);
 				}
 				else
 				{
