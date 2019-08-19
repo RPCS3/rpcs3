@@ -1072,7 +1072,7 @@ namespace vk
 			bool input_swizzled = swizzled;
 			if (context == rsx::texture_upload_context::blit_engine_src)
 			{
-				//Swizzling is ignored for blit engine copy and emulated using remapping
+				// Swizzling is ignored for blit engine copy and emulated using remapping
 				input_swizzled = false;
 			}
 

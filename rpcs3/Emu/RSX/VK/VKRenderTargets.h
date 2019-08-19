@@ -237,25 +237,7 @@ namespace vk
 			}
 			else
 			{
-				auto fmt = get_compatible_gcm_format(format_info.gcm_color_format);
-				if (fmt.second)
-				{
-					switch (fmt.first)
-					{
-					case CELL_GCM_TEXTURE_A8R8G8B8:
-					case CELL_GCM_TEXTURE_D8R8G8B8:
-						//Hack
-						gcm_format = CELL_GCM_TEXTURE_X32_FLOAT;
-						break;
-					default:
-						gcm_format = fmt.first;
-						break;
-					}
-				}
-				else
-				{
-					gcm_format = fmt.first;
-				}
+				gcm_format = get_compatible_gcm_format(format_info.gcm_color_format).first;
 			}
 
 			rsx_subresource_layout subres{};
