@@ -585,8 +585,8 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Shader must at least write to one output for the body to be considered valid
 
 	const bool fp16_out = !(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
-	const std::string $float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
-	const std::string init_value = $float4_type + "(0., 0., 0., 0.)";
+	const std::string float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
+	const std::string init_value = float4_type + "(0., 0., 0., 0.)";
 	std::array<std::string, 4> output_register_names;
 	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
 	bool shader_is_valid = false;
@@ -594,10 +594,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Check depth export
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
-		if (shader_is_valid = !!temp_registers[1].h0_writes; !shader_is_valid)
-		{
-			LOG_WARNING(RSX, "Fragment shader fails to write the depth value!");
-		}
+		// Hw tests show that the depth export register is default-initialized to 0 and not wpos.z!!
+		m_parr.AddParam(PF_PARAM_NONE, float4_type, "r1", init_value);
+		shader_is_valid = (!!temp_registers[1].h1_writes);
 	}
 
 	// Add the color output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
@@ -613,9 +612,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	for (int n = 0; n < 4; ++n)
 	{
-		if (!m_parr.HasParam(PF_PARAM_NONE, $float4_type, output_register_names[n]))
+		if (!m_parr.HasParam(PF_PARAM_NONE, float4_type, output_register_names[n]))
 		{
-			m_parr.AddParam(PF_PARAM_NONE, $float4_type, output_register_names[n], init_value);
+			m_parr.AddParam(PF_PARAM_NONE, float4_type, output_register_names[n], init_value);
 			continue;
 		}
 
