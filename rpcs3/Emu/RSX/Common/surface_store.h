@@ -122,6 +122,7 @@ namespace rsx
 			size2u old, _new;
 
 			const auto prev_area = prev_surface->get_normalized_memory_area();
+			const auto prev_bpp = prev_surface->get_bpp();
 			old.width = prev_area.x2;
 			old.height = prev_area.y2;
 
@@ -132,7 +133,7 @@ namespace rsx
 			{
 				// Split in X
 				const u32 baseaddr = address + _new.width;
-				const u32 bytes_to_texels_x = (bpp * prev_surface->samples_x);
+				const u32 bytes_to_texels_x = (prev_bpp * prev_surface->samples_x);
 
 				deferred_clipped_region<surface_type> copy;
 				copy.src_x = _new.width / bytes_to_texels_x;
@@ -160,7 +161,7 @@ namespace rsx
 			{
 				// Split in Y
 				const u32 baseaddr = address + (_new.height * prev_surface->get_rsx_pitch());
-				const u32 bytes_to_texels_x = (bpp * prev_surface->samples_x);
+				const u32 bytes_to_texels_x = (prev_bpp * prev_surface->samples_x);
 
 				deferred_clipped_region<surface_type> copy;
 				copy.src_x = 0;
