@@ -2762,6 +2762,10 @@ namespace rsx
 			{
 				mem_base = dst_address - dst_subres.base_address;
 			}
+			else if (cached_dest)
+			{
+				mem_base = dst_address - cached_dest->get_section_base();
+			}
 			else
 			{
 				mem_base = dst_address - dst.rsx_address;
@@ -2769,12 +2773,11 @@ namespace rsx
 
 			if (dst.clip_height == 1)
 			{
-				mem_length = dst.clip_width * dst_bpp;
+				mem_length = dst_w * dst_bpp;
 			}
 			else
 			{
-				const u32 mem_excess = mem_base % dst.pitch;
-				mem_length = (dst.pitch * dst.clip_height) - mem_excess;
+				mem_length = (dst.pitch * (dst_h - 1)) + (dst_w * dst_bpp);
 			}
 
 			const auto modified_range = utils::address_range::start_length(dst_address, mem_length);
