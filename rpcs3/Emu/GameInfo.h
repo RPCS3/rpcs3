@@ -10,6 +10,7 @@ struct GameInfo
 	std::string name;
 	std::string serial;
 	std::string app_ver;
+	std::string version;
 	std::string category;
 	std::string fw;
 
@@ -31,6 +32,7 @@ struct GameInfo
 		name = "Unknown";
 		serial = "Unknown";
 		app_ver = "Unknown";
+		version = "Unknown";
 		category = "Unknown";
 		fw = "Unknown";
 
