@@ -1337,21 +1337,6 @@ namespace rsx
 		}
 
 	public:
-		template <typename ...Args>
-		bool load_memory_from_cache(const address_range &memory_range, Args&&... extras)
-		{
-			reader_lock lock(m_cache_mutex);
-			section_storage_type *region = find_flushable_section(memory_range);
-
-			if (region && !region->is_dirty())
-			{
-				region->fill_texture(std::forward<Args>(extras)...);
-				return true;
-			}
-
-			//No valid object found in cache
-			return false;
-		}
 
 		template <typename ...Args>
 		thrashed_set invalidate_address(commandbuffer_type& cmd, u32 address, invalidation_cause cause, Args&&... extras)
