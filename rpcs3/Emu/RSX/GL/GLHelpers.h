@@ -688,6 +688,7 @@ namespace gl
 			uniform = GL_UNIFORM_BUFFER,
 			texture = GL_TEXTURE_BUFFER
 		};
+
 		enum class access
 		{
 			read = GL_READ_ONLY,
@@ -695,25 +696,12 @@ namespace gl
 			read_write = GL_READ_WRITE
 		};
 
-	protected:
-		GLuint m_id = GL_NONE;
-		GLsizeiptr m_size = 0;
-		target m_target = target::array;
-
-	public:
-		buffer() = default;
-		buffer(const buffer&) = delete;
-
-		buffer(GLuint id)
+		enum class memory_type
 		{
-			set_id(id);
-		}
-
-		~buffer()
-		{
-			if (created())
-				remove();
-		}
+			undefined = 0,
+			local = 1,
+			host_visible = 2
+		};
 
 		class save_binding_state
 		{
@@ -750,6 +738,65 @@ namespace gl
 			}
 		};
 
+	protected:
+		GLuint m_id = GL_NONE;
+		GLsizeiptr m_size = 0;
+		target m_target = target::array;
+		memory_type m_memory_type = memory_type::undefined;
+
+		void allocate(GLsizeiptr size, const void* data_, memory_type type, GLenum usage)
+		{
+			if (get_driver_caps().ARB_buffer_storage_supported)
+			{
+				target target_ = current_target();
+				save_binding_state save(target_, *this);
+				GLenum flags = 0;
+
+				if (type == memory_type::host_visible)
+				{
+					switch (usage)
+					{
+					case GL_STREAM_DRAW:
+					case GL_STATIC_DRAW:
+					case GL_DYNAMIC_DRAW:
+						flags |= GL_MAP_WRITE_BIT;
+						break;
+					case GL_STREAM_READ:
+					case GL_STATIC_READ:
+					case GL_DYNAMIC_READ:
+						flags |= GL_MAP_READ_BIT;
+						break;
+					default:
+						fmt::throw_exception("Unsupported buffer usage 0x%x", usage);
+					}
+				}
+
+				glBufferStorage((GLenum)target_, size, data_, flags);
+				m_size = size;
+			}
+			else
+			{
+				data(size, data_, usage);
+			}
+
+			m_memory_type = type;
+		}
+
+	public:
+		buffer() = default;
+		buffer(const buffer&) = delete;
+
+		buffer(GLuint id)
+		{
+			set_id(id);
+		}
+
+		~buffer()
+		{
+			if (created())
+				remove();
+		}
+
 		void recreate()
 		{
 			if (created())
@@ -775,32 +822,17 @@ namespace gl
 			glGenBuffers(1, &m_id);
 		}
 
-		void create(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
+		void create(GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW)
 		{
 			create();
-			data(size, data_, usage);
+			allocate(size, data_, type, usage);
 		}
 
-		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
+		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW)
 		{
 			create();
 			m_target = target_;
-			data(size, data_, usage);
-		}
-
-		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
-		{
-			target target_ = current_target();
-			save_binding_state save(target_, *this);
-			glBufferData((GLenum)target_, size, data_, usage);
-			m_size = size;
-		}
-
-		void sub_data(GLintptr offset, GLsizeiptr size, const void* data_ = nullptr)
-		{
-			target target_ = current_target();
-			save_binding_state save(target_, *this);
-			glBufferSubData((GLenum)target_, offset, size, data_);
+			allocate(size, data_, type, usage);
 		}
 
 		void bind(target target_) const
@@ -849,50 +881,27 @@ namespace gl
 			return created();
 		}
 
-		void map(const std::function<void(GLubyte*)>& impl, access access_)
+		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
 		{
+			verify(HERE), m_memory_type == memory_type::undefined;
+
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
-
-			if (GLubyte* ptr = (GLubyte*)glMapBuffer((GLenum)target_, (GLenum)access_))
-			{
-				impl(ptr);
-				glUnmapBuffer((GLenum)target_);
-			}
+			glBufferData((GLenum)target_, size, data_, usage);
+			m_size = size;
 		}
-
-		class mapper
-		{
-			buffer *m_parent;
-			GLubyte *m_data;
-
-		public:
-			mapper(buffer& parent, access access_)
-			{
-				m_parent = &parent;
-				m_data = parent.map(access_);
-			}
-
-			~mapper()
-			{
-				m_parent->unmap();
-			}
-
-			GLubyte* get() const
-			{
-				return m_data;
-			}
-		};
 
 		GLubyte* map(access access_)
 		{
-			bind(current_target());
+			verify(HERE), m_memory_type == memory_type::host_visible;
 
+			bind(current_target());
 			return (GLubyte*)glMapBuffer((GLenum)current_target(), (GLenum)access_);
 		}
 
 		void unmap()
 		{
+			verify(HERE), m_memory_type == memory_type::host_visible;
 			glUnmapBuffer((GLenum)current_target());
 		}
 	};
@@ -1010,8 +1019,9 @@ namespace gl
 				remove();
 
 			buffer::create();
-			buffer::data(size, data);
+			buffer::data(size, data, GL_DYNAMIC_DRAW);
 
+			m_memory_type = memory_type::host_visible;
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
 			m_size = ::narrow<u32>(size);
@@ -1034,7 +1044,7 @@ namespace gl
 
 			if ((offset + block_size) > m_size)
 			{
-				buffer::data(m_size, nullptr);
+				buffer::data(m_size, nullptr, GL_DYNAMIC_DRAW);
 				m_data_loc = 0;
 			}
 

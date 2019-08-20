@@ -738,7 +738,7 @@ namespace gl
 		if (!g_typeless_transfer_buffer || max_mem > g_typeless_transfer_buffer.size())
 		{
 			if (g_typeless_transfer_buffer) g_typeless_transfer_buffer.remove();
-			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer_copy_flag);
+			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, buffer_copy_flag);
 		}
 
 		auto format_type = get_format_type(src->get_internal_format());
@@ -746,14 +746,13 @@ namespace gl
 		pack_settings.swap_bytes(std::get<2>(format_type));
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
 		src->copy_to(nullptr, (texture::format)std::get<0>(format_type), (texture::type)std::get<1>(format_type), pack_settings);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
 		format_type = get_format_type(dst->get_internal_format());
 		pixel_unpack_settings unpack_settings{};
 		unpack_settings.swap_bytes(std::get<2>(format_type));
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
 		dst->copy_from(nullptr, (texture::format)std::get<0>(format_type), (texture::type)std::get<1>(format_type), unpack_settings);
-
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 	}
 }
