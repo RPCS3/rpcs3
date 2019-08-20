@@ -464,6 +464,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			game.serial       = psf::get_string(psf, "TITLE_ID", "");
 			game.name         = psf::get_string(psf, "TITLE", cat_unknown);
 			game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown);
+			game.version      = psf::get_string(psf, "VERSION", cat_unknown);
 			game.category     = psf::get_string(psf, "CATEGORY", cat_unknown);
 			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown);
 			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
@@ -1802,6 +1803,12 @@ int game_list_frame::PopulateGameList()
 
 		// Version
 		QString app_version = qstr(game->info.app_ver);
+
+		if (app_version == category::unknown)
+		{
+			// Fall back to Disc/Pkg Revision
+			app_version = qstr(game->info.version);
+		}
 
 		if (!game->compat.version.isEmpty() && (app_version == category::unknown || game->compat.version.toDouble() > app_version.toDouble()))
 		{
