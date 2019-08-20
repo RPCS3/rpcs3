@@ -41,7 +41,7 @@ void spu_recompiler::init()
 	if (!m_spurt)
 	{
 		m_cache = fxm::get<spu_cache>();
-		m_spurt = fxm::get_always<spu_runtime>();
+		m_spurt = g_fxo->get<spu_runtime>();
 	}
 }
 

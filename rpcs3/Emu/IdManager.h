@@ -138,7 +138,7 @@ class idm
 	{
 		using traits = id_manager::id_traits<T>;
 
-		// Note: if id is lower than base, diff / step will be higher than count 
+		// Note: if id is lower than base, diff / step will be higher than count
 		u32 diff = id - traits::base;
 
 		if (diff % traits::step)
@@ -785,6 +785,7 @@ public:
 };
 
 #include "Utilities/typemap.h"
+#include "util/fixed_typemap.hpp"
 
 extern utils::typemap g_typemap;
 
@@ -793,3 +794,7 @@ constexpr utils::typemap* g_idm = &g_typemap;
 using utils::id_new;
 using utils::id_any;
 using utils::id_always;
+
+extern stx::manual_fixed_typemap<void> g_fixed_typemap;
+
+constexpr stx::manual_fixed_typemap<void>* g_fxo = &g_fixed_typemap;

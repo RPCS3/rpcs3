@@ -538,8 +538,6 @@ spu_runtime::spu_runtime()
 		fs::file(m_cache_path + "spu.log", fs::rewrite);
 		fs::file(m_cache_path + "spu-ir.log", fs::rewrite);
 	}
-
-	LOG_SUCCESS(SPU, "SPU Recompiler Runtime initialized...");
 }
 
 bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compiled)
@@ -4165,7 +4163,7 @@ public:
 		if (!m_spurt)
 		{
 			m_cache = fxm::get<spu_cache>();
-			m_spurt = fxm::get_always<spu_runtime>();
+			m_spurt = g_fxo->get<spu_runtime>();
 			cpu_translator::initialize(m_jit.get_context(), m_jit.get_engine());
 
 			const auto md_name = llvm::MDString::get(m_context, "branch_weights");

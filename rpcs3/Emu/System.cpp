@@ -46,6 +46,8 @@
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
+stx::manual_fixed_typemap<void> g_fixed_typemap;
+
 utils::typemap g_typemap{nullptr};
 
 cfg_root g_cfg;
@@ -318,6 +320,7 @@ void Emulator::Init()
 	idm::init();
 	fxm::init();
 	g_idm->init();
+	g_fxo->reset();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
@@ -1511,6 +1514,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				LOG_NOTICE(LOADER, "Cache: %s", _main->cache);
 			}
 
+			g_fxo->init();
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
 			fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler, m_title_id);
 			network_thread_init();
@@ -1735,6 +1739,7 @@ void Emulator::Stop(bool restart)
 	idm::clear();
 	fxm::clear();
 	g_idm->init();
+	g_fxo->reset();
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 

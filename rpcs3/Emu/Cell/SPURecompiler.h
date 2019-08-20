@@ -76,6 +76,10 @@ public:
 public:
 	spu_runtime();
 
+	spu_runtime(const spu_runtime&) = delete;
+
+	spu_runtime& operator=(const spu_runtime&) = delete;
+
 	const std::string& get_cache_path() const
 	{
 		return m_cache_path;
@@ -226,7 +230,7 @@ public:
 	};
 
 protected:
-	std::shared_ptr<spu_runtime> m_spurt;
+	spu_runtime* m_spurt{};
 
 	u32 m_pos;
 	u32 m_size;
