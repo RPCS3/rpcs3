@@ -2927,34 +2927,36 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	if (!m_rtts.orphaned_surfaces.empty())
 	{
-		if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
+		u32 gcm_format;
+		bool swap_bytes;
+
+		for (auto& surface : m_rtts.orphaned_surfaces)
 		{
-			u32 gcm_format;
-			bool swap_bytes;
+			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
+				!!g_cfg.video.write_color_buffers;
 
-			for (auto& surface : m_rtts.orphaned_surfaces)
+			if (LIKELY(!lock))
 			{
-				if (surface->is_depth_surface())
-				{
-					if (!g_cfg.video.write_depth_buffer) continue;
-
-					gcm_format = (surface->get_surface_depth_format() != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
-					swap_bytes = true;
-				}
-				else
-				{
-					if (!g_cfg.video.write_color_buffers) continue;
-
-					auto info = get_compatible_gcm_format(surface->get_surface_color_format());
-					gcm_format = info.first;
-					swap_bytes = info.second;
-				}
-
-				m_texture_cache.lock_memory_region(
-					*m_current_command_buffer, surface, surface->get_memory_range(), false,
-					surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
-					gcm_format, swap_bytes);
+				m_texture_cache.commit_framebuffer_memory_region(*m_current_command_buffer, surface->get_memory_range());
+				continue;
 			}
+
+			if (surface->is_depth_surface())
+			{
+				gcm_format = (surface->get_surface_depth_format() != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
+				swap_bytes = true;
+			}
+			else
+			{
+				auto info = get_compatible_gcm_format(surface->get_surface_color_format());
+				gcm_format = info.first;
+				swap_bytes = info.second;
+			}
+
+			m_texture_cache.lock_memory_region(
+				*m_current_command_buffer, surface, surface->get_memory_range(), false,
+				surface->get_surface_width(rsx::surface_metrics::pixels), surface->get_surface_height(rsx::surface_metrics::pixels), surface->get_rsx_pitch(),
+				gcm_format, swap_bytes);
 		}
 
 		m_rtts.orphaned_surfaces.clear();
