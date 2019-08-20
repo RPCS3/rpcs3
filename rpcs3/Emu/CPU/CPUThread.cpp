@@ -8,6 +8,8 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 
+#include <thread>
+
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
 
@@ -132,7 +134,7 @@ void cpu_thread::operator()()
 	g_cpu_suspend_lock.lock_unlock();
 
 	// Check thread status
-	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)))
+	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)) && !Emu.IsStopped())
 	{
 		// Check stop status
 		if (!(state & cpu_flag::stop))
@@ -388,4 +390,33 @@ cpu_thread::suspend_all::~suspend_all()
 	{
 		m_this->check_state();
 	}
+}
+
+void cpu_thread::stop_all() noexcept
+{
+	if (g_tls_current_cpu_thread)
+	{
+		// Report unsupported but unnecessary case
+		LOG_FATAL(GENERAL, "cpu_thread::stop_all() has been called from a CPU thread.");
+		return;
+	}
+	else
+	{
+		::vip_lock lock(g_cpu_suspend_lock);
+
+		for_all_cpu([](cpu_thread* cpu)
+		{
+			cpu->state += cpu_flag::dbg_global_stop;
+			cpu->notify();
+		});
+	}
+
+	LOG_NOTICE(GENERAL, "All CPU threads have been signaled.");
+
+	while (g_cpu_array_sema)
+	{
+		std::this_thread::sleep_for(10ms);
+	}
+
+	LOG_NOTICE(GENERAL, "All CPU threads have been stopped.");
 }

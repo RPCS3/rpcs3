@@ -113,6 +113,9 @@ public:
 		suspend_all& operator=(const suspend_all&) = delete;
 		~suspend_all();
 	};
+
+	// Stop all threads with cpu_flag::dbg_global_stop
+	static void stop_all() noexcept;
 };
 
 inline cpu_thread* get_current_cpu_thread() noexcept

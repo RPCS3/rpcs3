@@ -1711,22 +1711,7 @@ void Emulator::Stop(bool restart)
 
 	GetCallbacks().on_stop();
 
-#ifdef WITH_GDB_DEBUGGER
-	//fxm for some reason doesn't call on_stop
-	fxm::get<GDBDebugServer>()->on_stop();
-	fxm::remove<GDBDebugServer>();
-#endif
-
-	auto on_select = [&](u32, cpu_thread& cpu)
-	{
-		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.notify();
-	};
-
-	idm::select<named_thread<ppu_thread>>(on_select);
-	idm::select<named_thread<spu_thread>>(on_select);
-
-	LOG_NOTICE(GENERAL, "All threads signaled...");
+	cpu_thread::stop_all();
 
 	while (g_thread_count)
 	{
