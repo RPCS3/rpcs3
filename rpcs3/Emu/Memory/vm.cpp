@@ -1060,16 +1060,7 @@ namespace vm
 		}
 
 		lock.upgrade();
-
-		// Fixed allocation
-		if (addr)
-		{
-			// Recheck
-			area = _get_map(location, addr);
-
-			return !area ? _map(addr, area_size, flags) : area;
-		}
-
+		
 		// Allocation on arbitrary address
 		if (location != any && location < g_locations.size())
 		{
@@ -1085,7 +1076,10 @@ namespace vm
 			return loc;
 		}
 
-		return nullptr;
+		// Fixed address allocation
+		area = _get_map(location, addr);
+
+		return !area ? _map(addr, area_size, flags) : area;
 	}
 
 	inline namespace ps3_
