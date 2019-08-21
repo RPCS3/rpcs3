@@ -43,7 +43,7 @@ void sys_spu_image::load(const fs::file& stream)
 	}
 
 	type        = SYS_SPU_IMAGE_TYPE_KERNEL;
-	
+
 	nsegs       = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
@@ -184,7 +184,7 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
 
 	if (!elf_file)
 	{

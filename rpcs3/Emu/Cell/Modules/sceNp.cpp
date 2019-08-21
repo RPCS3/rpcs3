@@ -60,7 +60,7 @@ s32 npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 		return CELL_ENOENT;
 	}
 
-	auto npdrmkeys = fxm::get_always<LoadedNpdrmKeys_t>();
+	auto npdrmkeys = g_fxo->get<loaded_npdrm_keys>();
 
 	npdrmkeys->devKlic.fill(0);
 	npdrmkeys->rifKey.fill(0);
