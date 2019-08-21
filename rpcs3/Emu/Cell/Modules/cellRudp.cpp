@@ -7,7 +7,7 @@
 
 LOG_CHANNEL(cellRudp);
 
-struct rudp_t
+struct rudp_info
 {
 	// allocator functions
 	std::function<vm::ptr<void>(ppu_thread& ppu, u32 size)> malloc;
@@ -22,9 +22,9 @@ s32 cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 {
 	cellRudp.warning("cellRudpInit(allocator=*0x%x)", allocator);
 
-	const auto rudp = fxm::make<rudp_t>();
+	const auto rudp = g_fxo->get<rudp_info>();
 
-	if (!rudp)
+	if (rudp->malloc)
 	{
 		return CELL_RUDP_ERROR_ALREADY_INITIALIZED;
 	}
@@ -57,10 +57,16 @@ s32 cellRudpEnd()
 {
 	cellRudp.warning("cellRudpEnd()");
 
-	if (!fxm::remove<rudp_t>())
+	const auto rudp = g_fxo->get<rudp_info>();
+
+	if (!rudp->malloc)
 	{
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
+
+	rudp->malloc = nullptr;
+	rudp->free = nullptr;
+	rudp->handler = vm::null;
 
 	return CELL_OK;
 }
@@ -75,9 +81,9 @@ s32 cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::ptr<void>
 {
 	cellRudp.todo("cellRudpSetEventHandler(handler=*0x%x, arg=*0x%x)", handler, arg);
 
-	const auto rudp = fxm::get<rudp_t>();
+	const auto rudp = g_fxo->get<rudp_info>();
 
-	if (!rudp)
+	if (!rudp->malloc)
 	{
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
