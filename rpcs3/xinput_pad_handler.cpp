@@ -6,6 +6,8 @@
 #include <Windows.h>
 #include <Xinput.h>
 
+#include <optional>
+
 // ScpToolkit defined structure for pressure sensitive button query
 typedef struct
 {
@@ -47,7 +49,7 @@ protected:
 	typedef DWORD(WINAPI* PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION*);
 
 protected:
-	bool is_init{false};
+	std::optional<bool> is_init;
 	HMODULE library{nullptr};
 	PFN_XINPUTSETSTATE xinputSetState{nullptr};
 	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{nullptr};
@@ -145,7 +147,7 @@ public:
 	bool Init() override
 	{
 		if (is_init)
-			return true;
+			return *is_init;
 
 		for (auto it : LIBRARY_FILENAMES)
 		{
@@ -162,7 +164,7 @@ public:
 				if (xinputGetState && xinputSetState && xinputGetBatteryInformation)
 				{
 					is_init = true;
-					break;
+					return true;
 				}
 
 				FreeLibrary(library);
@@ -172,7 +174,8 @@ public:
 			}
 		}
 
-		return is_init;
+		is_init = false;
+		return false;
 	}
 
 	DWORD GetState(DWORD userIndex, XInputStateUnion* state) override
@@ -295,7 +298,7 @@ public:
 	bool Init() override
 	{
 		if (is_init)
-			return true;
+			return *is_init;
 
 		library = LoadLibrary(L"XInput1_3.dll");
 		if (library)
@@ -316,6 +319,7 @@ public:
 			xinputGetBatteryInformation = nullptr;
 		}
 
+		is_init = false;
 		return false;
 	}
 
