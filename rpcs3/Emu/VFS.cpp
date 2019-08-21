@@ -25,7 +25,7 @@ struct vfs_manager
 
 bool vfs::mount(std::string_view vpath, std::string_view path)
 {
-	const auto table = fxm::get_always<vfs_manager>();
+	const auto table = g_fxo->get<vfs_manager>();
 
 	std::lock_guard lock(table->mutex);
 
@@ -98,7 +98,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 
 std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 {
-	const auto table = fxm::get_always<vfs_manager>();
+	const auto table = g_fxo->get<vfs_manager>();
 
 	reader_lock lock(table->mutex);
 
