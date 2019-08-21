@@ -1346,7 +1346,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
 			// know that this thread is page faulted and where.
 
-			auto pf_events = fxm::get_always<page_fault_event_entries>();
+			auto pf_events = g_fxo->get<page_fault_event_entries>();
 			{
 				std::lock_guard pf_lock(pf_events->pf_mutex);
 				pf_events->events.emplace(static_cast<u32>(data2), addr);

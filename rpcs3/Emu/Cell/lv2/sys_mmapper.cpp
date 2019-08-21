@@ -210,7 +210,7 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 	}
 
 	// If page fault notify exists and an address in this area is faulted, we can't free the memory.
-	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	auto pf_events = g_fxo->get<page_fault_event_entries>();
 	std::lock_guard pf_lock(pf_events->pf_mutex);
 
 	for (const auto& ev : pf_events->events)
@@ -489,7 +489,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 error_code mmapper_thread_recover_page_fault(u32 id)
 {
 	// We can only wake a thread if it is being suspended for a page fault.
-	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	auto pf_events = g_fxo->get<page_fault_event_entries>();
 	{
 		std::lock_guard pf_lock(pf_events->pf_mutex);
 		auto pf_event_ind = pf_events->events.find(id);
