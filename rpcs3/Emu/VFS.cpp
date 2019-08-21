@@ -25,6 +25,12 @@ struct vfs_manager
 
 bool vfs::mount(std::string_view vpath, std::string_view path)
 {
+	if (!g_fxo->get<vfs_manager>())
+	{
+		// Init (TODO)
+		g_fxo->init<vfs_manager>();
+	}
+
 	const auto table = g_fxo->get<vfs_manager>();
 
 	std::lock_guard lock(table->mutex);
