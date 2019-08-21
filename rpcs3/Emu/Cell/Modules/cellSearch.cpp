@@ -42,7 +42,7 @@ void fmt_class_string<CellSearchError>::format(std::string& out, u64 arg)
 	});
 }
 
-struct search_t
+struct search_info
 {
 	vm::ptr<CellSearchSystemCallback> func;
 	vm::ptr<void> userData;
@@ -61,7 +61,7 @@ error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<Cell
 {
 	cellSearch.warning("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", (u32) mode, container, func, userData);
 
-	const auto search = fxm::make_always<search_t>();
+	const auto search = g_fxo->get<search_info>();
 	search->func = func;
 	search->userData = userData;
 
@@ -78,10 +78,10 @@ error_code cellSearchFinalize()
 {
 	cellSearch.warning("cellSearchFinalize()");
 
+	const auto search = g_fxo->get<search_info>();
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		const auto search = fxm::get_always<search_t>();
-
 		search->func(ppu, CELL_SEARCH_EVENT_FINALIZE_RESULT, CELL_OK, vm::null, search->userData);
 		return CELL_OK;
 	});
@@ -98,12 +98,12 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	const auto search = g_fxo->get<search_info>();
+
 	*outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		const auto search = fxm::get_always<search_t>();
-
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
@@ -124,12 +124,12 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	const auto search = g_fxo->get<search_info>();
+
 	*outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		const auto search = fxm::get_always<search_t>();
-
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
@@ -150,12 +150,12 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	const auto search = g_fxo->get<search_info>();
+
 	*outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		const auto search = fxm::get_always<search_t>();
-
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
@@ -176,12 +176,12 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	const auto search = g_fxo->get<search_info>();
+
 	*outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		const auto search = fxm::get_always<search_t>();
-
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
@@ -202,12 +202,12 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
+	const auto search = g_fxo->get<search_info>();
+
 	*outSearchId = idm::make<search_object_t>();
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		const auto search = fxm::get_always<search_t>();
-
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = *outSearchId;
 		resultParam->resultNum = 0; // TODO
