@@ -236,7 +236,7 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 	}
 
 	// If a memory block is freed, remove it from page notification table.
-	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+	auto pf_entries = g_fxo->get<page_fault_notification_entries>();
 	std::lock_guard lock(pf_entries->mutex);
 
 	auto ind_to_remove = pf_entries->entries.begin();
@@ -465,7 +465,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 		return CELL_EAGAIN;
 	}
 
-	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+	auto pf_entries = g_fxo->get<page_fault_notification_entries>();
 	std::unique_lock lock(pf_entries->mutex);
 
 	// Return error code if page fault notifications are already enabled

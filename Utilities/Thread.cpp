@@ -1287,7 +1287,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	{
 		u32 pf_port_id = 0;
 
-		if (auto pf_entries = fxm::get<page_fault_notification_entries>())
+		if (auto pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
 		{
 			if (auto mem = vm::get(vm::any, addr))
 			{
