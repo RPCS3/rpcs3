@@ -425,6 +425,7 @@ namespace vk
 			unsigned first = prepare_rw_barrier_for_transfer(this);
 			bool optimize_copy = true;
 			bool any_valid_writes = false;
+			u64  newest_tag = 0;
 
 			for (auto i = first; i < old_contents.size(); ++i)
 			{
@@ -504,6 +505,7 @@ namespace vk
 					/*linear?*/false, /*depth?(unused)*/false, typeless_info);
 
 				optimize_copy = optimize_copy && !memory_load;
+				newest_tag = src_texture->last_use_tag;
 			}
 
 			if (UNLIKELY(!any_valid_writes))
@@ -524,7 +526,7 @@ namespace vk
 			}
 
 			// NOTE: Optimize flag relates to stencil resolve/unresolve for NVIDIA.
-			on_write_copy(0, optimize_copy);
+			on_write_copy(newest_tag, optimize_copy);
 
 			if (!read_access && samples() > 1)
 			{

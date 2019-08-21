@@ -586,6 +586,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
 	const auto dst_bpp = get_bpp();
 	unsigned first = prepare_rw_barrier_for_transfer(this);
+	u64 newest_tag = 0;
 
 	for (auto i = first; i < old_contents.size(); ++i)
 	{
@@ -632,9 +633,11 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 			section.src_rect(),
 			section.dst_rect(),
 			!dst_is_depth, dst_is_depth, typeless_info);
+
+		newest_tag = src_texture->last_use_tag;
 	}
 
 	// Memory has been transferred, discard old contents and update memory flags
 	// TODO: Preserve memory outside surface clip region
-	on_write();
+	on_write(newest_tag);
 }
