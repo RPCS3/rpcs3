@@ -6,7 +6,7 @@
 
 extern logs::channel cellSysutil;
 
-struct browser_t
+struct browser_info
 {
 	vm::ptr<CellWebBrowserSystemCallback> system_cb;
 	vm::ptr<void> userData;
@@ -215,7 +215,7 @@ error_code cellWebBrowserInitialize(vm::ptr<CellWebBrowserSystemCallback> system
 {
 	cellSysutil.todo("cellWebBrowserInitialize(system_cb=*0x%x, container=0x%x)", system_cb, container);
 
-	const auto browser = fxm::make_always<browser_t>();
+	const auto browser = g_fxo->get<browser_info>();
 	browser->system_cb = system_cb;
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
@@ -246,10 +246,10 @@ void cellWebBrowserShutdown()
 {
 	cellSysutil.todo("cellWebBrowserShutdown()");
 
+	const auto browser = g_fxo->get<browser_info>();
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		const auto browser = fxm::get_always<browser_t>();
-
 		browser->system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_SHUTDOWN_FINISHED, browser->userData);
 		return CELL_OK;
 	});
