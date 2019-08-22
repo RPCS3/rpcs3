@@ -149,7 +149,7 @@ s32 cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<CellAudi
 {
 	cellAvconfExt.todo("cellAudioInGetDeviceInfo(deviceNumber=0x%x, deviceIndex=0x%x, info=*0x%x)", deviceNumber, deviceIndex, info);
 
-	auto av_manager = fxm::get_always<avconf_manager>();
+	auto av_manager = g_fxo->get<avconf_manager>();
 
 	if (deviceNumber >= av_manager->devices.size())
 		return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
@@ -190,7 +190,7 @@ s32 cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDeviceInfo> 
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	auto av_manager = fxm::get_always<avconf_manager>();
+	auto av_manager = g_fxo->get<avconf_manager>();
 
 	u32 num_devices_returned = std::min(count, (u32)av_manager->devices.size());
 
