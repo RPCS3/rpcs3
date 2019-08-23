@@ -252,11 +252,30 @@ protected:
 	virtual void insertMainEnd(std::stringstream &OS) = 0;
 
 public:
+	enum : u16
+	{
+		in_wpos = (1 << 0),
+		in_diff_color = (1 << 1),
+		in_spec_color = (1 << 2),
+		in_fogc = (1 << 3),
+		in_tc0 = (1 << 4),
+		in_tc1 = (1 << 5),
+		in_tc2 = (1 << 6),
+		in_tc3 = (1 << 7),
+		in_tc4 = (1 << 8),
+		in_tc5 = (1 << 9),
+		in_tc6 = (1 << 10),
+		in_tc7 = (1 << 11),
+		in_tc8 = (1 << 12),
+		in_tc9 = (1 << 13),
+		in_ssa = (1 << 14)
+	};
+
 	struct
 	{
+		u16  in_register_mask = 0;
 		bool has_lit_op = false;
 		bool has_gather_op = false;
-		bool has_wpos_input = false;
 		bool has_no_output = false;
 		bool has_discard_op = false;
 		bool has_tex_op = false;

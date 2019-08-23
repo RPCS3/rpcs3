@@ -1624,6 +1624,18 @@ namespace rsx
 		{
 			return decode<NV4097_SET_CONTROL0>().depth_float();
 		}
+
+		u32 texcoord_control_mask()
+		{
+			// Only 10 texture coords exist [0-9]
+			u32 control_mask = 0;
+			for (u8 index = 0; index < 10; ++index)
+			{
+				control_mask |= ((registers[NV4097_SET_TEX_COORD_CONTROL + index] & 1) << index);
+			}
+
+			return control_mask;
+		}
 	};
 
 	extern rsx_state method_registers;

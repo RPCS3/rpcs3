@@ -44,9 +44,6 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
-	//It is possible for the two_sided_enabled flag to be set without actual 2-sided outputs
-	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
-
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
 		for (const ParamItem& PI : PT.items)
@@ -57,33 +54,36 @@ void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 			const auto reg_location = vk::get_varying_register_location(PI.name);
 			std::string var_name = PI.name;
 
-			if (two_sided_enabled)
-			{
-				if (m_prog.back_color_diffuse_output && var_name == "diff_color")
-					var_name = "back_diff_color";
-
-				if (m_prog.back_color_specular_output && var_name == "spec_color")
-					var_name = "back_spec_color";
-			}
-
 			if (var_name == "fogc")
+			{
 				var_name = "fog_c";
+			}
+			else if (m_prog.two_sided_lighting)
+			{
+				if (var_name == "diff_color")
+				{
+					var_name = "diff_color0";
+				}
+				else if (var_name == "spec_color")
+				{
+					var_name = "spec_color0";
+				}
+			}
 
 			OS << "layout(location=" << reg_location << ") in " << PT.type << " " << var_name << ";\n";
 		}
 	}
 
-	if (two_sided_enabled)
+	if (m_prog.two_sided_lighting)
 	{
-		//Only include the front counterparts if the default output is for back only and exists.
-		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
+		if (properties.in_register_mask & in_diff_color)
 		{
-			OS << "layout(location=" << vk::get_varying_register_location("front_diff_color") << ") in vec4 front_diff_color;\n";
+			OS << "layout(location=" << vk::get_varying_register_location("diff_color1") << ") in vec4 diff_color1;\n";
 		}
 
-		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
+		if (properties.in_register_mask & in_spec_color)
 		{
-			OS << "layout(location=" << vk::get_varying_register_location("front_spec_color") << ") in vec4 front_spec_color;\n";
+			OS << "layout(location=" << vk::get_varying_register_location("spec_color1") << ") in vec4 spec_color1;\n";
 		}
 	}
 }
@@ -231,7 +231,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
 	properties2.require_depth_conversion = m_prog.redirected_textures != 0;
-	properties2.require_wpos = properties.has_wpos_input;
+	properties2.require_wpos = !!(properties.in_register_mask & in_wpos);
 	properties2.require_texture_ops = properties.has_tex_op;
 	properties2.require_shadow_ops = m_prog.shadow_textures != 0;
 	properties2.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
@@ -243,18 +243,8 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 
 void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	//TODO: Generate input mask during parse stage to avoid this
-	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
-	{
-		for (const ParamItem& PI : PT.items)
-		{
-			if (PI.name == "fogc")
-			{
-				glsl::insert_fog_declaration(OS);
-				break;
-			}
-		}
-	}
+	if (properties.in_register_mask & in_fogc)
+		glsl::insert_fog_declaration(OS);
 
 	const std::set<std::string> output_values =
 	{
@@ -294,64 +284,22 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	if (m_parr.HasParam(PF_PARAM_IN, "vec4", "ssa"))
+	if (properties.in_register_mask & in_ssa)
 		OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
 
-	if (properties.has_wpos_input)
+	if (properties.in_register_mask & in_wpos)
 		OS << "	vec4 wpos = get_wpos();\n";
 
-	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
+	if (properties.in_register_mask & in_fogc)
+		OS << "	vec4 fogc = fetch_fog_value(fog_mode);\n";
 
-	//Some registers require redirection
-	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
+	if (m_prog.two_sided_lighting)
 	{
-		for (const ParamItem& PI : PT.items)
-		{
-			if (two_sided_enabled)
-			{
-				if (PI.name == "spec_color")
-				{
-					//Only redirect/rename variables if the back_color exists
-					if (m_prog.back_color_specular_output)
-					{
-						if (m_prog.back_color_specular_output && m_prog.front_color_specular_output)
-						{
-							OS << "	vec4 spec_color = gl_FrontFacing ? front_spec_color : back_spec_color;\n";
-						}
-						else
-						{
-							OS << "	vec4 spec_color = back_spec_color;\n";
-						}
-					}
+		if (properties.in_register_mask & in_diff_color)
+			OS << "	vec4 diff_color = gl_FrontFacing ? diff_color1 : diff_color0;\n";
 
-					continue;
-				}
-
-				else if (PI.name == "diff_color")
-				{
-					//Only redirect/rename variables if the back_color exists
-					if (m_prog.back_color_diffuse_output)
-					{
-						if (m_prog.back_color_diffuse_output && m_prog.front_color_diffuse_output)
-						{
-							OS << "	vec4 diff_color = gl_FrontFacing ? front_diff_color : back_diff_color;\n";
-						}
-						else
-						{
-							OS << "	vec4 diff_color = back_diff_color;\n";
-						}
-					}
-
-					continue;
-				}
-			}
-
-			if (PI.name == "fogc")
-			{
-				OS << "	vec4 fogc = fetch_fog_value(fog_mode);\n";
-				continue;
-			}
-		}
+		if (properties.in_register_mask & in_spec_color)
+			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color1 : spec_color0;\n";
 	}
 }
 

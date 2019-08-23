@@ -1639,12 +1639,9 @@ namespace rsx
 		result.ucode_length = current_fp_metadata.program_ucode_length;
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
+		result.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
 		result.unnormalized_coords = 0;
-		result.front_back_color_enabled = !rsx::method_registers.two_side_light_en();
-		result.back_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
-		result.back_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
-		result.front_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE);
-		result.front_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR);
+		result.two_sided_lighting = rsx::method_registers.two_side_light_en();
 		result.redirected_textures = 0;
 		result.shadow_textures = 0;
 
@@ -1775,11 +1772,7 @@ namespace rsx
 		result.valid = true;
 		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		result.unnormalized_coords = 0;
-		result.front_back_color_enabled = !rsx::method_registers.two_side_light_en();
-		result.back_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE);
-		result.back_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR);
-		result.front_color_diffuse_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE);
-		result.front_color_specular_output = !!(rsx::method_registers.vertex_attrib_output_mask() & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR);
+		result.two_sided_lighting = rsx::method_registers.two_side_light_en();
 		result.redirected_textures = 0;
 		result.shadow_textures = 0;
 
