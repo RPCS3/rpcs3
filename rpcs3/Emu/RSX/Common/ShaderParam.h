@@ -325,14 +325,50 @@ public:
 
 struct vertex_reg_info
 {
-	std::string name;           //output name
-	bool need_declare;          //needs explicit declaration as output (not language in-built)
-	std::string src_reg;        //reg to get data from
-	std::string src_reg_mask;   //input swizzle mask
-	bool need_cast;             //needs casting
-	std::string cond;           //update on condition
-	std::string default_val;    //fallback value on cond fail
-	std::string dst_alias;      //output name override
-	bool check_mask;            //check program output control mask for this output
-	u32  check_mask_value;      //program output control mask for testing
+	enum mask_test_type : u8
+	{
+		any = 0,   // Any bit set
+		none = 1,  // No bits set
+		all = 2,   // All bits set
+		xall = 3   // Some bits set
+	};
+
+	std::string name;           // output name
+	bool need_declare;          // needs explicit declaration as output (not language in-built)
+	std::string src_reg;        // reg to get data from
+	std::string src_reg_mask;   // input swizzle mask
+	bool need_cast;             // needs casting
+	std::string cond;           // update on condition
+	std::string default_val;    // fallback value on cond fail
+	std::string dst_alias;      // output name override
+	bool check_mask;            // check program output control mask for this output
+	u32  check_mask_value;      // program output control mask for testing
+
+	mask_test_type check_flags; // whole mask must match
+
+	bool test(u32 mask) const
+	{
+		if (!check_mask)
+			return true;
+
+		const u32 val = (mask & check_mask_value);
+		switch (check_flags)
+		{
+		case none:
+			return (val == 0);
+		case any:
+			return (val != 0);
+		case all:
+			return (val == check_mask_value);
+		case xall:
+			return (val && val != check_mask_value);
+		default:
+			fmt::throw_exception("Unreachable" HERE);
+		}
+	}
+
+	bool declare(u32 mask) const
+	{
+		return test(mask);
+	}
 };

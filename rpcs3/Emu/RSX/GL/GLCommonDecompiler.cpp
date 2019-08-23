@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "GLCommonDecompiler.h"
 
 namespace gl
@@ -7,10 +7,9 @@ namespace gl
 	{{
 		{"diff_color", 1},
 		{"spec_color", 2},
-		{"back_diff_color", 1},
-		{"back_spec_color", 2},
-		{"front_diff_color", 3},
-		{"front_spec_color", 4},
+		{"diff_color1", 3},
+		{"spec_color1", 4},
+		{"fogc", 5},
 		{"fog_c", 5},
 		{"tc0", 6},
 		{"tc1", 7},

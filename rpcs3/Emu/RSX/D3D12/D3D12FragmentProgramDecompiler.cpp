@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+﻿#ifdef _MSC_VER
 #include "stdafx.h"
 #include "stdafx_d3d12.h"
 #include "D3D12FragmentProgramDecompiler.h"
@@ -206,19 +206,6 @@ void D3D12FragmentDecompiler::insertMainStart(std::stringstream & OS)
 	{
 		for (const ParamItem &PI : PT.items)
 		{
-			if (m_prog.front_back_color_enabled)
-			{
-				if (PI.name == "spec_color" && m_prog.back_color_specular_output)
-				{
-					OS << "	float4 spec_color = is_front_face ? In.dst_reg4 : In.spec_color;\n";
-					continue;
-				}
-				if (PI.name == "diff_color" && m_prog.back_color_diffuse_output)
-				{
-					OS << "	float4 diff_color = is_front_face ? In.dst_reg3 : In.diff_color;\n";
-					continue;
-				}
-			}
 			if (PI.name == "fogc")
 			{
 				OS << "	float4 fogc = fetch_fog_value(fog_mode, In.fogc);\n";

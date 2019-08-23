@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "../rsx_methods.h"
 
 #include "FragmentProgramDecompiler.h"
 
@@ -520,27 +521,81 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			"ssa"
 		};
 
-		//TODO: Investigate effect of input modifier on this type
+		// NOTE: Hw testing showed the following:
+		// 1. Reading from registers 1 and 2 (COL0 and COL1) is clamped to (0, 1)
+		// 2. Reading from registers 4-12 (inclusive) is not clamped, but..
+		// 3. If the texcoord control mask is enabled, the last 2 values are always 0 and 1!
+		const std::string reg_var = (dst.src_attr_reg_num < std::size(reg_table))? reg_table[dst.src_attr_reg_num] : "unk";
+		bool insert = true;
 
 		switch (dst.src_attr_reg_num)
 		{
 		case 0x00:
+		{
+			// WPOS
 			ret += reg_table[0];
-			properties.has_wpos_input = true;
+			insert = false;
 			break;
-		default:
-			if (dst.src_attr_reg_num < std::size(reg_table))
+		}
+		case 0x01:
+		case 0x02:
+		{
+			// COL0, COL1
+			ret += "_saturate(" + reg_var + ")";
+			apply_precision_modifier = false;
+			break;
+		}
+		case 0x03:
+		{
+			// FOGC
+			// TODO: Confirm if precision modifiers affect this one
+			ret += reg_var;
+			break;
+		}
+		case 0x4:
+		case 0x5:
+		case 0x6:
+		case 0x7:
+		case 0x8:
+		case 0x9:
+		case 0xA:
+		case 0xB:
+		case 0xC:
+		case 0xD:
+		{
+			// TEX0 - TEX9
+			// Texcoord mask seems to reset the last 2 arguments to 0 and 1 if set
+			if (m_prog.texcoord_is_2d(dst.src_attr_reg_num - 4))
 			{
-				ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[dst.src_attr_reg_num]);
+				ret += getFloatTypeName(4) + "(" + reg_var + ".x, " + reg_var + ".y, 0., 1.)";
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
-				ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), "unk");
-				Emu.Pause();
+				ret += reg_var;
 			}
 			break;
 		}
+		default:
+		{
+			// SSA (winding direction register)
+			// UNK
+			if (reg_var == "unk")
+			{
+				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
+			}
+
+			ret += reg_var;
+			apply_precision_modifier = false;
+			break;
+		}
+		}
+
+		if (insert)
+		{
+			m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_var);
+		}
+
+		properties.in_register_mask |= (1 << dst.src_attr_reg_num);
 	}
 	break;
 

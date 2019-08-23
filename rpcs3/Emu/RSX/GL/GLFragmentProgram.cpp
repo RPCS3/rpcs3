@@ -48,7 +48,6 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 {
-	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
 	std::vector<std::string> inputs_to_declare;
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
@@ -58,40 +57,27 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 			//ssa is defined in the program body and is not a varying type
 			if (PI.name == "ssa") continue;
 
+			const auto reg_location = gl::get_varying_register_location(PI.name);
 			std::string var_name = PI.name;
 
-			if (two_sided_enabled)
+			if (var_name == "fogc")
 			{
-				if (m_prog.back_color_diffuse_output && var_name == "diff_color")
-					var_name = "back_diff_color";
-
-				if (m_prog.back_color_specular_output && var_name == "spec_color")
-					var_name = "back_spec_color";
+				var_name = "fog_c";
+			}
+			else if (m_prog.two_sided_lighting)
+			{
+				if (var_name == "diff_color")
+				{
+					var_name = "diff_color0";
+				}
+				else if (var_name == "spec_color")
+				{
+					var_name = "spec_color0";
+				}
 			}
 
-			if (var_name == "fogc")
-				var_name = "fog_c";
-
-			inputs_to_declare.push_back(var_name);
+			OS << "layout(location=" << reg_location << ") in vec4 " << var_name << ";\n";
 		}
-	}
-
-	if (two_sided_enabled)
-	{
-		if (m_prog.front_color_diffuse_output && m_prog.back_color_diffuse_output)
-		{
-			inputs_to_declare.emplace_back("front_diff_color");
-		}
-
-		if (m_prog.front_color_specular_output && m_prog.back_color_specular_output)
-		{
-			inputs_to_declare.emplace_back("front_spec_color");
-		}
-	}
-
-	for (auto &name: inputs_to_declare)
-	{
-		OS << "layout(location=" << gl::get_varying_register_location(name) << ") in vec4 " << name << ";\n";
 	}
 }
 
@@ -201,7 +187,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
 	properties2.require_depth_conversion = m_prog.redirected_textures != 0;
-	properties2.require_wpos = properties.has_wpos_input;
+	properties2.require_wpos = !!(properties.in_register_mask & in_wpos);
 	properties2.require_texture_ops = properties.has_tex_op;
 	properties2.require_shadow_ops = m_prog.shadow_textures != 0;
 	properties2.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
@@ -213,18 +199,8 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
-	//TODO: Generate input mask during parse stage to avoid this
-	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
-	{
-		for (const ParamItem& PI : PT.items)
-		{
-			if (PI.name == "fogc")
-			{
-				glsl::insert_fog_declaration(OS);
-				break;
-			}
-		}
-	}
+	if (properties.in_register_mask & in_fogc)
+		glsl::insert_fog_declaration(OS);
 
 	const std::set<std::string> output_values =
 	{
@@ -267,58 +243,25 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	if (m_parr.HasParam(PF_PARAM_IN, "vec4", "ssa"))
 		OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
 
-	if (properties.has_wpos_input)
+	if (properties.in_register_mask & in_wpos)
 		OS << "	vec4 wpos = get_wpos();\n";
 
-	bool two_sided_enabled = m_prog.front_back_color_enabled && (m_prog.back_color_diffuse_output || m_prog.back_color_specular_output);
+	if (properties.in_register_mask & in_ssa)
+		OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
 
-	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
+	if (properties.in_register_mask & in_wpos)
+		OS << "	vec4 wpos = get_wpos();\n";
+
+	if (properties.in_register_mask & in_fogc)
+		OS << "	vec4 fogc = fetch_fog_value(fog_mode);\n";
+
+	if (m_prog.two_sided_lighting)
 	{
-		for (const ParamItem& PI : PT.items)
-		{
-			if (two_sided_enabled)
-			{
-				if (PI.name == "spec_color")
-				{
-					if (m_prog.back_color_specular_output)
-					{
-						if (m_prog.back_color_specular_output && m_prog.front_color_specular_output)
-						{
-							OS << "	vec4 spec_color = gl_FrontFacing ? front_spec_color : back_spec_color;\n";
-						}
-						else
-						{
-							OS << "	vec4 spec_color = back_spec_color;\n";
-						}
-					}
+		if (properties.in_register_mask & in_diff_color)
+			OS << "	vec4 diff_color = gl_FrontFacing ? diff_color1 : diff_color0;\n";
 
-					continue;
-				}
-
-				else if (PI.name == "diff_color")
-				{
-					if (m_prog.back_color_diffuse_output)
-					{
-						if (m_prog.back_color_diffuse_output && m_prog.front_color_diffuse_output)
-						{
-							OS << "	vec4 diff_color = gl_FrontFacing ? front_diff_color : back_diff_color;\n";
-						}
-						else
-						{
-							OS << "	vec4 diff_color = back_diff_color;\n";
-						}
-					}
-
-					continue;
-				}
-			}
-
-			if (PI.name == "fogc")
-			{
-				OS << "	vec4 fogc = fetch_fog_value(fog_mode);\n";
-				continue;
-			}
-		}
+		if (properties.in_register_mask & in_spec_color)
+			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color1 : spec_color0;\n";
 	}
 }
 
