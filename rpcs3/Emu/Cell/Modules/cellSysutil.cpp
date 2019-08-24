@@ -45,14 +45,15 @@ struct sysutil_cb_manager
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	const auto cbm = g_fxo->get<sysutil_cb_manager>();
 
 	cbm->registered.push(std::move(cb));
 }
 
 extern void sysutil_send_system_cmd(u64 status, u64 param)
 {
-	if (const auto cbm = fxm::get<sysutil_cb_manager>())
+	// May be nullptr if emulation is stopped
+	if (const auto cbm = g_fxo->get<sysutil_cb_manager>())
 	{
 		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
@@ -251,7 +252,7 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	const auto cbm = g_fxo->get<sysutil_cb_manager>();
 
 	for (auto&& func : cbm->registered.pop_all())
 	{
@@ -279,7 +280,7 @@ s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm:
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	const auto cbm = g_fxo->get<sysutil_cb_manager>();
 
 	cbm->callbacks[slot].store({func, userdata});
 
@@ -295,7 +296,7 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	const auto cbm = g_fxo->get<sysutil_cb_manager>();
 
 	cbm->callbacks[slot].store({});
 
