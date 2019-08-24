@@ -103,11 +103,12 @@ struct RsxDisplayInfo
 	be_t<u32> height;
 };
 
-struct SysRsxConfig
+struct lv2_rsx_config
 {
-	u32 rsx_event_port{ 0 };
-	u32 driverInfo{ 0 };
-	u32 rsx_context_addr{ 0 }; 
+	atomic_t<u32> state = 0;
+	u32 rsx_event_port = 0;
+	u32 driverInfo = 0;
+	u32 rsx_context_addr = 0;
 };
 
 // SysCalls
