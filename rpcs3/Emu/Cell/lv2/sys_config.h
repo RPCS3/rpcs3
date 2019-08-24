@@ -125,7 +125,10 @@ static_assert(sizeof(sys_config_padmanager_data_t) == 26);
  * Global (fxm-managed) sys_config state
  */
 
-class lv2_config {
+class lv2_config
+{
+	atomic_t<u32> m_state = 0;
+
 	// LV2 Config mutex
 	shared_mutex m_mutex;
 
@@ -133,7 +136,7 @@ class lv2_config {
 	std::unordered_map<u32, std::weak_ptr<lv2_config_service_event>> events;
 
 public:
-	void initialize() const;
+	void initialize();
 
 	// Service Events
 	void add_service_event(const std::shared_ptr<lv2_config_service_event>& event);
@@ -154,17 +157,6 @@ public:
 		}
 
 		return nullptr;
-	}
-
-	// Utilities
-	static std::shared_ptr<lv2_config> make()
-	{
-		return fxm::make<lv2_config>();
-	}
-
-	static std::shared_ptr<lv2_config> get()
-	{
-		return fxm::get<lv2_config>();
 	}
 };
 
@@ -395,7 +387,7 @@ public:
 	{
 		auto ev = std::make_shared<lv2_config_service_event>(std::forward<Args>(args)...);
 
-		lv2_config::get()->add_service_event(ev);
+		g_fxo->get<lv2_config>()->add_service_event(ev);
 
 		return std::move(ev);
 	}
@@ -403,7 +395,10 @@ public:
 	// Destructor
 	~lv2_config_service_event()
 	{
-		lv2_config::get()->remove_service_event(id);
+		if (auto global = g_fxo->get<lv2_config>())
+		{
+			global->remove_service_event(id);
+		}
 	}
 
 	// Notify queue that this event exists

@@ -72,8 +72,13 @@ void dump_buffer(std::string& out, const std::vector<u8>& buffer)
 
 
 // LV2 Config
-void lv2_config::initialize() const
+void lv2_config::initialize()
 {
+	if (m_state || !m_state.compare_and_swap_test(0, 1))
+	{
+		return;
+	}
+
 	// Register padmanager service, notifying vsh that a controller is connected
 	static const u8 hid_info[0x1a] = {
 		0x01, 0x01, //  2 unk
@@ -258,7 +263,8 @@ error_code sys_config_open(u32 equeue_hdl, vm::ptr<u32> out_config_hdl)
 	}
 
 	// Initialize lv2_config global state
-	if (auto global = lv2_config::make())
+	const auto global = g_fxo->get<lv2_config>();
+	if (true)
 	{
 		global->initialize();
 	}
@@ -301,7 +307,7 @@ error_code sys_config_get_service_event(u32 config_hdl, u32 event_id, vm::ptr<sy
 	}
 
 	// Find service_event object
-	const auto event = lv2_config::get()->find_event(event_id);
+	const auto event = g_fxo->get<lv2_config>()->find_event(event_id);
 	if (!event)
 	{
 		return CELL_ESRCH;
