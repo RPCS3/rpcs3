@@ -96,14 +96,8 @@ struct CellPadActParam
 	u8 reserved[6];
 };
 
-struct pad_t
+struct pad_info
 {
-	u32 max_connect;
+	atomic_t<u32> max_connect = 0;
 	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting;
-
-	pad_t(u32 max_connect)
-		: max_connect(max_connect)
-	{
-		port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
-	}
 };
