@@ -149,7 +149,7 @@ struct ppu_linkage_info
 };
 
 // Initialize static modules.
-static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link)
+static void ppu_initialize_modules(ppu_linkage_info* link)
 {
 	if (!link->modules.empty())
 	{
@@ -474,7 +474,7 @@ struct ppu_prx_module_info
 };
 
 // Load and register exports; return special exports found (nameless module)
-static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 exports_start, u32 exports_end)
+static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end)
 {
 	std::unordered_map<u32, u32> result;
 
@@ -631,7 +631,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 	return result;
 }
 
-static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, const std::shared_ptr<ppu_linkage_info>& link, u32 imports_start, u32 imports_end)
+static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
 {
 	std::unordered_map<u32, void*> result;
 
@@ -724,7 +724,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->get<ppu_linkage_info>();
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
@@ -1046,7 +1046,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	const auto _main = fxm::make<ppu_module>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->init<ppu_linkage_info>();
 
 	// TLS information
 	u32 tls_vaddr = 0;
@@ -1529,7 +1529,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	const auto ovlm = idm::make_ptr<lv2_obj, lv2_overlay>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->get<ppu_linkage_info>();
 
 	// Executable hash
 	sha1_context sha;
