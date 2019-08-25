@@ -109,8 +109,8 @@ after_build:
 
 - ps: | # package artifacts
     7z a -m0=LZMA2 -mx9 $env:BUILD .\bin\*
-    7z a -m0=LZMA2 -mx9 openssl_win64.7z C:\OpenSSL-Win64\bin\libeay32.dll `
-      C:\OpenSSL-Win64\bin\ssleay32.dll
+    7z a -m0=LZMA2 -mx9 openssl_win64.7z C:\OpenSSL-v111-Win64\bin\libcrypto-1_1-x64.dll `
+      C:\OpenSSL-v111-Win64\bin\libssl-1_1-x64.dll
     $env:FILESIZEMB = (Get-Item $env:BUILD).length/1MB
 
 - ps: | # generate sha256 hashes
