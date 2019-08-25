@@ -202,34 +202,55 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	if (properties.in_register_mask & in_fogc)
 		glsl::insert_fog_declaration(OS);
 
-	const std::set<std::string> output_values =
+	std::set<std::string> output_registers;
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
 	{
-		"r0", "r1", "r2", "r3", "r4",
-		"h0", "h2", "h4", "h6", "h8"
-	};
-
-	std::string parameters;
-	const auto half4 = getHalfTypeName(4);
-	for (auto &reg_name : output_values)
+		output_registers = { "r0", "r2", "r3", "r4" };
+	}
+	else
 	{
-		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
-		if (m_parr.HasParam(PF_PARAM_NONE, type, reg_name))
-		{
-			if (parameters.length())
-				parameters += ", ";
-
-			parameters += "inout " + type + " " + reg_name;
-		}
+		output_registers = { "h0", "h4", "h6", "h8" };
 	}
 
-	OS << "void fs_main(" << parameters << ")\n";
+	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	{
+		output_registers.insert("r1");
+	}
+
+	std::string registers;
+	std::string reg_type;
+	const auto half4 = getHalfTypeName(4);
+	for (auto &reg_name : output_registers)
+	{
+		const auto type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
+		if (LIKELY(reg_type == type))
+		{
+			registers += ", " + reg_name + " = " + type + "(0.)";
+		}
+		else
+		{
+			if (!registers.empty())
+				registers += ";\n";
+
+			registers += type + " " + reg_name + " = " + type + "(0.)";
+		}
+
+		reg_type = type;
+	}
+
+	if (!registers.empty())
+	{
+		OS << registers << ";\n";
+	}
+
+	OS << "void fs_main()\n";
 	OS << "{\n";
 
 	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
-		for (const ParamItem& PI : PT.items)
+		for (const auto& PI : PT.items)
 		{
-			if (output_values.find(PI.name) != output_values.end())
+			if (output_registers.find(PI.name) != output_registers.end())
 				continue;
 
 			OS << "	" << PT.type << " " << PI.name;
@@ -240,11 +261,8 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	if (m_parr.HasParam(PF_PARAM_IN, "vec4", "ssa"))
-		OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
-
-	if (properties.in_register_mask & in_wpos)
-		OS << "	vec4 wpos = get_wpos();\n";
+	if (properties.has_w_access)
+		OS << "	float in_w = (1. / gl_FragCoord.w);\n";
 
 	if (properties.in_register_mask & in_ssa)
 		OS << "	vec4 ssa = gl_FrontFacing ? vec4(1.) : vec4(-1.);\n";
@@ -267,34 +285,12 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 
 void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 {
-	const std::set<std::string> output_values =
-	{
-		"r0", "r1", "r2", "r3", "r4",
-		"h0", "h2", "h4", "h6", "h8"
-	};
-
 	OS << "}\n\n";
 
 	OS << "void main()\n";
 	OS << "{\n";
 
-	std::string parameters;
-	const auto half4 = getHalfTypeName(4);
-
-	for (auto &reg_name : output_values)
-	{
-		const std::string type = (reg_name[0] == 'r' || !device_props.has_native_half_support)? "vec4" : half4;
-		if (m_parr.HasParam(PF_PARAM_NONE, type, reg_name))
-		{
-			if (parameters.length())
-				parameters += ", ";
-
-			parameters += reg_name;
-			OS << "	" << type << " " << reg_name << " = " << type << "(0.);\n";
-		}
-	}
-
-	OS << "\n" << "	fs_main(" + parameters + ");\n\n";
+	OS << "\n" << "	fs_main();\n\n";
 
 	glsl::insert_rop(
 		OS,

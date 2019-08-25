@@ -524,7 +524,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		// NOTE: Hw testing showed the following:
 		// 1. Reading from registers 1 and 2 (COL0 and COL1) is clamped to (0, 1)
 		// 2. Reading from registers 4-12 (inclusive) is not clamped, but..
-		// 3. If the texcoord control mask is enabled, the last 2 values are always 0 and 1!
+		// 3. If the texcoord control mask is enabled, the last 2 values are always 0 and hpos.w!
 		const std::string reg_var = (dst.src_attr_reg_num < std::size(reg_table))? reg_table[dst.src_attr_reg_num] : "unk";
 		bool insert = true;
 
@@ -541,15 +541,30 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		case 0x02:
 		{
 			// COL0, COL1
-			ret += "_saturate(" + reg_var + ")";
-			apply_precision_modifier = false;
+			if (!src2.use_index_reg)
+			{
+				ret += "_saturate(" + reg_var + ")";
+				apply_precision_modifier = false;
+			}
+			else
+			{
+				// Raw access
+				ret += reg_var;
+			}
 			break;
 		}
 		case 0x03:
 		{
 			// FOGC
-			// TODO: Confirm if precision modifiers affect this one
-			ret += reg_var;
+			if (!src2.use_index_reg)
+			{
+				ret += reg_var;
+			}
+			else
+			{
+				// Raw access
+				ret += "fog_c";
+			}
 			break;
 		}
 		case 0x4:
@@ -567,7 +582,8 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			// Texcoord mask seems to reset the last 2 arguments to 0 and 1 if set
 			if (m_prog.texcoord_is_2d(dst.src_attr_reg_num - 4))
 			{
-				ret += getFloatTypeName(4) + "(" + reg_var + ".x, " + reg_var + ".y, 0., 1.)";
+				ret += getFloatTypeName(4) + "(" + reg_var + ".x, " + reg_var + ".y, 0., in_w)";
+				properties.has_w_access = true;
 			}
 			else
 			{
