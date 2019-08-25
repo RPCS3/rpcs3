@@ -240,8 +240,11 @@ namespace rsx
 				m_no_saves = true;
 				m_list->set_cancel_only(true);
 			}
-
-			m_list->select_entry(focused);
+			else
+			{
+				// Only select an entry if there are entries available
+				m_list->select_entry(focused);
+			}
 
 			static_cast<label*>(m_description.get())->auto_resize();
 
