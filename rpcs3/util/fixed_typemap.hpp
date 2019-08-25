@@ -26,7 +26,7 @@ namespace stx
 					// Don't overwrite if already exists
 					if (!ptr)
 					{
-						ptr = new T{};
+						ptr = new T();
 					}
 				}
 			}
