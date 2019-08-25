@@ -47,5 +47,8 @@ namespace gui
 
 		// Opens an image in a new window with original size
 		void show_windowed_image(const QImage& img, const QString& title = "");
+
+		// Loads the app icon from path and embeds it centered into an empty square icon
+		QIcon get_app_icon_from_path(const std::string& path, const std::string& title_id);
 	} // utils
 } // gui
