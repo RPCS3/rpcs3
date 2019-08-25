@@ -365,7 +365,7 @@ void Emulator::Init()
 #endif
 
 	// Initialize patch engine
-	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
+	g_fxo->init<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 
 	// Initialize progress dialog server (TODO)
 	if (g_progr.exchange("") == nullptr)
@@ -999,7 +999,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		}
 
 		// Load patches from different locations
-		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
+		g_fxo->get<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
 
 		// Mount all devices
 		const std::string emu_dir = GetEmuDir();
