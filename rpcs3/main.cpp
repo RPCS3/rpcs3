@@ -1,4 +1,4 @@
-﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <QApplication>
@@ -97,13 +97,14 @@ static semaphore<> s_qt_mutex{};
 	std::abort();
 }
 
-const char* ARG_NO_GUI = "no-gui";
+const char* ARG_HEADLESS = "headless";
 const char* ARG_HI_DPI = "hidpi";
 
 QCoreApplication* createApplication(int& argc, char* argv[])
 {
+	const std::string headless("--" + std::string(ARG_HEADLESS));
 	for (int i = 1; i < argc; ++i)
-		if (!strcmp(ARG_NO_GUI, argv[i]))
+		if (!strcmp(headless.c_str(), argv[i]))
 			return new headless_application(argc, argv);
 	return new gui_application(argc, argv);
 }
@@ -126,6 +127,8 @@ int main(int argc, char** argv)
 	s_qt_mutex.lock();
 
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
+	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
+	app->setApplicationName("RPCS3");
 
 	// Command line args
 	QCommandLineParser parser;
@@ -135,16 +138,13 @@ int main(int argc, char** argv)
 
 	const QCommandLineOption helpOption    = parser.addHelpOption();
 	const QCommandLineOption versionOption = parser.addVersionOption();
-	parser.addOption(QCommandLineOption(ARG_NO_GUI, "Run RPCS3 without the GUI."));
+	parser.addOption(QCommandLineOption(ARG_HEADLESS, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(ARG_HI_DPI, "Enables Qt High Dpi Scaling.", "enabled", "1"));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(versionOption) || parser.isSet(helpOption))
 		return 0;
-
-	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
-	app->setApplicationName("RPCS3");
 
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
@@ -158,9 +158,9 @@ int main(int argc, char** argv)
 
 		gui_app->Init();
 	}
-	else if (auto non_gui_app = qobject_cast<headless_application*>(app.data()))
+	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{
-		non_gui_app->Init();
+		headless_app->Init();
 	}
 
 #ifdef _WIN32
