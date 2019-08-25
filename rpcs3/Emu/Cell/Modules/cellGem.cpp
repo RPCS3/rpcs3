@@ -546,7 +546,7 @@ s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
 
 	if (g_cfg.io.move == move_handler::fake)
 	{
-		auto shared_data = fxm::get_always<gem_camera_shared>();
+		auto shared_data = g_fxo->get<gem_camera_shared>();
 
 		image_state->frame_timestamp = shared_data->frame_timestamp.load();
 		image_state->timestamp = image_state->frame_timestamp + 10;   // arbitrarily define 10 usecs of frame processing

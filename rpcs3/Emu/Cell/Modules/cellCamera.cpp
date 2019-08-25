@@ -1051,7 +1051,7 @@ s32 cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 		read->frame = g_camera->frame_num;
 		read->bytesread = g_camera->is_streaming ? get_video_buffer_size(g_camera->info) : 0;
 
-		auto shared_data = fxm::get_always<gem_camera_shared>();
+		auto shared_data = g_fxo->get<gem_camera_shared>();
 
 		shared_data->frame_timestamp.exchange(read->timestamp);
 	}
