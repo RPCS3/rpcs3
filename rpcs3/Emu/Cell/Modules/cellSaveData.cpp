@@ -208,6 +208,12 @@ static error_code select_and_delete(ppu_thread& ppu)
 			save_entries.erase(save_entries.cbegin() + selected);
 			selected = -1;
 
+			// Reset the focused index if the new list is empty
+			if (save_entries.empty())
+			{
+				focused = -1;
+			}
+
 			// Display success message (return value should be irrelevant here)
 			msg = "Successfully removed entry!\n\n" + info;
 			cellSaveData.success("%s", msg);

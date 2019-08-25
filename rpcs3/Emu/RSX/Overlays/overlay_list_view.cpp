@@ -56,7 +56,19 @@ namespace rsx
 
 		void list_view::update_selection()
 		{
-			auto current_element = m_items[m_selected_entry * 2].get();
+			if (m_selected_entry < 0)
+			{
+				return; // Ideally unreachable but it should still be possible to recover by user interaction.
+			}
+
+			const size_t current_index = static_cast<size_t>(m_selected_entry) * 2;
+
+			if (m_items.size() <= current_index)
+			{
+				return; // Ideally unreachable but it should still be possible to recover by user interaction.
+			}
+
+			auto current_element = m_items[current_index].get();
 
 			// Calculate bounds
 			auto min_y = current_element->y - y;
