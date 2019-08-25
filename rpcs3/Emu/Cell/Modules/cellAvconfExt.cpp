@@ -175,7 +175,7 @@ s32 cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	auto conf = fxm::get_always<rsx::avconf>();
+	auto conf = g_fxo->get<rsx::avconf>();
 	*gamma    = conf->gamma;
 
 	return CELL_OK;
@@ -222,7 +222,7 @@ s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	auto conf   = fxm::get_always<rsx::avconf>();
+	auto conf   = g_fxo->get<rsx::avconf>();
 	conf->gamma = gamma;
 
 	return CELL_OK;

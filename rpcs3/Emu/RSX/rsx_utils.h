@@ -148,9 +148,10 @@ namespace rsx
 		u8 format = 0;             // XRGB
 		u8 aspect = 0;             // AUTO
 		u32 scanline_pitch = 0;    // PACKED
-		f32 gamma = 1.f;           // NO GAMMA CORRECTION
+		atomic_t<f32> gamma = 1.f; // NO GAMMA CORRECTION
 		u32 resolution_x = 1280;   // X RES
 		u32 resolution_y = 720;    // Y RES
+		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
 		u32 get_compatible_gcm_format()
 		{
@@ -407,7 +408,7 @@ namespace rsx
 		const u32 log2_w = ceil_log2(width);
 		const u32 log2_h = ceil_log2(height);
 		const u32 log2_d = ceil_log2(depth);
-	
+
 		for (u32 z = 0; z < depth; ++z)
 		{
 			for (u32 y = 0; y < height; ++y)

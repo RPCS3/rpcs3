@@ -492,7 +492,7 @@ void GLGSRender::end()
 		{
 			if (rsx::method_registers.current_draw_clause.execute_pipeline_dependencies() & rsx::vertex_base_changed)
 			{
-				// Rebase vertex bases instead of 
+				// Rebase vertex bases instead of
 				for (auto &info : m_vertex_layout.interleaved_blocks)
 				{
 					const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
@@ -1314,7 +1314,7 @@ void GLGSRender::load_program_env()
 		if (update_fragment_env) m_fragment_env_buffer->reserve_storage_on_heap(128);
 		if (update_vertex_env) m_vertex_env_buffer->reserve_storage_on_heap(256);
 		if (update_fragment_texture_env) m_texture_parameters_buffer->reserve_storage_on_heap(256);
-		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));		
+		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));
 		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
 	}
 
@@ -1564,12 +1564,13 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	u32 buffer_pitch = display_buffers[buffer].pitch;
 
 	u32 av_format;
-	const auto avconfig = fxm::get<rsx::avconf>();
+	const auto avconfig = g_fxo->get<rsx::avconf>();
 
-	if (avconfig)
+	if (avconfig->state)
 	{
 		av_format = avconfig->get_compatible_gcm_format();
-		if (!buffer_pitch) buffer_pitch = buffer_width * avconfig->get_bpp();
+		if (!buffer_pitch)
+			buffer_pitch = buffer_width * avconfig->get_bpp();
 
 		buffer_width = std::min(buffer_width, avconfig->resolution_x);
 		buffer_height = std::min(buffer_height, avconfig->resolution_y);
@@ -1577,7 +1578,8 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	else
 	{
 		av_format = CELL_GCM_TEXTURE_A8R8G8B8;
-		if (!buffer_pitch) buffer_pitch = buffer_width * 4;
+		if (!buffer_pitch)
+			buffer_pitch = buffer_width * 4;
 	}
 
 	// Disable scissor test (affects blit, clear, etc)
@@ -1648,7 +1650,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 					// TODO: Should emit only once to avoid flooding the log file
 					// TODO: Take AA scaling into account
 					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
-						display_buffers[buffer].width, display_buffers[buffer].height, avconfig ? avconfig->resolution_x : 0, avconfig ? avconfig->resolution_y : 0,
+						display_buffers[buffer].width, display_buffers[buffer].height, avconfig->state * avconfig->resolution_x, avconfig->state * avconfig->resolution_y,
 						render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
 
 					buffer_width = render_target_texture->width();
@@ -1705,7 +1707,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
 
-		if (g_cfg.video.full_rgb_range_output && (!avconfig || avconfig->gamma == 1.f))
+		if (g_cfg.video.full_rgb_range_output && avconfig->gamma == 1.f)
 		{
 			// Blit source image to the screen
 			m_flip_fbo.recreate();
@@ -1717,7 +1719,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		}
 		else
 		{
-			const f32 gamma = avconfig ? avconfig->gamma : 1.f;
+			const f32 gamma = avconfig->gamma;
 			const bool limited_range = !g_cfg.video.full_rgb_range_output;
 
 			gl::screen.bind();
