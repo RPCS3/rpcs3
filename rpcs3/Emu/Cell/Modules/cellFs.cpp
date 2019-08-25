@@ -922,8 +922,6 @@ s32 cellFsAioInit(vm::cptr<char> mount_point)
 	cellFs.warning("cellFsAioInit(mount_point=%s)", mount_point);
 
 	// TODO: create AIO thread (if not exists) for specified mount point
-	const auto m = fxm::make<fs_aio_manager>();
-
 	fmt::throw_exception("cellFsAio disabled, use LLE.");
 
 	return CELL_OK;
@@ -946,7 +944,7 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
-	const auto m = fxm::get<fs_aio_manager>();
+	const auto m = g_fxo->get<fs_aio_manager>();
 
 	if (!m)
 	{
@@ -970,7 +968,7 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
-	const auto m = fxm::get<fs_aio_manager>();
+	const auto m = g_fxo->get<fs_aio_manager>();
 
 	if (!m)
 	{
