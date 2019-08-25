@@ -292,6 +292,9 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
+				// Wait for rescheduling
+				ppu.check_state();
+
 				std::lock_guard lock(queue->mutex);
 
 				if (!queue->unqueue(queue->sq, &ppu))

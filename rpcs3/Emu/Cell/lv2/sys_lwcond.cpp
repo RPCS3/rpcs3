@@ -325,6 +325,9 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
+				// Wait for rescheduling
+				ppu.check_state();
+
 				std::lock_guard lock(cond->mutex);
 
 				if (!cond->unqueue(cond->sq, &ppu))
