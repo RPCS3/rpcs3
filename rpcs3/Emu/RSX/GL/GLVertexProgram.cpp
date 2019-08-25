@@ -129,20 +129,37 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);
 
-	std::string parameters;
-	for (int i = 0; i < 16; ++i)
+	// Declare global registers with optional initialization
+	std::string registers;
+	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{
-		std::string reg_name = "dst_reg" + std::to_string(i);
-		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", reg_name))
+		for (auto &PI : vec4Types->items)
 		{
-			if (parameters.length())
-				parameters += ", ";
+			if (registers.length())
+				registers += ", ";
+			else
+				registers = "vec4 ";
 
-			parameters += "inout vec4 " + reg_name;
+			registers += PI.name;
+
+			if (!PI.value.empty())
+			{
+				printf("Value=%s\n", PI.value.c_str());
+				// Simplify default initialization
+				if (PI.value == "vec4(0.0, 0.0, 0.0, 0.0)")
+					registers += " = vec4(0.)";
+				else
+					registers += " = " + PI.value;
+			}
 		}
 	}
 
-	OS << "void vs_main(" << parameters << ")\n";
+	if (!registers.empty())
+	{
+		OS << registers << ";\n";
+	}
+
+	OS << "void vs_main()\n";
 	OS << "{\n";
 
 	//Declare temporary registers, ignoring those mapped to outputs
@@ -177,33 +194,7 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main ()\n";
 	OS << "{\n";
 
-	std::string parameters;
-
-	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
-	{
-		for (int i = 0; i < 16; ++i)
-		{
-			std::string reg_name = "dst_reg" + std::to_string(i);
-			for (auto &PI : vec4Types->items)
-			{
-				if (reg_name == PI.name)
-				{
-					if (parameters.length())
-						parameters += ", ";
-
-					parameters += reg_name;
-					OS << "	vec4 " << reg_name;
-
-					if (!PI.value.empty())
-						OS << "= " << PI.value;
-
-					OS << ";\n";
-				}
-			}
-		}
-	}
-
-	OS << "\n" << "	vs_main(" << parameters << ");\n\n";
+	OS << "\n" << "	vs_main();\n\n";
 
 	for (auto &i : reg_table)
 	{

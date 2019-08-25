@@ -281,6 +281,7 @@ public:
 		bool has_tex_op = false;
 		bool has_divsq = false;
 		bool has_clamp = false;
+		bool has_w_access = false;
 	}
 	properties;
 
