@@ -1445,11 +1445,14 @@ extern void ppu_initialize(const ppu_module& info)
 
 	struct jit_core_allocator
 	{
-		::semaphore<0x7fffffff> sem;
+		const s32 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
 
-		jit_core_allocator(s32 arg)
-			: sem(arg)
+		// Initialize global semaphore with the max number of threads
+		::semaphore<0x7fffffff> sem{std::max<s32>(thread_count, 1)};
+
+		static s32 limit()
 		{
+			return static_cast<s32>(std::thread::hardware_concurrency());
 		}
 	};
 
@@ -1462,10 +1465,8 @@ extern void ppu_initialize(const ppu_module& info)
 	// Compiler mutex (global)
 	static shared_mutex jmutex;
 
-	// Initialize global semaphore with the max number of threads
-	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
-	s32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
-	const auto jcores = fxm::get_always<jit_core_allocator>(std::max<s32>(thread_count, 1));
+	// Get jit core allocator instance
+	const auto jcores = g_fxo->get<jit_core_allocator>();
 
 	// Worker threads
 	std::vector<std::thread> jthreads;
