@@ -12,6 +12,7 @@
 #include "rsx_methods.h"
 #include "rsx_utils.h"
 #include "Overlays/overlays.h"
+#include "Common/texture_cache_utils.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
@@ -418,8 +419,8 @@ namespace rsx
 
 	protected:
 		std::thread::id m_rsx_thread;
-		atomic_t<bool> m_rsx_thread_exiting{true};
-		s32 m_return_addr{-1}, restore_ret{-1};
+		atomic_t<bool> m_rsx_thread_exiting{ true };
+
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
 
@@ -433,6 +434,7 @@ namespace rsx
 		// FIFO
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		FIFO::flattening_helper m_flattener;
+		s32 m_return_addr{ -1 }, restore_ret{ -1 };
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -605,7 +607,7 @@ namespace rsx
 		virtual void flip(int buffer, bool emu_flip = false) = 0;
 		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
-		virtual void on_invalidate_memory_range(const address_range & /*range*/) {}
+		virtual void on_invalidate_memory_range(const address_range & /*range*/, rsx::invalidation_cause) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		// zcull
@@ -661,18 +663,6 @@ namespace rsx
 	private:
 		shared_mutex m_mtx_task;
 
-		struct internal_task_entry
-		{
-			std::function<bool()> callback;
-			//std::promise<void> promise;
-
-			internal_task_entry(std::function<bool()> callback) : callback(std::move(callback))
-			{
-			}
-		};
-
-		std::deque<internal_task_entry> m_internal_tasks;
-		void do_internal_task();
 		void handle_emu_flip(u32 buffer);
 		void handle_invalidated_memory_range();
 
@@ -732,7 +722,7 @@ namespace rsx
 		/**
 		 * Notify to check internal state during semaphore wait
 		 */
-		void on_semaphore_acquire_wait() { do_local_task(FIFO_state::lock_wait); }
+		virtual void on_semaphore_acquire_wait() {}
 
 		/**
 		 * Copy rtt values to buffer.
@@ -767,7 +757,10 @@ namespace rsx
 		void pause();
 		void unpause();
 
-		//Get RSX approximate load in %
+		// Get RSX approximate load in %
 		u32 get_load();
+
+		// Returns true if the current thread is the active RSX thread
+		bool is_current_thread() const { return std::this_thread::get_id() == m_rsx_thread; }
 	};
 }
