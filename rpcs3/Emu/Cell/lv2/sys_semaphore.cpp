@@ -131,6 +131,9 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
+				// Wait for rescheduling
+				ppu.check_state();
+
 				std::lock_guard lock(sem->mutex);
 
 				if (!sem->unqueue(sem->sq, &ppu))
