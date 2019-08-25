@@ -314,6 +314,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::inval: return {CELL_EINVAL, path};
 		case fs::error::noent: return {CELL_ENOENT, path};
 		default: sys_fs.error("sys_fs_open(): unknown error %s", error);
 		}
