@@ -294,6 +294,12 @@ struct flush_request_task
 	}
 };
 
+enum flush_queue_state : u32
+{
+	ok = 0,
+	deadlock = 1
+};
+
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
@@ -404,6 +410,11 @@ private:
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
 
+	// Offloader thread deadlock recovery
+	rsx::atomic_bitmask_t<flush_queue_state> m_queue_status;
+	utils::address_range m_offloader_fault_range;
+	rsx::invalidation_cause m_offloader_fault_cause;
+
 	bool m_render_pass_open = false;
 	u64  m_current_renderpass_key = 0;
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
@@ -488,7 +499,8 @@ protected:
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range &range) override;
+	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
+	void on_semaphore_acquire_wait() override;
 
 	bool on_decompiler_task() override;
 };

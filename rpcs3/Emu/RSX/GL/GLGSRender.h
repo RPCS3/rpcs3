@@ -327,8 +327,6 @@ private:
 	shared_mutex queue_guard;
 	std::list<work_item> work_queue;
 
-	std::thread::id m_thread_id;
-
 	GLProgramBuffer m_prog_buffer;
 	draw_context_t m_decompiler_context;
 
@@ -397,8 +395,9 @@ protected:
 	void do_local_task(rsx::FIFO_state state) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range &range) override;
+	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
 	void notify_tile_unbound(u32 tile) override;
+	void on_semaphore_acquire_wait() override;
 
 	std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() override;
 	std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() override;

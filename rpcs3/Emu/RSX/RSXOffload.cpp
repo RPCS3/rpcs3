@@ -3,6 +3,8 @@
 #include "Common/BufferUtils.h"
 #include "Emu/System.h"
 #include "RSXOffload.h"
+#include "RSXThread.h"
+#include "rsx_utils.h"
 
 #include <thread>
 #include <atomic>
@@ -27,6 +29,9 @@ namespace rsx
 				return;
 			}
 
+			// Register thread id
+			m_thread_id = std::this_thread::get_id();
+
 			if (g_cfg.core.thread_scheduler_enabled)
 			{
 				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
@@ -36,22 +41,21 @@ namespace rsx
 			{
 				if (m_enqueued_count.load() != m_processed_count)
 				{
-					for (auto slice = m_work_queue.pop_all(); slice; slice.pop_front())
+					for (m_current_job = m_work_queue.pop_all(); m_current_job; m_current_job.pop_front())
 					{
-						auto task = *slice;
-						switch (task.type)
+						switch (m_current_job->type)
 						{
 						case raw_copy:
-							memcpy(task.dst, task.src, task.length);
+							memcpy(m_current_job->dst, m_current_job->src, m_current_job->length);
 							break;
 						case vector_copy:
-							memcpy(task.dst, task.opt_storage.data(), task.length);
+							memcpy(m_current_job->dst, m_current_job->opt_storage.data(), m_current_job->length);
 							break;
 						case index_emulate:
 							write_index_array_for_non_indexed_non_native_primitive_to_buffer(
-								reinterpret_cast<char*>(task.dst),
-								static_cast<rsx::primitive_type>(task.aux_param0),
-								task.length);
+								reinterpret_cast<char*>(m_current_job->dst),
+								static_cast<rsx::primitive_type>(m_current_job->aux_param0),
+								m_current_job->length);
 							break;
 						default:
 							ASSUME(0);
@@ -116,6 +120,11 @@ namespace rsx
 	}
 
 	// Synchronization
+	bool dma_manager::is_current_thread() const
+	{
+		return (std::this_thread::get_id() == m_thread_id);
+	}
+
 	void dma_manager::sync()
 	{
 		if (LIKELY(m_enqueued_count.load() == m_processed_count))
@@ -124,13 +133,76 @@ namespace rsx
 			return;
 		}
 
-		while (m_enqueued_count.load() != m_processed_count)
-			_mm_pause();
+		if (auto rsxthr = get_current_renderer(); rsxthr->is_current_thread())
+		{
+			if (m_mem_fault_flag)
+			{
+				// Abort if offloader is in recovery mode
+				return;
+			}
+
+			while (m_enqueued_count.load() != m_processed_count)
+			{
+				rsxthr->on_semaphore_acquire_wait();
+				_mm_pause();
+			}
+		}
+		else
+		{
+			while (m_enqueued_count.load() != m_processed_count)
+				_mm_pause();
+		}
 	}
 
 	void dma_manager::join()
 	{
 		m_worker_state = thread_state::finished;
 		sync();
+	}
+
+	void dma_manager::set_mem_fault_flag()
+	{
+		verify("Access denied" HERE), is_current_thread();
+		m_mem_fault_flag.release(true);
+	}
+
+	void dma_manager::clear_mem_fault_flag()
+	{
+		verify("Access denied" HERE), is_current_thread();
+		m_mem_fault_flag.release(false);
+	}
+
+	// Fault recovery
+	utils::address_range dma_manager::get_fault_range(bool writing) const
+	{
+		verify(HERE), m_current_job;
+
+		void *address = nullptr;
+		u32 range = m_current_job->length;
+
+		switch (m_current_job->type)
+		{
+		case raw_copy:
+			address = (writing) ? m_current_job->dst : m_current_job->src;
+			break;
+		case vector_copy:
+			verify(HERE), writing;
+			address = m_current_job->dst;
+			break;
+		case index_emulate:
+			verify(HERE), writing;
+			address = m_current_job->dst;
+			range = get_index_count(static_cast<rsx::primitive_type>(m_current_job->aux_param0), m_current_job->length);
+			break;
+		default:
+			ASSUME(0);
+			fmt::throw_exception("Unreachable" HERE);
+		}
+
+		const uintptr_t addr = uintptr_t(address);
+		const uintptr_t base = uintptr_t(vm::g_base_addr);
+
+		verify(HERE), addr > base;
+		return utils::address_range::start_length(u32(addr - base), range);
 	}
 }

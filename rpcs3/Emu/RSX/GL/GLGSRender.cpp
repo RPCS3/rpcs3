@@ -895,7 +895,6 @@ void GLGSRender::on_init_thread()
 	m_video_output_pass.create();
 
 	m_gl_texture_cache.initialize();
-	m_thread_id = std::this_thread::get_id();
 
 	if (!supports_native_ui)
 	{
@@ -1818,7 +1817,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	const bool can_flush = (std::this_thread::get_id() == m_thread_id);
+	const bool can_flush = (std::this_thread::get_id() == m_rsx_thread);
 	const rsx::invalidation_cause cause =
 		is_writing ? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		           : (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
@@ -1845,20 +1844,27 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void GLGSRender::on_invalidate_memory_range(const utils::address_range &range)
+void GLGSRender::on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause)
 {
-	//Discard all memory in that range without bothering with writeback (Force it for strict?)
 	gl::command_context cmd{ gl_state };
-	auto data = std::move(m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::unmap));
+	auto data = std::move(m_gl_texture_cache.invalidate_range(cmd, range, cause));
 	AUDIT(data.empty());
 
-	if (data.violation_handled)
+	if (cause == rsx::invalidation_cause::unmap && data.violation_handled)
 	{
 		m_gl_texture_cache.purge_unreleased_sections();
 		{
 			std::lock_guard lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
 		}
+	}
+}
+
+void GLGSRender::on_semaphore_acquire_wait()
+{
+	if (!work_queue.empty())
+	{
+		do_local_task(rsx::FIFO_state::lock_wait);
 	}
 }
 

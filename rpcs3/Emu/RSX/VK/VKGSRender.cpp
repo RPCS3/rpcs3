@@ -662,10 +662,29 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (result.num_flushable > 0)
 	{
-		const bool is_rsxthr = std::this_thread::get_id() == m_rsx_thread;
-		bool has_queue_ref = false;
+		if (rsx::g_dma_manager.is_current_thread())
+		{
+			// The offloader thread cannot handle flush requests
+			verify(HERE), m_queue_status.load() == flush_queue_state::ok;
 
-		if (!is_rsxthr)
+			m_offloader_fault_range = rsx::g_dma_manager.get_fault_range(is_writing);
+			m_offloader_fault_cause = (is_writing) ? rsx::invalidation_cause::write : rsx::invalidation_cause::read;
+
+			rsx::g_dma_manager.set_mem_fault_flag();
+			m_queue_status |= flush_queue_state::deadlock;
+
+			// Wait for deadlock to clear
+			while (m_queue_status & flush_queue_state::deadlock)
+			{
+				_mm_pause();
+			}
+
+			rsx::g_dma_manager.clear_mem_fault_flag();
+			return true;
+		}
+
+		bool has_queue_ref = false;
+		if (!is_current_thread())
 		{
 			//Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
 			vm::temporary_unlock();
@@ -703,20 +722,28 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void VKGSRender::on_invalidate_memory_range(const utils::address_range &range)
+void VKGSRender::on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause)
 {
 	std::lock_guard lock(m_secondary_cb_guard);
 
-	auto data = std::move(m_texture_cache.invalidate_range(m_secondary_command_buffer, range, rsx::invalidation_cause::unmap));
+	auto data = std::move(m_texture_cache.invalidate_range(m_secondary_command_buffer, range, cause));
 	AUDIT(data.empty());
 
-	if (data.violation_handled)
+	if (cause == rsx::invalidation_cause::unmap && data.violation_handled)
 	{
 		m_texture_cache.purge_unreleased_sections();
 		{
 			std::lock_guard lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
 		}
+	}
+}
+
+void VKGSRender::on_semaphore_acquire_wait()
+{
+	if (m_flush_requests.pending() || m_queue_status & flush_queue_state::deadlock)
+	{
+		do_local_task(rsx::FIFO_state::lock_wait);
 	}
 }
 
@@ -2326,16 +2353,28 @@ void VKGSRender::frame_context_cleanup(frame_context_t *ctx, bool free_resources
 
 void VKGSRender::do_local_task(rsx::FIFO_state state)
 {
+	if (m_queue_status & flush_queue_state::deadlock)
+	{
+		// Clear offloader deadlock
+		// NOTE: It is not possible to handle regular flush requests before this is cleared
+		// NOTE: This may cause graphics corruption due to unsynchronized modification
+		flush_command_queue();
+		on_invalidate_memory_range(m_offloader_fault_range, m_offloader_fault_cause);
+		m_queue_status.clear(flush_queue_state::deadlock);
+	}
+
 	if (m_flush_requests.pending())
 	{
-		std::lock_guard lock(m_flush_queue_mutex);
+		if (m_flush_queue_mutex.try_lock())
+		{
+			// TODO: Determine if a hard sync is necessary
+			// Pipeline barriers later may do a better job synchronizing than wholly stalling the pipeline
+			flush_command_queue();
 
-		//TODO: Determine if a hard sync is necessary
-		//Pipeline barriers later may do a better job synchronizing than wholly stalling the pipeline
-		flush_command_queue();
-
-		m_flush_requests.clear_pending_flag();
-		m_flush_requests.consumer_wait();
+			m_flush_requests.clear_pending_flag();
+			m_flush_requests.consumer_wait();
+			m_flush_queue_mutex.unlock();
+		}
 	}
 	else if (!in_begin_end && state != rsx::FIFO_state::lock_wait)
 	{

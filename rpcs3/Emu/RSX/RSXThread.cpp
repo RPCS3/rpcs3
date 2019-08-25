@@ -917,27 +917,6 @@ namespace rsx
 		fmt::throw_exception("ill-formed draw command" HERE);
 	}
 
-	void thread::do_internal_task()
-	{
-		if (m_internal_tasks.empty())
-		{
-			std::this_thread::yield();
-		}
-		else
-		{
-			fmt::throw_exception("Disabled" HERE);
-			//std::lock_guard lock(m_mtx_task);
-
-			//internal_task_entry &front = m_internal_tasks.front();
-
-			//if (front.callback())
-			//{
-			//	front.promise.set_value();
-			//	m_internal_tasks.pop_front();
-			//}
-		}
-	}
-
 	void thread::do_local_task(FIFO_state state)
 	{
 		if (async_flip_requested & flip_request::emu_requested)
@@ -2465,7 +2444,7 @@ namespace rsx
 		if (!m_invalidated_memory_range.valid())
 			return;
 
-		on_invalidate_memory_range(m_invalidated_memory_range);
+		on_invalidate_memory_range(m_invalidated_memory_range, rsx::invalidation_cause::unmap);
 		m_invalidated_memory_range.invalidate();
 	}
 
