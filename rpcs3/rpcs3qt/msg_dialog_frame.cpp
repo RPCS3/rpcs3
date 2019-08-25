@@ -161,7 +161,7 @@ void msg_dialog_frame::Close(bool success)
 	}
 }
 
-msg_dialog_frame::msg_dialog_frame(QWindow* taskbarTarget) : m_taskbarTarget(taskbarTarget) {}
+msg_dialog_frame::msg_dialog_frame() {}
 
 msg_dialog_frame::~msg_dialog_frame()
 {

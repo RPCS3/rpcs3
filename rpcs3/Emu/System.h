@@ -213,7 +213,7 @@ struct EmuCallbacks
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
-	std::function<void()> exit;
+	std::function<void(bool)> exit; // (force_quit) close RPCS3
 	std::function<void(const std::string&)> reset_pads;
 	std::function<void(bool)> enable_pads;
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit

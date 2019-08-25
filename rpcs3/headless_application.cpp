@@ -9,8 +9,10 @@ headless_application::headless_application(int& argc, char** argv) : QCoreApplic
 {
 }
 
-void headless_application::Init()
+void headless_application::Init(const bool show_gui)
 {
+	Q_UNUSED(show_gui);
+
 	// Force init the emulator
 	InitializeEmulator("1", true); // TODO: get user from cli args if possible
 
@@ -32,9 +34,12 @@ void headless_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.exit = [this]()
+	callbacks.exit = [this](bool force_quit)
 	{
-		quit();
+		if (force_quit)
+		{
+			quit();
+		}
 	};
 	callbacks.call_after = [=](std::function<void()> func)
 	{

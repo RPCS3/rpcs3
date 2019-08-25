@@ -8,10 +8,6 @@
 #include <QDesktopWidget>
 #include <QMimeData>
 
-#ifdef WITH_DISCORD_RPC
-#include "_discord_utils.h"
-#endif
-
 #include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
@@ -66,9 +62,6 @@ main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_
 main_window::~main_window()
 {
 	delete ui;
-#ifdef WITH_DISCORD_RPC
-	discord::shutdown();
-#endif
 }
 
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
@@ -186,50 +179,6 @@ QIcon main_window::GetAppIcon()
 	return m_appIcon;
 }
 
-// loads the appIcon from path and embeds it centered into an empty square icon
-void main_window::SetAppIconFromPath(const std::string& path, const std::string& title_id)
-{
-	// get Icon for the gs_frame from path. this handles presumably all possible use cases
-	const QString qpath = qstr(path);
-	const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
-
-	for (const std::string& pth : path_list)
-	{
-		if (!fs::is_dir(pth))
-		{
-			continue;
-		}
-
-		const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
-		const std::string ico     = sfo_dir + "/ICON0.PNG";
-		if (fs::is_file(ico))
-		{
-			// load the image from path. It will most likely be a rectangle
-			QImage source = QImage(qstr(ico));
-			int edgeMax   = std::max(source.width(), source.height());
-
-			// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
-			QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
-			QImage dest           = QImage(edgeMax, edgeMax, format);
-			dest.fill(QColor("transparent"));
-
-			// get the location to draw the source image centered within the dest image.
-			QPoint destPos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2) : QPoint((source.height() - source.width()) / 2, 0);
-
-			// Paint the source into/over the dest
-			QPainter painter(&dest);
-			painter.drawImage(destPos, source);
-			painter.end();
-
-			// set Icon
-			m_appIcon = QIcon(QPixmap::fromImage(dest));
-			return;
-		}
-	}
-	// if nothing was found reset the icon to default
-	m_appIcon = QApplication::windowIcon();
-}
-
 void main_window::ResizeIcons(int index)
 {
 	if (ui->sizeSlider->value() != index)
@@ -289,7 +238,8 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 		}
 	}
 
-	SetAppIconFromPath(path, title_id);
+	m_appIcon = gui::utils::get_app_icon_from_path(path, title_id);
+
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
@@ -844,14 +794,6 @@ void main_window::OnEmuRun()
 	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
-
-#ifdef WITH_DISCORD_RPC
-	// Discord Rich Presence Integration
-	if (guiSettings->GetValue(gui::m_richPresence).toBool())
-	{
-		discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
-	}
-#endif
 }
 
 void main_window::OnEmuResume()
@@ -910,14 +852,6 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 	ui->actionManage_Users->setEnabled(true);
-
-#ifdef WITH_DISCORD_RPC
-	// Discord Rich Presence Integration
-	if (guiSettings->GetValue(gui::m_richPresence).toBool())
-	{
-		discord::update_presence(sstr(guiSettings->GetValue(gui::m_discordState).toString()));
-	}
-#endif
 }
 
 void main_window::OnEmuReady()

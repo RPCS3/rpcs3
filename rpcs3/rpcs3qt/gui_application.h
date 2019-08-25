@@ -21,9 +21,10 @@ class gui_application : public QApplication, public main_application
 	Q_OBJECT
 public:
 	gui_application(int& argc, char** argv);
+	~gui_application();
 
 	/** Call this method before calling app.exec */
-	void Init() override;
+	void Init(const bool show_gui = true) override;
 
 	std::unique_ptr<gs_frame> get_gs_frame();
 
@@ -40,6 +41,8 @@ private:
 
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<gui_settings> m_gui_settings;
+
+	bool m_show_gui = true;
 
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest(const QString& path);

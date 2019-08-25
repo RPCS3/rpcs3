@@ -1,4 +1,4 @@
-// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <QApplication>
@@ -97,12 +97,13 @@ static semaphore<> s_qt_mutex{};
 	std::abort();
 }
 
-const char* ARG_HEADLESS = "headless";
-const char* ARG_HI_DPI = "hidpi";
+const char* arg_headless = "headless";
+const char* arg_no_gui   = "no-gui";
+const char* arg_high_dpi = "hidpi";
 
 QCoreApplication* createApplication(int& argc, char* argv[])
 {
-	const std::string headless("--" + std::string(ARG_HEADLESS));
+	const std::string headless("--" + std::string(arg_headless));
 	for (int i = 1; i < argc; ++i)
 		if (!strcmp(headless.c_str(), argv[i]))
 			return new headless_application(argc, argv);
@@ -138,8 +139,9 @@ int main(int argc, char** argv)
 
 	const QCommandLineOption helpOption    = parser.addHelpOption();
 	const QCommandLineOption versionOption = parser.addVersionOption();
-	parser.addOption(QCommandLineOption(ARG_HEADLESS, "Run RPCS3 in headless mode."));
-	parser.addOption(QCommandLineOption(ARG_HI_DPI, "Enables Qt High Dpi Scaling.", "enabled", "1"));
+	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
+	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
+	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
@@ -149,14 +151,15 @@ int main(int argc, char** argv)
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
 		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
-		const bool use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", parser.value(ARG_HI_DPI));
+		const bool use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", parser.value(arg_high_dpi));
+		const bool show_gui     = !parser.isSet(arg_no_gui);
 
 		app->setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 		app->setAttribute(Qt::AA_UseHighDpiPixmaps);
 		app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
 		app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
-		gui_app->Init();
+		gui_app->Init(show_gui);
 	}
 	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{
