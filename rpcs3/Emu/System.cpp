@@ -1020,6 +1020,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
+			g_fxo->init();
 			Run();
 			m_force_boot = false;
 
