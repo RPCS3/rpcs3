@@ -1341,7 +1341,7 @@ extern void ppu_initialize(const ppu_module& info)
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
 		// Temporarily
-		s_ppu_toc = fxm::get_always<std::unordered_map<u32, u32>>().get();
+		s_ppu_toc = g_fxo->get<std::unordered_map<u32, u32>>();
 
 		for (const auto& func : info.funcs)
 		{
@@ -1454,7 +1454,7 @@ extern void ppu_initialize(const ppu_module& info)
 	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
-	jit_module& jit_mod = fxm::get_always<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
+	jit_module& jit_mod = g_fxo->get<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
 
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler> jit;
