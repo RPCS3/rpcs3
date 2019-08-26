@@ -70,6 +70,12 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 	}
 }
 
+struct syscache
+{
+	atomic_t<u32> state = 0;
+	std::string cache_path;
+};
+
 template <>
 void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 {
@@ -307,27 +313,21 @@ s32 cellSysCacheClear()
 {
 	cellSysutil.warning("cellSysCacheClear()");
 
-	// Get the param as a shared ptr, then decipher the cacheid from it
-	// (Instead of assuming naively that the param is passed as argument)
-	std::shared_ptr<CellSysCacheParam> param = fxm::get<CellSysCacheParam>();
+	const auto cache = g_fxo->get<syscache>();
 
-	// Unit test for param ptr, since it may be null at the time of get()
-	if (!param)
+	if (!cache->state)
 	{
 		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
 	}
 
-	const std::string& cache_id = param->cacheId;
+	std::string local_dir = vfs::get(cache->cache_path);
 
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
-	const std::string& dir_path = vfs::get(cache_path);
-
-	if (!fs::exists(dir_path) || !fs::is_dir(dir_path))
+	if (!fs::exists(local_dir) || !fs::is_dir(local_dir))
 	{
 		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
 	}
 
-	fs::remove_all(dir_path, false);
+	fs::remove_all(local_dir, false);
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
@@ -336,22 +336,24 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
 	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
 
+	const auto cache = g_fxo->get<syscache>();
+
 	if (!param || !memchr(param->cacheId, '\0', CELL_SYSCACHE_ID_SIZE))
 	{
 		return CELL_SYSCACHE_ERROR_PARAM;
 	}
 
-	const std::string& cache_id = param->cacheId;
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
+	std::string cache_id = param->cacheId;
+	std::string cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
-	// TODO: implement (what?)
-	fxm::make_always<CellSysCacheParam>(*param);
 	if (!fs::create_dir(vfs::get(cache_path)) && !cache_id.empty())
 	{
 		return CELL_SYSCACHE_RET_OK_RELAYED;
 	}
 
+	cache->cache_path = std::move(cache_path);
+	cache->state = 1;
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
 
