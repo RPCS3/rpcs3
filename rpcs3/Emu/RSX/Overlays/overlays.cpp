@@ -309,7 +309,7 @@ namespace rsx
 		{
 			// Force unload
 			exit = true;
-			if (auto manager = fxm::get<display_manager>())
+			if (auto manager = g_fxo->get<display_manager>())
 			{
 				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 				{

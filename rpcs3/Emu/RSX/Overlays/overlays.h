@@ -97,7 +97,7 @@ namespace rsx
 		class display_manager
 		{
 		private:
-			atomic_t<u32> m_uid_ctr { 0u };
+			atomic_t<u32> m_uid_ctr = 0;
 			std::vector<std::shared_ptr<overlay>> m_iface_list;
 			std::vector<std::shared_ptr<overlay>> m_dirty_list;
 
@@ -158,8 +158,10 @@ namespace rsx
 			}
 
 		public:
-			display_manager() = default;
-			~display_manager() = default;
+			// Disable default construction to make it conditionally available in g_fxo
+			explicit display_manager(int) noexcept
+			{
+			}
 
 			// Adds an object to the internal list. Optionally removes other objects of the same type.
 			// Original handle loses ownership but a usable pointer is returned

@@ -529,7 +529,6 @@ VKGSRender::VKGSRender() : GSRender()
 	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
 	supports_multidraw = true;
-	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
 	// NOTE: We do not actually need multiple sample support for A2C to work
 	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
 	supports_hw_a2c = (g_cfg.video.antialiasing_level != msaa_level::none);
@@ -1809,7 +1808,7 @@ void VKGSRender::on_init_thread()
 	GSRender::on_init_thread();
 	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 
-	if (!supports_native_ui)
+	if (!m_overlay_manager)
 	{
 		m_frame->hide();
 		m_shaders_cache->load(nullptr, *m_device, pipeline_layout);
@@ -1831,7 +1830,7 @@ void VKGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 2;
 
-				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
+				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
 				dlg->progress_bar_set_taskbar_index(-1);
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{

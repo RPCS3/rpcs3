@@ -34,7 +34,7 @@ OskDialogBase::~OskDialogBase()
 
 std::shared_ptr<OskDialogBase> _get_osk_dialog(bool always = false)
 {
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		// NOTE: Osk lifetime is managed by fxm, not display manager
 		// Visibility is still managed by display manager

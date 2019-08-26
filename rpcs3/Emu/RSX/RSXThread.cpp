@@ -271,6 +271,11 @@ namespace rsx
 		memset(m_vertex_textures_dirty, -1, sizeof(m_vertex_textures_dirty));
 
 		m_graphics_state = pipeline_state::all_dirty;
+
+		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
+		{
+			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
+		}
 	}
 
 	thread::~thread()
@@ -420,10 +425,8 @@ namespace rsx
 			return fmt::format("RSX [0x%07x]", +rsx->ctrl->get);
 		};
 
-		if (supports_native_ui)
+		if (m_overlay_manager)
 		{
-			m_overlay_manager = fxm::make_always<rsx::overlays::display_manager>();
-
 			if (g_cfg.video.perf_overlay.perf_overlay_enabled)
 			{
 				auto perf_overlay = m_overlay_manager->create<rsx::overlays::perf_metrics_overlay>();

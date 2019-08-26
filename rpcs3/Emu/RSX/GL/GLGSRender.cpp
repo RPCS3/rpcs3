@@ -38,7 +38,6 @@ GLGSRender::GLGSRender() : GSRender()
 
 	supports_hw_a2c = false;
 	supports_multidraw = true;
-	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
 }
 
 extern CellGcmContextData current_context;
@@ -896,7 +895,7 @@ void GLGSRender::on_init_thread()
 
 	m_gl_texture_cache.initialize();
 
-	if (!supports_native_ui)
+	if (!m_overlay_manager)
 	{
 		m_frame->hide();
 		m_shaders_cache->load(nullptr);
@@ -918,7 +917,7 @@ void GLGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 2;
 
-				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
+				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
 				dlg->progress_bar_set_taskbar_index(-1);
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{

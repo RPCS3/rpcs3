@@ -429,7 +429,6 @@ namespace rsx
 		bool skip_frame = false;
 
 		bool supports_multidraw = false;  // Draw call batching
-		bool supports_native_ui = false;  // Native UI rendering
 		bool supports_hw_a2c = false;     // Alpha to coverage
 
 		// FIFO
@@ -447,7 +446,7 @@ namespace rsx
 		bool framebuffer_status_valid = false;
 
 		// Overlays
-		std::shared_ptr<rsx::overlays::display_manager> m_overlay_manager;
+		rsx::overlays::display_manager* m_overlay_manager = nullptr;
 
 		// Invalidated memory range
 		address_range m_invalidated_memory_range;
