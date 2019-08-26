@@ -27,8 +27,8 @@ namespace rsx
 
 		// User memory + fifo size
 		buffer_size = ::align<u32>(buffer_size, 0x100000) + 0x10000000;
-		// We are not allowed to drain all memory so add a little 
-		fxm::make_always<lv2_memory_container>(buffer_size + 0x1000000);
+		// We are not allowed to drain all memory so add a little
+		fxm::make<lv2_memory_container>(buffer_size + 0x1000000);
 
 		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
 		if (contextAddr == 0)

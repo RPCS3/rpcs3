@@ -1469,7 +1469,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		mem_size += 0xC000000;
 	}
 
-	fxm::make_always<lv2_memory_container>(mem_size);
+	fxm::make<lv2_memory_container>(mem_size);
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 

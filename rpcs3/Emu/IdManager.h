@@ -631,25 +631,6 @@ public:
 		return ptr;
 	}
 
-	// Create the object unconditionally (old object will be removed if it exists)
-	template <typename T, typename Make = T, typename... Args>
-	static std::enable_if_t<std::is_constructible<Make, Args...>::value, std::shared_ptr<T>> make_always(Args&&... args)
-	{
-		std::shared_ptr<T> ptr;
-		std::shared_ptr<void> old;
-		{
-			std::lock_guard lock(id_manager::g_mutex);
-
-			auto& cur = g_vec[get_type<T>()];
-
-			ptr = std::make_shared<Make>(std::forward<Args>(args)...);
-			old = std::move(cur);
-			cur = ptr;
-		}
-
-		return ptr;
-	}
-
 	// Emplace the object returned by provider() and return it if no object exists
 	template <typename T, typename F, typename... Args>
 	static auto import(F&& provider, Args&&... args) -> decltype(static_cast<std::shared_ptr<T>>(provider(std::forward<Args>(args)...)))
