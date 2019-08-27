@@ -4258,7 +4258,7 @@ struct registers_decoder<NV4097_SET_CONTROL0>
 
 	static std::string dump(decoded_type&& decoded_values)
 	{
-		return "Depth float enabled: " + decoded_values.depth_float() ? "true" : "false";
+		return "Depth float enabled: " + (decoded_values.depth_float() ? std::string("true") : std::string("false"));
 	}
 };
 
