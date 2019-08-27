@@ -280,7 +280,11 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		std::lock_guard lock(cond->mutex->mutex);
 
 		// Own mutex or requeue
-		locked_ok = cond->mutex->try_own(ppu, ppu.id);
+		if (!cond->mutex->try_own(ppu, ppu.id))
+		{
+			locked_ok = false;
+			cond->mutex->sleep(ppu);
+		}
 	}
 
 	while (!locked_ok && !ppu.state.test_and_reset(cpu_flag::signal))
