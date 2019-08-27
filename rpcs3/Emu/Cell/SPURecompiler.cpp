@@ -530,6 +530,12 @@ spu_runtime::spu_runtime()
 
 	// Clear LLVM output
 	m_cache_path = Emu.PPUCache();
+
+	if (m_cache_path.empty())
+	{
+		return;
+	}
+
 	fs::create_dir(m_cache_path + "llvm/");
 	fs::remove_all(m_cache_path + "llvm/", false);
 
