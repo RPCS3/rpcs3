@@ -140,9 +140,6 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				// Wait for rescheduling
-				ppu.check_state();
-
 				std::lock_guard lock(rwlock->mutex);
 
 				if (!rwlock->unqueue(rwlock->rq, &ppu))
@@ -340,9 +337,6 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				// Wait for rescheduling
-				ppu.check_state();
-
 				std::lock_guard lock(rwlock->mutex);
 
 				if (!rwlock->unqueue(rwlock->wq, &ppu))

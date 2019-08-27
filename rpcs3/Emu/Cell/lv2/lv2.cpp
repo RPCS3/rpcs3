@@ -1057,7 +1057,7 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 
 	if (!g_to_awake.empty())
 	{
-		// Schedule pending entries 
+		// Schedule pending entries
 		awake_unlocked({});
 	}
 	else
@@ -1144,7 +1144,7 @@ void lv2_obj::awake_unlocked(cpu_thread* cpu, u32 prio)
 		// Emplace threads from list
 		emplace_thread(_cpu);
 	}
-	
+
 	// Remove pending if necessary
 	if (!g_pending.empty() && cpu && cpu == get_current_cpu_thread())
 	{

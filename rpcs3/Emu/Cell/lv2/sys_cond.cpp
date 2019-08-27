@@ -264,9 +264,6 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				// Wait for rescheduling
-				ppu.check_state();
-
 				std::lock_guard lock(cond->mutex->mutex);
 
 				// Try to cancel the waiting
@@ -281,8 +278,6 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 					{
 						break;
 					}
-
-					cond->mutex->sleep(ppu);
 				}
 
 				timeout = 0;
