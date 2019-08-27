@@ -545,7 +545,8 @@ std::string Emulator::PPUCache() const
 
 	if (!_main || _main->cache.empty())
 	{
-		fmt::throw_exception("PPU Cache location not initialized.");
+		LOG_WARNING(PPU, "PPU Cache location not initialized.");
+		return {};
 	}
 
 	return _main->cache;
