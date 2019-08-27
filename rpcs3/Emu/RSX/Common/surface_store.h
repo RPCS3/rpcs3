@@ -59,11 +59,13 @@ namespace rsx
 		rsx::address_range m_depth_stencil_memory_range;
 
 		bool m_invalidate_on_write = false;
+		bool m_skip_write_updates = false;
 
 	public:
 		std::pair<u8, u8> m_bound_render_targets_config = {};
 		std::array<std::pair<u32, surface_type>, 4> m_bound_render_targets = {};
 		std::pair<u32, surface_type> m_bound_depth_stencil = {};
+		u8 m_bound_buffers_count = 0;
 
 		// List of sections derived from a section that has been split and invalidated
 		std::vector<surface_type> orphaned_surfaces;
@@ -602,6 +604,7 @@ namespace rsx
 
 			cache_tag = rsx::get_shared_tag();
 			m_invalidate_on_write = (antialias != rsx::surface_antialiasing::center_1_sample);
+			m_bound_buffers_count = 0;
 
 			// Make previous RTTs sampleable
 			for (int i = m_bound_render_targets_config.first, count = 0;
@@ -628,7 +631,8 @@ namespace rsx
 						bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, antialias,
 							clip_width, clip_height, surface_pitch[surface_index], std::forward<Args>(extra_params)...));
 
-					m_bound_render_targets_config.second++;
+					++m_bound_render_targets_config.second;
+					++m_bound_buffers_count;
 				}
 			}
 			else
@@ -647,11 +651,18 @@ namespace rsx
 				m_bound_depth_stencil = std::make_pair(address_z,
 					bind_address_as_depth_stencil(command_list, address_z, depth_format, antialias,
 						clip_width, clip_height, zeta_pitch, std::forward<Args>(extra_params)...));
+
+				++m_bound_buffers_count;
 			}
 			else
 			{
 				m_bound_depth_stencil = std::make_pair(0, nullptr);
 			}
+		}
+
+		u8 get_color_surface_count() const
+		{
+			return m_bound_render_targets_config.second;
 		}
 
 		surface_type get_surface_at(u32 address)
@@ -866,74 +877,61 @@ namespace rsx
 			return result;
 		}
 
-		void on_write(bool color, bool z, u32 address = 0)
+		void on_write(const bool* color, bool z)
 		{
-			if (!address)
+			if (write_tag == cache_tag && m_skip_write_updates)
 			{
-				if (write_tag == cache_tag)
-				{
-					if (m_invalidate_on_write)
-					{
-						if (color)
-						{
-							for (int i = m_bound_render_targets_config.first, count = 0;
-								count < m_bound_render_targets_config.second;
-								++i, ++count)
-							{
-								m_bound_render_targets[i].second->on_invalidate_children();
-							}
-						}
+				// Nothing to do
+				return;
+			}
 
-						if (z && m_bound_depth_stencil.first)
-						{
-							m_bound_depth_stencil.second->on_invalidate_children();
-						}
-					}
+			write_tag = cache_tag;
+			m_skip_write_updates = false;
+			int tagged = 0;
 
-					return;
-				}
-				else
+			// Tag surfaces
+			if (color)
+			{
+				for (int i = m_bound_render_targets_config.first, count = 0;
+					count < m_bound_render_targets_config.second;
+					++i, ++count)
 				{
-					write_tag = cache_tag;
-				}
+					if (!color[i])
+						continue;
 
-				// Tag all available surfaces
-				if (color)
-				{
-					for (int i = m_bound_render_targets_config.first, count = 0;
-						count < m_bound_render_targets_config.second;
-						++i, ++count)
+					auto& surface = m_bound_render_targets[i].second;
+					if (surface->last_use_tag != write_tag)
 					{
 						m_bound_render_targets[i].second->on_write(write_tag);
 					}
-				}
+					else if (m_invalidate_on_write)
+					{
+						m_bound_render_targets[i].second->on_invalidate_children();
+					}
 
-				if (z && m_bound_depth_stencil.first)
-				{
-					m_bound_depth_stencil.second->on_write(write_tag);
+					++tagged;
 				}
 			}
-			else
+
+			if (z && m_bound_depth_stencil.first)
 			{
-				if (color)
-				{
-					for (int i = m_bound_render_targets_config.first, count = 0;
-						count < m_bound_render_targets_config.second;
-						++i, ++count)
-					{
-						if (m_bound_render_targets[i].first != address)
-						{
-							continue;
-						}
-
-						m_bound_render_targets[i].second->on_write(write_tag);
-					}
-				}
-
-				if (z && m_bound_depth_stencil.first == address)
+				auto& surface = m_bound_depth_stencil.second;
+				if (surface->last_use_tag != write_tag)
 				{
 					m_bound_depth_stencil.second->on_write(write_tag);
 				}
+				else if (m_invalidate_on_write)
+				{
+					m_bound_depth_stencil.second->on_invalidate_children();
+				}
+
+				++tagged;
+			}
+
+			if (!m_invalidate_on_write && tagged == m_bound_buffers_count)
+			{
+				// Skip any further updates as all active surfaces have been updated
+				m_skip_write_updates = true;
 			}
 		}
 

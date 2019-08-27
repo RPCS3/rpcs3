@@ -625,7 +625,7 @@ void GLGSRender::end()
 		}
 	} while (rsx::method_registers.current_draw_clause.next());
 
-	m_rtts.on_write(rsx::method_registers.color_write_enabled(), rsx::method_registers.depth_write_enabled());
+	m_rtts.on_write(m_framebuffer_layout.color_write_enabled.data(), m_framebuffer_layout.zeta_write_enabled);
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
@@ -1098,6 +1098,7 @@ void GLGSRender::clear_surface(u32 arg)
 		rsx::method_registers.scissor_width() < rsx::method_registers.surface_clip_width() ||
 		rsx::method_registers.scissor_height() < rsx::method_registers.surface_clip_height();
 
+	bool update_color = false, update_z = false;
 	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
@@ -1150,7 +1151,7 @@ void GLGSRender::clear_surface(u32 arg)
 			if (require_mem_load) ds->write_barrier(cmd);
 
 			// Memory has been initialized
-			m_rtts.on_write(false, true);
+			update_z = true;
 		}
 	}
 
@@ -1177,23 +1178,27 @@ void GLGSRender::clear_surface(u32 arg)
 			u8 clear_g = rsx::method_registers.clear_color_g();
 			u8 clear_b = rsx::method_registers.clear_color_b();
 
-			gl_state.color_mask(colormask);
 			gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
-
 			mask |= GLenum(gl::buffers::color);
 
-			for (auto &rtt : m_rtts.m_bound_render_targets)
+			for (u8 index = m_rtts.m_bound_render_targets_config.first, count = 0;
+				 count < m_rtts.m_bound_render_targets_config.second;
+				 ++count, ++index)
 			{
-				if (const auto address = rtt.first)
-				{
-					if (require_mem_load) rtt.second->write_barrier(cmd);
-					m_rtts.on_write(true, false, address);
-				}
+				if (require_mem_load) m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
+				gl_state.color_maski(count, colormask);
 			}
 
+			update_color = true;
 			break;
 		}
 		}
+	}
+
+	if (update_color || update_z)
+	{
+		const bool write_all_mask[] = { true, true, true, true };
+		m_rtts.on_write(update_color ? write_all_mask : nullptr, update_z);
 	}
 
 	glClear(mask);
@@ -1416,18 +1421,22 @@ void GLGSRender::update_draw_state()
 {
 	m_profiler.start();
 
-	bool color_mask_b = rsx::method_registers.color_mask_b();
-	bool color_mask_g = rsx::method_registers.color_mask_g();
-	bool color_mask_r = rsx::method_registers.color_mask_r();
-	bool color_mask_a = rsx::method_registers.color_mask_a();
-
-	if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+	for (int index = 0; index < m_rtts.get_color_surface_count(); ++index)
 	{
-		//Map GB components onto RG
-		rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+		bool color_mask_b = rsx::method_registers.color_mask_b(index);
+		bool color_mask_g = rsx::method_registers.color_mask_g(index);
+		bool color_mask_r = rsx::method_registers.color_mask_r(index);
+		bool color_mask_a = rsx::method_registers.color_mask_a(index);
+
+		if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+		{
+			//Map GB components onto RG
+			rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+		}
+
+		gl_state.color_maski(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	}
 
-	gl_state.color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
 	gl_state.stencil_mask(rsx::method_registers.stencil_mask());
 

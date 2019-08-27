@@ -2946,7 +2946,7 @@ public:
 			ia.primitiveRestartEnable = enable? VK_TRUE : VK_FALSE;
 		}
 
-		void set_color_mask(bool r, bool g, bool b, bool a)
+		void set_color_mask(int index, bool r, bool g, bool b, bool a)
 		{
 			VkColorComponentFlags mask = 0;
 			if (a) mask |= VK_COLOR_COMPONENT_A_BIT;
@@ -2954,10 +2954,7 @@ public:
 			if (g) mask |= VK_COLOR_COMPONENT_G_BIT;
 			if (r) mask |= VK_COLOR_COMPONENT_R_BIT;
 
-			att_state[0].colorWriteMask = mask;
-			att_state[1].colorWriteMask = mask;
-			att_state[2].colorWriteMask = mask;
-			att_state[3].colorWriteMask = mask;
+			att_state[index].colorWriteMask = mask;
 		}
 
 		void set_depth_mask(bool enable)
