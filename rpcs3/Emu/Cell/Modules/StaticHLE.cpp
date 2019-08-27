@@ -88,7 +88,7 @@ bool statichle_handler::load_patterns()
 
 		dapat.fnid = ppu_generate_id(dapat.name.c_str());
 
-		static_hle.success("Added a pattern for %s(id:0x%X)", dapat.name, dapat.fnid);
+		static_hle.notice("Added a pattern for %s(id:0x%X)", dapat.name, dapat.fnid);
 		hle_patterns.push_back(std::move(dapat));
 	}
 
