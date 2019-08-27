@@ -4,6 +4,8 @@
 
 #include "Utilities/BEType.h"
 
+#include <atomic>
+
 // Return codes
 enum SceNpClansError : u32
 {
@@ -253,4 +255,11 @@ struct SceNpClansBlacklistEntry
 {
 	SceNpId entry;
 	SceNpId registeredBy;
+};
+
+// fxm objects
+
+struct sce_np_clans_manager
+{
+	std::atomic<bool> is_initialized = false;
 };

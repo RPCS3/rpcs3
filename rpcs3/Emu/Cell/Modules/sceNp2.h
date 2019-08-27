@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "sceNp.h"
 
 #include "Emu/Memory/vm_ptr.h"
+
+#include <atomic>
 
 // Error codes
 enum SceNpMatching2Error : u32
@@ -1579,7 +1581,28 @@ struct SceNpAuthorizationCode
 struct SceNpAuthGetAuthorizationCodeParameter
 {
 	be_t<u64> size;
-	vm::cptr<SceNpClientId> pClientId;
-	vm::cptr<char> pScope;
+	vm::bcptr<SceNpClientId> pClientId;
+	vm::bcptr<char> pScope;
 };
 
+// fxm objects
+
+struct sce_np_2_manager
+{
+	std::atomic<bool> is_initialized = false;
+};
+
+struct sce_np_2_matching_manager
+{
+	std::atomic<bool> is_initialized = false;
+};
+
+struct sce_np_2_matching_2_manager
+{
+	std::atomic<bool> is_initialized = false;
+};
+
+struct sce_np_oauth_2_manager
+{
+	std::atomic<bool> is_initialized = false;
+};

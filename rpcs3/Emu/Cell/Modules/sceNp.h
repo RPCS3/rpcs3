@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "cellRtc.h"
 
 #include "Utilities/BEType.h"
+
+#include <atomic>
 
 using in_addr_t = u32;
 using in_port_t = u16;
@@ -930,7 +932,7 @@ struct SceNpBasicExtendedAttachmentData
 	SceNpBasicAttachmentData data;
 	be_t<u32> userAction;
 	b8 markedAsUsed;
-	//be_t<u8> reserved[3];
+	u8 reserved[3];
 };
 
 // Message structure
@@ -1098,10 +1100,11 @@ union SceNpSignalingConnectionInfo
 	be_t<u32> rtt;
 	be_t<u32> bandwidth;
 	SceNpId npId;
-	struct address {
+	struct
+	{
 		be_t<u32> addr; // in_addr
 		be_t<u16> port; // in_port_t
-	};
+	} address;
 	be_t<u32> packet_loss;
 };
 
@@ -1121,19 +1124,19 @@ struct SceNpCustomMenuAction
 {
 	be_t<u32> options;
 	char name[SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX];
-	SceNpCustomMenuActionMask mask;
+	be_t<SceNpCustomMenuActionMask> mask;
 };
 
 struct SceNpCustomMenu
 {
 	be_t<u64> options;
-	SceNpCustomMenuAction *actions;
+	vm::bptr<SceNpCustomMenuAction> actions;
 	be_t<u32> numActions;
 };
 
 struct SceNpCustomMenuIndexArray
 {
-	SceNpCustomMenuIndexMask index_bits[SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT];
+	be_t<SceNpCustomMenuIndexMask> index_bits[SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT];
 };
 
 struct SceNpCustomMenuActionExceptions
@@ -1147,7 +1150,7 @@ struct SceNpCustomMenuActionExceptions
 struct SceNpCommerceProductCategory
 {
 	be_t<u32> version;
-	vm::cptr<void> data;
+	vm::bcptr<void> data;
 	be_t<u64> dataSize;
 	be_t<u32> dval;
 	u8 reserved[16];
@@ -1155,22 +1158,22 @@ struct SceNpCommerceProductCategory
 
 struct SceNpCommerceProductSkuInfo
 {
-	vm::ptr<SceNpCommerceProductCategory> pc;
-	vm::cptr<void> data;
+	vm::bptr<SceNpCommerceProductCategory> pc;
+	vm::bcptr<void> data;
 	u8 reserved[8];
 };
 
 struct SceNpCommerceCategoryInfo
 {
-	vm::ptr<SceNpCommerceProductCategory> pc;
-	vm::cptr<void> data;
+	vm::bptr<SceNpCommerceProductCategory> pc;
+	vm::bcptr<void> data;
 	u8 reserved[8];
 };
 
 struct SceNpCommerceCurrencyInfo
 {
-	vm::ptr<SceNpCommerceProductCategory> pc;
-	vm::cptr<void> data;
+	vm::bptr<SceNpCommerceProductCategory> pc;
+	vm::bcptr<void> data;
 	u8 reserved[8];
 };
 
@@ -1199,8 +1202,8 @@ union SceNpTicketParam
 struct SceNpEntitlement
 {
 	SceNpEntitlementId id;
-	SceNpTime created_date;
-	SceNpTime expire_date;
+	be_t<SceNpTime> created_date;
+	be_t<SceNpTime> expire_date;
 	be_t<u32> type;
 	be_t<s32> remaining_count;
 	be_t<u32> consumed_count;
@@ -1221,7 +1224,7 @@ struct SceNpRoomId
 
 struct SceNpMatchingAttr
 {
-	vm::ptr<SceNpMatchingAttr> next;
+	vm::bptr<SceNpMatchingAttr> next;
 	be_t<s32> type;
 	be_t<u32> id;
 	union
@@ -1229,7 +1232,7 @@ struct SceNpMatchingAttr
 		be_t<u32> num;
 		struct
 		{
-			vm::ptr<void> ptr;
+			vm::bptr<void> ptr;
 			be_t<u64> size;
 		} data;
 	} value;
@@ -1237,7 +1240,7 @@ struct SceNpMatchingAttr
 
 struct SceNpMatchingSearchCondition
 {
-	vm::ptr<SceNpMatchingSearchCondition> next;
+	vm::bptr<SceNpMatchingSearchCondition> next;
 	be_t<s32> target_attr_type;
 	be_t<u32> target_attr_id;
 	be_t<s32> comp_op;
@@ -1261,8 +1264,8 @@ struct SceNpScoreVariableSizeGameInfo
 struct SceNpScoreRecordOptParam
 {
 	be_t<u64> size;
-	vm::ptr<SceNpScoreVariableSizeGameInfo> vsInfo;
-	vm::ptr<CellRtcTick> reserved;
+	vm::bptr<SceNpScoreVariableSizeGameInfo> vsInfo;
+	vm::bptr<CellRtcTick> reserved;
 };
 
 // NP callback functions
@@ -1276,3 +1279,20 @@ using SceNpMatchingGUIHandler = void(u32 ctx_id, s32 event, s32 error_code, vm::
 using SceNpProfileResultHandler = s32(s32 result, vm::ptr<void> arg);
 
 using SceNpManagerSubSigninCallback = void(s32 result, vm::ptr<SceNpId> npId, vm::ptr<void> cb_arg);
+
+// fxm objects
+
+struct sce_np_manager
+{
+	std::atomic<bool> is_initialized = false;
+};
+
+struct sce_np_lookup_manager
+{
+	std::atomic<bool> is_initialized = false;
+};
+
+struct sce_np_score_manager
+{
+	std::atomic<bool> is_initialized = false;
+};

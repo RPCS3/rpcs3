@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -9,8 +9,6 @@
 #include "cellRtc.h"
 #include "sceNp.h"
 #include "cellSysutil.h"
-
-#include <atomic>
 
 LOG_CHANNEL(sceNp);
 
@@ -373,15 +371,14 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 }
 
 s32 g_psn_connection_status = SCE_NP_MANAGER_STATUS_OFFLINE;
-std::atomic<bool> g_sce_np_is_initialized = false;
-std::atomic<bool> g_sce_np_lookup_is_initialized = false;
-std::atomic<bool> g_sce_np_score_is_initialized = false;
 
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp.warning("sceNpInit(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
 
-	if (g_sce_np_is_initialized)
+	const auto manager = g_fxo->get<sce_np_manager>();
+
+	if (manager->is_initialized)
 	{
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
 	}
@@ -400,7 +397,7 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
 
-	g_sce_np_is_initialized = true;
+	manager->is_initialized = true;
 
 	return CELL_OK;
 }
@@ -409,12 +406,14 @@ error_code sceNpTerm()
 {
 	sceNp.warning("sceNpTerm()");
 
-	if (!g_sce_np_is_initialized)
+	const auto manager = g_fxo->get<sce_np_manager>();
+
+	if (!manager->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	g_sce_np_is_initialized = false;
+	manager->is_initialized = false;
 
 	return CELL_OK;
 }
@@ -600,7 +599,7 @@ error_code sceNpBasicRegisterHandler(vm::cptr<SceNpCommunicationId> context, vm:
 {
 	sceNp.todo("sceNpBasicRegisterHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -617,7 +616,7 @@ error_code sceNpBasicRegisterContextSensitiveHandler(vm::cptr<SceNpCommunication
 {
 	sceNp.todo("sceNpBasicRegisterContextSensitiveHandler(context=*0x%x, handler=*0x%x, arg=*0x%x)", context, handler, arg);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -634,7 +633,7 @@ error_code sceNpBasicUnregisterHandler()
 {
 	sceNp.todo("sceNpBasicUnregisterHandler()");
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -646,7 +645,7 @@ error_code sceNpBasicSetPresence(vm::cptr<void> data, u64 size)
 {
 	sceNp.todo("sceNpBasicSetPresence(data=*0x%x, size=%d)", data, size);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -663,7 +662,7 @@ error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres
 {
 	sceNp.todo("sceNpBasicSetPresenceDetails(pres=*0x%x, options=0x%x)", pres, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -685,7 +684,7 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 {
 	sceNp.todo("sceNpBasicSetPresenceDetails2(pres=*0x%x, options=0x%x)", pres, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -707,7 +706,7 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u64 
 {
 	sceNp.todo("sceNpBasicSendMessage(to=*0x%x, data=*0x%x, size=%d)", to, data, size);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -729,7 +728,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 {
 	sceNp.todo("sceNpBasicSendMessageGui(msg=*0x%x, containerId=%d)", msg, containerId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -756,7 +755,7 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 {
 	sceNp.todo("sceNpBasicSendMessageAttachment(to=*0x%x, subject=%s, body=%s, data=%s, size=%d, containerId=%d)", to, subject, body, data, size, containerId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -783,7 +782,7 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 {
 	sceNp.todo("sceNpBasicRecvMessageAttachment(containerId=%d)", containerId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -795,7 +794,7 @@ error_code sceNpBasicRecvMessageAttachmentLoad(u32 id, vm::ptr<void> buffer, vm:
 {
 	sceNp.todo("sceNpBasicRecvMessageAttachmentLoad(id=%d, buffer=*0x%x, size=*0x%x)", id, buffer, size);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -817,7 +816,7 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 {
 	sceNp.todo("sceNpBasicRecvMessageCustom(mainType=%d, recvOptions=%d, containerId=%d)", mainType, recvOptions, containerId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -834,7 +833,7 @@ error_code sceNpBasicMarkMessageAsUsed(SceNpBasicMessageId msgId)
 {
 	sceNp.todo("sceNpBasicMarkMessageAsUsed(msgId=%d)", msgId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -851,7 +850,7 @@ error_code sceNpBasicAbortGui()
 {
 	sceNp.todo("sceNpBasicAbortGui()");
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -863,7 +862,7 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 {
 	sceNp.todo("sceNpBasicAddFriend(contact=*0x%x, body=%s, containerId=%d)", contact, body, containerId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -890,7 +889,7 @@ error_code sceNpBasicGetFriendListEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetFriendListEntryCount(count=*0x%x)", count);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -916,7 +915,7 @@ error_code sceNpBasicGetFriendListEntry(u32 index, vm::ptr<SceNpId> npid)
 {
 	sceNp.todo("sceNpBasicGetFriendListEntry(index=%d, npid=*0x%x)", index, npid);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -940,7 +939,7 @@ error_code sceNpBasicGetFriendPresenceByIndex(u32 index, vm::ptr<SceNpUserInfo> 
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByIndex(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -958,7 +957,7 @@ error_code sceNpBasicGetFriendPresenceByIndex2(u32 index, vm::ptr<SceNpUserInfo>
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByIndex2(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -976,7 +975,7 @@ error_code sceNpBasicGetFriendPresenceByNpId(vm::cptr<SceNpId> npid, vm::ptr<Sce
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByNpId(npid=*0x%x, pres=*0x%x, options=%d)", npid, pres, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -994,7 +993,7 @@ error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<Sc
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByNpId2(npid=*0x%x, pres=*0x%x, options=%d)", npid, pres, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1012,7 +1011,7 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 {
 	sceNp.todo("sceNpBasicAddPlayersHistory(npid=*0x%x, description=*0x%x)", npid, description);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1034,7 +1033,7 @@ error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u64 count, 
 {
 	sceNp.todo("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1056,7 +1055,7 @@ error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count
 {
 	sceNp.todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count=*0x%x)", options, count);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1082,7 +1081,7 @@ error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceN
 {
 	sceNp.todo("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1106,7 +1105,7 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 {
 	sceNp.todo("sceNpBasicAddBlockListEntry(npid=*0x%x)", npid);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1123,7 +1122,7 @@ error_code sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetBlockListEntryCount(count=*0x%x)", count);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1149,7 +1148,7 @@ error_code sceNpBasicGetBlockListEntry(u32 index, vm::ptr<SceNpId> npid)
 {
 	sceNp.todo("sceNpBasicGetBlockListEntry(index=%d, npid=*0x%x)", index, npid);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1173,7 +1172,7 @@ error_code sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMessageAttachmentEntryCount(count=*0x%x)", count);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1199,7 +1198,7 @@ error_code sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo>
 {
 	sceNp.todo("sceNpBasicGetMessageAttachmentEntry(index=%d, from=*0x%x)", index, from);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1263,7 +1262,7 @@ error_code sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMatchingInvitationEntryCount(count=*0x%x)", count);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1289,7 +1288,7 @@ error_code sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo
 {
 	sceNp.todo("sceNpBasicGetMatchingInvitationEntry(index=%d, from=*0x%x)", index, from);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1313,7 +1312,7 @@ error_code sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetClanMessageEntryCount(count=*0x%x)", count);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1339,7 +1338,7 @@ error_code sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.todo("sceNpBasicGetClanMessageEntry(index=%d, from=*0x%x)", index, from);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1363,7 +1362,7 @@ error_code sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMessageEntryCount(type=%d, count=*0x%x)", type, count);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1389,7 +1388,7 @@ error_code sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo>
 {
 	sceNp.todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from=*0x%x)", type, index, from);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
@@ -1637,7 +1636,7 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 {
 	sceNp.todo("sceNpCustomMenuRegisterActions(menu=*0x%x, handler=*0x%x, userArg=*0x%x, options=0x%x)", menu, handler, userArg, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
@@ -1654,7 +1653,7 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 {
 	sceNp.todo("sceNpCustomMenuActionSetActivation(array=*0x%x, options=0x%x)", array, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
@@ -1671,7 +1670,7 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 {
 	sceNp.todo("sceNpCustomMenuRegisterExceptionList(items=*0x%x, numItems=%d, options=0x%x)", items, numItems, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
@@ -1694,7 +1693,7 @@ error_code sceNpFriendlist(vm::ptr<SceNpFriendlistResultHandler> resultHandler, 
 {
 	sceNp.todo("sceNpFriendlist(resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", resultHandler, userArg, containerId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
@@ -1711,7 +1710,7 @@ error_code sceNpFriendlistCustom(SceNpFriendlistCustomOptions options, vm::ptr<S
 {
 	sceNp.todo("sceNpFriendlistCustom(options=0x%x, resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", options, resultHandler, userArg, containerId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
@@ -1728,7 +1727,7 @@ error_code sceNpFriendlistAbortGui()
 {
 	sceNp.todo("sceNpFriendlistAbortGui()");
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
@@ -1740,7 +1739,10 @@ error_code sceNpLookupInit()
 {
 	sceNp.todo("sceNpLookupInit()");
 
-	g_sce_np_lookup_is_initialized = true;
+	const auto lookup_manager = g_fxo->get<sce_np_lookup_manager>();
+
+	// TODO: check if this might throw SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED
+	lookup_manager->is_initialized = true;
 
 	return CELL_OK;
 }
@@ -1749,7 +1751,10 @@ error_code sceNpLookupTerm()
 {
 	sceNp.todo("sceNpLookupTerm()");
 
-	g_sce_np_lookup_is_initialized = false;
+	const auto lookup_manager = g_fxo->get<sce_np_lookup_manager>();
+
+	// TODO: check if this might throw SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED
+	lookup_manager->is_initialized = false;
 
 	return CELL_OK;
 }
@@ -1758,7 +1763,7 @@ error_code sceNpLookupCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicatio
 {
 	sceNp.todo("sceNpLookupCreateTitleCtx(communicationId=*0x%x, selfNpId=0x%x)", communicationId, selfNpId);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1775,7 +1780,7 @@ error_code sceNpLookupDestroyTitleCtx(vm::cptr<SceNpCommunicationId> communicati
 {
 	sceNp.todo("sceNpLookupDestroyTitleCtx(communicationId=*0x%x, selfNpId=0x%x)", communicationId, selfNpId);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1792,7 +1797,7 @@ error_code sceNpLookupCreateTransactionCtx(s32 titleCtxId)
 {
 	sceNp.todo("sceNpLookupCreateTransactionCtx(titleCtxId=%d)", titleCtxId);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1809,7 +1814,7 @@ error_code sceNpLookupDestroyTransactionCtx(s32 transId)
 {
 	sceNp.todo("sceNpLookupDestroyTransactionCtx(transId=%d)", transId);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1821,7 +1826,7 @@ error_code sceNpLookupSetTimeout(s32 ctxId, usecond_t timeout)
 {
 	sceNp.todo("sceNpLookupSetTimeout(ctxId=%d, timeout=%d)", ctxId, timeout);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1838,7 +1843,7 @@ error_code sceNpLookupAbortTransaction(s32 transId)
 {
 	sceNp.todo("sceNpLookupAbortTransaction(transId=%d)", transId);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1850,7 +1855,7 @@ error_code sceNpLookupWaitAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNp.todo("sceNpLookupWaitAsync(transId=%d, result=%d)", transId, result);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1862,7 +1867,7 @@ error_code sceNpLookupPollAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNp.todo("sceNpLookupPollAsync(transId=%d, result=%d)", transId, result);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1874,7 +1879,7 @@ error_code sceNpLookupNpId(s32 transId, vm::cptr<SceNpOnlineId> onlineId, vm::pt
 {
 	sceNp.todo("sceNpLookupNpId(transId=%d, onlineId=*0x%x, npId=*0x%x, option=*0x%x)", transId, onlineId, npId, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1901,7 +1906,7 @@ error_code sceNpLookupNpIdAsync(s32 transId, vm::ptr<SceNpOnlineId> onlineId, vm
 {
 	sceNp.todo("sceNpLookupNpIdAsync(transId=%d, onlineId=*0x%x, npId=*0x%x, prio=%d, option=*0x%x)", transId, onlineId, npId, prio, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1928,7 +1933,7 @@ error_code sceNpLookupUserProfile(s32 transId, vm::cptr<SceNpId> npId, vm::ptr<S
 {
 	sceNp.todo("sceNpLookupUserProfile(transId=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImage=*0x%x, option=*0x%x)", transId, npId, userInfo, aboutMe, languages, countryCode, avatarImage, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1957,7 +1962,7 @@ error_code sceNpLookupUserProfileAsync(s32 transId, vm::cptr<SceNpId> npId, vm::
 	sceNp.todo("sceNpLookupUserProfile(transId=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImage=*0x%x, prio=%d, option=*0x%x)",
 		transId, npId, userInfo, aboutMe, languages, countryCode, avatarImage, prio, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -1986,7 +1991,7 @@ error_code sceNpLookupUserProfileWithAvatarSize(s32 transId, s32 avatarSizeType,
 	sceNp.todo("sceNpLookupUserProfileWithAvatarSize(transId=%d, avatarSizeType=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImageData=*0x%x, avatarImageDataMaxSize=%d, avatarImageDataSize=*0x%x, option=*0x%x)",
 		transId, avatarSizeType, npId, userInfo, aboutMe, languages, countryCode, avatarImageData, avatarImageDataMaxSize, avatarImageDataSize, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2015,7 +2020,7 @@ error_code sceNpLookupUserProfileWithAvatarSizeAsync(s32 transId, s32 avatarSize
 	sceNp.todo("sceNpLookupUserProfileWithAvatarSizeAsync(transId=%d, avatarSizeType=%d, npId=*0x%x, userInfo=*0x%x, aboutMe=*0x%x, languages=*0x%x, countryCode=*0x%x, avatarImageData=*0x%x, avatarImageDataMaxSize=%d, avatarImageDataSize=*0x%x, prio=%d, option=*0x%x)",
 		transId, avatarSizeType, npId, userInfo, aboutMe, languages, countryCode, avatarImageData, avatarImageDataMaxSize, avatarImageDataSize, prio, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2042,7 +2047,7 @@ error_code sceNpLookupAvatarImage(s32 transId, vm::ptr<SceNpAvatarUrl> avatarUrl
 {
 	sceNp.todo("sceNpLookupAvatarImage(transId=%d, avatarUrl=*0x%x, avatarImage=*0x%x, option=*0x%x)", transId, avatarUrl, avatarImage, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2069,7 +2074,7 @@ error_code sceNpLookupAvatarImageAsync(s32 transId, vm::ptr<SceNpAvatarUrl> avat
 {
 	sceNp.todo("sceNpLookupAvatarImageAsync(transId=%d, avatarUrl=*0x%x, avatarImage=*0x%x, prio=%d, option=*0x%x)", transId, avatarUrl, avatarImage, prio, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2096,7 +2101,7 @@ error_code sceNpLookupTitleStorage()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2108,7 +2113,7 @@ error_code sceNpLookupTitleStorageAsync()
 {
 	UNIMPLEMENTED_FUNC(sceNp);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2120,7 +2125,7 @@ error_code sceNpLookupTitleSmallStorage(s32 transId, vm::ptr<void> data, u64 max
 {
 	sceNp.todo("sceNpLookupTitleSmallStorage(transId=%d, data=*0x%x, maxSize=%d, contentLength=*0x%x, option=*0x%x)", transId, data, maxSize, contentLength, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2152,7 +2157,7 @@ error_code sceNpLookupTitleSmallStorageAsync(s32 transId, vm::ptr<void> data, u6
 {
 	sceNp.todo("sceNpLookupTitleSmallStorageAsync(transId=%d, data=*0x%x, maxSize=%d, contentLength=*0x%x, prio=%d, option=*0x%x)", transId, data, maxSize, contentLength, prio, option);
 
-	if (!g_sce_np_lookup_is_initialized)
+	if (!g_fxo->get<sce_np_lookup_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2184,7 +2189,7 @@ error_code sceNpManagerRegisterCallback(vm::ptr<SceNpManagerCallback> callback, 
 {
 	sceNp.todo("sceNpManagerRegisterCallback(callback=*0x%x, arg=*0x%x)", callback, arg);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2201,7 +2206,7 @@ error_code sceNpManagerUnregisterCallback()
 {
 	sceNp.todo("sceNpManagerUnregisterCallback()");
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2213,7 +2218,7 @@ error_code sceNpManagerGetStatus(vm::ptr<s32> status)
 {
 	sceNp.todo("sceNpManagerGetStatus(status=*0x%x)", status);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2232,7 +2237,7 @@ error_code sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 {
 	sceNp.warning("sceNpManagerGetNetworkTime(pTick=*0x%x)", pTick);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2263,7 +2268,7 @@ error_code sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 {
 	sceNp.todo("sceNpManagerGetOnlineId(onlineId=*0x%x)", onlineId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2290,7 +2295,7 @@ error_code sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
 {
 	sceNp.todo("sceNpManagerGetNpId(npId=*0x%x)", npId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2317,7 +2322,7 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 {
 	sceNp.todo("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2344,7 +2349,7 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 {
 	sceNp.todo("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2371,7 +2376,7 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 {
 	sceNp.todo("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2398,7 +2403,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 {
 	sceNp.todo("sceNpManagerGetAccountRegion(countryCode=*0x%x, language=*0x%x)", countryCode, language);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2425,7 +2430,7 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 {
 	sceNp.todo("sceNpManagerGetAccountAge(age=*0x%x)", age);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2452,7 +2457,7 @@ error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s
 {
 	sceNp.todo("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2483,7 +2488,7 @@ error_code sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 {
 	sceNp.todo("sceNpManagerGetChatRestrictionFlag(isRestricted=*0x%x)", isRestricted);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2513,7 +2518,7 @@ error_code sceNpManagerGetCachedInfo(CellSysutilUserId userId, vm::ptr<SceNpMana
 {
 	sceNp.todo("sceNpManagerGetChatRestrictionFlag(userId=%d, param=*0x%x)", userId, param);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2537,7 +2542,7 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 	sceNp.todo("sceNpManagerRequestTicket(npId=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)",
 		npId, serviceId, cookie, cookieSize, entitlementId, consumedCount);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2566,7 +2571,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 	sceNp.todo("sceNpManagerRequestTicket2(npId=*0x%x, version=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)",
 		npId, version, serviceId, cookie, cookieSize, entitlementId, consumedCount);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2593,7 +2598,7 @@ error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u64> bufferSize)
 {
 	sceNp.todo("sceNpManagerGetTicket(buffer=*0x%x, bufferSize=*0x%x)", buffer, bufferSize);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2610,7 +2615,7 @@ error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> par
 {
 	sceNp.todo("sceNpManagerGetTicketParam(paramId=%d, param=*0x%x)", paramId, param);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2628,7 +2633,7 @@ error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdLis
 {
 	sceNp.todo("sceNpManagerGetEntitlementIdList(entIdList=*0x%x, entIdListNum=%d)", entIdList, entIdListNum);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2640,7 +2645,7 @@ error_code sceNpManagerGetEntitlementById(vm::cptr<char> entId, vm::ptr<SceNpEnt
 {
 	sceNp.todo("sceNpManagerGetEntitlementById(entId=%s, ent=*0x%x)", entId, ent);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2663,7 +2668,7 @@ error_code sceNpManagerSubSignin(CellSysutilUserId userId, vm::ptr<SceNpManagerS
 {
 	sceNp.todo("sceNpManagerSubSignin(userId=%d, cb_func=*0x%x, cb_arg=*0x%x, flag=%d)", userId, cb_func, cb_arg, flag);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2681,7 +2686,7 @@ error_code sceNpManagerSubSignout(vm::ptr<SceNpId> npId)
 {
 	sceNp.todo("sceNpManagerSubSignout(npId=*0x%x)", npId);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2854,7 +2859,7 @@ error_code sceNpProfileCallGui(vm::cptr<SceNpId> npid, vm::ptr<SceNpProfileResul
 {
 	sceNp.todo("sceNpProfileCallGui(npid=*0x%x, handler=*0x%x, userArg=*0x%x, options=0x%x)", npid, handler, userArg, options);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2871,7 +2876,7 @@ error_code sceNpProfileAbortGui()
 {
 	sceNp.todo("sceNpProfileAbortGui()");
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -2883,12 +2888,14 @@ error_code sceNpScoreInit()
 {
 	sceNp.warning("sceNpScoreInit()");
 
-	if (g_sce_np_score_is_initialized)
+	const auto score_manager = g_fxo->get<sce_np_score_manager>();
+
+	if (score_manager->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
 	}
 
-	g_sce_np_score_is_initialized = true;
+	score_manager->is_initialized = true;
 
 	return CELL_OK;
 }
@@ -2897,12 +2904,14 @@ error_code sceNpScoreTerm()
 {
 	sceNp.warning("sceNpScoreTerm()");
 
-	if (!g_sce_np_score_is_initialized)
+	const auto score_manager = g_fxo->get<sce_np_score_manager>();
+
+	if (!score_manager->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	g_sce_np_score_is_initialized = false;
+	score_manager->is_initialized = false;
 
 	return CELL_OK;
 }
@@ -2911,7 +2920,7 @@ error_code sceNpScoreCreateTitleCtx(vm::cptr<SceNpCommunicationId> communication
 {
 	sceNp.todo("sceNpScoreCreateTitleCtx(communicationId=*0x%x, passphrase=*0x%x, selfNpId=*0x%x)", communicationId, passphrase, selfNpId);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2928,7 +2937,7 @@ error_code sceNpScoreDestroyTitleCtx(s32 titleCtxId)
 {
 	sceNp.todo("sceNpScoreDestroyTitleCtx(titleCtxId=%d)", titleCtxId);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2940,7 +2949,7 @@ error_code sceNpScoreCreateTransactionCtx(s32 titleCtxId)
 {
 	sceNp.todo("sceNpScoreCreateTransactionCtx(titleCtxId=%d)", titleCtxId);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2957,7 +2966,7 @@ error_code sceNpScoreDestroyTransactionCtx(s32 transId)
 {
 	sceNp.todo("sceNpScoreDestroyTransactionCtx(transId=%d)", transId);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2969,7 +2978,7 @@ error_code sceNpScoreSetTimeout(s32 ctxId, usecond_t timeout)
 {
 	sceNp.todo("sceNpScoreSetTimeout(ctxId=%d, timeout=%d)", ctxId, timeout);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -2986,7 +2995,7 @@ error_code sceNpScoreSetPlayerCharacterId(s32 ctxId, SceNpScorePcId pcId)
 {
 	sceNp.todo("sceNpScoreSetPlayerCharacterId(ctxId=%d, pcId=%d)", ctxId, pcId);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3003,7 +3012,7 @@ error_code sceNpScoreWaitAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNp.todo("sceNpScoreWaitAsync(transId=%d, result=*0x%x)", transId, result);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3020,7 +3029,7 @@ error_code sceNpScorePollAsync(s32 transId, vm::ptr<s32> result)
 {
 	sceNp.todo("sceNpScorePollAsync(transId=%d, result=*0x%x)", transId, result);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3037,7 +3046,7 @@ error_code sceNpScoreGetBoardInfo(s32 transId, SceNpScoreBoardId boardId, vm::pt
 {
 	sceNp.todo("sceNpScoreGetBoardInfo(transId=%d, boardId=%d, boardInfo=*0x%x, option=*0x%x)", transId, boardId, boardInfo, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3064,7 +3073,7 @@ error_code sceNpScoreGetBoardInfoAsync(s32 transId, SceNpScoreBoardId boardId, v
 {
 	sceNp.todo("sceNpScoreGetBoardInfo(transId=%d, boardId=%d, boardInfo=*0x%x, prio=%d, option=*0x%x)", transId, boardId, boardInfo, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3083,7 +3092,7 @@ error_code sceNpScoreRecordScore(s32 transId, SceNpScoreBoardId boardId, SceNpSc
 	sceNp.todo("sceNpScoreRecordScore(transId=%d, boardId=%d, score=%d, scoreComment=*0x%x, gameInfo=*0x%x, tmpRank=*0x%x, option=*0x%x)",
 		transId, boardId, score, scoreComment, gameInfo, tmpRank, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3107,7 +3116,7 @@ error_code sceNpScoreRecordScoreAsync(s32 transId, SceNpScoreBoardId boardId, Sc
 	sceNp.todo("sceNpScoreRecordScoreAsync(transId=%d, boardId=%d, score=%d, scoreComment=*0x%x, gameInfo=*0x%x, tmpRank=*0x%x, prio=%d, option=*0x%x)",
 		transId, boardId, score, scoreComment, gameInfo, tmpRank, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3125,7 +3134,7 @@ error_code sceNpScoreRecordGameData(s32 transId, SceNpScoreBoardId boardId, SceN
 	sceNp.todo("sceNpScoreRecordGameData(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, option=*0x%x)",
 		transId, boardId, score, totalSize, sendSize, data, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3153,7 +3162,7 @@ error_code sceNpScoreRecordGameDataAsync(s32 transId, SceNpScoreBoardId boardId,
 	sceNp.todo("sceNpScoreRecordGameDataAsync(transId=%d, boardId=%d, score=%d, totalSize=%d, sendSize=%d, data=*0x%x, prio=%d, option=*0x%x)",
 		transId, boardId, score, totalSize, sendSize, data, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3171,7 +3180,7 @@ error_code sceNpScoreGetGameData(s32 transId, SceNpScoreBoardId boardId, vm::cpt
 	sceNp.todo("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, option=*0x%x)",
 		transId, boardId, npId, totalSize, recvSize, data, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3199,7 +3208,7 @@ error_code sceNpScoreGetGameDataAsync(s32 transId, SceNpScoreBoardId boardId, vm
 	sceNp.todo("sceNpScoreGetGameDataAsync(transId=%d, boardId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, prio=%d, option=*0x%x)",
 		transId, boardId, npId, totalSize, recvSize, data, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3219,7 +3228,7 @@ error_code sceNpScoreGetRankingByNpId(s32 transId, SceNpScoreBoardId boardId, vm
 	sceNp.todo("sceNpScoreGetRankingByNpId(transId=%d, boardId=%d, npIdArray=*0x%x, npIdArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, boardId, npIdArray, npIdArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3254,7 +3263,7 @@ error_code sceNpScoreGetRankingByNpIdAsync(s32 transId, SceNpScoreBoardId boardI
 	sceNp.todo("sceNpScoreGetRankingByNpIdAsync(transId=%d, boardId=%d, npIdArray=*0x%x, npIdArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, boardId, npIdArray, npIdArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3279,7 +3288,7 @@ error_code sceNpScoreGetRankingByRange(s32 transId, SceNpScoreBoardId boardId, S
 	sceNp.todo("sceNpScoreGetRankingByRange(transId=%d, boardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3314,7 +3323,7 @@ error_code sceNpScoreGetRankingByRangeAsync(s32 transId, SceNpScoreBoardId board
 	sceNp.todo("sceNpScoreGetRankingByRangeAsync(transId=%d, boardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3339,7 +3348,7 @@ error_code sceNpScoreGetFriendsRanking(s32 transId, SceNpScoreBoardId boardId, s
 	sceNp.todo("sceNpScoreGetFriendsRanking(transId=%d, boardId=%d, includeSelf=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3364,7 +3373,7 @@ error_code sceNpScoreGetFriendsRankingAsync(s32 transId, SceNpScoreBoardId board
 	sceNp.todo("sceNpScoreGetFriendsRankingAsync(transId=%d, boardId=%d, includeSelf=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, boardId, includeSelf, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3386,7 +3395,7 @@ error_code sceNpScoreCensorComment(s32 transId, vm::cptr<char> comment, vm::ptr<
 {
 	sceNp.todo("sceNpScoreCensorComment(transId=%d, comment=%s, option=*0x%x)", transId, comment, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3414,7 +3423,7 @@ error_code sceNpScoreCensorCommentAsync(s32 transId, vm::cptr<char> comment, s32
 {
 	sceNp.todo("sceNpScoreCensorCommentAsync(transId=%d, comment=%s, prio=%d, option=*0x%x)", transId, comment, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3437,7 +3446,7 @@ error_code sceNpScoreSanitizeComment(s32 transId, vm::cptr<char> comment, vm::pt
 {
 	sceNp.todo("sceNpScoreSanitizeComment(transId=%d, comment=%s, sanitizedComment=*0x%x, option=*0x%x)", transId, comment, sanitizedComment, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3465,7 +3474,7 @@ error_code sceNpScoreSanitizeCommentAsync(s32 transId, vm::cptr<char> comment, v
 {
 	sceNp.todo("sceNpScoreSanitizeCommentAsync(transId=%d, comment=%s, sanitizedComment=*0x%x, prio=%d, option=*0x%x)", transId, comment, sanitizedComment, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3491,7 +3500,7 @@ error_code sceNpScoreGetRankingByNpIdPcId(s32 transId, SceNpScoreBoardId boardId
 	sceNp.todo("sceNpScoreGetRankingByNpIdPcId(transId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3526,7 +3535,7 @@ error_code sceNpScoreGetRankingByNpIdPcIdAsync(s32 transId, SceNpScoreBoardId bo
 	sceNp.todo("sceNpScoreGetRankingByNpIdPcIdAsync(transId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3548,7 +3557,7 @@ error_code sceNpScoreAbortTransaction(s32 transId)
 {
 	sceNp.todo("sceNpScoreAbortTransaction(transId=%d)", transId);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3564,7 +3573,7 @@ error_code sceNpScoreGetClansMembersRankingByNpId(s32 transId, SceNpClanId clanI
 	sceNp.todo("sceNpScoreGetClansMembersRankingByNpId(transId=%d, clanId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, clanId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3600,7 +3609,7 @@ error_code sceNpScoreGetClansMembersRankingByNpIdAsync(s32 transId, SceNpClanId 
 	sceNp.todo("sceNpScoreGetClansMembersRankingByNpIdAsync(transId=%d, clanId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, clanId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3626,7 +3635,7 @@ error_code sceNpScoreGetClansMembersRankingByNpIdPcId(s32 transId, SceNpClanId c
 	sceNp.todo("sceNpScoreGetClansMembersRankingByNpIdPcId(transId=%d, clanId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, clanId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3662,7 +3671,7 @@ error_code sceNpScoreGetClansMembersRankingByNpIdPcIdAsync(s32 transId, SceNpCla
 	sceNp.todo("sceNpScoreGetClansMembersRankingByNpIdPcIdAsync(transId=%d, clanId=%d, boardId=%d, idArray=*0x%x, idArraySize=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, clanId, boardId, idArray, idArraySize, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3687,7 +3696,7 @@ error_code sceNpScoreGetClansRankingByRange(s32 transId, SceNpScoreClansBoardId 
 	sceNp.todo("sceNpScoreGetClansRankingByRange(transId=%d, clanBoardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, reserved1=*0x%x, reservedSize1=%d, reserved2=*0x%x, reservedSize2=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, clanBoardId, startSerialRank, rankArray, rankArraySize, reserved1, reservedSize1, reserved2, reservedSize2, arrayNum, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3722,7 +3731,7 @@ error_code sceNpScoreGetClansRankingByRangeAsync(s32 transId, SceNpScoreClansBoa
 	sceNp.todo("sceNpScoreGetClansRankingByRangeAsync(transId=%d, clanBoardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, reserved1=*0x%x, reservedSize1=%d, reserved2=*0x%x, reservedSize2=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, clanBoardId, startSerialRank, rankArray, rankArraySize, reserved1, reservedSize1, reserved2, reservedSize2, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3746,7 +3755,7 @@ error_code sceNpScoreGetClanMemberGameData(s32 transId, SceNpScoreBoardId boardI
 	sceNp.todo("sceNpScoreGetClanMemberGameData(transId=%d, boardId=%d, clanId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, option=*0x%x)",
 		transId, boardId, clanId, npId, totalSize, recvSize, data, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3775,7 +3784,7 @@ error_code sceNpScoreGetClanMemberGameDataAsync(s32 transId, SceNpScoreBoardId b
 	sceNp.todo("sceNpScoreGetClanMemberGameDataAsync(transId=%d, boardId=%d, clanId=%d, npId=*0x%x, totalSize=*0x%x, recvSize=%d, data=*0x%x, prio=%d, option=*0x%x)",
 		transId, boardId, clanId, npId, totalSize, recvSize, data, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3795,7 +3804,7 @@ error_code sceNpScoreGetClansRankingByClanId(s32 transId, SceNpScoreClansBoardId
 	sceNp.todo("sceNpScoreGetClansRankingByClanId(transId=%d, clanBoardId=%d, clanIdArray=*0x%x, clanIdArraySize=%d, rankArray=*0x%x, rankArraySize=%d, reserved1=*0x%x, reservedSize1=%d, reserved2=*0x%x, reservedSize2=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, clanBoardId, clanIdArray, clanIdArraySize, rankArray, rankArraySize, reserved1, reservedSize1, reserved2, reservedSize2, arrayNum, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3830,7 +3839,7 @@ error_code sceNpScoreGetClansRankingByClanIdAsync(s32 transId, SceNpScoreClansBo
 	sceNp.todo("sceNpScoreGetClansRankingByRangeAsync(transId=%d, clanBoardId=%d, clanIdArray=*0x%x, clanIdArraySize=%d, rankArray=*0x%x, rankArraySize=%d, reserved1=*0x%x, reservedSize1=%d, reserved2=*0x%x, reservedSize2=%d, arrayNum=%d, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, clanBoardId, clanIdArray, clanIdArraySize, rankArray, rankArraySize, reserved1, reservedSize1, reserved2, reservedSize2, arrayNum, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3856,7 +3865,7 @@ error_code sceNpScoreGetClansMembersRankingByRange(s32 transId, SceNpClanId clan
 	sceNp.todo("sceNpScoreGetClansMembersRankingByRange(transId=%d, clanId=%d, boardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, option=*0x%x)",
 		transId, clanId, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo, lastSortDate, totalRecord, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3892,7 +3901,7 @@ error_code sceNpScoreGetClansMembersRankingByRangeAsync(s32 transId, SceNpClanId
 	sceNp.todo("sceNpScoreGetClansMembersRankingByRangeAsync(transId=%d, clanId=%d, boardId=%d, startSerialRank=%d, rankArray=*0x%x, rankArraySize=%d, commentArray=*0x%x, commentArraySize=%d, infoArray=*0x%x, infoArraySize=%d, descriptArray=*0x%x, descriptArraySize=%d, arrayNum=%d, clanInfo=*0x%x, lastSortDate=*0x%x, totalRecord=*0x%x, prio=%d, option=*0x%x)",
 		transId, clanId, boardId, startSerialRank, rankArray, rankArraySize, commentArray, commentArraySize, infoArray, infoArraySize, descriptArray, descriptArraySize, arrayNum, clanInfo, lastSortDate, totalRecord, prio, option);
 
-	if (!g_sce_np_score_is_initialized)
+	if (!g_fxo->get<sce_np_score_manager>()->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -3914,7 +3923,7 @@ error_code sceNpSignalingCreateCtx(vm::ptr<SceNpId> npId, vm::ptr<SceNpSignaling
 {
 	sceNp.todo("sceNpSignalingCreateCtx(npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", npId, handler, arg, ctx_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -3936,7 +3945,7 @@ error_code sceNpSignalingDestroyCtx(u32 ctx_id)
 {
 	sceNp.todo("sceNpSignalingDestroyCtx(ctx_id=%d)", ctx_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -3948,7 +3957,7 @@ error_code sceNpSignalingAddExtendedHandler(u32 ctx_id, vm::ptr<SceNpSignalingHa
 {
 	sceNp.todo("sceNpSignalingAddExtendedHandler(ctx_id=%d, handler=*0x%x, arg=*0x%x)", ctx_id, handler, arg);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -3960,7 +3969,7 @@ error_code sceNpSignalingSetCtxOpt(u32 ctx_id, s32 optname, s32 optval)
 {
 	sceNp.todo("sceNpSignalingSetCtxOpt(ctx_id=%d, optname=%d, optval=%d)", ctx_id, optname, optval);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -3977,7 +3986,7 @@ error_code sceNpSignalingGetCtxOpt(u32 ctx_id, s32 optname, vm::ptr<s32> optval)
 {
 	sceNp.todo("sceNpSignalingGetCtxOpt(ctx_id=%d, optname=%d, optval=*0x%x)", ctx_id, optname, optval);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -3994,7 +4003,7 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, u
 {
 	sceNp.todo("sceNpSignalingActivateConnection(ctx_id=%d, npId=*0x%x, conn_id=%d)", ctx_id, npId, conn_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4011,7 +4020,7 @@ error_code sceNpSignalingDeactivateConnection(u32 ctx_id, u32 conn_id)
 {
 	sceNp.todo("sceNpSignalingDeactivateConnection(ctx_id=%d, conn_id=%d)", ctx_id, conn_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4023,7 +4032,7 @@ error_code sceNpSignalingTerminateConnection(u32 ctx_id, u32 conn_id)
 {
 	sceNp.todo("sceNpSignalingTerminateConnection(ctx_id=%d, conn_id=%d)", ctx_id, conn_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4035,7 +4044,7 @@ error_code sceNpSignalingGetConnectionStatus(u32 ctx_id, u32 conn_id, vm::ptr<s3
 {
 	sceNp.todo("sceNpSignalingGetConnectionStatus(ctx_id=%d, conn_id=%d, conn_status=*0x%x, peer_addr=*0x%x, peer_port=*0x%x)", ctx_id, conn_id, conn_status, peer_addr, peer_port);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4052,7 +4061,7 @@ error_code sceNpSignalingGetConnectionInfo(u32 ctx_id, u32 conn_id, s32 code, vm
 {
 	sceNp.todo("sceNpSignalingGetConnectionInfo(ctx_id=%d, conn_id=%d, code=%d, info=*0x%x)", ctx_id, conn_id, code, info);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4069,7 +4078,7 @@ error_code sceNpSignalingGetConnectionFromNpId(u32 ctx_id, vm::ptr<SceNpId> npId
 {
 	sceNp.todo("sceNpSignalingGetConnectionFromNpId(ctx_id=%d, npId=*0x%x, conn_id=*0x%x)", ctx_id, npId, conn_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4086,7 +4095,7 @@ error_code sceNpSignalingGetConnectionFromPeerAddress(u32 ctx_id, vm::ptr<in_add
 {
 	sceNp.todo("sceNpSignalingGetConnectionFromPeerAddress(ctx_id=%d, peer_addr=*0x%x, peer_port=%d, conn_id=*0x%x)", ctx_id, peer_addr, peer_port, conn_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4103,7 +4112,7 @@ error_code sceNpSignalingGetLocalNetInfo(u32 ctx_id, vm::ptr<SceNpSignalingNetIn
 {
 	sceNp.todo("sceNpSignalingGetLocalNetInfo(ctx_id=%d, info=*0x%x)", ctx_id, info);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4121,7 +4130,7 @@ error_code sceNpSignalingGetPeerNetInfo(u32 ctx_id, vm::ptr<SceNpId> npId, vm::p
 {
 	sceNp.todo("sceNpSignalingGetPeerNetInfo(ctx_id=%d, npId=*0x%x, req_id=*0x%x)", ctx_id, npId, req_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4138,7 +4147,7 @@ error_code sceNpSignalingCancelPeerNetInfo(u32 ctx_id, u32 req_id)
 {
 	sceNp.todo("sceNpSignalingCancelPeerNetInfo(ctx_id=%d, req_id=%d)", ctx_id, req_id);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
@@ -4150,7 +4159,7 @@ error_code sceNpSignalingGetPeerNetInfoResult(u32 ctx_id, u32 req_id, vm::ptr<Sc
 {
 	sceNp.todo("sceNpSignalingGetPeerNetInfoResult(ctx_id=%d, req_id=%d, info=*0x%x)", ctx_id, req_id, info);
 
-	if (!g_sce_np_is_initialized)
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
