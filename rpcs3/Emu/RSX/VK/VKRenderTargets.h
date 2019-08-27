@@ -711,6 +711,7 @@ namespace rsx
 				sink->sample_layout = ref->sample_layout;
 				sink->stencil_init_flags = ref->stencil_init_flags;
 				sink->native_pitch = u16(prev.width * ref->get_bpp() * ref->samples_x);
+				sink->rsx_pitch = ref->get_rsx_pitch();
 				sink->surface_width = prev.width;
 				sink->surface_height = prev.height;
 				sink->queue_tag(address);
@@ -724,7 +725,6 @@ namespace rsx
 
 			prev.target = sink.get();
 
-			sink->rsx_pitch = ref->get_rsx_pitch();
 			if (!sink->old_contents.empty())
 			{
 				// Deal with this, likely only needs to clear
@@ -738,6 +738,7 @@ namespace rsx
 				}
 			}
 
+			sink->rsx_pitch = ref->get_rsx_pitch();
 			sink->set_old_contents_region(prev, false);
 			sink->last_use_tag = ref->last_use_tag;
 		}

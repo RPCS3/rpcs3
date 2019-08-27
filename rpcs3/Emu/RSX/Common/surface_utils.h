@@ -357,6 +357,8 @@ namespace rsx
 #else
 		void queue_tag(u32 address)
 		{
+			verify(HERE), native_pitch, rsx_pitch;
+
 			base_addr = address;
 
 			const u32 size_x = (native_pitch > 8)? (native_pitch - 8) : 0u;
@@ -569,7 +571,8 @@ namespace rsx
 		rsx::address_range get_memory_range() const
 		{
 			const u32 internal_height = get_surface_height(rsx::surface_metrics::samples);
-			return rsx::address_range::start_length(base_addr, internal_height * get_rsx_pitch());
+			const u32 excess = (rsx_pitch - native_pitch);
+			return rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
 		}
 
 		template <typename T>
