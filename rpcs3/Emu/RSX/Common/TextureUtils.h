@@ -110,6 +110,19 @@ struct rsx_subresource_layout
 	u32 pitch_in_block;
 };
 
+struct texture_memory_info
+{
+	int element_size;
+	bool require_swap;
+};
+
+struct texture_uploader_capabilities
+{
+	bool supports_byteswap;
+	bool supports_vtc_decoding;
+	size_t alignment;
+};
+
 /**
 * Get size to store texture in a linear fashion.
 * Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
@@ -125,7 +138,7 @@ size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
 
-void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, bool vtc_support, size_t dst_row_pitch_multiple_of);
+texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
 
 u8 get_format_block_size_in_bytes(int format);
 u8 get_format_block_size_in_texel(int format);

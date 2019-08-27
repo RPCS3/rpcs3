@@ -516,19 +516,26 @@ namespace vk
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
 		u8  block_size_in_bytes = get_format_block_size_in_bytes(format);
 
+		texture_uploader_capabilities caps{ true, false, heap_align };
+		vk::buffer* scratch_buf = nullptr;
+		u32 scratch_offset = 0;
+
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{
 			u32 row_pitch = (((layout.width_in_block * block_size_in_bytes) + heap_align - 1) / heap_align) * heap_align;
 			if (heap_align != 256) verify(HERE), row_pitch == heap_align;
 			u32 image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 
-			//Map with extra padding bytes in case of realignment
+			// Map with extra padding bytes in case of realignment
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
 			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
 			VkBuffer buffer_handle = upload_heap.heap->value;
 
+			// Only do GPU-side conversion if occupancy is good
+			caps.supports_byteswap = (image_linear_size >= 1024);
+
 			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
-			upload_texture_subresource(mapped, layout, format, is_swizzled, false, heap_align);
+			auto opt = upload_texture_subresource(mapped, layout, format, is_swizzled, caps);
 			upload_heap.unmap();
 
 			VkBufferImageCopy copy_info = {};
@@ -542,24 +549,60 @@ namespace vk
 			copy_info.imageSubresource.mipLevel = mipmap_level % mipmap_count;
 			copy_info.bufferRowLength = block_in_pixel * row_pitch / block_size_in_bytes;
 
-			if (dst_image->info.format == VK_FORMAT_D24_UNORM_S8_UINT ||
-				dst_image->info.format == VK_FORMAT_D32_SFLOAT_S8_UINT)
+			if (opt.require_swap || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
 			{
-				// Executing GPU tasks on host_visible RAM is awful, copy to device-local buffer instead
-				auto scratch_buf = vk::get_scratch_buffer();
+				if (!scratch_buf)
+				{
+					scratch_buf = vk::get_scratch_buffer();
+				}
+				else if ((scratch_offset + image_linear_size) > scratch_buf->size())
+				{
+					scratch_offset = 0;
+					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_buf->size(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+				}
 
 				VkBufferCopy copy = {};
 				copy.srcOffset = offset_in_buffer;
-				copy.dstOffset = 0;
+				copy.dstOffset = scratch_offset;
 				copy.size = image_linear_size;
 
 				vkCmdCopyBuffer(cmd, buffer_handle, scratch_buf->value, 1, &copy);
 
-				insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, image_linear_size, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+				insert_buffer_memory_barrier(cmd, scratch_buf->value, scratch_offset, image_linear_size, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+			}
 
-				copy_info.bufferOffset = 0;
+			if (opt.require_swap)
+			{
+				if (opt.element_size == 4)
+				{
+					vk::get_compute_task<vk::cs_shuffle_32>()->run(cmd, scratch_buf, image_linear_size, scratch_offset);
+				}
+				else if (opt.element_size == 2)
+				{
+					vk::get_compute_task<vk::cs_shuffle_16>()->run(cmd, scratch_buf, image_linear_size, scratch_offset);
+				}
+				else
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
+			}
+
+			if (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
+			{
+				copy_info.bufferOffset = scratch_offset;
+				scratch_offset = align(scratch_offset + image_linear_size, 512);
 				vk::copy_buffer_to_image(cmd, scratch_buf, dst_image, copy_info);
+			}
+			else if (opt.require_swap)
+			{
+				insert_buffer_memory_barrier(cmd, scratch_buf->value, scratch_offset, image_linear_size, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+				copy_info.bufferOffset = scratch_offset;
+				scratch_offset = align(scratch_offset + image_linear_size, 512);
+				vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
 			}
 			else
 			{
