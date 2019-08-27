@@ -579,6 +579,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
+	g_fxo->init();
 
 	// PS3 'executable'
 	m_state = system_state::ready;
