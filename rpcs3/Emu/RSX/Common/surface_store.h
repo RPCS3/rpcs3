@@ -753,36 +753,35 @@ namespace rsx
 		{
 			std::vector<surface_overlap_info> result;
 			std::vector<std::pair<u32, bool>> dirty;
-			const u32 limit = texaddr + (required_pitch * required_height);
+
+			const auto surface_internal_pitch = (required_width * required_bpp);
+
+			verify(HERE), surface_internal_pitch <= required_pitch;
+			const auto test_range = utils::address_range::start_length(texaddr, (required_pitch * required_height) - (required_pitch - surface_internal_pitch));
 
 			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data, bool is_depth)
 			{
 				for (auto &tex_info : data)
 				{
-					const auto this_address = tex_info.first;
-					if (this_address >= limit)
+					const auto range = tex_info.second->get_memory_range();
+					if (!range.overlaps(test_range))
 						continue;
 
 					auto surface = tex_info.second.get();
-					const auto pitch = surface->get_rsx_pitch();
 					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
-						continue;
-
-					const auto texture_size = pitch * surface->get_surface_height(rsx::surface_metrics::samples);
-					if ((this_address + texture_size) <= texaddr)
 						continue;
 
 					surface_overlap_info info;
 					info.surface = surface;
-					info.base_address = this_address;
+					info.base_address = range.start;
 					info.is_depth = is_depth;
 
 					const auto normalized_surface_width = surface->get_surface_width(rsx::surface_metrics::bytes) / required_bpp;
 					const auto normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
 
-					if (LIKELY(this_address >= texaddr))
+					if (LIKELY(range.start >= texaddr))
 					{
-						const auto offset = this_address - texaddr;
+						const auto offset = range.start - texaddr;
 						info.dst_y = (offset / required_pitch);
 						info.dst_x = (offset % required_pitch) / required_bpp;
 
@@ -799,9 +798,10 @@ namespace rsx
 					}
 					else
 					{
-						const auto offset = texaddr - this_address;
-						info.src_y = (offset / required_pitch);
-						info.src_x = (offset % required_pitch) / required_bpp;
+						const auto pitch = surface->get_rsx_pitch();
+						const auto offset = texaddr - range.start;
+						info.src_y = (offset / pitch);
+						info.src_x = (offset % pitch) / required_bpp;
 
 						if (UNLIKELY(info.src_x >= normalized_surface_width || info.src_y >= normalized_surface_height))
 						{
@@ -819,7 +819,7 @@ namespace rsx
 					// Delay this as much as possible to avoid side-effects of spamming barrier
 					if (surface->memory_barrier(cmd, access); !surface->test())
 					{
-						dirty.emplace_back(this_address, is_depth);
+						dirty.emplace_back(range.start, is_depth);
 						continue;
 					}
 
@@ -838,14 +838,12 @@ namespace rsx
 
 			// Range test helper to quickly discard blocks
 			// Fortunately, render targets tend to be clustered anyway
-			rsx::address_range test = rsx::address_range::start_end(texaddr, limit-1);
-
-			if (test.overlaps(m_render_targets_memory_range))
+			if (test_range.overlaps(m_render_targets_memory_range))
 			{
 				process_list_function(m_render_targets_storage, false);
 			}
 
-			if (test.overlaps(m_depth_stencil_memory_range))
+			if (test_range.overlaps(m_depth_stencil_memory_range))
 			{
 				process_list_function(m_depth_stencil_storage, true);
 			}

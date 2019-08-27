@@ -212,13 +212,10 @@ struct gl_render_target_traits
 
 			sink->set_spp(ref->get_spp());
 			sink->set_native_pitch(prev.width * ref->get_bpp() * ref->samples_x);
+			sink->set_rsx_pitch(ref->get_rsx_pitch());
 			sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
 			sink->set_native_component_layout(ref->get_native_component_layout());
 			sink->queue_tag(address);
-		}
-		else
-		{
-			sink->set_rsx_pitch(ref->get_rsx_pitch());
 		}
 
 		prev.target = sink.get();
@@ -236,6 +233,7 @@ struct gl_render_target_traits
 			}
 		}
 
+		sink->set_rsx_pitch(ref->get_rsx_pitch());
 		sink->set_old_contents_region(prev, false);
 		sink->last_use_tag = ref->last_use_tag;
 	}
