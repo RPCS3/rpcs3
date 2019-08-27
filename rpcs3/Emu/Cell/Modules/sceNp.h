@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "cellRtc.h"
 
@@ -1296,3 +1296,5 @@ struct sce_np_score_manager
 {
 	std::atomic<bool> is_initialized = false;
 };
+
+extern s32 g_psn_connection_status;
