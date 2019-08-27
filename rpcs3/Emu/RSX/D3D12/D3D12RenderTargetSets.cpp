@@ -177,7 +177,8 @@ void D3D12GSRender::prepare_render_targets(ID3D12GraphicsCommandList *copycmdlis
 		rsx::method_registers.clear_color_a() / 255.f,
 	};
 
-	const auto layout = get_framebuffer_layout(rsx::framebuffer_creation_context::context_draw);
+	rsx::framebuffer_layout layout;
+	get_framebuffer_layout(rsx::framebuffer_creation_context::context_draw, layout);
 	if (!framebuffer_status_valid)
 		return;
 

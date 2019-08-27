@@ -468,7 +468,7 @@ namespace gl
 		blit_dst.check();
 
 		cmd.drv->clear_color(color);
-		cmd.drv->color_mask(true, true, true, true);
+		cmd.drv->color_maski(0, true, true, true, true);
 
 		glClear(GL_COLOR_BUFFER_BIT);
 	}

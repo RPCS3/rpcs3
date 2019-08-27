@@ -287,10 +287,10 @@ void D3D12GSRender::load_program()
 	prop.Rasterization.FrontCounterClockwise = get_front_face_ccw(rsx::method_registers.front_face_mode());
 
 	UINT8 mask = 0;
-	mask |= rsx::method_registers.color_mask_r() ? D3D12_COLOR_WRITE_ENABLE_RED : 0;
-	mask |= rsx::method_registers.color_mask_g() ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0;
-	mask |= rsx::method_registers.color_mask_b() ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0;
-	mask |= rsx::method_registers.color_mask_a() ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0;
+	mask |= rsx::method_registers.color_mask_r(0) ? D3D12_COLOR_WRITE_ENABLE_RED : 0;
+	mask |= rsx::method_registers.color_mask_g(0) ? D3D12_COLOR_WRITE_ENABLE_GREEN : 0;
+	mask |= rsx::method_registers.color_mask_b(0) ? D3D12_COLOR_WRITE_ENABLE_BLUE : 0;
+	mask |= rsx::method_registers.color_mask_a(0) ? D3D12_COLOR_WRITE_ENABLE_ALPHA : 0;
 	for (unsigned i = 0; i < prop.numMRT; i++)
 		prop.Blend.RenderTarget[i].RenderTargetWriteMask = mask;
 

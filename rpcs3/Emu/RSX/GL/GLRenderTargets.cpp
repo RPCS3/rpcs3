@@ -142,13 +142,13 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	framebuffer_status_valid = false;
 	m_framebuffer_state_contested = false;
 
-	const auto layout = get_framebuffer_layout(context);
+	get_framebuffer_layout(context, m_framebuffer_layout);
 	if (!framebuffer_status_valid)
 	{
 		return;
 	}
 
-	if (m_draw_fbo && layout.ignore_change)
+	if (m_draw_fbo && m_framebuffer_layout.ignore_change)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
@@ -161,17 +161,17 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	gl::command_context cmd{ gl_state };
 	m_rtts.prepare_render_target(cmd,
-		layout.color_format, layout.depth_format,
-		layout.width, layout.height,
-		layout.target, layout.aa_mode,
-		layout.color_addresses, layout.zeta_address,
-		layout.actual_color_pitch, layout.actual_zeta_pitch);
+		m_framebuffer_layout.color_format, m_framebuffer_layout.depth_format,
+		m_framebuffer_layout.width, m_framebuffer_layout.height,
+		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode,
+		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
+		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch);
 
 	std::array<GLuint, 4> color_targets;
 	GLuint depth_stencil_target;
 
-	const u8 color_bpp = get_format_block_size_in_bytes(layout.color_format);
-	const auto samples = get_format_sample_count(layout.aa_mode);
+	const u8 color_bpp = get_format_block_size_in_bytes(m_framebuffer_layout.color_format);
+	const auto samples = get_format_sample_count(m_framebuffer_layout.aa_mode);
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -187,15 +187,15 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
 			color_targets[i] = rtt->id();
 
-			verify("Pitch mismatch!" HERE), rtt->get_rsx_pitch() == layout.actual_color_pitch[i];
-			m_surface_info[i].address = layout.color_addresses[i];
-			m_surface_info[i].pitch = layout.actual_color_pitch[i];
-			m_surface_info[i].width = layout.width;
-			m_surface_info[i].height = layout.height;
-			m_surface_info[i].color_format = layout.color_format;
+			verify("Pitch mismatch!" HERE), rtt->get_rsx_pitch() == m_framebuffer_layout.actual_color_pitch[i];
+			m_surface_info[i].address = m_framebuffer_layout.color_addresses[i];
+			m_surface_info[i].pitch = m_framebuffer_layout.actual_color_pitch[i];
+			m_surface_info[i].width = m_framebuffer_layout.width;
+			m_surface_info[i].height = m_framebuffer_layout.height;
+			m_surface_info[i].color_format = m_framebuffer_layout.color_format;
 			m_surface_info[i].bpp = color_bpp;
 			m_surface_info[i].samples = samples;
-			m_gl_texture_cache.notify_surface_changed(m_surface_info[i].get_memory_range(layout.aa_factors));
+			m_gl_texture_cache.notify_surface_changed(m_surface_info[i].get_memory_range(m_framebuffer_layout.aa_factors));
 		}
 		else
 		{
@@ -215,20 +215,20 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
-		ds->set_depth_render_mode(!layout.depth_float);
+		ds->set_depth_render_mode(!m_framebuffer_layout.depth_float);
 
-		verify("Pitch mismatch!" HERE), std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == layout.actual_zeta_pitch;
+		verify("Pitch mismatch!" HERE), std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch;
 
-		m_depth_surface_info.address = layout.zeta_address;
-		m_depth_surface_info.pitch = layout.actual_zeta_pitch;
-		m_depth_surface_info.width = layout.width;
-		m_depth_surface_info.height = layout.height;
-		m_depth_surface_info.depth_format = layout.depth_format;
-		m_depth_surface_info.depth_buffer_float = layout.depth_float;
-		m_depth_surface_info.bpp = (layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
+		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
+		m_depth_surface_info.pitch = m_framebuffer_layout.actual_zeta_pitch;
+		m_depth_surface_info.width = m_framebuffer_layout.width;
+		m_depth_surface_info.height = m_framebuffer_layout.height;
+		m_depth_surface_info.depth_format = m_framebuffer_layout.depth_format;
+		m_depth_surface_info.depth_buffer_float = m_framebuffer_layout.depth_float;
+		m_depth_surface_info.bpp = (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
 		m_depth_surface_info.samples = samples;
 
-		m_gl_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
+		m_gl_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(m_framebuffer_layout.aa_factors));
 	}
 	else
 	{
@@ -252,7 +252,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 			m_draw_fbo = &fbo;
 			m_draw_fbo->bind();
-			m_draw_fbo->set_extents({ (int)layout.width, (int)layout.height });
+			m_draw_fbo->set_extents({ (int)m_framebuffer_layout.width, (int)m_framebuffer_layout.height });
 
 			framebuffer_status_valid = true;
 			break;
@@ -267,7 +267,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_draw_fbo = &m_framebuffer_cache.back();
 		m_draw_fbo->create();
 		m_draw_fbo->bind();
-		m_draw_fbo->set_extents({ (int)layout.width, (int)layout.height });
+		m_draw_fbo->set_extents({ (int)m_framebuffer_layout.width, (int)m_framebuffer_layout.height });
 
 		for (int i = 0; i < 4; ++i)
 		{
@@ -279,7 +279,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 		if (depth_stencil_target)
 		{
-			if (layout.depth_format == rsx::surface_depth_format::z24s8)
+			if (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z24s8)
 			{
 				m_draw_fbo->depth_stencil = depth_stencil_target;
 			}
@@ -329,7 +329,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 	m_gl_texture_cache.clear_ro_tex_invalidate_intr();
 
-	const auto color_format = rsx::internals::surface_color_format_to_gl(layout.color_format);
+	const auto color_format = rsx::internals::surface_color_format_to_gl(m_framebuffer_layout.color_format);
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
@@ -354,7 +354,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		const auto surface_range = m_depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
-			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(layout.depth_format);
+			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(m_framebuffer_layout.depth_format);
 			m_gl_texture_cache.lock_memory_region(
 				cmd, m_rtts.m_bound_depth_stencil.second, surface_range, true,
 				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,

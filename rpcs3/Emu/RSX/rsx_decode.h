@@ -3030,6 +3030,60 @@ struct registers_decoder<NV4097_SET_COLOR_MASK>
 };
 
 template<>
+struct registers_decoder<NV4097_SET_COLOR_MASK_MRT>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool color_b(int index) const
+		{
+			return bf_decoder<3, 1, bool>(value >> (index * 4));
+		}
+
+		bool color_g(int index) const
+		{
+			return bf_decoder<2, 1, bool>(value >> (index * 4));
+		}
+
+		bool color_r(int index) const
+		{
+			return bf_decoder<1, 1, bool>(value >> (index * 4));
+		}
+
+		bool color_a(int index) const
+		{
+			return bf_decoder<0, 1, bool>(value >> (index * 4));
+		}
+
+		bool color_write_enabled(int index) const
+		{
+			return ((value >> (index * 4)) & 0xF) != 0;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		std::string result;
+		for (int index = 1; index < 4; ++index)
+		{
+			result += fmt::format("Surface[%d]: A:%d R:%d G:%d B:%d\n",
+				index,
+				decoded_values.color_a(index),
+				decoded_values.color_r(index),
+				decoded_values.color_g(index),
+				decoded_values.color_b(index));
+		}
+
+		return "Color Mask MRT:\n" + result;
+	}
+};
+
+template<>
 struct registers_decoder<NV4097_SET_SHADER_WINDOW>
 {
 	struct decoded_type

@@ -1761,7 +1761,7 @@ void VKGSRender::end()
 	close_render_pass();
 	vk::leave_uninterruptible();
 
-	m_rtts.on_write(rsx::method_registers.color_write_enabled(), rsx::method_registers.depth_write_enabled());
+	m_rtts.on_write(m_framebuffer_layout.color_write_enabled.data(), m_framebuffer_layout.zeta_write_enabled);
 
 	rsx::thread::end();
 }
@@ -1919,6 +1919,7 @@ void VKGSRender::clear_surface(u32 mask)
 	VkClearRect region = { { { scissor_x, scissor_y }, { scissor_w, scissor_h } }, 0, 1 };
 
 	const bool require_mem_load = (scissor_w * scissor_h) < (fb_width * fb_height);
+	bool update_color = false, update_z = false;
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & 0x3)
@@ -2057,14 +2058,15 @@ void VKGSRender::clear_surface(u32 mask)
 					}
 				}
 
-				for (auto &rtt : m_rtts.m_bound_render_targets)
+				for (u8 index = m_rtts.m_bound_render_targets_config.first, count = 0;
+					count < m_rtts.m_bound_render_targets_config.second;
+					++count, ++index)
 				{
-					if (const auto address = rtt.first)
-					{
-						if (require_mem_load) rtt.second->write_barrier(*m_current_command_buffer);
-						m_rtts.on_write(true, false, address);
-					}
+					if (require_mem_load)
+						m_rtts.m_bound_render_targets[index].second->write_barrier(*m_current_command_buffer);
 				}
+
+				update_color = true;
 			}
 		}
 	}
@@ -2074,9 +2076,16 @@ void VKGSRender::clear_surface(u32 mask)
 		if (m_rtts.m_bound_depth_stencil.first)
 		{
 			if (require_mem_load) m_rtts.m_bound_depth_stencil.second->write_barrier(*m_current_command_buffer);
-			m_rtts.on_write(false, true);
+
 			clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
+			update_z = true;
 		}
+	}
+
+	if (update_color || update_z)
+	{
+		const bool write_all_mask[] = { true, true, true, true };
+		m_rtts.on_write(update_color ? write_all_mask : nullptr, update_z);
 	}
 
 	if (!clear_descriptors.empty())
@@ -2478,15 +2487,18 @@ bool VKGSRender::load_program()
 	if (rsx::method_registers.cull_face_enabled())
 		properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
 
-	bool color_mask_b = rsx::method_registers.color_mask_b();
-	bool color_mask_g = rsx::method_registers.color_mask_g();
-	bool color_mask_r = rsx::method_registers.color_mask_r();
-	bool color_mask_a = rsx::method_registers.color_mask_a();
+	for (int index = 0; index < m_draw_buffers.size(); ++index)
+	{
+		bool color_mask_b = rsx::method_registers.color_mask_b(index);
+		bool color_mask_g = rsx::method_registers.color_mask_g(index);
+		bool color_mask_r = rsx::method_registers.color_mask_r(index);
+		bool color_mask_a = rsx::method_registers.color_mask_a(index);
 
-	if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
-		rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+		if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+			rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 
-	properties.state.set_color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+		properties.state.set_color_mask(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+	}
 
 	bool mrt_blend_enabled[] =
 	{
@@ -2831,13 +2843,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	framebuffer_status_valid = false;
 	m_framebuffer_state_contested = false;
 
-	const auto layout = get_framebuffer_layout(context);
+	get_framebuffer_layout(context, m_framebuffer_layout);
 	if (!framebuffer_status_valid)
 	{
 		return;
 	}
 
-	if (m_draw_fbo && layout.ignore_change)
+	if (m_draw_fbo && m_framebuffer_layout.ignore_change)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
@@ -2846,16 +2858,16 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	}
 
 	m_rtts.prepare_render_target(*m_current_command_buffer,
-		layout.color_format, layout.depth_format,
-		layout.width, layout.height,
-		layout.target, layout.aa_mode,
-		layout.color_addresses, layout.zeta_address,
-		layout.actual_color_pitch, layout.actual_zeta_pitch,
+		m_framebuffer_layout.color_format, m_framebuffer_layout.depth_format,
+		m_framebuffer_layout.width, m_framebuffer_layout.height,
+		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode,
+		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
+		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
 		(*m_device), *m_current_command_buffer);
 
 	// Reset framebuffer information
-	const auto color_bpp = get_format_block_size_in_bytes(layout.color_format);
-	const auto samples = get_format_sample_count(layout.aa_mode);
+	const auto color_bpp = get_format_block_size_in_bytes(m_framebuffer_layout.color_format);
+	const auto samples = get_format_sample_count(m_framebuffer_layout.aa_mode);
 
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
@@ -2868,9 +2880,9 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 
 		m_surface_info[i].address = m_surface_info[i].pitch = 0;
-		m_surface_info[i].width = layout.width;
-		m_surface_info[i].height = layout.height;
-		m_surface_info[i].color_format = layout.color_format;
+		m_surface_info[i].width = m_framebuffer_layout.width;
+		m_surface_info[i].height = m_framebuffer_layout.height;
+		m_surface_info[i].color_format = m_framebuffer_layout.color_format;
 		m_surface_info[i].bpp = color_bpp;
 		m_surface_info[i].samples = samples;
 	}
@@ -2885,16 +2897,16 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 
 		m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
-		m_depth_surface_info.width = layout.width;
-		m_depth_surface_info.height = layout.height;
-		m_depth_surface_info.depth_format = layout.depth_format;
-		m_depth_surface_info.depth_buffer_float = layout.depth_float;
-		m_depth_surface_info.bpp = (layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
+		m_depth_surface_info.width = m_framebuffer_layout.width;
+		m_depth_surface_info.height = m_framebuffer_layout.height;
+		m_depth_surface_info.depth_format = m_framebuffer_layout.depth_format;
+		m_depth_surface_info.depth_buffer_float = m_framebuffer_layout.depth_float;
+		m_depth_surface_info.bpp = (m_framebuffer_layout.depth_format == rsx::surface_depth_format::z16? 2 : 4);
 		m_depth_surface_info.samples = samples;
 	}
 
 	//Bind created rtts as current fbo...
-	const auto draw_buffers = rsx::utility::get_rtt_indexes(layout.target);
+	const auto draw_buffers = rsx::utility::get_rtt_indexes(m_framebuffer_layout.target);
 	m_draw_buffers.clear();
 	m_fbo_images.clear();
 
@@ -2904,11 +2916,11 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			m_fbo_images.push_back(surface);
 
-			m_surface_info[index].address = layout.color_addresses[index];
-			m_surface_info[index].pitch = layout.actual_color_pitch[index];
-			verify("Pitch mismatch!" HERE), surface->rsx_pitch == layout.actual_color_pitch[index];
+			m_surface_info[index].address = m_framebuffer_layout.color_addresses[index];
+			m_surface_info[index].pitch = m_framebuffer_layout.actual_color_pitch[index];
+			verify("Pitch mismatch!" HERE), surface->rsx_pitch == m_framebuffer_layout.actual_color_pitch[index];
 
-			m_texture_cache.notify_surface_changed(m_surface_info[index].get_memory_range(layout.aa_factors));
+			m_texture_cache.notify_surface_changed(m_surface_info[index].get_memory_range(m_framebuffer_layout.aa_factors));
 			m_draw_buffers.push_back(index);
 		}
 	}
@@ -2916,14 +2928,14 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (std::get<0>(m_rtts.m_bound_depth_stencil) != 0)
 	{
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
-		ds->set_depth_render_mode(!layout.depth_float);
+		ds->set_depth_render_mode(!m_framebuffer_layout.depth_float);
 		m_fbo_images.push_back(ds);
 
-		m_depth_surface_info.address = layout.zeta_address;
-		m_depth_surface_info.pitch = layout.actual_zeta_pitch;
-		verify("Pitch mismatch!" HERE), ds->rsx_pitch == layout.actual_zeta_pitch;
+		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
+		m_depth_surface_info.pitch = m_framebuffer_layout.actual_zeta_pitch;
+		verify("Pitch mismatch!" HERE), ds->rsx_pitch == m_framebuffer_layout.actual_zeta_pitch;
 
-		m_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(layout.aa_factors));
+		m_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(m_framebuffer_layout.aa_factors));
 	}
 
 	// Before messing with memory properties, flush command queue if there are dma transfers queued up
@@ -2932,7 +2944,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		flush_command_queue();
 	}
 
-	const auto color_fmt_info = get_compatible_gcm_format(layout.color_format);
+	const auto color_fmt_info = get_compatible_gcm_format(m_framebuffer_layout.color_format);
 	for (u8 index : m_draw_buffers)
 	{
 		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
@@ -2942,7 +2954,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, m_rtts.m_bound_render_targets[index].second, surface_range, true,
-				m_surface_info[index].width, m_surface_info[index].height, layout.actual_color_pitch[index],
+				m_surface_info[index].width, m_surface_info[index].height, m_framebuffer_layout.actual_color_pitch[index],
 				color_fmt_info.first, color_fmt_info.second);
 		}
 		else
@@ -2959,7 +2971,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, m_rtts.m_bound_depth_stencil.second, surface_range, true,
-				m_depth_surface_info.width, m_depth_surface_info.height, layout.actual_zeta_pitch, gcm_format, false);
+				m_depth_surface_info.width, m_depth_surface_info.height, m_framebuffer_layout.actual_zeta_pitch, gcm_format, false);
 		}
 		else
 		{
@@ -3008,8 +3020,8 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	const auto fbo_width = rsx::apply_resolution_scale(layout.width, true);
-	const auto fbo_height = rsx::apply_resolution_scale(layout.height, true);
+	const auto fbo_width = rsx::apply_resolution_scale(m_framebuffer_layout.width, true);
+	const auto fbo_height = rsx::apply_resolution_scale(m_framebuffer_layout.height, true);
 
 	if (m_draw_fbo)
 	{

@@ -308,9 +308,11 @@ namespace rsx
 		std::array<u32, 4> color_addresses;
 		std::array<u32, 4> color_pitch;
 		std::array<u32, 4> actual_color_pitch;
+		std::array<bool, 4> color_write_enabled;
 		u32 zeta_address;
 		u32 zeta_pitch;
 		u32 actual_zeta_pitch;
+		bool zeta_write_enabled;
 		rsx::surface_target target;
 		rsx::surface_color_format color_format;
 		rsx::surface_depth_format depth_format;
@@ -443,6 +445,7 @@ namespace rsx
 		// Framebuffer setup
 		rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 		rsx::gcm_framebuffer_info m_depth_surface_info;
+		framebuffer_layout m_framebuffer_layout;
 		bool framebuffer_status_valid = false;
 
 		// Overlays
@@ -527,7 +530,7 @@ namespace rsx
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 
-		framebuffer_layout get_framebuffer_layout(rsx::framebuffer_creation_context context);
+		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
 
 		/**

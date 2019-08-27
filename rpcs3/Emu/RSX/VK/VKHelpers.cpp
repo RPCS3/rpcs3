@@ -617,12 +617,6 @@ namespace vk
 		VkPipelineStageFlags src_stage;
 		if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
 		{
-			if (!rsx::method_registers.color_write_enabled() && current_layout == new_layout)
-			{
-				// Nothing to do
-				return;
-			}
-
 			src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		}

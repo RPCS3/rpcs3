@@ -1017,9 +1017,8 @@ namespace rsx
 		return rsx::get_address(offset_zeta, m_context_dma_z);
 	}
 
-	framebuffer_layout thread::get_framebuffer_layout(rsx::framebuffer_creation_context context)
+	void thread::get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout)
 	{
-		framebuffer_layout layout;
 		memset(&layout, 0, sizeof(layout));
 
 		layout.ignore_change = true;
@@ -1033,7 +1032,7 @@ namespace rsx
 		if (layout.width == 0 || layout.height == 0)
 		{
 			LOG_TRACE(RSX, "Invalid framebuffer setup, w=%d, h=%d", layout.width, layout.height);
-			return layout;
+			return;
 		}
 
 		const u16 clip_x = rsx::method_registers.surface_clip_origin_x();
@@ -1050,11 +1049,21 @@ namespace rsx
 			rsx::method_registers.surface_d_pitch(),
 		};
 
+		layout.zeta_write_enabled = rsx::method_registers.depth_write_enabled();
+		layout.color_write_enabled =
+		{
+			method_registers.color_write_enabled(0),
+			method_registers.color_write_enabled(1),
+			method_registers.color_write_enabled(2),
+			method_registers.color_write_enabled(3)
+		};
+
 		layout.color_format = rsx::method_registers.surface_color();
 		layout.depth_format = rsx::method_registers.surface_depth_fmt();
 		layout.depth_float = rsx::method_registers.depth_buffer_float_enabled();
 		layout.target = rsx::method_registers.surface_color_target();
 
+		const auto mrt_buffers = rsx::utility::get_rtt_indexes(layout.target);
 		const auto aa_mode = rsx::method_registers.surface_antialias();
 		const u32 aa_factor_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
 		const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
@@ -1062,10 +1071,18 @@ namespace rsx
 
 		const auto depth_texel_size = (layout.depth_format == rsx::surface_depth_format::z16 ? 2 : 4) * aa_factor_u;
 		const auto color_texel_size = get_format_block_size_in_bytes(layout.color_format) * aa_factor_u;
-		const bool color_write_enabled = rsx::method_registers.color_write_enabled();
-		const bool depth_write_enabled = rsx::method_registers.depth_write_enabled();
 		const bool stencil_test_enabled = layout.depth_format == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 		const bool depth_test_enabled = rsx::method_registers.depth_test_enabled();
+
+		bool color_write_enabled = false;
+		for (const auto &index : mrt_buffers)
+		{
+			if (layout.color_write_enabled[index])
+			{
+				color_write_enabled = true;
+				break;
+			}
+		}
 
 		bool depth_buffer_unused = false, color_buffer_unused = false;
 
@@ -1167,7 +1184,7 @@ namespace rsx
 
 				// TODO: Research clearing both depth AND color
 				// TODO: If context is creation_draw, deal with possibility of a lost buffer clear
-				if (depth_test_enabled || stencil_test_enabled || (!color_write_enabled && depth_write_enabled))
+				if (depth_test_enabled || stencil_test_enabled || (!layout.color_write_enabled[index] && layout.zeta_write_enabled))
 				{
 					// Use address for depth data
 					layout.color_addresses[index] = 0;
@@ -1203,7 +1220,7 @@ namespace rsx
 		if (!framebuffer_status_valid && !layout.zeta_address)
 		{
 			LOG_WARNING(RSX, "Framebuffer setup failed. Draw calls may have been lost");
-			return layout;
+			return;
 		}
 
 		// At least one attachment exists
@@ -1280,12 +1297,11 @@ namespace rsx
 				sample_count == m_depth_surface_info.samples)
 			{
 				// Same target is reused
-				return layout;
+				return;
 			}
 		}
 
 		layout.ignore_change = false;
-		return layout;
 	}
 
 	bool thread::get_scissor(areau& region, bool clip_viewport)

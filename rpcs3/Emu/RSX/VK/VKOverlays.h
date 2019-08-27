@@ -572,7 +572,7 @@ namespace vk
 				"}\n";
 
 			renderpass_config.set_attachment_count(1);
-			renderpass_config.set_color_mask(true, true, true, true);
+			renderpass_config.set_color_mask(0, true, true, true, true);
 			renderpass_config.set_depth_mask(false);
 			renderpass_config.enable_blend(0,
 				VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_SRC_ALPHA,
@@ -848,7 +848,7 @@ namespace vk
 				"}\n";
 
 			renderpass_config.set_depth_mask(false);
-			renderpass_config.set_color_mask(true, true, true, true);
+			renderpass_config.set_color_mask(0, true, true, true, true);
 			renderpass_config.set_attachment_count(1);
 		}
 
