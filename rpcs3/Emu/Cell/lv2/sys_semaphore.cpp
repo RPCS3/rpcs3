@@ -138,8 +138,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 				if (!sem->unqueue(sem->sq, &ppu))
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				verify(HERE), 0 > sem->val.fetch_op([](s32& val)

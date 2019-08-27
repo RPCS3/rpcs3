@@ -332,12 +332,10 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				if (!cond->unqueue(cond->sq, &ppu))
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				cond->waiters--;
-
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}

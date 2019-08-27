@@ -137,8 +137,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 				if (!mutex->unqueue(mutex->sq, &ppu))
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;

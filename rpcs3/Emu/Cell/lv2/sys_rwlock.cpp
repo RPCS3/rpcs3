@@ -147,8 +147,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 				if (!rwlock->unqueue(rwlock->rq, &ppu))
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;
@@ -347,8 +346,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 				if (!rwlock->unqueue(rwlock->wq, &ppu))
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				// If the last waiter quit the writer sleep queue, wake blocked readers

@@ -178,8 +178,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 
 				if (!flag->unqueue(flag->sq, &ppu))
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				flag->waiters--;

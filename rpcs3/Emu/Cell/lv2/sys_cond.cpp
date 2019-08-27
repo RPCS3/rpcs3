@@ -283,10 +283,11 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 					}
 
 					cond->mutex->sleep(ppu);
+					timeout = 0;
+					continue;
 				}
 
-				timeout = 0;
-				continue;
+				break;
 			}
 		}
 		else
