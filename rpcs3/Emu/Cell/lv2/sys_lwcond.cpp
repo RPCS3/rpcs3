@@ -195,8 +195,6 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
-	bool need_awake = false;
-
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
 	{
 		lv2_lwmutex* mutex;
@@ -241,6 +239,9 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				result++;
 			}
 
+			if (result)
+				lv2_obj::awake_all();
+			
 			return result;
 		}
 
@@ -250,11 +251,6 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	if (!cond || cond.ret == -1)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (need_awake)
-	{
-		lv2_obj::awake_all();
 	}
 
 	if (mode == 1)
