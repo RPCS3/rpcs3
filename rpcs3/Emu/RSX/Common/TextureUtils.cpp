@@ -469,48 +469,51 @@ std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_te
 	return get_subresources_layout_impl(texture);
 }
 
-void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, bool vtc_support, size_t dst_row_pitch_multiple_of)
+texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps)
 {
 	u16 w = src_layout.width_in_block;
 	u16 h = src_layout.height_in_block;
 	u16 depth = src_layout.depth;
 	u32 pitch = src_layout.pitch_in_block;
 
+	texture_memory_info result{};
+
 	// Ignore when texture width > pitch
 	if (w > pitch)
-		return;
+		return result;
 
-	// NOTE: Avoid block optimization for formats that can be modified internally by the GPU itself
-	// Since the gpu code does not attempt to do wide translations (e.g WZYX32->XYZW32), only perform, per-channel transform and use proper swizzles to get the proper output
+	// Check if we can use a fast path
+	int word_size = 0;
+	int words_per_block;
+	u32 dst_pitch_in_block;
+
 	switch (format)
 	{
 	case CELL_GCM_TEXTURE_B8:
 	{
-		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u8>(w, dst_row_pitch_multiple_of));
-		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u8>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+		word_size = words_per_block = 1;
+		dst_pitch_in_block = get_row_pitch_in_block<u8>(w, caps.alignment);
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	{
-		copy_decoded_rb_rg_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+		copy_decoded_rb_rg_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 	{
-		copy_decoded_rb_rg_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u16>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+		copy_decoded_rb_rg_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u16>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_R6G5B5:
 	{
 		if (is_swizzled)
-			copy_rgb655_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, dst_row_pitch_multiple_of));
+			copy_rgb655_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, caps.alignment));
 		else
-			copy_rgb655_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+			copy_rgb655_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, caps.alignment), src_layout.pitch_in_block);
 		break;
 	}
 
@@ -526,10 +529,9 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	case CELL_GCM_TEXTURE_R5G6B5:
 	case CELL_GCM_TEXTURE_G8B8:
 	{
-		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, dst_row_pitch_multiple_of));
-		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+		word_size = 2;
+		words_per_block = 1;
+		dst_pitch_in_block = get_row_pitch_in_block<u16>(w, caps.alignment);
 		break;
 	}
 
@@ -538,10 +540,9 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	case CELL_GCM_TEXTURE_DEPTH24_D8:
 	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: // Untested
 	{
-		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of));
-		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), 1, w, h, depth, src_layout.border, get_row_pitch_in_block<u32>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+		word_size = 4;
+		words_per_block = 1;
+		dst_pitch_in_block = get_row_pitch_in_block<u32>(w, caps.alignment);
 		break;
 	}
 
@@ -554,13 +555,9 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 	{
 		const u16 block_size = get_format_block_size_in_bytes(format);
-		const u16 words_per_block = block_size / 2;
-		const auto dst_pitch_in_block = get_row_pitch_in_block(block_size, w, dst_row_pitch_multiple_of);
-
-		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+		word_size = 2;
+		words_per_block = block_size / 2;
+		dst_pitch_in_block = get_row_pitch_in_block(block_size, w, caps.alignment);
 		break;
 	}
 
@@ -568,28 +565,24 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 	{
 		const u16 block_size = get_format_block_size_in_bytes(format);
-		const u16 words_per_block = block_size / 4;
-		const auto dst_pitch_in_block = get_row_pitch_in_block(block_size, w, dst_row_pitch_multiple_of);
-
-		if (is_swizzled)
-			copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-		else
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+		word_size = 4;
+		words_per_block = block_size / 4;
+		dst_pitch_in_block = get_row_pitch_in_block(block_size, w, caps.alignment);
 		break;
 	}
 
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 	{
-		if (depth > 1 && !vtc_support)
+		if (depth > 1 && !caps.supports_vtc_decoding)
 		{
 			// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 			// This is only supported using Nvidia OpenGL.
 			// Remove the VTC tiling to support ATI and Vulkan.
-			copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), as_const_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+			copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), as_const_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
 		}
 		else
 		{
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), as_const_span<const u64>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u64>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), as_const_span<const u64>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
 		}
 		break;
 	}
@@ -597,16 +590,16 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 	{
-		if (depth > 1 && !vtc_support)
+		if (depth > 1 && !caps.supports_vtc_decoding)
 		{
 			// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 			// This is only supported using Nvidia OpenGL.
 			// Remove the VTC tiling to support ATI and Vulkan.
-			copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), as_const_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+			copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), as_const_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
 		}
 		else
 		{
-			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), as_const_span<const u128>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u128>(w, dst_row_pitch_multiple_of), src_layout.pitch_in_block);
+			copy_unmodified_block::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), as_const_span<const u128>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
 		}
 		break;
 	}
@@ -614,6 +607,56 @@ void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subre
 	default:
 		fmt::throw_exception("Wrong format 0x%x" HERE, format);
 	}
+
+	if (word_size)
+	{
+		if (word_size == 1)
+		{
+			if (is_swizzled)
+				copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+			else
+				copy_unmodified_block::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+		}
+		else if (caps.supports_byteswap)
+		{
+			result.require_swap = true;
+			result.element_size = word_size;
+
+			if (word_size == 2)
+			{
+				if (is_swizzled)
+					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+				else
+					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+			else if (word_size == 4)
+			{
+				if (is_swizzled)
+					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+				else
+					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+		}
+		else
+		{
+			if (word_size == 2)
+			{
+				if (is_swizzled)
+					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+				else
+					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+			else if (word_size == 4)
+			{
+				if (is_swizzled)
+					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+				else
+					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+		}
+	}
+
+	return result;
 }
 
 /**
