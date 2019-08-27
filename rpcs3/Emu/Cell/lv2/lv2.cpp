@@ -1016,22 +1016,11 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 	{
 		LOG_TRACE(PPU, "sleep() - waiting (%zu)", g_pending.size());
 
-		const auto [_, ok] = ppu->state.fetch_op([&](bs_t<cpu_flag>& val)
+		ppu->state.atomic_op([&](bs_t<cpu_flag>& val)
 		{
-			if (!(val & cpu_flag::signal))
-			{
-				val += cpu_flag::suspend;
-				return true;
-			}
-
-			return false;
+			val += cpu_flag::suspend;
+			val -= cpu_flag::signal;
 		});
-
-		if (!ok)
-		{
-			LOG_TRACE(PPU, "sleep() failed (signaled)");
-			return;
-		}
 
 		// Find and remove the thread
 		unqueue(g_ppu, ppu);
