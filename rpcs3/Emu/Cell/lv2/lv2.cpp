@@ -1029,7 +1029,7 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 
 		if (!ok)
 		{
-			LOG_TRACE(PPU, "sleep() failed (signaled)");
+			LOG_FATAL(PPU, "sleep() failed (signaled) (%s)", ppu->current_function);
 			return;
 		}
 

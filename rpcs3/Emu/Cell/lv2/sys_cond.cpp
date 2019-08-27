@@ -85,12 +85,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 			if (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
 			{
-				cond.waiters--;
-
-				if (cond.mutex->try_own(*cpu, cpu->id))
-				{
-					return cpu;
-				}
+				return cpu;
 			}
 		}
 
@@ -118,7 +113,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [](lv2_cond& cond)
 	{
-		cpu_thread* result = nullptr;
+		uint count = 0;
 
 		if (cond.waiters)
 		{
@@ -126,16 +121,12 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
 			{
-				cond.waiters--;
-
-				if (cond.mutex->try_own(*cpu, cpu->id))
-				{
-					result = cpu;
-				}
+				lv2_obj::append(cpu);
+				count++;
 			}
 		}
 
-		return result;
+		return count;
 	});
 
 	if (!cond)
@@ -145,7 +136,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 	if (cond.ret)
 	{
-		cond->awake(cond.ret);
+		lv2_obj::awake_all();
 	}
 
 	return CELL_OK;
@@ -172,14 +163,8 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 			{
 				if (cpu->id == thread_id)
 				{
-					verify(HERE), cond.unqueue(cond.sq, cpu), cond.waiters--;
-
-					if (cond.mutex->try_own(*cpu, cpu->id))
-					{
-						return cpu;
-					}
-
-					return (cpu_thread*)(2);
+					verify(HERE), cond.unqueue(cond.sq, cpu);
+					return cpu;
 				}
 			}
 		}
@@ -192,7 +177,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	if (cond.ret && cond.ret != (cpu_thread*)(2))
+	if (cond.ret)
 	{
 		cond->awake(cond.ret);
 	}
@@ -269,15 +254,8 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 				// Try to cancel the waiting
 				if (cond->unqueue(cond->sq, &ppu))
 				{
-					cond->waiters--;
-
 					ppu.gpr[3] = CELL_ETIMEDOUT;
-
-					// Own or requeue
-					if (cond->mutex->try_own(ppu, ppu.id))
-					{
-						break;
-					}
+					break;
 				}
 
 				timeout = 0;
@@ -290,11 +268,38 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		}
 	}
 
+	bool locked_ok = true;
+
+	// Schedule and relock
+	if (ppu.check_state())
+	{
+		return 0;
+	}
+	else if (cond->mutex->try_lock(ppu.id) != CELL_OK)
+	{
+		std::lock_guard lock(cond->mutex->mutex);
+
+		// Own mutex or requeue
+		locked_ok = cond->mutex->try_own(ppu, ppu.id);
+	}
+
+	while (!locked_ok && !ppu.state.test_and_reset(cpu_flag::signal))
+	{
+		if (ppu.is_stopped())
+		{
+			return 0;
+		}
+
+		thread_ctrl::wait();
+	}
+
 	// Verify ownership
 	verify(HERE), cond->mutex->owner >> 1 == ppu.id;
 
 	// Restore the recursive value
 	cond->mutex->lock_count = cond.ret;
+
+	cond->waiters--;
 
 	return not_an_error(ppu.gpr[3]);
 }
