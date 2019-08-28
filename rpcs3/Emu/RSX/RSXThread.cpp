@@ -1049,15 +1049,6 @@ namespace rsx
 			rsx::method_registers.surface_d_pitch(),
 		};
 
-		layout.zeta_write_enabled = rsx::method_registers.depth_write_enabled();
-		layout.color_write_enabled =
-		{
-			method_registers.color_write_enabled(0),
-			method_registers.color_write_enabled(1),
-			method_registers.color_write_enabled(2),
-			method_registers.color_write_enabled(3)
-		};
-
 		layout.color_format = rsx::method_registers.surface_color();
 		layout.depth_format = rsx::method_registers.surface_depth_fmt();
 		layout.depth_float = rsx::method_registers.depth_buffer_float_enabled();
@@ -1074,13 +1065,17 @@ namespace rsx
 		const bool stencil_test_enabled = layout.depth_format == rsx::surface_depth_format::z24s8 && rsx::method_registers.stencil_test_enabled();
 		const bool depth_test_enabled = rsx::method_registers.depth_test_enabled();
 
+		// Check write masks
+		layout.zeta_write_enabled = rsx::method_registers.depth_write_enabled();
+
+		// NOTE: surface_target_a is index 1 but is not MRT since only one surface is active
 		bool color_write_enabled = false;
-		for (const auto &index : mrt_buffers)
+		for (int i = 0; i < mrt_buffers.size(); ++i)
 		{
-			if (layout.color_write_enabled[index])
+			if (rsx::method_registers.color_write_enabled(i))
 			{
+				layout.color_write_enabled[i] = true;
 				color_write_enabled = true;
-				break;
 			}
 		}
 
