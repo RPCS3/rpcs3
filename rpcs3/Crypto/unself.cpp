@@ -1300,7 +1300,7 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	if (!rap_file)
 	{
-		LOG_FATAL(LOADER, "Failed to load RAP file: %s", rap_path);
+		LOG_FATAL(LOADER, "Failed to load RAP file: %s. Make sure the file extension is lowercase.", rap_path);
 		return false;
 	}
 
