@@ -756,7 +756,14 @@ namespace rsx
 
 			const auto surface_internal_pitch = (required_width * required_bpp);
 
-			verify(HERE), surface_internal_pitch <= required_pitch;
+			// Sanity check
+			if (UNLIKELY(surface_internal_pitch > required_pitch))
+			{
+				LOG_WARNING(RSX, "Invalid 2D region descriptor. w=%d, h=%d, bpp=%d, pitch=%d",
+							required_width, required_height, required_bpp, required_pitch);
+				return {};
+			}
+
 			const auto test_range = utils::address_range::start_length(texaddr, (required_pitch * required_height) - (required_pitch - surface_internal_pitch));
 
 			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data, bool is_depth)

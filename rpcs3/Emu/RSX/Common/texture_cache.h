@@ -2023,8 +2023,10 @@ namespace rsx
 				scale_x = 0.f;
 				scale_y = 0.f;
 			}
-			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
+			else if (required_surface_height == 1)
 			{
+				// Pitch doesn't matter when height=1 and some games abuse this fact
+				tex_pitch = std::max<u16>(tex_pitch, get_format_packed_pitch(format, tex_width, !tex.border_type(), !linear));
 				scale_y = 0.f;
 			}
 
