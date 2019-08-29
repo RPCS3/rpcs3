@@ -480,7 +480,7 @@ error_code sceNpMatching2ContextStart(SceNpMatching2ContextId ctxId)
 
 error_code sceNpMatching2CreateServerContext(SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2CreateServerContextRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2GetLobbyMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.todo("sceNpMatching2CreateServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
 	{

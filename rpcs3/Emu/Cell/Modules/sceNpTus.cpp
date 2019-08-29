@@ -1,21 +1,40 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 
 #include "sceNp.h"
 #include "sceNpTus.h"
 
 LOG_CHANNEL(sceNpTus);
 
-s32 sceNpTusInit()
+error_code sceNpTusInit(s32 prio)
 {
-	sceNpTus.warning("sceNpTusInit()");
+	sceNpTus.warning("sceNpTusInit(prio=%d)", prio);
+
+	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
+
+	if (tus_manager->is_initialized)
+	{
+		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+	}
+
+	tus_manager->is_initialized = true;
 
 	return CELL_OK;
 }
 
-s32 sceNpTusTerm()
+error_code sceNpTusTerm()
 {
 	sceNpTus.warning("sceNpTusTerm()");
+
+	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
+
+	if (!tus_manager->is_initialized)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	tus_manager->is_initialized = false;
 
 	return CELL_OK;
 }
