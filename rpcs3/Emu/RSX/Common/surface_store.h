@@ -887,6 +887,7 @@ namespace rsx
 			if (write_tag == cache_tag && m_skip_write_updates)
 			{
 				// Nothing to do
+				verify(HERE), !m_invalidate_on_write;
 				return;
 			}
 
