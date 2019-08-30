@@ -1067,6 +1067,24 @@ namespace rsx
 
 		// Check write masks
 		layout.zeta_write_enabled = rsx::method_registers.depth_write_enabled();
+		if (!layout.zeta_write_enabled && stencil_test_enabled)
+		{
+			// Check if stencil data is modified
+			auto mask = rsx::method_registers.stencil_mask();
+			bool active_write_op = (rsx::method_registers.stencil_op_zpass() != rsx::stencil_op::keep ||
+				rsx::method_registers.stencil_op_fail() != rsx::stencil_op::keep ||
+				rsx::method_registers.stencil_op_zfail() != rsx::stencil_op::keep);
+
+			if ((!mask || !active_write_op) && rsx::method_registers.two_sided_stencil_test_enabled())
+			{
+				mask |= rsx::method_registers.back_stencil_mask();
+				active_write_op |= (rsx::method_registers.stencil_op_zpass() != rsx::stencil_op::keep ||
+					rsx::method_registers.stencil_op_fail() != rsx::stencil_op::keep ||
+					rsx::method_registers.stencil_op_zfail() != rsx::stencil_op::keep);
+			}
+
+			layout.zeta_write_enabled = (mask && active_write_op);
+		}
 
 		// NOTE: surface_target_a is index 1 but is not MRT since only one surface is active
 		bool color_write_enabled = false;
