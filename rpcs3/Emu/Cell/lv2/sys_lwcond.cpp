@@ -86,11 +86,11 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
-	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> cpu_thread*
+	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> int
 	{
 		if (ppu_thread_id != -1 && !idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id))
 		{
-			return (cpu_thread*)(1);
+			return -1;
 		}
 
 		lv2_lwmutex* mutex;
@@ -101,7 +101,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 			if (!mutex)
 			{
-				return (cpu_thread*)(1);
+				return -1;
 			}
 		}
 
@@ -143,15 +143,19 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 					std::lock_guard lock(mutex->mutex);
 					mutex->sq.emplace_back(result);
 				}
+				else
+				{
+					cond.awake(result);
+				}
 
-				return result;
+				return 1;
 			}
 		}
 
-		return nullptr;
+		return 0;
 	});
 
-	if (!cond || cond.ret == (cpu_thread*)(1))
+	if (!cond || cond.ret == -1)
 	{
 		return CELL_ESRCH;
 	}
@@ -171,11 +175,6 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 		}
 
 		return not_an_error(CELL_EPERM);
-	}
-
-	if (mode != 1)
-	{
-		cond->awake(cond.ret);
 	}
 
 	return CELL_OK;
@@ -241,6 +240,11 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				result++;
 			}
 
+			if (need_awake)
+			{
+				lv2_obj::awake_all();
+			}
+
 			return result;
 		}
 
@@ -250,11 +254,6 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	if (!cond || cond.ret == -1)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (need_awake)
-	{
-		lv2_obj::awake_all();
 	}
 
 	if (mode == 1)

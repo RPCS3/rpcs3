@@ -77,7 +77,7 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 	sys_cond.trace("sys_cond_signal(cond_id=0x%x)", cond_id);
 
-	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [](lv2_cond& cond) -> cpu_thread*
+	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [](lv2_cond& cond)
 	{
 		if (cond.waiters)
 		{
@@ -85,21 +85,14 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 			if (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
 			{
-				return cpu;
+				cond.awake(cpu);
 			}
 		}
-
-		return nullptr;
 	});
 
 	if (!cond)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (cond.ret)
-	{
-		cond->awake(cond.ret);
 	}
 
 	return CELL_OK;
@@ -124,19 +117,17 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 				lv2_obj::append(cpu);
 				count++;
 			}
-		}
 
-		return count;
+			if (count)
+			{
+				lv2_obj::awake_all();
+			}
+		}
 	});
 
 	if (!cond)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (cond.ret)
-	{
-		lv2_obj::awake_all();
 	}
 
 	return CELL_OK;
@@ -148,11 +139,11 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 	sys_cond.trace("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
 
-	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> cpu_thread*
+	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> int
 	{
 		if (!idm::check_unlocked<named_thread<ppu_thread>>(thread_id))
 		{
-			return (cpu_thread*)(1);
+			return -1;
 		}
 
 		if (cond.waiters)
@@ -164,24 +155,21 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 				if (cpu->id == thread_id)
 				{
 					verify(HERE), cond.unqueue(cond.sq, cpu);
-					return cpu;
+					cond.awake(cpu);
+					return 1;
 				}
 			}
 		}
 
-		return nullptr;
+		return 0;
 	});
 
-	if (!cond || cond.ret == (cpu_thread*)(1))
+	if (!cond || cond.ret == -1)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (cond.ret)
-	{
-		cond->awake(cond.ret);
-	}
-	else if (!cond.ret)
+	if (!cond.ret)
 	{
 		return not_an_error(CELL_EPERM);
 	}

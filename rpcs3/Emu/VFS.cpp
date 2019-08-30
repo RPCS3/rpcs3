@@ -246,6 +246,49 @@ std::string vfs::escape(std::string_view path)
 	{
 		switch (char c = path[i])
 		{
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+		case 9:
+		{
+			result += u8"０";
+			result.back() += c;
+			break;
+		}
+		case 10:
+		case 11:
+		case 12:
+		case 13:
+		case 14:
+		case 15:
+		case 16:
+		case 17:
+		case 18:
+		case 19:
+		case 20:
+		case 21:
+		case 22:
+		case 23:
+		case 24:
+		case 25:
+		case 26:
+		case 27:
+		case 28:
+		case 29:
+		case 30:
+		case 31:
+		{
+			result += u8"Ａ";
+			result.back() += c;
+			result.back() -= 10;
+			break;
+		}
 		case '<':
 		{
 			result += u8"＜";
@@ -350,6 +393,49 @@ std::string vfs::unescape(std::string_view path)
 				{
 					switch (path[i + 2])
 					{
+					case char{u8"０"[2]}:
+					case char{u8"１"[2]}:
+					case char{u8"２"[2]}:
+					case char{u8"３"[2]}:
+					case char{u8"４"[2]}:
+					case char{u8"５"[2]}:
+					case char{u8"６"[2]}:
+					case char{u8"７"[2]}:
+					case char{u8"８"[2]}:
+					case char{u8"９"[2]}:
+					{
+						result += path[i + 2];
+						result.back() -= u8"０"[2];
+						continue;
+					}
+					case char{u8"Ａ"[2]}:
+					case char{u8"Ｂ"[2]}:
+					case char{u8"Ｃ"[2]}:
+					case char{u8"Ｄ"[2]}:
+					case char{u8"Ｅ"[2]}:
+					case char{u8"Ｆ"[2]}:
+					case char{u8"Ｇ"[2]}:
+					case char{u8"Ｈ"[2]}:
+					case char{u8"Ｉ"[2]}:
+					case char{u8"Ｊ"[2]}:
+					case char{u8"Ｋ"[2]}:
+					case char{u8"Ｌ"[2]}:
+					case char{u8"Ｍ"[2]}:
+					case char{u8"Ｎ"[2]}:
+					case char{u8"Ｏ"[2]}:
+					case char{u8"Ｐ"[2]}:
+					case char{u8"Ｑ"[2]}:
+					case char{u8"Ｒ"[2]}:
+					case char{u8"Ｓ"[2]}:
+					case char{u8"Ｔ"[2]}:
+					case char{u8"Ｕ"[2]}:
+					case char{u8"Ｖ"[2]}:
+					{
+						result += path[i + 2];
+						result.back() -= u8"Ａ"[2];
+						result.back() += 10;
+						continue;
+					}
 					case char{u8"！"[2]}:
 					{
 						i += 3;
