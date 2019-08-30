@@ -1092,7 +1092,8 @@ namespace rsx
 		{
 			if (rsx::method_registers.color_write_enabled(i))
 			{
-				layout.color_write_enabled[i] = true;
+				const auto real_index = mrt_buffers[i];
+				layout.color_write_enabled[real_index] = true;
 				color_write_enabled = true;
 			}
 		}
