@@ -89,13 +89,21 @@ namespace vk
 				{
 				case vk::driver_vendor::unknown:
 				case vk::driver_vendor::INTEL:
+					// Intel hw has 8 threads, but LDS allocation behavior makes optimal group size between 64 and 256
+					// Based on intel's own OpenCL recommended settings
+					unroll_loops = true;
+					optimal_kernel_size = 1;
+					optimal_group_size = 128;
+					break;
 				case vk::driver_vendor::NVIDIA:
+					// Warps are multiples of 32. Increasing kernel depth seems to hurt performance (Nier, Big Duck sample)
 					unroll_loops = true;
 					optimal_group_size = 32;
-					optimal_kernel_size = 16;
+					optimal_kernel_size = 1;
 					break;
 				case vk::driver_vendor::AMD:
 				case vk::driver_vendor::RADV:
+					// Wavefronts are multiples of 64
 					unroll_loops = false;
 					optimal_kernel_size = 1;
 					optimal_group_size = 64;
