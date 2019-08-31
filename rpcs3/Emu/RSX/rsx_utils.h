@@ -255,6 +255,11 @@ namespace rsx
 		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
 	}
 
+	static inline bool fcmp(float a, float b, float epsilon = 0.000001f)
+	{
+		return fabsf(a - b) < epsilon;
+	}
+
 	// Returns an ever-increasing tag value
 	static inline u64 get_shared_tag()
 	{
@@ -910,11 +915,11 @@ namespace rsx
 
 			if (_data)
 			{
-				_data = (Ty*)realloc(_data, sizeof(Ty) * size);
+				verify("realloc() failed!" HERE), _data = (Ty*)realloc(_data, sizeof(Ty) * size);
 			}
 			else
 			{
-				_data = (Ty*)malloc(sizeof(Ty) * size);
+				verify("malloc() failed!" HERE), _data = (Ty*)malloc(sizeof(Ty) * size);
 			}
 
 			_capacity = size;
