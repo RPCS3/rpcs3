@@ -159,14 +159,14 @@ namespace rsx
 		{
 			switch(arg)
 			{
-			case CELL_GCM_FRONT_AND_BACK: return;
-			case CELL_GCM_FRONT: return;
-			case CELL_GCM_BACK: return;
-			default: break;
+			case CELL_GCM_FRONT_AND_BACK:
+			case CELL_GCM_FRONT:
+			case CELL_GCM_BACK:
+				return;
+			default:
+				// Ignore value if unknown
+				method_registers.registers[reg] = method_registers.register_previous_value;
 			}
-
-			// Ignore value if unknown
-			method_registers.registers[reg] = method_registers.register_previous_value;
 		}
 
 		void set_notify(thread* rsx, u32 _reg, u32 arg)
@@ -923,7 +923,7 @@ namespace rsx
 
 			if (UNLIKELY(in_x == 1 || in_y == 1))
 			{
-				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || fabsf(fabsf(scale_x * scale_y) - 1.f) > 0.000001f;
+				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || !rsx::fcmp(scale_x, 1.f) || !rsx::fcmp(scale_y, 1.f);
 				if (!is_graphics_op)
 				{
 					// No scaling factor, so size in src == size in dst
@@ -1062,7 +1062,7 @@ namespace rsx
 				clip_x > 0 || clip_y > 0 ||
 				convert_w != out_w || convert_h != out_h;
 
-			const bool need_convert = out_format != in_format || std::abs(scale_x) != 1.0 || std::abs(scale_y) != 1.0;
+			const bool need_convert = out_format != in_format || !rsx::fcmp(fabsf(scale_x), 1.f) || !rsx::fcmp(fabsf(scale_y), 1.f);
 			const u32  slice_h = std::ceil(f32(clip_h + clip_y) / scale_y);
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
@@ -1740,22 +1740,23 @@ namespace rsx
 			registers[NV4097_SET_VIEWPORT_VERTICAL] = 0x10000000;
 			registers[NV4097_SET_CLIP_MIN] = 0x0;
 			registers[NV4097_SET_CLIP_MAX] = 0x3f800000;
-			registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-			registers[0xa24 / 4] = 0x45000000;
-			registers[0xa28 / 4] = 0x3f000000;
-			registers[0xa2c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-			registers[0xa34 / 4] = 0x45000000;
-			registers[0xa38 / 4] = 0x3f000000;
-			registers[0xa3c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-			registers[0xa24 / 4] = 0x45000000;
-			registers[0xa28 / 4] = 0x3f000000;
-			registers[0xa2c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-			registers[0xa34 / 4] = 0x45000000;
-			registers[0xa38 / 4] = 0x3f000000;
-			registers[0xa3c / 4] = 0x0;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+			registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
+			// NOTE: Realhw emits this sequence twice, likely to work around a hardware bug. Similar behavior can be seen in other buggy register blocks
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 			registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 			registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
 			registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
@@ -2274,22 +2275,23 @@ namespace rsx
 		registers[NV4097_SET_VIEWPORT_VERTICAL] = 0x10000000;
 		registers[NV4097_SET_CLIP_MIN] = 0x0;
 		registers[NV4097_SET_CLIP_MAX] = 0x3f800000;
-		registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-		registers[0xa24 / 4] = 0x45000000;
-		registers[0xa28 / 4] = 0x3f000000;
-		registers[0xa2c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-		registers[0xa34 / 4] = 0x45000000;
-		registers[0xa38 / 4] = 0x3f000000;
-		registers[0xa3c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-		registers[0xa24 / 4] = 0x45000000;
-		registers[0xa28 / 4] = 0x3f000000;
-		registers[0xa2c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-		registers[0xa34 / 4] = 0x45000000;
-		registers[0xa38 / 4] = 0x3f000000;
-		registers[0xa3c / 4] = 0x0;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+		registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
+		// NOTE: Realhw emits this sequence twice, likely to work around a hardware bug. Similar behavior can be seen in other buggy register blocks
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 		registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 		registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
 		registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
