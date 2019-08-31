@@ -290,7 +290,7 @@ namespace rsx
 				}
 				case detail_level::low:
 				{
-					if (cpu_usage == -1.f)
+					if (cpu_usage < 0.)
 						cpu_usage = m_cpu_stats.get_usage();
 
 					// fallthrough

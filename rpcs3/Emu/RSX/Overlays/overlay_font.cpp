@@ -150,7 +150,6 @@ namespace rsx
 					{
 						// Unsupported glyph, render null for now
 						c = ' ';
-						c = ' ';
 					}
 
 					switch (c)
