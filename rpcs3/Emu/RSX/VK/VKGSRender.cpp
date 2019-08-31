@@ -763,6 +763,8 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 
 void VKGSRender::check_heap_status(u32 flags)
 {
+	verify(HERE), flags;
+
 	bool heap_critical;
 	if (flags == VK_HEAP_CHECK_ALL)
 	{
@@ -2563,9 +2565,9 @@ bool VKGSRender::load_program()
 			if (properties.state.ds.front.failOp != VK_STENCIL_OP_KEEP ||
 				properties.state.ds.front.depthFailOp != VK_STENCIL_OP_KEEP ||
 				properties.state.ds.front.passOp != VK_STENCIL_OP_KEEP ||
-				properties.state.ds.front.failOp != VK_STENCIL_OP_KEEP ||
-				properties.state.ds.front.depthFailOp != VK_STENCIL_OP_KEEP ||
-				properties.state.ds.front.passOp != VK_STENCIL_OP_KEEP)
+				properties.state.ds.back.failOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.back.depthFailOp != VK_STENCIL_OP_KEEP ||
+				properties.state.ds.back.passOp != VK_STENCIL_OP_KEEP)
 			{
 				// Toggle bit 9 to signal require full bit-wise transfer
 				ds->stencil_init_flags |= (1 << 8);
