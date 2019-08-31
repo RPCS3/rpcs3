@@ -1130,7 +1130,7 @@ namespace rsx
 
 			dirty = new_dirty;
 
-			AUDIT(dirty || (!dirty && exists()));
+			AUDIT(dirty || exists());
 
 			update_unreleased();
 		}
