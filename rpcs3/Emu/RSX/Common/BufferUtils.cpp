@@ -322,7 +322,7 @@ namespace
 				//Copy u16 blocks
 				for (u32 vertex = 0; vertex < vertex_count; ++vertex)
 				{
-					*(u32*)dst_ptr = *(u32*)src_ptr;
+					*(u16*)dst_ptr = *(u16*)src_ptr;
 
 					dst_ptr += dst_stride;
 					src_ptr += src_stride;
@@ -687,6 +687,10 @@ namespace
 				{
 					const auto count = (remaining & ~0x7);
 					std::tie(min_index, max_index, written) = upload_u16_swapped(src.data(), dst.data(), count);
+				}
+				else
+				{
+					fmt::throw_exception("Unreachable" HERE);
 				}
 
 				remaining -= written;
