@@ -4,6 +4,25 @@
 #include "../RSXThread.h"
 #include "../rsx_utils.h"
 
+namespace rsx
+{
+	void typeless_xfer::analyse()
+	{
+		// TODO: This method needs to be re-evaluated
+		// Check if scaling hints match, which likely means internal formats match as well
+		// Only possible when doing RTT->RTT transfer with non-base-type formats like WZYX16/32
+		if (src_is_typeless && dst_is_typeless && src_gcm_format == dst_gcm_format)
+		{
+			if (fcmp(src_scaling_hint, dst_scaling_hint) && !fcmp(src_scaling_hint, 1.f))
+			{
+				verify(HERE), src_is_depth == dst_is_depth;
+				src_is_typeless = dst_is_typeless = false;
+				src_scaling_hint = dst_scaling_hint = 1.f;
+			}
+		}
+	}
+}
+
 namespace
 {
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
