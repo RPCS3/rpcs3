@@ -81,21 +81,7 @@ namespace rsx
 		texture_upload_context src_context = texture_upload_context::blit_engine_src;
 		texture_upload_context dst_context = texture_upload_context::blit_engine_dst;
 
-		void analyse()
-		{
-			if (src_is_typeless && dst_is_typeless)
-			{
-				if (src_scaling_hint == dst_scaling_hint &&
-					src_scaling_hint != 1.f)
-				{
-					if (src_is_depth == dst_is_depth)
-					{
-						src_is_typeless = dst_is_typeless = false;
-						src_scaling_hint = dst_scaling_hint = 1.f;
-					}
-				}
-			}
-		}
+		void analyse();
 	};
 }
 
