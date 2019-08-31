@@ -402,17 +402,17 @@ std::string FragmentProgramDecompiler::GetCond()
 	return "any(" + GetRawCond() + ")";
 }
 
-void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
+void FragmentProgramDecompiler::AddCodeCond(const std::string& lhs, const std::string& rhs)
 {
 	if (src0.exec_if_gr && src0.exec_if_lt && src0.exec_if_eq)
 	{
-		AddCode(dst + " = " + src + ";");
+		AddCode(lhs + " = " + rhs + ";");
 		return;
 	}
 
 	if (!src0.exec_if_gr && !src0.exec_if_lt && !src0.exec_if_eq)
 	{
-		AddCode("//" + dst + " = " + src + ";");
+		AddCode("//" + lhs + " = " + rhs + ";");
 		return;
 	}
 
@@ -426,17 +426,17 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 
 		bool src_is_fp16 = false;
 		if ((opflags & (OPFLAGS::texture_ref | OPFLAGS::src_cast_f32)) == 0 &&
-			src.find("$0") != std::string::npos)
+			rhs.find("$0") != std::string::npos)
 		{
 			// Texture sample operations are full-width and are exempt
 			src_is_fp16 = (src0.fp16 && src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
 
-			if (src_is_fp16 && src.find("$1") != std::string::npos)
+			if (src_is_fp16 && rhs.find("$1") != std::string::npos)
 			{
 				// References operand 1
 				src_is_fp16 = (src1.fp16 && src1.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
 
-				if (src_is_fp16 && src.find("$2") != std::string::npos)
+				if (src_is_fp16 && rhs.find("$2") != std::string::npos)
 				{
 					// References operand 2
 					src_is_fp16 = (src2.fp16 && src2.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
@@ -447,7 +447,7 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 		if (src_is_fp16)
 		{
 			// LHS argument is of native half type, need to cast to proper type!
-			if (src[0] != '(')
+			if (rhs[0] != '(')
 			{
 				// Upcast inputs to processing function instead
 				opflags |= OPFLAGS::src_cast_f32;
@@ -460,11 +460,11 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 		}
 	}
 
-	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
-	const auto dst_var = ShaderVariable(dst);
+	// NOTE: x = _select(x, y, cond) is equivalent to x = cond? y : x;
+	const auto dst_var = ShaderVariable(lhs);
 	const auto raw_cond = dst_var.add_mask(GetRawCond());
 	const auto cond = dst_var.match_size(raw_cond);
-	AddCode(dst + " = _select(" + dst + ", " + src_prefix + src + ", " + cond + ");");
+	AddCode(lhs + " = _select(" + lhs + ", " + src_prefix + rhs + ", " + cond + ");");
 }
 
 template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)

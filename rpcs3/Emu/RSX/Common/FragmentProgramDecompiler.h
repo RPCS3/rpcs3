@@ -183,7 +183,7 @@ class FragmentProgramDecompiler
 	*/
 	bool DstExpectsSca();
 
-	void AddCodeCond(const std::string& dst, const std::string& src);
+	void AddCodeCond(const std::string& lhs, const std::string& rhs);
 	std::string GetRawCond();
 	std::string GetCond();
 	template<typename T> std::string GetSRC(T src);
