@@ -81,7 +81,7 @@ struct VertexProgramDecompiler
 	u32 GetAddr();
 	std::string Format(const std::string& code);
 
-	void AddCodeCond(const std::string& dst, const std::string& src);
+	void AddCodeCond(const std::string& lhs, const std::string& rhs);
 	void AddCode(const std::string& code);
 	void SetDST(bool is_sca, std::string value);
 	void SetDSTVec(const std::string& code);
