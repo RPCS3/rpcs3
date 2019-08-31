@@ -105,7 +105,7 @@ public:
 	*/
 	size_t get_current_put_pos_minus_one() const
 	{
-		return (m_put_pos - 1 > 0) ? m_put_pos - 1 : m_size - 1;
+		return (m_put_pos > 0) ? m_put_pos - 1 : m_size - 1;
 	}
 	
 	bool is_critical() const
