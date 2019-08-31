@@ -1855,7 +1855,12 @@ public:
 			swapchain_images.clear();
 
 			if (full)
+			{
+				ReleaseDC(window_handle, hDstDC);
+				hDstDC = NULL;
+
 				dev.destroy();
+			}
 		}
 
 		VkResult present(VkSemaphore /*semaphore*/, u32 image) override

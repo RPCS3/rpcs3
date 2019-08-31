@@ -445,7 +445,7 @@ namespace vk
 		color4f m_color;
 		bool m_pulse_glow = false;
 		bool m_skip_texture_read = false;
-		bool m_clip_enabled;
+		bool m_clip_enabled = false;
 		int  m_texture_type;
 		areaf m_clip_region;
 		size2f m_viewport_size;
