@@ -7,7 +7,7 @@
 class main_application
 {
 public:
-	virtual void Init() = 0;
+	virtual void Init(const bool show_gui = false) = 0;
 
 	static bool InitializeEmulator(const std::string& user, bool force_init);
 

@@ -1708,7 +1708,8 @@ void Emulator::Stop(bool restart)
 		return;
 	}
 
-	const bool do_exit = !restart && !m_force_boot && g_cfg.misc.autoexit;
+	const bool full_stop = !restart && !m_force_boot;
+	const bool do_exit   = full_stop && g_cfg.misc.autoexit;
 
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
@@ -1735,10 +1736,14 @@ void Emulator::Stop(bool restart)
 
 	if (do_exit)
 	{
-		GetCallbacks().exit();
+		GetCallbacks().exit(true);
 	}
 	else
 	{
+		if (full_stop)
+		{
+			GetCallbacks().exit(false);
+		}
 		Init();
 	}
 

@@ -13,13 +13,24 @@
 #include "osk_dialog_frame.h"
 #include "stylesheets.h"
 
+#include <QScreen>
+
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {
 }
 
-void gui_application::Init()
+gui_application::~gui_application()
+{
+#ifdef WITH_DISCORD_RPC
+	discord::shutdown();
+#endif
+}
+
+void gui_application::Init(const bool show_gui)
 {
 	setWindowIcon(QIcon(":/rpcs3.ico"));
+
+	m_show_gui = show_gui;
 
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
@@ -28,7 +39,10 @@ void gui_application::Init()
 	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true);
 
 	// Create the main window
-	m_main_window = new main_window(m_gui_settings, m_emu_settings, nullptr);
+	if (m_show_gui)
+	{
+		m_main_window = new main_window(m_gui_settings, m_emu_settings, nullptr);
+	}
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
@@ -36,13 +50,17 @@ void gui_application::Init()
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
 
-	m_main_window->Init();
+	if (m_main_window)
+	{
+		m_main_window->Init();
+	}
 
 	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
 		welcome_dialog* welcome = new welcome_dialog();
 		welcome->exec();
 	}
+
 #ifdef WITH_DISCORD_RPC
 	// Discord Rich Presence Integration
 	if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
@@ -54,13 +72,35 @@ void gui_application::Init()
 
 void gui_application::InitializeConnects()
 {
-	connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
+	if (m_main_window)
+	{
+		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
 
-	connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
-	connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
-	connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
-	connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
-	connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
+		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
+		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
+		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
+		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
+		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
+	}
+
+#ifdef WITH_DISCORD_RPC
+	connect(this, &gui_application::OnEmulatorRun, [this]()
+	{
+		// Discord Rich Presence Integration
+		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
+		{
+			discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
+		}
+	});
+	connect(this, &gui_application::OnEmulatorStop, [this]()
+	{
+		// Discord Rich Presence Integration
+		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
+		{
+			discord::update_presence(m_gui_settings->GetValue(gui::m_discordState).toString().toStdString());
+		}
+	});
+#endif
 
 	qRegisterMetaType<std::function<void()>>("std::function<void()>");
 	connect(this, &gui_application::RequestCallAfter, this, &gui_application::HandleCallAfter);
@@ -80,7 +120,9 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		h = m_gui_settings->GetValue(gui::gs_height).toInt();
 	}
 
-	auto frame_geometry = gui::utils::create_centered_window_geometry(m_main_window->geometry(), w, h);
+	const auto screen_geometry = m_main_window ? m_main_window->geometry() : primaryScreen()->geometry();
+	const auto frame_geometry  = gui::utils::create_centered_window_geometry(screen_geometry, w, h);
+	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	gs_frame* frame;
 
@@ -88,23 +130,23 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	{
 	case video_renderer::null:
 	{
-		frame = new gs_frame("Null", frame_geometry, m_main_window->GetAppIcon(), m_gui_settings);
+		frame = new gs_frame("Null", frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 	case video_renderer::opengl:
 	{
-		frame = new gl_gs_frame(frame_geometry, m_main_window->GetAppIcon(), m_gui_settings);
+		frame = new gl_gs_frame(frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame("Vulkan", frame_geometry, m_main_window->GetAppIcon(), m_gui_settings);
+		frame = new gs_frame("Vulkan", frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 #ifdef _MSC_VER
 	case video_renderer::dx12:
 	{
-		frame = new gs_frame("DirectX 12", frame_geometry, m_main_window->GetAppIcon(), m_gui_settings);
+		frame = new gs_frame("DirectX 12", frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 #endif
@@ -112,6 +154,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	}
 
 	m_game_window = frame;
+
 	return std::unique_ptr<gs_frame>(frame);
 }
 
@@ -120,9 +163,13 @@ void gui_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.exit = [this]()
+	callbacks.exit = [this](bool force_quit)
 	{
-		quit();
+		// Close rpcs3 if closed in no-gui mode
+		if (force_quit || !m_main_window)
+		{
+			quit();
+		}
 	};
 	callbacks.call_after = [=](std::function<void()> func)
 	{
@@ -130,7 +177,7 @@ void gui_application::InitializeCallbacks()
 	};
 
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
-	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return std::make_shared<msg_dialog_frame>(m_main_window->windowHandle()); };
+	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return std::make_shared<msg_dialog_frame>(); };
 	callbacks.get_osk_dialog  = []() -> std::shared_ptr<OskDialogBase> { return std::make_shared<osk_dialog_frame>(); };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
@@ -216,7 +263,11 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 	}
 
 	gui::stylesheet = styleSheet();
-	m_main_window->RepaintGui();
+
+	if (m_main_window)
+	{
+		m_main_window->RepaintGui();
+	}
 }
 
 /**
