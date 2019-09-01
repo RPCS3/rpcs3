@@ -10,7 +10,7 @@ environment:
   GLSLANG: https://dl.dropboxusercontent.com/s/ku2qgwmtfptzbvx/glslang.7z
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
   VULKAN_SDK: "C:\\VulkanSDK\\1.1.114.0"
-  VULKAN_SDK_URL: https://vulkan.lunarg.com/sdk/home#sdk/downloadConfirm/1.1.114.0/windows/VulkanSDK-1.1.114.0-Installer.exe
+  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.106.0/windows/VulkanSDK-1.1.106.0-Installer.exe
   VULKAN_SDK_SHA: 6233e3095b67b883a55b4fa61fd0376feecb1de1e0a7b3962fa7a85cdd0e663f
 
 cache:
