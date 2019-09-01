@@ -5,7 +5,7 @@ export PATH="/usr/local/opt/ccache/libexec:$PATH"
 # Setup vulkan and gfx-rs/portability
 curl -sLO https://github.com/gfx-rs/portability/releases/download/latest/gfx-portability-macos-latest.zip
 unzip -: gfx-portability-macos-latest.zip
-curl -sLO https://github.com/KhronosGroup/Vulkan-Headers/archive/sdk-1.1.106.0.zip
+curl -sLO https://github.com/KhronosGroup/Vulkan-Headers/archive/sdk-1.1.114.0.zip
 unzip -: sdk-*.zip
 mkdir vulkan-sdk
 ln -s ${PWD}/Vulkan-Headers*/include vulkan-sdk/include
