@@ -11,7 +11,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 * [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
 * [Qt 5.10+](https://www.qt.io/download-qt-installer) (Avoid 5.11.1, due to a bug)
 * [Visual Studio 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
-* [Vulkan SDK 1.1.97.0+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
+* [Vulkan SDK 1.1.114.0+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 
 **Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.10.0\msvc2017_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools-19123)**
 
