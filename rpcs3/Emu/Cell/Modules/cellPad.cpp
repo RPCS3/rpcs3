@@ -550,9 +550,10 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 		return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD;
 
 	// make sure reserved bits are 0. Looks like this happens after checking the pad status
-	for (int i = 0; i < 6; i++)
-		if (param->reserved[i])
-			return CELL_PAD_ERROR_INVALID_PARAMETER;
+	// TODO: test this on real hardware and both old and new firmware
+	//for (int i = 0; i < 6; i++)
+	//	if (param->reserved[i])
+	//		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	handler->SetRumble(port_no, param->motor[1], param->motor[0] > 0);
 
