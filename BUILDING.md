@@ -22,7 +22,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 * Clang 5.0+ or GCC 8.1+
 * [CMake 3.8.2+](https://www.cmake.org/download/)
 * [Qt 5.10+](https://www.qt.io/download-qt-installer) (Avoid 5.11.1, due to a bug)
-* [Vulkan SDK 1.1.97.0+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
+* [Vulkan SDK 1.1.114.0+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
 
