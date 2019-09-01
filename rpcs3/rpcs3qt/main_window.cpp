@@ -528,7 +528,7 @@ void main_window::InstallPup(const QString& dropPath)
 		version_string.erase(version_pos);
 	}
 
-	const std::string cur_version = "4.84";
+	const std::string cur_version = "4.85";
 
 	if (version_string < cur_version &&
 		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
