@@ -2059,8 +2059,7 @@ namespace rsx
 			else
 			{
 				// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
-				const u32 lookup_mask = (is_compressed_format) ? rsx::texture_upload_context::shader_read :
-					rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
+				const u32 lookup_mask = rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
 
 				auto lookup_range = tex_range;
 				if (LIKELY(extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d))
@@ -2074,7 +2073,9 @@ namespace rsx
 					}
 				}
 
-				const auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
+				auto overlapping_locals = find_texture_from_range<true>(lookup_range, tex_height > 1? tex_pitch : 0, lookup_mask);
+
+				// Search for exact match if possible
 				for (auto& cached_texture : overlapping_locals)
 				{
 					if (cached_texture->matches(texaddr, format, tex_width, tex_height, depth, 0))
@@ -2086,6 +2087,28 @@ namespace rsx
 				// Next, attempt to merge blit engine and surface store
 				// Blit sources contain info from any shader-read stuff in range
 				// NOTE: Compressed formats require a reupload, facilitated by blit synchronization and/or WCB and are not handled here
+
+				if (!overlapping_locals.empty())
+				{
+					if (tex.get_exact_mipmap_count() > 1 && !linear)
+					{
+						// Investigate if this is possible; it can work for disjoint sections, but the gather code cannot handle this at the moment
+						LOG_TODO(RSX, "Mipmap gather of swizzled texture requested but not implemented");
+						overlapping_locals.clear();
+					}
+					else
+					{
+						// Remove everything that is not a transfer target
+						overlapping_locals.erase
+						(
+							std::remove_if(overlapping_locals.begin(), overlapping_locals.end(), [](const auto& e)
+							{
+								return (e->get_context() != rsx::texture_upload_context::blit_engine_dst);
+							}),
+							overlapping_locals.end()
+						);
+					}
+				}
 
 				const auto bpp = get_format_block_size_in_bytes(format);
 				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, texaddr, tex_width, required_surface_height, tex_pitch, bpp, rsx::surface_access::read);
