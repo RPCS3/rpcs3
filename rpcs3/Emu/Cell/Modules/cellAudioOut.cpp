@@ -234,22 +234,26 @@ s32 cellAudioOutSetCopyControl(u32 audioOut, u32 control)
 
 s32 cellAudioOutConfigure2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellAudioOutConfigure2()");
+	return CELL_OK;
 }
 
 s32 cellAudioOutGetConfiguration2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellAudioOutGetConfiguration2()");
+	return CELL_OK;
 }
 
 s32 cellAudioOutRegisterCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellAudioOutRegisterCallback()");
+	return CELL_OK;
 }
 
 s32 cellAudioOutUnregisterCallback()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellAudioOutUnregisterCallback()");
+	return CELL_OK;
 }
 
 

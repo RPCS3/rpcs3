@@ -93,7 +93,8 @@ s32 sys_get_random_number(vm::ptr<void> addr, u64 size)
 
 s32 console_getc()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("console_getc()");
+	return CELL_OK;
 }
 
 void console_putc(char ch)

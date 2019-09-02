@@ -219,7 +219,8 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 error_code cellHddGameCheck2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGame.todo("cellHddGameCheck2()");
+	return CELL_OK;
 }
 
 error_code cellHddGameGetSizeKB(vm::ptr<u32> size)

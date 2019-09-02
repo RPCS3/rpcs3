@@ -436,17 +436,20 @@ s32 _sys_sprintf(ppu_thread& ppu, vm::ptr<char> buffer, vm::cptr<char> fmt, ppu_
 
 s32 _sys_vprintf()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("_sys_vprintf()");
+	return CELL_OK;
 }
 
 s32 _sys_vsnprintf()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("_sys_vsnprintf()");
+	return CELL_OK;
 }
 
 s32 _sys_vsprintf()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("_sys_vsprintf()");
+	return CELL_OK;
 }
 
 void _sys_qsort(vm::ptr<void> base, u32 nelem, u32 size, vm::ptr<qsortcmp> cmp)

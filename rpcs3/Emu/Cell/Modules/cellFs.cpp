@@ -997,17 +997,20 @@ s32 cellFsAioCancel(s32 id)
 
 s32 cellFsArcadeHddSerialNumber()
 {
-	fmt::throw_exception("Unimplemented: %s", __func__);
+	cellFs.todo("cellFsArcadeHddSerialNumber()");
+	return CELL_OK;
 }
 
 s32 cellFsRegisterConversionCallback()
 {
-	fmt::throw_exception("Unimplemented: %s", __func__);
+	cellFs.todo("cellFsRegisterConversionCallback()");
+	return CELL_OK;
 }
 
 s32 cellFsUnregisterL10nCallbacks()
 {
-	fmt::throw_exception("Unimplemented: %s", __func__);
+	cellFs.todo("cellFsUnregisterL10nCallbacks()");
+	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellFs)("sys_fs", []()

@@ -831,7 +831,8 @@ s32 cellGcmGetVBlankCount2()
 
 s32 cellGcmSysGetLastVBlankTime()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("cellGcmSysGetLastVBlankTime()");
+	return CELL_OK;
 }
 
 s32 cellGcmInitSystemMode(u64 mode)
@@ -1307,27 +1308,32 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 
 s32 _cellGcmFunc2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc2()");
+	return CELL_OK;
 }
 
 s32 _cellGcmFunc3()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc3()");
+	return CELL_OK;
 }
 
 s32 _cellGcmFunc4()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc4()");
+	return CELL_OK;
 }
 
 s32 _cellGcmFunc13()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc13()");
+	return CELL_OK;
 }
 
 s32 _cellGcmFunc38()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc38()");
+	return CELL_OK;
 }
 
 s32 cellGcmGpadGetStatus(vm::ptr<u32> status)

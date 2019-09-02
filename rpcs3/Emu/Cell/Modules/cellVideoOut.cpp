@@ -265,32 +265,38 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 
 s32 cellVideoOutConfigure2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutConfigure2()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutGetResolutionAvailability2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutGetResolutionAvailability2()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutDebugSetMonitorType(u32 videoOut, u32 monitorType)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutDebugSetMonitorType()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutRegisterCallback(u32 slot, vm::ptr<CellVideoOutCallback> function, vm::ptr<void> userData)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutRegisterCallback()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutUnregisterCallback(u32 slot)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutUnregisterCallback()");
+	return CELL_OK;
 }
 
 

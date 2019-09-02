@@ -75,7 +75,8 @@ s32 cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc src, POpe
 
 s32 cellGifDecExtOpen()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGifDec.todo("cellGifDecExtOpen()");
+	return CELL_OK;
 }
 
 s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo info)
@@ -127,7 +128,8 @@ s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo inf
 
 s32 cellGifDecExtReadHeader()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGifDec.todo("cellGifDecExtReadHeader()");
+	return CELL_OK;
 }
 
 s32 cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInParam inParam, POutParam outParam)
@@ -157,7 +159,8 @@ s32 cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInPara
 
 s32 cellGifDecExtSetParameter()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGifDec.todo("cellGifDecExtSetParameter()");
+	return CELL_OK;
 }
 
 s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u8> data, PDataCtrlParam dataCtrlParam, PDataOutInfo dataOutInfo)
@@ -276,7 +279,8 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 
 s32 cellGifDecExtDecodeData()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGifDec.todo("cellGifDecExtDecodeData()");
+	return CELL_OK;
 }
 
 s32 cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
