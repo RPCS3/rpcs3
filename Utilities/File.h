@@ -517,6 +517,7 @@ namespace fs
 		exist,
 		acces,
 		notempty,
+		readonly,
 	};
 
 	// Error code returned
