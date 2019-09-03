@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "types.h"
 #include "bit_set.h"
@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+
 
 namespace fs
 {
