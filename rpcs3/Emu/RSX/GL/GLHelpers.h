@@ -883,7 +883,7 @@ namespace gl
 
 		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
 		{
-			verify(HERE), m_memory_type == memory_type::undefined;
+			verify(HERE), m_memory_type != memory_type::local;
 
 			target target_ = current_target();
 			save_binding_state save(target_, *this);

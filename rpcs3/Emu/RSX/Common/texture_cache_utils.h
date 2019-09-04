@@ -1504,7 +1504,7 @@ namespace rsx
 
 		void add_flush_exclusion(const address_range& rng)
 		{
-			AUDIT(exists() && is_locked() && is_flushable());
+			AUDIT(is_locked() && is_flushable());
 			const auto _rng = rng.get_intersect(get_section_range());
 			flush_exclusions.merge(_rng);
 		}
@@ -1710,7 +1710,14 @@ namespace rsx
 
 		bool exists() const
 		{
-			return derived()->exists();
+			if (derived()->exists())
+			{
+				return true;
+			}
+			else
+			{
+				return (context == rsx::texture_upload_context::dma && is_locked());
+			}
 		}
 	};
 

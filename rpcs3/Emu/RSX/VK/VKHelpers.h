@@ -148,7 +148,7 @@ namespace vk
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
-	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region);
+	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes = false);
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 
 	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,

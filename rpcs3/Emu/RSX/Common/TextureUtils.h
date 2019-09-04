@@ -12,7 +12,8 @@ namespace rsx
 		shader_read = 1,
 		blit_engine_src = 2,
 		blit_engine_dst = 4,
-		framebuffer_storage = 8
+		framebuffer_storage = 8,
+		dma = 16
 	};
 
 	enum texture_colorspace : u32
