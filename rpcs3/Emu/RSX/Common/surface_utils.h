@@ -309,6 +309,11 @@ namespace rsx
 			return (state_flags != rsx::surface_state_flags::ready) || !old_contents.empty();
 		}
 
+		bool write_through() const
+		{
+			return (state_flags & rsx::surface_state_flags::erase_bkgnd) && old_contents.empty();
+		}
+
 #if (ENABLE_SURFACE_CACHE_DEBUG)
 		u64 hash_block() const
 		{
