@@ -347,7 +347,7 @@ static bool savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNa
 		// ****** sysutil savedata parameter error : 18 ******
 		return false;
 	}
-	else if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD || 
+	else if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD ||
 		operation == SAVEDATA_OP_LIST_AUTO_LOAD || operation == SAVEDATA_OP_LIST_AUTO_SAVE || operation == SAVEDATA_OP_FIXED_DELETE) && !funcFixed)
 	{
 		// ****** sysutil savedata parameter error : 19 ******
@@ -376,7 +376,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
-	if (!savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat, 
+	if (!savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
 	funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
 		return CELL_SAVEDATA_ERROR_PARAM;
@@ -1294,7 +1294,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		// add file list per FS order to PARAM.SFO
 		std::string final_blist;
 		final_blist = fmt::merge(blist, "/");
-		psf::assign(psf, "RPCS3_BLIST", psf::string(final_blist.size(), final_blist));
+		psf::assign(psf, "RPCS3_BLIST", psf::string(::align(::size32(final_blist) + 1, 4), final_blist));
 
 		// Write all files in temporary directory
 		auto& fsfo = all_files["PARAM.SFO"];
