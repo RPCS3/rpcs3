@@ -2502,6 +2502,14 @@ namespace rsx
 					typeless_info.src_scaling_hint = (f32)bpp / src_bpp;
 					typeless_info.src_gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 				}
+
+				if (surf->get_surface_width(rsx::surface_metrics::pixels) != surf->width() ||
+					surf->get_surface_height(rsx::surface_metrics::pixels) != surf->height())
+				{
+					// Must go through a scaling operation due to resolution scaling being present
+					verify(HERE), g_cfg.video.resolution_scale_percent != 100;
+					use_null_region = false;
+				}
 			}
 
 			if (dst_is_render_target)
