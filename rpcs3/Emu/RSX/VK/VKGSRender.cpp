@@ -693,14 +693,15 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			m_flush_requests.post(false);
 			has_queue_ref = true;
 		}
-		else if (!vk::is_uninterruptible())
-		{
-			//Flush primary cb queue to sync pending changes (e.g image transitions!)
-			flush_command_queue();
-		}
 		else
 		{
-			//LOG_ERROR(RSX, "Fault in uninterruptible code!");
+			if (vk::is_uninterruptible())
+			{
+				LOG_ERROR(RSX, "Fault in uninterruptible code!");
+			}
+
+			//Flush primary cb queue to sync pending changes (e.g image transitions!)
+			flush_command_queue();
 		}
 
 		if (has_queue_ref)
@@ -1133,6 +1134,13 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		m_program->bind_uniform(persistent_buffer, VERTEX_BUFFERS_FIRST_BIND_SLOT, m_current_frame->descriptor_set);
 		m_program->bind_uniform(volatile_buffer, VERTEX_BUFFERS_FIRST_BIND_SLOT + 1, m_current_frame->descriptor_set);
 		m_program->bind_uniform(m_vertex_layout_storage->value, VERTEX_BUFFERS_FIRST_BIND_SLOT + 2, m_current_frame->descriptor_set);
+	}
+
+	if (!m_render_pass_open)
+	{
+		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+		update_draw_state();
+		begin_render_pass();
 	}
 
 	// Bind the new set of descriptors for use with this draw call
@@ -1694,63 +1702,18 @@ void VKGSRender::end()
 	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
 	// Apply write memory barriers
-	if (true)//g_cfg.video.strict_rendering_mode)
+	if (ds) ds->write_barrier(*m_current_command_buffer);
+
+	for (auto &rtt : m_rtts.m_bound_render_targets)
 	{
-		if (ds) ds->write_barrier(*m_current_command_buffer);
-
-		for (auto &rtt : m_rtts.m_bound_render_targets)
+		if (auto surface = std::get<1>(rtt))
 		{
-			if (auto surface = std::get<1>(rtt))
-			{
-				surface->write_barrier(*m_current_command_buffer);
-			}
-		}
-
-		begin_render_pass();
-	}
-	else
-	{
-		begin_render_pass();
-
-		// Clear any 'dirty' surfaces - possible is a recycled cache surface is used
-		rsx::simple_array<VkClearAttachment> buffers_to_clear;
-
-		if (ds && ds->dirty())
-		{
-			// Clear this surface before drawing on it
-			VkClearValue clear_value = {};
-			clear_value.depthStencil = { 1.f, 255 };
-			buffers_to_clear.push_back({ vk::get_aspect_flags(ds->info.format), 0, clear_value });
-		}
-
-		for (u32 index = 0; index < m_draw_buffers.size(); ++index)
-		{
-			if (auto rtt = std::get<1>(m_rtts.m_bound_render_targets[index]))
-			{
-				if (rtt->dirty())
-				{
-					buffers_to_clear.push_back({ VK_IMAGE_ASPECT_COLOR_BIT, index, {} });
-				}
-			}
-		}
-
-		if (UNLIKELY(!buffers_to_clear.empty()))
-		{
-			VkClearRect rect = { {{0, 0}, {m_draw_fbo->width(), m_draw_fbo->height()}}, 0, 1 };
-			vkCmdClearAttachments(*m_current_command_buffer, buffers_to_clear.size(),
-				buffers_to_clear.data(), 1, &rect);
+			surface->write_barrier(*m_current_command_buffer);
 		}
 	}
 
 	// Final heap check...
 	check_heap_status(VK_HEAP_CHECK_VERTEX_STORAGE | VK_HEAP_CHECK_VERTEX_LAYOUT_STORAGE);
-
-	// While vertex upload is an interruptible process, if we made it this far, there's no need to sync anything that occurs past this point
-	// Only textures are synchronized tightly with the GPU and they have been read back above
-	vk::enter_uninterruptible();
-
-	vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-	update_draw_state();
 
 	u32 sub_index = 0;
 	rsx::method_registers.current_draw_clause.begin();
@@ -1760,8 +1723,8 @@ void VKGSRender::end()
 	}
 	while (rsx::method_registers.current_draw_clause.next());
 
+	// Close any open passes unconditionally
 	close_render_pass();
-	vk::leave_uninterruptible();
 
 	m_rtts.on_write(m_framebuffer_layout.color_write_enabled.data(), m_framebuffer_layout.zeta_write_enabled);
 
@@ -2808,6 +2771,12 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 
 		m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(),
 			VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	}
+
+	// End any active renderpasses; the caller should handle reopening
+	if (m_render_pass_open)
+	{
+		close_render_pass();
 	}
 
 	// End open queries. Flags will be automatically reset by the submit routine
