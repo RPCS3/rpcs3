@@ -110,7 +110,7 @@ namespace vk
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-			job->run(cmd, dst, (u32)region.bufferOffset, packed_length, z_offset, s_offset);
+			job->run(cmd, dst, (u32)region.bufferOffset, packed_length, (u32)z_offset, (u32)s_offset);
 
 			vk::insert_buffer_memory_barrier(cmd, dst->value, region.bufferOffset, packed_length,
 				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -166,7 +166,7 @@ namespace vk
 				job = vk::get_compute_task<vk::cs_scatter_d32x8>();
 			}
 
-			job->run(cmd, src, (u32)region.bufferOffset, packed_length, z_offset, s_offset);
+			job->run(cmd, src, (u32)region.bufferOffset, packed_length, (u32)z_offset, (u32)s_offset);
 
 			vk::insert_buffer_memory_barrier(cmd, src->value, z_offset, in_depth_size + in_stencil_size,
 				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -517,9 +517,16 @@ namespace vk
 		u8  block_size_in_bytes = get_format_block_size_in_bytes(format);
 
 		texture_uploader_capabilities caps{ true, false, heap_align };
+		texture_memory_info opt{};
+		bool check_caps = true;
+
 		vk::buffer* scratch_buf = nullptr;
 		u32 scratch_offset = 0;
 		u32 row_pitch, image_linear_size;
+
+		std::vector<VkBufferImageCopy> copy_regions;
+		std::vector<VkBufferCopy> buffer_copies;
+		copy_regions.reserve(subresource_layout.size());
 
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{
@@ -539,16 +546,20 @@ namespace vk
 			// Map with extra padding bytes in case of realignment
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
 			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
-			VkBuffer buffer_handle = upload_heap.heap->value;
 
 			// Only do GPU-side conversion if occupancy is good
-			caps.supports_byteswap = (image_linear_size >= 1024);
+			if (check_caps)
+			{
+				caps.supports_byteswap = (image_linear_size >= 1024);
+				check_caps = false;
+			}
 
 			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
-			auto opt = upload_texture_subresource(mapped, layout, format, is_swizzled, caps);
+			opt = upload_texture_subresource(mapped, layout, format, is_swizzled, caps);
 			upload_heap.unmap();
 
-			VkBufferImageCopy copy_info = {};
+			copy_regions.push_back({});
+			auto& copy_info = copy_regions.back();
 			copy_info.bufferOffset = offset_in_buffer;
 			copy_info.imageExtent.height = layout.height_in_block * block_in_pixel;
 			copy_info.imageExtent.width = layout.width_in_block * block_in_pixel;
@@ -564,62 +575,71 @@ namespace vk
 				if (!scratch_buf)
 				{
 					scratch_buf = vk::get_scratch_buffer();
-				}
-				else if ((scratch_offset + image_linear_size) > scratch_buf->size())
-				{
-					scratch_offset = 0;
-					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_buf->size(), VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-						VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+					buffer_copies.reserve(subresource_layout.size());
 				}
 
-				VkBufferCopy copy = {};
+				// Copy from upload heap to scratch mem
+				buffer_copies.push_back({});
+				auto& copy = buffer_copies.back();
 				copy.srcOffset = offset_in_buffer;
 				copy.dstOffset = scratch_offset;
 				copy.size = image_linear_size;
 
-				vkCmdCopyBuffer(cmd, buffer_handle, scratch_buf->value, 1, &copy);
-
-				insert_buffer_memory_barrier(cmd, scratch_buf->value, scratch_offset, image_linear_size, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-			}
-
-			if (opt.require_swap)
-			{
-				if (opt.element_size == 4)
-				{
-					vk::get_compute_task<vk::cs_shuffle_32>()->run(cmd, scratch_buf, image_linear_size, scratch_offset);
-				}
-				else if (opt.element_size == 2)
-				{
-					vk::get_compute_task<vk::cs_shuffle_16>()->run(cmd, scratch_buf, image_linear_size, scratch_offset);
-				}
-				else
-				{
-					fmt::throw_exception("Unreachable" HERE);
-				}
-			}
-
-			if (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
-			{
+				// Point data source to scratch mem
 				copy_info.bufferOffset = scratch_offset;
-				scratch_offset = align(scratch_offset + image_linear_size, 512);
-				vk::copy_buffer_to_image(cmd, scratch_buf, dst_image, copy_info);
-			}
-			else if (opt.require_swap)
-			{
-				insert_buffer_memory_barrier(cmd, scratch_buf->value, scratch_offset, image_linear_size, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-				copy_info.bufferOffset = scratch_offset;
-				scratch_offset = align(scratch_offset + image_linear_size, 512);
-				vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
-			}
-			else
-			{
-				vkCmdCopyBufferToImage(cmd, buffer_handle, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_info);
+				scratch_offset += image_linear_size;
+				verify("Out of scratch memory" HERE), (scratch_offset + image_linear_size) <= scratch_buf->size();
 			}
 
 			mipmap_level++;
+		}
+
+		if (opt.require_swap || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
+		{
+			verify(HERE), scratch_buf;
+			vkCmdCopyBuffer(cmd, upload_heap.heap->value, scratch_buf->value, (u32)buffer_copies.size(), buffer_copies.data());
+
+			insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+		}
+
+		// Swap if requested
+		if (opt.require_swap)
+		{
+			if (opt.element_size == 4)
+			{
+				vk::get_compute_task<vk::cs_shuffle_32>()->run(cmd, scratch_buf, scratch_offset);
+			}
+			else if (opt.element_size == 2)
+			{
+				vk::get_compute_task<vk::cs_shuffle_16>()->run(cmd, scratch_buf, scratch_offset);
+			}
+			else
+			{
+				fmt::throw_exception("Unreachable" HERE);
+			}
+		}
+
+		// CopyBufferToImage routines
+		if (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
+		{
+			// Upload in reverse to avoid polluting data in lower space
+			for (auto rIt = copy_regions.crbegin(); rIt != copy_regions.crend(); ++rIt)
+			{
+				vk::copy_buffer_to_image(cmd, scratch_buf, dst_image, *rIt);
+			}
+		}
+		else if (opt.require_swap)
+		{
+			insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+
+			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (u32)copy_regions.size(), copy_regions.data());
+		}
+		else
+		{
+			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (u32)copy_regions.size(), copy_regions.data());
 		}
 	}
 
