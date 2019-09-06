@@ -519,12 +519,22 @@ namespace vk
 		texture_uploader_capabilities caps{ true, false, heap_align };
 		vk::buffer* scratch_buf = nullptr;
 		u32 scratch_offset = 0;
+		u32 row_pitch, image_linear_size;
 
 		for (const rsx_subresource_layout &layout : subresource_layout)
 		{
-			u32 row_pitch = (((layout.width_in_block * block_size_in_bytes) + heap_align - 1) / heap_align) * heap_align;
-			if (heap_align != 256) verify(HERE), row_pitch == heap_align;
-			u32 image_linear_size = row_pitch * layout.height_in_block * layout.depth;
+			if (LIKELY(!heap_align))
+			{
+				row_pitch = (layout.pitch_in_block * block_size_in_bytes);
+				caps.alignment = row_pitch;
+			}
+			else
+			{
+				row_pitch = (((layout.width_in_block * block_size_in_bytes) + heap_align - 1) / heap_align) * heap_align;
+				verify(HERE), row_pitch == heap_align;
+			}
+
+			image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 
 			// Map with extra padding bytes in case of realignment
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
