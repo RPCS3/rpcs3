@@ -391,16 +391,32 @@ namespace
 }
 
 template<typename T>
-u32 get_row_pitch_in_block(u16 width_in_block, size_t multiple_constraints_in_byte)
+u32 get_row_pitch_in_block(u16 width_in_block, size_t alignment)
 {
-	size_t divided = (width_in_block * sizeof(T) + multiple_constraints_in_byte - 1) / multiple_constraints_in_byte;
-	return static_cast<u32>(divided * multiple_constraints_in_byte / sizeof(T));
+	if (const size_t pitch = width_in_block * sizeof(T);
+		pitch == alignment)
+	{
+		return width_in_block;
+	}
+	else
+	{
+		size_t divided = (pitch + alignment - 1) / alignment;
+		return static_cast<u32>(divided * alignment / sizeof(T));
+	}
 }
 
-u32 get_row_pitch_in_block(u16 block_size_in_bytes, u16 width_in_block, size_t multiple_constraints_in_byte)
+u32 get_row_pitch_in_block(u16 block_size_in_bytes, u16 width_in_block, size_t alignment)
 {
-	size_t divided = (width_in_block * block_size_in_bytes + multiple_constraints_in_byte - 1) / multiple_constraints_in_byte;
-	return static_cast<u32>(divided * multiple_constraints_in_byte / block_size_in_bytes);
+	if (const size_t pitch = width_in_block * block_size_in_bytes;
+		pitch == alignment)
+	{
+		return width_in_block;
+	}
+	else
+	{
+		size_t divided = (pitch + alignment - 1) / alignment;
+		return static_cast<u32>(divided * alignment / block_size_in_bytes);
+	}
 }
 
 /**
