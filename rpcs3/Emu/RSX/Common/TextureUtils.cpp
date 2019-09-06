@@ -44,16 +44,8 @@ namespace
 	template<typename T1, typename T2>
 	constexpr void copy(gsl::span<T1> dst, gsl::span<T2> src)
 	{
-		if (std::is_same<T1, T2>::value)
-		{
-			std::memcpy(dst.data(), src.data(), src.size_bytes());
-		}
-		else
-		{
-			static_assert(std::is_convertible<T1, T2>::value, "Cannot convert source and destination span type.");
-			verify(HERE), (dst.size() == src.size());
-			std::copy(src.begin(), src.end(), dst.begin());
-		}
+		static_assert(std::is_convertible<T1, T2>::value, "Cannot convert source and destination span type.");
+		std::copy(src.begin(), src.end(), dst.begin());
 	}
 
 	u16 convert_rgb655_to_rgb565(const u16 bits)
@@ -70,13 +62,21 @@ struct copy_unmodified_block
 	{
 		static_assert(sizeof(T) == sizeof(U), "Type size doesn't match.");
 
+		if (src_pitch_in_block == dst_pitch_in_block && !border)
+		{
+			// Fast copy
+			const auto data_length = width_in_block * words_per_block * row_count * depth;
+			copy(dst, src.subspan(0, data_length));
+			return;
+		}
+
 		const u32 width_in_words = width_in_block * words_per_block;
 		const u32 src_pitch_in_words = src_pitch_in_block * words_per_block;
 		const u32 dst_pitch_in_words = dst_pitch_in_block * words_per_block;
 
-		u32 src_offset = 0, dst_offset = 0;
 		const u32 h_porch = border * words_per_block;
 		const u32 v_porch = src_pitch_in_words * border;
+		u32 src_offset = h_porch, dst_offset = 0;
 
 		for (int layer = 0; layer < depth; ++layer)
 		{
@@ -85,7 +85,8 @@ struct copy_unmodified_block
 
 			for (int row = 0; row < row_count; ++row)
 			{
-				copy(dst.subspan(dst_offset, width_in_words), src.subspan(src_offset + h_porch, width_in_words));
+				// NNOTE: src_offset is already shifted along the border at initialization
+				copy(dst.subspan(dst_offset, width_in_words), src.subspan(src_offset, width_in_words));
 
 				src_offset += src_pitch_in_words;
 				dst_offset += dst_pitch_in_words;
