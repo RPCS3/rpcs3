@@ -347,7 +347,7 @@ static bool savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNa
 		// ****** sysutil savedata parameter error : 18 ******
 		return false;
 	}
-	else if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD || 
+	else if ((operation == SAVEDATA_OP_FIXED_SAVE || operation == SAVEDATA_OP_FIXED_LOAD ||
 		operation == SAVEDATA_OP_LIST_AUTO_LOAD || operation == SAVEDATA_OP_LIST_AUTO_SAVE || operation == SAVEDATA_OP_FIXED_DELETE) && !funcFixed)
 	{
 		// ****** sysutil savedata parameter error : 19 ******
@@ -376,7 +376,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
-	if (!savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat, 
+	if (!savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
 	funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
 		return CELL_SAVEDATA_ERROR_PARAM;
@@ -813,6 +813,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	lv2_sleep(ppu, 250);
 
+	// Check if RPCS3_BLIST section exist in PARAM.SFO
+	// This section contains the list of files in the save ordered as they would be in BSD filesystem
+	std::vector<std::string> blist;
+
+	if (psf.count("RPCS3_BLIST"))
+		blist = fmt::split(psf.at("RPCS3_BLIST").as_string(), {"/"}, false);
+
 	// Get save stats
 	{
 		fs::stat_t dir_info{};
@@ -849,11 +856,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		u32 size_kbytes = 0;
 
+		std::vector<fs::dir_entry> files_sorted;
+
 		for (auto&& entry : fs::dir(dir_path))
 		{
 			entry.name = vfs::unescape(entry.name);
 
-			// only files, system files ignored, fileNum is limited by setBuf->fileListMax
 			if (!entry.is_directory)
 			{
 				if (entry.name == "PARAM.SFO" || entry.name == "PARAM.PFD")
@@ -861,6 +869,29 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					continue; // system files are not included in the file list
 				}
 
+				files_sorted.push_back(entry);
+			}
+		}
+
+		// clang-format off
+		std::sort(files_sorted.begin(), files_sorted.end(), [&](const fs::dir_entry& a, const fs::dir_entry& b) -> bool
+		{
+			const auto a_it = std::find(blist.begin(), blist.end(), a.name);
+			const auto b_it = std::find(blist.begin(), blist.end(), b.name);
+
+			if (a_it == blist.end() && b_it == blist.end())
+			{
+				// Order alphabetically for old saves
+				return a.name.compare(b.name);
+			}
+
+			return a_it < b_it;
+		});
+		// clang-format on
+
+		for (auto&& entry : files_sorted)
+		{
+			{
 				statGet->fileNum++;
 
 				size_kbytes += (entry.size + 1023) / 1024; // firmware rounds this value up
@@ -1135,6 +1166,25 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		const u32 access_size = std::min<u32>(fileSet->fileSize, fileSet->fileBufSize);
 
+		// clang-format off
+		auto add_to_blist = [&](const std::string& to_add)
+		{
+			if (std::find(blist.begin(), blist.end(), to_add) == blist.end())
+			{
+				if(auto it = std::find(blist.begin(), blist.end(), ""); it != blist.end())
+					*it = to_add;
+				else
+					blist.push_back(to_add);
+			}
+		};
+
+		auto del_from_blist = [&](const std::string& to_del)
+		{
+			if (auto it = std::find(blist.begin(), blist.end(), to_del); it != blist.end())
+				*it = "";
+		};
+		// clang-format on
+
 		switch (const u32 op = fileSet->fileOperation)
 		{
 		case CELL_SAVEDATA_FILEOP_READ:
@@ -1184,6 +1234,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			file.trunc(sr + wr);
 			fileGet->excSize = ::narrow<u32>(wr);
 			all_times.erase(file_path);
+			add_to_blist(file_path);
 			has_modified = true;
 			break;
 		}
@@ -1195,6 +1246,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			psf.erase("*" + file_path);
 			fileGet->excSize = 0;
 			all_times.erase(file_path);
+			del_from_blist(file_path);
 			has_modified = true;
 			break;
 		}
@@ -1213,6 +1265,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			const u64 wr = file.write(fileSet->fileBuf.get_ptr(), access_size);
 			fileGet->excSize = ::narrow<u32>(wr);
 			all_times.erase(file_path);
+			add_to_blist(file_path);
 			has_modified = true;
 			break;
 		}
@@ -1237,6 +1290,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			fmt::throw_exception("Failed to create directory %s (%s)", new_path, fs::g_tls_error);
 		}
+
+		// add file list per FS order to PARAM.SFO
+		std::string final_blist;
+		final_blist = fmt::merge(blist, "/");
+		psf::assign(psf, "RPCS3_BLIST", psf::string(::align(::size32(final_blist) + 1, 4), final_blist));
 
 		// Write all files in temporary directory
 		auto& fsfo = all_files["PARAM.SFO"];
