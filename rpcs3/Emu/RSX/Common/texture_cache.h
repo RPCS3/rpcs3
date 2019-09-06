@@ -2431,7 +2431,7 @@ namespace rsx
 			// Check if src/dst are parts of render targets
 			typename surface_store_type::surface_overlap_info dst_subres;
 			bool use_null_region = false;
-			if (dst_address > 0xc0000000)
+			if (get_location(dst_address) == CELL_GCM_LOCATION_LOCAL)
 			{
 				// TODO: HACK
 				// After writing, it is required to lock the memory range from access!
@@ -2534,6 +2534,7 @@ namespace rsx
 			size2i dst_dimensions = { dst.pitch / dst_bpp, dst.height };
 			if (src_is_render_target)
 			{
+				// Attempt to optimize...
 				if (dst_dimensions.width == src_subres.surface->get_surface_width(rsx::surface_metrics::samples))
 				{
 					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(rsx::surface_metrics::samples), dst.height);
@@ -2547,6 +2548,23 @@ namespace rsx
 				else
 				{
 					//LOG_TRACE(RSX, "Blit transfer to surface with dims %dx%d", dst_dimensions.width, dst.height);
+				}
+
+				if (get_location(dst.rsx_address) != CELL_GCM_LOCATION_LOCAL && !dst_is_render_target)
+				{
+					// Confirm if the pages actually exist in vm
+					// Only need to test the extra padding memory
+					const auto min_end = dst_address + (dst.height * dst.pitch);
+					const auto max_end = dst.rsx_address + (dst_dimensions.height * dst.pitch);
+
+					if (max_end > min_end)
+					{
+						if (!vm::check_addr(min_end, (max_end - min_end), vm::page_info_t::page_allocated))
+						{
+							// Enforce strict allocation size!
+							dst_dimensions.height = (dst.clip_height + dst.offset_y);
+						}
+					}
 				}
 			}
 

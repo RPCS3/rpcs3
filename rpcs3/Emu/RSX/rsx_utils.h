@@ -266,6 +266,13 @@ namespace rsx
 		return g_rsx_shared_tag++;
 	}
 
+	static inline u32 get_location(u32 addr)
+	{
+		return (addr >= rsx::constants::local_mem_base) ?
+			CELL_GCM_LOCATION_LOCAL :
+			CELL_GCM_LOCATION_MAIN;
+	}
+
 	// Copy memory in inverse direction from source
 	// Used to scale negatively x axis while transfering image data
 	template <typename Ts = u8, typename Td = Ts>
