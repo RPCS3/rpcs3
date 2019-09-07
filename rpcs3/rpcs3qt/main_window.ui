@@ -176,6 +176,8 @@
      <addaction name="batchRemovePPUCachesAct"/>
      <addaction name="batchRemoveSPUCachesAct"/>
      <addaction name="batchRemoveShaderCachesAct"/>
+     <addaction name="separator"/>
+     <addaction name="removeDiskCacheAct"/>
     </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
@@ -999,6 +1001,11 @@
   <action name="batchRemoveCustomPadConfigurationsAct">
    <property name="text">
     <string>Remove Custom Pad Configurations</string>
+   </property>
+  </action>
+  <action name="removeDiskCacheAct">
+   <property name="text">
+    <string>Remove Disk Cache</string>
    </property>
   </action>
  </widget>

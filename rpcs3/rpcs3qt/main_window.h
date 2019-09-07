@@ -126,6 +126,7 @@ private:
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
 	void AddRecentAction(const q_string_pair& entry);
+	void RemoveDiskCache();
 
 	q_pair_list m_rg_entries;
 	QList<QAction*> m_recentGameActs;
