@@ -68,6 +68,14 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		setWindowTitle(tr("Gamepads Settings"));
 	}
 
+	// Load tooltips
+	QFile json_file(":/Json/pad_settings.json");
+	json_file.open(QIODevice::ReadOnly | QIODevice::Text);
+	QJsonObject json_obj = QJsonDocument::fromJson(json_file.readAll()).object();
+	json_file.close();
+
+	m_json_handlers = json_obj.value("handlers").toObject();
+
 	// Create tab widget for 7 players
 	m_tabs = new QTabWidget;
 	for (int i = 1; i < 8; i++)
@@ -927,6 +935,43 @@ void pad_settings_dialog::ChangeInputType()
 	// Get this player's current handler and it's currently available devices
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	const auto device_list = m_handler->ListDevices();
+
+	// Change the description
+	QString description;
+	switch (m_handler->m_type)
+	{
+	case pad_handler::null:
+		description = m_json_handlers["null"].toString(); break;
+	case pad_handler::keyboard:
+		description = m_json_handlers["keyboard"].toString(); break;
+#ifdef _WIN32
+	case pad_handler::xinput:
+		description = m_json_handlers["xinput"].toString(); break;
+	case pad_handler::mm:
+		description = m_json_handlers["mmjoy"].toString(); break;
+	case pad_handler::ds3:
+		description = m_json_handlers["ds3_windows"].toString(); break;
+	case pad_handler::ds4:
+		description = m_json_handlers["ds4_windows"].toString(); break;
+#elif __linux__
+	case pad_handler::ds3:
+		description = m_json_handlers["ds3_linux"].toString(); break;
+	case pad_handler::ds4:
+		description = m_json_handlers["ds4_linux"].toString(); break;
+#else
+	case pad_handler::ds3:
+		description = m_json_handlers["ds3_other"].toString(); break;
+	case pad_handler::ds4:
+		description = m_json_handlers["ds4_other"].toString(); break;
+#endif
+#ifdef HAVE_LIBEVDEV
+	case pad_handler::evdev:
+		description = (m_json_handlers["evdev"].toString()); break;
+#endif
+	default:
+		description = "";
+	}
+	ui->l_description->setText(description);
 
 	// change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
