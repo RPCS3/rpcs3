@@ -48,7 +48,7 @@ inline void ppu_ov_set(ppu_thread& ppu, bool bit)
 template<typename T>
 inline void ppu_fpcc_set(ppu_thread& ppu, const T& a, const T& b, const bool rc, const u64 cr_field = 1)
 {
-	// TODO: Do not hardcode to be endian dependant  
+	// TODO: Do not hardcode to be endian dependant
 	u32 fpcc = u32{a < b} << (8 * 0) | u32{a > b} << (8 * 1) | u32{a == b} << (8 * 2);
 
 	// Test FU
@@ -4762,8 +4762,9 @@ bool ppu_interpreter::MTFSB0(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MTFSFI(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u32 bf = op.crfd * 4;
-	if (bf != 4 * 4)
+	const u32 bf = op.crfd;
+
+	if (bf != 4)
 	{
 		// Do nothing on non-FPCC field (TODO)
 		LOG_WARNING(PPU, "MTFSFI(%d)", op.crfd);
