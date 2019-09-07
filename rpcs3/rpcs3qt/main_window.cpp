@@ -1186,6 +1186,8 @@ void main_window::CreateConnects()
 	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveCustomConfigurations);
 	connect(ui->batchRemoveCustomPadConfigurationsAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveCustomPadConfigurations);
 
+	connect(ui->removeDiskCacheAct, &QAction::triggered, this, &main_window::RemoveDiskCache);
+
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Restart(); });
@@ -1635,6 +1637,20 @@ void main_window::SetIconSizeActions(int idx)
 		ui->setIconSizeMediumAct->setChecked(true);
 	else
 		ui->setIconSizeLargeAct->setChecked(true);
+}
+
+void main_window::RemoveDiskCache()
+{
+	std::string cacheDir = Emulator::GetHdd1Dir() + "/cache";
+
+	if (fs::is_dir(cacheDir) && fs::remove_all(cacheDir, false))
+	{
+		QMessageBox::information(this, tr("Cache Cleared"), tr("Disk cache was cleared successfully"));
+	}
+	else
+	{
+		QMessageBox::warning(this, tr("Error"), tr("Could not remove disk cache"));
+	}
 }
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
