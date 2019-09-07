@@ -868,7 +868,7 @@ namespace gl
 				}
 				case CELL_GCM_TEXTURE_DEPTH24_D8:
 				{
-					cached.set_format(gl::texture::format::depth_stencil, gl::texture::type::uint_24_8, true);
+					cached.set_format(gl::texture::format::depth_stencil, gl::texture::type::uint_24_8, false);
 					break;
 				}
 				case CELL_GCM_TEXTURE_DEPTH16:
