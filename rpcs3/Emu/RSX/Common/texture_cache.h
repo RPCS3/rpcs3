@@ -1691,7 +1691,7 @@ namespace rsx
 					surfaces.push_back
 					({
 						section->get_raw_texture(),
-						is_depth ? surface_transform::identity : surface_transform::argb_to_bgra,
+						surface_transform::identity,
 						(u16)std::get<0>(clipped).x,
 						(u16)std::get<0>(clipped).y,
 						rsx::apply_resolution_scale((u16)std::get<1>(clipped).x, true),
@@ -1710,7 +1710,7 @@ namespace rsx
 					surfaces.push_back
 					({
 						section->get_raw_texture(),
-						is_depth ? surface_transform::identity : surface_transform::argb_to_bgra,
+						surface_transform::identity,
 						(u16)std::get<0>(clipped).x,
 						(u16)std::get<0>(clipped).y,
 						(u16)std::get<1>(clipped).x,
