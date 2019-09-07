@@ -162,6 +162,11 @@ void cpu_thread::operator()()
 		thread_ctrl::wait();
 	}
 
+	if (auto ptr = vm::g_tls_locked)
+	{
+		ptr->compare_and_swap(this, nullptr);
+	}
+
 	// Unregister and wait if necessary
 	state += cpu_flag::wait;
 	verify("g_cpu_array[...] -> null" HERE), g_cpu_array[array_slot].exchange(nullptr) == this;
@@ -262,12 +267,12 @@ bool cpu_thread::check_state() noexcept
 			continue;
 		}
 
-		if (state & cpu_flag::wait)
+		if (state0 & cpu_flag::wait)
 		{
 			// Spin wait once for a bit before resorting to thread_ctrl::wait
 			for (u32 i = 0; i < 10; i++)
 			{
-				if (state0 & (cpu_flag::pause + cpu_flag::suspend))
+				if (state & (cpu_flag::pause + cpu_flag::suspend))
 				{
 					busy_wait(500);
 				}
@@ -277,7 +282,7 @@ bool cpu_thread::check_state() noexcept
 				}
 			}
 
-			if (!(state0 & (cpu_flag::pause + cpu_flag::suspend)))
+			if (!(state & (cpu_flag::pause + cpu_flag::suspend)))
 			{
 				continue;
 			}
