@@ -621,6 +621,10 @@ namespace vk
 								1, new_src_aspect, tmp->info.format == _dst->info.format,
 								VK_FILTER_NEAREST, tmp->info.format, _dst->info.format);
 						}
+						else
+						{
+							_dst = tmp;
+						}
 					}
 					else
 					{
