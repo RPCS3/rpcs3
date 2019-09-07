@@ -13,13 +13,13 @@ namespace program_common
 		if (low_precision)
 		{
 			OS <<
-				"int compare(float a, float b)\n"
+				"int compare(const in float a, const in float b)\n"
 				"{\n"
 				"	if (abs(a - b) < 0.000001) return 2;\n"
 				"	return (a > b)? 4 : 1;\n"
 				"}\n\n"
 
-				"bool comparison_passes(float a, float b, uint func)\n"
+				"bool comparison_passes(const in float a, const in float b, const in uint func)\n"
 				"{\n"
 				"	if (func == 0) return false; // never\n"
 				"	if (func == 7) return true;  // always\n\n"
@@ -41,7 +41,7 @@ namespace program_common
 		else
 		{
 			OS <<
-			"bool comparison_passes(float a, float b, uint func)\n"
+			"bool comparison_passes(const in float a, const in float b, const in uint func)\n"
 			"{\n"
 			"	switch (func)\n"
 			"	{\n"
@@ -62,7 +62,7 @@ namespace program_common
 	static void insert_compare_op_vector(std::ostream& OS)
 	{
 		OS <<
-		"bvec4 comparison_passes(vec4 a, vec4 b, uint func)\n"
+		"bvec4 comparison_passes(const in vec4 a, const in vec4 b, const in uint func)\n"
 		"{\n"
 		"	switch (func)\n"
 		"	{\n"
@@ -84,9 +84,9 @@ namespace program_common
 		std::string template_body;
 
 		if (!declare)
-			template_body += "$T fetch_fog_value(uint mode)\n";
+			template_body += "$T fetch_fog_value(const in uint mode)\n";
 		else
-			template_body += "$T fetch_fog_value(uint mode, $T $I)\n";
+			template_body += "$T fetch_fog_value(const in uint mode, const in $T $I)\n";
 
 		template_body +=
 		"{\n"
@@ -229,24 +229,25 @@ namespace glsl
 		"	bool modulo;\n"
 		"};\n\n"
 
-		"uint get_bits(uint x, uint y, uint z, uint w, bool swap)\n"
+		"uint get_bits(const in uint x, const in uint y, const in uint z, const in uint w, const in bool swap)\n"
 		"{\n"
 		"	if (swap) return (w | z << 8 | y << 16 | x << 24);\n"
 		"	return (x | y << 8 | z << 16 | w << 24);\n"
 		"}\n\n"
 
-		"uint get_bits(uint x, uint y, bool swap)\n"
+		"uint get_bits(const in uint x, const in uint y, const in bool swap)\n"
 		"{\n"
 		"	if (swap) return (y | x << 8);\n"
 		"	return (x | y << 8);\n"
 		"}\n\n"
 
-		"int preserve_sign_s16(uint bits)\n"
+		"int preserve_sign_s16(const in uint bits)\n"
 		"{\n"
 		"	//convert raw 16 bit value into signed 32-bit integer counterpart\n"
-		"	uint sign = bits & 0x8000;\n"
-		"	if (sign != 0) bits |= 0xFFFF0000;\n"
-		"	return int(bits);\n"
+		"	if ((bits & 0x8000) == 0)\n"
+		"		return int(bits);\n"
+		"	else\n"
+		"		return int(bits | 0xFFFF0000);\n"
 		"}\n\n"
 
 		"#define get_s16(v, s) preserve_sign_s16(get_bits(v, s))\n\n";
@@ -255,7 +256,7 @@ namespace glsl
 		if (!glsl4_compliant)
 		{
 			OS <<
-			"void mov(inout vec4 vector, in int index, in float scalar)\n"
+			"void mov(inout vec4 vector, const in int index, const in float scalar)\n"
 			"{\n"
 			"	switch(index)\n"
 			"	{\n"
@@ -267,7 +268,7 @@ namespace glsl
 			"}\n";
 
 			OS <<
-			"uint ref(in uvec4 vector, in int index)\n"
+			"uint ref(const in uvec4 vector, const in int index)\n"
 			"{\n"
 			"	switch(index)\n"
 			"	{\n"
@@ -286,7 +287,7 @@ namespace glsl
 		}
 
 		OS <<
-		"vec4 fetch_attribute(attribute_desc desc, int vertex_id, usamplerBuffer input_stream)\n"
+		"vec4 fetch_attribute(const in attribute_desc desc, const in int vertex_id, usamplerBuffer input_stream)\n"
 		"{\n"
 		"	vec4 result = vec4(0., 0., 0., 1.);\n"
 		"	vec4 scale = vec4(1.);\n"
@@ -355,7 +356,7 @@ namespace glsl
 		"	return (reverse_order)? result.wzyx: result;\n"
 		"}\n\n"
 
-		"attribute_desc fetch_desc(int location)\n"
+		"attribute_desc fetch_desc(const in int location)\n"
 		"{\n"
 		"	// Each descriptor is 64 bits wide\n"
 		"	// [0-8] attribute stride\n"
@@ -382,8 +383,7 @@ namespace glsl
 		{
 			// Fetch parameters streamed separately from draw parameters
 			OS <<
-			"	location += int(layout_ptr_offset);\n"
-			"	uvec2 attrib = texelFetch(vertex_layout_stream, location).xy;\n\n";
+			"	uvec2 attrib = texelFetch(vertex_layout_stream, location + int(layout_ptr_offset)).xy;\n\n";
 		}
 
 		OS <<
@@ -399,24 +399,13 @@ namespace glsl
 		"	return result;\n"
 		"}\n\n"
 
-		"vec4 read_location(int location)\n"
+		"vec4 read_location(const in int location)\n"
 		"{\n"
 		"	attribute_desc desc = fetch_desc(location);\n"
 		"	if (desc.attribute_size == 0)\n"
 		"	{\n"
-		"		//default values\n"
-		"		const vec4 defaults[] = \n"
-		"		{	vec4(0., 0., 0., 1.), //position\n"
-		"			vec4(0.), vec4(0.), //weight, normals\n"
-		"			vec4(1.), //diffuse\n"
-		"			vec4(0.), vec4(0.), //specular, fog\n"
-		"			vec4(1.), //point size\n"
-		"			vec4(0.), //in_7\n"
-		"			//in_tc registers\n"
-		"			vec4(0.), vec4(0.), vec4(0.), vec4(0.),\n"
-		"			vec4(0.), vec4(0.), vec4(0.), vec4(0.)\n"
-		"		};\n"
-		"		return defaults[location];\n"
+		"		//default value\n"
+		"		return vec4(0., 0., 0., 1.);\n"
 		"	}\n\n"
 		"	int vertex_id = " << vertex_id_name << " - int(vertex_base_index);\n"
 		"	if (desc.frequency == 0)\n"
@@ -524,7 +513,7 @@ namespace glsl
 		if (props.require_lit_emulation)
 		{
 			OS <<
-			"vec4 lit_legacy(vec4 val)"
+			"vec4 lit_legacy(const in vec4 val)"
 			"{\n"
 			"	vec4 clamped_val = val;\n"
 			"	clamped_val.x = max(val.x, 0.);\n"
@@ -541,7 +530,7 @@ namespace glsl
 		if (props.domain == glsl::program_domain::glsl_vertex_program)
 		{
 			OS <<
-			"vec4 apply_zclip_xform(vec4 pos, float near_plane, float far_plane)\n"
+			"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
 			"{\n"
 			"	float d = pos.z / pos.w;\n"
 			"	if (d < 0.f && d >= near_plane)\n"
@@ -551,8 +540,7 @@ namespace glsl
 			"	else\n"
 			"		return pos; //d = (0.99 * d);\n" //range compression for normal values is disabled until a solution to ops comparing z is found
 			"\n"
-			"	pos.z = d * pos.w;\n"
-			"	return pos;\n"
+			"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
 			"}\n\n";
 
 			return;
@@ -573,7 +561,7 @@ namespace glsl
 			// Helps to avoid A2C tested foliage disappearing in the distance
 			// TODO: Fix dithering when mipmap gather is finished to remove muddy appearance. Alpha boost is only present to hide far LOD issues in titles like RDR
 			OS <<
-			"bool coverage_test_passes(/*inout*/in vec4 _sample, uint control)\n"
+			"bool coverage_test_passes(/*inout*/const in vec4 _sample, const in uint control)\n"
 			"{\n"
 			"	if ((control & 0x1) == 0) return false;\n"
 			"\n"
@@ -589,7 +577,7 @@ namespace glsl
 		if (!props.fp32_outputs)
 		{
 			OS <<
-			"vec4 linear_to_srgb(vec4 cl)\n"
+			"vec4 linear_to_srgb(const in vec4 cl)\n"
 			"{\n"
 			"	vec4 low = cl * 12.92;\n"
 			"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
@@ -603,7 +591,7 @@ namespace glsl
 			//NOTE: Memory layout is fetched as byteswapped BGRA [GBAR] (GOW collection, DS2, DeS)
 			//The A component (Z) is useless (should contain stencil8 or just 1)
 			OS <<
-			"vec4 decode_depth24(float depth_value, uint depth_float)\n"
+			"vec4 decode_depth24(const in float depth_value, const in uint depth_float)\n"
 			"{\n"
 			"	uint value;\n"
 			"	if (depth_float == 0)\n"
@@ -617,7 +605,7 @@ namespace glsl
 			"	return vec4(float(g)/255., float(b)/255., 1., float(r)/255.);\n"
 			"}\n\n"
 
-			"float read_value(vec4 src, uint remap_index)\n"
+			"float read_value(const in vec4 src, const in uint remap_index)\n"
 			"{\n"
 			"	switch (remap_index)\n"
 			"	{\n"
@@ -628,7 +616,7 @@ namespace glsl
 			"	}\n"
 			"}\n\n"
 
-			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, vec2 coord, float remap)\n"
+			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, const in vec2 coord, const in float remap)\n"
 			"{\n"
 			"	uint control_bits = floatBitsToUint(remap);\n"
 			"	vec4 result = decode_depth24(texture(tex, coord.xy).r, control_bits >> 16);\n"
@@ -653,7 +641,7 @@ namespace glsl
 			if (props.require_shadow_ops && props.emulate_shadow_compare)
 			{
 				OS <<
-				"vec4 shadowCompare(sampler2D tex, vec3 p, uint func)\n"
+				"vec4 shadowCompare(sampler2D tex, const in vec3 p, const in uint func)\n"
 				"{\n"
 				"	vec4 samples = textureGather(tex, p.xy).xxxx;\n"
 				"	vec4 ref = clamp(p.z, 0., 1.).xxxx;\n"
@@ -661,7 +649,7 @@ namespace glsl
 				"	return filtered * dot(filtered, vec4(0.25f));\n"
 				"}\n\n"
 
-				"vec4 shadowCompareProj(sampler2D tex, vec4 p, uint func)\n"
+				"vec4 shadowCompareProj(sampler2D tex, const in vec4 p, const in uint func)\n"
 				"{\n"
 				"	return shadowCompare(tex, p.xyz / p.w, func);\n"
 				"}\n\n";
@@ -670,7 +658,7 @@ namespace glsl
 			OS <<
 
 #ifdef __APPLE__
-			"vec4 remap_vector(vec4 rgba, uint remap_bits)\n"
+			"vec4 remap_vector(const in vec4 rgba, const in uint remap_bits)\n"
 			"{\n"
 			"	uvec4 selector = (uvec4(remap_bits) >> uvec4(3, 6, 9, 0)) & 0x7;\n"
 			"	bvec4 choice = greaterThan(selector, uvec4(1));\n"
@@ -681,7 +669,7 @@ namespace glsl
 			"	return mix(direct, indexed, choice);\n"
 			"}\n\n"
 #endif
-			"vec4 srgb_to_linear(vec4 cs)\n"
+			"vec4 srgb_to_linear(const in vec4 cs)\n"
 			"{\n"
 			"	vec4 a = cs / 12.92;\n"
 			"	vec4 b = pow((cs + 0.055) / 1.055, vec4(2.4));\n"
@@ -689,7 +677,7 @@ namespace glsl
 			"}\n\n"
 
 			//TODO: Move all the texture read control operations here
-			"vec4 process_texel(vec4 rgba, uint control_bits)\n"
+			"vec4 process_texel(const in vec4 rgba, const in uint control_bits)\n"
 			"{\n"
 #ifdef __APPLE__
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
