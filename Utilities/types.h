@@ -96,7 +96,7 @@ namespace std
 	{
 		static_assert(sizeof(To) == sizeof(From), "std::bit_cast<>: incompatible type size");
 
-		To result;
+		To result{};
 		std::memcpy(&result, &from, sizeof(From));
 		return result;
 	}
