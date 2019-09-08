@@ -117,6 +117,7 @@ namespace gui
 
 	const QString Settings    = QObject::tr("CurrentSettings");
 	const QString Default     = QObject::tr("default");
+	const QString None        = QObject::tr("none");
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";

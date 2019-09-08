@@ -9,10 +9,8 @@ headless_application::headless_application(int& argc, char** argv) : QCoreApplic
 {
 }
 
-void headless_application::Init(const bool show_gui)
+void headless_application::Init()
 {
-	Q_UNUSED(show_gui);
-
 	// Force init the emulator
 	InitializeEmulator("1", true); // TODO: get user from cli args if possible
 
