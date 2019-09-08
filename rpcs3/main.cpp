@@ -8,6 +8,7 @@
 #include <QObject>
 #include <QMessageBox>
 #include <QTextDocument>
+#include <QStyleFactory>
 
 #include "rpcs3qt/gui_application.h"
 
@@ -100,6 +101,7 @@ static semaphore<> s_qt_mutex{};
 const char* arg_headless   = "headless";
 const char* arg_no_gui     = "no-gui";
 const char* arg_high_dpi   = "hidpi";
+const char* arg_styles     = "styles";
 const char* arg_style      = "style";
 const char* arg_stylesheet = "stylesheet";
 
@@ -157,6 +159,7 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
+	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
 	parser.process(app->arguments());
@@ -164,6 +167,18 @@ int main(int argc, char** argv)
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(versionOption) || parser.isSet(helpOption))
 		return 0;
+
+	if (parser.isSet(arg_styles))
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+			const auto con_out = freopen("CONOUT$", "w", stdout);
+#endif
+		for (const auto& style : QStyleFactory::keys())
+			std::cout << "\n" << style.toStdString();
+
+		return 0;
+	}
 
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
