@@ -65,7 +65,7 @@ struct copy_unmodified_block
 		if (src_pitch_in_block == dst_pitch_in_block && !border)
 		{
 			// Fast copy
-			const auto data_length = width_in_block * words_per_block * row_count * depth;
+			const auto data_length = src_pitch_in_block * words_per_block * row_count * depth;
 			copy(dst, src.subspan(0, data_length));
 			return;
 		}
