@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "cellGem.h"
 
 #include "cellCamera.h"
@@ -9,6 +9,52 @@
 #include "Utilities/Timer.h"
 
 LOG_CHANNEL(cellGem);
+
+template <>
+void fmt_class_string<CellGemError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_GEM_ERROR_RESOURCE_ALLOCATION_FAILED);
+			STR_CASE(CELL_GEM_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(CELL_GEM_ERROR_UNINITIALIZED);
+			STR_CASE(CELL_GEM_ERROR_INVALID_PARAMETER);
+			STR_CASE(CELL_GEM_ERROR_INVALID_ALIGNMENT);
+			STR_CASE(CELL_GEM_ERROR_UPDATE_NOT_FINISHED);
+			STR_CASE(CELL_GEM_ERROR_UPDATE_NOT_STARTED);
+			STR_CASE(CELL_GEM_ERROR_CONVERT_NOT_FINISHED);
+			STR_CASE(CELL_GEM_ERROR_CONVERT_NOT_STARTED);
+			STR_CASE(CELL_GEM_ERROR_WRITE_NOT_FINISHED);
+			STR_CASE(CELL_GEM_ERROR_NOT_A_HUE);
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<CellGemStatus>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_GEM_NOT_CONNECTED);
+			STR_CASE(CELL_GEM_SPHERE_NOT_CALIBRATED);
+			STR_CASE(CELL_GEM_SPHERE_CALIBRATING);
+			STR_CASE(CELL_GEM_COMPUTING_AVAILABLE_COLORS);
+			STR_CASE(CELL_GEM_HUE_NOT_SET);
+			STR_CASE(CELL_GEM_NO_VIDEO);
+			STR_CASE(CELL_GEM_TIME_OUT_OF_RANGE);
+			STR_CASE(CELL_GEM_NOT_CALIBRATED);
+			STR_CASE(CELL_GEM_NO_EXTERNAL_PORT_DEVICE);
+		}
+
+		return unknown;
+	});
+}
 
 // **********************
 // * HLE helper structs *
@@ -130,7 +176,6 @@ static bool check_gem_num(const u32 gem_num)
 {
 	return gem_num >= 0 && gem_num < CELL_GEM_MAX_NUM;
 }
-
 
 /**
  * \brief Maps Move controller data (digital buttons, and analog Trigger data) to DS3 pad input.
@@ -265,7 +310,7 @@ static bool map_ext_to_ds3_input(const u32 port_no, CellGemExtPortData& ext)
 // * cellGem functions *
 // *********************
 
-s32 cellGemCalibrate(u32 gem_num)
+error_code cellGemCalibrate(u32 gem_num)
 {
 	cellGem.todo("cellGemCalibrate(gem_num=%d)", gem_num);
 
@@ -290,7 +335,7 @@ s32 cellGemCalibrate(u32 gem_num)
 	return CELL_OK;
 }
 
-s32 cellGemClearStatusFlags(u32 gem_num, u64 mask)
+error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 {
 	cellGem.todo("cellGemClearStatusFlags(gem_num=%d, mask=0x%x)", gem_num, mask);
 
@@ -311,7 +356,7 @@ s32 cellGemClearStatusFlags(u32 gem_num, u64 mask)
 	return CELL_OK;
 }
 
-s32 cellGemConvertVideoFinish()
+error_code cellGemConvertVideoFinish()
 {
 	cellGem.todo("cellGemConvertVideoFinish()");
 
@@ -325,7 +370,7 @@ s32 cellGemConvertVideoFinish()
 	return CELL_OK;
 }
 
-s32 cellGemConvertVideoStart(vm::cptr<void> video_frame)
+error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 {
 	cellGem.todo("cellGemConvertVideoStart(video_frame=*0x%x)", video_frame);
 
@@ -339,7 +384,7 @@ s32 cellGemConvertVideoStart(vm::cptr<void> video_frame)
 	return CELL_OK;
 }
 
-s32 cellGemEnableCameraPitchAngleCorrection(u32 enable_flag)
+error_code cellGemEnableCameraPitchAngleCorrection(u32 enable_flag)
 {
 	cellGem.todo("cellGemEnableCameraPitchAngleCorrection(enable_flag=%d)", enable_flag);
 
@@ -355,7 +400,7 @@ s32 cellGemEnableCameraPitchAngleCorrection(u32 enable_flag)
 	return CELL_OK;
 }
 
-s32 cellGemEnableMagnetometer(u32 gem_num, u32 enable)
+error_code cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 {
 	cellGem.todo("cellGemEnableMagnetometer(gem_num=%d, enable=0x%x)", gem_num, enable);
 
@@ -376,13 +421,13 @@ s32 cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 	return CELL_OK;
 }
 
-s32 cellGemEnableMagnetometer2()
+error_code cellGemEnableMagnetometer2()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 	return CELL_OK;
 }
 
-s32 cellGemEnd()
+error_code cellGemEnd()
 {
 	cellGem.warning("cellGemEnd()");
 
@@ -396,7 +441,7 @@ s32 cellGemEnd()
 	return CELL_OK;
 }
 
-s32 cellGemFilterState(u32 gem_num, u32 enable)
+error_code cellGemFilterState(u32 gem_num, u32 enable)
 {
 	cellGem.warning("cellGemFilterState(gem_num=%d, enable=%d)", gem_num, enable);
 
@@ -417,7 +462,7 @@ s32 cellGemFilterState(u32 gem_num, u32 enable)
 	return CELL_OK;
 }
 
-s32 cellGemForceRGB(u32 gem_num, float r, float g, float b)
+error_code cellGemForceRGB(u32 gem_num, float r, float g, float b)
 {
 	cellGem.todo("cellGemForceRGB(gem_num=%d, r=%f, g=%f, b=%f)", gem_num, r, g, b);
 
@@ -438,13 +483,13 @@ s32 cellGemForceRGB(u32 gem_num, float r, float g, float b)
 	return CELL_OK;
 }
 
-s32 cellGemGetAccelerometerPositionInDevice()
+error_code cellGemGetAccelerometerPositionInDevice()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 	return CELL_OK;
 }
 
-s32 cellGemGetAllTrackableHues(vm::ptr<u8> hues)
+error_code cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 {
 	cellGem.todo("cellGemGetAllTrackableHues(hues=*0x%x)");
 
@@ -463,7 +508,7 @@ s32 cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 	return CELL_OK;
 }
 
-s32 cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
+error_code cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 {
 	cellGem.todo("cellGemGetCameraState(camera_state=0x%x)", camera_state);
 
@@ -485,7 +530,7 @@ s32 cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 	return CELL_OK;
 }
 
-s32 cellGemGetEnvironmentLightingColor(vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
+error_code cellGemGetEnvironmentLightingColor(vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
 {
 	cellGem.todo("cellGemGetEnvironmentLightingColor(r=*0x%x, g=*0x%x, b=*0x%x)", r, g, b);
 
@@ -509,7 +554,7 @@ s32 cellGemGetEnvironmentLightingColor(vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f
 	return CELL_OK;
 }
 
-s32 cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8> pixels)
+error_code cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8> pixels)
 {
 	cellGem.todo("cellGemGetHuePixels(camera_frame=*0x%x, hue=%d, pixels=*0x%x)", camera_frame, hue, pixels);
 
@@ -528,7 +573,7 @@ s32 cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8> pixels
 	return CELL_OK;
 }
 
-s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
+error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
 {
 	cellGem.todo("cellGemGetImageState(gem_num=%d, image_state=&0x%x)", gem_num, image_state);
 
@@ -564,7 +609,7 @@ s32 cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> image_state)
 	return CELL_OK;
 }
 
-s32 cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, vm::ptr<CellGemInertialState> inertial_state)
+error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, vm::ptr<CellGemInertialState> inertial_state)
 {
 	cellGem.todo("cellGemGetInertialState(gem_num=%d, state_flag=%d, timestamp=0x%x, inertial_state=0x%x)", gem_num, state_flag, timestamp, inertial_state);
 
@@ -595,7 +640,7 @@ s32 cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, vm::ptr<
 	return CELL_OK;
 }
 
-s32 cellGemGetInfo(vm::ptr<CellGemInfo> info)
+error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 {
 	cellGem.todo("cellGemGetInfo(info=*0x%x)", info);
 
@@ -624,7 +669,7 @@ s32 cellGemGetInfo(vm::ptr<CellGemInfo> info)
 	return CELL_OK;
 }
 
-s32 cellGemGetMemorySize(s32 max_connect)
+error_code cellGemGetMemorySize(s32 max_connect)
 {
 	cellGem.warning("cellGemGetMemorySize(max_connect=%d)", max_connect);
 
@@ -633,10 +678,10 @@ s32 cellGemGetMemorySize(s32 max_connect)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	return max_connect <= 2 ? 0x120000 : 0x140000;
+	return not_an_error(max_connect <= 2 ? 0x120000 : 0x140000);
 }
 
-s32 cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::ptr<float> b)
+error_code cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::ptr<float> b)
 {
 	cellGem.todo("cellGemGetRGB(gem_num=%d, r=*0x%x, g=*0x%x, b=*0x%x)", gem_num, r, g, b);
 
@@ -660,7 +705,7 @@ s32 cellGemGetRGB(u32 gem_num, vm::ptr<float> r, vm::ptr<float> g, vm::ptr<float
 	return CELL_OK;
 }
 
-s32 cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
+error_code cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
 {
 	cellGem.todo("cellGemGetRumble(gem_num=%d, rumble=*0x%x)", gem_num, rumble);
 
@@ -681,7 +726,7 @@ s32 cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
 	return CELL_OK;
 }
 
-s32 cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemState> gem_state)
+error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemState> gem_state)
 {
 	cellGem.todo("cellGemGetState(gem_num=%d, flag=0x%x, time=0x%llx, gem_state=*0x%x)", gem_num, flag, time_parameter, gem_state);
 
@@ -712,7 +757,7 @@ s32 cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemSt
 	return CELL_GEM_NOT_CONNECTED;
 }
 
-s32 cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
+error_code cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 {
 	cellGem.todo("cellGemGetStatusFlags(gem_num=%d, flags=*0x%x)", gem_num, flags);
 
@@ -733,7 +778,7 @@ s32 cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
 	return CELL_OK;
 }
 
-s32 cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
+error_code cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 {
 	cellGem.warning("cellGemGetTrackerHue(gem_num=%d, hue=*0x%x)", gem_num, hue);
 
@@ -759,7 +804,7 @@ s32 cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 	return CELL_OK;
 }
 
-s32 cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
+error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
 {
 	cellGem.todo("cellGemHSVtoRGB(h=%f, s=%f, v=%f, r=*0x%x, g=*0x%x, b=*0x%x)", h, s, v, r, g, b);
 
@@ -775,7 +820,7 @@ s32 cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr
 	return CELL_OK;
 }
 
-s32 cellGemInit(vm::cptr<CellGemAttribute> attribute)
+error_code cellGemInit(vm::cptr<CellGemAttribute> attribute)
 {
 	cellGem.warning("cellGemInit(attribute=*0x%x)", attribute);
 
@@ -804,7 +849,7 @@ s32 cellGemInit(vm::cptr<CellGemAttribute> attribute)
 	return CELL_OK;
 }
 
-s32 cellGemInvalidateCalibration(s32 gem_num)
+error_code cellGemInvalidateCalibration(s32 gem_num)
 {
 	cellGem.todo("cellGemInvalidateCalibration(gem_num=%d)", gem_num);
 
@@ -843,7 +888,7 @@ s32 cellGemIsTrackableHue(u32 hue)
 	return true;
 }
 
-s32 cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
+error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 {
 	cellGem.todo("cellGemPrepareCamera(max_exposure=%d, image_quality=%f)", max_exposure, image_quality);
 
@@ -862,7 +907,7 @@ s32 cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 	return CELL_OK;
 }
 
-s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribute)
+error_code cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribute)
 {
 	cellGem.todo("cellGemPrepareVideoConvert(vc_attribute=*0x%x)", vc_attribute);
 
@@ -896,9 +941,9 @@ s32 cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_attribu
 	return CELL_OK;
 }
 
-s32 cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, vm::ptr<u8[CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE]> ext_info)
+error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, vm::ptr<u8[CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE]> ext_info)
 {
-	cellGem.todo("cellGemReset(gem_num=%d, ext_id=*0x%x, ext_info=%s)", gem_num, ext_id, ext_info);
+	cellGem.todo("cellGemReadExternalPortDeviceInfo(gem_num=%d, ext_id=*0x%x, ext_info=%s)", gem_num, ext_id, ext_info);
 
 	const auto gem = g_fxo->get<gem_config>();
 
@@ -925,7 +970,7 @@ s32 cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, vm::ptr<
 	return CELL_OK;
 }
 
-s32 cellGemReset(u32 gem_num)
+error_code cellGemReset(u32 gem_num)
 {
 	cellGem.todo("cellGemReset(gem_num=%d)", gem_num);
 
@@ -949,7 +994,7 @@ s32 cellGemReset(u32 gem_num)
 	return CELL_OK;
 }
 
-s32 cellGemSetRumble(u32 gem_num, u8 rumble)
+error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 {
 	cellGem.todo("cellGemSetRumble(gem_num=%d, rumble=0x%x)", gem_num, rumble);
 
@@ -970,13 +1015,13 @@ s32 cellGemSetRumble(u32 gem_num, u8 rumble)
 	return CELL_OK;
 }
 
-s32 cellGemSetYaw()
+error_code cellGemSetYaw()
 {
 	UNIMPLEMENTED_FUNC(cellGem);
 	return CELL_OK;
 }
 
-s32 cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
+error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 {
 	cellGem.todo("cellGemTrackHues(req_hues=*0x%x, res_hues=*0x%x)", req_hues, res_hues);
 
@@ -1015,7 +1060,7 @@ s32 cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 	return CELL_OK;
 }
 
-s32 cellGemUpdateFinish()
+error_code cellGemUpdateFinish()
 {
 	cellGem.todo("cellGemUpdateFinish()");
 
@@ -1029,7 +1074,7 @@ s32 cellGemUpdateFinish()
 	return CELL_OK;
 }
 
-s32 cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
+error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 {
 	cellGem.todo("cellGemUpdateStart(camera_frame=*0x%x, timestamp=%d)", camera_frame, timestamp);
 
@@ -1048,7 +1093,7 @@ s32 cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 	return CELL_OK;
 }
 
-s32 cellGemWriteExternalPort(u32 gem_num, vm::ptr<u8[CELL_GEM_EXTERNAL_PORT_OUTPUT_SIZE]> data)
+error_code cellGemWriteExternalPort(u32 gem_num, vm::ptr<u8[CELL_GEM_EXTERNAL_PORT_OUTPUT_SIZE]> data)
 {
 	cellGem.todo("cellGemWriteExternalPort(gem_num=%d, data=%s)", gem_num, data);
 
