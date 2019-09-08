@@ -18,6 +18,12 @@ static constexpr s64 s_waiter_mask = 0x3fff;
 // Implementation detail (remaining bits out of 32)
 static constexpr s64 s_signal_mask = 0xffffffff & ~s_waiter_mask;
 
+// Callback for wait() function, returns false if wait should return
+static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*)
+{
+	return true;
+};
+
 static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value)
 {
 	switch (size)
@@ -73,7 +79,7 @@ namespace
 		// Update node key
 		s_tls_waiter.key() = data;
 
-		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value))
+		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value) && s_tls_wait_cb(data))
 		{
 			// Add node to the waiter list
 			std::condition_variable& cond = wmap.list.insert(std::move(s_tls_waiter))->second.cond;
@@ -140,14 +146,6 @@ void atomic_storage_futex::notify_all(const void* data)
 
 void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value)
 {
-#ifdef _WIN32
-	if (OptWaitOnAddress)
-	{
-		OptWaitOnAddress(const_cast<volatile void*>(data), &old_value, size, INFINITE);
-		return;
-	}
-#endif
-
 	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
 
 	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
@@ -182,7 +180,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		return;
 	}
 
-	if (ptr_cmp(data, size, old_value))
+	if (ptr_cmp(data, size, old_value) && s_tls_wait_cb(data))
 	{
 #ifdef _WIN32
 		NtWaitForKeyedEvent(nullptr, &entry, false, nullptr);
@@ -234,14 +232,6 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 void atomic_storage_futex::notify_one(const void* data)
 {
-#ifdef _WIN32
-	if (OptWaitOnAddress)
-	{
-		OptWakeByAddressSingle(const_cast<void*>(data));
-		return;
-	}
-#endif
-
 	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
 
 	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
@@ -295,14 +285,6 @@ void atomic_storage_futex::notify_one(const void* data)
 
 void atomic_storage_futex::notify_all(const void* data)
 {
-#ifdef _WIN32
-	if (OptWaitOnAddress)
-	{
-		OptWakeByAddressAll(const_cast<void*>(data));
-		return;
-	}
-#endif
-
 	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
 
 	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
@@ -339,3 +321,19 @@ void atomic_storage_futex::notify_all(const void* data)
 }
 
 #endif
+
+void atomic_storage_futex::set_wait_callback(bool(*cb)(const void* data))
+{
+	if (cb)
+	{
+		s_tls_wait_cb = cb;
+	}
+}
+
+void atomic_storage_futex::raw_notify(const void* data)
+{
+	if (data)
+	{
+		notify_all(data);
+	}
+}

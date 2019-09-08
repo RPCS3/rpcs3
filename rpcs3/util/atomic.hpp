@@ -17,6 +17,10 @@ private:
 	static void wait(const void* data, std::size_t size, u64 old_value);
 	static void notify_one(const void* data);
 	static void notify_all(const void* data);
+
+public:
+	static void set_wait_callback(bool(*)(const void* data));
+	static void raw_notify(const void* data);
 };
 
 // Helper class, provides access to compiler-specific atomic intrinsics
