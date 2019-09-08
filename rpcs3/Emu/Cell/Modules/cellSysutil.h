@@ -2,6 +2,8 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
+using CellSysutilUserId = u32;
+
 enum CellSysutilError : u32
 {
 	CELL_SYSUTIL_ERROR_TYPE   = 0x8002b101,

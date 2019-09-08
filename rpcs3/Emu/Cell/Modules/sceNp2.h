@@ -4,8 +4,10 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
+#include <atomic>
+
 // Error codes
-enum
+enum SceNpMatching2Error : u32
 {
 	// NP Matching 2 Utility
 	SCE_NP_MATCHING2_ERROR_OUT_OF_MEMORY               = 0x80022301,
@@ -463,6 +465,11 @@ enum
 	SCE_NP_MATCHING2_CONTEXT_EVENT_Stop      = 0x6f03,
 };
 
+enum
+{
+	SCE_NP_MIN_POOLSIZE = 128 * 1024
+};
+
 typedef u16 SceNpMatching2ServerId;
 typedef u32 SceNpMatching2WorldId;
 typedef u16 SceNpMatching2WorldNumber;
@@ -491,6 +498,7 @@ typedef u64 SceNpMatching2RoomPasswordSlotMask;
 typedef u64 SceNpMatching2RoomJoinedSlotMask;
 typedef u16 SceNpMatching2Event;
 typedef u32 SceNpMatching2EventKey;
+typedef u32 SceNpMatching2SignalingRequestId;
 typedef SceNpCommunicationPassphrase SceNpMatching2TitlePassphrase;
 
 // Request callback function
@@ -1506,4 +1514,95 @@ struct SceNpMatching2CbQueueInfo
 	be_t<u32> curSessionMsgCbQueueLen;
 	be_t<u32> maxSessionMsgCbQueueLen;
 	u8 reserved[12];
+};
+
+union SceNpMatching2SignalingNetInfo // TODO check values
+{
+	be_t<u64> size;
+	be_t<u32> localAddr;
+	be_t<u32> mappedAddr;
+	be_t<u32> natStatus;
+};
+
+// NP OAuth Errors
+enum SceNpOauthError : u32
+{
+	SCE_NP_OAUTH_ERROR_UNKNOWN                                         = 0x80025f01,
+	SCE_NP_OAUTH_ERROR_ALREADY_INITIALIZED                             = 0x80025f02,
+	SCE_NP_OAUTH_ERROR_NOT_INITIALIZED                                 = 0x80025f03,
+	SCE_NP_OAUTH_ERROR_INVALID_ARGUMENT                                = 0x80025f04,
+	SCE_NP_OAUTH_ERROR_OUT_OF_MEMORY                                   = 0x80025f05,
+	SCE_NP_OAUTH_ERROR_OUT_OF_BUFFER                                   = 0x80025f06,
+	SCE_NP_OAUTH_ERROR_BAD_RESPONSE                                    = 0x80025f07,
+	SCE_NP_OAUTH_ERROR_ABORTED                                         = 0x80025f08,
+	SCE_NP_OAUTH_ERROR_SIGNED_OUT                                      = 0x80025f09,
+	SCE_NP_OAUTH_ERROR_REQUEST_NOT_FOUND                               = 0x80025f0a,
+	SCE_NP_OAUTH_ERROR_SSL_ERR_CN_CHECK                                = 0x80025f0b,
+	SCE_NP_OAUTH_ERROR_SSL_ERR_UNKNOWN_CA                              = 0x80025f0c,
+	SCE_NP_OAUTH_ERROR_SSL_ERR_NOT_AFTER_CHECK                         = 0x80025f0d,
+	SCE_NP_OAUTH_ERROR_SSL_ERR_NOT_BEFORE_CHECK                        = 0x80025f0e,
+	SCE_NP_OAUTH_ERROR_SSL_ERR_INVALID_CERT                            = 0x80025f0f,
+	SCE_NP_OAUTH_ERROR_SSL_ERR_INTERNAL                                = 0x80025f10,
+	SCE_NP_OAUTH_ERROR_REQUEST_MAX                                     = 0x80025f11,
+
+	SCE_NP_OAUTH_SERVER_ERROR_BANNED_CONSOLE                           = 0x80025d14,
+	SCE_NP_OAUTH_SERVER_ERROR_INVALID_LOGIN                            = 0x82e00014,
+	SCE_NP_OAUTH_SERVER_ERROR_INACTIVE_ACCOUNT                         = 0x82e0001b,
+	SCE_NP_OAUTH_SERVER_ERROR_SUSPENDED_ACCOUNT                        = 0x82e0001c,
+	SCE_NP_OAUTH_SERVER_ERROR_SUSPENDED_DEVICE                         = 0x82e0001d,
+	SCE_NP_OAUTH_SERVER_ERROR_PASSWORD_EXPIRED                         = 0x82e00064,
+	SCE_NP_OAUTH_SERVER_ERROR_TOSUA_MUST_BE_RE_ACCEPTED                = 0x82e00067,
+	SCE_NP_OAUTH_SERVER_ERROR_TOSUA_MUST_BE_RE_ACCEPTED_FOR_SUBACCOUNT = 0x82e01042,
+	SCE_NP_OAUTH_SERVER_ERROR_BANNED_ACCOUNT                           = 0x82e01050,
+	SCE_NP_OAUTH_SERVER_ERROR_SERVICE_END                              = 0x82e1019a,
+	SCE_NP_OAUTH_SERVER_ERROR_SERVICE_UNAVAILABLE                      = 0x82e101f7,
+};
+
+typedef s32 SceNpAuthOAuthRequestId;
+
+enum
+{
+	SCE_NP_AUTHORIZATION_CODE_MAX_LEN = 128,
+	SCE_NP_CLIENT_ID_MAX_LEN          = 128,
+};
+
+struct SceNpClientId
+{
+	char id[SCE_NP_CLIENT_ID_MAX_LEN + 1];
+	u8 padding[7];
+};
+
+struct SceNpAuthorizationCode
+{
+	char code[SCE_NP_AUTHORIZATION_CODE_MAX_LEN + 1];
+	u8 padding[7];
+};
+
+struct SceNpAuthGetAuthorizationCodeParameter
+{
+	be_t<u64> size;
+	vm::bcptr<SceNpClientId> pClientId;
+	vm::bcptr<char> pScope;
+};
+
+// fxm objects
+
+struct sce_np_2_manager
+{
+	std::atomic<bool> is_initialized = false;
+};
+
+struct sce_np_2_matching_manager
+{
+	std::atomic<bool> is_initialized = false;
+};
+
+struct sce_np_2_matching_2_manager
+{
+	std::atomic<bool> is_initialized = false;
+};
+
+struct sce_np_oauth_2_manager
+{
+	std::atomic<bool> is_initialized = false;
 };

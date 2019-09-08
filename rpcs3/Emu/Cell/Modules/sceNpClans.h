@@ -1,11 +1,13 @@
-#pragma once
+﻿#pragma once
 
 #include "sceNp.h"
 
 #include "Utilities/BEType.h"
 
+#include <atomic>
+
 // Return codes
-enum
+enum SceNpClansError : u32
 {
 	SCE_NP_CLANS_ERROR_ALREADY_INITIALIZED                  = 0x80022701,
 	SCE_NP_CLANS_ERROR_NOT_INITIALIZED                      = 0x80022702,
@@ -225,8 +227,8 @@ struct SceNpClansMemberEntry
 // Clan message structure
 struct SceNpClansMessage
 {
-	s8 subject[SCE_NP_CLANS_MESSAGE_SUBJECT_MAX_LENGTH + 1];
-	s8 body[SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH + 1];
+	char subject[SCE_NP_CLANS_MESSAGE_SUBJECT_MAX_LENGTH + 1];
+	char body[SCE_NP_CLANS_MESSAGE_BODY_MAX_LENGTH + 1];
 	be_t<u32> options;
 };
 
@@ -253,4 +255,11 @@ struct SceNpClansBlacklistEntry
 {
 	SceNpId entry;
 	SceNpId registeredBy;
+};
+
+// fxm objects
+
+struct sce_np_clans_manager
+{
+	std::atomic<bool> is_initialized = false;
 };
