@@ -443,35 +443,3 @@ bool shared_cond::notify_all(shared_cond::shared_lock& lock) noexcept
 	balanced_awaken<true>(m_cvx32, utils::popcnt32(wait_mask));
 	return true;
 }
-
-bool lf_queue_base::wait(u64 _timeout)
-{
-	auto _old = m_head.compare_and_swap(0, 1);
-
-	if (_old)
-	{
-		verify("lf_queue concurrent wait" HERE), _old != 1;
-		return true;
-	}
-
-	return balanced_wait_until(m_head, _timeout, [](std::uintptr_t& head, auto... ret) -> int
-	{
-		if (head != 1)
-		{
-			return +1;
-		}
-
-		if constexpr (sizeof...(ret))
-		{
-			head = 0;
-			return -1;
-		}
-
-		return 0;
-	});
-}
-
-void lf_queue_base::imp_notify()
-{
-	balanced_awaken(m_head, 1);
-}

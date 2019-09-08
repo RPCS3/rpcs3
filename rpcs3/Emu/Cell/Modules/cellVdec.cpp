@@ -184,7 +184,7 @@ struct vdec_context final
 		{
 			if (!cmds)
 			{
-				in_cmd.wait(1000);
+				in_cmd.wait();
 				continue;
 			}
 
@@ -515,6 +515,7 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	lv2_obj::sleep(ppu);
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
+	vdec->in_cmd.notify();
 
 	while (!atomic_storage<u64>::load(vdec->ppu_tid))
 	{
@@ -538,6 +539,7 @@ error_code cellVdecStartSeq(u32 handle)
 	}
 
 	vdec->in_cmd.push(vdec_start_seq);
+	vdec->in_cmd.notify();
 	return CELL_OK;
 }
 
@@ -553,6 +555,7 @@ error_code cellVdecEndSeq(u32 handle)
 	}
 
 	vdec->in_cmd.push(vdec_cmd{-1});
+	vdec->in_cmd.notify();
 	return CELL_OK;
 }
 
@@ -574,6 +577,7 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 
 	// TODO: check info
 	vdec->in_cmd.push(vdec_cmd{mode, *auInfo});
+	vdec->in_cmd.notify();
 	return CELL_OK;
 }
 
@@ -924,6 +928,7 @@ error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 	// TODO: check frc value
 	vdec->in_cmd.push(frc);
+	vdec->in_cmd.notify();
 	return CELL_OK;
 }
 

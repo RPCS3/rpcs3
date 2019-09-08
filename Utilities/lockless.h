@@ -315,12 +315,6 @@ class lf_queue_base
 {
 protected:
 	atomic_t<std::uintptr_t> m_head = 0;
-
-	void imp_notify();
-
-public:
-	// Wait for new elements pushed, no other thread shall call wait() or pop_all() simultaneously
-	bool wait(u64 usec_timeout = -1);
 };
 
 // Linked list-based multi-producer queue (the consumer drains the whole queue at once)
@@ -361,20 +355,28 @@ public:
 		delete reinterpret_cast<lf_queue_item<T>*>(m_head.load());
 	}
 
+	void wait() noexcept
+	{
+		while (m_head == 0)
+		{
+			m_head.wait(0);
+		}
+	}
+
+	void notify() noexcept
+	{
+		m_head.notify_one();
+	}
+
 	template <typename... Args>
 	void push(Args&&... args)
 	{
 		auto  _old = m_head.load();
-		auto* item = new lf_queue_item<T>(_old & 1 ? nullptr : reinterpret_cast<lf_queue_item<T>*>(_old), std::forward<Args>(args)...);
+		auto* item = new lf_queue_item<T>(reinterpret_cast<lf_queue_item<T>*>(_old), std::forward<Args>(args)...);
 
 		while (!m_head.compare_exchange(_old, reinterpret_cast<std::uint64_t>(item)))
 		{
-			item->m_link = _old & 1 ? nullptr : reinterpret_cast<lf_queue_item<T>*>(_old);
-		}
-
-		if (_old & 1)
-		{
-			lf_queue_base::imp_notify();
+			item->m_link = reinterpret_cast<lf_queue_item<T>*>(_old);
 		}
 	}
 
