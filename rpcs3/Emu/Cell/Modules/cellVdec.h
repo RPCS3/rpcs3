@@ -3,7 +3,7 @@
 #include "Utilities/BEType.h"
 
 // Error Codes
-enum
+enum CellVdecError : u32
 {
 	CELL_VDEC_ERROR_ARG   = 0x80610101,
 	CELL_VDEC_ERROR_SEQ   = 0x80610102,
