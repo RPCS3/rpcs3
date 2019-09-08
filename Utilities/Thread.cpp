@@ -1667,10 +1667,13 @@ void thread_base::start(native_entry entry)
 #endif
 }
 
-void thread_base::initialize()
+void thread_base::initialize(bool(*wait_cb)(const void*))
 {
 	// Initialize TLS variable
 	thread_ctrl::g_tls_this_thread = this;
+
+	// Initialize atomic wait callback
+	atomic_storage_futex::set_wait_callback(wait_cb);
 
 	g_tls_log_prefix = []
 	{
@@ -1716,6 +1719,14 @@ void thread_base::initialize()
 #elif !defined(_WIN32)
 	pthread_setname_np(pthread_self(), m_name.get().substr(0, 15).c_str());
 #endif
+}
+
+void thread_base::notify_abort() noexcept
+{
+	// For now
+	notify();
+
+	atomic_storage_futex::raw_notify(+m_state_notifier);
 }
 
 bool thread_base::finalize(int) noexcept
