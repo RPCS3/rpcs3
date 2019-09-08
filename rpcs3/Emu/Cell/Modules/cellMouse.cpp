@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -9,7 +9,28 @@
 
 extern logs::channel sys_io;
 
-s32 cellMouseInit(u32 max_connect)
+template<>
+void fmt_class_string<CellMouseError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_MOUSE_ERROR_FATAL);
+			STR_CASE(CELL_MOUSE_ERROR_INVALID_PARAMETER);
+			STR_CASE(CELL_MOUSE_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(CELL_MOUSE_ERROR_UNINITIALIZED);
+			STR_CASE(CELL_MOUSE_ERROR_RESOURCE_ALLOCATION_FAILED);
+			STR_CASE(CELL_MOUSE_ERROR_DATA_READ_FAILED);
+			STR_CASE(CELL_MOUSE_ERROR_NO_DEVICE);
+			STR_CASE(CELL_MOUSE_ERROR_SYS_SETTING_FAILED);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellMouseInit(u32 max_connect)
 {
 	sys_io.warning("cellMouseInit(max_connect=%d)", max_connect);
 
@@ -31,7 +52,7 @@ s32 cellMouseInit(u32 max_connect)
 	return CELL_OK;
 }
 
-s32 cellMouseClearBuf(u32 port_no)
+error_code cellMouseClearBuf(u32 port_no)
 {
 	sys_io.trace("cellMouseClearBuf(port_no=%d)", port_no);
 
@@ -68,7 +89,7 @@ s32 cellMouseClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
-s32 cellMouseEnd()
+error_code cellMouseEnd()
 {
 	sys_io.notice("cellMouseEnd()");
 
@@ -80,7 +101,7 @@ s32 cellMouseEnd()
 	return CELL_OK;
 }
 
-s32 cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
+error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 {
 	sys_io.trace("cellMouseGetInfo(info=*0x%x)", info);
 
@@ -107,7 +128,7 @@ s32 cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 	return CELL_OK;
 }
 
-s32 cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
+error_code cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
 {
 	sys_io.trace("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
 
@@ -144,7 +165,7 @@ s32 cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
 	return CELL_OK;
 }
 
-s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
+error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 {
 	sys_io.trace("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
 
@@ -192,7 +213,7 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 	return CELL_OK;
 }
 
-s32 cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
+error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
 	sys_io.warning("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 
@@ -238,7 +259,7 @@ s32 cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 	return CELL_OK;
 }
 
-s32 cellMouseSetTabletMode(u32 port_no, u32 mode)
+error_code cellMouseSetTabletMode(u32 port_no, u32 mode)
 {
 	sys_io.warning("cellMouseSetTabletMode(port_no=%d, mode=%d)", port_no, mode);
 
@@ -274,7 +295,7 @@ s32 cellMouseSetTabletMode(u32 port_no, u32 mode)
 	return CELL_OK;
 }
 
-s32 cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataList> data)
+error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataList> data)
 {
 	sys_io.warning("cellMouseGetTabletDataList(port_no=%d, data=0x%x)", port_no, data);
 
@@ -319,7 +340,7 @@ s32 cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataList> dat
 	return CELL_OK;
 }
 
-s32 cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
+error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 {
 	sys_io.warning("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
