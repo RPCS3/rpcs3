@@ -474,7 +474,7 @@ enum SceNpCustomMenuActionMask : u32
 };
 
 // Custom menu index mask
-enum 
+enum
 {
 	SCE_NP_CUSTOM_MENU_INDEX_BITS       = (sizeof(SceNpCustomMenuIndexMask) * 8),
 	SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL   = ((SceNpCustomMenuIndexMask) - 1),
@@ -1193,8 +1193,8 @@ union SceNpTicketParam
 {
 	be_t<s32> i32;
 	be_t<s64> i64;
-	be_t<u32> u32;
-	be_t<u64> u64;
+	be_t<u32> ui32;
+	be_t<u64> ui64;
 	SceNpDate date;
 	u8 data[SCE_NP_TICKET_PARAM_DATA_LEN];
 };
