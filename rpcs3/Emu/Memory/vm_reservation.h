@@ -4,11 +4,8 @@
 #include "Utilities/cond.h"
 #include "util/atomic.hpp"
 
-class notifier;
-
 namespace vm
 {
-
 	// Get reservation status for further atomic update: last update timestamp
 	inline atomic_t<u64>& reservation_acquire(u32 addr, u32 size)
 	{

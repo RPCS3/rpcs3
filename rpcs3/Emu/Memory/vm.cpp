@@ -17,7 +17,7 @@
 #include <thread>
 #include <deque>
 
-static_assert(sizeof(notifier) == 8, "Unexpected size of notifier");
+static_assert(sizeof(shared_cond) == 8, "Unexpected size of shared_cond");
 
 namespace vm
 {
@@ -1060,7 +1060,7 @@ namespace vm
 		}
 
 		lock.upgrade();
-		
+
 		// Allocation on arbitrary address
 		if (location != any && location < g_locations.size())
 		{
