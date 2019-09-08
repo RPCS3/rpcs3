@@ -81,6 +81,11 @@ public:
 	// Upcast and notify
 	void notify();
 
+private:
+	// Upcast and abort
+	void abort();
+
+public:
 	// Thread stats for external observation
 	static atomic_t<u64> g_threads_created, g_threads_deleted;
 
