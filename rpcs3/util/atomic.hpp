@@ -7,6 +7,12 @@
 #include <atomic>
 #endif
 
+// Wait timeout extension (in nanoseconds)
+enum class atomic_wait_timeout : u64
+{
+	inf = 0xffff'ffff'ffff'ffff,
+};
+
 // Helper for waitable atomics (as in C++20 std::atomic)
 struct atomic_storage_futex
 {
@@ -14,7 +20,7 @@ private:
 	template <typename T>
 	friend class atomic_t;
 
-	static void wait(const void* data, std::size_t size, u64 old_value);
+	static void wait(const void* data, std::size_t size, u64 old_value, u64 timeout);
 	static void notify_one(const void* data);
 	static void notify_all(const void* data);
 
@@ -1128,9 +1134,9 @@ public:
 		return atomic_storage<type>::btr(m_data, bit);
 	}
 
-	void wait(type old_value) const noexcept
+	void wait(type old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const noexcept
 	{
-		atomic_storage_futex::wait(&m_data, sizeof(T), std::bit_cast<get_uint_t<sizeof(T)>>(old_value));
+		atomic_storage_futex::wait(&m_data, sizeof(T), std::bit_cast<get_uint_t<sizeof(T)>>(old_value), static_cast<u64>(timeout));
 	}
 
 	void notify_one() noexcept
