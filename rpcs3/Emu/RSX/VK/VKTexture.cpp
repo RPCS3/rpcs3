@@ -563,7 +563,7 @@ namespace vk
 			auto& copy_info = copy_regions.back();
 			copy_info.bufferOffset = offset_in_buffer;
 			copy_info.imageExtent.height = layout.height_in_block * block_in_pixel;
-			copy_info.imageExtent.width = layout.width_in_block * block_in_pixel;
+			copy_info.imageExtent.width = std::min<u32>(layout.width_in_block, layout.pitch_in_block) * block_in_pixel;
 			copy_info.imageExtent.depth = layout.depth;
 			copy_info.imageSubresource.aspectMask = flags;
 			copy_info.imageSubresource.layerCount = 1;
