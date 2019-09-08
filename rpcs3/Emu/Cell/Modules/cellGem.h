@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/BEType.h"
 
 static const float CELL_GEM_SPHERE_RADIUS_MM = 22.5f;
 
 // Error codes
-enum
+enum CellGemError : u32
 {
 	CELL_GEM_ERROR_RESOURCE_ALLOCATION_FAILED = 0x80121801,
 	CELL_GEM_ERROR_ALREADY_INITIALIZED        = 0x80121802,
@@ -21,7 +21,7 @@ enum
 };
 
 // Runtime statuses
-enum
+enum CellGemStatus : u32
 {
 	CELL_GEM_NOT_CONNECTED              = 1,
 	CELL_GEM_SPHERE_NOT_CALIBRATED      = 2,
