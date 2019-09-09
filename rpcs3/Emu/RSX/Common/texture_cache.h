@@ -10,6 +10,8 @@
 
 extern u64 get_system_time();
 
+#define RSX_GCM_FORMAT_IGNORED 0
+
 namespace rsx
 {
 	template <typename derived_type, typename _traits>
@@ -1092,7 +1094,7 @@ namespace rsx
 			return nullptr;
 		}
 
-		section_storage_type* find_cached_texture(const address_range &range, bool create_if_not_found, bool confirm_dimensions, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
+		section_storage_type* find_cached_texture(const address_range &range, u32 gcm_format, bool create_if_not_found, bool confirm_dimensions, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
 		{
 			auto &block = m_storage.block_for(range);
 
@@ -1110,7 +1112,7 @@ namespace rsx
 				{
 					if (!tex.is_dirty())
 					{
-						if (!confirm_dimensions || tex.matches_dimensions(width, height, depth, mipmaps))
+						if (!confirm_dimensions || tex.matches(gcm_format, width, height, depth, mipmaps))
 						{
 #ifndef TEXTURE_CACHE_DEBUG
 							return &tex;
@@ -1202,7 +1204,7 @@ namespace rsx
 			std::lock_guard lock(m_cache_mutex);
 
 			// Find a cached section to use
-			section_storage_type& region = *find_cached_texture(rsx_range, true, true, width, height);
+			section_storage_type& region = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, true, width, height);
 
 			// Prepare and initialize fbo region
 			if (region.exists() && region.get_context() != texture_upload_context::framebuffer_storage)
@@ -1278,7 +1280,7 @@ namespace rsx
 		{
 			std::lock_guard lock(m_cache_mutex);
 
-			auto* region_ptr = find_cached_texture(memory_range, false, false);
+			auto* region_ptr = find_cached_texture(memory_range, RSX_GCM_FORMAT_IGNORED, false, false);
 			if (region_ptr == nullptr)
 			{
 				AUDIT(m_flush_always_cache.find(memory_range) == m_flush_always_cache.end());
