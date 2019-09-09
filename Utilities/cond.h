@@ -11,9 +11,31 @@ class cond_variable
 	// Internal waiter counter
 	atomic_t<u32> m_value{0};
 
+	enum : u32
+	{
+		c_waiter_mask = 0x1fff,
+		c_signal_mask = 0xffffffff & ~c_waiter_mask,
+	};
+
 protected:
+	// Increment waiter count
+	u32 add_waiter() noexcept
+	{
+		return m_value.atomic_op([](u32& value) -> u32
+		{
+			if ((value & c_signal_mask) == c_signal_mask || (value & c_waiter_mask) == c_waiter_mask)
+			{
+				// Signal or waiter overflow, return immediately
+				return 0;
+			}
+
+			value += c_waiter_mask & -c_waiter_mask;
+			return value;
+		});
+	}
+
 	// Internal waiting function
-	bool imp_wait(u32 _old, u64 _timeout) noexcept;
+	void imp_wait(u32 _old, u64 _timeout) noexcept;
 
 	// Try to notify up to _count threads
 	void imp_wake(u32 _count) noexcept;
@@ -23,22 +45,33 @@ public:
 
 	// Intrusive wait algorithm for lockable objects
 	template <typename T>
-	bool wait(T& object, u64 usec_timeout = -1)
+	void wait(T& object, u64 usec_timeout = -1) noexcept
 	{
-		const u32 _old = m_value.fetch_add(1); // Increment waiter counter
+		const u32 _old = add_waiter();
+
+		if (!_old)
+		{
+			return;
+		}
+
 		object.unlock();
-		const bool res = imp_wait(_old, usec_timeout);
+		imp_wait(_old, usec_timeout);
 		object.lock();
-		return res;
 	}
 
 	// Unlock all specified objects but don't lock them again
 	template <typename... Locks>
-	bool wait_unlock(u64 usec_timeout, Locks&&... locks)
+	void wait_unlock(u64 usec_timeout, Locks&&... locks)
 	{
-		const u32 _old = m_value.fetch_add(1); // Increment waiter counter
+		const u32 _old = add_waiter();
 		(..., std::forward<Locks>(locks).unlock());
-		return imp_wait(_old, usec_timeout);
+
+		if (!_old)
+		{
+			return;
+		}
+
+		imp_wait(_old, usec_timeout);
 	}
 
 	// Wake one thread
@@ -55,11 +88,11 @@ public:
 	{
 		if (m_value)
 		{
-			imp_wake(65535);
+			imp_wake(-1);
 		}
 	}
 
-	static constexpr u64 max_timeout = u64{UINT32_MAX} / 1000 * 1000000;
+	static constexpr u64 max_timeout = UINT64_MAX / 1000;
 };
 
 // Condition variable fused with a pseudo-mutex supporting only reader locks (up to 32 readers).

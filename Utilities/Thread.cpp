@@ -1778,11 +1778,13 @@ void thread_base::finalize() noexcept
 	--g_thread_count;
 }
 
-bool thread_ctrl::_wait_for(u64 usec)
+void thread_ctrl::_wait_for(u64 usec)
 {
 	auto _this = g_tls_this_thread;
 
-	do
+	std::unique_lock lock(_this->m_mutex, std::defer_lock);
+
+	while (true)
 	{
 		// Mutex is unlocked at the start and after the waiting
 		if (u32 sig = _this->m_signal.load())
@@ -1790,17 +1792,20 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				return true;
+				return;
 			}
 		}
 
 		if (usec == 0)
 		{
 			// No timeout: return immediately
-			return false;
+			return;
 		}
 
-		_this->m_mutex.lock();
+		if (!lock)
+		{
+			lock.lock();
+		}
 
 		// Double-check the value
 		if (u32 sig = _this->m_signal.load())
@@ -1808,15 +1813,17 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				_this->m_mutex.unlock();
-				return true;
+				return;
 			}
 		}
-	}
-	while (_this->m_cond.wait_unlock(std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0), _this->m_mutex));
 
-	// Timeout
-	return false;
+		_this->m_cond.wait_unlock(usec, lock);
+
+		if (usec < cond_variable::max_timeout)
+		{
+			usec = 0;
+		}
+	}
 }
 
 thread_base::thread_base(std::string_view name)

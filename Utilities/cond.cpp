@@ -8,50 +8,57 @@
 #include <thread>
 #endif
 
-bool cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
+// use constants, increase signal space
+
+void cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 {
-	verify("cond_variable overflow" HERE), (_old & 0xffff) != 0xffff; // Very unlikely: it requires 65535 distinct threads to wait simultaneously
+	// Not supposed to fail
+	verify(HERE), _old;
 
-	return balanced_wait_until(m_value, _timeout, [&](u32& value, auto... ret) -> int
+	// Wait with timeout
+	m_value.wait(_old, atomic_wait_timeout{_timeout > max_timeout ? UINT64_MAX : _timeout * 1000});
+
+	// Cleanup
+	m_value.atomic_op([](u32& value)
 	{
-		if (value >> 16)
-		{
-			// Success
-			value -= 0x10001;
-			return +1;
-		}
+		value -= c_waiter_mask & -c_waiter_mask;
 
-		if constexpr (sizeof...(ret))
+		if ((value & c_waiter_mask) == 0)
 		{
-			// Retire
-			value -= 1;
-			return -1;
+			// Last waiter removed, clean signals
+			value = 0;
 		}
-
-		return 0;
 	});
-
-#ifdef _WIN32
-	if (_old >= 0x10000 && !OptWaitOnAddress && m_value)
-	{
-		// Workaround possibly stolen signal
-		imp_wake(1);
-	}
-#endif
 }
 
 void cond_variable::imp_wake(u32 _count) noexcept
 {
-	// TODO (notify_one)
-	balanced_awaken<true>(m_value, m_value.atomic_op([&](u32& value) -> u32
+	const auto [_old, ok] = m_value.fetch_op([](u32& value)
 	{
-		// Subtract already signaled number from total amount of waiters
-		const u32 can_sig = (value & 0xffff) - (value >> 16);
-		const u32 num_sig = std::min<u32>(can_sig, _count);
+		if (!value || (value & c_signal_mask) == c_signal_mask)
+		{
+			return false;
+		}
 
-		value += num_sig << 16;
-		return num_sig;
-	}));
+		// Add signal
+		value += c_signal_mask & -c_signal_mask;
+		return true;
+	});
+
+	if (!ok || !_count)
+	{
+		return;
+	}
+
+	if (_count > 1 || ((_old + (c_signal_mask & -c_signal_mask)) & c_signal_mask) == c_signal_mask)
+	{
+		// Resort to notify_all if signal count reached max
+		m_value.notify_all();
+	}
+	else
+	{
+		m_value.notify_one();
+	}
 }
 
 bool shared_cond::imp_wait(u32 slot, u64 _timeout) noexcept
