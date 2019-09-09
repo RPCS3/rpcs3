@@ -284,6 +284,8 @@ void atomic_storage_futex::notify_one(const void* data)
 
 	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
 
+	bool fallback = false;
+
 	const auto [prev, ok] = entry.fetch_op([&](u64& value)
 	{
 		if (value & s_waiter_mask && (value & s_pointer_mask) == (iptr & s_pointer_mask))
@@ -305,29 +307,40 @@ void atomic_storage_futex::notify_one(const void* data)
 			}
 
 			value += s_signal_mask & -s_signal_mask;
+
+			if ((value & s_signal_mask) == s_signal_mask)
+			{
+				// Signal will overflow, fallback
+				fallback = true;
+				return false;
+			}
 #endif
 
 			return true;
 		}
 
+		if (value & s_waiter_mask && (value & s_pointer_mask) == s_pointer_mask)
+		{
+			// Collision, notify everything
+			fallback = true;
+		}
+
 		return false;
 	});
+
+	if (fallback)
+	{
+		notify_all(data);
+		return;
+	}
 
 	if (ok)
 	{
 #ifdef _WIN32
 		NtReleaseKeyedEvent(nullptr, &entry, false, nullptr);
-		return;
 #else
 		futex(reinterpret_cast<char*>(&entry) + 4 * IS_BE_MACHINE, FUTEX_WAKE_PRIVATE, 1);
-		return;
 #endif
-	}
-
-	if ((prev & s_pointer_mask) == s_pointer_mask)
-	{
-		// Collision, notify everything
-		notify_all(data);
 	}
 }
 
