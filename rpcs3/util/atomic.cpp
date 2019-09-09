@@ -10,13 +10,16 @@
 static constexpr std::uintptr_t s_hashtable_size = 1u << 21;
 
 // TODO: it's probably better to implement more effective futex emulation for OSX/BSD here.
-static atomic_t<s64> s_hashtable[s_hashtable_size];
+static atomic_t<u64> s_hashtable[s_hashtable_size];
 
-// Max number of waiters (16383)
-static constexpr s64 s_waiter_mask = 0x3fff;
+// Pointer mask without bits used as hash, assuming signed 48-bit pointers
+static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & ~(s_hashtable_size - 1);
 
-// Implementation detail (remaining bits out of 32)
-static constexpr s64 s_signal_mask = 0xffffffff & ~s_waiter_mask;
+// Max number of waiters is 65535
+static constexpr u64 s_waiter_mask = 0xffff'0000'0000'0000;
+
+// Implementation detail (remaining bits out of 32 available for futex)
+static constexpr u64 s_signal_mask = 0xffffffff & ~(s_waiter_mask | s_pointer_mask);
 
 // Callback for wait() function, returns false if wait should return
 static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*)
@@ -170,13 +173,13 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		return;
 	}
 
-	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
+	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
 
 	u32 new_value = 0;
 
-	const auto [_, ok] = entry.fetch_op([&](s64& value)
+	const auto [_, ok] = entry.fetch_op([&](u64& value)
 	{
 		if ((value & s_waiter_mask) == s_waiter_mask || (value & s_signal_mask) == s_signal_mask)
 		{
@@ -184,18 +187,20 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			return false;
 		}
 
-		if (!value || (value >> 32) == (iptr >> 16))
+		if (!value || (value & s_pointer_mask) == (iptr & s_pointer_mask))
 		{
-			// Store 32 highest bits of signed 48-bit pointer
-			value |= (iptr >> 16) * 0x1'0000'0000;
+			// Store pointer bits
+			value |= (iptr & s_pointer_mask);
 		}
 		else
 		{
-			// Zero highest bits (collision)
-			value &= 0xffffffff;
+			// Set pointer bits to all ones (collision, TODO)
+			value |= s_pointer_mask;
 		}
 
-		new_value = static_cast<u32>(value += 1);
+		// Add waiter
+		value += s_waiter_mask & -s_waiter_mask;
+		new_value = static_cast<u32>(value);
 		return true;
 	});
 
@@ -219,6 +224,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		if (!NtWaitForKeyedEvent(nullptr, &entry, false, timeout + 1 ? &qw : nullptr))
 		{
 			// Return if no errors, continue if timed out
+			s_tls_wait_cb(nullptr);
 			return;
 		}
 #else
@@ -233,11 +239,11 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 	while (true)
 	{
 		// Try to decrement
-		const auto [prev, ok] = entry.fetch_op([&](s64& value)
+		const auto [prev, ok] = entry.fetch_op([&](u64& value)
 		{
 			if (value & s_waiter_mask)
 			{
-				value -= 1;
+				value -= s_waiter_mask & -s_waiter_mask;
 
 				if ((value & s_waiter_mask) == 0)
 				{
@@ -268,21 +274,23 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		std::terminate();
 #endif
 	}
+
+	s_tls_wait_cb(nullptr);
 }
 
 void atomic_storage_futex::notify_one(const void* data)
 {
-	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
+	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
 
-	const auto [prev, ok] = entry.fetch_op([&](s64& value)
+	const auto [prev, ok] = entry.fetch_op([&](u64& value)
 	{
-		if (value & s_waiter_mask && (value >> 32) == (iptr >> 16))
+		if (value & s_waiter_mask && (value & s_pointer_mask) == (iptr & s_pointer_mask))
 		{
 #ifdef _WIN32
 			// Try to decrement if no collision
-			value -= 1;
+			value -= s_waiter_mask & -s_waiter_mask;
 
 			if ((value & s_waiter_mask) == 0)
 			{
@@ -316,7 +324,7 @@ void atomic_storage_futex::notify_one(const void* data)
 #endif
 	}
 
-	if (prev)
+	if ((prev & s_pointer_mask) == s_pointer_mask)
 	{
 		// Collision, notify everything
 		notify_all(data);
@@ -325,18 +333,37 @@ void atomic_storage_futex::notify_one(const void* data)
 
 void atomic_storage_futex::notify_all(const void* data)
 {
-	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
+	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
 
-	// Consume everything
+	// Try to consume everything
 #ifdef _WIN32
-	for (s64 count = entry.exchange(0) & s_waiter_mask; count; count--)
+	const auto [old, ok] = entry.fetch_op([&](u64& value)
+	{
+		if (value & s_waiter_mask)
+		{
+			if ((value & s_pointer_mask) == s_pointer_mask || (value & s_pointer_mask) == (iptr & s_pointer_mask))
+			{
+				value = 0;
+				return true;
+			}
+		}
+
+		return false;
+	});
+
+	if (!ok)
+	{
+		return;
+	}
+
+	for (u64 count = old & s_waiter_mask; count; count -= s_waiter_mask & -s_waiter_mask)
 	{
 		NtReleaseKeyedEvent(nullptr, &entry, false, nullptr);
 	}
 #else
-	const auto [_, ok] = entry.fetch_op([&](s64& value)
+	const auto [_, ok] = entry.fetch_op([&](u64& value)
 	{
 		if (value & s_waiter_mask)
 		{
@@ -346,8 +373,11 @@ void atomic_storage_futex::notify_all(const void* data)
 				return false;
 			}
 
-			value += s_signal_mask & -s_signal_mask;
-			return true;
+			if ((value & s_pointer_mask) == s_pointer_mask || (value & s_pointer_mask) == (iptr & s_pointer_mask))
+			{
+				value += s_signal_mask & -s_signal_mask;
+				return true;
+			}
 		}
 
 		return false;
