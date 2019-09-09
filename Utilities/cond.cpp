@@ -54,54 +54,6 @@ void cond_variable::imp_wake(u32 _count) noexcept
 	}));
 }
 
-bool unique_cond::imp_wait(u64 _timeout) noexcept
-{
-	// State transition: c_sig -> c_lock \ c_lock -> c_wait
-	const u32 _old = m_value.fetch_sub(1);
-	if (LIKELY(_old == c_sig))
-		return true;
-
-	return balanced_wait_until(m_value, _timeout, [&](u32& value, auto... ret) -> int
-	{
-		if (value == c_sig)
-		{
-			value = c_lock;
-			return +1;
-		}
-
-		if constexpr (sizeof...(ret))
-		{
-			value = c_lock;
-			return -1;
-		}
-
-		return 0;
-	});
-}
-
-void unique_cond::imp_notify() noexcept
-{
-	auto [old, ok] = m_value.fetch_op([](u32& v)
-	{
-		if (UNLIKELY(v > 0 && v < c_sig))
-		{
-			v = c_sig;
-			return true;
-		}
-
-		return false;
-	});
-
-	verify(HERE), old <= c_sig;
-
-	if (LIKELY(!ok || old == c_lock))
-	{
-		return;
-	}
-
-	balanced_awaken(m_value, 1);
-}
-
 bool shared_cond::imp_wait(u32 slot, u64 _timeout) noexcept
 {
 	if (slot >= 32)

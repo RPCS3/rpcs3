@@ -62,53 +62,6 @@ public:
 	static constexpr u64 max_timeout = u64{UINT32_MAX} / 1000 * 1000000;
 };
 
-// Condition variable fused with a pseudo-mutex which is never supposed to be locked concurrently.
-class unique_cond
-{
-	enum : u32
-	{
-		c_wait = 1,
-		c_lock = 2,
-		c_sig  = 3,
-	};
-
-	atomic_t<u32> m_value{0};
-
-	bool imp_wait(u64 _timeout) noexcept;
-	void imp_notify() noexcept;
-
-public:
-	constexpr unique_cond() = default;
-
-	void lock() noexcept
-	{
-		// Shouldn't be locked by more than one thread concurrently
-		while (UNLIKELY(!m_value.compare_and_swap_test(0, c_lock)))
-			;
-	}
-
-	void unlock() noexcept
-	{
-		m_value = 0;
-	}
-
-	bool wait(std::unique_lock<unique_cond>& lock, u64 usec_timeout = -1) noexcept
-	{
-		AUDIT(lock.owns_lock());
-		AUDIT(lock.mutex() == this);
-		return imp_wait(usec_timeout);
-	}
-
-	void notify() noexcept
-	{
-		// Early exit if notification is not required
-		if (LIKELY(!m_value))
-			return;
-
-		imp_notify();
-	}
-};
-
 // Condition variable fused with a pseudo-mutex supporting only reader locks (up to 32 readers).
 class shared_cond
 {
