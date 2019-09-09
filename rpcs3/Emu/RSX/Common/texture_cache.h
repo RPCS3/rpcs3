@@ -2648,7 +2648,8 @@ namespace rsx
 			// Create source texture if does not exist
 			if (!src_is_render_target)
 			{
-				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst;
+				const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
+				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::shader_read;
 				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src.pitch * src.height), src.pitch, lookup_mask);
 
 				auto old_src_area = src_area;
@@ -2659,6 +2660,38 @@ namespace rsx
 						// TODO: Rejecting unlocked blit_engine dst causes stutter in SCV
 						// Surfaces marked as dirty have already been removed, leaving only flushed blit_dst data
 						continue;
+					}
+
+					// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
+					switch (surface->get_gcm_format())
+					{
+					case CELL_GCM_TEXTURE_A8R8G8B8:
+					case CELL_GCM_TEXTURE_D8R8G8B8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					case CELL_GCM_TEXTURE_X32_FLOAT:
+					case CELL_GCM_TEXTURE_Y16_X16:
+					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+					{
+						if (!src_is_argb8) continue;
+						break;
+					}
+					case CELL_GCM_TEXTURE_R5G6B5:
+					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_X16:
+					case CELL_GCM_TEXTURE_G8B8:
+					case CELL_GCM_TEXTURE_A1R5G5B5:
+					case CELL_GCM_TEXTURE_A4R4G4B4:
+					case CELL_GCM_TEXTURE_D1R5G5B5:
+					case CELL_GCM_TEXTURE_R5G5B5A1:
+					{
+						if (src_is_argb8) continue;
+						break;
+					}
+					default:
+					{
+						continue;
+					}
 					}
 
 					const auto this_address = surface->get_section_base();
@@ -2684,6 +2717,18 @@ namespace rsx
 					{
 						vram_texture = surface->get_raw_texture();
 						typeless_info.src_context = surface->get_context();
+						typeless_info.src_is_depth = surface->is_depth_texture();
+
+						const bool dst_is_depth = cached_dest ? cached_dest->is_depth_texture() : dst_subres.is_depth;
+						if (dst_is_depth != typeless_info.src_is_depth && !typeless_info.dst_is_typeless)
+						{
+							// Transfer crosses the dreaded DEPTH_STENCIL<->COLOR barrier
+							// Transfer in a typeless context using this surface as the reference
+							typeless_info.dst_is_depth = dst_is_depth;
+							typeless_info.dst_is_typeless = true;
+							typeless_info.dst_gcm_format = surface->get_gcm_format();
+						}
+
 						break;
 					}
 
@@ -2741,7 +2786,6 @@ namespace rsx
 					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(image_base)), src.pitch * image_height };
 					subresource_layout.push_back(subres);
 
-					const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 					vram_texture = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
