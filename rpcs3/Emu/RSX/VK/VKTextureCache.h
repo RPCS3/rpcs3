@@ -1020,7 +1020,7 @@ namespace vk
 
 			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect_flags, 0, mipmaps, 0, layer });
 
-			cached_texture_section& region = *find_cached_texture(rsx_range, true, true, width, height, section_depth);
+			cached_texture_section& region = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, section_depth);
 			ASSERT(!region.is_locked());
 
 			// New section, we must prepare it

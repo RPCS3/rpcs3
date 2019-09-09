@@ -831,7 +831,7 @@ namespace gl
 			const auto swizzle = get_component_mapping(gcm_format, flags);
 			image->set_native_component_layout(swizzle);
 
-			auto& cached = *find_cached_texture(rsx_range, true, true, width, height, depth, mipmaps);
+			auto& cached = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, depth, mipmaps);
 			ASSERT(!cached.is_locked());
 
 			// Prepare section
