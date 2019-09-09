@@ -6,7 +6,7 @@
 #include "TextureUtils.h"
 #include "../rsx_utils.h"
 
-#define  ENABLE_SURFACE_CACHE_DEBUG 0
+#define ENABLE_SURFACE_CACHE_DEBUG 0
 
 namespace rsx
 {
