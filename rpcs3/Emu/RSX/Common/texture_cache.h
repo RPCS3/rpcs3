@@ -2646,11 +2646,13 @@ namespace rsx
 			}
 
 			// Create source texture if does not exist
+			// TODO: This can be greatly improved with DMA optimizations. Most transfer operations here are actually non-graphical (no transforms applied)
 			if (!src_is_render_target)
 			{
+				// NOTE: Src address already takes into account the flipped nature of the overlap!
 				const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::shader_read;
-				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src.pitch * src.height), src.pitch, lookup_mask);
+				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src.pitch * src_h), src.pitch, lookup_mask);
 
 				auto old_src_area = src_area;
 				for (const auto &surface : overlapping_surfaces)
@@ -2742,7 +2744,7 @@ namespace rsx
 					u16 image_width = full_width;
 					u16 image_height = src.height;
 
-					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
+					if (LIKELY(dst.scale_x > 0.f && dst.scale_y > 0.f))
 					{
 						// Loading full image from the corner address
 						// Translate src_area into the declared block
@@ -2751,24 +2753,9 @@ namespace rsx
 						src_area.y1 += src.offset_y;
 						src_area.y2 += src.offset_y;
 					}
-					else if (!src.offset_x && !src.offset_y)
-					{
-						if (dst.scale_y < 0.f)
-						{
-							image_base = src.rsx_address - (src.pitch * src.height);
-						}
-						else
-						{
-							// Reverse X without reverse Y and no offset in X. Is this even possible?
-							LOG_ERROR(RSX, "Unexpected scaling parameters: reversed X without reverse Y");
-							image_base = src.rsx_address - src.pitch;
-						}
-					}
 					else
 					{
-						// It is difficult to determine the transfer region
 						image_base = src_address;
-						image_width = src_w;
 						image_height = src_h;
 					}
 
