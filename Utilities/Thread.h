@@ -124,9 +124,6 @@ class thread_base
 	// Thread flags
 	atomic_t<u32> m_signal{0};
 
-	// Thread joining condition variable
-	mutable cond_variable m_jcv;
-
 	// Thread state
 	atomic_t<thread_state> m_state = thread_state::created;
 

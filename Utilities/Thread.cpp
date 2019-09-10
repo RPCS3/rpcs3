@@ -1766,8 +1766,7 @@ bool thread_base::finalize(int) noexcept
 	const bool result = m_state.exchange(thread_state::finished) == thread_state::detached;
 
 	// Signal waiting threads
-	m_mutex.lock_unlock();
-	m_jcv.notify_all();
+	m_state.notify_all();
 	return result;
 }
 
@@ -1845,16 +1844,10 @@ thread_base::~thread_base()
 
 void thread_base::join() const
 {
-	if (m_state == thread_state::finished)
+	for (auto state = m_state.load(); state != thread_state::finished;)
 	{
-		return;
-	}
-
-	std::unique_lock lock(m_mutex);
-
-	while (m_state != thread_state::finished)
-	{
-		m_jcv.wait(lock);
+		m_state.wait(state);
+		state = m_state;
 	}
 }
 
