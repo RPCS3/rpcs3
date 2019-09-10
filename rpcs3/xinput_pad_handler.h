@@ -6,20 +6,9 @@
 #include <Windows.h>
 #include <Xinput.h>
 #include <chrono>
+#include <optional>
 
-namespace XINPUT_INFO
-{
-	const DWORD THREAD_TIMEOUT = 1000;
-	const DWORD THREAD_SLEEP = 10;
-	const DWORD THREAD_SLEEP_INACTIVE = 100;
-	const DWORD GUIDE_BUTTON = 0x0400;
-	const LPCWSTR LIBRARY_FILENAMES[] = {
-		L"xinput1_4.dll",
-		L"xinput1_3.dll",
-		L"xinput1_2.dll",
-		L"xinput9_1_0.dll"
-	};
-}
+struct SCP_EXTN;
 
 class xinput_pad_handler final : public PadHandlerBase
 {
@@ -112,28 +101,28 @@ public:
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
+	typedef DWORD (WINAPI * PFN_XINPUTGETEXTENDED)(DWORD, SCP_EXTN *);
 	typedef DWORD (WINAPI * PFN_XINPUTGETSTATE)(DWORD, XINPUT_STATE *);
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
+	using PadButtonValues = std::array<u16, XInputKeyCodes::KeyCodeCount>;
+
 private:
 	int GetDeviceNumber(const std::string& padId);
-	std::array<u16, XInputKeyCodes::KeyCodeCount> GetButtonValues(const XINPUT_STATE& state);
+	std::tuple<DWORD, std::optional<PadButtonValues>> GetState(u32 device_number);
+	PadButtonValues GetButtonValues_Base(const XINPUT_STATE& state);
+	PadButtonValues GetButtonValues_SCP(const SCP_EXTN& state);
 	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 
 	bool is_init{ false };
 	HMODULE library{ nullptr };
+	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };
 	PFN_XINPUTGETSTATE xinputGetState{ nullptr };
 	PFN_XINPUTSETSTATE xinputSetState{ nullptr };
-	PFN_XINPUTENABLE xinputEnable{ nullptr };
 	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{ nullptr };
 
 	std::vector<u32> blacklist;
 	std::vector<std::pair<std::shared_ptr<XInputDevice>, std::shared_ptr<Pad>>> bindings;
 	std::shared_ptr<XInputDevice> m_dev;
-
-	// holds internal controller state change
-	XINPUT_STATE state;
-	DWORD result{ 0 };
 };
