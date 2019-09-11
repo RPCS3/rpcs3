@@ -1166,7 +1166,7 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	{
 		const QString filepath = dir_iter.next();
 
-		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".obj", Qt::CaseInsensitive))
+		if (QString::compare(dir_iter.fileInfo().suffix(), QStringLiteral("obj"), Qt::CaseInsensitive) == 0)
 		{
 			if (QFile::remove(filepath))
 			{
@@ -1207,7 +1207,7 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	{
 		const QString filepath = dir_iter.next();
 
-		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".dat", Qt::CaseInsensitive))
+		if (QString::compare(dir_iter.fileInfo().suffix(), QStringLiteral("dat"), Qt::CaseInsensitive) == 0)
 		{
 			if (QFile::remove(filepath))
 			{
