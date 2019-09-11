@@ -21,13 +21,11 @@ steps:
   displayName: ccache
 
 - bash: |
-    lscpu
     docker pull rpcs3/rpcs3-travis-trusty:1.1
     docker run                      \
       -v $(pwd):/rpcs3              \
       -v $CCACHE_DIR:/root/.ccache  \
       rpcs3/rpcs3-travis-trusty:1.1 \
       /bin/bash -ex /rpcs3/.travis/build-linux.bash
-    ls -al build
-    ls -al bin
+    ls -al build/bin
   displayName: Fetch and build with Docker
