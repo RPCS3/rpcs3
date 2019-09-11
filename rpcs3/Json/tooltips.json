@@ -141,6 +141,7 @@
 		"show_boot_game": "Shows a confirmation dialog when a game was booted while another game is running.",
 		"show_pkg_install": "Shows a dialog when packages were installed successfully.",
 		"show_pup_install": "Shows a dialog when firmware was installed successfully.",
+		"check_update_start": "Check if an update is available on startup.",
 		"useRichPresence": "Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to completely close the connection.",
 		"discordState": "Tell your friends what you are doing.",
 		"custom_colors": "Prioritize custom user interface colors over properties set in stylesheet."

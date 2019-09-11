@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2027
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29306.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "asmjit", "asmjitsrc\asmjit.vcxproj", "{AC40FF01-426E-4838-A317-66354CEFAE88}"
 EndProject
@@ -78,6 +78,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libusb", "libusb", "{6D8E86F7-84A0-45BA-ACC3-F02FC5545B3B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "3rdparty\libusb_static.vcxproj", "{349EE8F9-7D25-4909-AAF5-FF3FADE72187}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "7z", "7z", "{CB3DD03E-074E-4FA5-B253-51A3372D1768}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "7zlib", "3rdparty\7z\7zlib\7zlib.vcxproj", "{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -247,6 +251,16 @@ Global
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release - LLVM|x64.Build.0 = Release|x64
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release|x64.ActiveCfg = Release|x64
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187}.Release|x64.Build.0 = Release|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Debug - LLVM|x64.ActiveCfg = Debug|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Debug - LLVM|x64.Build.0 = Debug|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Debug - MemLeak|x64.ActiveCfg = Debug|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Debug - MemLeak|x64.Build.0 = Debug|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Debug|x64.ActiveCfg = Debug|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Debug|x64.Build.0 = Debug|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Release - LLVM|x64.ActiveCfg = Release|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Release - LLVM|x64.Build.0 = Release|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Release|x64.ActiveCfg = Release|x64
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -268,6 +282,7 @@ Global
 		{A107C21C-418A-4697-BB10-20C3AA60E2E4} = {FA1E6C16-CA63-45F8-8D52-E21DF396BE36}
 		{939FE206-1182-ABC3-1234-FEAB88E98404} = {D16E245C-CC5A-4B9A-8BAB-1176F02C1631}
 		{349EE8F9-7D25-4909-AAF5-FF3FADE72187} = {6D8E86F7-84A0-45BA-ACC3-F02FC5545B3B}
+		{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C} = {CB3DD03E-074E-4FA5-B253-51A3372D1768}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {06CC7920-E085-4B81-9582-8DE8AAD42510}
