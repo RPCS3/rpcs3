@@ -27,13 +27,12 @@ steps:
       -v $CCACHE_DIR:/root/.ccache  \
       rpcs3/rpcs3-travis-trusty:1.1 \
       /bin/bash -ex /rpcs3/.travis/build-linux.bash
-    ls -al build/bin
   displayName: Fetch and build with Docker
 
 - task: CopyFiles@2
   inputs:
     sourceFolder: '$(Build.SourcesDirectory)'
-    contents: '**/$(BuildConfiguration)/**/?(rpcs3)'
+    contents: 'build/bin/rpcs3'
     TargetFolder: '$(Pipeline.Workspace)/artifacts'
 
 - task: PublishBuildArtifacts@1
