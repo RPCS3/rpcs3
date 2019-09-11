@@ -28,5 +28,6 @@ steps:
       -v $CCACHE_DIR:/root/.ccache  \
       rpcs3/rpcs3-travis-trusty:1.1 \
       /bin/bash -ex /rpcs3/.travis/build-linux.bash
-    ls -al
+    ls -al build
+    ls -al bin
   displayName: Fetch and build with Docker
