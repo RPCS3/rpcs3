@@ -34,6 +34,7 @@ steps:
   inputs:
     sourceFolder: '$(Build.SourcesDirectory)'
     contents: '**/$(BuildConfiguration)/**/?(rpcs3)'
+    TargetFolder: '$(Pipeline.Workspace)/artifacts'
 
 - task: PublishBuildArtifacts@1
   inputs:
