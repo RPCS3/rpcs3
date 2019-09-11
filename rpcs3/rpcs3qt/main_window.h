@@ -15,6 +15,7 @@
 #include "debugger_frame.h"
 #include "game_list_frame.h"
 #include "gui_settings.h"
+#include "update_manager.h"
 
 #include <memory>
 
@@ -144,4 +145,6 @@ private:
 	game_list_frame* m_gameListFrame = nullptr;
 	std::shared_ptr<gui_settings> guiSettings;
 	std::shared_ptr<emu_settings> emuSettings;
+
+	update_manager m_updater;
 };

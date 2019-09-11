@@ -97,3 +97,5 @@ CMakeLists.txt.user
 # macOS
 .DS_Store
 
+# 7zlib
+/3rdparty/7z/**/*.lib

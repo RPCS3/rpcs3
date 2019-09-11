@@ -61,6 +61,7 @@ target_sources(rpcs3_emu PRIVATE
 	../Crypto/lz.cpp
 	../Crypto/md5.cpp
 	../Crypto/sha1.cpp
+	../Crypto/sha256.cpp
 	../Crypto/unedat.cpp
 	../Crypto/unpkg.cpp
 	../Crypto/unself.cpp

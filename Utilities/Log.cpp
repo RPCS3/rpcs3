@@ -329,25 +329,34 @@ logs::file_writer::file_writer(const std::string& name)
 	{
 		if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
 		{
-			if (fs::g_tls_error == fs::error::acces)
-			{
-				if (fs::exists(buf_name))
-				{
-					fmt::throw_exception("Another instance of %s is running. Close it or kill its process, if necessary.", name);
-				}
-				else
-				{
-					fmt::throw_exception("Cannot create %s.log (access denied)."
 #ifdef _WIN32
-						"\nNote that %s cannot be installed in Program Files or similar directory with limited permissions."
-#else
-						"\nPlease, check %s permissions in '~/.config/'."
+			// Windows does not close all handles before starting a new process with execl
+			// We delay another check for rpcs3 restart after an update
+			// TODO: cleaner solution?
+			std::this_thread::sleep_for(500ms);
+			if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
 #endif
-						, name, name);
+			{
+				if (fs::g_tls_error == fs::error::acces)
+				{
+					if (fs::exists(buf_name))
+					{
+						fmt::throw_exception("Another instance of %s is running. Close it or kill its process, if necessary.", name);
+					}
+					else
+					{
+						fmt::throw_exception("Cannot create %s.log (access denied)."
+#ifdef _WIN32
+						                     "\nNote that %s cannot be installed in Program Files or similar directory with limited permissions."
+#else
+						                     "\nPlease, check %s permissions in '~/.config/'."
+#endif
+						                     , name, name);
+					}
 				}
-			}
 
-			fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
+				fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
+			}
 		}
 
 		// Check free space

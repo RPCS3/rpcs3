@@ -114,6 +114,9 @@
     <Filter Include="Gui\skylanders">
       <UniqueIdentifier>{c25f8f80-cc74-4760-8488-a291b3026b1d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\update manager">
+      <UniqueIdentifier>{ccb05d09-d394-493b-8b08-bde054969da0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="\rpcs3qt\*.cpp">
@@ -749,6 +752,21 @@
     <ClCompile Include="rpcs3qt\skylander_dialog.cpp">
       <Filter>Gui\skylanders</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\update_manager.cpp">
+      <Filter>Gui\update manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_update_manager.cpp">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_update_manager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_update_manager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_update_manager.cpp">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -992,6 +1010,9 @@
     </CustomBuild>
     <CustomBuild Include="headless_application.h">
       <Filter>rpcs3</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\update_manager.h">
+      <Filter>Gui\update manager</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

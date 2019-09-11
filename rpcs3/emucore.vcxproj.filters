@@ -83,6 +83,9 @@
     <ClCompile Include="Crypto\sha1.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
+    <ClCompile Include="Crypto\sha256.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
     <ClCompile Include="Crypto\unedat.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
@@ -842,6 +845,9 @@
       <Filter>Crypto</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\sha1.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\sha256.h">
       <Filter>Crypto</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\unedat.h">
