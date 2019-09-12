@@ -2444,7 +2444,7 @@ namespace rsx
 				// 1. Invalidate surfaces in range
 				// 2. Proceed as normal, blit into a 'normal' surface and any upload routines should catch it
 				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch * dst_h));
-				use_null_region = (scale_x == 1.f && scale_y == 1.f);
+				use_null_region = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
 			}
 
 			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
@@ -2532,6 +2532,10 @@ namespace rsx
 			areai dst_area = { 0, 0, dst_w, dst_h };
 
 			size2i dst_dimensions = { dst.pitch / dst_bpp, dst.height };
+
+			const auto src_payload_length = (src.pitch * (src_h - 1) + (src_w * src_bpp));
+			const auto dst_payload_length = (dst.pitch * (dst_h - 1) + (dst_w * dst_bpp));
+
 			if (src_is_render_target)
 			{
 				// Attempt to optimize...
@@ -2549,23 +2553,6 @@ namespace rsx
 				{
 					//LOG_TRACE(RSX, "Blit transfer to surface with dims %dx%d", dst_dimensions.width, dst.height);
 				}
-
-				if (get_location(dst.rsx_address) != CELL_GCM_LOCATION_LOCAL && !dst_is_render_target)
-				{
-					// Confirm if the pages actually exist in vm
-					// Only need to test the extra padding memory
-					const auto min_end = dst_address + (dst.height * dst.pitch);
-					const auto max_end = dst.rsx_address + (dst_dimensions.height * dst.pitch);
-
-					if (max_end > min_end)
-					{
-						if (!vm::check_addr(min_end, (max_end - min_end), vm::page_info_t::page_allocated))
-						{
-							// Enforce strict allocation size!
-							dst_dimensions.height = (dst.clip_height + dst.offset_y);
-						}
-					}
-				}
 			}
 
 			reader_lock lock(m_cache_mutex);
@@ -2575,7 +2562,7 @@ namespace rsx
 			{
 				// Check for any available region that will fit this one
 				const auto required_type = (use_null_region) ? texture_upload_context::dma : texture_upload_context::blit_engine_dst;
-				const auto dst_range = address_range::start_length(dst_address, dst.pitch * dst.clip_height);
+				const auto dst_range = address_range::start_length(dst_address, dst_payload_length);
 				auto overlapping_surfaces = find_texture_from_range(dst_range, dst.pitch, required_type);
 				for (const auto &surface : overlapping_surfaces)
 				{
@@ -2600,6 +2587,8 @@ namespace rsx
 							cached_dest = surface;
 						}
 
+						// Technically it is totally possible to just extend a pre-existing section
+						// Will leave this as a TODO
 						continue;
 					}
 
@@ -2694,7 +2683,7 @@ namespace rsx
 				// NOTE: Src address already takes into account the flipped nature of the overlap!
 				const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::shader_read;
-				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src.pitch * src_h), src.pitch, lookup_mask);
+				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src_payload_length), src.pitch, lookup_mask);
 
 				auto old_src_area = src_area;
 				for (const auto &surface : overlapping_surfaces)
@@ -2863,43 +2852,33 @@ namespace rsx
 				src_area.y2 += scaled_clip_offset_y;
 			}
 
-			// Calculate number of bytes actually modified
-			u32 mem_base, mem_length;
-			if (dst_is_render_target)
-			{
-				mem_base = dst_address - dst_subres.base_address;
-			}
-			else if (cached_dest)
-			{
-				mem_base = dst_address - cached_dest->get_section_base();
-			}
-			else
-			{
-				mem_base = dst_address - dst.rsx_address;
-			}
-
-			if (dst.clip_height == 1)
-			{
-				mem_length = dst_w * dst_bpp;
-			}
-			else
-			{
-				mem_length = (dst.pitch * (dst_h - 1)) + (dst_w * dst_bpp);
-			}
-
-			const auto modified_range = utils::address_range::start_length(dst_address, mem_length);
-
+			const auto dst_range = utils::address_range::start_length(dst_address, dst_payload_length);
 			if (!cached_dest && !dst_is_render_target)
 			{
 				verify(HERE), !dest_texture;
 
 				// Need to calculate the minium required size that will fit the data, anchored on the rsx_address
 				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
-				const u32 write_end = dst_address + (dst.pitch * dst_h);
-				const u32 expected_end = dst.rsx_address + (dst.pitch * dst_dimensions.height);
+				const u32 write_end = dst_address + dst_payload_length;
+				u32 block_end = dst.rsx_address + (dst.pitch * dst_dimensions.height);
 
-				const u32 section_length = std::max(write_end, expected_end) - dst.rsx_address;
-				dst_dimensions.height = section_length / dst.pitch;
+				// Confirm if the pages actually exist in vm
+				// Only need to test the extra padding memory and only when its on main memory
+				// NOTE: When src is not a render target, padding is not added speculatively
+				if (src_is_render_target && get_location(dst.rsx_address) != CELL_GCM_LOCATION_LOCAL)
+				{
+					if (block_end > write_end)
+					{
+						if (!vm::check_addr(write_end, (block_end - write_end), vm::page_info_t::page_allocated))
+						{
+							// Enforce strict allocation size!
+							block_end = write_end;
+						}
+					}
+				}
+
+				const u32 section_length = std::max(write_end, block_end) - dst.rsx_address;
+				dst_dimensions.height = align2(section_length, dst.pitch) / dst.pitch;
 
 				lock.upgrade();
 
@@ -2913,7 +2892,7 @@ namespace rsx
 					if ((dst_w * dst_bpp) != dst.pitch)
 					{
 						// Keep Cell from touching the range we need
-						const auto prot_range = modified_range.to_page_range();
+						const auto prot_range = dst_range.to_page_range();
 						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
 
 						force_dma_load = true;
@@ -2944,7 +2923,7 @@ namespace rsx
 					{
 						// HACK: workaround for data race with Cell
 						// Pre-lock the memory range we'll be touching, then load with super_ptr
-						const auto prot_range = modified_range.to_page_range();
+						const auto prot_range = dst_range.to_page_range();
 						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
 
 						const u16 pitch_in_block = dst.pitch / dst_bpp;
@@ -2972,15 +2951,17 @@ namespace rsx
 			verify(HERE), cached_dest || dst_is_render_target;
 
 			// Invalidate any cached subresources in modified range
-			notify_surface_changed(modified_range);
+			notify_surface_changed(dst_range);
 
 			if (cached_dest)
 			{
+				// Validate modified range
+				u32 mem_offset = dst_address - cached_dest->get_section_base();
+				verify(HERE), (mem_offset + dst_payload_length) <= cached_dest->get_section_size();
+
 				lock.upgrade();
 
-				verify(HERE), (mem_base + mem_length) <= cached_dest->get_section_size();
-
-				cached_dest->reprotect(utils::protection::no, { mem_base, mem_length });
+				cached_dest->reprotect(utils::protection::no, { mem_offset, dst_payload_length });
 				cached_dest->touch(m_cache_update_tag);
 				update_cache_tag();
 			}
@@ -3045,7 +3026,7 @@ namespace rsx
 			}
 			else
 			{
-				cached_dest->dma_transfer(cmd, vram_texture, src_area, modified_range, dst.pitch);
+				cached_dest->dma_transfer(cmd, vram_texture, src_area, dst_range, dst.pitch);
 			}
 
 			blit_op_result result = true;

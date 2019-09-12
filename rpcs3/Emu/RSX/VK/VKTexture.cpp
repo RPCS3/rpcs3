@@ -555,7 +555,7 @@ namespace vk
 			}
 			else
 			{
-				row_pitch = (((layout.width_in_block * block_size_in_bytes) + heap_align - 1) / heap_align) * heap_align;
+				row_pitch = rsx::align2(layout.width_in_block * block_size_in_bytes, heap_align);
 				verify(HERE), row_pitch == heap_align;
 			}
 
