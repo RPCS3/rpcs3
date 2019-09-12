@@ -173,6 +173,10 @@ void fmt_class_string<SceNpOauthError>::format(std::string& out, u64 arg)
 	});
 }
 
+error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param);
+error_code sceNpMatching2Term(ppu_thread& ppu);
+error_code sceNpMatching2Term2();
+
 error_code sceNp2Init(u64 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp2.warning("sceNp2Init(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
@@ -184,14 +188,11 @@ error_code sceNp2Init(u64 poolsize, vm::ptr<void> poolptr)
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
 	}
 
-	if (poolsize == 0 || !poolptr)
-	{
-		return SCE_NP_ERROR_INVALID_ARGUMENT;
-	}
+	auto result = sceNpInit(poolsize, poolptr);
 
-	if (poolsize < SCE_NP_MIN_POOLSIZE)
+	if (result != CELL_OK)
 	{
-		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
+		return result;
 	}
 
 	manager->is_initialized = true;
@@ -202,22 +203,7 @@ error_code sceNp2Init(u64 poolsize, vm::ptr<void> poolptr)
 error_code sceNpMatching2Init(u32 stackSize, s32 priority)
 {
 	sceNp2.todo("sceNpMatching2Init(stackSize=0x%x, priority=%d)", stackSize, priority);
-
-	if (!g_fxo->get<sce_np_2_manager>()->is_initialized)
-	{
-		return SCE_NP_ERROR_NOT_INITIALIZED;
-	}
-
-	const auto matching_manager = g_fxo->get<sce_np_2_matching_manager>();
-
-	if (matching_manager->is_initialized)
-	{
-		return SCE_NP_MATCHING2_ERROR_ALREADY_INITIALIZED;
-	}
-
-	matching_manager->is_initialized = true;
-
-	return CELL_OK;
+	return sceNpMatching2Init2(stackSize, priority, vm::null); // > SDK 2.4.0
 }
 
 error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
@@ -229,7 +215,7 @@ error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatchin
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto matching_2_manager = g_fxo->get<sce_np_2_matching_2_manager>();
+	const auto matching_2_manager = g_fxo->get<sce_np_2_matching_manager>();
 
 	if (matching_2_manager->is_initialized)
 	{
@@ -246,7 +232,7 @@ error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatchin
 	return CELL_OK;
 }
 
-error_code sceNp2Term()
+error_code sceNp2Term(ppu_thread& ppu)
 {
 	sceNp2.warning("sceNp2Term()");
 
@@ -257,6 +243,11 @@ error_code sceNp2Term()
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
+	// TODO: does this return on error_code ?
+	sceNpMatching2Term(ppu);
+	//cellSysutilUnregisterCallbackDispatcher();
+	sceNpTerm();
+
 	manager->is_initialized = false;
 
 	return CELL_OK;
@@ -265,22 +256,7 @@ error_code sceNp2Term()
 error_code sceNpMatching2Term(ppu_thread& ppu)
 {
 	sceNp2.warning("sceNpMatching2Term()");
-
-	if (!g_fxo->get<sce_np_2_manager>()->is_initialized)
-	{
-		return SCE_NP_ERROR_NOT_INITIALIZED;
-	}
-
-	const auto matching_manager = g_fxo->get<sce_np_2_matching_manager>();
-
-	if (!matching_manager->is_initialized)
-	{
-		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
-	}
-
-	matching_manager->is_initialized = false;
-
-	return CELL_OK;
+	return sceNpMatching2Term2(); // > SDK 2.4.0
 }
 
 error_code sceNpMatching2Term2()
@@ -292,12 +268,14 @@ error_code sceNpMatching2Term2()
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto matching_2_manager = g_fxo->get<sce_np_2_matching_2_manager>();
+	const auto matching_2_manager = g_fxo->get<sce_np_2_matching_manager>();
 
 	if (!matching_2_manager->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: for all contexts: sceNpMatching2DestroyContext
 
 	matching_2_manager->is_initialized = false;
 
@@ -308,7 +286,7 @@ error_code sceNpMatching2DestroyContext(SceNpMatching2ContextId ctxId)
 {
 	sceNp2.todo("sceNpMatching2DestroyContext(ctxId=%d)", ctxId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -320,7 +298,7 @@ error_code sceNpMatching2LeaveLobby(SceNpMatching2ContextId ctxId, vm::cptr<SceN
 {
 	sceNp2.todo("sceNpMatching2LeaveLobby(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -337,7 +315,7 @@ error_code sceNpMatching2RegisterLobbyMessageCallback(SceNpMatching2ContextId ct
 {
 	sceNp2.todo("sceNpMatching2RegisterLobbyMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -349,7 +327,7 @@ error_code sceNpMatching2GetWorldInfoList(SceNpMatching2ContextId ctxId, vm::cpt
 {
 	sceNp2.todo("sceNpMatching2GetWorldInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -366,7 +344,7 @@ error_code sceNpMatching2RegisterLobbyEventCallback(SceNpMatching2ContextId ctxI
 {
 	sceNp2.todo("sceNpMatching2RegisterLobbyEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -378,7 +356,7 @@ error_code sceNpMatching2GetLobbyMemberDataInternalList(SceNpMatching2ContextId 
 {
 	sceNp2.todo("sceNpMatching2GetLobbyMemberDataInternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -395,7 +373,7 @@ error_code sceNpMatching2SearchRoom(SceNpMatching2ContextId ctxId, vm::cptr<SceN
 {
 	sceNp2.todo("sceNpMatching2SearchRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -412,7 +390,7 @@ error_code sceNpMatching2SignalingGetConnectionStatus(SceNpMatching2ContextId ct
 {
 	sceNp2.todo("sceNpMatching2SignalingGetConnectionStatus(ctxId=%d, roomId=%d, memberId=%d, connStatus=*0x%x, peerAddr=*0x%x, peerPort=*0x%x)", ctxId, roomId, memberId, connStatus, peerAddr, peerPort);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -424,7 +402,7 @@ error_code sceNpMatching2SetUserInfo(SceNpMatching2ContextId ctxId, vm::cptr<Sce
 {
 	sceNp2.todo("sceNpMatching2SetUserInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -441,7 +419,7 @@ error_code sceNpMatching2GetClanLobbyId(SceNpMatching2ContextId ctxId, SceNpClan
 {
 	sceNp2.todo("sceNpMatching2GetClanLobbyId(ctxId=%d, clanId=%d, lobbyId=*0x%x)", ctxId, clanId, lobbyId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -453,7 +431,7 @@ error_code sceNpMatching2GetLobbyMemberDataInternal(SceNpMatching2ContextId ctxI
 {
 	sceNp2.todo("sceNpMatching2GetLobbyMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -470,7 +448,7 @@ error_code sceNpMatching2ContextStart(SceNpMatching2ContextId ctxId)
 {
 	sceNp2.todo("sceNpMatching2ContextStart(ctxId=%d)", ctxId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -482,7 +460,7 @@ error_code sceNpMatching2CreateServerContext(SceNpMatching2ContextId ctxId, vm::
 {
 	sceNp2.todo("sceNpMatching2CreateServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -499,7 +477,7 @@ error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo
 {
 	sceNp2.todo("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -511,7 +489,7 @@ error_code sceNpMatching2LeaveRoom(SceNpMatching2ContextId ctxId, vm::cptr<SceNp
 {
 	sceNp2.todo("sceNpMatching2LeaveRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -528,7 +506,7 @@ error_code sceNpMatching2SetRoomDataExternal(SceNpMatching2ContextId ctxId, vm::
 {
 	sceNp2.todo("sceNpMatching2SetRoomDataExternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -545,7 +523,7 @@ error_code sceNpMatching2SignalingGetConnectionInfo(SceNpMatching2ContextId ctxI
 {
 	sceNp2.todo("sceNpMatching2SignalingGetConnectionInfo(ctxId=%d, roomId=%d, memberId=%d, code=%d, connInfo=*0x%x)", ctxId, roomId, memberId, code, connInfo);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -557,7 +535,7 @@ error_code sceNpMatching2SendRoomMessage(SceNpMatching2ContextId ctxId, vm::cptr
 {
 	sceNp2.todo("sceNpMatching2SendRoomMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -574,7 +552,7 @@ error_code sceNpMatching2JoinLobby(SceNpMatching2ContextId ctxId, vm::cptr<SceNp
 {
 	sceNp2.todo("sceNpMatching2JoinLobby(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -591,7 +569,7 @@ error_code sceNpMatching2GetRoomMemberDataExternalList(SceNpMatching2ContextId c
 {
 	sceNp2.todo("sceNpMatching2GetRoomMemberDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -608,7 +586,7 @@ error_code sceNpMatching2AbortRequest(SceNpMatching2ContextId ctxId, SceNpMatchi
 {
 	sceNp2.todo("sceNpMatching2AbortRequest(ctxId=%d, reqId=%d)", ctxId, reqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -620,7 +598,7 @@ error_code sceNpMatching2GetServerInfo(SceNpMatching2ContextId ctxId, vm::cptr<S
 {
 	sceNp2.todo("sceNpMatching2GetServerInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -637,7 +615,7 @@ error_code sceNpMatching2GetEventData(SceNpMatching2ContextId ctxId, SceNpMatchi
 {
 	sceNp2.todo("sceNpMatching2GetEventData(ctxId=%d, eventKey=%d, buf=*0x%x, bufLen=%d)", ctxId, eventKey, buf, bufLen);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -654,7 +632,7 @@ error_code sceNpMatching2GetRoomSlotInfoLocal(SceNpMatching2ContextId ctxId, con
 {
 	sceNp2.todo("sceNpMatching2GetRoomSlotInfoLocal(ctxId=%d, roomId=%d, roomSlotInfo=*0x%x)", ctxId, roomId, roomSlotInfo);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -666,7 +644,7 @@ error_code sceNpMatching2SendLobbyChatMessage(SceNpMatching2ContextId ctxId, vm:
 {
 	sceNp2.todo("sceNpMatching2SendLobbyChatMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -683,7 +661,7 @@ error_code sceNpMatching2AbortContextStart(SceNpMatching2ContextId ctxId)
 {
 	sceNp2.todo("sceNpMatching2AbortContextStart(ctxId=%d)", ctxId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -695,7 +673,7 @@ error_code sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId,
 {
 	sceNp2.todo("sceNpMatching2GetRoomMemberIdListLocal(ctxId=%d, roomId=%d, sortMethod=%d, memberId=*0x%x, memberIdNum=%d)", ctxId, roomId, sortMethod, memberId, memberIdNum);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -707,7 +685,7 @@ error_code sceNpMatching2JoinRoom(SceNpMatching2ContextId ctxId, vm::cptr<SceNpM
 {
 	sceNp2.todo("sceNpMatching2JoinRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -726,7 +704,7 @@ error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId 
 	sceNp2.todo("sceNpMatching2GetRoomMemberDataInternalLocal(ctxId=%d, roomId=%d, memberId=%d, attrId=*0x%x, attrIdNum=%d, member=*0x%x, buf=*0x%x, bufLen=%d)",
 		ctxId, roomId, memberId, attrId, attrIdNum, member, buf, bufLen);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -738,7 +716,7 @@ error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<S
 {
 	sceNp2.todo("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -750,7 +728,7 @@ error_code sceNpMatching2KickoutRoomMember(SceNpMatching2ContextId ctxId, vm::cp
 {
 	sceNp2.todo("sceNpMatching2KickoutRoomMember(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -767,7 +745,7 @@ error_code sceNpMatching2ContextStartAsync(SceNpMatching2ContextId ctxId, u32 ti
 {
 	sceNp2.todo("sceNpMatching2ContextStartAsync(ctxId=%d, timeout=%d)", ctxId, timeout);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -779,7 +757,7 @@ error_code sceNpMatching2SetSignalingOptParam(SceNpMatching2ContextId ctxId, vm:
 {
 	sceNp2.todo("sceNpMatching2SetSignalingOptParam(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -796,7 +774,7 @@ error_code sceNpMatching2RegisterContextCallback(SceNpMatching2ContextId ctxId, 
 {
 	sceNp2.todo("sceNpMatching2RegisterContextCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -808,7 +786,7 @@ error_code sceNpMatching2SendRoomChatMessage(SceNpMatching2ContextId ctxId, vm::
 {
 	sceNp2.todo("sceNpMatching2SendRoomChatMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -825,7 +803,7 @@ error_code sceNpMatching2SetRoomDataInternal(SceNpMatching2ContextId ctxId, vm::
 {
 	sceNp2.todo("sceNpMatching2SetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -842,7 +820,7 @@ error_code sceNpMatching2GetRoomDataInternal(SceNpMatching2ContextId ctxId, vm::
 {
 	sceNp2.todo("sceNpMatching2GetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -859,7 +837,7 @@ error_code sceNpMatching2SignalingGetPingInfo(SceNpMatching2ContextId ctxId, vm:
 {
 	sceNp2.todo("sceNpMatching2SignalingGetPingInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -876,7 +854,7 @@ error_code sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, vm:
 {
 	sceNp2.todo("sceNpMatching2GetServerIdListLocal(ctxId=%d, serverId=*0x%x, serverIdNum=%d)", ctxId, serverId, serverIdNum);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -906,7 +884,7 @@ error_code sceNpMatching2GrantRoomOwner(SceNpMatching2ContextId ctxId, vm::cptr<
 {
 	sceNp2.todo("sceNpMatching2GrantRoomOwner(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -923,7 +901,7 @@ error_code sceNpMatching2CreateContext(vm::cptr<SceNpId> npId, vm::cptr<SceNpCom
 {
 	sceNp2.todo("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x, passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, passPhrase, ctxId, option);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -940,7 +918,7 @@ error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2GetSignalingOptParamLocal(ctxId=%d, roomId=%d, signalingOptParam=*0x%x)", ctxId, roomId, signalingOptParam);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -952,7 +930,7 @@ error_code sceNpMatching2RegisterSignalingCallback(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2RegisterSignalingCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -964,7 +942,7 @@ error_code sceNpMatching2ClearEventData(SceNpMatching2ContextId ctxId, SceNpMatc
 {
 	sceNp2.todo("sceNpMatching2ClearEventData(ctxId=%d, eventKey=%d)", ctxId, eventKey);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -976,7 +954,7 @@ error_code sceNpMatching2GetUserInfoList(SceNpMatching2ContextId ctxId, vm::cptr
 {
 	sceNp2.todo("sceNpMatching2GetUserInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -993,7 +971,7 @@ error_code sceNpMatching2GetRoomMemberDataInternal(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2GetRoomMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1010,7 +988,7 @@ error_code sceNpMatching2SetRoomMemberDataInternal(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2SetRoomMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1027,7 +1005,7 @@ error_code sceNpMatching2JoinProhibitiveRoom(SceNpMatching2ContextId ctxId, vm::
 {
 	sceNp2.todo("sceNpMatching2JoinProhibitiveRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1044,7 +1022,7 @@ error_code sceNpMatching2SignalingSetCtxOpt(SceNpMatching2ContextId ctxId, s32 o
 {
 	sceNp2.todo("sceNpMatching2SignalingSetCtxOpt(ctxId=%d, optname=%d, optval=%d)", ctxId, optname, optval);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1056,7 +1034,7 @@ error_code sceNpMatching2DeleteServerContext(SceNpMatching2ContextId ctxId, vm::
 {
 	sceNp2.todo("sceNpMatching2DeleteServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1073,7 +1051,7 @@ error_code sceNpMatching2SetDefaultRequestOptParam(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2SetDefaultRequestOptParam(ctxId=%d, optParam=*0x%x)", ctxId, optParam);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1090,7 +1068,7 @@ error_code sceNpMatching2RegisterRoomEventCallback(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2RegisterRoomEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1102,7 +1080,7 @@ error_code sceNpMatching2GetRoomPasswordLocal(SceNpMatching2ContextId ctxId, Sce
 {
 	sceNp2.todo("sceNpMatching2GetRoomPasswordLocal(ctxId=%d, roomId=%d, withPassword=*0x%x, roomPassword=*0x%x)", ctxId, roomId, withPassword, roomPassword);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1114,7 +1092,7 @@ error_code sceNpMatching2GetRoomDataExternalList(SceNpMatching2ContextId ctxId, 
 {
 	sceNp2.todo("sceNpMatching2GetRoomDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1131,7 +1109,7 @@ error_code sceNpMatching2CreateJoinRoom(SceNpMatching2ContextId ctxId, vm::cptr<
 {
 	sceNp2.todo("sceNpMatching2CreateJoinRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1148,7 +1126,7 @@ error_code sceNpMatching2SignalingGetCtxOpt(SceNpMatching2ContextId ctxId, s32 o
 {
 	sceNp2.todo("sceNpMatching2SignalingGetCtxOpt(ctxId=%d, optname=%d, optval=*0x%x)", ctxId, optname, optval);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1160,7 +1138,7 @@ error_code sceNpMatching2GetLobbyInfoList(SceNpMatching2ContextId ctxId, vm::cpt
 {
 	sceNp2.todo("sceNpMatching2GetLobbyInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1177,7 +1155,7 @@ error_code sceNpMatching2GetLobbyMemberIdListLocal(SceNpMatching2ContextId ctxId
 {
 	sceNp2.todo("sceNpMatching2GetLobbyMemberIdListLocal(ctxId=%d, lobbyId=%d, memberId=*0x%x, memberIdNum=%d, me=*0x%x)", ctxId, lobbyId, memberId, memberIdNum, me);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1189,7 +1167,7 @@ error_code sceNpMatching2SendLobbyInvitation(SceNpMatching2ContextId ctxId, vm::
 {
 	sceNp2.todo("sceNpMatching2SendLobbyInvitation(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1206,7 +1184,7 @@ error_code sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 {
 	sceNp2.todo("sceNpMatching2ContextStop(ctxId=%d)", ctxId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1218,7 +1196,7 @@ error_code sceNpMatching2SetLobbyMemberDataInternal(SceNpMatching2ContextId ctxI
 {
 	sceNp2.todo("sceNpMatching2SetLobbyMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1235,7 +1213,7 @@ error_code sceNpMatching2RegisterRoomMessageCallback(SceNpMatching2ContextId ctx
 {
 	sceNp2.todo("sceNpMatching2RegisterRoomMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1247,7 +1225,7 @@ error_code sceNpMatching2SignalingCancelPeerNetInfo(SceNpMatching2ContextId ctxI
 {
 	sceNp2.todo("sceNpMatching2SignalingCancelPeerNetInfo(ctxId=%d, reqId=%d)", ctxId, reqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1259,7 +1237,7 @@ error_code sceNpMatching2SignalingGetLocalNetInfo(vm::ptr<SceNpMatching2Signalin
 {
 	sceNp2.todo("sceNpMatching2SignalingGetLocalNetInfo(netinfo=*0x%x)", netinfo);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1277,7 +1255,7 @@ error_code sceNpMatching2SignalingGetPeerNetInfo(SceNpMatching2ContextId ctxId, 
 {
 	sceNp2.todo("sceNpMatching2SignalingGetPeerNetInfo(ctxId=%d, roomId=%d, roomMemberId=%d, reqId=*0x%x)", ctxId, roomId, roomMemberId, reqId);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
@@ -1294,7 +1272,7 @@ error_code sceNpMatching2SignalingGetPeerNetInfoResult(SceNpMatching2ContextId c
 {
 	sceNp2.todo("sceNpMatching2SignalingGetPeerNetInfoResult(ctxId=%d, reqId=%d, netinfo=*0x%x)", ctxId, reqId, netinfo);
 
-	if (!g_fxo->get<sce_np_2_matching_2_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_2_matching_manager>()->is_initialized)
 	{
 		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
 	}
