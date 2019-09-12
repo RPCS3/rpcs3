@@ -1,6 +1,5 @@
 #include "log_frame.h"
 #include "qt_utils.h"
-
 #include "stdafx.h"
 #include "rpcs3_version.h"
 #include "Utilities/sysinfo.h"
@@ -235,9 +234,7 @@ void log_frame::CreateAndConnectActions()
 		m_stack_tty = checked;
 	});
 
-
 	m_tty_channel_acts = new QActionGroup(this);
-
 	// Special Channel: All
 	QAction* all_channels_act = new QAction(tr("All user channels"), m_tty_channel_acts);
 	all_channels_act->setCheckable(true);
@@ -276,7 +273,7 @@ void log_frame::CreateAndConnectActions()
 	m_stackAct_log->setCheckable(true);
 	connect(m_stackAct_log, &QAction::toggled, xgui_settings.get(), [=](bool checked)
 	{
-		xgui_settings->SetValue(gui::l_stack_log, checked);
+		xgui_settings->SetValue(gui::l_stack, checked);
 		m_stack_log = checked;
 	});
 
@@ -368,7 +365,7 @@ void log_frame::LoadSettings()
 {
 	SetLogLevel(xgui_settings->GetLogLevel());
 	SetTTYLogging(xgui_settings->GetValue(gui::l_tty).toBool());
-	m_stack_log = xgui_settings->GetValue(gui::l_stack_log).toBool();
+	m_stack_log = xgui_settings->GetValue(gui::l_stack).toBool();
 	m_stack_tty = xgui_settings->GetValue(gui::l_stack_tty).toBool();
 	m_stackAct_log->setChecked(m_stack_log);
 	m_stackAct_tty->setChecked(m_stack_tty);
@@ -482,12 +479,10 @@ void log_frame::UpdateUI()
 			std::stringstream buf_stream;
 			buf_stream.str(buf);
 			std::string buf_line;
-			while(std::getline(buf_stream, buf_line)) 
+			while (std::getline(buf_stream, buf_line)) 
 			{
 				QString suffix;
 				QString tty_text = QString::fromStdString(buf_line);
-				std::string debugstring = "no selection";
-				
 				bool isSame = tty_text == m_old_tty_text;
 				// create counter suffix and remove recurring line if needed
 				if (m_stack_tty)
@@ -530,8 +525,7 @@ void log_frame::UpdateUI()
 
 				// set scrollbar to max means auto-scroll
 				sb->setValue(is_max ? sb->maximum() : sb_pos);
-			}
-			
+			}			
 		}
 
 		// Limit processing time
