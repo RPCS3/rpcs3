@@ -6,14 +6,14 @@
 #include <mutex>
 #include <condition_variable>
 
-// Should be at least 65536, currently 2097152.
-static constexpr std::uintptr_t s_hashtable_size = 1u << 21;
+// Total number of entries, should be a power of 2.
+static constexpr std::uintptr_t s_hashtable_size = 1u << 22;
 
 // TODO: it's probably better to implement more effective futex emulation for OSX/BSD here.
 static atomic_t<u64> s_hashtable[s_hashtable_size];
 
 // Pointer mask without bits used as hash, assuming signed 48-bit pointers
-static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & ~(s_hashtable_size - 1);
+static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & (~(s_hashtable_size - 1) << 2);
 
 // Max number of waiters is 32767
 static constexpr u64 s_waiter_mask = 0x7fff'0000'0000'0000;
@@ -178,7 +178,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[(iptr >> 2) % s_hashtable_size];
 
 	u32 new_value = 0;
 
@@ -304,7 +304,7 @@ void atomic_storage_futex::notify_one(const void* data)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[(iptr >> 2) % s_hashtable_size];
 
 	const auto [prev, ok] = entry.fetch_op([&](u64& value)
 	{
@@ -367,7 +367,7 @@ void atomic_storage_futex::notify_all(const void* data)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[(iptr >> 2) % s_hashtable_size];
 
 	// Try to consume everything
 #ifdef _WIN32
