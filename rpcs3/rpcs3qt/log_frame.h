@@ -75,8 +75,8 @@ private:
 	QAction* m_noticeAct;
 	QAction* m_traceAct;
 
-	QAction* m_stackAct_Log;
-	QAction* m_stackAct_TTY;
+	QAction* m_stackAct_log;
+	QAction* m_stackAct_tty;
 	
 
 
