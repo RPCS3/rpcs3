@@ -2394,7 +2394,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					return -1;
 				}
 
-				vm::reservation_notifier(raddr, 128).wait(rtime, atomic_wait_timeout{30000});
+				vm::reservation_notifier(raddr, 128).wait<UINT64_MAX & -128>(rtime, atomic_wait_timeout{30000});
 			}
 
 			check_state();

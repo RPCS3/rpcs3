@@ -30,14 +30,14 @@ static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*)
 	return true;
 };
 
-static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value)
+static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value, u64 mask)
 {
 	switch (size)
 	{
-	case 1: return reinterpret_cast<const atomic_t<u8>*>(data)->load() == old_value;
-	case 2: return reinterpret_cast<const atomic_t<u16>*>(data)->load() == old_value;
-	case 4: return reinterpret_cast<const atomic_t<u32>*>(data)->load() == old_value;
-	case 8: return reinterpret_cast<const atomic_t<u64>*>(data)->load() == old_value;
+	case 1: return (reinterpret_cast<const atomic_t<u8>*>(data)->load() & mask) == (old_value & mask);
+	case 2: return (reinterpret_cast<const atomic_t<u16>*>(data)->load() & mask) == (old_value & mask);
+	case 4: return (reinterpret_cast<const atomic_t<u32>*>(data)->load() & mask) == (old_value & mask);
+	case 8: return (reinterpret_cast<const atomic_t<u64>*>(data)->load() & mask) == (old_value & mask);
 	}
 
 	return false;
@@ -78,7 +78,7 @@ namespace
 		return s_waiter_maps[std::hash<const void*>()(ptr) % std::size(s_waiter_maps)];
 	}
 
-	void fallback_wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
+	void fallback_wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask)
 	{
 		auto& wmap = get_fallback_map(data);
 
@@ -90,7 +90,7 @@ namespace
 		// Update node key
 		s_tls_waiter.key() = data;
 
-		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value) && s_tls_wait_cb(data))
+		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value, mask) && s_tls_wait_cb(data))
 		{
 			// Add node to the waiter list
 			const auto iter = wmap.list.insert(std::move(s_tls_waiter));
@@ -152,9 +152,9 @@ namespace
 
 #if !defined(_WIN32) && !defined(__linux__)
 
-void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
+void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask)
 {
-	fallback_wait(data, size, old_value, timeout);
+	fallback_wait(data, size, old_value, timeout, mask);
 }
 
 void atomic_storage_futex::notify_one(const void* data)
@@ -169,7 +169,7 @@ void atomic_storage_futex::notify_all(const void* data)
 
 #else
 
-void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
+void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask)
 {
 	if (!timeout)
 	{
@@ -222,9 +222,9 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	if (fallback)
 	{
-		fallback_wait(data, size, old_value, timeout);
+		fallback_wait(data, size, old_value, timeout, mask);
 	}
-	else if (ptr_cmp(data, size, old_value) && s_tls_wait_cb(data))
+	else if (ptr_cmp(data, size, old_value, mask) && s_tls_wait_cb(data))
 	{
 #ifdef _WIN32
 		LARGE_INTEGER qw;
