@@ -606,6 +606,13 @@ namespace rsx
 
 	void thread::on_exit()
 	{
+		// Deregister violation handler
+		g_access_violation_handler = nullptr;
+
+		// Clear any pending flush requests to release threads
+		std::this_thread::sleep_for(10ms);
+		do_local_task(rsx::FIFO_state::lock_wait);
+
 		m_rsx_thread_exiting = true;
 		g_dma_manager.join();
 	}
