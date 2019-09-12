@@ -545,6 +545,9 @@ VKGSRender::~VKGSRender()
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
 
+	// Clear flush requests
+	m_flush_requests.clear_pending_flag();
+
 	//Texture cache
 	m_texture_cache.destroy();
 
