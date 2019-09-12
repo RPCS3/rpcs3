@@ -273,6 +273,13 @@ namespace rsx
 			CELL_GCM_LOCATION_MAIN;
 	}
 
+	// General purpose alignment without power-of-2 constraint
+	template <typename T, typename U>
+	static inline T align2(T value, U alignment)
+	{
+		return ((value + alignment - 1) / alignment) * alignment;
+	}
+
 	// Copy memory in inverse direction from source
 	// Used to scale negatively x axis while transfering image data
 	template <typename Ts = u8, typename Td = Ts>
