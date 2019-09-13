@@ -81,4 +81,5 @@ target_link_libraries(rpcs3_ui
 		3rdparty::discord-rpc
 		3rdparty::hidapi
 		3rdparty::libusb
-		3rdparty::libpng)
+		3rdparty::libpng
+		3rdparty::7z)
