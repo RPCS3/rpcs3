@@ -1468,62 +1468,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	return true;
 }
 
-#ifdef __linux__
-extern "C" struct dwarf_eh_bases
-{
-	void* tbase;
-	void* dbase;
-	void* func;
-};
-
-extern "C" struct fde* _Unwind_Find_FDE(void* pc, struct dwarf_eh_bases* bases);
-#endif
-
-// Detect leaf function
-static bool is_leaf_function(u64 rip)
-{
-#ifdef _WIN32
-	DWORD64 base = 0;
-	if (const auto rtf = RtlLookupFunctionEntry(rip, &base, nullptr))
-	{
-		// Access UNWIND_INFO structure
-		const auto uw = (u8*)(base + rtf->UnwindData);
-
-		// Leaf function has zero epilog size and no unwind codes
-		return uw[0] == 1 && uw[1] == 0 && uw[2] == 0 && uw[3] == 0;
-	}
-
-	// No unwind info implies leaf function
-	return true;
-#elif __linux__
-	struct dwarf_eh_bases bases;
-
-	if (struct fde* f = _Unwind_Find_FDE(reinterpret_cast<void*>(rip), &bases))
-	{
-		const auto words = (const u32*)f;
-
-		if (words[0] < 0x14)
-		{
-			return true;
-		}
-
-		if (words[0] == 0x14 && !words[3] && !words[4])
-		{
-			return true;
-		}
-
-		// TODO
-		return false;
-	}
-
-	// No unwind info implies leaf function
-	return true;
-#else
-	// Unsupported
-	return false;
-#endif
-}
-
 #ifdef _WIN32
 
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
@@ -1723,10 +1667,13 @@ void thread_base::start(native_entry entry)
 #endif
 }
 
-void thread_base::initialize()
+void thread_base::initialize(bool(*wait_cb)(const void*))
 {
 	// Initialize TLS variable
 	thread_ctrl::g_tls_this_thread = this;
+
+	// Initialize atomic wait callback
+	atomic_storage_futex::set_wait_callback(wait_cb);
 
 	g_tls_log_prefix = []
 	{
@@ -1774,6 +1721,14 @@ void thread_base::initialize()
 #endif
 }
 
+void thread_base::notify_abort() noexcept
+{
+	// For now
+	notify();
+
+	atomic_storage_futex::raw_notify(+m_state_notifier);
+}
+
 bool thread_base::finalize(int) noexcept
 {
 	// Report pending errors
@@ -1811,8 +1766,7 @@ bool thread_base::finalize(int) noexcept
 	const bool result = m_state.exchange(thread_state::finished) == thread_state::detached;
 
 	// Signal waiting threads
-	m_mutex.lock_unlock();
-	m_jcv.notify_all();
+	m_state.notify_all();
 	return result;
 }
 
@@ -1823,11 +1777,13 @@ void thread_base::finalize() noexcept
 	--g_thread_count;
 }
 
-bool thread_ctrl::_wait_for(u64 usec)
+void thread_ctrl::_wait_for(u64 usec)
 {
 	auto _this = g_tls_this_thread;
 
-	do
+	std::unique_lock lock(_this->m_mutex, std::defer_lock);
+
+	while (true)
 	{
 		// Mutex is unlocked at the start and after the waiting
 		if (u32 sig = _this->m_signal.load())
@@ -1835,17 +1791,20 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				return true;
+				return;
 			}
 		}
 
 		if (usec == 0)
 		{
 			// No timeout: return immediately
-			return false;
+			return;
 		}
 
-		_this->m_mutex.lock();
+		if (!lock)
+		{
+			lock.lock();
+		}
 
 		// Double-check the value
 		if (u32 sig = _this->m_signal.load())
@@ -1853,15 +1812,17 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				_this->m_mutex.unlock();
-				return true;
+				return;
 			}
 		}
-	}
-	while (_this->m_cond.wait_unlock(std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0), _this->m_mutex));
 
-	// Timeout
-	return false;
+		_this->m_cond.wait_unlock(usec, lock);
+
+		if (usec < cond_variable::max_timeout)
+		{
+			usec = 0;
+		}
+	}
 }
 
 thread_base::thread_base(std::string_view name)
@@ -1883,16 +1844,10 @@ thread_base::~thread_base()
 
 void thread_base::join() const
 {
-	if (m_state == thread_state::finished)
+	for (auto state = m_state.load(); state != thread_state::finished;)
 	{
-		return;
-	}
-
-	std::unique_lock lock(m_mutex);
-
-	while (m_state != thread_state::finished)
-	{
-		m_jcv.wait(lock);
+		m_state.wait(state);
+		state = m_state;
 	}
 }
 

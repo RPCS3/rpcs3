@@ -545,6 +545,9 @@ VKGSRender::~VKGSRender()
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
 
+	// Clear flush requests
+	m_flush_requests.clear_pending_flag();
+
 	//Texture cache
 	m_texture_cache.destroy();
 
@@ -1922,18 +1925,25 @@ void VKGSRender::clear_surface(u32 mask)
 			{
 				verify(HERE), depth_stencil_mask;
 
-				// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
-				if (mask == 1)
+				if (!g_cfg.video.read_depth_buffer)
 				{
-					// Depth was cleared, initialize stencil
-					depth_stencil_clear_values.depthStencil.stencil = 0xFF;
-					depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					// Only one aspect was cleared. Make sure to memory intialize the other before removing dirty flag
+					if (mask == 1)
+					{
+						// Depth was cleared, initialize stencil
+						depth_stencil_clear_values.depthStencil.stencil = 0xFF;
+						depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+					}
+					else
+					{
+						// Stencil was cleared, initialize depth
+						depth_stencil_clear_values.depthStencil.depth = 1.f;
+						depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+					}
 				}
 				else
 				{
-					// Stencil was cleared, initialize depth
-					depth_stencil_clear_values.depthStencil.depth = 1.f;
-					depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+					ds->write_barrier(*m_current_command_buffer);
 				}
 			}
 		}
@@ -2942,7 +2952,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, m_rtts.m_bound_depth_stencil.second, surface_range, true,
-				m_depth_surface_info.width, m_depth_surface_info.height, m_framebuffer_layout.actual_zeta_pitch, gcm_format, false);
+				m_depth_surface_info.width, m_depth_surface_info.height, m_framebuffer_layout.actual_zeta_pitch, gcm_format, true);
 		}
 		else
 		{

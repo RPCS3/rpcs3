@@ -4,11 +4,8 @@
 #include "Utilities/cond.h"
 #include "util/atomic.hpp"
 
-class notifier;
-
 namespace vm
 {
-
 	// Get reservation status for further atomic update: last update timestamp
 	inline atomic_t<u64>& reservation_acquire(u32 addr, u32 size)
 	{
@@ -24,9 +21,9 @@ namespace vm
 	}
 
 	// Get reservation sync variable
-	inline shared_cond& reservation_notifier(u32 addr, u32 size)
+	inline atomic_t<u64>& reservation_notifier(u32 addr, u32 size)
 	{
-		return *reinterpret_cast<shared_cond*>(g_reservations2 + addr / 128 * 8);
+		return reinterpret_cast<atomic_t<u64>*>(g_reservations)[addr / 128];
 	}
 
 	void reservation_lock_internal(atomic_t<u64>&);

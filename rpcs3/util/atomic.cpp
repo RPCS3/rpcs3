@@ -10,13 +10,25 @@
 static constexpr std::uintptr_t s_hashtable_size = 1u << 21;
 
 // TODO: it's probably better to implement more effective futex emulation for OSX/BSD here.
-static atomic_t<s64> s_hashtable[s_hashtable_size];
+static atomic_t<u64> s_hashtable[s_hashtable_size];
 
-// Max number of waiters (16383)
-static constexpr s64 s_waiter_mask = 0x3fff;
+// Pointer mask without bits used as hash, assuming signed 48-bit pointers
+static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & ~(s_hashtable_size - 1);
 
-// Implementation detail (remaining bits out of 32)
-static constexpr s64 s_signal_mask = 0xffffffff & ~s_waiter_mask;
+// Max number of waiters is 32767
+static constexpr u64 s_waiter_mask = 0x7fff'0000'0000'0000;
+
+//
+static constexpr u64 s_collision_bit = 0x8000'0000'0000'0000;
+
+// Implementation detail (remaining bits out of 32 available for futex)
+static constexpr u64 s_signal_mask = 0xffffffff & ~(s_waiter_mask | s_pointer_mask | s_collision_bit);
+
+// Callback for wait() function, returns false if wait should return
+static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*)
+{
+	return true;
+};
 
 static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value)
 {
@@ -66,22 +78,41 @@ namespace
 		return s_waiter_maps[std::hash<const void*>()(ptr) % std::size(s_waiter_maps)];
 	}
 
-	void fallback_wait(const void* data, std::size_t size, u64 old_value)
+	void fallback_wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
 	{
 		auto& wmap = get_fallback_map(data);
+
+		if (!timeout)
+		{
+			return;
+		}
 
 		// Update node key
 		s_tls_waiter.key() = data;
 
-		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value))
+		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value) && s_tls_wait_cb(data))
 		{
 			// Add node to the waiter list
-			std::condition_variable& cond = wmap.list.insert(std::move(s_tls_waiter))->second.cond;
+			const auto iter = wmap.list.insert(std::move(s_tls_waiter));
 
 			// Wait until the node is returned to its TLS location
+			if (timeout + 1)
+			{
+				if (!iter->second.cond.wait_for(lock, std::chrono::nanoseconds(timeout), [&]
+				{
+					return 1 && s_tls_waiter;
+				}))
+				{
+					// Put it back
+					s_tls_waiter = wmap.list.extract(iter);
+				}
+
+				return;
+			}
+
 			while (!s_tls_waiter)
 			{
-				cond.wait(lock);
+				iter->second.cond.wait(lock);
 			}
 		}
 	}
@@ -121,9 +152,9 @@ namespace
 
 #if !defined(_WIN32) && !defined(__linux__)
 
-void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value)
+void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
 {
-	fallback_wait(data, size, old_value);
+	fallback_wait(data, size, old_value, timeout);
 }
 
 void atomic_storage_futex::notify_one(const void* data)
@@ -138,23 +169,22 @@ void atomic_storage_futex::notify_all(const void* data)
 
 #else
 
-void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value)
+void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
 {
-#ifdef _WIN32
-	if (OptWaitOnAddress)
+	if (!timeout)
 	{
-		OptWaitOnAddress(const_cast<volatile void*>(data), &old_value, size, INFINITE);
 		return;
 	}
-#endif
 
-	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
+	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
 
 	u32 new_value = 0;
 
-	const auto [_, ok] = entry.fetch_op([&](s64& value)
+	bool fallback = false;
+
+	const auto [_, ok] = entry.fetch_op([&](u64& value)
 	{
 		if ((value & s_waiter_mask) == s_waiter_mask || (value & s_signal_mask) == s_signal_mask)
 		{
@@ -162,18 +192,26 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			return false;
 		}
 
-		if (!value || (value >> 32) == (iptr >> 16))
+		if (!value || (value & s_pointer_mask) == (iptr & s_pointer_mask))
 		{
-			// Store 32 highest bits of signed 48-bit pointer
-			value |= (iptr >> 16) * 0x1'0000'0000;
+			// Store pointer bits
+			value |= (iptr & s_pointer_mask);
+			fallback = false;
+
+#ifdef _WIN32
+			value += s_signal_mask & -s_signal_mask;
+#endif
 		}
 		else
 		{
-			// Zero highest bits (collision)
-			value &= 0xffffffff;
+			// Set collision bit
+			value |= s_collision_bit;
+			fallback = true;
 		}
 
-		new_value = static_cast<u32>(value += 1);
+		// Add waiter
+		value += s_waiter_mask & -s_waiter_mask;
+		new_value = static_cast<u32>(value);
 		return true;
 	});
 
@@ -182,24 +220,52 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		return;
 	}
 
-	if (ptr_cmp(data, size, old_value))
+	if (fallback)
+	{
+		fallback_wait(data, size, old_value, timeout);
+	}
+	else if (ptr_cmp(data, size, old_value) && s_tls_wait_cb(data))
 	{
 #ifdef _WIN32
-		NtWaitForKeyedEvent(nullptr, &entry, false, nullptr);
-		return;
+		LARGE_INTEGER qw;
+		qw.QuadPart = -static_cast<s64>(timeout / 100);
+
+		if (timeout % 100)
+		{
+			// Round up to closest 100ns unit
+			qw.QuadPart -= 1;
+		}
+
+		if (!NtWaitForKeyedEvent(nullptr, &entry, false, timeout + 1 ? &qw : nullptr))
+		{
+			// Return if no errors, continue if timed out
+			s_tls_wait_cb(nullptr);
+			return;
+		}
 #else
-		futex(reinterpret_cast<char*>(&entry) + 4 * IS_BE_MACHINE, FUTEX_WAIT_PRIVATE, new_value, nullptr);
+		struct timespec ts;
+		ts.tv_sec  = timeout / 1'000'000'000;
+		ts.tv_nsec = timeout % 1'000'000'000;
+
+		futex(reinterpret_cast<char*>(&entry) + 4 * IS_BE_MACHINE, FUTEX_WAIT_PRIVATE, new_value, timeout + 1 ? &ts : nullptr);
 #endif
 	}
 
 	while (true)
 	{
 		// Try to decrement
-		const auto [prev, ok] = entry.fetch_op([&](s64& value)
+		const auto [prev, ok] = entry.fetch_op([&](u64& value)
 		{
 			if (value & s_waiter_mask)
 			{
-				value -= 1;
+				value -= s_waiter_mask & -s_waiter_mask;
+
+#ifdef _WIN32
+				if (!fallback)
+				{
+					value -= s_signal_mask & -s_signal_mask;
+				}
+#endif
 
 				if ((value & s_waiter_mask) == 0)
 				{
@@ -213,7 +279,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			return false;
 		});
 
-		if (ok)
+		if (ok || fallback)
 		{
 			break;
 		}
@@ -230,29 +296,30 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		std::terminate();
 #endif
 	}
+
+	s_tls_wait_cb(nullptr);
 }
 
 void atomic_storage_futex::notify_one(const void* data)
 {
-#ifdef _WIN32
-	if (OptWaitOnAddress)
+	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
+
+	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
+
+	const auto [prev, ok] = entry.fetch_op([&](u64& value)
 	{
-		OptWakeByAddressSingle(const_cast<void*>(data));
-		return;
-	}
-#endif
-
-	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
-
-	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
-
-	const auto [prev, ok] = entry.fetch_op([&](s64& value)
-	{
-		if (value & s_waiter_mask && (value >> 32) == (iptr >> 16))
+		if (value & s_waiter_mask && (value & s_pointer_mask) == (iptr & s_pointer_mask))
 		{
 #ifdef _WIN32
-			// Try to decrement if no collision
-			value -= 1;
+			if ((value & s_signal_mask) == 0)
+			{
+				// No relevant waiters, do nothing
+				return false;
+			}
+
+			// Try to decrement if possible
+			value -= s_waiter_mask & -s_waiter_mask;
+			value -= s_signal_mask & -s_signal_mask;
 
 			if ((value & s_waiter_mask) == 0)
 			{
@@ -267,9 +334,20 @@ void atomic_storage_futex::notify_one(const void* data)
 			}
 
 			value += s_signal_mask & -s_signal_mask;
-#endif
 
+			if ((value & s_signal_mask) == s_signal_mask)
+			{
+				// Signal will overflow, fallback to notify_all
+				notify_all(data);
+				return false;
+			}
+#endif
 			return true;
+		}
+		else if (value & s_waiter_mask && value & s_collision_bit)
+		{
+			fallback_notify_one(data);
+			return false;
 		}
 
 		return false;
@@ -279,42 +357,66 @@ void atomic_storage_futex::notify_one(const void* data)
 	{
 #ifdef _WIN32
 		NtReleaseKeyedEvent(nullptr, &entry, false, nullptr);
-		return;
 #else
 		futex(reinterpret_cast<char*>(&entry) + 4 * IS_BE_MACHINE, FUTEX_WAKE_PRIVATE, 1);
-		return;
 #endif
-	}
-
-	if (prev)
-	{
-		// Collision, notify everything
-		notify_all(data);
 	}
 }
 
 void atomic_storage_futex::notify_all(const void* data)
 {
+	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
+
+	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
+
+	// Try to consume everything
 #ifdef _WIN32
-	if (OptWaitOnAddress)
+	const auto [old, ok] = entry.fetch_op([&](u64& value)
 	{
-		OptWakeByAddressAll(const_cast<void*>(data));
+		if (value & s_waiter_mask)
+		{
+			if ((value & s_pointer_mask) == (iptr & s_pointer_mask))
+			{
+				if ((value & s_signal_mask) == 0)
+				{
+					// No relevant waiters, do nothing
+					return false;
+				}
+
+				const u64 count = (value & s_signal_mask) / (s_signal_mask & -s_signal_mask);
+				value -= (s_waiter_mask & -s_waiter_mask) * count;
+				value -= (s_signal_mask & -s_signal_mask) * count;
+
+				if ((value & s_waiter_mask) == 0)
+				{
+					// Reset on last waiter
+					value = 0;
+				}
+
+				return true;
+			}
+
+			if (value & s_collision_bit)
+			{
+				fallback_notify_all(data);
+				return false;
+			}
+		}
+
+		return false;
+	});
+
+	if (!ok)
+	{
 		return;
 	}
-#endif
 
-	const std::intptr_t iptr = reinterpret_cast<std::intptr_t>(data);
-
-	atomic_t<s64>& entry = s_hashtable[iptr % s_hashtable_size];
-
-	// Consume everything
-#ifdef _WIN32
-	for (s64 count = entry.exchange(0) & s_waiter_mask; count; count--)
+	for (u64 count = old & s_signal_mask; count; count -= s_signal_mask & -s_signal_mask)
 	{
 		NtReleaseKeyedEvent(nullptr, &entry, false, nullptr);
 	}
 #else
-	const auto [_, ok] = entry.fetch_op([&](s64& value)
+	const auto [_, ok] = entry.fetch_op([&](u64& value)
 	{
 		if (value & s_waiter_mask)
 		{
@@ -324,8 +426,17 @@ void atomic_storage_futex::notify_all(const void* data)
 				return false;
 			}
 
-			value += s_signal_mask & -s_signal_mask;
-			return true;
+			if ((value & s_pointer_mask) == (iptr & s_pointer_mask))
+			{
+				value += s_signal_mask & -s_signal_mask;
+				return true;
+			}
+
+			if (value & s_collision_bit)
+			{
+				fallback_notify_all(data);
+				return false;
+			}
 		}
 
 		return false;
@@ -339,3 +450,19 @@ void atomic_storage_futex::notify_all(const void* data)
 }
 
 #endif
+
+void atomic_storage_futex::set_wait_callback(bool(*cb)(const void* data))
+{
+	if (cb)
+	{
+		s_tls_wait_cb = cb;
+	}
+}
+
+void atomic_storage_futex::raw_notify(const void* data)
+{
+	if (data)
+	{
+		notify_all(data);
+	}
+}

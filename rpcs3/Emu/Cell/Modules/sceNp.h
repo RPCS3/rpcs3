@@ -6,6 +6,9 @@
 
 #include <atomic>
 
+error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
+error_code sceNpTerm();
+
 using in_addr_t = u32;
 using in_port_t = u16;
 using sa_family_t = u8;
@@ -489,6 +492,11 @@ enum
 #define SCE_NP_CUSTOM_MENU_INDEX_ISSET(n, p) ((p)->index_bits[(n) >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT] & (1 << ((n) & SCE_NP_CUSTOM_MENU_INDEX_BITS_MASK)))
 #define SCE_NP_CUSTOM_MENU_INDEX_ZERO(p) ( for (u32 i = 0; i < (SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT); i++) p->index_bits[i] = 0; )
 #define SCE_NP_CUSTOM_MENU_INDEX_SET_ALL(p) ( for (u32 i = 0; i < (SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT); i++) p->index_bits[i] = SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL; )
+
+enum
+{
+	SCE_NP_MIN_POOLSIZE = 128 * 1024
+};
 
 enum
 {

@@ -25,6 +25,7 @@
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDMA.h" />
     <ClInclude Include="Emu\RSX\VK\VKFormats.h" />
     <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\VK\VKFramebuffer.h" />
@@ -43,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFragmentProgram.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp" />

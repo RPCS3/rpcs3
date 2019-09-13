@@ -321,6 +321,11 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 			STR_CASE(SCE_NP_CORE_ERROR_GETHOSTBYNAME);
 			STR_CASE(SCE_NP_CORE_ERROR_UNDEFINED_STREAM_ERROR);
 			STR_CASE(SCE_NP_CORE_ERROR_INTERNAL);
+			STR_CASE(SCE_NP_CORE_ERROR_DNS_HOST_NOT_FOUND);
+			STR_CASE(SCE_NP_CORE_ERROR_DNS_TRY_AGAIN);
+			STR_CASE(SCE_NP_CORE_ERROR_DNS_NO_RECOVERY);
+			STR_CASE(SCE_NP_CORE_ERROR_DNS_NO_DATA);
+			STR_CASE(SCE_NP_CORE_ERROR_DNS_NO_ADDRESS);
 			STR_CASE(SCE_NP_CORE_SERVER_ERROR_CONFLICT);
 			STR_CASE(SCE_NP_CORE_SERVER_ERROR_NOT_AUTHORIZED);
 			STR_CASE(SCE_NP_CORE_SERVER_ERROR_REMOTE_CONNECTION_FAILED);
@@ -387,7 +392,7 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
-	else if (poolsize < 128 * 1024)
+	else if (poolsize < SCE_NP_MIN_POOLSIZE)
 	{
 		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
@@ -1741,7 +1746,16 @@ error_code sceNpLookupInit()
 
 	const auto lookup_manager = g_fxo->get<sce_np_lookup_manager>();
 
-	// TODO: check if this might throw SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED
+	if (lookup_manager->is_initialized)
+	{
+		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	lookup_manager->is_initialized = true;
 
 	return CELL_OK;
@@ -1753,7 +1767,16 @@ error_code sceNpLookupTerm()
 
 	const auto lookup_manager = g_fxo->get<sce_np_lookup_manager>();
 
-	// TODO: check if this might throw SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED
+	if (!lookup_manager->is_initialized)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	lookup_manager->is_initialized = false;
 
 	return CELL_OK;
@@ -2895,6 +2918,11 @@ error_code sceNpScoreInit()
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
 	}
 
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	score_manager->is_initialized = true;
 
 	return CELL_OK;
@@ -2909,6 +2937,11 @@ error_code sceNpScoreTerm()
 	if (!score_manager->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
 	score_manager->is_initialized = false;

@@ -443,6 +443,7 @@ namespace vk
 		}
 	};
 
+	template<bool _SwapBytes = false>
 	struct cs_gather_d24x8 : cs_interleave_task
 	{
 		cs_gather_d24x8()
@@ -456,13 +457,24 @@ namespace vk
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = data[stencil_offset + s_offset];\n"
 				"		stencil = (stencil >> stencil_shift) & 0xFF;\n"
-				"		value = (depth << 8) | stencil;\n"
+				"		value = (depth << 8) | stencil;\n";
+
+			if constexpr (!_SwapBytes)
+			{
+				work_kernel +=
 				"		data[index] = value;\n";
+			}
+			else
+			{
+				work_kernel +=
+				"		data[index] = bswap_u32(value);\n";
+			}
 
 			cs_shuffle_base::build("");
 		}
 	};
 
+	template<bool _SwapBytes = false>
 	struct cs_gather_d32x8 : cs_interleave_task
 	{
 		cs_gather_d32x8()
@@ -476,8 +488,18 @@ namespace vk
 				"		stencil_shift = (index % 4) * 8;\n"
 				"		stencil = data[stencil_offset + s_offset];\n"
 				"		stencil = (stencil >> stencil_shift) & 0xFF;\n"
-				"		value = (depth << 8) | stencil;\n"
+				"		value = (depth << 8) | stencil;\n";
+
+			if constexpr (!_SwapBytes)
+			{
+				work_kernel +=
 				"		data[index] = value;\n";
+			}
+			else
+			{
+				work_kernel +=
+				"		data[index] = bswap_u32(value);\n";
+			}
 
 			cs_shuffle_base::build("");
 		}

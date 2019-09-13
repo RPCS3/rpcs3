@@ -236,10 +236,10 @@ public:
 		static_assert(UINT64_MAX / cond_variable::max_timeout >= g_cfg.core.clocks_scale.max, "timeout may overflow during scaling");
 
 		// Clamp to max timeout accepted
-		if (usec > cond_variable::max_timeout) usec = cond_variable::max_timeout;
+		const u64 max_usec = cond_variable::max_timeout * 100 / g_cfg.core.clocks_scale.max;
 
 		// Now scale the result
-		usec = (usec * g_cfg.core.clocks_scale) / 100;
+		usec = (std::min<u64>(usec, max_usec) * g_cfg.core.clocks_scale) / 100;
 
 #ifdef __linux__
 		// TODO: Confirm whether Apple or any BSD can benefit from this as well
@@ -271,7 +271,7 @@ public:
 					// Do not wait for the last quantum to avoid loss of accuracy
 					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
 #else
-					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus 
+					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
 					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
 #endif
 				}

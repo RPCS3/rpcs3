@@ -10,6 +10,8 @@
 
 extern u64 get_system_time();
 
+#define RSX_GCM_FORMAT_IGNORED 0
+
 namespace rsx
 {
 	template <typename derived_type, typename _traits>
@@ -360,6 +362,7 @@ namespace rsx
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, texture_create_flags flags) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
 			const std::vector<rsx_subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
+		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, bool memory_load) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
@@ -1092,7 +1095,7 @@ namespace rsx
 			return nullptr;
 		}
 
-		section_storage_type* find_cached_texture(const address_range &range, bool create_if_not_found, bool confirm_dimensions, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
+		section_storage_type* find_cached_texture(const address_range &range, u32 gcm_format, bool create_if_not_found, bool confirm_dimensions, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
 		{
 			auto &block = m_storage.block_for(range);
 
@@ -1110,7 +1113,7 @@ namespace rsx
 				{
 					if (!tex.is_dirty())
 					{
-						if (!confirm_dimensions || tex.matches_dimensions(width, height, depth, mipmaps))
+						if (!confirm_dimensions || tex.matches(gcm_format, width, height, depth, mipmaps))
 						{
 #ifndef TEXTURE_CACHE_DEBUG
 							return &tex;
@@ -1202,7 +1205,7 @@ namespace rsx
 			std::lock_guard lock(m_cache_mutex);
 
 			// Find a cached section to use
-			section_storage_type& region = *find_cached_texture(rsx_range, true, true, width, height);
+			section_storage_type& region = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, true, width, height);
 
 			// Prepare and initialize fbo region
 			if (region.exists() && region.get_context() != texture_upload_context::framebuffer_storage)
@@ -1278,7 +1281,7 @@ namespace rsx
 		{
 			std::lock_guard lock(m_cache_mutex);
 
-			auto* region_ptr = find_cached_texture(memory_range, false, false);
+			auto* region_ptr = find_cached_texture(memory_range, RSX_GCM_FORMAT_IGNORED, false, false);
 			if (region_ptr == nullptr)
 			{
 				AUDIT(m_flush_always_cache.find(memory_range) == m_flush_always_cache.end());
@@ -2427,7 +2430,8 @@ namespace rsx
 
 			// Check if src/dst are parts of render targets
 			typename surface_store_type::surface_overlap_info dst_subres;
-			if (dst_address > 0xc0000000)
+			bool use_null_region = false;
+			if (get_location(dst_address) == CELL_GCM_LOCATION_LOCAL)
 			{
 				// TODO: HACK
 				// After writing, it is required to lock the memory range from access!
@@ -2440,6 +2444,7 @@ namespace rsx
 				// 1. Invalidate surfaces in range
 				// 2. Proceed as normal, blit into a 'normal' surface and any upload routines should catch it
 				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch * dst_h));
+				use_null_region = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
 			}
 
 			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
@@ -2497,6 +2502,14 @@ namespace rsx
 					typeless_info.src_scaling_hint = (f32)bpp / src_bpp;
 					typeless_info.src_gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 				}
+
+				if (surf->get_surface_width(rsx::surface_metrics::pixels) != surf->width() ||
+					surf->get_surface_height(rsx::surface_metrics::pixels) != surf->height())
+				{
+					// Must go through a scaling operation due to resolution scaling being present
+					verify(HERE), g_cfg.video.resolution_scale_percent != 100;
+					use_null_region = false;
+				}
 			}
 
 			if (dst_is_render_target)
@@ -2519,8 +2532,13 @@ namespace rsx
 			areai dst_area = { 0, 0, dst_w, dst_h };
 
 			size2i dst_dimensions = { dst.pitch / dst_bpp, dst.height };
+
+			const auto src_payload_length = (src.pitch * (src_h - 1) + (src_w * src_bpp));
+			const auto dst_payload_length = (dst.pitch * (dst_h - 1) + (dst_w * dst_bpp));
+
 			if (src_is_render_target)
 			{
+				// Attempt to optimize...
 				if (dst_dimensions.width == src_subres.surface->get_surface_width(rsx::surface_metrics::samples))
 				{
 					dst_dimensions.height = std::max(src_subres.surface->get_surface_height(rsx::surface_metrics::samples), dst.height);
@@ -2543,7 +2561,9 @@ namespace rsx
 			if (!dst_is_render_target)
 			{
 				// Check for any available region that will fit this one
-				auto overlapping_surfaces = find_texture_from_range(address_range::start_length(dst_address, dst.pitch * dst.clip_height), dst.pitch, rsx::texture_upload_context::blit_engine_dst);
+				const auto required_type = (use_null_region) ? texture_upload_context::dma : texture_upload_context::blit_engine_dst;
+				const auto dst_range = address_range::start_length(dst_address, dst_payload_length);
+				auto overlapping_surfaces = find_texture_from_range(dst_range, dst.pitch, required_type);
 				for (const auto &surface : overlapping_surfaces)
 				{
 					if (!surface->is_locked())
@@ -2556,6 +2576,19 @@ namespace rsx
 					if (cached_dest)
 					{
 						// Nothing to do
+						continue;
+					}
+
+					if (use_null_region)
+					{
+						if (dst_range.inside(surface->get_section_range()))
+						{
+							// Attach to existing region
+							cached_dest = surface;
+						}
+
+						// Technically it is totally possible to just extend a pre-existing section
+						// Will leave this as a TODO
 						continue;
 					}
 
@@ -2607,9 +2640,9 @@ namespace rsx
 
 			// Check if available target is acceptable
 			// TODO: Check for other types of format mismatch
-			bool format_mismatch = false;
-			if (cached_dest)
+			if (cached_dest && !use_null_region)
 			{
+				bool format_mismatch = false;
 				if (cached_dest->is_depth_texture() != src_subres.is_depth)
 				{
 					// Dest surface has the wrong 'aspect'
@@ -2633,21 +2666,24 @@ namespace rsx
 						break;
 					}
 				}
-			}
 
-			if (format_mismatch)
-			{
-				// The invalidate call before creating a new target will remove this section
-				cached_dest = nullptr;
-				dest_texture = 0;
-				dst_area = old_dst_area;
+				if (format_mismatch)
+				{
+					// The invalidate call before creating a new target will remove this section
+					cached_dest = nullptr;
+					dest_texture = 0;
+					dst_area = old_dst_area;
+				}
 			}
 
 			// Create source texture if does not exist
+			// TODO: This can be greatly improved with DMA optimizations. Most transfer operations here are actually non-graphical (no transforms applied)
 			if (!src_is_render_target)
 			{
-				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst;
-				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src.pitch * src.height), src.pitch, lookup_mask);
+				// NOTE: Src address already takes into account the flipped nature of the overlap!
+				const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
+				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::shader_read;
+				auto overlapping_surfaces = find_texture_from_range<false>(address_range::start_length(src_address, src_payload_length), src.pitch, lookup_mask);
 
 				auto old_src_area = src_area;
 				for (const auto &surface : overlapping_surfaces)
@@ -2657,6 +2693,38 @@ namespace rsx
 						// TODO: Rejecting unlocked blit_engine dst causes stutter in SCV
 						// Surfaces marked as dirty have already been removed, leaving only flushed blit_dst data
 						continue;
+					}
+
+					// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
+					switch (surface->get_gcm_format())
+					{
+					case CELL_GCM_TEXTURE_A8R8G8B8:
+					case CELL_GCM_TEXTURE_D8R8G8B8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8:
+					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					case CELL_GCM_TEXTURE_X32_FLOAT:
+					case CELL_GCM_TEXTURE_Y16_X16:
+					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+					{
+						if (!src_is_argb8) continue;
+						break;
+					}
+					case CELL_GCM_TEXTURE_R5G6B5:
+					case CELL_GCM_TEXTURE_DEPTH16:
+					case CELL_GCM_TEXTURE_X16:
+					case CELL_GCM_TEXTURE_G8B8:
+					case CELL_GCM_TEXTURE_A1R5G5B5:
+					case CELL_GCM_TEXTURE_A4R4G4B4:
+					case CELL_GCM_TEXTURE_D1R5G5B5:
+					case CELL_GCM_TEXTURE_R5G5B5A1:
+					{
+						if (src_is_argb8) continue;
+						break;
+					}
+					default:
+					{
+						continue;
+					}
 					}
 
 					const auto this_address = surface->get_section_base();
@@ -2682,6 +2750,18 @@ namespace rsx
 					{
 						vram_texture = surface->get_raw_texture();
 						typeless_info.src_context = surface->get_context();
+						typeless_info.src_is_depth = surface->is_depth_texture();
+
+						const bool dst_is_depth = cached_dest ? cached_dest->is_depth_texture() : dst_subres.is_depth;
+						if (dst_is_depth != typeless_info.src_is_depth && !typeless_info.dst_is_typeless)
+						{
+							// Transfer crosses the dreaded DEPTH_STENCIL<->COLOR barrier
+							// Transfer in a typeless context using this surface as the reference
+							typeless_info.dst_is_depth = dst_is_depth;
+							typeless_info.dst_is_typeless = true;
+							typeless_info.dst_gcm_format = surface->get_gcm_format();
+						}
+
 						break;
 					}
 
@@ -2695,7 +2775,7 @@ namespace rsx
 					u16 image_width = full_width;
 					u16 image_height = src.height;
 
-					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
+					if (LIKELY(dst.scale_x > 0.f && dst.scale_y > 0.f))
 					{
 						// Loading full image from the corner address
 						// Translate src_area into the declared block
@@ -2704,24 +2784,9 @@ namespace rsx
 						src_area.y1 += src.offset_y;
 						src_area.y2 += src.offset_y;
 					}
-					else if (!src.offset_x && !src.offset_y)
-					{
-						if (dst.scale_y < 0.f)
-						{
-							image_base = src.rsx_address - (src.pitch * src.height);
-						}
-						else
-						{
-							// Reverse X without reverse Y and no offset in X. Is this even possible?
-							LOG_ERROR(RSX, "Unexpected scaling parameters: reversed X without reverse Y");
-							image_base = src.rsx_address - src.pitch;
-						}
-					}
 					else
 					{
-						// It is difficult to determine the transfer region
 						image_base = src_address;
-						image_width = src_w;
 						image_height = src_h;
 					}
 
@@ -2739,7 +2804,6 @@ namespace rsx
 					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(image_base)), src.pitch * image_height };
 					subresource_layout.push_back(subres);
 
-					const u32 gcm_format = src_is_argb8 ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 					vram_texture = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
 						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled)->get_raw_texture();
 
@@ -2762,7 +2826,7 @@ namespace rsx
 			else
 				gcm_format = (dst_is_argb8) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_R5G6B5;
 
-			if (cached_dest)
+			if (cached_dest && !use_null_region)
 			{
 				// Prep surface
 				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
@@ -2788,54 +2852,33 @@ namespace rsx
 				src_area.y2 += scaled_clip_offset_y;
 			}
 
-			// Calculate number of bytes actually modified
-			u32 mem_base, mem_length;
-			if (dst_is_render_target)
+			const auto dst_range = utils::address_range::start_length(dst_address, dst_payload_length);
+			if (!cached_dest && !dst_is_render_target)
 			{
-				mem_base = dst_address - dst_subres.base_address;
-			}
-			else if (cached_dest)
-			{
-				mem_base = dst_address - cached_dest->get_section_base();
-			}
-			else
-			{
-				mem_base = dst_address - dst.rsx_address;
-			}
-
-			if (dst.clip_height == 1)
-			{
-				mem_length = dst_w * dst_bpp;
-			}
-			else
-			{
-				mem_length = (dst.pitch * (dst_h - 1)) + (dst_w * dst_bpp);
-			}
-
-			const auto modified_range = utils::address_range::start_length(dst_address, mem_length);
-
-			if (dest_texture == 0)
-			{
-				verify(HERE), !dst_is_render_target;
+				verify(HERE), !dest_texture;
 
 				// Need to calculate the minium required size that will fit the data, anchored on the rsx_address
 				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
-				const u32 write_end = dst_address + (dst.pitch * dst_h);
-				const u32 expected_end = dst.rsx_address + (dst.pitch * dst_dimensions.height);
+				const u32 write_end = dst_address + dst_payload_length;
+				u32 block_end = dst.rsx_address + (dst.pitch * dst_dimensions.height);
 
-				const u32 section_length = std::max(write_end, expected_end) - dst.rsx_address;
-				dst_dimensions.height = section_length / dst.pitch;
+				// Confirm if the pages actually exist in vm
+				// Only need to test the extra padding memory and only when its on main memory
+				// NOTE: When src is not a render target, padding is not added speculatively
+				if (src_is_render_target && get_location(dst.rsx_address) != CELL_GCM_LOCATION_LOCAL)
+				{
+					if (block_end > write_end)
+					{
+						if (!vm::check_addr(write_end, (block_end - write_end), vm::page_info_t::page_allocated))
+						{
+							// Enforce strict allocation size!
+							block_end = write_end;
+						}
+					}
+				}
 
-				// render target data is already in correct swizzle layout
-				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
-					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
-					rsx::texture_create_flags::swapped_native_component_order;
-
-				// Translate dst_area into the 'full' dst block based on dst.rsx_address as (0, 0)
-				dst_area.x1 += dst.offset_x;
-				dst_area.x2 += dst.offset_x;
-				dst_area.y1 += dst.offset_y;
-				dst_area.y2 += dst.offset_y;
+				const u32 section_length = std::max(write_end, block_end) - dst.rsx_address;
+				dst_dimensions.height = align2(section_length, dst.pitch) / dst.pitch;
 
 				lock.upgrade();
 
@@ -2843,52 +2886,82 @@ namespace rsx
 				const auto rsx_range = address_range::start_length(dst.rsx_address, section_length);
 				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::write, std::forward<Args>(extras)...);
 
-				if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
+				if (LIKELY(use_null_region))
 				{
-					cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
-						gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-						channel_order);
+					bool force_dma_load = false;
+					if ((dst_w * dst_bpp) != dst.pitch)
+					{
+						// Keep Cell from touching the range we need
+						const auto prot_range = dst_range.to_page_range();
+						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
+
+						force_dma_load = true;
+					}
+
+					cached_dest = create_nul_section(cmd, rsx_range, force_dma_load);
 				}
 				else
 				{
-					// HACK: workaround for data race with Cell
-					// Pre-lock the memory range we'll be touching, then load with super_ptr
-					const auto prot_range = modified_range.to_page_range();
-					utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
+					// render target data is already in correct swizzle layout
+					auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
+						dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
+						rsx::texture_create_flags::swapped_native_component_order;
 
-					const u16 pitch_in_block = dst.pitch / dst_bpp;
-					std::vector<rsx_subresource_layout> subresource_layout;
-					rsx_subresource_layout subres = {};
-					subres.width_in_block = dst_dimensions.width;
-					subres.height_in_block = dst_dimensions.height;
-					subres.pitch_in_block = pitch_in_block;
-					subres.depth = 1;
-					subres.data = { reinterpret_cast<const gsl::byte*>(vm::get_super_ptr(dst.rsx_address)), dst.pitch * dst_dimensions.height };
-					subresource_layout.push_back(subres);
+					// Translate dst_area into the 'full' dst block based on dst.rsx_address as (0, 0)
+					dst_area.x1 += dst.offset_x;
+					dst_area.x2 += dst.offset_x;
+					dst_area.y1 += dst.offset_y;
+					dst_area.y2 += dst.offset_y;
 
-					cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
-						gcm_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
-						rsx::texture_dimension_extended::texture_dimension_2d, false);
+					if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
+					{
+						cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
+							gcm_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
+							channel_order);
+					}
+					else
+					{
+						// HACK: workaround for data race with Cell
+						// Pre-lock the memory range we'll be touching, then load with super_ptr
+						const auto prot_range = dst_range.to_page_range();
+						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
 
-					enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
+						const u16 pitch_in_block = dst.pitch / dst_bpp;
+						std::vector<rsx_subresource_layout> subresource_layout;
+						rsx_subresource_layout subres = {};
+						subres.width_in_block = dst_dimensions.width;
+						subres.height_in_block = dst_dimensions.height;
+						subres.pitch_in_block = pitch_in_block;
+						subres.depth = 1;
+						subres.data = { reinterpret_cast<const gsl::byte*>(vm::get_super_ptr(dst.rsx_address)), dst.pitch * dst_dimensions.height };
+						subresource_layout.push_back(subres);
+
+						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
+							gcm_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
+							rsx::texture_dimension_extended::texture_dimension_2d, false);
+
+						enforce_surface_creation_type(*cached_dest, gcm_format, channel_order);
+					}
+
+					dest_texture = cached_dest->get_raw_texture();
+					typeless_info.dst_context = texture_upload_context::blit_engine_dst;
 				}
-
-				dest_texture = cached_dest->get_raw_texture();
-				typeless_info.dst_context = texture_upload_context::blit_engine_dst;
 			}
 
 			verify(HERE), cached_dest || dst_is_render_target;
 
 			// Invalidate any cached subresources in modified range
-			notify_surface_changed(modified_range);
+			notify_surface_changed(dst_range);
 
 			if (cached_dest)
 			{
+				// Validate modified range
+				u32 mem_offset = dst_address - cached_dest->get_section_base();
+				verify(HERE), (mem_offset + dst_payload_length) <= cached_dest->get_section_size();
+
 				lock.upgrade();
 
-				verify(HERE), (mem_base + mem_length) <= cached_dest->get_section_size();
-
-				cached_dest->reprotect(utils::protection::no, { mem_base, mem_length });
+				cached_dest->reprotect(utils::protection::no, { mem_offset, dst_payload_length });
 				cached_dest->touch(m_cache_update_tag);
 				update_cache_tag();
 			}
@@ -2946,8 +3019,15 @@ namespace rsx
 				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, dst_area);
 			}
 
-			typeless_info.analyse();
-			blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit, typeless_info);
+			if (!use_null_region)
+			{
+				typeless_info.analyse();
+				blitter.scale_image(cmd, vram_texture, dest_texture, src_area, dst_area, interpolate, is_depth_blit, typeless_info);
+			}
+			else
+			{
+				cached_dest->dma_transfer(cmd, vram_texture, src_area, dst_range, dst.pitch);
+			}
 
 			blit_op_result result = true;
 			result.is_depth = is_depth_blit;

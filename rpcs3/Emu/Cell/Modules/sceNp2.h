@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "sceNp.h"
 
@@ -463,11 +463,6 @@ enum
 	SCE_NP_MATCHING2_CONTEXT_EVENT_StartOver = 0x6f01,
 	SCE_NP_MATCHING2_CONTEXT_EVENT_Start     = 0x6f02,
 	SCE_NP_MATCHING2_CONTEXT_EVENT_Stop      = 0x6f03,
-};
-
-enum
-{
-	SCE_NP_MIN_POOLSIZE = 128 * 1024
 };
 
 typedef u16 SceNpMatching2ServerId;
@@ -1593,11 +1588,6 @@ struct sce_np_2_manager
 };
 
 struct sce_np_2_matching_manager
-{
-	std::atomic<bool> is_initialized = false;
-};
-
-struct sce_np_2_matching_2_manager
 {
 	std::atomic<bool> is_initialized = false;
 };

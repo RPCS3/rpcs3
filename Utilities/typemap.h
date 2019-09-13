@@ -283,9 +283,6 @@ namespace utils
 		// Increased on each destructor call
 		atomic_t<ullong> m_destroy_count{0};
 
-		// Waitable object for the semaphore, signaled on decrease
-		::notifier m_free_notifier;
-
 		// Aligned size of the storage for each object
 		uint m_ssize = 0;
 
@@ -340,9 +337,6 @@ namespace utils
 					// Return semaphore
 					m_head->m_sema--;
 				}
-
-				// Signal free ID availability
-				m_head->m_free_notifier.notify_all();
 			}
 		}
 
@@ -1047,12 +1041,6 @@ namespace utils
 		ullong get_destroy_count() const
 		{
 			return get_head<Type>()->m_destroy_count;
-		}
-
-		template <typename Type>
-		std::shared_lock<::notifier> get_free_notifier() const
-		{
-			return std::shared_lock(get_head<Type>()->m_free_notifier, std::try_to_lock);
 		}
 	};
 } // namespace utils

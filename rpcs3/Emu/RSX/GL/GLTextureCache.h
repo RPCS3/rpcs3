@@ -61,72 +61,6 @@ namespace gl
 		texture::format format = texture::format::rgba;
 		texture::type type = texture::type::ubyte;
 
-		u8 get_pixel_size(texture::format fmt_, texture::type type_)
-		{
-			u8 size = 1;
-			switch (type_)
-			{
-			case texture::type::ubyte:
-			case texture::type::sbyte:
-				break;
-			case texture::type::ushort:
-			case texture::type::sshort:
-			case texture::type::f16:
-				size = 2;
-				break;
-			case texture::type::ushort_5_6_5:
-			case texture::type::ushort_5_6_5_rev:
-			case texture::type::ushort_4_4_4_4:
-			case texture::type::ushort_4_4_4_4_rev:
-			case texture::type::ushort_5_5_5_1:
-			case texture::type::ushort_1_5_5_5_rev:
-				return 2;
-			case texture::type::uint_8_8_8_8:
-			case texture::type::uint_8_8_8_8_rev:
-			case texture::type::uint_10_10_10_2:
-			case texture::type::uint_2_10_10_10_rev:
-			case texture::type::uint_24_8:
-				return 4;
-			case texture::type::f32:
-			case texture::type::sint:
-			case texture::type::uint:
-				size = 4;
-				break;
-			default:
-				LOG_ERROR(RSX, "Unsupported texture type");
-			}
-
-			switch (fmt_)
-			{
-			case texture::format::r:
-				break;
-			case texture::format::rg:
-				size *= 2;
-				break;
-			case texture::format::rgb:
-			case texture::format::bgr:
-				size *= 3;
-				break;
-			case texture::format::rgba:
-			case texture::format::bgra:
-				size *= 4;
-				break;
-
-			//Depth formats..
-			case texture::format::depth:
-				size = 2;
-				break;
-			case texture::format::depth_stencil:
-				size = 4;
-				break;
-			default:
-				LOG_ERROR(RSX, "Unsupported rtt format %d", (GLenum)fmt_);
-				size = 4;
-			}
-
-			return size;
-		}
-
 		void init_buffer(const gl::texture* src)
 		{
 			const u32 vram_size = src->pitch() * src->height();
@@ -218,6 +152,61 @@ namespace gl
 			}
 		}
 
+		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& /*src_area*/, const utils::address_range& /*valid_range*/, u32 pitch)
+		{
+			init_buffer(src);
+
+			glGetError();
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
+
+			if (context == rsx::texture_upload_context::dma)
+			{
+				// Determine unpack config dynamically
+				const auto format_info = gl::get_format_type(src->get_internal_format());
+				format = static_cast<gl::texture::format>(std::get<0>(format_info));
+				type = static_cast<gl::texture::type>(std::get<1>(format_info));
+
+				if ((src->aspect() & gl::image_aspect::stencil) == 0)
+				{
+					pack_unpack_swap_bytes = std::get<2>(format_info);
+				}
+				else
+				{
+					// Z24S8 decode is done on the CPU for now
+					pack_unpack_swap_bytes = false;
+				}
+			}
+
+			pixel_pack_settings pack_settings;
+			pack_settings.alignment(1);
+			pack_settings.swap_bytes(pack_unpack_swap_bytes);
+
+			src->copy_to(nullptr, format, type, pack_settings);
+			real_pitch = src->pitch();
+			rsx_pitch = pitch;
+
+			if (auto error = glGetError())
+			{
+				if (error == GL_OUT_OF_MEMORY && ::gl::get_driver_caps().vendor_AMD)
+				{
+					// AMD driver bug
+					// Pixel transfer fails with GL_OUT_OF_MEMORY. Usually happens with float textures or operations attempting to swap endianness.
+					// Failed operations also leak a large amount of memory
+					LOG_ERROR(RSX, "Memory transfer failure (AMD bug). Please update your driver to Adrenalin 19.4.3 or newer. Format=0x%x, Type=0x%x, Swap=%d", (u32)format, (u32)type, pack_unpack_swap_bytes);
+				}
+				else
+				{
+					LOG_ERROR(RSX, "Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, (u32)format, (u32)type);
+				}
+			}
+
+			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+
+			m_fence.reset();
+			synchronized = true;
+			sync_timestamp = get_system_time();
+		}
+
 		void copy_texture(gl::command_context& cmd, bool miss)
 		{
 			ASSERT(exists());
@@ -284,38 +273,7 @@ namespace gl
 				}
 			}
 
-			init_buffer(target_texture);
-
-			glGetError();
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
-
-			pixel_pack_settings pack_settings;
-			pack_settings.alignment(1);
-			pack_settings.swap_bytes(pack_unpack_swap_bytes);
-
-			target_texture->copy_to(nullptr, format, type, pack_settings);
-			real_pitch = target_texture->pitch();
-
-			if (auto error = glGetError())
-			{
-				if (error == GL_OUT_OF_MEMORY && ::gl::get_driver_caps().vendor_AMD)
-				{
-					// AMD driver bug
-					// Pixel transfer fails with GL_OUT_OF_MEMORY. Usually happens with float textures or operations attempting to swap endianness.
-					// Failed operations also leak a large amount of memory
-					LOG_ERROR(RSX, "Memory transfer failure (AMD bug). Please update your driver to Adrenalin 19.4.3 or newer. Format=0x%x, Type=0x%x, Swap=%d", (u32)format, (u32)type, pack_unpack_swap_bytes);
-				}
-				else
-				{
-					LOG_ERROR(RSX, "Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, (u32)format, (u32)type);
-				}
-			}
-
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
-
-			m_fence.reset();
-			synchronized = true;
-			sync_timestamp = get_system_time();
+			dma_transfer(cmd, target_texture, {}, {}, rsx_pitch);
 		}
 
 		void fill_texture(gl::texture* tex)
@@ -831,7 +789,7 @@ namespace gl
 			const auto swizzle = get_component_mapping(gcm_format, flags);
 			image->set_native_component_layout(swizzle);
 
-			auto& cached = *find_cached_texture(rsx_range, true, true, width, height, depth, mipmaps);
+			auto& cached = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, depth, mipmaps);
 			ASSERT(!cached.is_locked());
 
 			// Prepare section
@@ -885,6 +843,21 @@ namespace gl
 				no_access_range = cached.get_min_max(no_access_range, rsx::section_bounds::locked_range);
 			}
 
+			update_cache_tag();
+			return &cached;
+		}
+
+		cached_texture_section* create_nul_section(gl::command_context& cmd, const utils::address_range& rsx_range, bool memory_load) override
+		{
+			auto& cached = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, false);
+			ASSERT(!cached.is_locked());
+
+			// Prepare section
+			cached.reset(rsx_range);
+			cached.set_context(rsx::texture_upload_context::dma);
+			cached.set_dirty(false);
+
+			no_access_range = cached.get_min_max(no_access_range, rsx::section_bounds::locked_range);
 			update_cache_tag();
 			return &cached;
 		}
