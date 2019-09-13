@@ -103,7 +103,7 @@ struct vdec_context final
 	u32 frc_set{}; // Frame Rate Override
 	u64 next_pts{};
 	u64 next_dts{};
-	u64 ppu_tid{};
+	atomic_t<ppu_thread*> ppu{};
 
 	std::deque<vdec_frame> out;
 	atomic_t<u32> out_max = 60;
@@ -178,13 +178,13 @@ struct vdec_context final
 
 	void exec(ppu_thread& ppu, u32 vid)
 	{
-		ppu_tid = ppu.id;
+		this->ppu.release(&ppu);
 
 		for (auto cmds = in_cmd.pop_all(); !Emu.IsStopped(); cmds ? cmds.pop_front() : cmds = in_cmd.pop_all())
 		{
 			if (!cmds)
 			{
-				in_cmd.wait();
+				thread_ctrl::wait();
 				continue;
 			}
 
@@ -465,7 +465,8 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	}
 
 	// Create decoder context
-	const u32 vid = idm::make<vdec_context>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	const auto vdec = idm::make_ptr<vdec_context>(type->codecType, type->profileLevel, res->memAddr, res->memSize, cb->cbFunc, cb->cbArg);
+	const u32 vid = idm::last_id();
 
 	// Run thread
 	vm::var<u64> _tid;
@@ -473,16 +474,19 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	*handle = vid;
 
-	const auto thrd = idm::get<named_thread<ppu_thread>>(*_tid);
+	while (!vdec->ppu->load())
+	{
+		thread_ctrl::wait_for(1000);
+	}
 
-	thrd->cmd_list
+	vdec->ppu->cmd_list
 	({
 		{ ppu_cmd::set_args, 1 }, u64{vid},
 		{ ppu_cmd::hle_call, FIND_FUNC(vdecEntry) },
 	});
 
-	thrd->state -= cpu_flag::stop;
-	thread_ctrl::notify(*thrd);
+	vdec->ppu->state -= cpu_flag::stop;
+	vdec->ppu.load()->notify();
 
 	return CELL_OK;
 }
@@ -515,14 +519,9 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	lv2_obj::sleep(ppu);
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
-	vdec->in_cmd.notify();
+	vdec->ppu.load()->notify();
 
-	while (!atomic_storage<u64>::load(vdec->ppu_tid))
-	{
-		thread_ctrl::wait_for(1000);
-	}
-
-	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu_tid);
+	ppu_execute<&sys_interrupt_thread_disestablish>(ppu, vdec->ppu.load()->id);
 	idm::remove<vdec_context>(handle);
 	return CELL_OK;
 }
@@ -539,7 +538,7 @@ error_code cellVdecStartSeq(u32 handle)
 	}
 
 	vdec->in_cmd.push(vdec_start_seq);
-	vdec->in_cmd.notify();
+	vdec->ppu.load()->notify();
 	return CELL_OK;
 }
 
@@ -555,7 +554,7 @@ error_code cellVdecEndSeq(u32 handle)
 	}
 
 	vdec->in_cmd.push(vdec_cmd{-1});
-	vdec->in_cmd.notify();
+	vdec->ppu.load()->notify();
 	return CELL_OK;
 }
 
@@ -577,7 +576,7 @@ error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVd
 
 	// TODO: check info
 	vdec->in_cmd.push(vdec_cmd{mode, *auInfo});
-	vdec->in_cmd.notify();
+	vdec->ppu.load()->notify();
 	return CELL_OK;
 }
 
@@ -617,8 +616,7 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 
 	if (notify)
 	{
-		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
-		if (vdec_ppu) thread_ctrl::notify(*vdec_ppu);
+		vdec->ppu.load()->notify();
 	}
 
 	if (outBuff)
@@ -928,7 +926,7 @@ error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 
 	// TODO: check frc value
 	vdec->in_cmd.push(frc);
-	vdec->in_cmd.notify();
+	vdec->ppu.load()->notify();
 	return CELL_OK;
 }
 
