@@ -928,8 +928,6 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 	LOG_ERROR(PPU, "Invalid thread" HERE);
 }
 
-const ppu_decoder<ppu_itype> s_ppu_itype;
-
 extern u64 get_timebased_time();
 extern ppu_function_t ppu_get_syscall(u64 code);
 
