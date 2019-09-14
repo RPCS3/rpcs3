@@ -26,5 +26,8 @@ namespace vfs
 
 		// Delete file without deleting its contents, emulated with MoveFileEx on Windows
 		bool unlink(const std::string& path, const std::string& dev_root);
+
+		// Delete folder contents using rename, done atomically if remove_root is true
+		bool remove_all(const std::string& path, const std::string& dev_root, bool remove_root = true);
 	}
 }
