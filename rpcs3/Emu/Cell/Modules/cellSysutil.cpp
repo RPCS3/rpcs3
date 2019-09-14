@@ -72,8 +72,18 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 
 struct syscache
 {
-	atomic_t<u32> state = 0;
-	std::string cache_path;
+	atomic_t<bool> mounted = false;
+	std::string cache_id;
+	shared_mutex mtx;
+
+	~syscache()
+	{
+		// Check if mounted and cache_id is different than already written empty value
+		if (!cache_id.empty())
+		{
+			fs::write_file(fs::get_cache_dir() + "/cache/cacheId", fs::rewrite, cache_id);
+		}
+	}
 };
 
 template <>
@@ -309,22 +319,22 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 	return CELL_OK;
 }
 
+const std::string cache_path = "/dev_hdd1/cache";
+
 s32 cellSysCacheClear()
 {
 	cellSysutil.warning("cellSysCacheClear()");
 
 	const auto cache = g_fxo->get<syscache>();
 
-	if (!cache->state)
+	if (!cache->mounted)
 	{
 		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
 	}
 
-	std::string local_dir = vfs::get(cache->cache_path);
-
-	if (!fs::remove_all(local_dir, false))
+	if (!vfs::host::remove_all(vfs::get(cache_path), Emu.GetHdd1Dir(), false))
 	{
-		cellSysutil.error("cellSysCacheClear(): failed to clear directory '%s' (%s)", cache->cache_path, fs::g_tls_error);
+		cellSysutil.error("cellSysCacheClear(): failed to clear directory '%s' (%s)", cache_path, fs::g_tls_error);
 		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
 	}
 
@@ -343,16 +353,52 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	}
 
 	std::string cache_id = param->cacheId;
-	std::string cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
-	if (!fs::create_dir(vfs::get(cache_path)) && !cache_id.empty())
+	cellSysutil.notice("cellSysCacheMount: cache id=%s", cache_id);
+
+	std::lock_guard lock(cache->mtx);
+
+	if (!cache->mounted.exchange(true))
 	{
-		return CELL_SYSCACHE_RET_OK_RELAYED;
+		// Get last cache ID, lasts between application boots
+		fs::file last_id(fs::get_cache_dir() + "/cache/cacheId", fs::read + fs::write + fs::create);
+		const auto id_size = last_id.size();
+
+		// Compare specified ID with old one (if size is 0 clear unconditionally)
+		const bool relayed = id_size && id_size == cache_id.size() && [&]()
+		{
+			char buf[CELL_SYSCACHE_ID_SIZE - 1];
+			last_id.read(buf, id_size);
+			return memcmp(buf, cache_id.c_str(), id_size) == 0;
+		}();
+
+		// Protection against rpcs3 crash (syscache dtor wasn't called)
+		// Clear cacheId (clear cache on next startup)
+		last_id.trunc(0);
+
+		if (relayed)
+		{
+			cache->cache_id = std::move(cache_id);
+			return CELL_SYSCACHE_RET_OK_RELAYED;
+		}
+	}
+	else
+	{
+		// If null term specified at start it must be cleared uncondionally
+		if (!cache_id.empty() && cache->cache_id == cache_id)
+		{
+			return CELL_SYSCACHE_RET_OK_RELAYED;
+		}
 	}
 
-	cache->cache_path = std::move(cache_path);
-	cache->state = 1;
+	// Set new cache ID (clear previous)
+	if (!vfs::host::remove_all(vfs::get(cache_path), Emu.GetHdd1Dir(), false))
+	{
+		cellSysutil.error("cellSysCacheMount(): failed to clear directory '%s' (%s)", cache_path, fs::g_tls_error);
+	}
+
+	cache->cache_id = std::move(cache_id);
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
 
