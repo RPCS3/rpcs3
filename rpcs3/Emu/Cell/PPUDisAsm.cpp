@@ -1005,6 +1005,11 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	const u32 bi = op.bi;
 	const u32 bh = op.bh;
 
+	if (bo == 20)
+	{
+		return Write(op.lk ? "bctrl" : "bctr");
+	}
+
 	switch (op.lk)
 	{
 	case 0: DisAsm_INT3("bcctr", bo, bi, bh); break;
@@ -1664,7 +1669,7 @@ void PPUDisAsm::LFSUX(ppu_opcode_t op)
 
 void PPUDisAsm::SYNC(ppu_opcode_t op)
 {
-	Write("sync");
+	Write(op.l10 ? "lwsync" : "sync");
 }
 
 void PPUDisAsm::LFDX(ppu_opcode_t op)
