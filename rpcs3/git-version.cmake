@@ -25,7 +25,7 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
 	if(NOT ${exit_code} EQUAL 0)
 		message(WARNING "git rev-parse failed, unable to include git branch.")
 	endif()
-	execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0
+	execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=0 --always
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 		RESULT_VARIABLE exit_code
 		OUTPUT_VARIABLE RPCS3_GIT_TAG)
