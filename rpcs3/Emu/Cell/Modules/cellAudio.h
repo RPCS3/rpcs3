@@ -338,6 +338,9 @@ class cell_audio_thread
 public:
 	cell_audio_config cfg;
 
+	shared_mutex mutex;
+	atomic_t<u32> init = 0;
+
 	std::vector<u64> keys;
 	std::array<audio_port, AUDIO_PORT_COUNT> ports;
 
@@ -370,6 +373,8 @@ public:
 	{
 		return ringbuffer->has_capability(cap);
 	}
+
+	static constexpr auto thread_name = "cellAudio Thread"sv;
 };
 
 using cell_audio = named_thread<cell_audio_thread>;

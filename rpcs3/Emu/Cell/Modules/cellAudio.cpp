@@ -420,7 +420,7 @@ void cell_audio_thread::reset_ports(s32 offset)
 
 void cell_audio_thread::advance(u64 timestamp, bool reset)
 {
-	auto _locked = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	std::unique_lock lock(mutex);
 
 	// update ports
 	if (reset)
@@ -464,7 +464,7 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 		}
 	}
 
-	_locked.unlock();
+	lock.unlock();
 
 	for (u32 i = 0; i < queue_count; i++)
 	{
@@ -935,18 +935,17 @@ error_code cellAudioInit()
 {
 	cellAudio.warning("cellAudioInit()");
 
-	// Start audio thread
-	auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(id_new);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_ALREADY_INIT;
 	}
 
 	std::memset(g_audio_buffer.get_ptr(), 0, g_audio_buffer.alloc_size);
 	std::memset(g_audio_indices.get_ptr(), 0, g_audio_indices.alloc_size);
-
-	g_audio.create("cellAudio Thread");
 
 	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
 	{
@@ -955,6 +954,8 @@ error_code cellAudioInit()
 		g_audio->ports[i].index  = g_audio_indices + i;
 	}
 
+	g_audio->init = 1;
+
 	return CELL_OK;
 }
 
@@ -962,35 +963,17 @@ error_code cellAudioQuit(ppu_thread& ppu)
 {
 	cellAudio.warning("cellAudioQuit()");
 
-	// Stop audio thread
-	auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	// Signal to abort, release lock
-	*g_audio.get() = thread_state::aborting;
-	g_audio.unlock();
-
-	while (true)
-	{
-		if (ppu.is_stopped())
-		{
-			return 0;
-		}
-
-		thread_ctrl::wait_for(1000);
-
-		auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
-
-		if (*g_audio.get() == thread_state::finished)
-		{
-			g_audio.destroy();
-			break;
-		}
-	}
+	// TODO
+	g_audio->init = 0;
 
 	return CELL_OK;
 }
@@ -999,9 +982,11 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 {
 	cellAudio.warning("cellAudioPortOpen(audioParam=*0x%x, portNum=*0x%x)", audioParam, portNum);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1102,9 +1087,11 @@ error_code cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> port
 {
 	cellAudio.trace("cellAudioGetPortConfig(portNum=%d, portConfig=*0x%x)", portNum, portConfig);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1137,9 +1124,11 @@ error_code cellAudioPortStart(u32 portNum)
 {
 	cellAudio.warning("cellAudioPortStart(portNum=%d)", portNum);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1162,9 +1151,11 @@ error_code cellAudioPortClose(u32 portNum)
 {
 	cellAudio.warning("cellAudioPortClose(portNum=%d)", portNum);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1187,9 +1178,11 @@ error_code cellAudioPortStop(u32 portNum)
 {
 	cellAudio.warning("cellAudioPortStop(portNum=%d)", portNum);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1212,9 +1205,11 @@ error_code cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 {
 	cellAudio.trace("cellAudioGetPortTimestamp(portNum=%d, tag=0x%llx, stamp=*0x%x)", portNum, tag, stamp);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1248,9 +1243,11 @@ error_code cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 {
 	cellAudio.trace("cellAudioGetPortBlockTag(portNum=%d, blockNo=0x%llx, tag=*0x%x)", portNum, blockNo, tag);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1281,9 +1278,11 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 {
 	cellAudio.trace("cellAudioSetPortLevel(portNum=%d, level=%f)", portNum, level);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1363,9 +1362,11 @@ error_code cellAudioSetNotifyEventQueue(u64 key)
 {
 	cellAudio.warning("cellAudioSetNotifyEventQueue(key=0x%llx)", key);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1396,9 +1397,11 @@ error_code cellAudioRemoveNotifyEventQueue(u64 key)
 {
 	cellAudio.warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
 
-	const auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::lock_guard lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1429,9 +1432,11 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 {
 	cellAudio.trace("cellAudioAddData(portNum=%d, src=*0x%x, samples=%d, volume=%f)", portNum, src, samples, volume);
 
-	auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::unique_lock lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1452,7 +1457,7 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 
 	const auto dst = port.get_vm_ptr();
 
-	g_audio.unlock();
+	lock.unlock();
 
 	for (u32 i = 0; i < samples * port.num_channels; i++)
 	{
@@ -1466,9 +1471,11 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 {
 	cellAudio.trace("cellAudioAdd2chData(portNum=%d, src=*0x%x, samples=%d, volume=%f)", portNum, src, samples, volume);
 
-	auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::unique_lock lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1489,7 +1496,7 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 
 	const auto dst = port.get_vm_ptr();
 
-	g_audio.unlock();
+	lock.unlock();
 
 	if (port.num_channels == 2)
 	{
@@ -1537,9 +1544,11 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 {
 	cellAudio.trace("cellAudioAdd6chData(portNum=%d, src=*0x%x, volume=%f)", portNum, src, volume);
 
-	auto g_audio = g_idm->lock<named_thread<cell_audio_thread>>(0);
+	const auto g_audio = g_fxo->get<cell_audio>();
 
-	if (!g_audio)
+	std::unique_lock lock(g_audio->mutex);
+
+	if (!g_audio->init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -1553,7 +1562,7 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	const auto dst = port.get_vm_ptr();
 
-	g_audio.unlock();
+	lock.unlock();
 
 	if (port.num_channels == 6)
 	{
