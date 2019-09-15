@@ -102,6 +102,12 @@ struct thread_on_wait : std::bool_constant<false> {};
 template <typename T>
 struct thread_on_wait<T, decltype(std::declval<named_thread<T>&>().on_wait())> : std::bool_constant<true> {};
 
+template <typename T, typename = void>
+struct thread_thread_name : std::bool_constant<false> {};
+
+template <typename T>
+struct thread_thread_name<T, std::void_t<decltype(named_thread<T>::thread_name)>> : std::bool_constant<true> {};
+
 // Thread base class
 class thread_base
 {
@@ -380,6 +386,18 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		return thread::finalize(0);
 	}
 
+	static decltype(auto) get_default_thread_name()
+	{
+		if constexpr (thread_thread_name<Context>())
+		{
+			return Context::thread_name;
+		}
+		else
+		{
+			return "Unnamed Thread";
+		}
+	}
+
 	// Detached thread constructor
 	named_thread(thread_state s, std::string_view name, Context&& f)
 		: Context(std::forward<Context>(f))
@@ -392,6 +410,14 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 	friend class thread_ctrl;
 
 public:
+	// Default constructor
+	named_thread()
+		: Context()
+		, thread(get_default_thread_name())
+	{
+		thread::start(&named_thread::entry_point);
+	}
+
 	// Normal forwarding constructor
 	template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<Context, Args&&...>>>
 	named_thread(std::string_view name, Args&&... args)
