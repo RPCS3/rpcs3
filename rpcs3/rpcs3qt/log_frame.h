@@ -49,9 +49,12 @@ private:
 	QList<QColor> m_color;
 	QColor m_color_stack;
 	QTextEdit* m_log;
-	QString m_old_text;
+	QString m_old_log_text;
+	QString m_old_tty_text;
 	ullong m_log_counter;
+	ullong m_tty_counter;
 	bool m_stack_log;
+	bool m_stack_tty;
 
 	fs::file m_tty_file;
 	QWidget* m_tty_container;
@@ -72,7 +75,8 @@ private:
 	QAction* m_noticeAct;
 	QAction* m_traceAct;
 
-	QAction* m_stackAct;
+	QAction* m_stackAct_log;
+	QAction* m_stackAct_tty;
 
 	QAction* m_TTYAct;
 
