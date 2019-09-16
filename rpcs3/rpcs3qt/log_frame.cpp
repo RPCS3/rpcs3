@@ -310,6 +310,7 @@ void log_frame::CreateAndConnectActions()
 	{
 		QMenu* menu = m_tty->createStandardContextMenu();
 		menu->addAction(m_clearTTYAct);
+		menu->addSeparator();
 		menu->addAction(m_stackAct_tty);
 		menu->addSeparator();
 		menu->addActions(m_tty_channel_acts->actions());
@@ -525,7 +526,7 @@ void log_frame::UpdateUI()
 
 				// set scrollbar to max means auto-scroll
 				sb->setValue(is_max ? sb->maximum() : sb_pos);
-			}			
+			}
 		}
 
 		// Limit processing time

@@ -77,7 +77,7 @@ private:
 
 	QAction* m_stackAct_log;
 	QAction* m_stackAct_tty;
-	
+
 	QAction* m_TTYAct;
 
 	QActionGroup* m_tty_channel_acts;
