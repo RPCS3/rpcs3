@@ -1,4 +1,4 @@
-#include "gui_settings.h"
+﻿#include "gui_settings.h"
 
 #include "game_list_frame.h"
 #include "qt_utils.h"
@@ -387,6 +387,10 @@ QString gui_settings::GetCurrentStylesheetPath()
 	if (stylesheet == gui::Default)
 	{
 		return "";
+	}
+	else if (stylesheet == gui::None)
+	{
+		return "-";
 	}
 
 	return m_settingsDir.absoluteFilePath(stylesheet + ".qss");

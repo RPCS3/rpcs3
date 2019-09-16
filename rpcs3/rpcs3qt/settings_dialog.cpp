@@ -1605,6 +1605,7 @@ void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
 
+	ui->combo_stylesheets->addItem("None", gui::None);
 	ui->combo_stylesheets->addItem("Default (Bright)", gui::Default);
 
 	for (const QString& entry : xgui_settings->GetStylesheetEntries())

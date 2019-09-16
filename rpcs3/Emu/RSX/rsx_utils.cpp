@@ -46,7 +46,7 @@ namespace rsx
 		u8* buf = buffer;
 
 		// Read the whole buffer from source
-		for (u32 y = 0; y < clip_h; ++y)
+		for (int y = 0; y < clip_h; ++y)
 		{
 			std::memcpy(buf, src, buffer_pitch);
 			src += src_pitch;
@@ -56,7 +56,7 @@ namespace rsx
 		buf = buffer;
 
 		// Write to destination
-		for (u32 y = 0; y < clip_h; ++y)
+		for (int y = 0; y < clip_h; ++y)
 		{
 			std::memcpy(dst, buf, buffer_pitch);
 			dst += dst_pitch;

@@ -310,6 +310,22 @@ void cpu_thread::notify()
 	}
 }
 
+void cpu_thread::abort()
+{
+	if (id_type() == 1)
+	{
+		*static_cast<named_thread<ppu_thread>*>(this) = thread_state::aborting;
+	}
+	else if (id_type() == 2)
+	{
+		*static_cast<named_thread<spu_thread>*>(this) = thread_state::aborting;
+	}
+	else
+	{
+		fmt::throw_exception("Invalid cpu_thread type");
+	}
+}
+
 std::string cpu_thread::dump() const
 {
 	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());
@@ -391,7 +407,7 @@ void cpu_thread::stop_all() noexcept
 		for_all_cpu([](cpu_thread* cpu)
 		{
 			cpu->state += cpu_flag::dbg_global_stop;
-			cpu->notify();
+			cpu->abort();
 		});
 	}
 

@@ -1127,6 +1127,9 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove shaders cache?")) != QMessageBox::Yes)
 		return true;
 
+	u32 caches_removed = 0;
+	u32 caches_total   = 0;
+
 	QDirIterator dir_iter(qstr(base_dir), QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 	while (dir_iter.hasNext())
 	{
@@ -1136,18 +1139,25 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 		{
 			if (QDir(filepath).removeRecursively())
 			{
-				LOG_SUCCESS(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
+				++caches_removed;
+				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
 			}
 			else
 			{
-				LOG_FATAL(GENERAL, "Could not completely remove shaders cache file: %s", sstr(filepath));
-				return false;
+				LOG_WARNING(GENERAL, "Could not completely remove shaders cache dir: %s", sstr(filepath));
 			}
-			break;
+			++caches_total;
 		}
 	}
 
-	return true;
+	const bool success = caches_total == caches_removed;
+
+	if (success)
+		LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
+	else
+		LOG_FATAL(GENERAL, "Only %d/%d shaders cache dirs could be removed in %s", caches_removed, caches_total, base_dir);
+
+	return success;
 }
 
 bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_interactive)
@@ -1166,7 +1176,7 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	{
 		const QString filepath = dir_iter.next();
 
-		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".obj", Qt::CaseInsensitive))
+		if (QString::compare(dir_iter.fileInfo().suffix(), QStringLiteral("obj"), Qt::CaseInsensitive) == 0)
 		{
 			if (QFile::remove(filepath))
 			{
@@ -1207,7 +1217,7 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	{
 		const QString filepath = dir_iter.next();
 
-		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".dat", Qt::CaseInsensitive))
+		if (QString::compare(dir_iter.fileInfo().suffix(), QStringLiteral("dat"), Qt::CaseInsensitive) == 0)
 		{
 			if (QFile::remove(filepath))
 			{

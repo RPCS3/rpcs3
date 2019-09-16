@@ -3,6 +3,7 @@
 #include <QButtonGroup>
 #include <QDialog>
 #include <QEvent>
+#include <QJsonObject>
 #include <QLabel>
 #include <QTabWidget>
 #include <QTimer>
@@ -102,6 +103,9 @@ private Q_SLOTS:
 private:
 	Ui::pad_settings_dialog *ui;
 	std::string m_title_id;
+
+	// Tooltip things
+	QJsonObject m_json_handlers;
 
 	// TabWidget
 	QTabWidget* m_tabs = nullptr;

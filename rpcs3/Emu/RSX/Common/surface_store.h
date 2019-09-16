@@ -775,6 +775,9 @@ namespace rsx
 						continue;
 
 					auto surface = tex_info.second.get();
+					if (access == rsx::surface_access::transfer && surface->write_through())
+						continue;
+
 					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
 						continue;
 

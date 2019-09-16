@@ -357,7 +357,7 @@ public:
 
 	void wait() noexcept
 	{
-		while (m_head == 0)
+		if (m_head == 0)
 		{
 			m_head.wait(0);
 		}

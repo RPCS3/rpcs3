@@ -26,11 +26,9 @@ gui_application::~gui_application()
 #endif
 }
 
-void gui_application::Init(const bool show_gui)
+void gui_application::Init()
 {
 	setWindowIcon(QIcon(":/rpcs3.ico"));
-
-	m_show_gui = show_gui;
 
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
@@ -211,6 +209,19 @@ void gui_application::InitializeCallbacks()
 */
 void gui_application::OnChangeStyleSheetRequest(const QString& path)
 {
+	// skip stylesheets on first repaint if a style was set from command line
+	if (m_use_cli_style && gui::stylesheet.isEmpty())
+	{
+		gui::stylesheet = styleSheet().isEmpty() ? "/* style set by command line arg */" : styleSheet();
+
+		if (m_main_window)
+		{
+			m_main_window->RepaintGui();
+		}
+
+		return;
+	}
+
 	QFile file(path);
 
 	// If we can't open the file, try the /share or /Resources folder
@@ -226,6 +237,10 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 	if (path == "")
 	{
 		setStyleSheet(gui::stylesheets::default_style_sheet);
+	}
+	else if (path == "-")
+	{
+		setStyleSheet("/* none */");
 	}
 	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
 	{

@@ -6,14 +6,14 @@
 #include <mutex>
 #include <condition_variable>
 
-// Should be at least 65536, currently 2097152.
-static constexpr std::uintptr_t s_hashtable_size = 1u << 21;
+// Total number of entries, should be a power of 2.
+static constexpr std::uintptr_t s_hashtable_size = 1u << 22;
 
 // TODO: it's probably better to implement more effective futex emulation for OSX/BSD here.
 static atomic_t<u64> s_hashtable[s_hashtable_size];
 
 // Pointer mask without bits used as hash, assuming signed 48-bit pointers
-static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & ~(s_hashtable_size - 1);
+static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & (~(s_hashtable_size - 1) << 2);
 
 // Max number of waiters is 32767
 static constexpr u64 s_waiter_mask = 0x7fff'0000'0000'0000;
@@ -30,14 +30,14 @@ static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*)
 	return true;
 };
 
-static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value)
+static inline bool ptr_cmp(const void* data, std::size_t size, u64 old_value, u64 mask)
 {
 	switch (size)
 	{
-	case 1: return reinterpret_cast<const atomic_t<u8>*>(data)->load() == old_value;
-	case 2: return reinterpret_cast<const atomic_t<u16>*>(data)->load() == old_value;
-	case 4: return reinterpret_cast<const atomic_t<u32>*>(data)->load() == old_value;
-	case 8: return reinterpret_cast<const atomic_t<u64>*>(data)->load() == old_value;
+	case 1: return (reinterpret_cast<const atomic_t<u8>*>(data)->load() & mask) == (old_value & mask);
+	case 2: return (reinterpret_cast<const atomic_t<u16>*>(data)->load() & mask) == (old_value & mask);
+	case 4: return (reinterpret_cast<const atomic_t<u32>*>(data)->load() & mask) == (old_value & mask);
+	case 8: return (reinterpret_cast<const atomic_t<u64>*>(data)->load() & mask) == (old_value & mask);
 	}
 
 	return false;
@@ -78,7 +78,7 @@ namespace
 		return s_waiter_maps[std::hash<const void*>()(ptr) % std::size(s_waiter_maps)];
 	}
 
-	void fallback_wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
+	void fallback_wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask)
 	{
 		auto& wmap = get_fallback_map(data);
 
@@ -90,7 +90,7 @@ namespace
 		// Update node key
 		s_tls_waiter.key() = data;
 
-		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value) && s_tls_wait_cb(data))
+		if (std::unique_lock lock(wmap.mutex); ptr_cmp(data, size, old_value, mask) && s_tls_wait_cb(data))
 		{
 			// Add node to the waiter list
 			const auto iter = wmap.list.insert(std::move(s_tls_waiter));
@@ -152,9 +152,9 @@ namespace
 
 #if !defined(_WIN32) && !defined(__linux__)
 
-void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
+void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask)
 {
-	fallback_wait(data, size, old_value, timeout);
+	fallback_wait(data, size, old_value, timeout, mask);
 }
 
 void atomic_storage_futex::notify_one(const void* data)
@@ -169,7 +169,7 @@ void atomic_storage_futex::notify_all(const void* data)
 
 #else
 
-void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout)
+void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask)
 {
 	if (!timeout)
 	{
@@ -178,7 +178,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[(iptr >> 2) % s_hashtable_size];
 
 	u32 new_value = 0;
 
@@ -222,9 +222,9 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	if (fallback)
 	{
-		fallback_wait(data, size, old_value, timeout);
+		fallback_wait(data, size, old_value, timeout, mask);
 	}
-	else if (ptr_cmp(data, size, old_value) && s_tls_wait_cb(data))
+	else if (ptr_cmp(data, size, old_value, mask) && s_tls_wait_cb(data))
 	{
 #ifdef _WIN32
 		LARGE_INTEGER qw;
@@ -304,7 +304,7 @@ void atomic_storage_futex::notify_one(const void* data)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[(iptr >> 2) % s_hashtable_size];
 
 	const auto [prev, ok] = entry.fetch_op([&](u64& value)
 	{
@@ -367,7 +367,7 @@ void atomic_storage_futex::notify_all(const void* data)
 {
 	const std::uintptr_t iptr = reinterpret_cast<std::uintptr_t>(data);
 
-	atomic_t<u64>& entry = s_hashtable[iptr % s_hashtable_size];
+	atomic_t<u64>& entry = s_hashtable[(iptr >> 2) % s_hashtable_size];
 
 	// Try to consume everything
 #ifdef _WIN32

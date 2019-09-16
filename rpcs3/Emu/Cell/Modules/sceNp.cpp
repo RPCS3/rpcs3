@@ -392,7 +392,7 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
 	}
-	else if (poolsize < 128 * 1024)
+	else if (poolsize < SCE_NP_MIN_POOLSIZE)
 	{
 		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
@@ -1746,7 +1746,16 @@ error_code sceNpLookupInit()
 
 	const auto lookup_manager = g_fxo->get<sce_np_lookup_manager>();
 
-	// TODO: check if this might throw SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED
+	if (lookup_manager->is_initialized)
+	{
+		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	lookup_manager->is_initialized = true;
 
 	return CELL_OK;
@@ -1758,7 +1767,16 @@ error_code sceNpLookupTerm()
 
 	const auto lookup_manager = g_fxo->get<sce_np_lookup_manager>();
 
-	// TODO: check if this might throw SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED
+	if (!lookup_manager->is_initialized)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	lookup_manager->is_initialized = false;
 
 	return CELL_OK;
@@ -2900,6 +2918,11 @@ error_code sceNpScoreInit()
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
 	}
 
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	score_manager->is_initialized = true;
 
 	return CELL_OK;
@@ -2914,6 +2937,11 @@ error_code sceNpScoreTerm()
 	if (!score_manager->is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
 	score_manager->is_initialized = false;

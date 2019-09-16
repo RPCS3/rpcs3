@@ -56,7 +56,7 @@ namespace vk
 		}
 	}
 
-	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region)
+	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes)
 	{
 		// Always validate
 		verify("Invalid image layout!" HERE),
@@ -66,6 +66,7 @@ namespace vk
 		{
 		default:
 		{
+			verify("Implicit byteswap option not supported for speficied format" HERE), !swap_bytes;
 			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dst->value, 1, &region);
 			break;
 		}
@@ -83,8 +84,9 @@ namespace vk
 			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
 			verify(HERE), dst->size() >= allocation_end;
 
-			const VkDeviceSize z_offset = align<VkDeviceSize>(region.bufferOffset + packed_length, 256);
-			const VkDeviceSize s_offset = align<VkDeviceSize>(z_offset + in_depth_size, 256);
+			const auto data_offset = u32(region.bufferOffset);
+			const auto z_offset = align<u32>(data_offset + packed_length, 256);
+			const auto s_offset = align<u32>(z_offset + in_depth_size, 256);
 
 			// 1. Copy the depth and stencil blocks to separate banks
 			VkBufferImageCopy sub_regions[2];
@@ -97,20 +99,34 @@ namespace vk
 
 			// 2. Interleave the separated data blocks with a compute job
 			vk::cs_interleave_task *job;
-			if (src->format() == VK_FORMAT_D24_UNORM_S8_UINT)
+			if (LIKELY(!swap_bytes))
 			{
-				job = vk::get_compute_task<vk::cs_gather_d24x8>();
+				if (src->format() == VK_FORMAT_D24_UNORM_S8_UINT)
+				{
+					job = vk::get_compute_task<vk::cs_gather_d24x8<false>>();
+				}
+				else
+				{
+					job = vk::get_compute_task<vk::cs_gather_d32x8<false>>();
+				}
 			}
 			else
 			{
-				job = vk::get_compute_task<vk::cs_gather_d32x8>();
+				if (src->format() == VK_FORMAT_D24_UNORM_S8_UINT)
+				{
+					job = vk::get_compute_task<vk::cs_gather_d24x8<true>>();
+				}
+				else
+				{
+					job = vk::get_compute_task<vk::cs_gather_d32x8<true>>();
+				}
 			}
 
 			vk::insert_buffer_memory_barrier(cmd, dst->value, z_offset, in_depth_size + in_stencil_size,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 
-			job->run(cmd, dst, (u32)region.bufferOffset, packed_length, (u32)z_offset, (u32)s_offset);
+			job->run(cmd, dst, data_offset, packed_length, z_offset, s_offset);
 
 			vk::insert_buffer_memory_barrier(cmd, dst->value, region.bufferOffset, packed_length,
 				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -145,8 +161,9 @@ namespace vk
 			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
 			verify("Out of memory (compute heap). Lower your resolution scale setting." HERE), src->size() >= allocation_end;
 
-			const VkDeviceSize z_offset = align<VkDeviceSize>(region.bufferOffset + packed_length, 256);
-			const VkDeviceSize s_offset = align<VkDeviceSize>(z_offset + in_depth_size, 256);
+			const auto data_offset = u32(region.bufferOffset);
+			const auto z_offset = align<u32>(data_offset + packed_length, 256);
+			const auto s_offset = align<u32>(z_offset + in_depth_size, 256);
 
 			// Zero out the stencil block
 			vkCmdFillBuffer(cmd, src->value, s_offset, in_stencil_size, 0);
@@ -166,7 +183,7 @@ namespace vk
 				job = vk::get_compute_task<vk::cs_scatter_d32x8>();
 			}
 
-			job->run(cmd, src, (u32)region.bufferOffset, packed_length, (u32)z_offset, (u32)s_offset);
+			job->run(cmd, src, data_offset, packed_length, z_offset, s_offset);
 
 			vk::insert_buffer_memory_barrier(cmd, src->value, z_offset, in_depth_size + in_stencil_size,
 				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -538,7 +555,7 @@ namespace vk
 			}
 			else
 			{
-				row_pitch = (((layout.width_in_block * block_size_in_bytes) + heap_align - 1) / heap_align) * heap_align;
+				row_pitch = rsx::align2(layout.width_in_block * block_size_in_bytes, heap_align);
 				verify(HERE), row_pitch == heap_align;
 			}
 

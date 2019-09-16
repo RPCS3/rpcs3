@@ -8,6 +8,7 @@
 #include <QObject>
 #include <QMessageBox>
 #include <QTextDocument>
+#include <QStyleFactory>
 
 #include "rpcs3qt/gui_application.h"
 
@@ -97,16 +98,27 @@ static semaphore<> s_qt_mutex{};
 	std::abort();
 }
 
-const char* arg_headless = "headless";
-const char* arg_no_gui   = "no-gui";
-const char* arg_high_dpi = "hidpi";
+const char* arg_headless   = "headless";
+const char* arg_no_gui     = "no-gui";
+const char* arg_high_dpi   = "hidpi";
+const char* arg_styles     = "styles";
+const char* arg_style      = "style";
+const char* arg_stylesheet = "stylesheet";
+
+bool find_arg(std::string arg, int& argc, char* argv[])
+{
+	arg = "--" + arg;
+	for (int i = 1; i < argc; ++i)
+		if (!strcmp(arg.c_str(), argv[i]))
+			return true;
+	return false;
+}
 
 QCoreApplication* createApplication(int& argc, char* argv[])
 {
-	const std::string headless("--" + std::string(arg_headless));
-	for (int i = 1; i < argc; ++i)
-		if (!strcmp(headless.c_str(), argv[i]))
-			return new headless_application(argc, argv);
+	if (find_arg(arg_headless, argc, argv))
+		return new headless_application(argc, argv);
+
 	return new gui_application(argc, argv);
 }
 
@@ -127,6 +139,11 @@ int main(int argc, char** argv)
 	s_init.unlock();
 	s_qt_mutex.lock();
 
+	// The constructor of QApplication eats the --style and --stylesheet arguments.
+	// By checking for stylesheet().isEmpty() we could implicitly know if a stylesheet was passed,
+	// but I haven't found an implicit way to check for style yet, so we naively check them both here for now.
+	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
+
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
 	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
 	app->setApplicationName("RPCS3");
@@ -142,24 +159,40 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
+	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
+	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
+	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(versionOption) || parser.isSet(helpOption))
 		return 0;
 
+	if (parser.isSet(arg_styles))
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+			const auto con_out = freopen("CONOUT$", "w", stdout);
+#endif
+		for (const auto& style : QStyleFactory::keys())
+			std::cout << "\n" << style.toStdString();
+
+		return 0;
+	}
+
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
 		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
 		const bool use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", parser.value(arg_high_dpi));
-		const bool show_gui     = !parser.isSet(arg_no_gui);
 
-		app->setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
-		app->setAttribute(Qt::AA_UseHighDpiPixmaps);
-		app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
-		app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
+		gui_app->setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
+		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
+		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
+		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
-		gui_app->Init(show_gui);
+		gui_app->SetShowGui(!parser.isSet(arg_no_gui));
+		gui_app->SetUseCliStyle(use_cli_style);
+		gui_app->Init();
 	}
 	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{

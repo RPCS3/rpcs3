@@ -7,7 +7,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 ### Windows 7 or later
 
-* [CMake 3.8.2+](https://www.cmake.org/download/) (add to PATH)
+* [CMake 3.14.1+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
 * [Qt 5.10+](https://www.qt.io/download-qt-installer) (Avoid 5.11.1, due to a bug)
 * [Visual Studio 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
