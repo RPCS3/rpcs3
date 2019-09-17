@@ -103,9 +103,9 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 	};
 
-	callbacks.get_pad_handler = [this](const std::string& title_id) -> std::shared_ptr<pad_thread>
+	callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
-		return std::make_shared<pad_thread>(get_thread(), m_game_window, title_id);
+		g_fxo->init<pad_thread>(get_thread(), m_game_window, title_id);
 	};
 
 	callbacks.get_gs_render = []() -> std::shared_ptr<GSRender>

@@ -16,14 +16,14 @@ struct PadInfo
 class pad_thread
 {
 public:
-	pad_thread(void* _curthread, void* _curwindow, const std::string& title_id = ""); // void * instead of QThread * and QWindow * because of include in emucore
+	pad_thread(void* _curthread, void* _curwindow, std::string_view title_id); // void * instead of QThread * and QWindow * because of include in emucore
 	~pad_thread();
 
 	PadInfo& GetInfo() { return m_info; }
 	auto& GetPads() { return m_pads; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
 	void Init();
-	void Reset(const std::string& title_id = "");
+	void Reset(std::string_view title_id);
 	void SetEnabled(bool enabled);
 	void SetIntercepted(bool intercepted);
 

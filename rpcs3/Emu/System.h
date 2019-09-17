@@ -219,7 +219,7 @@ struct EmuCallbacks
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit
 	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
 	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
-	std::function<std::shared_ptr<class pad_thread>(const std::string&)> get_pad_handler;
+	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
 	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;

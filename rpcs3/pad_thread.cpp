@@ -24,7 +24,7 @@ struct pad_setting
 	u32 device_type;
 };
 
-pad_thread::pad_thread(void *_curthread, void *_curwindow, const std::string& title_id) : curthread(_curthread), curwindow(_curwindow)
+pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view title_id) : curthread(_curthread), curwindow(_curwindow)
 {
 	pad::g_title_id = title_id;
 	Init();
@@ -144,7 +144,7 @@ void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
 	}
 }
 
-void pad_thread::Reset(const std::string& title_id)
+void pad_thread::Reset(std::string_view title_id)
 {
 	pad::g_title_id = title_id;
 	reset = active.load();
