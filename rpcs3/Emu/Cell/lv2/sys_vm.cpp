@@ -3,7 +3,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Memory/vm_locking.h"
 
-sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, const std::shared_ptr<lv2_memory_container>& ct, u32 psize)
+sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
 	: ct(ct)
 	, psize(psize)
 	, addr(_addr)
@@ -38,7 +38,9 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64
 		return CELL_EINVAL;
 	}
 
-	auto ct = cid == SYS_MEMORY_CONTAINER_ID_INVALID ? fxm::get<lv2_memory_container>() : idm::get<lv2_memory_container>(cid);
+	const auto idm_ct = idm::get<lv2_memory_container>(cid);
+
+	const auto ct = cid == SYS_MEMORY_CONTAINER_ID_INVALID ? g_fxo->get<lv2_memory_container>() : idm_ct.get();
 
 	if (!ct)
 	{

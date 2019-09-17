@@ -10,7 +10,7 @@
 
 LOG_CHANNEL(sys_mmapper);
 
-lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
+lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct)
 	: size(size)
 	, align(align)
 	, flags(flags)
@@ -113,7 +113,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 unk, u32 size
 	}
 
 	// Get "default" memory container
-	const auto dct = fxm::get<lv2_memory_container>();
+	const auto dct = g_fxo->get<lv2_memory_container>();
 
 	if (!dct->take(size))
 	{
@@ -184,7 +184,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 	}
 
 	// Generate a new mem ID
-	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr);
+	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr.get());
 
 	return CELL_OK;
 }
