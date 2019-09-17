@@ -714,16 +714,7 @@ public:
 	}
 };
 
-#include "Utilities/typemap.h"
 #include "util/fixed_typemap.hpp"
-
-extern utils::typemap g_typemap;
-
-constexpr utils::typemap* g_idm = &g_typemap;
-
-using utils::id_new;
-using utils::id_any;
-using utils::id_always;
 
 extern stx::manual_fixed_typemap<void> g_fixed_typemap;
 

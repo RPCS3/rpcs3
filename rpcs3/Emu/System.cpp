@@ -48,8 +48,6 @@
 
 stx::manual_fixed_typemap<void> g_fixed_typemap;
 
-utils::typemap g_typemap{nullptr};
-
 cfg_root g_cfg;
 
 bool g_use_rtm;
@@ -319,7 +317,6 @@ void Emulator::Init()
 
 	idm::init();
 	fxm::init();
-	g_idm->init();
 	g_fxo->reset();
 
 	// Reset defaults, cache them
@@ -1727,7 +1724,6 @@ void Emulator::Stop(bool restart)
 	lv2_obj::cleanup();
 	idm::clear();
 	fxm::clear();
-	g_idm->init();
 	g_fxo->reset();
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
