@@ -1,9 +1,6 @@
 ﻿#pragma once
 
-#include <queue>
-#include <libusb.h>
 #include "Emu/Memory/vm_ptr.h"
-#include "Emu/Io/usb_device.h"
 
 #define MAX_SYS_USBD_TRANSFERS 0x44
 
@@ -59,106 +56,6 @@ struct UsbDeviceIsoRequest
 	be_t<u32> start_frame;
 	be_t<u32> num_packets;
 	be_t<u16> packets[8];
-};
-
-// HLE usbd
-void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer);
-
-struct UsbTransfer
-{
-	u32 transfer_id = 0;
-
-	s32 result = 0;
-	u32 count  = 0;
-	UsbDeviceIsoRequest iso_request;
-
-	std::vector<u8> setup_buf;
-	libusb_transfer* transfer = nullptr;
-	bool busy                 = false;
-
-	// For fake transfers
-	bool fake           = false;
-	u64 expected_time   = 0;
-	s32 expected_result = 0;
-	u32 expected_count  = 0;
-};
-
-struct UsbLdd
-{
-	std::string name;
-	u16 id_vendor;
-	u16 id_product_min;
-	u16 id_product_max;
-};
-
-struct UsbPipe
-{
-	std::shared_ptr<usb_device> device = nullptr;
-	u8 endpoint                        = 0;
-};
-
-class usb_handler_thread
-{
-public:
-	usb_handler_thread();
-	~usb_handler_thread();
-
-	// Thread loop
-	void operator()();
-
-	// Called by the libusb callback function to notify transfer completion
-	void transfer_complete(libusb_transfer* transfer);
-
-	// LDDs handling functions
-	u32 add_ldd(vm::ptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max);
-	void check_devices_vs_ldds();
-
-	// Pipe functions
-	u32 open_pipe(u32 device_handle, u8 endpoint);
-	bool close_pipe(u32 pipe_id);
-	bool is_pipe(u32 pipe_id) const;
-	const UsbPipe& get_pipe(u32 pipe_id) const;
-
-	// Events related functions
-	bool get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::ptr<u64>& arg3);
-	void add_to_receive_queue(ppu_thread* ppu);
-
-	// Transfers related functions
-	u32 get_free_transfer_id();
-	UsbTransfer& get_transfer(u32 transfer_id);
-
-	// Map of devices actively handled by the ps3(device_id, device)
-	std::map<u32, std::pair<UsbInternalDevice, std::shared_ptr<usb_device>>> handled_devices;
-	// Fake transfers
-	std::vector<UsbTransfer*> fake_transfers;
-
-private:
-	void send_message(u32 message, u32 tr_id);
-
-private:
-	// Counters for device IDs, transfer IDs and pipe IDs
-	atomic_t<u8> dev_counter = 1;
-	u32 transfer_counter     = 0;
-	u32 pipe_counter         = 0x10; // Start at 0x10 only for tracing purposes
-
-	// List of device drivers
-	std::vector<UsbLdd> ldds;
-
-	// List of pipes
-	std::map<u32, UsbPipe> open_pipes;
-	// Transfers infos
-	std::array<UsbTransfer, 0x44> transfers;
-
-	// Queue of pending usbd events
-	std::queue<std::tuple<u32, u32, u32>> usbd_events;
-	// sys_usbd_receive_event PPU Threads
-	std::queue<ppu_thread*> receive_threads;
-
-	// List of devices "connected" to the ps3
-	std::vector<std::shared_ptr<usb_device>> usb_devices;
-
-	libusb_context* ctx       = nullptr;
-	atomic_t<bool> is_running = false;
 };
 
 s32 sys_usbd_initialize(vm::ptr<u32> handle);

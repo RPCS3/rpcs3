@@ -2,6 +2,7 @@
 
 #include <libusb.h>
 #include "Emu/Memory/vm.h"
+#include "Emu/Cell/lv2/sys_usbd.h"
 
 struct UsbTransfer;
 
@@ -70,6 +71,25 @@ struct UsbDeviceHID
 	u8 bNumDescriptors;
 	u8 bDescriptorType;
 	le_t<u16, 1> wDescriptorLength;
+};
+
+struct UsbTransfer
+{
+	u32 transfer_id = 0;
+
+	s32 result = 0;
+	u32 count  = 0;
+	UsbDeviceIsoRequest iso_request;
+
+	std::vector<u8> setup_buf;
+	libusb_transfer* transfer = nullptr;
+	bool busy                 = false;
+
+	// For fake transfers
+	bool fake           = false;
+	u64 expected_time   = 0;
+	s32 expected_result = 0;
+	u32 expected_count  = 0;
 };
 
 // Usb descriptor helper
