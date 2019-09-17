@@ -21,16 +21,16 @@ cache:
 
 install:
 - ps: | # set env vars for versioning
-    $env:COMM_TAG = $(git describe --tags $(git rev-list --tags --max-count=1))
+    $env:COMM_TAG = $(Get-Content ./rpcs3/rpcs3_version.cpp | findstr 'version{.*}' | %{ $ver = $_ -split "[{,]"; "{0}.{1}.{2}" -f [int]$ver[1],[int]$ver[2],[int]$ver[3]; })
     $env:COMM_COUNT = $(git rev-list --count HEAD)
     $env:COMM_HASH = $(git rev-parse --short=8 HEAD)
 
     if ($env:APPVEYOR_PULL_REQUEST_NUMBER) {
-        $env:BUILD = "rpcs3-{0}-{1}_win64.7z" -f $env:COMM_TAG, $env:COMM_HASH
+        $env:BUILD = "rpcs3-v{0}-{1}_win64.7z" -f $env:COMM_TAG, $env:COMM_HASH
         $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_HASH
     }
     else {
-        $env:BUILD = "rpcs3-{0}-{1}-{2}_win64.7z" -f $env:COMM_TAG, $env:COMM_COUNT, $env:COMM_HASH
+        $env:BUILD = "rpcs3-v{0}-{1}-{2}_win64.7z" -f $env:COMM_TAG, $env:COMM_COUNT, $env:COMM_HASH
         $env:AVVER = "{0}-{1}" -f $env:COMM_TAG.TrimStart("v"), $env:COMM_COUNT
     }
 

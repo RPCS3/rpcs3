@@ -31,11 +31,11 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 	# Package it up and send it off
 	./squashfs-root/usr/bin/appimagetool /rpcs3/build/appdir
 	ls
-	COMM_TAG="$(git describe --tags $(git rev-list --tags --max-count=1))"
+	COMM_TAG="$(grep 'version{.*}' rpcs3/rpcs3_version.cpp | awk -F[{,] '{printf \"%d.%d.%d\", $2, $3, $4}')"
 	COMM_COUNT="$(git rev-list --count HEAD)"
 	curl -sLO https://github.com/hcorion/uploadtool/raw/master/upload.sh
 	
-	mv ./RPCS3*.AppImage rpcs3-${COMM_TAG}-${COMM_COUNT}-${TRAVIS_COMMIT:0:8}_linux64.AppImage
+	mv ./RPCS3*.AppImage rpcs3-v${COMM_TAG}-${COMM_COUNT}-${TRAVIS_COMMIT:0:8}_linux64.AppImage
 	
 	FILESIZE=($(stat -c %s ./rpcs3*.AppImage))
 	SHA256SUM=($(sha256sum ./rpcs3*.AppImage))
