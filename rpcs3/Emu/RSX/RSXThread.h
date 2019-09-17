@@ -558,6 +558,7 @@ namespace rsx
 		u64 start_rsx_time = 0;
 		u64 int_flip_index = 0;
 		u64 last_flip_time;
+		int queued_flip_index = -1;
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
@@ -607,6 +608,7 @@ namespace rsx
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
 		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
+		virtual void on_frame_end(u32 buffer, bool forced = false);
 		virtual void flip(int buffer, bool emu_flip = false) = 0;
 		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
