@@ -94,7 +94,7 @@ namespace stx
 
 		// Explicitly (re)initialize object of type T possibly with dynamic type As and arguments
 		template <typename T, typename As = T, typename... Args>
-		T* init(Args&&... args) noexcept
+		As* init(Args&&... args) noexcept
 		{
 			auto& ptr = m_list[stx::type_counter<typeinfo>::template type<std::decay_t<T>>.index()];
 
@@ -103,8 +103,8 @@ namespace stx
 				delete static_cast<T*>(ptr);
 			}
 
-			auto* obj = static_cast<T*>(new std::decay_t<As>(std::forward<Args>(args)...));
-			ptr = obj;
+			As* obj = new std::decay_t<As>(std::forward<Args>(args)...);
+			ptr = static_cast<T*>(obj);
 			return obj;
 		}
 
