@@ -187,7 +187,7 @@ usb_handler_thread::usb_handler_thread()
 
 	if (!found_skylander)
 	{
-		sys_usbd.success("Adding emulated skylander");
+		sys_usbd.notice("Adding emulated skylander");
 		usb_devices.push_back(std::make_shared<usb_device_skylander>());
 	}
 
