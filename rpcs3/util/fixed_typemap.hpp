@@ -73,11 +73,11 @@ namespace stx
 		{
 			if (!m_list)
 			{
-				m_list = std::make_unique<void*[]>(stx::typeinfo_v<typeinfo>.count());
+				m_list = std::make_unique<void*[]>(stx::typelist_v<typeinfo>.count());
 				return;
 			}
 
-			for (auto& type : stx::typeinfo_v<typeinfo>)
+			for (auto& type : stx::typelist_v<typeinfo>)
 			{
 				type.destroy(m_list[type.index()]);
 			}
@@ -86,7 +86,7 @@ namespace stx
 		// Default initialize all objects if possible and not already initialized
 		void init() noexcept
 		{
-			for (auto& type : stx::typeinfo_v<typeinfo>)
+			for (auto& type : stx::typelist_v<typeinfo>)
 			{
 				type.create(m_list[type.index()]);
 			}
