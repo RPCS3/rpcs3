@@ -71,33 +71,41 @@ EmuCallbacks main_application::CreateCallbacks()
 		pad::get_current_handler()->SetEnabled(enable);
 	};
 
-	callbacks.get_kb_handler = [=]() -> std::shared_ptr<KeyboardHandlerBase>
+	callbacks.init_kb_handler = [=]()
 	{
 		switch (keyboard_handler type = g_cfg.io.keyboard)
 		{
-		case keyboard_handler::null: return std::make_shared<NullKeyboardHandler>();
+		case keyboard_handler::null:
+		{
+			g_fxo->init<KeyboardHandlerBase, NullKeyboardHandler>();
+			break;
+		}
 		case keyboard_handler::basic:
 		{
-			basic_keyboard_handler* ret = new basic_keyboard_handler();
+			basic_keyboard_handler* ret = g_fxo->init<KeyboardHandlerBase, basic_keyboard_handler>();
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
-			return std::shared_ptr<KeyboardHandlerBase>(ret);
+			break;
 		}
 		default: fmt::throw_exception("Invalid keyboard handler: %s", type);
 		}
 	};
 
-	callbacks.get_mouse_handler = [=]() -> std::shared_ptr<MouseHandlerBase>
+	callbacks.init_mouse_handler = [=]()
 	{
 		switch (mouse_handler type = g_cfg.io.mouse)
 		{
-		case mouse_handler::null: return std::make_shared<NullMouseHandler>();
+		case mouse_handler::null:
+		{
+			g_fxo->init<MouseHandlerBase, NullMouseHandler>();
+			break;
+		}
 		case mouse_handler::basic:
 		{
-			basic_mouse_handler* ret = new basic_mouse_handler();
+			basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>();
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
-			return std::shared_ptr<MouseHandlerBase>(ret);
+			break;
 		}
 		default: fmt::throw_exception("Invalid mouse handler: %s", type);
 		}

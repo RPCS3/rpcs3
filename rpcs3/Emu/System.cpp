@@ -1517,6 +1517,8 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			g_fxo->init();
 			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
 			Emu.GetCallbacks().init_pad_handler(m_title_id);
+			Emu.GetCallbacks().init_kb_handler();
+			Emu.GetCallbacks().init_mouse_handler();
 			network_thread_init();
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
