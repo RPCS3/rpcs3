@@ -85,6 +85,7 @@ public:
 	std::vector<UsbTransfer*> fake_transfers;
 
 	shared_mutex mutex;
+	atomic_t<bool> is_init = false;
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
@@ -121,6 +122,8 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh->mutex);
+	if (!usbh->is_init)
+		return;
 
 	usbh->transfer_complete(transfer);
 }
@@ -432,6 +435,7 @@ s32 sys_usbd_initialize(vm::ptr<u32> handle)
 
 	std::lock_guard lock(usbh->mutex);
 
+	usbh->is_init = true;
 	*handle = 0x115B;
 
 	// TODO
@@ -445,6 +449,7 @@ s32 sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh->mutex);
+	usbh->is_init = false;
 
 	// TODO
 	return CELL_OK;
@@ -457,6 +462,8 @@ s32 sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> device_list,
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh->mutex);
+	if (!usbh->is_init)
+		return CELL_EINVAL;
 
 	u32 i_tocopy = std::min((s32)max_devices, (s32)usbh->handled_devices.size());
 
@@ -476,6 +483,8 @@ s32 sys_usbd_register_extra_ldd(u32 handle, vm::ptr<char> s_product, u16 slen_pr
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh->mutex);
+	if (!usbh->is_init)
+		return CELL_EINVAL;
 
 	s32 res = usbh->add_ldd(s_product, slen_product, id_vendor, id_product_min, id_product_max);
 	usbh->check_devices_vs_ldds();
@@ -491,7 +500,7 @@ s32 sys_usbd_get_descriptor_size(u32 handle, u32 device_handle)
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->handled_devices.count(device_handle))
+	if (!usbh->is_init || !usbh->handled_devices.count(device_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -507,7 +516,7 @@ s32 sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> descrip
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->handled_devices.count(device_handle))
+	if (!usbh->is_init || !usbh->handled_devices.count(device_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -541,7 +550,7 @@ s32 sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 un
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->handled_devices.count(device_handle))
+	if (!usbh->is_init || !usbh->handled_devices.count(device_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -557,7 +566,7 @@ s32 sys_usbd_open_default_pipe(u32 handle, u32 device_handle)
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->handled_devices.count(device_handle))
+	if (!usbh->is_init || !usbh->handled_devices.count(device_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -573,7 +582,7 @@ s32 sys_usbd_close_pipe(u32 handle, u32 pipe_handle)
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->is_pipe(pipe_handle))
+	if (!usbh->is_init || !usbh->is_pipe(pipe_handle))
 	{
 		return CELL_EINVAL;
 	}
@@ -596,6 +605,12 @@ s32 sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::p
 	sys_usbd.trace("sys_usbd_receive_event(handle=%u, arg1=*0x%x, arg2=*0x%x, arg3=*0x%x)", handle, arg1, arg2, arg3);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+
+	{
+		std::lock_guard lock(usbh->mutex);
+		if (!usbh->is_init)
+			return CELL_EINVAL;
+	}
 
 	while (!Emu.IsStopped())
 	{
@@ -667,7 +682,7 @@ s32 sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_siz
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->is_pipe(id_pipe))
+	if (!usbh->is_init || !usbh->is_pipe(id_pipe))
 	{
 		return CELL_EINVAL;
 	}
@@ -716,7 +731,7 @@ s32 sys_usbd_isochronous_transfer_data(u32 handle, u32 id_pipe, vm::ptr<UsbDevic
 
 	std::lock_guard lock(usbh->mutex);
 
-	if (!usbh->is_pipe(id_pipe))
+	if (!usbh->is_init || !usbh->is_pipe(id_pipe))
 	{
 		return CELL_EINVAL;
 	}
@@ -740,6 +755,9 @@ s32 sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<
 
 	std::lock_guard lock(usbh->mutex);
 
+	if (!usbh->is_init)
+		return CELL_EINVAL;
+
 	auto& transfer = usbh->get_transfer(id_transfer);
 
 	*result = transfer.result;
@@ -755,6 +773,9 @@ s32 sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer, u32 un
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh->mutex);
+
+	if (!usbh->is_init)
+		return CELL_EINVAL;
 
 	auto& transfer = usbh->get_transfer(id_transfer);
 
