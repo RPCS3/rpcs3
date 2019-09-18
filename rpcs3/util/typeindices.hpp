@@ -20,7 +20,10 @@ namespace stx
 		friend type_counter<Info>;
 
 	public:
-		constexpr type_info() noexcept = default;
+		constexpr type_info() noexcept
+			: Info()
+		{
+		}
 
 		unsigned index() const
 		{
