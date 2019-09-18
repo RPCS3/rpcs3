@@ -123,4 +123,11 @@ namespace stx
 		typelist_v<Info>.next->next = this;
 		typelist_v<Info>.next       = this;
 	}
+
+	// Type index accessor
+	template <typename Info, typename T>
+	inline unsigned typeindex() noexcept
+	{
+		return type_counter<Info>::template type<T>.index();
+	}
 }

@@ -506,7 +506,7 @@ namespace utils
 		template <typename T>
 		typemap_head* get_head() const
 		{
-			return &m_map[stx::type_counter<typeinfo_base>::type<std::decay_t<T>>.index()];
+			return &m_map[stx::typeindex<typeinfo_base, std::decay_t<T>>()];
 		}
 
 	public:

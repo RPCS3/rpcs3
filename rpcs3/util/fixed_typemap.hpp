@@ -96,7 +96,7 @@ namespace stx
 		template <typename T, typename As = T, typename... Args>
 		As* init(Args&&... args) noexcept
 		{
-			auto& ptr = m_list[stx::type_counter<typeinfo>::template type<std::decay_t<T>>.index()];
+			auto& ptr = m_list[stx::typeindex<typeinfo, std::decay_t<T>>()];
 
 			if (ptr)
 			{
@@ -112,7 +112,7 @@ namespace stx
 		template <typename T>
 		T* get() const noexcept
 		{
-			return static_cast<T*>(m_list[stx::type_counter<typeinfo>::template type<std::decay_t<T>>.index()]);
+			return static_cast<T*>(m_list[stx::typeindex<typeinfo, std::decay_t<T>>()]);
 		}
 	};
 }
