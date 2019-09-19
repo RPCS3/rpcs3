@@ -104,7 +104,7 @@ public:
 	void on_init_thread() override;
 	void on_exit() override;
 
-	void flip(int buffer, bool emu_flip = false) override;
+	void flip(const rsx::display_flip_info_t& info) override;
 
 	GSFrameBase* get_frame() { return m_frame; }
 };
