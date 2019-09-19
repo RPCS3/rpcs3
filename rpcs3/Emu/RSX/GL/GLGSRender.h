@@ -86,11 +86,6 @@ private:
 	// Identity buffer used to fix broken gl_VertexID on ATI stack
 	std::unique_ptr<gl::buffer> m_identity_index_buffer;
 
-	s64 m_begin_time = 0;
-	s64 m_draw_time = 0;
-	s64 m_vertex_upload_time = 0;
-	s64 m_textures_upload_time = 0;
-
 	std::unique_ptr<gl::vertex_cache> m_vertex_cache;
 	std::unique_ptr<gl::shader_cache> m_shaders_cache;
 
@@ -171,7 +166,7 @@ protected:
 	void on_init_thread() override;
 	void on_exit() override;
 	bool do_method(u32 cmd, u32 arg) override;
-	void flip(int buffer, bool emu_flip = false) override;
+	void flip(const rsx::display_flip_info_t& info) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 

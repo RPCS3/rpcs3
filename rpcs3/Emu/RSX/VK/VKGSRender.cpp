@@ -863,7 +863,7 @@ void VKGSRender::check_heap_status(u32 flags)
 			frame_context_cleanup(target_frame, true);
 		}
 
-		m_flip_time += m_profiler.duration();
+		m_frame_stats.flip_time += m_profiler.duration();
 	}
 }
 
@@ -920,7 +920,7 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame || swapchain_unavailable ||
+	if (skip_current_frame || swapchain_unavailable ||
 		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
@@ -1009,7 +1009,7 @@ void VKGSRender::update_draw_state()
 
 	//TODO: Set up other render-state parameters into the program pipeline
 
-	m_setup_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 }
 
 void VKGSRender::begin_render_pass()
@@ -1085,7 +1085,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		return;
 	}
 
-	m_vertex_upload_time += m_profiler.duration();
+	m_frame_stats.vertex_upload_time += m_profiler.duration();
 
 	auto persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
 	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
@@ -1149,7 +1149,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	// Bind the new set of descriptors for use with this draw call
 	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
 
-	m_setup_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	if (!upload_info.index_info)
 	{
@@ -1193,12 +1193,12 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		}
 	}
 
-	m_draw_time += m_profiler.duration();
+	m_frame_stats.draw_exec_time += m_profiler.duration();
 }
 
 void VKGSRender::end()
 {
-	if (skip_frame || !framebuffer_status_valid || swapchain_unavailable ||
+	if (skip_current_frame || !framebuffer_status_valid || swapchain_unavailable ||
 		(conditional_render_enabled && conditional_render_test_failed))
 	{
 		execute_nop_draw();
@@ -1450,7 +1450,7 @@ void VKGSRender::end()
 		}
 	}
 
-	m_textures_upload_time += m_profiler.duration();
+	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	if (!load_program())
 	{
@@ -1469,7 +1469,7 @@ void VKGSRender::end()
 	// Load program execution environment
 	load_program_env();
 
-	m_setup_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
@@ -1672,7 +1672,7 @@ void VKGSRender::end()
 		}
 	}
 
-	m_textures_upload_time += m_profiler.duration();
+	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
 	{
@@ -1811,19 +1811,19 @@ void VKGSRender::on_init_thread()
 			{
 				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void inc_value(u32 index, u32 value) override
 			{
 				dlg->progress_bar_increment(index, (f32)value);
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void set_limit(u32 index, u32 limit) override
 			{
 				dlg->progress_bar_set_limit(index, limit);
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void refresh() override
@@ -1852,7 +1852,7 @@ void VKGSRender::on_exit()
 
 void VKGSRender::clear_surface(u32 mask)
 {
-	if (skip_frame || swapchain_unavailable) return;
+	if (skip_current_frame || swapchain_unavailable) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!rsx::method_registers.stencil_mask()) mask &= ~0x2u;
@@ -2393,7 +2393,9 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
 			flush_command_queue(true);
-			flip((s32)current_display_buffer, false);
+			rsx::display_flip_info_t info{};
+			info.buffer = current_display_buffer;
+			flip(info);
 		}
 	}
 }
@@ -3093,7 +3095,7 @@ void VKGSRender::reinitialize_swapchain()
 	should_reinitialize_swapchain = false;
 }
 
-void VKGSRender::flip(int buffer, bool emu_flip)
+void VKGSRender::flip(const rsx::display_flip_info_t& info)
 {
 	// Check swapchain condition/status
 	if (!m_swapchain->supports_automatic_wm_reports())
@@ -3127,7 +3129,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 	}
 	else if (m_current_frame->swap_command_buffer)
 	{
-		if (m_draw_calls > 0)
+		if (info.stats.draw_calls > 0)
 		{
 			// This can be 'legal' if the window was being resized and no polling happened because of swapchain_unavailable flag
 			LOG_ERROR(RSX, "Possible data corruption on frame context storage detected");
@@ -3137,9 +3139,9 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		frame_context_cleanup(m_current_frame, true);
 	}
 
-	if (skip_frame || swapchain_unavailable)
+	if (info.skip_frame || swapchain_unavailable)
 	{
-		if (!skip_frame)
+		if (!info.skip_frame)
 		{
 			verify(HERE), swapchain_unavailable;
 
@@ -3148,21 +3150,16 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 			flush_command_queue(true);
 			vk::advance_frame_counter();
 			frame_context_cleanup(m_current_frame, true);
-
-			m_draw_time = 0;
-			m_setup_time = 0;
-			m_vertex_upload_time = 0;
-			m_textures_upload_time = 0;
 		}
 
 		m_frame->flip(m_context);
-		rsx::thread::flip(buffer, emu_flip);
+		rsx::thread::flip(info);
 		return;
 	}
 
-	u32 buffer_width = display_buffers[buffer].width;
-	u32 buffer_height = display_buffers[buffer].height;
-	u32 buffer_pitch = display_buffers[buffer].pitch;
+	u32 buffer_width = display_buffers[info.buffer].width;
+	u32 buffer_height = display_buffers[info.buffer].height;
+	u32 buffer_pitch = display_buffers[info.buffer].pitch;
 
 	u32 av_format;
 	const auto avconfig = g_fxo->get<rsx::avconf>();
@@ -3251,9 +3248,9 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 	//Blit contents to screen..
 	vk::image* image_to_flip = nullptr;
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
+	if ((u32)info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
-		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		const u32 absolute_address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		if (auto render_target_texture = m_rtts.get_color_surface_at(absolute_address))
 		{
@@ -3282,7 +3279,7 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 					// TODO: Should emit only once to avoid flooding the log file
 					// TODO: Take AA scaling into account
 					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
-						display_buffers[buffer].width, display_buffers[buffer].height, avconfig->state * avconfig->resolution_x, avconfig->state * avconfig->resolution_y,
+						display_buffers[info.buffer].width, display_buffers[info.buffer].height, avconfig->state * avconfig->resolution_x, avconfig->state * avconfig->resolution_y,
 						render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
 
 					buffer_width = render_target_texture->width();
@@ -3435,12 +3432,12 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 		if (g_cfg.video.overlay)
 		{
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,   0, direct_fbo->width(), direct_fbo->height(), fmt::format("RSX Load:                 %3d%%", get_load()));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  18, direct_fbo->width(), direct_fbo->height(), fmt::format("draw calls: %17d", m_draw_calls));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  36, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call setup: %12dus", m_setup_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  54, direct_fbo->width(), direct_fbo->height(), fmt::format("vertex upload time: %9dus", m_vertex_upload_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  72, direct_fbo->width(), direct_fbo->height(), fmt::format("texture upload time: %8dus", m_textures_upload_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  90, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call execution: %8dus", m_draw_time));
-			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 108, direct_fbo->width(), direct_fbo->height(), fmt::format("submit and flip: %12dus", m_flip_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  18, direct_fbo->width(), direct_fbo->height(), fmt::format("draw calls: %17d", info.stats.draw_calls));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  36, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call setup: %12dus", info.stats.setup_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  54, direct_fbo->width(), direct_fbo->height(), fmt::format("vertex upload time: %9dus", info.stats.vertex_upload_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  72, direct_fbo->width(), direct_fbo->height(), fmt::format("texture upload time: %8dus", info.stats.textures_upload_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  90, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call execution: %8dus", info.stats.draw_exec_time));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 108, direct_fbo->width(), direct_fbo->height(), fmt::format("submit and flip: %12dus", info.stats.flip_time));
 
 			const auto num_dirty_textures = m_texture_cache.get_unreleased_textures_count();
 			const auto texture_memory_size = m_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -3464,20 +3461,10 @@ void VKGSRender::flip(int buffer, bool emu_flip)
 
 	queue_swap_request();
 
-	m_flip_time = m_profiler.duration();
-
-	//NOTE:Resource destruction is handled within the real swap handler
+	m_frame_stats.flip_time = m_profiler.duration();
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(buffer, emu_flip);
-
-	//Do not reset perf counters if we are skipping the next frame
-	if (skip_frame) return;
-
-	m_draw_time = 0;
-	m_setup_time = 0;
-	m_vertex_upload_time = 0;
-	m_textures_upload_time = 0;
+	rsx::thread::flip(info);
 }
 
 bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)

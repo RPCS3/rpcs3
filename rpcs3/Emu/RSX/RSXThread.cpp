@@ -352,7 +352,7 @@ namespace rsx
 			capture::capture_draw_memory(this);
 
 		in_begin_end = false;
-		m_draw_calls++;
+		m_frame_stats.draw_calls++;
 
 		method_registers.current_draw_clause.post_execute_cleanup();
 
@@ -2233,12 +2233,12 @@ namespace rsx
 		}
 	}
 
-	void thread::flip(int buffer, bool emu_flip)
+	void thread::flip(const display_flip_info_t& info)
 	{
 		if (async_flip_requested & flip_request::any)
 		{
 			// Deferred flip
-			if (emu_flip)
+			if (info.emu_flip)
 			{
 				async_flip_requested.clear(flip_request::emu_requested);
 			}
@@ -2248,14 +2248,8 @@ namespace rsx
 			}
 		}
 
-		if (emu_flip)
+		if (info.emu_flip)
 		{
-			if (g_cfg.video.frame_skip_enabled)
-			{
-				skip_frame = (m_skip_frame_ctr < 0);
-			}
-
-			m_draw_calls = 0;
 			performance_counters.sampled_frames++;
 		}
 	}
@@ -2543,13 +2537,18 @@ namespace rsx
 			zcull_ctrl->sync(this);
 		}
 
+		// Save current state
+		m_queued_flip.stats = m_frame_stats;
+		m_queued_flip.buffer = buffer;
+		m_queued_flip.skip_frame = skip_current_frame;
+
 		if (LIKELY(!forced))
 		{
 			if (!g_cfg.video.disable_FIFO_reordering)
 			{
 				// Try to enable FIFO optimizations
 				// Only rarely useful for some games like RE4
-				m_flattener.evaluate_performance(m_draw_calls);
+				m_flattener.evaluate_performance(m_frame_stats.draw_calls);
 			}
 
 			if (g_cfg.video.frame_skip_enabled)
@@ -2558,6 +2557,8 @@ namespace rsx
 
 				if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
 					m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
+
+				skip_current_frame = (m_skip_frame_ctr < 0);
 			}
 		}
 		else
@@ -2574,7 +2575,8 @@ namespace rsx
 			}
 		}
 
-		queued_flip_index = int(buffer);
+		// Reset current stats
+		m_frame_stats = {};
 	}
 
 	void thread::request_emu_flip(u32 buffer)
@@ -2602,7 +2604,7 @@ namespace rsx
 
 	void thread::handle_emu_flip(u32 buffer)
 	{
-		if (queued_flip_index < 0)
+		if (m_queued_flip.buffer == ~0u)
 		{
 			// Frame was not queued before flipping
 			on_frame_end(buffer, true);
@@ -2649,12 +2651,15 @@ namespace rsx
 		}
 
 		int_flip_index++;
+
+		verify(HERE), m_queued_flip.buffer == buffer;
 		current_display_buffer = buffer;
-		flip(buffer, true);
+		m_queued_flip.emu_flip = true;
+		flip(m_queued_flip);
 
 		last_flip_time = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
-		queued_flip_index = -1;
+		m_queued_flip.buffer = ~0u;
 
 		if (flip_handler)
 		{
