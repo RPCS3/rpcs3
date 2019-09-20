@@ -2604,6 +2604,12 @@ namespace rsx
 
 	void thread::handle_emu_flip(u32 buffer)
 	{
+		if (m_queued_flip.in_progress)
+		{
+			// Rescursion not allowed!
+			return;
+		}
+
 		if (m_queued_flip.buffer == ~0u)
 		{
 			// Frame was not queued before flipping
@@ -2653,13 +2659,16 @@ namespace rsx
 		int_flip_index++;
 
 		verify(HERE), m_queued_flip.buffer == buffer;
+
 		current_display_buffer = buffer;
 		m_queued_flip.emu_flip = true;
+		m_queued_flip.in_progress = true;
 		flip(m_queued_flip);
 
 		last_flip_time = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		m_queued_flip.buffer = ~0u;
+		m_queued_flip.in_progress = false;
 
 		if (flip_handler)
 		{
