@@ -6612,7 +6612,7 @@ public:
 	{
 		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 		const auto c = get_vr<s32[4]>(op.rt) << 31;
-		set_vr(op.rt, zext<u32[4]>((a <= b) & ~((a == b) & (c >= 0))));
+		set_vr(op.rt, noncast<u32[4]>(sext<s32[4]>(b > a) | (sext<s32[4]>(a == b) & c)) >> 31);
 	}
 
 	void MPYHHA(spu_opcode_t op)
