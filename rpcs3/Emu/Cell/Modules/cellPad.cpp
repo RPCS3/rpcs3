@@ -137,7 +137,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (rinfo.system_info & CELL_PAD_INFO_INTERCEPTED)
+	if (rinfo.ignore_input || (rinfo.system_info & CELL_PAD_INFO_INTERCEPTED))
 	{
 		data->len = CELL_PAD_LEN_NO_CHANGE;
 		return CELL_OK;
