@@ -142,7 +142,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		data->len = CELL_PAD_LEN_NO_CHANGE;
 		return CELL_OK;
 	}
-	
+
 	if (pad->ldd)
 	{
 		memcpy(data.get_ptr(), pad->ldd_data, sizeof(CellPadData));
@@ -153,9 +153,8 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		return CELL_OK;
 	}
 
-	u16 d1Initial, d2Initial;
-	d1Initial = pad->m_digital_1;
-	d2Initial = pad->m_digital_2;
+	u16 d1Initial   = pad->m_digital_1;
+	u16 d2Initial   = pad->m_digital_2;
 	bool btnChanged = false;
 
 	for (Button& button : pad->m_buttons)
@@ -165,8 +164,10 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
-			if (button.m_pressed) pad->m_digital_1 |= button.m_outKeyCode;
-			else pad->m_digital_1 &= ~button.m_outKeyCode;
+			if (button.m_pressed)
+				pad->m_digital_1 |= button.m_outKeyCode;
+			else
+				pad->m_digital_1 &= ~button.m_outKeyCode;
 
 			switch (button.m_outKeyCode)
 			{
@@ -196,8 +197,10 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		}
 		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 		{
-			if (button.m_pressed) pad->m_digital_2 |= button.m_outKeyCode;
-			else pad->m_digital_2 &= ~button.m_outKeyCode;
+			if (button.m_pressed)
+				pad->m_digital_2 |= button.m_outKeyCode;
+			else
+				pad->m_digital_2 &= ~button.m_outKeyCode;
 
 			switch (button.m_outKeyCode)
 			{
@@ -235,13 +238,6 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 				break;
 			default: break;
 			}
-		}
-
-		if (button.m_flush)
-		{
-			button.m_pressed = false;
-			button.m_flush = false;
-			button.m_value = 0;
 		}
 	}
 
