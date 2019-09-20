@@ -3769,15 +3769,35 @@ void spu_recompiler::SFX(spu_opcode_t op)
 
 void spu_recompiler::CGX(spu_opcode_t op) //nf
 {
-	for (u32 i = 0; i < 4; i++) // unrolled loop
+	const XmmLink& vt = XmmGet(op.rt, XmmType::Int);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& res = XmmAlloc();
+	const XmmLink& sign = XmmAlloc();
+
+	c->pslld(vt, 31);
+	c->psrad(vt, 31);
+
+	if (utils::has_avx())
 	{
-		c->bt(SPU_OFF_32(gpr, op.rt, &v128::_u32, i), 0);
-		c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, i));
-		c->adc(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, i));
-		c->setc(addr->r8());
-		c->movzx(*addr, addr->r8());
-		c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, i), *addr);
+		c->vpaddd(res, va, vb);
 	}
+	else
+	{
+		c->movdqa(res, va);
+		c->paddd(res, vb);
+	}
+
+	c->movdqa(sign, XmmConst(_mm_set1_epi32(-0x80000000)));
+	c->pxor(va, sign);
+	c->pxor(res, sign);
+	c->pcmpgtd(va, res);
+	c->pxor(res, sign);
+	c->pcmpeqd(res, vt);
+	c->pand(res, vt);
+	c->por(res, va);
+	c->psrld(res, 31);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), res);
 }
 
 void spu_recompiler::BGX(spu_opcode_t op) //nf

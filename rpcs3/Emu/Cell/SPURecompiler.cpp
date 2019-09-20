@@ -6607,9 +6607,9 @@ public:
 	void CGX(spu_opcode_t op)
 	{
 		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
-		const auto x = ~get_vr(op.rt) & 1;
+		const auto x = (get_vr<s32[4]>(op.rt) << 31) >> 31;
 		const auto s = eval(a + b);
-		set_vr(op.rt, zext<u32[4]>((noncast<u32[4]>(sext<s32[4]>(s < a)) | (s & ~x)) == -1));
+		set_vr(op.rt, noncast<u32[4]>(sext<s32[4]>(s < a) | (sext<s32[4]>(s == noncast<u32[4]>(x)) & x)) >> 31);
 	}
 
 	void BGX(spu_opcode_t op)
