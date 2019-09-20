@@ -79,7 +79,7 @@ class pad_settings_dialog : public QDialog
 
 	struct pad_button
 	{
-		cfg::string* cfg_name;
+		cfg::string* cfg_name = nullptr;
 		std::string key;
 		QString text;
 	};

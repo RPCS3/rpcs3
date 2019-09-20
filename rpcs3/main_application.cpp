@@ -62,7 +62,7 @@ EmuCallbacks main_application::CreateCallbacks()
 {
 	EmuCallbacks callbacks;
 
-	callbacks.reset_pads = [this](const std::string& title_id = "")
+	callbacks.reset_pads = [this](const std::string& title_id)
 	{
 		pad::get_current_handler()->Reset(title_id);
 	};

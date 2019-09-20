@@ -595,7 +595,7 @@ void keyboard_pad_handler::ThreadProc()
 			bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
 			bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
-			connected++;
+			connected_devices++;
 		}
 		else
 		{

@@ -185,15 +185,15 @@ void pad_thread::ThreadFunc()
 			Init();
 		}
 
-		u32 connected = 0;
+		u32 connected_devices = 0;
 
 		for (auto& cur_pad_handler : handlers)
 		{
 			cur_pad_handler.second->ThreadProc();
-			connected += cur_pad_handler.second->connected;
+			connected_devices += cur_pad_handler.second->connected_devices;
 		}
 
-		m_info.now_connect = connected + num_ldd_pad;
+		m_info.now_connect = connected_devices + num_ldd_pad;
 
 		// The following section is only reached when a dialog was closed and the pads are still intercepted.
 		// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).

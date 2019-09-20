@@ -2,6 +2,10 @@
 #include "PadHandler.h"
 #include "pad_thread.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 cfg_input g_cfg_input;
 
 PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
@@ -9,7 +13,7 @@ PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 }
 
 // Search an unordered map for a string value and return found keycode
-int PadHandlerBase::FindKeyCode(std::unordered_map<u32, std::string> map, const cfg::string& name, bool fallback)
+int PadHandlerBase::FindKeyCode(const std::unordered_map<u32, std::string>& map, const cfg::string& name, bool fallback)
 {
 	std::string def = name.def;
 	std::string nam = name.to_string();
@@ -34,7 +38,7 @@ int PadHandlerBase::FindKeyCode(std::unordered_map<u32, std::string> map, const 
 	return def_code;
 }
 
-long PadHandlerBase::FindKeyCode(std::unordered_map<u64, std::string> map, const cfg::string& name, bool fallback)
+long PadHandlerBase::FindKeyCode(const std::unordered_map<u64, std::string>& map, const cfg::string& name, bool fallback)
 {
 	std::string def = name.def;
 	std::string nam = name.to_string();
@@ -60,7 +64,7 @@ long PadHandlerBase::FindKeyCode(std::unordered_map<u64, std::string> map, const
 }
 
 // Search an unordered map for a string value and return found keycode
-int PadHandlerBase::FindKeyCodeByString(std::unordered_map<u32, std::string> map, const std::string& name, bool fallback)
+int PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u32, std::string>& map, const std::string& name, bool fallback)
 {
 	for (auto it = map.begin(); it != map.end(); ++it)
 	{
@@ -70,7 +74,7 @@ int PadHandlerBase::FindKeyCodeByString(std::unordered_map<u32, std::string> map
 
 	if (fallback)
 	{
-		LOG_ERROR(HLE, "long FindKeyCodeByString fohr [name = %s] returned with 0", name);
+		LOG_ERROR(HLE, "long FindKeyCodeByString for [name = %s] returned with 0", name);
 		return 0;
 	}
 
@@ -78,7 +82,7 @@ int PadHandlerBase::FindKeyCodeByString(std::unordered_map<u32, std::string> map
 }
 
 // Search an unordered map for a string value and return found keycode
-long PadHandlerBase::FindKeyCodeByString(std::unordered_map<u64, std::string> map, const std::string& name, bool fallback)
+long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::string>& map, const std::string& name, bool fallback)
 {
 	for (auto it = map.begin(); it != map.end(); ++it)
 	{
@@ -88,7 +92,7 @@ long PadHandlerBase::FindKeyCodeByString(std::unordered_map<u64, std::string> ma
 
 	if (fallback)
 	{
-		LOG_ERROR(HLE, "long FindKeyCodeByString fohr [name = %s] returned with 0", name);
+		LOG_ERROR(HLE, "long FindKeyCodeByString for [name = %s] returned with 0", name);
 		return 0;
 	}
 
@@ -246,7 +250,7 @@ std::string PadHandlerBase::name_string()
 	return m_name_string;
 }
 
-int PadHandlerBase::max_devices()
+size_t PadHandlerBase::max_devices()
 {
 	return m_max_devices;
 }
@@ -304,5 +308,329 @@ void PadHandlerBase::init_configs()
 			init_config(&m_pad_configs[index], get_config_filename(i, pad::g_title_id));
 			index++;
 		}
+	}
+}
+
+void PadHandlerBase::get_next_button_press(const std::string& pad_id, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
+{
+	if (get_blacklist)
+		blacklist.clear();
+
+	auto device = get_device(pad_id);
+
+	const auto status = update_connection(device);
+	if (status == connection::disconnected)
+		return fail_callback(pad_id);
+	else if (status == connection::no_data)
+		return;
+
+	// Get the current button values
+	auto data = get_button_values(device);
+
+	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
+	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
+	// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
+	std::pair<u16, std::string> pressed_button = { 0, "" };
+	for (const auto& button : button_list)
+	{
+		u32 keycode = button.first;
+		u16 value = data[keycode];
+
+		if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
+			continue;
+
+		const bool is_trigger = get_is_left_trigger(keycode) || get_is_right_trigger(keycode);
+		const bool is_stick   = !is_trigger && (get_is_left_stick(keycode) || get_is_right_stick(keycode));
+		const bool is_button = !is_trigger && !is_stick;
+
+		if ((is_trigger && (value > m_trigger_threshold)) || (is_stick && (value > m_thumb_threshold)) || (is_button && (value > 0)))
+		{
+			if (get_blacklist)
+			{
+				blacklist.emplace_back(keycode);
+				LOG_ERROR(HLE, "%s Calibration: Added key [ %d = %s ] to blacklist. Value = %d", m_type, keycode, button.second, value);
+			}
+			else if (value > pressed_button.first)
+				pressed_button = { value, button.second };
+		}
+	}
+
+	if (get_blacklist)
+	{
+		if (blacklist.empty())
+			LOG_SUCCESS(HLE, "%s Calibration: Blacklist is clear. No input spam detected", m_type);
+		return;
+	}
+
+	const auto preview_values = get_preview_values(data);
+
+	if (pressed_button.first > 0)
+		return callback(pressed_button.first, pressed_button.second, pad_id, preview_values);
+	else
+		return callback(0, "", pad_id, preview_values);
+
+	return;
+}
+
+// Update the pad button values based on their type and thresholds. With this you can use axis or triggers as buttons or vice versa
+void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool ignore_stick_threshold, bool ignore_trigger_threshold)
+{
+	if (!device || !device->config)
+	{
+		return;
+	}
+
+	if (get_is_left_trigger(keyCode))
+	{
+		pressed = val > (ignore_trigger_threshold ? 0 : device->config->ltriggerthreshold);
+		val = pressed ? NormalizeTriggerInput(val, device->config->ltriggerthreshold) : 0;
+	}
+	else if (get_is_right_trigger(keyCode))
+	{
+		pressed = val > (ignore_trigger_threshold ? 0 : device->config->rtriggerthreshold);
+		val = pressed ? NormalizeTriggerInput(val, device->config->rtriggerthreshold) : 0;
+	}
+	else if (get_is_left_stick(keyCode))
+	{
+		pressed = val > (ignore_stick_threshold ? 0 : device->config->lstickdeadzone);
+		val = pressed ? NormalizeStickInput(val, device->config->lstickdeadzone, device->config->lstickmultiplier, ignore_stick_threshold) : 0;
+	}
+	else if (get_is_right_stick(keyCode))
+	{
+		pressed = val > (ignore_stick_threshold ? 0 : device->config->rstickdeadzone);
+		val = pressed ? NormalizeStickInput(val, device->config->rstickdeadzone, device->config->rstickmultiplier, ignore_stick_threshold) : 0;
+	}
+	else // normal button (should in theory also support sensitive buttons)
+	{
+		pressed = val > 0;
+		val = pressed ? val : 0;
+	}
+}
+
+bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
+{
+	std::shared_ptr<PadDevice> pad_device = get_device(device);
+	if (!pad_device)
+		return false;
+
+	int index = static_cast<int>(bindings.size());
+	m_pad_configs[index].load();
+	pad_device->config = &m_pad_configs[index];
+	pad_config* profile = pad_device->config;
+	if (profile == nullptr)
+		return false;
+
+	std::array<u32, button::button_count> mapping = get_mapped_key_codes(pad_device, profile);
+
+	pad->Init
+	(
+		CELL_PAD_STATUS_DISCONNECTED,
+		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
+		CELL_PAD_DEV_TYPE_STANDARD,
+		profile->device_class_type
+	);
+
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::up], CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::down], CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::left], CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::right], CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::cross], CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::square], CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::circle], CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::triangle], CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::l1], CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::l2], CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::l3], CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::r1], CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::r2], CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::r3], CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::start], CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::select], CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, mapping[button::ps], 0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved (and currently not in use by rpcs3 at all)
+
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X, mapping[button::ls_left], mapping[button::ls_right]);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y, mapping[button::ls_down], mapping[button::ls_up]);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, mapping[button::rs_left], mapping[button::rs_right]);
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, mapping[button::rs_down], mapping[button::rs_up]);
+
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
+
+	pad->m_vibrateMotors.emplace_back(true, 0);
+	pad->m_vibrateMotors.emplace_back(false, 0);
+
+	bindings.emplace_back(pad_device, pad);
+
+	return true;
+}
+
+std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& /*device*/, const pad_config* profile)
+{
+	std::array<u32, button::button_count> mapping;
+
+	mapping[button::up]       = FindKeyCode(button_list, profile->up);
+	mapping[button::down]     = FindKeyCode(button_list, profile->down);
+	mapping[button::left]     = FindKeyCode(button_list, profile->left);
+	mapping[button::right]    = FindKeyCode(button_list, profile->right);
+	mapping[button::cross]    = FindKeyCode(button_list, profile->cross);
+	mapping[button::square]   = FindKeyCode(button_list, profile->square);
+	mapping[button::circle]   = FindKeyCode(button_list, profile->circle);
+	mapping[button::triangle] = FindKeyCode(button_list, profile->triangle);
+	mapping[button::start]    = FindKeyCode(button_list, profile->start);
+	mapping[button::select]   = FindKeyCode(button_list, profile->select);
+	mapping[button::l1]       = FindKeyCode(button_list, profile->l1);
+	mapping[button::l2]       = FindKeyCode(button_list, profile->l2);
+	mapping[button::l3]       = FindKeyCode(button_list, profile->l3);
+	mapping[button::r1]       = FindKeyCode(button_list, profile->r1);
+	mapping[button::r2]       = FindKeyCode(button_list, profile->r2);
+	mapping[button::r3]       = FindKeyCode(button_list, profile->r3);
+	mapping[button::ls_left]  = FindKeyCode(button_list, profile->ls_left);
+	mapping[button::ls_right] = FindKeyCode(button_list, profile->ls_right);
+	mapping[button::ls_down]  = FindKeyCode(button_list, profile->ls_down);
+	mapping[button::ls_up]    = FindKeyCode(button_list, profile->ls_up);
+	mapping[button::rs_left]  = FindKeyCode(button_list, profile->rs_left);
+	mapping[button::rs_right] = FindKeyCode(button_list, profile->rs_right);
+	mapping[button::rs_down]  = FindKeyCode(button_list, profile->rs_down);
+	mapping[button::rs_up]    = FindKeyCode(button_list, profile->rs_up);
+
+	return mapping;
+}
+
+void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+{
+	if (!device || !pad)
+		return;
+
+	auto profile = device->config;
+
+	auto button_values = get_button_values(device);
+
+	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
+	for (auto& btn : pad->m_buttons)
+	{
+		btn.m_value = button_values[btn.m_keyCode];
+		TranslateButtonPress(device, btn.m_keyCode, btn.m_pressed, btn.m_value);
+	}
+
+	// used to get the absolute value of an axis
+	s32 stick_val[4]{ 0 };
+
+	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
+	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
+	{
+		bool pressed;
+
+		// m_keyCodeMin is the mapped key for left or down
+		u32 key_min = pad->m_sticks[i].m_keyCodeMin;
+		u16 val_min = button_values[key_min];
+		TranslateButtonPress(device, key_min, pressed, val_min, true);
+
+		// m_keyCodeMax is the mapped key for right or up
+		u32 key_max = pad->m_sticks[i].m_keyCodeMax;
+		u16 val_max = button_values[key_max];
+		TranslateButtonPress(device, key_max, pressed, val_max, true);
+
+		// cancel out opposing values and get the resulting difference
+		stick_val[i] = val_max - val_min;
+	}
+
+	u16 lx, ly, rx, ry;
+
+	// Normalize our two stick's axis based on the thresholds
+	std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], profile->lstickdeadzone);
+	std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], profile->rstickdeadzone);
+
+	if (profile->padsquircling != 0)
+	{
+		std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, profile->padsquircling);
+		std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, profile->padsquircling);
+	}
+
+	if (m_type == pad_handler::ds4)
+	{
+		ly = 255 - ly;
+		ry = 255 - ry;
+
+		// these are added with previous value and divided to 'smooth' out the readings
+		// the ds4 seems to rapidly flicker sometimes between two values and this seems to stop that
+
+		pad->m_sticks[0].m_value = (lx + pad->m_sticks[0].m_value) / 2; // LX
+		pad->m_sticks[1].m_value = (ly + pad->m_sticks[1].m_value) / 2; // LY
+		pad->m_sticks[2].m_value = (rx + pad->m_sticks[2].m_value) / 2; // RX
+		pad->m_sticks[3].m_value = (ry + pad->m_sticks[3].m_value) / 2; // RY
+	}
+	else
+	{
+		pad->m_sticks[0].m_value = lx;
+		pad->m_sticks[1].m_value = 255 - ly;
+		pad->m_sticks[2].m_value = rx;
+		pad->m_sticks[3].m_value = 255 - ry;
+	}
+}
+
+void PadHandlerBase::ThreadProc()
+{
+	for (size_t i = 0; i < bindings.size(); ++i)
+	{
+		auto device = bindings[i].first;
+		auto pad    = bindings[i].second;
+
+		if (!device || !pad)
+			continue;
+
+		const auto status = update_connection(device);
+
+		switch (status)
+		{
+		case connection::no_data:
+		case connection::connected:
+		{
+			if (!last_connection_status[i])
+			{
+				LOG_SUCCESS(HLE, "%s device %d connected", m_type, i);
+				pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				last_connection_status[i] = true;
+				connected_devices++;
+			}
+
+			if (status == connection::no_data)
+				continue;
+
+			break;
+		}
+		case connection::disconnected:
+		{
+			if (last_connection_status[i])
+			{
+				LOG_ERROR(HLE, "%s device %d disconnected", m_type, i);
+				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
+				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+				last_connection_status[i] = false;
+				connected_devices--;
+			}
+			continue;
+		}
+		default:
+			break;
+		}
+
+		get_mapping(device, pad);
+		get_extended_info(device, pad);
+		apply_pad_data(device, pad);
+
+#ifdef _WIN32
+		for (const auto& btn : pad->m_buttons)
+		{
+			if (pad->m_buttons[i].m_pressed)
+			{
+				SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
+				break;
+			}
+		}
+#endif
 	}
 }

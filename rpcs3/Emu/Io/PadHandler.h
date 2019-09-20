@@ -59,11 +59,11 @@ enum Digital2Flags
 
 enum DeviceCapability
 {
-	CELL_PAD_CAPABILITY_PS3_CONFORMITY  = 0x00000001, //PS3 Conformity Controller
-	CELL_PAD_CAPABILITY_PRESS_MODE      = 0x00000002, //Press mode supported
-	CELL_PAD_CAPABILITY_SENSOR_MODE     = 0x00000004, //Sensor mode supported
-	CELL_PAD_CAPABILITY_HP_ANALOG_STICK = 0x00000008, //High Precision analog stick
-	CELL_PAD_CAPABILITY_ACTUATOR        = 0x00000010, //Motor supported
+	CELL_PAD_CAPABILITY_PS3_CONFORMITY  = 0x00000001, // PS3 Conformity Controller
+	CELL_PAD_CAPABILITY_PRESS_MODE      = 0x00000002, // Press mode supported
+	CELL_PAD_CAPABILITY_SENSOR_MODE     = 0x00000004, // Sensor mode supported
+	CELL_PAD_CAPABILITY_HP_ANALOG_STICK = 0x00000008, // High Precision analog stick
+	CELL_PAD_CAPABILITY_ACTUATOR        = 0x00000010, // Motor supported
 };
 
 enum DeviceType
@@ -184,11 +184,11 @@ struct Pad
 	std::vector<AnalogSensor> m_sensors;
 	std::vector<VibrateMotor> m_vibrateMotors;
 
-	//These hold bits for their respective buttons
+	// These hold bits for their respective buttons
 	u16 m_digital_1;
 	u16 m_digital_2;
 
-	//All sensors go from 0-255
+	// All sensors go from 0-255
 	u16 m_analog_left_x;
 	u16 m_analog_left_y;
 	u16 m_analog_right_x;
@@ -207,8 +207,8 @@ struct Pad
 	u16 m_press_R1;
 	u16 m_press_R2;
 
-	//Except for these...0-1023
-	//~399 on sensor y is a level non moving controller
+	// Except for these...0-1023
+	// ~399 on sensor y is a level non moving controller
 	u16 m_sensor_x;
 	u16 m_sensor_y;
 	u16 m_sensor_z;
@@ -396,15 +396,59 @@ struct pad_config final : cfg::node
 	}
 };
 
+struct PadDevice
+{
+	pad_config* config{ nullptr };
+};
+
 class PadHandlerBase
 {
 protected:
+	enum button
+	{
+		up,
+		down,
+		left,
+		right,
+		cross,
+		square,
+		circle,
+		triangle,
+		l1,
+		l2,
+		l3,
+		r1,
+		r2,
+		r3,
+		start,
+		select,
+		ps,
+		//reserved,
+		ls_left,
+		ls_right,
+		ls_down,
+		ls_up,
+		rs_left,
+		rs_right,
+		rs_down,
+		rs_up,
+
+		button_count
+	};
+
+	enum connection
+	{
+		no_data,
+		connected,
+		disconnected
+	};
+
 	static const u32 MAX_GAMEPADS = 7;
 
 	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
 
 	std::string m_name_string;
-	int m_max_devices = 0;
+	size_t m_max_devices = 0;
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
 
@@ -413,6 +457,9 @@ protected:
 	bool b_has_rumble = false;
 	bool b_has_config = false;
 	std::array<pad_config, MAX_GAMEPADS> m_pad_configs;
+	std::vector<std::pair<std::shared_ptr<PadDevice>, std::shared_ptr<Pad>>> bindings;
+	std::unordered_map<u32, std::string> button_list;
+	std::vector<u32> blacklist;
 
 	template <typename T>
 	T lerp(T v0, T v1, T t) {
@@ -420,16 +467,16 @@ protected:
 	}
 
 	// Search an unordered map for a string value and return found keycode
-	int FindKeyCode(std::unordered_map<u32, std::string> map, const cfg::string& name, bool fallback = true);
+	int FindKeyCode(const std::unordered_map<u32, std::string>& map, const cfg::string& name, bool fallback = true);
 
 	// Search an unordered map for a string value and return found keycode
-	long FindKeyCode(std::unordered_map<u64, std::string> map, const cfg::string& name, bool fallback = true);
+	long FindKeyCode(const std::unordered_map<u64, std::string>& map, const cfg::string& name, bool fallback = true);
 
 	// Search an unordered map for a string value and return found keycode
-	int FindKeyCodeByString(std::unordered_map<u32, std::string> map, const std::string& name, bool fallback = true);
+	int FindKeyCodeByString(const std::unordered_map<u32, std::string>& map, const std::string& name, bool fallback = true);
 
 	// Search an unordered map for a string value and return found keycode
-	long FindKeyCodeByString(std::unordered_map<u64, std::string> map, const std::string& name, bool fallback = true);
+	long FindKeyCodeByString(const std::unordered_map<u64, std::string>& map, const std::string& name, bool fallback = true);
 
 	// Get new scaled value between 0 and 255 based on its minimum and maximum
 	float ScaleStickInput(s32 raw_value, int minimum, int maximum);
@@ -472,12 +519,12 @@ public:
 	s32 trigger_max = 255;
 	s32 vibration_min = 0;
 	s32 vibration_max = 255;
-	u32 connected = 0;
+	u32 connected_devices = 0;
 
 	pad_handler m_type = pad_handler::null;
 
 	std::string name_string();
-	int max_devices();
+	size_t max_devices();
 	bool has_config();
 	bool has_rumble();
 	bool has_deadzones();
@@ -489,20 +536,32 @@ public:
 	virtual bool Init() { return true; }
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
-	//Sets window to config the controller(optional)
-	virtual void GetNextButtonPress(const std::string& /*padId*/, const std::function<void(u16, std::string, std::string, int[])>& /*callback*/, const std::function<void(std::string)>& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) {}
+	// Sets window to config the controller(optional)
 	virtual void SetPadData(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/) {}
-	//Return list of devices for that handler
+	// Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
-	//Callback called during pad_thread::ThreadFunc
-	virtual void ThreadProc() = 0;
-	//Binds a Pad to a device
-	virtual bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, const std::string& /*device*/) = 0;
+	// Callback called during pad_thread::ThreadFunc
+	virtual void ThreadProc();
+	// Binds a Pad to a device
+	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device);
 	virtual void init_config(pad_config* /*cfg*/, const std::string& /*name*/) = 0;
+	virtual void get_next_button_press(const std::string& padId, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
 
 private:
-	virtual void TranslateButtonPress(u64 /*keyCode*/, bool& /*pressed*/, u16& /*val*/, bool /*ignore_threshold*/ = false) {}
+	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/) { return nullptr; };
+	virtual bool get_is_left_trigger(u64 /*keyCode*/) { return false; };
+	virtual bool get_is_right_trigger(u64 /*keyCode*/) { return false; };
+	virtual bool get_is_left_stick(u64 /*keyCode*/) { return false; };
+	virtual bool get_is_right_stick(u64 /*keyCode*/) { return false; };
+	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/) { return connection::disconnected; };
+	virtual void get_extended_info(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {};
+	virtual void apply_pad_data(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {};
+	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; };
+	virtual std::array<int, 6> get_preview_values(std::unordered_map<u64, u16> /*data*/) { return {}; };
 
 protected:
+	virtual std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& /*device*/, const pad_config* profile);
+	virtual void get_mapping(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad);
+	void TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u64 keyCode, bool& pressed, u16& val, bool ignore_stick_threshold = false, bool ignore_trigger_threshold = false);
 	void init_configs();
 };
