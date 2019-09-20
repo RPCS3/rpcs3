@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Io/PadHandler.h"
 #include <Windows.h>
@@ -86,13 +86,12 @@ class mm_joystick_handler final : public PadHandlerBase
 		{ joy_v_neg, "V-" },
 	};
 
-	struct MMJOYDevice
+	struct MMJOYDevice : public PadDevice
 	{
 		u32 device_id{ 0 };
 		std::string device_name{ "" };
-		pad_config* config{ nullptr };
-		JOYINFOEX device_info;
-		JOYCAPS device_caps;
+		JOYINFOEX device_info{};
+		JOYCAPS device_caps{};
 		u64 trigger_left = 0;
 		u64 trigger_right = 0;
 		std::vector<u64> axis_left  = { 0,0,0,0 };
@@ -106,22 +105,26 @@ public:
 	bool Init() override;
 
 	std::vector<std::string> ListDevices() override;
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
-	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
+	void get_next_button_press(const std::string& padId, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
 	std::unordered_map<u64, u16> GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps);
 	int GetIDByName(const std::string& name);
 	bool GetMMJOYDevice(int index, MMJOYDevice* dev);
 
 	bool is_init = false;
-	u32 m_supported_joysticks = 0;
 
 	std::vector<u64> blacklist;
-	std::unordered_map<int, MMJOYDevice> m_devices;
-	std::vector<std::pair<std::shared_ptr<MMJOYDevice>, std::shared_ptr<Pad>>> bindings;
 	std::shared_ptr<MMJOYDevice> m_dev;
+	std::unordered_map<int, MMJOYDevice> m_devices;
+
+	std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const pad_config* profile) override;
+	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
+	bool get_is_left_trigger(u64 keyCode) override;
+	bool get_is_right_trigger(u64 keyCode) override;
+	bool get_is_left_stick(u64 keyCode) override;
+	bool get_is_right_stick(u64 keyCode) override;
+	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
+	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 };

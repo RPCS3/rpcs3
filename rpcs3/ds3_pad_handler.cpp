@@ -2,21 +2,49 @@
 
 #include <thread>
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
 ds3_pad_handler::ds3_pad_handler() : PadHandlerBase(pad_handler::ds3)
 {
+	button_list =
+	{
+		{ DS3KeyCodes::Triangle, "Triangle" },
+		{ DS3KeyCodes::Circle,   "Circle" },
+		{ DS3KeyCodes::Cross,    "Cross" },
+		{ DS3KeyCodes::Square,   "Square" },
+		{ DS3KeyCodes::Left,     "Left" },
+		{ DS3KeyCodes::Right,    "Right" },
+		{ DS3KeyCodes::Up,       "Up" },
+		{ DS3KeyCodes::Down,     "Down" },
+		{ DS3KeyCodes::R1,       "R1" },
+		{ DS3KeyCodes::R2,       "R2" },
+		{ DS3KeyCodes::R3,       "R3" },
+		{ DS3KeyCodes::Start,    "Start" },
+		{ DS3KeyCodes::Select,   "Select" },
+		{ DS3KeyCodes::PSButton, "PS Button" },
+		{ DS3KeyCodes::L1,       "L1" },
+		{ DS3KeyCodes::L2,       "L2" },
+		{ DS3KeyCodes::L3,       "L3" },
+		{ DS3KeyCodes::LSXNeg,   "LS X-" },
+		{ DS3KeyCodes::LSXPos,   "LS X+" },
+		{ DS3KeyCodes::LSYPos,   "LS Y+" },
+		{ DS3KeyCodes::LSYNeg,   "LS Y-" },
+		{ DS3KeyCodes::RSXNeg,   "RS X-" },
+		{ DS3KeyCodes::RSXPos,   "RS X+" },
+		{ DS3KeyCodes::RSYPos,   "RS Y+" },
+		{ DS3KeyCodes::RSYNeg,   "RS Y-" }
+	};
+
 	init_configs();
 
 	// set capabilities
 	b_has_config = true;
 	b_has_rumble = true;
-	b_has_deadzones = false;
+	b_has_deadzones = true;
 
 	m_name_string = "DS3 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
+
+	m_trigger_threshold = trigger_max / 2;
+	m_thumb_threshold = thumb_max / 2;
 }
 
 ds3_pad_handler::~ds3_pad_handler()
@@ -123,124 +151,9 @@ std::vector<std::string> ds3_pad_handler::ListDevices()
 	return ds3_pads_list;
 }
 
-bool ds3_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
-{
-	std::shared_ptr<ds3_device> ds3device = get_device(device);
-	if (ds3device == nullptr || ds3device->handle == nullptr)
-		return false;
-
-	int index = static_cast<int>(bindings.size());
-	m_pad_configs[index].load();
-	ds3device->config = &m_pad_configs[index];
-	pad_config* p_profile = ds3device->config;
-	if (p_profile == nullptr)
-		return false;
-
-	pad->Init
-	(
-		CELL_PAD_STATUS_DISCONNECTED,
-		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
-		CELL_PAD_DEV_TYPE_STANDARD,
-		p_profile->device_class_type
-	);
-
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->l2),       CELL_PAD_CTRL_L2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->r2),       CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->up),       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->down),     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->left),     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->right),    CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->square),   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->circle),   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->l1),       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->r1),       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->start),    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->l3),       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->r3),       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, FindKeyCode(button_list, p_profile->ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                                             0x0); // Reserved (and currently not in use by rpcs3 at all)
-
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
-
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  FindKeyCode(button_list, p_profile->ls_left), FindKeyCode(button_list, p_profile->ls_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  FindKeyCode(button_list, p_profile->ls_down), FindKeyCode(button_list, p_profile->ls_up));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, FindKeyCode(button_list, p_profile->rs_left), FindKeyCode(button_list, p_profile->rs_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, FindKeyCode(button_list, p_profile->rs_down), FindKeyCode(button_list, p_profile->rs_up));
-
-	pad->m_vibrateMotors.emplace_back(true, 0);
-	pad->m_vibrateMotors.emplace_back(false, 0);
-
-	bindings.emplace_back(ds3device, pad);
-
-	return true;
-}
-
-void ds3_pad_handler::ThreadProc()
-{
-	for (int i = 0; i < static_cast<int>(bindings.size()); i++)
-	{
-		m_dev = bindings[i].first;
-		auto thepad = bindings[i].second;
-
-		if (m_dev->handle == nullptr)
-		{
-			hid_device* devhandle = hid_open_path(m_dev->device.c_str());
-			if (!devhandle)
-			{
-				continue;
-			}
-
-			m_dev->handle = devhandle;
-		}
-
-		switch (get_data(m_dev))
-		{
-		case DS3Status::NewData:
-			process_data(m_dev, thepad);
-		case DS3Status::Connected:
-			if (m_dev->status == DS3Status::Disconnected)
-			{
-				m_dev->status = DS3Status::Connected;
-				thepad->m_port_status = CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES;
-				LOG_WARNING(HLE, "[DS3] Pad was connected");
-
-				connected++;
-			}
-
-			if (m_dev->large_motor != thepad->m_vibrateMotors[0].m_value || m_dev->small_motor != thepad->m_vibrateMotors[1].m_value)
-			{
-				m_dev->large_motor = (u8)thepad->m_vibrateMotors[0].m_value;
-				m_dev->small_motor = (u8)thepad->m_vibrateMotors[1].m_value;
-				send_output_report(m_dev);
-			}
-
-			break;
-		case DS3Status::Disconnected:
-			if (m_dev->status == DS3Status::Connected)
-			{
-				m_dev->status = DS3Status::Disconnected;
-				thepad->m_port_status = CELL_PAD_STATUS_DISCONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES;
-				hid_close(m_dev->handle);
-
-				m_dev->handle = nullptr;
-				LOG_WARNING(HLE, "[DS3] Pad was disconnected");
-
-				connected--;
-			}
-			break;
-		}
-	}
-}
-
 void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/)
 {
-	std::shared_ptr<ds3_device> device = get_device(padId);
+	std::shared_ptr<ds3_device> device = get_ds3_device(padId);
 	if (device == nullptr || device->handle == nullptr)
 		return;
 
@@ -267,20 +180,11 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	send_output_report(device);
 }
 
-void ds3_pad_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& /*callback*/, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& /*buttons*/)
-{
-	if (get_blacklist)
-		blacklist.clear();
-
-	std::shared_ptr<ds3_device> device = get_device(padId);
-	if (device == nullptr || device->handle == nullptr)
-		return fail_callback(padId);
-
-	return;
-}
-
 void ds3_pad_handler::send_output_report(const std::shared_ptr<ds3_device>& ds3dev)
 {
+	if (!ds3dev)
+		return;
+
 #ifdef _WIN32
 	u8 report_buf[] = {
 		0x00,
@@ -307,7 +211,7 @@ void ds3_pad_handler::send_output_report(const std::shared_ptr<ds3_device>& ds3d
 	hid_write(ds3dev->handle, report_buf, sizeof(report_buf));
 }
 
-std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_device(const std::string& padId)
+std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_ds3_device(const std::string& padId)
 {
 	if (!Init())
 		return nullptr;
@@ -356,8 +260,8 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l3.def = button_list.at(DS3KeyCodes::L3);
 
 	// Set default misc variables
-	cfg->lstickdeadzone.def = 0; // between 0 and 255
-	cfg->rstickdeadzone.def = 0; // between 0 and 255
+	cfg->lstickdeadzone.def = 40; // between 0 and 255
+	cfg->rstickdeadzone.def = 40; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
 	cfg->padsquircling.def = 0;
@@ -373,6 +277,9 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 
 ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_device>& ds3dev)
 {
+	if (!ds3dev)
+		return DS3Status::Disconnected;
+
 	auto& dbuf = ds3dev->buf;
 
 #ifdef _WIN32
@@ -407,76 +314,85 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 	return DS3Status::Disconnected;
 }
 
-std::array<std::pair<u16, bool>, ds3_pad_handler::DS3KeyCodes::KeyCodeCount> ds3_pad_handler::get_button_values(const std::shared_ptr<ds3_device>& device)
+std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
-	std::array<std::pair<u16, bool>, DS3KeyCodes::KeyCodeCount> key_buf;
-	auto& dbuf = device->buf;
+	std::unordered_map<u64, u16> key_buf;
+	auto dev = std::static_pointer_cast<ds3_device>(device);
+	if (!dev)
+		return key_buf;
 
-	key_buf[DS3KeyCodes::Up].second    = dbuf[2 + DS3_HID_OFFSET] & 0x10;
-	key_buf[DS3KeyCodes::Right].second = dbuf[2 + DS3_HID_OFFSET] & 0x20;
-	key_buf[DS3KeyCodes::Down].second  = dbuf[2 + DS3_HID_OFFSET] & 0x40;
-	key_buf[DS3KeyCodes::Left].second  = dbuf[2 + DS3_HID_OFFSET] & 0x80;
+	auto& dbuf = dev->buf;
 
-	key_buf[DS3KeyCodes::Select].second = dbuf[2 + DS3_HID_OFFSET] & 0x01;
-	key_buf[DS3KeyCodes::L3].second     = dbuf[2 + DS3_HID_OFFSET] & 0x02;
-	key_buf[DS3KeyCodes::R3].second     = dbuf[2 + DS3_HID_OFFSET] & 0x04;
-	key_buf[DS3KeyCodes::Start].second  = dbuf[2 + DS3_HID_OFFSET] & 0x08;
+	//key_buf[DS3KeyCodes::Up].second    = dbuf[2 + DS3_HID_OFFSET] & 0x10;
+	//key_buf[DS3KeyCodes::Right].second = dbuf[2 + DS3_HID_OFFSET] & 0x20;
+	//key_buf[DS3KeyCodes::Down].second  = dbuf[2 + DS3_HID_OFFSET] & 0x40;
+	//key_buf[DS3KeyCodes::Left].second  = dbuf[2 + DS3_HID_OFFSET] & 0x80;
 
-	key_buf[DS3KeyCodes::Square].second   = dbuf[3 + DS3_HID_OFFSET] & 0x80;
-	key_buf[DS3KeyCodes::Cross].second    = dbuf[3 + DS3_HID_OFFSET] & 0x40;
-	key_buf[DS3KeyCodes::Circle].second   = dbuf[3 + DS3_HID_OFFSET] & 0x20;
-	key_buf[DS3KeyCodes::Triangle].second = dbuf[3 + DS3_HID_OFFSET] & 0x10;
+	//key_buf[DS3KeyCodes::Select].second = dbuf[2 + DS3_HID_OFFSET] & 0x01;
+	//key_buf[DS3KeyCodes::L3].second     = dbuf[2 + DS3_HID_OFFSET] & 0x02;
+	//key_buf[DS3KeyCodes::R3].second     = dbuf[2 + DS3_HID_OFFSET] & 0x04;
+	//key_buf[DS3KeyCodes::Start].second  = dbuf[2 + DS3_HID_OFFSET] & 0x08;
 
-	key_buf[DS3KeyCodes::R1].second = dbuf[3 + DS3_HID_OFFSET] & 0x08;
-	key_buf[DS3KeyCodes::L1].second = dbuf[3 + DS3_HID_OFFSET] & 0x04;
-	key_buf[DS3KeyCodes::R2].second = dbuf[3 + DS3_HID_OFFSET] & 0x02;
-	key_buf[DS3KeyCodes::L2].second = dbuf[3 + DS3_HID_OFFSET] & 0x01;
+	//key_buf[DS3KeyCodes::Square].second   = dbuf[3 + DS3_HID_OFFSET] & 0x80;
+	//key_buf[DS3KeyCodes::Cross].second    = dbuf[3 + DS3_HID_OFFSET] & 0x40;
+	//key_buf[DS3KeyCodes::Circle].second   = dbuf[3 + DS3_HID_OFFSET] & 0x20;
+	//key_buf[DS3KeyCodes::Triangle].second = dbuf[3 + DS3_HID_OFFSET] & 0x10;
 
-	key_buf[DS3KeyCodes::PSButton].second = dbuf[4 + DS3_HID_OFFSET] & 0x01;
+	//key_buf[DS3KeyCodes::R1].second = dbuf[3 + DS3_HID_OFFSET] & 0x08;
+	//key_buf[DS3KeyCodes::L1].second = dbuf[3 + DS3_HID_OFFSET] & 0x04;
+	//key_buf[DS3KeyCodes::R2].second = dbuf[3 + DS3_HID_OFFSET] & 0x02;
+	//key_buf[DS3KeyCodes::L2].second = dbuf[3 + DS3_HID_OFFSET] & 0x01;
 
-	key_buf[DS3KeyCodes::LSXPos].first = dbuf[6 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::LSYPos].first = dbuf[7 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::RSXPos].first = dbuf[8 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::RSYPos].first = dbuf[9 + DS3_HID_OFFSET];
+	//key_buf[DS3KeyCodes::PSButton].second = dbuf[4 + DS3_HID_OFFSET] & 0x01;
 
-	key_buf[DS3KeyCodes::Up].first    = dbuf[14 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Right].first = dbuf[15 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Down].first  = dbuf[16 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Left].first  = dbuf[17 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Triangle].first = dbuf[22 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Circle].first   = dbuf[23 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Cross].first    = dbuf[24 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Square].first   = dbuf[25 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::L1].first = dbuf[20 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::R1].first = dbuf[21 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::L2].first = dbuf[18 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::R2].first = dbuf[19 + DS3_HID_OFFSET];
+	const u8 lsx = dbuf[6 + DS3_HID_OFFSET];
+	const u8 lsy = dbuf[7 + DS3_HID_OFFSET];
+	const u8 rsx = dbuf[8 + DS3_HID_OFFSET];
+	const u8 rsy = dbuf[9 + DS3_HID_OFFSET];
+
+	// Left Stick X Axis
+	key_buf[DS3KeyCodes::LSXNeg] = Clamp0To255((127.5f - lsx) * 2.0f);
+	key_buf[DS3KeyCodes::LSXPos] = Clamp0To255((lsx - 127.5f) * 2.0f);
+
+	// Left Stick Y Axis (Up is the negative for some reason)
+	key_buf[DS3KeyCodes::LSYNeg] = Clamp0To255((lsy - 127.5f) * 2.0f);
+	key_buf[DS3KeyCodes::LSYPos] = Clamp0To255((127.5f - lsy) * 2.0f);
+
+	// Right Stick X Axis
+	key_buf[DS3KeyCodes::RSXNeg] = Clamp0To255((127.5f - rsx) * 2.0f);
+	key_buf[DS3KeyCodes::RSXPos] = Clamp0To255((rsx - 127.5f) * 2.0f);
+
+	// Right Stick Y Axis (Up is the negative for some reason)
+	key_buf[DS3KeyCodes::RSYNeg] = Clamp0To255((rsy - 127.5f) * 2.0f);
+	key_buf[DS3KeyCodes::RSYPos] = Clamp0To255((127.5f - rsy) * 2.0f);
+
+	// Buttons
+	key_buf[DS3KeyCodes::Up]       = dbuf[14 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Right]    = dbuf[15 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Down]     = dbuf[16 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Left]     = dbuf[17 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Triangle] = dbuf[22 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Circle]   = dbuf[23 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Cross]    = dbuf[24 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::Square]   = dbuf[25 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::L1]       = dbuf[20 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::R1]       = dbuf[21 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::L2]       = dbuf[18 + DS3_HID_OFFSET];
+	key_buf[DS3KeyCodes::R2]       = dbuf[19 + DS3_HID_OFFSET];
 
 	return key_buf;
 }
 
-void ds3_pad_handler::process_data(const std::shared_ptr<ds3_device>& ds3dev, const std::shared_ptr<Pad>& pad)
+std::array<int, 6> ds3_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
 {
-	auto ds3_info = get_button_values(ds3dev);
+	return { data[L2], data[R2], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
+}
 
-	for (auto & btn : pad->m_buttons)
-	{
-		btn.m_value = ds3_info[btn.m_keyCode].first;
-		btn.m_pressed = ds3_info[btn.m_keyCode].second;
-	}
-
-#ifdef _WIN32
-	if(ds3dev->buf[2] || ds3dev->buf[3] || ds3dev->buf[4])
-		SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
-#endif
-
-	// DS3 pad handler is only using the positive values for accuracy sake
-	for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
-	{
-		// m_keyCodeMax is the mapped key for right or up
-		u32 key_max = pad->m_sticks[i].m_keyCodeMax;
-		pad->m_sticks[i].m_value = ds3_info[key_max].first;
-	}
+void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+{
+	auto ds3dev = std::static_pointer_cast<ds3_device>(device);
+	if (!ds3dev || !pad)
+		return;
 
 	// For unknown reasons the sixaxis values seem to be in little endian on linux
 
@@ -510,4 +426,113 @@ void ds3_pad_handler::process_data(const std::shared_ptr<ds3_device>& ds3dev, co
 	//pad->m_sensors[1].m_value = polish_value(pad->m_sensors[1].m_value, 226, 226, 512, 512, 0, 1023);
 	//pad->m_sensors[2].m_value = polish_value(pad->m_sensors[2].m_value, 113, 113, 512, 512, 0, 1023);
 	//pad->m_sensors[3].m_value = polish_value(pad->m_sensors[3].m_value, 1, 1, 512, 512, 0, 1023);
+}
+
+std::shared_ptr<PadDevice> ds3_pad_handler::get_device(const std::string& device)
+{
+	std::shared_ptr<ds3_device> ds3device = get_ds3_device(device);
+	if (ds3device == nullptr || ds3device->handle == nullptr)
+		return nullptr;
+
+	return ds3device;
+}
+
+bool ds3_pad_handler::get_is_left_trigger(u64 keyCode)
+{
+	return keyCode == DS3KeyCodes::L2;
+}
+
+bool ds3_pad_handler::get_is_right_trigger(u64 keyCode)
+{
+	return keyCode == DS3KeyCodes::R2;
+}
+
+bool ds3_pad_handler::get_is_left_stick(u64 keyCode)
+{
+	switch (keyCode)
+	{
+	case DS3KeyCodes::LSXNeg:
+	case DS3KeyCodes::LSXPos:
+	case DS3KeyCodes::LSYPos:
+	case DS3KeyCodes::LSYNeg:
+		return true;
+	default:
+		return false;
+	}
+}
+
+bool ds3_pad_handler::get_is_right_stick(u64 keyCode)
+{
+	switch (keyCode)
+	{
+	case DS3KeyCodes::RSXNeg:
+	case DS3KeyCodes::RSXPos:
+	case DS3KeyCodes::RSYPos:
+	case DS3KeyCodes::RSYNeg:
+		return true;
+	default:
+		return false;
+	}
+}
+
+PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
+{
+	auto dev = std::static_pointer_cast<ds3_device>(device);
+	if (!dev)
+		return connection::disconnected;
+
+	if (dev->handle == nullptr)
+	{
+		hid_device* devhandle = hid_open_path(dev->device.c_str());
+		if (!devhandle)
+		{
+			return connection::disconnected;
+		}
+
+		dev->handle = devhandle;
+	}
+
+	switch (get_data(dev))
+	{
+	case DS3Status::Disconnected:
+	{
+		if (dev->status == DS3Status::Connected)
+		{
+			dev->status = DS3Status::Disconnected;
+			hid_close(dev->handle);
+			dev->handle = nullptr;
+		}
+		return connection::disconnected;
+	}
+	case DS3Status::Connected:
+	{
+		if (dev->status == DS3Status::Disconnected)
+		{
+			dev->status = DS3Status::Connected;
+		}
+		return connection::no_data;
+	}
+	case DS3Status::NewData:
+	{
+		return connection::connected;
+	}
+	default:
+		break;
+	}
+
+	return connection::disconnected;
+}
+
+void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
+{
+	auto dev = std::static_pointer_cast<ds3_device>(device);
+	if (!dev || !pad)
+		return;
+
+	if (dev->large_motor != pad->m_vibrateMotors[0].m_value || dev->small_motor != pad->m_vibrateMotors[1].m_value)
+	{
+		dev->large_motor = (u8)pad->m_vibrateMotors[0].m_value;
+		dev->small_motor = (u8)pad->m_vibrateMotors[1].m_value;
+		send_output_report(dev);
+	}
 }
