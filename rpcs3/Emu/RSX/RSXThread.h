@@ -428,6 +428,7 @@ namespace rsx
 		u32 buffer;
 		bool skip_frame;
 		bool emu_flip;
+		bool in_progress;
 		frame_statistics_t stats;
 	};
 
