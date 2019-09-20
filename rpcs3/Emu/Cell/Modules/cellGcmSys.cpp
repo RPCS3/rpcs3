@@ -423,7 +423,7 @@ s32 _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 
 	vm::var<u64> _tid;
 	vm::var<char[]> _name = vm::make_str("_gcm_intr_thread");
 	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, 0, 1, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
-	render->intr_thread = idm::get<named_thread<ppu_thread>>(*_tid);
+	render->intr_thread = idm::get<named_thread<ppu_thread>>(static_cast<u32>(*_tid));
 	render->intr_thread->state -= cpu_flag::stop;
 	render->isHLE = true;
 	render->label_addr = gcm_cfg->gcm_info.label_addr;

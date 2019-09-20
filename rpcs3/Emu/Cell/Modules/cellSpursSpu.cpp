@@ -133,7 +133,7 @@ bool spursDma(spu_thread& spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag)
 
 	if (cmd == MFC_GETLLAR_CMD || cmd == MFC_PUTLLC_CMD || cmd == MFC_PUTLLUC_CMD)
 	{
-		const u32 rv = spu.get_ch_value(MFC_RdAtomicStat);
+		const u32 rv = static_cast<u32>(spu.get_ch_value(MFC_RdAtomicStat));
 		return cmd == MFC_PUTLLC_CMD ? !rv : true;
 	}
 
@@ -145,7 +145,7 @@ u32 spursDmaGetCompletionStatus(spu_thread& spu, u32 tagMask)
 {
 	spu.set_ch_value(MFC_WrTagMask, tagMask);
 	spu.set_ch_value(MFC_WrTagUpdate, MFC_TAG_UPDATE_IMMEDIATE);
-	return spu.get_ch_value(MFC_RdTagStat);
+	return static_cast<u32>(spu.get_ch_value(MFC_RdTagStat));
 }
 
 // Wait for DMA operations to complete
@@ -153,7 +153,7 @@ u32 spursDmaWaitForCompletion(spu_thread& spu, u32 tagMask, bool waitForAll)
 {
 	spu.set_ch_value(MFC_WrTagMask, tagMask);
 	spu.set_ch_value(MFC_WrTagUpdate, waitForAll ? MFC_TAG_UPDATE_ALL : MFC_TAG_UPDATE_ANY);
-	return spu.get_ch_value(MFC_RdTagStat);
+	return static_cast<u32>(spu.get_ch_value(MFC_RdTagStat));
 }
 
 // Halt the SPU
@@ -234,7 +234,7 @@ s32 sys_spu_thread_switch_system_module(spu_thread& spu, u32 status)
 	{
 		spu.set_ch_value(SPU_WrOutMbox, status);
 		spu.stop_and_signal(0x120);
-		result = spu.get_ch_value(SPU_RdInMbox);
+		result = static_cast<u32>(spu.get_ch_value(SPU_RdInMbox));
 	}
 	while (result == CELL_EBUSY);
 
@@ -1709,8 +1709,8 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 	v128 r;
 	spu.fpscr.Read(r);
 	ctxt->savedContextFpscr = r;
-	ctxt->savedSpuWriteEventMask = spu.get_ch_value(SPU_RdEventMask);
-	ctxt->savedWriteTagGroupQueryMask = spu.get_ch_value(MFC_RdTagMask);
+	ctxt->savedSpuWriteEventMask = static_cast<u32>(spu.get_ch_value(SPU_RdEventMask));
+	ctxt->savedWriteTagGroupQueryMask = static_cast<u32>(spu.get_ch_value(MFC_RdTagMask));
 
 	// Store the processor context
 	const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80, HERE);

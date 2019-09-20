@@ -472,7 +472,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	*handle = vid;
 
-	const auto thrd = idm::get<named_thread<ppu_thread>>(*_tid);
+	const auto thrd = idm::get<named_thread<ppu_thread>>(static_cast<u32>(*_tid));
 
 	thrd->cmd_list
 	({
@@ -612,7 +612,7 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 
 	if (notify)
 	{
-		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
+		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(static_cast<u32>(vdec->ppu_tid));
 		if (vdec_ppu) thread_ctrl::notify(*vdec_ppu);
 	}
 

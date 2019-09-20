@@ -189,7 +189,7 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 	case 0:
 		switch (bRequest)
 		{
-		case 0x09: usb_device::set_configuration(wValue); break;
+		case 0x09: usb_device::set_configuration(::narrow<u8>(wValue)); break;
 		default: sys_usbd.fatal("Unhandled control transfer(0): 0x%x", bRequest); break;
 		}
 		break;
