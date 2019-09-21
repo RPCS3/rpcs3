@@ -258,14 +258,19 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		{
 			if (value & s_waiter_mask)
 			{
-				value -= s_waiter_mask & -s_waiter_mask;
-
 #ifdef _WIN32
 				if (!fallback)
 				{
+					if ((value & s_signal_mask) == 0)
+					{
+						return false;
+					}
+
 					value -= s_signal_mask & -s_signal_mask;
 				}
 #endif
+
+				value -= s_waiter_mask & -s_waiter_mask;
 
 				if ((value & s_waiter_mask) == 0)
 				{
