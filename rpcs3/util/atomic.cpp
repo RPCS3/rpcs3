@@ -1,6 +1,7 @@
 ﻿#include "atomic.hpp"
 
 #include "Utilities/sync.h"
+#include "Utilities/asm.h"
 
 #include <map>
 #include <mutex>
@@ -10,10 +11,10 @@
 static constexpr std::uintptr_t s_hashtable_size = 1u << 22;
 
 // TODO: it's probably better to implement more effective futex emulation for OSX/BSD here.
-static atomic_t<u64> s_hashtable[s_hashtable_size];
+static atomic_t<u64> s_hashtable[s_hashtable_size]{};
 
 // Pointer mask without bits used as hash, assuming signed 48-bit pointers
-static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & (~(s_hashtable_size - 1) << 2);
+static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & ~((s_hashtable_size - 1) << 2);
 
 // Max number of waiters is 32767
 static constexpr u64 s_waiter_mask = 0x7fff'0000'0000'0000;
