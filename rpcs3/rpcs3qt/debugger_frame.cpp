@@ -170,7 +170,7 @@ bool debugger_frame::eventFilter(QObject* object, QEvent* ev)
 void debugger_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	Q_EMIT DebugFrameClosed();
+	emit DebugFrameClosed();
 }
 
 void debugger_frame::showEvent(QShowEvent * event)

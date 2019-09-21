@@ -28,13 +28,13 @@ public:
 	/** Repaint log colors after new stylesheet was applied */
 	void RepaintTextColors();
 
-Q_SIGNALS:
+signals:
 	void LogFrameClosed();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
-private Q_SLOTS:
+private slots:
 	void UpdateUI();
 private:
 	void SetLogLevel(logs::level lev);

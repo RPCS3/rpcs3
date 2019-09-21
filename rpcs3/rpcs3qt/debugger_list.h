@@ -21,12 +21,12 @@ public:
 	QColor m_text_color_bp;
 	QColor m_text_color_pc;
 
-Q_SIGNALS:
+signals:
 	void BreakpointRequested(u32 loc);
 public:
 	debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler);
 	void UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm);
-public Q_SLOTS:
+public slots:
 	void ShowAddress(u32 addr);
 protected:
 	void keyPressEvent(QKeyEvent* event) override;

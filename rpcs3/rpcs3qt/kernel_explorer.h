@@ -14,6 +14,6 @@ class kernel_explorer : public QDialog
 
 public:
 	kernel_explorer(QWidget* parent);
-private Q_SLOTS:
+private slots:
 	void Update();
 };

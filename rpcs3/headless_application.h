@@ -28,9 +28,9 @@ private:
 		return thread();
 	};
 
-Q_SIGNALS:
+signals:
 	void RequestCallAfter(const std::function<void()>& func);
 
-private Q_SLOTS:
+private slots:
 	void HandleCallAfter(const std::function<void()>& func);
 };

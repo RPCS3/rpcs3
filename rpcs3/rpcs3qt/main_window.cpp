@@ -89,7 +89,7 @@ void main_window::Init()
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
 	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::version.to_string()));
 
-	Q_EMIT RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
+	emit RequestGlobalStylesheetChange(guiSettings->GetCurrentStylesheetPath());
 	ConfigureGuiFromSettings(true);
 
 #ifdef BRANCH
@@ -1083,7 +1083,7 @@ void main_window::RepaintGui()
 	RepaintToolBarIcons();
 	RepaintThumbnailIcons();
 
-	Q_EMIT RequestTrophyManagerRepaint();
+	emit RequestTrophyManagerRepaint();
 }
 
 void main_window::ShowTitleBars(bool show)

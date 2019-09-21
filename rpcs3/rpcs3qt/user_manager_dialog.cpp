@@ -377,7 +377,7 @@ void user_manager_dialog::OnUserLogin()
 	m_active_user = new_user;
 	m_gui_settings->SetValue(gui::um_active_user, qstr(m_active_user));
 	UpdateTable(true);
-	Q_EMIT OnUserLoginSuccess();
+	emit OnUserLoginSuccess();
 }
 
 void user_manager_dialog::OnSort(int logicalIndex)
@@ -389,7 +389,7 @@ void user_manager_dialog::OnSort(int logicalIndex)
 	else if (logicalIndex == m_sort_column)
 	{
 		m_sort_ascending ^= true;
-	} 
+	}
 	else
 	{
 		m_sort_ascending = true;

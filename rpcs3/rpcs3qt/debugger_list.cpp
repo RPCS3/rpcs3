@@ -141,7 +141,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 		// Let debugger_frame know about breakpoint.
 		// Other option is to add to breakpoint manager directly and have a signal there instead.
 		// Either the flow goes from debugger_list->breakpoint_manager->debugger_frame, or it goes debugger_list->debugger_frame, and I felt this was easier to read for now.
-		Q_EMIT BreakpointRequested(pc);
+		emit BreakpointRequested(pc);
 
 		ShowAddress(start_pc);
 	}

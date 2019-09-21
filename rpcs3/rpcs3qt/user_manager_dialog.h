@@ -25,9 +25,9 @@ class user_manager_dialog : public QDialog
 	Q_OBJECT
 public:
 	explicit user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = nullptr);
-Q_SIGNALS:
+signals:
 	void OnUserLoginSuccess();
-private Q_SLOTS:
+private slots:
 	void OnUserLogin();
 	void OnUserCreate();
 	void OnUserRemove();

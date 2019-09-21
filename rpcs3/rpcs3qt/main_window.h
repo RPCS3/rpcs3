@@ -74,11 +74,11 @@ public:
 	~main_window();
 	QIcon GetAppIcon();
 
-Q_SIGNALS:
+signals:
 	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
 	void RequestTrophyManagerRepaint();
 
-public Q_SLOTS:
+public slots:
 	void OnEmuStop();
 	void OnEmuRun();
 	void OnEmuResume();
@@ -87,7 +87,7 @@ public Q_SLOTS:
 
 	void RepaintGui();
 
-private Q_SLOTS:
+private slots:
 	void OnPlayOrPause();
 	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
 	void BootElf();

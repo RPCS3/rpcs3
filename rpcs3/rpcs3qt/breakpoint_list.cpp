@@ -52,7 +52,7 @@ void breakpoint_list::RemoveBreakpoint(u32 addr)
 		}
 	}
 
-	Q_EMIT RequestShowAddress(addr);
+	emit RequestShowAddress(addr);
 }
 
 void breakpoint_list::AddBreakpoint(u32 pc)
@@ -101,7 +101,7 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc)
 void breakpoint_list::OnBreakpointListDoubleClicked()
 {
 	u32 address = currentItem()->data(Qt::UserRole).value<u32>();
-	Q_EMIT RequestShowAddress(address);
+	emit RequestShowAddress(address);
 }
 
 void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)

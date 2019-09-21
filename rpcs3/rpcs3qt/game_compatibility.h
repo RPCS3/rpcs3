@@ -67,7 +67,7 @@ public:
 	/** Returns the data for the requested status */
 	compat_status GetStatusData(const QString& status);
 
-Q_SIGNALS:
+signals:
 	void DownloadStarted();
 	void DownloadFinished();
 	void DownloadError(const QString& error);

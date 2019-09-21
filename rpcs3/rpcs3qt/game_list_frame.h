@@ -31,7 +31,7 @@ enum Category
 	Others,
 };
 
-namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
+namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 {
 	// PS3 bootable
 	const QString app_music = QObject::tr("App Music");
@@ -211,7 +211,7 @@ public:
 
 	void SetShowHidden(bool show);
 
-public Q_SLOTS:
+public slots:
 	void BatchCreatePPUCaches();
 	void BatchRemovePPUCaches();
 	void BatchRemoveSPUCaches();
@@ -222,11 +222,11 @@ public Q_SLOTS:
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
 
-private Q_SLOTS:
+private slots:
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
-Q_SIGNALS:
+signals:
 	void GameListFrameClosed();
 	void RequestBoot(const game_info& game, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);

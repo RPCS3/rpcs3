@@ -77,6 +77,6 @@ protected:
 
 	bool event(QEvent* ev) override;
 
-private Q_SLOTS:
+private slots:
 	void HandleCursor(QWindow::Visibility visibility);
 };

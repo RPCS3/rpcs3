@@ -16,6 +16,6 @@ public:
 private:
 	QString m_text;
 
-Q_SIGNALS:
+signals:
 	void text_changed(const QString& text);
 };

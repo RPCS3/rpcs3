@@ -37,7 +37,7 @@ bool game_compatibility::ReadJSON(const QJsonObject& json_data, bool after_downl
 				break;
 			}
 			LOG_ERROR(GENERAL, "Compatibility error: { %s: return code %d }", error_message, return_code);
-			Q_EMIT DownloadError(qstr(error_message) + " " + QString::number(return_code));
+			emit DownloadError(qstr(error_message) + " " + QString::number(return_code));
 		}
 		else
 		{
@@ -188,7 +188,7 @@ void game_compatibility::RequestCompatibility(bool online)
 			// We failed to retrieve a new database, therefore refresh gamelist to old state
 			QString error = network_reply->errorString();
 			network_reply->deleteLater();
-			Q_EMIT DownloadError(error);
+			emit DownloadError(error);
 			LOG_ERROR(GENERAL, "Compatibility error: { Network Error - %s }", sstr(error));
 			return;
 		}
@@ -203,7 +203,7 @@ void game_compatibility::RequestCompatibility(bool online)
 		if (ReadJSON(QJsonDocument::fromJson(data).object(), online))
 		{
 			// We have a new database in map, therefore refresh gamelist to new state
-			Q_EMIT DownloadFinished();
+			emit DownloadFinished();
 
 			// Write database to file
 			QFile file(m_filepath);
@@ -227,7 +227,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	});
 
 	// We want to retrieve a new database, therefore refresh gamelist and indicate that
-	Q_EMIT DownloadStarted();
+	emit DownloadStarted();
 }
 
 compat_status game_compatibility::GetCompatibility(const std::string& title_id)

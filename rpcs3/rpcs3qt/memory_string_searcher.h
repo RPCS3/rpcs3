@@ -18,6 +18,6 @@ class memory_string_searcher : public QDialog
 public:
 	memory_string_searcher(QWidget* parent);
 
-private Q_SLOTS:
+private slots:
 	void OnSearch();
 };

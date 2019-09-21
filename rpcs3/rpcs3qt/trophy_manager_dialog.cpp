@@ -674,7 +674,7 @@ void trophy_manager_dialog::trophy_load_thread::run()
 	QDir trophy_dir(qstr(vfs::get(m_manager->m_trophy_dir)));
 	const auto folder_list = trophy_dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 	const int count = folder_list.count();
-	Q_EMIT TotalCountChanged(count);
+	emit TotalCountChanged(count);
 
 	for (int i = 0; m_manager->m_thread_state == TrophyThreadState::RUNNING && i < count; i++)
 	{
@@ -690,12 +690,12 @@ void trophy_manager_dialog::trophy_load_thread::run()
 			// Also add a way of showing the number of corrupted/invalid folders in UI somewhere.
 			LOG_ERROR(GENERAL, "Exception occurred while parsing folder %s for trophies: %s", dir_name, e.what());
 		}
-		Q_EMIT ProcessedCountChanged(i + 1);
+		emit ProcessedCountChanged(i + 1);
 	}
 
 	if (m_manager->m_thread_state == TrophyThreadState::RUNNING)
 	{
-		Q_EMIT FinishedSuccessfully();
+		emit FinishedSuccessfully();
 	}
 
 	m_manager->m_thread_state = TrophyThreadState::CLOSED;

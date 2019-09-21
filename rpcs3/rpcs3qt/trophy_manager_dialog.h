@@ -66,10 +66,10 @@ public:
 	~trophy_manager_dialog() override;
 	void RepaintUI(bool restore_layout = true);
 
-public Q_SLOTS:
+public slots:
 	void HandleRepaintUiRequest();
 
-private Q_SLOTS:
+private slots:
 	void ResizeGameIcon(int index);
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
@@ -77,7 +77,7 @@ private Q_SLOTS:
 	void ShowContextMenu(const QPoint& pos);
 
 private:
-	/** Loads a trophy folder. 
+	/** Loads a trophy folder.
 	Returns true if successful.  Does not attempt to install if failure occurs, like sceNpTrophy.
 	*/
 	bool LoadTrophyFolderToDB(const std::string& trop_name);
@@ -141,7 +141,7 @@ class trophy_manager_dialog::trophy_load_thread : public QThread
 		explicit trophy_load_thread(trophy_manager_dialog *manager) : m_manager(manager) {}
 		void run() override;
 
-	Q_SIGNALS:
+	signals:
 		void TotalCountChanged(int count);
 		void ProcessedCountChanged(int processed);
 		void FinishedSuccessfully();

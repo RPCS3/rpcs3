@@ -96,7 +96,7 @@ public:
 
 	void SetPC(const uint pc);
 
-public Q_SLOTS:
+public slots:
 	virtual void OnClickDrawCalls();
 	virtual void SetFlags();
 	virtual void SetPrograms();

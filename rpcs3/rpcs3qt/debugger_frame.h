@@ -80,7 +80,7 @@ public:
 	void ClearBreakpoints(); // Fallthrough method into breakpoint_list.
 
 	/** Needed so key press events work when other objects are selected in debugger_frame. */
-	bool eventFilter(QObject* object, QEvent* event) override; 
+	bool eventFilter(QObject* object, QEvent* event) override;
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
@@ -88,13 +88,13 @@ protected:
 	void hideEvent(QHideEvent* event) override;
 	void keyPressEvent(QKeyEvent* event) override;
 
-Q_SIGNALS:
+signals:
 	void DebugFrameClosed();
 
-public Q_SLOTS:
+public slots:
 	void DoStep(bool stepOver = false);
 
-private Q_SLOTS:
+private slots:
 	void OnSelectUnit();
 	void ShowPC();
 	void EnableUpdateTimer(bool state);

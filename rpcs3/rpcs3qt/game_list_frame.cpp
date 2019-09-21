@@ -703,7 +703,7 @@ void game_list_frame::doubleClickedSlot(QTableWidgetItem *item)
 	}
 
 	LOG_NOTICE(LOADER, "Booting from gamelist per doubleclick...");
-	Q_EMIT RequestBoot(game);
+	emit RequestBoot(game);
 }
 
 void game_list_frame::ShowContextMenu(const QPoint &pos)
@@ -748,7 +748,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		connect(boot_custom, &QAction::triggered, [=]
 		{
 			LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
-			Q_EMIT RequestBoot(gameinfo);
+			emit RequestBoot(gameinfo);
 		});
 	}
 	else
@@ -857,7 +857,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(boot, &QAction::triggered, [=]
 	{
 		LOG_NOTICE(LOADER, "Booting from gamelist per context menu...");
-		Q_EMIT RequestBoot(gameinfo, gameinfo->hasCustomConfig);
+		emit RequestBoot(gameinfo, gameinfo->hasCustomConfig);
 	});
 	connect(configure, &QAction::triggered, [=]
 	{
@@ -1642,7 +1642,7 @@ void game_list_frame::SetSearchText(const QString& text)
 void game_list_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	Q_EMIT GameListFrameClosed();
+	emit GameListFrameClosed();
 }
 
 void game_list_frame::resizeEvent(QResizeEvent *event)
@@ -1665,7 +1665,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 		{
 			QPoint numSteps = wheelEvent->angleDelta() / 8 / 15;	// http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 			const int value = numSteps.y();
-			Q_EMIT RequestIconSizeChange(value);
+			emit RequestIconSizeChange(value);
 			return true;
 		}
 	}
@@ -1677,12 +1677,12 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 		{
 			if (keyEvent->key() == Qt::Key_Plus)
 			{
-				Q_EMIT RequestIconSizeChange(1);
+				emit RequestIconSizeChange(1);
 				return true;
 			}
 			else if (keyEvent->key() == Qt::Key_Minus)
 			{
-				Q_EMIT RequestIconSizeChange(-1);
+				emit RequestIconSizeChange(-1);
 				return true;
 			}
 		}
@@ -1706,7 +1706,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 					return false;
 
 				LOG_NOTICE(LOADER, "Booting from gamelist by pressing %s...", keyEvent->key() == Qt::Key_Enter ? "Enter" : "Return");
-				Q_EMIT RequestBoot(gameinfo);
+				emit RequestBoot(gameinfo);
 
 				return true;
 			}

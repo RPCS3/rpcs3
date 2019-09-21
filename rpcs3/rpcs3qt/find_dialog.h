@@ -24,7 +24,7 @@ private:
 	QPushButton* m_find_next;
 	QPushButton* m_find_previous;
 
-private Q_SLOTS:
+private slots:
 	int count_all();
 	void find_first();
 	void find_last();

@@ -90,7 +90,7 @@ public:
 	explicit pad_settings_dialog(QWidget *parent = nullptr, const GameInfo *game = nullptr);
 	~pad_settings_dialog();
 
-private Q_SLOTS:
+private slots:
 	void OnPadButtonClicked(int id);
 	void OnTabChanged(int index);
 	void RefreshInputTypes();

@@ -225,7 +225,7 @@ void log_frame::CreateAndConnectActions()
 
 	m_clearTTYAct = new QAction(tr("Clear"), this);
 	connect(m_clearTTYAct, &QAction::triggered, m_tty, &QTextEdit::clear);
-	
+
 	m_stackAct_tty = new QAction(tr("Stack Mode (TTY)"), this);
 	m_stackAct_tty->setCheckable(true);
 	connect(m_stackAct_tty, &QAction::toggled, xgui_settings.get(), [=](bool checked)
@@ -480,7 +480,7 @@ void log_frame::UpdateUI()
 			std::stringstream buf_stream;
 			buf_stream.str(buf);
 			std::string buf_line;
-			while (std::getline(buf_stream, buf_line)) 
+			while (std::getline(buf_stream, buf_line))
 			{
 				QString suffix;
 				QString tty_text = QString::fromStdString(buf_line);
@@ -632,7 +632,7 @@ void log_frame::UpdateUI()
 void log_frame::closeEvent(QCloseEvent *event)
 {
 	QDockWidget::closeEvent(event);
-	Q_EMIT LogFrameClosed();
+	emit LogFrameClosed();
 }
 
 bool log_frame::eventFilter(QObject* object, QEvent* event)

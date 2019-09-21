@@ -33,6 +33,6 @@ public:
 private:
 	void OnOkay(const std::shared_ptr<cpu_thread>& _cpu);
 
-private Q_SLOTS:
+private slots:
 	void updateRegister(const QString& text);
 };

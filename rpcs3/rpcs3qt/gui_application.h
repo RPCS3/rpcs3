@@ -55,10 +55,10 @@ private:
 	bool m_show_gui = true;
 	bool m_use_cli_style = false;
 
-private Q_SLOTS:
+private slots:
 	void OnChangeStyleSheetRequest(const QString& path);
 
-Q_SIGNALS:
+signals:
 	void OnEmulatorRun();
 	void OnEmulatorPause();
 	void OnEmulatorResume();
@@ -67,6 +67,6 @@ Q_SIGNALS:
 
 	void RequestCallAfter(const std::function<void()>& func);
 
-private Q_SLOTS:
+private slots:
 	void HandleCallAfter(const std::function<void()>& func);
 };

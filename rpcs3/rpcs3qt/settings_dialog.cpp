@@ -1405,7 +1405,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				ApplyGuiOptions(true);
 				xgui_settings->Reset(true);
 				xgui_settings->ChangeToConfig(gui::Default);
-				Q_EMIT GuiSettingsSyncRequest(true);
+				emit GuiSettingsSyncRequest(true);
 				AddConfigs();
 				AddStylesheets();
 				AddColoredIcons();
@@ -1448,7 +1448,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			ui->pb_gl_icon_color->setEnabled(val);
 			ui->pb_sd_icon_color->setEnabled(val);
 			ui->pb_tr_icon_color->setEnabled(val);
-			Q_EMIT GuiRepaintRequest();
+			emit GuiRepaintRequest();
 		});
 		auto colorDialog = [&](const gui_save& color, const QString& title, QPushButton *button)
 		{
@@ -1468,7 +1468,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 				}
 				xgui_settings->SetValue(color, dlg.selectedColor());
 				button->setIcon(gui::utils::get_colorized_icon(button->icon(), oldColor, dlg.selectedColor(), true));
-				Q_EMIT GuiRepaintRequest();
+				emit GuiRepaintRequest();
 			}
 		};
 
@@ -1655,7 +1655,7 @@ void settings_dialog::OnBackupCurrentConfig()
 			QMessageBox::warning(this, tr("Error"), tr("Please choose a non-existing name"));
 			continue;
 		}
-		Q_EMIT GuiSettingsSaveRequest();
+		emit GuiSettingsSaveRequest();
 		xgui_settings->SaveCurrentConfig(friendly_name);
 		ui->combo_configs->addItem(friendly_name);
 		ui->combo_configs->setCurrentText(friendly_name);
@@ -1682,14 +1682,14 @@ void settings_dialog::OnApplyConfig()
 	}
 
 	m_currentConfig = new_config;
-	Q_EMIT GuiSettingsSyncRequest(true);
+	emit GuiSettingsSyncRequest(true);
 }
 
 void settings_dialog::OnApplyStylesheet()
 {
 	m_currentStylesheet = ui->combo_stylesheets->currentData().toString();
 	xgui_settings->SetValue(gui::m_currentStylesheet, m_currentStylesheet);
-	Q_EMIT GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
+	emit GuiStylesheetRequest(xgui_settings->GetCurrentStylesheetPath());
 }
 
 int settings_dialog::exec()

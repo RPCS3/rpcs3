@@ -269,7 +269,7 @@ public:
 	QStringList GetStylesheetEntries();
 	QStringList GetGameListCategoryFilters();
 
-public Q_SLOTS:
+public slots:
 	void Reset(bool removeMeta = false);
 
 	/** Remove entry */

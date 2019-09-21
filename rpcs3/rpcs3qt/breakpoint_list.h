@@ -20,11 +20,11 @@ public:
 
 	QColor m_text_color_bp;
 	QColor m_color_bp;
-Q_SIGNALS:
+signals:
 	void RequestShowAddress(u32 addr);
-public Q_SLOTS:
+public slots:
 	void HandleBreakpointRequest(u32 addr);
-private Q_SLOTS:
+private slots:
 	void OnBreakpointListDoubleClicked();
 	void OnBreakpointListRightClicked(const QPoint &pos);
 	void OnBreakpointListDelete();

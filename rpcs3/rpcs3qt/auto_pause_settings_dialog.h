@@ -39,9 +39,9 @@ public:
 	void LoadEntries(void);
 	void SaveEntries(void);
 
-public Q_SLOTS:
+public slots:
 	void OnRemove();
-private Q_SLOTS:
+private slots:
 	void ShowContextMenu(const QPoint &pos);
 	void keyPressEvent(QKeyEvent *event) override;
 };
@@ -60,7 +60,7 @@ class AutoPauseConfigDialog : public QDialog
 public:
 	explicit AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32* entry);
 
-private Q_SLOTS:
+private slots:
 	void OnOk();
 	void OnCancel();
 	void OnUpdateValue();

@@ -11,7 +11,7 @@ class cg_disasm_window : public QWidget
 {
 	Q_OBJECT
 
-private Q_SLOTS:
+private slots:
 	void ShowContextMenu(const QPoint &pos);
 	void ShowDisasm();
 	bool IsValidFile(const QMimeData& md, bool save = false);

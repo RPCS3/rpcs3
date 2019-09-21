@@ -21,9 +21,9 @@ public:
 	* There'll be some duplicated code.  But, in the future, there'll be no duplicated code. So, I don't care.
 	*/
 	explicit save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::string dir = "", QWidget* parent = nullptr);
-public Q_SLOTS:
+public slots:
 	void HandleRepaintUiRequest();
-private Q_SLOTS:
+private slots:
 	void OnEntryRemove();
 	void OnEntriesRemove();
 	void OnSort(int logicalIndex);
