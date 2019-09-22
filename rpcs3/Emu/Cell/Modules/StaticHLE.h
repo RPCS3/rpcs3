@@ -20,7 +20,7 @@ struct shle_pattern
 class statichle_handler
 {
 public:
-	statichle_handler();
+	statichle_handler(int);
 	~statichle_handler();
 
 	bool load_patterns();

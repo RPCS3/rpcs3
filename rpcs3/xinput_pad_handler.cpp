@@ -2,6 +2,49 @@
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 
+namespace XINPUT_INFO
+{
+	const DWORD GUIDE_BUTTON = 0x0400;
+	const LPCWSTR LIBRARY_FILENAMES[] = {
+		L"xinput1_3.dll", // Prioritizing 1_3 because of SCP
+		L"xinput1_4.dll",
+		L"xinput9_1_0.dll"
+	};
+} // namespace XINPUT_INFO
+
+// ScpToolkit defined structure for pressure sensitive button query
+struct SCP_EXTN
+{
+	float SCP_UP;
+	float SCP_RIGHT;
+	float SCP_DOWN;
+	float SCP_LEFT;
+
+	float SCP_LX;
+	float SCP_LY;
+
+	float SCP_L1;
+	float SCP_L2;
+	float SCP_L3;
+
+	float SCP_RX;
+	float SCP_RY;
+
+	float SCP_R1;
+	float SCP_R2;
+	float SCP_R3;
+
+	float SCP_T;
+	float SCP_C;
+	float SCP_X;
+	float SCP_S;
+
+	float SCP_SELECT;
+	float SCP_START;
+
+	float SCP_PS;
+};
+
 xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 {
 	init_configs();
@@ -83,20 +126,17 @@ void xinput_pad_handler::GetNextButtonPress(const std::string& padId, const std:
 	if (device_number < 0)
 		return fail_callback(padId);
 
-	DWORD dwResult;
-	XINPUT_STATE state;
-	ZeroMemory(&state, sizeof(XINPUT_STATE));
-
 	// Simply get the state of the controller from XInput.
-	dwResult = (*xinputGetState)(static_cast<u32>(device_number), &state);
-	if (dwResult != ERROR_SUCCESS)
+	const auto state = GetState(static_cast<u32>(device_number));
+	if (std::get<DWORD>(state) != ERROR_SUCCESS)
 		return fail_callback(padId);
 
 	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
 	// Use a pair to get all the legally pressed buttons and use the one with highest value (prioritize first)
-	std::pair<u16, std::string> pressed_button = { 0, "" };
-	auto data = GetButtonValues(state);
+	ASSERT(std::get<std::optional<PadButtonValues>>(state).has_value());
+	std::pair<u16, std::string> pressed_button = {0, ""};
+	const PadButtonValues& data = *std::get<std::optional<PadButtonValues>>(state);
 	for (const auto& button : button_list)
 	{
 		u32 keycode = button.first;
@@ -204,7 +244,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	return device_number;
 }
 
-std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> xinput_pad_handler::GetButtonValues(const XINPUT_STATE& state)
+std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> xinput_pad_handler::GetButtonValues_Base(const XINPUT_STATE& state)
 {
 	std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> values;
 
@@ -263,6 +303,91 @@ std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> xinput_pad_han
 	return values;
 }
 
+std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> xinput_pad_handler::GetButtonValues_SCP(const SCP_EXTN& state)
+{
+	std::array<u16, xinput_pad_handler::XInputKeyCodes::KeyCodeCount> values;
+
+	// Triggers
+	values[xinput_pad_handler::XInputKeyCodes::LT] = static_cast<u16>(state.SCP_L2 * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::RT] = static_cast<u16>(state.SCP_R2 * 255.0f);
+
+	// Sticks
+	float lx = state.SCP_LX;
+	float ly = state.SCP_LY;
+	float rx = state.SCP_RX;
+	float ry = state.SCP_RY;
+
+	// Left Stick X Axis
+	values[xinput_pad_handler::XInputKeyCodes::LSXNeg] = lx < 0.0f ? static_cast<u16>(lx * -32768.0f) : 0;
+	values[xinput_pad_handler::XInputKeyCodes::LSXPos] = lx > 0.0f ? static_cast<u16>(lx * 32767.0f) : 0;
+
+	// Left Stick Y Axis
+	values[xinput_pad_handler::XInputKeyCodes::LSYNeg] = ly < 0.0f ? static_cast<u16>(ly * -32768.0f) : 0;
+	values[xinput_pad_handler::XInputKeyCodes::LSYPos] = ly > 0.0f ? static_cast<u16>(ly * 32767.0f) : 0;
+
+	// Right Stick X Axis
+	values[xinput_pad_handler::XInputKeyCodes::RSXNeg] = rx < 0.0f ? static_cast<u16>(rx * -32768.0f) : 0;
+	values[xinput_pad_handler::XInputKeyCodes::RSXPos] = rx > 0.0f ? static_cast<u16>(rx * 32767.0f) : 0;
+
+	// Right Stick Y Axis
+	values[xinput_pad_handler::XInputKeyCodes::RSYNeg] = ry < 0.0f ? static_cast<u16>(ry * -32768.0f) : 0;
+	values[xinput_pad_handler::XInputKeyCodes::RSYPos] = ry > 0.0f ? static_cast<u16>(ry * 32767.0f) : 0;
+
+	// A, B, X, Y
+	values[xinput_pad_handler::XInputKeyCodes::A] = static_cast<u16>(state.SCP_X * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::B] = static_cast<u16>(state.SCP_C * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::X] = static_cast<u16>(state.SCP_S * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::Y] = static_cast<u16>(state.SCP_T * 255.0f);
+
+	// D-Pad
+	values[xinput_pad_handler::XInputKeyCodes::Left]  = static_cast<u16>(state.SCP_LEFT * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::Right] = static_cast<u16>(state.SCP_RIGHT * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::Up]    = static_cast<u16>(state.SCP_UP * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::Down]  = static_cast<u16>(state.SCP_DOWN * 255.0f);
+
+	// LB, RB, LS, RS
+	values[xinput_pad_handler::XInputKeyCodes::LB] = static_cast<u16>(state.SCP_L1 * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::RB] = static_cast<u16>(state.SCP_R1 * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::LS] = static_cast<u16>(state.SCP_L3 * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::RS] = static_cast<u16>(state.SCP_R3 * 255.0f);
+
+	// Start, Back, Guide
+	values[xinput_pad_handler::XInputKeyCodes::Start] = static_cast<u16>(state.SCP_START * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::Back]  = static_cast<u16>(state.SCP_SELECT * 255.0f);
+	values[xinput_pad_handler::XInputKeyCodes::Guide] = static_cast<u16>(state.SCP_PS * 255.0f);
+
+	return values;
+}
+
+auto xinput_pad_handler::GetState(u32 device_number) -> std::tuple<DWORD, std::optional<PadButtonValues>>
+{
+	std::tuple<DWORD, std::optional<PadButtonValues>> result;
+	std::get<DWORD>(result) = ERROR_NOT_CONNECTED;
+
+	// Try SCP first, if it fails for that pad then try normal XInput
+	if (xinputGetExtended)
+	{
+		SCP_EXTN stateExtn;
+		std::get<DWORD>(result) = xinputGetExtended(device_number, &stateExtn);
+		if (std::get<DWORD>(result) == ERROR_SUCCESS)
+		{
+			std::get<std::optional<PadButtonValues>>(result) = GetButtonValues_SCP(stateExtn);
+		}
+	}
+
+	if (std::get<DWORD>(result) != ERROR_SUCCESS)
+	{
+		XINPUT_STATE stateBase;
+		std::get<DWORD>(result) = xinputGetState(device_number, &stateBase);
+		if (std::get<DWORD>(result) == ERROR_SUCCESS)
+		{
+			std::get<std::optional<PadButtonValues>>(result) = GetButtonValues_Base(stateBase);
+		}
+	}
+
+	return result;
+}
+
 bool xinput_pad_handler::Init()
 {
 	if (is_init)
@@ -273,7 +398,7 @@ bool xinput_pad_handler::Init()
 		library = LoadLibrary(it);
 		if (library)
 		{
-			xinputEnable = reinterpret_cast<PFN_XINPUTENABLE>(GetProcAddress(library, "XInputEnable"));
+			xinputGetExtended = reinterpret_cast<PFN_XINPUTGETEXTENDED>(GetProcAddress(library, "XInputGetExtended")); // Optional
 			xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, reinterpret_cast<LPCSTR>(100)));
 			if (!xinputGetState)
 				xinputGetState = reinterpret_cast<PFN_XINPUTGETSTATE>(GetProcAddress(library, "XInputGetState"));
@@ -281,7 +406,7 @@ bool xinput_pad_handler::Init()
 			xinputSetState = reinterpret_cast<PFN_XINPUTSETSTATE>(GetProcAddress(library, "XInputSetState"));
 			xinputGetBatteryInformation = reinterpret_cast<PFN_XINPUTGETBATTERYINFORMATION>(GetProcAddress(library, "XInputGetBatteryInformation"));
 
-			if (xinputEnable && xinputGetState && xinputSetState && xinputGetBatteryInformation)
+			if (xinputGetState && xinputSetState && xinputGetBatteryInformation)
 			{
 				is_init = true;
 				break;
@@ -289,8 +414,9 @@ bool xinput_pad_handler::Init()
 
 			FreeLibrary(library);
 			library = nullptr;
-			xinputEnable = nullptr;
+			xinputGetExtended = nullptr;
 			xinputGetState = nullptr;
+			xinputSetState = nullptr;
 			xinputGetBatteryInformation = nullptr;
 		}
 	}
@@ -307,8 +433,9 @@ void xinput_pad_handler::Close()
 	{
 		FreeLibrary(library);
 		library = nullptr;
+		xinputGetExtended = nullptr;
 		xinputGetState = nullptr;
-		xinputEnable = nullptr;
+		xinputSetState = nullptr;
 		xinputGetBatteryInformation = nullptr;
 	}
 }
@@ -323,9 +450,9 @@ void xinput_pad_handler::ThreadProc()
 		auto profile = m_dev->config;
 		auto pad = bind.second;
 
-		result = (*xinputGetState)(padnum, &state);
+		const auto state = GetState(padnum);
 
-		switch (result)
+		switch (std::get<DWORD>(state))
 		{
 		case ERROR_DEVICE_NOT_CONNECTED:
 		{
@@ -350,7 +477,8 @@ void xinput_pad_handler::ThreadProc()
 				connected++;
 			}
 
-			std::array<u16, XInputKeyCodes::KeyCodeCount> button_values = GetButtonValues(state);
+			ASSERT(std::get<std::optional<PadButtonValues>>(state).has_value());
+			const PadButtonValues& button_values = *std::get<std::optional<PadButtonValues>>(state);
 
 			// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 			for (auto& btn : pad->m_buttons)
@@ -506,7 +634,7 @@ bool xinput_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::st
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->triangle), CELL_PAD_CTRL_TRIANGLE);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->l2),       CELL_PAD_CTRL_L2);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, FindKeyCode(button_list, p_profile->r2),       CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
+	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved (and currently not in use by rpcs3 at all)
 
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  FindKeyCode(button_list, p_profile->ls_left), FindKeyCode(button_list, p_profile->ls_right));
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  FindKeyCode(button_list, p_profile->ls_down), FindKeyCode(button_list, p_profile->ls_up));

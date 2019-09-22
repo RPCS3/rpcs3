@@ -229,11 +229,6 @@ bool cpu_thread::check_state() noexcept
 			return true;
 		}
 
-		if (state & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
-		{
-			cpu_sleep_called = false;
-		}
-
 		const auto [state0, escape] = state.fetch_op([&](bs_t<cpu_flag>& flags)
 		{
 			// Atomically clean wait flag and escape
@@ -250,6 +245,11 @@ bool cpu_thread::check_state() noexcept
 
 			return true;
 		});
+
+		if (state & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
+		{
+			cpu_sleep_called = false;
+		}
 
 		if (escape)
 		{

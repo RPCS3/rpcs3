@@ -352,7 +352,7 @@ namespace rsx
 			capture::capture_draw_memory(this);
 
 		in_begin_end = false;
-		m_draw_calls++;
+		m_frame_stats.draw_calls++;
 
 		method_registers.current_draw_clause.post_execute_cleanup();
 
@@ -2233,48 +2233,12 @@ namespace rsx
 		}
 	}
 
-	void thread::flip(int buffer, bool emu_flip)
+	void thread::flip(const display_flip_info_t& info)
 	{
-		if (!(async_flip_requested & flip_request::any))
+		if (async_flip_requested & flip_request::any)
 		{
-			// Flip is processed through inline FLIP command in the commandstream
-			// This is critical as it is a reliable end-of-frame marker
-
-			if (!g_cfg.video.disable_FIFO_reordering)
-			{
-				// Try to enable FIFO optimizations
-				// Only rarely useful for some games like RE4
-				m_flattener.evaluate_performance(m_draw_calls);
-			}
-
-			// Reset zcull ctrl
-			zcull_ctrl->set_active(this, false);
-			zcull_ctrl->clear(this);
-
-			if (zcull_ctrl->has_pending())
-			{
-				LOG_TRACE(RSX, "Dangling reports found, discarding...");
-				zcull_ctrl->sync(this);
-			}
-
-			if (g_cfg.video.frame_skip_enabled)
-			{
-				m_skip_frame_ctr++;
-
-				if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
-					m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
-
-				skip_frame = (m_skip_frame_ctr < 0);
-			}
-		}
-		else
-		{
-			if (async_flip_requested & flip_request::emu_requested)
-			{
-				m_flattener.force_disable();
-			}
-
-			if (emu_flip)
+			// Deferred flip
+			if (info.emu_flip)
 			{
 				async_flip_requested.clear(flip_request::emu_requested);
 			}
@@ -2284,13 +2248,10 @@ namespace rsx
 			}
 		}
 
-		if (!skip_frame)
+		if (info.emu_flip)
 		{
-			// Reset counter
-			m_draw_calls = 0;
+			performance_counters.sampled_frames++;
 		}
-
-		performance_counters.sampled_frames++;
 	}
 
 	void thread::check_zcull_status(bool framebuffer_swap)
@@ -2528,31 +2489,9 @@ namespace rsx
 		return performance_counters.approximate_load;
 	}
 
-	void thread::request_emu_flip(u32 buffer)
+	void thread::on_frame_end(u32 buffer, bool forced)
 	{
-		const bool is_rsxthr = std::this_thread::get_id() == m_rsx_thread;
-
-		// requested through command buffer
-		if (is_rsxthr)
-		{
-			// NOTE: The flip will clear any queued flip requests
-			handle_emu_flip(buffer);
-		}
-		else // requested 'manually' through ppu syscall
-		{
-			if (async_flip_requested & flip_request::emu_requested)
-			{
-				// ignore multiple requests until previous happens
-				return;
-			}
-
-			async_flip_buffer = buffer;
-			async_flip_requested |= flip_request::emu_requested;
-		}
-	}
-
-	void thread::handle_emu_flip(u32 buffer)
-	{
+		// Marks the end of a frame scope GPU-side
 		if (user_asked_for_frame_capture && !capture_current_frame)
 		{
 			capture_current_frame = true;
@@ -2586,6 +2525,95 @@ namespace rsx
 
 			frame_capture.reset();
 			Emu.Pause();
+		}
+
+		// Reset zcull ctrl
+		zcull_ctrl->set_active(this, false);
+		zcull_ctrl->clear(this);
+
+		if (zcull_ctrl->has_pending())
+		{
+			LOG_TRACE(RSX, "Dangling reports found, discarding...");
+			zcull_ctrl->sync(this);
+		}
+
+		// Save current state
+		m_queued_flip.stats = m_frame_stats;
+		m_queued_flip.buffer = buffer;
+		m_queued_flip.skip_frame = skip_current_frame;
+
+		if (LIKELY(!forced))
+		{
+			if (!g_cfg.video.disable_FIFO_reordering)
+			{
+				// Try to enable FIFO optimizations
+				// Only rarely useful for some games like RE4
+				m_flattener.evaluate_performance(m_frame_stats.draw_calls);
+			}
+
+			if (g_cfg.video.frame_skip_enabled)
+			{
+				m_skip_frame_ctr++;
+
+				if (m_skip_frame_ctr == g_cfg.video.consequtive_frames_to_draw)
+					m_skip_frame_ctr = -g_cfg.video.consequtive_frames_to_skip;
+
+				skip_current_frame = (m_skip_frame_ctr < 0);
+			}
+		}
+		else
+		{
+			if (!g_cfg.video.disable_FIFO_reordering)
+			{
+				// Flattener is unusable due to forced random flips
+				m_flattener.force_disable();
+			}
+
+			if (g_cfg.video.frame_skip_enabled)
+			{
+				LOG_ERROR(RSX, "Frame skip is not compatible with this application");
+			}
+		}
+
+		// Reset current stats
+		m_frame_stats = {};
+	}
+
+	void thread::request_emu_flip(u32 buffer)
+	{
+		const bool is_rsxthr = std::this_thread::get_id() == m_rsx_thread;
+
+		// requested through command buffer
+		if (is_rsxthr)
+		{
+			// NOTE: The flip will clear any queued flip requests
+			handle_emu_flip(buffer);
+		}
+		else // requested 'manually' through ppu syscall
+		{
+			if (async_flip_requested & flip_request::emu_requested)
+			{
+				// ignore multiple requests until previous happens
+				return;
+			}
+
+			async_flip_buffer = buffer;
+			async_flip_requested |= flip_request::emu_requested;
+		}
+	}
+
+	void thread::handle_emu_flip(u32 buffer)
+	{
+		if (m_queued_flip.in_progress)
+		{
+			// Rescursion not allowed!
+			return;
+		}
+
+		if (m_queued_flip.buffer == ~0u)
+		{
+			// Frame was not queued before flipping
+			on_frame_end(buffer, true);
 		}
 
 		double limit = 0.;
@@ -2629,11 +2657,18 @@ namespace rsx
 		}
 
 		int_flip_index++;
+
+		verify(HERE), m_queued_flip.buffer == buffer;
+
 		current_display_buffer = buffer;
-		flip(buffer, true);
+		m_queued_flip.emu_flip = true;
+		m_queued_flip.in_progress = true;
+		flip(m_queued_flip);
 
 		last_flip_time = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+		m_queued_flip.buffer = ~0u;
+		m_queued_flip.in_progress = false;
 
 		if (flip_handler)
 		{

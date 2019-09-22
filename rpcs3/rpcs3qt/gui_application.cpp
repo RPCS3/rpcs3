@@ -15,6 +15,8 @@
 
 #include <QScreen>
 
+#include <clocale>
+
 gui_application::gui_application(int& argc, char** argv) : QApplication(argc, argv)
 {
 }
@@ -47,6 +49,9 @@ void gui_application::Init()
 
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
+
+	// As per QT recommendations to avoid conflicts for POSIX functions
+	std::setlocale(LC_NUMERIC, "C");
 
 	if (m_main_window)
 	{

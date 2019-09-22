@@ -115,11 +115,9 @@ struct Button
 	u32 m_outKeyCode;
 	u16 m_value;
 	bool m_pressed;
-	bool m_flush;
 
 	Button(u32 offset, u32 keyCode, u32 outKeyCode)
 		: m_pressed(false)
-		, m_flush(false)
 		, m_offset(offset)
 		, m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
