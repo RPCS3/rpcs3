@@ -28,6 +28,7 @@
 #include "about_dialog.h"
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
+#include "skylander_dialog.h"
 
 #include <thread>
 
@@ -1269,6 +1270,12 @@ void main_window::CreateConnects()
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(guiSettings);
 		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
+	});
+
+	connect(ui->actionManage_Skylanders_Portal, &QAction::triggered, [=]
+	{
+		skylander_dialog* sky_diag = skylander_dialog::get_dlg(this);
+		sky_diag->show();
 	});
 
 	connect(ui->actionManage_Users, &QAction::triggered, [=]

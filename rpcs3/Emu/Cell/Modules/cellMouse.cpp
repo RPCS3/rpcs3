@@ -34,19 +34,18 @@ error_code cellMouseInit(u32 max_connect)
 {
 	sys_io.warning("cellMouseInit(max_connect=%d)", max_connect);
 
-	auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (handler)
-	{
+	const auto init = handler->init.init();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_ALREADY_INITIALIZED;
-	}
 
 	if (max_connect == 0 || max_connect > CELL_MAX_MICE)
 	{
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	handler = fxm::import<MouseHandlerBase>(Emu.GetCallbacks().get_mouse_handler);
 	handler->Init(std::min(max_connect, 7u));
 
 	return CELL_OK;
@@ -56,12 +55,12 @@ error_code cellMouseClearBuf(u32 port_no)
 {
 	sys_io.trace("cellMouseClearBuf(port_no=%d)", port_no);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
 	if (port_no >= CELL_MAX_MICE)
 	{
@@ -93,11 +92,14 @@ error_code cellMouseEnd()
 {
 	sys_io.notice("cellMouseEnd()");
 
-	if (!fxm::remove<MouseHandlerBase>())
-	{
-		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
+	const auto init = handler->init.reset();
+
+	if (!init)
+		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	// TODO
 	return CELL_OK;
 }
 
@@ -105,12 +107,12 @@ error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 {
 	sys_io.trace("cellMouseGetInfo(info=*0x%x)", info);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
 	if (!info)
 	{
@@ -132,12 +134,12 @@ error_code cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> inf
 {
 	sys_io.trace("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
 	// only check for port_no here. Tests show that valid ports lead to ERROR_FATAL with disconnected devices regardless of info
 	if (port_no >= CELL_MAX_MICE)
@@ -169,12 +171,12 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 {
 	sys_io.trace("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
 	if (port_no >= CELL_MAX_MICE || !data)
 	{
@@ -217,12 +219,12 @@ error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
 	sys_io.warning("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
 	if (port_no >= CELL_MAX_MICE || !data)
 	{
@@ -263,12 +265,12 @@ error_code cellMouseSetTabletMode(u32 port_no, u32 mode)
 {
 	sys_io.warning("cellMouseSetTabletMode(port_no=%d, mode=%d)", port_no, mode);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
 	// only check for port_no here. Tests show that valid ports lead to ERROR_FATAL with disconnected devices regardless of info
 	if (port_no >= CELL_MAX_MICE)
@@ -299,12 +301,12 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 {
 	sys_io.warning("cellMouseGetTabletDataList(port_no=%d, data=0x%x)", port_no, data);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
 	if (port_no >= CELL_MAX_MICE || !data)
 	{
@@ -344,12 +346,12 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 {
 	sys_io.warning("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
 	if (port_no >= CELL_MAX_MICE || !data)
 	{

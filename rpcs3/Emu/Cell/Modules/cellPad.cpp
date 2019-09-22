@@ -137,15 +137,24 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (rinfo.system_info & CELL_PAD_INFO_INTERCEPTED)
+	if (rinfo.ignore_input || (rinfo.system_info & CELL_PAD_INFO_INTERCEPTED))
 	{
 		data->len = CELL_PAD_LEN_NO_CHANGE;
 		return CELL_OK;
 	}
 
-	u16 d1Initial, d2Initial;
-	d1Initial = pad->m_digital_1;
-	d2Initial = pad->m_digital_2;
+	if (pad->ldd)
+	{
+		memcpy(data.get_ptr(), pad->ldd_data, sizeof(CellPadData));
+		if (setting & CELL_PAD_SETTING_SENSOR_ON)
+			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
+		else
+			data->len = (setting & CELL_PAD_SETTING_PRESS_ON) ? CELL_PAD_LEN_CHANGE_PRESS_ON : CELL_PAD_LEN_CHANGE_DEFAULT;
+		return CELL_OK;
+	}
+
+	u16 d1Initial   = pad->m_digital_1;
+	u16 d2Initial   = pad->m_digital_2;
 	bool btnChanged = false;
 
 	for (Button& button : pad->m_buttons)
@@ -155,8 +164,10 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 		{
-			if (button.m_pressed) pad->m_digital_1 |= button.m_outKeyCode;
-			else pad->m_digital_1 &= ~button.m_outKeyCode;
+			if (button.m_pressed)
+				pad->m_digital_1 |= button.m_outKeyCode;
+			else
+				pad->m_digital_1 &= ~button.m_outKeyCode;
 
 			switch (button.m_outKeyCode)
 			{
@@ -186,8 +197,10 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		}
 		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 		{
-			if (button.m_pressed) pad->m_digital_2 |= button.m_outKeyCode;
-			else pad->m_digital_2 &= ~button.m_outKeyCode;
+			if (button.m_pressed)
+				pad->m_digital_2 |= button.m_outKeyCode;
+			else
+				pad->m_digital_2 &= ~button.m_outKeyCode;
 
 			switch (button.m_outKeyCode)
 			{
@@ -225,13 +238,6 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 				break;
 			default: break;
 			}
-		}
-
-		if (button.m_flush)
-		{
-			button.m_pressed = false;
-			button.m_flush = false;
-			button.m_value = 0;
 		}
 	}
 
@@ -295,7 +301,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	{
 		// report back new data every ~10 ms even if the input doesn't change
 		// this is observed behaviour when using a Dualshock 3 controller
-		static std::chrono::time_point<steady_clock> last_update[CELL_PAD_MAX_PORT_NUM] = { };
+		static std::array<std::chrono::time_point<steady_clock>, CELL_PAD_MAX_PORT_NUM> last_update = { };
 		const std::chrono::time_point<steady_clock> now = steady_clock::now();
 
 		if (btnChanged || pad->m_buffer_cleared || (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update[port_no]).count() >= 10))
@@ -868,7 +874,7 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 
 error_code cellPadLddRegisterController()
 {
-	sys_io.todo("cellPadLddRegisterController()");
+	sys_io.warning("cellPadLddRegisterController()");
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -879,14 +885,21 @@ error_code cellPadLddRegisterController()
 
 	const auto handler = pad::get_current_handler();
 
-	// can return CELL_PAD_ERROR_TOO_MANY_DEVICES
+	const s32 handle = handler->AddLddPad();
 
-	return CELL_OK;
+	if (handle < 0)
+		return CELL_PAD_ERROR_TOO_MANY_DEVICES;
+
+	auto& pads = handler->GetPads();
+	pads[handle]->Init(CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER, CELL_PAD_CAPABILITY_PS3_CONFORMITY, CELL_PAD_DEV_TYPE_LDD, 0);
+	config->port_setting[handle] = 0;
+
+	return not_an_error(handle);
 }
 
 error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 {
-	sys_io.todo("cellPadLddDataInsert(handle=%d, data=*0x%x)", handle, data);
+	sys_io.trace("cellPadLddDataInsert(handle=%d, data=*0x%x)", handle, data);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -900,14 +913,18 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 	if (handle < 0 || !data) // data == NULL stalls on decr
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	// can return CELL_PAD_ERROR_NO_DEVICE
+	auto& pads = handler->GetPads();
+	if (!pads[handle]->ldd)
+		return CELL_PAD_ERROR_NO_DEVICE;
+
+	memcpy(pads[handle]->ldd_data, data.get_ptr(), sizeof(CellPadData));
 
 	return CELL_OK;
 }
 
 error_code cellPadLddGetPortNo(s32 handle)
 {
-	sys_io.todo("cellPadLddGetPortNo(handle=%d)", handle);
+	sys_io.trace("cellPadLddGetPortNo(handle=%d)", handle);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -921,12 +938,17 @@ error_code cellPadLddGetPortNo(s32 handle)
 	if (handle < 0)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	return CELL_PAD_ERROR_EBUSY; // or CELL_PAD_ERROR_FATAL or CELL_EBUSY
+	auto& pads = handler->GetPads();
+	if (!pads[handle]->ldd)
+		return CELL_PAD_ERROR_FATAL; // might be incorrect
+
+	// Other possible return values: CELL_PAD_ERROR_EBUSY, CELL_EBUSY
+	return not_an_error(handle); // handle is port
 }
 
 error_code cellPadLddUnregisterController(s32 handle)
 {
-	sys_io.todo("cellPadLddUnregisterController(handle=%d)", handle);
+	sys_io.warning("cellPadLddUnregisterController(handle=%d)", handle);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
@@ -940,7 +962,12 @@ error_code cellPadLddUnregisterController(s32 handle)
 	if (handle < 0)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	// can return CELL_PAD_ERROR_NO_DEVICE
+	const auto& pads = handler->GetPads();
+
+	if (!pads[handle]->ldd)
+		return CELL_PAD_ERROR_NO_DEVICE;
+
+	handler->UnregisterLddPad(handle);
 
 	return CELL_OK;
 }

@@ -73,11 +73,11 @@ namespace stx
 		{
 			if (!m_list)
 			{
-				m_list = std::make_unique<void*[]>(stx::typeinfo_v<typeinfo>.count());
+				m_list = std::make_unique<void*[]>(stx::typelist_v<typeinfo>.count());
 				return;
 			}
 
-			for (auto& type : stx::typeinfo_v<typeinfo>)
+			for (auto& type : stx::typelist_v<typeinfo>)
 			{
 				type.destroy(m_list[type.index()]);
 			}
@@ -86,7 +86,7 @@ namespace stx
 		// Default initialize all objects if possible and not already initialized
 		void init() noexcept
 		{
-			for (auto& type : stx::typeinfo_v<typeinfo>)
+			for (auto& type : stx::typelist_v<typeinfo>)
 			{
 				type.create(m_list[type.index()]);
 			}
@@ -94,17 +94,17 @@ namespace stx
 
 		// Explicitly (re)initialize object of type T possibly with dynamic type As and arguments
 		template <typename T, typename As = T, typename... Args>
-		T* init(Args&&... args) noexcept
+		As* init(Args&&... args) noexcept
 		{
-			auto& ptr = m_list[stx::type_counter<typeinfo>::template type<std::decay_t<T>>.index()];
+			auto& ptr = m_list[stx::typeindex<typeinfo, std::decay_t<T>>()];
 
 			if (ptr)
 			{
 				delete static_cast<T*>(ptr);
 			}
 
-			auto* obj = static_cast<T*>(new std::decay_t<As>(std::forward<Args>(args)...));
-			ptr = obj;
+			As* obj = new std::decay_t<As>(std::forward<Args>(args)...);
+			ptr = static_cast<T*>(obj);
 			return obj;
 		}
 
@@ -112,7 +112,7 @@ namespace stx
 		template <typename T>
 		T* get() const noexcept
 		{
-			return static_cast<T*>(m_list[stx::type_counter<typeinfo>::template type<std::decay_t<T>>.index()]);
+			return static_cast<T*>(m_list[stx::typeindex<typeinfo, std::decay_t<T>>()]);
 		}
 	};
 }

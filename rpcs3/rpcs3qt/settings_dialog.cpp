@@ -229,7 +229,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		ui->enableTSX->setEnabled(false);
 		ui->enableTSX->addItem(tr("Not supported"));
-		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your cpu model does not support this instruction set."));
+		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your CPU model does not support this instruction set."));
 	}
 
 	// PPU tool tips

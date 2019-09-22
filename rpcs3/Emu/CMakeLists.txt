@@ -59,6 +59,7 @@ target_sources(rpcs3_emu PRIVATE
 	../Crypto/ec.cpp
 	../Crypto/key_vault.cpp
 	../Crypto/lz.cpp
+	../Crypto/md5.cpp
 	../Crypto/sha1.cpp
 	../Crypto/unedat.cpp
 	../Crypto/unpkg.cpp
@@ -301,6 +302,8 @@ target_link_libraries(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
 	Io/KeyboardHandler.cpp
 	Io/PadHandler.cpp
+	Io/usb_device.cpp
+	Io/Skylander.cpp
 )
 
 
@@ -398,6 +401,7 @@ target_link_libraries(rpcs3_emu
 		3rdparty::ffmpeg 3rdparty::cereal
 		3rdparty::opengl 3rdparty::stblib
 		3rdparty::vulkan 3rdparty::glew
+		3rdparty::libusb
 	PRIVATE
 		3rdparty::gsl 3rdparty::xxhash
 		3rdparty::dx12)

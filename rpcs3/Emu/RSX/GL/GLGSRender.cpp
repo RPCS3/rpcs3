@@ -174,7 +174,7 @@ void GLGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame ||
+	if (skip_current_frame ||
 		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
@@ -185,7 +185,7 @@ void GLGSRender::end()
 {
 	m_profiler.start();
 
-	if (skip_frame || !framebuffer_status_valid ||
+	if (skip_current_frame || !framebuffer_status_valid ||
 		(conditional_render_enabled && conditional_render_test_failed))
 	{
 		execute_nop_draw();
@@ -193,7 +193,7 @@ void GLGSRender::end()
 		return;
 	}
 
-	m_begin_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	const auto do_heap_cleanup = [this]()
 	{
@@ -294,7 +294,7 @@ void GLGSRender::end()
 
 		m_samplers_dirty.store(false);
 
-		m_textures_upload_time += m_profiler.duration();
+		m_frame_stats.textures_upload_time += m_profiler.duration();
 	}
 
 	// NOTE: Due to common OpenGL driver architecture, vertex data has to be uploaded as far away from the draw as possible
@@ -312,7 +312,7 @@ void GLGSRender::end()
 	// Load program execution environment
 	load_program_env();
 
-	m_begin_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	//Bind textures and resolve external copy operations
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -386,7 +386,7 @@ void GLGSRender::end()
 		}
 	}
 
-	m_textures_upload_time += m_profiler.duration();
+	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	// Optionally do memory synchronization if the texture stage has not yet triggered this
 	if (true)//g_cfg.video.strict_rendering_mode)
@@ -636,7 +636,7 @@ void GLGSRender::end()
 	m_fragment_constants_buffer->notify();
 	m_transform_constants_buffer->notify();
 
-	m_draw_time += m_profiler.duration();
+	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	rsx::thread::end();
 }
@@ -930,19 +930,19 @@ void GLGSRender::on_init_thread()
 			{
 				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void inc_value(u32 index, u32 value) override
 			{
 				dlg->progress_bar_increment(index, (f32)value);
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void set_limit(u32 index, u32 limit) override
 			{
 				dlg->progress_bar_set_limit(index, limit);
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void refresh() override
@@ -1081,7 +1081,7 @@ void GLGSRender::on_exit()
 
 void GLGSRender::clear_surface(u32 arg)
 {
-	if (skip_frame || !framebuffer_status_valid) return;
+	if (skip_current_frame || !framebuffer_status_valid) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!rsx::method_registers.stencil_mask()) arg &= ~0x2u;
@@ -1546,30 +1546,21 @@ void GLGSRender::update_draw_state()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	m_begin_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 }
 
-void GLGSRender::flip(int buffer, bool emu_flip)
+void GLGSRender::flip(const rsx::display_flip_info_t& info)
 {
-	if (skip_frame)
+	if (info.skip_frame)
 	{
 		m_frame->flip(m_context, true);
-		rsx::thread::flip(buffer);
-
-		if (!skip_frame)
-		{
-			m_begin_time = 0;
-			m_draw_time = 0;
-			m_vertex_upload_time = 0;
-			m_textures_upload_time = 0;
-		}
-
+		rsx::thread::flip(info);
 		return;
 	}
 
-	u32 buffer_width = display_buffers[buffer].width;
-	u32 buffer_height = display_buffers[buffer].height;
-	u32 buffer_pitch = display_buffers[buffer].pitch;
+	u32 buffer_width = display_buffers[info.buffer].width;
+	u32 buffer_height = display_buffers[info.buffer].height;
+	u32 buffer_pitch = display_buffers[info.buffer].pitch;
 
 	u32 av_format;
 	const auto avconfig = g_fxo->get<rsx::avconf>();
@@ -1598,7 +1589,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	gl::screen.bind();
 	gl::screen.clear(gl::buffers::color);
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
+	if ((u32)info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Calculate blit coordinates
 		coordi aspect_ratio;
@@ -1626,7 +1617,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		aspect_ratio.size = new_size;
 
 		// Find the source image
-		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		const u32 absolute_address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		GLuint image = GL_NONE;
 
 		if (auto render_target_texture = m_rtts.get_color_surface_at(absolute_address))
@@ -1658,7 +1649,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 					// TODO: Should emit only once to avoid flooding the log file
 					// TODO: Take AA scaling into account
 					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
-						display_buffers[buffer].width, display_buffers[buffer].height, avconfig->state * avconfig->resolution_x, avconfig->state * avconfig->resolution_y,
+						display_buffers[info.buffer].width, display_buffers[info.buffer].height, avconfig->state * avconfig->resolution_x, avconfig->state * avconfig->resolution_y,
 						render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
 
 					buffer_width = render_target_texture->width();
@@ -1776,11 +1767,11 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 
 		m_text_printer.print_text(0,  0, m_frame->client_width(), m_frame->client_height(), fmt::format("RSX Load:                %3d%%", get_load()));
-		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), fmt::format("draw calls: %16d", m_draw_calls));
-		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call setup: %11dus", m_begin_time));
-		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), fmt::format("vertex upload time: %8dus", m_vertex_upload_time));
-		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), fmt::format("textures upload time: %6dus", m_textures_upload_time));
-		m_text_printer.print_text(0, 90, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call execution: %7dus", m_draw_time));
+		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), fmt::format("draw calls: %16d", info.stats.draw_calls));
+		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call setup: %11dus", info.stats.setup_time));
+		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), fmt::format("vertex upload time: %8dus", info.stats.vertex_upload_time));
+		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), fmt::format("textures upload time: %6dus", info.stats.textures_upload_time));
+		m_text_printer.print_text(0, 90, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call execution: %7dus", info.stats.draw_exec_time));
 
 		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -1796,7 +1787,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	}
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(buffer, emu_flip);
+	rsx::thread::flip(info);
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
@@ -1818,14 +1809,6 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		set_viewport();
 		set_scissor(!!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped));
 	}
-
-	// If we are skipping the next frame, do not reset perf counters
-	if (skip_frame) return;
-
-	m_begin_time = 0;
-	m_draw_time = 0;
-	m_vertex_upload_time = 0;
-	m_textures_upload_time = 0;
 }
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
@@ -1922,7 +1905,9 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 	{
 		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
-			flip((s32)current_display_buffer, false);
+			rsx::display_flip_info_t info{};
+			info.buffer = current_display_buffer;
+			flip(info);
 		}
 	}
 }

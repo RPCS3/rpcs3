@@ -253,6 +253,11 @@ public:
 
 	std::unordered_map<u8, microphone_device> mic_list;
 
+	shared_mutex mutex;
+	atomic_t<u32> init = 0;
+
+	static constexpr auto thread_name = "Microphone Thread"sv;
+
 protected:
 	const u64 start_time = get_guest_system_time();
 	u64 m_counter        = 0;

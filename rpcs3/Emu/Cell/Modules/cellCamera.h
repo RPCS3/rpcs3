@@ -396,6 +396,10 @@ public:
 	};
 	attr_t attr[500]{};
 	atomic_t<u32> frame_num;
+
+	atomic_t<u32> init = 0;
+
+	static constexpr auto thread_name = "Camera Thread"sv;
 };
 
 using camera_thread = named_thread<camera_context>;

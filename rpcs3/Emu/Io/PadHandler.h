@@ -18,13 +18,15 @@ enum SystemInfo
 
 enum PortStatus
 {
-	CELL_PAD_STATUS_DISCONNECTED   = 0x00000000,
-	CELL_PAD_STATUS_CONNECTED      = 0x00000001,
-	CELL_PAD_STATUS_ASSIGN_CHANGES = 0x00000002,
+	CELL_PAD_STATUS_DISCONNECTED      = 0x00000000,
+	CELL_PAD_STATUS_CONNECTED         = 0x00000001,
+	CELL_PAD_STATUS_ASSIGN_CHANGES    = 0x00000002,
+	CELL_PAD_STATUS_CUSTOM_CONTROLLER = 0x00000004,
 };
 
 enum PortSettings
 {
+	CELL_PAD_SETTING_LDD           = 0x00000001, // Speculative
 	CELL_PAD_SETTING_PRESS_ON      = 0x00000002,
 	CELL_PAD_SETTING_SENSOR_ON     = 0x00000004,
 	CELL_PAD_SETTING_PRESS_OFF     = 0x00000000,
@@ -113,11 +115,9 @@ struct Button
 	u32 m_outKeyCode;
 	u16 m_value;
 	bool m_pressed;
-	bool m_flush;
 
 	Button(u32 offset, u32 keyCode, u32 outKeyCode)
 		: m_pressed(false)
-		, m_flush(false)
 		, m_offset(offset)
 		, m_keyCode(keyCode)
 		, m_outKeyCode(outKeyCode)
@@ -213,6 +213,9 @@ struct Pad
 	u16 m_sensor_y;
 	u16 m_sensor_z;
 	u16 m_sensor_g;
+
+	bool ldd = false;
+	u8 ldd_data[132] = {};
 
 	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type)
 	{

@@ -506,7 +506,7 @@ namespace utils
 		template <typename T>
 		typemap_head* get_head() const
 		{
-			return &m_map[stx::type_counter<typeinfo_base>::type<std::decay_t<T>>.index()];
+			return &m_map[stx::typeindex<typeinfo_base, std::decay_t<T>>()];
 		}
 
 	public:
@@ -538,7 +538,7 @@ namespace utils
 		// Recreate, also required if constructed without initialization.
 		void init()
 		{
-			if (!stx::typeinfo_v<typeinfo_base>.count())
+			if (!stx::typelist_v<typeinfo_base>.count())
 			{
 				return;
 			}
@@ -546,12 +546,12 @@ namespace utils
 			// Recreate and copy some type information
 			if (m_map == nullptr)
 			{
-				m_map = new typemap_head[stx::typeinfo_v<typeinfo_base>.count()]();
+				m_map = new typemap_head[stx::typelist_v<typeinfo_base>.count()]();
 			}
 			else
 			{
-				auto type = stx::typeinfo_v<typeinfo_base>.begin();
-				auto _end = stx::typeinfo_v<typeinfo_base>.end();
+				auto type = stx::typelist_v<typeinfo_base>.begin();
+				auto _end = stx::typelist_v<typeinfo_base>.end();
 
 				for (uint i = 0; type != _end; i++, ++type)
 				{
@@ -581,8 +581,8 @@ namespace utils
 			if (m_memory == nullptr)
 			{
 				// Determine total size, copy typeinfo
-				auto type = stx::typeinfo_v<typeinfo_base>.begin();
-				auto _end = stx::typeinfo_v<typeinfo_base>.end();
+				auto type = stx::typelist_v<typeinfo_base>.begin();
+				auto _end = stx::typelist_v<typeinfo_base>.end();
 
 				for (uint i = 0; type != _end; i++, ++type)
 				{
@@ -611,7 +611,7 @@ namespace utils
 				utils::memory_commit(m_memory, m_total);
 
 				// Update pointers
-				for (uint i = 0, n = stx::typeinfo_v<typeinfo_base>.count(); i < n; i++)
+				for (uint i = 0, n = stx::typelist_v<typeinfo_base>.count(); i < n; i++)
 				{
 					if (m_map[i].m_count)
 					{

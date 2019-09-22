@@ -17,6 +17,8 @@
 #include <thread>
 #include <deque>
 
+static_assert(sizeof(shared_cond) == 8, "Unexpected size of shared_cond");
+
 namespace vm
 {
 	static u8* memory_reserve_4GiB(std::uintptr_t _addr = 0)
@@ -47,6 +49,9 @@ namespace vm
 
 	// Reservation stats (compressed x16)
 	u8* const g_reservations = memory_reserve_4GiB((std::uintptr_t)g_stat_addr);
+
+	// Reservation sync variables
+	u8* const g_reservations2 = g_reservations + 0x10000000;
 
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
@@ -629,9 +634,11 @@ namespace vm
 			if (addr == 0x10000)
 			{
 				utils::memory_commit(g_reservations, 0x1000);
+				utils::memory_commit(g_reservations2, 0x1000);
 			}
 
 			utils::memory_commit(g_reservations + addr / 16, size / 16);
+			utils::memory_commit(g_reservations2 + addr / 16, size / 16);
 		}
 		else
 		{
@@ -639,10 +646,12 @@ namespace vm
 			for (u32 i = 0; i < 6; i++)
 			{
 				utils::memory_commit(g_reservations + addr / 16 + i * 0x10000, 0x4000);
+				utils::memory_commit(g_reservations2 + addr / 16 + i * 0x10000, 0x4000);
 			}
 
 			// End of the address space
 			utils::memory_commit(g_reservations + 0xfff0000, 0x10000);
+			utils::memory_commit(g_reservations2 + 0xfff0000, 0x10000);
 		}
 
 		if (flags & 0x100)
@@ -1070,7 +1079,12 @@ namespace vm
 		// Fixed address allocation
 		area = _get_map(location, addr);
 
-		return !area ? _map(addr, area_size, flags) : area;
+		if (area)
+		{
+			return area;
+		}
+
+		return _map(addr, area_size, flags);
 	}
 
 	inline namespace ps3_

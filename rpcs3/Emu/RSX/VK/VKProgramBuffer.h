@@ -40,6 +40,9 @@ namespace vk
 			{
 				if (memcmp(&state.ms, &other.state.ms, sizeof(VkPipelineMultisampleStateCreateInfo)))
 					return false;
+
+				if (state.temp_storage.msaa_sample_mask != other.state.temp_storage.msaa_sample_mask)
+					return false;
 			}
 
 			return true;
@@ -57,6 +60,7 @@ namespace rpcs3
 		seed ^= hash_struct(pipelineProperties.state.ds);
 		seed ^= hash_struct(pipelineProperties.state.rs);
 		seed ^= hash_struct(pipelineProperties.state.ms);
+		seed ^= hash_base(pipelineProperties.state.temp_storage.msaa_sample_mask);
 
 		// Do not compare pointers to memory!
 		VkPipelineColorBlendStateCreateInfo tmp;

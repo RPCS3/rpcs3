@@ -398,13 +398,6 @@ private:
 	VkViewport m_viewport{};
 	VkRect2D m_scissor{};
 
-	// Timers
-	s64 m_setup_time = 0;
-	s64 m_vertex_upload_time = 0;
-	s64 m_textures_upload_time = 0;
-	s64 m_draw_time = 0;
-	s64 m_flip_time = 0;
-
 	std::vector<u8> m_draw_buffers;
 
 	shared_mutex m_flush_queue_mutex;
@@ -492,7 +485,7 @@ protected:
 	void on_init_thread() override;
 	void on_exit() override;
 	bool do_method(u32 cmd, u32 arg) override;
-	void flip(int buffer, bool emu_flip = false) override;
+	void flip(const rsx::display_flip_info_t& info) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;

@@ -229,11 +229,6 @@ bool cpu_thread::check_state() noexcept
 			return true;
 		}
 
-		if (state & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
-		{
-			cpu_sleep_called = false;
-		}
-
 		const auto [state0, escape] = state.fetch_op([&](bs_t<cpu_flag>& flags)
 		{
 			// Atomically clean wait flag and escape
@@ -250,6 +245,11 @@ bool cpu_thread::check_state() noexcept
 
 			return true;
 		});
+
+		if (state & cpu_flag::signal && state.test_and_reset(cpu_flag::signal))
+		{
+			cpu_sleep_called = false;
+		}
 
 		if (escape)
 		{
@@ -303,6 +303,22 @@ void cpu_thread::notify()
 	else if (id_type() == 2)
 	{
 		thread_ctrl::notify(*static_cast<named_thread<spu_thread>*>(this));
+	}
+	else
+	{
+		fmt::throw_exception("Invalid cpu_thread type");
+	}
+}
+
+void cpu_thread::abort()
+{
+	if (id_type() == 1)
+	{
+		*static_cast<named_thread<ppu_thread>*>(this) = thread_state::aborting;
+	}
+	else if (id_type() == 2)
+	{
+		*static_cast<named_thread<spu_thread>*>(this) = thread_state::aborting;
 	}
 	else
 	{
@@ -391,7 +407,7 @@ void cpu_thread::stop_all() noexcept
 		for_all_cpu([](cpu_thread* cpu)
 		{
 			cpu->state += cpu_flag::dbg_global_stop;
-			cpu->notify();
+			cpu->abort();
 		});
 	}
 

@@ -56,7 +56,7 @@ struct ppu_static_function
 struct ppu_static_variable
 {
 	const char* name;
-	vm::gvar<void>* var; // Pointer to variable address storage
+	vm::gvar<char>* var; // Pointer to variable address storage
 	void(*init)(); // Variable initialization function
 	u32 size;
 	u32 align;
@@ -150,10 +150,10 @@ public:
 		auto& info = access_static_variable(module, vnid);
 
 		info.name  = name;
-		info.var   = reinterpret_cast<vm::gvar<void>*>(Var);
+		info.var   = reinterpret_cast<vm::gvar<char>*>(Var);
 		info.init  = [] {};
-		info.size  = sizeof(typename gvar::type);
-		info.align = alignof(typename gvar::type);
+		info.size  = gvar::alloc_size;
+		info.align = gvar::alloc_align;
 		info.type  = typeid(*Var).name();
 		info.flags = 0;
 		info.addr  = 0;
