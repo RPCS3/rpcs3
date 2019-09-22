@@ -413,12 +413,33 @@ namespace rsx
 		};
 	}
 
+	struct frame_statistics_t
+	{
+		u32 draw_calls;
+		s64 setup_time;
+		s64 vertex_upload_time;
+		s64 textures_upload_time;
+		s64 draw_exec_time;
+		s64 flip_time;
+	};
+
+	struct display_flip_info_t
+	{
+		u32 buffer;
+		bool skip_frame;
+		bool emu_flip;
+		bool in_progress;
+		frame_statistics_t stats;
+	};
+
 	struct sampled_image_descriptor_base;
 
 	class thread
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
+
+		display_flip_info_t m_queued_flip;
 
 	protected:
 		std::thread::id m_rsx_thread;
@@ -428,7 +449,8 @@ namespace rsx
 		std::vector<u32> element_push_buffer;
 
 		s32 m_skip_frame_ctr = 0;
-		bool skip_frame = false;
+		bool skip_current_frame = false;
+		frame_statistics_t stats{};
 
 		bool supports_multidraw = false;  // Draw call batching
 		bool supports_hw_a2c = false;     // Alpha to coverage
@@ -454,11 +476,9 @@ namespace rsx
 		// Invalidated memory range
 		address_range m_invalidated_memory_range;
 
-		// Draw call stats
-		u32 m_draw_calls = 0;
-
 		// Profiler
 		rsx::profiling_timer m_profiler;
+		frame_statistics_t m_frame_stats;
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
@@ -607,7 +627,8 @@ namespace rsx
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
 		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
-		virtual void flip(int buffer, bool emu_flip = false) = 0;
+		virtual void on_frame_end(u32 buffer, bool forced = false);
+		virtual void flip(const display_flip_info_t& info) = 0;
 		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
 		virtual void on_invalidate_memory_range(const address_range & /*range*/, rsx::invalidation_cause) {}

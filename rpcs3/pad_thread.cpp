@@ -60,10 +60,11 @@ void pad_thread::Init()
 		}
 	}
 
-	const u32 system_info = m_info.system_info;
+	const PadInfo pad_info(m_info);
 	std::memset(&m_info, 0, sizeof(m_info));
 	m_info.now_connect = 0;
-	m_info.system_info |= system_info;
+	m_info.system_info |= pad_info.system_info;
+	m_info.ignore_input = pad_info.ignore_input;
 
 	handlers.clear();
 
@@ -160,11 +161,11 @@ void pad_thread::SetIntercepted(bool intercepted)
 	if (intercepted)
 	{
 		m_info.system_info |= CELL_PAD_INFO_INTERCEPTED;
-		m_is_intercepted = true;
+		m_info.ignore_input = true;
 	}
 	else
 	{
-		m_is_intercepted = false;
+		m_info.system_info &= ~CELL_PAD_INFO_INTERCEPTED;
 	}
 }
 
@@ -195,8 +196,9 @@ void pad_thread::ThreadFunc()
 		m_info.now_connect = connected + num_ldd_pad;
 
 		// The following section is only reached when a dialog was closed and the pads are still intercepted.
-		// As long as any of the listed buttons is pressed the interception stays active.
-		if (!m_is_intercepted && (m_info.system_info & CELL_PAD_INFO_INTERCEPTED))
+		// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
+		// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
+		if (!(m_info.system_info & CELL_PAD_INFO_INTERCEPTED) && m_info.ignore_input)
 		{
 			bool any_button_pressed = false;
 
@@ -228,7 +230,7 @@ void pad_thread::ThreadFunc()
 
 			if (!any_button_pressed)
 			{
-				m_info.system_info &= ~CELL_PAD_INFO_INTERCEPTED;
+				m_info.ignore_input = false;
 			}
 		}
 

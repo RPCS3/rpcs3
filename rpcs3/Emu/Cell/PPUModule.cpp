@@ -1151,7 +1151,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Static HLE patching
 	if (g_cfg.core.hook_functions)
 	{
-		auto shle = g_fxo->init<statichle_handler>();
+		auto shle = g_fxo->init<statichle_handler>(0);
 
 		for (u32 i = _main->segs[0].addr; i < (_main->segs[0].addr + _main->segs[0].size); i += 4)
 		{

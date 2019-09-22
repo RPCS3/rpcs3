@@ -286,13 +286,6 @@ namespace rsx
 							button_state[pad_index][button_id] = button.m_pressed;
 						}
 
-						if (button.m_flush)
-						{
-							button.m_pressed = false;
-							button.m_flush = false;
-							button.m_value = 0;
-						}
-
 						if (exit)
 							return 0;
 					}

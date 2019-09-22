@@ -17,7 +17,8 @@ void cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 	// Cleanup
 	m_value.atomic_op([](u32& value)
 	{
-		value -= c_waiter_mask & -c_waiter_mask;
+		// Remove waiter (c_waiter_mask)
+		value -= 1;
 
 		if ((value & c_waiter_mask) == 0)
 		{

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "GLGSRender.h"
 #include "../Common/BufferUtils.h"
 #include "GLHelpers.h"
@@ -254,6 +254,6 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	//Write all the data
 	write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping.first, volatile_mapping.first);
 
-	m_vertex_upload_time += m_profiler.duration();
+	m_frame_stats.vertex_upload_time += m_profiler.duration();
 	return upload_info;
 }
