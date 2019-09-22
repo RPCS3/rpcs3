@@ -4,6 +4,8 @@
 
 #include "Emu/RSX/GSRender.h"
 
+#include <clocale>
+
 // For now, a trivial constructor/destructor. May add command line usage later.
 headless_application::headless_application(int& argc, char** argv) : QCoreApplication(argc, argv)
 {
@@ -19,6 +21,9 @@ void headless_application::Init()
 
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
+
+	// As per QT recommendations to avoid conflicts for POSIX functions
+	std::setlocale(LC_NUMERIC, "C");
 }
 
 void headless_application::InitializeConnects()

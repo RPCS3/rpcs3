@@ -1079,7 +1079,12 @@ namespace vm
 		// Fixed address allocation
 		area = _get_map(location, addr);
 
-		return !area ? _map(addr, area_size, flags) : area;
+		if (area)
+		{
+			return area;
+		}
+
+		return _map(addr, area_size, flags);
 	}
 
 	inline namespace ps3_

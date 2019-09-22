@@ -11,19 +11,20 @@ struct PadInfo
 {
 	u32 now_connect;
 	u32 system_info;
+	bool ignore_input;
 };
 
 class pad_thread
 {
 public:
-	pad_thread(void* _curthread, void* _curwindow, const std::string& title_id = ""); // void * instead of QThread * and QWindow * because of include in emucore
+	pad_thread(void* _curthread, void* _curwindow, std::string_view title_id); // void * instead of QThread * and QWindow * because of include in emucore
 	~pad_thread();
 
 	PadInfo& GetInfo() { return m_info; }
 	auto& GetPads() { return m_pads; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
 	void Init();
-	void Reset(const std::string& title_id = "");
+	void Reset(std::string_view title_id);
 	void SetEnabled(bool enabled);
 	void SetIntercepted(bool intercepted);
 
@@ -40,13 +41,12 @@ protected:
 	void *curthread;
 	void *curwindow;
 
-	PadInfo m_info{ 0, 0 };
+	PadInfo m_info{ 0, 0, false };
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
 
 	atomic_t<bool> active{ false };
 	atomic_t<bool> reset{ false };
 	atomic_t<bool> is_enabled{ true };
-	atomic_t<bool> m_is_intercepted{ false };
 	std::shared_ptr<std::thread> thread;
 
 	u32 num_ldd_pad = 0;

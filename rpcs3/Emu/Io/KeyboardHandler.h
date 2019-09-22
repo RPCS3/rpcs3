@@ -4,6 +4,8 @@
 
 #include <mutex>
 
+#include "util/init_mutex.hpp"
+
 extern u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode); // (TODO: Can it be problematic to place SysCalls in middle of nowhere?)
 
 enum QtKeys
@@ -107,4 +109,6 @@ public:
 	std::vector<KbButton>& GetButtons(const u32 keyboard) { return m_keyboards[keyboard].m_buttons; }
 	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
 	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
+
+	stx::init_mutex init;
 };

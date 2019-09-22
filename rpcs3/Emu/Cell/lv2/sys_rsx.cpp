@@ -15,6 +15,9 @@ extern u64 get_timebased_time();
 
 static shared_mutex s_rsxmem_mtx;
 
+// Unknown error code returned by sys_rsx_context_attribute
+constexpr unsigned SYS_RSX_CONTEXT_ATTRIBUTE_ERROR = -17u;
+
 u64 rsxTimeStamp()
 {
 	return get_timebased_time();
@@ -82,7 +85,9 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	auto rsx_cfg = g_fxo->get<lv2_rsx_config>();
 
 	if (!rsx_cfg->state)
+	{
 		return CELL_EINVAL;
+	}
 
 	*context_id = 0x55555555;
 
@@ -96,7 +101,8 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	for (int i = 0; i < 64; ++i)
 		reports.notify[i].timestamp = (u64)-1;
 
-	for (int i = 0; i < 256; ++i) {
+	for (int i = 0; i < 256; ++i)
+	{
 		reports.semaphore[i].val = 0x1337C0D3;
 		reports.semaphore[i].pad = 0x1337BABE;
 		reports.semaphore[i].timestamp = (u64)-1; // technically different but should be fine
@@ -301,9 +307,9 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 			// fyi -- u32 hardware_channel = (a4 >> 8) & 0xFF;
 
 			// sanity check, the head should have a 'queued' buffer on it, and it should have been previously 'queued'
-			u32 sanity_check = 0x40000000 & (1 << flip_idx);
+			const u32 sanity_check = 0x40000000 & (1 << flip_idx);
 			if ((driverInfo.head[a3].flipFlags & sanity_check) != sanity_check)
-				LOG_ERROR(RSX, "Display Flip Queued: Flipping non previously queued buffer 0x%x", a4);
+				LOG_ERROR(RSX, "Display Flip Queued: Flipping non previously queued buffer 0x%llx", a4);
 		}
 		else
 		{
@@ -327,23 +333,33 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 	break;
 
 	case 0x103: // Display Queue
+	{
 		driverInfo.head[a3].lastQueuedBufferId = a4;
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
-		if (a3 == 0)
-			sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 5), 0);
-		if (a3 == 1)
-			sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 6), 0);
-		break;
+
+		// NOTE: There currently seem to only be 2 active heads on PS3
+		verify(HERE), a3 < 2;
+
+		const u64 shift_offset = (a3 + 5);
+		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1ull << shift_offset), 0);
+
+		render->on_frame_end(a4);
+	}
+	break;
 
 	case 0x104: // Display buffer
 	{
-		u8 id = a3 & 0xFF;
-		u32 width = (a4 >> 32) & 0xFFFFFFFF;
-		u32 height = a4 & 0xFFFFFFFF;
-		u32 pitch = (a5 >> 32) & 0xFFFFFFFF;
-		u32 offset = a5 & 0xFFFFFFFF;
+		const u8 id = a3 & 0xFF;
 		if (id > 7)
-			return -17;
+		{
+			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
+		}
+
+		const u32 width = (a4 >> 32) & 0xFFFFFFFF;
+		const u32 height = a4 & 0xFFFFFFFF;
+		const u32 pitch = (a5 >> 32) & 0xFFFFFFFF;
+		const u32 offset = a5 & 0xFFFFFFFF;
+
 		render->display_buffers[id].width = width;
 		render->display_buffers[id].height = height;
 		render->display_buffers[id].pitch = pitch;
@@ -370,7 +386,9 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 	case 0x10a: // ? Involved in managing flip status through cellGcmResetFlipStatus
 	{
 		if (a3 > 7)
-			return -17;
+		{
+			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
+		}
 
 		u32 flipStatus = driverInfo.head[a3].flipFlags;
 		flipStatus = (flipStatus & a4) | a5;

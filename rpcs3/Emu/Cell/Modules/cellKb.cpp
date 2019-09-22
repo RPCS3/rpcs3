@@ -33,15 +33,16 @@ error_code cellKbInit(u32 max_connect)
 {
 	sys_io.warning("cellKbInit(max_connect=%d)", max_connect);
 
-	auto handler = fxm::get<KeyboardHandlerBase>();
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
 
-	if (handler)
+	const auto init = handler->init.init();
+
+	if (!init)
 		return CELL_KB_ERROR_ALREADY_INITIALIZED;
 
 	if (max_connect == 0 || max_connect > CELL_KB_MAX_KEYBOARDS)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	handler = fxm::import<KeyboardHandlerBase>(Emu.GetCallbacks().get_kb_handler);
 	handler->Init(std::min(max_connect, 7u));
 
 	return CELL_OK;
@@ -51,9 +52,14 @@ error_code cellKbEnd()
 {
 	sys_io.notice("cellKbEnd()");
 
-	if (!fxm::remove<KeyboardHandlerBase>())
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+
+	const auto init = handler->init.reset();
+
+	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
+	// TODO
 	return CELL_OK;
 }
 
@@ -61,9 +67,11 @@ error_code cellKbClearBuf(u32 port_no)
 {
 	sys_io.trace("cellKbClearBuf(port_no=%d)", port_no);
 
-	const auto handler = fxm::get<KeyboardHandlerBase>();
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
 
-	if (!handler)
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
 	if (port_no >= CELL_KB_MAX_KEYBOARDS)
@@ -233,9 +241,11 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 {
 	sys_io.trace("cellKbGetInfo(info=*0x%x)", info);
 
-	const auto handler = fxm::get<KeyboardHandlerBase>();
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
 
-	if (!handler)
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
 	if (!info)
@@ -260,9 +270,11 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 {
 	sys_io.trace("cellKbRead(port_no=%d, data=*0x%x)", port_no, data);
 
-	const auto handler = fxm::get<KeyboardHandlerBase>();
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
 
-	if (!handler)
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || !data)
@@ -292,9 +304,11 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 {
 	sys_io.trace("cellKbSetCodeType(port_no=%d, type=%d)", port_no, type);
 
-	const auto handler = fxm::get<KeyboardHandlerBase>();
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
 
-	if (!handler)
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || type > CELL_KB_CODETYPE_ASCII)
@@ -317,9 +331,11 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 {
 	sys_io.trace("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
 
-	const auto handler = fxm::get<KeyboardHandlerBase>();
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
 
-	if (!handler)
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
 	if (port_no >= CELL_KB_MAX_KEYBOARDS)
@@ -343,9 +359,11 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 {
 	sys_io.trace("cellKbSetReadMode(port_no=%d, rmode=%d)", port_no, rmode);
 
-	const auto handler = fxm::get<KeyboardHandlerBase>();
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
 
-	if (!handler)
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || rmode > CELL_KB_RMODE_PACKET)
@@ -368,9 +386,11 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 {
 	sys_io.trace("cellKbGetConfiguration(port_no=%d, config=*0x%x)", port_no, config);
 
-	const auto handler = fxm::get<KeyboardHandlerBase>();
+	const auto handler = g_fxo->get<KeyboardHandlerBase>();
 
-	if (!handler)
+	const auto init = handler->init.access();
+
+	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
 
 	if (port_no >= CELL_KB_MAX_KEYBOARDS)

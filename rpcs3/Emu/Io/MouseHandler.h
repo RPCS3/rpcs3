@@ -2,6 +2,7 @@
 
 #include <list>
 #include "Utilities/mutex.h"
+#include "util/init_mutex.hpp"
 
 // TODO: HLE info (constants, structs, etc.) should not be available here
 
@@ -255,4 +256,6 @@ public:
 	MouseDataList& GetDataList(const u32 mouse) { return m_mice[mouse].m_datalist; }
 	MouseTabletDataList& GetTabletDataList(const u32 mouse) { return m_mice[mouse].m_tablet_datalist; }
 	MouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
+
+	stx::init_mutex init;
 };
