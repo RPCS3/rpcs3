@@ -192,9 +192,9 @@ error_code sceNpSnsFbGetAccessToken(u32 handle, vm::cptr<SceNpSnsFbAccessTokenPa
 	return CELL_OK;
 }
 
-s32 sceNpSnsFbStreamPublish(u32 handle)
+s32 sceNpSnsFbStreamPublish(u32 handle) // add more arguments
 {
-	UNIMPLEMENTED_FUNC(sceNpSns);
+	sceNpSns.todo("sceNpSnsFbStreamPublish(handle=%d, ...)", handle);
 
 	if (handle == SCE_NP_SNS_FB_INVALID_HANDLE || handle > SCE_NP_SNS_FB_HANDLE_SLOT_MAX)
 	{
@@ -221,11 +221,11 @@ s32 sceNpSnsFbStreamPublish(u32 handle)
 	return CELL_OK;
 }
 
-s32 sceNpSnsFbCheckThrottle(vm::ptr<void> r3)
+s32 sceNpSnsFbCheckThrottle(vm::ptr<void> arg0)
 {
-	UNIMPLEMENTED_FUNC(sceNpSns);
+	sceNpSns.todo("sceNpSnsFbCheckThrottle(arg0=*0x%x)", arg0);
 
-	if (!r3)
+	if (!arg0)
 	{
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
@@ -238,9 +238,9 @@ s32 sceNpSnsFbCheckThrottle(vm::ptr<void> r3)
 	return CELL_OK;
 }
 
-s32 sceNpSnsFbCheckConfig()
+s32 sceNpSnsFbCheckConfig(vm::ptr<void> arg0)
 {
-	UNIMPLEMENTED_FUNC(sceNpSns);
+	sceNpSns.todo("sceNpSnsFbCheckConfig(arg0=*0x%x)", arg0);
 
 	if (!g_fxo->get<sce_np_sns_manager>()->is_initialized)
 	{
@@ -252,7 +252,7 @@ s32 sceNpSnsFbCheckConfig()
 
 s32 sceNpSnsFbLoadThrottle(u32 handle)
 {
-	UNIMPLEMENTED_FUNC(sceNpSns);
+	sceNpSns.todo("sceNpSnsFbLoadThrottle(handle=%d)", handle);
 
 	if (handle == SCE_NP_SNS_FB_INVALID_HANDLE || handle > SCE_NP_SNS_FB_HANDLE_SLOT_MAX)
 	{
