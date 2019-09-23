@@ -495,6 +495,11 @@ public:
 		return m_data;
 	}
 
+	const stype& raw() const
+	{
+		return m_data;
+	}
+
 	se_t& operator=(const se_t&) = default;
 
 	se_t& operator=(type value)
@@ -539,6 +544,11 @@ public:
 	}
 
 	stype& raw()
+	{
+		return m_data;
+	}
+
+	const stype& raw() const
 	{
 		return m_data;
 	}
