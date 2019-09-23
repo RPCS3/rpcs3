@@ -333,7 +333,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		return 6;
 	}
 
-	for (be_t<u32> resv : setBuf->reserved)
+	for (const auto& resv : setBuf->reserved)
 	{
 		if (resv.raw() != 0)
 		{
@@ -646,7 +646,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				{
 					doneGet->sizeKB += static_cast<s32>(::align(file.size, 4096));
 
-					if (!vfs::host::unlink(del_path + file.name))
+					if (!fs::remove_file(del_path + file.name))
 					{
 						doneGet->excResult = CELL_SAVEDATA_ERROR_FAILURE;
 					}
@@ -1049,7 +1049,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (!entry.is_directory)
 				{
-					vfs::host::unlink(dir_path + entry.name);
+					fs:remove_file(dir_path + entry.name);
 				}
 			}
 
