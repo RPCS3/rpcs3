@@ -519,6 +519,7 @@ namespace fs
 		acces,
 		notempty,
 		readonly,
+		isdir,
 	};
 
 	// Error code returned
