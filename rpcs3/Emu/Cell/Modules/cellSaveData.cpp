@@ -1049,7 +1049,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (!entry.is_directory)
 				{
-					fs:remove_file(dir_path + entry.name);
+					fs::remove_file(dir_path + entry.name);
 				}
 			}
 
