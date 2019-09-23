@@ -333,7 +333,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		return 6;
 	}
 
-	for (const auto& resv : setBuf->reserved)
+	for (auto resv : setBuf->reserved)
 	{
 		if (resv.raw() != 0)
 		{
@@ -377,9 +377,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
-	funcFile, container, unk_op_flags, userdata, userId, funcDone))
+		funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
-		return {CELL_SAVEDATA_ERROR_PARAM, std::to_string(ecode).c_str()};
+		return {CELL_SAVEDATA_ERROR_PARAM, std::to_string(ecode)};
 	}
 
 	std::unique_lock lock(g_savedata_mutex, std::try_to_lock);
