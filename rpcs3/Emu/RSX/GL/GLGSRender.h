@@ -10,7 +10,9 @@
 
 #include <optional>
 
+#ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")
+#endif
 
 namespace gl
 {
