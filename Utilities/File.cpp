@@ -543,7 +543,7 @@ bool fs::create_path(const std::string& path)
 {
 	const std::string parent = get_parent_dir(path);
 
-	if (!parent.empty() && !create_path(parent))
+	if (!parent.empty() && !is_dir(parent) && !create_path(parent))
 	{
 		return false;
 	}
