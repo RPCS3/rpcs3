@@ -355,6 +355,8 @@ void Emulator::Init()
 		}
 	};
 
+	const std::string save_path = dev_hdd0 + "home/" + m_usr + "/savedata/";
+
 	if (g_cfg.vfs.init_dirs)
 	{
 		make_path_verbose(dev_hdd0);
@@ -367,7 +369,7 @@ void Emulator::Init()
 		make_path_verbose(dev_hdd0 + "home/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/");
-		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/savedata/");
+		make_path_verbose(save_path);
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/trophy/");
 
 		if (!fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s))
@@ -383,6 +385,40 @@ void Emulator::Init()
 		make_path_verbose(dev_hdd0 + "savedata/vmc/");
 		make_path_verbose(dev_hdd1 + "cache/");
 		make_path_verbose(dev_hdd1 + "game/");
+	}
+
+	// Fixup savedata
+	for (const auto& entry : fs::dir(save_path))
+	{
+		if (entry.is_directory && entry.name.compare(0, 8, ".backup_", 8) == 0)
+		{
+			const std::string desired = entry.name.substr(8);
+			const std::string pending = save_path + ".working_" + desired;
+
+			if (fs::is_dir(pending))
+			{
+				// Finalize interrupted saving
+				if (!fs::rename(pending, save_path + desired, false))
+				{
+					LOG_FATAL(GENERAL, "Failed to fix save data: %s (%s)", pending, fs::g_tls_error);
+					continue;
+				}
+				else
+				{
+					LOG_SUCCESS(GENERAL, "Fixed save data: %s", desired);
+				}
+			}
+
+			// Remove pending backup data
+			if (!fs::remove_all(save_path + entry.name))
+			{
+				LOG_FATAL(GENERAL, "Failed to remove save data backup: %s%s (%s)", save_path, entry.name, fs::g_tls_error);
+			}
+			else
+			{
+				LOG_SUCCESS(GENERAL, "Removed save data backup: %s%s", save_path, entry.name);
+			}
+		}
 	}
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");

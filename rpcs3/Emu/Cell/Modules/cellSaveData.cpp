@@ -630,7 +630,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 		}
 
-		auto delete_save = [&](const std::string& del_path)
+		auto delete_save = [&]()
 		{
 			strcpy_trunc(doneGet->dirName, save_entries[selected].dirName);
 			doneGet->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
@@ -638,29 +638,36 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			doneGet->excResult     = CELL_OK;
 			std::memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
 
-			const fs::dir _dir{del_path};
+			const std::string old_path = base_dir + ".backup_" + save_entries[selected].dirName + "/";
+			const std::string del_path = base_dir + save_entries[selected].dirName + "/";
+
+			const fs::dir _dir(del_path);
 
 			for (auto&& file : _dir)
 			{
 				if (!file.is_directory)
 				{
 					doneGet->sizeKB += static_cast<s32>(::align(file.size, 4096));
-
-					if (!fs::remove_file(del_path + file.name))
-					{
-						doneGet->excResult = CELL_SAVEDATA_ERROR_FAILURE;
-					}
 				}
 			}
 
-			if (!_dir)
+			if (_dir)
+			{
+				// Remove old backup
+				fs::remove_all(old_path);
+
+				// Remove savedata by renaming
+				if (!vfs::host::rename(del_path, old_path, false))
+				{
+					fmt::throw_exception("Failed to move directory %s (%s)", del_path, fs::g_tls_error);
+				}
+
+				// Cleanup
+				fs::remove_all(old_path);
+			}
+			else
 			{
 				doneGet->excResult = CELL_SAVEDATA_ERROR_NODATA;
-			}
-
-			if (!doneGet->excResult && !fs::remove_dir(del_path))
-			{
-				doneGet->excResult = CELL_SAVEDATA_ERROR_FAILURE;
 			}
 
 			funcDone(ppu, result, doneGet);
@@ -701,7 +708,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (operation == SAVEDATA_OP_LIST_DELETE)
 			{
-				delete_save(base_dir + save_entries[selected].dirName + '/');
+				delete_save();
 
 				if (result->result < 0)
 				{
@@ -777,7 +784,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (operation == SAVEDATA_OP_FIXED_DELETE)
 			{
-				delete_save(base_dir + save_entries[selected].dirName + '/');
+				delete_save();
 
 				if (result->result < 0)
 				{
@@ -813,6 +820,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
 	bool has_modified = false;
+	bool recreated = false;
 
 	lv2_sleep(ppu, 250);
 
@@ -1044,15 +1052,21 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return {CELL_SAVEDATA_ERROR_PARAM, "50"};
 			}
 
-			// TODO: Only delete data, not owner info
-			for (const auto& entry : fs::dir(dir_path))
+			// Clear secure file info
+			for (auto it = psf.cbegin(), end = psf.cend(); it != end;)
 			{
-				if (!entry.is_directory)
-				{
-					fs::remove_file(dir_path + entry.name);
-				}
+				if (it->first[0] == '*')
+					it = psf.erase(it);
+				else
+					it++;
 			}
 
+			// Clear order info
+			blist.clear();
+
+			// Set to not load files
+			has_modified = true;
+			recreated = true;
 			break;
 		}
 
@@ -1081,7 +1095,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	// First, preload all files (TODO: beware of possible lag, although it should be insignificant)
 	for (auto&& entry : fs::dir(dir_path))
 	{
-		if (!entry.is_directory)
+		if (!recreated && !entry.is_directory)
 		{
 			// Read file into a vector and make a memory file
 			all_times.emplace(entry.name, std::make_pair(entry.atime, entry.mtime));
@@ -1319,10 +1333,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 
 		// Remove old backup
-		fs::remove_all(old_path, false);
+		fs::remove_all(old_path);
 
 		// Backup old savedata
-		if (!vfs::host::rename(dir_path, old_path, true))
+		if (!vfs::host::rename(dir_path, old_path, false))
 		{
 			fmt::throw_exception("Failed to move directory %s (%s)", dir_path, fs::g_tls_error);
 		}
