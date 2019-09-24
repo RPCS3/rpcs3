@@ -184,7 +184,8 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x044F, 0xB660, 0xB660, "Thrustmaster T500 RS Gear Shift");
 	}
 
-	libusb_free_device_list(list, 1);
+	if (ndev > 0)
+		libusb_free_device_list(list, 1);
 
 	if (!found_skylander)
 	{
