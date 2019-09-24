@@ -312,7 +312,13 @@ void Emulator::Init()
 
 	if (!g_tty)
 	{
-		g_tty.open(fs::get_cache_dir() + "TTY.log", fs::rewrite + fs::append);
+		const auto tty_path = fs::get_cache_dir() + "TTY.log";
+		g_tty.open(tty_path, fs::rewrite + fs::append);
+
+		if (!g_tty)
+		{
+			LOG_FATAL(GENERAL, "Failed to create TTY log: %s (%s)", tty_path, fs::g_tls_error);
+		}
 	}
 
 	idm::init();
@@ -324,7 +330,16 @@ void Emulator::Init()
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Reload global configuration
-	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
+	const auto cfg_path = fs::get_config_dir() + "/config.yml";
+
+	if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
+	{
+		g_cfg.from_string(cfg_file.to_string());
+	}
+	else
+	{
+		LOG_FATAL(GENERAL, "Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
+	}
 
 	// Create directories (can be disabled if necessary)
 	const std::string emu_dir = GetEmuDir();
@@ -332,30 +347,46 @@ void Emulator::Init()
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
+	auto make_path_verbose = [](const std::string& path)
+	{
+		if (!fs::create_path(path))
+		{
+			LOG_FATAL(GENERAL, "Failed to create path: %s (%s)", path, fs::g_tls_error);
+		}
+	};
+
 	if (g_cfg.vfs.init_dirs)
 	{
-		fs::create_path(dev_hdd0);
-		fs::create_path(dev_hdd1);
-		fs::create_path(dev_usb);
-		fs::create_dir(dev_hdd0 + "game/");
-		fs::create_dir(dev_hdd0 + "game/TEST12345/");
-		fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
-		fs::create_dir(dev_hdd0 + "game/.locks/");
-		fs::create_dir(dev_hdd0 + "home/");
-		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/");
-		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/exdata/");
-		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/savedata/");
-		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/trophy/");
-		fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s);
-		fs::create_dir(dev_hdd0 + "disc/");
-		fs::create_dir(dev_hdd0 + "savedata/");
-		fs::create_dir(dev_hdd0 + "savedata/vmc/");
-		fs::create_dir(dev_hdd1 + "cache/");
-		fs::create_dir(dev_hdd1 + "game/");
+		make_path_verbose(dev_hdd0);
+		make_path_verbose(dev_hdd1);
+		make_path_verbose(dev_usb);
+		make_path_verbose(dev_hdd0 + "game/");
+		make_path_verbose(dev_hdd0 + "game/TEST12345/");
+		make_path_verbose(dev_hdd0 + "game/TEST12345/USRDIR/");
+		make_path_verbose(dev_hdd0 + "game/.locks/");
+		make_path_verbose(dev_hdd0 + "home/");
+		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/");
+		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/");
+		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/savedata/");
+		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/trophy/");
+
+		if (!fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s))
+		{
+			if (fs::g_tls_error != fs::error::exist)
+			{
+				LOG_FATAL(GENERAL, "Failed to create file: %shome/%s/localusername (%s)", dev_hdd0, m_usr, fs::g_tls_error);
+			}
+		}
+
+		make_path_verbose(dev_hdd0 + "disc/");
+		make_path_verbose(dev_hdd0 + "savedata/");
+		make_path_verbose(dev_hdd0 + "savedata/vmc/");
+		make_path_verbose(dev_hdd1 + "cache/");
+		make_path_verbose(dev_hdd1 + "game/");
 	}
 
-	fs::create_path(fs::get_cache_dir() + "shaderlog/");
-	fs::create_path(fs::get_config_dir() + "captures/");
+	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
+	make_path_verbose(fs::get_config_dir() + "captures/");
 
 #ifdef WITH_GDB_DEBUGGER
 	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int)g_cfg.misc.gdb_server_port);

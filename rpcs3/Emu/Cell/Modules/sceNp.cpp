@@ -716,7 +716,7 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u64 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!to || !to->handle.data || !data || !size)
+	if (!to || to->handle.data[0] == '\0' || !data || !size)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -738,7 +738,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!msg || msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS || !msg->npids.handle.data || !(msg->msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES))
+	if (!msg || msg->count > SCE_NP_BASIC_SEND_MESSAGE_MAX_RECIPIENTS || msg->npids.handle.data[0] == '\0' || !(msg->msgFeatures & SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES))
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -765,7 +765,7 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!to || !to->handle.data || !data || !size)
+	if (!to || to->handle.data[0] == '\0' || !data || !size)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -872,7 +872,7 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!contact || !contact->handle.data)
+	if (!contact || contact->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -1021,7 +1021,7 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npid || !npid->handle.data)
+	if (!npid || npid->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -1043,7 +1043,7 @@ error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u64 count, 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npids || !npids->handle.data)
+	if (!npids || npids->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
@@ -1115,7 +1115,7 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npid || !npid->handle.data)
+	if (!npid || npid->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
