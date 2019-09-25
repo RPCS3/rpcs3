@@ -225,7 +225,7 @@ void log_frame::CreateAndConnectActions()
 
 	m_clearTTYAct = new QAction(tr("Clear"), this);
 	connect(m_clearTTYAct, &QAction::triggered, m_tty, &QTextEdit::clear);
-	
+
 	m_stackAct_tty = new QAction(tr("Stack Mode (TTY)"), this);
 	m_stackAct_tty->setCheckable(true);
 	connect(m_stackAct_tty, &QAction::toggled, xgui_settings.get(), [=](bool checked)
@@ -352,9 +352,13 @@ void log_frame::CreateAndConnectActions()
 		{
 			text = fmt::format("%s > %s\n", "Ch.%d", m_tty_channel, text);
 		}
-		g_tty_size -= (1ll << 48);
-		g_tty.write(text.c_str(), text.size());
-		g_tty_size += (1ll << 48) + text.size();
+
+		if (g_tty)
+		{
+			g_tty_size -= (1ll << 48);
+			g_tty.write(text.c_str(), text.size());
+			g_tty_size += (1ll << 48) + text.size();
+		}
 
 		m_tty_input->clear();
 	});
@@ -449,7 +453,7 @@ void log_frame::UpdateUI()
 	const auto start = steady_clock::now();
 
 	// Check TTY logs
-	while (const u64 size = std::max<s64>(0, g_tty_size.load() - m_tty_file.pos()))
+	while (const u64 size = std::max<s64>(0, g_tty_size.load() - (m_tty_file ? m_tty_file.pos() : 0)))
 	{
 		std::string buf;
 		buf.resize(size);
@@ -480,7 +484,7 @@ void log_frame::UpdateUI()
 			std::stringstream buf_stream;
 			buf_stream.str(buf);
 			std::string buf_line;
-			while (std::getline(buf_stream, buf_line)) 
+			while (std::getline(buf_stream, buf_line))
 			{
 				QString suffix;
 				QString tty_text = QString::fromStdString(buf_line);

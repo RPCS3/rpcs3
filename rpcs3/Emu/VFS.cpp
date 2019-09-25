@@ -33,6 +33,8 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 
 	const auto table = g_fxo->get<vfs_manager>();
 
+	// TODO: scan roots of mounted devices for undeleted vfs::host::unlink remnants, and try to delete them (_WIN32 only)
+
 	std::lock_guard lock(table->mutex);
 
 	if (vpath.empty())
@@ -566,13 +568,13 @@ bool vfs::host::rename(const std::string& from, const std::string& to, bool over
 	return true;
 }
 
-bool vfs::host::unlink(const std::string& path)
+bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 {
 #ifdef _WIN32
 	if (path.size() < 2 || reinterpret_cast<const u16&>(path.front()) != "//"_u16)
 	{
 		// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
-		const std::string dummy = fmt::format(u8"%s/＄%s%s", fs::get_parent_dir(path), fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+		const std::string dummy = fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
 
 		if (!fs::rename(path, dummy, true))
 		{

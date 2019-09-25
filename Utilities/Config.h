@@ -298,6 +298,7 @@ namespace cfg
 	// Simple string entry with mutex
 	class string final : public _base
 	{
+		std::string m_name;
 		std::string m_value;
 
 	public:
@@ -305,6 +306,7 @@ namespace cfg
 
 		string(node* owner, const std::string& name, const std::string& def = {})
 			: _base(type::string, owner, name)
+			, m_name(name)
 			, m_value(def)
 			, def(def)
 		{
@@ -318,6 +320,11 @@ namespace cfg
 		const std::string& get() const
 		{
 			return m_value;
+		}
+
+		std::string get_name() const
+		{
+			return m_name;
 		}
 
 		std::size_t size() const

@@ -804,93 +804,109 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 		return;
 	}
 
-	//TODO: aa lk
 	const u8 bo0 = (bo & 0x10) ? 1 : 0;
 	const u8 bo1 = (bo & 0x08) ? 1 : 0;
 	const u8 bo2 = (bo & 0x04) ? 1 : 0;
 	const u8 bo3 = (bo & 0x02) ? 1 : 0;
 	const u8 bo4 = (bo & 0x01) ? 1 : 0;
 
+	std::add_pointer_t<const char> inst{""}, sign = inst;
+
 	if (bo0 && !bo1 && !bo2 && bo3 && !bo4)
 	{
-		DisAsm_CR_BRANCH("bdz", bi / 4, bd); return;
+		inst = "bdz";
 	}
 	else if (bo0 && bo1 && !bo2 && bo3 && !bo4)
 	{
-		DisAsm_CR_BRANCH("bdz-", bi / 4, bd); return;
+		inst = "bdz", sign = "-";
 	}
 	else if (bo0 && bo1 && !bo2 && bo3 && bo4)
 	{
-		DisAsm_CR_BRANCH("bdz+", bi / 4, bd); return;
+		inst = "bdz", sign = "+";
 	}
 	else if (bo0 && !bo1 && !bo2 && !bo3 && !bo4)
 	{
-		DisAsm_CR_BRANCH("bdnz", bi / 4, bd); return;
+		inst = "bdnz";
 	}
 	else if (bo0 && bo1 && !bo2 && !bo3 && !bo4)
 	{
-		DisAsm_CR_BRANCH("bdnz-", bi / 4, bd); return;
+		inst = "bdnz", sign = "-";
 	}
 	else if (bo0 && bo1 && !bo2 && !bo3 && bo4)
 	{
-		DisAsm_CR_BRANCH("bdnz+", bi / 4, bd); return;
+		inst = "bdnz", sign = "+";
 	}
 	else if (!bo0 && !bo1 && bo2 && !bo3 && !bo4)
 	{
 		switch (bi % 4)
 		{
-		case 0x0: DisAsm_CR_BRANCH("bge", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("ble", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("bne", bi / 4, bd); return;
+		case 0x0: inst = "bge"; break;
+		case 0x1: inst = "ble"; break;
+		case 0x2: inst = "bne"; break;
+		case 0x3: inst = "bns"; break;
 		}
 	}
 	else if (!bo0 && !bo1 && bo2 && bo3 && !bo4)
 	{
+		sign = "-";
 		switch (bi % 4)
 		{
-		case 0x0: DisAsm_CR_BRANCH("bge-", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("ble-", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("bne-", bi / 4, bd); return;
+		case 0x0: inst = "bge"; break;
+		case 0x1: inst = "ble"; break;
+		case 0x2: inst = "bne"; break;
+		case 0x3: inst = "bns"; break;
 		}
 	}
 	else if (!bo0 && !bo1 && bo2 && bo3 && bo4)
 	{
+		sign = "+";
 		switch (bi % 4)
 		{
-		case 0x0: DisAsm_CR_BRANCH("bge+", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("ble+", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("bne+", bi / 4, bd); return;
+		case 0x0: inst = "bge"; break;
+		case 0x1: inst = "ble"; break;
+		case 0x2: inst = "bne"; break;
+		case 0x3: inst = "bns"; break;
 		}
 	}
 	else if (!bo0 && bo1 && bo2 && !bo3 && !bo4)
 	{
 		switch (bi % 4)
 		{
-		case 0x0: DisAsm_CR_BRANCH("blt", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("bgt", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("beq", bi / 4, bd); return;
+		case 0x0: inst = "blt"; break;
+		case 0x1: inst = "bgt"; break;
+		case 0x2: inst = "beq"; break;
+		case 0x3: inst = "bso"; break;
 		}
 	}
 	else if (!bo0 && bo1 && bo2 && bo3 && !bo4)
 	{
+		sign = "-";
 		switch (bi % 4)
 		{
-		case 0x0: DisAsm_CR_BRANCH("blt-", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("bgt-", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("beq-", bi / 4, bd); return;
+		case 0x0: inst = "blt"; break;
+		case 0x1: inst = "bgt"; break;
+		case 0x2: inst = "beq"; break;
+		case 0x3: inst = "bso"; break;
 		}
 	}
 	else if (!bo0 && bo1 && bo2 && bo3 && bo4)
 	{
+		sign = "+";
 		switch (bi % 4)
 		{
-		case 0x0: DisAsm_CR_BRANCH("blt+", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("bgt+", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("beq+", bi / 4, bd); return;
+		case 0x0: inst = "blt"; break;
+		case 0x1: inst = "bgt"; break;
+		case 0x2: inst = "beq"; break;
+		case 0x3: inst = "bso"; break;
 		}
 	}
 
-	Write(fmt::format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi / 4, bi % 4, bd, aa, lk));
+	if (inst[0] == '\0')
+	{
+		return Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
+	}
+
+	DisAsm_CR_BRANCH(std::string(inst) + (lk ? "l" : "") + (aa ? "a" : "") + sign, bi / 4, bd);
 }
 
 void PPUDisAsm::SC(ppu_opcode_t op)
@@ -1004,6 +1020,11 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	const u32 bo = op.bo;
 	const u32 bi = op.bi;
 	const u32 bh = op.bh;
+
+	if (bo == 20)
+	{
+		return Write(op.lk ? "bctrl" : "bctr");
+	}
 
 	switch (op.lk)
 	{
@@ -1664,7 +1685,7 @@ void PPUDisAsm::LFSUX(ppu_opcode_t op)
 
 void PPUDisAsm::SYNC(ppu_opcode_t op)
 {
-	Write("sync");
+	Write(op.l10 ? "lwsync" : "sync");
 }
 
 void PPUDisAsm::LFDX(ppu_opcode_t op)

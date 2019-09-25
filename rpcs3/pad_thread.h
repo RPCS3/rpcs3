@@ -11,6 +11,7 @@ struct PadInfo
 {
 	u32 now_connect;
 	u32 system_info;
+	bool ignore_input;
 };
 
 class pad_thread
@@ -40,13 +41,12 @@ protected:
 	void *curthread;
 	void *curwindow;
 
-	PadInfo m_info{ 0, 0 };
+	PadInfo m_info{ 0, 0, false };
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
 
 	atomic_t<bool> active{ false };
 	atomic_t<bool> reset{ false };
 	atomic_t<bool> is_enabled{ true };
-	atomic_t<bool> m_is_intercepted{ false };
 	std::shared_ptr<std::thread> thread;
 
 	u32 num_ldd_pad = 0;

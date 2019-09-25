@@ -77,7 +77,7 @@ s32 sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<
 s32 sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<UsbDeviceIsoRequest> request, vm::ptr<u32> result);
 s32 sys_usbd_get_device_location();
 s32 sys_usbd_send_event();
-s32 sys_usbd_event_port_send();
+s32 sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3);
 s32 sys_usbd_allocate_memory();
 s32 sys_usbd_free_memory();
 s32 sys_usbd_get_device_speed();

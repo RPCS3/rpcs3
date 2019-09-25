@@ -72,40 +72,10 @@ class ds3_pad_handler final : public PadHandlerBase
 		NewData
 	};
 
-	const std::unordered_map<u32, std::string> button_list =
-	{
-		{ DS3KeyCodes::Triangle, "Triangle" },
-		{ DS3KeyCodes::Circle,   "Circle" },
-		{ DS3KeyCodes::Cross,    "Cross" },
-		{ DS3KeyCodes::Square,   "Square" },
-		{ DS3KeyCodes::Left,     "Left" },
-		{ DS3KeyCodes::Right,    "Right" },
-		{ DS3KeyCodes::Up,       "Up" },
-		{ DS3KeyCodes::Down,     "Down" },
-		{ DS3KeyCodes::R1,       "R1" },
-		{ DS3KeyCodes::R2,       "R2" },
-		{ DS3KeyCodes::R3,       "R3" },
-		{ DS3KeyCodes::Start,    "Start" },
-		{ DS3KeyCodes::Select,   "Select" },
-		{ DS3KeyCodes::PSButton, "PS Button" },
-		{ DS3KeyCodes::L1,       "L1" },
-		{ DS3KeyCodes::L2,       "L2" },
-		{ DS3KeyCodes::L3,       "L3" },
-		{ DS3KeyCodes::LSXNeg,   "LS X-" },
-		{ DS3KeyCodes::LSXPos,   "LS X+" },
-		{ DS3KeyCodes::LSYPos,   "LS Y+" },
-		{ DS3KeyCodes::LSYNeg,   "LS Y-" },
-		{ DS3KeyCodes::RSXNeg,   "RS X-" },
-		{ DS3KeyCodes::RSXPos,   "RS X+" },
-		{ DS3KeyCodes::RSYPos,   "RS Y+" },
-		{ DS3KeyCodes::RSYNeg,   "RS Y-" }
-	};
-
-	struct ds3_device
+	struct ds3_device : public PadDevice
 	{
 		std::string device = {};
 		hid_device *handle = nullptr;
-		pad_config* config{ nullptr };
 		u8 buf[64]{ 0 };
 		u8 large_motor = 0;
 		u8 small_motor = 0;
@@ -131,17 +101,12 @@ public:
 	bool Init() override;
 
 	std::vector<std::string> ListDevices() override;
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
-	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& buttonCallback, const std::function<void(std::string)>& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	std::shared_ptr<ds3_device> get_device(const std::string& padId);
+	std::shared_ptr<ds3_device> get_ds3_device(const std::string& padId);
 	ds3_pad_handler::DS3Status get_data(const std::shared_ptr<ds3_device>& ds3dev);
-	void process_data(const std::shared_ptr<ds3_device>& ds3dev, const std::shared_ptr<Pad>& pad);
-	std::array<std::pair<u16, bool>, ds3_pad_handler::DS3KeyCodes::KeyCodeCount> get_button_values(const std::shared_ptr<ds3_device>& device);
 	void send_output_report(const std::shared_ptr<ds3_device>& ds3dev);
 
 private:
@@ -150,8 +115,14 @@ private:
 private:
 	bool is_init = false;
 
-	std::vector<u32> blacklist;
-
-	std::vector<std::pair<std::shared_ptr<ds3_device>, std::shared_ptr<Pad>>> bindings;
-	std::shared_ptr<ds3_device> m_dev;
+	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
+	bool get_is_left_trigger(u64 keyCode) override;
+	bool get_is_right_trigger(u64 keyCode) override;
+	bool get_is_left_stick(u64 keyCode) override;
+	bool get_is_right_stick(u64 keyCode) override;
+	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
+	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
+	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
+	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
+	std::array<int, 6> get_preview_values(std::unordered_map<u64, u16> data) override;
 };

@@ -77,17 +77,17 @@ bool mm_joystick_handler::Init()
 		return true;
 
 	m_devices.clear();
-	m_supported_joysticks = joyGetNumDevs();
+	u32 supported_joysticks = joyGetNumDevs();
 
-	if (m_supported_joysticks <= 0)
+	if (supported_joysticks <= 0)
 	{
 		LOG_ERROR(GENERAL, "mmjoy: Driver doesn't support Joysticks");
 		return false;
 	}
 
-	LOG_NOTICE(GENERAL, "mmjoy: Driver supports %u joysticks", m_supported_joysticks);
+	LOG_NOTICE(GENERAL, "mmjoy: Driver supports %u joysticks", supported_joysticks);
 
-	for (u32 i = 0; i < m_supported_joysticks; i++)
+	for (u32 i = 0; i < supported_joysticks; i++)
 	{
 		MMJOYDevice dev;
 
@@ -116,23 +116,13 @@ std::vector<std::string> mm_joystick_handler::ListDevices()
 	return devices;
 }
 
-bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
+std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const pad_config* profile)
 {
-	if (!Init())
-		return false;
+	std::array<u32, button::button_count> mapping{ 0 };
 
-	int id = GetIDByName(device);
-	if (id < 0)
-		return false;
-
-	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>(m_devices.at(id));
-
-	int index = static_cast<int>(bindings.size());
-	m_pad_configs[index].load();
-	joy_device->config = &m_pad_configs[index];
-	pad_config* p_profile = joy_device->config;
-	if (p_profile == nullptr)
-		return false;
+	auto joy_device = std::static_pointer_cast<MMJOYDevice>(device);
+	if (!joy_device)
+		return mapping;
 
 	auto find_key = [=](const cfg::string& name)
 	{
@@ -144,147 +134,47 @@ bool mm_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::s
 		return static_cast<u64>(key);
 	};
 
-	pad->Init
-	(
-		CELL_PAD_STATUS_DISCONNECTED,
-		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
-		CELL_PAD_DEV_TYPE_STANDARD,
-		p_profile->device_class_type
-	);
+	joy_device->trigger_left  = find_key(profile->l2);
+	joy_device->trigger_right = find_key(profile->r2);
+	joy_device->axis_left[0]  = find_key(profile->ls_left);
+	joy_device->axis_left[1]  = find_key(profile->ls_right);
+	joy_device->axis_left[2]  = find_key(profile->ls_down);
+	joy_device->axis_left[3]  = find_key(profile->ls_up);
+	joy_device->axis_right[0] = find_key(profile->rs_left);
+	joy_device->axis_right[1] = find_key(profile->rs_right);
+	joy_device->axis_right[2] = find_key(profile->rs_down);
+	joy_device->axis_right[3] = find_key(profile->rs_up);
 
-	joy_device->trigger_left  = find_key(p_profile->l2);
-	joy_device->trigger_right = find_key(p_profile->r2);
-	joy_device->axis_left[0]  = find_key(p_profile->ls_left);
-	joy_device->axis_left[1]  = find_key(p_profile->ls_right);
-	joy_device->axis_left[2]  = find_key(p_profile->ls_down);
-	joy_device->axis_left[3]  = find_key(p_profile->ls_up);
-	joy_device->axis_right[0] = find_key(p_profile->rs_left);
-	joy_device->axis_right[1] = find_key(p_profile->rs_right);
-	joy_device->axis_right[2] = find_key(p_profile->rs_down);
-	joy_device->axis_right[3] = find_key(p_profile->rs_up);
+	mapping[button::up]       = static_cast<u32>(find_key(profile->up));
+	mapping[button::down]     = static_cast<u32>(find_key(profile->down));
+	mapping[button::left]     = static_cast<u32>(find_key(profile->left));
+	mapping[button::right]    = static_cast<u32>(find_key(profile->right));
+	mapping[button::cross]    = static_cast<u32>(find_key(profile->cross));
+	mapping[button::square]   = static_cast<u32>(find_key(profile->square));
+	mapping[button::circle]   = static_cast<u32>(find_key(profile->circle));
+	mapping[button::triangle] = static_cast<u32>(find_key(profile->triangle));
+	mapping[button::l1]       = static_cast<u32>(find_key(profile->l1));
+	mapping[button::l2]       = static_cast<u32>(joy_device->trigger_left);
+	mapping[button::l3]       = static_cast<u32>(find_key(profile->l3));
+	mapping[button::r1]       = static_cast<u32>(find_key(profile->r1));
+	mapping[button::r2]       = static_cast<u32>(joy_device->trigger_right);
+	mapping[button::r3]       = static_cast<u32>(find_key(profile->r3));
+	mapping[button::start]    = static_cast<u32>(find_key(profile->start));
+	mapping[button::select]   = static_cast<u32>(find_key(profile->select));
+	mapping[button::ps]       = static_cast<u32>(find_key(profile->ps));
+	mapping[button::ls_left]  = static_cast<u32>(joy_device->axis_left[0]);
+	mapping[button::ls_right] = static_cast<u32>(joy_device->axis_left[1]);
+	mapping[button::ls_down]  = static_cast<u32>(joy_device->axis_left[2]);
+	mapping[button::ls_up]    = static_cast<u32>(joy_device->axis_left[3]);
+	mapping[button::rs_left]  = static_cast<u32>(joy_device->axis_right[0]);
+	mapping[button::rs_right] = static_cast<u32>(joy_device->axis_right[1]);
+	mapping[button::rs_down]  = static_cast<u32>(joy_device->axis_right[2]);
+	mapping[button::rs_up]    = static_cast<u32>(joy_device->axis_right[3]);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->triangle),   CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->circle),     CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->cross),      CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->square),     CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, (u32) joy_device->trigger_left,  CELL_PAD_CTRL_L2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, (u32) joy_device->trigger_right, CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->l1),         CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->r1),         CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->start),      CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->select),     CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->l3),         CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->r3),         CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->ps),         0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->up),         CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->down),       CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->left),       CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->right),      CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0, 0x0); // Reserved
-
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  joy_device->axis_left[0],  joy_device->axis_left[1]);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  joy_device->axis_left[2],  joy_device->axis_left[3]);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, joy_device->axis_right[0], joy_device->axis_right[1]);
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, joy_device->axis_right[2], joy_device->axis_right[3]);
-
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
-	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
-
-	pad->m_vibrateMotors.emplace_back(true, 0);
-	pad->m_vibrateMotors.emplace_back(false, 0);
-
-	bindings.emplace_back(joy_device, pad);
-
-	return true;
+	return mapping;
 }
 
-void mm_joystick_handler::ThreadProc()
-{
-	MMRESULT status;
-
-	for (u32 i = 0; i != bindings.size(); ++i)
-	{
-		m_dev = bindings[i].first;
-		auto pad = bindings[i].second;
-		auto profile = m_dev->config;
-		status = joyGetPosEx(m_dev->device_id, &m_dev->device_info);
-
-		if (status != JOYERR_NOERROR)
-		{
-			if (last_connection_status[i] == true)
-			{
-				LOG_ERROR(HLE, "MMJOY Device %d disconnected.", m_dev->device_id);
-				pad->m_port_status &= ~CELL_PAD_STATUS_CONNECTED;
-				pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-				last_connection_status[i] = false;
-				connected--;
-			}
-			continue;
-		}
-
-		if (last_connection_status[i] == false)
-		{
-			if (GetMMJOYDevice(m_dev->device_id, m_dev.get()) == false)
-				continue;
-			LOG_SUCCESS(HLE, "MMJOY Device %d reconnected.", m_dev->device_id);
-			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
-			pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
-			last_connection_status[i] = true;
-			connected++;
-		}
-
-		auto button_values = GetButtonValues(m_dev->device_info, m_dev->device_caps);
-
-		// Translate any corresponding keycodes to our normal DS3 buttons and triggers
-		for (auto& btn : pad->m_buttons)
-		{
-			btn.m_value = button_values[btn.m_keyCode];
-			TranslateButtonPress(btn.m_keyCode, btn.m_pressed, btn.m_value);
-		}
-
-		s32 stick_val[4]{0};
-
-		// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
-		for (int i = 0; i < static_cast<int>(pad->m_sticks.size()); i++)
-		{
-			bool pressed;
-
-			// m_keyCodeMin is the mapped key for left or down
-			u32 key_min = pad->m_sticks[i].m_keyCodeMin;
-			u16 val_min = button_values[key_min];
-			TranslateButtonPress(key_min, pressed, val_min, true);
-
-			// m_keyCodeMax is the mapped key for right or up
-			u32 key_max = pad->m_sticks[i].m_keyCodeMax;
-			u16 val_max = button_values[key_max];
-			TranslateButtonPress(key_max, pressed, val_max, true);
-
-			// cancel out opposing values and get the resulting difference
-			stick_val[i] = val_max - val_min;
-		}
-
-		u16 lx, ly, rx, ry;
-
-		// Normalize our two stick's axis based on the thresholds
-		std::tie(lx, ly) = NormalizeStickDeadzone(stick_val[0], stick_val[1], profile->lstickdeadzone);
-		std::tie(rx, ry) = NormalizeStickDeadzone(stick_val[2], stick_val[3], profile->rstickdeadzone);
-
-		if (profile->padsquircling != 0)
-		{
-			std::tie(lx, ly) = ConvertToSquirclePoint(lx, ly, profile->padsquircling);
-			std::tie(rx, ry) = ConvertToSquirclePoint(rx, ry, profile->padsquircling);
-		}
-
-		pad->m_sticks[0].m_value = lx;
-		pad->m_sticks[1].m_value = 255 - ly;
-		pad->m_sticks[2].m_value = rx;
-		pad->m_sticks[3].m_value = 255 - ry;
-	}
-}
-
-void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
+void mm_joystick_handler::get_next_button_press(const std::string& padId, const std::function<void(u16, std::string, std::string, std::array<int, 6>)>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons)
 {
 	if (get_blacklist)
 		blacklist.clear();
@@ -301,7 +191,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 		id = GetIDByName(padId);
 		if (id < 0)
 		{
-			LOG_ERROR(GENERAL, "MMJOY GetNextButtonPress for device [%s] failed with id = %d", padId, id);
+			LOG_ERROR(GENERAL, "MMJOY get_next_button_press for device [%s] failed with id = %d", padId, id);
 			return fail_callback(padId);
 		}
 	}
@@ -406,7 +296,7 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 			return static_cast<u64>(key);
 		};
 
-		int preview_values[6] = { 0, 0, 0, 0, 0, 0 };
+		std::array<int, 6> preview_values = { 0, 0, 0, 0, 0, 0 };
 		if (buttons.size() == 10)
 		{
 			preview_values[0] = data[find_key(buttons[0])];
@@ -426,39 +316,6 @@ void mm_joystick_handler::GetNextButtonPress(const std::string& padId, const std
 	}
 	default:
 		break;
-	}
-}
-
-void mm_joystick_handler::TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold)
-{
-	// Update the pad button values based on their type and thresholds.
-	// With this you can use axis or triggers as buttons or vice versa
-	auto p_profile = m_dev->config;
-
-	if (keyCode == m_dev->trigger_left)
-	{
-		pressed = val > (ignore_threshold ? 0 : p_profile->ltriggerthreshold);
-		val = pressed ? NormalizeTriggerInput(val, p_profile->ltriggerthreshold) : 0;
-	}
-	else if (keyCode == m_dev->trigger_right)
-	{
-		pressed = val > (ignore_threshold ? 0 : p_profile->rtriggerthreshold);
-		val = pressed ? NormalizeTriggerInput(val, p_profile->rtriggerthreshold) : 0;
-	}
-	else if (std::find(m_dev->axis_left.begin(), m_dev->axis_left.end(), keyCode) != m_dev->axis_left.end())
-	{
-		pressed = val > (ignore_threshold ? 0 : p_profile->lstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->lstickdeadzone, p_profile->lstickmultiplier, ignore_threshold) : 0;
-	}
-	else if (std::find(m_dev->axis_right.begin(), m_dev->axis_right.end(), keyCode) != m_dev->axis_right.end())
-	{
-		pressed = val > (ignore_threshold ? 0 : p_profile->rstickdeadzone);
-		val = pressed ? NormalizeStickInput(val, p_profile->rstickdeadzone, p_profile->rstickmultiplier, ignore_threshold) : 0;
-	}
-	else // normal button (should in theory also support sensitive buttons)
-	{
-		pressed = val > 0;
-		val = pressed ? val : 0;
 	}
 }
 
@@ -554,6 +411,14 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 	return button_values;
 }
 
+std::unordered_map<u64, u16> mm_joystick_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
+{
+	auto dev = std::static_pointer_cast<MMJOYDevice>(device);
+	if (!dev)
+		return std::unordered_map<u64, u16>();
+	return GetButtonValues(dev->device_info, dev->device_caps);
+}
+
 int mm_joystick_handler::GetIDByName(const std::string& name)
 {
 	for (auto dev : m_devices)
@@ -567,9 +432,7 @@ int mm_joystick_handler::GetIDByName(const std::string& name)
 bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 {
 	if (!dev)
-	{
 		return false;
-	}
 
 	JOYINFOEX js_info;
 	JOYCAPS js_caps;
@@ -591,6 +454,53 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 	dev->device_caps = js_caps;
 
 	return true;
+}
+
+std::shared_ptr<PadDevice> mm_joystick_handler::get_device(const std::string& device)
+{
+	if (!Init())
+		return false;
+
+	int id = GetIDByName(device);
+	if (id < 0)
+		return false;
+
+	std::shared_ptr<MMJOYDevice> joy_device = std::make_shared<MMJOYDevice>(m_devices.at(id));
+	return joy_device;
+}
+
+bool mm_joystick_handler::get_is_left_trigger(u64 keyCode)
+{
+	return m_dev && m_dev->trigger_left == keyCode;
+}
+
+bool mm_joystick_handler::get_is_right_trigger(u64 keyCode)
+{
+	return m_dev && m_dev->trigger_right == keyCode;
+}
+
+bool mm_joystick_handler::get_is_left_stick(u64 keyCode)
+{
+	return m_dev && std::find(m_dev->axis_left.begin(), m_dev->axis_left.end(), keyCode) != m_dev->axis_left.end();
+}
+
+bool mm_joystick_handler::get_is_right_stick(u64 keyCode)
+{
+	return m_dev && std::find(m_dev->axis_right.begin(), m_dev->axis_right.end(), keyCode) != m_dev->axis_right.end();
+}
+
+PadHandlerBase::connection mm_joystick_handler::update_connection(const std::shared_ptr<PadDevice>& device)
+{
+	auto dev = std::static_pointer_cast<MMJOYDevice>(device);
+	if (!dev)
+		return connection::disconnected;
+
+	MMRESULT status = joyGetPosEx(dev->device_id, &dev->device_info);
+	if (status == JOYERR_NOERROR && GetMMJOYDevice(dev->device_id, dev.get()))
+	{
+		return connection::connected;
+	}
+	return connection::disconnected;
 }
 
 #endif

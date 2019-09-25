@@ -236,13 +236,6 @@ static bool map_to_ds3_input(const u32 port_no, be_t<u16>& digital_buttons, be_t
 			default: break;
 			}
 		}
-
-		if (button.m_flush)
-		{
-			button.m_pressed = false;
-			button.m_flush = false;
-			button.m_value = 0;
-		}
 	}
 
 	memset(&digital_buttons, 0, sizeof(digital_buttons));

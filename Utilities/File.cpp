@@ -154,6 +154,7 @@ static fs::error to_error(int e)
 	case EACCES: return fs::error::acces;
 	case ENOTEMPTY: return fs::error::notempty;
 	case EROFS: return fs::error::readonly;
+	case EISDIR: return fs::error::isdir;
 	default: fmt::throw_exception("Unknown system error: %d.", e);
 	}
 }
@@ -542,7 +543,7 @@ bool fs::create_path(const std::string& path)
 {
 	const std::string parent = get_parent_dir(path);
 
-	if (!parent.empty() && !create_path(parent))
+	if (!parent.empty() && !is_dir(parent) && !create_path(parent))
 	{
 		return false;
 	}
@@ -1572,7 +1573,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	{
 		return false;
 	}
-	
+
 	if (remove_root)
 	{
 		return remove_dir(path);
@@ -1753,6 +1754,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::acces: return "Access violation";
 		case fs::error::notempty: return "Not empty";
 		case fs::error::readonly: return "Read only";
+		case fs::error::isdir: return "Is a directory";
 		}
 
 		return unknown;

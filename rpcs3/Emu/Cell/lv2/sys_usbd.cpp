@@ -73,6 +73,7 @@ public:
 
 	// Events related functions
 	bool get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::ptr<u64>& arg3);
+	void add_event(u64 arg1, u64 arg2, u64 arg3);
 	void add_to_receive_queue(ppu_thread* ppu);
 
 	// Transfers related functions
@@ -114,7 +115,7 @@ private:
 	// List of devices "connected" to the ps3
 	std::vector<std::shared_ptr<usb_device>> usb_devices;
 
-	libusb_context* ctx       = nullptr;
+	libusb_context* ctx = nullptr;
 };
 
 void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
@@ -183,7 +184,8 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x044F, 0xB660, 0xB660, "Thrustmaster T500 RS Gear Shift");
 	}
 
-	libusb_free_device_list(list, 1);
+	if (ndev > 0)
+		libusb_free_device_list(list, 1);
 
 	if (!found_skylander)
 	{
@@ -269,12 +271,7 @@ void usb_handler_thread::send_message(u32 message, u32 tr_id)
 {
 	sys_usbd.trace("Sending event: arg1=0x%x arg2=0x%x arg3=0x00", message, tr_id);
 
-	usbd_events.push({message, tr_id, 0x00});
-	if (receive_threads.size())
-	{
-		lv2_obj::awake(receive_threads.front());
-		receive_threads.pop();
-	}
+	add_event(message, tr_id, 0x00);
 }
 
 void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
@@ -403,6 +400,16 @@ bool usb_handler_thread::get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::p
 	return false;
 }
 
+void usb_handler_thread::add_event(u64 arg1, u64 arg2, u64 arg3)
+{
+	usbd_events.push({arg1, arg2, arg3});
+	if (receive_threads.size())
+	{
+		lv2_obj::awake(receive_threads.front());
+		receive_threads.pop();
+	}
+}
+
 void usb_handler_thread::add_to_receive_queue(ppu_thread* ppu)
 {
 	lv2_obj::sleep(*ppu);
@@ -436,7 +443,7 @@ s32 sys_usbd_initialize(vm::ptr<u32> handle)
 	std::lock_guard lock(usbh->mutex);
 
 	usbh->is_init = true;
-	*handle = 0x115B;
+	*handle       = 0x115B;
 
 	// TODO
 	return CELL_OK;
@@ -768,7 +775,7 @@ s32 sys_usbd_get_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<
 
 s32 sys_usbd_get_isochronous_transfer_status(u32 handle, u32 id_transfer, u32 unk1, vm::ptr<UsbDeviceIsoRequest> request, vm::ptr<u32> result)
 {
-	sys_usbd.todo("sys_usbd_get_isochronous_transfer_status()");
+	sys_usbd.todo("sys_usbd_get_isochronous_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, request=*0x%x, result=*0x%x)", handle, id_transfer, unk1, request, result);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -797,9 +804,19 @@ s32 sys_usbd_send_event()
 	return CELL_OK;
 }
 
-s32 sys_usbd_event_port_send()
+s32 sys_usbd_event_port_send(u32 handle, u64 arg1, u64 arg2, u64 arg3)
 {
-	sys_usbd.todo("sys_usbd_event_port_send()");
+	sys_usbd.warning("sys_usbd_event_port_send(handle=0x%x, arg1=0x%x, arg2=0x%x, arg3=0x%x)", handle, arg1, arg2, arg3);
+
+	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
+
+	std::lock_guard lock(usbh->mutex);
+
+	if (!usbh->is_init)
+		return CELL_EINVAL;
+
+	usbh->add_event(arg1, arg2, arg3);
+
 	return CELL_OK;
 }
 
