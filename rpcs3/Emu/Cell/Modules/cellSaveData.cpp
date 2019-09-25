@@ -1064,9 +1064,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// Clear order info
 			blist.clear();
 
-			// Set to not load files
-			has_modified = true;
+			// Set to not load files on next step
 			recreated = true;
+			has_modified = true;
 			break;
 		}
 
@@ -1106,14 +1106,16 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	fileGet->excSize = 0;
 	memset(fileGet->reserved, 0, sizeof(fileGet->reserved));
 
+	error_code savedata_result = CELL_OK;
+
 	while (funcFile)
 	{
 		funcFile(ppu, result, fileGet, fileSet);
 
 		if (result->result < 0)
 		{
-			cellSaveData.warning("savedata_op(): funcFile returned result=%d.", result->result);
-			return CELL_SAVEDATA_ERROR_CBRESULT;
+			savedata_result = {CELL_SAVEDATA_ERROR_CBRESULT, +result->result};
+			break;
 		}
 
 		if (result->result == CELL_SAVEDATA_CBRESULT_OK_LAST || result->result == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
@@ -1175,8 +1177,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			// ****** sysutil savedata parameter error : 61 ******
 			cellSaveData.error("savedata_op(): unknown fileSet->fileType (0x%x)", type);
-			return {CELL_SAVEDATA_ERROR_PARAM, "61"};
+			savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "61"};
+			break;
 		}
+		}
+
+		if (savedata_result)
+		{
+			break;
 		}
 
 		psf.emplace("*" + file_path, fileSet->fileType == CELL_SAVEDATA_FILETYPE_SECUREFILE);
@@ -1212,19 +1220,22 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				// ****** sysutil savedata parameter error : 22 ******
 				cellSaveData.error("Failed to open file %s%s", dir_path, file_path);
-				return {CELL_SAVEDATA_ERROR_PARAM, "22"};
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "22"};
+				break;
 			}
 
 			if (fileSet->fileBufSize < fileSet->fileSize)
 			{
 				// ****** sysutil savedata parameter error : 72 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "72"};
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "72"};
+				break;
 			}
 
 			if (!fileSet->fileBuf)
 			{
 				// ****** sysutil savedata parameter error : 73 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "73"};
+				savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "73"};
+				break;
 			}
 
 			// Read from memory file to vm
@@ -1289,8 +1300,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			// ****** sysutil savedata parameter error : 60 ******
 			cellSaveData.error("savedata_op(): unknown fileSet->fileOperation (0x%x)", op);
-			return {CELL_SAVEDATA_ERROR_PARAM, "60"};
+			savedata_result = {CELL_SAVEDATA_ERROR_PARAM, "60"};
+			break;
 		}
+		}
+
+		if (savedata_result)
+		{
+			break;
 		}
 	}
 
@@ -1352,7 +1369,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		fs::remove_all(old_path);
 	}
 
-	return CELL_OK;
+	return savedata_result;
 }
 
 static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm::ptr<CellSaveDataDirStat> dir, vm::ptr<CellSaveDataSystemFileParam> sysFileParam, vm::ptr<u32> bind, vm::ptr<u32> sizeKB, u32 userId)
