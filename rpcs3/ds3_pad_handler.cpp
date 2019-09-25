@@ -323,28 +323,6 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 
 	auto& dbuf = dev->buf;
 
-	//key_buf[DS3KeyCodes::Up].second    = dbuf[2 + DS3_HID_OFFSET] & 0x10;
-	//key_buf[DS3KeyCodes::Right].second = dbuf[2 + DS3_HID_OFFSET] & 0x20;
-	//key_buf[DS3KeyCodes::Down].second  = dbuf[2 + DS3_HID_OFFSET] & 0x40;
-	//key_buf[DS3KeyCodes::Left].second  = dbuf[2 + DS3_HID_OFFSET] & 0x80;
-
-	//key_buf[DS3KeyCodes::Select].second = dbuf[2 + DS3_HID_OFFSET] & 0x01;
-	//key_buf[DS3KeyCodes::L3].second     = dbuf[2 + DS3_HID_OFFSET] & 0x02;
-	//key_buf[DS3KeyCodes::R3].second     = dbuf[2 + DS3_HID_OFFSET] & 0x04;
-	//key_buf[DS3KeyCodes::Start].second  = dbuf[2 + DS3_HID_OFFSET] & 0x08;
-
-	//key_buf[DS3KeyCodes::Square].second   = dbuf[3 + DS3_HID_OFFSET] & 0x80;
-	//key_buf[DS3KeyCodes::Cross].second    = dbuf[3 + DS3_HID_OFFSET] & 0x40;
-	//key_buf[DS3KeyCodes::Circle].second   = dbuf[3 + DS3_HID_OFFSET] & 0x20;
-	//key_buf[DS3KeyCodes::Triangle].second = dbuf[3 + DS3_HID_OFFSET] & 0x10;
-
-	//key_buf[DS3KeyCodes::R1].second = dbuf[3 + DS3_HID_OFFSET] & 0x08;
-	//key_buf[DS3KeyCodes::L1].second = dbuf[3 + DS3_HID_OFFSET] & 0x04;
-	//key_buf[DS3KeyCodes::R2].second = dbuf[3 + DS3_HID_OFFSET] & 0x02;
-	//key_buf[DS3KeyCodes::L2].second = dbuf[3 + DS3_HID_OFFSET] & 0x01;
-
-	//key_buf[DS3KeyCodes::PSButton].second = dbuf[4 + DS3_HID_OFFSET] & 0x01;
-
 	const u8 lsx = dbuf[6 + DS3_HID_OFFSET];
 	const u8 lsy = dbuf[7 + DS3_HID_OFFSET];
 	const u8 rsx = dbuf[8 + DS3_HID_OFFSET];
@@ -366,19 +344,26 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 	key_buf[DS3KeyCodes::RSYNeg] = Clamp0To255((rsy - 127.5f) * 2.0f);
 	key_buf[DS3KeyCodes::RSYPos] = Clamp0To255((127.5f - rsy) * 2.0f);
 
-	// Buttons
-	key_buf[DS3KeyCodes::Up]       = dbuf[14 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Right]    = dbuf[15 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Down]     = dbuf[16 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Left]     = dbuf[17 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Triangle] = dbuf[22 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Circle]   = dbuf[23 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Cross]    = dbuf[24 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::Square]   = dbuf[25 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::L1]       = dbuf[20 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::R1]       = dbuf[21 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::L2]       = dbuf[18 + DS3_HID_OFFSET];
-	key_buf[DS3KeyCodes::R2]       = dbuf[19 + DS3_HID_OFFSET];
+	// Buttons or triggers with pressure sensitivity
+	key_buf[DS3KeyCodes::Up]       = (dbuf[2 + DS3_HID_OFFSET] & 0x10) ? dbuf[14 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::Right]    = (dbuf[2 + DS3_HID_OFFSET] & 0x20) ? dbuf[15 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::Down]     = (dbuf[2 + DS3_HID_OFFSET] & 0x40) ? dbuf[16 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::Left]     = (dbuf[2 + DS3_HID_OFFSET] & 0x80) ? dbuf[17 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::L2]       = (dbuf[3 + DS3_HID_OFFSET] & 0x01) ? dbuf[18 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::R2]       = (dbuf[3 + DS3_HID_OFFSET] & 0x02) ? dbuf[19 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::L1]       = (dbuf[3 + DS3_HID_OFFSET] & 0x04) ? dbuf[20 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::R1]       = (dbuf[3 + DS3_HID_OFFSET] & 0x08) ? dbuf[21 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::Triangle] = (dbuf[3 + DS3_HID_OFFSET] & 0x10) ? dbuf[22 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::Circle]   = (dbuf[3 + DS3_HID_OFFSET] & 0x20) ? dbuf[23 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::Cross]    = (dbuf[3 + DS3_HID_OFFSET] & 0x40) ? dbuf[24 + DS3_HID_OFFSET] : 0;
+	key_buf[DS3KeyCodes::Square]   = (dbuf[3 + DS3_HID_OFFSET] & 0x80) ? dbuf[25 + DS3_HID_OFFSET] : 0;
+
+	// Buttons without pressure sensitivity
+	key_buf[DS3KeyCodes::Select]   = (dbuf[2 + DS3_HID_OFFSET] & 0x01) ? 255 : 0;
+	key_buf[DS3KeyCodes::L3]       = (dbuf[2 + DS3_HID_OFFSET] & 0x02) ? 255 : 0;
+	key_buf[DS3KeyCodes::R3]       = (dbuf[2 + DS3_HID_OFFSET] & 0x04) ? 255 : 0;
+	key_buf[DS3KeyCodes::Start]    = (dbuf[2 + DS3_HID_OFFSET] & 0x08) ? 255 : 0;
+	key_buf[DS3KeyCodes::PSButton] = (dbuf[4 + DS3_HID_OFFSET] & 0x01) ? 255 : 0;
 
 	return key_buf;
 }
