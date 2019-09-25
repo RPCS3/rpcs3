@@ -862,7 +862,9 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	const std::size_t dev_start = vpath.find_first_not_of('/');
+
+	if (dev_start == -1)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -877,7 +879,10 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 		return {CELL_EISDIR, path};
 	}
 
-	if (!vfs::host::unlink(local_path))
+	// Size of "/dev_hdd0"-alike substring
+	const std::size_t dev_size  = vpath.find_first_of('/', dev_start);
+
+	if (!vfs::host::unlink(local_path, vfs::get(vpath.substr(0, dev_size))))
 	{
 		switch (auto error = fs::g_tls_error)
 		{
