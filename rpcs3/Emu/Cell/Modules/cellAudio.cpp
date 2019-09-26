@@ -1376,6 +1376,11 @@ error_code cellAudioSetNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
+	if (!lv2_event_queue::find(key))
+	{
+		return CELL_AUDIO_ERROR_TRANS_EVENT;
+	}
+
 	for (auto k : g_audio->keys) // check for duplicates
 	{
 		if (k == key)
