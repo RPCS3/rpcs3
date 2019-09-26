@@ -80,6 +80,19 @@ namespace vk
 		INTEL
 	};
 
+	enum class chip_class
+	{
+		unknown,
+		AMD_gcn_generic,
+		AMD_polaris,
+		AMD_vega,
+		AMD_navi,
+		NV_generic,
+		NV_pascal,
+		NV_volta,
+		NV_turing
+	};
+
 	class context;
 	class render_device;
 	class swap_chain_image;
@@ -107,6 +120,8 @@ namespace vk
 	bool fence_reset_disabled();
 	VkFlags get_heap_compatible_buffer_types();
 	driver_vendor get_driver_vendor();
+	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id);
+	chip_class get_chip_family();
 
 	VkComponentMapping default_component_map();
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
@@ -214,6 +229,35 @@ namespace vk
 	{
 		bool allow_float16;
 		bool allow_int8;
+	};
+
+	struct chip_family_table
+	{
+		chip_class default_ = chip_class::unknown;
+		std::unordered_map<uint32_t, chip_class> lut;
+
+		void add(uint32_t first, uint32_t last, chip_class family)
+		{
+			for (auto i = first; i <= last; ++i)
+			{
+				lut[i] = family;
+			}
+		}
+
+		void add(uint32_t id, chip_class family)
+		{
+			lut[id] = family;
+		}
+
+		chip_class find(uint32_t device_id)
+		{
+			if (auto found = lut.find(device_id); found != lut.end())
+			{
+				return found->second;
+			}
+
+			return default_;
+		}
 	};
 
 	// Memory Allocator - base class
@@ -628,6 +672,11 @@ private:
 					VK_VERSION_PATCH(props.driverVersion));
 			}
 			}
+		}
+
+		chip_class get_chip_class() const
+		{
+			return get_chip_family(props.vendorID, props.deviceID);
 		}
 
 		uint32_t get_queue_count() const
