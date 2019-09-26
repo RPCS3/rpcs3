@@ -68,7 +68,7 @@ struct ppu_segment
 // PPU Module Information
 struct ppu_module
 {
-	uchar sha1[20];
+	uchar sha1[20]{};
 	std::string name;
 	std::string path;
 	std::string cache;

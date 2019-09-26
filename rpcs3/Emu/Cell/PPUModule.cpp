@@ -992,7 +992,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 	LOG_NOTICE(LOADER, "PRX library hash: %s (<- %u)", hash, applied);
 
-	if (Emu.IsReady() && fxm::import<ppu_module>([&] { return prx; }))
+	if (Emu.IsReady() && g_fxo->get<ppu_module>()->segs.empty())
 	{
 		// Special loading mode
 		ppu_thread_params p{};
@@ -1043,7 +1043,7 @@ void ppu_unload_prx(const lv2_prx& prx)
 void ppu_load_exec(const ppu_exec_object& elf)
 {
 	// Set for delayed initialization in ppu_initialize()
-	const auto _main = fxm::make<ppu_module>();
+	const auto _main = g_fxo->get<ppu_module>();
 
 	// Access linkage information object
 	const auto link = g_fxo->init<ppu_linkage_info>();

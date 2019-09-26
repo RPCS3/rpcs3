@@ -605,7 +605,7 @@ const std::string Emulator::GetBackgroundPicturePath() const
 
 std::string Emulator::PPUCache() const
 {
-	const auto _main = fxm::check_unlocked<ppu_module>();
+	const auto _main = g_fxo->get<ppu_module>();
 
 	if (!_main || _main->cache.empty())
 	{
@@ -1557,9 +1557,9 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
 			}
 
-			ppu_load_exec(ppu_exec);
+			const auto _main = g_fxo->init<ppu_module>();
 
-			const auto _main = fxm::get<ppu_module>();
+			ppu_load_exec(ppu_exec);
 
 			_main->cache = fs::get_cache_dir() + "cache/";
 
@@ -1594,6 +1594,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
+			g_fxo->init();
 			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
@@ -1602,6 +1603,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
+			g_fxo->init();
 			spu_load_exec(spu_exec);
 		}
 		else

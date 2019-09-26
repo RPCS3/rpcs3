@@ -1304,7 +1304,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 extern void ppu_initialize()
 {
-	const auto _main = fxm::get<ppu_module>();
+	const auto _main = g_fxo->get<ppu_module>();
 
 	if (!_main)
 	{
@@ -1317,7 +1317,10 @@ extern void ppu_initialize()
 	}
 
 	// Initialize main module
-	ppu_initialize(*_main);
+	if (!_main->segs.empty())
+	{
+		ppu_initialize(*_main);
+	}
 
 	std::vector<lv2_prx*> prx_list;
 
