@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "PPUDisAsm.h"
 #include "PPUFunction.h"
 
@@ -844,6 +844,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 		case 0x1: inst = "ble"; break;
 		case 0x2: inst = "bne"; break;
 		case 0x3: inst = "bns"; break;
+		default: ASSUME(0); break;
 		}
 	}
 	else if (!bo0 && !bo1 && bo2 && bo3 && !bo4)
@@ -855,6 +856,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 		case 0x1: inst = "ble"; break;
 		case 0x2: inst = "bne"; break;
 		case 0x3: inst = "bns"; break;
+		default: ASSUME(0); break;
 		}
 	}
 	else if (!bo0 && !bo1 && bo2 && bo3 && bo4)
@@ -866,6 +868,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 		case 0x1: inst = "ble"; break;
 		case 0x2: inst = "bne"; break;
 		case 0x3: inst = "bns"; break;
+		default: ASSUME(0); break;
 		}
 	}
 	else if (!bo0 && bo1 && bo2 && !bo3 && !bo4)
@@ -876,6 +879,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 		case 0x1: inst = "bgt"; break;
 		case 0x2: inst = "beq"; break;
 		case 0x3: inst = "bso"; break;
+		default: ASSUME(0); break;
 		}
 	}
 	else if (!bo0 && bo1 && bo2 && bo3 && !bo4)
@@ -887,6 +891,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 		case 0x1: inst = "bgt"; break;
 		case 0x2: inst = "beq"; break;
 		case 0x3: inst = "bso"; break;
+		default: ASSUME(0); break;
 		}
 	}
 	else if (!bo0 && bo1 && bo2 && bo3 && bo4)
@@ -898,15 +903,24 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 		case 0x1: inst = "bgt"; break;
 		case 0x2: inst = "beq"; break;
 		case 0x3: inst = "bso"; break;
+		default: ASSUME(0); break;
 		}
 	}
-
-	if (inst[0] == '\0')
+	else
 	{
 		return Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
 	}
 
-	DisAsm_CR_BRANCH(std::string(inst) + (lk ? "l" : "") + (aa ? "a" : "") + sign, bi / 4, bd);
+	const auto msg = std::string(inst) + (lk ? "l" : "") + (aa ? "a" : "") + sign;
+
+	if (aa)
+	{
+		DisAsm_CR_BRANCH_A(msg, bi / 4, bd);
+	}
+	else
+	{
+		DisAsm_CR_BRANCH(msg, bi / 4, bd);
+	}
 }
 
 void PPUDisAsm::SC(ppu_opcode_t op)
@@ -1571,12 +1585,12 @@ void PPUDisAsm::OR(ppu_opcode_t op)
 	if (op.rs == op.rb)
 	{
 		switch (op.opcode)
-		{	
+		{
 		case 0x7f9ce378: return Write("db8cyc");
 		case 0x7fbdeb78: return Write("db10cyc");
 		case 0x7fdef378: return Write("db12cyc");
 		case 0x7ffffb78: return Write("db16cyc");
-		default : DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
+		default: DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
 		}
 	}
 	else

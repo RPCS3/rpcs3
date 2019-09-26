@@ -239,6 +239,10 @@ private:
 	{
 		Write(fmt::format("%s cr%d,0x%x ", FixOp(op).c_str(), cr, DisAsmBranchTarget(pc)));
 	}
+	void DisAsm_CR_BRANCH_A(const std::string& op, u32 cr, const int pc)
+	{
+		Write(fmt::format("%s cr%d,0x%x ", FixOp(op).c_str(), cr, pc));
+	}
 	
 public:
 	u32 disasm(u32 pc) override;
