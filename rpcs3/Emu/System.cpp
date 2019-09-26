@@ -322,7 +322,6 @@ void Emulator::Init()
 	}
 
 	idm::init();
-	fxm::init();
 	g_fxo->reset();
 
 	// Reset defaults, cache them
@@ -1791,7 +1790,6 @@ void Emulator::Stop(bool restart)
 
 	lv2_obj::cleanup();
 	idm::clear();
-	fxm::clear();
 	g_fxo->reset();
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");

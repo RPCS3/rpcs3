@@ -122,7 +122,7 @@ static_assert(sizeof(sys_config_padmanager_data_t) == 26);
 
 
 /*
- * Global (fxm-managed) sys_config state
+ * Global sys_config state
  */
 
 class lv2_config
