@@ -50,6 +50,8 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 
 	const auto cond = idm::withdraw<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> CellError
 	{
+		std::lock_guard lock(cond.mutex->mutex);
+
 		if (cond.waiters)
 		{
 			return CELL_EBUSY;
