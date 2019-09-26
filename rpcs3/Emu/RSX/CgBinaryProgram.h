@@ -375,7 +375,7 @@ public:
 			verify(HERE), (m_buffer_size - m_offset) % sizeof(u32) == 0;
 			for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 			{
-				vdata[i] = be_t<u32>{vdata[i]}.raw();
+				vdata[i] = std::bit_cast<u32, be_t<u32>>(vdata[i]);
 			}
 
 			for (u32 i = 0; i < prog.ucodeSize / sizeof(u32); i++)
