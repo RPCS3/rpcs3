@@ -313,16 +313,16 @@ void spu_cache::initialize()
 	// SPU cache file (version + block size type)
 	const std::string loc = ppu_cache + "spu-" + fmt::to_lower(g_cfg.core.spu_block_size.to_string()) + "-v1-tane.dat";
 
-	auto cache = std::make_shared<spu_cache>(loc);
+	spu_cache cache(loc);
 
-	if (!*cache)
+	if (!cache)
 	{
 		LOG_ERROR(SPU, "Failed to initialize SPU cache at: %s", loc);
 		return;
 	}
 
 	// Read cache
-	auto func_list = cache->get();
+	auto func_list = cache.get();
 	atomic_t<std::size_t> fnext{};
 	atomic_t<u8> fail_flag{0};
 
@@ -469,11 +469,8 @@ void spu_cache::initialize()
 		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());
 	}
 
-	// Register cache instance
-	fxm::import<spu_cache>([&]() -> std::shared_ptr<spu_cache>&&
-	{
-		return std::move(cache);
-	});
+	// Initialize global cache instance
+	g_fxo->init<spu_cache>(std::move(cache));
 }
 
 bool spu_runtime::func_compare::operator()(const std::vector<u32>& lhs, const std::vector<u32>& rhs) const
@@ -571,7 +568,7 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	// Register function in PIC map
 	m_pic_map[{func.data() + _off, func.size() - _off}] = compiled;
 
-	if (fxm::check_unlocked<spu_cache>())
+	if (g_fxo->get<spu_cache>())
 	{
 		// Rebuild trampolines if necessary
 		if (const auto new_tr = rebuild_ubertrampoline())
@@ -4168,7 +4165,6 @@ public:
 		// Initialize if necessary
 		if (!m_spurt)
 		{
-			m_cache = fxm::get<spu_cache>();
 			m_spurt = g_fxo->get<spu_runtime>();
 			cpu_translator::initialize(m_jit.get_context(), m_jit.get_engine());
 
@@ -4203,9 +4199,9 @@ public:
 
 		std::string log;
 
-		if (m_cache && g_cfg.core.spu_cache)
+		if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache)
 		{
-			m_cache->add(func);
+			cache->add(func);
 		}
 
 		{
@@ -4220,7 +4216,7 @@ public:
 			fmt::append(m_hash, "spu-0x%05x-%s", func[0], fmt::base57(output));
 		}
 
-		if (m_cache)
+		if (g_fxo->get<spu_cache>())
 		{
 			LOG_SUCCESS(SPU, "LLVM: Building %s (size %u)...", m_hash, func.size() - 1);
 		}

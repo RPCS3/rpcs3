@@ -40,7 +40,6 @@ void spu_recompiler::init()
 	// Initialize if necessary
 	if (!m_spurt)
 	{
-		m_cache = fxm::get<spu_cache>();
 		m_spurt = g_fxo->get<spu_runtime>();
 	}
 }
@@ -59,9 +58,9 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 		return nullptr;
 	}
 
-	if (m_cache && g_cfg.core.spu_cache)
+	if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache)
 	{
-		m_cache->add(func);
+		cache->add(func);
 	}
 
 	using namespace asmjit;

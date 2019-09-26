@@ -19,6 +19,10 @@ class spu_cache
 public:
 	spu_cache(const std::string& loc);
 
+	spu_cache(spu_cache&&) noexcept = default;
+
+	spu_cache& operator=(spu_cache&&) noexcept = default;
+
 	~spu_cache();
 
 	operator bool() const
@@ -336,8 +340,6 @@ protected:
 
 	// Sorted function info
 	std::map<u32, func_info> m_funcs;
-
-	std::shared_ptr<spu_cache> m_cache;
 
 private:
 	// For private use
