@@ -482,7 +482,7 @@ namespace rsx
 			compiled_resource get_compiled() override;
 		};
 
-		struct osk_enUS : osk_dialog
+		struct osk_latin : osk_dialog
 		{
 			using osk_dialog::osk_dialog;
 
