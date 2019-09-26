@@ -11,6 +11,8 @@
 
 #include <thread>
 
+#include "util/init_mutex.hpp"
+
 extern logs::channel cellSysutil;
 
 template<>
@@ -31,6 +33,53 @@ void fmt_class_string<CellMsgDialogError>::format(std::string& out, u64 arg)
 MsgDialogBase::~MsgDialogBase()
 {
 }
+
+struct msg_info
+{
+	std::shared_ptr<MsgDialogBase> dlg;
+
+	stx::init_mutex init;
+
+	// Emulate fxm as if it's some sort of museum
+
+	std::shared_ptr<MsgDialogBase> make() noexcept
+	{
+		const auto init_lock = init.init();
+
+		if (!init_lock)
+		{
+			return nullptr;
+		}
+
+		dlg = Emu.GetCallbacks().get_msg_dialog();
+
+		return dlg;
+	}
+
+	std::shared_ptr<MsgDialogBase> get() noexcept
+	{
+		const auto init_lock = init.access();
+
+		if (!init_lock)
+		{
+			return nullptr;
+		}
+
+		return dlg;
+	}
+
+	void remove() noexcept
+	{
+		const auto init_lock = init.reset();
+
+		if (!init_lock)
+		{
+			return;
+		}
+
+		dlg.reset();
+	}
+};
 
 // variable used to immediately get the response from auxiliary message dialogs (callbacks would be async)
 atomic_t<s32> g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
@@ -60,7 +109,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 		}
 		else
 		{
-			while (auto dlg = fxm::get<MsgDialogBase>())
+			while (auto dlg = g_fxo->get<msg_info>()->get())
 			{
 				if (Emu.IsStopped() || dlg->state != MsgDialogState::Open)
 				{
@@ -191,7 +240,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 		return res;
 	}
 
-	const auto dlg = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
+	const auto dlg = g_fxo->get<msg_info>()->make();
 
 	if (!dlg)
 	{
@@ -215,7 +264,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 				});
 			}
 
-			fxm::remove<MsgDialogBase>();
+			g_fxo->get<msg_info>()->remove();
 		}
 
 		pad::SetIntercepted(false);
@@ -362,7 +411,7 @@ error_code cellMsgDialogClose(f32 delay)
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
@@ -397,7 +446,7 @@ error_code cellMsgDialogAbort()
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
@@ -409,8 +458,8 @@ error_code cellMsgDialogAbort()
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
-	verify(HERE), fxm::remove<MsgDialogBase>(); // this shouldn't call on_close
-	pad::SetIntercepted(false);                 // so we need to reenable the pads here
+	g_fxo->get<msg_info>()->remove(); // this shouldn't call on_close
+	pad::SetIntercepted(false);       // so we need to reenable the pads here
 
 	return CELL_OK;
 }
@@ -445,7 +494,7 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
@@ -477,7 +526,7 @@ error_code cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
@@ -509,7 +558,7 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
