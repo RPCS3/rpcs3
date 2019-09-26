@@ -649,11 +649,8 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	m_state = system_state::ready;
 	GetCallbacks().on_ready();
 
-	auto gsrender = fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render);
+	Emu.GetCallbacks().init_gs_render();
 	Emu.GetCallbacks().init_pad_handler("");
-
-	if (gsrender.get() == nullptr)
-		return false;
 
 	GetCallbacks().on_run();
 	m_state = system_state::running;
@@ -1582,7 +1579,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			}
 
 			g_fxo->init();
-			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
+			Emu.GetCallbacks().init_gs_render();
 			Emu.GetCallbacks().init_pad_handler(m_title_id);
 			Emu.GetCallbacks().init_kb_handler();
 			Emu.GetCallbacks().init_mouse_handler();

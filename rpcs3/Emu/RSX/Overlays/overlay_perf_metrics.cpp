@@ -244,7 +244,7 @@ namespace rsx
 				f32 rsx_usage{0};
 				u32 rsx_load{0};
 
-				std::shared_ptr<GSRender> rsx_thread;
+				const auto rsx_thread = g_fxo->get<rsx::thread>();
 
 				std::string perf_text;
 
@@ -255,7 +255,6 @@ namespace rsx
 				{
 					frametime = m_force_update ? 0 : std::max(0.0, elapsed / m_frames);
 
-					rsx_thread = fxm::get<GSRender>();
 					rsx_load = rsx_thread->get_load();
 
 					total_threads = CPUStats::get_thread_count();
@@ -273,9 +272,6 @@ namespace rsx
 					{
 						spu_cycles += thread_ctrl::get_cycles(spu);
 					});
-
-					if (!rsx_thread)
-						rsx_thread = fxm::get<GSRender>();
 
 					rsx_cycles += rsx_thread->get_cycles();
 

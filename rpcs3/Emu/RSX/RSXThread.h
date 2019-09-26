@@ -20,6 +20,7 @@
 #include "Capture/rsx_replay.h"
 
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/IdManager.h"
 
 extern u64 get_guest_system_time();
 extern u64 get_system_time();
@@ -599,10 +600,12 @@ namespace rsx
 
 		void operator()();
 		virtual u64 get_cycles() = 0;
+		virtual ~thread();
+
+		static constexpr auto thread_name = "rsx::thread"sv;
 
 	protected:
 		thread();
-		virtual ~thread();
 		virtual void on_task();
 		virtual void on_exit();
 
@@ -787,4 +790,9 @@ namespace rsx
 		// Returns true if the current thread is the active RSX thread
 		bool is_current_thread() const { return std::this_thread::get_id() == m_rsx_thread; }
 	};
+
+	inline thread* get_current_renderer()
+	{
+		return g_fxo->get<rsx::thread>();
+	}
 }

@@ -221,7 +221,7 @@ struct EmuCallbacks
 	std::function<void()> init_mouse_handler;
 	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
-	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
+	std::function<void()> init_gs_render;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;

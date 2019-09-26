@@ -30,9 +30,6 @@ namespace rsx
 	using flags16_t = uint16_t;
 	using flags8_t = uint8_t;
 
-	// Definitions
-	class thread;
-	extern thread* g_current_renderer;
 	extern atomic_t<u64> g_rsx_shared_tag;
 
 	//Base for resources with reference counting
@@ -753,11 +750,6 @@ namespace rsx
 		result.r = ((colorref >> 16) & 0xFF) / 255.f;
 		result.a = ((colorref >> 24) & 0xFF) / 255.f;
 		return result;
-	}
-
-	static inline thread* get_current_renderer()
-	{
-		return g_current_renderer;
 	}
 
 	template <int N>

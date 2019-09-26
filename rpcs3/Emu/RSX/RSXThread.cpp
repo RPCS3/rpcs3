@@ -42,7 +42,7 @@ extern thread_local std::string(*g_tls_log_prefix)();
 namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
-	thread* g_current_renderer = nullptr;
+
 	dma_manager g_dma_manager;
 
 	u32 get_address(u32 offset, u32 location)
@@ -258,9 +258,13 @@ namespace rsx
 		}
 	}
 
+	thread::~thread()
+	{
+		g_access_violation_handler = nullptr;
+	}
+
 	thread::thread()
 	{
-		g_current_renderer = this;
 		g_access_violation_handler = [this](u32 address, bool is_writing)
 		{
 			return on_access_violation(address, is_writing);
@@ -276,12 +280,6 @@ namespace rsx
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
 		}
-	}
-
-	thread::~thread()
-	{
-		g_access_violation_handler = nullptr;
-		g_current_renderer = nullptr;
 	}
 
 	void thread::capture_frame(const std::string &name)
