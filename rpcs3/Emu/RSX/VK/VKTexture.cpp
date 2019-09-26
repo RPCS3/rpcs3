@@ -471,9 +471,23 @@ namespace vk
 				}
 				case VK_FORMAT_D24_UNORM_S8_UINT:
 				{
-					auto typeless = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, typeless_w, typeless_h);
-					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
-					stretch_image_typeless_unsafe(src, dst, typeless->value, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+					const VkImageAspectFlags depth_stencil = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+					if (vk::get_chip_family() != vk::chip_class::NV_turing)
+					{
+						auto typeless = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, typeless_w, typeless_h);
+						change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
+						stretch_image_typeless_unsafe(src, dst, typeless->value, src_rect, dst_rect, depth_stencil);
+					}
+					else
+					{
+						auto typeless_depth = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, typeless_w, typeless_h);
+						auto typeless_stencil = vk::get_typeless_helper(VK_FORMAT_R8_UNORM, typeless_w, typeless_h);
+						change_image_layout(cmd, typeless_depth, VK_IMAGE_LAYOUT_GENERAL);
+						change_image_layout(cmd, typeless_stencil, VK_IMAGE_LAYOUT_GENERAL);
+
+						stretch_image_typeless_safe(src, dst, typeless_depth->value, src_rect, dst_rect, depth_stencil, VK_IMAGE_ASPECT_DEPTH_BIT);
+						stretch_image_typeless_safe(src, dst, typeless_stencil->value, src_rect, dst_rect, depth_stencil, VK_IMAGE_ASPECT_STENCIL_BIT);
+					}
 					break;
 				}
 				case VK_FORMAT_D32_SFLOAT_S8_UINT:
@@ -488,8 +502,6 @@ namespace vk
 					change_image_layout(cmd, typeless_stencil, VK_IMAGE_LAYOUT_GENERAL);
 
 					const VkImageAspectFlags depth_stencil = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-
-					// Blit DEPTH aspect
 					stretch_image_typeless_safe(src, dst, typeless_depth->value, src_rect, dst_rect, depth_stencil, VK_IMAGE_ASPECT_DEPTH_BIT);
 					stretch_image_typeless_safe(src, dst, typeless_stencil->value, src_rect, dst_rect, depth_stencil, VK_IMAGE_ASPECT_STENCIL_BIT);
 					break;
