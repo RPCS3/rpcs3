@@ -244,6 +244,18 @@ private:
 		}
 
 public:
+		static type undo(const type& data) noexcept
+		{
+			if constexpr (Swap)
+			{
+				return std::bit_cast<type>(to_data(data));
+			}
+			else
+			{
+				return data;
+			}
+		}
+
 		template <typename T2>
 		bool operator==(const T2& rhs) const noexcept
 		{

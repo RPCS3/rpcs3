@@ -247,7 +247,7 @@ namespace rsx
 			case rsx::vertex_base_type::ub:
 			case rsx::vertex_base_type::ub256:
 				// Get BE data
-				arg = std::bit_cast<u32, be_t<u32>>(arg);
+				arg = be_t<u32>::undo(arg);
 				break;
 			default:
 				break;

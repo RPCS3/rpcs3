@@ -340,12 +340,10 @@ using stx::se_storage;
 template <typename T, std::size_t Align = alignof(T)>
 using nse_t = se_t<T, false, Align>;
 
-#if IS_LE_MACHINE == 1
 template <typename T, std::size_t Align = alignof(T)>
-using be_t = se_t<T, true, Align>;
+using be_t = se_t<T, !IS_BE_MACHINE, Align>;
 template <typename T, std::size_t Align = alignof(T)>
-using le_t = se_t<T, false, Align>;
-#endif
+using le_t = se_t<T, !IS_LE_MACHINE, Align>;
 
 // Type converter: converts native endianness arithmetic/enum types to appropriate se_t<> type
 template <typename T, bool Se, typename = void>
@@ -414,20 +412,16 @@ struct to_se<T[N], Se>
 };
 
 // BE/LE aliases for to_se<>
-#if IS_LE_MACHINE == 1
 template <typename T>
-using to_be_t = typename to_se<T, true>::type;
+using to_be_t = typename to_se<T, !IS_BE_MACHINE>::type;
 template <typename T>
-using to_le_t = typename to_se<T, false>::type;
-#endif
+using to_le_t = typename to_se<T, !IS_LE_MACHINE>::type;
 
 // BE/LE aliases for atomic_t
-#if IS_LE_MACHINE == 1
 template <typename T>
 using atomic_be_t = atomic_t<be_t<T>>;
 template <typename T>
 using atomic_le_t = atomic_t<le_t<T>>;
-#endif
 
 template <typename T, bool Se, std::size_t Align>
 struct fmt_unveil<se_t<T, Se, Align>, void>
