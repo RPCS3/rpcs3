@@ -2272,7 +2272,7 @@ error_code sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2303,7 +2303,7 @@ error_code sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2330,7 +2330,7 @@ error_code sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2357,7 +2357,7 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2384,7 +2384,7 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2411,7 +2411,7 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2438,7 +2438,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2465,7 +2465,7 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2492,7 +2492,7 @@ error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2523,7 +2523,7 @@ error_code sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2577,7 +2577,7 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
@@ -2606,7 +2606,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 
 	if (g_psn_connection_status == SCE_NP_MANAGER_STATUS_OFFLINE)
 	{
-		return SCE_NP_ERROR_OFFLINE;
+		return not_an_error(SCE_NP_ERROR_OFFLINE);
 	}
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_LOGGING_IN && g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
