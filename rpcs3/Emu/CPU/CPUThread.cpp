@@ -296,6 +296,7 @@ bool cpu_thread::check_state() noexcept
 
 void cpu_thread::notify()
 {
+	// Downcast to correct type
 	if (id_type() == 1)
 	{
 		thread_ctrl::notify(*static_cast<named_thread<ppu_thread>*>(this));
@@ -312,6 +313,7 @@ void cpu_thread::notify()
 
 void cpu_thread::abort()
 {
+	// Downcast to correct type
 	if (id_type() == 1)
 	{
 		*static_cast<named_thread<ppu_thread>*>(this) = thread_state::aborting;
