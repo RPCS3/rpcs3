@@ -439,7 +439,7 @@ namespace rsx
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
 
-		display_flip_info_t m_queued_flip;
+		display_flip_info_t m_queued_flip{};
 
 	protected:
 		std::thread::id m_rsx_thread;
