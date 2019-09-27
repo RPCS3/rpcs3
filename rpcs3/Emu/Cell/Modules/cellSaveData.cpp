@@ -107,8 +107,6 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 			continue;
 		}
 
-		entry.name = vfs::unescape(entry.name);
-
 		if (entry.name.substr(0, prefix.size()) != prefix)
 		{
 			continue;
@@ -140,6 +138,8 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		if (fs::file icon{base_dir + entry.name + "/ICON0.PNG"})
 			save_entry.iconBuf = icon.to_vector<uchar>();
 		save_entry.isNew = false;
+
+		save_entry.escaped = std::move(entry.name);
 		save_entries.emplace_back(save_entry);
 	}
 
@@ -201,7 +201,7 @@ static error_code select_and_delete(ppu_thread& ppu)
 		if (g_last_user_response.load() == CELL_MSGDIALOG_BUTTON_YES)
 		{
 			// Remove directory
-			const std::string path = base_dir + save_entries[selected].dirName;
+			const std::string path = base_dir + save_entries[selected].escaped;
 			fs::remove_all(path);
 
 			// Remove entry from the list and reset the selection
@@ -438,8 +438,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				continue;
 			}
 
-			entry.name = vfs::unescape(entry.name);
-
 			for (const auto& prefix : prefix_list)
 			{
 				if (entry.name.substr(0, prefix.size()) == prefix)
@@ -476,6 +474,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						if (fs::file icon{base_dir + entry.name + "/ICON0.PNG"})
 							save_entry2.iconBuf = icon.to_vector<uchar>();
 						save_entry2.isNew = false;
+
+						save_entry2.escaped = std::move(entry.name);
 						save_entries.emplace_back(save_entry2);
 					}
 
@@ -638,8 +638,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			doneGet->excResult     = CELL_OK;
 			std::memset(doneGet->reserved, 0, sizeof(doneGet->reserved));
 
-			const std::string old_path = base_dir + ".backup_" + save_entries[selected].dirName + "/";
-			const std::string del_path = base_dir + save_entries[selected].dirName + "/";
+			const std::string old_path = base_dir + ".backup_" + save_entries[selected].escaped + "/";
+			const std::string del_path = base_dir + save_entries[selected].escaped + "/";
 
 			const fs::dir _dir(del_path);
 
@@ -698,6 +698,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (selected == -1)
 			{
 				save_entry.dirName = listSet->newData->dirName.get_ptr();
+				save_entry.escaped = vfs::escape(save_entry.dirName);
 			}
 
 			// Cancel selected in UI
@@ -780,6 +781,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (selected == -1)
 			{
 				save_entry.dirName = fixedSet->dirName.get_ptr();
+				save_entry.escaped = vfs::escape(save_entry.dirName);
 			}
 
 			if (operation == SAVEDATA_OP_FIXED_DELETE)
@@ -801,6 +803,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (selected < save_entries.size())
 			{
 				save_entry.dirName = std::move(save_entries[selected].dirName);
+				save_entry.escaped = vfs::escape(save_entry.dirName);
 			}
 			else
 			{
@@ -812,11 +815,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	if (dirName)
 	{
 		save_entry.dirName = dirName.get_ptr();
+		save_entry.escaped = vfs::escape(save_entry.dirName);
 	}
 
-	const std::string dir_path = base_dir + save_entry.dirName + "/";
-	const std::string old_path = base_dir + ".backup_" + save_entry.dirName + "/";
-	const std::string new_path = base_dir + ".working_" + save_entry.dirName + "/";
+	const std::string dir_path = base_dir + save_entry.escaped + "/";
+	const std::string old_path = base_dir + ".backup_" + save_entry.escaped + "/";
+	const std::string new_path = base_dir + ".working_" + save_entry.escaped + "/";
 
 	psf::registry psf = psf::load_object(fs::file(dir_path + "PARAM.SFO"));
 	bool has_modified = false;
@@ -1098,6 +1102,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		if (!recreated && !entry.is_directory)
 		{
 			// Read file into a vector and make a memory file
+			entry.name = vfs::unescape(entry.name);
 			all_times.emplace(entry.name, std::make_pair(entry.atime, entry.mtime));
 			all_files.emplace(std::move(entry.name), fs::make_stream(fs::file(dir_path + entry.name).to_vector<uchar>()));
 		}
@@ -1339,14 +1344,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (auto file = pair.second.release())
 			{
 				auto fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
-				fs::file(new_path + pair.first, fs::rewrite).write(fvec.obj);
+				fs::file(new_path + vfs::escape(pair.first), fs::rewrite).write(fvec.obj);
 			}
 		}
 
 		for (auto&& pair : all_times)
 		{
 			// Restore atime/mtime for files which have not been modified
-			fs::utime(new_path + pair.first, pair.second.first, pair.second.second);
+			fs::utime(new_path + vfs::escape(pair.first), pair.second.first, pair.second.second);
 		}
 
 		// Remove old backup

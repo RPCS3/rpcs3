@@ -292,6 +292,8 @@ using CellSaveDataDoneCallback = void(vm::ptr<CellSaveDataCBResult> cbResult, vm
 // Auxiliary Structs
 struct SaveDataEntry
 {
+	std::string escaped;
+
 	std::string dirName;
 	std::string listParam;
 	std::string title;
