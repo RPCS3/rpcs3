@@ -1006,6 +1006,9 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
 
+		std::string version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
+		std::string version_disc = psf::get_string(_psf, "VERSION", "Unknown");
+
 		if (!_psf.empty() && m_cat.empty())
 		{
 			LOG_FATAL(LOADER, "Corrupted PARAM.SFO found! Assuming category GD. Try reinstalling the game.");
@@ -1015,6 +1018,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 		LOG_NOTICE(LOADER, "Category: %s", GetCat());
+		LOG_NOTICE(LOADER, "Version: %s / %s", version_app, version_disc);
 
 		if (!force_global_config)
 		{
