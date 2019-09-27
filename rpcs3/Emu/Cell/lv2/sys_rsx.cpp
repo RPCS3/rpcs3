@@ -16,7 +16,24 @@ extern u64 get_timebased_time();
 static shared_mutex s_rsxmem_mtx;
 
 // Unknown error code returned by sys_rsx_context_attribute
-constexpr unsigned SYS_RSX_CONTEXT_ATTRIBUTE_ERROR = -17u;
+enum sys_rsx_error : s32
+{
+	SYS_RSX_CONTEXT_ATTRIBUTE_ERROR = -17
+};
+
+template<>
+void fmt_class_string<sys_rsx_error>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(SYS_RSX_CONTEXT_ATTRIBUTE_ERROR);
+		}
+
+		return unknown;
+	});
+}
 
 u64 rsxTimeStamp()
 {
