@@ -360,7 +360,7 @@ struct to_se
 	template <typename T2>
 	struct to_se_<T2, std::enable_if_t<std::is_arithmetic<T2>::value || std::is_enum<T2>::value>>
 	{
-		using type = se_t<T2, Se>;
+		using type = std::conditional_t<(sizeof(T2) > 1), se_t<T2, Se>, T2>;
 	};
 
 	// Convert arithmetic and enum types
@@ -383,30 +383,6 @@ template <bool Se>
 struct to_se<s128, Se>
 {
 	using type = se_t<s128, Se>;
-};
-
-template <bool Se>
-struct to_se<bool, Se>
-{
-	using type = bool;
-};
-
-template <bool Se>
-struct to_se<char, Se>
-{
-	using type = char;
-};
-
-template <bool Se>
-struct to_se<u8, Se>
-{
-	using type = u8;
-};
-
-template <bool Se>
-struct to_se<s8, Se>
-{
-	using type = s8;
 };
 
 template <typename T, bool Se>
