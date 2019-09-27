@@ -194,6 +194,26 @@ namespace stx
 		}
 #endif
 
+		template <typename T2>
+		bool operator==(const T2& rhs) const noexcept
+		{
+			using R = simple_t<T2>;
+
+			if constexpr ((std::is_integral_v<T> || std::is_enum_v<T>) && (std::is_integral_v<R> || std::is_enum_v<R>) && sizeof(T) >= sizeof(R))
+			{
+				return std::bit_cast<type>(m_data) == std::bit_cast<type>(static_cast<se_t>(rhs));
+			}
+
+			// Keep outside of if constexpr to make sure it fails on invalid comparison
+			return value() == rhs;
+		}
+
+		template <typename T2>
+		bool operator!=(const T2& rhs) const noexcept
+		{
+			return !operator==<T2>(rhs);
+		}
+
 		template <typename T1>
 		se_t& operator+=(const T1& rhs)
 		{
