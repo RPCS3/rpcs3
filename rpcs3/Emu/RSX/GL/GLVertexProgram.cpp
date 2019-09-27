@@ -144,7 +144,6 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 
 			if (!PI.value.empty())
 			{
-				printf("Value=%s\n", PI.value.c_str());
 				// Simplify default initialization
 				if (PI.value == "vec4(0.0, 0.0, 0.0, 0.0)")
 					registers += " = vec4(0.)";
