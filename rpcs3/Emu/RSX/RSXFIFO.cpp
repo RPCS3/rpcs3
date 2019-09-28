@@ -17,26 +17,26 @@ namespace rsx
 		{
 			m_internal_get += 4;
 
-			if (wait && m_ctrl->put == m_internal_get)
+			if (wait && read_put() == m_internal_get)
 			{
 				// NOTE: Only supposed to be invoked to wait for a single arg on command[0] (4 bytes)
 				// Wait for put to allow us to procceed execution
 				sync_get();
 
-				while (m_ctrl->put == m_internal_get && !Emu.IsStopped())
+				while (read_put() == m_internal_get && !Emu.IsStopped())
 				{
 					std::this_thread::yield();
 				}
 			}
 		}
 
+		u32 FIFO_control::read_put()
+		{
+			return m_ctrl->put.and_fetch(~3);
+		}
+
 		void FIFO_control::set_put(u32 put)
 		{
-			if (m_ctrl->put == put)
-			{
-				return;
-			}
-
 			m_ctrl->put = put;
 		}
 
@@ -65,7 +65,7 @@ namespace rsx
 		{
 			// Fast read with no processing, only safe inside a PACKET_BEGIN+count block
 			if (m_remaining_commands &&
-				m_internal_get != m_ctrl->put)
+				m_internal_get != read_put())
 			{
 				m_command_reg += m_command_inc;
 				m_args_ptr += 4;
@@ -81,7 +81,7 @@ namespace rsx
 
 		void FIFO_control::read(register_pair& data)
 		{
-			const u32 put = m_ctrl->put;
+			const u32 put = read_put();
 			m_internal_get = m_ctrl->get;
 
 			if (put == m_internal_get)
