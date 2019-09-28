@@ -459,7 +459,8 @@ namespace rsx
 		// FIFO
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		FIFO::flattening_helper m_flattener;
-		s32 m_return_addr{ -1 }, restore_ret{ -1 };
+		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
 
 		// Occlusion query
 		bool zcull_surface_active = false;

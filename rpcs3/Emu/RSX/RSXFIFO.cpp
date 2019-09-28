@@ -387,7 +387,7 @@ namespace rsx
 				// Error. Should reset the queue
 				LOG_ERROR(RSX, "FIFO error: possible desync event");
 				fifo_ctrl->set_get(restore_point);
-				m_return_addr = restore_ret;
+				fifo_ret_addr = saved_fifo_ret;
 				std::this_thread::sleep_for(1ms);
 				return;
 			}
@@ -434,30 +434,29 @@ namespace rsx
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 			{
-				if (m_return_addr != -1)
+				if (fifo_ret_addr != RSX_CALL_STACK_EMPTY)
 				{
 					// Only one layer is allowed in the call stack.
 					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
-					fifo_ctrl->set_get(std::exchange(m_return_addr, -1));
+					fifo_ctrl->set_get(std::exchange(fifo_ret_addr, RSX_CALL_STACK_EMPTY));
 					return;
 				}
 
 				const u32 offs = cmd & RSX_METHOD_CALL_OFFSET_MASK;
-				m_return_addr = fifo_ctrl->get_pos() + 4;
+				fifo_ret_addr = fifo_ctrl->get_pos() + 4;
 				fifo_ctrl->set_get(offs);
 				return;
 			}
 			if ((cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
 			{
-				if (m_return_addr == -1)
+				if (fifo_ret_addr == RSX_CALL_STACK_EMPTY)
 				{
 					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
 					fifo_ctrl->set_get(ctrl->put);
 					return;
 				}
 
-				fifo_ctrl->set_get(m_return_addr);
-				m_return_addr = -1;
+				fifo_ctrl->set_get(std::exchange(fifo_ret_addr, RSX_CALL_STACK_EMPTY));
 				return;
 			}
 
