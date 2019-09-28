@@ -4220,7 +4220,7 @@ error_code sceNpUtilCanonicalizeNpIdForPsp()
 
 error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 {
-	sceNp.todo("sceNpUtilCmpNpId(id1=*0x%x, id2=*0x%x)", id1, id2);
+	sceNp.warning("sceNpUtilCmpNpId(id1=*0x%x, id2=*0x%x)", id1, id2);
 
 	if (!id1 || !id2)
 	{
@@ -4228,7 +4228,7 @@ error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 	}
 
 	// TODO: Improve the comparison.
-	if (strcmp(id1->handle.data, id2->handle.data) != 0)
+	if (memcmp(id1->handle.data, id2->handle.data, 16) != 0)
 	{
 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
 	}
@@ -4247,7 +4247,7 @@ error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2,
 
 	// TODO: Improve the comparison.
 	// TODO: check for nullptr
-	order.set(strcmp(id1->handle.data, id2->handle.data));
+	*order = memcmp(id1->handle.data, id2->handle.data, 16);
 
 	return CELL_OK;
 }
@@ -4262,7 +4262,7 @@ error_code sceNpUtilCmpOnlineId(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2)
 	}
 
 	// TODO: Improve the comparison.
-	if (strcmp(id1->handle.data, id2->handle.data) != 0)
+	if (memcmp(id1->handle.data, id2->handle.data, 16) != 0)
 	{
 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
 	}
