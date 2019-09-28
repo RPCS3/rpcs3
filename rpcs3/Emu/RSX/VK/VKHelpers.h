@@ -44,8 +44,8 @@
 
 #define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
 
-#define FRAME_PRESENT_TIMEOUT 1000000ull // 1 second
-#define GENERAL_WAIT_TIMEOUT  100000ull  // 100ms
+#define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
+#define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
 
 namespace rsx
 {
