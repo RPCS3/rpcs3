@@ -839,7 +839,7 @@ namespace rsx
 					{
 						// Width is calculated in the coordinate-space of the requester; normalize
 						info.src_x = (info.src_x * required_bpp) / surface_bpp;
-						info.width = (info.width * required_bpp) / surface_bpp;
+						info.width = align(info.width * required_bpp, surface_bpp) / surface_bpp;
 					}
 
 					result.push_back(info);
