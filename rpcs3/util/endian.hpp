@@ -252,6 +252,12 @@ namespace stx
 		template <typename T1>
 		se_t& operator&=(const T1& rhs)
 		{
+			if constexpr (std::is_integral_v<T>)
+			{
+				m_data = std::bit_cast<stype, T>(static_cast<T>(std::bit_cast<T>(m_data) & std::bit_cast<T>(static_cast<se_t>(rhs))));
+				return *this;
+			}
+
 			*this = value() & rhs;
 			return *this;
 		}
@@ -259,6 +265,12 @@ namespace stx
 		template <typename T1>
 		se_t& operator|=(const T1& rhs)
 		{
+			if constexpr (std::is_integral_v<T>)
+			{
+				m_data = std::bit_cast<stype, T>(static_cast<T>(std::bit_cast<T>(m_data) | std::bit_cast<T>(static_cast<se_t>(rhs))));
+				return *this;
+			}
+
 			*this = value() | rhs;
 			return *this;
 		}
@@ -266,6 +278,12 @@ namespace stx
 		template <typename T1>
 		se_t& operator^=(const T1& rhs)
 		{
+			if constexpr (std::is_integral_v<T>)
+			{
+				m_data = std::bit_cast<stype, T>(static_cast<T>(std::bit_cast<T>(m_data) ^ std::bit_cast<T>(static_cast<se_t>(rhs))));
+				return *this;
+			}
+
 			*this = value() ^ rhs;
 			return *this;
 		}
