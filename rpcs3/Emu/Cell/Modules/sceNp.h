@@ -795,7 +795,8 @@ enum : SceNpPlatformType
 {
 	SCE_NP_PLATFORM_TYPE_NONE = 0,
 	SCE_NP_PLATFORM_TYPE_PS3  = 1,
-	SCE_NP_PLATFORM_TYPE_VITA = 2
+	SCE_NP_PLATFORM_TYPE_VITA = 2,
+	SCE_NP_PLATFORM_TYPE_PS4 = 3, // Note: unknown on which fw versions it appears, but sdk version is unchecked
 };
 
 enum
@@ -844,9 +845,19 @@ struct SceNpOnlineId
 struct SceNpId
 {
 	SceNpOnlineId handle;
-	u8 opt[8];
+
+	union
+	{
+		// This field (system reserved) seems to be combined of two parts
+		// The second is used by sceNpUtilSetPlatformType and sceNpUtilGetPlatformType
+		u8 opt[8];
+		nse_t<u32, 1> unk1[2];
+	};
+
 	u8 reserved[8];
 };
+
+CHECK_SIZE_ALIGN(SceNpId, 0x24, 1);
 
 // Online Name structure
 struct SceNpOnlineName
