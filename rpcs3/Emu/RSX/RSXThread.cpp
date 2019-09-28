@@ -2537,7 +2537,7 @@ namespace rsx
 
 		// Save current state
 		m_queued_flip.stats = m_frame_stats;
-		m_queued_flip.buffer = buffer;
+		m_queued_flip.push(buffer);
 		m_queued_flip.skip_frame = skip_current_frame;
 
 		if (LIKELY(!forced))
@@ -2579,10 +2579,7 @@ namespace rsx
 
 	void thread::request_emu_flip(u32 buffer)
 	{
-		const bool is_rsxthr = std::this_thread::get_id() == m_rsx_thread;
-
-		// requested through command buffer
-		if (is_rsxthr)
+		if (is_current_thread()) // requested through command buffer
 		{
 			// NOTE: The flip will clear any queued flip requests
 			handle_emu_flip(buffer);
@@ -2608,10 +2605,11 @@ namespace rsx
 			return;
 		}
 
-		if (m_queued_flip.buffer == ~0u)
+		if (!m_queued_flip.pop(buffer))
 		{
 			// Frame was not queued before flipping
 			on_frame_end(buffer, true);
+			verify(HERE), m_queued_flip.pop(buffer);
 		}
 
 		double limit = 0.;
@@ -2656,16 +2654,14 @@ namespace rsx
 
 		int_flip_index++;
 
-		verify(HERE), m_queued_flip.buffer == buffer;
-
 		current_display_buffer = buffer;
 		m_queued_flip.emu_flip = true;
 		m_queued_flip.in_progress = true;
+
 		flip(m_queued_flip);
 
 		last_flip_time = get_system_time() - 1000000;
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
-		m_queued_flip.buffer = ~0u;
 		m_queued_flip.in_progress = false;
 
 		if (flip_handler)
