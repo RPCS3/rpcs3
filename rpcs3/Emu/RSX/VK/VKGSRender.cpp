@@ -2023,8 +2023,7 @@ void VKGSRender::clear_surface(u32 mask)
 								renderpass = vk::get_renderpass(*m_device, key);
 							}
 
-							m_attachment_clear_pass->run(*m_current_command_buffer, rtt,
-								region.rect, renderpass);
+							m_attachment_clear_pass->run(*m_current_command_buffer, rtt, region.rect, renderpass);
 
 							rtt->change_layout(*m_current_command_buffer, old_layout);
 						}
@@ -3425,7 +3424,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+				m_ui_renderer->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
 			}
 		}
 

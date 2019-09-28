@@ -268,7 +268,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				(u16)resolve_image->width(), (u16)resolve_image->height(),
+				{ 0, 0, resolve_image->width(), resolve_image->height() },
 				resolve_image, src_view,
 				render_pass);
 		}
@@ -299,7 +299,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				(u16)msaa_image->width(), (u16)msaa_image->height(),
+				{ 0, 0, msaa_image->width(), msaa_image->height() },
 				msaa_image, src_view,
 				render_pass);
 		}
@@ -364,7 +364,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				(u16)resolve_image->width(), (u16)resolve_image->height(),
+				{ 0, 0, resolve_image->width(), resolve_image->height() },
 				resolve_image, stencil_view,
 				render_pass);
 		}
@@ -432,7 +432,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				(u16)msaa_image->width(), (u16)msaa_image->height(),
+				{ 0, 0, msaa_image->width(), msaa_image->height() },
 				msaa_image, stencil_view,
 				render_pass);
 		}
@@ -474,7 +474,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				(u16)resolve_image->width(), (u16)resolve_image->height(),
+				{ 0, 0, resolve_image->width(), resolve_image->height() },
 				resolve_image, { depth_view, stencil_view },
 				render_pass);
 		}
@@ -519,7 +519,7 @@ namespace vk
 
 			overlay_pass::run(
 				cmd,
-				(u16)msaa_image->width(), (u16)msaa_image->height(),
+				{ 0, 0, msaa_image->width(), msaa_image->height() },
 				msaa_image, { depth_view, stencil_view },
 				render_pass);
 		}
