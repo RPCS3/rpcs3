@@ -573,7 +573,7 @@ namespace rsx
 			if (sync_point_request)
 			{
 				restore_point = ctrl->get;
-				restore_ret = m_return_addr;
+				saved_fifo_ret = fifo_ret_addr;
 				sync_point_request = false;
 			}
 

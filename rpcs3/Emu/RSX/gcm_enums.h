@@ -1040,7 +1040,7 @@ enum
 };
 
 
-enum Method
+enum Method : u32
 {
 	/*
 	CELL_GCM_METHOD_FLAG_NON_INCREMENT = 0x40000000,
@@ -1078,6 +1078,9 @@ enum Method
 
 	RSX_METHOD_NOP_CMD = 0x00000000,
 	RSX_METHOD_NOP_MASK = 0xbfff0003,
+
+	// Stack is empty (invalid value)
+	RSX_CALL_STACK_EMPTY = 0x00000003,
 };
 
 //Fog
