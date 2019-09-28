@@ -327,51 +327,53 @@ namespace vk
 			vkCmdDraw(cmd, num_drawable_elements, 1, first_vertex, 0);
 		}
 
-		virtual void set_up_viewport(vk::command_buffer &cmd, u16 max_w, u16 max_h)
+		virtual void set_up_viewport(vk::command_buffer &cmd, u32 x, u32 y, u32 w, u32 h)
 		{
 			VkViewport vp{};
-			vp.width = (f32)max_w;
-			vp.height = (f32)max_h;
+			vp.x = (f32)x;
+			vp.y = (f32)y;
+			vp.width = (f32)w;
+			vp.height = (f32)h;
 			vp.minDepth = 0.f;
 			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);
 
-			VkRect2D vs = { { 0, 0 }, { 0u + max_w, 0u + max_h } };
+			VkRect2D vs = { { (s32)x, (s32)y }, { w, h } };
 			vkCmdSetScissor(cmd, 0, 1, &vs);
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* fbo, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
+		void run(vk::command_buffer &cmd, const areau& viewport, vk::framebuffer* fbo, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
 		{
 			load_program(cmd, render_pass, src);
-			set_up_viewport(cmd, w, h);
+			set_up_viewport(cmd, viewport.x1, viewport.y1, viewport.width(), viewport.height());
 
 			VkRenderPassBeginInfo rp_begin = {};
 			rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			rp_begin.renderPass = render_pass;
 			rp_begin.framebuffer = fbo->value;
-			rp_begin.renderArea.offset.x = 0;
-			rp_begin.renderArea.offset.y = 0;
-			rp_begin.renderArea.extent.width = w;
-			rp_begin.renderArea.extent.height = h;
+			rp_begin.renderArea.offset.x = (s32)viewport.x1;
+			rp_begin.renderArea.offset.y = (s32)viewport.y1;
+			rp_begin.renderArea.extent.width = viewport.width();
+			rp_begin.renderArea.extent.height = viewport.height();
 
 			vkCmdBeginRenderPass(cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 			emit_geometry(cmd);
 			vkCmdEndRenderPass(cmd);
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
+		void run(vk::command_buffer &cmd, const areau& viewport, vk::image* target, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
 		{
 			auto fbo = static_cast<vk::framebuffer_holder*>(get_framebuffer(target, render_pass));
 			fbo->add_ref();
 
-			run(cmd, w, h, fbo, src, render_pass);
+			run(cmd, viewport, fbo, src, render_pass);
 			fbo->release();
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::image* target, vk::image_view* src, VkRenderPass render_pass)
+		void run(vk::command_buffer &cmd, const areau& viewport, vk::image* target, vk::image_view* src, VkRenderPass render_pass)
 		{
 			std::vector<vk::image_view*> views = { src };
-			run(cmd, w, h, target, views, render_pass);
+			run(cmd, viewport, target, views, render_pass);
 		}
 	};
 
@@ -433,7 +435,7 @@ namespace vk
 			src_scale_x = f32(src_area.x2) / real_src->width();
 			src_scale_y = f32(src_area.y2) / real_src->height();
 
-			overlay_pass::run(cmd, dst_area.x2, dst_area.y2, dst, src, render_pass);
+			overlay_pass::run(cmd, dst_area, dst, src, render_pass);
 		}
 	};
 
@@ -756,12 +758,12 @@ namespace vk
 			}
 		}
 
-		void run(vk::command_buffer &cmd, u16 w, u16 h, vk::framebuffer* target, VkRenderPass render_pass,
+		void run(vk::command_buffer &cmd, const areau& viewport, vk::framebuffer* target, VkRenderPass render_pass,
 				vk::data_heap &upload_heap, rsx::overlays::overlay &ui)
 		{
 			m_scale_offset = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			m_time = (f32)(get_system_time() / 1000) * 0.005f;
-			m_viewport_size = { f32(w), f32(h) };
+			m_viewport_size = { f32(viewport.width()), f32(viewport.height()) };
 
 			for (auto &command : ui.get_compiled().draw_commands)
 			{
@@ -799,7 +801,7 @@ namespace vk
 					break;
 				}
 
-				overlay_pass::run(cmd, w, h, target, { src }, render_pass);
+				overlay_pass::run(cmd, viewport, target, { src }, render_pass);
 			}
 
 			ui.update();
@@ -877,11 +879,13 @@ namespace vk
 			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 32, data);
 		}
 
-		void set_up_viewport(vk::command_buffer &cmd, u16 max_w, u16 max_h) override
+		void set_up_viewport(vk::command_buffer &cmd, u32 x, u32 y, u32 w, u32 h) override
 		{
 			VkViewport vp{};
-			vp.width = (f32)max_w;
-			vp.height = (f32)max_h;
+			vp.x = (f32)x;
+			vp.y = (f32)y;
+			vp.width = (f32)w;
+			vp.height = (f32)h;
 			vp.minDepth = 0.f;
 			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);
@@ -915,9 +919,8 @@ namespace vk
 			// Coverage sampling disabled, but actually report correct number of samples
 			renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
 
-			overlay_pass::run(cmd, target->width(), target->height(), target,
-				target->get_view(0xAAE4, rsx::default_remap_vector),
-				render_pass);
+			overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target,
+				target->get_view(0xAAE4, rsx::default_remap_vector), render_pass);
 		}
 	};
 }

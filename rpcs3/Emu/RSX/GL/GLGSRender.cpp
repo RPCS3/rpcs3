@@ -1589,33 +1589,33 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	gl::screen.bind();
 	gl::screen.clear(gl::buffers::color);
 
+	// Calculate blit coordinates
+	coordi aspect_ratio;
+	sizei csize(m_frame->client_width(), m_frame->client_height());
+	sizei new_size = csize;
+
+	if (!g_cfg.video.stretch_to_display_area)
+	{
+		const double aq = (double)buffer_width / buffer_height;
+		const double rq = (double)new_size.width / new_size.height;
+		const double q = aq / rq;
+
+		if (q > 1.0)
+		{
+			new_size.height = int(new_size.height / q);
+			aspect_ratio.y = (csize.height - new_size.height) / 2;
+		}
+		else if (q < 1.0)
+		{
+			new_size.width = int(new_size.width * q);
+			aspect_ratio.x = (csize.width - new_size.width) / 2;
+		}
+	}
+
+	aspect_ratio.size = new_size;
+
 	if ((u32)info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
-		// Calculate blit coordinates
-		coordi aspect_ratio;
-		sizei csize(m_frame->client_width(), m_frame->client_height());
-		sizei new_size = csize;
-
-		if (!g_cfg.video.stretch_to_display_area)
-		{
-			const double aq = (double)buffer_width / buffer_height;
-			const double rq = (double)new_size.width / new_size.height;
-			const double q = aq / rq;
-
-			if (q > 1.0)
-			{
-				new_size.height = int(new_size.height / q);
-				aspect_ratio.y = (csize.height - new_size.height) / 2;
-			}
-			else if (q < 1.0)
-			{
-				new_size.width = int(new_size.width * q);
-				aspect_ratio.x = (csize.width - new_size.width) / 2;
-			}
-		}
-
-		aspect_ratio.size = new_size;
-
 		// Find the source image
 		const u32 absolute_address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		GLuint image = GL_NONE;
@@ -1722,8 +1722,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			const bool limited_range = !g_cfg.video.full_rgb_range_output;
 
 			gl::screen.bind();
-			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
-			m_video_output_pass.run(m_frame->client_width(), m_frame->client_height(), image, areai(aspect_ratio), gamma, limited_range);
+			m_video_output_pass.run(areau(aspect_ratio), image, gamma, limited_range);
 		}
 	}
 
@@ -1749,14 +1748,13 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		if (m_overlay_manager->has_visible())
 		{
 			gl::screen.bind();
-			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 
 			// Lock to avoid modification during run-update chain
 			std::lock_guard lock(*m_overlay_manager);
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer.run(m_frame->client_width(), m_frame->client_height(), 0, *view.get());
+				m_ui_renderer.run(areau(aspect_ratio), 0, *view.get());
 			}
 		}
 	}
