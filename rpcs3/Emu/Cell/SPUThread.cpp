@@ -1680,7 +1680,7 @@ void spu_thread::do_mfc(bool wait)
 	u32 fence = 0;
 
 	// Process enqueued commands
-	std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
+	static_cast<void>(std::remove_if(mfc_queue + 0, mfc_queue + mfc_size, [&](spu_mfc_cmd& args)
 	{
 		// Select tag bit in the tag mask or the stall mask
 		const u32 mask = utils::rol32(1, args.tag);
@@ -1753,7 +1753,7 @@ void spu_thread::do_mfc(bool wait)
 
 		removed++;
 		return true;
-	});
+	}));
 
 	mfc_size -= removed;
 	mfc_barrier = barrier;
