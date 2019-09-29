@@ -177,7 +177,7 @@ error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatchin
 error_code sceNpMatching2Term(ppu_thread& ppu);
 error_code sceNpMatching2Term2();
 
-error_code sceNp2Init(u64 poolsize, vm::ptr<void> poolptr)
+error_code sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp2.warning("sceNp2Init(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
 
