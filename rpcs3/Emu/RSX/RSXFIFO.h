@@ -131,7 +131,7 @@ namespace rsx
 			void inc_get(bool wait);
 			void set_get(u32 get);
 			void set_put(u32 put);
-			u32 read_put();
+			template <bool = true> u32 read_put();
 
 			void read(register_pair& data);
 			inline bool read_unsafe(register_pair& data);
