@@ -62,8 +62,6 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, const QIcon& app
 		setIcon(appIcon);
 	}
 
-	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
-
 #ifdef __APPLE__
 	// Needed for MoltenVK to work properly on MacOS
 	if (g_cfg.video.renderer == video_renderer::vulkan)
@@ -280,26 +278,30 @@ int gs_frame::client_height()
 
 void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
-	if (m_show_fps)
+	static Timer fps_t;
+
+	++m_frames;
+
+	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
-		++m_frames;
+		QString fps_title;
 
-		static Timer fps_t;
-
-		if (fps_t.GetElapsedTimeInSec() >= 0.5)
+		if (g_cfg.misc.show_fps_in_title)
 		{
-			QString fps_title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
+			fps_title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 
 			if (!m_windowTitle.isEmpty())
 			{
-				fps_title += " | " + m_windowTitle;
+				fps_title += " | ";
 			}
-
-			Emu.CallAfter([this, title = std::move(fps_title)]() {setTitle(title); });
-
-			m_frames = 0;
-			fps_t.Start();
 		}
+
+		fps_title += m_windowTitle;
+
+		Emu.CallAfter([this, title = std::move(fps_title)]() { setTitle(title); });
+
+		m_frames = 0;
+		fps_t.Start();
 	}
 }
 
