@@ -17,7 +17,7 @@ namespace rsx
 		{
 			m_internal_get += 4;
 
-			if (wait && read_put() == m_internal_get)
+			if (wait && read_put<false>() == m_internal_get)
 			{
 				// NOTE: Only supposed to be invoked to wait for a single arg on command[0] (4 bytes)
 				// Wait for put to allow us to procceed execution
@@ -30,9 +30,17 @@ namespace rsx
 			}
 		}
 
+		template <bool full>
 		u32 FIFO_control::read_put()
 		{
-			return m_ctrl->put.and_fetch(~3);
+			if constexpr (!full)
+			{
+				return m_ctrl->put & ~3;
+			}
+			else
+			{
+				return m_ctrl->put.and_fetch(~3);
+			}
 		}
 
 		void FIFO_control::set_put(u32 put)
@@ -65,7 +73,7 @@ namespace rsx
 		{
 			// Fast read with no processing, only safe inside a PACKET_BEGIN+count block
 			if (m_remaining_commands &&
-				m_internal_get != read_put())
+				m_internal_get != read_put<false>())
 			{
 				m_command_reg += m_command_inc;
 				m_args_ptr += 4;
