@@ -471,6 +471,7 @@ namespace gl
 		cmd.drv->color_maski(0, true, true, true, true);
 
 		glClear(GL_COLOR_BUFFER_BIT);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GL_NONE, 0);
 	}
 
 	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil)
@@ -505,5 +506,6 @@ namespace gl
 		cmd.drv->stencil_mask(0xFF);
 
 		glClear(clear_mask);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
 	}
 }
