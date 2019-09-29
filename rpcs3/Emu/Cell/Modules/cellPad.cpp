@@ -47,6 +47,9 @@ error_code cellPadInit(u32 max_connect)
 
 	config->max_connect = std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
 	config->port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
+
+	Emu.GetCallbacks().reset_pads(Emu.GetTitleID());
+
 	return CELL_OK;
 }
 

@@ -183,6 +183,7 @@ void pad_thread::ThreadFunc()
 		if (reset && reset.exchange(false))
 		{
 			Init();
+			std::this_thread::sleep_for(100ms); // Add some delay to simulate ps3 pad initialization
 		}
 
 		u32 connected_devices = 0;
