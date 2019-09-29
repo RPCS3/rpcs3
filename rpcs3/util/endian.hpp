@@ -201,7 +201,7 @@ namespace stx
 
 			if constexpr ((std::is_integral_v<T> || std::is_enum_v<T>) && (std::is_integral_v<R> || std::is_enum_v<R>) && sizeof(T) >= sizeof(R))
 			{
-				return std::bit_cast<type>(m_data) == std::bit_cast<type>(static_cast<se_t>(rhs));
+				return std::bit_cast<type>(m_data) == std::bit_cast<type>(static_cast<se_t>(static_cast<type>(rhs)));
 			}
 
 			// Keep outside of if constexpr to make sure it fails on invalid comparison
