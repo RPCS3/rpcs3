@@ -31,6 +31,20 @@ void fmt_class_string<CellPadError>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_PADFILTER_ERROR_INVALID_PARAMETER);
+		}
+
+		return unknown;
+	});
+}
+
 error_code cellPadInit(u32 max_connect)
 {
 	sys_io.warning("cellPadInit(max_connect=%d)", max_connect);
@@ -989,6 +1003,27 @@ error_code cellPadLddUnregisterController(s32 handle)
 	return CELL_OK;
 }
 
+error_code cellPadFilterIIRInit(vm::ptr<CellPadFilterIIRSos> pSos, s32 cutoff)
+{
+	sys_io.todo("cellPadFilterIIRInit(pSos=*0x%x, cutoff=%d)", pSos, cutoff);
+
+	if (!pSos) // TODO: does this check for cutoff > 2 ?
+	{
+		return CELL_PADFILTER_ERROR_INVALID_PARAMETER;
+	}
+
+	return CELL_OK;
+}
+
+u32 cellPadFilterIIRFilter(vm::ptr<CellPadFilterIIRSos> pSos, u32 filterIn)
+{
+	sys_io.todo("cellPadFilterIIRFilter(pSos=*0x%x, filterIn=%d)", pSos, filterIn);
+
+	// TODO: apply filter
+
+	return std::clamp(filterIn, 0u, 1023u);
+}
+
 s32 sys_io_3733EA3C(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadData> data)
 {
 	// Used by the ps1 emulator built into the firmware
@@ -1020,6 +1055,9 @@ void cellPad_init()
 	REG_FUNC(sys_io, cellPadLddDataInsert);
 	REG_FUNC(sys_io, cellPadLddGetPortNo);
 	REG_FUNC(sys_io, cellPadLddUnregisterController);
+
+	REG_FUNC(sys_io, cellPadFilterIIRInit);
+	REG_FUNC(sys_io, cellPadFilterIIRFilter);
 
 	REG_FNID(sys_io, 0x3733EA3C, sys_io_3733EA3C);
 }
