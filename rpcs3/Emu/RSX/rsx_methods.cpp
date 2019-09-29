@@ -65,13 +65,15 @@ namespace rsx
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
-			const auto& sema = vm::_ref<atomic_t<be_t<u32>>>(addr);
+			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema.load() == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
+
+			rsx->flush_fifo();
 
 			u64 start = get_system_time();
-			while (sema.load() != arg)
+			while (sema != arg)
 			{
 				if (Emu.IsStopped())
 					return;

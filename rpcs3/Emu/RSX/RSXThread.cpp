@@ -2334,6 +2334,12 @@ namespace rsx
 		//verify (HERE), async_tasks_pending.load() == 0;
 	}
 
+	void thread::flush_fifo()
+	{
+		// Make sure GET value is exposed before sync points
+		fifo_ctrl->sync_get();
+	}
+
 	void thread::read_barrier(u32 memory_address, u32 memory_range)
 	{
 		zcull_ctrl->read_barrier(this, memory_address, memory_range);
