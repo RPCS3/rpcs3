@@ -121,5 +121,5 @@ struct CellPadFilterIIRSos
 struct pad_info
 {
 	atomic_t<u32> max_connect = 0;
-	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting;
+	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting{ 0 };
 };
