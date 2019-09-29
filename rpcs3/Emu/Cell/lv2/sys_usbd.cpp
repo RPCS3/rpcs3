@@ -458,6 +458,16 @@ s32 sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	std::lock_guard lock(usbh->mutex);
 	usbh->is_init = false;
 
+	// Forcefully awake all waiters
+	for (auto& cpu : decltype(usbh->sq)(std::move(usbh->sq)))
+	{
+		// Special ternimation signal value
+		cpu->gpr[4] = 4;
+		cpu->gpr[5] = 0;
+		cpu->gpr[6] = 0;
+		lv2_obj::awake(cpu);
+	}
+
 	// TODO
 	return CELL_OK;
 }
