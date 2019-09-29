@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -759,7 +759,7 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 	return CELL_OK;
 }
 
-s32 cellPadInfoPressMode(u32 port_no)
+error_code cellPadInfoPressMode(u32 port_no)
 {
 	sys_io.trace("cellPadInfoPressMode(port_no=%d)", port_no);
 
@@ -785,10 +785,10 @@ s32 cellPadInfoPressMode(u32 port_no)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	return (pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) > 0;
+	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
 }
 
-s32 cellPadInfoSensorMode(u32 port_no)
+error_code cellPadInfoSensorMode(u32 port_no)
 {
 	sys_io.trace("cellPadInfoSensorMode(port_no=%d)", port_no);
 
@@ -814,7 +814,7 @@ s32 cellPadInfoSensorMode(u32 port_no)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	return (pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) > 0;
+	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);
 }
 
 error_code cellPadSetPressMode(u32 port_no, u32 mode)
