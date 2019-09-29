@@ -188,7 +188,7 @@ error_code sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
 	}
 
-	const u32 result = std::bit_cast<u32>(sceNpInit(::narrow<u32>(poolsize), poolptr));
+	const u32 result = std::bit_cast<u32>(sceNpInit(poolsize, poolptr));
 
 	if (result && result != SCE_NP_ERROR_ALREADY_INITIALIZED)
 	{

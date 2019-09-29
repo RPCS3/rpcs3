@@ -103,7 +103,7 @@ struct vdec_context final
 	u32 frc_set{}; // Frame Rate Override
 	u64 next_pts{};
 	u64 next_dts{};
-	u64 ppu_tid{};
+	u32 ppu_tid{};
 
 	std::deque<vdec_frame> out;
 	atomic_t<u32> out_max = 60;
@@ -515,7 +515,7 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
 
-	while (!atomic_storage<u64>::load(vdec->ppu_tid))
+	while (!atomic_storage<u32>::load(vdec->ppu_tid))
 	{
 		thread_ctrl::wait_for(1000);
 	}
@@ -612,7 +612,7 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 
 	if (notify)
 	{
-		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(static_cast<u32>(vdec->ppu_tid));
+		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
 		if (vdec_ppu) thread_ctrl::notify(*vdec_ppu);
 	}
 
