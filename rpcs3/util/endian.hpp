@@ -143,6 +143,20 @@ namespace stx
 			}
 		}
 
+		static constexpr auto int_or_enum()
+		{
+			if constexpr (std::is_enum_v<simple_t<type>>)
+			{
+				return std::underlying_type_t<simple_t<type>>{};
+			}
+			else
+			{
+				return simple_t<type>{};
+			}
+		}
+
+		using under = decltype(int_or_enum());
+
 	public:
 		se_t() = default;
 
@@ -194,6 +208,19 @@ namespace stx
 		}
 #endif
 
+		auto operator~() const noexcept
+		{
+			if constexpr ((std::is_integral_v<T> || std::is_enum_v<T>) && std::is_convertible_v<T, int>)
+			{
+				// Return se_t of integral type if possible. Promotion to int is omitted on purpose (a compromise).
+				return std::bit_cast<se_t<under, Swap>>(static_cast<under>(~std::bit_cast<under>(m_data)));
+			}
+			else
+			{
+				return ~value();
+			}
+		}
+
 		template <typename T2>
 		bool operator==(const T2& rhs) const noexcept
 		{
@@ -205,12 +232,11 @@ namespace stx
 				{
 					if constexpr (std::is_enum_v<T> && std::is_convertible_v<T, int> && std::is_convertible_v<R, int>)
 					{
-						using under = std::underlying_type_t<T>;
 						return std::bit_cast<under>(m_data) == std::bit_cast<under>(static_cast<se_t<under, Swap>>(rhs));
 					}
 					else
 					{
-						return std::bit_cast<type>(m_data) == std::bit_cast<type>(static_cast<se_t>(rhs));
+						return std::bit_cast<type>(m_data) == std::bit_cast<type>(static_cast<se_t<type, Swap>>(rhs));
 					}
 				}
 			}
