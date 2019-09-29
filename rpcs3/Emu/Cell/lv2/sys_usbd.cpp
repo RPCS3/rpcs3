@@ -233,9 +233,7 @@ void usb_handler_thread::operator()()
 		// Process fake transfers
 		if (!fake_transfers.empty())
 		{
-			const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
-
-			std::lock_guard lock(usbh->mutex);
+			std::lock_guard lock(this->mutex);
 
 			u64 timestamp = get_system_time() - Emu.GetPauseTime();
 
@@ -442,7 +440,9 @@ s32 sys_usbd_initialize(vm::ptr<u32> handle)
 
 	std::lock_guard lock(usbh->mutex);
 
-	usbh->is_init = true;
+	// Must not occur (lv2 allows multiple handles, cellUsbd does not)
+	verify("sys_usbd Initialized twice" HERE), !usbh->is_init.exchange(true);
+
 	*handle       = 0x115B;
 
 	// TODO
