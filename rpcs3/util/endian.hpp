@@ -221,6 +221,29 @@ namespace stx
 			}
 		}
 
+private:
+		// Compatible bit pattern cast
+		template <typename To, typename Test = int, typename T2>
+		static To right_arg_cast(const T2& rhs) noexcept
+		{
+			return std::bit_cast<To>(static_cast<se_t<To, Swap>>(rhs));
+		}
+
+		template <typename To, typename Test = int, typename R, std::size_t Align2>
+		static To right_arg_cast(const se_t<R, Swap, Align2>& rhs) noexcept
+		{
+			if constexpr ((std::is_integral_v<R> || std::is_enum_v<R>) && std::is_convertible_v<R, Test> && sizeof(R) == sizeof(T))
+			{
+				// Optimization: allow to reuse bit pattern of any se_t with bit-compatible type
+				return std::bit_cast<To>(rhs);
+			}
+			else
+			{
+				return std::bit_cast<To>(static_cast<se_t<To, Swap>>(rhs.value()));
+			}
+		}
+
+public:
 		template <typename T2>
 		bool operator==(const T2& rhs) const noexcept
 		{
@@ -230,13 +253,14 @@ namespace stx
 			{
 				if constexpr (sizeof(T) >= sizeof(R))
 				{
-					if constexpr (std::is_enum_v<T> && std::is_convertible_v<T, int> && std::is_convertible_v<R, int>)
+					if constexpr (std::is_convertible_v<T, int> && std::is_convertible_v<R, int>)
 					{
-						return std::bit_cast<under>(m_data) == std::bit_cast<under>(static_cast<se_t<under, Swap>>(rhs));
+						return std::bit_cast<under>(m_data) == right_arg_cast<under>(rhs);
 					}
 					else
 					{
-						return std::bit_cast<type>(m_data) == std::bit_cast<type>(static_cast<se_t<type, Swap>>(rhs));
+						// Compare with strict type on the right side (possibly scoped enum)
+						return std::bit_cast<type>(m_data) == right_arg_cast<type, type>(rhs);
 					}
 				}
 			}
@@ -249,6 +273,63 @@ namespace stx
 		bool operator!=(const T2& rhs) const noexcept
 		{
 			return !operator==<T2>(rhs);
+		}
+
+private:
+		template <typename T2>
+		static constexpr bool check_args_for_bitwise_op()
+		{
+			using R = simple_t<T2>;
+
+			if constexpr ((std::is_integral_v<T> || std::is_enum_v<T>) && (std::is_integral_v<R> || std::is_enum_v<R>))
+			{
+				if constexpr (std::is_convertible_v<T, int> && std::is_convertible_v<R, int> && sizeof(T) >= sizeof(R))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+public:
+		template <typename T2>
+		auto operator&(const T2& rhs) const noexcept
+		{
+			if constexpr (check_args_for_bitwise_op<T2>())
+			{
+				return std::bit_cast<se_t<under, Swap>>(static_cast<under>(std::bit_cast<under>(m_data) & right_arg_cast<under>(rhs)));
+			}
+			else
+			{
+				return value() & rhs;
+			}
+		}
+
+		template <typename T2>
+		auto operator|(const T2& rhs) const noexcept
+		{
+			if constexpr (check_args_for_bitwise_op<T2>())
+			{
+				return std::bit_cast<se_t<under, Swap>>(static_cast<under>(std::bit_cast<under>(m_data) | right_arg_cast<under>(rhs)));
+			}
+			else
+			{
+				return value() | rhs;
+			}
+		}
+
+		template <typename T2>
+		auto operator^(const T2& rhs) const noexcept
+		{
+			if constexpr (check_args_for_bitwise_op<T2>())
+			{
+				return std::bit_cast<se_t<under, Swap>>(static_cast<under>(std::bit_cast<under>(m_data) ^ right_arg_cast<under>(rhs)));
+			}
+			else
+			{
+				return value() ^ rhs;
+			}
 		}
 
 		template <typename T1>
