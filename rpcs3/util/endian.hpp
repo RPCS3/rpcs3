@@ -372,7 +372,7 @@ public:
 		{
 			if constexpr (std::is_integral_v<T>)
 			{
-				m_data = std::bit_cast<stype, T>(static_cast<T>(std::bit_cast<T>(m_data) & std::bit_cast<T>(static_cast<se_t>(rhs))));
+				m_data = std::bit_cast<stype, type>(static_cast<type>(std::bit_cast<type>(m_data) & right_arg_cast<type>(rhs)));
 				return *this;
 			}
 
@@ -385,7 +385,7 @@ public:
 		{
 			if constexpr (std::is_integral_v<T>)
 			{
-				m_data = std::bit_cast<stype, T>(static_cast<T>(std::bit_cast<T>(m_data) | std::bit_cast<T>(static_cast<se_t>(rhs))));
+				m_data = std::bit_cast<stype, type>(static_cast<type>(std::bit_cast<type>(m_data) | right_arg_cast<type>(rhs)));
 				return *this;
 			}
 
@@ -398,7 +398,7 @@ public:
 		{
 			if constexpr (std::is_integral_v<T>)
 			{
-				m_data = std::bit_cast<stype, T>(static_cast<T>(std::bit_cast<T>(m_data) ^ std::bit_cast<T>(static_cast<se_t>(rhs))));
+				m_data = std::bit_cast<stype, type>(static_cast<type>(std::bit_cast<type>(m_data) ^ right_arg_cast<type>(rhs)));
 				return *this;
 			}
 
