@@ -2369,6 +2369,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	case SPU_WrSRR0:
 	{
 		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->and_(*addr, 0x3fffc);
 		c->mov(SPU_OFF_32(srr0), *addr);
 		return;
 	}
@@ -2712,7 +2713,6 @@ void spu_recompiler::BISL(spu_opcode_t op)
 void spu_recompiler::IRET(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(srr0));
-	c->and_(*addr, 0x3fffc);
 	branch_indirect(op);
 	m_pos = -1;
 }
