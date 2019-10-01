@@ -1,10 +1,12 @@
 ﻿#include "stdafx.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
+#include "GLCompute.h"
 #include "Utilities/Log.h"
 
 namespace gl
 {
+	std::unordered_map<u32, std::unique_ptr<gl::compute_task>> g_compute_tasks;
 	blitter *g_hw_blitter = nullptr;
 	capabilities g_driver_caps;
 	const fbo screen{};
