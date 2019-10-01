@@ -21,6 +21,14 @@
 #define GL_STENCIL_MIRRORS_START   (GL_VERTEX_TEXTURES_START + 4)
 #define GL_STREAM_BUFFER_START     (GL_STENCIL_MIRRORS_START + 16)
 
+#define GL_VERTEX_PARAMS_BIND_SLOT 0
+#define GL_VERTEX_LAYOUT_BIND_SLOT 1
+#define GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT 2
+#define GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 3
+#define GL_FRAGMENT_STATE_BIND_SLOT 4
+#define GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 5
+#define GL_COMPUTE_BUFFER_SLOT(index) (index + 6)
+
 inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
 
 namespace gl
@@ -904,6 +912,11 @@ namespace gl
 			verify(HERE), m_memory_type == memory_type::host_visible;
 			glUnmapBuffer((GLenum)current_target());
 		}
+
+		void bind_range(u32 index, u32 offset, u32 size) const
+		{
+			glBindBufferRange((GLenum)current_target(), index, id(), offset, size);
+		}
 	};
 
 	class ring_buffer : public buffer
@@ -990,11 +1003,6 @@ namespace gl
 		virtual void reserve_storage_on_heap(u32 /*alloc_size*/) {}
 
 		virtual void unmap() {}
-
-		void bind_range(u32 index, u32 offset, u32 size) const
-		{
-			glBindBufferRange((GLenum)current_target(), index, id(), offset, size);
-		}
 
 		//Notification of a draw command
 		virtual void notify()
@@ -2383,7 +2391,7 @@ public:
 			{
 				fragment = GL_FRAGMENT_SHADER,
 				vertex = GL_VERTEX_SHADER,
-				geometry = GL_GEOMETRY_SHADER
+				compute = GL_COMPUTE_SHADER
 			};
 
 		private:
@@ -2533,6 +2541,7 @@ public:
 				}
 
 				void operator = (int rhs) const { glProgramUniform1i(m_program.id(), location(), rhs); }
+				void operator = (unsigned rhs) const { glProgramUniform1ui(m_program.id(), location(), rhs); }
 				void operator = (float rhs) const { glProgramUniform1f(m_program.id(), location(), rhs); }
 				void operator = (const color1i& rhs) const { glProgramUniform1i(m_program.id(), location(), rhs.r); }
 				void operator = (const color1f& rhs) const { glProgramUniform1f(m_program.id(), location(), rhs.r); }

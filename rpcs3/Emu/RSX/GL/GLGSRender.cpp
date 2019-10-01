@@ -1334,7 +1334,7 @@ void GLGSRender::load_program_env()
 		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
 		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
 
-		m_vertex_env_buffer->bind_range(0, mapping.second, 144);
+		m_vertex_env_buffer->bind_range(GL_VERTEX_PARAMS_BIND_SLOT, mapping.second, 144);
 	}
 
 	if (update_transform_constants)
@@ -1344,7 +1344,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 		fill_vertex_program_constants_data(buf);
 
-		m_transform_constants_buffer->bind_range(2, mapping.second, 8192);
+		m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, 8192);
 	}
 
 	if (update_fragment_constants)
@@ -1356,7 +1356,7 @@ void GLGSRender::load_program_env()
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) },
 			current_fragment_program, gl::get_driver_caps().vendor_NVIDIA);
 
-		m_fragment_constants_buffer->bind_range(3, mapping.second, fragment_constants_size);
+		m_fragment_constants_buffer->bind_range(GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, fragment_constants_size);
 	}
 
 	if (update_fragment_env)
@@ -1366,7 +1366,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 		fill_fragment_state_buffer(buf, current_fragment_program);
 
-		m_fragment_env_buffer->bind_range(4, mapping.second, 32);
+		m_fragment_env_buffer->bind_range(GL_FRAGMENT_STATE_BIND_SLOT, mapping.second, 32);
 	}
 
 	if (update_fragment_texture_env)
@@ -1376,7 +1376,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 		fill_fragment_texture_parameters(buf, current_fragment_program);
 
-		m_texture_parameters_buffer->bind_range(5, mapping.second, 256);
+		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 256);
 	}
 
 	if (manually_flush_ring_buffers)
@@ -1409,7 +1409,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 	fill_vertex_layout_state(m_vertex_layout, upload_info.first_vertex, upload_info.allocated_vertex_count, (s32*)buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
-	m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
+	m_vertex_layout_buffer->bind_range(GL_VERTEX_LAYOUT_BIND_SLOT, mapping.second, 128 + 16);
 
 	if (manually_flush_ring_buffers)
 	{
