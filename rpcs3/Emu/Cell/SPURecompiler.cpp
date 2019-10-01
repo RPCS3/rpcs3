@@ -5569,7 +5569,7 @@ public:
 		{
 		case SPU_WrSRR0:
 		{
-			m_ir->CreateStore(val.value, spu_ptr<u32>(&spu_thread::srr0));
+			m_ir->CreateStore(eval(val & 0x3fffc).value, spu_ptr<u32>(&spu_thread::srr0));
 			return;
 		}
 		case SPU_WrOutIntrMbox:

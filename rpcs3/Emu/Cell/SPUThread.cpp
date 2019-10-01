@@ -2436,7 +2436,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	{
 	case SPU_WrSRR0:
 	{
-		srr0 = value;
+		srr0 = value & 0x3fffc;
 		return true;
 	}
 
