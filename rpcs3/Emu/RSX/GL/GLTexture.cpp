@@ -738,116 +738,117 @@ namespace gl
 		return false;
 	}
 
+	cs_shuffle_base* get_pixel_transform_job(const pixel_buffer_layout& pack_info)
+	{
+		const bool is_depth_stencil = (pack_info.type == GL_UNSIGNED_INT_24_8);
+		if (LIKELY(!is_depth_stencil))
+		{
+			if (!pack_info.swap_bytes)
+			{
+				return nullptr;
+			}
+
+			switch (pack_info.size)
+			{
+			case 1:
+				return nullptr;
+			case 2:
+				return gl::get_compute_task<gl::cs_shuffle_16>();
+				break;
+			case 4:
+				return gl::get_compute_task<gl::cs_shuffle_32>();
+				break;
+			default:
+				fmt::throw_exception("Unsupported format");
+			}
+		}
+		else
+		{
+			if (pack_info.swap_bytes)
+			{
+				return gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<true>>();
+			}
+			else
+			{
+				return gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<false>>();
+			}
+		}
+	}
+
 	void copy_typeless(texture * dst, const texture * src)
 	{
-		GLsizeiptr src_mem = src->width() * src->height();
-		GLsizeiptr dst_mem = dst->width() * dst->height();
+		GLsizeiptr src_mem = src->pitch() * src->height();
+		GLsizeiptr dst_mem = dst->pitch() * dst->height();
 
-		auto max_mem = std::max(src_mem, dst_mem) * 16;
+		auto max_mem = std::max(src_mem, dst_mem);
 		if (!g_typeless_transfer_buffer || max_mem > g_typeless_transfer_buffer.size())
 		{
 			if (g_typeless_transfer_buffer) g_typeless_transfer_buffer.remove();
 			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 		}
 
+		const auto& caps = gl::get_driver_caps();
 		const auto pack_info = get_format_type(src->get_internal_format());
 		const auto unpack_info = get_format_type(dst->get_internal_format());
 
-		pixel_pack_settings pack_settings{};
+		// Start pack operation
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
-		src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, pack_settings);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
-		const bool src_is_ds = !!(src->aspect() & gl::image_aspect::stencil);
-		const bool dst_is_ds = !!(src->aspect() & gl::image_aspect::stencil);
-
-		if (pack_info.swap_bytes || unpack_info.swap_bytes || src_is_ds || dst_is_ds)
+		if (LIKELY(caps.ARB_compute_shader_supported))
 		{
-			gl::cs_shuffle_base *src_transform = nullptr, *dst_transform = nullptr;
-
-			if (src_is_ds)
-			{
-				if (pack_info.swap_bytes)
-				{
-					src_transform = gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<true>>();
-				}
-				else
-				{
-					src_transform = gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<false>>();
-				}
-			}
-			else if (pack_info.swap_bytes)
-			{
-				switch (pack_info.size)
-				{
-				case 1:
-					break;
-				case 2:
-					src_transform = gl::get_compute_task<gl::cs_shuffle_16>();
-					break;
-				case 4:
-					src_transform = gl::get_compute_task<gl::cs_shuffle_32>();
-					break;
-				default:
-					fmt::throw_exception("Unsupported format");
-				}
-			}
-
-			if (dst_is_ds)
-			{
-				if (unpack_info.swap_bytes)
-				{
-					dst_transform = gl::get_compute_task<gl::cs_shuffle_x8d24_to_d24x8<true>>();
-				}
-				else
-				{
-					dst_transform = gl::get_compute_task<gl::cs_shuffle_x8d24_to_d24x8<false>>();
-				}
-			}
-			else if (unpack_info.swap_bytes)
-			{
-				switch (unpack_info.size)
-				{
-				case 1:
-					break;
-				case 2:
-					dst_transform = gl::get_compute_task<gl::cs_shuffle_16>();
-					break;
-				case 4:
-					dst_transform = gl::get_compute_task<gl::cs_shuffle_32>();
-					break;
-				default:
-					fmt::throw_exception("Unsupported format");
-				}
-
-				if (!src_is_ds)
-				{
-					if (src_transform == dst_transform)
-					{
-						src_transform = dst_transform = nullptr;
-					}
-					else if (src_transform)
-					{
-						src_transform = gl::get_compute_task<gl::cs_shuffle_32_16>();
-						dst_transform = nullptr;
-					}
-				}
-
-				if (src_transform)
-				{
-					const auto image_size = src->pitch() * src->height();
-					src_transform->run(&g_typeless_transfer_buffer, image_size);
-				}
-
-				if (dst_transform)
-				{
-					const auto image_size = dst->pitch() * dst->height();
-					dst_transform->run(&g_typeless_transfer_buffer, image_size);
-				}
-			}
+			// Raw copy
+			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type);
+		}
+		else
+		{
+			pixel_pack_settings pack_settings{};
+			pack_settings.swap_bytes(pack_info.swap_bytes);
+			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, pack_settings);
 		}
 
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+
+		// Start unpack operation
 		pixel_unpack_settings unpack_settings{};
+
+		if (LIKELY(caps.ARB_compute_shader_supported))
+		{
+			auto src_transform = get_pixel_transform_job(pack_info);
+			auto dst_transform = get_pixel_transform_job(unpack_info);
+
+			if (src->aspect() == gl::image_aspect::color && dst->aspect() == gl::image_aspect::color)
+			{
+				if (src_transform == dst_transform)
+				{
+					src_transform = dst_transform = nullptr;
+				}
+				else if (src_transform && dst_transform)
+				{
+					src_transform = gl::get_compute_task<cs_shuffle_32_16>();
+					dst_transform = nullptr;
+				}
+			}
+
+			const auto job_length = std::min(src_mem, dst_mem);
+			if (src_transform)
+			{
+				src_transform->run(&g_typeless_transfer_buffer, job_length);
+			}
+
+			if (dst_transform)
+			{
+				dst_transform->run(&g_typeless_transfer_buffer, job_length);
+			}
+
+			// NOTE: glBindBufferRange also binds the buffer to the old-school target.
+			// Unbind it to avoid glitching later
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+		}
+		else
+		{
+			unpack_settings.swap_bytes(unpack_info.swap_bytes);
+		}
+
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
 		dst->copy_from(nullptr, (texture::format)unpack_info.format, (texture::type)unpack_info.type, unpack_settings);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);

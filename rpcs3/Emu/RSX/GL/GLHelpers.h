@@ -114,6 +114,7 @@ namespace gl
 		bool NV_texture_barrier_supported = false;
 		bool NV_gpu_shader5_supported = false;
 		bool AMD_gpu_shader_half_float_supported = false;
+		bool ARB_compute_shader_supported = false;
 		bool initialized = false;
 		bool vendor_INTEL = false;  // has broken GLSL compiler
 		bool vendor_AMD = false;    // has broken ARB_multidraw
@@ -133,7 +134,7 @@ namespace gl
 
 		void initialize()
 		{
-			int find_count = 10;
+			int find_count = 11;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -209,6 +210,13 @@ namespace gl
 				if (check(ext_name, "GL_AMD_gpu_shader_half_float"))
 				{
 					AMD_gpu_shader_half_float_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (check(ext_name, "GL_ARB_compute_shader"))
+				{
+					ARB_compute_shader_supported = true;
 					find_count--;
 					continue;
 				}
