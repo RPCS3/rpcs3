@@ -13,10 +13,18 @@ namespace rsx
 
 namespace gl
 {
+	struct pixel_buffer_layout
+	{
+		GLenum format;
+		GLenum type;
+		u8     size;
+		bool   swap_bytes;
+	};
+
 	GLenum get_target(rsx::texture_dimension_extended type);
 	GLenum get_sized_internal_format(u32 texture_format);
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format);
-	std::tuple<GLenum, GLenum, bool> get_format_type(texture::internal_format format);
+	pixel_buffer_layout get_format_type(texture::internal_format format);
 	GLenum wrap_mode(rsx::texture_wrap_mode wrap);
 	float max_aniso(rsx::texture_max_anisotropy aniso);
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format);

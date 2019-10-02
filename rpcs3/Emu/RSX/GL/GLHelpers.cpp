@@ -30,6 +30,16 @@ namespace gl
 		}
 	}
 
+	void destroy_compute_tasks()
+	{
+		for (auto& [key, prog] : g_compute_tasks)
+		{
+			prog->destroy();
+		}
+
+		g_compute_tasks.clear();
+	}
+
 #ifdef WIN32
 	void APIENTRY dbgFunc(GLenum source, GLenum type, GLuint id,
 		GLenum severity, GLsizei lenght, const GLchar* message,

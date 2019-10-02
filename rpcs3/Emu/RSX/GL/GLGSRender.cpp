@@ -2,6 +2,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
+#include "GLCompute.h"
 #include "GLVertexProgram.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
@@ -965,6 +966,8 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
+	gl::destroy_compute_tasks();
+
 	zcull_ctrl.release();
 
 	m_prog_buffer.clear();

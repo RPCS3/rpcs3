@@ -2454,8 +2454,8 @@ public:
 					case type::fragment:
 						base_name = "shaderlog/FragmentProgram";
 						break;
-					case type::geometry:
-						base_name = "shaderlog/GeometryProgram";
+					case type::compute:
+						base_name = "shaderlog/ComputeProgram";
 						break;
 					}
 

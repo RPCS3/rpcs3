@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Utilities/StrUtil.h"
+#include "Emu/IdManager.h"
 #include "GLHelpers.h"
 
 namespace gl
@@ -16,6 +17,28 @@ namespace gl
 		bool unroll_loops = true;
 		u32 optimal_group_size = 1;
 		u32 optimal_kernel_size = 1;
+		u32 max_invocations_x = 65535;
+
+		void initialize()
+		{
+			// Set up optimal kernel size
+			const auto& caps = gl::get_driver_caps();
+			if (caps.vendor_AMD || caps.vendor_MESA)
+			{
+				optimal_group_size = 64;
+				unroll_loops = false;
+			}
+			else if (caps.vendor_NVIDIA)
+			{
+				optimal_group_size = 32;
+			}
+			else
+			{
+				optimal_group_size = 128;
+			}
+
+			glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, (GLint*)&max_invocations_x);
+		}
 
         void create()
         {
@@ -52,6 +75,7 @@ namespace gl
             GLint old_program;
             glGetIntegerv(GL_CURRENT_PROGRAM, &old_program);
 
+			bind_resources();
             m_program.use();
             glDispatchCompute(invocations_x, invocations_y, 1);
 
@@ -60,7 +84,23 @@ namespace gl
 
         void run(u32 num_invocations)
         {
-            run(num_invocations, 1);   
+			u32 invocations_x, invocations_y;
+			if (LIKELY(num_invocations <= max_invocations_x))
+			{
+				invocations_x = num_invocations;
+				invocations_y = 1;
+			}
+			else
+			{
+				// Since all the invocations will run, the optimal distribution is sqrt(count)
+				const auto optimal_length = (u32)floor(std::sqrt(num_invocations));
+				invocations_x = optimal_length;
+				invocations_y = invocations_x;
+
+				if (num_invocations % invocations_x) invocations_y++;
+			}
+
+            run(invocations_x, invocations_y);
         }
     };
 
@@ -89,7 +129,7 @@ namespace gl
 		void build(const char* function_name, u32 _kernel_size = 0)
 		{
 			// Initialize to allow detecting optimal settings
-			create();
+			initialize();
 
 			kernel_size = _kernel_size? _kernel_size : optimal_kernel_size;
 
@@ -107,15 +147,21 @@ namespace gl
 				"#define bswap_u16_u32(bits) (bits & 0xFFFF) << 16 | (bits & 0xFFFF0000) >> 16\n"
 				"\n"
 				"// Depth format conversions\n"
-				"#define d24_to_f32(bits)             floatBitsToUint(float(bits) / 16777215.f)\n"
-				"#define f32_to_d24(bits)             uint(uintBitsToFloat(bits) * 16777215.f)\n"
-				"#define d24x8_to_f32(bits)           d24_to_f32(bits >> 8)\n"
-				"#define d24x8_to_d24x8_swapped(bits) (bits & 0xFF00) | (bits & 0xFF0000) >> 16 | (bits & 0xFF) << 16\n"
-				"#define f32_to_d24x8_swapped(bits)   d24x8_to_d24x8_swapped(f32_to_d24(bits))\n"
+                "#define d24x8_to_x8d24(bits) (bits << 8) | (bits >> 24)\n"
+                "#define d24x8_to_x8d24_swapped(bits) bswap_u32(d24x8_to_x8d24(bits))\n"
+                "#define x8d24_to_d24x8(bits) (bits >> 8) | (bits << 24)\n"
+                "#define x8d24_to_d24x8_swapped(bits) x8d24_to_d24x8(bswap_u32(bits))\n"
+				"\n"
+				"uint linear_invocation_id()\n"
+				"{\n"
+				"	uint size_in_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);\n"
+				"	return (gl_GlobalInvocationID.y * size_in_x) + gl_GlobalInvocationID.x;\n"
+				"}\n"
 				"\n"
 				"void main()\n"
 				"{\n"
-				"	uint index = gl_GlobalInvocationID.x * KERNEL_SIZE;\n"
+				"	uint invocation_id = linear_invocation_id();\n"
+				"	uint index = invocation_id * KERNEL_SIZE;\n"
 				"	uint value;\n"
 				"	%vars"
 				"\n";
@@ -169,7 +215,7 @@ namespace gl
 
 		void bind_resources() override
 		{
-            m_data->bind_range(GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_data_length);
+            m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_data_length);
 		}
 
 		void run(const gl::buffer* data, u32 data_length, u32 data_offset = 0)
@@ -220,156 +266,35 @@ namespace gl
 		}
 	};
 
-	struct cs_shuffle_d24x8_f32 : cs_shuffle_base
+    template<bool _SwapBytes = false>
+	struct cs_shuffle_d24x8_to_x8d24 : cs_shuffle_base
 	{
-		// convert d24x8 to f32
-		cs_shuffle_d24x8_f32()
+		cs_shuffle_d24x8_to_x8d24()
 		{
-			cs_shuffle_base::build("d24x8_to_f32");
+            if constexpr (_SwapBytes)
+            {
+			    cs_shuffle_base::build("d24x8_to_x8d24_swapped");
+            }
+            else
+            {
+			    cs_shuffle_base::build("d24x8_to_x8d24");
+            }
 		}
 	};
 
-	struct cs_shuffle_se_f32_d24x8 : cs_shuffle_base
+    template<bool _SwapBytes = false>
+	struct cs_shuffle_x8d24_to_d24x8 : cs_shuffle_base
 	{
-		// convert f32 to d24x8 and swap endianness
-		cs_shuffle_se_f32_d24x8()
+		cs_shuffle_x8d24_to_d24x8()
 		{
-			cs_shuffle_base::build("f32_to_d24x8_swapped");
-		}
-	};
-
-	struct cs_shuffle_se_d24x8 : cs_shuffle_base
-	{
-		// swap endianness of d24x8
-		cs_shuffle_se_d24x8()
-		{
-			cs_shuffle_base::build("d24x8_to_d24x8_swapped");
-		}
-	};
-
-	// NOTE: D24S8 layout has the stencil in the MSB! Its actually S8|D24|S8|D24 starting at offset 0
-	struct cs_interleave_task : cs_shuffle_base
-	{
-		cs_interleave_task()
-		{
-            uniforms =
-            "   uniform uint block_length;\n"
-            "   uniform uint z_offset;\n"
-            "   uniform uint s_offset;\n";
-
-			variables =
-				"	uint depth;\n"
-				"	uint stencil;\n"
-				"	uint stencil_shift;\n"
-				"	uint stencil_offset;\n";
-		}
-
-		void run(const gl::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
-		{
-            m_program.uniforms["block_length"] = data_length;
-            m_program.uniforms["z_offset"] = zeta_offset - data_offset;
-            m_program.uniforms["s_offset"] = stencil_offset - data_offset;
-			cs_shuffle_base::run(data, data_length, data_offset);
-		}
-	};
-
-	template<bool _SwapBytes = false>
-	struct cs_gather_d24x8 : cs_interleave_task
-	{
-		cs_gather_d24x8()
-		{
-			work_kernel =
-				"		if (index >= block_length)\n"
-				"			return;\n"
-				"\n"
-				"		depth = data[index + z_offset] & 0x00FFFFFF;\n"
-				"		stencil_offset = (index / 4);\n"
-				"		stencil_shift = (index % 4) * 8;\n"
-				"		stencil = data[stencil_offset + s_offset];\n"
-				"		stencil = (stencil >> stencil_shift) & 0xFF;\n"
-				"		value = (depth << 8) | stencil;\n";
-
-			if constexpr (!_SwapBytes)
-			{
-				work_kernel +=
-				"		data[index] = value;\n";
-			}
-			else
-			{
-				work_kernel +=
-				"		data[index] = bswap_u32(value);\n";
-			}
-
-			cs_shuffle_base::build("");
-		}
-	};
-
-	template<bool _SwapBytes = false>
-	struct cs_gather_d32x8 : cs_interleave_task
-	{
-		cs_gather_d32x8()
-		{
-			work_kernel =
-				"		if (index >= block_length)\n"
-				"			return;\n"
-				"\n"
-				"		depth = f32_to_d24(data[index + z_offset]);\n"
-				"		stencil_offset = (index / 4);\n"
-				"		stencil_shift = (index % 4) * 8;\n"
-				"		stencil = data[stencil_offset + s_offset];\n"
-				"		stencil = (stencil >> stencil_shift) & 0xFF;\n"
-				"		value = (depth << 8) | stencil;\n";
-
-			if constexpr (!_SwapBytes)
-			{
-				work_kernel +=
-				"		data[index] = value;\n";
-			}
-			else
-			{
-				work_kernel +=
-				"		data[index] = bswap_u32(value);\n";
-			}
-
-			cs_shuffle_base::build("");
-		}
-	};
-
-	struct cs_scatter_d24x8 : cs_interleave_task
-	{
-		cs_scatter_d24x8()
-		{
-			work_kernel =
-				"		if (index >= block_length)\n"
-				"			return;\n"
-				"\n"
-				"		value = data[index];\n"
-				"		data[index + z_offset] = (value >> 8);\n"
-				"		stencil_offset = (index / 4);\n"
-				"		stencil_shift = (index % 4) * 8;\n"
-				"		stencil = (value & 0xFF) << stencil_shift;\n"
-				"		data[stencil_offset + s_offset] |= stencil;\n";
-
-			cs_shuffle_base::build("");
-		}
-	};
-
-	struct cs_scatter_d32x8 : cs_interleave_task
-	{
-		cs_scatter_d32x8()
-		{
-			work_kernel =
-				"		if (index >= block_length)\n"
-				"			return;\n"
-				"\n"
-				"		value = data[index];\n"
-				"		data[index + z_offset] = d24_to_f32(value >> 8);\n"
-				"		stencil_offset = (index / 4);\n"
-				"		stencil_shift = (index % 4) * 8;\n"
-				"		stencil = (value & 0xFF) << stencil_shift;\n"
-				"		data[stencil_offset + s_offset] |= stencil;\n";
-
-			cs_shuffle_base::build("");
+            if constexpr (_SwapBytes)
+            {
+			    cs_shuffle_base::build("x8d24_to_d24x8_swapped");
+            }
+            else
+            {
+			    cs_shuffle_base::build("x8d24_to_d24x8");
+            }
 		}
 	};
 
@@ -390,4 +315,6 @@ namespace gl
 
 		return static_cast<T*>(e.get());
 	}
+
+	void destroy_compute_tasks();
 }
