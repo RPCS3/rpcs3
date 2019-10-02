@@ -430,7 +430,7 @@ struct vdec_context final
 						if (frame->interlaced_frame)
 						{
 							// NPEB01838, NPUB31260
-							cellVdec.todo("Interlaced frames not supported (handle=0x%x, seq_id=%d, cmd_id=%d, interlaced_frame=0x%x)", handle, cmd->seq_id, cmd->id, frame->interlaced_frame);
+							// cellVdec.todo("Interlaced frames not supported (handle=0x%x, seq_id=%d, cmd_id=%d, interlaced_frame=0x%x)", handle, cmd->seq_id, cmd->id, frame->interlaced_frame);
 						}
 
 						if (frame->repeat_pict)
