@@ -618,7 +618,13 @@ struct coord_base
 	{
 	}
 
-	constexpr coord_base(T x, T y, T width, T height) : x{ x }, y{ y }, width{ width }, height{ height }
+	constexpr coord_base(const coord_base<T>& other)
+		: position{ other.position }, size{ other.size }
+	{
+	}
+
+	constexpr coord_base(T x, T y, T width, T height)
+		: x{ x }, y{ y }, width{ width }, height{ height }
 	{
 	}
 
