@@ -768,7 +768,7 @@ namespace rsx
 
 			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data, bool is_depth)
 			{
-				for (auto &tex_info : data)
+				for (auto& tex_info : data)
 				{
 					const auto range = tex_info.second->get_memory_range();
 					if (!range.overlaps(test_range))
@@ -782,48 +782,49 @@ namespace rsx
 						continue;
 
 					surface_overlap_info info;
+					u32 width, height;
 					info.surface = surface;
 					info.base_address = range.start;
 					info.is_depth = is_depth;
 
-					const auto normalized_surface_width = surface->get_surface_width(rsx::surface_metrics::bytes) / required_bpp;
-					const auto normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
+					const u32 normalized_surface_width = surface->get_surface_width(rsx::surface_metrics::bytes) / required_bpp;
+					const u32 normalized_surface_height = surface->get_surface_height(rsx::surface_metrics::samples);
 
 					if (LIKELY(range.start >= texaddr))
 					{
 						const auto offset = range.start - texaddr;
-						info.dst_y = (offset / required_pitch);
-						info.dst_x = (offset % required_pitch) / required_bpp;
+						info.dst_area.y = (offset / required_pitch);
+						info.dst_area.x = (offset % required_pitch) / required_bpp;
 
-						if (UNLIKELY(info.dst_x >= required_width || info.dst_y >= required_height))
+						if (UNLIKELY(info.dst_area.x >= required_width || info.dst_area.y >= required_height))
 						{
 							// Out of bounds
 							continue;
 						}
 
-						info.src_x = 0;
-						info.src_y = 0;
-						info.width = std::min<u32>(normalized_surface_width, required_width - info.dst_x);
-						info.height = std::min<u32>(normalized_surface_height, required_height - info.dst_y);
+						info.src_area.x = 0;
+						info.src_area.y = 0;
+						width = std::min<u32>(normalized_surface_width, required_width - info.dst_area.x);
+						height = std::min<u32>(normalized_surface_height, required_height - info.dst_area.y);
 					}
 					else
 					{
 						const auto pitch = surface->get_rsx_pitch();
 						const auto offset = texaddr - range.start;
-						info.src_y = (offset / pitch);
-						info.src_x = (offset % pitch) / required_bpp;
+						info.src_area.y = (offset / pitch);
+						info.src_area.x = (offset % pitch) / required_bpp;
 
-						if (UNLIKELY(info.src_x >= normalized_surface_width || info.src_y >= normalized_surface_height))
+						if (UNLIKELY(info.src_area.x >= normalized_surface_width || info.src_area.y >= normalized_surface_height))
 						{
 							// Region lies outside the actual texture area, but inside the 'tile'
 							// In this case, a small region lies to the top-left corner, partially occupying the  target
 							continue;
 						}
 
-						info.dst_x = 0;
-						info.dst_y = 0;
-						info.width = std::min<u32>(required_width, normalized_surface_width - info.src_x);
-						info.height = std::min<u32>(required_height, normalized_surface_height - info.src_y);
+						info.dst_area.x = 0;
+						info.dst_area.y = 0;
+						width = std::min<u32>(required_width, normalized_surface_width - info.src_area.x);
+						height = std::min<u32>(required_height, normalized_surface_height - info.src_area.y);
 					}
 
 					// Delay this as much as possible to avoid side-effects of spamming barrier
@@ -833,13 +834,19 @@ namespace rsx
 						continue;
 					}
 
-					info.is_clipped = (info.width < required_width || info.height < required_height);
+					info.is_clipped = (width < required_width || height < required_height);
+					info.src_area.height = info.dst_area.height = height;
+					info.dst_area.width = width;
 
 					if (auto surface_bpp = surface->get_bpp(); UNLIKELY(surface_bpp != required_bpp))
 					{
 						// Width is calculated in the coordinate-space of the requester; normalize
-						info.src_x = (info.src_x * required_bpp) / surface_bpp;
-						info.width = align(info.width * required_bpp, surface_bpp) / surface_bpp;
+						info.src_area.x = (info.src_area.x * required_bpp) / surface_bpp;
+						info.src_area.width = align(width * required_bpp, surface_bpp) / surface_bpp;
+					}
+					else
+					{
+						info.src_area.width = width;
 					}
 
 					result.push_back(info);
@@ -872,8 +879,8 @@ namespace rsx
 				{
 					if (a.surface->last_use_tag == b.surface->last_use_tag)
 					{
-						const auto area_a = a.width * a.height;
-						const auto area_b = b.width * b.height;
+						const auto area_a = a.dst_area.width * a.dst_area.height;
+						const auto area_b = b.dst_area.width * b.dst_area.height;
 
 						return area_a < area_b;
 					}

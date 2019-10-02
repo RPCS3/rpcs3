@@ -579,6 +579,17 @@ namespace vk
 				auto src_w = section.src_w;
 				auto src_h = section.src_h;
 
+				rsx::flags32_t transform = section.xform;
+				if (section.xform == surface_transform::coordinate_transform)
+				{
+					// Dimensions were given in 'dst' space. Work out the real source coordinates
+					const auto src_bpp = vk::get_format_texel_width(section.src->format());
+					src_x = (src_x * dst_bpp) / src_bpp;
+					src_w = (src_w * dst_bpp) / src_bpp;
+
+					transform &= ~(surface_transform::coordinate_transform);
+				}
+
 				if (auto surface = dynamic_cast<vk::render_target*>(section.src))
 				{
 					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
@@ -586,15 +597,20 @@ namespace vk
 
 				if (UNLIKELY(typeless))
 				{
-					src_image = vk::get_typeless_helper(dst->info.format, src_x + src_w, src_y + src_h);
+					const auto src_bpp = vk::get_format_texel_width(section.src->format());
+					const u16 convert_w = u16(src_w * src_bpp) / dst_bpp;
+					const u16 convert_x = u16(src_x * src_bpp) / dst_bpp;
+
+					src_image = vk::get_typeless_helper(dst->info.format, convert_x + convert_w, src_y + src_h);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-					const auto src_bpp = vk::get_format_texel_width(section.src->format());
-					const u16 convert_w = u16(src_w * dst_bpp) / src_bpp;
-					const areai src_rect = coordi{{ src_x, src_y }, { convert_w, src_h }};
-					const areai dst_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
+					const areai src_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
+					const areai dst_rect = coordi{{ convert_x, src_y }, { convert_w, src_h }};
 					vk::copy_image_typeless(cmd, section.src, src_image, src_rect, dst_rect, 1, section.src->aspect(), dst_aspect);
 					src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+					src_x = convert_x;
+					src_w = convert_w;
 				}
 
 				verify(HERE), src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -641,7 +657,7 @@ namespace vk
 						_dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 					}
 
-					if (section.xform == surface_transform::identity)
+					if (transform == surface_transform::identity)
 					{
 						vk::copy_scaled_image(cmd, src_image->value, _dst->value, section.src->current_layout, _dst->current_layout,
 							coordi{ { src_x, src_y }, { src_w, src_h } },
@@ -649,7 +665,7 @@ namespace vk
 							1, src_image->aspect(), src_image->info.format == _dst->info.format,
 							VK_FILTER_NEAREST, src_image->info.format, _dst->info.format);
 					}
-					else if (section.xform == surface_transform::argb_to_bgra)
+					else if (transform == surface_transform::argb_to_bgra)
 					{
 						VkBufferImageCopy copy{};
 						copy.imageExtent = { src_w, src_h, 1 };
@@ -838,7 +854,7 @@ namespace vk
 				std::vector<copy_region_descriptor> region =
 				{{
 					source,
-					surface_transform::identity,
+					surface_transform::coordinate_transform,
 					x, y, 0, 0, 0,
 					w, h, w, h
 				}};

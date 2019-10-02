@@ -136,13 +136,14 @@ namespace rsx
 		enum surface_transform : u32
 		{
 			identity = 0,
-			argb_to_bgra = 1
+			argb_to_bgra = 1,
+			coordinate_transform = 2
 		};
 
 		struct copy_region_descriptor
 		{
 			image_resource_type src;
-			surface_transform xform;
+			flags32_t xform;
 			u16 src_x;
 			u16 src_y;
 			u16 dst_x;
@@ -1476,7 +1477,7 @@ namespace rsx
 					sections[n] =
 					{
 						desc.external_handle,
-						surface_transform::identity,
+						surface_transform::coordinate_transform,
 						0, (u16)(desc.slice_h * n),
 						0, 0, n,
 						desc.width, desc.height,
@@ -1501,7 +1502,7 @@ namespace rsx
 					sections[n] =
 					{
 						desc.external_handle,
-						surface_transform::identity,
+						surface_transform::coordinate_transform,
 						0, (u16)(desc.slice_h * n),
 						0, 0, n,
 						desc.width, desc.height,
@@ -1602,22 +1603,22 @@ namespace rsx
 					return;
 				}
 
-				const auto slice_begin = (slice * src_slice_h);
-				const auto slice_end = (slice_begin + slice_h);
+				const u32 slice_begin = (slice * src_slice_h);
+				const u32 slice_end = (slice_begin + slice_h);
 
-				const auto section_end = section.dst_y + section.height;
-				if (section.dst_y >= slice_end || section_end <= slice_begin)
+				const u32 section_end = section.dst_area.y + section.dst_area.height;
+				if (section.dst_area.y >= slice_end || section_end <= slice_begin)
 				{
 					// Belongs to a different slice
 					return;
 				}
 
 				// How much of this slice to read?
-				int rebased = int(section.dst_y) - slice_begin;
-				const auto src_x = section.src_x;
-				const auto dst_x = section.dst_x;
-				auto src_y = section.src_y;
-				auto dst_y = section.dst_y;
+				int rebased = int(section.dst_area.y) - slice_begin;
+				const auto src_x = section.src_area.x;
+				const auto dst_x = section.dst_area.x;
+				auto src_y = section.src_area.y;
+				auto dst_y = section.dst_area.y;
 
 				if (rebased < 0)
 				{
@@ -1629,10 +1630,10 @@ namespace rsx
 				verify(HERE), dst_y >= slice_begin;
 				dst_y = (dst_y - slice_begin);
 
-				const auto h = std::min(section_end, slice_end) - section.dst_y;
-				const auto src_width = rsx::apply_resolution_scale(section.width, true);
+				const auto h = std::min(section_end, slice_end) - section.dst_area.y;
+				const auto src_width = rsx::apply_resolution_scale(section.src_area.width, true);
 				const auto src_height = rsx::apply_resolution_scale(h, true);
-				const auto dst_width = src_width;
+				const auto dst_width = rsx::apply_resolution_scale(section.dst_area.width, true);
 				const auto dst_height = src_height;
 
 				surfaces.push_back
@@ -1687,7 +1688,10 @@ namespace rsx
 					return;
 				}
 
-				const u16 internal_clip_width = u16(std::get<2>(clipped).width * bpp) / section_bpp;
+				const u16 dst_w = (u16)std::get<2>(clipped).width;
+				const u16 src_w = u16(dst_w * bpp) / section_bpp;
+				const u16 height = (u16)std::get<2>(clipped).height;
+
 				if (scaling)
 				{
 					// Since output is upscaled, also upscale on dst
@@ -1700,16 +1704,14 @@ namespace rsx
 						rsx::apply_resolution_scale((u16)std::get<1>(clipped).x, true),
 						rsx::apply_resolution_scale((u16)std::get<1>(clipped).y, true),
 						slice,
-						internal_clip_width,
-						(u16)std::get<2>(clipped).height,
-						rsx::apply_resolution_scale(internal_clip_width, true),
-						rsx::apply_resolution_scale((u16)std::get<2>(clipped).height, true),
+						src_w,
+						height,
+						rsx::apply_resolution_scale(dst_w, true),
+						rsx::apply_resolution_scale(height, true),
 					});
 				}
 				else
 				{
-					const auto src_width = internal_clip_width, dst_width = src_width;
-					const auto src_height = (u16)std::get<2>(clipped).height, dst_height = src_height;
 					surfaces.push_back
 					({
 						section->get_raw_texture(),
@@ -1719,10 +1721,10 @@ namespace rsx
 						(u16)std::get<1>(clipped).x,
 						(u16)std::get<1>(clipped).y,
 						0,
-						src_width,
-						src_height,
-						dst_width,
-						dst_height,
+						src_w,
+						height,
+						dst_w,
+						height,
 					});
 				}
 			};
@@ -2136,10 +2138,9 @@ namespace rsx
 					{
 						// Surface cache data is newer, check if this thing fits our search parameters
 						const auto& last = overlapping_fbos.back();
-						if (last.src_x == 0 && last.src_y == 0)
+						if (last.src_area.x == 0 && last.src_area.y == 0)
 						{
-							u16 normalized_width = u16(last.width * last.surface->get_bpp()) / bpp;
-							if (normalized_width >= tex_width && last.height >= required_surface_height)
+							if (last.dst_area.width >= tex_width && last.dst_area.height >= required_surface_height)
 							{
 								return process_framebuffer_resource_fast(cmd, last.surface, texaddr, format, tex_width, tex_height, depth, slice_h,
 									scale_x, scale_y, extended_dimension, tex.remap(), tex.decoded_remap(), false);
@@ -2405,8 +2406,8 @@ namespace rsx
 						return *It;
 					}
 
-					auto _w = u32(It->width * It->surface->get_bpp()) / bpp;
-					auto _h = u32(It->height);
+					const auto _w = It->dst_area.width;
+					const auto _h = It->dst_area.height;
 
 					if (_w < width)
 					{
@@ -2629,7 +2630,7 @@ namespace rsx
 			else
 			{
 				// Destination dimensions are relaxed (true)
-				dst_area = dst_subres.get_src_area();
+				dst_area = dst_subres.src_area;
 
 				dest_texture = dst_subres.surface->get_surface(rsx::surface_access::transfer);
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
@@ -2812,7 +2813,7 @@ namespace rsx
 			}
 			else
 			{
-				src_area = src_subres.get_src_area();
+				src_area = src_subres.src_area;
 				vram_texture = src_subres.surface->get_surface(rsx::surface_access::read);
 				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}

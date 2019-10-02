@@ -529,7 +529,7 @@ namespace gl
 				std::vector<copy_region_descriptor> region =
 				{{
 					src,
-					surface_transform::identity,
+					surface_transform::coordinate_transform,
 					x, y, 0, 0, 0,
 					width, height, width, height
 				}};
@@ -612,6 +612,14 @@ namespace gl
 				auto src_w = slice.src_w;
 				auto src_h = slice.src_h;
 
+				if (slice.xform == surface_transform::coordinate_transform)
+				{
+					// Dimensions were given in 'dst' space. Work out the real source coordinates
+					const auto src_bpp = slice.src->pitch() / slice.src->width();
+					src_x = (src_x * dst_bpp) / src_bpp;
+					src_w = (src_w * dst_bpp) / src_bpp;
+				}
+
 				if (auto surface = dynamic_cast<gl::render_target*>(slice.src))
 				{
 					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
@@ -624,8 +632,11 @@ namespace gl
 					tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, (GLenum)dst_image->get_internal_format());
 
 					src_image = tmp.get();
-					src_x = u16(src_x * src_bpp) / dst_bpp;
 					gl::copy_typeless(src_image, slice.src);
+
+					// Compute src region in dst format layout
+					src_x = u16(src_x * src_bpp) / dst_bpp;
+					src_w = u16(src_w * src_bpp) / dst_bpp;
 				}
 
 				if (src_w == slice.dst_w && src_h == slice.dst_h)
