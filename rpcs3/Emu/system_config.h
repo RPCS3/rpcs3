@@ -182,6 +182,7 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_native_float16{ this, "Disable native float16 support", false };
 #endif
 		cfg::_bool multithreaded_rsx{ this, "Multithreaded RSX", false };
+		cfg::_int<0, 0xFFFFFFFFu> zcull_default_value{this, "ZCull query default value", 1};
 		cfg::_bool relaxed_zcull_sync{ this, "Relaxed ZCULL Sync", false };
 		cfg::_bool enable_3d{ this, "Enable 3D", false };
 		cfg::_bool debug_program_analyser{ this, "Debug Program Analyser", false };

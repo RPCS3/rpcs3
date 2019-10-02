@@ -2741,6 +2741,8 @@ namespace rsx
 				break;
 			}
 		}
+		else
+			value = g_cfg.video.zcull_default_value;
 
 		rsx::reservation_lock<true> lock(sink, 16);
 		vm::_ref<atomic_t<CellGcmReportData>>(sink).store({ timestamp(), value, 0});
