@@ -10,6 +10,7 @@
 #include <cerrno>
 #include <typeinfo>
 #include <map>
+#include <string_view>
 
 using namespace std::literals::string_literals;
 
@@ -18,37 +19,32 @@ using namespace std::literals::string_literals;
 #include <cwchar>
 #include <Windows.h>
 
-static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
+static std::wstring to_wchar(std::string_view source)
 {
-	// String size + null terminator
-	const std::size_t buf_size = source.size() + 1;
+	const int source_size = narrow<int>(source.size(), "to_wchar" HERE);
 
-	// Safe size
-	const int size = narrow<int>(buf_size, "to_wchar" HERE);
+	// Calculate required buffer size
+	const int buf_size = MultiByteToWideChar(CP_UTF8, 0, source.data(), source_size, nullptr, 0);
+	verify("to_wchar" HERE, buf_size);
 
-	// Buffer for max possible output length
-	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size]);
+	std::wstring result(buf_size, L'\0');
+	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.data(), source_size, result.data(), buf_size);
 
-	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size);
-
-	return buffer;
+	return result;
 }
 
-static void to_utf8(std::string& out, const wchar_t* source)
+static std::string to_utf8(std::wstring_view source)
 {
-	// String size
-	const std::size_t length = std::wcslen(source);
+	const int source_size = narrow<int>(source.size(), "to_utf8" HERE);
 
-	// Safe buffer size for max possible output length (including null terminator)
-	const int buf_size = narrow<int>(length * 3 + 1, "to_utf8" HERE);
+	// Calculate required buffer size
+	const int buf_size = WideCharToMultiByte(CP_UTF8, 0, source.data(), source_size, nullptr, 0, nullptr, nullptr);
+	verify("to_utf8" HERE, buf_size);
 
-	// Resize buffer
-	out.resize(buf_size - 1);
+	std::string result(buf_size, '\0');
+	verify("to_utf8" HERE), WideCharToMultiByte(CP_UTF8, 0, source.data(), source_size, result.data(), buf_size, nullptr, nullptr);
 
-	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, NULL, NULL);
-
-	// Fix the size
-	out.resize(verify("to_utf8" HERE, result) - 1);
+	return result;
 }
 
 static time_t to_time(const ULARGE_INTEGER& ft)
@@ -315,7 +311,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 
 #ifdef _WIN32
 	WIN32_FILE_ATTRIBUTE_DATA attrs;
-	if (!GetFileAttributesExW(to_wchar(path).get(), GetFileExInfoStandard, &attrs))
+	if (!GetFileAttributesExW(to_wchar(path).c_str(), GetFileExInfoStandard, &attrs))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -358,7 +354,7 @@ bool fs::exists(const std::string& path)
 	}
 
 #ifdef _WIN32
-	if (GetFileAttributesW(to_wchar(path).get()) == INVALID_FILE_ATTRIBUTES)
+	if (GetFileAttributesW(to_wchar(path).c_str()) == INVALID_FILE_ATTRIBUTES)
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -397,7 +393,7 @@ bool fs::is_file(const std::string& path)
 	}
 
 #ifdef _WIN32
-	const DWORD attrs = GetFileAttributesW(to_wchar(path).get());
+	const DWORD attrs = GetFileAttributesW(to_wchar(path).c_str());
 	if (attrs == INVALID_FILE_ATTRIBUTES)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -446,7 +442,7 @@ bool fs::is_dir(const std::string& path)
 	}
 
 #ifdef _WIN32
-	const DWORD attrs = GetFileAttributesW(to_wchar(path).get());
+	const DWORD attrs = GetFileAttributesW(to_wchar(path).c_str());
 	if (attrs == INVALID_FILE_ATTRIBUTES)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -486,7 +482,7 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	ULARGE_INTEGER total_size;
 	ULARGE_INTEGER total_free;
 
-	if (!GetDiskFreeSpaceExW(to_wchar(path).get(), &avail_free, &total_size, &total_free))
+	if (!GetDiskFreeSpaceExW(to_wchar(path).c_str(), &avail_free, &total_size, &total_free))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -521,7 +517,7 @@ bool fs::create_dir(const std::string& path)
 	}
 
 #ifdef _WIN32
-	if (!CreateDirectoryW(to_wchar(path).get(), NULL))
+	if (!CreateDirectoryW(to_wchar(path).c_str(), NULL))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -571,7 +567,7 @@ bool fs::remove_dir(const std::string& path)
 	}
 
 #ifdef _WIN32
-	if (!RemoveDirectoryW(to_wchar(path).get()))
+	if (!RemoveDirectoryW(to_wchar(path).c_str()))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -614,21 +610,21 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 	const auto ws1 = to_wchar(from);
 	const auto ws2 = to_wchar(to);
 
-	if (!MoveFileExW(ws1.get(), ws2.get(), overwrite ? MOVEFILE_REPLACE_EXISTING : 0))
+	if (!MoveFileExW(ws1.c_str(), ws2.c_str(), overwrite ? MOVEFILE_REPLACE_EXISTING : 0))
 	{
 		DWORD error1 = GetLastError();
 
 		if (overwrite && error1 == ERROR_ACCESS_DENIED && is_dir(from) && is_dir(to))
 		{
-			if (RemoveDirectoryW(ws2.get()))
+			if (RemoveDirectoryW(ws2.c_str()))
 			{
-				if (MoveFileW(ws1.get(), ws2.get()))
+				if (MoveFileW(ws1.c_str(), ws2.c_str()))
 				{
 					return true;
 				}
 
 				error1 = GetLastError();
-				CreateDirectoryW(ws2.get(), NULL); // TODO
+				CreateDirectoryW(ws2.c_str(), NULL); // TODO
 			}
 			else
 			{
@@ -683,7 +679,7 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 	}
 
 #ifdef _WIN32
-	if (!CopyFileW(to_wchar(from).get(), to_wchar(to).get(), !overwrite))
+	if (!CopyFileW(to_wchar(from).c_str(), to_wchar(to).c_str(), !overwrite))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -770,7 +766,7 @@ bool fs::remove_file(const std::string& path)
 	}
 
 #ifdef _WIN32
-	if (!DeleteFileW(to_wchar(path).get()))
+	if (!DeleteFileW(to_wchar(path).c_str()))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -797,7 +793,7 @@ bool fs::truncate_file(const std::string& path, u64 length)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -836,7 +832,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).c_str(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -933,7 +929,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		share |= FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 	}
 
-	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+	const HANDLE handle = CreateFileW(to_wchar(path).c_str(), access, share, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -1324,7 +1320,7 @@ bool fs::dir::open(const std::string& path)
 
 #ifdef _WIN32
 	WIN32_FIND_DATAW found;
-	const auto handle = FindFirstFileExW(to_wchar(path + "/*").get(), FindExInfoBasic, &found, FindExSearchNameMatch, NULL, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
+	const auto handle = FindFirstFileExW(to_wchar(path + "/*").c_str(), FindExInfoBasic, &found, FindExSearchNameMatch, NULL, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -1341,7 +1337,7 @@ bool fs::dir::open(const std::string& path)
 		{
 			dir_entry info;
 
-			to_utf8(info.name, found.cFileName);
+			info.name = to_utf8(found.cFileName);
 			info.is_directory = (found.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 			info.is_writable = (found.dwFileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = ((u64)found.nFileSizeHigh << 32) | (u64)found.nFileSizeLow;
@@ -1470,7 +1466,7 @@ const std::string& fs::get_config_dir()
 			return dir; // empty
 		}
 
-		to_utf8(dir, buf); // Convert to UTF-8
+		dir = to_utf8(buf); // Convert to UTF-8
 
 		std::replace(dir.begin(), dir.end(), '\\', '/');
 
