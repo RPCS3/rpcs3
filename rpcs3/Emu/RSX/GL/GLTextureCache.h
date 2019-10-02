@@ -163,12 +163,12 @@ namespace gl
 			{
 				// Determine unpack config dynamically
 				const auto format_info = gl::get_format_type(src->get_internal_format());
-				format = static_cast<gl::texture::format>(std::get<0>(format_info));
-				type = static_cast<gl::texture::type>(std::get<1>(format_info));
+				format = static_cast<gl::texture::format>(format_info.format);
+				type = static_cast<gl::texture::type>(format_info.type);
 
 				if ((src->aspect() & gl::image_aspect::stencil) == 0)
 				{
-					pack_unpack_swap_bytes = std::get<2>(format_info);
+					pack_unpack_swap_bytes = format_info.swap_bytes;
 				}
 				else
 				{

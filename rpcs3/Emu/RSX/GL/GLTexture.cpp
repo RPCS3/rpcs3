@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "GLTexture.h"
+#include "GLCompute.h"
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
@@ -90,43 +91,43 @@ namespace gl
 		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
 	}
 
-	std::tuple<GLenum, GLenum, bool> get_format_type(texture::internal_format format)
+	pixel_buffer_layout get_format_type(texture::internal_format format)
 	{
 		switch (format)
 		{
 		case texture::internal_format::compressed_rgba_s3tc_dxt1:
 		case texture::internal_format::compressed_rgba_s3tc_dxt3:
 		case texture::internal_format::compressed_rgba_s3tc_dxt5:
-			return std::make_tuple(GL_RGBA, GL_UNSIGNED_BYTE, false);
+			return { GL_RGBA, GL_UNSIGNED_BYTE, 1, false };
 		case texture::internal_format::r8:
-			return std::make_tuple(GL_RED, GL_UNSIGNED_BYTE, false);
+			return { GL_RED, GL_UNSIGNED_BYTE, 1, false };
 		case texture::internal_format::r16:
-			return std::make_tuple(GL_RED, GL_UNSIGNED_SHORT, true);
+			return { GL_RED, GL_UNSIGNED_SHORT, 2, true };
 		case texture::internal_format::r32f:
-			return std::make_tuple(GL_RED, GL_FLOAT, true);
+			return { GL_RED, GL_FLOAT, 4, true };
 		case texture::internal_format::rg8:
-			return std::make_tuple(GL_RG, GL_UNSIGNED_BYTE, false);
+			return { GL_RG, GL_UNSIGNED_BYTE, 1, false };
 		case texture::internal_format::rg16:
-			return std::make_tuple(GL_RG, GL_UNSIGNED_SHORT, true);
+			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
 		case texture::internal_format::rg16f:
-			return std::make_tuple(GL_RG, GL_HALF_FLOAT, true);
+			return { GL_RG, GL_HALF_FLOAT, 2, true };
 		case texture::internal_format::rgb565:
-			return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_6_5, true);
+			return { GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, true };
 		case texture::internal_format::rgb5a1:
-			return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, true);
+			return { GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, 2, true };
 		case texture::internal_format::rgba4:
-			return std::make_tuple(GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, false);
+			return { GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false };
 		case texture::internal_format::rgba8:
-			return std::make_tuple(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, false);
+			return { GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 4, false };
 		case texture::internal_format::rgba16f:
-			return std::make_tuple(GL_RGBA, GL_HALF_FLOAT, true);
+			return { GL_RGBA, GL_HALF_FLOAT, 2, true };
 		case texture::internal_format::rgba32f:
-			return std::make_tuple(GL_RGBA, GL_FLOAT, true);
+			return { GL_RGBA, GL_FLOAT, 4, true };
 		case texture::internal_format::depth16:
-			return std::make_tuple(GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, true);
+			return { GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, 2, true };
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
-			return std::make_tuple(GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, true);
+			return { GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true };
 		default:
 			fmt::throw_exception("Unexpected internal format 0x%X" HERE, (u32)format);
 		}
@@ -742,30 +743,113 @@ namespace gl
 		GLsizeiptr src_mem = src->width() * src->height();
 		GLsizeiptr dst_mem = dst->width() * dst->height();
 
-		GLenum buffer_copy_flag = GL_STATIC_COPY;
-		if (gl::get_driver_caps().vendor_MESA) buffer_copy_flag = GL_STREAM_COPY;
-		// NOTE: Mesa lacks acceleration for PBO unpacking and is currently fastest with GL_STREAM_COPY
-		// See https://bugs.freedesktop.org/show_bug.cgi?id=111043
-
 		auto max_mem = std::max(src_mem, dst_mem) * 16;
 		if (!g_typeless_transfer_buffer || max_mem > g_typeless_transfer_buffer.size())
 		{
 			if (g_typeless_transfer_buffer) g_typeless_transfer_buffer.remove();
-			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, buffer_copy_flag);
+			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 		}
 
-		auto format_type = get_format_type(src->get_internal_format());
+		const auto pack_info = get_format_type(src->get_internal_format());
+		const auto unpack_info = get_format_type(dst->get_internal_format());
+
 		pixel_pack_settings pack_settings{};
-		pack_settings.swap_bytes(std::get<2>(format_type));
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
-		src->copy_to(nullptr, (texture::format)std::get<0>(format_type), (texture::type)std::get<1>(format_type), pack_settings);
+		src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, pack_settings);
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
-		format_type = get_format_type(dst->get_internal_format());
+		const bool src_is_ds = !!(src->aspect() & gl::image_aspect::stencil);
+		const bool dst_is_ds = !!(src->aspect() & gl::image_aspect::stencil);
+
+		if (pack_info.swap_bytes || unpack_info.swap_bytes || src_is_ds || dst_is_ds)
+		{
+			gl::cs_shuffle_base *src_transform = nullptr, *dst_transform = nullptr;
+
+			if (src_is_ds)
+			{
+				if (pack_info.swap_bytes)
+				{
+					src_transform = gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<true>>();
+				}
+				else
+				{
+					src_transform = gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<false>>();
+				}
+			}
+			else if (pack_info.swap_bytes)
+			{
+				switch (pack_info.size)
+				{
+				case 1:
+					break;
+				case 2:
+					src_transform = gl::get_compute_task<gl::cs_shuffle_16>();
+					break;
+				case 4:
+					src_transform = gl::get_compute_task<gl::cs_shuffle_32>();
+					break;
+				default:
+					fmt::throw_exception("Unsupported format");
+				}
+			}
+
+			if (dst_is_ds)
+			{
+				if (unpack_info.swap_bytes)
+				{
+					dst_transform = gl::get_compute_task<gl::cs_shuffle_x8d24_to_d24x8<true>>();
+				}
+				else
+				{
+					dst_transform = gl::get_compute_task<gl::cs_shuffle_x8d24_to_d24x8<false>>();
+				}
+			}
+			else if (unpack_info.swap_bytes)
+			{
+				switch (unpack_info.size)
+				{
+				case 1:
+					break;
+				case 2:
+					dst_transform = gl::get_compute_task<gl::cs_shuffle_16>();
+					break;
+				case 4:
+					dst_transform = gl::get_compute_task<gl::cs_shuffle_32>();
+					break;
+				default:
+					fmt::throw_exception("Unsupported format");
+				}
+
+				if (!src_is_ds)
+				{
+					if (src_transform == dst_transform)
+					{
+						src_transform = dst_transform = nullptr;
+					}
+					else if (src_transform)
+					{
+						src_transform = gl::get_compute_task<gl::cs_shuffle_32_16>();
+						dst_transform = nullptr;
+					}
+				}
+
+				if (src_transform)
+				{
+					const auto image_size = src->pitch() * src->height();
+					src_transform->run(&g_typeless_transfer_buffer, image_size);
+				}
+
+				if (dst_transform)
+				{
+					const auto image_size = dst->pitch() * dst->height();
+					dst_transform->run(&g_typeless_transfer_buffer, image_size);
+				}
+			}
+		}
+
 		pixel_unpack_settings unpack_settings{};
-		unpack_settings.swap_bytes(std::get<2>(format_type));
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
-		dst->copy_from(nullptr, (texture::format)std::get<0>(format_type), (texture::type)std::get<1>(format_type), unpack_settings);
+		dst->copy_from(nullptr, (texture::format)unpack_info.format, (texture::type)unpack_info.type, unpack_settings);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 	}
 }
