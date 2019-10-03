@@ -77,6 +77,9 @@ public:
 	// Trampoline to legacy interpreter
 	static const spu_function_t tr_interpreter;
 
+	// Detect and call any recompiled function
+	static const spu_function_t tr_all;
+
 public:
 	spu_runtime();
 
@@ -93,7 +96,7 @@ public:
 	bool add(u64 last_reset_count, void* where, spu_function_t compiled);
 
 private:
-	spu_function_t rebuild_ubertrampoline();
+	spu_function_t rebuild_ubertrampoline(u32 id_inst);
 
 	friend class spu_cache;
 public:
@@ -120,7 +123,7 @@ public:
 	void handle_return(spu_thread* _spu);
 
 	// All dispatchers (array allocated in jit memory)
-	static atomic_t<spu_function_t>* const g_dispatcher;
+	static std::array<atomic_t<spu_function_t>, (1 << 20)>* const g_dispatcher;
 
 	// Recompiler entry point
 	static const spu_function_t g_gateway;

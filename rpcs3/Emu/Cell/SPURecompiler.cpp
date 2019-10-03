@@ -91,9 +91,58 @@ DECLARE(spu_runtime::tr_interpreter) = []
 
 DECLARE(spu_runtime::g_dispatcher) = []
 {
-	const auto ptr = reinterpret_cast<decltype(spu_runtime::g_dispatcher)>(jit_runtime::alloc(sizeof(spu_function_t), 8, false));
-	ptr->raw() = tr_dispatch;
+	// Allocate 2^20 positions in data area
+	const auto ptr = reinterpret_cast<decltype(g_dispatcher)>(jit_runtime::alloc(sizeof(*g_dispatcher), 64, false));
+
+	for (auto& x : *ptr)
+	{
+		x.raw() = tr_dispatch;
+	}
+
 	return ptr;
+}();
+
+DECLARE(spu_runtime::tr_all) = []
+{
+	u8* const trptr = jit_runtime::alloc(32, 16);
+	u8* raw = trptr;
+
+	// Load PC: mov eax, [r13 + spu_thread::pc]
+	*raw++ = 0x41;
+	*raw++ = 0x8b;
+	*raw++ = 0x45;
+	*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
+
+	// Get LS address starting from PC: lea rcx, [rbp + rax]
+	*raw++ = 0x48;
+	*raw++ = 0x8d;
+	*raw++ = 0x4c;
+	*raw++ = 0x05;
+	*raw++ = 0x00;
+
+	// mov eax, [rcx]
+	*raw++ = 0x8b;
+	*raw++ = 0x01;
+
+	// shr eax, (32 - 20)
+	*raw++ = 0xc1;
+	*raw++ = 0xe8;
+	*raw++ = 0x0c;
+
+	// Load g_dispatcher to rdx
+	*raw++ = 0x48;
+	*raw++ = 0x8d;
+	*raw++ = 0x15;
+	const s32 r32 = ::narrow<s32>(reinterpret_cast<u64>(g_dispatcher) - reinterpret_cast<u64>(raw) - 4, HERE);
+	std::memcpy(raw, &r32, 4);
+	raw += 4;
+
+	// jmp [rdx + rax * 8]
+	*raw++ = 0xff;
+	*raw++ = 0x24;
+	*raw++ = 0xc2;
+
+	return reinterpret_cast<spu_function_t>(trptr);
 }();
 
 DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::X86Assembler& c, auto& args)
@@ -131,9 +180,8 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>([](asmjit::
 	c.push(x86::rax);
 #endif
 
-	// Load g_dispatcher pointer to call g_dispatcher[0]
-	c.mov(x86::rax, asmjit::imm_ptr(spu_runtime::g_dispatcher));
-	c.mov(x86::rax, x86::qword_ptr(x86::rax));
+	// Load tr_all function pointer to call actual compiled function
+	c.mov(x86::rax, asmjit::imm_ptr(spu_runtime::tr_all));
 
 	// Save native stack pointer for longjmp emulation
 	c.mov(x86::qword_ptr(args[0], ::offset32(&spu_thread::saved_native_sp)), x86::rsp);
@@ -300,7 +348,10 @@ void spu_cache::initialize()
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::precise || g_cfg.core.spu_decoder == spu_decoder_type::fast)
 	{
-		*spu_runtime::g_dispatcher = spu_runtime::tr_interpreter;
+		for (auto& x : *spu_runtime::g_dispatcher)
+		{
+			x.raw() = spu_runtime::tr_interpreter;
+		}
 	}
 
 	const std::string ppu_cache = Emu.PPUCache();
@@ -463,9 +514,6 @@ void spu_cache::initialize()
 
 	if (compilers.size() && !func_list.empty())
 	{
-		LOG_NOTICE(SPU, "SPU Runtime: Building trampoline...");
-		spu_runtime::g_dispatcher[0] = compilers[0]->get_runtime().rebuild_ubertrampoline();
-
 		LOG_SUCCESS(SPU, "SPU Runtime: Built %u functions.", func_list.size());
 	}
 
@@ -568,12 +616,12 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	// Register function in PIC map
 	m_pic_map[{func.data() + _off, func.size() - _off}] = compiled;
 
-	if (g_fxo->get<spu_cache>())
+	if (func.size() > 1)
 	{
 		// Rebuild trampolines if necessary
-		if (const auto new_tr = rebuild_ubertrampoline())
+		if (const auto new_tr = rebuild_ubertrampoline(func[1]))
 		{
-			g_dispatcher[0] = new_tr;
+			g_dispatcher->at(func[1] >> 12) = new_tr;
 		}
 		else
 		{
@@ -586,11 +634,17 @@ bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compile
 	return true;
 }
 
-spu_function_t spu_runtime::rebuild_ubertrampoline()
+spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 {
 	// Prepare sorted list
 	m_flat_list.clear();
-	m_flat_list.assign(m_pic_map.cbegin(), m_pic_map.cend());
+	{
+		// Select required subrange (fixed 20 bits for single pos in g_dispatcher table)
+		const u32 id_lower = id_inst & ~0xfff;
+		const u32 id_upper = id_inst | 0xfff;
+
+		m_flat_list.assign(m_pic_map.lower_bound({&id_lower, 1}), m_pic_map.upper_bound({&id_upper, 1}));
+	}
 
 	struct work
 	{
@@ -661,18 +715,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline()
 		workload.back().beg   = beg;
 		workload.back().end   = _end;
 
-		// Load PC: mov eax, [r13 + spu_thread::pc]
-		*raw++ = 0x41;
-		*raw++ = 0x8b;
-		*raw++ = 0x45;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::pc));
-
-		// Get LS address starting from PC: lea rcx, [rbp + rax]
-		*raw++ = 0x48;
-		*raw++ = 0x8d;
-		*raw++ = 0x4c;
-		*raw++ = 0x05;
-		*raw++ = 0x00;
+		// LS address starting from PC is already loaded into rcx (see spu_runtime::tr_all)
 
 		for (std::size_t i = 0; i < workload.size(); i++)
 		{
@@ -1098,7 +1141,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	// If code verification failed from a patched patchpoint, clear it with a dispatcher jump
 	if (rip)
 	{
-		const s64 rel = reinterpret_cast<u64>(spu_runtime::g_dispatcher) - reinterpret_cast<u64>(rip - 8) - 6;
+		const s64 rel = reinterpret_cast<u64>(spu_runtime::tr_all) - reinterpret_cast<u64>(rip - 8) - 5;
 
 		union
 		{
@@ -1106,9 +1149,9 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 			u64 result;
 		};
 
-		bytes[0] = 0xff; // jmp [rip + 0x...]
-		bytes[1] = 0x25;
-		std::memcpy(bytes + 2, &rel, 4);
+		bytes[0] = 0xe9; // jmp rel32
+		std::memcpy(bytes + 1, &rel, 4);
+		bytes[5] = 0x90;
 		bytes[6] = 0x90;
 		bytes[7] = 0x90;
 
@@ -1116,7 +1159,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 	}
 
 	// Second attempt (recover from the recursion after repeated unsuccessful trampoline call)
-	if (spu.block_counter != spu.block_recover && &dispatch != spu_runtime::g_dispatcher[0])
+	if (spu.block_counter != spu.block_recover && &dispatch != spu_runtime::g_dispatcher->at(spu._ref<nse_t<u32>>(spu.pc) >> 12))
 	{
 		spu.block_recover = spu.block_counter;
 		return;
@@ -4388,13 +4431,8 @@ public:
 		const auto entry_call = m_ir->CreateCall(entry_chunk->chunk, {m_thread, m_lsptr, m_base_pc});
 		entry_call->setCallingConv(entry_chunk->chunk->getCallingConv());
 
-#ifdef _WIN32
-		// TODO: fix this mess
-		const auto dispatcher = m_ir->CreateIntToPtr(m_ir->getInt64((u64)+spu_runtime::g_dispatcher), get_type<u8**>());
-#else
-		const auto dispatcher = new llvm::GlobalVariable(*m_module, get_type<u8*>(), true, GlobalValue::ExternalLinkage, nullptr, "spu_dispatcher");
-		m_engine->addGlobalMapping("spu_dispatcher", (u64)+spu_runtime::g_dispatcher);
-#endif
+		const auto dispatcher = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("spu_dispatcher", main_func->getType()).getCallee());
+		m_engine->addGlobalMapping("spu_dispatcher", reinterpret_cast<u64>(spu_runtime::tr_all));
 
 		// Proceed to the next code
 		if (entry_chunk->chunk->getReturnType() != get_type<void>())
@@ -4436,15 +4474,14 @@ public:
 
 		if (entry_chunk->chunk->getReturnType() == get_type<void>())
 		{
-			const auto next_func = m_ir->CreateLoad(dispatcher);
-			const auto next_call = m_ir->CreateCall(m_ir->CreateBitCast(next_func, main_func->getType()), {m_thread, m_lsptr, m_ir->getInt64(0)});
+			const auto next_call = m_ir->CreateCall(m_ir->CreateBitCast(dispatcher, main_func->getType()), {m_thread, m_lsptr, m_ir->getInt64(0)});
 			next_call->setCallingConv(main_func->getCallingConv());
 			next_call->setTailCall();
 			m_ir->CreateRetVoid();
 		}
 		else
 		{
-			m_ir->CreateRet(m_ir->CreateLoad(dispatcher));
+			m_ir->CreateRet(m_ir->CreateBitCast(dispatcher, get_type<u8*>()));
 		}
 
 		// Function that executes check_state and escapes if necessary
