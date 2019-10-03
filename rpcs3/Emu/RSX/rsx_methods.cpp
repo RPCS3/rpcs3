@@ -65,15 +65,15 @@ namespace rsx
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
-			// Get raw BE value
-			arg = be_t<u32>{arg}.raw();
-			const auto& sema = vm::_ref<atomic_t<nse_t<u32>>>(addr);
+			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema.load() == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
+
+			rsx->flush_fifo();
 
 			u64 start = get_system_time();
-			while (sema.load() != arg)
+			while (sema != arg)
 			{
 				if (Emu.IsStopped())
 					return;
@@ -247,7 +247,7 @@ namespace rsx
 			case rsx::vertex_base_type::ub:
 			case rsx::vertex_base_type::ub256:
 				// Get BE data
-				arg = be_t<u32>{arg}.raw();
+				arg = std::bit_cast<u32, be_t<u32>>(arg);
 				break;
 			default:
 				break;
@@ -1301,7 +1301,7 @@ namespace rsx
 				else
 				{
 					std::vector<u8> temp(line_length * line_count);
-					u8* buf = temp.data(); 
+					u8* buf = temp.data();
 
 					for (u32 y = 0; y < line_count; ++y)
 					{
@@ -1310,7 +1310,7 @@ namespace rsx
 						src += in_pitch;
 					}
 
-					buf = temp.data(); 
+					buf = temp.data();
 
 					for (u32 y = 0; y < line_count; ++y)
 					{

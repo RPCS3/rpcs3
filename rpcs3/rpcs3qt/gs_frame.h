@@ -37,7 +37,6 @@ private:
 
 	u64 m_frames = 0;
 	QString m_windowTitle;
-	bool m_show_fps;
 	bool m_disable_mouse;
 
 public:

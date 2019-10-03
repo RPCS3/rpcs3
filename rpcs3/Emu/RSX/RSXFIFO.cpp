@@ -17,26 +17,34 @@ namespace rsx
 		{
 			m_internal_get += 4;
 
-			if (wait && m_ctrl->put == m_internal_get)
+			if (wait && read_put<false>() == m_internal_get)
 			{
 				// NOTE: Only supposed to be invoked to wait for a single arg on command[0] (4 bytes)
 				// Wait for put to allow us to procceed execution
 				sync_get();
 
-				while (m_ctrl->put == m_internal_get && !Emu.IsStopped())
+				while (read_put() == m_internal_get && !Emu.IsStopped())
 				{
 					std::this_thread::yield();
 				}
 			}
 		}
 
+		template <bool full>
+		u32 FIFO_control::read_put()
+		{
+			if constexpr (!full)
+			{
+				return m_ctrl->put & ~3;
+			}
+			else
+			{
+				return m_ctrl->put.and_fetch(~3);
+			}
+		}
+
 		void FIFO_control::set_put(u32 put)
 		{
-			if (m_ctrl->put == put)
-			{
-				return;
-			}
-
 			m_ctrl->put = put;
 		}
 
@@ -65,7 +73,7 @@ namespace rsx
 		{
 			// Fast read with no processing, only safe inside a PACKET_BEGIN+count block
 			if (m_remaining_commands &&
-				m_internal_get != m_ctrl->put)
+				m_internal_get != read_put<false>())
 			{
 				m_command_reg += m_command_inc;
 				m_args_ptr += 4;
@@ -81,7 +89,7 @@ namespace rsx
 
 		void FIFO_control::read(register_pair& data)
 		{
-			const u32 put = m_ctrl->put;
+			const u32 put = read_put();
 			m_internal_get = m_ctrl->get;
 
 			if (put == m_internal_get)
@@ -387,7 +395,7 @@ namespace rsx
 				// Error. Should reset the queue
 				LOG_ERROR(RSX, "FIFO error: possible desync event");
 				fifo_ctrl->set_get(restore_point);
-				m_return_addr = restore_ret;
+				fifo_ret_addr = saved_fifo_ret;
 				std::this_thread::sleep_for(1ms);
 				return;
 			}
@@ -434,30 +442,29 @@ namespace rsx
 			}
 			if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
 			{
-				if (m_return_addr != -1)
+				if (fifo_ret_addr != RSX_CALL_STACK_EMPTY)
 				{
 					// Only one layer is allowed in the call stack.
 					LOG_ERROR(RSX, "FIFO: CALL found inside a subroutine. Discarding subroutine");
-					fifo_ctrl->set_get(std::exchange(m_return_addr, -1));
+					fifo_ctrl->set_get(std::exchange(fifo_ret_addr, RSX_CALL_STACK_EMPTY));
 					return;
 				}
 
 				const u32 offs = cmd & RSX_METHOD_CALL_OFFSET_MASK;
-				m_return_addr = fifo_ctrl->get_pos() + 4;
+				fifo_ret_addr = fifo_ctrl->get_pos() + 4;
 				fifo_ctrl->set_get(offs);
 				return;
 			}
 			if ((cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
 			{
-				if (m_return_addr == -1)
+				if (fifo_ret_addr == RSX_CALL_STACK_EMPTY)
 				{
 					LOG_ERROR(RSX, "FIFO: RET found without corresponding CALL. Discarding queue");
 					fifo_ctrl->set_get(ctrl->put);
 					return;
 				}
 
-				fifo_ctrl->set_get(m_return_addr);
-				m_return_addr = -1;
+				fifo_ctrl->set_get(std::exchange(fifo_ret_addr, RSX_CALL_STACK_EMPTY));
 				return;
 			}
 

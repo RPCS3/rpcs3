@@ -191,12 +191,6 @@ namespace fmt
 	const fmt_type_info* get_type_info();
 }
 
-template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
-struct se_storage;
-
-template <typename T, bool Se = true, std::size_t Align = alignof(T)>
-class se_t;
-
 template <typename T>
 class atomic_t;
 

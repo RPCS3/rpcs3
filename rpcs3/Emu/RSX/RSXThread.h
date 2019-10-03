@@ -426,11 +426,42 @@ namespace rsx
 
 	struct display_flip_info_t
 	{
+		std::deque<u32> buffer_queue;
 		u32 buffer;
 		bool skip_frame;
 		bool emu_flip;
 		bool in_progress;
 		frame_statistics_t stats;
+
+		inline void push(u32 _buffer)
+		{
+			buffer_queue.push_back(_buffer);
+		}
+
+		inline bool pop(u32 _buffer)
+		{
+			if (buffer_queue.empty())
+			{
+				return false;
+			}
+
+			do
+			{
+				const auto index = buffer_queue.front();
+				buffer_queue.pop_front();
+
+				if (index == _buffer)
+				{
+					buffer = _buffer;
+					return true;
+				}
+			}
+			while (!buffer_queue.empty());
+
+			// Need to observe this happening in the wild
+			LOG_ERROR(RSX, "Display queue was discarded while not empty!");
+			return false;
+		}
 	};
 
 	struct sampled_image_descriptor_base;
@@ -459,7 +490,8 @@ namespace rsx
 		// FIFO
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		FIFO::flattening_helper m_flattener;
-		s32 m_return_addr{ -1 }, restore_ret{ -1 };
+		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -486,6 +518,7 @@ namespace rsx
 		u32 restore_point = 0;
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
+		void flush_fifo();
 
 		// Performance approximation counters
 		struct

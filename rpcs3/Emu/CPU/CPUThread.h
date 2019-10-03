@@ -78,11 +78,9 @@ public:
 		return id >> 24;
 	}
 
-	// Upcast and notify
 	void notify();
 
 private:
-	// Upcast and abort
 	void abort();
 
 public:

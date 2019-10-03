@@ -335,7 +335,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 
 	for (auto resv : setBuf->reserved)
 	{
-		if (resv.raw() != 0)
+		if (resv)
 		{
 			// ****** sysutil savedata parameter error : 10 ******
 			return 10;

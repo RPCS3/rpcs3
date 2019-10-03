@@ -925,30 +925,6 @@ void VKGSRender::begin()
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
-
-	if (!framebuffer_status_valid)
-		return;
-
-	if (m_current_frame->flags & frame_context_state::dirty)
-	{
-		check_present_status();
-
-		if (m_current_frame->swap_command_buffer)
-		{
-			// Borrow time by using the auxilliary context
-			m_aux_frame_context.grab_resources(*m_current_frame);
-			m_current_frame = &m_aux_frame_context;
-		}
-		else if (m_current_frame->used_descriptors)
-		{
-			m_current_frame->descriptor_pool.reset(0);
-			m_current_frame->used_descriptors = 0;
-		}
-
-		verify(HERE), !m_current_frame->swap_command_buffer;
-
-		m_current_frame->flags &= ~frame_context_state::dirty;
-	}
 }
 
 void VKGSRender::update_draw_state()
@@ -1204,6 +1180,28 @@ void VKGSRender::end()
 		execute_nop_draw();
 		rsx::thread::end();
 		return;
+	}
+
+	// Check for frame resource status here because it is possible for an async flip to happen between begin/end
+	if (UNLIKELY(m_current_frame->flags & frame_context_state::dirty))
+	{
+		check_present_status();
+
+		if (UNLIKELY(m_current_frame->swap_command_buffer))
+		{
+			// Borrow time by using the auxilliary context
+			m_aux_frame_context.grab_resources(*m_current_frame);
+			m_current_frame = &m_aux_frame_context;
+		}
+		else if (m_current_frame->used_descriptors)
+		{
+			m_current_frame->descriptor_pool.reset(0);
+			m_current_frame->used_descriptors = 0;
+		}
+
+		verify(HERE), !m_current_frame->swap_command_buffer;
+
+		m_current_frame->flags &= ~frame_context_state::dirty;
 	}
 
 	m_profiler.start();
@@ -2023,8 +2021,7 @@ void VKGSRender::clear_surface(u32 mask)
 								renderpass = vk::get_renderpass(*m_device, key);
 							}
 
-							m_attachment_clear_pass->run(*m_current_command_buffer, rtt,
-								region.rect, renderpass);
+							m_attachment_clear_pass->run(*m_current_command_buffer, rtt, region.rect, renderpass);
 
 							rtt->change_layout(*m_current_command_buffer, old_layout);
 						}
@@ -3425,7 +3422,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer->run(*m_current_command_buffer, direct_fbo->width(), direct_fbo->height(), direct_fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+				m_ui_renderer->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
 			}
 		}
 

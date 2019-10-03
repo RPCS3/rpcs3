@@ -79,6 +79,19 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 			OS << "layout(location=" << reg_location << ") in vec4 " << var_name << ";\n";
 		}
 	}
+
+	if (m_prog.two_sided_lighting)
+	{
+		if (properties.in_register_mask & in_diff_color)
+		{
+			OS << "layout(location=" << gl::get_varying_register_location("diff_color1") << ") in vec4 diff_color1;\n";
+		}
+
+		if (properties.in_register_mask & in_spec_color)
+		{
+			OS << "layout(location=" << gl::get_varying_register_location("spec_color1") << ") in vec4 spec_color1;\n";
+		}
+	}
 }
 
 void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
