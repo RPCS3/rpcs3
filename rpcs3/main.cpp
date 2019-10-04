@@ -105,19 +105,35 @@ const char* arg_styles     = "styles";
 const char* arg_style      = "style";
 const char* arg_stylesheet = "stylesheet";
 
-bool find_arg(std::string arg, int& argc, char* argv[])
+int find_arg(std::string arg, int& argc, char* argv[])
 {
 	arg = "--" + arg;
 	for (int i = 1; i < argc; ++i)
 		if (!strcmp(arg.c_str(), argv[i]))
-			return true;
-	return false;
+			return i;
+	return 0;
 }
 
 QCoreApplication* createApplication(int& argc, char* argv[])
 {
 	if (find_arg(arg_headless, argc, argv))
 		return new headless_application(argc, argv);
+
+	bool use_high_dpi = true;
+
+	const auto i_hdpi = find_arg(arg_high_dpi, argc, argv);
+	if (i_hdpi)
+	{
+		const std::string cmp_str = "0";
+		const auto i_hdpi_2 = (argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
+		const auto high_dpi_setting = (i_hdpi_2 && !strcmp(cmp_str.c_str(), argv[i_hdpi_2])) ? "0" : "1";
+		
+		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
+		use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", high_dpi_setting);
+	}
+
+	// AA_EnableHighDpiScaling has to be set before creating a QApplication
+	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 
 	return new gui_application(argc, argv);
 }
@@ -182,10 +198,6 @@ int main(int argc, char** argv)
 
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
-		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
-		const bool use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", parser.value(arg_high_dpi));
-
-		gui_app->setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
 		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
 		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
