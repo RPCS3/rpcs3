@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "vfs_dialog_tab.h"
 
