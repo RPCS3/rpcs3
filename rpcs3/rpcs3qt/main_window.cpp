@@ -32,6 +32,7 @@
 #include "ipc_settings_dialog.h"
 #include "shortcut_utils.h"
 #include "config_checker.h"
+#include "shortcut_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -158,6 +159,9 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 			return false;
 		}
 	}
+
+	m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::main_window, this, m_gui_settings);
+	connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &main_window::handle_shortcut);
 
 	show(); // needs to be done before creating the thumbnail toolbar
 
@@ -327,6 +331,63 @@ void main_window::ResizeIcons(int index)
 	}
 
 	m_game_list_frame->ResizeIcons(index);
+}
+
+void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)
+{
+	gui_log.notice("Main window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString().toStdString());
+
+	const system_state status = Emu.GetStatus();
+
+	switch (shortcut_key)
+	{
+	case gui::shortcuts::shortcut::mw_toggle_fullscreen:
+	{
+		ui->toolbar_fullscreen->trigger();
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_exit_fullscreen:
+	{
+		if (isFullScreen())
+			ui->toolbar_fullscreen->trigger();
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_refresh:
+	{
+		m_game_list_frame->Refresh(true);
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_pause:
+	{
+		if (status == system_state::running)
+			Emu.Pause();
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_restart:
+	{
+		if (status == system_state::paused)
+			Emu.Resume();
+		else if (status == system_state::ready)
+			Emu.Run(true);
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_start:
+	{
+		if (!Emu.GetBoot().empty())
+			Emu.Restart();
+		break;
+	}
+	case gui::shortcuts::shortcut::mw_stop:
+	{
+		if (status != system_state::stopped)
+			Emu.GracefulShutdown(false, true);
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
 }
 
 void main_window::OnPlayOrPause()
@@ -941,7 +1002,6 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		pdlg.SetValue(pdlg.maximum());
 		std::this_thread::sleep_for(100ms);
 
-		if (true)
 		{
 			m_game_list_frame->Refresh(true);
 			
@@ -962,7 +1022,6 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 				bootable_paths_installed[bootable_paths[index]] = packages[index].title_id;
 			}
 
-			if (true)
 			{
 				pdlg.hide();
 
@@ -1684,7 +1743,6 @@ void main_window::OnEmuRun(bool /*start_playtime*/) const
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
 	ui->sysPauseAct->setText(tr("&Pause"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setText(tr("Pause"));
@@ -1708,7 +1766,6 @@ void main_window::OnEmuResume() const
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
 	ui->sysPauseAct->setText(tr("&Pause"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setText(tr("Pause"));
@@ -1726,7 +1783,6 @@ void main_window::OnEmuPause() const
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	ui->sysPauseAct->setText(tr("&Resume"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
@@ -1747,7 +1803,6 @@ void main_window::OnEmuStop()
 	m_debugger_frame->UpdateUI();
 
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
@@ -1808,7 +1863,6 @@ void main_window::OnEmuReady() const
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
-	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
@@ -2285,6 +2339,13 @@ void main_window::CreateConnects()
 	connect(ui->confAdvAct,    &QAction::triggered, this, [open_settings]() { open_settings(6); });
 	connect(ui->confEmuAct,    &QAction::triggered, this, [open_settings]() { open_settings(7); });
 	connect(ui->confGuiAct,    &QAction::triggered, this, [open_settings]() { open_settings(8); });
+
+	connect(ui->confShortcutsAct, &QAction::triggered, [this]()
+	{
+		shortcut_dialog dlg(m_gui_settings, this);
+		connect(&dlg, &shortcut_dialog::saved, m_shortcut_handler, &shortcut_handler::update);
+		dlg.exec();
+	});
 
 	const auto open_pad_settings = [this]
 	{
@@ -2993,23 +3054,6 @@ void main_window::CreateFirmwareCache()
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);
-	}
-}
-
-void main_window::keyPressEvent(QKeyEvent *keyEvent)
-{
-	if (keyEvent->isAutoRepeat())
-	{
-		return;
-	}
-
-	if (((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return) || (isFullScreen() && keyEvent->key() == Qt::Key_Escape))
-	{
-		ui->toolbar_fullscreen->trigger();
-	}
-	else if ((keyEvent->modifiers() & Qt::ControlModifier) && keyEvent->key() == Qt::Key_F5)
-	{
-		m_game_list_frame->Refresh(true);
 	}
 }
 
