@@ -74,6 +74,9 @@ set(SRC_FILES
     settings.cpp
     settings_dialog.cpp
     shortcut_utils.cpp
+    shortcut_dialog.cpp
+    shortcut_handler.cpp
+    shortcut_settings.cpp
     skylander_dialog.cpp
     syntax_highlighter.cpp
     tooltips.cpp
@@ -102,6 +105,7 @@ set(UI_FILES
     patch_creator_dialog.ui
     patch_manager_dialog.ui
     settings_dialog.ui
+    shortcut_dialog.ui
     welcome_dialog.ui
 )
 

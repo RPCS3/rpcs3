@@ -1,5 +1,6 @@
 #pragma once
 
+#include "shortcut_handler.h"
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/media_utils.h"
@@ -105,10 +106,12 @@ protected:
 
 private:
 	void hide_on_close();
+	void toggle_recording();
 	void toggle_mouselock();
 	void update_cursor();
 	void handle_cursor(QWindow::Visibility visibility, bool from_event, bool start_idle_timer);
 
 private Q_SLOTS:
-	void MouseHideTimeout();
+	void mouse_hide_timeout();
+	void handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence);
 };

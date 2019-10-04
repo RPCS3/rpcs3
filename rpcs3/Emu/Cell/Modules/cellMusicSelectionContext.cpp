@@ -302,7 +302,7 @@ u32 music_selection_context::step_track(bool next)
 			// Play the previous track. Start with the last track if we reached the start of the playlist.
 			if (current_track == 0)
 			{
-				current_track = playlist.size() - 1;
+				current_track = ::narrow<u32>(playlist.size() - 1);
 			}
 			else
 			{

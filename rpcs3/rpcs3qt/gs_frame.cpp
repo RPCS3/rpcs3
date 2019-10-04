@@ -124,6 +124,10 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	setVisibility(startup_visibility);
 	create();
 
+	// TODO: enable in Qt6
+	//m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::game_window, this, m_gui_settings);
+	//connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &gs_frame::handle_shortcut);
+
 	// Change cursor when in fullscreen.
 	connect(this, &QWindow::visibilityChanged, this, [this](QWindow::Visibility visibility)
 	{
@@ -138,7 +142,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	});
 
 	// Configure the mouse hide on idle timer
-	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::MouseHideTimeout);
+	connect(&m_mousehide_timer, &QTimer::timeout, this, &gs_frame::mouse_hide_timeout);
 	m_mousehide_timer.setSingleShot(true);
 
 #ifdef _WIN32
@@ -220,6 +224,7 @@ void gs_frame::showEvent(QShowEvent *event)
 	QWindow::showEvent(event);
 }
 
+// TODO: remove when shortcuts are properly hooked up (also check keyboard_pad_handler::processKeyEvent)
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 {
 	if (keyEvent->isAutoRepeat())
@@ -236,38 +241,117 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	{
 		if (keyEvent->modifiers() == Qt::AltModifier)
 		{
-			static int count = 0;
-			mark_log.success("Made forced mark %d in log", ++count);
-			return;
+			handle_shortcut(gui::shortcuts::shortcut::gw_log_mark, {});
+			break;
 		}
 		else if (keyEvent->modifiers() == Qt::ControlModifier)
 		{
-			toggle_mouselock();
-			return;
+			handle_shortcut(gui::shortcuts::shortcut::gw_mouse_lock, {});
+			break;
 		}
 		break;
 	}
 	case Qt::Key_Return:
 	{
 		if (keyEvent->modifiers() == Qt::AltModifier)
-		{
-			toggle_fullscreen();
-			return;
-		}
+			handle_shortcut(gui::shortcuts::shortcut::gw_toggle_fullscreen, {});
 		break;
 	}
 	case Qt::Key_Escape:
 	{
-		if (visibility() == FullScreen && !m_disable_kb_hotkeys)
-		{
-			toggle_fullscreen();
-			return;
-		}
+		handle_shortcut(gui::shortcuts::shortcut::gw_exit_fullscreen, {});
 		break;
 	}
 	case Qt::Key_P:
 	{
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_pause_play, {});
+		break;
+	}
+	case Qt::Key_S:
+	{
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_savestate, {});
+		break;
+	}
+	case Qt::Key_R:
+	{
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_restart, {});
+		break;
+	}
+	case Qt::Key_C:
+	{
+		if (keyEvent->modifiers() == Qt::AltModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_rsx_capture, {});
+		break;
+	}
+	case Qt::Key_F10:
+	{
+		if (keyEvent->modifiers() == Qt::ControlModifier)
+			handle_shortcut(gui::shortcuts::shortcut::gw_frame_limit, {});
+		break;
+	}
+	case Qt::Key_F11:
+	{
+		handle_shortcut(gui::shortcuts::shortcut::gw_toggle_recording, {});
+		break;
+	}
+	case Qt::Key_F12:
+	{
+		handle_shortcut(gui::shortcuts::shortcut::gw_screenshot, {});
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+}
+
+void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKeySequence& key_sequence)
+{
+	gui_log.notice("Game window registered shortcut: %s (%s)", shortcut_key, key_sequence.toString().toStdString());
+
+	switch (shortcut_key)
+	{
+	case gui::shortcuts::shortcut::gw_toggle_fullscreen:
+	{
+		toggle_fullscreen();
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_exit_fullscreen:
+	{
+		if (visibility() == FullScreen && !m_disable_kb_hotkeys)
+		{
+			toggle_fullscreen();
+		}
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_log_mark:
+	{
+		static int count = 0;
+		mark_log.success("Made forced mark %d in log", ++count);
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_mouse_lock:
+	{
+		toggle_mouselock();
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_screenshot:
+	{
+		screenshot_toggle = true;
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_toggle_recording:
+	{
+		toggle_recording();
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_pause_play:
+	{
+		if (!m_disable_kb_hotkeys)
 		{
 			switch (Emu.GetStatus())
 			{
@@ -290,18 +374,9 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		}
 		break;
 	}
-	case Qt::Key_S:
+	case gui::shortcuts::shortcut::gw_restart:
 	{
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
-		{
-			Emu.Kill(false, true);
-			return;
-		}
-		break;
-	}
-	case Qt::Key_R:
-	{
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		if (!m_disable_kb_hotkeys)
 		{
 			if (Emu.IsStopped())
 			{
@@ -314,132 +389,33 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		}
 		break;
 	}
-	case Qt::Key_C:
+	case gui::shortcuts::shortcut::gw_savestate:
 	{
-		if (keyEvent->modifiers() == Qt::AltModifier && !m_disable_kb_hotkeys)
+		if (!m_disable_kb_hotkeys)
+		{
+			Emu.Kill(false, true);
+			return;
+		}
+		break;
+	}
+	case gui::shortcuts::shortcut::gw_rsx_capture:
+	{
+		if (!m_disable_kb_hotkeys)
 		{
 			g_user_asked_for_frame_capture = true;
-			return;
 		}
 		break;
 	}
-	case Qt::Key_F10:
+	case gui::shortcuts::shortcut::gw_frame_limit:
 	{
-		if (keyEvent->modifiers() == Qt::ControlModifier)
-		{
-			g_disable_frame_limit = !g_disable_frame_limit;
-			gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
-			return;
-		}
-		break;
-	}
-	case Qt::Key_F11:
-	{
-		utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
-
-		if (g_recording_mode == recording_mode::cell)
-		{
-			gui_log.warning("A video recorder is already in use by cell. Regular recording can not proceed.");
-			m_video_encoder->stop();
-			break;
-		}
-
-		if (g_recording_mode.exchange(recording_mode::stopped) == recording_mode::rpcs3)
-		{
-			m_video_encoder->stop();
-
-			if (!video_provider.set_image_sink(nullptr, recording_mode::rpcs3))
-			{
-				gui_log.warning("The video provider could not release the image sink. A sink with higher priority must have been set.");
-			}
-
-			// Play a sound
-			if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
-			{
-				QSound::play(qstr(sound_path));
-			}
-			else
-			{
-				QApplication::beep();
-			}
-
-			ensure(m_video_encoder->path().starts_with(fs::get_config_dir()));
-			const std::string shortpath = m_video_encoder->path().substr(fs::get_config_dir().size() - 1); // -1 for /
-			rsx::overlays::queue_message(tr("Recording saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
-		}
-		else
-		{
-			m_video_encoder->stop();
-
-			const std::string& id = Emu.GetTitleID();
-			std::string video_path = fs::get_config_dir() + "recordings/";
-			if (!id.empty())
-			{
-				video_path += id + "/";
-			}
-
-			if (!fs::create_path(video_path) && fs::g_tls_error != fs::error::exist)
-			{
-				screenshot_log.error("Failed to create recordings path \"%s\" : %s", video_path, fs::g_tls_error);
-				break;
-			}
-
-			if (!id.empty())
-			{
-				video_path += id + "_";
-			}
-
-			video_path += "recording_" + date_time::current_time_narrow<'_'>() + ".mp4";
-
-			utils::video_encoder::frame_format output_format{};
-			output_format.av_pixel_format = static_cast<AVPixelFormat>(g_cfg_recording.pixel_format.get());
-			output_format.width = g_cfg_recording.width;
-			output_format.height = g_cfg_recording.height;
-			output_format.pitch = g_cfg_recording.width * 4;
-
-			m_video_encoder->set_path(video_path);
-			m_video_encoder->set_framerate(g_cfg_recording.framerate);
-			m_video_encoder->set_video_bitrate(g_cfg_recording.video_bps);
-			m_video_encoder->set_video_codec(g_cfg_recording.video_codec);
-			m_video_encoder->set_max_b_frames(g_cfg_recording.max_b_frames);
-			m_video_encoder->set_gop_size(g_cfg_recording.gop_size);
-			m_video_encoder->set_output_format(output_format);
-			m_video_encoder->set_sample_rate(0);   // TODO
-			m_video_encoder->set_audio_bitrate(0); // TODO
-			m_video_encoder->set_audio_codec(0);   // TODO
-			m_video_encoder->encode();
-
-			if (m_video_encoder->has_error)
-			{
-				rsx::overlays::queue_message(tr("Recording not possible").toStdString());
-				m_video_encoder->stop();
-				break;
-			}
-
-			if (!video_provider.set_image_sink(m_video_encoder, recording_mode::rpcs3))
-			{
-				gui_log.warning("The video provider could not set the image sink. A sink with higher priority must have been set.");
-				rsx::overlays::queue_message(tr("Recording not possible").toStdString());
-				m_video_encoder->stop();
-				break;
-			}
-
-			video_provider.set_pause_time(0);
-
-			g_recording_mode = recording_mode::rpcs3;
-
-			rsx::overlays::queue_message(tr("Recording started").toStdString());
-		}
-
-		break;
-	}
-	case Qt::Key_F12:
-	{
-		screenshot_toggle = true;
+		g_disable_frame_limit = !g_disable_frame_limit;
+		gui_log.warning("%s boost mode", g_disable_frame_limit.load() ? "Enabled" : "Disabled");
 		break;
 	}
 	default:
+	{
 		break;
+	}
 	}
 }
 
@@ -464,6 +440,105 @@ void gs_frame::toggle_fullscreen()
 			setVisibility(FullScreen);
 		}
 	});
+}
+
+void gs_frame::toggle_recording()
+{
+	utils::video_provider& video_provider = g_fxo->get<utils::video_provider>();
+
+	if (g_recording_mode == recording_mode::cell)
+	{
+		gui_log.warning("A video recorder is already in use by cell. Regular recording can not proceed.");
+		m_video_encoder->stop();
+		return;
+	}
+
+	if (g_recording_mode.exchange(recording_mode::stopped) == recording_mode::rpcs3)
+	{
+		m_video_encoder->stop();
+
+		if (!video_provider.set_image_sink(nullptr, recording_mode::rpcs3))
+		{
+			gui_log.warning("The video provider could not release the image sink. A sink with higher priority must have been set.");
+		}
+
+		// Play a sound
+		if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
+		{
+			QSound::play(qstr(sound_path));
+		}
+		else
+		{
+			QApplication::beep();
+		}
+
+		ensure(m_video_encoder->path().starts_with(fs::get_config_dir()));
+		const std::string shortpath = m_video_encoder->path().substr(fs::get_config_dir().size() - 1); // -1 for /
+		rsx::overlays::queue_message(tr("Recording saved: %0").arg(QString::fromStdString(shortpath)).toStdString());
+	}
+	else
+	{
+		m_video_encoder->stop();
+
+		const std::string& id = Emu.GetTitleID();
+		std::string video_path = fs::get_config_dir() + "recordings/";
+		if (!id.empty())
+		{
+			video_path += id + "/";
+		}
+
+		if (!fs::create_path(video_path) && fs::g_tls_error != fs::error::exist)
+		{
+			screenshot_log.error("Failed to create recordings path \"%s\" : %s", video_path, fs::g_tls_error);
+			return;
+		}
+
+		if (!id.empty())
+		{
+			video_path += id + "_";
+		}
+
+		video_path += "recording_" + date_time::current_time_narrow<'_'>() + ".mp4";
+
+		utils::video_encoder::frame_format output_format{};
+		output_format.av_pixel_format = static_cast<AVPixelFormat>(g_cfg_recording.pixel_format.get());
+		output_format.width = g_cfg_recording.width;
+		output_format.height = g_cfg_recording.height;
+		output_format.pitch = g_cfg_recording.width * 4;
+
+		m_video_encoder->set_path(video_path);
+		m_video_encoder->set_framerate(g_cfg_recording.framerate);
+		m_video_encoder->set_video_bitrate(g_cfg_recording.video_bps);
+		m_video_encoder->set_video_codec(g_cfg_recording.video_codec);
+		m_video_encoder->set_max_b_frames(g_cfg_recording.max_b_frames);
+		m_video_encoder->set_gop_size(g_cfg_recording.gop_size);
+		m_video_encoder->set_output_format(output_format);
+		m_video_encoder->set_sample_rate(0);   // TODO
+		m_video_encoder->set_audio_bitrate(0); // TODO
+		m_video_encoder->set_audio_codec(0);   // TODO
+		m_video_encoder->encode();
+
+		if (m_video_encoder->has_error)
+		{
+			rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+			m_video_encoder->stop();
+			return;
+		}
+
+		if (!video_provider.set_image_sink(m_video_encoder, recording_mode::rpcs3))
+		{
+			gui_log.warning("The video provider could not set the image sink. A sink with higher priority must have been set.");
+			rsx::overlays::queue_message(tr("Recording not possible").toStdString());
+			m_video_encoder->stop();
+			return;
+		}
+
+		video_provider.set_pause_time(0);
+
+		g_recording_mode = recording_mode::rpcs3;
+
+		rsx::overlays::queue_message(tr("Recording started").toStdString());
+	}
 }
 
 void gs_frame::toggle_mouselock()
@@ -985,7 +1060,7 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bo
 	update_cursor();
 }
 
-void gs_frame::MouseHideTimeout()
+void gs_frame::mouse_hide_timeout()
 {
 	// Our idle timeout occured, so we update the cursor
 	if (m_hide_mouse_after_idletime && m_show_mouse)
