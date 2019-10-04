@@ -197,23 +197,16 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		archive_seek(packet.size, fs::seek_cur);
 	}
 
-	// If false, an existing directory is being overwritten: cannot cancel the operation
-	bool was_null = true;
-
 	// Get full path and create the directory
 	const std::string dir = Emulator::GetHddDir() + "game/" + install_id + '/';
 
+	// If false, an existing directory is being overwritten: cannot cancel the operation
+	const bool was_null = !fs::is_dir(dir);
+
 	if (!fs::create_path(dir))
 	{
-		if (fs::g_tls_error == fs::error::exist)
-		{
-			was_null = false;
-		}
-		else
-		{
-			LOG_ERROR(LOADER, "PKG: Could not create the installation directory %s", dir);
-			return false;
-		}
+		LOG_ERROR(LOADER, "PKG: Could not create the installation directory %s", dir);
+		return false;
 	}
 
 	// Allocate buffer with BUF_SIZE size or more if required
