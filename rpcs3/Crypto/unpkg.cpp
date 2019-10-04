@@ -203,7 +203,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 	// Get full path and create the directory
 	const std::string dir = Emulator::GetHddDir() + "game/" + install_id + '/';
 
-	if (!fs::create_dir(dir))
+	if (!fs::create_path(dir))
 	{
 		if (fs::g_tls_error == fs::error::exist)
 		{
