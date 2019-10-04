@@ -440,7 +440,8 @@ bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
 	js_info.dwFlags = JOY_RETURNALL;
 	joyGetDevCaps(index, &js_caps, sizeof(js_caps));
 
-	if (joyGetPosEx(index, &js_info) != JOYERR_NOERROR)
+	dev->device_status = joyGetPosEx(index, &js_info);
+	if (dev->device_status != JOYERR_NOERROR)
 		return false;
 
 	char drv[32];
@@ -495,8 +496,10 @@ PadHandlerBase::connection mm_joystick_handler::update_connection(const std::sha
 	if (!dev)
 		return connection::disconnected;
 
-	MMRESULT status = joyGetPosEx(dev->device_id, &dev->device_info);
-	if (status == JOYERR_NOERROR && GetMMJOYDevice(dev->device_id, dev.get()))
+	const auto old_status = dev->device_status;
+	dev->device_status    = joyGetPosEx(dev->device_id, &dev->device_info);
+
+	if (dev->device_status == JOYERR_NOERROR && (old_status == JOYERR_NOERROR || GetMMJOYDevice(dev->device_id, dev.get())))
 	{
 		return connection::connected;
 	}
