@@ -4,6 +4,8 @@
 #include <QPushButton>
 #include <QMessageBox>
 
+#include "Emu/System.h"
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
@@ -60,6 +62,13 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 				static_cast<vfs_dialog_tab*>(tabs->widget(i))->SetSettings();
 			}
 			m_emu_settings->SaveSettings();
+
+			// Recreate folder structure for new VFS paths
+			if (Emu.IsStopped())
+			{
+				Emu.Init();
+			}
+
 			accept();
 		}
 		else if (button == buttons->button(QDialogButtonBox::Close))
