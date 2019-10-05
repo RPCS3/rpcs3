@@ -116,17 +116,21 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	std::memset(&reports, 0, sizeof(RsxReports));
 
 	for (int i = 0; i < 64; ++i)
-		reports.notify[i].timestamp = (u64)-1;
+		reports.notify[i].timestamp = -1;
 
 	for (int i = 0; i < 256; ++i)
 	{
 		reports.semaphore[i].val = 0x1337C0D3;
 		reports.semaphore[i].pad = 0x1337BABE;
-		reports.semaphore[i].timestamp = (u64)-1; // technically different but should be fine
+		reports.semaphore[i].timestamp = -1; // technically different but should be fine
 	}
 
 	for (int i = 0; i < 2048; ++i)
-		reports.report[i].timestamp = (u64)-1;
+	{
+		reports.report[i].val = 0;
+		reports.report[i].timestamp = -1;
+		reports.report[i].pad = -1;
+	}
 
 	auto &driverInfo = vm::_ref<RsxDriverInfo>(*lpar_driver_info);
 
