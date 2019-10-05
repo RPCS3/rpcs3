@@ -259,7 +259,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					break;
+					continue;
 				}
 
 				std::lock_guard lock(cond->mutex->mutex);
