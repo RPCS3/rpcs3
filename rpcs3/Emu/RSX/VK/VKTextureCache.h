@@ -618,7 +618,7 @@ namespace vk
 				// Final aspect mask of the 'final' transfer source
 				const auto new_src_aspect = src_image->aspect();
 
-				if (LIKELY(src_w == section.dst_w && src_h == section.dst_h && section.xform == surface_transform::identity))
+				if (LIKELY(src_w == section.dst_w && src_h == section.dst_h && transform == surface_transform::identity))
 				{
 					VkImageCopy copy_rgn;
 					copy_rgn.srcOffset = { src_x, src_y, 0 };
