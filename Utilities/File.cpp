@@ -966,7 +966,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = this->size();
 			info.atime = to_time(basic_info.LastAccessTime);
-			info.mtime = to_time(basic_info.ChangeTime);
+			info.mtime = to_time(basic_info.LastWriteTime);
 			info.ctime = info.mtime;
 
 			if (info.atime < info.mtime)
