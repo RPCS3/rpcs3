@@ -44,6 +44,14 @@ void progress_dialog::SetValue(int progress)
 	QProgressDialog::setValue(value);
 }
 
+void progress_dialog::SignalFailure()
+{
+#ifdef _WIN32
+	m_tb_progress->stop();
+#endif
+	// TODO: Implement an equivalent for Linux, if possible
+}
+
 #ifdef HAVE_QTDBUS
 void progress_dialog::UpdateProgress(int progress, bool disable)
 {
