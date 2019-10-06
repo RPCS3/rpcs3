@@ -122,14 +122,14 @@ public:
 		const u32 value = m_value.load();
 
 		// Conditional increment
-		return value < c_one - 1 && (value % c_vip) == 0 && m_value.compare_and_swap_test(value, value + c_vip);
+		return (value < c_one - 1 || value & (c_one - c_vip)) && (value % c_vip) == 0 && m_value.compare_and_swap_test(value, value + c_vip);
 	}
 
 	void lock_vip()
 	{
 		const u32 value = m_value.load();
 
-		if (UNLIKELY(value >= c_one - 1 || (value % c_vip) || !m_value.compare_and_swap_test(value, value + c_vip)))
+		if (UNLIKELY((value >= c_one - 1 && !(value & (c_one - c_vip))) || (value % c_vip) || !m_value.compare_and_swap_test(value, value + c_vip)))
 		{
 			imp_lock_vip(value);
 		}
