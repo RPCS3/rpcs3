@@ -177,6 +177,27 @@ static fs::error to_error(int e)
 
 #endif
 
+static std::string path_append(std::string_view path, std::string_view more)
+{
+	std::string result;
+
+	if (const size_t src_slash_pos = path.find_last_not_of('/'); src_slash_pos != path.npos)
+	{
+		path.remove_suffix(path.length() - src_slash_pos - 1);
+		result = path;
+	}
+
+	result.push_back('/');
+
+	if (const size_t dst_slash_pos = more.find_first_not_of('/'); dst_slash_pos != more.npos)
+	{
+		more.remove_prefix(dst_slash_pos);
+		result.append(more);
+	}
+
+	return result;
+}
+
 namespace fs
 {
 	thread_local error g_tls_error = error::ok;
@@ -1586,7 +1607,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 
 			if (entry.is_directory == false)
 			{
-				if (!remove_file(path + '/' + entry.name))
+				if (!remove_file(path_append(path, entry.name)))
 				{
 					return false;
 				}
@@ -1594,7 +1615,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 
 			if (entry.is_directory == true)
 			{
-				if (!remove_all(path + '/' + entry.name))
+				if (!remove_all(path_append(path, entry.name)))
 				{
 					return false;
 				}
@@ -1632,7 +1653,7 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 		if (entry.is_directory == true)
 		{
-			result += get_dir_size(path + '/' + entry.name, rounding_alignment);
+			result += get_dir_size(path_append(path, entry.name), rounding_alignment);
 		}
 	}
 
