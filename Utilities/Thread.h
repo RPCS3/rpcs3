@@ -188,7 +188,7 @@ class thread_ctrl final
 	static atomic_t<native_core_arrangement> g_native_core_layout;
 
 	// Internal waiting function, may throw. Infinite value is -1.
-	static void _wait_for(u64 usec);
+	static void _wait_for(u64 usec, bool alert);
 
 	friend class thread_base;
 
@@ -238,15 +238,15 @@ public:
 	}
 
 	// Wait once with timeout. May spuriously return false.
-	static inline void wait_for(u64 usec)
+	static inline void wait_for(u64 usec, bool alert = true)
 	{
-		_wait_for(usec);
+		_wait_for(usec, alert);
 	}
 
 	// Wait.
 	static inline void wait()
 	{
-		_wait_for(-1);
+		_wait_for(-1, true);
 	}
 
 	// Wait until pred().
@@ -260,7 +260,7 @@ public:
 				return result;
 			}
 
-			_wait_for(-1);
+			_wait_for(-1, true);
 		}
 	}
 

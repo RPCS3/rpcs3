@@ -1777,7 +1777,7 @@ void thread_base::finalize() noexcept
 	--g_thread_count;
 }
 
-void thread_ctrl::_wait_for(u64 usec)
+void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
 

@@ -261,7 +261,7 @@ public:
 
 			if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
 			{
-				thread_ctrl::wait_for(remaining);
+				thread_ctrl::wait_for(remaining, !is_usleep);
 			}
 			else
 			{
@@ -269,10 +269,10 @@ public:
 				{
 #ifdef __linux__
 					// Do not wait for the last quantum to avoid loss of accuracy
-					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
+					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum), !is_usleep);
 #else
 					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
-					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
+					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum), !is_usleep);
 #endif
 				}
 				else
