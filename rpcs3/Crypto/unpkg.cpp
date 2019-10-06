@@ -295,6 +295,8 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		decrypt(0, header.file_count * sizeof(PKGEntry), header.pkg_platform == PKG_PLATFORM_TYPE_PSP ? PKG_AES_KEY2 : dec_key.data());
 	}
 
+	size_t num_failures = 0;
+
 	std::vector<PKGEntry> entries(header.file_count);
 
 	std::memcpy(entries.data(), buf.get(), entries.size() * sizeof(PKGEntry));
@@ -305,6 +307,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 		if (entry.name_size > 256)
 		{
+			num_failures++;
 			LOG_ERROR(LOADER, "PKG name size is too big (0x%x)", entry.name_size);
 			continue;
 		}
@@ -341,18 +344,21 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 			if (fs::file out{path, fs::rewrite})
 			{
+				bool extract_success = true;
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
 				{
 					const u64 block_size = std::min<u64>(BUF_SIZE, entry.file_size - pos);
 
 					if (decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : dec_key.data()) != block_size)
 					{
+						extract_success = false;
 						LOG_ERROR(LOADER, "Failed to extract file %s", path);
 						break;
 					}
 
 					if (out.write(buf.get(), block_size) != block_size)
 					{
+						extract_success = false;
 						LOG_ERROR(LOADER, "Failed to write file %s", path);
 						break;
 					}
@@ -372,17 +378,25 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 					}
 				}
 
-				if (did_overwrite)
-				{
-					LOG_WARNING(LOADER, "Overwritten file %s", name);
+				if (extract_success)
+				{	
+					if (did_overwrite)
+					{
+						LOG_WARNING(LOADER, "Overwritten file %s", name);
+					}
+					else
+					{
+						LOG_NOTICE(LOADER, "Created file %s", name);
+					}
 				}
 				else
 				{
-					LOG_NOTICE(LOADER, "Created file %s", name);
+					num_failures++;
 				}
 			}
 			else
 			{
+				num_failures++;
 				LOG_ERROR(LOADER, "Failed to create file %s", path);
 			}
 
@@ -404,6 +418,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			}
 			else
 			{
+				num_failures++;
 				LOG_ERROR(LOADER, "Failed to create directory %s", path);
 			}
 
@@ -412,11 +427,20 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 
 		default:
 		{
+			num_failures++;
 			LOG_ERROR(LOADER, "Unknown PKG entry type (0x%x) %s", entry.type, name);
 		}
 		}
 	}
 
-	LOG_SUCCESS(LOADER, "Package successfully installed to %s", dir);
-	return true;
+	if (num_failures == 0)
+	{
+		LOG_SUCCESS(LOADER, "Package successfully installed to %s", dir);
+	}
+	else
+	{
+		fs::remove_all(dir, true);
+		LOG_ERROR(LOADER, "Package installation failed: %s", dir);
+	}
+	return num_failures == 0;
 }

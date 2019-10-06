@@ -437,6 +437,8 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 	// Synchronization variable
 	atomic_t<double> progress(0.);
 
+	bool cancelled = false;
+
 	// Run PKG unpacking asynchronously
 	named_thread worker("PKG Installer", [&]
 	{
@@ -449,6 +451,7 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 		{
 			if (pdlg.wasCanceled())
 			{
+				cancelled = true;
 				progress -= 1.;
 				break;
 			}
@@ -465,6 +468,11 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 			pdlg.SetValue(pdlg.maximum());
 			std::this_thread::sleep_for(100ms);
 		}
+		else
+		{
+			pdlg.setHidden(true);
+			pdlg.SignalFailure();
+		}
 	}
 
 	if (worker())
@@ -472,6 +480,11 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 		m_gameListFrame->Refresh(true);
 		LOG_SUCCESS(GENERAL, "Successfully installed %s.", fileName);
 		guiSettings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package!"), gui::ib_pkg_success, this);
+	}
+	else if (!cancelled)
+	{
+		LOG_ERROR(GENERAL, "Failed to install %s.", fileName);
+		QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package %1!").arg(filePath));
 	}
 }
 
