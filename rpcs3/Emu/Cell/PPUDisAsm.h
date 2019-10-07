@@ -16,6 +16,18 @@ private:
 		return dump_pc + (imm & ~3);
 	}
 
+	constexpr const char* get_partial_BI_field(u32 bi)
+	{
+		switch (bi % 4)
+		{
+		case 0x0: return "lt";
+		case 0x1: return "gt";
+		case 0x2: return "eq";
+		case 0x3: return "so";
+		default: ASSUME(0); return {};
+		}
+	}
+
 private:
 	void DisAsm_V4(const std::string& op, u32 v0, u32 v1, u32 v2, u32 v3)
 	{
@@ -242,6 +254,14 @@ private:
 	void DisAsm_CR_BRANCH_A(const std::string& op, u32 cr, const int pc)
 	{
 		Write(fmt::format("%s cr%d,0x%x ", FixOp(op).c_str(), cr, pc));
+	}
+	void DisAsm_BI_BRANCH(const std::string& op, u32 bi, const int pc)
+	{
+		Write(fmt::format("%s cr%d[%s],0x%x ", FixOp(op).c_str(), bi / 4, get_partial_BI_field(bi), DisAsmBranchTarget(pc)));
+	}
+	void DisAsm_BI_BRANCH_A(const std::string& op, u32 bi, const int pc)
+	{
+		Write(fmt::format("%s cr%d[%s],0x%x ", FixOp(op).c_str(), bi / 4, get_partial_BI_field(bi), pc));
 	}
 	
 public:
