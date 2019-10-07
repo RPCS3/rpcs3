@@ -38,6 +38,8 @@
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
 
+#include "3rdparty/xxHash/xxhash.h"
+
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
 
@@ -536,6 +538,22 @@ void main_window::InstallPup(const QString& dropPath)
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 	{
 		return;
+	}
+	else if (version_string == cur_version)
+	{
+		const size_t firmware_size = update_files_f.size();
+		std::vector<char> buffer(firmware_size);
+		update_files_f.read(buffer.data(), static_cast<u64>(firmware_size));
+
+		u64 cur_hash = 48369119;
+		u64 file_hash = XXH64(buffer.data(), firmware_size, 0);
+		LOG_NOTICE(GENERAL, "Firmware hash: %lu", file_hash);
+		if (file_hash != cur_hash &&
+			QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("This firmware file seems to be corrupted. Installing it is not recommended, as it will most likely cause crashes."),
+				QMessageBox::Ok | QMessageBox::Ignore, QMessageBox::Ok) == QMessageBox::Ok)
+		{
+			return;
+		}
 	}
 
 	progress_dialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
