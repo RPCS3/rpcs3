@@ -44,4 +44,5 @@ public:
 	explicit operator bool() const { return isValid; }
 
 	fs::file get_file(u64 entry_id);
+	bool validate_hashes();
 };
