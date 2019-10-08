@@ -487,7 +487,7 @@ namespace gl
 		}
 
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
-				u16 x, u16 y, u16 width, u16 height, const texture_channel_remap_t& remap, bool copy)
+				u16 x, u16 y, u16 width, u16 height, const rsx::texture_channel_remap_t& remap, bool copy)
 		{
 			if (sized_internal_fmt == GL_NONE)
 			{
@@ -501,7 +501,7 @@ namespace gl
 				std::vector<copy_region_descriptor> region =
 				{{
 					src,
-					surface_transform::coordinate_transform,
+					rsx::surface_transform::coordinate_transform,
 					x, y, 0, 0, 0,
 					width, height, width, height
 				}};
@@ -584,7 +584,7 @@ namespace gl
 				auto src_w = slice.src_w;
 				auto src_h = slice.src_h;
 
-				if (slice.xform == surface_transform::coordinate_transform)
+				if (slice.xform == rsx::surface_transform::coordinate_transform)
 				{
 					// Dimensions were given in 'dst' space. Work out the real source coordinates
 					const auto src_bpp = slice.src->pitch() / slice.src->width();
@@ -691,19 +691,19 @@ namespace gl
 	protected:
 
 		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
-				const texture_channel_remap_t& remap_vector) override
+				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			return create_temporary_subresource_impl(cmd, *src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
 		}
 
 		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
-				const texture_channel_remap_t& remap_vector) override
+				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			return create_temporary_subresource_impl(cmd, src, (GLenum)src->get_internal_format(),
 					GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
 		}
 
-		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_CUBE_MAP, size, size, 1, 1, ifmt);
@@ -725,7 +725,7 @@ namespace gl
 			return result;
 		}
 
-		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& /*remap_vector*/) override
+		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& /*remap_vector*/) override
 		{
 			const GLenum ifmt = gl::get_sized_internal_format(gcm_format);
 			std::unique_ptr<gl::texture> dst_image = std::make_unique<gl::viewable_image>(GL_TEXTURE_3D, width, height, depth, 1, ifmt);
@@ -748,7 +748,7 @@ namespace gl
 		}
 
 		gl::texture_view* generate_atlas_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
-				const texture_channel_remap_t& remap_vector) override
+				const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			auto _template = get_template_from_collection_impl(sections_to_copy);
 			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, remap_vector, false);
@@ -762,7 +762,7 @@ namespace gl
 			std::vector<copy_region_descriptor> region =
 			{{
 				src,
-				surface_transform::identity,
+				rsx::surface_transform::identity,
 				0, 0, 0, 0, 0,
 				width, height, width, height
 			}};
