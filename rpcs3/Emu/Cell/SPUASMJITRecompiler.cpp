@@ -1400,7 +1400,7 @@ void spu_recompiler::SYNC(spu_opcode_t op)
 void spu_recompiler::DSYNC(spu_opcode_t op)
 {
 	// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
-	SYNC(op);
+	c->mfence();
 }
 
 void spu_recompiler::MFSPR(spu_opcode_t op)
