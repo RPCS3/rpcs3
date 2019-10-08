@@ -257,7 +257,7 @@ bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
 		}
 		catch (const std::runtime_error& e)
 		{
-			gdbDebugServer.error(e.what());
+			gdbDebugServer.error("%s", e.what());
 			return false;
 		}
 	}
@@ -855,7 +855,7 @@ void gdb_thread::operator()()
 				client_socket = -1;
 			}
 
-			gdbDebugServer.error(e.what());
+			gdbDebugServer.error("%s", e.what());
 		}
 	}
 }
