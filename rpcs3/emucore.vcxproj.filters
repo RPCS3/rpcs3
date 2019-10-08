@@ -824,6 +824,12 @@
     <ClCompile Include="Emu\Io\usb_device.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="util\atomic.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto\aesni.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1025,9 +1031,6 @@
       <Filter>Emu\Cell</Filter>
     </ClInclude>
     <ClInclude Include="util\atomic.hpp">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\TextureUtils.h">
@@ -1560,6 +1563,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\usb_device.h">
       <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\aesni.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
