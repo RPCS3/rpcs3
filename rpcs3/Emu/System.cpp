@@ -38,8 +38,6 @@
 #include <memory>
 #include <regex>
 
-#include "Utilities/GDBDebugServer.h"
-
 #include "Utilities/JIT.h"
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
@@ -420,10 +418,6 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
-
-#ifdef WITH_GDB_DEBUGGER
-	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int)g_cfg.misc.gdb_server_port);
-#endif
 
 	// Initialize patch engine
 	g_fxo->init<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
@@ -1661,11 +1655,6 @@ void Emulator::Run()
 
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
-
-#ifdef WITH_GDB_DEBUGGER
-	// Initialize debug server at the end of emu run sequence
-	fxm::make<GDBDebugServer>();
-#endif
 }
 
 bool Emulator::Pause()

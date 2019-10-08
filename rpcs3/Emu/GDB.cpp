@@ -1,8 +1,7 @@
 #include "stdafx.h"
-#ifdef WITH_GDB_DEBUGGER
 
-#include "GDBDebugServer.h"
-#include "Log.h"
+#include "GDB.h"
+#include "Utilities/Log.h"
 #include <algorithm>
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
@@ -12,8 +11,18 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 
-#ifndef _WIN32
-#include "fcntl.h"
+#ifdef _WIN32
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#else
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <fcntl.h>
 #endif
 
 extern void ppu_set_breakpoint(u32 addr);
@@ -21,31 +30,12 @@ extern void ppu_remove_breakpoint(u32 addr);
 
 LOG_CHANNEL(gdbDebugServer);
 
-int sock_init(void)
-{
-#ifdef _WIN32
-	WSADATA wsa_data;
-	return WSAStartup(MAKEWORD(1, 1), &wsa_data);
-#else
-	return 0;
-#endif
-}
-
-int sock_quit(void)
-{
-#ifdef _WIN32
-	return WSACleanup();
-#else
-	return 0;
-#endif
-}
-
 #ifndef _WIN32
-int closesocket(socket_t s) {
+int closesocket(int s)
+{
 	return close(s);
 }
-const int SOCKET_ERROR = -1;
-const socket_t INVALID_SOCKET = -1;
+
 #define sscanf_s sscanf
 #define HEX_U32 "x"
 #define HEX_U64 "lx"
@@ -54,7 +44,24 @@ const socket_t INVALID_SOCKET = -1;
 #define HEX_U64 "llx"
 #endif
 
-bool check_errno_again() {
+struct gdb_cmd
+{
+	std::string cmd;
+	std::string data;
+	u8 checksum;
+};
+
+class wrong_checksum_exception : public std::runtime_error
+{
+public:
+	wrong_checksum_exception(char const* const message)
+		: runtime_error(message)
+	{
+	}
+};
+
+bool check_errno_again()
+{
 #ifdef _WIN32
 	int err = GetLastError();
 	return (err == WSAEWOULDBLOCK);
@@ -94,11 +101,12 @@ u64 hex_to_u64(std::string val) {
 	return result;
 }
 
-void GDBDebugServer::start_server()
+void gdb_thread::start_server()
 {
 	server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
-	if (server_socket == INVALID_SOCKET) {
+	if (server_socket == -1)
+	{
 		gdbDebugServer.error("Error creating server socket");
 		return;
 	}
@@ -116,33 +124,38 @@ void GDBDebugServer::start_server()
 
 	sockaddr_in server_saddr;
 	server_saddr.sin_family = AF_INET;
-	int port = g_cfg.misc.gdb_server_port;
+	int port = 2345;
 	server_saddr.sin_port = htons(port);
-	server_saddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	server_saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	err = bind(server_socket, (struct sockaddr *) &server_saddr, sizeof(server_saddr));
-	if (err == SOCKET_ERROR) {
+	if (err == -1)
+	{
 		gdbDebugServer.error("Error binding to port %d", port);
 		return;
 	}
 
 	err = listen(server_socket, 1);
-	if (err == SOCKET_ERROR) {
+	if (err == -1)
+	{
 		gdbDebugServer.error("Error listening on port %d", port);
 		return;
 	}
 
-	gdbDebugServer.success("GDB Debug Server listening on port %d", port);
+	gdbDebugServer.notice("GDB Debug Server listening on port %d", port);
 }
 
-int GDBDebugServer::read(void * buf, int cnt)
+int gdb_thread::read(void* buf, int cnt)
 {
-	while (!stop) {
+	while (!Emu.IsStopped())
+	{
 		int result = recv(client_socket, reinterpret_cast<char*>(buf), cnt, 0);
 
-		if (result == SOCKET_ERROR) {
-			if (check_errno_again()) {
-				thread_ctrl::wait_for(50);
+		if (result == -1)
+		{
+			if (check_errno_again())
+			{
+				thread_ctrl::wait_for(5000);
 				continue;
 			}
 
@@ -154,7 +167,7 @@ int GDBDebugServer::read(void * buf, int cnt)
 	return 0;
 }
 
-char GDBDebugServer::read_char()
+char gdb_thread::read_char()
 {
 	char result;
 	int cnt = read(&result, 1);
@@ -164,7 +177,7 @@ char GDBDebugServer::read_char()
 	return result;
 }
 
-u8 GDBDebugServer::read_hexbyte()
+u8 gdb_thread::read_hexbyte()
 {
 	std::string s = "";
 	s += read_char();
@@ -172,7 +185,7 @@ u8 GDBDebugServer::read_hexbyte()
 	return hex_to_u8(s);
 }
 
-void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
+void gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 {
 	char c = read_char();
 	//interrupt
@@ -228,32 +241,39 @@ void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
 	}
 }
 
-bool GDBDebugServer::read_cmd(gdb_cmd & out_cmd)
+bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
 {
-	while (true) {
-		try {
+	while (true)
+	{
+		try
+		{
 			try_read_cmd(out_cmd);
 			ack(true);
 			return true;
 		}
-		catch (wrong_checksum_exception) {
+		catch (const wrong_checksum_exception&)
+		{
 			ack(false);
 		}
-		catch (std::runtime_error e) {
+		catch (const std::runtime_error& e)
+		{
 			gdbDebugServer.error(e.what());
 			return false;
 		}
 	}
 }
 
-void GDBDebugServer::send(const char * buf, int cnt)
+void gdb_thread::send(const char* buf, int cnt)
 {
 	gdbDebugServer.trace("Sending %s (%d bytes)", buf, cnt);
-	while (!stop) {
+	while (!Emu.IsStopped())
+	{
 		int res = ::send(client_socket, buf, cnt, 0);
-		if (res == SOCKET_ERROR) {
-			if (check_errno_again()) {
-				thread_ctrl::wait_for(50);
+		if (res == -1)
+		{
+			if (check_errno_again())
+			{
+				thread_ctrl::wait_for(5000);
 				continue;
 			}
 			gdbDebugServer.error("Failed sending %d bytes", cnt);
@@ -263,17 +283,17 @@ void GDBDebugServer::send(const char * buf, int cnt)
 	}
 }
 
-void GDBDebugServer::send_char(char c)
+void gdb_thread::send_char(char c)
 {
 	send(&c, 1);
 }
 
-void GDBDebugServer::ack(bool accepted)
+void gdb_thread::ack(bool accepted)
 {
 	send_char(accepted ? '+' : '-');
 }
 
-void GDBDebugServer::send_cmd(const std::string & cmd)
+void gdb_thread::send_cmd(const std::string& cmd)
 {
 	u8 checksum = 0;
 	std::string buf;
@@ -287,7 +307,7 @@ void GDBDebugServer::send_cmd(const std::string & cmd)
 	send(buf.c_str(), static_cast<int>(buf.length()));
 }
 
-bool GDBDebugServer::send_cmd_ack(const std::string & cmd)
+bool gdb_thread::send_cmd_ack(const std::string& cmd)
 {
 	while (true) {
 		send_cmd(cmd);
@@ -303,7 +323,7 @@ bool GDBDebugServer::send_cmd_ack(const std::string & cmd)
 	}
 }
 
-u8 GDBDebugServer::append_encoded_char(char c, std::string & str)
+u8 gdb_thread::append_encoded_char(char c, std::string& str)
 {
 	u8 checksum = 0;
 	if (UNLIKELY((c == '#') || (c == '$') || (c == '}'))) {
@@ -316,7 +336,7 @@ u8 GDBDebugServer::append_encoded_char(char c, std::string & str)
 	return checksum;
 }
 
-std::string GDBDebugServer::to_hexbyte(u8 i)
+std::string gdb_thread::to_hexbyte(u8 i)
 {
 	std::string result = "00";
 	u8 i1 = i & 0xF;
@@ -326,7 +346,7 @@ std::string GDBDebugServer::to_hexbyte(u8 i)
 	return result;
 }
 
-bool GDBDebugServer::select_thread(u64 id)
+bool gdb_thread::select_thread(u64 id)
 {
 	//in case we have none at all
 	selected_thread.reset();
@@ -342,7 +362,7 @@ bool GDBDebugServer::select_thread(u64 id)
 	return false;
 }
 
-std::string GDBDebugServer::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
+std::string gdb_thread::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
 {
 	std::string result;
 	//ids from gdb/features/rs6000/powerpc-64.c
@@ -373,7 +393,7 @@ std::string GDBDebugServer::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
 	}
 }
 
-bool GDBDebugServer::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::string value)
+bool gdb_thread::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::string value)
 {
 	switch (rid) {
 	case 64:
@@ -409,7 +429,7 @@ bool GDBDebugServer::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::s
 	}
 }
 
-u32 GDBDebugServer::get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid)
+u32 gdb_thread::get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid)
 {
 	switch (rid) {
 	case 66:
@@ -424,19 +444,23 @@ u32 GDBDebugServer::get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid)
 	}
 }
 
-bool GDBDebugServer::send_reason()
+bool gdb_thread::send_reason()
 {
 	return send_cmd_ack("S05");
 }
 
-void GDBDebugServer::wait_with_interrupts() {
+void gdb_thread::wait_with_interrupts()
+{
 	char c;
-	while (!paused) {
+	while (!paused)
+	{
 		int result = recv(client_socket, &c, 1, 0);
 
-		if (result == SOCKET_ERROR) {
-			if (check_errno_again()) {
-				thread_ctrl::wait_for(50);
+		if (result == -1)
+		{
+			if (check_errno_again())
+			{
+				thread_ctrl::wait_for(5000);
 				continue;
 			}
 
@@ -448,22 +472,22 @@ void GDBDebugServer::wait_with_interrupts() {
 	}
 }
 
-bool GDBDebugServer::cmd_extended_mode(gdb_cmd & cmd)
+bool gdb_thread::cmd_extended_mode(gdb_cmd& cmd)
 {
 	return send_cmd_ack("OK");
 }
 
-bool GDBDebugServer::cmd_reason(gdb_cmd & cmd)
+bool gdb_thread::cmd_reason(gdb_cmd& cmd)
 {
 	return send_reason();
 }
 
-bool GDBDebugServer::cmd_supported(gdb_cmd & cmd)
+bool gdb_thread::cmd_supported(gdb_cmd& cmd)
 {
 	return send_cmd_ack("PacketSize=1200");
 }
 
-bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
+bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
 {
 	std::string result = "";
 	const auto on_select = [&](u32, cpu_thread& cpu)
@@ -483,12 +507,12 @@ bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
 	return send_cmd_ack(result);;
 }
 
-bool GDBDebugServer::cmd_current_thread(gdb_cmd & cmd)
+bool gdb_thread::cmd_current_thread(gdb_cmd& cmd)
 {
 	return send_cmd_ack(selected_thread.expired() ? "" : ("QC" + u64_to_padded_hex(selected_thread.lock()->id)));
 }
 
-bool GDBDebugServer::cmd_read_register(gdb_cmd & cmd)
+bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 {
 	if (!select_thread(general_ops_thread_id)) {
 		return send_cmd_ack("E02");
@@ -508,7 +532,7 @@ bool GDBDebugServer::cmd_read_register(gdb_cmd & cmd)
 	return send_cmd_ack("");
 }
 
-bool GDBDebugServer::cmd_write_register(gdb_cmd & cmd)
+bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 {
 	if (!select_thread(general_ops_thread_id)) {
 		return send_cmd_ack("E02");
@@ -533,7 +557,7 @@ bool GDBDebugServer::cmd_write_register(gdb_cmd & cmd)
 	return send_cmd_ack("");
 }
 
-bool GDBDebugServer::cmd_read_memory(gdb_cmd & cmd)
+bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 {
 	size_t s = cmd.data.find(',');
 	u32 addr = hex_to_u32(cmd.data.substr(0, s));
@@ -555,7 +579,7 @@ bool GDBDebugServer::cmd_read_memory(gdb_cmd & cmd)
 	return send_cmd_ack(result);
 }
 
-bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
+bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 {
 	size_t s = cmd.data.find(',');
 	size_t s2 = cmd.data.find(':');
@@ -583,7 +607,7 @@ bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
 	return send_cmd_ack("OK");
 }
 
-bool GDBDebugServer::cmd_read_all_registers(gdb_cmd & cmd)
+bool gdb_thread::cmd_read_all_registers(gdb_cmd& cmd)
 {
 	std::string result;
 	select_thread(general_ops_thread_id);
@@ -602,7 +626,7 @@ bool GDBDebugServer::cmd_read_all_registers(gdb_cmd & cmd)
 	return send_cmd_ack("");
 }
 
-bool GDBDebugServer::cmd_write_all_registers(gdb_cmd & cmd)
+bool gdb_thread::cmd_write_all_registers(gdb_cmd& cmd)
 {
 	select_thread(general_ops_thread_id);
 	auto th = selected_thread.lock();
@@ -620,7 +644,7 @@ bool GDBDebugServer::cmd_write_all_registers(gdb_cmd & cmd)
 	return send_cmd_ack("E01");
 }
 
-bool GDBDebugServer::cmd_set_thread_ops(gdb_cmd & cmd)
+bool gdb_thread::cmd_set_thread_ops(gdb_cmd& cmd)
 {
 	char type = cmd.data[0];
 	std::string thread = cmd.data.substr(1);
@@ -637,24 +661,24 @@ bool GDBDebugServer::cmd_set_thread_ops(gdb_cmd & cmd)
 	return send_cmd_ack("E01");
 }
 
-bool GDBDebugServer::cmd_attached_to_what(gdb_cmd & cmd)
+bool gdb_thread::cmd_attached_to_what(gdb_cmd& cmd)
 {
 	//creating processes from client is not available yet
 	return send_cmd_ack("1");
 }
 
-bool GDBDebugServer::cmd_kill(gdb_cmd & cmd)
+bool gdb_thread::cmd_kill(gdb_cmd& cmd)
 {
 	Emu.Stop();
 	return true;
 }
 
-bool GDBDebugServer::cmd_continue_support(gdb_cmd & cmd)
+bool gdb_thread::cmd_continue_support(gdb_cmd& cmd)
 {
 	return send_cmd_ack("vCont;c;s;C;S");
 }
 
-bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
+bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 {
 	//todo: handle multiple actions and thread ids
 	this->from_breakpoint = false;
@@ -690,7 +714,7 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 
 static const u32 INVALID_PTR = 0xffffffff;
 
-bool GDBDebugServer::cmd_set_breakpoint(gdb_cmd & cmd)
+bool gdb_thread::cmd_set_breakpoint(gdb_cmd& cmd)
 {
 	char type = cmd.data[0];
 	//software breakpoint
@@ -712,7 +736,7 @@ bool GDBDebugServer::cmd_set_breakpoint(gdb_cmd & cmd)
 	return send_cmd_ack("");
 }
 
-bool GDBDebugServer::cmd_remove_breakpoint(gdb_cmd & cmd)
+bool gdb_thread::cmd_remove_breakpoint(gdb_cmd& cmd)
 {
 	char type = cmd.data[0];
 	//software breakpoint
@@ -733,20 +757,46 @@ bool GDBDebugServer::cmd_remove_breakpoint(gdb_cmd & cmd)
 
 #define PROCESS_CMD(cmds,handler) if (cmd.cmd == cmds) { if (!handler(cmd)) break; else continue; }
 
-void GDBDebugServer::on_task()
+gdb_thread::gdb_thread() noexcept
 {
-	sock_init();
+#ifdef _WIN32
+	WSADATA wsa_data;
+	WSAStartup(MAKEWORD(2, 2), &wsa_data);
+#endif
+}
 
+gdb_thread::~gdb_thread()
+{
+	if (server_socket != -1)
+	{
+		closesocket(server_socket);
+	}
+
+	if (client_socket != -1)
+	{
+		closesocket(client_socket);
+	}
+
+#ifdef _WIN32
+	WSACleanup();
+#endif
+}
+
+void gdb_thread::operator()()
+{
 	start_server();
 
-	while (!stop) {
+	while (!Emu.IsStopped())
+	{
 		sockaddr_in client;
 		socklen_t client_len = sizeof(client);
 		client_socket = accept(server_socket, (struct sockaddr *) &client, &client_len);
 
-		if (client_socket == INVALID_SOCKET) {
-			if (check_errno_again()) {
-				thread_ctrl::wait_for(50);
+		if (client_socket == -1)
+		{
+			if (check_errno_again())
+			{
+				thread_ctrl::wait_for(5000);
 				continue;
 			}
 
@@ -765,8 +815,10 @@ void GDBDebugServer::on_task()
 
 			gdb_cmd cmd;
 
-			while (!stop) {
-				if (!read_cmd(cmd)) {
+			while (!Emu.IsStopped())
+			{
+				if (!read_cmd(cmd))
+				{
 					break;
 				}
 				gdbDebugServer.trace("Command %s with data %s received", cmd.cmd.c_str(), cmd.data.c_str());
@@ -795,12 +847,14 @@ void GDBDebugServer::on_task()
 				}
 			}
 		}
-		catch (std::runtime_error& e)
+		catch (const std::runtime_error& e)
 		{
-			if (client_socket) {
+			if (client_socket != -1)
+			{
 				closesocket(client_socket);
-				client_socket = 0;
+				client_socket = -1;
 			}
+
 			gdbDebugServer.error(e.what());
 		}
 	}
@@ -808,40 +862,16 @@ void GDBDebugServer::on_task()
 
 #undef PROCESS_CMD
 
-void GDBDebugServer::on_exit()
+void gdb_thread::pause_from(cpu_thread* t)
 {
-	if (server_socket) {
-		closesocket(server_socket);
-	}
-	if (client_socket) {
-		closesocket(client_socket);
-	}
-	sock_quit();
-}
-
-std::string GDBDebugServer::get_name() const
-{
-	return "GDBDebugger";
-}
-
-void GDBDebugServer::on_stop()
-{
-	this->stop = true;
-	//just in case we are waiting for breakpoint
-	this->notify();
-	old_thread::on_stop();
-}
-
-void GDBDebugServer::pause_from(cpu_thread* t) {
-	if (paused) {
+	if (paused)
+	{
 		return;
 	}
 	paused = true;
 	pausedBy = t->id;
-	notify();
+	thread_ctrl::notify(*static_cast<gdb_server*>(this));
 }
-
-u32 g_gdb_debugger_id = 0;
 
 #ifndef _WIN32
 #undef sscanf_s
@@ -849,5 +879,3 @@ u32 g_gdb_debugger_id = 0;
 
 #undef HEX_U32
 #undef HEX_U64
-
-#endif

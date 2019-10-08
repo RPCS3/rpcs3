@@ -2,6 +2,7 @@
 	IdManager.cpp
 	System.cpp
 	VFS.cpp
+	GDB.cpp
 )
 
 target_link_libraries(rpcs3_emu
@@ -24,7 +25,6 @@ target_sources(rpcs3_emu PRIVATE
 	../../Utilities/Config.cpp
 	../../Utilities/dynamic_library.cpp
 	../../Utilities/File.cpp
-	../../Utilities/GDBDebugServer.cpp
 	../../Utilities/JIT.cpp
 	../../Utilities/Log.cpp
 	../../Utilities/LUrlParser.cpp

@@ -12,7 +12,6 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
 	endif()
 endif()
 
-option(WITH_GDB "WITH_GDB" OFF)
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
 option(WITH_LLVM "Enable usage of LLVM library" ON)
 option(BUILD_LLVM_SUBMODULE "Build LLVM from git submodule" ON)
@@ -27,10 +26,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/rpcs3/cmake_modules")
 
 set(CMAKE_CXX_STANDARD 17)
 include(CheckCXXCompilerFlag)
-
-if (WITH_GDB)
-	add_definitions(-DWITH_GDB_DEBUGGER)
-endif()
 
 if (NOT CMAKE_BUILD_TYPE)
 	message(STATUS "No build type selected, default to Release")

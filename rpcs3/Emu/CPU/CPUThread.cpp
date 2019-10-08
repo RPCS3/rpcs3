@@ -4,7 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/IdManager.h"
-#include "Utilities/GDBDebugServer.h"
+#include "Emu/GDB.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 
@@ -194,12 +194,10 @@ cpu_thread::cpu_thread(u32 id)
 
 bool cpu_thread::check_state() noexcept
 {
-#ifdef WITH_GDB_DEBUGGER
 	if (state & cpu_flag::dbg_pause)
 	{
-		fxm::get<GDBDebugServer>()->pause_from(this);
+		g_fxo->get<gdb_server>()->pause_from(this);
 	}
-#endif
 
 	bool cpu_sleep_called = false;
 	bool cpu_flag_memory = false;

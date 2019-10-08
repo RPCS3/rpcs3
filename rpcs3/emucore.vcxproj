@@ -80,9 +80,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\dynamic_library.cpp" />
-    <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
-      <PrecompiledHeader>Use</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -369,6 +366,7 @@
     <ClCompile Include="Emu\RSX\RSXThread.cpp" />
     <ClCompile Include="Emu\Memory\vm.cpp" />
     <ClCompile Include="Emu\System.cpp" />
+    <ClCompile Include="Emu\GDB.cpp" />
     <ClCompile Include="Loader\ELF.cpp" />
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\PUP.cpp" />
@@ -397,7 +395,6 @@
     <ClInclude Include="..\Utilities\date_time.h" />
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
-    <ClInclude Include="..\Utilities\GDBDebugServer.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
     <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\hash.h" />
@@ -618,6 +615,7 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
+    <ClInclude Include="Emu\GDB.h" />
     <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\PSF.h" />
     <ClInclude Include="Loader\PUP.h" />
