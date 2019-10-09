@@ -54,11 +54,11 @@ class gdb_thread
 	//choose thread, support ALL_THREADS and ANY_THREAD values, returns true if some thread was selected
 	bool select_thread(u64 id);
 	//returns register value as hex string by register id (in gdb), in case of wrong id returns empty string
-	static std::string get_reg(std::shared_ptr<ppu_thread> thread, u32 rid);
+	static std::string get_reg(ppu_thread* thread, u32 rid);
 	//sets register value to hex string by register id (in gdb), in case of wrong id returns false
-	static bool set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::string value);
+	static bool set_reg(ppu_thread* thread, u32 rid, std::string value);
 	//returns size of register with id rid in bytes, zero if invalid rid is provided
-	static u32 get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid);
+	static u32 get_reg_size(ppu_thread* thread, u32 rid);
 	//send reason of stop, returns false if sending response failed
 	bool send_reason();
 

@@ -362,7 +362,7 @@ bool gdb_thread::select_thread(u64 id)
 	return false;
 }
 
-std::string gdb_thread::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
+std::string gdb_thread::get_reg(ppu_thread* thread, u32 rid)
 {
 	std::string result;
 	//ids from gdb/features/rs6000/powerpc-64.c
@@ -393,7 +393,7 @@ std::string gdb_thread::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
 	}
 }
 
-bool gdb_thread::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::string value)
+bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
 {
 	switch (rid) {
 	case 64:
@@ -429,7 +429,7 @@ bool gdb_thread::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::strin
 	}
 }
 
-u32 gdb_thread::get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid)
+u32 gdb_thread::get_reg_size(ppu_thread* thread, u32 rid)
 {
 	switch (rid) {
 	case 66:
@@ -519,7 +519,7 @@ bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 	}
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
-		auto ppu = std::static_pointer_cast<ppu_thread>(th);
+		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		u32 rid = hex_to_u32(cmd.data);
 		std::string result = get_reg(ppu, rid);
 		if (!result.length()) {
@@ -539,7 +539,7 @@ bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 	}
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
-		auto ppu = std::static_pointer_cast<ppu_thread>(th);
+		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		size_t eq_pos = cmd.data.find('=');
 		if (eq_pos == std::string::npos) {
 			GDB.warning("Wrong write_register cmd data '%s'.", cmd.data);
@@ -614,7 +614,7 @@ bool gdb_thread::cmd_read_all_registers(gdb_cmd& cmd)
 
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
-		auto ppu = std::static_pointer_cast<ppu_thread>(th);
+		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		//68 64-bit registers, and 3 32-bit
 		result.reserve(68*16 + 3*8);
 		for (int i = 0; i < 71; ++i) {
@@ -631,7 +631,7 @@ bool gdb_thread::cmd_write_all_registers(gdb_cmd& cmd)
 	select_thread(general_ops_thread_id);
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
-		auto ppu = std::static_pointer_cast<ppu_thread>(th);
+		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		int ptr = 0;
 		for (int i = 0; i < 71; ++i) {
 			int sz = get_reg_size(ppu, i);
@@ -684,7 +684,7 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 	this->from_breakpoint = false;
 	if (cmd.data[1] == 'c' || cmd.data[1] == 's') {
 		select_thread(continue_ops_thread_id);
-		auto ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
+		auto ppu = std::static_pointer_cast<named_thread<ppu_thread>>(selected_thread.lock());
 		paused = false;
 		if (cmd.data[1] == 's') {
 			ppu->state += cpu_flag::dbg_step;
@@ -697,7 +697,7 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		if (Emu.IsPaused()) {
 			Emu.Resume();
 		} else {
-			ppu->notify();
+			thread_ctrl::notify(*ppu);
 		}
 		wait_with_interrupts();
 		//we are in all-stop mode
@@ -705,7 +705,7 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		select_thread(pausedBy);
 		// we have to remove dbg_pause from thread that paused execution, otherwise
 		// it will be paused forever (Emu.Resume only removes dbg_global_pause)
-		ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
+		ppu = std::static_pointer_cast<named_thread<ppu_thread>>(selected_thread.lock());
 		ppu->state -= cpu_flag::dbg_pause;
 		return send_reason();
 	}
