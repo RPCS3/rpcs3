@@ -117,8 +117,19 @@ namespace rsx
 		void semaphore_release(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync();
-			rsx->sync_point_request = true;
-			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+
+			const u32 offset = method_registers.semaphore_offset_406e();
+			const u32 ctxt = method_registers.semaphore_context_dma_406e();
+
+			// By avoiding doing this on flip's semaphore release
+			// We allow last gcm's registers reset to occur in case of a crash
+			const bool is_flip_sema = (offset == 0x10 && ctxt == CELL_GCM_CONTEXT_DMA_SEMAPHORE_R);
+			if (!is_flip_sema)
+			{
+				rsx->sync_point_request = true;
+			}
+
+			const u32 addr = get_address(offset, ctxt);
 
 			if (LIKELY(g_use_rtm))
 			{
