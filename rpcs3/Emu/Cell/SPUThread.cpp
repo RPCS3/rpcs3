@@ -40,6 +40,25 @@ static FORCE_INLINE bool cmp_rdata(const decltype(spu_thread::rdata)& lhs, const
 	return !(r._u64[0] | r._u64[1]);
 }
 
+static FORCE_INLINE bool cmp3_rdata(const decltype(spu_thread::rdata)& copy1, const decltype(spu_thread::rdata)& copy2, const decltype(spu_thread::rdata)& copy3)
+{
+	v128 a, b, c;
+
+	a = (copy1[0] ^ copy2[0]) | (copy2[0] ^ copy3[0]);
+	b = (copy1[1] ^ copy2[1]) | (copy2[1] ^ copy3[1]);
+	c = a | b;
+	a = (copy1[2] ^ copy2[2]) | (copy2[2] ^ copy3[2]);
+	b = (copy1[3] ^ copy2[3]) | (copy2[3] ^ copy3[3]);
+	c = c | a | b;
+	a = (copy1[4] ^ copy2[4]) | (copy2[4] ^ copy3[4]);
+	b = (copy1[5] ^ copy2[5]) | (copy2[5] ^ copy3[5]);
+	c = c | a | b;
+	a = (copy1[6] ^ copy2[6]) | (copy2[6] ^ copy3[6]);
+	b = (copy1[7] ^ copy2[7]) | (copy2[7] ^ copy3[7]);
+	c = c | a | b;
+	return !(c._u64[0] | c._u64[1]);
+}
+
 static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const decltype(spu_thread::rdata)& src)
 {
 	{
@@ -65,87 +84,6 @@ static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const declt
 		const v128 data1 = src[7];
 		dst[6] = data0;
 		dst[7] = data1;
-	}
-}
-
-u64 x_cnt = 0;		// DEBUG
-u64 x_success = 0;	// DEBUG
-u64 x_diff = 0;		// DEBUG
-u64 x_multi = 0;	// DEBUG
-u64 x_zero = 0;		// DEBUG
-u64 x_unknown = 0;	// DEBUG
-
-static FORCE_INLINE int cmpxchg_rdata(decltype(spu_thread::rdata)& dst, decltype(spu_thread::rdata)& cmp, const decltype(spu_thread::rdata)& with)
-{
-	int diffcnt = 0, pos, i, result;
-	bool ok, cres;
-	v128 *d,c,w;
-
-	if (x_cnt % 1000000 == 0)		// DEBUG
-	{					// DEBUG
-		LOG_ERROR(GENERAL,"cmpxchg(): cnt:%llu, success:%llu, zero:%llu, multi:%llu, diff:%llu, ???:%llu",x_cnt,x_success,x_zero,x_multi,x_diff,x_unknown);
-	}					// DEBUG
-	x_cnt++;				// DEBUG
-
-	for (i = 0; i < 8; i++)
-	{
-		if ((cmp[i]._u64[0] ^ with[i]._u64[0]) | (cmp[i]._u64[1] ^ with[i]._u64[1]))
-		{
-			diffcnt++;
-			pos = i;
-		}
-	};
-
-	if (diffcnt == 1) {
-		d = &dst[pos];
-		c = cmp[pos];
-		w = with[pos];
-
-		cres = cmp_rdata(dst,cmp);	// DEBUG
-
-		__asm__ __volatile__
-		(
-			"lock cmpxchg16b %1\n\t"
-			"setz %0"
-			: "=q" ( ok )
-			, "+m" ( *d )
-			, "+d" ( c._u64[1] )
-			, "+a" ( c._u64[0] )
-			: "c" ( w._u64[1] )
-			, "b" ( w._u64[0] )
-			: "cc", "memory"
-		);
-
-		if (ok)				// DEBUG
-		{				// DEBUG
-			if (cres)		// DEBUG
-			{			// DEBUG
-				x_success++;	// DEBUG
-			}			// DEBUG
-			else			// DEBUG
-			{			// DEBUG
-				x_unknown++;	// DEBUG
-			}			// DEBUG
-		}				// DEBUG
-		else				// DEBUG
-		{				// DEBUG
-			x_diff++;		// DEBUG
-		}				// DEBUG
-
-		return ok ? 1 : 0;
-	}
-	else
-	{
-		if (diffcnt)			// DEBUG
-		{				// DEBUG
-			x_multi++;		// DEBUG
-		}				// DEBUG
-		else				// DEBUG
-		{				// DEBUG
-			x_zero++;		// DEBUG
-		}				// DEBUG
-
-		return diffcnt ? -1 : 1;
 	}
 }
 
@@ -2025,14 +1963,17 @@ bool spu_thread::process_mfc_cmd()
 				auto& res = vm::reservation_lock(raddr, 128);
 				const u64 old_time = res.load() & -128;
 
-				if (rtime == old_time)
+				if (rtime != old_time)
 				{
-					result = cmpxchg_rdata(data, rdata, to_write);
+					res.release(old_time);
 				}
-
-				if (result == -1)
+				else if (cmp3_rdata(data, rdata, to_write))
 				{
-					result = 0;
+					result = 1;
+					res.release(old_time);
+				}
+				else
+				{
 					*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
 					// Full lock (heavyweight)
@@ -2044,9 +1985,8 @@ bool spu_thread::process_mfc_cmd()
 						mov_rdata(data, to_write);
 						result = 1;
 					}
+					res.release(old_time + (long long)(result << 7));
 				}
-
-				res.release(old_time + (long long)(result << 7));
 			}
 		}
 
