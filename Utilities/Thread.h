@@ -118,6 +118,11 @@ class thread_base
 	using native_entry = void*(*)(void* arg);
 #endif
 
+#ifdef __linux__
+	// Linux thread timer
+	int m_timer = -1;
+#endif
+
 	// Thread handle (platform-specific)
 	atomic_t<std::uintptr_t> m_thread{0};
 

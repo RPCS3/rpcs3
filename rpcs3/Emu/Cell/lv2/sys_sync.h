@@ -241,14 +241,6 @@ public:
 		// Now scale the result
 		usec = (std::min<u64>(usec, max_usec) * g_cfg.core.clocks_scale) / 100;
 
-#ifdef __linux__
-		// TODO: Confirm whether Apple or any BSD can benefit from this as well
-		constexpr u32 host_min_quantum = 50;
-#else
-		// Host scheduler quantum for windows (worst case)
-		// NOTE: On ps3 this function has very high accuracy
-		constexpr u32 host_min_quantum = 500;
-#endif
 		extern u64 get_system_time();
 
 		u64 passed = 0;
@@ -258,6 +250,14 @@ public:
 		while (usec >= passed)
 		{
 			remaining = usec - passed;
+#ifdef __linux__
+			// NOTE: Assumption that timer initialization has succeeded
+			u64 host_min_quantum = is_usleep && remaining <= 1000 ? 16 : 50;
+#else
+			// Host scheduler quantum for windows (worst case)
+			// NOTE: On ps3 this function has very high accuracy
+			constexpr u64 host_min_quantum = 500;
+#endif
 
 			if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
 			{

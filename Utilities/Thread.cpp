@@ -38,6 +38,9 @@
 #include <sys/resource.h>
 #include <time.h>
 #endif
+#ifdef __linux__
+#include <sys/timerfd.h>
+#endif
 
 #include "sync.h"
 #include "Log.h"
@@ -1719,6 +1722,14 @@ void thread_base::initialize(bool(*wait_cb)(const void*))
 #elif !defined(_WIN32)
 	pthread_setname_np(pthread_self(), m_name.get().substr(0, 15).c_str());
 #endif
+
+#ifdef __linux__
+	m_timer = timerfd_create(CLOCK_MONOTONIC, 0);
+	if (m_timer == -1)
+	{
+		LOG_ERROR(GENERAL, "Linux timer allocation failed, use wait_unlock() only");
+	}
+#endif
 }
 
 void thread_base::notify_abort() noexcept
@@ -1733,6 +1744,13 @@ bool thread_base::finalize(int) noexcept
 {
 	// Report pending errors
 	error_code::error_report(0, 0, 0, 0);
+
+#ifdef __linux__
+	if (m_timer != -1)
+	{
+		close(m_timer);
+	}
+#endif
 
 #ifdef _WIN32
 	ULONG64 cycles{};
@@ -1780,6 +1798,23 @@ void thread_base::finalize() noexcept
 void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
+
+#ifdef __linux__
+	if (!alert && _this->m_timer != -1 && usec > 0 && usec <= 1000)
+	{
+		struct itimerspec timeout;
+		u64 missed;
+		u64 nsec = usec * 1000ull;
+
+		timeout.it_value.tv_nsec = (nsec % 1000000000ull);
+		timeout.it_value.tv_sec = nsec / 1000000000ull;
+		timeout.it_interval.tv_sec = 0;
+		timeout.it_interval.tv_nsec = 0;
+		timerfd_settime(_this->m_timer, 0, &timeout, NULL);
+		read(_this->m_timer, &missed, sizeof(missed));
+		return;
+	}
+#endif
 
 	std::unique_lock lock(_this->m_mutex, std::defer_lock);
 
