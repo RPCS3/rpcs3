@@ -2,7 +2,7 @@
 
 #include "GDB.h"
 #include "Utilities/Log.h"
-#include <algorithm>
+#include "Utilities/StrUtil.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -14,16 +14,23 @@
 #ifdef _WIN32
 #include <WinSock2.h>
 #include <WS2tcpip.h>
+#include <afunix.h> // sockaddr_un
 #else
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/un.h> // sockaddr_un
 #endif
+
+#include <algorithm>
+#include <regex>
+#include <charconv>
 
 extern void ppu_set_breakpoint(u32 addr);
 extern void ppu_remove_breakpoint(u32 addr);
@@ -36,10 +43,22 @@ int closesocket(int s)
 	return close(s);
 }
 
+void set_nonblocking(int s)
+{
+	fcntl(s, F_SETFL, fcntl(s, F_GETFL) | O_NONBLOCK);
+}
+
 #define sscanf_s sscanf
 #define HEX_U32 "x"
 #define HEX_U64 "lx"
 #else
+
+void set_nonblocking(int s)
+{
+	u_long mode = 1;
+	ioctlsocket(s, FIONBIO, &mode);
+}
+
 #define HEX_U32 "lx"
 #define HEX_U64 "llx"
 #endif
@@ -103,46 +122,93 @@ u64 hex_to_u64(std::string val) {
 
 void gdb_thread::start_server()
 {
-	server_socket = socket(AF_INET, SOCK_STREAM, 0);
+	// IPv4 address:port in format 127.0.0.1:2345
+	static const std::regex ipv4_regex("^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})\\:([0-9]{1,5})$");
+
+	if (g_cfg.misc.gdb_server.get()[0] == '\0')
+	{
+		// Empty string or starts with null: GDB server disabled
+		GDB.notice("GDB Server is disabled.");
+		return;
+	}
+
+	// Try to detect socket type
+	std::smatch match;
+
+	if (std::regex_match(g_cfg.misc.gdb_server.get(), match, ipv4_regex))
+	{
+		struct addrinfo hints{};
+		struct addrinfo* info;
+		hints.ai_flags    = AI_PASSIVE;
+		hints.ai_socktype = SOCK_STREAM;
+
+		std::string bind_addr = match[1].str();
+		std::string bind_port = match[2].str();
+
+		if (getaddrinfo(bind_addr.c_str(), bind_port.c_str(), &hints, &info) == 0)
+		{
+			server_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+
+			if (server_socket == -1)
+			{
+				GDB.error("Error creating IP socket for '%s'.", g_cfg.misc.gdb_server.get());
+				freeaddrinfo(info);
+				return;
+			}
+
+			set_nonblocking(server_socket);
+
+			if (bind(server_socket, info->ai_addr, static_cast<int>(info->ai_addrlen)) != 0)
+			{
+				GDB.error("Failed to bind socket on '%s'.", g_cfg.misc.gdb_server.get());
+				freeaddrinfo(info);
+				return;
+			}
+
+			freeaddrinfo(info);
+
+			if (listen(server_socket, 1) != 0)
+			{
+				GDB.error("Failed to listen on '%s'.", g_cfg.misc.gdb_server.get());
+				return;
+			}
+
+			GDB.notice("Started listening on '%s'.", g_cfg.misc.gdb_server.get());
+			return;
+		}
+	}
+
+	// Fallback to UNIX socket
+	server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
 
 	if (server_socket == -1)
 	{
-		GDB.error("Error creating server socket.");
+		GDB.error("Failed to create Unix socket. Possibly unsupported.");
 		return;
 	}
 
-#ifdef WIN32
+	// Delete existing socket (TODO?)
+	fs::remove_file(g_cfg.misc.gdb_server.get());
+
+	set_nonblocking(server_socket);
+
+	sockaddr_un unix_saddr;
+	unix_saddr.sun_family = AF_UNIX;
+	strcpy_trunc(unix_saddr.sun_path, g_cfg.misc.gdb_server.get());
+
+	if (bind(server_socket, (struct sockaddr*) &unix_saddr, sizeof(unix_saddr)) != 0)
 	{
-		int mode = 1;
-		ioctlsocket(server_socket, FIONBIO, (u_long FAR *)&mode);
-	}
-#else
-	fcntl(server_socket, F_SETFL, fcntl(server_socket, F_GETFL) | O_NONBLOCK);
-#endif
-
-	int err;
-
-	sockaddr_in server_saddr;
-	server_saddr.sin_family = AF_INET;
-	int port = 2345;
-	server_saddr.sin_port = htons(port);
-	server_saddr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	err = bind(server_socket, (struct sockaddr *) &server_saddr, sizeof(server_saddr));
-	if (err == -1)
-	{
-		GDB.error("Error binding to port %d.", port);
+		GDB.error("Failed to bind Unix socket '%s'.", g_cfg.misc.gdb_server.get());
 		return;
 	}
 
-	err = listen(server_socket, 1);
-	if (err == -1)
+	if (listen(server_socket, 1) != 0)
 	{
-		GDB.error("Error listening on port %d.", port);
+		GDB.error("Failed to listen on Unix socket '%s'.", g_cfg.misc.gdb_server.get());
 		return;
 	}
 
-	GDB.notice("Started listening on port %d.", port);
+	GDB.notice("Started listening on Unix socket '%s'.", g_cfg.misc.gdb_server.get());
 }
 
 int gdb_thread::read(void* buf, int cnt)
@@ -786,7 +852,7 @@ void gdb_thread::operator()()
 {
 	start_server();
 
-	while (!Emu.IsStopped())
+	while (server_socket != -1 && !Emu.IsStopped())
 	{
 		sockaddr_in client;
 		socklen_t client_len = sizeof(client);
