@@ -1,4 +1,6 @@
 ﻿#include "stdafx.h"
+#include "sys_hid.h"
+
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUThread.h"
@@ -163,7 +165,7 @@ error_code sys_hid_manager_read(u32 handle, u32 pkg_id, vm::ptr<void> buf, u64 b
 		//auto data = vm::static_ptr_cast<u16[64]>(buf);
 		// todo: use handle and dont call cellpad here
 		vm::var<CellPadData> tmpData;
-		if ((cellPadGetData(0, tmpData) == CELL_OK) && tmpData->len > 0)
+		if ((cellPadGetData(0, +tmpData) == CELL_OK) && tmpData->len > 0)
 		{
 			u64 cpySize = std::min((u64)tmpData->len * 2, buf_size * 2);
 			memcpy(buf.get_ptr(), &tmpData->button, cpySize);
@@ -173,7 +175,7 @@ error_code sys_hid_manager_read(u32 handle, u32 pkg_id, vm::ptr<void> buf, u64 b
 	else if (pkg_id == 0x81) {
 		// cellPadGetDataExtra?
 		vm::var<CellPadData> tmpData;
-		cellPadGetData(0, tmpData);
+		cellPadGetData(0, +tmpData);
 		u64 cpySize = std::min((u64)tmpData->len * 2, buf_size);
 		memcpy(buf.get_ptr(), &tmpData->button, cpySize);
 		return not_an_error(cpySize / 2);

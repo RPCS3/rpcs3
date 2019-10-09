@@ -2,6 +2,10 @@
 
 #include "Emu/Memory/vm_ptr.h"
 
+#include "Emu/Memory/vm_ptr.h"
+#include "Emu/Memory/vm_var.h"
+#include "sys_sync.h"
+
 
 // set sensor mode? also getinfo?
 struct sys_hid_info_5

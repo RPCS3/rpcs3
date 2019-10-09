@@ -829,7 +829,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 			}
 		}
 
-		auto globalsymtab = fxm::get_always<GlobalSymbolTable>();
+		auto globalsymtab = g_fxo->get<GlobalSymbolTable>();
 
 		const auto& symbols = reinterpret_cast<const elf64_sym*>(elf.symtable.data());
 
@@ -1709,7 +1709,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	u32 numSymbols = elf.symtable.size() / 0x18;
 
 	if (numSymbols > 0) {
-		auto globalsymtab = fxm::get_always<GlobalSymbolTable>();
+		auto globalsymtab = g_fxo->get<GlobalSymbolTable>();
 		for (uint i = 0; i < elf.symtable.size(); i += sizeof(elf64_sym)) {
 			const auto* syminfo = reinterpret_cast<const elf64_sym*>(&elf.symtable[i]);
 
