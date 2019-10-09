@@ -20,6 +20,7 @@ namespace rsx
 	{
 		image_resource_type src;
 		flags32_t xform;
+		u8  level;
 		u16 src_x;
 		u16 src_y;
 		u16 dst_x;
@@ -233,6 +234,7 @@ namespace rsx
 				({
 					section.surface->get_surface(rsx::surface_access::read),
 					surface_transform::identity,
+					0,
 					rsx::apply_resolution_scale(src_x, true),
 					rsx::apply_resolution_scale(src_y, true),
 					rsx::apply_resolution_scale(dst_x, true),
@@ -292,6 +294,7 @@ namespace rsx
 					({
 						section->get_raw_texture(),
 						surface_transform::identity,
+						0,
 						(u16)std::get<0>(clipped).x,
 						(u16)std::get<0>(clipped).y,
 						rsx::apply_resolution_scale((u16)std::get<1>(clipped).x, true),
@@ -309,6 +312,7 @@ namespace rsx
 					({
 						section->get_raw_texture(),
 						surface_transform::identity,
+						0,
 						(u16)std::get<0>(clipped).x,
 						(u16)std::get<0>(clipped).y,
 						(u16)std::get<1>(clipped).x,
@@ -580,6 +584,75 @@ namespace rsx
 			gather_texture_slices(result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
 			result.simplify();
 			return result;
+		}
+
+		template<typename sampled_image_descriptor, typename copy_region_descriptor_type>
+		bool append_mipmap_level(
+			std::vector<copy_region_descriptor_type>& sections,   // Destination list
+			const sampled_image_descriptor& level,                // Descriptor for the image level being checked
+			const image_section_attributes_t& attr,               // Attributes of image level
+			u8 mipmap_level,                                      // Level index
+			bool apply_upscaling,                                 // Whether to upscale the results or not
+			const image_section_attributes_t& level0_attr)        // Attributes of the first mipmap level
+		{
+			if (level.image_handle)
+			{
+				copy_region_descriptor_type mip{};
+				mip.src = level.image_handle->image();
+				mip.xform = surface_transform::coordinate_transform;
+				mip.level = mipmap_level;
+				mip.dst_w = attr.width;
+				mip.dst_h = attr.height;
+
+				if (level.upload_context == rsx::texture_upload_context::framebuffer_storage)
+				{
+					mip.src_w = rsx::apply_resolution_scale(attr.width, true);
+					mip.src_h = rsx::apply_resolution_scale(attr.height, true);
+				}
+				else
+				{
+					mip.src_w = attr.width;
+					mip.src_h = attr.height;
+				}
+
+				sections.push_back(mip);
+			}
+			else
+			{
+
+				switch (level.external_subresource_desc.op)
+				{
+				case deferred_request_command::copy_image_dynamic:
+				case deferred_request_command::copy_image_static:
+				{
+					copy_region_descriptor_type mip{};
+					mip.src = level.external_subresource_desc.external_handle;
+					mip.xform = surface_transform::coordinate_transform;
+					mip.level = mipmap_level;
+					mip.src_w = level.external_subresource_desc.width;
+					mip.src_h = level.external_subresource_desc.height;
+					mip.dst_w = attr.width;
+					mip.dst_h = attr.height;
+					sections.push_back(mip);
+					break;
+				}
+				default:
+				{
+					// TODO
+					return false;
+				}
+				}
+			}
+
+			// Check for upscaling if requested
+			if (apply_upscaling)
+			{
+				auto& mip = sections.back();
+				mip.dst_w = rsx::apply_resolution_scale(mip.dst_w, true, level0_attr.width);
+				mip.dst_h = rsx::apply_resolution_scale(mip.dst_h, true, level0_attr.height);
+			}
+
+			return true;
 		}
 	};
 }

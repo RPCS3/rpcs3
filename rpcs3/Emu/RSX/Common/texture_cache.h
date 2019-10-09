@@ -316,6 +316,7 @@ namespace rsx
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_2d_mipmaps_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
 		virtual void prepare_for_dma_transfers(commandbuffer_type&) = 0;
@@ -1354,6 +1355,7 @@ namespace rsx
 					{
 						desc.external_handle,
 						surface_transform::coordinate_transform,
+						0,
 						0, (u16)(desc.slice_h * n),
 						0, 0, n,
 						desc.width, desc.height,
@@ -1379,6 +1381,7 @@ namespace rsx
 					{
 						desc.external_handle,
 						surface_transform::coordinate_transform,
+						0,
 						0, (u16)(desc.slice_h * n),
 						0, 0, n,
 						desc.width, desc.height,
@@ -1400,6 +1403,11 @@ namespace rsx
 				result = create_temporary_subresource_view(cmd, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height, desc.remap);
 				break;
 			}
+			case deferred_request_command::mipmap_gather:
+			{
+				result = generate_2d_mipmaps_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
+				break;
+			}
 			default:
 			{
 				//Throw
@@ -1407,7 +1415,7 @@ namespace rsx
 			}
 			}
 
-			if (result)
+			if (result && !desc.do_not_cache)
 			{
 				m_temporary_subresource_cache.insert({ desc.address,{ desc, result } });
 			}
@@ -1438,6 +1446,7 @@ namespace rsx
 			u32 encoded_remap,
 			const texture_channel_remap_t& remap,
 			bool is_compressed_format,
+			bool skip_texture_barriers,
 			const utils::address_range& memory_range,
 			rsx::texture_dimension_extended extended_dimension,
 			surface_store_type& m_rtts, Args&& ... extras)
@@ -1463,7 +1472,10 @@ namespace rsx
 						auto result = texture_cache_helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
 							cmd, texptr, attr, scale, extended_dimension, encoded_remap, remap, true, force_convert);
 
-						insert_texture_barrier(cmd, texptr);
+						if (!skip_texture_barriers)
+						{
+							insert_texture_barrier(cmd, texptr);
+						}
 						return result;
 					}
 				}
@@ -1645,7 +1657,8 @@ namespace rsx
 			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 			const auto extended_dimension = tex.get_extended_texture_dimension();
 
-			u32 tex_size = 0, required_surface_height, subsurface_count;
+			u32 tex_size = 0, required_surface_height;
+			u8 subsurface_count;
 			size2f scale{ 1.f, 1.f };
 
 			if (LIKELY(!is_swizzled))
@@ -1708,54 +1721,92 @@ namespace rsx
 			reader_lock lock(m_cache_mutex);
 
 			auto result = fast_texture_search(cmd, attributes, scale, tex.remap(), tex.decoded_remap(),
-				is_compressed_format, lookup_range, extended_dimension, m_rtts,
+				is_compressed_format, false, lookup_range, extended_dimension, m_rtts,
 				std::forward<Args>(extras)...);
 
 			if (result.validate())
 			{
-#if 0
-				if (subsurface_count <= 1 ||
-					(result.image_handle && result.upload_context == rsx::texture_upload_context::shader_read))
+				if (subsurface_count == 1)
 				{
-					// Full result exists
 					return result;
 				}
 
-				if (result.upload_context != rsx::texture_upload_context::blit_engine_dst &&
-					result.upload_context != rsx::texture_upload_context::framebuffer_storage)
+				switch (result.upload_context)
 				{
-					LOG_ERROR(RSX, "Unexpected surface context %d", (u32)result.upload_context);
+				case rsx::texture_upload_context::blit_engine_dst:
+				case rsx::texture_upload_context::framebuffer_storage:
+					break;
+				case rsx::texture_upload_context::shader_read:
+					if (!result.image_handle)
+						break;
+					// Conditional fallthrough
+				default:
 					return result;
 				}
 
-				// Traverse mipmap tree
-				auto scan_address = texaddr + (tex_pitch * tex_height);
-				auto scan_pitch = swizzled? (tex_pitch / 2) : tex_pitch;
-				auto scan_width = (tex_width / 2);
-				auto scan_height = (tex_height / 2);
+				// Traverse the mipmap tree
+				// Some guarantees here include:
+				// 1. Only 2D images will invoke this routine
+				// 2. The image has to have been generated on the GPU (fbo or blit target only)
 
-				std::vector<sampled_image_descriptor> sections;
-				sections.reserve(subsurface_count - 1);
+				std::vector<copy_region_descriptor> sections;
+				const bool use_upscaling = (result.upload_context == rsx::texture_upload_context::framebuffer_storage && g_cfg.video.resolution_scale_percent != 100);
 
-				for (u32 subsurface = 1; subsurface < subsurface_count; ++subsurface)
+				if (UNLIKELY(!texture_cache_helpers::append_mipmap_level(sections, result, attributes, 0, use_upscaling, attributes)))
 				{
-					const auto range = utils::address_range::start_length(scan_address, scan_pitch * scan_height);
+					// Abort if mip0 is not compatible
+					return result;
+				}
 
-					auto ret = fast_texture_search(cmd, scan_address, format, scan_width, scan_height, 1, scan_height,
-						scan_pitch, bpp, is_compressed_format, range, extended_dimension, m_rtts,
-						std::forward<Args>(extras)...);
+				auto attr2 = attributes;
+				sections.reserve(subsurface_count);
 
-					if (LIKELY(ret.validate()))
+				for (u8 subsurface = 1; subsurface < subsurface_count; ++subsurface)
+				{
+					attr2.address += (attr2.pitch * attr2.height);
+					attr2.width = std::max(attr2.width / 2, 1);
+					attr2.height = std::max(attr2.height / 2, 1);
+
+					if (is_swizzled)
 					{
-						sections.push_back(ret);
+						attr2.pitch = attr2.width * attr2.bpp;
 					}
-					else
+
+					const auto range = utils::address_range::start_length(attr2.address, attr2.pitch * attr2.height);
+					auto ret = fast_texture_search(cmd, attr2, scale, tex.remap(), tex.decoded_remap(),
+						false, true, range, extended_dimension, m_rtts, std::forward<Args>(extras)...);
+
+					if (!ret.validate() ||
+						!texture_cache_helpers::append_mipmap_level(sections, ret, attr2, subsurface, use_upscaling, attributes))
 					{
+						// Abort
 						break;
 					}
 				}
-#endif
-				return result;
+
+				if (UNLIKELY(sections.size() == 1))
+				{
+					return result;
+				}
+				else
+				{
+					// NOTE: Do not disable 'cyclic ref' since the texture_barrier may have already been issued!
+					result.image_handle = 0;
+					result.external_subresource_desc = { 0, deferred_request_command::mipmap_gather, attributes, {}, tex.decoded_remap() };
+
+					if (use_upscaling)
+					{
+						// Grab the correct image dimensions from the base mipmap level
+						const auto& mip0 = sections.front();
+						result.external_subresource_desc.width = mip0.dst_w;
+						result.external_subresource_desc.height = mip0.dst_h;
+					}
+
+					// Disable caching until the subresources store actual memory ranges!
+					result.external_subresource_desc.do_not_cache = true;
+					result.external_subresource_desc.sections_to_copy = std::move(sections);
+					return result;
+				}
 			}
 
 			// Do direct upload from CPU as the last resort
