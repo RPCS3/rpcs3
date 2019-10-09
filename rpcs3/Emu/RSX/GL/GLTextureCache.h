@@ -502,6 +502,7 @@ namespace gl
 				{{
 					src,
 					rsx::surface_transform::coordinate_transform,
+					0,
 					x, y, 0, 0, 0,
 					width, height, width, height
 				}};
@@ -620,7 +621,7 @@ namespace gl
 				if (src_w == slice.dst_w && src_h == slice.dst_h)
 				{
 					glCopyImageSubData(src_image->id(), GL_TEXTURE_2D, 0, src_x, src_y, 0,
-						dst_image->id(), (GLenum)dst_image->get_target(), 0, slice.dst_x, slice.dst_y, slice.dst_z, src_w, src_h, 1);
+						dst_image->id(), (GLenum)dst_image->get_target(), slice.level, slice.dst_x, slice.dst_y, slice.dst_z, src_w, src_h, 1);
 				}
 				else
 				{
@@ -630,10 +631,13 @@ namespace gl
 					const areai src_rect = { src_x, src_y, src_x + src_w, src_y + src_h };
 					const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
 
-					auto _dst = dst_image;
-					if (UNLIKELY(src_image->get_internal_format() != dst_image->get_internal_format()))
+					gl::texture* _dst;
+					if (src_image->get_internal_format() == dst_image->get_internal_format() && slice.level == 0)
 					{
-						verify(HERE), !typeless;
+						_dst = dst_image;
+					}
+					else
+					{
 						tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, (GLenum)slice.src->get_internal_format());
 						_dst = tmp.get();
 					}
@@ -645,7 +649,7 @@ namespace gl
 					{
 						// Data cast comes after scaling
 						glCopyImageSubData(tmp->id(), GL_TEXTURE_2D, 0, slice.dst_x, slice.dst_y, 0,
-							dst_image->id(), (GLenum)dst_image->get_target(), 0, slice.dst_x, slice.dst_y, slice.dst_z, slice.dst_w, slice.dst_h, 1);
+							dst_image->id(), (GLenum)dst_image->get_target(), slice.level, slice.dst_x, slice.dst_y, slice.dst_z, slice.dst_w, slice.dst_h, 1);
 					}
 				}
 			}
@@ -757,12 +761,33 @@ namespace gl
 			return result;
 		}
 
+		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
+			const rsx::texture_channel_remap_t& remap_vector) override
+		{
+			const auto _template = sections_to_copy.front().src;
+			const GLenum ifmt = (GLenum)_template->get_internal_format();
+			const u8 mipmaps = (u8)sections_to_copy.size();
+			const auto swizzle = _template->get_native_component_layout();
+
+			auto image_ptr = new gl::viewable_image(GL_TEXTURE_2D, width, height, 1, mipmaps, ifmt);
+			image_ptr->set_native_component_layout(swizzle);
+
+			copy_transfer_regions_impl(cmd, image_ptr, sections_to_copy);
+
+			auto view = image_ptr->get_view(get_remap_encoding(remap_vector), remap_vector);
+
+			std::unique_ptr<gl::texture> dst_image(image_ptr);
+			m_temporary_surfaces.emplace_back(dst_image);
+			return view;
+		}
+
 		void update_image_contents(gl::command_context& cmd, gl::texture_view* dst, gl::texture* src, u16 width, u16 height) override
 		{
 			std::vector<copy_region_descriptor> region =
 			{{
 				src,
 				rsx::surface_transform::identity,
+				0,
 				0, 0, 0, 0, 0,
 				width, height, width, height
 			}};

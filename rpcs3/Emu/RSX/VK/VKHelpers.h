@@ -1188,6 +1188,11 @@ private:
 			return info.extent.depth;
 		}
 
+		u32 mipmaps() const
+		{
+			return info.mipLevels;
+		}
+
 		u8 samples() const
 		{
 			return u8(info.samples);
