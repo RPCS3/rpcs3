@@ -354,7 +354,8 @@ bool gdb_thread::select_thread(u64 id)
 	{
 		return (id == ALL_THREADS) || (id == ANY_THREAD) || (cpu.id == id);
 	};
-	if (auto ppu = idm::select<ppu_thread>(on_select)) {
+	if (auto ppu = idm::select<named_thread<ppu_thread>>(on_select))
+	{
 		selected_thread = ppu.ptr;
 		return true;
 	}
@@ -497,9 +498,8 @@ bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
 		}
 		result += u64_to_padded_hex(static_cast<u64>(cpu.id));
 	};
-	idm::select<ppu_thread>(on_select);
-	//idm::select<RawSPUThread>(on_select);
-	//idm::select<SPUThread>(on_select);
+	idm::select<named_thread<ppu_thread>>(on_select);
+	//idm::select<named_thread<spu_thread>>(on_select);
 
 	//todo: this may exceed max command length
 	result = "m" + result + "l";
