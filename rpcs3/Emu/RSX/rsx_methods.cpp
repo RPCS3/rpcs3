@@ -713,6 +713,19 @@ namespace rsx
 			}
 		}
 
+		void check_index_array_dma(thread* rsx, u32 reg, u32 arg)
+		{
+			// Check if either location or index type are invalid
+			if (arg & ~(CELL_GCM_LOCATION_MAIN | (CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16 << 4)))
+			{
+				// Ignore invalid value, recover
+				method_registers.registers[reg] = method_registers.register_previous_value;
+				rsx->invalid_command_interrupt_raised = true;
+
+				LOG_ERROR(RSX, "Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
+			}
+		}
+
 		template<u32 index>
 		struct set_texture_dirty_bit
 		{
@@ -2911,6 +2924,7 @@ namespace rsx
 		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
+		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

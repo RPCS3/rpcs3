@@ -448,6 +448,13 @@ enum
 	CELL_GCM_SYSTEM_MODE_IOMAP_512MB = 1,
 };
 
+enum
+{
+	// Index Array Type
+	CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32	= 0,
+	CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16	= 1,
+};
+
 // GCM Texture
 enum
 {
