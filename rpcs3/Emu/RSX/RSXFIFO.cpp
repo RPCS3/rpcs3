@@ -87,6 +87,11 @@ namespace rsx
 			return false;
 		}
 
+		void FIFO_control::abort()
+		{
+			m_remaining_commands = 0;
+		}
+
 		void FIFO_control::read(register_pair& data)
 		{
 			const u32 put = read_put();
@@ -392,11 +397,8 @@ namespace rsx
 			}
 			case FIFO::FIFO_ERROR:
 			{
-				// Error. Should reset the queue
 				LOG_ERROR(RSX, "FIFO error: possible desync event");
-				fifo_ctrl->set_get(restore_point);
-				fifo_ret_addr = saved_fifo_ret;
-				std::this_thread::sleep_for(1ms);
+				recover_fifo();
 				return;
 			}
 			}
@@ -563,6 +565,13 @@ namespace rsx
 			if (auto method = methods[reg])
 			{
 				method(this, reg, value);
+
+				if (invalid_command_interrupt_raised)
+				{
+					fifo_ctrl->abort();
+					recover_fifo();
+					return;
+				}
 			}
 		}
 		while (fifo_ctrl->read_unsafe(command));

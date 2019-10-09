@@ -2340,6 +2340,15 @@ namespace rsx
 		fifo_ctrl->sync_get();
 	}
 
+	void thread::recover_fifo()
+	{
+		// Error. Should reset the queue
+		fifo_ctrl->set_get(restore_point);
+		fifo_ret_addr = saved_fifo_ret;
+		std::this_thread::sleep_for(1ms);
+		invalid_command_interrupt_raised = false;
+	}
+
 	void thread::read_barrier(u32 memory_address, u32 memory_range)
 	{
 		zcull_ctrl->read_barrier(this, memory_address, memory_range);

@@ -519,6 +519,7 @@ namespace rsx
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
 		void flush_fifo();
+		void recover_fifo();
 
 		// Performance approximation counters
 		struct
