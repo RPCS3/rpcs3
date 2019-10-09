@@ -120,7 +120,7 @@ class thread_base
 
 #ifdef __linux__
 	// Linux thread timer
-	int m_timer;
+	int m_timer = -1;
 #endif
 
 	// Thread handle (platform-specific)

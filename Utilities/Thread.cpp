@@ -1725,11 +1725,7 @@ void thread_base::initialize(bool(*wait_cb)(const void*))
 
 #ifdef __linux__
 	m_timer = timerfd_create(CLOCK_MONOTONIC, 0);
-	if (m_timer != -1)
-	{
-		LOG_SUCCESS(GENERAL, "allocated high precision Linux timer");
-	}
-	else
+	if (m_timer == -1)
 	{
 		LOG_ERROR(GENERAL, "Linux timer allocation failed, use wait_unlock() only");
 	}
