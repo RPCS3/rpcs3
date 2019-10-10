@@ -68,87 +68,6 @@ static FORCE_INLINE void mov_rdata(decltype(spu_thread::rdata)& dst, const declt
 	}
 }
 
-u64 x_cnt = 0;		// DEBUG
-u64 x_success = 0;	// DEBUG
-u64 x_diff = 0;		// DEBUG
-u64 x_multi = 0;	// DEBUG
-u64 x_zero = 0;		// DEBUG
-u64 x_unknown = 0;	// DEBUG
-
-static FORCE_INLINE int cmpxchg_rdata(decltype(spu_thread::rdata)& dst, decltype(spu_thread::rdata)& cmp, const decltype(spu_thread::rdata)& with)
-{
-	int diffcnt = 0, pos, i, result;
-	bool ok, cres;
-	v128 *d,c,w;
-
-	if (x_cnt % 1000000 == 0)		// DEBUG
-	{					// DEBUG
-		LOG_ERROR(GENERAL,"cmpxchg(): cnt:%llu, success:%llu, zero:%llu, multi:%llu, diff:%llu, ???:%llu",x_cnt,x_success,x_zero,x_multi,x_diff,x_unknown);
-	}					// DEBUG
-	x_cnt++;				// DEBUG
-
-	for (i = 0; i < 8; i++)
-	{
-		if ((cmp[i]._u64[0] ^ with[i]._u64[0]) | (cmp[i]._u64[1] ^ with[i]._u64[1]))
-		{
-			diffcnt++;
-			pos = i;
-		}
-	};
-
-	if (diffcnt == 1) {
-		d = &dst[pos];
-		c = cmp[pos];
-		w = with[pos];
-
-		cres = cmp_rdata(dst,cmp);	// DEBUG
-
-		__asm__ __volatile__
-		(
-			"lock cmpxchg16b %1\n\t"
-			"setz %0"
-			: "=q" ( ok )
-			, "+m" ( *d )
-			, "+d" ( c._u64[1] )
-			, "+a" ( c._u64[0] )
-			: "c" ( w._u64[1] )
-			, "b" ( w._u64[0] )
-			: "cc", "memory"
-		);
-
-		if (ok)				// DEBUG
-		{				// DEBUG
-			if (cres)		// DEBUG
-			{			// DEBUG
-				x_success++;	// DEBUG
-			}			// DEBUG
-			else			// DEBUG
-			{			// DEBUG
-				x_unknown++;	// DEBUG
-			}			// DEBUG
-		}				// DEBUG
-		else				// DEBUG
-		{				// DEBUG
-			x_diff++;		// DEBUG
-		}				// DEBUG
-
-		return ok ? 1 : 0;
-	}
-	else
-	{
-		if (diffcnt)			// DEBUG
-		{				// DEBUG
-			x_multi++;		// DEBUG
-		}				// DEBUG
-		else				// DEBUG
-		{				// DEBUG
-			x_zero++;		// DEBUG
-		}				// DEBUG
-
-		return diffcnt ? -1 : 1;
-	}
-}
-
 extern u64 get_timebased_time();
 extern u64 get_system_time();
 
@@ -2020,19 +1939,13 @@ bool spu_thread::process_mfc_cmd()
 					}
 				}
 			}
-			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rtime == (vm::reservation_acquire(raddr, 128) & -128))
+			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rtime == (vm::reservation_acquire(raddr, 128) & -128) && cmp_rdata(rdata, data))
 			{
 				auto& res = vm::reservation_lock(raddr, 128);
 				const u64 old_time = res.load() & -128;
 
 				if (rtime == old_time)
 				{
-					result = cmpxchg_rdata(data, rdata, to_write);
-				}
-
-				if (result == -1)
-				{
-					result = 0;
 					*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
 
 					// Full lock (heavyweight)
@@ -2042,11 +1955,18 @@ bool spu_thread::process_mfc_cmd()
 					if (cmp_rdata(rdata, data))
 					{
 						mov_rdata(data, to_write);
+						res.release(old_time + 128);
 						result = 1;
 					}
+					else
+					{
+						res.release(old_time);
+					}
 				}
-
-				res.release(old_time + (long long)(result << 7));
+				else
+				{
+					res.release(old_time);
+				}
 			}
 		}
 
