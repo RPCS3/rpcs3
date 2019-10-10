@@ -1429,7 +1429,8 @@ namespace rsx
 		{
 			for (auto It = m_temporary_subresource_cache.begin(); It != m_temporary_subresource_cache.end();)
 			{
-				if (range.overlaps(It->second.cache_range))
+				const auto& desc = It->second.first;
+				if (range.overlaps(desc.cache_range))
 				{
 					It = m_temporary_subresource_cache.erase(It);
 				}
@@ -1765,7 +1766,7 @@ namespace rsx
 				if (UNLIKELY(!result.image_handle))
 				{
 					// Deferred reconstruct
-					result.external_subresource_range.cache_range = lookup_range;
+					result.external_subresource_desc.cache_range = lookup_range;
 				}
 
 				if (subsurface_count == 1)
@@ -1849,7 +1850,7 @@ namespace rsx
 					}
 
 					const u32 cache_end = attr2.address + (attr2.pitch * attr2.height);
-					result.external_subresource_desc.cache_range = utils::address_range::start_end(attributes.address, end);
+					result.external_subresource_desc.cache_range = utils::address_range::start_end(attributes.address, cache_end);
 
 					result.external_subresource_desc.sections_to_copy = std::move(sections);
 					return result;
