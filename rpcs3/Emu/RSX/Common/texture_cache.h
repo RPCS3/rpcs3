@@ -141,6 +141,8 @@ namespace rsx
 			deferred_request_command op = deferred_request_command::nop;
 			u16 x = 0;
 			u16 y = 0;
+
+			utils::address_range cache_range;
 			bool do_not_cache = false;
 
 			deferred_subresource() = default;
@@ -1427,7 +1429,7 @@ namespace rsx
 		{
 			for (auto It = m_temporary_subresource_cache.begin(); It != m_temporary_subresource_cache.end();)
 			{
-				if (range.overlaps(It->first))
+				if (range.overlaps(It->second.cache_range))
 				{
 					It = m_temporary_subresource_cache.erase(It);
 				}
@@ -1760,6 +1762,12 @@ namespace rsx
 
 			if (result.validate())
 			{
+				if (UNLIKELY(!result.image_handle))
+				{
+					// Deferred reconstruct
+					result.external_subresource_range.cache_range = lookup_range;
+				}
+
 				if (subsurface_count == 1)
 				{
 					return result;
@@ -1840,8 +1848,9 @@ namespace rsx
 						result.external_subresource_desc.height = mip0.dst_h;
 					}
 
-					// Disable caching until the subresources store actual memory ranges!
-					result.external_subresource_desc.do_not_cache = true;
+					const u32 cache_end = attr2.address + (attr2.pitch * attr2.height);
+					result.external_subresource_desc.cache_range = utils::address_range::start_end(attributes.address, end);
+
 					result.external_subresource_desc.sections_to_copy = std::move(sections);
 					return result;
 				}
