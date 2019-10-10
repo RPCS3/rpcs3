@@ -1943,8 +1943,8 @@ bool spu_thread::process_mfc_cmd()
 			{
 				if (cmp_rdata(rdata, to_write))
 				{
-					// No changes, just unlink data
-					result = 1;
+					// Pseudo write back: Check memory change without lock
+					result = cmp_rdata(rdata, data) && vm::reservation_acquire(raddr, 128).compare_and_swap_test(rtime, rtime + 128);
 				}
 				else
 				{
