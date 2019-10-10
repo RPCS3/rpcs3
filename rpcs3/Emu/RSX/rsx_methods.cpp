@@ -45,6 +45,12 @@ namespace rsx
 		rsx->invalid_command_interrupt_raised = true;
 	}
 
+	void trace_method(thread* rsx, u32 _reg, u32 arg)
+	{
+		// For unknown yet valid methods
+		LOG_TRACE(RSX, "RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+	}
+
 	template<typename Type> struct vertex_data_type_from_element_type;
 	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
 	template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
@@ -2798,7 +2804,11 @@ namespace rsx
 		bind_array<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr>();
 		bind_array<NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr>();
-		bind_array<(0xac00 >> 2), 1, 16, nullptr>();  // Unknown texture control register
+
+		// Unknown (NV4097?)
+		bind<(0x171c >> 2), trace_method>();
+		bind_array<(0xac00 >> 2), 1, 16, trace_method>(); // Unknown texture control register
+		bind_array<(0xac40 >> 2), 1, 16, trace_method>();
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
