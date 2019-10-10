@@ -1445,13 +1445,12 @@ namespace rsx
 			const size2f& scale,
 			u32 encoded_remap,
 			const texture_channel_remap_t& remap,
-			bool is_compressed_format,
-			bool skip_texture_barriers,
+			const texture_cache_search_options& options,
 			const utils::address_range& memory_range,
 			rsx::texture_dimension_extended extended_dimension,
 			surface_store_type& m_rtts, Args&& ... extras)
 		{
-			if (LIKELY(is_compressed_format))
+			if (LIKELY(options.is_compressed_format))
 			{
 				// Most mesh textures are stored as compressed to make the most of the limited memory
 				if (auto cached_texture = find_texture_from_dimensions(attr.address, attr.gcm_format, attr.width, attr.height, attr.depth))
@@ -1472,7 +1471,7 @@ namespace rsx
 						auto result = texture_cache_helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
 							cmd, texptr, attr, scale, extended_dimension, encoded_remap, remap, true, force_convert);
 
-						if (!skip_texture_barriers)
+						if (!options.skip_texture_barriers)
 						{
 							insert_texture_barrier(cmd, texptr);
 						}
@@ -1480,9 +1479,46 @@ namespace rsx
 					}
 				}
 
+				std::vector<typename surface_store_type::surface_overlap_info> overlapping_fbos;
+				std::vector<section_storage_type*> overlapping_locals;
+
+				auto fast_fbo_check = [&]() -> sampled_image_descriptor
+				{
+					const auto& last = overlapping_fbos.back();
+					if (last.src_area.x == 0 && last.src_area.y == 0 && !last.is_clipped)
+					{
+						const bool force_convert = !render_target_format_is_compatible(last.surface, attr.gcm_format);
+
+						return texture_cache_helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
+							cmd, last.surface, attr, scale, extended_dimension, encoded_remap, remap, false, force_convert);
+					}
+
+					return {};
+				};
+
+				// Check surface cache early if the option is enabled
+				if (options.prefer_surface_cache)
+				{
+					// TODO: Should scan for block_height aka required_surface_height not simply attr.height
+					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, attr.height, attr.pitch, attr.bpp, rsx::surface_access::read);
+
+					if (!overlapping_fbos.empty())
+					{
+						if (auto result = fast_fbo_check(); result.validate())
+						{
+							return result;
+						}
+
+						if (options.skip_texture_merge)
+						{
+							overlapping_fbos.clear();
+						}
+					}
+				}
+
 				// Check shader_read storage. In a given scene, reads from local memory far outnumber reads from the surface cache
 				const u32 lookup_mask = rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::blit_engine_src;
-				auto overlapping_locals = find_texture_from_range<true>(memory_range, attr.height > 1 ? attr.pitch : 0, lookup_mask);
+				overlapping_locals = find_texture_from_range<true>(memory_range, attr.height > 1 ? attr.pitch : 0, lookup_mask & options.lookup_mask);
 
 				// Search for exact match if possible
 				for (auto& cached_texture : overlapping_locals)
@@ -1506,8 +1542,12 @@ namespace rsx
 					);
 				}
 
-				// TODO: Should scan for block_height aka required_surface_height not simply attr.height
-				const auto overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, attr.height, attr.pitch, attr.bpp, rsx::surface_access::read);
+				if (!options.prefer_surface_cache)
+				{
+					// Now check for surface cache hits
+					// TODO: Should scan for block_height aka required_surface_height not simply attr.height
+					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, attr.height, attr.pitch, attr.bpp, rsx::surface_access::read);
+				}
 
 				if (!overlapping_fbos.empty() || !overlapping_locals.empty())
 				{
@@ -1528,13 +1568,12 @@ namespace rsx
 					if (_pool == 0)
 					{
 						// Surface cache data is newer, check if this thing fits our search parameters
-						const auto& last = overlapping_fbos.back();
-						if (last.src_area.x == 0 && last.src_area.y == 0 && !last.is_clipped)
+						if (!options.prefer_surface_cache)
 						{
-							const bool force_convert = !render_target_format_is_compatible(last.surface, attr.gcm_format);
-
-							return texture_cache_helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
-								cmd, last.surface, attr, scale, extended_dimension, encoded_remap, remap, false, force_convert);
+							if (auto result = fast_fbo_check(); result.validate())
+							{
+								return result;
+							}
 						}
 					}
 					else if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
@@ -1545,56 +1584,44 @@ namespace rsx
 						if (last->get_section_base() == attr.address &&
 							normalized_width >= attr.width && last->get_height() >= attr.height)
 						{
-							bool is_depth = last->is_depth_texture();
 							u32  gcm_format = attr.gcm_format;
+							const bool gcm_format_is_depth = texture_cache_helpers::is_gcm_depth_format(attr.gcm_format);
 
-							if (const auto gcm_format_is_depth = texture_cache_helpers::is_gcm_depth_format(attr.gcm_format);
-								is_depth != gcm_format_is_depth)
+							if (gcm_format_is_depth && !last->is_depth_texture())
 							{
-								// Conflict, resolve
-								if (gcm_format_is_depth)
+								// Request for a depth format, but only a color format exists
+								const auto actual_format = last->get_gcm_format();
+								bool  resolved = false;
+
+								switch (attr.gcm_format)
 								{
-									is_depth = true;
+								case CELL_GCM_TEXTURE_A8R8G8B8:
+								case CELL_GCM_TEXTURE_D8R8G8B8:
+								{
+									// Compatible with D24S8_UINT
+									if (actual_format == CELL_GCM_TEXTURE_DEPTH24_D8)
+									{
+										gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
+										resolved = true;
+									}
+									break;
 								}
-								else
+								case CELL_GCM_TEXTURE_X16:
 								{
-									const auto actual_format = last->get_gcm_format();
-									bool  resolved = false;
+									// Compatible with DEPTH16_UNORM
+									if (actual_format == CELL_GCM_TEXTURE_DEPTH16)
+									{
+										gcm_format = CELL_GCM_TEXTURE_DEPTH16;
+										resolved = true;
+									}
+									break;
+								}
+								}
 
-									switch (attr.gcm_format)
-									{
-									case CELL_GCM_TEXTURE_A8R8G8B8:
-									case CELL_GCM_TEXTURE_D8R8G8B8:
-									{
-										// Compatible with D24S8_UINT
-										if (actual_format == CELL_GCM_TEXTURE_DEPTH24_D8)
-										{
-											gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
-											resolved = true;
-											is_depth = true;
-										}
-										break;
-									}
-									case CELL_GCM_TEXTURE_X16:
-									{
-										// Compatible with DEPTH16_UNORM
-										if (actual_format == CELL_GCM_TEXTURE_DEPTH16)
-										{
-											gcm_format = CELL_GCM_TEXTURE_DEPTH16;
-											resolved = true;
-											is_depth = true;
-										}
-										break;
-									}
-									}
-
-									if (!resolved)
-									{
-										LOG_ERROR(RSX, "Reading texture with gcm format 0x%x as unexpected cast with format 0x%x",
-											actual_format, attr.gcm_format);
-
-										is_depth = gcm_format_is_depth;
-									}
+								if (!resolved)
+								{
+									LOG_ERROR(RSX, "Reading texture with gcm format 0x%x as unexpected cast with format 0x%x",
+										actual_format, attr.gcm_format);
 								}
 							}
 
@@ -1604,6 +1631,11 @@ namespace rsx
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, new_attr, {},
 									last->get_context(), last->get_format_type(), scale, extended_dimension, remap };
 						}
+					}
+
+					if (options.skip_texture_merge)
+					{
+						return {};
 					}
 
 					auto result = texture_cache_helpers::merge_cache_resources<sampled_image_descriptor>(
@@ -1646,16 +1678,18 @@ namespace rsx
 		sampled_image_descriptor upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
 		{
 			image_section_attributes_t attributes{};
+			texture_cache_search_options options{};
 			attributes.address = rsx::get_address(tex.offset(), tex.location());
 			attributes.gcm_format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			attributes.bpp = get_format_block_size_in_bytes(attributes.gcm_format);
 			attributes.width = tex.width();
 			attributes.height = tex.height();
 
-			const bool is_compressed_format = texture_cache_helpers::is_compressed_gcm_format(attributes.gcm_format);
 			const bool is_unnormalized = !!(tex.format() & CELL_GCM_TEXTURE_UN);
 			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 			const auto extended_dimension = tex.get_extended_texture_dimension();
+
+			options.is_compressed_format = texture_cache_helpers::is_compressed_gcm_format(attributes.gcm_format);
 
 			u32 tex_size = 0, required_surface_height;
 			u8 subsurface_count;
@@ -1685,7 +1719,7 @@ namespace rsx
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				attributes.depth = 1;
-				subsurface_count = is_compressed_format? 1 : tex.get_exact_mipmap_count();
+				subsurface_count = options.is_compressed_format? 1 : tex.get_exact_mipmap_count();
 				attributes.slice_h = required_surface_height = attributes.height;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
@@ -1721,7 +1755,7 @@ namespace rsx
 			reader_lock lock(m_cache_mutex);
 
 			auto result = fast_texture_search(cmd, attributes, scale, tex.remap(), tex.decoded_remap(),
-				is_compressed_format, false, lookup_range, extended_dimension, m_rtts,
+				options, lookup_range, extended_dimension, m_rtts,
 				std::forward<Args>(extras)...);
 
 			if (result.validate())
@@ -1761,6 +1795,10 @@ namespace rsx
 				auto attr2 = attributes;
 				sections.reserve(subsurface_count);
 
+				options.skip_texture_merge = true;
+				options.skip_texture_barriers = true;
+				options.prefer_surface_cache = (result.upload_context == rsx::texture_upload_context::framebuffer_storage);
+
 				for (u8 subsurface = 1; subsurface < subsurface_count; ++subsurface)
 				{
 					attr2.address += (attr2.pitch * attr2.height);
@@ -1774,7 +1812,7 @@ namespace rsx
 
 					const auto range = utils::address_range::start_length(attr2.address, attr2.pitch * attr2.height);
 					auto ret = fast_texture_search(cmd, attr2, scale, tex.remap(), tex.decoded_remap(),
-						false, true, range, extended_dimension, m_rtts, std::forward<Args>(extras)...);
+						options, range, extended_dimension, m_rtts, std::forward<Args>(extras)...);
 
 					if (!ret.validate() ||
 						!texture_cache_helpers::append_mipmap_level(sections, ret, attr2, subsurface, use_upscaling, attributes))

@@ -74,6 +74,15 @@ namespace rsx
 		}
 	};
 
+	struct texture_cache_search_options
+	{
+		u8 lookup_mask = 0xff;
+		bool is_compressed_format = false;
+		bool skip_texture_barriers = false;
+		bool skip_texture_merge = false;
+		bool prefer_surface_cache = false;
+	};
+
 	namespace texture_cache_helpers
 	{
 		static inline bool is_gcm_depth_format(u32 format)
