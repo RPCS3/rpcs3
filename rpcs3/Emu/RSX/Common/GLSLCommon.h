@@ -555,22 +555,14 @@ namespace glsl
 
 		if (props.emulate_coverage_tests)
 		{
-			// NOTES:
-			// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
-			// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
-			// Helps to avoid A2C tested foliage disappearing in the distance
-			// TODO: Fix dithering when mipmap gather is finished to remove muddy appearance. Alpha boost is only present to hide far LOD issues in titles like RDR
+			// Purely stochastic
 			OS <<
-			"bool coverage_test_passes(/*inout*/const in vec4 _sample, const in uint control)\n"
+			"bool coverage_test_passes(const in vec4 _sample, const in uint control)\n"
 			"{\n"
 			"	if ((control & 0x1) == 0) return false;\n"
 			"\n"
-			"	float samples = float(control & 0x6) * 0.5f + 1.f;\n"
-			"	float hash    = _saturate(_rand(gl_FragCoord) + 0.5f) * 0.9f;\n"
-			"	float epsilon = hash / samples;\n"
-			"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"
-			"	//_sample.a     = min(_sample.a, alpha);\n" // Cannot blend A2C samples naively as they are order independent! Causes background bleeding
-			"	return (alpha > 0.f);\n"
+			"	float random  = _rand(gl_FragCoord);\n"
+			"	return (_sample.a > random);\n"
 			"}\n\n";
 		}
 
