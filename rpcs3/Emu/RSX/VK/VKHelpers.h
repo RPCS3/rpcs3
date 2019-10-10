@@ -2511,8 +2511,15 @@ public:
 			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
 			VkInstance instance;
-			if (vkCreateInstance(&instance_info, nullptr, &instance) != VK_SUCCESS)
+			VkResult result = vkCreateInstance(&instance_info, nullptr, &instance);
+			if (result == VK_ERROR_LAYER_NOT_PRESENT)
+			{
+				LOG_FATAL(RSX,"Could not initialize VK_LAYER_KHRONOS_validation layer");
+			}
+			if (result != VK_SUCCESS)
+			{
 				return 0;
+			}
 
 			m_vk_instances.push_back(instance);
 			return (u32)m_vk_instances.size();
