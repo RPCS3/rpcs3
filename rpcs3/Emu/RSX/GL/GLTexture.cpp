@@ -7,7 +7,7 @@
 
 namespace gl
 {
-	static buffer g_typeless_transfer_buffer;
+	buffer g_typeless_transfer_buffer;
 
 	GLenum get_target(rsx::texture_dimension_extended type)
 	{
@@ -775,10 +775,10 @@ namespace gl
 		}
 	}
 
-	void copy_typeless(texture * dst, const texture * src)
+	void copy_typeless(texture * dst, const texture * src, const coord3u& dst_region, const coord3u& src_region)
 	{
-		GLsizeiptr src_mem = src->pitch() * src->height();
-		GLsizeiptr dst_mem = dst->pitch() * dst->height();
+		const u32 src_mem = src->pitch() * src_region.height;
+		const u32 dst_mem = dst->pitch() * dst_region.height;
 
 		auto max_mem = std::max(src_mem, dst_mem);
 		if (!g_typeless_transfer_buffer || max_mem > g_typeless_transfer_buffer.size())
@@ -797,13 +797,13 @@ namespace gl
 		if (LIKELY(caps.ARB_compute_shader_supported))
 		{
 			// Raw copy
-			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type);
+			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, src_region, {});
 		}
 		else
 		{
 			pixel_pack_settings pack_settings{};
 			pack_settings.swap_bytes(pack_info.swap_bytes);
-			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, pack_settings);
+			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, src_region, pack_settings);
 		}
 
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
@@ -850,7 +850,14 @@ namespace gl
 		}
 
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
-		dst->copy_from(nullptr, (texture::format)unpack_info.format, (texture::type)unpack_info.type, unpack_settings);
+		dst->copy_from(nullptr, (texture::format)unpack_info.format, (texture::type)unpack_info.type, dst_region, unpack_settings);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
+	}
+
+	void copy_typeless(texture* dst, const texture* src)
+	{
+		const coord3u src_area = { {}, src->size3D() };
+		const coord3u dst_area = { {}, dst->size3D() };
+		copy_typeless(dst, src, dst_area, src_area);
 	}
 }
