@@ -756,19 +756,19 @@ void GLGSRender::on_init_thread()
 
 		//1D
 		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, GL_RGBA8);
-		tex1D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		tex1D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		//2D
 		auto tex2D = std::make_unique<gl::texture>(GL_TEXTURE_2D, 1, 1, 1, 1, GL_RGBA8);
-		tex2D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		tex2D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		//3D
 		auto tex3D = std::make_unique<gl::texture>(GL_TEXTURE_3D, 1, 1, 1, 1, GL_RGBA8);
-		tex3D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		tex3D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		//CUBE
 		auto texCUBE = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, GL_RGBA8);
-		texCUBE->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		texCUBE->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		m_null_textures[GL_TEXTURE_1D] = std::move(tex1D);
 		m_null_textures[GL_TEXTURE_2D] = std::move(tex2D);
@@ -966,7 +966,14 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
+	// Globals
+	// TODO: Move these
 	gl::destroy_compute_tasks();
+
+	if (gl::g_typeless_transfer_buffer)
+	{
+		gl::g_typeless_transfer_buffer.remove();
+	}
 
 	zcull_ctrl.release();
 

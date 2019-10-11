@@ -480,7 +480,7 @@ namespace gl
 		gl::texture_view* load_simple_image(rsx::overlays::image_info* desc, bool temp_resource, u32 owner_uid)
 		{
 			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, GL_RGBA8);
-			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 			GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
 			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -551,7 +551,7 @@ namespace gl
 
 			//Create font file
 			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, (int)font->width, (int)font->height, 1, 1, GL_R8);
-			tex->copy_from(font->glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte);
+			tex->copy_from(font->glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
 
 			GLenum remap[] = { GL_RED, GL_RED, GL_RED, GL_RED };
 			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);

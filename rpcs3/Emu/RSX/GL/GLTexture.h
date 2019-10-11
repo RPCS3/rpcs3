@@ -32,7 +32,9 @@ namespace gl
 	viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps, rsx::texture_dimension_extended type);
 
 	bool formats_are_bitcast_compatible(GLenum format1, GLenum format2);
+	void copy_typeless(texture* dst, const texture* src, const coord3u& dst_region, const coord3u& src_region);
 	void copy_typeless(texture* dst, const texture* src);
+
 	/**
 	 * is_swizzled - determines whether input bytes are in morton order
 	 * subresources_layout - descriptor of the mipmap levels in memory
@@ -110,4 +112,6 @@ namespace gl
 
 		void apply_defaults(GLenum default_filter = GL_NEAREST);
 	};
+
+	extern buffer g_typeless_transfer_buffer;
 }

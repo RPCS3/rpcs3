@@ -702,7 +702,8 @@ namespace gl
 			array = GL_ARRAY_BUFFER,
 			element_array = GL_ELEMENT_ARRAY_BUFFER,
 			uniform = GL_UNIFORM_BUFFER,
-			texture = GL_TEXTURE_BUFFER
+			texture = GL_TEXTURE_BUFFER,
+			ssbo = GL_SHADER_STORAGE_BUFFER
 		};
 
 		enum class access
@@ -924,6 +925,11 @@ namespace gl
 		void bind_range(u32 index, u32 offset, u32 size) const
 		{
 			glBindBufferRange((GLenum)current_target(), index, id(), offset, size);
+		}
+
+		void bind_range(target target_, u32 index, u32 offset, u32 size) const
+		{
+			glBindBufferRange((GLenum)target_, index, id(), offset, size);
 		}
 	};
 
@@ -1764,9 +1770,15 @@ namespace gl
 			return m_aspect_flags;
 		}
 
-		sizei size2D() const
+		sizeu size2D() const
 		{
-			return{ (int)m_width, (int)m_height };
+			return{ m_width, m_height };
+		}
+
+		size3u size3D() const
+		{
+			const auto depth = (m_target == target::textureCUBE) ? 6 : m_depth;
+			return{ m_width, m_height, depth };
 		}
 
 		texture::internal_format get_internal_format() const
@@ -1779,7 +1791,7 @@ namespace gl
 			return m_component_layout;
 		}
 
-		void copy_from(const void* src, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
+		void copy_from(const void* src, texture::format format, texture::type type, const coord3u region, const pixel_unpack_settings& pixel_settings)
 		{
 			pixel_settings.apply();
 
@@ -1787,38 +1799,45 @@ namespace gl
 			{
 			case GL_TEXTURE_1D:
 			{
-				DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, 0, 0, m_width, (GLenum)format, (GLenum)type, src);
+				DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, 0, region.x, region.width, (GLenum)format, (GLenum)type, src);
 				break;
 			}
 			case GL_TEXTURE_2D:
 			{
-				DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, 0, 0, 0, m_width, m_height, (GLenum)format, (GLenum)type, src);
+				DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, 0, region.x, region.y, region.width, region.height, (GLenum)format, (GLenum)type, src);
 				break;
 			}
 			case GL_TEXTURE_3D:
 			{
-				DSA_CALL(TextureSubImage3D, m_id, GL_TEXTURE_3D, 0, 0, 0, 0, m_width, m_height, m_depth, (GLenum)format, (GLenum)type, src);
+				DSA_CALL(TextureSubImage3D, m_id, GL_TEXTURE_3D, 0, region.x, region.y, region.z, region.width, region.height, region.depth, (GLenum)format, (GLenum)type, src);
 				break;
 			}
 			case GL_TEXTURE_CUBE_MAP:
 			{
-				if (::gl::get_driver_caps().ARB_dsa_supported)
+				if (get_driver_caps().ARB_dsa_supported)
 				{
-					glTextureSubImage3D(m_id, 0, 0, 0, 0, m_width, m_height, 6, (GLenum)format, (GLenum)type, src);
+					glTextureSubImage3D(m_id, 0, region.x, region.y, region.z, region.width, region.height, region.depth, (GLenum)format, (GLenum)type, src);
 				}
 				else
 				{
 					LOG_WARNING(RSX, "Cubemap upload via texture::copy_from is halfplemented!");
 					u8* ptr = (u8*)src;
-					for (int face = 0; face < 6; ++face)
+					const auto end = std::min(6u, region.z + region.depth);
+					for (unsigned face = region.z; face < end; ++face)
 					{
-						glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, 0, 0, m_width, m_height, (GLenum)format, (GLenum)type, ptr);
-						ptr += (m_width * m_height * 4); //TODO
+						glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, region.x, region.y, region.width, region.height, (GLenum)format, (GLenum)type, ptr);
+						ptr += (region.width * region.height * 4); //TODO
 					}
 				}
 				break;
 			}
 			}
+		}
+
+		void copy_from(const void* src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
+		{
+			const coord3u region = { {}, size3D() };
+			copy_from(src, format, type, region, pixel_settings);
 		}
 
 		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
@@ -1834,45 +1853,41 @@ namespace gl
 			copy_from(*view.value(), view.format(), view.offset(), view.range());
 		}
 
-		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
-		{
-			buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
-			copy_from(nullptr, format, type, pixel_settings);
-		}
-
-		void copy_from(void* src, texture::format format, texture::type type)
-		{
-			copy_from(src, format, type, pixel_unpack_settings());
-		}
-
-		void copy_from(const buffer& buf, texture::format format, texture::type type)
-		{
-			copy_from(buf, format, type, pixel_unpack_settings());
-		}
-
-		void copy_to(void* dst, texture::format format, texture::type type, class pixel_pack_settings pixel_settings) const
+		void copy_to(void* dst, texture::format format, texture::type type, const coord3u& region, const pixel_pack_settings& pixel_settings) const
 		{
 			pixel_settings.apply();
-			if (gl::get_driver_caps().ARB_dsa_supported)
-				glGetTextureImage(m_id, 0, (GLenum)format, (GLenum)type, m_width * m_height * 16, dst);
+			const auto& caps = get_driver_caps();
+
+			if (!region.x && !region.y && !region.z &&
+				region.width == m_width && region.height == m_height && region.depth == m_depth)
+			{
+				if (caps.ARB_dsa_supported)
+					glGetTextureImage(m_id, 0, (GLenum)format, (GLenum)type, INT32_MAX, dst);
+				else
+					glGetTextureImageEXT(m_id, (GLenum)m_target, 0, (GLenum)format, (GLenum)type, dst);
+			}
+			else if (caps.ARB_dsa_supported)
+			{
+				glGetTextureSubImage(m_id, 0, region.x, region.y, region.z, region.width, region.height, region.depth,
+					(GLenum)format, (GLenum)type, INT32_MAX, dst);
+			}
 			else
-				glGetTextureImageEXT(m_id, (GLenum)m_target, 0, (GLenum)format, (GLenum)type, dst);
+			{
+				// Worst case scenario. For some reason, EXT_dsa does not have glGetTextureSubImage
+				const auto target_ = static_cast<GLenum>(m_target);
+				texture tmp{ target_, region.width, region.height, region.depth, 1, (GLenum)m_internal_format };
+				glCopyImageSubData(m_id, target_, 0, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
+					region.width, region.height, region.depth);
+
+				const coord3u region2 = { {0, 0, 0}, region.size };
+				tmp.copy_to(dst, format, type, region2, pixel_settings);
+			}
 		}
 
-		void copy_to(const buffer& buf, texture::format format, texture::type type, class pixel_pack_settings pixel_settings) const
+		void copy_to(void* dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
 		{
-			buffer::save_binding_state save_buffer(buffer::target::pixel_pack, buf);
-			copy_to(nullptr, format, type, pixel_settings);
-		}
-
-		void copy_to(void* dst, texture::format format, texture::type type) const
-		{
-			copy_to(dst, format, type, pixel_pack_settings());
-		}
-
-		void copy_to(const buffer& buf, texture::format format, texture::type type) const
-		{
-			copy_to(buf, format, type, pixel_pack_settings());
+			const coord3u region = { {}, size3D() };
+			copy_to(dst, format, type, region, pixel_settings);
 		}
 	};
 
