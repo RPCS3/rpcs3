@@ -2512,12 +2512,12 @@ public:
 
 			VkInstance instance;
 			VkResult result = vkCreateInstance(&instance_info, nullptr, &instance);
-			if (result == VK_ERROR_LAYER_NOT_PRESENT)
-			{
-				LOG_FATAL(RSX,"Could not initialize VK_LAYER_KHRONOS_validation layer");
-			}
 			if (result != VK_SUCCESS)
 			{
+				if (result == VK_ERROR_LAYER_NOT_PRESENT)
+				{
+					LOG_FATAL(RSX,"Could not initialize layer VK_LAYER_KHRONOS_validation");
+				}
 				return 0;
 			}
 
