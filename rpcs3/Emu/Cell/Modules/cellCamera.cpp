@@ -314,6 +314,7 @@ error_code cellCameraInit()
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
+		g_camera->init = 1;
 		return CELL_OK;
 	}
 
@@ -369,7 +370,6 @@ error_code cellCameraInit()
 	}
 
 	g_camera->init = 1;
-
 	return CELL_OK;
 }
 
