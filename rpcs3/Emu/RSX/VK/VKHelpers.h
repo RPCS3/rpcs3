@@ -2511,8 +2511,7 @@ public:
 			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
 			VkInstance instance;
-			VkResult result = vkCreateInstance(&instance_info, nullptr, &instance);
-			if (result != VK_SUCCESS)
+			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &instance); result != VK_SUCCESS)
 			{
 				if (result == VK_ERROR_LAYER_NOT_PRESENT)
 				{
