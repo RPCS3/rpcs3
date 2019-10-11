@@ -1137,14 +1137,9 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 		auto& res = vm::reservation_acquire(addr, sizeof(u32));
 
-		const auto [_, ok] = res.fetch_op([&](u64& reserv)
-		{
-			return (++reserv & -128) == ppu.rtime;
-		});
-
 		ppu.raddr = 0;
 
-		if (ok)
+		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
@@ -1258,14 +1253,9 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		auto& res = vm::reservation_acquire(addr, sizeof(u64));
 
-		const auto [_, ok] = res.fetch_op([&](u64& reserv)
-		{
-			return (++reserv & -128) == ppu.rtime;
-		});
-
 		ppu.raddr = 0;
 
-		if (ok)
+		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
