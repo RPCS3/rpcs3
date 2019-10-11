@@ -742,6 +742,7 @@ namespace gl
 				case target::element_array: pname = GL_ELEMENT_ARRAY_BUFFER_BINDING; break;
 				case target::uniform: pname = GL_UNIFORM_BUFFER_BINDING; break;
 				case target::texture: pname = GL_TEXTURE_BUFFER_BINDING; break;
+				case target::ssbo: pname = GL_SHADER_STORAGE_BUFFER_BINDING; break;
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
