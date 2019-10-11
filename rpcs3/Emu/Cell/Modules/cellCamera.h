@@ -8,7 +8,7 @@
 
 
 // Error Codes
-enum
+enum CellCameraError : u32
 {
 	CELL_CAMERA_ERROR_ALREADY_INIT       = 0x80140801,
 	CELL_CAMERA_ERROR_NOT_INIT           = 0x80140803,
