@@ -2802,7 +2802,7 @@ namespace rsx
 
 		//Some custom GCM methods
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
-		methods[FIFO::FIFO_DRAW_BARRIER]                  = nullptr;
+		methods[FIFO::FIFO_DRAW_BARRIER >> 2]             = nullptr;
 
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
