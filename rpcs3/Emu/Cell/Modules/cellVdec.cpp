@@ -180,15 +180,14 @@ struct vdec_context final
 	{
 		ppu_tid = ppu.id;
 
-		for (auto cmds = in_cmd.pop_all(); thread_ctrl::state() != thread_state::aborting; cmds ? cmds.pop_front() : cmds = in_cmd.pop_all())
+		// pcmd can be nullptr
+		for (auto* pcmd : in_cmd)
 		{
-			if (!cmds)
+			if (thread_ctrl::state() == thread_state::aborting)
 			{
-				in_cmd.wait();
-				continue;
+				break;
 			}
-
-			if (std::get_if<vdec_start_seq_t>(&*cmds))
+			else if (std::get_if<vdec_start_seq_t>(pcmd))
 			{
 				avcodec_flush_buffers(ctx);
 
@@ -197,7 +196,7 @@ struct vdec_context final
 				next_dts = 0;
 				cellVdec.trace("Start sequence...");
 			}
-			else if (auto* cmd = std::get_if<vdec_cmd>(&*cmds))
+			else if (auto* cmd = std::get_if<vdec_cmd>(pcmd))
 			{
 				AVPacket packet{};
 				packet.pos = -1;
@@ -399,11 +398,11 @@ struct vdec_context final
 					thread_ctrl::wait_for(1000);
 				}
 			}
-			else if (auto* frc = std::get_if<CellVdecFrameRate>(&*cmds))
+			else if (auto* frc = std::get_if<CellVdecFrameRate>(pcmd))
 			{
 				frc_set = *frc;
 			}
-			else
+			else if (std::get_if<vdec_close_t>(pcmd))
 			{
 				break;
 			}
