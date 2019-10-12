@@ -45,6 +45,12 @@ namespace rsx
 		rsx->invalid_command_interrupt_raised = true;
 	}
 
+	void trace_method(thread* rsx, u32 _reg, u32 arg)
+	{
+		// For unknown yet valid methods
+		LOG_TRACE(RSX, "RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+	}
+
 	template<typename Type> struct vertex_data_type_from_element_type;
 	template<> struct vertex_data_type_from_element_type<float> { static const vertex_base_type type = vertex_base_type::f; };
 	template<> struct vertex_data_type_from_element_type<f16> { static const vertex_base_type type = vertex_base_type::sf; };
@@ -65,13 +71,15 @@ namespace rsx
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
-			const auto& sema = vm::_ref<atomic_t<be_t<u32>>>(addr);
+			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema.load() == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
+
+			rsx->flush_fifo();
 
 			u64 start = get_system_time();
-			while (sema.load() != arg)
+			while (sema != arg)
 			{
 				if (Emu.IsStopped())
 					return;
@@ -109,8 +117,19 @@ namespace rsx
 		void semaphore_release(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync();
-			rsx->sync_point_request = true;
-			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+
+			const u32 offset = method_registers.semaphore_offset_406e();
+			const u32 ctxt = method_registers.semaphore_context_dma_406e();
+
+			// By avoiding doing this on flip's semaphore release
+			// We allow last gcm's registers reset to occur in case of a crash
+			const bool is_flip_sema = (offset == 0x10 && ctxt == CELL_GCM_CONTEXT_DMA_SEMAPHORE_R);
+			if (!is_flip_sema)
+			{
+				rsx->sync_point_request = true;
+			}
+
+			const u32 addr = get_address(offset, ctxt);
 
 			if (LIKELY(g_use_rtm))
 			{
@@ -702,6 +721,19 @@ namespace rsx
 			if (arg != method_registers.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::scissor_config_state_dirty;
+			}
+		}
+
+		void check_index_array_dma(thread* rsx, u32 reg, u32 arg)
+		{
+			// Check if either location or index type are invalid
+			if (arg & ~(CELL_GCM_LOCATION_MAIN | (CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16 << 4)))
+			{
+				// Ignore invalid value, recover
+				method_registers.registers[reg] = method_registers.register_previous_value;
+				rsx->invalid_command_interrupt_raised = true;
+
+				LOG_ERROR(RSX, "Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
 			}
 		}
 
@@ -2770,7 +2802,7 @@ namespace rsx
 
 		//Some custom GCM methods
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
-		methods[FIFO::FIFO_DRAW_BARRIER]                  = nullptr;
+		methods[FIFO::FIFO_DRAW_BARRIER >> 2]             = nullptr;
 
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
@@ -2796,7 +2828,11 @@ namespace rsx
 		bind_array<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr>();
 		bind_array<NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr>();
-		bind_array<(0xac00 >> 2), 1, 16, nullptr>();  // Unknown texture control register
+
+		// Unknown (NV4097?)
+		bind<(0x171c >> 2), trace_method>();
+		bind_array<(0xac00 >> 2), 1, 16, trace_method>(); // Unknown texture control register
+		bind_array<(0xac40 >> 2), 1, 16, trace_method>();
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
@@ -2899,6 +2935,7 @@ namespace rsx
 		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
+		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

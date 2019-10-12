@@ -32,22 +32,8 @@ namespace rsx
 		bool is_depth = false;
 		bool is_clipped = false;
 
-		u16 src_x = 0;
-		u16 src_y = 0;
-		u16 dst_x = 0;
-		u16 dst_y = 0;
-		u16 width = 0;
-		u16 height = 0;
-
-		areai get_src_area() const
-		{
-			return coordi{ {src_x, src_y}, {width, height} };
-		}
-
-		areai get_dst_area() const
-		{
-			return coordi{ {dst_x, dst_y}, {width, height} };
-		}
+		coordu src_area;
+		coordu dst_area;
 	};
 
 	template <typename surface_type>

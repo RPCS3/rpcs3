@@ -1,9 +1,8 @@
 #include "stdafx.h"
-#ifdef WITH_GDB_DEBUGGER
 
-#include "GDBDebugServer.h"
-#include "Log.h"
-#include <algorithm>
+#include "GDB.h"
+#include "Utilities/Log.h"
+#include "Utilities/StrUtil.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
@@ -12,49 +11,76 @@
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 
-#ifndef _WIN32
-#include "fcntl.h"
+#ifdef _WIN32
+#include <WinSock2.h>
+#include <WS2tcpip.h>
+#include <afunix.h> // sockaddr_un
+#else
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/un.h> // sockaddr_un
 #endif
+
+#include <algorithm>
+#include <regex>
+#include <charconv>
 
 extern void ppu_set_breakpoint(u32 addr);
 extern void ppu_remove_breakpoint(u32 addr);
 
-LOG_CHANNEL(gdbDebugServer);
-
-int sock_init(void)
-{
-#ifdef _WIN32
-	WSADATA wsa_data;
-	return WSAStartup(MAKEWORD(1, 1), &wsa_data);
-#else
-	return 0;
-#endif
-}
-
-int sock_quit(void)
-{
-#ifdef _WIN32
-	return WSACleanup();
-#else
-	return 0;
-#endif
-}
+LOG_CHANNEL(GDB);
 
 #ifndef _WIN32
-int closesocket(socket_t s) {
+int closesocket(int s)
+{
 	return close(s);
 }
-const int SOCKET_ERROR = -1;
-const socket_t INVALID_SOCKET = -1;
+
+void set_nonblocking(int s)
+{
+	fcntl(s, F_SETFL, fcntl(s, F_GETFL) | O_NONBLOCK);
+}
+
 #define sscanf_s sscanf
 #define HEX_U32 "x"
 #define HEX_U64 "lx"
 #else
+
+void set_nonblocking(int s)
+{
+	u_long mode = 1;
+	ioctlsocket(s, FIONBIO, &mode);
+}
+
 #define HEX_U32 "lx"
 #define HEX_U64 "llx"
 #endif
 
-bool check_errno_again() {
+struct gdb_cmd
+{
+	std::string cmd;
+	std::string data;
+	u8 checksum;
+};
+
+class wrong_checksum_exception : public std::runtime_error
+{
+public:
+	wrong_checksum_exception(char const* const message)
+		: runtime_error(message)
+	{
+	}
+};
+
+bool check_errno_again()
+{
 #ifdef _WIN32
 	int err = GetLastError();
 	return (err == WSAEWOULDBLOCK);
@@ -94,59 +120,112 @@ u64 hex_to_u64(std::string val) {
 	return result;
 }
 
-void GDBDebugServer::start_server()
+void gdb_thread::start_server()
 {
-	server_socket = socket(AF_INET, SOCK_STREAM, 0);
+	// IPv4 address:port in format 127.0.0.1:2345
+	static const std::regex ipv4_regex("^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})\\:([0-9]{1,5})$");
 
-	if (server_socket == INVALID_SOCKET) {
-		gdbDebugServer.error("Error creating server socket");
-		return;
-	}
-
-#ifdef WIN32
+	if (g_cfg.misc.gdb_server.get()[0] == '\0')
 	{
-		int mode = 1;
-		ioctlsocket(server_socket, FIONBIO, (u_long FAR *)&mode);
-	}
-#else
-	fcntl(server_socket, F_SETFL, fcntl(server_socket, F_GETFL) | O_NONBLOCK);
-#endif
-
-	int err;
-
-	sockaddr_in server_saddr;
-	server_saddr.sin_family = AF_INET;
-	int port = g_cfg.misc.gdb_server_port;
-	server_saddr.sin_port = htons(port);
-	server_saddr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-	err = bind(server_socket, (struct sockaddr *) &server_saddr, sizeof(server_saddr));
-	if (err == SOCKET_ERROR) {
-		gdbDebugServer.error("Error binding to port %d", port);
+		// Empty string or starts with null: GDB server disabled
+		GDB.notice("GDB Server is disabled.");
 		return;
 	}
 
-	err = listen(server_socket, 1);
-	if (err == SOCKET_ERROR) {
-		gdbDebugServer.error("Error listening on port %d", port);
+	// Try to detect socket type
+	std::smatch match;
+
+	if (std::regex_match(g_cfg.misc.gdb_server.get(), match, ipv4_regex))
+	{
+		struct addrinfo hints{};
+		struct addrinfo* info;
+		hints.ai_flags    = AI_PASSIVE;
+		hints.ai_socktype = SOCK_STREAM;
+
+		std::string bind_addr = match[1].str();
+		std::string bind_port = match[2].str();
+
+		if (getaddrinfo(bind_addr.c_str(), bind_port.c_str(), &hints, &info) == 0)
+		{
+			server_socket = socket(info->ai_family, info->ai_socktype, info->ai_protocol);
+
+			if (server_socket == -1)
+			{
+				GDB.error("Error creating IP socket for '%s'.", g_cfg.misc.gdb_server.get());
+				freeaddrinfo(info);
+				return;
+			}
+
+			set_nonblocking(server_socket);
+
+			if (bind(server_socket, info->ai_addr, static_cast<int>(info->ai_addrlen)) != 0)
+			{
+				GDB.error("Failed to bind socket on '%s'.", g_cfg.misc.gdb_server.get());
+				freeaddrinfo(info);
+				return;
+			}
+
+			freeaddrinfo(info);
+
+			if (listen(server_socket, 1) != 0)
+			{
+				GDB.error("Failed to listen on '%s'.", g_cfg.misc.gdb_server.get());
+				return;
+			}
+
+			GDB.notice("Started listening on '%s'.", g_cfg.misc.gdb_server.get());
+			return;
+		}
+	}
+
+	// Fallback to UNIX socket
+	server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+
+	if (server_socket == -1)
+	{
+		GDB.error("Failed to create Unix socket. Possibly unsupported.");
 		return;
 	}
 
-	gdbDebugServer.success("GDB Debug Server listening on port %d", port);
+	// Delete existing socket (TODO?)
+	fs::remove_file(g_cfg.misc.gdb_server.get());
+
+	set_nonblocking(server_socket);
+
+	sockaddr_un unix_saddr;
+	unix_saddr.sun_family = AF_UNIX;
+	strcpy_trunc(unix_saddr.sun_path, g_cfg.misc.gdb_server.get());
+
+	if (bind(server_socket, (struct sockaddr*) &unix_saddr, sizeof(unix_saddr)) != 0)
+	{
+		GDB.error("Failed to bind Unix socket '%s'.", g_cfg.misc.gdb_server.get());
+		return;
+	}
+
+	if (listen(server_socket, 1) != 0)
+	{
+		GDB.error("Failed to listen on Unix socket '%s'.", g_cfg.misc.gdb_server.get());
+		return;
+	}
+
+	GDB.notice("Started listening on Unix socket '%s'.", g_cfg.misc.gdb_server.get());
 }
 
-int GDBDebugServer::read(void * buf, int cnt)
+int gdb_thread::read(void* buf, int cnt)
 {
-	while (!stop) {
+	while (!Emu.IsStopped())
+	{
 		int result = recv(client_socket, reinterpret_cast<char*>(buf), cnt, 0);
 
-		if (result == SOCKET_ERROR) {
-			if (check_errno_again()) {
-				thread_ctrl::wait_for(50);
+		if (result == -1)
+		{
+			if (check_errno_again())
+			{
+				thread_ctrl::wait_for(5000);
 				continue;
 			}
 
-			gdbDebugServer.error("Error during socket read");
+			GDB.error("Error during socket read.");
 			fmt::throw_exception("Error during socket read" HERE);
 		}
 		return result;
@@ -154,7 +233,7 @@ int GDBDebugServer::read(void * buf, int cnt)
 	return 0;
 }
 
-char GDBDebugServer::read_char()
+char gdb_thread::read_char()
 {
 	char result;
 	int cnt = read(&result, 1);
@@ -164,7 +243,7 @@ char GDBDebugServer::read_char()
 	return result;
 }
 
-u8 GDBDebugServer::read_hexbyte()
+u8 gdb_thread::read_hexbyte()
 {
 	std::string s = "";
 	s += read_char();
@@ -172,7 +251,7 @@ u8 GDBDebugServer::read_hexbyte()
 	return hex_to_u8(s);
 }
 
-void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
+void gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 {
 	char c = read_char();
 	//interrupt
@@ -228,52 +307,59 @@ void GDBDebugServer::try_read_cmd(gdb_cmd & out_cmd)
 	}
 }
 
-bool GDBDebugServer::read_cmd(gdb_cmd & out_cmd)
+bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
 {
-	while (true) {
-		try {
+	while (true)
+	{
+		try
+		{
 			try_read_cmd(out_cmd);
 			ack(true);
 			return true;
 		}
-		catch (wrong_checksum_exception) {
+		catch (const wrong_checksum_exception&)
+		{
 			ack(false);
 		}
-		catch (std::runtime_error e) {
-			gdbDebugServer.error(e.what());
+		catch (const std::runtime_error& e)
+		{
+			GDB.error("Error: %s", e.what());
 			return false;
 		}
 	}
 }
 
-void GDBDebugServer::send(const char * buf, int cnt)
+void gdb_thread::send(const char* buf, int cnt)
 {
-	gdbDebugServer.trace("Sending %s (%d bytes)", buf, cnt);
-	while (!stop) {
+	GDB.trace("Sending %s (%d bytes).", buf, cnt);
+	while (!Emu.IsStopped())
+	{
 		int res = ::send(client_socket, buf, cnt, 0);
-		if (res == SOCKET_ERROR) {
-			if (check_errno_again()) {
-				thread_ctrl::wait_for(50);
+		if (res == -1)
+		{
+			if (check_errno_again())
+			{
+				thread_ctrl::wait_for(5000);
 				continue;
 			}
-			gdbDebugServer.error("Failed sending %d bytes", cnt);
+			GDB.error("Failed sending %d bytes.", cnt);
 			return;
 		}
 		return;
 	}
 }
 
-void GDBDebugServer::send_char(char c)
+void gdb_thread::send_char(char c)
 {
 	send(&c, 1);
 }
 
-void GDBDebugServer::ack(bool accepted)
+void gdb_thread::ack(bool accepted)
 {
 	send_char(accepted ? '+' : '-');
 }
 
-void GDBDebugServer::send_cmd(const std::string & cmd)
+void gdb_thread::send_cmd(const std::string& cmd)
 {
 	u8 checksum = 0;
 	std::string buf;
@@ -287,7 +373,7 @@ void GDBDebugServer::send_cmd(const std::string & cmd)
 	send(buf.c_str(), static_cast<int>(buf.length()));
 }
 
-bool GDBDebugServer::send_cmd_ack(const std::string & cmd)
+bool gdb_thread::send_cmd_ack(const std::string& cmd)
 {
 	while (true) {
 		send_cmd(cmd);
@@ -296,14 +382,14 @@ bool GDBDebugServer::send_cmd_ack(const std::string & cmd)
 			return true;
 		}
 		if (UNLIKELY(c != '-')) {
-			gdbDebugServer.error("Wrong acknowledge character received %c", c);
+			GDB.error("Wrong acknowledge character received: '%c'.", c);
 			return false;
 		}
-		gdbDebugServer.warning("Client rejected our cmd");
+		GDB.warning("Client rejected our cmd.");
 	}
 }
 
-u8 GDBDebugServer::append_encoded_char(char c, std::string & str)
+u8 gdb_thread::append_encoded_char(char c, std::string& str)
 {
 	u8 checksum = 0;
 	if (UNLIKELY((c == '#') || (c == '$') || (c == '}'))) {
@@ -316,7 +402,7 @@ u8 GDBDebugServer::append_encoded_char(char c, std::string & str)
 	return checksum;
 }
 
-std::string GDBDebugServer::to_hexbyte(u8 i)
+std::string gdb_thread::to_hexbyte(u8 i)
 {
 	std::string result = "00";
 	u8 i1 = i & 0xF;
@@ -326,7 +412,7 @@ std::string GDBDebugServer::to_hexbyte(u8 i)
 	return result;
 }
 
-bool GDBDebugServer::select_thread(u64 id)
+bool gdb_thread::select_thread(u64 id)
 {
 	//in case we have none at all
 	selected_thread.reset();
@@ -334,15 +420,16 @@ bool GDBDebugServer::select_thread(u64 id)
 	{
 		return (id == ALL_THREADS) || (id == ANY_THREAD) || (cpu.id == id);
 	};
-	if (auto ppu = idm::select<ppu_thread>(on_select)) {
+	if (auto ppu = idm::select<named_thread<ppu_thread>>(on_select))
+	{
 		selected_thread = ppu.ptr;
 		return true;
 	}
-	gdbDebugServer.warning("Unable to select thread! Is the emulator running?");
+	GDB.warning("Unable to select thread! Is the emulator running?");
 	return false;
 }
 
-std::string GDBDebugServer::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
+std::string gdb_thread::get_reg(ppu_thread* thread, u32 rid)
 {
 	std::string result;
 	//ids from gdb/features/rs6000/powerpc-64.c
@@ -373,7 +460,7 @@ std::string GDBDebugServer::get_reg(std::shared_ptr<ppu_thread> thread, u32 rid)
 	}
 }
 
-bool GDBDebugServer::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::string value)
+bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
 {
 	switch (rid) {
 	case 64:
@@ -409,7 +496,7 @@ bool GDBDebugServer::set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::s
 	}
 }
 
-u32 GDBDebugServer::get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid)
+u32 gdb_thread::get_reg_size(ppu_thread* thread, u32 rid)
 {
 	switch (rid) {
 	case 66:
@@ -424,23 +511,27 @@ u32 GDBDebugServer::get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid)
 	}
 }
 
-bool GDBDebugServer::send_reason()
+bool gdb_thread::send_reason()
 {
 	return send_cmd_ack("S05");
 }
 
-void GDBDebugServer::wait_with_interrupts() {
+void gdb_thread::wait_with_interrupts()
+{
 	char c;
-	while (!paused) {
+	while (!paused)
+	{
 		int result = recv(client_socket, &c, 1, 0);
 
-		if (result == SOCKET_ERROR) {
-			if (check_errno_again()) {
-				thread_ctrl::wait_for(50);
+		if (result == -1)
+		{
+			if (check_errno_again())
+			{
+				thread_ctrl::wait_for(5000);
 				continue;
 			}
 
-			gdbDebugServer.error("Error during socket read");
+			GDB.error("Error during socket read.");
 			fmt::throw_exception("Error during socket read" HERE);
 		} else if (c == 0x03) {
 			paused = true;
@@ -448,22 +539,22 @@ void GDBDebugServer::wait_with_interrupts() {
 	}
 }
 
-bool GDBDebugServer::cmd_extended_mode(gdb_cmd & cmd)
+bool gdb_thread::cmd_extended_mode(gdb_cmd& cmd)
 {
 	return send_cmd_ack("OK");
 }
 
-bool GDBDebugServer::cmd_reason(gdb_cmd & cmd)
+bool gdb_thread::cmd_reason(gdb_cmd& cmd)
 {
 	return send_reason();
 }
 
-bool GDBDebugServer::cmd_supported(gdb_cmd & cmd)
+bool gdb_thread::cmd_supported(gdb_cmd& cmd)
 {
 	return send_cmd_ack("PacketSize=1200");
 }
 
-bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
+bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
 {
 	std::string result = "";
 	const auto on_select = [&](u32, cpu_thread& cpu)
@@ -473,9 +564,8 @@ bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
 		}
 		result += u64_to_padded_hex(static_cast<u64>(cpu.id));
 	};
-	idm::select<ppu_thread>(on_select);
-	//idm::select<RawSPUThread>(on_select);
-	//idm::select<SPUThread>(on_select);
+	idm::select<named_thread<ppu_thread>>(on_select);
+	//idm::select<named_thread<spu_thread>>(on_select);
 
 	//todo: this may exceed max command length
 	result = "m" + result + "l";
@@ -483,57 +573,57 @@ bool GDBDebugServer::cmd_thread_info(gdb_cmd & cmd)
 	return send_cmd_ack(result);;
 }
 
-bool GDBDebugServer::cmd_current_thread(gdb_cmd & cmd)
+bool gdb_thread::cmd_current_thread(gdb_cmd& cmd)
 {
 	return send_cmd_ack(selected_thread.expired() ? "" : ("QC" + u64_to_padded_hex(selected_thread.lock()->id)));
 }
 
-bool GDBDebugServer::cmd_read_register(gdb_cmd & cmd)
+bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 {
 	if (!select_thread(general_ops_thread_id)) {
 		return send_cmd_ack("E02");
 	}
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
-		auto ppu = std::static_pointer_cast<ppu_thread>(th);
+		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		u32 rid = hex_to_u32(cmd.data);
 		std::string result = get_reg(ppu, rid);
 		if (!result.length()) {
-			gdbDebugServer.warning("Wrong register id %d", rid);
+			GDB.warning("Wrong register id %d.", rid);
 			return send_cmd_ack("E01");
 		}
 		return send_cmd_ack(result);
 	}
-	gdbDebugServer.warning("Unimplemented thread type %d", th->id_type());
+	GDB.warning("Unimplemented thread type %d.", th->id_type());
 	return send_cmd_ack("");
 }
 
-bool GDBDebugServer::cmd_write_register(gdb_cmd & cmd)
+bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 {
 	if (!select_thread(general_ops_thread_id)) {
 		return send_cmd_ack("E02");
 	}
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
-		auto ppu = std::static_pointer_cast<ppu_thread>(th);
+		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		size_t eq_pos = cmd.data.find('=');
 		if (eq_pos == std::string::npos) {
-			gdbDebugServer.warning("Wrong write_register cmd data %s", cmd.data.c_str());
+			GDB.warning("Wrong write_register cmd data '%s'.", cmd.data);
 			return send_cmd_ack("E02");
 		}
 		u32 rid = hex_to_u32(cmd.data.substr(0, eq_pos));
 		std::string value = cmd.data.substr(eq_pos + 1);
 		if (!set_reg(ppu, rid, value)) {
-			gdbDebugServer.warning("Wrong register id %d", rid);
+			GDB.warning("Wrong register id %d.", rid);
 			return send_cmd_ack("E01");
 		}
 		return send_cmd_ack("OK");
 	}
-	gdbDebugServer.warning("Unimplemented thread type %d", th->id_type());
+	GDB.warning("Unimplemented thread type %d.", th->id_type());
 	return send_cmd_ack("");
 }
 
-bool GDBDebugServer::cmd_read_memory(gdb_cmd & cmd)
+bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 {
 	size_t s = cmd.data.find(',');
 	u32 addr = hex_to_u32(cmd.data.substr(0, s));
@@ -555,12 +645,12 @@ bool GDBDebugServer::cmd_read_memory(gdb_cmd & cmd)
 	return send_cmd_ack(result);
 }
 
-bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
+bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 {
 	size_t s = cmd.data.find(',');
 	size_t s2 = cmd.data.find(':');
 	if ((s == std::string::npos) || (s2 == std::string::npos)) {
-		gdbDebugServer.warning("Malformed write memory request received: %s", cmd.data.c_str());
+		GDB.warning("Malformed write memory request received: '%s'.", cmd.data);
 		return send_cmd_ack("E01");
 	}
 	u32 addr = hex_to_u32(cmd.data.substr(0, s));
@@ -571,7 +661,7 @@ bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
 			if (!res) {
-				gdbDebugServer.warning("Couldn't read u8 from string %s", data_ptr);
+				GDB.warning("Couldn't read u8 from string '%s'.", data_ptr);
 				return send_cmd_ack("E02");
 			}
 			data_ptr += 2;
@@ -583,14 +673,14 @@ bool GDBDebugServer::cmd_write_memory(gdb_cmd & cmd)
 	return send_cmd_ack("OK");
 }
 
-bool GDBDebugServer::cmd_read_all_registers(gdb_cmd & cmd)
+bool gdb_thread::cmd_read_all_registers(gdb_cmd& cmd)
 {
 	std::string result;
 	select_thread(general_ops_thread_id);
 
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
-		auto ppu = std::static_pointer_cast<ppu_thread>(th);
+		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		//68 64-bit registers, and 3 32-bit
 		result.reserve(68*16 + 3*8);
 		for (int i = 0; i < 71; ++i) {
@@ -598,16 +688,16 @@ bool GDBDebugServer::cmd_read_all_registers(gdb_cmd & cmd)
 		}
 		return send_cmd_ack(result);
 	}
-	gdbDebugServer.warning("Unimplemented thread type %d", th->id_type());
+	GDB.warning("Unimplemented thread type %d.", th->id_type());
 	return send_cmd_ack("");
 }
 
-bool GDBDebugServer::cmd_write_all_registers(gdb_cmd & cmd)
+bool gdb_thread::cmd_write_all_registers(gdb_cmd& cmd)
 {
 	select_thread(general_ops_thread_id);
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
-		auto ppu = std::static_pointer_cast<ppu_thread>(th);
+		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
 		int ptr = 0;
 		for (int i = 0; i < 71; ++i) {
 			int sz = get_reg_size(ppu, i);
@@ -616,11 +706,11 @@ bool GDBDebugServer::cmd_write_all_registers(gdb_cmd & cmd)
 		}
 		return send_cmd_ack("OK");
 	}
-	gdbDebugServer.warning("Unimplemented thread type %d", th->id_type());
+	GDB.warning("Unimplemented thread type %d.", th->id_type());
 	return send_cmd_ack("E01");
 }
 
-bool GDBDebugServer::cmd_set_thread_ops(gdb_cmd & cmd)
+bool gdb_thread::cmd_set_thread_ops(gdb_cmd& cmd)
 {
 	char type = cmd.data[0];
 	std::string thread = cmd.data.substr(1);
@@ -633,34 +723,34 @@ bool GDBDebugServer::cmd_set_thread_ops(gdb_cmd & cmd)
 	if (select_thread(id)) {
 		return send_cmd_ack("OK");
 	}
-	gdbDebugServer.warning("Client asked to use thread %llx for %s, but no matching thread was found", id, type == 'c' ? "continue ops" : "general ops");
+	GDB.warning("Client asked to use thread 0x%x for %s, but no matching thread was found.", id, type == 'c' ? "continue ops" : "general ops");
 	return send_cmd_ack("E01");
 }
 
-bool GDBDebugServer::cmd_attached_to_what(gdb_cmd & cmd)
+bool gdb_thread::cmd_attached_to_what(gdb_cmd& cmd)
 {
 	//creating processes from client is not available yet
 	return send_cmd_ack("1");
 }
 
-bool GDBDebugServer::cmd_kill(gdb_cmd & cmd)
+bool gdb_thread::cmd_kill(gdb_cmd& cmd)
 {
 	Emu.Stop();
 	return true;
 }
 
-bool GDBDebugServer::cmd_continue_support(gdb_cmd & cmd)
+bool gdb_thread::cmd_continue_support(gdb_cmd& cmd)
 {
 	return send_cmd_ack("vCont;c;s;C;S");
 }
 
-bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
+bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 {
 	//todo: handle multiple actions and thread ids
 	this->from_breakpoint = false;
 	if (cmd.data[1] == 'c' || cmd.data[1] == 's') {
 		select_thread(continue_ops_thread_id);
-		auto ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
+		auto ppu = std::static_pointer_cast<named_thread<ppu_thread>>(selected_thread.lock());
 		paused = false;
 		if (cmd.data[1] == 's') {
 			ppu->state += cpu_flag::dbg_step;
@@ -673,7 +763,7 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 		if (Emu.IsPaused()) {
 			Emu.Resume();
 		} else {
-			ppu->notify();
+			thread_ctrl::notify(*ppu);
 		}
 		wait_with_interrupts();
 		//we are in all-stop mode
@@ -681,7 +771,7 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 		select_thread(pausedBy);
 		// we have to remove dbg_pause from thread that paused execution, otherwise
 		// it will be paused forever (Emu.Resume only removes dbg_global_pause)
-		ppu = std::static_pointer_cast<ppu_thread>(selected_thread.lock());
+		ppu = std::static_pointer_cast<named_thread<ppu_thread>>(selected_thread.lock());
 		ppu->state -= cpu_flag::dbg_pause;
 		return send_reason();
 	}
@@ -690,19 +780,19 @@ bool GDBDebugServer::cmd_vcont(gdb_cmd & cmd)
 
 static const u32 INVALID_PTR = 0xffffffff;
 
-bool GDBDebugServer::cmd_set_breakpoint(gdb_cmd & cmd)
+bool gdb_thread::cmd_set_breakpoint(gdb_cmd& cmd)
 {
 	char type = cmd.data[0];
 	//software breakpoint
 	if (type == '0') {
 		u32 addr = INVALID_PTR;
 		if (cmd.data.find(';') != std::string::npos) {
-			gdbDebugServer.warning("Received request to set breakpoint with condition, but they are not supported");
+			GDB.warning("Received request to set breakpoint with condition, but they are not supported.");
 			return send_cmd_ack("E01");
 		}
 		sscanf_s(cmd.data.c_str(), "0,%x", &addr);
 		if (addr == INVALID_PTR) {
-			gdbDebugServer.warning("Can't parse breakpoint request, data: %s", cmd.data.c_str());
+			GDB.warning("Can't parse breakpoint request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E02");
 		}
 		ppu_set_breakpoint(addr);
@@ -712,7 +802,7 @@ bool GDBDebugServer::cmd_set_breakpoint(gdb_cmd & cmd)
 	return send_cmd_ack("");
 }
 
-bool GDBDebugServer::cmd_remove_breakpoint(gdb_cmd & cmd)
+bool gdb_thread::cmd_remove_breakpoint(gdb_cmd& cmd)
 {
 	char type = cmd.data[0];
 	//software breakpoint
@@ -720,7 +810,7 @@ bool GDBDebugServer::cmd_remove_breakpoint(gdb_cmd & cmd)
 		u32 addr = INVALID_PTR;
 		sscanf_s(cmd.data.c_str(), "0,%x", &addr);
 		if (addr == INVALID_PTR) {
-			gdbDebugServer.warning("Can't parse breakpoint remove request, data: %s", cmd.data.c_str());
+			GDB.warning("Can't parse breakpoint remove request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E01");
 		}
 		ppu_remove_breakpoint(addr);
@@ -733,24 +823,50 @@ bool GDBDebugServer::cmd_remove_breakpoint(gdb_cmd & cmd)
 
 #define PROCESS_CMD(cmds,handler) if (cmd.cmd == cmds) { if (!handler(cmd)) break; else continue; }
 
-void GDBDebugServer::on_task()
+gdb_thread::gdb_thread() noexcept
 {
-	sock_init();
+#ifdef _WIN32
+	WSADATA wsa_data;
+	WSAStartup(MAKEWORD(2, 2), &wsa_data);
+#endif
+}
 
+gdb_thread::~gdb_thread()
+{
+	if (server_socket != -1)
+	{
+		closesocket(server_socket);
+	}
+
+	if (client_socket != -1)
+	{
+		closesocket(client_socket);
+	}
+
+#ifdef _WIN32
+	WSACleanup();
+#endif
+}
+
+void gdb_thread::operator()()
+{
 	start_server();
 
-	while (!stop) {
+	while (server_socket != -1 && !Emu.IsStopped())
+	{
 		sockaddr_in client;
 		socklen_t client_len = sizeof(client);
 		client_socket = accept(server_socket, (struct sockaddr *) &client, &client_len);
 
-		if (client_socket == INVALID_SOCKET) {
-			if (check_errno_again()) {
-				thread_ctrl::wait_for(50);
+		if (client_socket == -1)
+		{
+			if (check_errno_again())
+			{
+				thread_ctrl::wait_for(5000);
 				continue;
 			}
 
-			gdbDebugServer.error("Could not establish new connection\n");
+			GDB.error("Could not establish new connection.");
 			return;
 		}
 		//stop immediately
@@ -761,15 +877,17 @@ void GDBDebugServer::on_task()
 		try {
 			char hostbuf[32];
 			inet_ntop(client.sin_family, reinterpret_cast<void*>(&client.sin_addr), hostbuf, 32);
-			gdbDebugServer.success("Got connection to GDB debug server from %s:%d", hostbuf, client.sin_port);
+			GDB.success("Got connection to GDB debug server from %s:%d.", hostbuf, client.sin_port);
 
 			gdb_cmd cmd;
 
-			while (!stop) {
-				if (!read_cmd(cmd)) {
+			while (!Emu.IsStopped())
+			{
+				if (!read_cmd(cmd))
+				{
 					break;
 				}
-				gdbDebugServer.trace("Command %s with data %s received", cmd.cmd.c_str(), cmd.data.c_str());
+				GDB.trace("Command %s with data %s received.", cmd.cmd, cmd.data);
 				PROCESS_CMD("!", cmd_extended_mode);
 				PROCESS_CMD("?", cmd_reason);
 				PROCESS_CMD("qSupported", cmd_supported);
@@ -789,59 +907,37 @@ void GDBDebugServer::on_task()
 				PROCESS_CMD("z", cmd_remove_breakpoint);
 				PROCESS_CMD("Z", cmd_set_breakpoint);
 
-				gdbDebugServer.trace("Unsupported command received %s", cmd.cmd.c_str());
+				GDB.trace("Unsupported command received: '%s'.", cmd.cmd);
 				if (!send_cmd_ack("")) {
 					break;
 				}
 			}
 		}
-		catch (std::runtime_error& e)
+		catch (const std::runtime_error& e)
 		{
-			if (client_socket) {
+			if (client_socket != -1)
+			{
 				closesocket(client_socket);
-				client_socket = 0;
+				client_socket = -1;
 			}
-			gdbDebugServer.error(e.what());
+
+			GDB.error("Error: %s", e.what());
 		}
 	}
 }
 
 #undef PROCESS_CMD
 
-void GDBDebugServer::on_exit()
+void gdb_thread::pause_from(cpu_thread* t)
 {
-	if (server_socket) {
-		closesocket(server_socket);
-	}
-	if (client_socket) {
-		closesocket(client_socket);
-	}
-	sock_quit();
-}
-
-std::string GDBDebugServer::get_name() const
-{
-	return "GDBDebugger";
-}
-
-void GDBDebugServer::on_stop()
-{
-	this->stop = true;
-	//just in case we are waiting for breakpoint
-	this->notify();
-	old_thread::on_stop();
-}
-
-void GDBDebugServer::pause_from(cpu_thread* t) {
-	if (paused) {
+	if (paused)
+	{
 		return;
 	}
 	paused = true;
 	pausedBy = t->id;
-	notify();
+	thread_ctrl::notify(*static_cast<gdb_server*>(this));
 }
-
-u32 g_gdb_debugger_id = 0;
 
 #ifndef _WIN32
 #undef sscanf_s
@@ -849,5 +945,3 @@ u32 g_gdb_debugger_id = 0;
 
 #undef HEX_U32
 #undef HEX_U64
-
-#endif

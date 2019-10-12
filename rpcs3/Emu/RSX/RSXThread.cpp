@@ -573,7 +573,7 @@ namespace rsx
 			if (sync_point_request)
 			{
 				restore_point = ctrl->get;
-				restore_ret = m_return_addr;
+				saved_fifo_ret = fifo_ret_addr;
 				sync_point_request = false;
 			}
 
@@ -2332,6 +2332,21 @@ namespace rsx
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
 		//verify (HERE), async_tasks_pending.load() == 0;
+	}
+
+	void thread::flush_fifo()
+	{
+		// Make sure GET value is exposed before sync points
+		fifo_ctrl->sync_get();
+	}
+
+	void thread::recover_fifo()
+	{
+		// Error. Should reset the queue
+		fifo_ctrl->set_get(restore_point);
+		fifo_ret_addr = saved_fifo_ret;
+		std::this_thread::sleep_for(1ms);
+		invalid_command_interrupt_raised = false;
 	}
 
 	void thread::read_barrier(u32 memory_address, u32 memory_range)

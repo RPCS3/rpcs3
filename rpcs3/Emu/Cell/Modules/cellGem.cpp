@@ -104,6 +104,10 @@ struct gem_config
 
 	std::array<gem_controller, CELL_GEM_MAX_NUM> controllers;
 	u32 connected_controllers;
+	bool update_started{};
+	u32 camera_frame{};
+
+	shared_mutex mtx;
 
 	Timer timer;
 
@@ -1064,6 +1068,18 @@ error_code cellGemUpdateFinish()
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
+	std::scoped_lock lock(gem->mtx);
+
+	if (!std::exchange(gem->update_started, false))
+	{
+		return CELL_GEM_ERROR_UPDATE_NOT_STARTED;
+	}
+
+	if (!gem->camera_frame)
+	{
+		return CELL_GEM_NO_VIDEO;
+	}
+
 	return CELL_OK;
 }
 
@@ -1078,9 +1094,18 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
+	std::scoped_lock lock(gem->mtx);
+
+	// Update is starting even when camera_frame is null
+	if (std::exchange(gem->update_started, true))
+	{
+		return CELL_GEM_ERROR_UPDATE_NOT_FINISHED;
+	}
+
+	gem->camera_frame = camera_frame.addr();
 	if (!camera_frame)
 	{
-		return CELL_GEM_ERROR_INVALID_PARAMETER;
+		return CELL_GEM_NO_VIDEO;
 	}
 
 	return CELL_OK;

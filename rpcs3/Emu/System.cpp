@@ -38,8 +38,6 @@
 #include <memory>
 #include <regex>
 
-#include "Utilities/GDBDebugServer.h"
-
 #include "Utilities/JIT.h"
 
 #include "display_sleep_control.h"
@@ -63,8 +61,6 @@ extern void spu_load_exec(const spu_exec_object&);
 extern void ppu_initialize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
-
-extern void network_thread_init();
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -424,10 +420,6 @@ void Emulator::Init()
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
-
-#ifdef WITH_GDB_DEBUGGER
-	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int)g_cfg.misc.gdb_server_port);
-#endif
 
 	// Initialize patch engine
 	g_fxo->init<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
@@ -1588,7 +1580,6 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			Emu.GetCallbacks().init_pad_handler(m_title_id);
 			Emu.GetCallbacks().init_kb_handler();
 			Emu.GetCallbacks().init_mouse_handler();
-			network_thread_init();
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
@@ -1666,11 +1657,6 @@ void Emulator::Run()
 
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
-
-#ifdef WITH_GDB_DEBUGGER
-	// Initialize debug server at the end of emu run sequence
-	fxm::make<GDBDebugServer>();
-#endif
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{

@@ -1,49 +1,21 @@
 #pragma once
 
-#ifdef WITH_GDB_DEBUGGER
+#include "Utilities/Thread.h"
+#include <memory>
+#include <string>
 
-#include "Thread.h"
-#include <Emu/IdManager.h>
-#include "Emu/CPU/CPUThread.h"
-#include "Emu/Cell/PPUThread.h"
+struct gdb_cmd;
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <WS2tcpip.h>
-#else
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#endif
+class cpu_thread;
+class ppu_thread;
 
-#ifdef _WIN32
-using socket_t = SOCKET;
-#else
-using socket_t = int;
-#endif
-
-typedef struct gdb_cmd {
-	std::string cmd;
-	std::string data;
-	u8 checksum;
-} gdb_cmd;
-
-class wrong_checksum_exception : public std::runtime_error {
-public:
-	wrong_checksum_exception(char const* const message) : runtime_error(message) {}
-};
-
-const u64 ALL_THREADS = 0xffffffffffffffff;
-const u64 ANY_THREAD = 0;
-
-class GDBDebugServer
+class gdb_thread
 {
-	socket_t server_socket;
-	socket_t client_socket;
+	static const u64 ALL_THREADS = 0xffffffffffffffff;
+	static const u64 ANY_THREAD = 0;
+
+	int server_socket = -1;
+	int client_socket = -1;
 	std::weak_ptr<cpu_thread> selected_thread;
 	u64 continue_ops_thread_id = ANY_THREAD;
 	u64 general_ops_thread_id = ANY_THREAD;
@@ -71,10 +43,10 @@ class GDBDebugServer
 	//acknowledge packet, either as accepted or declined
 	void ack(bool accepted);
 	//sends command body cmd to client
-	void send_cmd(const std::string & cmd);
+	void send_cmd(const std::string& cmd);
 	//sends command to client until receives positive acknowledgement
 	//returns false in case some error happened, and command wasn't sent
-	bool send_cmd_ack(const std::string & cmd);
+	bool send_cmd_ack(const std::string& cmd);
 	//appends encoded char c to string str, and returns checksum. encoded byte can occupy 2 bytes
 	static u8 append_encoded_char(char c, std::string& str);
 	//convert u8 to 2 byte hexademical representation
@@ -82,11 +54,11 @@ class GDBDebugServer
 	//choose thread, support ALL_THREADS and ANY_THREAD values, returns true if some thread was selected
 	bool select_thread(u64 id);
 	//returns register value as hex string by register id (in gdb), in case of wrong id returns empty string
-	static std::string get_reg(std::shared_ptr<ppu_thread> thread, u32 rid);
+	static std::string get_reg(ppu_thread* thread, u32 rid);
 	//sets register value to hex string by register id (in gdb), in case of wrong id returns false
-	static bool set_reg(std::shared_ptr<ppu_thread> thread, u32 rid, std::string value);
+	static bool set_reg(ppu_thread* thread, u32 rid, std::string value);
 	//returns size of register with id rid in bytes, zero if invalid rid is provided
-	static u32 get_reg_size(std::shared_ptr<ppu_thread> thread, u32 rid);
+	static u32 get_reg_size(ppu_thread* thread, u32 rid);
 	//send reason of stop, returns false if sending response failed
 	bool send_reason();
 
@@ -114,14 +86,18 @@ class GDBDebugServer
 
 public:
 	bool from_breakpoint = true;
-	bool stop = false;
 	bool paused = false;
 	u64 pausedBy;
 
+	gdb_thread() noexcept;
+	~gdb_thread();
+	gdb_thread(const gdb_thread&) = delete;
+	gdb_thread& operator=(const gdb_thread&) = delete;
+
 	void operator()();
 	void pause_from(cpu_thread* t);
+
+	static constexpr auto thread_name = "GDB Server"sv;
 };
 
-extern u32 g_gdb_debugger_id;
-
-#endif
+using gdb_server = named_thread<gdb_thread>;

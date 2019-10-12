@@ -729,21 +729,21 @@ s32 cellMicSetDeviceAttr(u32 dev_num, CellMicDeviceAttr deviceAttributes, u32 ar
 	return CELL_OK;
 }
 
-s32 cellMicGetSignalAttr()
+s32 cellMicGetSignalAttr(u32 dev_num, CellMicSignalAttr sig_attrib, vm::ptr<void> value)
 {
-	UNIMPLEMENTED_FUNC(cellMic);
+	cellMic.todo("cellMicGetSignalAttr(dev_num=%d, sig_attrib=%d, value=*0x%x)", dev_num, (u32)sig_attrib, value);
 	return CELL_OK;
 }
 
-s32 cellMicSetSignalAttr()
+s32 cellMicSetSignalAttr(u32 dev_num, CellMicSignalAttr sig_attrib, vm::ptr<void> value)
 {
-	UNIMPLEMENTED_FUNC(cellMic);
+	cellMic.todo("cellMicSetSignalAttr(dev_num=%d, sig_attrib=%d, value=*0x%x)", dev_num, (u32)sig_attrib, value);
 	return CELL_OK;
 }
 
 s32 cellMicGetSignalState(u32 dev_num, CellMicSignalState sig_state, vm::ptr<void> value)
 {
-	cellMic.todo("cellMicGetSignalState(dev_num=%d, signalSate=%d, value=*0x%x)", dev_num, (u32)sig_state, value);
+	cellMic.todo("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, (u32)sig_state, value);
 
 	const auto mic_thr = g_fxo->get<mic_thread>();
 	const std::lock_guard lock(mic_thr->mutex);
@@ -921,29 +921,29 @@ s32 cellMicRead(u32 dev_num, vm::ptr<void> data, u32 maxBytes)
 	return mic.read_dsp(res_buf, maxBytes);
 }
 
-s32 cellMicReadAux()
+s32 cellMicReadAux(u32 dev_num, vm::ptr<void> data, s32 max_bytes)
 {
-	UNIMPLEMENTED_FUNC(cellMic);
+	cellMic.todo("cellMicReadAux(dev_num=%d, data=0x%x, max_bytes=0x%x)", dev_num, data, max_bytes);
 	return CELL_OK;
 }
 
-s32 cellMicReadDsp()
+s32 cellMicReadDsp(u32 dev_num, vm::ptr<void> data, s32 max_bytes)
 {
-	UNIMPLEMENTED_FUNC(cellMic);
+	cellMic.todo("cellMicReadDsp(dev_num=%d, data=0x%x, max_bytes=0x%x)", dev_num, data, max_bytes);
 	return CELL_OK;
 }
 
 /// Unimplemented Functions
 
-s32 cellMicReset()
+s32 cellMicReset(u32 dev_num)
 {
-	UNIMPLEMENTED_FUNC(cellMic);
+	cellMic.todo("cellMicReset(dev_num=%d)", dev_num);
 	return CELL_OK;
 }
 
-s32 cellMicGetDeviceGUID()
+s32 cellMicGetDeviceGUID(u32 dev_num, vm::ptr<u32> ptr_guid)
 {
-	UNIMPLEMENTED_FUNC(cellMic);
+	cellMic.todo("cellMicGetDeviceGUID(dev_num=%dm ptr_guid=*0x%x)", dev_num, ptr_guid);
 	return CELL_OK;
 }
 

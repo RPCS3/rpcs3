@@ -1,5 +1,6 @@
 ﻿#include <QVBoxLayout>
 #include <QButtonGroup>
+#include <QDialogButtonBox>
 #include <QPushButton>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -38,7 +39,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	: QDialog(parent), xgui_settings(guiSettings), xemu_settings(emuSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
 {
 	ui->setupUi(this);
-	ui->cancelButton->setFocus();
+	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
@@ -118,7 +119,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	m_discord_state = xgui_settings->GetValue(gui::m_discordState).toString();
 
 	// Various connects
-	connect(ui->okButton, &QAbstractButton::clicked, [=, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
+	connect(ui->buttonBox, &QDialogButtonBox::accepted, [=, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
 	{
 		std::set<std::string> selectedlle;
 		for (int i = 0; i<ui->lleList->count(); ++i)
@@ -158,11 +159,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 #endif
 	});
 
-	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
+	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 
 	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, [=]()
 	{
-		ui->cancelButton->setFocus();
+		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	});
 
 	//     _____ _____  _    _   _______    _
@@ -1397,7 +1398,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 		};
 
-		connect(ui->okButton, &QAbstractButton::clicked, [=]()
+		connect(ui->buttonBox, &QDialogButtonBox::accepted, [=]()
 		{
 			ApplyGuiOptions();
 		});

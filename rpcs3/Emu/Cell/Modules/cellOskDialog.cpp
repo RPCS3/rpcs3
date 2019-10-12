@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -448,6 +448,12 @@ error_code cellOskDialogDisableDimmer()
 error_code cellOskDialogSetKeyLayoutOption(u32 option)
 {
 	cellOskDialog.todo("cellOskDialogSetKeyLayoutOption(option=0x%x)", option);
+
+	if (option == 0 || option > 3) // CELL_OSKDIALOG_10KEY_PANEL OR CELL_OSKDIALOG_FULLKEY_PANEL
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 
@@ -475,16 +481,40 @@ error_code cellOskDialogExtInputDeviceUnlock()
 	return CELL_OK;
 }
 
+error_code register_keyboard_event_hook_callback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
+{
+	cellOskDialog.todo("register_keyboard_event_hook_callback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
+
+	if (!pCallback)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
+	return CELL_OK;
+}
+
 error_code cellOskDialogExtRegisterKeyboardEventHookCallback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallback(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
-	return CELL_OK;
+
+	if (hookEventMode == 0 || hookEventMode > 3) // CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
+	return register_keyboard_event_hook_callback(hookEventMode, pCallback);
 }
 
 error_code cellOskDialogExtRegisterKeyboardEventHookCallbackEx(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterKeyboardEventHookCallbackEx(hookEventMode=%u, pCallback=*0x%x)", hookEventMode, pCallback);
-	return CELL_OK;
+
+	if (hookEventMode == 0 || hookEventMode > 7) // CELL_OSKDIALOG_EVENT_HOOK_TYPE_FUNCTION_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ASCII_KEY OR CELL_OSKDIALOG_EVENT_HOOK_TYPE_ONLY_MODIFIER
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
+	return register_keyboard_event_hook_callback(hookEventMode, pCallback);
 }
 
 error_code cellOskDialogExtAddJapaneseOptionDictionary(vm::cpptr<char> filePath)
@@ -590,6 +620,12 @@ error_code cellOskDialogExtEnableHalfByteKana()
 error_code cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForceFinishCallback> pCallback)
 {
 	cellOskDialog.todo("cellOskDialogExtRegisterForceFinishCallback(pCallback=*0x%x)", pCallback);
+
+	if (!pCallback)
+	{
+		return CELL_OSKDIALOG_ERROR_PARAM;
+	}
+
 	return CELL_OK;
 }
 

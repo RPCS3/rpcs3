@@ -44,8 +44,8 @@
 
 #define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
 
-#define FRAME_PRESENT_TIMEOUT 1000000ull // 1 second
-#define GENERAL_WAIT_TIMEOUT  100000ull  // 100ms
+#define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
+#define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
 
 namespace rsx
 {
@@ -2511,8 +2511,14 @@ public:
 			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
 			VkInstance instance;
-			if (vkCreateInstance(&instance_info, nullptr, &instance) != VK_SUCCESS)
+			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &instance); result != VK_SUCCESS)
+			{
+				if (result == VK_ERROR_LAYER_NOT_PRESENT)
+				{
+					LOG_FATAL(RSX,"Could not initialize layer VK_LAYER_KHRONOS_validation");
+				}
 				return 0;
+			}
 
 			m_vk_instances.push_back(instance);
 			return (u32)m_vk_instances.size();

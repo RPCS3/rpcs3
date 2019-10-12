@@ -966,7 +966,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = this->size();
 			info.atime = to_time(basic_info.LastAccessTime);
-			info.mtime = to_time(basic_info.ChangeTime);
+			info.mtime = to_time(basic_info.LastWriteTime);
 			info.ctime = info.mtime;
 
 			if (info.atime < info.mtime)
@@ -1088,7 +1088,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (mode & fs::trunc && mode & (fs::lock + fs::unread))
 	{
 		// Postpone truncation in order to avoid using O_TRUNC on a locked file
-		::ftruncate(fd, 0);
+		verify(HERE), ::ftruncate(fd, 0) == 0;
 	}
 
 	class unix_file final : public file_base

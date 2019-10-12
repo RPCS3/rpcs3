@@ -209,11 +209,11 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 	if (_type.se_normal)
 	{
-		cellSysutil.warning(msgString.get_ptr());
+		cellSysutil.warning("%s", msgString);
 	}
 	else
 	{
-		cellSysutil.error(msgString.get_ptr());
+		cellSysutil.error("%s", msgString);
 	}
 
 	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())

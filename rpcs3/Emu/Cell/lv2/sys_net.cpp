@@ -26,10 +26,6 @@
 
 LOG_CHANNEL(sys_net);
 
-static std::vector<ppu_thread*> s_to_awake;
-
-static shared_mutex s_nw_mutex;
-
 // Error helper functions
 static s32 get_last_error(bool is_blocking, int native_error = 0)
 {
@@ -106,9 +102,35 @@ static void network_clear_queue(ppu_thread& ppu)
 	});
 }
 
-extern void network_thread_init()
+struct network_thread
 {
-	thread_ctrl::spawn("Network Thread", []()
+	std::vector<ppu_thread*> s_to_awake;
+
+	shared_mutex s_nw_mutex;
+
+	static constexpr auto thread_name = "Network Thread";
+
+	network_thread() noexcept
+	{
+#ifdef _WIN32
+		WSADATA wsa_data;
+		WSAStartup(MAKEWORD(2, 2), &wsa_data);
+#endif
+	}
+
+	~network_thread()
+	{
+#ifdef _WIN32
+		WSACleanup();
+		CloseHandle(_eventh);
+#endif
+	}
+
+#ifdef _WIN32
+	HANDLE _eventh = CreateEventW(nullptr, false, false, nullptr);
+#endif
+
+	void operator()()
 	{
 		std::vector<std::shared_ptr<lv2_socket>> socklist;
 		socklist.reserve(lv2_socket::id_count);
@@ -116,10 +138,6 @@ extern void network_thread_init()
 		s_to_awake.clear();
 
 #ifdef _WIN32
-		HANDLE _eventh = CreateEventW(nullptr, false, false, nullptr);
-
-		WSADATA wsa_data;
-		WSAStartup(MAKEWORD(2, 2), &wsa_data);
 #else
 		::pollfd fds[lv2_socket::id_count]{};
 #endif
@@ -237,13 +255,10 @@ extern void network_thread_init()
 			}
 		}
 		while (!Emu.IsStopped());
+	}
+};
 
-#ifdef _WIN32
-		CloseHandle(_eventh);
-		WSACleanup();
-#endif
-	});
-}
+using network_context = named_thread<network_thread>;
 
 lv2_socket::lv2_socket(lv2_socket::socket_type s)
 	: socket(s)
@@ -1484,7 +1499,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 
 	if (nfds)
 	{
-		std::lock_guard nw_lock(s_nw_mutex);
+		std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
 		reader_lock lock(id_manager::g_mutex);
 
@@ -1590,7 +1605,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 							fds[i].revents |= SYS_NET_POLLERR;
 
 						signaled++;
-						s_to_awake.emplace_back(&ppu);
+						g_fxo->get<network_context>()->s_to_awake.emplace_back(&ppu);
 						return true;
 					}
 
@@ -1618,7 +1633,7 @@ s32 sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 nfds, s3
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				std::lock_guard nw_lock(s_nw_mutex);
+				std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
 				if (signaled)
 				{
@@ -1659,7 +1674,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 
 	if (nfds >= 0)
 	{
-		std::lock_guard nw_lock(s_nw_mutex);
+		std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
 		reader_lock lock(id_manager::g_mutex);
 
@@ -1783,7 +1798,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 						//	rexcept.set(i);
 
 						signaled++;
-						s_to_awake.emplace_back(&ppu);
+						g_fxo->get<network_context>()->s_to_awake.emplace_back(&ppu);
 						return true;
 					}
 
@@ -1815,7 +1830,7 @@ s32 sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set> readf
 		{
 			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				std::lock_guard nw_lock(s_nw_mutex);
+				std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
 
 				if (signaled)
 				{

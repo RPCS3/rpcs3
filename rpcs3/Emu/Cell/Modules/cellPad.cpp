@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -25,6 +25,20 @@ void fmt_class_string<CellPadError>::format(std::string& out, u64 arg)
 			STR_CASE(CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD);
 			STR_CASE(CELL_PAD_ERROR_TOO_MANY_DEVICES);
 			STR_CASE(CELL_PAD_ERROR_EBUSY);
+		}
+
+		return unknown;
+	});
+}
+
+template<>
+void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_PADFILTER_ERROR_INVALID_PARAMETER);
 		}
 
 		return unknown;
@@ -64,6 +78,27 @@ error_code cellPadEnd()
 	return CELL_OK;
 }
 
+void clear_pad_buffer(const std::shared_ptr<Pad> pad)
+{
+	if (!pad)
+		return;
+
+	// Set 'm_buffer_cleared' to force a resend of everything
+	// might as well also reset everything in our pad 'buffer' to nothing as well
+
+	pad->m_buffer_cleared = true;
+	pad->m_analog_left_x = pad->m_analog_left_y = pad->m_analog_right_x = pad->m_analog_right_y = 128;
+
+	pad->m_digital_1 = pad->m_digital_2 = 0;
+	pad->m_press_right = pad->m_press_left = pad->m_press_up = pad->m_press_down = 0;
+	pad->m_press_triangle = pad->m_press_circle = pad->m_press_cross = pad->m_press_square = 0;
+	pad->m_press_L1 = pad->m_press_L2 = pad->m_press_R1 = pad->m_press_R2 = 0;
+
+	// ~399 on sensor y is a level non moving controller
+	pad->m_sensor_y = 399;
+	pad->m_sensor_x = pad->m_sensor_z = pad->m_sensor_g = 512;
+}
+
 error_code cellPadClearBuf(u32 port_no)
 {
 	sys_io.trace("cellPadClearBuf(port_no=%d)", port_no);
@@ -90,20 +125,7 @@ error_code cellPadClearBuf(u32 port_no)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	// Set 'm_buffer_cleared' to force a resend of everything
-	// might as well also reset everything in our pad 'buffer' to nothing as well
-
-	pad->m_buffer_cleared = true;
-	pad->m_analog_left_x = pad->m_analog_left_y = pad->m_analog_right_x = pad->m_analog_right_y = 128;
-
-	pad->m_digital_1 = pad->m_digital_2 = 0;
-	pad->m_press_right = pad->m_press_left = pad->m_press_up = pad->m_press_down = 0;
-	pad->m_press_triangle = pad->m_press_circle = pad->m_press_cross = pad->m_press_square = 0;
-	pad->m_press_L1 = pad->m_press_L2 = pad->m_press_R1 = pad->m_press_R2 = 0;
-
-	// ~399 on sensor y is a level non moving controller
-	pad->m_sensor_y = 399;
-	pad->m_sensor_x = pad->m_sensor_z = pad->m_sensor_g = 512;
+	clear_pad_buffer(pad);
 
 	return CELL_OK;
 }
@@ -137,13 +159,21 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const PadInfo& rinfo = handler->GetInfo();
 
-	if (rinfo.ignore_input || (rinfo.system_info & CELL_PAD_INFO_INTERCEPTED))
+	if (rinfo.system_info & CELL_PAD_INFO_INTERCEPTED)
 	{
 		data->len = CELL_PAD_LEN_NO_CHANGE;
 		return CELL_OK;
 	}
 
-	if (pad->ldd)
+	bool btnChanged = false;
+
+	if (rinfo.ignore_input)
+	{
+		// Needed for Hotline Miami and Ninja Gaiden Sigma after dialogs were closed and buttons are still pressed.
+		// Gran Turismo 6 would keep registering the Start button during OSK Dialogs if this wasn't cleared and if we'd return with len as CELL_PAD_LEN_NO_CHANGE.
+		clear_pad_buffer(pad);
+	}
+	else if (pad->ldd)
 	{
 		memcpy(data.get_ptr(), pad->ldd_data, sizeof(CellPadData));
 		if (setting & CELL_PAD_SETTING_SENSOR_ON)
@@ -152,149 +182,150 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 			data->len = (setting & CELL_PAD_SETTING_PRESS_ON) ? CELL_PAD_LEN_CHANGE_PRESS_ON : CELL_PAD_LEN_CHANGE_DEFAULT;
 		return CELL_OK;
 	}
-
-	u16 d1Initial   = pad->m_digital_1;
-	u16 d2Initial   = pad->m_digital_2;
-	bool btnChanged = false;
-
-	for (Button& button : pad->m_buttons)
+	else
 	{
-		// here we check btns, and set pad accordingly,
-		// if something changed, set btnChanged
+		u16 d1Initial = pad->m_digital_1;
+		u16 d2Initial = pad->m_digital_2;
 
-		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
+		for (Button& button : pad->m_buttons)
 		{
-			if (button.m_pressed)
-				pad->m_digital_1 |= button.m_outKeyCode;
-			else
-				pad->m_digital_1 &= ~button.m_outKeyCode;
+			// here we check btns, and set pad accordingly,
+			// if something changed, set btnChanged
 
-			switch (button.m_outKeyCode)
+			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 			{
-			case CELL_PAD_CTRL_LEFT:
-				if (pad->m_press_left != button.m_value) btnChanged = true;
-				pad->m_press_left = button.m_value;
-				break;
-			case CELL_PAD_CTRL_DOWN:
-				if (pad->m_press_down != button.m_value) btnChanged = true;
-				pad->m_press_down = button.m_value;
-				break;
-			case CELL_PAD_CTRL_RIGHT:
-				if (pad->m_press_right != button.m_value) btnChanged = true;
-				pad->m_press_right = button.m_value;
-				break;
-			case CELL_PAD_CTRL_UP:
-				if (pad->m_press_up != button.m_value) btnChanged = true;
-				pad->m_press_up = button.m_value;
-				break;
-			// These arent pressure btns
-			case CELL_PAD_CTRL_R3:
-			case CELL_PAD_CTRL_L3:
-			case CELL_PAD_CTRL_START:
-			case CELL_PAD_CTRL_SELECT:
-			default: break;
+				if (button.m_pressed)
+					pad->m_digital_1 |= button.m_outKeyCode;
+				else
+					pad->m_digital_1 &= ~button.m_outKeyCode;
+
+				switch (button.m_outKeyCode)
+				{
+				case CELL_PAD_CTRL_LEFT:
+					if (pad->m_press_left != button.m_value) btnChanged = true;
+					pad->m_press_left = button.m_value;
+					break;
+				case CELL_PAD_CTRL_DOWN:
+					if (pad->m_press_down != button.m_value) btnChanged = true;
+					pad->m_press_down = button.m_value;
+					break;
+				case CELL_PAD_CTRL_RIGHT:
+					if (pad->m_press_right != button.m_value) btnChanged = true;
+					pad->m_press_right = button.m_value;
+					break;
+				case CELL_PAD_CTRL_UP:
+					if (pad->m_press_up != button.m_value) btnChanged = true;
+					pad->m_press_up = button.m_value;
+					break;
+				// These arent pressure btns
+				case CELL_PAD_CTRL_R3:
+				case CELL_PAD_CTRL_L3:
+				case CELL_PAD_CTRL_START:
+				case CELL_PAD_CTRL_SELECT:
+				default: break;
+				}
+			}
+			else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+			{
+				if (button.m_pressed)
+					pad->m_digital_2 |= button.m_outKeyCode;
+				else
+					pad->m_digital_2 &= ~button.m_outKeyCode;
+
+				switch (button.m_outKeyCode)
+				{
+				case CELL_PAD_CTRL_SQUARE:
+					if (pad->m_press_square != button.m_value) btnChanged = true;
+					pad->m_press_square = button.m_value;
+					break;
+				case CELL_PAD_CTRL_CROSS:
+					if (pad->m_press_cross != button.m_value) btnChanged = true;
+					pad->m_press_cross = button.m_value;
+					break;
+				case CELL_PAD_CTRL_CIRCLE:
+					if (pad->m_press_circle != button.m_value) btnChanged = true;
+					pad->m_press_circle = button.m_value;
+					break;
+				case CELL_PAD_CTRL_TRIANGLE:
+					if (pad->m_press_triangle != button.m_value) btnChanged = true;
+					pad->m_press_triangle = button.m_value;
+					break;
+				case CELL_PAD_CTRL_R1:
+					if (pad->m_press_R1 != button.m_value) btnChanged = true;
+					pad->m_press_R1 = button.m_value;
+					break;
+				case CELL_PAD_CTRL_L1:
+					if (pad->m_press_L1 != button.m_value) btnChanged = true;
+					pad->m_press_L1 = button.m_value;
+					break;
+				case CELL_PAD_CTRL_R2:
+					if (pad->m_press_R2 != button.m_value) btnChanged = true;
+					pad->m_press_R2 = button.m_value;
+					break;
+				case CELL_PAD_CTRL_L2:
+					if (pad->m_press_L2 != button.m_value) btnChanged = true;
+					pad->m_press_L2 = button.m_value;
+					break;
+				default: break;
+				}
 			}
 		}
-		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-		{
-			if (button.m_pressed)
-				pad->m_digital_2 |= button.m_outKeyCode;
-			else
-				pad->m_digital_2 &= ~button.m_outKeyCode;
 
-			switch (button.m_outKeyCode)
+		for (const AnalogStick& stick : pad->m_sticks)
+		{
+			switch (stick.m_offset)
 			{
-			case CELL_PAD_CTRL_SQUARE:
-				if (pad->m_press_square != button.m_value) btnChanged = true;
-				pad->m_press_square = button.m_value;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
+				if (pad->m_analog_left_x != stick.m_value) btnChanged = true;
+				pad->m_analog_left_x = stick.m_value;
 				break;
-			case CELL_PAD_CTRL_CROSS:
-				if (pad->m_press_cross != button.m_value) btnChanged = true;
-				pad->m_press_cross = button.m_value;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
+				if (pad->m_analog_left_y != stick.m_value) btnChanged = true;
+				pad->m_analog_left_y = stick.m_value;
 				break;
-			case CELL_PAD_CTRL_CIRCLE:
-				if (pad->m_press_circle != button.m_value) btnChanged = true;
-				pad->m_press_circle = button.m_value;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
+				if (pad->m_analog_right_x != stick.m_value) btnChanged = true;
+				pad->m_analog_right_x = stick.m_value;
 				break;
-			case CELL_PAD_CTRL_TRIANGLE:
-				if (pad->m_press_triangle != button.m_value) btnChanged = true;
-				pad->m_press_triangle = button.m_value;
-				break;
-			case CELL_PAD_CTRL_R1:
-				if (pad->m_press_R1 != button.m_value) btnChanged = true;
-				pad->m_press_R1 = button.m_value;
-				break;
-			case CELL_PAD_CTRL_L1:
-				if (pad->m_press_L1 != button.m_value) btnChanged = true;
-				pad->m_press_L1 = button.m_value;
-				break;
-			case CELL_PAD_CTRL_R2:
-				if (pad->m_press_R2 != button.m_value) btnChanged = true;
-				pad->m_press_R2 = button.m_value;
-				break;
-			case CELL_PAD_CTRL_L2:
-				if (pad->m_press_L2 != button.m_value) btnChanged = true;
-				pad->m_press_L2 = button.m_value;
-				break;
-			default: break;
-			}
-		}
-	}
-
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		switch (stick.m_offset)
-		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-			if (pad->m_analog_left_x != stick.m_value) btnChanged = true;
-			pad->m_analog_left_x = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-			if (pad->m_analog_left_y != stick.m_value) btnChanged = true;
-			pad->m_analog_left_y = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-			if (pad->m_analog_right_x != stick.m_value) btnChanged = true;
-			pad->m_analog_right_x = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-			if (pad->m_analog_right_y != stick.m_value) btnChanged = true;
-			pad->m_analog_right_y = stick.m_value;
-			break;
-		default: break;
-		}
-	}
-
-	if (setting & CELL_PAD_SETTING_SENSOR_ON)
-	{
-		for (const AnalogSensor& sensor : pad->m_sensors)
-		{
-			switch (sensor.m_offset)
-			{
-			case CELL_PAD_BTN_OFFSET_SENSOR_X:
-				if (pad->m_sensor_x != sensor.m_value) btnChanged = true;
-				pad->m_sensor_x = sensor.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_SENSOR_Y:
-				if (pad->m_sensor_y != sensor.m_value) btnChanged = true;
-				pad->m_sensor_y = sensor.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_SENSOR_Z:
-				if (pad->m_sensor_z != sensor.m_value) btnChanged = true;
-				pad->m_sensor_z = sensor.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_SENSOR_G:
-				if (pad->m_sensor_g != sensor.m_value) btnChanged = true;
-				pad->m_sensor_g = sensor.m_value;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
+				if (pad->m_analog_right_y != stick.m_value) btnChanged = true;
+				pad->m_analog_right_y = stick.m_value;
 				break;
 			default: break;
 			}
 		}
-	}
 
-	if (d1Initial != pad->m_digital_1 || d2Initial != pad->m_digital_2)
-	{
-		btnChanged = true;
+		if (setting & CELL_PAD_SETTING_SENSOR_ON)
+		{
+			for (const AnalogSensor& sensor : pad->m_sensors)
+			{
+				switch (sensor.m_offset)
+				{
+				case CELL_PAD_BTN_OFFSET_SENSOR_X:
+					if (pad->m_sensor_x != sensor.m_value) btnChanged = true;
+					pad->m_sensor_x = sensor.m_value;
+					break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Y:
+					if (pad->m_sensor_y != sensor.m_value) btnChanged = true;
+					pad->m_sensor_y = sensor.m_value;
+					break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Z:
+					if (pad->m_sensor_z != sensor.m_value) btnChanged = true;
+					pad->m_sensor_z = sensor.m_value;
+					break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_G:
+					if (pad->m_sensor_g != sensor.m_value) btnChanged = true;
+					pad->m_sensor_g = sensor.m_value;
+					break;
+				default: break;
+				}
+			}
+		}
+
+		if (d1Initial != pad->m_digital_1 || d2Initial != pad->m_digital_2)
+		{
+			btnChanged = true;
+		}
 	}
 
 	if (setting & CELL_PAD_SETTING_SENSOR_ON)
@@ -742,7 +773,7 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 	return CELL_OK;
 }
 
-s32 cellPadInfoPressMode(u32 port_no)
+error_code cellPadInfoPressMode(u32 port_no)
 {
 	sys_io.trace("cellPadInfoPressMode(port_no=%d)", port_no);
 
@@ -768,10 +799,10 @@ s32 cellPadInfoPressMode(u32 port_no)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	return (pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) > 0;
+	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
 }
 
-s32 cellPadInfoSensorMode(u32 port_no)
+error_code cellPadInfoSensorMode(u32 port_no)
 {
 	sys_io.trace("cellPadInfoSensorMode(port_no=%d)", port_no);
 
@@ -797,7 +828,7 @@ s32 cellPadInfoSensorMode(u32 port_no)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	return (pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) > 0;
+	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);
 }
 
 error_code cellPadSetPressMode(u32 port_no, u32 mode)
@@ -972,6 +1003,27 @@ error_code cellPadLddUnregisterController(s32 handle)
 	return CELL_OK;
 }
 
+error_code cellPadFilterIIRInit(vm::ptr<CellPadFilterIIRSos> pSos, s32 cutoff)
+{
+	sys_io.todo("cellPadFilterIIRInit(pSos=*0x%x, cutoff=%d)", pSos, cutoff);
+
+	if (!pSos) // TODO: does this check for cutoff > 2 ?
+	{
+		return CELL_PADFILTER_ERROR_INVALID_PARAMETER;
+	}
+
+	return CELL_OK;
+}
+
+u32 cellPadFilterIIRFilter(vm::ptr<CellPadFilterIIRSos> pSos, u32 filterIn)
+{
+	sys_io.todo("cellPadFilterIIRFilter(pSos=*0x%x, filterIn=%d)", pSos, filterIn);
+
+	// TODO: apply filter
+
+	return std::clamp(filterIn, 0u, 1023u);
+}
+
 s32 sys_io_3733EA3C(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadData> data)
 {
 	// Used by the ps1 emulator built into the firmware
@@ -1003,6 +1055,9 @@ void cellPad_init()
 	REG_FUNC(sys_io, cellPadLddDataInsert);
 	REG_FUNC(sys_io, cellPadLddGetPortNo);
 	REG_FUNC(sys_io, cellPadLddUnregisterController);
+
+	REG_FUNC(sys_io, cellPadFilterIIRInit);
+	REG_FUNC(sys_io, cellPadFilterIIRFilter);
 
 	REG_FNID(sys_io, 0x3733EA3C, sys_io_3733EA3C);
 }

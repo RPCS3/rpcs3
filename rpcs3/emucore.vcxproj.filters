@@ -728,8 +728,8 @@
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
-      <Filter>Utilities</Filter>
+    <ClCompile Include="Emu\GDB.cpp">
+      <Filter>Emu</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <Filter>Utilities</Filter>
@@ -1438,8 +1438,8 @@
     <ClInclude Include="Loader\TAR.h">
       <Filter>Loader</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\GDBDebugServer.h">
-      <Filter>Utilities</Filter>
+    <ClInclude Include="Emu\GDB.h">
+      <Filter>Emu</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\bin_patch.h">
       <Filter>Utilities</Filter>

@@ -149,7 +149,7 @@ void pngDecEndCallback(png_structp png_ptr, png_infop info)
 // Custom error handler for libpng
 void pngDecError(png_structp png_ptr, png_const_charp error_message)
 {
-	cellPngDec.error(error_message);
+	cellPngDec.error("%s", error_message);
 	// we can't return here or libpng blows up
 	throw LibPngCustomException("Fatal Error in libpng");
 }
@@ -157,7 +157,7 @@ void pngDecError(png_structp png_ptr, png_const_charp error_message)
 // Custom warning handler for libpng
 void pngDecWarning(png_structp png_ptr, png_const_charp error_message)
 {
-	cellPngDec.warning(error_message);
+	cellPngDec.warning("%s", error_message);
 }
 
 // Get the chunk information of the PNG file. IDAT is marked as existing, only after decoding or reading the header.

@@ -1,220 +1,418 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellVoice.h"
 
 LOG_CHANNEL(cellVoice);
 
-
-s32 cellVoiceConnectIPortToOPort()
+template<>
+void fmt_class_string<CellVoiceError>::format(std::string& out, u64 arg)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_VOICE_ERROR_ADDRESS_INVALID);
+			STR_CASE(CELL_VOICE_ERROR_ARGUMENT_INVALID);
+			STR_CASE(CELL_VOICE_ERROR_CONTAINER_INVALID);
+			STR_CASE(CELL_VOICE_ERROR_DEVICE_NOT_PRESENT);
+			STR_CASE(CELL_VOICE_ERROR_EVENT_DISPATCH);
+			STR_CASE(CELL_VOICE_ERROR_EVENT_QUEUE);
+			STR_CASE(CELL_VOICE_ERROR_GENERAL);
+			STR_CASE(CELL_VOICE_ERROR_LIBVOICE_INITIALIZED);
+			STR_CASE(CELL_VOICE_ERROR_LIBVOICE_NOT_INIT);
+			STR_CASE(CELL_VOICE_ERROR_NOT_IMPLEMENTED);
+			STR_CASE(CELL_VOICE_ERROR_PORT_INVALID);
+			STR_CASE(CELL_VOICE_ERROR_RESOURCE_INSUFFICIENT);
+			STR_CASE(CELL_VOICE_ERROR_SERVICE_ATTACHED);
+			STR_CASE(CELL_VOICE_ERROR_SERVICE_DETACHED);
+			STR_CASE(CELL_VOICE_ERROR_SERVICE_HANDLE);
+			STR_CASE(CELL_VOICE_ERROR_SERVICE_NOT_FOUND);
+			STR_CASE(CELL_VOICE_ERROR_SHAREDMEMORY);
+			STR_CASE(CELL_VOICE_ERROR_TOPOLOGY);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellVoiceConnectIPortToOPort(u32 ips, u32 ops)
+{
+	cellVoice.todo("cellVoiceConnectIPortToOPort(ips=%d, ops=%d)", ips, ops);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceCreateNotifyEventQueue()
+error_code cellVoiceCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceCreatePort()
+error_code cellVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<CellVoicePortParam> pArg)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceCreatePort(portId=*0x%x, pArg=*0x%x)", portId, pArg);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
+	if (!pArg)
+		return CELL_VOICE_ERROR_ARGUMENT_INVALID;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceDeletePort()
+error_code cellVoiceDeletePort(u32 portId)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceDeletePort(portId=%d)", portId);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceDisconnectIPortFromOPort()
+error_code cellVoiceDisconnectIPortFromOPort(u32 ips, u32 ops)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceDisconnectIPortFromOPort(ips=%d, ops=%d)", ips, ops);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceEnd()
+error_code cellVoiceEnd()
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceEnd()");
+
+	const auto manager = g_fxo->get<voice_manager>();
+
+	if (!manager->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
+	manager->is_init = false;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceGetBitRate()
+error_code cellVoiceGetBitRate(u32 portId, vm::ptr<u32> bitrate)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceGetBitRate(portId=%d, bitrate=*0x%x)", portId, bitrate);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceGetMuteFlag()
+error_code cellVoiceGetMuteFlag(u32 portId, vm::ptr<u16> bMuted)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceGetMuteFlag(portId=%d, bMuted=*0x%x)", portId, bMuted);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceGetPortAttr()
+error_code cellVoiceGetPortAttr(u32 portId, u32 attr, vm::ptr<void> attrValue)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceGetPortAttr(portId=%d, attr=%d, attrValue=*0x%x)", portId, attr, attrValue);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceGetPortInfo()
+error_code cellVoiceGetPortInfo(u32 portId, vm::ptr<CellVoiceBasePortInfo> pInfo)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceGetPortInfo(portId=%d, pInfo=*0x%x)", portId, pInfo);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceGetSignalState()
+error_code cellVoiceGetSignalState(u32 portId, u32 attr, vm::ptr<void> attrValue)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceGetSignalState(portId=%d, attr=%d, attrValue=*0x%x)", portId, attr, attrValue);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceGetVolume()
+error_code cellVoiceGetVolume(u32 portId, vm::ptr<f32> volume)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceGetVolume(portId=%d, volume=*0x%x)", portId, volume);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceInit()
+error_code cellVoiceInit(vm::ptr<CellVoiceInitParam> pArg)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceInit(pArg=*0x%x)", pArg);
+
+	const auto manager = g_fxo->get<voice_manager>();
+
+	if (manager->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_INITIALIZED;
+
+	if (!pArg)
+		return CELL_VOICE_ERROR_ARGUMENT_INVALID;
+
+	manager->is_init = true;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceInitEx()
+error_code cellVoiceInitEx(vm::ptr<CellVoiceInitParam> pArg)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceInitEx(pArg=*0x%x)", pArg);
+
+	const auto manager = g_fxo->get<voice_manager>();
+
+	if (manager->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_INITIALIZED;
+
+	if (!pArg)
+		return CELL_VOICE_ERROR_ARGUMENT_INVALID;
+
+	manager->is_init = true;
+
 	return CELL_OK;
 }
 
-s32 cellVoicePausePort()
+error_code cellVoicePausePort(u32 portId)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoicePausePort(portId=%d)", portId);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoicePausePortAll()
+error_code cellVoicePausePortAll()
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoicePausePortAll()");
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceRemoveNotifyEventQueue()
+error_code cellVoiceRemoveNotifyEventQueue(u64 key)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceRemoveNotifyEventQueue(key=0x%llx)", key);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceResetPort()
+error_code cellVoiceResetPort(u32 portId)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceResetPort(portId=%d)", portId);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceResumePort()
+error_code cellVoiceResumePort(u32 portId)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceResumePort(portId=%d)", portId);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceResumePortAll()
+error_code cellVoiceResumePortAll()
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceResumePortAll()");
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceSetBitRate()
+error_code cellVoiceSetBitRate(u32 portId, s32 bitrate)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceSetBitRate(portId=%d, bitrate=%d)", portId, bitrate);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceSetMuteFlag()
+error_code cellVoiceSetMuteFlag(u32 portId, u16 bMuted)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceSetMuteFlag(portId=%d, bMuted=%d)", portId, bMuted);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceSetMuteFlagAll()
+error_code cellVoiceSetMuteFlagAll(u16 bMuted)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceSetMuteFlagAll(bMuted=%d)", bMuted);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceSetNotifyEventQueue()
+error_code cellVoiceSetNotifyEventQueue(u64 key, u64 source)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceSetNotifyEventQueue(key=0x%llx, source=%d)", key, source);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceSetPortAttr()
+error_code cellVoiceSetPortAttr(u32 portId, u32 attr, vm::ptr<void> attrValue)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceSetPortAttr(portId=%d, attr=%d, attrValue=*0x%x)", portId, attr, attrValue);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceSetVolume()
+error_code cellVoiceSetVolume(u32 portId, f32 volume)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceSetVolume(portId=%d, volume=%f)", portId, volume);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceStart()
+error_code cellVoiceStart()
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceStart()");
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceStartEx()
+error_code cellVoiceStartEx(vm::ptr<CellVoiceStartParam> pArg)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceStartEx(pArg=*0x%x)", pArg);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
+	if (!pArg)
+		return CELL_VOICE_ERROR_ARGUMENT_INVALID;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceStop()
+error_code cellVoiceStop()
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceStop()");
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceUpdatePort()
+error_code cellVoiceUpdatePort(u32 portId, vm::cptr<CellVoicePortParam> pArg)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceUpdatePort(portId=%d, pArg=*0x%x)", portId, pArg);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
+	if (!pArg)
+		return CELL_VOICE_ERROR_ARGUMENT_INVALID;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceWriteToIPort()
+error_code cellVoiceWriteToIPort(u32 ips, vm::cptr<void> data, vm::ptr<u32> size)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceWriteToIPort(ips=%d, data=*0x%x, size=*0x%x)", ips, data, size);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceWriteToIPortEx()
+error_code cellVoiceWriteToIPortEx(u32 ips, vm::cptr<void> data, vm::ptr<u32> size, u32 numFrameLost)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceWriteToIPortEx(ips=%d, data=*0x%x, size=*0x%x, numFrameLost=%d)", ips, data, size, numFrameLost);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceWriteToIPortEx2()
+error_code cellVoiceWriteToIPortEx2(u32 ips, vm::cptr<void> data, vm::ptr<u32> size, s16 frameGaps)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceWriteToIPortEx2(ips=%d, data=*0x%x, size=*0x%x, frameGaps=%d)", ips, data, size, frameGaps);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceReadFromOPort()
+error_code cellVoiceReadFromOPort(u32 ops, vm::ptr<void> data, vm::ptr<u32> size)
 {
-	UNIMPLEMENTED_FUNC(cellVoice);
+	cellVoice.todo("cellVoiceReadFromOPort(ops=%d, data=*0x%x, size=*0x%x)", ops, data, size);
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
 	return CELL_OK;
 }
 
-s32 cellVoiceDebugTopology()
+error_code cellVoiceDebugTopology()
 {
 	UNIMPLEMENTED_FUNC(cellVoice);
-	return CELL_OK;
+
+	if (!g_fxo->get<voice_manager>()->is_init)
+		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
+
+	return CELL_VOICE_ERROR_NOT_IMPLEMENTED;
 }
 
 DECLARE(ppu_module_manager::cellVoice)("cellVoice", []()

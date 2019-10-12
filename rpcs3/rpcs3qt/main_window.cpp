@@ -506,11 +506,36 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
+	if (pup_f.size() < sizeof(PUPHeader))
+	{
+		LOG_ERROR(GENERAL, "Too small PUP file: %llu", pup_f.size());
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file size is invalid."));
+		return;
+	}
+
+	struct PUPHeader header = {};
+	pup_f.seek(0);
+	pup_f.read(header);
+
+	if (header.header_length + header.data_length != pup_f.size())
+	{
+		LOG_ERROR(GENERAL, "Firmware size mismatch, expected: %llu, actual: %llu + %llu", pup_f.size(), header.header_length, header.data_length);
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is corrupted."));
+		return;
+	}
+
 	pup_object pup(pup_f);
 	if (!pup)
 	{
 		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
 		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."));
+		return;
+	}
+
+	if (!pup.validate_hashes())
+	{
+		LOG_ERROR(GENERAL, "Error while installing firmware: Hash check failed. ");
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file contents are invalid."));
 		return;
 	}
 

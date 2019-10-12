@@ -9,12 +9,38 @@
 
 LOG_CHANNEL(cellCamera);
 
+template <>
+void fmt_class_string<CellCameraError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellCameraError value)
+	{
+		switch (value)
+		{
+		STR_CASE(CELL_CAMERA_ERROR_ALREADY_INIT);
+		STR_CASE(CELL_CAMERA_ERROR_NOT_INIT);
+		STR_CASE(CELL_CAMERA_ERROR_PARAM);
+		STR_CASE(CELL_CAMERA_ERROR_ALREADY_OPEN);
+		STR_CASE(CELL_CAMERA_ERROR_NOT_OPEN);
+		STR_CASE(CELL_CAMERA_ERROR_DEVICE_NOT_FOUND);
+		STR_CASE(CELL_CAMERA_ERROR_DEVICE_DEACTIVATED);
+		STR_CASE(CELL_CAMERA_ERROR_NOT_STARTED);
+		STR_CASE(CELL_CAMERA_ERROR_FORMAT_UNKNOWN);
+		STR_CASE(CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN);
+		STR_CASE(CELL_CAMERA_ERROR_BAD_FRAMERATE);
+		STR_CASE(CELL_CAMERA_ERROR_TIMEOUT);
+		STR_CASE(CELL_CAMERA_ERROR_FATAL);
+		}
+
+		return unknown;
+	});
+}
+
 // **************
 // * Prototypes *
 // **************
 
-s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2);
-s32 cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read);
+error_code cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2);
+error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read);
 
 // ************************
 // * HLE helper functions *
@@ -115,7 +141,7 @@ static bool check_dev_num(s32 dev_num)
 	return dev_num == 0;
 }
 
-static s32 check_camera_info(const CellCameraInfoEx& info)
+static error_code check_camera_info(const CellCameraInfoEx& info)
 {
 	// TODO: I managed to get 0x80990004 once. :thonkang:
 
@@ -272,7 +298,7 @@ u32 get_video_buffer_size(const CellCameraInfoEx& info)
 // * cellCamera functions *
 // ************************
 
-s32 cellCameraInit()
+error_code cellCameraInit()
 {
 	cellCamera.todo("cellCameraInit()");
 
@@ -288,6 +314,7 @@ s32 cellCameraInit()
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
+		g_camera->init = 1;
 		return CELL_OK;
 	}
 
@@ -343,11 +370,10 @@ s32 cellCameraInit()
 	}
 
 	g_camera->init = 1;
-
 	return CELL_OK;
 }
 
-s32 cellCameraEnd()
+error_code cellCameraEnd()
 {
 	cellCamera.todo("cellCameraEnd()");
 
@@ -361,8 +387,7 @@ s32 cellCameraEnd()
 	}
 
 	// TODO: My tests hinted to this behavior, but I'm not sure, so I'll leave this commented
-	//s32 res = cellCameraClose(0);
-	//if (res != CELL_OK)
+	//if (auto res = cellCameraClose(0))
 	//{
 	//	return res;
 	//}
@@ -372,19 +397,19 @@ s32 cellCameraEnd()
 	return CELL_OK;
 }
 
-s32 cellCameraOpen() // seems unused
+error_code cellCameraOpen() // seems unused
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraOpenAsync()
+error_code cellCameraOpenAsync()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
+error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
 	cellCamera.todo("cellCameraOpenEx(dev_num=%d, type=*0x%x)", dev_num, info);
 
@@ -397,19 +422,20 @@ s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+		return not_an_error(CELL_CAMERA_ERROR_DEVICE_NOT_FOUND);
 	}
 
-	s32 status;
-	if ((status = cellCameraSetAttribute(dev_num, CELL_CAMERA_READMODE, info->read_mode, 0)) != CELL_OK)
+	if (auto res = cellCameraSetAttribute(dev_num, CELL_CAMERA_READMODE, info->read_mode, 0))
 	{
-		return status;
+		return res;
 	}
+
 	if (info->read_mode == CELL_CAMERA_READ_DIRECT)
 	{
-		if ((status = cellCameraSetAttribute(dev_num, CELL_CAMERA_GAMEPID, status, 0)) != CELL_OK)
+		// Note: arg1 is the return value of previous SetAttribute
+		if (auto res = cellCameraSetAttribute(dev_num, CELL_CAMERA_GAMEPID, 0, 0))
 		{
-			return status;
+			return res;
 		}
 	}
 
@@ -426,10 +452,9 @@ s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 		return CELL_CAMERA_ERROR_ALREADY_OPEN;
 	}
 
-	status = check_camera_info(*info);
-	if (status < 0)
+	if (auto res = check_camera_info(*info))
 	{
-		return status;
+		return res;
 	}
 
 	// calls cellCameraGetAttribute(dev_num, CELL_CAMERA_PBUFFER) at some point
@@ -452,13 +477,13 @@ s32 cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	return CELL_OK;
 }
 
-s32 cellCameraOpenPost()
+error_code cellCameraOpenPost()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraClose(s32 dev_num)
+error_code cellCameraClose(s32 dev_num)
 {
 	cellCamera.todo("cellCameraClose(dev_num=%d)", dev_num);
 
@@ -476,7 +501,7 @@ s32 cellCameraClose(s32 dev_num)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_NOT_OPEN;
+		return not_an_error(CELL_CAMERA_ERROR_NOT_OPEN);
 	}
 
 	std::lock_guard lock(g_camera->mutex);
@@ -492,19 +517,19 @@ s32 cellCameraClose(s32 dev_num)
 	return CELL_OK;
 }
 
-s32 cellCameraCloseAsync()
+error_code cellCameraCloseAsync()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraClosePost()
+error_code cellCameraClosePost()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraGetDeviceGUID(s32 dev_num, vm::ptr<u32> guid)
+error_code cellCameraGetDeviceGUID(s32 dev_num, vm::ptr<u32> guid)
 {
 	cellCamera.todo("cellCameraGetDeviceGUID(dev_num=%d, guid=*0x%x)", dev_num, guid);
 
@@ -522,7 +547,7 @@ s32 cellCameraGetDeviceGUID(s32 dev_num, vm::ptr<u32> guid)
 	return CELL_OK;
 }
 
-s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
+error_code cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 {
 	cellCamera.todo("cellCameraGetType(dev_num=%d, type=*0x%x)", dev_num, type);
 
@@ -535,7 +560,7 @@ s32 cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+		return not_an_error(CELL_CAMERA_ERROR_DEVICE_NOT_FOUND);
 	}
 
 	if (!check_dev_num(dev_num) || !type )
@@ -648,7 +673,7 @@ s32 cellCameraIsOpen(s32 dev_num)
 	return g_camera->is_open;
 }
 
-s32 cellCameraIsStarted(s32 dev_num)
+error_code cellCameraIsStarted(s32 dev_num)
 {
 	cellCamera.todo("cellCameraIsStarted(dev_num=%d)", dev_num);
 
@@ -674,7 +699,7 @@ s32 cellCameraIsStarted(s32 dev_num)
 	return g_camera->is_streaming;
 }
 
-s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2)
+error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2)
 {
 	const auto attr_name = get_camera_attr_name(attrib);
 	cellCamera.todo("cellCameraGetAttribute(dev_num=%d, attrib=%d=%s, arg1=*0x%x, arg2=*0x%x)", dev_num, attrib, attr_name, arg1, arg2);
@@ -688,7 +713,7 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+		return not_an_error(CELL_CAMERA_ERROR_DEVICE_NOT_FOUND);
 	}
 
 	if (!check_dev_num(dev_num) || !attr_name || !arg1) // invalid attributes don't have a name and at least arg1 should not be NULL
@@ -721,7 +746,7 @@ s32 cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u
 	return CELL_OK;
 }
 
-s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
+error_code cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 {
 	const auto attr_name = get_camera_attr_name(attrib);
 	cellCamera.todo("cellCameraSetAttribute(dev_num=%d, attrib=%d=%s, arg1=%d, arg2=%d)", dev_num, attrib, attr_name, arg1, arg2);
@@ -735,7 +760,7 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_NOT_OPEN;
+		return not_an_error(CELL_CAMERA_ERROR_NOT_OPEN);
 	}
 
 	if (!check_dev_num(dev_num) || !attr_name) // invalid attributes don't have a name
@@ -754,13 +779,13 @@ s32 cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 	return CELL_OK;
 }
 
-s32 cellCameraResetAttribute()
+error_code cellCameraResetAttribute()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
+error_code cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
 	cellCamera.todo("cellCameraGetBufferSize(dev_num=%d, info=*0x%x)", dev_num, info);
 
@@ -773,7 +798,7 @@ s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+		return not_an_error(CELL_CAMERA_ERROR_DEVICE_NOT_FOUND);
 	}
 
 	// the next few checks have a strange order, if I can trust the tests
@@ -793,8 +818,7 @@ s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 		return CELL_CAMERA_ERROR_PARAM;
 	}
 
-	s32 res = check_camera_info(*info);
-	if (res < 0)
+	if (auto res = check_camera_info(*info))
 	{
 		return res;
 	}
@@ -804,8 +828,7 @@ s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	s32 status;
-	if ((status = cellCameraSetAttribute(dev_num, CELL_CAMERA_READMODE, info->read_mode, 0)) != CELL_OK)
+	if (auto status = cellCameraSetAttribute(dev_num, CELL_CAMERA_READMODE, info->read_mode, 0))
 	{
 		return status;
 	}
@@ -818,7 +841,7 @@ s32 cellCameraGetBufferSize(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	return info->bytesize;
 }
 
-s32 cellCameraGetBufferInfo()
+error_code cellCameraGetBufferInfo()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 
@@ -827,7 +850,7 @@ s32 cellCameraGetBufferInfo()
 	return CELL_OK;
 }
 
-s32 cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
+error_code cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 {
 	cellCamera.todo("cellCameraGetBufferInfoEx(dev_num=%d, read=0x%x)", dev_num, info);
 
@@ -842,7 +865,7 @@ s32 cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_NOT_OPEN;
+		return not_an_error(CELL_CAMERA_ERROR_NOT_OPEN);
 	}
 
 	if (!check_dev_num(dev_num))
@@ -866,39 +889,39 @@ s32 cellCameraGetBufferInfoEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	return CELL_OK;
 }
 
-s32 cellCameraPrepExtensionUnit(s32 dev_num, vm::ptr<u8> guidExtensionCode)
+error_code cellCameraPrepExtensionUnit(s32 dev_num, vm::ptr<u8> guidExtensionCode)
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraCtrlExtensionUnit(s32 dev_num, u8 request, u16 value, u16 length, vm::ptr<u8> data)
+error_code cellCameraCtrlExtensionUnit(s32 dev_num, u8 request, u16 value, u16 length, vm::ptr<u8> data)
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraGetExtensionUnit(s32 dev_num, u16 value, u16 length, vm::ptr<u8> data)
+error_code cellCameraGetExtensionUnit(s32 dev_num, u16 value, u16 length, vm::ptr<u8> data)
 {
 	cellCamera.todo("cellCameraGetExtensionUnit(dev_num=%d, value=%d, length=%d, data=*0x%x)", dev_num, value, length, data);
 
 	return cellCameraCtrlExtensionUnit(dev_num, GET_CUR, value, length, data);
 }
 
-s32 cellCameraSetExtensionUnit(s32 dev_num, u16 value, u16 length, vm::ptr<u8> data)
+error_code cellCameraSetExtensionUnit(s32 dev_num, u16 value, u16 length, vm::ptr<u8> data)
 {
 	cellCamera.todo("cellCameraSetExtensionUnit(dev_num=%d, value=%d, length=%d, data=*0x%x)", dev_num, value, length, data);
 
 	return cellCameraCtrlExtensionUnit(dev_num, SET_CUR, value, length, data);
 }
 
-s32 cellCameraSetContainer()
+error_code cellCameraSetContainer()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraReset(s32 dev_num)
+error_code cellCameraReset(s32 dev_num)
 {
 	cellCamera.todo("cellCameraReset(dev_num=%d)", dev_num);
 
@@ -916,7 +939,7 @@ s32 cellCameraReset(s32 dev_num)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_NOT_OPEN;
+		return not_an_error(CELL_CAMERA_ERROR_NOT_OPEN);
 	}
 
 	if (!g_camera->is_open)
@@ -934,19 +957,19 @@ s32 cellCameraReset(s32 dev_num)
 	return CELL_OK;
 }
 
-s32 cellCameraResetAsync()
+error_code cellCameraResetAsync()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraResetPost()
+error_code cellCameraResetPost()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraStart(s32 dev_num)
+error_code cellCameraStart(s32 dev_num)
 {
 	cellCamera.todo("cellCameraStart(dev_num=%d)", dev_num);
 
@@ -964,7 +987,7 @@ s32 cellCameraStart(s32 dev_num)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_NOT_OPEN;
+		return not_an_error(CELL_CAMERA_ERROR_NOT_OPEN);
 	}
 
 	std::lock_guard lock(g_camera->mutex);
@@ -985,27 +1008,25 @@ s32 cellCameraStart(s32 dev_num)
 	return CELL_OK;
 }
 
-s32 cellCameraStartAsync()
+error_code cellCameraStartAsync()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraStartPost()
+error_code cellCameraStartPost()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraRead(s32 dev_num, vm::ptr<u32> frame_num, vm::ptr<u32> bytes_read)
+error_code cellCameraRead(s32 dev_num, vm::ptr<u32> frame_num, vm::ptr<u32> bytes_read)
 {
 	cellCamera.todo("cellCameraRead(dev_num=%d, frame_num=*0x%x, bytes_read=*0x%x)", dev_num, frame_num, bytes_read);
 
 	vm::ptr<CellCameraReadEx> read_ex = vm::make_var<CellCameraReadEx>({});
 
-	s32 res = cellCameraReadEx(dev_num, read_ex);
-
-	if (res != CELL_OK)
+	if (auto res = cellCameraReadEx(dev_num, read_ex))
 	{
 		return res;
 	}
@@ -1023,13 +1044,13 @@ s32 cellCameraRead(s32 dev_num, vm::ptr<u32> frame_num, vm::ptr<u32> bytes_read)
 	return CELL_OK;
 }
 
-s32 cellCameraRead2()
+error_code cellCameraRead2()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
+error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 {
 	cellCamera.todo("cellCameraReadEx(dev_num=%d, read=0x%x)", dev_num, read);
 
@@ -1042,7 +1063,7 @@ s32 cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_NOT_OPEN;
+		return not_an_error(CELL_CAMERA_ERROR_NOT_OPEN);
 	}
 
 	if (!check_dev_num(dev_num))
@@ -1083,14 +1104,14 @@ s32 cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 	return CELL_OK;
 }
 
-s32 cellCameraReadComplete(s32 dev_num, u32 bufnum, u32 arg2)
+error_code cellCameraReadComplete(s32 dev_num, u32 bufnum, u32 arg2)
 {
 	cellCamera.todo("cellCameraReadComplete(dev_num=%d, bufnum=%d, arg2=%d)", dev_num, bufnum, arg2);
 
 	return cellCameraSetAttribute(dev_num, CELL_CAMERA_READFINISH, bufnum, arg2);
 }
 
-s32 cellCameraStop(s32 dev_num)
+error_code cellCameraStop(s32 dev_num)
 {
 	cellCamera.todo("cellCameraStop(dev_num=%d)", dev_num);
 
@@ -1108,7 +1129,7 @@ s32 cellCameraStop(s32 dev_num)
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
-		return CELL_CAMERA_ERROR_NOT_OPEN;
+		return not_an_error(CELL_CAMERA_ERROR_NOT_OPEN);
 	}
 
 	if (!g_camera->is_open)
@@ -1134,19 +1155,19 @@ s32 cellCameraStop(s32 dev_num)
 	return CELL_OK;
 }
 
-s32 cellCameraStopAsync()
+error_code cellCameraStopAsync()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraStopPost()
+error_code cellCameraStopPost()
 {
 	UNIMPLEMENTED_FUNC(cellCamera);
 	return CELL_OK;
 }
 
-s32 cellCameraSetNotifyEventQueue(u64 key)
+error_code cellCameraSetNotifyEventQueue(u64 key)
 {
 	cellCamera.todo("cellCameraSetNotifyEventQueue(key=0x%x)", key);
 
@@ -1167,14 +1188,9 @@ s32 cellCameraSetNotifyEventQueue(u64 key)
 	return CELL_OK;
 }
 
-s32 cellCameraRemoveNotifyEventQueue(u64 key)
+error_code cellCameraRemoveNotifyEventQueue(u64 key)
 {
 	cellCamera.todo("cellCameraRemoveNotifyEventQueue(key=0x%x)", key);
-
-	if (g_cfg.io.camera == camera_handler::null)
-	{
-		return CELL_OK;
-	}
 
 	const auto g_camera = g_fxo->get<camera_thread>();
 
@@ -1183,12 +1199,17 @@ s32 cellCameraRemoveNotifyEventQueue(u64 key)
 		return CELL_CAMERA_ERROR_NOT_INIT;
 	}
 
+	if (g_cfg.io.camera == camera_handler::null)
+	{
+		return CELL_OK;
+	}
+
 	g_camera->remove_queue(key);
 
 	return CELL_OK;
 }
 
-s32 cellCameraSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
+error_code cellCameraSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 {
 	cellCamera.todo("cellCameraSetNotifyEventQueue2(key=0x%x, source=%d, flag=%d)", key, source, flag);
 
@@ -1209,7 +1230,7 @@ s32 cellCameraSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 	return CELL_OK;
 }
 
-s32 cellCameraRemoveNotifyEventQueue2(u64 key)
+error_code cellCameraRemoveNotifyEventQueue2(u64 key)
 {
 	cellCamera.todo("cellCameraRemoveNotifyEventQueue2(key=0x%x)", key);
 
