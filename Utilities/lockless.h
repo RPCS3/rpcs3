@@ -363,11 +363,6 @@ public:
 		}
 	}
 
-	void notify() noexcept
-	{
-		m_head.notify_one();
-	}
-
 	template <typename... Args>
 	void push(Args&&... args)
 	{
@@ -377,6 +372,12 @@ public:
 		while (!m_head.compare_exchange(_old, reinterpret_cast<std::uint64_t>(item)))
 		{
 			item->m_link = reinterpret_cast<lf_queue_item<T>*>(_old);
+		}
+
+		if (!_old)
+		{
+			// Notify only if queue was empty
+			m_head.notify_one();
 		}
 	}
 
