@@ -764,7 +764,8 @@ namespace gl
 
 		void allocate(GLsizeiptr size, const void* data_, memory_type type, GLenum usage)
 		{
-			if (get_driver_caps().ARB_buffer_storage_supported)
+			if (const auto& caps = get_driver_caps();
+				caps.ARB_buffer_storage_supported)
 			{
 				target target_ = current_target();
 				save_binding_state save(target_, *this);
@@ -787,6 +788,16 @@ namespace gl
 					default:
 						fmt::throw_exception("Unsupported buffer usage 0x%x", usage);
 					}
+				}
+
+				if ((flags & GL_MAP_READ_BIT) && !caps.vendor_AMD)
+				{
+					// This flag stops NVIDIA from allocating read-only memory in VRAM.
+					// NOTE: On AMD, allocating client-side memory via CLIENT_STORAGE_BIT or
+					// making use of GL_AMD_pinned_memory brings everything down to a crawl.
+					// Afaict there is no reason for this; disabling pixel pack/unpack operations does not alleviate the problem.
+					// The driver seems to eventually figure out the optimal storage location by itself.
+					flags |= GL_CLIENT_STORAGE_BIT;
 				}
 
 				glBufferStorage((GLenum)target_, size, data_, flags);
