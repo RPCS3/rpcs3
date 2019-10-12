@@ -213,7 +213,7 @@ void gdb_thread::start_server()
 
 int gdb_thread::read(void* buf, int cnt)
 {
-	while (!Emu.IsStopped())
+	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		int result = recv(client_socket, reinterpret_cast<char*>(buf), cnt, 0);
 
@@ -332,7 +332,8 @@ bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
 void gdb_thread::send(const char* buf, int cnt)
 {
 	GDB.trace("Sending %s (%d bytes).", buf, cnt);
-	while (!Emu.IsStopped())
+
+	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		int res = ::send(client_socket, buf, cnt, 0);
 		if (res == -1)
@@ -852,7 +853,7 @@ void gdb_thread::operator()()
 {
 	start_server();
 
-	while (server_socket != -1 && !Emu.IsStopped())
+	while (server_socket != -1 && thread_ctrl::state() != thread_state::aborting)
 	{
 		sockaddr_in client;
 		socklen_t client_len = sizeof(client);
@@ -881,7 +882,7 @@ void gdb_thread::operator()()
 
 			gdb_cmd cmd;
 
-			while (!Emu.IsStopped())
+			while (thread_ctrl::state() != thread_state::aborting)
 			{
 				if (!read_cmd(cmd))
 				{

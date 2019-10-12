@@ -489,7 +489,7 @@ void cell_audio_thread::operator()()
 	u32 in_progress_expected = 0;
 
 	// Main cellAudio loop
-	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
+	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		const u64 timestamp = ringbuffer->update();
 

@@ -223,7 +223,7 @@ void usb_handler_thread::operator()()
 	memset(&lusb_tv, 0, sizeof(timeval));
 	lusb_tv.tv_usec = 200;
 
-	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
+	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		// Todo: Hotplug here?
 

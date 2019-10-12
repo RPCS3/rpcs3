@@ -134,7 +134,7 @@ void cpu_thread::operator()()
 	g_cpu_suspend_lock.lock_unlock();
 
 	// Check thread status
-	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)) && !Emu.IsStopped())
+	while (!(state & (cpu_flag::exit + cpu_flag::dbg_global_stop)) && thread_ctrl::state() != thread_state::aborting)
 	{
 		// Check stop status
 		if (!(state & cpu_flag::stop))

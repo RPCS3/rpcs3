@@ -180,7 +180,7 @@ struct vdec_context final
 	{
 		ppu_tid = ppu.id;
 
-		for (auto cmds = in_cmd.pop_all(); !Emu.IsStopped(); cmds ? cmds.pop_front() : cmds = in_cmd.pop_all())
+		for (auto cmds = in_cmd.pop_all(); thread_ctrl::state() != thread_state::aborting; cmds ? cmds.pop_front() : cmds = in_cmd.pop_all())
 		{
 			if (!cmds)
 			{
@@ -394,7 +394,7 @@ struct vdec_context final
 					au_count--;
 				}
 
-				while (!Emu.IsStopped() && out_max && (std::lock_guard{mutex}, out.size() > out_max))
+				while (thread_ctrl::state() != thread_state::aborting && out_max && (std::lock_guard{mutex}, out.size() > out_max))
 				{
 					thread_ctrl::wait_for(1000);
 				}

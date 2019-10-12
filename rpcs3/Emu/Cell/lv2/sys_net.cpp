@@ -142,7 +142,7 @@ struct network_thread
 		::pollfd fds[lv2_socket::id_count]{};
 #endif
 
-		do
+		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			// Wait with 1ms timeout
 #ifdef _WIN32
@@ -254,7 +254,6 @@ struct network_thread
 #endif
 			}
 		}
-		while (!Emu.IsStopped());
 	}
 };
 

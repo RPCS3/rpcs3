@@ -28,7 +28,7 @@ void fmt_class_string<microphone_handler>::format(std::string& out, u64 arg)
 
 void mic_context::operator()()
 {
-	while (thread_ctrl::state() != thread_state::aborting && !Emu.IsStopped())
+	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		// The time between processing is copied from audio thread
 		// Might be inaccurate for mic thread
