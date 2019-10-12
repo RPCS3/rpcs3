@@ -54,8 +54,6 @@ bool g_use_rtm;
 
 std::string g_cfg_defaults;
 
-extern atomic_t<u32> g_thread_count;
-
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void ppu_initialize(const ppu_module&);
@@ -1148,6 +1146,8 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 				g_progr = "Compiling PPU modules";
 
+				atomic_t<u32> worker_count = 0;
+
 				for (std::size_t i = 0; i < file_queue.size(); i++)
 				{
 					const auto& path = file_queue[i].first;
@@ -1169,16 +1169,19 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 					{
 						if (auto prx = ppu_load_prx(obj, path))
 						{
-							while (g_thread_count >= max_threads + 2)
+							worker_count++;
+
+							while (worker_count > max_threads)
 							{
 								std::this_thread::sleep_for(10ms);
 							}
 
-							thread_queue.emplace("Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
+							thread_queue.emplace("Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx), &worker_count]
 							{
 								ppu_initialize(*_prx);
 								ppu_unload_prx(*_prx);
 								g_progr_fdone++;
+								worker_count--;
 							});
 
 							continue;
@@ -1788,17 +1791,9 @@ void Emulator::Stop(bool restart)
 	GetCallbacks().on_stop();
 
 	cpu_thread::stop_all();
-
-	while (g_thread_count)
-	{
-		std::this_thread::sleep_for(10ms);
-	}
-
-	LOG_NOTICE(GENERAL, "All threads stopped...");
-
+	g_fxo->reset();
 	lv2_obj::cleanup();
 	idm::clear();
-	g_fxo->reset();
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 

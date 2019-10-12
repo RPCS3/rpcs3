@@ -1653,9 +1653,6 @@ const bool s_exception_handler_set = []() -> bool
 
 #endif
 
-// TODO
-atomic_t<u32> g_thread_count(0);
-
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
@@ -1682,8 +1679,6 @@ void thread_base::initialize(bool(*wait_cb)(const void*))
 	{
 		return thread_ctrl::g_tls_this_thread->m_name.get();
 	};
-
-	++g_thread_count;
 
 #ifdef _MSC_VER
 	struct THREADNAME_INFO
@@ -1792,7 +1787,6 @@ void thread_base::finalize() noexcept
 {
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = nullptr;
-	--g_thread_count;
 }
 
 void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
