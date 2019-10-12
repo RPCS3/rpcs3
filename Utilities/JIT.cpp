@@ -205,12 +205,18 @@ void asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fall
 	}
 	else
 	{
+		// Don't repeat on explicit XABORT instruction (workaround)
+		c.test(x86::eax, _XABORT_EXPLICIT);
+		c.jnz(fallback);
+
 		// Count an attempt without RETRY flag as 65 normal attempts and continue
+		c.push(x86::rax);
 		c.not_(x86::eax);
 		c.and_(x86::eax, _XABORT_RETRY);
 		c.shl(x86::eax, 5);
 		c.add(x86::eax, 1); // eax = RETRY ? 1 : 65
 		c.add(ctr, x86::rax);
+		c.pop(x86::rax);
 	}
 
 	c.cmp(ctr, less_than);
