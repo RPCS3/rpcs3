@@ -289,7 +289,7 @@ public:
 
 	// Spawn a detached named thread
 	template <typename F>
-	static void spawn(std::string_view name, F&& func)
+	[[deprecated]] static void spawn(std::string_view name, F&& func)
 	{
 		new named_thread<F>(thread_state::detached, name, std::forward<F>(func));
 	}
