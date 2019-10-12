@@ -3,25 +3,69 @@
 #include <bitset>
 #include <string>
 
+#include "cellSsl.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/File.h"
 #include "Emu/VFS.h"
+#include "Emu/IdManager.h"
+
+#include "cellRtc.h"
 
 LOG_CHANNEL(cellSsl);
 
-
-
-enum SpecialCerts { BaltimoreCert = 6, Class3G2V2Cert = 13, ClassSSV4Cert = 15, EntrustNetCert = 18, GTECyberTrustGlobalCert = 23 };
-
-s32 cellSslInit(vm::ptr<void> pool, u32 poolSize)
+template<>
+void fmt_class_string<CellSslError>::format(std::string& out, u64 arg)
 {
-	cellSsl.todo("cellSslInit(pool=0x%x, poolSize=%d)", pool, poolSize);
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SSL_ERROR_NOT_INITIALIZED);
+			STR_CASE(CELL_SSL_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(CELL_SSL_ERROR_INITIALIZATION_FAILED);
+			STR_CASE(CELL_SSL_ERROR_NO_BUFFER);
+			STR_CASE(CELL_SSL_ERROR_INVALID_CERTIFICATE);
+			STR_CASE(CELL_SSL_ERROR_UNRETRIEVABLE);
+			STR_CASE(CELL_SSL_ERROR_INVALID_FORMAT);
+			STR_CASE(CELL_SSL_ERROR_NOT_FOUND);
+			STR_CASE(CELL_SSL_ERROR_INVALID_TIME);
+			STR_CASE(CELL_SSL_ERROR_INAVLID_NEGATIVE_TIME);
+			STR_CASE(CELL_SSL_ERROR_INCORRECT_TIME);
+			STR_CASE(CELL_SSL_ERROR_UNDEFINED_TIME_TYPE);
+			STR_CASE(CELL_SSL_ERROR_NO_MEMORY);
+			STR_CASE(CELL_SSL_ERROR_NO_STRING);
+			STR_CASE(CELL_SSL_ERROR_UNKNOWN_LOAD_CERT);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellSslInit(vm::ptr<void> pool, u32 poolSize)
+{
+	cellSsl.todo("cellSslInit(pool=*0x%x, poolSize=%d)", pool, poolSize);
+
+	const auto manager = g_fxo->get<ssl_manager>();
+
+	if (manager->is_init)
+		return CELL_SSL_ERROR_ALREADY_INITIALIZED;
+
+	manager->is_init = true;
+
 	return CELL_OK;
 }
 
-s32 cellSslEnd()
+error_code cellSslEnd()
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslEnd()");
+
+	const auto manager = g_fxo->get<ssl_manager>();
+
+	if (!manager->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	manager->is_init = false;
+
 	return CELL_OK;
 }
 
@@ -58,9 +102,9 @@ std::string getCert(const std::string certPath, const int certID, const bool isN
 	return fs::file(filePath).to_string();
 }
 
-s32 cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u32> required)
+error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u32> required)
 {
-	cellSsl.trace("cellSslCertificateLoader(flag=%llu, buffer=0x%x, size=%zu, required=0x%x)", flag, buffer, size, required);
+	cellSsl.trace("cellSslCertificateLoader(flag=%llu, buffer=*0x%x, size=%zu, required=*0x%x)", flag, buffer, size, required);
 
 	const std::bitset<58> flagBits(flag);
 	const std::string certPath = vfs::get("/dev_flash/data/cert/");
@@ -94,69 +138,179 @@ s32 cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u
 	return CELL_OK;
 }
 
-s32 cellSslCertGetSerialNumber()
+error_code cellSslCertGetSerialNumber(vm::cptr<void> sslCert, vm::cpptr<u8> sboData, vm::ptr<u64> sboLength)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetSerialNumber(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!sboData || !sboLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetPublicKey()
+error_code cellSslCertGetPublicKey(vm::cptr<void> sslCert, vm::cpptr<u8> sboData, vm::ptr<u64> sboLength)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetPublicKey(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!sboData || !sboLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetRsaPublicKeyModulus()
+error_code cellSslCertGetRsaPublicKeyModulus(vm::cptr<void> sslCert, vm::cpptr<u8> sboData, vm::ptr<u64> sboLength)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetRsaPublicKeyModulus(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!sboData || !sboLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetRsaPublicKeyExponent()
+error_code cellSslCertGetRsaPublicKeyExponent(vm::cptr<void> sslCert, vm::cpptr<u8> sboData, vm::ptr<u64> sboLength)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetRsaPublicKeyExponent(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!sboData || !sboLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetNotBefore()
+error_code cellSslCertGetNotBefore(vm::cptr<void> sslCert, vm::ptr<CellRtcTick> begin)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetNotBefore(sslCert=*0x%x, begin=*0x%x)", sslCert, begin);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!begin)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetNotAfter()
+error_code cellSslCertGetNotAfter(vm::cptr<void> sslCert, vm::ptr<CellRtcTick> limit)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetNotAfter(sslCert=*0x%x, limit=*0x%x)", sslCert, limit);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!limit)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetSubjectName()
+error_code cellSslCertGetSubjectName(vm::cptr<void> sslCert, vm::cpptr<void> certName)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetSubjectName(sslCert=*0x%x, certName=**0x%x)", sslCert, certName);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!certName)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetIssuerName()
+error_code cellSslCertGetIssuerName(vm::cptr<void> sslCert, vm::cpptr<void> certName)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetIssuerName(sslCert=*0x%x, certName=**0x%x)", sslCert, certName);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!certName)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetNameEntryCount()
+error_code cellSslCertGetNameEntryCount(vm::cptr<void> certName, vm::ptr<u32> entryCount)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetNameEntryCount(certName=*0x%x, entryCount=*0x%x)", certName, entryCount);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!certName)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!entryCount)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetNameEntryInfo()
+error_code cellSslCertGetNameEntryInfo(vm::cptr<void> certName, u32 entryNum, vm::cpptr<char> oidName, vm::cpptr<u8> value, vm::ptr<u64> valueLength, s32 flag)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetNameEntryInfo(certName=*0x%x, entryNum=%d, oidName=**0x%x, value=**0x%x, valueLength=*0x%x, flag=0x%x)", certName, entryNum, oidName, value, valueLength, flag);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!certName)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!oidName || !value || !valueLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetMd5Fingerprint()
+error_code cellSslCertGetMd5Fingerprint(vm::cptr<void> sslCert, vm::cptr<u8> buf, vm::cptr<u32> plen)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetMd5Fingerprint(sslCert=*0x%x, buf=*0x%x, plen=*0x%x)", sslCert, buf, plen);
+
+	if (!g_fxo->get<ssl_manager>()->is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!buf || !plen)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
