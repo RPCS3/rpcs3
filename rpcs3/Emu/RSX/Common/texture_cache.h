@@ -1636,13 +1636,22 @@ namespace rsx
 						}
 					}
 
-					if (options.skip_texture_merge)
-					{
-						return {};
-					}
-
 					auto result = texture_cache_helpers::merge_cache_resources<sampled_image_descriptor>(
 						overlapping_fbos, overlapping_locals, attr, scale, extended_dimension, encoded_remap, remap, _pool);
+
+					if (options.skip_texture_merge)
+					{
+						switch (result.external_subresource_desc.op)
+						{
+						case deferred_request_command::copy_image_static:
+						case deferred_request_command::copy_image_dynamic:
+							return result;
+						default:
+							break;
+						}
+
+						return {};
+					}
 
 					if (!result.external_subresource_desc.sections_to_copy.empty() &&
 						(_pool == 0 || result.atlas_covers_target_area()))
@@ -1813,6 +1822,7 @@ namespace rsx
 					attr2.address += (attr2.pitch * attr2.height);
 					attr2.width = std::max(attr2.width / 2, 1);
 					attr2.height = std::max(attr2.height / 2, 1);
+					attr2.slice_h = attr2.height;
 
 					if (is_swizzled)
 					{
