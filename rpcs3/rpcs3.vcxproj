@@ -332,6 +332,7 @@
   <ItemGroup>
     <ClCompile Include="basic_keyboard_handler.cpp" />
     <ClCompile Include="basic_mouse_handler.cpp" />
+    <ClCompile Include="display_sleep_control.cpp" />
     <ClCompile Include="ds3_pad_handler.cpp" />
     <ClCompile Include="ds4_pad_handler.cpp" />
     <ClCompile Include="evdev_joystick_handler.cpp" />
@@ -1207,6 +1208,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
+    <ClInclude Include="display_sleep_control.h" />
     <ClInclude Include="ds3_pad_handler.h" />
     <ClInclude Include="ds4_pad_handler.h" />
     <ClInclude Include="evdev_joystick_handler.h" />

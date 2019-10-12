@@ -2,10 +2,6 @@
 #include "PadHandler.h"
 #include "pad_thread.h"
 
-#ifdef _WIN32
-#include <Windows.h>
-#endif
-
 cfg_input g_cfg_input;
 
 PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
@@ -621,16 +617,5 @@ void PadHandlerBase::ThreadProc()
 		get_mapping(device, pad);
 		get_extended_info(device, pad);
 		apply_pad_data(device, pad);
-
-#ifdef _WIN32
-		for (const auto& btn : pad->m_buttons)
-		{
-			if (pad->m_buttons[i].m_pressed)
-			{
-				SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED);
-				break;
-			}
-		}
-#endif
 	}
 }

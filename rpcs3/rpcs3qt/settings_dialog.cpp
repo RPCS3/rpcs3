@@ -15,6 +15,7 @@
 #include <QTimer>
 #include <QScreen>
 
+#include "display_sleep_control.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "ui_settings_dialog.h"
@@ -1141,6 +1142,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->startGameFullscreen, emu_settings::StartGameFullscreen);
 	SubscribeTooltip(ui->startGameFullscreen, json_emu_misc["startGameFullscreen"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->preventDisplaySleep, emu_settings::PreventDisplaySleep);
+	SubscribeTooltip(ui->preventDisplaySleep, json_emu_misc["preventDisplaySleep"].toString());
+	ui->preventDisplaySleep->setEnabled(display_sleep_control_supported());
 
 	xemu_settings->EnhanceCheckBox(ui->showFPSInTitle, emu_settings::ShowFPSInTitle);
 	SubscribeTooltip(ui->showFPSInTitle, json_emu_misc["showFPSInTitle"].toString());
