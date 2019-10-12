@@ -825,10 +825,10 @@
       <Filter>Emu\Io</Filter>
     </ClCompile>
     <ClCompile Include="util\atomic.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Crypto\aesni.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Crypto</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1565,10 +1565,13 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\aesni.h">
-      <Filter>Header Files</Filter>
+      <Filter>Crypto</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellSsl.h">
+      <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
