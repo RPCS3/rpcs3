@@ -1499,8 +1499,8 @@ namespace rsx
 				// Check surface cache early if the option is enabled
 				if (options.prefer_surface_cache)
 				{
-					// TODO: Should scan for block_height aka required_surface_height not simply attr.height
-					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, attr.height, attr.pitch, attr.bpp, rsx::surface_access::read);
+					const u16 block_h = (attr.depth * attr.slice_h);
+					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, block_h, attr.pitch, attr.bpp, rsx::surface_access::read);
 
 					if (!overlapping_fbos.empty())
 					{
@@ -1545,8 +1545,8 @@ namespace rsx
 				if (!options.prefer_surface_cache)
 				{
 					// Now check for surface cache hits
-					// TODO: Should scan for block_height aka required_surface_height not simply attr.height
-					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, attr.height, attr.pitch, attr.bpp, rsx::surface_access::read);
+					const u16 block_h = (attr.depth * attr.slice_h);
+					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, block_h, attr.pitch, attr.bpp, rsx::surface_access::read);
 				}
 
 				if (!overlapping_fbos.empty() || !overlapping_locals.empty())
