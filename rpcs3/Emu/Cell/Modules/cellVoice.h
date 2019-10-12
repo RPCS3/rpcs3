@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include <unordered_map>
+#include <deque>
+
 // libvoice = 0x80310801 - 0x803108ff
 // libvoice version 100
 
@@ -26,14 +29,14 @@ enum CellVoiceError : u32
 	CELL_VOICE_ERROR_TOPOLOGY              = 0x80310807,
 };
 
-enum CellVoiceAppType
+enum CellVoiceAppType : u32
 {
 	CELLVOICE_APPTYPE_GAME_1MB = 1 << 29
 };
 
-enum CellVoiceBitRate
+enum CellVoiceBitRate : u32
 {
-	CELLVOICE_BITRATE_NULL  = -1,
+	CELLVOICE_BITRATE_NULL  = ~0u,
 	CELLVOICE_BITRATE_3850  = 3850,
 	CELLVOICE_BITRATE_4650  = 4650,
 	CELLVOICE_BITRATE_5700  = 5700,
@@ -43,7 +46,7 @@ enum CellVoiceBitRate
 	CELLVOICE_BITRATE_22533 = 22533,
 };
 
-enum CellVoiceEventType
+enum CellVoiceEventType : u32
 {
 	CELLVOICE_EVENT_DATA_ERROR         = 1 << 0,
 	CELLVOICE_EVENT_PORT_ATTACHED      = 1 << 1,
@@ -54,9 +57,9 @@ enum CellVoiceEventType
 	CELLVOICE_EVENT_PORT_WEAK_DETACHED = 1 << 6,
 };
 
-enum CellVoicePcmDataType
+enum CellVoicePcmDataType : u32
 {
-	CELLVOICE_PCM_NULL                  = -1,
+	CELLVOICE_PCM_NULL                  = ~0u,
 	CELLVOICE_PCM_FLOAT                 = 0,
 	CELLVOICE_PCM_FLOAT_LITTLE_ENDIAN   = 1,
 	CELLVOICE_PCM_SHORT                 = 2,
@@ -65,7 +68,7 @@ enum CellVoicePcmDataType
 	CELLVOICE_PCM_INTEGER_LITTLE_ENDIAN = 5,
 };
 
-enum CellVoicePortAttr
+enum CellVoicePortAttr : u32
 {
 	CELLVOICE_ATTR_ENERGY_LEVEL      = 1000,
 	CELLVOICE_ATTR_VAD               = 1001,
@@ -75,18 +78,18 @@ enum CellVoicePortAttr
 	CELLVOICE_ATTR_SILENCE_THRESHOLD = 1005,
 };
 
-enum CellVoicePortState
+enum CellVoicePortState : u32
 {
-	CELLVOICE_PORTSTATE_NULL      = -1,
+	CELLVOICE_PORTSTATE_NULL      = ~0u,
 	CELLVOICE_PORTSTATE_IDLE      = 0,
 	CELLVOICE_PORTSTATE_READY     = 1,
 	CELLVOICE_PORTSTATE_BUFFERING = 2,
 	CELLVOICE_PORTSTATE_RUNNING   = 3,
 };
 
-enum CellVoicePortType
+enum CellVoicePortType : u32
 {
-	CELLVOICE_PORTTYPE_NULL          = -1,
+	CELLVOICE_PORTTYPE_NULL          = ~0u,
 	CELLVOICE_PORTTYPE_IN_MIC        = 0,
 	CELLVOICE_PORTTYPE_IN_PCMAUDIO   = 1,
 	CELLVOICE_PORTTYPE_IN_VOICE      = 2,
@@ -95,13 +98,13 @@ enum CellVoicePortType
 	CELLVOICE_PORTTYPE_OUT_SECONDARY = 5,
 };
 
-enum CellVoiceSamplingRate
+enum CellVoiceSamplingRate : u32
 {
-	CELLVOICE_SAMPLINGRATE_NULL  = -1,
+	CELLVOICE_SAMPLINGRATE_NULL  = ~0u,
 	CELLVOICE_SAMPLINGRATE_16000 = 16000,
 };
 
-enum CellVoiceVersionCheck
+enum CellVoiceVersionCheck : u32
 {
 	CELLVOICE_VERSION_100 = 100
 };
@@ -175,5 +178,33 @@ struct CellVoiceStartParam // aligned(32)
 
 struct voice_manager
 {
+	struct port_t
+	{
+		s32 state = CELLVOICE_PORTSTATE_NULL;
+		CellVoicePortParam info;
+	};
+
+	// See cellVoiceCreatePort
+	u32 id_ctr = 0;
+
+	std::unordered_map<u16, port_t> ports;
+	std::unordered_map<u64, std::deque<u64>> queue_keys;
+	bool voice_service_started = false;
+
+	port_t* access_port(u32 id)
+	{
+		// Upper 16 bits are ignored
+		auto pos = ports.find((u16)id);
+
+		if (pos == ports.end())
+		{
+			return nullptr;
+		}
+
+		return &pos->second;
+	}
+
+	void reset();
+	shared_mutex mtx;
 	atomic_t<bool> is_init{ false };
 };
