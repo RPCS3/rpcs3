@@ -283,8 +283,8 @@ namespace rsx
 			const blit_engine::transfer_interpolator in_inter               = method_registers.blit_engine_input_inter();
 			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
-			const f32 in_x = std::ceil(method_registers.blit_engine_in_x());
-			const f32 in_y = std::ceil(method_registers.blit_engine_in_y());
+			const f32 in_x = std::floor(method_registers.blit_engine_in_x());
+			const f32 in_y = std::floor(method_registers.blit_engine_in_y());
 
 			u16 in_pitch = method_registers.blit_engine_input_pitch();
 
@@ -298,16 +298,16 @@ namespace rsx
 
 			const u32 in_bpp              = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
 			const u32 in_offset           = u32(in_x * in_bpp + in_pitch * in_y);
-			const tiled_region src_region = rsx->get_tiled_address(src_offset + in_offset, src_dma & 0xf);
 
 			frame_capture_data::memory_block block;
-			block.offset = src_region.tile ? src_region.base : src_offset + in_offset;
+			block.offset = src_offset + in_offset;
 			block.location = src_dma & 0xf;
 
-			u8* pixels_src = src_region.tile ? src_region.ptr + src_region.base : src_region.ptr;
+			const auto src_address = rsx::get_address(block.offset, block.location);
+			u8* pixels_src = (u8*)vm::base(src_address);
 
 			const u32 src_size = in_pitch * (in_h - 1) + (in_w * in_bpp);
-			rsx->read_barrier(src_region.address, src_size);
+			rsx->read_barrier(src_address, src_size);
 
 			frame_capture_data::memory_block_data block_data;
 			block_data.data.resize(src_size);
