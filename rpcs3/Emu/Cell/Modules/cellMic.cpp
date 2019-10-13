@@ -85,7 +85,7 @@ void mic_context::load_config_and_init()
 {
 	auto device_list = fmt::split(g_cfg.audio.microphone_devices, {"@@@"});
 
-	if (device_list.size())
+	if (device_list.size() && mic_list.empty())
 	{
 		switch (g_cfg.audio.microphone_type)
 		{
@@ -481,6 +481,7 @@ s32 cellMicEnd(ppu_thread& ppu)
 
 	// TODO
 	mic_thr->init = 0;
+	mic_thr->event_queue_key = 0;
 
 	return CELL_OK;
 }

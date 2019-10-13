@@ -394,6 +394,7 @@ error_code cellCameraEnd()
 
 	// TODO
 	g_camera->init = 0;
+	g_camera->reset_state();
 	return CELL_OK;
 }
 
@@ -1354,6 +1355,19 @@ void camera_context::operator()()
 			lv2_obj::wait_timeout(frame_target_time - time_passed);
 		}
 	}
+}
+
+void camera_context::reset_state()
+{
+	read_mode = CELL_CAMERA_READ_FUNCCALL;
+	is_streaming = false;
+	is_attached = false;
+	is_open = false;
+	info.framerate = 0;
+	std::memset(&attr, 0, sizeof(attr));
+
+	std::scoped_lock lock(mutex_notify_data_map);
+	notify_data_map.clear();
 }
 
 void camera_context::send_attach_state(bool attached)
