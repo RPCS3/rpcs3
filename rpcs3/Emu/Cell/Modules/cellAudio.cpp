@@ -952,6 +952,7 @@ error_code cellAudioInit()
 		g_audio->ports[i].number = i;
 		g_audio->ports[i].addr   = g_audio_buffer + AUDIO_PORT_OFFSET * i;
 		g_audio->ports[i].index  = g_audio_indices + i;
+		g_audio->ports[i].state  = audio_port_state::closed;
 	}
 
 	g_audio->init = 1;
@@ -973,6 +974,7 @@ error_code cellAudioQuit(ppu_thread& ppu)
 	}
 
 	// TODO
+	g_audio->keys.clear();
 	g_audio->init = 0;
 
 	return CELL_OK;
