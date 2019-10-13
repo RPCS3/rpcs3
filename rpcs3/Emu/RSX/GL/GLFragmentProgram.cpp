@@ -44,6 +44,8 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 			OS << "#extension GL_AMD_gpu_shader_half_float: require\n";
 		}
 	}
+
+	glsl::insert_subheader_block(OS);
 }
 
 void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
@@ -189,7 +191,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	OS << "layout(std140, binding = 5) uniform TextureParametersBuffer\n";
 	OS << "{\n";
-	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
+	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
 }
 
