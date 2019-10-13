@@ -743,10 +743,10 @@ namespace rsx
 					if (tex.overlaps(fault_range, section_bounds::locked_range))
 					{
 						if (cause == invalidation_cause::superseded_by_fbo &&
-							tex.get_context() == texture_upload_context::framebuffer_storage &&
+							tex.is_flushable() &&
 							tex.get_section_base() != fault_range_in.start)
 						{
-							// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
+							// HACK: When being superseded by an fbo, we preserve overlapped flushables unless the start addresses match
 							continue;
 						}
 						else if (tex.inside(fault_range, section_bounds::locked_range))
@@ -807,9 +807,9 @@ namespace rsx
 						!tex.inside(trampled_set.invalidate_range, bounds) ||
 						// Unsynchronized sections (or any flushable when skipping flushes) that do not overlap the fault range directly can also be ignored
 						(invalidation_ignore_unsynchronized && tex.is_flushable() && (cause.skip_flush() || !tex.is_synchronized()) && !overlaps_fault_range) ||
-						// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
-						// If region is committed as fbo, all non-fbo data is removed but all fbos in the region must be preserved if possible
-						(overlaps_fault_range && tex.get_context() == texture_upload_context::framebuffer_storage && cause.skip_fbos() && tex.get_section_base() != fault_range_in.start)
+						// HACK: When being superseded by an fbo, we preserve other overlapped flushables unless the start addresses match
+						// If region is committed as fbo, all non-flushable data is removed but all flushables in the region must be preserved if possible
+						(overlaps_fault_range && tex.is_flushable() && cause.skip_fbos() && tex.get_section_base() != fault_range_in.start)
 					   )
 					{
 						// False positive
