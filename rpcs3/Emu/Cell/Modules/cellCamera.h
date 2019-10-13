@@ -360,6 +360,7 @@ class camera_context
 
 public:
 	void operator()();
+	void reset_state();
 	void send_attach_state(bool attached);
 	void set_attr(s32 attrib, u32 arg1, u32 arg2);
 
@@ -388,7 +389,7 @@ public:
 	atomic_t<bool> is_attached{false};
 	atomic_t<bool> is_open{false};
 
-	CellCameraInfoEx info;
+	CellCameraInfoEx info{};
 
 	struct attr_t
 	{
