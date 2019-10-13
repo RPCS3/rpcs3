@@ -429,26 +429,39 @@ namespace glsl
 		"}\n\n";
 	}
 
-	static void insert_rop(std::ostream& OS, bool _32_bit_exports, bool native_half_support, bool emulate_coverage_tests)
+	static void insert_rop(std::ostream& OS, const shader_properties& props)
 	{
-		const std::string reg0 = _32_bit_exports ? "r0" : "h0";
-		const std::string reg1 = _32_bit_exports ? "r2" : "h4";
-		const std::string reg2 = _32_bit_exports ? "r3" : "h6";
-		const std::string reg3 = _32_bit_exports ? "r4" : "h8";
+		const std::string reg0 = props.fp32_outputs ? "r0" : "h0";
+		const std::string reg1 = props.fp32_outputs ? "r2" : "h4";
+		const std::string reg2 = props.fp32_outputs ? "r3" : "h6";
+		const std::string reg3 = props.fp32_outputs ? "r4" : "h8";
 
 		//TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
+		if (props.disable_early_discard)
+		{
+			OS <<
+			"	if (_fragment_discard)\n"
+			"	{\n"
+			"		discard;\n"
+			"	}\n"
+			"	else if ((rop_control & 0xFF) != 0)\n";
+		}
+		else
+		{
+			OS << "	if ((rop_control & 0xFF) != 0)\n";
+		}
+
 		OS <<
-		"	if ((rop_control & 0xFF) != 0)\n"
 		"	{\n"
 		"		bool alpha_test = (rop_control & 0x1) > 0;\n"
 		"		uint alpha_func = ((rop_control >> 16) & 0x7);\n";
 
-		if (!_32_bit_exports)
+		if (!props.fp32_outputs)
 		{
 			OS << "		bool srgb_convert = (rop_control & 0x2) > 0;\n\n";
 		}
 
-		if (emulate_coverage_tests)
+		if (props.emulate_coverage_tests)
 		{
 			OS << "		bool a2c_enabled = (rop_control & 0x10) > 0;\n";
 		}
@@ -459,7 +472,7 @@ namespace glsl
 		"			discard;\n"
 		"		}\n";
 
-		if (emulate_coverage_tests)
+		if (props.emulate_coverage_tests)
 		{
 			OS <<
 			"		else if (a2c_enabled && !coverage_test_passes(" << reg0 << ", rop_control >> 5))\n"
@@ -468,10 +481,10 @@ namespace glsl
 			"		}\n";
 		}
 
-		if (!_32_bit_exports)
+		if (!props.fp32_outputs)
 		{
 			// Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
-			if (native_half_support)
+			if (props.supports_native_fp16)
 			{
 				OS <<
 				"		else if (srgb_convert)\n"
@@ -509,6 +522,21 @@ namespace glsl
 		OS << "#define _select mix\n";
 		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
 		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
+
+		if (props.domain == glsl::program_domain::glsl_fragment_program)
+		{
+			OS << "// Workaround for broken early discard in some drivers\n";
+
+			if (props.disable_early_discard)
+			{
+				OS << "bool _fragment_discard = false;\n";
+				OS << "#define _kill() _fragment_discard = true\n\n";
+			}
+			else
+			{
+				OS << "#define _kill() discard\n\n";
+			}
+		}
 
 		if (props.require_lit_emulation)
 		{
@@ -684,7 +712,7 @@ namespace glsl
 			"		// Alphakill\n"
 			"		if (rgba.a < 0.000001)\n"
 			"		{\n"
-			"			discard;\n"
+			"			_kill();\n"
 			"			return rgba;\n"
 			"		}\n"
 			"	}\n"

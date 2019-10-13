@@ -1184,7 +1184,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		case RSX_FP_OPCODE_NOP: break;
 		case RSX_FP_OPCODE_KIL:
 			properties.has_discard_op = true;
-			AddFlowOp("discard");
+			AddFlowOp("_kill()");
 			break;
 
 		default:
