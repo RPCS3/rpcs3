@@ -40,6 +40,8 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 	}
 
 	OS << "#extension GL_ARB_separate_shader_objects: enable\n\n";
+
+	glsl::insert_subheader_block(OS);
 }
 
 void VKFragmentDecompilerThread::insertInputs(std::stringstream & OS)
@@ -205,7 +207,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	OS << "layout(std140, set = 0, binding = 4) uniform TextureParametersBuffer\n";
 	OS << "{\n";
-	OS << "	vec4 texture_parameters[16];\n";
+	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
