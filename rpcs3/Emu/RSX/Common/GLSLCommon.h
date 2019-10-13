@@ -669,7 +669,7 @@ namespace glsl
 			"}\n\n"
 
 			//TODO: Move all the texture read control operations here
-			"vec4 process_texel(const in vec4 rgba, const in uint control_bits)\n"
+			"vec4 process_texel(in vec4 rgba, const in uint control_bits)\n"
 			"{\n"
 #ifdef __APPLE__
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
@@ -688,6 +688,13 @@ namespace glsl
 			"			discard;\n"
 			"			return rgba;\n"
 			"		}\n"
+			"	}\n"
+			"\n"
+			"	if ((control_bits & 0x20) != 0)\n"
+			"	{\n"
+			"		// Renormalize to 8-bit (PS3) accuracy\n"
+			"		rgba = floor(rgba * 255.);\n"
+			"		rgba /= 255.;"
 			"	}\n"
 			"\n"
 			"	//TODO: Verify gamma control bit ordering, looks to be 0x7 for rgb, 0xF for rgba\n"

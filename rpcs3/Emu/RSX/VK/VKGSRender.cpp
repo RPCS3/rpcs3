@@ -528,10 +528,15 @@ VKGSRender::VKGSRender() : GSRender()
 	m_ui_renderer = std::make_unique<vk::ui_overlay_renderer>();
 	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
-	supports_multidraw = true;
+	backend_config.supports_multidraw = true;
+
 	// NOTE: We do not actually need multiple sample support for A2C to work
 	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
-	supports_hw_a2c = (g_cfg.video.antialiasing_level != msaa_level::none);
+	backend_config.supports_hw_a2c = (g_cfg.video.antialiasing_level != msaa_level::none);
+
+	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
+	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
+	backend_config.supports_hw_renormalization = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA);
 }
 
 VKGSRender::~VKGSRender()
@@ -2573,7 +2578,7 @@ bool VKGSRender::load_program()
 	}
 
 	const auto rasterization_samples = u8((m_current_renderpass_key >> 16) & 0xF);
-	if (supports_hw_a2c || rasterization_samples > 1)
+	if (backend_config.supports_hw_a2c || rasterization_samples > 1)
 	{
 		properties.state.set_multisample_state(
 			rasterization_samples,

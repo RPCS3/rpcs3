@@ -37,8 +37,8 @@ GLGSRender::GLGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
-	supports_hw_a2c = false;
-	supports_multidraw = true;
+	backend_config.supports_hw_a2c = false;
+	backend_config.supports_multidraw = true;
 }
 
 extern CellGcmContextData current_context;
@@ -826,13 +826,19 @@ void GLGSRender::on_init_thread()
 		m_identity_index_buffer->create(gl::buffer::target::element_array, 1 * 0x100000, nullptr, gl::buffer::memory_type::host_visible);
 
 		// Initialize with 256k identity entries
-		auto *dst = (u32*)m_identity_index_buffer->map(gl::buffer::access::write);
+		auto* dst = (u32*)m_identity_index_buffer->map(gl::buffer::access::write);
 		for (u32 n = 0; n < (0x100000 >> 2); ++n)
 		{
 			dst[n] = n;
 		}
 
 		m_identity_index_buffer->unmap();
+	}
+	else if (gl_caps.vendor_NVIDIA)
+	{
+		// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
+		// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
+		backend_config.supports_hw_renormalization = true;
 	}
 
 	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));

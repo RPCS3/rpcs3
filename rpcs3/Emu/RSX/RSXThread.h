@@ -464,6 +464,13 @@ namespace rsx
 		}
 	};
 
+	struct backend_configuration
+	{
+		bool supports_multidraw;           // Draw call batching
+		bool supports_hw_a2c;              // Alpha to coverage
+		bool supports_hw_renormalization;  // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+	};
+
 	struct sampled_image_descriptor_base;
 
 	class thread
@@ -484,8 +491,7 @@ namespace rsx
 		bool skip_current_frame = false;
 		frame_statistics_t stats{};
 
-		bool supports_multidraw = false;  // Draw call batching
-		bool supports_hw_a2c = false;     // Alpha to coverage
+		backend_configuration backend_config{};
 
 		// FIFO
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;

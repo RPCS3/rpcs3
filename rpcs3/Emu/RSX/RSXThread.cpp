@@ -699,7 +699,7 @@ namespace rsx
 		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !supports_hw_a2c)
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
 		{
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
@@ -1726,6 +1726,22 @@ namespace rsx
 					}
 					default:
 						LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
+					}
+				}
+				else if (!backend_config.supports_hw_renormalization)
+				{
+					switch (format)
+					{
+					case CELL_GCM_TEXTURE_A1R5G5B5:
+					case CELL_GCM_TEXTURE_A4R4G4B4:
+					case CELL_GCM_TEXTURE_D1R5G5B5:
+					case CELL_GCM_TEXTURE_R5G5B5A1:
+					case CELL_GCM_TEXTURE_R5G6B5:
+					case CELL_GCM_TEXTURE_R6G5B5:
+						texture_control |= (1 << 5);
+						break;
+					default:
+						break;
 					}
 				}
 
