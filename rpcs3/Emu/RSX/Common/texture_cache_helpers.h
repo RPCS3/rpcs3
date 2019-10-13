@@ -172,7 +172,6 @@ namespace rsx
 			};
 
 			std::vector<sort_helper> sort_list;
-			const auto src_slice_h = attr.height;
 
 			if (!fbos.empty() && !local.empty())
 			{
@@ -206,8 +205,8 @@ namespace rsx
 					return;
 				}
 
-				const u32 slice_begin = (slice * src_slice_h);
-				const u32 slice_end = (slice_begin + attr.slice_h);
+				const u32 slice_begin = (slice * attr.slice_h);
+				const u32 slice_end = (slice_begin + attr.height);
 
 				const u32 section_end = section.dst_area.y + section.dst_area.height;
 				if (section.dst_area.y >= slice_end || section_end <= slice_begin)
@@ -279,8 +278,8 @@ namespace rsx
 					return;
 				}
 
-				const auto slice_begin = u32(slice * src_slice_h);
-				const auto slice_end = u32(slice_begin + attr.slice_h);
+				const auto slice_begin = u32(slice * attr.slice_h);
+				const auto slice_end = u32(slice_begin + attr.height);
 
 				const auto dst_y = std::get<1>(clipped).y;
 				const auto dst_h = std::get<2>(clipped).height;
@@ -338,7 +337,7 @@ namespace rsx
 			u32 current_address = attr.address;
 			u16 current_src_offset = 0;
 			u16 current_dst_offset = 0;
-			u32 slice_size = (attr.pitch * src_slice_h);
+			u32 slice_size = (attr.pitch * attr.slice_h);
 
 			out.reserve(count);
 			u16 found_slices = 0;
