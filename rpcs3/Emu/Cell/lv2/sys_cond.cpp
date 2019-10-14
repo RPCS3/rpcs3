@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_cond.h"
 
 #include "Emu/System.h"
@@ -273,15 +273,19 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 					ppu.gpr[3] = CELL_ETIMEDOUT;
 
 					// Own or requeue
-					if (!cond->mutex->try_own(ppu, ppu.id))
+					if (cond->mutex->try_own(ppu, ppu.id))
 					{
-						cond->mutex->sleep(ppu);
-						timeout = 0;
-						continue;
+						break;
 					}
 				}
+				else if (cond->mutex->owner >> 1 == ppu.id)
+				{
+					break;
+				}
 
-				break;
+				cond->mutex->sleep(ppu);
+				timeout = 0;
+				continue;
 			}
 		}
 		else
