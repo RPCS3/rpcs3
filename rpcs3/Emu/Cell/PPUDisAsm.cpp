@@ -1051,12 +1051,18 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 
 void PPUDisAsm::CRNOR(ppu_opcode_t op)
 {
-	DisAsm_INT3("crnor", op.crbd, op.crba, op.crbb);
+	if (op.crba == op.crbb)
+	{
+		DisAsm_BI2("crnot", op.crbd, op.crba);
+		return;
+	}
+
+	DisAsm_BI3("crnor", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CRANDC(ppu_opcode_t op)
 {
-	DisAsm_INT3("crandc", op.crbd, op.crba, op.crbb);
+	DisAsm_BI3("crandc", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::ISYNC(ppu_opcode_t op)
@@ -1066,32 +1072,50 @@ void PPUDisAsm::ISYNC(ppu_opcode_t op)
 
 void PPUDisAsm::CRXOR(ppu_opcode_t op)
 {
-	DisAsm_INT3("crxor", op.crbd, op.crba, op.crbb);
+	if (op.crba == op.crbb && op.crba == op.crbd)
+	{
+		DisAsm_BI1("crclr", op.crbd);
+		return;
+	}
+
+	DisAsm_BI3("crxor", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CRNAND(ppu_opcode_t op)
 {
-	DisAsm_INT3("crnand", op.crbd, op.crba, op.crbb);
+	DisAsm_BI3("crnand", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CRAND(ppu_opcode_t op)
 {
-	DisAsm_INT3("crand", op.crbd, op.crba, op.crbb);
+	DisAsm_BI3("crand", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CREQV(ppu_opcode_t op)
 {
-	DisAsm_INT3("creqv", op.crbd, op.crba, op.crbb);
+	if (op.crba == op.crbb && op.crba == op.crbd)
+	{
+		DisAsm_BI1("crset", op.crbd);
+		return;
+	}
+
+	DisAsm_BI3("creqv", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CRORC(ppu_opcode_t op)
 {
-	DisAsm_INT3("crorc", op.crbd, op.crba, op.crbb);
+	DisAsm_BI3("crorc", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CROR(ppu_opcode_t op)
 {
-	DisAsm_INT3("cror", op.crbd, op.crba, op.crbb);
+	if (op.crba == op.crbb)
+	{
+		DisAsm_BI2("crmove", op.crbd, op.crba);
+		return;
+	}
+
+	DisAsm_BI3("cror", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::BCCTR(ppu_opcode_t op)
@@ -1112,7 +1136,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	if (!inst || inst[1] == 'd')
 	{
 		// Invalid or unknown bcctr form
-		Write(fmt::format("bcctr %d, cr%d[%x], %d, %d", bo, bi / 4, bi % 4, bh, lk));
+		Write(fmt::format("bcctr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
 		return;
 	}
 

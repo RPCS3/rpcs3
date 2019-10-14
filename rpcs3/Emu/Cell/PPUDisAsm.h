@@ -227,6 +227,19 @@ private:
 	{
 		Write(fmt::format("%s cr%d,cr%d", FixOp(op).c_str(), cr0, cr1));
 	}
+	void DisAsm_BI1(const std::string& op, const int i0)
+	{
+		Write(fmt::format("%s cr%d[%s]", FixOp(op).c_str(), i0 / 4, get_partial_BI_field(i0)));
+	}
+	void DisAsm_BI2(const std::string& op, const int i0, const int i1)
+	{
+		Write(fmt::format("%s cr%d[%s],cr%d[%s]", FixOp(op).c_str(), i0 / 4, get_partial_BI_field(i0), i1 / 4, get_partial_BI_field(i1)));
+	}
+	void DisAsm_BI3(const std::string& op, const int i0, const int i1, const int i2)
+	{
+		Write(fmt::format("%s cr%d[%s],cr%d[%s],cr%d[%s]", FixOp(op).c_str(),
+		i0 / 4, get_partial_BI_field(i0), i1 / 4, get_partial_BI_field(i1), i2 / 4, get_partial_BI_field(i2)));
+	}
 	void DisAsm_INT3(const std::string& op, const int i0, const int i1, const int i2)
 	{
 		Write(fmt::format("%s %d,%d,%d", FixOp(op).c_str(), i0, i1, i2));
