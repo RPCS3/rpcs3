@@ -40,13 +40,13 @@ namespace rsx
 			else
 			{
 				u32 put = m_ctrl->put;
-				if (put & 3)
+				if (LIKELY((put & 3) == 0))
 				{
-					return m_ctrl->put.and_fetch(~3);
+					return put;
 				}
 				else
 				{
-					return put;
+					return m_ctrl->put.and_fetch(~3);
 				}
 			}
 		}
