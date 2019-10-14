@@ -1088,7 +1088,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	// Create save directory if necessary
 	if (psf.size() && save_entry.isNew && !fs::create_dir(dir_path))
 	{
-		cellSaveData.warning("savedata_op(): failed to create %s", dir_path);
+		cellSaveData.warning("savedata_op(): failed to create %s (%s)", dir_path, fs::g_tls_error);
 		return CELL_SAVEDATA_ERROR_ACCESS_ERROR;
 	}
 
