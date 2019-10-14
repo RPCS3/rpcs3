@@ -1677,6 +1677,9 @@ bool Emulator::Pause()
 		return m_state.compare_and_swap_test(system_state::ready, system_state::paused);
 	}
 
+	// Signal profilers to print results (if enabled)
+	cpu_thread::flush_profilers();
+
 	GetCallbacks().on_pause();
 
 	// Update pause start time

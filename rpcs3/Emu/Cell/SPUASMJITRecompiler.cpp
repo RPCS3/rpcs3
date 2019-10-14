@@ -10,6 +10,7 @@
 #include "Utilities/sysinfo.h"
 #include "Utilities/asm.h"
 #include "PPUAnalyser.h"
+#include "Crypto/sha1.h"
 
 #include <cmath>
 #include <mutex>
@@ -61,6 +62,19 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache)
 	{
 		cache->add(func);
+	}
+
+	{
+		sha1_context ctx;
+		u8 output[20];
+
+		sha1_starts(&ctx);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(func.data() + 1), func.size() * 4 - 4);
+		sha1_finish(&ctx, output);
+
+		be_t<u64> hash_start;
+		std::memcpy(&hash_start, output, sizeof(hash_start));
+		m_hash_start = hash_start;
 	}
 
 	using namespace asmjit;
@@ -159,6 +173,12 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	c->mov(pc0->r32(), SPU_OFF_32(pc));
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_stop);
+
+	if (g_cfg.core.spu_prof && g_cfg.core.spu_verification)
+	{
+		c->mov(x86::rax, m_hash_start & -0xffff);
+		c->mov(SPU_OFF_64(block_hash), x86::rax);
+	}
 
 	if (utils::has_avx())
 	{
@@ -722,6 +742,13 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	// Acknowledge success and add statistics
 	c->add(SPU_OFF_64(block_counter), ::size32(words) / (words_align / 4));
 
+	// Set block hash for profiling (if enabled)
+	if (g_cfg.core.spu_prof)
+	{
+		c->mov(x86::rax, m_hash_start | 0xffff);
+		c->mov(SPU_OFF_64(block_hash), x86::rax);
+	}
+
 	if (m_pos != start)
 	{
 		// Jump to the entry point if necessary
@@ -1159,6 +1186,14 @@ void spu_recompiler::branch_set_link(u32 target)
 				c->and_(qw1->r32(), 0x3fff0);
 				c->pcmpeqd(x86::xmm0, x86::xmm0);
 				c->movdqa(x86::dqword_ptr(*cpu, *qw1, 0, ::offset32(&spu_thread::stack_mirror)), x86::xmm0);
+
+				// Set block hash for profiling (if enabled)
+				if (g_cfg.core.spu_prof)
+				{
+					c->mov(x86::rax, m_hash_start | 0xffff);
+					c->mov(SPU_OFF_64(block_hash), x86::rax);
+				}
+
 				c->jmp(target);
 			});
 		}

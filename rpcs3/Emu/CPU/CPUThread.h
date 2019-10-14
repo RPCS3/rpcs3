@@ -27,7 +27,10 @@ enum class cpu_flag : u32
 class cpu_thread
 {
 	// PPU cache backward compatibility hack
-	char dummy[sizeof(std::shared_ptr<void>)];
+	char dummy[sizeof(std::shared_ptr<void>) - 8];
+
+public:
+	u64 block_hash = 0;
 
 protected:
 	cpu_thread(u32 id);
@@ -119,6 +122,9 @@ public:
 
 	// Stop all threads with cpu_flag::dbg_global_stop
 	static void stop_all() noexcept;
+
+	// Send signal to the profiler(s) to flush results
+	static void flush_profilers() noexcept;
 };
 
 inline cpu_thread* get_current_cpu_thread() noexcept

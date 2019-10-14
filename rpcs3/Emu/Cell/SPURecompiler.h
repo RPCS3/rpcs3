@@ -241,6 +241,7 @@ protected:
 
 	u32 m_pos;
 	u32 m_size;
+	u64 m_hash_start;
 
 	// Bit indicating start of the block
 	std::bitset<0x10000> m_block_info;

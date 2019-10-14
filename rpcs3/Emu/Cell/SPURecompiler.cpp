@@ -137,6 +137,16 @@ DECLARE(spu_runtime::tr_all) = []
 	std::memcpy(raw, &r32, 4);
 	raw += 4;
 
+	// Update block_hash (set zero): mov [r13 + spu_thread::m_block_hash], 0
+	*raw++ = 0x49;
+	*raw++ = 0xc7;
+	*raw++ = 0x45;
+	*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+	*raw++ = 0x00;
+
 	// jmp [rdx + rax * 8]
 	*raw++ = 0xff;
 	*raw++ = 0x24;
@@ -4257,6 +4267,10 @@ public:
 
 			m_hash.clear();
 			fmt::append(m_hash, "spu-0x%05x-%s", func[0], fmt::base57(output));
+
+			be_t<u64> hash_start;
+			std::memcpy(&hash_start, output, sizeof(hash_start));
+			m_hash_start = hash_start;
 		}
 
 		if (g_fxo->get<spu_cache>())
@@ -4317,6 +4331,10 @@ public:
 		// Emit code check
 		u32 check_iterations = 0;
 		m_ir->SetInsertPoint(label_test);
+
+		// Set block hash for profiling (if enabled)
+		if (g_cfg.core.spu_prof && g_cfg.core.spu_verification)
+			m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536)), spu_ptr<u64>(&spu_thread::block_hash), true);
 
 		if (!g_cfg.core.spu_verification)
 		{
@@ -4507,6 +4525,11 @@ public:
 			// Initialize function info
 			m_entry = m_function_queue[fi];
 			set_function(m_functions[m_entry].chunk);
+
+			// Set block hash for profiling (if enabled)
+			if (g_cfg.core.spu_prof)
+				m_ir->CreateStore(m_ir->getInt64((m_hash_start & -65536) | (m_entry >> 2)), spu_ptr<u64>(&spu_thread::block_hash), true);
+
 			m_finfo = &m_functions[m_entry];
 			m_ir->CreateBr(add_block(m_entry));
 
