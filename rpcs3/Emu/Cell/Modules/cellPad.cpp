@@ -1,7 +1,8 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/lv2/sys_process.h"
 
 #include "pad_thread.h"
 #include "cellPad.h"
@@ -572,6 +573,17 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	if (port_no >= CELL_MAX_PADS || !param)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
+	// Note: signed check unlike the usual unsigned check
+	if ((s32)g_ps3_process_info.sdk_ver > 0x1FFFFF)
+	{
+		// make sure reserved bits are 0
+		for (int i = 0; i < 6; i++)
+		{
+			if (param->reserved[i])
+				return CELL_PAD_ERROR_INVALID_PARAMETER;
+		}
+	}
+
 	const auto& pads = handler->GetPads();
 
 	if (port_no >= config->max_connect)
@@ -585,12 +597,6 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 	// TODO: find out if this is checked here or later or at all
 	if (!(pad->m_device_capability & CELL_PAD_CAPABILITY_ACTUATOR))
 		return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD;
-
-	// make sure reserved bits are 0. Looks like this happens after checking the pad status
-	// TODO: test this on real hardware and both old and new firmware
-	//for (int i = 0; i < 6; i++)
-	//	if (param->reserved[i])
-	//		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	handler->SetRumble(port_no, param->motor[1], param->motor[0] > 0);
 
