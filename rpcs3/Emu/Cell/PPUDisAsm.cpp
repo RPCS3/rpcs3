@@ -1033,7 +1033,7 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 
 	if (!inst)
 	{
-		Write(fmt::format("bclr %d, cr%d[%x], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		Write(fmt::format("bclr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
 		return;
 	}
 
