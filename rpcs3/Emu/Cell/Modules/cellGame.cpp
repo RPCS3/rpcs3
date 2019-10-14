@@ -670,7 +670,7 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 
 	if (!fs::create_dir(vfs::get(tmp_contentInfo)))
 	{
-		cellGame.error("cellGameCreateGameData(): failed to create directory '%s'", tmp_contentInfo);
+		cellGame.error("cellGameCreateGameData(): failed to create directory '%s' (%s)", tmp_contentInfo, fs::g_tls_error);
 		return CELL_GAME_ERROR_ACCESS_ERROR; // ???
 	}
 
@@ -679,7 +679,7 @@ error_code cellGameCreateGameData(vm::ptr<CellGameSetInitParams> init, vm::ptr<c
 
 	if (!fs::create_dir(vfs::get(tmp_usrdir)))
 	{
-		cellGame.error("cellGameCreateGameData(): failed to create directory '%s'", tmp_usrdir);
+		cellGame.error("cellGameCreateGameData(): failed to create directory '%s' (%s)", tmp_usrdir, fs::g_tls_error);
 		return CELL_GAME_ERROR_ACCESS_ERROR; // ???
 	}
 
@@ -885,6 +885,7 @@ error_code cellGameGetSizeKB(vm::ptr<s32> size)
 		}
 		else
 		{
+			cellGame.error("cellGameGetSizeKb(): unexpexcted error on path '%s' (%s)", local_dir, fs::g_tls_error);
 			return CELL_GAME_ERROR_ACCESS_ERROR;
 		}
 	}
