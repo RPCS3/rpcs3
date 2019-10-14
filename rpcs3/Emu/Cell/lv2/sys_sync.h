@@ -252,12 +252,13 @@ public:
 			remaining = usec - passed;
 #ifdef __linux__
 			// NOTE: Assumption that timer initialization has succeeded
-			u64 host_min_quantum = is_usleep && remaining <= 1000 ? 16 : 50;
+			u64 host_min_quantum = is_usleep && remaining <= 1000 ? 10 : 50;
 #else
 			// Host scheduler quantum for windows (worst case)
 			// NOTE: On ps3 this function has very high accuracy
 			constexpr u64 host_min_quantum = 500;
 #endif
+			// TODO: Tune for other non windows operating sytems
 
 			if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
 			{
