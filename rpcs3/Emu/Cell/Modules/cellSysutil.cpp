@@ -292,22 +292,58 @@ error_code cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> 
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	memset(buf.get_ptr(), 0, bufsize);
+	u32 copy_size;
+	std::string param_str = "Unknown";
+	bool report_use = false;
 
 	switch (id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
-		memcpy(buf.get_ptr(), "Unknown", 8); // for example
-	break;
-
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
-		memcpy(buf.get_ptr(), "Unknown", 8);
-	break;
-
-	default:
-		return CELL_SYSUTIL_ERROR_VALUE;
+	{
+		copy_size = CELL_SYSUTIL_SYSTEMPARAM_NICKNAME_SIZE;
+		break;
 	}
 
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
+	{
+		const fs::file username(vfs::get(fmt::format("/dev_hdd0/home/%08u/localusername", Emu.GetUsrId())));
+	
+		if (!username)
+		{
+			cellSysutil.error("cellSysutilGetSystemParamString(): Username for user %08u doesn't exist. Did you delete the username file?", Emu.GetUsrId());
+		}
+		else
+		{
+			// Read current username
+			param_str = username.to_string();
+		}
+
+		copy_size = CELL_SYSUTIL_SYSTEMPARAM_CURRENT_USERNAME_SIZE;
+		break;
+	}
+
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_x1011: // Same as x1012
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_x1012: copy_size = 0x400; report_use = true; break;
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_x1024:	copy_size = 0x100; report_use = true; break;
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_x1008: copy_size = 0x4; report_use = true; break;
+	default:
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
+	}
+
+	if (bufsize != copy_size)
+	{
+		return CELL_SYSUTIL_ERROR_SIZE;
+	}
+
+	if (report_use)
+	{
+		cellSysutil.error("cellSysutilGetSystemParamString: Unknown ParamId 0x%x", id);
+	}
+
+	std::strncpy(buf.get_ptr(), param_str.c_str(), copy_size - 1);
+	buf[copy_size - 1] = '\0';
 	return CELL_OK;
 }
 
