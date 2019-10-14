@@ -31,7 +31,7 @@ namespace rsx
 		}
 
 		template <bool full>
-		u32 FIFO_control::read_put()
+		inline u32 FIFO_control::read_put()
 		{
 			if constexpr (!full)
 			{
@@ -39,7 +39,15 @@ namespace rsx
 			}
 			else
 			{
-				return m_ctrl->put.and_fetch(~3);
+				u32 put = m_ctrl->put;
+				if (put & 3)
+				{
+					return m_ctrl->put.and_fetch(~3);
+				}
+				else
+				{
+					return put;
+				}
 			}
 		}
 
