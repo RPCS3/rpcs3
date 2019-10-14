@@ -56,7 +56,7 @@ error_code cellUserInfoGetStat(u32 id, vm::ptr<CellUserInfoUserStat> stat)
 
 	if (!f)
 	{
-		cellUserInfo.error("cellUserInfoGetStat(): CELL_USERINFO_ERROR_INTERNAL. Username for user %d doesn't exist. Did you delete the username file?", id);
+		cellUserInfo.error("cellUserInfoGetStat(): CELL_USERINFO_ERROR_INTERNAL. Username for user %08u doesn't exist. Did you delete the username file?", id);
 		return CELL_USERINFO_ERROR_INTERNAL;
 	}
 
