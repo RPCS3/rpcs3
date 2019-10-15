@@ -139,11 +139,14 @@ namespace vk
 
 	struct cs_resolve_task : cs_resolve_base
 	{
-		cs_resolve_task(const std::string& format_prefix)
+		cs_resolve_task(const std::string& format_prefix, bool bgra_swap = false)
 		{
+			// Allow rgba->bgra transformation for old GeForce cards
+			const std::string swizzle = bgra_swap? ".bgra" : "";
+
 			std::string kernel =
 			"	vec4 aa_sample = imageLoad(multisampled, aa_coords, sample_index);\n"
-			"	imageStore(resolve, resolve_coords, aa_sample);\n";
+			"	imageStore(resolve, resolve_coords, aa_sample" + swizzle + ");\n";
 
 			build(kernel, format_prefix, 0);
 		}
@@ -151,11 +154,14 @@ namespace vk
 
 	struct cs_unresolve_task : cs_resolve_base
 	{
-		cs_unresolve_task(const std::string& format_prefix)
+		cs_unresolve_task(const std::string& format_prefix, bool bgra_swap = false)
 		{
+			// Allow rgba->bgra transformation for old GeForce cards
+			const std::string swizzle = bgra_swap? ".bgra" : "";
+
 			std::string kernel =
 			"	vec4 resolved_sample = imageLoad(resolve, resolve_coords);\n"
-			"	imageStore(multisampled, aa_coords, sample_index, resolved_sample);\n";
+			"	imageStore(multisampled, aa_coords, sample_index, resolved_sample" + swizzle + ");\n";
 
 			build(kernel, format_prefix, 1);
 		}
