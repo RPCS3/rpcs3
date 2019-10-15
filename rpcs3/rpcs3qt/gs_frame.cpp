@@ -280,13 +280,18 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
 	static Timer fps_t;
 
+	if (!m_show_fps_in_title && !g_cfg.misc.show_fps_in_title)
+	{
+		return;
+	}
+
 	++m_frames;
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
 		QString fps_title;
 
-		if (g_cfg.misc.show_fps_in_title)
+		if ((m_show_fps_in_title = g_cfg.misc.show_fps_in_title.get()))
 		{
 			fps_title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 
