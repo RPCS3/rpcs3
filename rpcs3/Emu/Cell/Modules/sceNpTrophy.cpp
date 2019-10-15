@@ -340,6 +340,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	TRPLoader trp(ctxt->trp_stream);
 	if (!trp.LoadHeader())
 	{
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to load trophy config header");
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
@@ -362,6 +363,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	}
 	else if (!trp.ContainsEntry("TROPCONF.SFM"))
 	{
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): Invalid/Incomplete trophy config"); 
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
@@ -378,6 +380,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name;
 	if (!trp.Install(trophyPath))
 	{
+		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to install trophy context '%s' (%s)", trophyPath, fs::g_tls_error); 
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
