@@ -36,6 +36,8 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	u64 m_frames = 0;
+	// display status of last title update
+	bool m_show_fps_in_title = false;
 	QString m_windowTitle;
 	bool m_disable_mouse;
 
