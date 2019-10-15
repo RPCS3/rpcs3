@@ -2455,8 +2455,16 @@ public:
 		static_assert(sizeof...(FArgs) == sizeof...(Args), "spu_llvm_recompiler::call(): unexpected arg number");
 		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
 		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({lame.data(), lame.size()}, type).getCallee());
+#ifdef _WIN32
+		func->setCallingConv(llvm::CallingConv::Win64);
+#endif
 		m_engine->addGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<std::uintptr_t>(_func));
-		return m_ir->CreateCall(func, {args...});
+
+		const auto inst = m_ir->CreateCall(func, {args...});
+#ifdef _WIN32
+		inst->setCallingConv(llvm::CallingConv::Win64);
+#endif
+		return inst;
 	}
 
 	// Bitcast with immediate constant folding

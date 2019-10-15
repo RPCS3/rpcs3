@@ -743,6 +743,8 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 {
 	std::string result;
 
+	auto null_mod = std::make_unique<llvm::Module> ("null_", m_context);
+
 	if (m_link.empty())
 	{
 		std::unique_ptr<llvm::RTDyldMemoryManager> mem;
@@ -754,10 +756,11 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		else
 		{
 			mem = std::make_unique<MemoryManager2>();
+			null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
 		}
 
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
-		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
+		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))
@@ -772,7 +775,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		auto mem = std::make_unique<MemoryManager>(m_link);
 		m_jit_el = std::make_unique<EventListener>(*mem);
 
-		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null", m_context))
+		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))

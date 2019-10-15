@@ -3410,7 +3410,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// 1. Thread context
 		// 2. Local storage pointer
 		// 3.
-#ifdef _WIN32
+#if 0
 		const auto chunk_type = get_ftype<u8*, u8*, u8*, u32>();
 #else
 		const auto chunk_type = get_ftype<void, u8*, u8*, u32>();
@@ -3424,7 +3424,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		result->setLinkage(llvm::GlobalValue::InternalLinkage);
 		result->addAttribute(1, llvm::Attribute::NoAlias);
 		result->addAttribute(2, llvm::Attribute::NoAlias);
-#ifndef _WIN32
+#if 1
 		result->setCallingConv(llvm::CallingConv::GHC);
 #endif
 
@@ -3448,7 +3448,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				fn->setLinkage(llvm::GlobalValue::InternalLinkage);
 				fn->addAttribute(1, llvm::Attribute::NoAlias);
 				fn->addAttribute(2, llvm::Attribute::NoAlias);
-#ifndef _WIN32
+#if 1
 				fn->setCallingConv(llvm::CallingConv::GHC);
 #endif
 				empl.first->second.fn = fn;
@@ -4298,7 +4298,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> module = std::make_unique<Module>(m_hash + ".obj", m_context);
-		module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
+		module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
 		module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = module.get();
 
@@ -4451,6 +4451,7 @@ public:
 
 		const auto dispatcher = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("spu_dispatcher", main_func->getType()).getCallee());
 		m_engine->addGlobalMapping("spu_dispatcher", reinterpret_cast<u64>(spu_runtime::tr_all));
+		dispatcher->setCallingConv(main_func->getCallingConv());
 
 		// Proceed to the next code
 		if (entry_chunk->chunk->getReturnType() != get_type<void>())
@@ -5887,7 +5888,11 @@ public:
 					else
 					{
 						// TODO
-						m_ir->CreateCall(get_intrinsic<u8*, u8*, u32>(llvm::Intrinsic::memcpy), {dst, src, zext<u32>(size).eval(m_ir), m_ir->getTrue()});
+						auto spu_memcpy = [](u8* dst, const u8* src, u32 size)
+						{
+							std::memcpy(dst, src, size);
+						};
+						call("spu_memcpy", +spu_memcpy, dst, src, zext<u32>(size).eval(m_ir));
 					}
 
 					m_ir->CreateBr(next);
