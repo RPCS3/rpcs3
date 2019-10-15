@@ -76,6 +76,11 @@ enum SceNpTrophyGrade
 	SCE_NP_TROPHY_GRADE_BRONZE         = 4,
 };
 
+enum
+{
+	SCE_NP_TROPHY_OPTIONS_CREATE_CONTEXT_READ_ONLY = 1,
+};
+
 struct SceNpTrophyGameDetails
 {
 	be_t<u32> numTrophies;
