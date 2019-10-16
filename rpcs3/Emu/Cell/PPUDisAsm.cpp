@@ -71,6 +71,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x3: info.first = "bns"; break;
 		default: ASSUME(0); break;
 		}
+		break;
 	}
 	case 0b00110:
 	{
@@ -83,6 +84,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x3: info.first = "bns"; break;
 		default: ASSUME(0); break;
 		}
+		break;
 	}
 	case 0b00111:
 	{
@@ -95,6 +97,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x3: info.first = "bns"; break;
 		default: ASSUME(0); break;
 		}
+		break;
 	}
 	case 0b01100:
 	{
@@ -106,6 +109,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x3: info.first = "bso"; break;
 		default: ASSUME(0); break;
 		}
+		break;
 	}
 	case 0b01110:
 	{
@@ -118,6 +122,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x3: info.first = "bso"; break;
 		default: ASSUME(0); break;
 		}
+		break;
 	}
 	case 0b01111:
 	{
@@ -130,6 +135,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x3: info.first = "bso"; break;
 		default: ASSUME(0); break;
 		}
+		break;
 	}
 	//case 0b10100:
 	//{
