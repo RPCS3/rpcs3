@@ -589,13 +589,11 @@ private:
 				LOG_FATAL(RSX, "RADV drivers have a major driver bug with LLVM 8.0.0 resulting in no visual output. Upgrade to LLVM version 8.0.1 or greater to avoid this issue.");
 			}
 
-#ifndef _WIN32
-			if (get_name().find("VEGA") != std::string::npos)
+			if (get_chip_class() == chip_class::AMD_vega)
 			{
-				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware for both RADV and AMDVLK. Using float32_t fallback instead.");
+				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware on all drivers. Using float32_t fallback instead.");
 				shader_types_support.allow_float16 = false;
 			}
-#endif
 		}
 
 		std::string get_name() const
