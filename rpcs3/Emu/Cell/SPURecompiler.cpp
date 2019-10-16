@@ -4879,7 +4879,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-		module->setTargetTriple(Triple::normalize(sys::getProcessTriple()));
+		module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
 		module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = module.get();
 
@@ -4904,6 +4904,9 @@ public:
 
 		// Add entry function, serves as a trampoline
 		const auto main_func = llvm::cast<Function>(m_module->getOrInsertFunction("spu_interpreter", get_ftype<void, u8*, u8*, u8*>()).getCallee());
+#ifdef _WIN32
+		main_func->setCallingConv(CallingConv::Win64);
+#endif
 		set_function(main_func);
 
 		// Load pc and opcode
