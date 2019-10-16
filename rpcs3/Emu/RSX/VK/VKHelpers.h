@@ -88,6 +88,8 @@ namespace vk
 		AMD_vega,
 		AMD_navi,
 		NV_generic,
+		NV_kepler,
+		NV_maxwell,
 		NV_pascal,
 		NV_volta,
 		NV_turing
