@@ -112,8 +112,6 @@ namespace vk
 						vkCmdClearDepthStencilImage(cmd, dst->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
 						dst->pop_layout(cmd);
 					}
-
-					vk::as_rtt(dst)->stencil_init_flags = stencil_init_flags;
 				}
 			}
 			else
