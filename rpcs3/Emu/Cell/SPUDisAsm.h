@@ -148,11 +148,11 @@ private:
 	using field_de_t = decltype(spu_opcode_t{}.de);
 	void DisAsm(std::string op, field_de_t de, const char* a1)
 	{
-		Write(fmt::format("%s%s %s", FixOp(op).c_str(), BrIndirectSuffix(de), a1));
+		Write(fmt::format("%s %s", FixOp(op.append(BrIndirectSuffix(de))).c_str(), a1));
 	}
 	void DisAsm(std::string op, field_de_t de, const char* a1, const char* a2)
 	{
-		Write(fmt::format("%s%s %s", FixOp(op).c_str(), BrIndirectSuffix(de), a1, a2));
+		Write(fmt::format("%s %s", FixOp(op.append(BrIndirectSuffix(de))).c_str(), a1, a2));
 	}
 
 public:
