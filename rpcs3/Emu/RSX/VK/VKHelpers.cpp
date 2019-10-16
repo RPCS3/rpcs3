@@ -40,9 +40,18 @@ namespace vk
 
 		// NV cards. See https://envytools.readthedocs.io/en/latest/hw/pciid.html
 		// NOTE: Since NV device IDs are linearly incremented per generation, there is no need to carefully check all the ranges
+		table.add(0x1180, 0x11fa, chip_class::NV_kepler); // GK104, 106
+		table.add(0x0FC0, 0x0FFF, chip_class::NV_kepler); // GK107
+		table.add(0x1003, 0x1028, chip_class::NV_kepler); // GK110
+		table.add(0x1280, 0x12BA, chip_class::NV_kepler); // GK208
+		table.add(0x1381, 0x13B0, chip_class::NV_maxwell); // GM107
+		table.add(0x1340, 0x134D, chip_class::NV_maxwell); // GM108
+		table.add(0x13C0, 0x13D9, chip_class::NV_maxwell); // GM204
+		table.add(0x1401, 0x1427, chip_class::NV_maxwell); // GM206
+		table.add(0x15F7, 0x15F9, chip_class::NV_pascal); // GP100 (Tesla P100)
 		table.add(0x1B00, 0x1D80, chip_class::NV_pascal);
 		table.add(0x1D81, 0x1DBA, chip_class::NV_volta);
-		table.add(0x1E02, 0x1F51, chip_class::NV_turing); // RTX 20
+		table.add(0x1E02, 0x1F51, chip_class::NV_turing); // RTX 20 series
 		table.add(0x2182, chip_class::NV_turing); // TU116
 		table.add(0x2184, chip_class::NV_turing); // TU116
 		table.add(0x1F82, chip_class::NV_turing); // TU117
