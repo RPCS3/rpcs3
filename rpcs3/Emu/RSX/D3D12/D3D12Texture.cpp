@@ -49,8 +49,8 @@ D3D12_SAMPLER_DESC get_sampler_desc(const rsx::fragment_texture &texture)
 	samplerDesc.BorderColor[1] = (FLOAT)texture.border_color();
 	samplerDesc.BorderColor[2] = (FLOAT)texture.border_color();
 	samplerDesc.BorderColor[3] = (FLOAT)texture.border_color();
-	samplerDesc.MinLOD = (FLOAT)(texture.min_lod() >> 8);
-	samplerDesc.MaxLOD = (FLOAT)(texture.max_lod() >> 8);
+	samplerDesc.MinLOD = (FLOAT)(texture.min_lod());
+	samplerDesc.MaxLOD = (FLOAT)(texture.max_lod());
 	return samplerDesc;
 }
 
