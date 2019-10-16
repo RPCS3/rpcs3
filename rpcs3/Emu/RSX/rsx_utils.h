@@ -752,6 +752,27 @@ namespace rsx
 		return result;
 	}
 
+	static inline f32 decode_fx13(u32 bits)
+	{
+		// Classic fixed point, see PGRAPH section of nouveau docs for TEX_FILTER (lod_bias) and TEX_CONTROL (min_lod, max_lod)
+		// Technically min/max lod are fixed 4.8 but a 5.8 decoder should work just as well since sign bit is 0
+
+		if ((bits & (1 << 12)) == 0)
+		{
+			const auto integral = f32(bits >> 8);
+			const auto fractional = (bits & 0xff) / 256.f;
+			return integral + fractional;
+		}
+		else
+		{
+			// Negative sign bit
+			bits = (~bits + 1) & 0x1fff;
+			const auto integral = -f32(bits >> 8);
+			const auto fractional = (bits & 0xff) / 256.f;
+			return integral - fractional;
+		}
+	}
+
 	template <int N>
 	void unpack_bitset(std::bitset<N>& block, u64* values)
 	{

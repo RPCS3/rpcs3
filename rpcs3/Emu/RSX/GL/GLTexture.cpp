@@ -259,8 +259,8 @@ namespace gl
 		{
 			set_parameteri(GL_TEXTURE_MIN_FILTER, tex_min_filter(tex.min_filter()));
 			set_parameterf(GL_TEXTURE_LOD_BIAS, tex.bias());
-			set_parameteri(GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-			set_parameteri(GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+			set_parameterf(GL_TEXTURE_MIN_LOD, tex.min_lod());
+			set_parameterf(GL_TEXTURE_MAX_LOD, tex.max_lod());
 		}
 
 		const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
@@ -307,8 +307,8 @@ namespace gl
 		set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		set_parameterf(GL_TEXTURE_LOD_BIAS, tex.bias());
-		set_parameteri(GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-		set_parameteri(GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+		set_parameterf(GL_TEXTURE_MIN_LOD, tex.min_lod());
+		set_parameterf(GL_TEXTURE_MAX_LOD, tex.max_lod());
 		set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 

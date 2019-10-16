@@ -1348,8 +1348,8 @@ void VKGSRender::end()
 
 					if (rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
 					{
-						min_lod = (float)(rsx::method_registers.fragment_textures[i].min_lod() >> 8);
-						max_lod = (float)(rsx::method_registers.fragment_textures[i].max_lod() >> 8);
+						min_lod = rsx::method_registers.fragment_textures[i].min_lod();
+						max_lod = rsx::method_registers.fragment_textures[i].max_lod();
 						lod_bias = rsx::method_registers.fragment_textures[i].bias();
 
 						f32 actual_mipmaps;
@@ -1425,8 +1425,8 @@ void VKGSRender::end()
 
 					bool replace = !vs_sampler_handles[i];
 					const VkBool32 unnormalized_coords = !!(rsx::method_registers.vertex_textures[i].format() & CELL_GCM_TEXTURE_UN);
-					const auto min_lod = (f32)rsx::method_registers.vertex_textures[i].min_lod();
-					const auto max_lod = (f32)rsx::method_registers.vertex_textures[i].max_lod();
+					const auto min_lod = rsx::method_registers.vertex_textures[i].min_lod();
+					const auto max_lod = rsx::method_registers.vertex_textures[i].max_lod();
 					const auto border_color = vk::get_border_color(rsx::method_registers.vertex_textures[i].border_color());
 
 					if (vs_sampler_handles[i])
