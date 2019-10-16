@@ -541,7 +541,7 @@ namespace vk
 
 	static inline vk::render_target* as_rtt(vk::image* t)
 	{
-		return static_cast<vk::render_target*>(t);
+		return verify(HERE, dynamic_cast<vk::render_target*>(t));
 	}
 }
 
