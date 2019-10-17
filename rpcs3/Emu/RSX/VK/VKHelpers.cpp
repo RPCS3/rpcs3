@@ -321,6 +321,7 @@ namespace vk
 	{
 		vk::reset_compute_tasks();
 		vk::reset_resolve_resources();
+		vk::vmm_reset();
 
 		g_upload_heap.reset_allocation_stats();
 	}

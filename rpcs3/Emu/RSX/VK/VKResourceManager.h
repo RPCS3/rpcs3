@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "VKHelpers.h"
 
 namespace vk
@@ -141,6 +141,12 @@ namespace vk
 				}
 			}
 		}
+	};
+
+	struct vmm_allocation_t
+	{
+		u64 size;
+		u32 type_index;
 	};
 
 	resource_manager* get_resource_manager();

@@ -151,6 +151,10 @@ namespace vk
 	void destroy_global_resources();
 	void reset_global_resources();
 
+	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size);
+	void vmm_notify_memory_freed(void* handle);
+	void vmm_reset();
+
 	/**
 	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
 	* Then copy all layers into dst_image.
@@ -319,11 +323,14 @@ namespace vk
 			mem_req.alignment = alignment;
 			create_info.memoryTypeBits = 1u << memory_type_index;
 			CHECK_RESULT(vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr));
+
+			vmm_notify_memory_allocated(vma_alloc, memory_type_index, block_sz);
 			return vma_alloc;
 		}
 
 		void free(mem_handle_t mem_handle) override
 		{
+			vmm_notify_memory_freed(mem_handle);
 			vmaFreeMemory(m_allocator, static_cast<VmaAllocation>(mem_handle));
 		}
 
@@ -380,13 +387,15 @@ namespace vk
 			info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 			info.allocationSize = block_sz;
 			info.memoryTypeIndex = memory_type_index;
-
 			CHECK_RESULT(vkAllocateMemory(m_device, &info, nullptr, &memory));
+
+			vmm_notify_memory_allocated(memory, memory_type_index, block_sz);
 			return memory;
 		}
 
 		void free(mem_handle_t mem_handle) override
 		{
+			vmm_notify_memory_freed(mem_handle);
 			vkFreeMemory(m_device, (VkDeviceMemory)mem_handle, nullptr);
 		}
 
