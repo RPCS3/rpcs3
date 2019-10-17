@@ -57,3 +57,67 @@ void cond_variable::imp_wake(u32 _count) noexcept
 		m_value.notify_one();
 	}
 }
+
+void shared_cond::imp_wait(u32 slot, u64 _timeout) noexcept
+{
+	if (slot >= 32)
+	{
+		// Invalid argument, assume notified
+		return;
+	}
+
+	const u64 wait_bit = c_wait << slot;
+	const u64 lock_bit = c_lock << slot;
+
+	// Change state from c_lock to c_wait
+	const auto [old_, new_] = m_cvx32.fetch_op([=](u64& cvx32)
+	{
+		if (cvx32 & wait_bit)
+		{
+			// c_lock -> c_wait
+			cvx32 &= ~(lock_bit & ~wait_bit);
+		}
+		else
+		{
+			// c_sig -> c_lock
+			cvx32 |= lock_bit;
+		}
+
+		return cvx32;
+	});
+
+	if ((old_ & wait_bit) == 0)
+	{
+		// Already signaled, return without waiting
+		return;
+	}
+
+	m_cvx32.wait<0xffffffff>(new_, atomic_wait_timeout{_timeout > cond_variable::max_timeout ? UINT64_MAX : _timeout * 1000});
+
+	m_cvx32 |= lock_bit;
+}
+
+void shared_cond::imp_notify() noexcept
+{
+	auto [old, ok] = m_cvx32.fetch_op([](u64& cvx32)
+	{
+		if (const u64 sig_mask = cvx32 & 0xffffffff)
+		{
+			cvx32 &= 0xffffffffull << 32;
+			cvx32 |= sig_mask << 32;
+			return true;
+		}
+
+		return false;
+	});
+
+	// Determine if some waiters need a syscall notification
+	const u64 wait_mask = old & (~old >> 32);
+
+	if (UNLIKELY(!ok || !wait_mask))
+	{
+		return;
+	}
+
+	m_cvx32.notify_all();
+}

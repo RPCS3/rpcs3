@@ -2399,6 +2399,13 @@ s64 spu_thread::get_ch_value(u32 ch)
 				fmt::throw_exception("Not supported: event mask 0x%x" HERE, mask1);
 			}
 
+			const auto pseudo_lock = vm::reservation_notifier(raddr, 128).try_shared_lock();
+
+			if (!pseudo_lock)
+			{
+				fmt::throw_exception("Unexpected: reservation notifier lock failed");
+			}
+
 			while (res = get_events(), !res)
 			{
 				state += cpu_flag::wait;
@@ -2408,7 +2415,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					return -1;
 				}
 
-				vm::reservation_notifier(raddr, 128).wait<UINT64_MAX & -128>(rtime, atomic_wait_timeout{100'000});
+				pseudo_lock.wait(100);
 			}
 
 			check_state();
