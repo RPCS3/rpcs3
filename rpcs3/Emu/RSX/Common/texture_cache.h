@@ -1494,10 +1494,13 @@ namespace rsx
 						auto result = texture_cache_helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
 							cmd, texptr, attr, scale, extended_dimension, encoded_remap, remap, true, force_convert);
 
-						if (!options.skip_texture_barriers)
+						if (!options.skip_texture_barriers && result.is_cyclic_reference)
 						{
+							// A texture barrier is only necessary when the rendertarget is going to be bound as a shader input.
+							// If a temporary copy is to be made, this should not be invoked
 							insert_texture_barrier(cmd, texptr);
 						}
+
 						return result;
 					}
 				}
