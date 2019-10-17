@@ -1418,7 +1418,7 @@ void VKGSRender::end()
 					check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
 					*sampler_state = m_texture_cache.upload_texture(*m_current_command_buffer, rsx::method_registers.vertex_textures[i], m_rtts);
 
-					if (sampler_state->is_cyclic_reference)
+					if (sampler_state->is_cyclic_reference || sampler_state->external_subresource_desc.do_not_cache)
 					{
 						check_for_cyclic_refs |= true;
 					}
