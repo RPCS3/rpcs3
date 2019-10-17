@@ -387,6 +387,8 @@ void GLGSRender::end()
 		}
 	}
 
+	m_gl_texture_cache.release_uncached_temporary_subresources();
+
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	// Optionally do memory synchronization if the texture stage has not yet triggered this
