@@ -573,7 +573,11 @@ namespace vk
 				const bool typeless = section.src->aspect() != dst_aspect ||
 					!formats_are_bitcast_compatible(dst->format(), section.src->format());
 
-				section.src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+				// Avoid inserting unnecessary barrier GENERAL->TRANSFER_SRC->GENERAL in active render targets
+				const auto preferred_layout = (section.src->current_layout != VK_IMAGE_LAYOUT_GENERAL) ?
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VK_IMAGE_LAYOUT_GENERAL;
+
+				section.src->push_layout(cmd, preferred_layout);
 
 				auto src_image = section.src;
 				auto src_x = section.src_x;
@@ -615,7 +619,7 @@ namespace vk
 					src_w = convert_w;
 				}
 
-				verify(HERE), src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				verify(HERE), src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src_image->current_layout == VK_IMAGE_LAYOUT_GENERAL;
 
 				// Final aspect mask of the 'final' transfer source
 				const auto new_src_aspect = src_image->aspect();
@@ -675,7 +679,7 @@ namespace vk
 						copy.imageSubresource = { src_image->aspect(), 0, 0, 1 };
 
 						auto scratch_buf = vk::get_scratch_buffer();
-						vkCmdCopyImageToBuffer(cmd, src_image->value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, scratch_buf->value, 1, &copy);
+						vkCmdCopyImageToBuffer(cmd, src_image->value, src_image->current_layout, scratch_buf->value, 1, &copy);
 
 						const auto mem_length = src_w * src_h * dst_bpp;
 						vk::insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, mem_length, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
