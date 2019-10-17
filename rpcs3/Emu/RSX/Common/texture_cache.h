@@ -269,6 +269,7 @@ namespace rsx
 		shared_mutex m_cache_mutex;
 		ranged_storage m_storage;
 		std::unordered_multimap<u32, std::pair<deferred_subresource, image_view_type>> m_temporary_subresource_cache;
+		std::vector<image_view_type> m_uncached_subresources;
 		predictor_type m_predictor;
 
 		std::atomic<u64> m_cache_update_tag = {0};
@@ -1322,7 +1323,7 @@ namespace rsx
 
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
 		{
-			if (!desc.do_not_cache)
+			if (LIKELY(!desc.do_not_cache))
 			{
 				const auto found = m_temporary_subresource_cache.equal_range(desc.address);
 				for (auto It = found.first; It != found.second; ++It)
@@ -1418,12 +1419,29 @@ namespace rsx
 			}
 			}
 
-			if (result && !desc.do_not_cache)
+			if (LIKELY(result))
 			{
-				m_temporary_subresource_cache.insert({ desc.address,{ desc, result } });
+				if (LIKELY(!desc.do_not_cache))
+				{
+					m_temporary_subresource_cache.insert({ desc.address,{ desc, result } });
+				}
+				else
+				{
+					m_uncached_subresources.push_back(result);
+				}
 			}
 
 			return result;
+		}
+
+		void release_uncached_temporary_subresources()
+		{
+			for (auto& view : m_uncached_subresources)
+			{
+				release_temporary_subresource(view);
+			}
+
+			m_uncached_subresources.clear();
 		}
 
 		void notify_surface_changed(const utils::address_range& range)

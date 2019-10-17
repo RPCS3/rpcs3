@@ -1691,6 +1691,8 @@ void VKGSRender::end()
 		}
 	}
 
+	m_texture_cache.release_uncached_temporary_subresources();
+
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
