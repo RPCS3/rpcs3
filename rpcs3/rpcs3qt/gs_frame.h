@@ -36,7 +36,7 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	u64 m_frames = 0;
-	// display status of last title update
+	// display status of last title update, needed for dynamic changes of the fps setting
 	bool m_show_fps_in_title = false;
 	QString m_windowTitle;
 	bool m_disable_mouse;
