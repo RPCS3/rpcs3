@@ -125,12 +125,12 @@ namespace rsx
 
 	f32 fragment_texture::min_lod() const
 	{
-		return rsx::decode_fx13((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 19) & 0xfff);
+		return rsx::decode_fxp<4, 8, false>((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 19) & 0xfff);
 	}
 
 	f32 fragment_texture::max_lod() const
 	{
-		return rsx::decode_fx13((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
+		return rsx::decode_fxp<4, 8, false>((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
 	}
 
 	rsx::texture_max_anisotropy fragment_texture::max_aniso() const
@@ -213,7 +213,7 @@ namespace rsx
 
 	f32 fragment_texture::bias() const
 	{
-		return rsx::decode_fx13((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		return rsx::decode_fxp<4, 8>((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
 	}
 
 	rsx::texture_minify_filter fragment_texture::min_filter() const
@@ -352,17 +352,17 @@ namespace rsx
 
 	f32 vertex_texture::min_lod() const
 	{
-		return rsx::decode_fx13((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 19) & 0xfff);
+		return rsx::decode_fxp<4, 8, false>((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 19) & 0xfff);
 	}
 
 	f32 vertex_texture::max_lod() const
 	{
-		return rsx::decode_fx13((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
+		return rsx::decode_fxp<4, 8, false>((registers[NV4097_SET_VERTEX_TEXTURE_CONTROL0 + (m_index * 8)] >> 7) & 0xfff);
 	}
 
 	f32 vertex_texture::bias() const
 	{
-		return rsx::decode_fx13((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		return rsx::decode_fxp<4, 8>((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
 	}
 
 	rsx::texture_minify_filter vertex_texture::min_filter() const
