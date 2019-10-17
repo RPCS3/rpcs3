@@ -781,6 +781,19 @@ namespace gl
 			return view;
 		}
 
+		void release_temporary_subresource(gl::texture_view* view) override
+		{
+			for (auto& e : m_temporary_surfaces)
+			{
+				if (e.image.get() == view->image())
+				{
+					e.view.reset();
+					e.image.reset();
+					return;
+				}
+			}
+		}
+
 		void update_image_contents(gl::command_context& cmd, gl::texture_view* dst, gl::texture* src, u16 width, u16 height) override
 		{
 			std::vector<copy_region_descriptor> region =
