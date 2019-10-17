@@ -443,6 +443,7 @@ namespace vk
 	struct temporary_storage
 	{
 		std::unique_ptr<vk::viewable_image> combined_image;
+		bool can_reuse = false;
 
 		// Memory held by this temp storage object
 		u32 block_size = 0;
@@ -777,7 +778,7 @@ namespace vk
 			const auto current_frame = vk::get_current_frame_id();
 			for (auto &e : m_temporary_storage)
 			{
-				if (e.frame_tag != current_frame && e.matches(format, w, h, d, mipmaps, 0))
+				if (e.can_reuse && e.matches(format, w, h, d, mipmaps, 0))
 				{
 					m_temporary_memory_size -= e.block_size;
 					e.block_size = 0;
@@ -793,7 +794,7 @@ namespace vk
 			const auto current_frame = vk::get_current_frame_id();
 			for (auto &e : m_temporary_storage)
 			{
-				if (e.frame_tag != current_frame && e.matches(format, size, size, 1, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT))
+				if (e.can_reuse && e.matches(format, size, size, 1, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT))
 				{
 					m_temporary_memory_size -= e.block_size;
 					e.block_size = 0;
@@ -1053,6 +1054,19 @@ namespace vk
 			m_temporary_memory_size += resource_memory;
 
 			return view;
+		}
+
+		void release_temporary_subresource(vk::image_view* view) override
+		{
+			auto handle = dynamic_cast<vk::viewable_image*>(view->image());
+			for (auto& e : m_temporary_storage)
+			{
+				if (e.combined_image.get() == handle)
+				{
+					e.can_reuse = true;
+					return;
+				}
+			}
 		}
 
 		void update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, vk::image* src, u16 width, u16 height) override
