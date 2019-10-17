@@ -38,8 +38,7 @@ struct sys_vm_t
 	lv2_memory_container* const ct;
 	const u32 addr;
 	const u32 size;
-	u32 psize;
-	shared_mutex mutex;
+	atomic_t<u32> psize;
 
 	sys_vm_t(u32 addr, u32 vsize, lv2_memory_container* ct, u32 psize);
 	~sys_vm_t();
