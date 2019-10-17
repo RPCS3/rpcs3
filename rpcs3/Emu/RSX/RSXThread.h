@@ -612,11 +612,11 @@ namespace rsx
 	public:
 		u64 start_rsx_time = 0;
 		u64 int_flip_index = 0;
-		u64 last_flip_time;
+		u64 last_flip_time = 0;
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
-		atomic_t<u64> vblank_count;
+		atomic_t<u64> vblank_count{0};
 
 	public:
 		bool invalid_command_interrupt_raised = false;
