@@ -5,6 +5,7 @@
 #include <tuple>
 #include <climits>
 #include "gcm_enums.h"
+#include "rsx_utils.h"
 #pragma warning(disable:4503)
 
 namespace
@@ -2027,17 +2028,13 @@ struct registers_decoder<NV3089_DS_DX>
 		{
 			const u32 val = value;
 
-			if ((val & ~(1<<31)) == 0)
+			if (val == 0)
 			{
+				// Will get reported in image_in
 				return 0;
 			}
 
-			if ((s32)val < 0)
-			{
-				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
-			}
-
-			return 1048576.f / val;
+			return 1.f / rsx::decode_fxp<11, 20>(val);
 		}
 	};
 
@@ -2063,17 +2060,13 @@ struct registers_decoder<NV3089_DT_DY>
 		{
 		    const u32 val = value;
 
-			if ((val & ~(1<<31)) == 0)
+			if (val == 0)
 			{
-				return 0;
+				// Will get reported in image_in
+				return 0.f;
 			}
 
-			if ((s32)val < 0)
-			{
-				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
-			}
-
-			return 1048576.f / val;
+			return 1.f / rsx::decode_fxp<11, 20>(val);
 		}
 	};
 
