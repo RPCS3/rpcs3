@@ -1722,7 +1722,7 @@ namespace rsx
 
 			const bool is_unnormalized = !!(tex.format() & CELL_GCM_TEXTURE_UN);
 			const bool is_swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
-			const auto extended_dimension = tex.get_extended_texture_dimension();
+			auto extended_dimension = tex.get_extended_texture_dimension();
 
 			options.is_compressed_format = texture_cache_helpers::is_compressed_gcm_format(attributes.gcm_format);
 
@@ -1784,6 +1784,14 @@ namespace rsx
 				{
 					LOG_ERROR(RSX, "Unimplemented unnormalized sampling for texture type %d", (u32)extended_dimension);
 				}
+			}
+
+			if (options.is_compressed_format)
+			{
+				attributes.width = align(attributes.width, 4);
+				attributes.height = align(attributes.height, 4);
+
+				extended_dimension = std::max(extended_dimension, rsx::texture_dimension_extended::texture_dimension_2d);
 			}
 
 			const auto lookup_range = utils::address_range::start_length(attributes.address, attributes.pitch * required_surface_height);
