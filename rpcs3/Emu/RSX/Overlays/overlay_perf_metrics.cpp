@@ -1,5 +1,5 @@
 ﻿#include "stdafx.h"
-#include "overlays.h"
+#include "overlay_perf_metrics.h"
 #include "../GSRender.h"
 
 #include "Emu/Cell/SPUThread.h"

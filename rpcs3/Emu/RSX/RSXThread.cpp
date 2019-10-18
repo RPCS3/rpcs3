@@ -14,6 +14,7 @@
 #include "rsx_utils.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
+#include "Overlays/overlay_perf_metrics.h"
 
 #include "Utilities/span.h"
 #include "Utilities/StrUtil.h"

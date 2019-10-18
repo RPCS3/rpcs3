@@ -392,6 +392,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="..\Utilities\BEType.h" />
     <ClInclude Include="..\Utilities\bin_patch.h" />
