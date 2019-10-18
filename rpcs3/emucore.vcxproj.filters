@@ -1576,5 +1576,8 @@
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
