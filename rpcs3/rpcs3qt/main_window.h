@@ -75,6 +75,7 @@ public:
 Q_SIGNALS:
 	void RequestGlobalStylesheetChange(const QString& sheetFilePath);
 	void RequestTrophyManagerRepaint();
+	void NotifyEmuSettingsChange();
 
 public Q_SLOTS:
 	void OnEmuStop();

@@ -78,12 +78,12 @@ namespace rsx
 				break;
 			}
 
-			if (g_cfg.video.perf_overlay.center_x)
+			if (m_center_x)
 			{
 				pos.x = (virtual_width - m_body.w) / 2;
 			}
 
-			if (g_cfg.video.perf_overlay.center_y)
+			if (m_center_y)
 			{
 				pos.y = (virtual_height - m_body.h - bottom_margin) / 2;
 			}
@@ -125,8 +125,17 @@ namespace rsx
 			}
 
 			// Set body/titles transform
-			reset_transform(m_body, bottom_margin);
-			reset_transform(m_titles, bottom_margin);
+			if (m_is_initialised && m_force_repaint)
+			{
+				m_force_repaint = false;
+				reset_body(bottom_margin);
+				reset_titles(bottom_margin);
+			}
+			else
+			{
+				reset_transform(m_body, bottom_margin);
+				reset_transform(m_titles, bottom_margin);
+			}
 
 			if (m_framerate_graph_enabled || m_frametime_graph_enabled)
 			{
@@ -156,20 +165,20 @@ namespace rsx
 			}
 		}
 
-		void perf_metrics_overlay::reset_body()
+		void perf_metrics_overlay::reset_body(u16 bottom_margin)
 		{
 			m_body.set_font(m_font.c_str(), m_font_size);
-			m_body.fore_color = convert_color_code(g_cfg.video.perf_overlay.color_body, m_opacity);
-			m_body.back_color = convert_color_code(g_cfg.video.perf_overlay.background_body, m_opacity);
-			reset_transform(m_body);
+			m_body.fore_color = convert_color_code(m_color_body, m_opacity);
+			m_body.back_color = convert_color_code(m_background_body, m_opacity);
+			reset_transform(m_body, bottom_margin);
 		}
 
-		void perf_metrics_overlay::reset_titles()
+		void perf_metrics_overlay::reset_titles(u16 bottom_margin)
 		{
 			m_titles.set_font(m_font.c_str(), m_font_size);
-			m_titles.fore_color = convert_color_code(g_cfg.video.perf_overlay.color_title, m_opacity);
-			m_titles.back_color = convert_color_code(g_cfg.video.perf_overlay.background_title, m_opacity);
-			reset_transform(m_titles);
+			m_titles.fore_color = convert_color_code(m_color_title, m_opacity);
+			m_titles.back_color = convert_color_code(m_background_title, m_opacity);
+			reset_transform(m_titles, bottom_margin);
 
 			switch (m_detail)
 			{
@@ -182,15 +191,9 @@ namespace rsx
 			m_titles.refresh();
 		}
 
-		void perf_metrics_overlay::reset_text()
-		{
-			reset_body();
-			reset_titles();
-		}
-
 		void perf_metrics_overlay::init()
 		{
-			reset_text();
+			reset_transforms();
 			force_next_update();
 
 			m_update_timer.Start();
@@ -203,6 +206,9 @@ namespace rsx
 
 		void perf_metrics_overlay::set_framerate_graph_enabled(bool enabled)
 		{
+			if (m_framerate_graph_enabled == enabled)
+				return;
+
 			m_framerate_graph_enabled = enabled;
 
 			if (enabled)
@@ -210,18 +216,18 @@ namespace rsx
 				m_fps_graph.set_title("Framerate");
 				m_fps_graph.set_font_size(m_font_size * 0.8);
 				m_fps_graph.set_count(50);
-				m_fps_graph.set_color(convert_color_code(g_cfg.video.perf_overlay.color_body));
+				m_fps_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_fps_graph.set_guide_interval(10);
 			}
 
-			if (m_is_initialised)
-			{
-				reset_transforms();
-			}
+			m_force_repaint = true;
 		}
 
 		void perf_metrics_overlay::set_frametime_graph_enabled(bool enabled)
 		{
+			if (m_frametime_graph_enabled == enabled)
+				return;
+
 			m_frametime_graph_enabled = enabled;
 
 			if (enabled)
@@ -229,34 +235,31 @@ namespace rsx
 				m_frametime_graph.set_title("Frametime");
 				m_frametime_graph.set_font_size(m_font_size * 0.8);
 				m_frametime_graph.set_count(170);
-				m_frametime_graph.set_color(convert_color_code(g_cfg.video.perf_overlay.color_body));
+				m_frametime_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_frametime_graph.set_guide_interval(8);
 			}
 
-			if (m_is_initialised)
-			{
-				reset_transforms();
-			}
+			m_force_repaint = true;
 		}
 
 		void perf_metrics_overlay::set_detail_level(detail_level level)
 		{
+			if (m_detail == level)
+				return;
+
 			m_detail = level;
 
-			if (m_is_initialised)
-			{
-				reset_titles();
-			}
+			m_force_repaint = true;
 		}
 
 		void perf_metrics_overlay::set_position(screen_quadrant quadrant)
 		{
+			if (m_quadrant == quadrant)
+				return;
+
 			m_quadrant = quadrant;
 
-			if (m_is_initialised)
-			{
-				reset_transforms();
-			}
+			m_force_repaint = true;
 		}
 
 		// In ms
@@ -267,43 +270,67 @@ namespace rsx
 
 		void perf_metrics_overlay::set_font(std::string font)
 		{
+			if (m_font == font)
+				return;
+
 			m_font = std::move(font);
 
-			if (m_is_initialised)
-			{
-				reset_text();
-			}
+			m_force_repaint = true;
 		}
 
 		void perf_metrics_overlay::set_font_size(u32 font_size)
 		{
+			if (m_font_size == font_size)
+				return;
+
 			m_font_size = font_size;
 
-			if (m_is_initialised)
-			{
-				reset_text();
-			}
+			m_force_repaint = true;
 		}
 
-		void perf_metrics_overlay::set_margins(u32 margin_x, u32 margin_y)
+		void perf_metrics_overlay::set_margins(u32 margin_x, u32 margin_y, bool center_x, bool center_y)
 		{
+			if (m_margin_x == margin_x && m_margin_y == margin_y && m_center_x == center_x && m_center_y == center_y)
+				return;
+
 			m_margin_x = margin_x;
 			m_margin_y = margin_y;
+			m_center_x = center_x;
+			m_center_y = center_y;
 
-			if (m_is_initialised)
-			{
-				reset_transforms();
-			}
+			m_force_repaint = true;
 		}
 
 		void perf_metrics_overlay::set_opacity(f32 opacity)
 		{
+			if (m_opacity == opacity)
+				return;
+
 			m_opacity = opacity;
 
-			if (m_is_initialised)
-			{
-				reset_text();
-			}
+			m_force_repaint = true;
+		}
+
+		void perf_metrics_overlay::set_body_colors(std::string color, std::string background)
+		{
+			if (m_color_body == color && m_background_body == background)
+				return;
+
+			m_color_body = std::move(color);
+			m_background_body = std::move(background);
+
+			m_force_repaint = true;
+		}
+
+		void perf_metrics_overlay::set_title_colors(std::string color, std::string background)
+		{
+			if (m_color_title == color && m_background_title == background)
+				return;
+
+			m_color_title = std::move(color);
+			m_background_title = std::move(background);
+
+			m_force_repaint = true;
 		}
 
 		void perf_metrics_overlay::force_next_update()
@@ -315,10 +342,18 @@ namespace rsx
 		{
 			const auto elapsed_update = m_update_timer.GetElapsedTimeInMilliSec();
 
-			if (m_is_initialised && m_frametime_graph_enabled)
+			if (m_is_initialised)
 			{
-				const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
-				m_frametime_graph.record_datapoint(elapsed_frame);
+				if (m_frametime_graph_enabled)
+				{
+					const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
+					m_frametime_graph.record_datapoint(elapsed_frame);
+				}
+
+				if (m_force_repaint)
+				{
+					reset_transforms();
+				}
 			}
 
 			if (!m_force_update)
@@ -625,16 +660,59 @@ namespace rsx
 			const f32 x_stride = f32(w) / m_datapoint_count;
 			const u32 tail_index_offset = m_datapoints.size() - m_datapoint_count;
 
-			for (u32 i = 0; i < m_datapoint_count; ++i)
+			for (size_t i = 0; i < m_datapoint_count; ++i)
 			{
 				const f32 x_line = x + i * x_stride;
-				const f32 y_line = y + h - (m_datapoints[i + tail_index_offset] * normalize_factor);
+				const f32 y_line = y + h - (m_datapoints[tail_index_offset + i] * normalize_factor);
 				verts_graph.emplace_back(x_line, y_line);
 			}
 
 			compiled_resources.add(m_label.get_compiled());
 
 			return compiled_resources;
+		}
+
+		void reset_performance_overlay()
+		{
+			if (!g_cfg.misc.use_native_interface)
+				return;
+
+			if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+			{
+				auto& perf_settings = g_cfg.video.perf_overlay;
+				auto perf_overlay = manager->get<rsx::overlays::perf_metrics_overlay>();
+
+				if (perf_settings.perf_overlay_enabled)
+				{
+					const bool existed = !!perf_overlay;
+
+					if (!existed)
+					{
+						perf_overlay = manager->create<rsx::overlays::perf_metrics_overlay>();
+					}
+
+					perf_overlay->set_detail_level(perf_settings.level);
+					perf_overlay->set_position(perf_settings.position);
+					perf_overlay->set_update_interval(perf_settings.update_interval);
+					perf_overlay->set_font(perf_settings.font);
+					perf_overlay->set_font_size(perf_settings.font_size);
+					perf_overlay->set_margins(perf_settings.margin_x, perf_settings.margin_y, perf_settings.center_x.get(), perf_settings.center_y.get());
+					perf_overlay->set_opacity(perf_settings.opacity / 100.f);
+					perf_overlay->set_body_colors(perf_settings.color_body, perf_settings.background_body);
+					perf_overlay->set_title_colors(perf_settings.color_title, perf_settings.background_title);
+					perf_overlay->set_framerate_graph_enabled(perf_settings.framerate_graph_enabled.get());
+					perf_overlay->set_frametime_graph_enabled(perf_settings.frametime_graph_enabled.get());
+
+					if (!existed)
+					{
+						perf_overlay->init();
+					}
+				}
+				else if (perf_overlay)
+				{
+					manager->remove<rsx::overlays::perf_metrics_overlay>();
+				}
+			}
 		}
 	} // namespace overlays
 } // namespace rsx
