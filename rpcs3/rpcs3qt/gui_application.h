@@ -62,6 +62,7 @@ private:
 
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest(const QString& path);
+	void OnEmuSettingsChange();
 
 Q_SIGNALS:
 	void OnEmulatorRun();

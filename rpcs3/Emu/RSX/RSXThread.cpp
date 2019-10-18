@@ -424,25 +424,7 @@ namespace rsx
 			return fmt::format("RSX [0x%07x]", +rsx->ctrl->get);
 		};
 
-		if (m_overlay_manager)
-		{
-			if (g_cfg.video.perf_overlay.perf_overlay_enabled)
-			{
-				auto perf_overlay = m_overlay_manager->create<rsx::overlays::perf_metrics_overlay>();
-
-				auto& perf_settings = g_cfg.video.perf_overlay;
-				perf_overlay->set_detail_level(perf_settings.level);
-				perf_overlay->set_position(perf_settings.position);
-				perf_overlay->set_update_interval(perf_settings.update_interval);
-				perf_overlay->set_font(perf_settings.font);
-				perf_overlay->set_font_size(perf_settings.font_size);
-				perf_overlay->set_margins(perf_settings.margin_x, perf_settings.margin_y);
-				perf_overlay->set_opacity(perf_settings.opacity / 100.f);
-				perf_overlay->set_framerate_graph_enabled(perf_settings.framerate_graph_enabled.get());
-				perf_overlay->set_frametime_graph_enabled(perf_settings.frametime_graph_enabled.get());
-				perf_overlay->init();
-			}
-		}
+		rsx::overlays::reset_performance_overlay();
 
 		on_init_thread();
 

@@ -7,6 +7,7 @@
 #include "_discord_utils.h"
 #endif
 
+#include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -83,6 +84,7 @@ void gui_application::InitializeConnects()
 	if (m_main_window)
 	{
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
+		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, &gui_application::OnEmuSettingsChange);
 
 		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
 		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
@@ -316,6 +318,11 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 	{
 		m_main_window->RepaintGui();
 	}
+}
+
+void gui_application::OnEmuSettingsChange()
+{
+	rsx::overlays::reset_performance_overlay();
 }
 
 /**
