@@ -1285,8 +1285,8 @@ void VKGSRender::end()
 					}
 
 					bool replace = !fs_sampler_handles[i];
-					VkFilter min_filter, mag_filter;
-					VkSamplerMipmapMode mip_mode;
+					VkFilter mag_filter;
+					vk::minification_filter min_filter;
 					f32 min_lod = 0.f, max_lod = 0.f;
 					f32 lod_bias = 0.f;
 
@@ -1335,18 +1335,20 @@ void VKGSRender::end()
 						can_sample_linear = m_device->get_format_properties(vk_format).optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
 					}
 
+					const auto mipmap_count = rsx::method_registers.fragment_textures[i].get_exact_mipmap_count();
+					min_filter = vk::get_min_filter(rsx::method_registers.fragment_textures[i].min_filter());
+
 					if (can_sample_linear)
 					{
 						mag_filter = vk::get_mag_filter(rsx::method_registers.fragment_textures[i].mag_filter());
-						std::tie(min_filter, mip_mode) = vk::get_min_filter_and_mip(rsx::method_registers.fragment_textures[i].min_filter());
 					}
 					else
 					{
-						mag_filter = min_filter = VK_FILTER_NEAREST;
-						mip_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+						mag_filter = VK_FILTER_NEAREST;
+						min_filter.filter = VK_FILTER_NEAREST;
 					}
 
-					if (rsx::method_registers.fragment_textures[i].get_exact_mipmap_count() > 1)
+					if (min_filter.sample_mipmaps && mipmap_count > 1)
 					{
 						min_lod = rsx::method_registers.fragment_textures[i].min_lod();
 						max_lod = rsx::method_registers.fragment_textures[i].max_lod();
@@ -1355,7 +1357,7 @@ void VKGSRender::end()
 						f32 actual_mipmaps;
 						if (sampler_state->upload_context == rsx::texture_upload_context::shader_read)
 						{
-							actual_mipmaps = (f32)rsx::method_registers.fragment_textures[i].get_exact_mipmap_count();
+							actual_mipmaps = (f32)mipmap_count;
 						}
 						else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
 						{
@@ -1375,14 +1377,14 @@ void VKGSRender::end()
 						else
 						{
 							min_lod = max_lod = lod_bias = 0.f;
-							mip_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+							min_filter.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 						}
 					}
 
 					if (fs_sampler_handles[i] && m_textures_dirty[i])
 					{
 						if (!fs_sampler_handles[i]->matches(wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode))
+							min_filter.filter, mag_filter, min_filter.mipmap_mode, border_color, compare_enabled, depth_compare_mode))
 						{
 							replace = true;
 						}
@@ -1391,7 +1393,7 @@ void VKGSRender::end()
 					if (replace)
 					{
 						fs_sampler_handles[i] = vk::get_resource_manager()->find_sampler(*m_device, wrap_s, wrap_t, wrap_r, false, lod_bias, af_level, min_lod, max_lod,
-							min_filter, mag_filter, mip_mode, border_color, compare_enabled, depth_compare_mode);
+							min_filter.filter, mag_filter, min_filter.mipmap_mode, border_color, compare_enabled, depth_compare_mode);
 					}
 				}
 				else
