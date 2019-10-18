@@ -59,7 +59,7 @@ static thread_local bool(*s_tls_wait_cb)(const void* data) = [](const void*)
 #ifdef USE_POSIX
 using sema_handle = sem_t;
 #elif defined(_WIN32)
-using sema_handle = HANDLE;
+using sema_handle = std::uint16_t;
 #else
 namespace
 {
@@ -119,10 +119,7 @@ static u32 sema_alloc()
 			// Initialize semaphore (should be very fast)
 			sem_init(&s_sema_list[id], 0, 0);
 #elif defined(_WIN32)
-			if (!s_sema_list[id])
-			{
-				s_sema_list[id] = CreateSemaphoreW(nullptr, 0, 0x7fff'ffff, nullptr);
-			}
+			// Do nothing
 #else
 			if (!s_sema_list[id])
 			{
@@ -457,7 +454,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			qw.QuadPart -= 1;
 		}
 
-		if (!NtWaitForSingleObject(s_sema_list[sema_id], false, timeout + 1 ? &qw : nullptr))
+		if (!NtWaitForKeyedEvent(nullptr, &s_sema_list[sema_id], false, timeout + 1 ? &qw : nullptr))
 		{
 			fallback = true;
 		}
@@ -572,7 +569,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 #if defined(_WIN32) && !defined(USE_POSIX)
 		static LARGE_INTEGER instant{};
 
-		if (!NtWaitForSingleObject(s_sema_list[sema_id], false, &instant))
+		if (!NtWaitForKeyedEvent(nullptr, &s_sema_list[sema_id], false, &instant))
 		{
 			fallback = true;
 		}
@@ -768,7 +765,7 @@ void atomic_storage_futex::notify_one(const void* data)
 #ifdef USE_POSIX
 		sem_post(&s_sema_list[sema_id]);
 #elif defined(_WIN32)
-		ReleaseSemaphore(s_sema_list[sema_id], 1, nullptr);
+		NtReleaseKeyedEvent(nullptr, &s_sema_list[sema_id], 1, nullptr);
 #else
 		dumb_sema& sema = *s_sema_list[sema_id];
 
@@ -839,9 +836,9 @@ void atomic_storage_futex::notify_all(const void* data)
 		sem_post(&s_sema_list[sema_id]);
 	}
 #elif defined(_WIN32)
-	if (count)
+	for (u32 i = 0; i < count; i++)
 	{
-		ReleaseSemaphore(s_sema_list[sema_id], count, nullptr);
+		NtReleaseKeyedEvent(nullptr, &s_sema_list[sema_id], count, nullptr);
 	}
 #else
 	if (count)
