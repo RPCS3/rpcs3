@@ -48,17 +48,17 @@ namespace vk
 		fmt::throw_exception("Invalid format (0x%x)" HERE, (u32)format);
 	}
 
-	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter)
+	minification_filter get_min_filter(rsx::texture_minify_filter min_filter)
 	{
 		switch (min_filter)
 		{
-		case rsx::texture_minify_filter::nearest: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-		case rsx::texture_minify_filter::linear: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-		case rsx::texture_minify_filter::nearest_nearest: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-		case rsx::texture_minify_filter::linear_nearest: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-		case rsx::texture_minify_filter::nearest_linear: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-		case rsx::texture_minify_filter::linear_linear: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-		case rsx::texture_minify_filter::convolution_min: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+		case rsx::texture_minify_filter::nearest: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
+		case rsx::texture_minify_filter::linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
+		case rsx::texture_minify_filter::nearest_nearest: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
+		case rsx::texture_minify_filter::linear_nearest: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
+		case rsx::texture_minify_filter::nearest_linear: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
+		case rsx::texture_minify_filter::linear_linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
+		case rsx::texture_minify_filter::convolution_min: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, false };
 		default:
 			ASSUME(0);
 			break;
