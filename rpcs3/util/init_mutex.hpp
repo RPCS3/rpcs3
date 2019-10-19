@@ -29,17 +29,17 @@ namespace stx
 				{
 					auto [val, ok] = _this->m_state.fetch_op([](u32& value)
 					{
-						if (val == 0)
+						if (value == 0)
 						{
-							val = 1;
+							value = 1;
 							return true;
 						}
 
 						if constexpr (sizeof...(FAndArgs))
 						{
-							if (val & c_init_bit)
+							if (value & c_init_bit)
 							{
-								val -= c_init_bit - 1;
+								value -= c_init_bit - 1;
 								return true;
 							}
 						}
