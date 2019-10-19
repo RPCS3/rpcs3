@@ -2349,6 +2349,12 @@ namespace rsx
 		invalid_command_interrupt_raised = false;
 	}
 
+	u32 thread::get_fifo_cmd()
+	{
+		// Last fifo cmd for logging and utility
+		return fifo_ctrl->last_cmd();
+	}
+
 	void thread::read_barrier(u32 memory_address, u32 memory_range)
 	{
 		zcull_ctrl->read_barrier(this, memory_address, memory_range);
