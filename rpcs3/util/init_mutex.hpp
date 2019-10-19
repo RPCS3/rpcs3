@@ -21,13 +21,31 @@ namespace stx
 			init_mutex* _this;
 
 		public:
-			explicit init_lock(init_mutex& mtx) noexcept
+			template <typename... FAndArgs>
+			explicit init_lock(init_mutex& mtx, FAndArgs&&... args) noexcept
 				: _this(&mtx)
 			{
 				while (true)
 				{
-					// Expect initial (zero) state, don't optimize for least expected cases
-					const u32 val = _this->m_state.compare_and_swap(0, 1);
+					auto [val, ok] = _this->m_state.fetch_op([](u32& value)
+					{
+						if (val == 0)
+						{
+							val = 1;
+							return true;
+						}
+
+						if constexpr (sizeof...(FAndArgs))
+						{
+							if (val & c_init_bit)
+							{
+								val -= c_init_bit - 1;
+								return true;
+							}
+						}
+
+						return false;
+					});
 
 					if (val == 0)
 					{
@@ -37,12 +55,28 @@ namespace stx
 
 					if (val & c_init_bit)
 					{
+						if constexpr (sizeof...(FAndArgs))
+						{
+							// Forced reset
+							val -= c_init_bit - 1;
+
+							while (val != 1)
+							{
+								// Wait for other users to finish their work
+								_this->m_state.wait(val);
+								val = _this->m_state;
+							}
+
+							// Call specified reset function
+							std::invoke(std::forward<FAndArgs>(args)...);
+							break;
+						}
+
 						// Failure
 						_this = nullptr;
 						break;
 					}
 
-					// Wait until the state becomes certain
 					_this->m_state.wait(val);
 				}
 			}
@@ -84,6 +118,13 @@ namespace stx
 		[[nodiscard]] init_lock init() noexcept
 		{
 			return init_lock(*this);
+		}
+
+		// Same as init, but never fails, and executes provided `on_reset` function if already initialized.
+		template <typename F, typename... Args>
+		[[nodiscard]] init_lock init_always(F on_reset, Args&&... args) noexcept
+		{
+			return init_lock(*this, std::move(on_reset), std::forward<Args>(args)...);
 		}
 
 		class reset_lock final
@@ -141,6 +182,16 @@ namespace stx
 			}
 
 			explicit operator bool() && = delete;
+
+			void set_init() & noexcept
+			{
+				if (_this)
+				{
+					// Set initialized state (TODO?)
+					_this->m_state |= c_init_bit;
+					_this->m_state.notify_all();
+				}
+			}
 		};
 
 		// Obtain exclusive lock to finalize protected resource. Waits for ongoing use. Fails if not initialized.
