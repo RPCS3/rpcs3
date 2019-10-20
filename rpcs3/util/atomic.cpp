@@ -19,7 +19,7 @@
 #include <string>
 
 // Hashtable size factor (can be set to 0 to stress-test collisions)
-static constexpr uint s_hashtable_power = 17;
+static constexpr uint s_hashtable_power = 16;
 
 // Total number of entries, should be a power of 2.
 static constexpr std::uintptr_t s_hashtable_size = 1u << s_hashtable_power;
@@ -36,12 +36,26 @@ static constexpr u64 s_collision_bit = 0x8000'0000'0000'0000;
 // Allocated slot with secondary table.
 static constexpr u64 s_slot_mask = ~(s_waiter_mask | s_pointer_mask | s_collision_bit);
 
-// Main hashtable for atomic wait, uses lowest pointer bits.
-static atomic_t<u64> s_hashtable[s_hashtable_size]{};
-
 // Helper to get least significant set bit from 64-bit masks
 template <u64 Mask>
 static constexpr u64 one_v = Mask & (0 - Mask);
+
+namespace
+{
+	struct sync_var
+	{
+		constexpr sync_var() noexcept = default;
+
+		// Reference counter, owning pointer, collision bit and optionally selected slot
+		atomic_t<u64> addr_ref{};
+
+		// Counter for waiting threads for the semaphore and allocated semaphore id
+		atomic_t<u64> sema_var{};
+	};
+}
+
+// Main hashtable for atomic wait.
+static sync_var s_hashtable[s_hashtable_size]{};
 
 namespace
 {
@@ -49,16 +63,13 @@ namespace
 	{
 		constexpr slot_info() noexcept = default;
 
-		// Combined allocated semaphore id and number of waiters
-		atomic_t<u64> sema_var{};
-
-		// Sub slots
-		atomic_t<u64> branch[48 - s_hashtable_power]{};
+		// Branch extension
+		sync_var branch[48 - s_hashtable_power]{};
 	};
 }
 
 // Number of search groups (defines max slot branch count as gcount * 64)
-static constexpr u32 s_slot_gcount = (s_hashtable_power ? 16384 : 256) / 64;
+static constexpr u32 s_slot_gcount = (s_hashtable_power ? 4096 : 256) / 64;
 
 // Array of slot branch objects
 static slot_info s_slot_list[s_slot_gcount * 64]{};
@@ -106,14 +117,14 @@ static u64 slot_alloc()
 	return 0;
 }
 
-static slot_info* slot_get(std::uintptr_t iptr, atomic_t<u64>* loc, u64 lv = 0)
+static sync_var* slot_get(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
 {
 	if (!loc)
 	{
 		return nullptr;
 	}
 
-	const u64 value = loc->load();
+	const u64 value = loc->addr_ref.load();
 
 	if (!value)
 	{
@@ -122,7 +133,7 @@ static slot_info* slot_get(std::uintptr_t iptr, atomic_t<u64>* loc, u64 lv = 0)
 
 	if ((value & s_pointer_mask) == (iptr & s_pointer_mask))
 	{
-		return &s_slot_list[(value & s_slot_mask) / one_v<s_slot_mask>];
+		return loc;
 	}
 
 	if ((value & s_collision_bit) == 0)
@@ -316,7 +327,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 	u64 slot_a = -1;
 
 	// Found slot object
-	slot_info* slot = nullptr;
+	sync_var* slot = nullptr;
 
 	auto install_op = [&](u64& value) -> u64
 	{
@@ -328,28 +339,25 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 		if (!value || (value & s_pointer_mask) == (iptr & s_pointer_mask))
 		{
-			if (!value)
+			// Store pointer bits
+			value |= (iptr & s_pointer_mask);
+		}
+		else
+		{
+			if ((value & s_collision_bit) == 0)
 			{
 				if (slot_a + 1 == 0)
 				{
-					// First waiter: allocate slot and install it
+					// Second waiter: allocate slot and install it
 					slot_a = slot_alloc() * one_v<s_slot_mask>;
 				}
 
 				value |= slot_a;
 			}
 
-			// Store pointer bits
-			value |= (iptr & s_pointer_mask);
-		}
-		else
-		{
 			// Set collision bit
 			value |= s_collision_bit;
 		}
-
-		// Return slot ptr
-		slot = &s_slot_list[(value & s_slot_mask) / one_v<s_slot_mask>];
 
 		// Add waiter
 		value += one_v<s_waiter_mask>;
@@ -360,15 +368,15 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 	u64 lv = 0;
 
 	// For cleanup
-	std::basic_string<atomic_t<u64>*> install_list;
+	std::basic_string<sync_var*> install_list;
 
-	for (atomic_t<u64>* ptr = &s_hashtable[iptr % s_hashtable_size];;)
+	for (sync_var* ptr = &s_hashtable[iptr % s_hashtable_size];;)
 	{
-		auto [_old, ok] = ptr->fetch_op(install_op);
+		auto [_old, ok] = ptr->addr_ref.fetch_op(install_op);
 
 		if (slot_a + 1)
 		{
-			if ((ok & s_slot_mask) == slot_a)
+			if ((_old & s_collision_bit) == 0 && (ok & s_collision_bit) && (ok & s_slot_mask) == slot_a)
 			{
 				// Slot set successfully
 				slot_a = -1;
@@ -391,6 +399,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 				slot_a = -1;
 			}
 
+			slot = ptr;
 			break;
 		}
 
@@ -398,7 +407,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		const u64 eq_bits = utils::cntlz64((((iptr ^ ok) & (s_pointer_mask >> lv)) | ~s_pointer_mask) << 16, true);
 
 		// Collision; need to go deeper
-		ptr = slot->branch + eq_bits;
+		ptr = s_slot_list[(ok & s_slot_mask) / one_v<s_slot_mask>].branch + eq_bits;
 		install_list.push_back(ptr);
 
 		lv = eq_bits + 1;
@@ -651,7 +660,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	for (auto ptr = (install_list.empty() ? &s_hashtable[iptr % s_hashtable_size] : install_list.back());;)
 	{
-		auto [_old, ok] = ptr->fetch_op([&](u64& value)
+		auto [_old, ok] = ptr->addr_ref.fetch_op([&](u64& value)
 		{
 			if (value & s_waiter_mask)
 			{
