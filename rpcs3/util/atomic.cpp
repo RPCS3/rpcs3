@@ -16,7 +16,6 @@
 #include <condition_variable>
 #include <iterator>
 #include <memory>
-#include <string>
 #include <cstdlib>
 
 // Hashtable size factor (can be set to 0 to stress-test collisions)
@@ -126,7 +125,7 @@ static sync_var* slot_get(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
 
 	const u64 value = loc->addr_ref.load();
 
-	if (!value)
+	if ((value & s_waiter_mask) == 0)
 	{
 		return nullptr;
 	}
@@ -153,6 +152,51 @@ static void slot_free(u64 id)
 	// Reset allocation bit
 	id = (id & s_slot_mask) / one_v<s_slot_mask>;
 	s_slot_bits[id / 64] &= ~(1ull << (id % 64));
+}
+
+static void slot_free(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
+{
+	const u64 value = loc->addr_ref.load();
+
+	if ((value & s_pointer_mask) != (iptr & s_pointer_mask))
+	{
+		if ((value & s_waiter_mask) == 0 || (value & s_collision_bit) == 0)
+		{
+			std::abort();
+		}
+
+		// Get the number of leading equal bits to determine subslot
+		const u64 eq_bits = utils::cntlz64((((iptr ^ value) & (s_pointer_mask >> lv)) | ~s_pointer_mask) << 16, true);
+
+		// Proceed recursively, to deallocate deepest branch first
+		slot_free(iptr, s_slot_list[(value & s_slot_mask) / one_v<s_slot_mask>].branch + eq_bits, eq_bits + 1);
+	}
+
+	// Actual cleanup in reverse order
+	auto [_old, ok] = loc->addr_ref.fetch_op([&](u64& value)
+	{
+		if (value & s_waiter_mask)
+		{
+			value -= one_v<s_waiter_mask>;
+
+			if (!(value & s_waiter_mask))
+			{
+				// Reset on last waiter
+				value = 0;
+				return 2;
+			}
+
+			return 1;
+		}
+
+		std::abort();
+	});
+
+	if (ok > 1 && _old & s_collision_bit)
+	{
+		// Deallocate slot on last waiter
+		slot_free(_old);
+	}
 }
 
 // Number of search groups (defines max semaphore count as gcount * 64)
@@ -367,9 +411,6 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 	// Search detail
 	u64 lv = 0;
 
-	// For cleanup
-	std::basic_string<sync_var*> install_list;
-
 	for (sync_var* ptr = &s_hashtable[iptr % s_hashtable_size];;)
 	{
 		auto [_old, ok] = ptr->addr_ref.fetch_op(install_op);
@@ -408,7 +449,6 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 		// Collision; need to go deeper
 		ptr = s_slot_list[(ok & s_slot_mask) / one_v<s_slot_mask>].branch + eq_bits;
-		install_list.push_back(ptr);
 
 		lv = eq_bits + 1;
 	}
@@ -658,46 +698,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 		sema_free(sema_id);
 	}
 
-	for (auto ptr = (install_list.empty() ? &s_hashtable[iptr % s_hashtable_size] : install_list.back());;)
-	{
-		auto [_old, ok] = ptr->addr_ref.fetch_op([&](u64& value)
-		{
-			if (value & s_waiter_mask)
-			{
-				value -= one_v<s_waiter_mask>;
-
-				if (!(value & s_waiter_mask))
-				{
-					// Reset on last waiter
-					value = 0;
-					return 2;
-				}
-
-				return 1;
-			}
-
-			return 0;
-		});
-
-		if (!ok)
-		{
-			std::abort();
-		}
-
-		if (ok > 1 && _old & s_collision_bit)
-		{
-			// Deallocate slot on last waiter
-			slot_free(_old);
-		}
-
-		if (ptr == &s_hashtable[iptr % s_hashtable_size])
-		{
-			break;
-		}
-
-		install_list.pop_back();
-		ptr = install_list.empty() ? &s_hashtable[iptr % s_hashtable_size] : install_list.back();
-	}
+	slot_free(iptr, &s_hashtable[iptr % s_hashtable_size]);
 
 	s_tls_wait_cb(nullptr);
 }
