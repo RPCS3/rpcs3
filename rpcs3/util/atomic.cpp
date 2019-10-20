@@ -11,12 +11,13 @@
 #include <semaphore.h>
 #endif
 
-#include <map>
+#include <utility>
 #include <mutex>
 #include <condition_variable>
 #include <iterator>
 #include <memory>
 #include <string>
+#include <cstdlib>
 
 // Hashtable size factor (can be set to 0 to stress-test collisions)
 static constexpr uint s_hashtable_power = 16;
@@ -25,10 +26,10 @@ static constexpr uint s_hashtable_power = 16;
 static constexpr std::uintptr_t s_hashtable_size = 1u << s_hashtable_power;
 
 // Pointer mask without bits used as hash, assuming signed 48-bit pointers.
-static constexpr u64 s_pointer_mask = 0xffff'ffff'ffff & ~((s_hashtable_size - 1));
+static constexpr u64 s_pointer_mask = s_hashtable_power > 7 ? 0xffff'ffff'ffff & ~((s_hashtable_size - 1)) : 0xffff'ffff'ffff;
 
 // Max number of waiters is 32767.
-static constexpr u64 s_waiter_mask = s_hashtable_power ? 0x7fff'0000'0000'0000 : 0x7f00'0000'0000'0000;
+static constexpr u64 s_waiter_mask = s_hashtable_power > 7 ? 0x7fff'0000'0000'0000 : 0x7f00'0000'0000'0000;
 
 // Bit indicates that more than one.
 static constexpr u64 s_collision_bit = 0x8000'0000'0000'0000;
@@ -69,7 +70,7 @@ namespace
 }
 
 // Number of search groups (defines max slot branch count as gcount * 64)
-static constexpr u32 s_slot_gcount = (s_hashtable_power ? 4096 : 256) / 64;
+static constexpr u32 s_slot_gcount = (s_hashtable_power > 7 ? 4096 : 256) / 64;
 
 // Array of slot branch objects
 static slot_info s_slot_list[s_slot_gcount * 64]{};
@@ -111,8 +112,7 @@ static u64 slot_alloc()
 		}
 	}
 
-	// TODO: handle it somehow
-	std::printf("slot overflow\n");
+	// TODO: unreachable
 	std::abort();
 	return 0;
 }
@@ -668,7 +668,7 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 				if (!(value & s_waiter_mask))
 				{
-					// Deallocate slot on last waiter
+					// Reset on last waiter
 					value = 0;
 					return 2;
 				}
@@ -684,8 +684,9 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			std::abort();
 		}
 
-		if (ok > 1)
+		if (ok > 1 && _old & s_collision_bit)
 		{
+			// Deallocate slot on last waiter
 			slot_free(_old);
 		}
 
