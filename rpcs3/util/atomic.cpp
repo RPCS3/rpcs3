@@ -1,10 +1,7 @@
 ﻿#include "atomic.hpp"
 
-// USE_FUTEX takes precedence over USE_POSIX
-
 #ifdef __linux__
 #define USE_FUTEX
-#define USE_POSIX
 #endif
 
 #include "Utilities/sync.h"
@@ -154,6 +151,14 @@ static constexpr u64 s_sema_mask = (s_sema_gcount * 64 - 1);
 
 #ifdef USE_POSIX
 using sema_handle = sem_t;
+#elif defined(USE_FUTEX)
+namespace
+{
+	struct alignas(64) sema_handle
+	{
+		atomic_t<u32> sema;
+	};
+}
 #elif defined(_WIN32)
 using sema_handle = std::uint16_t;
 #else
@@ -214,7 +219,7 @@ static u32 sema_alloc()
 #ifdef USE_POSIX
 			// Initialize semaphore (should be very fast)
 			sem_init(&s_sema_list[id], 0, 0);
-#elif defined(_WIN32)
+#elif defined(_WIN32) | defined(USE_FUTEX)
 			// Do nothing
 #else
 			if (!s_sema_list[id])
@@ -485,7 +490,25 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 
 	if (sema_id && ptr_cmp(data, size, old_value, mask) && s_tls_wait_cb(data))
 	{
-#if defined(_WIN32) && !defined(USE_POSIX)
+#ifdef USE_FUTEX
+		struct timespec ts;
+		ts.tv_sec  = timeout / 1'000'000'000;
+		ts.tv_nsec = timeout % 1'000'000'000;
+
+		if (s_sema_list[sema_id].sema.try_dec(0))
+		{
+			fallback = true;
+		}
+		else
+		{
+			futex(&s_sema_list[sema_id].sema, FUTEX_WAIT_PRIVATE, 0, timeout + 1 ? &ts : nullptr);
+
+			if (s_sema_list[sema_id].sema.try_dec(0))
+			{
+				fallback = true;
+			}
+		}
+#elif defined(_WIN32) && !defined(USE_POSIX)
 		LARGE_INTEGER qw;
 		qw.QuadPart = -static_cast<s64>(timeout / 100);
 
@@ -591,7 +614,12 @@ void atomic_storage_futex::wait(const void* data, std::size_t size, u64 old_valu
 			break;
 		}
 
-#if defined(_WIN32) && !defined(USE_POSIX)
+#ifdef USE_FUTEX
+		if (s_sema_list[sema_id].sema.try_dec(0))
+		{
+			fallback = true;
+		}
+#elif defined(_WIN32) && !defined(USE_POSIX)
 		static LARGE_INTEGER instant{};
 
 		if (!NtWaitForKeyedEvent(nullptr, &s_sema_list[sema_id], false, &instant))
@@ -727,6 +755,9 @@ void atomic_storage_futex::notify_one(const void* data)
 	{
 #ifdef USE_POSIX
 		sem_post(&s_sema_list[sema_id]);
+#elif defined(USE_FUTEX)
+		s_sema_list[sema_id].sema++;
+		futex(&s_sema_list[sema_id].sema, FUTEX_WAKE_PRIVATE, 1);
 #elif defined(_WIN32)
 		NtReleaseKeyedEvent(nullptr, &s_sema_list[sema_id], 1, nullptr);
 #else
@@ -782,6 +813,9 @@ void atomic_storage_futex::notify_all(const void* data)
 	{
 		sem_post(&s_sema_list[sema_id]);
 	}
+#elif defined(USE_FUTEX)
+	s_sema_list[sema_id].sema += count;
+	futex(&s_sema_list[sema_id].sema, FUTEX_WAKE_PRIVATE, 0x7fff'ffff);
 #elif defined(_WIN32)
 	for (u32 i = 0; i < count; i++)
 	{
