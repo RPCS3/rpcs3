@@ -103,6 +103,7 @@ struct RsxDisplayInfo
 
 struct lv2_rsx_config
 {
+	u32 memory_size{};
 	u32 rsx_event_port{};
 	u32 context_base{};
 	u32 device_addr{};
