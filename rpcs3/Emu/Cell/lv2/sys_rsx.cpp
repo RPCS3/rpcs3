@@ -58,7 +58,7 @@ error_code sys_rsx_device_close()
  * lv2 SysCall 668 (0x29C): sys_rsx_memory_allocate
  * @param mem_handle (OUT): Context / ID, which is used by sys_rsx_memory_free to free allocated memory.
  * @param mem_addr (OUT): Returns the local memory base address, usually 0xC0000000.
- * @param size (IN): Local memory size. E.g. 0x0F900000 (249 MB).
+ * @param size (IN): Local memory size. E.g. 0x0F900000 (249 MB). (changes with sdk version)
  * @param flags (IN): E.g. Immediate value passed in cellGcmSys is 8.
  * @param a5 (IN): E.g. Immediate value passed in cellGcmSys is 0x00300000 (3 MB?).
  * @param a6 (IN): E.g. Immediate value passed in cellGcmSys is 16.
@@ -70,6 +70,7 @@ error_code sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_add
 
 	if (u32 addr = vm::falloc(rsx::constants::local_mem_base, size, vm::video))
 	{
+		g_fxo->get<lv2_rsx_config>()->memory_size = size;
 		*mem_addr = addr;
 		*mem_handle = 0x5a5a5a5b;
 		return CELL_OK;
@@ -171,7 +172,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 
 	driverInfo.version_driver = 0x211;
 	driverInfo.version_gpu = 0x5c;
-	driverInfo.memory_size = 0xFE00000;
+	driverInfo.memory_size = rsx_cfg->memory_size;
 	driverInfo.nvcore_frequency = 500000000; // 0x1DCD6500
 	driverInfo.memory_frequency = 650000000; // 0x26BE3680
 	driverInfo.reportsNotifyOffset = 0x1000;
