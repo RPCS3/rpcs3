@@ -203,7 +203,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	properties2.require_wpos = !!(properties.in_register_mask & in_wpos);
 	properties2.require_texture_ops = properties.has_tex_op;
 	properties2.require_shadow_ops = m_prog.shadow_textures != 0;
-	properties2.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
+	properties2.emulate_coverage_tests = true; // g_cfg.video.antialiasing_level == msaa_level::none;
 	properties2.emulate_shadow_compare = device_props.emulate_depth_compare;
 	properties2.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
 
