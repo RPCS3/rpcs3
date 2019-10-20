@@ -1613,49 +1613,17 @@ namespace rsx
 							u32  gcm_format = attr.gcm_format;
 							const bool gcm_format_is_depth = texture_cache_helpers::is_gcm_depth_format(attr.gcm_format);
 
-							if (gcm_format_is_depth && !last->is_depth_texture())
+							if (!gcm_format_is_depth && last->is_depth_texture())
 							{
-								// Request for a depth format, but only a color format exists
-								const auto actual_format = last->get_gcm_format();
-								bool  resolved = false;
-
-								switch (attr.gcm_format)
-								{
-								case CELL_GCM_TEXTURE_A8R8G8B8:
-								case CELL_GCM_TEXTURE_D8R8G8B8:
-								{
-									// Compatible with D24S8_UINT
-									if (actual_format == CELL_GCM_TEXTURE_DEPTH24_D8)
-									{
-										gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
-										resolved = true;
-									}
-									break;
-								}
-								case CELL_GCM_TEXTURE_X16:
-								{
-									// Compatible with DEPTH16_UNORM
-									if (actual_format == CELL_GCM_TEXTURE_DEPTH16)
-									{
-										gcm_format = CELL_GCM_TEXTURE_DEPTH16;
-										resolved = true;
-									}
-									break;
-								}
-								}
-
-								if (!resolved)
-								{
-									LOG_ERROR(RSX, "Reading texture with gcm format 0x%x as unexpected cast with format 0x%x",
-										actual_format, attr.gcm_format);
-								}
+								// While the copy routines can perform a typeless cast, prefer to not cross the aspect barrier if possible
+								gcm_format = texture_cache_helpers::get_compatible_depth_format(attr.gcm_format);
 							}
 
 							auto new_attr = attr;
 							new_attr.gcm_format = gcm_format;
 
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, new_attr, {},
-									last->get_context(), last->get_format_type(), scale, extended_dimension, remap };
+									last->get_context(), texture_cache_helpers::get_format_class(gcm_format), scale, extended_dimension, remap };
 						}
 					}
 
