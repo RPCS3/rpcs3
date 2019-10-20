@@ -54,16 +54,16 @@ namespace vk
 		{
 		case rsx::texture_minify_filter::nearest: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
 		case rsx::texture_minify_filter::linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
-		case rsx::texture_minify_filter::nearest_nearest: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
+		case rsx::texture_minify_filter::nearest_nearest: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
 		case rsx::texture_minify_filter::linear_nearest: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
 		case rsx::texture_minify_filter::nearest_linear: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
 		case rsx::texture_minify_filter::linear_linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
-		case rsx::texture_minify_filter::convolution_min: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, false };
+		case rsx::texture_minify_filter::convolution_min: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
 		default:
 			ASSUME(0);
 			break;
 		}
-		fmt::throw_exception("Invalid max filter" HERE);
+		fmt::throw_exception("Invalid min filter" HERE);
 	}
 
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
