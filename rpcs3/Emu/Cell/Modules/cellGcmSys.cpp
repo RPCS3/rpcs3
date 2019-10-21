@@ -969,8 +969,7 @@ s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	// TODO: Pass correct flags and context
-	if (s32 error = sys_rsx_context_iomap(0, io, ea, size, 0))
+	if (s32 error = sys_rsx_context_iomap(0x55555555, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
 	{
 		return error;
 	}
@@ -1035,7 +1034,7 @@ s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
 		{
 			if (unmap_count >= (size >> 20))
 			{
-				if (s32 error = sys_rsx_context_iomap(0, io << 20, ea, size, 0))
+				if (s32 error = sys_rsx_context_iomap(0x55555555, io << 20, ea, size, 0xe000000000000800ull))
 				{
 					return error;
 				}
