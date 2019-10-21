@@ -321,7 +321,6 @@ namespace vk
 	{
 		vk::reset_compute_tasks();
 		vk::reset_resolve_resources();
-		vk::vmm_reset();
 
 		g_upload_heap.reset_allocation_stats();
 	}
@@ -333,6 +332,7 @@ namespace vk
 		vk::clear_framebuffer_cache();
 		vk::clear_resolve_helpers();
 		vk::clear_dma_resources();
+		vk::vmm_reset();
 		vk::get_resource_manager()->destroy();
 
 		g_null_texture.reset();
