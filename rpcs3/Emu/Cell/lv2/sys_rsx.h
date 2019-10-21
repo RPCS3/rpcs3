@@ -56,6 +56,12 @@ struct RsxDriverInfo
 static_assert(sizeof(RsxDriverInfo) == 0x12F8, "rsxSizeTest");
 static_assert(sizeof(RsxDriverInfo::Head) == 0x40, "rsxHeadSizeTest");
 
+enum : u64
+{
+	// Unused
+	SYS_RSX_IO_MAP_IS_STRICT = 1ull << 60
+};
+
 struct RsxDmaControl
 {
 	u8 resv[0x40];
