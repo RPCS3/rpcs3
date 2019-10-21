@@ -508,10 +508,21 @@ namespace rsx
 					continue;
 				}
 
-				while (Emu.IsPaused() && !m_rsx_thread_exiting)
-					thread_ctrl::wait_for(wait_sleep);
+				if (Emu.IsPaused())
+				{
+					// Save the difference before pause
+					start_time = get_system_time() - start_time;
+					
+					while (Emu.IsPaused() && !m_rsx_thread_exiting)
+					{
+						thread_ctrl::wait_for(wait_sleep);
+					}
 
-				thread_ctrl::wait_for(100); // Hack
+					// Restore difference
+					start_time = get_system_time() - start_time;
+				}
+
+				thread_ctrl::wait_for(100);
 			}
 		});
 
