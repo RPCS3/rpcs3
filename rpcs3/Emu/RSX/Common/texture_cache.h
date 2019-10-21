@@ -2407,7 +2407,7 @@ namespace rsx
 					subres.height_in_block = image_height;
 					subres.pitch_in_block = full_width;
 					subres.depth = 1;
-					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(image_base)), src.pitch * image_height };
+					subres.data = { vm::_ptr<const gsl::byte>(image_base), src.pitch * image_height };
 					subresource_layout.push_back(subres);
 
 					vram_texture = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
@@ -2539,7 +2539,7 @@ namespace rsx
 						subres.height_in_block = dst_dimensions.height;
 						subres.pitch_in_block = pitch_in_block;
 						subres.depth = 1;
-						subres.data = { reinterpret_cast<const gsl::byte*>(vm::get_super_ptr(dst.rsx_address)), dst.pitch * dst_dimensions.height };
+						subres.data = { vm::get_super_ptr<const gsl::byte>(dst.rsx_address), dst.pitch * dst_dimensions.height };
 						subresource_layout.push_back(subres);
 
 						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,

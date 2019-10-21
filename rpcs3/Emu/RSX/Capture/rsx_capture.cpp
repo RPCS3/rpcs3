@@ -171,9 +171,9 @@ namespace rsx
 				const u32 base_address    = method_registers.index_array_address();
 				const u32 memory_location = method_registers.index_array_location();
 
-				const u32 base_addr   = get_address(base_address, memory_location);
-				const u32 type_size   = get_index_type_size(method_registers.index_type());
 				const auto index_type = method_registers.index_type();
+				const u32 type_size   = get_index_type_size(index_type);
+				const u32 base_addr   = get_address(base_address, memory_location) & ~(type_size - 1);
 
 				// manually parse index buffer and copy vertex buffer
 				u32 min_index = 0xFFFFFFFF, max_index = 0;

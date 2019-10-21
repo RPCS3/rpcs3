@@ -450,7 +450,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout_impl(const RsxTextur
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
-	auto pixels = reinterpret_cast<const gsl::byte*>(vm::_ptr<const u8>(texaddr));
+	auto pixels = vm::_ptr<const gsl::byte>(texaddr);
 
 	const bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
 	const bool has_border = !texture.border_type();

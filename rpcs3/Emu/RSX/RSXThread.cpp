@@ -838,17 +838,19 @@ namespace rsx
 			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
 		}
 
-		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
-		rsx::index_array_type type = rsx::method_registers.index_type();
+		const rsx::index_array_type type = rsx::method_registers.index_type();
+		const u32 type_size = get_index_type_size(type);
 
-		u32 type_size = ::narrow<u32>(get_index_type_size(type));
-		bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-		u32 primitive_restart_index = rsx::method_registers.restart_index();
+		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+		address &= ~(type_size - 1); // Force aligned indices as realhw
+
+		const bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
+		const u32 primitive_restart_index = rsx::method_registers.restart_index();
 
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
 
-		const gsl::byte* ptr = static_cast<const gsl::byte*>(vm::base(address));
+		const auto ptr = vm::_ptr<const gsl::byte>(address);
 		return{ ptr + first * type_size, count * type_size };
 	}
 
@@ -862,7 +864,7 @@ namespace rsx
 		const u32 first = draw_array_clause.min_index();
 		const u32 count = draw_array_clause.get_elements_count();
 
-		const gsl::byte* ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
+		const gsl::byte* ptr = vm::_ptr<const gsl::byte>(address);
 		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
