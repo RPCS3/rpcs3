@@ -19,13 +19,14 @@
       <SDLCheck>false</SDLCheck>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalOptions>/Zc:throwingNew</AdditionalOptions>
+      <AdditionalOptions>/Zc:throwingNew -d2FH4- %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>xxhash.lib;ws2_32.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\3rdparty\ffmpeg\Windows\x86_64\lib</AdditionalLibraryDirectories>
       <StackReserveSize>8388608</StackReserveSize>
       <StackCommitSize>1048576</StackCommitSize>
+      <AdditionalOptions>-d2:-FH4- %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />
