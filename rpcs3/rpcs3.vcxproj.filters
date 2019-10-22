@@ -767,6 +767,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_update_manager.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="display_sleep_control.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="\rpcs3qt\*.h">
@@ -858,6 +861,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\skylander_dialog.h">
       <Filter>Gui\skylanders</Filter>
+    </ClInclude>
+    <ClInclude Include="display_sleep_control.h">
+      <Filter>Generated Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

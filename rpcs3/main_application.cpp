@@ -35,9 +35,7 @@
 #include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
-#ifdef _MSC_VER
-#include "Emu/RSX/D3D12/D3D12GSRender.h"
-#endif
+
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
@@ -134,13 +132,6 @@ EmuCallbacks main_application::CreateCallbacks()
 		case video_renderer::vulkan:
 		{
 			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
-			break;
-		}
-#endif
-#ifdef _MSC_VER
-		case video_renderer::dx12:
-		{
-			g_fxo->init<rsx::thread, named_thread<D3D12GSRender>>();
 			break;
 		}
 #endif

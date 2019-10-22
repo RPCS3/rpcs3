@@ -176,9 +176,7 @@ public:
 		QStringList vulkanAdapters;
 		QString name_Null = tr("Disable Video Output");
 		QString name_Vulkan = tr("Vulkan");
-		QString name_D3D12 = tr("D3D12[DO NOT USE]");
 		QString name_OpenGL = tr("OpenGL");
-		Render_Info D3D12;
 		Render_Info Vulkan;
 		Render_Info OpenGL;
 		Render_Info NullRender;
