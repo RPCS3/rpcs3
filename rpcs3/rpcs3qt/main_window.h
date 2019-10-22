@@ -54,9 +54,6 @@ class main_window : public QMainWindow
 	QWinThumbnailToolButton *m_thumb_restart = nullptr;
 	QStringList m_vulkan_adapters;
 #endif
-#ifdef _MSC_VER
-	QStringList m_d3d12_adapters;
-#endif
 
 	enum drop_type
 	{
