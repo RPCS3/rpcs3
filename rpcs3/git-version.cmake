@@ -9,19 +9,13 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
 		OUTPUT_VARIABLE RPCS3_GIT_VERSION)
 	if(NOT ${exit_code} EQUAL 0)
 		message(WARNING "git rev-list failed, unable to include version.")
-	else()
-		string(STRIP ${RPCS3_GIT_VERSION} RPCS3_GIT_VERSION)
 	endif()
 	execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --short=8 HEAD
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-		RESULT_VARIABLE exit_code2
+		RESULT_VARIABLE exit_code
 		OUTPUT_VARIABLE GIT_VERSION_)
-	if(NOT ${exit_code2} EQUAL 0)
+	if(NOT ${exit_code} EQUAL 0)
 		message(WARNING "git rev-parse failed, unable to include version.")
-		string(STRIP ${GIT_VERSION_} GIT_VERSION_)
-		if(${exit_code} EQUAL 0)
-			string(STRIP ${RPCS3_GIT_VERSION}-${GIT_VERSION_} RPCS3_GIT_VERSION)
-		endif()
 	endif()
 	execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
 		WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -29,10 +23,12 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git/")
 		OUTPUT_VARIABLE RPCS3_GIT_BRANCH)
 	if(NOT ${exit_code} EQUAL 0)
 		message(WARNING "git rev-parse failed, unable to include git branch.")
-	else()
-		string(STRIP ${RPCS3_GIT_BRANCH} RPCS3_GIT_BRANCH)
 	endif()
 
+	string(STRIP ${RPCS3_GIT_VERSION} RPCS3_GIT_VERSION)
+	string(STRIP ${GIT_VERSION_} GIT_VERSION_)
+	string(STRIP ${RPCS3_GIT_VERSION}-${GIT_VERSION_} RPCS3_GIT_VERSION)
+	string(STRIP ${RPCS3_GIT_BRANCH} RPCS3_GIT_BRANCH)
 else()
 	message(WARNING "git not found, unable to include version.")
 endif()
