@@ -200,7 +200,7 @@ public:
 		if (const u32 idm_id = idm::import_existing<lv2_config_handle>(cfg))
 		{
 			cfg->idm_id = idm_id;
-			return std::move(cfg);
+			return cfg;
 		}
 		return nullptr;
 	}
@@ -259,7 +259,7 @@ public:
 		{
 			service->wkptr = service;
 			service->idm_id = idm_id;
-			return std::move(service);
+			return service;
 		}
 
 		return nullptr;
@@ -326,7 +326,7 @@ public:
 		{
 			listener->wkptr = listener;
 			listener->idm_id = idm_id;
-			return std::move(listener);
+			return listener;
 		}
 
 		return nullptr;
@@ -389,7 +389,7 @@ public:
 
 		g_fxo->get<lv2_config>()->add_service_event(ev);
 
-		return std::move(ev);
+		return ev;
 	}
 
 	// Destructor
