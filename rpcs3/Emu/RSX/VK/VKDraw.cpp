@@ -136,7 +136,18 @@ void VKGSRender::update_draw_state()
 	{
 		//offset_bias is the constant factor, multiplied by the implementation factor R
 		//offst_scale is the slope factor, multiplied by the triangle slope factor M
-		vkCmdSetDepthBias(*m_current_command_buffer, rsx::method_registers.poly_offset_bias(), 0.f, rsx::method_registers.poly_offset_scale());
+		const auto constant_factor = rsx::method_registers.poly_offset_bias();
+		auto slope_factor = rsx::method_registers.poly_offset_scale();
+		if (slope_factor == 0)
+		{
+			slope_factor = constant_factor * 0.5f;
+			if (slope_factor < 0)
+				slope_factor -= 0.05f;
+			else if (slope_factor > 0)
+				slope_factor += 0.05f;
+		}
+
+		vkCmdSetDepthBias(*m_current_command_buffer, constant_factor, 0.f, slope_factor);
 	}
 	else
 	{
