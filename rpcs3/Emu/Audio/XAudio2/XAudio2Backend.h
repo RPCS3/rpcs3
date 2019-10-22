@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-#ifdef _WIN32
+#ifndef _WIN32
+#error "XAudio2 can only be built on Windows."
+#endif
 
 #include "Emu/Audio/AudioBackend.h"
 
@@ -49,5 +51,3 @@ public:
 	virtual u64 GetNumEnqueuedSamples() override;
 	virtual f32 SetFrequencyRatio(f32 new_ratio) override;
 };
-
-#endif
