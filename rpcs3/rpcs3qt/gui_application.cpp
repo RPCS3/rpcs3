@@ -146,13 +146,6 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		frame = new gs_frame("Vulkan", frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
-#ifdef _MSC_VER
-	case video_renderer::dx12:
-	{
-		frame = new gs_frame("DirectX 12", frame_geometry, app_icon, m_gui_settings);
-		break;
-	}
-#endif
 	default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 	}
 

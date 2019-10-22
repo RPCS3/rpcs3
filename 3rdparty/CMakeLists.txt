@@ -388,13 +388,6 @@ else()
 endif()
 
 
-# dx12
-add_library(3rdparty_dx12 INTERFACE)
-if (WIN32)
-	target_link_libraries(3rdparty_dx12 INTERFACE dxgi.lib d2d1.lib dwrite.lib)
-endif()
-
-
 # GLEW
 add_library(3rdparty_glew INTERFACE)
 if(NOT MSVC)
@@ -427,5 +420,4 @@ add_library(3rdparty::libevdev ALIAS ${LIBEVDEV_TARGET})
 add_library(3rdparty::vulkan ALIAS ${VULKAN_TARGET})
 add_library(3rdparty::openal ALIAS 3rdparty_openal)
 add_library(3rdparty::ffmpeg ALIAS 3rdparty_ffmpeg)
-add_library(3rdparty::dx12 ALIAS 3rdparty_dx12)
 add_library(3rdparty::glew ALIAS 3rdparty_glew)
