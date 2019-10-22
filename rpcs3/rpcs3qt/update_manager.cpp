@@ -73,8 +73,8 @@ void update_manager::handle_error(QNetworkReply::NetworkError error)
 {
 	if (error != QNetworkReply::NoError)
 	{
-		QNetworkReply* reply = qobject_cast<QNetworkReply *>(sender());
-		if(!reply)
+		QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+		if (!reply)
 			return;
 
 		m_progress_dialog->close();
@@ -543,13 +543,16 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool automatic)
 
 	replace_path = Emulator::GetEmuDir() + "rpcs3.exe";
 
+	// Creating a file to indicate we're restarting
+	const std::string s_filelock = fs::get_cache_dir() + ".restart_lock";
+	verify("Restart lock" HERE), !!fs::file(s_filelock, fs::create);
+
 #endif
 
 	m_progress_dialog->close();
-
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!"));
-	int ret = execl(replace_path.c_str(), replace_path.c_str(), nullptr);
 
+	int ret = execl(replace_path.c_str(), replace_path.c_str(), nullptr);
 	if (ret == -1)
 	{
 		LOG_ERROR(GENERAL, "[Auto-updater] Relaunching failed with result: %d(%s)", ret, strerror(errno));
