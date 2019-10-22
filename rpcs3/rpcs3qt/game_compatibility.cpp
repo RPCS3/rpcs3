@@ -115,8 +115,11 @@ void game_compatibility::RequestCompatibility(bool online)
 
 	if (QSslSocket::supportsSsl() == false)
 	{
-		LOG_ERROR(GENERAL, "Can not retrieve the online database! Please make sure your system supports SSL.");
-		QMessageBox::warning(nullptr, tr("Warning!"), tr("Can not retrieve the online database! Please make sure your system supports SSL."));
+		LOG_ERROR(GENERAL, "Can not retrieve the online database! Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
+		const QString message = tr("Can not retrieve the online database!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>quickstart guide</a> for more information.");
+		QMessageBox box(QMessageBox::Icon::Warning, tr("Warning!"), message, QMessageBox::StandardButton::Ok, nullptr);
+		box.setTextFormat(Qt::RichText);
+		box.exec();
 		return;
 	}
 
