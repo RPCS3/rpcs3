@@ -600,8 +600,8 @@ private:
 
 			if (get_chip_class() == chip_class::AMD_vega)
 			{
-				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware on all drivers. Using float32_t fallback instead.");
-				shader_types_support.allow_float16 = false;
+				// Disable fp16 if driver uses LLVM emitter. It does fine with AMD proprietary drivers though.
+				shader_types_support.allow_float16 = (driver_properties.driverID == VK_DRIVER_ID_AMD_PROPRIETARY_KHR);
 			}
 		}
 
