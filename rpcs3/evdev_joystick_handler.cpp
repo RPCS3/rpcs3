@@ -682,7 +682,7 @@ PadHandlerBase::connection evdev_joystick_handler::update_connection(const std::
 	if (!update_device(device))
 		return connection::disconnected;
 
-		auto evdev_device = std::static_pointer_cast<EvdevDevice>(device);
+	auto evdev_device = std::static_pointer_cast<EvdevDevice>(device);
 	if (!evdev_device || !evdev_device->device)
 		return connection::disconnected;
 

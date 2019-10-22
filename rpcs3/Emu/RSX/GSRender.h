@@ -52,42 +52,42 @@ using RSXDebuggerPrograms = std::vector<RSXDebuggerProgram>;
 using draw_context_t = void*;
 
 #ifdef _WIN32
-	using display_handle_t = HWND;
+using display_handle_t = HWND;
 #elif defined(__APPLE__)
-	using display_handle_t = void*; // NSView
+using display_handle_t = void*; // NSView
 #else
-	using display_handle_t = std::variant<
-		std::pair<Display*, Window>
+using display_handle_t = std::variant<
+	std::pair<Display*, Window>
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-		, std::pair<wl_display*, wl_surface*>
+	, std::pair<wl_display*, wl_surface*>
 #endif
-	>;
+>;
 #endif
 
-	class GSFrameBase
-	{
-	public:
-		GSFrameBase() = default;
-		GSFrameBase(const GSFrameBase&) = delete;
-		virtual ~GSFrameBase() = default;
+class GSFrameBase
+{
+public:
+	GSFrameBase() = default;
+	GSFrameBase(const GSFrameBase&) = delete;
+	virtual ~GSFrameBase() = default;
 
-		virtual void close() = 0;
-		virtual bool shown() = 0;
-		virtual void hide() = 0;
-		virtual void show() = 0;
-		virtual void toggle_fullscreen() = 0;
+	virtual void close() = 0;
+	virtual bool shown() = 0;
+	virtual void hide() = 0;
+	virtual void show() = 0;
+	virtual void toggle_fullscreen() = 0;
 
-		virtual void delete_context(draw_context_t ctx) = 0;
-		virtual draw_context_t make_context() = 0;
-		virtual void set_current(draw_context_t ctx) = 0;
-		virtual void flip(draw_context_t ctx, bool skip_frame = false) = 0;
-		virtual int client_width() = 0;
-		virtual int client_height() = 0;
+	virtual void delete_context(draw_context_t ctx) = 0;
+	virtual draw_context_t make_context() = 0;
+	virtual void set_current(draw_context_t ctx) = 0;
+	virtual void flip(draw_context_t ctx, bool skip_frame = false) = 0;
+	virtual int client_width() = 0;
+	virtual int client_height() = 0;
 
-		virtual display_handle_t handle() const = 0;
+	virtual display_handle_t handle() const = 0;
 
-		std::atomic<bool> screenshot_toggle = false;
-		virtual void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height) = 0;
+	std::atomic<bool> screenshot_toggle = false;
+	virtual void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height) = 0;
 };
 
 class GSRender : public rsx::thread
