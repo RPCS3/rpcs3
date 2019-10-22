@@ -1,6 +1,7 @@
 ﻿#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "../rsx_methods.h"
 
 #include "FragmentProgramDecompiler.h"
 
@@ -401,17 +402,17 @@ std::string FragmentProgramDecompiler::GetCond()
 	return "any(" + GetRawCond() + ")";
 }
 
-void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
+void FragmentProgramDecompiler::AddCodeCond(const std::string& lhs, const std::string& rhs)
 {
 	if (src0.exec_if_gr && src0.exec_if_lt && src0.exec_if_eq)
 	{
-		AddCode(dst + " = " + src + ";");
+		AddCode(lhs + " = " + rhs + ";");
 		return;
 	}
 
 	if (!src0.exec_if_gr && !src0.exec_if_lt && !src0.exec_if_eq)
 	{
-		AddCode("//" + dst + " = " + src + ";");
+		AddCode("//" + lhs + " = " + rhs + ";");
 		return;
 	}
 
@@ -425,17 +426,17 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 
 		bool src_is_fp16 = false;
 		if ((opflags & (OPFLAGS::texture_ref | OPFLAGS::src_cast_f32)) == 0 &&
-			src.find("$0") != std::string::npos)
+			rhs.find("$0") != std::string::npos)
 		{
 			// Texture sample operations are full-width and are exempt
 			src_is_fp16 = (src0.fp16 && src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
 
-			if (src_is_fp16 && src.find("$1") != std::string::npos)
+			if (src_is_fp16 && rhs.find("$1") != std::string::npos)
 			{
 				// References operand 1
 				src_is_fp16 = (src1.fp16 && src1.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
 
-				if (src_is_fp16 && src.find("$2") != std::string::npos)
+				if (src_is_fp16 && rhs.find("$2") != std::string::npos)
 				{
 					// References operand 2
 					src_is_fp16 = (src2.fp16 && src2.reg_type == RSX_FP_REGISTER_TYPE_TEMP);
@@ -446,7 +447,7 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 		if (src_is_fp16)
 		{
 			// LHS argument is of native half type, need to cast to proper type!
-			if (src[0] != '(')
+			if (rhs[0] != '(')
 			{
 				// Upcast inputs to processing function instead
 				opflags |= OPFLAGS::src_cast_f32;
@@ -459,9 +460,11 @@ void FragmentProgramDecompiler::AddCodeCond(const std::string& dst, const std::s
 		}
 	}
 
-	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
-	const auto cond = ShaderVariable(dst).match_size(GetRawCond());
-	AddCode(dst + " = _select(" + dst + ", " + src_prefix + src + ", " + cond + ");");
+	// NOTE: x = _select(x, y, cond) is equivalent to x = cond? y : x;
+	const auto dst_var = ShaderVariable(lhs);
+	const auto raw_cond = dst_var.add_mask(GetRawCond());
+	const auto cond = dst_var.match_size(raw_cond);
+	AddCode(lhs + " = _select(" + lhs + ", " + src_prefix + rhs + ", " + cond + ");");
 }
 
 template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
@@ -518,27 +521,97 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			"ssa"
 		};
 
-		//TODO: Investigate effect of input modifier on this type
+		// NOTE: Hw testing showed the following:
+		// 1. Reading from registers 1 and 2 (COL0 and COL1) is clamped to (0, 1)
+		// 2. Reading from registers 4-12 (inclusive) is not clamped, but..
+		// 3. If the texcoord control mask is enabled, the last 2 values are always 0 and hpos.w!
+		const std::string reg_var = (dst.src_attr_reg_num < std::size(reg_table))? reg_table[dst.src_attr_reg_num] : "unk";
+		bool insert = true;
 
 		switch (dst.src_attr_reg_num)
 		{
 		case 0x00:
+		{
+			// WPOS
 			ret += reg_table[0];
-			properties.has_wpos_input = true;
+			insert = false;
 			break;
-		default:
-			if (dst.src_attr_reg_num < std::size(reg_table))
+		}
+		case 0x01:
+		case 0x02:
+		{
+			// COL0, COL1
+			if (!src2.use_index_reg)
 			{
-				ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[dst.src_attr_reg_num]);
+				ret += "_saturate(" + reg_var + ")";
+				apply_precision_modifier = false;
 			}
 			else
 			{
-				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
-				ret += m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), "unk");
-				Emu.Pause();
+				// Raw access
+				ret += reg_var;
 			}
 			break;
 		}
+		case 0x03:
+		{
+			// FOGC
+			if (!src2.use_index_reg)
+			{
+				ret += reg_var;
+			}
+			else
+			{
+				// Raw access
+				ret += "fog_c";
+			}
+			break;
+		}
+		case 0x4:
+		case 0x5:
+		case 0x6:
+		case 0x7:
+		case 0x8:
+		case 0x9:
+		case 0xA:
+		case 0xB:
+		case 0xC:
+		case 0xD:
+		{
+			// TEX0 - TEX9
+			// Texcoord mask seems to reset the last 2 arguments to 0 and 1 if set
+			if (m_prog.texcoord_is_2d(dst.src_attr_reg_num - 4))
+			{
+				ret += getFloatTypeName(4) + "(" + reg_var + ".x, " + reg_var + ".y, 0., in_w)";
+				properties.has_w_access = true;
+			}
+			else
+			{
+				ret += reg_var;
+			}
+			break;
+		}
+		default:
+		{
+			// SSA (winding direction register)
+			// UNK
+			if (reg_var == "unk")
+			{
+				LOG_ERROR(RSX, "Bad src reg num: %d", u32{ dst.src_attr_reg_num });
+			}
+
+			ret += reg_var;
+			apply_precision_modifier = false;
+			break;
+		}
+		}
+
+		if (insert)
+		{
+			m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_var);
+		}
+
+		properties.in_register_mask |= (1 << dst.src_attr_reg_num);
 	}
 	break;
 
@@ -585,8 +658,8 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Shader must at least write to one output for the body to be considered valid
 
 	const bool fp16_out = !(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
-	const std::string $float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
-	const std::string init_value = $float4_type + "(0., 0., 0., 0.)";
+	const std::string float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
+	const std::string init_value = float4_type + "(0., 0., 0., 0.)";
 	std::array<std::string, 4> output_register_names;
 	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
 	bool shader_is_valid = false;
@@ -594,10 +667,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Check depth export
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
-		if (shader_is_valid = !!temp_registers[1].h0_writes; !shader_is_valid)
-		{
-			LOG_WARNING(RSX, "Fragment shader fails to write the depth value!");
-		}
+		// Hw tests show that the depth export register is default-initialized to 0 and not wpos.z!!
+		m_parr.AddParam(PF_PARAM_NONE, float4_type, "r1", init_value);
+		shader_is_valid = (!!temp_registers[1].h1_writes);
 	}
 
 	// Add the color output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
@@ -613,9 +685,9 @@ std::string FragmentProgramDecompiler::BuildCode()
 
 	for (int n = 0; n < 4; ++n)
 	{
-		if (!m_parr.HasParam(PF_PARAM_NONE, $float4_type, output_register_names[n]))
+		if (!m_parr.HasParam(PF_PARAM_NONE, float4_type, output_register_names[n]))
 		{
-			m_parr.AddParam(PF_PARAM_NONE, $float4_type, output_register_names[n], init_value);
+			m_parr.AddParam(PF_PARAM_NONE, float4_type, output_register_names[n], init_value);
 			continue;
 		}
 
@@ -1112,7 +1184,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		case RSX_FP_OPCODE_NOP: break;
 		case RSX_FP_OPCODE_KIL:
 			properties.has_discard_op = true;
-			AddFlowOp("discard");
+			AddFlowOp("_kill()");
 			break;
 
 		default:

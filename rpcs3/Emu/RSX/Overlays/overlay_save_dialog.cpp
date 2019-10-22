@@ -154,7 +154,7 @@ namespace rsx
 			return result;
 		}
 
-		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> listSet)
+		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
 		{
 			std::vector<u8> icon;
 			std::vector<std::unique_ptr<overlay_element>> entries;
@@ -179,7 +179,7 @@ namespace rsx
 				m_description->set_text("Save");
 			}
 
-			const bool newpos_head = listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
+			const bool newpos_head = listSet && listSet->newData && listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_HEAD;
 
 			if (!newpos_head)
 			{
@@ -189,7 +189,7 @@ namespace rsx
 				}
 			}
 
-			if (listSet->newData)
+			if (listSet && listSet->newData)
 			{
 				std::unique_ptr<overlay_element> new_stub;
 
@@ -239,6 +239,11 @@ namespace rsx
 
 				m_no_saves = true;
 				m_list->set_cancel_only(true);
+			}
+			else
+			{
+				// Only select an entry if there are entries available
+				m_list->select_entry(focused);
 			}
 
 			static_cast<label*>(m_description.get())->auto_resize();

@@ -10,21 +10,30 @@
 
 LOG_CHANNEL(sys_lwcond);
 
-extern u64 get_system_time();
-
 error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name, u32 arg5)
 {
 	vm::temporary_unlock(ppu);
 
 	sys_lwcond.warning("_sys_lwcond_create(lwcond_id=*0x%x, lwmutex_id=0x%x, control=*0x%x, name=0x%llx, arg5=0x%x)", lwcond_id, lwmutex_id, control, name, arg5);
 
-	// Temporarily
-	if (!idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id))
+	u32 protocol;
+
+	// Extract protocol from lwmutex
+	if (!idm::check<lv2_obj, lv2_lwmutex>(lwmutex_id, [&protocol](lv2_lwmutex& mutex)
+	{
+		protocol = mutex.protocol;
+	}))
 	{
 		return CELL_ESRCH;
 	}
 
-	if (const u32 id = idm::make<lv2_obj, lv2_lwcond>(name, lwmutex_id, control))
+	if (protocol == SYS_SYNC_RETRY)
+	{
+		// Lwcond can't have SYS_SYNC_RETRY protocol
+		protocol = SYS_SYNC_PRIORITY;
+	}
+
+	if (const u32 id = idm::make<lv2_obj, lv2_lwcond>(name, lwmutex_id, protocol, control))
 	{
 		*lwcond_id = id;
 		return CELL_OK;
@@ -77,11 +86,11 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
-	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> cpu_thread*
+	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> int
 	{
 		if (ppu_thread_id != -1 && !idm::check_unlocked<named_thread<ppu_thread>>(ppu_thread_id))
 		{
-			return (cpu_thread*)(1);
+			return -1;
 		}
 
 		lv2_lwmutex* mutex;
@@ -92,7 +101,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 
 			if (!mutex)
 			{
-				return (cpu_thread*)(1);
+				return -1;
 			}
 		}
 
@@ -116,7 +125,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 			}
 			else
 			{
-				result = cond.schedule<ppu_thread>(cond.sq, cond.control->lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK);
+				result = cond.schedule<ppu_thread>(cond.sq, cond.protocol);
 			}
 
 			if (result)
@@ -134,15 +143,19 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 					std::lock_guard lock(mutex->mutex);
 					mutex->sq.emplace_back(result);
 				}
+				else
+				{
+					cond.awake(result);
+				}
 
-				return result;
+				return 1;
 			}
 		}
 
-		return nullptr;
+		return 0;
 	});
 
-	if (!cond || cond.ret == (cpu_thread*)(1))
+	if (!cond || cond.ret == -1)
 	{
 		return CELL_ESRCH;
 	}
@@ -164,11 +177,6 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u3
 		return not_an_error(CELL_EPERM);
 	}
 
-	if (mode != 1)
-	{
-		cond->awake(*cond.ret);
-	}
-
 	return CELL_OK;
 }
 
@@ -186,7 +194,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
 	}
 
-	std::basic_string<cpu_thread*> threads;
+	bool need_awake = false;
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
 	{
@@ -208,7 +216,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 			u32 result = 0;
 
-			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.control->lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK))
+			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.protocol))
 			{
 				cond.waiters--;
 
@@ -225,10 +233,16 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				}
 				else
 				{
-					threads.push_back(cpu);
+					lv2_obj::append(cpu);
+					need_awake = true;
 				}
 
 				result++;
+			}
+
+			if (need_awake)
+			{
+				lv2_obj::awake_all();
 			}
 
 			return result;
@@ -240,11 +254,6 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 	if (!cond || cond.ret == -1)
 	{
 		return CELL_ESRCH;
-	}
-
-	for (auto cpu : threads)
-	{
-		cond->awake(*cpu);
 	}
 
 	if (mode == 1)
@@ -266,13 +275,13 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	std::shared_ptr<lv2_lwmutex> mutex;
 
-	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> cpu_thread*
+	const auto cond = idm::get<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond)
 	{
 		mutex = idm::get_unlocked<lv2_obj, lv2_lwmutex>(lwmutex_id);
 
 		if (!mutex)
 		{
-			return nullptr;
+			return;
 		}
 
 		std::lock_guard lock(cond.mutex);
@@ -280,28 +289,28 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		// Add a waiter
 		cond.waiters++;
 		cond.sq.emplace_back(&ppu);
-		cond.sleep(ppu, timeout);
 
-		std::lock_guard lock2(mutex->mutex);
-
-		// Process lwmutex sleep queue
-		if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
 		{
-			return cpu;
+			std::lock_guard lock2(mutex->mutex);
+
+			// Process lwmutex sleep queue
+			if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
+			{
+				cond.append(cpu);
+			}
+			else
+			{
+				mutex->signaled |= 1;
+			}
 		}
 
-		mutex->signaled |= 1;
-		return nullptr;
+		// Sleep current thread and schedule lwmutex waiter
+		cond.sleep(ppu, timeout);
 	});
 
 	if (!cond || !mutex)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (cond.ret)
-	{
-		cond->awake(*cond.ret);
 	}
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
@@ -313,9 +322,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(cond->mutex);
 
@@ -330,8 +337,6 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{

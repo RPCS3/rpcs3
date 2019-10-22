@@ -26,5 +26,6 @@
     <ClInclude Include="Emu\RSX\GL\GLTextOut.h" />
     <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
     <ClInclude Include="Emu\RSX\GL\GLExecutionState.h" />
+    <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
   </ItemGroup>
 </Project>

@@ -1,9 +1,13 @@
-#include "basic_keyboard_handler.h"
+﻿#include "basic_keyboard_handler.h"
 
 #include <QApplication>
 #include <QKeyEvent>
 
 #include "Emu/System.h"
+
+#ifdef _WIN32
+#include "windows.h"
+#endif
 
 void basic_keyboard_handler::Init(const u32 max_connect)
 {
@@ -11,10 +15,7 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 	{
 		Keyboard kb = Keyboard();
 
-		// Only differentiate between japanese and us layouts right now
-		kb.m_config.arrange = g_cfg.sys.language == 0 // CELL_SYSUTIL_LANG_JAPANESE
-			? CELL_KB_MAPPING_106
-			: CELL_KB_MAPPING_101;
+		kb.m_config.arrange = g_cfg.sys.keyboard_type;
 
 		m_keyboards.emplace_back();
 	}
@@ -50,6 +51,11 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 
 bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 {
+	if (!ev)
+	{
+		return false;
+	}
+
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
 	if (!m_target || !m_target->isVisible() || target == m_target)
@@ -68,26 +74,90 @@ bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
 
 void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 {
-	if (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat)
+	if (!keyEvent)
+	{
+		return;
+	}
+
+	if (m_keyboards.empty() || (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat))
 	{
 		keyEvent->ignore();
 		return;
 	}
-	Key(keyEvent->key(), true);
+
+	const int key = getUnmodifiedKey(keyEvent);
+
+	if (key >= 0)
+	{
+		Key(static_cast<u32>(key), true);
+	}
 }
 
 void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 {
-	if (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat)
+	if (!keyEvent)
+	{
+		return;
+	}
+
+	if (m_keyboards.empty() || (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat))
 	{
 		keyEvent->ignore();
 		return;
 	}
-	Key(keyEvent->key(), false);
+
+	const int key = getUnmodifiedKey(keyEvent);
+
+	if (key >= 0)
+	{
+		Key(static_cast<u32>(key), false);
+	}
+}
+
+// This should get the actual unmodified key without getting too crazy.
+// key() only shows the modifiers and the modified key (e.g. no easy way of knowing that - was pressed in 'SHIFT+-' in order to get _)
+s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
+{
+	if (!keyEvent)
+	{
+		return -1;
+	}
+
+	const int key = keyEvent->key();
+
+	if (key < 0)
+	{
+		return key;
+	}
+
+	u32 raw_key = static_cast<u32>(key);
+
+#ifdef _WIN32
+	if (keyEvent->modifiers() != Qt::NoModifier && !keyEvent->text().isEmpty())
+	{
+		u32 mapped_key = (u32)MapVirtualKeyA((UINT)keyEvent->nativeVirtualKey(), MAPVK_VK_TO_CHAR);
+
+		if (raw_key != mapped_key)
+		{
+			if (mapped_key > 0x80000000) // diacritics
+			{
+				mapped_key -= 0x80000000;
+			}
+			raw_key = mapped_key;
+		}
+	}
+#endif
+
+	return static_cast<s32>(raw_key);
 }
 
 void basic_keyboard_handler::LoadSettings()
 {
+	if (m_keyboards.empty())
+	{
+		return;
+	}
+
 	// Meta Keys
 	//m_keyboards[0].m_buttons.emplace_back(Qt::Key_Control, CELL_KB_MKEY_L_CTRL);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Shift, CELL_KB_MKEY_L_SHIFT);
@@ -195,7 +265,6 @@ void basic_keyboard_handler::LoadSettings()
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_9, CELL_KEYC_9);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_0, CELL_KEYC_0);
 
-
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Return, CELL_KEYC_ENTER);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Backspace, CELL_KEYC_BS);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Tab, CELL_KEYC_TAB);
@@ -210,11 +279,18 @@ void basic_keyboard_handler::LoadSettings()
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Backslash, CELL_KEYC_BACKSLASH_101);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_BracketRight, CELL_KEYC_RIGHT_BRACKET_106);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Semicolon, CELL_KEYC_SEMICOLON);
-	m_keyboards[0].m_buttons.emplace_back(Qt::Key_QuoteDbl, CELL_KEYC_QUOTATION_101);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Apostrophe, CELL_KEYC_QUOTATION_101);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Colon, CELL_KEYC_COLON_106);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Comma, CELL_KEYC_COMMA);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Period, CELL_KEYC_PERIOD);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Slash, CELL_KEYC_SLASH);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Backslash, CELL_KEYC_BACKSLASH_106);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_yen, CELL_KEYC_YEN_106);
+
+	// Made up helper buttons
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Less, CELL_KEYC_LESS);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_NumberSign, CELL_KEYC_HASHTAG);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_ssharp, CELL_KEYC_SSHARP);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_QuoteLeft, CELL_KEYC_BACK_QUOTE);
+	m_keyboards[0].m_buttons.emplace_back(Qt::Key_acute, CELL_KEYC_BACK_QUOTE);
 }

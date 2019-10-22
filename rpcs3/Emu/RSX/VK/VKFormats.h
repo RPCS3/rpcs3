@@ -1,9 +1,16 @@
-#pragma once
+﻿#pragma once
 #include "VKHelpers.h"
 #include <tuple>
 
 namespace vk
 {
+	struct minification_filter
+	{
+		VkFilter filter;
+		VkSamplerMipmapMode mipmap_mode;
+		bool sample_mipmaps;
+	};
+
 	VkBorderColor get_border_color(u32 color);
 
 	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format format);
@@ -14,7 +21,7 @@ namespace vk
 	std::pair<bool, u32> get_format_convert_flags(VkFormat format);
 	bool formats_are_bitcast_compatible(VkFormat format1, VkFormat format2);
 
-	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter);
+	minification_filter get_min_filter(rsx::texture_minify_filter min_filter);
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter);
 	VkSamplerAddressMode vk_wrap_mode(rsx::texture_wrap_mode gcm_wrap);
 	float max_aniso(rsx::texture_max_anisotropy gcm_aniso);

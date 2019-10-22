@@ -61,7 +61,17 @@ namespace vk
 
 			if (!job)
 			{
-				job.reset(new vk::cs_resolve_task(get_format_prefix(src->format())));
+				const char* format_prefix = get_format_prefix(src->format());
+				bool require_bgra_swap = false;
+
+				if (vk::get_chip_family() == vk::chip_class::NV_kepler &&
+					src->format() == VK_FORMAT_B8G8R8A8_UNORM)
+				{
+					// Workaround for NVIDIA kepler's broken image_load_store
+					require_bgra_swap = true;
+				}
+
+				job.reset(new vk::cs_resolve_task(format_prefix, require_bgra_swap));
 			}
 
 			job->run(cmd, src, dst);
@@ -102,8 +112,6 @@ namespace vk
 						vkCmdClearDepthStencilImage(cmd, dst->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear, 1, &range);
 						dst->pop_layout(cmd);
 					}
-
-					vk::as_rtt(dst)->stencil_init_flags = stencil_init_flags;
 				}
 			}
 			else
@@ -122,7 +130,17 @@ namespace vk
 
 			if (!job)
 			{
-				job.reset(new vk::cs_unresolve_task(get_format_prefix(src->format())));
+				const char* format_prefix = get_format_prefix(src->format());
+				bool require_bgra_swap = false;
+
+				if (vk::get_chip_family() == vk::chip_class::NV_kepler &&
+					src->format() == VK_FORMAT_B8G8R8A8_UNORM)
+				{
+					// Workaround for NVIDIA kepler's broken image_load_store
+					require_bgra_swap = true;
+				}
+
+				job.reset(new vk::cs_unresolve_task(format_prefix, require_bgra_swap));
 			}
 
 			job->run(cmd, dst, src);

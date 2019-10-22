@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "../System.h"
 #include "Utilities/address_range.h"
@@ -30,9 +30,6 @@ namespace rsx
 	using flags16_t = uint16_t;
 	using flags8_t = uint8_t;
 
-	// Definitions
-	class thread;
-	extern thread* g_current_renderer;
 	extern atomic_t<u64> g_rsx_shared_tag;
 
 	//Base for resources with reference counting
@@ -111,6 +108,7 @@ namespace rsx
 
 		rsx::surface_color_format color_format;
 		rsx::surface_depth_format depth_format;
+		bool depth_buffer_float;
 
 		u16 width = 0;
 		u16 height = 0;
@@ -147,9 +145,10 @@ namespace rsx
 		u8 format = 0;             // XRGB
 		u8 aspect = 0;             // AUTO
 		u32 scanline_pitch = 0;    // PACKED
-		f32 gamma = 1.f;           // NO GAMMA CORRECTION
+		atomic_t<f32> gamma = 1.f; // NO GAMMA CORRECTION
 		u32 resolution_x = 1280;   // X RES
 		u32 resolution_y = 720;    // Y RES
+		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
 		u32 get_compatible_gcm_format()
 		{
@@ -253,10 +252,29 @@ namespace rsx
 		return static_cast<u32>((1ULL << 32) >> utils::cntlz32(x - 1, true));
 	}
 
+	static inline bool fcmp(float a, float b, float epsilon = 0.000001f)
+	{
+		return fabsf(a - b) < epsilon;
+	}
+
 	// Returns an ever-increasing tag value
 	static inline u64 get_shared_tag()
 	{
 		return g_rsx_shared_tag++;
+	}
+
+	static inline u32 get_location(u32 addr)
+	{
+		return (addr >= rsx::constants::local_mem_base) ?
+			CELL_GCM_LOCATION_LOCAL :
+			CELL_GCM_LOCATION_MAIN;
+	}
+
+	// General purpose alignment without power-of-2 constraint
+	template <typename T, typename U>
+	static inline T align2(T value, U alignment)
+	{
+		return ((value + alignment - 1) / alignment) * alignment;
 	}
 
 	// Copy memory in inverse direction from source
@@ -406,7 +424,7 @@ namespace rsx
 		const u32 log2_w = ceil_log2(width);
 		const u32 log2_h = ceil_log2(height);
 		const u32 log2_d = ceil_log2(depth);
-	
+
 		for (u32 z = 0; z < depth; ++z)
 		{
 			for (u32 y = 0; y < height; ++y)
@@ -425,17 +443,11 @@ namespace rsx
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear);
 
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
-	void clip_image(std::unique_ptr<u8[]>& dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
+	void clip_image_may_overlap(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch, u8* buffer);
 
 	void convert_le_f32_to_be_d24(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
 	void convert_le_d24x8_to_be_d24x8(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
 	void convert_le_d24x8_to_le_f32(void *dst, void *src, u32 row_length_in_texels, u32 num_rows);
-
-	void fill_scale_offset_matrix(void *dest_, bool transpose,
-		float offset_x, float offset_y, float offset_z,
-		float scale_x, float scale_y, float scale_z);
-	void fill_window_matrix(void *dest, bool transpose);
-	void fill_viewport_matrix(void *buffer, bool transpose);
 
 	std::array<float, 4> get_constant_blend_colors();
 
@@ -606,7 +618,7 @@ namespace rsx
 	template <typename SurfaceType>
 	std::tuple<u16, u16, u16, u16> get_transferable_region(const SurfaceType* surface)
 	{
-		auto src = static_cast<const SurfaceType*>(surface->old_contents.source);
+		auto src = static_cast<const SurfaceType*>(surface->old_contents[0].source);
 		auto area1 = src->get_normalized_memory_area();
 		auto area2 = surface->get_normalized_memory_area();
 
@@ -740,9 +752,21 @@ namespace rsx
 		return result;
 	}
 
-	static inline thread* get_current_renderer()
+	template <uint integer, uint frac, bool sign = true, typename To = f32>
+	static inline To decode_fxp(u32 bits)
 	{
-		return g_current_renderer;
+		static_assert(u64{sign} + integer + frac <= 32, "Invalid decode_fxp range");
+
+		// Classic fixed point, see PGRAPH section of nouveau docs for TEX_FILTER (lod_bias) and TEX_CONTROL (min_lod, max_lod)
+		// Technically min/max lod are fixed 4.8 but a 5.8 decoder should work just as well since sign bit is 0
+
+		if constexpr (sign) if (bits & (1 << (integer + frac)))
+		{
+			bits = (0 - bits) & (~0u >> (31 - (integer + frac)));
+			return bits / (-To(1u << frac));
+		}
+
+		return bits / To(1u << frac);
 	}
 
 	template <int N>
@@ -914,11 +938,11 @@ namespace rsx
 
 			if (_data)
 			{
-				_data = (Ty*)realloc(_data, sizeof(Ty) * size);
+				verify("realloc() failed!" HERE), _data = (Ty*)realloc(_data, sizeof(Ty) * size);
 			}
 			else
 			{
-				_data = (Ty*)malloc(sizeof(Ty) * size);
+				verify("malloc() failed!" HERE), _data = (Ty*)malloc(sizeof(Ty) * size);
 			}
 
 			_capacity = size;

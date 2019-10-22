@@ -2,6 +2,7 @@
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 #include "GLGSRender.h"
+#include "GLCompute.h"
 #include "GLVertexProgram.h"
 #include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
@@ -29,15 +30,15 @@ u64 GLGSRender::get_cycles()
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.6");
+	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.91");
 
 	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
 		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();
 	else
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
-	supports_multidraw = true;
-	supports_native_ui = (bool)g_cfg.misc.use_native_interface;
+	backend_config.supports_hw_a2c = false;
+	backend_config.supports_multidraw = true;
 }
 
 extern CellGcmContextData current_context;
@@ -174,7 +175,7 @@ void GLGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_frame ||
+	if (skip_current_frame ||
 		(conditional_render_enabled && conditional_render_test_failed))
 		return;
 
@@ -185,7 +186,7 @@ void GLGSRender::end()
 {
 	m_profiler.start();
 
-	if (skip_frame || !framebuffer_status_valid ||
+	if (skip_current_frame || !framebuffer_status_valid ||
 		(conditional_render_enabled && conditional_render_test_failed))
 	{
 		execute_nop_draw();
@@ -193,7 +194,7 @@ void GLGSRender::end()
 		return;
 	}
 
-	m_begin_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	const auto do_heap_cleanup = [this]()
 	{
@@ -213,19 +214,18 @@ void GLGSRender::end()
 	gl::render_target *ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 
 	// Handle special memory barrier for ARGB8->D24S8 in an active DSV
-	if (ds && ds->old_contents &&
-		ds->old_contents.source->get_internal_format() == gl::texture::internal_format::rgba8 &&
-		rsx::pitch_compatible(ds, gl::as_rtt(ds->old_contents.source)))
+	if (ds && ds->old_contents.size() == 1 &&
+		ds->old_contents[0].source->get_internal_format() == gl::texture::internal_format::rgba8)
 	{
 		gl_state.enable(GL_FALSE, GL_SCISSOR_TEST);
 
 		// TODO: Stencil transfer
 		gl::g_hw_blitter->fast_clear_image(cmd, ds, 1.f, 0xFF);
-		ds->old_contents.init_transfer(ds);
+		ds->old_contents[0].init_transfer(ds);
 
-		m_depth_converter.run(ds->old_contents.src_rect(),
-			ds->old_contents.dst_rect(),
-			ds->old_contents.source, ds);
+		m_depth_converter.run(ds->old_contents[0].src_rect(),
+			ds->old_contents[0].dst_rect(),
+			ds->old_contents[0].source, ds);
 
 		ds->on_write();
 	}
@@ -295,7 +295,7 @@ void GLGSRender::end()
 
 		m_samplers_dirty.store(false);
 
-		m_textures_upload_time += m_profiler.duration();
+		m_frame_stats.textures_upload_time += m_profiler.duration();
 	}
 
 	// NOTE: Due to common OpenGL driver architecture, vertex data has to be uploaded as far away from the draw as possible
@@ -313,7 +313,7 @@ void GLGSRender::end()
 	// Load program execution environment
 	load_program_env();
 
-	m_begin_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	//Bind textures and resolve external copy operations
 	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
@@ -387,7 +387,9 @@ void GLGSRender::end()
 		}
 	}
 
-	m_textures_upload_time += m_profiler.duration();
+	m_gl_texture_cache.release_uncached_temporary_subresources();
+
+	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	// Optionally do memory synchronization if the texture stage has not yet triggered this
 	if (true)//g_cfg.video.strict_rendering_mode)
@@ -492,7 +494,7 @@ void GLGSRender::end()
 		{
 			if (rsx::method_registers.current_draw_clause.execute_pipeline_dependencies() & rsx::vertex_base_changed)
 			{
-				// Rebase vertex bases instead of 
+				// Rebase vertex bases instead of
 				for (auto &info : m_vertex_layout.interleaved_blocks)
 				{
 					const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
@@ -626,7 +628,7 @@ void GLGSRender::end()
 		}
 	} while (rsx::method_registers.current_draw_clause.next());
 
-	m_rtts.on_write();
+	m_rtts.on_write(m_framebuffer_layout.color_write_enabled.data(), m_framebuffer_layout.zeta_write_enabled);
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();
@@ -637,7 +639,7 @@ void GLGSRender::end()
 	m_fragment_constants_buffer->notify();
 	m_transform_constants_buffer->notify();
 
-	m_draw_time += m_profiler.duration();
+	m_frame_stats.textures_upload_time += m_profiler.duration();
 
 	rsx::thread::end();
 }
@@ -650,45 +652,16 @@ void GLGSRender::set_viewport()
 	glViewport(0, 0, clip_width, clip_height);
 }
 
-void GLGSRender::set_scissor()
+void GLGSRender::set_scissor(bool clip_viewport)
 {
-	if (m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty)
+	areau scissor;
+	if (get_scissor(scissor, clip_viewport))
 	{
-		// Optimistic that the new config will allow us to render
-		framebuffer_status_valid = true;
+		// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
+		// See LIMBO [NPUB-30373] which uses shader window origin = top
+		glScissor(scissor.x1, scissor.y1, scissor.width(), scissor.height());
+		gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 	}
-	else if (!(m_graphics_state & rsx::pipeline_state::scissor_config_state_dirty))
-	{
-		// Nothing to do
-		return;
-	}
-
-	m_graphics_state &= ~(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_invalid);
-
-	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
-	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
-
-	u16 scissor_x = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_x(), false);
-	u16 scissor_w = rsx::apply_resolution_scale(rsx::method_registers.scissor_width(), true);
-	u16 scissor_y = rsx::apply_resolution_scale(rsx::method_registers.scissor_origin_y(), false);
-	u16 scissor_h = rsx::apply_resolution_scale(rsx::method_registers.scissor_height(), true);
-
-	// Do not bother drawing anything if output is zero sized
-	// TODO: Clip scissor region
-	if (scissor_x >= clip_width || scissor_y >= clip_height || scissor_w == 0 || scissor_h == 0)
-	{
-		if (!g_cfg.video.strict_rendering_mode)
-		{
-			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
-			framebuffer_status_valid = false;
-			return;
-		}
-	}
-
-	// NOTE: window origin does not affect scissor region (probably only affects viewport matrix; already applied)
-	// See LIMBO [NPUB-30373] which uses shader window origin = top
-	glScissor(scissor_x, scissor_y, scissor_w, scissor_h);
-	gl_state.enable(GL_TRUE, GL_SCISSOR_TEST);
 }
 
 void GLGSRender::on_init_thread()
@@ -785,19 +758,19 @@ void GLGSRender::on_init_thread()
 
 		//1D
 		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, GL_RGBA8);
-		tex1D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		tex1D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		//2D
 		auto tex2D = std::make_unique<gl::texture>(GL_TEXTURE_2D, 1, 1, 1, 1, GL_RGBA8);
-		tex2D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		tex2D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		//3D
 		auto tex3D = std::make_unique<gl::texture>(GL_TEXTURE_3D, 1, 1, 1, 1, GL_RGBA8);
-		tex3D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		tex3D->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		//CUBE
 		auto texCUBE = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, GL_RGBA8);
-		texCUBE->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+		texCUBE->copy_from(pixeldata.data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		m_null_textures[GL_TEXTURE_1D] = std::move(tex1D);
 		m_null_textures[GL_TEXTURE_2D] = std::move(tex2D);
@@ -850,16 +823,22 @@ void GLGSRender::on_init_thread()
 	if (gl_caps.vendor_AMD)
 	{
 		m_identity_index_buffer = std::make_unique<gl::buffer>();
-		m_identity_index_buffer->create(gl::buffer::target::element_array, 1 * 0x100000);
+		m_identity_index_buffer->create(gl::buffer::target::element_array, 1 * 0x100000, nullptr, gl::buffer::memory_type::host_visible);
 
 		// Initialize with 256k identity entries
-		auto *dst = (u32*)m_identity_index_buffer->map(gl::buffer::access::write);
+		auto* dst = (u32*)m_identity_index_buffer->map(gl::buffer::access::write);
 		for (u32 n = 0; n < (0x100000 >> 2); ++n)
 		{
 			dst[n] = n;
 		}
 
 		m_identity_index_buffer->unmap();
+	}
+	else if (gl_caps.vendor_NVIDIA)
+	{
+		// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
+		// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
+		backend_config.supports_hw_renormalization = true;
 	}
 
 	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
@@ -924,9 +903,8 @@ void GLGSRender::on_init_thread()
 	m_video_output_pass.create();
 
 	m_gl_texture_cache.initialize();
-	m_thread_id = std::this_thread::get_id();
 
-	if (!supports_native_ui)
+	if (!m_overlay_manager)
 	{
 		m_frame->hide();
 		m_shaders_cache->load(nullptr);
@@ -948,7 +926,7 @@ void GLGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 2;
 
-				dlg = fxm::get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
+				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
 				dlg->progress_bar_set_taskbar_index(-1);
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{
@@ -961,19 +939,19 @@ void GLGSRender::on_init_thread()
 			{
 				const char *text = index == 0 ? "Loading pipeline object %u of %u" : "Compiling pipeline object %u of %u";
 				dlg->progress_bar_set_message(index, fmt::format(text, processed, entry_count));
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void inc_value(u32 index, u32 value) override
 			{
 				dlg->progress_bar_increment(index, (f32)value);
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void set_limit(u32 index, u32 limit) override
 			{
 				dlg->progress_bar_set_limit(index, limit);
-				owner->flip(0);
+				owner->flip({});
 			}
 
 			void refresh() override
@@ -996,6 +974,15 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
+	// Globals
+	// TODO: Move these
+	gl::destroy_compute_tasks();
+
+	if (gl::g_typeless_transfer_buffer)
+	{
+		gl::g_typeless_transfer_buffer.remove();
+	}
+
 	zcull_ctrl.release();
 
 	m_prog_buffer.clear();
@@ -1112,7 +1099,7 @@ void GLGSRender::on_exit()
 
 void GLGSRender::clear_surface(u32 arg)
 {
-	if (skip_frame || !framebuffer_status_valid) return;
+	if (skip_current_frame || !framebuffer_status_valid) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!rsx::method_registers.stencil_mask()) arg &= ~0x2u;
@@ -1129,6 +1116,7 @@ void GLGSRender::clear_surface(u32 arg)
 		rsx::method_registers.scissor_width() < rsx::method_registers.surface_clip_width() ||
 		rsx::method_registers.scissor_height() < rsx::method_registers.surface_clip_height();
 
+	bool update_color = false, update_z = false;
 	rsx::surface_depth_format surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
@@ -1181,7 +1169,7 @@ void GLGSRender::clear_surface(u32 arg)
 			if (require_mem_load) ds->write_barrier(cmd);
 
 			// Memory has been initialized
-			m_rtts.on_write(std::get<0>(m_rtts.m_bound_depth_stencil));
+			update_z = true;
 		}
 	}
 
@@ -1208,23 +1196,27 @@ void GLGSRender::clear_surface(u32 arg)
 			u8 clear_g = rsx::method_registers.clear_color_g();
 			u8 clear_b = rsx::method_registers.clear_color_b();
 
-			gl_state.color_mask(colormask);
 			gl_state.clear_color(clear_r, clear_g, clear_b, clear_a);
-
 			mask |= GLenum(gl::buffers::color);
 
-			for (auto &rtt : m_rtts.m_bound_render_targets)
+			for (u8 index = m_rtts.m_bound_render_targets_config.first, count = 0;
+				 count < m_rtts.m_bound_render_targets_config.second;
+				 ++count, ++index)
 			{
-				if (const auto address = rtt.first)
-				{
-					if (require_mem_load) rtt.second->write_barrier(cmd);
-					m_rtts.on_write(address);
-				}
+				if (require_mem_load) m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
+				gl_state.color_maski(count, colormask);
 			}
 
+			update_color = true;
 			break;
 		}
 		}
+	}
+
+	if (update_color || update_z)
+	{
+		const bool write_all_mask[] = { true, true, true, true };
+		m_rtts.on_write(update_color ? write_all_mask : nullptr, update_z);
 	}
 
 	glClear(mask);
@@ -1344,7 +1336,7 @@ void GLGSRender::load_program_env()
 		if (update_fragment_env) m_fragment_env_buffer->reserve_storage_on_heap(128);
 		if (update_vertex_env) m_vertex_env_buffer->reserve_storage_on_heap(256);
 		if (update_fragment_texture_env) m_texture_parameters_buffer->reserve_storage_on_heap(256);
-		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));		
+		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));
 		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
 	}
 
@@ -1360,7 +1352,7 @@ void GLGSRender::load_program_env()
 		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
 		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
 
-		m_vertex_env_buffer->bind_range(0, mapping.second, 144);
+		m_vertex_env_buffer->bind_range(GL_VERTEX_PARAMS_BIND_SLOT, mapping.second, 144);
 	}
 
 	if (update_transform_constants)
@@ -1370,7 +1362,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 		fill_vertex_program_constants_data(buf);
 
-		m_transform_constants_buffer->bind_range(2, mapping.second, 8192);
+		m_transform_constants_buffer->bind_range(GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, 8192);
 	}
 
 	if (update_fragment_constants)
@@ -1382,7 +1374,7 @@ void GLGSRender::load_program_env()
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), gsl::narrow<int>(fragment_constants_size) },
 			current_fragment_program, gl::get_driver_caps().vendor_NVIDIA);
 
-		m_fragment_constants_buffer->bind_range(3, mapping.second, fragment_constants_size);
+		m_fragment_constants_buffer->bind_range(GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, fragment_constants_size);
 	}
 
 	if (update_fragment_env)
@@ -1392,7 +1384,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 		fill_fragment_state_buffer(buf, current_fragment_program);
 
-		m_fragment_env_buffer->bind_range(4, mapping.second, 32);
+		m_fragment_env_buffer->bind_range(GL_FRAGMENT_STATE_BIND_SLOT, mapping.second, 32);
 	}
 
 	if (update_fragment_texture_env)
@@ -1402,7 +1394,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 		fill_fragment_texture_parameters(buf, current_fragment_program);
 
-		m_texture_parameters_buffer->bind_range(5, mapping.second, 256);
+		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 256);
 	}
 
 	if (manually_flush_ring_buffers)
@@ -1435,7 +1427,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 	fill_vertex_layout_state(m_vertex_layout, upload_info.first_vertex, upload_info.allocated_vertex_count, (s32*)buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
-	m_vertex_layout_buffer->bind_range(1, mapping.second, 128 + 16);
+	m_vertex_layout_buffer->bind_range(GL_VERTEX_LAYOUT_BIND_SLOT, mapping.second, 128 + 16);
 
 	if (manually_flush_ring_buffers)
 	{
@@ -1447,18 +1439,22 @@ void GLGSRender::update_draw_state()
 {
 	m_profiler.start();
 
-	bool color_mask_b = rsx::method_registers.color_mask_b();
-	bool color_mask_g = rsx::method_registers.color_mask_g();
-	bool color_mask_r = rsx::method_registers.color_mask_r();
-	bool color_mask_a = rsx::method_registers.color_mask_a();
-
-	if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+	for (int index = 0; index < m_rtts.get_color_surface_count(); ++index)
 	{
-		//Map GB components onto RG
-		rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+		bool color_mask_b = rsx::method_registers.color_mask_b(index);
+		bool color_mask_g = rsx::method_registers.color_mask_g(index);
+		bool color_mask_r = rsx::method_registers.color_mask_r(index);
+		bool color_mask_a = rsx::method_registers.color_mask_a(index);
+
+		if (rsx::method_registers.surface_color() == rsx::surface_color_format::g8b8)
+		{
+			//Map GB components onto RG
+			rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
+		}
+
+		gl_state.color_maski(index, color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	}
 
-	gl_state.color_mask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
 	gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
 	gl_state.stencil_mask(rsx::method_registers.stencil_mask());
 
@@ -1547,6 +1543,12 @@ void GLGSRender::update_draw_state()
 
 	gl_state.front_face(front_face(rsx::method_registers.front_face_mode()));
 
+	// Sample control
+	// TODO: MinSampleShading
+	//gl_state.enable(rsx::method_registers.msaa_enabled(), GL_MULTISAMPLE);
+	//gl_state.enable(rsx::method_registers.msaa_alpha_to_coverage_enabled(), GL_SAMPLE_ALPHA_TO_COVERAGE);
+	//gl_state.enable(rsx::method_registers.msaa_alpha_to_one_enabled(), GL_SAMPLE_ALPHA_TO_ONE);
+
 	//TODO
 	//NV4097_SET_ANISO_SPREAD
 	//NV4097_SET_SPECULAR_ENABLE
@@ -1562,38 +1564,30 @@ void GLGSRender::update_draw_state()
 	//NV4097_SET_ANTI_ALIASING_CONTROL
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
-	m_begin_time += m_profiler.duration();
+	m_frame_stats.setup_time += m_profiler.duration();
 }
 
-void GLGSRender::flip(int buffer, bool emu_flip)
+void GLGSRender::flip(const rsx::display_flip_info_t& info)
 {
-	if (skip_frame)
+	if (info.skip_frame)
 	{
 		m_frame->flip(m_context, true);
-		rsx::thread::flip(buffer);
-
-		if (!skip_frame)
-		{
-			m_begin_time = 0;
-			m_draw_time = 0;
-			m_vertex_upload_time = 0;
-			m_textures_upload_time = 0;
-		}
-
+		rsx::thread::flip(info);
 		return;
 	}
 
-	u32 buffer_width = display_buffers[buffer].width;
-	u32 buffer_height = display_buffers[buffer].height;
-	u32 buffer_pitch = display_buffers[buffer].pitch;
+	u32 buffer_width = display_buffers[info.buffer].width;
+	u32 buffer_height = display_buffers[info.buffer].height;
+	u32 buffer_pitch = display_buffers[info.buffer].pitch;
 
 	u32 av_format;
-	const auto avconfig = fxm::get<rsx::avconf>();
+	const auto avconfig = g_fxo->get<rsx::avconf>();
 
-	if (avconfig)
+	if (avconfig->state)
 	{
 		av_format = avconfig->get_compatible_gcm_format();
-		if (!buffer_pitch) buffer_pitch = buffer_width * avconfig->get_bpp();
+		if (!buffer_pitch)
+			buffer_pitch = buffer_width * avconfig->get_bpp();
 
 		buffer_width = std::min(buffer_width, avconfig->resolution_x);
 		buffer_height = std::min(buffer_height, avconfig->resolution_y);
@@ -1601,7 +1595,8 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	else
 	{
 		av_format = CELL_GCM_TEXTURE_A8R8G8B8;
-		if (!buffer_pitch) buffer_pitch = buffer_width * 4;
+		if (!buffer_pitch)
+			buffer_pitch = buffer_width * 4;
 	}
 
 	// Disable scissor test (affects blit, clear, etc)
@@ -1612,35 +1607,35 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	gl::screen.bind();
 	gl::screen.clear(gl::buffers::color);
 
-	if ((u32)buffer < display_buffers_count && buffer_width && buffer_height)
+	// Calculate blit coordinates
+	coordi aspect_ratio;
+	sizei csize(m_frame->client_width(), m_frame->client_height());
+	sizei new_size = csize;
+
+	if (!g_cfg.video.stretch_to_display_area)
 	{
-		// Calculate blit coordinates
-		coordi aspect_ratio;
-		sizei csize(m_frame->client_width(), m_frame->client_height());
-		sizei new_size = csize;
+		const double aq = (double)buffer_width / buffer_height;
+		const double rq = (double)new_size.width / new_size.height;
+		const double q = aq / rq;
 
-		if (!g_cfg.video.stretch_to_display_area)
+		if (q > 1.0)
 		{
-			const double aq = (double)buffer_width / buffer_height;
-			const double rq = (double)new_size.width / new_size.height;
-			const double q = aq / rq;
-
-			if (q > 1.0)
-			{
-				new_size.height = int(new_size.height / q);
-				aspect_ratio.y = (csize.height - new_size.height) / 2;
-			}
-			else if (q < 1.0)
-			{
-				new_size.width = int(new_size.width * q);
-				aspect_ratio.x = (csize.width - new_size.width) / 2;
-			}
+			new_size.height = int(new_size.height / q);
+			aspect_ratio.y = (csize.height - new_size.height) / 2;
 		}
+		else if (q < 1.0)
+		{
+			new_size.width = int(new_size.width * q);
+			aspect_ratio.x = (csize.width - new_size.width) / 2;
+		}
+	}
 
-		aspect_ratio.size = new_size;
+	aspect_ratio.size = new_size;
 
+	if ((u32)info.buffer < display_buffers_count && buffer_width && buffer_height)
+	{
 		// Find the source image
-		const u32 absolute_address = rsx::get_address(display_buffers[buffer].offset, CELL_GCM_LOCATION_LOCAL);
+		const u32 absolute_address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 		GLuint image = GL_NONE;
 
 		if (auto render_target_texture = m_rtts.get_color_surface_at(absolute_address))
@@ -1652,7 +1647,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 			else
 			{
 				gl::command_context cmd = { gl_state };
-				const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, absolute_address, buffer_width, buffer_height, buffer_pitch, render_target_texture->get_bpp());
+				const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd, absolute_address, buffer_width, buffer_height, buffer_pitch, render_target_texture->get_bpp(), rsx::surface_access::read);
 
 				if (!overlap_info.empty() && overlap_info.back().surface == render_target_texture)
 				{
@@ -1672,7 +1667,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 					// TODO: Should emit only once to avoid flooding the log file
 					// TODO: Take AA scaling into account
 					LOG_WARNING(RSX, "Selected output image does not satisfy the video configuration. Display buffer resolution=%dx%d, avconf resolution=%dx%d, surface=%dx%d",
-						display_buffers[buffer].width, display_buffers[buffer].height, avconfig ? avconfig->resolution_x : 0, avconfig ? avconfig->resolution_y : 0,
+						display_buffers[info.buffer].width, display_buffers[info.buffer].height, avconfig->state * avconfig->resolution_x, avconfig->state * avconfig->resolution_y,
 						render_target_texture->get_surface_width(rsx::surface_metrics::pixels), render_target_texture->get_surface_height(rsx::surface_metrics::pixels));
 
 					buffer_width = render_target_texture->width();
@@ -1699,14 +1694,37 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 				m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, buffer_width, buffer_height, 1, 1, GL_RGBA8);
 			}
 
-			m_flip_tex_color->copy_from(vm::base(absolute_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
+			gl::command_context cmd{ gl_state };
+			const auto range = utils::address_range::start_length(absolute_address, buffer_pitch * buffer_height);
+			m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
+			m_flip_tex_color->copy_from(vm::base(absolute_address), gl::texture::format::bgra, gl::texture::type::uint_8_8_8_8, unpack_settings);
 			image = m_flip_tex_color->id();
+		}
+
+		if (m_frame->screenshot_toggle == true)
+		{
+			m_frame->screenshot_toggle = false;
+
+			std::vector<u8> sshot_frame(buffer_height * buffer_width * 4);
+
+			gl::pixel_pack_settings pack_settings{};
+			pack_settings.apply();
+
+			if (gl::get_driver_caps().ARB_dsa_supported)
+				glGetTextureImage(image, 0, GL_BGRA, GL_UNSIGNED_BYTE, buffer_height * buffer_width * 4, sshot_frame.data());
+			else
+				glGetTextureImageEXT(image, GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, sshot_frame.data());
+
+			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
+				LOG_ERROR(GENERAL, "[Screenshot] Failed to capture image: 0x%x", err);
+			else
+				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
 		}
 
 		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
 
-		if (g_cfg.video.full_rgb_range_output && (!avconfig || avconfig->gamma == 1.f))
+		if (g_cfg.video.full_rgb_range_output && avconfig->gamma == 1.f)
 		{
 			// Blit source image to the screen
 			m_flip_fbo.recreate();
@@ -1718,12 +1736,11 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		}
 		else
 		{
-			const f32 gamma = avconfig ? avconfig->gamma : 1.f;
+			const f32 gamma = avconfig->gamma;
 			const bool limited_range = !g_cfg.video.full_rgb_range_output;
 
 			gl::screen.bind();
-			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
-			m_video_output_pass.run(m_frame->client_width(), m_frame->client_height(), image, areai(aspect_ratio), gamma, limited_range);
+			m_video_output_pass.run(areau(aspect_ratio), image, gamma, limited_range);
 		}
 	}
 
@@ -1749,14 +1766,13 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		if (m_overlay_manager->has_visible())
 		{
 			gl::screen.bind();
-			glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 
 			// Lock to avoid modification during run-update chain
 			std::lock_guard lock(*m_overlay_manager);
 
 			for (const auto& view : m_overlay_manager->get_views())
 			{
-				m_ui_renderer.run(m_frame->client_width(), m_frame->client_height(), 0, *view.get());
+				m_ui_renderer.run(areau(aspect_ratio), 0, *view.get());
 			}
 		}
 	}
@@ -1767,11 +1783,11 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 
 		m_text_printer.print_text(0,  0, m_frame->client_width(), m_frame->client_height(), fmt::format("RSX Load:                %3d%%", get_load()));
-		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), fmt::format("draw calls: %16d", m_draw_calls));
-		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call setup: %11dus", m_begin_time));
-		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), fmt::format("vertex upload time: %8dus", m_vertex_upload_time));
-		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), fmt::format("textures upload time: %6dus", m_textures_upload_time));
-		m_text_printer.print_text(0, 90, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call execution: %7dus", m_draw_time));
+		m_text_printer.print_text(0, 18, m_frame->client_width(), m_frame->client_height(), fmt::format("draw calls: %16d", info.stats.draw_calls));
+		m_text_printer.print_text(0, 36, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call setup: %11dus", info.stats.setup_time));
+		m_text_printer.print_text(0, 54, m_frame->client_width(), m_frame->client_height(), fmt::format("vertex upload time: %8dus", info.stats.vertex_upload_time));
+		m_text_printer.print_text(0, 72, m_frame->client_width(), m_frame->client_height(), fmt::format("textures upload time: %6dus", info.stats.textures_upload_time));
+		m_text_printer.print_text(0, 90, m_frame->client_width(), m_frame->client_height(), fmt::format("draw call execution: %7dus", info.stats.draw_exec_time));
 
 		const auto num_dirty_textures = m_gl_texture_cache.get_unreleased_textures_count();
 		const auto texture_memory_size = m_gl_texture_cache.get_texture_memory_in_use() / (1024 * 1024);
@@ -1787,7 +1803,7 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 	}
 
 	m_frame->flip(m_context);
-	rsx::thread::flip(buffer, emu_flip);
+	rsx::thread::flip(info);
 
 	// Cleanup
 	m_gl_texture_cache.on_frame_end();
@@ -1807,21 +1823,13 @@ void GLGSRender::flip(int buffer, bool emu_flip)
 		// Always restore the active framebuffer
 		m_draw_fbo->bind();
 		set_viewport();
-		set_scissor();
+		set_scissor(!!(m_graphics_state & rsx::pipeline_state::scissor_setup_clipped));
 	}
-
-	// If we are skipping the next frame, do not reset perf counters
-	if (skip_frame) return;
-
-	m_begin_time = 0;
-	m_draw_time = 0;
-	m_vertex_upload_time = 0;
-	m_textures_upload_time = 0;
 }
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	const bool can_flush = (std::this_thread::get_id() == m_thread_id);
+	const bool can_flush = (std::this_thread::get_id() == m_rsx_thread);
 	const rsx::invalidation_cause cause =
 		is_writing ? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		           : (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);
@@ -1848,20 +1856,28 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	return true;
 }
 
-void GLGSRender::on_invalidate_memory_range(const utils::address_range &range)
+void GLGSRender::on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause)
 {
-	//Discard all memory in that range without bothering with writeback (Force it for strict?)
 	gl::command_context cmd{ gl_state };
-	auto data = std::move(m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::unmap));
+	auto data = std::move(m_gl_texture_cache.invalidate_range(cmd, range, cause));
 	AUDIT(data.empty());
 
-	if (data.violation_handled)
+	if (cause == rsx::invalidation_cause::unmap && data.violation_handled)
 	{
 		m_gl_texture_cache.purge_unreleased_sections();
 		{
 			std::lock_guard lock(m_sampler_mutex);
 			m_samplers_dirty.store(true);
 		}
+	}
+}
+
+void GLGSRender::on_semaphore_acquire_wait()
+{
+	if (!work_queue.empty() ||
+		(async_flip_requested & flip_request::emu_requested))
+	{
+		do_local_task(rsx::FIFO_state::lock_wait);
 	}
 }
 
@@ -1905,7 +1921,9 @@ void GLGSRender::do_local_task(rsx::FIFO_state state)
 	{
 		if (!in_begin_end && async_flip_requested & flip_request::native_ui)
 		{
-			flip((s32)current_display_buffer, false);
+			rsx::display_flip_info_t info{};
+			info.buffer = current_display_buffer;
+			flip(info);
 		}
 	}
 }

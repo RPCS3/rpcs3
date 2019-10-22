@@ -1,11 +1,15 @@
-#include "vfs_dialog.h"
+﻿#include "vfs_dialog.h"
 
+#include <QDialogButtonBox>
 #include <QPushButton>
+#include <QMessageBox>
+
+#include "Emu/System.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
-	: QDialog(parent), m_gui_settings(guiSettings), m_emu_settings(emuSettings)
+	: QDialog(parent), m_gui_settings(std::move(guiSettings)), m_emu_settings(std::move(emuSettings))
 {
 	QTabWidget* tabs = new QTabWidget();
 	tabs->setUsesScrollButtons(false);
@@ -35,53 +39,51 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	tabs->addTab(dev_usb000_tab, "dev_usb000");
 
 	// Create buttons
-	QPushButton* addDir = new QPushButton(tr("Add New Directory"));
-	connect(addDir, &QAbstractButton::clicked, [=]
-	{
-		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->AddNewDirectory();
-	});
+	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Close | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
+	buttons->button(QDialogButtonBox::RestoreDefaults)->setText(tr("Reset Directories"));
+	buttons->button(QDialogButtonBox::Save)->setDefault(true);
 
-	QPushButton* reset = new QPushButton(tr("Reset"));
-	connect(reset, &QAbstractButton::clicked, [=]
+	connect(buttons, &QDialogButtonBox::clicked, [=](QAbstractButton* button)
 	{
-		static_cast<vfs_dialog_tab*>(tabs->currentWidget())->Reset();
-	});
-
-	QPushButton* resetAll = new QPushButton(tr("Reset All"));
-	connect(resetAll, &QAbstractButton::clicked, [=]
-	{
-		for (int i = 0; i < tabs->count(); ++i)
+		if (button == buttons->button(QDialogButtonBox::RestoreDefaults))
 		{
-			static_cast<vfs_dialog_tab*>(tabs->widget(i))->Reset();
+			if (QMessageBox::question(this, tr("Confirm Reset"), tr("Reset all file system directories?")) != QMessageBox::Yes)
+				return;
+
+			for (int i = 0; i < tabs->count(); ++i)
+			{
+				static_cast<vfs_dialog_tab*>(tabs->widget(i))->Reset();
+			}
+		}
+		else if (button == buttons->button(QDialogButtonBox::Save))
+		{
+			for (int i = 0; i < tabs->count(); ++i)
+			{
+				static_cast<vfs_dialog_tab*>(tabs->widget(i))->SetSettings();
+			}
+			m_emu_settings->SaveSettings();
+
+			// Recreate folder structure for new VFS paths
+			if (Emu.IsStopped())
+			{
+				Emu.Init();
+			}
+
+			accept();
+		}
+		else if (button == buttons->button(QDialogButtonBox::Close))
+		{
+			reject();
 		}
 	});
-
-	QPushButton* okay = new QPushButton(tr("Okay"));
-	okay->setAutoDefault(true);
-	okay->setDefault(true);
-
-	connect(okay, &QAbstractButton::clicked, [=]
-	{
-		for (int i = 0; i < tabs->count(); ++i)
-		{
-			static_cast<vfs_dialog_tab*>(tabs->widget(i))->SetSettings();
-		}
-		m_emu_settings->SaveSettings();
-		accept();
-	});
-
-	QHBoxLayout* buttons = new QHBoxLayout;
-	buttons->addWidget(addDir);
-	buttons->addWidget(reset);
-	buttons->addWidget(resetAll);
-	buttons->addStretch();
-	buttons->addWidget(okay);
 
 	QVBoxLayout* vbox = new QVBoxLayout;
 	vbox->addWidget(tabs);
-	vbox->addLayout(buttons);
+	vbox->addWidget(buttons);
 
 	setLayout(vbox);
 	setWindowTitle(tr("Virtual File System"));
 	setObjectName("vfs_dialog");
+
+	buttons->button(QDialogButtonBox::Save)->setFocus();
 }

@@ -1168,7 +1168,7 @@ namespace rsx
 			std::unique_ptr<overlay_element> m_highlight_box;
 
 			u16 m_elements_height = 0;
-			s16 m_selected_entry = -1;
+			s32 m_selected_entry = -1;
 			u16 m_elements_count = 0;
 
 			bool m_cancel_only = false;
@@ -1178,6 +1178,7 @@ namespace rsx
 
 			void update_selection();
 
+			void select_entry(s32 entry);
 			void select_next(u16 count = 1);
 			void select_previous(u16 count = 1);
 

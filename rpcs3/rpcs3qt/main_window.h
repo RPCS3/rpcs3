@@ -15,6 +15,7 @@
 #include "debugger_frame.h"
 #include "game_list_frame.h"
 #include "gui_settings.h"
+#include "update_manager.h"
 
 #include <memory>
 
@@ -108,7 +109,6 @@ protected:
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
 	void dragLeaveEvent(QDragLeaveEvent* event) override;
-	void SetAppIconFromPath(const std::string& path, const std::string& title_id = "");
 
 private:
 	void RepaintToolBarIcons();
@@ -127,6 +127,7 @@ private:
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
 	void AddRecentAction(const q_string_pair& entry);
+	void RemoveDiskCache();
 
 	q_pair_list m_rg_entries;
 	QList<QAction*> m_recentGameActs;
@@ -144,4 +145,6 @@ private:
 	game_list_frame* m_gameListFrame = nullptr;
 	std::shared_ptr<gui_settings> guiSettings;
 	std::shared_ptr<emu_settings> emuSettings;
+
+	update_manager m_updater;
 };

@@ -13,7 +13,7 @@
 #include "SPURecompiler.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
-#include "Utilities/GDBDebugServer.h"
+#include "Emu/GDB.h"
 
 #ifdef LLVM_AVAILABLE
 #include "restore_new.h"
@@ -64,7 +64,7 @@ const bool s_use_ssse3 =
 #define _mm_shuffle_epi8
 #endif
 
-extern u64 get_system_time();
+extern u64 get_guest_system_time();
 
 extern atomic_t<const char*> g_progr;
 extern atomic_t<u64> g_progr_ptotal;
@@ -271,6 +271,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 
 	// Register executable range at
 	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
+	vm::page_protect(addr, align(size, 0x10000), 0, vm::page_executable);
 
 	const u32 fallback = ::narrow<u32>(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ?
 	reinterpret_cast<uptr>(ppu_recompiler_fallback) : reinterpret_cast<uptr>(ppu_fallback));
@@ -328,9 +329,9 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// Pause and wait if necessary
 	bool status = ppu.state.test_and_set(cpu_flag::dbg_pause);
-#ifdef WITH_GDB_DEBUGGER
-	fxm::get<GDBDebugServer>()->pause_from(&ppu);
-#endif
+
+	g_fxo->get<gdb_server>()->pause_from(&ppu);
+
 	if (!status && ppu.check_state())
 	{
 		return false;
@@ -469,7 +470,7 @@ std::string ppu_thread::dump() const
 
 	if (const auto _time = start_time)
 	{
-		fmt::append(ret, "Waiting: %fs\n", (get_system_time() - _time) / 1000000.);
+		fmt::append(ret, "Waiting: %fs\n", (get_guest_system_time() - _time) / 1000000.);
 	}
 	else
 	{
@@ -500,12 +501,12 @@ std::string ppu_thread::dump() const
 	u32 stack_min = stack_ptr & ~0xfff;
 	u32 stack_max = stack_min + 4096;
 
-	while (stack_min && vm::check_addr(stack_min - 4096, 4096, vm::page_allocated | vm::page_writable))
+	while (stack_min && vm::check_addr(stack_min - 4096, 4096, vm::page_writable))
 	{
 		stack_min -= 4096;
 	}
 
-	while (stack_max + 4096 && vm::check_addr(stack_max, 4096, vm::page_allocated | vm::page_writable))
+	while (stack_max + 4096 && vm::check_addr(stack_max, 4096, vm::page_writable))
 	{
 		stack_max += 4096;
 	}
@@ -614,7 +615,7 @@ void ppu_thread::cpu_task()
 void ppu_thread::cpu_sleep()
 {
 	vm::temporary_unlock(*this);
-	lv2_obj::awake(*this);
+	lv2_obj::awake(this);
 }
 
 void ppu_thread::cpu_mem()
@@ -649,7 +650,7 @@ void ppu_thread::exec_task()
 			return reinterpret_cast<func_t>((uptr)(u32)op)(*this, {u32(op >> 32)});
 		};
 
-		if (cia % 8 || !s_use_ssse3 || UNLIKELY(state))
+		if (cia % 8 || UNLIKELY(state))
 		{
 			if (test_stopped()) return;
 
@@ -721,7 +722,7 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	, prio(prio)
 	, stack_size(param.stack_size)
 	, stack_addr(param.stack_addr)
-	, start_time(get_system_time())
+	, start_time(get_guest_system_time())
 	, joiner(-!!detached)
 	, ppu_name(name)
 {
@@ -846,7 +847,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 			{
 				if (start_time)
 				{
-					LOG_WARNING(PPU, "'%s' aborted (%fs)", current_function, (get_system_time() - start_time) / 1000000.);
+					LOG_WARNING(PPU, "'%s' aborted (%fs)", current_function, (get_guest_system_time() - start_time) / 1000000.);
 				}
 				else
 				{
@@ -926,8 +927,6 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 
 	LOG_ERROR(PPU, "Invalid thread" HERE);
 }
-
-const ppu_decoder<ppu_itype> s_ppu_itype;
 
 extern u64 get_timebased_time();
 extern ppu_function_t ppu_get_syscall(u64 code);
@@ -1136,14 +1135,9 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 		auto& res = vm::reservation_acquire(addr, sizeof(u32));
 
-		const auto [_, ok] = res.fetch_op([&](u64& reserv)
-		{
-			return (++reserv & -128) == ppu.rtime;
-		});
-
 		ppu.raddr = 0;
 
-		if (ok)
+		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
@@ -1257,14 +1251,9 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		auto& res = vm::reservation_acquire(addr, sizeof(u64));
 
-		const auto [_, ok] = res.fetch_op([&](u64& reserv)
-		{
-			return (++reserv & -128) == ppu.rtime;
-		});
-
 		ppu.raddr = 0;
 
-		if (ok)
+		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
@@ -1303,7 +1292,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 extern void ppu_initialize()
 {
-	const auto _main = fxm::get<ppu_module>();
+	const auto _main = g_fxo->get<ppu_module>();
 
 	if (!_main)
 	{
@@ -1316,7 +1305,10 @@ extern void ppu_initialize()
 	}
 
 	// Initialize main module
-	ppu_initialize(*_main);
+	if (!_main->segs.empty())
+	{
+		ppu_initialize(*_main);
+	}
 
 	std::vector<lv2_prx*> prx_list;
 
@@ -1340,7 +1332,7 @@ extern void ppu_initialize(const ppu_module& info)
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
 		// Temporarily
-		s_ppu_toc = fxm::get_always<std::unordered_map<u32, u32>>().get();
+		s_ppu_toc = g_fxo->get<std::unordered_map<u32, u32>>();
 
 		for (const auto& func : info.funcs)
 		{
@@ -1386,6 +1378,7 @@ extern void ppu_initialize(const ppu_module& info)
 			{ "__stvlx", s_use_ssse3 ? (u64)&sse_cellbe_stvlx : (u64)&sse_cellbe_stvlx_v0 },
 			{ "__stvrx", s_use_ssse3 ? (u64)&sse_cellbe_stvrx : (u64)&sse_cellbe_stvrx_v0 },
 			{ "__resupdate", (u64)&vm::reservation_update },
+			{ "sys_config_io_event", (u64)ppu_get_syscall(523) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -1443,16 +1436,19 @@ extern void ppu_initialize(const ppu_module& info)
 
 	struct jit_core_allocator
 	{
-		::semaphore<0x7fffffff> sem;
+		const s32 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
 
-		jit_core_allocator(s32 arg)
-			: sem(arg)
+		// Initialize global semaphore with the max number of threads
+		::semaphore<0x7fffffff> sem{std::max<s32>(thread_count, 1)};
+
+		static s32 limit()
 		{
+			return static_cast<s32>(std::thread::hardware_concurrency());
 		}
 	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
-	jit_module& jit_mod = fxm::get_always<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
+	jit_module& jit_mod = g_fxo->get<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
 
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler> jit;
@@ -1460,10 +1456,8 @@ extern void ppu_initialize(const ppu_module& info)
 	// Compiler mutex (global)
 	static shared_mutex jmutex;
 
-	// Initialize global semaphore with the max number of threads
-	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
-	s32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
-	const auto jcores = fxm::get_always<jit_core_allocator>(std::max<s32>(thread_count, 1));
+	// Get jit core allocator instance
+	const auto jcores = g_fxo->get<jit_core_allocator>();
 
 	// Worker threads
 	std::vector<std::thread> jthreads;

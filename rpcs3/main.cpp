@@ -1,4 +1,4 @@
-﻿// Qt5.2+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <QApplication>
@@ -6,11 +6,19 @@
 #include <QFileInfo>
 #include <QTimer>
 #include <QObject>
+#include <QMessageBox>
+#include <QTextDocument>
+#include <QStyleFactory>
 
-#include "rpcs3_app.h"
+#include "rpcs3qt/gui_application.h"
+
+#include "headless_application.h"
 #include "Utilities/sema.h"
 #ifdef _WIN32
 #include <windows.h>
+#include "Utilities/dynamic_library.h"
+DYNAMIC_IMPORT("ntdll.dll", NtQueryTimerResolution, NTSTATUS(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution));
+DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
 #endif
 
 #ifdef __linux__
@@ -90,15 +98,49 @@ static semaphore<> s_qt_mutex{};
 	std::abort();
 }
 
+const char* arg_headless   = "headless";
+const char* arg_no_gui     = "no-gui";
+const char* arg_high_dpi   = "hidpi";
+const char* arg_styles     = "styles";
+const char* arg_style      = "style";
+const char* arg_stylesheet = "stylesheet";
+
+int find_arg(std::string arg, int& argc, char* argv[])
+{
+	arg = "--" + arg;
+	for (int i = 1; i < argc; ++i)
+		if (!strcmp(arg.c_str(), argv[i]))
+			return i;
+	return 0;
+}
+
+QCoreApplication* createApplication(int& argc, char* argv[])
+{
+	if (find_arg(arg_headless, argc, argv))
+		return new headless_application(argc, argv);
+
+	bool use_high_dpi = true;
+
+	const auto i_hdpi = find_arg(arg_high_dpi, argc, argv);
+	if (i_hdpi)
+	{
+		const std::string cmp_str = "0";
+		const auto i_hdpi_2 = (argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
+		const auto high_dpi_setting = (i_hdpi_2 && !strcmp(cmp_str.c_str(), argv[i_hdpi_2])) ? "0" : "1";
+		
+		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
+		use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", high_dpi_setting);
+	}
+
+	// AA_EnableHighDpiScaling has to be set before creating a QApplication
+	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
+
+	return new gui_application(argc, argv);
+}
+
 int main(int argc, char** argv)
 {
 	logs::set_init();
-
-#if defined(_WIN32) || defined(__APPLE__)
-	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#else
-	setenv("QT_AUTO_SCREEN_SCALE_FACTOR", "1", 0);
-#endif
 
 #ifdef __linux__
 	struct ::rlimit rlim;
@@ -106,18 +148,21 @@ int main(int argc, char** argv)
 	rlim.rlim_max = 4096;
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
 		std::fprintf(stderr, "Failed to set max open file limit (4096).");
+	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
+	setenv( "KDE_DEBUG", "1", 0 );
 #endif
-
-	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-	QCoreApplication::setAttribute(Qt::AA_DisableWindowContextHelpButton);
-	QCoreApplication::setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
 	s_init.unlock();
 	s_qt_mutex.lock();
-	rpcs3_app app(argc, argv);
 
-	QCoreApplication::setApplicationVersion(qstr(rpcs3::version.to_string()));
-	QCoreApplication::setApplicationName("RPCS3");
+	// The constructor of QApplication eats the --style and --stylesheet arguments.
+	// By checking for stylesheet().isEmpty() we could implicitly know if a stylesheet was passed,
+	// but I haven't found an implicit way to check for style yet, so we naively check them both here for now.
+	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
+
+	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
+	app->setApplicationVersion(qstr(rpcs3::version.to_string()));
+	app->setApplicationName("RPCS3");
 
 	// Command line args
 	QCommandLineParser parser;
@@ -125,16 +170,57 @@ int main(int argc, char** argv)
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
 
-	const QCommandLineOption helpOption = parser.addHelpOption();
+	const QCommandLineOption helpOption    = parser.addHelpOption();
 	const QCommandLineOption versionOption = parser.addVersionOption();
-	parser.parse(QCoreApplication::arguments());
-	parser.process(app);
+	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
+	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
+	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
+	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
+	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
+	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
+	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(versionOption) || parser.isSet(helpOption))
 		return 0;
 
-	app.Init();
+	if (parser.isSet(arg_styles))
+	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+			const auto con_out = freopen("CONOUT$", "w", stdout);
+#endif
+		for (const auto& style : QStyleFactory::keys())
+			std::cout << "\n" << style.toStdString();
+
+		return 0;
+	}
+
+	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
+	{
+		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
+		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
+		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
+
+		gui_app->SetShowGui(!parser.isSet(arg_no_gui));
+		gui_app->SetUseCliStyle(use_cli_style);
+		gui_app->Init();
+	}
+	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
+	{
+		headless_app->Init();
+	}
+
+#ifdef _WIN32
+	// Set 0.5 msec timer resolution for best performance
+	// - As QT5 timers (QTimer) sets the timer resolution to 1 msec, override it here.
+	// - Don't bother "unsetting" the timer resolution after the emulator stops as QT5 will still require the timer resolution to be set to 1 msec.
+	ULONG min_res, max_res, orig_res, new_res;
+	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0)
+	{
+		NtSetTimerResolution(max_res, TRUE, &new_res);
+	}
+#endif
 
 	QStringList args = parser.positionalArguments();
 
@@ -164,5 +250,7 @@ int main(int argc, char** argv)
 
 	s_qt_init.unlock();
 	s_qt_mutex.unlock();
-	return QCoreApplication::exec();
+
+	// run event loop (maybe only needed for the gui application)
+	return app->exec();
 }

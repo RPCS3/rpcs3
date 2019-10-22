@@ -96,7 +96,7 @@ namespace std
 	{
 		static_assert(sizeof(To) == sizeof(From), "std::bit_cast<>: incompatible type size");
 
-		To result;
+		To result{};
 		std::memcpy(&result, &from, sizeof(From));
 		return result;
 	}
@@ -131,38 +131,45 @@ using steady_clock = std::conditional<
     std::chrono::high_resolution_clock::is_steady,
     std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
 
-// Get unsigned integral type from type size
-template<size_t N>
+// Get integral type from type size
+template <std::size_t N>
 struct get_int_impl
 {
 };
 
-template<>
+template <>
 struct get_int_impl<sizeof(u8)>
 {
-    using type = u8;
+	using utype = u8;
+	using stype = s8;
 };
 
-template<>
+template <>
 struct get_int_impl<sizeof(u16)>
 {
-    using type = u16;
+	using utype = u16;
+	using stype = s16;
 };
 
-template<>
+template <>
 struct get_int_impl<sizeof(u32)>
 {
-    using type = u32;
+	using utype = u32;
+	using stype = s32;
 };
 
-template<>
+template <>
 struct get_int_impl<sizeof(u64)>
 {
-    using type = u64;
+	using utype = u64;
+	using stype = s64;
 };
 
-template <size_t N>
-using get_int_t = typename get_int_impl<N>::type;
+template <std::size_t N>
+using get_uint_t = typename get_int_impl<N>::utype;
+
+template <std::size_t N>
+using get_sint_t = typename get_int_impl<N>::stype;
 
 namespace gsl
 {
@@ -183,12 +190,6 @@ namespace fmt
 	template <typename... Args>
 	const fmt_type_info* get_type_info();
 }
-
-template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
-struct se_storage;
-
-template <typename T, bool Se = true, std::size_t Align = alignof(T)>
-class se_t;
 
 template <typename T>
 class atomic_t;

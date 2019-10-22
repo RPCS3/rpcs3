@@ -1,104 +1,126 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
+extern logs::channel cellSysutil;
+
 s32 cellSysutilAvcByeRequest()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcByeRequest()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcCancelByeRequest()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcCancelByeRequest()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcCancelJoinRequest()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcCancelJoinRequest()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcEnumPlayers()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcEnumPlayers()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcGetAttribute()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcGetAttribute()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcGetLayoutMode()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcGetLayoutMode()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcGetShowStatus()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcGetShowStatus()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcGetSpeakerVolumeLevel()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcGetSpeakerVolumeLevel()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcGetVideoMuting()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcGetVideoMuting()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcGetVoiceMuting()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcGetVoiceMuting()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcHidePanel()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcHidePanel()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcJoinRequest()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcJoinRequest()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcLoadAsync()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcLoadAsync()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcSetAttribute()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcSetAttribute()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcSetLayoutMode()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcSetLayoutMode()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcSetSpeakerVolumeLevel()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcSetSpeakerVolumeLevel()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcSetVideoMuting()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcSetVideoMuting()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcSetVoiceMuting()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcSetVoiceMuting()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcShowPanel()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcShowPanel()");
+	return CELL_OK;
 }
 
 s32 cellSysutilAvcUnloadAsync()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilAvcUnloadAsync()");
+	return CELL_OK;
 }
 
 void cellSysutil_SysutilAvc_init()

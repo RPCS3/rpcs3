@@ -32,17 +32,36 @@ namespace rsx
 
 		for (int y = 0; y < clip_h; ++y)
 		{
-			std::memmove(pixels_dst, pixels_src, row_length);
+			std::memcpy(pixels_dst, pixels_src, row_length);
 			pixels_src += src_pitch;
 			pixels_dst += dst_pitch;
 		}
 	}
 
-	void clip_image(std::unique_ptr<u8[]>& dst, const u8 *src,
-		int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch)
+	void clip_image_may_overlap(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch, u8 *buffer)
 	{
-		dst.reset(new u8[clip_h * dst_pitch]);
-		clip_image(dst.get(), src, clip_x, clip_y, clip_w, clip_h, bpp, src_pitch, dst_pitch);
+		src += clip_y * src_pitch + clip_x * bpp;
+
+		const u32 buffer_pitch = bpp * clip_w;
+		u8* buf = buffer;
+
+		// Read the whole buffer from source
+		for (int y = 0; y < clip_h; ++y)
+		{
+			std::memcpy(buf, src, buffer_pitch);
+			src += src_pitch;
+			buf += buffer_pitch;
+		}
+
+		buf = buffer;
+
+		// Write to destination
+		for (int y = 0; y < clip_h; ++y)
+		{
+			std::memcpy(dst, buf, buffer_pitch);
+			dst += dst_pitch;
+			buf += buffer_pitch;
+		}
 	}
 
 	//Convert decoded integer values for CONSTANT_BLEND_FACTOR into f32 array in 0-1 range

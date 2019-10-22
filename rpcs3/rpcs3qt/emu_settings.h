@@ -47,6 +47,8 @@ public:
 		SPUCache,
 		DebugConsoleMode,
 		MaxSPURSThreads,
+		SleepTimersAccuracy,
+		ClocksScale,
 
 		// Graphics
 		Renderer,
@@ -81,6 +83,7 @@ public:
 		DisableVulkanMemAllocator,
 		DisableAsyncShaderCompiler,
 		MultithreadedRSX,
+		VBlankRate,
 
 		// Performance Overlay
 		PerfOverlayEnabled,
@@ -124,6 +127,7 @@ public:
 		ExitRPCS3OnFinish,
 		StartOnBoot,
 		StartGameFullscreen,
+		PreventDisplaySleep,
 		ShowFPSInTitle,
 		ShowTrophyPopups,
 		ShowWelcomeScreen,
@@ -135,6 +139,7 @@ public:
 
 		// System
 		Language,
+		KeyboardType,
 		EnterButtonAssignment,
 		EnableHostRoot,
 		LimitCacheSize,
@@ -274,6 +279,8 @@ private:
 		{ SPUCache,                 { "Core", "SPU Cache"}},
 		{ DebugConsoleMode,         { "Core", "Debug Console Mode"}},
 		{ MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
+		{ SleepTimersAccuracy,      { "Core", "Sleep Timers Accuracy"}},
+		{ ClocksScale,              { "Core", "Clocks scale"}},
 
 		// Graphics Tab
 		{ Renderer,                   { "Video", "Renderer"}},
@@ -308,6 +315,7 @@ private:
 		{ MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
 		{ D3D12Adapter,               { "Video", "D3D12", "Adapter"}},
 		{ VulkanAdapter,              { "Video", "Vulkan", "Adapter"}},
+		{ VBlankRate,                 { "Video", "Vblank Rate"}},
 
 		// Performance Overlay
 		{ PerfOverlayEnabled,       { "Video", "Performance Overlay", "Enabled" } },
@@ -351,6 +359,7 @@ private:
 		{ ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},
 		{ StartOnBoot,               { "Miscellaneous", "Automatically start games after boot" }},
 		{ StartGameFullscreen,       { "Miscellaneous", "Start games in fullscreen mode"}},
+		{ PreventDisplaySleep,       { "Miscellaneous", "Prevent display sleep while running games"}},
 		{ ShowFPSInTitle,            { "Miscellaneous", "Show FPS counter in window title"}},
 		{ ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},
 		{ ShowWelcomeScreen,         { "Miscellaneous", "Show Welcome Screen"}},
@@ -362,6 +371,7 @@ private:
 
 		// System
 		{ Language,              { "System", "Language"}},
+		{ KeyboardType,          { "System", "Keyboard Type"} },
 		{ EnterButtonAssignment, { "System", "Enter button assignment"}},
 		{ EnableHostRoot,        { "VFS", "Enable /host_root/"}},
 		{ LimitCacheSize,        { "VFS", "Limit disk cache size"}},

@@ -1130,7 +1130,7 @@ namespace rsx
 
 			dirty = new_dirty;
 
-			AUDIT(dirty || (!dirty && exists()));
+			AUDIT(dirty || exists());
 
 			update_unreleased();
 		}
@@ -1401,7 +1401,7 @@ namespace rsx
 			}
 		}
 
-		void imp_flush()
+		virtual void imp_flush()
 		{
 			AUDIT(synchronized);
 
@@ -1504,7 +1504,7 @@ namespace rsx
 
 		void add_flush_exclusion(const address_range& rng)
 		{
-			AUDIT(exists() && is_locked() && is_flushable());
+			AUDIT(is_locked() && is_flushable());
 			const auto _rng = rng.get_intersect(get_section_range());
 			flush_exclusions.merge(_rng);
 		}
@@ -1621,6 +1621,23 @@ namespace rsx
 			return sync_timestamp;
 		}
 
+		format_type get_format_type() const
+		{
+			switch (gcm_format)
+			{
+			default:
+				return format_type::color;
+			case CELL_GCM_TEXTURE_DEPTH16:
+			case CELL_GCM_TEXTURE_DEPTH24_D8:
+				return format_type::depth_uint;
+			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+				return format_type::depth_float;
+			case 0:
+				fmt::throw_exception("Unreachable" HERE);
+			}
+		}
+
 		/**
 		 * Comparison
 		 */
@@ -1629,9 +1646,12 @@ namespace rsx
 			return valid_range() && rsx::buffered_section::matches(memory_range);
 		}
 
-		bool matches_dimensions(u32 width, u32 height, u32 depth, u32 mipmaps)
+		bool matches(u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
 		{
 			if (!valid_range())
+				return false;
+
+			if ((gcm_format & format) != format)
 				return false;
 
 			if (!width && !height && !depth && !mipmaps)
@@ -1660,10 +1680,7 @@ namespace rsx
 			if (rsx_address != get_section_base())
 				return false;
 
-			if ((gcm_format & format) != format)
-				return false;
-
-			return matches_dimensions(width, height, depth, mipmaps);
+			return matches(format, width, height, depth, mipmaps);
 		}
 
 		bool matches(const address_range& memory_range, u32 format, u32 width, u32 height, u32 depth, u32 mipmaps)
@@ -1674,10 +1691,7 @@ namespace rsx
 			if (!rsx::buffered_section::matches(memory_range))
 				return false;
 
-			if ((gcm_format & format) != format)
-				return false;
-
-			return matches_dimensions(width, height, depth, mipmaps);
+			return matches(format, width, height, depth, mipmaps);
 		}
 
 
@@ -1696,7 +1710,14 @@ namespace rsx
 
 		bool exists() const
 		{
-			return derived()->exists();
+			if (derived()->exists())
+			{
+				return true;
+			}
+			else
+			{
+				return (context == rsx::texture_upload_context::dma && is_locked());
+			}
 		}
 	};
 

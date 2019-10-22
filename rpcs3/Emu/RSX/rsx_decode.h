@@ -5,6 +5,7 @@
 #include <tuple>
 #include <climits>
 #include "gcm_enums.h"
+#include "rsx_utils.h"
 #pragma warning(disable:4503)
 
 namespace
@@ -68,7 +69,7 @@ struct registers_decoder
 {};
 
 // Use the smallest type by default
-template<u32 I, u32 N, typename T = get_int_t<std::max<size_t>(static_cast<size_t>((UINTMAX_C(1) << ::ceil2(N)) / CHAR_BIT), 1)>>
+template <u32 I, u32 N, typename T = get_uint_t<std::max<size_t>(static_cast<size_t>((UINTMAX_C(1) << ::ceil2(N)) / CHAR_BIT), 1)>>
 static constexpr inline T bf_decoder(const u32& bits)
 {
 	return static_cast<T>(bf_t<u32, I, N>::extract(bits));
@@ -2027,17 +2028,13 @@ struct registers_decoder<NV3089_DS_DX>
 		{
 			const u32 val = value;
 
-			if ((val & ~(1<<31)) == 0)
+			if (val == 0)
 			{
+				// Will get reported in image_in
 				return 0;
 			}
 
-			if ((s32)val < 0)
-			{
-				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
-			}
-
-			return 1048576.f / val;
+			return 1.f / rsx::decode_fxp<11, 20>(val);
 		}
 	};
 
@@ -2063,17 +2060,13 @@ struct registers_decoder<NV3089_DT_DY>
 		{
 		    const u32 val = value;
 
-			if ((val & ~(1<<31)) == 0)
+			if (val == 0)
 			{
-				return 0;
+				// Will get reported in image_in
+				return 0.f;
 			}
 
-			if ((s32)val < 0)
-			{
-				return 1.f / (((val & ~(1<<31)) / 1048576.f) - 2048.f);
-			}
-
-			return 1048576.f / val;
+			return 1.f / rsx::decode_fxp<11, 20>(val);
 		}
 	};
 
@@ -2320,7 +2313,7 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_FAIL>
 	{
 	private:
 		u32 value;
-	
+
 	public:
 		decoded_type(u32 value) : value(value) {}
 
@@ -2508,7 +2501,7 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC_MASK>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u8 stencil_func_mask() const 
+		u8 stencil_func_mask() const
 		{
 			return bf_decoder<0, 8>(value);
 		}
@@ -2531,7 +2524,7 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC_MASK>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u8 back_stencil_func_mask() const 
+		u8 back_stencil_func_mask() const
 		{
 			return bf_decoder<0, 8>(value);
 		}
@@ -2556,7 +2549,7 @@ struct registers_decoder<NV4097_SET_ALPHA_REF>
 
 		u8 alpha_ref() const
 		{
-			return bf_decoder<0, 8>(value); 
+			return bf_decoder<0, 8>(value);
 		}
 	};
 
@@ -2914,7 +2907,7 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_SFACTOR>
 	{
 	private:
 		u32 value;
-		
+
 		u16 src_blend_rgb_raw() const
 		{
 			return bf_decoder<0, 16>(value);
@@ -2952,7 +2945,7 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_DFACTOR>
 	{
 	private:
 		u32 value;
-		
+
 		u16 dst_blend_rgb_raw() const
 		{
 			return bf_decoder<0, 16>(value);
@@ -3026,6 +3019,60 @@ struct registers_decoder<NV4097_SET_COLOR_MASK>
 			" R = " + print_boolean(decoded_values.color_r()) +
 			" G = " + print_boolean(decoded_values.color_g()) +
 			" B = " + print_boolean(decoded_values.color_b());
+	}
+};
+
+template<>
+struct registers_decoder<NV4097_SET_COLOR_MASK_MRT>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool color_b(int index) const
+		{
+			return bf_decoder<3, 1, bool>(value >> (index * 4));
+		}
+
+		bool color_g(int index) const
+		{
+			return bf_decoder<2, 1, bool>(value >> (index * 4));
+		}
+
+		bool color_r(int index) const
+		{
+			return bf_decoder<1, 1, bool>(value >> (index * 4));
+		}
+
+		bool color_a(int index) const
+		{
+			return bf_decoder<0, 1, bool>(value >> (index * 4));
+		}
+
+		bool color_write_enabled(int index) const
+		{
+			return ((value >> (index * 4)) & 0xF) != 0;
+		}
+	};
+
+	static std::string dump(decoded_type &&decoded_values)
+	{
+		std::string result;
+		for (int index = 1; index < 4; ++index)
+		{
+			result += fmt::format("Surface[%d]: A:%d R:%d G:%d B:%d\n",
+				index,
+				decoded_values.color_a(index),
+				decoded_values.color_r(index),
+				decoded_values.color_g(index),
+				decoded_values.color_b(index));
+		}
+
+		return "Color Mask MRT:\n" + result;
 	}
 };
 
@@ -3768,7 +3815,7 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR>
 			return bf_decoder<16, 16>(value);
 		}
 
-		u8 red8() const
+		u8 blue8() const
 		{
 			return bf_decoder<0, 8>(value);
 		}
@@ -3778,7 +3825,7 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR>
 			return bf_decoder<8, 8>(value);
 		}
 
-		u8 blue8() const
+		u8 red8() const
 		{
 			return bf_decoder<16, 8>(value);
 		}
@@ -3791,8 +3838,8 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR>
 
 	static std::string dump(decoded_type &&decoded_values)
 	{
-		return "Blend color: 8b RGBA = " +
-			std::to_string(decoded_values.red8()) + ", " + std::to_string(decoded_values.green8()) + ", " + std::to_string(decoded_values.blue8()) + ", " + std::to_string(decoded_values.alpha8()) +
+		return "Blend color: 8b BGRA = " +
+			std::to_string(decoded_values.blue8()) + ", " + std::to_string(decoded_values.green8()) + ", " + std::to_string(decoded_values.red8()) + ", " + std::to_string(decoded_values.alpha8()) +
 			" 16b RG = " + std::to_string(decoded_values.red16()) + ", " + std::to_string(decoded_values.green16());
 	}
 };
@@ -3814,7 +3861,7 @@ struct registers_decoder<NV3089_IMAGE_IN>
 		{
 			return bf_decoder<16, 16, u32>(value);
 		}
-	
+
 	public:
 		decoded_type(u32 value) : value(value) {}
 
@@ -4182,6 +4229,29 @@ struct registers_decoder<NV4097_DRAW_INDEX_ARRAY>
 	{
 		return "Draw vertexes range [IdxArray[" + std::to_string(decoded_values.start()) +
 			      "], IdxArray[" + std::to_string(decoded_values.start() + decoded_values.count()) + "}]";
+	}
+};
+
+template <>
+struct registers_decoder<NV4097_SET_CONTROL0>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool depth_float() const
+		{
+			return bf_decoder<12, 1>(value) != 0;
+		}
+	};
+
+	static std::string dump(decoded_type&& decoded_values)
+	{
+		return "Depth float enabled: " + (decoded_values.depth_float() ? std::string("true") : std::string("false"));
 	}
 };
 

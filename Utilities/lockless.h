@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 
 //! Simple sizeless array base for concurrent access. Cannot shrink, only growths automatically.
 //! There is no way to know the current size. The smaller index is, the faster it's accessed.
@@ -315,12 +315,6 @@ class lf_queue_base
 {
 protected:
 	atomic_t<std::uintptr_t> m_head = 0;
-
-	void imp_notify();
-
-public:
-	// Wait for new elements pushed, no other thread shall call wait() or pop_all() simultaneously
-	bool wait(u64 usec_timeout = -1);
 };
 
 // Linked list-based multi-producer queue (the consumer drains the whole queue at once)
@@ -361,20 +355,29 @@ public:
 		delete reinterpret_cast<lf_queue_item<T>*>(m_head.load());
 	}
 
+	void wait() noexcept
+	{
+		if (m_head == 0)
+		{
+			m_head.wait(0);
+		}
+	}
+
 	template <typename... Args>
 	void push(Args&&... args)
 	{
 		auto  _old = m_head.load();
-		auto* item = new lf_queue_item<T>(_old & 1 ? nullptr : reinterpret_cast<lf_queue_item<T>*>(_old), std::forward<Args>(args)...);
+		auto* item = new lf_queue_item<T>(reinterpret_cast<lf_queue_item<T>*>(_old), std::forward<Args>(args)...);
 
 		while (!m_head.compare_exchange(_old, reinterpret_cast<std::uint64_t>(item)))
 		{
-			item->m_link = _old & 1 ? nullptr : reinterpret_cast<lf_queue_item<T>*>(_old);
+			item->m_link = reinterpret_cast<lf_queue_item<T>*>(_old);
 		}
 
-		if (_old & 1)
+		if (!_old)
 		{
-			lf_queue_base::imp_notify();
+			// Notify only if queue was empty
+			m_head.notify_one();
 		}
 	}
 
@@ -388,30 +391,74 @@ public:
 
 	// Apply func(data) to each element, return the total length
 	template <typename F>
-	std::size_t apply(F&& func)
+	std::size_t apply(F func)
 	{
 		std::size_t count = 0;
 
 		for (auto slice = pop_all(); slice; slice.pop_front())
 		{
-			std::invoke(std::forward<F>(func), *slice);
+			std::invoke(func, *slice);
 		}
 
 		return count;
 	}
 
-	// apply() overload for callable template argument
-	template <auto F>
-	std::size_t apply()
+	// Iterator that enables direct endless range-for loop: for (auto* ptr : queue) ...
+	class iterator
 	{
-		std::size_t count = 0;
+		lf_queue* _this = nullptr;
 
-		for (auto slice = pop_all(); slice; slice.pop_front())
+		lf_queue_slice<T> m_data;
+
+	public:
+		constexpr iterator() = default;
+
+		explicit iterator(lf_queue* _this)
+			: _this(_this)
 		{
-			std::invoke(F, *slice);
+			m_data = _this->pop_all();
 		}
 
-		return count;
+		bool operator !=(const iterator& rhs) const
+		{
+			return _this != rhs._this;
+		}
+
+		T* operator *() const
+		{
+			return m_data ? m_data.get() : nullptr;
+		}
+
+		iterator& operator ++()
+		{
+			if (m_data)
+			{
+				m_data.pop_front();
+			}
+
+			if (!m_data)
+			{
+				m_data = _this->pop_all();
+
+				if (!m_data)
+				{
+					_this->wait();
+					m_data = _this->pop_all();
+				}
+			}
+
+			return *this;
+		}
+	};
+
+	iterator begin()
+	{
+		return iterator{this};
+	}
+
+	iterator end()
+	{
+		return iterator{};
 	}
 };
 

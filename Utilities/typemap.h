@@ -3,7 +3,8 @@
 #include "types.h"
 #include "mutex.h"
 #include "cond.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
+#include "util/typeindices.hpp"
 #include "VirtualMemory.h"
 #include <memory>
 
@@ -35,21 +36,6 @@ namespace utils
 		ullong stamp;
 	};
 
-	// Detect shared type: id_share tag type can specify any type
-	template <typename T, typename = void>
-	struct typeinfo_share
-	{
-		static constexpr bool is_shared = false;
-	};
-
-	template <typename T>
-	struct typeinfo_share<T, std::void_t<typename std::decay_t<T>::id_share>>
-	{
-		using share = std::decay_t<typename std::decay_t<T>::id_share>;
-
-		static constexpr bool is_shared = true;
-	};
-
 	// Detect id transformation trait (multiplier)
 	template <typename T, typename = void>
 	struct typeinfo_step
@@ -70,12 +56,6 @@ namespace utils
 		static constexpr uint bias = 0;
 	};
 
-	// template <typename T>
-	// struct typeinfo_bias<T, std::void_t<decltype(std::decay_t<T>::id_bias)>>
-	// {
-	// 	static constexpr uint bias = uint{std::decay_t<T>::id_bias};
-	// };
-
 	template <typename T>
 	struct typeinfo_bias<T, std::void_t<decltype(std::decay_t<T>::id_base)>>
 	{
@@ -92,40 +72,9 @@ namespace utils
 	template <typename T>
 	struct typeinfo_count<T, std::void_t<decltype(std::decay_t<T>::id_count)>>
 	{
-		static constexpr uint get_max()
-		{
-			// Use count of the "shared" tag type, it should be a public base of T in this case
-			if constexpr (typeinfo_share<T>::is_shared)
-			{
-				using shared = typename typeinfo_share<T>::share;
-
-				if constexpr (!std::is_same_v<std::decay_t<T>, shared>)
-				{
-					return typeinfo_count<shared>::max_count;
-				}
-			}
-
-			return uint{std::decay_t<T>::id_count};
-		}
-
-		static constexpr uint max_count = get_max();
+		static constexpr uint max_count = uint{std::decay_t<T>::id_count};
 
 		static_assert(ullong{max_count} * typeinfo_step<T>::step <= 0x1'0000'0000ull);
-	};
-
-	// Detect polymorphic type enablement
-	template <typename T, typename = void>
-	struct typeinfo_poly
-	{
-		static constexpr bool is_poly = false;
-	};
-
-	template <typename T>
-	struct typeinfo_poly<T, std::void_t<decltype(std::decay_t<T>::id_poly)>>
-	{
-		static constexpr bool is_poly = true;
-
-		static_assert(std::has_virtual_destructor_v<std::decay_t<T>>);
 	};
 
 	// Detect operator ->
@@ -144,172 +93,29 @@ namespace utils
 	// Type information
 	struct typeinfo_base
 	{
-		uint type = 0;
 		uint size = 0;
 		uint align = 0;
 		uint count = 0;
 		void(*clean)(class typemap_block*) = 0;
-		const typeinfo_base* base = 0;
 
 		constexpr typeinfo_base() noexcept = default;
 
-	protected:
-		// Next typeinfo in linked list
-		typeinfo_base* next = 0;
+		template <typename T>
+		static void call_destructor(typemap_block* ptr) noexcept;
 
 		template <typename T>
-		friend struct typeinfo;
-
-		friend class typecounter;
-
-		friend class typemap_block;
-		friend class typemap;
-	};
-
-	template <typename T>
-	inline typeinfo_base g_sh{};
-
-	// Class for automatic type registration
-	class typecounter
-	{
-		// Linked list built at global initialization time
-		typeinfo_base* first = &g_sh<void>;
-		typeinfo_base* next  = first;
-		typeinfo_base* last  = first;
-
-		template <typename T>
-		friend struct typeinfo;
-
-		friend class typemap_block;
-		friend class typemap;
-
-	public:
-		constexpr typecounter() noexcept = default;
-
-		// Get next type id, or total type count
-		operator uint() const
+		static constexpr typeinfo_base make_typeinfo() noexcept
 		{
-			return last->type + 1;
+			static_assert(alignof(T) < 4096);
+
+			typeinfo_base r;
+			r.size  = uint{sizeof(T)};
+			r.align = uint{alignof(T)};
+			r.count = typeinfo_count<T>::max_count;
+			r.clean = &call_destructor<T>;
+			return r;
 		}
 	};
-
-	// Global typecounter instance
-	inline typecounter g_typecounter{};
-
-	template <typename T>
-	struct typeinfo : typeinfo_base
-	{
-		static void call_destructor(class typemap_block* ptr);
-
-		typeinfo();
-
-		template <typename, typename B>
-		friend struct typepoly;
-	};
-
-	// Type information for each used type
-	template <typename T>
-	inline const typeinfo<T> g_typeinfo{};
-
-	template <typename T, typename B>
-	struct typepoly
-	{
-		uint type = 0;
-
-		typepoly();
-	};
-
-	// Polymorphic type helper
-	template <typename T, typename B>
-	inline const typepoly<T, B> g_typepoly{};
-
-	template <typename T>
-	typeinfo<T>::typeinfo()
-	{
-		static_assert(alignof(T) < 4096);
-
-		this->type  = g_typecounter;
-		this->size  = uint{sizeof(T)};
-		this->align = uint{alignof(T)};
-		this->count = typeinfo_count<T>::max_count;
-		this->clean = &call_destructor;
-
-		if (this != &g_typeinfo<T>)
-		{
-			// Protect global state against unrelated constructions of typeinfo<> objects
-			this->type = g_typeinfo<T>.type;
-		}
-		else
-		{
-			// Update linked list
-			g_typecounter.next->next = this;
-			g_typecounter.next       = this;
-			g_typecounter.last       = this;
-		}
-
-		if constexpr (typeinfo_share<T>::is_shared)
-		{
-			// Store additional information for shared types
-			using shared = typename typeinfo_share<T>::share;
-
-			// Bind
-			this->base = &g_sh<shared>;
-
-			if (this != &g_typeinfo<T>)
-			{
-				return;
-			}
-
-			// Use smallest type id (void tag can reuse id 0)
-			if (g_sh<shared>.type == 0 && !std::is_void_v<shared>)
-				g_sh<shared>.type = this->type;
-
-			// Update max size and alignment
-			if (g_sh<shared>.size < this->size)
-				g_sh<shared>.size = this->size;
-			if (g_sh<shared>.align < this->align)
-				g_sh<shared>.align = this->align;
-			if (g_sh<shared>.count < this->count)
-				g_sh<shared>.count = this->count;
-		}
-	}
-
-	template <typename T, typename B>
-	typepoly<T, B>::typepoly()
-	{
-		static_assert(alignof(T) < 4096);
-
-		if (this != &g_typepoly<T, B>)
-		{
-			// Protect global state against unrelated constructions of typepoly<> objects
-			return;
-		}
-
-		// Set min align 16 to make some space for a pointer
-		const uint size{sizeof(T) < 16 ? 16 : sizeof(T)};
-		const uint align{alignof(T) < 16 ? 16 : alignof(T)};
-
-		typeinfo_base& info = const_cast<typeinfo<B>&>(g_typeinfo<B>);
-
-		this->type = info.type;
-
-		// Update max size and alignment of the base class typeinfo
-		if (info.size < size)
-			info.size = size;
-		if (info.align < align)
-			info.align = align;
-
-		if constexpr (typeinfo_share<B>::is_shared)
-		{
-			typeinfo_base& base = const_cast<typeinfo_base&>(*info.base);
-
-			// Update max size and alignment of the shared type
-			if (base.size < size)
-				base.size = size;
-			if (base.align < align)
-				base.align = align;
-		}
-	}
 
 	// Internal, control block for a particular object
 	class typemap_block
@@ -339,18 +145,9 @@ namespace utils
 	static_assert(sizeof(typemap_block) == 8);
 
 	template <typename T>
-	void typeinfo<T>::call_destructor(typemap_block* ptr)
+	void typeinfo_base::call_destructor(typemap_block* ptr) noexcept
 	{
-		// Choose cleanup routine
-		if constexpr (typeinfo_poly<T>::is_poly)
-		{
-			// Read actual pointer to the base class
-			(*ptr->get_ptr<T*>())->~T();
-		}
-		else
-		{
-			ptr->get_ptr<T>()->~T();
-		}
+		ptr->get_ptr<T>()->~T();
 	}
 
 	// An object of type T paired with atomic refcounter
@@ -486,9 +283,6 @@ namespace utils
 		// Increased on each destructor call
 		atomic_t<ullong> m_destroy_count{0};
 
-		// Waitable object for the semaphore, signaled on decrease
-		::notifier m_free_notifier;
-
 		// Aligned size of the storage for each object
 		uint m_ssize = 0;
 
@@ -543,9 +337,6 @@ namespace utils
 					// Return semaphore
 					m_head->m_sema--;
 				}
-
-				// Signal free ID availability
-				m_head->m_free_notifier.notify_all();
 			}
 		}
 
@@ -584,15 +375,7 @@ namespace utils
 		auto get() const noexcept
 		{
 			ASSUME(m_block->m_type != 0);
-
-			if constexpr (std::is_lvalue_reference_v<T>)
-			{
-				return static_cast<D*>(*m_block->get_ptr<std::remove_reference_t<T>*>());
-			}
-			else
-			{
-				return m_block->get_ptr<T>();
-			}
+			return m_block->get_ptr<T>();
 		}
 
 		auto operator->() const noexcept
@@ -648,24 +431,12 @@ namespace utils
 				}
 			}
 
-			if constexpr (std::is_lvalue_reference_v<T>)
-			{
-				using base = std::remove_reference_t<T>;
-
-				if (m_block->m_type.exchange(g_typepoly<New, base>.type) != 0)
-				{
-					(*m_block->get_ptr<base*>())->~base();
-					m_head->m_destroy_count++;
-				}
-
-				*m_block->get_ptr<base*>() = new (m_block->get_ptr<New, 16>()) New(std::forward<Args>(args)...);
-			}
-			else
+			if constexpr (true)
 			{
 				static_assert(std::is_same_v<New, T>);
 
 				// Set type; zero value shall not be observed in the case of recreation
-				if (m_block->m_type.exchange(type_index()) != 0)
+				if (m_block->m_type.exchange(1) != 0)
 				{
 					// Destroy object if it exists
 					m_block->get_ptr<T>()->~T();
@@ -688,16 +459,7 @@ namespace utils
 				return;
 			}
 
-			if constexpr (std::is_lvalue_reference_v<T>)
-			{
-				using base = std::remove_reference_t<T>;
-				(*m_block->get_ptr<base*>())->~base();
-			}
-			else
-			{
-				m_block->get_ptr<T>()->~T();
-			}
-
+			m_block->get_ptr<T>()->~T();
 			m_head->m_destroy_count++;
 		}
 
@@ -716,17 +478,6 @@ namespace utils
 			constexpr uint bias = typeinfo_bias<T>::bias;
 			constexpr uint step = typeinfo_step<T>::step;
 			return static_cast<uint>(quot) * step + bias;
-		}
-
-		// Get current type
-		uint get_type() const
-		{
-			return m_block->m_type;
-		}
-
-		static uint type_index()
-		{
-			return g_typeinfo<std::decay_t<T>>.type;
 		}
 
 		static constexpr bool type_const()
@@ -755,16 +506,7 @@ namespace utils
 		template <typename T>
 		typemap_head* get_head() const
 		{
-			using _type = std::decay_t<T>;
-
-			if constexpr (typeinfo_share<T>::is_shared)
-			{
-				return &m_map[g_sh<_type>.type];
-			}
-			else
-			{
-				return &m_map[g_typeinfo<_type>.type];
-			}
+			return &m_map[stx::typeindex<typeinfo_base, std::decay_t<T>>()];
 		}
 
 	public:
@@ -796,10 +538,7 @@ namespace utils
 		// Recreate, also required if constructed without initialization.
 		void init()
 		{
-			// Kill the ability to register more types (should segfault on attempt)
-			g_typecounter.next = nullptr;
-
-			if (g_typecounter <= 1)
+			if (!stx::typelist_v<typeinfo_base>.count())
 			{
 				return;
 			}
@@ -807,13 +546,14 @@ namespace utils
 			// Recreate and copy some type information
 			if (m_map == nullptr)
 			{
-				m_map = new typemap_head[g_typecounter]();
+				m_map = new typemap_head[stx::typelist_v<typeinfo_base>.count()]();
 			}
 			else
 			{
-				auto type = g_typecounter.first;
+				auto type = stx::typelist_v<typeinfo_base>.begin();
+				auto _end = stx::typelist_v<typeinfo_base>.end();
 
-				for (uint i = 0; type; i++, type = type->next)
+				for (uint i = 0; type != _end; i++, ++type)
 				{
 					// Delete objects (there shall be no threads accessing them)
 					const uint lim = m_map[i].m_count != 1 ? +m_map[i].m_limit : 1;
@@ -822,9 +562,9 @@ namespace utils
 					{
 						const auto block = reinterpret_cast<typemap_block*>(m_map[i].m_ptr + j * m_map[i].m_ssize);
 
-						if (const uint type_id = block->m_type)
+						if (block->m_type)
 						{
-							m_map[type_id].clean(block);
+							m_map[i].clean(block);
 						}
 					}
 
@@ -841,26 +581,24 @@ namespace utils
 			if (m_memory == nullptr)
 			{
 				// Determine total size, copy typeinfo
-				auto type = g_typecounter.first;
+				auto type = stx::typelist_v<typeinfo_base>.begin();
+				auto _end = stx::typelist_v<typeinfo_base>.end();
 
-				for (uint i = 0; type; i++, type = type->next)
+				for (uint i = 0; type != _end; i++, ++type)
 				{
-					// Use base info if provided
-					const auto base = type->base ? type->base : type;
-
-					const uint align = base->align;
-					const uint ssize = ::align<uint>(sizeof(typemap_block), align) + ::align(base->size, align);
-					const auto total = std::size_t{ssize} * base->count;
+					const uint align = type->align;
+					const uint ssize = ::align<uint>(sizeof(typemap_block), align) + ::align(type->size, align);
+					const auto total = std::size_t{ssize} * type->count;
 					const auto start = std::uintptr_t{::align(m_total, align)};
 
-					if (total && type->type == base->type)
+					if (total)
 					{
 						// Move forward hoping there are no usable gaps wasted
 						m_total = start + total;
 
 						// Store storage size and object count
 						m_map[i].m_ssize = ssize;
-						m_map[i].m_count = base->count;
+						m_map[i].m_count = type->count;
 						m_map[i].m_ptr   = reinterpret_cast<uchar*>(start);
 					}
 
@@ -873,7 +611,7 @@ namespace utils
 				utils::memory_commit(m_memory, m_total);
 
 				// Update pointers
-				for (uint i = 0, n = g_typecounter; i < n; i++)
+				for (uint i = 0, n = stx::typelist_v<typeinfo_base>.count(); i < n; i++)
 				{
 					if (m_map[i].m_count)
 					{
@@ -904,8 +642,6 @@ namespace utils
 			{
 				return {};
 			}
-
-			const uint type_id = g_typeinfo<std::decay_t<Type>>.type;
 
 			using id_tag = std::decay_t<Arg>;
 
@@ -965,14 +701,6 @@ namespace utils
 							block = nullptr;
 						}
 					}
-					else if constexpr (typeinfo_share<Type>::is_shared)
-					{
-						// id_any/id_always allows either null or matching type
-						if (UNLIKELY(block->m_type && block->m_type != type_id))
-						{
-							block = nullptr;
-						}
-					}
 				}
 			}
 			else if constexpr (std::is_invocable_r_v<bool, const Arg&, const Type&>)
@@ -982,20 +710,13 @@ namespace utils
 				{
 					block = reinterpret_cast<typemap_block*>(head->m_ptr + j * head->m_ssize);
 
-					if (block->m_type == type_id)
+					if (block->m_type)
 					{
 						std::lock_guard lock(block->m_mutex);
 
-						if (block->m_type == type_id)
+						if (block->m_type)
 						{
-							if constexpr (std::is_lvalue_reference_v<Type>)
-							{
-								if (std::invoke(std::forward<Arg>(id), std::as_const(**block->get_ptr<std::remove_reference_t<Type>*>())))
-								{
-									break;
-								}
-							}
-							else if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
+							if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
 							{
 								break;
 							}
@@ -1020,13 +741,6 @@ namespace utils
 				{
 					block = nullptr;
 				}
-				else if constexpr (typeinfo_share<Type>::is_shared)
-				{
-					if (UNLIKELY(block->m_type != type_id))
-					{
-						block = nullptr;
-					}
-				}
 				else
 				{
 					if (UNLIKELY(block->m_type == 0))
@@ -1047,58 +761,24 @@ namespace utils
 		{
 			using id_tag = std::decay_t<Arg>;
 
-			const uint type_id = g_typeinfo<std::decay_t<Type>>.type;
-
 			if constexpr (std::is_same_v<id_tag, id_new_t>)
 			{
 				// No action for id_new
 				return;
 			}
-			else if constexpr (std::is_same_v<id_tag, id_any_t> && !typeinfo_share<Type>::is_shared)
-			{
-				// No action for unshared id_any
-				return;
-			}
 			else if constexpr (std::is_same_v<id_tag, id_any_t>)
 			{
-				// Possibly shared id_any
-				if (LIKELY(!block || block->m_type == type_id || block->m_type == 0))
-				{
-					return;
-				}
+				// No action for id_any
+				return;
 			}
 			else if constexpr (std::is_same_v<id_tag, id_always_t>)
 			{
-				if constexpr (typeinfo_share<Type>::is_shared)
-				{
-					if (!block)
-					{
-						return;
-					}
-
-					if (block->m_type && block->m_type != type_id)
-					{
-						block->m_mutex.unlock();
-						block = nullptr;
-						return;
-					}
-				}
-
-				if (block->m_type == 0 && block->m_type.compare_and_swap_test(0, type_id))
+				if (block->m_type == 0 && block->m_type.compare_and_swap_test(0, 1))
 				{
 					// Initialize object if necessary
 					static_assert(!std::is_const_v<std::remove_reference_t<Type>>);
 					static_assert(!std::is_volatile_v<std::remove_reference_t<Type>>);
-
-					if constexpr (std::is_lvalue_reference_v<Type>)
-					{
-						using base = std::remove_reference_t<Type>;
-						*block->get_ptr<base*>() = new (block->get_ptr<base, 16>()) base();
-					}
-					else
-					{
-						new (block->get_ptr<Type>) Type();
-					}
+					new (block->get_ptr<Type>) Type();
 				}
 
 				return;
@@ -1110,16 +790,9 @@ namespace utils
 					return;
 				}
 
-				if (LIKELY(block->m_type == type_id))
+				if (LIKELY(block->m_type))
 				{
-					if constexpr (std::is_lvalue_reference_v<Type>)
-					{
-						if (std::invoke(std::forward<Arg>(id), std::as_const(**block->get_ptr<std::remove_reference_t<Type>*>())))
-						{
-							return;
-						}
-					}
-					else if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
+					if (std::invoke(std::forward<Arg>(id), std::as_const(*block->get_ptr<Type>())))
 					{
 						return;
 					}
@@ -1127,19 +800,9 @@ namespace utils
 			}
 			else if (block)
 			{
-				if constexpr (!typeinfo_share<Type>::is_shared)
+				if (LIKELY(block->m_type))
 				{
-					if (LIKELY(block->m_type))
-					{
-						return;
-					}
-				}
-				else
-				{
-					if (LIKELY(block->m_type == type_id))
-					{
-						return;
-					}
+					return;
 				}
 			}
 			else
@@ -1293,7 +956,7 @@ namespace utils
 		template <typename... Types, typename... Args, typename = std::enable_if_t<sizeof...(Types) == sizeof...(Args)>>
 		auto lock(Args&&... ids) const
 		{
-			static_assert(((!std::is_lvalue_reference_v<Types> == !typeinfo_poly<Types>::is_poly) && ...));
+			static_assert(((!std::is_lvalue_reference_v<Types>) && ...));
 			static_assert(((!std::is_array_v<Types>) && ...));
 			static_assert(((!std::is_void_v<Types>) && ...));
 
@@ -1332,11 +995,9 @@ namespace utils
 		template <typename Type, typename... Types, typename F>
 		ullong apply(F&& func)
 		{
-			static_assert(!std::is_lvalue_reference_v<Type> == !typeinfo_poly<Type>::is_poly);
+			static_assert(!std::is_lvalue_reference_v<Type>);
 			static_assert(!std::is_array_v<Type>);
 			static_assert(!std::is_void_v<Type>);
-
-			const uint type_id = g_typeinfo<std::decay_t<decode_t<Type>>>.type;
 
 			typemap_head* head = get_head<decode_t<Type>>();
 
@@ -1346,20 +1007,13 @@ namespace utils
 			{
 				const auto block = reinterpret_cast<typemap_block*>(head->m_ptr + j * head->m_ssize);
 
-				if (block->m_type == type_id)
+				if (block->m_type)
 				{
 					std::lock_guard lock(block->m_mutex);
 
-					if (block->m_type == type_id)
+					if (block->m_type)
 					{
-						if constexpr (std::is_lvalue_reference_v<Type>)
-						{
-							std::invoke(std::forward<F>(func), **block->get_ptr<std::remove_reference_t<Type>*>());
-						}
-						else
-						{
-							std::invoke(std::forward<F>(func), *block->get_ptr<decode_t<Type>>());
-						}
+						std::invoke(std::forward<F>(func), *block->get_ptr<decode_t<Type>>());
 					}
 				}
 			}
@@ -1387,12 +1041,6 @@ namespace utils
 		ullong get_destroy_count() const
 		{
 			return get_head<Type>()->m_destroy_count;
-		}
-
-		template <typename Type>
-		std::shared_lock<::notifier> get_free_notifier() const
-		{
-			return std::shared_lock(get_head<Type>()->m_free_notifier, std::try_to_lock);
 		}
 	};
 } // namespace utils

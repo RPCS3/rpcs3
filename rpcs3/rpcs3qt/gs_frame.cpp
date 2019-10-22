@@ -2,7 +2,9 @@
 
 #include "Utilities/Config.h"
 #include "Utilities/Timer.h"
+#include "Utilities/date_time.h"
 #include "Emu/System.h"
+#include "Emu/Cell/Modules/cellScreenshot.h"
 
 #include <QKeyEvent>
 #include <QTimer>
@@ -12,6 +14,8 @@
 #include <string>
 
 #include "rpcs3_version.h"
+
+#include "png.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -32,14 +36,11 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, const QIcon& app
 {
 	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
 
-	// Workaround for a Qt bug affecting 5.11.1 binaries
-	//m_use_5_11_1_workaround = QLibraryInfo::version() == QVersionNumber(5, 11, 1);
-
-	//Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
+	// Get version by substringing VersionNumber-buildnumber-commithash to get just the part before the dash
 	std::string version = rpcs3::version.to_string();
 	version = version.substr(0 , version.find_last_of('-'));
 
-	//Add branch and commit hash to version on frame , unless it's master.
+	// Add branch and commit hash to version on frame unless it's master.
 	if ((rpcs3::get_branch().compare("master") != 0) && (rpcs3::get_branch().compare("HEAD") != 0))
 	{
 		version = version + "-" + rpcs3::version.to_string().substr((rpcs3::version.to_string().find_last_of('-') + 1), 8) + "-" + rpcs3::get_branch();
@@ -61,8 +62,6 @@ gs_frame::gs_frame(const QString& title, const QRect& geometry, const QIcon& app
 	{
 		setIcon(appIcon);
 	}
-
-	m_show_fps = static_cast<bool>(g_cfg.misc.show_fps_in_title);
 
 #ifdef __APPLE__
 	// Needed for MoltenVK to work properly on MacOS
@@ -153,6 +152,11 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			if (Emu.IsReady()) { Emu.Run(); return; }
 			else if (Emu.IsPaused()) { Emu.Resume(); return; }
 		}
+		break;
+	case Qt::Key_F12:
+		screenshot_toggle = true;
+		break;
+	default:
 		break;
 	}
 }
@@ -279,27 +283,138 @@ int gs_frame::client_height()
 
 void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
-	if (m_show_fps)
+	static Timer fps_t;
+
+	if (!m_show_fps_in_title && !g_cfg.misc.show_fps_in_title)
 	{
-		++m_frames;
+		return;
+	}
 
-		static Timer fps_t;
+	++m_frames;
 
-		if (fps_t.GetElapsedTimeInSec() >= 0.5)
+	if (fps_t.GetElapsedTimeInSec() >= 0.5)
+	{
+		QString fps_title;
+
+		if ((m_show_fps_in_title = g_cfg.misc.show_fps_in_title.get()))
 		{
-			QString fps_title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
+			fps_title = qstr(fmt::format("FPS: %.2f", (double)m_frames / fps_t.GetElapsedTimeInSec()));
 
 			if (!m_windowTitle.isEmpty())
 			{
-				fps_title += " | " + m_windowTitle;
+				fps_title += " | ";
+			}
+		}
+
+		fps_title += m_windowTitle;
+
+		Emu.CallAfter([this, title = std::move(fps_title)]() { setTitle(title); });
+
+		m_frames = 0;
+		fps_t.Start();
+	}
+}
+
+void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height)
+{
+	std::thread(
+		[sshot_width, sshot_height](const std::vector<u8> sshot_data)
+		{
+			std::string screen_path = fs::get_config_dir() + "/screenshots/";
+
+			if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
+			{
+				LOG_ERROR(GENERAL, "Failed to create screenshot path \"%s\" : %s", screen_path, fs::g_tls_error);
+				return;
 			}
 
-			Emu.CallAfter([this, title = std::move(fps_title)]() {setTitle(title); });
+			std::string filename = screen_path + "screenshot-" + date_time::current_time_narrow<'_'>() + ".png";
 
-			m_frames = 0;
-			fps_t.Start();
-		}
-	}
+			fs::file sshot_file(filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
+			if (!sshot_file)
+			{
+				LOG_ERROR(GENERAL, "[Screenshot] Failed to save screenshot \"%s\" : %s", filename, fs::g_tls_error);
+				return;
+			}
+
+			std::vector<u8> sshot_data_alpha(sshot_data.size());
+			const u32* sshot_ptr = (const u32*)sshot_data.data();
+			u32* alpha_ptr       = (u32*)sshot_data_alpha.data();
+
+			for (size_t index = 0; index < sshot_data.size() / sizeof(u32); index++)
+			{
+				alpha_ptr[index] = ((sshot_ptr[index] & 0xFF) << 16) | (sshot_ptr[index] & 0xFF00) | ((sshot_ptr[index] & 0xFF0000) >> 16) | 0xFF000000;
+			}
+
+			std::vector<u8> encoded_png;
+
+			png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+			png_infop info_ptr    = png_create_info_struct(write_ptr);
+			png_set_IHDR(write_ptr, info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
+			std::vector<u8*> rows(sshot_height);
+			for (size_t y = 0; y < sshot_height; y++)
+				rows[y] = (u8*)sshot_data_alpha.data() + y * sshot_width * 4;
+
+			png_set_rows(write_ptr, info_ptr, &rows[0]);
+			png_set_write_fn(write_ptr, &encoded_png,
+				[](png_structp png_ptr, png_bytep data, png_size_t length)
+				{
+					std::vector<u8>* p = (std::vector<u8>*)png_get_io_ptr(png_ptr);
+					p->insert(p->end(), data, data + length);
+				},
+				nullptr);
+
+			png_write_png(write_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
+
+			png_free_data(write_ptr, info_ptr, PNG_FREE_ALL, -1);
+			png_destroy_write_struct(&write_ptr, nullptr);
+
+			sshot_file.write(encoded_png.data(), encoded_png.size());
+
+			LOG_SUCCESS(GENERAL, "[Screenshot] Successfully saved screenshot to %s", filename);
+
+			const auto fxo = g_fxo->get<screenshot_manager>();
+
+			if (fxo->is_enabled)
+			{
+				const std::string cell_sshot_filename = fxo->get_screenshot_path();
+				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
+
+				LOG_NOTICE(GENERAL, "[Screenshot] Saving cell screenshot to %s", cell_sshot_filename);
+
+				if (!fs::create_path(cell_sshot_dir) && fs::g_tls_error != fs::error::exist)
+				{
+					LOG_ERROR(GENERAL, "Failed to create cell screenshot dir \"%s\" : %s", cell_sshot_dir, fs::g_tls_error);
+					return;
+				}
+
+				fs::file cell_sshot_file(cell_sshot_filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
+				if (!cell_sshot_file)
+				{
+					LOG_ERROR(GENERAL, "[Screenshot] Failed to save cell screenshot \"%s\" : %s", cell_sshot_filename, fs::g_tls_error);
+					return;
+				}
+
+				const std::string cell_sshot_overlay_path = fxo->get_overlay_path();
+				if (fs::is_file(cell_sshot_overlay_path))
+				{
+					LOG_NOTICE(GENERAL, "[Screenshot] Adding overlay to cell screenshot from %s", cell_sshot_overlay_path);
+					// TODO: add overlay to screenshot
+				}
+
+				// TODO: add tEXt chunk with creation time, source, title id
+				// TODO: add tTXt chunk with data procured from cellScreenShotSetParameter (get_photo_title, get_game_title, game_comment)
+
+				cell_sshot_file.write(encoded_png.data(), encoded_png.size());
+
+				LOG_SUCCESS(GENERAL, "[Screenshot] Successfully saved cell screenshot to %s", cell_sshot_filename);
+			}
+
+			return;
+		},
+		std::move(sshot_data))
+		.detach();
 }
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)

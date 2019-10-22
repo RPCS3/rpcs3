@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <map>
 #include <memory>
@@ -14,7 +14,6 @@ namespace vm
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
 	extern u8* const g_reservations;
-	extern u8* const g_reservations2;
 
 	struct writer_lock;
 
@@ -23,6 +22,7 @@ namespace vm
 		main,
 		user64k,
 		user1m,
+		rsx_context,
 		video,
 		stack,
 		spu,
@@ -52,7 +52,7 @@ namespace vm
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check flags for specified memory range (unsafe)
-	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_allocated);
+	bool check_addr(u32 addr, u32 size = 1, u8 flags = page_readable);
 
 	// Search and map memory in specified memory location (min alignment is 0x10000)
 	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);
@@ -116,7 +116,10 @@ namespace vm
 	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty = false);
 
 	// Get memory block associated with optionally specified memory location or optionally specified address
-	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0, u32 area_size = 0);
+	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
+
+	// Allocate segment at specified location, does nothing if exists already
+	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = 0x200);
 
 	// Get PS3/PSV virtual memory address from the provided pointer (nullptr always converted to 0)
 	inline vm::addr_t get_addr(const void* real_ptr)
@@ -268,5 +271,10 @@ namespace vm
 	}
 
 	void close();
-}
 
+	template <typename T, typename AT>
+	class _ptr_base;
+
+	template <typename T, typename AT>
+	class _ref_base;
+}

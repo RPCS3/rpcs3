@@ -401,6 +401,7 @@ namespace rsx
 
 			u32 fp_ctrl;
 			u32 fp_texture_dimensions;
+			u32 fp_texcoord_control;
 			u16 fp_unnormalized_coords;
 			u16 fp_height;
 			u16 fp_pixel_layout;
@@ -430,25 +431,28 @@ namespace rsx
 			virtual void create()
 			{
 				dlg = Emu.GetCallbacks().get_msg_dialog();
-				dlg->type.se_normal = true;
-				dlg->type.bg_invisible = true;
-				dlg->type.progress_bar_count = 2;
-				dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
-				dlg->on_close = [](s32 status)
+				if (dlg)
 				{
-					Emu.CallAfter([]()
+					dlg->type.se_normal          = true;
+					dlg->type.bg_invisible       = true;
+					dlg->type.progress_bar_count = 2;
+					dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
+					dlg->on_close = [](s32 status)
 					{
-						Emu.Stop();
+						Emu.CallAfter([]()
+						{
+							Emu.Stop();
+						});
+					};
+
+					ref_cnt++;
+
+					Emu.CallAfter([&]()
+					{
+						dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
+						ref_cnt--;
 					});
-				};
-
-				ref_cnt++;
-
-				Emu.CallAfter([&]()
-				{
-					dlg->Create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
-					ref_cnt--;
-				});
+				}
 
 				while (ref_cnt.load() && !Emu.IsStopped())
 				{
@@ -458,6 +462,11 @@ namespace rsx
 
 			virtual void update_msg(u32 index, u32 processed, u32 entry_count)
 			{
+				if (!dlg)
+				{
+					return;
+				}
+
 				ref_cnt++;
 
 				Emu.CallAfter([&, index, processed, entry_count]()
@@ -470,6 +479,11 @@ namespace rsx
 
 			virtual void inc_value(u32 index, u32 value)
 			{
+				if (!dlg)
+				{
+					return;
+				}
+
 				ref_cnt++;
 
 				Emu.CallAfter([&, index, value]()
@@ -481,6 +495,11 @@ namespace rsx
 
 			virtual void set_limit(u32 index, u32 limit)
 			{
+				if (!dlg)
+				{
+					return;
+				}
+
 				ref_cnt++;
 
 				Emu.CallAfter([&, index, limit]()
@@ -720,6 +739,7 @@ namespace rsx
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_ctrl);
 			state_hash ^= rpcs3::hash_base<u32>(data.vp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
+			state_hash ^= rpcs3::hash_base<u32>(data.fp_texcoord_control);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_unnormalized_coords);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_height);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_pixel_layout);
@@ -792,12 +812,9 @@ namespace rsx
 
 			fp.ctrl = data.fp_ctrl;
 			fp.texture_dimensions = data.fp_texture_dimensions;
+			fp.texcoord_control_mask = data.fp_texcoord_control;
 			fp.unnormalized_coords = data.fp_unnormalized_coords;
-			fp.front_back_color_enabled = (data.fp_lighting_flags & 0x1) != 0;
-			fp.back_color_diffuse_output = ((data.fp_lighting_flags >> 1) & 0x1) != 0;
-			fp.back_color_specular_output = ((data.fp_lighting_flags >> 2) & 0x1) != 0;
-			fp.front_color_diffuse_output = ((data.fp_lighting_flags >> 3) & 0x1) != 0;
-			fp.front_color_specular_output = ((data.fp_lighting_flags >> 4) & 0x1) != 0;
+			fp.two_sided_lighting = !!(data.fp_lighting_flags & 0x1);
 			fp.shadow_textures = data.fp_shadow_textures;
 			fp.redirected_textures = data.fp_redirected_textures;
 
@@ -845,16 +862,16 @@ namespace rsx
 
 			data_block.fp_ctrl = fp.ctrl;
 			data_block.fp_texture_dimensions = fp.texture_dimensions;
+			data_block.fp_texcoord_control = fp.texcoord_control_mask;
 			data_block.fp_unnormalized_coords = fp.unnormalized_coords;
-			data_block.fp_lighting_flags = (u16)fp.front_back_color_enabled | (u16)fp.back_color_diffuse_output << 1 |
-				(u16)fp.back_color_specular_output << 2 | (u16)fp.front_color_diffuse_output << 3 | (u16)fp.front_color_specular_output << 4;
+			data_block.fp_lighting_flags = u16(fp.two_sided_lighting);
 			data_block.fp_shadow_textures = fp.shadow_textures;
 			data_block.fp_redirected_textures = fp.redirected_textures;
 
 			for (u8 index = 0; index < 16; ++index)
 			{
-				data_block.fp_alphakill_mask |= (u32)(fp.textures_alpha_kill[index] & 0x1) << index;
-				data_block.fp_zfunc_mask |= (u32)(fp.textures_zfunc[index] & 0xF) << (index << 2);
+				data_block.fp_alphakill_mask |= u32(fp.textures_alpha_kill[index] & 0x1) << index;
+				data_block.fp_zfunc_mask |= u64(fp.textures_zfunc[index] & 0xF) << (index << 2);
 			}
 
 			return data_block;

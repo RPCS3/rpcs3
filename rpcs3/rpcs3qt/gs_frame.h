@@ -36,8 +36,9 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	u64 m_frames = 0;
+	// display status of last title update, needed for dynamic changes of the fps setting
+	bool m_show_fps_in_title = false;
 	QString m_windowTitle;
-	bool m_show_fps;
 	bool m_disable_mouse;
 
 public:
@@ -53,6 +54,8 @@ public:
 	void progress_reset(bool reset_limit = false);
 	void progress_increment(int delta);
 	void progress_set_limit(int limit);
+
+	void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height) override;
 
 protected:
 	virtual void paintEvent(QPaintEvent *event);

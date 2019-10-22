@@ -9,15 +9,15 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{EB33566E-DA7F-4D28-9077-88C0B7C77E35}</ProjectGuid>
     <RootNamespace>pnglibconf</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
+  <Import Project="..\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="..\common_default_macros.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\3rdparty\zlib.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />

@@ -13,7 +13,7 @@ inline void strcpy_trunc(char (&dst)[N], const std::string& src)
 {
 	const std::size_t count = src.size() >= N ? N - 1 : src.size();
 	std::memcpy(dst, src.c_str(), count);
-	dst[count] = '\0';
+	std::memset(dst + count, 0, N - count);
 }
 
 // Copy null-terminated string from char array to another char array with truncation
@@ -22,7 +22,7 @@ inline void strcpy_trunc(char (&dst)[N], const char (&src)[N2])
 {
 	const std::size_t count = N2 >= N ? N - 1 : N2;
 	std::memcpy(dst, src, count);
-	dst[count] = '\0';
+	std::memset(dst + count, 0, N - count);
 }
 
 template <std::size_t N>

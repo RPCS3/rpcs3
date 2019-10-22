@@ -15,6 +15,9 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 {
 	vm::temporary_unlock(ppu);
 
+	// Need to wait until the current writer finish
+	if (ppu.state & cpu_flag::memory) vm::g_mutex.lock_unlock();
+
 	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
 	ppu.state += cpu_flag::exit;
@@ -46,7 +49,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 		std::lock_guard lock(id_manager::g_mutex);
 
 		// Schedule joiner and unqueue
-		lv2_obj::awake(*idm::check_unlocked<named_thread<ppu_thread>>(jid), -2);
+		lv2_obj::awake(idm::check_unlocked<named_thread<ppu_thread>>(jid), -2);
 	}
 
 	// Unqueue
@@ -60,7 +63,7 @@ void sys_ppu_thread_yield(ppu_thread& ppu)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_yield()");
 
-	lv2_obj::awake(ppu, -4);
+	lv2_obj::yield(ppu);
 }
 
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr)
@@ -216,7 +219,7 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 	{
 		if (thread.prio != prio)
 		{
-			lv2_obj::awake(thread, prio);
+			lv2_obj::awake(&thread, prio);
 		}
 	});
 
@@ -307,7 +310,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 	}
 
 	// Compute actual stack size and allocate
-	const u32 stack_size = _stacksz >= 4096 ? ::align(std::min<u32>(_stacksz, 0x100000), 4096) : 0x4000;
+	const u32 stack_size = ::align<u32>(std::max<u32>(_stacksz, 4096), 4096);
 
 	const vm::addr_t stack_base{vm::alloc(stack_size, vm::stack, 4096)};
 
@@ -342,6 +345,7 @@ error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_par
 
 	if (!tid)
 	{
+		vm::dealloc(stack_base);
 		return CELL_EAGAIN;
 	}
 
@@ -355,7 +359,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
-		lv2_obj::awake(thread, -2);
+		lv2_obj::awake(&thread, -2);
 	});
 
 	if (!thread)
@@ -433,12 +437,7 @@ error_code sys_ppu_thread_recover_page_fault(u32 thread_id)
 		return CELL_ESRCH;
 	}
 
-	if (auto res = mmapper_thread_recover_page_fault(thread_id))
-	{
-		return res;
-	}
-
-	return CELL_OK;
+	return mmapper_thread_recover_page_fault(thread_id);
 }
 
 error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt)
@@ -453,7 +452,7 @@ error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_
 	}
 
 	// We can only get a context if the thread is being suspended for a page fault.
-	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	auto pf_events = g_fxo->get<page_fault_event_entries>();
 	std::shared_lock lock(pf_events->pf_mutex);
 
 	const auto evt = pf_events->events.find(thread_id);

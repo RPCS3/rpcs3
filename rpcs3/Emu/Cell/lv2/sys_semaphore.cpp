@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_semaphore.h"
 
 #include "Emu/System.h"
@@ -8,16 +8,14 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 
-
-
 LOG_CHANNEL(sys_semaphore);
 
 template<> DECLARE(ipc_manager<lv2_sema, u64>::g_ipc) {};
 
-extern u64 get_system_time();
-
-error_code sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
+error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_semaphore.warning("sys_semaphore_create(sem_id=*0x%x, attr=*0x%x, initial_val=%d, max_val=%d)", sem_id, attr, initial_val, max_val);
 
 	if (!sem_id || !attr)
@@ -33,10 +31,7 @@ error_code sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attri
 
 	const u32 protocol = attr->protocol;
 
-	if (protocol == SYS_SYNC_PRIORITY_INHERIT)
-		sys_semaphore.todo("sys_semaphore_create(): SYS_SYNC_PRIORITY_INHERIT");
-
-	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY && protocol != SYS_SYNC_PRIORITY_INHERIT)
+	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY)
 	{
 		sys_semaphore.error("sys_semaphore_create(): unknown protocol (0x%x)", protocol);
 		return CELL_EINVAL;
@@ -54,8 +49,10 @@ error_code sys_semaphore_create(vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attri
 	return CELL_OK;
 }
 
-error_code sys_semaphore_destroy(u32 sem_id)
+error_code sys_semaphore_destroy(ppu_thread& ppu, u32 sem_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_semaphore.warning("sys_semaphore_destroy(sem_id=0x%x)", sem_id);
 
 	const auto sem = idm::withdraw<lv2_obj, lv2_sema>(sem_id, [](lv2_sema& sema) -> CellError
@@ -83,6 +80,8 @@ error_code sys_semaphore_destroy(u32 sem_id)
 
 error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_semaphore.trace("sys_semaphore_wait(sem_id=0x%x, timeout=0x%llx)", sem_id, timeout);
 
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
@@ -130,9 +129,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(sem->mutex);
 
@@ -153,8 +150,6 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
@@ -165,8 +160,10 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 	return not_an_error(ppu.gpr[3]);
 }
 
-error_code sys_semaphore_trywait(u32 sem_id)
+error_code sys_semaphore_trywait(ppu_thread& ppu, u32 sem_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_semaphore.trace("sys_semaphore_trywait(sem_id=0x%x)", sem_id);
 
 	const auto sem = idm::check<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
@@ -189,6 +186,8 @@ error_code sys_semaphore_trywait(u32 sem_id)
 
 error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_semaphore.trace("sys_semaphore_post(sem_id=0x%x, count=%d)", sem_id, count);
 
 	const auto sem = idm::get<lv2_obj, lv2_sema>(sem_id, [&](lv2_sema& sema)
@@ -238,17 +237,26 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 		}
 
 		// Wake threads
-		for (s32 i = std::min<s32>(-std::min<s32>(val, 0), count); i > 0; i--)
+		const s32 to_awake = std::min<s32>(-std::min<s32>(val, 0), count);
+
+		for (s32 i = 0; i < to_awake; i++)
 		{
-			sem->awake(*verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol)));
+			sem->append(verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol)));
+		}
+
+		if (to_awake > 0)
+		{
+			lv2_obj::awake_all();
 		}
 	}
 
 	return CELL_OK;
 }
 
-error_code sys_semaphore_get_value(u32 sem_id, vm::ptr<s32> count)
+error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> count)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_semaphore.trace("sys_semaphore_get_value(sem_id=0x%x, count=*0x%x)", sem_id, count);
 
 	if (!count)

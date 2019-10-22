@@ -13,13 +13,13 @@ namespace program_common
 		if (low_precision)
 		{
 			OS <<
-				"int compare(float a, float b)\n"
+				"int compare(const in float a, const in float b)\n"
 				"{\n"
 				"	if (abs(a - b) < 0.000001) return 2;\n"
 				"	return (a > b)? 4 : 1;\n"
 				"}\n\n"
 
-				"bool comparison_passes(float a, float b, uint func)\n"
+				"bool comparison_passes(const in float a, const in float b, const in uint func)\n"
 				"{\n"
 				"	if (func == 0) return false; // never\n"
 				"	if (func == 7) return true;  // always\n\n"
@@ -41,7 +41,7 @@ namespace program_common
 		else
 		{
 			OS <<
-			"bool comparison_passes(float a, float b, uint func)\n"
+			"bool comparison_passes(const in float a, const in float b, const in uint func)\n"
 			"{\n"
 			"	switch (func)\n"
 			"	{\n"
@@ -62,7 +62,7 @@ namespace program_common
 	static void insert_compare_op_vector(std::ostream& OS)
 	{
 		OS <<
-		"bvec4 comparison_passes(vec4 a, vec4 b, uint func)\n"
+		"bvec4 comparison_passes(const in vec4 a, const in vec4 b, const in uint func)\n"
 		"{\n"
 		"	switch (func)\n"
 		"	{\n"
@@ -84,9 +84,9 @@ namespace program_common
 		std::string template_body;
 
 		if (!declare)
-			template_body += "$T fetch_fog_value(uint mode)\n";
+			template_body += "$T fetch_fog_value(const in uint mode)\n";
 		else
-			template_body += "$T fetch_fog_value(uint mode, $T $I)\n";
+			template_body += "$T fetch_fog_value(const in uint mode, const in $T $I)\n";
 
 		template_body +=
 		"{\n"
@@ -229,24 +229,25 @@ namespace glsl
 		"	bool modulo;\n"
 		"};\n\n"
 
-		"uint get_bits(uint x, uint y, uint z, uint w, bool swap)\n"
+		"uint get_bits(const in uint x, const in uint y, const in uint z, const in uint w, const in bool swap)\n"
 		"{\n"
 		"	if (swap) return (w | z << 8 | y << 16 | x << 24);\n"
 		"	return (x | y << 8 | z << 16 | w << 24);\n"
 		"}\n\n"
 
-		"uint get_bits(uint x, uint y, bool swap)\n"
+		"uint get_bits(const in uint x, const in uint y, const in bool swap)\n"
 		"{\n"
 		"	if (swap) return (y | x << 8);\n"
 		"	return (x | y << 8);\n"
 		"}\n\n"
 
-		"int preserve_sign_s16(uint bits)\n"
+		"int preserve_sign_s16(const in uint bits)\n"
 		"{\n"
 		"	//convert raw 16 bit value into signed 32-bit integer counterpart\n"
-		"	uint sign = bits & 0x8000;\n"
-		"	if (sign != 0) bits |= 0xFFFF0000;\n"
-		"	return int(bits);\n"
+		"	if ((bits & 0x8000) == 0)\n"
+		"		return int(bits);\n"
+		"	else\n"
+		"		return int(bits | 0xFFFF0000);\n"
 		"}\n\n"
 
 		"#define get_s16(v, s) preserve_sign_s16(get_bits(v, s))\n\n";
@@ -255,7 +256,7 @@ namespace glsl
 		if (!glsl4_compliant)
 		{
 			OS <<
-			"void mov(inout vec4 vector, in int index, in float scalar)\n"
+			"void mov(inout vec4 vector, const in int index, const in float scalar)\n"
 			"{\n"
 			"	switch(index)\n"
 			"	{\n"
@@ -267,7 +268,7 @@ namespace glsl
 			"}\n";
 
 			OS <<
-			"uint ref(in uvec4 vector, in int index)\n"
+			"uint ref(const in uvec4 vector, const in int index)\n"
 			"{\n"
 			"	switch(index)\n"
 			"	{\n"
@@ -286,7 +287,7 @@ namespace glsl
 		}
 
 		OS <<
-		"vec4 fetch_attribute(attribute_desc desc, int vertex_id, usamplerBuffer input_stream)\n"
+		"vec4 fetch_attribute(const in attribute_desc desc, const in int vertex_id, usamplerBuffer input_stream)\n"
 		"{\n"
 		"	vec4 result = vec4(0., 0., 0., 1.);\n"
 		"	vec4 scale = vec4(1.);\n"
@@ -355,7 +356,7 @@ namespace glsl
 		"	return (reverse_order)? result.wzyx: result;\n"
 		"}\n\n"
 
-		"attribute_desc fetch_desc(int location)\n"
+		"attribute_desc fetch_desc(const in int location)\n"
 		"{\n"
 		"	// Each descriptor is 64 bits wide\n"
 		"	// [0-8] attribute stride\n"
@@ -382,8 +383,7 @@ namespace glsl
 		{
 			// Fetch parameters streamed separately from draw parameters
 			OS <<
-			"	location += int(layout_ptr_offset);\n"
-			"	uvec2 attrib = texelFetch(vertex_layout_stream, location).xy;\n\n";
+			"	uvec2 attrib = texelFetch(vertex_layout_stream, location + int(layout_ptr_offset)).xy;\n\n";
 		}
 
 		OS <<
@@ -399,24 +399,13 @@ namespace glsl
 		"	return result;\n"
 		"}\n\n"
 
-		"vec4 read_location(int location)\n"
+		"vec4 read_location(const in int location)\n"
 		"{\n"
 		"	attribute_desc desc = fetch_desc(location);\n"
 		"	if (desc.attribute_size == 0)\n"
 		"	{\n"
-		"		//default values\n"
-		"		const vec4 defaults[] = \n"
-		"		{	vec4(0., 0., 0., 1.), //position\n"
-		"			vec4(0.), vec4(0.), //weight, normals\n"
-		"			vec4(1.), //diffuse\n"
-		"			vec4(0.), vec4(0.), //specular, fog\n"
-		"			vec4(1.), //point size\n"
-		"			vec4(0.), //in_7\n"
-		"			//in_tc registers\n"
-		"			vec4(0.), vec4(0.), vec4(0.), vec4(0.),\n"
-		"			vec4(0.), vec4(0.), vec4(0.), vec4(0.)\n"
-		"		};\n"
-		"		return defaults[location];\n"
+		"		//default value\n"
+		"		return vec4(0., 0., 0., 1.);\n"
 		"	}\n\n"
 		"	int vertex_id = " << vertex_id_name << " - int(vertex_base_index);\n"
 		"	if (desc.frequency == 0)\n"
@@ -440,26 +429,39 @@ namespace glsl
 		"}\n\n";
 	}
 
-	static void insert_rop(std::ostream& OS, bool _32_bit_exports, bool native_half_support, bool emulate_coverage_tests)
+	static void insert_rop(std::ostream& OS, const shader_properties& props)
 	{
-		const std::string reg0 = _32_bit_exports ? "r0" : "h0";
-		const std::string reg1 = _32_bit_exports ? "r2" : "h4";
-		const std::string reg2 = _32_bit_exports ? "r3" : "h6";
-		const std::string reg3 = _32_bit_exports ? "r4" : "h8";
+		const std::string reg0 = props.fp32_outputs ? "r0" : "h0";
+		const std::string reg1 = props.fp32_outputs ? "r2" : "h4";
+		const std::string reg2 = props.fp32_outputs ? "r3" : "h6";
+		const std::string reg3 = props.fp32_outputs ? "r4" : "h8";
 
 		//TODO: Implement all ROP options like CSAA and ALPHA_TO_ONE here
+		if (props.disable_early_discard)
+		{
+			OS <<
+			"	if (_fragment_discard)\n"
+			"	{\n"
+			"		discard;\n"
+			"	}\n"
+			"	else if ((rop_control & 0xFF) != 0)\n";
+		}
+		else
+		{
+			OS << "	if ((rop_control & 0xFF) != 0)\n";
+		}
+
 		OS <<
-		"	if ((rop_control & 0xFF) != 0)\n"
 		"	{\n"
 		"		bool alpha_test = (rop_control & 0x1) > 0;\n"
 		"		uint alpha_func = ((rop_control >> 16) & 0x7);\n";
 
-		if (!_32_bit_exports)
+		if (!props.fp32_outputs)
 		{
 			OS << "		bool srgb_convert = (rop_control & 0x2) > 0;\n\n";
 		}
 
-		if (emulate_coverage_tests)
+		if (props.emulate_coverage_tests)
 		{
 			OS << "		bool a2c_enabled = (rop_control & 0x10) > 0;\n";
 		}
@@ -470,7 +472,7 @@ namespace glsl
 		"			discard;\n"
 		"		}\n";
 
-		if (emulate_coverage_tests)
+		if (props.emulate_coverage_tests)
 		{
 			OS <<
 			"		else if (a2c_enabled && !coverage_test_passes(" << reg0 << ", rop_control >> 5))\n"
@@ -479,10 +481,10 @@ namespace glsl
 			"		}\n";
 		}
 
-		if (!_32_bit_exports)
+		if (!props.fp32_outputs)
 		{
 			// Tested using NPUB90375; some shaders (32-bit output only?) do not obey srgb flags
-			if (native_half_support)
+			if (props.supports_native_fp16)
 			{
 				OS <<
 				"		else if (srgb_convert)\n"
@@ -521,10 +523,25 @@ namespace glsl
 		OS << "#define _saturate(x) clamp(x, 0., 1.)\n";
 		OS << "#define _rand(seed) fract(sin(dot(seed.xy, vec2(12.9898f, 78.233f))) * 43758.5453f)\n\n";
 
+		if (props.domain == glsl::program_domain::glsl_fragment_program)
+		{
+			OS << "// Workaround for broken early discard in some drivers\n";
+
+			if (props.disable_early_discard)
+			{
+				OS << "bool _fragment_discard = false;\n";
+				OS << "#define _kill() _fragment_discard = true\n\n";
+			}
+			else
+			{
+				OS << "#define _kill() discard\n\n";
+			}
+		}
+
 		if (props.require_lit_emulation)
 		{
 			OS <<
-			"vec4 lit_legacy(vec4 val)"
+			"vec4 lit_legacy(const in vec4 val)"
 			"{\n"
 			"	vec4 clamped_val = val;\n"
 			"	clamped_val.x = max(val.x, 0.);\n"
@@ -541,7 +558,7 @@ namespace glsl
 		if (props.domain == glsl::program_domain::glsl_vertex_program)
 		{
 			OS <<
-			"vec4 apply_zclip_xform(vec4 pos, float near_plane, float far_plane)\n"
+			"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
 			"{\n"
 			"	float d = pos.z / pos.w;\n"
 			"	if (d < 0.f && d >= near_plane)\n"
@@ -551,8 +568,7 @@ namespace glsl
 			"	else\n"
 			"		return pos; //d = (0.99 * d);\n" //range compression for normal values is disabled until a solution to ops comparing z is found
 			"\n"
-			"	pos.z = d * pos.w;\n"
-			"	return pos;\n"
+			"	return vec4(pos.x, pos.y, d * pos.w, pos.w);\n"
 			"}\n\n";
 
 			return;
@@ -567,28 +583,21 @@ namespace glsl
 
 		if (props.emulate_coverage_tests)
 		{
-			// NOTES:
-			// Lowers alpha accuracy down to 2 bits, to mimic A2C banding
-			// Alpha lower than the real threshold (e.g 0.25 for 4 samples) gets a randomized chance to make it to the lowest transparency state
-			// Helps to avoid A2C tested foliage disappearing in the distance
+			// Purely stochastic
 			OS <<
-			"bool coverage_test_passes(/*inout*/in vec4 _sample, uint control)\n"
+			"bool coverage_test_passes(const in vec4 _sample, const in uint control)\n"
 			"{\n"
 			"	if ((control & 0x1) == 0) return false;\n"
 			"\n"
-			"	float samples = ((control & 0x2) != 0)? 4.f : 2.f;\n"
-			"	float hash    = _saturate(_rand(gl_FragCoord) + 0.5f) * 0.9f;\n"
-			"	float epsilon = hash / samples;\n"
-			"	float alpha   = trunc((_sample.a + epsilon) * samples) / samples;\n"
-			"	//_sample.a     = min(_sample.a, alpha);\n" // Cannot blend A2C samples naively as they are order independent! Causes background bleeding
-			"	return (alpha > 0.f);\n"
+			"	float random  = _rand(gl_FragCoord);\n"
+			"	return (_sample.a > random);\n"
 			"}\n\n";
 		}
 
 		if (!props.fp32_outputs)
 		{
 			OS <<
-			"vec4 linear_to_srgb(vec4 cl)\n"
+			"vec4 linear_to_srgb(const in vec4 cl)\n"
 			"{\n"
 			"	vec4 low = cl * 12.92;\n"
 			"	vec4 high = 1.055 * pow(cl, vec4(1. / 2.4)) - 0.055;\n"
@@ -602,16 +611,21 @@ namespace glsl
 			//NOTE: Memory layout is fetched as byteswapped BGRA [GBAR] (GOW collection, DS2, DeS)
 			//The A component (Z) is useless (should contain stencil8 or just 1)
 			OS <<
-			"vec4 decodeLinearDepth(float depth_value)\n"
+			"vec4 decode_depth24(const in float depth_value, const in uint depth_float)\n"
 			"{\n"
-			"	uint value = uint(depth_value * 16777215.);\n"
+			"	uint value;\n"
+			"	if (depth_float == 0)\n"
+			"		value = uint(depth_value * 16777215.);\n"
+			"	else\n"
+			"		value = (floatBitsToUint(depth_value) >> 7) & 0xffffff;\n"
+			"\n"
 			"	uint b = (value & 0xff);\n"
 			"	uint g = (value >> 8) & 0xff;\n"
 			"	uint r = (value >> 16) & 0xff;\n"
 			"	return vec4(float(g)/255., float(b)/255., 1., float(r)/255.);\n"
 			"}\n\n"
 
-			"float read_value(vec4 src, uint remap_index)\n"
+			"float read_value(const in vec4 src, const in uint remap_index)\n"
 			"{\n"
 			"	switch (remap_index)\n"
 			"	{\n"
@@ -622,11 +636,11 @@ namespace glsl
 			"	}\n"
 			"}\n\n"
 
-			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, vec2 coord, float remap)\n"
+			"vec4 texture2DReconstruct(sampler2D tex, usampler2D stencil_tex, const in vec2 coord, const in uint remap)\n"
 			"{\n"
-			"	vec4 result = decodeLinearDepth(texture(tex, coord.xy).r);\n"
+			"	vec4 result = decode_depth24(texture(tex, coord.xy).r, remap >> 16);\n"
 			"	result.z = float(texture(stencil_tex, coord.xy).x) / 255.f;\n"
-			"	uint remap_vector = floatBitsToUint(remap) & 0xFF;\n"
+			"	uint remap_vector = remap & 0xFF;\n"
 			"	if (remap_vector == 0xE4) return result;\n\n"
 			"	vec4 tmp;\n"
 			"	uint remap_a = remap_vector & 0x3;\n"
@@ -646,7 +660,7 @@ namespace glsl
 			if (props.require_shadow_ops && props.emulate_shadow_compare)
 			{
 				OS <<
-				"vec4 shadowCompare(sampler2D tex, vec3 p, uint func)\n"
+				"vec4 shadowCompare(sampler2D tex, const in vec3 p, const in uint func)\n"
 				"{\n"
 				"	vec4 samples = textureGather(tex, p.xy).xxxx;\n"
 				"	vec4 ref = clamp(p.z, 0., 1.).xxxx;\n"
@@ -654,7 +668,7 @@ namespace glsl
 				"	return filtered * dot(filtered, vec4(0.25f));\n"
 				"}\n\n"
 
-				"vec4 shadowCompareProj(sampler2D tex, vec4 p, uint func)\n"
+				"vec4 shadowCompareProj(sampler2D tex, const in vec4 p, const in uint func)\n"
 				"{\n"
 				"	return shadowCompare(tex, p.xyz / p.w, func);\n"
 				"}\n\n";
@@ -663,7 +677,7 @@ namespace glsl
 			OS <<
 
 #ifdef __APPLE__
-			"vec4 remap_vector(vec4 rgba, uint remap_bits)\n"
+			"vec4 remap_vector(const in vec4 rgba, const in uint remap_bits)\n"
 			"{\n"
 			"	uvec4 selector = (uvec4(remap_bits) >> uvec4(3, 6, 9, 0)) & 0x7;\n"
 			"	bvec4 choice = greaterThan(selector, uvec4(1));\n"
@@ -674,7 +688,7 @@ namespace glsl
 			"	return mix(direct, indexed, choice);\n"
 			"}\n\n"
 #endif
-			"vec4 srgb_to_linear(vec4 cs)\n"
+			"vec4 srgb_to_linear(const in vec4 cs)\n"
 			"{\n"
 			"	vec4 a = cs / 12.92;\n"
 			"	vec4 b = pow((cs + 0.055) / 1.055, vec4(2.4));\n"
@@ -682,7 +696,7 @@ namespace glsl
 			"}\n\n"
 
 			//TODO: Move all the texture read control operations here
-			"vec4 process_texel(vec4 rgba, uint control_bits)\n"
+			"vec4 process_texel(in vec4 rgba, const in uint control_bits)\n"
 			"{\n"
 #ifdef __APPLE__
 			"	uint remap_bits = (control_bits >> 16) & 0xFFFF;\n"
@@ -698,9 +712,16 @@ namespace glsl
 			"		// Alphakill\n"
 			"		if (rgba.a < 0.000001)\n"
 			"		{\n"
-			"			discard;\n"
+			"			_kill();\n"
 			"			return rgba;\n"
 			"		}\n"
+			"	}\n"
+			"\n"
+			"	if ((control_bits & 0x20) != 0)\n"
+			"	{\n"
+			"		// Renormalize to 8-bit (PS3) accuracy\n"
+			"		rgba = floor(rgba * 255.);\n"
+			"		rgba /= 255.;"
 			"	}\n"
 			"\n"
 			"	//TODO: Verify gamma control bit ordering, looks to be 0x7 for rgb, 0xF for rgba\n"
@@ -712,39 +733,39 @@ namespace glsl
 			"#define TEX_NAME(index) tex##index\n"
 			"#define TEX_NAME_STENCIL(index) tex##index##_stencil\n\n"
 
-			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].x), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].x, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].x, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].x, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].x, 1.)), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x), texture_parameters[index].flags)\n"
+			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, bias), texture_parameters[index].flags)\n"
+			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, lod), texture_parameters[index].flags)\n"
+			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, dpdx, dpdy), texture_parameters[index].flags)\n"
+			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].scale.x, 1.)), texture_parameters[index].flags)\n"
 
-			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].xy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].xy, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].xy, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].xy, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.)), floatBitsToUint(texture_parameters[index].w))\n"
+			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale), texture_parameters[index].flags)\n"
+			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale, bias), texture_parameters[index].flags)\n"
+			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].scale, lod), texture_parameters[index].flags)\n"
+			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].scale, dpdx, dpdy), texture_parameters[index].flags)\n"
+			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.)), texture_parameters[index].flags)\n"
 
-			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].xy, texture_parameters[index].z), floatBitsToUint(texture_parameters[index].w))\n";
+			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].scale, texture_parameters[index].remap), texture_parameters[index].flags)\n";
 
 			if (props.emulate_shadow_compare)
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) shadowCompareProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.), floatBitsToUint(texture_parameters[index].w) >> 8)\n";
+				"#define TEX2D_SHADOW(index, coord3) shadowCompare(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.), texture_parameters[index].flags >> 8)\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) shadowCompareProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.), texture_parameters[index].flags >> 8)\n";
 			}
 			else
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].xy, 1.))\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].xy, 1., 1.))\n";
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.))\n";
 			}
 
 			OS <<
-			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), floatBitsToUint(texture_parameters[index].w))\n"
-			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), floatBitsToUint(texture_parameters[index].w))\n\n";
+			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), texture_parameters[index].flags)\n"
+			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), texture_parameters[index].flags)\n"
+			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), texture_parameters[index].flags)\n"
+			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), texture_parameters[index].flags)\n"
+			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), texture_parameters[index].flags)\n\n";
 		}
 
 		if (props.require_wpos)
@@ -845,5 +866,19 @@ namespace glsl
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLE2D_DEPTH_RGBA:
 			return "TEX2D_DEPTH_RGBA8($_i, $0.xy)";
 		}
+	}
+
+	static void insert_subheader_block(std::ostream& OS)
+	{
+		// Global types and stuff
+		// Must be compatible with std140 packing rules
+		OS <<
+		"struct sampler_info\n"
+		"{\n"
+		"	vec2 scale;\n"
+		"	uint remap;\n"
+		"	uint flags;\n"
+		"};\n"
+		"\n";
 	}
 }

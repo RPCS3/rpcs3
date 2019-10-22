@@ -26,7 +26,7 @@ namespace std { inline namespace literals { inline namespace chrono_literals {}}
 
 #include "Utilities/types.h"
 #include "Utilities/BEType.h"
-#include "Utilities/Atomic.h"
+#include "util/atomic.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/File.h"
 #include "Utilities/Log.h"

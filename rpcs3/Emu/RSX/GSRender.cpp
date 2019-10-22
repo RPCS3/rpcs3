@@ -6,7 +6,14 @@
 
 GSRender::GSRender()
 {
-	m_frame = Emu.GetCallbacks().get_gs_frame().release();
+	if (auto gs_frame = Emu.GetCallbacks().get_gs_frame())
+	{
+		m_frame = gs_frame.release();
+	}
+	else
+	{
+		m_frame = nullptr;
+	}
 }
 
 GSRender::~GSRender()
@@ -48,7 +55,7 @@ void GSRender::on_exit()
 	rsx::thread::on_exit();
 }
 
-void GSRender::flip(int buffer, bool emu_flip)
+void GSRender::flip(const rsx::display_flip_info_t& info)
 {
 	if (m_frame)
 	{

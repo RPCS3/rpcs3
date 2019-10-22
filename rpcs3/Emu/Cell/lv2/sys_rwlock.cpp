@@ -8,16 +8,14 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 
-
-
 LOG_CHANNEL(sys_rwlock);
 
 template<> DECLARE(ipc_manager<lv2_rwlock, u64>::g_ipc) {};
 
-extern u64 get_system_time();
-
-error_code sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
+error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.warning("sys_rwlock_create(rw_lock_id=*0x%x, attr=*0x%x)", rw_lock_id, attr);
 
 	if (!rw_lock_id || !attr)
@@ -48,8 +46,10 @@ error_code sys_rwlock_create(vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribu
 	return CELL_OK;
 }
 
-error_code sys_rwlock_destroy(u32 rw_lock_id)
+error_code sys_rwlock_destroy(ppu_thread& ppu, u32 rw_lock_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.warning("sys_rwlock_destroy(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::withdraw<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rw) -> CellError
@@ -77,6 +77,8 @@ error_code sys_rwlock_destroy(u32 rw_lock_id)
 
 error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.trace("sys_rwlock_rlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
@@ -136,9 +138,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(rwlock->mutex);
 
@@ -151,8 +151,6 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
@@ -163,8 +161,10 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 	return not_an_error(ppu.gpr[3]);
 }
 
-error_code sys_rwlock_tryrlock(u32 rw_lock_id)
+error_code sys_rwlock_tryrlock(ppu_thread& ppu, u32 rw_lock_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.trace("sys_rwlock_tryrlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::check<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rwlock)
@@ -198,6 +198,8 @@ error_code sys_rwlock_tryrlock(u32 rw_lock_id)
 
 error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.trace("sys_rwlock_runlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [](lv2_rwlock& rwlock)
@@ -248,7 +250,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 			{
 				rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
 
-				rwlock->awake(*cpu);
+				rwlock->awake(cpu);
 			}
 			else
 			{
@@ -264,6 +266,8 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 
 error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.trace("sys_rwlock_wlock(rw_lock_id=0x%x, timeout=0x%llx)", rw_lock_id, timeout);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock) -> s64
@@ -331,9 +335,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
 				std::lock_guard lock(rwlock->mutex);
 
@@ -346,23 +348,24 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				// If the last waiter quit the writer sleep queue, wake blocked readers
 				if (!rwlock->rq.empty() && rwlock->wq.empty() && rwlock->owner < 0)
 				{
-					verify(HERE), rwlock->owner & 1;
-
-					rwlock->owner -= s64{2} * rwlock->rq.size();
-
-					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
+					rwlock->owner.atomic_op([&](s64& owner)
 					{
-						rwlock->awake(*cpu);
+						owner -= -2 * static_cast<s64>(rwlock->rq.size()); // Add readers to value
+						owner &= -2; // Clear wait bit
+					});
+
+					// Protocol doesn't matter here since they are all enqueued anyways
+					while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
+					{
+						rwlock->append(cpu);
 					}
 
-					rwlock->owner &= ~1;
+					lv2_obj::awake_all();
 				}
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
@@ -375,6 +378,8 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.trace("sys_rwlock_trywlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::check<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
@@ -405,6 +410,8 @@ error_code sys_rwlock_trywlock(ppu_thread& ppu, u32 rw_lock_id)
 
 error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 {
+	vm::temporary_unlock(ppu);
+
 	sys_rwlock.trace("sys_rwlock_wunlock(rw_lock_id=0x%x)", rw_lock_id);
 
 	const auto rwlock = idm::get<lv2_obj, lv2_rwlock>(rw_lock_id, [&](lv2_rwlock& rwlock)
@@ -433,18 +440,17 @@ error_code sys_rwlock_wunlock(ppu_thread& ppu, u32 rw_lock_id)
 		{
 			rwlock->owner = cpu->id << 1 | !rwlock->wq.empty() | !rwlock->rq.empty();
 
-			rwlock->awake(*cpu);
+			rwlock->awake(cpu);
 		}
 		else if (auto readers = rwlock->rq.size())
 		{
-			rwlock->owner = (s64{-2} * readers) | 1;
-
-			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_PRIORITY))
+			while (auto cpu = rwlock->schedule<ppu_thread>(rwlock->rq, SYS_SYNC_FIFO))
 			{
-				rwlock->awake(*cpu);
+				rwlock->append(cpu);
 			}
 
-			rwlock->owner &= ~1;
+			rwlock->owner.release(-2 * static_cast<s64>(readers));
+			lv2_obj::awake_all();
 		}
 		else
 		{

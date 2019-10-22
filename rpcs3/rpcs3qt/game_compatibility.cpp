@@ -127,10 +127,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	QNetworkReply* network_reply = m_network_access_manager->get(m_network_request);
 
 	// Show Progress
-	m_progress_dialog = new progress_dialog(tr(".Please wait."), tr("Abort"), 0, 100);
-	m_progress_dialog->setWindowTitle(tr("Downloading Database"));
-	m_progress_dialog->setFixedWidth(QLabel("This is the very length of the progressbar due to hidpi reasons.").sizeHint().width());
-	m_progress_dialog->setValue(0);
+	m_progress_dialog = new progress_dialog(tr("Downloading Database"), tr(".Please wait."), tr("Abort"), 0, 100);
 	m_progress_dialog->show();
 
 	// Animate progress dialog a bit more

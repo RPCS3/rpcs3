@@ -6,7 +6,7 @@
 
 extern logs::channel cellSysutil;
 
-struct browser_t
+struct browser_info
 {
 	vm::ptr<CellWebBrowserSystemCallback> system_cb;
 	vm::ptr<void> userData;
@@ -14,12 +14,14 @@ struct browser_t
 
 s32 cellWebBrowserActivate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserActivate()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfig()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfig()");
+	return CELL_OK;
 }
 
 error_code cellWebBrowserConfig2(vm::cptr<CellWebBrowserConfig2> config, u32 version)
@@ -30,27 +32,32 @@ error_code cellWebBrowserConfig2(vm::cptr<CellWebBrowserConfig2> config, u32 ver
 
 s32 cellWebBrowserConfigGetHeapSize()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigGetHeapSize()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigGetHeapSize2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigGetHeapSize2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetCustomExit()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetCustomExit()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetDisableTabs()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetDisableTabs()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetErrorHook2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetErrorHook2()");
+	return CELL_OK;
 }
 
 error_code cellWebBrowserConfigSetFullScreen2(vm::cptr<CellWebBrowserConfig2> config, u32 full)
@@ -61,12 +68,14 @@ error_code cellWebBrowserConfigSetFullScreen2(vm::cptr<CellWebBrowserConfig2> co
 
 s32 cellWebBrowserConfigSetFullVersion2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetFullVersion2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetFunction()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetFunction()");
+	return CELL_OK;
 }
 
 error_code cellWebBrowserConfigSetFunction2(vm::ptr<CellWebBrowserConfig2> config, u32 funcset)
@@ -77,7 +86,8 @@ error_code cellWebBrowserConfigSetFunction2(vm::ptr<CellWebBrowserConfig2> confi
 
 s32 cellWebBrowserConfigSetHeapSize()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetHeapSize()");
+	return CELL_OK;
 }
 
 error_code cellWebBrowserConfigSetHeapSize2(vm::ptr<CellWebBrowserConfig2> config, u32 size)
@@ -88,7 +98,8 @@ error_code cellWebBrowserConfigSetHeapSize2(vm::ptr<CellWebBrowserConfig2> confi
 
 s32 cellWebBrowserConfigSetMimeSet()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetMimeSet()");
+	return CELL_OK;
 }
 
 error_code cellWebBrowserConfigSetNotifyHook2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<CellWebBrowserNotify> cb, vm::ptr<void> userdata)
@@ -99,12 +110,14 @@ error_code cellWebBrowserConfigSetNotifyHook2(vm::cptr<CellWebBrowserConfig2> co
 
 s32 cellWebBrowserConfigSetRequestHook2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetRequestHook2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigSetStatusHook2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetStatusHook2()");
+	return CELL_OK;
 }
 
 error_code cellWebBrowserConfigSetTabCount2(vm::cptr<CellWebBrowserConfig2> config, u32 tab_count)
@@ -121,7 +134,8 @@ error_code cellWebBrowserConfigSetUnknownMIMETypeHook2(vm::cptr<CellWebBrowserCo
 
 s32 cellWebBrowserConfigSetVersion()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetVersion()");
+	return CELL_OK;
 }
 
 error_code cellWebBrowserConfigSetViewCondition2(vm::ptr<CellWebBrowserConfig2> config, u32 cond)
@@ -132,67 +146,80 @@ error_code cellWebBrowserConfigSetViewCondition2(vm::ptr<CellWebBrowserConfig2> 
 
 s32 cellWebBrowserConfigSetViewRect2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigSetViewRect2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserConfigWithVer()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserConfigWithVer()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserCreate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserCreate()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserCreate2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserCreate2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserCreateRender2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserCreateRender2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserCreateRenderWithRect2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserCreateRenderWithRect2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserCreateWithConfig()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserCreateWithConfig()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserCreateWithConfigFull()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserCreateWithConfigFull()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserCreateWithRect2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserCreateWithRect2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserDeactivate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserDeactivate()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserDestroy()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserDestroy()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserDestroy2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserDestroy2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserEstimate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserEstimate()");
+	return CELL_OK;
 }
 
 error_code cellWebBrowserEstimate2(vm::cptr<CellWebBrowserConfig2> config, vm::ptr<u32> memSize)
@@ -215,7 +242,7 @@ error_code cellWebBrowserInitialize(vm::ptr<CellWebBrowserSystemCallback> system
 {
 	cellSysutil.todo("cellWebBrowserInitialize(system_cb=*0x%x, container=0x%x)", system_cb, container);
 
-	const auto browser = fxm::make_always<browser_t>();
+	const auto browser = g_fxo->get<browser_info>();
 	browser->system_cb = system_cb;
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
@@ -229,27 +256,30 @@ error_code cellWebBrowserInitialize(vm::ptr<CellWebBrowserSystemCallback> system
 
 s32 cellWebBrowserNavigate2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserNavigate2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserSetLocalContentsAdditionalTitleID()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserSetLocalContentsAdditionalTitleID()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserSetSystemCallbackUsrdata()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserSetSystemCallbackUsrdata()");
+	return CELL_OK;
 }
 
 void cellWebBrowserShutdown()
 {
 	cellSysutil.todo("cellWebBrowserShutdown()");
 
+	const auto browser = g_fxo->get<browser_info>();
+
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
-		const auto browser = fxm::get_always<browser_t>();
-
 		browser->system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_SHUTDOWN_FINISHED, browser->userData);
 		return CELL_OK;
 	});
@@ -257,27 +287,32 @@ void cellWebBrowserShutdown()
 
 s32 cellWebBrowserUpdatePointerDisplayPos2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserUpdatePointerDisplayPos2()");
+	return CELL_OK;
 }
 
 s32 cellWebBrowserWakeupWithGameExit()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebBrowserWakeupWithGameExit()");
+	return CELL_OK;
 }
 
 s32 cellWebComponentCreate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebComponentCreate()");
+	return CELL_OK;
 }
 
 s32 cellWebComponentCreateAsync()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebComponentCreateAsync()");
+	return CELL_OK;
 }
 
 s32 cellWebComponentDestroy()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellWebComponentDestroy()");
+	return CELL_OK;
 }
 
 

@@ -1,6 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+
+using CellSysutilUserId = u32;
 
 enum CellSysutilError : u32
 {
@@ -194,7 +196,7 @@ struct CellSysCacheParam
 {
 	char cacheId[CELL_SYSCACHE_ID_SIZE];
 	char getCachePath[CELL_SYSCACHE_PATH_MAX];
-	vm::ptr<void> reserved;
+	vm::bptr<void> reserved;
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&&);

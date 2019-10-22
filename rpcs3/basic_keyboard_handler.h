@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 #include "Emu/Io/KeyboardHandler.h"
@@ -18,6 +18,7 @@ public:
 	bool eventFilter(QObject* obj, QEvent* ev) override;
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
+	s32 getUnmodifiedKey(QKeyEvent* event);
 	void LoadSettings();
 private:
 	QWindow* m_target = nullptr;

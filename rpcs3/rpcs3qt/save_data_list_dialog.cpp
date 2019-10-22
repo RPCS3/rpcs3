@@ -8,13 +8,14 @@
 #include <QMenu>
 #include <QDesktopWidget>
 #include <QApplication>
+#include <QScreen>
 
 constexpr auto qstr = QString::fromStdString;
 
 //Show up the savedata list, either to choose one to save/load or to manage saves.
 //I suggest to use function callbacks to give save data list or get save data entry. (Not implemented or stubbed)
 save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, u32 op, vm::ptr<CellSaveDataListSet> listSet, QWidget* parent)
-	: QDialog(parent), m_save_entries(entries), m_entry(selection_code::new_save), m_entry_label(nullptr)
+	: QDialog(parent), m_save_entries(entries), m_entry(selection_code::new_save), m_entry_label(nullptr), m_sort_column(0), m_sort_ascending(true)
 {
 	if (op >= 8)
 	{
@@ -58,7 +59,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		UpdateSelectionLabel();
 	}
 
-	if (listSet->newData)
+	if (listSet && listSet->newData)
 	{
 		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
 		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]()
@@ -225,7 +226,7 @@ void save_data_list_dialog::UpdateList()
 
 	QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
 
-	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6));
+	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QGuiApplication::primaryScreen()->geometry().height() * 0.6));
 
 	resize(preferredSize.boundedTo(maxSize));
 }

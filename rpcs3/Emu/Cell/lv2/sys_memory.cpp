@@ -44,7 +44,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 	}
 
 	// Get "default" memory container
-	const auto dct = fxm::get<lv2_memory_container>();
+	const auto dct = g_fxo->get<lv2_memory_container>();
 
 	// Try to get "physical memory"
 	if (!dct->take(size))
@@ -52,7 +52,7 @@ error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr)
 		return CELL_ENOMEM;
 	}
 
-	if (const auto area = vm::get(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000)))
+	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000), 0x401))
 	{
 		if (u32 addr = area->alloc(size, align))
 		{
@@ -118,7 +118,7 @@ error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::
 	// Create phantom memory object
 	const auto mem = idm::make_ptr<lv2_memory_alloca>(size, align, flags, ct.ptr);
 
-	if (const auto area = vm::get(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000)))
+	if (const auto area = vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, ::align(size, 0x10000000), 0x401))
 	{
 		if (u32 addr = area->alloc(size, mem->align, &mem->shm))
 		{
@@ -179,7 +179,7 @@ error_code sys_memory_free(u32 addr)
 		}
 
 		// Return "physical memory" to the default container
-		fxm::get<lv2_memory_container>()->used -= shm.second->size();
+		g_fxo->get<lv2_memory_container>()->used -= shm.second->size();
 
 		return CELL_OK;
 	}
@@ -233,6 +233,7 @@ error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr
 		attr->page_size = 4096;
 	}
 
+	attr->pad = 0; // Always write 0
 	return CELL_OK;
 }
 
@@ -243,7 +244,7 @@ error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info)
 	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
 
 	// Get "default" memory container
-	const auto dct = fxm::get<lv2_memory_container>();
+	const auto dct = g_fxo->get<lv2_memory_container>();
 
 	::reader_lock lock(s_memstats_mtx);
 
@@ -273,7 +274,7 @@ error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 		return CELL_ENOMEM;
 	}
 
-	const auto dct = fxm::get<lv2_memory_container>();
+	const auto dct = g_fxo->get<lv2_memory_container>();
 
 	std::lock_guard lock(s_memstats_mtx);
 
@@ -284,9 +285,14 @@ error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size)
 	}
 
 	// Create the memory container
-	*cid = idm::make<lv2_memory_container>(size);
+	if (const u32 id = idm::make<lv2_memory_container>(size))
+	{
+		*cid = id;
+		return CELL_OK;
+	}
 
-	return CELL_OK;
+	dct->used -= size;
+	return CELL_EAGAIN;
 }
 
 error_code sys_memory_container_destroy(u32 cid)
@@ -319,7 +325,7 @@ error_code sys_memory_container_destroy(u32 cid)
 	}
 
 	// Return "physical memory" to the default container
-	fxm::get<lv2_memory_container>()->used -= ct->size;
+	g_fxo->get<lv2_memory_container>()->used -= ct->size;
 
 	return CELL_OK;
 }

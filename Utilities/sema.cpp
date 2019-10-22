@@ -1,5 +1,4 @@
 #include "sema.h"
-#include "sync.h"
 
 void semaphore_base::imp_wait()
 {
@@ -15,14 +14,6 @@ void semaphore_base::imp_wait()
 		}
 	}
 
-#ifdef _WIN32
-	const s32 value = m_value.fetch_sub(1);
-
-	if (value <= 0)
-	{
-		NtWaitForKeyedEvent(nullptr, &m_value, false, nullptr);
-	}
-#else
 	while (true)
 	{
 		// Try hard way
@@ -51,24 +42,19 @@ void semaphore_base::imp_wait()
 		if (value >= 0)
 		{
 			// Signal other waiter to wake up or to restore sign bit
-			futex(&m_value, FUTEX_WAKE_PRIVATE, 1);
+			m_value.notify_one();
 			return;
 		}
 
-		futex(&m_value, FUTEX_WAIT_PRIVATE, value);
+		m_value.wait(value);
 	}
-#endif
 }
 
 void semaphore_base::imp_post(s32 _old)
 {
 	verify("semaphore_base: overflow" HERE), _old < 0;
 
-#ifdef _WIN32
-	NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
-#else
-	futex(&m_value, FUTEX_WAKE_PRIVATE, 1);
-#endif
+	m_value.notify_one();
 }
 
 bool semaphore_base::try_post(s32 _max)

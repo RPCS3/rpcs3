@@ -1,9 +1,11 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/BEType.h"
 
 #include "cellRtc.h"
 #include "sceNp.h"
+
+#include <atomic>
 
 // Constants for TUS functions and structures
 enum
@@ -48,4 +50,11 @@ struct SceNpTusDataStatus
 	be_t<u32> dataSize;
 	u8 pad[4];
 	SceNpTusDataInfo info;
+};
+
+// fxm objects
+
+struct sce_np_tus_manager
+{
+	std::atomic<bool> is_initialized = false;
 };

@@ -1,11 +1,18 @@
+﻿#include <QRegExpValidator>
+#include <QInputDialog>
+#include <QKeyEvent>
+#include <QEvent>
+
 #include "user_manager_dialog.h"
 #include "table_item_delegate.h"
-#include "rpcs3_app.h"
+#include "main_application.h"
 
 #include "Utilities/StrUtil.h"
 
 #include <QRegExpValidator>
 #include <QInputDialog>
+#include <QScreen>
+#include <QKeyEvent>
 
 namespace
 {
@@ -209,7 +216,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 		m_table->horizontalHeader()->height() + m_table->verticalHeader()->length() + m_table->frameWidth() * 2);
 
 	QSize preferred_size = minimumSize().expandedTo(sizeHint() - m_table->sizeHint() + table_size).expandedTo(size());
-	QSize max_size = QSize(preferred_size.width(), static_cast<int>(QApplication::desktop()->screenGeometry().height()*.6));
+	QSize max_size = QSize(preferred_size.width(), static_cast<int>(QGuiApplication::primaryScreen()->size().height() * 0.6));
 
 	resize(preferred_size.boundedTo(max_size));
 }
@@ -361,7 +368,7 @@ void user_manager_dialog::OnUserLogin()
 	const u32 key = GetUserKey();
 	const std::string new_user = m_user_list[key].GetUserId();
 
-	if (!rpcs3_app::InitializeEmulator(new_user, false))
+	if (!main_application::InitializeEmulator(new_user, false))
 	{
 		LOG_FATAL(GENERAL, "Failed to login user! username=%s key=%d", new_user, key);
 		return;

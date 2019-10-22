@@ -132,7 +132,7 @@ namespace gl
 			glBindVertexArray(old_vao);
 		}
 
-		virtual void run(u16 w, u16 h, GLuint target_texture, bool depth_target, bool use_blending = false)
+		virtual void run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false)
 		{
 			if (!compiled)
 			{
@@ -198,7 +198,7 @@ namespace gl
 				}
 
 				// Set initial state
-				glViewport(0, 0, w, h);
+				glViewport(region.x1, region.y1, region.width(), region.height());
 				glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 				glDepthMask(depth_target ? GL_TRUE : GL_FALSE);
 
@@ -311,7 +311,7 @@ namespace gl
 			saved_sampler_state saved(31, m_sampler);
 			glBindTexture(GL_TEXTURE_2D, source->id());
 
-			overlay_pass::run(dst_area.x2, dst_area.y2, target->id(), true);
+			overlay_pass::run(dst_area, target->id(), true);
 		}
 	};
 
@@ -341,12 +341,12 @@ namespace gl
 				"}\n";
 		}
 
-		void run(u16 w, u16 h, GLuint target, GLuint source)
+		void run(const areau& viewport, GLuint target, GLuint source)
 		{
 			saved_sampler_state saved(31, m_sampler);
 			glBindTexture(GL_TEXTURE_2D, source);
 
-			overlay_pass::run(w, h, target, false);
+			overlay_pass::run(viewport, target, false);
 		}
 	};
 
@@ -480,7 +480,7 @@ namespace gl
 		gl::texture_view* load_simple_image(rsx::overlays::image_info* desc, bool temp_resource, u32 owner_uid)
 		{
 			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, GL_RGBA8);
-			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8);
+			tex->copy_from(desc->data, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 			GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
 			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -551,7 +551,7 @@ namespace gl
 
 			//Create font file
 			auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, (int)font->width, (int)font->height, 1, 1, GL_R8);
-			tex->copy_from(font->glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte);
+			tex->copy_from(font->glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
 
 			GLenum remap[] = { GL_RED, GL_RED, GL_RED, GL_RED };
 			auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -608,9 +608,9 @@ namespace gl
 			}
 		}
 
-		void run(u16 w, u16 h, GLuint target, rsx::overlays::overlay& ui)
+		void run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
 		{
-			program_handle.uniforms["viewport"] = color2f(f32(w), f32(h));
+			program_handle.uniforms["viewport"] = color2f((f32)viewport.width(), (f32)viewport.height());
 			program_handle.uniforms["ui_scale"] = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
 			program_handle.uniforms["time"] = (f32)(get_system_time() / 1000) * 0.005f;
 
@@ -658,7 +658,7 @@ namespace gl
 				program_handle.uniforms["blur_strength"] = (s32)cmd.config.blur_strength;
 				program_handle.uniforms["clip_region"] = (s32)cmd.config.clip_region;
 				program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
-				overlay_pass::run(w, h, target, false, true);
+				overlay_pass::run(viewport, target, false, true);
 			}
 
 			ui.update();
@@ -672,17 +672,13 @@ namespace gl
 			vs_src =
 				"#version 420\n\n"
 				"layout(location=0) out vec2 tc0;\n"
-				"uniform float x_scale;\n"
-				"uniform float y_scale;\n"
-				"uniform float x_offset;\n"
-				"uniform float y_offset;\n"
 				"\n"
 				"void main()\n"
 				"{\n"
 				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
 				"	vec2 coords[] = {vec2(0., 1.), vec2(1., 1.), vec2(0., 0.), vec2(1., 0.)};\n"
 				"	tc0 = coords[gl_VertexID % 4];\n"
-				"	vec2 pos = positions[gl_VertexID % 4] * vec2(x_scale, y_scale) + (2. * vec2(x_offset, y_offset));\n"
+				"	vec2 pos = positions[gl_VertexID % 4];\n"
 				"	gl_Position = vec4(pos, 0., 1.);\n"
 				"}\n";
 
@@ -708,23 +704,14 @@ namespace gl
 			input_filter = GL_LINEAR;
 		}
 
-		void run(u16 w, u16 h, GLuint source, const areai& region, f32 gamma, bool limited_rgb)
+		void run(const areau& viewport, GLuint source, f32 gamma, bool limited_rgb)
 		{
-			const f32 x_scale = (f32)(region.x2 - region.x1) / w;
-			const f32 y_scale = (f32)(region.y2 - region.y1) / h;
-			const f32 x_offset = (f32)(region.x1) / w;
-			const f32 y_offset = (f32)(region.y1) / h;
-
-			program_handle.uniforms["x_scale"] = x_scale;
-			program_handle.uniforms["y_scale"] = y_scale;
-			program_handle.uniforms["x_offset"] = x_offset;
-			program_handle.uniforms["y_offset"] = y_offset;
 			program_handle.uniforms["gamma"] = gamma;
 			program_handle.uniforms["limit_range"] = (int)limited_rgb;
 
 			saved_sampler_state saved(31, m_sampler);
 			glBindTexture(GL_TEXTURE_2D, source);
-			overlay_pass::run(w, h, GL_NONE, false, false);
+			overlay_pass::run(viewport, GL_NONE, false, false);
 		}
 	};
 }

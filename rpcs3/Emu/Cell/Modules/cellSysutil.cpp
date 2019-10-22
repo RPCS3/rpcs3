@@ -45,14 +45,15 @@ struct sysutil_cb_manager
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	const auto cbm = g_fxo->get<sysutil_cb_manager>();
 
 	cbm->registered.push(std::move(cb));
 }
 
 extern void sysutil_send_system_cmd(u64 status, u64 param)
 {
-	if (const auto cbm = fxm::get<sysutil_cb_manager>())
+	// May be nullptr if emulation is stopped
+	if (const auto cbm = g_fxo->get<sysutil_cb_manager>())
 	{
 		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
@@ -68,6 +69,12 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 		}
 	}
 }
+
+struct syscache
+{
+	atomic_t<u32> state = 0;
+	std::string cache_path;
+};
 
 template <>
 void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
@@ -192,7 +199,7 @@ s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE:
-		*value = 0;
+		*value = g_cfg.sys.keyboard_type;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD:
@@ -251,7 +258,7 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	const auto cbm = g_fxo->get<sysutil_cb_manager>();
 
 	for (auto&& func : cbm->registered.pop_all())
 	{
@@ -279,7 +286,7 @@ s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm:
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	const auto cbm = g_fxo->get<sysutil_cb_manager>();
 
 	cbm->callbacks[slot].store({func, userdata});
 
@@ -295,7 +302,7 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	const auto cbm = g_fxo->get<sysutil_cb_manager>();
 
 	cbm->callbacks[slot].store({});
 
@@ -306,27 +313,20 @@ s32 cellSysCacheClear()
 {
 	cellSysutil.warning("cellSysCacheClear()");
 
-	// Get the param as a shared ptr, then decipher the cacheid from it
-	// (Instead of assuming naively that the param is passed as argument)
-	std::shared_ptr<CellSysCacheParam> param = fxm::get<CellSysCacheParam>();
+	const auto cache = g_fxo->get<syscache>();
 
-	// Unit test for param ptr, since it may be null at the time of get()
-	if (!param)
+	if (!cache->state)
 	{
 		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
 	}
 
-	const std::string& cache_id = param->cacheId;
+	std::string local_dir = vfs::get(cache->cache_path);
 
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
-	const std::string& dir_path = vfs::get(cache_path);
-
-	if (!fs::exists(dir_path) || !fs::is_dir(dir_path))
+	if (!fs::remove_all(local_dir, false))
 	{
+		cellSysutil.error("cellSysCacheClear(): failed to clear directory '%s' (%s)", cache->cache_path, fs::g_tls_error);
 		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
 	}
-
-	fs::remove_all(dir_path, false);
 
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
@@ -335,22 +335,24 @@ s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
 	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
 
+	const auto cache = g_fxo->get<syscache>();
+
 	if (!param || !memchr(param->cacheId, '\0', CELL_SYSCACHE_ID_SIZE))
 	{
 		return CELL_SYSCACHE_ERROR_PARAM;
 	}
 
-	const std::string& cache_id = param->cacheId;
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id;
+	std::string cache_id = param->cacheId;
+	std::string cache_path = "/dev_hdd1/cache/" + cache_id;
 	strcpy_trunc(param->getCachePath, cache_path);
 
-	// TODO: implement (what?)
-	fxm::make_always<CellSysCacheParam>(*param);
 	if (!fs::create_dir(vfs::get(cache_path)) && !cache_id.empty())
 	{
 		return CELL_SYSCACHE_RET_OK_RELAYED;
 	}
 
+	cache->cache_path = std::move(cache_path);
+	cache->state = 1;
 	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
 
@@ -429,72 +431,86 @@ s32 cellSysutilSetBgmPlaybackExtraParam()
 
 s32 cellSysutilRegisterCallbackDispatcher()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilRegisterCallbackDispatcher()");
+	return CELL_OK;
 }
 
 s32 cellSysutilUnregisterCallbackDispatcher()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilUnregisterCallbackDispatcher()");
+	return CELL_OK;
 }
 
 s32 cellSysutilPacketRead()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilPacketRead()");
+	return CELL_OK;
 }
 
 s32 cellSysutilPacketWrite()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilPacketWrite()");
+	return CELL_OK;
 }
 
 s32 cellSysutilPacketBegin()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilPacketBegin()");
+	return CELL_OK;
 }
 
 s32 cellSysutilPacketEnd()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilPacketEnd()");
+	return CELL_OK;
 }
 
 s32 cellSysutilGameDataAssignVmc()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGameDataAssignVmc()");
+	return CELL_OK;
 }
 
 s32 cellSysutilGameDataExit()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGameDataExit()");
+	return CELL_OK;
 }
 
 s32 cellSysutilGameExit_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGameExit_I()");
+	return CELL_OK;
 }
 
 s32 cellSysutilGamePowerOff_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGamePowerOff_I()");
+	return CELL_OK;
 }
 
 s32 cellSysutilGameReboot_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGameReboot_I()");
+	return CELL_OK;
 }
 
 s32 cellSysutilSharedMemoryAlloc()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilSharedMemoryAlloc()");
+	return CELL_OK;
 }
 
 s32 cellSysutilSharedMemoryFree()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilSharedMemoryFree()");
+	return CELL_OK;
 }
 
 s32 cellSysutilNotification()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilNotification()");
+	return CELL_OK;
 }
 
 s32 _ZN4cxml7Element11AppendChildERS0_()

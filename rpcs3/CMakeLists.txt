@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8.2)
+﻿cmake_minimum_required(VERSION 3.8.2)
 
 include(cotire)
 
@@ -35,7 +35,24 @@ include(${CMAKE_SOURCE_DIR}/3rdparty/qt5.cmake)
 add_subdirectory(Emu)
 add_subdirectory(rpcs3qt)
 
-file(GLOB RPCS3_SRC "*.cpp")
+set(RPCS3_SRC
+	basic_keyboard_handler.cpp
+	basic_mouse_handler.cpp
+	display_sleep_control.cpp
+	ds3_pad_handler.cpp
+	ds4_pad_handler.cpp
+	evdev_joystick_handler.cpp
+	headless_application.cpp
+	keyboard_pad_handler.cpp
+	main.cpp
+	main_application.cpp
+	mm_joystick_handler.cpp
+	pad_thread.cpp
+	rpcs3_version.cpp
+	stb_image.cpp
+	stdafx.cpp
+	xinput_pad_handler.cpp
+)
 
 if(WIN32)
 	add_executable(rpcs3 WIN32 ${RPCS3_SRC})

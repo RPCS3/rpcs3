@@ -1,11 +1,33 @@
 ﻿#pragma once
 
-#include "types.h"
+#include "Utilities/types.h"
 #include <functional>
 
 #ifdef _MSC_VER
 #include <atomic>
 #endif
+
+// Wait timeout extension (in nanoseconds)
+enum class atomic_wait_timeout : u64
+{
+	inf = 0xffff'ffff'ffff'ffff,
+};
+
+// Helper for waitable atomics (as in C++20 std::atomic)
+struct atomic_storage_futex
+{
+private:
+	template <typename T>
+	friend class atomic_t;
+
+	static void wait(const void* data, std::size_t size, u64 old_value, u64 timeout, u64 mask);
+	static void notify_one(const void* data);
+	static void notify_all(const void* data);
+
+public:
+	static void set_wait_callback(bool(*)(const void* data));
+	static void raw_notify(const void* data);
+};
 
 // Helper class, provides access to compiler-specific atomic intrinsics
 template <typename T, std::size_t Size = sizeof(T)>
@@ -708,7 +730,7 @@ public:
 
 	// Atomic operation; returns old value, or pair of old value and return value (cancel op if evaluates to false)
 	template <typename F, typename RT = std::invoke_result_t<F, T&>>
-	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op(F&& func)
+	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op(F func)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
@@ -718,7 +740,7 @@ public:
 
 			if constexpr (std::is_void_v<RT>)
 			{
-				std::invoke(std::forward<F>(func), _new);
+				std::invoke(func, _new);
 
 				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
@@ -727,38 +749,7 @@ public:
 			}
 			else
 			{
-				RT ret = std::invoke(std::forward<F>(func), _new);
-
-				if (LIKELY(!ret || atomic_storage<type>::compare_exchange(m_data, old, _new)))
-				{
-					return {old, std::move(ret)};
-				}
-			}
-		}
-	}
-
-	// fetch_op overload with function (invokable) provided as a template parameter
-	template <auto F, typename RT = std::invoke_result_t<decltype(F), T&>>
-	std::conditional_t<std::is_void_v<RT>, type, std::pair<type, RT>> fetch_op()
-	{
-		type _new, old = atomic_storage<type>::load(m_data);
-
-		while (true)
-		{
-			_new = old;
-
-			if constexpr (std::is_void_v<RT>)
-			{
-				std::invoke(F, _new);
-
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
-				{
-					return old;
-				}
-			}
-			else
-			{
-				RT ret = std::invoke(F, _new);
+				RT ret = std::invoke(func, _new);
 
 				if (LIKELY(!ret || atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
@@ -770,7 +761,7 @@ public:
 
 	// Atomic operation; returns function result value, function is the lambda
 	template <typename F, typename RT = std::invoke_result_t<F, T&>>
-	RT atomic_op(F&& func)
+	RT atomic_op(F func)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
@@ -780,7 +771,7 @@ public:
 
 			if constexpr (std::is_void_v<RT>)
 			{
-				std::invoke(std::forward<F>(func), _new);
+				std::invoke(func, _new);
 
 				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
@@ -789,38 +780,7 @@ public:
 			}
 			else
 			{
-				RT result = std::invoke(std::forward<F>(func), _new);
-
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
-				{
-					return result;
-				}
-			}
-		}
-	}
-
-	// atomic_op overload with function (invokable) provided as a template parameter
-	template <auto F, typename RT = std::invoke_result_t<decltype(F), T&>>
-	RT atomic_op()
-	{
-		type _new, old = atomic_storage<type>::load(m_data);
-
-		while (true)
-		{
-			_new = old;
-
-			if constexpr (std::is_void_v<RT>)
-			{
-				std::invoke(F, _new);
-
-				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
-				{
-					return;
-				}
-			}
-			else
-			{
-				RT result = std::invoke(F, _new);
+				RT result = std::invoke(func, _new);
 
 				if (LIKELY(atomic_storage<type>::compare_exchange(m_data, old, _new)))
 				{
@@ -1172,5 +1132,21 @@ public:
 	bool btr(uint bit)
 	{
 		return atomic_storage<type>::btr(m_data, bit);
+	}
+
+	template <u64 Mask = 0xffff'ffff'ffff'ffff>
+	void wait(type old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const noexcept
+	{
+		atomic_storage_futex::wait(&m_data, sizeof(T), std::bit_cast<get_uint_t<sizeof(T)>>(old_value), static_cast<u64>(timeout), Mask);
+	}
+
+	void notify_one() noexcept
+	{
+		atomic_storage_futex::notify_one(&m_data);
+	}
+
+	void notify_all() noexcept
+	{
+		atomic_storage_futex::notify_all(&m_data);
 	}
 };

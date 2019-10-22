@@ -38,6 +38,9 @@
 #include <sys/resource.h>
 #include <time.h>
 #endif
+#ifdef __linux__
+#include <sys/timerfd.h>
+#endif
 
 #include "sync.h"
 #include "Log.h"
@@ -1273,7 +1276,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		return true;
 	}
 
-	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | (is_writing ? vm::page_writable : vm::page_readable)))
+	if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), is_writing ? vm::page_writable : vm::page_readable))
 	{
 		if (cpu && cpu->test_stopped())
 		{
@@ -1287,7 +1290,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	{
 		u32 pf_port_id = 0;
 
-		if (auto pf_entries = fxm::get<page_fault_notification_entries>())
+		if (auto pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
 		{
 			if (auto mem = vm::get(vm::any, addr))
 			{
@@ -1328,12 +1331,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			u64 data3;
 			{
 				vm::reader_lock rlock;
-				if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | (is_writing ? vm::page_writable : vm::page_readable)))
+				if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), is_writing ? vm::page_writable : vm::page_readable))
 				{
 					// Memory was allocated inbetween, retry
 					return true;
 				}
-				else if (vm::check_addr(addr, std::max<std::size_t>(1, d_size), vm::page_allocated | vm::page_readable))
+				else if (vm::check_addr(addr, std::max<std::size_t>(1, d_size)))
 				{
 					data3 = SYS_MEMORY_PAGE_FAULT_CAUSE_READ_ONLY; // TODO
 				}
@@ -1346,7 +1349,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
 			// know that this thread is page faulted and where.
 
-			auto pf_events = fxm::get_always<page_fault_event_entries>();
+			auto pf_events = g_fxo->get<page_fault_event_entries>();
 			{
 				std::lock_guard pf_lock(pf_events->pf_mutex);
 				pf_events->events.emplace(static_cast<u32>(data2), addr);
@@ -1420,7 +1423,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			if (cpu->check_state())
 			{
 				// Hack: allocate memory in case the emulator is stopping
-				auto area = vm::get(vm::any, addr & -0x10000, 0x10000);
+				auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
 
 				if (area->flags & 0x100)
 				{
@@ -1468,68 +1471,12 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	return true;
 }
 
-#ifdef __linux__
-extern "C" struct dwarf_eh_bases
-{
-	void* tbase;
-	void* dbase;
-	void* func;
-};
-
-extern "C" struct fde* _Unwind_Find_FDE(void* pc, struct dwarf_eh_bases* bases);
-#endif
-
-// Detect leaf function
-static bool is_leaf_function(u64 rip)
-{
-#ifdef _WIN32
-	DWORD64 base = 0;
-	if (const auto rtf = RtlLookupFunctionEntry(rip, &base, nullptr))
-	{
-		// Access UNWIND_INFO structure
-		const auto uw = (u8*)(base + rtf->UnwindData);
-
-		// Leaf function has zero epilog size and no unwind codes
-		return uw[0] == 1 && uw[1] == 0 && uw[2] == 0 && uw[3] == 0;
-	}
-
-	// No unwind info implies leaf function
-	return true;
-#elif __linux__
-	struct dwarf_eh_bases bases;
-
-	if (struct fde* f = _Unwind_Find_FDE(reinterpret_cast<void*>(rip), &bases))
-	{
-		const auto words = (const u32*)f;
-
-		if (words[0] < 0x14)
-		{
-			return true;
-		}
-
-		if (words[0] == 0x14 && !words[3] && !words[4])
-		{
-			return true;
-		}
-
-		// TODO
-		return false;
-	}
-
-	// No unwind info implies leaf function
-	return true;
-#else
-	// Unsupported
-	return false;
-#endif
-}
-
 #ifdef _WIN32
 
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 {
 	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
-	const u64 exec64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr;
+	const u64 exec64 = (pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr) / 2;
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
@@ -1664,7 +1611,7 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 #endif
 
 	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
-	const u64 exec64 = (u64)info->si_addr - (u64)vm::g_exec_addr;
+	const u64 exec64 = ((u64)info->si_addr - (u64)vm::g_exec_addr) / 2;
 	const auto cause = is_writing ? "writing" : "reading";
 
 	if (addr64 < 0x100000000ull)
@@ -1706,9 +1653,6 @@ const bool s_exception_handler_set = []() -> bool
 
 #endif
 
-// TODO
-atomic_t<u32> g_thread_count(0);
-
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
@@ -1723,17 +1667,18 @@ void thread_base::start(native_entry entry)
 #endif
 }
 
-void thread_base::initialize()
+void thread_base::initialize(bool(*wait_cb)(const void*))
 {
 	// Initialize TLS variable
 	thread_ctrl::g_tls_this_thread = this;
+
+	// Initialize atomic wait callback
+	atomic_storage_futex::set_wait_callback(wait_cb);
 
 	g_tls_log_prefix = []
 	{
 		return thread_ctrl::g_tls_this_thread->m_name.get();
 	};
-
-	++g_thread_count;
 
 #ifdef _MSC_VER
 	struct THREADNAME_INFO
@@ -1772,12 +1717,35 @@ void thread_base::initialize()
 #elif !defined(_WIN32)
 	pthread_setname_np(pthread_self(), m_name.get().substr(0, 15).c_str());
 #endif
+
+#ifdef __linux__
+	m_timer = timerfd_create(CLOCK_MONOTONIC, 0);
+	if (m_timer == -1)
+	{
+		LOG_ERROR(GENERAL, "Linux timer allocation failed, use wait_unlock() only");
+	}
+#endif
+}
+
+void thread_base::notify_abort() noexcept
+{
+	// For now
+	notify();
+
+	atomic_storage_futex::raw_notify(+m_state_notifier);
 }
 
 bool thread_base::finalize(int) noexcept
 {
 	// Report pending errors
 	error_code::error_report(0, 0, 0, 0);
+
+#ifdef __linux__
+	if (m_timer != -1)
+	{
+		close(m_timer);
+	}
+#endif
 
 #ifdef _WIN32
 	ULONG64 cycles{};
@@ -1811,8 +1779,7 @@ bool thread_base::finalize(int) noexcept
 	const bool result = m_state.exchange(thread_state::finished) == thread_state::detached;
 
 	// Signal waiting threads
-	m_mutex.lock_unlock();
-	m_jcv.notify_all();
+	m_state.notify_all();
 	return result;
 }
 
@@ -1820,14 +1787,32 @@ void thread_base::finalize() noexcept
 {
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = nullptr;
-	--g_thread_count;
 }
 
-bool thread_ctrl::_wait_for(u64 usec)
+void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
 
-	do
+#ifdef __linux__
+	if (!alert && _this->m_timer != -1 && usec > 0 && usec <= 1000)
+	{
+		struct itimerspec timeout;
+		u64 missed;
+		u64 nsec = usec * 1000ull;
+
+		timeout.it_value.tv_nsec = (nsec % 1000000000ull);
+		timeout.it_value.tv_sec = nsec / 1000000000ull;
+		timeout.it_interval.tv_sec = 0;
+		timeout.it_interval.tv_nsec = 0;
+		timerfd_settime(_this->m_timer, 0, &timeout, NULL);
+		read(_this->m_timer, &missed, sizeof(missed));
+		return;
+	}
+#endif
+
+	std::unique_lock lock(_this->m_mutex, std::defer_lock);
+
+	while (true)
 	{
 		// Mutex is unlocked at the start and after the waiting
 		if (u32 sig = _this->m_signal.load())
@@ -1835,17 +1820,20 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				return true;
+				return;
 			}
 		}
 
 		if (usec == 0)
 		{
 			// No timeout: return immediately
-			return false;
+			return;
 		}
 
-		_this->m_mutex.lock();
+		if (!lock)
+		{
+			lock.lock();
+		}
 
 		// Double-check the value
 		if (u32 sig = _this->m_signal.load())
@@ -1853,15 +1841,17 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				_this->m_mutex.unlock();
-				return true;
+				return;
 			}
 		}
-	}
-	while (_this->m_cond.wait_unlock(std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0), _this->m_mutex));
 
-	// Timeout
-	return false;
+		_this->m_cond.wait_unlock(usec, lock);
+
+		if (usec < cond_variable::max_timeout)
+		{
+			usec = 0;
+		}
+	}
 }
 
 thread_base::thread_base(std::string_view name)
@@ -1883,16 +1873,10 @@ thread_base::~thread_base()
 
 void thread_base::join() const
 {
-	if (m_state == thread_state::finished)
+	for (auto state = m_state.load(); state != thread_state::finished;)
 	{
-		return;
-	}
-
-	std::unique_lock lock(m_mutex);
-
-	while (m_state != thread_state::finished)
-	{
-		m_jcv.wait(lock);
+		m_state.wait(state);
+		state = m_state;
 	}
 }
 
@@ -2002,13 +1986,13 @@ void thread_ctrl::detect_cpu_layout()
 	}
 }
 
-u16 thread_ctrl::get_affinity_mask(thread_class group)
+u64 thread_ctrl::get_affinity_mask(thread_class group)
 {
 	detect_cpu_layout();
 
 	if (const auto thread_count = std::thread::hardware_concurrency())
 	{
-		const u16 all_cores_mask = thread_count < 16 ? (u16)(~(UINT16_MAX << thread_count)): UINT16_MAX;
+		const u64 all_cores_mask = thread_count < 64 ? UINT64_MAX >> (64 - thread_count): UINT64_MAX;
 
 		switch (g_native_core_layout)
 		{
@@ -2019,20 +2003,100 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 		case native_core_arrangement::amd_ccx:
 		{
-			u16 spu_mask, ppu_mask, rsx_mask;
-			if (thread_count >= 16)
+			u64 spu_mask, ppu_mask, rsx_mask;
+			const auto system_id = utils::get_system_info();
+			if (thread_count >= 32)
 			{
-				// Threadripper, R7
-				// Assign threads 8-16
-				// It appears some windows code is bound to lower core addresses, binding 8-16 is alot faster than 0-7
-				ppu_mask = spu_mask = 0b1111111100000000;
-				rsx_mask = all_cores_mask;
+				if (system_id.find("3950X") != std::string::npos)
+				{
+					// zen2
+					// Ryzen 9 3950X
+					// Assign threads 9-32
+					ppu_mask = 0b11111111000000000000000000000000;
+					spu_mask = 0b00000000111111110000000000000000;
+					rsx_mask = 0b00000000000000001111111100000000;
+				}
+				else if (system_id.find("2970WX") != std::string::npos)
+				{
+					// zen+
+					// Threadripper 2970WX
+					// Assign threads 9-24
+					ppu_mask = 0b000000111111000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b111111000000000000000000;
+				}
+				else
+				{
+					// zen(+)
+					// Threadripper 1950X/2950X/2990WX
+					// Assign threads 17-32
+					ppu_mask = 0b00000000111111110000000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b11111111000000000000000000000000;
+				}
+
+			}
+			else if (thread_count == 24)
+			{
+				if (system_id.find("3900X") != std::string::npos)
+				{
+					// zen2
+					// Ryzen 9 3900X
+					// Assign threads 7-22
+					ppu_mask = 0b111111000000000000000000;
+					spu_mask = 0b000000111111000000000000;
+					rsx_mask = 0b000000000000111111000000;
+				}
+				else
+				{
+					// zen(+)
+					// Threadripper 1920X/2920X
+					// Assign threads 13-24
+					ppu_mask = 0b000000111111000000000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b111111000000000000000000;
+				}
+			}
+			else if (thread_count == 16)
+			{
+				if (system_id.find("3700X") != std::string::npos || system_id.find("3800X") != std::string::npos)
+				{
+					// Ryzen 7 3700/3800 (x)
+					// Assign threads 1-16
+					ppu_mask = 0b0000000011110000;
+					spu_mask = 0b1111111100000000;
+					rsx_mask = 0b0000000000001111;
+				}
+				else
+				{
+					// zen(+)
+					// Ryzen 7, Threadripper
+					// Assign threads 3-16
+					ppu_mask = 0b1111111100000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b0000000000111100;
+				}
 			}
 			else if (thread_count == 12)
 			{
-				// 1600/2600 (x)
-				ppu_mask = spu_mask = 0b111111000000;
-				rsx_mask = all_cores_mask;
+				if (system_id.find("3600") != std::string::npos)
+				{
+					// zen2
+					// R5 3600 (x)
+					// Assign threads 1-12
+					ppu_mask = 0b000000111000;
+					spu_mask = 0b111111000000;
+					rsx_mask = 0b000000000111;
+				}
+				else
+				{
+					// zen(+)
+					// R5 1600/2600 (x)
+					// Assign threads 3-12
+					ppu_mask = 0b111111000000;
+					spu_mask = ppu_mask;
+					rsx_mask = 0b000000111100;
+				}
 			}
 			else
 			{
@@ -2077,7 +2141,7 @@ u16 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 	}
 
-	return UINT16_MAX;
+	return UINT64_MAX;
 }
 
 void thread_ctrl::set_native_priority(int priority)
@@ -2113,24 +2177,32 @@ void thread_ctrl::set_native_priority(int priority)
 #endif
 }
 
-void thread_ctrl::set_thread_affinity_mask(u16 mask)
+void thread_ctrl::set_thread_affinity_mask(u64 mask)
 {
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
-	SetThreadAffinityMask(_this_thread, (DWORD_PTR)mask);
+	SetThreadAffinityMask(_this_thread, mask);
 #elif __APPLE__
-	thread_affinity_policy_data_t policy = { static_cast<integer_t>(mask) };
+	// Supports only one core
+	thread_affinity_policy_data_t policy = { static_cast<integer_t>(utils::cnttz64(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
 #elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
 
-	for (u32 core = 0; core < 16u; ++core)
+	for (u32 core = 0; core < 64u; ++core)
 	{
-		if ((u32)mask & (1u << core))
+		const u64 shifted = mask >> core;
+
+		if (shifted & 1)
 		{
 			CPU_SET(core, &cs);
+		}
+
+		if (shifted <= 1)
+		{
+			break;
 		}
 	}
 

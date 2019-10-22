@@ -1,7 +1,6 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_rsx.h"
 
-#include <atomic>
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/GSRender.h"
@@ -13,6 +12,28 @@
 LOG_CHANNEL(sys_rsx);
 
 extern u64 get_timebased_time();
+
+static shared_mutex s_rsxmem_mtx;
+
+// Unknown error code returned by sys_rsx_context_attribute
+enum sys_rsx_error : s32
+{
+	SYS_RSX_CONTEXT_ATTRIBUTE_ERROR = -17
+};
+
+template<>
+void fmt_class_string<sys_rsx_error>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(SYS_RSX_CONTEXT_ATTRIBUTE_ERROR);
+		}
+
+		return unknown;
+	});
+}
 
 u64 rsxTimeStamp()
 {
@@ -37,7 +58,7 @@ error_code sys_rsx_device_close()
  * lv2 SysCall 668 (0x29C): sys_rsx_memory_allocate
  * @param mem_handle (OUT): Context / ID, which is used by sys_rsx_memory_free to free allocated memory.
  * @param mem_addr (OUT): Returns the local memory base address, usually 0xC0000000.
- * @param size (IN): Local memory size. E.g. 0x0F900000 (249 MB).
+ * @param size (IN): Local memory size. E.g. 0x0F900000 (249 MB). (changes with sdk version)
  * @param flags (IN): E.g. Immediate value passed in cellGcmSys is 8.
  * @param a5 (IN): E.g. Immediate value passed in cellGcmSys is 0x00300000 (3 MB?).
  * @param a6 (IN): E.g. Immediate value passed in cellGcmSys is 16.
@@ -47,10 +68,15 @@ error_code sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_add
 {
 	sys_rsx.warning("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
-	*mem_handle = 0x5a5a5a5b;
-	*mem_addr = vm::falloc(rsx::constants::local_mem_base, size, vm::video);
+	if (u32 addr = vm::falloc(rsx::constants::local_mem_base, size, vm::video))
+	{
+		g_fxo->get<lv2_rsx_config>()->memory_size = size;
+		*mem_addr = addr;
+		*mem_handle = 0x5a5a5a5b;
+		return CELL_OK;
+	}
 
-	return CELL_OK;
+	return CELL_ENOMEM;
 }
 
 /*
@@ -59,7 +85,22 @@ error_code sys_rsx_memory_allocate(vm::ptr<u32> mem_handle, vm::ptr<u64> mem_add
  */
 error_code sys_rsx_memory_free(u32 mem_handle)
 {
-	sys_rsx.todo("sys_rsx_memory_free(mem_handle=0x%x)", mem_handle);
+	sys_rsx.warning("sys_rsx_memory_free(mem_handle=0x%x)", mem_handle);
+
+	if (!vm::check_addr(rsx::constants::local_mem_base))
+	{
+		return CELL_ENOMEM;
+	}
+
+	if (g_fxo->get<lv2_rsx_config>()->context_base)
+	{
+		fmt::throw_exception("Attempting to dealloc rsx memory when the context is still being used" HERE);
+	}
+
+	if (!vm::dealloc(rsx::constants::local_mem_base))
+	{
+		return CELL_ENOMEM;
+	}
 
 	return CELL_OK;
 }
@@ -78,31 +119,52 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	sys_rsx.warning("sys_rsx_context_allocate(context_id=*0x%x, lpar_dma_control=*0x%x, lpar_driver_info=*0x%x, lpar_reports=*0x%x, mem_ctx=0x%llx, system_mode=0x%llx)",
 		context_id, lpar_dma_control, lpar_driver_info, lpar_reports, mem_ctx, system_mode);
 
-	auto m_sysrsx = fxm::get<SysRsxConfig>();
-
-	if (!m_sysrsx) // TODO: check if called twice
+	if (!vm::check_addr(rsx::constants::local_mem_base))
+	{
 		return CELL_EINVAL;
+	}
 
-	*context_id = 0x55555555;
+	auto rsx_cfg = g_fxo->get<lv2_rsx_config>();
 
-	*lpar_dma_control = m_sysrsx->rsx_context_addr + 0x100000;
-	*lpar_driver_info = m_sysrsx->rsx_context_addr + 0x200000;
-	*lpar_reports = m_sysrsx->rsx_context_addr + 0x300000;
+	std::lock_guard lock(s_rsxmem_mtx);
+
+	if (rsx_cfg->context_base)
+	{
+		// We currently do not support multiple contexts
+		fmt::throw_exception("sys_rsx_context_allocate was called twice" HERE);
+	}
+
+	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
+	const u32 context_base = area ? area->alloc(0x300000) : 0; 
+
+	if (!context_base)
+	{
+		return CELL_ENOMEM;
+	}
+
+	*lpar_dma_control = context_base;
+	*lpar_driver_info = context_base + 0x100000;
+	*lpar_reports = context_base + 0x200000;
 
 	auto &reports = vm::_ref<RsxReports>(*lpar_reports);
 	std::memset(&reports, 0, sizeof(RsxReports));
 
 	for (int i = 0; i < 64; ++i)
-		reports.notify[i].timestamp = (u64)-1;
+		reports.notify[i].timestamp = -1;
 
-	for (int i = 0; i < 256; ++i) {
+	for (int i = 0; i < 256; ++i)
+	{
 		reports.semaphore[i].val = 0x1337C0D3;
 		reports.semaphore[i].pad = 0x1337BABE;
-		reports.semaphore[i].timestamp = (u64)-1; // technically different but should be fine
+		reports.semaphore[i].timestamp = -1; // technically different but should be fine
 	}
 
 	for (int i = 0; i < 2048; ++i)
-		reports.report[i].timestamp = (u64)-1;
+	{
+		reports.report[i].val = 0;
+		reports.report[i].timestamp = -1;
+		reports.report[i].pad = -1;
+	}
 
 	auto &driverInfo = vm::_ref<RsxDriverInfo>(*lpar_driver_info);
 
@@ -110,7 +172,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 
 	driverInfo.version_driver = 0x211;
 	driverInfo.version_gpu = 0x5c;
-	driverInfo.memory_size = 0xFE00000;
+	driverInfo.memory_size = rsx_cfg->memory_size;
 	driverInfo.nvcore_frequency = 500000000; // 0x1DCD6500
 	driverInfo.memory_frequency = 650000000; // 0x26BE3680
 	driverInfo.reportsNotifyOffset = 0x1000;
@@ -119,7 +181,7 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	driverInfo.systemModeFlags = system_mode;
 	driverInfo.hardware_channel = 1; // * i think* this 1 for games, 0 for vsh
 
-	m_sysrsx->driverInfo = *lpar_driver_info;
+	rsx_cfg->driver_info = *lpar_driver_info;
 
 	auto &dmaControl = vm::_ref<RsxDmaControl>(*lpar_dma_control);
 	dmaControl.get = 0;
@@ -139,16 +201,19 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 	attr->name_u64 = 0;
 
 	sys_event_port_create(vm::get_addr(&driverInfo.handler_queue), SYS_EVENT_PORT_LOCAL, 0);
-	m_sysrsx->rsx_event_port = driverInfo.handler_queue;
+	rsx_cfg->rsx_event_port = driverInfo.handler_queue;
 	sys_event_queue_create(vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
-	sys_event_port_connect_local(m_sysrsx->rsx_event_port, driverInfo.handler_queue);
+	sys_event_port_connect_local(rsx_cfg->rsx_event_port, driverInfo.handler_queue);
 
 	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
 	render->current_display_buffer = 0;
 	render->label_addr = *lpar_reports;
-	render->ctxt_addr = m_sysrsx->rsx_context_addr;
+	render->device_addr = rsx_cfg->device_addr;
 	render->init(*lpar_dma_control);
+
+	rsx_cfg->context_base = context_base;
+	*context_id = 0x55555555;
 
 	return CELL_OK;
 }
@@ -160,6 +225,15 @@ error_code sys_rsx_context_allocate(vm::ptr<u32> context_id, vm::ptr<u64> lpar_d
 error_code sys_rsx_context_free(u32 context_id)
 {
 	sys_rsx.todo("sys_rsx_context_free(context_id=0x%x)", context_id);
+
+	std::scoped_lock lock(s_rsxmem_mtx);
+
+	auto rsx_cfg = g_fxo->get<lv2_rsx_config>();
+
+	if (context_id != 0x55555555 || !rsx_cfg->context_base)
+	{
+		return CELL_EINVAL;
+	}
 
 	return CELL_OK;
 }
@@ -177,7 +251,7 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 	sys_rsx.warning("sys_rsx_context_iomap(context_id=0x%x, io=0x%x, ea=0x%x, size=0x%x, flags=0x%llx)", context_id, io, ea, size, flags);
 
 	if (!size || io & 0xFFFFF || ea + u64{size} > rsx::constants::local_mem_base || ea & 0xFFFFF || size & 0xFFFFF ||
-		rsx::get_current_renderer()->main_mem_size < io + u64{size})
+		context_id != 0x55555555 || rsx::get_current_renderer()->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
 	}
@@ -186,7 +260,7 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	for (u32 addr = ea, end = ea + size; addr < end; addr += 0x100000)
 	{
-		if (!vm::check_addr(addr, 1, vm::page_allocated | (addr < 0x20000000 ? 0 : vm::page_1m_size)))
+		if (!vm::check_addr(addr, 1, vm::page_readable | (addr < 0x20000000 ? 0 : vm::page_1m_size)))
 		{
 			return CELL_EINVAL;
 		}
@@ -194,10 +268,13 @@ error_code sys_rsx_context_iomap(u32 context_id, u32 io, u32 ea, u32 size, u64 f
 
 	io >>= 20, ea >>= 20, size >>= 20;
 
+	std::scoped_lock lock(s_rsxmem_mtx);
+
 	for (u32 i = 0; i < size; i++)
 	{
+		const u32 prev_ea = std::exchange(RSXIOMem.ea[io + i].raw(), ea + i);
+		if (prev_ea < 0xC00) RSXIOMem.io[prev_ea].raw() = 0xFFFF; // Clear previous mapping if exists
 		RSXIOMem.io[ea + i].raw() = io + i;
-		RSXIOMem.ea[io + i].raw() = ea + i;
 	}
 
 	return CELL_OK;
@@ -213,19 +290,24 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
 {
 	sys_rsx.warning("sys_rsx_context_iounmap(context_id=0x%x, io=0x%x, size=0x%x)", context_id, io, size);
 
-	if (!size || size & 0xFFFFF || io & 0xFFFFF || rsx::get_current_renderer()->main_mem_size < io + u64{size})
+	if (!size || size & 0xFFFFF || io & 0xFFFFF || context_id != 0x55555555 ||
+			rsx::get_current_renderer()->main_mem_size < io + u64{size})
 	{
 		return CELL_EINVAL;
 	}
 
+	vm::reader_lock rlock;
+
+	std::scoped_lock lock(s_rsxmem_mtx);
+
 	const u32 end = (io >>= 20) + (size >>= 20);
-	for (u32 ea = RSXIOMem.ea[io]; io < end;)
+
+	while (io < end)
 	{
-		RSXIOMem.io[ea++].raw() = 0xFFFF;
-		RSXIOMem.ea[io++].raw() = 0xFFFF;
+		const u32 ea_entry = std::exchange(RSXIOMem.ea[io++].raw(), 0xFFFF);
+		if (ea_entry < 0xC00) RSXIOMem.io[ea_entry].raw() = 0xFFFF;
 	}
 
-	std::atomic_thread_fence(std::memory_order_seq_cst);
 	return CELL_OK;
 }
 
@@ -238,7 +320,7 @@ error_code sys_rsx_context_iounmap(u32 context_id, u32 io, u32 size)
  * @param a5 (IN):
  * @param a6 (IN):
  */
-error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
+error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
 {
 	// Flip/queue/reset flip/flip event/user command/vblank as trace to help with log spam
 	if (package_id == 0x102 || package_id == 0x103 || package_id == 0x10a || package_id == 0xFEC || package_id == 0xFED || package_id == 0xFEF)
@@ -250,18 +332,14 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 
 	const auto render = rsx::get_current_renderer();
 
-	//hle protection
-	if (render->isHLE)
-		return CELL_OK;
+	auto rsx_cfg = g_fxo->get<lv2_rsx_config>();
 
-	auto m_sysrsx = fxm::get<SysRsxConfig>();
-
-	if (!m_sysrsx)
+	if (!rsx_cfg->context_base || context_id != 0x55555555)
 	{
 		return CELL_EINVAL;
 	}
 
-	auto &driverInfo = vm::_ref<RsxDriverInfo>(m_sysrsx->driverInfo);
+	auto &driverInfo = vm::_ref<RsxDriverInfo>(rsx_cfg->driver_info);
 	switch (package_id)
 	{
 	case 0x001: // FIFO
@@ -297,9 +375,9 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 			// fyi -- u32 hardware_channel = (a4 >> 8) & 0xFF;
 
 			// sanity check, the head should have a 'queued' buffer on it, and it should have been previously 'queued'
-			u32 sanity_check = 0x40000000 & (1 << flip_idx);
+			const u32 sanity_check = 0x40000000 & (1 << flip_idx);
 			if ((driverInfo.head[a3].flipFlags & sanity_check) != sanity_check)
-				LOG_ERROR(RSX, "Display Flip Queued: Flipping non previously queued buffer 0x%x", a4);
+				LOG_ERROR(RSX, "Display Flip Queued: Flipping non previously queued buffer 0x%llx", a4);
 		}
 		else
 		{
@@ -323,23 +401,33 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 	break;
 
 	case 0x103: // Display Queue
+	{
 		driverInfo.head[a3].lastQueuedBufferId = a4;
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
-		if (a3 == 0)
-			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 5), 0);
-		if (a3 == 1)
-			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 6), 0);
-		break;
+
+		// NOTE: There currently seem to only be 2 active heads on PS3
+		verify(HERE), a3 < 2;
+
+		const u64 shift_offset = (a3 + 5);
+		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1ull << shift_offset), 0);
+
+		render->on_frame_end(a4);
+	}
+	break;
 
 	case 0x104: // Display buffer
 	{
-		u8 id = a3 & 0xFF;
-		u32 width = (a4 >> 32) & 0xFFFFFFFF;
-		u32 height = a4 & 0xFFFFFFFF;
-		u32 pitch = (a5 >> 32) & 0xFFFFFFFF;
-		u32 offset = a5 & 0xFFFFFFFF;
+		const u8 id = a3 & 0xFF;
 		if (id > 7)
-			return -17;
+		{
+			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
+		}
+
+		const u32 width = (a4 >> 32) & 0xFFFFFFFF;
+		const u32 height = a4 & 0xFFFFFFFF;
+		const u32 pitch = (a5 >> 32) & 0xFFFFFFFF;
+		const u32 offset = a5 & 0xFFFFFFFF;
+
 		render->display_buffers[id].width = width;
 		render->display_buffers[id].height = height;
 		render->display_buffers[id].pitch = pitch;
@@ -366,7 +454,9 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 	case 0x10a: // ? Involved in managing flip status through cellGcmResetFlipStatus
 	{
 		if (a3 > 7)
-			return -17;
+		{
+			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
+		}
 
 		u32 flipStatus = driverInfo.head[a3].flipFlags;
 		flipStatus = (flipStatus & a4) | a5;
@@ -452,20 +542,20 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 		vm::_ref<u32>(render->label_addr + 0x10) = 0;
 
 		//if (a3 == 0)
-		//	sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 3), 0);
+		//	sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 3), 0);
 		//if (a3 == 1)
-		sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 4), 0);
+		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 4), 0);
 		break;
 
 	case 0xFED: // hack: vblank command
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
-		vm::_ref<u32>(render->ctxt_addr + 0x30) = 1;
+		vm::_ref<u32>(render->device_addr + 0x30) = 1;
 		driverInfo.head[a3].vBlankCount++;
 		driverInfo.head[a3].lastSecondVTime = rsxTimeStamp();
-		sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 1), 0);
+		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 1), 0);
 
 		if (render->enable_second_vhandler)
-			sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 11), 0); // second vhandler
+			sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 11), 0); // second vhandler
 
 		break;
 
@@ -474,7 +564,7 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
 		driverInfo.userCmdParam = a4;
-		sys_event_port_send(m_sysrsx->rsx_event_port, 0, (1 << 7), 0);
+		sys_event_port_send(rsx_cfg->rsx_event_port, 0, (1 << 7), 0);
 		break;
 
 	default:
@@ -487,7 +577,7 @@ error_code sys_rsx_context_attribute(s32 context_id, u32 package_id, u64 a3, u64
 /*
  * lv2 SysCall 675 (0x2A3): sys_rsx_device_map
  * @param a1 (OUT): rsx device map address : 0x40000000, 0x50000000.. 0xB0000000
- * @param a2 (OUT): Unused?
+ * @param a2 (OUT): Unused
  * @param dev_id (IN): An immediate value and always 8. (cellGcmInitPerfMon uses 11, 10, 9, 7, 12 successively).
  */
 error_code sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id)
@@ -499,24 +589,27 @@ error_code sys_rsx_device_map(vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id
 		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 
-	// a2 seems to not be referenced in cellGcmSys, tests show this arg is ignored
-	//*a2 = 0;
+	auto rsx_cfg = g_fxo->get<lv2_rsx_config>();
 
-	auto m_sysrsx = fxm::make<SysRsxConfig>();
+	static shared_mutex device_map_mtx;
+	std::scoped_lock lock(device_map_mtx);
 
-	if (!m_sysrsx)
+	if (!rsx_cfg->device_addr)
 	{
-		return CELL_EINVAL; // sys_rsx_device_map called twice
-	}
+		const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
+		const u32 addr = area ? area->alloc(0x100000) : 0; 
 
-	if (const auto area = vm::find_map(0x10000000, 0x10000000, 0x403))
-	{
-		vm::falloc(area->addr, 0x400000);
-		m_sysrsx->rsx_context_addr = *dev_addr = area->addr;
+		if (!addr)
+		{
+			return CELL_ENOMEM;
+		}
+
+		rsx_cfg->device_addr = *dev_addr = addr;
 		return CELL_OK;
 	}
 
-	return CELL_ENOMEM;
+	*dev_addr = rsx_cfg->device_addr;
+	return CELL_OK;
 }
 
 /*

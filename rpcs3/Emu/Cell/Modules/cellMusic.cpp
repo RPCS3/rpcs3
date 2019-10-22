@@ -13,7 +13,7 @@
 
 LOG_CHANNEL(cellMusic);
 
-struct music_t
+struct music_state
 {
 	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func;
 	vm::ptr<void> userData;
@@ -36,7 +36,7 @@ s32 cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> context)
 	if (!context)
 		return CELL_MUSIC2_ERROR_PARAM;
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (!music->func)
 		return CELL_MUSIC2_ERROR_GENERIC;
@@ -56,7 +56,7 @@ s32 cellMusicSetVolume2(f32 level)
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (!music->func)
 		return CELL_MUSIC2_ERROR_GENERIC;
@@ -87,7 +87,7 @@ s32 cellMusicSetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
 	if (!context)
 		return CELL_MUSIC_ERROR_PARAM;
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (!music->func)
 		return CELL_MUSIC_ERROR_GENERIC;
@@ -114,7 +114,7 @@ s32 cellMusicInitialize2SystemWorkload(s32 mode, vm::ptr<CellMusic2Callback> fun
 		return CELL_MUSIC2_ERROR_PARAM;
 	}
 
-	const auto music = fxm::make_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 	music->func = func;
 	music->userData = userData;
 
@@ -151,7 +151,7 @@ s32 cellMusicFinalize()
 {
 	cellMusic.todo("cellMusicFinalize()");
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (music->func)
 	{
@@ -178,7 +178,7 @@ s32 cellMusicInitializeSystemWorkload(s32 mode, u32 container, vm::ptr<CellMusic
 		return CELL_MUSIC_ERROR_PARAM;
 	}
 
-	const auto music = fxm::make_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 	music->func = func;
 	music->userData = userData;
 
@@ -204,7 +204,7 @@ s32 cellMusicInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr<CellMu
 		return CELL_MUSIC_ERROR_PARAM;
 	}
 
-	const auto music = fxm::make_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 	music->func = func;
 	music->userData = userData;
 
@@ -221,7 +221,7 @@ s32 cellMusicFinalize2()
 {
 	cellMusic.todo("cellMusicFinalize2()");
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (music->func)
 	{
@@ -272,7 +272,7 @@ s32 cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 	if (command < CELL_MUSIC_PB_CMD_STOP || command > CELL_MUSIC_PB_CMD_FASTREVERSE)
 		return CELL_MUSIC2_ERROR_PARAM;
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (!music->func)
 		return CELL_MUSIC2_ERROR_GENERIC;
@@ -293,7 +293,7 @@ s32 cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
 	if (command < CELL_MUSIC_PB_CMD_STOP || command > CELL_MUSIC_PB_CMD_FASTREVERSE)
 		return CELL_MUSIC_ERROR_PARAM;
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (!music->func)
 		return CELL_MUSIC_ERROR_GENERIC;
@@ -311,7 +311,7 @@ s32 cellMusicSelectContents2()
 {
 	cellMusic.todo("cellMusicSelectContents2()");
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (!music->func)
 		return CELL_MUSIC2_ERROR_GENERIC;
@@ -329,7 +329,7 @@ s32 cellMusicSelectContents(u32 container)
 {
 	cellMusic.todo("cellMusicSelectContents(container=0x%x)", container);
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (!music->func)
 		return CELL_MUSIC_ERROR_GENERIC;
@@ -356,7 +356,7 @@ s32 cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Callback> 
 		return CELL_MUSIC2_ERROR_PARAM;
 	}
 
-	const auto music = fxm::make_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 	music->func = func;
 	music->userData = userData;
 
@@ -375,7 +375,7 @@ s32 cellMusicSetVolume(f32 level)
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
-	const auto music = fxm::get_always<music_t>();
+	const auto music = g_fxo->get<music_state>();
 
 	if (!music->func)
 		return CELL_MUSIC_ERROR_GENERIC;

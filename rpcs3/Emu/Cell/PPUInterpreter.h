@@ -40,7 +40,6 @@ struct ppu_interpreter
 	static bool VCMPGTUW(ppu_thread&, ppu_opcode_t);
 	static bool VEXPTEFP(ppu_thread&, ppu_opcode_t);
 	static bool VLOGEFP(ppu_thread&, ppu_opcode_t);
-	static bool VMADDFP(ppu_thread&, ppu_opcode_t);
 	static bool VMAXFP(ppu_thread&, ppu_opcode_t);
 	static bool VMAXSB(ppu_thread&, ppu_opcode_t);
 	static bool VMAXSH(ppu_thread&, ppu_opcode_t);
@@ -310,16 +309,6 @@ struct ppu_interpreter
 	static bool LWA(ppu_thread&, ppu_opcode_t);
 	static bool STD(ppu_thread&, ppu_opcode_t);
 	static bool STDU(ppu_thread&, ppu_opcode_t);
-	static bool FDIVS(ppu_thread&, ppu_opcode_t);
-	static bool FSUBS(ppu_thread&, ppu_opcode_t);
-	static bool FADDS(ppu_thread&, ppu_opcode_t);
-	static bool FSQRTS(ppu_thread&, ppu_opcode_t);
-	static bool FRES(ppu_thread&, ppu_opcode_t);
-	static bool FMULS(ppu_thread&, ppu_opcode_t);
-	static bool FMADDS(ppu_thread&, ppu_opcode_t);
-	static bool FMSUBS(ppu_thread&, ppu_opcode_t);
-	static bool FNMSUBS(ppu_thread&, ppu_opcode_t);
-	static bool FNMADDS(ppu_thread&, ppu_opcode_t);
 	static bool MTFSB1(ppu_thread&, ppu_opcode_t);
 	static bool MCRFS(ppu_thread&, ppu_opcode_t);
 	static bool MTFSB0(ppu_thread&, ppu_opcode_t);
@@ -327,20 +316,9 @@ struct ppu_interpreter
 	static bool MFFS(ppu_thread&, ppu_opcode_t);
 	static bool MTFSF(ppu_thread&, ppu_opcode_t);
 	static bool FCMPU(ppu_thread&, ppu_opcode_t);
-	static bool FRSP(ppu_thread&, ppu_opcode_t);
 	static bool FCTIW(ppu_thread&, ppu_opcode_t);
 	static bool FCTIWZ(ppu_thread&, ppu_opcode_t);
-	static bool FDIV(ppu_thread&, ppu_opcode_t);
-	static bool FSUB(ppu_thread&, ppu_opcode_t);
-	static bool FADD(ppu_thread&, ppu_opcode_t);
-	static bool FSQRT(ppu_thread&, ppu_opcode_t);
 	static bool FSEL(ppu_thread&, ppu_opcode_t);
-	static bool FMUL(ppu_thread&, ppu_opcode_t);
-	static bool FRSQRTE(ppu_thread&, ppu_opcode_t);
-	static bool FMSUB(ppu_thread&, ppu_opcode_t);
-	static bool FMADD(ppu_thread&, ppu_opcode_t);
-	static bool FNMSUB(ppu_thread&, ppu_opcode_t);
-	static bool FNMADD(ppu_thread&, ppu_opcode_t);
 	static bool FCMPO(ppu_thread&, ppu_opcode_t);
 	static bool FNEG(ppu_thread&, ppu_opcode_t);
 	static bool FMR(ppu_thread&, ppu_opcode_t);
@@ -394,6 +372,30 @@ struct ppu_interpreter_precise final : ppu_interpreter
 	static bool VSUM4UBS(ppu_thread&, ppu_opcode_t);
 	static bool VCTSXS(ppu_thread&, ppu_opcode_t);
 	static bool VCTUXS(ppu_thread&, ppu_opcode_t);
+	static bool VMADDFP(ppu_thread&, ppu_opcode_t);
+
+	static bool FDIVS(ppu_thread&, ppu_opcode_t);
+	static bool FSUBS(ppu_thread&, ppu_opcode_t);
+	static bool FADDS(ppu_thread&, ppu_opcode_t);
+	static bool FSQRTS(ppu_thread&, ppu_opcode_t);
+	static bool FRES(ppu_thread&, ppu_opcode_t);
+	static bool FMULS(ppu_thread&, ppu_opcode_t);
+	static bool FMADDS(ppu_thread&, ppu_opcode_t);
+	static bool FMSUBS(ppu_thread&, ppu_opcode_t);
+	static bool FNMSUBS(ppu_thread&, ppu_opcode_t);
+	static bool FNMADDS(ppu_thread&, ppu_opcode_t);
+
+	static bool FRSP(ppu_thread&, ppu_opcode_t);
+	static bool FDIV(ppu_thread&, ppu_opcode_t);
+	static bool FSUB(ppu_thread&, ppu_opcode_t);
+	static bool FADD(ppu_thread&, ppu_opcode_t);
+	static bool FSQRT(ppu_thread&, ppu_opcode_t);
+	static bool FMUL(ppu_thread&, ppu_opcode_t);
+	static bool FRSQRTE(ppu_thread&, ppu_opcode_t);
+	static bool FMSUB(ppu_thread&, ppu_opcode_t);
+	static bool FMADD(ppu_thread&, ppu_opcode_t);
+	static bool FNMSUB(ppu_thread&, ppu_opcode_t);
+	static bool FNMADD(ppu_thread&, ppu_opcode_t);
 };
 
 struct ppu_interpreter_fast final : ppu_interpreter
@@ -437,4 +439,28 @@ struct ppu_interpreter_fast final : ppu_interpreter
 	static bool VSUM4UBS(ppu_thread&, ppu_opcode_t);
 	static bool VCTSXS(ppu_thread&, ppu_opcode_t);
 	static bool VCTUXS(ppu_thread&, ppu_opcode_t);
+	static bool VMADDFP(ppu_thread&, ppu_opcode_t);
+
+	static bool FDIVS(ppu_thread&, ppu_opcode_t);
+	static bool FSUBS(ppu_thread&, ppu_opcode_t);
+	static bool FADDS(ppu_thread&, ppu_opcode_t);
+	static bool FSQRTS(ppu_thread&, ppu_opcode_t);
+	static bool FRES(ppu_thread&, ppu_opcode_t);
+	static bool FMULS(ppu_thread&, ppu_opcode_t);
+	static bool FMADDS(ppu_thread&, ppu_opcode_t);
+	static bool FMSUBS(ppu_thread&, ppu_opcode_t);
+	static bool FNMSUBS(ppu_thread&, ppu_opcode_t);
+	static bool FNMADDS(ppu_thread&, ppu_opcode_t);
+
+	static bool FRSP(ppu_thread&, ppu_opcode_t);
+	static bool FDIV(ppu_thread&, ppu_opcode_t);
+	static bool FSUB(ppu_thread&, ppu_opcode_t);
+	static bool FADD(ppu_thread&, ppu_opcode_t);
+	static bool FSQRT(ppu_thread&, ppu_opcode_t);
+	static bool FMUL(ppu_thread&, ppu_opcode_t);
+	static bool FRSQRTE(ppu_thread&, ppu_opcode_t);
+	static bool FMSUB(ppu_thread&, ppu_opcode_t);
+	static bool FMADD(ppu_thread&, ppu_opcode_t);
+	static bool FNMSUB(ppu_thread&, ppu_opcode_t);
+	static bool FNMADD(ppu_thread&, ppu_opcode_t);
 };

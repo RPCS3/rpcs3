@@ -294,6 +294,12 @@ struct flush_request_task
 	}
 };
 
+enum flush_queue_state : u32
+{
+	ok = 0,
+	deadlock = 1
+};
+
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
@@ -359,6 +365,7 @@ private:
 
 	sizeu m_swapchain_dims{};
 	bool swapchain_unavailable = false;
+	bool should_reinitialize_swapchain = false;
 
 	u64 m_last_heap_sync_time = 0;
 	u32 m_texbuffer_view_size = 0;
@@ -391,17 +398,15 @@ private:
 	VkViewport m_viewport{};
 	VkRect2D m_scissor{};
 
-	// Timers
-	s64 m_setup_time = 0;
-	s64 m_vertex_upload_time = 0;
-	s64 m_textures_upload_time = 0;
-	s64 m_draw_time = 0;
-	s64 m_flip_time = 0;
-
 	std::vector<u8> m_draw_buffers;
 
 	shared_mutex m_flush_queue_mutex;
 	flush_request_task m_flush_requests;
+
+	// Offloader thread deadlock recovery
+	rsx::atomic_bitmask_t<flush_queue_state> m_queue_status;
+	utils::address_range m_offloader_fault_range;
+	rsx::invalidation_cause m_offloader_fault_cause;
 
 	bool m_render_pass_open = false;
 	u64  m_current_renderpass_key = 0;
@@ -457,13 +462,11 @@ private:
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
-	void read_buffers();
-	void write_buffers();
 	void set_viewport();
-	void set_scissor();
+	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
-	void sync_hint(rsx::FIFO_hint hint) override;
+	void sync_hint(rsx::FIFO_hint hint, u32 arg) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -482,14 +485,15 @@ protected:
 	void on_init_thread() override;
 	void on_exit() override;
 	bool do_method(u32 cmd, u32 arg) override;
-	void flip(int buffer, bool emu_flip = false) override;
+	void flip(const rsx::display_flip_info_t& info) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;
 	void notify_tile_unbound(u32 tile) override;
 
 	bool on_access_violation(u32 address, bool is_writing) override;
-	void on_invalidate_memory_range(const utils::address_range &range) override;
+	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
+	void on_semaphore_acquire_wait() override;
 
 	bool on_decompiler_task() override;
 };

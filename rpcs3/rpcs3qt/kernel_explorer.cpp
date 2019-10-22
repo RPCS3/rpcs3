@@ -64,7 +64,7 @@ void kernel_explorer::Update()
 {
 	m_tree->clear();
 
-	const auto dct = fxm::get<lv2_memory_container>();
+	const auto dct = g_fxo->get<lv2_memory_container>();
 
 	if (!dct)
 	{
@@ -241,7 +241,7 @@ void kernel_explorer::Update()
 		}
 		case SYS_LWCOND_OBJECT:
 		{
-			auto& lwc = static_cast<lv2_cond&>(obj);
+			auto& lwc = static_cast<lv2_lwcond&>(obj);
 			l_addTreeChild(node, qstr(fmt::format("LWCond: ID = 0x%08x \"%s\", Waiters = %zu", id, +name64(lwc.name), +lwc.waiters)));
 			break;
 		}

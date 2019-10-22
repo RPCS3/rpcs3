@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "sys_sync.h"
 #include "sys_event.h"
 #include "Emu/Cell/SPUThread.h"
 
@@ -112,7 +113,7 @@ enum : u32
 struct sys_spu_image
 {
 	be_t<u32> type; // user, kernel
-	be_t<u32> entry_point;
+	be_t<u32> entry_point; // Note: in kernel mode it's used to store id
 	vm::bptr<sys_spu_segment> segs;
 	be_t<s32> nsegs;
 
@@ -210,6 +211,18 @@ enum : u32
 	SYS_SPU_IMAGE_DIRECT  = 1,
 };
 
+struct lv2_spu_image : lv2_obj
+{
+	static const u32 id_base = 0x22000000;
+
+	const u32 e_entry;
+
+	lv2_spu_image(u32 entry)
+		: e_entry(entry)
+	{
+	}
+};
+
 struct lv2_spu_group
 {
 	static const u32 id_base = 0x04000100;
@@ -287,49 +300,49 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
-error_code _sys_spu_image_get_information(vm::ptr<sys_spu_image> img, vm::ptr<u32> entry_point, vm::ptr<s32> nsegs);
-error_code sys_spu_image_open(vm::ptr<sys_spu_image> img, vm::cptr<char> path);
-error_code _sys_spu_image_import(vm::ptr<sys_spu_image> img, u32 src, u32 size, u32 arg4);
-error_code _sys_spu_image_close(vm::ptr<sys_spu_image> img);
-error_code _sys_spu_image_get_segments(vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_segment> segments, s32 nseg);
-error_code sys_spu_thread_initialize(vm::ptr<u32> thread, u32 group, u32 spu_num, vm::ptr<sys_spu_image>, vm::ptr<sys_spu_thread_attribute>, vm::ptr<sys_spu_thread_argument>);
-error_code sys_spu_thread_set_argument(u32 id, vm::ptr<sys_spu_thread_argument> arg);
-error_code sys_spu_thread_group_create(vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr);
-error_code sys_spu_thread_group_destroy(u32 id);
+error_code sys_spu_initialize(ppu_thread&, u32 max_usable_spu, u32 max_raw_spu);
+error_code _sys_spu_image_get_information(ppu_thread&, vm::ptr<sys_spu_image> img, vm::ptr<u32> entry_point, vm::ptr<s32> nsegs);
+error_code sys_spu_image_open(ppu_thread&, vm::ptr<sys_spu_image> img, vm::cptr<char> path);
+error_code _sys_spu_image_import(ppu_thread&, vm::ptr<sys_spu_image> img, u32 src, u32 size, u32 arg4);
+error_code _sys_spu_image_close(ppu_thread&, vm::ptr<sys_spu_image> img);
+error_code _sys_spu_image_get_segments(ppu_thread&, vm::ptr<sys_spu_image> img, vm::ptr<sys_spu_segment> segments, s32 nseg);
+error_code sys_spu_thread_initialize(ppu_thread&, vm::ptr<u32> thread, u32 group, u32 spu_num, vm::ptr<sys_spu_image>, vm::ptr<sys_spu_thread_attribute>, vm::ptr<sys_spu_thread_argument>);
+error_code sys_spu_thread_set_argument(ppu_thread&, u32 id, vm::ptr<sys_spu_thread_argument> arg);
+error_code sys_spu_thread_group_create(ppu_thread&, vm::ptr<u32> id, u32 num, s32 prio, vm::ptr<sys_spu_thread_group_attribute> attr);
+error_code sys_spu_thread_group_destroy(ppu_thread&, u32 id);
 error_code sys_spu_thread_group_start(ppu_thread&, u32 id);
-error_code sys_spu_thread_group_suspend(u32 id);
-error_code sys_spu_thread_group_resume(u32 id);
-error_code sys_spu_thread_group_yield(u32 id);
-error_code sys_spu_thread_group_terminate(u32 id, s32 value);
+error_code sys_spu_thread_group_suspend(ppu_thread&, u32 id);
+error_code sys_spu_thread_group_resume(ppu_thread&, u32 id);
+error_code sys_spu_thread_group_yield(ppu_thread&, u32 id);
+error_code sys_spu_thread_group_terminate(ppu_thread&, u32 id, s32 value);
 error_code sys_spu_thread_group_join(ppu_thread&, u32 id, vm::ptr<u32> cause, vm::ptr<u32> status);
-error_code sys_spu_thread_group_set_priority(u32 id, s32 priority);
-error_code sys_spu_thread_group_get_priority(u32 id, vm::ptr<s32> priority);
-error_code sys_spu_thread_group_connect_event(u32 id, u32 eq, u32 et);
-error_code sys_spu_thread_group_disconnect_event(u32 id, u32 et);
-error_code sys_spu_thread_group_connect_event_all_threads(u32 id, u32 eq_id, u64 req, vm::ptr<u8> spup);
-error_code sys_spu_thread_group_disconnect_event_all_threads(u32 id, u8 spup);
-error_code sys_spu_thread_write_ls(u32 id, u32 address, u64 value, u32 type);
-error_code sys_spu_thread_read_ls(u32 id, u32 address, vm::ptr<u64> value, u32 type);
-error_code sys_spu_thread_write_spu_mb(u32 id, u32 value);
-error_code sys_spu_thread_set_spu_cfg(u32 id, u64 value);
-error_code sys_spu_thread_get_spu_cfg(u32 id, vm::ptr<u64> value);
-error_code sys_spu_thread_write_snr(u32 id, u32 number, u32 value);
-error_code sys_spu_thread_connect_event(u32 id, u32 eq, u32 et, u8 spup);
-error_code sys_spu_thread_disconnect_event(u32 id, u32 event_type, u8 spup);
-error_code sys_spu_thread_bind_queue(u32 id, u32 spuq, u32 spuq_num);
-error_code sys_spu_thread_unbind_queue(u32 id, u32 spuq_num);
-error_code sys_spu_thread_get_exit_status(u32 id, vm::ptr<u32> status);
-error_code sys_spu_thread_recover_page_fault(u32 id);
+error_code sys_spu_thread_group_set_priority(ppu_thread&, u32 id, s32 priority);
+error_code sys_spu_thread_group_get_priority(ppu_thread&, u32 id, vm::ptr<s32> priority);
+error_code sys_spu_thread_group_connect_event(ppu_thread&, u32 id, u32 eq, u32 et);
+error_code sys_spu_thread_group_disconnect_event(ppu_thread&, u32 id, u32 et);
+error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread&, u32 id, u32 eq_id, u64 req, vm::ptr<u8> spup);
+error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread&, u32 id, u8 spup);
+error_code sys_spu_thread_write_ls(ppu_thread&, u32 id, u32 address, u64 value, u32 type);
+error_code sys_spu_thread_read_ls(ppu_thread&, u32 id, u32 address, vm::ptr<u64> value, u32 type);
+error_code sys_spu_thread_write_spu_mb(ppu_thread&, u32 id, u32 value);
+error_code sys_spu_thread_set_spu_cfg(ppu_thread&, u32 id, u64 value);
+error_code sys_spu_thread_get_spu_cfg(ppu_thread&, u32 id, vm::ptr<u64> value);
+error_code sys_spu_thread_write_snr(ppu_thread&, u32 id, u32 number, u32 value);
+error_code sys_spu_thread_connect_event(ppu_thread&, u32 id, u32 eq, u32 et, u8 spup);
+error_code sys_spu_thread_disconnect_event(ppu_thread&, u32 id, u32 event_type, u8 spup);
+error_code sys_spu_thread_bind_queue(ppu_thread&, u32 id, u32 spuq, u32 spuq_num);
+error_code sys_spu_thread_unbind_queue(ppu_thread&, u32 id, u32 spuq_num);
+error_code sys_spu_thread_get_exit_status(ppu_thread&, u32 id, vm::ptr<u32> status);
+error_code sys_spu_thread_recover_page_fault(ppu_thread&, u32 id);
 
-error_code sys_raw_spu_create(vm::ptr<u32> id, vm::ptr<void> attr);
+error_code sys_raw_spu_create(ppu_thread&, vm::ptr<u32> id, vm::ptr<void> attr);
 error_code sys_raw_spu_destroy(ppu_thread& ppu, u32 id);
-error_code sys_raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag);
-error_code sys_raw_spu_set_int_mask(u32 id, u32 class_id, u64 mask);
-error_code sys_raw_spu_get_int_mask(u32 id, u32 class_id, vm::ptr<u64> mask);
-error_code sys_raw_spu_set_int_stat(u32 id, u32 class_id, u64 stat);
-error_code sys_raw_spu_get_int_stat(u32 id, u32 class_id, vm::ptr<u64> stat);
-error_code sys_raw_spu_read_puint_mb(u32 id, vm::ptr<u32> value);
-error_code sys_raw_spu_set_spu_cfg(u32 id, u32 value);
-error_code sys_raw_spu_get_spu_cfg(u32 id, vm::ptr<u32> value);
-error_code sys_raw_spu_recover_page_fault(u32 id);
+error_code sys_raw_spu_create_interrupt_tag(ppu_thread&, u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag);
+error_code sys_raw_spu_set_int_mask(ppu_thread&, u32 id, u32 class_id, u64 mask);
+error_code sys_raw_spu_get_int_mask(ppu_thread&, u32 id, u32 class_id, vm::ptr<u64> mask);
+error_code sys_raw_spu_set_int_stat(ppu_thread&, u32 id, u32 class_id, u64 stat);
+error_code sys_raw_spu_get_int_stat(ppu_thread&, u32 id, u32 class_id, vm::ptr<u64> stat);
+error_code sys_raw_spu_read_puint_mb(ppu_thread&, u32 id, vm::ptr<u32> value);
+error_code sys_raw_spu_set_spu_cfg(ppu_thread&, u32 id, u32 value);
+error_code sys_raw_spu_get_spu_cfg(ppu_thread&, u32 id, vm::ptr<u32> value);
+error_code sys_raw_spu_recover_page_fault(ppu_thread&, u32 id);

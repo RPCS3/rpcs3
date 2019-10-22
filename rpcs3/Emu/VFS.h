@@ -25,6 +25,6 @@ namespace vfs
 		bool rename(const std::string& from, const std::string& to, bool overwrite);
 
 		// Delete file without deleting its contents, emulated with MoveFileEx on Windows
-		bool unlink(const std::string&);
+		bool unlink(const std::string& path, const std::string& dev_root);
 	}
 }

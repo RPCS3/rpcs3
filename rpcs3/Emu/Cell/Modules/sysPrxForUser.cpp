@@ -11,7 +11,7 @@
 
 LOG_CHANNEL(sysPrxForUser);
 
-extern u64 get_system_time();
+extern u64 get_guest_system_time();
 
 vm::gvar<s32> sys_prx_version; // ???
 vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
@@ -22,7 +22,7 @@ s64 sys_time_get_system_time()
 {
 	sysPrxForUser.trace("sys_time_get_system_time()");
 
-	return get_system_time();
+	return get_guest_system_time();
 }
 
 void sys_process_exit(ppu_thread& ppu, s32 status)
@@ -93,7 +93,8 @@ s32 sys_get_random_number(vm::ptr<void> addr, u64 size)
 
 s32 console_getc()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("console_getc()");
+	return CELL_OK;
 }
 
 void console_putc(char ch)

@@ -1,12 +1,12 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 
 enum : u64
 {
-	SYS_GPIO_UNKNOWN_DEVICE_ID,
-	SYS_GPIO_LED_DEVICE_ID,
-	SYS_GPIO_DIP_SWITCH_DEVICE_ID,
+	SYS_GPIO_UNKNOWN_DEVICE_ID    = 0x0,
+	SYS_GPIO_LED_DEVICE_ID        = 0x1,
+	SYS_GPIO_DIP_SWITCH_DEVICE_ID = 0x2,
 };
 
 error_code sys_gpio_get(u64 device_id, vm::ptr<u64> value);

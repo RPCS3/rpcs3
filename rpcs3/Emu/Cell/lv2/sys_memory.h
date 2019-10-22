@@ -46,7 +46,7 @@ struct sys_page_attr_t
 
 struct lv2_memory_container
 {
-	static const u32 id_base = 0x1; // Wrong?
+	static const u32 id_base = 0x3F000000;
 	static const u32 id_step = 0x1;
 	static const u32 id_count = 16;
 
@@ -80,7 +80,7 @@ struct lv2_memory_alloca
 {
 	static const u32 id_base = 0x1;
 	static const u32 id_step = 0x1;
-	static const u32 id_count = 0x1000;
+	static const u32 id_count = 0x2000;
 
 	const u32 size; // Memory size
 	const u32 align; // Alignment required

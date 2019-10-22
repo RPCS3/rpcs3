@@ -49,8 +49,8 @@ D3D12_SAMPLER_DESC get_sampler_desc(const rsx::fragment_texture &texture)
 	samplerDesc.BorderColor[1] = (FLOAT)texture.border_color();
 	samplerDesc.BorderColor[2] = (FLOAT)texture.border_color();
 	samplerDesc.BorderColor[3] = (FLOAT)texture.border_color();
-	samplerDesc.MinLOD = (FLOAT)(texture.min_lod() >> 8);
-	samplerDesc.MaxLOD = (FLOAT)(texture.max_lod() >> 8);
+	samplerDesc.MinLOD = (FLOAT)(texture.min_lod());
+	samplerDesc.MaxLOD = (FLOAT)(texture.max_lod());
 	return samplerDesc;
 }
 
@@ -115,7 +115,8 @@ namespace {
 		size_t offset_in_buffer = 0;
 		for (const rsx_subresource_layout &layout : input_layouts)
 		{
-			upload_texture_subresource(mapped_buffer.subspan(offset_in_buffer), layout, format, is_swizzled, false, 256);
+			texture_uploader_capabilities caps{ false, false, 256 };
+			upload_texture_subresource(mapped_buffer.subspan(offset_in_buffer), layout, format, is_swizzled, caps);
 			UINT row_pitch = align(layout.width_in_block * block_size_in_bytes, 256);
 			command_list->CopyTextureRegion(&CD3DX12_TEXTURE_COPY_LOCATION(existing_texture, (UINT)mip_level), 0, 0, 0,
 				&CD3DX12_TEXTURE_COPY_LOCATION(texture_buffer_heap.get_heap(),

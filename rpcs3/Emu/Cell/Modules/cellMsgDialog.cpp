@@ -11,6 +11,8 @@
 
 #include <thread>
 
+#include "util/init_mutex.hpp"
+
 extern logs::channel cellSysutil;
 
 template<>
@@ -32,6 +34,56 @@ MsgDialogBase::~MsgDialogBase()
 {
 }
 
+struct msg_info
+{
+	std::shared_ptr<MsgDialogBase> dlg;
+
+	stx::init_mutex init;
+
+	// Emulate fxm as if it's some sort of museum
+
+	std::shared_ptr<MsgDialogBase> make() noexcept
+	{
+		const auto init_lock = init.init();
+
+		if (!init_lock)
+		{
+			return nullptr;
+		}
+
+		dlg = Emu.GetCallbacks().get_msg_dialog();
+
+		return dlg;
+	}
+
+	std::shared_ptr<MsgDialogBase> get() noexcept
+	{
+		const auto init_lock = init.access();
+
+		if (!init_lock)
+		{
+			return nullptr;
+		}
+
+		return dlg;
+	}
+
+	void remove() noexcept
+	{
+		const auto init_lock = init.reset();
+
+		if (!init_lock)
+		{
+			return;
+		}
+
+		dlg.reset();
+	}
+};
+
+// variable used to immediately get the response from auxiliary message dialogs (callbacks would be async)
+atomic_t<s32> g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
+
 // forward declaration for open_msg_dialog
 error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback, vm::ptr<void> userData, vm::ptr<void> extParam);
 
@@ -44,7 +96,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 	if (res == CELL_OK && is_blocking)
 	{
-		if (auto manager = fxm::get<rsx::overlays::display_manager>())
+		if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 		{
 			while (auto dlg = manager->get<rsx::overlays::message_dialog>())
 			{
@@ -57,7 +109,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 		}
 		else
 		{
-			while (auto dlg = fxm::get<MsgDialogBase>())
+			while (auto dlg = g_fxo->get<msg_info>()->get())
 			{
 				if (Emu.IsStopped() || dlg->state != MsgDialogState::Open)
 				{
@@ -129,7 +181,6 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 		break;
 	}
-
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
 	{
 		if (_type.default_cursor > 1 || _type.progress_bar_count)
@@ -139,7 +190,6 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 		break;
 	}
-
 	case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK:
 	{
 		if (_type.default_cursor || _type.progress_bar_count)
@@ -149,7 +199,6 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 		break;
 	}
-
 	default: return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
@@ -160,19 +209,21 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 
 	if (_type.se_normal)
 	{
-		cellSysutil.warning(msgString.get_ptr());
+		cellSysutil.warning("%s", msgString);
 	}
 	else
 	{
-		cellSysutil.error(msgString.get_ptr());
+		cellSysutil.error("%s", msgString);
 	}
 
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		if (manager->get<rsx::overlays::message_dialog>())
 		{
 			return CELL_SYSUTIL_ERROR_BUSY;
 		}
+
+		g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
 
 		const auto res = manager->create<rsx::overlays::message_dialog>()->show(msgString.get_ptr(), _type, [callback, userData](s32 status)
 		{
@@ -189,7 +240,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 		return res;
 	}
 
-	const auto dlg = fxm::import<MsgDialogBase>(Emu.GetCallbacks().get_msg_dialog);
+	const auto dlg = g_fxo->get<msg_info>()->make();
 
 	if (!dlg)
 	{
@@ -213,7 +264,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 				});
 			}
 
-			fxm::remove<MsgDialogBase>();
+			g_fxo->get<msg_info>()->remove();
 		}
 
 		pad::SetIntercepted(false);
@@ -227,8 +278,9 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 	// Run asynchronously in GUI thread
 	Emu.CallAfter([&]()
 	{
+		g_last_user_response = CELL_MSGDIALOG_BUTTON_NONE;
 		dlg->Create(msgString.get_ptr());
-		lv2_obj::awake(ppu);
+		lv2_obj::awake(&ppu);
 	});
 
 	while (!ppu.state.test_and_reset(cpu_flag::signal))
@@ -332,16 +384,16 @@ error_code cellMsgDialogClose(f32 delay)
 {
 	cellSysutil.warning("cellMsgDialogClose(delay=%f)", delay);
 
-	extern u64 get_system_time();
-	const u64 wait_until = get_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
+	extern u64 get_guest_system_time();
+	const u64 wait_until = get_guest_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
 
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
 			thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]
 			{
-				while (get_system_time() < wait_until)
+				while (get_guest_system_time() < wait_until)
 				{
 					if (Emu.IsStopped())
 						return;
@@ -359,7 +411,7 @@ error_code cellMsgDialogClose(f32 delay)
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
@@ -368,7 +420,7 @@ error_code cellMsgDialogClose(f32 delay)
 
 	thread_ctrl::spawn("cellMsgDialogClose() Thread", [=]()
 	{
-		while (dlg->state == MsgDialogState::Open && get_system_time() < wait_until)
+		while (dlg->state == MsgDialogState::Open && get_guest_system_time() < wait_until)
 		{
 			if (Emu.IsStopped()) return;
 
@@ -385,7 +437,7 @@ error_code cellMsgDialogAbort()
 {
 	cellSysutil.warning("cellMsgDialogAbort()");
 
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
@@ -394,7 +446,7 @@ error_code cellMsgDialogAbort()
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
@@ -406,8 +458,8 @@ error_code cellMsgDialogAbort()
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
-	verify(HERE), fxm::remove<MsgDialogBase>(); // this shouldn't call on_close
-	pad::SetIntercepted(false);                 // so we need to reenable the pads here
+	g_fxo->get<msg_info>()->remove(); // this shouldn't call on_close
+	pad::SetIntercepted(false);       // so we need to reenable the pads here
 
 	return CELL_OK;
 }
@@ -434,7 +486,7 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
@@ -442,7 +494,7 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
@@ -466,7 +518,7 @@ error_code cellMsgDialogProgressBarReset(u32 progressBarIndex)
 {
 	cellSysutil.warning("cellMsgDialogProgressBarReset(progressBarIndex=%d)", progressBarIndex);
 
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
@@ -474,7 +526,7 @@ error_code cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{
@@ -498,7 +550,7 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 {
 	cellSysutil.warning("cellMsgDialogProgressBarInc(progressBarIndex=%d, delta=%d)", progressBarIndex, delta);
 
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
@@ -506,7 +558,7 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		}
 	}
 
-	const auto dlg = fxm::get<MsgDialogBase>();
+	const auto dlg = g_fxo->get<msg_info>()->get();
 
 	if (!dlg)
 	{

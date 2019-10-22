@@ -149,7 +149,7 @@ void pngDecEndCallback(png_structp png_ptr, png_infop info)
 // Custom error handler for libpng
 void pngDecError(png_structp png_ptr, png_const_charp error_message)
 {
-	cellPngDec.error(error_message);
+	cellPngDec.error("%s", error_message);
 	// we can't return here or libpng blows up
 	throw LibPngCustomException("Fatal Error in libpng");
 }
@@ -157,7 +157,7 @@ void pngDecError(png_structp png_ptr, png_const_charp error_message)
 // Custom warning handler for libpng
 void pngDecWarning(png_structp png_ptr, png_const_charp error_message)
 {
-	cellPngDec.warning(error_message);
+	cellPngDec.warning("%s", error_message);
 }
 
 // Get the chunk information of the PNG file. IDAT is marked as existing, only after decoding or reading the header.
@@ -913,87 +913,104 @@ s32 cellPngDecExtDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm:
 
 s32 cellPngDecGetUnknownChunks(PHandle handle, PStream stream, vm::pptr<CellPngUnknownChunk> unknownChunk, vm::ptr<u32> unknownChunkNumber)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetUnknownChunks()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetpCAL(PHandle handle, PStream stream, vm::ptr<CellPngPCAL> pcal)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetpCAL()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetcHRM(PHandle handle, PStream stream, vm::ptr<CellPngCHRM> chrm)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetcHRM()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetsCAL(PHandle handle, PStream stream, vm::ptr<CellPngSCAL> scal)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetsCAL()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetpHYs(PHandle handle, PStream stream, vm::ptr<CellPngPHYS> phys)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetpHYs()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetoFFs(PHandle handle, PStream stream, vm::ptr<CellPngOFFS> offs)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetoFFs()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetsPLT(PHandle handle, PStream stream, vm::ptr<CellPngSPLT> splt)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetsPLT()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetbKGD(PHandle handle, PStream stream, vm::ptr<CellPngBKGD> bkgd)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetbKGD()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGettIME(PHandle handle, PStream stream, vm::ptr<CellPngTIME> time)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGettIME()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGethIST(PHandle handle, PStream stream, vm::ptr<CellPngHIST> hist)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGethIST()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGettRNS(PHandle handle, PStream stream, vm::ptr<CellPngTRNS> trns)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGettRNS()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetsBIT(PHandle handle, PStream stream, vm::ptr<CellPngSBIT> sbit)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetsBIT()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetiCCP(PHandle handle, PStream stream, vm::ptr<CellPngICCP> iccp)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetiCCP()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetsRGB(PHandle handle, PStream stream, vm::ptr<CellPngSRGB> srgb)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetsRGB()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetgAMA(PHandle handle, PStream stream, vm::ptr<CellPngGAMA> gama)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetgAMA()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetPLTE(PHandle handle, PStream stream, vm::ptr<CellPngPLTE> plte)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetPLTE()");
+	return CELL_OK;
 }
 
 s32 cellPngDecGetTextChunk(PHandle handle, PStream stream, vm::ptr<u32> textInfoNum, vm::pptr<CellPngTextInfo> textInfo)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetTextChunk()");
+	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellPngDec)("cellPngDec", []()

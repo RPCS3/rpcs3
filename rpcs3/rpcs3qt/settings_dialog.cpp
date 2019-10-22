@@ -1,5 +1,6 @@
 ﻿#include <QVBoxLayout>
 #include <QButtonGroup>
+#include <QDialogButtonBox>
 #include <QPushButton>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -12,7 +13,9 @@
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QTimer>
+#include <QScreen>
 
+#include "display_sleep_control.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "ui_settings_dialog.h"
@@ -36,7 +39,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	: QDialog(parent), xgui_settings(guiSettings), xemu_settings(emuSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
 {
 	ui->setupUi(this);
-	ui->cancelButton->setFocus();
+	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
@@ -44,11 +47,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xgui_settings->SetValue(gui::m_showDebugTab, showDebugTab);
 	if (!showDebugTab)
 	{
-		ui->tab_widget_settings->removeTab(8);
+		ui->tab_widget_settings->removeTab(9);
 	}
 	if (game)
 	{
-		ui->tab_widget_settings->removeTab(7);
+		ui->tab_widget_settings->removeTab(8);
 	}
 
 	// Add description labels
@@ -58,6 +61,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeDescription(ui->description_io);
 	SubscribeDescription(ui->description_system);
 	SubscribeDescription(ui->description_network);
+	SubscribeDescription(ui->description_advanced);
 	SubscribeDescription(ui->description_emulator);
 	if (!game)
 	{
@@ -88,6 +92,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	QJsonObject json_sys   = json_obj.value("system").toObject();
 	QJsonObject json_net   = json_obj.value("network").toObject();
 
+	QJsonObject json_advanced = json_obj.value("advanced").toObject();
+
 	QJsonObject json_emu         = json_obj.value("emulator").toObject();
 	QJsonObject json_emu_misc    = json_emu.value("misc").toObject();
 	QJsonObject json_emu_overlay = json_emu.value("overlay").toObject();
@@ -113,7 +119,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	m_discord_state = xgui_settings->GetValue(gui::m_discordState).toString();
 
 	// Various connects
-	connect(ui->okButton, &QAbstractButton::clicked, [=, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
+	connect(ui->buttonBox, &QDialogButtonBox::accepted, [=, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
 	{
 		std::set<std::string> selectedlle;
 		for (int i = 0; i<ui->lleList->count(); ++i)
@@ -153,11 +159,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 #endif
 	});
 
-	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
+	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 
 	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, [=]()
 	{
-		ui->cancelButton->setFocus();
+		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	});
 
 	//     _____ _____  _    _   _______    _
@@ -225,7 +231,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		ui->enableTSX->setEnabled(false);
 		ui->enableTSX->addItem(tr("Not supported"));
-		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your cpu model does not support this instruction set."));
+		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your CPU model does not support this instruction set."));
 	}
 
 	// PPU tool tips
@@ -304,17 +310,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 #endif
 
 	// lib options tool tips
-	SubscribeTooltip(ui->lib_auto, json_cpu_lib["auto"].toString());
 	SubscribeTooltip(ui->lib_manu, json_cpu_lib["manual"].toString());
 	SubscribeTooltip(ui->lib_both, json_cpu_lib["both"].toString());
 	SubscribeTooltip(ui->lib_lv2,  json_cpu_lib["liblv2"].toString());
+	SubscribeTooltip(ui->lib_lv2b, json_cpu_lib["liblv2both"].toString());
+	SubscribeTooltip(ui->lib_lv2l, json_cpu_lib["liblv2list"].toString());
 
 	// creating this in ui file keeps scrambling the order...
 	QButtonGroup *libModeBG = new QButtonGroup(this);
-	libModeBG->addButton(ui->lib_auto, (int)lib_loading_type::automatic);
 	libModeBG->addButton(ui->lib_manu, (int)lib_loading_type::manual);
-	libModeBG->addButton(ui->lib_both, (int)lib_loading_type::both);
+	libModeBG->addButton(ui->lib_both, (int)lib_loading_type::hybrid);
 	libModeBG->addButton(ui->lib_lv2,  (int)lib_loading_type::liblv2only);
+	libModeBG->addButton(ui->lib_lv2b, (int)lib_loading_type::liblv2both);
+	libModeBG->addButton(ui->lib_lv2l, (int)lib_loading_type::liblv2list);
 
 	{// Handle lib loading options
 		QString selectedLib = qstr(xemu_settings->GetSetting(emu_settings::LibLoadOptions));
@@ -386,7 +394,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	auto l_OnLibButtonClicked = [=](int ind)
 	{
-		if (ind == (int)lib_loading_type::manual || ind == (int)lib_loading_type::both)
+		if (ind != (int)lib_loading_type::liblv2only)
 		{
 			ui->searchBox->setEnabled(true);
 			ui->lleList->setEnabled(true);
@@ -859,7 +867,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		}
 		ChangeMicrophoneType(ui->microphoneBox->currentText());
 	};
-	
+
 	auto ChangeMicrophoneDevice = [=](u32 next_index, QString text)
 	{
 		xemu_settings->SetSetting(emu_settings::MicrophoneDevices, xemu_settings->m_microphone_creator.SetDevice(next_index, text));
@@ -980,6 +988,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceComboBox(ui->sysLangBox, emu_settings::Language, false, false, 0, true);
 	SubscribeTooltip(ui->sysLangBox, json_sys["sysLangBox"].toString());
 
+	xemu_settings->EnhanceComboBox(ui->keyboardType, emu_settings::KeyboardType, false, false, 0, true);
+	SubscribeTooltip(ui->keyboardType, json_sys["keyboardType"].toString());
+
 	// Checkboxes
 
 	xemu_settings->EnhanceCheckBox(ui->enableHostRoot, emu_settings::EnableHostRoot);
@@ -1036,6 +1047,72 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceComboBox(ui->netStatusBox, emu_settings::ConnectionStatus);
 	SubscribeTooltip(ui->netStatusBox, json_net["netStatusBox"].toString());
 
+
+	//                _                               _   _______    _
+	//       /\      | |                             | | |__   __|  | |
+	//      /  \   __| |_   ____ _ _ __   ___ ___  __| |    | | __ _| |__
+	//     / /\ \ / _` \ \ / / _` | '_ \ / __/ _ \/ _` |    | |/ _` | '_ \
+	//    / ____ \ (_| |\ V / (_| | | | | (_|  __/ (_| |    | | (_| | |_) |
+	//   /_/    \_\__,_| \_/ \__,_|_| |_|\___\___|\__,_|    |_|\__,_|_.__/
+
+
+	// Checkboxes
+
+	xemu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
+	SubscribeTooltip(ui->debugConsoleMode, json_advanced["debugConsoleMode"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
+	SubscribeTooltip(ui->readColor, json_advanced["readColor"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
+	SubscribeTooltip(ui->readDepth, json_advanced["readDepth"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
+	SubscribeTooltip(ui->dumpDepth, json_advanced["dumpDepth"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
+	SubscribeTooltip(ui->disableOnDiskShaderCache, json_advanced["disableOnDiskShaderCache"].toString());
+
+	// Comboboxes
+
+	xemu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings::MaxSPURSThreads, true);
+	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData("6"), tr("Unlimited (Default)"));
+	SubscribeTooltip(ui->maxSPURSThreads, json_advanced["maxSPURSThreads"].toString());
+
+	xemu_settings->EnhanceComboBox(ui->sleepTimersAccuracy, emu_settings::SleepTimersAccuracy);
+	SubscribeTooltip(ui->sleepTimersAccuracy, json_advanced["sleepTimersAccuracy"].toString());
+
+	// Sliders
+
+	EnhanceSlider(emu_settings::VBlankRate, ui->vblank, ui->vblankText, tr("%0 Hz"));
+	int vblankDef = stoi(xemu_settings->GetSettingDefault(emu_settings::VBlankRate));
+	connect(ui->vblankReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->vblank->setValue(vblankDef);
+	});
+
+	EnhanceSlider(emu_settings::ClocksScale, ui->clockScale, ui->clockScaleText, tr("%0 %"));
+	int clocksScaleDef = stoi(xemu_settings->GetSettingDefault(emu_settings::ResolutionScale));
+	connect(ui->clockScaleReset, &QAbstractButton::clicked, [=]()
+	{
+		ui->clockScale->setValue(clocksScaleDef);
+	});
+
+	if (!game) // Prevent users from doing dumb things
+	{
+		ui->vblank->setDisabled(true);
+		ui->vblankReset->setDisabled(true);
+		SubscribeTooltip(ui->vblank, json_advanced["disabledFromGlobal"].toString());
+		ui->clockScale->setDisabled(true);
+		ui->clockScaleReset->setDisabled(true);
+		SubscribeTooltip(ui->clockScale, json_advanced["disabledFromGlobal"].toString());
+	}
+	else
+	{
+		SubscribeTooltip(ui->vblank, json_advanced["vblankRate"].toString());
+		SubscribeTooltip(ui->clockScale, json_advanced["clocksScale"].toString());
+	}
+
 	//    ______                 _       _               _______    _
 	//   |  ____|               | |     | |             |__   __|  | |
 	//   | |__   _ __ ___  _   _| | __ _| |_ ___  _ __     | | __ _| |__
@@ -1065,6 +1142,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->startGameFullscreen, emu_settings::StartGameFullscreen);
 	SubscribeTooltip(ui->startGameFullscreen, json_emu_misc["startGameFullscreen"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->preventDisplaySleep, emu_settings::PreventDisplaySleep);
+	SubscribeTooltip(ui->preventDisplaySleep, json_emu_misc["preventDisplaySleep"].toString());
+	ui->preventDisplaySleep->setEnabled(display_sleep_control_supported());
 
 	xemu_settings->EnhanceCheckBox(ui->showFPSInTitle, emu_settings::ShowFPSInTitle);
 	SubscribeTooltip(ui->showFPSInTitle, json_emu_misc["showFPSInTitle"].toString());
@@ -1173,7 +1254,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->gs_width->setEnabled(enableButtons);
 		ui->gs_height->setEnabled(enableButtons);
 
-		QRect screen = QApplication::desktop()->screenGeometry();
+		QRect screen = QGuiApplication::primaryScreen()->geometry();
 		int width = xgui_settings->GetValue(gui::gs_width).toInt();
 		int height = xgui_settings->GetValue(gui::gs_height).toInt();
 		ui->gs_width->setValue(std::min(width, screen.width()));
@@ -1187,12 +1268,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		});
 		connect(ui->gs_width, &QSpinBox::editingFinished, [=]()
 		{
-			ui->gs_width->setValue(std::min(ui->gs_width->value(), QApplication::desktop()->screenGeometry().width()));
+			ui->gs_width->setValue(std::min(ui->gs_width->value(), QGuiApplication::primaryScreen()->size().width()));
 			xgui_settings->SetValue(gui::gs_width, ui->gs_width->value());
 		});
 		connect(ui->gs_height, &QSpinBox::editingFinished, [=]()
 		{
-			ui->gs_height->setValue(std::min(ui->gs_height->value(), QApplication::desktop()->screenGeometry().height()));
+			ui->gs_height->setValue(std::min(ui->gs_height->value(), QGuiApplication::primaryScreen()->size().height()));
 			xgui_settings->SetValue(gui::gs_height, ui->gs_height->value());
 		});
 	}
@@ -1229,6 +1310,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		SubscribeTooltip(ui->cb_show_pkg_install, json_gui["show_pkg_install"].toString());
 
 		SubscribeTooltip(ui->cb_show_pup_install, json_gui["show_pup_install"].toString());
+
+		SubscribeTooltip(ui->cb_check_update_start, json_gui["check_update_start"].toString());
 
 		SubscribeTooltip(ui->useRichPresence, json_gui["useRichPresence"].toString());
 
@@ -1280,6 +1363,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		auto AddColoredIcons = [=]()
 		{
 			addColoredIcon(ui->pb_gl_icon_color, xgui_settings->GetValue(gui::gl_iconColor).value<QColor>());
+			addColoredIcon(ui->pb_sd_icon_color, xgui_settings->GetValue(gui::sd_icon_color).value<QColor>());
+			addColoredIcon(ui->pb_tr_icon_color, xgui_settings->GetValue(gui::tr_icon_color).value<QColor>());
 		};
 		AddColoredIcons();
 
@@ -1289,9 +1374,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->cb_show_pkg_install->setChecked(xgui_settings->GetValue(gui::ib_pkg_success).toBool());
 		ui->cb_show_pup_install->setChecked(xgui_settings->GetValue(gui::ib_pup_success).toBool());
 
+		ui->cb_check_update_start->setChecked(xgui_settings->GetValue(gui::m_check_upd_start).toBool());
+
 		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
 		ui->pb_gl_icon_color->setEnabled(enableUIColors);
+		ui->pb_sd_icon_color->setEnabled(enableUIColors);
+		ui->pb_tr_icon_color->setEnabled(enableUIColors);
 
 		auto ApplyGuiOptions = [&](bool reset = false)
 		{
@@ -1313,7 +1402,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 		};
 
-		connect(ui->okButton, &QAbstractButton::clicked, [=]()
+		connect(ui->buttonBox, &QDialogButtonBox::accepted, [=]()
 		{
 			ApplyGuiOptions();
 		});
@@ -1362,11 +1451,17 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		{
 			xgui_settings->SetValue(gui::ib_pup_success, val);
 		});
+		connect(ui->cb_check_update_start, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::m_check_upd_start, val);
+		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
 		{
 			xgui_settings->SetValue(gui::m_enableUIColors, val);
 			ui->pb_gl_icon_color->setEnabled(val);
+			ui->pb_sd_icon_color->setEnabled(val);
+			ui->pb_tr_icon_color->setEnabled(val);
 			Q_EMIT GuiRepaintRequest();
 		});
 		auto colorDialog = [&](const gui_save& color, const QString& title, QPushButton *button)
@@ -1394,6 +1489,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->pb_gl_icon_color, &QAbstractButton::clicked, [=]()
 		{
 			colorDialog(gui::gl_iconColor, tr("Choose gamelist icon color"), ui->pb_gl_icon_color);
+		});
+		connect(ui->pb_sd_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(gui::sd_icon_color, tr("Choose save manager icon color"), ui->pb_sd_icon_color);
+		});
+		connect(ui->pb_tr_icon_color, &QAbstractButton::clicked, [=]()
+		{
+			colorDialog(gui::tr_icon_color, tr("Choose trophy manager icon color"), ui->pb_tr_icon_color);
 		});
 
 		AddConfigs();
@@ -1425,23 +1528,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->logProg, emu_settings::LogShaderPrograms);
 	SubscribeTooltip(ui->logProg, json_debug["logProg"].toString());
 
-	xemu_settings->EnhanceCheckBox(ui->readColor, emu_settings::ReadColorBuffers);
-	SubscribeTooltip(ui->readColor, json_debug["readColor"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings::WriteDepthBuffer);
-	SubscribeTooltip(ui->dumpDepth, json_debug["dumpDepth"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->readDepth, emu_settings::ReadDepthBuffer);
-	SubscribeTooltip(ui->readDepth, json_debug["readDepth"].toString());
-
 	xemu_settings->EnhanceCheckBox(ui->disableHwOcclusionQueries, emu_settings::DisableOcclusionQueries);
 	SubscribeTooltip(ui->disableHwOcclusionQueries, json_debug["disableOcclusionQueries"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->forceCpuBlitEmulation, emu_settings::ForceCPUBlitEmulation);
 	SubscribeTooltip(ui->forceCpuBlitEmulation, json_debug["forceCpuBlitEmulation"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
-	SubscribeTooltip(ui->disableOnDiskShaderCache, json_debug["disableOnDiskShaderCache"].toString());
 
 	xemu_settings->EnhanceCheckBox(ui->disableVulkanMemAllocator, emu_settings::DisableVulkanMemAllocator);
 	SubscribeTooltip(ui->disableVulkanMemAllocator, json_debug["disableVulkanMemAllocator"].toString());
@@ -1473,14 +1564,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	xemu_settings->EnhanceCheckBox(ui->hookStFunc, emu_settings::HookStaticFuncs);
 	SubscribeTooltip(ui->hookStFunc, json_debug["hookStFunc"].toString());
-
-	xemu_settings->EnhanceCheckBox(ui->debugConsoleMode, emu_settings::DebugConsoleMode);
-	SubscribeTooltip(ui->debugConsoleMode, json_debug["debugConsoleMode"].toString());
-
-	// Comboboxes
-	xemu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings::MaxSPURSThreads, true);
-	ui->maxSPURSThreads->setItemText(ui->maxSPURSThreads->findData("6"), tr("Unlimited (Default)"));
-	SubscribeTooltip(ui->maxSPURSThreads, json_debug["maxSPURSThreads"].toString());
 
 	// Layout fix for High Dpi
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
@@ -1536,6 +1619,7 @@ void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
 
+	ui->combo_stylesheets->addItem("None", gui::None);
 	ui->combo_stylesheets->addItem("Default (Bright)", gui::Default);
 
 	for (const QString& entry : xgui_settings->GetStylesheetEntries())

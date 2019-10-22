@@ -166,11 +166,11 @@ emu_settings::Render_Creator::Render_Creator()
 	static std::mutex mtx;
 	static std::condition_variable cond;
 	static bool thread_running = true;
-	static volatile bool device_found = false;
+	static bool device_found = false;
 
 	static QStringList compatible_gpus;
 
-	thread_ctrl::spawn("Vulkan device enumeration", [&]
+	std::thread enum_thread = std::thread([&]
 	{
 		thread_ctrl::set_native_priority(-1);
 
@@ -192,6 +192,7 @@ emu_settings::Render_Creator::Render_Creator()
 				}
 			}
 		}
+
 		std::scoped_lock{mtx}, thread_running = false;
 		cond.notify_all();
 	});
@@ -204,12 +205,13 @@ emu_settings::Render_Creator::Render_Creator()
 	if (thread_running)
 	{
 		LOG_ERROR(GENERAL, "Vulkan device enumeration timed out");
-		auto button = QMessageBox::critical(nullptr, tr("Vulkan check timeout"),
+		auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
 			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
 			"graphics drivers, reinstalling them could fix the issue.\n\n"
 			"Selecting ignore starts the emulator without Vulkan support."),
 			QMessageBox::Ignore | QMessageBox::Abort, QMessageBox::Abort);
 
+		enum_thread.detach();
 		if (button != QMessageBox::Ignore)
 			std::exit(1);
 
@@ -219,6 +221,7 @@ emu_settings::Render_Creator::Render_Creator()
 	{
 		supportsVulkan = device_found;
 		vulkanAdapters = std::move(compatible_gpus);
+		enum_thread.join();
 	}
 #endif
 
@@ -612,7 +615,7 @@ void emu_settings::OpenCorrectionDialog(QWidget* parent)
 {
 	if (m_broken_types.size() && QMessageBox::question(parent, tr("Fix invalid settings?"),
 		tr(
-			"Your config file contained one or more unrecognized settings.\n"
+			"Your config file contained one or more unrecognized values for settings.\n"
 			"Their default value will be used until they are corrected.\n"
 			"Consider that a correction might render them invalid for other versions of RPCS3.\n"
 			"\n"

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/BEType.h"
@@ -16,6 +16,11 @@ enum CellPadError : u32
 	CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD        = 0x80121108,
 	CELL_PAD_ERROR_TOO_MANY_DEVICES           = 0x80121109,
 	CELL_PAD_ERROR_EBUSY                      = 0x8012110a,
+};
+
+enum CellPadFilterError : u32
+{
+	CELL_PADFILTER_ERROR_INVALID_PARAMETER = 0x80121401,
 };
 
 // Controller types
@@ -36,6 +41,13 @@ enum
 	CELL_PAD_LEN_CHANGE_DEFAULT = 8,
 	CELL_PAD_LEN_CHANGE_PRESS_ON = 20,
 	CELL_PAD_LEN_CHANGE_SENSOR_ON = 24,
+};
+
+enum
+{
+	CELL_PADFILTER_IIR_CUTOFF_2ND_LPF_BT_050 = 0, // 50% Nyquist frequency
+	CELL_PADFILTER_IIR_CUTOFF_2ND_LPF_BT_020 = 1, // 20% Nyquist frequency
+	CELL_PADFILTER_IIR_CUTOFF_2ND_LPF_BT_010 = 2, // 10% Nyquist frequency
 };
 
 struct CellPadData
@@ -96,14 +108,18 @@ struct CellPadActParam
 	u8 reserved[6];
 };
 
-struct pad_t
+struct CellPadFilterIIRSos
 {
-	u32 max_connect;
-	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting;
+	be_t<s32> u[3];
+	be_t<s32> a1;
+	be_t<s32> a2;
+	be_t<s32> b0;
+	be_t<s32> b1;
+	be_t<s32> b2;
+};
 
-	pad_t(u32 max_connect)
-		: max_connect(max_connect)
-	{
-		port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
-	}
+struct pad_info
+{
+	atomic_t<u32> max_connect = 0;
+	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting{ 0 };
 };

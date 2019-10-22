@@ -49,16 +49,12 @@ namespace rsx
 
 			if (use_custom_background)
 			{
-				auto icon_path = Emu.GetSfoDir() + "/PIC1.PNG";
-				if (!fs::exists(icon_path))
-				{
-					// Fallback path
-					icon_path = Emu.GetSfoDir() + "/ICON0.PNG";
-				}
+				const auto picture_path = Emu.GetBackgroundPicturePath();
 
-				if (fs::exists(icon_path))
+				if (fs::exists(picture_path))
 				{
-					background_image = std::make_unique<image_info>(icon_path.c_str());
+					background_image = std::make_unique<image_info>(picture_path.c_str());
+
 					if (background_image->data)
 					{
 						f32 color                    = (100 - g_cfg.video.shader_preloading_dialog.darkening_strength) / 100.f;

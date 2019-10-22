@@ -79,77 +79,42 @@ void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 static const vertex_reg_info reg_table[] =
 {
 	{ "gl_Position", false, "dst_reg0", "", false },
-	{ "diff_color", true, "dst_reg1", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE },
-	{ "spec_color", true, "dst_reg2", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR },
+	{ "diff_color", true, "dst_reg1", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE },
+	{ "spec_color", true, "dst_reg2", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR },
 	//These are only present when back variants are specified, otherwise the default diff/spec color vars are for both front and back
-	{ "front_diff_color", true, "dst_reg3", "", false },
-	{ "front_spec_color", true, "dst_reg4", "", false },
+	{ "diff_color1", true, "dst_reg3", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE },
+	{ "spec_color1", true, "dst_reg4", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR | CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR },
 	//Fog output shares a data source register with clip planes 0-2 so only declare when specified
 	{ "fog_c", true, "dst_reg5", ".xxxx", true, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_FOG },
 	//Warning: Always define all 3 clip plane groups together to avoid flickering with openGL
 	{ "gl_ClipDistance[0]", false, "dst_reg5", ".y * user_clip_factor[0].x", false, "user_clip_enabled[0].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
 	{ "gl_ClipDistance[1]", false, "dst_reg5", ".z * user_clip_factor[0].y", false, "user_clip_enabled[0].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
 	{ "gl_ClipDistance[2]", false, "dst_reg5", ".w * user_clip_factor[0].z", false, "user_clip_enabled[0].z > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC0 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC1 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC2 },
-	{ "gl_PointSize", false, "dst_reg6", ".x", false },
+	{ "gl_PointSize", false, "dst_reg6", ".x", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_POINTSIZE },
 	{ "gl_ClipDistance[3]", false, "dst_reg6", ".y * user_clip_factor[0].w", false, "user_clip_enabled[0].w > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
 	{ "gl_ClipDistance[4]", false, "dst_reg6", ".z * user_clip_factor[1].x", false, "user_clip_enabled[1].x > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
 	{ "gl_ClipDistance[5]", false, "dst_reg6", ".w * user_clip_factor[1].y", false, "user_clip_enabled[1].y > 0", "0.5", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_UC3 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC4 | CELL_GCM_ATTRIB_OUTPUT_MASK_UC5 },
-	{ "tc0", true, "dst_reg7", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
-	{ "tc1", true, "dst_reg8", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
-	{ "tc2", true, "dst_reg9", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
-	{ "tc3", true, "dst_reg10", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX3 },
-	{ "tc4", true, "dst_reg11", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX4 },
-	{ "tc5", true, "dst_reg12", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX5 },
-	{ "tc6", true, "dst_reg13", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX6 },
-	{ "tc7", true, "dst_reg14", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX7 },
-	{ "tc8", true, "dst_reg15", "", false, "", "", "", false, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX8 },
+	{ "tc0", true, "dst_reg7", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX0 },
+	{ "tc1", true, "dst_reg8", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX1 },
+	{ "tc2", true, "dst_reg9", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX2 },
+	{ "tc3", true, "dst_reg10", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX3 },
+	{ "tc4", true, "dst_reg11", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX4 },
+	{ "tc5", true, "dst_reg12", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX5 },
+	{ "tc6", true, "dst_reg13", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX6 },
+	{ "tc7", true, "dst_reg14", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX7 },
+	{ "tc8", true, "dst_reg15", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX8 },
 	{ "tc9", true, "dst_reg6", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX9 }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 };
 
 void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
 {
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
-
-	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
-	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
-
-	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
-	bool front_back_specular = (insert_back_specular && insert_front_specular);
-
-	std::vector<std::string> outputs_to_declare;
-
 	for (auto &i : reg_table)
 	{
 		if (i.need_declare)
 		{
-			if (i.name == "front_diff_color")
-				insert_front_diffuse = false;
-
-			if (i.name == "front_spec_color")
-				insert_front_specular = false;
-
-			std::string name = i.name;
-
-			if (front_back_diffuse && name == "diff_color")
-				name = "back_diff_color";
-
-			if (front_back_specular && name == "spec_color")
-				name = "back_spec_color";
-
-			outputs_to_declare.push_back(name);
+			// All outputs must be declared always to allow setting default values
+			OS << "layout(location=" << gl::get_varying_register_location(i.name) << ") out vec4 " << i.name << ";\n";
 		}
-	}
-
-	if (insert_back_diffuse && insert_front_diffuse)
-		outputs_to_declare.emplace_back("front_diff_color");
-
-	if (insert_back_specular && insert_front_specular)
-		outputs_to_declare.emplace_back("front_spec_color");
-
-	for (auto &name: outputs_to_declare)
-	{
-		OS << "layout(location=" << gl::get_varying_register_location(name) << ") out vec4 " << name << ";\n";
 	}
 }
 
@@ -164,20 +129,36 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_opengl4, dev_caps.vendor_INTEL == false);
 
-	std::string parameters;
-	for (int i = 0; i < 16; ++i)
+	// Declare global registers with optional initialization
+	std::string registers;
+	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
 	{
-		std::string reg_name = "dst_reg" + std::to_string(i);
-		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", reg_name))
+		for (auto &PI : vec4Types->items)
 		{
-			if (parameters.length())
-				parameters += ", ";
+			if (registers.length())
+				registers += ", ";
+			else
+				registers = "vec4 ";
 
-			parameters += "inout vec4 " + reg_name;
+			registers += PI.name;
+
+			if (!PI.value.empty())
+			{
+				// Simplify default initialization
+				if (PI.value == "vec4(0.0, 0.0, 0.0, 0.0)")
+					registers += " = vec4(0.)";
+				else
+					registers += " = " + PI.value;
+			}
 		}
 	}
 
-	OS << "void vs_main(" << parameters << ")\n";
+	if (!registers.empty())
+	{
+		OS << registers << ";\n";
+	}
+
+	OS << "void vs_main()\n";
 	OS << "{\n";
 
 	//Declare temporary registers, ignoring those mapped to outputs
@@ -212,93 +193,44 @@ void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main ()\n";
 	OS << "{\n";
 
-	std::string parameters;
-
-	if (ParamType *vec4Types = m_parr.SearchParam(PF_PARAM_OUT, "vec4"))
-	{
-		for (int i = 0; i < 16; ++i)
-		{
-			std::string reg_name = "dst_reg" + std::to_string(i);
-			for (auto &PI : vec4Types->items)
-			{
-				if (reg_name == PI.name)
-				{
-					if (parameters.length())
-						parameters += ", ";
-
-					parameters += reg_name;
-					OS << "	vec4 " << reg_name;
-
-					if (!PI.value.empty())
-						OS << "= " << PI.value;
-
-					OS << ";\n";
-				}
-			}
-		}
-	}
-
-	OS << "\n" << "	vs_main(" << parameters << ");\n\n";
-
-	bool insert_front_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTDIFFUSE) != 0;
-	bool insert_front_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_FRONTSPECULAR) != 0;
-
-	bool insert_back_diffuse = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKDIFFUSE) != 0;
-	bool insert_back_specular = (rsx_vertex_program.output_mask & CELL_GCM_ATTRIB_OUTPUT_MASK_BACKSPECULAR) != 0;
-
-	bool front_back_diffuse = (insert_back_diffuse && insert_front_diffuse);
-	bool front_back_specular = (insert_back_specular && insert_front_specular);
+	OS << "\n" << "	vs_main();\n\n";
 
 	for (auto &i : reg_table)
 	{
-		std::string name = i.name;
-
-		if (front_back_diffuse && name == "diff_color")
-			name = "back_diff_color";
-
-		if (front_back_specular && name == "spec_color")
-			name = "back_spec_color";
-
-		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", i.src_reg))
+		if (!i.check_mask || i.test(rsx_vertex_program.output_mask))
 		{
-			if (i.check_mask && (rsx_vertex_program.output_mask & i.check_mask_value) == 0)
+			if (m_parr.HasParam(PF_PARAM_OUT, "vec4", i.src_reg))
+			{
+				std::string condition = (!i.cond.empty()) ? "(" + i.cond + ") " : "";
+
+				if (condition.empty() || i.default_val.empty())
+				{
+					if (!condition.empty()) condition = "if " + condition;
+					OS << "	" << condition << i.name << " = " << i.src_reg << i.src_reg_mask << ";\n";
+				}
+				else
+				{
+					//Insert if-else condition
+					OS << "	" << i.name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";\n";
+				}
+
+				// Register was marked for output and a properly initialized source register exists
+				// Nothing more to do
 				continue;
-
-			if (i.name == "front_diff_color")
-				insert_front_diffuse = false;
-
-			if (i.name == "front_spec_color")
-				insert_front_specular = false;
-
-			std::string condition = (!i.cond.empty()) ? "(" + i.cond + ") " : "";
-			if (condition.empty() || i.default_val.empty())
-			{
-				if (!condition.empty()) condition = "if " + condition;
-				OS << "	" << condition << name << " = " << i.src_reg << i.src_reg_mask << ";\n";
-			}
-			else
-			{
-				//Insert if-else condition
-				OS << "	" << name << " = " << condition << "? " << i.src_reg << i.src_reg_mask << ": " << i.default_val << ";\n";
 			}
 		}
-		else if (i.need_declare && (rsx_vertex_program.output_mask & i.check_mask_value) > 0)
+
+		if (i.need_declare)
 		{
-			//An output was declared but nothing was written to it
-			//Set it to all ones (Atelier Escha)
-			OS << "	" << name << " = vec4(1.);\n";
+			OS << "	" << i.name << " = vec4(0., 0., 0., 1.);\n";
+		}
+		else if (i.check_mask_value == CELL_GCM_ATTRIB_OUTPUT_MASK_POINTSIZE)
+		{
+			// Default point size if none was generated by the program
+			OS << "	gl_PointSize = point_size;\n";
 		}
 	}
 
-	if (insert_back_diffuse && insert_front_diffuse)
-		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", "dst_reg1"))
-			OS << "	front_diff_color = dst_reg1;\n";
-
-	if (insert_back_specular && insert_front_specular)
-		if (m_parr.HasParam(PF_PARAM_OUT, "vec4", "dst_reg2"))
-			OS << "	front_spec_color = dst_reg2;\n";
-
-	OS << "	gl_PointSize = point_size;\n";
 	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
 	OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
 

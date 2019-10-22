@@ -3,6 +3,7 @@
 #include <QButtonGroup>
 #include <QDialog>
 #include <QEvent>
+#include <QJsonObject>
 #include <QLabel>
 #include <QTabWidget>
 #include <QTimer>
@@ -78,7 +79,7 @@ class pad_settings_dialog : public QDialog
 
 	struct pad_button
 	{
-		cfg::string* cfg_name;
+		cfg::string* cfg_name = nullptr;
 		std::string key;
 		QString text;
 	};
@@ -102,6 +103,9 @@ private Q_SLOTS:
 private:
 	Ui::pad_settings_dialog *ui;
 	std::string m_title_id;
+
+	// Tooltip things
+	QJsonObject m_json_handlers;
 
 	// TabWidget
 	QTabWidget* m_tabs = nullptr;

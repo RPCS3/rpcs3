@@ -5,42 +5,50 @@ LOG_CHANNEL(cellRemotePlay);
 
 s32 cellRemotePlayGetStatus()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayGetStatus()");
+	return CELL_OK;
 }
 
 s32 cellRemotePlaySetComparativeVolume()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlaySetComparativeVolume()");
+	return CELL_OK;
 }
 
 s32 cellRemotePlayGetPeerInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayGetPeerInfo()");
+	return CELL_OK;
 }
 
 s32 cellRemotePlayGetSharedMemory()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayGetSharedMemory()");
+	return CELL_OK;
 }
 
 s32 cellRemotePlayEncryptAllData()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayEncryptAllData()");
+	return CELL_OK;
 }
 
 s32 cellRemotePlayStopPeerVideoOut()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayStopPeerVideoOut()");
+	return CELL_OK;
 }
 
 s32 cellRemotePlayGetComparativeVolume()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayGetComparativeVolume()");
+	return CELL_OK;
 }
 
 s32 cellRemotePlayBreak()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayBreak()");
+	return CELL_OK;
 }
 
 

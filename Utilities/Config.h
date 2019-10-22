@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/types.h"
 #include "Utilities/StrFmt.h"
@@ -235,6 +235,10 @@ namespace cfg
 	public:
 		int_type def;
 
+		// Expose range
+		static const s64 max = Max;
+		static const s64 min = Min;
+
 		_int(node* owner, const std::string& name, int_type def = std::min<int_type>(Max, std::max<int_type>(Min, 0)))
 			: _base(type::_int, owner, name)
 			, m_value(def)
@@ -294,6 +298,7 @@ namespace cfg
 	// Simple string entry with mutex
 	class string final : public _base
 	{
+		std::string m_name;
 		std::string m_value;
 
 	public:
@@ -301,6 +306,7 @@ namespace cfg
 
 		string(node* owner, const std::string& name, const std::string& def = {})
 			: _base(type::string, owner, name)
+			, m_name(name)
 			, m_value(def)
 			, def(def)
 		{
@@ -314,6 +320,11 @@ namespace cfg
 		const std::string& get() const
 		{
 			return m_value;
+		}
+
+		std::string get_name() const
+		{
+			return m_name;
 		}
 
 		std::size_t size() const

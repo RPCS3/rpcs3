@@ -44,8 +44,8 @@
 
 #define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
 
-#define FRAME_PRESENT_TIMEOUT 1000000ull // 1 second
-#define GENERAL_WAIT_TIMEOUT  100000ull  // 100ms
+#define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
+#define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
 
 namespace rsx
 {
@@ -80,6 +80,21 @@ namespace vk
 		INTEL
 	};
 
+	enum class chip_class
+	{
+		unknown,
+		AMD_gcn_generic,
+		AMD_polaris,
+		AMD_vega,
+		AMD_navi,
+		NV_generic,
+		NV_kepler,
+		NV_maxwell,
+		NV_pascal,
+		NV_volta,
+		NV_turing
+	};
+
 	class context;
 	class render_device;
 	class swap_chain_image;
@@ -107,6 +122,8 @@ namespace vk
 	bool fence_reset_disabled();
 	VkFlags get_heap_compatible_buffer_types();
 	driver_vendor get_driver_vendor();
+	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id);
+	chip_class get_chip_family();
 
 	VkComponentMapping default_component_map();
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
@@ -118,6 +135,7 @@ namespace vk
 	image_view* null_image_view(vk::command_buffer&);
 	image* get_typeless_helper(VkFormat format, u32 requested_width, u32 requested_height);
 	buffer* get_scratch_buffer();
+	data_heap* get_upload_heap();
 
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
@@ -133,6 +151,10 @@ namespace vk
 	void destroy_global_resources();
 	void reset_global_resources();
 
+	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size);
+	void vmm_notify_memory_freed(void* handle);
+	void vmm_reset();
+
 	/**
 	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
 	* Then copy all layers into dst_image.
@@ -140,14 +162,14 @@ namespace vk
 	*/
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::data_heap &upload_heap);
+		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align = 0);
 
 	//Other texture management helpers
 	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, const VkImageSubresourceRange& range);
 	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout);
 
-	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region);
+	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes = false);
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 
 	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,
@@ -215,6 +237,35 @@ namespace vk
 		bool allow_int8;
 	};
 
+	struct chip_family_table
+	{
+		chip_class default_ = chip_class::unknown;
+		std::unordered_map<uint32_t, chip_class> lut;
+
+		void add(uint32_t first, uint32_t last, chip_class family)
+		{
+			for (auto i = first; i <= last; ++i)
+			{
+				lut[i] = family;
+			}
+		}
+
+		void add(uint32_t id, chip_class family)
+		{
+			lut[id] = family;
+		}
+
+		chip_class find(uint32_t device_id)
+		{
+			if (auto found = lut.find(device_id); found != lut.end())
+			{
+				return found->second;
+			}
+
+			return default_;
+		}
+	};
+
 	// Memory Allocator - base class
 
 	class mem_allocator_base
@@ -272,11 +323,14 @@ namespace vk
 			mem_req.alignment = alignment;
 			create_info.memoryTypeBits = 1u << memory_type_index;
 			CHECK_RESULT(vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr));
+
+			vmm_notify_memory_allocated(vma_alloc, memory_type_index, block_sz);
 			return vma_alloc;
 		}
 
 		void free(mem_handle_t mem_handle) override
 		{
+			vmm_notify_memory_freed(mem_handle);
 			vmaFreeMemory(m_allocator, static_cast<VmaAllocation>(mem_handle));
 		}
 
@@ -333,13 +387,15 @@ namespace vk
 			info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 			info.allocationSize = block_sz;
 			info.memoryTypeIndex = memory_type_index;
-
 			CHECK_RESULT(vkAllocateMemory(m_device, &info, nullptr, &memory));
+
+			vmm_notify_memory_allocated(memory, memory_type_index, block_sz);
 			return memory;
 		}
 
 		void free(mem_handle_t mem_handle) override
 		{
+			vmm_notify_memory_freed(mem_handle);
 			vkFreeMemory(m_device, (VkDeviceMemory)mem_handle, nullptr);
 		}
 
@@ -482,7 +538,7 @@ private:
 			supported_extensions instance_extensions(supported_extensions::instance);
 			supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
 
-			if (!instance_extensions.is_supported("VK_KHR_get_physical_device_properties2"))
+			if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
 			{
 				vkGetPhysicalDeviceFeatures(dev, &features);
 			}
@@ -494,13 +550,13 @@ private:
 
 				VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
 
-				if (device_extensions.is_supported("VK_KHR_shader_float16_int8"))
+				if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 				{
 					shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
 					features2.pNext = &shader_support_info;
 				}
 
-				if (device_extensions.is_supported("VK_KHR_driver_properties"))
+				if (device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
 				{
 					driver_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
 					driver_properties.pNext = features2.pNext;
@@ -516,7 +572,7 @@ private:
 				features = features2.features;
 			}
 
-			stencil_export_support = device_extensions.is_supported("VK_EXT_shader_stencil_export");
+			stencil_export_support = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		}
 
 	public:
@@ -535,20 +591,18 @@ private:
 			LOG_NOTICE(RSX, "Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
 			if (get_driver_vendor() == driver_vendor::RADV &&
-				get_name().find("LLVM 8") != std::string::npos)
+				get_name().find("LLVM 8.0.0") != std::string::npos)
 			{
 				// Serious driver bug causing black screens
 				// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
-				LOG_FATAL(RSX, "RADV drivers have a major driver bug with LLVM 8 resulting in no visual output. Upgrade to LLVM 9 version of mesa to avoid this issue.");
+				LOG_FATAL(RSX, "RADV drivers have a major driver bug with LLVM 8.0.0 resulting in no visual output. Upgrade to LLVM version 8.0.1 or greater to avoid this issue.");
 			}
 
-#ifndef _WIN32
-			if (get_name().find("VEGA"))
+			if (get_chip_class() == chip_class::AMD_vega)
 			{
-				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware for both RADV and AMDVLK. Using float32_t fallback instead.");
+				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware on all drivers. Using float32_t fallback instead.");
 				shader_types_support.allow_float16 = false;
 			}
-#endif
 		}
 
 		std::string get_name() const
@@ -627,6 +681,11 @@ private:
 					VK_VERSION_PATCH(props.driverVersion));
 			}
 			}
+		}
+
+		chip_class get_chip_class() const
+		{
+			return get_chip_family(props.vendorID, props.deviceID);
 		}
 
 		uint32_t get_queue_count() const
@@ -714,7 +773,7 @@ private:
 			VkPhysicalDeviceFeatures available_features = pgpu->features;
 			if (pgpu->shader_types_support.allow_float16)
 			{
-				requested_extensions.push_back("VK_KHR_shader_float16_int8");
+				requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 			}
 
 			available_features.samplerAnisotropy = VK_TRUE;
@@ -1136,6 +1195,11 @@ private:
 		u32 depth() const
 		{
 			return info.extent.depth;
+		}
+
+		u32 mipmaps() const
+		{
+			return info.mipLevels;
 		}
 
 		u8 samples() const
@@ -1854,7 +1918,12 @@ public:
 			swapchain_images.clear();
 
 			if (full)
+			{
+				ReleaseDC(window_handle, hDstDC);
+				hDstDC = NULL;
+
 				dev.destroy();
+			}
 		}
 
 		VkResult present(VkSemaphore /*semaphore*/, u32 image) override
@@ -2397,7 +2466,7 @@ public:
 			app.applicationVersion = 0;
 			app.pEngineName = app_name;
 			app.engineVersion = 0;
-			app.apiVersion = VK_MAKE_VERSION(1, 0, 0);
+			app.apiVersion = VK_API_VERSION_1_0;
 
 			//Set up instance information
 
@@ -2415,9 +2484,9 @@ public:
 					extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 				}
 
-				if (support.is_supported("VK_KHR_get_physical_device_properties2"))
+				if (support.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
 				{
-					extensions.push_back("VK_KHR_get_physical_device_properties2");
+					extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -2456,8 +2525,14 @@ public:
 			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
 			VkInstance instance;
-			if (vkCreateInstance(&instance_info, nullptr, &instance) != VK_SUCCESS)
+			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &instance); result != VK_SUCCESS)
+			{
+				if (result == VK_ERROR_LAYER_NOT_PRESENT)
+				{
+					LOG_FATAL(RSX,"Could not initialize layer VK_LAYER_KHRONOS_validation");
+				}
 				return 0;
+			}
 
 			m_vk_instances.push_back(instance);
 			return (u32)m_vk_instances.size();
@@ -2945,7 +3020,7 @@ public:
 			ia.primitiveRestartEnable = enable? VK_TRUE : VK_FALSE;
 		}
 
-		void set_color_mask(bool r, bool g, bool b, bool a)
+		void set_color_mask(int index, bool r, bool g, bool b, bool a)
 		{
 			VkColorComponentFlags mask = 0;
 			if (a) mask |= VK_COLOR_COMPONENT_A_BIT;
@@ -2953,10 +3028,7 @@ public:
 			if (g) mask |= VK_COLOR_COMPONENT_G_BIT;
 			if (r) mask |= VK_COLOR_COMPONENT_R_BIT;
 
-			att_state[0].colorWriteMask = mask;
-			att_state[1].colorWriteMask = mask;
-			att_state[2].colorWriteMask = mask;
-			att_state[3].colorWriteMask = mask;
+			att_state[index].colorWriteMask = mask;
 		}
 
 		void set_depth_mask(bool enable)

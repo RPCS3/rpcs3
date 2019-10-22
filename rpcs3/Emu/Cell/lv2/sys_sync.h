@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
@@ -9,8 +9,10 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
+#include "Emu/System.h"
 
 #include <deque>
+#include <thread>
 
 // attr_protocol (waiting scheduling policy)
 enum
@@ -113,27 +115,42 @@ struct lv2_obj
 		return res;
 	}
 
+private:
 	// Remove the current thread from the scheduling queue, register timeout
-	static void sleep_timeout(cpu_thread&, u64 timeout);
+	static void sleep_unlocked(cpu_thread&, u64 timeout);
 
-	static void sleep(cpu_thread& thread, u64 timeout = 0)
+	// Schedule the thread
+	static void awake_unlocked(cpu_thread*, u32 prio = -1);
+
+public:
+	static void sleep(cpu_thread& cpu, const u64 timeout = 0)
 	{
-		vm::temporary_unlock(thread);
-		sleep_timeout(thread, timeout);
+		vm::temporary_unlock(cpu);
+		std::lock_guard{g_mutex}, sleep_unlocked(cpu, timeout);
+		g_to_awake.clear();
+	}
+
+	static inline void awake(cpu_thread* const thread, const u32 prio = -1)
+	{
+		std::lock_guard lock(g_mutex);
+		awake_unlocked(thread, prio);
 	}
 
 	static void yield(cpu_thread& thread)
 	{
 		vm::temporary_unlock(thread);
-		awake(thread, -4);
+		awake(&thread, -4);
 	}
 
-	// Schedule the thread
-	static void awake(cpu_thread&, u32 prio);
-
-	static void awake(cpu_thread& thread)
+	static inline void awake_all()
 	{
-		awake(thread, -1);
+		awake({});
+		g_to_awake.clear();
+	}
+
+	static inline void append(cpu_thread* const thread)
+	{
+		g_to_awake.emplace_back(thread);
 	}
 
 	static void cleanup();
@@ -213,9 +230,81 @@ struct lv2_obj
 		}
 	}
 
+	template<bool is_usleep = false>
+	static bool wait_timeout(u64 usec, cpu_thread* const cpu = {})
+	{
+		static_assert(UINT64_MAX / cond_variable::max_timeout >= g_cfg.core.clocks_scale.max, "timeout may overflow during scaling");
+
+		// Clamp to max timeout accepted
+		const u64 max_usec = cond_variable::max_timeout * 100 / g_cfg.core.clocks_scale.max;
+
+		// Now scale the result
+		usec = (std::min<u64>(usec, max_usec) * g_cfg.core.clocks_scale) / 100;
+
+		extern u64 get_system_time();
+
+		u64 passed = 0;
+		u64 remaining;
+
+		const u64 start_time = get_system_time();
+		while (usec >= passed)
+		{
+			remaining = usec - passed;
+#ifdef __linux__
+			// NOTE: Assumption that timer initialization has succeeded
+			u64 host_min_quantum = is_usleep && remaining <= 1000 ? 10 : 50;
+#else
+			// Host scheduler quantum for windows (worst case)
+			// NOTE: On ps3 this function has very high accuracy
+			constexpr u64 host_min_quantum = 500;
+#endif
+			// TODO: Tune for other non windows operating sytems
+
+			if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
+			{
+				thread_ctrl::wait_for(remaining, !is_usleep);
+			}
+			else
+			{
+				if (remaining > host_min_quantum)
+				{
+#ifdef __linux__
+					// Do not wait for the last quantum to avoid loss of accuracy
+					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum), !is_usleep);
+#else
+					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
+					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum), !is_usleep);
+#endif
+				}
+				else
+				{
+					// Try yielding. May cause long wake latency but helps weaker CPUs a lot by alleviating resource pressure
+					std::this_thread::yield();
+				}
+			}
+
+			if (Emu.IsStopped())
+			{
+				return false;
+			}
+
+			if (cpu && cpu->state & cpu_flag::signal)
+			{
+				return false;
+			}
+
+			passed = get_system_time() - start_time;
+		}
+
+		return true;
+	}
+
 private:
 	// Scheduler mutex
 	static shared_mutex g_mutex;
+
+	// Pending list of threads to run
+	static thread_local std::vector<class cpu_thread*> g_to_awake;
 
 	// Scheduler queue for active PPU threads
 	static std::deque<class ppu_thread*> g_ppu;

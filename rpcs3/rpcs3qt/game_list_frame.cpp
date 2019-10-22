@@ -407,7 +407,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		{
 			for (const auto& entry : fs::dir(path))
 			{
-				if (entry.name == "." || entry.name == "..")
+				if (!entry.is_directory || entry.name == "." || entry.name == "..")
 				{
 					continue;
 				}
@@ -418,7 +418,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				{
 					add_disc_dir(entry_path);
 				}
-				else if (entry.is_directory)
+				else
 				{
 					path_list.emplace_back(entry_path);
 				}
@@ -464,6 +464,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			game.serial       = psf::get_string(psf, "TITLE_ID", "");
 			game.name         = psf::get_string(psf, "TITLE", cat_unknown);
 			game.app_ver      = psf::get_string(psf, "APP_VER", cat_unknown);
+			game.version      = psf::get_string(psf, "VERSION", cat_unknown);
 			game.category     = psf::get_string(psf, "CATEGORY", cat_unknown);
 			game.fw           = psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown);
 			game.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
@@ -504,10 +505,10 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				game.category = sstr(category::other);
 			}
 
-			// Load Image
-			QImage img;
+			// Load ICON0.PNG
+			QPixmap icon;
 
-			if (game.icon_path.empty() || !img.load(qstr(game.icon_path)))
+			if (game.icon_path.empty() || !icon.load(qstr(game.icon_path)))
 			{
 				LOG_WARNING(GENERAL, "Could not load image from path %s", sstr(QDir(qstr(game.icon_path)).absolutePath()));
 			}
@@ -518,9 +519,9 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			const bool hasCustomPadConfig = fs::is_file(Emulator::GetCustomInputConfigPath(game.serial));
 
 			const QColor color = getGridCompatibilityColor(compat.color);
-			const QPixmap pxmap = PaintedPixmap(img, hasCustomConfig, hasCustomPadConfig, color);
+			const QPixmap pxmap = PaintedPixmap(icon, hasCustomConfig, hasCustomPadConfig, color);
 
-			m_game_data.push_back(game_info(new gui_game_info{game, compat, img, pxmap, hasCustomConfig, hasCustomPadConfig}));
+			m_game_data.push_back(game_info(new gui_game_info{game, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig}));
 		}
 		catch (const std::exception& e)
 		{
@@ -657,7 +658,24 @@ void game_list_frame::SaveSettings()
 static void open_dir(const std::string& spath)
 {
 	fs::create_dir(spath);
-	QString path = qstr(spath);
+	const QString path = qstr(spath);
+
+	if (fs::is_file(spath))
+	{
+		// open directory and select file
+		// https://stackoverflow.com/questions/3490336/how-to-reveal-in-finder-or-show-in-explorer-with-qt
+#ifdef _WIN32
+		QProcess::startDetached("explorer.exe", { "/select,", QDir::toNativeSeparators(path) });
+#elif defined(__APPLE__)
+		QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to reveal POSIX file \"" + path + "\"" });
+		QProcess::execute("/usr/bin/osascript", { "-e", "tell application \"Finder\" to activate" });
+#else
+		// open parent directory
+		QDesktopServices::openUrl(QUrl("file:///" + qstr(fs::get_parent_dir(spath))));
+#endif
+		return;
+	}
+
 	QDesktopServices::openUrl(QUrl("file:///" + path));
 }
 
@@ -807,11 +825,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = myMenu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [=]()
 		{
-			if (fs::is_file(Emulator::GetCustomConfigPath(currGame.serial)))
-				open_dir(Emulator::GetCustomConfigDir());
+			const std::string new_config_path = Emulator::GetCustomConfigPath(currGame.serial);
 
-			if (fs::is_file(Emulator::GetCustomConfigPath(currGame.serial, true)))
-				open_dir(data_base_dir);
+			if (fs::is_file(new_config_path))
+				open_dir(new_config_path);
+
+			const std::string old_config_path = Emulator::GetCustomConfigPath(currGame.serial, true);
+
+			if (fs::is_file(old_config_path))
+				open_dir(old_config_path);
 		});
 	}
 	if (fs::is_dir(data_base_dir))
@@ -908,15 +930,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 			fs::remove_all(currGame.path);
 			m_game_data.erase(std::remove(m_game_data.begin(), m_game_data.end(), gameinfo), m_game_data.end());
-			if (m_isListLayout)
-			{
-				m_gameList->removeRow(m_gameList->currentItem()->row());
-			}
-			else
-			{
-				Refresh();
-			}
 			LOG_SUCCESS(GENERAL, "Removed %s %s in %s", currGame.category, currGame.name, currGame.path);
+			Refresh(true);
 		}
 	});
 	connect(openGameFolder, &QAction::triggered, [=]()
@@ -1071,7 +1086,7 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, gam
 
 bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, game_info game, bool is_interactive)
 {
-	const std::string config_dir = Emulator::GetCustomConfigPath(title_id);
+	const std::string config_dir = Emulator::GetCustomInputConfigDir(title_id);
 
 	if (!fs::is_dir(config_dir))
 		return true;
@@ -1112,6 +1127,9 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove shaders cache?")) != QMessageBox::Yes)
 		return true;
 
+	u32 caches_removed = 0;
+	u32 caches_total   = 0;
+
 	QDirIterator dir_iter(qstr(base_dir), QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 	while (dir_iter.hasNext())
 	{
@@ -1121,18 +1139,25 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 		{
 			if (QDir(filepath).removeRecursively())
 			{
+				++caches_removed;
 				LOG_NOTICE(GENERAL, "Removed shaders cache dir: %s", sstr(filepath));
 			}
 			else
 			{
-				LOG_FATAL(GENERAL, "Could not completely remove shaders cache file: %s", sstr(filepath));
-				return false;
+				LOG_WARNING(GENERAL, "Could not completely remove shaders cache dir: %s", sstr(filepath));
 			}
-			break;
+			++caches_total;
 		}
 	}
 
-	return true;
+	const bool success = caches_total == caches_removed;
+
+	if (success)
+		LOG_SUCCESS(GENERAL, "Removed shaders cache in %s", base_dir);
+	else
+		LOG_FATAL(GENERAL, "Only %d/%d shaders cache dirs could be removed in %s", caches_removed, caches_total, base_dir);
+
+	return success;
 }
 
 bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_interactive)
@@ -1151,7 +1176,7 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	{
 		const QString filepath = dir_iter.next();
 
-		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".obj", Qt::CaseInsensitive))
+		if (QString::compare(dir_iter.fileInfo().suffix(), QStringLiteral("obj"), Qt::CaseInsensitive) == 0)
 		{
 			if (QFile::remove(filepath))
 			{
@@ -1192,7 +1217,7 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	{
 		const QString filepath = dir_iter.next();
 
-		if (dir_iter.fileInfo().absoluteFilePath().endsWith(".dat", Qt::CaseInsensitive))
+		if (QString::compare(dir_iter.fileInfo().suffix(), QStringLiteral("dat"), Qt::CaseInsensitive) == 0)
 		{
 			if (QFile::remove(filepath))
 			{
@@ -1227,8 +1252,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Creating all PPU caches"), tr("Cancel"), 0, total, this);
-	pdlg->setWindowTitle(tr("PPU Cache Batch Creation"));
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1273,8 +1297,7 @@ void game_list_frame::BatchRemovePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Removing all PPU caches"), tr("Cancel"), 0, total, this);
-	pdlg->setWindowTitle(tr("PPU Cache Batch Removal"));
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Removal"), tr("Removing all PPU caches"), tr("Cancel"), 0, total, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1315,8 +1338,7 @@ void game_list_frame::BatchRemoveSPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Removing all SPU caches"), tr("Cancel"), 0, total, this);
-	pdlg->setWindowTitle(tr("SPU Cache Batch Removal"));
+	progress_dialog* pdlg = new progress_dialog(tr("SPU Cache Batch Removal"), tr("Removing all SPU caches"), tr("Cancel"), 0, total, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1360,8 +1382,7 @@ void game_list_frame::BatchRemoveCustomConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Removing all custom configurations"), tr("Cancel"), 0, total, this);
-	pdlg->setWindowTitle(tr("Custom Configuration Batch Removal"));
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Configuration Batch Removal"), tr("Removing all custom configurations"), tr("Cancel"), 0, total, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1406,8 +1427,7 @@ void game_list_frame::BatchRemoveCustomPadConfigurations()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, this);
-	pdlg->setWindowTitle(tr("Custom Pad Configuration Batch Removal"));
+	progress_dialog* pdlg = new progress_dialog(tr("Custom Pad Configuration Batch Removal"), tr("Removing all custom pad configurations"), tr("Cancel"), 0, total, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1449,8 +1469,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("Removing all shader caches"), tr("Cancel"), 0, total, this);
-	pdlg->setWindowTitle(tr("Shader Cache Batch Removal"));
+	progress_dialog* pdlg = new progress_dialog(tr("Shader Cache Batch Removal"), tr("Removing all shader caches"), tr("Cancel"), 0, total, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1476,20 +1495,20 @@ void game_list_frame::BatchRemoveShaderCaches()
 	QApplication::beep();
 }
 
-QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
+QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
 	const int device_pixel_ratio = devicePixelRatio();
-	const QSize original_size = img.size();
+	const QSize original_size = icon.size();
 
-	QImage image = QImage(original_size * device_pixel_ratio, QImage::Format_ARGB32);
-	image.setDevicePixelRatio(device_pixel_ratio);
-	image.fill(m_Icon_Color);
+	QPixmap canvas = QPixmap(original_size * device_pixel_ratio);
+	canvas.setDevicePixelRatio(device_pixel_ratio);
+	canvas.fill(m_Icon_Color);
 
-	QPainter painter(&image);
+	QPainter painter(&canvas);
 
-	if (!img.isNull())
+	if (!icon.isNull())
 	{
-		painter.drawImage(QPoint(0, 0), img);
+		painter.drawPixmap(QPoint(0, 0), icon);
 	}
 
 	if (!m_isListLayout && (paint_config_icon || paint_pad_config_icon))
@@ -1511,9 +1530,9 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 			icon_path = ":/Icons/controllers_2.png";
 		}
 
-		QImage custom_config_icon(icon_path);
+		QPixmap custom_config_icon(icon_path);
 		custom_config_icon.setDevicePixelRatio(device_pixel_ratio);
-		painter.drawImage(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+		painter.drawPixmap(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
 	if (compatibility_color.isValid())
@@ -1528,7 +1547,7 @@ QPixmap game_list_frame::PaintedPixmap(const QImage& img, bool paint_config_icon
 
 	painter.end();
 
-	return QPixmap::fromImage(image.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
+	return canvas.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 }
 
 void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
@@ -1541,10 +1560,13 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
 
 	if (!m_isListLayout)
 	{
+		const QString custom_title = m_titles[QString::fromStdString(game->info.serial)];
+		const QString title = custom_title.isEmpty() ? qstr(game->info.name) : custom_title;
 		const QColor color = getGridCompatibilityColor(game->compat.color);
+
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 		int r = m_xgrid->currentItem()->row(), c = m_xgrid->currentItem()->column();
-		m_xgrid->addItem(game->pxmap, qstr(game->info.name).simplified(), r, c);
+		m_xgrid->addItem(game->pxmap, title.simplified(), r, c);
 		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(game));
 	}
 	else if (game->hasCustomConfig && game->hasCustomPadConfig)
@@ -1554,7 +1576,7 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
 	else if (game->hasCustomPadConfig)
 		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/controllers.png"));
 	else
-		m_gameList->setItem(item->row(), gui::column_name, new custom_table_widget_item(game->info.name));
+		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon());
 }
 
 void game_list_frame::ResizeIcons(const int& sliderPos)
@@ -1785,6 +1807,12 @@ int game_list_frame::PopulateGameList()
 
 		// Version
 		QString app_version = qstr(game->info.app_ver);
+
+		if (app_version == category::unknown)
+		{
+			// Fall back to Disc/Pkg Revision
+			app_version = qstr(game->info.version);
+		}
 
 		if (!game->compat.version.isEmpty() && (app_version == category::unknown || game->compat.version.toDouble() > app_version.toDouble()))
 		{

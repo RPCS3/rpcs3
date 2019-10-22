@@ -31,7 +31,7 @@ namespace gui
 		QStringList get_dir_entries(const QDir& dir, const QStringList& name_filters);
 
 		// Returns the color specified by its color_role for the QLabels with object_name
-		QColor get_label_color(const QString& object_name, QPalette::ColorRole color_role = QPalette::Foreground);
+		QColor get_label_color(const QString& object_name, QPalette::ColorRole color_role = QPalette::WindowText);
 
 		// Returns the font of the QLabels with object_name
 		QFont get_label_font(const QString& object_name);
@@ -47,5 +47,8 @@ namespace gui
 
 		// Opens an image in a new window with original size
 		void show_windowed_image(const QImage& img, const QString& title = "");
+
+		// Loads the app icon from path and embeds it centered into an empty square icon
+		QIcon get_app_icon_from_path(const std::string& path, const std::string& title_id);
 	} // utils
 } // gui

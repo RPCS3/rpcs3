@@ -21,7 +21,7 @@ std::vector<std::array<std::string, 6>> shle_patterns_list
 	{ "2B850007409D00B07C6923785520077E2F800000409E00ACE8030000E9440000", "68", "EF18", "0158", "sys_libc", "memcmp" },
 };
 
-statichle_handler::statichle_handler()
+statichle_handler::statichle_handler(int)
 {
 	load_patterns();
 }
@@ -88,7 +88,7 @@ bool statichle_handler::load_patterns()
 
 		dapat.fnid = ppu_generate_id(dapat.name.c_str());
 
-		static_hle.success("Added a pattern for %s(id:0x%X)", dapat.name, dapat.fnid);
+		static_hle.notice("Added a pattern for %s(id:0x%X)", dapat.name, dapat.fnid);
 		hle_patterns.push_back(std::move(dapat));
 	}
 

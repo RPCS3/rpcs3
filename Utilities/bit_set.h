@@ -22,7 +22,7 @@ Intersection (&) and symmetric difference (^) is also available.
 */
 
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 
 template <typename T>
 class atomic_bs_t;

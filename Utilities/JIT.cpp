@@ -205,12 +205,18 @@ void asmjit::build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fall
 	}
 	else
 	{
+		// Don't repeat on explicit XABORT instruction (workaround)
+		c.test(x86::eax, _XABORT_EXPLICIT);
+		c.jnz(fallback);
+
 		// Count an attempt without RETRY flag as 65 normal attempts and continue
+		c.push(x86::rax);
 		c.not_(x86::eax);
 		c.and_(x86::eax, _XABORT_RETRY);
 		c.shl(x86::eax, 5);
 		c.add(x86::eax, 1); // eax = RETRY ? 1 : 65
 		c.add(ctr, x86::rax);
+		c.pop(x86::rax);
 	}
 
 	c.cmp(ctr, less_than);
@@ -737,6 +743,8 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 {
 	std::string result;
 
+	auto null_mod = std::make_unique<llvm::Module> ("null_", m_context);
+
 	if (m_link.empty())
 	{
 		std::unique_ptr<llvm::RTDyldMemoryManager> mem;
@@ -748,10 +756,11 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		else
 		{
 			mem = std::make_unique<MemoryManager2>();
+			null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
 		}
 
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
-		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
+		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))
@@ -766,7 +775,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		auto mem = std::make_unique<MemoryManager>(m_link);
 		m_jit_el = std::make_unique<EventListener>(*mem);
 
-		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null", m_context))
+		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
 			.setErrorStr(&result)
 			.setEngineKind(llvm::EngineKind::JIT)
 			.setMCJITMemoryManager(std::move(mem))
@@ -823,7 +832,16 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> module)
 
 void jit_compiler::add(const std::string& path)
 {
-	m_engine->addObjectFile(std::move(llvm::object::ObjectFile::createObjectFile(*ObjectCache::load(path)).get()));
+	auto cache = ObjectCache::load(path);
+
+	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
+	{
+		m_engine->addObjectFile( std::move(*object_file) );
+	}
+	else
+	{
+		LOG_ERROR(GENERAL, "ObjectCache: Adding failed: %s", path);
+	}
 }
 
 void jit_compiler::fin()

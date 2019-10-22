@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <deque>
 #include <variant>
@@ -12,6 +12,7 @@
 #include "rsx_methods.h"
 #include "rsx_utils.h"
 #include "Overlays/overlays.h"
+#include "Common/texture_cache_utils.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
@@ -19,7 +20,9 @@
 #include "Capture/rsx_replay.h"
 
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/IdManager.h"
 
+extern u64 get_guest_system_time();
 extern u64 get_system_time();
 
 struct RSXIOTable
@@ -76,6 +79,7 @@ namespace rsx
 		scissor_config_state_dirty = 0x200,  // Scissor region changed
 
 		scissor_setup_invalid = 0x400,       // Scissor configuration is broken
+		scissor_setup_clipped = 0x800,       // Scissor region is cropped by viewport constraint
 
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
@@ -305,14 +309,17 @@ namespace rsx
 		std::array<u32, 4> color_addresses;
 		std::array<u32, 4> color_pitch;
 		std::array<u32, 4> actual_color_pitch;
+		std::array<bool, 4> color_write_enabled;
 		u32 zeta_address;
 		u32 zeta_pitch;
 		u32 actual_zeta_pitch;
+		bool zeta_write_enabled;
 		rsx::surface_target target;
 		rsx::surface_color_format color_format;
 		rsx::surface_depth_format depth_format;
 		rsx::surface_antialiasing aa_mode;
 		u32 aa_factors[2];
+		bool depth_float;
 		bool ignore_change;
 	};
 
@@ -369,7 +376,7 @@ namespace rsx
 			void set_enabled(class ::rsx::thread* ptimer, bool state);
 			void set_active(class ::rsx::thread* ptimer, bool state);
 
-			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
+			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
 
 			// Read current zcull statistics into the address provided
 			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
@@ -395,6 +402,9 @@ namespace rsx
 			// Check for pending writes
 			bool has_pending() const { return !m_pending_writes.empty(); }
 
+			// Search for query synchronized at address
+			occlusion_query_info* find_query(vm::addr_t sink_address);
+
 			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
@@ -404,6 +414,63 @@ namespace rsx
 		};
 	}
 
+	struct frame_statistics_t
+	{
+		u32 draw_calls;
+		s64 setup_time;
+		s64 vertex_upload_time;
+		s64 textures_upload_time;
+		s64 draw_exec_time;
+		s64 flip_time;
+	};
+
+	struct display_flip_info_t
+	{
+		std::deque<u32> buffer_queue;
+		u32 buffer;
+		bool skip_frame;
+		bool emu_flip;
+		bool in_progress;
+		frame_statistics_t stats;
+
+		inline void push(u32 _buffer)
+		{
+			buffer_queue.push_back(_buffer);
+		}
+
+		inline bool pop(u32 _buffer)
+		{
+			if (buffer_queue.empty())
+			{
+				return false;
+			}
+
+			do
+			{
+				const auto index = buffer_queue.front();
+				buffer_queue.pop_front();
+
+				if (index == _buffer)
+				{
+					buffer = _buffer;
+					return true;
+				}
+			}
+			while (!buffer_queue.empty());
+
+			// Need to observe this happening in the wild
+			LOG_ERROR(RSX, "Display queue was discarded while not empty!");
+			return false;
+		}
+	};
+
+	struct backend_configuration
+	{
+		bool supports_multidraw;           // Draw call batching
+		bool supports_hw_a2c;              // Alpha to coverage
+		bool supports_hw_renormalization;  // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+	};
+
 	struct sampled_image_descriptor_base;
 
 	class thread
@@ -411,22 +478,26 @@ namespace rsx
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
 
+		display_flip_info_t m_queued_flip{};
+
 	protected:
 		std::thread::id m_rsx_thread;
-		atomic_t<bool> m_rsx_thread_exiting{true};
-		s32 m_return_addr{-1}, restore_ret{-1};
+		atomic_t<bool> m_rsx_thread_exiting{ true };
+
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
 
 		s32 m_skip_frame_ctr = 0;
-		bool skip_frame = false;
+		bool skip_current_frame = false;
+		frame_statistics_t stats{};
 
-		bool supports_multidraw = false;
-		bool supports_native_ui = false;
+		backend_configuration backend_config{};
 
 		// FIFO
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		FIFO::flattening_helper m_flattener;
+		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -435,25 +506,27 @@ namespace rsx
 		// Framebuffer setup
 		rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 		rsx::gcm_framebuffer_info m_depth_surface_info;
+		framebuffer_layout m_framebuffer_layout;
 		bool framebuffer_status_valid = false;
 
 		// Overlays
-		std::shared_ptr<rsx::overlays::display_manager> m_overlay_manager;
+		rsx::overlays::display_manager* m_overlay_manager = nullptr;
 
 		// Invalidated memory range
 		address_range m_invalidated_memory_range;
 
-		// Draw call stats
-		u32 m_draw_calls = 0;
-
 		// Profiler
 		rsx::profiling_timer m_profiler;
+		frame_statistics_t m_frame_stats;
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
 		u32 restore_point = 0;
 		atomic_t<bool> external_interrupt_lock{ false };
 		atomic_t<bool> external_interrupt_ack{ false };
+		void flush_fifo();
+		void recover_fifo();
+		u32 get_fifo_cmd();
 
 		// Performance approximation counters
 		struct
@@ -498,7 +571,7 @@ namespace rsx
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{0};
 		u32 current_display_buffer{0};
-		u32 ctxt_addr;
+		u32 device_addr;
 		u32 label_addr;
 
 		u32 main_mem_size{0};
@@ -519,7 +592,8 @@ namespace rsx
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 
-		framebuffer_layout get_framebuffer_layout(rsx::framebuffer_creation_context context);
+		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
+		bool get_scissor(areau& region, bool clip_viewport);
 
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
@@ -545,11 +619,11 @@ namespace rsx
 	public:
 		u64 start_rsx_time = 0;
 		u64 int_flip_index = 0;
-		u64 last_flip_time;
+		u64 last_flip_time = 0;
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
-		u64 vblank_count;
+		atomic_t<u64> vblank_count{0};
 
 	public:
 		bool invalid_command_interrupt_raised = false;
@@ -567,10 +641,12 @@ namespace rsx
 
 		void operator()();
 		virtual u64 get_cycles() = 0;
+		virtual ~thread();
+
+		static constexpr auto thread_name = "rsx::thread"sv;
 
 	protected:
 		thread();
-		virtual ~thread();
 		virtual void on_task();
 		virtual void on_exit();
 
@@ -595,10 +671,11 @@ namespace rsx
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
 		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
-		virtual void flip(int buffer, bool emu_flip = false) = 0;
+		virtual void on_frame_end(u32 buffer, bool forced = false);
+		virtual void flip(const display_flip_info_t& info) = 0;
 		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
-		virtual void on_invalidate_memory_range(const address_range & /*range*/) {}
+		virtual void on_invalidate_memory_range(const address_range & /*range*/, rsx::invalidation_cause) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
 		// zcull
@@ -610,7 +687,7 @@ namespace rsx
 		// sync
 		void sync();
 		void read_barrier(u32 memory_address, u32 memory_range);
-		virtual void sync_hint(FIFO_hint /*hint*/) {}
+		virtual void sync_hint(FIFO_hint /*hint*/, u32 /*arg*/) {}
 
 		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
@@ -654,18 +731,6 @@ namespace rsx
 	private:
 		shared_mutex m_mtx_task;
 
-		struct internal_task_entry
-		{
-			std::function<bool()> callback;
-			//std::promise<void> promise;
-
-			internal_task_entry(std::function<bool()> callback) : callback(std::move(callback))
-			{
-			}
-		};
-
-		std::deque<internal_task_entry> m_internal_tasks;
-		void do_internal_task();
 		void handle_emu_flip(u32 buffer);
 		void handle_invalidated_memory_range();
 
@@ -725,7 +790,7 @@ namespace rsx
 		/**
 		 * Notify to check internal state during semaphore wait
 		 */
-		void on_semaphore_acquire_wait() { do_local_task(FIFO_state::lock_wait); }
+		virtual void on_semaphore_acquire_wait() {}
 
 		/**
 		 * Copy rtt values to buffer.
@@ -760,7 +825,15 @@ namespace rsx
 		void pause();
 		void unpause();
 
-		//Get RSX approximate load in %
+		// Get RSX approximate load in %
 		u32 get_load();
+
+		// Returns true if the current thread is the active RSX thread
+		bool is_current_thread() const { return std::this_thread::get_id() == m_rsx_thread; }
 	};
+
+	inline thread* get_current_renderer()
+	{
+		return g_fxo->get<rsx::thread>();
+	}
 }

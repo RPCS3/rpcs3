@@ -57,13 +57,13 @@ enum
 using CellMusicDecodeCallback = void(u32, vm::ptr<void> param, vm::ptr<void> userData);
 using CellMusicDecode2Callback = void(u32, vm::ptr<void> param, vm::ptr<void> userData);
 
-struct music_decode_t
+struct music_decode
 {
 	vm::ptr<CellMusicDecodeCallback> func;
 	vm::ptr<void> userData;
 };
 
-struct music_decode2_t
+struct music_decode2
 {
 	vm::ptr<CellMusicDecode2Callback> func;
 	vm::ptr<void> userData;
@@ -73,7 +73,7 @@ s32 cellMusicDecodeInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr<
 {
 	cellMusicDecode.todo("cellMusicDecodeInitialize(mode=0x%x, container=0x%x, spuPriority=0x%x, func=*0x%x, userData=*0x%x)", mode, container, spuPriority, func, userData);
 
-	const auto musicDecode = fxm::make_always<music_decode_t>();
+	const auto musicDecode = g_fxo->get<music_decode>();
 	musicDecode->func = func;
 	musicDecode->userData = userData;
 
@@ -90,7 +90,7 @@ s32 cellMusicDecodeInitializeSystemWorkload(s32 mode, u32 container, vm::ptr<Cel
 {
 	cellMusicDecode.todo("cellMusicDecodeInitializeSystemWorkload(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x, spuUsageRate=0x%x, spurs=*0x%x, priority=*0x%x, attr=*0x%x)", mode, container, func, userData, spuUsageRate, spurs, priority, attr);
 
-	const auto musicDecode = fxm::make_always<music_decode_t>();
+	const auto musicDecode = g_fxo->get<music_decode>();
 	musicDecode->func = func;
 	musicDecode->userData = userData;
 
@@ -107,7 +107,7 @@ s32 cellMusicDecodeFinalize()
 {
 	cellMusicDecode.todo("cellMusicDecodeFinalize()");
 
-	const auto musicDecode = fxm::get_always<music_decode_t>();
+	const auto musicDecode = g_fxo->get<music_decode>();
 
 	if (musicDecode->func)
 	{
@@ -125,7 +125,7 @@ s32 cellMusicDecodeSelectContents()
 {
 	cellMusicDecode.todo("cellMusicDecodeSelectContents()");
 
-	const auto musicDecode = fxm::get_always<music_decode_t>();
+	const auto musicDecode = g_fxo->get<music_decode>();
 
 	if (!musicDecode->func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
@@ -143,7 +143,7 @@ s32 cellMusicDecodeSetDecodeCommand(s32 command)
 {
 	cellMusicDecode.todo("cellMusicDecodeSetDecodeCommand(command=0x%x)", command);
 
-	const auto musicDecode = fxm::get_always<music_decode_t>();
+	const auto musicDecode = g_fxo->get<music_decode>();
 
 	if (!musicDecode->func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
@@ -179,7 +179,7 @@ s32 cellMusicDecodeSetSelectionContext(vm::ptr<CellMusicSelectionContext> contex
 {
 	cellMusicDecode.todo("cellMusicDecodeSetSelectionContext(context=*0x%x)", context);
 
-	const auto musicDecode = fxm::get_always<music_decode_t>();
+	const auto musicDecode = g_fxo->get<music_decode>();
 
 	if (!musicDecode->func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
@@ -203,7 +203,7 @@ s32 cellMusicDecodeInitialize2(s32 mode, u32 container, s32 spuPriority, vm::ptr
 {
     cellMusicDecode.todo("cellMusicDecodeInitialize2(mode=0x%x, container=0x%x, spuPriority=0x%x, func=*0x%x, userData=*0x%x, speed=0x%x, bufsize=0x%x)", mode, container, spuPriority, func, userData, speed, bufsize);
 
-	const auto musicDecode = fxm::make_always<music_decode2_t>();
+	const auto musicDecode = g_fxo->get<music_decode2>();
 	musicDecode->func = func;
 	musicDecode->userData = userData;
 
@@ -220,7 +220,7 @@ s32 cellMusicDecodeInitialize2SystemWorkload(s32 mode, u32 container, vm::ptr<Ce
 {
 	cellMusicDecode.todo("cellMusicDecodeInitialize2SystemWorkload(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x, spuUsageRate=0x%x, bufsize=0x%x, spurs=*0x%x, priority=*0x%x, attr=*0x%x)", mode, container, func, userData, spuUsageRate, bufsize, spurs, priority, attr);
 
-	const auto musicDecode = fxm::make_always<music_decode2_t>();
+	const auto musicDecode = g_fxo->get<music_decode2>();
 	musicDecode->func = func;
 	musicDecode->userData = userData;
 
@@ -237,7 +237,7 @@ s32 cellMusicDecodeFinalize2()
 {
 	cellMusicDecode.todo("cellMusicDecodeFinalize2()");
 
-	const auto musicDecode = fxm::get_always<music_decode2_t>();
+	const auto musicDecode = g_fxo->get<music_decode2>();
 
 	if (musicDecode->func)
 	{
@@ -255,7 +255,7 @@ s32 cellMusicDecodeSelectContents2()
 {
 	cellMusicDecode.todo("cellMusicDecodeSelectContents2()");
 
-	const auto musicDecode = fxm::get_always<music_decode2_t>();
+	const auto musicDecode = g_fxo->get<music_decode2>();
 
 	if (!musicDecode->func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
@@ -273,7 +273,7 @@ s32 cellMusicDecodeSetDecodeCommand2(s32 command)
 {
 	cellMusicDecode.todo("cellMusicDecodeSetDecodeCommand2(command=0x%x)", command);
 
-	const auto musicDecode = fxm::get_always<music_decode2_t>();
+	const auto musicDecode = g_fxo->get<music_decode2>();
 
 	if (!musicDecode->func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
@@ -309,7 +309,7 @@ s32 cellMusicDecodeSetSelectionContext2(vm::ptr<CellMusicSelectionContext> conte
 {
 	cellMusicDecode.todo("cellMusicDecodeSetSelectionContext2(context=*0x%x)", context);
 
-	const auto musicDecode = fxm::get_always<music_decode2_t>();
+	const auto musicDecode = g_fxo->get<music_decode2>();
 
 	if (!musicDecode->func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;

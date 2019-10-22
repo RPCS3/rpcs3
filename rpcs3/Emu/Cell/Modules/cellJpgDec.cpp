@@ -64,7 +64,8 @@ s32 cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJpgDecSrc
 
 s32 cellJpgDecExtOpen()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellJpgDec.todo("cellJpgDecExtOpen()");
+	return CELL_OK;
 }
 
 s32 cellJpgDecClose(u32 mainHandle, u32 subHandle)
@@ -158,7 +159,8 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 
 s32 cellJpgDecExtReadHeader()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellJpgDec.todo("cellJpgDecExtReadHeader()");
+	return CELL_OK;
 }
 
 s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cptr<CellJpgDecDataCtrlParam> dataCtrlParam, vm::ptr<CellJpgDecDataOutInfo> dataOutInfo)
@@ -299,7 +301,8 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 
 s32 cellJpgDecExtDecodeData()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellJpgDec.todo("cellJpgDecExtDecodeData()");
+	return CELL_OK;
 }
 
 s32 cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJpgDecInParam> inParam, vm::ptr<CellJpgDecOutParam> outParam)
@@ -349,7 +352,8 @@ s32 cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJpgDecInP
 
 s32 cellJpgDecExtSetParameter()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellJpgDec.todo("cellJpgDecExtSetParameter()");
+	return CELL_OK;
 }
 
 

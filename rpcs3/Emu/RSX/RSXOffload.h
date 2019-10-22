@@ -3,9 +3,11 @@
 #include "Utilities/types.h"
 #include "Utilities/lockless.h"
 #include "Utilities/Thread.h"
+#include "Utilities/address_range.h"
 #include "gcm_enums.h"
 
 #include <vector>
+#include <thread>
 
 namespace rsx
 {
@@ -42,9 +44,12 @@ namespace rsx
 		};
 
 		lf_queue<transport_packet> m_work_queue;
+		lf_queue_slice<transport_packet> m_current_job;
 		atomic_t<u64> m_enqueued_count{ 0 };
 		volatile u64 m_processed_count = 0;
 		thread_state m_worker_state = thread_state::detached;
+		std::thread::id m_thread_id;
+		atomic_t<bool> m_mem_fault_flag{ false };
 
 		// TODO: Improved benchmarks here; value determined by profiling on a Ryzen CPU, rounded to the nearest 512 bytes
 		const u32 max_immediate_transfer_size = 3584;
@@ -63,8 +68,14 @@ namespace rsx
 		void emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count);
 
 		// Synchronization
+		bool is_current_thread() const;
 		void sync();
 		void join();
+		void set_mem_fault_flag();
+		void clear_mem_fault_flag();
+
+		// Fault recovery
+		utils::address_range get_fault_range(bool writing) const;
 	};
 
 	extern dma_manager g_dma_manager;

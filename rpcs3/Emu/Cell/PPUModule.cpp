@@ -12,6 +12,7 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/PPUAnalyser.h"
 
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
@@ -34,8 +35,6 @@ extern void ppu_initialize();
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
-extern u32 g_ps3_sdk_version;
-
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
 
@@ -46,10 +45,11 @@ void fmt_class_string<lib_loading_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case lib_loading_type::automatic: return "Automatically load required libraries";
 		case lib_loading_type::manual: return "Manually load selected libraries";
-		case lib_loading_type::both: return "Load automatic and manual selection";
+		case lib_loading_type::hybrid: return "Load automatic and manual selection";
 		case lib_loading_type::liblv2only: return "Load liblv2.sprx only";
+		case lib_loading_type::liblv2both: return "Load liblv2.sprx and manual selection";
+		case lib_loading_type::liblv2list: return "Load liblv2.sprx and strict selection";
 		}
 
 		return unknown;
@@ -149,7 +149,7 @@ struct ppu_linkage_info
 };
 
 // Initialize static modules.
-static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link)
+static void ppu_initialize_modules(ppu_linkage_info* link)
 {
 	if (!link->modules.empty())
 	{
@@ -474,7 +474,7 @@ struct ppu_prx_module_info
 };
 
 // Load and register exports; return special exports found (nameless module)
-static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 exports_start, u32 exports_end)
+static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end)
 {
 	std::unordered_map<u32, u32> result;
 
@@ -631,7 +631,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 	return result;
 }
 
-static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, const std::shared_ptr<ppu_linkage_info>& link, u32 imports_start, u32 imports_end)
+static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
 {
 	std::unordered_map<u32, void*> result;
 
@@ -724,7 +724,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->get<ppu_linkage_info>();
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
@@ -982,17 +982,17 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = g_fxo->get<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "PRX library hash: %s (<- %u)", hash, applied);
 
-	if (Emu.IsReady() && fxm::import<ppu_module>([&] { return prx; }))
+	if (Emu.IsReady() && g_fxo->get<ppu_module>()->segs.empty())
 	{
 		// Special loading mode
 		ppu_thread_params p{};
@@ -1043,10 +1043,10 @@ void ppu_unload_prx(const lv2_prx& prx)
 void ppu_load_exec(const ppu_exec_object& elf)
 {
 	// Set for delayed initialization in ppu_initialize()
-	const auto _main = fxm::make<ppu_module>();
+	const auto _main = g_fxo->get<ppu_module>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->init<ppu_linkage_info>();
 
 	// TLS information
 	u32 tls_vaddr = 0;
@@ -1058,6 +1058,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	s32 primary_prio = 1001;
 	u32 primary_stacksize = 0x100000;
 	u32 malloc_pagesize = 0x100000;
+	u32 ppc_seg = 0;
 
 	// Executable hash
 	sha1_context sha;
@@ -1134,12 +1135,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = g_fxo->get<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "PPU executable hash: %s (<- %u)", hash, applied);
@@ -1150,7 +1151,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Static HLE patching
 	if (g_cfg.core.hook_functions)
 	{
-		auto shle = fxm::get_always<statichle_handler>();
+		auto shle = g_fxo->init<statichle_handler>(0);
 
 		for (u32 i = _main->segs[0].addr; i < (_main->segs[0].addr + _main->segs[0].size); i += 4)
 		{
@@ -1213,6 +1214,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 					primary_stacksize = info.primary_stacksize;
 					malloc_pagesize = info.malloc_pagesize;
+					ppc_seg = info.ppc_seg;
 
 					LOG_NOTICE(LOADER, "*** sdk version: 0x%x", info.sdk_version);
 					LOG_NOTICE(LOADER, "*** primary prio: %d", info.primary_prio);
@@ -1280,140 +1282,22 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
 		load_libs = g_cfg.core.load_libraries.get_set();
 	}
-	else if (g_cfg.core.lib_loading == lib_loading_type::liblv2only)
+	else
 	{
-		// Load only liblv2.sprx
-		load_libs.emplace("liblv2.sprx");
-	}
-
-	if (g_cfg.core.lib_loading == lib_loading_type::automatic || g_cfg.core.lib_loading == lib_loading_type::both)
-	{
-		// Load only libsysmodule.sprx
-		load_libs.emplace("libsysmodule.sprx");
-	}
-	else if (0)
-	{
-		// Load recommended set of modules: Module name -> SPRX
-		std::unordered_multimap<std::string, std::string> sprx_map
+		if (g_cfg.core.lib_loading != lib_loading_type::hybrid || g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
 		{
-			{ "cellAdec", "libadec.sprx" }, // cellSpurs|cell_libac3dec|cellAtrac3dec|cellAtracXdec|cellCelpDec|cellDTSdec|cellM2AACdec|cellM2BCdec|cellM4AacDec|cellMP3dec|cellTRHDdec|cellWMAdec|cellDTSLBRdec|cellDDPdec|cellM4AacDec2ch|cellDTSHDdec|cellMPL1dec|cellMP3Sdec|cellM4AacDec2chmod|cellCelp8Dec|cellWMAPROdec|cellWMALSLdec|cellDTSHDCOREdec|cellAtrac3multidec
-			{ "cellAdec", "libsre.sprx" },
-			{ "cellAdec", "libac3dec.sprx" },
-			{ "cellAdec", "libat3dec.sprx" },
-			{ "cellAdec", "libat3multidec.sprx" },
-			{ "cellAdec", "libatxdec.sprx" },
-			{ "cellAdec", "libcelp8dec.sprx" },
-			{ "cellAdec", "libcelpdec.sprx" },
-			{ "cellAdec", "libddpdec.sprx" },
-			{ "cellAdec", "libm2bcdec.sprx" },
-			{ "cellAdec", "libm4aacdec.sprx" },
-			{ "cellAdec", "libm4aacdec2ch.sprx" },
-			{ "cellAdec", "libmp3dec.sprx" },
-			{ "cellAdec", "libmpl1dec.sprx" },
-			{ "cellAdec", "libwmadec.sprx" },
-			{ "cellAtrac", "libatrac3plus.sprx" },
-			{ "cellAtrac", "cellAdec" },
-			{ "cellAtracMulti", "libatrac3multi.sprx" },
-			{ "cellAtracMulti", "cellAdec" },
-			{ "cellCelp8Enc", "libcelp8enc.sprx" },
-			{ "cellCelp8Enc", "libsre.sprx" },
-			{ "cellCelpEnc", "libcelpenc.sprx" },
-			{ "cellCelpEnc", "libsre.sprx" },
-			{ "cellDmux", "libdmux.sprx" },
-			{ "cellDmux", "libdmuxpamf.sprx" },
-			{ "cellDmux", "libsre.sprx" },
-			{ "cellFiber", "libfiber.sprx" },
-			{ "cellFont", "libfont.sprx" },
-			{ "cellFontFT", "libfontFT.sprx" },
-			{ "cellFontFT", "libfreetype.sprx" },
-			{ "cellGcmSys", "libgcm_sys.sprx" },
-			{ "cellGifDec", "libgifdec.sprx" },
-			{ "cellGifDec", "libsre.sprx" },
-			{ "cellJpgDec", "libjpgdec.sprx" },
-			{ "cellJpgDec", "libsre.sprx" },
-			{ "cellJpgEnc", "libjpgenc.sprx" },
-			{ "cellJpgEnc", "libsre.sprx" },
-			{ "cellKey2char", "libkey2char.sprx" },
-			{ "cellL10n", "libl10n.sprx" },
-			{ "cellM4hdEnc", "libm4hdenc.sprx" },
-			{ "cellM4hdEnc", "libsre.sprx" },
-			{ "cellPamf", "libpamf.sprx" },
-			{ "cellPngDec", "libpngdec.sprx" },
-			{ "cellPngDec", "libsre.sprx" },
-			{ "cellPngEnc", "libpngenc.sprx" },
-			{ "cellPngEnc", "libsre.sprx" },
-			{ "cellResc", "libresc.sprx" },
-			{ "cellRtc", "librtc.sprx" },
-			{ "cellSsl", "libssl.sprx" },
-			{ "cellSsl", "librtc.sprx" },
-			{ "cellHttp", "libhttp.sprx" },
-			{ "cellHttp", "cellSsl" },
-			{ "cellHttpUtil", "libhttp.sprx" },
-			{ "cellHttpUtil", "cellSsl" },
-			{ "cellSail", "libsail.sprx" },
-			{ "cellSail", "libsre.sprx" },
-			{ "cellSail", "libmp4.sprx" },
-			{ "cellSail", "libpamf.sprx" },
-			{ "cellSail", "libdmux.sprx" },
-			{ "cellSail", "libdmuxpamf.sprx" },
-			{ "cellSail", "libapostsrc_mini.sprx" },
-			{ "cellSail", "libsail_avi.sprx" },
-			{ "cellSail", "libvpost.sprx" },
-			{ "cellSail", "cellAdec" },
-			{ "cellSpursJq", "libspurs_jq.sprx" },
-			{ "cellSpursJq", "libsre.sprx" },
-			{ "cellSync", "libsre.sprx" },
-			{ "cellSheap", "libsre.sprx" },
-			{ "cellOvis", "libsre.sprx" },
-			{ "cellSpurs", "libsre.sprx" },
-			{ "cellDaisy", "libsre.sprx" },
-			{ "cellSpudll", "libsre.sprx" },
-			{ "cellSync2", "libsync2.sprx" },
-			{ "cellSync2", "libsre.sprx" },
-			{ "cellVpost", "libvpost.sprx" },
-			{ "cellVpost", "libsre.sprx" },
-			{ "sys_fs", "libfs.sprx" },
-		};
-
-		// Expand dependencies
-		for (bool repeat = true; repeat;)
-		{
-			repeat = false;
-
-			for (auto it = sprx_map.begin(), end = sprx_map.end(); it != end; ++it)
-			{
-				auto range = sprx_map.equal_range(it->second);
-
-				if (range.first != range.second)
-				{
-					decltype(sprx_map) add;
-
-					for (; range.first != range.second; ++range.first)
-					{
-						add.emplace(it->first, range.first->second);
-					}
-
-					sprx_map.erase(it);
-					sprx_map.insert(add.begin(), add.end());
-					repeat = true;
-					break;
-				}
-			}
+			// Will load libsysmodule.sprx internally
+			load_libs.emplace("liblv2.sprx");
 		}
-
-		for (const auto& pair : link->modules)
+		else
 		{
-			if (!pair.second.imported)
-			{
-				continue;
-			}
-
-			for (auto range = sprx_map.equal_range(pair.first); range.first != range.second; ++range.first)
-			{
-				load_libs.emplace(range.first->second);
-			}
+			// Load only libsysmodule.sprx
+			load_libs.emplace("libsysmodule.sprx");
 		}
 	}
+
+	// Program entry
+	u32 entry = 0;
 
 	if (!load_libs.empty())
 	{
@@ -1446,7 +1330,15 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					prx->validate(prx->funcs[0].addr);
 				}
 
-				loaded_modules.emplace_back(std::move(prx));
+				if (name == "liblv2.sprx")
+				{
+ 					// Run liblv2.sprx entry point (TODO)
+					entry = prx->start.addr();
+				}
+				else
+				{
+					loaded_modules.emplace_back(std::move(prx));
+				}
 			}
 			else
 			{
@@ -1466,7 +1358,24 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	_main->validate(0);
 
 	// Set SDK version
-	g_ps3_sdk_version = sdk_version;
+	g_ps3_process_info.sdk_ver = sdk_version;
+
+	// Set ppc fixed allocations segment permission
+	g_ps3_process_info.ppc_seg = ppc_seg;
+
+	if (ppc_seg != 0x0)
+	{
+		if (ppc_seg != 0x1)
+		{
+			LOG_TODO(LOADER, "Unknown ppc_seg flag value = 0x%x", ppc_seg);
+		}
+
+		// Additional segment for fixed allocations
+		if (!vm::map(0x30000000, 0x10000000, 0x200))
+		{
+			fmt::throw_exception("Failed to map ppc_seg's segment!" HERE);
+		}
+	}
 
 	// Initialize process arguments
 	auto args = vm::ptr<u64>::make(vm::alloc(u32{sizeof(u64)} * (::size32(Emu.argv) + ::size32(Emu.envp) + 2), vm::main));
@@ -1507,7 +1416,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	case 0x70: primary_stacksize = 1024 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_1M
 	default:
 	{
-		primary_stacksize = sz >= 4096 ? ::align(std::min<u32>(sz, 0x100000), 4096) : 0x4000;
+		primary_stacksize = ::align<u32>(std::clamp<u32>(sz, 0x10000, 0x100000), 4096);
 		break;
 	}
 	}
@@ -1560,14 +1469,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		mem_size += 0xC000000;
 	}
 
-	fxm::make_always<lv2_memory_container>(mem_size);
+	g_fxo->init<lv2_memory_container>(mem_size);
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
-	// TODO: adjust for liblv2 loading option
-	u32 entry = static_cast<u32>(elf.header.e_entry);
-
-	if (g_cfg.core.lib_loading != lib_loading_type::liblv2only)
+	if (!entry)
 	{
 		// Set TLS args, call sys_initialize_tls
 		ppu->cmd_list
@@ -1575,13 +1481,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			{ ppu_cmd::set_args, 4 }, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 			{ ppu_cmd::hle_call, FIND_FUNC(sys_initialize_tls) },
 		});
-	}
-	else
-	{
-		// Run liblv2.sprx entry point (TODO)
-		entry = loaded_modules[0]->start.addr();
 
-		loaded_modules.clear();
+		entry = static_cast<u32>(elf.header.e_entry); // Run entry from elf
 	}
 
 	// Run start functions
@@ -1628,7 +1529,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	const auto ovlm = idm::make_ptr<lv2_obj, lv2_overlay>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->get<ppu_linkage_info>();
 
 	// Executable hash
 	sha1_context sha;
@@ -1705,12 +1606,12 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = g_fxo->get<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "OVL executable hash: %s (<- %u)", hash, applied);

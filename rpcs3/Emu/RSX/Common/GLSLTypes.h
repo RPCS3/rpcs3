@@ -30,5 +30,7 @@ namespace glsl
 		bool emulate_coverage_tests;
 		bool emulate_shadow_compare;
 		bool low_precision_tests;
+		bool disable_early_discard;
+		bool supports_native_fp16;
 	};
 };

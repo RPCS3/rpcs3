@@ -357,7 +357,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 			file.seek(0);
 			if (magic == "NPD\0"_u32)
 			{
-				auto edatkeys = fxm::get_always<LoadedNpdrmKeys_t>();
+				auto edatkeys = g_fxo->get<loaded_npdrm_keys>();
 				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys->devKlic, edatkeys->rifKey);
 				if (!sdata_file->ReadHeader())
 				{
@@ -602,14 +602,10 @@ error_code sys_fs_closedir(ppu_thread& ppu, u32 fd)
 
 	sys_fs.warning("sys_fs_closedir(fd=%d)", fd);
 
-	const auto directory = idm::get<lv2_fs_object, lv2_dir>(fd);
-
-	if (!directory)
+	if (!idm::remove<lv2_fs_object, lv2_dir>(fd))
 	{
 		return CELL_EBADF;
 	}
-
-	idm::remove<lv2_fs_object, lv2_dir>(fd);
 
 	return CELL_OK;
 }
@@ -866,7 +862,9 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 	const std::string_view vpath = path.get_ptr();
 	const std::string local_path = vfs::get(vpath);
 
-	if (vpath.find_first_not_of('/') == -1)
+	const std::size_t dev_start = vpath.find_first_not_of('/');
+
+	if (dev_start == -1)
 	{
 		return {CELL_EISDIR, path};
 	}
@@ -881,7 +879,10 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 		return {CELL_EISDIR, path};
 	}
 
-	if (!vfs::host::unlink(local_path))
+	// Size of "/dev_hdd0"-alike substring
+	const std::size_t dev_size  = vpath.find_first_of('/', dev_start);
+
+	if (!vfs::host::unlink(local_path, vfs::get(vpath.substr(0, dev_size))))
 	{
 		switch (auto error = fs::g_tls_error)
 		{

@@ -47,37 +47,6 @@ class ds4_pad_handler final : public PadHandlerBase
 		KeyCodeCount
 	};
 
-	// Unique names for the config files and our pad settings dialog
-	const std::unordered_map<u32, std::string> button_list =
-	{
-		{ DS4KeyCodes::Triangle, "Triangle" },
-		{ DS4KeyCodes::Circle,   "Circle" },
-		{ DS4KeyCodes::Cross,    "Cross" },
-		{ DS4KeyCodes::Square,   "Square" },
-		{ DS4KeyCodes::Left,     "Left" },
-		{ DS4KeyCodes::Right,    "Right" },
-		{ DS4KeyCodes::Up,       "Up" },
-		{ DS4KeyCodes::Down,     "Down" },
-		{ DS4KeyCodes::R1,       "R1" },
-		{ DS4KeyCodes::R2,       "R2" },
-		{ DS4KeyCodes::R3,       "R3" },
-		{ DS4KeyCodes::Options,  "Options" },
-		{ DS4KeyCodes::Share,    "Share" },
-		{ DS4KeyCodes::PSButton, "PS Button" },
-		{ DS4KeyCodes::TouchPad, "Touch Pad" },
-		{ DS4KeyCodes::L1,       "L1" },
-		{ DS4KeyCodes::L2,       "L2" },
-		{ DS4KeyCodes::L3,       "L3" },
-		{ DS4KeyCodes::LSXNeg,   "LS X-" },
-		{ DS4KeyCodes::LSXPos,   "LS X+" },
-		{ DS4KeyCodes::LSYPos,   "LS Y+" },
-		{ DS4KeyCodes::LSYNeg,   "LS Y-" },
-		{ DS4KeyCodes::RSXNeg,   "RS X-" },
-		{ DS4KeyCodes::RSXPos,   "RS X+" },
-		{ DS4KeyCodes::RSYPos,   "RS Y+" },
-		{ DS4KeyCodes::RSYNeg,   "RS Y-" }
-	};
-
 	enum DS4CalibIndex
 	{
 		// gyro
@@ -106,18 +75,17 @@ class ds4_pad_handler final : public PadHandlerBase
 		ReadError,
 	};
 
-	struct DS4Device
+	struct DS4Device : public PadDevice
 	{
 		hid_device* hidDevice{ nullptr };
-		pad_config* config{ nullptr };
 		std::string path{ "" };
 		bool btCon{ false };
 		bool hasCalibData{ false };
-		std::array<DS4CalibData, DS4CalibIndex::COUNT> calibData;
+		std::array<DS4CalibData, DS4CalibIndex::COUNT> calibData{};
 		bool newVibrateData{ true };
 		u8 largeVibrate{ 0 };
 		u8 smallVibrate{ 0 };
-		std::array<u8, 64> padData;
+		std::array<u8, 64> padData{};
 		u8 batteryLevel{ 0 };
 		u8 cableState{ 0 };
 		u8 led_delay_on{ 0 };
@@ -140,28 +108,19 @@ public:
 	bool Init() override;
 
 	std::vector<std::string> ListDevices() override;
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
-	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& buttonCallback, const std::function<void(std::string)>& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
 	bool is_init = false;
-
-	std::vector<u32> blacklist;
-	std::vector<std::pair<std::shared_ptr<DS4Device>, std::shared_ptr<Pad>>> bindings;
-	std::shared_ptr<DS4Device> m_dev;
+	DS4DataStatus status;
 
 private:
-	std::shared_ptr<DS4Device> GetDevice(const std::string& padId, bool try_reconnect = false);
-	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
-	void ProcessDataToPad(const std::shared_ptr<DS4Device>& ds4Device, const std::shared_ptr<Pad>& pad);
+	std::shared_ptr<DS4Device> GetDS4Device(const std::string& padId, bool try_reconnect = false);
 	// Copies data into padData if status is NewData, otherwise buffer is untouched
 	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData
 	// Todo: this currently only handles 'buttons' and not axis or sensors for the time being
-	std::array<u16, DS4KeyCodes::KeyCodeCount> GetButtonValues(const std::shared_ptr<DS4Device>& ds4Device);
 	bool GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Device);
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
 	int SendVibrateData(const std::shared_ptr<DS4Device>& device);
@@ -178,4 +137,15 @@ private:
 			return std::numeric_limits<s16>::min();
 		else return static_cast<s16>(output);
 	}
+
+	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
+	bool get_is_left_trigger(u64 keyCode) override;
+	bool get_is_right_trigger(u64 keyCode) override;
+	bool get_is_left_stick(u64 keyCode) override;
+	bool get_is_right_stick(u64 keyCode) override;
+	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
+	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
+	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
+	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
+	std::array<int, 6> get_preview_values(std::unordered_map<u64, u16> data) override;
 };

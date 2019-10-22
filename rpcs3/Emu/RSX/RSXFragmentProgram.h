@@ -234,12 +234,9 @@ struct RSXFragmentProgram
 	u16 unnormalized_coords;
 	u16 redirected_textures;
 	u16 shadow_textures;
-	bool front_back_color_enabled : 1;
-	bool back_color_diffuse_output : 1;
-	bool back_color_specular_output : 1;
-	bool front_color_diffuse_output : 1;
-	bool front_color_specular_output : 1;
+	bool two_sided_lighting;
 	u32 texture_dimensions;
+	u32 texcoord_control_mask;
 
 	float texture_scale[16][4];
 	u8 textures_alpha_kill[16];
@@ -250,6 +247,11 @@ struct RSXFragmentProgram
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
 		return (rsx::texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
+	}
+
+	bool texcoord_is_2d(u8 index) const
+	{
+		return !!(texcoord_control_mask & (1u << index));
 	}
 
 	RSXFragmentProgram()

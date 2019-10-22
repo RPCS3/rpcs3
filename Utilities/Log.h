@@ -1,7 +1,7 @@
 #pragma once
 
 #include "types.h"
-#include "Atomic.h"
+#include "util/atomic.hpp"
 #include "StrFmt.h"
 #include <climits>
 
@@ -72,8 +72,8 @@ namespace logs
 
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
-		template <typename... Args>\
-		void _sev(const char* fmt, const Args&... args)\
+		template <std::size_t N, typename... Args>\
+		void _sev(const char(&fmt)[N], const Args&... args)\
 		{\
 			if (UNLIKELY(level::_sev <= enabled))\
 			{\

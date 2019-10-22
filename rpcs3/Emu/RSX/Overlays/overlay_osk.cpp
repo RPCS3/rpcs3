@@ -375,26 +375,12 @@ namespace rsx
 			}
 			case pad_button::cross:
 			{
-				if (g_cfg.sys.enter_button_assignment != enter_button_assign::circle)
-				{
-					on_accept();
-				}
-				else
-				{
-					Close(false);
-				}
+				on_accept();
 				break;
 			}
 			case pad_button::circle:
 			{
-				if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
-				{
-					on_accept();
-				}
-				else
-				{
-					Close(false);
-				}
+				Close(false);
 				break;
 			}
 			default:
@@ -583,7 +569,7 @@ namespace rsx
 		}
 
 		// Language specific implementations
-		void osk_enUS::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options)
+		void osk_latin::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 options)
 		{
 			state = OskDialogState::Open;
 			flags = options;

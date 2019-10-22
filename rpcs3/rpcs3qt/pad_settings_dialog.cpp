@@ -68,6 +68,14 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		setWindowTitle(tr("Gamepads Settings"));
 	}
 
+	// Load tooltips
+	QFile json_file(":/Json/pad_settings.json");
+	json_file.open(QIODevice::ReadOnly | QIODevice::Text);
+	QJsonObject json_obj = QJsonDocument::fromJson(json_file.readAll()).object();
+	json_file.close();
+
+	m_json_handlers = json_obj.value("handlers").toObject();
+
 	// Create tab widget for 7 players
 	m_tabs = new QTabWidget;
 	for (int i = 1; i < 8; i++)
@@ -86,7 +94,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 
 	// Fill input type combobox
 	std::vector<std::string> str_inputs = g_cfg_input.player[0]->handler.to_list();
-	for (int index = 0; index < str_inputs.size(); index++)
+	for (size_t index = 0; index < str_inputs.size(); index++)
 	{
 		ui->chooseHandler->addItem(qstr(str_inputs[index]));
 	}
@@ -187,9 +195,8 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 	// Set up first tab
 	OnTabChanged(0);
 
-	// repaint and resize controller image
+	// repaint controller image
 	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(*ui->l_controller->pixmap(), QColor(), gui::utils::get_label_color("l_controller"), false, true));
-	ui->l_controller->setMaximumSize(ui->gb_description->sizeHint().width(), ui->l_controller->maximumHeight() * ui->gb_description->sizeHint().width() / ui->l_controller->maximumWidth());
 
 	// set tab layout constraint to the first tab
 	m_tabs->widget(0)->layout()->setSizeConstraint(QLayout::SetFixedSize);
@@ -348,7 +355,7 @@ void pad_settings_dialog::InitButtons()
 	});
 
 	// Enable Button Remapping
-	const auto& callback = [=](u16 val, std::string name, std::string pad_name, int preview_values[6])
+	const auto& callback = [=](u16 val, std::string name, std::string pad_name, std::array<int, 6> preview_values)
 	{
 		SwitchPadInfo(pad_name, true);
 
@@ -378,7 +385,7 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		LOG_NOTICE(HLE, "GetNextButtonPress: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
+		LOG_NOTICE(HLE, "get_next_button_press: %s device %s button %s pressed with value %d", m_handler->m_type, pad_name, name, val);
 		if (m_button_id > button_ids::id_pad_begin && m_button_id < button_ids::id_pad_end)
 		{
 			m_cfg_entries[m_button_id].key  = name;
@@ -407,7 +414,7 @@ void pad_settings_dialog::InitButtons()
 			m_cfg_entries[button_ids::id_pad_rstick_left].key, m_cfg_entries[button_ids::id_pad_rstick_right].key, m_cfg_entries[button_ids::id_pad_rstick_down].key,
 			m_cfg_entries[button_ids::id_pad_rstick_up].key
 		};
-		m_handler->GetNextButtonPress(m_device_name, callback, fail_callback, false, buttons);
+		m_handler->get_next_button_press(m_device_name, callback, fail_callback, false, buttons);
 	});
 
 	// Use timer to refresh pad connection status
@@ -421,7 +428,7 @@ void pad_settings_dialog::InitButtons()
 				continue;
 			}
 			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
-			m_handler->GetNextButtonPress(info.name, [=](u16, std::string, std::string pad_name, int[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
 }
@@ -828,7 +835,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		UpdateLabel(true);
 		return;
 	case button_ids::id_blacklist:
-		m_handler->GetNextButtonPress(m_device_name, nullptr, nullptr, true);
+		m_handler->get_next_button_press(m_device_name, nullptr, nullptr, true);
 		return;
 	default:
 		break;
@@ -929,6 +936,43 @@ void pad_settings_dialog::ChangeInputType()
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	const auto device_list = m_handler->ListDevices();
 
+	// Change the description
+	QString description;
+	switch (m_handler->m_type)
+	{
+	case pad_handler::null:
+		description = m_json_handlers["null"].toString(); break;
+	case pad_handler::keyboard:
+		description = m_json_handlers["keyboard"].toString(); break;
+#ifdef _WIN32
+	case pad_handler::xinput:
+		description = m_json_handlers["xinput"].toString(); break;
+	case pad_handler::mm:
+		description = m_json_handlers["mmjoy"].toString(); break;
+	case pad_handler::ds3:
+		description = m_json_handlers["ds3_windows"].toString(); break;
+	case pad_handler::ds4:
+		description = m_json_handlers["ds4_windows"].toString(); break;
+#elif __linux__
+	case pad_handler::ds3:
+		description = m_json_handlers["ds3_linux"].toString(); break;
+	case pad_handler::ds4:
+		description = m_json_handlers["ds4_linux"].toString(); break;
+#else
+	case pad_handler::ds3:
+		description = m_json_handlers["ds3_other"].toString(); break;
+	case pad_handler::ds4:
+		description = m_json_handlers["ds4_other"].toString(); break;
+#endif
+#ifdef HAVE_LIBEVDEV
+	case pad_handler::evdev:
+		description = (m_json_handlers["evdev"].toString()); break;
+#endif
+	default:
+		description = "";
+	}
+	ui->l_description->setText(description);
+
 	// change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 	ui->right_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
@@ -943,7 +987,7 @@ void pad_settings_dialog::ChangeInputType()
 	case pad_handler::ds4:
 	{
 		const QString name_string = qstr(m_handler->name_string());
-		for (int i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
+		for (size_t i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			const QString device_name = name_string + QString::number(i);
 			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_info{ sstr(device_name), true }));
@@ -953,7 +997,7 @@ void pad_settings_dialog::ChangeInputType()
 	}
 	default:
 	{
-		for (int i = 0; i < device_list.size(); i++)
+		for (size_t i = 0; i < device_list.size(); i++)
 		{
 			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_info{ device_list[i], true }));
 		}
@@ -976,7 +1020,7 @@ void pad_settings_dialog::ChangeInputType()
 				continue;
 			}
 			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
-			m_handler->GetNextButtonPress(info.name, [=](u16, std::string, std::string pad_name, int[6]) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
+			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 			if (info.name == device)
 			{
 				ui->chooseDevice->setCurrentIndex(i);

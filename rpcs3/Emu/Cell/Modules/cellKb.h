@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/BEType.h"
+#include "Emu/Io/Keyboard.h"
 
 enum CellKbError : u32
 {
@@ -12,12 +13,6 @@ enum CellKbError : u32
 	CELL_KB_ERROR_READ_FAILED                = 0x80121006,
 	CELL_KB_ERROR_NO_DEVICE                  = 0x80121007,
 	CELL_KB_ERROR_SYS_SETTING_FAILED         = 0x80121008,
-};
-
-enum
-{
-	CELL_KB_MAX_KEYCODES  = 62,
-	CELL_KB_MAX_KEYBOARDS = 127,
 };
 
 struct CellKbInfo

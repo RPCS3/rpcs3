@@ -9,6 +9,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
 #include "sys_fs.h"
+#include "sys_process.h"
 
 
 
@@ -83,6 +84,21 @@ static const std::unordered_map<std::string, int> s_prx_ignore
 
 static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, fs::file src = {})
 {
+	if (flags != 0)
+	{
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_INVALIDMASK)
+		{
+			return CELL_EINVAL;
+		}
+
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !g_ps3_process_info.ppc_seg)
+		{
+			return CELL_ENOSYS;
+		}
+
+		fmt::throw_exception("sys_prx: Unimplemented fixed address allocations" HERE);
+	}
+
 	std::string name = vpath.substr(vpath.find_last_of('/') + 1);
 	std::string path = vfs::get(vpath);
 
@@ -101,9 +117,21 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		return CELL_PRX_ERROR_LIBRARY_FOUND;
 	}
 
-	bool ignore = s_prx_ignore.count(vpath) != 0;
+	bool ignore = false;
 
-	if (ignore && g_cfg.core.lib_loading == lib_loading_type::both)
+	if (g_cfg.core.lib_loading == lib_loading_type::liblv2list)
+	{
+		if (vpath.compare(0, 24, "/dev_flash/sys/external/") == 0 && vpath != "/dev_flash/sys/external/libsysmodule.sprx"sv)
+		{
+			ignore = g_cfg.core.load_libraries.get_set().count(name) == 0;
+		}
+	}
+	else
+	{
+		ignore = s_prx_ignore.count(vpath) != 0;
+	}
+
+	if (ignore && (g_cfg.core.lib_loading == lib_loading_type::hybrid || g_cfg.core.lib_loading == lib_loading_type::liblv2both))
 	{
 		// Ignore ignore list if the library is selected in 'both' mode
 		if (g_cfg.core.load_libraries.get_set().count(name) != 0)
@@ -129,7 +157,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		src.open(path);
 	}
 
-	const ppu_prx_object obj = decrypt_self(std::move(src), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	const ppu_prx_object obj = decrypt_self(std::move(src), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
 
 	if (obj != elf_error::ok)
 	{

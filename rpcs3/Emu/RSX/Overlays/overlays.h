@@ -97,7 +97,7 @@ namespace rsx
 		class display_manager
 		{
 		private:
-			atomic_t<u32> m_uid_ctr { 0u };
+			atomic_t<u32> m_uid_ctr = 0;
 			std::vector<std::shared_ptr<overlay>> m_iface_list;
 			std::vector<std::shared_ptr<overlay>> m_dirty_list;
 
@@ -158,8 +158,10 @@ namespace rsx
 			}
 
 		public:
-			display_manager() = default;
-			~display_manager() = default;
+			// Disable default construction to make it conditionally available in g_fxo
+			explicit display_manager(int) noexcept
+			{
+			}
 
 			// Adds an object to the internal list. Optionally removes other objects of the same type.
 			// Original handle loses ownership but a usable pointer is returned
@@ -480,7 +482,7 @@ namespace rsx
 			compiled_resource get_compiled() override;
 		};
 
-		struct osk_enUS : osk_dialog
+		struct osk_latin : osk_dialog
 		{
 			using osk_dialog::osk_dialog;
 
@@ -515,7 +517,7 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 op, vm::ptr<CellSaveDataListSet> listSet);
+			s32 show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet);
 		};
 
 		struct message_dialog : public user_interface

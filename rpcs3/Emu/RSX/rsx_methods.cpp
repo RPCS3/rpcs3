@@ -41,8 +41,16 @@ namespace rsx
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+		const u32 cmd = rsx->get_fifo_cmd();
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg, 
+		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->invalid_command_interrupt_raised = true;
+	}
+
+	void trace_method(thread* rsx, u32 _reg, u32 arg)
+	{
+		// For unknown yet valid methods
+		LOG_TRACE(RSX, "RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -65,15 +73,15 @@ namespace rsx
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
-			// Get raw BE value
-			arg = be_t<u32>{arg}.raw();
-			const auto& sema = vm::_ref<atomic_t<nse_t<u32>>>(addr);
+			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema.load() == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema == arg || addr == rsx->device_addr + 0x30) return;
+
+			rsx->flush_fifo();
 
 			u64 start = get_system_time();
-			while (sema.load() != arg)
+			while (sema != arg)
 			{
 				if (Emu.IsStopped())
 					return;
@@ -111,8 +119,19 @@ namespace rsx
 		void semaphore_release(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync();
-			rsx->sync_point_request = true;
-			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+
+			const u32 offset = method_registers.semaphore_offset_406e();
+			const u32 ctxt = method_registers.semaphore_context_dma_406e();
+
+			// By avoiding doing this on flip's semaphore release
+			// We allow last gcm's registers reset to occur in case of a crash
+			const bool is_flip_sema = (offset == 0x10 && ctxt == CELL_GCM_CONTEXT_DMA_SEMAPHORE_R);
+			if (!is_flip_sema)
+			{
+				rsx->sync_point_request = true;
+			}
+
+			const u32 addr = get_address(offset, ctxt);
 
 			if (LIKELY(g_use_rtm))
 			{
@@ -159,14 +178,14 @@ namespace rsx
 		{
 			switch(arg)
 			{
-			case CELL_GCM_FRONT_AND_BACK: return;
-			case CELL_GCM_FRONT: return;
-			case CELL_GCM_BACK: return;
-			default: break;
+			case CELL_GCM_FRONT_AND_BACK:
+			case CELL_GCM_FRONT:
+			case CELL_GCM_BACK:
+				return;
+			default:
+				// Ignore value if unknown
+				method_registers.registers[reg] = method_registers.register_previous_value;
 			}
-
-			// Ignore value if unknown
-			method_registers.registers[reg] = method_registers.register_previous_value;
 		}
 
 		void set_notify(thread* rsx, u32 _reg, u32 arg)
@@ -180,9 +199,11 @@ namespace rsx
 				return;
 			}
 
-			auto& notify = vm::_ref<RsxNotify>(verify(HERE, RSXIOMem.RealAddr(0xf100000 + (index * 0x40))));
-			notify.zero = 0;
-			notify.timestamp = rsx->timestamp();
+			vm::_ref<atomic_t<RsxNotify>>(verify(HERE, RSXIOMem.RealAddr(0xf100000 + (index * 0x40)))).store(
+			{
+				rsx->timestamp(),
+				0
+			});
 		}
 
 		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -196,10 +217,12 @@ namespace rsx
 				//
 			}
 
-			auto& sema = vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097()));
-			sema.val = arg;
-			sema.pad = 0;
-			sema.timestamp = rsx->timestamp();
+			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
+			{
+				arg,
+				0,
+				rsx->timestamp()
+			});
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -213,10 +236,12 @@ namespace rsx
 
 			rsx->sync();
 			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			auto& sema = vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097()));
-			sema.val = val;
-			sema.pad = 0;
-			sema.timestamp = rsx->timestamp();
+			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
+			{
+				val,
+				0,
+				rsx->timestamp()
+			});
 		}
 
 		/**
@@ -241,7 +266,7 @@ namespace rsx
 			case rsx::vertex_base_type::ub:
 			case rsx::vertex_base_type::ub256:
 				// Get BE data
-				arg = be_t<u32>{arg}.raw();
+				arg = std::bit_cast<u32, be_t<u32>>(arg);
 				break;
 			default:
 				break;
@@ -509,8 +534,6 @@ namespace rsx
 				return;
 			}
 
-			vm::ptr<CellGcmReportData> result = address_ptr;
-
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
@@ -522,8 +545,12 @@ namespace rsx
 				break;
 			default:
 				LOG_ERROR(RSX, "NV4097_GET_REPORT: Bad type %d", type);
-				result->timer = rsx->timestamp();
-				result->padding = 0;
+
+				vm::_ref<atomic_t<CellGcmReportData>>(address_ptr).atomic_op([&](CellGcmReportData& data)
+				{
+					data.timer = rsx->timestamp();
+					data.padding = 0;
+				});
 				break;
 			}
 		}
@@ -554,7 +581,6 @@ namespace rsx
 				return;
 			case 2:
 				rsx->conditional_render_enabled = true;
-				LOG_WARNING(RSX, "Conditional rendering mode enabled (mode 2)");
 				break;
 			default:
 				rsx->conditional_render_enabled = false;
@@ -573,7 +599,7 @@ namespace rsx
 			}
 
 			// Defer conditional render evaluation
-			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval);
+			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval, address_ptr);
 			rsx->conditional_render_test_address = address_ptr;
 			rsx->conditional_render_test_failed = false;
 		}
@@ -697,6 +723,19 @@ namespace rsx
 			if (arg != method_registers.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::scissor_config_state_dirty;
+			}
+		}
+
+		void check_index_array_dma(thread* rsx, u32 reg, u32 arg)
+		{
+			// Check if either location or index type are invalid
+			if (arg & ~(CELL_GCM_LOCATION_MAIN | (CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16 << 4)))
+			{
+				// Ignore invalid value, recover
+				method_registers.registers[reg] = method_registers.register_previous_value;
+				rsx->invalid_command_interrupt_raised = true;
+
+				LOG_ERROR(RSX, "Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
 			}
 		}
 
@@ -915,7 +954,7 @@ namespace rsx
 
 			if (UNLIKELY(in_x == 1 || in_y == 1))
 			{
-				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || fabsf(fabsf(scale_x * scale_y) - 1.f) > 0.000001f;
+				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || !rsx::fcmp(scale_x, 1.f) || !rsx::fcmp(scale_y, 1.f);
 				if (!is_graphics_op)
 				{
 					// No scaling factor, so size in src == size in dst
@@ -933,7 +972,7 @@ namespace rsx
 			}
 
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
-			const s32 out_offset = out_x * out_bpp + out_pitch * out_y;
+			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
 			const u32 src_address = get_address(src_offset, src_dma);
 			const u32 dst_address = get_address(dst_offset, dst_dma);
@@ -1010,18 +1049,19 @@ namespace rsx
 					return;
 			}
 
-			std::unique_ptr<u8[]> temp1, temp2, temp3, sw_temp;
+			std::vector<u8> temp1, temp2, temp3, sw_temp;
 
 			if (scale_y < 0 || scale_x < 0)
 			{
-				temp1.reset(new u8[in_pitch * (in_h - 1) + (in_bpp * in_w)]);
+				const u32 packed_pitch = in_w * in_bpp;
+				temp1.resize(packed_pitch * in_h);
 
-				const s32 stride_y = (scale_y < 0 ? -1 : 1) * in_pitch;
+				const s32 stride_y = (scale_y < 0 ? -1 : 1) * (s32)in_pitch;
 
 				for (u32 y = 0; y < in_h; ++y)
 				{
-					u8 *dst = temp1.get() + (in_pitch * y);
-					u8 *src = pixels_src + (y * stride_y);
+					u8 *dst = temp1.data() + (packed_pitch * y);
+					u8 *src = pixels_src + ((s32)y * stride_y);
 
 					if (scale_x < 0)
 					{
@@ -1036,11 +1076,12 @@ namespace rsx
 					}
 					else
 					{
-						std::memcpy(dst, src, in_bpp * in_w);
+						std::memcpy(dst, src, packed_pitch);
 					}
 				}
 
-				pixels_src = temp1.get();
+				pixels_src = temp1.data();
+				in_pitch = packed_pitch;
 			}
 
 			const AVPixelFormat in_format = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? AV_PIX_FMT_RGB565BE : AV_PIX_FMT_ARGB;
@@ -1052,50 +1093,96 @@ namespace rsx
 				clip_x > 0 || clip_y > 0 ||
 				convert_w != out_w || convert_h != out_h;
 
-			const bool need_convert = out_format != in_format || std::abs(scale_x) != 1.0 || std::abs(scale_y) != 1.0;
-			const u32  slice_h = std::ceil(f32(clip_h + clip_y) / scale_x);
+			const bool need_convert = out_format != in_format || !rsx::fcmp(fabsf(scale_x), 1.f) || !rsx::fcmp(fabsf(scale_y), 1.f);
+			const u32  slice_h = std::ceil(f32(clip_h + clip_y) / scale_y);
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
-				if (need_convert || need_clip)
+				if (!need_convert)
 				{
-					if (need_clip)
+					const bool is_overlapping = scale_x > 0 && scale_y > 0 && dst_dma == src_dma && [&]() -> bool
 					{
-						if (need_convert)
+						const u32 src_max = src_offset + in_pitch * (in_h - 1) + (in_bpp * in_w);
+						const u32 dst_max = dst_offset + out_pitch * (out_h - 1) + (out_bpp * out_w);
+						return (src_offset >= dst_offset && src_offset < dst_max) ||
+						 (dst_offset >= src_offset && dst_offset < src_max);
+					}();
+
+					if (is_overlapping)
+					{
+						if (need_clip)
 						{
-							temp2.reset(new u8[out_pitch * (std::max(convert_h, (u32)clip_h) - 1) + (out_bpp * std::max(convert_w, (u32)clip_w))]);
+							temp2.resize(out_pitch * clip_h);
 
-							convert_scale_image(temp2.get(), out_format, convert_w, convert_h, out_pitch,
-								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
+							clip_image_may_overlap(pixels_dst, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch, temp2.data());
+						}
+						else if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
+						{
+							const u32 buffer_pitch = out_bpp * out_w;
+							temp2.resize(buffer_pitch * out_h);
+							std::add_pointer_t<u8> buf = temp2.data(), pixels = pixels_src;
 
-							clip_image(pixels_dst, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							// Read the whole buffer from source
+							for (u32 y = 0; y < out_h; ++y)
+							{
+								std::memcpy(buf, pixels, buffer_pitch);
+								pixels += in_pitch;
+								buf += buffer_pitch;
+							}
+
+							buf = temp2.data(), pixels = pixels_dst;
+
+							// Write to destination
+							for (u32 y = 0; y < out_h; ++y)
+							{
+								std::memcpy(pixels, buf, buffer_pitch);
+								pixels += out_pitch;
+								buf += buffer_pitch;
+							}
 						}
 						else
 						{
+							std::memmove(pixels_dst, pixels_src, out_pitch * out_h);
+						}
+					}
+					else
+					{
+						if (need_clip)
+						{
 							clip_image(pixels_dst, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
 						}
+						else if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
+						{
+							u8 *dst = pixels_dst, *src = pixels_src;
+
+							for (u32 y = 0; y < out_h; ++y)
+							{
+								std::memcpy(dst, src, out_w * out_bpp);
+								dst += out_pitch;
+								src += in_pitch;
+							}
+						}
+						else
+						{
+							std::memcpy(pixels_dst, pixels_src, out_pitch * out_h);
+						}
+					}
+				}
+				else
+				{
+					if (need_clip)
+					{
+						temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
+
+						convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
+							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
+
+						clip_image(pixels_dst, temp2.data(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 					}
 					else
 					{
 						convert_scale_image(pixels_dst, out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
-					}
-				}
-				else
-				{
-					if (out_pitch != in_pitch || out_pitch != out_bpp * out_w)
-					{
-						for (u32 y = 0; y < out_h; ++y)
-						{
-							u8 *dst = pixels_dst + out_pitch * y;
-							u8 *src = pixels_src + in_pitch * y;
-
-							std::memmove(dst, src, out_w * out_bpp);
-						}
-					}
-					else
-					{
-						std::memmove(pixels_dst, pixels_src, out_pitch * out_h);
 					}
 				}
 			}
@@ -1105,29 +1192,31 @@ namespace rsx
 				{
 					if (need_clip)
 					{
+						temp3.resize(out_pitch * clip_h);
+
 						if (need_convert)
 						{
-							temp2.reset(new u8[out_pitch * (std::max(convert_h, (u32)clip_h) - 1) + (out_bpp * std::max(convert_w, (u32)clip_w))]);
+							temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
 
-							convert_scale_image(temp2.get(), out_format, convert_w, convert_h, out_pitch,
+							convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 
-							clip_image(temp3, temp2.get(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
+							clip_image(temp3.data(), temp2.data(), clip_x, clip_y, clip_w, clip_h, out_bpp, out_pitch, out_pitch);
 						}
 						else
 						{
-							clip_image(temp3, pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
+							clip_image(temp3.data(), pixels_src, clip_x, clip_y, clip_w, clip_h, out_bpp, in_pitch, out_pitch);
 						}
 					}
 					else
 					{
-						temp3.reset(new u8[out_pitch * (out_h - 1) + (out_bpp * out_w)]);
+						temp3.resize(out_pitch * out_h);
 
-						convert_scale_image(temp3.get(), out_format, out_w, out_h, out_pitch,
+						convert_scale_image(temp3.data(), out_format, out_w, out_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
 					}
 
-					pixels_src = temp3.get();
+					pixels_src = temp3.data();
 					in_pitch = out_pitch;
 				}
 
@@ -1153,22 +1242,22 @@ namespace rsx
 				// Check and pad texture out if we are given non power of 2 output
 				if (sw_width != out_w || sw_height != out_h)
 				{
-					sw_temp.reset(new u8[out_bpp * sw_width * sw_height]);
+					sw_temp.resize(out_bpp * sw_width * sw_height);
 
 					switch (out_bpp)
 					{
 					case 1:
-						pad_texture<u8>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u8>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 						break;
 					case 2:
-						pad_texture<u16>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u16>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 						break;
 					case 4:
-						pad_texture<u32>(linear_pixels, sw_temp.get(), out_w, out_h, sw_width, sw_height);
+						pad_texture<u32>(linear_pixels, sw_temp.data(), out_w, out_h, sw_width, sw_height);
 						break;
 					}
 
-					linear_pixels = sw_temp.get();
+					linear_pixels = sw_temp.data();
 				}
 
 				switch (out_bpp)
@@ -1202,10 +1291,17 @@ namespace rsx
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
 			if (in_format != 0x01 || out_format != 0x01)
 			{
-				LOG_ERROR(RSX, "NV0039_OFFSET_IN: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
+				LOG_ERROR(RSX, "NV0039_BUFFER_NOTIFY: Unsupported format: inFormat=%d, outFormat=%d", in_format, out_format);
 			}
 
-			LOG_TRACE(RSX, "NV0039_OFFSET_IN: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+			if (!line_count || !line_length)
+			{
+				LOG_WARNING(RSX, "NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
+					in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
+				return;
+			}
+
+			LOG_TRACE(RSX, "NV0039_BUFFER_NOTIFY: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 
 			u32 src_offset = method_registers.nv0039_input_offset();
@@ -1220,17 +1316,56 @@ namespace rsx
 			u8 *dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
 			const u8 *src = vm::_ptr<u8>(read_address);
 
-			if (in_pitch == out_pitch && out_pitch == line_length)
+			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
-				std::memcpy(dst, src, line_length * line_count);
+				const u32 src_max = src_offset + (in_pitch * (line_count - 1) + line_length);
+				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
+				return (src_offset >= dst_offset && src_offset < dst_max) ||
+				 (dst_offset >= src_offset && dst_offset < src_max);
+			}();
+
+			if (is_overlapping)
+			{
+				if (in_pitch == out_pitch && out_pitch == line_length)
+				{
+					std::memmove(dst, src, line_length * line_count);
+				}
+				else
+				{
+					std::vector<u8> temp(line_length * line_count);
+					u8* buf = temp.data();
+
+					for (u32 y = 0; y < line_count; ++y)
+					{
+						std::memcpy(buf, src, line_length);
+						buf += line_length;
+						src += in_pitch;
+					}
+
+					buf = temp.data();
+
+					for (u32 y = 0; y < line_count; ++y)
+					{
+						std::memcpy(dst, buf, line_length);
+						buf += line_length;
+						dst += out_pitch;
+					}
+				}
 			}
 			else
 			{
-				for (u32 i = 0; i < line_count; ++i)
+				if (in_pitch == out_pitch && out_pitch == line_length)
 				{
-					std::memcpy(dst, src, line_length);
-					dst += out_pitch;
-					src += in_pitch;
+					std::memcpy(dst, src, line_length * line_count);
+				}
+				else
+				{
+					for (u32 i = 0; i < line_count; ++i)
+					{
+						std::memcpy(dst, src, line_length);
+						dst += out_pitch;
+						src += in_pitch;
+					}
 				}
 			}
 		}
@@ -1636,22 +1771,23 @@ namespace rsx
 			registers[NV4097_SET_VIEWPORT_VERTICAL] = 0x10000000;
 			registers[NV4097_SET_CLIP_MIN] = 0x0;
 			registers[NV4097_SET_CLIP_MAX] = 0x3f800000;
-			registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-			registers[0xa24 / 4] = 0x45000000;
-			registers[0xa28 / 4] = 0x3f000000;
-			registers[0xa2c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-			registers[0xa34 / 4] = 0x45000000;
-			registers[0xa38 / 4] = 0x3f000000;
-			registers[0xa3c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-			registers[0xa24 / 4] = 0x45000000;
-			registers[0xa28 / 4] = 0x3f000000;
-			registers[0xa2c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-			registers[0xa34 / 4] = 0x45000000;
-			registers[0xa38 / 4] = 0x3f000000;
-			registers[0xa3c / 4] = 0x0;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+			registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
+			// NOTE: Realhw emits this sequence twice, likely to work around a hardware bug. Similar behavior can be seen in other buggy register blocks
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 			registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 			registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
 			registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
@@ -2170,22 +2306,23 @@ namespace rsx
 		registers[NV4097_SET_VIEWPORT_VERTICAL] = 0x10000000;
 		registers[NV4097_SET_CLIP_MIN] = 0x0;
 		registers[NV4097_SET_CLIP_MAX] = 0x3f800000;
-		registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-		registers[0xa24 / 4] = 0x45000000;
-		registers[0xa28 / 4] = 0x3f000000;
-		registers[0xa2c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-		registers[0xa34 / 4] = 0x45000000;
-		registers[0xa38 / 4] = 0x3f000000;
-		registers[0xa3c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-		registers[0xa24 / 4] = 0x45000000;
-		registers[0xa28 / 4] = 0x3f000000;
-		registers[0xa2c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-		registers[0xa34 / 4] = 0x45000000;
-		registers[0xa38 / 4] = 0x3f000000;
-		registers[0xa3c / 4] = 0x0;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+		registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
+		// NOTE: Realhw emits this sequence twice, likely to work around a hardware bug. Similar behavior can be seen in other buggy register blocks
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 		registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 		registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
 		registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
@@ -2667,7 +2804,7 @@ namespace rsx
 
 		//Some custom GCM methods
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
-		methods[FIFO::FIFO_DRAW_BARRIER]                  = nullptr;
+		methods[FIFO::FIFO_DRAW_BARRIER >> 2]             = nullptr;
 
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
@@ -2693,7 +2830,11 @@ namespace rsx
 		bind_array<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr>();
 		bind_array<NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr>();
-		bind_array<(0xac00 >> 2), 1, 16, nullptr>();  // Unknown texture control register
+
+		// Unknown (NV4097?)
+		bind<(0x171c >> 2), trace_method>();
+		bind_array<(0xac00 >> 2), 1, 16, trace_method>(); // Unknown texture control register
+		bind_array<(0xac40 >> 2), 1, 16, trace_method>();
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
@@ -2770,6 +2911,7 @@ namespace rsx
 		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
@@ -2790,9 +2932,12 @@ namespace rsx
 		bind<NV4097_SET_FOG_MODE, nv4097::set_ROP_state_dirty_bit>();
 		bind<NV4097_SET_SCISSOR_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
 		bind<NV4097_SET_SCISSOR_VERTICAL, nv4097::set_scissor_dirty_bit>();
+		bind<NV4097_SET_VIEWPORT_HORIZONTAL, nv4097::set_scissor_dirty_bit>();
+		bind<NV4097_SET_VIEWPORT_VERTICAL, nv4097::set_scissor_dirty_bit>();
 		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
+		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

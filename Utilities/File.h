@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 
+
 namespace fs
 {
 #ifdef _WIN32
@@ -503,10 +504,10 @@ namespace fs
 	const std::string& get_cache_dir();
 
 	// Delete directory and all its contents recursively
-	void remove_all(const std::string& path, bool remove_root = true);
+	bool remove_all(const std::string& path, bool remove_root = true);
 
 	// Get size of all files recursively
-	u64 get_dir_size(const std::string& path);
+	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1);
 
 	enum class error : uint
 	{
@@ -517,6 +518,8 @@ namespace fs
 		exist,
 		acces,
 		notempty,
+		readonly,
+		isdir,
 	};
 
 	// Error code returned

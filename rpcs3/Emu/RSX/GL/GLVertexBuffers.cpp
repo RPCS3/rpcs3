@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "GLGSRender.h"
 #include "../Common/BufferUtils.h"
 #include "GLHelpers.h"
@@ -93,7 +93,7 @@ namespace
 				rsx::index_array_type::u32:
 				rsx::method_registers.index_type();
 			
-			u32 type_size              = ::narrow<u32>(get_index_type_size(type));
+			u32 type_size              = get_index_type_size(type);
 
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			u32 index_count = vertex_count;
@@ -254,6 +254,6 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	//Write all the data
 	write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping.first, volatile_mapping.first);
 
-	m_vertex_upload_time += m_profiler.duration();
+	m_frame_stats.vertex_upload_time += m_profiler.duration();
 	return upload_info;
 }

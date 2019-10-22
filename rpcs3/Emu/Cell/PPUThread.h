@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "../CPU/CPUThread.h"
-#include "../Memory/vm_ref.h"
 #include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
 
@@ -59,9 +58,10 @@ public:
 	f64 fpr[32] = {}; // Floating Point Registers
 	v128 vr[32] = {}; // Vector Registers
 
-	struct cr_bits
+	union alignas(16) cr_bits
 	{
-		alignas(16) u8 bits[32];
+		u8 bits[32];
+		u32 fields[8];
 
 		u8& operator [](std::size_t i)
 		{
@@ -109,6 +109,7 @@ public:
 			bool _end[12];
 		};
 
+		u32 fields[8];
 		cr_bits bits;
 	}
 	fpscr{};

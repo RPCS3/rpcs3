@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Memory/vm_ref.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -485,7 +486,8 @@ s32 GBKtoUCS2()
 
 s32 eucjp2jis()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("eucjp2jis()");
+	return CELL_OK;
 }
 
 s32 UTF32stoUTF8s(vm::cptr<u32> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
@@ -1212,7 +1214,8 @@ s32 BIG5stoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::p
 
 s32 EUCCNtoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCCNtoUCS2()");
+	return CELL_OK;
 }
 
 s32 UTF8stoSBCSs()

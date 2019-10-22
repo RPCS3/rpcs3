@@ -26,6 +26,26 @@ std::mutex g_mutex_avcodec_open2;
 
 LOG_CHANNEL(cellVdec);
 
+template<>
+void fmt_class_string<CellVdecError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_VDEC_ERROR_ARG);
+			STR_CASE(CELL_VDEC_ERROR_SEQ);
+			STR_CASE(CELL_VDEC_ERROR_BUSY);
+			STR_CASE(CELL_VDEC_ERROR_EMPTY);
+			STR_CASE(CELL_VDEC_ERROR_AU);
+			STR_CASE(CELL_VDEC_ERROR_PIC);
+			STR_CASE(CELL_VDEC_ERROR_FATAL);
+		}
+
+		return unknown;
+	});
+}
+
 vm::gvar<s32> _cell_vdec_prx_ver; // ???
 
 constexpr struct vdec_start_seq_t{} vdec_start_seq{};
@@ -63,9 +83,9 @@ struct vdec_frame
 
 struct vdec_context final
 {
-	static constexpr u32 id_base = 0xf0000000;
-	static constexpr u32 id_step = 0x00000100;
-	static constexpr u32 id_count = 1024;
+	static const u32 id_base = 0xf0000000;
+	static const u32 id_step = 0x00000100;
+	static const u32 id_count = 1024;
 
 	AVCodec* codec{};
 	AVCodecContext* ctx{};
@@ -160,15 +180,14 @@ struct vdec_context final
 	{
 		ppu_tid = ppu.id;
 
-		for (auto cmds = in_cmd.pop_all(); !Emu.IsStopped(); cmds ? cmds.pop_front() : cmds = in_cmd.pop_all())
+		// pcmd can be nullptr
+		for (auto* pcmd : in_cmd)
 		{
-			if (!cmds)
+			if (thread_ctrl::state() == thread_state::aborting)
 			{
-				in_cmd.wait(1000);
-				continue;
+				break;
 			}
-
-			if (std::get_if<vdec_start_seq_t>(&*cmds))
+			else if (std::get_if<vdec_start_seq_t>(pcmd))
 			{
 				avcodec_flush_buffers(ctx);
 
@@ -177,7 +196,7 @@ struct vdec_context final
 				next_dts = 0;
 				cellVdec.trace("Start sequence...");
 			}
-			else if (auto* cmd = std::get_if<vdec_cmd>(&*cmds))
+			else if (auto* cmd = std::get_if<vdec_cmd>(pcmd))
 			{
 				AVPacket packet{};
 				packet.pos = -1;
@@ -374,16 +393,16 @@ struct vdec_context final
 					au_count--;
 				}
 
-				while (!Emu.IsStopped() && out_max && (std::lock_guard{mutex}, out.size() > out_max))
+				while (thread_ctrl::state() != thread_state::aborting && out_max && (std::lock_guard{mutex}, out.size() > out_max))
 				{
 					thread_ctrl::wait_for(1000);
 				}
 			}
-			else if (auto* frc = std::get_if<CellVdecFrameRate>(&*cmds))
+			else if (auto* frc = std::get_if<CellVdecFrameRate>(pcmd))
 			{
 				frc_set = *frc;
 			}
-			else
+			else if (std::get_if<vdec_close_t>(pcmd))
 			{
 				break;
 			}
@@ -395,10 +414,10 @@ static void vdecEntry(ppu_thread& ppu, u32 vid)
 {
 	idm::get<vdec_context>(vid)->exec(ppu, vid);
 
-	_sys_ppu_thread_exit(ppu, 0);
+	ppu.state += cpu_flag::exit;
 }
 
-static u32 vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, vm::ptr<CellVdecAttr> attr)
+static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, vm::ptr<CellVdecAttr> attr)
 {
 	switch (type) // TODO: check profile levels
 	{
@@ -416,14 +435,14 @@ static u32 vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, vm
 	return CELL_OK;
 }
 
-s32 cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
+error_code cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
 {
 	cellVdec.warning("cellVdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
 
 	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr);
 }
 
-s32 cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
+error_code cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
 {
 	cellVdec.warning("cellVdecQueryAttrEx(type=*0x%x, attr=*0x%x)", type, attr);
 
@@ -431,7 +450,7 @@ s32 cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> att
 }
 
 template <typename T, typename U>
-static s32 vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
+static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
 {
 	if (!type || !res || !cb || !handle)
 	{
@@ -467,21 +486,21 @@ static s32 vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> cb, vm:
 	return CELL_OK;
 }
 
-s32 cellVdecOpen(ppu_thread& ppu, vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
+error_code cellVdecOpen(ppu_thread& ppu, vm::cptr<CellVdecType> type, vm::cptr<CellVdecResource> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
 {
 	cellVdec.warning("cellVdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	return vdecOpen(ppu, type, res, cb, handle);
 }
 
-s32 cellVdecOpenEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
+error_code cellVdecOpenEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, vm::cptr<CellVdecResourceEx> res, vm::cptr<CellVdecCb> cb, vm::ptr<u32> handle)
 {
 	cellVdec.warning("cellVdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	return vdecOpen(ppu, type, res, cb, handle);
 }
 
-s32 cellVdecClose(ppu_thread& ppu, u32 handle)
+error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 {
 	cellVdec.warning("cellVdecClose(handle=0x%x)", handle);
 
@@ -506,7 +525,7 @@ s32 cellVdecClose(ppu_thread& ppu, u32 handle)
 	return CELL_OK;
 }
 
-s32 cellVdecStartSeq(u32 handle)
+error_code cellVdecStartSeq(u32 handle)
 {
 	cellVdec.trace("cellVdecStartSeq(handle=0x%x)", handle);
 
@@ -521,7 +540,7 @@ s32 cellVdecStartSeq(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellVdecEndSeq(u32 handle)
+error_code cellVdecEndSeq(u32 handle)
 {
 	cellVdec.warning("cellVdecEndSeq(handle=0x%x)", handle);
 
@@ -536,7 +555,7 @@ s32 cellVdecEndSeq(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfo> auInfo)
+error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfo> auInfo)
 {
 	cellVdec.trace("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, (s32)mode, auInfo);
 
@@ -557,13 +576,13 @@ s32 cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInf
 	return CELL_OK;
 }
 
-s32 cellVdecDecodeAuEx2()
+error_code cellVdecDecodeAuEx2()
 {
 	UNIMPLEMENTED_FUNC(cellVdec);
 	return CELL_OK;
 }
 
-s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u8> outBuff)
+error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u8> outBuff)
 {
 	cellVdec.trace("cellVdecGetPicture(handle=0x%x, format=*0x%x, outBuff=*0x%x)", handle, format, outBuff);
 
@@ -594,7 +613,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	if (notify)
 	{
 		auto vdec_ppu = idm::get<named_thread<ppu_thread>>(vdec->ppu_tid);
-		thread_ctrl::notify(*vdec_ppu);
+		if (vdec_ppu) thread_ctrl::notify(*vdec_ppu);
 	}
 
 	if (outBuff)
@@ -670,7 +689,7 @@ s32 cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm::ptr<u
 	return CELL_OK;
 }
 
-s32 cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
+error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::ptr<u8> outBuff, u32 arg4)
 {
 	cellVdec.warning("cellVdecGetPictureExt(handle=0x%x, format2=*0x%x, outBuff=*0x%x, arg4=*0x%x)", handle, format2, outBuff, arg4);
 
@@ -687,7 +706,7 @@ s32 cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format2, vm::
 	return cellVdecGetPicture(handle, format, outBuff);
 }
 
-s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
+error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 {
 	cellVdec.trace("cellVdecGetPicItem(handle=0x%x, picItem=**0x%x)", handle, picItem);
 
@@ -891,7 +910,7 @@ s32 cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	return CELL_OK;
 }
 
-s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
+error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
 	cellVdec.trace("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, (s32)frc);
 
@@ -907,37 +926,37 @@ s32 cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 	return CELL_OK;
 }
 
-s32 cellVdecOpenExt()
+error_code cellVdecOpenExt()
 {
 	UNIMPLEMENTED_FUNC(cellVdec);
 	return CELL_OK;
 }
 
-s32 cellVdecStartSeqExt()
+error_code cellVdecStartSeqExt()
 {
 	UNIMPLEMENTED_FUNC(cellVdec);
 	return CELL_OK;
 }
 
-s32 cellVdecGetPicItemEx()
+error_code cellVdecGetPicItemEx()
 {
 	UNIMPLEMENTED_FUNC(cellVdec);
 	return CELL_OK;
 }
 
-s32 cellVdecGetPicItemExt()
+error_code cellVdecGetPicItemExt()
 {
 	UNIMPLEMENTED_FUNC(cellVdec);
 	return CELL_OK;
 }
 
-s32 cellVdecSetFrameRateExt()
+error_code cellVdecSetFrameRateExt()
 {
 	UNIMPLEMENTED_FUNC(cellVdec);
 	return CELL_OK;
 }
 
-s32 cellVdecSetPts()
+error_code cellVdecSetPts()
 {
 	UNIMPLEMENTED_FUNC(cellVdec);
 	return CELL_OK;
