@@ -164,9 +164,22 @@ void game_compatibility::RequestCompatibility(bool online)
 		m_progress_dialog->setValue(bytesReceived);
 	});
 
-	// Handle response according to its contents
-	connect(network_reply, &QNetworkReply::finished, [=]()
+	// Handle network error
+	connect(network_reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), [=](QNetworkReply::NetworkError error)
 	{
+		if (error == QNetworkReply::NoError)
+		{
+			return;
+		}
+
+		if (error != QNetworkReply::OperationCanceledError)
+		{
+			// We failed to retrieve a new database, therefore refresh gamelist to old state
+			const QString error = network_reply->errorString();
+			Q_EMIT DownloadError(error);
+			LOG_ERROR(GENERAL, "Compatibility error: { Network Error - %s }", sstr(error));
+		}
+
 		// Clean up Progress Dialog
 		if (m_progress_dialog)
 		{
@@ -177,20 +190,25 @@ void game_compatibility::RequestCompatibility(bool online)
 			m_progress_timer->stop();
 		}
 
-		// Handle Errors
-		if (network_reply->error() == QNetworkReply::OperationCanceledError)
+		network_reply->deleteLater();
+	});
+
+	// Handle response according to its contents
+	connect(network_reply, &QNetworkReply::finished, [=]()
+	{
+		if (network_reply->error() != QNetworkReply::NoError)
 		{
-			network_reply->deleteLater();
 			return;
 		}
-		else if (network_reply->error() != QNetworkReply::NoError)
+
+		// Clean up Progress Dialog
+		if (m_progress_dialog)
 		{
-			// We failed to retrieve a new database, therefore refresh gamelist to old state
-			QString error = network_reply->errorString();
-			network_reply->deleteLater();
-			Q_EMIT DownloadError(error);
-			LOG_ERROR(GENERAL, "Compatibility error: { Network Error - %s }", sstr(error));
-			return;
+			m_progress_dialog->close();
+		}
+		if (m_progress_timer)
+		{
+			m_progress_timer->stop();
 		}
 
 		LOG_NOTICE(GENERAL, "Compatibility notice: { Database download finished }");
