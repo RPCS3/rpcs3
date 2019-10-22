@@ -1,4 +1,6 @@
-﻿#ifdef _WIN32
+﻿#ifndef _WIN32
+#error "XAudio28 can only be built on Windows."
+#endif
 
 #include "Utilities/Log.h"
 #include "Utilities/StrFmt.h"
@@ -211,5 +213,3 @@ XAudio2Backend::XAudio2Library* XAudio2Backend::xa28_init(void* lib2_8)
 {
 	return new XAudio28Library(lib2_8);
 }
-
-#endif
