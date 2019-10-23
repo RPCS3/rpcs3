@@ -754,7 +754,8 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 		if (port.state != audio_port_state::started) continue;
 
 		auto buf = port.get_vm_ptr(offset);
-		static const float k = 1.0f;
+		static const float k = 0.3694f;	/* avoids clipping loud audio when downmixing multiple channels to 2
+                                       https://hydrogenaud.io/index.php?topic=104214.msg855199#msg855199 */
 		float& m = port.level;
 
 		// part of cellAudioSetPortLevel functionality
@@ -790,15 +791,6 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					out_buffer[out + 0] = left;
 					out_buffer[out + 1] = right;
 
-					if constexpr (!DownmixToStereo)
-					{
-						out_buffer[out + 2] = 0.0f;
-						out_buffer[out + 3] = 0.0f;
-						out_buffer[out + 4] = 0.0f;
-						out_buffer[out + 5] = 0.0f;
-						out_buffer[out + 6] = 0.0f;
-						out_buffer[out + 7] = 0.0f;
-					}
 				}
 				first_mix = false;
 			}
@@ -835,9 +827,11 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 					if constexpr (DownmixToStereo)
 					{
-						const float mid = (center + low_freq) * 0.708f;
-						out_buffer[out + 0] = (left + rear_left + side_left + mid) * k;
-						out_buffer[out + 1] = (right + rear_right + side_right + mid) * k;
+						const float mid = center * 0.7071f; /* don't mix in the lfe as per
+                                                   https://hydrogenaud.io/index.php?topic=104214.msg855199#msg855199
+                                                   recommendations) */
+						out_buffer[out + 0] = (left + rear_left + (side_left * 0.7071f) + mid) * k;
+						out_buffer[out + 1] = (right + rear_right + (side_right * 0.7071f) + mid) * k;
 					}
 					else
 					{
@@ -870,9 +864,9 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 
 					if constexpr (DownmixToStereo)
 					{
-						const float mid = (center + low_freq) * 0.708f;
-						out_buffer[out + 0] += (left + rear_left + side_left + mid) * k;
-						out_buffer[out + 1] += (right + rear_right + side_right + mid) * k;
+						const float mid = center * 0.7071f;
+						out_buffer[out + 0] += (left + rear_left + (side_left * 0.7071f) + mid) * k;
+						out_buffer[out + 1] += (right + rear_right + (side_right * 0.7071f) + mid) * k;
 					}
 					else
 					{
