@@ -137,11 +137,9 @@ namespace rsx
 				m_memwatch_cmp = 0;
 			}
 
-			u32 cmd;
-
 			if (u32 addr = RSXIOMem.RealAddr(m_internal_get))
 			{
-				cmd = vm::read32(addr);
+				m_cmd = vm::read32(addr);
 			}
 			else
 			{
@@ -150,15 +148,15 @@ namespace rsx
 				return;
 			}
 
-			if (UNLIKELY(cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
+			if (UNLIKELY(m_cmd & RSX_METHOD_NON_METHOD_CMD_MASK))
 			{
-				if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD ||
-					(cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD ||
-					(cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD ||
-					(cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
+				if ((m_cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD ||
+					(m_cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD ||
+					(m_cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD ||
+					(m_cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
 				{
 					// Flow control, stop reading
-					data.reg = cmd;
+					data.reg = m_cmd;
 					return;
 				}
 
@@ -177,7 +175,7 @@ namespace rsx
 			}
 
 			verify(HERE), !m_remaining_commands;
-			const u32 count = (cmd >> 18) & 0x7ff;
+			const u32 count = (m_cmd >> 18) & 0x7ff;
 
 			if (!count)
 			{
@@ -189,15 +187,15 @@ namespace rsx
 			if (count > 1)
 			{
 				// Set up readback parameters
-				m_command_reg = cmd & 0xfffc;
-				m_command_inc = ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
+				m_command_reg = m_cmd & 0xfffc;
+				m_command_inc = ((m_cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
 				m_remaining_commands = count - 1;
 			}
 
 			inc_get(true); // Wait for data block to become available
 			m_internal_get += 4;
 
-			data.set(cmd & 0xfffc, vm::read32(m_args_ptr));
+			data.set(m_cmd & 0xfffc, vm::read32(m_args_ptr));
 		}
 
 		void flattening_helper::reset(bool _enabled)
@@ -405,7 +403,7 @@ namespace rsx
 			}
 			case FIFO::FIFO_ERROR:
 			{
-				LOG_ERROR(RSX, "FIFO error: possible desync event");
+				LOG_ERROR(RSX, "FIFO error: possible desync event (last cmd = 0x%x)", fifo_ctrl->last_cmd());
 				recover_fifo();
 				return;
 			}

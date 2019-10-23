@@ -41,7 +41,9 @@ namespace rsx
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+		const u32 cmd = rsx->get_fifo_cmd();
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg, 
+		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->invalid_command_interrupt_raised = true;
 	}
 
@@ -74,7 +76,7 @@ namespace rsx
 			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema == arg || addr == rsx->device_addr + 0x30) return;
 
 			rsx->flush_fifo();
 

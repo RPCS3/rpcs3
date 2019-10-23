@@ -402,7 +402,7 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 		result.push_back(source.substr(cursor_begin));
 	}
 
-	return std::move(result);
+	return result;
 }
 
 std::string fmt::trim(const std::string& source, const std::string& values)

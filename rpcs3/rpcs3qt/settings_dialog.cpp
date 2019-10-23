@@ -465,16 +465,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Comboboxes
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
-#ifdef WIN32
 	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox"].toString());
 	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox"].toString());
-#else
-	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox_Linux"].toString());
-	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox_Linux"].toString());
-#endif
+
 	// Change displayed renderer names
 	ui->renderBox->setItemText(ui->renderBox->findData("Null"), render_creator.name_Null);
-	ui->renderBox->setItemText(ui->renderBox->findData("D3D12"), render_creator.name_D3D12);
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	SubscribeTooltip(ui->resBox, json_gpu_cbo["resBox"].toString());
@@ -1311,6 +1306,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		SubscribeTooltip(ui->cb_show_pup_install, json_gui["show_pup_install"].toString());
 
+		SubscribeTooltip(ui->cb_check_update_start, json_gui["check_update_start"].toString());
+
 		SubscribeTooltip(ui->useRichPresence, json_gui["useRichPresence"].toString());
 
 		SubscribeTooltip(ui->discordState, json_gui["discordState"].toString());
@@ -1371,6 +1368,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->cb_show_boot_game->setChecked(xgui_settings->GetValue(gui::ib_confirm_boot).toBool());
 		ui->cb_show_pkg_install->setChecked(xgui_settings->GetValue(gui::ib_pkg_success).toBool());
 		ui->cb_show_pup_install->setChecked(xgui_settings->GetValue(gui::ib_pup_success).toBool());
+
+		ui->cb_check_update_start->setChecked(xgui_settings->GetValue(gui::m_check_upd_start).toBool());
 
 		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
@@ -1446,6 +1445,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->cb_show_pup_install, &QCheckBox::clicked, [=](bool val)
 		{
 			xgui_settings->SetValue(gui::ib_pup_success, val);
+		});
+		connect(ui->cb_check_update_start, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::m_check_upd_start, val);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)

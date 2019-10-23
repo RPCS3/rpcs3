@@ -172,6 +172,13 @@ void main_window::Init()
 
 	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
 	m_gameListFrame->FixNarrowColumns();
+
+#if defined(_WIN32) || defined(__linux__)
+	if (guiSettings->GetValue(gui::m_check_upd_start).toBool())
+	{
+		m_updater.check_for_updates(true, this);
+	}
+#endif
 }
 
 // returns appIcon
@@ -423,8 +430,7 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
 
-	progress_dialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
-	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
+	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
 	pdlg.show();
 
 	// Synchronization variable
@@ -563,8 +569,7 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
-	progress_dialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
-	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
+	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.show();
 
 	// Synchronization variable
@@ -1409,6 +1414,20 @@ void main_window::CreateConnects()
 			m_gameListFrame->ToggleCategoryFilter(categories, checked);
 			guiSettings->SetCategoryVisibility(id, checked);
 		}
+	});
+
+	connect(ui->updateAct, &QAction::triggered, [=]()
+	{
+#if !defined(_WIN32) && !defined(__linux__)
+		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater currently isn't available for your os."));
+		return;
+#endif
+		if(!Emu.IsStopped())
+		{
+			QMessageBox::warning(this, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
+			return;
+		}
+		m_updater.check_for_updates(false, this);
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, [this]

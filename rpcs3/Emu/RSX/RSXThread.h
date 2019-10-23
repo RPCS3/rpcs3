@@ -464,6 +464,13 @@ namespace rsx
 		}
 	};
 
+	struct backend_configuration
+	{
+		bool supports_multidraw;           // Draw call batching
+		bool supports_hw_a2c;              // Alpha to coverage
+		bool supports_hw_renormalization;  // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+	};
+
 	struct sampled_image_descriptor_base;
 
 	class thread
@@ -484,8 +491,7 @@ namespace rsx
 		bool skip_current_frame = false;
 		frame_statistics_t stats{};
 
-		bool supports_multidraw = false;  // Draw call batching
-		bool supports_hw_a2c = false;     // Alpha to coverage
+		backend_configuration backend_config{};
 
 		// FIFO
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
@@ -520,6 +526,7 @@ namespace rsx
 		atomic_t<bool> external_interrupt_ack{ false };
 		void flush_fifo();
 		void recover_fifo();
+		u32 get_fifo_cmd();
 
 		// Performance approximation counters
 		struct
@@ -564,7 +571,7 @@ namespace rsx
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{0};
 		u32 current_display_buffer{0};
-		u32 ctxt_addr;
+		u32 device_addr;
 		u32 label_addr;
 
 		u32 main_mem_size{0};

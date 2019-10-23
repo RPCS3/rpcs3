@@ -104,6 +104,12 @@ public:
 	// Return opaque pointer for add()
 	void* find(u64 last_reset_count, const std::vector<u32>&);
 
+	// Get func from opaque ptr
+	static inline const std::vector<u32>& get_func(void* _where)
+	{
+		return static_cast<decltype(m_map)::value_type*>(_where)->first;
+	}
+
 	// Find existing function
 	spu_function_t find(const u32* ls, u32 addr) const;
 
@@ -133,6 +139,9 @@ public:
 
 	// Similar to g_escape, but doing tail call to the new function.
 	static void(*const g_tail_escape)(spu_thread*, spu_function_t, u8*);
+
+	// Interpreter table (spu_itype -> ptr)
+	static std::array<u64, 256> g_interpreter_table;
 
 	// Interpreter entry point
 	static spu_function_t g_interpreter;
@@ -364,7 +373,7 @@ public:
 	virtual void init() = 0;
 
 	// Compile function (may fail)
-	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&) = 0;
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&, void*) = 0;
 
 	// Compile function, handle failure
 	void make_function(const std::vector<u32>&);
@@ -400,4 +409,7 @@ public:
 
 	// Create recompiler instance (LLVM)
 	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler(u8 magn = 0);
+
+	// Create recompiler instance (interpreter-based LLVM)
+	static std::unique_ptr<spu_recompiler_base> make_fast_llvm_recompiler();
 };

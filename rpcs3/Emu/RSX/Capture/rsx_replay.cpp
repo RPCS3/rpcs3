@@ -50,7 +50,7 @@ namespace rsx
 
 		get_current_renderer()->main_mem_size = buffer_size;
 
-		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0) != CELL_OK)
+		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
 
 		return contextInfo->context_id;

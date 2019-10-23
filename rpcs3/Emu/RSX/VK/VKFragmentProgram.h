@@ -1,5 +1,6 @@
-#pragma once
+﻿#pragma once
 #include "../Common/FragmentProgramDecompiler.h"
+#include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "VulkanAPI.h"
 #include "VKHelpers.h"
@@ -10,6 +11,8 @@ struct VKFragmentDecompilerThread : public FragmentProgramDecompiler
 	ParamArray& m_parrDummy;
 	std::vector<vk::glsl::program_input> inputs;
 	class VKFragmentProgram *vk_prog;
+	glsl::shader_properties m_shader_props{};
+
 public:
 	VKFragmentDecompilerThread(std::string& shader, ParamArray& parr, const RSXFragmentProgram &prog, u32& size, class VKFragmentProgram& dst)
 		: FragmentProgramDecompiler(prog, size)

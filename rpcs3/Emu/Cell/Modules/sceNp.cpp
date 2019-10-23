@@ -1417,6 +1417,16 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 {
 	sceNp.todo("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
+	if (!g_fxo->get<sce_np_manager>()->is_initialized)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!event || !from || !data || !size)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
 	// TODO: Check for other error and pass other events
 	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
@@ -4227,10 +4237,24 @@ error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Improve the comparison.
-	if (memcmp(id1->handle.data, id2->handle.data, 16) != 0)
+	// Unknown what this constant means
+	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	{
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	}
+
+	if (strncmp(id1->handle.data, id2->handle.data, 16) || id1->unk1[0] != id2->unk1[0])
 	{
 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
+	}
+
+	if (id1->unk1[1] != id2->unk1[1])
+	{
+		// If either is zero they match
+		if (id1->opt[4] && id2->opt[4])
+		{
+			return SCE_NP_UTIL_ERROR_NOT_MATCH;
+		}
 	}
 
 	return CELL_OK;
@@ -4245,10 +4269,41 @@ error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2,
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Improve the comparison.
-	// TODO: check for nullptr
-	*order = memcmp(id1->handle.data, id2->handle.data, 16);
+	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	{
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	}
 
+	if (s32 res = strncmp(id1->handle.data, id2->handle.data, 16))
+	{
+		*order = std::clamp<s32>(res, -1, 1);
+		return CELL_OK;
+	}
+
+	if (s32 res = memcmp(id1->unk1, id2->unk1, 4))
+	{
+		*order = std::clamp<s32>(res, -1, 1);
+		return CELL_OK;
+	}
+
+	const u8 opt14 = id1->opt[4];
+	const u8 opt24 = id2->opt[4];
+
+	if (opt14 == 0 && opt24 == 0)
+	{
+		*order = 0;
+		return CELL_OK;	
+	}
+
+	if (opt14 != 0 && opt24 != 0)
+	{
+		s32 res = memcmp(id1->unk1 + 1, id2->unk1 + 1, 4);
+		*order = std::clamp<s32>(res, -1, 1);
+		return CELL_OK;
+	}
+
+	s32 res = memcmp((opt14 != 0 ? id1 : id2)->unk1 + 1, "ps3", 4);
+	*order = std::clamp<s32>(res, -1, 1);
 	return CELL_OK;
 }
 
@@ -4261,8 +4316,12 @@ error_code sceNpUtilCmpOnlineId(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2)
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	// TODO: Improve the comparison.
-	if (memcmp(id1->handle.data, id2->handle.data, 16) != 0)
+	if (id1->reserved[0] != 1 || id2->reserved[0] != 1)
+	{
+		return SCE_NP_UTIL_ERROR_INVALID_NP_ID;
+	}
+
+	if (strncmp(id1->handle.data, id2->handle.data, 16) != 0)
 	{
 		return SCE_NP_UTIL_ERROR_NOT_MATCH;
 	}
@@ -4279,12 +4338,21 @@ error_code sceNpUtilGetPlatformType(vm::cptr<SceNpId> npId)
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	//if (unknown_platform)
-	//{
-	//	return SCE_NP_UTIL_ERROR_UNKNOWN_PLATFORM_TYPE;
-	//}
+	switch (npId->unk1[1])
+	{
+	case "ps4\0"_u32:
+		return not_an_error(SCE_NP_PLATFORM_TYPE_PS4);
+	case "psp2"_u32:
+		return not_an_error(SCE_NP_PLATFORM_TYPE_VITA);
+	case "ps3\0"_u32:
+		return not_an_error(SCE_NP_PLATFORM_TYPE_PS3); 
+	case 0u:
+		return not_an_error(SCE_NP_PLATFORM_TYPE_NONE);
+	default:
+		break;
+	}
 
-	return CELL_OK; // SCE_NP_PLATFORM_TYPE_NONE
+	return SCE_NP_UTIL_ERROR_UNKNOWN_PLATFORM_TYPE;
 }
 
 error_code sceNpUtilSetPlatformType(vm::ptr<SceNpId> npId, SceNpPlatformType platformType)
@@ -4296,8 +4364,17 @@ error_code sceNpUtilSetPlatformType(vm::ptr<SceNpId> npId, SceNpPlatformType pla
 		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (platformType < SCE_NP_PLATFORM_TYPE_NONE || platformType > SCE_NP_PLATFORM_TYPE_VITA)
+	switch (platformType)
 	{
+	case SCE_NP_PLATFORM_TYPE_PS4:
+		npId->unk1[1] = "ps4\0"_u32; break;
+	case SCE_NP_PLATFORM_TYPE_VITA:
+		npId->unk1[1] = "psp2"_u32; break;
+	case SCE_NP_PLATFORM_TYPE_PS3:
+		npId->unk1[1] = "ps3\0"_u32; break;
+	case SCE_NP_PLATFORM_TYPE_NONE:
+		npId->unk1[1] = 0; break;
+	default:
 		return SCE_NP_UTIL_ERROR_UNKNOWN_PLATFORM_TYPE;
 	}
 

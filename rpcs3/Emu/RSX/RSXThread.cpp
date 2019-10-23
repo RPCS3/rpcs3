@@ -91,10 +91,10 @@ namespace rsx
 			return get_current_renderer()->label_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW:
-			return get_current_renderer()->ctxt_addr + offset;
+			return get_current_renderer()->device_addr + offset;
 
 		case CELL_GCM_CONTEXT_DMA_DEVICE_R:
-			return get_current_renderer()->ctxt_addr + offset;
+			return get_current_renderer()->device_addr + offset;
 
 		default:
 		{
@@ -508,10 +508,21 @@ namespace rsx
 					continue;
 				}
 
-				while (Emu.IsPaused() && !m_rsx_thread_exiting)
-					thread_ctrl::wait_for(wait_sleep);
+				if (Emu.IsPaused())
+				{
+					// Save the difference before pause
+					start_time = get_system_time() - start_time;
+					
+					while (Emu.IsPaused() && !m_rsx_thread_exiting)
+					{
+						thread_ctrl::wait_for(wait_sleep);
+					}
 
-				thread_ctrl::wait_for(100); // Hack
+					// Restore difference
+					start_time = get_system_time() - start_time;
+				}
+
+				thread_ctrl::wait_for(100);
 			}
 		});
 
@@ -699,7 +710,7 @@ namespace rsx
 		auto alpha_ref = rsx::method_registers.alpha_ref() / 255.f;
 		auto rop_control = rsx::method_registers.alpha_test_enabled()? 1u : 0u;
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !supports_hw_a2c)
+		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
 		{
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
@@ -827,17 +838,19 @@ namespace rsx
 			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
 		}
 
-		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
-		rsx::index_array_type type = rsx::method_registers.index_type();
+		const rsx::index_array_type type = rsx::method_registers.index_type();
+		const u32 type_size = get_index_type_size(type);
 
-		u32 type_size = ::narrow<u32>(get_index_type_size(type));
-		bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-		u32 primitive_restart_index = rsx::method_registers.restart_index();
+		u32 address = rsx::get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+		address &= ~(type_size - 1); // Force aligned indices as realhw
+
+		const bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
+		const u32 primitive_restart_index = rsx::method_registers.restart_index();
 
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
 
-		const gsl::byte* ptr = static_cast<const gsl::byte*>(vm::base(address));
+		const auto ptr = vm::_ptr<const gsl::byte>(address);
 		return{ ptr + first * type_size, count * type_size };
 	}
 
@@ -851,7 +864,7 @@ namespace rsx
 		const u32 first = draw_array_clause.min_index();
 		const u32 count = draw_array_clause.get_elements_count();
 
-		const gsl::byte* ptr = gsl::narrow_cast<const gsl::byte*>(vm::base(address));
+		const gsl::byte* ptr = vm::_ptr<const gsl::byte>(address);
 		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
@@ -1669,7 +1682,7 @@ namespace rsx
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
 			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
-			result.texture_scale[i][2] = (f32)tex.remap();  //Debug value
+			result.texture_scale[i][2] = std::bit_cast<f32>(tex.remap());
 
 			if (tex.enabled() && (current_fp_metadata.referenced_textures_mask & (1 << i)))
 			{
@@ -1726,6 +1739,22 @@ namespace rsx
 					}
 					default:
 						LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
+					}
+				}
+				else if (!backend_config.supports_hw_renormalization)
+				{
+					switch (format)
+					{
+					case CELL_GCM_TEXTURE_A1R5G5B5:
+					case CELL_GCM_TEXTURE_A4R4G4B4:
+					case CELL_GCM_TEXTURE_D1R5G5B5:
+					case CELL_GCM_TEXTURE_R5G5B5A1:
+					case CELL_GCM_TEXTURE_R5G6B5:
+					case CELL_GCM_TEXTURE_R6G5B5:
+						texture_control |= (1 << 5);
+						break;
+					default:
+						break;
 					}
 				}
 
@@ -2347,6 +2376,12 @@ namespace rsx
 		fifo_ret_addr = saved_fifo_ret;
 		std::this_thread::sleep_for(1ms);
 		invalid_command_interrupt_raised = false;
+	}
+
+	u32 thread::get_fifo_cmd()
+	{
+		// Last fifo cmd for logging and utility
+		return fifo_ctrl->last_cmd();
 	}
 
 	void thread::read_barrier(u32 memory_address, u32 memory_range)

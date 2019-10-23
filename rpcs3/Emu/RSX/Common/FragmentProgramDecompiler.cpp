@@ -668,7 +668,7 @@ std::string FragmentProgramDecompiler::BuildCode()
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		// Hw tests show that the depth export register is default-initialized to 0 and not wpos.z!!
-		m_parr.AddParam(PF_PARAM_NONE, float4_type, "r1", init_value);
+		m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "r1", init_value);
 		shader_is_valid = (!!temp_registers[1].h1_writes);
 	}
 
@@ -1184,7 +1184,7 @@ std::string FragmentProgramDecompiler::Decompile()
 		case RSX_FP_OPCODE_NOP: break;
 		case RSX_FP_OPCODE_KIL:
 			properties.has_discard_op = true;
-			AddFlowOp("discard");
+			AddFlowOp("_kill()");
 			break;
 
 		default:

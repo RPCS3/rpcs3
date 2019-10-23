@@ -45,9 +45,12 @@ void spu_recompiler::init()
 	}
 }
 
-spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
+spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func, void* fn_location)
 {
-	const auto fn_location = m_spurt->find(last_reset_count, func);
+	if (!fn_location)
+	{
+		fn_location = m_spurt->find(last_reset_count, func);
+	}
 
 	if (fn_location == spu_runtime::g_dispatcher)
 	{

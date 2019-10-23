@@ -74,7 +74,6 @@ public:
 	// Events related functions
 	bool get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::ptr<u64>& arg3);
 	void add_event(u64 arg1, u64 arg2, u64 arg3);
-	void add_to_receive_queue(ppu_thread* ppu);
 
 	// Transfers related functions
 	u32 get_free_transfer_id();
@@ -87,6 +86,9 @@ public:
 
 	shared_mutex mutex;
 	atomic_t<bool> is_init = false;
+
+	// sys_usbd_receive_event PPU Threads
+	std::deque<ppu_thread*> sq;
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
@@ -108,9 +110,7 @@ private:
 	std::array<UsbTransfer, 0x44> transfers;
 
 	// Queue of pending usbd events
-	std::queue<std::tuple<u32, u32, u32>> usbd_events;
-	// sys_usbd_receive_event PPU Threads
-	std::queue<ppu_thread*> receive_threads;
+	std::queue<std::tuple<u64, u64, u64>> usbd_events;
 
 	// List of devices "connected" to the ps3
 	std::vector<std::shared_ptr<usb_device>> usb_devices;
@@ -233,9 +233,7 @@ void usb_handler_thread::operator()()
 		// Process fake transfers
 		if (!fake_transfers.empty())
 		{
-			const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
-
-			std::lock_guard lock(usbh->mutex);
+			std::lock_guard lock(this->mutex);
 
 			u64 timestamp = get_system_time() - Emu.GetPauseTime();
 
@@ -389,9 +387,9 @@ bool usb_handler_thread::get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::p
 	if (usbd_events.size())
 	{
 		const auto& usb_event = usbd_events.front();
-		*arg1                 = (u64)std::get<0>(usb_event);
-		*arg2                 = (u64)std::get<1>(usb_event);
-		*arg3                 = (u64)std::get<2>(usb_event);
+		*arg1                 = std::get<0>(usb_event);
+		*arg2                 = std::get<1>(usb_event);
+		*arg3                 = std::get<2>(usb_event);
 		usbd_events.pop();
 		sys_usbd.trace("Received event: arg1=0x%x arg2=0x%x arg3=0x%x", *arg1, *arg2, *arg3);
 		return true;
@@ -402,18 +400,18 @@ bool usb_handler_thread::get_event(vm::ptr<u64>& arg1, vm::ptr<u64>& arg2, vm::p
 
 void usb_handler_thread::add_event(u64 arg1, u64 arg2, u64 arg3)
 {
-	usbd_events.push({arg1, arg2, arg3});
-	if (receive_threads.size())
+	// sys_usbd events use an internal event queue with SYS_SYNC_PRIORITY protocol
+	if (const auto cpu = lv2_obj::schedule<ppu_thread>(sq, SYS_SYNC_PRIORITY))
 	{
-		lv2_obj::awake(receive_threads.front());
-		receive_threads.pop();
+		cpu->gpr[4] = arg1;
+		cpu->gpr[5] = arg2;
+		cpu->gpr[6] = arg3;
+		lv2_obj::awake(cpu);
 	}
-}
-
-void usb_handler_thread::add_to_receive_queue(ppu_thread* ppu)
-{
-	lv2_obj::sleep(*ppu);
-	receive_threads.push(ppu);
+	else
+	{
+		usbd_events.emplace(arg1, arg2, arg3);
+	}
 }
 
 u32 usb_handler_thread::get_free_transfer_id()
@@ -442,7 +440,9 @@ s32 sys_usbd_initialize(vm::ptr<u32> handle)
 
 	std::lock_guard lock(usbh->mutex);
 
-	usbh->is_init = true;
+	// Must not occur (lv2 allows multiple handles, cellUsbd does not)
+	verify("sys_usbd Initialized twice" HERE), !usbh->is_init.exchange(true);
+
 	*handle       = 0x115B;
 
 	// TODO
@@ -457,6 +457,16 @@ s32 sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 
 	std::lock_guard lock(usbh->mutex);
 	usbh->is_init = false;
+
+	// Forcefully awake all waiters
+	for (auto& cpu : decltype(usbh->sq)(std::move(usbh->sq)))
+	{
+		// Special ternimation signal value
+		cpu->gpr[4] = 4;
+		cpu->gpr[5] = 0;
+		cpu->gpr[6] = 0;
+		lv2_obj::awake(cpu);
+	}
 
 	// TODO
 	return CELL_OK;
@@ -607,47 +617,43 @@ s32 sys_usbd_close_pipe(u32 handle, u32 pipe_handle)
 // *arg1 == 1 || *arg1 == 2 will send a sys_event to internal CellUsbd event queue with same parameters as received and loop(attach and detach event)
 s32 sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1, vm::ptr<u64> arg2, vm::ptr<u64> arg3)
 {
-	lv2_obj::sleep(ppu);
-
 	sys_usbd.trace("sys_usbd_receive_event(handle=%u, arg1=*0x%x, arg2=*0x%x, arg3=*0x%x)", handle, arg1, arg2, arg3);
 
 	const auto usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	{
 		std::lock_guard lock(usbh->mutex);
+
 		if (!usbh->is_init)
 			return CELL_EINVAL;
+
+		if (usbh->get_event(arg1, arg2, arg3))
+		{
+			// hack for Guitar Hero Live
+			// Attaching the device too fast seems to result in a nullptr along the way
+			if (*arg1 == SYS_USBD_ATTACH)
+				lv2_obj::wait_timeout(5000);
+
+			return CELL_OK;
+		}
+
+		lv2_obj::sleep(ppu);
+		usbh->sq.emplace_back(&ppu);
 	}
 
-	while (!Emu.IsStopped())
+	while (!ppu.state.test_and_reset(cpu_flag::signal))
 	{
+		if (ppu.is_stopped())
 		{
-			std::lock_guard lock(usbh->mutex);
-
-			if (usbh->get_event(arg1, arg2, arg3))
-			{
-				// hack for Guitar Hero Live
-				// Attaching the device too fast seems to result in a nullptr along the way
-				if (*arg1 == SYS_USBD_ATTACH)
-					std::this_thread::sleep_for(5ms);
-
-				break;
-			}
-
-			usbh->add_to_receive_queue(&ppu);
+			return 0;
 		}
 
-		while (!ppu.state.test_and_reset(cpu_flag::signal))
-		{
-			if (ppu.is_stopped())
-			{
-				return 0;
-			}
-
-			thread_ctrl::wait();
-		}
+		thread_ctrl::wait();
 	}
 
+	*arg1 = ppu.gpr[4];
+	*arg2 = ppu.gpr[5];
+	*arg3 = ppu.gpr[6];
 	return CELL_OK;
 }
 

@@ -347,6 +347,9 @@
     <ClCompile Include="Crypto\sha1.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Crypto\sha256.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="Crypto\unedat.cpp" />
     <ClCompile Include="Crypto\unpkg.cpp" />
     <ClCompile Include="Crypto\unself.cpp" />
@@ -424,6 +427,7 @@
     <ClInclude Include="Crypto\lz.h" />
     <ClInclude Include="Crypto\md5.h" />
     <ClInclude Include="Crypto\sha1.h" />
+    <ClInclude Include="Crypto\sha256.h" />
     <ClInclude Include="Crypto\unedat.h" />
     <ClInclude Include="Crypto\unpkg.h" />
     <ClInclude Include="Crypto\unself.h" />

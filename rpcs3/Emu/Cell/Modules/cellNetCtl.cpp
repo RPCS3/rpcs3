@@ -1,6 +1,7 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 
 #include "cellGame.h"
 #include "cellSysutil.h"
@@ -89,19 +90,39 @@ error_code cellNetCtlInit()
 {
 	cellNetCtl.warning("cellNetCtlInit()");
 
+	auto net_ctl_manager = g_fxo->get<cell_net_ctl_manager>();
+
+	if (net_ctl_manager->is_initialized)
+	{
+		return CELL_NET_CTL_ERROR_NOT_TERMINATED;
+	}
+
+	net_ctl_manager->is_initialized = true;
+
 	return CELL_OK;
 }
 
-error_code cellNetCtlTerm()
+void cellNetCtlTerm()
 {
 	cellNetCtl.warning("cellNetCtlTerm()");
 
-	return CELL_OK;
+	auto net_ctl_manager = g_fxo->get<cell_net_ctl_manager>();
+	net_ctl_manager->is_initialized = false;
 }
 
-error_code cellNetCtlGetState(vm::ptr<u32> state)
+error_code cellNetCtlGetState(vm::ptr<s32> state)
 {
 	cellNetCtl.trace("cellNetCtlGetState(state=*0x%x)", state);
+
+	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	{
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!state)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
 
 	*state = g_cfg.net.net_status;
 	return CELL_OK;
@@ -111,6 +132,16 @@ error_code cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void
 {
 	cellNetCtl.todo("cellNetCtlAddHandler(handler=*0x%x, arg=*0x%x, hid=*0x%x)", handler, arg, hid);
 
+	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	{
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!hid)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
+
 	return CELL_OK;
 }
 
@@ -118,12 +149,32 @@ error_code cellNetCtlDelHandler(s32 hid)
 {
 	cellNetCtl.todo("cellNetCtlDelHandler(hid=0x%x)", hid);
 
+	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	{
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
+
+	if (hid > 3)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_ID;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
 	cellNetCtl.todo("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
+
+	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	{
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!info)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
 
 	if (code == CELL_NET_CTL_INFO_ETHER_ADDR)
 	{
@@ -169,9 +220,29 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	return CELL_OK;
 }
 
-error_code cellNetCtlNetStartDialogLoadAsync(vm::ptr<CellNetCtlNetStartDialogParam> param)
+error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogParam> param)
 {
 	cellNetCtl.error("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
+
+	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	{
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!param)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
+
+	if (param->type >= CELL_NET_CTL_NETSTART_TYPE_MAX)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_TYPE;
+	}
+
+	if (param->size != 12)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_SIZE;
+	}
 
 	// TODO: Actually sign into PSN or an emulated network similar to PSN (ESN)
 	// TODO: Properly open the dialog prompt for sign in
@@ -185,12 +256,32 @@ error_code cellNetCtlNetStartDialogAbortAsync()
 {
 	cellNetCtl.error("cellNetCtlNetStartDialogAbortAsync()");
 
+	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	{
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
 error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogResult> result)
 {
 	cellNetCtl.warning("cellNetCtlNetStartDialogUnloadAsync(result=*0x%x)", result);
+
+	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
+	{
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!result)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
+
+	if (result->size != 8)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_SIZE;
+	}
 
 	result->result = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 	sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
@@ -202,9 +293,18 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
 	cellNetCtl.todo("cellNetCtlGetNatInfo(natInfo=*0x%x)", natInfo);
 
-	if (natInfo->size == 0)
+	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
 	{
-		cellNetCtl.error("cellNetCtlGetNatInfo : CELL_NET_CTL_ERROR_INVALID_SIZE");
+		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!natInfo)
+	{
+		return CELL_NET_CTL_ERROR_INVALID_ADDR;
+	}
+
+	if (natInfo->size != 16 && natInfo->size != 20)
+	{
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
 

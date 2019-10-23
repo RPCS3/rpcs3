@@ -832,7 +832,16 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> module)
 
 void jit_compiler::add(const std::string& path)
 {
-	m_engine->addObjectFile(std::move(llvm::object::ObjectFile::createObjectFile(*ObjectCache::load(path)).get()));
+	auto cache = ObjectCache::load(path);
+
+	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
+	{
+		m_engine->addObjectFile( std::move(*object_file) );
+	}
+	else
+	{
+		LOG_ERROR(GENERAL, "ObjectCache: Adding failed: %s", path);
+	}
 }
 
 void jit_compiler::fin()

@@ -44,6 +44,8 @@ void GLFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 			OS << "#extension GL_AMD_gpu_shader_half_float: require\n";
 		}
 	}
+
+	glsl::insert_subheader_block(OS);
 }
 
 void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
@@ -189,25 +191,26 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	OS << "layout(std140, binding = 5) uniform TextureParametersBuffer\n";
 	OS << "{\n";
-	OS << "	vec4 texture_parameters[16];\n";	//sampling: x,y scaling and (unused) offsets data
+	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 {
-	glsl::shader_properties properties2;
-	properties2.domain = glsl::glsl_fragment_program;
-	properties2.require_lit_emulation = properties.has_lit_op;
-	properties2.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
-	properties2.require_depth_conversion = m_prog.redirected_textures != 0;
-	properties2.require_wpos = !!(properties.in_register_mask & in_wpos);
-	properties2.require_texture_ops = properties.has_tex_op;
-	properties2.require_shadow_ops = m_prog.shadow_textures != 0;
-	properties2.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
-	properties2.emulate_shadow_compare = device_props.emulate_depth_compare;
-	properties2.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
+	m_shader_props.domain = glsl::glsl_fragment_program;
+	m_shader_props.require_lit_emulation = properties.has_lit_op;
+	m_shader_props.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
+	m_shader_props.require_depth_conversion = m_prog.redirected_textures != 0;
+	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
+	m_shader_props.require_texture_ops = properties.has_tex_op;
+	m_shader_props.require_shadow_ops = m_prog.shadow_textures != 0;
+	m_shader_props.emulate_coverage_tests = true; // g_cfg.video.antialiasing_level == msaa_level::none;
+	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
+	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
+	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
+	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 
-	glsl::insert_glsl_legacy_function(OS, properties2);
+	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
 
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
@@ -305,11 +308,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 	OS << "\n" << "	fs_main();\n\n";
 
-	glsl::insert_rop(
-		OS,
-		!!(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS),
-		device_props.has_native_half_support,
-		g_cfg.video.antialiasing_level == msaa_level::none);
+	glsl::insert_rop(OS, m_shader_props);
 
 	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{

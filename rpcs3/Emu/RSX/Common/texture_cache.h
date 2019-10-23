@@ -743,10 +743,10 @@ namespace rsx
 					if (tex.overlaps(fault_range, section_bounds::locked_range))
 					{
 						if (cause == invalidation_cause::superseded_by_fbo &&
-							tex.get_context() == texture_upload_context::framebuffer_storage &&
+							tex.is_flushable() &&
 							tex.get_section_base() != fault_range_in.start)
 						{
-							// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
+							// HACK: When being superseded by an fbo, we preserve overlapped flushables unless the start addresses match
 							continue;
 						}
 						else if (tex.inside(fault_range, section_bounds::locked_range))
@@ -807,9 +807,9 @@ namespace rsx
 						!tex.inside(trampled_set.invalidate_range, bounds) ||
 						// Unsynchronized sections (or any flushable when skipping flushes) that do not overlap the fault range directly can also be ignored
 						(invalidation_ignore_unsynchronized && tex.is_flushable() && (cause.skip_flush() || !tex.is_synchronized()) && !overlaps_fault_range) ||
-						// HACK: When being superseded by an fbo, we preserve other overlapped fbos unless the start addresses match
-						// If region is committed as fbo, all non-fbo data is removed but all fbos in the region must be preserved if possible
-						(overlaps_fault_range && tex.get_context() == texture_upload_context::framebuffer_storage && cause.skip_fbos() && tex.get_section_base() != fault_range_in.start)
+						// HACK: When being superseded by an fbo, we preserve other overlapped flushables unless the start addresses match
+						// If region is committed as fbo, all non-flushable data is removed but all flushables in the region must be preserved if possible
+						(overlaps_fault_range && tex.is_flushable() && cause.skip_fbos() && tex.get_section_base() != fault_range_in.start)
 					   )
 					{
 						// False positive
@@ -1613,49 +1613,17 @@ namespace rsx
 							u32  gcm_format = attr.gcm_format;
 							const bool gcm_format_is_depth = texture_cache_helpers::is_gcm_depth_format(attr.gcm_format);
 
-							if (gcm_format_is_depth && !last->is_depth_texture())
+							if (!gcm_format_is_depth && last->is_depth_texture())
 							{
-								// Request for a depth format, but only a color format exists
-								const auto actual_format = last->get_gcm_format();
-								bool  resolved = false;
-
-								switch (attr.gcm_format)
-								{
-								case CELL_GCM_TEXTURE_A8R8G8B8:
-								case CELL_GCM_TEXTURE_D8R8G8B8:
-								{
-									// Compatible with D24S8_UINT
-									if (actual_format == CELL_GCM_TEXTURE_DEPTH24_D8)
-									{
-										gcm_format = CELL_GCM_TEXTURE_DEPTH24_D8;
-										resolved = true;
-									}
-									break;
-								}
-								case CELL_GCM_TEXTURE_X16:
-								{
-									// Compatible with DEPTH16_UNORM
-									if (actual_format == CELL_GCM_TEXTURE_DEPTH16)
-									{
-										gcm_format = CELL_GCM_TEXTURE_DEPTH16;
-										resolved = true;
-									}
-									break;
-								}
-								}
-
-								if (!resolved)
-								{
-									LOG_ERROR(RSX, "Reading texture with gcm format 0x%x as unexpected cast with format 0x%x",
-										actual_format, attr.gcm_format);
-								}
+								// While the copy routines can perform a typeless cast, prefer to not cross the aspect barrier if possible
+								gcm_format = texture_cache_helpers::get_compatible_depth_format(attr.gcm_format);
 							}
 
 							auto new_attr = attr;
 							new_attr.gcm_format = gcm_format;
 
 							return { last->get_raw_texture(), deferred_request_command::copy_image_static, new_attr, {},
-									last->get_context(), last->get_format_type(), scale, extended_dimension, remap };
+									last->get_context(), texture_cache_helpers::get_format_class(gcm_format), scale, extended_dimension, remap };
 						}
 					}
 
@@ -1943,6 +1911,9 @@ namespace rsx
 			const f32 scale_x = fabsf(dst.scale_x);
 			const f32 scale_y = fabsf(dst.scale_y);
 
+			const bool is_copy_op = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
+			const bool is_format_convert = (dst_is_argb8 != src_is_argb8);
+
 			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			// Reproject final clip onto source...
 			u16 src_w = (u16)((f32)dst.clip_width / scale_x);
@@ -2073,7 +2044,7 @@ namespace rsx
 				// 1. Invalidate surfaces in range
 				// 2. Proceed as normal, blit into a 'normal' surface and any upload routines should catch it
 				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch * dst_h));
-				use_null_region = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
+				use_null_region = (is_copy_op && !is_format_convert);
 			}
 
 			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
@@ -2081,28 +2052,34 @@ namespace rsx
 			src_is_render_target = src_subres.surface != nullptr;
 
 			// Always use GPU blit if src or dst is in the surface store
-			if (!g_cfg.video.use_gpu_texture_scaling && !(src_is_render_target || dst_is_render_target))
-				return false;
-
-			// Check if trivial memcpy can perform the same task
-			// Used to copy programs and arbitrary data to the GPU in some cases
-			if (!src_is_render_target && !dst_is_render_target && dst_is_argb8 == src_is_argb8 && !dst.swizzled)
+			if (!src_is_render_target && !dst_is_render_target)
 			{
-				if ((src_h == 1 && dst_h == 1) || (dst_w == src_w && dst_h == src_h && src.pitch == dst.pitch))
+				const bool is_trivial_copy = is_copy_op && !is_format_convert && !dst.swizzled;
+				if (is_trivial_copy)
 				{
-					if (dst.scale_x > 0.f && dst.scale_y > 0.f)
+					// Check if trivial memcpy can perform the same task
+					// Used to copy programs and arbitrary data to the GPU in some cases
+					// NOTE: This case overrides the GPU texture scaling option
+					if ((src_h == 1 && dst_h == 1) || (dst_w == src_w && dst_h == src_h && src.pitch == dst.pitch))
 					{
-						const u32 memcpy_bytes_length = dst.clip_width * dst_bpp * dst.clip_height;
-
-						std::lock_guard lock(m_cache_mutex);
-						invalidate_range_impl_base(cmd, address_range::start_length(src_address, memcpy_bytes_length), invalidation_cause::read, std::forward<Args>(extras)...);
-						invalidate_range_impl_base(cmd, address_range::start_length(dst_address, memcpy_bytes_length), invalidation_cause::write, std::forward<Args>(extras)...);
-						memcpy(dst.pixels, src.pixels, memcpy_bytes_length);
-						return true;
+						if (dst.scale_x > 0.f && dst.scale_y > 0.f)
+						{
+							return false;
+						}
 					}
-					else
+				}
+
+				if (!g_cfg.video.use_gpu_texture_scaling)
+				{
+					if (dst.swizzled)
 					{
-						// Rotation transform applied, use fallback
+						// Swizzle operation requested. Use fallback
+						return false;
+					}
+
+					if (is_trivial_copy && get_location(dst_address) != CELL_GCM_LOCATION_LOCAL)
+					{
+						// Trivial copy and the destination is in XDR memory
 						return false;
 					}
 				}
@@ -2430,7 +2407,7 @@ namespace rsx
 					subres.height_in_block = image_height;
 					subres.pitch_in_block = full_width;
 					subres.depth = 1;
-					subres.data = { reinterpret_cast<const gsl::byte*>(vm::base(image_base)), src.pitch * image_height };
+					subres.data = { vm::_ptr<const gsl::byte>(image_base), src.pitch * image_height };
 					subresource_layout.push_back(subres);
 
 					vram_texture = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
@@ -2562,7 +2539,7 @@ namespace rsx
 						subres.height_in_block = dst_dimensions.height;
 						subres.pitch_in_block = pitch_in_block;
 						subres.depth = 1;
-						subres.data = { reinterpret_cast<const gsl::byte*>(vm::get_super_ptr(dst.rsx_address)), dst.pitch * dst_dimensions.height };
+						subres.data = { vm::get_super_ptr<const gsl::byte>(dst.rsx_address), dst.pitch * dst_dimensions.height };
 						subresource_layout.push_back(subres);
 
 						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,

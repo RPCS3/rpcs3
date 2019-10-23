@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -298,7 +298,7 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionCheck_for_Updates"/>
+    <addaction name="updateAct"/>
     <addaction name="separator"/>
     <addaction name="aboutAct"/>
     <addaction name="aboutQtAct"/>
@@ -638,10 +638,7 @@
     <string>RAP Files</string>
    </property>
   </action>
-  <action name="actionCheck_for_Updates">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
+  <action name="updateAct">
    <property name="text">
     <string>Check for Updates</string>
    </property>
