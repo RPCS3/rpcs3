@@ -194,7 +194,7 @@ error_code cellVoiceDeletePort(u32 portId)
 	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
-	if (!manager->ports.erase((u16)portId) == 0)
+	if (manager->ports.erase((u16)portId) == 0)
 		return CELL_VOICE_ERROR_TOPOLOGY;
 
 	return CELL_OK;
