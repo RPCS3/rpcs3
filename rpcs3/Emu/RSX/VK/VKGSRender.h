@@ -467,7 +467,7 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
-	void sync_hint(rsx::FIFO_hint hint, u32 arg) override;
+	void sync_hint(rsx::FIFO_hint hint, u64 arg) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
