@@ -2172,7 +2172,9 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 void VKGSRender::sync_hint(rsx::FIFO_hint hint, u64 arg)
 {
 	// Occlusion test result evaluation is coming up, avoid a hard sync
-	if (hint == rsx::FIFO_hint::hint_conditional_render_eval)
+	switch (hint)
+	{
+	case rsx::FIFO_hint::hint_conditional_render_eval:
 	{
 		// Occlusion queries not enabled, do nothing
 		if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
@@ -2193,6 +2195,31 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, u64 arg)
 				m_flush_requests.remove_one();
 			}
 		}
+
+		break;
+	}
+	case rsx::FIFO_hint::hint_zcull_sync:
+	{
+		if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
+			return;
+
+		auto occlusion_info = reinterpret_cast<rsx::reports::occlusion_query_info*>(arg);
+		auto& data = m_occlusion_map[occlusion_info->driver_handle];
+
+		if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
+		{
+			std::lock_guard lock(m_flush_queue_mutex);
+			flush_command_queue();
+
+			if (m_flush_requests.pending())
+			{
+				// Clear without wait
+				m_flush_requests.clear_pending_flag();
+			}
+		}
+
+		break;
+	}
 	}
 }
 
@@ -2804,33 +2831,37 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 	// Wait before sync block below
 	rsx::g_dma_manager.sync();
 
-	if (m_attrib_ring_info.dirty() ||
-		m_fragment_env_ring_info.dirty() ||
-		m_vertex_env_ring_info.dirty() ||
-		m_fragment_texture_params_ring_info.dirty() ||
-		m_vertex_layout_ring_info.dirty() ||
-		m_fragment_constants_ring_info.dirty() ||
-		m_index_buffer_ring_info.dirty() ||
-		m_transform_constants_ring_info.dirty() ||
-		m_texture_upload_buffer_ring_info.dirty())
+	// TODO: Better check for shadowed memory
+	if (m_attrib_ring_info.shadow)
 	{
-		std::lock_guard lock(m_secondary_cb_guard);
-		m_secondary_command_buffer.begin();
+		if (m_attrib_ring_info.dirty() ||
+			m_fragment_env_ring_info.dirty() ||
+			m_vertex_env_ring_info.dirty() ||
+			m_fragment_texture_params_ring_info.dirty() ||
+			m_vertex_layout_ring_info.dirty() ||
+			m_fragment_constants_ring_info.dirty() ||
+			m_index_buffer_ring_info.dirty() ||
+			m_transform_constants_ring_info.dirty() ||
+			m_texture_upload_buffer_ring_info.dirty())
+		{
+			std::lock_guard lock(m_secondary_cb_guard);
+			m_secondary_command_buffer.begin();
 
-		m_attrib_ring_info.sync(m_secondary_command_buffer);
-		m_fragment_env_ring_info.sync(m_secondary_command_buffer);
-		m_vertex_env_ring_info.sync(m_secondary_command_buffer);
-		m_fragment_texture_params_ring_info.sync(m_secondary_command_buffer);
-		m_vertex_layout_ring_info.sync(m_secondary_command_buffer);
-		m_fragment_constants_ring_info.sync(m_secondary_command_buffer);
-		m_index_buffer_ring_info.sync(m_secondary_command_buffer);
-		m_transform_constants_ring_info.sync(m_secondary_command_buffer);
-		m_texture_upload_buffer_ring_info.sync(m_secondary_command_buffer);
+			m_attrib_ring_info.sync(m_secondary_command_buffer);
+			m_fragment_env_ring_info.sync(m_secondary_command_buffer);
+			m_vertex_env_ring_info.sync(m_secondary_command_buffer);
+			m_fragment_texture_params_ring_info.sync(m_secondary_command_buffer);
+			m_vertex_layout_ring_info.sync(m_secondary_command_buffer);
+			m_fragment_constants_ring_info.sync(m_secondary_command_buffer);
+			m_index_buffer_ring_info.sync(m_secondary_command_buffer);
+			m_transform_constants_ring_info.sync(m_secondary_command_buffer);
+			m_texture_upload_buffer_ring_info.sync(m_secondary_command_buffer);
 
-		m_secondary_command_buffer.end();
+			m_secondary_command_buffer.end();
 
-		m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(),
-			VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+			m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(),
+				VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		}
 	}
 
 	// End any active renderpasses; the caller should handle reopening
@@ -3617,19 +3648,6 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 		return true;
 
 	if (data.command_buffer_to_wait == m_current_command_buffer)
-	{
-		if (!m_flush_requests.pending())
-		{
-			//Likely to be read at some point in the near future, submit now to avoid stalling later
-			m_flush_requests.post(false);
-			m_flush_requests.remove_one();
-		}
-
-		return false;
-	}
-
-	if (data.command_buffer_to_wait->pending)
-		//Don't bother poking the state, a flush later will likely do it for free
 		return false;
 
 	u32 oldest = data.indices.front();
@@ -3649,21 +3667,27 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 			std::lock_guard lock(m_flush_queue_mutex);
 			flush_command_queue();
 
-			//Clear any deferred flush requests from previous call to get_query_status()
 			if (m_flush_requests.pending())
 			{
 				m_flush_requests.clear_pending_flag();
-				m_flush_requests.consumer_wait();
 			}
 		}
 
-		if (data.command_buffer_to_wait->pending)
-			data.command_buffer_to_wait->wait(GENERAL_WAIT_TIMEOUT);
+		// Fast wait. Avoids heavyweight routines
+		while (!data.command_buffer_to_wait->poke())
+		{
+			_mm_pause();
 
-		//Gather data
+			if (Emu.IsStopped())
+			{
+				return;
+			}
+		}
+
+		// Gather data
 		for (const auto occlusion_id : data.indices)
 		{
-			//We only need one hit
+			// We only need one hit
 			if (auto value = m_occlusion_query_pool.get_query_result(occlusion_id))
 			{
 				query->result = 1;
