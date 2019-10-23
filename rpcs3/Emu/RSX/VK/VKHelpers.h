@@ -2936,25 +2936,39 @@ public:
 		bool check_query_status(u32 index)
 		{
 			u32 result[2] = {0, 0};
-			switch (VkResult status = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
+			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
 			{
 			case VK_SUCCESS:
-				break;
+				return (result[0] || result[1]);
 			case VK_NOT_READY:
 				return false;
 			default:
-				vk::die_with_error(HERE, status);
+				die_with_error(HERE, error);
+				return false;
 			}
-
-			return result[1] != 0;
 		}
 
 		u32 get_query_result(u32 index)
 		{
-			u32 result = 0;
-			CHECK_RESULT(vkGetQueryPoolResults(*owner, query_pool, index, 1, 4, &result, 4, VK_QUERY_RESULT_WAIT_BIT));
+			u32 result[2] = { 0, 0 };
 
-			return result == 0u? 0u: 1u;
+			do
+			{
+				switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
+				{
+				case VK_SUCCESS:
+					if (result[0]) return 1u;
+					if (result[1]) return 0u;  // Partial result can return SUCCESS when unavailable
+					continue;
+				case VK_NOT_READY:
+					if (result[0]) return 1u;  // Partial result can return NOT_READY when unavailable
+					continue;
+				default:
+					die_with_error(HERE, error);
+					return false;
+				}
+			}
+			while (true);
 		}
 
 		void reset_query(vk::command_buffer &cmd, u32 index)
