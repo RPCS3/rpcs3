@@ -2843,6 +2843,7 @@ namespace rsx
 					m_current_task->sync_timestamp = 0;
 					m_current_task->active = true;
 					m_current_task->owned = false;
+					m_current_task->hint = false;
 					return;
 				}
 
@@ -2866,6 +2867,7 @@ namespace rsx
 					m_current_task->sync_timestamp = 0;
 					m_current_task->active = true;
 					m_current_task->owned = false;
+					m_current_task->hint = false;
 					return;
 				}
 
@@ -3050,6 +3052,17 @@ namespace rsx
 			{
 				if (m_tsc < front.due_tsc)
 				{
+					if (front.query && !front.query->hint && (front.due_tsc - m_tsc) <= m_backend_warn_threshold)
+					{
+						if (front.type == CELL_GCM_ZPASS_PIXEL_CNT || front.type == CELL_GCM_ZCULL_STATS3)
+						{
+							// Imminent read
+							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, reinterpret_cast<uintptr_t>(front.query));
+						}
+
+						front.query->hint = true;
+					}
+
 					// Avoid spamming backend with report status updates
 					return;
 				}
@@ -3120,6 +3133,13 @@ namespace rsx
 							}
 							else
 							{
+								if (!query->hint && (writer.due_tsc - m_tsc) <= m_backend_warn_threshold)
+								{
+									// Imminent read
+									ptimer->sync_hint(FIFO_hint::hint_zcull_sync, reinterpret_cast<uintptr_t>(query));
+									query->hint = true;
+								}
+
 								//Too early; abort
 								break;
 							}
@@ -3176,18 +3196,21 @@ namespace rsx
 
 			const auto memory_end = memory_address + memory_range;
 			u32 sync_address = 0;
+			occlusion_query_info* query;
 
 			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
 				if (It->sink >= memory_address && It->sink < memory_end)
 				{
 					sync_address = It->sink;
+					query = It->query;
 					break;
 				}
 			}
 
 			if (sync_address)
 			{
+				ptimer->sync_hint(FIFO_hint::hint_zcull_sync, reinterpret_cast<uintptr_t>(query));
 				update(ptimer, sync_address);
 			}
 		}

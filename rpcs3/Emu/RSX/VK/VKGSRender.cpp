@@ -2169,7 +2169,7 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 	open_command_buffer();
 }
 
-void VKGSRender::sync_hint(rsx::FIFO_hint hint, u32 arg)
+void VKGSRender::sync_hint(rsx::FIFO_hint hint, u64 arg)
 {
 	// Occlusion test result evaluation is coming up, avoid a hard sync
 	if (hint == rsx::FIFO_hint::hint_conditional_render_eval)

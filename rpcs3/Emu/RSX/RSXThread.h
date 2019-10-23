@@ -97,7 +97,8 @@ namespace rsx
 
 	enum FIFO_hint : u8
 	{
-		hint_conditional_render_eval = 1
+		hint_conditional_render_eval = 1,
+		hint_zcull_sync = 2
 	};
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
@@ -330,6 +331,7 @@ namespace rsx
 			u32 driver_handle;
 			u32 result;
 			u32 num_draws;
+			bool hint;
 			bool pending;
 			bool active;
 			bool owned;
@@ -366,6 +368,7 @@ namespace rsx
 			u32 m_statistics_tag_id = 0;
 			u64 m_tsc = 0;
 			u32 m_cycles_delay = max_zcull_delay_us;
+			u32 m_backend_warn_threshold = max_zcull_delay_us / 2;
 
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
@@ -688,7 +691,7 @@ namespace rsx
 		// sync
 		void sync();
 		void read_barrier(u32 memory_address, u32 memory_range);
-		virtual void sync_hint(FIFO_hint /*hint*/, u32 /*arg*/) {}
+		virtual void sync_hint(FIFO_hint /*hint*/, u64 /*arg*/) {}
 
 		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
