@@ -768,7 +768,7 @@
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="display_sleep_control.cpp">
-      <Filter>Generated Files\Debug</Filter>
+      <Filter>Gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -863,7 +863,7 @@
       <Filter>Gui\skylanders</Filter>
     </ClInclude>
     <ClInclude Include="display_sleep_control.h">
-      <Filter>Generated Files</Filter>
+      <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
