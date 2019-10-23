@@ -2802,4 +2802,16 @@ public:
 	llvm::Constant* make_const_vector(T, llvm::Type*);
 };
 
+// Format llvm::SizeType
+template <>
+struct fmt_unveil<llvm::TypeSize, void>
+{
+	using type = std::size_t;
+
+	static inline std::size_t get(const llvm::TypeSize& arg)
+	{
+		return arg;
+	}
+};
+
 #endif
