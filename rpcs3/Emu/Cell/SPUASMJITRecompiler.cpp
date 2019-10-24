@@ -10,6 +10,7 @@
 #include "Utilities/sysinfo.h"
 #include "Utilities/asm.h"
 #include "PPUAnalyser.h"
+#include "Crypto/sha1.h"
 
 #include <cmath>
 #include <mutex>
@@ -40,14 +41,16 @@ void spu_recompiler::init()
 	// Initialize if necessary
 	if (!m_spurt)
 	{
-		m_cache = fxm::get<spu_cache>();
-		m_spurt = fxm::get_always<spu_runtime>();
+		m_spurt = g_fxo->get<spu_runtime>();
 	}
 }
 
-spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func)
+spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func, void* fn_location)
 {
-	const auto fn_location = m_spurt->find(last_reset_count, func);
+	if (!fn_location)
+	{
+		fn_location = m_spurt->find(last_reset_count, func);
+	}
 
 	if (fn_location == spu_runtime::g_dispatcher)
 	{
@@ -59,9 +62,22 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 		return nullptr;
 	}
 
-	if (m_cache && g_cfg.core.spu_cache)
+	if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache)
 	{
-		m_cache->add(func);
+		cache->add(func);
+	}
+
+	{
+		sha1_context ctx;
+		u8 output[20];
+
+		sha1_starts(&ctx);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(func.data() + 1), func.size() * 4 - 4);
+		sha1_finish(&ctx, output);
+
+		be_t<u64> hash_start;
+		std::memcpy(&hash_start, output, sizeof(hash_start));
+		m_hash_start = hash_start;
 	}
 
 	using namespace asmjit;
@@ -160,6 +176,12 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	c->mov(pc0->r32(), SPU_OFF_32(pc));
 	c->cmp(SPU_OFF_32(state), 0);
 	c->jnz(label_stop);
+
+	if (g_cfg.core.spu_prof && g_cfg.core.spu_verification)
+	{
+		c->mov(x86::rax, m_hash_start & -0xffff);
+		c->mov(SPU_OFF_64(block_hash), x86::rax);
+	}
 
 	if (utils::has_avx())
 	{
@@ -723,6 +745,13 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	// Acknowledge success and add statistics
 	c->add(SPU_OFF_64(block_counter), ::size32(words) / (words_align / 4));
 
+	// Set block hash for profiling (if enabled)
+	if (g_cfg.core.spu_prof)
+	{
+		c->mov(x86::rax, m_hash_start | 0xffff);
+		c->mov(SPU_OFF_64(block_hash), x86::rax);
+	}
+
 	if (m_pos != start)
 	{
 		// Jump to the entry point if necessary
@@ -1160,6 +1189,14 @@ void spu_recompiler::branch_set_link(u32 target)
 				c->and_(qw1->r32(), 0x3fff0);
 				c->pcmpeqd(x86::xmm0, x86::xmm0);
 				c->movdqa(x86::dqword_ptr(*cpu, *qw1, 0, ::offset32(&spu_thread::stack_mirror)), x86::xmm0);
+
+				// Set block hash for profiling (if enabled)
+				if (g_cfg.core.spu_prof)
+				{
+					c->mov(x86::rax, m_hash_start | 0xffff);
+					c->mov(SPU_OFF_64(block_hash), x86::rax);
+				}
+
 				c->jmp(target);
 			});
 		}
@@ -2370,6 +2407,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	case SPU_WrSRR0:
 	{
 		c->mov(*addr, SPU_OFF_32(gpr, op.rt, &v128::_u32, 3));
+		c->and_(*addr, 0x3fffc);
 		c->mov(SPU_OFF_32(srr0), *addr);
 		return;
 	}
@@ -2713,7 +2751,6 @@ void spu_recompiler::BISL(spu_opcode_t op)
 void spu_recompiler::IRET(spu_opcode_t op)
 {
 	c->mov(*addr, SPU_OFF_32(srr0));
-	c->and_(*addr, 0x3fffc);
 	branch_indirect(op);
 	m_pos = -1;
 }
@@ -3769,29 +3806,65 @@ void spu_recompiler::SFX(spu_opcode_t op)
 
 void spu_recompiler::CGX(spu_opcode_t op) //nf
 {
-	for (u32 i = 0; i < 4; i++) // unrolled loop
+	const XmmLink& vt = XmmGet(op.rt, XmmType::Int);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& res = XmmAlloc();
+	const XmmLink& sign = XmmAlloc();
+
+	c->pslld(vt, 31);
+	c->psrad(vt, 31);
+
+	if (utils::has_avx())
 	{
-		c->bt(SPU_OFF_32(gpr, op.rt, &v128::_u32, i), 0);
-		c->mov(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, i));
-		c->adc(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, i));
-		c->setc(addr->r8());
-		c->movzx(*addr, addr->r8());
-		c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, i), *addr);
+		c->vpaddd(res, va, vb);
 	}
+	else
+	{
+		c->movdqa(res, va);
+		c->paddd(res, vb);
+	}
+
+	c->movdqa(sign, XmmConst(_mm_set1_epi32(-0x80000000)));
+	c->pxor(va, sign);
+	c->pxor(res, sign);
+	c->pcmpgtd(va, res);
+	c->pxor(res, sign);
+	c->pcmpeqd(res, vt);
+	c->pand(res, vt);
+	c->por(res, va);
+	c->psrld(res, 31);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), res);
 }
 
 void spu_recompiler::BGX(spu_opcode_t op) //nf
 {
-	for (u32 i = 0; i < 4; i++) // unrolled loop
+	const XmmLink& vt = XmmGet(op.rt, XmmType::Int);
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& temp = XmmAlloc();
+	const XmmLink& sign = XmmAlloc();
+
+	c->pslld(vt, 31);
+
+	if (utils::has_avx())
 	{
-		c->bt(SPU_OFF_32(gpr, op.rt, &v128::_u32, i), 0);
-		c->cmc();
-		c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, i));
-		c->sbb(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, i));
-		c->setnc(addr->r8());
-		c->movzx(*addr, addr->r8());
-		c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, i), *addr);
+		c->vpcmpeqd(temp, vb, va);
 	}
+	else
+	{
+		c->movdqa(temp, vb);
+		c->pcmpeqd(temp, va);
+	}
+
+	c->pand(vt, temp);
+	c->movdqa(sign, XmmConst(_mm_set1_epi32(-0x80000000)));
+	c->pxor(va, sign);
+	c->pxor(vb, sign);
+	c->pcmpgtd(vb, va);
+	c->por(vt, vb);
+	c->psrld(vt, 31);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 }
 
 void spu_recompiler::MPYHHA(spu_opcode_t op)

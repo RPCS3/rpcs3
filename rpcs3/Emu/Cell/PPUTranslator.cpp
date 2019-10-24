@@ -4004,7 +4004,7 @@ void PPUTranslator::FRSP(ppu_opcode_t op)
 void PPUTranslator::FCTIW(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, m_ir->CreateSelect(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), f64(INT32_MAX))), m_ir->getInt32(INT32_MAX), 
+	SetFpr(op.frd, m_ir->CreateSelect(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), f64(INT32_MAX))), m_ir->getInt32(INT32_MAX),
 	Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fr", b));
@@ -4353,12 +4353,12 @@ void PPUTranslator::SetVr(u32 vr, Value* value)
 		if (type->getScalarType()->isIntegerTy(1))
 		{
 			// Sign-extend bool values
-			value = SExt(value, ScaleType(type, 7 - s32(std::log2(size))));
+			value = SExt(value, ScaleType(type, 7 - s32(std::log2(+size))));
 		}
 		else if (size == 256 || size == 512)
 		{
 			// Truncate big vectors
-			value = Trunc(value, ScaleType(type, 7 - s32(std::log2(size))));
+			value = Trunc(value, ScaleType(type, 7 - s32(std::log2(+size))));
 		}
 	}
 

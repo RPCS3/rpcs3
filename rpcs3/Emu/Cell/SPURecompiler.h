@@ -19,6 +19,10 @@ class spu_cache
 public:
 	spu_cache(const std::string& loc);
 
+	spu_cache(spu_cache&&) noexcept = default;
+
+	spu_cache& operator=(spu_cache&&) noexcept = default;
+
 	~spu_cache();
 
 	operator bool() const
@@ -73,8 +77,15 @@ public:
 	// Trampoline to legacy interpreter
 	static const spu_function_t tr_interpreter;
 
+	// Detect and call any recompiled function
+	static const spu_function_t tr_all;
+
 public:
 	spu_runtime();
+
+	spu_runtime(const spu_runtime&) = delete;
+
+	spu_runtime& operator=(const spu_runtime&) = delete;
 
 	const std::string& get_cache_path() const
 	{
@@ -85,13 +96,19 @@ public:
 	bool add(u64 last_reset_count, void* where, spu_function_t compiled);
 
 private:
-	spu_function_t rebuild_ubertrampoline();
+	spu_function_t rebuild_ubertrampoline(u32 id_inst);
 
 	friend class spu_cache;
 public:
 
 	// Return opaque pointer for add()
 	void* find(u64 last_reset_count, const std::vector<u32>&);
+
+	// Get func from opaque ptr
+	static inline const std::vector<u32>& get_func(void* _where)
+	{
+		return static_cast<decltype(m_map)::value_type*>(_where)->first;
+	}
 
 	// Find existing function
 	spu_function_t find(const u32* ls, u32 addr) const;
@@ -112,7 +129,7 @@ public:
 	void handle_return(spu_thread* _spu);
 
 	// All dispatchers (array allocated in jit memory)
-	static atomic_t<spu_function_t>* const g_dispatcher;
+	static std::array<atomic_t<spu_function_t>, (1 << 20)>* const g_dispatcher;
 
 	// Recompiler entry point
 	static const spu_function_t g_gateway;
@@ -122,6 +139,9 @@ public:
 
 	// Similar to g_escape, but doing tail call to the new function.
 	static void(*const g_tail_escape)(spu_thread*, spu_function_t, u8*);
+
+	// Interpreter table (spu_itype -> ptr)
+	static std::array<u64, 256> g_interpreter_table;
 
 	// Interpreter entry point
 	static spu_function_t g_interpreter;
@@ -226,10 +246,11 @@ public:
 	};
 
 protected:
-	std::shared_ptr<spu_runtime> m_spurt;
+	spu_runtime* m_spurt{};
 
 	u32 m_pos;
 	u32 m_size;
+	u64 m_hash_start;
 
 	// Bit indicating start of the block
 	std::bitset<0x10000> m_block_info;
@@ -333,8 +354,6 @@ protected:
 	// Sorted function info
 	std::map<u32, func_info> m_funcs;
 
-	std::shared_ptr<spu_cache> m_cache;
-
 private:
 	// For private use
 	std::bitset<0x10000> m_bits;
@@ -354,7 +373,7 @@ public:
 	virtual void init() = 0;
 
 	// Compile function (may fail)
-	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&) = 0;
+	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&, void*) = 0;
 
 	// Compile function, handle failure
 	void make_function(const std::vector<u32>&);
@@ -390,4 +409,7 @@ public:
 
 	// Create recompiler instance (LLVM)
 	static std::unique_ptr<spu_recompiler_base> make_llvm_recompiler(u8 magn = 0);
+
+	// Create recompiler instance (interpreter-based LLVM)
+	static std::unique_ptr<spu_recompiler_base> make_fast_llvm_recompiler();
 };

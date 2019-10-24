@@ -10,7 +10,7 @@
 
 LOG_CHANNEL(sys_mmapper);
 
-lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct)
+lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct)
 	: size(size)
 	, align(align)
 	, flags(flags)
@@ -113,7 +113,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 unk, u32 size
 	}
 
 	// Get "default" memory container
-	const auto dct = fxm::get<lv2_memory_container>();
+	const auto dct = g_fxo->get<lv2_memory_container>();
 
 	if (!dct->take(size))
 	{
@@ -184,7 +184,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 	}
 
 	// Generate a new mem ID
-	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr);
+	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr.get());
 
 	return CELL_OK;
 }
@@ -210,7 +210,7 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 	}
 
 	// If page fault notify exists and an address in this area is faulted, we can't free the memory.
-	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	auto pf_events = g_fxo->get<page_fault_event_entries>();
 	std::lock_guard pf_lock(pf_events->pf_mutex);
 
 	for (const auto& ev : pf_events->events)
@@ -236,7 +236,7 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 	}
 
 	// If a memory block is freed, remove it from page notification table.
-	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+	auto pf_entries = g_fxo->get<page_fault_notification_entries>();
 	std::lock_guard lock(pf_entries->mutex);
 
 	auto ind_to_remove = pf_entries->entries.begin();
@@ -465,7 +465,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 		return CELL_EAGAIN;
 	}
 
-	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+	auto pf_entries = g_fxo->get<page_fault_notification_entries>();
 	std::unique_lock lock(pf_entries->mutex);
 
 	// Return error code if page fault notifications are already enabled
@@ -489,7 +489,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 error_code mmapper_thread_recover_page_fault(u32 id)
 {
 	// We can only wake a thread if it is being suspended for a page fault.
-	auto pf_events = fxm::get_always<page_fault_event_entries>();
+	auto pf_events = g_fxo->get<page_fault_event_entries>();
 	{
 		std::lock_guard pf_lock(pf_events->pf_mutex);
 		auto pf_event_ind = pf_events->events.find(id);

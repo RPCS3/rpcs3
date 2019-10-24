@@ -38,6 +38,9 @@
 #include <sys/resource.h>
 #include <time.h>
 #endif
+#ifdef __linux__
+#include <sys/timerfd.h>
+#endif
 
 #include "sync.h"
 #include "Log.h"
@@ -1287,7 +1290,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	{
 		u32 pf_port_id = 0;
 
-		if (auto pf_entries = fxm::get<page_fault_notification_entries>())
+		if (auto pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
 		{
 			if (auto mem = vm::get(vm::any, addr))
 			{
@@ -1346,7 +1349,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
 			// know that this thread is page faulted and where.
 
-			auto pf_events = fxm::get_always<page_fault_event_entries>();
+			auto pf_events = g_fxo->get<page_fault_event_entries>();
 			{
 				std::lock_guard pf_lock(pf_events->pf_mutex);
 				pf_events->events.emplace(static_cast<u32>(data2), addr);
@@ -1466,62 +1469,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	}
 
 	return true;
-}
-
-#ifdef __linux__
-extern "C" struct dwarf_eh_bases
-{
-	void* tbase;
-	void* dbase;
-	void* func;
-};
-
-extern "C" struct fde* _Unwind_Find_FDE(void* pc, struct dwarf_eh_bases* bases);
-#endif
-
-// Detect leaf function
-static bool is_leaf_function(u64 rip)
-{
-#ifdef _WIN32
-	DWORD64 base = 0;
-	if (const auto rtf = RtlLookupFunctionEntry(rip, &base, nullptr))
-	{
-		// Access UNWIND_INFO structure
-		const auto uw = (u8*)(base + rtf->UnwindData);
-
-		// Leaf function has zero epilog size and no unwind codes
-		return uw[0] == 1 && uw[1] == 0 && uw[2] == 0 && uw[3] == 0;
-	}
-
-	// No unwind info implies leaf function
-	return true;
-#elif __linux__
-	struct dwarf_eh_bases bases;
-
-	if (struct fde* f = _Unwind_Find_FDE(reinterpret_cast<void*>(rip), &bases))
-	{
-		const auto words = (const u32*)f;
-
-		if (words[0] < 0x14)
-		{
-			return true;
-		}
-
-		if (words[0] == 0x14 && !words[3] && !words[4])
-		{
-			return true;
-		}
-
-		// TODO
-		return false;
-	}
-
-	// No unwind info implies leaf function
-	return true;
-#else
-	// Unsupported
-	return false;
-#endif
 }
 
 #ifdef _WIN32
@@ -1706,9 +1653,6 @@ const bool s_exception_handler_set = []() -> bool
 
 #endif
 
-// TODO
-atomic_t<u32> g_thread_count(0);
-
 thread_local DECLARE(thread_ctrl::g_tls_this_thread) = nullptr;
 
 DECLARE(thread_ctrl::g_native_core_layout) { native_core_arrangement::undefined };
@@ -1723,17 +1667,18 @@ void thread_base::start(native_entry entry)
 #endif
 }
 
-void thread_base::initialize()
+void thread_base::initialize(bool(*wait_cb)(const void*))
 {
 	// Initialize TLS variable
 	thread_ctrl::g_tls_this_thread = this;
+
+	// Initialize atomic wait callback
+	atomic_storage_futex::set_wait_callback(wait_cb);
 
 	g_tls_log_prefix = []
 	{
 		return thread_ctrl::g_tls_this_thread->m_name.get();
 	};
-
-	++g_thread_count;
 
 #ifdef _MSC_VER
 	struct THREADNAME_INFO
@@ -1772,12 +1717,35 @@ void thread_base::initialize()
 #elif !defined(_WIN32)
 	pthread_setname_np(pthread_self(), m_name.get().substr(0, 15).c_str());
 #endif
+
+#ifdef __linux__
+	m_timer = timerfd_create(CLOCK_MONOTONIC, 0);
+	if (m_timer == -1)
+	{
+		LOG_ERROR(GENERAL, "Linux timer allocation failed, use wait_unlock() only");
+	}
+#endif
+}
+
+void thread_base::notify_abort() noexcept
+{
+	// For now
+	notify();
+
+	atomic_storage_futex::raw_notify(+m_state_notifier);
 }
 
 bool thread_base::finalize(int) noexcept
 {
 	// Report pending errors
 	error_code::error_report(0, 0, 0, 0);
+
+#ifdef __linux__
+	if (m_timer != -1)
+	{
+		close(m_timer);
+	}
+#endif
 
 #ifdef _WIN32
 	ULONG64 cycles{};
@@ -1811,8 +1779,7 @@ bool thread_base::finalize(int) noexcept
 	const bool result = m_state.exchange(thread_state::finished) == thread_state::detached;
 
 	// Signal waiting threads
-	m_mutex.lock_unlock();
-	m_jcv.notify_all();
+	m_state.notify_all();
 	return result;
 }
 
@@ -1820,14 +1787,32 @@ void thread_base::finalize() noexcept
 {
 	g_tls_log_prefix = []() -> std::string { return {}; };
 	thread_ctrl::g_tls_this_thread = nullptr;
-	--g_thread_count;
 }
 
-bool thread_ctrl::_wait_for(u64 usec)
+void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
 
-	do
+#ifdef __linux__
+	if (!alert && _this->m_timer != -1 && usec > 0 && usec <= 1000)
+	{
+		struct itimerspec timeout;
+		u64 missed;
+		u64 nsec = usec * 1000ull;
+
+		timeout.it_value.tv_nsec = (nsec % 1000000000ull);
+		timeout.it_value.tv_sec = nsec / 1000000000ull;
+		timeout.it_interval.tv_sec = 0;
+		timeout.it_interval.tv_nsec = 0;
+		timerfd_settime(_this->m_timer, 0, &timeout, NULL);
+		read(_this->m_timer, &missed, sizeof(missed));
+		return;
+	}
+#endif
+
+	std::unique_lock lock(_this->m_mutex, std::defer_lock);
+
+	while (true)
 	{
 		// Mutex is unlocked at the start and after the waiting
 		if (u32 sig = _this->m_signal.load())
@@ -1835,17 +1820,20 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				return true;
+				return;
 			}
 		}
 
 		if (usec == 0)
 		{
 			// No timeout: return immediately
-			return false;
+			return;
 		}
 
-		_this->m_mutex.lock();
+		if (!lock)
+		{
+			lock.lock();
+		}
 
 		// Double-check the value
 		if (u32 sig = _this->m_signal.load())
@@ -1853,15 +1841,17 @@ bool thread_ctrl::_wait_for(u64 usec)
 			if (sig & 1)
 			{
 				_this->m_signal &= ~1;
-				_this->m_mutex.unlock();
-				return true;
+				return;
 			}
 		}
-	}
-	while (_this->m_cond.wait_unlock(std::exchange(usec, usec > cond_variable::max_timeout ? -1 : 0), _this->m_mutex));
 
-	// Timeout
-	return false;
+		_this->m_cond.wait_unlock(usec, lock);
+
+		if (usec < cond_variable::max_timeout)
+		{
+			usec = 0;
+		}
+	}
 }
 
 thread_base::thread_base(std::string_view name)
@@ -1883,16 +1873,10 @@ thread_base::~thread_base()
 
 void thread_base::join() const
 {
-	if (m_state == thread_state::finished)
+	for (auto state = m_state.load(); state != thread_state::finished;)
 	{
-		return;
-	}
-
-	std::unique_lock lock(m_mutex);
-
-	while (m_state != thread_state::finished)
-	{
-		m_jcv.wait(lock);
+		m_state.wait(state);
+		state = m_state;
 	}
 }
 

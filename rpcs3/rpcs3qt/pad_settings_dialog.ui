@@ -997,7 +997,7 @@
        </layout>
       </item>
       <item>
-       <layout class="QVBoxLayout" name="verticalLayout_middle">
+       <layout class="QVBoxLayout" name="verticalLayout_middle" stretch="0,0,0,0,0,1">
         <property name="spacing">
          <number>0</number>
         </property>
@@ -1540,15 +1540,18 @@
            <item>
             <widget class="QLabel" name="l_description">
              <property name="text">
-              <string>To use a DualShock 3 controller on Windows you can now use Sony's official drivers. To get them you'll have to install PlayStation Now, since the drivers are bundled with it.</string>
+              <string>This text should be replaced by an actual description.&lt;br/&gt;&lt;br/&gt;</string>
              </property>
              <property name="textFormat">
-              <enum>Qt::PlainText</enum>
+              <enum>Qt::RichText</enum>
              </property>
              <property name="alignment">
               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
              </property>
              <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+             <property name="openExternalLinks">
               <bool>true</bool>
              </property>
             </widget>

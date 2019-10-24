@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VKCommonDecompiler.h"
 #include "restore_new.h"
 #include "SPIRV/GlslangToSpv.h"
@@ -118,11 +118,9 @@ namespace vk
 		{ "tc8", 8 },
 		{ "tc9", 9 },
 		{ "diff_color", 10 },
-		{ "back_diff_color", 10 },
-		{ "front_diff_color", 11 },
+		{ "diff_color1", 11 },
 		{ "spec_color", 12 },
-		{ "back_spec_color", 12 },
-		{ "front_spec_color", 13 },
+		{ "spec_color1", 13 },
 		{ "fog_c", 14 },
 		{ "fogc", 14 }
 	}};

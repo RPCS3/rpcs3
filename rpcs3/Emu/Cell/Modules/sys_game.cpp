@@ -24,7 +24,7 @@ static u32 get_string_array_size(vm::cpptr<char> list, u32& out_count)
 			result += (((u32)std::strlen(str.get_ptr()) + 0x10) & -0x10) + 8;
 			continue;
 		}
-		break;		
+		break;
 	}
 
 	return result;
@@ -43,7 +43,7 @@ static u32 get_exitspawn_size(vm::cptr<char> path, vm::cpptr<char> argv, vm::cpp
 	{
 		result += 8;
 	}
-	
+
 	return result;
 }
 
@@ -134,7 +134,7 @@ static void exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv
 	}
 
 	// TODO (process atexit)
-	return _sys_process_exit2(ppu, 0, arg, alloc_size, 0x10000000);	
+	return _sys_process_exit2(ppu, 0, arg, alloc_size, 0x10000000);
 }
 
 void sys_game_process_exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
@@ -153,42 +153,50 @@ void sys_game_process_exitspawn2(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr
 
 s32 sys_game_board_storage_read()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_board_storage_read()");
+	return CELL_OK;
 }
 
 s32 sys_game_board_storage_write()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_board_storage_write()");
+	return CELL_OK;
 }
 
 s32 sys_game_get_rtc_status()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_get_rtc_status()");
+	return CELL_OK;
 }
 
 s32 sys_game_get_system_sw_version()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_get_system_sw_version()");
+	return CELL_OK;
 }
 
 s32 sys_game_get_temperature()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_get_temperature()");
+	return CELL_OK;
 }
 
 s32 sys_game_watchdog_clear()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_watchdog_clear()");
+	return CELL_OK;
 }
 
 s32 sys_game_watchdog_start()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_watchdog_start()");
+	return CELL_OK;
 }
 
 s32 sys_game_watchdog_stop()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_watchdog_stop()");
+	return CELL_OK;
 }
 
 

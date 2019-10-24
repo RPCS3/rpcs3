@@ -13,7 +13,7 @@
 #include "SPURecompiler.h"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
-#include "Utilities/GDBDebugServer.h"
+#include "Emu/GDB.h"
 
 #ifdef LLVM_AVAILABLE
 #include "restore_new.h"
@@ -329,9 +329,9 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// Pause and wait if necessary
 	bool status = ppu.state.test_and_set(cpu_flag::dbg_pause);
-#ifdef WITH_GDB_DEBUGGER
-	fxm::get<GDBDebugServer>()->pause_from(&ppu);
-#endif
+
+	g_fxo->get<gdb_server>()->pause_from(&ppu);
+
 	if (!status && ppu.check_state())
 	{
 		return false;
@@ -928,8 +928,6 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 	LOG_ERROR(PPU, "Invalid thread" HERE);
 }
 
-const ppu_decoder<ppu_itype> s_ppu_itype;
-
 extern u64 get_timebased_time();
 extern ppu_function_t ppu_get_syscall(u64 code);
 
@@ -1137,14 +1135,9 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 		auto& res = vm::reservation_acquire(addr, sizeof(u32));
 
-		const auto [_, ok] = res.fetch_op([&](u64& reserv)
-		{
-			return (++reserv & -128) == ppu.rtime;
-		});
-
 		ppu.raddr = 0;
 
-		if (ok)
+		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
@@ -1258,14 +1251,9 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 		auto& res = vm::reservation_acquire(addr, sizeof(u64));
 
-		const auto [_, ok] = res.fetch_op([&](u64& reserv)
-		{
-			return (++reserv & -128) == ppu.rtime;
-		});
-
 		ppu.raddr = 0;
 
-		if (ok)
+		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
@@ -1304,7 +1292,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 extern void ppu_initialize()
 {
-	const auto _main = fxm::get<ppu_module>();
+	const auto _main = g_fxo->get<ppu_module>();
 
 	if (!_main)
 	{
@@ -1317,7 +1305,10 @@ extern void ppu_initialize()
 	}
 
 	// Initialize main module
-	ppu_initialize(*_main);
+	if (!_main->segs.empty())
+	{
+		ppu_initialize(*_main);
+	}
 
 	std::vector<lv2_prx*> prx_list;
 
@@ -1341,7 +1332,7 @@ extern void ppu_initialize(const ppu_module& info)
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
 		// Temporarily
-		s_ppu_toc = fxm::get_always<std::unordered_map<u32, u32>>().get();
+		s_ppu_toc = g_fxo->get<std::unordered_map<u32, u32>>();
 
 		for (const auto& func : info.funcs)
 		{
@@ -1445,16 +1436,19 @@ extern void ppu_initialize(const ppu_module& info)
 
 	struct jit_core_allocator
 	{
-		::semaphore<0x7fffffff> sem;
+		const s32 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
 
-		jit_core_allocator(s32 arg)
-			: sem(arg)
+		// Initialize global semaphore with the max number of threads
+		::semaphore<0x7fffffff> sem{std::max<s32>(thread_count, 1)};
+
+		static s32 limit()
 		{
+			return static_cast<s32>(std::thread::hardware_concurrency());
 		}
 	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
-	jit_module& jit_mod = fxm::get_always<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
+	jit_module& jit_mod = g_fxo->get<std::unordered_map<std::string, jit_module>>()->emplace(cache_path + info.name, jit_module{}).first->second;
 
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler> jit;
@@ -1462,10 +1456,8 @@ extern void ppu_initialize(const ppu_module& info)
 	// Compiler mutex (global)
 	static shared_mutex jmutex;
 
-	// Initialize global semaphore with the max number of threads
-	u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
-	s32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
-	const auto jcores = fxm::get_always<jit_core_allocator>(std::max<s32>(thread_count, 1));
+	// Get jit core allocator instance
+	const auto jcores = g_fxo->get<jit_core_allocator>();
 
 	// Worker threads
 	std::vector<std::thread> jthreads;

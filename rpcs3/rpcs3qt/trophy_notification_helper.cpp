@@ -7,7 +7,7 @@
 
 s32 trophy_notification_helper::ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer)
 {
-	if (auto manager = fxm::get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
 	{
 		return manager->create<rsx::overlays::trophy_notification>()->show(trophy, trophy_icon_buffer);
 	}

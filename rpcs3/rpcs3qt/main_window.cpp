@@ -8,10 +8,6 @@
 #include <QDesktopWidget>
 #include <QMimeData>
 
-#ifdef WITH_DISCORD_RPC
-#include "_discord_utils.h"
-#endif
-
 #include "qt_utils.h"
 #include "vfs_dialog.h"
 #include "save_manager_dialog.h"
@@ -32,6 +28,7 @@
 #include "about_dialog.h"
 #include "pad_settings_dialog.h"
 #include "progress_dialog.h"
+#include "skylander_dialog.h"
 
 #include <thread>
 
@@ -66,9 +63,6 @@ main_window::main_window(std::shared_ptr<gui_settings> guiSettings, std::shared_
 main_window::~main_window()
 {
 	delete ui;
-#ifdef WITH_DISCORD_RPC
-	discord::shutdown();
-#endif
 }
 
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
@@ -178,56 +172,19 @@ void main_window::Init()
 
 	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
 	m_gameListFrame->FixNarrowColumns();
+
+#if defined(_WIN32) || defined(__linux__)
+	if (guiSettings->GetValue(gui::m_check_upd_start).toBool())
+	{
+		m_updater.check_for_updates(true, this);
+	}
+#endif
 }
 
 // returns appIcon
 QIcon main_window::GetAppIcon()
 {
 	return m_appIcon;
-}
-
-// loads the appIcon from path and embeds it centered into an empty square icon
-void main_window::SetAppIconFromPath(const std::string& path, const std::string& title_id)
-{
-	// get Icon for the gs_frame from path. this handles presumably all possible use cases
-	const QString qpath = qstr(path);
-	const std::string path_list[] = { path, sstr(qpath.section("/", 0, -2)), sstr(qpath.section("/", 0, -3)) };
-
-	for (const std::string& pth : path_list)
-	{
-		if (!fs::is_dir(pth))
-		{
-			continue;
-		}
-
-		const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
-		const std::string ico     = sfo_dir + "/ICON0.PNG";
-		if (fs::is_file(ico))
-		{
-			// load the image from path. It will most likely be a rectangle
-			QImage source = QImage(qstr(ico));
-			int edgeMax   = std::max(source.width(), source.height());
-
-			// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
-			QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
-			QImage dest           = QImage(edgeMax, edgeMax, format);
-			dest.fill(QColor("transparent"));
-
-			// get the location to draw the source image centered within the dest image.
-			QPoint destPos = source.width() > source.height() ? QPoint(0, (source.width() - source.height()) / 2) : QPoint((source.height() - source.width()) / 2, 0);
-
-			// Paint the source into/over the dest
-			QPainter painter(&dest);
-			painter.drawImage(destPos, source);
-			painter.end();
-
-			// set Icon
-			m_appIcon = QIcon(QPixmap::fromImage(dest));
-			return;
-		}
-	}
-	// if nothing was found reset the icon to default
-	m_appIcon = QApplication::windowIcon();
 }
 
 void main_window::ResizeIcons(int index)
@@ -289,7 +246,8 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 		}
 	}
 
-	SetAppIconFromPath(path, title_id);
+	m_appIcon = gui::utils::get_app_icon_from_path(path, title_id);
+
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
@@ -472,8 +430,7 @@ void main_window::InstallPkg(const QString& dropPath, bool is_bulk)
 	const std::string fileName = sstr(QFileInfo(filePath).fileName());
 	const std::string path = sstr(filePath);
 
-	progress_dialog pdlg(tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
-	pdlg.setWindowTitle(tr("RPCS3 Package Installer"));
+	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package ... please wait ..."), tr("Cancel"), 0, 1000, this);
 	pdlg.show();
 
 	// Synchronization variable
@@ -555,11 +512,36 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
+	if (pup_f.size() < sizeof(PUPHeader))
+	{
+		LOG_ERROR(GENERAL, "Too small PUP file: %llu", pup_f.size());
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file size is invalid."));
+		return;
+	}
+
+	struct PUPHeader header = {};
+	pup_f.seek(0);
+	pup_f.read(header);
+
+	if (header.header_length + header.data_length != pup_f.size())
+	{
+		LOG_ERROR(GENERAL, "Firmware size mismatch, expected: %llu, actual: %llu + %llu", pup_f.size(), header.header_length, header.data_length);
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is corrupted."));
+		return;
+	}
+
 	pup_object pup(pup_f);
 	if (!pup)
 	{
 		LOG_ERROR(GENERAL, "Error while installing firmware: PUP file is invalid.");
 		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file is invalid."));
+		return;
+	}
+
+	if (!pup.validate_hashes())
+	{
+		LOG_ERROR(GENERAL, "Error while installing firmware: Hash check failed. ");
+		QMessageBox::critical(this, tr("Failure!"), tr("Error while installing firmware: PUP file contents are invalid."));
 		return;
 	}
 
@@ -578,7 +560,7 @@ void main_window::InstallPup(const QString& dropPath)
 		version_string.erase(version_pos);
 	}
 
-	const std::string cur_version = "4.84";
+	const std::string cur_version = "4.85";
 
 	if (version_string < cur_version &&
 		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
@@ -587,8 +569,7 @@ void main_window::InstallPup(const QString& dropPath)
 		return;
 	}
 
-	progress_dialog pdlg(tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
-	pdlg.setWindowTitle(tr("RPCS3 Firmware Installer"));
+	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(updatefilenames.size()), this);
 	pdlg.show();
 
 	// Synchronization variable
@@ -844,14 +825,6 @@ void main_window::OnEmuRun()
 	ui->toolbar_start->setText(tr("Pause"));
 	ui->toolbar_start->setToolTip(tr("Pause emulation"));
 	EnableMenus(true);
-
-#ifdef WITH_DISCORD_RPC
-	// Discord Rich Presence Integration
-	if (guiSettings->GetValue(gui::m_richPresence).toBool())
-	{
-		discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
-	}
-#endif
 }
 
 void main_window::OnEmuResume()
@@ -910,14 +883,6 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 	ui->actionManage_Users->setEnabled(true);
-
-#ifdef WITH_DISCORD_RPC
-	// Discord Rich Presence Integration
-	if (guiSettings->GetValue(gui::m_richPresence).toBool())
-	{
-		discord::update_presence(sstr(guiSettings->GetValue(gui::m_discordState).toString()));
-	}
-#endif
 }
 
 void main_window::OnEmuReady()
@@ -1252,6 +1217,8 @@ void main_window::CreateConnects()
 	connect(ui->batchRemoveCustomConfigurationsAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveCustomConfigurations);
 	connect(ui->batchRemoveCustomPadConfigurationsAct, &QAction::triggered, m_gameListFrame, &game_list_frame::BatchRemoveCustomPadConfigurations);
 
+	connect(ui->removeDiskCacheAct, &QAction::triggered, this, &main_window::RemoveDiskCache);
+
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
 	connect(ui->sysStopAct, &QAction::triggered, [=]() { Emu.Stop(); });
 	connect(ui->sysRebootAct, &QAction::triggered, [=]() { Emu.Restart(); });
@@ -1333,6 +1300,12 @@ void main_window::CreateConnects()
 		trophy_manager_dialog* trop_manager = new trophy_manager_dialog(guiSettings);
 		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
+	});
+
+	connect(ui->actionManage_Skylanders_Portal, &QAction::triggered, [=]
+	{
+		skylander_dialog* sky_diag = skylander_dialog::get_dlg(this);
+		sky_diag->show();
 	});
 
 	connect(ui->actionManage_Users, &QAction::triggered, [=]
@@ -1441,6 +1414,20 @@ void main_window::CreateConnects()
 			m_gameListFrame->ToggleCategoryFilter(categories, checked);
 			guiSettings->SetCategoryVisibility(id, checked);
 		}
+	});
+
+	connect(ui->updateAct, &QAction::triggered, [=]()
+	{
+#if !defined(_WIN32) && !defined(__linux__)
+		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater currently isn't available for your os."));
+		return;
+#endif
+		if(!Emu.IsStopped())
+		{
+			QMessageBox::warning(this, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
+			return;
+		}
+		m_updater.check_for_updates(false, this);
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, [this]
@@ -1701,6 +1688,20 @@ void main_window::SetIconSizeActions(int idx)
 		ui->setIconSizeMediumAct->setChecked(true);
 	else
 		ui->setIconSizeLargeAct->setChecked(true);
+}
+
+void main_window::RemoveDiskCache()
+{
+	std::string cacheDir = Emulator::GetHdd1Dir() + "/cache";
+
+	if (fs::is_dir(cacheDir) && fs::remove_all(cacheDir, false))
+	{
+		QMessageBox::information(this, tr("Cache Cleared"), tr("Disk cache was cleared successfully"));
+	}
+	else
+	{
+		QMessageBox::warning(this, tr("Error"), tr("Could not remove disk cache"));
+	}
 }
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)

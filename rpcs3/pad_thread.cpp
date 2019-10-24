@@ -24,7 +24,7 @@ struct pad_setting
 	u32 device_type;
 };
 
-pad_thread::pad_thread(void *_curthread, void *_curwindow, const std::string& title_id) : curthread(_curthread), curwindow(_curwindow)
+pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view title_id) : curthread(_curthread), curwindow(_curwindow)
 {
 	pad::g_title_id = title_id;
 	Init();
@@ -60,10 +60,11 @@ void pad_thread::Init()
 		}
 	}
 
-	const u32 system_info = m_info.system_info;
+	const PadInfo pad_info(m_info);
 	std::memset(&m_info, 0, sizeof(m_info));
 	m_info.now_connect = 0;
-	m_info.system_info |= system_info;
+	m_info.system_info |= pad_info.system_info;
+	m_info.ignore_input = pad_info.ignore_input;
 
 	handlers.clear();
 
@@ -144,7 +145,7 @@ void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
 	}
 }
 
-void pad_thread::Reset(const std::string& title_id)
+void pad_thread::Reset(std::string_view title_id)
 {
 	pad::g_title_id = title_id;
 	reset = active.load();
@@ -160,11 +161,11 @@ void pad_thread::SetIntercepted(bool intercepted)
 	if (intercepted)
 	{
 		m_info.system_info |= CELL_PAD_INFO_INTERCEPTED;
-		m_is_intercepted = true;
+		m_info.ignore_input = true;
 	}
 	else
 	{
-		m_is_intercepted = false;
+		m_info.system_info &= ~CELL_PAD_INFO_INTERCEPTED;
 	}
 }
 
@@ -184,19 +185,20 @@ void pad_thread::ThreadFunc()
 			Init();
 		}
 
-		u32 connected = 0;
+		u32 connected_devices = 0;
 
 		for (auto& cur_pad_handler : handlers)
 		{
 			cur_pad_handler.second->ThreadProc();
-			connected += cur_pad_handler.second->connected;
+			connected_devices += cur_pad_handler.second->connected_devices;
 		}
 
-		m_info.now_connect = connected;
+		m_info.now_connect = connected_devices + num_ldd_pad;
 
 		// The following section is only reached when a dialog was closed and the pads are still intercepted.
-		// As long as any of the listed buttons is pressed the interception stays active.
-		if (!m_is_intercepted && (m_info.system_info & CELL_PAD_INFO_INTERCEPTED))
+		// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
+		// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
+		if (!(m_info.system_info & CELL_PAD_INFO_INTERCEPTED) && m_info.ignore_input)
 		{
 			bool any_button_pressed = false;
 
@@ -228,10 +230,32 @@ void pad_thread::ThreadFunc()
 
 			if (!any_button_pressed)
 			{
-				m_info.system_info &= ~CELL_PAD_INFO_INTERCEPTED;
+				m_info.ignore_input = false;
 			}
 		}
 
 		std::this_thread::sleep_for(1ms);
 	}
+}
+
+s32 pad_thread::AddLddPad()
+{
+	// Look for first null pad
+	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++)
+	{
+		if (g_cfg_input.player[i]->handler == pad_handler::null)
+		{
+			m_pads[i]->ldd = true;
+			num_ldd_pad++;
+			return i;
+		}
+	}
+
+	return -1;
+}
+
+void pad_thread::UnregisterLddPad(u32 handle)
+{
+	m_pads[handle]->ldd = false;
+	num_ldd_pad--;
 }

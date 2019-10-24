@@ -88,9 +88,6 @@ enum class video_renderer
 	null,
 	opengl,
 	vulkan,
-#ifdef _MSC_VER
-	dx12,
-#endif
 };
 
 enum class audio_renderer
@@ -216,15 +213,15 @@ struct EmuCallbacks
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
-	std::function<void()> exit;
+	std::function<void(bool)> exit; // (force_quit) close RPCS3
 	std::function<void(const std::string&)> reset_pads;
 	std::function<void(bool)> enable_pads;
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit
-	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
-	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
-	std::function<std::shared_ptr<class pad_thread>(const std::string&)> get_pad_handler;
+	std::function<void()> init_kb_handler;
+	std::function<void()> init_mouse_handler;
+	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
-	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
+	std::function<void()> init_gs_render;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
@@ -347,12 +344,12 @@ public:
 	bool InstallPkg(const std::string& path);
 
 private:
-	static std::string GetEmuDir();
-	static std::string GetHdd1Dir();
-
 	void LimitCacheSize();
+
 public:
+	static std::string GetEmuDir();
 	static std::string GetHddDir();
+	static std::string GetHdd1Dir();
 	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id = "");
 
 	static std::string GetCustomConfigDir();
@@ -411,6 +408,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_putlluc{this, "Accurate PUTLLUC", false};
 		cfg::_bool spu_verification{this, "SPU Verification", true}; // Should be enabled
 		cfg::_bool spu_cache{this, "SPU Cache", true};
+		cfg::_bool spu_prof{this, "SPU Profiler", false};
 		cfg::_enum<tsx_usage> enable_TSX{this, "Enable TSX", tsx_usage::enabled}; // Enable TSX. Forcing this on Haswell/Broadwell CPUs should be used carefully
 		cfg::_bool spu_accurate_xfloat{this, "Accurate xfloat", false};
 		cfg::_bool spu_approx_xfloat{this, "Approximate xfloat", true};
@@ -422,7 +420,12 @@ struct cfg_root : cfg::node
 		cfg::_bool hle_lwmutex{this, "HLE lwmutex"}; // Force alternative lwmutex/lwcond implementation
 
 		cfg::_int<10, 1000> clocks_scale{this, "Clocks scale", 100}; // Changing this from 100 (percentage) may affect game speed in unexpected ways
-		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{this, "Sleep Timers Accuracy", sleep_timers_accuracy_level::_usleep};
+		cfg::_enum<sleep_timers_accuracy_level> sleep_timers_accuracy{this, "Sleep Timers Accuracy", 
+#ifdef __linux__
+		sleep_timers_accuracy_level::_as_host};
+#else
+		sleep_timers_accuracy_level::_usleep};
+#endif
 	} core{this};
 
 	struct node_vfs : cfg::node
@@ -495,14 +498,6 @@ struct cfg_root : cfg::node
 		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16};
 		cfg::_int<0, 30000000> driver_recovery_timeout{this, "Driver Recovery Timeout", 1000000};
 		cfg::_int<1, 500> vblank_rate{this, "Vblank Rate", 60}; // Changing this from 60 may affect game speed in unexpected ways
-
-		struct node_d3d12 : cfg::node
-		{
-			node_d3d12(cfg::node* _this) : cfg::node(_this, "D3D12") {}
-
-			cfg::string adapter{this, "Adapter"};
-
-		} d3d12{this};
 
 		struct node_vk : cfg::node
 		{
@@ -615,11 +610,12 @@ struct cfg_root : cfg::node
 		cfg::_bool autostart{this, "Automatically start games after boot", true};
 		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
 		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
+		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true};
 		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
 		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
-		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
+		cfg::string gdb_server{this, "GDB Server", "127.0.0.1:2345"};
 
 	} misc{this};
 

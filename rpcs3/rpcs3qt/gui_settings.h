@@ -117,6 +117,7 @@ namespace gui
 
 	const QString Settings    = QObject::tr("CurrentSettings");
 	const QString Default     = QObject::tr("default");
+	const QString None        = QObject::tr("none");
 	const QString main_window = "main_window";
 	const QString game_list   = "GameList";
 	const QString logger      = "Logger";
@@ -191,6 +192,7 @@ namespace gui
 	const gui_save l_tty   = gui_save(logger, "TTY",   true);
 	const gui_save l_level = gui_save(logger, "level", (uint)(logs::level::success));
 	const gui_save l_stack = gui_save(logger, "stack", true);
+	const gui_save l_stack_tty = gui_save(logger, "TTY stack", false);
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 	const gui_save d_centerPC      = gui_save(debugger, "centerPC",      false);
@@ -205,6 +207,7 @@ namespace gui
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
 	const gui_save m_richPresence      = gui_save(meta, "useRichPresence",   true);
 	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
+	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart", true);
 
 	const gui_save gs_disableMouse = gui_save(gs_frame, "disableMouse", false);
 	const gui_save gs_resize       = gui_save(gs_frame, "resize",       false);

@@ -12,7 +12,8 @@ namespace rsx
 		shader_read = 1,
 		blit_engine_src = 2,
 		blit_engine_dst = 4,
-		framebuffer_storage = 8
+		framebuffer_storage = 8,
+		dma = 16
 	};
 
 	enum texture_colorspace : u32
@@ -42,12 +43,19 @@ namespace rsx
 		transfer = 2
 	};
 
+	enum format_type : u8
+	{
+		color = 0,
+		depth_uint = 1,
+		depth_float = 2
+	};
+
 	//Sampled image descriptor
 	struct sampled_image_descriptor_base
 	{
 		texture_upload_context upload_context = texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = texture_dimension_extended::texture_dimension_2d;
-		bool is_depth_texture = false;
+		rsx::format_type format_class = rsx::format_type::color;
 		bool is_cyclic_reference = false;
 		f32 scale_x = 1.f;
 		f32 scale_y = 1.f;
@@ -74,21 +82,7 @@ namespace rsx
 		texture_upload_context src_context = texture_upload_context::blit_engine_src;
 		texture_upload_context dst_context = texture_upload_context::blit_engine_dst;
 
-		void analyse()
-		{
-			if (src_is_typeless && dst_is_typeless)
-			{
-				if (src_scaling_hint == dst_scaling_hint &&
-					src_scaling_hint != 1.f)
-				{
-					if (src_is_depth == dst_is_depth)
-					{
-						src_is_typeless = dst_is_typeless = false;
-						src_scaling_hint = dst_scaling_hint = 1.f;
-					}
-				}
-			}
-		}
+		void analyse();
 	};
 }
 
@@ -101,6 +95,19 @@ struct rsx_subresource_layout
 	u8  border;
 	u8  reserved;
 	u32 pitch_in_block;
+};
+
+struct texture_memory_info
+{
+	int element_size;
+	bool require_swap;
+};
+
+struct texture_uploader_capabilities
+{
+	bool supports_byteswap;
+	bool supports_vtc_decoding;
+	size_t alignment;
 };
 
 /**
@@ -118,7 +125,7 @@ size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
 
-void upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, bool vtc_support, size_t dst_row_pitch_multiple_of);
+texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
 
 u8 get_format_block_size_in_bytes(int format);
 u8 get_format_block_size_in_texel(int format);
@@ -146,3 +153,9 @@ u32 get_format_packed_pitch(u32 format, u16 width, bool border = false, bool swi
 * Reverse encoding
 */
 u32 get_remap_encoding(const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap);
+
+/**
+ * Get gcm texel layout. Returns <format, byteswapped>
+ */
+std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format);
+std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format format);

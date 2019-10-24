@@ -45,12 +45,10 @@ private:
 	QProgressBar* m_gauge1 = nullptr;
 	QProgressBar* m_gauge2 = nullptr;
 
-	QWindow* m_taskbarTarget; // Window which will be targeted by custom taskbars.
-
 	int m_gauge_max = 0;
 
 public:
-	msg_dialog_frame(QWindow* taskbarTarget);
+	msg_dialog_frame();
 	~msg_dialog_frame();
 	virtual void Create(const std::string& msg, const std::string& title = "") override;
 	virtual void Close(bool success) override;

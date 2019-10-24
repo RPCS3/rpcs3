@@ -1,10 +1,12 @@
 ﻿#include "stdafx.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
+#include "GLCompute.h"
 #include "Utilities/Log.h"
 
 namespace gl
 {
+	std::unordered_map<u32, std::unique_ptr<gl::compute_task>> g_compute_tasks;
 	blitter *g_hw_blitter = nullptr;
 	capabilities g_driver_caps;
 	const fbo screen{};
@@ -26,6 +28,16 @@ namespace gl
 		default:
 			fmt::throw_exception("unknown primitive type" HERE);
 		}
+	}
+
+	void destroy_compute_tasks()
+	{
+		for (auto& [key, prog] : g_compute_tasks)
+		{
+			prog->destroy();
+		}
+
+		g_compute_tasks.clear();
 	}
 
 #ifdef WIN32
@@ -468,9 +480,10 @@ namespace gl
 		blit_dst.check();
 
 		cmd.drv->clear_color(color);
-		cmd.drv->color_mask(true, true, true, true);
+		cmd.drv->color_maski(0, true, true, true, true);
 
 		glClear(GL_COLOR_BUFFER_BIT);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GL_NONE, 0);
 	}
 
 	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil)
@@ -505,5 +518,6 @@ namespace gl
 		cmd.drv->stencil_mask(0xFF);
 
 		glClear(clear_mask);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, GL_NONE, 0);
 	}
 }

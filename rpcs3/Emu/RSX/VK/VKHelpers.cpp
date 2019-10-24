@@ -6,10 +6,60 @@
 #include "VKFramebuffer.h"
 #include "VKResolveHelper.h"
 #include "VKResourceManager.h"
+#include "VKDMA.h"
 #include "Utilities/mutex.h"
 
 namespace vk
 {
+	static chip_family_table s_AMD_family_tree = []()
+	{
+		chip_family_table table;
+		table.default_ = chip_class::AMD_gcn_generic;
+
+		// AMD cards. See https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
+		table.add(0x67C0, 0x67FF, chip_class::AMD_polaris);
+		table.add(0x6FDF, chip_class::AMD_polaris); // RX580 2048SP
+		table.add(0x6980, 0x699F, chip_class::AMD_polaris); // Polaris12
+		table.add(0x694C, 0x694F, chip_class::AMD_vega); // VegaM
+		table.add(0x6860, 0x686F, chip_class::AMD_vega); // VegaPro
+		table.add(0x687F, chip_class::AMD_vega); // Vega56/64
+		table.add(0x69A0, 0x69AF, chip_class::AMD_vega); // Vega12
+		table.add(0x66A0, 0x66AF, chip_class::AMD_vega); // Vega20
+		table.add(0x15DD, chip_class::AMD_vega); // Raven Ridge
+		table.add(0x15D8, chip_class::AMD_vega); // Raven Ridge
+		table.add(0x7310, 0x731F, chip_class::AMD_navi); // Navi10
+		table.add(0x7340, 0x7340, chip_class::AMD_navi); // Navi14
+
+		return table;
+	}();
+
+	static chip_family_table s_NV_family_tree = []()
+	{
+		chip_family_table table;
+		table.default_ = chip_class::NV_generic;
+
+		// NV cards. See https://envytools.readthedocs.io/en/latest/hw/pciid.html
+		// NOTE: Since NV device IDs are linearly incremented per generation, there is no need to carefully check all the ranges
+		table.add(0x1180, 0x11fa, chip_class::NV_kepler); // GK104, 106
+		table.add(0x0FC0, 0x0FFF, chip_class::NV_kepler); // GK107
+		table.add(0x1003, 0x1028, chip_class::NV_kepler); // GK110
+		table.add(0x1280, 0x12BA, chip_class::NV_kepler); // GK208
+		table.add(0x1381, 0x13B0, chip_class::NV_maxwell); // GM107
+		table.add(0x1340, 0x134D, chip_class::NV_maxwell); // GM108
+		table.add(0x13C0, 0x13D9, chip_class::NV_maxwell); // GM204
+		table.add(0x1401, 0x1427, chip_class::NV_maxwell); // GM206
+		table.add(0x15F7, 0x15F9, chip_class::NV_pascal); // GP100 (Tesla P100)
+		table.add(0x1B00, 0x1D80, chip_class::NV_pascal);
+		table.add(0x1D81, 0x1DBA, chip_class::NV_volta);
+		table.add(0x1E02, 0x1F51, chip_class::NV_turing); // RTX 20 series
+		table.add(0x2182, chip_class::NV_turing); // TU116
+		table.add(0x2184, chip_class::NV_turing); // TU116
+		table.add(0x1F82, chip_class::NV_turing); // TU117
+		table.add(0x1F91, chip_class::NV_turing); // TU117
+
+		return table;
+	}();
+
 	const context* g_current_vulkan_ctx = nullptr;
 	const render_device* g_current_renderer;
 
@@ -18,6 +68,10 @@ namespace vk
 	std::unique_ptr<buffer> g_scratch_buffer;
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
+
+	// General purpose upload heap
+	// TODO: Clean this up and integrate cleanly with VKGSRender
+	data_heap g_upload_heap;
 
 	// Garbage collection
 	std::vector<std::unique_ptr<image>> g_deleted_typeless_textures;
@@ -29,6 +83,7 @@ namespace vk
 	// Driver compatibility workarounds
 	VkFlags g_heap_compatible_buffer_types = 0;
 	driver_vendor g_driver_vendor = driver_vendor::unknown;
+	chip_class g_chip_class = chip_class::unknown;
 	bool g_drv_no_primitive_restart_flag = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
@@ -119,6 +174,21 @@ namespace vk
 		if (result.device_local == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support device local memory" HERE);
 		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support host coherent device local memory" HERE);
 		return result;
+	}
+
+	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id)
+	{
+		if (vendor_id == 0x10DE)
+		{
+			return s_NV_family_tree.find(device_id);
+		}
+
+		if (vendor_id == 0x1002)
+		{
+			return s_AMD_family_tree.find(device_id);
+		}
+
+		return chip_class::unknown;
 	}
 
 	VkAllocationCallbacks default_callbacks()
@@ -219,6 +289,16 @@ namespace vk
 		return g_scratch_buffer.get();
 	}
 
+	data_heap* get_upload_heap()
+	{
+		if (!g_upload_heap.heap)
+		{
+			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap");
+		}
+
+		return &g_upload_heap;
+	}
+
 	void acquire_global_submit_lock()
 	{
 		g_submit_mutex.lock();
@@ -241,6 +321,8 @@ namespace vk
 	{
 		vk::reset_compute_tasks();
 		vk::reset_resolve_resources();
+
+		g_upload_heap.reset_allocation_stats();
 	}
 
 	void destroy_global_resources()
@@ -249,11 +331,14 @@ namespace vk
 		vk::clear_renderpass_cache(dev);
 		vk::clear_framebuffer_cache();
 		vk::clear_resolve_helpers();
+		vk::clear_dma_resources();
+		vk::vmm_reset();
 		vk::get_resource_manager()->destroy();
 
 		g_null_texture.reset();
 		g_null_image_view.reset();
 		g_scratch_buffer.reset();
+		g_upload_heap.destroy();
 
 		g_typeless_textures.clear();
 		g_deleted_typeless_textures.clear();
@@ -302,11 +387,15 @@ namespace vk
 		g_drv_disable_fence_reset = false;
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
-		g_driver_vendor = driver_vendor::unknown;
 		g_heap_compatible_buffer_types = 0;
 
-		const auto gpu_name = g_current_renderer->gpu().get_name();
-		switch (g_driver_vendor = g_current_renderer->gpu().get_driver_vendor())
+		const auto& gpu = g_current_renderer->gpu();
+		const auto gpu_name = gpu.get_name();
+
+		g_driver_vendor = gpu.get_driver_vendor();
+		g_chip_class = gpu.get_chip_class();
+
+		switch (g_driver_vendor)
 		{
 		case driver_vendor::AMD:
 		case driver_vendor::RADV:
@@ -370,6 +459,11 @@ namespace vk
 	driver_vendor get_driver_vendor()
 	{
 		return g_driver_vendor;
+	}
+
+	chip_class get_chip_family()
+	{
+		return g_chip_class;
 	}
 
 	bool emulate_primitive_restart(rsx::primitive_type type)
@@ -600,12 +694,6 @@ namespace vk
 		VkPipelineStageFlags src_stage;
 		if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
 		{
-			if (!rsx::method_registers.color_write_enabled() && current_layout == new_layout)
-			{
-				// Nothing to do
-				return;
-			}
-
 			src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 			src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		}

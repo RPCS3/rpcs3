@@ -48,7 +48,7 @@ inline void ppu_ov_set(ppu_thread& ppu, bool bit)
 template<typename T>
 inline void ppu_fpcc_set(ppu_thread& ppu, const T& a, const T& b, const bool rc, const u64 cr_field = 1)
 {
-	// TODO: Do not hardcode to be endian dependant  
+	// TODO: Do not hardcode to be endian dependant
 	u32 fpcc = u32{a < b} << (8 * 0) | u32{a > b} << (8 * 1) | u32{a == b} << (8 * 2);
 
 	// Test FU
@@ -288,8 +288,6 @@ struct add_flags_result_t
 {
 	T result;
 	bool carry;
-	bool zero;
-	bool sign;
 
 	add_flags_result_t() = default;
 
@@ -297,8 +295,6 @@ struct add_flags_result_t
 	add_flags_result_t(T a, T b)
 		: result(a + b)
 		, carry(result < a)
-		, zero(result == 0)
-		, sign(result >> (sizeof(T) * 8 - 1) != 0)
 	{
 	}
 
@@ -309,8 +305,6 @@ struct add_flags_result_t
 		add_flags_result_t r(result, c);
 		result = r.result;
 		carry |= r.carry;
-		zero = r.zero;
-		sign = r.sign;
 	}
 };
 
@@ -904,9 +898,25 @@ bool ppu_interpreter::VLOGEFP(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter_fast::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
 {
 	ppu.vr[op.vd].vf = _mm_add_ps(_mm_mul_ps(ppu.vr[op.va].vf, ppu.vr[op.vc].vf), ppu.vr[op.vb].vf);
+	return true;
+}
+
+bool ppu_interpreter_precise::VMADDFP(ppu_thread& ppu, ppu_opcode_t op)
+{
+	const auto& a = ppu.vr[op.va]._f;
+	const auto& b = ppu.vr[op.vb]._f;
+	const auto& c = ppu.vr[op.vc]._f;
+	auto& d = ppu.vr[op.rd]._f;
+
+	// TODO: Optimize
+	for (u32 i = 0; i < 4; i++)
+	{
+		d[i] = f32(f64{a[i]} * f64{c[i]} + f64{b[i]});
+	}
+
 	return true;
 }
 
@@ -4762,8 +4772,9 @@ bool ppu_interpreter::MTFSB0(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::MTFSFI(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const u32 bf = op.crfd * 4;
-	if (bf != 4 * 4)
+	const u32 bf = op.crfd;
+
+	if (bf != 4)
 	{
 		// Do nothing on non-FPCC field (TODO)
 		LOG_WARNING(PPU, "MTFSFI(%d)", op.crfd);
@@ -4830,7 +4841,7 @@ bool ppu_interpreter::FCTIWZ(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
 	const auto res = _mm_xor_si128(_mm_cvttpd_epi32(b), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(0x80000000))));
-	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_extract_epi32(res, 0));
+	ppu.fpr[op.frd] = std::bit_cast<f64, s64>(_mm_cvtsi128_si32(res));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -4941,7 +4952,7 @@ bool ppu_interpreter_fast::FMSUB(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::FMSUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const f64 res = ppu.fpr[op.frd] = ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb];
+	const f64 res = ppu.fpr[op.frd] = std::fma(ppu.fpr[op.fra], ppu.fpr[op.frc], -ppu.fpr[op.frb]);
 	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
@@ -4954,7 +4965,7 @@ bool ppu_interpreter_fast::FMADD(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::FMADD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const f64 res = ppu.fpr[op.frd] = ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb];
+	const f64 res = ppu.fpr[op.frd] = std::fma(ppu.fpr[op.fra], ppu.fpr[op.frc], ppu.fpr[op.frb]);
 	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
@@ -4967,7 +4978,7 @@ bool ppu_interpreter_fast::FNMSUB(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::FNMSUB(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const f64 res = ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] - ppu.fpr[op.frb]);
+	const f64 res = ppu.fpr[op.frd] = -std::fma(ppu.fpr[op.fra], ppu.fpr[op.frc], -ppu.fpr[op.frb]);
 	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
@@ -4980,7 +4991,7 @@ bool ppu_interpreter_fast::FNMADD(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter_precise::FNMADD(ppu_thread& ppu, ppu_opcode_t op)
 {
-	const f64 res = ppu.fpr[op.frd] = -(ppu.fpr[op.fra] * ppu.fpr[op.frc] + ppu.fpr[op.frb]);
+	const f64 res = ppu.fpr[op.frd] = -std::fma(ppu.fpr[op.fra], ppu.fpr[op.frc], ppu.fpr[op.frb]);
 	ppu_fpcc_set(ppu, res, 0., op.rc);
 	return true;
 }
@@ -5022,7 +5033,7 @@ bool ppu_interpreter::FCTID(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
 	const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvtsd_si64(b)), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(f64(1ull << 63)))));
-	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_extract_epi64(res, 0));
+	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }
@@ -5031,7 +5042,7 @@ bool ppu_interpreter::FCTIDZ(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const auto b = _mm_load_sd(&ppu.fpr[op.frb]);
 	const auto res = _mm_xor_si128(_mm_set1_epi64x(_mm_cvttsd_si64(b)), _mm_castpd_si128(_mm_cmpge_pd(b, _mm_set1_pd(f64(1ull << 63)))));
-	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_extract_epi64(res, 0));
+	ppu.fpr[op.frd] = std::bit_cast<f64>(_mm_cvtsi128_si64(res));
 	if (UNLIKELY(op.rc)) fmt::throw_exception("%s: op.rc", __func__); //ppu_cr_set(ppu, 1, ppu.fpscr.fg, ppu.fpscr.fl, ppu.fpscr.fe, ppu.fpscr.fu);
 	return true;
 }

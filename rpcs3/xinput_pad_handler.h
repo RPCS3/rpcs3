@@ -5,21 +5,41 @@
 #define NOMINMAX
 #include <Windows.h>
 #include <Xinput.h>
-#include <ctime>
+#include <chrono>
+#include <optional>
 
-namespace XINPUT_INFO
+// ScpToolkit defined structure for pressure sensitive button query
+struct SCP_EXTN
 {
-	const DWORD THREAD_TIMEOUT = 1000;
-	const DWORD THREAD_SLEEP = 10;
-	const DWORD THREAD_SLEEP_INACTIVE = 100;
-	const DWORD GUIDE_BUTTON = 0x0400;
-	const LPCWSTR LIBRARY_FILENAMES[] = {
-		L"xinput1_4.dll",
-		L"xinput1_3.dll",
-		L"xinput1_2.dll",
-		L"xinput9_1_0.dll"
-	};
-}
+	float SCP_UP;
+	float SCP_RIGHT;
+	float SCP_DOWN;
+	float SCP_LEFT;
+
+	float SCP_LX;
+	float SCP_LY;
+
+	float SCP_L1;
+	float SCP_L2;
+	float SCP_L3;
+
+	float SCP_RX;
+	float SCP_RY;
+
+	float SCP_R1;
+	float SCP_R2;
+	float SCP_R3;
+
+	float SCP_T;
+	float SCP_C;
+	float SCP_X;
+	float SCP_S;
+
+	float SCP_SELECT;
+	float SCP_START;
+
+	float SCP_PS;
+};
 
 class xinput_pad_handler final : public PadHandlerBase
 {
@@ -57,44 +77,19 @@ class xinput_pad_handler final : public PadHandlerBase
 		KeyCodeCount
 	};
 
-	// Unique names for the config files and our pad settings dialog
-	const std::unordered_map<u32, std::string> button_list =
-	{
-		{ XInputKeyCodes::A,      "A" },
-		{ XInputKeyCodes::B,      "B" },
-		{ XInputKeyCodes::X,      "X" },
-		{ XInputKeyCodes::Y,      "Y" },
-		{ XInputKeyCodes::Left,   "Left" },
-		{ XInputKeyCodes::Right,  "Right" },
-		{ XInputKeyCodes::Up,     "Up" },
-		{ XInputKeyCodes::Down,   "Down" },
-		{ XInputKeyCodes::LB,     "LB" },
-		{ XInputKeyCodes::RB,     "RB" },
-		{ XInputKeyCodes::Back,   "Back" },
-		{ XInputKeyCodes::Start,  "Start" },
-		{ XInputKeyCodes::LS,     "LS" },
-		{ XInputKeyCodes::RS,     "RS" },
-		{ XInputKeyCodes::Guide,  "Guide" },
-		{ XInputKeyCodes::LT,     "LT" },
-		{ XInputKeyCodes::RT,     "RT" },
-		{ XInputKeyCodes::LSXNeg, "LS X-" },
-		{ XInputKeyCodes::LSXPos, "LS X+" },
-		{ XInputKeyCodes::LSYPos, "LS Y+" },
-		{ XInputKeyCodes::LSYNeg, "LS Y-" },
-		{ XInputKeyCodes::RSXNeg, "RS X-" },
-		{ XInputKeyCodes::RSXPos, "RS X+" },
-		{ XInputKeyCodes::RSYPos, "RS Y+" },
-		{ XInputKeyCodes::RSYNeg, "RS Y-" }
-	};
+	using PadButtonValues = std::unordered_map<u64, u16>;
 
-	struct XInputDevice
+	struct XInputDevice : public PadDevice
 	{
 		u32 deviceNumber{ 0 };
 		bool newVibrateData{ true };
-		u8 largeVibrate{ 0 };
-		u8 smallVibrate{ 0 };
-		clock_t last_vibration{ 0 };
-		pad_config* config{ nullptr };
+		u16 largeVibrate{ 0 };
+		u16 smallVibrate{ 0 };
+		std::chrono::high_resolution_clock::time_point last_vibration;
+		bool is_scp_device{ false };
+		DWORD state{ ERROR_NOT_CONNECTED }; // holds internal controller state change
+		SCP_EXTN state_scp{ 0 };
+		XINPUT_STATE state_base{ 0 };
 	};
 
 public:
@@ -102,38 +97,37 @@ public:
 	~xinput_pad_handler();
 
 	bool Init() override;
-	void Close();
 
 	std::vector<std::string> ListDevices() override;
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
-	void ThreadProc() override;
-	void GetNextButtonPress(const std::string& padId, const std::function<void(u16, std::string, std::string, int[])>& callback, const std::function<void(std::string)>& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	typedef void (WINAPI * PFN_XINPUTENABLE)(BOOL);
+	typedef DWORD (WINAPI * PFN_XINPUTGETEXTENDED)(DWORD, SCP_EXTN *);
 	typedef DWORD (WINAPI * PFN_XINPUTGETSTATE)(DWORD, XINPUT_STATE *);
 	typedef DWORD (WINAPI * PFN_XINPUTSETSTATE)(DWORD, XINPUT_VIBRATION *);
 	typedef DWORD (WINAPI * PFN_XINPUTGETBATTERYINFORMATION)(DWORD, BYTE, XINPUT_BATTERY_INFORMATION *);
 
 private:
 	int GetDeviceNumber(const std::string& padId);
-	std::array<u16, XInputKeyCodes::KeyCodeCount> GetButtonValues(const XINPUT_STATE& state);
-	void TranslateButtonPress(u64 keyCode, bool& pressed, u16& val, bool ignore_threshold = false) override;
+	PadButtonValues get_button_values_base(const XINPUT_STATE& state);
+	PadButtonValues get_button_values_scp(const SCP_EXTN& state);
 
 	bool is_init{ false };
 	HMODULE library{ nullptr };
+	PFN_XINPUTGETEXTENDED xinputGetExtended{ nullptr };
 	PFN_XINPUTGETSTATE xinputGetState{ nullptr };
 	PFN_XINPUTSETSTATE xinputSetState{ nullptr };
-	PFN_XINPUTENABLE xinputEnable{ nullptr };
 	PFN_XINPUTGETBATTERYINFORMATION xinputGetBatteryInformation{ nullptr };
 
-	std::vector<u32> blacklist;
-	std::vector<std::pair<std::shared_ptr<XInputDevice>, std::shared_ptr<Pad>>> bindings;
-	std::shared_ptr<XInputDevice> m_dev;
-
-	// holds internal controller state change
-	XINPUT_STATE state;
-	DWORD result{ 0 };
+	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
+	bool get_is_left_trigger(u64 keyCode) override;
+	bool get_is_right_trigger(u64 keyCode) override;
+	bool get_is_left_stick(u64 keyCode) override;
+	bool get_is_right_stick(u64 keyCode) override;
+	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
+	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
+	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
+	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
+	std::array<int, 6> get_preview_values(std::unordered_map<u64, u16> data) override;
 };

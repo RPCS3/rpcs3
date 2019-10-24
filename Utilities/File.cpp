@@ -1,4 +1,4 @@
-#include "File.h"
+﻿#include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
 #include "BEType.h"
@@ -27,9 +27,15 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 	const int size = narrow<int>(buf_size, "to_wchar" HERE);
 
 	// Buffer for max possible output length
-	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size]);
+	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size + 4 + 32768]);
 
-	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get(), size);
+	// Prepend wide path prefix (4 characters)
+	std::memcpy(buffer.get() + 32768, L"\\\\\?\\", 4 * sizeof(wchar_t));
+
+	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + 4, size);
+
+	// Canonicalize wide path (replace '/', ".", "..", \\ repetitions, etc)
+	verify("to_wchar" HERE), GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1;
 
 	return buffer;
 }
@@ -153,6 +159,8 @@ static fs::error to_error(int e)
 	case EINVAL: return fs::error::inval;
 	case EACCES: return fs::error::acces;
 	case ENOTEMPTY: return fs::error::notempty;
+	case EROFS: return fs::error::readonly;
+	case EISDIR: return fs::error::isdir;
 	default: fmt::throw_exception("Unknown system error: %d.", e);
 	}
 }
@@ -484,7 +492,11 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	ULARGE_INTEGER total_size;
 	ULARGE_INTEGER total_free;
 
-	if (!GetDiskFreeSpaceExW(to_wchar(path).get(), &avail_free, &total_size, &total_free))
+	// Get disk letter from path (TODO)
+	std::wstring disk(L"C:");
+	disk[0] = path[0];
+
+	if (!GetDiskFreeSpaceExW(disk.c_str(), &avail_free, &total_size, &total_free))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
@@ -541,7 +553,12 @@ bool fs::create_path(const std::string& path)
 {
 	const std::string parent = get_parent_dir(path);
 
-	if (!parent.empty() && !create_path(parent))
+#ifdef _WIN32
+	// Workaround: don't call is_dir with naked drive letter
+	if (!parent.empty() && parent.back() != ':' && !is_dir(parent) && !create_path(parent))
+#else
+	if (!parent.empty() && !is_dir(parent) && !create_path(parent))
+#endif
 	{
 		return false;
 	}
@@ -964,7 +981,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			info.is_writable = (basic_info.FileAttributes & FILE_ATTRIBUTE_READONLY) == 0;
 			info.size = this->size();
 			info.atime = to_time(basic_info.LastAccessTime);
-			info.mtime = to_time(basic_info.ChangeTime);
+			info.mtime = to_time(basic_info.LastWriteTime);
 			info.ctime = info.mtime;
 
 			if (info.atime < info.mtime)
@@ -1050,7 +1067,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	m_file = std::make_unique<windows_file>(handle);
 #else
-	int flags = 0;
+	int flags = O_CLOEXEC; // Ensures all files are closed on execl for auto updater
 
 	if (mode & fs::read && mode & fs::write) flags |= O_RDWR;
 	else if (mode & fs::read) flags |= O_RDONLY;
@@ -1086,7 +1103,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (mode & fs::trunc && mode & (fs::lock + fs::unread))
 	{
 		// Postpone truncation in order to avoid using O_TRUNC on a locked file
-		::ftruncate(fd, 0);
+		verify(HERE), ::ftruncate(fd, 0) == 0;
 	}
 
 	class unix_file final : public file_base
@@ -1571,7 +1588,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	{
 		return false;
 	}
-	
+
 	if (remove_root)
 	{
 		return remove_dir(path);
@@ -1580,7 +1597,7 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	return true;
 }
 
-u64 fs::get_dir_size(const std::string& path)
+u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 {
 	u64 result = 0;
 
@@ -1593,12 +1610,12 @@ u64 fs::get_dir_size(const std::string& path)
 
 		if (entry.is_directory == false)
 		{
-			result += entry.size;
+			result += ::align(entry.size, rounding_alignment);
 		}
 
 		if (entry.is_directory == true)
 		{
-			result += get_dir_size(path + '/' + entry.name);
+			result += get_dir_size(path + '/' + entry.name, rounding_alignment);
 		}
 	}
 
@@ -1751,6 +1768,8 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::exist: return "Already exists";
 		case fs::error::acces: return "Access violation";
 		case fs::error::notempty: return "Not empty";
+		case fs::error::readonly: return "Read only";
+		case fs::error::isdir: return "Is a directory";
 		}
 
 		return unknown;

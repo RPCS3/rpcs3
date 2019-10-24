@@ -332,7 +332,7 @@ struct surmixer_thread : ppu_thread
 
 	void non_task()
 	{
-		const auto g_audio = fxm::get<cell_audio>();
+		const auto g_audio = g_fxo->get<cell_audio>();
 
 		audio_port& port = g_audio->ports[g_surmx.audio_port];
 
@@ -460,7 +460,7 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 {
 	libmixer.warning("cellSurMixerCreate(config=*0x%x)", config);
 
-	const auto g_audio = fxm::get<cell_audio>();
+	const auto g_audio = g_fxo->get<cell_audio>();
 
 	const auto port = g_audio->open_port();
 
@@ -544,7 +544,7 @@ s32 cellSurMixerStart()
 {
 	libmixer.warning("cellSurMixerStart()");
 
-	const auto g_audio = fxm::get<cell_audio>();
+	const auto g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -566,7 +566,7 @@ s32 cellSurMixerFinalize()
 {
 	libmixer.warning("cellSurMixerFinalize()");
 
-	const auto g_audio = fxm::get<cell_audio>();
+	const auto g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -611,7 +611,7 @@ s32 cellSurMixerPause(u32 type)
 {
 	libmixer.warning("cellSurMixerPause(type=%d)", type);
 
-	const auto g_audio = fxm::get<cell_audio>();
+	const auto g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
@@ -635,7 +635,7 @@ s32 cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 {
 	libmixer.error("cellSurMixerGetTimestamp(tag=0x%llx, stamp=*0x%x)", tag, stamp);
 
-	const auto g_audio = fxm::get<cell_audio>();
+	const auto g_audio = g_fxo->get<cell_audio>();
 
 	*stamp = g_audio->m_start_time + tag * AUDIO_BUFFER_SAMPLES * 1'000'000 / g_audio->cfg.audio_sampling_rate;
 

@@ -104,9 +104,12 @@ error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserLis
 	cellUserInfo.todo("cellUserInfoGetList(listNum=*0x%x, listBuf=*0x%x, currentUserId=*0x%x)", listNum, listBuf, currentUserId);
 
 	// If only listNum is NULL, an error will be returned
-	if (listBuf && !listNum)
+	if (!listNum)
 	{
-		return CELL_USERINFO_ERROR_PARAM;
+		if (listBuf || !currentUserId)
+		{
+			return CELL_USERINFO_ERROR_PARAM;
+		}
 	}
 
 	if (listNum)
@@ -116,7 +119,10 @@ error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserLis
 
 	if (listBuf)
 	{
-		listBuf->userId[0] = 1;
+		std::memset(listBuf.get_ptr(), 0, listBuf.size());
+
+		// We report only one user, so it must be the current user
+		listBuf->userId[0] = Emu.GetUsrId();
 	}
 
 	if (currentUserId)

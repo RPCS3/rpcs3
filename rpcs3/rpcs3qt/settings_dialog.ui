@@ -1900,6 +1900,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="preventDisplaySleep">
+                <property name="text">
+                 <string>Prevent display sleep while running games</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="showFPSInTitle">
                 <property name="text">
                  <string>Show framerate in the window title</string>
@@ -2508,6 +2515,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="cb_check_update_start">
+                <property name="text">
+                 <string>Check for updates on startup</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <spacer name="verticalSpacer_17">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
@@ -2829,41 +2843,11 @@
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="buttonLayout">
-     <item alignment="Qt::AlignLeft">
-      <widget class="QPushButton" name="okButton">
-       <property name="text">
-        <string>Save</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item alignment="Qt::AlignLeft">
-      <widget class="QPushButton" name="cancelButton">
-       <property name="text">
-        <string>Close</string>
-       </property>
-       <property name="autoDefault">
-        <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-    </layout>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Close|QDialogButtonBox::Save</set>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>

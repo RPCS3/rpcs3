@@ -705,29 +705,64 @@ namespace rsx
 			return decode<NV4097_SET_INDEX_ARRAY_DMA>().type();
 		}
 
-		bool color_mask_b() const
+		bool color_mask_b(int index) const
 		{
-			return decode<NV4097_SET_COLOR_MASK>().color_b();
+			if (index == 0)
+			{
+				return decode<NV4097_SET_COLOR_MASK>().color_b();
+			}
+			else
+			{
+				return decode<NV4097_SET_COLOR_MASK_MRT>().color_b(index);
+			}
 		}
 
-		bool color_mask_g() const
+		bool color_mask_g(int index) const
 		{
-			return decode<NV4097_SET_COLOR_MASK>().color_g();
+			if (index == 0)
+			{
+				return decode<NV4097_SET_COLOR_MASK>().color_g();
+			}
+			else
+			{
+				return decode<NV4097_SET_COLOR_MASK_MRT>().color_g(index);
+			}
 		}
 
-		bool color_mask_r() const
+		bool color_mask_r(int index) const
 		{
-			return decode<NV4097_SET_COLOR_MASK>().color_r();
+			if (index == 0)
+			{
+				return decode<NV4097_SET_COLOR_MASK>().color_r();
+			}
+			else
+			{
+				return decode<NV4097_SET_COLOR_MASK_MRT>().color_r(index);
+			}
 		}
 
-		bool color_mask_a() const
+		bool color_mask_a(int index) const
 		{
-			return decode<NV4097_SET_COLOR_MASK>().color_a();
+			if (index == 0)
+			{
+				return decode<NV4097_SET_COLOR_MASK>().color_a();
+			}
+			else
+			{
+				return decode<NV4097_SET_COLOR_MASK_MRT>().color_a(index);
+			}
 		}
 
-		bool color_write_enabled() const
+		bool color_write_enabled(int index) const
 		{
-			return decode<NV4097_SET_COLOR_MASK>().color_write_enabled();
+			if (index == 0)
+			{
+				return decode<NV4097_SET_COLOR_MASK>().color_write_enabled();
+			}
+			else
+			{
+				return decode<NV4097_SET_COLOR_MASK_MRT>().color_write_enabled(index);
+			}
 		}
 
 		u8 clear_color_b() const
@@ -1618,6 +1653,23 @@ namespace rsx
 		bool framebuffer_srgb_enabled()
 		{
 			return decode<NV4097_SET_SHADER_PACKER>().srgb_output_enabled();
+		}
+
+		bool depth_buffer_float_enabled()
+		{
+			return decode<NV4097_SET_CONTROL0>().depth_float();
+		}
+
+		u32 texcoord_control_mask()
+		{
+			// Only 10 texture coords exist [0-9]
+			u32 control_mask = 0;
+			for (u8 index = 0; index < 10; ++index)
+			{
+				control_mask |= ((registers[NV4097_SET_TEX_COORD_CONTROL + index] & 1) << index);
+			}
+
+			return control_mask;
 		}
 	};
 

@@ -288,7 +288,7 @@ std::string VertexProgramDecompiler::GetOptionalBranchCond()
 	return "if (" + cond + ")";
 }
 
-void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::string& src)
+void VertexProgramDecompiler::AddCodeCond(const std::string& lhs, const std::string& rhs)
 {
 	enum
 	{
@@ -299,19 +299,21 @@ void VertexProgramDecompiler::AddCodeCond(const std::string& dst, const std::str
 
 	if (!d0.cond_test_enable || d0.cond == (lt | gt | eq))
 	{
-		AddCode(dst + " = " + src + ";");
+		AddCode(lhs + " = " + rhs + ";");
 		return;
 	}
 
 	if (d0.cond == 0)
 	{
-		AddCode("//" + dst + " = " + src + ";");
+		AddCode("//" + lhs + " = " + rhs + ";");
 		return;
 	}
 
-	// NOTE: dst = _select(dst, src, cond) is equivalent to dst = cond? src : dst;
-	const auto cond = ShaderVariable(dst).match_size(GetRawCond());
-	AddCode(dst + " = _select(" + dst + ", " + src + ", " + cond + ");");
+	// NOTE: x = _select(x, y, cond) is equivalent to x = cond? y : x;
+	const auto dst_var = ShaderVariable(lhs);
+	const auto raw_cond = dst_var.add_mask(GetRawCond());
+	const auto cond = dst_var.match_size(raw_cond);
+	AddCode(lhs + " = _select(" + lhs + ", " + rhs + ", " + cond + ");");
 }
 
 std::string VertexProgramDecompiler::AddAddrReg()
@@ -712,16 +714,16 @@ std::string VertexProgramDecompiler::Decompile()
 
 			break;
 		}
-		case RSX_SCA_OPCODE_CLB: break;
+		case RSX_SCA_OPCODE_CLB:
 			// works same as BRB
 			AddCode("//CLB");
 			do_function_call("$ifbcond");
 			break;
-		case RSX_SCA_OPCODE_PSH: break;
+		case RSX_SCA_OPCODE_PSH:
 			// works differently (PSH o[1].x A0;)
 			LOG_ERROR(RSX, "Unimplemented sca_opcode PSH");
 			break;
-		case RSX_SCA_OPCODE_POP: break;
+		case RSX_SCA_OPCODE_POP:
 			// works differently (POP o[1].x;)
 			LOG_ERROR(RSX, "Unimplemented sca_opcode POP");
 			break;

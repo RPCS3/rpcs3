@@ -1,6 +1,7 @@
-#pragma once
+﻿#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+#include <atomic>
 
 // Error codes
 enum SceNpTrophyError : u32
@@ -75,6 +76,11 @@ enum SceNpTrophyGrade
 	SCE_NP_TROPHY_GRADE_BRONZE         = 4,
 };
 
+enum
+{
+	SCE_NP_TROPHY_OPTIONS_CREATE_CONTEXT_READ_ONLY = 1,
+};
+
 struct SceNpTrophyGameDetails
 {
 	be_t<u32> numTrophies;
@@ -147,4 +153,11 @@ public:
 	virtual ~TrophyNotificationBase();
 
 	virtual s32 ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophyIconBfr) = 0;
+};
+
+// fxm objects
+
+struct sce_np_trophy_manager
+{
+	std::atomic<bool> is_initialized = false;
 };

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <Emu/Memory/vm_ptr.h>
 
@@ -186,7 +186,7 @@ struct CellSaveDataSystemFileParam
 	char subTitle[CELL_SAVEDATA_SYSP_SUBTITLE_SIZE];
 	char detail[CELL_SAVEDATA_SYSP_DETAIL_SIZE];
 	be_t<u32> attribute;
-	char reserved2[4];
+	be_t<u32> parental_level; // char reserved2[4] in firmware 3.70 or higher
 	char listParam[CELL_SAVEDATA_SYSP_LPARAM_SIZE];
 	char reserved[256];
 };
@@ -292,17 +292,19 @@ using CellSaveDataDoneCallback = void(vm::ptr<CellSaveDataCBResult> cbResult, vm
 // Auxiliary Structs
 struct SaveDataEntry
 {
+	std::string escaped;
+
 	std::string dirName;
 	std::string listParam;
 	std::string title;
 	std::string subtitle;
 	std::string details;
-	u64 size;
-	s64 atime;
-	s64 mtime;
-	s64 ctime;
+	u64 size{0};
+	s64 atime{0};
+	s64 mtime{0};
+	s64 ctime{0};
 	std::vector<uchar> iconBuf;
-	bool isNew;
+	bool isNew{false};
 };
 
 class SaveDialogBase

@@ -514,6 +514,12 @@ public:
 
 	u32 pc = 0;
 
+	// May be used internally by recompilers.
+	u32 base_pc = 0;
+
+	// May be used by recompilers.
+	u8* memory_base_addr = vm::g_base_addr;
+
 	// General-Purpose Registers
 	std::array<v128, 128> gpr;
 	SPU_FPSCR fpscr;
@@ -546,7 +552,7 @@ public:
 	spu_channel ch_out_mbox;
 	spu_channel ch_out_intr_mbox;
 
-	u64 snr_config; // SPU SNR Config Register
+	u64 snr_config = 0; // SPU SNR Config Register
 
 	spu_channel ch_snr1; // SPU Signal Notification Register 1
 	spu_channel ch_snr2; // SPU Signal Notification Register 2
@@ -580,8 +586,6 @@ public:
 	u64 block_failure = 0;
 
 	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
-
-	u8* memory_base_addr = vm::g_base_addr;
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 

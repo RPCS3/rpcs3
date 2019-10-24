@@ -3,6 +3,7 @@
 
 #include "Emu/System.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Utilities/asm.h"
 
 #ifdef _WIN32
 
@@ -196,8 +197,12 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	LARGE_INTEGER count;
 	verify(HERE), QueryPerformanceCounter(&count);
 
-	// get time difference in nanoseconds
-	const u64 diff = (count.QuadPart - s_time_aux_info.start_time) * 1000000000ull / s_time_aux_info.perf_freq;
+	const u64 diff_base = count.QuadPart - s_time_aux_info.start_time;
+
+	// Get time difference in nanoseconds (using 128 bit accumulator)
+	const u64 diff_sl = diff_base * 1000000000ull;
+	const u64 diff_sh = utils::umulh64(diff_base, 1000000000ull);
+	const u64 diff = utils::udiv128(diff_sh, diff_sl, s_time_aux_info.perf_freq);
 
 	// get time since Epoch in nanoseconds
 	const u64 time = s_time_aux_info.start_ftime * 100u + (diff * g_cfg.core.clocks_scale / 100u);
@@ -237,7 +242,7 @@ s32 sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	{
 		// Correct value if borrow encountered
 		tv_sec -= 1;
-		tv_nsec = 1'000'000'000ull - (stv_nsec - tv_nsec);	
+		tv_nsec = 1'000'000'000ull - (stv_nsec - tv_nsec);
 	}
 	else
 	{

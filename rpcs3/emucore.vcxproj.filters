@@ -83,6 +83,9 @@
     <ClCompile Include="Crypto\sha1.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
+    <ClCompile Include="Crypto\sha256.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
     <ClCompile Include="Crypto\unedat.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
@@ -728,8 +731,8 @@
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\GDBDebugServer.cpp">
-      <Filter>Utilities</Filter>
+    <ClCompile Include="Emu\GDB.cpp">
+      <Filter>Emu</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <Filter>Utilities</Filter>
@@ -782,6 +785,9 @@
     <ClCompile Include="Emu\Cell\lv2\sys_config.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\Skylander.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_overlay.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -815,6 +821,18 @@
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Crypto\md5.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\usb_device.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="util\atomic.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Crypto\aesni.cpp">
+      <Filter>Crypto</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -827,6 +845,9 @@
       <Filter>Crypto</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\sha1.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\sha256.h">
       <Filter>Crypto</Filter>
     </ClInclude>
     <ClInclude Include="Crypto\unedat.h">
@@ -1016,9 +1037,6 @@
       <Filter>Emu\Cell</Filter>
     </ClInclude>
     <ClInclude Include="util\atomic.hpp">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\TextureUtils.h">
@@ -1429,8 +1447,8 @@
     <ClInclude Include="Loader\TAR.h">
       <Filter>Loader</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\GDBDebugServer.h">
-      <Filter>Utilities</Filter>
+    <ClInclude Include="Emu\GDB.h">
+      <Filter>Emu</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\bin_patch.h">
       <Filter>Utilities</Filter>
@@ -1542,6 +1560,24 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\Keyboard.h">
       <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Skylander.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\md5.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\usb_device.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Crypto\aesni.h">
+      <Filter>Crypto</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellSsl.h">
+      <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

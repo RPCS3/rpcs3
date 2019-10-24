@@ -38,15 +38,15 @@
 #include <memory>
 #include <regex>
 
-#include "Utilities/GDBDebugServer.h"
-
 #include "Utilities/JIT.h"
+
+#include "display_sleep_control.h"
 
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
 #endif
 
-utils::typemap g_typemap{nullptr};
+stx::manual_fixed_typemap<void> g_fixed_typemap;
 
 cfg_root g_cfg;
 
@@ -54,15 +54,11 @@ bool g_use_rtm;
 
 std::string g_cfg_defaults;
 
-extern atomic_t<u32> g_thread_count;
-
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void ppu_initialize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
-
-extern void network_thread_init();
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -125,9 +121,6 @@ void fmt_class_string<video_renderer>::format(std::string& out, u64 arg)
 		case video_renderer::null: return "Null";
 		case video_renderer::opengl: return "OpenGL";
 		case video_renderer::vulkan: return "Vulkan";
-#ifdef _MSC_VER
-		case video_renderer::dx12: return "D3D12";
-#endif
 		}
 
 		return unknown;
@@ -315,19 +308,33 @@ void Emulator::Init()
 
 	if (!g_tty)
 	{
-		g_tty.open(fs::get_cache_dir() + "TTY.log", fs::rewrite + fs::append);
+		const auto tty_path = fs::get_cache_dir() + "TTY.log";
+		g_tty.open(tty_path, fs::rewrite + fs::append);
+
+		if (!g_tty)
+		{
+			LOG_FATAL(GENERAL, "Failed to create TTY log: %s (%s)", tty_path, fs::g_tls_error);
+		}
 	}
 
 	idm::init();
-	fxm::init();
-	g_idm->init();
+	g_fxo->reset();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Reload global configuration
-	g_cfg.from_string(fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::create).to_string());
+	const auto cfg_path = fs::get_config_dir() + "/config.yml";
+
+	if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
+	{
+		g_cfg.from_string(cfg_file.to_string());
+	}
+	else
+	{
+		LOG_FATAL(GENERAL, "Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
+	}
 
 	// Create directories (can be disabled if necessary)
 	const std::string emu_dir = GetEmuDir();
@@ -335,37 +342,85 @@ void Emulator::Init()
 	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
 	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
 
+	auto make_path_verbose = [](const std::string& path)
+	{
+		if (!fs::create_path(path))
+		{
+			LOG_FATAL(GENERAL, "Failed to create path: %s (%s)", path, fs::g_tls_error);
+		}
+	};
+
+	const std::string save_path = dev_hdd0 + "home/" + m_usr + "/savedata/";
+
 	if (g_cfg.vfs.init_dirs)
 	{
-		fs::create_path(dev_hdd0);
-		fs::create_path(dev_hdd1);
-		fs::create_path(dev_usb);
-		fs::create_dir(dev_hdd0 + "game/");
-		fs::create_dir(dev_hdd0 + "game/TEST12345/");
-		fs::create_dir(dev_hdd0 + "game/TEST12345/USRDIR/");
-		fs::create_dir(dev_hdd0 + "game/.locks/");
-		fs::create_dir(dev_hdd0 + "home/");
-		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/");
-		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/exdata/");
-		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/savedata/");
-		fs::create_dir(dev_hdd0 + "home/" + m_usr + "/trophy/");
-		fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s);
-		fs::create_dir(dev_hdd0 + "disc/");
-		fs::create_dir(dev_hdd0 + "savedata/");
-		fs::create_dir(dev_hdd0 + "savedata/vmc/");
-		fs::create_dir(dev_hdd1 + "cache/");
-		fs::create_dir(dev_hdd1 + "game/");
+		make_path_verbose(dev_hdd0);
+		make_path_verbose(dev_hdd1);
+		make_path_verbose(dev_usb);
+		make_path_verbose(dev_hdd0 + "game/");
+		make_path_verbose(dev_hdd0 + "game/TEST12345/");
+		make_path_verbose(dev_hdd0 + "game/TEST12345/USRDIR/");
+		make_path_verbose(dev_hdd0 + "game/.locks/");
+		make_path_verbose(dev_hdd0 + "home/");
+		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/");
+		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/");
+		make_path_verbose(save_path);
+		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/trophy/");
+
+		if (!fs::write_file(dev_hdd0 + "home/" + m_usr + "/localusername", fs::create + fs::excl + fs::write, "User"s))
+		{
+			if (fs::g_tls_error != fs::error::exist)
+			{
+				LOG_FATAL(GENERAL, "Failed to create file: %shome/%s/localusername (%s)", dev_hdd0, m_usr, fs::g_tls_error);
+			}
+		}
+
+		make_path_verbose(dev_hdd0 + "disc/");
+		make_path_verbose(dev_hdd0 + "savedata/");
+		make_path_verbose(dev_hdd0 + "savedata/vmc/");
+		make_path_verbose(dev_hdd1 + "cache/");
+		make_path_verbose(dev_hdd1 + "game/");
 	}
 
-	fs::create_path(fs::get_cache_dir() + "shaderlog/");
-	fs::create_path(fs::get_config_dir() + "captures/");
+	// Fixup savedata
+	for (const auto& entry : fs::dir(save_path))
+	{
+		if (entry.is_directory && entry.name.compare(0, 8, ".backup_", 8) == 0)
+		{
+			const std::string desired = entry.name.substr(8);
+			const std::string pending = save_path + ".working_" + desired;
 
-#ifdef WITH_GDB_DEBUGGER
-	LOG_SUCCESS(GENERAL, "GDB debug server will be started and listening on %d upon emulator boot", (int)g_cfg.misc.gdb_server_port);
-#endif
+			if (fs::is_dir(pending))
+			{
+				// Finalize interrupted saving
+				if (!fs::rename(pending, save_path + desired, false))
+				{
+					LOG_FATAL(GENERAL, "Failed to fix save data: %s (%s)", pending, fs::g_tls_error);
+					continue;
+				}
+				else
+				{
+					LOG_SUCCESS(GENERAL, "Fixed save data: %s", desired);
+				}
+			}
+
+			// Remove pending backup data
+			if (!fs::remove_all(save_path + entry.name))
+			{
+				LOG_FATAL(GENERAL, "Failed to remove save data backup: %s%s (%s)", save_path, entry.name, fs::g_tls_error);
+			}
+			else
+			{
+				LOG_SUCCESS(GENERAL, "Removed save data backup: %s%s", save_path, entry.name);
+			}
+		}
+	}
+
+	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
+	make_path_verbose(fs::get_config_dir() + "captures/");
 
 	// Initialize patch engine
-	fxm::make_always<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
+	g_fxo->init<patch_engine>()->append(fs::get_config_dir() + "/patch.yml");
 
 	// Initialize progress dialog server (TODO)
 	if (g_progr.exchange("") == nullptr)
@@ -541,11 +596,12 @@ const std::string Emulator::GetBackgroundPicturePath() const
 
 std::string Emulator::PPUCache() const
 {
-	const auto _main = fxm::check_unlocked<ppu_module>();
+	const auto _main = g_fxo->get<ppu_module>();
 
 	if (!_main || _main->cache.empty())
 	{
-		fmt::throw_exception("PPU Cache location not initialized.");
+		LOG_WARNING(PPU, "PPU Cache location not initialized.");
+		return {};
 	}
 
 	return _main->cache;
@@ -578,21 +634,19 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
+	g_fxo->init();
 
 	// PS3 'executable'
 	m_state = system_state::ready;
 	GetCallbacks().on_ready();
 
-	auto gsrender = fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render);
-	auto padhandler = fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler, "");
-
-	if (gsrender.get() == nullptr || padhandler.get() == nullptr)
-		return false;
+	Emu.GetCallbacks().init_gs_render();
+	Emu.GetCallbacks().init_pad_handler("");
 
 	GetCallbacks().on_run();
 	m_state = system_state::running;
 
-	fxm::make<named_thread<rsx::rsx_replay_thread>>("RSX Replay", std::move(frame));
+	g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay"sv, std::move(frame));
 
 	return true;
 }
@@ -944,6 +998,9 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		m_title_id = psf::get_string(_psf, "TITLE_ID");
 		m_cat = psf::get_string(_psf, "CATEGORY");
 
+		std::string version_app  = psf::get_string(_psf, "APP_VER", "Unknown");
+		std::string version_disc = psf::get_string(_psf, "VERSION", "Unknown");
+
 		if (!_psf.empty() && m_cat.empty())
 		{
 			LOG_FATAL(LOADER, "Corrupted PARAM.SFO found! Assuming category GD. Try reinstalling the game.");
@@ -953,6 +1010,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		LOG_NOTICE(LOADER, "Title: %s", GetTitle());
 		LOG_NOTICE(LOADER, "Serial: %s", GetTitleID());
 		LOG_NOTICE(LOADER, "Category: %s", GetCat());
+		LOG_NOTICE(LOADER, "Version: %s / %s", version_app, version_disc);
 
 		if (!force_global_config)
 		{
@@ -999,7 +1057,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		}
 
 		// Load patches from different locations
-		fxm::check_unlocked<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
+		g_fxo->get<patch_engine>()->append(fs::get_config_dir() + "data/" + m_title_id + "/patch.yml");
 
 		// Mount all devices
 		const std::string emu_dir = GetEmuDir();
@@ -1020,6 +1078,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
+			g_fxo->init();
 			Run();
 			m_force_boot = false;
 
@@ -1087,6 +1146,8 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 				g_progr = "Compiling PPU modules";
 
+				atomic_t<u32> worker_count = 0;
+
 				for (std::size_t i = 0; i < file_queue.size(); i++)
 				{
 					const auto& path = file_queue[i].first;
@@ -1108,16 +1169,19 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 					{
 						if (auto prx = ppu_load_prx(obj, path))
 						{
-							while (g_thread_count >= max_threads + 2)
+							worker_count++;
+
+							while (worker_count > max_threads)
 							{
 								std::this_thread::sleep_for(10ms);
 							}
 
-							thread_queue.emplace("Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx)]
+							thread_queue.emplace("Worker " + std::to_string(thread_queue.size()), [_prx = std::move(prx), &worker_count]
 							{
 								ppu_initialize(*_prx);
 								ppu_unload_prx(*_prx);
 								g_progr_fdone++;
+								worker_count--;
 							});
 
 							continue;
@@ -1490,9 +1554,9 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				LOG_NOTICE(LOADER, "Elf path: %s", argv[0]);
 			}
 
-			ppu_load_exec(ppu_exec);
+			const auto _main = g_fxo->init<ppu_module>();
 
-			const auto _main = fxm::get<ppu_module>();
+			ppu_load_exec(ppu_exec);
 
 			_main->cache = fs::get_cache_dir() + "cache/";
 
@@ -1514,9 +1578,11 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				LOG_NOTICE(LOADER, "Cache: %s", _main->cache);
 			}
 
-			fxm::import<GSRender>(Emu.GetCallbacks().get_gs_render); // TODO: must be created in appropriate sys_rsx syscall
-			fxm::import<pad_thread>(Emu.GetCallbacks().get_pad_handler, m_title_id);
-			network_thread_init();
+			g_fxo->init();
+			Emu.GetCallbacks().init_gs_render();
+			Emu.GetCallbacks().init_pad_handler(m_title_id);
+			Emu.GetCallbacks().init_kb_handler();
+			Emu.GetCallbacks().init_mouse_handler();
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
@@ -1524,6 +1590,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
+			g_fxo->init();
 			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
@@ -1532,6 +1599,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
+			g_fxo->init();
 			spu_load_exec(spu_exec);
 		}
 		else
@@ -1593,10 +1661,10 @@ void Emulator::Run()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 
-#ifdef WITH_GDB_DEBUGGER
-	// Initialize debug server at the end of emu run sequence
-	fxm::make<GDBDebugServer>();
-#endif
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		disable_display_sleep();
+	}
 }
 
 bool Emulator::Pause()
@@ -1608,6 +1676,9 @@ bool Emulator::Pause()
 	{
 		return m_state.compare_and_swap_test(system_state::ready, system_state::paused);
 	}
+
+	// Signal profilers to print results (if enabled)
+	cpu_thread::flush_profilers();
 
 	GetCallbacks().on_pause();
 
@@ -1624,6 +1695,12 @@ bool Emulator::Pause()
 
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		enable_display_sleep();
+	}
+
 	return true;
 }
 
@@ -1689,6 +1766,11 @@ void Emulator::Resume()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 	GetCallbacks().on_resume();
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		disable_display_sleep();
+	}
 }
 
 void Emulator::Stop(bool restart)
@@ -1704,40 +1786,17 @@ void Emulator::Stop(bool restart)
 		return;
 	}
 
-	const bool do_exit = !restart && !m_force_boot && g_cfg.misc.autoexit;
+	const bool full_stop = !restart && !m_force_boot;
+	const bool do_exit   = full_stop && g_cfg.misc.autoexit;
 
 	LOG_NOTICE(GENERAL, "Stopping emulator...");
 
 	GetCallbacks().on_stop();
 
-#ifdef WITH_GDB_DEBUGGER
-	//fxm for some reason doesn't call on_stop
-	fxm::get<GDBDebugServer>()->on_stop();
-	fxm::remove<GDBDebugServer>();
-#endif
-
-	auto on_select = [&](u32, cpu_thread& cpu)
-	{
-		cpu.state += cpu_flag::dbg_global_stop;
-		cpu.notify();
-	};
-
-	idm::select<named_thread<ppu_thread>>(on_select);
-	idm::select<named_thread<spu_thread>>(on_select);
-
-	LOG_NOTICE(GENERAL, "All threads signaled...");
-
-	while (g_thread_count)
-	{
-		std::this_thread::sleep_for(10ms);
-	}
-
-	LOG_NOTICE(GENERAL, "All threads stopped...");
-
+	cpu_thread::stop_all();
+	g_fxo->reset();
 	lv2_obj::cleanup();
 	idm::clear();
-	fxm::clear();
-	g_idm->init();
 
 	LOG_NOTICE(GENERAL, "Objects cleared...");
 
@@ -1745,10 +1804,14 @@ void Emulator::Stop(bool restart)
 
 	if (do_exit)
 	{
-		GetCallbacks().exit();
+		GetCallbacks().exit(true);
 	}
 	else
 	{
+		if (full_stop)
+		{
+			GetCallbacks().exit(false);
+		}
 		Init();
 	}
 
@@ -1771,6 +1834,11 @@ void Emulator::Stop(bool restart)
 	klic.clear();
 
 	m_force_boot = false;
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		enable_display_sleep();
+	}
 }
 
 std::string cfg_root::node_vfs::get(const cfg::string& _cfg, const char* _def) const

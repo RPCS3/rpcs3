@@ -6,6 +6,8 @@
 #include "TextureUtils.h"
 #include "../rsx_utils.h"
 
+#define ENABLE_SURFACE_CACHE_DEBUG 0
+
 namespace rsx
 {
 	enum surface_state_flags : u32
@@ -30,22 +32,8 @@ namespace rsx
 		bool is_depth = false;
 		bool is_clipped = false;
 
-		u16 src_x = 0;
-		u16 src_y = 0;
-		u16 dst_x = 0;
-		u16 dst_y = 0;
-		u16 width = 0;
-		u16 height = 0;
-
-		areai get_src_area() const
-		{
-			return coordi{ {src_x, src_y}, {width, height} };
-		}
-
-		areai get_dst_area() const
-		{
-			return coordi{ {dst_x, dst_y}, {width, height} };
-		}
+		coordu src_area;
+		coordu dst_area;
 	};
 
 	template <typename surface_type>
@@ -128,7 +116,13 @@ namespace rsx
 	struct render_target_descriptor
 	{
 		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
-		std::array<std::pair<u32, u64>, 5> memory_tag_samples;
+		u32 base_addr = 0;
+
+#if (ENABLE_SURFACE_CACHE_DEBUG)
+		u64 memory_hash = 0;
+#else
+		std::array<std::pair<u32, u64>, 3> memory_tag_samples;
+#endif
 
 		std::vector<deferred_clipped_region<image_storage_type>> old_contents;
 
@@ -140,6 +134,8 @@ namespace rsx
 		u8  spp = 1;
 		u8  samples_x = 1;
 		u8  samples_y = 1;
+
+		format_type format_class = format_type::color;
 
 		std::unique_ptr<typename std::remove_pointer<image_storage_type>::type> resolve_surface;
 		surface_sample_layout sample_layout = surface_sample_layout::null;
@@ -271,14 +267,27 @@ namespace rsx
 			format_info.gcm_depth_format = format;
 		}
 
-		rsx::surface_color_format get_surface_color_format()
+		void set_depth_render_mode(bool integer)
+		{
+			if (is_depth_surface())
+			{
+				format_class = (integer) ? format_type::depth_uint : format_type::depth_float;
+			}
+		}
+
+		rsx::surface_color_format get_surface_color_format() const
 		{
 			return format_info.gcm_color_format;
 		}
 
-		rsx::surface_depth_format get_surface_depth_format()
+		rsx::surface_depth_format get_surface_depth_format() const
 		{
 			return format_info.gcm_depth_format;
+		}
+
+		rsx::format_type get_format_type() const
+		{
+			return format_class;
 		}
 
 		bool dirty() const
@@ -286,27 +295,109 @@ namespace rsx
 			return (state_flags != rsx::surface_state_flags::ready) || !old_contents.empty();
 		}
 
-		bool test() const
+		bool write_through() const
 		{
-			if (dirty())
+			return (state_flags & rsx::surface_state_flags::erase_bkgnd) && old_contents.empty();
+		}
+
+#if (ENABLE_SURFACE_CACHE_DEBUG)
+		u64 hash_block() const
+		{
+			const auto padding = (rsx_pitch - native_pitch) / 8;
+			const auto row_length = (native_pitch) / 8;
+			auto num_rows = (surface_height * samples_y);
+			auto ptr = reinterpret_cast<u64*>(vm::g_sudo_addr + base_addr);
+
+			auto col = row_length;
+			u64 result = 0;
+
+			while (num_rows--)
 			{
-				// TODO
-				// Should RCB or mem-sync (inherit previous mem) to init memory
-				LOG_TODO(RSX, "Resource used before memory initialization");
+				while (col--)
+				{
+					result ^= *ptr++;
+				}
+
+				ptr += padding;
+				col = row_length;
 			}
 
-			// Tags are tested in an X pattern
-			for (const auto &tag : memory_tag_samples)
-			{
-				if (!tag.first)
-					break;
+			return result;
+		}
 
-				if (tag.second != *reinterpret_cast<u64*>(vm::g_sudo_addr + tag.first))
+		void queue_tag(u32 address)
+		{
+			base_addr = address;
+		}
+
+		void sync_tag()
+		{
+			memory_hash = hash_block();
+		}
+
+		void shuffle_tag()
+		{
+			memory_hash = ~memory_hash;
+		}
+
+		bool test() const
+		{
+			return hash_block() == memory_hash;
+		}
+
+#else
+		void queue_tag(u32 address)
+		{
+			verify(HERE), native_pitch, rsx_pitch;
+
+			base_addr = address;
+
+			const u32 size_x = (native_pitch > 8)? (native_pitch - 8) : 0u;
+			const u32 size_y = u32(surface_height * samples_y) - 1u;
+			const position2u samples[] =
+			{
+				// NOTE: Sorted by probability to catch dirty flag
+				{0, 0},
+				{size_x, size_y},
+				{size_x / 2, size_y / 2},
+
+				// Auxilliary, highly unlikely to ever catch anything
+				// NOTE: Currently unused as length of samples is truncated to 3
+				{size_x, 0},
+				{0, size_y},
+			};
+
+			for (int n = 0; n < memory_tag_samples.size(); ++n)
+			{
+				const auto sample_offset = (samples[n].y * rsx_pitch) + samples[n].x;
+				memory_tag_samples[n].first = (sample_offset + base_addr);
+			}
+		}
+
+		void sync_tag()
+		{
+			for (auto &e : memory_tag_samples)
+			{
+				e.second = *reinterpret_cast<u64*>(vm::g_sudo_addr + e.first);
+			}
+		}
+
+		void shuffle_tag()
+		{
+			memory_tag_samples[0].second = memory_tag_samples[0].second;
+		}
+
+		bool test()
+		{
+			for (auto &e : memory_tag_samples)
+			{
+				if (e.second != *reinterpret_cast<u64*>(vm::g_sudo_addr + e.first))
 					return false;
 			}
 
 			return true;
 		}
+#endif
 
 		void clear_rw_barrier()
 		{
@@ -415,51 +506,6 @@ namespace rsx
 			}
 		}
 
-		void queue_tag(u32 address)
-		{
-			for (unsigned i = 0; i < memory_tag_samples.size(); ++i)
-			{
-				if (LIKELY(i))
-					memory_tag_samples[i].first = 0;
-				else
-					memory_tag_samples[i].first = address; // Top left
-			}
-
-			const u32 pitch = get_native_pitch();
-			if (UNLIKELY(pitch < 16))
-			{
-				// Not enough area to gather samples if pitch is too small
-				return;
-			}
-
-			// Top right corner
-			memory_tag_samples[1].first = address + pitch - 8;
-
-			if (const u32 h = get_surface_height(); h > 1)
-			{
-				// Last row
-				const u32 pitch2 = get_rsx_pitch();
-				const u32 last_row_offset = pitch2 * (h - 1);
-				memory_tag_samples[2].first = address + last_row_offset;              // Bottom left corner
-				memory_tag_samples[3].first = address + last_row_offset + pitch - 8;  // Bottom right corner
-
-				// Centroid
-				const u32 center_row_offset = pitch2 * (h / 2);
-				memory_tag_samples[4].first = address + center_row_offset + pitch / 2;
-			}
-		}
-
-		void sync_tag()
-		{
-			for (auto &tag : memory_tag_samples)
-			{
-				if (!tag.first)
-					break;
-
-				tag.second = *reinterpret_cast<u64*>(vm::g_sudo_addr + tag.first);
-			}
-		}
-
 		void on_write(u64 write_tag = 0, rsx::surface_state_flags resolve_flags = surface_state_flags::require_resolve)
 		{
 			if (write_tag)
@@ -516,7 +562,8 @@ namespace rsx
 		rsx::address_range get_memory_range() const
 		{
 			const u32 internal_height = get_surface_height(rsx::surface_metrics::samples);
-			return rsx::address_range::start_length(memory_tag_samples[0].first, internal_height * get_rsx_pitch());
+			const u32 excess = (rsx_pitch - native_pitch);
+			return rsx::address_range::start_length(base_addr, internal_height * rsx_pitch - excess);
 		}
 
 		template <typename T>

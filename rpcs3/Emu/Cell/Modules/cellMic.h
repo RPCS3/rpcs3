@@ -62,6 +62,15 @@ enum CellMicDeviceAttr : u32
 	CELLMIC_DEVATTR_DSPTYPE = 302,
 };
 
+enum CellMicSignalAttr : u32
+{
+	CELLMIC_SIGATTR_BKNGAIN,
+	CELLMIC_SIGATTR_REVERB,
+	CELLMIC_SIGATTR_AGCLEVEL,
+	CELLMIC_SIGATTR_VOLUME,
+	CELLMIC_SIGATTR_PITCHSHIFT
+};
+
 enum CellMicSignalType : u8
 {
 	CELLMIC_SIGTYPE_NULL = 0,
@@ -252,6 +261,11 @@ public:
 	u64 event_queue_key = 0;
 
 	std::unordered_map<u8, microphone_device> mic_list;
+
+	shared_mutex mutex;
+	atomic_t<u32> init = 0;
+
+	static constexpr auto thread_name = "Microphone Thread"sv;
 
 protected:
 	const u64 start_time = get_guest_system_time();

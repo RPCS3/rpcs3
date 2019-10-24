@@ -321,9 +321,6 @@ public:
 
 class cell_audio_thread
 {
-	vm::ptr<char> m_buffer;
-	vm::ptr<u64> m_indexes;
-
 	std::unique_ptr<audio_ringbuffer> ringbuffer;
 
 	void reset_ports(s32 offset = 0);
@@ -341,6 +338,9 @@ class cell_audio_thread
 public:
 	cell_audio_config cfg;
 
+	shared_mutex mutex;
+	atomic_t<u32> init = 0;
+
 	std::vector<u64> keys;
 	std::array<audio_port, AUDIO_PORT_COUNT> ports;
 
@@ -352,16 +352,8 @@ public:
 
 	void operator()();
 
-	cell_audio_thread(vm::ptr<char> buf, vm::ptr<u64> ind)
-		: m_buffer(buf)
-		, m_indexes(ind)
+	cell_audio_thread()
 	{
-		for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
-		{
-			ports[i].number = i;
-			ports[i].addr   = m_buffer + AUDIO_PORT_OFFSET * i;
-			ports[i].index  = m_indexes + i;
-		}
 	}
 
 	audio_port* open_port()
@@ -381,6 +373,8 @@ public:
 	{
 		return ringbuffer->has_capability(cap);
 	}
+
+	static constexpr auto thread_name = "cellAudio Thread"sv;
 };
 
 using cell_audio = named_thread<cell_audio_thread>;

@@ -1,8 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/BEType.h"
 
-enum
+enum CellMouseError : u32
 {
 	CELL_MOUSE_ERROR_FATAL                      = 0x80121201,
 	CELL_MOUSE_ERROR_INVALID_PARAMETER          = 0x80121202,

@@ -13,14 +13,6 @@
 
 #include <QMessageBox>
 
-#ifdef _MSC_VER
-#include <Windows.h>
-#undef GetHwnd
-#include <d3d12.h>
-#include <wrl/client.h>
-#include <dxgi1_4.h>
-#endif
-
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKHelpers.h"
 #endif
@@ -124,36 +116,6 @@ static QStringList getOptions(cfg_location location)
 
 emu_settings::Render_Creator::Render_Creator()
 {
-	// check for dx12 adapters
-#ifdef _MSC_VER
-	HMODULE D3D12Module = LoadLibrary(L"d3d12.dll");
-
-	if (D3D12Module != NULL)
-	{
-		Microsoft::WRL::ComPtr<IDXGIAdapter1> pAdapter;
-		Microsoft::WRL::ComPtr<IDXGIFactory1> dxgi_factory;
-		if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory))))
-		{
-			PFN_D3D12_CREATE_DEVICE wrapD3D12CreateDevice = (PFN_D3D12_CREATE_DEVICE)GetProcAddress(D3D12Module, "D3D12CreateDevice");
-			if (wrapD3D12CreateDevice != nullptr)
-			{
-				for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != dxgi_factory->EnumAdapters1(adapterIndex, pAdapter.ReleaseAndGetAddressOf()); ++adapterIndex)
-				{
-					if (SUCCEEDED(wrapD3D12CreateDevice(pAdapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
-					{
-						//A device with D3D12 support found. Init data
-						supportsD3D12 = true;
-
-						DXGI_ADAPTER_DESC desc;
-						if (SUCCEEDED(pAdapter->GetDesc(&desc)))
-							D3D12Adapters.append(QString::fromWCharArray(desc.Description));
-					}
-				}
-			}
-		}
-	}
-#endif
-
 #if defined(WIN32) || defined(HAVE_VULKAN)
 	// Some drivers can get stuck when checking for vulkan-compatible gpus, f.ex. if they're waiting for one to get
 	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
@@ -226,12 +188,11 @@ emu_settings::Render_Creator::Render_Creator()
 #endif
 
 	// Graphics Adapter
-	D3D12 = Render_Info(name_D3D12, D3D12Adapters, supportsD3D12, emu_settings::D3D12Adapter);
 	Vulkan = Render_Info(name_Vulkan, vulkanAdapters, supportsVulkan, emu_settings::VulkanAdapter);
 	OpenGL = Render_Info(name_OpenGL);
 	NullRender = Render_Info(name_Null);
 
-	renderers = { &D3D12, &Vulkan, &OpenGL, &NullRender };
+	renderers = { &Vulkan, &OpenGL, &NullRender };
 }
 
 emu_settings::Microphone_Creator::Microphone_Creator()

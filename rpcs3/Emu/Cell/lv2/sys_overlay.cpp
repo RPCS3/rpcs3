@@ -26,7 +26,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 		src.open(path);
 	}
 
-	const ppu_exec_object obj = decrypt_self(std::move(src), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	const ppu_exec_object obj = decrypt_self(std::move(src), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
 
 	if (obj != elf_error::ok)
 	{

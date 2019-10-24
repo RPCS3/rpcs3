@@ -139,7 +139,7 @@ bool ALSABackend::AddData(const void* src, u32 num_samples)
 		return false;
 	}
 
-	if (false)
+	if (res < 0)
 	{
 		res = snd_pcm_recover(tls_handle, res, 0);
 
@@ -149,7 +149,7 @@ bool ALSABackend::AddData(const void* src, u32 num_samples)
 			return false;
 		}
 
-		res = snd_pcm_writei(tls_handle, src, num_frames);
+		return false;
 	}
 
 	if (res != num_frames)

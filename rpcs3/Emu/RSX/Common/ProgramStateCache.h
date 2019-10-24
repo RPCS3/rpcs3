@@ -228,8 +228,12 @@ protected:
 		}
 
 		LOG_NOTICE(RSX, "FP not found in buffer!");
+
 		void* fragment_program_ucode_copy = malloc(rsx_fp.ucode_length);
+
+		verify("malloc() failed!" HERE), fragment_program_ucode_copy;
 		std::memcpy(fragment_program_ucode_copy, rsx_fp.addr, rsx_fp.ucode_length);
+
 		RSXFragmentProgram new_fp_key = rsx_fp;
 		new_fp_key.addr = fragment_program_ucode_copy;
 		fragment_program_type &new_shader = m_fragment_shader_cache[new_fp_key];

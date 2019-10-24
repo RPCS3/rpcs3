@@ -14,7 +14,7 @@ constexpr u32 EDAT_FLAG_0x10 = 0x00000010;
 constexpr u32 EDAT_FLAG_0x20 = 0x00000020;
 constexpr u32 EDAT_DEBUG_DATA_FLAG = 0x80000000;
 
-struct LoadedNpdrmKeys_t
+struct loaded_npdrm_keys
 {
 	std::array<u8, 0x10> devKlic{};
 	std::array<u8, 0x10> rifKey{};
@@ -77,7 +77,7 @@ public:
 		: edata_file(std::move(input)), rif_key(rif_key), dev_key(dev_key) {}
 
 	~EDATADecrypter() override {}
-	// false if invalid 
+	// false if invalid
 	bool ReadHeader();
 	u64 ReadData(u64 pos, u8* data, u64 size);
 
@@ -92,7 +92,7 @@ public:
 		stats.mtime = -1;
 		return stats;
 	}
-	bool trunc(u64 length) override 
+	bool trunc(u64 length) override
 	{
 		return true;
 	}

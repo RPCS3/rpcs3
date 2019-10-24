@@ -149,7 +149,7 @@ struct ppu_linkage_info
 };
 
 // Initialize static modules.
-static void ppu_initialize_modules(const std::shared_ptr<ppu_linkage_info>& link)
+static void ppu_initialize_modules(ppu_linkage_info* link)
 {
 	if (!link->modules.empty())
 	{
@@ -474,7 +474,7 @@ struct ppu_prx_module_info
 };
 
 // Load and register exports; return special exports found (nameless module)
-static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 exports_start, u32 exports_end)
+static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end)
 {
 	std::unordered_map<u32, u32> result;
 
@@ -631,7 +631,7 @@ static auto ppu_load_exports(const std::shared_ptr<ppu_linkage_info>& link, u32 
 	return result;
 }
 
-static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, const std::shared_ptr<ppu_linkage_info>& link, u32 imports_start, u32 imports_end)
+static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
 {
 	std::unordered_map<u32, void*> result;
 
@@ -724,7 +724,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->get<ppu_linkage_info>();
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
@@ -982,17 +982,17 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = g_fxo->get<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "PRX library hash: %s (<- %u)", hash, applied);
 
-	if (Emu.IsReady() && fxm::import<ppu_module>([&] { return prx; }))
+	if (Emu.IsReady() && g_fxo->get<ppu_module>()->segs.empty())
 	{
 		// Special loading mode
 		ppu_thread_params p{};
@@ -1043,10 +1043,10 @@ void ppu_unload_prx(const lv2_prx& prx)
 void ppu_load_exec(const ppu_exec_object& elf)
 {
 	// Set for delayed initialization in ppu_initialize()
-	const auto _main = fxm::make<ppu_module>();
+	const auto _main = g_fxo->get<ppu_module>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->init<ppu_linkage_info>();
 
 	// TLS information
 	u32 tls_vaddr = 0;
@@ -1135,12 +1135,12 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = g_fxo->get<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "PPU executable hash: %s (<- %u)", hash, applied);
@@ -1151,7 +1151,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Static HLE patching
 	if (g_cfg.core.hook_functions)
 	{
-		auto shle = fxm::get_always<statichle_handler>();
+		auto shle = g_fxo->init<statichle_handler>(0);
 
 		for (u32 i = _main->segs[0].addr; i < (_main->segs[0].addr + _main->segs[0].size); i += 4)
 		{
@@ -1469,7 +1469,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		mem_size += 0xC000000;
 	}
 
-	fxm::make_always<lv2_memory_container>(mem_size);
+	g_fxo->init<lv2_memory_container>(mem_size);
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
@@ -1529,7 +1529,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	const auto ovlm = idm::make_ptr<lv2_obj, lv2_overlay>();
 
 	// Access linkage information object
-	const auto link = fxm::get_always<ppu_linkage_info>();
+	const auto link = g_fxo->get<ppu_linkage_info>();
 
 	// Executable hash
 	sha1_context sha;
@@ -1606,12 +1606,12 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::g_base_addr);
+	auto applied = g_fxo->get<patch_engine>()->apply(hash, vm::g_base_addr);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
 	LOG_NOTICE(LOADER, "OVL executable hash: %s (<- %u)", hash, applied);

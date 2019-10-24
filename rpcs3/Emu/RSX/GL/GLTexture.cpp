@@ -1,12 +1,13 @@
 ﻿#include "stdafx.h"
 #include "GLTexture.h"
+#include "GLCompute.h"
 #include "../GCM.h"
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
 
 namespace gl
 {
-	static buffer g_typeless_transfer_buffer;
+	buffer g_typeless_transfer_buffer;
 
 	GLenum get_target(rsx::texture_dimension_extended type)
 	{
@@ -90,43 +91,43 @@ namespace gl
 		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
 	}
 
-	std::tuple<GLenum, GLenum, bool> get_format_type(texture::internal_format format)
+	pixel_buffer_layout get_format_type(texture::internal_format format)
 	{
 		switch (format)
 		{
 		case texture::internal_format::compressed_rgba_s3tc_dxt1:
 		case texture::internal_format::compressed_rgba_s3tc_dxt3:
 		case texture::internal_format::compressed_rgba_s3tc_dxt5:
-			return std::make_tuple(GL_RGBA, GL_UNSIGNED_BYTE, false);
+			return { GL_RGBA, GL_UNSIGNED_BYTE, 1, false };
 		case texture::internal_format::r8:
-			return std::make_tuple(GL_RED, GL_UNSIGNED_BYTE, false);
+			return { GL_RED, GL_UNSIGNED_BYTE, 1, false };
 		case texture::internal_format::r16:
-			return std::make_tuple(GL_RED, GL_UNSIGNED_SHORT, true);
+			return { GL_RED, GL_UNSIGNED_SHORT, 2, true };
 		case texture::internal_format::r32f:
-			return std::make_tuple(GL_RED, GL_FLOAT, true);
+			return { GL_RED, GL_FLOAT, 4, true };
 		case texture::internal_format::rg8:
-			return std::make_tuple(GL_RG, GL_UNSIGNED_BYTE, false);
+			return { GL_RG, GL_UNSIGNED_BYTE, 1, false };
 		case texture::internal_format::rg16:
-			return std::make_tuple(GL_RG, GL_UNSIGNED_SHORT, true);
+			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
 		case texture::internal_format::rg16f:
-			return std::make_tuple(GL_RG, GL_HALF_FLOAT, true);
+			return { GL_RG, GL_HALF_FLOAT, 2, true };
 		case texture::internal_format::rgb565:
-			return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_6_5, true);
+			return { GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, true };
 		case texture::internal_format::rgb5a1:
-			return std::make_tuple(GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, true);
+			return { GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, 2, true };
 		case texture::internal_format::rgba4:
-			return std::make_tuple(GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, false);
+			return { GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false };
 		case texture::internal_format::rgba8:
-			return std::make_tuple(GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, false);
+			return { GL_BGRA, GL_UNSIGNED_INT_8_8_8_8, 4, false };
 		case texture::internal_format::rgba16f:
-			return std::make_tuple(GL_RGBA, GL_HALF_FLOAT, true);
+			return { GL_RGBA, GL_HALF_FLOAT, 2, true };
 		case texture::internal_format::rgba32f:
-			return std::make_tuple(GL_RGBA, GL_FLOAT, true);
+			return { GL_RGBA, GL_FLOAT, 4, true };
 		case texture::internal_format::depth16:
-			return std::make_tuple(GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, true);
+			return { GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, 2, true };
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
-			return std::make_tuple(GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, true);
+			return { GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true };
 		default:
 			fmt::throw_exception("Unexpected internal format 0x%X" HERE, (u32)format);
 		}
@@ -258,8 +259,8 @@ namespace gl
 		{
 			set_parameteri(GL_TEXTURE_MIN_FILTER, tex_min_filter(tex.min_filter()));
 			set_parameterf(GL_TEXTURE_LOD_BIAS, tex.bias());
-			set_parameteri(GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-			set_parameteri(GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+			set_parameterf(GL_TEXTURE_MIN_LOD, tex.min_lod());
+			set_parameterf(GL_TEXTURE_MAX_LOD, tex.max_lod());
 		}
 
 		const bool aniso_override = !g_cfg.video.strict_rendering_mode && g_cfg.video.anisotropic_level_override > 0;
@@ -306,8 +307,8 @@ namespace gl
 		set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		set_parameterf(GL_TEXTURE_LOD_BIAS, tex.bias());
-		set_parameteri(GL_TEXTURE_MIN_LOD, (tex.min_lod() >> 8));
-		set_parameteri(GL_TEXTURE_MAX_LOD, (tex.max_lod() >> 8));
+		set_parameterf(GL_TEXTURE_MIN_LOD, tex.min_lod());
+		set_parameterf(GL_TEXTURE_MAX_LOD, tex.max_lod());
 		set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 
@@ -370,7 +371,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_R5G5B5A1:
 		case CELL_GCM_TEXTURE_R6G5B5:
 		case CELL_GCM_TEXTURE_R5G6B5:
-		case CELL_GCM_TEXTURE_A8R8G8B8: // TODO
+		case CELL_GCM_TEXTURE_A8R8G8B8:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
@@ -458,107 +459,122 @@ namespace gl
 			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<gsl::byte>& staging_buffer)
 	{
 		int mip_level = 0;
-		bool vtc_support = gl::get_driver_caps().vendor_NVIDIA;
+		texture_uploader_capabilities caps{ true, false, 4 };
 
-		if (is_compressed_format(format))
+		pixel_unpack_settings unpack_settings;
+		unpack_settings.row_length(0).alignment(4);
+
+		if (LIKELY(is_compressed_format(format)))
 		{
 			//Compressed formats have a 4-byte alignment
 			//TODO: Verify that samplers are not affected by the padding
 			width = align(width, 4);
 			height = align(height, 4);
-		}
 
-		if (dim == rsx::texture_dimension_extended::texture_dimension_1d)
-		{
-			if (!is_compressed_format(format))
+			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
+			unpack_settings.apply();
+
+			for (const rsx_subresource_layout& layout : input_layouts)
 			{
-				for (const rsx_subresource_layout &layout : input_layouts)
+				upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
+
+				switch (dim)
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
-					glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, gl_format, gl_type, staging_buffer.data());
-				}
-			}
-			else
-			{
-				for (const rsx_subresource_layout &layout : input_layouts)
+				case rsx::texture_dimension_extended::texture_dimension_1d:
 				{
 					u32 size = layout.width_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block * 4, gl_format, size, staging_buffer.data());
+					break;
 				}
-			}
-			return;
-		}
-
-		if (dim == rsx::texture_dimension_extended::texture_dimension_2d)
-		{
-			if (!is_compressed_format(format))
-			{
-				for (const rsx_subresource_layout &layout : input_layouts)
-				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
-					glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
-				}
-			}
-			else
-			{
-				for (const rsx_subresource_layout &layout : input_layouts)
+				case rsx::texture_dimension_extended::texture_dimension_2d:
 				{
 					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
+					break;
 				}
-			}
-			return;
-		}
-
-		if (dim == rsx::texture_dimension_extended::texture_dimension_cubemap)
-		{
-			// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
-			// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
-			// mip_level % mipmap_per_layer will always be equal to mip_level
-			if (!is_compressed_format(format))
-			{
-				for (const rsx_subresource_layout &layout : input_layouts)
+				case rsx::texture_dimension_extended::texture_dimension_cubemap:
 				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
-					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
-					mip_level++;
-				}
-			}
-			else
-			{
-				for (const rsx_subresource_layout &layout : input_layouts)
-				{
+					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
+					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
+					// mip_level % mipmap_per_layer will always be equal to mip_level
 					u32 size = layout.width_in_block * layout.height_in_block * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, gl_format, size, staging_buffer.data());
 					mip_level++;
+					break;
 				}
-			}
-			return;
-		}
-
-		if (dim == rsx::texture_dimension_extended::texture_dimension_3d)
-		{
-			if (!is_compressed_format(format))
-			{
-				for (const rsx_subresource_layout &layout : input_layouts)
-				{
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
-					glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, gl_format, gl_type, staging_buffer.data());
-				}
-			}
-			else
-			{
-				for (const rsx_subresource_layout &layout : input_layouts)
+				case rsx::texture_dimension_extended::texture_dimension_3d:
 				{
 					u32 size = layout.width_in_block * layout.height_in_block * layout.depth * ((format == CELL_GCM_TEXTURE_COMPRESSED_DXT1) ? 8 : 16);
-					upload_texture_subresource(staging_buffer, layout, format, is_swizzled, vtc_support, 4);
 					glCompressedTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block * 4, layout.height_in_block * 4, layout.depth, gl_format, size, staging_buffer.data());
+					break;
+				}
+				default:
+				{
+					ASSUME(0);
+					fmt::throw_exception("Unreachable" HERE);
+				}
 				}
 			}
-			return;
+		}
+		else
+		{
+			bool apply_settings = true;
+			switch (gl_type)
+			{
+			case GL_UNSIGNED_INT_8_8_8_8:
+				// NOTE: GL_UNSIGNED_INT_8_8_8_8 is already a swapped type
+				// TODO: Remove reliance on format and type checks when compute acceleration is implemented
+				apply_settings = false;
+				break;
+			case GL_BYTE:
+			case GL_UNSIGNED_BYTE:
+				// Multi-channel format uploaded one byte at a time. This is due to poor driver support for formats like GL_UNSIGNED SHORT_8_8
+				// Do byteswapping in software for now until compute acceleration is available
+				apply_settings = (gl_format == GL_RED);
+				caps.supports_byteswap = apply_settings;
+				break;
+			default:
+				break;
+			}
+
+			if (!apply_settings)
+			{
+				unpack_settings.apply();
+			}
+
+			for (const rsx_subresource_layout& layout : input_layouts)
+			{
+				auto op = upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
+				if (apply_settings)
+				{
+					unpack_settings.swap_bytes(op.require_swap);
+					unpack_settings.apply();
+					apply_settings = false;
+				}
+
+				switch (dim)
+				{
+				case rsx::texture_dimension_extended::texture_dimension_1d:
+					glTexSubImage1D(GL_TEXTURE_1D, mip_level++, 0, layout.width_in_block, gl_format, gl_type, staging_buffer.data());
+					break;
+				case rsx::texture_dimension_extended::texture_dimension_2d:
+					glTexSubImage2D(GL_TEXTURE_2D, mip_level++, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
+					break;
+				case rsx::texture_dimension_extended::texture_dimension_cubemap:
+					// Note : input_layouts size is get_exact_mipmap_count() for non cubemap texture, and 6 * get_exact_mipmap_count() for cubemap
+					// Thus for non cubemap texture, mip_level / mipmap_per_layer will always be rounded to 0.
+					// mip_level % mipmap_per_layer will always be equal to mip_level
+					glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + mip_level / mipmap_count, mip_level % mipmap_count, 0, 0, layout.width_in_block, layout.height_in_block, gl_format, gl_type, staging_buffer.data());
+					mip_level++;
+					break;
+				case rsx::texture_dimension_extended::texture_dimension_3d:
+					glTexSubImage3D(GL_TEXTURE_3D, mip_level++, 0, 0, 0, layout.width_in_block, layout.height_in_block, depth, gl_format, gl_type, staging_buffer.data());
+					break;
+				default:
+					ASSUME(0);
+					fmt::throw_exception("Unreachable" HERE);
+				}
+			}
 		}
 	}
 
@@ -615,9 +631,6 @@ namespace gl
 		}
 
 		glBindTexture(target, id);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-		glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE);
 		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, mipmaps - 1);
 		// The rest of sampler state is now handled by sampler state objects
@@ -627,6 +640,7 @@ namespace gl
 		size_t texture_data_sz = depth * height * aligned_pitch;
 		std::vector<gsl::byte> data_upload_buf(texture_data_sz);
 
+		// TODO: GL drivers support byteswapping and this should be used instead of doing so manually
 		const auto format_type = get_format_type(gcm_format);
 		const GLenum gl_format = std::get<0>(format_type);
 		const GLenum gl_type = std::get<1>(format_type);
@@ -724,36 +738,126 @@ namespace gl
 		return false;
 	}
 
-	void copy_typeless(texture * dst, const texture * src)
+	cs_shuffle_base* get_pixel_transform_job(const pixel_buffer_layout& pack_info)
 	{
-		GLsizeiptr src_mem = src->width() * src->height();
-		GLsizeiptr dst_mem = dst->width() * dst->height();
+		const bool is_depth_stencil = (pack_info.type == GL_UNSIGNED_INT_24_8);
+		if (LIKELY(!is_depth_stencil))
+		{
+			if (!pack_info.swap_bytes)
+			{
+				return nullptr;
+			}
 
-		GLenum buffer_copy_flag = GL_STATIC_COPY;
-		if (gl::get_driver_caps().vendor_MESA) buffer_copy_flag = GL_STREAM_COPY;
-		// NOTE: Mesa lacks acceleration for PBO unpacking and is currently fastest with GL_STREAM_COPY
-		// See https://bugs.freedesktop.org/show_bug.cgi?id=111043
+			switch (pack_info.size)
+			{
+			case 1:
+				return nullptr;
+			case 2:
+				return gl::get_compute_task<gl::cs_shuffle_16>();
+				break;
+			case 4:
+				return gl::get_compute_task<gl::cs_shuffle_32>();
+				break;
+			default:
+				fmt::throw_exception("Unsupported format");
+			}
+		}
+		else
+		{
+			if (pack_info.swap_bytes)
+			{
+				return gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<true>>();
+			}
+			else
+			{
+				return gl::get_compute_task<gl::cs_shuffle_d24x8_to_x8d24<false>>();
+			}
+		}
+	}
 
-		auto max_mem = std::max(src_mem, dst_mem) * 16;
+	void copy_typeless(texture * dst, const texture * src, const coord3u& dst_region, const coord3u& src_region)
+	{
+		const u32 src_mem = src->pitch() * src_region.height;
+		const u32 dst_mem = dst->pitch() * dst_region.height;
+
+		auto max_mem = std::max(src_mem, dst_mem);
 		if (!g_typeless_transfer_buffer || max_mem > g_typeless_transfer_buffer.size())
 		{
 			if (g_typeless_transfer_buffer) g_typeless_transfer_buffer.remove();
-			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer_copy_flag);
+			g_typeless_transfer_buffer.create(buffer::target::pixel_pack, max_mem, nullptr, buffer::memory_type::local, GL_STATIC_COPY);
 		}
 
-		auto format_type = get_format_type(src->get_internal_format());
-		pixel_pack_settings pack_settings{};
-		pack_settings.swap_bytes(std::get<2>(format_type));
-		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
-		src->copy_to(nullptr, (texture::format)std::get<0>(format_type), (texture::type)std::get<1>(format_type), pack_settings);
+		const auto& caps = gl::get_driver_caps();
+		const auto pack_info = get_format_type(src->get_internal_format());
+		const auto unpack_info = get_format_type(dst->get_internal_format());
 
-		format_type = get_format_type(dst->get_internal_format());
-		pixel_unpack_settings unpack_settings{};
-		unpack_settings.swap_bytes(std::get<2>(format_type));
-		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
-		dst->copy_from(nullptr, (texture::format)std::get<0>(format_type), (texture::type)std::get<1>(format_type), unpack_settings);
+		// Start pack operation
+		g_typeless_transfer_buffer.bind(buffer::target::pixel_pack);
+
+		if (LIKELY(caps.ARB_compute_shader_supported))
+		{
+			// Raw copy
+			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, src_region, {});
+		}
+		else
+		{
+			pixel_pack_settings pack_settings{};
+			pack_settings.swap_bytes(pack_info.swap_bytes);
+			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, src_region, pack_settings);
+		}
 
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
+
+		// Start unpack operation
+		pixel_unpack_settings unpack_settings{};
+
+		if (LIKELY(caps.ARB_compute_shader_supported))
+		{
+			auto src_transform = get_pixel_transform_job(pack_info);
+			auto dst_transform = get_pixel_transform_job(unpack_info);
+
+			if (src->aspect() == gl::image_aspect::color && dst->aspect() == gl::image_aspect::color)
+			{
+				if (src_transform == dst_transform)
+				{
+					src_transform = dst_transform = nullptr;
+				}
+				else if (src_transform && dst_transform)
+				{
+					src_transform = gl::get_compute_task<cs_shuffle_32_16>();
+					dst_transform = nullptr;
+				}
+			}
+
+			const auto job_length = std::min(src_mem, dst_mem);
+			if (src_transform)
+			{
+				src_transform->run(&g_typeless_transfer_buffer, job_length);
+			}
+
+			if (dst_transform)
+			{
+				dst_transform->run(&g_typeless_transfer_buffer, job_length);
+			}
+
+			// NOTE: glBindBufferRange also binds the buffer to the old-school target.
+			// Unbind it to avoid glitching later
+			glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
+		}
+		else
+		{
+			unpack_settings.swap_bytes(unpack_info.swap_bytes);
+		}
+
+		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
+		dst->copy_from(nullptr, (texture::format)unpack_info.format, (texture::type)unpack_info.type, dst_region, unpack_settings);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
+	}
+
+	void copy_typeless(texture* dst, const texture* src)
+	{
+		const coord3u src_area = { {}, src->size3D() };
+		const coord3u dst_area = { {}, dst->size3D() };
+		copy_typeless(dst, src, dst_area, src_area);
 	}
 }

@@ -43,7 +43,7 @@ void sys_spu_image::load(const fs::file& stream)
 	}
 
 	type        = SYS_SPU_IMAGE_TYPE_KERNEL;
-	
+
 	nsegs       = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
@@ -130,12 +130,12 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 	}
 
 	// Apply the patch
-	auto applied = fxm::check_unlocked<patch_engine>()->apply(hash, vm::_ptr<u8>(loc));
+	auto applied = g_fxo->get<patch_engine>()->apply(hash, vm::_ptr<u8>(loc));
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += fxm::check_unlocked<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::_ptr<u8>(loc));
+		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::_ptr<u8>(loc));
 	}
 
 	LOG_NOTICE(LOADER, "Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
@@ -184,7 +184,7 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 
 	sys_spu.warning("sys_spu_image_open(img=*0x%x, path=%s)", img, path);
 
-	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), fxm::get_always<LoadedNpdrmKeys_t>()->devKlic.data());
+	const fs::file elf_file = decrypt_self(fs::file(vfs::get(path.get_ptr())), g_fxo->get<loaded_npdrm_keys>()->devKlic.data());
 
 	if (!elf_file)
 	{
@@ -963,16 +963,16 @@ error_code sys_spu_thread_set_spu_cfg(ppu_thread& ppu, u32 id, u64 value)
 
 	sys_spu.warning("sys_spu_thread_set_spu_cfg(id=0x%x, value=0x%x)", id, value);
 
+	if (value > 3)
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto thread = idm::get<named_thread<spu_thread>>(id);
 
 	if (UNLIKELY(!thread || !thread->group))
 	{
 		return CELL_ESRCH;
-	}
-
-	if (value > 3)
-	{
-		return CELL_EINVAL;
 	}
 
 	thread->snr_config = value;

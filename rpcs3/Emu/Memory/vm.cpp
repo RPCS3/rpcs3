@@ -17,8 +17,6 @@
 #include <thread>
 #include <deque>
 
-static_assert(sizeof(notifier) == 8, "Unexpected size of notifier");
-
 namespace vm
 {
 	static u8* memory_reserve_4GiB(std::uintptr_t _addr = 0)
@@ -49,9 +47,6 @@ namespace vm
 
 	// Reservation stats (compressed x16)
 	u8* const g_reservations = memory_reserve_4GiB((std::uintptr_t)g_stat_addr);
-
-	// Reservation sync variables
-	u8* const g_reservations2 = g_reservations + 0x10000000;
 
 	// Memory locations
 	std::vector<std::shared_ptr<block_t>> g_locations;
@@ -351,7 +346,7 @@ namespace vm
 		// Notify rsx that range has become valid
 		// Note: This must be done *before* memory gets mapped while holding the vm lock, otherwise
 		//       the RSX might try to invalidate memory that got unmapped and remapped
-		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
+		if (const auto rsxthr = g_fxo->get<rsx::thread>())
 		{
 			rsxthr->on_notify_memory_mapped(addr, size);
 		}
@@ -488,7 +483,7 @@ namespace vm
 		// Notify rsx to invalidate range
 		// Note: This must be done *before* memory gets unmapped while holding the vm lock, otherwise
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
-		if (const auto rsxthr = fxm::check_unlocked<GSRender>())
+		if (const auto rsxthr = g_fxo->get<rsx::thread>())
 		{
 			rsxthr->on_notify_memory_unmapped(addr, size);
 		}
@@ -634,11 +629,9 @@ namespace vm
 			if (addr == 0x10000)
 			{
 				utils::memory_commit(g_reservations, 0x1000);
-				utils::memory_commit(g_reservations2, 0x1000);
 			}
 
 			utils::memory_commit(g_reservations + addr / 16, size / 16);
-			utils::memory_commit(g_reservations2 + addr / 16, size / 16);
 		}
 		else
 		{
@@ -646,12 +639,10 @@ namespace vm
 			for (u32 i = 0; i < 6; i++)
 			{
 				utils::memory_commit(g_reservations + addr / 16 + i * 0x10000, 0x4000);
-				utils::memory_commit(g_reservations2 + addr / 16 + i * 0x10000, 0x4000);
 			}
 
 			// End of the address space
 			utils::memory_commit(g_reservations + 0xfff0000, 0x10000);
-			utils::memory_commit(g_reservations2 + 0xfff0000, 0x10000);
 		}
 
 		if (flags & 0x100)
@@ -1061,15 +1052,6 @@ namespace vm
 
 		lock.upgrade();
 
-		// Fixed allocation
-		if (addr)
-		{
-			// Recheck
-			area = _get_map(location, addr);
-
-			return !area ? _map(addr, area_size, flags) : area;
-		}
-
 		// Allocation on arbitrary address
 		if (location != any && location < g_locations.size())
 		{
@@ -1085,7 +1067,15 @@ namespace vm
 			return loc;
 		}
 
-		return nullptr;
+		// Fixed address allocation
+		area = _get_map(location, addr);
+
+		if (area)
+		{
+			return area;
+		}
+
+		return _map(addr, area_size, flags);
 	}
 
 	inline namespace ps3_
@@ -1097,6 +1087,7 @@ namespace vm
 				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x200), // main
 				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
 				nullptr, // user 1m pages
+				nullptr, // rsx context
 				std::make_shared<block_t>(0xC0000000, 0x10000000), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000, 0x111), // stack
 				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved

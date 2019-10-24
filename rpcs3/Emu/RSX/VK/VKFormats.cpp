@@ -48,22 +48,22 @@ namespace vk
 		fmt::throw_exception("Invalid format (0x%x)" HERE, (u32)format);
 	}
 
-	std::tuple<VkFilter, VkSamplerMipmapMode> get_min_filter_and_mip(rsx::texture_minify_filter min_filter)
+	minification_filter get_min_filter(rsx::texture_minify_filter min_filter)
 	{
 		switch (min_filter)
 		{
-		case rsx::texture_minify_filter::nearest: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-		case rsx::texture_minify_filter::linear: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-		case rsx::texture_minify_filter::nearest_nearest: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-		case rsx::texture_minify_filter::linear_nearest: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST);
-		case rsx::texture_minify_filter::nearest_linear: return std::make_tuple(VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-		case rsx::texture_minify_filter::linear_linear: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-		case rsx::texture_minify_filter::convolution_min: return std::make_tuple(VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+		case rsx::texture_minify_filter::nearest: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
+		case rsx::texture_minify_filter::linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
+		case rsx::texture_minify_filter::nearest_nearest: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
+		case rsx::texture_minify_filter::linear_nearest: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, true };
+		case rsx::texture_minify_filter::nearest_linear: return { VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
+		case rsx::texture_minify_filter::linear_linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
+		case rsx::texture_minify_filter::convolution_min: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
 		default:
 			ASSUME(0);
 			break;
 		}
-		fmt::throw_exception("Invalid max filter" HERE);
+		fmt::throw_exception("Invalid min filter" HERE);
 	}
 
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
@@ -204,7 +204,7 @@ namespace vk
 			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
 
 		case CELL_GCM_TEXTURE_D8R8G8B8:
-			mapping = { VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A }; break;
+			mapping = { VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
 
 		case CELL_GCM_TEXTURE_D1R5G5B5:
 			mapping = { VK_COMPONENT_SWIZZLE_ONE, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
@@ -218,7 +218,7 @@ namespace vk
 			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
 
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-			mapping = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A }; break;
+			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
 
 		default:
 			fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)" HERE, format);

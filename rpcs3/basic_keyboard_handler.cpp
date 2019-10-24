@@ -79,7 +79,7 @@ void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 		return;
 	}
 
-	if (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat)
+	if (m_keyboards.empty() || (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat))
 	{
 		keyEvent->ignore();
 		return;
@@ -100,7 +100,7 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 		return;
 	}
 
-	if (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat)
+	if (m_keyboards.empty() || (keyEvent->isAutoRepeat() && !m_keyboards[0].m_key_repeat))
 	{
 		keyEvent->ignore();
 		return;
@@ -153,6 +153,11 @@ s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
 
 void basic_keyboard_handler::LoadSettings()
 {
+	if (m_keyboards.empty())
+	{
+		return;
+	}
+
 	// Meta Keys
 	//m_keyboards[0].m_buttons.emplace_back(Qt::Key_Control, CELL_KB_MKEY_L_CTRL);
 	m_keyboards[0].m_buttons.emplace_back(Qt::Key_Shift, CELL_KB_MKEY_L_SHIFT);

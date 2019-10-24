@@ -577,177 +577,212 @@ s32 cellFontGetCharGlyphMetricsVertical()
 
 s32 cellFontGetRenderEffectWeight()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetRenderEffectWeight()");
+	return CELL_OK;
 }
 
 s32 cellFontGraphicsGetDrawType()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGraphicsGetDrawType()");
+	return CELL_OK;
 }
 
 s32 cellFontGetKerning()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetKerning()");
+	return CELL_OK;
 }
 
 s32 cellFontGetRenderScaledKerning()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetRenderScaledKerning()");
+	return CELL_OK;
 }
 
 s32 cellFontGetRenderScalePixel()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetRenderScalePixel()");
+	return CELL_OK;
 }
 
 s32 cellFontGlyphGetScalePixel()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGlyphGetScalePixel()");
+	return CELL_OK;
 }
 
 s32 cellFontGlyphGetHorizontalShift()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGlyphGetHorizontalShift()");
+	return CELL_OK;
 }
 
 s32 cellFontRenderCharGlyphImageHorizontal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontRenderCharGlyphImageHorizontal()");
+	return CELL_OK;
 }
 
 s32 cellFontGetEffectWeight()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetEffectWeight()");
+	return CELL_OK;
 }
 
 s32 cellFontGetScalePixel()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetScalePixel()");
+	return CELL_OK;
 }
 
 s32 cellFontClearFileCache()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontClearFileCache()");
+	return CELL_OK;
 }
 
 s32 cellFontAdjustFontScaling()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontAdjustFontScaling()");
+	return CELL_OK;
 }
 
 s32 cellFontSetupRenderScalePoint()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontSetupRenderScalePoint()");
+	return CELL_OK;
 }
 
 s32 cellFontGlyphGetVerticalShift()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGlyphGetVerticalShift()");
+	return CELL_OK;
 }
 
 s32 cellFontGetGlyphExpandBufferInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetGlyphExpandBufferInfo()");
+	return CELL_OK;
 }
 
 s32 cellFontGetLibrary()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetLibrary()");
+	return CELL_OK;
 }
 
 s32 cellFontVertexesGlyphRelocate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontVertexesGlyphRelocate()");
+	return CELL_OK;
 }
 
 s32 cellFontGetInitializedRevisionFlags()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetInitializedRevisionFlags()");
+	return CELL_OK;
 }
 
 s32 cellFontGetResolutionDpi()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetResolutionDpi()");
+	return CELL_OK;
 }
 
 s32 cellFontGlyphRenderImageVertical()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGlyphRenderImageVertical()");
+	return CELL_OK;
 }
 
 s32 cellFontGlyphRenderImageHorizontal()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGlyphRenderImageHorizontal()");
+	return CELL_OK;
 }
 
 s32 cellFontAdjustGlyphExpandBuffer()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontAdjustGlyphExpandBuffer()");
+	return CELL_OK;
 }
 
 s32 cellFontGetRenderScalePoint()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetRenderScalePoint()");
+	return CELL_OK;
 }
 
 s32 cellFontGraphicsGetFontRGBA()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGraphicsGetFontRGBA()");
+	return CELL_OK;
 }
 
 s32 cellFontGlyphGetOutlineVertexes()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGlyphGetOutlineVertexes()");
+	return CELL_OK;
 }
 
 s32 cellFontDelete()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontDelete()");
+	return CELL_OK;
 }
 
 s32 cellFontPatchWorks()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontPatchWorks()");
+	return CELL_OK;
 }
 
 s32 cellFontGlyphRenderImage()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGlyphRenderImage()");
+	return CELL_OK;
 }
 
 s32 cellFontGetBindingRenderer()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetBindingRenderer()");
+	return CELL_OK;
 }
 
 s32 cellFontGenerateCharGlyphVertical()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGenerateCharGlyphVertical()");
+	return CELL_OK;
 }
 
 s32 cellFontGetRenderEffectSlant()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetRenderEffectSlant()");
+	return CELL_OK;
 }
 
 s32 cellFontGetScalePoint()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGetScalePoint()");
+	return CELL_OK;
 }
 
 s32 cellFontGraphicsGetLineRGBA()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontGraphicsGetLineRGBA()");
+	return CELL_OK;
 }
 
 s32 cellFontControl()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontControl()");
+	return CELL_OK;
 }
 
 s32 cellFontStatic()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellFont.todo("cellFontStatic()");
+	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellFont)("cellFont", []()

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "ProgramStateCache.h"
 #include "Emu/System.h"
 
@@ -424,9 +424,7 @@ size_t fragment_program_storage_hash::operator()(const RSXFragmentProgram& progr
 	hash ^= program.ctrl;
 	hash ^= program.texture_dimensions;
 	hash ^= program.unnormalized_coords;
-	hash ^= program.back_color_diffuse_output;
-	hash ^= program.back_color_specular_output;
-	hash ^= program.front_back_color_enabled;
+	hash ^= program.two_sided_lighting;
 	hash ^= program.shadow_textures;
 	hash ^= program.redirected_textures;
 
@@ -436,8 +434,7 @@ size_t fragment_program_storage_hash::operator()(const RSXFragmentProgram& progr
 bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
 	if (binary1.ctrl != binary2.ctrl || binary1.texture_dimensions != binary2.texture_dimensions || binary1.unnormalized_coords != binary2.unnormalized_coords ||
-		binary1.back_color_diffuse_output != binary2.back_color_diffuse_output || binary1.back_color_specular_output != binary2.back_color_specular_output ||
-		binary1.front_back_color_enabled != binary2.front_back_color_enabled ||
+		binary1.two_sided_lighting != binary2.two_sided_lighting ||
 		binary1.shadow_textures != binary2.shadow_textures || binary1.redirected_textures != binary2.redirected_textures)
 		return false;
 

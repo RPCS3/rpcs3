@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -31,20 +31,36 @@ void fmt_class_string<CellPadError>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_PADFILTER_ERROR_INVALID_PARAMETER);
+		}
+
+		return unknown;
+	});
+}
+
 error_code cellPadInit(u32 max_connect)
 {
 	sys_io.warning("cellPadInit(max_connect=%d)", max_connect);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (fxm::check<pad_t>())
+	const auto config = g_fxo->get<pad_info>();
+
+	if (config->max_connect)
 		return CELL_PAD_ERROR_ALREADY_INITIALIZED;
 
 	if (max_connect == 0 || max_connect > CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	fxm::make<pad_t>(std::min(max_connect, (u32)CELL_PAD_MAX_PORT_NUM));
-
+	config->max_connect = std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
+	config->port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
 	return CELL_OK;
 }
 
@@ -54,10 +70,33 @@ error_code cellPadEnd()
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (!fxm::remove<pad_t>())
+	const auto config = g_fxo->get<pad_info>();
+
+	if (!config->max_connect.exchange(0))
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	return CELL_OK;
+}
+
+void clear_pad_buffer(const std::shared_ptr<Pad> pad)
+{
+	if (!pad)
+		return;
+
+	// Set 'm_buffer_cleared' to force a resend of everything
+	// might as well also reset everything in our pad 'buffer' to nothing as well
+
+	pad->m_buffer_cleared = true;
+	pad->m_analog_left_x = pad->m_analog_left_y = pad->m_analog_right_x = pad->m_analog_right_y = 128;
+
+	pad->m_digital_1 = pad->m_digital_2 = 0;
+	pad->m_press_right = pad->m_press_left = pad->m_press_up = pad->m_press_down = 0;
+	pad->m_press_triangle = pad->m_press_circle = pad->m_press_cross = pad->m_press_square = 0;
+	pad->m_press_L1 = pad->m_press_L2 = pad->m_press_R1 = pad->m_press_R2 = 0;
+
+	// ~399 on sensor y is a level non moving controller
+	pad->m_sensor_y = 399;
+	pad->m_sensor_x = pad->m_sensor_z = pad->m_sensor_g = 512;
 }
 
 error_code cellPadClearBuf(u32 port_no)
@@ -66,9 +105,9 @@ error_code cellPadClearBuf(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -86,20 +125,7 @@ error_code cellPadClearBuf(u32 port_no)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	// Set 'm_buffer_cleared' to force a resend of everything
-	// might as well also reset everything in our pad 'buffer' to nothing as well
-
-	pad->m_buffer_cleared = true;
-	pad->m_analog_left_x = pad->m_analog_left_y = pad->m_analog_right_x = pad->m_analog_right_y = 128;
-
-	pad->m_digital_1 = pad->m_digital_2 = 0;
-	pad->m_press_right = pad->m_press_left = pad->m_press_up = pad->m_press_down = 0;
-	pad->m_press_triangle = pad->m_press_circle = pad->m_press_cross = pad->m_press_square = 0;
-	pad->m_press_L1 = pad->m_press_L2 = pad->m_press_R1 = pad->m_press_R2 = 0;
-
-	// ~399 on sensor y is a level non moving controller
-	pad->m_sensor_y = 399;
-	pad->m_sensor_x = pad->m_sensor_z = pad->m_sensor_g = 512;
+	clear_pad_buffer(pad);
 
 	return CELL_OK;
 }
@@ -110,9 +136,9 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -139,159 +165,174 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		return CELL_OK;
 	}
 
-	u16 d1Initial, d2Initial;
-	d1Initial = pad->m_digital_1;
-	d2Initial = pad->m_digital_2;
 	bool btnChanged = false;
 
-	for (Button& button : pad->m_buttons)
+	if (rinfo.ignore_input)
 	{
-		// here we check btns, and set pad accordingly,
-		// if something changed, set btnChanged
+		// Needed for Hotline Miami and Ninja Gaiden Sigma after dialogs were closed and buttons are still pressed.
+		// Gran Turismo 6 would keep registering the Start button during OSK Dialogs if this wasn't cleared and if we'd return with len as CELL_PAD_LEN_NO_CHANGE.
+		clear_pad_buffer(pad);
+	}
+	else if (pad->ldd)
+	{
+		memcpy(data.get_ptr(), pad->ldd_data, sizeof(CellPadData));
+		if (setting & CELL_PAD_SETTING_SENSOR_ON)
+			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
+		else
+			data->len = (setting & CELL_PAD_SETTING_PRESS_ON) ? CELL_PAD_LEN_CHANGE_PRESS_ON : CELL_PAD_LEN_CHANGE_DEFAULT;
+		return CELL_OK;
+	}
+	else
+	{
+		u16 d1Initial = pad->m_digital_1;
+		u16 d2Initial = pad->m_digital_2;
 
-		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
+		for (Button& button : pad->m_buttons)
 		{
-			if (button.m_pressed) pad->m_digital_1 |= button.m_outKeyCode;
-			else pad->m_digital_1 &= ~button.m_outKeyCode;
+			// here we check btns, and set pad accordingly,
+			// if something changed, set btnChanged
 
-			switch (button.m_outKeyCode)
+			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 			{
-			case CELL_PAD_CTRL_LEFT:
-				if (pad->m_press_left != button.m_value) btnChanged = true;
-				pad->m_press_left = button.m_value;
-				break;
-			case CELL_PAD_CTRL_DOWN:
-				if (pad->m_press_down != button.m_value) btnChanged = true;
-				pad->m_press_down = button.m_value;
-				break;
-			case CELL_PAD_CTRL_RIGHT:
-				if (pad->m_press_right != button.m_value) btnChanged = true;
-				pad->m_press_right = button.m_value;
-				break;
-			case CELL_PAD_CTRL_UP:
-				if (pad->m_press_up != button.m_value) btnChanged = true;
-				pad->m_press_up = button.m_value;
-				break;
-			// These arent pressure btns
-			case CELL_PAD_CTRL_R3:
-			case CELL_PAD_CTRL_L3:
-			case CELL_PAD_CTRL_START:
-			case CELL_PAD_CTRL_SELECT:
-			default: break;
+				if (button.m_pressed)
+					pad->m_digital_1 |= button.m_outKeyCode;
+				else
+					pad->m_digital_1 &= ~button.m_outKeyCode;
+
+				switch (button.m_outKeyCode)
+				{
+				case CELL_PAD_CTRL_LEFT:
+					if (pad->m_press_left != button.m_value) btnChanged = true;
+					pad->m_press_left = button.m_value;
+					break;
+				case CELL_PAD_CTRL_DOWN:
+					if (pad->m_press_down != button.m_value) btnChanged = true;
+					pad->m_press_down = button.m_value;
+					break;
+				case CELL_PAD_CTRL_RIGHT:
+					if (pad->m_press_right != button.m_value) btnChanged = true;
+					pad->m_press_right = button.m_value;
+					break;
+				case CELL_PAD_CTRL_UP:
+					if (pad->m_press_up != button.m_value) btnChanged = true;
+					pad->m_press_up = button.m_value;
+					break;
+				// These arent pressure btns
+				case CELL_PAD_CTRL_R3:
+				case CELL_PAD_CTRL_L3:
+				case CELL_PAD_CTRL_START:
+				case CELL_PAD_CTRL_SELECT:
+				default: break;
+				}
+			}
+			else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
+			{
+				if (button.m_pressed)
+					pad->m_digital_2 |= button.m_outKeyCode;
+				else
+					pad->m_digital_2 &= ~button.m_outKeyCode;
+
+				switch (button.m_outKeyCode)
+				{
+				case CELL_PAD_CTRL_SQUARE:
+					if (pad->m_press_square != button.m_value) btnChanged = true;
+					pad->m_press_square = button.m_value;
+					break;
+				case CELL_PAD_CTRL_CROSS:
+					if (pad->m_press_cross != button.m_value) btnChanged = true;
+					pad->m_press_cross = button.m_value;
+					break;
+				case CELL_PAD_CTRL_CIRCLE:
+					if (pad->m_press_circle != button.m_value) btnChanged = true;
+					pad->m_press_circle = button.m_value;
+					break;
+				case CELL_PAD_CTRL_TRIANGLE:
+					if (pad->m_press_triangle != button.m_value) btnChanged = true;
+					pad->m_press_triangle = button.m_value;
+					break;
+				case CELL_PAD_CTRL_R1:
+					if (pad->m_press_R1 != button.m_value) btnChanged = true;
+					pad->m_press_R1 = button.m_value;
+					break;
+				case CELL_PAD_CTRL_L1:
+					if (pad->m_press_L1 != button.m_value) btnChanged = true;
+					pad->m_press_L1 = button.m_value;
+					break;
+				case CELL_PAD_CTRL_R2:
+					if (pad->m_press_R2 != button.m_value) btnChanged = true;
+					pad->m_press_R2 = button.m_value;
+					break;
+				case CELL_PAD_CTRL_L2:
+					if (pad->m_press_L2 != button.m_value) btnChanged = true;
+					pad->m_press_L2 = button.m_value;
+					break;
+				default: break;
+				}
 			}
 		}
-		else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
-		{
-			if (button.m_pressed) pad->m_digital_2 |= button.m_outKeyCode;
-			else pad->m_digital_2 &= ~button.m_outKeyCode;
 
-			switch (button.m_outKeyCode)
+		for (const AnalogStick& stick : pad->m_sticks)
+		{
+			switch (stick.m_offset)
 			{
-			case CELL_PAD_CTRL_SQUARE:
-				if (pad->m_press_square != button.m_value) btnChanged = true;
-				pad->m_press_square = button.m_value;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
+				if (pad->m_analog_left_x != stick.m_value) btnChanged = true;
+				pad->m_analog_left_x = stick.m_value;
 				break;
-			case CELL_PAD_CTRL_CROSS:
-				if (pad->m_press_cross != button.m_value) btnChanged = true;
-				pad->m_press_cross = button.m_value;
+			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
+				if (pad->m_analog_left_y != stick.m_value) btnChanged = true;
+				pad->m_analog_left_y = stick.m_value;
 				break;
-			case CELL_PAD_CTRL_CIRCLE:
-				if (pad->m_press_circle != button.m_value) btnChanged = true;
-				pad->m_press_circle = button.m_value;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
+				if (pad->m_analog_right_x != stick.m_value) btnChanged = true;
+				pad->m_analog_right_x = stick.m_value;
 				break;
-			case CELL_PAD_CTRL_TRIANGLE:
-				if (pad->m_press_triangle != button.m_value) btnChanged = true;
-				pad->m_press_triangle = button.m_value;
-				break;
-			case CELL_PAD_CTRL_R1:
-				if (pad->m_press_R1 != button.m_value) btnChanged = true;
-				pad->m_press_R1 = button.m_value;
-				break;
-			case CELL_PAD_CTRL_L1:
-				if (pad->m_press_L1 != button.m_value) btnChanged = true;
-				pad->m_press_L1 = button.m_value;
-				break;
-			case CELL_PAD_CTRL_R2:
-				if (pad->m_press_R2 != button.m_value) btnChanged = true;
-				pad->m_press_R2 = button.m_value;
-				break;
-			case CELL_PAD_CTRL_L2:
-				if (pad->m_press_L2 != button.m_value) btnChanged = true;
-				pad->m_press_L2 = button.m_value;
-				break;
-			default: break;
-			}
-		}
-
-		if (button.m_flush)
-		{
-			button.m_pressed = false;
-			button.m_flush = false;
-			button.m_value = 0;
-		}
-	}
-
-	for (const AnalogStick& stick : pad->m_sticks)
-	{
-		switch (stick.m_offset)
-		{
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X:
-			if (pad->m_analog_left_x != stick.m_value) btnChanged = true;
-			pad->m_analog_left_x = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
-			if (pad->m_analog_left_y != stick.m_value) btnChanged = true;
-			pad->m_analog_left_y = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-			if (pad->m_analog_right_x != stick.m_value) btnChanged = true;
-			pad->m_analog_right_x = stick.m_value;
-			break;
-		case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-			if (pad->m_analog_right_y != stick.m_value) btnChanged = true;
-			pad->m_analog_right_y = stick.m_value;
-			break;
-		default: break;
-		}
-	}
-
-	if (setting & CELL_PAD_SETTING_SENSOR_ON)
-	{
-		for (const AnalogSensor& sensor : pad->m_sensors)
-		{
-			switch (sensor.m_offset)
-			{
-			case CELL_PAD_BTN_OFFSET_SENSOR_X:
-				if (pad->m_sensor_x != sensor.m_value) btnChanged = true;
-				pad->m_sensor_x = sensor.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_SENSOR_Y:
-				if (pad->m_sensor_y != sensor.m_value) btnChanged = true;
-				pad->m_sensor_y = sensor.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_SENSOR_Z:
-				if (pad->m_sensor_z != sensor.m_value) btnChanged = true;
-				pad->m_sensor_z = sensor.m_value;
-				break;
-			case CELL_PAD_BTN_OFFSET_SENSOR_G:
-				if (pad->m_sensor_g != sensor.m_value) btnChanged = true;
-				pad->m_sensor_g = sensor.m_value;
+			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
+				if (pad->m_analog_right_y != stick.m_value) btnChanged = true;
+				pad->m_analog_right_y = stick.m_value;
 				break;
 			default: break;
 			}
 		}
-	}
 
-	if (d1Initial != pad->m_digital_1 || d2Initial != pad->m_digital_2)
-	{
-		btnChanged = true;
+		if (setting & CELL_PAD_SETTING_SENSOR_ON)
+		{
+			for (const AnalogSensor& sensor : pad->m_sensors)
+			{
+				switch (sensor.m_offset)
+				{
+				case CELL_PAD_BTN_OFFSET_SENSOR_X:
+					if (pad->m_sensor_x != sensor.m_value) btnChanged = true;
+					pad->m_sensor_x = sensor.m_value;
+					break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Y:
+					if (pad->m_sensor_y != sensor.m_value) btnChanged = true;
+					pad->m_sensor_y = sensor.m_value;
+					break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_Z:
+					if (pad->m_sensor_z != sensor.m_value) btnChanged = true;
+					pad->m_sensor_z = sensor.m_value;
+					break;
+				case CELL_PAD_BTN_OFFSET_SENSOR_G:
+					if (pad->m_sensor_g != sensor.m_value) btnChanged = true;
+					pad->m_sensor_g = sensor.m_value;
+					break;
+				default: break;
+				}
+			}
+		}
+
+		if (d1Initial != pad->m_digital_1 || d2Initial != pad->m_digital_2)
+		{
+			btnChanged = true;
+		}
 	}
 
 	if (setting & CELL_PAD_SETTING_SENSOR_ON)
 	{
 		// report back new data every ~10 ms even if the input doesn't change
 		// this is observed behaviour when using a Dualshock 3 controller
-		static std::chrono::time_point<steady_clock> last_update[CELL_PAD_MAX_PORT_NUM] = { };
+		static std::array<std::chrono::time_point<steady_clock>, CELL_PAD_MAX_PORT_NUM> last_update = { };
 		const std::chrono::time_point<steady_clock> now = steady_clock::now();
 
 		if (btnChanged || pad->m_buffer_cleared || (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update[port_no]).count() >= 10))
@@ -371,9 +412,9 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -415,9 +456,9 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -449,9 +490,9 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -480,9 +521,9 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -521,9 +562,9 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -546,9 +587,10 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 		return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD;
 
 	// make sure reserved bits are 0. Looks like this happens after checking the pad status
-	for (int i = 0; i < 6; i++)
-		if (param->reserved[i])
-			return CELL_PAD_ERROR_INVALID_PARAMETER;
+	// TODO: test this on real hardware and both old and new firmware
+	//for (int i = 0; i < 6; i++)
+	//	if (param->reserved[i])
+	//		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	handler->SetRumble(port_no, param->motor[1], param->motor[0] > 0);
 
@@ -561,9 +603,9 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -637,9 +679,9 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -677,9 +719,9 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -710,9 +752,9 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -731,15 +773,15 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 	return CELL_OK;
 }
 
-s32 cellPadInfoPressMode(u32 port_no)
+error_code cellPadInfoPressMode(u32 port_no)
 {
 	sys_io.trace("cellPadInfoPressMode(port_no=%d)", port_no);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -757,18 +799,18 @@ s32 cellPadInfoPressMode(u32 port_no)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	return (pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) > 0;
+	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_PRESS_MODE) ? 1 : 0);
 }
 
-s32 cellPadInfoSensorMode(u32 port_no)
+error_code cellPadInfoSensorMode(u32 port_no)
 {
 	sys_io.trace("cellPadInfoSensorMode(port_no=%d)", port_no);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -786,7 +828,7 @@ s32 cellPadInfoSensorMode(u32 port_no)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	return (pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) > 0;
+	return not_an_error((pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE) ? 1 : 0);
 }
 
 error_code cellPadSetPressMode(u32 port_no, u32 mode)
@@ -795,9 +837,9 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -831,9 +873,9 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = fxm::check<pad_t>();
+	const auto config = g_fxo->get<pad_info>();
 
-	if (!config)
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -863,27 +905,38 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 
 error_code cellPadLddRegisterController()
 {
-	sys_io.todo("cellPadLddRegisterController()");
+	sys_io.warning("cellPadLddRegisterController()");
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (!fxm::check<pad_t>())
+	const auto config = g_fxo->get<pad_info>();
+
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
 
-	// can return CELL_PAD_ERROR_TOO_MANY_DEVICES
+	const s32 handle = handler->AddLddPad();
 
-	return CELL_OK;
+	if (handle < 0)
+		return CELL_PAD_ERROR_TOO_MANY_DEVICES;
+
+	auto& pads = handler->GetPads();
+	pads[handle]->Init(CELL_PAD_STATUS_CONNECTED | CELL_PAD_STATUS_ASSIGN_CHANGES | CELL_PAD_STATUS_CUSTOM_CONTROLLER, CELL_PAD_CAPABILITY_PS3_CONFORMITY, CELL_PAD_DEV_TYPE_LDD, 0);
+	config->port_setting[handle] = 0;
+
+	return not_an_error(handle);
 }
 
 error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 {
-	sys_io.todo("cellPadLddDataInsert(handle=%d, data=*0x%x)", handle, data);
+	sys_io.trace("cellPadLddDataInsert(handle=%d, data=*0x%x)", handle, data);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (!fxm::check<pad_t>())
+	const auto config = g_fxo->get<pad_info>();
+
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -891,18 +944,24 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 	if (handle < 0 || !data) // data == NULL stalls on decr
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	// can return CELL_PAD_ERROR_NO_DEVICE
+	auto& pads = handler->GetPads();
+	if (!pads[handle]->ldd)
+		return CELL_PAD_ERROR_NO_DEVICE;
+
+	memcpy(pads[handle]->ldd_data, data.get_ptr(), sizeof(CellPadData));
 
 	return CELL_OK;
 }
 
 error_code cellPadLddGetPortNo(s32 handle)
 {
-	sys_io.todo("cellPadLddGetPortNo(handle=%d)", handle);
+	sys_io.trace("cellPadLddGetPortNo(handle=%d)", handle);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (!fxm::check<pad_t>())
+	const auto config = g_fxo->get<pad_info>();
+
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -910,16 +969,23 @@ error_code cellPadLddGetPortNo(s32 handle)
 	if (handle < 0)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	return CELL_PAD_ERROR_EBUSY; // or CELL_PAD_ERROR_FATAL or CELL_EBUSY
+	auto& pads = handler->GetPads();
+	if (!pads[handle]->ldd)
+		return CELL_PAD_ERROR_FATAL; // might be incorrect
+
+	// Other possible return values: CELL_PAD_ERROR_EBUSY, CELL_EBUSY
+	return not_an_error(handle); // handle is port
 }
 
 error_code cellPadLddUnregisterController(s32 handle)
 {
-	sys_io.todo("cellPadLddUnregisterController(handle=%d)", handle);
+	sys_io.warning("cellPadLddUnregisterController(handle=%d)", handle);
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	if (!fxm::check<pad_t>())
+	const auto config = g_fxo->get<pad_info>();
+
+	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -927,9 +993,35 @@ error_code cellPadLddUnregisterController(s32 handle)
 	if (handle < 0)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
-	// can return CELL_PAD_ERROR_NO_DEVICE
+	const auto& pads = handler->GetPads();
+
+	if (!pads[handle]->ldd)
+		return CELL_PAD_ERROR_NO_DEVICE;
+
+	handler->UnregisterLddPad(handle);
 
 	return CELL_OK;
+}
+
+error_code cellPadFilterIIRInit(vm::ptr<CellPadFilterIIRSos> pSos, s32 cutoff)
+{
+	sys_io.todo("cellPadFilterIIRInit(pSos=*0x%x, cutoff=%d)", pSos, cutoff);
+
+	if (!pSos) // TODO: does this check for cutoff > 2 ?
+	{
+		return CELL_PADFILTER_ERROR_INVALID_PARAMETER;
+	}
+
+	return CELL_OK;
+}
+
+u32 cellPadFilterIIRFilter(vm::ptr<CellPadFilterIIRSos> pSos, u32 filterIn)
+{
+	sys_io.todo("cellPadFilterIIRFilter(pSos=*0x%x, filterIn=%d)", pSos, filterIn);
+
+	// TODO: apply filter
+
+	return std::clamp(filterIn, 0u, 1023u);
 }
 
 s32 sys_io_3733EA3C(u32 port_no, vm::ptr<u32> device_type, vm::ptr<CellPadData> data)
@@ -963,6 +1055,9 @@ void cellPad_init()
 	REG_FUNC(sys_io, cellPadLddDataInsert);
 	REG_FUNC(sys_io, cellPadLddGetPortNo);
 	REG_FUNC(sys_io, cellPadLddUnregisterController);
+
+	REG_FUNC(sys_io, cellPadFilterIIRInit);
+	REG_FUNC(sys_io, cellPadFilterIIRFilter);
 
 	REG_FNID(sys_io, 0x3733EA3C, sys_io_3733EA3C);
 }

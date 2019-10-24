@@ -15,12 +15,12 @@ struct lv2_memory : lv2_obj
 	const u32 size; // Memory size
 	const u32 align; // Alignment required
 	const u64 flags;
-	const std::shared_ptr<lv2_memory_container> ct; // Associated memory container
+	lv2_memory_container* const ct; // Associated memory container
 	const std::shared_ptr<utils::shm> shm;
 
 	atomic_t<u32> counter{0};
 
-	lv2_memory(u32 size, u32 align, u64 flags, const std::shared_ptr<lv2_memory_container>& ct);
+	lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct);
 };
 
 enum : u64

@@ -68,6 +68,15 @@ namespace gl
 			return (found->second == test);
 		}
 
+		inline bool test_propertyi(GLenum property, u32 test, GLint index) const
+		{
+			auto found = indexed_properties.find(property);
+			if (found == indexed_properties.end())
+				return false;
+
+			return found->second[index] == test;
+		}
+
 		void depth_func(GLenum func)
 		{
 			if (!test_property(GL_DEPTH_FUNC, func))
@@ -115,16 +124,16 @@ namespace gl
 			}
 		}
 
-		void color_mask(u32 mask)
+		void color_maski(GLint index, u32 mask)
 		{
-			if (!test_property(GL_COLOR_WRITEMASK, mask))
+			if (!test_propertyi(GL_COLOR_WRITEMASK, mask, index))
 			{
-				glColorMask(((mask & 0x10) ? 1 : 0), ((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0));
-				properties[GL_COLOR_WRITEMASK] = mask;
+				glColorMaski(index, ((mask & 0x10) ? 1 : 0), ((mask & 0x20) ? 1 : 0), ((mask & 0x40) ? 1 : 0), ((mask & 0x80) ? 1 : 0));
+				indexed_properties[GL_COLOR_WRITEMASK][index] = mask;
 			}
 		}
 
-		void color_mask(bool r, bool g, bool b, bool a)
+		void color_maski(GLint index, bool r, bool g, bool b, bool a)
 		{
 			u32 mask = 0;
 			if (r) mask |= 0x10;
@@ -132,7 +141,7 @@ namespace gl
 			if (b) mask |= 0x40;
 			if (a) mask |= 0x80;
 
-			color_mask(mask);
+			color_maski(index, mask);
 		}
 
 		void clear_color(u8 r, u8 g, u8 b, u8 a)

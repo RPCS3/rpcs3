@@ -1,4 +1,6 @@
-﻿#ifdef _WIN32
+﻿#ifndef _WIN32
+#error "XAudio2 can only be built on Windows."
+#endif
 
 #include "Utilities/Log.h"
 #include "Utilities/StrFmt.h"
@@ -88,5 +90,3 @@ f32 XAudio2Backend::SetFrequencyRatio(f32 new_ratio)
 {
 	return lib->set_freq_ratio(new_ratio);
 }
-
-#endif

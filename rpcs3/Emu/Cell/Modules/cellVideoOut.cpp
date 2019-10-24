@@ -121,7 +121,7 @@ error_code cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResol
 	case 0x99: *resolution = { 0x3c0, 0x5be }; break;
 	case 0x98: *resolution = { 0x400, 0x5be }; break;
 	case 0xa1: *resolution = { 0x780, 0x438 }; break;
-		
+
 	default: return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
@@ -168,12 +168,13 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 
 	auto& res_info = g_video_out_resolution_map.at(res);
 
-	auto conf = fxm::get_always<rsx::avconf>();
+	auto conf = g_fxo->get<rsx::avconf>();
 	conf->aspect = config->aspect;
 	conf->format = config->format;
 	conf->scanline_pitch = config->pitch;
 	conf->resolution_x = u32(res_info.first);
 	conf->resolution_y = u32(res_info.second);
+	conf->state = 1;
 
 	return CELL_OK;
 }
@@ -264,32 +265,38 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 
 s32 cellVideoOutConfigure2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutConfigure2()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutGetResolutionAvailability2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutGetResolutionAvailability2()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutDebugSetMonitorType(u32 videoOut, u32 monitorType)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutDebugSetMonitorType()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutRegisterCallback(u32 slot, vm::ptr<CellVideoOutCallback> function, vm::ptr<void> userData)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutRegisterCallback()");
+	return CELL_OK;
 }
 
 s32 cellVideoOutUnregisterCallback(u32 slot)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutUnregisterCallback()");
+	return CELL_OK;
 }
 
 

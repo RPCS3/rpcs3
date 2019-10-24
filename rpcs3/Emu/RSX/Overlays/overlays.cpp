@@ -286,13 +286,6 @@ namespace rsx
 							button_state[pad_index][button_id] = button.m_pressed;
 						}
 
-						if (button.m_flush)
-						{
-							button.m_pressed = false;
-							button.m_flush = false;
-							button.m_value = 0;
-						}
-
 						if (exit)
 							return 0;
 					}
@@ -309,7 +302,7 @@ namespace rsx
 		{
 			// Force unload
 			exit = true;
-			if (auto manager = fxm::get<display_manager>())
+			if (auto manager = g_fxo->get<display_manager>())
 			{
 				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 				{
@@ -323,7 +316,10 @@ namespace rsx
 			pad::SetIntercepted(false);
 
 			if (on_close && use_callback)
+			{
+				g_last_user_response = return_code;
 				on_close(return_code);
+			}
 		}
 
 		void overlay::refresh()

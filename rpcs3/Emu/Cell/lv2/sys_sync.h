@@ -236,19 +236,11 @@ public:
 		static_assert(UINT64_MAX / cond_variable::max_timeout >= g_cfg.core.clocks_scale.max, "timeout may overflow during scaling");
 
 		// Clamp to max timeout accepted
-		if (usec > cond_variable::max_timeout) usec = cond_variable::max_timeout;
+		const u64 max_usec = cond_variable::max_timeout * 100 / g_cfg.core.clocks_scale.max;
 
 		// Now scale the result
-		usec = (usec * g_cfg.core.clocks_scale) / 100;
+		usec = (std::min<u64>(usec, max_usec) * g_cfg.core.clocks_scale) / 100;
 
-#ifdef __linux__
-		// TODO: Confirm whether Apple or any BSD can benefit from this as well
-		constexpr u32 host_min_quantum = 50;
-#else
-		// Host scheduler quantum for windows (worst case)
-		// NOTE: On ps3 this function has very high accuracy
-		constexpr u32 host_min_quantum = 500;
-#endif
 		extern u64 get_system_time();
 
 		u64 passed = 0;
@@ -258,10 +250,19 @@ public:
 		while (usec >= passed)
 		{
 			remaining = usec - passed;
+#ifdef __linux__
+			// NOTE: Assumption that timer initialization has succeeded
+			u64 host_min_quantum = is_usleep && remaining <= 1000 ? 10 : 50;
+#else
+			// Host scheduler quantum for windows (worst case)
+			// NOTE: On ps3 this function has very high accuracy
+			constexpr u64 host_min_quantum = 500;
+#endif
+			// TODO: Tune for other non windows operating sytems
 
 			if (g_cfg.core.sleep_timers_accuracy < (is_usleep ? sleep_timers_accuracy_level::_usleep : sleep_timers_accuracy_level::_all_timers))
 			{
-				thread_ctrl::wait_for(remaining);
+				thread_ctrl::wait_for(remaining, !is_usleep);
 			}
 			else
 			{
@@ -269,10 +270,10 @@ public:
 				{
 #ifdef __linux__
 					// Do not wait for the last quantum to avoid loss of accuracy
-					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum));
+					thread_ctrl::wait_for(remaining - ((remaining % host_min_quantum) + host_min_quantum), !is_usleep);
 #else
-					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus 
-					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum));
+					// Wait on multiple of min quantum for large durations to avoid overloading low thread cpus
+					thread_ctrl::wait_for(remaining - (remaining % host_min_quantum), !is_usleep);
 #endif
 				}
 				else

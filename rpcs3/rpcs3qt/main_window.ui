@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -176,6 +176,8 @@
      <addaction name="batchRemovePPUCachesAct"/>
      <addaction name="batchRemoveSPUCachesAct"/>
      <addaction name="batchRemoveShaderCachesAct"/>
+     <addaction name="separator"/>
+     <addaction name="removeDiskCacheAct"/>
     </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
@@ -225,6 +227,7 @@
     <addaction name="confSavedataManagerAct"/>
     <addaction name="actionManage_RAP_Licences"/>
     <addaction name="actionManage_Trophy_Data"/>
+    <addaction name="actionManage_Skylanders_Portal"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
@@ -295,7 +298,7 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionCheck_for_Updates"/>
+    <addaction name="updateAct"/>
     <addaction name="separator"/>
     <addaction name="aboutAct"/>
     <addaction name="aboutQtAct"/>
@@ -635,10 +638,7 @@
     <string>RAP Files</string>
    </property>
   </action>
-  <action name="actionCheck_for_Updates">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
+  <action name="updateAct">
    <property name="text">
     <string>Check for Updates</string>
    </property>
@@ -999,6 +999,16 @@
   <action name="batchRemoveCustomPadConfigurationsAct">
    <property name="text">
     <string>Remove Custom Pad Configurations</string>
+   </property>
+  </action>
+  <action name="removeDiskCacheAct">
+   <property name="text">
+    <string>Remove Disk Cache</string>
+   </property>
+  </action>
+  <action name="actionManage_Skylanders_Portal">
+   <property name="text">
+    <string>Skylanders Portal</string>
    </property>
   </action>
  </widget>

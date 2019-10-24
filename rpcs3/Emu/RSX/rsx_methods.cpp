@@ -41,8 +41,16 @@ namespace rsx
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+		const u32 cmd = rsx->get_fifo_cmd();
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg, 
+		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->invalid_command_interrupt_raised = true;
+	}
+
+	void trace_method(thread* rsx, u32 _reg, u32 arg)
+	{
+		// For unknown yet valid methods
+		LOG_TRACE(RSX, "RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -65,15 +73,15 @@ namespace rsx
 			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
-			// Get raw BE value
-			arg = be_t<u32>{arg}.raw();
-			const auto& sema = vm::_ref<atomic_t<nse_t<u32>>>(addr);
+			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
 
 			// TODO: Remove vblank semaphore hack
-			if (sema.load() == arg || addr == rsx->ctxt_addr + 0x30) return;
+			if (sema == arg || addr == rsx->device_addr + 0x30) return;
+
+			rsx->flush_fifo();
 
 			u64 start = get_system_time();
-			while (sema.load() != arg)
+			while (sema != arg)
 			{
 				if (Emu.IsStopped())
 					return;
@@ -111,8 +119,19 @@ namespace rsx
 		void semaphore_release(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync();
-			rsx->sync_point_request = true;
-			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+
+			const u32 offset = method_registers.semaphore_offset_406e();
+			const u32 ctxt = method_registers.semaphore_context_dma_406e();
+
+			// By avoiding doing this on flip's semaphore release
+			// We allow last gcm's registers reset to occur in case of a crash
+			const bool is_flip_sema = (offset == 0x10 && ctxt == CELL_GCM_CONTEXT_DMA_SEMAPHORE_R);
+			if (!is_flip_sema)
+			{
+				rsx->sync_point_request = true;
+			}
+
+			const u32 addr = get_address(offset, ctxt);
 
 			if (LIKELY(g_use_rtm))
 			{
@@ -159,14 +178,14 @@ namespace rsx
 		{
 			switch(arg)
 			{
-			case CELL_GCM_FRONT_AND_BACK: return;
-			case CELL_GCM_FRONT: return;
-			case CELL_GCM_BACK: return;
-			default: break;
+			case CELL_GCM_FRONT_AND_BACK:
+			case CELL_GCM_FRONT:
+			case CELL_GCM_BACK:
+				return;
+			default:
+				// Ignore value if unknown
+				method_registers.registers[reg] = method_registers.register_previous_value;
 			}
-
-			// Ignore value if unknown
-			method_registers.registers[reg] = method_registers.register_previous_value;
 		}
 
 		void set_notify(thread* rsx, u32 _reg, u32 arg)
@@ -247,7 +266,7 @@ namespace rsx
 			case rsx::vertex_base_type::ub:
 			case rsx::vertex_base_type::ub256:
 				// Get BE data
-				arg = be_t<u32>{arg}.raw();
+				arg = std::bit_cast<u32, be_t<u32>>(arg);
 				break;
 			default:
 				break;
@@ -562,7 +581,6 @@ namespace rsx
 				return;
 			case 2:
 				rsx->conditional_render_enabled = true;
-				LOG_WARNING(RSX, "Conditional rendering mode enabled (mode 2)");
 				break;
 			default:
 				rsx->conditional_render_enabled = false;
@@ -705,6 +723,19 @@ namespace rsx
 			if (arg != method_registers.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::scissor_config_state_dirty;
+			}
+		}
+
+		void check_index_array_dma(thread* rsx, u32 reg, u32 arg)
+		{
+			// Check if either location or index type are invalid
+			if (arg & ~(CELL_GCM_LOCATION_MAIN | (CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16 << 4)))
+			{
+				// Ignore invalid value, recover
+				method_registers.registers[reg] = method_registers.register_previous_value;
+				rsx->invalid_command_interrupt_raised = true;
+
+				LOG_ERROR(RSX, "Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
 			}
 		}
 
@@ -923,7 +954,7 @@ namespace rsx
 
 			if (UNLIKELY(in_x == 1 || in_y == 1))
 			{
-				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || fabsf(fabsf(scale_x * scale_y) - 1.f) > 0.000001f;
+				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || !rsx::fcmp(scale_x, 1.f) || !rsx::fcmp(scale_y, 1.f);
 				if (!is_graphics_op)
 				{
 					// No scaling factor, so size in src == size in dst
@@ -1062,7 +1093,7 @@ namespace rsx
 				clip_x > 0 || clip_y > 0 ||
 				convert_w != out_w || convert_h != out_h;
 
-			const bool need_convert = out_format != in_format || std::abs(scale_x) != 1.0 || std::abs(scale_y) != 1.0;
+			const bool need_convert = out_format != in_format || !rsx::fcmp(fabsf(scale_x), 1.f) || !rsx::fcmp(fabsf(scale_y), 1.f);
 			const u32  slice_h = std::ceil(f32(clip_h + clip_y) / scale_y);
 
 			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
@@ -1302,7 +1333,7 @@ namespace rsx
 				else
 				{
 					std::vector<u8> temp(line_length * line_count);
-					u8* buf = temp.data(); 
+					u8* buf = temp.data();
 
 					for (u32 y = 0; y < line_count; ++y)
 					{
@@ -1311,7 +1342,7 @@ namespace rsx
 						src += in_pitch;
 					}
 
-					buf = temp.data(); 
+					buf = temp.data();
 
 					for (u32 y = 0; y < line_count; ++y)
 					{
@@ -1740,22 +1771,23 @@ namespace rsx
 			registers[NV4097_SET_VIEWPORT_VERTICAL] = 0x10000000;
 			registers[NV4097_SET_CLIP_MIN] = 0x0;
 			registers[NV4097_SET_CLIP_MAX] = 0x3f800000;
-			registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-			registers[0xa24 / 4] = 0x45000000;
-			registers[0xa28 / 4] = 0x3f000000;
-			registers[0xa2c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-			registers[0xa34 / 4] = 0x45000000;
-			registers[0xa38 / 4] = 0x3f000000;
-			registers[0xa3c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-			registers[0xa24 / 4] = 0x45000000;
-			registers[0xa28 / 4] = 0x3f000000;
-			registers[0xa2c / 4] = 0x0;
-			registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-			registers[0xa34 / 4] = 0x45000000;
-			registers[0xa38 / 4] = 0x3f000000;
-			registers[0xa3c / 4] = 0x0;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+			registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+			registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+			registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
+			// NOTE: Realhw emits this sequence twice, likely to work around a hardware bug. Similar behavior can be seen in other buggy register blocks
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+			//registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+			//registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 			registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 			registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
 			registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
@@ -2274,22 +2306,23 @@ namespace rsx
 		registers[NV4097_SET_VIEWPORT_VERTICAL] = 0x10000000;
 		registers[NV4097_SET_CLIP_MIN] = 0x0;
 		registers[NV4097_SET_CLIP_MAX] = 0x3f800000;
-		registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-		registers[0xa24 / 4] = 0x45000000;
-		registers[0xa28 / 4] = 0x3f000000;
-		registers[0xa2c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-		registers[0xa34 / 4] = 0x45000000;
-		registers[0xa38 / 4] = 0x3f000000;
-		registers[0xa3c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_OFFSET] = 0x45000000;
-		registers[0xa24 / 4] = 0x45000000;
-		registers[0xa28 / 4] = 0x3f000000;
-		registers[0xa2c / 4] = 0x0;
-		registers[NV4097_SET_VIEWPORT_SCALE] = 0x45000000;
-		registers[0xa34 / 4] = 0x45000000;
-		registers[0xa38 / 4] = 0x3f000000;
-		registers[0xa3c / 4] = 0x0;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+		registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+		registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+		registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
+		// NOTE: Realhw emits this sequence twice, likely to work around a hardware bug. Similar behavior can be seen in other buggy register blocks
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 0] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 1] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 2] = 0x3f000000;
+		//registers[NV4097_SET_VIEWPORT_OFFSET + 3] = 0x0;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 0] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 1] = 0x45000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 2] = 0x3f000000;
+		//registers[NV4097_SET_VIEWPORT_SCALE + 3] = 0x0;
 		registers[NV4097_SET_ANTI_ALIASING_CONTROL] = 0xffff0000;
 		registers[NV4097_SET_BACK_POLYGON_MODE] = 0x1b02;
 		registers[NV4097_SET_COLOR_CLEAR_VALUE] = 0x0;
@@ -2771,7 +2804,7 @@ namespace rsx
 
 		//Some custom GCM methods
 		methods[GCM_SET_DRIVER_OBJECT]                    = nullptr;
-		methods[FIFO::FIFO_DRAW_BARRIER]                  = nullptr;
+		methods[FIFO::FIFO_DRAW_BARRIER >> 2]             = nullptr;
 
 		bind_array<GCM_FLIP_HEAD, 1, 2, nullptr>();
 		bind_array<GCM_DRIVER_QUEUE, 1, 8, nullptr>();
@@ -2797,7 +2830,11 @@ namespace rsx
 		bind_array<NV4097_SET_VERTEX_DATA4F_M, 1, 64, nullptr>();
 		bind_array<NV4097_SET_VERTEX_DATA1F_M, 1, 16, nullptr>();
 		bind_array<NV4097_SET_COLOR_KEY_COLOR, 1, 16, nullptr>();
-		bind_array<(0xac00 >> 2), 1, 16, nullptr>();  // Unknown texture control register
+
+		// Unknown (NV4097?)
+		bind<(0x171c >> 2), trace_method>();
+		bind_array<(0xac00 >> 2), 1, 16, trace_method>(); // Unknown texture control register
+		bind_array<(0xac40 >> 2), 1, 16, trace_method>();
 
 		// NV406E
 		bind<NV406E_SET_REFERENCE, nv406e::set_reference>();
@@ -2874,6 +2911,7 @@ namespace rsx
 		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_COLOR_MASK_MRT, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
@@ -2899,6 +2937,7 @@ namespace rsx
 		bind_array<NV4097_SET_FOG_PARAMS, 1, 2, nv4097::set_ROP_state_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_SCALE, 1, 3, nv4097::set_viewport_dirty_bit>();
 		bind_range<NV4097_SET_VIEWPORT_OFFSET, 1, 3, nv4097::set_viewport_dirty_bit>();
+		bind<NV4097_SET_INDEX_ARRAY_DMA, nv4097::check_index_array_dma>();
 
 		//NV308A
 		bind_range<NV308A_COLOR, 1, 256, nv308a::color>();

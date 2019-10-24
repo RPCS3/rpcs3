@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "rpcs3_version.h"
 #include "git-version.h"
+#include "Utilities/StrUtil.h"
 
 namespace rpcs3
 {
@@ -9,6 +10,16 @@ namespace rpcs3
 		return RPCS3_GIT_BRANCH;
 	}
 
-	//TODO: Make this accessible from cmake and keep in sync with MACOSX_BUNDLE_BUNDLE_VERSION.
-	const extern utils::version version{ 0, 0, 6, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
+	std::pair<std::string, std::string> get_commit_and_hash()
+	{
+		const auto commit_and_hash = fmt::split(RPCS3_GIT_VERSION, {"-"});
+		if (commit_and_hash.size() != 2)
+			return std::make_pair("0", "00000000");
+
+		return std::make_pair(commit_and_hash[0], commit_and_hash[1]);
+	}
+
+	// TODO: Make this accessible from cmake and keep in sync with MACOSX_BUNDLE_BUNDLE_VERSION.
+	// Currently accessible by Windows and Linux build scripts, see implementations when doing MACOSX
+	const extern utils::version version{ 0, 0, 7, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
 }

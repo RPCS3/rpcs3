@@ -27,8 +27,8 @@ namespace rsx
 
 		// User memory + fifo size
 		buffer_size = ::align<u32>(buffer_size, 0x100000) + 0x10000000;
-		// We are not allowed to drain all memory so add a little 
-		fxm::make_always<lv2_memory_container>(buffer_size + 0x1000000);
+		// We are not allowed to drain all memory so add a little
+		g_fxo->init<lv2_memory_container>(buffer_size + 0x1000000);
 
 		const u32 contextAddr = vm::alloc(sizeof(rsx_context), vm::main);
 		if (contextAddr == 0)
@@ -50,7 +50,7 @@ namespace rsx
 
 		get_current_renderer()->main_mem_size = buffer_size;
 
-		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0) != CELL_OK)
+		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
 
 		return contextInfo->context_id;

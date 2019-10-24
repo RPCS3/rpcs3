@@ -317,8 +317,11 @@ error_code sys_event_flag_set(u32 id, u64 bitptn)
 			return false;
 		});
 
-		flag->sq.erase(tail, flag->sq.end());
-		lv2_obj::awake_all();
+		if (tail != flag->sq.end())
+		{
+			flag->sq.erase(tail, flag->sq.end());
+			lv2_obj::awake_all();
+		}
 	}
 
 	return CELL_OK;
@@ -380,7 +383,10 @@ error_code sys_event_flag_cancel(ppu_thread& ppu, u32 id, vm::ptr<u32> num)
 			flag->append(thread);
 		}
 
-		lv2_obj::awake_all();
+		if (value)
+		{
+			lv2_obj::awake_all();
+		}
 	}
 
 	if (ppu.test_stopped())

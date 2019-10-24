@@ -1,6 +1,5 @@
 #include "log_frame.h"
 #include "qt_utils.h"
-
 #include "stdafx.h"
 #include "rpcs3_version.h"
 #include "Utilities/sysinfo.h"
@@ -10,7 +9,7 @@
 #include <QScrollBar>
 #include <QTabBar>
 #include <QVBoxLayout>
-
+#include <sstream>
 #include <deque>
 #include <mutex>
 #include "Utilities/mutex.h"
@@ -227,8 +226,15 @@ void log_frame::CreateAndConnectActions()
 	m_clearTTYAct = new QAction(tr("Clear"), this);
 	connect(m_clearTTYAct, &QAction::triggered, m_tty, &QTextEdit::clear);
 
-	m_tty_channel_acts = new QActionGroup(this);
+	m_stackAct_tty = new QAction(tr("Stack Mode (TTY)"), this);
+	m_stackAct_tty->setCheckable(true);
+	connect(m_stackAct_tty, &QAction::toggled, xgui_settings.get(), [=](bool checked)
+	{
+		xgui_settings->SetValue(gui::l_stack_tty, checked);
+		m_stack_tty = checked;
+	});
 
+	m_tty_channel_acts = new QActionGroup(this);
 	// Special Channel: All
 	QAction* all_channels_act = new QAction(tr("All user channels"), m_tty_channel_acts);
 	all_channels_act->setCheckable(true);
@@ -263,9 +269,9 @@ void log_frame::CreateAndConnectActions()
 	m_noticeAct = new QAction(tr("Notice"), m_logLevels);
 	m_traceAct = new QAction(tr("Trace"), m_logLevels);
 
-	m_stackAct = new QAction(tr("Stack Mode"), this);
-	m_stackAct->setCheckable(true);
-	connect(m_stackAct, &QAction::toggled, xgui_settings.get(), [=](bool checked)
+	m_stackAct_log = new QAction(tr("Stack Mode (Log)"), this);
+	m_stackAct_log->setCheckable(true);
+	connect(m_stackAct_log, &QAction::toggled, xgui_settings.get(), [=](bool checked)
 	{
 		xgui_settings->SetValue(gui::l_stack, checked);
 		m_stack_log = checked;
@@ -294,7 +300,7 @@ void log_frame::CreateAndConnectActions()
 		menu->addSeparator();
 		menu->addActions(m_logLevels->actions());
 		menu->addSeparator();
-		menu->addAction(m_stackAct);
+		menu->addAction(m_stackAct_log);
 		menu->addSeparator();
 		menu->addAction(m_TTYAct);
 		menu->exec(mapToGlobal(pos));
@@ -304,6 +310,8 @@ void log_frame::CreateAndConnectActions()
 	{
 		QMenu* menu = m_tty->createStandardContextMenu();
 		menu->addAction(m_clearTTYAct);
+		menu->addSeparator();
+		menu->addAction(m_stackAct_tty);
 		menu->addSeparator();
 		menu->addActions(m_tty_channel_acts->actions());
 		menu->exec(mapToGlobal(pos));
@@ -344,9 +352,13 @@ void log_frame::CreateAndConnectActions()
 		{
 			text = fmt::format("%s > %s\n", "Ch.%d", m_tty_channel, text);
 		}
-		g_tty_size -= (1ll << 48);
-		g_tty.write(text.c_str(), text.size());
-		g_tty_size += (1ll << 48) + text.size();
+
+		if (g_tty)
+		{
+			g_tty_size -= (1ll << 48);
+			g_tty.write(text.c_str(), text.size());
+			g_tty_size += (1ll << 48) + text.size();
+		}
 
 		m_tty_input->clear();
 	});
@@ -359,7 +371,9 @@ void log_frame::LoadSettings()
 	SetLogLevel(xgui_settings->GetLogLevel());
 	SetTTYLogging(xgui_settings->GetValue(gui::l_tty).toBool());
 	m_stack_log = xgui_settings->GetValue(gui::l_stack).toBool();
-	m_stackAct->setChecked(m_stack_log);
+	m_stack_tty = xgui_settings->GetValue(gui::l_stack_tty).toBool();
+	m_stackAct_log->setChecked(m_stack_log);
+	m_stackAct_tty->setChecked(m_stack_tty);
 }
 
 void log_frame::RepaintTextColors()
@@ -439,7 +453,7 @@ void log_frame::UpdateUI()
 	const auto start = steady_clock::now();
 
 	// Check TTY logs
-	while (const u64 size = std::max<s64>(0, g_tty_size.load() - m_tty_file.pos()))
+	while (const u64 size = std::max<s64>(0, g_tty_size.load() - (m_tty_file ? m_tty_file.pos() : 0)))
 	{
 		std::string buf;
 		buf.resize(size);
@@ -467,23 +481,56 @@ void log_frame::UpdateUI()
 			// clear selection or else it will get colorized as well
 			text_cursor.clearSelection();
 
-			// write text to the end
-			text_cursor.movePosition(QTextCursor::End);
-			text_cursor.insertText(qstr(buf));
-
-			// if we mark text from right to left we need to swap sides (start is always smaller than end)
-			if (sel_pos < sel_end)
+			std::stringstream buf_stream;
+			buf_stream.str(buf);
+			std::string buf_line;
+			while (std::getline(buf_stream, buf_line))
 			{
-				std::swap(sel_start, sel_end);
+				QString suffix;
+				QString tty_text = QString::fromStdString(buf_line);
+				bool isSame = tty_text == m_old_tty_text;
+				// create counter suffix and remove recurring line if needed
+				if (m_stack_tty)
+				{
+					if (isSame)
+					{
+						m_tty_counter++;
+						suffix = QString(" x%1").arg(m_tty_counter);
+						m_tty->moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+						m_tty->moveCursor(QTextCursor::StartOfBlock, QTextCursor::MoveAnchor);
+						m_tty->moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
+						m_tty->textCursor().removeSelectedText();
+						m_tty->textCursor().deletePreviousChar();
+					}
+					else
+					{
+						m_tty_counter = 1;
+						m_old_tty_text = tty_text;
+					}
+				}
+
+				// write text to the end
+				m_tty->append(tty_text);
+				// add counter suffix if needed
+				if (isSame && m_stack_tty)
+				{
+					m_tty->insertPlainText(suffix);
+				}
+
+				// if we mark text from right to left we need to swap sides (start is always smaller than end)
+				if (sel_pos < sel_end)
+				{
+					std::swap(sel_start, sel_end);
+				}
+
+				// reset old text cursor and selection
+				text_cursor.setPosition(sel_start);
+				text_cursor.setPosition(sel_end, QTextCursor::KeepAnchor);
+				m_tty->setTextCursor(text_cursor);
+
+				// set scrollbar to max means auto-scroll
+				sb->setValue(is_max ? sb->maximum() : sb_pos);
 			}
-
-			// reset old text cursor and selection
-			text_cursor.setPosition(sel_start);
-			text_cursor.setPosition(sel_end, QTextCursor::KeepAnchor);
-			m_tty->setTextCursor(text_cursor);
-
-			// set scrollbar to max means auto-scroll
-			sb->setValue(is_max ? sb->maximum() : sb_pos);
 		}
 
 		// Limit processing time
@@ -530,7 +577,7 @@ void log_frame::UpdateUI()
 			text.chop(1);
 
 			QString suffix;
-			bool isSame = text == m_old_text;
+			bool isSame = text == m_old_log_text;
 
 			// create counter suffix and remove recurring line if needed
 			if (m_stack_log)
@@ -548,7 +595,7 @@ void log_frame::UpdateUI()
 				else
 				{
 					m_log_counter = 1;
-					m_old_text = text;
+					m_old_log_text = text;
 				}
 			}
 

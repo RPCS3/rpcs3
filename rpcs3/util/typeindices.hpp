@@ -20,7 +20,10 @@ namespace stx
 		friend type_counter<Info>;
 
 	public:
-		constexpr type_info() noexcept = default;
+		constexpr type_info() noexcept
+			: Info()
+		{
+		}
 
 		unsigned index() const
 		{
@@ -109,15 +112,22 @@ namespace stx
 
 	// Global typecounter instance
 	template <typename Info>
-	inline type_counter<Info> typeinfo_v{};
+	inline type_counter<Info> typelist_v{};
 
 	template <typename Info>
 	type_info<Info>::type_info(Info info, decltype(sizeof(int))) noexcept
 		: Info(info)
-		, type(typeinfo_v<Info>.count())
+		, type(typelist_v<Info>.count())
 	{
 		// Update linked list
-		typeinfo_v<Info>.next->next = this;
-		typeinfo_v<Info>.next       = this;
+		typelist_v<Info>.next->next = this;
+		typelist_v<Info>.next       = this;
+	}
+
+	// Type index accessor
+	template <typename Info, typename T>
+	inline unsigned typeindex() noexcept
+	{
+		return type_counter<Info>::template type<T>.index();
 	}
 }

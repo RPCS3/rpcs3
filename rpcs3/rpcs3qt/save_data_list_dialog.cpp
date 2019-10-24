@@ -59,7 +59,7 @@ save_data_list_dialog::save_data_list_dialog(const std::vector<SaveDataEntry>& e
 		UpdateSelectionLabel();
 	}
 
-	if (listSet->newData)
+	if (listSet && listSet->newData)
 	{
 		QPushButton *saveNewEntry = new QPushButton(tr("Save New Entry"), this);
 		connect(saveNewEntry, &QAbstractButton::clicked, this, [&]()

@@ -974,7 +974,7 @@ error_code _cellSyncLFQueueGetPushPointer2(ppu_thread& ppu, vm::ptr<CellSyncLFQu
 	// arguments copied from _cellSyncLFQueueGetPushPointer
 	cellSync.todo("_cellSyncLFQueueGetPushPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
-	fmt::throw_exception("Unimplemented" HERE);
+	return CELL_OK;
 }
 
 error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
@@ -1115,7 +1115,7 @@ error_code _cellSyncLFQueueCompletePushPointer2(ppu_thread& ppu, vm::ptr<CellSyn
 	// arguments copied from _cellSyncLFQueueCompletePushPointer
 	cellSync.todo("_cellSyncLFQueueCompletePushPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x)", queue, pointer, fpSendSignal);
 
-	fmt::throw_exception("Unimplemented" HERE);
+	return CELL_OK;
 }
 
 error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> queue, vm::cptr<void> buffer, u32 isBlocking)
@@ -1273,7 +1273,7 @@ error_code _cellSyncLFQueueGetPopPointer2(ppu_thread& ppu, vm::ptr<CellSyncLFQue
 	// arguments copied from _cellSyncLFQueueGetPopPointer
 	cellSync.todo("_cellSyncLFQueueGetPopPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
 
-	fmt::throw_exception("Unimplemented" HERE);
+	return CELL_OK;
 }
 
 error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
@@ -1414,7 +1414,7 @@ error_code _cellSyncLFQueueCompletePopPointer2(ppu_thread& ppu, vm::ptr<CellSync
 	// arguments copied from _cellSyncLFQueueCompletePopPointer
 	cellSync.todo("_cellSyncLFQueueCompletePopPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x, noQueueFull=%d)", queue, pointer, fpSendSignal, noQueueFull);
 
-	fmt::throw_exception("Unimplemented" HERE);
+	return CELL_OK;
 }
 
 error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> queue, vm::ptr<void> buffer, u32 isBlocking)
@@ -1646,14 +1646,14 @@ error_code _cellSyncLFQueueAttachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::p
 {
 	cellSync.todo("_cellSyncLFQueueAttachLv2EventQueue(spus=*0x%x, num=%d, queue=*0x%x)", spus, num, queue);
 
-	fmt::throw_exception("Unimplemented" HERE);
+	return CELL_OK;
 }
 
 error_code _cellSyncLFQueueDetachLv2EventQueue(vm::ptr<u32> spus, u32 num, vm::ptr<CellSyncLFQueue> queue)
 {
 	cellSync.todo("_cellSyncLFQueueDetachLv2EventQueue(spus=*0x%x, num=%d, queue=*0x%x)", spus, num, queue);
 
-	fmt::throw_exception("Unimplemented" HERE);
+	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellSync)("cellSync", []()

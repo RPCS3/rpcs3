@@ -618,7 +618,13 @@ struct coord_base
 	{
 	}
 
-	constexpr coord_base(T x, T y, T width, T height) : x{ x }, y{ y }, width{ width }, height{ height }
+	constexpr coord_base(const coord_base<T>& other)
+		: position{ other.position }, size{ other.size }
+	{
+	}
+
+	constexpr coord_base(T x, T y, T width, T height)
+		: x{ x }, y{ y }, width{ width }, height{ height }
 	{
 	}
 
@@ -664,7 +670,8 @@ struct area_base
 	{
 	}
 
-	constexpr area_base(const coord_base<T>& coord) : x1{ coord.x }, x2{ coord.x + coord.width }, y1{ coord.y }, y2{ coord.y + coord.height }
+	template<typename N>
+	constexpr area_base(const coord_base<N>& coord) : x1{ T(coord.x) }, x2{ T(coord.x + coord.width) }, y1{ T(coord.y) }, y2{ T(coord.y + coord.height) }
 	{
 	}
 

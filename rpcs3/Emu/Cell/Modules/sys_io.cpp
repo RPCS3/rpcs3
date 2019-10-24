@@ -10,42 +10,50 @@ extern void cellMouse_init();
 
 s32 sys_config_start()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sys_io.todo("sys_config_start()");
+	return CELL_OK;
 }
 
 s32 sys_config_stop()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sys_io.todo("sys_config_stop()");
+	return CELL_OK;
 }
 
 s32 sys_config_add_service_listener()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sys_io.todo("sys_config_add_service_listener()");
+	return CELL_OK;
 }
 
 s32 sys_config_remove_service_listener()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sys_io.todo("sys_config_remove_service_listener()");
+	return CELL_OK;
 }
 
 s32 sys_config_register_io_error_handler()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sys_io.todo("sys_config_register_io_error_handler()");
+	return CELL_OK;
 }
 
 s32 sys_config_register_service()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sys_io.todo("sys_config_register_service()");
+	return CELL_OK;
 }
 
 s32 sys_config_unregister_io_error_handler()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sys_io.todo("sys_config_unregister_io_error_handler()");
+	return CELL_OK;
 }
 
 s32 sys_config_unregister_service()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sys_io.todo("sys_config_unregister_service()");
+	return CELL_OK;
 }
 
 

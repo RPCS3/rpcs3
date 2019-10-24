@@ -17,9 +17,17 @@
 #include "Utilities/Log.h"
 
 #define GL_FRAGMENT_TEXTURES_START 0
-#define GL_VERTEX_TEXTURES_START   GL_FRAGMENT_TEXTURES_START + 16
-#define GL_STENCIL_MIRRORS_START   GL_VERTEX_TEXTURES_START + 4
-#define GL_STREAM_BUFFER_START     GL_STENCIL_MIRRORS_START + 16
+#define GL_VERTEX_TEXTURES_START   (GL_FRAGMENT_TEXTURES_START + 16)
+#define GL_STENCIL_MIRRORS_START   (GL_VERTEX_TEXTURES_START + 4)
+#define GL_STREAM_BUFFER_START     (GL_STENCIL_MIRRORS_START + 16)
+
+#define GL_VERTEX_PARAMS_BIND_SLOT 0
+#define GL_VERTEX_LAYOUT_BIND_SLOT 1
+#define GL_VERTEX_CONSTANT_BUFFERS_BIND_SLOT 2
+#define GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT 3
+#define GL_FRAGMENT_STATE_BIND_SLOT 4
+#define GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 5
+#define GL_COMPUTE_BUFFER_SLOT(index) (index + 6)
 
 inline static void _SelectTexture(int unit) { glActiveTexture(GL_TEXTURE0 + unit); }
 
@@ -106,6 +114,7 @@ namespace gl
 		bool NV_texture_barrier_supported = false;
 		bool NV_gpu_shader5_supported = false;
 		bool AMD_gpu_shader_half_float_supported = false;
+		bool ARB_compute_shader_supported = false;
 		bool initialized = false;
 		bool vendor_INTEL = false;  // has broken GLSL compiler
 		bool vendor_AMD = false;    // has broken ARB_multidraw
@@ -125,7 +134,7 @@ namespace gl
 
 		void initialize()
 		{
-			int find_count = 10;
+			int find_count = 11;
 			int ext_count = 0;
 			glGetIntegerv(GL_NUM_EXTENSIONS, &ext_count);
 
@@ -201,6 +210,13 @@ namespace gl
 				if (check(ext_name, "GL_AMD_gpu_shader_half_float"))
 				{
 					AMD_gpu_shader_half_float_supported = true;
+					find_count--;
+					continue;
+				}
+
+				if (check(ext_name, "GL_ARB_compute_shader"))
+				{
+					ARB_compute_shader_supported = true;
 					find_count--;
 					continue;
 				}
@@ -686,8 +702,10 @@ namespace gl
 			array = GL_ARRAY_BUFFER,
 			element_array = GL_ELEMENT_ARRAY_BUFFER,
 			uniform = GL_UNIFORM_BUFFER,
-			texture = GL_TEXTURE_BUFFER
+			texture = GL_TEXTURE_BUFFER,
+			ssbo = GL_SHADER_STORAGE_BUFFER
 		};
+
 		enum class access
 		{
 			read = GL_READ_ONLY,
@@ -695,25 +713,12 @@ namespace gl
 			read_write = GL_READ_WRITE
 		};
 
-	protected:
-		GLuint m_id = GL_NONE;
-		GLsizeiptr m_size = 0;
-		target m_target = target::array;
-
-	public:
-		buffer() = default;
-		buffer(const buffer&) = delete;
-
-		buffer(GLuint id)
+		enum class memory_type
 		{
-			set_id(id);
-		}
-
-		~buffer()
-		{
-			if (created())
-				remove();
-		}
+			undefined = 0,
+			local = 1,
+			host_visible = 2
+		};
 
 		class save_binding_state
 		{
@@ -737,6 +742,7 @@ namespace gl
 				case target::element_array: pname = GL_ELEMENT_ARRAY_BUFFER_BINDING; break;
 				case target::uniform: pname = GL_UNIFORM_BUFFER_BINDING; break;
 				case target::texture: pname = GL_TEXTURE_BUFFER_BINDING; break;
+				case target::ssbo: pname = GL_SHADER_STORAGE_BUFFER_BINDING; break;
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -749,6 +755,76 @@ namespace gl
 				glBindBuffer(m_target, m_last_binding);
 			}
 		};
+
+	protected:
+		GLuint m_id = GL_NONE;
+		GLsizeiptr m_size = 0;
+		target m_target = target::array;
+		memory_type m_memory_type = memory_type::undefined;
+
+		void allocate(GLsizeiptr size, const void* data_, memory_type type, GLenum usage)
+		{
+			if (const auto& caps = get_driver_caps();
+				caps.ARB_buffer_storage_supported)
+			{
+				target target_ = current_target();
+				save_binding_state save(target_, *this);
+				GLenum flags = 0;
+
+				if (type == memory_type::host_visible)
+				{
+					switch (usage)
+					{
+					case GL_STREAM_DRAW:
+					case GL_STATIC_DRAW:
+					case GL_DYNAMIC_DRAW:
+						flags |= GL_MAP_WRITE_BIT;
+						break;
+					case GL_STREAM_READ:
+					case GL_STATIC_READ:
+					case GL_DYNAMIC_READ:
+						flags |= GL_MAP_READ_BIT;
+						break;
+					default:
+						fmt::throw_exception("Unsupported buffer usage 0x%x", usage);
+					}
+				}
+
+				if ((flags & GL_MAP_READ_BIT) && !caps.vendor_AMD)
+				{
+					// This flag stops NVIDIA from allocating read-only memory in VRAM.
+					// NOTE: On AMD, allocating client-side memory via CLIENT_STORAGE_BIT or
+					// making use of GL_AMD_pinned_memory brings everything down to a crawl.
+					// Afaict there is no reason for this; disabling pixel pack/unpack operations does not alleviate the problem.
+					// The driver seems to eventually figure out the optimal storage location by itself.
+					flags |= GL_CLIENT_STORAGE_BIT;
+				}
+
+				glBufferStorage((GLenum)target_, size, data_, flags);
+				m_size = size;
+			}
+			else
+			{
+				data(size, data_, usage);
+			}
+
+			m_memory_type = type;
+		}
+
+	public:
+		buffer() = default;
+		buffer(const buffer&) = delete;
+
+		buffer(GLuint id)
+		{
+			set_id(id);
+		}
+
+		~buffer()
+		{
+			if (created())
+				remove();
+		}
 
 		void recreate()
 		{
@@ -775,32 +851,17 @@ namespace gl
 			glGenBuffers(1, &m_id);
 		}
 
-		void create(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
+		void create(GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW)
 		{
 			create();
-			data(size, data_, usage);
+			allocate(size, data_, type, usage);
 		}
 
-		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
+		void create(target target_, GLsizeiptr size, const void* data_ = nullptr, memory_type type = memory_type::local, GLenum usage = GL_STREAM_DRAW)
 		{
 			create();
 			m_target = target_;
-			data(size, data_, usage);
-		}
-
-		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
-		{
-			target target_ = current_target();
-			save_binding_state save(target_, *this);
-			glBufferData((GLenum)target_, size, data_, usage);
-			m_size = size;
-		}
-
-		void sub_data(GLintptr offset, GLsizeiptr size, const void* data_ = nullptr)
-		{
-			target target_ = current_target();
-			save_binding_state save(target_, *this);
-			glBufferSubData((GLenum)target_, offset, size, data_);
+			allocate(size, data_, type, usage);
 		}
 
 		void bind(target target_) const
@@ -849,51 +910,38 @@ namespace gl
 			return created();
 		}
 
-		void map(const std::function<void(GLubyte*)>& impl, access access_)
+		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
 		{
+			verify(HERE), m_memory_type != memory_type::local;
+
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
-
-			if (GLubyte* ptr = (GLubyte*)glMapBuffer((GLenum)target_, (GLenum)access_))
-			{
-				impl(ptr);
-				glUnmapBuffer((GLenum)target_);
-			}
+			glBufferData((GLenum)target_, size, data_, usage);
+			m_size = size;
 		}
-
-		class mapper
-		{
-			buffer *m_parent;
-			GLubyte *m_data;
-
-		public:
-			mapper(buffer& parent, access access_)
-			{
-				m_parent = &parent;
-				m_data = parent.map(access_);
-			}
-
-			~mapper()
-			{
-				m_parent->unmap();
-			}
-
-			GLubyte* get() const
-			{
-				return m_data;
-			}
-		};
 
 		GLubyte* map(access access_)
 		{
-			bind(current_target());
+			verify(HERE), m_memory_type == memory_type::host_visible;
 
+			bind(current_target());
 			return (GLubyte*)glMapBuffer((GLenum)current_target(), (GLenum)access_);
 		}
 
 		void unmap()
 		{
+			verify(HERE), m_memory_type == memory_type::host_visible;
 			glUnmapBuffer((GLenum)current_target());
+		}
+
+		void bind_range(u32 index, u32 offset, u32 size) const
+		{
+			glBindBufferRange((GLenum)current_target(), index, id(), offset, size);
+		}
+
+		void bind_range(target target_, u32 index, u32 offset, u32 size) const
+		{
+			glBindBufferRange((GLenum)target_, index, id(), offset, size);
 		}
 	};
 
@@ -982,11 +1030,6 @@ namespace gl
 
 		virtual void unmap() {}
 
-		void bind_range(u32 index, u32 offset, u32 size) const
-		{
-			glBindBufferRange((GLenum)current_target(), index, id(), offset, size);
-		}
-
 		//Notification of a draw command
 		virtual void notify()
 		{
@@ -1010,8 +1053,9 @@ namespace gl
 				remove();
 
 			buffer::create();
-			buffer::data(size, data);
+			buffer::data(size, data, GL_DYNAMIC_DRAW);
 
+			m_memory_type = memory_type::host_visible;
 			m_memory_mapping = nullptr;
 			m_data_loc = 0;
 			m_size = ::narrow<u32>(size);
@@ -1034,7 +1078,7 @@ namespace gl
 
 			if ((offset + block_size) > m_size)
 			{
-				buffer::data(m_size, nullptr);
+				buffer::data(m_size, nullptr, GL_DYNAMIC_DRAW);
 				m_data_loc = 0;
 			}
 
@@ -1738,9 +1782,15 @@ namespace gl
 			return m_aspect_flags;
 		}
 
-		sizei size2D() const
+		sizeu size2D() const
 		{
-			return{ (int)m_width, (int)m_height };
+			return{ m_width, m_height };
+		}
+
+		size3u size3D() const
+		{
+			const auto depth = (m_target == target::textureCUBE) ? 6 : m_depth;
+			return{ m_width, m_height, depth };
 		}
 
 		texture::internal_format get_internal_format() const
@@ -1753,7 +1803,7 @@ namespace gl
 			return m_component_layout;
 		}
 
-		void copy_from(const void* src, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
+		void copy_from(const void* src, texture::format format, texture::type type, const coord3u region, const pixel_unpack_settings& pixel_settings)
 		{
 			pixel_settings.apply();
 
@@ -1761,38 +1811,45 @@ namespace gl
 			{
 			case GL_TEXTURE_1D:
 			{
-				DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, 0, 0, m_width, (GLenum)format, (GLenum)type, src);
+				DSA_CALL(TextureSubImage1D, m_id, GL_TEXTURE_1D, 0, region.x, region.width, (GLenum)format, (GLenum)type, src);
 				break;
 			}
 			case GL_TEXTURE_2D:
 			{
-				DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, 0, 0, 0, m_width, m_height, (GLenum)format, (GLenum)type, src);
+				DSA_CALL(TextureSubImage2D, m_id, GL_TEXTURE_2D, 0, region.x, region.y, region.width, region.height, (GLenum)format, (GLenum)type, src);
 				break;
 			}
 			case GL_TEXTURE_3D:
 			{
-				DSA_CALL(TextureSubImage3D, m_id, GL_TEXTURE_3D, 0, 0, 0, 0, m_width, m_height, m_depth, (GLenum)format, (GLenum)type, src);
+				DSA_CALL(TextureSubImage3D, m_id, GL_TEXTURE_3D, 0, region.x, region.y, region.z, region.width, region.height, region.depth, (GLenum)format, (GLenum)type, src);
 				break;
 			}
 			case GL_TEXTURE_CUBE_MAP:
 			{
-				if (::gl::get_driver_caps().ARB_dsa_supported)
+				if (get_driver_caps().ARB_dsa_supported)
 				{
-					glTextureSubImage3D(m_id, 0, 0, 0, 0, m_width, m_height, 6, (GLenum)format, (GLenum)type, src);
+					glTextureSubImage3D(m_id, 0, region.x, region.y, region.z, region.width, region.height, region.depth, (GLenum)format, (GLenum)type, src);
 				}
 				else
 				{
 					LOG_WARNING(RSX, "Cubemap upload via texture::copy_from is halfplemented!");
 					u8* ptr = (u8*)src;
-					for (int face = 0; face < 6; ++face)
+					const auto end = std::min(6u, region.z + region.depth);
+					for (unsigned face = region.z; face < end; ++face)
 					{
-						glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, 0, 0, m_width, m_height, (GLenum)format, (GLenum)type, ptr);
-						ptr += (m_width * m_height * 4); //TODO
+						glTextureSubImage2DEXT(m_id, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, region.x, region.y, region.width, region.height, (GLenum)format, (GLenum)type, ptr);
+						ptr += (region.width * region.height * 4); //TODO
 					}
 				}
 				break;
 			}
 			}
+		}
+
+		void copy_from(const void* src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
+		{
+			const coord3u region = { {}, size3D() };
+			copy_from(src, format, type, region, pixel_settings);
 		}
 
 		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
@@ -1808,45 +1865,41 @@ namespace gl
 			copy_from(*view.value(), view.format(), view.offset(), view.range());
 		}
 
-		void copy_from(const buffer& buf, texture::format format, texture::type type, class pixel_unpack_settings pixel_settings)
-		{
-			buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
-			copy_from(nullptr, format, type, pixel_settings);
-		}
-
-		void copy_from(void* src, texture::format format, texture::type type)
-		{
-			copy_from(src, format, type, pixel_unpack_settings());
-		}
-
-		void copy_from(const buffer& buf, texture::format format, texture::type type)
-		{
-			copy_from(buf, format, type, pixel_unpack_settings());
-		}
-
-		void copy_to(void* dst, texture::format format, texture::type type, class pixel_pack_settings pixel_settings) const
+		void copy_to(void* dst, texture::format format, texture::type type, const coord3u& region, const pixel_pack_settings& pixel_settings) const
 		{
 			pixel_settings.apply();
-			if (gl::get_driver_caps().ARB_dsa_supported)
-				glGetTextureImage(m_id, 0, (GLenum)format, (GLenum)type, m_width * m_height * 16, dst);
+			const auto& caps = get_driver_caps();
+
+			if (!region.x && !region.y && !region.z &&
+				region.width == m_width && region.height == m_height && region.depth == m_depth)
+			{
+				if (caps.ARB_dsa_supported)
+					glGetTextureImage(m_id, 0, (GLenum)format, (GLenum)type, INT32_MAX, dst);
+				else
+					glGetTextureImageEXT(m_id, (GLenum)m_target, 0, (GLenum)format, (GLenum)type, dst);
+			}
+			else if (caps.ARB_dsa_supported)
+			{
+				glGetTextureSubImage(m_id, 0, region.x, region.y, region.z, region.width, region.height, region.depth,
+					(GLenum)format, (GLenum)type, INT32_MAX, dst);
+			}
 			else
-				glGetTextureImageEXT(m_id, (GLenum)m_target, 0, (GLenum)format, (GLenum)type, dst);
+			{
+				// Worst case scenario. For some reason, EXT_dsa does not have glGetTextureSubImage
+				const auto target_ = static_cast<GLenum>(m_target);
+				texture tmp{ target_, region.width, region.height, region.depth, 1, (GLenum)m_internal_format };
+				glCopyImageSubData(m_id, target_, 0, region.x, region.y, region.z, tmp.id(), target_, 0, 0, 0, 0,
+					region.width, region.height, region.depth);
+
+				const coord3u region2 = { {0, 0, 0}, region.size };
+				tmp.copy_to(dst, format, type, region2, pixel_settings);
+			}
 		}
 
-		void copy_to(const buffer& buf, texture::format format, texture::type type, class pixel_pack_settings pixel_settings) const
+		void copy_to(void* dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
 		{
-			buffer::save_binding_state save_buffer(buffer::target::pixel_pack, buf);
-			copy_to(nullptr, format, type, pixel_settings);
-		}
-
-		void copy_to(void* dst, texture::format format, texture::type type) const
-		{
-			copy_to(dst, format, type, pixel_pack_settings());
-		}
-
-		void copy_to(const buffer& buf, texture::format format, texture::type type) const
-		{
-			copy_to(buf, format, type, pixel_pack_settings());
+			const coord3u region = { {}, size3D() };
+			copy_to(dst, format, type, region, pixel_settings);
 		}
 	};
 
@@ -2373,7 +2426,7 @@ public:
 			{
 				fragment = GL_FRAGMENT_SHADER,
 				vertex = GL_VERTEX_SHADER,
-				geometry = GL_GEOMETRY_SHADER
+				compute = GL_COMPUTE_SHADER
 			};
 
 		private:
@@ -2436,8 +2489,8 @@ public:
 					case type::fragment:
 						base_name = "shaderlog/FragmentProgram";
 						break;
-					case type::geometry:
-						base_name = "shaderlog/GeometryProgram";
+					case type::compute:
+						base_name = "shaderlog/ComputeProgram";
 						break;
 					}
 
@@ -2523,6 +2576,7 @@ public:
 				}
 
 				void operator = (int rhs) const { glProgramUniform1i(m_program.id(), location(), rhs); }
+				void operator = (unsigned rhs) const { glProgramUniform1ui(m_program.id(), location(), rhs); }
 				void operator = (float rhs) const { glProgramUniform1f(m_program.id(), location(), rhs); }
 				void operator = (const color1i& rhs) const { glProgramUniform1i(m_program.id(), location(), rhs.r); }
 				void operator = (const color1f& rhs) const { glProgramUniform1f(m_program.id(), location(), rhs.r); }

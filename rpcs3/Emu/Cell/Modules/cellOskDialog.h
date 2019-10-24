@@ -6,21 +6,21 @@
 enum CellOskDialogError : u32
 {
 	CELL_OSKDIALOG_ERROR_IME_ALREADY_IN_USE = 0x8002b501,
-	CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR = 0x8002b502,
-	CELL_OSKDIALOG_ERROR_UNKNOWN = 0x8002b503,
-	CELL_OSKDIALOG_ERROR_PARAM = 0x8002b504,
+	CELL_OSKDIALOG_ERROR_GET_SIZE_ERROR     = 0x8002b502,
+	CELL_OSKDIALOG_ERROR_UNKNOWN            = 0x8002b503,
+	CELL_OSKDIALOG_ERROR_PARAM              = 0x8002b504,
 };
 
 // OSK status for the callback
 enum
 {
-	CELL_SYSUTIL_OSKDIALOG_LOADED = 0x0502,
-	CELL_SYSUTIL_OSKDIALOG_FINISHED = 0x0503,
-	CELL_SYSUTIL_OSKDIALOG_UNLOADED = 0x0504,
-	CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED = 0x0505,
-	CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED = 0x0506,
+	CELL_SYSUTIL_OSKDIALOG_LOADED               = 0x0502,
+	CELL_SYSUTIL_OSKDIALOG_FINISHED             = 0x0503,
+	CELL_SYSUTIL_OSKDIALOG_UNLOADED             = 0x0504,
+	CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED        = 0x0505,
+	CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED       = 0x0506,
 	CELL_SYSUTIL_OSKDIALOG_INPUT_DEVICE_CHANGED = 0x0507,
-	CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED = 0x0508,
+	CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED      = 0x0508,
 };
 
 enum CellOskDialogInputFieldResult
@@ -251,12 +251,8 @@ public:
 	std::function<void()> on_osk_input_entered;
 
 	atomic_t<OskDialogState> state{ OskDialogState::Close };
-	atomic_t<bool> use_seperate_windows{ false };
 
-	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode{ CellOskDialogContinuousMode::CELL_OSKDIALOG_CONTINUOUS_MODE_NONE };
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};
 	char16_t osk_text_old[CELL_OSKDIALOG_STRING_SIZE]{};
-
-	vm::ptr<cellOskDialogConfirmWordFilterCallback> osk_confirm_callback{ vm::null };
 };

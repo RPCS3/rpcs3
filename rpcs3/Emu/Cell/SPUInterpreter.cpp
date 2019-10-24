@@ -508,7 +508,7 @@ bool spu_interpreter::BISL(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::IRET(spu_thread& spu, spu_opcode_t op)
 {
-	spu.pc = spu_branch_target(spu.srr0);
+	spu.pc = spu.srr0;
 	set_interrupt_status(spu, op);
 	return false;
 }

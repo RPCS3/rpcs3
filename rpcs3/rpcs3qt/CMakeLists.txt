@@ -37,10 +37,12 @@
 	save_data_list_dialog.cpp
 	save_manager_dialog.cpp
 	settings_dialog.cpp
+	skylander_dialog.cpp
 	syntax_highlighter.cpp
 	trophy_manager_dialog.cpp
 	trophy_notification_frame.cpp
 	trophy_notification_helper.cpp
+	update_manager.cpp
 	user_account.cpp
 	user_manager_dialog.cpp
 	vfs_dialog.cpp
@@ -80,4 +82,5 @@ target_link_libraries(rpcs3_ui
 		3rdparty::discord-rpc
 		3rdparty::hidapi
 		3rdparty::libusb
-		3rdparty::libpng)
+		3rdparty::libpng
+		3rdparty::7z)

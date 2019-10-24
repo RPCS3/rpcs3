@@ -1,5 +1,6 @@
 ﻿#include <QVBoxLayout>
 #include <QButtonGroup>
+#include <QDialogButtonBox>
 #include <QPushButton>
 #include <QMessageBox>
 #include <QInputDialog>
@@ -14,6 +15,7 @@
 #include <QTimer>
 #include <QScreen>
 
+#include "display_sleep_control.h"
 #include "qt_utils.h"
 #include "settings_dialog.h"
 #include "ui_settings_dialog.h"
@@ -37,7 +39,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	: QDialog(parent), xgui_settings(guiSettings), xemu_settings(emuSettings), ui(new Ui::settings_dialog), m_tab_Index(tabIndex)
 {
 	ui->setupUi(this);
-	ui->cancelButton->setFocus();
+	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
@@ -117,7 +119,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	m_discord_state = xgui_settings->GetValue(gui::m_discordState).toString();
 
 	// Various connects
-	connect(ui->okButton, &QAbstractButton::clicked, [=, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
+	connect(ui->buttonBox, &QDialogButtonBox::accepted, [=, use_discord_old = m_use_discord, discord_state_old = m_discord_state]
 	{
 		std::set<std::string> selectedlle;
 		for (int i = 0; i<ui->lleList->count(); ++i)
@@ -157,11 +159,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 #endif
 	});
 
-	connect(ui->cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
+	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
 
 	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, [=]()
 	{
-		ui->cancelButton->setFocus();
+		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	});
 
 	//     _____ _____  _    _   _______    _
@@ -229,7 +231,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		ui->enableTSX->setEnabled(false);
 		ui->enableTSX->addItem(tr("Not supported"));
-		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your cpu model does not support this instruction set."));
+		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your CPU model does not support this instruction set."));
 	}
 
 	// PPU tool tips
@@ -463,16 +465,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// Comboboxes
 	xemu_settings->EnhanceComboBox(ui->renderBox, emu_settings::Renderer);
-#ifdef WIN32
 	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox"].toString());
 	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox"].toString());
-#else
-	SubscribeTooltip(ui->renderBox, json_gpu_cbo["renderBox_Linux"].toString());
-	SubscribeTooltip(ui->graphicsAdapterBox, json_gpu_cbo["graphicsAdapterBox_Linux"].toString());
-#endif
+
 	// Change displayed renderer names
 	ui->renderBox->setItemText(ui->renderBox->findData("Null"), render_creator.name_Null);
-	ui->renderBox->setItemText(ui->renderBox->findData("D3D12"), render_creator.name_D3D12);
 
 	xemu_settings->EnhanceComboBox(ui->resBox, emu_settings::Resolution);
 	SubscribeTooltip(ui->resBox, json_gpu_cbo["resBox"].toString());
@@ -1141,6 +1138,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->startGameFullscreen, emu_settings::StartGameFullscreen);
 	SubscribeTooltip(ui->startGameFullscreen, json_emu_misc["startGameFullscreen"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->preventDisplaySleep, emu_settings::PreventDisplaySleep);
+	SubscribeTooltip(ui->preventDisplaySleep, json_emu_misc["preventDisplaySleep"].toString());
+	ui->preventDisplaySleep->setEnabled(display_sleep_control_supported());
+
 	xemu_settings->EnhanceCheckBox(ui->showFPSInTitle, emu_settings::ShowFPSInTitle);
 	SubscribeTooltip(ui->showFPSInTitle, json_emu_misc["showFPSInTitle"].toString());
 
@@ -1305,6 +1306,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 		SubscribeTooltip(ui->cb_show_pup_install, json_gui["show_pup_install"].toString());
 
+		SubscribeTooltip(ui->cb_check_update_start, json_gui["check_update_start"].toString());
+
 		SubscribeTooltip(ui->useRichPresence, json_gui["useRichPresence"].toString());
 
 		SubscribeTooltip(ui->discordState, json_gui["discordState"].toString());
@@ -1366,6 +1369,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->cb_show_pkg_install->setChecked(xgui_settings->GetValue(gui::ib_pkg_success).toBool());
 		ui->cb_show_pup_install->setChecked(xgui_settings->GetValue(gui::ib_pup_success).toBool());
 
+		ui->cb_check_update_start->setChecked(xgui_settings->GetValue(gui::m_check_upd_start).toBool());
+
 		bool enableUIColors = xgui_settings->GetValue(gui::m_enableUIColors).toBool();
 		ui->cb_custom_colors->setChecked(enableUIColors);
 		ui->pb_gl_icon_color->setEnabled(enableUIColors);
@@ -1392,7 +1397,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			}
 		};
 
-		connect(ui->okButton, &QAbstractButton::clicked, [=]()
+		connect(ui->buttonBox, &QDialogButtonBox::accepted, [=]()
 		{
 			ApplyGuiOptions();
 		});
@@ -1440,6 +1445,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		connect(ui->cb_show_pup_install, &QCheckBox::clicked, [=](bool val)
 		{
 			xgui_settings->SetValue(gui::ib_pup_success, val);
+		});
+		connect(ui->cb_check_update_start, &QCheckBox::clicked, [=](bool val)
+		{
+			xgui_settings->SetValue(gui::m_check_upd_start, val);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [=](bool val)
@@ -1605,6 +1614,7 @@ void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
 
+	ui->combo_stylesheets->addItem("None", gui::None);
 	ui->combo_stylesheets->addItem("Default (Bright)", gui::Default);
 
 	for (const QString& entry : xgui_settings->GetStylesheetEntries())

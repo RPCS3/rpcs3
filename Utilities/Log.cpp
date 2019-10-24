@@ -325,30 +325,58 @@ logs::file_writer::file_writer(const std::string& name)
 	const std::string log_name = fs::get_cache_dir() + name + ".log";
 	const std::string buf_name = fs::get_cache_dir() + name + ".buf";
 
+	const std::string s_filelock = fs::get_cache_dir() + ".restart_lock";
+
 	try
 	{
 		if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
 		{
-			if (fs::g_tls_error == fs::error::acces)
-			{
-				if (fs::exists(buf_name))
-				{
-					fmt::throw_exception("Another instance of %s is running. Close it or kill its process, if necessary.", name);
-				}
-				else
-				{
-					fmt::throw_exception("Cannot create %s.log (access denied)."
 #ifdef _WIN32
-						"\nNote that %s cannot be installed in Program Files or similar directory with limited permissions."
-#else
-						"\nPlease, check %s permissions in '~/.config/'."
-#endif
-						, name, name);
+			auto prev_error = fs::g_tls_error;
+
+			if (fs::exists(s_filelock))
+			{
+				// A restart is happening, wait for the file to be accessible
+				u32 tries = 0;
+				while (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock) && tries < 100)
+				{
+					std::this_thread::sleep_for(100ms);
+					tries++;
 				}
 			}
+			else
+			{
+				fs::g_tls_error = prev_error;
+			}
 
-			fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
+			if (!m_file)
+#endif
+			{
+				if (fs::g_tls_error == fs::error::acces)
+				{
+					if (fs::exists(buf_name))
+					{
+						fmt::throw_exception("Another instance of %s is running. Close it or kill its process, if necessary.", name);
+					}
+					else
+					{
+						fmt::throw_exception("Cannot create %s.log (access denied)."
+#ifdef _WIN32
+						                     "\nNote that %s cannot be installed in Program Files or similar directory with limited permissions."
+#else
+						                     "\nPlease, check %s permissions in '~/.config/'."
+#endif
+						                     , name, name);
+					}
+				}
+
+				fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
+			}
 		}
+
+#ifdef _WIN32
+		fs::remove_file(s_filelock); // remove restart token if it exists
+#endif
 
 		// Check free space
 		fs::device_stat stats{};

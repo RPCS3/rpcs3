@@ -38,9 +38,7 @@
 #include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
-#ifdef _MSC_VER
-#include "Emu/RSX/D3D12/D3D12GSRender.h"
-#endif
+
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
 #endif
@@ -65,7 +63,7 @@ EmuCallbacks main_application::CreateCallbacks()
 {
 	EmuCallbacks callbacks;
 
-	callbacks.reset_pads = [this](const std::string& title_id = "")
+	callbacks.reset_pads = [this](const std::string& title_id)
 	{
 		pad::get_current_handler()->Reset(title_id);
 	};
@@ -74,54 +72,71 @@ EmuCallbacks main_application::CreateCallbacks()
 		pad::get_current_handler()->SetEnabled(enable);
 	};
 
-	callbacks.get_kb_handler = [=]() -> std::shared_ptr<KeyboardHandlerBase>
+	callbacks.init_kb_handler = [=]()
 	{
 		switch (keyboard_handler type = g_cfg.io.keyboard)
 		{
-		case keyboard_handler::null: return std::make_shared<NullKeyboardHandler>();
+		case keyboard_handler::null:
+		{
+			g_fxo->init<KeyboardHandlerBase, NullKeyboardHandler>();
+			break;
+		}
 		case keyboard_handler::basic:
 		{
-			basic_keyboard_handler* ret = new basic_keyboard_handler();
+			basic_keyboard_handler* ret = g_fxo->init<KeyboardHandlerBase, basic_keyboard_handler>();
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
-			return std::shared_ptr<KeyboardHandlerBase>(ret);
+			break;
 		}
 		default: fmt::throw_exception("Invalid keyboard handler: %s", type);
 		}
 	};
 
-	callbacks.get_mouse_handler = [=]() -> std::shared_ptr<MouseHandlerBase>
+	callbacks.init_mouse_handler = [=]()
 	{
 		switch (mouse_handler type = g_cfg.io.mouse)
 		{
-		case mouse_handler::null: return std::make_shared<NullMouseHandler>();
+		case mouse_handler::null:
+		{
+			g_fxo->init<MouseHandlerBase, NullMouseHandler>();
+			break;
+		}
 		case mouse_handler::basic:
 		{
-			basic_mouse_handler* ret = new basic_mouse_handler();
+			basic_mouse_handler* ret = g_fxo->init<MouseHandlerBase, basic_mouse_handler>();
 			ret->moveToThread(get_thread());
 			ret->SetTargetWindow(m_game_window);
-			return std::shared_ptr<MouseHandlerBase>(ret);
+			break;
 		}
 		default: fmt::throw_exception("Invalid mouse handler: %s", type);
 		}
 	};
 
-	callbacks.get_pad_handler = [this](const std::string& title_id) -> std::shared_ptr<pad_thread>
+	callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
-		return std::make_shared<pad_thread>(get_thread(), m_game_window, title_id);
+		g_fxo->init<pad_thread>(get_thread(), m_game_window, title_id);
 	};
 
-	callbacks.get_gs_render = []() -> std::shared_ptr<GSRender>
+	callbacks.init_gs_render = []()
 	{
 		switch (video_renderer type = g_cfg.video.renderer)
 		{
-		case video_renderer::null: return std::make_shared<named_thread<NullGSRender>>("rsx::thread");
-		case video_renderer::opengl: return std::make_shared<named_thread<GLGSRender>>("rsx::thread");
+		case video_renderer::null:
+		{
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			break;
+		}
+		case video_renderer::opengl:
+		{
+			g_fxo->init<rsx::thread, named_thread<GLGSRender>>();
+			break;
+		}
 #if defined(_WIN32) || defined(HAVE_VULKAN)
-		case video_renderer::vulkan: return std::make_shared<named_thread<VKGSRender>>("rsx::thread");
-#endif
-#ifdef _MSC_VER
-		case video_renderer::dx12: return std::make_shared<named_thread<D3D12GSRender>>("rsx::thread");
+		case video_renderer::vulkan:
+		{
+			g_fxo->init<rsx::thread, named_thread<VKGSRender>>();
+			break;
+		}
 #endif
 		default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 		}

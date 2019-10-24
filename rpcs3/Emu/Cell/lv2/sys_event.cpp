@@ -179,7 +179,10 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 				queue->append(cpu);
 			}
 
-			lv2_obj::awake_all();
+			if (!queue->sq.empty())
+			{
+				lv2_obj::awake_all();
+			}
 		}
 		else
 		{

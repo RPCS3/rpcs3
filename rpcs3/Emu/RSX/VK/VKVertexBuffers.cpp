@@ -132,7 +132,7 @@ namespace
 				rsx::index_array_type::u32 :
 				rsx::method_registers.index_type();
 
-			u32 type_size = gsl::narrow<u32>(get_index_type_size(index_type));
+			u32 type_size = get_index_type_size(index_type);
 
 			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			if (primitives_emulated)
