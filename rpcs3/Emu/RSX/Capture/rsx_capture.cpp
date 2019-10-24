@@ -307,7 +307,7 @@ namespace rsx
 			u8* pixels_src = (u8*)vm::base(src_address);
 
 			const u32 src_size = in_pitch * (in_h - 1) + (in_w * in_bpp);
-			rsx->read_barrier(src_address, src_size);
+			rsx->read_barrier(src_address, src_size, true);
 
 			frame_capture_data::memory_block_data block_data;
 			block_data.data.resize(src_size);
@@ -328,7 +328,7 @@ namespace rsx
 			u32 src_dma    = method_registers.nv0039_input_location();
 			u32 src_addr   = get_address(src_offset, src_dma);
 
-			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length);
+			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length, true);
 
 			const u8* src = vm::_ptr<u8>(src_addr);
 

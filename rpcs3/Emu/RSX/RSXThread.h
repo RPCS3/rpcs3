@@ -101,6 +101,13 @@ namespace rsx
 		hint_zcull_sync = 2
 	};
 
+	enum result_flags: u8
+	{
+		result_none = 0,
+		result_error = 1,
+		result_zcull_intr = 2
+	};
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
 	u32 get_address(u32 offset, u32 location);
@@ -345,9 +352,18 @@ namespace rsx
 			u32 counter_tag;
 			occlusion_query_info* query;
 			queued_report_write* forwarder;
-			vm::addr_t sink;
+
+			vm::addr_t sink;                      // Memory location of the report
+			std::vector<vm::addr_t> sink_alias;   // Aliased memory addresses
 
 			u64 due_tsc;
+		};
+
+		enum sync_control
+		{
+			sync_none = 0,
+			sync_defer_copy = 1, // If set, return a zcull intr code instead of forcefully reading zcull data
+			sync_no_notify = 2   // If set, backend hint notifications will not be made
 		};
 
 		struct ZCULL_control
@@ -380,6 +396,7 @@ namespace rsx
 			void set_active(class ::rsx::thread* ptimer, bool state);
 
 			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
+			void write(queued_report_write* writer, u64 timestamp, u32 value);
 
 			// Read current zcull statistics into the address provided
 			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
@@ -394,7 +411,7 @@ namespace rsx
 			void sync(class ::rsx::thread* ptimer);
 
 			// Conditionally sync any pending writes if range overlaps
-			void read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range);
+			flags32_t read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range, flags32_t flags);
 
 			// Call once every 'tick' to update, optional address provided to partially sync until address is processed
 			void update(class ::rsx::thread* ptimer, u32 sync_address = 0);
@@ -407,6 +424,9 @@ namespace rsx
 
 			// Search for query synchronized at address
 			occlusion_query_info* find_query(vm::addr_t sink_address);
+
+			// Copies queries in range rebased from source range to destination range
+			u32 copy_reports_to(u32 start, u32 range, u32 dest);
 
 			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
@@ -687,10 +707,11 @@ namespace rsx
 		void clear_zcull_stats(u32 type);
 		void check_zcull_status(bool framebuffer_swap);
 		void get_zcull_stats(u32 type, vm::addr_t sink);
+		u32  copy_zcull_stats(u32 memory_range_start, u32 memory_range, u32 destination);
 
 		// sync
 		void sync();
-		void read_barrier(u32 memory_address, u32 memory_range);
+		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		virtual void sync_hint(FIFO_hint /*hint*/, u64 /*arg*/) {}
 
 		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
