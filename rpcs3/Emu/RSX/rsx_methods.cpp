@@ -920,6 +920,7 @@ namespace rsx
 			rsx::blit_engine::transfer_destination_format dst_color_format;
 			u32 out_pitch = 0;
 			u32 out_alignment = 64;
+			bool is_block_transfer = false;
 
 			switch (method_registers.blit_engine_context_surface())
 			{
@@ -930,6 +931,7 @@ namespace rsx
 				dst_color_format = method_registers.blit_engine_nv3062_color_format();
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
+				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
 				break;
 			}
 			case blit_engine::context_surface::swizzle2d:
@@ -954,8 +956,7 @@ namespace rsx
 
 			if (UNLIKELY(in_x == 1 || in_y == 1))
 			{
-				const bool is_graphics_op = scale_x < 0.f || scale_y < 0.f || in_bpp != out_bpp || !rsx::fcmp(scale_x, 1.f) || !rsx::fcmp(scale_y, 1.f);
-				if (!is_graphics_op)
+				if (is_block_transfer && in_bpp == out_bpp)
 				{
 					// No scaling factor, so size in src == size in dst
 					// Check for texel wrapping where (offset + size) > size by 1 pixel
@@ -968,6 +969,8 @@ namespace rsx
 					// Graphics operation, ignore subpixel correction offsets
 					if (in_x == 1) in_x = 0;
 					if (in_y == 1) in_y = 0;
+
+					is_block_transfer = false;
 				}
 			}
 
@@ -977,11 +980,30 @@ namespace rsx
 			const u32 src_address = get_address(src_offset, src_dma);
 			const u32 dst_address = get_address(dst_offset, dst_dma);
 
+			const u32 src_line_length = (in_w * in_bpp);
+			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
+			{
+				const u32 nb_lines = std::min(clip_h, in_h);
+				const u32 data_length = nb_lines * src_line_length;
+
+				if (const auto result = rsx->read_barrier(src_address, data_length, false);
+					result == rsx::result_zcull_intr)
+				{
+					if (rsx->copy_zcull_stats(src_address, data_length, dst_address) == data_length)
+					{
+						// All writes deferred
+						return;
+					}
+				}
+			}
+			else
+			{
+				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
+				rsx->read_barrier(src_address, dst_address, true);
+			}
+
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
 			u8* pixels_dst = vm::_ptr<u8>(dst_address + out_offset);
-
-			const auto read_address = get_address(src_offset, src_dma);
-			rsx->read_barrier(read_address, in_pitch * (in_h - 1) + (in_w * in_bpp));
 
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
@@ -1310,15 +1332,28 @@ namespace rsx
 			u32 dst_offset = method_registers.nv0039_output_offset();
 			u32 dst_dma = method_registers.nv0039_output_location();
 
+			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch == line_length);
 			const auto read_address = get_address(src_offset, src_dma);
-			rsx->read_barrier(read_address, in_pitch * (line_count - 1) + line_length);
+			const auto write_address = get_address(dst_offset, dst_dma);
+			const auto data_length = in_pitch * (line_count - 1) + line_length;
 
-			u8 *dst = vm::_ptr<u8>(get_address(dst_offset, dst_dma));
+			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
+				result == rsx::result_zcull_intr)
+			{
+				// This transfer overlaps will zcull data pool
+				if (rsx->copy_zcull_stats(read_address, data_length, write_address) == data_length)
+				{
+					// All writes deferred
+					return;
+				}
+			}
+
+			u8 *dst = vm::_ptr<u8>(write_address);
 			const u8 *src = vm::_ptr<u8>(read_address);
 
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
-				const u32 src_max = src_offset + (in_pitch * (line_count - 1) + line_length);
+				const u32 src_max = src_offset + data_length;
 				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
 				 (dst_offset >= src_offset && dst_offset < src_max);
@@ -1326,7 +1361,7 @@ namespace rsx
 
 			if (is_overlapping)
 			{
-				if (in_pitch == out_pitch && out_pitch == line_length)
+				if (is_block_transfer)
 				{
 					std::memmove(dst, src, line_length * line_count);
 				}
@@ -1354,7 +1389,7 @@ namespace rsx
 			}
 			else
 			{
-				if (in_pitch == out_pitch && out_pitch == line_length)
+				if (is_block_transfer)
 				{
 					std::memcpy(dst, src, line_length * line_count);
 				}
