@@ -55,6 +55,7 @@ install:
       3rdparty/xxHash `
       3rdparty/yaml-cpp `
       3rdparty/zlib `
+      3rdparty/FAudio `
       asmjit `
       Vulkan/glslang
 
