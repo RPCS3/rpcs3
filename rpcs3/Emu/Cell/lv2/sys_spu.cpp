@@ -947,11 +947,6 @@ error_code sys_spu_thread_write_spu_mb(ppu_thread& ppu, u32 id, u32 value)
 
 	std::lock_guard lock(group->mutex);
 
-	if (group->run_state < SPU_THREAD_GROUP_STATUS_WAITING || group->run_state > SPU_THREAD_GROUP_STATUS_RUNNING)
-	{
-		return CELL_ESTAT;
-	}
-
 	thread->ch_in_mbox.push(*thread, value);
 
 	return CELL_OK;
@@ -1015,11 +1010,6 @@ error_code sys_spu_thread_write_snr(ppu_thread& ppu, u32 id, u32 number, u32 val
 	{
 		return CELL_EINVAL;
 	}
-
-	//if (group->state < SPU_THREAD_GROUP_STATUS_WAITING || group->state > SPU_THREAD_GROUP_STATUS_RUNNING) // ???
-	//{
-	//	return CELL_ESTAT;
-	//}
 
 	thread->push_snr(number, value);
 
