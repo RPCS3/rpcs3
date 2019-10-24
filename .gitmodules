@@ -55,3 +55,4 @@
 [submodule "3rdparty/FAudio"]
 	path = 3rdparty/FAudio
 	url = https://github.com/FNA-XNA/FAudio.git
+	ignore = dirty
