@@ -332,6 +332,8 @@ logs::file_writer::file_writer(const std::string& name)
 		if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
 		{
 #ifdef _WIN32
+			auto prev_error = fs::g_tls_error;
+
 			if (fs::exists(s_filelock))
 			{
 				// A restart is happening, wait for the file to be accessible
@@ -341,6 +343,10 @@ logs::file_writer::file_writer(const std::string& name)
 					std::this_thread::sleep_for(100ms);
 					tries++;
 				}
+			}
+			else
+			{
+				fs::g_tls_error = prev_error;
 			}
 
 			if (!m_file)
