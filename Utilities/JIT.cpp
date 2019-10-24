@@ -603,12 +603,12 @@ struct EventListener : llvm::JITEventListener
 		for (auto it = obj.section_begin(), end = obj.section_end(); it != end; ++it)
 		{
 			llvm::StringRef name;
-			it->getName(name);
+			name = it->getName().get();
 
 			if (name == ".pdata")
 			{
 				llvm::StringRef data;
-				it->getContents(data);
+				data = it->getContents().get();
 
 				std::vector<RUNTIME_FUNCTION> rfs(data.size() / sizeof(RUNTIME_FUNCTION));
 

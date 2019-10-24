@@ -32,6 +32,7 @@ private Q_SLOTS:
 private:
 	void Init(std::string dir);
 	void UpdateList();
+	QPixmap GetResizedIcon(int i);
 	void UpdateIcons();
 	void ShowContextMenu(const QPoint &pos);
 

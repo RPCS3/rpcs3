@@ -274,7 +274,7 @@ static u32 sema_alloc()
 #ifdef USE_POSIX
 			// Initialize semaphore (should be very fast)
 			sem_init(&s_sema_list[id], 0, 0);
-#elif defined(_WIN32) | defined(USE_FUTEX)
+#elif defined(_WIN32) || defined(USE_FUTEX)
 			// Do nothing
 #else
 			if (!s_sema_list[id])
