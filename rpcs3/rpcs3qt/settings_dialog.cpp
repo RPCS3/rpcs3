@@ -788,7 +788,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	auto EnableBuffering = [this, EnableBufferingOptions](const QString& text)
 	{
-		const bool enabled = text == "XAudio2" || text == "OpenAL";
+		const bool enabled = text == "XAudio2" || text == "OpenAL" || text == "FAudio";
 		ui->enableBuffering->setEnabled(enabled);
 		EnableBufferingOptions(enabled && ui->enableBuffering->isChecked());
 	};
