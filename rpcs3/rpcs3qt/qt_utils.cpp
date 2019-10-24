@@ -171,7 +171,7 @@ namespace gui
 
 			for (int i = 0; i < combo->count(); ++i)
 			{
-				max_width = std::max(max_width, font_metrics.width(combo->itemText(i)));
+				max_width = std::max(max_width, font_metrics.horizontalAdvance(combo->itemText(i)));
 			}
 
 			if (combo->view()->minimumWidth() < max_width)
