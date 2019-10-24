@@ -1050,13 +1050,8 @@ void spu_thread::cpu_init()
 	ch_stall_stat.data.raw() = {};
 	ch_atomic_stat.data.raw() = {};
 
-	ch_in_mbox.clear();
-
 	ch_out_mbox.data.raw() = {};
 	ch_out_intr_mbox.data.raw() = {};
-
-	ch_snr1.data.raw() = {};
-	ch_snr2.data.raw() = {};
 
 	ch_event_mask.raw() = 0;
 	ch_event_stat.raw() = 0;
@@ -1068,6 +1063,10 @@ void spu_thread::cpu_init()
 
 	if (offset >= RAW_SPU_BASE_ADDR)
 	{
+		ch_in_mbox.clear();
+		ch_snr1.data.raw() = {};
+		ch_snr2.data.raw() = {};
+
 		snr_config = 0;
 	}
 
@@ -1097,6 +1096,7 @@ void spu_thread::cpu_stop()
 				std::lock_guard lock(group->mutex);
 				group->stop_count++;
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
+				ch_in_mbox.clear();
 
 				if (!group->join_state)
 				{
