@@ -1332,7 +1332,7 @@ error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 		// Create an event queue "bruteforcing" an available key
 		const u64 key_value = 0x80004d494f323221ull + i;
 
-		if (const s32 res = sys_event_queue_create(id, attr, key_value, 32))
+		if (CellError res{sys_event_queue_create(id, attr, key_value, 32) + 0u})
 		{
 			if (res != CELL_EEXIST)
 			{
