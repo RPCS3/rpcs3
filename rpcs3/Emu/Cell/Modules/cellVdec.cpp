@@ -255,29 +255,31 @@ struct vdec_context final
 						fmt::throw_exception("av_frame_alloc() failed" HERE);
 					}
 
-					int got_picture = 0;
-
-					int decode = avcodec_decode_video2(ctx, frame.avf.get(), &got_picture, &packet);
-
-					if (decode < 0)
+					int ret = avcodec_send_packet(ctx, &packet);
+					if (ret < 0)
 					{
 						char av_error[AV_ERROR_MAX_STRING_SIZE];
-						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, decode);
-						fmt::throw_exception("AU decoding error(0x%x): %s" HERE, decode, av_error);
+						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
+						fmt::throw_exception("AU queuing error(0x%x): %s" HERE, ret, av_error);
 					}
 
-					if (got_picture == 0)
+					while (true)
 					{
-						break;
-					}
+						int ret = avcodec_receive_frame(ctx, frame.avf.get());
+						if (ret != 0)
+						{
+							if (ret == AVERROR(EAGAIN))
+							{
+								break;
+							}
+							else
+							{
+								char av_error[AV_ERROR_MAX_STRING_SIZE];
+								av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
+								fmt::throw_exception("AU decoding error(0x%x): %s" HERE, ret, av_error);
+							}
+						}
 
-					if (decode != packet.size)
-					{
-						cellVdec.error("Incorrect AU size (0x%x, decoded 0x%x)", packet.size, decode);
-					}
-
-					if (got_picture)
-					{
 						if (frame->interlaced_frame)
 						{
 							// NPEB01838, NPUB31260
