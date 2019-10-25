@@ -337,6 +337,19 @@ add_library(3rdparty_openal INTERFACE)
 target_include_directories(3rdparty_openal INTERFACE ${OPENAL_INCLUDE_DIR})
 target_link_libraries(3rdparty_openal INTERFACE ${OPENAL_LIBRARY})
 
+# FAudio
+set(FAUDIO_TARGET 3rdparty_dummy_lib)
+if(USE_FAUDIO)
+	# FAudio depends on SDL2
+	pkg_check_modules(SDL2 sdl2)
+	if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.9)
+		message("-- RPCS3: FAudio requires SDL 2.0.9 or newer.")
+	else()
+		add_subdirectory(FAudio EXCLUDE_FROM_ALL)
+		target_compile_definitions(FAudio INTERFACE -DHAVE_FAUDIO)
+		set(FAUDIO_TARGET FAudio)
+	endif()
+endif()
 
 # FFMPEG
 add_library(3rdparty_ffmpeg INTERFACE)
@@ -416,6 +429,7 @@ add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
 add_library(3rdparty::discord-rpc ALIAS 3rdparty_discord-rpc)
 add_library(3rdparty::alsa ALIAS ${ALSA_TARGET})
 add_library(3rdparty::pulse ALIAS ${PULSE_TARGET})
+add_library(3rdparty::faudio ALIAS ${FAUDIO_TARGET})
 add_library(3rdparty::libevdev ALIAS ${LIBEVDEV_TARGET})
 add_library(3rdparty::vulkan ALIAS ${VULKAN_TARGET})
 add_library(3rdparty::openal ALIAS 3rdparty_openal)
