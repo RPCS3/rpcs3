@@ -17,8 +17,8 @@
 #include <thread>
 
 extern atomic_t<const char*> g_progr;
-extern atomic_t<u64> g_progr_ptotal;
-extern atomic_t<u64> g_progr_pdone;
+extern atomic_t<u32> g_progr_ptotal;
+extern atomic_t<u32> g_progr_pdone;
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;

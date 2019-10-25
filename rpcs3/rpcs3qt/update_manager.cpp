@@ -552,7 +552,11 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool automatic)
 	m_progress_dialog->close();
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!"));
 
+#ifdef _WIN32
+	int ret = _execl(replace_path.c_str(), replace_path.c_str(), nullptr);
+#else
 	int ret = execl(replace_path.c_str(), replace_path.c_str(), nullptr);
+#endif
 	if (ret == -1)
 	{
 		LOG_ERROR(GENERAL, "[Auto-updater] Relaunching failed with result: %d(%s)", ret, strerror(errno));

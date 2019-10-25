@@ -147,7 +147,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 		if (code <= size)
 		{
 			memcpy(out, (const void *)(in + 5), code);
-			result = (start - out);
+			result = static_cast<int>(start - out);
 		}
 	}
 	else
@@ -162,7 +162,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 			{
 				// Adjust offset and check for stream end.
 				if (offset > 0) offset--;
-				if (start == end) return (start - out);
+				if (start == end) return static_cast<int>(start - out);
 
 				// Locate first section.
 				int sect = (((((((int)(start - out)) & 7) << 8) + prev) >> head) & 7) * 0xFF - 1;
@@ -203,7 +203,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 
 					// Decode the data length (8 bit fields).
 					data_length = decode_number(tmp_sect1, index, &bit_flag, &range, &code, &in);
-					if (data_length == 0xFF) return (start - out);  // End of stream.
+					if (data_length == 0xFF) return static_cast<int>(start - out);  // End of stream.
 				}
 				else
 				{
@@ -276,7 +276,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 			}
 			prev = *(start - 1);
 		}
-		result = (start - out);
+		result = static_cast<int>(start - out);
 	}
 	delete[] tmp;
 	return result;

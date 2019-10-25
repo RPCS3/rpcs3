@@ -9,6 +9,8 @@ if(MSVC)
 	#TODO: Some of these could be cleaned up
 	add_compile_options(/wd4805) # Comparing boolean and int
 	add_compile_options(/wd4804) # Using integer operators with booleans
+	add_compile_options(/wd4200) # Zero-sized array in struct/union
+	add_link_options(/ignore:4281) # Undesirable base address 0x10000
 
 	# MSVC 2017 uses iterator as base class internally, causing a lot of warning spam
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /D _SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING=1")

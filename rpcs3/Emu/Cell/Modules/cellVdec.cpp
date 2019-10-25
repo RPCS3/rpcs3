@@ -103,7 +103,7 @@ struct vdec_context final
 	u32 frc_set{}; // Frame Rate Override
 	u64 next_pts{};
 	u64 next_dts{};
-	u64 ppu_tid{};
+	u32 ppu_tid{};
 
 	std::deque<vdec_frame> out;
 	atomic_t<u32> out_max = 60;
@@ -472,7 +472,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, vid, +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
 	*handle = vid;
 
-	const auto thrd = idm::get<named_thread<ppu_thread>>(*_tid);
+	const auto thrd = idm::get<named_thread<ppu_thread>>(static_cast<u32>(*_tid));
 
 	thrd->cmd_list
 	({
@@ -515,7 +515,7 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->out_max = 0;
 	vdec->in_cmd.push(vdec_close);
 
-	while (!atomic_storage<u64>::load(vdec->ppu_tid))
+	while (!atomic_storage<u32>::load(vdec->ppu_tid))
 	{
 		thread_ctrl::wait_for(1000);
 	}

@@ -1260,7 +1260,7 @@ s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8,
 
 	const u32 max_len = utf8_len; utf8_len = 0;
 
-	for (u32 i = 0, len = 0; i < utf16_len; i++, utf8_len = len)
+	for (u32 i = 0, len = 0; i < static_cast<u32>(utf16_len); i++, utf8_len = len)
 	{
 		const u16 ch = utf16[i];
 

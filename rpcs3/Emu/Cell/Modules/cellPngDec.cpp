@@ -680,7 +680,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 	// Indicate, that the PNG decoding is stopped/failed. This is incase, we return an error code in the middle of decoding
 	data_out_info->status = CELL_PNGDEC_DEC_STATUS_STOP;
 
-	const u32 bytes_per_line = data_control_param->outputBytesPerLine;
+	const u32 bytes_per_line = ::narrow<u32>(data_control_param->outputBytesPerLine);
 
 	// Log this for now
 	if (bytes_per_line < stream->out_param.outputWidthByte)

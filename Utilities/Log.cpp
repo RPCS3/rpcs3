@@ -527,7 +527,7 @@ bool logs::file_writer::flush(u64 bufv)
 		// Write compressed
 		if (m_fout2 && st < m_max_size)
 		{
-			m_zs.avail_in = size;
+			m_zs.avail_in = static_cast<uInt>(size);
 			m_zs.next_in  = m_fptr + st % s_log_size;
 
 			do
