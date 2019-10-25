@@ -262,7 +262,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 	return true;
 }
 
-bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool automatic)
+bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic*/)
 {
 	if (m_expected_size != rpcs3_data.size())
 	{
