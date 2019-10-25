@@ -6,7 +6,7 @@ progress_dialog::progress_dialog(const QString &windowTitle, const QString &labe
 	: QProgressDialog(labelText, cancelButtonText, minimum, maximum, parent, flags)
 {
 	setWindowTitle(windowTitle);
-	setFixedWidth(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width());
+	setFixedSize(QLabel("This is the very length of the progressdialog due to hidpi reasons.").sizeHint().width(), sizeHint().height());
 	setValue(0);
 	setWindowModality(Qt::WindowModal);
 	connect(this, &QProgressDialog::canceled, this, &QProgressDialog::deleteLater);
