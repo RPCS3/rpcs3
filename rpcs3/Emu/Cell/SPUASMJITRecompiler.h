@@ -13,7 +13,7 @@ public:
 
 	virtual void init() override;
 
-	virtual spu_function_t compile(const std::vector<u32>&, void*) override;
+	virtual spu_function_t compile(std::vector<u32>&&) override;
 
 private:
 	// ASMJIT runtime

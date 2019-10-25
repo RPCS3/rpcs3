@@ -400,14 +400,18 @@ void spu_cache::initialize()
 		{
 			compiler->init();
 
-			if (compiler->compile({}, nullptr) && spu_runtime::g_interpreter)
+			if (compiler->compile({}) && spu_runtime::g_interpreter)
 			{
-				LOG_SUCCESS(SPU, "SPU Runtime: built interpreter.");
+				LOG_SUCCESS(SPU, "SPU Runtime: Built the interpreter.");
 
 				if (g_cfg.core.spu_decoder != spu_decoder_type::llvm)
 				{
 					return;
 				}
+			}
+			else
+			{
+				LOG_FATAL(SPU, "SPU Runtime: Failed to build the interpreter.");
 			}
 		}
 	}
@@ -472,34 +476,21 @@ void spu_cache::initialize()
 			}
 
 			// Call analyser
-			const std::vector<u32>& func2 = compiler->analyse(ls.data(), func[0]);
+			std::vector<u32> func2 = compiler->analyse(ls.data(), func[0]);
 
 			if (func2.size() != size0)
 			{
 				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
 			}
 
-			if (!compiler->compile(func, nullptr))
+			if (!compiler->compile(std::move(func2)))
 			{
 				// Likely, out of JIT memory. Signal to prevent further building.
 				fail_flag |= 1;
 			}
 
 			// Clear fake LS
-			for (u32 i = 1, pos = start; i < func2.size(); i++, pos += 4)
-			{
-				if (se_storage<u32>::swap(func2[i]) != ls[pos / 4])
-				{
-					LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed at 0x%x", func2[0], pos);
-				}
-
-				ls[pos / 4] = 0;
-			}
-
-			if (func2.size() != size0)
-			{
-				std::memset(ls.data(), 0, 0x40000);
-			}
+			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
 
 			g_progr_pdone++;
 		}
@@ -519,7 +510,7 @@ void spu_cache::initialize()
 
 	if (fail_flag)
 	{
-		LOG_ERROR(SPU, "SPU Runtime: Cache building failed (too much data). SPU Cache will be disabled.");
+		LOG_FATAL(SPU, "SPU Runtime: Cache building failed (out of memory).");
 		return;
 	}
 
@@ -581,9 +572,6 @@ bool spu_runtime::func_compare::operator()(const std::vector<u32>& lhs, const st
 
 spu_runtime::spu_runtime()
 {
-	// Initialize "empty" block
-	m_map[std::vector<u32>()] = tr_dispatch;
-
 	// Clear LLVM output
 	m_cache_path = Emu.PPUCache();
 
@@ -602,59 +590,76 @@ spu_runtime::spu_runtime()
 	}
 }
 
-bool spu_runtime::add(void* _where, spu_function_t compiled)
+spu_item* spu_runtime::add_empty(std::vector<u32>&& data)
 {
-	writer_lock lock(*this);
-
-	if (!_where)
+	if (data.size() <= 1)
 	{
-		return false;
+		return nullptr;
 	}
 
-	// Use opaque pointer
-	auto& where = *static_cast<decltype(m_map)::value_type*>(_where);
+	// Store previous item if already added
+	spu_item* prev = nullptr;
 
-	// Function info
-	const std::vector<u32>& func = get_func(_where);
-
-	//
-	const u32 _off = 1 + (func[0] / 4) * (false);
-
-	// Set pointer to the compiled function
-	where.second = compiled;
-
-	// Register function in PIC map
-	m_pic_map[{func.data() + _off, func.size() - _off}] = compiled;
-
-	if (func.size() > 1)
+	//Try to add item that doesn't exist yet
+	const auto ret = m_stuff[data[1] >> 12].push_if([&](spu_item& _new, spu_item& _old)
 	{
-		// Rebuild trampolines if necessary
-		if (const auto new_tr = rebuild_ubertrampoline(func[1]))
+		std::basic_string_view<u32> lhs{_new.data.data() + 1, _new.data.size() - 1};
+		std::basic_string_view<u32> rhs{_old.data.data() + 1, _old.data.size() - 1};
+
+		if (lhs == rhs)
 		{
-			g_dispatcher->at(func[1] >> 12) = new_tr;
-		}
-		else
-		{
+			prev = &_old;
 			return false;
 		}
+
+		return true;
+	}, std::move(data));
+
+	if (ret)
+	{
+		return ret;
 	}
 
-	// Notify in lock destructor
-	lock.notify = true;
-	return true;
+	return prev;
 }
 
 spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 {
 	// Prepare sorted list
-	m_flat_list.clear();
-	{
-		// Select required subrange (fixed 20 bits for single pos in g_dispatcher table)
-		const u32 id_lower = id_inst & ~0xfff;
-		const u32 id_upper = id_inst | 0xfff;
+	static thread_local std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
 
-		m_flat_list.assign(m_pic_map.lower_bound({&id_lower, 1}), m_pic_map.upper_bound({&id_upper, 1}));
+	// Remember top position
+	auto stuff_it = m_stuff.at(id_inst >> 12).begin();
+	auto stuff_end = m_stuff.at(id_inst >> 12).end();
+	{
+		if (stuff_it->trampoline)
+		{
+			return stuff_it->trampoline;
+		}
+
+		m_flat_list.clear();
+
+		for (auto it = stuff_it; it != stuff_end; ++it)
+		{
+			if (const auto ptr = it->compiled.load())
+			{
+				std::basic_string_view<u32> range{it->data.data() + 1, it->data.size() - 1};
+				m_flat_list.emplace_back(range, ptr);
+			}
+			else
+			{
+				// Pull oneself deeper (TODO)
+				++stuff_it;
+			}
+		}
 	}
+
+	std::sort(m_flat_list.begin(), m_flat_list.end(), [&](const auto& a, const auto& b)
+	{
+		std::basic_string_view<u32> lhs = a.first;
+		std::basic_string_view<u32> rhs = b.first;
+		return lhs < rhs;
+	});
 
 	struct work
 	{
@@ -673,6 +678,8 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 	const auto beg = m_flat_list.begin();
 	const auto _end = m_flat_list.end();
 	const u32 size0 = ::size32(m_flat_list);
+
+	auto result = beg->second;
 
 	if (size0 != 1)
 	{
@@ -944,77 +951,63 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		}
 
 		workload.clear();
-		return reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
+		result = reinterpret_cast<spu_function_t>(reinterpret_cast<u64>(wxptr));
 	}
 
-	// No trampoline required
-	return beg->second;
-}
-
-void* spu_runtime::find(const std::vector<u32>& func)
-{
-	writer_lock lock(*this);
-
-	//
-	const u32 _off = 1 + (func[0] / 4) * (false);
-
-	// Try to find PIC first
-	const auto found = m_pic_map.find({func.data() + _off, func.size() - _off});
-
-	if (found != m_pic_map.end())
+	if (auto _old = stuff_it->trampoline.compare_and_swap(nullptr, result))
 	{
-		// Wait if already in progress
-		while (!found->second)
+		return _old;
+	}
+
+	// Install ubertrampoline
+	auto& insert_to = spu_runtime::g_dispatcher->at(id_inst >> 12);
+
+	auto _old = insert_to.load();
+
+	do
+	{
+		// Make sure we are replacing an older ubertrampoline but not newer one
+		if (_old != tr_dispatch)
 		{
-			m_cond.wait(m_mutex);
+			bool ok = false;
+
+			for (auto it = stuff_it; it != stuff_end; ++it)
+			{
+				if (it->trampoline == _old)
+				{
+					ok = true;
+					break;
+				}
+			}
+
+			if (!ok)
+			{
+				return result;
+			}
 		}
-
-		// Already compiled
-		return g_dispatcher;
 	}
+	while (!insert_to.compare_exchange(_old, result));
 
-	// Try to find existing function, register new one if necessary
-	const auto result = m_map.try_emplace(func, nullptr);
-
-	// Add PIC entry as well
-	m_pic_map.try_emplace({result.first->first.data() + _off, result.first->first.size() - _off}, nullptr);
-
-	// Pointer to the value in the map (pair)
-	const auto fn_location = &*result.first;
-
-	if (fn_location->second)
-	{
-		// Already compiled
-		return g_dispatcher;
-	}
-	else if (!result.second)
-	{
-		// Wait if already in progress
-		while (!fn_location->second)
-		{
-			m_cond.wait(m_mutex);
-		}
-
-		return g_dispatcher;
-	}
-
-	// Return location to compile and use in add()
-	return fn_location;
+	return result;
 }
 
 spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 {
-	reader_lock lock(this->m_mutex);
-
-	const auto upper = m_pic_map.upper_bound({ls + addr / 4, (0x40000 - addr) / 4});
-
-	if (upper != m_pic_map.begin())
+	for (auto& item : m_stuff.at(ls[addr / 4] >> 12))
 	{
-		const auto found = std::prev(upper);
-
-		if (found->first.compare(0, found->first.size(), ls + addr / 4, found->first.size()) == 0)
+		if (const auto ptr = item.compiled.load())
 		{
-			return found->second;
+			std::basic_string_view<u32> range{item.data.data() + 1, item.data.size() - 1};
+
+			if (addr / 4 + range.size() > 0x10000)
+			{
+				continue;
+			}
+
+			if (range.compare(0, range.size(), ls + addr / 4, range.size()) == 0)
+			{
+				return ptr;
+			}
 		}
 	}
 
@@ -1055,16 +1048,10 @@ spu_function_t spu_runtime::make_branch_patchpoint() const
 
 spu_recompiler_base::spu_recompiler_base()
 {
-	result.reserve(8192);
 }
 
 spu_recompiler_base::~spu_recompiler_base()
 {
-}
-
-void spu_recompiler_base::make_function(const std::vector<u32>& data)
-{
-	compile(data, nullptr);
 }
 
 void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
@@ -1082,7 +1069,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 		bytes[0] = 0xe9; // jmp rel32
 		std::memcpy(bytes + 1, &rel, 4);
-		bytes[5] = 0x90;
+		bytes[5] = 0x66; // lnop (2 bytes)
 		bytes[6] = 0x90;
 		bytes[7] = 0x90;
 
@@ -1096,8 +1083,17 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 		return;
 	}
 
+	spu.jit->init();
+
 	// Compile
-	spu.jit->make_function(spu.jit->analyse(spu._ptr<u32>(0), spu.pc));
+	const auto func = spu.jit->compile(spu.jit->analyse(spu._ptr<u32>(0), spu.pc));
+
+	if (!func)
+	{
+		LOG_FATAL(SPU, "[0x%05x] Compilation failed.", spu.pc);
+		Emu.Pause();
+		return;
+	}
 
 	// Diagnostic
 	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
@@ -1109,6 +1105,8 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 			LOG_TRACE(SPU, "Called from 0x%x", _info._u32[2] - 4);
 		}
 	}
+
+	spu_runtime::g_tail_escape(&spu, func, nullptr);
 }
 
 void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
@@ -1156,6 +1154,8 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	}
 
 	atomic_storage<u64>::release(*reinterpret_cast<u64*>(rip), result);
+
+	spu_runtime::g_tail_escape(&spu, func, rip);
 }
 
 void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip) try
@@ -1189,10 +1189,11 @@ catch (const std::exception& e)
 	LOG_NOTICE(GENERAL, "\n%s", spu.dump());
 }
 
-const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
+std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 {
 	// Result: addr + raw instruction data
-	result.clear();
+	std::vector<u32> result;
+	result.reserve(10000);
 	result.push_back(entry_point);
 
 	// Initialize block entries
@@ -3120,7 +3121,7 @@ const std::vector<u32>& spu_recompiler_base::analyse(const be_t<u32>* ls, u32 en
 	return result;
 }
 
-void spu_recompiler_base::dump(std::string& out)
+void spu_recompiler_base::dump(const std::vector<u32>& result, std::string& out)
 {
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
 	dis_asm.offset = reinterpret_cast<const u8*>(result.data() + 1);
@@ -4153,31 +4154,25 @@ public:
 		}
 	}
 
-	virtual spu_function_t compile(const std::vector<u32>& func, void* fn_location) override
+	virtual spu_function_t compile(std::vector<u32>&& _func) override
 	{
-		if (func.empty() && m_interp_magn)
+		if (_func.empty() && m_interp_magn)
 		{
 			return compile_interpreter();
 		}
 
-		if (!fn_location)
-		{
-			fn_location = m_spurt->find(func);
-		}
+		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
-		if (fn_location == spu_runtime::g_dispatcher)
-		{
-			return &dispatch;
-		}
-
-		if (!fn_location)
+		if (!add_loc)
 		{
 			return nullptr;
 		}
 
+		const std::vector<u32>& func = add_loc->data;
+
 		std::string log;
 
-		if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache)
+		if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
 			cache->add(func);
 		}
@@ -4206,9 +4201,9 @@ public:
 		const u32 start = m_pos;
 		const u32 end = start + m_size;
 
-		if (g_cfg.core.spu_debug)
+		if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 		{
-			this->dump(log);
+			this->dump(func, log);
 			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
 
@@ -4745,10 +4740,16 @@ public:
 		// Register function pointer
 		const spu_function_t fn = reinterpret_cast<spu_function_t>(m_jit.get_engine().getPointerToFunction(main_func));
 
-		if (!m_spurt->add(fn_location, fn))
+		// Install unconditionally, possibly replacing existing one from spu_fast
+		add_loc->compiled = fn;
+
+		// Rebuild trampoline if necessary
+		if (!m_spurt->rebuild_ubertrampoline(func[1]))
 		{
 			return nullptr;
 		}
+
+		add_loc->compiled.notify_all();
 
 		if (g_cfg.core.spu_debug)
 		{
@@ -8236,7 +8237,7 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u
 struct spu_llvm
 {
 	// Workload
-	lf_queue<std::pair<void*, u8*>> registered;
+	lf_queue<spu_item*> registered;
 
 	void operator()()
 	{
@@ -8259,7 +8260,10 @@ struct spu_llvm
 				continue;
 			}
 
-			const std::vector<u32>& func = spu_runtime::get_func(parg->first);
+			const std::vector<u32>& func = (*parg)->data;
+
+			// Old function pointer (pre-recompiled)
+			const spu_function_t _old = (*parg)->compiled;
 
 			// Get data start
 			const u32 start = func[0];
@@ -8272,17 +8276,17 @@ struct spu_llvm
 			}
 
 			// Call analyser
-			const std::vector<u32>& func2 = compiler->analyse(ls.data(), func[0]);
+			std::vector<u32> func2 = compiler->analyse(ls.data(), func[0]);
 
 			if (func2.size() != size0)
 			{
 				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
 			}
 
-			if (const auto target = compiler->compile(func, parg->first))
+			if (const auto target = compiler->compile(std::move(func2)))
 			{
 				// Redirect old function (TODO: patch in multiple places)
-				const s64 rel = reinterpret_cast<u64>(target) - reinterpret_cast<u64>(parg->second) - 5;
+				const s64 rel = reinterpret_cast<u64>(target) - reinterpret_cast<u64>(_old) - 5;
 
 				union
 				{
@@ -8296,28 +8300,17 @@ struct spu_llvm
 				bytes[6] = 0x90;
 				bytes[7] = 0x90;
 
-				atomic_storage<u64>::release(*reinterpret_cast<u64*>(parg->second), result);
+				atomic_storage<u64>::release(*reinterpret_cast<u64*>(_old), result);
 			}
 			else
 			{
-				LOG_FATAL(SPU, "[0x%05x] Compilation failed.", func2[0]);
+				LOG_FATAL(SPU, "[0x%05x] Compilation failed.", func[0]);
+				Emu.Pause();
+				return;
 			}
 
 			// Clear fake LS
-			for (u32 i = 1, pos = start; i < func2.size(); i++, pos += 4)
-			{
-				if (se_storage<u32>::swap(func2[i]) != ls[pos / 4])
-				{
-					LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed at 0x%x", func2[0], pos);
-				}
-
-				ls[pos / 4] = 0;
-			}
-
-			if (func2.size() != size0)
-			{
-				std::memset(ls.data(), 0, 0x40000);
-			}
+			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
 		}
 	}
 
@@ -8336,27 +8329,26 @@ struct spu_fast : public spu_recompiler_base
 		}
 	}
 
-	virtual spu_function_t compile(const std::vector<u32>& func, void* fn_location) override
+	virtual spu_function_t compile(std::vector<u32>&& _func) override
 	{
-		if (!fn_location)
-		{
-			fn_location = m_spurt->find(func);
-		}
+		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
-		if (fn_location == spu_runtime::g_dispatcher)
-		{
-			return &dispatch;
-		}
-
-		if (!fn_location)
+		if (!add_loc)
 		{
 			return nullptr;
 		}
 
-		if (g_cfg.core.spu_debug)
+		if (add_loc->compiled)
+		{
+			return add_loc->compiled;
+		}
+
+		const std::vector<u32>& func = add_loc->data;
+
+		if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 		{
 			std::string log;
-			this->dump(log);
+			this->dump(func, log);
 			fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 		}
 
@@ -8639,15 +8631,29 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x28;
 		*raw++ = 0xc3;
 
-		if (!m_spurt->add(fn_location, reinterpret_cast<spu_function_t>(result)))
+		const auto fn = reinterpret_cast<spu_function_t>(result);
+
+		// Install pointer carefully
+		const bool added = !add_loc->compiled && add_loc->compiled.compare_and_swap_test(nullptr, fn);
+
+		if (added)
+		{
+			// Send work to LLVM compiler thread
+			g_fxo->get<spu_llvm_thread>()->registered.push(add_loc);
+		}
+
+		// Rebuild trampoline if necessary
+		if (!m_spurt->rebuild_ubertrampoline(func[1]))
 		{
 			return nullptr;
 		}
 
-		// Send work to LLVM compiler thread; after add() to avoid race
-		g_fxo->get<spu_llvm_thread>()->registered.push(fn_location, result);
+		if (added)
+		{
+			add_loc->compiled.notify_all();
+		}
 
-		return reinterpret_cast<spu_function_t>(result);
+		return fn;
 	}
 };
 
