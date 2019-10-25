@@ -466,12 +466,9 @@ namespace gl
 
 		if (LIKELY(is_compressed_format(format)))
 		{
-			//Compressed formats have a 4-byte alignment
-			//TODO: Verify that samplers are not affected by the padding
-			width = align(width, 4);
-			height = align(height, 4);
-
 			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
+
+			unpack_settings.row_length(align(width, 4));
 			unpack_settings.apply();
 
 			for (const rsx_subresource_layout& layout : input_layouts)

@@ -1756,9 +1756,7 @@ namespace rsx
 
 			if (options.is_compressed_format)
 			{
-				attributes.width = align(attributes.width, 4);
-				attributes.height = align(attributes.height, 4);
-
+				// Compressed textures cannot be 1D in some APIs
 				extended_dimension = std::max(extended_dimension, rsx::texture_dimension_extended::texture_dimension_2d);
 			}
 
