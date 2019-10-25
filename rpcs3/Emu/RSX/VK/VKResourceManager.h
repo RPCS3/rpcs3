@@ -45,11 +45,6 @@ namespace vk
 		std::unordered_multimap<u64, std::unique_ptr<vk::sampler>> m_sampler_pool;
 		std::deque<eid_scope_t> m_eid_map;
 
-		bool value_compare(const f32& a, const f32& b)
-		{
-			return fabsf(a - b) < 0.0000001f;
-		}
-
 		eid_scope_t& get_current_eid_scope()
 		{
 			const auto eid = current_event_id();
@@ -94,10 +89,10 @@ namespace vk
 			for (auto It = found.first; It != found.second; ++It)
 			{
 				const auto& info = It->second->info;
-				if (!value_compare(info.mipLodBias, mipLodBias) ||
-					!value_compare(info.maxAnisotropy, max_anisotropy) ||
-					!value_compare(info.minLod, min_lod) ||
-					!value_compare(info.maxLod, max_lod))
+				if (!rsx::fcmp(info.maxLod, max_lod) ||
+					!rsx::fcmp(info.mipLodBias, mipLodBias) ||
+					!rsx::fcmp(info.minLod, min_lod) ||
+					!rsx::fcmp(info.maxAnisotropy, max_anisotropy))
 				{
 					continue;
 				}
