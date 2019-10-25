@@ -449,6 +449,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 
 		QSet<QString> serials;
 
+		QMutex mutex_cat;
+
 		QList<size_t> indices;
 		for (size_t i = 0; i < path_list.size(); ++i)
 			indices.append(i);
@@ -482,9 +484,12 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
 
+				mutex_cat.lock();
+
 				// Detect duplication
 				if (!serial_cat_name[game.serial].emplace(game.category + game.name).second)
 				{
+					mutex_cat.unlock();
 					return;
 				}
 
@@ -513,6 +518,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 					game.icon_path = sfo_dir + "/ICON0.PNG";
 					game.category = sstr(category::other);
 				}
+
+				mutex_cat.unlock();
 
 				// Load ICON0.PNG
 				QPixmap icon;
