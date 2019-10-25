@@ -400,7 +400,7 @@ void spu_cache::initialize()
 		{
 			compiler->init();
 
-			if (compiler->compile(0, {}, nullptr) && spu_runtime::g_interpreter)
+			if (compiler->compile({}, nullptr) && spu_runtime::g_interpreter)
 			{
 				LOG_SUCCESS(SPU, "SPU Runtime: built interpreter.");
 
@@ -447,9 +447,6 @@ void spu_cache::initialize()
 
 	for (std::size_t i = 0; i < compilers.size(); i++) thread_queue.emplace_back("Worker " + std::to_string(i), [&, compiler = compilers[i].get()]()
 	{
-		// Register SPU runtime user
-		spu_runtime::passive_lock _passive_lock(compiler->get_runtime());
-
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
@@ -482,7 +479,7 @@ void spu_cache::initialize()
 				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
 			}
 
-			if (!compiler->compile(0, func, nullptr))
+			if (!compiler->compile(func, nullptr))
 			{
 				// Likely, out of JIT memory. Signal to prevent further building.
 				fail_flag |= 1;
@@ -523,8 +520,6 @@ void spu_cache::initialize()
 	if (fail_flag)
 	{
 		LOG_ERROR(SPU, "SPU Runtime: Cache building failed (too much data). SPU Cache will be disabled.");
-		spu_runtime::passive_lock _passive_lock(compilers[0]->get_runtime());
-		compilers[0]->get_runtime().reset(0);
 		return;
 	}
 
@@ -607,12 +602,11 @@ spu_runtime::spu_runtime()
 	}
 }
 
-bool spu_runtime::add(u64 last_reset_count, void* _where, spu_function_t compiled)
+bool spu_runtime::add(void* _where, spu_function_t compiled)
 {
 	writer_lock lock(*this);
 
-	// Check reset count (makes where invalid)
-	if (!_where || last_reset_count != m_reset_count)
+	if (!_where)
 	{
 		return false;
 	}
@@ -957,15 +951,9 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 	return beg->second;
 }
 
-void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
+void* spu_runtime::find(const std::vector<u32>& func)
 {
 	writer_lock lock(*this);
-
-	// Check reset count
-	if (last_reset_count != m_reset_count)
-	{
-		return nullptr;
-	}
 
 	//
 	const u32 _off = 1 + (func[0] / 4) * (false);
@@ -979,11 +967,6 @@ void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
 		while (!found->second)
 		{
 			m_cond.wait(m_mutex);
-
-			if (last_reset_count != m_reset_count)
-			{
-				return nullptr;
-			}
 		}
 
 		// Already compiled
@@ -1010,12 +993,6 @@ void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
 		while (!fn_location->second)
 		{
 			m_cond.wait(m_mutex);
-
-			// If reset count changed, fn_location is invalidated; also requires return
-			if (last_reset_count != m_reset_count)
-			{
-				return nullptr;
-			}
 		}
 
 		return g_dispatcher;
@@ -1027,14 +1004,7 @@ void* spu_runtime::find(u64 last_reset_count, const std::vector<u32>& func)
 
 spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 {
-	const u64 reset_count = m_reset_count;
-
-	reader_lock lock(*this);
-
-	if (reset_count != m_reset_count)
-	{
-		return nullptr;
-	}
+	reader_lock lock(this->m_mutex);
 
 	const auto upper = m_pic_map.upper_bound({ls + addr / 4, (0x40000 - addr) / 4});
 
@@ -1083,53 +1053,6 @@ spu_function_t spu_runtime::make_branch_patchpoint() const
 	return reinterpret_cast<spu_function_t>(raw);
 }
 
-u64 spu_runtime::reset(std::size_t last_reset_count)
-{
-	writer_lock lock(*this);
-
-	if (last_reset_count != m_reset_count || !m_reset_count.compare_and_swap_test(last_reset_count, last_reset_count + 1))
-	{
-		// Probably already reset
-		return m_reset_count;
-	}
-
-	// Notify SPU threads
-	idm::select<named_thread<spu_thread>>([](u32, cpu_thread& cpu)
-	{
-		if (!cpu.state.test_and_set(cpu_flag::jit_return))
-		{
-			cpu.notify();
-		}
-	});
-
-	// Reset function map (may take some time)
-	m_map.clear();
-	m_pic_map.clear();
-
-	// Wait for threads to catch on jit_return flag
-	while (m_passive_locks)
-	{
-		busy_wait();
-	}
-
-	// Reinitialize (TODO)
-	jit_runtime::finalize();
-	jit_runtime::initialize();
-	return ++m_reset_count;
-}
-
-void spu_runtime::handle_return(spu_thread* _spu)
-{
-	// Wait until the runtime becomes available
-	writer_lock lock(*this);
-
-	// Reset stack mirror
-	std::memset(_spu->stack_mirror.data(), 0xff, sizeof(spu_thread::stack_mirror));
-
-	// Reset the flag
-	_spu->state -= cpu_flag::jit_return;
-}
-
 spu_recompiler_base::spu_recompiler_base()
 {
 	result.reserve(8192);
@@ -1141,15 +1064,7 @@ spu_recompiler_base::~spu_recompiler_base()
 
 void spu_recompiler_base::make_function(const std::vector<u32>& data)
 {
-	for (u64 reset_count = m_spurt->get_reset_count();;)
-	{
-		if (LIKELY(compile(reset_count, data, nullptr)))
-		{
-			break;
-		}
-
-		reset_count = m_spurt->reset(reset_count);
-	}
+	compile(data, nullptr);
 }
 
 void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
@@ -4238,16 +4153,16 @@ public:
 		}
 	}
 
-	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>& func, void* fn_location) override
+	virtual spu_function_t compile(const std::vector<u32>& func, void* fn_location) override
 	{
-		if (func.empty() && last_reset_count == 0 && m_interp_magn)
+		if (func.empty() && m_interp_magn)
 		{
 			return compile_interpreter();
 		}
 
 		if (!fn_location)
 		{
-			fn_location = m_spurt->find(last_reset_count, func);
+			fn_location = m_spurt->find(func);
 		}
 
 		if (fn_location == spu_runtime::g_dispatcher)
@@ -4830,7 +4745,7 @@ public:
 		// Register function pointer
 		const spu_function_t fn = reinterpret_cast<spu_function_t>(m_jit.get_engine().getPointerToFunction(main_func));
 
-		if (!m_spurt->add(last_reset_count, fn_location, fn))
+		if (!m_spurt->add(fn_location, fn))
 		{
 			return nullptr;
 		}
@@ -8364,9 +8279,9 @@ struct spu_llvm
 				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
 			}
 
-			if (const auto target = compiler->compile(0, func, parg->first))
+			if (const auto target = compiler->compile(func, parg->first))
 			{
-				// Redirect old function
+				// Redirect old function (TODO: patch in multiple places)
 				const s64 rel = reinterpret_cast<u64>(target) - reinterpret_cast<u64>(parg->second) - 5;
 
 				union
@@ -8421,11 +8336,11 @@ struct spu_fast : public spu_recompiler_base
 		}
 	}
 
-	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>& func, void* fn_location) override
+	virtual spu_function_t compile(const std::vector<u32>& func, void* fn_location) override
 	{
 		if (!fn_location)
 		{
-			fn_location = m_spurt->find(last_reset_count, func);
+			fn_location = m_spurt->find(func);
 		}
 
 		if (fn_location == spu_runtime::g_dispatcher)
@@ -8446,7 +8361,7 @@ struct spu_fast : public spu_recompiler_base
 		}
 
 		// Allocate executable area with necessary size
-		const auto result = jit_runtime::alloc(8 + 1 + 9 + (::size32(func) - 1) * (16 + 16) + 36 + 47, 16);
+		const auto result = jit_runtime::alloc(16 + 1 + 9 + (::size32(func) - 1) * (16 + 16) + 36 + 47, 16);
 
 		if (!result)
 		{
@@ -8458,13 +8373,14 @@ struct spu_fast : public spu_recompiler_base
 
 		u8* raw = result;
 
-		// 8-byte NOP for patching
-		*raw++ = 0x0f;
-		*raw++ = 0x1f;
-		*raw++ = 0x84;
-		*raw++ = 0x00;
-		*raw++ = 0x00;
-		*raw++ = 0x00;
+		// 8-byte intruction for patching
+		// Update block_hash: mov [r13 + spu_thread::m_block_hash], 0xffff
+		*raw++ = 0x49;
+		*raw++ = 0xc7;
+		*raw++ = 0x45;
+		*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
+		*raw++ = 0xff;
+		*raw++ = 0xff;
 		*raw++ = 0x00;
 		*raw++ = 0x00;
 
@@ -8508,6 +8424,16 @@ struct spu_fast : public spu_recompiler_base
 
 		// trap
 		//*raw++ = 0xcc;
+
+		// Update block_hash: mov [r13 + spu_thread::m_block_hash], 0xfffe
+		*raw++ = 0x49;
+		*raw++ = 0xc7;
+		*raw++ = 0x45;
+		*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
+		*raw++ = 0xfe;
+		*raw++ = 0xff;
+		*raw++ = 0x00;
+		*raw++ = 0x00;
 
 		// Secondary prologue: sub rsp,0x28
 		*raw++ = 0x48;
@@ -8713,7 +8639,7 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x28;
 		*raw++ = 0xc3;
 
-		if (!m_spurt->add(last_reset_count, fn_location, reinterpret_cast<spu_function_t>(result)))
+		if (!m_spurt->add(fn_location, reinterpret_cast<spu_function_t>(result)))
 		{
 			return nullptr;
 		}

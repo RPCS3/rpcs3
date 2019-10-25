@@ -45,11 +45,11 @@ void spu_recompiler::init()
 	}
 }
 
-spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func, void* fn_location)
+spu_function_t spu_recompiler::compile(const std::vector<u32>& func, void* fn_location)
 {
 	if (!fn_location)
 	{
-		fn_location = m_spurt->find(last_reset_count, func);
+		fn_location = m_spurt->find(func);
 	}
 
 	if (fn_location == spu_runtime::g_dispatcher)
@@ -892,7 +892,7 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 		LOG_FATAL(SPU, "Failed to build a function");
 	}
 
-	if (!m_spurt->add(last_reset_count, fn_location, fn))
+	if (!m_spurt->add(fn_location, fn))
 	{
 		return nullptr;
 	}

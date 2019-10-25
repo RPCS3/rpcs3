@@ -30,7 +30,6 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::ret: return "ret";
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
-		case cpu_flag::jit_return: return "JIT";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_global_stop: return "G-EXIT";
 		case cpu_flag::dbg_pause: return "PAUSE";
@@ -423,7 +422,7 @@ bool cpu_thread::check_state() noexcept
 			state -= cpu_flag::memory;
 		}
 
-		if (state & (cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop))
+		if (state & (cpu_flag::exit + cpu_flag::dbg_global_stop))
 		{
 			state += cpu_flag::wait;
 			return true;
@@ -432,7 +431,7 @@ bool cpu_thread::check_state() noexcept
 		const auto [state0, escape] = state.fetch_op([&](bs_t<cpu_flag>& flags)
 		{
 			// Atomically clean wait flag and escape
-			if (!(flags & (cpu_flag::exit + cpu_flag::jit_return + cpu_flag::dbg_global_stop + cpu_flag::ret + cpu_flag::stop)))
+			if (!(flags & (cpu_flag::exit + cpu_flag::dbg_global_stop + cpu_flag::ret + cpu_flag::stop)))
 			{
 				// Check pause flags which hold thread inside check_state
 				if (flags & (cpu_flag::pause + cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause))

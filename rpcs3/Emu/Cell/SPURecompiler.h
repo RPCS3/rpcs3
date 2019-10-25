@@ -44,10 +44,6 @@ class spu_runtime
 
 	mutable cond_variable m_cond;
 
-	mutable atomic_t<u64> m_passive_locks{0};
-
-	atomic_t<u64> m_reset_count{0};
-
 	struct func_compare
 	{
 		// Comparison function for SPU programs
@@ -93,7 +89,7 @@ public:
 	}
 
 	// Add compiled function and generate trampoline if necessary
-	bool add(u64 last_reset_count, void* where, spu_function_t compiled);
+	bool add(void* where, spu_function_t compiled);
 
 private:
 	spu_function_t rebuild_ubertrampoline(u32 id_inst);
@@ -102,7 +98,7 @@ private:
 public:
 
 	// Return opaque pointer for add()
-	void* find(u64 last_reset_count, const std::vector<u32>&);
+	void* find(const std::vector<u32>&);
 
 	// Get func from opaque ptr
 	static inline const std::vector<u32>& get_func(void* _where)
@@ -115,18 +111,6 @@ public:
 
 	// Generate a patchable trampoline to spu_recompiler_base::branch
 	spu_function_t make_branch_patchpoint() const;
-
-	// reset() arg retriever, for race avoidance (can result in double reset)
-	u64 get_reset_count() const
-	{
-		return m_reset_count.load();
-	}
-
-	// Remove all compiled function and free JIT memory
-	u64 reset(std::size_t last_reset_count);
-
-	// Handle cpu_flag::jit_return
-	void handle_return(spu_thread* _spu);
 
 	// All dispatchers (array allocated in jit memory)
 	static std::array<atomic_t<spu_function_t>, (1 << 20)>* const g_dispatcher;
@@ -146,26 +130,7 @@ public:
 	// Interpreter entry point
 	static spu_function_t g_interpreter;
 
-	struct passive_lock
-	{
-		spu_runtime& _this;
-
-		passive_lock(const passive_lock&) = delete;
-
-		passive_lock(spu_runtime& _this)
-			: _this(_this)
-		{
-			std::lock_guard lock(_this.m_mutex);
-			_this.m_passive_locks++;
-		}
-
-		~passive_lock()
-		{
-			_this.m_passive_locks--;
-		}
-	};
-
-	// Exclusive lock within passive_lock scope
+	// Exclusive lock
 	struct writer_lock
 	{
 		spu_runtime& _this;
@@ -176,40 +141,17 @@ public:
 		writer_lock(spu_runtime& _this)
 			: _this(_this)
 		{
-			// Temporarily release the passive lock
-			_this.m_passive_locks--;
 			_this.m_mutex.lock();
 		}
 
 		~writer_lock()
 		{
-			_this.m_passive_locks++;
 			_this.m_mutex.unlock();
 
 			if (notify)
 			{
 				_this.m_cond.notify_all();
 			}
-		}
-	};
-
-	struct reader_lock
-	{
-		const spu_runtime& _this;
-
-		reader_lock(const reader_lock&) = delete;
-
-		reader_lock(const spu_runtime& _this)
-			: _this(_this)
-		{
-			_this.m_passive_locks--;
-			_this.m_mutex.lock_shared();
-		}
-
-		~reader_lock()
-		{
-			_this.m_passive_locks++;
-			_this.m_mutex.unlock_shared();
 		}
 	};
 };
@@ -373,7 +315,7 @@ public:
 	virtual void init() = 0;
 
 	// Compile function (may fail)
-	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&, void*) = 0;
+	virtual spu_function_t compile(const std::vector<u32>&, void*) = 0;
 
 	// Compile function, handle failure
 	void make_function(const std::vector<u32>&);
