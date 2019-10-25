@@ -1355,10 +1355,6 @@ void VKGSRender::end()
 
 					if (min_filter.sample_mipmaps && mipmap_count > 1)
 					{
-						min_lod = rsx::method_registers.fragment_textures[i].min_lod();
-						max_lod = rsx::method_registers.fragment_textures[i].max_lod();
-						lod_bias = rsx::method_registers.fragment_textures[i].bias();
-
 						f32 actual_mipmaps;
 						if (sampler_state->upload_context == rsx::texture_upload_context::shader_read)
 						{
@@ -1376,8 +1372,19 @@ void VKGSRender::end()
 
 						if (actual_mipmaps > 1.f)
 						{
+							min_lod = rsx::method_registers.fragment_textures[i].min_lod();
+							max_lod = rsx::method_registers.fragment_textures[i].max_lod();
+							lod_bias = rsx::method_registers.fragment_textures[i].bias();
+
 							min_lod = std::min(min_lod, actual_mipmaps - 1.f);
 							max_lod = std::min(max_lod, actual_mipmaps - 1.f);
+
+							if (min_filter.mipmap_mode == VK_SAMPLER_MIPMAP_MODE_NEAREST)
+							{
+								// Round to nearest 0.5 to work around some broken games
+								// Unlike openGL, sampler parameters cannot be dynamically changed on vulkan, leading to many permutations
+								lod_bias = std::floor(lod_bias * 2.f + 0.5f) * 0.5f;
+							}
 						}
 						else
 						{
