@@ -13,7 +13,7 @@ struct sys_cond_attribute_t
 
 	union
 	{
-		u64 name_u64;
+		nse_t<u64, 1> name_u64;
 		char name[sizeof(u64)];
 	};
 };
