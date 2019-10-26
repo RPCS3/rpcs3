@@ -1322,13 +1322,11 @@ error_code cellAudioSetPortLevel(u32 portNum, float level)
 	return CELL_OK;
 }
 
-error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
+static error_code AudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key, u32 queue_type)
 {
-	cellAudio.warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
-
 	vm::var<sys_event_queue_attribute_t> attr;
 	attr->protocol = SYS_SYNC_FIFO;
-	attr->type     = SYS_PPU_QUEUE;
+	attr->type     = queue_type;
 	attr->name_u64 = 0;
 
 	for (u64 i = 0; i < MAX_AUDIO_EVENT_QUEUES; i++)
@@ -1353,18 +1351,24 @@ error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
 	return CELL_AUDIO_ERROR_EVENT_QUEUE;
 }
 
+error_code cellAudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key)
+{
+	cellAudio.warning("cellAudioCreateNotifyEventQueue(id=*0x%x, key=*0x%x)", id, key);
+
+	return AudioCreateNotifyEventQueue(id, key, SYS_PPU_QUEUE);
+}
+
 error_code cellAudioCreateNotifyEventQueueEx(vm::ptr<u32> id, vm::ptr<u64> key, u32 iFlags)
 {
-	cellAudio.todo("cellAudioCreateNotifyEventQueueEx(id=*0x%x, key=*0x%x, iFlags=0x%x)", id, key, iFlags);
+	cellAudio.warning("cellAudioCreateNotifyEventQueueEx(id=*0x%x, key=*0x%x, iFlags=0x%x)", id, key, iFlags);
 
 	if (iFlags & ~CELL_AUDIO_CREATEEVENTFLAG_SPU)
 	{
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	// TODO
-
-	return CELL_AUDIO_ERROR_EVENT_QUEUE;
+	const u32 queue_type = (iFlags & CELL_AUDIO_CREATEEVENTFLAG_SPU) ? SYS_SPU_QUEUE : SYS_PPU_QUEUE;
+	return AudioCreateNotifyEventQueue(id, key, queue_type);
 }
 
 error_code cellAudioSetNotifyEventQueue(u64 key)
