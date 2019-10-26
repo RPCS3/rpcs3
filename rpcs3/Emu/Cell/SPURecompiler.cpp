@@ -4637,6 +4637,18 @@ public:
 
 				if (found == m_functions.end())
 				{
+					if (g_cfg.core.spu_verification)
+					{
+						const std::string ppname = fmt::format("%s-chunkpp-0x%05x", m_hash, i);
+						m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint());
+
+						const auto ppfunc = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(ppname, m_finfo->chunk->getFunctionType()).getCallee());
+						ppfunc->setCallingConv(m_finfo->chunk->getCallingConv());
+
+						chunks.push_back(ppfunc);
+						continue;
+					}
+
 					chunks.push_back(m_dispatch);
 					continue;
 				}
@@ -7843,7 +7855,7 @@ public:
 			m_ir->SetInsertPoint(fail);
 		}
 
-		if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
+		if (g_cfg.core.spu_block_size >= spu_block_size_type::mega)
 		{
 			// Try to load chunk address from the function table
 			const auto fail = llvm::BasicBlock::Create(m_context, "", m_function);
