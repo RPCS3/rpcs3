@@ -1334,7 +1334,11 @@ static error_code AudioCreateNotifyEventQueue(vm::ptr<u32> id, vm::ptr<u64> key,
 		// Create an event queue "bruteforcing" an available key
 		const u64 key_value = 0x80004d494f323221ull + i;
 
-		if (CellError res{sys_event_queue_create(id, attr, key_value, 32) + 0u})
+		// This originally reads from a global sdk value set by cellAudioInit
+		// So check initialization as well
+		const u32 queue_depth = g_fxo->get<cell_audio>()->init && g_ps3_process_info.sdk_ver <= 0x35FFFF ? 2 : 8;
+
+		if (CellError res{sys_event_queue_create(id, attr, key_value, queue_depth) + 0u})
 		{
 			if (res != CELL_EEXIST)
 			{
