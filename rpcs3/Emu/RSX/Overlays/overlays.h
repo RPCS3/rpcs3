@@ -329,9 +329,9 @@ namespace rsx
 		{
 		private:
 			/*
-			   minimal - fps
-			   low - fps, total cpu usage
-			   medium - fps, detailed cpu usage
+			   minimal - fps, frametime
+			   low - fps, frametime, total cpu usage
+			   medium - fps, frametime, detailed cpu usage
 			   high - fps, frametime, detailed cpu usage, thread number, rsx load
 			 */
 			detail_level m_detail;

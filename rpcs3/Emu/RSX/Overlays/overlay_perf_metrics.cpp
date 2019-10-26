@@ -253,7 +253,6 @@ namespace rsx
 				{
 				case detail_level::high:
 				{
-					frametime = m_force_update ? 0 : std::max(0.0, elapsed / m_frames);
 
 					rsx_load = rsx_thread->get_load();
 
@@ -294,6 +293,7 @@ namespace rsx
 				case detail_level::minimal:
 				{
 					fps = m_force_update ? 0 : std::max(0.0, static_cast<f32>(m_frames) / (elapsed / 1000));
+					frametime = m_force_update ? 0 : std::max(0.0, elapsed / m_frames);
 				}
 				}
 
@@ -302,25 +302,26 @@ namespace rsx
 				{
 				case detail_level::minimal:
 				{
-					perf_text += fmt::format("FPS : %05.2f", fps);
+					perf_text += fmt::format("FPS : %05.2f (%03.1fms)", 
+					fps, frametime);
 					break;
 				}
 				case detail_level::low:
 				{
-					perf_text += fmt::format("FPS : %05.2f\n"
+					perf_text += fmt::format("FPS : %05.2f (%03.1fms)\n"
 					                         "CPU : %04.1f %%",
-					    fps, cpu_usage);
+					    fps, frametime, cpu_usage);
 					break;
 				}
 				case detail_level::medium:
 				{
-					perf_text += fmt::format("FPS : %05.2f\n\n"
+					perf_text += fmt::format("FPS : %05.2f (%03.1fms)\n\n"
 					                         "%s\n"
 					                         " PPU   : %04.1f %%\n"
 					                         " SPU   : %04.1f %%\n"
 					                         " RSX   : %04.1f %%\n"
 					                         " Total : %04.1f %%",
-					    fps, std::string(title1_medium.size(), ' '), ppu_usage, spu_usage, rsx_usage, cpu_usage, std::string(title2.size(), ' '));
+					    fps, frametime, std::string(title1_medium.size(), ' '), ppu_usage, spu_usage, rsx_usage, cpu_usage, std::string(title2.size(), ' '));
 					break;
 				}
 				case detail_level::high:
