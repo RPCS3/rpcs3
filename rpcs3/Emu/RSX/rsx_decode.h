@@ -3369,8 +3369,8 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 
 		index_array_type type() const
 		{
-			// Why truncate??
-			return to_index_array_type(static_cast<u8>(type_raw()));
+			// Must be a valid value
+			return static_cast<index_array_type>(static_cast<u8>(type_raw()));
 		}
 	};
 
