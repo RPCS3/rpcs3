@@ -178,10 +178,11 @@ error_code cellVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<CellVoicePortParam>
 	{
 		verify(HERE), ctr2 < CELLVOICE_MAX_PORT + 1;
 
-		std::tie(port, success) = manager->ports.try_emplace((ctr2 << 8) | manager->id_ctr); 
+		std::tie(port, success) = manager->ports.try_emplace(::narrow<u16>((ctr2 << 8) | manager->id_ctr)); 
 	}
 
 	port->second.info = *pArg;
+	*portId = port->first;
 	return CELL_OK;
 }
 
