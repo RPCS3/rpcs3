@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "cellAudio.h"
 #include <atomic>
@@ -454,12 +455,14 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 
 	// send aftermix event (normal audio event)
 	std::array<std::shared_ptr<lv2_event_queue>, MAX_AUDIO_EVENT_QUEUES> queues;
+	std::array<u64, MAX_AUDIO_EVENT_QUEUES> event_sources;
 	u32 queue_count = 0;
 
-	for (u64 key : keys)
+	for (const auto& key_pair : keys)
 	{
-		if (auto queue = lv2_event_queue::find(key))
+		if (auto queue = lv2_event_queue::find(key_pair.first))
 		{
+			event_sources[queue_count] = key_pair.second;
 			queues[queue_count++] = queue;
 		}
 	}
@@ -468,7 +471,7 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 
 	for (u32 i = 0; i < queue_count; i++)
 	{
-		queues[i]->send(0, 0, 0, 0); // TODO: check arguments
+		queues[i]->send(event_sources[i], 0, 0, 0);
 	}
 }
 
@@ -978,6 +981,7 @@ error_code cellAudioQuit(ppu_thread& ppu)
 
 	// TODO
 	g_audio->keys.clear();
+	g_audio->key_count = 0;
 	g_audio->init = 0;
 
 	return CELL_OK;
@@ -1381,15 +1385,17 @@ error_code cellAudioSetNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_TRANS_EVENT;
 	}
 
-	for (auto k : g_audio->keys) // check for duplicates
+	for (const auto& k : g_audio->keys) // check for duplicates
 	{
-		if (k == key)
+		if (k.first == key)
 		{
 			return CELL_AUDIO_ERROR_TRANS_EVENT;
 		}
 	}
 
-	g_audio->keys.emplace_back(key);
+	// Set unique source associated with the key
+	g_audio->keys.emplace_back(key, ((process_getpid() + 1ull) << 32) + (lv2_event_port::id_base + g_audio->key_count * lv2_event_port::id_step));
+	g_audio->key_count = (g_audio->key_count + 1) % lv2_event_port::id_count;
 
 	return CELL_OK;
 }
@@ -1416,9 +1422,9 @@ error_code cellAudioRemoveNotifyEventQueue(u64 key)
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	for (auto i = g_audio->keys.begin(); i != g_audio->keys.end(); i++)
+	for (auto i = g_audio->keys.cbegin(); i != g_audio->keys.cend(); i++)
 	{
-		if (*i == key)
+		if (i->first == key)
 		{
 			g_audio->keys.erase(i);
 
