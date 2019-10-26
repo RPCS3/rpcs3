@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "cellVoice.h"
 
 LOG_CHANNEL(cellVoice);
@@ -42,6 +43,7 @@ void fmt_class_string<CellVoiceError>::format(std::string& out, u64 arg)
 void voice_manager::reset()
 {
 	id_ctr = 0;
+	port_source = 0;
 	ports.clear();
 	queue_keys.clear();
 }
@@ -54,7 +56,7 @@ error_code cellVoiceConnectIPortToOPort(u32 ips, u32 ops)
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto iport = manager->access_port(ips);
@@ -288,7 +290,7 @@ error_code cellVoiceGetMuteFlag(u32 portId, vm::ptr<u16> bMuted)
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -308,7 +310,7 @@ error_code cellVoiceGetPortAttr(u32 portId, u32 attr, vm::ptr<void> attrValue)
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -328,7 +330,7 @@ error_code cellVoiceGetPortInfo(u32 portId, vm::ptr<CellVoiceBasePortInfo> pInfo
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -355,7 +357,7 @@ error_code cellVoiceGetSignalState(u32 portId, u32 attr, vm::ptr<void> attrValue
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -375,7 +377,7 @@ error_code cellVoiceGetVolume(u32 portId, vm::ptr<f32> volume)
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -436,7 +438,7 @@ error_code cellVoicePausePort(u32 portId)
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -455,7 +457,7 @@ error_code cellVoicePausePortAll()
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	return CELL_OK;
@@ -469,7 +471,7 @@ error_code cellVoiceRemoveNotifyEventQueue(u64 key)
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	if (manager->queue_keys.erase(key) == 0)
@@ -486,7 +488,7 @@ error_code cellVoiceResetPort(u32 portId)
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -505,7 +507,7 @@ error_code cellVoiceResumePort(u32 portId)
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -524,7 +526,7 @@ error_code cellVoiceResumePortAll()
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	return CELL_OK;
@@ -538,7 +540,7 @@ error_code cellVoiceSetBitRate(u32 portId, CellVoiceBitRate bitrate)
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -575,7 +577,7 @@ error_code cellVoiceSetMuteFlag(u32 portId, u16 bMuted)
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -595,7 +597,7 @@ error_code cellVoiceSetMuteFlagAll(u16 bMuted)
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	// Doesn't change port->bMute value 
@@ -610,7 +612,7 @@ error_code cellVoiceSetNotifyEventQueue(u64 key, u64 source)
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	// Note: it is allowed to enqueue the key twice (another source is enqueued with FIFO ordering)
@@ -621,7 +623,10 @@ error_code cellVoiceSetNotifyEventQueue(u64 key, u64 source)
 
 	if (!source)
 	{
-		// TODO: same thing as sys_event_port_send with port.name == 0
+		// same thing as sys_event_port_send with port.name == 0
+		// Try to give different port id everytime
+		source = ((process_getpid() + 1ull) << 32) | (lv2_event_port::id_base + manager->port_source * lv2_event_port::id_step);
+		manager->port_source = (manager->port_source + 1) % lv2_event_port::id_count;
 	}
 
 	manager->queue_keys[key].push_back(source);
@@ -636,7 +641,7 @@ error_code cellVoiceSetPortAttr(u32 portId, u32 attr, vm::ptr<void> attrValue)
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -656,7 +661,7 @@ error_code cellVoiceSetVolume(u32 portId, f32 volume)
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto port = manager->access_port(portId);
@@ -695,7 +700,7 @@ error_code cellVoiceStart()
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	return VoiceStart(manager);
@@ -709,7 +714,7 @@ error_code cellVoiceStartEx(vm::ptr<CellVoiceStartParam> pArg)
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	if (!pArg)
@@ -728,7 +733,7 @@ error_code cellVoiceStop()
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	if (!std::exchange(manager->voice_service_started, false))
@@ -756,7 +761,7 @@ error_code cellVoiceUpdatePort(u32 portId, vm::cptr<CellVoicePortParam> pArg)
 
 	std::scoped_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	if (!pArg)
@@ -788,7 +793,7 @@ error_code cellVoiceWriteToIPort(u32 ips, vm::cptr<void> data, vm::ptr<u32> size
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 	
 	auto iport = manager->access_port(ips);
@@ -807,7 +812,7 @@ error_code cellVoiceWriteToIPortEx(u32 ips, vm::cptr<void> data, vm::ptr<u32> si
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto iport = manager->access_port(ips);
@@ -826,7 +831,7 @@ error_code cellVoiceWriteToIPortEx2(u32 ips, vm::cptr<void> data, vm::ptr<u32> s
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto iport = manager->access_port(ips);
@@ -845,7 +850,7 @@ error_code cellVoiceReadFromOPort(u32 ops, vm::ptr<void> data, vm::ptr<u32> size
 
 	std::shared_lock lock(manager->mtx);
 
-	if (manager->is_init)
+	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
 	auto oport = manager->access_port(ops);
