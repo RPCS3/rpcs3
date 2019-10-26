@@ -755,38 +755,190 @@ namespace
 
 	struct primitive_restart_impl
 	{
+		static
+		std::tuple<u16, u16> upload_u16_swapped(const void *src, void *dst, u32 iterations, u16 restart_index)
+		{
+			const __m128i shuffle_mask = _mm_set_epi8(
+				0xE, 0xF, 0xC, 0xD,
+				0xA, 0xB, 0x8, 0x9,
+				0x6, 0x7, 0x4, 0x5,
+				0x2, 0x3, 0x0, 0x1);
+
+			auto src_stream = (const __m128i*)src;
+			auto dst_stream = (__m128i*)dst;
+
+			__m128i restart = _mm_set1_epi16(restart_index);
+			__m128i min = _mm_set1_epi16(0xffff);
+			__m128i max = _mm_set1_epi16(0);
+
+			for (unsigned n = 0; n < iterations; ++n)
+			{
+				const __m128i raw = _mm_loadu_si128(src_stream++);
+				const __m128i value = __mm_shuffle_epi8(raw, shuffle_mask);
+				const __m128i mask = _mm_cmpeq_epi16(restart, value);
+				const __m128i value_with_min_restart = _mm_andnot_si128(mask, value);
+				const __m128i value_with_max_restart = _mm_or_si128(mask, value);
+				max = __mm_max_epu16(max, value_with_min_restart);
+				min = __mm_min_epu16(min, value_with_max_restart);
+				_mm_storeu_si128(dst_stream++, value_with_max_restart);
+			}
+
+			const __m128i mask_step1 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
+
+			const __m128i mask_step2 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
+
+			const __m128i mask_step3 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0x3, 0x2);
+
+			__m128i tmp = __mm_shuffle_epi8(min, mask_step1);
+			min = __mm_min_epu16(min, tmp);
+			tmp = __mm_shuffle_epi8(min, mask_step2);
+			min = __mm_min_epu16(min, tmp);
+			tmp = __mm_shuffle_epi8(min, mask_step3);
+			min = __mm_min_epu16(min, tmp);
+
+			tmp = __mm_shuffle_epi8(max, mask_step1);
+			max = __mm_max_epu16(max, tmp);
+			tmp = __mm_shuffle_epi8(max, mask_step2);
+			max = __mm_max_epu16(max, tmp);
+			tmp = __mm_shuffle_epi8(max, mask_step3);
+			max = __mm_max_epu16(max, tmp);
+
+			const u16 min_index = u16(_mm_cvtsi128_si32(min) & 0xFFFF);
+			const u16 max_index = u16(_mm_cvtsi128_si32(max) & 0xFFFF);
+
+			return std::make_tuple(min_index, max_index);
+		}
+
+		static
+		std::tuple<u32, u32> upload_u32_swapped(const void *src, void *dst, u32 iterations, u32 restart_index)
+		{
+			const __m128i shuffle_mask = _mm_set_epi8(
+				0xC, 0xD, 0xE, 0xF,
+				0x8, 0x9, 0xA, 0xB,
+				0x4, 0x5, 0x6, 0x7,
+				0x0, 0x1, 0x2, 0x3);
+
+			auto src_stream = (const __m128i*)src;
+			auto dst_stream = (__m128i*)dst;
+
+			__m128i restart = _mm_set1_epi32(restart_index);
+			__m128i min = _mm_set1_epi32(0xffffffff);
+			__m128i max = _mm_set1_epi32(0);
+
+			for (unsigned n = 0; n < iterations; ++n)
+			{
+				const __m128i raw = _mm_loadu_si128(src_stream++);
+				const __m128i value = __mm_shuffle_epi8(raw, shuffle_mask);
+				const __m128i mask = _mm_cmpeq_epi32(restart, value);
+				const __m128i value_with_min_restart = _mm_andnot_si128(mask, value);
+				const __m128i value_with_max_restart = _mm_or_si128(mask, value);
+				max = __mm_max_epu32(max, value_with_min_restart);
+				min = __mm_min_epu32(min, value_with_max_restart);
+				_mm_storeu_si128(dst_stream++, value_with_max_restart);
+			}
+
+			const __m128i mask_step1 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
+
+			const __m128i mask_step2 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
+
+			__m128i tmp = __mm_shuffle_epi8(min, mask_step1);
+			min = __mm_min_epu32(min, tmp);
+			tmp = __mm_shuffle_epi8(min, mask_step2);
+			min = __mm_min_epu32(min, tmp);
+
+			tmp = __mm_shuffle_epi8(max, mask_step1);
+			max = __mm_max_epu32(max, tmp);
+			tmp = __mm_shuffle_epi8(max, mask_step2);
+			max = __mm_max_epu32(max, tmp);
+
+			const u32 min_index = u32(_mm_cvtsi128_si32(min));
+			const u32 max_index = u32(_mm_cvtsi128_si32(max));
+
+			return std::make_tuple(min_index, max_index);
+		}
+
 		template<typename T>
 		static
-		std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, u32 restart_index, bool skip_restart)
+		std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, T restart_index, bool skip_restart)
 		{
-			T min_index = index_limit<T>(), max_index = 0;
-			u32 dst_index = 0;
+			T min_index = index_limit<T>();
+			T max_index = 0;
+			u32 written = 0;
+			u32 length = src.size();
 
-			for (const T index : src)
+			if (length >= 32 && !skip_restart)
 			{
-				if (index == restart_index)
+				if constexpr (std::is_same<T, u16>::value)
 				{
-					if (!skip_restart)
+					if (s_use_sse4_1)
 					{
-						dst[dst_index++] = index_limit<T>();
+						u32 iterations = length >> 3;
+						written = length & ~0x7;
+						std::tie(min_index, max_index) = upload_u16_swapped(src.data(), dst.data(), iterations, restart_index);
+					}
+				}
+				else if constexpr (std::is_same<T, u32>::value)
+				{
+					if (s_use_sse4_1)
+					{
+						u32 iterations = length >> 2;
+						written = length & ~0x3;
+						std::tie(min_index, max_index) = upload_u32_swapped(src.data(), dst.data(), iterations, restart_index);
 					}
 				}
 				else
 				{
-					dst[dst_index++] = min_max(min_index, max_index, index);
+					fmt::throw_exception("Unreachable" HERE);
 				}
 			}
 
-			return std::make_tuple(min_index, max_index, dst_index);
+			for (u32 i = written; i < length; ++i)
+			{
+				T index = src[i];
+				if (index == restart_index)
+				{
+					if (!skip_restart)
+					{
+						dst[written++] = index_limit<T>();
+					}
+				}
+				else
+				{
+					dst[written++] = min_max(min_index, max_index, index);
+				}
+			}
+
+			return std::make_tuple(min_index, max_index, written);
 		}
 	};
 
 	template<typename T>
 	std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, rsx::primitive_type draw_mode, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
-		if (LIKELY(!is_primitive_restart_enabled))
+		if (!is_primitive_restart_enabled)
 		{
 			return untouched_impl::upload_untouched(src, dst);
+		}
+		else if constexpr (std::is_same<T, u16>::value)
+		{
+			if (primitive_restart_index > 0xffff)
+			{
+				return untouched_impl::upload_untouched(src, dst);
+			}
+			else
+			{
+				return primitive_restart_impl::upload_untouched(src, dst, (u16)primitive_restart_index, is_primitive_disjointed(draw_mode));
+			}
 		}
 		else
 		{
