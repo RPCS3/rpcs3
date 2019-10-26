@@ -347,8 +347,12 @@ class lv2_config_service_event
 {
 	static u32 get_next_id()
 	{
-		static atomic_t<u32> next_id = 0;
-		return next_id++;
+		struct service_event_id
+		{
+			atomic_t<u32> next_id = 0;
+		};
+
+		return g_fxo->get<service_event_id>()->next_id++;
 	}
 
 public:
