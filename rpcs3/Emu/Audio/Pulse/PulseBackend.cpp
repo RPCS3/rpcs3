@@ -1,7 +1,9 @@
+#ifndef HAVE_PULSE
+#error "PulseAudio support disabled but still being built."
+#endif
+
 #include "Emu/System.h"
 #include "PulseBackend.h"
-
-#ifdef HAVE_PULSE
 
 #include <pulse/simple.h>
 #include <pulse/error.h>
@@ -70,5 +72,3 @@ bool PulseBackend::AddData(const void* src, u32 num_samples)
 	
 	return true;
 }
-
-#endif

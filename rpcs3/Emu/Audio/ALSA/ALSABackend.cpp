@@ -1,9 +1,11 @@
+#ifndef HAVE_ALSA
+#error "ALSA support disabled but still being built."
+#endif
+
 #include "stdafx.h"
 #include "Emu/System.h"
 
 #include "ALSABackend.h"
-
-#ifdef HAVE_ALSA
 
 
 static void error(int err, const char* reason)
@@ -160,5 +162,3 @@ bool ALSABackend::AddData(const void* src, u32 num_samples)
 
 	return true;
 }
-
-#endif

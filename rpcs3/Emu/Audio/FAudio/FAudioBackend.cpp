@@ -1,6 +1,8 @@
-#include "FAudioBackend.h"
+#ifndef HAVE_FAUDIO
+#error "FAudio support disabled but still being built."
+#endif
 
-#ifdef HAVE_FAUDIO
+#include "FAudioBackend.h"
 
 FAudioBackend::FAudioBackend()
 {
@@ -175,5 +177,3 @@ f32 FAudioBackend::SetFrequencyRatio(f32 new_ratio)
 
 	return new_ratio;
 }
-
-#endif

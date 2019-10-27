@@ -88,10 +88,22 @@ target_sources(rpcs3_emu PRIVATE
 target_sources(rpcs3_emu PRIVATE
 	Audio/AudioDumper.cpp
 	Audio/AL/OpenALBackend.cpp
-	Audio/ALSA/ALSABackend.cpp
-	Audio/Pulse/PulseBackend.cpp
-	Audio/FAudio/FAudioBackend.cpp
 )
+
+if(HAVE_ALSA)
+	target_sources(rpcs3_emu PRIVATE Audio/ALSA/ALSABackend.cpp)
+	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::alsa)
+endif()
+
+if(HAVE_PULSE)
+	target_sources(rpcs3_emu PRIVATE Audio/Pulse/PulseBackend.cpp)
+	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::pulse)
+endif()
+
+if(HAVE_FAUDIO)
+	target_sources(rpcs3_emu PRIVATE Audio/FAudio/FAudioBackend.cpp)
+	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::faudio)
+endif()
 
 if(WIN32)
 	target_sources(rpcs3_emu PRIVATE
@@ -105,7 +117,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
 	PUBLIC
-		3rdparty::alsa 3rdparty::pulse 3rdparty::openal 3rdparty::faudio)
+		3rdparty::openal)
 
 
 # Cell
