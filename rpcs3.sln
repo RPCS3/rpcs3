@@ -78,7 +78,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "3rdp
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "7z", "7z", "{CB3DD03E-074E-4FA5-B253-51A3372D1768}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "7zlib", "3rdparty\7z\7zlib\7zlib.vcxproj", "{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "7zlib", "3rdparty\7zlib.vcxproj", "{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
