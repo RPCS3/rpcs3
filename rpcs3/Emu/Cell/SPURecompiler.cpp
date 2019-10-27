@@ -478,12 +478,11 @@ void spu_cache::initialize()
 			// Call analyser
 			std::vector<u32> func2 = compiler->analyse(ls.data(), func[0]);
 
-			if (func2.size() != size0)
+			if (func2 != func)
 			{
 				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
 			}
-
-			if (!compiler->compile(std::move(func2)))
+			else if (!compiler->compile(std::move(func2)))
 			{
 				// Likely, out of JIT memory. Signal to prevent further building.
 				fail_flag |= 1;
@@ -8303,12 +8302,11 @@ struct spu_llvm
 			// Call analyser
 			std::vector<u32> func2 = compiler->analyse(ls.data(), func[0]);
 
-			if (func2.size() != size0)
+			if (func2 != func)
 			{
 				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
 			}
-
-			if (const auto target = compiler->compile(std::move(func2)))
+			else if (const auto target = compiler->compile(std::move(func2)))
 			{
 				// Redirect old function (TODO: patch in multiple places)
 				const s64 rel = reinterpret_cast<u64>(target) - reinterpret_cast<u64>(_old) - 5;
