@@ -27,12 +27,21 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 	const int size = narrow<int>(buf_size, "to_wchar" HERE);
 
 	// Buffer for max possible output length
-	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size + 4 + 32768]);
+	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size + 8 + 32768]);
 
 	// Prepend wide path prefix (4 characters)
 	std::memcpy(buffer.get() + 32768, L"\\\\\?\\", 4 * sizeof(wchar_t));
 
-	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + 4, size);
+	// Test whether additional UNC prefix is required
+	const bool unc = source.size() > 2 && (source[0] == '\\' || source[0] == '/') && source[1] == source[0];
+
+	if (unc)
+	{
+		// Use \\?\UNC\ prefix
+		std::memcpy(buffer.get() + 32768 + 4, L"UNC\\", 4 * sizeof(wchar_t));
+	}
+
+	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + (unc ? 8 : 4), size);
 
 	// Canonicalize wide path (replace '/', ".", "..", \\ repetitions, etc)
 	verify("to_wchar" HERE), GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1;
