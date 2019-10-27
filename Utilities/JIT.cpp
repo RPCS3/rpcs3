@@ -8,10 +8,8 @@
 #include "VirtualMemory.h"
 #include <immintrin.h>
 
-// Memory manager mutex
-shared_mutex s_mutex2;
-
 #ifdef __linux__
+#include <sys/mman.h>
 #define CAN_OVERCOMMIT
 #endif
 
@@ -50,30 +48,32 @@ static u8* add_jit_memory(std::size_t size, uint align)
 		return pointer;
 	}
 
-#ifndef CAN_OVERCOMMIT
-	std::lock_guard lock(s_mutex2);
-#endif
-
 	u64 olda, newa;
 
 	// Simple allocation by incrementing pointer to the next free data
 	const u64 pos = Ctr.atomic_op([&](u64& ctr) -> u64
 	{
-		const u64 _pos = ::align(ctr, align);
+		const u64 _pos = ::align(ctr & 0xffff'ffff, align);
 		const u64 _new = ::align(_pos + size, align);
 
 		if (UNLIKELY(_new > 0x40000000))
 		{
 			// Sorry, we failed, and further attempts should fail too.
-			ctr = 0x40000000;
+			ctr |= 0x40000000;
 			return -1;
 		}
 
-		// Check the necessity to commit more memory
-		olda = ::align(ctr, 0x10000);
-		newa = ::align(_new, 0x10000);
+		// Last allocation is stored in highest bits
+		olda = ctr >> 32;
+		newa = olda;
 
-		ctr = _new;
+		// Check the necessity to commit more memory
+		if (UNLIKELY(_new > olda))
+		{
+			newa = ::align(_new, 0x100000);
+		}
+
+		ctr += _new - (ctr & 0xffff'ffff);
 		return _pos;
 	});
 
@@ -86,11 +86,19 @@ static u8* add_jit_memory(std::size_t size, uint align)
 	if (UNLIKELY(olda != newa))
 	{
 #ifdef CAN_OVERCOMMIT
-		// TODO: possibly madvise
+		madvise(pointer + olda, newa - olda, MADV_WILLNEED);
 #else
 		// Commit more memory
 		utils::memory_commit(pointer + olda, newa - olda, Prot);
 #endif
+		// Acknowledge committed memory
+		Ctr.atomic_op([&](u64& ctr)
+		{
+			if ((ctr >> 32) < newa)
+			{
+				ctr += (newa - (ctr >> 32)) << 32;
+			}
+		});
 	}
 
 	return pointer + pos;
@@ -159,10 +167,10 @@ void jit_runtime::initialize()
 	}
 
 	// Create code/data snapshot
-	s_code_init.resize(s_code_pos);
-	std::memcpy(s_code_init.data(), alloc(0, 0, true), s_code_pos);
-	s_data_init.resize(s_data_pos);
-	std::memcpy(s_data_init.data(), alloc(0, 0, false), s_data_pos);
+	s_code_init.resize(s_code_pos & 0xffff'ffff);
+	std::memcpy(s_code_init.data(), alloc(0, 0, true), s_code_init.size());
+	s_data_init.resize(s_data_pos & 0xffff'ffff);
+	std::memcpy(s_data_init.data(), alloc(0, 0, false), s_data_init.size());
 }
 
 void jit_runtime::finalize() noexcept

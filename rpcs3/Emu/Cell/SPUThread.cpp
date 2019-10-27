@@ -1145,24 +1145,12 @@ void spu_thread::cpu_task()
 
 	if (jit)
 	{
-		// Register SPU runtime user
-		spu_runtime::passive_lock _passive_lock(jit->get_runtime());
-
 		while (true)
 		{
 			if (UNLIKELY(state))
 			{
 				if (check_state())
-				{
-					if (state & cpu_flag::jit_return)
-					{
-						// Handle jit_return as a special case
-						jit->get_runtime().handle_return(this);
-						continue;
-					}
-
 					break;
-				}
 			}
 
 			spu_runtime::g_gateway(*this, vm::_ptr<u8>(offset), nullptr);
