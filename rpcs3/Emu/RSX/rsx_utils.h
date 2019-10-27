@@ -330,8 +330,8 @@ namespace rsx
 	*    Restriction: It has mixed results if the height or width is not a power of 2
 	*    Restriction: Only works with 2D surfaces
 	*/
-	template<typename T>
-	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, u32 pitch, bool input_is_swizzled)
+	template<typename T, bool input_is_swizzled>
+	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, u32 pitch)
 	{
 		u32 log2width = ceil_log2(width);
 		u32 log2height = ceil_log2(height);
@@ -357,7 +357,7 @@ namespace rsx
 
 		u32 adv = pitch / sizeof(T);
 
-		if (!input_is_swizzled)
+		if constexpr (!input_is_swizzled)
 		{
 			for (int y = 0; y < height; ++y)
 			{
@@ -414,7 +414,7 @@ namespace rsx
 	{
 		if (depth == 1)
 		{
-			convert_linear_swizzle<T>(input_pixels, output_pixels, width, height, width * sizeof(T), true);
+			convert_linear_swizzle<T, true>(input_pixels, output_pixels, width, height, width * sizeof(T));
 			return;
 		}
 
