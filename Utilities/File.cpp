@@ -501,11 +501,27 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	ULARGE_INTEGER total_size;
 	ULARGE_INTEGER total_free;
 
-	// Get disk letter from path (TODO)
-	std::wstring disk(L"C:");
-	disk[0] = path[0];
+	// Convert path and return it back to the "short" format
+	const bool unc = path.size() > 2 && (path[0] == '\\' || path[0] == '/') && path[1] == path[0];
 
-	if (!GetDiskFreeSpaceExW(disk.c_str(), &avail_free, &total_size, &total_free))
+	std::wstring str = to_wchar(path).get() + (unc ? 6 : 4);
+
+	if (unc)
+	{
+		str[0] = '\\';
+		str[1] = '\\';
+	}
+
+	// Keep cutting path from right until it's short enough
+	while (str.size() > 256)
+	{
+		if (std::size_t x = str.find_last_of('\\') + 1)
+			str.resize(x - 1);
+		else
+			break;
+	}
+
+	if (!GetDiskFreeSpaceExW(str.c_str(), &avail_free, &total_size, &total_free))
 	{
 		g_tls_error = to_error(GetLastError());
 		return false;
