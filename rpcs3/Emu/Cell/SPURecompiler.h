@@ -1,9 +1,8 @@
 #pragma once
 
 #include "Utilities/File.h"
-#include "Utilities/mutex.h"
-#include "Utilities/cond.h"
 #include "Utilities/JIT.h"
+#include "Utilities/lockless.h"
 #include "SPUThread.h"
 #include <vector>
 #include <bitset>
@@ -37,37 +36,47 @@ public:
 	static void initialize();
 };
 
+class spu_item
+{
+public:
+	// SPU program
+	const std::vector<u32> data;
+
+	// Compiled function pointer
+	atomic_t<spu_function_t> compiled = nullptr;
+
+	// Ubertrampoline generated for this item when it was latest
+	atomic_t<spu_function_t> trampoline = nullptr;
+
+	atomic_t<u8> cached = false;
+	atomic_t<u8> logged = false;
+
+	spu_item(std::vector<u32>&& data)
+		: data(std::move(data))
+	{
+	}
+
+	spu_item(const spu_item&) = delete;
+
+	spu_item& operator=(const spu_item&) = delete;
+};
+
 // Helper class
 class spu_runtime
 {
-	mutable shared_mutex m_mutex;
-
-	mutable cond_variable m_cond;
-
-	mutable atomic_t<u64> m_passive_locks{0};
-
-	atomic_t<u64> m_reset_count{0};
-
 	struct func_compare
 	{
 		// Comparison function for SPU programs
 		bool operator()(const std::vector<u32>& lhs, const std::vector<u32>& rhs) const;
 	};
 
-	// All functions
-	std::map<std::vector<u32>, spu_function_t, func_compare> m_map;
-
-	// All functions as PIC
-	std::map<std::basic_string_view<u32>, spu_function_t> m_pic_map;
+	// All functions (2^20 bunches)
+	std::array<lf_bunch<spu_item>, (1 << 20)> m_stuff;
 
 	// Debug module output location
 	std::string m_cache_path;
 
-	// Scratch vector
-	std::vector<std::pair<std::basic_string_view<u32>, spu_function_t>> m_flat_list;
-
 public:
-
 	// Trampoline to spu_recompiler_base::dispatch
 	static const spu_function_t tr_dispatch;
 
@@ -92,41 +101,21 @@ public:
 		return m_cache_path;
 	}
 
-	// Add compiled function and generate trampoline if necessary
-	bool add(u64 last_reset_count, void* where, spu_function_t compiled);
-
-private:
+	// Rebuild ubertrampoline for given identifier (first instruction)
 	spu_function_t rebuild_ubertrampoline(u32 id_inst);
 
+private:
 	friend class spu_cache;
+
 public:
-
-	// Return opaque pointer for add()
-	void* find(u64 last_reset_count, const std::vector<u32>&);
-
-	// Get func from opaque ptr
-	static inline const std::vector<u32>& get_func(void* _where)
-	{
-		return static_cast<decltype(m_map)::value_type*>(_where)->first;
-	}
+	// Return new pointer for add()
+	spu_item* add_empty(std::vector<u32>&&);
 
 	// Find existing function
 	spu_function_t find(const u32* ls, u32 addr) const;
 
 	// Generate a patchable trampoline to spu_recompiler_base::branch
-	spu_function_t make_branch_patchpoint() const;
-
-	// reset() arg retriever, for race avoidance (can result in double reset)
-	u64 get_reset_count() const
-	{
-		return m_reset_count.load();
-	}
-
-	// Remove all compiled function and free JIT memory
-	u64 reset(std::size_t last_reset_count);
-
-	// Handle cpu_flag::jit_return
-	void handle_return(spu_thread* _spu);
+	spu_function_t make_branch_patchpoint(u16 data = 0) const;
 
 	// All dispatchers (array allocated in jit memory)
 	static std::array<atomic_t<spu_function_t>, (1 << 20)>* const g_dispatcher;
@@ -145,73 +134,6 @@ public:
 
 	// Interpreter entry point
 	static spu_function_t g_interpreter;
-
-	struct passive_lock
-	{
-		spu_runtime& _this;
-
-		passive_lock(const passive_lock&) = delete;
-
-		passive_lock(spu_runtime& _this)
-			: _this(_this)
-		{
-			std::lock_guard lock(_this.m_mutex);
-			_this.m_passive_locks++;
-		}
-
-		~passive_lock()
-		{
-			_this.m_passive_locks--;
-		}
-	};
-
-	// Exclusive lock within passive_lock scope
-	struct writer_lock
-	{
-		spu_runtime& _this;
-		bool notify = false;
-
-		writer_lock(const writer_lock&) = delete;
-
-		writer_lock(spu_runtime& _this)
-			: _this(_this)
-		{
-			// Temporarily release the passive lock
-			_this.m_passive_locks--;
-			_this.m_mutex.lock();
-		}
-
-		~writer_lock()
-		{
-			_this.m_passive_locks++;
-			_this.m_mutex.unlock();
-
-			if (notify)
-			{
-				_this.m_cond.notify_all();
-			}
-		}
-	};
-
-	struct reader_lock
-	{
-		const spu_runtime& _this;
-
-		reader_lock(const reader_lock&) = delete;
-
-		reader_lock(const spu_runtime& _this)
-			: _this(_this)
-		{
-			_this.m_passive_locks--;
-			_this.m_mutex.lock_shared();
-		}
-
-		~reader_lock()
-		{
-			_this.m_passive_locks++;
-			_this.m_mutex.unlock_shared();
-		}
-	};
 };
 
 // SPU Recompiler instance base class
@@ -361,9 +283,6 @@ private:
 	// For private use
 	std::vector<u32> workload;
 
-	// Result of analyse(), to avoid copying and allocation
-	std::vector<u32> result;
-
 public:
 	spu_recompiler_base();
 
@@ -372,11 +291,8 @@ public:
 	// Initialize
 	virtual void init() = 0;
 
-	// Compile function (may fail)
-	virtual spu_function_t compile(u64 last_reset_count, const std::vector<u32>&, void*) = 0;
-
-	// Compile function, handle failure
-	void make_function(const std::vector<u32>&);
+	// Compile function
+	virtual spu_function_t compile(std::vector<u32>&&) = 0;
 
 	// Default dispatch function fallback (second arg is unused)
 	static void dispatch(spu_thread&, void*, u8* rip);
@@ -388,10 +304,10 @@ public:
 	static void old_interpreter(spu_thread&, void* ls, u8*);
 
 	// Get the function data at specified address
-	const std::vector<u32>& analyse(const be_t<u32>* ls, u32 lsa);
+	std::vector<u32> analyse(const be_t<u32>* ls, u32 lsa);
 
 	// Print analyser internal state
-	void dump(std::string& out);
+	void dump(const std::vector<u32>& result, std::string& out);
 
 	// Get SPU Runtime
 	spu_runtime& get_runtime()

@@ -163,6 +163,9 @@ class lf_queue_item final
 	template <typename U>
 	friend class lf_queue;
 
+	template <typename U>
+	friend class lf_bunch;
+
 	constexpr lf_queue_item() = default;
 
 	template <typename... Args>
@@ -194,6 +197,9 @@ class lf_queue_iterator
 
 	template <typename U>
 	friend class lf_queue_slice;
+
+	template <typename U>
+	friend class lf_bunch;
 
 public:
 	constexpr lf_queue_iterator() = default;
@@ -311,22 +317,16 @@ public:
 	}
 };
 
-class lf_queue_base
-{
-protected:
-	atomic_t<std::uintptr_t> m_head = 0;
-};
-
 // Linked list-based multi-producer queue (the consumer drains the whole queue at once)
 template <typename T>
-class lf_queue : public lf_queue_base
+class lf_queue final
 {
-	using lf_queue_base::m_head;
+	atomic_t<lf_queue_item<T>*> m_head{nullptr};
 
 	// Extract all elements and reverse element order (FILO to FIFO)
 	lf_queue_item<T>* reverse() noexcept
 	{
-		if (auto* head = m_head.load() ? reinterpret_cast<lf_queue_item<T>*>(m_head.exchange(0)) : nullptr)
+		if (auto* head = m_head.load() ? m_head.exchange(nullptr) : nullptr)
 		{
 			if (auto* prev = head->m_link)
 			{
@@ -352,26 +352,26 @@ public:
 
 	~lf_queue()
 	{
-		delete reinterpret_cast<lf_queue_item<T>*>(m_head.load());
+		delete m_head.load();
 	}
 
 	void wait() noexcept
 	{
-		if (m_head == 0)
+		if (m_head == nullptr)
 		{
-			m_head.wait(0);
+			m_head.wait(nullptr);
 		}
 	}
 
 	template <typename... Args>
 	void push(Args&&... args)
 	{
-		auto  _old = m_head.load();
-		auto* item = new lf_queue_item<T>(reinterpret_cast<lf_queue_item<T>*>(_old), std::forward<Args>(args)...);
+		auto _old = m_head.load();
+		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
 
-		while (!m_head.compare_exchange(_old, reinterpret_cast<std::uint64_t>(item)))
+		while (!m_head.compare_exchange(_old, item))
 		{
-			item->m_link = reinterpret_cast<lf_queue_item<T>*>(_old);
+			item->m_link = _old;
 		}
 
 		if (!_old)
@@ -459,6 +459,81 @@ public:
 	iterator end()
 	{
 		return iterator{};
+	}
+};
+
+// Concurrent linked list, elements remain until destroyed.
+template <typename T>
+class lf_bunch final
+{
+	atomic_t<lf_queue_item<T>*> m_head{nullptr};
+
+public:
+	constexpr lf_bunch() noexcept = default;
+
+	~lf_bunch()
+	{
+		delete m_head.load();
+	}
+
+	// Add unconditionally
+	template <typename... Args>
+	T* push(Args&&... args) noexcept
+	{
+		auto _old = m_head.load();
+		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
+
+		while (!m_head.compare_exchange(_old, item))
+		{
+			item->m_link = _old;
+		}
+
+		return &item->m_data;
+	}
+
+	// Add if pred(item, all_items) is true for all existing items
+	template <typename F, typename... Args>
+	T* push_if(F pred, Args&&... args) noexcept
+	{
+		auto _old = m_head.load();
+		auto _chk = _old;
+		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
+
+		_chk = nullptr;
+
+		do
+		{
+			item->m_link = _old;
+
+			// Check all items in the queue
+			for (auto ptr = _old; ptr != _chk; ptr = ptr->m_link)
+			{
+				if (!pred(item->m_data, ptr->m_data))
+				{
+					item->m_link = nullptr;
+					delete item;
+					return nullptr;
+				}
+			}
+
+			// Set to not check already checked items
+			_chk = _old;
+		}
+		while (!m_head.compare_exchange(_old, item));
+
+		return &item->m_data;
+	}
+
+	lf_queue_iterator<T> begin() const
+	{
+		lf_queue_iterator<T> result;
+		result.m_ptr = m_head.load();
+		return result;
+	}
+
+	lf_queue_iterator<T> end() const
+	{
+		return {};
 	}
 };
 

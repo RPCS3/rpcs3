@@ -35,9 +35,14 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 {
 	if (QSslSocket::supportsSsl() == false)
 	{
-		LOG_ERROR(GENERAL, "Can't update! Please make sure your system supports SSL.");
+		LOG_ERROR(GENERAL, "Unable to update RPCS3!Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
 		if (!automatic)
-			QMessageBox::warning(parent, tr("Auto-updater"), tr("Can't update! Please make sure your system supports SSL."));
+		{
+			const QString message = tr("Unable to update RPCS3!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>quickstart guide</a> for more information.");
+			QMessageBox box(QMessageBox::Icon::Warning, tr("Auto-updater"), message, QMessageBox::StandardButton::Ok, parent);
+			box.setTextFormat(Qt::RichText);
+			box.exec();
+		}
 		return;
 	}
 
@@ -257,7 +262,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 	return true;
 }
 
-bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool automatic)
+bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic*/)
 {
 	if (m_expected_size != rpcs3_data.size())
 	{
