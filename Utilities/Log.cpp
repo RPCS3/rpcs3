@@ -325,16 +325,31 @@ logs::file_writer::file_writer(const std::string& name)
 	const std::string log_name = fs::get_cache_dir() + name + ".log";
 	const std::string buf_name = fs::get_cache_dir() + name + ".buf";
 
+	const std::string s_filelock = fs::get_cache_dir() + ".restart_lock";
+
 	try
 	{
 		if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
 		{
 #ifdef _WIN32
-			// Windows does not close all handles before starting a new process with execl
-			// We delay another check for rpcs3 restart after an update
-			// TODO: cleaner solution?
-			std::this_thread::sleep_for(500ms);
-			if (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock))
+			auto prev_error = fs::g_tls_error;
+
+			if (fs::exists(s_filelock))
+			{
+				// A restart is happening, wait for the file to be accessible
+				u32 tries = 0;
+				while (!m_file.open(buf_name, fs::read + fs::rewrite + fs::lock) && tries < 100)
+				{
+					std::this_thread::sleep_for(100ms);
+					tries++;
+				}
+			}
+			else
+			{
+				fs::g_tls_error = prev_error;
+			}
+
+			if (!m_file)
 #endif
 			{
 				if (fs::g_tls_error == fs::error::acces)
@@ -358,6 +373,10 @@ logs::file_writer::file_writer(const std::string& name)
 				fmt::throw_exception("Cannot create %s.log (error %s)", name, fs::g_tls_error);
 			}
 		}
+
+#ifdef _WIN32
+		fs::remove_file(s_filelock); // remove restart token if it exists
+#endif
 
 		// Check free space
 		fs::device_stat stats{};
@@ -508,7 +527,7 @@ bool logs::file_writer::flush(u64 bufv)
 		// Write compressed
 		if (m_fout2 && st < m_max_size)
 		{
-			m_zs.avail_in = size;
+			m_zs.avail_in = static_cast<uInt>(size);
 			m_zs.next_in  = m_fptr + st % s_log_size;
 
 			do

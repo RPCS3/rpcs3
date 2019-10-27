@@ -103,6 +103,9 @@ enum class audio_renderer
 #ifdef HAVE_PULSE
 	pulse,
 #endif
+#ifdef HAVE_FAUDIO
+	faudio,
+#endif
 };
 
 enum class camera_handler

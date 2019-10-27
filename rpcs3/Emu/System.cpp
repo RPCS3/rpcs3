@@ -67,10 +67,10 @@ std::mutex g_tty_mutex;
 
 // Progress display server synchronization variables
 atomic_t<const char*> g_progr{nullptr};
-atomic_t<u64> g_progr_ftotal{0};
-atomic_t<u64> g_progr_fdone{0};
-atomic_t<u64> g_progr_ptotal{0};
-atomic_t<u64> g_progr_pdone{0};
+atomic_t<u32> g_progr_ftotal{0};
+atomic_t<u32> g_progr_fdone{0};
+atomic_t<u32> g_progr_ptotal{0};
+atomic_t<u32> g_progr_pdone{0};
 
 template <>
 void fmt_class_string<mouse_handler>::format(std::string& out, u64 arg)
@@ -212,6 +212,9 @@ void fmt_class_string<audio_renderer>::format(std::string& out, u64 arg)
 		case audio_renderer::pulse: return "PulseAudio";
 #endif
 		case audio_renderer::openal: return "OpenAL";
+#ifdef HAVE_FAUDIO
+		case audio_renderer::faudio: return "FAudio";
+#endif
 		}
 
 		return unknown;
@@ -454,10 +457,10 @@ void Emulator::Init()
 					});
 				}
 
-				u64 ftotal = 0;
-				u64 fdone = 0;
-				u64 ptotal = 0;
-				u64 pdone = 0;
+				u32 ftotal = 0;
+				u32 fdone = 0;
+				u32 ptotal = 0;
+				u32 pdone = 0;
 				u32 value = 0;
 
 				// Update progress
@@ -473,7 +476,7 @@ void Emulator::Init()
 						// Compute new progress in percents
 						const u32 total = ftotal + ptotal;
 						const u32 done = fdone + pdone;
-						const u32 new_value = double(done) * 100. / double(total ? total : 1);
+						const u32 new_value = static_cast<u32>(double(done) * 100. / double(total ? total : 1));
 
 						// Compute the difference
 						const u32 delta = new_value > value ? new_value - value : 0;

@@ -52,3 +52,7 @@
 	path = 3rdparty/libusb
 	url = https://github.com/RPCS3/libusb.git
 	ignore = dirty
+[submodule "3rdparty/FAudio"]
+	path = 3rdparty/FAudio
+	url = https://github.com/FNA-XNA/FAudio.git
+	ignore = dirty

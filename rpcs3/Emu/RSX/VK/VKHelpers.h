@@ -600,8 +600,8 @@ private:
 
 			if (get_chip_class() == chip_class::AMD_vega)
 			{
-				LOG_WARNING(RSX, "float16_t does not work correctly on VEGA hardware on all drivers. Using float32_t fallback instead.");
-				shader_types_support.allow_float16 = false;
+				// Disable fp16 if driver uses LLVM emitter. It does fine with AMD proprietary drivers though.
+				shader_types_support.allow_float16 = (driver_properties.driverID == VK_DRIVER_ID_AMD_PROPRIETARY_KHR);
 			}
 		}
 
@@ -2169,7 +2169,7 @@ public:
 		}
 
 	public:
-		swapchain_WSI(vk::physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space)
+		swapchain_WSI(vk::physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
 			: WSI_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{
 			createSwapchainKHR = (PFN_vkCreateSwapchainKHR)vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR");
@@ -2181,17 +2181,20 @@ public:
 			m_surface = surface;
 			m_color_space = color_space;
 
-			switch (gpu.get_driver_vendor())
+			if (!force_wm_reporting_off)
 			{
-			case driver_vendor::AMD:
-				break;
-			case driver_vendor::NVIDIA:
-			case driver_vendor::INTEL:
-			case driver_vendor::RADV:
-				m_wm_reports_flag = true;
-				break;
-			default:
-				break;
+				switch (gpu.get_driver_vendor())
+				{
+				case driver_vendor::AMD:
+					break;
+				case driver_vendor::NVIDIA:
+				case driver_vendor::INTEL:
+				case driver_vendor::RADV:
+					m_wm_reports_flag = true;
+					break;
+				default:
+					break;
+				}
 			}
 		}
 
@@ -2591,6 +2594,7 @@ public:
 		swapchain_base* createSwapChain(display_handle_t window_handle, vk::physical_device &dev)
 		{
 			VkSurfaceKHR surface;
+			bool force_wm_reporting_off = false;
 #ifdef _WIN32
 			using swapchain_NATIVE = swapchain_WIN32;
 			HINSTANCE hInstance = NULL;
@@ -2632,6 +2636,7 @@ public:
 					createInfo.display                       = p.first;
 					createInfo.surface                       = p.second;
 					CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+					force_wm_reporting_off = true;
 				}
 				else
 				{
@@ -2753,7 +2758,7 @@ public:
 
 			color_space = surfFormats[0].colorSpace;
 
-			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, surface, color_space);
+			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, surface, color_space, force_wm_reporting_off);
 		}
 	};
 

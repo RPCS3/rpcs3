@@ -909,7 +909,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				statGet->fileNum++;
 
-				size_kbytes += (entry.size + 1023) / 1024; // firmware rounds this value up
+				size_kbytes += ::narrow<u32>((entry.size + 1023) / 1024); // firmware rounds this value up
 
 				if (statGet->fileListNum >= setBuf->fileListMax)
 					continue;
@@ -1423,7 +1423,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 
 		for (const auto& entry : fs::dir(save_path))
 		{
-			size_kbytes += (entry.size + 1023) / 1024; // firmware rounds this value up
+			size_kbytes += ::narrow<u32>((entry.size + 1023) / 1024); // firmware rounds this value up
 		}
 
 		*sizeKB = size_kbytes;

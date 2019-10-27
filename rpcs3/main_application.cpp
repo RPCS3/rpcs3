@@ -31,6 +31,9 @@
 #ifdef HAVE_PULSE
 #include "Emu/Audio/Pulse/PulseBackend.h"
 #endif
+#ifdef HAVE_FAUDIO
+#include "Emu/Audio/FAudio/FAudioBackend.h"
+#endif
 
 #include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Null/NullGSRender.h"
@@ -155,6 +158,9 @@ EmuCallbacks main_application::CreateCallbacks()
 #endif
 
 		case audio_renderer::openal: return std::make_shared<OpenALBackend>();
+#ifdef HAVE_FAUDIO
+		case audio_renderer::faudio: return std::make_shared<FAudioBackend>();
+#endif
 		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
 		}
 	};

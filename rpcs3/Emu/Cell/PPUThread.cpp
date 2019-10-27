@@ -67,8 +67,8 @@ const bool s_use_ssse3 =
 extern u64 get_guest_system_time();
 
 extern atomic_t<const char*> g_progr;
-extern atomic_t<u64> g_progr_ptotal;
-extern atomic_t<u64> g_progr_pdone;
+extern atomic_t<u32> g_progr_ptotal;
+extern atomic_t<u32> g_progr_pdone;
 
 enum class join_status : u32
 {

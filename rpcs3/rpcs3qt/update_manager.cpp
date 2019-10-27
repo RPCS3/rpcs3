@@ -35,9 +35,14 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 {
 	if (QSslSocket::supportsSsl() == false)
 	{
-		LOG_ERROR(GENERAL, "Can't update! Please make sure your system supports SSL.");
+		LOG_ERROR(GENERAL, "Unable to update RPCS3!Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
 		if (!automatic)
-			QMessageBox::warning(parent, tr("Auto-updater"), tr("Can't update! Please make sure your system supports SSL."));
+		{
+			const QString message = tr("Unable to update RPCS3!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>quickstart guide</a> for more information.");
+			QMessageBox box(QMessageBox::Icon::Warning, tr("Auto-updater"), message, QMessageBox::StandardButton::Ok, parent);
+			box.setTextFormat(Qt::RichText);
+			box.exec();
+		}
 		return;
 	}
 
@@ -73,8 +78,8 @@ void update_manager::handle_error(QNetworkReply::NetworkError error)
 {
 	if (error != QNetworkReply::NoError)
 	{
-		QNetworkReply* reply = qobject_cast<QNetworkReply *>(sender());
-		if(!reply)
+		QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
+		if (!reply)
 			return;
 
 		m_progress_dialog->close();
@@ -257,7 +262,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 	return true;
 }
 
-bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool automatic)
+bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic*/)
 {
 	if (m_expected_size != rpcs3_data.size())
 	{
@@ -543,13 +548,20 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool automatic)
 
 	replace_path = Emulator::GetEmuDir() + "rpcs3.exe";
 
+	// Creating a file to indicate we're restarting
+	const std::string s_filelock = fs::get_cache_dir() + ".restart_lock";
+	verify("Restart lock" HERE), !!fs::file(s_filelock, fs::create);
+
 #endif
 
 	m_progress_dialog->close();
-
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!"));
-	int ret = execl(replace_path.c_str(), replace_path.c_str(), nullptr);
 
+#ifdef _WIN32
+	int ret = _execl(replace_path.c_str(), replace_path.c_str(), nullptr);
+#else
+	int ret = execl(replace_path.c_str(), replace_path.c_str(), nullptr);
+#endif
 	if (ret == -1)
 	{
 		LOG_ERROR(GENERAL, "[Auto-updater] Relaunching failed with result: %d(%s)", ret, strerror(errno));

@@ -45,24 +45,36 @@ void spu_recompiler::init()
 	}
 }
 
-spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u32>& func, void* fn_location)
+spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 {
-	if (!fn_location)
-	{
-		fn_location = m_spurt->find(last_reset_count, func);
-	}
+	const u32 start0 = _func[0];
 
-	if (fn_location == spu_runtime::g_dispatcher)
-	{
-		return &dispatch;
-	}
+	const auto add_loc = m_spurt->add_empty(std::move(_func));
 
-	if (!fn_location)
+	if (!add_loc)
 	{
 		return nullptr;
 	}
 
-	if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache)
+	if (add_loc->compiled)
+	{
+		return add_loc->compiled;
+	}
+
+	const std::vector<u32>& func = add_loc->data;
+
+	if (func[0] != start0)
+	{
+		// Wait for the duplicate
+		while (!add_loc->compiled)
+		{
+			add_loc->compiled.wait(nullptr);
+		}
+
+		return add_loc->compiled;
+	}
+
+	if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 	{
 		cache->add(func);
 	}
@@ -94,10 +106,10 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 	X86Assembler compiler(&code);
 	this->c = &compiler;
 
-	if (g_cfg.core.spu_debug)
+	if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 	{
 		// Dump analyser data
-		this->dump(log);
+		this->dump(func, log);
 		fs::file(m_spurt->get_cache_path() + "spu.log", fs::write + fs::append).write(log);
 
 		// Set logger
@@ -892,12 +904,21 @@ spu_function_t spu_recompiler::compile(u64 last_reset_count, const std::vector<u
 		LOG_FATAL(SPU, "Failed to build a function");
 	}
 
-	if (!m_spurt->add(last_reset_count, fn_location, fn))
+	// Install compiled function pointer
+	const bool added = !add_loc->compiled && add_loc->compiled.compare_and_swap_test(nullptr, fn);
+
+	// Rebuild trampoline if necessary
+	if (!m_spurt->rebuild_ubertrampoline(func[1]))
 	{
 		return nullptr;
 	}
 
-	if (g_cfg.core.spu_debug)
+	if (added)
+	{
+		add_loc->compiled.notify_all();
+	}
+
+	if (g_cfg.core.spu_debug && added)
 	{
 		// Add ASMJIT logs
 		fmt::append(log, "Address: %p\n\n", fn);

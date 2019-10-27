@@ -90,19 +90,22 @@ target_sources(rpcs3_emu PRIVATE
 	Audio/AL/OpenALBackend.cpp
 	Audio/ALSA/ALSABackend.cpp
 	Audio/Pulse/PulseBackend.cpp
-	Audio/XAudio2/XAudio27Backend.cpp
-	Audio/XAudio2/XAudio28Backend.cpp
-	Audio/XAudio2/XAudio2Backend.cpp
+	Audio/FAudio/FAudioBackend.cpp
 )
 
 if(WIN32)
+	target_sources(rpcs3_emu PRIVATE
+		Audio/XAudio2/XAudio27Backend.cpp
+		Audio/XAudio2/XAudio28Backend.cpp
+		Audio/XAudio2/XAudio2Backend.cpp
+	)
 	# Slimmed down version of minidx9 for XAudio2_7 only
 	include_directories(BEFORE "${RPCS3_SRC_DIR}/../3rdparty/XAudio2_7")
 endif()
 
 target_link_libraries(rpcs3_emu
 	PUBLIC
-		3rdparty::alsa 3rdparty::pulse 3rdparty::openal)
+		3rdparty::alsa 3rdparty::pulse 3rdparty::openal 3rdparty::faudio)
 
 
 # Cell
