@@ -4161,6 +4161,8 @@ public:
 			return compile_interpreter();
 		}
 
+		const u32 start0 = _func[0];
+
 		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
 		if (!add_loc)
@@ -4169,6 +4171,17 @@ public:
 		}
 
 		const std::vector<u32>& func = add_loc->data;
+
+		if (func[0] != start0)
+		{
+			// Wait for the duplicate
+			while (!add_loc->compiled)
+			{
+				add_loc->compiled.wait(nullptr);
+			}
+
+			return add_loc->compiled;
+		}
 
 		std::string log;
 

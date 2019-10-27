@@ -47,6 +47,8 @@ void spu_recompiler::init()
 
 spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 {
+	const u32 start0 = _func[0];
+
 	const auto add_loc = m_spurt->add_empty(std::move(_func));
 
 	if (!add_loc)
@@ -60,6 +62,17 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 	}
 
 	const std::vector<u32>& func = add_loc->data;
+
+	if (func[0] != start0)
+	{
+		// Wait for the duplicate
+		while (!add_loc->compiled)
+		{
+			add_loc->compiled.wait(nullptr);
+		}
+
+		return add_loc->compiled;
+	}
 
 	if (auto cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 	{
