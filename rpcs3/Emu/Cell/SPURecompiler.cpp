@@ -1013,7 +1013,7 @@ spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 	return nullptr;
 }
 
-spu_function_t spu_runtime::make_branch_patchpoint() const
+spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 {
 	u8* const raw = jit_runtime::alloc(16, 16);
 
@@ -1039,8 +1039,8 @@ spu_function_t spu_runtime::make_branch_patchpoint() const
 	const s64 rel = reinterpret_cast<u64>(tr_branch) - reinterpret_cast<u64>(raw + 8) - 5;
 	std::memcpy(raw + 9, &rel, 4);
 	raw[13] = 0xcc;
-	raw[14] = 0;
-	raw[15] = 0;
+	raw[14] = data >> 8;
+	raw[15] = data & 0xff;
 
 	return reinterpret_cast<spu_function_t>(raw);
 }
@@ -1110,6 +1110,11 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 {
+	if (const u32 ls_off = ((rip[6] << 8) | rip[7]) * 4)
+	{
+		LOG_TODO(SPU, "Special branch patchpoint hit.\nPlease report to the developer (0x%05x).", ls_off);
+	}
+
 	// Find function
 	const auto func = spu.jit->get_runtime().find(static_cast<u32*>(vm::base(spu.offset)), spu.pc);
 
@@ -1144,8 +1149,8 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 			bytes[5] = 0xcc;
 		}
 
-		bytes[6] = 0;
-		bytes[7] = 0;
+		bytes[6] = rip[6];
+		bytes[7] = rip[7];
 	}
 	else
 	{
@@ -4652,7 +4657,7 @@ public:
 					if (g_cfg.core.spu_verification)
 					{
 						const std::string ppname = fmt::format("%s-chunkpp-0x%05x", m_hash, i);
-						m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint());
+						m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint(i / 4));
 
 						const auto ppfunc = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(ppname, m_finfo->chunk->getFunctionType()).getCallee());
 						ppfunc->setCallingConv(m_finfo->chunk->getCallingConv());

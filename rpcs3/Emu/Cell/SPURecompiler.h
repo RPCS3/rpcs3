@@ -115,7 +115,7 @@ public:
 	spu_function_t find(const u32* ls, u32 addr) const;
 
 	// Generate a patchable trampoline to spu_recompiler_base::branch
-	spu_function_t make_branch_patchpoint() const;
+	spu_function_t make_branch_patchpoint(u16 data = 0) const;
 
 	// All dispatchers (array allocated in jit memory)
 	static std::array<atomic_t<spu_function_t>, (1 << 20)>* const g_dispatcher;
