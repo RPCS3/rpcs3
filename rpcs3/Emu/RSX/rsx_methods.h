@@ -687,13 +687,13 @@ namespace rsx
 
 		bool restart_index_enabled() const
 		{
-			if (const u32 idx = restart_index(); 
-				idx > (index_type() == rsx::index_array_type::u16 ? 0xffff : 0xfffff))
+			if (!restart_index_enabled_raw()) 
 			{
 				return false;
-			}
 
-			return restart_index_enabled_raw();
+			}
+			
+			return restart_index() > (index_type() == rsx::index_array_type::u16 ? 0xffff : 0xfffff);
 		}
 
 		u32 z_clear_value(bool is_depth_stencil) const
