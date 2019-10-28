@@ -595,3 +595,56 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 
 	return fs::remove_file(path);
 }
+
+bool vfs::host::remove_all(const std::string& path, const std::string& dev_root, bool remove_root)
+{
+	if (remove_root)
+	{
+		// Rename to special dummy folder which will be ignored by VFS (but opened file handles can still read or write it)
+		const std::string dummy = fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+
+		if (!vfs::host::rename(path, dummy, false))
+		{
+			return false;
+		}
+
+		if (!fs::remove_all(dummy))
+		{
+			return false;
+		}
+	}
+	else
+	{
+		const auto root_dir = fs::dir(path);
+
+		if (!root_dir)
+		{
+			return false;
+		}
+
+		for (const auto& entry : root_dir)
+		{
+			if (entry.name == "." || entry.name == "..")
+			{
+				continue;
+			}
+
+			if (!entry.is_directory)
+			{
+				if (!vfs::host::unlink(path + '/' + entry.name, dev_root))
+				{
+					return false;
+				}
+			}
+			else
+			{
+				if (!vfs::host::remove_all(path + '/' + entry.name, dev_root))
+				{
+					return false;
+				}
+			}
+		}
+	}
+
+	return true;
+}
