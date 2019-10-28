@@ -11,8 +11,10 @@
 #if defined(_MSC_VER)
 #define __SSSE3__  1
 #define __SSE4_1__ 1
+#define SSE4_1_FUNC
 #else
 #define __sse_intrin static FORCE_INLINE
+#define SSE4_1_FUNC __attribute__((__target__("sse4.1")))
 #endif // _MSC_VER
 
 // NOTE: Clang does not allow to redefine missing intrinsics
@@ -602,8 +604,9 @@ namespace
 
 	struct untouched_impl
 	{
+		SSE4_1_FUNC
 		static
-		std::tuple<u16, u16, u32> upload_u16_swapped(const void *src, void *dst, u32 count)
+		std::tuple<u16, u16, u32> upload_u16_swapped_sse4_1(const void *src, void *dst, u32 count)
 		{
 			const __m128i mask = _mm_set_epi8(
 				0xE, 0xF, 0xC, 0xD,
@@ -659,8 +662,9 @@ namespace
 			return std::make_tuple(min_index, max_index, count);
 		}
 
+		SSE4_1_FUNC
 		static
-		std::tuple<u32, u32, u32> upload_u32_swapped(const void *src, void *dst, u32 count)
+		std::tuple<u32, u32, u32> upload_u32_swapped_sse4_1(const void *src, void *dst, u32 count)
 		{
 			const __m128i mask = _mm_set_epi8(
 				0xC, 0xD, 0xE, 0xF,
@@ -722,12 +726,12 @@ namespace
 				if constexpr (std::is_same<T, u32>::value)
 				{
 					const auto count = (remaining & ~0x3);
-					std::tie(min_index, max_index, written) = upload_u32_swapped(src.data(), dst.data(), count);
+					std::tie(min_index, max_index, written) = upload_u32_swapped_sse4_1(src.data(), dst.data(), count);
 				}
 				else if constexpr (std::is_same<T, u16>::value)
 				{
 					const auto count = (remaining & ~0x7);
-					std::tie(min_index, max_index, written) = upload_u16_swapped(src.data(), dst.data(), count);
+					std::tie(min_index, max_index, written) = upload_u16_swapped_sse4_1(src.data(), dst.data(), count);
 				}
 				else
 				{
@@ -755,8 +759,9 @@ namespace
 
 	struct primitive_restart_impl
 	{
+		SSE4_1_FUNC
 		static
-		std::tuple<u16, u16> upload_u16_swapped(const void *src, void *dst, u32 iterations, u16 restart_index)
+		std::tuple<u16, u16> upload_u16_swapped_sse4_1(const void *src, void *dst, u32 iterations, u16 restart_index)
 		{
 			const __m128i shuffle_mask = _mm_set_epi8(
 				0xE, 0xF, 0xC, 0xD,
@@ -815,8 +820,9 @@ namespace
 			return std::make_tuple(min_index, max_index);
 		}
 
+		SSE4_1_FUNC
 		static
-		std::tuple<u32, u32> upload_u32_swapped(const void *src, void *dst, u32 iterations, u32 restart_index)
+		std::tuple<u32, u32> upload_u32_swapped_sse4_1(const void *src, void *dst, u32 iterations, u32 restart_index)
 		{
 			const __m128i shuffle_mask = _mm_set_epi8(
 				0xC, 0xD, 0xE, 0xF,
@@ -884,7 +890,7 @@ namespace
 					{
 						u32 iterations = length >> 3;
 						written = length & ~0x7;
-						std::tie(min_index, max_index) = upload_u16_swapped(src.data(), dst.data(), iterations, restart_index);
+						std::tie(min_index, max_index) = upload_u16_swapped_sse4_1(src.data(), dst.data(), iterations, restart_index);
 					}
 				}
 				else if constexpr (std::is_same<T, u32>::value)
@@ -893,7 +899,7 @@ namespace
 					{
 						u32 iterations = length >> 2;
 						written = length & ~0x3;
-						std::tie(min_index, max_index) = upload_u32_swapped(src.data(), dst.data(), iterations, restart_index);
+						std::tie(min_index, max_index) = upload_u32_swapped_sse4_1(src.data(), dst.data(), iterations, restart_index);
 					}
 				}
 				else
