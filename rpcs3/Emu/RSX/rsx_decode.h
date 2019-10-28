@@ -3357,7 +3357,7 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 	private:
 		u32 value;
 
-		u32 type_raw() const { return bf_decoder<4, 28>(value); }
+		u8 type_raw() const { return bf_decoder<4, 8>(value); }
 
 	public:
 		decoded_type(u32 value) : value(value) {}
