@@ -10,7 +10,6 @@
 
 #if defined(_MSC_VER)
 #define __SSSE3__  1
-#define __SSE4_1__ 1
 #define SSE4_1_FUNC
 #else
 #define __sse_intrin static FORCE_INLINE
@@ -27,34 +26,6 @@ __sse_intrin __m128i __mm_shuffle_epi8(__m128i opd, __m128i opa)
 #else
 #define __mm_shuffle_epi8 _mm_shuffle_epi8
 #endif // __SSSE3__
-
-#ifndef __SSE4_1__
-__sse_intrin __m128i __mm_max_epu32(__m128i opd, __m128i opa)
-{
-	__asm__("pmaxud %1, %0" : "+x" (opd) : "xm" (opa));
-	return opd;
-}
-__sse_intrin __m128i __mm_min_epu32(__m128i opd, __m128i opa)
-{
-	__asm__("pminud %1, %0" : "+x" (opd) : "xm" (opa));
-	return opd;
-}
-__sse_intrin __m128i __mm_max_epu16(__m128i opd, __m128i opa)
-{
-	__asm__("pmaxuw %1, %0" : "+x" (opd) : "xm" (opa));
-	return opd;
-}
-__sse_intrin __m128i __mm_min_epu16(__m128i opd, __m128i opa)
-{
-	__asm__("pminuw %1, %0" : "+x" (opd) : "xm" (opa));
-	return opd;
-}
-#else
-#define __mm_max_epu32 _mm_max_epu32
-#define __mm_min_epu32 _mm_min_epu32
-#define __mm_max_epu16 _mm_max_epu16
-#define __mm_min_epu16 _mm_min_epu16
-#endif // __SSE4_1__
 
 #undef __sse_intrin
 
@@ -624,9 +595,9 @@ namespace
 			for (unsigned n = 0; n < iterations; ++n)
 			{
 				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = __mm_shuffle_epi8(raw, mask);
-				max = __mm_max_epu16(max, value);
-				min = __mm_min_epu16(min, value);
+				const __m128i value = _mm_shuffle_epi8(raw, mask);
+				max = _mm_max_epu16(max, value);
+				min = _mm_min_epu16(min, value);
 				_mm_storeu_si128(dst_stream++, value);
 			}
 
@@ -642,19 +613,19 @@ namespace
 				0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0x3, 0x2);
 
-			__m128i tmp = __mm_shuffle_epi8(min, mask_step1);
-			min = __mm_min_epu16(min, tmp);
-			tmp = __mm_shuffle_epi8(min, mask_step2);
-			min = __mm_min_epu16(min, tmp);
-			tmp = __mm_shuffle_epi8(min, mask_step3);
-			min = __mm_min_epu16(min, tmp);
+			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step2);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step3);
+			min = _mm_min_epu16(min, tmp);
 
-			tmp = __mm_shuffle_epi8(max, mask_step1);
-			max = __mm_max_epu16(max, tmp);
-			tmp = __mm_shuffle_epi8(max, mask_step2);
-			max = __mm_max_epu16(max, tmp);
-			tmp = __mm_shuffle_epi8(max, mask_step3);
-			max = __mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step1);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step2);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step3);
+			max = _mm_max_epu16(max, tmp);
 
 			const u16 min_index = u16(_mm_cvtsi128_si32(min) & 0xFFFF);
 			const u16 max_index = u16(_mm_cvtsi128_si32(max) & 0xFFFF);
@@ -682,9 +653,9 @@ namespace
 			for (unsigned n = 0; n < iterations; ++n)
 			{
 				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = __mm_shuffle_epi8(raw, mask);
-				max = __mm_max_epu32(max, value);
-				min = __mm_min_epu32(min, value);
+				const __m128i value = _mm_shuffle_epi8(raw, mask);
+				max = _mm_max_epu32(max, value);
+				min = _mm_min_epu32(min, value);
 				_mm_storeu_si128(dst_stream++, value);
 			}
 
@@ -697,15 +668,15 @@ namespace
 				0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
 
-			__m128i tmp = __mm_shuffle_epi8(min, mask_step1);
-			min = __mm_min_epu32(min, tmp);
-			tmp = __mm_shuffle_epi8(min, mask_step2);
-			min = __mm_min_epu32(min, tmp);
+			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			min = _mm_min_epu32(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step2);
+			min = _mm_min_epu32(min, tmp);
 
-			tmp = __mm_shuffle_epi8(max, mask_step1);
-			max = __mm_max_epu32(max, tmp);
-			tmp = __mm_shuffle_epi8(max, mask_step2);
-			max = __mm_max_epu32(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step1);
+			max = _mm_max_epu32(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step2);
+			max = _mm_max_epu32(max, tmp);
 
 			const u32 min_index = u32(_mm_cvtsi128_si32(min));
 			const u32 max_index = u32(_mm_cvtsi128_si32(max));
@@ -779,12 +750,12 @@ namespace
 			for (unsigned n = 0; n < iterations; ++n)
 			{
 				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = __mm_shuffle_epi8(raw, shuffle_mask);
+				const __m128i value = _mm_shuffle_epi8(raw, shuffle_mask);
 				const __m128i mask = _mm_cmpeq_epi16(restart, value);
 				const __m128i value_with_min_restart = _mm_andnot_si128(mask, value);
 				const __m128i value_with_max_restart = _mm_or_si128(mask, value);
-				max = __mm_max_epu16(max, value_with_min_restart);
-				min = __mm_min_epu16(min, value_with_max_restart);
+				max = _mm_max_epu16(max, value_with_min_restart);
+				min = _mm_min_epu16(min, value_with_max_restart);
 				_mm_storeu_si128(dst_stream++, value_with_max_restart);
 			}
 
@@ -800,19 +771,19 @@ namespace
 				0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0, 0, 0x3, 0x2);
 
-			__m128i tmp = __mm_shuffle_epi8(min, mask_step1);
-			min = __mm_min_epu16(min, tmp);
-			tmp = __mm_shuffle_epi8(min, mask_step2);
-			min = __mm_min_epu16(min, tmp);
-			tmp = __mm_shuffle_epi8(min, mask_step3);
-			min = __mm_min_epu16(min, tmp);
+			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step2);
+			min = _mm_min_epu16(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step3);
+			min = _mm_min_epu16(min, tmp);
 
-			tmp = __mm_shuffle_epi8(max, mask_step1);
-			max = __mm_max_epu16(max, tmp);
-			tmp = __mm_shuffle_epi8(max, mask_step2);
-			max = __mm_max_epu16(max, tmp);
-			tmp = __mm_shuffle_epi8(max, mask_step3);
-			max = __mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step1);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step2);
+			max = _mm_max_epu16(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step3);
+			max = _mm_max_epu16(max, tmp);
 
 			const u16 min_index = u16(_mm_cvtsi128_si32(min) & 0xFFFF);
 			const u16 max_index = u16(_mm_cvtsi128_si32(max) & 0xFFFF);
@@ -840,12 +811,12 @@ namespace
 			for (unsigned n = 0; n < iterations; ++n)
 			{
 				const __m128i raw = _mm_loadu_si128(src_stream++);
-				const __m128i value = __mm_shuffle_epi8(raw, shuffle_mask);
+				const __m128i value = _mm_shuffle_epi8(raw, shuffle_mask);
 				const __m128i mask = _mm_cmpeq_epi32(restart, value);
 				const __m128i value_with_min_restart = _mm_andnot_si128(mask, value);
 				const __m128i value_with_max_restart = _mm_or_si128(mask, value);
-				max = __mm_max_epu32(max, value_with_min_restart);
-				min = __mm_min_epu32(min, value_with_max_restart);
+				max = _mm_max_epu32(max, value_with_min_restart);
+				min = _mm_min_epu32(min, value_with_max_restart);
 				_mm_storeu_si128(dst_stream++, value_with_max_restart);
 			}
 
@@ -857,15 +828,15 @@ namespace
 				0, 0, 0, 0, 0, 0, 0, 0,
 				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
 
-			__m128i tmp = __mm_shuffle_epi8(min, mask_step1);
-			min = __mm_min_epu32(min, tmp);
-			tmp = __mm_shuffle_epi8(min, mask_step2);
-			min = __mm_min_epu32(min, tmp);
+			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			min = _mm_min_epu32(min, tmp);
+			tmp = _mm_shuffle_epi8(min, mask_step2);
+			min = _mm_min_epu32(min, tmp);
 
-			tmp = __mm_shuffle_epi8(max, mask_step1);
-			max = __mm_max_epu32(max, tmp);
-			tmp = __mm_shuffle_epi8(max, mask_step2);
-			max = __mm_max_epu32(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step1);
+			max = _mm_max_epu32(max, tmp);
+			tmp = _mm_shuffle_epi8(max, mask_step2);
+			max = _mm_max_epu32(max, tmp);
 
 			const u32 min_index = u32(_mm_cvtsi128_si32(min));
 			const u32 max_index = u32(_mm_cvtsi128_si32(max));
