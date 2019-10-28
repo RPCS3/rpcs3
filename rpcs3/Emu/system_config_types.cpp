@@ -300,6 +300,21 @@ void fmt_class_string<spu_block_size_type>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<spu_instruction_accuracy>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_instruction_accuracy type) {
+		switch (type)
+		{
+		case spu_instruction_accuracy::Default: return "Default";
+		case spu_instruction_accuracy::approximate: return "Approximate";
+		case spu_instruction_accuracy::accurate: return "Accurate";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<frame_limit_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](frame_limit_type value)

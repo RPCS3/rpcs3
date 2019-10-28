@@ -4147,6 +4147,221 @@
               </widget>
              </item>
              <item>
+          <widget class="QGroupBox" name="gb_spuInstructions">
+           <property name="title">
+            <string>SPU instructions</string>
+           </property>
+           <layout class="QFormLayout" name="formLayout">
+            <property name="verticalSpacing">
+             <number>0</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QLabel" name="lbl_fcgt">
+              <property name="text">
+               <string>FCGT accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="spuAccuracyFCGT"/>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="lbl_fcmgt">
+              <property name="text">
+               <string>FCMGT accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QComboBox" name="spuAccuracyFCMGT"/>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="lbl_fm">
+              <property name="text">
+               <string>FM accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="lbl_fnms">
+              <property name="text">
+               <string>FNMS accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="lbl_fma">
+              <property name="text">
+               <string>FMA accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="6" column="0">
+             <widget class="QLabel" name="lbl_fms">
+              <property name="text">
+               <string>FMS accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="7" column="0">
+             <widget class="QLabel" name="lbl_frest">
+              <property name="text">
+               <string>FREST accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="8" column="0">
+             <widget class="QLabel" name="lbl_frsqest">
+              <property name="text">
+               <string>FRSQEST accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="9" column="0">
+             <widget class="QLabel" name="lbl_fi">
+              <property name="text">
+               <string>FI accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="10" column="0">
+             <widget class="QLabel" name="lbl_fa">
+              <property name="text">
+               <string>FA accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="11" column="0">
+             <widget class="QLabel" name="lbl_fs">
+              <property name="text">
+               <string>FS accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="12" column="0">
+             <widget class="QLabel" name="lbl_fesd">
+              <property name="text">
+               <string>FESD accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="13" column="0">
+             <widget class="QLabel" name="lbl_frds">
+              <property name="text">
+               <string>FRDS accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="14" column="0">
+             <widget class="QLabel" name="lbl_fceq">
+              <property name="text">
+               <string>FCEQ accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="15" column="0">
+             <widget class="QLabel" name="llb_fcmeq">
+              <property name="text">
+               <string>FCMEQ accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="16" column="0">
+             <widget class="QLabel" name="lbl_cflts">
+              <property name="text">
+               <string>CFLTS accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="17" column="0">
+             <widget class="QLabel" name="lbl_clftu">
+              <property name="text">
+               <string>CFLTU accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="18" column="0">
+             <widget class="QLabel" name="lbl_csflt">
+              <property name="text">
+               <string>CSFLT accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="19" column="0">
+             <widget class="QLabel" name="lbl_cuflt">
+              <property name="text">
+               <string>CUFLT accuracy:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QComboBox" name="spuAccuracyFM"/>
+            </item>
+            <item row="4" column="1">
+             <widget class="QComboBox" name="spuAccuracyFNMS"/>
+            </item>
+            <item row="5" column="1">
+             <widget class="QComboBox" name="spuAccuracyFMA"/>
+            </item>
+            <item row="6" column="1">
+             <widget class="QComboBox" name="spuAccuracyFMS"/>
+            </item>
+            <item row="7" column="1">
+             <widget class="QComboBox" name="spuAccuracyFREST"/>
+            </item>
+            <item row="8" column="1">
+             <widget class="QComboBox" name="spuAccuracyFRSQEST"/>
+            </item>
+            <item row="9" column="1">
+             <widget class="QComboBox" name="spuAccuracyFI"/>
+            </item>
+            <item row="10" column="1">
+             <widget class="QComboBox" name="spuAccuracyFA"/>
+            </item>
+            <item row="11" column="1">
+             <widget class="QComboBox" name="spuAccuracyFS"/>
+            </item>
+            <item row="12" column="1">
+             <widget class="QComboBox" name="spuAccuracyFESD"/>
+            </item>
+            <item row="13" column="1">
+             <widget class="QComboBox" name="spuAccuracyFRDS"/>
+            </item>
+            <item row="14" column="1">
+             <widget class="QComboBox" name="spuAccuracyFCEQ"/>
+            </item>
+            <item row="15" column="1">
+             <widget class="QComboBox" name="spuAccuracyFCMEQ"/>
+            </item>
+            <item row="16" column="1">
+             <widget class="QComboBox" name="spuAccuracyCFLTS"/>
+            </item>
+            <item row="17" column="1">
+             <widget class="QComboBox" name="spuAccuracyCFLTU"/>
+            </item>
+            <item row="18" column="1">
+             <widget class="QComboBox" name="spuAccuracyCSFLT"/>
+            </item>
+            <item row="19" column="1">
+             <widget class="QComboBox" name="spuAccuracyCUFLT"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QWidget" name="widget_11" native="true"/>
+              <widget class="QGroupBox" name="gb_metalsemaphore">
+               <property name="title">
+                <string>Metal Semaphore</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_metalsemaphore_layout">
+                <item>
+                 <widget class="QComboBox" name="metalsemaphore"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
               <spacer name="verticalSpacerDebugMore">
                <property name="orientation">
                 <enum>Qt::Vertical</enum>
