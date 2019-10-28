@@ -770,16 +770,44 @@ private:
 			// 1. Anisotropic sampling
 			// 2. DXT support
 			// 3. Indexable storage buffers
-			VkPhysicalDeviceFeatures available_features = pgpu->features;
+			VkPhysicalDeviceFeatures enabled_features{};
 			if (pgpu->shader_types_support.allow_float16)
 			{
 				requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 			}
 
-			available_features.depthBounds = VK_TRUE;
-			available_features.samplerAnisotropy = VK_TRUE;
-			available_features.textureCompressionBC = VK_TRUE;
-			available_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+			enabled_features.robustBufferAccess = VK_TRUE;
+			enabled_features.fullDrawIndexUint32 = VK_TRUE;
+			enabled_features.independentBlend = VK_TRUE;
+			enabled_features.logicOp = VK_TRUE;
+			enabled_features.depthClamp = VK_TRUE;
+			enabled_features.depthBounds = VK_TRUE;
+			enabled_features.wideLines = VK_TRUE;
+			enabled_features.largePoints = VK_TRUE;
+
+			if (g_cfg.video.antialiasing_level != msaa_level::none)
+			{
+				// MSAA features
+				enabled_features.alphaToOne = VK_TRUE;
+				enabled_features.shaderStorageImageMultisample = VK_TRUE;
+				// enabled_features.shaderStorageImageReadWithoutFormat = VK_TRUE;  // Unused currently, may be needed soon
+				enabled_features.shaderStorageImageWriteWithoutFormat = VK_TRUE;
+			}
+
+			// enabled_features.shaderSampledImageArrayDynamicIndexing = TRUE;  // Unused currently but will be needed soon
+			enabled_features.shaderClipDistance = VK_TRUE;
+			// enabled_features.shaderCullDistance = VK_TRUE;  // Alt notation of clip distance
+
+			enabled_features.samplerAnisotropy = VK_TRUE;
+			enabled_features.textureCompressionBC = VK_TRUE;
+			enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+
+			// Optionally disable unsupported stuff
+			if (!pgpu->features.depthBounds)
+			{
+				LOG_ERROR(RSX, "Your GPU does not support depth bounds testing. Graphics may not work correctly.");
+				enabled_features.depthBounds = VK_FALSE;
+			}
 
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -790,7 +818,7 @@ private:
 			device.ppEnabledLayerNames = nullptr; // Deprecated
 			device.enabledExtensionCount = (u32)requested_extensions.size();
 			device.ppEnabledExtensionNames = requested_extensions.data();
-			device.pEnabledFeatures = &available_features;
+			device.pEnabledFeatures = &enabled_features;
 
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
 			if (pgpu->shader_types_support.allow_float16)
@@ -896,6 +924,11 @@ private:
 		bool get_shader_stencil_export_support() const
 		{
 			return pgpu->stencil_export_support;
+		}
+
+		bool get_depth_bounds_support() const
+		{
+			return pgpu->features.depthBounds != VK_FALSE;
 		}
 
 		mem_allocator_base* get_allocator() const
