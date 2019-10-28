@@ -17,16 +17,6 @@ rsx::vertex_base_type rsx::to_vertex_base_type(u8 in)
 	fmt::throw_exception("Unknown vertex base type %d" HERE, in);
 }
 
-rsx::index_array_type rsx::to_index_array_type(u8 in)
-{
-	switch (in)
-	{
-	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32: return rsx::index_array_type::u32;
-	case CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16: return rsx::index_array_type::u16;
-	}
-	fmt::throw_exception("Unknown index array type %d" HERE, in);
-}
-
 rsx::primitive_type rsx::to_primitive_type(u8 in)
 {
 	switch (in)

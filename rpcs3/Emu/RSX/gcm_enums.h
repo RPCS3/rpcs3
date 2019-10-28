@@ -18,11 +18,9 @@ namespace rsx
 
 	enum class index_array_type : u8
 	{
-		u32,
-		u16,
+		u32 = 0, // CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32
+		u16 = 1, // CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16
 	};
-
-	index_array_type to_index_array_type(u8 in);
 
 	enum class primitive_type : u8
 	{
