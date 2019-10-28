@@ -283,19 +283,22 @@ public:
 		LLVMLinkInMCJIT();
 
 		// Try to reserve as much virtual memory in the first 2 GB address space beforehand, if possible.
+		Segment found_segs[16];
+		u32 num_segs = 0;
 #ifdef MAP_32BIT
-		auto ptr = ::mmap(nullptr, DEFAULT_SEGMENT_SIZE, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_32BIT, -1, 0);
-		if (ptr != MAP_FAILED)
+		u64 max_size = 0x80000000u;
+		while (num_segs < 16)
 		{
-			m_curr.addr = (u8*)ptr;
-			m_curr.size = DEFAULT_SEGMENT_SIZE;
-			m_curr.used = 0;
-			return;
+			auto ptr = ::mmap(nullptr, max_size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_32BIT, -1, 0);
+			if (ptr != MAP_FAILED)
+				found_segs[num_segs++] = Segment(ptr, u32(max_size));
+			else if (max_size > 0x1000000)
+				max_size -= 0x1000000;
+			else
+				break;
 		}
 #else
-		Segment found_segs[16];
 		u64 start_addr = 0x10000000;
-		u32 num_segs = 0;
 		while (num_segs < 16)
 		{
 			u64 max_addr = 0;
@@ -326,7 +329,7 @@ public:
 
 			start_addr = max_addr + max_size;
 		}
-
+#endif
 		if (num_segs)
 		{
 			if (num_segs > 1)
@@ -340,7 +343,7 @@ public:
 
 			return;
 		}
-#endif
+
 		if (auto ptr = utils::memory_reserve(DEFAULT_SEGMENT_SIZE))
 		{
 			m_curr.addr = (u8*)ptr;
