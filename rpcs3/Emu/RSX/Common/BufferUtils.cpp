@@ -11,9 +11,11 @@
 #if defined(_MSC_VER)
 #define __SSSE3__  1
 #define SSE4_1_FUNC
+#define AVX2_FUNC
 #else
 #define __sse_intrin static FORCE_INLINE
 #define SSE4_1_FUNC __attribute__((__target__("sse4.1")))
+#define AVX2_FUNC __attribute__((__target__("avx2")))
 #endif // _MSC_VER
 
 // NOTE: Clang does not allow to redefine missing intrinsics
@@ -31,6 +33,7 @@ __sse_intrin __m128i __mm_shuffle_epi8(__m128i opd, __m128i opa)
 
 const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
+const bool s_use_avx2 = utils::has_avx2();
 
 namespace
 {
@@ -730,6 +733,77 @@ namespace
 
 	struct primitive_restart_impl
 	{
+		AVX2_FUNC
+		static
+		std::tuple<u16, u16> upload_u16_swapped_avx2(const void *src, void *dst, u32 iterations, u16 restart_index)
+		{
+			const __m256i shuffle_mask = _mm256_set_epi8(
+				0xE, 0xF, 0xC, 0xD,
+				0xA, 0xB, 0x8, 0x9,
+				0x6, 0x7, 0x4, 0x5,
+				0x2, 0x3, 0x0, 0x1,
+				0xE, 0xF, 0xC, 0xD,
+				0xA, 0xB, 0x8, 0x9,
+				0x6, 0x7, 0x4, 0x5,
+				0x2, 0x3, 0x0, 0x1);
+
+			auto src_stream = (const __m256i*)src;
+			auto dst_stream = (__m256i*)dst;
+
+			__m256i restart = _mm256_set1_epi16(restart_index);
+			__m256i min = _mm256_set1_epi16(0xffff);
+			__m256i max = _mm256_set1_epi16(0);
+
+			for (unsigned n = 0; n < iterations; ++n)
+			{
+				const __m256i raw = _mm256_loadu_si256(src_stream++);
+				const __m256i value = _mm256_shuffle_epi8(raw, shuffle_mask);
+				const __m256i mask = _mm256_cmpeq_epi16(restart, value);
+				const __m256i value_with_min_restart = _mm256_andnot_si256(mask, value);
+				const __m256i value_with_max_restart = _mm256_or_si256(mask, value);
+				max = _mm256_max_epu16(max, value_with_min_restart);
+				min = _mm256_min_epu16(min, value_with_max_restart);
+				_mm256_storeu_si256(dst_stream++, value_with_max_restart);
+			}
+
+			const __m128i mask_step1 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
+
+			const __m128i mask_step2 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
+
+			const __m128i mask_step3 = _mm_set_epi8(
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0x3, 0x2);
+
+			__m128i tmp = _mm256_extracti128_si256(min, 1);
+			__m128i min2 = _mm256_castsi256_si128(min);
+			min2 = _mm_min_epu16(min2, tmp);
+			tmp = _mm_shuffle_epi8(min2, mask_step1);
+			min2 = _mm_min_epu16(min2, tmp);
+			tmp = _mm_shuffle_epi8(min2, mask_step2);
+			min2 = _mm_min_epu16(min2, tmp);
+			tmp = _mm_shuffle_epi8(min2, mask_step3);
+			min2 = _mm_min_epu16(min2, tmp);
+
+			tmp = _mm256_extracti128_si256(max, 1);
+			__m128i max2 = _mm256_castsi256_si128(max);
+			max2 = _mm_max_epu16(max2, tmp);
+			tmp = _mm_shuffle_epi8(max2, mask_step1);
+			max2 = _mm_max_epu16(max2, tmp);
+			tmp = _mm_shuffle_epi8(max2, mask_step2);
+			max2 = _mm_max_epu16(max2, tmp);
+			tmp = _mm_shuffle_epi8(max2, mask_step3);
+			max2 = _mm_max_epu16(max2, tmp);
+
+			const u16 min_index = u16(_mm_cvtsi128_si32(min2) & 0xFFFF);
+			const u16 max_index = u16(_mm_cvtsi128_si32(max2) & 0xFFFF);
+
+			return std::make_tuple(min_index, max_index);
+		}
+
 		SSE4_1_FUNC
 		static
 		std::tuple<u16, u16> upload_u16_swapped_sse4_1(const void *src, void *dst, u32 iterations, u16 restart_index)
@@ -857,7 +931,13 @@ namespace
 			{
 				if constexpr (std::is_same<T, u16>::value)
 				{
-					if (s_use_sse4_1)
+					if (s_use_avx2)
+					{
+						u32 iterations = length >> 4;
+						written = length & ~0xF;
+						std::tie(min_index, max_index) = upload_u16_swapped_avx2(src.data(), dst.data(), iterations, restart_index);
+					}
+					else if (s_use_sse4_1)
 					{
 						u32 iterations = length >> 3;
 						written = length & ~0x7;
