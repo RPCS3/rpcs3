@@ -137,11 +137,9 @@ emu_settings::Render_Creator::Render_Creator()
 		thread_ctrl::set_native_priority(-1);
 
 		vk::context device_enum_context;
-		u32 instance_handle = device_enum_context.createInstance("RPCS3", true);
-
-		if (instance_handle > 0)
+		if (device_enum_context.createInstance("RPCS3", true))
 		{
-			device_enum_context.makeCurrentInstance(instance_handle);
+			device_enum_context.makeCurrentInstance();
 			std::vector<vk::physical_device> &gpus = device_enum_context.enumerateDevices();
 
 			if (!gpus.empty())

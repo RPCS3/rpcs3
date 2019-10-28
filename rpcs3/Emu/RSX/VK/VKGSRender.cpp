@@ -338,12 +338,9 @@ u64 VKGSRender::get_cycles()
 
 VKGSRender::VKGSRender() : GSRender()
 {
-	u32 instance_handle = m_thread_context.createInstance("RPCS3");
-
-	if (instance_handle > 0)
+	if (m_thread_context.createInstance("RPCS3"))
 	{
-		m_thread_context.makeCurrentInstance(instance_handle);
-		m_thread_context.enable_debugging();
+		m_thread_context.makeCurrentInstance();
 	}
 	else
 	{
