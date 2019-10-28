@@ -3370,7 +3370,7 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 		index_array_type type() const
 		{
 			// Must be a valid value
-			return static_cast<index_array_type>(static_cast<u8>(type_raw()));
+			return static_cast<index_array_type>(type_raw());
 		}
 	};
 
