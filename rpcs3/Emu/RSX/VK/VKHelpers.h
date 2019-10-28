@@ -776,6 +776,7 @@ private:
 				requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 			}
 
+			available_features.depthBounds = VK_TRUE;
 			available_features.samplerAnisotropy = VK_TRUE;
 			available_features.textureCompressionBC = VK_TRUE;
 			available_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
@@ -2401,9 +2402,8 @@ public:
 	{
 	private:
 		std::vector<physical_device> gpus;
-
-		std::vector<VkInstance> m_vk_instances;
-		VkInstance m_instance;
+		VkInstance m_instance = VK_NULL_HANDLE;
+		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
 		PFN_vkDestroyDebugReportCallbackEXT destroyDebugReportCallback = nullptr;
 		PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = nullptr;
@@ -2413,20 +2413,17 @@ public:
 
 	public:
 
-		context()
-		{
-			m_instance = nullptr;
-		}
+		context() = default;
 
 		~context()
 		{
-			if (m_instance || !m_vk_instances.empty())
+			if (m_instance)
 				close();
 		}
 
 		void close()
 		{
-			if (m_vk_instances.empty()) return;
+			if (!m_instance) return;
 
 			if (m_debugger)
 			{
@@ -2434,13 +2431,14 @@ public:
 				m_debugger = nullptr;
 			}
 
-			for (VkInstance &inst : m_vk_instances)
+			if (m_surface)
 			{
-				vkDestroyInstance(inst, nullptr);
+				vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+				m_surface = VK_NULL_HANDLE;
 			}
 
-			m_instance = nullptr;
-			m_vk_instances.clear();
+			vkDestroyInstance(m_instance, nullptr);
+			m_instance = VK_NULL_HANDLE;
 		}
 
 		void enable_debugging()
@@ -2460,7 +2458,7 @@ public:
 			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}
 
-		uint32_t createInstance(const char *app_name, bool fast = false)
+		bool createInstance(const char *app_name, bool fast = false)
 		{
 			//Initialize a vulkan instance
 			VkApplicationInfo app = {};
@@ -2528,47 +2526,34 @@ public:
 			instance_info.enabledExtensionCount = fast ? 0 : static_cast<uint32_t>(extensions.size());
 			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
-			VkInstance instance;
-			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &instance); result != VK_SUCCESS)
+			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &m_instance); result != VK_SUCCESS)
 			{
 				if (result == VK_ERROR_LAYER_NOT_PRESENT)
 				{
 					LOG_FATAL(RSX,"Could not initialize layer VK_LAYER_KHRONOS_validation");
 				}
-				return 0;
+
+				return false;
 			}
 
-			m_vk_instances.push_back(instance);
-			return (u32)m_vk_instances.size();
+			return true;
 		}
 
-		void makeCurrentInstance(uint32_t instance_id)
+		void makeCurrentInstance()
 		{
-			if (!instance_id || instance_id > m_vk_instances.size())
-				fmt::throw_exception("Invalid instance passed to makeCurrentInstance (%u)" HERE, instance_id);
-
+			// Register some global states
 			if (m_debugger)
 			{
 				destroyDebugReportCallback(m_instance, m_debugger, nullptr);
 				m_debugger = nullptr;
 			}
 
-			instance_id--;
-			m_instance = m_vk_instances[instance_id];
+			enable_debugging();
 		}
 
 		VkInstance getCurrentInstance()
 		{
 			return m_instance;
-		}
-
-		VkInstance getInstanceById(uint32_t instance_id)
-		{
-			if (!instance_id || instance_id > m_vk_instances.size())
-				fmt::throw_exception("Invalid instance passed to getInstanceById (%u)" HERE, instance_id);
-
-			instance_id--;
-			return m_vk_instances[instance_id];
 		}
 
 		std::vector<physical_device>& enumerateDevices()
@@ -2594,7 +2579,6 @@ public:
 
 		swapchain_base* createSwapChain(display_handle_t window_handle, vk::physical_device &dev)
 		{
-			VkSurfaceKHR surface;
 			bool force_wm_reporting_off = false;
 #ifdef _WIN32
 			using swapchain_NATIVE = swapchain_WIN32;
@@ -2605,7 +2589,7 @@ public:
 			createInfo.hinstance = hInstance;
 			createInfo.hwnd = window_handle;
 
-			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &surface));
+			CHECK_RESULT(vkCreateWin32SurfaceKHR(m_instance, &createInfo, NULL, &m_surface));
 
 #elif defined(__APPLE__)
 			using swapchain_NATIVE = swapchain_MacOS;
@@ -2613,7 +2597,7 @@ public:
 			createInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
 			createInfo.pView = window_handle;
 
-			CHECK_RESULT(vkCreateMacOSSurfaceMVK(m_instance, &createInfo, NULL, &surface));
+			CHECK_RESULT(vkCreateMacOSSurfaceMVK(m_instance, &createInfo, NULL, &m_surface));
 #else
 			using swapchain_NATIVE = swapchain_X11;
 
@@ -2627,7 +2611,7 @@ public:
 					createInfo.sType                      = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
 					createInfo.dpy                        = p.first;
 					createInfo.window                     = p.second;
-					CHECK_RESULT(vkCreateXlibSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+					CHECK_RESULT(vkCreateXlibSurfaceKHR(this->m_instance, &createInfo, nullptr, &m_surface));
 				}
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 				else if constexpr (std::is_same_v<T, std::pair<wl_display*, wl_surface*>>)
@@ -2636,7 +2620,7 @@ public:
 					createInfo.sType                         = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
 					createInfo.display                       = p.first;
 					createInfo.surface                       = p.second;
-					CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &surface));
+					CHECK_RESULT(vkCreateWaylandSurfaceKHR(this->m_instance, &createInfo, nullptr, &m_surface));
 					force_wm_reporting_off = true;
 				}
 				else
@@ -2653,7 +2637,7 @@ public:
 
 			for (u32 index = 0; index < device_queues; index++)
 			{
-				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, surface, &supportsPresent[index]);
+				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, m_surface, &supportsPresent[index]);
 			}
 
 			for (const auto &value : supportsPresent)
@@ -2729,10 +2713,10 @@ public:
 
 			// Get the list of VkFormat's that are supported:
 			uint32_t formatCount;
-			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, nullptr));
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, m_surface, &formatCount, nullptr));
 
 			std::vector<VkSurfaceFormatKHR> surfFormats(formatCount);
-			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, surface, &formatCount, surfFormats.data()));
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, m_surface, &formatCount, surfFormats.data()));
 
 			VkFormat format;
 			VkColorSpaceKHR color_space;
@@ -2759,7 +2743,7 @@ public:
 
 			color_space = surfFormats[0].colorSpace;
 
-			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, surface, color_space, force_wm_reporting_off);
+			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, m_surface, color_space, force_wm_reporting_off);
 		}
 	};
 
