@@ -89,9 +89,13 @@ namespace rsx
 struct rsx_subresource_layout
 {
 	gsl::span<const gsl::byte> data;
+	u16 width_in_texel;
+	u16 height_in_texel;
 	u16 width_in_block;
 	u16 height_in_block;
 	u16 depth;
+	u16 level;
+	u16 layer;
 	u8  border;
 	u8  reserved;
 	u32 pitch_in_block;

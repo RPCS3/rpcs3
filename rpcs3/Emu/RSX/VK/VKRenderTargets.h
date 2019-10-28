@@ -241,8 +241,8 @@ namespace vk
 			}
 
 			rsx_subresource_layout subres{};
-			subres.width_in_block = surface_width * samples_x;
-			subres.height_in_block = surface_height * samples_y;
+			subres.width_in_block = subres.width_in_texel = surface_width * samples_x;
+			subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 			subres.pitch_in_block = rsx_pitch / get_bpp();
 			subres.depth = 1;
 			subres.data = { (const gsl::byte*)vm::get_super_ptr(base_addr), s32(rsx_pitch * surface_height * samples_y) };
