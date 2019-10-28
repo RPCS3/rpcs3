@@ -2401,8 +2401,8 @@ namespace rsx
 
 					std::vector<rsx_subresource_layout> subresource_layout;
 					rsx_subresource_layout subres = {};
-					subres.width_in_block = image_width;
-					subres.height_in_block = image_height;
+					subres.width_in_block = subres.width_in_texel = image_width;
+					subres.height_in_block = subres.height_in_texel = image_height;
 					subres.pitch_in_block = full_width;
 					subres.depth = 1;
 					subres.data = { vm::_ptr<const gsl::byte>(image_base), src.pitch * image_height };
@@ -2533,8 +2533,8 @@ namespace rsx
 						const u16 pitch_in_block = dst.pitch / dst_bpp;
 						std::vector<rsx_subresource_layout> subresource_layout;
 						rsx_subresource_layout subres = {};
-						subres.width_in_block = dst_dimensions.width;
-						subres.height_in_block = dst_dimensions.height;
+						subres.width_in_block = subres.width_in_texel = dst_dimensions.width;
+						subres.height_in_block = subres.height_in_texel = dst_dimensions.height;
 						subres.pitch_in_block = pitch_in_block;
 						subres.depth = 1;
 						subres.data = { vm::get_super_ptr<const gsl::byte>(dst.rsx_address), dst.pitch * dst_dimensions.height };

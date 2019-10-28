@@ -338,10 +338,6 @@ namespace
 		std::vector<rsx_subresource_layout> result;
 		size_t offset_in_src = 0;
 
-		// Always lower than width/height so fits in u16
-		u16 texture_height_in_block = (height_in_texel + block_edge_in_texel - 1) / block_edge_in_texel;
-		u16 texture_width_in_block = (width_in_texel + block_edge_in_texel - 1) / block_edge_in_texel;
-
 		u8 border_size = border ? (padded_row ? 1 : 4) : 0;
 		u32 src_pitch_in_block;
 		u32 full_height_in_block;
@@ -349,43 +345,58 @@ namespace
 
 		for (unsigned layer = 0; layer < layer_count; layer++)
 		{
-			u16 miplevel_height_in_block = texture_height_in_block, miplevel_width_in_block = texture_width_in_block;
+			u16 miplevel_width_in_texel = width_in_texel, miplevel_height_in_texel = height_in_texel;
 			for (unsigned mip_level = 0; mip_level < mipmap_count; mip_level++)
 			{
-				rsx_subresource_layout current_subresource_layout = {};
-				// Since <= width/height, fits on 16 bits
-				current_subresource_layout.height_in_block = miplevel_height_in_block;
-				current_subresource_layout.width_in_block = miplevel_width_in_block;
+				result.push_back({});
+				rsx_subresource_layout& current_subresource_layout = result.back();
+
+				current_subresource_layout.width_in_texel = miplevel_width_in_texel;
+				current_subresource_layout.height_in_texel = miplevel_height_in_texel;
+				current_subresource_layout.level = mip_level;
+				current_subresource_layout.layer = layer;
 				current_subresource_layout.depth = depth;
 				current_subresource_layout.border = border_size;
+
+				if constexpr (block_edge_in_texel == 1)
+				{
+					current_subresource_layout.width_in_block = miplevel_width_in_texel;
+					current_subresource_layout.height_in_block = miplevel_height_in_texel;
+				}
+				else
+				{
+					current_subresource_layout.width_in_block = rsx::aligned_div(miplevel_width_in_texel, block_edge_in_texel);
+					current_subresource_layout.height_in_block = rsx::aligned_div(miplevel_height_in_texel, block_edge_in_texel);
+				}
 
 				if (padded_row)
 				{
 					src_pitch_in_block = suggested_pitch_in_bytes / block_size_in_bytes;
-					full_height_in_block = miplevel_height_in_block + border_size + border_size;
+					full_height_in_block = current_subresource_layout.height_in_block + (border_size + border_size);
 				}
 				else if (!border)
 				{
-					src_pitch_in_block = miplevel_width_in_block + border_size + border_size;
-					full_height_in_block = miplevel_height_in_block;
+					src_pitch_in_block = current_subresource_layout.width_in_block;
+					full_height_in_block = current_subresource_layout.height_in_block;
 				}
 				else
 				{
-					src_pitch_in_block = rsx::next_pow2(miplevel_width_in_block + border_size + border_size);
-					full_height_in_block = rsx::next_pow2(miplevel_height_in_block + border_size + border_size);
+					src_pitch_in_block = rsx::next_pow2(current_subresource_layout.width_in_block + border_size + border_size);
+					full_height_in_block = rsx::next_pow2(current_subresource_layout.height_in_block + border_size + border_size);
 				}
 
 				slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * depth;
 				current_subresource_layout.pitch_in_block = src_pitch_in_block;
 				current_subresource_layout.data = gsl::span<const gsl::byte>(texture_data_pointer + offset_in_src, slice_sz);
 
-				result.push_back(current_subresource_layout);
 				offset_in_src += slice_sz;
-				miplevel_height_in_block = std::max(miplevel_height_in_block / 2, 1);
-				miplevel_width_in_block = std::max(miplevel_width_in_block / 2, 1);
+				miplevel_width_in_texel = std::max(miplevel_width_in_texel / 2, 1);
+				miplevel_height_in_texel = std::max(miplevel_height_in_texel / 2, 1);
 			}
+
 			offset_in_src = align(offset_in_src, 128);
 		}
+
 		return result;
 	}
 }

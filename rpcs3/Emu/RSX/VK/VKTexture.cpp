@@ -542,7 +542,6 @@ namespace vk
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align)
 	{
-		u32 mipmap_level = 0;
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
 		u8  block_size_in_bytes = get_format_block_size_in_bytes(format);
 
@@ -591,13 +590,13 @@ namespace vk
 			copy_regions.push_back({});
 			auto& copy_info = copy_regions.back();
 			copy_info.bufferOffset = offset_in_buffer;
-			copy_info.imageExtent.height = layout.height_in_block * block_in_pixel;
-			copy_info.imageExtent.width = std::min<u32>(layout.width_in_block, layout.pitch_in_block) * block_in_pixel;
+			copy_info.imageExtent.height = layout.height_in_texel;
+			copy_info.imageExtent.width = layout.width_in_texel;
 			copy_info.imageExtent.depth = layout.depth;
 			copy_info.imageSubresource.aspectMask = flags;
 			copy_info.imageSubresource.layerCount = 1;
-			copy_info.imageSubresource.baseArrayLayer = mipmap_level / mipmap_count;
-			copy_info.imageSubresource.mipLevel = mipmap_level % mipmap_count;
+			copy_info.imageSubresource.baseArrayLayer = layout.layer;
+			copy_info.imageSubresource.mipLevel = layout.level;
 			copy_info.bufferRowLength = block_in_pixel * row_pitch / block_size_in_bytes;
 
 			if (opt.require_swap || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
@@ -621,8 +620,6 @@ namespace vk
 				scratch_offset += image_linear_size;
 				verify("Out of scratch memory" HERE), (scratch_offset + image_linear_size) <= scratch_buf->size();
 			}
-
-			mipmap_level++;
 		}
 
 		if (opt.require_swap || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)

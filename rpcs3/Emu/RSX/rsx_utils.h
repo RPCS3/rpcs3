@@ -277,6 +277,13 @@ namespace rsx
 		return ((value + alignment - 1) / alignment) * alignment;
 	}
 
+	// General purpose aligned division, the result is rounded up not truncated
+	template <typename T, typename U>
+	static inline T aligned_div(T value, U alignment)
+	{
+		return (value + alignment - 1) / alignment;
+	}
+
 	// Copy memory in inverse direction from source
 	// Used to scale negatively x axis while transfering image data
 	template <typename Ts = u8, typename Td = Ts>
