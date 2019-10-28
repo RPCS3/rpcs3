@@ -1263,13 +1263,13 @@ namespace rsx
 				switch (out_bpp)
 				{
 				case 1:
-					convert_linear_swizzle<u8>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
+					convert_linear_swizzle<u8, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
 					break;
 				case 2:
-					convert_linear_swizzle<u16>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
+					convert_linear_swizzle<u16, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
 					break;
 				case 4:
-					convert_linear_swizzle<u32>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch, false);
+					convert_linear_swizzle<u32, false>(linear_pixels, swizzled_pixels, sw_width, sw_height, in_pitch);
 					break;
 				}
 			}
