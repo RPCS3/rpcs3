@@ -1355,10 +1355,6 @@ void VKGSRender::end()
 
 					if (min_filter.sample_mipmaps && mipmap_count > 1)
 					{
-						min_lod = rsx::method_registers.fragment_textures[i].min_lod();
-						max_lod = rsx::method_registers.fragment_textures[i].max_lod();
-						lod_bias = rsx::method_registers.fragment_textures[i].bias();
-
 						f32 actual_mipmaps;
 						if (sampler_state->upload_context == rsx::texture_upload_context::shader_read)
 						{
@@ -1376,8 +1372,19 @@ void VKGSRender::end()
 
 						if (actual_mipmaps > 1.f)
 						{
+							min_lod = rsx::method_registers.fragment_textures[i].min_lod();
+							max_lod = rsx::method_registers.fragment_textures[i].max_lod();
+							lod_bias = rsx::method_registers.fragment_textures[i].bias();
+
 							min_lod = std::min(min_lod, actual_mipmaps - 1.f);
 							max_lod = std::min(max_lod, actual_mipmaps - 1.f);
+
+							if (min_filter.mipmap_mode == VK_SAMPLER_MIPMAP_MODE_NEAREST)
+							{
+								// Round to nearest 0.5 to work around some broken games
+								// Unlike openGL, sampler parameters cannot be dynamically changed on vulkan, leading to many permutations
+								lod_bias = std::floor(lod_bias * 2.f + 0.5f) * 0.5f;
+							}
 						}
 						else
 						{
@@ -2750,9 +2757,9 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		if (m_vertex_layout_storage)
 			m_current_frame->buffer_views_to_clean.push_back(std::move(m_vertex_layout_storage));
 
-		// View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
-		const size_t view_size = (base_offset + m_texbuffer_view_size) > m_vertex_layout_ring_info.size() ? m_vertex_layout_ring_info.size() - base_offset : m_texbuffer_view_size;
-		m_vertex_layout_storage = std::make_unique<vk::buffer_view>(*m_device, m_vertex_layout_ring_info.heap->value, VK_FORMAT_R32G32_UINT, base_offset, view_size);
+		const size_t alloc_addr = m_vertex_layout_stream_info.offset;
+		const size_t view_size = (alloc_addr + m_texbuffer_view_size) > m_vertex_layout_ring_info.size() ? m_vertex_layout_ring_info.size() - alloc_addr : m_texbuffer_view_size;
+		m_vertex_layout_storage = std::make_unique<vk::buffer_view>(*m_device, m_vertex_layout_ring_info.heap->value, VK_FORMAT_R32G32_UINT, alloc_addr, view_size);
 		base_offset = 0;
 	}
 

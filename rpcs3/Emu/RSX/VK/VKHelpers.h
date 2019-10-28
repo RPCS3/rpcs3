@@ -1558,8 +1558,9 @@ private:
 			if (info.magFilter != mag_filter || info.minFilter != min_filter || info.mipmapMode != mipmap_mode ||
 				info.addressModeU != clamp_u || info.addressModeV != clamp_v || info.addressModeW != clamp_w ||
 				info.compareEnable != depth_compare || info.unnormalizedCoordinates != unnormalized_coordinates ||
-				info.mipLodBias != mipLodBias || info.maxAnisotropy != max_anisotropy || info.maxLod != max_lod ||
-				info.minLod != min_lod || info.compareOp != depth_compare_mode || info.borderColor != border_color)
+				!rsx::fcmp(info.maxLod, max_lod) || !rsx::fcmp(info.mipLodBias, mipLodBias) || !rsx::fcmp(info.minLod, min_lod) ||
+				!rsx::fcmp(info.maxAnisotropy, max_anisotropy) ||
+				info.compareOp != depth_compare_mode || info.borderColor != border_color)
 				return false;
 
 			return true;
