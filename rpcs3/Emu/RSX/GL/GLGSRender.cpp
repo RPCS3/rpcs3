@@ -38,6 +38,7 @@ GLGSRender::GLGSRender() : GSRender()
 		m_vertex_cache = std::make_unique<gl::weak_vertex_cache>();
 
 	backend_config.supports_hw_a2c = false;
+	backend_config.supports_hw_a2one = false;
 	backend_config.supports_multidraw = true;
 }
 

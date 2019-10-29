@@ -469,6 +469,7 @@ namespace rsx
 		bool supports_multidraw;           // Draw call batching
 		bool supports_hw_a2c;              // Alpha to coverage
 		bool supports_hw_renormalization;  // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_a2one;            // Alpha to one
 	};
 
 	struct sampled_image_descriptor_base;

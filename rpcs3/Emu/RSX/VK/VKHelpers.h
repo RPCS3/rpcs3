@@ -809,6 +809,13 @@ private:
 				enabled_features.depthBounds = VK_FALSE;
 			}
 
+			if (!pgpu->features.alphaToOne && enabled_features.alphaToOne)
+			{
+				// AMD proprietary drivers do not expose alphaToOne support
+				LOG_ERROR(RSX, "Your GPU does not support alpha-to-one for multisampling. Graphics may be inaccurate when MSAA is enabled.");
+				enabled_features.alphaToOne = VK_FALSE;
+			}
+
 			VkDeviceCreateInfo device = {};
 			device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 			device.pNext = nullptr;
@@ -929,6 +936,11 @@ private:
 		bool get_depth_bounds_support() const
 		{
 			return pgpu->features.depthBounds != VK_FALSE;
+		}
+
+		bool get_alpha_to_one_support() const
+		{
+			return pgpu->features.alphaToOne != VK_FALSE;
 		}
 
 		mem_allocator_base* get_allocator() const

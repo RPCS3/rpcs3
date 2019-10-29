@@ -529,7 +529,11 @@ VKGSRender::VKGSRender() : GSRender()
 
 	// NOTE: We do not actually need multiple sample support for A2C to work
 	// This is here for visual consistency - will be removed when AA problems due to mipmaps are fixed
-	backend_config.supports_hw_a2c = (g_cfg.video.antialiasing_level != msaa_level::none);
+	if (g_cfg.video.antialiasing_level != msaa_level::none)
+	{
+		backend_config.supports_hw_a2c = VK_TRUE;
+		backend_config.supports_hw_a2one = m_device->get_alpha_to_one_support();
+	}
 
 	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
@@ -2587,12 +2591,14 @@ bool VKGSRender::load_program()
 	const auto rasterization_samples = u8((m_current_renderpass_key >> 16) & 0xF);
 	if (backend_config.supports_hw_a2c || rasterization_samples > 1)
 	{
+		const bool alpha_to_one_enable = rsx::method_registers.msaa_alpha_to_one_enabled() && backend_config.supports_hw_a2one;
+
 		properties.state.set_multisample_state(
 			rasterization_samples,
 			rsx::method_registers.msaa_sample_mask(),
 			rsx::method_registers.msaa_enabled(),
 			rsx::method_registers.msaa_alpha_to_coverage_enabled(),
-			rsx::method_registers.msaa_alpha_to_one_enabled());
+			alpha_to_one_enable);
 	}
 
 	properties.renderpass_key = m_current_renderpass_key;
