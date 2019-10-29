@@ -83,8 +83,9 @@ void kernel_explorer::Update()
 		char string[8];
 
 		name64(u64 data)
-			: u64_data(data & 0x00ffffffffffffffull)
+			: u64_data(data)
 		{
+			string[7] = '\0';
 		}
 
 		const char* operator+() const

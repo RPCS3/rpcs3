@@ -350,7 +350,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				{
 					rwlock->owner.atomic_op([&](s64& owner)
 					{
-						owner -= -2 * static_cast<s64>(rwlock->rq.size()); // Add readers to value
+						owner -= 2 * static_cast<s64>(rwlock->rq.size()); // Add readers to value
 						owner &= -2; // Clear wait bit
 					});
 

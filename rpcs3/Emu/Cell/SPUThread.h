@@ -547,15 +547,15 @@ public:
 	spu_channel ch_stall_stat;
 	spu_channel ch_atomic_stat;
 
-	spu_channel_4_t ch_in_mbox;
+	spu_channel_4_t ch_in_mbox{};
 
 	spu_channel ch_out_mbox;
 	spu_channel ch_out_intr_mbox;
 
 	u64 snr_config = 0; // SPU SNR Config Register
 
-	spu_channel ch_snr1; // SPU Signal Notification Register 1
-	spu_channel ch_snr2; // SPU Signal Notification Register 2
+	spu_channel ch_snr1{}; // SPU Signal Notification Register 1
+	spu_channel ch_snr2{}; // SPU Signal Notification Register 2
 
 	atomic_t<u32> ch_event_mask;
 	atomic_t<u32> ch_event_stat;
