@@ -766,36 +766,19 @@ namespace
 				_mm256_storeu_si256(dst_stream++, value_with_max_restart);
 			}
 
-			const __m128i mask_step1 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
-
-			const __m128i mask_step2 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
-
-			const __m128i mask_step3 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0x3, 0x2);
-
 			__m128i tmp = _mm256_extracti128_si256(min, 1);
 			__m128i min2 = _mm256_castsi256_si128(min);
 			min2 = _mm_min_epu16(min2, tmp);
-			tmp = _mm_shuffle_epi8(min2, mask_step1);
-			min2 = _mm_min_epu16(min2, tmp);
-			tmp = _mm_shuffle_epi8(min2, mask_step2);
-			min2 = _mm_min_epu16(min2, tmp);
-			tmp = _mm_shuffle_epi8(min2, mask_step3);
-			min2 = _mm_min_epu16(min2, tmp);
+			min2 = _mm_minpos_epu16(min2);
 
 			tmp = _mm256_extracti128_si256(max, 1);
 			__m128i max2 = _mm256_castsi256_si128(max);
 			max2 = _mm_max_epu16(max2, tmp);
-			tmp = _mm_shuffle_epi8(max2, mask_step1);
+			tmp = _mm_srli_si128(max2, 8);
 			max2 = _mm_max_epu16(max2, tmp);
-			tmp = _mm_shuffle_epi8(max2, mask_step2);
+			tmp = _mm_srli_si128(max2, 4);
 			max2 = _mm_max_epu16(max2, tmp);
-			tmp = _mm_shuffle_epi8(max2, mask_step3);
+			tmp = _mm_srli_si128(max2, 2);
 			max2 = _mm_max_epu16(max2, tmp);
 
 			const u16 min_index = u16(_mm_cvtsi128_si32(min2) & 0xFFFF);
@@ -833,30 +816,13 @@ namespace
 				_mm_storeu_si128(dst_stream++, value_with_max_restart);
 			}
 
-			const __m128i mask_step1 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
+			min = _mm_minpos_epu16(min);
 
-			const __m128i mask_step2 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
-
-			const __m128i mask_step3 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0x3, 0x2);
-
-			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
-			min = _mm_min_epu16(min, tmp);
-			tmp = _mm_shuffle_epi8(min, mask_step2);
-			min = _mm_min_epu16(min, tmp);
-			tmp = _mm_shuffle_epi8(min, mask_step3);
-			min = _mm_min_epu16(min, tmp);
-
-			tmp = _mm_shuffle_epi8(max, mask_step1);
+			__m128i tmp = _mm_srli_si128(max, 8);
 			max = _mm_max_epu16(max, tmp);
-			tmp = _mm_shuffle_epi8(max, mask_step2);
+			tmp = _mm_srli_si128(max, 4);
 			max = _mm_max_epu16(max, tmp);
-			tmp = _mm_shuffle_epi8(max, mask_step3);
+			tmp = _mm_srli_si128(max, 2);
 			max = _mm_max_epu16(max, tmp);
 
 			const u16 min_index = u16(_mm_cvtsi128_si32(min) & 0xFFFF);
@@ -894,22 +860,14 @@ namespace
 				_mm_storeu_si128(dst_stream++, value_with_max_restart);
 			}
 
-			const __m128i mask_step1 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
-
-			const __m128i mask_step2 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
-
-			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			__m128i tmp = _mm_srli_si128(min, 8);
 			min = _mm_min_epu32(min, tmp);
-			tmp = _mm_shuffle_epi8(min, mask_step2);
+			tmp = _mm_srli_si128(min, 4);
 			min = _mm_min_epu32(min, tmp);
 
-			tmp = _mm_shuffle_epi8(max, mask_step1);
+			tmp = _mm_srli_si128(max, 8);
 			max = _mm_max_epu32(max, tmp);
-			tmp = _mm_shuffle_epi8(max, mask_step2);
+			tmp = _mm_srli_si128(max, 4);
 			max = _mm_max_epu32(max, tmp);
 
 			const u32 min_index = u32(_mm_cvtsi128_si32(min));
