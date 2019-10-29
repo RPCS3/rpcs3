@@ -17,8 +17,8 @@ void fmt_class_string<microphone_handler>::format(std::string& out, u64 arg)
 		{
 		case microphone_handler::null: return "Null";
 		case microphone_handler::standard: return "Standard";
-		case microphone_handler::singstar: return "Singstar";
-		case microphone_handler::real_singstar: return "Real Singstar";
+		case microphone_handler::singstar: return "SingStar";
+		case microphone_handler::real_singstar: return "Real SingStar";
 		case microphone_handler::rocksmith: return "Rocksmith";
 		}
 
@@ -160,11 +160,11 @@ s32 microphone_device::open_microphone(const u8 type, const u32 dsp_r, const u32
 		break;
 	case microphone_handler::singstar:
 	case microphone_handler::real_singstar:
-		// Singstar mic has always 2 channels, each channel represent a physical microphone
+		// SingStar mic has always 2 channels, each channel represent a physical microphone
 		ASSERT(num_channels >= 2);
 		if (num_channels > 2)
 		{
-			cellMic.error("Tried to open a singstar-type device with num_channels = %d", num_channels);
+			cellMic.error("Tried to open a SingStar-type device with num_channels = %d", num_channels);
 			num_channels = 2;
 		}
 		break;
@@ -177,7 +177,7 @@ s32 microphone_device::open_microphone(const u8 type, const u32 dsp_r, const u32
 	{
 	case 1: num_al_channels = AL_FORMAT_MONO16; break;
 	case 2:
-		// If we're using singstar each device needs to be mono
+		// If we're using SingStar each device needs to be mono
 		if (device_type == microphone_handler::singstar)
 			num_al_channels = AL_FORMAT_MONO16;
 		else
@@ -224,7 +224,7 @@ s32 microphone_device::open_microphone(const u8 type, const u32 dsp_r, const u32
 		if (alcGetError(device) != ALC_NO_ERROR)
 		{
 			// Ignore it and move on
-			cellMic.error("Error opening 2nd singstar capture device %s", device_name[1]);
+			cellMic.error("Error opening 2nd SingStar capture device %s", device_name[1]);
 		}
 		else
 		{
@@ -714,7 +714,7 @@ s32 cellMicSetDeviceAttr(u32 dev_num, CellMicDeviceAttr deviceAttributes, u32 ar
 	switch (deviceAttributes)
 	{
 	case CELLMIC_DEVATTR_CHANVOL:
-		// Used by Singstar to set the volume of each mic
+		// Used by SingStar to set the volume of each mic
 		if (arg1 > 2)
 			return CELL_MIC_ERROR_PARAM;
 		device.attr_chanvol[arg1] = arg2;

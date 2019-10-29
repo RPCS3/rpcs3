@@ -665,14 +665,35 @@ namespace rsx
 			return decode<NV4097_SET_STENCIL_TEST_ENABLE>().stencil_test_enabled();
 		}
 
-		bool restart_index_enabled() const
+		u8 index_array_location() const
 		{
-			return decode<NV4097_SET_RESTART_INDEX_ENABLE>().restart_index_enabled();
+			return decode<NV4097_SET_INDEX_ARRAY_DMA>().index_dma();
+		}
+
+		rsx::index_array_type index_type() const
+		{
+			return decode<NV4097_SET_INDEX_ARRAY_DMA>().type();
 		}
 
 		u32 restart_index() const
 		{
 			return decode<NV4097_SET_RESTART_INDEX>().restart_index();
+		}
+
+		bool restart_index_enabled_raw() const
+		{
+			return decode<NV4097_SET_RESTART_INDEX_ENABLE>().restart_index_enabled();
+		}
+
+		bool restart_index_enabled() const
+		{
+			if (!restart_index_enabled_raw()) 
+			{
+				return false;
+
+			}
+			
+			return restart_index() <= (index_type() == rsx::index_array_type::u16 ? 0xffff : 0xfffff);
 		}
 
 		u32 z_clear_value(bool is_depth_stencil) const
@@ -693,16 +714,6 @@ namespace rsx
 		f32 fog_params_1() const
 		{
 			return decode<NV4097_SET_FOG_PARAMS + 1>().fog_param_1();
-		}
-
-		u8 index_array_location() const
-		{
-			return decode<NV4097_SET_INDEX_ARRAY_DMA>().index_dma();
-		}
-
-		rsx::index_array_type index_type() const
-		{
-			return decode<NV4097_SET_INDEX_ARRAY_DMA>().type();
 		}
 
 		bool color_mask_b(int index) const

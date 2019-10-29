@@ -39,15 +39,12 @@ namespace rsx
 			}
 			else
 			{
-				u32 put = m_ctrl->put;
-				if (LIKELY((put & 3) == 0))
+				if (u32 put = m_ctrl->put; LIKELY((put & 3) == 0))
 				{
 					return put;
 				}
-				else
-				{
-					return m_ctrl->put.and_fetch(~3);
-				}
+
+				return m_ctrl->put.and_fetch(~3);
 			}
 		}
 

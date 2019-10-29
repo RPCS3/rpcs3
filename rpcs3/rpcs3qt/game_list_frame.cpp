@@ -10,6 +10,7 @@
 #include "Emu/System.h"
 #include "Loader/PSF.h"
 #include "Utilities/types.h"
+#include "Utilities/lockless.h"
 
 #include <algorithm>
 #include <iterator>
@@ -455,6 +456,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		for (size_t i = 0; i < path_list.size(); ++i)
 			indices.append(i);
 
+		lf_queue<game_info> games;
+
 		QtConcurrent::blockingMap(indices, [&](size_t& i)
 		{
 			const std::string dir = path_list[i];
@@ -537,7 +540,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				const QColor color = getGridCompatibilityColor(compat.color);
 				const QPixmap pxmap = PaintedPixmap(icon, hasCustomConfig, hasCustomPadConfig, color);
 
-				m_game_data.push_back(game_info(new gui_game_info{ game, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig }));
+				games.push(std::make_shared<gui_game_info>(gui_game_info{game, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig}));
 			}
 			catch (const std::exception& e)
 			{
@@ -545,6 +548,11 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				return;
 			}
 		});
+
+		for (auto&& g : games.pop_all())
+		{
+			m_game_data.push_back(std::move(g));
+		}
 
 		// Try to update the app version for disc games if there is a patch
 		for (const auto& entry : m_game_data)
