@@ -133,7 +133,7 @@ namespace vk
 			const u32 invocations_x = align(resolve_image->width(), cs_wave_x) / cs_wave_x;
 			const u32 invocations_y = align(resolve_image->height(), cs_wave_y) / cs_wave_y;
 
-			compute_task::run(cmd, invocations_x, invocations_y);
+			compute_task::run(cmd, invocations_x, invocations_y, 1);
 		}
 	};
 

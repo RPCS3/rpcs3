@@ -22,13 +22,14 @@ namespace vk
 		bool initialized = false;
 		bool unroll_loops = true;
 		bool uniform_inputs = false;
+		u32 ssbo_count = 1;
 		u32 optimal_group_size = 1;
 		u32 optimal_kernel_size = 1;
 
 		virtual std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout()
 		{
 			std::vector<std::pair<VkDescriptorType, u8>> result;
-			result.emplace_back(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1);
+			result.emplace_back(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, ssbo_count);
 
 			if (uniform_inputs)
 			{
@@ -189,15 +190,15 @@ namespace vk
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 		}
 
-		virtual void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y)
+		virtual void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
 		{
 			load_program(cmd);
-			vkCmdDispatch(cmd, invocations_x, invocations_y, 1);
+			vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
 		}
 
 		virtual void run(VkCommandBuffer cmd, u32 num_invocations)
 		{
-			run(cmd, num_invocations, 1);
+			run(cmd, num_invocations, 1, 1);
 		}
 	};
 
@@ -209,9 +210,14 @@ namespace vk
 		u32 kernel_size = 1;
 
 		std::string variables, work_kernel, loop_advance, suffix;
+		std::string index_declaration;
+		std::string method_declarations;
 
 		cs_shuffle_base()
 		{
+			index_declaration =
+				"gl_GlobalInvocationID.x * KERNEL_SIZE";
+
 			work_kernel =
 				"		value = data[index];\n"
 				"		data[index] = %f(value);\n";
@@ -252,7 +258,7 @@ namespace vk
 				"\n"
 				"void main()\n"
 				"{\n"
-				"	uint index = gl_GlobalInvocationID.x * KERNEL_SIZE;\n"
+				"	uint index = %idx;\n"
 				"	uint value;\n"
 				"	%vars"
 				"\n";
@@ -540,6 +546,176 @@ namespace vk
 				"		data[stencil_offset + s_offset] |= stencil;\n";
 
 			cs_shuffle_base::build("");
+		}
+	};
+
+	// Reverse morton-order block arrangement
+	template <typename _BlockType, typename _BaseType, bool _SwapBytes>
+	struct cs_deswizzle_3d : compute_task
+	{
+		union params_t
+		{
+			u32 data[4];
+
+			struct
+			{
+				u32 width;
+				u32 height;
+				u32 logw;
+				u32 logh;
+			};
+		}
+		params;
+
+		const vk::buffer* src_buffer = nullptr;
+		const vk::buffer* dst_buffer = nullptr;
+		u32 in_offset = 0;
+		u32 out_offset = 0;
+		u32 block_length = 0;
+		
+		cs_deswizzle_3d()
+		{
+			verify("Unsupported block type" HERE), (sizeof(_BlockType) & 3) == 0;
+
+			ssbo_count = 2;
+			uniform_inputs = true;		
+			create();
+
+			m_src =
+			"#version 450\n"
+			"layout(local_size_x = 8, local_size_y = 8, local_size_z = 1)\n\n"
+
+			"layout(set=0, binding=0, std430) buffer ssbo{ uint data_in[]; }\n"
+			"layout(set=0, binding=1, std430) buffer ssbo{ uint data_out[]; }\n"
+			"layout(set=0, binding=2, std140) uniform buffer parameters\n"
+			"{\n"
+			"	uint image_width;\n"
+			"	uint image_height;\n"
+			"	uint image_logw;\n"
+			"	uint image_logh;\n"
+			"};\n\n"
+
+			"#define bswap_u16(bits)     (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
+			"#define bswap_u32(bits)     (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
+
+			"uint get_z_index(uint x, uint y, uint z, uint log2w, uint log2h, uint log2d)\n"
+			"{\n"
+			"	uint offset = 0;\n"
+			"	uint shift = 0;\n"
+			"\n"
+			"	do\n"
+			"	{\n"
+			"		if (log2w > 0)\n"
+			"		{\n"
+			"			offset |= (x & 1) << shift;\n"
+			"			shift++;\n"
+			"			x >>= 1;\n"
+			"			log2w--;\n"
+			"		}\n"
+			"\n"
+			"		if (log2h > 0)\n"
+			"		{\n"
+			"			offset |= (y & 1) << shift;\n"
+			"			shift++;\n"
+			"			y >>= 1;\n"
+			"			log2h--;\n"
+			"		}\n"
+			"\n"
+			"		if (log2d > 0)\n"
+			"		{\n"
+			"			offset |= (z & 1) << shift;\n"
+			"			shift++;\n"
+			"			z >>= 1;\n"
+			"			log2d--;\n"
+			"		}\n"
+			"	}\n"
+			"	while(x > 0 || y > 0 || z > 0)\n"
+			"\n"
+			"	return offset;\n"
+			"}\n\n"
+
+			"void main()\n"
+			"{\n"
+			"	if (gl_GlobalInvocationID.x >= image_width || gl_GlobalInvocationID.y >= image_height)\n"
+			"		return;\n\n"
+
+			"	uint texel_id = (gl_GlobalInvocationID.y * image_width) + gl_GlobalInvocationID.x"
+			"	uint word_count = %_wordcount;\n"
+			"	uint dst_id = (index * word_count);\n\n"
+
+			"	uint src_id = get_z_index(gl_GlobalInvocationID.x, gl_GlobalInvocation.y, 0, image_logw, image_logh, 0);\n"
+			"	for (uint i = 0; i < word_count; ++i)\n"
+			"	{\n"
+			"		data_out[dst_id++] = %f(data_in[src_id++]);\n"
+			"	}\n\n"
+			
+			"}\n";
+
+			std::string transform;
+			if constexpr (_SwapBytes)
+			{
+				if constexpr (sizeof(_BaseType) == 4)
+				{
+					transform = "bswap_u32";
+				}
+				else if constexpr (sizeof(_BaseType) == 2)
+				{
+					transform = "bswap_u16";
+				}
+				else
+				{
+					fmt::throw_exception("Unreachable" HERE);
+				}
+			}
+
+			const std::pair<std::string, std::string> syntax_replace[] =
+			{
+				{ "%_wordcount", std::to_string(sizeof(_BlockType) / 4) },
+				{ "%f", transform }
+			};
+
+			m_src = fmt::replace_all(m_src, syntax_replace);
+		}
+
+		void bind_resources() override
+		{
+			m_program->bind_buffer({ src_buffer->value, in_offset, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({ dst_buffer->value, out_offset, block_length }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({ m_param_buffer->value, 0, 16 }, 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_descriptor_set);
+		}
+
+		void set_parameters(VkCommandBuffer cmd)
+		{
+			verify(HERE), uniform_inputs;
+
+			if (!m_param_buffer)
+			{
+				auto pdev = vk::get_current_renderer();
+				m_param_buffer = std::make_unique<vk::buffer>(*pdev, 256, pdev->get_memory_mapping().host_visible_coherent,
+					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+			}
+
+			vkCmdUpdateBuffer(cmd, m_param_buffer->value, 0, 16, params.data);
+		}
+
+		void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 width, u32 height, u32 depth)
+		{
+			dst_buffer = dst;
+			src_buffer = src;
+
+			this->in_offset = in_offset;
+			this->out_offset = out_offset;
+			this->block_length = sizeof(_BlockType) * width * height * depth;
+
+			params.width = width;
+			params.height = height * depth;
+			params.logw = rsx::ceil_log2(width);
+			params.logh = rsx::ceil_log2(height);
+			set_parameters();
+
+			const u32 invocations_x = align(params.width, 8) / 8;
+			const u32 invocations_y = align(params.height, 8) / 8;
+			compute_task::run(cmd, invocations_x, invocations_y, 1);
 		}
 	};
 

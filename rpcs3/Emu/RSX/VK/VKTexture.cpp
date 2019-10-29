@@ -545,7 +545,7 @@ namespace vk
 		u32 block_in_pixel = get_format_block_size_in_texel(format);
 		u8  block_size_in_bytes = get_format_block_size_in_bytes(format);
 
-		texture_uploader_capabilities caps{ true, false, heap_align };
+		texture_uploader_capabilities caps{ true, false, true, heap_align };
 		texture_memory_info opt{};
 		bool check_caps = true;
 
@@ -580,6 +580,7 @@ namespace vk
 			if (check_caps)
 			{
 				caps.supports_byteswap = (image_linear_size >= 1024);
+				caps.supports_hw_deswizzle = caps.supports_byteswap;
 				check_caps = false;
 			}
 
