@@ -1090,13 +1090,14 @@ void spu_thread::cpu_stop()
 	}
 	else if (group && is_stopped())
 	{
+		ch_in_mbox.clear();
+
 		if (verify(HERE, group->running--) == 1)
 		{
 			{
 				std::lock_guard lock(group->mutex);
 				group->stop_count++;
 				group->run_state = SPU_THREAD_GROUP_STATUS_INITIALIZED;
-				ch_in_mbox.clear();
 
 				if (!group->join_state)
 				{
