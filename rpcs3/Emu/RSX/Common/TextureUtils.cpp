@@ -671,14 +671,19 @@ texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, 
 
 			if (word_size == 2)
 			{
-				if (is_swizzled)
+				const bool skip_swizzle = ((word_size * words_per_block) & 3) == 0 && caps.supports_hw_deswizzle;
+				if (is_swizzled && skip_swizzle) result.require_deswizzle = true;
+
+				if (is_swizzled && !skip_swizzle)
 					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 				else
 					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 			}
 			else if (word_size == 4)
 			{
-				if (is_swizzled)
+				result.require_deswizzle = (is_swizzled && caps.supports_hw_deswizzle);
+				
+				if (is_swizzled && !caps.supports_hw_deswizzle)
 					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 				else
 					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);

@@ -459,7 +459,7 @@ namespace gl
 			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<gsl::byte>& staging_buffer)
 	{
 		int mip_level = 0;
-		texture_uploader_capabilities caps{ true, false, 4 };
+		texture_uploader_capabilities caps{ true, false, false, 4 };
 
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
