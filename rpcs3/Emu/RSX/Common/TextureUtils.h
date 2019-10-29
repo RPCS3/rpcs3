@@ -104,6 +104,7 @@ struct rsx_subresource_layout
 struct texture_memory_info
 {
 	int element_size;
+	int block_length;
 	bool require_swap;
 	bool require_deswizzle;
 };

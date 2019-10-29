@@ -538,6 +538,90 @@ namespace vk
 			change_image_layout(cmd, dst, preferred_dst_format, dstLayout, vk::get_image_subresource_range(0, 0, 1, 1, aspect));
 	}
 
+	void gpu_deswizzle_sections_impl(VkCommandBuffer cmd, vk::buffer* scratch_buf, u32 dst_offset, int word_size, int word_count, bool swap_bytes, std::vector<VkBufferImageCopy>& sections)
+	{
+		// NOTE: This has to be done individually for every LOD
+		vk::cs_deswizzle_base* job = nullptr;
+		const auto block_size = (word_size * word_count);
+
+		verify(HERE), word_size == 4 || word_size == 2;
+
+		if (!swap_bytes)
+		{
+			if (word_size == 4)
+			{
+				switch (block_size)
+				{
+				case 4:
+					job = vk::get_compute_task<cs_deswizzle_3d<u32, u32, false>>();
+					break;
+				case 8:
+					job = vk::get_compute_task<cs_deswizzle_3d<u64, u32, false>>();
+					break;
+				case 16:
+					job = vk::get_compute_task<cs_deswizzle_3d<u128, u32, false>>();
+					break;
+				}
+			}
+			else
+			{
+				switch (block_size)
+				{
+				case 4:
+					job = vk::get_compute_task<cs_deswizzle_3d<u32, u16, false>>();
+					break;
+				case 8:
+					job = vk::get_compute_task<cs_deswizzle_3d<u64, u16, false>>();
+					break;
+				}
+			}
+		}
+		else
+		{
+			if (word_size == 4)
+			{
+				switch (block_size)
+				{
+				case 4:
+					job = vk::get_compute_task<cs_deswizzle_3d<u32, u32, true>>();
+					break;
+				case 8:
+					job = vk::get_compute_task<cs_deswizzle_3d<u64, u32, true>>();
+					break;
+				case 16:
+					job = vk::get_compute_task<cs_deswizzle_3d<u128, u32, true>>();
+					break;
+				}
+			}
+			else
+			{
+				switch (block_size)
+				{
+				case 4:
+					job = vk::get_compute_task<cs_deswizzle_3d<u32, u16, true>>();
+					break;
+				case 8:
+					job = vk::get_compute_task<cs_deswizzle_3d<u64, u16, true>>();
+					break;
+				}
+			}
+		}
+
+		verify(HERE), job;
+
+		for (auto &section : sections)
+		{
+			job->run(cmd, scratch_buf, dst_offset, scratch_buf, section.bufferOffset,
+				section.imageExtent.width, section.imageExtent.height, section.imageExtent.depth);
+
+			const u32 packed_size = section.imageExtent.width * section.imageExtent.height * section.imageExtent.depth * block_size;
+			section.bufferOffset = dst_offset;
+			dst_offset += packed_size;
+		}
+
+		verify(HERE), dst_offset <= scratch_buf->size();
+	}
+
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
 		const std::vector<rsx_subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align)
@@ -600,7 +684,7 @@ namespace vk
 			copy_info.imageSubresource.mipLevel = layout.level;
 			copy_info.bufferRowLength = block_in_pixel * row_pitch / block_size_in_bytes;
 
-			if (opt.require_swap || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
+			if (opt.require_swap || opt.require_deswizzle || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
 			{
 				if (!scratch_buf)
 				{
@@ -623,7 +707,7 @@ namespace vk
 			}
 		}
 
-		if (opt.require_swap || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
+		if (opt.require_swap || opt.require_deswizzle || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
 		{
 			verify(HERE), scratch_buf;
 			vkCmdCopyBuffer(cmd, upload_heap.heap->value, scratch_buf->value, (u32)buffer_copies.size(), buffer_copies.data());
@@ -632,8 +716,12 @@ namespace vk
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 		}
 
-		// Swap if requested
-		if (opt.require_swap)
+		// Swap and swizzle if requested
+		if (opt.require_deswizzle)
+		{
+			gpu_deswizzle_sections_impl(cmd, scratch_buf, scratch_offset, opt.element_size, opt.block_length, opt.require_swap, copy_regions);
+		}
+		else if (opt.require_swap)
 		{
 			if (opt.element_size == 4)
 			{
@@ -658,9 +746,12 @@ namespace vk
 				vk::copy_buffer_to_image(cmd, scratch_buf, dst_image, *rIt);
 			}
 		}
-		else if (opt.require_swap)
+		else if (scratch_buf)
 		{
-			insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			verify(HERE), opt.require_deswizzle || opt.require_swap;
+
+			const auto block_start = copy_regions.front().bufferOffset;
+			insert_buffer_memory_barrier(cmd, scratch_buf->value, block_start, scratch_offset, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (u32)copy_regions.size(), copy_regions.data());

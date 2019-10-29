@@ -2,7 +2,7 @@
 #include "VKHelpers.h"
 #include "Utilities/StrUtil.h"
 
-#define VK_MAX_COMPUTE_TASKS 1024   // Max number of jobs per frame
+#define VK_MAX_COMPUTE_TASKS 32768   // Max number of jobs per frame
 
 namespace vk
 {
@@ -22,7 +22,9 @@ namespace vk
 		bool initialized = false;
 		bool unroll_loops = true;
 		bool uniform_inputs = false;
+		bool use_push_constants = false;
 		u32 ssbo_count = 1;
+		u32 push_constants_size = 0;
 		u32 optimal_group_size = 1;
 		u32 optimal_kernel_size = 1;
 
@@ -76,6 +78,16 @@ namespace vk
 			layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 			layout_info.setLayoutCount = 1;
 			layout_info.pSetLayouts = &m_descriptor_layout;
+
+			VkPushConstantRange push_constants{};
+			if (use_push_constants)
+			{
+				push_constants.size = push_constants_size;
+				push_constants.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+				layout_info.pushConstantRangeCount = 1;
+				layout_info.pPushConstantRanges = &push_constants;
+			}
 
 			CHECK_RESULT(vkCreatePipelineLayout(*get_current_renderer(), &layout_info, nullptr, &m_pipeline_layout));
 		}
@@ -258,7 +270,7 @@ namespace vk
 				"\n"
 				"void main()\n"
 				"{\n"
-				"	uint index = %idx;\n"
+				"	uint index = gl_GlobalInvocationID.x;\n"
 				"	uint value;\n"
 				"	%vars"
 				"\n";
@@ -550,19 +562,26 @@ namespace vk
 	};
 
 	// Reverse morton-order block arrangement
+	struct cs_deswizzle_base : compute_task
+	{
+		virtual void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 width, u32 height, u32 depth) = 0;
+	};
+
 	template <typename _BlockType, typename _BaseType, bool _SwapBytes>
-	struct cs_deswizzle_3d : compute_task
+	struct cs_deswizzle_3d : cs_deswizzle_base
 	{
 		union params_t
 		{
-			u32 data[4];
+			u32 data[6];
 
 			struct
 			{
 				u32 width;
 				u32 height;
+				u32 depth;
 				u32 logw;
 				u32 logh;
+				u32 logd;
 			};
 		}
 		params;
@@ -578,25 +597,29 @@ namespace vk
 			verify("Unsupported block type" HERE), (sizeof(_BlockType) & 3) == 0;
 
 			ssbo_count = 2;
-			uniform_inputs = true;		
+			use_push_constants = true;
+			push_constants_size = 24;
+
 			create();
 
 			m_src =
 			"#version 450\n"
-			"layout(local_size_x = 8, local_size_y = 8, local_size_z = 1)\n\n"
+			"layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;\n\n"
 
-			"layout(set=0, binding=0, std430) buffer ssbo{ uint data_in[]; }\n"
-			"layout(set=0, binding=1, std430) buffer ssbo{ uint data_out[]; }\n"
-			"layout(set=0, binding=2, std140) uniform buffer parameters\n"
+			"layout(set=0, binding=0, std430) buffer ssbo0{ uint data_in[]; };\n"
+			"layout(set=0, binding=1, std430) buffer ssbo1{ uint data_out[]; };\n"
+			"layout(push_constant) uniform parameters\n"
 			"{\n"
 			"	uint image_width;\n"
 			"	uint image_height;\n"
+			"	uint image_depth;\n"
 			"	uint image_logw;\n"
 			"	uint image_logh;\n"
+			"	uint image_logd;\n"
 			"};\n\n"
 
-			"#define bswap_u16(bits)     (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
-			"#define bswap_u32(bits)     (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
+			"#define bswap_u16(bits) (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
+			"#define bswap_u32(bits) (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
 
 			"uint get_z_index(uint x, uint y, uint z, uint log2w, uint log2h, uint log2d)\n"
 			"{\n"
@@ -629,26 +652,29 @@ namespace vk
 			"			log2d--;\n"
 			"		}\n"
 			"	}\n"
-			"	while(x > 0 || y > 0 || z > 0)\n"
+			"	while(x > 0 || y > 0 || z > 0);\n"
 			"\n"
 			"	return offset;\n"
 			"}\n\n"
 
 			"void main()\n"
 			"{\n"
-			"	if (gl_GlobalInvocationID.x >= image_width || gl_GlobalInvocationID.y >= image_height)\n"
+			"	if (any(greaterThanEqual(gl_GlobalInvocationID, uvec3(image_width, image_height, image_depth))))\n"
 			"		return;\n\n"
 
-			"	uint texel_id = (gl_GlobalInvocationID.y * image_width) + gl_GlobalInvocationID.x"
+			"	uint texel_id = (gl_GlobalInvocationID.z * image_width * image_height) + (gl_GlobalInvocationID.y * image_width) + gl_GlobalInvocationID.x;\n"
 			"	uint word_count = %_wordcount;\n"
-			"	uint dst_id = (index * word_count);\n\n"
+			"	uint dst_id = (texel_id * word_count);\n\n"
 
-			"	uint src_id = get_z_index(gl_GlobalInvocationID.x, gl_GlobalInvocation.y, 0, image_logw, image_logh, 0);\n"
+			"	uint src_id = get_z_index(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z, image_logw, image_logh, image_logd);\n"
+			"	src_id *= word_count;\n\n"
+
 			"	for (uint i = 0; i < word_count; ++i)\n"
 			"	{\n"
-			"		data_out[dst_id++] = %f(data_in[src_id++]);\n"
+			"		uint value = data_in[src_id++];\n"
+			"		data_out[dst_id++] = %f(value);\n"
 			"	}\n\n"
-			
+
 			"}\n";
 
 			std::string transform;
@@ -681,24 +707,14 @@ namespace vk
 		{
 			m_program->bind_buffer({ src_buffer->value, in_offset, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
 			m_program->bind_buffer({ dst_buffer->value, out_offset, block_length }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-			m_program->bind_buffer({ m_param_buffer->value, 0, 16 }, 2, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_descriptor_set);
 		}
 
 		void set_parameters(VkCommandBuffer cmd)
 		{
-			verify(HERE), uniform_inputs;
-
-			if (!m_param_buffer)
-			{
-				auto pdev = vk::get_current_renderer();
-				m_param_buffer = std::make_unique<vk::buffer>(*pdev, 256, pdev->get_memory_mapping().host_visible_coherent,
-					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
-			}
-
-			vkCmdUpdateBuffer(cmd, m_param_buffer->value, 0, 16, params.data);
+			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 24, params.data);
 		}
 
-		void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 width, u32 height, u32 depth)
+		void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 width, u32 height, u32 depth) override
 		{
 			dst_buffer = dst;
 			src_buffer = src;
@@ -708,14 +724,16 @@ namespace vk
 			this->block_length = sizeof(_BlockType) * width * height * depth;
 
 			params.width = width;
-			params.height = height * depth;
+			params.height = height;
+			params.depth = depth;
 			params.logw = rsx::ceil_log2(width);
 			params.logh = rsx::ceil_log2(height);
-			set_parameters();
+			params.logd = rsx::ceil_log2(depth);
+			set_parameters(cmd);
 
 			const u32 invocations_x = align(params.width, 8) / 8;
 			const u32 invocations_y = align(params.height, 8) / 8;
-			compute_task::run(cmd, invocations_x, invocations_y, 1);
+			compute_task::run(cmd, invocations_x, invocations_y, depth);
 		}
 	};
 

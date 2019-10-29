@@ -3299,6 +3299,7 @@ public:
 					std::string shader_type = type == ::glsl::program_domain::glsl_vertex_program ? "vertex" :
 						type == ::glsl::program_domain::glsl_fragment_program ? "fragment" : "compute";
 
+					LOG_NOTICE(RSX, "%s", m_source);
 					fmt::throw_exception("Failed to compile %s shader" HERE, shader_type);
 				}
 
