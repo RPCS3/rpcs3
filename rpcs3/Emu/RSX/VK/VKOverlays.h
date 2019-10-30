@@ -26,7 +26,7 @@ namespace vk
 		VkFilter m_sampler_filter = VK_FILTER_LINEAR;
 		u32 m_num_usable_samplers = 1;
 
-		std::unordered_map<VkRenderPass, std::unique_ptr<vk::glsl::program>> m_program_cache;
+		std::unordered_map<u64, std::unique_ptr<vk::glsl::program>> m_program_cache;
 		std::unique_ptr<vk::sampler> m_sampler;
 		std::unique_ptr<vk::framebuffer> m_draw_fbo;
 		vk::data_heap m_vao;
@@ -37,6 +37,7 @@ namespace vk
 		std::string fs_src;
 
 		graphics_pipeline_state renderpass_config;
+		bool multi_primitive = false;
 
 		bool initialized = false;
 		bool compiled = false;
@@ -55,6 +56,25 @@ namespace vk
 		}
 
 		~overlay_pass() = default;
+
+		u64 get_pipeline_key(VkRenderPass pass)
+		{
+			if (!multi_primitive)
+			{
+				// Default fast path
+				return reinterpret_cast<u64>(pass);
+			}
+			else
+			{
+				struct
+				{
+					u64 pass_value;
+					u64 config;
+				}
+				key{ reinterpret_cast<uintptr_t>(pass), static_cast<u64>(renderpass_config.ia.topology) };
+				return rpcs3::hash_struct(key);
+			}
+		}
 
 		void check_heap()
 		{
@@ -157,7 +177,7 @@ namespace vk
 			m_vao.unmap();
 		}
 
-		vk::glsl::program* build_pipeline(VkRenderPass render_pass)
+		vk::glsl::program* build_pipeline(u64 storage_key, VkRenderPass render_pass)
 		{
 			if (!compiled)
 			{
@@ -226,7 +246,7 @@ namespace vk
 
 			auto program = std::make_unique<vk::glsl::program>(*m_device, pipeline, get_vertex_inputs(), get_fragment_inputs());
 			auto result = program.get();
-			m_program_cache[render_pass] = std::move(program);
+			m_program_cache[storage_key] = std::move(program);
 
 			return result;
 		}
@@ -234,11 +254,13 @@ namespace vk
 		void load_program(vk::command_buffer& cmd, VkRenderPass pass, const std::vector<vk::image_view*>& src)
 		{
 			vk::glsl::program *program = nullptr;
-			auto found = m_program_cache.find(pass);
+			const auto key = get_pipeline_key(pass);
+
+			auto found = m_program_cache.find(key);
 			if (found != m_program_cache.end())
 				program = found->second.get();
 			else
-				program = build_pipeline(pass);
+				program = build_pipeline(key, pass);
 
 			verify(HERE), m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS;
 
@@ -457,6 +479,7 @@ namespace vk
 		std::unordered_map<u64, std::unique_ptr<vk::image_view>> view_cache;
 		std::unordered_map<u64, std::pair<u32, std::unique_ptr<vk::image>>> temp_image_cache;
 		std::unordered_map<u64, std::unique_ptr<vk::image_view>> temp_view_cache;
+		rsx::overlays::primitive_type m_current_primitive_type = rsx::overlays::primitive_type::quad_list;
 
 		ui_overlay_renderer()
 		{
@@ -572,6 +595,9 @@ namespace vk
 				"	else\n"
 				"		ocol = sample_image(fs0, tc0, parameters2.x).bgra * diff_color;\n"
 				"}\n";
+
+			// Allow mixed primitive rendering
+			multi_primitive = true;
 
 			renderpass_config.set_attachment_count(1);
 			renderpass_config.set_color_mask(0, true, true, true, true);
@@ -745,16 +771,44 @@ namespace vk
 			m_ubo.unmap();
 		}
 
+		void set_primitive_type(rsx::overlays::primitive_type type)
+		{
+			m_current_primitive_type = type;
+
+			switch (type)
+			{
+				case rsx::overlays::primitive_type::quad_list:
+				case rsx::overlays::primitive_type::triangle_strip:
+					renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+					break;
+				case rsx::overlays::primitive_type::line_list:
+					renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_LIST);
+					break;
+				case rsx::overlays::primitive_type::line_strip:
+					renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
+					break;
+				default:
+					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+			}
+		}
+
 		void emit_geometry(vk::command_buffer &cmd) override
 		{
-			//Split into groups of 4
-			u32 first = 0;
-			u32 num_quads = num_drawable_elements / 4;
-
-			for (u32 n = 0; n < num_quads; ++n)
+			if (m_current_primitive_type == rsx::overlays::primitive_type::quad_list)
 			{
-				vkCmdDraw(cmd, 4, 1, first, 0);
-				first += 4;
+				// Emulate quads with disjointed triangle strips
+				u32 first = 0;
+				u32 num_quads = num_drawable_elements / 4;
+
+				for (u32 n = 0; n < num_quads; ++n)
+				{
+					vkCmdDraw(cmd, 4, 1, first, 0);
+					first += 4;
+				}
+			}
+			else
+			{
+				overlay_pass::emit_geometry(cmd);
 			}
 		}
 
@@ -771,6 +825,7 @@ namespace vk
 				const u32 value_count = num_drawable_elements * 4;
 
 				upload_vertex_data((f32*)command.verts.data(), value_count);
+				set_primitive_type(command.config.primitives);
 
 				m_skip_texture_read = false;
 				m_color = command.config.color;

@@ -358,7 +358,7 @@ namespace gl
 		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> temp_view_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture>> font_cache;
 		std::unordered_map<u64, std::unique_ptr<gl::texture_view>> view_cache;
-		bool is_font_draw = false;
+		rsx::overlays::primitive_type m_current_primitive_type = rsx::overlays::primitive_type::quad_list;
 
 		ui_overlay_renderer()
 		{
@@ -577,14 +577,32 @@ namespace gl
 			}
 		}
 
+		void set_primitive_type(rsx::overlays::primitive_type type)
+		{
+			m_current_primitive_type = type;
+
+			switch (type)
+			{
+				case rsx::overlays::primitive_type::quad_list:
+				case rsx::overlays::primitive_type::triangle_strip:
+					primitives = GL_TRIANGLE_STRIP;
+					break;
+				case rsx::overlays::primitive_type::line_list:
+					primitives = GL_LINES;
+					break;
+				case rsx::overlays::primitive_type::line_strip:
+					primitives = GL_LINE_STRIP;
+					break;
+				default:
+					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+			}
+		}
+
 		void emit_geometry() override
 		{
-			if (!is_font_draw)
+			if (m_current_primitive_type == rsx::overlays::primitive_type::quad_list)
 			{
-				overlay_pass::emit_geometry();
-			}
-			else
-			{
+				// Emulate quads with disjointed triangle strips
 				int num_quads = num_drawable_elements / 4;
 				std::vector<GLint> firsts;
 				std::vector<GLsizei> counts;
@@ -606,6 +624,10 @@ namespace gl
 
 				glBindVertexArray(old_vao);
 			}
+			else
+			{
+				overlay_pass::emit_geometry();
+			}
 		}
 
 		void run(const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
@@ -618,9 +640,9 @@ namespace gl
 
 			for (auto &cmd : ui.get_compiled().draw_commands)
 			{
+				set_primitive_type(cmd.config.primitives);
 				upload_vertex_data((f32*)cmd.verts.data(), (u32)cmd.verts.size() * 4u);
 				num_drawable_elements = (u32)cmd.verts.size();
-				is_font_draw = false;
 				GLint texture_exists = GL_TRUE;
 
 				switch (cmd.config.texture_ref)
@@ -641,7 +663,6 @@ namespace gl
 				}
 				case rsx::overlays::image_resource_id::font_file:
 				{
-					is_font_draw = true;
 					glBindTexture(GL_TEXTURE_2D, find_font(cmd.config.font_ref)->id());
 					break;
 				}
