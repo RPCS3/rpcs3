@@ -9,27 +9,19 @@
 #define DEBUG_VERTEX_STREAMING 0
 
 #if defined(_MSC_VER)
-#define __SSSE3__  1
+#define SSSE3_FUNC
 #define SSE4_1_FUNC
 #define AVX2_FUNC
 #else
-#define __sse_intrin static FORCE_INLINE
+#define SSSE3_FUNC __attribute__((__target__("ssse3")))
 #define SSE4_1_FUNC __attribute__((__target__("sse4.1")))
 #define AVX2_FUNC __attribute__((__target__("avx2")))
 #endif // _MSC_VER
 
-// NOTE: Clang does not allow to redefine missing intrinsics
-#ifndef __SSSE3__
-__sse_intrin __m128i __mm_shuffle_epi8(__m128i opd, __m128i opa)
+SSSE3_FUNC static inline __m128i ssse3_shuffle_epi8(__m128i x, __m128i y)
 {
-	__asm__("pshufb %1, %0" : "+x" (opd) : "xm" (opa));
-	return opd;
+	return _mm_shuffle_epi8(x, y);
 }
-#else
-#define __mm_shuffle_epi8 _mm_shuffle_epi8
-#endif // __SSSE3__
-
-#undef __sse_intrin
 
 const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
@@ -91,7 +83,7 @@ namespace
 			for (u32 i = 0; i < iterations; ++i)
 			{
 				const __m128i vector = _mm_loadu_si128(src_ptr);
-				const __m128i shuffled_vector = __mm_shuffle_epi8(vector, mask);
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
 				_mm_stream_si128(dst_ptr, shuffled_vector);
 
 				src_ptr++;
@@ -142,7 +134,7 @@ namespace
 			for (u32 i = 0; i < iterations; ++i)
 			{
 				const __m128i vector = _mm_loadu_si128(src_ptr);
-				const __m128i shuffled_vector = __mm_shuffle_epi8(vector, mask);
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
 				_mm_stream_si128(dst_ptr, shuffled_vector);
 
 				src_ptr++;
@@ -202,7 +194,7 @@ namespace
 			for (u32 i = 0; i < iterations; ++i)
 			{
 				const __m128i vector = _mm_loadu_si128((__m128i*)src_ptr);
-				const __m128i shuffled_vector = __mm_shuffle_epi8(vector, mask);
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
 				_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
 
 				src_ptr += src_stride;
@@ -266,7 +258,7 @@ namespace
 			for (u32 i = 0; i < iterations; ++i)
 			{
 				const __m128i vector = _mm_loadu_si128((__m128i*)src_ptr);
-				const __m128i shuffled_vector = __mm_shuffle_epi8(vector, mask);
+				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
 				_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
 
 				src_ptr += src_stride;
