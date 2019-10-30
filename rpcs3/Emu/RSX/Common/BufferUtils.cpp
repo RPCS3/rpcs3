@@ -23,6 +23,16 @@ SSSE3_FUNC static inline __m128i ssse3_shuffle_epi8(__m128i x, __m128i y)
 	return _mm_shuffle_epi8(x, y);
 }
 
+SSE4_1_FUNC static inline u16 sse41_hmin_epu16(__m128i x)
+{
+	return _mm_cvtsi128_si32(_mm_minpos_epu16(x));
+}
+
+SSE4_1_FUNC static inline u16 sse41_hmax_epu16(__m128i x)
+{
+	return ~_mm_cvtsi128_si32(_mm_minpos_epu16(_mm_xor_si128(x, _mm_set1_epi32(-1))));
+}
+
 const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
 const bool s_use_avx2 = utils::has_avx2();
@@ -596,34 +606,8 @@ namespace
 				_mm_storeu_si128(dst_stream++, value);
 			}
 
-			const __m128i mask_step1 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
-
-			const __m128i mask_step2 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
-
-			const __m128i mask_step3 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0, 0, 0x3, 0x2);
-
-			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
-			min = _mm_min_epu16(min, tmp);
-			tmp = _mm_shuffle_epi8(min, mask_step2);
-			min = _mm_min_epu16(min, tmp);
-			tmp = _mm_shuffle_epi8(min, mask_step3);
-			min = _mm_min_epu16(min, tmp);
-
-			tmp = _mm_shuffle_epi8(max, mask_step1);
-			max = _mm_max_epu16(max, tmp);
-			tmp = _mm_shuffle_epi8(max, mask_step2);
-			max = _mm_max_epu16(max, tmp);
-			tmp = _mm_shuffle_epi8(max, mask_step3);
-			max = _mm_max_epu16(max, tmp);
-
-			const u16 min_index = u16(_mm_cvtsi128_si32(min) & 0xFFFF);
-			const u16 max_index = u16(_mm_cvtsi128_si32(max) & 0xFFFF);
+			const u16 min_index = sse41_hmin_epu16(min);
+			const u16 max_index = sse41_hmax_epu16(max);
 
 			return std::make_tuple(min_index, max_index, count);
 		}
@@ -654,27 +638,18 @@ namespace
 				_mm_storeu_si128(dst_stream++, value);
 			}
 
-			// Aggregate min-max
-			const __m128i mask_step1 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0xF, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8);
-
-			const __m128i mask_step2 = _mm_set_epi8(
-				0, 0, 0, 0, 0, 0, 0, 0,
-				0, 0, 0, 0, 0x7, 0x6, 0x5, 0x4);
-
-			__m128i tmp = _mm_shuffle_epi8(min, mask_step1);
+			__m128i tmp = _mm_srli_si128(min, 8);
 			min = _mm_min_epu32(min, tmp);
-			tmp = _mm_shuffle_epi8(min, mask_step2);
+			tmp = _mm_srli_si128(min, 4);
 			min = _mm_min_epu32(min, tmp);
 
-			tmp = _mm_shuffle_epi8(max, mask_step1);
+			tmp = _mm_srli_si128(max, 8);
 			max = _mm_max_epu32(max, tmp);
-			tmp = _mm_shuffle_epi8(max, mask_step2);
+			tmp = _mm_srli_si128(max, 4);
 			max = _mm_max_epu32(max, tmp);
 
-			const u32 min_index = u32(_mm_cvtsi128_si32(min));
-			const u32 max_index = u32(_mm_cvtsi128_si32(max));
+			const u32 min_index = _mm_cvtsi128_si32(min);
+			const u32 max_index = _mm_cvtsi128_si32(max);
 
 			return std::make_tuple(min_index, max_index, count);
 		}
@@ -761,20 +736,13 @@ namespace
 			__m128i tmp = _mm256_extracti128_si256(min, 1);
 			__m128i min2 = _mm256_castsi256_si128(min);
 			min2 = _mm_min_epu16(min2, tmp);
-			min2 = _mm_minpos_epu16(min2);
 
 			tmp = _mm256_extracti128_si256(max, 1);
 			__m128i max2 = _mm256_castsi256_si128(max);
 			max2 = _mm_max_epu16(max2, tmp);
-			tmp = _mm_srli_si128(max2, 8);
-			max2 = _mm_max_epu16(max2, tmp);
-			tmp = _mm_srli_si128(max2, 4);
-			max2 = _mm_max_epu16(max2, tmp);
-			tmp = _mm_srli_si128(max2, 2);
-			max2 = _mm_max_epu16(max2, tmp);
 
-			const u16 min_index = u16(_mm_cvtsi128_si32(min2) & 0xFFFF);
-			const u16 max_index = u16(_mm_cvtsi128_si32(max2) & 0xFFFF);
+			const u16 min_index = sse41_hmin_epu16(min2);
+			const u16 max_index = sse41_hmax_epu16(max2);
 
 			return std::make_tuple(min_index, max_index);
 		}
@@ -808,17 +776,8 @@ namespace
 				_mm_storeu_si128(dst_stream++, value_with_max_restart);
 			}
 
-			min = _mm_minpos_epu16(min);
-
-			__m128i tmp = _mm_srli_si128(max, 8);
-			max = _mm_max_epu16(max, tmp);
-			tmp = _mm_srli_si128(max, 4);
-			max = _mm_max_epu16(max, tmp);
-			tmp = _mm_srli_si128(max, 2);
-			max = _mm_max_epu16(max, tmp);
-
-			const u16 min_index = u16(_mm_cvtsi128_si32(min) & 0xFFFF);
-			const u16 max_index = u16(_mm_cvtsi128_si32(max) & 0xFFFF);
+			const u16 min_index = sse41_hmin_epu16(min);
+			const u16 max_index = sse41_hmax_epu16(max);
 
 			return std::make_tuple(min_index, max_index);
 		}
@@ -862,8 +821,8 @@ namespace
 			tmp = _mm_srli_si128(max, 4);
 			max = _mm_max_epu32(max, tmp);
 
-			const u32 min_index = u32(_mm_cvtsi128_si32(min));
-			const u32 max_index = u32(_mm_cvtsi128_si32(max));
+			const u32 min_index = _mm_cvtsi128_si32(min);
+			const u32 max_index = _mm_cvtsi128_si32(max);
 
 			return std::make_tuple(min_index, max_index);
 		}
