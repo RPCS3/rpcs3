@@ -43,6 +43,14 @@ namespace rsx
 			backbuffer = 255  // Use current backbuffer contents
 		};
 
+		enum class primitive_type : u8
+		{
+			quad_list = 0,
+			triangle_strip = 1,
+			line_list = 2,
+			line_strip = 3
+		};
+
 		struct vertex
 		{
 			float values[4];
@@ -353,6 +361,8 @@ namespace rsx
 		{
 			struct command_config
 			{
+				primitive_type primitives = primitive_type::quad_list;
+
 				color4f color = { 1.f, 1.f, 1.f, 1.f };
 				bool pulse_glow = false;
 
