@@ -103,8 +103,8 @@ struct sys_config_service_event_t {
 	be_t<u32> padding;
 
 	// Buffer containing event data (copy of the buffer supplied to sys_config_register_service)
-	// NOTE: This buffer size is dynamic, according to 'data_size', and can be 0. Here it is set to 1 since zero-sized buffers are not standards-compliant
-	u8 data[1];
+	// NOTE: This buffer size is dynamic, according to 'data_size'.
+	u8 data[];
 };
 
 
