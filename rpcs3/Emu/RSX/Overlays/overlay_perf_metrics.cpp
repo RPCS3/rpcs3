@@ -7,6 +7,9 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Utilities/sysinfo.h"
 
+#include <algorithm>
+#include <utility>
+
 namespace rsx
 {
 	namespace overlays
@@ -43,7 +46,7 @@ namespace rsx
 			return color4f(r / 255.f, g / 255.f, b / 255.f, a / 255.f * opacity);
 		}
 
-		void perf_metrics_overlay::reset_transform(label& elm) const
+		void perf_metrics_overlay::reset_transform(label& elm, u16 bottom_margin) const
 		{
 			const u32 text_padding = m_font_size / 2;
 
@@ -67,11 +70,11 @@ namespace rsx
 				break;
 			case screen_quadrant::bottom_left:
 				pos.x = margin.x;
-				pos.y = virtual_height - overlay_height;
+				pos.y = virtual_height - overlay_height - bottom_margin;
 				break;
 			case screen_quadrant::bottom_right:
 				pos.x = virtual_width - overlay_width;
-				pos.y = virtual_height - overlay_height;
+				pos.y = virtual_height - overlay_height - bottom_margin;
 				break;
 			}
 
@@ -91,8 +94,38 @@ namespace rsx
 
 		void perf_metrics_overlay::reset_transforms()
 		{
-			reset_transform(m_body);
-			reset_transform(m_titles);
+			const u16 per_overlay_padding = m_font_size / 2;
+			const u16 graphs_padding = m_font_size * 2;
+
+			const u16 fps_graph_h = 60;
+			const u16 frametime_graph_h = 45;
+
+			u16 bottom_margin{};
+
+			if (m_graphs_enabled)
+			{
+				// Adjust body size to account for the graphs
+				// TODO: Bit hacky, could do this with margins if overlay_element had bottom margin (or negative top at least)
+				bottom_margin = per_overlay_padding + fps_graph_h + graphs_padding + frametime_graph_h;
+			}
+
+			// Set body/titles transform
+			reset_transform(m_body, bottom_margin);
+			reset_transform(m_titles, bottom_margin);
+
+			if (m_graphs_enabled)
+			{
+				// Position the graphs within the body
+				const u16 graphs_width = m_body.w;
+				const u16 body_left = m_body.x;
+				const u16 body_bottom = m_body.y + m_body.h + per_overlay_padding;
+
+				m_fps_graph.set_pos(body_left, body_bottom);
+				m_fps_graph.set_size(graphs_width, fps_graph_h);
+
+				m_frametime_graph.set_pos(body_left, body_bottom + m_fps_graph.h + graphs_padding);
+				m_frametime_graph.set_size(graphs_width, frametime_graph_h);
+			}
 		}
 
 		void perf_metrics_overlay::reset_body()
@@ -131,8 +164,23 @@ namespace rsx
 		{
 			reset_text();
 			force_next_update();
-			update();
+
+			m_fps_graph.set_title("Framerate");
+			m_fps_graph.set_font_size(m_font_size * 0.8);
+			m_fps_graph.set_count(50);
+			m_fps_graph.set_color(convert_color_code(g_cfg.video.perf_overlay.color_body));
+			m_fps_graph.set_guide_interval(10);
+
+			m_frametime_graph.set_title("Frametime");
+			m_frametime_graph.set_font_size(m_font_size * 0.8);
+			m_frametime_graph.set_count(170);
+			m_frametime_graph.set_color(convert_color_code(g_cfg.video.perf_overlay.color_body));
+			m_frametime_graph.set_guide_interval(8);
+
 			m_update_timer.Start();
+			m_frametime_timer.Start();
+
+			update();
 
 			m_is_initialised = true;
 		}
@@ -140,6 +188,8 @@ namespace rsx
 		void perf_metrics_overlay::set_detail_level(detail_level level)
 		{
 			m_detail = level;
+
+			m_graphs_enabled = (level == detail_level::high);
 
 			if (m_is_initialised)
 			{
@@ -211,16 +261,22 @@ namespace rsx
 
 		void perf_metrics_overlay::update()
 		{
-			const auto elapsed = m_update_timer.GetElapsedTimeInMilliSec();
+			const auto elapsed_update = m_update_timer.GetElapsedTimeInMilliSec();
+
+			if (m_is_initialised && m_graphs_enabled)
+			{
+				const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
+				m_frametime_graph.record_datapoint(elapsed_frame);
+			}
 
 			if (!m_force_update)
 			{
 				++m_frames;
 			}
 
-			if (elapsed >= m_update_interval || m_force_update)
+			if (elapsed_update >= m_update_interval || m_force_update)
 			{
-				if (!m_force_update)
+				if (!m_force_update && m_graphs_enabled)
 				{
 					m_update_timer.Start();
 				}
@@ -253,7 +309,7 @@ namespace rsx
 				{
 				case detail_level::high:
 				{
-					frametime = m_force_update ? 0 : std::max(0.0, elapsed / m_frames);
+					frametime = m_force_update ? 0 : std::max(0.0, elapsed_update / m_frames);
 
 					rsx_load = rsx_thread->get_load();
 
@@ -293,7 +349,9 @@ namespace rsx
 				}
 				case detail_level::minimal:
 				{
-					fps = m_force_update ? 0 : std::max(0.0, static_cast<f32>(m_frames) / (elapsed / 1000));
+					fps = m_force_update ? 0 : std::max(0.0, static_cast<f32>(m_frames) / (elapsed_update / 1000));
+					if (m_is_initialised && m_graphs_enabled)
+						m_fps_graph.record_datapoint(fps);
 				}
 				}
 
@@ -357,6 +415,167 @@ namespace rsx
 					m_force_update = false;
 				}
 			}
+
+			if (m_graphs_enabled)
+			{
+				m_fps_graph.update();
+				m_frametime_graph.update();
+
+				m_frametime_timer.Start();
+			}
+		}
+
+		compiled_resource perf_metrics_overlay::get_compiled()
+		{
+			auto compiled_resources = m_body.get_compiled();
+
+			compiled_resources.add(m_titles.get_compiled());
+
+			if (m_graphs_enabled)
+			{
+				compiled_resources.add(m_fps_graph.get_compiled());
+				compiled_resources.add(m_frametime_graph.get_compiled());
+			}
+
+			return compiled_resources;
+		}
+
+		graph::graph()
+		{
+			m_label.set_font("e046323ms.ttf", 8);
+			m_label.fore_color = { 1.f, 1.f, 1.f, 1.f };
+			m_label.back_color = { 0.f, 0.f, 0.f, .7f };
+
+			back_color = { 0.f, 0.f, 0.f, 0.5f };
+		}
+
+		void graph::set_pos(u16 _x, u16 _y)
+		{
+			overlay_element::set_pos(_x, _y);
+
+			m_label.set_pos(x, y + h);
+		}
+
+		void graph::set_size(u16 _w, u16 _h)
+		{
+			overlay_element::set_size(_w, _h);
+
+			set_padding(0, 0, h, 0);
+			m_label.set_size(w, m_label.h);
+
+			m_label.set_pos(x, y + h);
+		}
+
+		void graph::set_title(const char* title)
+		{
+			m_title = title;
+		}
+
+		void graph::set_font(const char* font_name, u16 font_size)
+		{
+			m_label.set_font(font_name, font_size);
+		}
+
+		void graph::set_font_size(u16 font_size)
+		{
+			const auto font_name = m_label.get_font()->font_name.c_str();
+			m_label.set_font(font_name, font_size);
+		}
+
+		void graph::set_count(u32 datapoint_count)
+		{
+			m_datapoint_count = datapoint_count;
+			m_datapoints.resize(datapoint_count, 0);
+		}
+
+		void graph::set_color(color4f color)
+		{
+			m_color = color;
+		}
+
+		void graph::set_guide_interval(f32 guide_interval)
+		{
+			m_guide_interval = guide_interval;
+		}
+
+		void graph::record_datapoint(f32 datapoint)
+		{
+			// std::dequeue is only faster for large sizes, so just use a std::vector and resize once in while
+
+			// Record datapoint
+			m_datapoints.push_back(datapoint);
+
+			// Calculate new min/max
+			// Make sure min/max reflects the data being displayed, not the entire datapoints vector
+			m_min = *std::min_element(m_datapoints.end() - m_datapoint_count, m_datapoints.end());
+			m_max = *std::max_element(m_datapoints.end() - m_datapoint_count, m_datapoints.end());
+
+			// Cull vector when it gets large
+			if (m_datapoints.size() > m_datapoint_count * 16ull)
+			{
+				std::copy(m_datapoints.begin() + m_datapoints.size() - m_datapoint_count, m_datapoints.end(), m_datapoints.begin());
+				m_datapoints.resize(m_datapoint_count);
+			}
+		}
+
+		void graph::update()
+		{
+			m_label.set_text(fmt::format("%s  min:%5.2f max:%6.2f", m_title.c_str(), m_min, m_max));
+			m_label.set_padding(4, 4, 0, 4);
+
+			m_label.auto_resize();
+			m_label.refresh();
+		}
+
+		compiled_resource& graph::get_compiled()
+		{
+			refresh();
+			overlay_element::get_compiled();
+
+			const f32 normalize_factor = f32(h) / m_max;
+
+			// Don't show guide lines if they'd be more dense than 1 guide line every 3 pixels
+			const bool guides_too_dense = (m_max / m_guide_interval) > (h / 3);
+
+			if (m_guide_interval > 0 && !guides_too_dense)
+			{
+				auto& cmd_guides = compiled_resources.append({});
+				auto& config_guides = cmd_guides.config;
+
+				config_guides.color = { 1.f, 1.f, 1.f, .2f };
+				config_guides.primitives = primitive_type::line_list;
+
+				auto& verts_guides = compiled_resources.draw_commands.back().verts;
+
+				for (auto y_off = m_guide_interval; y_off < m_max; y_off += m_guide_interval)
+				{
+					const f32 guide_y = y + y_off * normalize_factor;
+					verts_guides.emplace_back(x, guide_y);
+					verts_guides.emplace_back(x + w, guide_y);
+				}
+			}
+
+			auto& cmd_graph = compiled_resources.append({});
+			auto& config_graph = cmd_graph.config;
+
+			config_graph.color = m_color;
+			config_graph.primitives = primitive_type::line_strip;
+
+			auto& verts_graph = compiled_resources.draw_commands.back().verts;
+
+			const f32 x_stride = f32(w) / m_datapoint_count;
+			const u32 tail_index_offset = m_datapoints.size() - m_datapoint_count;
+
+			for (u32 i = 0; i < m_datapoint_count; ++i)
+			{
+				const f32 x_line = x + i * x_stride;
+				const f32 y_line = y + h - (m_datapoints[i + tail_index_offset] * normalize_factor);
+				verts_graph.emplace_back(x_line, y_line);
+			}
+
+			compiled_resources.add(m_label.get_compiled());
+
+			return compiled_resources;
 		}
 	} // namespace overlays
 } // namespace rsx

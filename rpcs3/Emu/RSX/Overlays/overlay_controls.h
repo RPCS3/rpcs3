@@ -1225,5 +1225,32 @@ namespace rsx
 
 			compiled_resource& get_compiled() override;
 		};
+
+		struct graph : public overlay_element
+		{
+		private:
+			std::string m_title;
+			std::vector<f32> m_datapoints;
+			u32 m_datapoint_count{};
+			color4f m_color;
+			f32 m_min{};
+			f32 m_max{};
+			f32 m_guide_interval{};
+			label m_label{};
+
+		public:
+			graph();
+			void set_pos(u16 _x, u16 _y) override;
+			void set_size(u16 _w, u16 _h) override;
+			void set_title(const char* title);
+			void set_font(const char* font_name, u16 font_size) override;
+			void set_font_size(u16 font_size);
+			void set_count(u32 datapoint_count);
+			void set_color(color4f color);
+			void set_guide_interval(f32 guide_interval);
+			void record_datapoint(f32 datapoint);
+			void update();
+			compiled_resource& get_compiled() override;
+		};
 	}
 }

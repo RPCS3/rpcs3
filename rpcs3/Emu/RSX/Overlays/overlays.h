@@ -334,32 +334,37 @@ namespace rsx
 			   medium - fps, detailed cpu usage
 			   high - fps, frametime, detailed cpu usage, thread number, rsx load
 			 */
-			detail_level m_detail;
+			detail_level m_detail{};
 
-			screen_quadrant m_quadrant;
-			positioni m_position;
+			screen_quadrant m_quadrant{};
+			positioni m_position{};
 
-			label m_body;
-			label m_titles;
+			label m_body{};
+			label m_titles{};
 
-			CPUStats m_cpu_stats;
-			Timer m_update_timer;
-			u32 m_update_interval; // in ms
-			u32 m_frames{ 0 };
-			std::string m_font;
-			u32 m_font_size;
-			u32 m_margin_x; // horizontal distance to the screen border relative to the screen_quadrant in px
-			u32 m_margin_y; // vertical distance to the screen border relative to the screen_quadrant in px
-			f32 m_opacity;  // 0..1
+			bool m_graphs_enabled{};
+			graph m_fps_graph;
+			graph m_frametime_graph;
 
-			bool m_force_update;
-			bool m_is_initialised{ false };
+			CPUStats m_cpu_stats{};
+			Timer m_update_timer{};
+			Timer m_frametime_timer{};
+			u32 m_update_interval{}; // in ms
+			u32 m_frames{};
+			std::string m_font{};
+			u32 m_font_size{};
+			u32 m_margin_x{}; // horizontal distance to the screen border relative to the screen_quadrant in px
+			u32 m_margin_y{}; // vertical distance to the screen border relative to the screen_quadrant in px
+			f32 m_opacity{};  // 0..1
+
+			bool m_force_update{};
+			bool m_is_initialised{};
 
 			const std::string title1_medium{"CPU Utilization:"};
 			const std::string title1_high{"Host Utilization (CPU):"};
 			const std::string title2{"Guest Utilization (PS3):"};
 
-			void reset_transform(label& elm) const;
+			void reset_transform(label& elm, u16 bottom_margin = 0) const;
 			void reset_transforms();
 			void reset_body();
 			void reset_titles();
@@ -379,12 +384,7 @@ namespace rsx
 
 			void update() override;
 
-			compiled_resource get_compiled() override
-			{
-				auto result = m_body.get_compiled();
-				result.add(m_titles.get_compiled());
-				return result;
-			}
+			compiled_resource get_compiled() override;
 		};
 
 		struct osk_dialog : public user_interface, public OskDialogBase
