@@ -493,6 +493,9 @@ VKGSRender::VKGSRender() : GSRender()
 	m_attachment_clear_pass = std::make_unique<vk::attachment_clear_pass>();
 	m_attachment_clear_pass->create(*m_device);
 
+	m_video_output_pass = std::make_unique<vk::video_out_calibration_pass>();
+	m_video_output_pass->create(*m_device);
+
 	m_prog_buffer = std::make_unique<VKProgramBuffer>();
 
 	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
@@ -623,6 +626,10 @@ VKGSRender::~VKGSRender()
 	//Attachment clear helper
 	m_attachment_clear_pass->destroy();
 	m_attachment_clear_pass.reset();
+
+	// Video-out calibration (gamma, colorspace, etc)
+	m_video_output_pass->destroy();
+	m_video_output_pass.reset();
 
 	//Pipeline descriptors
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
@@ -2327,6 +2334,7 @@ void VKGSRender::frame_context_cleanup(frame_context_t *ctx, bool free_resources
 		m_attachment_clear_pass->free_resources();
 		m_depth_converter->free_resources();
 		m_ui_renderer->free_resources();
+		m_video_output_pass->free_resources();
 
 		ctx->buffer_views_to_clean.clear();
 
@@ -3363,37 +3371,63 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	VkImage target_image = m_swapchain->get_image(m_current_frame->present_image);
 	const auto present_layout = m_swapchain->get_optimal_present_layout();
 
+	const VkImageSubresourceRange subresource_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+	VkImageLayout target_layout = present_layout;
+
+	VkRenderPass single_target_pass = VK_NULL_HANDLE;
+	vk::framebuffer_holder* direct_fbo = nullptr;
+	vk::viewable_image* calibration_src = nullptr;
+
 	if (image_to_flip)
 	{
-		VkImageLayout target_layout = present_layout;
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-
 		if (aspect_ratio.x || aspect_ratio.y)
 		{
 			VkClearColorValue clear_black {};
-			vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-			vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &range);
+			vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+			vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
 
 			target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		}
 
-		vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
-			{ 0, 0, (s32)buffer_width, (s32)buffer_height }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
-
-		if (target_layout != present_layout)
+		if (UNLIKELY(!g_cfg.video.full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f)))
 		{
-			vk::change_image_layout(*m_current_command_buffer, target_image, target_layout, present_layout, range);
+			calibration_src = dynamic_cast<vk::viewable_image*>(image_to_flip);
+			verify("Image handle not viewable!" HERE), calibration_src;
+		}
+
+		if (LIKELY(!calibration_src))
+		{
+			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
+				{ 0, 0, (s32)buffer_width, (s32)buffer_height }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
+		}
+		else
+		{
+			vk::change_image_layout(*m_current_command_buffer, target_image, target_layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, subresource_range);
+			target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
+			single_target_pass = vk::get_renderpass(*m_device, key);
+			verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
+
+			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, single_target_pass, m_swapchain->get_surface_format(), target_image);
+			direct_fbo->add_ref();
+
+			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			m_video_output_pass->run(*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src, avconfig->gamma, !g_cfg.video.full_rgb_range_output, single_target_pass);
+			image_to_flip->pop_layout(*m_current_command_buffer);
+
+			direct_fbo->release();
 		}
 	}
 	else
 	{
 		//No draw call was issued!
 		//TODO: Upload raw bytes from cpu for rendering
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 		VkClearColorValue clear_black {};
-		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &range);
-		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, present_layout, range);
+		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
+		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
+
+		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
 	if (m_frame->screenshot_toggle == true)
@@ -3436,26 +3470,33 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	const bool has_overlay = (m_overlay_manager && m_overlay_manager->has_visible());
 	if (g_cfg.video.overlay || has_overlay)
 	{
-		//Change the image layout whilst setting up a dependency on waiting for the blit op to finish before we start writing
-		VkImageSubresourceRange subres = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		barrier.oldLayout = present_layout;
-		barrier.image = target_image;
-		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.subresourceRange = subres;
+		if (target_layout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+		{
+			// Change the image layout whilst setting up a dependency on waiting for the blit op to finish before we start writing
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			barrier.oldLayout = target_layout;
+			barrier.image = target_image;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.subresourceRange = subresource_range;
+			vkCmdPipelineBarrier(*m_current_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &barrier);
 
-		vkCmdPipelineBarrier(*m_current_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &barrier);
+			target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		}
 
-		auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
-		VkRenderPass single_target_pass = vk::get_renderpass(*m_device, key);
-		verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
+		if (!direct_fbo)
+		{
+			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
+			single_target_pass = vk::get_renderpass(*m_device, key);
+			verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
 
-		auto direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, single_target_pass, m_swapchain->get_surface_format(), target_image);
+			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, single_target_pass, m_swapchain->get_surface_format(), target_image);
+		}
+
 		direct_fbo->add_ref();
 
 		if (has_overlay)
@@ -3494,9 +3535,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
 		}
 
-		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, present_layout, subres);
-
 		direct_fbo->release();
+	}
+
+	if (target_layout != present_layout)
+	{
+		vk::change_image_layout(*m_current_command_buffer, target_image, target_layout, present_layout, subresource_range);
 	}
 
 	queue_swap_request();
