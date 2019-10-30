@@ -978,4 +978,85 @@ namespace vk
 				target->get_view(0xAAE4, rsx::default_remap_vector), render_pass);
 		}
 	};
+
+	struct video_out_calibration_pass : public overlay_pass
+	{
+		union config_t
+		{
+			struct
+			{
+				float gamma;
+				int   limit_range;
+			};
+
+			float data[2];
+		}
+		config;
+
+		video_out_calibration_pass()
+		{
+			vs_src =
+				"#version 450\n\n"
+				"layout(location=0) out vec2 tc0;\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
+				"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
+				"	tc0 = coords[gl_VertexIndex % 4];\n"
+				"	vec2 pos = positions[gl_VertexIndex % 4];\n"
+				"	gl_Position = vec4(pos, 0., 1.);\n"
+				"}\n";
+
+			fs_src =
+				"#version 420\n\n"
+				"layout(set=0, binding=1) uniform sampler2D fs0;\n"
+				"layout(location=0) in vec2 tc0;\n"
+				"layout(location=0) out vec4 ocol;\n"
+				"\n"
+				"layout(push_constant) uniform static_data\n"
+				"{\n"
+				"	float gamma;\n"
+				"	int limit_range;\n"
+				"};\n"
+				"\n"
+				"void main()\n"
+				"{\n"
+				"	vec4 color = texture(fs0, tc0);\n"
+				"	color.rgb = pow(color.rgb, vec3(gamma));\n"
+				"	if (limit_range > 0)\n"
+				"		ocol = ((color * 220.) + 16.) / 255.;\n"
+				"	else\n"
+				"		ocol = color;\n"
+				"}\n";
+
+			renderpass_config.set_depth_mask(false);
+			renderpass_config.set_color_mask(0, true, true, true, true);
+			renderpass_config.set_attachment_count(1);
+		}
+
+		std::vector<VkPushConstantRange> get_push_constants() override
+		{
+			VkPushConstantRange constant;
+			constant.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			constant.offset = 0;
+			constant.size = 8;
+
+			return { constant };
+		}
+
+		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override
+		{
+			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8, config.data);
+		}
+
+		void run(vk::command_buffer &cmd, const areau& viewport, vk::framebuffer* target, vk::viewable_image* src,
+			f32 gamma, bool limited_rgb, VkRenderPass render_pass)
+		{
+			config.gamma = gamma;
+			config.limit_range = limited_rgb? 1 : 0;
+
+			overlay_pass::run(cmd, viewport, target, { src->get_view(0xAAE4, rsx::default_remap_vector) }, render_pass);
+		}
+	};
 }

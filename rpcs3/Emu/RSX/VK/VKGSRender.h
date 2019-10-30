@@ -317,6 +317,7 @@ private:
 	std::unique_ptr<vk::depth_convert_pass> m_depth_converter;
 	std::unique_ptr<vk::ui_overlay_renderer> m_ui_renderer;
 	std::unique_ptr<vk::attachment_clear_pass> m_attachment_clear_pass;
+	std::unique_ptr<vk::video_out_calibration_pass> m_video_output_pass;
 
 	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
