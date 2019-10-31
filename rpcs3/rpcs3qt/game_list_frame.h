@@ -253,6 +253,8 @@ private:
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool CreatePPUCache(const game_info& game);
 
+	QString GetLastPlayedBySerial(const QString& serial);
+	QString GetPlayTimeBySerial(const QString& serial);
 	std::string GetCacheDirBySerial(const std::string& serial);
 	std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionIconPath();

@@ -851,6 +851,12 @@ void main_window::OnEmuPause()
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
 	ui->toolbar_start->setToolTip(tr("Resume emulation"));
+
+	// Refresh game list in order to update time played
+	if (m_gameListFrame)
+	{
+		m_gameListFrame->Refresh();
+	}
 }
 
 void main_window::OnEmuStop()
@@ -883,6 +889,12 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setToolTip(Emu.IsReady() ? tr("Start emulation") : tr("Resume emulation"));
 	}
 	ui->actionManage_Users->setEnabled(true);
+
+	// Refresh game list in order to update time played
+	if (m_gameListFrame)
+	{
+		m_gameListFrame->Refresh();
+	}
 }
 
 void main_window::OnEmuReady()
