@@ -75,6 +75,11 @@ void gui_application::Init()
 
 void gui_application::InitializeConnects()
 {
+	connect(this, &gui_application::OnEmulatorRun, this, &gui_application::StartPlaytime);
+	connect(this, &gui_application::OnEmulatorStop, this, &gui_application::StopPlaytime);
+	connect(this, &gui_application::OnEmulatorPause, this, &gui_application::StopPlaytime);
+	connect(this, &gui_application::OnEmulatorResume, this, &gui_application::StartPlaytime);
+
 	if (m_main_window)
 	{
 		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
@@ -199,6 +204,25 @@ void gui_application::InitializeCallbacks()
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
+}
+
+void gui_application::StartPlaytime()
+{
+	const QString serial = qstr(Emu.GetTitleID());
+	m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	m_timer_playtime.start();
+}
+
+void gui_application::StopPlaytime()
+{
+	if (!m_timer_playtime.isValid())
+		return;
+
+	const QString serial = qstr(Emu.GetTitleID());
+	const qint64 playtime = m_gui_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
+	m_gui_settings->SetPlaytime(serial, playtime);
+	m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+	m_timer_playtime.invalidate();
 }
 
 /*

@@ -157,6 +157,28 @@ void gui_settings::SetValue(const QString& key, const QString& name, const QVari
 	m_settings.endGroup();
 }
 
+void gui_settings::SetPlaytime(const QString& serial, const qint64& elapsed)
+{
+	m_playtime[serial] = elapsed;
+	SetValue(gui::playtime, serial, elapsed);
+}
+
+qint64 gui_settings::GetPlaytime(const QString& serial)
+{
+	return m_playtime[serial];
+}
+
+void gui_settings::SetLastPlayed(const QString& serial, const QString& date)
+{
+	m_last_played[serial] = date;
+	SetValue(gui::last_played, serial, date);
+}
+
+QString gui_settings::GetLastPlayed(const QString& serial)
+{
+	return m_last_played[serial];
+}
+
 QStringList gui_settings::GetGameListCategoryFilters()
 {
 	QStringList filterList;

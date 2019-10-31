@@ -57,6 +57,8 @@ namespace gui
 		column_resolution,
 		column_sound,
 		column_parental,
+		column_last_play,
+		column_playtime,
 		column_compat,
 
 		column_count
@@ -88,6 +90,10 @@ namespace gui
 			return "column_sound";
 		case column_parental:
 			return "column_parental";
+		case column_last_play:
+			return "column_last_play";
+		case column_playtime:
+			return "column_playtime";
 		case column_compat:
 			return "column_compat";
 		case column_count:
@@ -131,6 +137,8 @@ namespace gui
 	const QString users       = "Users";
 	const QString notes       = "Notes";
 	const QString titles      = "Titles";
+	const QString playtime    = "Playtime";
+	const QString last_played = "LastPlayed";
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
 
@@ -189,9 +197,9 @@ namespace gui
 	const gui_save fs_dev_flash_list    = gui_save(fs, "dev_flash_list",    QStringList());
 	const gui_save fs_dev_usb000_list   = gui_save(fs, "dev_usb000_list",   QStringList());
 
-	const gui_save l_tty   = gui_save(logger, "TTY",   true);
-	const gui_save l_level = gui_save(logger, "level", (uint)(logs::level::success));
-	const gui_save l_stack = gui_save(logger, "stack", true);
+	const gui_save l_tty       = gui_save(logger, "TTY",       true);
+	const gui_save l_level     = gui_save(logger, "level",     (uint)(logs::level::success));
+	const gui_save l_stack     = gui_save(logger, "stack",     true);
 	const gui_save l_stack_tty = gui_save(logger, "TTY stack", false);
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
@@ -207,7 +215,7 @@ namespace gui
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
 	const gui_save m_richPresence      = gui_save(meta, "useRichPresence",   true);
 	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
-	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart", true);
+	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart",  true);
 
 	const gui_save gs_disableMouse = gui_save(gs_frame, "disableMouse", false);
 	const gui_save gs_resize       = gui_save(gs_frame, "resize",       false);
@@ -280,6 +288,12 @@ public Q_SLOTS:
 	void SetValue(const gui_save& entry, const QVariant& value);
 	void SetValue(const QString& key, const QString& name, const QVariant& value);
 
+	void SetPlaytime(const QString& serial, const qint64& elapsed);
+	qint64 GetPlaytime(const QString& serial);
+
+	void SetLastPlayed(const QString& serial, const QString& date);
+	QString GetLastPlayed(const QString& serial);
+
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, const bool& val);
 
@@ -300,4 +314,6 @@ private:
 	QSettings m_settings;
 	QDir m_settingsDir;
 	QString m_current_name;
+	QMap<QString, qint64> m_playtime;
+	QMap<QString, QString> m_last_played;
 };

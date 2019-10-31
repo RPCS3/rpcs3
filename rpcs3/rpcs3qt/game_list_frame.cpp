@@ -106,6 +106,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	AddColumn(gui::column_resolution, tr("Supported Resolutions"), tr("Show Supported Resolutions"));
 	AddColumn(gui::column_sound,      tr("Sound Formats"),         tr("Show Sound Formats"));
 	AddColumn(gui::column_parental,   tr("Parental Level"),        tr("Show Parental Levels"));
+	AddColumn(gui::column_last_play,  tr("Last Played"),           tr("Show Last Played"));
+	AddColumn(gui::column_playtime,   tr("Time Played"),           tr("Show Time Played"));
 	AddColumn(gui::column_compat,     tr("Compatibility"),         tr("Show Compatibility"));
 
 	// Events
@@ -363,6 +365,48 @@ void game_list_frame::SortGameList()
 	m_gameList->resizeColumnToContents(gui::column_count - 1);
 }
 
+QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
+{
+	return m_gui_settings->GetLastPlayed(serial);
+}
+
+QString game_list_frame::GetPlayTimeBySerial(const QString& serial)
+{
+	const qint64 elapsed_ms = m_gui_settings->GetPlaytime(serial);
+
+	if (elapsed_ms <= 0)
+	{
+		return "";
+	}
+
+	const qint64 elapsed_seconds = (elapsed_ms / 1000) + ((elapsed_ms % 1000) > 0 ? 1 : 0);
+	const qint64 hours_played    = elapsed_seconds / 3600;
+	const qint64 minutes_played  = (elapsed_seconds % 3600) / 60;
+	const qint64 seconds_played  = (elapsed_seconds % 3600) % 60;
+
+	if (hours_played <= 0)
+	{
+		if (minutes_played <= 0)
+		{
+			return tr("%0 seconds").arg(seconds_played);
+		}
+
+		if (seconds_played <= 0)
+		{
+			return tr("%0 minutes").arg(minutes_played);
+		}
+
+		return tr("%0 minutes and %1 seconds").arg(minutes_played).arg(seconds_played);
+	}
+
+	if (minutes_played <= 0)
+	{
+		return tr("%0 hours").arg(hours_played);
+	}
+
+	return tr("%0 hours and %1 minutes").arg(hours_played).arg(minutes_played);
+}
+
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
 	return fs::get_cache_dir() + "cache/" + serial;
@@ -499,6 +543,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 				QString serial = qstr(game.serial);
 				m_notes[serial] = m_gui_settings->GetValue(gui::notes, serial, "").toString();
 				m_titles[serial] = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
+				m_gui_settings->SetLastPlayed(serial, m_gui_settings->GetValue(gui::last_played, serial, "").toString());
+				m_gui_settings->SetPlaytime(serial, m_gui_settings->GetValue(gui::playtime, serial, 0).toInt());
 				serials.insert(serial);
 
 				auto cat = category::cat_boot.find(game.category);
@@ -1859,6 +1905,8 @@ int game_list_frame::PopulateGameList()
 		m_gameList->setItem(row, gui::column_resolution, new custom_table_widget_item(GetStringFromU32(game->info.resolution, resolution::mode, true)));
 		m_gameList->setItem(row, gui::column_sound,      new custom_table_widget_item(GetStringFromU32(game->info.sound_format, sound::format, true)));
 		m_gameList->setItem(row, gui::column_parental,   new custom_table_widget_item(GetStringFromU32(game->info.parental_lvl, parental::level), Qt::UserRole, game->info.parental_lvl));
+		m_gameList->setItem(row, gui::column_last_play,  new custom_table_widget_item(GetLastPlayedBySerial(serial)));
+		m_gameList->setItem(row, gui::column_playtime,   new custom_table_widget_item(GetPlayTimeBySerial(serial)));
 		m_gameList->setItem(row, gui::column_compat,     compat_item);
 
 		if (selected_item == game->info.icon_path)
