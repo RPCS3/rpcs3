@@ -13,6 +13,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "sys_interrupt.h"
+#include "sys_process.h"
 #include "sys_mmapper.h"
 #include "sys_event.h"
 
@@ -409,7 +410,8 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	// TODO: max num value should be affected by sys_spu_initialize() settings
 
-	if (attr->nsize > 0x80 || !num || num > 6 || ((prio < 16 || prio > 255) && (attr->type != SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT && attr->type != SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)))
+	const s32 min_prio = g_ps3_process_info.has_root_perm() ? 0 : 16;
+	if (attr->nsize > 0x80 || !num || num > 6 || ((prio < min_prio || prio > 255) && (attr->type != SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT && attr->type != SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)))
 	{
 		return CELL_EINVAL;
 	}
@@ -802,16 +804,16 @@ error_code sys_spu_thread_group_set_priority(ppu_thread& ppu, u32 id, s32 priori
 
 	sys_spu.trace("sys_spu_thread_group_set_priority(id=0x%x, priority=%d)", id, priority);
 
-	if (priority < 16 || priority > 255)
-	{
-		return CELL_EINVAL;
-	}
-
 	const auto group = idm::get<lv2_spu_group>(id);
 
 	if (!group)
 	{
 		return CELL_ESRCH;
+	}
+
+	if (priority < (g_ps3_process_info.has_root_perm() ? 0 : 16) || priority > 255)
+	{
+		return CELL_EINVAL;
 	}
 
 	if (group->type == SYS_SPU_THREAD_GROUP_TYPE_EXCLUSIVE_NON_CONTEXT)

@@ -25,7 +25,23 @@
 #include "sys_fs.h"
 #include "sys_spu.h"
 
+// Check all flags known to be related to extended permissions (TODO)
+// I think anything which has root flags implicitly has debug perm as well
+// But I havn't confirmed it.
+bool ps3_process_info_t::debug_or_root() const
+{
+	return (ctrl_flags1 & (0xe << 28)) != 0;
+}
 
+bool ps3_process_info_t::has_root_perm() const
+{
+	return (ctrl_flags1 & (0xc << 28)) != 0;
+}
+
+bool ps3_process_info_t::has_debug_perm() const
+{
+	return (ctrl_flags1 & (0xa << 28)) != 0;
+}
 
 LOG_CHANNEL(sys_process);
 

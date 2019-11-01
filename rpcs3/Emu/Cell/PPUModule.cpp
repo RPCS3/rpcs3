@@ -1160,6 +1160,27 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		}
 	}
 
+	// Read control flags (0 if doesn't exist)
+	g_ps3_process_info.ctrl_flags1 = 0;
+
+	if (bool not_found = true)
+	{
+		for (const auto& ctrl : g_ps3_process_info.self_info.ctrl_info)
+		{
+			if (ctrl.type == 1)
+			{
+				if (!std::exchange(not_found, false))
+				{
+					LOG_ERROR(LOADER, "More than one control flags header found! (flags1=0x%x)",
+						ctrl.control_flags.ctrl_flag1);
+					break;
+				}
+
+				g_ps3_process_info.ctrl_flags1 |= ctrl.control_flags.ctrl_flag1;
+			}
+		}
+	}
+
 	// Load other programs
 	for (auto& prog : elf.progs)
 	{
@@ -1207,7 +1228,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 				{
 					sdk_version = info.sdk_version;
 
-					if (s32 prio = info.primary_prio; prio < 3072 && prio >= 0)
+					if (s32 prio = info.primary_prio; prio < 3072 
+						&& (prio >= (g_ps3_process_info.debug_or_root() ? 0 : -512)))
 					{
 						primary_prio = prio;
 					}

@@ -10,6 +10,7 @@
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
@@ -1481,7 +1482,7 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 				elf_file.open(decrypted_path);
 			}
 			// Decrypt SELF
-			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data())))
+			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data(), &g_ps3_process_info.self_info)))
 			{
 				if (true)
 				{
@@ -1497,6 +1498,10 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 					LOG_ERROR(LOADER, "Failed to create boot.elf");
 				}
 			}
+		}
+		else
+		{
+			g_ps3_process_info.self_info.valid = false;
 		}
 
 		if (!elf_file)

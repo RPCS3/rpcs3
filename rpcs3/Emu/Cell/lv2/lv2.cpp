@@ -770,7 +770,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	null_func,//BIND_FUNC(sys_ss_individual_info_manager)   //868  ROOT / DBG  AUTHID
 	null_func,//BIND_FUNC(sys_ss_factory_data_manager)      //869  ROOT
 	BIND_FUNC(sys_ss_get_console_id),                       //870 (0x366)
-	null_func,//BIND_FUNC(sys_ss_access_control_engine),    //871 (0x367)  DBG
+	BIND_FUNC(sys_ss_access_control_engine),                //871 (0x367)  DBG
 	BIND_FUNC(sys_ss_get_open_psid),                        //872 (0x368)
 	null_func,//BIND_FUNC(sys_ss_get_cache_of_product_mode), //873 (0x369)
 	null_func,//BIND_FUNC(sys_ss_get_cache_of_flash_ext_flag), //874 (0x36A)
@@ -1066,20 +1066,24 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 	}
 }
 
-void lv2_obj::awake_unlocked(cpu_thread* cpu, u32 prio)
+void lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 {
 	// Check thread type
 	AUDIT(!cpu || cpu->id_type() == 1);
 
-	if (prio < INT32_MAX)
+	switch (prio)
 	{
-        // Priority set
-        if (static_cast<ppu_thread*>(cpu)->prio.exchange(prio) == prio || !unqueue(g_ppu, cpu))
-        {
-            return;
-        }
+	default:
+	{
+		// Priority set
+		if (static_cast<ppu_thread*>(cpu)->prio.exchange(prio) == prio || !unqueue(g_ppu, cpu))
+		{
+			return;
+		}
+
+		break;
 	}
-	else if (prio == -4)
+	case yield_cmd:
 	{
 		// Yield command
 		const u64 start_time = get_guest_system_time();
@@ -1101,6 +1105,11 @@ void lv2_obj::awake_unlocked(cpu_thread* cpu, u32 prio)
 		unqueue(g_pending, cpu);
 
 		static_cast<ppu_thread*>(cpu)->start_time = start_time;
+	}
+	case enqueue_cmd:
+	{
+		break;
+	}
 	}
 
 	const auto emplace_thread = [](cpu_thread* const cpu)
