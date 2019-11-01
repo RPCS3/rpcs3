@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "sys_ss.h"
 
+#include "sys_process.h"
 #include "Emu/Cell/PPUThread.h"
 
 
@@ -60,6 +61,52 @@ error_code sys_ss_random_number_generator(u32 arg1, vm::ptr<void> buf, u64 size)
 		return CELL_EABORT;
 	}
 #endif
+
+	return CELL_OK;
+}
+
+error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
+{
+	sys_ss.todo("sys_ss_access_control_engine(pkg_id=0x%llx, a2=0x%llx, a3=0x%llx)", pkg_id, a2, a3);
+
+	const u64 authid = g_ps3_process_info.self_info.valid ? 
+		g_ps3_process_info.self_info.app_info.authid : 0;
+
+	switch (pkg_id)
+	{
+	case 0x1:
+	{
+		if (!g_ps3_process_info.debug_or_root())
+		{
+			return CELL_ENOSYS;
+		}
+
+		if (!a2)
+		{
+			return CELL_ESRCH;
+		}
+
+		verify(HERE), a2 == process_getpid();
+		vm::_ref<u64>(vm::cast(a3)) = authid;
+		break;
+	}
+	case 0x2:
+	{
+		vm::_ref<u64>(vm::cast(a2)) = authid;
+		break;
+	}
+	case 0x3:
+	{
+		if (!g_ps3_process_info.debug_or_root())
+		{
+			return CELL_ENOSYS;
+		}
+
+		break;
+	}
+	default:
+		return 0x8001051du;
+	}
 
 	return CELL_OK;
 }

@@ -166,7 +166,7 @@ public:
 	u64 rtime{0};
 	u64 rdata{0}; // Reservation data
 
-	atomic_t<u32> prio{0}; // Thread priority (0..3071)
+	atomic_t<s32> prio{0}; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address
 

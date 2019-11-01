@@ -65,6 +65,15 @@ struct lv2_obj
 	static const u32 id_step = 0x100;
 	static const u32 id_count = 8192;
 
+private:
+	enum thread_cmd : s32
+	{
+		yield_cmd = INT32_MIN,
+		enqueue_cmd,
+	};
+
+public:
+
 	// Find and remove the object from the container (deque or vector)
 	template <typename T, typename E>
 	static bool unqueue(std::deque<T*>& queue, const E& object)
@@ -96,7 +105,7 @@ struct lv2_obj
 			return res;
 		}
 
-		u32 prio = -1;
+		s32 prio = 3071;
 		auto it = queue.cbegin();
 
 		for (auto found = it, end = queue.cend(); found != end; found++)
@@ -120,7 +129,7 @@ private:
 	static void sleep_unlocked(cpu_thread&, u64 timeout);
 
 	// Schedule the thread
-	static void awake_unlocked(cpu_thread*, u32 prio = -1);
+	static void awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
 
 public:
 	static void sleep(cpu_thread& cpu, const u64 timeout = 0)
@@ -130,7 +139,7 @@ public:
 		g_to_awake.clear();
 	}
 
-	static inline void awake(cpu_thread* const thread, const u32 prio = -1)
+	static inline void awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
 	{
 		std::lock_guard lock(g_mutex);
 		awake_unlocked(thread, prio);
@@ -139,7 +148,13 @@ public:
 	static void yield(cpu_thread& thread)
 	{
 		vm::temporary_unlock(thread);
-		awake(&thread, -4);
+		awake(&thread, yield_cmd);
+	}
+
+	static void set_priority(cpu_thread& thread, s32 prio)
+	{
+		verify(HERE), prio + 512u < 3712;
+		awake(&thread, prio);
 	}
 
 	static inline void awake_all()
