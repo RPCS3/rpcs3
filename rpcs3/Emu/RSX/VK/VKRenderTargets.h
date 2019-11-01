@@ -350,19 +350,19 @@ namespace vk
 		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT) override
 		{
-			if (remap_encoding != 0xDEADBEEF && resolve_surface)
+			if (remap_encoding == VK_REMAP_VIEW_MULTISAMPLED)
 			{
-				return resolve_surface->get_view(remap_encoding, remap, mask);
+				// Special remap flag, intercept here
+				return vk::viewable_image::get_view(VK_REMAP_IDENTITY, remap, mask);
+			}
+
+			if (LIKELY(!resolve_surface))
+			{
+				return vk::viewable_image::get_view(remap_encoding, remap, mask);
 			}
 			else
 			{
-				if (remap_encoding == 0xDEADBEEF)
-				{
-					// Special encoding to skip the resolve target fetch
-					remap_encoding = 0xAAE4;
-				}
-
-				return vk::viewable_image::get_view(remap_encoding, remap, mask);
+				return resolve_surface->get_view(remap_encoding, remap, mask);
 			}
 		}
 
