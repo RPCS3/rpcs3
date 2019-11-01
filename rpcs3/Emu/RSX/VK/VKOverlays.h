@@ -1056,7 +1056,7 @@ namespace vk
 			config.gamma = gamma;
 			config.limit_range = limited_rgb? 1 : 0;
 
-			overlay_pass::run(cmd, viewport, target, { src->get_view(0xAAE4, rsx::default_remap_vector) }, render_pass);
+			overlay_pass::run(cmd, viewport, target, { src->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector) }, render_pass);
 		}
 	};
 }
