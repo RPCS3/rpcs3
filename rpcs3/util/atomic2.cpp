@@ -6,6 +6,226 @@
 //
 static const bool s_use_rtm = utils::has_rtm();
 
+template <unsigned Count>
+static const auto commit_tx = build_function_asm<s32(*)(const stx::multi_cas_item*)>([](asmjit::X86Assembler& c, auto& args)
+{
+	static_assert(Count <= 8);
+	using namespace asmjit;
+
+	// Fill registers with item data
+	c.lea(x86::rax, x86::qword_ptr(args[0], 120));
+
+	if constexpr (Count >= 1)
+	{
+		c.mov(x86::rcx, x86::qword_ptr(x86::rax, -120));
+		c.mov(x86::rdx, x86::qword_ptr(x86::rax, -112));
+		c.mov(x86::r8, x86::qword_ptr(x86::rax, -104));
+	}
+	if constexpr (Count >= 2)
+	{
+		c.mov(x86::r9, x86::qword_ptr(x86::rax, -96));
+		c.mov(x86::r10, x86::qword_ptr(x86::rax, -88));
+		c.mov(x86::r11, x86::qword_ptr(x86::rax, -80));
+	}
+	if constexpr (Count >= 3)
+	{
+		if (utils::has_avx())
+		{
+			c.vzeroupper();
+		}
+
+#ifdef _WIN32
+		c.push(x86::rsi);
+#endif
+		c.mov(x86::rsi, x86::qword_ptr(x86::rax, -72));
+		c.movups(x86::xmm0, x86::oword_ptr(x86::rax, -64));
+	}
+	if constexpr (Count >= 4)
+	{
+#ifdef _WIN32
+		c.push(x86::rdi);
+#endif
+		c.mov(x86::rdi, x86::qword_ptr(x86::rax, -48));
+		c.movups(x86::xmm1, x86::oword_ptr(x86::rax, -40));
+	}
+	if constexpr (Count >= 5)
+	{
+		c.push(x86::rbx);
+		c.mov(x86::rbx, x86::qword_ptr(x86::rax, -24));
+		c.movups(x86::xmm2, x86::oword_ptr(x86::rax, -16));
+	}
+	if constexpr (Count >= 6)
+	{
+		c.push(x86::rbp);
+		c.mov(x86::rbp, x86::qword_ptr(x86::rax));
+		c.movups(x86::xmm3, x86::oword_ptr(x86::rax, 8));
+	}
+	if constexpr (Count >= 7)
+	{
+		c.push(x86::r12);
+		c.mov(x86::r12, x86::qword_ptr(x86::rax, 24));
+		c.movups(x86::xmm4, x86::oword_ptr(x86::rax, 32));
+	}
+	if constexpr (Count >= 8)
+	{
+		c.push(x86::r13);
+		c.mov(x86::r13, x86::qword_ptr(x86::rax, 48));
+		c.movups(x86::xmm5, x86::oword_ptr(x86::rax, 56));
+	}
+
+	// Begin transaction
+	Label begin = c.newLabel();
+	Label fall = c.newLabel();
+	Label stop = c.newLabel();
+	Label wait = c.newLabel();
+	Label ret = c.newLabel();
+	c.bind(begin);
+	c.xbegin(fall);
+
+	// Compare phase
+	if constexpr (Count >= 1)
+	{
+		c.cmp(x86::qword_ptr(x86::rcx), x86::rdx);
+		c.jne(stop);
+	}
+	if constexpr (Count >= 2)
+	{
+		c.cmp(x86::qword_ptr(x86::r9), x86::r10);
+		c.jne(stop);
+	}
+	if constexpr (Count >= 3)
+	{
+		c.movq(x86::rax, x86::xmm0);
+		c.cmp(x86::qword_ptr(x86::rsi), x86::rax);
+		c.jne(stop);
+	}
+	if constexpr (Count >= 4)
+	{
+		c.movq(x86::rax, x86::xmm1);
+		c.cmp(x86::qword_ptr(x86::rdi), x86::rax);
+		c.jne(stop);
+	}
+	if constexpr (Count >= 5)
+	{
+		c.movq(x86::rax, x86::xmm2);
+		c.cmp(x86::qword_ptr(x86::rbx), x86::rax);
+		c.jne(stop);
+	}
+	if constexpr (Count >= 6)
+	{
+		c.movq(x86::rax, x86::xmm3);
+		c.cmp(x86::qword_ptr(x86::rbp), x86::rax);
+		c.jne(stop);
+	}
+	if constexpr (Count >= 7)
+	{
+		c.movq(x86::rax, x86::xmm4);
+		c.cmp(x86::qword_ptr(x86::r12), x86::rax);
+		c.jne(stop);
+	}
+	if constexpr (Count >= 8)
+	{
+		c.movq(x86::rax, x86::xmm5);
+		c.cmp(x86::qword_ptr(x86::r13), x86::rax);
+		c.jne(stop);
+	}
+
+	// Check for transactions in progress
+	if constexpr (Count >= 1)
+	{
+		c.cmp(x86::qword_ptr(x86::rcx, 8), 0);
+		c.jne(wait);
+	}
+	if constexpr (Count >= 2)
+	{
+		c.cmp(x86::qword_ptr(x86::r9, 8), 0);
+		c.jne(wait);
+	}
+	if constexpr (Count >= 3)
+	{
+		c.cmp(x86::qword_ptr(x86::rsi, 8), 0);
+		c.jne(wait);
+	}
+	if constexpr (Count >= 4)
+	{
+		c.cmp(x86::qword_ptr(x86::rdi, 8), 0);
+		c.jne(wait);
+	}
+	if constexpr (Count >= 5)
+	{
+		c.cmp(x86::qword_ptr(x86::rbx, 8), 0);
+		c.jne(wait);
+	}
+	if constexpr (Count >= 6)
+	{
+		c.cmp(x86::qword_ptr(x86::rbp, 8), 0);
+		c.jne(wait);
+	}
+	if constexpr (Count >= 7)
+	{
+		c.cmp(x86::qword_ptr(x86::r12, 8), 0);
+		c.jne(wait);
+	}
+	if constexpr (Count >= 8)
+	{
+		c.cmp(x86::qword_ptr(x86::r13, 8), 0);
+		c.jne(wait);
+	}
+
+	// Write phase
+	if constexpr (Count >= 1)
+		c.mov(x86::qword_ptr(x86::rcx), x86::r8);
+	if constexpr (Count >= 2)
+		c.mov(x86::qword_ptr(x86::r9), x86::r11);
+	if constexpr (Count >= 3)
+		c.movhps(x86::qword_ptr(x86::rsi), x86::xmm0);
+	if constexpr (Count >= 4)
+		c.movhps(x86::qword_ptr(x86::rdi), x86::xmm1);
+	if constexpr (Count >= 5)
+		c.movhps(x86::qword_ptr(x86::rbx), x86::xmm2);
+	if constexpr (Count >= 6)
+		c.movhps(x86::qword_ptr(x86::rbp), x86::xmm3);
+	if constexpr (Count >= 7)
+		c.movhps(x86::qword_ptr(x86::r12), x86::xmm4);
+	if constexpr (Count >= 8)
+		c.movhps(x86::qword_ptr(x86::r13), x86::xmm5);
+
+	// End transaction (success)
+	c.xend();
+	c.mov(x86::eax, 1);
+	c.bind(ret);
+	if constexpr (Count >= 8)
+		c.pop(x86::r13);
+	if constexpr (Count >= 7)
+		c.pop(x86::r12);
+	if constexpr (Count >= 6)
+		c.pop(x86::rbp);
+	if constexpr (Count >= 5)
+		c.pop(x86::rbx);
+#ifdef _WIN32
+	if constexpr (Count >= 4)
+		c.pop(x86::rdi);
+	if constexpr (Count >= 3)
+		c.pop(x86::rsi);
+#endif
+	c.ret();
+
+	// Transaction abort
+	c.bind(stop);
+	build_transaction_abort(c, 0xff);
+
+	// Abort when there is still a chance of success
+	c.bind(wait);
+	build_transaction_abort(c, 0x00);
+
+	// Transaction fallback: return zero
+	c.bind(fall);
+	c.test(x86::eax, _XABORT_RETRY);
+	c.jnz(begin);
+	c.sar(x86::eax, 24);
+	c.jmp(ret);
+});
+
 // 4095 records max
 static constexpr u64 s_rec_gcount = 4096 / 64;
 
@@ -70,12 +290,6 @@ bool stx::multi_cas_record::commit() const noexcept
 	if (m_count == 0)
 	{
 		return true;
-	}
-
-	// Try TSX if available
-	if (s_use_rtm)
-	{
-		// TODO
 	}
 
 	static auto rec_unref = [](u64 id)
@@ -217,6 +431,21 @@ bool stx::multi_cas_record::commit() const noexcept
 		std::abort();
 	}
 
+	// Try TSX if available
+	if (s_use_rtm)
+	{
+		switch (m_count)
+		{
+		case 2: if (s32 r = commit_tx<2>(m_list)) return r > 0; break;
+		case 3: if (s32 r = commit_tx<3>(m_list)) return r > 0; break;
+		case 4: if (s32 r = commit_tx<4>(m_list)) return r > 0; break;
+		case 5: if (s32 r = commit_tx<5>(m_list)) return r > 0; break;
+		case 6: if (s32 r = commit_tx<6>(m_list)) return r > 0; break;
+		case 7: if (s32 r = commit_tx<7>(m_list)) return r > 0; break;
+		case 8: if (s32 r = commit_tx<8>(m_list)) return r > 0; break;
+		}
+	}
+
 	// Allocate global record and copy data
 	const u64 id = rec_alloc();
 
@@ -299,7 +528,9 @@ bool stx::multi_cas_record::commit() const noexcept
 		if (item.m_addr->load() == item.m_old && atomic_storage<s64>::load(item.m_addr->m_data[1]) == id)
 		{
 			// Restore old or set new
-			cmpxchg16(item.m_addr->m_data, cmp.m_data, 0, ok ? item.m_new : item.m_old);
+			if (cmpxchg16(item.m_addr->m_data, cmp.m_data, 0, ok ? item.m_new : item.m_old))
+			{
+			}
 		}
 	}
 
