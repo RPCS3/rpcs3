@@ -420,6 +420,11 @@ error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key
 
 	sys_event.warning("sys_event_port_connect_ipc(eport_id=0x%x, ipc_key=0x%x)", eport_id, ipc_key);
 
+	if (ipc_key == 0)
+	{
+		return CELL_EINVAL;
+	}
+
 	auto queue = lv2_event_queue::find(ipc_key);
 
 	std::lock_guard lock(id_manager::g_mutex);
