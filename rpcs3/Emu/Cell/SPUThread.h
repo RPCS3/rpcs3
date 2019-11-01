@@ -278,7 +278,6 @@ public:
 	void clear()
 	{
 		values.release({});
-		value3.release(0);
 	}
 
 	// push unconditionally (overwriting latest value), returns true if needs signaling
