@@ -322,7 +322,8 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	m_progress_dialog->setWindowTitle(tr("Updating RPCS3"));
 
 	// Move the appimage/exe and replace with new appimage
-	fs::rename(replace_path, "/tmp/rpcs3_old", true);
+	std::string move_dest = replace_path + "_old";
+	fs::rename(replace_path, move_dest, true);
 	fs::file new_appimage(replace_path, fs::read + fs::write + fs::create + fs::trunc);
 	if (!new_appimage)
 	{
