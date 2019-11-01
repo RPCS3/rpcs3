@@ -25,6 +25,7 @@ target_include_directories(rpcs3_emu
 # Utilities
 target_sources(rpcs3_emu PRIVATE
 	../util/atomic.cpp
+	../util/atomic2.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cond.cpp
 	../../Utilities/Config.cpp
