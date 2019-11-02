@@ -991,7 +991,7 @@ spu_imm_table_t::spu_imm_table_t()
 
 std::string spu_thread::get_name() const
 {
-	return fmt::format("%sSPU[0x%x] Thread (%s)", offset >= RAW_SPU_BASE_ADDR ? "Raw" : "", id, spu_name.get());
+	return fmt::format("%sSPU[0x%07x] Thread (%s)", offset >= RAW_SPU_BASE_ADDR ? "Raw" : "", lv2_id, spu_name.get());
 }
 
 std::string spu_thread::dump() const
@@ -1202,12 +1202,13 @@ spu_thread::~spu_thread()
 	}
 }
 
-spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name)
+spu_thread::spu_thread(vm::addr_t ls, lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id)
 	: cpu_thread(idm::last_id())
 	, spu_name(name)
 	, index(index)
 	, offset(ls)
 	, group(group)
+	, lv2_id(lv2_id)
 {
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{
@@ -1295,9 +1296,9 @@ void spu_thread::do_dma_transfer(const spu_mfc_cmd& args)
 		{
 			fmt::throw_exception("SPU MMIO used for RawSPU (cmd=0x%x, lsa=0x%x, ea=0x%llx, tag=0x%x, size=0x%x)" HERE, args.cmd, args.lsa, args.eal, args.tag, args.size);
 		}
-		else if (group && group->threads[index])
+		else if (group && group->threads_map[index] != -1)
 		{
-			auto& spu = static_cast<spu_thread&>(*group->threads[index]);
+			auto& spu = static_cast<spu_thread&>(*group->threads[group->threads_map[index]]);
 
 			if (offset + args.size - 1 < 0x40000) // LS access
 			{
@@ -2506,7 +2507,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				ch_in_mbox.set_values(1, CELL_OK);
 
-				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, (u64{spup} << 32) | (value & 0x00ffffff), data))
+				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data))
 				{
 					ch_in_mbox.set_values(1, CELL_EBUSY);
 				}
@@ -2536,7 +2537,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 				}
 
 				// TODO: check passing spup value
-				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, id, (u64{spup} << 32) | (value & 0x00ffffff), data))
+				if (!queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data))
 				{
 					LOG_WARNING(SPU, "sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x) failed (queue is full)", spup, (value & 0x00ffffff), data);
 				}
