@@ -25,6 +25,7 @@ target_include_directories(rpcs3_emu
 # Utilities
 target_sources(rpcs3_emu PRIVATE
 	../util/atomic.cpp
+	../util/atomic2.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cond.cpp
 	../../Utilities/Config.cpp
@@ -90,17 +91,20 @@ target_sources(rpcs3_emu PRIVATE
 	Audio/AL/OpenALBackend.cpp
 )
 
-if(HAVE_ALSA)
-	target_sources(rpcs3_emu PRIVATE Audio/ALSA/ALSABackend.cpp)
-	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::alsa)
+if(USE_ALSA)
+	find_package(ALSA)
+	if(ALSA_FOUND)
+		target_sources(rpcs3_emu PRIVATE Audio/ALSA/ALSABackend.cpp)
+		target_link_libraries(rpcs3_emu PUBLIC 3rdparty::alsa)
+	endif()
 endif()
 
-if(HAVE_PULSE)
+if(USE_PULSE AND PULSE_FOUND)
 	target_sources(rpcs3_emu PRIVATE Audio/Pulse/PulseBackend.cpp)
 	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::pulse)
 endif()
 
-if(HAVE_FAUDIO)
+if(USE_FAUDIO AND SDL2_FOUND AND NOT SDL2_VERSION VERSION_LESS 2.0.9)
 	target_sources(rpcs3_emu PRIVATE Audio/FAudio/FAudioBackend.cpp)
 	target_link_libraries(rpcs3_emu PUBLIC 3rdparty::faudio)
 endif()

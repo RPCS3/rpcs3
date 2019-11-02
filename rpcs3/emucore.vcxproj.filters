@@ -830,6 +830,9 @@
     <ClCompile Include="util\atomic.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="util\atomic2.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
     <ClCompile Include="Crypto\aesni.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>

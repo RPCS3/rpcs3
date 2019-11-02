@@ -71,7 +71,7 @@ namespace vk
 
 	//VkAllocationCallbacks default_callbacks();
 
-	enum driver_vendor
+	enum class driver_vendor
 	{
 		unknown,
 		AMD,
@@ -93,6 +93,12 @@ namespace vk
 		NV_pascal,
 		NV_volta,
 		NV_turing
+	};
+
+	enum // special remap_encoding enums
+	{
+		VK_REMAP_IDENTITY = 0xCAFEBABE,             // Special view encoding to return an identity image view
+		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF     // Special encoding for multisampled images; returns a multisampled image view
 	};
 
 	class context;
@@ -1407,6 +1413,17 @@ private:
 		virtual image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT)
 		{
+			if (remap_encoding == VK_REMAP_IDENTITY)
+			{
+				if (native_component_map.a == VK_COMPONENT_SWIZZLE_A &&
+					native_component_map.r == VK_COMPONENT_SWIZZLE_R &&
+					native_component_map.g == VK_COMPONENT_SWIZZLE_G &&
+					native_component_map.b == VK_COMPONENT_SWIZZLE_B)
+				{
+					remap_encoding = 0xAAE4;
+				}
+			}
+
 			auto found = views.equal_range(remap_encoding);
 			for (auto It = found.first; It != found.second; ++It)
 			{
@@ -1417,17 +1434,21 @@ private:
 			}
 
 			VkComponentMapping real_mapping;
-			if (remap_encoding == 0xAAE4)
+			switch (remap_encoding)
 			{
+			case VK_REMAP_IDENTITY:
+				real_mapping = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+				break;
+			case 0xAAE4:
 				real_mapping = native_component_map;
-			}
-			else
-			{
+				break;
+			default:
 				real_mapping = vk::apply_swizzle_remap
 				(
 					{ native_component_map.a, native_component_map.r, native_component_map.g, native_component_map.b },
 					remap
 				);
+				break;
 			}
 
 			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
