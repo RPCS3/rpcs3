@@ -21,7 +21,6 @@ namespace vk
 
 		bool initialized = false;
 		bool unroll_loops = true;
-		bool uniform_inputs = false;
 		bool use_push_constants = false;
 		u32 ssbo_count = 1;
 		u32 push_constants_size = 0;
@@ -32,12 +31,6 @@ namespace vk
 		{
 			std::vector<std::pair<VkDescriptorType, u8>> result;
 			result.emplace_back(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, ssbo_count);
-
-			if (uniform_inputs)
-			{
-				result.emplace_back(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
-			}
-
 			return result;
 		}
 
@@ -275,13 +268,14 @@ namespace vk
 				"	%vars"
 				"\n";
 
+			const auto parameters_size = align(push_constants_size, 16) / 16;
 			const std::pair<std::string, std::string> syntax_replace[] =
 			{
 				{ "%ws", std::to_string(optimal_group_size) },
 				{ "%ks", std::to_string(kernel_size) },
 				{ "%vars", variables },
 				{ "%f", function_name },
-				{ "%ub", uniform_inputs? "layout(std140, set=0, binding=1) uniform ubo{ uvec4 params[16]; };\n" : "" },
+				{ "%ub", use_push_constants? "layout(push_constant) uniform ubo{ uvec4 params[" + std::to_string(parameters_size) + "]; };\n" : "" },
 			};
 
 			m_src = fmt::replace_all(m_src, syntax_replace);
@@ -324,26 +318,12 @@ namespace vk
 		void bind_resources() override
 		{
 			m_program->bind_buffer({ m_data->value, m_data_offset, m_data_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-
-			if (uniform_inputs)
-			{
-				verify(HERE), m_param_buffer, m_param_buffer->value != VK_NULL_HANDLE;
-				m_program->bind_buffer({ m_param_buffer->value, 0, 256 }, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_descriptor_set);
-			}
 		}
 
 		void set_parameters(VkCommandBuffer cmd, const u32* params, u8 count)
 		{
-			verify(HERE), uniform_inputs;
-
-			if (!m_param_buffer)
-			{
-				auto pdev = vk::get_current_renderer();
-				m_param_buffer = std::make_unique<vk::buffer>(*pdev, 256, pdev->get_memory_mapping().host_visible_coherent,
-					VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
-			}
-
-			vkCmdUpdateBuffer(cmd, m_param_buffer->value, 0, count * sizeof(u32), params);
+			verify(HERE), use_push_constants;
+			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, count * 4, params);
 		}
 
 		void run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_length, u32 data_offset = 0)
@@ -428,7 +408,8 @@ namespace vk
 
 		cs_interleave_task()
 		{
-			uniform_inputs = true;
+			use_push_constants = true;
+			push_constants_size = 16;
 
 			variables =
 				"	uint block_length = params[0].x >> 2;\n"
@@ -443,18 +424,12 @@ namespace vk
 		void bind_resources() override
 		{
 			m_program->bind_buffer({ m_data->value, m_data_offset, m_ssbo_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
-
-			if (uniform_inputs)
-			{
-				verify(HERE), m_param_buffer;
-				m_program->bind_buffer({ m_param_buffer->value, 0, 256 }, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_descriptor_set);
-			}
 		}
 
 		void run(VkCommandBuffer cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
 		{
-			u32 parameters[3] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset };
-			set_parameters(cmd, parameters, 3);
+			u32 parameters[4] = { data_length, zeta_offset - data_offset, stencil_offset - data_offset, 0 };
+			set_parameters(cmd, parameters, 4);
 
 			m_ssbo_length = stencil_offset + (data_length / 4) - data_offset;
 			cs_shuffle_base::run(cmd, data, data_length, data_offset);
@@ -621,10 +596,16 @@ namespace vk
 			"#define bswap_u16(bits) (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
 			"#define bswap_u32(bits) (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
 
-			"uint get_z_index(uint x, uint y, uint z, uint log2w, uint log2h, uint log2d)\n"
+			"uint get_z_index(const in uint x_, const in uint y_, const in uint z_)\n"
 			"{\n"
 			"	uint offset = 0;\n"
 			"	uint shift = 0;\n"
+			"	uint x = x_;\n"
+			"	uint y = y_;\n"
+			"	uint z = z_;\n"
+			"	uint log2w = image_logw;\n"
+			"	uint log2h = image_logh;\n"
+			"	uint log2d = image_logd;\n"
 			"\n"
 			"	do\n"
 			"	{\n"
@@ -666,7 +647,7 @@ namespace vk
 			"	uint word_count = %_wordcount;\n"
 			"	uint dst_id = (texel_id * word_count);\n\n"
 
-			"	uint src_id = get_z_index(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z, image_logw, image_logh, image_logd);\n"
+			"	uint src_id = get_z_index(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z);\n"
 			"	src_id *= word_count;\n\n"
 
 			"	for (uint i = 0; i < word_count; ++i)\n"
