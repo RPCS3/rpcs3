@@ -383,7 +383,12 @@ QString game_list_frame::GetPlayTimeBySerial(const QString& serial)
 	const qint64 hours_played    = elapsed_seconds / 3600;
 	const qint64 minutes_played  = (elapsed_seconds % 3600) / 60;
 	const qint64 seconds_played  = (elapsed_seconds % 3600) % 60;
-
+	
+	// For anyone who was wondering why there need to be so many cases:
+	// 1. Using variables won't work for future localization due to varying sentence structure in different languages.
+	// 2. The provided Qt functionality only works if localization is already enabled
+	// 3. The provided Qt functionality only works for single variables
+	
 	if (hours_played <= 0)
 	{
 		if (minutes_played <= 0)
