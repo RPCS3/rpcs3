@@ -4654,7 +4654,7 @@ public:
 
 				if (found == m_functions.end())
 				{
-					if (g_cfg.core.spu_verification)
+					if (false && g_cfg.core.spu_verification)
 					{
 						const std::string ppname = fmt::format("%s-chunkpp-0x%05x", m_hash, i);
 						m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint(i / 4));
