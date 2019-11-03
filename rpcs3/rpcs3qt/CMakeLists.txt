@@ -42,13 +42,17 @@
 	trophy_manager_dialog.cpp
 	trophy_notification_frame.cpp
 	trophy_notification_helper.cpp
-	update_manager.cpp
 	user_account.cpp
 	user_manager_dialog.cpp
 	vfs_dialog.cpp
 	vfs_dialog_tab.cpp
 	welcome_dialog.cpp
 )
+
+if(WITH_UPDATER)
+	list(APPEND SRC_FILES update_manager.cpp)
+	add_definitions(-DWITH_UPDATER)
+endif()
 
 set(UI_FILES
 	about_dialog.ui

@@ -3,6 +3,7 @@
 #include "stdafx.h"
 
 #include <QApplication>
+#include <QElapsedTimer>
 #include <QFontDatabase>
 #include <QIcon>
 

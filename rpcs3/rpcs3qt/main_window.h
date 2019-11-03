@@ -15,7 +15,9 @@
 #include "debugger_frame.h"
 #include "game_list_frame.h"
 #include "gui_settings.h"
+#ifdef WITH_UPDATER
 #include "update_manager.h"
+#endif
 
 #include <memory>
 
@@ -143,5 +145,7 @@ private:
 	std::shared_ptr<gui_settings> guiSettings;
 	std::shared_ptr<emu_settings> emuSettings;
 
+#ifdef WITH_UPDATER
 	update_manager m_updater;
+#endif
 };

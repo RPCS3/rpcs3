@@ -173,7 +173,7 @@ void main_window::Init()
 	// Fix possible hidden game list columns. The game list has to be visible already. Use this after show()
 	m_gameListFrame->FixNarrowColumns();
 
-#if defined(_WIN32) || defined(__linux__)
+#if defined(WITH_UPDATER) && (defined(_WIN32) || defined(__linux__))
 	if (guiSettings->GetValue(gui::m_check_upd_start).toBool())
 	{
 		m_updater.check_for_updates(true, this);
@@ -1430,6 +1430,10 @@ void main_window::CreateConnects()
 
 	connect(ui->updateAct, &QAction::triggered, [=]()
 	{
+#ifndef WITH_UPDATER
+		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater is disabled in this build."));
+		return;
+#else
 #if !defined(_WIN32) && !defined(__linux__)
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater currently isn't available for your os."));
 		return;
@@ -1440,6 +1444,7 @@ void main_window::CreateConnects()
 			return;
 		}
 		m_updater.check_for_updates(false, this);
+#endif
 	});
 
 	connect(ui->aboutAct, &QAction::triggered, [this]

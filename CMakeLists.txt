@@ -14,6 +14,7 @@ endif()
 
 option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
 option(WITH_LLVM "Enable usage of LLVM library" ON)
+option(WITH_UPDATER "Enable the auto-updater" ON)
 option(BUILD_LLVM_SUBMODULE "Build LLVM from git submodule" ON)
 option(USE_ALSA "ALSA audio backend" ON)
 option(USE_PULSE "PulseAudio audio backend" ON)
