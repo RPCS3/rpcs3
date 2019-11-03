@@ -380,26 +380,65 @@ QString game_list_frame::GetPlayTimeBySerial(const QString& serial)
 	const qint64 minutes_played  = (elapsed_seconds % 3600) / 60;
 	const qint64 seconds_played  = (elapsed_seconds % 3600) % 60;
 
+	// For anyone who was wondering why there need to be so many cases:
+	// 1. Using variables won't work for future localization due to varying sentence structure in different languages.
+	// 2. The provided Qt functionality only works if localization is already enabled
+	// 3. The provided Qt functionality only works for single variables
+
 	if (hours_played <= 0)
 	{
 		if (minutes_played <= 0)
 		{
+			if (seconds_played == 1) 
+			{
+				return tr("%0 second").arg(seconds_played);
+			}
 			return tr("%0 seconds").arg(seconds_played);
 		}
 
 		if (seconds_played <= 0)
 		{
+			if (minutes_played == 1) 
+			{
+				return tr("%0 minute").arg(minutes_played);
+			}
 			return tr("%0 minutes").arg(minutes_played);
 		}
-
+		if (minutes_played == 1 && seconds_played == 1)
+		{
+			return tr("%0 minute and %1 second").arg(minutes_played).arg(seconds_played);
+		}
+		if (minutes_played == 1) 
+		{
+			return tr("%0 minute and %1 seconds").arg(minutes_played).arg(seconds_played);
+		}
+		if (seconds_played == 1) 
+		{
+			return tr("%0 minutes and %1 second").arg(minutes_played).arg(seconds_played);
+		}
 		return tr("%0 minutes and %1 seconds").arg(minutes_played).arg(seconds_played);
 	}
 
 	if (minutes_played <= 0)
 	{
+		if (hours_played == 1) 
+		{
+			return tr("%0 hour").arg(hours_played);
+		}
 		return tr("%0 hours").arg(hours_played);
 	}
-
+	if (hours_played == 1 && minutes_played == 1)
+	{
+		return tr("%0 hour and %1 minute").arg(hours_played).arg(minutes_played);
+	}
+	if (hours_played == 1) 
+	{
+		return tr("%0 hour and %1 minutes").arg(hours_played).arg(minutes_played);
+	}
+	if (minutes_played == 1) 
+	{
+		return tr("%0 hours and %1 minute").arg(hours_played).arg(minutes_played);
+	}
 	return tr("%0 hours and %1 minutes").arg(hours_played).arg(minutes_played);
 }
 
