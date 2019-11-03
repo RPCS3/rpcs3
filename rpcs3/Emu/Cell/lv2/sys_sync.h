@@ -162,6 +162,11 @@ public:
 		{
 		case SYS_SYNC_PROCESS_SHARED:
 		{
+			if (ipc_key == 0)
+			{
+				return CELL_EINVAL;
+			}
+
 			switch (flags)
 			{
 			case SYS_SYNC_NEWLY_CREATED:

@@ -1,7 +1,6 @@
-#pragma once
+﻿#pragma once
 
 #include "types.h"
-#include <limits>
 
 template<typename T, uint N>
 struct bf_base
@@ -17,7 +16,7 @@ struct bf_base
 	static constexpr uint bitsize = N;
 
 	// All ones mask
-	static constexpr utype mask1 = std::numeric_limits<utype>::max();
+	static constexpr utype mask1 = static_cast<utype>(UINTMAX_MAX);
 
 	// Value mask
 	static constexpr utype vmask = mask1 >> (bitmax - bitsize);
