@@ -388,8 +388,6 @@ bool stx::multi_cas_record::commit() const noexcept
 	if (m_count == 1)
 	{
 		atomic2 cmp;
-		cmp.m_data[0] = m_list[0].m_old;
-		cmp.m_data[1] = 0;
 
 		while (auto ptr = m_list[0].m_addr)
 		{
@@ -398,6 +396,7 @@ bool stx::multi_cas_record::commit() const noexcept
 				return false;
 			}
 
+			cmp.m_data[0] = m_list[0].m_old;
 			cmp.m_data[1] = atomic_storage<s64>::load(ptr->m_data[1]);
 
 			if (!cmp.m_data[1] && cmpxchg16(ptr->m_data, cmp.m_data, 0, m_list[0].m_new))
@@ -461,8 +460,6 @@ bool stx::multi_cas_record::commit() const noexcept
 	for (u32 i = 0; i < m_count && (s_records[id].m_state & s_state_mask) == s_state_undef; i++)
 	{
 		atomic2 cmp;
-		cmp.m_data[0] = m_list[i].m_old;
-		cmp.m_data[1] = 0;
 
 		while (auto ptr = m_list[i].m_addr)
 		{
@@ -472,6 +469,7 @@ bool stx::multi_cas_record::commit() const noexcept
 				break;
 			}
 
+			cmp.m_data[0] = m_list[i].m_old;
 			cmp.m_data[1] = atomic_storage<s64>::load(ptr->m_data[1]);
 
 			if (!cmp.m_data[1] && cmpxchg16(ptr->m_data, cmp.m_data, id, m_list[i].m_old))
