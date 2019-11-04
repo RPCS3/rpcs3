@@ -794,6 +794,14 @@ private:
 			if (g_cfg.video.antialiasing_level != msaa_level::none)
 			{
 				// MSAA features
+				if (!pgpu->features.shaderStorageImageMultisample ||
+					!pgpu->features.shaderStorageImageWriteWithoutFormat)
+				{
+					// TODO: Slow fallback to emulate this
+					// Just warn and let the driver decide whether to crash or not
+					LOG_FATAL(RSX, "Your GPU driver does not support some required MSAA features. Expect problems.");
+				}
+
 				enabled_features.alphaToOne = VK_TRUE;
 				enabled_features.shaderStorageImageMultisample = VK_TRUE;
 				// enabled_features.shaderStorageImageReadWithoutFormat = VK_TRUE;  // Unused currently, may be needed soon
