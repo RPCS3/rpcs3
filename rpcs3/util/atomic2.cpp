@@ -419,10 +419,6 @@ bool stx::multi_cas_record::commit() const noexcept
 
 					rec_unref(_id);
 				}
-				else
-				{
-					return false;
-				}
 			}
 		}
 
@@ -448,7 +444,7 @@ bool stx::multi_cas_record::commit() const noexcept
 	// Allocate global record and copy data
 	const u64 id = rec_alloc();
 
-	for (u32 i = 0; i < (m_count / 2 + 1); i++)
+	for (u32 i = 0; i < (m_count + 1) / 2; i++)
 	{
 		std::memcpy(s_records[id].m_list + i * 2, m_list + i * 2, sizeof(multi_cas_item) * 2);
 	}
@@ -492,11 +488,6 @@ bool stx::multi_cas_record::commit() const noexcept
 					}
 
 					rec_unref(_id);
-				}
-				else
-				{
-					s_records[id].m_state |= s_state_failure;
-					break;
 				}
 			}
 		}
