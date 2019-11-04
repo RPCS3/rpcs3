@@ -3216,19 +3216,36 @@ namespace rsx
 
 			const auto memory_end = memory_address + memory_range;
 			u32 sync_address = 0;
-			occlusion_query_info* query;
+			occlusion_query_info* query = nullptr;
 
 			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
+				if (sync_address)
+				{
+					if (It->query)
+					{
+						sync_address = It->sink;
+						query = It->query;
+						break;
+					}
+
+					continue;
+				}
+
 				if (It->sink >= memory_address && It->sink < memory_end)
 				{
 					sync_address = It->sink;
-					query = It->query;
-					break;
+
+					// NOTE: If application is spamming requests, there may be no query attached
+					if (It->query)
+					{
+						query = It->query;
+						break;
+					}
 				}
 			}
 
-			if (!sync_address)
+			if (!sync_address || !query)
 				return result_none;
 
 			if (!(flags & sync_defer_copy))
