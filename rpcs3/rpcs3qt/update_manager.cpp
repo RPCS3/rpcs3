@@ -33,6 +33,14 @@ update_manager::update_manager()
 
 void update_manager::check_for_updates(bool automatic, QWidget* parent)
 {
+#ifdef __linux__
+	if (automatic && !::getenv("APPIMAGE"))
+	{
+		// Don't check for updates on startup if RPCS3 is not running from an AppImage.
+		return;
+	}
+#endif
+
 	if (QSslSocket::supportsSsl() == false)
 	{
 		LOG_ERROR(GENERAL, "Unable to update RPCS3!Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
