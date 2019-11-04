@@ -66,7 +66,14 @@ struct copy_unmodified_block
 		{
 			// Fast copy
 			const auto data_length = src_pitch_in_block * words_per_block * row_count * depth;
-			copy(dst, src.subspan(0, data_length));
+			if constexpr (std::is_same<T, U>::value)
+			{
+				memcpy(dst.data(), src.data(), data_length * sizeof(T));
+			}
+			else
+			{
+				copy(dst, src.subspan(0, data_length));
+			}
 			return;
 		}
 
