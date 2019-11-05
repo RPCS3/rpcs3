@@ -609,14 +609,59 @@ namespace vk
 
 		verify(HERE), job;
 
-		for (auto &section : sections)
-		{
-			job->run(cmd, scratch_buf, dst_offset, scratch_buf, section.bufferOffset,
-				section.imageExtent.width, section.imageExtent.height, section.imageExtent.depth);
+		auto next_layer = sections.front().imageSubresource.baseArrayLayer;
+		auto next_level = sections.front().imageSubresource.mipLevel;
+		unsigned base = 0;
+		unsigned lods = 0;
 
-			const u32 packed_size = section.imageExtent.width * section.imageExtent.height * section.imageExtent.depth * block_size;
-			section.bufferOffset = dst_offset;
-			dst_offset += packed_size;
+		std::vector<std::pair<unsigned, unsigned>> packets;
+		for (unsigned i = 0; i < sections.size(); ++i)
+		{
+			verify(HERE), sections[i].bufferRowLength;
+
+			const auto layer = sections[i].imageSubresource.baseArrayLayer;
+			const auto level = sections[i].imageSubresource.mipLevel;
+
+			if (layer == next_layer &&
+				level == next_level)
+			{
+				next_level++;
+				lods++;
+				continue;
+			}
+
+			packets.push_back({base, lods });
+			next_layer = layer;
+			next_level = 1;
+			base = i;
+			lods = 1;
+		}
+
+		if (packets.empty() ||
+			(packets.back().first + packets.back().second) < sections.size())
+		{
+			packets.push_back({base, lods});
+		}
+
+		for (const auto &packet : packets)
+		{
+			const auto& section = sections[packet.first];
+			const auto src_offset = section.bufferOffset;
+
+			// Align output to 128-byte boundary to keep some drivers happy
+			dst_offset = align(dst_offset, 128);
+
+			u32 data_length = 0;
+			for (unsigned i = 0, j = packet.first; i < packet.second; ++i, ++j)
+			{
+				const u32 packed_size = sections[j].imageExtent.width * sections[j].imageExtent.height * sections[j].imageExtent.depth * block_size;
+				sections[j].bufferOffset = dst_offset;
+				dst_offset += packed_size;
+				data_length += packed_size;
+			}
+
+			job->run(cmd, scratch_buf, section.bufferOffset, scratch_buf, src_offset, data_length,
+				section.imageExtent.width, section.imageExtent.height, section.imageExtent.depth, packet.second);
 		}
 
 		verify(HERE), dst_offset <= scratch_buf->size();
@@ -645,7 +690,16 @@ namespace vk
 		{
 			if (LIKELY(!heap_align))
 			{
-				row_pitch = (layout.pitch_in_block * block_size_in_bytes);
+				if (LIKELY(!layout.border))
+				{
+					row_pitch = (layout.pitch_in_block * block_size_in_bytes);
+				}
+				else
+				{
+					// Skip the border texels if possible. Padding is undesirable for GPU deswizzle
+					row_pitch = (layout.width_in_block * block_size_in_bytes);
+				}
+
 				caps.alignment = row_pitch;
 			}
 			else
@@ -690,6 +744,12 @@ namespace vk
 				{
 					scratch_buf = vk::get_scratch_buffer();
 					buffer_copies.reserve(subresource_layout.size());
+				}
+
+				if (layout.level == 0)
+				{
+					// Align mip0 on a 128-byte boundary
+					scratch_offset = align(scratch_offset, 128);
 				}
 
 				// Copy from upload heap to scratch mem

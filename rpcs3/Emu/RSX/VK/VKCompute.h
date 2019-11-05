@@ -2,7 +2,7 @@
 #include "VKHelpers.h"
 #include "Utilities/StrUtil.h"
 
-#define VK_MAX_COMPUTE_TASKS 32768   // Max number of jobs per frame
+#define VK_MAX_COMPUTE_TASKS 4096   // Max number of jobs per frame
 
 namespace vk
 {
@@ -539,7 +539,7 @@ namespace vk
 	// Reverse morton-order block arrangement
 	struct cs_deswizzle_base : compute_task
 	{
-		virtual void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 width, u32 height, u32 depth) = 0;
+		virtual void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) = 0;
 	};
 
 	template <typename _BlockType, typename _BaseType, bool _SwapBytes>
@@ -547,7 +547,7 @@ namespace vk
 	{
 		union params_t
 		{
-			u32 data[6];
+			u32 data[7];
 
 			struct
 			{
@@ -557,6 +557,7 @@ namespace vk
 				u32 logw;
 				u32 logh;
 				u32 logd;
+				u32 mipmaps;
 			};
 		}
 		params;
@@ -573,13 +574,13 @@ namespace vk
 
 			ssbo_count = 2;
 			use_push_constants = true;
-			push_constants_size = 24;
+			push_constants_size = 28;
 
 			create();
 
 			m_src =
 			"#version 450\n"
-			"layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;\n\n"
+			"layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;\n\n"
 
 			"layout(set=0, binding=0, std430) buffer ssbo0{ uint data_in[]; };\n"
 			"layout(set=0, binding=1, std430) buffer ssbo1{ uint data_out[]; };\n"
@@ -591,10 +592,46 @@ namespace vk
 			"	uint image_logw;\n"
 			"	uint image_logh;\n"
 			"	uint image_logd;\n"
+			"	uint lod_count;\n"
+			"};\n\n"
+
+			"struct invocation_properties\n"
+			"{\n"
+			"	uint data_offset;\n"
+			"	uvec3 size;\n"
+			"	uvec3 size_log2;\n"
 			"};\n\n"
 
 			"#define bswap_u16(bits) (bits & 0xFF) << 8 | (bits & 0xFF00) >> 8 | (bits & 0xFF0000) << 8 | (bits & 0xFF000000) >> 8\n"
-			"#define bswap_u32(bits) (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n"
+			"#define bswap_u32(bits) (bits & 0xFF) << 24 | (bits & 0xFF00) << 8 | (bits & 0xFF0000) >> 8 | (bits & 0xFF000000) >> 24\n\n"
+
+			"invocation_properties invocation;\n\n"
+
+			"bool init_invocation_properties(const in uint offset)\n"
+			"{\n"
+			"	invocation.data_offset = 0;\n"
+			"	invocation.size.x = image_width;\n"
+			"	invocation.size.y = image_height;\n"
+			"	invocation.size.z = image_depth;\n"
+			"	invocation.size_log2.x = image_logw;\n"
+			"	invocation.size_log2.y = image_logh;\n"
+			"	invocation.size_log2.z = image_logd;\n"
+			"	uint level_end = image_width * image_height * image_depth;\n"
+			"	uint level = 1;\n\n"
+
+			"	while (offset >= level_end && level < lod_count)\n"
+			"	{\n"
+			"		invocation.data_offset = level_end;\n"
+			"		invocation.size.xy /= 2;\n"
+			"		invocation.size.xy = max(invocation.size.xy, uvec2(1));\n"
+			"		invocation.size_log2.xy = max(invocation.size_log2.xy, uvec2(1));\n"
+			"		invocation.size_log2.xy --;\n"
+			"		level_end += (invocation.size.x * invocation.size.y * image_depth);\n"
+			"		level++;"
+			"	}\n\n"
+
+			"	return (offset < level_end);\n"
+			"}\n\n"
 
 			"uint get_z_index(const in uint x_, const in uint y_, const in uint z_)\n"
 			"{\n"
@@ -603,9 +640,9 @@ namespace vk
 			"	uint x = x_;\n"
 			"	uint y = y_;\n"
 			"	uint z = z_;\n"
-			"	uint log2w = image_logw;\n"
-			"	uint log2h = image_logh;\n"
-			"	uint log2d = image_logd;\n"
+			"	uint log2w = invocation.size_log2.x;\n"
+			"	uint log2h = invocation.size_log2.y;\n"
+			"	uint log2d = invocation.size_log2.z;\n"
 			"\n"
 			"	do\n"
 			"	{\n"
@@ -640,15 +677,25 @@ namespace vk
 
 			"void main()\n"
 			"{\n"
-			"	if (any(greaterThanEqual(gl_GlobalInvocationID, uvec3(image_width, image_height, image_depth))))\n"
+			"	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);"
+			"	uint texel_id = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
+			"	uint word_count = %_wordcount;\n\n"
+
+			"	if (!init_invocation_properties(texel_id))\n"
 			"		return;\n\n"
 
-			"	uint texel_id = (gl_GlobalInvocationID.z * image_width * image_height) + (gl_GlobalInvocationID.y * image_width) + gl_GlobalInvocationID.x;\n"
-			"	uint word_count = %_wordcount;\n"
-			"	uint dst_id = (texel_id * word_count);\n\n"
+			"	// Calculations done in texels, not bytes\n"
+			"	uint row_length = invocation.size.x;\n"
+			"	uint slice_length = (invocation.size.y * row_length);\n"
+			"	uint level_offset = (texel_id - invocation.data_offset);\n"
+			"	uint slice_offset = (level_offset % slice_length);\n"
+			"	uint z = (level_offset / slice_length);\n"
+			"	uint y = (slice_offset / row_length);\n"
+			"	uint x = (slice_offset % row_length);\n\n"
 
-			"	uint src_id = get_z_index(gl_GlobalInvocationID.x, gl_GlobalInvocationID.y, gl_GlobalInvocationID.z);\n"
-			"	src_id *= word_count;\n\n"
+			"	uint src_texel_id = get_z_index(x, y, z);\n"
+			"	uint dst_id = (texel_id * word_count);\n"
+			"	uint src_id = (src_texel_id + invocation.data_offset) * word_count;\n\n"
 
 			"	for (uint i = 0; i < word_count; ++i)\n"
 			"	{\n"
@@ -677,6 +724,7 @@ namespace vk
 
 			const std::pair<std::string, std::string> syntax_replace[] =
 			{
+				{ "%ws", std::to_string(optimal_group_size) },
 				{ "%_wordcount", std::to_string(sizeof(_BlockType) / 4) },
 				{ "%f", transform }
 			};
@@ -692,29 +740,30 @@ namespace vk
 
 		void set_parameters(VkCommandBuffer cmd)
 		{
-			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, 24, params.data);
+			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
 		}
 
-		void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 width, u32 height, u32 depth) override
+		void run(VkCommandBuffer cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) override
 		{
 			dst_buffer = dst;
 			src_buffer = src;
 
 			this->in_offset = in_offset;
 			this->out_offset = out_offset;
-			this->block_length = sizeof(_BlockType) * width * height * depth;
+			this->block_length = data_length;
 
 			params.width = width;
 			params.height = height;
 			params.depth = depth;
+			params.mipmaps = mipmaps;
 			params.logw = rsx::ceil_log2(width);
 			params.logh = rsx::ceil_log2(height);
 			params.logd = rsx::ceil_log2(depth);
 			set_parameters(cmd);
 
-			const u32 invocations_x = align(params.width, 8) / 8;
-			const u32 invocations_y = align(params.height, 8) / 8;
-			compute_task::run(cmd, invocations_x, invocations_y, depth);
+			const u32 num_bytes_per_invocation = (4 * optimal_group_size);
+			const u32 linear_invocations = rsx::aligned_div(data_length, num_bytes_per_invocation);
+			compute_task::run(cmd, linear_invocations);
 		}
 	};
 
