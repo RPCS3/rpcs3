@@ -378,8 +378,7 @@ void Emulator::Init()
 		make_path_verbose(dev_hdd0 + "disc/");
 		make_path_verbose(dev_hdd0 + "savedata/");
 		make_path_verbose(dev_hdd0 + "savedata/vmc/");
-		make_path_verbose(dev_hdd1 + "cache/");
-		make_path_verbose(dev_hdd1 + "game/");
+		make_path_verbose(dev_hdd1 + "caches/");
 	}
 
 	// Fixup savedata
@@ -653,7 +652,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 void Emulator::LimitCacheSize()
 {
-	const std::string cache_location = Emulator::GetHdd1Dir() + "/cache";
+	const std::string cache_location = Emulator::GetHdd1Dir() + "/caches";
 	if (!fs::is_dir(cache_location))
 	{
 		LOG_WARNING(GENERAL, "Cache does not exist (%s)", cache_location);
@@ -1066,7 +1065,6 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 
 		// Mount default relative path to non-existent directory
 		vfs::mount("/dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
-		vfs::mount("/dev_hdd1", fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir));
 		vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
 		vfs::mount("/dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("/dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));

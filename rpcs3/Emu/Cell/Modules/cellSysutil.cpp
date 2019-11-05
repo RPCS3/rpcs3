@@ -70,22 +70,6 @@ extern void sysutil_send_system_cmd(u64 status, u64 param)
 	}
 }
 
-struct syscache
-{
-	atomic_t<bool> mounted = false;
-	std::string cache_id;
-	shared_mutex mtx;
-
-	~syscache()
-	{
-		// Check if mounted and cache_id is different than already written empty value
-		if (!cache_id.empty())
-		{
-			fs::write_file(fs::get_cache_dir() + "/cache/cacheId", fs::rewrite, cache_id);
-		}
-	}
-};
-
 template <>
 void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 {
@@ -317,89 +301,6 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 	cbm->callbacks[slot].store({});
 
 	return CELL_OK;
-}
-
-const std::string cache_path = "/dev_hdd1/cache";
-
-s32 cellSysCacheClear()
-{
-	cellSysutil.warning("cellSysCacheClear()");
-
-	const auto cache = g_fxo->get<syscache>();
-
-	if (!cache->mounted)
-	{
-		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
-	}
-
-	if (!vfs::host::remove_all(vfs::get(cache_path), Emu.GetHdd1Dir(), false))
-	{
-		cellSysutil.error("cellSysCacheClear(): failed to clear directory '%s' (%s)", cache_path, fs::g_tls_error);
-		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
-	}
-
-	return CELL_SYSCACHE_RET_OK_CLEARED;
-}
-
-s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
-{
-	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
-
-	const auto cache = g_fxo->get<syscache>();
-
-	if (!param || !memchr(param->cacheId, '\0', CELL_SYSCACHE_ID_SIZE))
-	{
-		return CELL_SYSCACHE_ERROR_PARAM;
-	}
-
-	std::string cache_id = param->cacheId;
-	strcpy_trunc(param->getCachePath, cache_path);
-
-	cellSysutil.notice("cellSysCacheMount: cache id=%s", cache_id);
-
-	std::lock_guard lock(cache->mtx);
-
-	if (!cache->mounted.exchange(true))
-	{
-		// Get last cache ID, lasts between application boots
-		fs::file last_id(fs::get_cache_dir() + "/cache/cacheId", fs::read + fs::write + fs::create);
-		const auto id_size = last_id.size();
-
-		// Compare specified ID with old one (if size is 0 clear unconditionally)
-		const bool relayed = id_size && id_size == cache_id.size() && [&]()
-		{
-			char buf[CELL_SYSCACHE_ID_SIZE - 1];
-			last_id.read(buf, id_size);
-			return memcmp(buf, cache_id.c_str(), id_size) == 0;
-		}();
-
-		// Protection against rpcs3 crash (syscache dtor wasn't called)
-		// Clear cacheId (clear cache on next startup)
-		last_id.trunc(0);
-
-		if (relayed)
-		{
-			cache->cache_id = std::move(cache_id);
-			return CELL_SYSCACHE_RET_OK_RELAYED;
-		}
-	}
-	else
-	{
-		// If null term specified at start it must be cleared uncondionally
-		if (!cache_id.empty() && cache->cache_id == cache_id)
-		{
-			return CELL_SYSCACHE_RET_OK_RELAYED;
-		}
-	}
-
-	// Set new cache ID (clear previous)
-	if (!vfs::host::remove_all(vfs::get(cache_path), Emu.GetHdd1Dir(), false))
-	{
-		cellSysutil.error("cellSysCacheMount(): failed to clear directory '%s' (%s)", cache_path, fs::g_tls_error);
-	}
-
-	cache->cache_id = std::move(cache_id);
-	return CELL_SYSCACHE_RET_OK_CLEARED;
 }
 
 bool g_bgm_playback_enabled = true;
@@ -762,6 +663,7 @@ extern void cellSysutil_SysutilAvc_init();
 extern void cellSysutil_WebBrowser_init();
 extern void cellSysutil_AudioOut_init();
 extern void cellSysutil_VideoOut_init();
+extern void cellSysutil_SysCache_init();
 
 DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 {
@@ -775,6 +677,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	cellSysutil_WebBrowser_init(); // cellWebBrowser, cellWebComponent functions
 	cellSysutil_AudioOut_init(); // cellAudioOut functions
 	cellSysutil_VideoOut_init(); // cellVideoOut functions
+	cellSysutil_SysCache_init(); // cellSysCache functions
 
 	REG_FUNC(cellSysutil, _cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
@@ -791,9 +694,6 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilDisableBgmPlayback);
 	REG_FUNC(cellSysutil, cellSysutilDisableBgmPlaybackEx);
 	REG_FUNC(cellSysutil, cellSysutilSetBgmPlaybackExtraParam);
-
-	REG_FUNC(cellSysutil, cellSysCacheMount);
-	REG_FUNC(cellSysutil, cellSysCacheClear);
 
 	REG_FUNC(cellSysutil, cellSysutilRegisterCallbackDispatcher);
 	REG_FUNC(cellSysutil, cellSysutilUnregisterCallbackDispatcher);

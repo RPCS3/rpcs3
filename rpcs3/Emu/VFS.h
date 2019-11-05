@@ -13,7 +13,7 @@ namespace vfs
 	std::string get(std::string_view vpath, std::vector<std::string>* out_dir = nullptr);
 
 	// Escape VFS path by replacing non-portable characters with surrogates
-	std::string escape(std::string_view path);
+	std::string escape(std::string_view path, bool escape_slash = false);
 
 	// Invert escape operation
 	std::string unescape(std::string_view path);

@@ -1704,7 +1704,7 @@ void main_window::SetIconSizeActions(int idx)
 
 void main_window::RemoveDiskCache()
 {
-	std::string cacheDir = Emulator::GetHdd1Dir() + "/cache";
+	std::string cacheDir = Emulator::GetHdd1Dir() + "/caches";
 
 	if (fs::is_dir(cacheDir) && fs::remove_all(cacheDir, false))
 	{
