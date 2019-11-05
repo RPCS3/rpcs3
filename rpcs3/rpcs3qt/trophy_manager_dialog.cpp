@@ -636,19 +636,18 @@ void trophy_manager_dialog::ApplyFilter()
 	ReadjustTrophyTable();
 }
 
-void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
+void trophy_manager_dialog::ShowContextMenu(const QPoint& pos)
 {
-	QPoint globalPos = m_trophy_table->mapToGlobal(loc);
-	QMenu* menu = new QMenu();
 	QTableWidgetItem* item = m_trophy_table->item(m_trophy_table->currentRow(), TrophyColumns::Icon);
 	if (!item)
 	{
 		return;
 	}
 
+	QMenu* menu = new QMenu();
 	QAction* show_trophy_dir = new QAction(tr("Open Trophy Dir"), menu);
 
-	int db_ind = m_game_combo->currentData().toInt();
+	const int db_ind = m_game_combo->currentData().toInt();
 
 	connect(show_trophy_dir, &QAction::triggered, [=]()
 	{
@@ -657,7 +656,7 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& loc)
 	});
 
 	menu->addAction(show_trophy_dir);
-	menu->exec(globalPos);
+	menu->exec(m_trophy_table->viewport()->mapToGlobal(pos));
 }
 
 void trophy_manager_dialog::StartTrophyLoadThreads()

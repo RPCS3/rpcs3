@@ -1,4 +1,4 @@
-#include "breakpoint_list.h"
+﻿#include "breakpoint_list.h"
 
 #include "Emu/Cell/SPUThread.h"
 
@@ -127,7 +127,7 @@ void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)
 
 	menu->addAction(m_breakpoint_list_delete);
 
-	QAction* selectedItem = menu->exec(QCursor::pos());
+	QAction* selectedItem = menu->exec(viewport()->mapToGlobal(pos));
 	if (selectedItem)
 	{
 		if (selectedItem->text() == "Rename")

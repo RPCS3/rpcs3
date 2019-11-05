@@ -406,7 +406,6 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 		return;
 	}
 
-	QPoint global_pos = m_table->mapToGlobal(pos);
 	QMenu* menu = new QMenu();
 
 	// Create submenu for sort options.
@@ -439,7 +438,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(user_id_act, &QAction::triggered, this, [=] {OnSort(0); });
 	connect(username_act, &QAction::triggered, this, [=] {OnSort(1); });
 
-	menu->exec(global_pos);
+	menu->exec(m_table->viewport()->mapToGlobal(pos));
 }
 
 // Returns the current user's key > 0. if no user is selected, return 0
