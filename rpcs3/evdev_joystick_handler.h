@@ -355,7 +355,7 @@ private:
 	positive_axis m_pos_axis_config;
 	std::vector<u32> m_positive_axis;
 	std::vector<std::string> blacklist;
-	int m_pad_index = -1;
+	std::unordered_map<std::string, int> settings_added;
 	std::shared_ptr<EvdevDevice> m_dev;
 	bool m_is_button_or_trigger;
 	bool m_is_negative;
