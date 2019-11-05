@@ -26,6 +26,7 @@ namespace vk
 		u32 push_constants_size = 0;
 		u32 optimal_group_size = 1;
 		u32 optimal_kernel_size = 1;
+		u32 max_invocations_x = 65535;
 
 		virtual std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout()
 		{
@@ -116,6 +117,9 @@ namespace vk
 					break;
 				}
 
+				const auto& gpu = vk::get_current_renderer()->gpu();
+				max_invocations_x = gpu.get_limits().maxComputeWorkGroupCount[0];
+
 				initialized = true;
 			}
 		}
@@ -203,7 +207,23 @@ namespace vk
 
 		virtual void run(VkCommandBuffer cmd, u32 num_invocations)
 		{
-			run(cmd, num_invocations, 1, 1);
+			u32 invocations_x, invocations_y;
+			if (num_invocations > max_invocations_x)
+			{
+				// AMD hw reports an annoyingly small maximum number of invocations in the X dimension
+				// Split the 1D job into 2 dimensions to accomodate this
+				invocations_x = (u32)floor(std::sqrt(num_invocations));
+				invocations_y = invocations_x;
+
+				if (num_invocations % invocations_x) invocations_y++;
+			}
+			else
+			{
+				invocations_x = num_invocations;
+				invocations_y = 1;
+			}
+
+			run(cmd, invocations_x, invocations_y, 1);
 		}
 	};
 
@@ -215,14 +235,10 @@ namespace vk
 		u32 kernel_size = 1;
 
 		std::string variables, work_kernel, loop_advance, suffix;
-		std::string index_declaration;
 		std::string method_declarations;
 
 		cs_shuffle_base()
 		{
-			index_declaration =
-				"gl_GlobalInvocationID.x * KERNEL_SIZE";
-
 			work_kernel =
 				"		value = data[index];\n"
 				"		data[index] = %f(value);\n";
@@ -263,7 +279,8 @@ namespace vk
 				"\n"
 				"void main()\n"
 				"{\n"
-				"	uint index = gl_GlobalInvocationID.x;\n"
+				"	uint invocations_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);"
+				"	uint index = (gl_GlobalInvocationID.y * invocations_x) + gl_GlobalInvocationID.x;\n"
 				"	uint value;\n"
 				"	%vars"
 				"\n";
@@ -761,7 +778,7 @@ namespace vk
 			params.logd = rsx::ceil_log2(depth);
 			set_parameters(cmd);
 
-			const u32 num_bytes_per_invocation = (4 * optimal_group_size);
+			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
 			const u32 linear_invocations = rsx::aligned_div(data_length, num_bytes_per_invocation);
 			compute_task::run(cmd, linear_invocations);
 		}
