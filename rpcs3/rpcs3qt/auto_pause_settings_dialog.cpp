@@ -1,4 +1,4 @@
-
+﻿
 #include "auto_pause_settings_dialog.h"
 
 constexpr auto qstr = QString::fromStdString;
@@ -141,7 +141,6 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 {
 	int row = pauseList->indexAt(pos).row();
 
-	QPoint globalPos = pauseList->mapToGlobal(pos);
 	QMenu myMenu;
 
 	// Make Actions
@@ -174,7 +173,7 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 	connect(remove, &QAction::triggered, this, &auto_pause_settings_dialog::OnRemove);
 	connect(config, &QAction::triggered, [=]() {OnEntryConfig(row, false); });
 
-	myMenu.exec(globalPos);
+	myMenu.exec(pauseList->viewport()->mapToGlobal(pos));
 }
 
 void auto_pause_settings_dialog::OnRemove()

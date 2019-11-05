@@ -119,7 +119,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> guiSettings, std:
 	{
 		QMenu* configure = new QMenu(this);
 		configure->addActions(m_columnActs);
-		configure->exec(mapToGlobal(pos));
+		configure->exec(m_gameList->horizontalHeader()->viewport()->mapToGlobal(pos));
 	});
 
 	connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
@@ -819,13 +819,13 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	if (m_isListLayout)
 	{
 		item = m_gameList->item(m_gameList->indexAt(pos).row(), gui::column_icon);
-		globalPos = m_gameList->mapToGlobal(pos);
+		globalPos = m_gameList->viewport()->mapToGlobal(pos);
 	}
 	else
 	{
 		QModelIndex mi = m_xgrid->indexAt(pos);
 		item = m_xgrid->item(mi.row(), mi.column());
-		globalPos = m_xgrid->mapToGlobal(pos);
+		globalPos = m_xgrid->viewport()->mapToGlobal(pos);
 	}
 
 	game_info gameinfo = GetGameInfoFromItem(item);
