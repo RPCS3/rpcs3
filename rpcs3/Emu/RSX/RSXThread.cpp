@@ -1084,7 +1084,7 @@ namespace rsx
 		const bool depth_test_enabled = rsx::method_registers.depth_test_enabled();
 
 		// Check write masks
-		layout.zeta_write_enabled = rsx::method_registers.depth_write_enabled();
+		layout.zeta_write_enabled = (depth_test_enabled && rsx::method_registers.depth_write_enabled());
 		if (!layout.zeta_write_enabled && stencil_test_enabled)
 		{
 			// Check if stencil data is modified
@@ -1130,8 +1130,31 @@ namespace rsx
 			break;
 		case rsx::framebuffer_creation_context::context_draw:
 			// NOTE: As with all other hw, depth/stencil writes involve the corresponding depth/stencil test, i.e No test = No write
+			// NOTE: Depth test is not really using the memory if its set to always or never
+			// TODO: Perform similar checks for stencil test
+			if (!stencil_test_enabled)
+			{
+				if (!depth_test_enabled)
+				{
+					depth_buffer_unused = true;
+				}
+				else if (!rsx::method_registers.depth_write_enabled())
+				{
+					// Depth test is enabled but depth write is disabled
+					switch (rsx::method_registers.depth_func())
+					{
+					default:
+						break;
+					case rsx::comparison_function::never:
+					case rsx::comparison_function::always:
+						// No access to depth buffer memory
+						depth_buffer_unused = true;
+						break;
+					}
+				}
+			}
+
 			color_buffer_unused = !color_write_enabled || layout.target == rsx::surface_target::none;
-			depth_buffer_unused = !depth_test_enabled && !stencil_test_enabled;
 			m_framebuffer_state_contested = color_buffer_unused || depth_buffer_unused;
 			break;
 		default:
