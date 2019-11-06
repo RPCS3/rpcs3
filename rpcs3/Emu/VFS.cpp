@@ -239,7 +239,7 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir)
 	return std::string{result_base} + vfs::escape(fmt::merge(result, "/"));
 }
 
-std::string vfs::escape(std::string_view path)
+std::string vfs::escape(std::string_view path, bool escape_slash)
 {
 	std::string result;
 	result.reserve(path.size());
@@ -329,6 +329,17 @@ std::string vfs::escape(std::string_view path)
 		case '*':
 		{
 			result += u8"＊";
+			break;
+		}
+		case '/':
+		{
+			if (escape_slash)
+			{
+				result += u8"／";
+				break;
+			}
+
+			result += c;
 			break;
 		}
 		case char{u8"！"[0]}:

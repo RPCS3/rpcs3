@@ -148,7 +148,10 @@ enum
 
 	CELL_SYSCACHE_ID_SIZE             = 32,
 	CELL_SYSCACHE_PATH_MAX            = 1055,
+};
 
+enum CellSysCacheError : u32
+{
 	CELL_SYSCACHE_ERROR_ACCESS_ERROR  = 0x8002bc01, // I don't think we need this
 	CELL_SYSCACHE_ERROR_INTERNAL      = 0x8002bc02, // Not really useful, if we run out of HDD space sys_fs should handle that
 

@@ -246,6 +246,7 @@ target_sources(rpcs3_emu PRIVATE
 	Cell/Modules/cellSync2.cpp
 	Cell/Modules/cellSync.cpp
 	Cell/Modules/cellSysconf.cpp
+	Cell/Modules/cellSysCache.cpp
 	Cell/Modules/cellSysmodule.cpp
 	Cell/Modules/cellSysutilAp.cpp
 	Cell/Modules/cellSysutilAvc2.cpp

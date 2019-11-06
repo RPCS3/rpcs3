@@ -104,13 +104,16 @@ struct rsx_subresource_layout
 struct texture_memory_info
 {
 	int element_size;
+	int block_length;
 	bool require_swap;
+	bool require_deswizzle;
 };
 
 struct texture_uploader_capabilities
 {
 	bool supports_byteswap;
 	bool supports_vtc_decoding;
+	bool supports_hw_deswizzle;
 	size_t alignment;
 };
 
