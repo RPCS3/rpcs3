@@ -415,7 +415,9 @@ logs::file_writer::file_writer(const std::string& name)
 
 #ifdef _WIN32
 		// Autodelete compressed log file
-		m_fout2.set_delete();
+		FILE_DISPOSITION_INFO disp;
+		disp.DeleteFileW = true;
+		SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 #endif
 	}
 	catch (const std::exception& e)
@@ -495,7 +497,9 @@ logs::file_writer::~file_writer()
 
 #ifdef _WIN32
 	// Cancel compressed log file autodeletion
-	m_fout2.set_delete(false);
+	FILE_DISPOSITION_INFO disp;
+	disp.DeleteFileW = false;
+	SetFileInformationByHandle(m_fout2.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 
 	UnmapViewOfFile(m_fptr);
 	CloseHandle(m_fmap);

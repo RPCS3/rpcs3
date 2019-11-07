@@ -377,11 +377,6 @@ namespace fs
 			if (!m_file) xnull();
 			return m_file->write_gather(buffers, buf_count);
 		}
-
-#ifdef _WIN32
-		// Windows-specific function
-		bool set_delete(bool autodelete = true) const;
-#endif
 	};
 
 	class dir final

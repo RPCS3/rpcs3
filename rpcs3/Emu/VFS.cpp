@@ -6,6 +6,10 @@
 #include "Utilities/mutex.h"
 #include "Utilities/StrUtil.h"
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 struct vfs_directory
 {
 	// Real path (empty if root or not exists)
@@ -599,7 +603,9 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 		if (fs::file f{dummy, fs::read + fs::write})
 		{
 			// Set to delete on close on last handle
-			f.set_delete();
+			FILE_DISPOSITION_INFO disp;
+			disp.DeleteFileW = true;
+			SetFileInformationByHandle(f.get_handle(), FileDispositionInfo, &disp, sizeof(disp));
 			return true;
 		}
 
