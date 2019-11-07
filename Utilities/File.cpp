@@ -911,7 +911,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 
 void fs::file::xnull() const
 {
-	fmt::throw_exception<std::logic_error>("fs::file is null");
+	fmt::throw_exception("fs::file is null");
 }
 
 void fs::file::xfail() const
@@ -1330,7 +1330,7 @@ fs::native_handle fs::file::get_handle() const
 
 void fs::dir::xnull() const
 {
-	fmt::throw_exception<std::logic_error>("fs::dir is null");
+	fmt::throw_exception("fs::dir is null");
 }
 
 bool fs::dir::open(const std::string& path)

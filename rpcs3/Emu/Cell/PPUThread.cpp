@@ -182,7 +182,7 @@ static u64 ppu_cache(u32 addr)
 	const auto& table = *(
 		g_cfg.core.ppu_decoder == ppu_decoder_type::precise ? &g_ppu_interpreter_precise.get_table() :
 		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &g_ppu_interpreter_fast.get_table() :
-		(fmt::throw_exception<std::logic_error>("Invalid PPU decoder"), nullptr));
+		(fmt::throw_exception("Invalid PPU decoder"), nullptr));
 
 	const u32 value = vm::read32(addr);
 	return (u64)value << 32 | ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(value)]));

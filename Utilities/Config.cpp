@@ -12,7 +12,7 @@ namespace cfg
 	{
 		if (_type != type::node)
 		{
-			fmt::throw_exception<std::logic_error>("Invalid root node" HERE);
+			fmt::throw_exception("Invalid root node" HERE);
 		}
 	}
 
@@ -23,7 +23,7 @@ namespace cfg
 		{
 			if (pair.first == name)
 			{
-				fmt::throw_exception<std::logic_error>("Node already exists: %s" HERE, name);
+				fmt::throw_exception("Node already exists: %s" HERE, name);
 			}
 		}
 
@@ -32,12 +32,12 @@ namespace cfg
 
 	bool _base::from_string(const std::string&)
 	{
-		fmt::throw_exception<std::logic_error>("from_string() purecall" HERE);
+		fmt::throw_exception("from_string() purecall" HERE);
 	}
 
 	bool _base::from_list(std::vector<std::string>&&)
 	{
-		fmt::throw_exception<std::logic_error>("from_list() purecall" HERE);
+		fmt::throw_exception("from_list() purecall" HERE);
 	}
 
 	// Emit YAML

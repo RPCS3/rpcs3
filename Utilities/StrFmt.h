@@ -291,14 +291,13 @@ namespace fmt
 	}
 
 	// Internal exception message formatting template, must be explicitly specialized or instantiated in cpp to minimize code bloat
-	template <typename T>
 	[[noreturn]] void raw_throw_exception(const char*, const fmt_type_info*, const u64*);
 
 	// Throw exception with formatting
-	template <typename T = std::runtime_error, typename... Args>
+	template <typename... Args>
 	[[noreturn]] SAFE_BUFFERS FORCE_INLINE void throw_exception(const char* fmt, const Args&... args)
 	{
 		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
-		raw_throw_exception<T>(fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+		raw_throw_exception(fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 	}
 }
