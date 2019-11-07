@@ -609,6 +609,7 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 
 bool vfs::host::remove_all(const std::string& path, const std::string& dev_root, bool remove_root)
 {
+#ifdef _WIN32
 	if (remove_root)
 	{
 		// Rename to special dummy folder which will be ignored by VFS (but opened file handles can still read or write it)
@@ -619,7 +620,12 @@ bool vfs::host::remove_all(const std::string& path, const std::string& dev_root,
 			return false;
 		}
 
-		if (!fs::remove_all(dummy))
+		if (!vfs::host::remove_all(dummy, dev_root, false))
+		{
+			return false;
+		}
+
+		if (!fs::remove_dir(dummy))
 		{
 			return false;
 		}
@@ -658,4 +664,7 @@ bool vfs::host::remove_all(const std::string& path, const std::string& dev_root,
 	}
 
 	return true;
+#else
+	return fs::remove_all(path, remove_root);
+#endif
 }
