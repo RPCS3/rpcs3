@@ -582,7 +582,11 @@ bool vfs::host::rename(const std::string& from, const std::string& to, bool over
 bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 {
 #ifdef _WIN32
-	if (path.size() < 2 || reinterpret_cast<const u16&>(path.front()) != "//"_u16)
+	if (auto device = fs::get_virtual_device(path))
+	{
+		return device->remove(path);
+	}
+	else
 	{
 		// Rename to special dummy name which will be ignored by VFS (but opened file handles can still read or write it)
 		const std::string dummy = fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
@@ -602,9 +606,9 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 		// TODO: what could cause this and how to handle it
 		return true;
 	}
-#endif
-
+#else
 	return fs::remove_file(path);
+#endif
 }
 
 bool vfs::host::remove_all(const std::string& path, const std::string& dev_root, bool remove_root)
