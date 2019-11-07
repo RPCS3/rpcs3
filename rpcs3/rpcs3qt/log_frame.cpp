@@ -303,7 +303,7 @@ void log_frame::CreateAndConnectActions()
 		menu->addAction(m_stackAct_log);
 		menu->addSeparator();
 		menu->addAction(m_TTYAct);
-		menu->exec(mapToGlobal(pos));
+		menu->exec(m_log->viewport()->mapToGlobal(pos));
 	});
 
 	connect(m_tty, &QWidget::customContextMenuRequested, [=](const QPoint& pos)
@@ -314,7 +314,7 @@ void log_frame::CreateAndConnectActions()
 		menu->addAction(m_stackAct_tty);
 		menu->addSeparator();
 		menu->addActions(m_tty_channel_acts->actions());
-		menu->exec(mapToGlobal(pos));
+		menu->exec(m_tty->viewport()->mapToGlobal(pos));
 	});
 
 	connect(m_tabWidget, &QTabWidget::currentChanged, [this](int/* index*/)
