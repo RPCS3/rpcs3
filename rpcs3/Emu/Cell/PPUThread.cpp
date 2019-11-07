@@ -868,19 +868,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 		}
 	});
 
-	try
-	{
-		exec_task();
-	}
-	catch (cpu_flag _s)
-	{
-		state += _s;
-
-		if (_s != cpu_flag::ret)
-		{
-			throw;
-		}
-	}
+	exec_task();
 }
 
 u32 ppu_thread::stack_push(u32 size, u32 align_v)

@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/SPURecompiler.h"
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_spu.h"
@@ -1799,7 +1800,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		{
 			// TODO: Figure this out
 			spu.status |= SPU_STATUS_STOPPED_BY_STOP;
-			throw cpu_flag::stop;
+			spu_runtime::g_escape(&spu);
 		}
 
 		spursTasksetStartTask(spu, taskInfo->args);
@@ -1853,7 +1854,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		{
 			// TODO: Figure this out
 			spu.status |= SPU_STATUS_STOPPED_BY_STOP;
-			throw cpu_flag::stop;
+			spu_runtime::g_escape(&spu);
 		}
 
 		spu.gpr[3].clear();

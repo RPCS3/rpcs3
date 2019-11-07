@@ -344,10 +344,6 @@ void cpu_thread::operator()()
 			{
 				cpu_task();
 			}
-			catch (cpu_flag _s)
-			{
-				state += _s;
-			}
 			catch (const std::exception& e)
 			{
 				Emu.Pause();
