@@ -70,15 +70,6 @@ struct gdb_cmd
 	u8 checksum;
 };
 
-class wrong_checksum_exception : public std::runtime_error
-{
-public:
-	wrong_checksum_exception(char const* const message)
-		: runtime_error(message)
-	{
-	}
-};
-
 bool check_errno_again()
 {
 #ifdef _WIN32
@@ -251,7 +242,7 @@ u8 gdb_thread::read_hexbyte()
 	return hex_to_u8(s);
 }
 
-void gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
+bool gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 {
 	char c = read_char();
 	//interrupt
@@ -259,7 +250,7 @@ void gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 		out_cmd.cmd = '\x03';
 		out_cmd.data = "";
 		out_cmd.checksum = 0;
-		return;
+		return true;
 	}
 	if (UNLIKELY(c != '$')) {
 		//gdb starts conversation with + for some reason
@@ -302,9 +293,7 @@ void gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 		}
 	}
 	out_cmd.checksum = read_hexbyte();
-	if (out_cmd.checksum != checksum) {
-		throw wrong_checksum_exception("Wrong checksum for packet" HERE);
-	}
+	return out_cmd.checksum == checksum;
 }
 
 bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
@@ -313,12 +302,12 @@ bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
 	{
 		try
 		{
-			try_read_cmd(out_cmd);
-			ack(true);
-			return true;
-		}
-		catch (const wrong_checksum_exception&)
-		{
+			if (try_read_cmd(out_cmd))
+			{
+				ack(true);
+				return true;
+			}
+
 			ack(false);
 		}
 		catch (const std::runtime_error& e)
