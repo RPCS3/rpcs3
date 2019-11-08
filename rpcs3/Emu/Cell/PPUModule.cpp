@@ -1054,7 +1054,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	u32 tls_vsize = 0;
 
 	// Process information
-	u32 sdk_version = 0x360001;
+	u32 sdk_version = 0xffffffff;
 	s32 primary_prio = 1001;
 	u32 primary_stacksize = 0x100000;
 	u32 malloc_pagesize = 0x100000;
