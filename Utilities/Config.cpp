@@ -4,6 +4,7 @@
 #include "yaml-cpp/yaml.h"
 
 #include <typeinfo>
+#include <charconv>
 
 namespace cfg
 {
@@ -55,23 +56,23 @@ std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
 
 bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 {
-	// TODO: this could be rewritten without exceptions (but it should be as safe as possible and provide logs)
 	s64 result;
-	std::size_t pos;
+	const char* start = &value.front();
+	const char* end = &value.back() + 1;
+	int base = 10;
 
-	try
+	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
 	{
-		result = std::stoll(value, &pos, 0 /* Auto-detect numeric base */);
-	}
-	catch (const std::exception& e)
-	{
-		if (out) LOG_ERROR(GENERAL, "cfg::try_to_int('%s'): exception: %s", value, e.what());
-		return false;
+		// Limited hex support
+		base = 16;
+		start += 2;
 	}
 
-	if (pos != value.size())
+	const auto ret = std::from_chars(start, end, result, base);
+
+	if (ret.ec != std::errc() || ret.ptr != end)
 	{
-		if (out) LOG_ERROR(GENERAL, "cfg::try_to_int('%s'): unexpected characters (pos=%zu)", value, pos);
+		if (out) LOG_ERROR(GENERAL, "cfg::try_to_int('%s'): invalid integer", value);
 		return false;
 	}
 
@@ -110,31 +111,34 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 		max = i;
 	}
 
-	try
+	u64 result;
+	const char* start = &value.front();
+	const char* end = &value.back() + 1;
+	int base = 10;
+
+	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
 	{
-		std::size_t pos;
-		const auto val = std::stoull(value, &pos, 0);
-
-		if (pos != value.size())
-		{
-			if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): unexpected characters (pos=%zu)", value, pos);
-			return false;
-		}
-
-		if (val > max)
-		{
-			if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
-			return false;
-		}
-
-		if (out) *out = val;
-		return true;
+		// Limited hex support
+		base = 16;
+		start += 2;
 	}
-	catch (const std::exception& e)
+
+	const auto ret = std::from_chars(start, end, result, base);
+
+	if (ret.ec != std::errc() || ret.ptr != end)
 	{
-		if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): invalid enum value: %s", value, e.what());
+		if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): invalid enum or integer", value);
 		return false;
 	}
+
+	if (result > max)
+	{
+		if (out) LOG_ERROR(GENERAL, "cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
+		return false;
+	}
+
+	if (out) *out = result;
+	return true;
 }
 
 std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::format) func)
