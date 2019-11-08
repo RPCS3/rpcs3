@@ -204,3 +204,4 @@ struct CellSysCacheParam
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&&);
 extern void sysutil_send_system_cmd(u64 status, u64 param);
+s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen);
