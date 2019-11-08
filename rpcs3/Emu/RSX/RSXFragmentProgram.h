@@ -251,7 +251,13 @@ struct RSXFragmentProgram
 
 	bool texcoord_is_2d(u8 index) const
 	{
-		return !!(texcoord_control_mask & (1u << index));
+		return bool(texcoord_control_mask & (1u << index));
+	}
+
+	bool texcoord_is_point_coord(u8 index) const
+	{
+		index += 16;
+		return bool(texcoord_control_mask & (1u << index));
 	}
 
 	RSXFragmentProgram()

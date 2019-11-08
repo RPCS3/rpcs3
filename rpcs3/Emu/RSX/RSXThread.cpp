@@ -1698,6 +1698,13 @@ namespace rsx
 		result.redirected_textures = 0;
 		result.shadow_textures = 0;
 
+		if (method_registers.current_draw_clause.primitive == primitive_type::points &&
+			method_registers.point_sprite_enabled())
+		{
+			// Set high word of the control mask to store point sprite control
+			result.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
+		}
+
 		const auto resolution_scale = rsx::get_resolution_scale();
 
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
