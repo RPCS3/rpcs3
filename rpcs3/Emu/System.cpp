@@ -37,6 +37,7 @@
 #include <fstream>
 #include <memory>
 #include <regex>
+#include <charconv>
 
 #include "Utilities/JIT.h"
 
@@ -537,16 +538,8 @@ const bool Emulator::SetUsr(const std::string& user)
 		return false;
 	}
 
-	u32 id;
-
-	try
-	{
-		id = static_cast<u32>(std::stoul(user));
-	}
-	catch (const std::exception&)
-	{
-		id = 0;
-	}
+	u32 id = 0;
+	std::from_chars(&user.front(), &user.back() + 1, id);
 
 	if (id == 0)
 	{
