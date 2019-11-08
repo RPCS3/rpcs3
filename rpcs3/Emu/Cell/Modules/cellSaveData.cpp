@@ -240,10 +240,29 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		return 5;
 	}
 
-	if (operation <= SAVEDATA_OP_AUTO_LOAD && !dirName)
+	if (operation <= SAVEDATA_OP_AUTO_LOAD)
 	{
-		// ****** sysutil savedata parameter error : 2 ******
-		return 2;
+		if (!dirName)
+		{
+			// ****** sysutil savedata parameter error : 2 ******
+			return 2;
+		}
+
+		switch (sysutil_check_name_string(dirName.get_ptr(), 1, CELL_SAVEDATA_DIRNAME_SIZE))
+		{
+		case -1:
+		{
+			// ****** sysutil savedata parameter error : 3 ******
+			return 3;
+		}
+		case -2:
+		{
+			// ****** sysutil savedata parameter error : 4 ******
+			return 4;
+		}
+		case 0: break;
+		default: ASSUME(0);
+		}
 	}
 
 	if ((operation >= SAVEDATA_OP_LIST_AUTO_SAVE && operation <= SAVEDATA_OP_FIXED_LOAD) || operation == SAVEDATA_OP_FIXED_DELETE)
@@ -279,7 +298,50 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 			return 17;
 		}
 
-		// TODO: Theres some check here I've missed about dirNamePrefix
+		char cur, buf[CELL_SAVEDATA_DIRNAME_SIZE + 1]{};
+
+		for (s32 pos = 0, posprefix = 0; cur = setList->dirNamePrefix[pos++], true;)
+		{
+			if (cur == '\0' || cur == '|')
+			{
+				// Check prefix if not empty
+				if (posprefix) 
+				{
+					switch (sysutil_check_name_string(buf, 1, CELL_SAVEDATA_DIRNAME_SIZE))
+					{
+					case -1:
+					{
+						// ****** sysutil savedata parameter error : 16 ******
+						return 16;
+					}
+					case -2:
+					{
+						// ****** sysutil savedata parameter error : 17 ******
+						return 17;
+					}
+					case 0: break;
+					default: ASSUME(0);
+					}
+				}
+
+				if (cur == '\0')
+				{
+					break;
+				}
+
+				// Note: no need to reset buffer, only position
+				posprefix = 0;
+				continue;
+			}
+
+			if (posprefix == CELL_SAVEDATA_DIRNAME_SIZE)
+			{
+				// ****** sysutil savedata parameter error : 17 ******
+				return 17;
+			}
+
+			buf[posprefix++] = cur;
+		}
 
 		if (setList->reserved)
 		{

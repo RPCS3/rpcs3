@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_process.h"
 #include "cellSysutil.h"
 
 #include "Utilities/StrUtil.h"
@@ -132,6 +133,64 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+// Common string checks used in libsysutil functions
+s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen)
+{
+	s32 lastpos;
+
+	if (g_ps3_process_info.sdk_ver > 0x36FFFF)
+	{
+		// Limit null terminator boundary to before buffer max size
+		lastpos = std::max(maxlen - 1, 0); 
+	}
+	else
+	{
+		// Limit null terminator boundary to one after buffer max size
+		lastpos = maxlen;
+	}
+
+	char cur = src[0];
+
+	if (cur == '_')
+	{
+		// Invalid character at start
+		return -1;
+	}
+
+	for (u32 index = 0;; cur = src[++index])
+	{
+		if (cur == '\0' || index == maxlen)
+		{
+			if (minlen > index || (maxlen == index && src[lastpos]))
+			{
+				// String length is invalid
+				return -2;
+			}
+
+			// OK
+			return 0;
+		}
+
+		if (cur >= 'A' && cur <= 'Z')
+		{
+			continue;
+		}
+
+		if (cur >= '0' && cur <= '9')
+		{
+			continue;
+		}
+
+		if (cur == '-' || cur == '_')
+		{
+			continue;
+		}
+
+		// Invalid character found
+		return -1;
+	}
 }
 
 s32 _cellSysutilGetSystemParamInt()

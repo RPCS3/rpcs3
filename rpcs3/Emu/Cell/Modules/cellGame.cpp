@@ -150,12 +150,15 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 {
 	cellGame.error("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	std::string dir = dirName.get_ptr();
-
-	if (dir.size() != 9)
+	if (!dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
+
+	std::string dir = dirName.get_ptr();
+
+	// TODO: Find error code
+	verify(HERE), dir.size() == 9;
 
 	vm::var<CellHddGameCBResult> result;
 	vm::var<CellHddGameStatGet> get;
