@@ -579,10 +579,24 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		case 0xD:
 		{
 			// TEX0 - TEX9
-			// Texcoord mask seems to reset the last 2 arguments to 0 and 1 if set
-			if (m_prog.texcoord_is_2d(dst.src_attr_reg_num - 4))
+			// Texcoord 2d mask seems to reset the last 2 arguments to 0 and w if set
+			const u8 texcoord = u8(dst.src_attr_reg_num) - 4;
+			if (m_prog.texcoord_is_point_coord(texcoord))
 			{
-				ret += getFloatTypeName(4) + "(" + reg_var + ".x, " + reg_var + ".y, 0., in_w)";
+				// Point sprite coord generation. Stacks with the 2D override mask.
+				if (m_prog.texcoord_is_2d(texcoord))
+				{
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., in_w)";
+					properties.has_w_access = true;
+				}
+				else
+				{
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
+				}
+			}
+			else if (m_prog.texcoord_is_2d(texcoord))
+			{
+				ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
 				properties.has_w_access = true;
 			}
 			else
