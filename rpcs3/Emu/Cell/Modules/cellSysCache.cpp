@@ -36,6 +36,21 @@ struct syscache_info
 
 	syscache_info() noexcept
 	{
+		// Check if dev_hdd1 is mounted by parent process
+		if (Emu.hdd1.size())
+		{
+			const auto lock = init.init();
+
+			// Extract cache id from path
+			cache_id = Emu.hdd1;
+			if (cache_id.back() == '/')
+				cache_id.resize(cache_id.size() - 1);
+			cache_id = cache_id.substr(cache_id.find_last_of('/') + 1);
+
+			LOG_SUCCESS(PPU, "Retained cache from parent process: %s", Emu.hdd1);
+			return;
+		}
+
 		// Find existing cache at startup
 		const std::string prefix = Emu.GetTitleID() + '_';
 

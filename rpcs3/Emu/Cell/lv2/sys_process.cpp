@@ -290,6 +290,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	// TODO: set prio, flags
 
 	std::string path = vfs::get(argv[0]);
+	std::string hdd1 = vfs::get("/dev_hdd1/");
 	std::string disc;
 
 	if (Emu.GetCat() == "DG" || Emu.GetCat() == "GD")
@@ -299,7 +300,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	vm::temporary_unlock(ppu);
 
-	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), klic = g_fxo->get<loaded_npdrm_keys>()->devKlic]() mutable
+	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>()->devKlic]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
 		Emu.SetForceBoot(true);
@@ -308,6 +309,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		Emu.envp = std::move(envp);
 		Emu.data = std::move(data);
 		Emu.disc = std::move(disc);
+		Emu.hdd1 = std::move(hdd1);
 
 		if (klic != std::array<u8, 16>{})
 		{

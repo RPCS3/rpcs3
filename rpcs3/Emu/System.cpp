@@ -1063,6 +1063,12 @@ void Emulator::Load(const std::string& title_id, bool add_only, bool force_globa
 		vfs::mount("/dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
 		vfs::mount("/app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
 
+		if (!hdd1.empty())
+		{
+			vfs::mount("/dev_hdd1", hdd1);
+			LOG_NOTICE(LOADER, "Hdd1: %s", vfs::get("/dev_hdd1"));
+		}
+
 		// Special boot mode (directory scan)
 		if (fs::is_dir(m_path))
 		{
@@ -1823,6 +1829,7 @@ void Emulator::Stop(bool restart)
 	data.clear();
 	disc.clear();
 	klic.clear();
+	hdd1.clear();
 
 	m_force_boot = false;
 
