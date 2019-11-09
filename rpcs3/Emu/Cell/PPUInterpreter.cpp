@@ -10,8 +10,10 @@
 #include <cmath>
 #include <atomic>
 
-#if !defined(_MSC_VER) && !defined(__SSSE3__)
-#define _mm_shuffle_epi8(opa, opb) opb
+#if defined(_MSC_VER)
+#define SSSE3_FUNC
+#else
+#define SSSE3_FUNC __attribute__((__target__("ssse3")))
 #endif
 
 inline u64 dup32(u32 x) { return x | static_cast<u64>(x) << 32; }
@@ -130,7 +132,7 @@ extern __m128i sse_pshufb(__m128i data, __m128i index)
 	return _mm_and_si128(r.vi, _mm_cmpgt_epi8(index, _mm_set1_epi8(-1)));
 }
 
-extern __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
+extern SSSE3_FUNC __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
 {
 	const auto index = _mm_andnot_si128(C, _mm_set1_epi8(0x1f));
 	const auto mask = _mm_cmpgt_epi8(index, _mm_set1_epi8(0xf));
@@ -243,22 +245,22 @@ static const __m128i lvrx_masks[0x10] =
 	_mm_set_epi8(-1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe),
 };
 
-extern __m128i sse_cellbe_lvlx(u64 addr)
+extern SSSE3_FUNC __m128i sse_cellbe_lvlx(u64 addr)
 {
 	return _mm_shuffle_epi8(_mm_load_si128((__m128i*)vm::base(addr & ~0xf)), lvlx_masks[addr & 0xf]);
 }
 
-extern void sse_cellbe_stvlx(u64 addr, __m128i a)
+extern SSSE3_FUNC void sse_cellbe_stvlx(u64 addr, __m128i a)
 {
 	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
 }
 
-extern __m128i sse_cellbe_lvrx(u64 addr)
+extern SSSE3_FUNC __m128i sse_cellbe_lvrx(u64 addr)
 {
 	return _mm_shuffle_epi8(_mm_load_si128((__m128i*)vm::base(addr & ~0xf)), lvrx_masks[addr & 0xf]);
 }
 
-extern void sse_cellbe_stvrx(u64 addr, __m128i a)
+extern SSSE3_FUNC void sse_cellbe_stvrx(u64 addr, __m128i a)
 {
 	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], (char*)vm::base(addr & ~0xf));
 }
