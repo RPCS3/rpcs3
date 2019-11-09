@@ -399,6 +399,11 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	std::lock_guard lock(file->mp->mutex);
 
+	if (file->lock == 2)
+	{
+		return CELL_EIO;
+	}
+
 	*nread = file->op_read(buf, nbytes);
 
 	return CELL_OK;
@@ -421,6 +426,11 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 
 	if (file->lock)
 	{
+		if (file->lock == 2)
+		{
+			return CELL_EIO;
+		}
+
 		return CELL_EBUSY;
 	}
 
@@ -437,7 +447,7 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 
 	const auto file = idm::withdraw<lv2_fs_object, lv2_file>(fd, [](lv2_file& file) -> CellError
 	{
-		if (file.lock)
+		if (file.lock == 1)
 		{
 			return CELL_EBUSY;
 		}
@@ -706,6 +716,11 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 
 	std::lock_guard lock(file->mp->mutex);
 
+	if (file->lock == 2)
+	{
+		return CELL_EIO;
+	}
+
 	const fs::stat_t& info = file->file.stat();
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
@@ -958,6 +973,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		if (op == 0x8000000b && file->lock)
 		{
+			if (file->lock == 2)
+			{
+				return CELL_EIO;
+			}
+
 			return CELL_EBUSY;
 		}
 
@@ -1447,6 +1467,11 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 	}
 
 	std::lock_guard lock(file->mp->mutex);
+
+	if (file->lock == 2)
+	{
+		return CELL_EIO;
+	}
 
 	if (file->lock)
 	{

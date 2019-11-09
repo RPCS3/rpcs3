@@ -3,6 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_fs.h"
 #include "cellSysutil.h"
 #include "util/init_mutex.hpp"
 #include "Utilities/StrUtil.h"
@@ -70,6 +71,18 @@ struct syscache_info
 		if (!vfs::host::remove_all(cache_root + cache_id, cache_root, remove_root))
 		{
 			cellSysutil.fatal("cellSysCache: failed to clear cache directory '%s%s' (%s)", cache_root, cache_id, fs::g_tls_error);
+		}
+
+		// Poison opened files in /dev_hdd1 to return CELL_EIO on access
+		if (remove_root)
+		{
+			idm::select<lv2_fs_object, lv2_file>([](u32 id, lv2_file& file)
+			{
+				if (std::memcmp("/dev_hdd1", file.name.data(), 9) == 0)
+				{
+					file.lock = 2;
+				}
+			});
 		}
 	}
 };
