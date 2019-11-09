@@ -173,9 +173,6 @@
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Common\ShaderParam.cpp">
-      <Filter>Emu\GPU\RSX\Common</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
