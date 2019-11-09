@@ -830,12 +830,12 @@ namespace rsx
 		return t + timestamp_subvalue;
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
+	gsl::span<const std::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
 		if (!element_push_buffer.empty())
 		{
 			//Indices provided via immediate mode
-			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
+			return{(const std::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
 		}
 
 		const rsx::index_array_type type = rsx::method_registers.index_type();
@@ -850,11 +850,11 @@ namespace rsx
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
 
-		const auto ptr = vm::_ptr<const gsl::byte>(address);
+		const auto ptr = vm::_ptr<const std::byte>(address);
 		return{ ptr + first * type_size, count * type_size };
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const draw_clause& draw_array_clause) const
+	gsl::span<const std::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const draw_clause& draw_array_clause) const
 	{
 		u32 offset  = vertex_array_info.offset();
 		u32 address = rsx::get_address(rsx::get_vertex_offset_from_base(base_offset, offset & 0x7fffffff), offset >> 31);
@@ -864,7 +864,7 @@ namespace rsx
 		const u32 first = draw_array_clause.min_index();
 		const u32 count = draw_array_clause.get_elements_count();
 
-		const gsl::byte* ptr = vm::_ptr<const gsl::byte>(address);
+		const std::byte* ptr = vm::_ptr<const std::byte>(address);
 		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
 	}
 
@@ -896,7 +896,7 @@ namespace rsx
 				const auto& info = vertex_push_buffers[index];
 				const u8 element_size = info.size * sizeof(u32);
 
-				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
+				gsl::span<const std::byte> vertex_src = { (const std::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
 				result.emplace_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
 				continue;
 			}

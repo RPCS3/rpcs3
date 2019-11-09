@@ -107,7 +107,7 @@ namespace
 			u32 offset_in_index_buffer = mapping.second;
 
 			std::tie(min_index, max_index, index_count) = write_index_array_data_to_buffer(
-				{ reinterpret_cast<gsl::byte*>(ptr), max_size },
+				{ reinterpret_cast<std::byte*>(ptr), max_size },
 				command.raw_index_buffer, type,
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
