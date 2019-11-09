@@ -54,15 +54,7 @@
 #include <cfenv>
 #include "Utilities/GSL.h"
 
-const bool s_use_ssse3 =
-#ifdef _MSC_VER
-	utils::has_ssse3();
-#elif __SSSE3__
-	true;
-#else
-	false;
-#define _mm_shuffle_epi8
-#endif
+const bool s_use_ssse3 = utils::has_ssse3();
 
 extern u64 get_guest_system_time();
 
