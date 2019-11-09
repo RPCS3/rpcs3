@@ -2,7 +2,9 @@
 
 #include <vector>
 
-#include "Utilities/GSL.h"
+#define TCB_SPAN_NAMESPACE_NAME gsl
+#include <tcb/span.hpp>
+
 #include "../gcm_enums.h"
 
 /**

@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-#include "Utilities/GSL.h"
+#define TCB_SPAN_NAMESPACE_NAME gsl
+#include <tcb/span.hpp>
+
 #include "Emu/Memory/vm.h"
 #include "surface_utils.h"
 #include "../GCM.h"

@@ -15,7 +15,9 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 
-#include "Utilities/GSL.h"
+#define TCB_SPAN_NAMESPACE_NAME gsl
+#include <tcb/span.hpp>
+
 #include "Utilities/StrUtil.h"
 
 #include <cereal/archives/binary.hpp>
