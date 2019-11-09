@@ -78,7 +78,7 @@ namespace vk
 
 	VkSampler g_null_sampler = nullptr;
 
-	atomic_t<bool> g_cb_no_interrupt_flag { false };
+	rsx::atomic_bitmask_t<runtime_state, u64> g_runtime_state;
 
 	// Driver compatibility workarounds
 	VkFlags g_heap_compatible_buffer_types = 0;
@@ -426,7 +426,7 @@ namespace vk
 	void set_current_renderer(const vk::render_device &device)
 	{
 		g_current_renderer = &device;
-		g_cb_no_interrupt_flag.store(false);
+		g_runtime_state.clear();
 		g_drv_no_primitive_restart_flag = false;
 		g_drv_sanitize_fp_values = false;
 		g_drv_disable_fence_reset = false;
@@ -780,19 +780,34 @@ namespace vk
 		image->current_layout = new_layout;
 	}
 
+	void raise_status_interrupt(runtime_state status)
+	{
+		g_runtime_state |= status;
+	}
+
+	void clear_status_interrupt(runtime_state status)
+	{
+		g_runtime_state.clear(status);
+	}
+
+	bool test_status_interrupt(runtime_state status)
+	{
+		return g_runtime_state & status;
+	}
+
 	void enter_uninterruptible()
 	{
-		g_cb_no_interrupt_flag = true;
+		raise_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	void leave_uninterruptible()
 	{
-		g_cb_no_interrupt_flag = false;
+		clear_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	bool is_uninterruptible()
 	{
-		return g_cb_no_interrupt_flag;
+		return test_status_interrupt(runtime_state::uninterruptible);
 	}
 
 	void advance_completed_frame_counter()
