@@ -71,12 +71,6 @@ struct syscache_info
 		{
 			cellSysutil.fatal("cellSysCache: failed to clear cache directory '%s%s' (%s)", cache_root, cache_id, fs::g_tls_error);
 		}
-
-		if (!remove_root)
-		{
-			// Recreate /cache subdirectory if necessary
-			fs::create_path(cache_root + cache_id + "/cache");
-		}
 	}
 };
 
@@ -120,7 +114,7 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	std::string new_path = cache->cache_root + cache_id + '/';
 
 	// Set fixed VFS path
-	strcpy_trunc(param->getCachePath, "/dev_hdd1/cache");
+	strcpy_trunc(param->getCachePath, "/dev_hdd1");
 
 	// Lock pseudo-mutex
 	const auto lock = cache->init.init_always([&]
@@ -128,7 +122,7 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	});
 
 	// Check if can reuse existing cache (won't if cache id is an empty string)
-	if (param->cacheId[0] && cache_id == cache->cache_id && fs::is_dir(new_path + "cache"))
+	if (param->cacheId[0] && cache_id == cache->cache_id)
 	{
 		// Isn't mounted yet on first call to cellSysCacheMount
 		vfs::mount("/dev_hdd1", new_path);
@@ -145,7 +139,7 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 	// Set new cache id
 	cache->cache_id = std::move(cache_id);
-	fs::create_path(new_path + "cache");
+	fs::create_dir(new_path);
 	vfs::mount("/dev_hdd1", new_path);
 
 	return not_an_error(CELL_SYSCACHE_RET_OK_CLEARED);
