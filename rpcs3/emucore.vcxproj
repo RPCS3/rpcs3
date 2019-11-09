@@ -405,7 +405,6 @@
     <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\event.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
-    <ClInclude Include="..\Utilities\GSL.h" />
     <ClInclude Include="..\Utilities\hash.h" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
