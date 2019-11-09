@@ -2832,7 +2832,7 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 	rsx::g_dma_manager.sync();
 
 	// TODO: Better check for shadowed memory
-	if (m_attrib_ring_info.shadow)
+	//if (m_attrib_ring_info.shadow)
 	{
 		if (m_attrib_ring_info.dirty() ||
 			m_fragment_env_ring_info.dirty() ||

@@ -109,7 +109,7 @@ namespace vk
 	class image;
 	struct image_view;
 	struct buffer;
-	struct data_heap;
+	class data_heap;
 	class mem_allocator_base;
 	struct memory_type_mapping;
 	struct gpu_formats_support;
@@ -3384,14 +3384,20 @@ public:
 		};
 	}
 
-	struct data_heap : public ::data_heap
+	class data_heap : public ::data_heap
 	{
-		std::unique_ptr<buffer> heap;
+	private:
 		bool mapped = false;
 		void *_ptr = nullptr;
 
 		std::unique_ptr<buffer> shadow;
 		std::vector<VkBufferCopy> dirty_ranges;
+
+	protected:
+		bool grow(size_t size) override;
+
+	public:
+		std::unique_ptr<buffer> heap;
 
 		// NOTE: Some drivers (RADV) use heavyweight OS map/unmap routines that are insanely slow
 		// Avoid mapping/unmapping to keep these drivers from stalling
@@ -3402,7 +3408,7 @@ public:
 			::data_heap::init(size, name, guard);
 
 			const auto device = get_current_renderer();
-			const auto memory_map = device->get_memory_mapping();
+			const auto& memory_map = device->get_memory_mapping();
 
 			VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 			auto memory_index = memory_map.host_visible_coherent;
