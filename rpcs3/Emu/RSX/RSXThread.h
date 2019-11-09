@@ -635,7 +635,6 @@ namespace rsx
 		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
-		void get_current_fragment_program_legacy(const std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)>& get_surface_info);
 
 	public:
 		double fps_limit = 59.94;
@@ -714,11 +713,7 @@ namespace rsx
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		virtual void sync_hint(FIFO_hint /*hint*/, u64 /*arg*/) {}
 
-		gsl::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
-		gsl::span<const std::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
-
-		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, u64 consumed_attrib_mask) const;
+		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
