@@ -56,3 +56,6 @@
 	path = 3rdparty/FAudio
 	url = https://github.com/FNA-XNA/FAudio.git
 	ignore = dirty
+[submodule "3rdparty/span"]
+	path = 3rdparty/span
+	url = https://github.com/tcbrindle/span
