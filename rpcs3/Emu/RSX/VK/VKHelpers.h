@@ -70,6 +70,11 @@ namespace vk
 							void *pUserData);
 
 	//VkAllocationCallbacks default_callbacks();
+	enum runtime_state
+	{
+		uninterruptible = 1,
+		heap_check = 2
+	};
 
 	enum class driver_vendor
 	{
@@ -203,7 +208,9 @@ namespace vk
 		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask,
 		const VkImageSubresourceRange& range);
 
-	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
+	void raise_status_interrupt(runtime_state status);
+	void clear_status_interrupt(runtime_state status);
+	bool test_status_interrupt(runtime_state status);
 	void enter_uninterruptible();
 	void leave_uninterruptible();
 	bool is_uninterruptible();
@@ -3452,6 +3459,7 @@ public:
 			if (shadow)
 			{
 				dirty_ranges.push_back({offset, offset, size});
+				raise_status_interrupt(runtime_state::heap_check);
 			}
 
 			return (u8*)_ptr + offset;

@@ -2831,8 +2831,7 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 	// Wait before sync block below
 	rsx::g_dma_manager.sync();
 
-	// TODO: Better check for shadowed memory
-	//if (m_attrib_ring_info.shadow)
+	if (vk::test_status_interrupt(vk::heap_check))
 	{
 		if (m_attrib_ring_info.dirty() ||
 			m_fragment_env_ring_info.dirty() ||
@@ -2862,6 +2861,8 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 			m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(),
 				VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 		}
+
+		vk::clear_status_interrupt(vk::heap_check);
 	}
 
 	// End any active renderpasses; the caller should handle reopening
