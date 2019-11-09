@@ -1,11 +1,9 @@
 ﻿#pragma once
 
 #include "../RSXTexture.h"
+#include "Utilities/span.h"
 
 #include <vector>
-
-#define TCB_SPAN_NAMESPACE_NAME gsl
-#include <tcb/span.hpp>
 
 namespace rsx
 {

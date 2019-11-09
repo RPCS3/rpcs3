@@ -3,12 +3,10 @@
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 
-#define TCB_SPAN_NAMESPACE_NAME gsl
-#include <tcb/span.hpp>
-
 #include "Utilities/hash.h"
 #include "Utilities/mutex.h"
 #include "Utilities/Log.h"
+#include "Utilities/span.h"
 
 #include <deque>
 
