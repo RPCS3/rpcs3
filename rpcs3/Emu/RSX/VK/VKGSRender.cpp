@@ -2735,7 +2735,7 @@ void VKGSRender::load_program_env()
 			auto mem = m_fragment_constants_ring_info.alloc<256>(fragment_constants_size);
 			auto buf = m_fragment_constants_ring_info.map(mem, fragment_constants_size);
 
-			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_size) },
+			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
 				current_fragment_program, vk::sanitize_fp_values());
 
 			m_fragment_constants_ring_info.unmap();

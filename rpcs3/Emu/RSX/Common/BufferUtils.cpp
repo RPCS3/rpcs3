@@ -44,13 +44,13 @@ namespace
 	template <typename T>
 	gsl::span<T> as_span_workaround(gsl::span<std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
 	}
 
 	template <typename T>
 	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
 	}
 }
 
