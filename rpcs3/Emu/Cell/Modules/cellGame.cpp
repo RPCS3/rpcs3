@@ -965,7 +965,7 @@ s32 cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32
 {
 	cellGame.todo("cellGameThemeInstall(usrdirPath=%s, fileName=%s, option=0x%x)", usrdirPath, fileName, option);
 
-	if (!fileName || !usrdirPath || usrdirPath.size() > CELL_GAME_PATH_MAX)
+	if (!fileName || !usrdirPath || !memchr(usrdirPath.get_ptr(), '\0', CELL_GAME_PATH_MAX))
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
