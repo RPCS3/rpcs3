@@ -171,11 +171,6 @@ using get_uint_t = typename get_int_impl<N>::utype;
 template <std::size_t N>
 using get_sint_t = typename get_int_impl<N>::stype;
 
-namespace gsl
-{
-	using std::byte;
-}
-
 // Formatting helper, type-specific preprocessing for improving safety and functionality
 template <typename T, typename = void>
 struct fmt_unveil;

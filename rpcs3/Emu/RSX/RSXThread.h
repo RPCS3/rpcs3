@@ -128,7 +128,7 @@ namespace rsx
 		rsx::vertex_base_type type;
 		u8 attribute_size;
 		u8 stride;
-		gsl::span<const gsl::byte> data;
+		gsl::span<const std::byte> data;
 		u8 index;
 		bool is_be;
 	};
@@ -153,7 +153,7 @@ namespace rsx
 
 	struct draw_indexed_array_command
 	{
-		gsl::span<const gsl::byte> raw_index_buffer;
+		gsl::span<const std::byte> raw_index_buffer;
 	};
 
 	struct draw_inlined_array
@@ -714,8 +714,8 @@ namespace rsx
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		virtual void sync_hint(FIFO_hint /*hint*/, u64 /*arg*/) {}
 
-		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
-		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
+		gsl::span<const std::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
+		gsl::span<const std::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const draw_clause& draw_array_clause) const;
 
 		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
 		get_vertex_buffers(const rsx::rsx_state& state, u64 consumed_attrib_mask) const;
@@ -821,16 +821,16 @@ namespace rsx
 		 * Copy rtt values to buffer.
 		 * TODO: It's more efficient to combine multiple call of this function into one.
 		 */
-		virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() {
-			return std::array<std::vector<gsl::byte>, 4>();
+		virtual std::array<std::vector<std::byte>, 4> copy_render_targets_to_memory() {
+			return std::array<std::vector<std::byte>, 4>();
 		}
 
 		/**
 		* Copy depth and stencil content to buffers.
 		* TODO: It's more efficient to combine multiple call of this function into one.
 		*/
-		virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() {
-			return std::array<std::vector<gsl::byte>, 2>();
+		virtual std::array<std::vector<std::byte>, 2> copy_depth_stencil_buffer_to_memory() {
+			return std::array<std::vector<std::byte>, 2>();
 		}
 
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }

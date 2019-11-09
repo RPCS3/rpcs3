@@ -144,8 +144,8 @@ namespace
 			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<4>(upload_size);
 			void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
-			gsl::span<gsl::byte> dst;
-			std::vector<gsl::byte> tmp;
+			gsl::span<std::byte> dst;
+			std::vector<std::byte> tmp;
 			if (emulate_restart)
 			{
 				tmp.resize(upload_size);
@@ -153,7 +153,7 @@ namespace
 			}
 			else
 			{
-				dst = gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), upload_size);
+				dst = gsl::span<std::byte>(static_cast<std::byte*>(buf), upload_size);
 			}
 
 			/**

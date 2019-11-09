@@ -722,7 +722,7 @@ namespace vk
 				check_caps = false;
 			}
 
-			gsl::span<gsl::byte> mapped{ (gsl::byte*)mapped_buffer, ::narrow<int>(image_linear_size) };
+			gsl::span<std::byte> mapped{ (std::byte*)mapped_buffer, image_linear_size };
 			opt = upload_texture_subresource(mapped, layout, format, is_swizzled, caps);
 			upload_heap.unmap();
 

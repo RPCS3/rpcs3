@@ -42,15 +42,15 @@ namespace
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
 	// Replace with true as_span when fixed.
 	template <typename T>
-	gsl::span<T> as_span_workaround(gsl::span<gsl::byte> unformated_span)
+	gsl::span<T> as_span_workaround(gsl::span<std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
 	}
 
 	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
 	}
 }
 
@@ -457,7 +457,7 @@ namespace
 	}
 }
 
-void write_vertex_array_data_to_buffer(gsl::span<gsl::byte> raw_dst_span, gsl::span<const gsl::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness)
+void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::span<const std::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness)
 {
 	verify(HERE), (vector_element_count > 0);
 	const u32 src_read_stride = rsx::get_vertex_type_size_on_host(type, vector_element_count);
@@ -1171,8 +1171,8 @@ namespace
 	}
 }
 
-std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<gsl::byte> dst_ptr,
-	gsl::span<const gsl::byte> src_ptr,
+std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<std::byte> dst_ptr,
+	gsl::span<const std::byte> src_ptr,
 	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
 	const std::function<bool(rsx::primitive_type)>& expands)
 {

@@ -3,10 +3,10 @@
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 
-#include "Utilities/GSL.h"
 #include "Utilities/hash.h"
 #include "Utilities/mutex.h"
 #include "Utilities/Log.h"
+#include "Utilities/span.h"
 
 #include <deque>
 
@@ -520,7 +520,7 @@ public:
 		return 0;
 	}
 
-	void fill_fragment_constants_buffer(gsl::span<f32, gsl::dynamic_range> dst_buffer, const RSXFragmentProgram &fragment_program, bool sanitize = false) const
+	void fill_fragment_constants_buffer(gsl::span<f32> dst_buffer, const RSXFragmentProgram &fragment_program, bool sanitize = false) const
 	{
 		const auto I = m_fragment_shader_cache.find(fragment_program);
 		if (I == m_fragment_shader_cache.end())

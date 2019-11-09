@@ -13,9 +13,9 @@ constexpr auto qstr = QString::fromStdString;
 namespace
 {
 	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
 	}
 }
 
@@ -427,7 +427,7 @@ void Buffer::ShowWindowed()
 
 namespace
 {
-	std::array<u8, 3> get_value(gsl::span<const gsl::byte> orig_buffer, rsx::surface_color_format format, size_t idx)
+	std::array<u8, 3> get_value(gsl::span<const std::byte> orig_buffer, rsx::surface_color_format format, size_t idx)
 	{
 		switch (format)
 		{
@@ -486,7 +486,7 @@ namespace
 	/**
 	 * Return a new buffer that can be passed to QImage.
 	 */
-	u8* convert_to_QImage_buffer(rsx::surface_color_format format, gsl::span<const gsl::byte> orig_buffer, size_t width, size_t height) noexcept
+	u8* convert_to_QImage_buffer(rsx::surface_color_format format, gsl::span<const std::byte> orig_buffer, size_t width, size_t height) noexcept
 	{
 		unsigned char* buffer = (unsigned char*)malloc(width * height * 4);
 		for (u32 i = 0; i < width * height; i++)
@@ -532,7 +532,7 @@ void rsx_debugger::OnClickDrawCalls()
 	{
 		if (width && height && !draw_call.depth_stencil[0].empty())
 		{
-			gsl::span<const gsl::byte> orig_buffer = draw_call.depth_stencil[0];
+			gsl::span<const std::byte> orig_buffer = draw_call.depth_stencil[0];
 			unsigned char *buffer = (unsigned char *)malloc(width * height * 4);
 
 			if (draw_call.state.surface_depth_fmt() == rsx::surface_depth_format::z24s8)
@@ -573,7 +573,7 @@ void rsx_debugger::OnClickDrawCalls()
 	{
 		if (width && height && !draw_call.depth_stencil[1].empty())
 		{
-			gsl::span<const gsl::byte> orig_buffer = draw_call.depth_stencil[1];
+			gsl::span<const std::byte> orig_buffer = draw_call.depth_stencil[1];
 			unsigned char *buffer = (unsigned char *)malloc(width * height * 4);
 
 			for (u32 row = 0; row < height; row++)

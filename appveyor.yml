@@ -47,7 +47,7 @@ install:
     git submodule -q update --init `
       3rdparty/cereal `
       3rdparty/ffmpeg `
-      3rdparty/GSL `
+      3rdparty/span `
       3rdparty/hidapi `
       3rdparty/libpng `
       3rdparty/libusb `

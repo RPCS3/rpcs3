@@ -1,9 +1,9 @@
 ﻿#pragma once
 
 #include "../RSXTexture.h"
+#include "Utilities/span.h"
 
 #include <vector>
-#include "Utilities/GSL.h"
 
 namespace rsx
 {
@@ -88,7 +88,7 @@ namespace rsx
 
 struct rsx_subresource_layout
 {
-	gsl::span<const gsl::byte> data;
+	gsl::span<const std::byte> data;
 	u16 width_in_texel;
 	u16 height_in_texel;
 	u16 width_in_block;
@@ -132,7 +132,7 @@ size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
 
-texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
+texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
 
 u8 get_format_block_size_in_bytes(int format);
 u8 get_format_block_size_in_texel(int format);

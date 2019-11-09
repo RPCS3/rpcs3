@@ -28,15 +28,15 @@ namespace
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
 	// Replace with true as_span when fixed.
 	template <typename T>
-	gsl::span<T> as_span_workaround(gsl::span<gsl::byte> unformated_span)
+	gsl::span<T> as_span_workaround(gsl::span<std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
 	}
 
 	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
 	}
 
 	// TODO: Make this function part of GSL
@@ -326,7 +326,7 @@ namespace
 	 * Sometimes texture provides a pitch even if texture is swizzled (and then packed) and in such case it's ignored. It's passed via suggested_pitch and is used only if padded_row is false.
 	 */
 	template <u8 block_edge_in_texel, typename SRC_TYPE>
-	std::vector<rsx_subresource_layout> get_subresources_layout_impl(const gsl::byte *texture_data_pointer, u16 width_in_texel, u16 height_in_texel, u16 depth, u8 layer_count, u16 mipmap_count, u32 suggested_pitch_in_bytes, bool padded_row, bool border)
+	std::vector<rsx_subresource_layout> get_subresources_layout_impl(const std::byte *texture_data_pointer, u16 width_in_texel, u16 height_in_texel, u16 depth, u8 layer_count, u16 mipmap_count, u32 suggested_pitch_in_bytes, bool padded_row, bool border)
 	{
 		/**
 		* Note about size type: RSX texture width is stored in a 16 bits int and pitch is stored in a 20 bits int.
@@ -387,7 +387,7 @@ namespace
 
 				slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * depth;
 				current_subresource_layout.pitch_in_block = src_pitch_in_block;
-				current_subresource_layout.data = gsl::span<const gsl::byte>(texture_data_pointer + offset_in_src, slice_sz);
+				current_subresource_layout.data = gsl::span<const std::byte>(texture_data_pointer + offset_in_src, slice_sz);
 
 				offset_in_src += slice_sz;
 				miplevel_width_in_texel = std::max(miplevel_width_in_texel / 2, 1);
@@ -461,7 +461,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout_impl(const RsxTextur
 	int format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
-	auto pixels = vm::_ptr<const gsl::byte>(texaddr);
+	auto pixels = vm::_ptr<const std::byte>(texaddr);
 
 	const bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
 	const bool has_border = !texture.border_type();
@@ -516,7 +516,7 @@ std::vector<rsx_subresource_layout> get_subresources_layout(const rsx::vertex_te
 	return get_subresources_layout_impl(texture);
 }
 
-texture_memory_info upload_texture_subresource(gsl::span<gsl::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps)
+texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const rsx_subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps)
 {
 	u16 w = src_layout.width_in_block;
 	u16 h = src_layout.height_in_block;
