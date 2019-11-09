@@ -84,9 +84,6 @@
     <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VulkanAPI.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -355,7 +355,6 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Common/BufferUtils.cpp
 	RSX/Common/FragmentProgramDecompiler.cpp
 	RSX/Common/ProgramStateCache.cpp
-	RSX/Common/ShaderParam.cpp
 	RSX/Common/surface_store.cpp
 	RSX/Common/TextureUtils.cpp
 	RSX/Common/VertexProgramDecompiler.cpp
@@ -401,7 +400,6 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKTexture.cpp
 		RSX/VK/VKVertexBuffers.cpp
 		RSX/VK/VKVertexProgram.cpp
-		RSX/VK/VulkanAPI.cpp
 	)
 endif()
 
