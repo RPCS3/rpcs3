@@ -127,6 +127,51 @@ namespace vk
 #endif
 	}
 
+	bool data_heap::grow(size_t size)
+	{
+		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
+		const size_t size_limit = 1024 * 0x100000;
+		const size_t aligned_new_size = align(m_size + size, 64 * 0x100000);
+
+		if (aligned_new_size >= size_limit)
+		{
+			// Too large
+			return false;
+		}
+
+		if (shadow)
+		{
+			// Shadowed. Growing this can be messy as it requires double allocation (macOS only)
+			return false;
+		}
+
+		// Wait for DMA activity to end
+		rsx::g_dma_manager.sync();
+
+		if (mapped)
+		{
+			// Force reset mapping
+			unmap(true);
+		}
+
+		VkBufferUsageFlags usage = heap->info.usage;
+
+		const auto device = get_current_renderer();
+		const auto& memory_map = device->get_memory_mapping();
+
+		VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		auto memory_index = memory_map.host_visible_coherent;
+
+		// Update heap information and reset the allocator
+		::data_heap::init(aligned_new_size, m_name, m_min_guard_size);
+
+		// Discard old heap and create a new one. Old heap will be garbage collected when no longer needed
+		get_resource_manager()->dispose(heap);
+		heap = std::make_unique<buffer>(*device, aligned_new_size, memory_index, memory_flags, usage, 0);
+
+		return true;
+	}
+
 	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
 	{
 		VkPhysicalDevice pdev = dev;
