@@ -16,7 +16,7 @@ struct bf_base
 	static constexpr uint bitsize = N;
 
 	// All ones mask
-	static constexpr utype mask1 = static_cast<utype>(UINTMAX_MAX);
+	static constexpr utype mask1 = static_cast<utype>(~static_cast<utype>(0));
 
 	// Value mask
 	static constexpr utype vmask = mask1 >> (bitmax - bitsize);
