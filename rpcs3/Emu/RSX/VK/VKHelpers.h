@@ -2912,12 +2912,8 @@ public:
 			CHECK_RESULT(vkCreateQueryPool(dev, &info, nullptr, &query_pool));
 			owner = &dev;
 
-			query_active_status.resize(num_entries, false);
-
-			for (u32 n = 0; n < num_entries; ++n)
-			{
-				available_slots.push(n);
-			}
+			// From spec: "After query pool creation, each query must be reset before it is used."
+			query_active_status.resize(num_entries, true);
 		}
 
 		void destroy()
@@ -2928,6 +2924,19 @@ public:
 
 				owner = nullptr;
 				query_pool = VK_NULL_HANDLE;
+			}
+		}
+
+		void initialize(vk::command_buffer &cmd)
+		{
+			const u32 count = (u32)query_active_status.size();
+			vkCmdResetQueryPool(cmd, query_pool, 0, count);
+
+			std::fill(query_active_status.begin(), query_active_status.end(), false);
+
+			for (u32 n = 0; n < count; ++n)
+			{
+				available_slots.push(n);
 			}
 		}
 
