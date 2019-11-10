@@ -73,7 +73,8 @@ namespace vk
 	enum runtime_state
 	{
 		uninterruptible = 1,
-		heap_check = 2
+		heap_dirty = 2,
+		heap_changed = 3
 	};
 
 	enum class driver_vendor
@@ -3407,6 +3408,8 @@ public:
 		bool mapped = false;
 		void *_ptr = nullptr;
 
+		bool notify_on_grow = false;
+
 		std::unique_ptr<buffer> shadow;
 		std::vector<VkBufferCopy> dirty_ranges;
 
@@ -3420,7 +3423,7 @@ public:
 		// Avoid mapping/unmapping to keep these drivers from stalling
 		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
 
-		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
+		void create(VkBufferUsageFlags usage, size_t size, const char *name, size_t guard = 0x10000, VkBool32 notify = VK_FALSE)
 		{
 			::data_heap::init(size, name, guard);
 
@@ -3441,7 +3444,9 @@ public:
 			}
 
 			heap = std::make_unique<buffer>(*device, size, memory_index, memory_flags, usage, 0);
+
 			initial_size = size;
+			notify_on_grow = bool(notify);
 		}
 
 		void destroy()
@@ -3470,7 +3475,7 @@ public:
 			if (shadow)
 			{
 				dirty_ranges.push_back({offset, offset, size});
-				raise_status_interrupt(runtime_state::heap_check);
+				raise_status_interrupt(runtime_state::heap_dirty);
 			}
 
 			return (u8*)_ptr + offset;

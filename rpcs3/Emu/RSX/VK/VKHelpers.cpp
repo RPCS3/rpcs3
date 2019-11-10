@@ -169,6 +169,11 @@ namespace vk
 		get_resource_manager()->dispose(heap);
 		heap = std::make_unique<buffer>(*device, aligned_new_size, memory_index, memory_flags, usage, 0);
 
+		if (notify_on_grow)
+		{
+			raise_status_interrupt(vk::heap_changed);
+		}
+
 		return true;
 	}
 
@@ -338,7 +343,7 @@ namespace vk
 	{
 		if (!g_upload_heap.heap)
 		{
-			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap");
+			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap", 0x100000);
 		}
 
 		return &g_upload_heap;
