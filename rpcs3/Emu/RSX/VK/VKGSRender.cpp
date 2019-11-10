@@ -528,6 +528,8 @@ VKGSRender::VKGSRender() : GSRender()
 	m_ui_renderer = std::make_unique<vk::ui_overlay_renderer>();
 	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
 
+	m_occlusion_query_pool.initialize(*m_current_command_buffer);
+
 	backend_config.supports_multidraw = true;
 
 	// NOTE: We do not actually need multiple sample support for A2C to work
