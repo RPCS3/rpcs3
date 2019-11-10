@@ -3394,6 +3394,7 @@ public:
 	class data_heap : public ::data_heap
 	{
 	private:
+		size_t initial_size = 0;
 		bool mapped = false;
 		void *_ptr = nullptr;
 
@@ -3431,6 +3432,7 @@ public:
 			}
 
 			heap = std::make_unique<buffer>(*device, size, memory_index, memory_flags, usage, 0);
+			initial_size = size;
 		}
 
 		void destroy()
@@ -3496,6 +3498,20 @@ public:
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
+		}
+
+		bool is_critical() const override
+		{
+			if (!::data_heap::is_critical())
+				return false;
+
+			// By default, allow the size to grow upto 8x larger
+			// This value is arbitrary, theoretically it is possible to allow infinite stretching to improve performance
+			const size_t soft_limit = initial_size * 8;
+			if ((m_size + m_min_guard_size) < soft_limit)
+				return false;
+
+			return true;
 		}
 	};
 
