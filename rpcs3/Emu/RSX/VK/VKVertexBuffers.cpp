@@ -318,6 +318,24 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		}
 	}
 
+	if (vk::test_status_interrupt(vk::heap_changed))
+	{
+		// Check for validity
+		if (m_persistent_attribute_storage &&
+			m_persistent_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
+		{
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
+		}
+
+		if (m_volatile_attribute_storage &&
+			m_volatile_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
+		{
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
+		}
+
+		vk::clear_status_interrupt(vk::heap_changed);
+	}
+
 	if (persistent_range_base != UINT32_MAX)
 	{
 		if (!m_persistent_attribute_storage || !m_persistent_attribute_storage->in_range(persistent_range_base, required.first, persistent_range_base))
