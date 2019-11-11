@@ -1332,7 +1332,6 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 		}
 
 		case spu_itype::SYNC:
-		case spu_itype::DSYNC:
 		case spu_itype::STOP:
 		case spu_itype::STOPD:
 		{
@@ -1696,6 +1695,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 			break;
 		}
 
+		case spu_itype::DSYNC:
 		case spu_itype::HEQ:
 		case spu_itype::HEQI:
 		case spu_itype::HGT:
@@ -6086,7 +6086,7 @@ public:
 	void DSYNC(spu_opcode_t op) //
 	{
 		// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
-		SYNC(op);
+		m_ir->CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
 	}
 
 	void MFSPR(spu_opcode_t op) //
