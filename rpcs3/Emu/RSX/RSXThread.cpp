@@ -781,43 +781,6 @@ namespace rsx
 		memcpy(buffer, fragment_program.texture_scale, 16 * 4 * sizeof(float));
 	}
 
-	void thread::write_inline_array_to_buffer(void *dst_buffer)
-	{
-		u8* src =
-			reinterpret_cast<u8*>(rsx::method_registers.current_draw_clause.inline_vertex_array.data());
-		u8* dst = (u8*)dst_buffer;
-
-		size_t bytes_written = 0;
-		while (bytes_written <
-			   rsx::method_registers.current_draw_clause.inline_vertex_array.size() * sizeof(u32))
-		{
-			for (int index = 0; index < rsx::limits::vertex_count; ++index)
-			{
-				const auto &info = rsx::method_registers.vertex_arrays_info[index];
-
-				if (!info.size()) // disabled
-					continue;
-
-				u32 element_size = rsx::get_vertex_type_size_on_host(info.type(), info.size());
-
-				if (info.type() == vertex_base_type::ub && info.size() == 4)
-				{
-					dst[0] = src[3];
-					dst[1] = src[2];
-					dst[2] = src[1];
-					dst[3] = src[0];
-				}
-				else
-					memcpy(dst, src, element_size);
-
-				src += element_size;
-				dst += element_size;
-
-				bytes_written += element_size;
-			}
-		}
-	}
-
 	u64 thread::timestamp()
 	{
 		// Get timestamp, and convert it from microseconds to nanoseconds
