@@ -15,7 +15,7 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 
-#include "Utilities/GSL.h"
+#include "Utilities/span.h"
 #include "Utilities/StrUtil.h"
 
 #include <cereal/archives/binary.hpp>
@@ -830,12 +830,12 @@ namespace rsx
 		return t + timestamp_subvalue;
 	}
 
-	gsl::span<const gsl::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
+	gsl::span<const std::byte> thread::get_raw_index_array(const draw_clause& draw_indexed_clause) const
 	{
 		if (!element_push_buffer.empty())
 		{
 			//Indices provided via immediate mode
-			return{(const gsl::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
+			return{(const std::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
 		}
 
 		const rsx::index_array_type type = rsx::method_registers.index_type();
@@ -850,68 +850,8 @@ namespace rsx
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
 
-		const auto ptr = vm::_ptr<const gsl::byte>(address);
+		const auto ptr = vm::_ptr<const std::byte>(address);
 		return{ ptr + first * type_size, count * type_size };
-	}
-
-	gsl::span<const gsl::byte> thread::get_raw_vertex_buffer(const rsx::data_array_format_info& vertex_array_info, u32 base_offset, const draw_clause& draw_array_clause) const
-	{
-		u32 offset  = vertex_array_info.offset();
-		u32 address = rsx::get_address(rsx::get_vertex_offset_from_base(base_offset, offset & 0x7fffffff), offset >> 31);
-
-		u32 element_size = rsx::get_vertex_type_size_on_host(vertex_array_info.type(), vertex_array_info.size());
-
-		const u32 first = draw_array_clause.min_index();
-		const u32 count = draw_array_clause.get_elements_count();
-
-		const gsl::byte* ptr = vm::_ptr<const gsl::byte>(address);
-		return {ptr + first * vertex_array_info.stride(), count * vertex_array_info.stride() + element_size};
-	}
-
-	std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-	thread::get_vertex_buffers(const rsx::rsx_state& state, const u64 consumed_attrib_mask) const
-	{
-		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>> result;
-		result.reserve(rsx::limits::vertex_count);
-
-		u32 input_mask = state.vertex_attrib_input_mask();
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
-		{
-			const bool enabled = !!(input_mask & (1 << index));
-			const bool consumed = !!(consumed_attrib_mask & (1ull << index));
-
-			if (!enabled && !consumed)
-				continue;
-
-			if (state.vertex_arrays_info[index].size() > 0)
-			{
-				const rsx::data_array_format_info& info = state.vertex_arrays_info[index];
-				result.emplace_back(vertex_array_buffer{info.type(), info.size(), info.stride(),
-					get_raw_vertex_buffer(info, state.vertex_data_base_offset(), state.current_draw_clause), index, true});
-				continue;
-			}
-
-			if (vertex_push_buffers[index].vertex_count > 1)
-			{
-				const auto& info = vertex_push_buffers[index];
-				const u8 element_size = info.size * sizeof(u32);
-
-				gsl::span<const gsl::byte> vertex_src = { (const gsl::byte*)vertex_push_buffers[index].data.data(), vertex_push_buffers[index].vertex_count * element_size };
-				result.emplace_back(vertex_array_buffer{ info.type, info.size, element_size, vertex_src, index, false });
-				continue;
-			}
-
-			if (state.register_vertex_info[index].size > 0)
-			{
-				const rsx::register_vertex_data_info& info = state.register_vertex_info[index];
-				result.emplace_back(vertex_array_register{info.type, info.size, info.data, index});
-				continue;
-			}
-
-			result.emplace_back(empty_vertex_array{index});
-		}
-
-		return result;
 	}
 
 	std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
@@ -960,33 +900,6 @@ namespace rsx
 			}
 		}
 	}
-
-
-	//std::future<void> thread::add_internal_task(std::function<bool()> callback)
-	//{
-	//	std::lock_guard lock(m_mtx_task);
-	//	m_internal_tasks.emplace_back(callback);
-
-	//	return m_internal_tasks.back().promise.get_future();
-	//}
-
-	//void thread::invoke(std::function<bool()> callback)
-	//{
-	//	if (get() == thread_ctrl::get_current())
-	//	{
-	//		while (true)
-	//		{
-	//			if (callback())
-	//			{
-	//				break;
-	//			}
-	//		}
-	//	}
-	//	else
-	//	{
-	//		add_internal_task(callback).wait();
-	//	}
-	//}
 
 	namespace
 	{
@@ -1827,116 +1740,6 @@ namespace rsx
 			if (!rsx::method_registers.depth_test_enabled())
 			{
 				LOG_ERROR(RSX, "FS exports depth component but depth test is disabled (INVALID_OPERATION)");
-			}
-		}
-	}
-
-	void thread::get_current_fragment_program_legacy(const std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)>& get_surface_info)
-	{
-		auto &result = current_fragment_program = {};
-
-		const u32 shader_program = rsx::method_registers.shader_program_address();
-		const u32 program_location = (shader_program & 0x3) - 1;
-		const u32 program_offset = (shader_program & ~0x3);
-
-		result.addr = vm::base(rsx::get_address(program_offset, program_location));
-		auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(result.addr);
-
-		result.addr = ((u8*)result.addr + program_info.program_start_offset);
-		result.offset = program_offset + program_info.program_start_offset;
-		result.ucode_length = program_info.program_ucode_length;
-		result.valid = true;
-		result.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
-		result.unnormalized_coords = 0;
-		result.two_sided_lighting = rsx::method_registers.two_side_light_en();
-		result.redirected_textures = 0;
-		result.shadow_textures = 0;
-
-		const auto resolution_scale = rsx::get_resolution_scale();
-
-		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
-		{
-			auto &tex = rsx::method_registers.fragment_textures[i];
-			result.texture_scale[i][0] = 1.f;
-			result.texture_scale[i][1] = 1.f;
-			result.textures_alpha_kill[i] = 0;
-			result.textures_zfunc[i] = 0;
-
-			if (tex.enabled() && (program_info.referenced_textures_mask & (1 << i)))
-			{
-				result.texture_dimensions |= ((u32)tex.get_extended_texture_dimension() << (i << 1));
-
-				if (tex.alpha_kill_enabled())
-				{
-					//alphakill can be ignored unless a valid comparison function is set
-					const auto func = tex.zfunc();
-					if (func < rsx::comparison_function::always && func > rsx::comparison_function::never)
-					{
-						result.textures_alpha_kill[i] = 1;
-						result.textures_zfunc[i] = (u8)func;
-					}
-				}
-
-				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
-				const u32 raw_format = tex.format();
-
-				if (raw_format & CELL_GCM_TEXTURE_UN)
-					result.unnormalized_coords |= (1 << i);
-
-				bool surface_exists;
-				u16  surface_pitch;
-
-				std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, tex, false);
-
-				if (surface_exists && surface_pitch)
-				{
-					if (raw_format & CELL_GCM_TEXTURE_UN)
-					{
-						result.texture_scale[i][0] = (resolution_scale * (float)surface_pitch) / tex.pitch();
-						result.texture_scale[i][1] = resolution_scale;
-					}
-				}
-				else
-				{
-					std::tie(surface_exists, surface_pitch) = get_surface_info(texaddr, tex, true);
-					if (surface_exists)
-					{
-						if (raw_format & CELL_GCM_TEXTURE_UN)
-						{
-							result.texture_scale[i][0] = (resolution_scale * (float)surface_pitch) / tex.pitch();
-							result.texture_scale[i][1] = resolution_scale;
-						}
-
-						const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-						switch (format)
-						{
-						case CELL_GCM_TEXTURE_A8R8G8B8:
-						case CELL_GCM_TEXTURE_D8R8G8B8:
-						case CELL_GCM_TEXTURE_A4R4G4B4:
-						case CELL_GCM_TEXTURE_R5G6B5:
-						{
-							u32 remap = tex.remap();
-							result.redirected_textures |= (1 << i);
-							result.texture_scale[i][2] = std::bit_cast<f32>(remap);
-							break;
-						}
-						case CELL_GCM_TEXTURE_DEPTH16:
-						case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-						case CELL_GCM_TEXTURE_DEPTH24_D8:
-						case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-						{
-							const auto compare_mode = tex.zfunc();
-							if (result.textures_alpha_kill[i] == 0 &&
-								compare_mode < rsx::comparison_function::always &&
-								compare_mode > rsx::comparison_function::never)
-								result.shadow_textures |= (1 << i);
-							break;
-						}
-						default:
-							LOG_ERROR(RSX, "Depth texture bound to pipeline with unexpected format 0x%X", format);
-						}
-					}
-				}
 			}
 		}
 	}

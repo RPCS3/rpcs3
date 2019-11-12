@@ -204,9 +204,9 @@ else()
 endif()
 
 
-# GSL
-add_library(3rdparty_gsl INTERFACE)
-target_include_directories(3rdparty_gsl INTERFACE GSL/include)
+# span
+add_library(3rdparty_span INTERFACE)
+target_include_directories(3rdparty_span INTERFACE span/include)
 
 
 # stblib
@@ -424,7 +424,7 @@ add_library(3rdparty::hidapi ALIAS 3rdparty_hidapi)
 add_library(3rdparty::libpng ALIAS ${LIBPNG_TARGET})
 add_library(3rdparty::cereal ALIAS 3rdparty_cereal)
 add_library(3rdparty::opengl ALIAS 3rdparty_opengl)
-add_library(3rdparty::gsl ALIAS 3rdparty_gsl)
+add_library(3rdparty::span ALIAS 3rdparty_span)
 add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
 add_library(3rdparty::discord-rpc ALIAS 3rdparty_discord-rpc)
 add_library(3rdparty::alsa ALIAS ${ALSA_TARGET})

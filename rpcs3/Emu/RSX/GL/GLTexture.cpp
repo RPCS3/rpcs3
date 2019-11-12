@@ -456,7 +456,7 @@ namespace gl
 	}
 
 	void fill_texture(rsx::texture_dimension_extended dim, u16 mipmap_count, int format, u16 width, u16 height, u16 depth,
-			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<gsl::byte>& staging_buffer)
+			const std::vector<rsx_subresource_layout> &input_layouts, bool is_swizzled, GLenum gl_format, GLenum gl_type, std::vector<std::byte>& staging_buffer)
 	{
 		int mip_level = 0;
 		texture_uploader_capabilities caps{ true, false, false, 4 };
@@ -635,7 +635,7 @@ namespace gl
 		// Calculate staging buffer size
 		const u32 aligned_pitch = align<u32>(width * get_format_block_size_in_bytes(gcm_format), 4);
 		size_t texture_data_sz = depth * height * aligned_pitch;
-		std::vector<gsl::byte> data_upload_buf(texture_data_sz);
+		std::vector<std::byte> data_upload_buf(texture_data_sz);
 
 		// TODO: GL drivers support byteswapping and this should be used instead of doing so manually
 		const auto format_type = get_format_type(gcm_format);

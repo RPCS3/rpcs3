@@ -414,12 +414,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	}
 }
 
-std::array<std::vector<gsl::byte>, 4> GLGSRender::copy_render_targets_to_memory()
+std::array<std::vector<std::byte>, 4> GLGSRender::copy_render_targets_to_memory()
 {
 	return {};
 }
 
-std::array<std::vector<gsl::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_memory()
+std::array<std::vector<std::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_memory()
 {
 	return {};
 }

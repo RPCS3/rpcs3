@@ -448,11 +448,11 @@ VKGSRender::VKGSRender() : GSRender()
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
 	//VRAM allocation
-	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000);
+	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, "attrib buffer", 0x400000, VK_TRUE);
 	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment env buffer");
 	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex env buffer");
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment texture params buffer");
-	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer");
+	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "vertex layout buffer", 0x10000, VK_TRUE);
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, "fragment constants buffer");
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, "transform constants buffer");
 	m_index_buffer_ring_info.create(VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_INDEX_RING_BUFFER_SIZE_M * 0x100000, "index buffer");
@@ -527,6 +527,8 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_ui_renderer = std::make_unique<vk::ui_overlay_renderer>();
 	m_ui_renderer->create(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
+
+	m_occlusion_query_pool.initialize(*m_current_command_buffer);
 
 	backend_config.supports_multidraw = true;
 
@@ -1090,7 +1092,17 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		// Allocate stream layout memory for this batch
 		m_vertex_layout_stream_info.range = rsx::method_registers.current_draw_clause.pass_count() * 128;
 		m_vertex_layout_stream_info.offset = m_vertex_layout_ring_info.alloc<256>(m_vertex_layout_stream_info.range);
-		// m_vertex_layout_stream_info.buffer = m_vertex_layout_ring_info.heap->value;
+
+		if (vk::test_status_interrupt(vk::heap_changed))
+		{
+			if (m_vertex_layout_storage &&
+				m_vertex_layout_storage->info.buffer != m_vertex_layout_ring_info.heap->value)
+			{
+				m_current_frame->buffer_views_to_clean.push_back(std::move(m_vertex_layout_storage));
+			}
+
+			vk::clear_status_interrupt(vk::heap_changed);
+		}
 	}
 	else if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
 	{
@@ -2735,7 +2747,7 @@ void VKGSRender::load_program_env()
 			auto mem = m_fragment_constants_ring_info.alloc<256>(fragment_constants_size);
 			auto buf = m_fragment_constants_ring_info.map(mem, fragment_constants_size);
 
-			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), ::narrow<int>(fragment_constants_size) },
+			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
 				current_fragment_program, vk::sanitize_fp_values());
 
 			m_fragment_constants_ring_info.unmap();
@@ -2831,8 +2843,7 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 	// Wait before sync block below
 	rsx::g_dma_manager.sync();
 
-	// TODO: Better check for shadowed memory
-	if (m_attrib_ring_info.shadow)
+	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
 		if (m_attrib_ring_info.dirty() ||
 			m_fragment_env_ring_info.dirty() ||
@@ -2862,6 +2873,8 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 			m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(),
 				VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 		}
+
+		vk::clear_status_interrupt(vk::heap_dirty);
 	}
 
 	// End any active renderpasses; the caller should handle reopening

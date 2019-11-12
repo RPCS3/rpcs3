@@ -1,18 +1,18 @@
 ﻿#pragma once
 
-#include "Utilities/GSL.h"
 #include "Emu/Memory/vm.h"
 #include "surface_utils.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
+#include "Utilities/span.h"
 #include <list>
 
 namespace
 {
 	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const gsl::byte> unformated_span)
+	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), ::narrow<int>(unformated_span.size_bytes() / sizeof(T)) };
+		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
 	}
 }
 

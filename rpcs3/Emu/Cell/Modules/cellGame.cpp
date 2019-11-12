@@ -150,12 +150,15 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 {
 	cellGame.error("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
-	std::string dir = dirName.get_ptr();
-
-	if (dir.size() != 9)
+	if (!dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_HDDGAME_ERROR_PARAM;
 	}
+
+	std::string dir = dirName.get_ptr();
+
+	// TODO: Find error code
+	verify(HERE), dir.size() == 9;
 
 	vm::var<CellHddGameCBResult> result;
 	vm::var<CellHddGameStatGet> get;
@@ -962,7 +965,7 @@ s32 cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileName, u32
 {
 	cellGame.todo("cellGameThemeInstall(usrdirPath=%s, fileName=%s, option=0x%x)", usrdirPath, fileName, option);
 
-	if (!fileName || !usrdirPath || usrdirPath.size() > CELL_GAME_PATH_MAX)
+	if (!fileName || !usrdirPath || !memchr(usrdirPath.get_ptr(), '\0', CELL_GAME_PATH_MAX))
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}

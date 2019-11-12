@@ -115,13 +115,13 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 
 	const auto cache = g_fxo->get<syscache_info>();
 
-	if (!param || !std::memchr(param->cacheId, '\0', CELL_SYSCACHE_ID_SIZE))
+	if (!param || (param->cacheId[0] && sysutil_check_name_string(param->cacheId, 1, CELL_SYSCACHE_ID_SIZE) != 0))
 	{
 		return CELL_SYSCACHE_ERROR_PARAM;
 	}
 
 	// Full virtualized cache id (with title id included)
-	std::string cache_id = vfs::escape(Emu.GetTitleID() + '_' + param->cacheId, true);
+	std::string cache_id = vfs::escape(Emu.GetTitleID() + '_' + param->cacheId);
 
 	// Full path to virtual cache root (/dev_hdd1)
 	std::string new_path = cache->cache_root + cache_id + '/';

@@ -52,7 +52,6 @@
 
 #include <thread>
 #include <cfenv>
-#include "Utilities/GSL.h"
 
 const bool s_use_ssse3 = utils::has_ssse3();
 

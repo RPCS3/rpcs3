@@ -70,6 +70,12 @@ namespace vk
 							void *pUserData);
 
 	//VkAllocationCallbacks default_callbacks();
+	enum runtime_state
+	{
+		uninterruptible = 1,
+		heap_dirty = 2,
+		heap_changed = 3
+	};
 
 	enum class driver_vendor
 	{
@@ -109,7 +115,7 @@ namespace vk
 	class image;
 	struct image_view;
 	struct buffer;
-	struct data_heap;
+	class data_heap;
 	class mem_allocator_base;
 	struct memory_type_mapping;
 	struct gpu_formats_support;
@@ -203,7 +209,9 @@ namespace vk
 		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask,
 		const VkImageSubresourceRange& range);
 
-	//Manage 'uininterruptible' state where secondary operations (e.g violation handlers) will have to wait
+	void raise_status_interrupt(runtime_state status);
+	void clear_status_interrupt(runtime_state status);
+	bool test_status_interrupt(runtime_state status);
 	void enter_uninterruptible();
 	void leave_uninterruptible();
 	bool is_uninterruptible();
@@ -2905,12 +2913,8 @@ public:
 			CHECK_RESULT(vkCreateQueryPool(dev, &info, nullptr, &query_pool));
 			owner = &dev;
 
-			query_active_status.resize(num_entries, false);
-
-			for (u32 n = 0; n < num_entries; ++n)
-			{
-				available_slots.push(n);
-			}
+			// From spec: "After query pool creation, each query must be reset before it is used."
+			query_active_status.resize(num_entries, true);
 		}
 
 		void destroy()
@@ -2921,6 +2925,19 @@ public:
 
 				owner = nullptr;
 				query_pool = VK_NULL_HANDLE;
+			}
+		}
+
+		void initialize(vk::command_buffer &cmd)
+		{
+			const u32 count = (u32)query_active_status.size();
+			vkCmdResetQueryPool(cmd, query_pool, 0, count);
+
+			std::fill(query_active_status.begin(), query_active_status.end(), false);
+
+			for (u32 n = 0; n < count; ++n)
+			{
+				available_slots.push(n);
 			}
 		}
 
@@ -3384,25 +3401,34 @@ public:
 		};
 	}
 
-	struct data_heap : public ::data_heap
+	class data_heap : public ::data_heap
 	{
-		std::unique_ptr<buffer> heap;
+	private:
+		size_t initial_size = 0;
 		bool mapped = false;
 		void *_ptr = nullptr;
 
+		bool notify_on_grow = false;
+
 		std::unique_ptr<buffer> shadow;
 		std::vector<VkBufferCopy> dirty_ranges;
+
+	protected:
+		bool grow(size_t size) override;
+
+	public:
+		std::unique_ptr<buffer> heap;
 
 		// NOTE: Some drivers (RADV) use heavyweight OS map/unmap routines that are insanely slow
 		// Avoid mapping/unmapping to keep these drivers from stalling
 		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
 
-		void create(VkBufferUsageFlags usage, size_t size, const char *name = "unnamed", size_t guard = 0x10000)
+		void create(VkBufferUsageFlags usage, size_t size, const char *name, size_t guard = 0x10000, VkBool32 notify = VK_FALSE)
 		{
 			::data_heap::init(size, name, guard);
 
 			const auto device = get_current_renderer();
-			const auto memory_map = device->get_memory_mapping();
+			const auto& memory_map = device->get_memory_mapping();
 
 			VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 			auto memory_index = memory_map.host_visible_coherent;
@@ -3418,6 +3444,9 @@ public:
 			}
 
 			heap = std::make_unique<buffer>(*device, size, memory_index, memory_flags, usage, 0);
+
+			initial_size = size;
+			notify_on_grow = bool(notify);
 		}
 
 		void destroy()
@@ -3446,6 +3475,7 @@ public:
 			if (shadow)
 			{
 				dirty_ranges.push_back({offset, offset, size});
+				raise_status_interrupt(runtime_state::heap_dirty);
 			}
 
 			return (u8*)_ptr + offset;
@@ -3482,6 +3512,20 @@ public:
 						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
 						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 			}
+		}
+
+		bool is_critical() const override
+		{
+			if (!::data_heap::is_critical())
+				return false;
+
+			// By default, allow the size to grow upto 8x larger
+			// This value is arbitrary, theoretically it is possible to allow infinite stretching to improve performance
+			const size_t soft_limit = initial_size * 8;
+			if ((m_size + m_min_guard_size) < soft_limit)
+				return false;
+
+			return true;
 		}
 	};
 

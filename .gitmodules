@@ -11,10 +11,6 @@
 	url = https://github.com/RPCS3/llvm
 	branch = release_60
 	ignore = dirty
-[submodule "GSL"]
-	path = 3rdparty/GSL
-	url = https://github.com/Microsoft/GSL.git
-	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
 	url = https://github.com/KhronosGroup/glslang.git
@@ -56,3 +52,6 @@
 	path = 3rdparty/FAudio
 	url = https://github.com/FNA-XNA/FAudio.git
 	ignore = dirty
+[submodule "3rdparty/span"]
+	path = 3rdparty/span
+	url = https://github.com/tcbrindle/span

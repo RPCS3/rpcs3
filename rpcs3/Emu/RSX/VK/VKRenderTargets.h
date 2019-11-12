@@ -245,7 +245,7 @@ namespace vk
 			subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 			subres.pitch_in_block = rsx_pitch / get_bpp();
 			subres.depth = 1;
-			subres.data = { (const gsl::byte*)vm::get_super_ptr(base_addr), s32(rsx_pitch * surface_height * samples_y) };
+			subres.data = { (const std::byte*)vm::get_super_ptr(base_addr), static_cast<gsl::span<const std::byte>::index_type>(rsx_pitch * surface_height * samples_y) };
 
 			if (LIKELY(g_cfg.video.resolution_scale_percent == 100 && samples() == 1))
 			{

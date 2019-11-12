@@ -144,8 +144,8 @@ namespace
 			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<4>(upload_size);
 			void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
-			gsl::span<gsl::byte> dst;
-			std::vector<gsl::byte> tmp;
+			gsl::span<std::byte> dst;
+			std::vector<std::byte> tmp;
 			if (emulate_restart)
 			{
 				tmp.resize(upload_size);
@@ -153,7 +153,7 @@ namespace
 			}
 			else
 			{
-				dst = gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), upload_size);
+				dst = gsl::span<std::byte>(static_cast<std::byte*>(buf), upload_size);
 			}
 
 			/**
@@ -316,6 +316,24 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 			write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, nullptr, volatile_mapping);
 			m_attrib_ring_info.unmap();
 		}
+	}
+
+	if (vk::test_status_interrupt(vk::heap_changed))
+	{
+		// Check for validity
+		if (m_persistent_attribute_storage &&
+			m_persistent_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
+		{
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
+		}
+
+		if (m_volatile_attribute_storage &&
+			m_volatile_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
+		{
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
+		}
+
+		vk::clear_status_interrupt(vk::heap_changed);
 	}
 
 	if (persistent_range_base != UINT32_MAX)

@@ -1054,9 +1054,6 @@
     <ClInclude Include="..\Utilities\types.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\event.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\BitField.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1377,12 +1374,6 @@
     </ClInclude>
     <ClInclude Include="Emu\VFS.h">
       <Filter>Emu</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\GSL.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\AtomicPtr.h">
-      <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\StrUtil.h">
       <Filter>Utilities</Filter>
