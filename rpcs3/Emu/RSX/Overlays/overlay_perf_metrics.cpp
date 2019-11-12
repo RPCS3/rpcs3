@@ -85,7 +85,7 @@ namespace rsx
 
 			if (g_cfg.video.perf_overlay.center_y)
 			{
-				pos.y = (virtual_height - m_body.h) / 2;
+				pos.y = (virtual_height - m_body.h - bottom_margin) / 2;
 			}
 
 			elm.set_pos(pos.x, pos.y);
