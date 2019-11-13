@@ -736,7 +736,7 @@ namespace vk
 			copy_info.imageSubresource.layerCount = 1;
 			copy_info.imageSubresource.baseArrayLayer = layout.layer;
 			copy_info.imageSubresource.mipLevel = layout.level;
-			copy_info.bufferRowLength = block_in_pixel * row_pitch / block_size_in_bytes;
+			copy_info.bufferRowLength = std::max<u32>(block_in_pixel * row_pitch / block_size_in_bytes, layout.width_in_texel);
 
 			if (opt.require_swap || opt.require_deswizzle || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
 			{
