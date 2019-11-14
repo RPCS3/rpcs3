@@ -21,7 +21,8 @@ namespace rsx
 			label m_body{};
 			label m_titles{};
 
-			bool m_graphs_enabled{};
+			bool m_framerate_graph_enabled{};
+			bool m_frametime_graph_enabled{};
 			graph m_fps_graph;
 			graph m_frametime_graph;
 
@@ -52,6 +53,8 @@ namespace rsx
 		public:
 			void init();
 
+			void set_framerate_graph_enabled(bool enabled);
+			void set_frametime_graph_enabled(bool enabled);
 			void set_detail_level(detail_level level);
 			void set_position(screen_quadrant quadrant);
 			void set_update_interval(u32 update_interval);

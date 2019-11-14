@@ -94,7 +94,7 @@ namespace rsx
 
 		void perf_metrics_overlay::reset_transforms()
 		{
-			const u16 per_overlay_padding = m_font_size / 2;
+			const u16 perf_overlay_padding = m_font_size / 2;
 			const u16 graphs_padding = m_font_size * 2;
 
 			const u16 fps_graph_h = 60;
@@ -102,29 +102,57 @@ namespace rsx
 
 			u16 bottom_margin{};
 
-			if (m_graphs_enabled)
+			if (m_framerate_graph_enabled || m_frametime_graph_enabled)
 			{
 				// Adjust body size to account for the graphs
 				// TODO: Bit hacky, could do this with margins if overlay_element had bottom margin (or negative top at least)
-				bottom_margin = per_overlay_padding + fps_graph_h + graphs_padding + frametime_graph_h;
+				bottom_margin = perf_overlay_padding;
+
+				if (m_framerate_graph_enabled)
+				{
+					bottom_margin += fps_graph_h;
+
+					if (m_frametime_graph_enabled)
+					{
+						bottom_margin += graphs_padding;
+					}
+				}
+
+				if (m_frametime_graph_enabled)
+				{
+					bottom_margin += frametime_graph_h;
+				}
 			}
 
 			// Set body/titles transform
 			reset_transform(m_body, bottom_margin);
 			reset_transform(m_titles, bottom_margin);
 
-			if (m_graphs_enabled)
+			if (m_framerate_graph_enabled || m_frametime_graph_enabled)
 			{
 				// Position the graphs within the body
 				const u16 graphs_width = m_body.w;
 				const u16 body_left = m_body.x;
-				const u16 body_bottom = m_body.y + m_body.h + per_overlay_padding;
+				const u16 body_bottom = m_body.y + m_body.h + perf_overlay_padding;
 
-				m_fps_graph.set_pos(body_left, body_bottom);
-				m_fps_graph.set_size(graphs_width, fps_graph_h);
+				if (m_framerate_graph_enabled)
+				{
+					m_fps_graph.set_pos(body_left, body_bottom);
+					m_fps_graph.set_size(graphs_width, fps_graph_h);
+				}
 
-				m_frametime_graph.set_pos(body_left, body_bottom + m_fps_graph.h + graphs_padding);
-				m_frametime_graph.set_size(graphs_width, frametime_graph_h);
+				if (m_frametime_graph_enabled)
+				{
+					u16 padding = 0;
+
+					if (m_framerate_graph_enabled)
+					{
+						padding = m_fps_graph.h + graphs_padding;
+					}
+
+					m_frametime_graph.set_pos(body_left, body_bottom + padding);
+					m_frametime_graph.set_size(graphs_width, frametime_graph_h);
+				}
 			}
 		}
 
@@ -165,18 +193,6 @@ namespace rsx
 			reset_text();
 			force_next_update();
 
-			m_fps_graph.set_title("Framerate");
-			m_fps_graph.set_font_size(m_font_size * 0.8);
-			m_fps_graph.set_count(50);
-			m_fps_graph.set_color(convert_color_code(g_cfg.video.perf_overlay.color_body));
-			m_fps_graph.set_guide_interval(10);
-
-			m_frametime_graph.set_title("Frametime");
-			m_frametime_graph.set_font_size(m_font_size * 0.8);
-			m_frametime_graph.set_count(170);
-			m_frametime_graph.set_color(convert_color_code(g_cfg.video.perf_overlay.color_body));
-			m_frametime_graph.set_guide_interval(8);
-
 			m_update_timer.Start();
 			m_frametime_timer.Start();
 
@@ -185,11 +201,47 @@ namespace rsx
 			m_is_initialised = true;
 		}
 
+		void perf_metrics_overlay::set_framerate_graph_enabled(bool enabled)
+		{
+			m_framerate_graph_enabled = enabled;
+
+			if (enabled)
+			{
+				m_fps_graph.set_title("Framerate");
+				m_fps_graph.set_font_size(m_font_size * 0.8);
+				m_fps_graph.set_count(50);
+				m_fps_graph.set_color(convert_color_code(g_cfg.video.perf_overlay.color_body));
+				m_fps_graph.set_guide_interval(10);
+			}
+
+			if (m_is_initialised)
+			{
+				reset_transforms();
+			}
+		}
+
+		void perf_metrics_overlay::set_frametime_graph_enabled(bool enabled)
+		{
+			m_frametime_graph_enabled = enabled;
+
+			if (enabled)
+			{
+				m_frametime_graph.set_title("Frametime");
+				m_frametime_graph.set_font_size(m_font_size * 0.8);
+				m_frametime_graph.set_count(170);
+				m_frametime_graph.set_color(convert_color_code(g_cfg.video.perf_overlay.color_body));
+				m_frametime_graph.set_guide_interval(8);
+			}
+
+			if (m_is_initialised)
+			{
+				reset_transforms();
+			}
+		}
+
 		void perf_metrics_overlay::set_detail_level(detail_level level)
 		{
 			m_detail = level;
-
-			m_graphs_enabled = (level == detail_level::high);
 
 			if (m_is_initialised)
 			{
@@ -263,7 +315,7 @@ namespace rsx
 		{
 			const auto elapsed_update = m_update_timer.GetElapsedTimeInMilliSec();
 
-			if (m_is_initialised && m_graphs_enabled)
+			if (m_is_initialised && m_frametime_graph_enabled)
 			{
 				const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
 				m_frametime_graph.record_datapoint(elapsed_frame);
@@ -276,7 +328,7 @@ namespace rsx
 
 			if (elapsed_update >= m_update_interval || m_force_update)
 			{
-				if (!m_force_update && m_graphs_enabled)
+				if (!m_force_update)
 				{
 					m_update_timer.Start();
 				}
@@ -350,7 +402,7 @@ namespace rsx
 				case detail_level::minimal:
 				{
 					fps = m_force_update ? 0 : std::max(0.0, static_cast<f32>(m_frames) / (elapsed_update / 1000));
-					if (m_is_initialised && m_graphs_enabled)
+					if (m_is_initialised && m_framerate_graph_enabled)
 						m_fps_graph.record_datapoint(fps);
 				}
 				}
@@ -416,11 +468,14 @@ namespace rsx
 				}
 			}
 
-			if (m_graphs_enabled)
+			if (m_framerate_graph_enabled)
 			{
 				m_fps_graph.update();
-				m_frametime_graph.update();
+			}
 
+			if (m_frametime_graph_enabled)
+			{
+				m_frametime_graph.update();
 				m_frametime_timer.Start();
 			}
 		}
@@ -431,9 +486,13 @@ namespace rsx
 
 			compiled_resources.add(m_titles.get_compiled());
 
-			if (m_graphs_enabled)
+			if (m_framerate_graph_enabled)
 			{
 				compiled_resources.add(m_fps_graph.get_compiled());
+			}
+
+			if (m_frametime_graph_enabled)
+			{
 				compiled_resources.add(m_frametime_graph.get_compiled());
 			}
 
