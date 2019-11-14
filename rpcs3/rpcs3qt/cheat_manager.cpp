@@ -16,6 +16,7 @@
 
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUAnalyser.h"
+#include "Emu/Cell/PPUFunction.h"
 
 #include "Utilities/StrUtil.h"
 
@@ -332,7 +333,7 @@ std::vector<u32> cheat_engine::search(const T value, const std::vector<u32>& to_
 	{
 		for (const auto& off : to_filter)
 		{
-			if (vm::check_addr(off))
+			if (vm::check_addr(off, sizeof(T)))
 			{
 				if (*vm::get_super_ptr<T>(off) == value_swapped)
 					results.push_back(off);
@@ -370,7 +371,7 @@ T cheat_engine::get_value(const u32 offset, bool& success)
 
 	cpu_thread::suspend_all cpu_lock(nullptr);
 
-	if (!vm::check_addr(offset))
+	if (!vm::check_addr(offset, sizeof(T)))
 	{
 		success = false;
 		return 0;
@@ -391,12 +392,52 @@ bool cheat_engine::set_value(const u32 offset, const T value)
 
 	cpu_thread::suspend_all cpu_lock(nullptr);
 
-	if (!vm::check_addr(offset))
+	if (!vm::check_addr(offset, sizeof(T)))
 	{
 		return false;
 	}
 
 	*vm::get_super_ptr<T>(offset) = value;
+
+	const bool exec_code_at_start = vm::check_addr(offset, 1, vm::page_executable);
+	const bool exec_code_at_end = [&]()
+	{
+		if constexpr (sizeof(T) == 1)
+		{
+			return exec_code_at_start;
+		}
+		else
+		{
+			return vm::check_addr(offset + sizeof(T) - 1, 1, vm::page_executable);
+		}
+	}();
+
+	if (exec_code_at_end || exec_code_at_start)
+	{
+		extern void ppu_register_function_at(u32, u32, ppu_function_t);
+
+		u32 addr = offset, size = sizeof(T);
+
+		if (exec_code_at_end && exec_code_at_start)
+		{
+			size = align<u32>(addr + size, 4) - (addr & -4);
+			addr &= -4;
+		}
+		else if (exec_code_at_end)
+		{
+			size -= align<u32>(size - 4096 + (addr & 4095), 4);
+			addr = align<u32>(addr, 4096);
+		}
+		else if (exec_code_at_start)
+		{
+			size = align<u32>(4096 - (addr & 4095), 4);
+			addr &= -4;
+		}
+
+		// Reinitialize executable code
+		ppu_register_function_at(addr, size, nullptr);
+	}
+
 	return true;
 }
 
