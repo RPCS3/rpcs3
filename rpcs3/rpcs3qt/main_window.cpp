@@ -1593,6 +1593,8 @@ void main_window::CreateDockWindows()
 	{
 		Boot(game->info.path, game->info.serial, false, false, force_global_config);
 	});
+
+	connect(m_gameListFrame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);
 }
 
 void main_window::ConfigureGuiFromSettings(bool configure_all)
