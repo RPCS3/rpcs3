@@ -2139,6 +2139,20 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="perfOverlayFramerateGraphEnabled">
+                <property name="text">
+                 <string>Show framerate graph</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="perfOverlayFrametimeGraphEnabled">
+                <property name="text">
+                 <string>Show frametime graph</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QLabel" name="label_detail_level">
                 <property name="text">
                  <string>Detail Level:</string>

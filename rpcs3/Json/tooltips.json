@@ -91,6 +91,8 @@
 		},
 		"overlay": {
 			"perfOverlayEnabled": "Enables or disables the performance overlay.",
+			"perfOverlayFramerateGraphEnabled": "Enables or disables the framerate graph.",
+			"perfOverlayFrametimeGraphEnabled": "Enables or disables the frametime graph.",
 			"perfOverlayPosition": "Sets the on-screen position (quadrant) of the performance overlay.",
 			"perfOverlayDetailLevel": "Controls the amount of information displayed on the performance overlay.",
 			"perfOverlayUpdateInterval": "Sets the time interval in which the performance overlay is being updated (measured in milliseconds).",
