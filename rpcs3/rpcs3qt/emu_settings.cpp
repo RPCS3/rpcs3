@@ -296,19 +296,36 @@ void emu_settings::SaveSettings()
 	YAML::Emitter out;
 	emitData(out, m_currentSettings);
 
-	if (!m_title_id.empty())
+	std::string config_name;
+
+	if (m_title_id.empty())
 	{
-		config = fs::file(Emulator::GetCustomConfigPath(m_title_id), fs::read + fs::write + fs::create);
+		config_name = fs::get_config_dir() + "/config.yml";
 	}
 	else
 	{
-		config = fs::file(fs::get_config_dir() + "/config.yml", fs::read + fs::write + fs::create);
+		config_name = Emulator::GetCustomConfigPath(m_title_id);
 	}
+
+	config = fs::file(config_name, fs::read + fs::write + fs::create);
 
 	// Save config
 	config.seek(0);
 	config.trunc(0);
 	config.write(out.c_str(), out.size());
+
+	// Check if the running config/title is the same as the edited config/title.
+	if (config_name == g_cfg.name || m_title_id == Emu.GetTitleID())
+	{
+		// Update current config
+		g_cfg.from_string(config.to_string(), true);
+
+		if (!Emu.IsStopped()) // Don't spam the log while emulation is stopped. The config will be logged on boot anyway.
+		{
+			LOG_NOTICE(LOADER, "Updated configuration:\n%s\n", g_cfg.to_string());
+		}
+	}
+
 	config.close();
 }
 

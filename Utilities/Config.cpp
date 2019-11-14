@@ -17,8 +17,8 @@ namespace cfg
 		}
 	}
 
-	_base::_base(type _type, node* owner, const std::string& name)
-		: m_type(_type)
+	_base::_base(type _type, node* owner, const std::string& name, bool dynamic)
+		: m_type(_type), m_dynamic(dynamic)
 	{
 		for (const auto& pair : owner->m_nodes)
 		{
@@ -31,7 +31,7 @@ namespace cfg
 		owner->m_nodes.emplace_back(name, this);
 	}
 
-	bool _base::from_string(const std::string&)
+	bool _base::from_string(const std::string&, bool)
 	{
 		fmt::throw_exception("from_string() purecall" HERE);
 	}
@@ -46,7 +46,7 @@ namespace cfg
 
 	// Incrementally load config entries from YAML::Node.
 	// The config value is preserved if the corresponding YAML node doesn't exist.
-	static void decode(const YAML::Node& data, class _base& rhs);
+	static void decode(const YAML::Node& data, class _base& rhs, bool dynamic = false);
 }
 
 std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
@@ -212,8 +212,13 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 	}
 }
 
-void cfg::decode(const YAML::Node& data, cfg::_base& rhs)
+void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 {
+	if (dynamic && !rhs.get_is_dynamic())
+	{
+		return;
+	}
+
 	switch (rhs.get_type())
 	{
 	case type::node:
@@ -232,7 +237,7 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs)
 			{
 				if (_pair.first == pair.first.Scalar())
 				{
-					decode(pair.second, *_pair.second);
+					decode(pair.second, *_pair.second, dynamic);
 				}
 			}
 		}
@@ -295,9 +300,9 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
-bool cfg::node::from_string(const std::string& value) try
+bool cfg::node::from_string(const std::string& value, bool dynamic) try
 {
-	cfg::decode(YAML::Load(value), *this);
+	cfg::decode(YAML::Load(value), *this, dynamic);
 	return true;
 }
 catch (const std::exception& e)

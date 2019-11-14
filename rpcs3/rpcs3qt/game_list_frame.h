@@ -230,6 +230,7 @@ Q_SIGNALS:
 	void GameListFrameClosed();
 	void RequestBoot(const game_info& game, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);
+	void NotifyEmuSettingsChange();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
