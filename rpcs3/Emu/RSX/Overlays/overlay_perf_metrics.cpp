@@ -383,7 +383,7 @@ namespace rsx
 
 					rsx_cycles += rsx_thread->get_cycles();
 
-					total_cycles = ppu_cycles + spu_cycles + rsx_cycles;
+					total_cycles = std::max<u64>(1, ppu_cycles + spu_cycles + rsx_cycles);
 					cpu_usage = m_cpu_stats.get_usage();
 
 					ppu_usage = std::clamp(cpu_usage * ppu_cycles / total_cycles, 0.f, 100.f);
