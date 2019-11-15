@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef LLVM_AVAILABLE
 
@@ -2726,6 +2726,23 @@ public:
 		const auto bv = b.eval(m_ir);
 		const auto cv = c.eval(m_ir);
 		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fmuladd), {av, bv, cv});
+		return result;
+	}
+
+	// TODO: Support doubles
+	auto fre(value_t<f32[4]> a)
+	{
+		decltype(a) result;
+		const auto av = a.eval(m_ir);
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rcp.ps", av->getType(), av->getType()).getCallee(), {av});
+		return result;
+	}
+
+	auto frsqe(value_t<f32[4]> a)
+	{
+		decltype(a) result;
+		const auto av = a.eval(m_ir);
+		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rsqrt.ps", av->getType(), av->getType()).getCallee(), {av});
 		return result;
 	}
 
