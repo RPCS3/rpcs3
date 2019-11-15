@@ -212,14 +212,14 @@ s32 cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 {
 	cellAvconfExt.warning("cellVideoOutSetGamma(videoOut=%d, gamma=%f)", videoOut, gamma);
 
+	if (!(gamma >= 0.8f && gamma <= 1.2f))
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	if (videoOut != CELL_VIDEO_OUT_PRIMARY)
 	{
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
-	}
-
-	if (gamma < 0.8f || gamma > 1.2f)
-	{
-		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
 	auto conf   = g_fxo->get<rsx::avconf>();
