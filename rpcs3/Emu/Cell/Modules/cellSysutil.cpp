@@ -253,7 +253,7 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE:
-		*value = CELL_SYSUTIL_PAD_RUMBLE_OFF;
+		*value = CELL_SYSUTIL_PAD_RUMBLE_ON;
 	break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE:
