@@ -408,15 +408,11 @@ extern bool ppu_patch(u32 addr, u32 value)
 		return false;
 	}
 
-	const auto ptr = vm::get_super_ptr<u32>(addr);
-
-	if (!ptr)
+	if (!vm::try_access(addr, &value, sizeof(value), true))
 	{
 		LOG_FATAL(GENERAL, "Patch failed at 0x%x: invalid memory address.", addr);
 		return false;
 	}
-
-	*ptr = value;
 
 	const u32 _break = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_break));
 	const u32 fallback = ::narrow<u32>(reinterpret_cast<std::uintptr_t>(&ppu_fallback));
