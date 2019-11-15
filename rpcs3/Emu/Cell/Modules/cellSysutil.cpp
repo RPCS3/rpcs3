@@ -203,6 +203,11 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 {
 	cellSysutil.warning("cellSysutilGetSystemParamInt(id=0x%x(%s), value=*0x%x)", id, id, value);
 
+	if (!value)
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
+
 	// TODO: load this information from config (preferably "sys/" group)
 
 	switch (id)
@@ -272,7 +277,7 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 	break;
 
 	default:
-		return CELL_EINVAL;
+		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
 	return CELL_OK;
@@ -281,6 +286,11 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 error_code cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> buf, u32 bufsize)
 {
 	cellSysutil.trace("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, id, buf, bufsize);
+
+	if (!buf)
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
 
 	memset(buf.get_ptr(), 0, bufsize);
 
@@ -295,7 +305,7 @@ error_code cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> 
 	break;
 
 	default:
-		return CELL_EINVAL;
+		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
 	return CELL_OK;
