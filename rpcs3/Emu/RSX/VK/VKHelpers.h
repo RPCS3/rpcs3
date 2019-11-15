@@ -2271,8 +2271,11 @@ public:
 				{
 				case driver_vendor::AMD:
 					break;
-				case driver_vendor::NVIDIA:
 				case driver_vendor::INTEL:
+#ifdef _WIN32
+				break;
+#endif
+				case driver_vendor::NVIDIA:
 				case driver_vendor::RADV:
 					m_wm_reports_flag = true;
 					break;
