@@ -209,8 +209,13 @@ void gui_application::InitializeCallbacks()
 void gui_application::StartPlaytime()
 {
 	const QString serial = qstr(Emu.GetTitleID());
-	m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
-	m_timer_playtime.start();
+	const auto isPUPFirmware = serial.isEmpty();
+
+	if (!isPUPFirmware)
+	{
+		m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+		m_timer_playtime.start();
+	}
 }
 
 void gui_application::StopPlaytime()
@@ -219,10 +224,15 @@ void gui_application::StopPlaytime()
 		return;
 
 	const QString serial = qstr(Emu.GetTitleID());
-	const qint64 playtime = m_gui_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
-	m_gui_settings->SetPlaytime(serial, playtime);
-	m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
-	m_timer_playtime.invalidate();
+	const auto isPUPFirmware = serial.isEmpty();
+
+	if (!isPUPFirmware)
+	{
+		const qint64 playtime = m_gui_settings->GetPlaytime(serial) + m_timer_playtime.elapsed();
+		m_gui_settings->SetPlaytime(serial, playtime);
+		m_gui_settings->SetLastPlayed(serial, QDate::currentDate().toString("MMMM d yyyy"));
+		m_timer_playtime.invalidate();
+	}
 }
 
 /*
