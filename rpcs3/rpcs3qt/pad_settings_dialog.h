@@ -16,13 +16,13 @@ namespace Ui
 	class pad_settings_dialog;
 }
 
-struct pad_info
+struct pad_device_info
 {
 	std::string name;
 	bool is_connected{false};
 };
 
-Q_DECLARE_METATYPE(pad_info)
+Q_DECLARE_METATYPE(pad_device_info)
 
 class pad_settings_dialog : public QDialog
 {

@@ -109,7 +109,7 @@ pad_settings_dialog::pad_settings_dialog(QWidget *parent, const GameInfo *game)
 		{
 			return;
 		}
-		const pad_info info = ui->chooseDevice->itemData(index).value<pad_info>();
+		const pad_device_info info = ui->chooseDevice->itemData(index).value<pad_device_info>();
 		m_device_name = info.name;
 		if (!g_cfg_input.player[m_tabs->currentIndex()]->device.from_string(m_device_name))
 		{
@@ -422,12 +422,12 @@ void pad_settings_dialog::InitButtons()
 	{
 		for (int i = 0; i < ui->chooseDevice->count(); i++)
 		{
-			if (!ui->chooseDevice->itemData(i).canConvert<pad_info>())
+			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
 			{
 				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
-			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
 			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 		}
 	});
@@ -447,12 +447,12 @@ void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_con
 {
 	for (int i = 0; i < ui->chooseDevice->count(); i++)
 	{
-		const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+		const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
 		if (info.name == pad_name)
 		{
 			if (info.is_connected != is_connected)
 			{
-				ui->chooseDevice->setItemData(i, QVariant::fromValue(pad_info{ pad_name, is_connected }));
+				ui->chooseDevice->setItemData(i, QVariant::fromValue(pad_device_info{ pad_name, is_connected }));
 				ui->chooseDevice->setItemText(i, is_connected ? qstr(pad_name) : (qstr(pad_name) + Disconnected_suffix));
 			}
 
@@ -990,7 +990,7 @@ void pad_settings_dialog::ChangeInputType()
 		for (size_t i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			const QString device_name = name_string + QString::number(i);
-			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_info{ sstr(device_name), true }));
+			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_device_info{ sstr(device_name), true }));
 		}
 		force_enable = true;
 		break;
@@ -999,7 +999,7 @@ void pad_settings_dialog::ChangeInputType()
 	{
 		for (size_t i = 0; i < device_list.size(); i++)
 		{
-			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_info{ device_list[i], true }));
+			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_device_info{ device_list[i], true }));
 		}
 		break;
 	}
@@ -1014,12 +1014,12 @@ void pad_settings_dialog::ChangeInputType()
 	{
 		for (int i = 0; i < ui->chooseDevice->count(); i++)
 		{
-			if (!ui->chooseDevice->itemData(i).canConvert<pad_info>())
+			if (!ui->chooseDevice->itemData(i).canConvert<pad_device_info>())
 			{
 				LOG_FATAL(GENERAL, "Cannot convert itemData for index %d and itemText %s", i, sstr(ui->chooseDevice->itemText(i)));
 				continue;
 			}
-			const pad_info info = ui->chooseDevice->itemData(i).value<pad_info>();
+			const pad_device_info info = ui->chooseDevice->itemData(i).value<pad_device_info>();
 			m_handler->get_next_button_press(info.name, [=](u16, std::string, std::string pad_name, std::array<int, 6>) { SwitchPadInfo(pad_name, true); }, [=](std::string pad_name) { SwitchPadInfo(pad_name, false); }, false);
 			if (info.name == device)
 			{
