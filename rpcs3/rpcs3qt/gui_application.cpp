@@ -209,7 +209,10 @@ void gui_application::InitializeCallbacks()
 void gui_application::StartPlaytime()
 {
 	const QString serial = qstr(Emu.GetTitleID());
-	const auto isPUPFirmware = serial.isEmpty();
+	if (serial.isEmpty())
+	{
+		return;
+	}
 
 	if (!isPUPFirmware)
 	{
