@@ -227,7 +227,11 @@ void gui_application::StopPlaytime()
 		return;
 
 	const QString serial = qstr(Emu.GetTitleID());
-	const auto isPUPFirmware = serial.isEmpty();
+    if (serial.isEmpty())
+    {
+        m_timer_playtime.invalidate();
+        return;
+    }
 
 	if (!isPUPFirmware)
 	{
