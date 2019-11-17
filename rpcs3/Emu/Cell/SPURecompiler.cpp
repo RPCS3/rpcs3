@@ -3407,7 +3407,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 			// Register under a unique linkable name
 			const std::string ppname = fmt::format("%s-pp-%u", m_hash, m_pp_id++);
-			m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint());
+			m_engine->updateGlobalMapping(ppname, reinterpret_cast<u64>(m_spurt->make_branch_patchpoint()));
 
 			// Create function with not exactly correct type
 			const auto ppfunc = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(ppname, m_finfo->chunk->getFunctionType()).getCallee());
@@ -4232,6 +4232,8 @@ public:
 
 		using namespace llvm;
 
+		m_engine->clearAllGlobalMappings();
+
 		// Create LLVM module
 		std::unique_ptr<Module> module = std::make_unique<Module>(m_hash + ".obj", m_context);
 		module->setTargetTriple(Triple::normalize("x86_64-unknown-linux-gnu"));
@@ -4386,7 +4388,7 @@ public:
 		entry_call->setCallingConv(entry_chunk->chunk->getCallingConv());
 
 		const auto dispatcher = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("spu_dispatcher", main_func->getType()).getCallee());
-		m_engine->addGlobalMapping("spu_dispatcher", reinterpret_cast<u64>(spu_runtime::tr_all));
+		m_engine->updateGlobalMapping("spu_dispatcher", reinterpret_cast<u64>(spu_runtime::tr_all));
 		dispatcher->setCallingConv(main_func->getCallingConv());
 
 		// Proceed to the next code
@@ -4663,7 +4665,7 @@ public:
 					if (false && g_cfg.core.spu_verification)
 					{
 						const std::string ppname = fmt::format("%s-chunkpp-0x%05x", m_hash, i);
-						m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint(i / 4));
+						m_engine->updateGlobalMapping(ppname, reinterpret_cast<u64>(m_spurt->make_branch_patchpoint(i / 4)));
 
 						const auto ppfunc = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(ppname, m_finfo->chunk->getFunctionType()).getCallee());
 						ppfunc->setCallingConv(m_finfo->chunk->getCallingConv());
@@ -4835,6 +4837,8 @@ public:
 	spu_function_t compile_interpreter()
 	{
 		using namespace llvm;
+
+		m_engine->clearAllGlobalMappings();
 
 		// Create LLVM module
 		std::unique_ptr<Module> module = std::make_unique<Module>("spu_interpreter.obj", m_context);
