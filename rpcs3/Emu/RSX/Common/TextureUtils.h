@@ -68,8 +68,6 @@ namespace rsx
 	{
 		bool src_is_typeless = false;
 		bool dst_is_typeless = false;
-		bool src_is_depth = false;
-		bool dst_is_depth = false;
 		bool flip_vertical = false;
 		bool flip_horizontal = false;
 

@@ -847,7 +847,7 @@ namespace vk
 		return{ final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 	}
 
-	void blitter::scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, bool /*is_depth*/, const rsx::typeless_xfer& xfer_info)
+	void blitter::scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, const rsx::typeless_xfer& xfer_info)
 	{
 		const auto src_aspect = vk::get_aspect_flags(src->info.format);
 		const auto dst_aspect = vk::get_aspect_flags(dst->info.format);
@@ -857,40 +857,48 @@ namespace vk
 
 		if (xfer_info.src_is_typeless)
 		{
-			const auto internal_width = src->width() * xfer_info.src_scaling_hint;
 			const auto format = xfer_info.src_native_format_override ?
 				VkFormat(xfer_info.src_native_format_override) :
 				vk::get_compatible_sampler_format(vk::get_current_renderer()->get_formats_support(), xfer_info.src_gcm_format);
-			const auto aspect = vk::get_aspect_flags(format);
 
-			// Transfer bits from src to typeless src
-			real_src = vk::get_typeless_helper(format, (u32)internal_width, src->height());
-			vk::change_image_layout(cmd, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect, 0, 1, 0, 1 });
+			if (format != src->format())
+			{
+				const auto internal_width = src->width() * xfer_info.src_scaling_hint;
+				const auto aspect = vk::get_aspect_flags(format);
 
-			vk::copy_image_typeless(cmd, src, real_src, { 0, 0, (s32)src->width(), (s32)src->height() }, { 0, 0, (s32)internal_width, (s32)src->height() }, 1,
-				vk::get_aspect_flags(src->info.format), aspect);
+				// Transfer bits from src to typeless src
+				real_src = vk::get_typeless_helper(format, (u32)internal_width, src->height());
+				vk::change_image_layout(cmd, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect, 0, 1, 0, 1 });
 
-			src_area.x1 = (u16)(src_area.x1 * xfer_info.src_scaling_hint);
-			src_area.x2 = (u16)(src_area.x2 * xfer_info.src_scaling_hint);
+				vk::copy_image_typeless(cmd, src, real_src, { 0, 0, (s32)src->width(), (s32)src->height() }, { 0, 0, (s32)internal_width, (s32)src->height() }, 1,
+					vk::get_aspect_flags(src->info.format), aspect);
+
+				src_area.x1 = (u16)(src_area.x1 * xfer_info.src_scaling_hint);
+				src_area.x2 = (u16)(src_area.x2 * xfer_info.src_scaling_hint);
+			}
 		}
 
 		if (xfer_info.dst_is_typeless)
 		{
-			const auto internal_width = dst->width() * xfer_info.dst_scaling_hint;
 			const auto format = xfer_info.dst_native_format_override ?
 				VkFormat(xfer_info.dst_native_format_override) :
 				vk::get_compatible_sampler_format(vk::get_current_renderer()->get_formats_support(), xfer_info.dst_gcm_format);
-			const auto aspect = vk::get_aspect_flags(format);
 
-			// Transfer bits from dst to typeless dst
-			real_dst = vk::get_typeless_helper(format, (u32)internal_width, dst->height());
-			vk::change_image_layout(cmd, real_dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect, 0, 1, 0, 1 });
+			if (format != dst->format())
+			{
+				const auto internal_width = dst->width() * xfer_info.dst_scaling_hint;
+				const auto aspect = vk::get_aspect_flags(format);
 
-			vk::copy_image_typeless(cmd, dst, real_dst, { 0, 0, (s32)dst->width(), (s32)dst->height() }, { 0, 0, (s32)internal_width, (s32)dst->height() }, 1,
-				vk::get_aspect_flags(dst->info.format), aspect);
+				// Transfer bits from dst to typeless dst
+				real_dst = vk::get_typeless_helper(format, (u32)internal_width, dst->height());
+				vk::change_image_layout(cmd, real_dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect, 0, 1, 0, 1 });
 
-			dst_area.x1 = (u16)(dst_area.x1 * xfer_info.dst_scaling_hint);
-			dst_area.x2 = (u16)(dst_area.x2 * xfer_info.dst_scaling_hint);
+				vk::copy_image_typeless(cmd, dst, real_dst, { 0, 0, (s32)dst->width(), (s32)dst->height() }, { 0, 0, (s32)internal_width, (s32)dst->height() }, 1,
+					vk::get_aspect_flags(dst->info.format), aspect);
+
+				dst_area.x1 = (u16)(dst_area.x1 * xfer_info.dst_scaling_hint);
+				dst_area.x2 = (u16)(dst_area.x2 * xfer_info.dst_scaling_hint);
+			}
 		}
 
 		// Checks

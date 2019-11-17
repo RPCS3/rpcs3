@@ -374,8 +374,8 @@ namespace gl
 		return attrib_t(index);
 	}
 
-	void blitter::scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
-		bool is_depth_copy, const rsx::typeless_xfer& xfer_info)
+	void blitter::scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect,
+		bool linear_interpolation, const rsx::typeless_xfer& xfer_info)
 	{
 		std::unique_ptr<texture> typeless_src;
 		std::unique_ptr<texture> typeless_dst;
@@ -384,41 +384,49 @@ namespace gl
 
 		if (xfer_info.src_is_typeless)
 		{
-			const auto internal_width = (u16)(src->width() * xfer_info.src_scaling_hint);
 			const auto internal_fmt = xfer_info.src_native_format_override ?
 				GLenum(xfer_info.src_native_format_override) :
 				get_sized_internal_format(xfer_info.src_gcm_format);
 
-			typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
-			copy_typeless(typeless_src.get(), src);
+			if (static_cast<gl::texture::internal_format>(internal_fmt) != src->get_internal_format())
+			{
+				const auto internal_width = (u16)(src->width() * xfer_info.src_scaling_hint);
+				typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
+				copy_typeless(typeless_src.get(), src);
 
-			real_src = typeless_src.get();
-			src_rect.x1 = (u16)(src_rect.x1 * xfer_info.src_scaling_hint);
-			src_rect.x2 = (u16)(src_rect.x2 * xfer_info.src_scaling_hint);
+				real_src = typeless_src.get();
+				src_rect.x1 = (u16)(src_rect.x1 * xfer_info.src_scaling_hint);
+				src_rect.x2 = (u16)(src_rect.x2 * xfer_info.src_scaling_hint);
+			}
 		}
 
 		if (xfer_info.dst_is_typeless)
 		{
-			const auto internal_width = (u16)(dst->width() * xfer_info.dst_scaling_hint);
 			const auto internal_fmt = xfer_info.dst_native_format_override ?
 				GLenum(xfer_info.dst_native_format_override) :
 				get_sized_internal_format(xfer_info.dst_gcm_format);
 
-			typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
-			copy_typeless(typeless_dst.get(), dst);
+			if (static_cast<gl::texture::internal_format>(internal_fmt) != dst->get_internal_format())
+			{
+				const auto internal_width = (u16)(dst->width() * xfer_info.dst_scaling_hint);
+				typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
+				copy_typeless(typeless_dst.get(), dst);
 
-			real_dst = typeless_dst.get();
-			dst_rect.x1 = (u16)(dst_rect.x1 * xfer_info.dst_scaling_hint);
-			dst_rect.x2 = (u16)(dst_rect.x2 * xfer_info.dst_scaling_hint);
+				real_dst = typeless_dst.get();
+				dst_rect.x1 = (u16)(dst_rect.x1 * xfer_info.dst_scaling_hint);
+				dst_rect.x2 = (u16)(dst_rect.x2 * xfer_info.dst_scaling_hint);
+			}
 		}
 
-		filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
+		verify(HERE), real_src->aspect() == real_dst->aspect();
+
+		const bool is_depth_copy = (real_src->aspect() != image_aspect::color);
+		const filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
 		GLenum attachment;
 		gl::buffers target;
 
 		if (is_depth_copy)
 		{
-			verify(HERE), real_src->aspect() == real_dst->aspect();
 			if (real_dst->aspect() & gl::image_aspect::stencil)
 			{
 				attachment = GL_DEPTH_STENCIL_ATTACHMENT;
