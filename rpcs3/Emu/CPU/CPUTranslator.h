@@ -2458,13 +2458,33 @@ public:
 #ifdef _WIN32
 		func->setCallingConv(llvm::CallingConv::Win64);
 #endif
-		m_engine->addGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<std::uintptr_t>(_func));
+
+		tryAddFunctionToGlobalAddressMap({lame.data(), lame.size()}, reinterpret_cast<std::uintptr_t>(_func));
 
 		const auto inst = m_ir->CreateCall(func, {args...});
 #ifdef _WIN32
 		inst->setCallingConv(llvm::CallingConv::Win64);
 #endif
 		return inst;
+	}
+
+	void tryAddFunctionToGlobalAddressMap(const llvm::StringRef lame, std::uintptr_t address_to_be_added)
+	{
+		const auto address = m_engine->getAddressToGlobalIfAvailable(lame);
+
+		if (!address)
+		{
+			LOG_NOTICE(GENERAL, "LLVM: GlobalMapping not found (but maybe now yes from other thread): %s", lame.str());
+		}
+
+		if (address == address_to_be_added)
+		{
+			LOG_NOTICE(GENERAL, "LLVM: GlobalMapping already added: %s", lame.str());
+		}
+		else
+		{
+			m_engine->updateGlobalMapping(lame, address_to_be_added);
+		}
 	}
 
 	// Bitcast with immediate constant folding
