@@ -2586,6 +2586,34 @@ namespace rsx
 				// Need to lock the affected memory range and actually attach this subres to a locked_region
 				dst_subres.surface->on_write_copy(rsx::get_shared_tag());
 				m_rtts.notify_memory_structure_changed();
+
+				if (src_is_render_target)
+				{
+					if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format) !=
+						helpers::is_gcm_depth_format(typeless_info.dst_gcm_format))
+					{
+						verify(HERE), !typeless_info.dst_is_typeless || !typeless_info.src_is_typeless;
+						verify(HERE), src_is_argb8 == dst_is_argb8;
+
+						if (typeless_info.src_is_typeless == typeless_info.dst_is_typeless)
+						{
+							// None are typeless. Cast src
+							typeless_info.src_is_typeless = true;
+							typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_subres.is_depth);
+						}
+						else if (typeless_info.src_is_typeless)
+						{
+							// Src is already getting cast
+							typeless_info.src_gcm_format = typeless_info.dst_gcm_format;
+						}
+						else
+						{
+							// Dst is already getting cast
+							verify(HERE), typeless_info.dst_is_typeless;
+							typeless_info.dst_gcm_format = typeless_info.src_gcm_format;
+						}
+					}
+				}
 			}
 
 			if (rsx::get_resolution_scale_percent() != 100)
