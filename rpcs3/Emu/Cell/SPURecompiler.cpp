@@ -3230,6 +3230,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Module name
 	std::string m_hash;
 
+	// Patchpoint unique id
+	u32 m_pp_id = 0;
+
 	// Current function (chunk)
 	llvm::Function* m_function;
 
@@ -3403,7 +3406,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			verify(HERE), m_finfo, !m_finfo->fn || m_function == m_finfo->chunk;
 
 			// Register under a unique linkable name
-			const std::string ppname = fmt::format("%s-pp-0x%05x", m_hash, m_pos);
+			const std::string ppname = fmt::format("%s-pp-%u", m_hash, m_pp_id++);
 			m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint());
 
 			// Create function with not exactly correct type
@@ -4218,6 +4221,8 @@ public:
 		m_size = (func.size() - 1) * 4;
 		const u32 start = m_pos;
 		const u32 end = start + m_size;
+
+		m_pp_id = 0;
 
 		if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 		{
