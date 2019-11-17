@@ -15,7 +15,6 @@ namespace rsx
 		{
 			if (fcmp(src_scaling_hint, dst_scaling_hint) && !fcmp(src_scaling_hint, 1.f))
 			{
-				verify(HERE), src_is_depth == dst_is_depth;
 				src_is_typeless = dst_is_typeless = false;
 				src_scaling_hint = dst_scaling_hint = 1.f;
 			}

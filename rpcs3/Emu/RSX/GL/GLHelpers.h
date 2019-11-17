@@ -2926,7 +2926,7 @@ public:
 		}
 
 		void scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
-			bool is_depth_copy, const rsx::typeless_xfer& xfer_info);
+			const rsx::typeless_xfer& xfer_info);
 
 		void fast_clear_image(gl::command_context& cmd, const texture* dst, const color4f& color);
 		void fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil);

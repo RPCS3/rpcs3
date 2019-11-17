@@ -258,9 +258,8 @@ namespace gl
 						scaled_texture = std::make_unique<gl::texture>(GL_TEXTURE_2D, real_width, real_height, 1, 1, (GLenum)ifmt);
 					}
 
-					const bool is_depth = is_depth_texture();
-					const bool linear_interp = is_depth? false : true;
-					g_hw_blitter->scale_image(cmd, vram_texture, scaled_texture.get(), src_area, dst_area, linear_interp, is_depth, {});
+					const bool linear_interp = is_depth_texture() ? false : true;
+					g_hw_blitter->scale_image(cmd, vram_texture, scaled_texture.get(), src_area, dst_area, linear_interp, {});
 					target_texture = scaled_texture.get();
 				}
 			}
@@ -643,7 +642,7 @@ namespace gl
 					}
 
 					_blitter->scale_image(cmd, src_image, _dst,
-						src_rect, dst_rect, false, false, {});
+						src_rect, dst_rect, false, {});
 
 					if (_dst != dst_image)
 					{
