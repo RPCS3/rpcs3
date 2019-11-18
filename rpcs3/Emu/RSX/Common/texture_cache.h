@@ -2247,36 +2247,39 @@ namespace rsx
 					dst_area = old_dst_area;
 				}
 
-				const bool format_check = (src_is_render_target || is_format_convert);
-				if (!use_null_region && cached_dest && format_check)
+				if (cached_dest && cached_dest->get_context() != texture_upload_context::dma)
 				{
-					bool src_is_depth;
-					if (is_format_convert)
+					// NOTE: DMA sections are plain memory blocks with no format!
+					if (src_is_render_target || is_format_convert)
 					{
-						src_is_depth = false;
-					}
-					else
-					{
-						verify(HERE), src_is_render_target;
-						src_is_depth = (typeless_info.src_is_typeless)? false : src_subres.is_depth;
+						bool src_is_depth;
+						if (is_format_convert)
+						{
+							src_is_depth = false;
+						}
+						else
+						{
+							verify(HERE), src_is_render_target;
+							src_is_depth = (typeless_info.src_is_typeless) ? false : src_subres.is_depth;
+						}
+
+						if (cached_dest->is_depth_texture() != src_is_depth)
+						{
+							// Opt to cancel the destination. Can also use typeless convert
+							LOG_WARNING(RSX, "Format mismatch on blit destination block. Performance warning.");
+
+							// The invalidate call before creating a new target will remove this section
+							cached_dest = nullptr;
+							dest_texture = 0;
+							dst_area = old_dst_area;
+						}
 					}
 
-					if (cached_dest->is_depth_texture() != src_is_depth)
+					if (LIKELY(cached_dest))
 					{
-						// Opt to cancel the destination. Can also use typeless convert
-						LOG_WARNING(RSX, "Format mismatch on blit destination block. Performance warning.");
-
-						// The invalidate call before creating a new target will remove this section
-						cached_dest = nullptr;
-						dest_texture = 0;
-						dst_area = old_dst_area;
+						typeless_info.dst_gcm_format = cached_dest->get_gcm_format();
+						dst_is_depth_surface = cached_dest->is_depth_texture();
 					}
-				}
-
-				if (LIKELY(cached_dest))
-				{
-					typeless_info.dst_gcm_format = cached_dest->get_gcm_format();
-					dst_is_depth_surface = cached_dest->is_depth_texture();
 				}
 			}
 			else
