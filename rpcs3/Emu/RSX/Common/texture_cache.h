@@ -2441,7 +2441,9 @@ namespace rsx
 				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}
 
-			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, dst_is_depth_surface);
+			const auto src_is_depth_format = helpers::is_gcm_depth_format(typeless_info.src_gcm_format);
+			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, src_is_depth_format);
+
 			if (cached_dest && !use_null_region)
 			{
 				// Prep surface
