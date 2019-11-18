@@ -849,9 +849,6 @@ namespace vk
 
 	void blitter::scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, const rsx::typeless_xfer& xfer_info)
 	{
-		const auto src_aspect = vk::get_aspect_flags(src->info.format);
-		const auto dst_aspect = vk::get_aspect_flags(dst->info.format);
-
 		vk::image* real_src = src;
 		vk::image* real_dst = dst;
 
@@ -930,8 +927,10 @@ namespace vk
 			src_area.flip_vertical();
 		}
 
+		verify("Incompatible source and destination format!" HERE), real_src->aspect() == real_dst->aspect();
+
 		copy_scaled_image(cmd, real_src->value, real_dst->value, real_src->current_layout, real_dst->current_layout,
-			src_area, dst_area, 1, dst_aspect, real_src->info.format == real_dst->info.format,
+			src_area, dst_area, 1, real_src->aspect(), real_src->info.format == real_dst->info.format,
 			interpolate ? VK_FILTER_LINEAR : VK_FILTER_NEAREST, real_src->info.format, real_dst->info.format);
 
 		if (real_dst != dst)
