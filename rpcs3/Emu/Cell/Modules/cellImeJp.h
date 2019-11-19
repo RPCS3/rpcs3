@@ -91,15 +91,44 @@ enum
 enum
 {
 	CELL_IMEJP_DIC_PATH_MAXLENGTH = 256,
+
+	// Helper
+	CELL_IMEJP_STRING_MAXLENGTH = 128, // including terminator
 };
 
 struct CellImeJpAddDic
 {
-	s8 path[CELL_IMEJP_DIC_PATH_MAXLENGTH];
+	char path[CELL_IMEJP_DIC_PATH_MAXLENGTH];
 };
 
 struct CellImeJpPredictItem
 {
 	u16 KanaYomi[31];
 	u16 Hyoki[61];
+};
+
+struct ime_jp_manager
+{
+	u32 container_id = 0;
+	u32 input_state = CELL_IMEJP_BEFORE_INPUT;
+	std::vector<std::string> dictionary_paths;
+	std::u16string confirmed_string;
+	std::u16string converted_string;
+	std::u16string input_string;
+	size_t cursor = 0;
+	size_t cursor_end = 0;
+	s16 fix_input_mode = CELL_IMEJP_FIXINMODE_OFF;
+	s16 input_char_type = CELL_IMEJP_DSPCHAR_HIRA;
+	s16 kana_input_mode = CELL_IMEJP_ROMAN_INPUT;
+	s16 allowed_extensions = CELL_IMEJP_EXTENSIONCH_UD09TO15 | CELL_IMEJP_EXTENSIONCH_UD85TO94 | CELL_IMEJP_EXTENSIONCH_OUTJIS;
+
+	ime_jp_manager();
+
+	bool check_handle(CellImeJpHandle handle);
+	bool addChar(u16 c);
+	bool addString(vm::cptr<u16> str);
+	bool backspaceWord();
+	bool deleteWord();
+	void moveCursor(s8 amount);
+	void moveCursorEnd(s8 amount);
 };
