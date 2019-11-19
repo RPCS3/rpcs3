@@ -490,7 +490,7 @@ private:
 	};
 
 	Segment m_curr;
-	std::vector<Segment> m_segs;	
+	std::vector<Segment> m_segs;
 };
 
 // Memory manager mutex
@@ -581,7 +581,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 			if (m_tramps)
 			{
 				const s64 tramps_diff = u64(m_tramps) - code_start;
-				if (tramps_diff < INT_MIN || tramps_diff > INT_MAX) 
+				if (tramps_diff < INT_MIN || tramps_diff > INT_MAX)
 					m_tramps = nullptr; //previously allocated trampoline section too far away now
 			}
 
@@ -964,6 +964,12 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			{
 				m_cpu = "skylake";
 			}
+		}
+
+		if (m_cpu == "znver1" && utils::has_clwb())
+		{
+			// Upgrade
+			m_cpu = "znver2";
 		}
 	}
 

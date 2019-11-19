@@ -1170,6 +1170,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	});
 	ui->perfOverlayMarginY->setEnabled(!ui->perfOverlayCenterY->isChecked());
 
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayFramerateGraphEnabled, emu_settings::PerfOverlayFramerateGraphEnabled);
+	SubscribeTooltip(ui->perfOverlayFramerateGraphEnabled, json_emu_overlay["perfOverlayFramerateGraphEnabled"].toString());
+
+	xemu_settings->EnhanceCheckBox(ui->perfOverlayFrametimeGraphEnabled, emu_settings::PerfOverlayFrametimeGraphEnabled);
+	SubscribeTooltip(ui->perfOverlayFrametimeGraphEnabled, json_emu_overlay["perfOverlayFrametimeGraphEnabled"].toString());
+
 	xemu_settings->EnhanceCheckBox(ui->perfOverlayEnabled, emu_settings::PerfOverlayEnabled);
 	SubscribeTooltip(ui->perfOverlayEnabled, json_emu_overlay["perfOverlayEnabled"].toString());
 	auto EnablePerfOverlayOptions = [this](bool enabled)
@@ -1186,10 +1192,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 		ui->perfOverlayUpdateInterval->setEnabled(enabled);
 		ui->perfOverlayFontSize->setEnabled(enabled);
 		ui->perfOverlayOpacity->setEnabled(enabled);
-		ui->perfOverlayMarginX->setEnabled(enabled);
-		ui->perfOverlayMarginY->setEnabled(enabled);
+		ui->perfOverlayMarginX->setEnabled(enabled && !ui->perfOverlayCenterX->isChecked());
+		ui->perfOverlayMarginY->setEnabled(enabled && !ui->perfOverlayCenterY->isChecked());
 		ui->perfOverlayCenterX->setEnabled(enabled);
 		ui->perfOverlayCenterY->setEnabled(enabled);
+		ui->perfOverlayFramerateGraphEnabled->setEnabled(enabled);
+		ui->perfOverlayFrametimeGraphEnabled->setEnabled(enabled);
 	};
 	EnablePerfOverlayOptions(ui->perfOverlayEnabled->isChecked());
 	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, EnablePerfOverlayOptions);

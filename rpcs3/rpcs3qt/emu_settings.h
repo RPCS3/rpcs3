@@ -86,6 +86,8 @@ public:
 
 		// Performance Overlay
 		PerfOverlayEnabled,
+		PerfOverlayFramerateGraphEnabled,
+		PerfOverlayFrametimeGraphEnabled,
 		PerfOverlayDetailLevel,
 		PerfOverlayPosition,
 		PerfOverlayUpdateInterval,
@@ -312,16 +314,18 @@ private:
 		{ VBlankRate,                 { "Video", "Vblank Rate"}},
 
 		// Performance Overlay
-		{ PerfOverlayEnabled,       { "Video", "Performance Overlay", "Enabled" } },
-		{ PerfOverlayDetailLevel,   { "Video", "Performance Overlay", "Detail level" } },
-		{ PerfOverlayPosition,      { "Video", "Performance Overlay", "Position" } },
-		{ PerfOverlayUpdateInterval,{ "Video", "Performance Overlay", "Metrics update interval (ms)" } },
-		{ PerfOverlayFontSize,      { "Video", "Performance Overlay", "Font size (px)" } },
-		{ PerfOverlayOpacity,       { "Video", "Performance Overlay", "Opacity (%)" } },
-		{ PerfOverlayMarginX,       { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
-		{ PerfOverlayMarginY,       { "Video", "Performance Overlay", "Vertical Margin (px)" } },
-		{ PerfOverlayCenterX,       { "Video", "Performance Overlay", "Center Horizontally" } },
-		{ PerfOverlayCenterY,       { "Video", "Performance Overlay", "Center Vertically" } },
+		{ PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
+		{ PerfOverlayFramerateGraphEnabled, { "Video", "Performance Overlay", "Enable Framerate Graph" } },
+		{ PerfOverlayFrametimeGraphEnabled, { "Video", "Performance Overlay", "Enable Frametime Graph" } },
+		{ PerfOverlayDetailLevel,           { "Video", "Performance Overlay", "Detail level" } },
+		{ PerfOverlayPosition,              { "Video", "Performance Overlay", "Position" } },
+		{ PerfOverlayUpdateInterval,        { "Video", "Performance Overlay", "Metrics update interval (ms)" } },
+		{ PerfOverlayFontSize,              { "Video", "Performance Overlay", "Font size (px)" } },
+		{ PerfOverlayOpacity,               { "Video", "Performance Overlay", "Opacity (%)" } },
+		{ PerfOverlayMarginX,               { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
+		{ PerfOverlayMarginY,               { "Video", "Performance Overlay", "Vertical Margin (px)" } },
+		{ PerfOverlayCenterX,               { "Video", "Performance Overlay", "Center Horizontally" } },
+		{ PerfOverlayCenterY,               { "Video", "Performance Overlay", "Center Vertically" } },
 
 		// Shader Loading Dialog
 		{ ShaderLoadBgEnabled,      { "Video", "Shader Loading Dialog", "Allow custom background" } },

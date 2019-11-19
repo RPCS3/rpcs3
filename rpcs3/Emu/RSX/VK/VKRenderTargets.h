@@ -457,7 +457,6 @@ namespace vk
 						typeless_info.src_is_typeless = true;
 						typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
 						typeless_info.src_native_format_override = (u32)info.format;
-						typeless_info.src_is_depth = is_depth;
 						typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
 					}
 				}
@@ -502,7 +501,7 @@ namespace vk
 					this->get_surface(rsx::surface_access::transfer),
 					src_area,
 					dst_area,
-					/*linear?*/false, /*depth?(unused)*/false, typeless_info);
+					/*linear?*/false, typeless_info);
 
 				optimize_copy = optimize_copy && !memory_load;
 				newest_tag = src_texture->last_use_tag;

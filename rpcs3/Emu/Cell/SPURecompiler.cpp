@@ -7,6 +7,7 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
 #include "Utilities/sysinfo.h"
+#include "util/init_mutex.hpp"
 
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
@@ -1332,7 +1333,6 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 		}
 
 		case spu_itype::SYNC:
-		case spu_itype::DSYNC:
 		case spu_itype::STOP:
 		case spu_itype::STOPD:
 		{
@@ -1696,6 +1696,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 			break;
 		}
 
+		case spu_itype::DSYNC:
 		case spu_itype::HEQ:
 		case spu_itype::HEQI:
 		case spu_itype::HGT:
@@ -3229,6 +3230,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Module name
 	std::string m_hash;
 
+	// Patchpoint unique id
+	u32 m_pp_id = 0;
+
 	// Current function (chunk)
 	llvm::Function* m_function;
 
@@ -3402,8 +3406,8 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			verify(HERE), m_finfo, !m_finfo->fn || m_function == m_finfo->chunk;
 
 			// Register under a unique linkable name
-			const std::string ppname = fmt::format("%s-pp-0x%05x", m_hash, m_pos);
-			m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint());
+			const std::string ppname = fmt::format("%s-pp-%u", m_hash, m_pp_id++);
+			m_engine->updateGlobalMapping(ppname, reinterpret_cast<u64>(m_spurt->make_branch_patchpoint()));
 
 			// Create function with not exactly correct type
 			const auto ppfunc = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(ppname, m_finfo->chunk->getFunctionType()).getCallee());
@@ -4218,6 +4222,8 @@ public:
 		const u32 start = m_pos;
 		const u32 end = start + m_size;
 
+		m_pp_id = 0;
+
 		if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 		{
 			this->dump(func, log);
@@ -4225,6 +4231,8 @@ public:
 		}
 
 		using namespace llvm;
+
+		m_engine->clearAllGlobalMappings();
 
 		// Create LLVM module
 		std::unique_ptr<Module> module = std::make_unique<Module>(m_hash + ".obj", m_context);
@@ -4380,7 +4388,7 @@ public:
 		entry_call->setCallingConv(entry_chunk->chunk->getCallingConv());
 
 		const auto dispatcher = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("spu_dispatcher", main_func->getType()).getCallee());
-		m_engine->addGlobalMapping("spu_dispatcher", reinterpret_cast<u64>(spu_runtime::tr_all));
+		m_engine->updateGlobalMapping("spu_dispatcher", reinterpret_cast<u64>(spu_runtime::tr_all));
 		dispatcher->setCallingConv(main_func->getCallingConv());
 
 		// Proceed to the next code
@@ -4657,7 +4665,7 @@ public:
 					if (false && g_cfg.core.spu_verification)
 					{
 						const std::string ppname = fmt::format("%s-chunkpp-0x%05x", m_hash, i);
-						m_engine->addGlobalMapping(ppname, (u64)m_spurt->make_branch_patchpoint(i / 4));
+						m_engine->updateGlobalMapping(ppname, reinterpret_cast<u64>(m_spurt->make_branch_patchpoint(i / 4)));
 
 						const auto ppfunc = llvm::cast<llvm::Function>(m_module->getOrInsertFunction(ppname, m_finfo->chunk->getFunctionType()).getCallee());
 						ppfunc->setCallingConv(m_finfo->chunk->getCallingConv());
@@ -4829,6 +4837,8 @@ public:
 	spu_function_t compile_interpreter()
 	{
 		using namespace llvm;
+
+		m_engine->clearAllGlobalMappings();
 
 		// Create LLVM module
 		std::unique_ptr<Module> module = std::make_unique<Module>("spu_interpreter.obj", m_context);
@@ -6086,7 +6096,7 @@ public:
 	void DSYNC(spu_opcode_t op) //
 	{
 		// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
-		SYNC(op);
+		m_ir->CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
 	}
 
 	void MFSPR(spu_opcode_t op) //
@@ -8266,7 +8276,7 @@ std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_llvm_recompiler(u
 struct spu_llvm
 {
 	// Workload
-	lf_queue<spu_item*> registered;
+	lf_queue<std::pair<const u64, spu_item*>> registered;
 
 	void operator()()
 	{
@@ -8277,22 +8287,96 @@ struct spu_llvm
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
-		for (auto* parg : registered)
+		// To compile (hash -> item)
+		std::unordered_multimap<u64, spu_item*, value_hash<u64>> enqueued;
+
+		// Mini-profiler (hash -> number of occurrences)
+		std::unordered_map<u64, atomic_t<u64>, value_hash<u64>> samples;
+
+		// For synchronization with profiler thread
+		stx::init_mutex prof_mutex;
+
+		named_thread profiler("SPU LLVM Profiler"sv, [&]()
 		{
-			if (thread_ctrl::state() == thread_state::aborting)
+			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				break;
+				{
+					// Lock if enabled
+					const auto lock = prof_mutex.access();
+
+					if (!lock)
+					{
+						// Wait when the profiler is disabled
+						prof_mutex.wait_for_initialized();
+						continue;
+					}
+
+					// Collect profiling samples
+					idm::select<named_thread<spu_thread>>([&](u32 id, spu_thread& spu)
+					{
+						const u64 name = atomic_storage<u64>::load(spu.block_hash);
+
+						if (!(spu.state.load() & (cpu_flag::wait + cpu_flag::stop + cpu_flag::dbg_global_pause)))
+						{
+							const auto found = std::as_const(samples).find(spu.block_hash);
+
+							if (found != std::as_const(samples).end())
+							{
+								const_cast<atomic_t<u64>&>(found->second)++;
+							}
+						}
+					});
+				}
+
+				// Sleep for a short period if enabled
+				thread_ctrl::wait_for(20, false);
+			}
+		});
+
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			for (const auto& pair : registered.pop_all())
+			{
+				enqueued.emplace(pair);
+
+				// Interrupt and kick profiler thread
+				const auto lock = prof_mutex.init_always([&]{});
+
+				// Register new blocks to collect samples
+				samples.emplace(pair.first, 0);
 			}
 
-			if (!parg)
+			if (enqueued.empty())
 			{
+				// Interrupt profiler thread and put it to sleep
+				static_cast<void>(prof_mutex.reset());
+				registered.wait();
 				continue;
 			}
 
-			const std::vector<u32>& func = (*parg)->data;
+			// Find the most used enqueued item
+			u64 sample_max = 0;
+			auto found_it  = enqueued.begin();
+
+			for (auto it = enqueued.begin(), end = enqueued.end(); it != end; ++it)
+			{
+				const u64 cur = std::as_const(samples).at(it->first);
+
+				if (cur > sample_max)
+				{
+					sample_max = cur;
+					found_it = it;
+				}
+			}
+
+			// Start compiling
+			const std::vector<u32>& func = found_it->second->data;
 
 			// Old function pointer (pre-recompiled)
-			const spu_function_t _old = (*parg)->compiled;
+			const spu_function_t _old = found_it->second->compiled;
+
+			// Remove item from the queue
+			enqueued.erase(found_it);
 
 			// Get data start
 			const u32 start = func[0];
@@ -8381,7 +8465,7 @@ struct spu_fast : public spu_recompiler_base
 		}
 
 		// Allocate executable area with necessary size
-		const auto result = jit_runtime::alloc(16 + 1 + 9 + (::size32(func) - 1) * (16 + 16) + 36 + 47, 16);
+		const auto result = jit_runtime::alloc(22 + 1 + 9 + (::size32(func) - 1) * (16 + 16) + 36 + 47, 16);
 
 		if (!result)
 		{
@@ -8391,18 +8475,42 @@ struct spu_fast : public spu_recompiler_base
 		m_pos = func[0];
 		m_size = (::size32(func) - 1) * 4;
 
+		{
+			sha1_context ctx;
+			u8 output[20];
+
+			sha1_starts(&ctx);
+			sha1_update(&ctx, reinterpret_cast<const u8*>(func.data() + 1), func.size() * 4 - 4);
+			sha1_finish(&ctx, output);
+
+			be_t<u64> hash_start;
+			std::memcpy(&hash_start, output, sizeof(hash_start));
+			m_hash_start = hash_start;
+		}
+
 		u8* raw = result;
 
-		// 8-byte intruction for patching
-		// Update block_hash: mov [r13 + spu_thread::m_block_hash], 0xffff
+		// 8-byte intruction for patching (long NOP)
+		*raw++ = 0x0f;
+		*raw++ = 0x1f;
+		*raw++ = 0x84;
+		*raw++ = 0;
+		*raw++ = 0;
+		*raw++ = 0;
+		*raw++ = 0;
+		*raw++ = 0;
+
+		// mov rax, m_hash_start
+		*raw++ = 0x48;
+		*raw++ = 0xb8;
+		std::memcpy(raw, &m_hash_start, sizeof(m_hash_start));
+		raw += 8;
+
+		// Update block_hash: mov [r13 + spu_thread::m_block_hash], rax
 		*raw++ = 0x49;
-		*raw++ = 0xc7;
+		*raw++ = 0x89;
 		*raw++ = 0x45;
 		*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
-		*raw++ = 0xff;
-		*raw++ = 0xff;
-		*raw++ = 0x00;
-		*raw++ = 0x00;
 
 		// Load PC: mov eax, [r13 + spu_thread::pc]
 		*raw++ = 0x41;
@@ -8444,16 +8552,6 @@ struct spu_fast : public spu_recompiler_base
 
 		// trap
 		//*raw++ = 0xcc;
-
-		// Update block_hash: mov [r13 + spu_thread::m_block_hash], 0xfffe
-		*raw++ = 0x49;
-		*raw++ = 0xc7;
-		*raw++ = 0x45;
-		*raw++ = ::narrow<s8>(::offset32(&spu_thread::block_hash));
-		*raw++ = 0xfe;
-		*raw++ = 0xff;
-		*raw++ = 0x00;
-		*raw++ = 0x00;
 
 		// Secondary prologue: sub rsp,0x28
 		*raw++ = 0x48;
@@ -8667,7 +8765,7 @@ struct spu_fast : public spu_recompiler_base
 		if (added)
 		{
 			// Send work to LLVM compiler thread
-			g_fxo->get<spu_llvm_thread>()->registered.push(add_loc);
+			g_fxo->get<spu_llvm_thread>()->registered.push(m_hash_start, add_loc);
 		}
 
 		// Rebuild trampoline if necessary

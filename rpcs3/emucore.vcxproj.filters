@@ -1054,9 +1054,6 @@
     <ClInclude Include="..\Utilities\types.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\event.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\BitField.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1378,9 +1375,6 @@
     <ClInclude Include="Emu\VFS.h">
       <Filter>Emu</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\AtomicPtr.h">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\StrUtil.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1580,6 +1574,12 @@
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_perf_metrics.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\cellCrossController.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
   </ItemGroup>
