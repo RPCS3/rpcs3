@@ -95,7 +95,7 @@ enum
 
 struct CellImeJpAddDic
 {
-	s8 data[CELL_IMEJP_DIC_PATH_MAXLENGTH];
+	s8 path[CELL_IMEJP_DIC_PATH_MAXLENGTH];
 };
 
 struct CellImeJpPredictItem
