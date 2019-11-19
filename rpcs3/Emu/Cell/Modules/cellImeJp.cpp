@@ -1,94 +1,102 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "cellImeJp.h"
 
 LOG_CHANNEL(cellImeJp);
 
-// Return Codes
-enum
+template <>
+void fmt_class_string<CellImeJpError>::format(std::string& out, u64 arg)
 {
-	CELL_IMEJP_ERROR_ERR                = 0x8002bf01,
-	CELL_IMEJP_ERROR_CONTEXT            = 0x8002bf11,
-	CELL_IMEJP_ERROR_ALREADY_OPEN       = 0x8002bf21,
-	CELL_IMEJP_ERROR_DIC_OPEN           = 0x8002bf31,
-	CELL_IMEJP_ERROR_PARAM              = 0x8002bf41,
-	CELL_IMEJP_ERROR_IME_ALREADY_IN_USE = 0x8002bf51,
-	CELL_IMEJP_ERROR_OTHER              = 0x8002bfff,
-};
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_IMEJP_ERROR_ERR);
+			STR_CASE(CELL_IMEJP_ERROR_CONTEXT);
+			STR_CASE(CELL_IMEJP_ERROR_ALREADY_OPEN);
+			STR_CASE(CELL_IMEJP_ERROR_DIC_OPEN);
+			STR_CASE(CELL_IMEJP_ERROR_PARAM);
+			STR_CASE(CELL_IMEJP_ERROR_IME_ALREADY_IN_USE);
+			STR_CASE(CELL_IMEJP_ERROR_OTHER);
+		}
+
+		return unknown;
+	});
+}
 
 static uint16_t s_ime_string[256];
 
-s32 cellImeJpOpen()
+error_code cellImeJpOpen()
 {
 	std::memset(s_ime_string, 0, sizeof(s_ime_string));
 	cellImeJp.error("cellImeJpOpen()");
 	return CELL_OK;
 }
 
-s32 cellImeJpOpen2()
+error_code cellImeJpOpen2()
 {
 	std::memset(s_ime_string, 0, sizeof(s_ime_string));
 	cellImeJp.error("cellImeJpOpen2()");
 	return CELL_OK;
 }
 
-s32 cellImeJpOpen3()
+error_code cellImeJpOpen3()
 {
 	std::memset(s_ime_string, 0, sizeof(s_ime_string));
 	cellImeJp.error("cellImeJpOpen3()");
 	return CELL_OK;
 }
 
-s32 cellImeJpOpenExt()
+error_code cellImeJpOpenExt()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpClose()
+error_code cellImeJpClose()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpSetKanaInputMode()
+error_code cellImeJpSetKanaInputMode()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpSetInputCharType()
+error_code cellImeJpSetInputCharType()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpSetFixInputMode()
+error_code cellImeJpSetFixInputMode()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpAllowExtensionCharacters()
+error_code cellImeJpAllowExtensionCharacters()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpReset()
+error_code cellImeJpReset()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pInputStatus)
+error_code cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pInputStatus)
 {
 	cellImeJp.error("cellImeJpGetStatus()");
 	*pInputStatus = CELL_IMEJP_CANDIDATE_EMPTY;
 	return CELL_OK;
 }
 
-s32 cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
+error_code cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
 {
 	LOG_TODO(HLE, "cellImeJpEnterChar hImeJpHandle / inputChar / pOutputStatus (%d / 0x%x / %d)" HERE, hImeJpHandle, inputChar, pOutputStatus);
 	*s_ime_string = inputChar;
@@ -96,186 +104,186 @@ s32 cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16>
 	return CELL_OK;
 }
 
-s32 cellImeJpEnterCharExt(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
+error_code cellImeJpEnterCharExt(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterCharExt()");
 	return cellImeJpEnterChar(hImeJpHandle, inputChar, pOutputStatus);
 }
 
-s32 cellImeJpEnterString(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
+error_code cellImeJpEnterString(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterString()");
 	return cellImeJpEnterChar(hImeJpHandle, inputChar, pOutputStatus);
 }
 
-s32 cellImeJpEnterStringExt(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
+error_code cellImeJpEnterStringExt(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::ptr<u16> pOutputStatus)
 {
 	cellImeJp.todo("cellImeJpEnterStringExt()");
 	return cellImeJpEnterChar(hImeJpHandle, inputChar, pOutputStatus);
 }
 
-s32 cellImeJpModeCaretRight()
+error_code cellImeJpModeCaretRight()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpModeCaretLeft()
+error_code cellImeJpModeCaretLeft()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpBackspaceWord()
+error_code cellImeJpBackspaceWord()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpDeleteWord()
+error_code cellImeJpDeleteWord()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpAllDeleteConvertString()
+error_code cellImeJpAllDeleteConvertString()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpConvertForward()
+error_code cellImeJpConvertForward()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpConvertBackward()
+error_code cellImeJpConvertBackward()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpCurrentPartConfirm()
+error_code cellImeJpCurrentPartConfirm()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpAllConfirm()
+error_code cellImeJpAllConfirm()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpConvertCancel()
+error_code cellImeJpConvertCancel()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpAllConvertCancel()
+error_code cellImeJpAllConvertCancel()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpExtendConvertArea()
+error_code cellImeJpExtendConvertArea()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpShortenConvertArea()
+error_code cellImeJpShortenConvertArea()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpTemporalConfirm()
+error_code cellImeJpTemporalConfirm()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpPostConvert()
+error_code cellImeJpPostConvert()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpMoveFocusClause()
+error_code cellImeJpMoveFocusClause()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpGetFocusTop()
+error_code cellImeJpGetFocusTop()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pFocusLength)
+error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pFocusLength)
 {
 	cellImeJp.error("cellImeJpGetFocusLength()");
 	*pFocusLength = 1;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
+error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
 {
 	cellImeJp.error("cellImeJpGetConfirmYomiString()");
 	*pYomiString = *s_ime_string;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConfirmString)
+error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConfirmString)
 {
 	cellImeJp.error("cellImeJpGetConfirmString()");
 	*pConfirmString = *s_ime_string;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
+error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pYomiString)
 {
 	cellImeJp.error("cellImeJpGetConvertYomiString()");
 	*pYomiString = *s_ime_string;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConvertString)
+error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> pConvertString)
 {
 	cellImeJp.error("cellImeJpGetConvertString()");
 	*pConvertString = *s_ime_string;
 	return CELL_OK;
 }
 
-s32 cellImeJpGetCandidateListSize()
+error_code cellImeJpGetCandidateListSize()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpGetCandidateList()
+error_code cellImeJpGetCandidateList()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpGetCandidateSelect()
+error_code cellImeJpGetCandidateSelect()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpGetPredictList()
+error_code cellImeJpGetPredictList()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
 }
 
-s32 cellImeJpConfirmPrediction()
+error_code cellImeJpConfirmPrediction()
 {
 	UNIMPLEMENTED_FUNC(cellImeJp);
 	return CELL_OK;
