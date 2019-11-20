@@ -81,9 +81,15 @@ if (WIN32)
 endif()
 
 if(UNIX AND NOT APPLE)
-	find_package(X11 REQUIRED)
-	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
-	target_link_libraries(rpcs3 ${X11_LIBRARIES})
+	find_package(X11)
+	if(X11_FOUND)
+		target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
+		target_link_libraries(rpcs3 ${X11_LIBRARIES})
+		target_compile_definitions(rpcs3 INTERFACE -DHAVE_X11)
+	# This has been checked in 3rdparty/CMakeLists.txt already.
+	elseif(NOT WAYLAND_FOUND)
+		message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
+	endif()
 endif()
 
 if(UNIX)
