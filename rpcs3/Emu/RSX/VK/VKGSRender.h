@@ -262,13 +262,17 @@ struct flush_request_task
 
 	void remove_one()
 	{
-		num_waiters--;
+		if (--num_waiters == 0)
+		{
+			num_waiters.notify_all();
+		}
 	}
 
 	void clear_pending_flag()
 	{
 		hard_sync = false;
 		pending_state.store(false);
+		pending_state.notify_all();
 	}
 
 	bool pending() const
@@ -278,17 +282,19 @@ struct flush_request_task
 
 	void consumer_wait() const
 	{
-		while (num_waiters.load() != 0)
+		int num;
+		while ((num = num_waiters.load()) != 0)
 		{
-			_mm_pause();
+			num_waiters.wait(num);
 		}
 	}
 
 	void producer_wait() const
 	{
-		while (pending_state.load())
+		bool state;
+		while ((state = pending_state.load()))
 		{
-			std::this_thread::yield();
+			pending_state.wait(state);
 		}
 	}
 };

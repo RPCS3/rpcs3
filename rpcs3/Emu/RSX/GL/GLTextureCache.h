@@ -8,7 +8,6 @@
 #include <vector>
 #include <memory>
 #include <thread>
-#include <condition_variable>
 #include <chrono>
 
 #include "Utilities/mutex.h"
