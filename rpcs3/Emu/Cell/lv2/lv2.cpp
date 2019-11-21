@@ -298,7 +298,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_spu_thread_group_connect_event_all_threads), //251 (0x0FB)
 	BIND_FUNC(sys_spu_thread_group_disconnect_event_all_threads), //252 (0x0FC)
 	null_func,//BIND_FUNC(sys_spu_thread_group...)          //253 (0x0FD)
-	null_func,//BIND_FUNC(sys_spu_thread_group_log)         //254 (0x0FE)
+	BIND_FUNC(sys_spu_thread_group_log),                    //254 (0x0FE)
 
 	uns_func, uns_func, uns_func, uns_func, uns_func,       //255-259  UNS
 
