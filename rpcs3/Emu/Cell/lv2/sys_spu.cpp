@@ -1376,6 +1376,43 @@ error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread& ppu, u3
 	return CELL_OK;
 }
 
+error_code sys_spu_thread_group_log(ppu_thread& ppu, s32 command, vm::ptr<s32> stat)
+{
+	vm::temporary_unlock(ppu);
+
+	sys_spu.warning("sys_spu_thread_group_log(command=0x%x, stat=*0x%x)", command, stat);
+
+	struct spu_group_log_state_t
+	{
+		atomic_t<s32> state = SYS_SPU_THREAD_GROUP_LOG_ON;
+	};
+
+	const auto state = g_fxo->get<spu_group_log_state_t>();
+
+	switch (command)
+	{
+	case SYS_SPU_THREAD_GROUP_LOG_GET_STATUS:
+	{
+		if (!stat)
+		{
+			return CELL_EFAULT;
+		}
+
+		*stat = state->state;
+		break;
+	}
+	case SYS_SPU_THREAD_GROUP_LOG_ON:
+	case SYS_SPU_THREAD_GROUP_LOG_OFF:
+	{
+		state->state.release(command);
+		break;
+	}
+	default: return CELL_EINVAL;
+	}
+
+	return CELL_OK;
+}
+
 error_code sys_spu_thread_recover_page_fault(ppu_thread& ppu, u32 id)
 {
 	vm::temporary_unlock(ppu);

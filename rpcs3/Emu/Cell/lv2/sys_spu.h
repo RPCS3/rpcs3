@@ -39,6 +39,13 @@ enum : u64
 	SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY = 0xFFFFFFFF53505504ull,
 };
 
+enum
+{
+	SYS_SPU_THREAD_GROUP_LOG_ON         = 0x0,
+	SYS_SPU_THREAD_GROUP_LOG_OFF        = 0x1,
+	SYS_SPU_THREAD_GROUP_LOG_GET_STATUS = 0x2,
+};
+
 enum : u32
 {
 	SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED,
@@ -322,6 +329,7 @@ error_code sys_spu_thread_group_connect_event(ppu_thread&, u32 id, u32 eq, u32 e
 error_code sys_spu_thread_group_disconnect_event(ppu_thread&, u32 id, u32 et);
 error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread&, u32 id, u32 eq_id, u64 req, vm::ptr<u8> spup);
 error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread&, u32 id, u8 spup);
+error_code sys_spu_thread_group_log(ppu_thread&, s32 command, vm::ptr<s32> stat);
 error_code sys_spu_thread_write_ls(ppu_thread&, u32 id, u32 address, u64 value, u32 type);
 error_code sys_spu_thread_read_ls(ppu_thread&, u32 id, u32 address, vm::ptr<u64> value, u32 type);
 error_code sys_spu_thread_write_spu_mb(ppu_thread&, u32 id, u32 value);
