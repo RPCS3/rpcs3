@@ -31,9 +31,9 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto error)
 	{
-		switch (error)
+		switch (s32 _error = error)
 		{
-#define SYS_NET_ERROR_CASE(x) case -x: return #x
+#define SYS_NET_ERROR_CASE(x) case -x: return "-" #x; case x: return #x
 		SYS_NET_ERROR_CASE(SYS_NET_ENOENT);
 		SYS_NET_ERROR_CASE(SYS_NET_EINTR);
 		SYS_NET_ERROR_CASE(SYS_NET_EBADF);
@@ -45,9 +45,8 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 		SYS_NET_ERROR_CASE(SYS_NET_EMFILE);
 		SYS_NET_ERROR_CASE(SYS_NET_ENOSPC);
 		SYS_NET_ERROR_CASE(SYS_NET_EPIPE);
-		case -SYS_NET_EAGAIN: 
+		SYS_NET_ERROR_CASE(SYS_NET_EAGAIN);
 			static_assert(SYS_NET_EWOULDBLOCK == SYS_NET_EAGAIN);
-			return "SYS_NET_EAGAIN/WOULDBLOCK";
 		SYS_NET_ERROR_CASE(SYS_NET_EINPROGRESS);
 		SYS_NET_ERROR_CASE(SYS_NET_EALREADY);
 		SYS_NET_ERROR_CASE(SYS_NET_EDESTADDRREQ);
