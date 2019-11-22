@@ -858,16 +858,16 @@ error_code sys_spu_thread_write_ls(ppu_thread& ppu, u32 id, u32 lsa, u64 value, 
 
 	sys_spu.trace("sys_spu_thread_write_ls(id=0x%x, lsa=0x%05x, value=0x%llx, type=%d)", id, lsa, value, type);
 
+	if (lsa >= 0x40000 || type > 8 || !type || (type | lsa) & (type - 1)) // check range and alignment
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto thread = idm::get<named_thread<spu_thread>>(id);
 
 	if (UNLIKELY(!thread || !thread->group))
 	{
 		return CELL_ESRCH;
-	}
-
-	if (lsa >= 0x40000 || lsa + type > 0x40000 || lsa % type) // check range and alignment
-	{
-		return CELL_EINVAL;
 	}
 
 	const auto group = thread->group;
@@ -885,7 +885,7 @@ error_code sys_spu_thread_write_ls(ppu_thread& ppu, u32 id, u32 lsa, u64 value, 
 	case 2: thread->_ref<u16>(lsa) = (u16)value; break;
 	case 4: thread->_ref<u32>(lsa) = (u32)value; break;
 	case 8: thread->_ref<u64>(lsa) = value; break;
-	default: return CELL_EINVAL;
+	default: ASSUME(0);
 	}
 
 	return CELL_OK;
@@ -897,16 +897,16 @@ error_code sys_spu_thread_read_ls(ppu_thread& ppu, u32 id, u32 lsa, vm::ptr<u64>
 
 	sys_spu.trace("sys_spu_thread_read_ls(id=0x%x, lsa=0x%05x, value=*0x%x, type=%d)", id, lsa, value, type);
 
+	if (lsa >= 0x40000 || type > 8 || !type || (type | lsa) & (type - 1)) // check range and alignment
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto thread = idm::get<named_thread<spu_thread>>(id);
 
 	if (UNLIKELY(!thread || !thread->group))
 	{
 		return CELL_ESRCH;
-	}
-
-	if (lsa >= 0x40000 || lsa + type > 0x40000 || lsa % type) // check range and alignment
-	{
-		return CELL_EINVAL;
 	}
 
 	const auto group = thread->group;
@@ -924,7 +924,7 @@ error_code sys_spu_thread_read_ls(ppu_thread& ppu, u32 id, u32 lsa, vm::ptr<u64>
 	case 2: *value = thread->_ref<u16>(lsa); break;
 	case 4: *value = thread->_ref<u32>(lsa); break;
 	case 8: *value = thread->_ref<u64>(lsa); break;
-	default: return CELL_EINVAL;
+	default: ASSUME(0);
 	}
 
 	return CELL_OK;
