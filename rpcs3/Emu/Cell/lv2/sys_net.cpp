@@ -401,6 +401,11 @@ error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr>
 
 	if (!sock.ret && result)
 	{
+		if (result == SYS_NET_EWOULDBLOCK)
+		{
+			return not_an_error(-result);
+		}
+
 		return -sys_net_error{result};
 	}
 
@@ -628,6 +633,11 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 	if (!sock.ret && result)
 	{
+		if (result == SYS_NET_EWOULDBLOCK || result == SYS_NET_EINPROGRESS)
+		{
+			return not_an_error(-result);
+		}
+
 		return -sys_net_error{result};
 	}
 
@@ -1063,6 +1073,11 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 	if (!sock.ret && result)
 	{
+		if (result == SYS_NET_EWOULDBLOCK)
+		{
+			return not_an_error(-result);
+		}
+
 		return -result;
 	}
 
@@ -1232,6 +1247,11 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 	if (!sock.ret && result)
 	{
+		if (result == SYS_NET_EWOULDBLOCK)
+		{
+			return not_an_error(-result);
+		}
+
 		return -result;
 	}
 
