@@ -2306,9 +2306,6 @@ namespace rsx
 				auto old_src_area = src_area;
 				section_storage_type *cached_src = nullptr;
 
-				// If no source exists, a dest texture must exist since format matching should always pass
-				verify(HERE), dest_texture;
-
 				for (const auto &surface : overlapping_surfaces)
 				{
 					if (!surface->is_locked())
