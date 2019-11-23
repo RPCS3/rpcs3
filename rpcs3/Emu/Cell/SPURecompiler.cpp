@@ -6110,6 +6110,18 @@ public:
 		// Check SPUInterpreter for notes.
 	}
 
+	template <typename TA, typename TB>
+	static auto mpyh(TA&& a, TB&& b)
+	{
+		return (std::forward<TA>(a) >> 16) * (std::forward<TB>(b) << 16);
+	}
+
+	template <typename TA, typename TB>
+	static auto mpyu(TA&& a, TB&& b)
+	{
+		return (std::forward<TA>(a) << 16 >> 16) * (std::forward<TB>(b) << 16 >> 16);
+	}
+
 	void SF(spu_opcode_t op)
 	{
 		set_vr(op.rt, get_vr(op.rb) - get_vr(op.ra));
@@ -6268,6 +6280,22 @@ public:
 
 	void A(spu_opcode_t op)
 	{
+		if (auto [a, b] = match_vrs<u32[4]>(op.ra, op.rb); a && b)
+		{
+			static const auto MP = match<u32[4]>();
+
+			if (auto [ok, a0, b0, b1, a1] = match_expr(a, mpyh(MP, MP) + mpyh(MP, MP)); ok)
+			{
+				if (auto [ok, a2, b2] = match_expr(b, mpyu(MP, MP)); ok && a2.eq(a0, a1) && b2.eq(b0, b1))
+				{
+					// 32-bit multiplication
+					LOG_NOTICE(SPU, "mpy32 in %s at 0x%05x", m_hash, m_pos);
+					set_vr(op.rt, a0 * b0);
+					return;
+				}
+			}
+		}
+
 		set_vr(op.rt, get_vr(op.ra) + get_vr(op.rb));
 	}
 
@@ -6729,7 +6757,7 @@ public:
 
 	void MPYH(spu_opcode_t op)
 	{
-		set_vr(op.rt, (get_vr(op.ra) >> 16) * (get_vr(op.rb) << 16));
+		set_vr(op.rt, mpyh(get_vr(op.ra), get_vr(op.rb)));
 	}
 
 	void MPYHH(spu_opcode_t op)
@@ -6749,7 +6777,7 @@ public:
 
 	void MPYU(spu_opcode_t op)
 	{
-		set_vr(op.rt, (get_vr(op.ra) << 16 >> 16) * (get_vr(op.rb) << 16 >> 16));
+		set_vr(op.rt, mpyu(get_vr(op.ra), get_vr(op.rb)));
 	}
 
 	void CEQB(spu_opcode_t op)
