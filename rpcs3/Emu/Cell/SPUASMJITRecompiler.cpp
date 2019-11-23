@@ -45,9 +45,9 @@ void spu_recompiler::init()
 	}
 }
 
-spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
+spu_function_t spu_recompiler::compile(spu_program&& _func)
 {
-	const u32 start0 = _func[0];
+	const u32 start0 = _func.entry_point;
 
 	const auto add_loc = m_spurt->add_empty(std::move(_func));
 
@@ -61,9 +61,9 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 		return add_loc->compiled;
 	}
 
-	const std::vector<u32>& func = add_loc->data;
+	const spu_program& func = add_loc->data;
 
-	if (func[0] != start0)
+	if (func.entry_point != start0)
 	{
 		// Wait for the duplicate
 		while (!add_loc->compiled)
@@ -84,7 +84,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 		u8 output[20];
 
 		sha1_starts(&ctx);
-		sha1_update(&ctx, reinterpret_cast<const u8*>(func.data() + 1), func.size() * 4 - 4);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
 		sha1_finish(&ctx, output);
 
 		be_t<u64> hash_start;
@@ -168,18 +168,18 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 	u32 words_align = 8;
 
 	// Start compilation
-	m_pos = func[0];
-	m_base = func[0];
-	m_size = ::size32(func) * 4 - 4;
+	m_pos = func.lower_bound;
+	m_base = func.entry_point;
+	m_size = ::size32(func.data) * 4;
 	const u32 start = m_pos;
 	const u32 end = start + m_size;
 
 	// Create block labels
-	for (u32 i = 1; i < func.size(); i++)
+	for (u32 i = 0; i < func.data.size(); i++)
 	{
-		if (func[i] && m_block_info[i - 1 + start / 4])
+		if (func.data[i] && m_block_info[i + start / 4])
 		{
-			instr_labels[i * 4 - 4 + start] = c->newLabel();
+			instr_labels[i * 4 + start] = c->newLabel();
 		}
 	}
 
@@ -211,7 +211,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 		for (u32 addr = starta, m = 1; addr < enda && m; addr += 4, m <<= 1)
 		{
 			// Filter out if out of range, or is a hole
-			if (addr >= start && addr < end && func[(addr - start) / 4 + 1])
+			if (addr >= start && addr < end && func.data[(addr - start) / 4])
 			{
 				result |= m;
 			}
@@ -226,7 +226,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 	// Skip holes at the beginning (giga only)
 	for (u32 j = start; j < end; j += 4)
 	{
-		if (!func[(j - start) / 4 + 1])
+		if (!func.data[(j - start) / 4])
 		{
 			starta += 4;
 		}
@@ -261,7 +261,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 	}
 	else if (m_size == 8)
 	{
-		c->mov(x86::rax, static_cast<u64>(func[2]) << 32 | func[1]);
+		c->mov(x86::rax, static_cast<u64>(func.data[1]) << 32 | func.data[0]);
 		c->cmp(x86::rax, x86::qword_ptr(*ls, *pc0));
 		c->jnz(label_diff);
 
@@ -272,7 +272,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 	}
 	else if (m_size == 4)
 	{
-		c->cmp(x86::dword_ptr(*ls, *pc0), func[1]);
+		c->cmp(x86::dword_ptr(*ls, *pc0), func.data[0]);
 		c->jnz(label_diff);
 
 		if (utils::has_avx())
@@ -351,7 +351,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 
 			for (u32 i = j; i < j + 64; i += 4)
 			{
-				words.push_back(i >= start && i < end ? func[(i - start) / 4 + 1] : 0);
+				words.push_back(i >= start && i < end ? func.data[(i - start) / 4] : 0);
 			}
 
 			code_off += 64;
@@ -391,7 +391,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 
 			for (u32 i = starta; i < enda; i += 4)
 			{
-				words.push_back(i >= start && i < end ? func[(i - start) / 4 + 1] : 0);
+				words.push_back(i >= start && i < end ? func.data[(i - start) / 4] : 0);
 			}
 		}
 		else if (sizea == 2 && (end - start) <= 32)
@@ -408,7 +408,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 
 			for (u32 i = starta; i < starta + 32; i += 4)
 			{
-				words.push_back(i >= start ? func[(i - start) / 4 + 1] : i + 32 < end ? func[(i + 32 - start) / 4 + 1] : 0);
+				words.push_back(i >= start ? func.data[(i - start) / 4] : i + 32 < end ? func.data[(i + 32 - start) / 4] : 0);
 			}
 		}
 		else
@@ -471,7 +471,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 
 				for (u32 i = j; i < j + 32; i += 4)
 				{
-					words.push_back(i >= start && i < end ? func[(i - start) / 4 + 1] : 0);
+					words.push_back(i >= start && i < end ? func.data[(i - start) / 4] : 0);
 				}
 
 				code_off += 32;
@@ -513,7 +513,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 
 			for (u32 i = starta; i < enda; i += 4)
 			{
-				words.push_back(i >= start && i < end ? func[(i - start) / 4 + 1] : 0);
+				words.push_back(i >= start && i < end ? func.data[(i - start) / 4] : 0);
 			}
 		}
 		else if (sizea == 2 && (end - start) <= 32)
@@ -530,7 +530,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 
 			for (u32 i = starta; i < starta + 32; i += 4)
 			{
-				words.push_back(i >= start ? func[(i - start) / 4 + 1] : i + 32 < end ? func[(i + 32 - start) / 4 + 1] : 0);
+				words.push_back(i >= start ? func.data[(i - start) / 4] : i + 32 < end ? func.data[(i + 32 - start) / 4] : 0);
 			}
 		}
 		else
@@ -605,7 +605,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 
 				for (u32 i = j; i < j + 32; i += 4)
 				{
-					words.push_back(i >= start && i < end ? func[(i - start) / 4 + 1] : 0);
+					words.push_back(i >= start && i < end ? func.data[(i - start) / 4] : 0);
 				}
 
 				code_off += 32;
@@ -675,10 +675,10 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 			}
 
 			// Determine which value will be duplicated at hole positions
-			const u32 w3 = func.at((j - start + ~utils::cntlz32(cmask, true) % 4 * 4) / 4 + 1);
-			words.push_back(cmask & 1 ? func[(j - start + 0) / 4 + 1] : w3);
-			words.push_back(cmask & 2 ? func[(j - start + 4) / 4 + 1] : w3);
-			words.push_back(cmask & 4 ? func[(j - start + 8) / 4 + 1] : w3);
+			const u32 w3 = func.data.at((j - start + ~utils::cntlz32(cmask, true) % 4 * 4) / 4);
+			words.push_back(cmask & 1 ? func.data[(j - start + 0) / 4] : w3);
+			words.push_back(cmask & 2 ? func.data[(j - start + 4) / 4] : w3);
+			words.push_back(cmask & 4 ? func.data[(j - start + 8) / 4] : w3);
 			words.push_back(w3);
 
 			// PSHUFD immediate table for all possible hole mask values, holes repeat highest valid word
@@ -771,10 +771,10 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 		m_pos = -1;
 	}
 
-	for (u32 i = 1; i < func.size(); i++)
+	for (u32 i = 0; i < func.data.size(); i++)
 	{
-		const u32 pos = start + (i - 1) * 4;
-		const u32 op  = se_storage<u32>::swap(func[i]);
+		const u32 pos = start + i * 4;
+		const u32 op  = std::bit_cast<be_t<u32>>(func.data[i]);
 
 		if (!op)
 		{
@@ -908,7 +908,7 @@ spu_function_t spu_recompiler::compile(std::vector<u32>&& _func)
 	const bool added = !add_loc->compiled && add_loc->compiled.compare_and_swap_test(nullptr, fn);
 
 	// Rebuild trampoline if necessary
-	if (!m_spurt->rebuild_ubertrampoline(func[1]))
+	if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
 	{
 		return nullptr;
 	}
