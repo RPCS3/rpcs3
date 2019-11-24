@@ -1483,6 +1483,8 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 
 	lock.unlock();
 
+	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
+
 	for (u32 i = 0; i < samples * port.num_channels; i++)
 	{
 		dst[i] += src[i] * volume; // mix all channels
@@ -1521,6 +1523,8 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 	const auto dst = port.get_vm_ptr();
 
 	lock.unlock();
+
+	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
 	if (port.num_channels == 2)
 	{
@@ -1587,6 +1591,8 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	const auto dst = port.get_vm_ptr();
 
 	lock.unlock();
+
+	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
 	if (port.num_channels == 6)
 	{
