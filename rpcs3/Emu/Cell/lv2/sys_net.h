@@ -10,7 +10,7 @@
 #include <functional>
 
 // Error codes
-enum
+enum sys_net_error : s32
 {
 	SYS_NET_ENOENT          = 2,
 	SYS_NET_EINTR           = 4,
@@ -51,6 +51,11 @@ enum
 	SYS_NET_EHOSTDOWN       = 64,
 	SYS_NET_EHOSTUNREACH    = 65,
 };
+
+static constexpr sys_net_error operator-(sys_net_error v)
+{
+	return sys_net_error{-+v};
+}
 
 // Socket types (prefixed with SYS_NET_)
 enum
@@ -362,30 +367,30 @@ class ppu_thread;
 
 // Syscalls
 
-s32 sys_net_bnet_accept(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
-s32 sys_net_bnet_bind(ppu_thread&, s32 s, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_connect(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_getpeername(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
-s32 sys_net_bnet_getsockname(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
-s32 sys_net_bnet_getsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::ptr<void> optval, vm::ptr<u32> optlen);
-s32 sys_net_bnet_listen(ppu_thread&, s32 s, s32 backlog);
-s32 sys_net_bnet_recvfrom(ppu_thread&, s32 s, vm::ptr<void> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
-s32 sys_net_bnet_recvmsg(ppu_thread&, s32 s, vm::ptr<sys_net_msghdr> msg, s32 flags);
-s32 sys_net_bnet_sendmsg(ppu_thread&, s32 s, vm::cptr<sys_net_msghdr> msg, s32 flags);
-s32 sys_net_bnet_sendto(ppu_thread&, s32 s, vm::cptr<void> buf, u32 len, s32 flags, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_setsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen);
-s32 sys_net_bnet_shutdown(ppu_thread&, s32 s, s32 how);
-s32 sys_net_bnet_socket(ppu_thread&, s32 family, s32 type, s32 protocol);
-s32 sys_net_bnet_close(ppu_thread&, s32 s);
-s32 sys_net_bnet_poll(ppu_thread&, vm::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms);
-s32 sys_net_bnet_select(ppu_thread&, s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout);
-s32 _sys_net_open_dump(ppu_thread&, s32 len, s32 flags);
-s32 _sys_net_read_dump(ppu_thread&, s32 id, vm::ptr<void> buf, s32 len, vm::ptr<s32> pflags);
-s32 _sys_net_close_dump(ppu_thread&, s32 id, vm::ptr<s32> pflags);
-s32 _sys_net_write_dump(ppu_thread&, s32 id, vm::cptr<void> buf, s32 len, u32 unknown);
-s32 sys_net_abort(ppu_thread&, s32 type, u64 arg, s32 flags);
-s32 sys_net_infoctl(ppu_thread&, s32 cmd, vm::ptr<void> arg);
-s32 sys_net_control(ppu_thread&, u32 arg1, s32 arg2, vm::ptr<void> arg3, s32 arg4);
-s32 sys_net_bnet_ioctl(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
-s32 sys_net_bnet_sysctl(ppu_thread&, u32 arg1, u32 arg2, u32 arg3, vm::ptr<void> arg4, u32 arg5, u32 arg6);
-s32 sys_net_eurus_post_command(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
+error_code sys_net_bnet_accept(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+error_code sys_net_bnet_bind(ppu_thread&, s32 s, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
+error_code sys_net_bnet_connect(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, u32 addrlen);
+error_code sys_net_bnet_getpeername(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+error_code sys_net_bnet_getsockname(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+error_code sys_net_bnet_getsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::ptr<void> optval, vm::ptr<u32> optlen);
+error_code sys_net_bnet_listen(ppu_thread&, s32 s, s32 backlog);
+error_code sys_net_bnet_recvfrom(ppu_thread&, s32 s, vm::ptr<void> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+error_code sys_net_bnet_recvmsg(ppu_thread&, s32 s, vm::ptr<sys_net_msghdr> msg, s32 flags);
+error_code sys_net_bnet_sendmsg(ppu_thread&, s32 s, vm::cptr<sys_net_msghdr> msg, s32 flags);
+error_code sys_net_bnet_sendto(ppu_thread&, s32 s, vm::cptr<void> buf, u32 len, s32 flags, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
+error_code sys_net_bnet_setsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen);
+error_code sys_net_bnet_shutdown(ppu_thread&, s32 s, s32 how);
+error_code sys_net_bnet_socket(ppu_thread&, s32 family, s32 type, s32 protocol);
+error_code sys_net_bnet_close(ppu_thread&, s32 s);
+error_code sys_net_bnet_poll(ppu_thread&, vm::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms);
+error_code sys_net_bnet_select(ppu_thread&, s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout);
+error_code _sys_net_open_dump(ppu_thread&, s32 len, s32 flags);
+error_code _sys_net_read_dump(ppu_thread&, s32 id, vm::ptr<void> buf, s32 len, vm::ptr<s32> pflags);
+error_code _sys_net_close_dump(ppu_thread&, s32 id, vm::ptr<s32> pflags);
+error_code _sys_net_write_dump(ppu_thread&, s32 id, vm::cptr<void> buf, s32 len, u32 unknown);
+error_code sys_net_abort(ppu_thread&, s32 type, u64 arg, s32 flags);
+error_code sys_net_infoctl(ppu_thread&, s32 cmd, vm::ptr<void> arg);
+error_code sys_net_control(ppu_thread&, u32 arg1, s32 arg2, vm::ptr<void> arg3, s32 arg4);
+error_code sys_net_bnet_ioctl(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
+error_code sys_net_bnet_sysctl(ppu_thread&, u32 arg1, u32 arg2, u32 arg3, vm::ptr<void> arg4, u32 arg5, u32 arg6);
+error_code sys_net_eurus_post_command(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);

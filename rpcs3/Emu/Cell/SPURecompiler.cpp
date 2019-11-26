@@ -291,9 +291,9 @@ spu_cache::~spu_cache()
 {
 }
 
-std::deque<std::vector<u32>> spu_cache::get()
+std::deque<spu_program> spu_cache::get()
 {
-	std::deque<std::vector<u32>> result;
+	std::deque<spu_program> result;
 
 	if (!m_file)
 	{
@@ -314,41 +314,44 @@ std::deque<std::vector<u32>> spu_cache::get()
 			break;
 		}
 
-		func.resize(size + 1);
-		func[0] = addr;
+		func.resize(size);
 
-		if (m_file.read(func.data() + 1, func.size() * 4 - 4) != func.size() * 4 - 4)
+		if (m_file.read(func.data(), func.size() * 4) != func.size() * 4)
 		{
 			break;
 		}
 
-		if (!size || !func[1])
+		if (!size || !func[0])
 		{
 			// Skip old format Giga entries
 			continue;
 		}
 
-		result.emplace_front(std::move(func));
+		spu_program res;
+		res.entry_point = addr;
+		res.lower_bound = addr;
+		res.data = std::move(func);
+		result.emplace_front(std::move(res));
 	}
 
 	return result;
 }
 
-void spu_cache::add(const std::vector<u32>& func)
+void spu_cache::add(const spu_program& func)
 {
 	if (!m_file)
 	{
 		return;
 	}
 
-	be_t<u32> size = ::size32(func) - 1;
-	be_t<u32> addr = func[0];
+	be_t<u32> size = ::size32(func.data);
+	be_t<u32> addr = func.entry_point;
 
 	const fs::iovec_clone gather[3]
 	{
 		{&size, sizeof(size)},
 		{&addr, sizeof(addr)},
-		{func.data() + 1, func.size() * 4 - 4}
+		{func.data.data(), func.data.size() * 4}
 	};
 
 	// Append data
@@ -458,7 +461,7 @@ void spu_cache::initialize()
 		// Build functions
 		for (std::size_t func_i = fnext++; func_i < func_list.size(); func_i = fnext++)
 		{
-			const std::vector<u32>& func = std::as_const(func_list)[func_i];
+			const spu_program& func = std::as_const(func_list)[func_i];
 
 			if (Emu.IsStopped() || fail_flag)
 			{
@@ -467,21 +470,21 @@ void spu_cache::initialize()
 			}
 
 			// Get data start
-			const u32 start = func[0];
-			const u32 size0 = ::size32(func);
+			const u32 start = func.lower_bound;
+			const u32 size0 = ::size32(func.data);
 
 			// Initialize LS with function data only
-			for (u32 i = 1, pos = start; i < size0; i++, pos += 4)
+			for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
 			{
-				ls[pos / 4] = se_storage<u32>::swap(func[i]);
+				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.data[i]);
 			}
 
 			// Call analyser
-			std::vector<u32> func2 = compiler->analyse(ls.data(), func[0]);
+			spu_program func2 = compiler->analyse(ls.data(), func.entry_point);
 
 			if (func2 != func)
 			{
-				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
+				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
 			}
 			else if (!compiler->compile(std::move(func2)))
 			{
@@ -523,51 +526,39 @@ void spu_cache::initialize()
 	g_fxo->init<spu_cache>(std::move(cache));
 }
 
-bool spu_runtime::func_compare::operator()(const std::vector<u32>& lhs, const std::vector<u32>& rhs) const
+bool spu_program::operator==(const spu_program& rhs) const noexcept
 {
-	if (lhs.empty())
-		return !rhs.empty();
-	else if (rhs.empty())
-		return false;
+	// TODO
+	return entry_point - lower_bound == rhs.entry_point - rhs.lower_bound && data == rhs.data;
+}
 
-	const u32 lhs_addr = lhs[0];
-	const u32 rhs_addr = rhs[0];
-
-	if (lhs_addr < rhs_addr)
-		return true;
-	else if (lhs_addr > rhs_addr)
-		return false;
+bool spu_program::operator<(const spu_program& rhs) const noexcept
+{
+	const u32 lhs_offs = (entry_point - lower_bound) / 4;
+	const u32 rhs_offs = (rhs.entry_point - rhs.lower_bound) / 4;
 
 	// Select range for comparison
-	std::basic_string_view<u32> lhs_data(lhs.data() + 1, lhs.size() - 1);
-	std::basic_string_view<u32> rhs_data(rhs.data() + 1, rhs.size() - 1);
+	std::basic_string_view<u32> lhs_data(data.data() + lhs_offs, data.size() - lhs_offs);
+	std::basic_string_view<u32> rhs_data(rhs.data.data() + rhs_offs, rhs.data.size() - rhs_offs);
+	const auto cmp0 = lhs_data.compare(rhs_data);
 
-	if (lhs_data.empty())
-		return !rhs_data.empty();
-	else if (rhs_data.empty())
+	if (cmp0 < 0)
+		return true;
+	else if (cmp0 > 0)
 		return false;
 
-	if (false)
-	{
-		// In Giga mode, compare instructions starting from the entry point first
-		lhs_data.remove_prefix(lhs_addr / 4);
-		rhs_data.remove_prefix(rhs_addr / 4);
-		const auto cmp0 = lhs_data.compare(rhs_data);
+	// Compare from address 0 to the point before the entry point (TODO: undesirable)
+	lhs_data = {data.data(), lhs_offs};
+	rhs_data = {rhs.data.data(), rhs_offs};
+	const auto cmp1 = lhs_data.compare(rhs_data);
 
-		if (cmp0 < 0)
-			return true;
-		else if (cmp0 > 0)
-			return false;
+	if (cmp1 < 0)
+		return true;
+	else if (cmp1 > 0)
+		return false;
 
-		// Compare from address 0 to the point before the entry point (undesirable)
-		lhs_data = {lhs.data() + 1, lhs_addr / 4};
-		rhs_data = {rhs.data() + 1, rhs_addr / 4};
-		return lhs_data < rhs_data;
-	}
-	else
-	{
-		return lhs_data < rhs_data;
-	}
+	// TODO
+	return lhs_offs < rhs_offs;
 }
 
 spu_runtime::spu_runtime()
@@ -590,9 +581,9 @@ spu_runtime::spu_runtime()
 	}
 }
 
-spu_item* spu_runtime::add_empty(std::vector<u32>&& data)
+spu_item* spu_runtime::add_empty(spu_program&& data)
 {
-	if (data.size() <= 1)
+	if (data.data.empty())
 	{
 		return nullptr;
 	}
@@ -601,12 +592,9 @@ spu_item* spu_runtime::add_empty(std::vector<u32>&& data)
 	spu_item* prev = nullptr;
 
 	//Try to add item that doesn't exist yet
-	const auto ret = m_stuff[data[1] >> 12].push_if([&](spu_item& _new, spu_item& _old)
+	const auto ret = m_stuff[data.data[0] >> 12].push_if([&](spu_item& _new, spu_item& _old)
 	{
-		std::basic_string_view<u32> lhs{_new.data.data() + 1, _new.data.size() - 1};
-		std::basic_string_view<u32> rhs{_old.data.data() + 1, _old.data.size() - 1};
-
-		if (lhs == rhs)
+		if (_new.data == _old.data)
 		{
 			prev = &_old;
 			return false;
@@ -643,7 +631,8 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		{
 			if (const auto ptr = it->compiled.load())
 			{
-				std::basic_string_view<u32> range{it->data.data() + 1, it->data.size() - 1};
+				std::basic_string_view<u32> range{it->data.data.data(), it->data.data.size()};
+				range.remove_prefix((it->data.entry_point - it->data.lower_bound) / 4);
 				m_flat_list.emplace_back(range, ptr);
 			}
 			else
@@ -997,7 +986,8 @@ spu_function_t spu_runtime::find(const u32* ls, u32 addr) const
 	{
 		if (const auto ptr = item.compiled.load())
 		{
-			std::basic_string_view<u32> range{item.data.data() + 1, item.data.size() - 1};
+			std::basic_string_view<u32> range{item.data.data.data(), item.data.data.size()};
+			range.remove_prefix((item.data.entry_point - item.data.lower_bound) / 4);
 
 			if (addr / 4 + range.size() > 0x10000)
 			{
@@ -1194,12 +1184,13 @@ catch (const std::exception& e)
 	LOG_NOTICE(GENERAL, "\n%s", spu.dump());
 }
 
-std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
+spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 {
 	// Result: addr + raw instruction data
-	std::vector<u32> result;
-	result.reserve(10000);
-	result.push_back(entry_point);
+	spu_program result;
+	result.data.reserve(10000);
+	result.entry_point = entry_point;
+	result.lower_bound = entry_point;
 
 	// Initialize block entries
 	m_block_info.reset();
@@ -1400,7 +1391,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 			{
 				const u32 target = spu_branch_target(av);
 
-				LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x%s", result[0], pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
+				LOG_WARNING(SPU, "[0x%x] At 0x%x: indirect branch to 0x%x%s", entry_point, pos, target, op.d ? " (D)" : op.e ? " (E)" : "");
 
 				m_targets[pos].push_back(target);
 
@@ -1408,7 +1399,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 				{
 					if (sync)
 					{
-						LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring %scall to 0x%x (SYNC)", result[0], pos, sl ? "" : "tail ", target);
+						LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring %scall to 0x%x (SYNC)", entry_point, pos, sl ? "" : "tail ", target);
 
 						if (target > entry_point)
 						{
@@ -1505,17 +1496,17 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 
 					if (jt_abs.size() >= jt_rel.size())
 					{
-						const u32 new_size = (start - lsa) / 4 + 1 + jt_abs.size();
+						const u32 new_size = (start - lsa) / 4 + jt_abs.size();
 
-						if (result.size() < new_size)
+						if (result.data.size() < new_size)
 						{
-							result.resize(new_size);
+							result.data.resize(new_size);
 						}
 
 						for (u32 i = 0; i < jt_abs.size(); i++)
 						{
 							add_block(jt_abs[i]);
-							result[(start - lsa) / 4 + 1 + i] = se_storage<u32>::swap(jt_abs[i]);
+							result.data[(start - lsa) / 4 + i] = std::bit_cast<u32, be_t<u32>>(jt_abs[i]);
 							m_targets[start + i * 4];
 						}
 
@@ -1524,17 +1515,17 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 
 					if (jt_rel.size() >= jt_abs.size())
 					{
-						const u32 new_size = (start - lsa) / 4 + 1 + jt_rel.size();
+						const u32 new_size = (start - lsa) / 4 + jt_rel.size();
 
-						if (result.size() < new_size)
+						if (result.data.size() < new_size)
 						{
-							result.resize(new_size);
+							result.data.resize(new_size);
 						}
 
 						for (u32 i = 0; i < jt_rel.size(); i++)
 						{
 							add_block(jt_rel[i]);
-							result[(start - lsa) / 4 + 1 + i] = se_storage<u32>::swap(jt_rel[i] - start);
+							result.data[(start - lsa) / 4 + i] = std::bit_cast<u32, be_t<u32>>(jt_rel[i] - start);
 							m_targets[start + i * 4];
 						}
 
@@ -1569,7 +1560,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 			}
 			else if (type == spu_itype::BI && sync)
 			{
-				LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring indirect branch (SYNC)", result[0], pos);
+				LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring indirect branch (SYNC)", entry_point, pos);
 			}
 
 			if (type == spu_itype::BI || sl)
@@ -1630,7 +1621,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 			{
 				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 				{
-					LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring fixed call to 0x%x (SYNC)", result[0], pos, target);
+					LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring fixed call to 0x%x (SYNC)", entry_point, pos, target);
 				}
 
 				if (target > entry_point)
@@ -1656,7 +1647,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 			{
 				if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
 				{
-					LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", result[0], pos, target);
+					LOG_NOTICE(SPU, "[0x%x] At 0x%x: ignoring fixed tail call to 0x%x (SYNC)", entry_point, pos, target);
 				}
 
 				if (target > entry_point)
@@ -1914,31 +1905,33 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 		}
 
 		// Insert raw instruction value
-		if (result.size() - 1 <= (pos - lsa) / 4)
+		const u32 new_size = (pos - lsa) / 4;
+
+		if (result.data.size() <= new_size)
 		{
-			if (result.size() - 1 < (pos - lsa) / 4)
+			if (result.data.size() < new_size)
 			{
-				result.resize((pos - lsa) / 4 + 1);
+				result.data.resize(new_size);
 			}
 
-			result.emplace_back(se_storage<u32>::swap(data));
+			result.data.emplace_back(std::bit_cast<u32, be_t<u32>>(data));
 		}
-		else if (u32& raw_val = result[(pos - lsa) / 4 + 1])
+		else if (u32& raw_val = result.data[new_size])
 		{
-			verify(HERE), raw_val == se_storage<u32>::swap(data);
+			verify(HERE), raw_val == std::bit_cast<u32, be_t<u32>>(data);
 		}
 		else
 		{
-			raw_val = se_storage<u32>::swap(data);
+			raw_val = std::bit_cast<u32, be_t<u32>>(data);
 		}
 	}
 
 	while (lsa > 0 || limit < 0x40000)
 	{
-		const u32 initial_size = result.size();
+		const u32 initial_size = result.data.size();
 
 		// Check unreachable blocks
-		limit = std::min<u32>(limit, lsa + initial_size * 4 - 4);
+		limit = std::min<u32>(limit, lsa + initial_size * 4);
 
 		for (auto& pair : m_preds)
 		{
@@ -1961,7 +1954,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 				for (u32 j = workload[i];; j -= 4)
 				{
 					// Go backward from an address until the entry point is reached
-					if (j == result[0])
+					if (j == entry_point)
 					{
 						reachable = true;
 						break;
@@ -1994,7 +1987,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 					// Check for possible fallthrough predecessor
 					if (!had_fallthrough)
 					{
-						if (result.at((j - lsa) / 4) == 0 || m_targets.count(j - 4))
+						if (result.data.at((j - lsa) / 4 - 1) == 0 || m_targets.count(j - 4))
 						{
 							break;
 						}
@@ -2018,16 +2011,16 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 			}
 		}
 
-		result.resize((limit - lsa) / 4 + 1);
+		result.data.resize((limit - lsa) / 4);
 
 		// Check holes in safe mode (TODO)
 		u32 valid_size = 0;
 
-		for (u32 i = 1; i < result.size(); i++)
+		for (u32 i = 0; i < result.data.size(); i++)
 		{
-			if (result[i] == 0)
+			if (result.data[i] == 0)
 			{
-				const u32 pos  = lsa + (i - 1) * 4;
+				const u32 pos  = lsa + i * 4;
 				const u32 data = ls[pos / 4];
 
 				// Allow only NOP or LNOP instructions in holes
@@ -2038,34 +2031,34 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 
 				if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 				{
-					result.resize(valid_size + 1);
+					result.data.resize(valid_size);
 					break;
 				}
 			}
 			else
 			{
-				valid_size = i;
+				valid_size = i + 1;
 			}
 		}
 
 		// Even if NOP or LNOP, should be removed at the end
-		result.resize(valid_size + 1);
+		result.data.resize(valid_size);
 
 		// Repeat if blocks were removed
-		if (result.size() == initial_size)
+		if (result.data.size() == initial_size)
 		{
 			break;
 		}
 	}
 
-	limit = std::min<u32>(limit, lsa + ::size32(result) * 4 - 4);
+	limit = std::min<u32>(limit, lsa + ::size32(result.data) * 4);
 
 	// Cleanup block info
 	for (u32 i = 0; i < workload.size(); i++)
 	{
 		const u32 addr = workload[i];
 
-		if (addr < lsa || addr >= limit || !result[(addr - lsa) / 4 + 1])
+		if (addr < lsa || addr >= limit || !result.data[(addr - lsa) / 4])
 		{
 			m_block_info[addr / 4] = false;
 			m_entry_info[addr / 4] = false;
@@ -2104,7 +2097,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 		const u32 prev = (it->first - 4) & 0x3fffc;
 
 		// TODO: check the correctness
-		if (m_targets.count(prev) == 0 && prev >= lsa && prev < limit && result[(prev - lsa) / 4 + 1])
+		if (m_targets.count(prev) == 0 && prev >= lsa && prev < limit && result.data[(prev - lsa) / 4])
 		{
 			// Add target and the predecessor
 			m_targets[prev].push_back(it->first);
@@ -2127,25 +2120,25 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 	}
 
 	// Fill holes which contain only NOP and LNOP instructions (TODO: compile)
-	for (u32 i = 1, nnop = 0, vsize = 0; i <= result.size(); i++)
+	for (u32 i = 0, nnop = 0, vsize = 0; i <= result.data.size(); i++)
 	{
-		if (i >= result.size() || result[i])
+		if (i >= result.data.size() || result.data[i])
 		{
-			if (nnop && nnop == i - vsize - 1)
+			if (nnop && nnop == i - vsize)
 			{
 				// Write only complete NOP sequence
-				for (u32 j = vsize + 1; j < i; j++)
+				for (u32 j = vsize; j < i; j++)
 				{
-					result[j] = se_storage<u32>::swap(ls[lsa / 4 + j - 1]);
+					result.data[j] = std::bit_cast<u32, be_t<u32>>(ls[lsa / 4 + j]);
 				}
 			}
 
 			nnop  = 0;
-			vsize = i;
+			vsize = i + 1;
 		}
 		else
 		{
-			const u32 pos  = lsa + (i - 1) * 4;
+			const u32 pos  = lsa + i * 4;
 			const u32 data = ls[pos / 4];
 
 			if (data == 0x200000 || (data & 0xffffff80) == 0x40200000)
@@ -2169,7 +2162,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 			block.size++;
 
 			// Decode instruction
-			const spu_opcode_t op{se_storage<u32>::swap(result[(ia - lsa) / 4 + 1])};
+			const spu_opcode_t op{std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 4])};
 
 			const auto type = s_spu_itype.decode(op.opcode);
 
@@ -2663,7 +2656,7 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 		for (u32 ia = addr; ia < addr + bb.size * 4; ia += 4)
 		{
 			// Decode instruction again
-			op.opcode = se_storage<u32>::swap(result[(ia - lsa) / 4 + 1]);
+			op.opcode = std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 41]);
 			last_inst = s_spu_itype.decode(op.opcode);
 
 			// Propagate some constants
@@ -3117,24 +3110,18 @@ std::vector<u32> spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_poi
 		}
 	}
 
-	if (result.size() == 1)
+	if (result.data.empty())
 	{
 		// Blocks starting from 0x0 or invalid instruction won't be compiled, may need special interpreter fallback
-		result.clear();
 	}
 
 	return result;
 }
 
-void spu_recompiler_base::dump(const std::vector<u32>& result, std::string& out)
+void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 {
 	SPUDisAsm dis_asm(CPUDisAsm_InterpreterMode);
-	dis_asm.offset = reinterpret_cast<const u8*>(result.data() + 1);
-
-	if (true)
-	{
-		dis_asm.offset -= result[0];
-	}
+	dis_asm.offset = reinterpret_cast<const u8*>(result.data.data()) - result.lower_bound;
 
 	std::string hash;
 	{
@@ -3142,12 +3129,12 @@ void spu_recompiler_base::dump(const std::vector<u32>& result, std::string& out)
 		u8 output[20];
 
 		sha1_starts(&ctx);
-		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data() + 1), result.size() * 4 - 4);
+		sha1_update(&ctx, reinterpret_cast<const u8*>(result.data.data()), result.data.size() * 4);
 		sha1_finish(&ctx, output);
 		fmt::append(hash, "%s", fmt::base57(output));
 	}
 
-	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n", result[0], result.size() - 1, hash);
+	fmt::append(out, "========== SPU BLOCK 0x%05x (size %u, %s) ==========\n", result.entry_point, result.data.size(), hash);
 
 	for (auto& bb : m_bbs)
 	{
@@ -4162,14 +4149,14 @@ public:
 		}
 	}
 
-	virtual spu_function_t compile(std::vector<u32>&& _func) override
+	virtual spu_function_t compile(spu_program&& _func) override
 	{
-		if (_func.empty() && m_interp_magn)
+		if (_func.data.empty() && m_interp_magn)
 		{
 			return compile_interpreter();
 		}
 
-		const u32 start0 = _func[0];
+		const u32 start0 = _func.entry_point;
 
 		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
@@ -4178,9 +4165,9 @@ public:
 			return nullptr;
 		}
 
-		const std::vector<u32>& func = add_loc->data;
+		const spu_program& func = add_loc->data;
 
-		if (func[0] != start0)
+		if (func.entry_point != start0)
 		{
 			// Wait for the duplicate
 			while (!add_loc->compiled)
@@ -4203,22 +4190,22 @@ public:
 			u8 output[20];
 
 			sha1_starts(&ctx);
-			sha1_update(&ctx, reinterpret_cast<const u8*>(func.data() + 1), func.size() * 4 - 4);
+			sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
 			sha1_finish(&ctx, output);
 
 			m_hash.clear();
-			fmt::append(m_hash, "spu-0x%05x-%s", func[0], fmt::base57(output));
+			fmt::append(m_hash, "spu-0x%05x-%s", func.entry_point, fmt::base57(output));
 
 			be_t<u64> hash_start;
 			std::memcpy(&hash_start, output, sizeof(hash_start));
 			m_hash_start = hash_start;
 		}
 
-		LOG_NOTICE(SPU, "Building function 0x%x... (size %u, %s)", func[0], func.size() - 1, m_hash);
+		LOG_NOTICE(SPU, "Building function 0x%x... (size %u, %s)", func.entry_point, func.data.size(), m_hash);
 
-		m_pos = func[0];
-		m_base = func[0];
-		m_size = (func.size() - 1) * 4;
+		m_pos = func.lower_bound;
+		m_base = func.entry_point;
+		m_size = ::size32(func.data) * 4;
 		const u32 start = m_pos;
 		const u32 end = start + m_size;
 
@@ -4279,16 +4266,16 @@ public:
 			// Disable check (unsafe)
 			m_ir->CreateBr(label_body);
 		}
-		else if (func.size() - 1 == 1)
+		else if (func.data.size() == 1)
 		{
 			const auto pu32 = m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, m_base_pc), get_type<u32*>());
-			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(pu32), m_ir->getInt32(func[1]));
+			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(pu32), m_ir->getInt32(func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
-		else if (func.size() - 1 == 2)
+		else if (func.data.size() == 2)
 		{
 			const auto pu64 = m_ir->CreateBitCast(m_ir->CreateGEP(m_lsptr, m_base_pc), get_type<u64*>());
-			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(pu64), m_ir->getInt64(static_cast<u64>(func[2]) << 32 | func[1]));
+			const auto cond = m_ir->CreateICmpNE(m_ir->CreateLoad(pu64), m_ir->getInt64(static_cast<u64>(func.data[1]) << 32 | func.data[0]));
 			m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 		}
 		else
@@ -4298,7 +4285,7 @@ public:
 			// Skip holes at the beginning (giga only)
 			for (u32 j = start; j < end; j += 4)
 			{
-				if (!func[(j - start) / 4 + 1])
+				if (!func.data[(j - start) / 4])
 				{
 					starta += 4;
 				}
@@ -4324,7 +4311,7 @@ public:
 				{
 					const u32 k = j + i * 4;
 
-					if (k < start || k >= end || !func[(k - start) / 4 + 1])
+					if (k < start || k >= end || !func.data[(k - start) / 4])
 					{
 						indices[i] = 8;
 						holes      = true;
@@ -4357,7 +4344,7 @@ public:
 				for (u32 i = 0; i < 8; i++)
 				{
 					const u32 k = j + i * 4;
-					words[i] = k >= start && k < end ? func[(k - start) / 4 + 1] : 0;
+					words[i] = k >= start && k < end ? func.data[(k - start) / 4] : 0;
 				}
 
 				vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, words));
@@ -4598,7 +4585,7 @@ public:
 						break;
 					}
 
-					const u32 op = se_storage<u32>::swap(func[(m_pos - start) / 4 + 1]);
+					const u32 op = std::bit_cast<be_t<u32>>(func.data[(m_pos - start) / 4]);
 
 					if (!op)
 					{
@@ -4744,7 +4731,7 @@ public:
 
 		if (g_cfg.core.spu_debug)
 		{
-			fmt::append(log, "LLVM IR at 0x%x:\n", func[0]);
+			fmt::append(log, "LLVM IR at 0x%x:\n", func.entry_point);
 			out << *module; // print IR
 			out << "\n\n";
 		}
@@ -4752,7 +4739,7 @@ public:
 		if (verifyModule(*module, &out))
 		{
 			out.flush();
-			LOG_ERROR(SPU, "LLVM: Verification failed at 0x%x:\n%s", func[0], log);
+			LOG_ERROR(SPU, "LLVM: Verification failed at 0x%x:\n%s", func.entry_point, log);
 
 			if (g_cfg.core.spu_debug)
 			{
@@ -4781,7 +4768,7 @@ public:
 		add_loc->compiled = fn;
 
 		// Rebuild trampoline if necessary
-		if (!m_spurt->rebuild_ubertrampoline(func[1]))
+		if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
 		{
 			return nullptr;
 		}
@@ -6110,6 +6097,18 @@ public:
 		// Check SPUInterpreter for notes.
 	}
 
+	template <typename TA, typename TB>
+	static auto mpyh(TA&& a, TB&& b)
+	{
+		return (std::forward<TA>(a) >> 16) * (std::forward<TB>(b) << 16);
+	}
+
+	template <typename TA, typename TB>
+	static auto mpyu(TA&& a, TB&& b)
+	{
+		return (std::forward<TA>(a) << 16 >> 16) * (std::forward<TB>(b) << 16 >> 16);
+	}
+
 	void SF(spu_opcode_t op)
 	{
 		set_vr(op.rt, get_vr(op.rb) - get_vr(op.ra));
@@ -6268,6 +6267,22 @@ public:
 
 	void A(spu_opcode_t op)
 	{
+		if (auto [a, b] = match_vrs<u32[4]>(op.ra, op.rb); a && b)
+		{
+			static const auto MP = match<u32[4]>();
+
+			if (auto [ok, a0, b0, b1, a1] = match_expr(a, mpyh(MP, MP) + mpyh(MP, MP)); ok)
+			{
+				if (auto [ok, a2, b2] = match_expr(b, mpyu(MP, MP)); ok && a2.eq(a0, a1) && b2.eq(b0, b1))
+				{
+					// 32-bit multiplication
+					LOG_NOTICE(SPU, "mpy32 in %s at 0x%05x", m_hash, m_pos);
+					set_vr(op.rt, a0 * b0);
+					return;
+				}
+			}
+		}
+
 		set_vr(op.rt, get_vr(op.ra) + get_vr(op.rb));
 	}
 
@@ -6729,7 +6744,7 @@ public:
 
 	void MPYH(spu_opcode_t op)
 	{
-		set_vr(op.rt, (get_vr(op.ra) >> 16) * (get_vr(op.rb) << 16));
+		set_vr(op.rt, mpyh(get_vr(op.ra), get_vr(op.rb)));
 	}
 
 	void MPYHH(spu_opcode_t op)
@@ -6749,7 +6764,7 @@ public:
 
 	void MPYU(spu_opcode_t op)
 	{
-		set_vr(op.rt, (get_vr(op.ra) << 16 >> 16) * (get_vr(op.rb) << 16 >> 16));
+		set_vr(op.rt, mpyu(get_vr(op.ra), get_vr(op.rb)));
 	}
 
 	void CEQB(spu_opcode_t op)
@@ -8370,7 +8385,7 @@ struct spu_llvm
 			}
 
 			// Start compiling
-			const std::vector<u32>& func = found_it->second->data;
+			const spu_program& func = found_it->second->data;
 
 			// Old function pointer (pre-recompiled)
 			const spu_function_t _old = found_it->second->compiled;
@@ -8379,21 +8394,21 @@ struct spu_llvm
 			enqueued.erase(found_it);
 
 			// Get data start
-			const u32 start = func[0];
-			const u32 size0 = ::size32(func);
+			const u32 start = func.lower_bound;
+			const u32 size0 = ::size32(func.data);
 
 			// Initialize LS with function data only
-			for (u32 i = 1, pos = start; i < size0; i++, pos += 4)
+			for (u32 i = 0, pos = start; i < size0; i++, pos += 4)
 			{
-				ls[pos / 4] = se_storage<u32>::swap(func[i]);
+				ls[pos / 4] = std::bit_cast<be_t<u32>>(func.data[i]);
 			}
 
 			// Call analyser
-			std::vector<u32> func2 = compiler->analyse(ls.data(), func[0]);
+			spu_program func2 = compiler->analyse(ls.data(), func.entry_point);
 
 			if (func2 != func)
 			{
-				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2[0], func2.size() - 1, size0 - 1);
+				LOG_ERROR(SPU, "[0x%05x] SPU Analyser failed, %u vs %u", func2.entry_point, func2.data.size(), size0);
 			}
 			else if (const auto target = compiler->compile(std::move(func2)))
 			{
@@ -8416,7 +8431,7 @@ struct spu_llvm
 			}
 			else
 			{
-				LOG_FATAL(SPU, "[0x%05x] Compilation failed.", func[0]);
+				LOG_FATAL(SPU, "[0x%05x] Compilation failed.", func.entry_point);
 				Emu.Pause();
 				return;
 			}
@@ -8441,7 +8456,7 @@ struct spu_fast : public spu_recompiler_base
 		}
 	}
 
-	virtual spu_function_t compile(std::vector<u32>&& _func) override
+	virtual spu_function_t compile(spu_program&& _func) override
 	{
 		const auto add_loc = m_spurt->add_empty(std::move(_func));
 
@@ -8455,7 +8470,7 @@ struct spu_fast : public spu_recompiler_base
 			return add_loc->compiled;
 		}
 
-		const std::vector<u32>& func = add_loc->data;
+		const spu_program& func = add_loc->data;
 
 		if (g_cfg.core.spu_debug && !add_loc->logged.exchange(1))
 		{
@@ -8465,22 +8480,22 @@ struct spu_fast : public spu_recompiler_base
 		}
 
 		// Allocate executable area with necessary size
-		const auto result = jit_runtime::alloc(22 + 1 + 9 + (::size32(func) - 1) * (16 + 16) + 36 + 47, 16);
+		const auto result = jit_runtime::alloc(22 + 1 + 9 + ::size32(func.data) * (16 + 16) + 36 + 47, 16);
 
 		if (!result)
 		{
 			return nullptr;
 		}
 
-		m_pos = func[0];
-		m_size = (::size32(func) - 1) * 4;
+		m_pos = func.lower_bound;
+		m_size = ::size32(func.data) * 4;
 
 		{
 			sha1_context ctx;
 			u8 output[20];
 
 			sha1_starts(&ctx);
-			sha1_update(&ctx, reinterpret_cast<const u8*>(func.data() + 1), func.size() * 4 - 4);
+			sha1_update(&ctx, reinterpret_cast<const u8*>(func.data.data()), func.data.size() * 4);
 			sha1_finish(&ctx, output);
 
 			be_t<u64> hash_start;
@@ -8526,9 +8541,9 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x00;
 
 		// Verification (slow)
-		for (u32 i = 1; i < func.size(); i++)
+		for (u32 i = 0; i < func.data.size(); i++)
 		{
-			if (!func[i])
+			if (!func.data[i])
 			{
 				continue;
 			}
@@ -8536,8 +8551,8 @@ struct spu_fast : public spu_recompiler_base
 			// cmp dword ptr [rcx + off], opc
 			*raw++ = 0x81;
 			*raw++ = 0xb9;
-			const u32 off = (i - 1) * 4;
-			const u32 opc = func[i];
+			const u32 off = i * 4;
+			const u32 opc = func.data[i];
 			std::memcpy(raw + 0, &off, 4);
 			std::memcpy(raw + 4, &opc, 4);
 			raw += 8;
@@ -8599,16 +8614,16 @@ struct spu_fast : public spu_recompiler_base
 		*raw++ = 0x4c;
 		*raw++ = 0x8d;
 		*raw++ = 0x35;
-		const u32 epi_off = (::size32(func) - 1) * 16;
+		const u32 epi_off = ::size32(func.data) * 16;
 		std::memcpy(raw, &epi_off, 4);
 		raw += 4;
 
 		// Instructions (each instruction occupies fixed number of bytes)
-		for (u32 i = 1; i < func.size(); i++)
+		for (u32 i = 0; i < func.data.size(); i++)
 		{
-			const u32 pos = m_pos + (i - 1) * 4;
+			const u32 pos = m_pos + i * 4;
 
-			if (!func[i])
+			if (!func.data[i])
 			{
 				// Save pc: mov [rbp + spu_thread::pc], r12d
 				*raw++ = 0x44;
@@ -8630,7 +8645,7 @@ struct spu_fast : public spu_recompiler_base
 			}
 
 			// Fix endianness
-			const spu_opcode_t op{se_storage<u32>::swap(func[i])};
+			const spu_opcode_t op{std::bit_cast<be_t<u32>>(func.data[i])};
 
 			switch (auto type = s_spu_itype.decode(op.opcode))
 			{
@@ -8769,7 +8784,7 @@ struct spu_fast : public spu_recompiler_base
 		}
 
 		// Rebuild trampoline if necessary
-		if (!m_spurt->rebuild_ubertrampoline(func[1]))
+		if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
 		{
 			return nullptr;
 		}
