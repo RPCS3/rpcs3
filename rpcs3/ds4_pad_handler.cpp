@@ -407,7 +407,7 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 	ds4Dev->calibData[DS4CalibIndex::ROLL].bias = GetS16LEData(&buf[5]);
 
 	s16 pitchPlus, pitchNeg, rollPlus, rollNeg, yawPlus, yawNeg;
-	if (ds4Dev->btCon)
+	if (ds4Dev->btCon || ds4Dev->unAuthentic)
 	{
 		pitchPlus = GetS16LEData(&buf[7]);
 		yawPlus   = GetS16LEData(&buf[9]);
@@ -479,8 +479,20 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, hid_device_info* hid
 	// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
 	std::array<u8, 64> buf{};
 	buf[0] = 0x81;
-	if (hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE) > 0)
+	if (const auto length = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x81_SIZE); length > 0)
 	{
+		if (length != DS4_FEATURE_REPORT_0x81_SIZE)
+		{
+			// Controller may not be genuine. These controllers do not have feature 0x81 implemented and calibration data is in bluetooth format even in USB mode!
+			ds4Dev->unAuthentic = true;
+			LOG_WARNING(HLE, "DS4 controller may not be genuine. Workaround enabled.");
+
+			// Read feature report 0x12 instead which is what the console uses.
+			buf[0] = 0x12;
+			buf[1] = 0;
+			hid_get_feature_report(hidDevice, buf.data(), 16);
+		}
+
 		serial = fmt::format("%x%x%x%x%x%x", buf[6], buf[5], buf[4], buf[3], buf[2], buf[1]);
 	}
 	else
