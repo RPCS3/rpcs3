@@ -1219,29 +1219,37 @@ error_code sys_spu_thread_bind_queue(ppu_thread& ppu, u32 id, u32 spuq, u32 spuq
 
 	std::lock_guard lock(thread->group->mutex);
 
+	decltype(std::data(thread->spuq)) q{};
+
 	for (auto& v : thread->spuq)
 	{
-		if (auto q = v.second.lock())
+		// Check if the entry is assigned at all
+		if (const decltype(v.second) test{};
+			!v.second.owner_before(test) && !test.owner_before(v.second))
 		{
-			if (v.first == spuq_num || q == queue)
+			if (!q)
 			{
-				return CELL_EBUSY;
+				q = &v;
 			}
-		}
-	}
 
-	for (auto& v : thread->spuq)
-	{
-		if (v.second.expired())
+			continue;
+		}
+
+		if (v.first == spuq_num || 
+			(!v.second.owner_before(queue) && !queue.owner_before(v.second)))
 		{
-			v.first = spuq_num;
-			v.second = queue;
-
-			return CELL_OK;
+			return CELL_EBUSY;
 		}
 	}
 
-	return CELL_EAGAIN;
+	if (!q)
+	{
+		return CELL_EAGAIN;
+	}
+
+	q->first = spuq_num;
+	q->second = queue;
+	return CELL_OK;
 }
 
 error_code sys_spu_thread_unbind_queue(ppu_thread& ppu, u32 id, u32 spuq_num)
@@ -1261,12 +1269,19 @@ error_code sys_spu_thread_unbind_queue(ppu_thread& ppu, u32 id, u32 spuq_num)
 
 	for (auto& v : thread->spuq)
 	{
-		if (v.first == spuq_num && !v.second.expired())
+		if (v.first != spuq_num)
 		{
-			v.second.reset();
-
-			return CELL_OK;
+			continue;
 		}
+
+		if (const decltype(v.second) test{};
+			!v.second.owner_before(test) && !test.owner_before(v.second))
+		{
+			continue;
+		}
+
+		v.second.reset();
+		return CELL_OK;
 	}
 
 	return CELL_ESRCH;
