@@ -936,7 +936,7 @@ namespace
 				if (is_primitive_restart_enabled && index == primitive_restart_index)
 					continue;
 
-				anchor = index;
+				anchor = min_max(min_index, max_index, index);
 				needs_anchor = false;
 				continue;
 			}
@@ -951,7 +951,7 @@ namespace
 			if (last_index == invalid_index)
 			{
 				//Need at least one anchor and one outer index to create a triangle
-				last_index = index;
+				last_index = min_max(min_index, max_index, index);
 				continue;
 			}
 

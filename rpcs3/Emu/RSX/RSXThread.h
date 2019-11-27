@@ -788,13 +788,6 @@ namespace rsx
 		void fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program);
 
 		/**
-		 * Write inlined array data to buffer.
-		 * The storage of inlined data looks different from memory stored arrays.
-		 * There is no swapping required except for 4 u8 (according to Bleach Soul Resurection)
-		 */
-		void write_inline_array_to_buffer(void *dst_buffer);
-
-		/**
 		 * Notify that a section of memory has been mapped
 		 * If there is a notify_memory_unmapped request on this range yet to be handled,
 		 * handles it immediately.

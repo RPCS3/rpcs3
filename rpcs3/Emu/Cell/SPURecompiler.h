@@ -29,18 +29,39 @@ public:
 		return m_file.operator bool();
 	}
 
-	std::deque<std::vector<u32>> get();
+	std::deque<struct spu_program> get();
 
-	void add(const std::vector<u32>& func);
+	void add(const struct spu_program& func);
 
 	static void initialize();
+};
+
+struct spu_program
+{
+	// Address of the entry point in LS
+	u32 entry_point;
+
+	// Address of the data in LS
+	u32 lower_bound;
+
+	// Program data with intentionally wrong endianness (on LE platform opcode values are swapped)
+	std::vector<u32> data;
+
+	bool operator==(const spu_program& rhs) const noexcept;
+
+	bool operator!=(const spu_program& rhs) const noexcept
+	{
+		return !(*this == rhs);
+	}
+
+	bool operator<(const spu_program& rhs) const noexcept;
 };
 
 class spu_item
 {
 public:
 	// SPU program
-	const std::vector<u32> data;
+	const spu_program data;
 
 	// Compiled function pointer
 	atomic_t<spu_function_t> compiled = nullptr;
@@ -51,7 +72,7 @@ public:
 	atomic_t<u8> cached = false;
 	atomic_t<u8> logged = false;
 
-	spu_item(std::vector<u32>&& data)
+	spu_item(spu_program&& data)
 		: data(std::move(data))
 	{
 	}
@@ -64,12 +85,6 @@ public:
 // Helper class
 class spu_runtime
 {
-	struct func_compare
-	{
-		// Comparison function for SPU programs
-		bool operator()(const std::vector<u32>& lhs, const std::vector<u32>& rhs) const;
-	};
-
 	// All functions (2^20 bunches)
 	std::array<lf_bunch<spu_item>, (1 << 20)> m_stuff;
 
@@ -109,7 +124,7 @@ private:
 
 public:
 	// Return new pointer for add()
-	spu_item* add_empty(std::vector<u32>&&);
+	spu_item* add_empty(spu_program&&);
 
 	// Find existing function
 	spu_function_t find(const u32* ls, u32 addr) const;
@@ -292,7 +307,7 @@ public:
 	virtual void init() = 0;
 
 	// Compile function
-	virtual spu_function_t compile(std::vector<u32>&&) = 0;
+	virtual spu_function_t compile(spu_program&&) = 0;
 
 	// Default dispatch function fallback (second arg is unused)
 	static void dispatch(spu_thread&, void*, u8* rip);
@@ -304,10 +319,10 @@ public:
 	static void old_interpreter(spu_thread&, void* ls, u8*);
 
 	// Get the function data at specified address
-	std::vector<u32> analyse(const be_t<u32>* ls, u32 lsa);
+	spu_program analyse(const be_t<u32>* ls, u32 lsa);
 
 	// Print analyser internal state
-	void dump(const std::vector<u32>& result, std::string& out);
+	void dump(const spu_program& result, std::string& out);
 
 	// Get SPU Runtime
 	spu_runtime& get_runtime()

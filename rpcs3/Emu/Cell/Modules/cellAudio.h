@@ -341,7 +341,8 @@ public:
 	shared_mutex mutex;
 	atomic_t<u32> init = 0;
 
-	std::vector<u64> keys;
+	u32 key_count = 0;
+	std::vector<std::pair<u64, u64>> keys;
 	std::array<audio_port, AUDIO_PORT_COUNT> ports;
 
 	u64 m_last_period_end = 0;

@@ -79,11 +79,9 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 			case RSX_FP_OPCODE_COS:
 			case RSX_FP_OPCODE_SIN:
 			case RSX_FP_OPCODE_REFL:
-			case RSX_FP_OPCODE_EX2:
 			case RSX_FP_OPCODE_FRC:
 			case RSX_FP_OPCODE_LIT:
 			case RSX_FP_OPCODE_LIF:
-			case RSX_FP_OPCODE_LRP:
 			case RSX_FP_OPCODE_LG2:
 				break;
 			case RSX_FP_OPCODE_MOV:

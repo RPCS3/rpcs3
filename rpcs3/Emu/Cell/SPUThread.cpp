@@ -1942,33 +1942,41 @@ bool spu_thread::process_mfc_cmd()
 					}
 				}
 			}
-			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rtime == (vm::reservation_acquire(raddr, 128) & -128) && cmp_rdata(rdata, data))
+			else if (auto& data = vm::_ref<decltype(rdata)>(addr); rtime == (vm::reservation_acquire(raddr, 128) & -128))
 			{
-				auto& res = vm::reservation_lock(raddr, 128);
-				const u64 old_time = res.load() & -128;
-
-				if (rtime == old_time)
+				if (cmp_rdata(rdata, to_write))
 				{
-					*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
+					// Writeback of unchanged data. Only check memory change
+					result = cmp_rdata(rdata, data) && vm::reservation_acquire(raddr, 128).compare_and_swap_test(rtime, rtime + 128);
+				}
+				else
+				{
+					auto& res = vm::reservation_lock(raddr, 128);
+					const u64 old_time = res.load() & -128;
 
-					// Full lock (heavyweight)
-					// TODO: vm::check_addr
-					vm::writer_lock lock(addr);
-
-					if (cmp_rdata(rdata, data))
+					if (rtime == old_time)
 					{
-						mov_rdata(data, to_write);
-						res.release(old_time + 128);
-						result = 1;
+						*reinterpret_cast<atomic_t<u32>*>(&data) += 0;
+
+						// Full lock (heavyweight)
+						// TODO: vm::check_addr
+						vm::writer_lock lock(addr);
+
+						if (cmp_rdata(rdata, data))
+						{
+							mov_rdata(data, to_write);
+							res.release(old_time + 128);
+							result = 1;
+						}
+						else
+						{
+							res.release(old_time);
+						}
 					}
 					else
 					{
 						res.release(old_time);
 					}
-				}
-				else
-				{
-					res.release(old_time);
 				}
 			}
 		}

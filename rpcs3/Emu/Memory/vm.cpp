@@ -1078,6 +1078,47 @@ namespace vm
 		return _map(addr, area_size, flags);
 	}
 
+	bool try_access(u32 addr, void* ptr, u32 size, bool is_write)
+	{
+		vm::reader_lock lock;
+
+		if (size == 0)
+		{
+			return true;
+		}
+
+		if (vm::check_addr(addr, size, is_write ? page_writable : page_readable))
+		{
+			void* src = vm::g_sudo_addr + addr;
+			void* dst = ptr;
+
+			if (is_write)
+				std::swap(src, dst);
+
+			if (size <= 16 && utils::popcnt32(size) == 1 && (addr & (size - 1)) == 0)
+			{
+				if (is_write)
+				{
+					switch (size)
+					{
+					case 1: atomic_storage<u8>::release(*static_cast<u8*>(dst), *static_cast<u8*>(src)); break;
+					case 2: atomic_storage<u16>::release(*static_cast<u16*>(dst), *static_cast<u16*>(src)); break;
+					case 4: atomic_storage<u32>::release(*static_cast<u32*>(dst), *static_cast<u32*>(src)); break;
+					case 8: atomic_storage<u64>::release(*static_cast<u64*>(dst), *static_cast<u64*>(src)); break;
+					case 16: _mm_store_si128(static_cast<__m128i*>(dst), _mm_loadu_si128(static_cast<__m128i*>(src))); break;
+					}
+
+					return true;
+				}
+			}
+
+			std::memcpy(dst, src, size);
+			return true;
+		}
+
+		return false;
+	}
+
 	inline namespace ps3_
 	{
 		void init()

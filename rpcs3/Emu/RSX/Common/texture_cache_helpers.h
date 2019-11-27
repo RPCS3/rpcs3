@@ -61,7 +61,6 @@ namespace rsx
 	struct blit_op_result
 	{
 		bool succeeded = false;
-		bool is_depth = false;
 		u32 real_dst_address = 0;
 		u32 real_dst_size = 0;
 
@@ -121,6 +120,18 @@ namespace rsx
 
 			LOG_ERROR(RSX, "Unsupported depth conversion (0x%X)", gcm_format);
 			return gcm_format;
+		}
+
+		static inline u32 get_sized_blit_format(bool _32_bit, bool depth_format)
+		{
+			if (LIKELY(_32_bit))
+			{
+				return (!depth_format) ? CELL_GCM_TEXTURE_A8R8G8B8 : CELL_GCM_TEXTURE_DEPTH24_D8;
+			}
+			else
+			{
+				return (!depth_format) ? CELL_GCM_TEXTURE_R5G6B5 : CELL_GCM_TEXTURE_DEPTH16;
+			}
 		}
 
 		static inline bool is_compressed_gcm_format(u32 format)

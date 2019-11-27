@@ -263,37 +263,37 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-s32 cellVideoOutConfigure2()
+error_code cellVideoOutConfigure2()
 {
 	cellSysutil.todo("cellVideoOutConfigure2()");
 	return CELL_OK;
 }
 
-s32 cellVideoOutGetResolutionAvailability2()
+error_code cellVideoOutGetResolutionAvailability2()
 {
 	cellSysutil.todo("cellVideoOutGetResolutionAvailability2()");
 	return CELL_OK;
 }
 
-s32 cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
+error_code cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
 {
 	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo()");
 	return CELL_OK;
 }
 
-s32 cellVideoOutDebugSetMonitorType(u32 videoOut, u32 monitorType)
+error_code cellVideoOutDebugSetMonitorType(u32 videoOut, u32 monitorType)
 {
 	cellSysutil.todo("cellVideoOutDebugSetMonitorType()");
 	return CELL_OK;
 }
 
-s32 cellVideoOutRegisterCallback(u32 slot, vm::ptr<CellVideoOutCallback> function, vm::ptr<void> userData)
+error_code cellVideoOutRegisterCallback(u32 slot, vm::ptr<CellVideoOutCallback> function, vm::ptr<void> userData)
 {
 	cellSysutil.todo("cellVideoOutRegisterCallback()");
 	return CELL_OK;
 }
 
-s32 cellVideoOutUnregisterCallback(u32 slot)
+error_code cellVideoOutUnregisterCallback(u32 slot)
 {
 	cellSysutil.todo("cellVideoOutUnregisterCallback()");
 	return CELL_OK;

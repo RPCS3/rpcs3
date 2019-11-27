@@ -39,6 +39,11 @@ enum CellSysutilParamId: s32
 	// Strings
 	CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME                        = 0x0113,
 	CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME                = 0x0131,
+	// Unknown strings
+	CELL_SYSUTIL_SYSTEMPARAM_ID_x1008                           = 0x1008,
+	CELL_SYSUTIL_SYSTEMPARAM_ID_x1011                           = 0x1011,
+	CELL_SYSUTIL_SYSTEMPARAM_ID_x1012                           = 0x1012, // Equal meaning to x1011
+	CELL_SYSUTIL_SYSTEMPARAM_ID_x1024                           = 0x1024,
 };
 
 enum CellSysutilLang : s32
@@ -63,6 +68,12 @@ enum CellSysutilLang : s32
 	CELL_SYSUTIL_LANG_PORTUGUESE_BR  = 17, // FW 4.00
 	CELL_SYSUTIL_LANG_ENGLISH_GB     = 18, // FW 4.00
 	CELL_SYSUTIL_LANG_TURKISH        = 19, // FW 4.30
+};
+
+enum
+{
+	CELL_SYSUTIL_SYSTEMPARAM_NICKNAME_SIZE = 0x80,
+	CELL_SYSUTIL_SYSTEMPARAM_CURRENT_USERNAME_SIZE = 0x40
 };
 
 enum

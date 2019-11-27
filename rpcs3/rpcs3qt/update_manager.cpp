@@ -43,7 +43,7 @@ void update_manager::check_for_updates(bool automatic, QWidget* parent)
 
 	if (QSslSocket::supportsSsl() == false)
 	{
-		LOG_ERROR(GENERAL, "Unable to update RPCS3!Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
+		LOG_ERROR(GENERAL, "Unable to update RPCS3! Please make sure your system supports SSL. Visit our quickstart guide for more information: https://rpcs3.net/quickstart");
 		if (!automatic)
 		{
 			const QString message = tr("Unable to update RPCS3!<br>Please make sure your system supports SSL.<br>Visit our <a href='https://rpcs3.net/quickstart'>Quickstart</a> guide for more information.");

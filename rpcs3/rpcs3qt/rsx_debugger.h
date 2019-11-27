@@ -1,12 +1,10 @@
-#pragma once
+﻿#pragma once
 
 #include "stdafx.h"
 
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/RSX/GSRender.h"
-#include "Emu/RSX/GCM.h"
 
 #include "memory_viewer_panel.h"
 #include "table_item_delegate.h"
@@ -54,10 +52,6 @@ class rsx_debugger : public QDialog
 	QTableWidget* m_list_commands;
 	QTableWidget* m_list_captured_frame;
 	QTableWidget* m_list_captured_draw_calls;
-	QTableWidget* m_list_flags;
-	QTableWidget* m_list_lightning;
-	QTableWidget* m_list_texture;
-	QTableWidget* m_list_settings;
 	QListWidget* m_list_index_buffer;
 	QTabWidget* m_tw_rsx;
 
@@ -84,10 +78,6 @@ public:
 	virtual void UpdateInformation();
 	virtual void GetMemory();
 	virtual void GetBuffers();
-	virtual void GetFlags();
-	virtual void GetLightning();
-	virtual void GetTexture();
-	virtual void GetSettings();
 
 	const char* ParseGCMEnum(u32 value, u32 type);
 	QString DisAsmCommand(u32 cmd, u32 count, u32 ioAddr);
@@ -96,8 +86,6 @@ public:
 
 public Q_SLOTS:
 	virtual void OnClickDrawCalls();
-	virtual void SetFlags();
-	virtual void SetPrograms();
 
 protected:
 	virtual void closeEvent(QCloseEvent* event) override;
