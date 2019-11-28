@@ -416,49 +416,6 @@ static void point_mul(struct point *d, u8 *a, struct point *b)	// a is bignum
 		}
 }
 
-static void generate_ecdsa(u8 *R, u8 *S, u8 *k, u8 *hash)
-{
-	u8 e[21];
-	u8 kk[21];
-	u8 m[21];
-	u8 minv[21];
-	struct point mG;
-
-	e[0] = 0;
-	memcpy(e + 1, hash, 20);
-	bn_reduce(e, ec_N, 21);
-
-try_again:
-	prng(m, 21);
-	m[0] = 0;
-	if (bn_compare(m, ec_N, 21) >= 0)
-		goto try_again;
-
-	//	R = (mG).x
-
-	point_mul(&mG, m, &ec_G);
-	point_from_mon(&mG);
-	R[0] = 0;
-	elt_copy(R+1, mG.x);
-
-	//	S = m**-1*(e + Rk) (mod N)
-
-	bn_copy(kk, k, 21);
-	bn_reduce(kk, ec_N, 21);
-	bn_to_mon(m, ec_N, 21);
-	bn_to_mon(e, ec_N, 21);
-	bn_to_mon(R, ec_N, 21);
-	bn_to_mon(kk, ec_N, 21);
-
-	bn_mon_mul(S, R, kk, ec_N, 21);
-	bn_add(kk, S, e, ec_N, 21);
-	bn_mon_inv(minv, m, ec_N, 21);
-	bn_mon_mul(S, minv, kk, ec_N, 21);
-
-	bn_from_mon(R, ec_N, 21);
-	bn_from_mon(S, ec_N, 21);
-}
-
 static int check_ecdsa(struct point *Q, u8 *R, u8 *S, u8 *hash)
 {
 	u8 Sinv[21];
@@ -515,14 +472,14 @@ int ecdsa_set_curve(u8* p, u8* a, u8* b, u8* N, u8* Gx, u8* Gy)
 	memcpy(ec_N, N, 21);
 	memcpy(ec_G.x, Gx, 20);
 	memcpy(ec_G.y, Gy, 20);
-	
+
 	bn_to_mon(ec_a, ec_p, 20);
 	bn_to_mon(ec_b, ec_p, 20);
 
 	point_to_mon(&ec_G);
 
 	return 0;
-} 
+}
 
 void ecdsa_set_pub(u8 *Q)
 {
@@ -539,9 +496,4 @@ void ecdsa_set_priv(u8 *k)
 int ecdsa_verify(u8 *hash, u8 *R, u8 *S)
 {
 	return check_ecdsa(&ec_Q, R, S, hash);
-}
-
-void ecdsa_sign(u8 *hash, u8 *R, u8 *S)
-{
-	generate_ecdsa(R, S, ec_k, hash);
 }

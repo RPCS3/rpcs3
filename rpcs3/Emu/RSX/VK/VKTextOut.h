@@ -11,7 +11,7 @@ namespace vk
 	private:
 		std::unique_ptr<vk::buffer> m_vertex_buffer;
 		std::unique_ptr<vk::buffer> m_uniforms_buffer;
-		
+
 		std::unique_ptr<vk::glsl::program> m_program;
 		vk::glsl::shader m_vertex_shader;
 		vk::glsl::shader m_fragment_shader;
@@ -42,7 +42,7 @@ namespace vk
 			m_descriptor_pool.create(dev, descriptor_pools, 1, 120, 2);
 
 			VkDescriptorSetLayoutBinding bindings[1] = {};
-			
+
 			//Scale and offset data plus output color
 			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			bindings[0].descriptorCount = 1;
@@ -128,7 +128,7 @@ namespace vk
 
 			VkVertexInputAttributeDescription vdesc;
 			VkVertexInputBindingDescription vbind;
-			
+
 			vdesc.binding = 0;
 			vdesc.format = VK_FORMAT_R32G32_SFLOAT;
 			vdesc.location = 0;
@@ -195,7 +195,7 @@ namespace vk
 			CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &info, NULL, &pipeline));
 
 			const std::vector<vk::glsl::program_input> unused;
-			m_program = std::make_unique<vk::glsl::program>((VkDevice)dev, pipeline, unused, unused);
+			m_program = std::make_unique<vk::glsl::program>(static_cast<VkDevice>(dev), pipeline, unused, unused);
 		}
 
 		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, size_t nb_offsets, std::array<float, 4> color)
@@ -213,7 +213,7 @@ namespace vk
 
 			float scale[] = { scale_x, scale_y };
 			float colors[] = { color[0], color[1], color[2], color[3] };
-			float *dst = (float*)m_uniforms_buffer->map(m_uniform_buffer_offset, 8192);
+			float* dst = static_cast<float*>(m_uniforms_buffer->map(m_uniform_buffer_offset, 8192));
 
 			//std140 spec demands that arrays be multiples of 16 bytes
 			for (size_t i = 0; i < nb_offsets; ++i)
@@ -232,7 +232,7 @@ namespace vk
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
-			
+
 			VkDeviceSize zero = 0;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &m_vertex_buffer->value, &zero);
 		}
@@ -264,15 +264,15 @@ namespace vk
 
 			m_render_pass = render_pass;
 			m_uniform_buffer_size = 983040;
-			
+
 			init_descriptor_set(dev);
 			init_program(dev);
 
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
 			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
-			
-			u8 *dst = (u8*)m_vertex_buffer->map(0, buffer_size);
+
+			u8* dst = static_cast<u8*>(m_vertex_buffer->map(0, buffer_size));
 			memcpy(dst, points.data(), buffer_size);
 			m_vertex_buffer->unmap();
 
@@ -302,7 +302,7 @@ namespace vk
 
 			while (*s)
 			{
-				u8 offset = (u8)*s;
+				u8 offset = static_cast<u8>(*s);
 				bool to_draw = false;	//Can be false for space or unsupported characters
 
 				auto o = m_offsets.find(offset);
@@ -334,8 +334,8 @@ namespace vk
 			}
 
 			VkViewport vp{};
-			vp.width = (f32)target_w;
-			vp.height = (f32)target_h;
+			vp.width = static_cast<f32>(target_w);
+			vp.height = static_cast<f32>(target_h);
 			vp.minDepth = 0.f;
 			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);

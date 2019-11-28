@@ -185,7 +185,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (lock)
 			{
-				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): LOCK prefix found twice", (size_t)code - out_length);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): LOCK prefix found twice", code - out_length);
 			}
 
 			lock = true;
@@ -195,7 +195,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (repne)
 			{
-				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REPNE/REPNZ prefix found twice", (size_t)code - out_length);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REPNE/REPNZ prefix found twice", code - out_length);
 			}
 
 			repne = true;
@@ -205,7 +205,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (repe)
 			{
-				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REP/REPE/REPZ prefix found twice", (size_t)code - out_length);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): REP/REPE/REPZ prefix found twice", code - out_length);
 			}
 
 			repe = true;
@@ -221,7 +221,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (pg2)
 			{
-				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): 0x%02x (group 2 prefix) found after 0x%02x", (size_t)code - out_length, prefix, pg2);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): 0x%02x (group 2 prefix) found after 0x%02x", code - out_length, prefix, pg2);
 			}
 			else
 			{
@@ -234,7 +234,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		{
 			if (oso)
 			{
-				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): operand-size override prefix found twice", (size_t)code - out_length);
+				LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): operand-size override prefix found twice", code - out_length);
 			}
 
 			oso = true;
@@ -243,7 +243,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 
 		case 0x67: // group 4
 		{
-			LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): address-size override prefix found", (size_t)code - out_length, prefix);
+			LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length, prefix);
 			out_op = X64OP_NONE;
 			out_reg = X64_NOT_SET;
 			out_size = 0;
@@ -257,7 +257,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 			{
 				if (rex)
 				{
-					LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): 0x%02x (REX prefix) found after 0x%02x", (size_t)code - out_length, prefix, rex);
+					LOG_ERROR(MEMORY, "decode_x64_reg_op(%016llxh): 0x%02x (REX prefix) found after 0x%02x", code - out_length, prefix, rex);
 				}
 				else
 				{
@@ -273,17 +273,17 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 
 	auto get_modRM_reg = [](const u8* code, const u8 rex) -> x64_reg_t
 	{
-		return (x64_reg_t)(((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R_RAX);
+		return x64_reg_t{((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R_RAX};
 	};
 
 	auto get_modRM_reg_xmm = [](const u8* code, const u8 rex) -> x64_reg_t
 	{
-		return (x64_reg_t)(((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R_XMM0);
+		return x64_reg_t{((*code & 0x38) >> 3 | (/* check REX.R bit */ rex & 4 ? 8 : 0)) + X64R_XMM0};
 	};
 
 	auto get_modRM_reg_lh = [](const u8* code) -> x64_reg_t
 	{
-		return (x64_reg_t)(((*code & 0x38) >> 3) + X64R_AL);
+		return x64_reg_t{((*code & 0x38) >> 3) + X64R_AL};
 	};
 
 	auto get_op_size = [](const u8 rex, const bool oso) -> size_t
@@ -887,57 +887,57 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 
 		switch (d_size)
 		{
-		case 1: out_value = (u8)reg_value; return true;
-		case 2: out_value = (u16)reg_value; return true;
-		case 4: out_value = (u32)reg_value; return true;
+		case 1: out_value = static_cast<u8>(reg_value); return true;
+		case 2: out_value = static_cast<u16>(reg_value); return true;
+		case 4: out_value = static_cast<u32>(reg_value); return true;
 		case 8: out_value = reg_value; return true;
 		}
 	}
 	else if (reg - X64R_AL < 4 && d_size == 1)
 	{
-		out_value = (u8)(*X64REG(context, reg - X64R_AL));
+		out_value = static_cast<u8>(*X64REG(context, reg - X64R_AL));
 		return true;
 	}
 	else if (reg - X64R_AH < 4 && d_size == 1)
 	{
-		out_value = (u8)(*X64REG(context, reg - X64R_AH) >> 8);
+		out_value = static_cast<u8>(*X64REG(context, reg - X64R_AH) >> 8);
 		return true;
 	}
 	else if (reg == X64_IMM8)
 	{
 		// load the immediate value (assuming it's at the end of the instruction)
-		const s8 imm_value = *(s8*)(RIP(context) + i_size - 1);
+		const s8 imm_value = *reinterpret_cast<s8*>(RIP(context) + i_size - 1);
 
 		switch (d_size)
 		{
-		case 1: out_value = (u8)imm_value; return true;
-		case 2: out_value = (u16)imm_value; return true; // sign-extended
-		case 4: out_value = (u32)imm_value; return true; // sign-extended
-		case 8: out_value = (u64)imm_value; return true; // sign-extended
+		case 1: out_value = static_cast<u8>(imm_value); return true;
+		case 2: out_value = static_cast<u16>(imm_value); return true; // sign-extended
+		case 4: out_value = static_cast<u32>(imm_value); return true; // sign-extended
+		case 8: out_value = static_cast<u64>(imm_value); return true; // sign-extended
 		}
 	}
 	else if (reg == X64_IMM16)
 	{
-		const s16 imm_value = *(s16*)(RIP(context) + i_size - 2);
+		const s16 imm_value = *reinterpret_cast<s16*>(RIP(context) + i_size - 2);
 
 		switch (d_size)
 		{
-		case 2: out_value = (u16)imm_value; return true;
+		case 2: out_value = static_cast<u16>(imm_value); return true;
 		}
 	}
 	else if (reg == X64_IMM32)
 	{
-		const s32 imm_value = *(s32*)(RIP(context) + i_size - 4);
+		const s32 imm_value = *reinterpret_cast<s32*>(RIP(context) + i_size - 4);
 
 		switch (d_size)
 		{
-		case 4: out_value = (u32)imm_value; return true;
-		case 8: out_value = (u64)imm_value; return true; // sign-extended
+		case 4: out_value = static_cast<u32>(imm_value); return true;
+		case 8: out_value = static_cast<u64>(imm_value); return true; // sign-extended
 		}
 	}
 	else if (reg == X64R_ECX)
 	{
-		out_value = (u32)RCX(context);
+		out_value = static_cast<u32>(RCX(context));
 		return true;
 	}
 	else if (reg >= X64_BIT_O && reg <= X64_BIT_NLE)
@@ -964,7 +964,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 		return true;
 	}
 
-	LOG_ERROR(MEMORY, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", (u32)reg, d_size, i_size);
+	LOG_ERROR(MEMORY, "get_x64_reg_value(): invalid arguments (reg=%d, d_size=%lld, i_size=%lld)", +reg, d_size, i_size);
 	return false;
 }
 
@@ -983,7 +983,7 @@ bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 v
 		}
 	}
 
-	LOG_ERROR(MEMORY, "put_x64_reg_value(): invalid destination (reg=%d, d_size=%lld, value=0x%llx)", (u32)reg, d_size, value);
+	LOG_ERROR(MEMORY, "put_x64_reg_value(): invalid destination (reg=%d, d_size=%lld, value=0x%llx)", +reg, d_size, value);
 	return false;
 }
 
@@ -1038,7 +1038,7 @@ bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y, bool c
 		EFLAGS(context) &= ~0x800; // clear OF
 	}
 
-	const u8 p1 = (u8)diff ^ ((u8)diff >> 4);
+	const u8 p1 = static_cast<u8>(diff) ^ (static_cast<u8>(diff) >> 4);
 	const u8 p2 = p1 ^ (p1 >> 2);
 	const u8 p3 = p2 ^ (p2 >> 1);
 
@@ -1145,7 +1145,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		}
 	}
 
-	auto code = (const u8*)RIP(context);
+	const u8* const code = reinterpret_cast<u8*>(RIP(context));
 
 	x64_op_t op;
 	x64_reg_t reg;
@@ -1159,7 +1159,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 	{
 		if (op == X64OP_NONE)
 		{
-			LOG_ERROR(MEMORY, "decode_x64_reg_op(%p): unsupported opcode: %s", code, *(be_t<v128, 1>*)code);
+			LOG_ERROR(MEMORY, "decode_x64_reg_op(%p): unsupported opcode: %s", code, *reinterpret_cast<const be_t<v128, 1>*>(code));
 		}
 	};
 
@@ -1192,7 +1192,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 		if (a_size != 4 || !d_size || !i_size)
 		{
-			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", (u32)op, (u32)reg, d_size, a_size, i_size);
+			LOG_ERROR(MEMORY, "Invalid or unsupported instruction (op=%d, reg=%d, d_size=%lld, a_size=0x%llx, i_size=%lld)", +op, +reg, d_size, a_size, i_size);
 			report_opcode();
 			return false;
 		}
@@ -1253,7 +1253,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 				return false;
 			}
 
-			if (!thread->write_reg(addr, op == X64OP_STORE ? se_storage<u32>::swap((u32)reg_value) : (u32)reg_value))
+			u32 val32 = static_cast<u32>(reg_value);
+			if (!thread->write_reg(addr, op == X64OP_STORE ? se_storage<u32>::swap(val32) : val32))
 			{
 				return false;
 			}
@@ -1264,7 +1265,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 		case X64OP_STOS:
 		default:
 		{
-			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", (u32)op, (u32)reg, d_size, i_size);
+			LOG_ERROR(MEMORY, "Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", +op, +reg, d_size, i_size);
 			report_opcode();
 			return false;
 		}
@@ -1475,13 +1476,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 
 static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 {
-	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_base_addr;
-	const u64 exec64 = (pExp->ExceptionRecord->ExceptionInformation[1] - (u64)vm::g_exec_addr) / 2;
+	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - reinterpret_cast<u64>(vm::g_base_addr);
+	const u64 exec64 = (pExp->ExceptionRecord->ExceptionInformation[1] - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
 	{
-		if (thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, pExp->ContextRecord))
+		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(addr64), is_writing, pExp->ContextRecord))
 		{
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
@@ -1489,7 +1490,7 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp)
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && exec64 < 0x100000000ull)
 	{
-		if (thread_ctrl::get_current() && handle_access_violation((u32)exec64, is_writing, pExp->ContextRecord))
+		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(exec64), is_writing, pExp->ContextRecord))
 		{
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
@@ -1546,7 +1547,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp)
 		MODULEINFO info;
 		if (GetModuleInformation(GetCurrentProcess(), module, &info, sizeof(info)))
 		{
-			const DWORD64 base = (DWORD64)info.lpBaseOfDll;
+			const DWORD64 base = reinterpret_cast<DWORD64>(info.lpBaseOfDll);
 
 			if (pExp->ContextRecord->Rip >= base && pExp->ContextRecord->Rip < base + info.SizeOfImage)
 			{
@@ -1596,7 +1597,7 @@ const bool s_exception_handler_set = []() -> bool
 
 static void signal_handler(int sig, siginfo_t* info, void* uct)
 {
-	x64_context* context = (ucontext_t*)uct;
+	x64_context* context = static_cast<ucontext_t*>(uct);
 
 #ifdef __APPLE__
 	const bool is_writing = context->uc_mcontext->__es.__err & 0x2;
@@ -1610,14 +1611,14 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 	const bool is_writing = context->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
 
-	const u64 addr64 = (u64)info->si_addr - (u64)vm::g_base_addr;
-	const u64 exec64 = ((u64)info->si_addr - (u64)vm::g_exec_addr) / 2;
+	const u64 addr64 = reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_base_addr);
+	const u64 exec64 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
 	const auto cause = is_writing ? "writing" : "reading";
 
 	if (addr64 < 0x100000000ull)
 	{
 		// Try to process access violation
-		if (thread_ctrl::get_current() && handle_access_violation((u32)addr64, is_writing, context))
+		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(addr64), is_writing, context))
 		{
 			return;
 		}
@@ -1625,7 +1626,7 @@ static void signal_handler(int sig, siginfo_t* info, void* uct)
 
 	if (exec64 < 0x100000000ull)
 	{
-		if (thread_ctrl::get_current() && handle_access_violation((u32)exec64, is_writing, context))
+		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(exec64), is_writing, context))
 		{
 			return;
 		}
@@ -1864,9 +1865,9 @@ thread_base::~thread_base()
 	if (m_thread)
 	{
 #ifdef _WIN32
-		CloseHandle((HANDLE)m_thread.raw());
+		CloseHandle(reinterpret_cast<HANDLE>(m_thread.raw()));
 #else
-		pthread_detach((pthread_t)m_thread.raw());
+		pthread_detach(reinterpret_cast<pthread_t>(m_thread.raw()));
 #endif
 	}
 }
@@ -1895,10 +1896,10 @@ u64 thread_base::get_cycles()
 	u64 cycles;
 
 #ifdef _WIN32
-	if (QueryThreadCycleTime((HANDLE)m_thread.load(), &cycles))
+	if (QueryThreadCycleTime(reinterpret_cast<HANDLE>(m_thread.load()), &cycles))
 	{
 #elif __APPLE__
-	mach_port_name_t port = pthread_mach_thread_np((pthread_t)m_thread.load());
+	mach_port_name_t port = pthread_mach_thread_np(reinterpret_cast<pthread_t>(m_thread.load()));
 	mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
 	thread_basic_info_data_t info;
 	kern_return_t ret = thread_info(port, THREAD_BASIC_INFO, (thread_info_t)&info, &count);
@@ -1909,7 +1910,7 @@ u64 thread_base::get_cycles()
 #else
 	clockid_t _clock;
 	struct timespec thread_time;
-	if (!pthread_getcpuclockid((pthread_t)m_thread.load(), &_clock) && !clock_gettime(_clock, &thread_time))
+	if (!pthread_getcpuclockid(reinterpret_cast<pthread_t>(m_thread.load()), &_clock) && !clock_gettime(_clock, &thread_time))
 	{
 		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
 #endif

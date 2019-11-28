@@ -35,7 +35,7 @@
 /* Implementation that should never be optimized out by the compiler */
 static void mbedtls_zeroize(void* v, size_t n)
 {
-	volatile unsigned char* p = (volatile unsigned char*)v;
+	auto p = const_cast<volatile char*>(static_cast<char*>(v));
 	while (n--)
 		*p++ = 0;
 }
@@ -46,20 +46,20 @@ static void mbedtls_zeroize(void* v, size_t n)
 #ifndef GET_UINT32_LE
 #define GET_UINT32_LE(n,b,i)                            \
 {                                                       \
-    (n) = ( (uint32_t) (b)[(i)    ]       )             \
-        | ( (uint32_t) (b)[(i) + 1] <<  8 )             \
-        | ( (uint32_t) (b)[(i) + 2] << 16 )             \
-        | ( (uint32_t) (b)[(i) + 3] << 24 );            \
+    (n) = ( static_cast<uint32_t>((b)[(i)    ])       ) \
+        | ( static_cast<uint32_t>((b)[(i) + 1]) <<  8 ) \
+        | ( static_cast<uint32_t>((b)[(i) + 2]) << 16 ) \
+        | ( static_cast<uint32_t>((b)[(i) + 3]) << 24 );\
 }
 #endif
 
 #ifndef PUT_UINT32_LE
 #define PUT_UINT32_LE(n,b,i)                                    \
 {                                                               \
-    (b)[(i)    ] = (unsigned char) ( ( (n)       ) & 0xFF );    \
-    (b)[(i) + 1] = (unsigned char) ( ( (n) >>  8 ) & 0xFF );    \
-    (b)[(i) + 2] = (unsigned char) ( ( (n) >> 16 ) & 0xFF );    \
-    (b)[(i) + 3] = (unsigned char) ( ( (n) >> 24 ) & 0xFF );    \
+    (b)[(i)    ] = static_cast<unsigned char>(( (n)       ) & 0xFF ); \
+    (b)[(i) + 1] = static_cast<unsigned char>(( (n) >>  8 ) & 0xFF ); \
+    (b)[(i) + 2] = static_cast<unsigned char>(( (n) >> 16 ) & 0xFF ); \
+    (b)[(i) + 3] = static_cast<unsigned char>(( (n) >> 24 ) & 0xFF ); \
 }
 #endif
 
@@ -258,15 +258,15 @@ int mbedtls_md5_update_ret( mbedtls_md5_context *ctx,
     left = ctx->total[0] & 0x3F;
     fill = 64 - left;
 
-    ctx->total[0] += (uint32_t) ilen;
+    ctx->total[0] += static_cast<uint32_t>(ilen);
     ctx->total[0] &= 0xFFFFFFFF;
 
-    if( ctx->total[0] < (uint32_t) ilen )
+    if( ctx->total[0] < static_cast<uint32_t>(ilen) )
         ctx->total[1]++;
 
     if( left && ilen >= fill )
     {
-        memcpy( (void *) (ctx->buffer + left), input, fill );
+        memcpy( ctx->buffer + left, input, fill );
         if( ( ret = mbedtls_internal_md5_process( ctx, ctx->buffer ) ) != 0 )
             return( ret );
 
@@ -286,7 +286,7 @@ int mbedtls_md5_update_ret( mbedtls_md5_context *ctx,
 
     if( ilen > 0 )
     {
-        memcpy( (void *) (ctx->buffer + left), input, ilen );
+        memcpy( ctx->buffer + left, input, ilen );
     }
 
     return( 0 );

@@ -341,7 +341,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		if (!ctx.type)
 		{
-			ctx.type = (u8)src.type(ctx.args);
+			ctx.type = static_cast<u8>(src.type(ctx.args));
 
 			if (!ctx.type)
 			{
@@ -403,7 +403,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		if (!ctx.type)
 		{
-			ctx.type = (u8)src.type(ctx.args);
+			ctx.type = static_cast<u8>(src.type(ctx.args));
 
 			if (!ctx.type)
 			{
@@ -460,7 +460,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		if (!ctx.type)
 		{
-			ctx.type = (u8)src.type(ctx.args);
+			ctx.type = static_cast<u8>(src.type(ctx.args));
 
 			if (!ctx.type)
 			{
@@ -524,7 +524,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		if (!ctx.type)
 		{
-			ctx.type = (u8)src.type(ctx.args);
+			ctx.type = static_cast<u8>(src.type(ctx.args));
 
 			if (!ctx.type)
 			{

@@ -590,8 +590,8 @@ struct cfg_root : cfg::node
 	{
 		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
 
-		cfg::_enum<CellSysutilLang> language{this, "Language", (CellSysutilLang)1}; // CELL_SYSUTIL_LANG_ENGLISH_US
-		cfg::_enum<CellKbMappingType> keyboard_type{this, "Keyboard Type", (CellKbMappingType)0}; // CELL_KB_MAPPING_101 = US
+		cfg::_enum<CellSysutilLang> language{this, "Language", CellSysutilLang{1}}; // CELL_SYSUTIL_LANG_ENGLISH_US
+		cfg::_enum<CellKbMappingType> keyboard_type{this, "Keyboard Type", CellKbMappingType{0}}; // CELL_KB_MAPPING_101 = US
 		cfg::_enum<enter_button_assign> enter_button_assignment{this, "Enter button assignment", enter_button_assign::cross};
 
 	} sys{this};

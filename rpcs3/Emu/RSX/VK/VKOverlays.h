@@ -171,7 +171,7 @@ namespace vk
 			check_heap();
 
 			const auto size = count * sizeof(f32);
-			m_vao_offset = (u32)m_vao.alloc<16>(size);
+			m_vao_offset = static_cast<u32>(m_vao.alloc<16>(size));
 			auto dst = m_vao.map(m_vao_offset, size);
 			std::memcpy(dst, data, size);
 			m_vao.unmap();
@@ -352,15 +352,15 @@ namespace vk
 		virtual void set_up_viewport(vk::command_buffer &cmd, u32 x, u32 y, u32 w, u32 h)
 		{
 			VkViewport vp{};
-			vp.x = (f32)x;
-			vp.y = (f32)y;
-			vp.width = (f32)w;
-			vp.height = (f32)h;
+			vp.x = static_cast<f32>(x);
+			vp.y = static_cast<f32>(y);
+			vp.width = static_cast<f32>(w);
+			vp.height = static_cast<f32>(h);
 			vp.minDepth = 0.f;
 			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);
 
-			VkRect2D vs = { { (s32)x, (s32)y }, { w, h } };
+			VkRect2D vs = { { static_cast<s32>(x), static_cast<s32>(y) }, { w, h } };
 			vkCmdSetScissor(cmd, 0, 1, &vs);
 		}
 
@@ -373,8 +373,8 @@ namespace vk
 			rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			rp_begin.renderPass = render_pass;
 			rp_begin.framebuffer = fbo->value;
-			rp_begin.renderArea.offset.x = (s32)viewport.x1;
-			rp_begin.renderArea.offset.y = (s32)viewport.y1;
+			rp_begin.renderArea.offset.x = static_cast<s32>(viewport.x1);
+			rp_begin.renderArea.offset.y = static_cast<s32>(viewport.y1);
 			rp_begin.renderArea.extent.width = viewport.width();
 			rp_begin.renderArea.extent.height = viewport.height();
 
@@ -440,8 +440,8 @@ namespace vk
 
 		void update_uniforms(vk::command_buffer& /*cmd*/, vk::glsl::program* /*program*/) override
 		{
-			m_ubo_offset = (u32)m_ubo.alloc<256>(128);
-			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
+			m_ubo_offset = static_cast<u32>(m_ubo.alloc<256>(128));
+			auto dst = static_cast<f32*>(m_ubo.map(m_ubo_offset, 128));
 			dst[0] = src_scale_x;
 			dst[1] = src_scale_y;
 			dst[2] = 0.f;
@@ -454,8 +454,8 @@ namespace vk
 			auto real_src = src->image();
 			verify(HERE), real_src;
 
-			src_scale_x = f32(src_area.x2) / real_src->width();
-			src_scale_y = f32(src_area.y2) / real_src->height();
+			src_scale_x = static_cast<f32>(src_area.x2) / real_src->width();
+			src_scale_y = static_cast<f32>(src_area.y2) / real_src->height();
 
 			overlay_pass::run(cmd, dst_area, dst, src, render_pass);
 		}
@@ -637,7 +637,7 @@ namespace vk
 			region.bufferRowLength = w;
 			region.bufferImageHeight = h;
 			region.imageOffset = {};
-			region.imageExtent = { (u32)w, (u32)h, 1u};
+			region.imageExtent = { static_cast<u32>(w), static_cast<u32>(h), 1u};
 
 			change_image_layout(cmd, tex.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
 			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
@@ -711,7 +711,7 @@ namespace vk
 
 		vk::image_view* find_font(rsx::overlays::font *font, vk::command_buffer &cmd, vk::data_heap &upload_heap)
 		{
-			u64 key = (u64)font;
+			u64 key = reinterpret_cast<u64>(font);
 			auto found = view_cache.find(key);
 			if (found != view_cache.end())
 				return found->second.get();
@@ -723,7 +723,7 @@ namespace vk
 
 		vk::image_view* find_temp_image(rsx::overlays::image_info *desc, vk::command_buffer &cmd, vk::data_heap &upload_heap, u32 owner_uid)
 		{
-			u64 key = (u64)desc;
+			u64 key = reinterpret_cast<u64>(desc);
 			auto found = temp_view_cache.find(key);
 			if (found != temp_view_cache.end())
 				return found->second.get();
@@ -734,8 +734,8 @@ namespace vk
 
 		void update_uniforms(vk::command_buffer& /*cmd*/, vk::glsl::program* /*program*/) override
 		{
-			m_ubo_offset = (u32)m_ubo.alloc<256>(128);
-			auto dst = (f32*)m_ubo.map(m_ubo_offset, 128);
+			m_ubo_offset = static_cast<u32>(m_ubo.alloc<256>(128));
+			auto dst = static_cast<f32*>(m_ubo.map(m_ubo_offset, 128));
 
 			// regs[0] = scaling parameters
 			dst[0] = m_scale_offset.r;
@@ -752,7 +752,7 @@ namespace vk
 			// regs[2] = fs config parameters
 			dst[8] = m_time;
 			dst[9] = m_pulse_glow? 1.f : 0.f;
-			dst[10] = m_skip_texture_read? 0.f : (f32)m_texture_type;
+			dst[10] = m_skip_texture_read? 0.f : static_cast<f32>(m_texture_type);
 			dst[11] = m_clip_enabled ? 1.f : 0.f;
 
 			// regs[3] = clip rect
@@ -815,22 +815,22 @@ namespace vk
 		void run(vk::command_buffer &cmd, const areau& viewport, vk::framebuffer* target, VkRenderPass render_pass,
 				vk::data_heap &upload_heap, rsx::overlays::overlay &ui)
 		{
-			m_scale_offset = color4f((f32)ui.virtual_width, (f32)ui.virtual_height, 1.f, 1.f);
-			m_time = (f32)(get_system_time() / 1000) * 0.005f;
-			m_viewport_size = { f32(viewport.width()), f32(viewport.height()) };
+			m_scale_offset = color4f(ui.virtual_width, ui.virtual_height, 1.f, 1.f);
+			m_time = static_cast<f32>(get_system_time() / 1000) * 0.005f;
+			m_viewport_size = { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) };
 
 			for (auto &command : ui.get_compiled().draw_commands)
 			{
-				num_drawable_elements = (u32)command.verts.size();
+				num_drawable_elements = static_cast<u32>(command.verts.size());
 				const u32 value_count = num_drawable_elements * 4;
 
-				upload_vertex_data((f32*)command.verts.data(), value_count);
+				upload_vertex_data(reinterpret_cast<f32*>(command.verts.data()), value_count);
 				set_primitive_type(command.config.primitives);
 
 				m_skip_texture_read = false;
 				m_color = command.config.color;
 				m_pulse_glow = command.config.pulse_glow;
-				m_blur_strength = f32(command.config.blur_strength) * 0.01f;
+				m_blur_strength = static_cast<f32>(command.config.blur_strength) * 0.01f;
 				m_clip_enabled = command.config.clip_region;
 				m_clip_region = command.config.clip_rect;
 				m_texture_type = 1;
@@ -849,7 +849,7 @@ namespace vk
 					src = find_font(command.config.font_ref, cmd, upload_heap);
 					break;
 				case rsx::overlays::image_resource_id::raw_image:
-					src = find_temp_image((rsx::overlays::image_info*)command.config.external_data_ref, cmd, upload_heap, ui.uid);
+					src = find_temp_image(static_cast<rsx::overlays::image_info*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
 					break;
 				default:
 					src = view_cache[command.config.texture_ref].get();
@@ -937,10 +937,10 @@ namespace vk
 		void set_up_viewport(vk::command_buffer &cmd, u32 x, u32 y, u32 w, u32 h) override
 		{
 			VkViewport vp{};
-			vp.x = (f32)x;
-			vp.y = (f32)y;
-			vp.width = (f32)w;
-			vp.height = (f32)h;
+			vp.x = static_cast<f32>(x);
+			vp.y = static_cast<f32>(y);
+			vp.width = static_cast<f32>(w);
+			vp.height = static_cast<f32>(h);
 			vp.minDepth = 0.f;
 			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);

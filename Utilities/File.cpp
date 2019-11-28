@@ -1234,7 +1234,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
 			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
 
-			const auto result = ::writev(m_fd, (const iovec*)buffers, buf_count);
+			const auto result = ::writev(m_fd, reinterpret_cast<const iovec*>(buffers), buf_count);
 			verify("file::write_gather" HERE), result != -1;
 
 			return result;

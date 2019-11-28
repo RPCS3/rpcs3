@@ -9,7 +9,7 @@
 
 #include <memory>
 
-// Auxiliary functions (endian swap, xor and prng).
+// Auxiliary functions (endian swap, xor).
 
 void xor_key(unsigned char *dest, const u8* src1, const u8* src2)
 {
@@ -19,18 +19,10 @@ void xor_key(unsigned char *dest, const u8* src1, const u8* src2)
 	}
 }
 
-void prng(unsigned char *dest, int size)
-{
-	srand((u32)time(0));
-
-	for(int i = 0; i < size; i++)
-		dest[i] = (unsigned char)(rand() & 0xFF);
-}
-
 // Hex string conversion auxiliary functions.
 u64 hex_to_u64(const char* hex_str)
 {
-	u32 length = (u32) strlen(hex_str);
+	auto length = std::strlen(hex_str);
 	u64 tmp = 0;
 	u64 result = 0;
 	char c;
@@ -54,8 +46,8 @@ u64 hex_to_u64(const char* hex_str)
 
 void hex_to_bytes(unsigned char* data, const char* hex_str, unsigned int str_length)
 {
-	u32 strn_length = (str_length > 0) ? str_length : (u32)std::strlen(hex_str);
-	u32 data_length = strn_length / 2;
+	auto strn_length = (str_length > 0) ? str_length : std::strlen(hex_str);
+	auto data_length = strn_length / 2;
 	char tmp_buf[3] = {0, 0, 0};
 
 	// Don't convert if the string length is odd.
@@ -66,7 +58,7 @@ void hex_to_bytes(unsigned char* data, const char* hex_str, unsigned int str_len
 			tmp_buf[0] = *hex_str++;
 			tmp_buf[1] = *hex_str++;
 
-			*data++ = (u8)(hex_to_u64(tmp_buf) & 0xFF);
+			*data++ = static_cast<u8>(hex_to_u64(tmp_buf) & 0xFF);
 		}
 	}
 }
@@ -155,6 +147,6 @@ char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH])
 	if (!p) p = strrchr(file_path, '\\');
 	if (p) file_path_len = file_path + file_path_len - p - 1;
 	strncpy(real_file_name, p ? (p + 1) : file_path, file_path_len + 1);
-	
+
 	return real_file_name;
 }
