@@ -66,6 +66,7 @@ struct lv2_obj
 
 	static const u32 id_step = 0x100;
 	static const u32 id_count = 8192;
+	static constexpr std::pair<u32, u32> id_invl_range = {0, 8};
 
 private:
 	enum thread_cmd : s32
