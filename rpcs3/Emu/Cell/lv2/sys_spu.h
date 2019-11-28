@@ -260,6 +260,7 @@ struct lv2_spu_group
 	static const u32 id_base = 0x04000100;
 	static const u32 id_step = 0x100;
 	static const u32 id_count = 255;
+	static constexpr std::pair<u32, u32> id_invl_range = {0, 8};
 
 	const std::string name;
 	const u32 id;
