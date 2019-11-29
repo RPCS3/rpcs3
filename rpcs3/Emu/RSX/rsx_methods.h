@@ -286,7 +286,7 @@ namespace rsx
 				return 1u;
 			}
 
-			u32 count = (u32)draw_command_ranges.size();
+			u32 count = ::size32(draw_command_ranges);
 			if (draw_command_ranges.back().count == 0)
 			{
 				// Dangling barrier
@@ -400,7 +400,7 @@ namespace rsx
 
 				const u32 count = barrier.address - previous_barrier;
 				ret.push_back({ 0, vertex_counter, count });
-				previous_barrier = (u32)barrier.address;
+				previous_barrier = barrier.address;
 				vertex_counter += count;
 			}
 
@@ -687,7 +687,7 @@ namespace rsx
 
 		bool restart_index_enabled() const
 		{
-			if (!restart_index_enabled_raw()) 
+			if (!restart_index_enabled_raw())
 			{
 				return false;
 

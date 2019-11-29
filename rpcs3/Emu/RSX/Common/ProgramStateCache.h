@@ -532,8 +532,8 @@ public:
 		alignas(16) f32 tmp[4];
 		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
 		{
-			char* data = (char*)fragment_program.addr + (u32)offset_in_fragment_program;
-			const __m128i vector = _mm_loadu_si128((__m128i*)data);
+			char* data = static_cast<char*>(fragment_program.addr) + offset_in_fragment_program;
+			const __m128i vector = _mm_loadu_si128(reinterpret_cast<__m128i*>(data));
 			const __m128i shuffled_vector = _mm_or_si128(_mm_slli_epi16(vector, 8), _mm_srli_epi16(vector, 8));
 
 			if (!patch_table.is_empty())

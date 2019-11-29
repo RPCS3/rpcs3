@@ -91,7 +91,7 @@ struct push_buffer_vertex_info
 		case vertex_base_type::s32k:
 			return size / 2;
 		default:
-			fmt::throw_exception("Unsupported vertex base type %d", (u8)type);
+			fmt::throw_exception("Unsupported vertex base type %d", static_cast<u8>(type));
 		}
 	}
 
@@ -112,8 +112,8 @@ struct push_buffer_vertex_info
 
 		attribute_mask |= element_mask;
 
-		void* dst = data.data() + ((vertex_count - 1) * vertex_size) + sub_index;
-		*(u32*)dst = arg;
+		u32* dst = data.data() + ((vertex_count - 1) * vertex_size) + sub_index;
+		*dst = arg;
 	}
 };
 

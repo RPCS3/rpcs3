@@ -140,12 +140,12 @@ namespace utils
 			// other after this
 			if (other.start > end)
 			{
-				return (s32)(other.start - end - 1);
+				return static_cast<s32>(other.start - end - 1);
 			}
 
 			// this after other
 			AUDIT(start > other.end);
-			return -((s32)(start - other.end - 1));
+			return -static_cast<s32>(start - other.end - 1);
 		}
 
 		u32 distance(const address_range &other) const
@@ -577,7 +577,8 @@ namespace utils
 } // namespace utils
 
 
-namespace std {
+namespace std
+{
 	static_assert(sizeof(size_t) >= 2 * sizeof(u32), "size_t must be at least twice the size of u32");
 
 	template <>

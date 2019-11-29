@@ -291,7 +291,7 @@ namespace rsx
 	{
 		for (u32 i = 0; i < size; i++)
 		{
-			*((Td*)dst + i) = *((Ts*)src - i);
+			*(static_cast<Td*>(dst) + i) = *(static_cast<Ts*>(src) - i);
 		}
 	}
 
@@ -463,14 +463,14 @@ namespace rsx
 	 * TODO: Variable src/dst and optional se conversion
 	 */
 	template <typename T>
-	void shuffle_texel_data_wzyx(void *data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
+	void shuffle_texel_data_wzyx(void* data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
 	{
-		char *raw_src = (char*)data;
+		char* raw_src = static_cast<char*>(data);
 		T tmp[4];
 
 		for (u16 n = 0; n < num_rows; ++n)
 		{
-			T* src = (T*)raw_src;
+			T* src = reinterpret_cast<T*>(raw_src);
 			raw_src += row_pitch_in_bytes;
 
 			for (u16 m = 0; m < row_length_in_texels; ++m)
@@ -511,7 +511,7 @@ namespace rsx
 				else
 					width = parent_width;
 
-				x = (T)0;
+				x = static_cast<T>(0);
 			}
 			else
 			{
@@ -531,7 +531,7 @@ namespace rsx
 				else
 					height = parent_height;
 
-				y = (T)0;
+				y = static_cast<T>(0);
 			}
 			else
 			{
@@ -581,7 +581,7 @@ namespace rsx
 
 	static inline const f32 get_resolution_scale()
 	{
-		return g_cfg.video.strict_rendering_mode? 1.f : ((f32)g_cfg.video.resolution_scale_percent / 100.f);
+		return g_cfg.video.strict_rendering_mode? 1.f : (g_cfg.video.resolution_scale_percent / 100.f);
 	}
 
 	static inline const int get_resolution_scale_percent()
@@ -598,9 +598,9 @@ namespace rsx
 			return value;
 
 		else if (clamp)
-			return (u16)std::max((get_resolution_scale_percent() * value) / 100, 1);
+			return static_cast<u16>(std::max((get_resolution_scale_percent() * value) / 100, 1));
 		else
-			return (get_resolution_scale_percent() * value) / 100;
+			return static_cast<u16>((get_resolution_scale_percent() * value) / 100);
 	}
 
 	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
@@ -608,9 +608,9 @@ namespace rsx
 		u16 result = value;
 
 		if (clamp)
-			result = (u16)std::max((value * 100) / get_resolution_scale_percent(), 1);
+			result = static_cast<u16>(std::max((value * 100) / get_resolution_scale_percent(), 1));
 		else
-			result = (value * 100) / get_resolution_scale_percent();
+			result = static_cast<u16>((value * 100) / get_resolution_scale_percent());
 
 		if (result <= g_cfg.video.min_scalable_dimension)
 			return value;
@@ -721,14 +721,14 @@ namespace rsx
 	// before actually attempting to translate to the internal address. Seen happening heavily in R&C games
 	static inline u32 get_vertex_offset_from_base(u32 vert_data_base_offset, u32 vert_base_offset)
 	{
-		return ((u64)vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
+		return (vert_data_base_offset + vert_base_offset) & 0xFFFFFFF;
 	}
 
 	// Similar to vertex_offset_base calculation, the rsx internally adds and masks index
 	// before using
 	static inline u32 get_index_from_base(u32 index, u32 index_base)
 	{
-		return ((u64)index + index_base) & 0x000FFFFF;
+		return (index + index_base) & 0x000FFFFF;
 	}
 
 	// Convert color write mask for G8B8 to R8G8
@@ -912,7 +912,7 @@ namespace rsx
 			_size = other._size;
 
 			const auto size_bytes = sizeof(Ty) * _capacity;
-			_data = (Ty*)malloc(size_bytes);
+			_data = static_cast<Ty*>(malloc(size_bytes));
 			std::memcpy(_data, other._data, size_bytes);
 		}
 
@@ -943,15 +943,7 @@ namespace rsx
 			if (_capacity >= size)
 				return;
 
-			if (_data)
-			{
-				verify("realloc() failed!" HERE), _data = (Ty*)realloc(_data, sizeof(Ty) * size);
-			}
-			else
-			{
-				verify("malloc() failed!" HERE), _data = (Ty*)malloc(sizeof(Ty) * size);
-			}
-
+			verify("realloc() failed!" HERE), _data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size));
 			_capacity = size;
 		}
 

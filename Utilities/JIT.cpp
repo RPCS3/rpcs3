@@ -252,6 +252,11 @@ void asmjit::build_transaction_abort(asmjit::X86Assembler& c, unsigned char code
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/FormattedStream.h"
@@ -261,6 +266,8 @@ void asmjit::build_transaction_abort(asmjit::X86Assembler& c, unsigned char code
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
 #endif
 
 #ifdef _WIN32
