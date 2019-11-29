@@ -75,7 +75,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 		return CELL_EFAULT;
 	}
 
-	*preadlen = (u32)chars_to_read;
+	*preadlen = static_cast<u32>(chars_to_read);
 
 	if (chars_to_read > 0)
 	{

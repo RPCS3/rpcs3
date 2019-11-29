@@ -1019,7 +1019,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 					continue;
 				}
 			}
-	
+
 			if (ptr + 4 <= fend &&
 				ptr[0] == STD(r2, r1, 0x28) &&
 				(ptr[1] & 0xffff0000) == ADDIS(r2, r2, {}) &&
@@ -2177,7 +2177,7 @@ void ppu_acontext::ADDI(ppu_opcode_t op)
 
 void ppu_acontext::ADDIS(ppu_opcode_t op)
 {
-	gpr[op.rd] = op.ra ? gpr[op.ra] + spec_gpr::fixed((u64)op.simm16 << 16) : spec_gpr::fixed((u64)op.simm16 << 16);
+	gpr[op.rd] = op.ra ? gpr[op.ra] + spec_gpr::fixed(op.simm16 * 65536) : spec_gpr::fixed(op.simm16 * 65536);
 }
 
 void ppu_acontext::BC(ppu_opcode_t op)
@@ -2250,14 +2250,14 @@ void ppu_acontext::RLWIMI(ppu_opcode_t op)
 	if (op.mb32 <= op.me32)
 	{
 		// 32-bit op, including mnemonics: INSLWI, INSRWI (TODO)
-		min = utils::rol32((u32)min, op.sh32) & mask;
-		max = utils::rol32((u32)max, op.sh32) & mask;
+		min = utils::rol32(static_cast<u32>(min), op.sh32) & mask;
+		max = utils::rol32(static_cast<u32>(max), op.sh32) & mask;
 	}
 	else
 	{
 		// Full 64-bit op with duplication
-		min = utils::rol64((u32)min | min << 32, op.sh32) & mask;
-		max = utils::rol64((u32)max | max << 32, op.sh32) & mask;
+		min = utils::rol64(static_cast<u32>(min) | min << 32, op.sh32) & mask;
+		max = utils::rol64(static_cast<u32>(max) | max << 32, op.sh32) & mask;
 	}
 
 	if (mask != -1)
@@ -2306,14 +2306,14 @@ void ppu_acontext::RLWINM(ppu_opcode_t op)
 			// EXTRWI and other possible mnemonics
 		}
 
-		min = utils::rol32((u32)min, op.sh32) & mask;
-		max = utils::rol32((u32)max, op.sh32) & mask;
+		min = utils::rol32(static_cast<u32>(min), op.sh32) & mask;
+		max = utils::rol32(static_cast<u32>(max), op.sh32) & mask;
 	}
 	else
 	{
 		// Full 64-bit op with duplication
-		min = utils::rol64((u32)min | min << 32, op.sh32) & mask;
-		max = utils::rol64((u32)max | max << 32, op.sh32) & mask;
+		min = utils::rol64(static_cast<u32>(min) | min << 32, op.sh32) & mask;
+		max = utils::rol64(static_cast<u32>(max) | max << 32, op.sh32) & mask;
 	}
 
 	gpr[op.ra] = spec_gpr::approx(min, max);

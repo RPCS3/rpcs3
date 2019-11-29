@@ -187,7 +187,7 @@ void gdb_thread::start_server()
 	unix_saddr.sun_family = AF_UNIX;
 	strcpy_trunc(unix_saddr.sun_path, g_cfg.misc.gdb_server.get());
 
-	if (bind(server_socket, (struct sockaddr*) &unix_saddr, sizeof(unix_saddr)) != 0)
+	if (bind(server_socket, reinterpret_cast<struct sockaddr*>(&unix_saddr), sizeof(unix_saddr)) != 0)
 	{
 		GDB.error("Failed to bind Unix socket '%s'.", g_cfg.misc.gdb_server.get());
 		return;
@@ -846,7 +846,7 @@ void gdb_thread::operator()()
 	{
 		sockaddr_in client;
 		socklen_t client_len = sizeof(client);
-		client_socket = accept(server_socket, (struct sockaddr *) &client, &client_len);
+		client_socket = accept(server_socket, reinterpret_cast<struct sockaddr*>(&client), &client_len);
 
 		if (client_socket == -1)
 		{

@@ -37,13 +37,13 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 		}
 	};
 
-	auto archive_read = [&](const void *data_ptr, const u64 num_bytes)
+	auto archive_read = [&](void* data_ptr, const u64 num_bytes)
 	{
 		u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
 		//check if it continues in another file
 		if (num_bytes > num_bytes_left)
 		{
-			filelist[cur_file].read((u8 *)data_ptr, num_bytes_left);
+			filelist[cur_file].read(data_ptr, num_bytes_left);
 			if ((cur_file + 1) < filelist.size()) cur_file++;
 			else
 			{
@@ -51,13 +51,13 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 				cur_file_offset = filelist[cur_file].size();
 				return num_bytes_left;
 			}
-			u64 num_read = filelist[cur_file].read((u8 *)data_ptr + num_bytes_left, num_bytes - num_bytes_left);
+			u64 num_read = filelist[cur_file].read(static_cast<u8*>(data_ptr) + num_bytes_left, num_bytes - num_bytes_left);
 			cur_offset += (num_read + num_bytes_left);
 			cur_file_offset = num_read;
 			return (num_read+num_bytes_left);
 		}
 
-		u64 num_read = filelist[cur_file].read((u8 *)data_ptr, num_bytes);
+		u64 num_read = filelist[cur_file].read(data_ptr, num_bytes);
 
 		cur_offset += num_read;
 		cur_file_offset += num_read;
@@ -153,7 +153,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 			be_t<u32> id;
 			be_t<u32> size;
 		} packet;
-		
+
 		archive_read(&packet, sizeof(packet));
 
 		// TODO
@@ -244,7 +244,7 @@ bool pkg_install(const std::string& path, atomic_t<double>& sync)
 					u8 data[20];
 					u128 _v128;
 				} hash;
-				
+
 				sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
 
 				buf[i] ^= hash._v128;

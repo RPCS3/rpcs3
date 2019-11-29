@@ -160,7 +160,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 		{
 			u32 trophy_id = std::atoi(n->GetAttribute("id").c_str());
 			u32 trophy_grade;
-			switch (((const char *)n->GetAttribute("ttype").c_str())[0])
+			switch (n->GetAttribute("ttype")[0])
 			{
 			case 'B': trophy_grade = 4; break;
 			case 'S': trophy_grade = 3; break;
@@ -169,8 +169,8 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 			default: trophy_grade = 0;
 			}
 
-			TROPUSREntry4 entry4 = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, (u32)m_table4.size(), 0, trophy_id, trophy_grade, 0xFFFFFFFF };
-			TROPUSREntry6 entry6 = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, (u32)m_table6.size(), 0, trophy_id };
+			TROPUSREntry4 entry4 = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, ::size32(m_table4), 0, trophy_id, trophy_grade, 0xFFFFFFFF };
+			TROPUSREntry6 entry6 = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, ::size32(m_table6), 0, trophy_id };
 
 			m_table4.push_back(entry4);
 			m_table6.push_back(entry6);
@@ -178,9 +178,9 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	}
 
 	u64 offset = sizeof(TROPUSRHeader) + 2 * sizeof(TROPUSRTableHeader);
-	TROPUSRTableHeader table4header = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, 1, (u32)m_table4.size(), offset };
+	TROPUSRTableHeader table4header = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, 1, ::size32(m_table4), offset };
 	offset += m_table4.size() * sizeof(TROPUSREntry4);
-	TROPUSRTableHeader table6header = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, 1, (u32)m_table6.size(), offset };
+	TROPUSRTableHeader table6header = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, 1, ::size32(m_table6), offset };
 	offset += m_table6.size() * sizeof(TROPUSREntry6);
 
 	m_tableHeaders.clear();
@@ -189,7 +189,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 
 	m_header.magic = 0x818F54AD;
 	m_header.unk1 = 0x00010000;
-	m_header.tables_count = (u32)m_tableHeaders.size();
+	m_header.tables_count = ::size32(m_tableHeaders);
 	m_header.unk2 = 0;
 
 	Save(filepath);
@@ -199,7 +199,7 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 
 u32 TROPUSRLoader::GetTrophiesCount()
 {
-	return (u32)m_table6.size();
+	return ::size32(m_table6);
 }
 
 u32 TROPUSRLoader::GetUnlockedTrophiesCount()

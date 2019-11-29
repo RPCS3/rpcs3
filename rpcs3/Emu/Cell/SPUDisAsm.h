@@ -90,14 +90,14 @@ private:
 		case 0b01: return "e";
 		case 0b10: return "d";
 		//case 0b11: return "(undef)";
-		default: return "";	
+		default: return "";
 		}
 	}
 
 private:
 	std::string& FixOp(std::string& op)
 	{
-		op.append(std::max<int>(10 - (int)op.length(), 0),' ');
+		op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0),' ');
 		return op;
 	}
 	void DisAsm(const char* op)

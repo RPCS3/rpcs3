@@ -73,7 +73,7 @@ error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 offset
 		return CELL_ENOSYS;
 	}
 
-	if ((s64)offset < 0)
+	if (static_cast<s64>(offset) < 0)
 	{
 		return CELL_EINVAL;
 	}
