@@ -6,7 +6,6 @@
 #include "VKHelpers.h"
 #include "../Common/GLSLCommon.h"
 
-#pragma optimize("", off)
 
 std::string VKVertexDecompilerThread::getFloatTypeName(size_t elementCount)
 {
