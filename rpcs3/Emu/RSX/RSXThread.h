@@ -2,6 +2,8 @@
 
 #include <deque>
 #include <variant>
+#include <stack>
+
 #include "GCM.h"
 #include "rsx_cache.h"
 #include "RSXFIFO.h"
@@ -338,12 +340,11 @@ namespace rsx
 			u32 driver_handle;
 			u32 result;
 			u32 num_draws;
-			bool hint;
+			u64 sync_tag;
+			u64 timestamp;
 			bool pending;
 			bool active;
 			bool owned;
-
-			u64 sync_timestamp;
 		};
 
 		struct queued_report_write
@@ -355,8 +356,13 @@ namespace rsx
 
 			vm::addr_t sink;                      // Memory location of the report
 			std::vector<vm::addr_t> sink_alias;   // Aliased memory addresses
+		};
 
-			u64 due_tsc;
+		struct query_search_result
+		{
+			bool found;
+			u32  raw_zpass_result;
+			occlusion_query_info* query;
 		};
 
 		enum sync_control
@@ -369,31 +375,39 @@ namespace rsx
 		struct ZCULL_control
 		{
 			// Delay before a report update operation is forced to retire
-			const u32 max_zcull_delay_us = 500;
+			const u32 max_zcull_delay_us = 4000;
 			const u32 min_zcull_delay_us = 50;
+			const u32 min_zcull_tick_us = 500;
 
 			// Number of occlusion query slots available. Real hardware actually has far fewer units before choking
-			const u32 occlusion_query_count = 128;
+			const u32 occlusion_query_count = 1024;
+			const u32 max_safe_queue_depth = 892;
 
 			bool active = false;
 			bool enabled = false;
 
-			std::array<occlusion_query_info, 128> m_occlusion_query_data = {};
+			std::array<occlusion_query_info, 1024> m_occlusion_query_data = {};
+			std::stack<occlusion_query_info*> m_free_occlusion_pool;
 
 			occlusion_query_info* m_current_task = nullptr;
 			u32 m_statistics_tag_id = 0;
+
+			// Scheduling clock. Granunlarity is min_zcull_tick value.
 			u64 m_tsc = 0;
-			u32 m_cycles_delay = max_zcull_delay_us;
-			u32 m_backend_warn_threshold = max_zcull_delay_us / 2;
+			u64 m_next_tsc = 0;
+
+			// Incremental tag used for tracking sync events. Hardware clock resolution is too low for the job.
+			u64 m_sync_tag = 0;
+			u64 m_timer = 0;
 
 			std::vector<queued_report_write> m_pending_writes;
 			std::unordered_map<u32, u32> m_statistics_map;
 
-			ZCULL_control() = default;
-			~ZCULL_control() = default;
+			ZCULL_control();
+			~ZCULL_control();
 
-			void set_enabled(class ::rsx::thread* ptimer, bool state);
-			void set_active(class ::rsx::thread* ptimer, bool state);
+			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
+			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
 
 			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
 			void write(queued_report_write* writer, u64 timestamp, u32 value);
@@ -403,6 +417,9 @@ namespace rsx
 
 			// Sets up a new query slot and sets it to the current task
 			void allocate_new_query(class ::rsx::thread* ptimer);
+
+			// Free a query slot in use
+			void free_query(occlusion_query_info* query);
 
 			// Clears current stat block and increments stat_tag_id
 			void clear(class ::rsx::thread* ptimer);
@@ -414,16 +431,19 @@ namespace rsx
 			flags32_t read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range, flags32_t flags);
 
 			// Call once every 'tick' to update, optional address provided to partially sync until address is processed
-			void update(class ::rsx::thread* ptimer, u32 sync_address = 0);
+			void update(class ::rsx::thread* ptimer, u32 sync_address = 0, bool hint = false);
 
 			// Draw call notification
 			void on_draw();
+
+			// Sync hint notification
+			void on_sync_hint();
 
 			// Check for pending writes
 			bool has_pending() const { return !m_pending_writes.empty(); }
 
 			// Search for query synchronized at address
-			occlusion_query_info* find_query(vm::addr_t sink_address);
+			query_search_result find_query(vm::addr_t sink_address);
 
 			// Copies queries in range rebased from source range to destination range
 			u32 copy_reports_to(u32 start, u32 range, u32 dest);
@@ -434,6 +454,38 @@ namespace rsx
 			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
 			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = UINT32_MAX; }
 			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
+		};
+
+		// Helper class for conditional rendering
+		struct conditional_render_eval
+		{
+			bool enabled = false;
+			bool eval_failed = false;
+			bool hw_cond_active = false;
+			bool reserved = false;
+			u32  eval_address = 0;
+			u64  sync_tag = 0;
+
+			// Returns true if rendering is disabled as per conditional render test
+			bool disable_rendering() const;
+
+			// Returns true if a conditional render is active but not yet evaluated
+			bool eval_pending() const;
+
+			// Enable conditional rendering
+			void enable_conditional_render(thread* pthr, u32 address);
+
+			// Disable conditional rendering
+			void disable_conditional_render(thread* pthr);
+
+			// Sets up the zcull sync tag
+			void set_sync_tag(u64 value);
+
+			// Sets evaluation result. Result is true if conditional evaluation failed
+			void set_eval_result(thread* pthr, bool failed);
+
+			// Evaluates the condition by accessing memory directly
+			void eval_result(thread* pthr);
 		};
 	}
 
@@ -489,10 +541,11 @@ namespace rsx
 
 	struct backend_configuration
 	{
-		bool supports_multidraw;           // Draw call batching
-		bool supports_hw_a2c;              // Alpha to coverage
-		bool supports_hw_renormalization;  // Should be true on NV hardware which matches PS3 texture renormalization behaviour
-		bool supports_hw_a2one;            // Alpha to one
+		bool supports_multidraw;             // Draw call batching
+		bool supports_hw_a2c;                // Alpha to coverage
+		bool supports_hw_renormalization;    // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_a2one;              // Alpha to one
+		bool supports_hw_conditional_render; // Conditional render
 	};
 
 	struct sampled_image_descriptor_base;
@@ -655,12 +708,11 @@ namespace rsx
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
-		u32  conditional_render_test_address = 0;
-		bool conditional_render_test_failed = false;
-		bool conditional_render_enabled = false;
 		bool zcull_stats_enabled = false;
 		bool zcull_rendering_enabled = false;
 		bool zcull_pixel_cnt_enabled = false;
+
+		reports::conditional_render_eval cond_render_ctrl;
 
 		void operator()();
 		virtual u64 get_cycles() = 0;
@@ -708,10 +760,15 @@ namespace rsx
 		void get_zcull_stats(u32 type, vm::addr_t sink);
 		u32  copy_zcull_stats(u32 memory_range_start, u32 memory_range, u32 destination);
 
+		void enable_conditional_rendering(vm::addr_t ref);
+		void disable_conditional_rendering();
+		virtual void begin_conditional_rendering();
+		virtual void end_conditional_rendering();
+
 		// sync
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
-		virtual void sync_hint(FIFO_hint /*hint*/, u64 /*arg*/) {}
+		virtual void sync_hint(FIFO_hint hint, void* args);
 
 		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 

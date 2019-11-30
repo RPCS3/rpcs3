@@ -580,14 +580,11 @@ namespace rsx
 			switch (mode)
 			{
 			case 1:
-				rsx->conditional_render_enabled = false;
-				rsx->conditional_render_test_failed = false;
+				rsx->disable_conditional_rendering();
 				return;
 			case 2:
-				rsx->conditional_render_enabled = true;
 				break;
 			default:
-				rsx->conditional_render_enabled = false;
 				LOG_ERROR(RSX, "Unknown render mode %d", mode);
 				return;
 			}
@@ -597,15 +594,12 @@ namespace rsx
 
 			if (!address_ptr)
 			{
-				rsx->conditional_render_test_failed = false;
 				LOG_ERROR(RSX, "Bad argument passed to NV4097_SET_RENDER_ENABLE, arg=0x%X", arg);
 				return;
 			}
 
 			// Defer conditional render evaluation
-			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval, address_ptr);
-			rsx->conditional_render_test_address = address_ptr;
-			rsx->conditional_render_test_failed = false;
+			rsx->enable_conditional_rendering(address_ptr);
 		}
 
 		void set_zcull_render_enable(thread* rsx, u32, u32 arg)

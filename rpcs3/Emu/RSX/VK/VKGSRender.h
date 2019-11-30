@@ -44,7 +44,7 @@ namespace vk
 #define VK_FRAGMENT_CONSTANTS_BUFFER_SIZE_M 16
 #define VK_INDEX_RING_BUFFER_SIZE_M 16
 
-#define VK_MAX_ASYNC_CB_COUNT 64
+#define VK_MAX_ASYNC_CB_COUNT 256
 #define VK_MAX_ASYNC_FRAMES 2
 
 using rsx::flags32_t;
@@ -465,7 +465,7 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
-	void sync_hint(rsx::FIFO_hint hint, u64 arg) override;
+	void sync_hint(rsx::FIFO_hint hint, void* args) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;

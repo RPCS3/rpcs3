@@ -176,8 +176,7 @@ void GLGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_current_frame ||
-		(conditional_render_enabled && conditional_render_test_failed))
+	if (skip_current_frame || cond_render_ctrl.disable_rendering())
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
@@ -187,8 +186,7 @@ void GLGSRender::end()
 {
 	m_profiler.start();
 
-	if (skip_current_frame || !framebuffer_status_valid ||
-		(conditional_render_enabled && conditional_render_test_failed))
+	if (skip_current_frame || !framebuffer_status_valid || cond_render_ctrl.disable_rendering())
 	{
 		execute_nop_draw();
 		rsx::thread::end();

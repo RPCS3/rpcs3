@@ -294,13 +294,33 @@ namespace rsx
 
 	void thread::begin()
 	{
-		if (conditional_render_enabled && conditional_render_test_address)
+		if (cond_render_ctrl.hw_cond_active)
 		{
-			// Evaluate conditional rendering test
-			zcull_ctrl->read_barrier(this, conditional_render_test_address, 4, reports::sync_no_notify);
-			vm::ptr<CellGcmReportData> result = vm::cast(conditional_render_test_address);
-			conditional_render_test_failed = (result->value == 0);
-			conditional_render_test_address = 0;
+			if (!cond_render_ctrl.eval_pending())
+			{
+				// End conditional rendering if still active
+				end_conditional_rendering();
+			}
+
+			// If hw cond render is enabled and evalutation is still pending, do nothing
+		}
+		else if (cond_render_ctrl.eval_pending())
+		{
+			// Evaluate conditional rendering test or enable hw cond render until results are available
+			if (backend_config.supports_hw_conditional_render)
+			{
+				// In this mode, it is possible to skip the cond render while the backend is still processing data.
+				// The backend guarantees that any draw calls emitted during this time will NOT generate any ROP writes
+				verify(HERE), !cond_render_ctrl.hw_cond_active;
+
+				// Pending evaluation, use hardware test
+				begin_conditional_rendering();
+			}
+			else
+			{
+				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, 4, reports::sync_no_notify);
+				cond_render_ctrl.eval_result(this);
+			}
 		}
 
 		if (m_graphics_state & rsx::pipeline_state::fragment_program_dirty)
@@ -2134,6 +2154,45 @@ namespace rsx
 		return zcull_ctrl->copy_reports_to(memory_range_start, memory_range, destination);
 	}
 
+	void thread::enable_conditional_rendering(vm::addr_t ref)
+	{
+		cond_render_ctrl.enable_conditional_render(this, ref);
+
+		auto result = zcull_ctrl->find_query(ref);
+		if (result.found)
+		{
+			if (result.query)
+			{
+				cond_render_ctrl.set_sync_tag(result.query->sync_tag);
+				sync_hint(FIFO_hint::hint_conditional_render_eval, result.query);
+			}
+			else
+			{
+				bool failed = (result.raw_zpass_result == 0);
+				cond_render_ctrl.set_eval_result(this, failed);
+			}
+		}
+		else
+		{
+			cond_render_ctrl.eval_result(this);
+		}
+	}
+
+	void thread::disable_conditional_rendering()
+	{
+		cond_render_ctrl.disable_conditional_render(this);
+	}
+
+	void thread::begin_conditional_rendering()
+	{
+		cond_render_ctrl.hw_cond_active = true;
+	}
+
+	void thread::end_conditional_rendering()
+	{
+		cond_render_ctrl.hw_cond_active = false;
+	}
+
 	void thread::sync()
 	{
 		zcull_ctrl->sync(this);
@@ -2147,6 +2206,11 @@ namespace rsx
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
 		//verify (HERE), async_tasks_pending.load() == 0;
+	}
+
+	void thread::sync_hint(FIFO_hint /*hint*/, void* /*args*/)
+	{
+		zcull_ctrl->on_sync_hint();
 	}
 
 	void thread::flush_fifo()
@@ -2369,7 +2433,7 @@ namespace rsx
 		}
 
 		// Reset zcull ctrl
-		zcull_ctrl->set_active(this, false);
+		zcull_ctrl->set_active(this, false, true);
 		zcull_ctrl->clear(this);
 
 		if (zcull_ctrl->has_pending())
@@ -2525,18 +2589,29 @@ namespace rsx
 
 	namespace reports
 	{
-		void ZCULL_control::set_enabled(class ::rsx::thread* ptimer, bool state)
+		ZCULL_control::ZCULL_control()
+		{
+			for (auto& query : m_occlusion_query_data)
+			{
+				m_free_occlusion_pool.push(&query);
+			}
+		}
+
+		ZCULL_control::~ZCULL_control()
+		{}
+
+		void ZCULL_control::set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue)
 		{
 			if (state != enabled)
 			{
 				enabled = state;
 
 				if (active && !enabled)
-					set_active(ptimer, false);
+					set_active(ptimer, false, flush_queue);
 			}
 		}
 
-		void ZCULL_control::set_active(class ::rsx::thread* ptimer, bool state)
+		void ZCULL_control::set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue)
 		{
 			if (state != active)
 			{
@@ -2556,6 +2631,8 @@ namespace rsx
 						end_occlusion_query(m_current_task);
 						m_current_task->active = false;
 						m_current_task->pending = true;
+						m_current_task->sync_tag = ++m_timer;
+						m_current_task->timestamp = m_tsc;
 
 						m_pending_writes.push_back({});
 						m_pending_writes.back().query = m_current_task;
@@ -2564,10 +2641,12 @@ namespace rsx
 					else
 					{
 						discard_occlusion_query(m_current_task);
+						free_query(m_current_task);
 						m_current_task->active = false;
 					}
 
 					m_current_task = nullptr;
+					update(ptimer, 0u, flush_queue);
 				}
 			}
 		}
@@ -2582,6 +2661,8 @@ namespace rsx
 
 				m_current_task->active = false;
 				m_current_task->pending = true;
+				m_current_task->timestamp = m_tsc;
+				m_current_task->sync_tag = ++m_timer;
 				m_pending_writes.back().query = m_current_task;
 
 				allocate_new_query(ptimer);
@@ -2589,8 +2670,16 @@ namespace rsx
 			}
 			else
 			{
-				//Spam; send null query down the pipeline to copy the last result
-				//Might be used to capture a timestamp (verify)
+				// Spam; send null query down the pipeline to copy the last result
+				// Might be used to capture a timestamp (verify)
+
+				if (m_pending_writes.empty())
+				{
+					// No need to queue this if there is no pending request in the pipeline anyway
+					write(sink, ptimer->timestamp(), type, m_statistics_map[m_statistics_tag_id]);
+					return;
+				}
+
 				m_pending_writes.push_back({});
 			}
 
@@ -2600,13 +2689,15 @@ namespace rsx
 				if (!It->sink)
 				{
 					It->counter_tag = m_statistics_tag_id;
-					It->due_tsc = get_system_time() + m_cycles_delay;
 					It->sink = sink;
 					It->type = type;
 
 					if (forwarder != &(*It))
 					{
-						//Not the last one in the chain, forward the writing operation to the last writer
+						// Not the last one in the chain, forward the writing operation to the last writer
+						// Usually comes from truncated queries caused by disabling the testing
+						verify(HERE), It->query;
+
 						It->forwarder = forwarder;
 						It->query->owned = true;
 					}
@@ -2625,51 +2716,44 @@ namespace rsx
 			int retries = 0;
 			while (true)
 			{
-				for (u32 n = 0; n < occlusion_query_count; ++n)
+				if (!m_free_occlusion_pool.empty())
 				{
-					if (m_occlusion_query_data[n].pending || m_occlusion_query_data[n].active)
-						continue;
+					m_current_task = m_free_occlusion_pool.top();
+					m_free_occlusion_pool.pop();
 
-					m_current_task = &m_occlusion_query_data[n];
 					m_current_task->num_draws = 0;
 					m_current_task->result = 0;
-					m_current_task->sync_timestamp = 0;
 					m_current_task->active = true;
 					m_current_task->owned = false;
-					m_current_task->hint = false;
+					m_current_task->sync_tag = 0;
+					m_current_task->timestamp = 0;
 					return;
 				}
 
 				if (retries > 0)
 				{
-					LOG_ERROR(RSX, "ZCULL report queue is overflowing!!");
-					m_statistics_map[m_statistics_tag_id] = 1;
-
-					verify(HERE), m_pending_writes.front().sink == 0;
-					m_pending_writes.clear();
-
-					for (auto &query : m_occlusion_query_data)
-					{
-						discard_occlusion_query(&query);
-						query.pending = false;
-					}
-
-					m_current_task = &m_occlusion_query_data[0];
-					m_current_task->num_draws = 0;
-					m_current_task->result = 0;
-					m_current_task->sync_timestamp = 0;
-					m_current_task->active = true;
-					m_current_task->owned = false;
-					m_current_task->hint = false;
-					return;
+					fmt::throw_exception("Allocation failed!");
 				}
 
-				//All slots are occupied, try to pop the earliest entry
-				m_tsc += max_zcull_delay_us;
-				update(ptimer);
+				// All slots are occupied, try to pop the earliest entry
+
+				if (!m_pending_writes.front().query)
+				{
+					// If this happens, the assert above will fire. There should never be a queue header with no work to be done
+					LOG_ERROR(RSX, "Close to our death.");
+				}
+
+				m_next_tsc = 0;
+				update(ptimer, m_pending_writes.front().sink);
 
 				retries++;
 			}
+		}
+
+		void ZCULL_control::free_query(occlusion_query_info* query)
+		{
+			query->pending = false;
+			m_free_occlusion_pool.push(query);
 		}
 
 		void ZCULL_control::clear(class ::rsx::thread* ptimer)
@@ -2683,7 +2767,7 @@ namespace rsx
 					if (!It->sink)
 					{
 						discard_occlusion_query(It->query);
-						It->query->pending = false;
+						free_query(It->query);
 						valid_size--;
 						ptimer->async_tasks_pending--;
 						continue;
@@ -2703,8 +2787,11 @@ namespace rsx
 		{
 			if (m_current_task)
 				m_current_task->num_draws++;
+		}
 
-			m_cycles_delay = max_zcull_delay_us;
+		void ZCULL_control::on_sync_hint()
+		{
+			m_sync_tag = ++m_timer;
 		}
 
 		void ZCULL_control::write(vm::addr_t sink, u64 timestamp, u32 type, u32 value)
@@ -2745,6 +2832,21 @@ namespace rsx
 		{
 			if (!m_pending_writes.empty())
 			{
+				// Quick reverse scan to push commands ahead of time
+				for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
+				{
+					if (It->query && It->query->num_draws)
+					{
+						if (It->query->sync_tag > m_sync_tag)
+						{
+							// LOG_TRACE(RSX, "[Performance warning] Query hint emit during sync command.");
+							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
+						}
+
+						break;
+					}
+				}
+
 				u32 processed = 0;
 				const bool has_unclaimed = (m_pending_writes.back().sink == 0);
 
@@ -2778,13 +2880,19 @@ namespace rsx
 							discard_occlusion_query(query);
 						}
 
-						query->pending = false;
+						free_query(query);
 					}
 
 					if (!writer.forwarder)
 					{
 						// No other queries in the chain, write result
 						write(&writer, ptimer->timestamp(), result);
+
+						if (query && ptimer->cond_render_ctrl.sync_tag == query->sync_tag)
+						{
+							const bool eval_failed = (result == 0);
+							ptimer->cond_render_ctrl.set_eval_result(ptimer, eval_failed);
+						}
 					}
 
 					processed++;
@@ -2824,19 +2932,9 @@ namespace rsx
 				//Decrement jobs counter
 				ptimer->async_tasks_pending -= processed;
 			}
-
-			if (ptimer->conditional_render_enabled && ptimer->conditional_render_test_address)
-			{
-				ptimer->conditional_render_test_failed = vm::read32(ptimer->conditional_render_test_address) == 0;
-				ptimer->conditional_render_test_address = 0;
-			}
-
-			//Critical, since its likely a WAIT_FOR_IDLE type has been processed, all results are considered available
-			m_cycles_delay = min_zcull_delay_us;
-			m_tsc = std::max(m_tsc, get_system_time());
 		}
 
-		void ZCULL_control::update(::rsx::thread* ptimer, u32 sync_address)
+		void ZCULL_control::update(::rsx::thread* ptimer, u32 sync_address, bool hint)
 		{
 			if (m_pending_writes.empty())
 			{
@@ -2850,26 +2948,51 @@ namespace rsx
 				return;
 			}
 
-			// Update timestamp and proceed with processing only if there is work to be done
-			m_tsc = std::max(m_tsc, get_system_time());
-
 			if (!sync_address)
 			{
-				if (m_tsc < front.due_tsc)
+				if (hint || ptimer->async_tasks_pending >= max_safe_queue_depth)
 				{
-					if (front.query && !front.query->hint && (front.due_tsc - m_tsc) <= m_backend_warn_threshold)
+					verify(HERE), !active || !hint;
+
+					// Prepare the whole queue for reading. This happens when zcull activity is disabled or queue is too long
+					for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
 					{
-						if (front.type == CELL_GCM_ZPASS_PIXEL_CNT || front.type == CELL_GCM_ZCULL_STATS3)
+						if (It->query)
 						{
-							// Imminent read
+							if (It->query->num_draws && It->query->sync_tag > m_sync_tag)
+							{
+								ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
+								verify(HERE), It->query->sync_tag < m_sync_tag;
+							}
+
+							break;
+						}
+					}
+				}
+
+				if (m_tsc = get_system_time(); m_tsc < m_next_tsc)
+				{
+					return;
+				}
+				else
+				{
+					// Schedule ahead
+					m_next_tsc = m_tsc + min_zcull_tick_us;
+
+#if 0
+					// Schedule a queue flush if needed
+					if (front.query && front.query->num_draws && front.query->sync_tag > m_sync_tag)
+					{
+						const auto elapsed = m_tsc - front.query->timestamp;
+						if (elapsed > max_zcull_delay_us)
+						{
 							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, reinterpret_cast<uintptr_t>(front.query));
+							verify(HERE), front.query->sync_tag < m_sync_tag;
 						}
 
-						front.query->hint = true;
+						return;
 					}
-
-					// Avoid spamming backend with report status updates
-					return;
+#endif
 				}
 			}
 
@@ -2904,7 +3027,7 @@ namespace rsx
 					verify(HERE), query->pending;
 
 					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-					if (force_read || writer.due_tsc < m_tsc)
+					if (force_read)
 					{
 						if (implemented && !result && query->num_draws)
 						{
@@ -2938,13 +3061,6 @@ namespace rsx
 							}
 							else
 							{
-								if (!query->hint && (writer.due_tsc - m_tsc) <= m_backend_warn_threshold)
-								{
-									// Imminent read
-									ptimer->sync_hint(FIFO_hint::hint_zcull_sync, reinterpret_cast<uintptr_t>(query));
-									query->hint = true;
-								}
-
 								//Too early; abort
 								break;
 							}
@@ -2956,7 +3072,7 @@ namespace rsx
 						}
 					}
 
-					query->pending = false;
+					free_query(query);
 				}
 
 				stat_tag_to_remove = writer.counter_tag;
@@ -2966,6 +3082,12 @@ namespace rsx
 				{
 					// No other queries in the chain, write result
 					write(&writer, ptimer->timestamp(), result);
+
+					if (query && ptimer->cond_render_ctrl.sync_tag == query->sync_tag)
+					{
+						const bool eval_failed = (result == 0);
+						ptimer->cond_render_ctrl.set_eval_result(ptimer, eval_failed);
+					}
 				}
 
 				processed++;
@@ -3039,7 +3161,11 @@ namespace rsx
 			{
 				if (!(flags & sync_no_notify))
 				{
-					ptimer->sync_hint(FIFO_hint::hint_zcull_sync, reinterpret_cast<uintptr_t>(query));
+					if (UNLIKELY(query->sync_tag > m_sync_tag))
+					{
+						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, query);
+						verify(HERE), m_sync_tag > query->sync_tag;
+					}
 				}
 
 				update(ptimer, sync_address);
@@ -3049,15 +3175,36 @@ namespace rsx
 			return result_zcull_intr;
 		}
 
-		occlusion_query_info* ZCULL_control::find_query(vm::addr_t sink_address)
+		query_search_result ZCULL_control::find_query(vm::addr_t sink_address)
 		{
-			for (auto &writer : m_pending_writes)
+			u32 stat_id = 0;
+			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
-				if (writer.sink == sink_address)
-					return writer.query;
+				if (UNLIKELY(stat_id))
+				{
+					if (It->counter_tag != stat_id)
+					{
+						// Zcull stats were cleared between this query and the required one
+						return { true, 0, nullptr };
+					}
+
+					if (It->query)
+					{
+						return { true, 0, It->query };
+					}
+				}
+				else if (It->sink == sink_address)
+				{
+					if (It->query)
+					{
+						return { true, 0, It->query };
+					}
+
+					stat_id = It->counter_tag;
+				}
 			}
 
-			return nullptr;
+			return {};
 		}
 
 		u32 ZCULL_control::copy_reports_to(u32 start, u32 range, u32 dest)
@@ -3077,6 +3224,71 @@ namespace rsx
 			}
 
 			return bytes_to_write;
+		}
+
+
+		// Conditional rendering helpers
+		bool conditional_render_eval::disable_rendering() const
+		{
+			return (enabled && eval_failed);
+		}
+
+		bool conditional_render_eval::eval_pending() const
+		{
+			return (enabled && eval_address);
+		}
+
+		void conditional_render_eval::enable_conditional_render(::rsx::thread* pthr, u32 address)
+		{
+			if (hw_cond_active)
+			{
+				verify(HERE), enabled;
+				pthr->end_conditional_rendering();
+			}
+
+			enabled = true;
+			eval_failed = false;
+			eval_address = address;
+			sync_tag = 0;
+		}
+
+		void conditional_render_eval::disable_conditional_render(::rsx::thread* pthr)
+		{
+			if (hw_cond_active)
+			{
+				verify(HERE), enabled;
+				pthr->end_conditional_rendering();
+			}
+
+			enabled = false;
+			eval_failed = false;
+			eval_address = 0;
+			sync_tag = 0;
+		}
+
+		void conditional_render_eval::set_sync_tag(u64 value)
+		{
+			sync_tag = value;
+		}
+
+		void conditional_render_eval::set_eval_result(::rsx::thread* pthr, bool failed)
+		{
+			if (hw_cond_active)
+			{
+				verify(HERE), enabled;
+				pthr->end_conditional_rendering();
+			}
+
+			eval_failed = failed;
+			eval_address = 0;
+			sync_tag = 0;
+		}
+
+		void conditional_render_eval::eval_result(::rsx::thread* pthr)
+		{
+			vm::ptr<CellGcmReportData> result = vm::cast(eval_address);
+			const bool failed = (result->value == 0);
+			set_eval_result(pthr, failed);
 		}
 	}
 }

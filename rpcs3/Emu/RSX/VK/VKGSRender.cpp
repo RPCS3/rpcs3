@@ -543,6 +543,9 @@ VKGSRender::VKGSRender() : GSRender()
 	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
 	backend_config.supports_hw_renormalization = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA);
+
+	// Stub
+	backend_config.supports_hw_conditional_render = true;
 }
 
 VKGSRender::~VKGSRender()
@@ -935,8 +938,7 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_current_frame || swapchain_unavailable ||
-		(conditional_render_enabled && conditional_render_test_failed))
+	if (skip_current_frame || swapchain_unavailable || cond_render_ctrl.disable_rendering())
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
@@ -1202,8 +1204,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 void VKGSRender::end()
 {
-	if (skip_current_frame || !framebuffer_status_valid || swapchain_unavailable ||
-		(conditional_render_enabled && conditional_render_test_failed))
+	if (skip_current_frame || !framebuffer_status_valid || swapchain_unavailable || cond_render_ctrl.disable_rendering())
 	{
 		execute_nop_draw();
 		rsx::thread::end();
@@ -1737,8 +1738,9 @@ void VKGSRender::end()
 		u32 occlusion_id = m_occlusion_query_pool.find_free_slot();
 		if (occlusion_id == UINT32_MAX)
 		{
-			m_tsc += 100;
-			update(this);
+			// Force flush
+			LOG_ERROR(RSX, "[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
+			ZCULL_control::sync(this);
 
 			occlusion_id = m_occlusion_query_pool.find_free_slot();
 			if (occlusion_id == UINT32_MAX)
@@ -2181,8 +2183,11 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 	open_command_buffer();
 }
 
-void VKGSRender::sync_hint(rsx::FIFO_hint hint, u64 arg)
+void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 {
+	verify(HERE), args;
+	rsx::thread::sync_hint(hint, args);
+
 	// Occlusion test result evaluation is coming up, avoid a hard sync
 	switch (hint)
 	{
@@ -2197,15 +2202,14 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, u64 arg)
 			return;
 
 		// Check if the required report is synced to this CB
-		if (auto occlusion_info = zcull_ctrl->find_query(vm::cast(arg)))
+		auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
+		auto& data = m_occlusion_map[occlusion_info->driver_handle];
+
+		if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
 		{
-			auto& data = m_occlusion_map[occlusion_info->driver_handle];
-			if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
-			{
-				// Confirmed hard sync coming up, post a sync request
-				m_flush_requests.post(false);
-				m_flush_requests.remove_one();
-			}
+			// Confirmed hard sync coming up, post a sync request
+			m_flush_requests.post(false);
+			m_flush_requests.remove_one();
 		}
 
 		break;
@@ -2215,7 +2219,7 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, u64 arg)
 		if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
 			return;
 
-		auto occlusion_info = reinterpret_cast<rsx::reports::occlusion_query_info*>(arg);
+		auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
 		auto& data = m_occlusion_map[occlusion_info->driver_handle];
 
 		if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
@@ -3666,17 +3670,9 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 			{
 				m_flush_requests.clear_pending_flag();
 			}
-		}
 
-		// Fast wait. Avoids heavyweight routines
-		while (!data.command_buffer_to_wait->poke())
-		{
-			_mm_pause();
-
-			if (Emu.IsStopped())
-			{
-				return;
-			}
+			LOG_ERROR(RSX, "[Performance warning] Unexpected ZCULL read caused a hard sync");
+			busy_wait();
 		}
 
 		// Gather data
