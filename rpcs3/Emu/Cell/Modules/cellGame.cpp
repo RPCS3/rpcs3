@@ -470,7 +470,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 {
 	cellGame.warning("cellGameContentPermit(contentInfoPath=*0x%x, usrdirPath=*0x%x)", contentInfoPath, usrdirPath);
 
-	if (!contentInfoPath && !usrdirPath)
+	if (!contentInfoPath || !usrdirPath)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
