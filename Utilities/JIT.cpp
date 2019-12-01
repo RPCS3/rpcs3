@@ -298,7 +298,7 @@ public:
 		{
 			auto ptr = ::mmap(nullptr, max_size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_32BIT, -1, 0);
 			if (ptr != MAP_FAILED)
-				found_segs[num_segs++] = Segment(ptr, u32(max_size));
+				found_segs[num_segs++] = Segment(ptr, static_cast<u32>(max_size));
 			else if (max_size > 0x1000000)
 				max_size -= 0x1000000;
 			else
@@ -314,7 +314,7 @@ public:
 			{
 				for (auto curr_size = max_size; (0x80000000u - curr_size) >= addr; curr_size += 0x1000000)
 				{
-					if (auto ptr = utils::memory_reserve(curr_size, (void*)addr))
+					if (auto ptr = utils::memory_reserve(curr_size, reinterpret_cast<void*>(addr)))
 					{
 						if (max_addr == 0 || max_size < curr_size)
 						{
@@ -331,8 +331,8 @@ public:
 			if (max_addr == 0)
 				break;
 
-			if (auto ptr = utils::memory_reserve(max_size, (void*)max_addr))
-				found_segs[num_segs++] = Segment(ptr, u32(max_size));
+			if (auto ptr = utils::memory_reserve(max_size, reinterpret_cast<void*>(max_addr)))
+				found_segs[num_segs++] = Segment(ptr, static_cast<u32>(max_size));
 
 			start_addr = max_addr + max_size;
 		}
@@ -353,7 +353,7 @@ public:
 
 		if (auto ptr = utils::memory_reserve(DEFAULT_SEGMENT_SIZE))
 		{
-			m_curr.addr = (u8*)ptr;
+			m_curr.addr = static_cast<u8*>(ptr);
 			m_curr.size = DEFAULT_SEGMENT_SIZE;
 			m_curr.used = 0;
 		}
@@ -378,7 +378,7 @@ public:
 		store_curr();
 
 		u32 best_idx = UINT_MAX;
-		for (u32 i = 0, segs_size = (u32)m_segs.size(); i < segs_size; i++)
+		for (u32 i = 0, segs_size = ::size32(m_segs); i < segs_size; i++)
 		{
 			const auto seg_remaining = m_segs[i].remaining();
 			if (seg_remaining < size)
@@ -393,7 +393,7 @@ public:
 			const auto size_to_reserve = (size > DEFAULT_SEGMENT_SIZE) ? ::align(size+4096, 4096) : DEFAULT_SEGMENT_SIZE;
 			if (auto ptr = utils::memory_reserve(size_to_reserve))
 			{
-				best_idx = (u32)m_segs.size();
+				best_idx = ::size32(m_segs);
 				m_segs.emplace_back(ptr, size_to_reserve);
 			}
 			else
@@ -407,17 +407,22 @@ public:
 		return true;
 	}
 
-	std::pair<u64, u32> current_segment() const { return std::make_pair(u64(m_curr.addr), m_curr.size); }
+	std::pair<u64, u32> current_segment() const
+	{
+		return std::make_pair(reinterpret_cast<u64>(m_curr.addr), m_curr.size);
+	}
+
 	std::pair<u64, u32> find_segment(u64 addr) const
 	{
 		for (const auto& seg: m_segs)
 		{
-			if (addr < (u64)seg.addr)
+			const u64 seg_addr = reinterpret_cast<u64>(seg.addr);
+			if (addr < seg_addr)
 				continue;
 
-			const auto end_addr = u64(seg.addr) + seg.size;
+			const auto end_addr = seg_addr + seg.size;
 			if (addr < end_addr)
-				return std::make_pair(u64(seg.addr), seg.size);
+				return std::make_pair(seg_addr, seg.size);
 		}
 
 		return std::make_pair(0, 0);
@@ -438,7 +443,10 @@ public:
 		if (store_curr())
 			m_curr = Segment();
 
-		auto allocated_it = std::remove_if(m_segs.begin(), m_segs.end(), [](const Segment& seg) { return u64(seg.addr + seg.size) > 0x80000000u; });
+		auto allocated_it = std::remove_if(m_segs.begin(), m_segs.end(), [](const Segment& seg)
+		{
+			return reinterpret_cast<u64>(seg.addr + seg.size) > 0x80000000u;
+		});
 		if (allocated_it != m_segs.end())
 		{
 			for (auto it = allocated_it; it != m_segs.end(); ++it)
@@ -475,7 +483,10 @@ private:
 	struct Segment
 	{
 		Segment() {}
-		Segment(void* addr, u32 size) : addr((u8*)addr), size(size) {}
+		Segment(void* addr, u32 size)
+			: addr(static_cast<u8*>(addr))
+			, size(size)
+		{}
 
 		u8* addr = nullptr;
 		u32 size = 0;
@@ -572,12 +583,12 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 			else
 			{
 				LOG_ERROR(GENERAL, "LLVM: Linkage failed: %s", name);
-				addr = (u64)null;
+				addr = reinterpret_cast<u64>(null);
 			}
 		}
 
 		// Verify address for small code model
-		const u64 code_start = u64(m_code_addr);
+		const u64 code_start = reinterpret_cast<u64>(m_code_addr);
 		const s64 addr_diff = addr - code_start;
 		if (addr_diff < INT_MIN || addr_diff > INT_MAX)
 		{
@@ -587,7 +598,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 			// Allocate memory for trampolines
 			if (m_tramps)
 			{
-				const s64 tramps_diff = u64(m_tramps) - code_start;
+				const s64 tramps_diff = reinterpret_cast<u64>(m_tramps) - code_start;
 				if (tramps_diff < INT_MIN || tramps_diff > INT_MAX)
 					m_tramps = nullptr; //previously allocated trampoline section too far away now
 			}
@@ -609,10 +620,10 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 			data[0x6] = 0x48; // MOV rax, imm64 (not executed)
 			data[0x7] = 0xb8;
 			std::memcpy(data.data() + 8, &addr, 8);
-			addr = (u64)&data;
+			addr = reinterpret_cast<u64>(&data);
 
 			// Reset pointer (memory page exhausted)
-			if (((u64)m_tramps % 4096) == 0)
+			if ((reinterpret_cast<u64>(m_tramps) % 4096) == 0)
 			{
 				m_tramps = nullptr;
 			}
@@ -624,9 +635,9 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 	bool needsToReserveAllocationSpace() override { return true; }
 	void reserveAllocationSpace(uintptr_t CodeSize, uint32_t CodeAlign, uintptr_t RODataSize, uint32_t RODataAlign, uintptr_t RWDataSize, uint32_t RWDataAlign) override
 	{
-		const u32 wanted_code_size = ::align(u32(CodeSize), std::min(4096u, CodeAlign));
-		const u32 wanted_rodata_size = ::align(u32(RODataSize), std::min(4096u, RODataAlign));
-		const u32 wanted_rwdata_size = ::align(u32(RWDataSize), std::min(4096u, RWDataAlign));
+		const u32 wanted_code_size = ::align(static_cast<u32>(CodeSize), std::min(4096u, CodeAlign));
+		const u32 wanted_rodata_size = ::align(static_cast<u32>(RODataSize), std::min(4096u, RODataAlign));
+		const u32 wanted_rwdata_size = ::align(static_cast<u32>(RWDataSize), std::min(4096u, RWDataAlign));
 
 		// Lock memory manager
 		std::lock_guard lock(s_mutex);
@@ -638,7 +649,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
 	{
 		void* ptr = nullptr;
-		const u32 wanted_size = ::align(u32(size), 4096);
+		const u32 wanted_size = ::align(static_cast<u32>(size), 4096);
 		{
 			// Lock memory manager
 			std::lock_guard lock(s_mutex);
@@ -653,16 +664,16 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 			return nullptr;
 		}
 		utils::memory_commit(ptr, size, utils::protection::wx);
-		m_code_addr = (u8*)ptr;
+		m_code_addr = static_cast<u8*>(ptr);
 
 		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), ptr, size, align);
-		return (u8*)ptr;
+		return static_cast<u8*>(ptr);
 	}
 
 	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
 	{
 		void* ptr = nullptr;
-		const u32 wanted_size = ::align(u32(size), 4096);
+		const u32 wanted_size = ::align(static_cast<u32>(size), 4096);
 		{
 			// Lock memory manager
 			std::lock_guard lock(s_mutex);
@@ -684,7 +695,7 @@ struct MemoryManager : llvm::RTDyldMemoryManager
 		utils::memory_commit(ptr, size);
 
 		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), ptr, size, align, is_ro ? "ro" : "rw");
-		return (u8*)ptr;
+		return static_cast<u8*>(ptr);
 	}
 
 	bool finalizeMemory(std::string* = nullptr) override
@@ -868,7 +879,7 @@ struct EventListener : llvm::JITEventListener
 
 				// Use current memory segment as a BASE, compute the difference
 				const u64 segment_start = s_alloc.current_segment().first;
-				const u64 code_diff = u64(m_mem.m_code_addr) - segment_start;
+				const u64 code_diff = reinterpret_cast<u64>(m_mem.m_code_addr) - segment_start;
 
 				// Fix RUNTIME_FUNCTION records (.pdata section)
 				for (auto& rf : rfs)

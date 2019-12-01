@@ -155,7 +155,7 @@ public:
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
+		for (u32 p = 0; p < m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -186,7 +186,7 @@ public:
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
+		for (u32 p = 0; p < m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{
@@ -213,7 +213,7 @@ public:
 	{
 		std::lock_guard lock(mutex);
 
-		for (u32 p = 0; p < (u32)m_mice.size(); ++p)
+		for (u32 p = 0; p < m_mice.size(); ++p)
 		{
 			if (m_info.status[p] != CELL_MOUSE_STATUS_CONNECTED)
 			{

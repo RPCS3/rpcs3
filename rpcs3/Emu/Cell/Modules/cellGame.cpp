@@ -572,7 +572,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
-	switch ((s32)cbResult->result)
+	switch (cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 	{

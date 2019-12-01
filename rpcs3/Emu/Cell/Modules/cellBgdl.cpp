@@ -4,8 +4,6 @@
 
 #include "cellBgdl.h"
 
-
-
 LOG_CHANNEL(cellBGDL);
 
 error_code cellBGDLGetInfo(vm::cptr<char> content_id, vm::ptr<CellBGDLInfo> info, s32 num)
@@ -22,7 +20,7 @@ error_code cellBGDLGetInfo2(vm::cptr<char> service_id, vm::ptr<CellBGDLInfo> inf
 
 error_code cellBGDLSetMode(CellBGDLMode mode)
 {
-	cellBGDL.todo("cellBGDLSetMode(mode=%d)", (s32) mode);
+	cellBGDL.todo("cellBGDLSetMode(mode=%d)", +mode);
 	return CELL_OK;
 }
 

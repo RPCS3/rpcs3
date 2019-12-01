@@ -89,14 +89,14 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 
 		fmt::append(dump, "\n\t[%d] t=0x%x, ls=0x%x, size=0x%x, addr=0x%x", i, seg.type, seg.ls, seg.size, seg.addr);
 
-		sha1_update(&sha, (uchar*)&seg.type, sizeof(seg.type));
+		sha1_update(&sha, reinterpret_cast<uchar*>(&seg.type), sizeof(seg.type));
 
 		// Hash big-endian values
 		if (seg.type == SYS_SPU_SEGMENT_TYPE_COPY)
 		{
 			std::memcpy(vm::base(loc + seg.ls), vm::base(seg.addr), seg.size);
-			sha1_update(&sha, (uchar*)&seg.size, sizeof(seg.size));
-			sha1_update(&sha, (uchar*)&seg.ls, sizeof(seg.ls));
+			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.size), sizeof(seg.size));
+			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.ls), sizeof(seg.ls));
 			sha1_update(&sha, vm::_ptr<uchar>(seg.addr), seg.size);
 		}
 		else if (seg.type == SYS_SPU_SEGMENT_TYPE_FILL)
@@ -107,14 +107,14 @@ void sys_spu_image::deploy(u32 loc, sys_spu_segment* segs, u32 nsegs)
 			}
 
 			std::fill_n(vm::_ptr<u32>(loc + seg.ls), seg.size / 4, seg.addr);
-			sha1_update(&sha, (uchar*)&seg.size, sizeof(seg.size));
-			sha1_update(&sha, (uchar*)&seg.ls, sizeof(seg.ls));
-			sha1_update(&sha, (uchar*)&seg.addr, sizeof(seg.addr));
+			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.size), sizeof(seg.size));
+			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.ls), sizeof(seg.ls));
+			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.addr), sizeof(seg.addr));
 		}
 		else if (seg.type == SYS_SPU_SEGMENT_TYPE_INFO)
 		{
 			const be_t<u32> size = seg.size + 0x14; // Workaround
-			sha1_update(&sha, (uchar*)&size, sizeof(size));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&size), sizeof(size));
 		}
 	}
 
@@ -881,9 +881,9 @@ error_code sys_spu_thread_write_ls(ppu_thread& ppu, u32 id, u32 lsa, u64 value, 
 
 	switch (type)
 	{
-	case 1: thread->_ref<u8>(lsa) = (u8)value; break;
-	case 2: thread->_ref<u16>(lsa) = (u16)value; break;
-	case 4: thread->_ref<u32>(lsa) = (u32)value; break;
+	case 1: thread->_ref<u8>(lsa) = static_cast<u8>(value); break;
+	case 2: thread->_ref<u16>(lsa) = static_cast<u16>(value); break;
+	case 4: thread->_ref<u32>(lsa) = static_cast<u32>(value); break;
 	case 8: thread->_ref<u64>(lsa) = value; break;
 	default: ASSUME(0);
 	}
@@ -1235,7 +1235,7 @@ error_code sys_spu_thread_bind_queue(ppu_thread& ppu, u32 id, u32 spuq, u32 spuq
 			continue;
 		}
 
-		if (v.first == spuq_num || 
+		if (v.first == spuq_num ||
 			(!v.second.owner_before(queue) && !queue.owner_before(v.second)))
 		{
 			return CELL_EBUSY;
@@ -1747,7 +1747,7 @@ error_code sys_raw_spu_get_spu_cfg(ppu_thread& ppu, u32 id, vm::ptr<u32> value)
 		return CELL_ESRCH;
 	}
 
-	*value = (u32)thread->snr_config;
+	*value = static_cast<u32>(thread->snr_config);
 
 	return CELL_OK;
 }

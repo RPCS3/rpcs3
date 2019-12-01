@@ -118,8 +118,8 @@ s32 cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDecInfo> 
 	}
 	}
 
-	if ((le_t<u32>&)(buffer[0]) != 0xE0FFD8FF || // Error: Not a valid SOI header
-		(le_t<u32>&)(buffer[6]) != 0x4649464A)   // Error: Not a valid JFIF string
+	if (*reinterpret_cast<le_t<u32>*>(buffer.get()) != 0xE0FFD8FF || // Error: Not a valid SOI header
+		*reinterpret_cast<u32*>(buffer.get() + 6) != "JFIF"_u32)   // Error: Not a valid JFIF string
 	{
 		return CELL_JPGDEC_ERROR_HEADER;
 	}
@@ -202,7 +202,7 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(jpg.get(), (s32)fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(jpg.get(), ::narrow<int>(fileSize), &width, &height, &actual_components, 4),
 			&::free
 		);
 
@@ -210,10 +210,10 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 		return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
 	const bool flip = current_outParam.outputMode == CELL_JPGDEC_BOTTOM_TO_TOP;
-	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
+	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
 	size_t image_size = width * height;
 
-	switch((u32)current_outParam.outputColorSpace)
+	switch(current_outParam.outputColorSpace)
 	{
 	case CELL_JPG_RGB:
 	case CELL_JPG_RGBA:
@@ -245,7 +245,7 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 		{
 			//TODO: Find out if we can't do padding without an extra copy
 			const int linesize = std::min(bytesPerLine, width * nComponents);
-			char *output = (char *) malloc(linesize);
+			const auto output = std::make_unique<char[]>(linesize);
 			for (int i = 0; i < height; i++)
 			{
 				const int dstOffset = i * bytesPerLine;
@@ -257,15 +257,14 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(&data[dstOffset], output, linesize);
+				std::memcpy(&data[dstOffset], output.get(), linesize);
 			}
-			free(output);
 		}
 		else
 		{
-			uint* img = (uint*)new char[image_size];
-			uint* source_current = (uint*)&(image.get()[0]);
-			uint* dest_current = img;
+			const auto img = std::make_unique<uint[]>(image_size);
+			uint* source_current = reinterpret_cast<uint*>(image.get());
+			uint* dest_current = img.get();
 			for (uint i = 0; i < image_size / nComponents; i++)
 			{
 				uint val = *source_current;
@@ -273,8 +272,7 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 				source_current++;
 				dest_current++;
 			}
-			memcpy(data.get_ptr(), img, image_size);
-			delete[] img;
+			std::memcpy(data.get_ptr(), img.get(), image_size);
 		}
 	}
 	break;
@@ -294,7 +292,7 @@ s32 cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data, vm::cp
 	dataOutInfo->status = CELL_JPGDEC_DEC_STATUS_FINISH;
 
 	if(dataCtrlParam->outputBytesPerLine)
-		dataOutInfo->outputLines = (u32)(image_size / dataCtrlParam->outputBytesPerLine);
+		dataOutInfo->outputLines = static_cast<u32>(image_size / dataCtrlParam->outputBytesPerLine);
 
 	return CELL_OK;
 }
@@ -324,7 +322,7 @@ s32 cellJpgDecSetParameter(u32 mainHandle, u32 subHandle, vm::cptr<CellJpgDecInP
 	current_outParam.outputHeight     = current_info.imageHeight;
 	current_outParam.outputColorSpace = inParam->outputColorSpace;
 
-	switch ((u32)current_outParam.outputColorSpace)
+	switch (current_outParam.outputColorSpace)
 	{
 	case CELL_JPG_GRAYSCALE:               current_outParam.outputComponents = 1; break;
 

@@ -351,7 +351,7 @@ public:
 		{
 			fmt::throw_exception("avformat_alloc_context() failed" HERE);
 		}
-		io_buf = (u8*)av_malloc(4096);
+		io_buf = static_cast<u8*>(av_malloc(4096));
 		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
 		if (!fmt->pb)
 		{
@@ -457,7 +457,7 @@ public:
 
 						if (size)
 						{
-							data = (u8*)av_calloc(1, size + AV_INPUT_BUFFER_PADDING_SIZE);
+							data = static_cast<u8*>(av_calloc(1, size + AV_INPUT_BUFFER_PADDING_SIZE));
 							this->size = size + AV_INPUT_BUFFER_PADDING_SIZE;
 						}
 						else
@@ -579,10 +579,10 @@ public:
 						//	frame.pts = ts/* - first_pts*/;
 						//	last_pts = frame.pts;
 						//}
-						last_pts += ((u64)frame.data->nb_samples) * 90000 / frame.data->sample_rate;
+						last_pts += frame.data->nb_samples * 90000ull / frame.data->sample_rate;
 						frame.pts = last_pts;
 
-						s32 nbps = av_get_bytes_per_sample((AVSampleFormat)frame.data->format);
+						s32 nbps = av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame.data->format));
 						switch (frame.data->format)
 						{
 						case AV_SAMPLE_FMT_FLTP: break;
@@ -621,7 +621,7 @@ public:
 
 			default:
 			{
-				fmt::throw_exception("Unknown task(%d)" HERE, (u32)task.type);
+				fmt::throw_exception("Unknown task(%d)" HERE, +task.type);
 			}
 			}
 		}
@@ -632,7 +632,7 @@ public:
 
 int adecRead(void* opaque, u8* buf, int buf_size)
 {
-	AudioDecoder& adec = *(AudioDecoder*)opaque;
+	AudioDecoder& adec = *static_cast<AudioDecoder*>(opaque);
 
 	int res = 0;
 
@@ -642,7 +642,7 @@ next:
 		u8 code1 = vm::read8(adec.reader.addr + 2);
 		u8 code2 = vm::read8(adec.reader.addr + 3);
 		adec.ch_cfg = (code1 >> 2) & 0x7;
-		adec.frame_size = ((((u32)code1 & 0x3) << 8) | (u32)code2) * 8 + 8;
+		adec.frame_size = (((u32{code1} & 0x3) << 8) | code2) * 8 + 8;
 		adec.sample_rate = at3freq[code1 >> 5];
 
 		adec.reader.size -= 8;
@@ -668,7 +668,7 @@ next:
 		adec.reader.init = true;
 	}
 
-	if (adec.reader.size < (u32)buf_size /*&& !adec.just_started*/)
+	if (adec.reader.size < static_cast<u32>(buf_size) /*&& !adec.just_started*/)
 	{
 		AdecTask task;
 		if (!adec.job.peek(task, 0, &adec.is_closed))
@@ -707,7 +707,7 @@ next:
 
 		default:
 		{
-			cellAdec.error("adecRawRead(): unknown task (%d)", (u32)task.type);
+			cellAdec.error("adecRawRead(): unknown task (%d)", +task.type);
 			Emu.Pause();
 			return -1;
 		}
@@ -716,7 +716,7 @@ next:
 		goto next;
 	}
 	// TODO:: Syphurith: I don't know whether we should keep this else-if now. Since the if condition is same with this one.
-	else if (adec.reader.size < (u32)buf_size)
+	else if (adec.reader.size < static_cast<u32>(buf_size))
 	{
 		buf_size = adec.reader.size;
 	}
@@ -864,8 +864,10 @@ error_code cellAdecStartSeq(u32 handle, u32 param)
 		task.at3p.output = atx->bw_pcm;
 		task.at3p.downmix = atx->downmix_flag;
 		task.at3p.ats_header = atx->au_includes_ats_hdr_flg;
-		cellAdec.todo("*** CellAdecParamAtracX: sr=%d, ch_cfg=%d(%d), frame_size=0x%x, extra=0x%x, output=%d, downmix=%d, ats_header=%d",
-			task.at3p.sample_rate, task.at3p.channel_config, task.at3p.channels, task.at3p.frame_size, (u32&)task.at3p.extra_config, task.at3p.output, task.at3p.downmix, task.at3p.ats_header);
+		cellAdec.todo("*** CellAdecParamAtracX: sr=%d, ch_cfg=%d(%d), frame_size=0x%x, extra=%u:%u:%u:%u, output=%d, downmix=%d, ats_header=%d",
+			task.at3p.sample_rate, task.at3p.channel_config, task.at3p.channels, task.at3p.frame_size,
+			task.at3p.extra_config[0], task.at3p.extra_config[1], task.at3p.extra_config[2], task.at3p.extra_config[3],
+			task.at3p.output, task.at3p.downmix, task.at3p.ats_header);
 		break;
 	}
 	case CELL_ADEC_TYPE_MP3:
@@ -917,7 +919,7 @@ error_code cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	task.au.auInfo_addr = auInfo.addr();
 	task.au.addr = auInfo->startAddr;
 	task.au.size = auInfo->size;
-	task.au.pts = ((u64)auInfo->pts.upper << 32) | (u64)auInfo->pts.lower;
+	task.au.pts = (u64{auInfo->pts.upper} << 32) | u64{auInfo->pts.lower};
 	task.au.userdata = auInfo->userData;
 
 	//cellAdec.notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
@@ -954,7 +956,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		// reverse byte order:
 		if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 1)
 		{
-			float* in_f = (float*)frame->extended_data[0];
+			float* in_f = reinterpret_cast<float*>(frame->extended_data[0]);
 			for (u32 i = 0; i < af.size / 4; i++)
 			{
 				outBuffer[i] = in_f[i];
@@ -963,8 +965,8 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 2)
 		{
 			float* in_f[2];
-			in_f[0] = (float*)frame->extended_data[0];
-			in_f[1] = (float*)frame->extended_data[1];
+			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
+			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
 			for (u32 i = 0; i < af.size / 8; i++)
 			{
 				outBuffer[i * 2 + 0] = in_f[0][i];
@@ -974,12 +976,12 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 6)
 		{
 			float* in_f[6];
-			in_f[0] = (float*)frame->extended_data[0];
-			in_f[1] = (float*)frame->extended_data[1];
-			in_f[2] = (float*)frame->extended_data[2];
-			in_f[3] = (float*)frame->extended_data[3];
-			in_f[4] = (float*)frame->extended_data[4];
-			in_f[5] = (float*)frame->extended_data[5];
+			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
+			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
+			in_f[2] = reinterpret_cast<float*>(frame->extended_data[2]);
+			in_f[3] = reinterpret_cast<float*>(frame->extended_data[3]);
+			in_f[4] = reinterpret_cast<float*>(frame->extended_data[4]);
+			in_f[5] = reinterpret_cast<float*>(frame->extended_data[5]);
 			for (u32 i = 0; i < af.size / 24; i++)
 			{
 				outBuffer[i * 6 + 0] = in_f[0][i];
@@ -993,14 +995,14 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 8)
 		{
 			float* in_f[8];
-			in_f[0] = (float*)frame->extended_data[0];
-			in_f[1] = (float*)frame->extended_data[1];
-			in_f[2] = (float*)frame->extended_data[2];
-			in_f[3] = (float*)frame->extended_data[3];
-			in_f[4] = (float*)frame->extended_data[4];
-			in_f[5] = (float*)frame->extended_data[5];
-			in_f[6] = (float*)frame->extended_data[6];
-			in_f[7] = (float*)frame->extended_data[7];
+			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
+			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
+			in_f[2] = reinterpret_cast<float*>(frame->extended_data[2]);
+			in_f[3] = reinterpret_cast<float*>(frame->extended_data[3]);
+			in_f[4] = reinterpret_cast<float*>(frame->extended_data[4]);
+			in_f[5] = reinterpret_cast<float*>(frame->extended_data[5]);
+			in_f[6] = reinterpret_cast<float*>(frame->extended_data[6]);
+			in_f[7] = reinterpret_cast<float*>(frame->extended_data[7]);
 			for (u32 i = 0; i < af.size / 24; i++)
 			{
 				outBuffer[i * 8 + 0] = in_f[0][i];
@@ -1015,21 +1017,21 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		}
 		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->channels == 1)
 		{
-			s16* in_i = (s16*)frame->extended_data[0];
+			s16* in_i = reinterpret_cast<s16*>(frame->extended_data[0]);
 			for (u32 i = 0; i < af.size / 2; i++)
 			{
-				outBuffer[i] = (float)in_i[i] / 0x8000;
+				outBuffer[i] = in_i[i] / 32768.f;
 			}
 		}
 		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->channels == 2)
 		{
 			s16* in_i[2];
-			in_i[0] = (s16*)frame->extended_data[0];
-			in_i[1] = (s16*)frame->extended_data[1];
+			in_i[0] = reinterpret_cast<s16*>(frame->extended_data[0]);
+			in_i[1] = reinterpret_cast<s16*>(frame->extended_data[1]);
 			for (u32 i = 0; i < af.size / 4; i++)
 			{
-				outBuffer[i * 2 + 0] = (float)in_i[0][i] / 0x8000;
-				outBuffer[i * 2 + 1] = (float)in_i[1][i] / 0x8000;
+				outBuffer[i * 2 + 0] = in_i[0][i] / 32768.f;
+				outBuffer[i * 2 + 1] = in_i[1][i] / 32768.f;
 			}
 		}
 		else
@@ -1074,8 +1076,8 @@ error_code cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 	pcm->startAddr = 0x00000312; // invalid address (no output)
 	pcm->size = af.size;
 	pcm->status = CELL_OK;
-	pcm->auInfo.pts.lower = (u32)(af.pts);
-	pcm->auInfo.pts.upper = (u32)(af.pts >> 32);
+	pcm->auInfo.pts.lower = static_cast<u32>(af.pts);
+	pcm->auInfo.pts.upper = static_cast<u32>(af.pts >> 32);
 	pcm->auInfo.size = af.auSize;
 	pcm->auInfo.startAddr = af.auAddr;
 	pcm->auInfo.userData = af.userdata;

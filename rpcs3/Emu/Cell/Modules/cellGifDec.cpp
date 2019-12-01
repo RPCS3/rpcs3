@@ -105,8 +105,8 @@ s32 cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PInfo inf
 	}
 	}
 
-	if (*(be_t<u32>*)buffer != 0x47494638 ||
-		(*(le_t<u16>*)(buffer + 4) != 0x6139 && *(le_t<u16>*)(buffer + 4) != 0x6137)) // Error: The first 6 bytes are not a valid GIF signature
+	if (*reinterpret_cast<be_t<u32>*>(buffer) != 0x47494638 ||
+		(*reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6139 && *reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6137)) // Error: The first 6 bytes are not a valid GIF signature
 	{
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}
@@ -143,7 +143,7 @@ s32 cellGifDecSetParameter(PMainHandle mainHandle, PSubHandle subHandle, PInPara
 	current_outParam.outputWidth      = current_info.SWidth;
 	current_outParam.outputHeight     = current_info.SHeight;
 	current_outParam.outputColorSpace = inParam->colorSpace;
-	switch ((u32)current_outParam.outputColorSpace)
+	switch (current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
 	case CELL_GIFDEC_ARGB: current_outParam.outputComponents = 4; break;
@@ -169,8 +169,8 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 
 	dataOutInfo->status = CELL_GIFDEC_DEC_STATUS_STOP;
 
-	const u32& fd = subHandle->fd;
-	const u64& fileSize = subHandle->fileSize;
+	const u32 fd = subHandle->fd;
+	const u64 fileSize = subHandle->fileSize;
 	const CellGifDecOutParam& current_outParam = subHandle->outParam;
 
 	//Copy the GIF file to a buffer
@@ -195,18 +195,18 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 	int width, height, actual_components;
 	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
 		(
-			stbi_load_from_memory(gif.get(), (s32)fileSize, &width, &height, &actual_components, 4),
+			stbi_load_from_memory(gif.get(), ::narrow<int>(fileSize), &width, &height, &actual_components, 4),
 			&::free
 		);
 
 	if (!image)
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
 
-	const int bytesPerLine = (u32)dataCtrlParam->outputBytesPerLine;
+	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
 	const char nComponents = 4;
 	uint image_size = width * height * nComponents;
 
-	switch((u32)current_outParam.outputColorSpace)
+	switch(current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
 	{
@@ -233,7 +233,7 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 		{
 			//TODO: find out if we can't do padding without an extra copy
 			const int linesize = std::min(bytesPerLine, width * nComponents);
-			char *output = (char *) malloc(linesize);
+			const auto output = std::make_unique<char[]>(linesize);
 			for (int i = 0; i < height; i++)
 			{
 				const int dstOffset = i * bytesPerLine;
@@ -245,15 +245,14 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 					output[j + 2] = image.get()[srcOffset + j + 1];
 					output[j + 3] = image.get()[srcOffset + j + 2];
 				}
-				memcpy(&data[dstOffset], output, linesize);
+				std::memcpy(&data[dstOffset], output.get(), linesize);
 			}
-			free(output);
 		}
 		else
 		{
-			uint* img = (uint*)new char[image_size];
-			uint* source_current = (uint*)&(image.get()[0]);
-			uint* dest_current = img;
+			const auto img = std::make_unique<uint[]>(image_size);
+			uint* source_current = reinterpret_cast<uint*>(image.get());
+			uint* dest_current = img.get();
 			for (uint i = 0; i < image_size / nComponents; i++)
 			{
 				uint val = *source_current;
@@ -261,8 +260,7 @@ s32 cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm::ptr<u
 				source_current++;
 				dest_current++;
 			}
-			memcpy(data.get_ptr(), img, image_size);
-			delete[] img;
+			std::memcpy(data.get_ptr(), img.get(), image_size);
 		}
 	}
 	break;
