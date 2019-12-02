@@ -111,13 +111,13 @@ void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16
 
 	libusb_fill_control_setup(transfer->setup_buf.data(), bmRequestType, bRequest, wValue, wIndex, buf_size);
 	memcpy(transfer->setup_buf.data() + 8, buf, buf_size);
-	libusb_fill_control_transfer(transfer->transfer, lusb_handle, transfer->setup_buf.data(), callback_transfer, (void*)transfer, 0);
+	libusb_fill_control_transfer(transfer->transfer, lusb_handle, transfer->setup_buf.data(), callback_transfer, transfer, 0);
 	libusb_submit_transfer(transfer->transfer);
 }
 
 void usb_device_passthrough::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
-	libusb_fill_interrupt_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, (void*)transfer, 0);
+	libusb_fill_interrupt_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, transfer, 0);
 	libusb_submit_transfer(transfer->transfer);
 }
 
@@ -125,7 +125,7 @@ void usb_device_passthrough::isochronous_transfer(UsbTransfer* transfer)
 {
 	// TODO actual endpoint
 	// TODO actual size?
-	libusb_fill_iso_transfer(transfer->transfer, lusb_handle, 0x81, (u8*)transfer->iso_request.buf.get_ptr(), 0xFFFF, transfer->iso_request.num_packets, callback_transfer, (void*)transfer, 0);
+	libusb_fill_iso_transfer(transfer->transfer, lusb_handle, 0x81, static_cast<u8*>(transfer->iso_request.buf.get_ptr()), 0xFFFF, transfer->iso_request.num_packets, callback_transfer, transfer, 0);
 
 	for (u32 index = 0; index < transfer->iso_request.num_packets; index++)
 	{
@@ -158,7 +158,7 @@ s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 max_size
 	{
 		if (index < strings.size())
 		{
-			u8 string_len = (u8)strings[index].size();
+			u8 string_len = ::narrow<u8>(strings[index].size());
 			ptr[0]        = (string_len * 2) + 2;
 			ptr[1]        = USB_DESCRIPTOR_STRING;
 			for (u32 i = 0; i < string_len; i++)
@@ -166,7 +166,7 @@ s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 max_size
 				ptr[2 + (i * 2)] = strings[index].data()[i];
 				ptr[3 + (i * 2)] = 0;
 			}
-			return (s32)ptr[0];
+			return ptr[0];
 		}
 	}
 	else

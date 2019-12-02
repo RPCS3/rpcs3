@@ -600,7 +600,7 @@ bool spu_interpreter::ROTQBYBI(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(32) const __m128i buf[2]{a, a};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (16 - (spu.gpr[op.rb]._u32[3] >> 3 & 0xf))));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (16 - (spu.gpr[op.rb]._u32[3] >> 3 & 0xf))));
 	return true;
 }
 
@@ -608,7 +608,7 @@ bool spu_interpreter::ROTQMBYBI(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - (spu.gpr[op.rb]._u32[3] >> 3)) & 0x1f)));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + ((0 - (spu.gpr[op.rb]._u32[3] >> 3)) & 0x1f)));
 	return true;
 }
 
@@ -616,7 +616,7 @@ bool spu_interpreter::SHLQBYBI(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (spu.gpr[op.rb]._u32[3] >> 3 & 0x1f))));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (32 - (spu.gpr[op.rb]._u32[3] >> 3 & 0x1f))));
 	return true;
 }
 
@@ -700,7 +700,7 @@ bool spu_interpreter::ROTQBY(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(32) const __m128i buf[2]{a, a};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (16 - (spu.gpr[op.rb]._u32[3] & 0xf))));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (16 - (spu.gpr[op.rb]._u32[3] & 0xf))));
 	return true;
 }
 
@@ -708,7 +708,7 @@ bool spu_interpreter::ROTQMBY(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - spu.gpr[op.rb]._u32[3]) & 0x1f)));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + ((0 - spu.gpr[op.rb]._u32[3]) & 0x1f)));
 	return true;
 }
 
@@ -716,7 +716,7 @@ bool spu_interpreter::SHLQBY(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (spu.gpr[op.rb]._u32[3] & 0x1f))));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (32 - (spu.gpr[op.rb]._u32[3] & 0x1f))));
 	return true;
 }
 
@@ -806,7 +806,7 @@ bool spu_interpreter::ROTQBYI(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(32) const __m128i buf[2]{a, a};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (16 - (op.i7 & 0xf))));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (16 - (op.i7 & 0xf))));
 	return true;
 }
 
@@ -814,7 +814,7 @@ bool spu_interpreter::ROTQMBYI(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{a, _mm_setzero_si128(), _mm_setzero_si128()};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + ((0 - op.i7) & 0x1f)));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + ((0 - op.i7) & 0x1f)));
 	return true;
 }
 
@@ -822,7 +822,7 @@ bool spu_interpreter::SHLQBYI(spu_thread& spu, spu_opcode_t op)
 {
 	const auto a = spu.gpr[op.ra].vi;
 	alignas(64) const __m128i buf[3]{_mm_setzero_si128(), _mm_setzero_si128(), a};
-	spu.gpr[op.rt].vi = _mm_loadu_si128((__m128i*)((u8*)buf + (32 - (op.i7 & 0x1f))));
+	spu.gpr[op.rt].vi = _mm_loadu_si128(reinterpret_cast<const __m128i*>(reinterpret_cast<const u8*>(buf) + (32 - (op.i7 & 0x1f))));
 	return true;
 }
 
@@ -1172,7 +1172,7 @@ bool spu_interpreter::BGX(spu_thread& spu, spu_opcode_t op)
 {
 	for (s32 i = 0; i < 4; i++)
 	{
-		const s64 result = (u64)spu.gpr[op.rb]._u32[i] - (u64)spu.gpr[op.ra]._u32[i] - (u64)(1 - (spu.gpr[op.rt]._u32[i] & 1));
+		const s64 result = u64{spu.gpr[op.rb]._u32[i]} - spu.gpr[op.ra]._u32[i] - (1 - (spu.gpr[op.rt]._u32[i] & 1));
 		spu.gpr[op.rt]._u32[i] = result >= 0;
 	}
 	return true;
@@ -1692,7 +1692,7 @@ static bool SHUFB_(spu_thread& spu, spu_opcode_t op)
 	// Select bytes
 	for (int i = 0; i < 16; i++)
 	{
-		res._u8[i] = ((u8*)+ab)[x._u8[i]];
+		res._u8[i] = reinterpret_cast<u8*>(ab)[x._u8[i]];
 	}
 
 	// Select special values
@@ -1956,7 +1956,7 @@ bool spu_interpreter_precise::FCGT(spu_thread& spu, spu_opcode_t op)
 		if (a_zero)
 			pass = b >= 0x80800000;
 		else if (b_zero)
-			pass = (s32)a >= 0x00800000;
+			pass = static_cast<s32>(a) >= 0x00800000;
 		else if (a >= 0x80000000)
 			pass = (b >= 0x80000000 && a < b);
 		else
@@ -2307,7 +2307,7 @@ bool spu_interpreter_precise::FESD(spu_thread& spu, spu_opcode_t op)
 		}
 		else
 		{
-			spu.gpr[op.rt]._d[i] = (double)a;
+			spu.gpr[op.rt]._d[i] = a;
 		}
 	}
 	return true;
@@ -2329,7 +2329,7 @@ bool spu_interpreter_precise::FRDS(spu_thread& spu, spu_opcode_t op)
 		else
 		{
 			feclearexcept(FE_ALL_EXCEPT);
-			spu.gpr[op.rt]._f[i * 2 + 1] = (float)a;
+			spu.gpr[op.rt]._f[i * 2 + 1] = static_cast<float>(a);
 			const u32 e = _mm_getcsr();
 			if (e & _MM_EXCEPT_OVERFLOW)
 				spu.fpscr.setDoublePrecisionExceptionFlags(i, FPSCR_DOVF);
@@ -2405,7 +2405,7 @@ bool spu_interpreter_precise::CFLTS(spu_thread& spu, spu_opcode_t op)
 		else if (scaled < -2147483648.0f)
 			result = 0x80000000;
 		else
-			result = (s32)scaled;
+			result = static_cast<s32>(scaled);
 		spu.gpr[op.rt]._s32[i] = result;
 	}
 	return true;
@@ -2428,7 +2428,7 @@ bool spu_interpreter_precise::CFLTU(spu_thread& spu, spu_opcode_t op)
 		else if (scaled < 0.0f)
 			result = 0;
 		else
-			result = (u32)scaled;
+			result = static_cast<u32>(scaled);
 		spu.gpr[op.rt]._u32[i] = result;
 	}
 	return true;
@@ -2441,7 +2441,7 @@ bool spu_interpreter_precise::CSFLT(spu_thread& spu, spu_opcode_t op)
 	for (int i = 0; i < 4; i++)
 	{
 		const s32 a = spu.gpr[op.ra]._s32[i];
-		spu.gpr[op.rt]._f[i] = (float)a;
+		spu.gpr[op.rt]._f[i] = static_cast<float>(a);
 
 		u32 exp = ((spu.gpr[op.rt]._u32[i] >> 23) & 0xff) - scale;
 
@@ -2465,7 +2465,7 @@ bool spu_interpreter_precise::CUFLT(spu_thread& spu, spu_opcode_t op)
 	for (int i = 0; i < 4; i++)
 	{
 		const u32 a = spu.gpr[op.ra]._u32[i];
-		spu.gpr[op.rt]._f[i] = (float)a;
+		spu.gpr[op.rt]._f[i] = static_cast<float>(a);
 
 		u32 exp = ((spu.gpr[op.rt]._u32[i] >> 23) & 0xff) - scale;
 

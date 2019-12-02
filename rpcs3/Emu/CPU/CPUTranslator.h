@@ -2753,7 +2753,7 @@ public:
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef((const u8*)mask._bytes, 16));
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
 				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, zeros, result.value);
 				return result;

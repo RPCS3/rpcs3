@@ -574,7 +574,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	// Note: signed check unlike the usual unsigned check
-	if ((s32)g_ps3_process_info.sdk_ver > 0x1FFFFF)
+	if (static_cast<s32>(g_ps3_process_info.sdk_ver) > 0x1FFFFF)
 	{
 		// make sure reserved bits are 0
 		for (int i = 0; i < 6; i++)

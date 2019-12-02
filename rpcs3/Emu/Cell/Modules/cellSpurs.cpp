@@ -168,7 +168,7 @@ namespace _spurs
 namespace _spurs
 {
 	// Add workload
-	s32 add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, const u8 priorityTable[], u32 minContention, u32 maxContention, vm::cptr<char> nameClass, vm::cptr<char> nameInstance, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> hookArg);
+	s32 add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, const u8(&priorityTable)[8], u32 minContention, u32 maxContention, vm::cptr<char> nameClass, vm::cptr<char> nameInstance, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> hookArg);
 }
 
 //s32 _cellSpursWorkloadAttributeInitialize(vm::ptr<CellSpursWorkloadAttribute> attr, u32 revision, u32 sdkVersion, vm::cptr<void> pm, u32 size, u64 data, vm::cptr<u8[8]> priority, u32 minCnt, u32 maxCnt);
@@ -506,13 +506,13 @@ void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			for (u32 i = 0; i < 16; i++)
 			{
 				if (spurs->wklState1[i] == SPURS_WKL_STATE_RUNNABLE &&
-					*((u64*)spurs->wklInfo1[i].priority) != 0 &&
+					std::bit_cast<u64>(spurs->wklInfo1[i].priority) != 0 &&
 					spurs->wklMaxContention[i] & 0x0F)
 				{
 					if (spurs->wklReadyCount1[i] ||
 						spurs->wklSignal1.load() & (0x8000u >> i) ||
 						(spurs->wklFlag.flag.load() == 0 &&
-							spurs->wklFlagReceiver == (u8)i))
+							spurs->wklFlagReceiver == static_cast<u8>(i)))
 					{
 						foundRunnableWorkload = true;
 						break;
@@ -525,13 +525,13 @@ void _spurs::handler_wait_ready(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 				for (u32 i = 0; i < 16; i++)
 				{
 					if (spurs->wklState2[i] == SPURS_WKL_STATE_RUNNABLE &&
-						*((u64*)spurs->wklInfo2[i].priority) != 0 &&
+						std::bit_cast<u64>(spurs->wklInfo2[i].priority) != 0 &&
 						spurs->wklMaxContention[i] & 0xF0)
 					{
 						if (spurs->wklIdleSpuCountOrReadyCount2[i] ||
 							spurs->wklSignal2.load() & (0x8000u >> i) ||
 							(spurs->wklFlag.flag.load() == 0 &&
-								spurs->wklFlagReceiver == (u8)i + 0x10))
+								spurs->wklFlagReceiver == static_cast<u8>(i) + 0x10))
 						{
 							foundRunnableWorkload = true;
 							break;
@@ -642,7 +642,7 @@ s32 _spurs::wakeup_shutdown_completion_waiter(ppu_thread& ppu, vm::ptr<CellSpurs
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
 
-	if (wid >= (u32)(spurs->flags1 & SF1_32_WORKLOADS ? CELL_SPURS_MAX_WORKLOAD2 : CELL_SPURS_MAX_WORKLOAD))
+	if (wid >= (spurs->flags1 & SF1_32_WORKLOADS ? CELL_SPURS_MAX_WORKLOAD2 : CELL_SPURS_MAX_WORKLOAD))
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
@@ -676,7 +676,7 @@ s32 _spurs::wakeup_shutdown_completion_waiter(ppu_thread& ppu, vm::ptr<CellSpurs
 	if (!wklF->hook || wklEvent->load() & 0x10)
 	{
 		verify(HERE), (wklF->x28 == 2);
-		rc = sys_semaphore_post(ppu, (u32)wklF->sem, 1);
+		rc = sys_semaphore_post(ppu, static_cast<u32>(wklF->sem), 1);
 	}
 
 	return rc;
@@ -714,11 +714,11 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 			for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 			{
-				sys_semaphore_post(ppu, (u32)spurs->wklF1[i].sem, 1);
+				sys_semaphore_post(ppu, static_cast<u32>(spurs->wklF1[i].sem), 1);
 
 				if (spurs->flags1 & SF1_32_WORKLOADS)
 				{
-					sys_semaphore_post(ppu, (u32)spurs->wklF2[i].sem, 1);
+					sys_semaphore_post(ppu, static_cast<u32>(spurs->wklF2[i].sem), 1);
 				}
 			}
 		}
@@ -732,7 +732,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			}
 			else if (data0 < 1)
 			{
-				const u32 shutdownMask = (u32)event_data3;
+				const u32 shutdownMask = static_cast<u32>(event_data3);
 
 				for (u32 wid = 0; wid < CELL_SPURS_MAX_WORKLOAD; wid++)
 				{
@@ -749,7 +749,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 			}
 			else if (data0 == 2)
 			{
-				CHECK_SUCCESS(sys_semaphore_post(ppu, (u32)spurs->semPrv, 1));
+				CHECK_SUCCESS(sys_semaphore_post(ppu, static_cast<u32>(spurs->semPrv), 1));
 			}
 			else if (data0 == 3)
 			{
@@ -887,7 +887,7 @@ s32 _spurs::stop_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	if (sys_ppu_thread_join(ppu, (u32)spurs->ppu1, vm::var<u64>{}) != CELL_OK)
+	if (sys_ppu_thread_join(ppu, static_cast<u32>(spurs->ppu1), vm::var<u64>{}) != CELL_OK)
 	{
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
@@ -918,7 +918,7 @@ s32 _spurs::join_handler_thread(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 		return CELL_SPURS_CORE_ERROR_STAT;
 	}
 
-	CHECK_SUCCESS(sys_ppu_thread_join(ppu, (u32)spurs->ppu0, vm::var<u64>{}));
+	CHECK_SUCCESS(sys_ppu_thread_join(ppu, static_cast<u32>(spurs->ppu0), vm::var<u64>{}));
 
 	spurs->ppu0 = 0xFFFFFFFF;
 	return CELL_OK;
@@ -987,7 +987,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	spurs->ppu0       = 0xffffffffull;
 	spurs->ppu1       = 0xffffffffull;
 	spurs->flags      = flags;
-	spurs->prefixSize = (u8)prefixSize;
+	spurs->prefixSize = static_cast<u8>(prefixSize);
 	std::memcpy(spurs->prefix, prefix.get_ptr(), prefixSize);
 
 	if (!isSecond)
@@ -1063,7 +1063,7 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	std::strcat(spuTgName.get_ptr(), "CellSpursKernelGroup");
 
 	spuTgAttr->name  = spuTgName;
-	spuTgAttr->nsize = (u32)strlen(spuTgAttr->name.get_ptr()) + 1;
+	spuTgAttr->nsize = static_cast<u32>(std::strlen(spuTgAttr->name.get_ptr())) + 1;
 	spuTgAttr->type  = SYS_SPU_THREAD_GROUP_TYPE_NORMAL;
 
 	if (spurs->flags & SAF_UNKNOWN_FLAG_0)
@@ -1102,15 +1102,15 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	std::strcat(spuThName.get_ptr(), "CellSpursKernel");
 
 	spuThAttr->name                    = spuThName;
-	spuThAttr->name_len                = (u32)strlen(spuThName.get_ptr()) + 2;
+	spuThAttr->name_len                = static_cast<u32>(std::strlen(spuThName.get_ptr())) + 2;
 	spuThAttr->option                  = SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE;
 	spuThName[spuThAttr->name_len - 1] = '\0';
 
 	for (s32 num = 0; num < nSpus; num++)
 	{
 		spuThName[spuThAttr->name_len - 2] = '0' + num;
-		spuThArgs->arg1                    = (u64)num << 32;
-		spuThArgs->arg2                    = (u64)spurs.addr();
+		spuThArgs->arg1                    = static_cast<u64>(num) << 32;
+		spuThArgs->arg2                    = spurs.addr();
 
 		if (s32 rc = sys_spu_thread_initialize(ppu, spurs.ptr(&CellSpurs::spus, num), spurs->spuTG, num, spurs.ptr(&CellSpurs::spuImg), spuThAttr, spuThArgs))
 		{
@@ -1469,7 +1469,7 @@ s32 cellSpursAttributeEnableSystemWorkload(vm::ptr<CellSpursAttribute> attr, vm:
 			}
 
 			attr->flags |= SAF_SYSTEM_WORKLOAD_ENABLED; // set flag
-			*(u64*)attr->swlPriority = *(u64*)*priority; // copy system workload priorities
+			std::memcpy(attr->swlPriority, priority.get_ptr(), 8);
 
 			u32 isPreem = 0; // generate mask from isPreemptible values
 			for (u32 j = 0; j < nSpus; j++)
@@ -1633,7 +1633,7 @@ s32 cellSpursSetMaxContention(vm::ptr<CellSpurs> spurs, u32 wid, u32 maxContenti
 }
 
 /// Set the priority of a workload on each SPU
-s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8> priorities)
+s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8[8]> priorities)
 {
 	cellSpurs.warning("cellSpursSetPriorities(spurs=*0x%x, wid=%d, priorities=*0x%x)", spurs, wid, priorities);
 
@@ -1667,20 +1667,16 @@ s32 cellSpursSetPriorities(vm::ptr<CellSpurs> spurs, u32 wid, vm::cptr<u8> prior
 		// TODO: Implement this
 	}
 
-	u64 prio = 0;
-	for (s32 i = 0; i < CELL_SPURS_MAX_SPU; i++)
-	{
-		if (priorities[i] >= CELL_SPURS_MAX_PRIORITY)
-		{
-			return CELL_SPURS_CORE_ERROR_INVAL;
-		}
+	const u64 prio = std::bit_cast<u64>(*priorities);
 
-		prio |=  priorities[i];
-		prio <<= 8;
+	// Test if any of the value >= CELL_SPURS_MAX_PRIORITY
+	if (prio & 0xf0f0f0f0f0f0f0f0)
+	{
+		return CELL_SPURS_CORE_ERROR_INVAL;
 	}
 
 	const auto wklInfo = wid < CELL_SPURS_MAX_WORKLOAD ? &spurs->wklInfo1[wid] : &spurs->wklInfo2[wid];
-	*((be_t<u64>*)wklInfo->priority) = prio;
+	std::memcpy(wklInfo->priority, &prio, 8);
 
 	spurs->sysSrvMsgUpdateWorkload = 0xff;
 	spurs->sysSrvMessage = 0xff;
@@ -1831,7 +1827,7 @@ void _spurs::trace_status_update(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 	if (init)
 	{
 		spurs->sysSrvMessage = 0xff;
-		CHECK_SUCCESS(sys_semaphore_wait(ppu, (u32)spurs->semPrv, 0));
+		CHECK_SUCCESS(sys_semaphore_wait(ppu, static_cast<u32>(spurs->semPrv), 0));
 	}
 }
 
@@ -2045,18 +2041,22 @@ s32 _cellSpursWorkloadAttributeInitialize(vm::ptr<CellSpursWorkloadAttribute> at
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
 
-	if (minCnt == 0 || *(u64*)*priority & 0xf0f0f0f0f0f0f0f0ull) // check if some priority > 15
+	// Load packed priorities (endian-agnostic)
+	const u64 prio = std::bit_cast<u64>(*priority);
+
+	// check if some priority > 15
+	if (minCnt == 0 || prio & 0xf0f0f0f0f0f0f0f0)
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
 
-	memset(attr.get_ptr(), 0, sizeof(CellSpursWorkloadAttribute));
+	std::memset(attr.get_ptr(), 0, sizeof(CellSpursWorkloadAttribute));
 	attr->revision = revision;
 	attr->sdkVersion = sdkVersion;
 	attr->pm = pm;
 	attr->size = size;
 	attr->data = data;
-	*(u64*)attr->priority = *(u64*)*priority;
+	std::memcpy(attr->priority, &prio, 8);
 	attr->minContention = minCnt;
 	attr->maxContention = maxCnt;
 	return CELL_OK;
@@ -2102,7 +2102,7 @@ s32 cellSpursWorkloadAttributeSetShutdownCompletionEventHook(vm::ptr<CellSpursWo
 	return CELL_OK;
 }
 
-s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, const u8 priorityTable[], u32 minContention, u32 maxContention, vm::cptr<char> nameClass, vm::cptr<char> nameInstance, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> hookArg)
+s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<void> pm, u32 size, u64 data, const u8(&priorityTable)[8], u32 minContention, u32 maxContention, vm::cptr<char> nameClass, vm::cptr<char> nameInstance, vm::ptr<CellSpursShutdownCompletionEventHook> hook, vm::ptr<void> hookArg)
 {
 	if (!spurs || !wid || !pm)
 	{
@@ -2114,7 +2114,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 		return CELL_SPURS_POLICY_MODULE_ERROR_ALIGN;
 	}
 
-	if (minContention == 0 || *(u64*)priorityTable & 0xf0f0f0f0f0f0f0f0ull) // check if some priority > 15
+	if (minContention == 0 || std::bit_cast<u64>(priorityTable) & 0xf0f0f0f0f0f0f0f0ull) // check if some priority > 15
 	{
 		return CELL_SPURS_POLICY_MODULE_ERROR_INVAL;
 	}
@@ -2128,10 +2128,10 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 	const u32 wmax = spurs->flags1 & SF1_32_WORKLOADS ? 0x20u : 0x10u; // TODO: check if can be changed
 	spurs->wklEnabled.atomic_op([spurs, wmax, &wnum](be_t<u32>& value)
 	{
-		wnum = utils::cntlz32(~(u32)value); // found empty position
+		wnum = utils::cntlz32(~value); // found empty position
 		if (wnum < wmax)
 		{
-			value |= (u32)(0x80000000ull >> wnum); // set workload bit
+			value |= (0x80000000 >> wnum); // set workload bit
 		}
 	});
 
@@ -2256,7 +2256,7 @@ s32 _spurs::add_workload(vm::ptr<CellSpurs> spurs, vm::ptr<u32> wid, vm::cptr<vo
 			}
 		}
 
-		wkl->uniqueId.exchange((u8)res_wkl);
+		wkl->uniqueId.exchange(static_cast<u8>(res_wkl));
 		v = mask | (0x80000000u >> wnum);
 	});
 
@@ -2453,11 +2453,11 @@ s32 cellSpursReadyCountStore(vm::ptr<CellSpurs> spurs, u32 wid, u32 value)
 
 	if (wid < CELL_SPURS_MAX_WORKLOAD)
 	{
-		spurs->wklReadyCount1[wid].exchange((u8)value);
+		spurs->wklReadyCount1[wid].exchange(static_cast<u8>(value));
 	}
 	else
 	{
-		spurs->wklIdleSpuCountOrReadyCount2[wid].exchange((u8)value);
+		spurs->wklIdleSpuCountOrReadyCount2[wid].exchange(static_cast<u8>(value));
 	}
 
 	return CELL_OK;
@@ -2608,7 +2608,7 @@ s32 _cellSpursWorkloadFlagReceiver(vm::ptr<CellSpurs> spurs, u32 wid, u32 is_set
 		{
 			if (FR == 0xff)
 			{
-				FR = (u8)wid;
+				FR = static_cast<u8>(wid);
 			}
 		}
 		else
@@ -2810,11 +2810,11 @@ s32 cellSpursEventFlagSet(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFlag
 				vm::var<vm::ptr<CellSpursTaskset>> taskset;
 				if (eventFlag->isIwl)
 				{
-					cellSpursLookUpTasksetAddress(ppu, vm::ptr<CellSpurs>::make((u32)eventFlag->addr), taskset, eventFlag->waitingTaskWklId[i]);
+					cellSpursLookUpTasksetAddress(ppu, vm::cast(eventFlag->addr, HERE), taskset, eventFlag->waitingTaskWklId[i]);
 				}
 				else
 				{
-					taskset->set((u32)eventFlag->addr);
+					*taskset = vm::cast(eventFlag->addr, HERE);
 				}
 
 				auto rc = _cellSpursSendSignal(ppu, *taskset, eventFlag->waitingTaskId[i]);
@@ -2978,7 +2978,7 @@ s32 _spurs::event_flag_wait(ppu_thread& ppu, vm::ptr<CellSpursEventFlag> eventFl
 		}
 
 		*mask = eventFlag->pendingRecvTaskEvents[i];
-		((CellSpursEventFlag::ControlSyncVar&)eventFlag->ctrl).ppuPendingRecv = 0;
+		eventFlag->ctrl.atomic_op([](auto& ctrl) { ctrl.ppuPendingRecv = 0; });
 	}
 
 	*mask = receivedEvents;
@@ -3029,11 +3029,11 @@ s32 cellSpursEventFlagAttachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 	vm::ptr<CellSpurs> spurs;
 	if (eventFlag->isIwl == 1)
 	{
-		spurs.set((u32)eventFlag->addr);
+		spurs = vm::cast(eventFlag->addr, HERE);
 	}
 	else
 	{
-		auto taskset = vm::ptr<CellSpursTaskset>::make((u32)eventFlag->addr);
+		auto taskset = vm::ptr<CellSpursTaskset>::make(vm::cast(eventFlag->addr, HERE));
 		spurs = taskset->spurs;
 	}
 
@@ -3122,11 +3122,11 @@ s32 cellSpursEventFlagDetachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 	vm::ptr<CellSpurs> spurs;
 	if (eventFlag->isIwl == 1)
 	{
-		spurs.set((u32)eventFlag->addr);
+		spurs = vm::cast(eventFlag->addr, HERE);
 	}
 	else
 	{
-		auto taskset = vm::ptr<CellSpursTaskset>::make((u32)eventFlag->addr);
+		auto taskset = vm::ptr<CellSpursTaskset>::make(vm::cast(eventFlag->addr, HERE));
 		spurs = taskset->spurs;
 	}
 
@@ -3904,7 +3904,7 @@ s32 cellSpursLookUpTasksetAddress(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm:
 		return rc ^ 0x100;
 	}
 
-	taskset->set((u32)*data);
+	*taskset = vm::cast(*data, HERE);
 	return CELL_OK;
 }
 
@@ -3927,7 +3927,7 @@ s32 cellSpursTasksetGetSpursAddress(vm::cptr<CellSpursTaskset> taskset, vm::ptr<
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	*spurs = (u32)taskset->spurs.addr();
+	*spurs = vm::cast(taskset->spurs.addr(), HERE);
 	return CELL_OK;
 }
 

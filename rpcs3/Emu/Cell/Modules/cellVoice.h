@@ -197,7 +197,7 @@ struct voice_manager
 	port_t* access_port(u32 id)
 	{
 		// Upper 16 bits are ignored
-		auto pos = ports.find((u16)id);
+		auto pos = ports.find(static_cast<u16>(id));
 
 		if (pos == ports.end())
 		{

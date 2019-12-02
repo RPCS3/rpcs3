@@ -2928,7 +2928,7 @@ void spu_recompiler::ROTQBYBI(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.rldq_pshufb));
+	c->mov(*qw0, asmjit::imm_ptr(+g_spu_imm.rldq_pshufb));
 	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
 	c->and_(*addr, 0xf << 3);
 	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64(), 1));
@@ -2943,7 +2943,7 @@ void spu_recompiler::ROTQMBYBI(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.srdq_pshufb));
+	c->mov(*qw0, asmjit::imm_ptr(+g_spu_imm.srdq_pshufb));
 	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
 	c->and_(*addr, 0x1f << 3);
 	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64(), 1));
@@ -2958,7 +2958,7 @@ void spu_recompiler::SHLQBYBI(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.sldq_pshufb));
+	c->mov(*qw0, asmjit::imm_ptr(+g_spu_imm.sldq_pshufb));
 	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
 	c->and_(*addr, 0x1f << 3);
 	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64(), 1));
@@ -3081,7 +3081,7 @@ void spu_recompiler::ROTQBY(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.rldq_pshufb));
+	c->mov(*qw0, asmjit::imm_ptr(+g_spu_imm.rldq_pshufb));
 	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
 	c->and_(*addr, 0xf);
 	c->shl(*addr, 4);
@@ -3097,7 +3097,7 @@ void spu_recompiler::ROTQMBY(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.srdq_pshufb));
+	c->mov(*qw0, asmjit::imm_ptr(+g_spu_imm.srdq_pshufb));
 	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
 	c->and_(*addr, 0x1f);
 	c->shl(*addr, 4);
@@ -3113,7 +3113,7 @@ void spu_recompiler::SHLQBY(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, asmjit::imm_ptr((void*)g_spu_imm.sldq_pshufb));
+	c->mov(*qw0, asmjit::imm_ptr(+g_spu_imm.sldq_pshufb));
 	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
 	c->and_(*addr, 0x1f);
 	c->shl(*addr, 4);

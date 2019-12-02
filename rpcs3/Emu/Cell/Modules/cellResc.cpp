@@ -146,7 +146,7 @@ void cellRescSetVBlankHandler(vm::ptr<void(u32)> handler)
 
 s32 cellRescCreateInterlaceTable(u32 ea_addr, f32 srcH, CellRescTableElement depth, s32 length)
 {
-	cellResc.todo("cellRescCreateInterlaceTable(ea_addr=0x%x, srcH=%f, depth=%d, length=%d)", ea_addr, srcH, (s32)depth, length);
+	cellResc.todo("cellRescCreateInterlaceTable(ea_addr=0x%x, srcH=%f, depth=%d, length=%d)", ea_addr, srcH, +depth, length);
 
 	return CELL_OK;
 }

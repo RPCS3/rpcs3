@@ -111,7 +111,7 @@ void KeyboardHandlerBase::Key(u32 code, bool pressed)
 					}
 				}
 
-				data.len = std::min(data.len + 1, (int)CELL_KB_MAX_KEYCODES);
+				data.len = std::min<s32>(data.len + 1, CELL_KB_MAX_KEYCODES);
 			}
 			else
 			{

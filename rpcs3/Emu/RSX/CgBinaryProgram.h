@@ -288,15 +288,15 @@ public:
 		{
 			auto& fprog = GetCgRef<CgBinaryFragmentProgram>(prog.program);
 			m_arb_shader += "\n";
-			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", (u32)prog.binaryFormatRevision);
+			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
 			m_arb_shader += fmt::format("# profile sce_fp_rsx\n");
-			m_arb_shader += fmt::format("# parameterCount %d\n", (u32)prog.parameterCount);
-			m_arb_shader += fmt::format("# instructionCount %d\n", (u32)fprog.instructionCount);
-			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", (u32)fprog.attributeInputMask);
-			m_arb_shader += fmt::format("# registerCount %d\n\n", (u32)fprog.registerCount);
+			m_arb_shader += fmt::format("# parameterCount %d\n", prog.parameterCount);
+			m_arb_shader += fmt::format("# instructionCount %d\n", fprog.instructionCount);
+			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", fprog.attributeInputMask);
+			m_arb_shader += fmt::format("# registerCount %d\n\n", fprog.registerCount);
 
 			CgBinaryParameterOffset offset = prog.parameterArray;
-			for (u32 i = 0; i < (u32)prog.parameterCount; i++)
+			for (u32 i = 0; i < prog.parameterCount; i++)
 			{
 				auto& fparam = GetCgRef<CgBinaryParameter>(offset);
 
@@ -344,16 +344,16 @@ public:
 		{
 			auto& vprog = GetCgRef<CgBinaryVertexProgram>(prog.program);
 			m_arb_shader += "\n";
-			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", (u32)prog.binaryFormatRevision);
+			m_arb_shader += fmt::format("# binaryFormatRevision 0x%x\n", prog.binaryFormatRevision);
 			m_arb_shader += fmt::format("# profile sce_vp_rsx\n");
-			m_arb_shader += fmt::format("# parameterCount %d\n", (u32)prog.parameterCount);
-			m_arb_shader += fmt::format("# instructionCount %d\n", (u32)vprog.instructionCount);
-			m_arb_shader += fmt::format("# registerCount %d\n", (u32)vprog.registerCount);
-			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", (u32)vprog.attributeInputMask);
-			m_arb_shader += fmt::format("# attributeOutputMask 0x%x\n\n", (u32)vprog.attributeOutputMask);
+			m_arb_shader += fmt::format("# parameterCount %d\n", prog.parameterCount);
+			m_arb_shader += fmt::format("# instructionCount %d\n", vprog.instructionCount);
+			m_arb_shader += fmt::format("# registerCount %d\n", vprog.registerCount);
+			m_arb_shader += fmt::format("# attributeInputMask 0x%x\n", vprog.attributeInputMask);
+			m_arb_shader += fmt::format("# attributeOutputMask 0x%x\n\n", vprog.attributeOutputMask);
 
 			CgBinaryParameterOffset offset = prog.parameterArray;
-			for (u32 i = 0; i < (u32)prog.parameterCount; i++)
+			for (u32 i = 0; i < prog.parameterCount; i++)
 			{
 				auto& vparam = GetCgRef<CgBinaryParameter>(offset);
 
@@ -371,7 +371,7 @@ public:
 			m_arb_shader += "\n";
 			m_offset = prog.ucode;
 
-			u32* vdata = (u32*)&m_buffer[m_offset];
+			u32* vdata = reinterpret_cast<u32*>(&m_buffer[m_offset]);
 			verify(HERE), (m_buffer_size - m_offset) % sizeof(u32) == 0;
 			for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 			{

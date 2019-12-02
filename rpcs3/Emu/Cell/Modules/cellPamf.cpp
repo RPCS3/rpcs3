@@ -117,7 +117,7 @@ s32 pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 {
 	// TODO: get stream type correctly
-	verify(HERE), (stream < (u32)pSelf->pAddr->stream_count);
+	verify(HERE), (stream < pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[stream];
 
 	switch (header.type)
@@ -138,7 +138,7 @@ u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 {
 	// TODO: get stream channel correctly
-	verify(HERE), (stream < (u32)pSelf->pAddr->stream_count);
+	verify(HERE), (stream < pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[stream];
 
 	switch (header.type)
@@ -184,7 +184,7 @@ s32 cellPamfGetHeaderSize(vm::ptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<u64> 
 
 	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
-	const u64 offset = (u64)pAddr->data_offset << 11;
+	const u64 offset = u64{pAddr->data_offset} << 11;
 	*pSize = offset;
 	return CELL_OK;
 }
@@ -195,7 +195,7 @@ s32 cellPamfGetHeaderSize2(vm::ptr<PamfHeader> pAddr, u64 fileSize, u32 attribut
 
 	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
-	const u64 offset = (u64)pAddr->data_offset << 11;
+	const u64 offset = u64{pAddr->data_offset} << 11;
 	*pSize = offset;
 	return CELL_OK;
 }
@@ -206,9 +206,9 @@ s32 cellPamfGetStreamOffsetAndSize(vm::ptr<PamfHeader> pAddr, u64 fileSize, vm::
 
 	//if ((u32)pAddr->magic != 0x464d4150) return CELL_PAMF_ERROR_UNKNOWN_TYPE;
 
-	const u64 offset = (u64)pAddr->data_offset << 11;
+	const u64 offset = u64{pAddr->data_offset} << 11;
 	*pOffset = offset;
-	const u64 size = (u64)pAddr->data_size << 11;
+	const u64 size = u64{pAddr->data_size} << 11;
 	*pSize = size;
 	return CELL_OK;
 }
@@ -231,7 +231,7 @@ s32 cellPamfReaderInitialize(vm::ptr<CellPamfReader> pSelf, vm::cptr<PamfHeader>
 	}
 	else // if fileSize is unknown
 	{
-		pSelf->fileSize = ((u64)pAddr->data_offset << 11) + ((u64)pAddr->data_size << 11);
+		pSelf->fileSize = (u64{pAddr->data_offset} << 11) + (u64{pAddr->data_size} << 11);
 	}
 	pSelf->pAddr = pAddr;
 
@@ -251,7 +251,7 @@ s32 cellPamfReaderGetPresentationStartTime(vm::ptr<CellPamfReader> pSelf, vm::pt
 
 	// always returns CELL_OK
 
-	pTimeStamp->upper = (u32)(u16)pSelf->pAddr->start_pts_high;
+	pTimeStamp->upper = pSelf->pAddr->start_pts_high;
 	pTimeStamp->lower = pSelf->pAddr->start_pts_low;
 	return CELL_OK;
 }
@@ -262,7 +262,7 @@ s32 cellPamfReaderGetPresentationEndTime(vm::ptr<CellPamfReader> pSelf, vm::ptr<
 
 	// always returns CELL_OK
 
-	pTimeStamp->upper = (u32)(u16)pSelf->pAddr->end_pts_high;
+	pTimeStamp->upper = pSelf->pAddr->end_pts_high;
 	pTimeStamp->lower = pSelf->pAddr->end_pts_low;
 	return CELL_OK;
 }
@@ -454,7 +454,7 @@ s32 cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<CellCodec
 
 	// always returns CELL_OK
 
-	verify(HERE), (u32)pSelf->stream < pSelf->pAddr->stream_count;
+	verify(HERE), static_cast<u32>(pSelf->stream) < pSelf->pAddr->stream_count;
 	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
 	pEsFilterId->filterIdMajor = header.fid_major;
 	pEsFilterId->filterIdMinor = header.fid_minor;
@@ -467,7 +467,7 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 {
 	cellPamf.warning("cellPamfReaderGetStreamInfo(pSelf=*0x%x, pInfo=*0x%x, size=%d)", pSelf, pInfo, size);
 
-	verify(HERE), (u32)pSelf->stream < pSelf->pAddr->stream_count;
+	verify(HERE), static_cast<u32>(pSelf->stream) < pSelf->pAddr->stream_count;
 	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
 	const u8 type = pamfGetStreamType(pSelf, pSelf->stream);
 	const u8 ch = pamfGetStreamChannel(pSelf, pSelf->stream);
@@ -501,8 +501,8 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 			info->sarHeight = 0;
 		}
 
-		info->horizontalSize = ((u16)header.AVC.horizontalSize & 0xff) * 16;
-		info->verticalSize = ((u16)header.AVC.verticalSize & 0xff) * 16;
+		info->horizontalSize = (header.AVC.horizontalSize & u8{0xff}) * 16;
+		info->verticalSize = (header.AVC.verticalSize & u8{0xff}) * 16;
 		info->frameCropLeftOffset = header.AVC.frameCropLeftOffset;
 		info->frameCropRightOffset = header.AVC.frameCropRightOffset;
 		info->frameCropTopOffset = header.AVC.frameCropTopOffset;
@@ -567,8 +567,8 @@ s32 cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<void> pIn
 			info->sarHeight = 0;
 		}
 
-		info->horizontalSize = ((u16)header.M2V.horizontalSize & 0xff) * 16;
-		info->verticalSize = ((u16)header.M2V.verticalSize & 0xff) * 16;
+		info->horizontalSize = (header.M2V.horizontalSize & u8{0xff}) * 16;
+		info->verticalSize = (header.M2V.verticalSize & u8{0xff}) * 16;
 		info->horizontalSizeValue = header.M2V.horizontalSizeValue;
 		info->verticalSizeValue = header.M2V.verticalSizeValue;
 

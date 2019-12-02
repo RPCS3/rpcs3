@@ -99,7 +99,7 @@ s32 cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, vm::ptr<
 {
 	cellSail.warning("cellSailDescriptorCreateDatabase(pSelf=*0x%x, pDatabase=*0x%x, size=0x%x, arg=0x%llx)", pSelf, pDatabase, size, arg);
 
-	switch ((s32)pSelf->streamType)
+	switch (pSelf->streamType)
 	{
 		case CELL_SAIL_STREAM_PAMF:
 		{

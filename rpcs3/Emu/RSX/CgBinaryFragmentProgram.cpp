@@ -69,7 +69,7 @@ std::string CgBinaryDisasm::AddRegDisAsm(u32 index, int fp16)
 
 std::string CgBinaryDisasm::AddConstDisAsm()
 {
-	u32* data = (u32*)&m_buffer[m_offset + m_size + 4 * sizeof(u32)];
+	u32* data = reinterpret_cast<u32*>(&m_buffer[m_offset + m_size + 4 * sizeof(u32)]);
 
 	m_step = 2 * 4 * sizeof(u32);
 	const u32 x = GetData(data[0]);
@@ -224,7 +224,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 void CgBinaryDisasm::TaskFP()
 {
 	m_size = 0;
-	u32* data = (u32*)&m_buffer[m_offset];
+	u32* data = reinterpret_cast<u32*>(&m_buffer[m_offset]);
 	verify(HERE), ((m_buffer_size - m_offset) % sizeof(u32) == 0);
 	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 	{

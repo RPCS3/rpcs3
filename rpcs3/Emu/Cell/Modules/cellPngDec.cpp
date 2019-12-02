@@ -59,7 +59,7 @@ void pngDecReadBuffer(png_structp png_ptr, png_bytep out, png_size_t length)
 	}
 
 	// Cast the IO pointer to our custom structure
-	PngBuffer& buffer = *(PngBuffer*)io_ptr;
+	PngBuffer& buffer = *static_cast<PngBuffer*>(io_ptr);
 
 	// Read froma  file or a buffer
 	if (buffer.file)
@@ -85,7 +85,7 @@ void pngDecReadBuffer(png_structp png_ptr, png_bytep out, png_size_t length)
 
 void pngDecRowCallback(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass)
 {
-	PngStream* stream = (PngStream*)png_get_progressive_ptr(png_ptr);
+	PngStream* stream = static_cast<PngStream*>(png_get_progressive_ptr(png_ptr));
 	if (!stream)
 	{
 		cellPngDec.error("Failed to obtain streamPtr in rowCallback.");
@@ -123,7 +123,7 @@ void pngDecRowCallback(png_structp png_ptr, png_bytep new_row, png_uint_32 row_n
 
 void pngDecInfoCallback(png_structp png_ptr, png_infop info)
 {
-	PngStream* stream = (PngStream*)png_get_progressive_ptr(png_ptr);
+	PngStream* stream = static_cast<PngStream*>(png_get_progressive_ptr(png_ptr));
 	if (!stream)
 	{
 		cellPngDec.error("Failed to obtain streamPtr in rowCallback.");
@@ -136,7 +136,7 @@ void pngDecInfoCallback(png_structp png_ptr, png_infop info)
 
 void pngDecEndCallback(png_structp png_ptr, png_infop info)
 {
-	PngStream* stream = (PngStream*)png_get_progressive_ptr(png_ptr);
+	PngStream* stream = static_cast<PngStream*>(png_get_progressive_ptr(png_ptr));
 	if (!stream)
 	{
 		cellPngDec.error("Failed to obtain streamPtr in endCallback.");
@@ -286,7 +286,7 @@ be_t<u32> pngDecGetChunkInformation(PngStream* stream, bool IDAT = false)
 		chunk_information |= 1 << 11; // sRGB
 	}
 
-	if (png_get_iCCP(stream->png_ptr, stream->info_ptr, &name, &compression_type, &profile, (png_uint_32*)&proflen))
+	if (png_get_iCCP(stream->png_ptr, stream->info_ptr, &name, &compression_type, &profile, &proflen))
 	{
 		chunk_information |= 1 << 12; // iCCP
 	}
@@ -483,7 +483,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 		stream->cbCtrlStream.cbCtrlStrmArg = control_stream->cbCtrlStrmArg;
 		stream->cbCtrlStream.cbCtrlStrmFunc = control_stream->cbCtrlStrmFunc;
 
-		png_set_progressive_read_fn(stream->png_ptr, (void *)stream.get_ptr(), pngDecInfoCallback, pngDecRowCallback, pngDecEndCallback);
+		png_set_progressive_read_fn(stream->png_ptr, stream.get_ptr(), pngDecInfoCallback, pngDecRowCallback, pngDecEndCallback);
 
 		// push header tag to libpng to keep us in sync
 		try
@@ -789,7 +789,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 	const s32 text_chunks = png_get_text(stream->png_ptr, stream->info_ptr, nullptr, nullptr);
 
 	// Set the chunk information and the previously obtained number of text chunks
-	data_out_info->numText = (u32)text_chunks;
+	data_out_info->numText = static_cast<u32>(text_chunks);
 	data_out_info->chunkInformation = pngDecGetChunkInformation(stream.get_ptr(), true);
 	png_unknown_chunkp unknowns;
 	const int num_unknowns = png_get_unknown_chunks(stream->png_ptr, stream->info_ptr, &unknowns);

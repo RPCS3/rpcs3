@@ -10,7 +10,7 @@ size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgra
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
-	const qword *instbuffer = (const qword*)program.data.data();
+	const qword* instbuffer = reinterpret_cast<const qword*>(program.data.data());
 	size_t instIndex = 0;
 	bool end = false;
 	for (unsigned i = 0; i < program.data.size() / 4; i++)
@@ -70,7 +70,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				}
 			}
 
-			const qword* instruction = (const qword*)&data[current_instrution * 4];
+			const qword* instruction = reinterpret_cast<const qword*>(&data[current_instrution * 4]);
 			d1.HEX = instruction->word[1];
 			d3.HEX = instruction->word[3];
 
@@ -200,8 +200,8 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	{
 		for (u32 i = instruction_range.first, count = 0; i <= instruction_range.second; ++i, ++count)
 		{
-			const qword* instruction = (const qword*)&data[i * 4];
-			qword* dst = (qword*)&dst_prog.data[count * 4];
+			const qword* instruction = reinterpret_cast<const qword*>(&data[i * 4]);
+			qword* dst = reinterpret_cast<qword*>(&dst_prog.data[count * 4]);
 
 			if (result.instruction_mask[i])
 			{
@@ -265,8 +265,8 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 	if (!binary1.skip_vertex_input_check && !binary2.skip_vertex_input_check && binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
 		return false;
 
-	const qword *instBuffer1 = (const qword*)binary1.data.data();
-	const qword *instBuffer2 = (const qword*)binary2.data.data();
+	const qword* instBuffer1 = reinterpret_cast<const qword*>(binary1.data.data());
+	const qword* instBuffer2 = reinterpret_cast<const qword*>(binary2.data.data());
 	size_t instIndex = 0;
 	for (unsigned i = 0; i < binary1.data.size() / 4; i++)
 	{
@@ -300,7 +300,7 @@ bool fragment_program_utils::is_constant(u32 sourceOperand)
 
 size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
 {
-	const qword *instBuffer = (const qword*)ptr;
+	const qword* instBuffer = reinterpret_cast<const qword*>(ptr);
 	size_t instIndex = 0;
 	while (true)
 	{
@@ -325,7 +325,7 @@ size_t fragment_program_utils::get_fragment_program_ucode_size(void *ptr)
 
 fragment_program_utils::fragment_program_metadata fragment_program_utils::analyse_fragment_program(void *ptr)
 {
-	const qword *instBuffer = (const qword*)ptr;
+	const qword* instBuffer = reinterpret_cast<const qword*>(ptr);
 	s32 index = 0;
 	s32 program_offset = -1;
 	u32 ucode_size = 0;
@@ -388,14 +388,14 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		index++;
 	}
 
-	return{ (u32)program_offset, ucode_size, constants_size, textures_mask };
+	return{ static_cast<u32>(program_offset), ucode_size, constants_size, textures_mask };
 }
 
 size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
-	const qword *instbuffer = (const qword*)program.addr;
+	const qword* instbuffer = reinterpret_cast<const qword*>(program.addr);
 	size_t instIndex = 0;
 	while (true)
 	{
@@ -447,8 +447,8 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 			return false;
 	}
 
-	const qword *instBuffer1 = (const qword*)binary1.addr;
-	const qword *instBuffer2 = (const qword*)binary2.addr;
+	const qword* instBuffer1 = reinterpret_cast<const qword*>(binary1.addr);
+	const qword* instBuffer2 = reinterpret_cast<const qword*>(binary2.addr);
 	size_t instIndex = 0;
 	while (true)
 	{

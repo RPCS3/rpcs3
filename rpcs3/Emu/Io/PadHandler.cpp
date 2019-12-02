@@ -99,7 +99,7 @@ long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::stri
 float PadHandlerBase::ScaleStickInput(s32 raw_value, int minimum, int maximum)
 {
 	// value based on max range converted to [0, 1]
-	float val = float(std::clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
+	float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
 	return 255.0f * val;
 }
 
@@ -107,7 +107,7 @@ float PadHandlerBase::ScaleStickInput(s32 raw_value, int minimum, int maximum)
 float PadHandlerBase::ScaleStickInput2(s32 raw_value, int minimum, int maximum)
 {
 	// value based on max range converted to [0, 1]
-	float val = float(std::clamp(raw_value, minimum, maximum) - minimum) / float(abs(maximum) + abs(minimum));
+	float val = static_cast<float>(std::clamp(raw_value, minimum, maximum) - minimum) / (abs(maximum) + abs(minimum));
 	return (510.0f * val) - 255.0f;
 }
 
@@ -124,7 +124,7 @@ u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold)
 	}
 	else
 	{
-		return (u16)(float(trigger_max) * float(value - threshold) / float(trigger_max - threshold));
+		return static_cast<u16>(static_cast<float>(trigger_max) * (value - threshold) / (trigger_max - threshold));
 	}
 }
 
@@ -137,7 +137,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 		return static_cast<u16>(0);
 	}
 
-	float val = float(std::clamp(raw_value, 0, maximum)) / float(maximum); // value based on max range converted to [0, 1]
+	float val = static_cast<float>(std::clamp(raw_value, 0, maximum)) / maximum; // value based on max range converted to [0, 1]
 
 	if (threshold <= 0)
 	{
@@ -145,7 +145,7 @@ u16 PadHandlerBase::NormalizeDirectedInput(s32 raw_value, s32 threshold, s32 max
 	}
 	else
 	{
-		float thresh = float(threshold) / float(maximum); // threshold converted to [0, 1]
+		float thresh = static_cast<float>(threshold) / maximum; // threshold converted to [0, 1]
 		return static_cast<u16>(255.0f * std::min(1.0f, (val - thresh) / (1.0f - thresh)));
 	}
 }
@@ -169,7 +169,7 @@ u16 PadHandlerBase::NormalizeStickInput(u16 raw_value, int threshold, int multip
 // return is new x and y values in 0-255 range
 std::tuple<u16, u16> PadHandlerBase::NormalizeStickDeadzone(s32 inX, s32 inY, u32 deadzone)
 {
-	const float dzRange = deadzone / float((std::abs(thumb_max) + std::abs(thumb_min)));
+	const float dzRange = deadzone / static_cast<float>((std::abs(thumb_max) + std::abs(thumb_min)));
 
 	float X = inX / 255.0f;
 	float Y = inY / 255.0f;
@@ -224,8 +224,8 @@ u16 PadHandlerBase::ConvertAxis(float value)
 std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, int squircle_factor)
 {
 	// convert inX and Y to a (-1, 1) vector;
-	const f32 x = ((f32)inX - 127.5f) / 127.5f;
-	const f32 y = ((f32)inY - 127.5f) / 127.5f;
+	const f32 x = (inX - 127.5f) / 127.5f;
+	const f32 y = (inY - 127.5f) / 127.5f;
 
 	// compute angle and len of given point to be used for squircle radius
 	const f32 angle = std::atan2(y, x);
@@ -233,7 +233,7 @@ std::tuple<u16, u16> PadHandlerBase::ConvertToSquirclePoint(u16 inX, u16 inY, in
 
 	// now find len/point on the given squircle from our current angle and radius in polar coords
 	// https://thatsmaths.com/2016/07/14/squircles/
-	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (float(squircle_factor) / 1000.f)) * r;
+	const f32 newLen = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * r;
 
 	// we now have len and angle, convert to cartesian
 	const int newX = Clamp0To255(((newLen * std::cos(angle)) + 1) * 127.5f);
