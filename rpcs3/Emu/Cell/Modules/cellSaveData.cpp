@@ -168,7 +168,10 @@ static error_code select_and_delete(ppu_thread& ppu)
 		lv2_obj::sleep(ppu);
 
 		// Display Save Data List asynchronously in the GUI thread.
-		selected = Emu.GetCallbacks().get_save_dialog()->ShowSaveDataList(save_entries, focused, SAVEDATA_OP_LIST_DELETE, vm::null);
+		if (auto save_dialog = Emu.GetCallbacks().get_save_dialog())
+		{
+			selected = save_dialog->ShowSaveDataList(save_entries, focused, SAVEDATA_OP_LIST_DELETE, vm::null);
+		}
 
 		// Reschedule
 		if (ppu.check_state())
@@ -176,8 +179,8 @@ static error_code select_and_delete(ppu_thread& ppu)
 			return 0;
 		}
 
-		// Abort if dialog was canceled
-		if (selected == -2)
+		// Abort if dialog was canceled or selection is invalid in this context
+		if (selected < 0)
 		{
 			return CELL_CANCEL;
 		}
