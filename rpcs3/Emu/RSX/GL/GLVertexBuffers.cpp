@@ -26,7 +26,7 @@ namespace
 		verify(HERE), !gl::is_primitive_native(primitive_mode);
 
 		auto mapping = dst.alloc_from_heap(element_count * sizeof(u16), 256);
-		char *mapped_buffer = (char *)mapping.first;
+		auto mapped_buffer = static_cast<char*>(mapping.first);
 
 		write_index_array_for_non_indexed_non_native_primitive_to_buffer(mapped_buffer, primitive_mode, vertex_count);
 		return std::make_tuple(element_count, mapping.second);
@@ -92,14 +92,14 @@ namespace
 			rsx::index_array_type type = rsx::method_registers.current_draw_clause.is_immediate_draw?
 				rsx::index_array_type::u32:
 				rsx::method_registers.index_type();
-			
+
 			u32 type_size              = get_index_type_size(type);
 
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			u32 index_count = vertex_count;
-			
+
 			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
-				index_count = (u32)get_index_count(rsx::method_registers.current_draw_clause.primitive, vertex_count);
+				index_count = static_cast<u32>(get_index_count(rsx::method_registers.current_draw_clause.primitive, vertex_count));
 
 			u32 max_size               = index_count * type_size;
 			auto mapping               = m_index_ring_buffer.alloc_from_heap(max_size, 256);
@@ -228,7 +228,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 			const size_t view_size = ((upload_info.persistent_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.persistent_mapping_offset) : m_max_texbuffer_size;
 
-			m_persistent_stream_view.update(m_attrib_ring_buffer.get(), upload_info.persistent_mapping_offset, (u32)view_size);
+			m_persistent_stream_view.update(m_attrib_ring_buffer.get(), upload_info.persistent_mapping_offset, static_cast<u32>(view_size));
 			m_gl_persistent_stream_buffer->copy_from(m_persistent_stream_view);
 			upload_info.persistent_mapping_offset = 0;
 		}
@@ -245,7 +245,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 			const size_t view_size = ((upload_info.volatile_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.volatile_mapping_offset) : m_max_texbuffer_size;
 
-			m_volatile_stream_view.update(m_attrib_ring_buffer.get(), upload_info.volatile_mapping_offset, (u32)view_size);
+			m_volatile_stream_view.update(m_attrib_ring_buffer.get(), upload_info.volatile_mapping_offset, static_cast<u32>(view_size));
 			m_gl_volatile_stream_buffer->copy_from(m_volatile_stream_view);
 			upload_info.volatile_mapping_offset = 0;
 		}

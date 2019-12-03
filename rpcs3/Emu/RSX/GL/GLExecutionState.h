@@ -146,7 +146,7 @@ namespace gl
 
 		void clear_color(u8 r, u8 g, u8 b, u8 a)
 		{
-			u32 value = (u32)r | (u32)g << 8 | (u32)b << 16 | (u32)a << 24;
+			u32 value = u32{r} | u32{g} << 8 | u32{b} << 16 | u32{a} << 24;
 			if (!test_property(GL_COLOR_CLEAR_VALUE, value))
 			{
 				glClearColor(r / 255.f, g / 255.f, b / 255.f, a / 255.f);
@@ -156,7 +156,7 @@ namespace gl
 
 		void clear_color(const color4f& color)
 		{
-			clear_color(u8(color.r * 255), u8(color.g * 255), u8(color.b * 255), u8(color.a * 255));
+			clear_color(static_cast<u8>(color.r * 255), static_cast<u8>(color.g * 255), static_cast<u8>(color.b * 255), static_cast<u8>(color.a * 255));
 		}
 
 		void depth_bounds(float min, float max)

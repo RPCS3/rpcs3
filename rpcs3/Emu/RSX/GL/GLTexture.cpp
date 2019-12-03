@@ -129,7 +129,7 @@ namespace gl
 		case texture::internal_format::depth32f_stencil8:
 			return { GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true };
 		default:
-			fmt::throw_exception("Unexpected internal format 0x%X" HERE, (u32)format);
+			fmt::throw_exception("Unexpected internal format 0x%X" HERE, static_cast<u32>(format));
 		}
 	}
 
@@ -165,7 +165,7 @@ namespace gl
 		case rsx::texture_wrap_mode::mirror_once_clamp: return GL_MIRROR_CLAMP_EXT;
 		}
 
-		LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d)", (u32)wrap);
+		LOG_ERROR(RSX, "Texture wrap error: bad wrap (%d)", static_cast<u32>(wrap));
 		return GL_REPEAT;
 	}
 
@@ -183,7 +183,7 @@ namespace gl
 		case rsx::texture_max_anisotropy::x16: return 16.0f;
 		}
 
-		LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d)", (u32)aniso);
+		LOG_ERROR(RSX, "Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(aniso));
 		return 1.0f;
 	}
 
@@ -245,7 +245,7 @@ namespace gl
 				case GL_LINEAR_MIPMAP_LINEAR:
 					min_filter = GL_LINEAR; break;
 				default:
-					LOG_ERROR(RSX, "No mipmap fallback defined for rsx_min_filter = 0x%X", (u32)tex.min_filter());
+					LOG_ERROR(RSX, "No mipmap fallback defined for rsx_min_filter = 0x%X", static_cast<u32>(tex.min_filter()));
 					min_filter = GL_NEAREST;
 				}
 			}
@@ -273,7 +273,7 @@ namespace gl
 			texture_format == CELL_GCM_TEXTURE_DEPTH16_FLOAT || texture_format == CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT)
 		{
 			//NOTE: The stored texture function is reversed wrt the textureProj compare function
-			GLenum compare_mode = (GLenum)tex.zfunc() | GL_NEVER;
+			GLenum compare_mode = static_cast<GLenum>(tex.zfunc()) | GL_NEVER;
 
 			switch (compare_mode)
 			{
@@ -672,7 +672,7 @@ namespace gl
 		case GL_DEPTH32F_STENCIL8:
 			return 4;
 		default:
-			fmt::throw_exception("Unexpected internal format 0x%X" HERE, (u32)format);
+			fmt::throw_exception("Unexpected internal format 0x%X" HERE, static_cast<u32>(format));
 		}
 	}
 
@@ -703,7 +703,7 @@ namespace gl
 		case GL_DEPTH32F_STENCIL8:
 			return { true, 4 };
 		default:
-			fmt::throw_exception("Unexpected internal format 0x%X" HERE, (u32)format);
+			fmt::throw_exception("Unexpected internal format 0x%X" HERE, static_cast<u32>(format));
 		}
 	}
 
@@ -794,13 +794,13 @@ namespace gl
 		if (LIKELY(caps.ARB_compute_shader_supported))
 		{
 			// Raw copy
-			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, src_region, {});
+			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_region, {});
 		}
 		else
 		{
 			pixel_pack_settings pack_settings{};
 			pack_settings.swap_bytes(pack_info.swap_bytes);
-			src->copy_to(nullptr, (texture::format)pack_info.format, (texture::type)pack_info.type, src_region, pack_settings);
+			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_region, pack_settings);
 		}
 
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
@@ -847,7 +847,7 @@ namespace gl
 		}
 
 		g_typeless_transfer_buffer.bind(buffer::target::pixel_unpack);
-		dst->copy_from(nullptr, (texture::format)unpack_info.format, (texture::type)unpack_info.type, dst_region, unpack_settings);
+		dst->copy_from(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), dst_region, unpack_settings);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 	}
 

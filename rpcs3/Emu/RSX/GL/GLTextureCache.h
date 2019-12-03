@@ -184,11 +184,11 @@ namespace gl
 					// AMD driver bug
 					// Pixel transfer fails with GL_OUT_OF_MEMORY. Usually happens with float textures or operations attempting to swap endianness.
 					// Failed operations also leak a large amount of memory
-					LOG_ERROR(RSX, "Memory transfer failure (AMD bug). Please update your driver to Adrenalin 19.4.3 or newer. Format=0x%x, Type=0x%x, Swap=%d", (u32)format, (u32)type, pack_unpack_swap_bytes);
+					LOG_ERROR(RSX, "Memory transfer failure (AMD bug). Please update your driver to Adrenalin 19.4.3 or newer. Format=0x%x, Type=0x%x, Swap=%d", static_cast<u32>(format), static_cast<u32>(type), pack_unpack_swap_bytes);
 				}
 				else
 				{
-					LOG_ERROR(RSX, "Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, (u32)format, (u32)type);
+					LOG_ERROR(RSX, "Memory transfer failed with error 0x%x. Format=0x%x, Type=0x%x", error, static_cast<u32>(format), static_cast<u32>(type));
 				}
 			}
 
@@ -233,7 +233,7 @@ namespace gl
 				}
 
 				areai src_area = { 0, 0, 0, 0 };
-				const areai dst_area = { 0, 0, (s32)real_width, (s32)real_height };
+				const areai dst_area = { 0, 0, static_cast<s32>(real_width), static_cast<s32>(real_height) };
 
 				auto ifmt = vram_texture->get_internal_format();
 				src_area.x2 = vram_texture->width();
@@ -255,7 +255,7 @@ namespace gl
 
 					if (!scaled_texture)
 					{
-						scaled_texture = std::make_unique<gl::texture>(GL_TEXTURE_2D, real_width, real_height, 1, 1, (GLenum)ifmt);
+						scaled_texture = std::make_unique<gl::texture>(GL_TEXTURE_2D, real_width, real_height, 1, 1, static_cast<GLenum>(ifmt));
 					}
 
 					const bool linear_interp = is_depth_texture() ? false : true;
@@ -510,7 +510,7 @@ namespace gl
 			}
 
 			std::array<GLenum, 4> swizzle;
-			if (!src || (GLenum)src->get_internal_format() != sized_internal_fmt)
+			if (!src || static_cast<GLenum>(src->get_internal_format()) != sized_internal_fmt)
 			{
 				// Apply base component map onto the new texture if a data cast has been done
 				swizzle = get_component_mapping(gcm_format, rsx::texture_create_flags::default_component_order);
@@ -575,7 +575,7 @@ namespace gl
 					continue;
 
 				const bool typeless = dst_aspect != slice.src->aspect() ||
-					!formats_are_bitcast_compatible((GLenum)slice.src->get_internal_format(), (GLenum)dst_image->get_internal_format());
+					!formats_are_bitcast_compatible(static_cast<GLenum>(slice.src->get_internal_format()), static_cast<GLenum>(dst_image->get_internal_format()));
 
 				std::unique_ptr<gl::texture> tmp;
 				auto src_image = slice.src;
@@ -601,7 +601,7 @@ namespace gl
 				{
 					const auto src_bpp = slice.src->pitch() / slice.src->width();
 					const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
-					tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, (GLenum)dst_image->get_internal_format());
+					tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, static_cast<GLenum>(dst_image->get_internal_format()));
 
 					src_image = tmp.get();
 
@@ -620,7 +620,7 @@ namespace gl
 				if (src_w == slice.dst_w && src_h == slice.dst_h)
 				{
 					glCopyImageSubData(src_image->id(), GL_TEXTURE_2D, 0, src_x, src_y, 0,
-						dst_image->id(), (GLenum)dst_image->get_target(), slice.level, slice.dst_x, slice.dst_y, slice.dst_z, src_w, src_h, 1);
+						dst_image->id(), static_cast<GLenum>(dst_image->get_target()), slice.level, slice.dst_x, slice.dst_y, slice.dst_z, src_w, src_h, 1);
 				}
 				else
 				{
@@ -637,7 +637,7 @@ namespace gl
 					}
 					else
 					{
-						tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, (GLenum)slice.src->get_internal_format());
+						tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, static_cast<GLenum>(slice.src->get_internal_format()));
 						_dst = tmp.get();
 					}
 
@@ -648,7 +648,7 @@ namespace gl
 					{
 						// Data cast comes after scaling
 						glCopyImageSubData(tmp->id(), GL_TEXTURE_2D, 0, slice.dst_x, slice.dst_y, 0,
-							dst_image->id(), (GLenum)dst_image->get_target(), slice.level, slice.dst_x, slice.dst_y, slice.dst_z, slice.dst_w, slice.dst_h, 1);
+							dst_image->id(), static_cast<GLenum>(dst_image->get_target()), slice.level, slice.dst_x, slice.dst_y, slice.dst_z, slice.dst_w, slice.dst_h, 1);
 					}
 				}
 			}
@@ -702,7 +702,7 @@ namespace gl
 		gl::texture_view* create_temporary_subresource_view(gl::command_context &cmd, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
 				const rsx::texture_channel_remap_t& remap_vector) override
 		{
-			return create_temporary_subresource_impl(cmd, src, (GLenum)src->get_internal_format(),
+			return create_temporary_subresource_impl(cmd, src, static_cast<GLenum>(src->get_internal_format()),
 					GL_TEXTURE_2D, gcm_format, x, y, w, h, remap_vector, true);
 		}
 
@@ -764,8 +764,8 @@ namespace gl
 			const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			const auto _template = sections_to_copy.front().src;
-			const GLenum ifmt = (GLenum)_template->get_internal_format();
-			const u8 mipmaps = (u8)sections_to_copy.size();
+			const GLenum ifmt = static_cast<GLenum>(_template->get_internal_format());
+			const u8 mipmaps = ::narrow<u8>(sections_to_copy.size());
 			const auto swizzle = _template->get_native_component_layout();
 
 			auto image_ptr = new gl::viewable_image(GL_TEXTURE_2D, width, height, 1, mipmaps, ifmt);
@@ -932,7 +932,7 @@ namespace gl
 			{
 			default:
 				//TODO
-				warn_once("Format incompatibility detected, reporting failure to force data copy (GL_INTERNAL_FORMAT=0x%X, GCM_FORMAT=0x%X)", (u32)ifmt, gcm_format);
+				warn_once("Format incompatibility detected, reporting failure to force data copy (GL_INTERNAL_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(ifmt), gcm_format);
 				return false;
 			case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 				return (ifmt == gl::texture::internal_format::rgba16f);

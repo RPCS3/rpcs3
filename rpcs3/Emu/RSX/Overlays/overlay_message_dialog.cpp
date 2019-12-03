@@ -63,7 +63,7 @@ namespace rsx
 
 						background_poster.set_size(1280, 720);
 						background_poster.set_raw_image(background_image.get());
-						background_poster.set_blur_strength((u8)g_cfg.video.shader_preloading_dialog.blur_strength);
+						background_poster.set_blur_strength(static_cast<u8>(g_cfg.video.shader_preloading_dialog.blur_strength));
 					}
 				}
 			}
@@ -248,7 +248,7 @@ namespace rsx
 				progress_2.inc(value);
 
 			if (index == taskbar_index || taskbar_index == -1)
-				Emu.GetCallbacks().handle_taskbar_progress(1, (s32)value);
+				Emu.GetCallbacks().handle_taskbar_progress(1, static_cast<s32>(value));
 
 			return CELL_OK;
 		}
@@ -274,9 +274,9 @@ namespace rsx
 				return CELL_MSGDIALOG_ERROR_PARAM;
 
 			if (index == 0)
-				progress_1.set_limit((float)limit);
+				progress_1.set_limit(static_cast<f32>(limit));
 			else
-				progress_2.set_limit((float)limit);
+				progress_2.set_limit(static_cast<f32>(limit));
 
 			if (index == taskbar_index)
 			{

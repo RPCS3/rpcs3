@@ -410,24 +410,24 @@ namespace vk
 		void free(mem_handle_t mem_handle) override
 		{
 			vmm_notify_memory_freed(mem_handle);
-			vkFreeMemory(m_device, (VkDeviceMemory)mem_handle, nullptr);
+			vkFreeMemory(m_device, static_cast<VkDeviceMemory>(mem_handle), nullptr);
 		}
 
 		void *map(mem_handle_t mem_handle, u64 offset, u64 size) override
 		{
 			void *data = nullptr;
-			CHECK_RESULT(vkMapMemory(m_device, (VkDeviceMemory)mem_handle, offset, std::max<u64>(size, 1u), 0, &data));
+			CHECK_RESULT(vkMapMemory(m_device, static_cast<VkDeviceMemory>(mem_handle), offset, std::max<u64>(size, 1u), 0, &data));
 			return data;
 		}
 
 		void unmap(mem_handle_t mem_handle) override
 		{
-			vkUnmapMemory(m_device, (VkDeviceMemory)mem_handle);
+			vkUnmapMemory(m_device, static_cast<VkDeviceMemory>(mem_handle));
 		}
 
 		VkDeviceMemory get_vk_device_memory(mem_handle_t mem_handle) override
 		{
-			return (VkDeviceMemory)mem_handle;
+			return static_cast<VkDeviceMemory>(mem_handle);
 		}
 
 		u64 get_vk_device_memory_offset(mem_handle_t /*mem_handle*/) override
@@ -577,7 +577,7 @@ private:
 					features2.pNext = &driver_properties;
 				}
 
-				auto getPhysicalDeviceFeatures2KHR = (PFN_vkGetPhysicalDeviceFeatures2KHR)vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR");
+				auto getPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
 				getPhysicalDeviceFeatures2KHR(dev, &features2);
 
@@ -705,7 +705,7 @@ private:
 		uint32_t get_queue_count() const
 		{
 			if (!queue_props.empty())
-				return (u32)queue_props.size();
+				return ::size32(queue_props);
 
 			uint32_t count = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
@@ -852,7 +852,7 @@ private:
 			device.pQueueCreateInfos = &queue;
 			device.enabledLayerCount = 0;
 			device.ppEnabledLayerNames = nullptr; // Deprecated
-			device.enabledExtensionCount = (u32)requested_extensions.size();
+			device.enabledExtensionCount = ::size32(requested_extensions);
 			device.ppEnabledExtensionNames = requested_extensions.data();
 			device.pEnabledFeatures = &enabled_features;
 
@@ -1060,7 +1060,7 @@ private:
 			VkCommandBufferAllocateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 			infos.commandBufferCount = 1;
-			infos.commandPool = (VkCommandPool)cmd_pool;
+			infos.commandPool = +cmd_pool;
 			infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 			CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
 
@@ -1547,7 +1547,7 @@ private:
 
 		u32 size() const
 		{
-			return (u32)info.size;
+			return static_cast<u32>(info.size);
 		}
 
 		buffer(const buffer&) = delete;
@@ -1586,7 +1586,7 @@ private:
 			if (address < info.offset)
 				return false;
 
-			const u32 _offset = address - (u32)info.offset;
+			const u32 _offset = address - static_cast<u32>(info.offset);
 			if (info.range < _offset)
 				return false;
 
@@ -1937,7 +1937,7 @@ public:
 
 		u32 get_swap_image_count() const override
 		{
-			return (u32)swapchain_images.size();
+			return ::size32(swapchain_images);
 		}
 
 		using swapchain_base::init;
@@ -2167,7 +2167,7 @@ public:
 			auto& src = swapchain_images[index];
 			if (pixmap)
 			{
-				pixmap->data = (char*)src.second->get_pixels();
+				pixmap->data = static_cast<char*>(src.second->get_pixels());
 
 				XPutImage(display, window, gc, pixmap, 0, 0, 0, 0, m_width, m_height);
 				XFlush(display);
@@ -2206,7 +2206,7 @@ public:
 
 		VkImage& get_image(u32 index) override
 		{
-			return (VkImage&)(*swapchain_images[index].second);
+			return swapchain_images[index].second->value;
 		}
 
 		VkImageLayout get_optimal_present_layout() override
@@ -2263,11 +2263,11 @@ public:
 		swapchain_WSI(vk::physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
 			: WSI_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{
-			createSwapchainKHR = (PFN_vkCreateSwapchainKHR)vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR");
-			destroySwapchainKHR = (PFN_vkDestroySwapchainKHR)vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR");
-			getSwapchainImagesKHR = (PFN_vkGetSwapchainImagesKHR)vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR");
-			acquireNextImageKHR = (PFN_vkAcquireNextImageKHR)vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR");
-			queuePresentKHR = (PFN_vkQueuePresentKHR)vkGetDeviceProcAddr(dev, "vkQueuePresentKHR");
+			createSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR"));
+			destroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR"));
+			getSwapchainImagesKHR = reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR"));
+			acquireNextImageKHR = reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR"));
+			queuePresentKHR = reinterpret_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(dev, "vkQueuePresentKHR"));
 
 			m_surface = surface;
 			m_color_space = color_space;
@@ -2297,9 +2297,9 @@ public:
 		void create(display_handle_t&) override
 		{}
 
-		void destroy(bool=true) override
+		void destroy(bool = true) override
 		{
-			if (VkDevice pdev = (VkDevice)dev)
+			if (VkDevice pdev = dev)
 			{
 				if (m_vk_swapchain)
 				{
@@ -2338,7 +2338,7 @@ public:
 			}
 
 			VkExtent2D swapchainExtent;
-			if (surface_descriptors.currentExtent.width == (uint32_t)-1)
+			if (surface_descriptors.currentExtent.width == UINT32_MAX)
 			{
 				swapchainExtent.width = m_width;
 				swapchainExtent.height = m_height;
@@ -2481,7 +2481,7 @@ public:
 
 		VkImage& get_image(u32 index) override
 		{
-			return (VkImage&)swapchain_images[index];
+			return static_cast<VkImage&>(swapchain_images[index]);
 		}
 
 		VkImageLayout get_optimal_present_layout() override
@@ -2539,8 +2539,8 @@ public:
 
 			PFN_vkDebugReportCallbackEXT callback = vk::dbgFunc;
 
-			createDebugReportCallback = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT");
-			destroyDebugReportCallback = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT");
+			createDebugReportCallback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT"));
+			destroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT"));
 
 			VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = {};
 			dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
@@ -2940,7 +2940,7 @@ public:
 
 		void initialize(vk::command_buffer &cmd)
 		{
-			const u32 count = (u32)query_active_status.size();
+			const u32 count = ::size32(query_active_status);
 			vkCmdResetQueryPool(cmd, query_pool, 0, count);
 
 			std::fill(query_active_status.begin(), query_active_status.end(), false);
@@ -3334,10 +3334,10 @@ public:
 				vs_info.codeSize = m_compiled.size() * sizeof(u32);
 				vs_info.pNext = nullptr;
 				vs_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-				vs_info.pCode = (uint32_t*)m_compiled.data();
+				vs_info.pCode = m_compiled.data();
 				vs_info.flags = 0;
 
-				VkDevice dev = (VkDevice)*vk::get_current_renderer();
+				VkDevice dev = *vk::get_current_renderer();
 				vkCreateShaderModule(dev, &vs_info, nullptr, &m_handle);
 
 				return m_handle;
@@ -3350,7 +3350,7 @@ public:
 
 				if (m_handle)
 				{
-					VkDevice dev = (VkDevice)*vk::get_current_renderer();
+					VkDevice dev = *vk::get_current_renderer();
 					vkDestroyShaderModule(dev, m_handle, nullptr);
 					m_handle = nullptr;
 				}
@@ -3445,7 +3445,7 @@ public:
 
 			if (!(get_heap_compatible_buffer_types() & usage))
 			{
-				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", (u32)usage);
+				LOG_WARNING(RSX, "Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", usage);
 
 				shadow = std::make_unique<buffer>(*device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0);
 				usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -3488,7 +3488,7 @@ public:
 				raise_status_interrupt(runtime_state::heap_dirty);
 			}
 
-			return (u8*)_ptr + offset;
+			return static_cast<u8*>(_ptr) + offset;
 		}
 
 		void unmap(bool force = false)
@@ -3515,7 +3515,7 @@ public:
 			if (!dirty_ranges.empty())
 			{
 				verify (HERE), shadow, heap;
-				vkCmdCopyBuffer(cmd, shadow->value, heap->value, (u32)dirty_ranges.size(), dirty_ranges.data());
+				vkCmdCopyBuffer(cmd, shadow->value, heap->value, ::size32(dirty_ranges), dirty_ranges.data());
 				dirty_ranges.clear();
 
 				insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),

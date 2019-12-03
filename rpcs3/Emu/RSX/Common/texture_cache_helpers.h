@@ -289,8 +289,8 @@ namespace rsx
 					return;
 				}
 
-				const auto slice_begin = u32(slice * attr.slice_h);
-				const auto slice_end = u32(slice_begin + attr.height);
+				const u32 slice_begin = slice * attr.slice_h;
+				const u32 slice_end = slice_begin + attr.height;
 
 				const auto dst_y = std::get<1>(clipped).y;
 				const auto dst_h = std::get<2>(clipped).height;
@@ -302,9 +302,9 @@ namespace rsx
 					return;
 				}
 
-				const u16 dst_w = (u16)std::get<2>(clipped).width;
-				const u16 src_w = u16(dst_w * attr.bpp) / section_bpp;
-				const u16 height = (u16)std::get<2>(clipped).height;
+				const u16 dst_w = static_cast<u16>(std::get<2>(clipped).width);
+				const u16 src_w = static_cast<u16>(dst_w * attr.bpp) / section_bpp;
+				const u16 height = static_cast<u16>(std::get<2>(clipped).height);
 
 				if (scaling)
 				{
@@ -314,10 +314,10 @@ namespace rsx
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						(u16)std::get<0>(clipped).x,
-						(u16)std::get<0>(clipped).y,
-						rsx::apply_resolution_scale((u16)std::get<1>(clipped).x, true),
-						rsx::apply_resolution_scale((u16)std::get<1>(clipped).y, true),
+						static_cast<u16>(std::get<0>(clipped).x),
+						static_cast<u16>(std::get<0>(clipped).y),
+						rsx::apply_resolution_scale(static_cast<u16>(std::get<1>(clipped).x), true),
+						rsx::apply_resolution_scale(static_cast<u16>(std::get<1>(clipped).y), true),
 						slice,
 						src_w,
 						height,
@@ -332,10 +332,10 @@ namespace rsx
 						section->get_raw_texture(),
 						surface_transform::identity,
 						0,
-						(u16)std::get<0>(clipped).x,
-						(u16)std::get<0>(clipped).y,
-						(u16)std::get<1>(clipped).x,
-						(u16)std::get<1>(clipped).y,
+						static_cast<u16>(std::get<0>(clipped).x),
+						static_cast<u16>(std::get<0>(clipped).y),
+						static_cast<u16>(std::get<1>(clipped).x),
+						static_cast<u16>(std::get<1>(clipped).y),
 						0,
 						src_w,
 						height,

@@ -938,7 +938,7 @@ namespace rsx
 			{
 				auto &tex = *It;
 
-				if (!tex.is_dirty() && (context_mask & (u32)tex.get_context()))
+				if (!tex.is_dirty() && (context_mask & static_cast<u32>(tex.get_context())))
 				{
 					if constexpr (check_unlocked)
 					{
@@ -1362,7 +1362,7 @@ namespace rsx
 						desc.external_handle,
 						surface_transform::coordinate_transform,
 						0,
-						0, (u16)(desc.slice_h * n),
+						0, static_cast<u16>(desc.slice_h * n),
 						0, 0, n,
 						desc.width, desc.height,
 						desc.width, desc.height
@@ -1388,7 +1388,7 @@ namespace rsx
 						desc.external_handle,
 						surface_transform::coordinate_transform,
 						0,
-						0, (u16)(desc.slice_h * n),
+						0, static_cast<u16>(desc.slice_h * n),
 						0, 0, n,
 						desc.width, desc.height,
 						desc.width, desc.height
@@ -1417,7 +1417,7 @@ namespace rsx
 			default:
 			{
 				//Throw
-				fmt::throw_exception("Invalid deferred command op 0x%X" HERE, (u32)desc.op);
+				fmt::throw_exception("Invalid deferred command op 0x%X" HERE, static_cast<u32>(desc.op));
 			}
 			}
 
@@ -1730,14 +1730,14 @@ namespace rsx
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
 				attributes.depth = 6;
 				subsurface_count = 1;
-				tex_size = (u32)get_texture_size(tex);
+				tex_size = static_cast<u32>(get_texture_size(tex));
 				required_surface_height = tex_size / attributes.pitch;
 				attributes.slice_h = required_surface_height / attributes.depth;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				attributes.depth = tex.depth();
 				subsurface_count = 1;
-				tex_size = (u32)get_texture_size(tex);
+				tex_size = static_cast<u32>(get_texture_size(tex));
 				required_surface_height = tex_size / attributes.pitch;
 				attributes.slice_h = required_surface_height / attributes.depth;
 				break;
@@ -1752,7 +1752,7 @@ namespace rsx
 				}
 				else
 				{
-					LOG_ERROR(RSX, "Unimplemented unnormalized sampling for texture type %d", (u32)extended_dimension);
+					LOG_ERROR(RSX, "Unimplemented unnormalized sampling for texture type %d", static_cast<u32>(extended_dimension));
 				}
 			}
 
@@ -1872,7 +1872,7 @@ namespace rsx
 
 			if (!tex_size)
 			{
-				tex_size = (u32)get_texture_size(tex);
+				tex_size = static_cast<u32>(get_texture_size(tex));
 			}
 
 			lock.upgrade();
@@ -1916,8 +1916,8 @@ namespace rsx
 
 			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			// Reproject final clip onto source...
-			u16 src_w = (u16)((f32)dst.clip_width / scale_x);
-			u16 src_h = (u16)((f32)dst.clip_height / scale_y);
+			u16 src_w = static_cast<u16>(dst.clip_width / scale_x);
+			u16 src_h = static_cast<u16>(dst.clip_height / scale_y);
 
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
@@ -2100,7 +2100,7 @@ namespace rsx
 				{
 					// Enable type scaling in src
 					typeless_info.src_is_typeless = true;
-					typeless_info.src_scaling_hint = (f32)bpp / src_bpp;
+					typeless_info.src_scaling_hint = static_cast<f32>(bpp) / src_bpp;
 					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false);
 				}
 
@@ -2126,7 +2126,7 @@ namespace rsx
 				{
 					// Enable type scaling in dst
 					typeless_info.dst_is_typeless = true;
-					typeless_info.dst_scaling_hint = (f32)bpp / dst_bpp;
+					typeless_info.dst_scaling_hint = static_cast<f32>(bpp) / dst_bpp;
 					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false);
 				}
 			}
@@ -2232,8 +2232,8 @@ namespace rsx
 					}
 
 					// Validate clipping region
-					if ((unsigned)dst_area.x2 <= surface->get_width() &&
-						(unsigned)dst_area.y2 <= surface->get_height())
+					if (static_cast<uint>(dst_area.x2) <= surface->get_width() &&
+						static_cast<uint>(dst_area.y2) <= surface->get_height())
 					{
 						cached_dest = surface;
 						dest_texture = cached_dest->get_raw_texture();
@@ -2291,7 +2291,7 @@ namespace rsx
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 				dst_is_depth_surface = typeless_info.dst_is_typeless ? false : dst_subres.is_depth;
 
-				max_dst_width = (u16)(dst_subres.surface->get_surface_width(rsx::surface_metrics::samples) * typeless_info.dst_scaling_hint);
+				max_dst_width = static_cast<u16>(dst_subres.surface->get_surface_width(rsx::surface_metrics::samples) * typeless_info.dst_scaling_hint);
 				max_dst_height = dst_subres.surface->get_surface_height(rsx::surface_metrics::samples);
 			}
 
@@ -2458,8 +2458,8 @@ namespace rsx
 			// Reproject clip offsets onto source to simplify blit
 			if (dst.clip_x || dst.clip_y)
 			{
-				const u16 scaled_clip_offset_x = (const u16)((f32)dst.clip_x / (scale_x * typeless_info.src_scaling_hint));
-				const u16 scaled_clip_offset_y = (const u16)((f32)dst.clip_y / scale_y);
+				const u16 scaled_clip_offset_x = static_cast<u16>(dst.clip_x / (scale_x * typeless_info.src_scaling_hint));
+				const u16 scaled_clip_offset_y = static_cast<u16>(dst.clip_y / scale_y);
 
 				src_area.x1 += scaled_clip_offset_x;
 				src_area.x2 += scaled_clip_offset_x;
@@ -2625,14 +2625,14 @@ namespace rsx
 				{
 					if (src_subres.surface->get_surface_width(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
 					{
-						src_area.x1 = (u16)(src_area.x1 * resolution_scale);
-						src_area.x2 = (u16)(src_area.x2 * resolution_scale);
+						src_area.x1 = static_cast<u16>(src_area.x1 * resolution_scale);
+						src_area.x2 = static_cast<u16>(src_area.x2 * resolution_scale);
 					}
 
 					if (src_subres.surface->get_surface_height(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
 					{
-						src_area.y1 = (u16)(src_area.y1 * resolution_scale);
-						src_area.y2 = (u16)(src_area.y2 * resolution_scale);
+						src_area.y1 = static_cast<u16>(src_area.y1 * resolution_scale);
+						src_area.y2 = static_cast<u16>(src_area.y2 * resolution_scale);
 					}
 				}
 
@@ -2640,14 +2640,14 @@ namespace rsx
 				{
 					if (dst_subres.surface->get_surface_width(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
 					{
-						dst_area.x1 = (u16)(dst_area.x1 * resolution_scale);
-						dst_area.x2 = (u16)(dst_area.x2 * resolution_scale);
+						dst_area.x1 = static_cast<u16>(dst_area.x1 * resolution_scale);
+						dst_area.x2 = static_cast<u16>(dst_area.x2 * resolution_scale);
 					}
 
 					if (dst_subres.surface->get_surface_height(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
 					{
-						dst_area.y1 = (u16)(dst_area.y1 * resolution_scale);
-						dst_area.y2 = (u16)(dst_area.y2 * resolution_scale);
+						dst_area.y1 = static_cast<u16>(dst_area.y1 * resolution_scale);
+						dst_area.y2 = static_cast<u16>(dst_area.y2 * resolution_scale);
 					}
 				}
 			}
@@ -2819,7 +2819,7 @@ namespace rsx
 		f32 get_cache_miss_ratio() const
 		{
 			const auto num_flushes = m_flushes_this_frame.load();
-			return (num_flushes == 0u) ? 0.f : (f32)m_misses_this_frame.load() / num_flushes;
+			return (num_flushes == 0u) ? 0.f : static_cast<f32>(m_misses_this_frame.load()) / num_flushes;
 		}
 	};
 }
