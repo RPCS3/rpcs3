@@ -81,7 +81,6 @@ class ds4_pad_handler final : public PadHandlerBase
 		std::string path{ "" };
 		bool btCon{ false };
 		bool hasCalibData{ false };
-		bool unAuthentic{ false };
 		std::array<DS4CalibData, DS4CalibIndex::COUNT> calibData{};
 		bool newVibrateData{ true };
 		u8 largeVibrate{ 0 };
