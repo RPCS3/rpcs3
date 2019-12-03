@@ -315,7 +315,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	if (!init)
 	{
-		return CELL_GAME_ERROR_BROKEN;
+		return CELL_GAME_ERROR_BUSY;
 	}
 
 	std::string dir;
@@ -396,7 +396,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 
 	if (!init)
 	{
-		return CELL_GAME_ERROR_BROKEN;
+		return CELL_GAME_ERROR_BUSY;
 	}
 
 	perm->dir = Emu.GetTitleID();
@@ -444,7 +444,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	if (!init)
 	{
-		return CELL_GAME_ERROR_BROKEN;
+		return CELL_GAME_ERROR_BUSY;
 	}
 
 	perm->dir = std::move(name);
