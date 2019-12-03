@@ -44,8 +44,10 @@
 #endif
 
 /** Emu.Init() wrapper for user manager */
-bool main_application::InitializeEmulator(const std::string& user, bool force_init)
+bool main_application::InitializeEmulator(const std::string& user, bool force_init, bool show_gui)
 {
+	Emu.SetHasGui(show_gui);
+
 	// try to set a new user
 	const bool user_was_set = Emu.SetUsr(user);
 
