@@ -24,13 +24,13 @@ struct ps3_fmt_src
 	template <typename T>
 	T get(std::size_t index) const
 	{
-		const u32 i = (u32)index + g_count;
+		const u32 i = static_cast<u32>(index) + g_count;
 		return ppu_gpr_cast<T>(i < 8 ? ctx->gpr[3 + i] : +*ctx->get_stack_arg(i));
 	}
 
 	void skip(std::size_t extra)
 	{
-		g_count += (u32)extra + 1;
+		g_count += static_cast<u32>(extra) + 1;
 	}
 
 	std::size_t fmt_string(std::string& out, std::size_t extra) const
@@ -404,7 +404,7 @@ s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> 
 	}
 	else
 	{
-		count = (u32)std::min<size_t>(count - 1, result.size());
+		count = static_cast<u32>(std::min<size_t>(count - 1, result.size()));
 
 		std::memcpy(dst.get_ptr(), result.c_str(), count);
 		dst[count] = 0;

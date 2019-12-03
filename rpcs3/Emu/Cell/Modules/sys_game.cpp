@@ -21,7 +21,7 @@ static u32 get_string_array_size(vm::cpptr<char> list, u32& out_count)
 		if (const vm::cptr<char> str = list[i])
 		{
 			out_count++;
-			result += (((u32)std::strlen(str.get_ptr()) + 0x10) & -0x10) + 8;
+			result += ((static_cast<u32>(std::strlen(str.get_ptr())) + 0x10) & -0x10) + 8;
 			continue;
 		}
 		break;
@@ -35,7 +35,7 @@ static u32 get_exitspawn_size(vm::cptr<char> path, vm::cpptr<char> argv, vm::cpp
 	arg_count = 1;
 	env_count = 0;
 
-	u32 result = (((u32)std::strlen(path.get_ptr()) + 0x10) & -0x10) + 8;
+	u32 result = ((static_cast<u32>(std::strlen(path.get_ptr())) + 0x10) & -0x10) + 8;
 	result += get_string_array_size(argv, arg_count);
 	result += get_string_array_size(envp, env_count);
 
@@ -51,7 +51,7 @@ static void put_string_array(vm::pptr<char, u32, u64> pstr, vm::ptr<char>& str, 
 {
 	for (u32 i = 0; i < count; i++)
 	{
-		const u32 len = (u32)std::strlen(list[i].get_ptr());
+		const u32 len = static_cast<u32>(std::strlen(list[i].get_ptr()));
 		std::memcpy(str.get_ptr(), list[i].get_ptr(), len + 1);
 		pstr[i] = str;
 		str += (len + 0x10) & -0x10;
@@ -65,7 +65,7 @@ static void put_exitspawn(vm::ptr<void> out, vm::cptr<char> path, u32 argc, vm::
 	vm::pptr<char, u32, u64> pstr = vm::cast(out.addr());
 	vm::ptr<char> str = vm::static_ptr_cast<char>(out) + (argc + envc + (argc + envc) % 2) * 8 + 0x10;
 
-	const u32 len = (u32)std::strlen(path.get_ptr());
+	const u32 len = static_cast<u32>(std::strlen(path.get_ptr()));
 	std::memcpy(str.get_ptr(), path.get_ptr(), len + 1);
 	*pstr++ = str;
 	str += (len + 0x10) & -0x10;

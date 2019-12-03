@@ -121,7 +121,7 @@ uint16_t statichle_handler::gen_CRC16(const uint8_t* data_p, size_t length)
 	crc  = ~crc;
 	data = crc;
 	crc  = (crc << 8) | ((data >> 8) & 0xff);
-	return (unsigned short)(crc);
+	return static_cast<u16>(crc);
 }
 
 bool statichle_handler::check_against_patterns(vm::cptr<u8>& data, u32 size, u32 addr)

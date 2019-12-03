@@ -107,7 +107,7 @@ u32 cellSpursModulePollStatus(spu_thread& spu, u32* status)
 	auto result = spu.gpr[3]._u64[1];
 	if (status)
 	{
-		*status = (u32)result;
+		*status = static_cast<u32>(result);
 	}
 
 	u32 wklId = result >> 32;
@@ -126,8 +126,8 @@ void cellSpursModuleExit(spu_thread& spu)
 bool spursDma(spu_thread& spu, u32 cmd, u64 ea, u32 lsa, u32 size, u32 tag)
 {
 	spu.set_ch_value(MFC_LSA, lsa);
-	spu.set_ch_value(MFC_EAH, (u32)(ea >> 32));
-	spu.set_ch_value(MFC_EAL, (u32)(ea));
+	spu.set_ch_value(MFC_EAH, static_cast<u32>(ea >> 32));
+	spu.set_ch_value(MFC_EAL, static_cast<u32>(ea));
 	spu.set_ch_value(MFC_Size, size);
 	spu.set_ch_value(MFC_TagID, tag);
 	spu.set_ch_value(MFC_Cmd, cmd);
@@ -330,7 +330,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 						// 6. Is the workload executable same as the currently loaded executable
 						// 7. The workload id (lesser the number, more the weight)
 						u16 weight = (wklFlag || wklSignal || (readyCount > contention[i])) ? 0x8000 : 0;
-						weight |= (u16)(ctxt->priority[i] & 0x7F) << 16;
+						weight |= (ctxt->priority[i] & 0x7F) << 8; // TODO: was shifted << 16
 						weight |= i == ctxt->wklCurrentId ? 0x80 : 0x00;
 						weight |= (contention[i] > 0 && spurs->wklMinContention[i] > contention[i]) ? 0x40 : 0x00;
 						weight |= ((CELL_SPURS_MAX_SPU - contention[i]) & 0x0F) << 2;
@@ -424,7 +424,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 		std::memcpy(vm::base(spu.offset + 0x100), spurs, 128);
 	}//);
 
-	u64 result = (u64)wklSelectedId << 32;
+	u64 result = u64{wklSelectedId} << 32;
 	result |= pollStatus;
 	spu.gpr[3]._u64[1] = result;
 	return true;
@@ -597,7 +597,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 		std::memcpy(vm::base(spu.offset + 0x100), spurs, 128);
 	}//);
 
-	u64 result = (u64)wklSelectedId << 32;
+	u64 result = u64{wklSelectedId} << 32;
 	result |= pollStatus;
 	spu.gpr[3]._u64[1] = result;
 	return true;
@@ -609,8 +609,8 @@ void spursKernelDispatchWorkload(spu_thread& spu, u64 widAndPollStatus)
 	auto ctxt = vm::_ptr<SpursKernelContext>(spu.offset + 0x100);
 	auto isKernel2 = ctxt->spurs->flags1 & SF1_32_WORKLOADS ? true : false;
 
-	auto pollStatus = (u32)widAndPollStatus;
-	auto wid = (u32)(widAndPollStatus >> 32);
+	auto pollStatus = static_cast<u32>(widAndPollStatus);
+	auto wid = static_cast<u32>(widAndPollStatus >> 32);
 
 	// DMA in the workload info for the selected workload
 	auto wklInfoOffset = wid < CELL_SPURS_MAX_WORKLOAD ? &ctxt->spurs->wklInfo1[wid] :
@@ -718,7 +718,7 @@ bool spursKernelEntry(spu_thread& spu)
 	//spu.RegisterHleFunction(ctxt->selectWorkloadAddr, isKernel2 ? spursKernel2SelectWorkload : spursKernel1SelectWorkload);
 
 	// Start the system service
-	spursKernelDispatchWorkload(spu, ((u64)CELL_SPURS_SYS_SERVICE_WORKLOAD_ID) << 32);
+	spursKernelDispatchWorkload(spu, u64{CELL_SPURS_SYS_SERVICE_WORKLOAD_ID} << 32);
 	return false;
 }
 
@@ -1167,7 +1167,7 @@ void spursSysServiceTraceSaveCount(spu_thread& spu, SpursKernelContext* ctxt)
 {
 	if (ctxt->traceBuffer)
 	{
-		auto traceInfo = vm::ptr<CellSpursTraceInfo>::make((u32)(ctxt->traceBuffer - (ctxt->spurs->traceStartIndex[ctxt->spuNum] << 4)));
+		auto traceInfo = vm::ptr<CellSpursTraceInfo>::make(vm::cast(ctxt->traceBuffer - (ctxt->spurs->traceStartIndex[ctxt->spuNum] << 4)));
 		traceInfo->count[ctxt->spuNum] = ctxt->traceMsgCount;
 	}
 }
@@ -1787,7 +1787,7 @@ void spursTasksetDispatch(spu_thread& spu)
 
 		if ((elfAddr & 5) == 1)
 		{
-			std::memcpy(vm::base(spu.offset + 0x2FC0), &((CellSpursTaskset2*)(ctxt->taskset.get_ptr()))->task_exit_code[taskId], 0x10);
+			std::memcpy(vm::base(spu.offset + 0x2FC0), &vm::_ptr<CellSpursTaskset2>(vm::cast(ctxt->taskset.addr()))->task_exit_code[taskId], 0x10);
 		}
 
 		// Trace - GUID

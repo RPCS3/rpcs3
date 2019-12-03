@@ -178,7 +178,7 @@ error_code cellVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<CellVoicePortParam>
 	{
 		verify(HERE), ctr2 < CELLVOICE_MAX_PORT + 1;
 
-		std::tie(port, success) = manager->ports.try_emplace(::narrow<u16>((ctr2 << 8) | manager->id_ctr)); 
+		std::tie(port, success) = manager->ports.try_emplace(::narrow<u16>((ctr2 << 8) | manager->id_ctr));
 	}
 
 	port->second.info = *pArg;
@@ -197,7 +197,7 @@ error_code cellVoiceDeletePort(u32 portId)
 	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
-	if (manager->ports.erase((u16)portId) == 0)
+	if (manager->ports.erase(static_cast<u16>(portId)) == 0)
 		return CELL_VOICE_ERROR_TOPOLOGY;
 
 	return CELL_OK;
@@ -601,7 +601,7 @@ error_code cellVoiceSetMuteFlagAll(u16 bMuted)
 	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
 
-	// Doesn't change port->bMute value 
+	// Doesn't change port->bMute value
 	return CELL_OK;
 }
 
@@ -796,7 +796,7 @@ error_code cellVoiceWriteToIPort(u32 ips, vm::cptr<void> data, vm::ptr<u32> size
 
 	if (!manager->is_init)
 		return CELL_VOICE_ERROR_LIBVOICE_NOT_INIT;
-	
+
 	auto iport = manager->access_port(ips);
 
 	if (!iport || iport->info.portType >= CELLVOICE_PORTTYPE_OUT_PCMAUDIO)

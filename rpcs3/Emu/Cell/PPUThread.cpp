@@ -170,7 +170,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 template<typename T = u64>
 static T& ppu_ref(u32 addr)
 {
-	return *reinterpret_cast<T*>(vm::g_exec_addr + (u64)addr * 2);
+	return *reinterpret_cast<T*>(vm::g_exec_addr + u64{addr} * 2);
 }
 
 // Get interpreter cache value
@@ -183,7 +183,7 @@ static u64 ppu_cache(u32 addr)
 		(fmt::throw_exception("Invalid PPU decoder"), nullptr));
 
 	const u32 value = vm::read32(addr);
-	return (u64)value << 32 | ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(value)]));
+	return u64{value} << 32 | ::narrow<u32>(reinterpret_cast<std::uintptr_t>(table[ppu_decode(value)]));
 }
 
 static bool ppu_fallback(ppu_thread& ppu, ppu_opcode_t op)
@@ -212,14 +212,14 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 	while (true)
 	{
 		// Run instructions in interpreter
-		if (const u32 op = *reinterpret_cast<u32*>(cache + (u64)ppu.cia * 2 + 4);
+		if (const u32 op = *reinterpret_cast<u32*>(cache + u64{ppu.cia} * 2 + 4);
 			LIKELY(table[ppu_decode(op)](ppu, { op })))
 		{
 			ppu.cia += 4;
 			continue;
 		}
 
-		if (uptr func = *reinterpret_cast<u32*>(cache + (u64)ppu.cia * 2);
+		if (uptr func = *reinterpret_cast<u32*>(cache + u64{ppu.cia} * 2);
 			func != reinterpret_cast<uptr>(ppu_recompiler_fallback))
 		{
 			// We found a recompiler function at cia, return
@@ -251,7 +251,7 @@ static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
 	}
 
 	// Fallback to the interpreter function
-	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{(u32)ppu_cache(ppu.cia)})(ppu, op))
+	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(ppu_cache(ppu.cia) & 0xffffffff)(ppu, op))
 	{
 		ppu.cia += 4;
 	}
@@ -277,7 +277,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
 	while (size)
 	{
-		ppu_ref(addr) = (u64)vm::read32(addr) << 32 | fallback;
+		ppu_ref(addr) = u64{vm::read32(addr)} << 32 | fallback;
 		addr += 4;
 		size -= 4;
 	}
@@ -336,7 +336,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 	}
 
 	// Fallback to the interpreter function
-	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(std::uintptr_t{(u32)ppu_cache(ppu.cia)})(ppu, op))
+	if (reinterpret_cast<decltype(&ppu_interpreter::UNK)>(ppu_cache(ppu.cia) & 0xffffffff)(ppu, op))
 	{
 		ppu.cia += 4;
 	}
@@ -604,7 +604,7 @@ void ppu_thread::cpu_task()
 		}
 		default:
 		{
-			fmt::throw_exception("Unknown ppu_cmd(0x%x)" HERE, (u32)type);
+			fmt::throw_exception("Unknown ppu_cmd(0x%x)" HERE, static_cast<u32>(type));
 		}
 		}
 	}
@@ -645,7 +645,7 @@ void ppu_thread::exec_task()
 	{
 		const auto exec_op = [this](u64 op)
 		{
-			return reinterpret_cast<func_t>((uptr)(u32)op)(*this, {u32(op >> 32)});
+			return reinterpret_cast<func_t>(op & 0xffffffff)(*this, {static_cast<u32>(op >> 32)});
 		};
 
 		if (cia % 8 || UNLIKELY(state))
@@ -653,12 +653,12 @@ void ppu_thread::exec_task()
 			if (test_stopped()) return;
 
 			// Decode single instruction (may be step)
-			if (exec_op(*reinterpret_cast<u64*>(cache + (u64)cia * 2))) { cia += 4; }
+			if (exec_op(*reinterpret_cast<u64*>(cache + u64{cia} * 2))) { cia += 4; }
 			continue;
 		}
 
 		u64 op0, op1, op2, op3;
-		u64 _pos = (u64)cia * 2;
+		u64 _pos = u64{cia} * 2;
 
 		// Reinitialize
 		{
@@ -887,7 +887,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 
 		const u32 old_pos = vm::cast(context.gpr[1], HERE);
 		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
-		context.gpr[1] &= ~((u64)align_v - 1); // fix stack alignment
+		context.gpr[1] &= ~(u64{align_v} - 1); // fix stack alignment
 
 		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
 		{
@@ -1352,37 +1352,37 @@ extern void ppu_initialize(const ppu_module& info)
 	{
 		std::unordered_map<std::string, u64> link_table
 		{
-			{ "__mptr", (u64)&vm::g_base_addr },
-			{ "__cptr", (u64)&vm::g_exec_addr },
-			{ "__trap", (u64)&ppu_trap },
-			{ "__error", (u64)&ppu_error },
-			{ "__check", (u64)&ppu_check },
-			{ "__trace", (u64)&ppu_trace },
-			{ "__syscall", (u64)&ppu_execute_syscall },
-			{ "__get_tb", (u64)&get_timebased_time },
-			{ "__lwarx", (u64)&ppu_lwarx },
-			{ "__ldarx", (u64)&ppu_ldarx },
-			{ "__stwcx", (u64)&ppu_stwcx },
-			{ "__stdcx", (u64)&ppu_stdcx },
-			{ "__vexptefp", (u64)&sse_exp2_ps },
-			{ "__vlogefp", (u64)&sse_log2_ps },
-			{ "__vperm", s_use_ssse3 ? (u64)&sse_altivec_vperm : (u64)&sse_altivec_vperm_v0 }, // Obsolete
-			{ "__lvsl", (u64)&sse_altivec_lvsl },
-			{ "__lvsr", (u64)&sse_altivec_lvsr },
-			{ "__lvlx", s_use_ssse3 ? (u64)&sse_cellbe_lvlx : (u64)&sse_cellbe_lvlx_v0 },
-			{ "__lvrx", s_use_ssse3 ? (u64)&sse_cellbe_lvrx : (u64)&sse_cellbe_lvrx_v0 },
-			{ "__stvlx", s_use_ssse3 ? (u64)&sse_cellbe_stvlx : (u64)&sse_cellbe_stvlx_v0 },
-			{ "__stvrx", s_use_ssse3 ? (u64)&sse_cellbe_stvrx : (u64)&sse_cellbe_stvrx_v0 },
-			{ "__resupdate", (u64)&vm::reservation_update },
-			{ "sys_config_io_event", (u64)ppu_get_syscall(523) },
+			{ "__mptr", reinterpret_cast<u64>(&vm::g_base_addr) },
+			{ "__cptr", reinterpret_cast<u64>(&vm::g_exec_addr) },
+			{ "__trap", reinterpret_cast<u64>(&ppu_trap) },
+			{ "__error", reinterpret_cast<u64>(&ppu_error) },
+			{ "__check", reinterpret_cast<u64>(&ppu_check) },
+			{ "__trace", reinterpret_cast<u64>(&ppu_trace) },
+			{ "__syscall", reinterpret_cast<u64>(ppu_execute_syscall) },
+			{ "__get_tb", reinterpret_cast<u64>(get_timebased_time) },
+			{ "__lwarx", reinterpret_cast<u64>(ppu_lwarx) },
+			{ "__ldarx", reinterpret_cast<u64>(ppu_ldarx) },
+			{ "__stwcx", reinterpret_cast<u64>(ppu_stwcx) },
+			{ "__stdcx", reinterpret_cast<u64>(ppu_stdcx) },
+			{ "__vexptefp", reinterpret_cast<u64>(sse_exp2_ps) },
+			{ "__vlogefp", reinterpret_cast<u64>(sse_log2_ps) },
+			{ "__vperm", s_use_ssse3 ? reinterpret_cast<u64>(sse_altivec_vperm) : reinterpret_cast<u64>(sse_altivec_vperm_v0) }, // Obsolete
+			{ "__lvsl", reinterpret_cast<u64>(sse_altivec_lvsl) },
+			{ "__lvsr", reinterpret_cast<u64>(sse_altivec_lvsr) },
+			{ "__lvlx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_lvlx) : reinterpret_cast<u64>(sse_cellbe_lvlx_v0) },
+			{ "__lvrx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_lvrx) : reinterpret_cast<u64>(sse_cellbe_lvrx_v0) },
+			{ "__stvlx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvlx) : reinterpret_cast<u64>(sse_cellbe_stvlx_v0) },
+			{ "__stvrx", s_use_ssse3 ? reinterpret_cast<u64>(sse_cellbe_stvrx) : reinterpret_cast<u64>(sse_cellbe_stvrx_v0) },
+			{ "__resupdate", reinterpret_cast<u64>(vm::reservation_update) },
+			{ "sys_config_io_event", reinterpret_cast<u64>(ppu_get_syscall(523)) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
 		{
 			if (auto sc = ppu_get_syscall(index))
 			{
-				link_table.emplace(fmt::format("%s", ppu_syscall_code(index)), (u64)sc);
-				link_table.emplace(fmt::format("syscall_%u", index), (u64)sc);
+				link_table.emplace(fmt::format("%s", ppu_syscall_code(index)), reinterpret_cast<u64>(sc));
+				link_table.emplace(fmt::format("syscall_%u", index), reinterpret_cast<u64>(sc));
 			}
 		}
 
@@ -1607,8 +1607,8 @@ extern void ppu_initialize(const ppu_module& info)
 			break;
 		}
 
-		globals.emplace_back(fmt::format("__mptr%x", suffix), (u64)vm::g_base_addr);
-		globals.emplace_back(fmt::format("__cptr%x", suffix), (u64)vm::g_exec_addr);
+		globals.emplace_back(fmt::format("__mptr%x", suffix), reinterpret_cast<u64>(vm::g_base_addr));
+		globals.emplace_back(fmt::format("__cptr%x", suffix), reinterpret_cast<u64>(vm::g_exec_addr));
 
 		// Initialize segments for relocations
 		for (u32 i = 0; i < info.segs.size(); i++)
@@ -1739,8 +1739,8 @@ extern void ppu_initialize(const ppu_module& info)
 		// Rewrite global variables
 		while (index < jit_mod.vars.size())
 		{
-			*jit_mod.vars[index++] = (u64)vm::g_base_addr;
-			*jit_mod.vars[index++] = (u64)vm::g_exec_addr;
+			*jit_mod.vars[index++] = reinterpret_cast<u64>(vm::g_base_addr);
+			*jit_mod.vars[index++] = reinterpret_cast<u64>(vm::g_exec_addr);
 
 			for (const auto& seg : info.segs)
 			{

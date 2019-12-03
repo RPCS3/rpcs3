@@ -557,7 +557,7 @@ error_code cellVdecEndSeq(u32 handle)
 
 error_code cellVdecDecodeAu(u32 handle, CellVdecDecodeMode mode, vm::cptr<CellVdecAuInfo> auInfo)
 {
-	cellVdec.trace("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, (s32)mode, auInfo);
+	cellVdec.trace("cellVdecDecodeAu(handle=0x%x, mode=%d, auInfo=*0x%x)", handle, +mode, auInfo);
 
 	const auto vdec = idm::get<vdec_context>(handle);
 
@@ -758,14 +758,14 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
 	info->size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 	info->auNum = 1;
-	info->auPts[0].lower = (u32)(pts);
-	info->auPts[0].upper = (u32)(pts >> 32);
-	info->auPts[1].lower = (u32)CODEC_TS_INVALID;
-	info->auPts[1].upper = (u32)CODEC_TS_INVALID;
-	info->auDts[0].lower = (u32)(dts);
-	info->auDts[0].upper = (u32)(dts >> 32);
-	info->auDts[1].lower = (u32)CODEC_TS_INVALID;
-	info->auDts[1].upper = (u32)CODEC_TS_INVALID;
+	info->auPts[0].lower = static_cast<u32>(pts);
+	info->auPts[0].upper = static_cast<u32>(pts >> 32);
+	info->auPts[1].lower = -1;
+	info->auPts[1].upper = -1;
+	info->auDts[0].lower = static_cast<u32>(dts);
+	info->auDts[0].upper = static_cast<u32>(dts >> 32);
+	info->auDts[1].lower = -1;
+	info->auDts[1].upper = -1;
 	info->auUserData[0] = usrd;
 	info->auUserData[1] = 0;
 	info->status = CELL_OK;
@@ -912,7 +912,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 
 error_code cellVdecSetFrameRate(u32 handle, CellVdecFrameRate frc)
 {
-	cellVdec.trace("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, (s32)frc);
+	cellVdec.trace("cellVdecSetFrameRate(handle=0x%x, frc=0x%x)", handle, +frc);
 
 	const auto vdec = idm::get<vdec_context>(handle);
 

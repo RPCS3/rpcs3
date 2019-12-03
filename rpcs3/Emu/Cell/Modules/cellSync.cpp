@@ -902,20 +902,20 @@ error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQue
 			{
 				push.m_h7 = 0;
 			}
-			if (isBlocking && useEventQueue && *(u32*)queue->m_bs == -1)
+			if (isBlocking && useEventQueue && std::bit_cast<s32>(queue->m_bs) == -1)
 			{
 				return CELL_SYNC_ERROR_STAT;
 			}
 
-			s32 var2 = (s16)push.m_h8;
+			s32 var2 = static_cast<s16>(push.m_h8);
 			s32 res;
-			if (useEventQueue && ((s32)push.m_h5 != var2 || push.m_h7))
+			if (useEventQueue && (+push.m_h5 != var2 || push.m_h7))
 			{
 				res = CELL_SYNC_ERROR_BUSY;
 			}
 			else
 			{
-				var2 -= (s32)(u16)queue->pop1.load().m_h1;
+				var2 -= queue->pop1.load().m_h1;
 				if (var2 < 0)
 				{
 					var2 += depth * 2;
@@ -923,7 +923,7 @@ error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQue
 
 				if (var2 < depth)
 				{
-					const s32 _pointer = (s16)push.m_h8;
+					const s32 _pointer = static_cast<s16>(push.m_h8);
 					*pointer = _pointer;
 					if (_pointer + 1 >= depth * 2)
 					{
@@ -997,13 +997,13 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 		const auto old2 = queue->push3.load();
 		auto push3 = old2;
 
-		s32 var1 = pointer - (u16)push3.m_h5;
+		s32 var1 = pointer - push3.m_h5;
 		if (var1 < 0)
 		{
 			var1 += depth * 2;
 		}
 
-		s32 var2 = (s32)(s16)queue->pop1.load().m_h4 - (s32)(u16)queue->pop1.load().m_h1;
+		s32 var2 = static_cast<s16>(queue->pop1.load().m_h4) - queue->pop1.load().m_h1;
 		if (var2 < 0)
 		{
 			var2 += depth * 2;
@@ -1019,9 +1019,9 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = utils::cntlz32((u32)(u16)~(var9_ | (u16)push3.m_h6)) - 16; // count leading zeros in u16
+		s32 var9 = utils::cntlz32(static_cast<u16>(~(var9_ | push3.m_h6))) - 16; // count leading zeros in u16
 
-		s32 var5 = (s32)(u16)push3.m_h6 | var9_;
+		s32 var5 = push3.m_h6 | var9_;
 		if (var9 & 0x30)
 		{
 			var5 = 0;
@@ -1031,7 +1031,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 			var5 <<= var9;
 		}
 
-		s32 var3 = (u16)push3.m_h5 + var9;
+		s32 var3 = push3.m_h5 + var9;
 		if (var3 >= depth * 2)
 		{
 			var3 -= depth * 2;
@@ -1054,7 +1054,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 				var8 += 0x1e;
 			}
 
-			if (var9 > 1 && (u32)var8 > 1)
+			if (var9 > 1 && static_cast<u32>(var8) > 1)
 			{
 				verify(HERE), (16 - var2 <= 1);
 			}
@@ -1076,15 +1076,15 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 			}
 
 			push2.pack = (pack & 0x83ff) | var12;
-			var6 = (u16)queue->m_hs1[var11];
+			var6 = queue->m_hs1[var11];
 		}
 		else
 		{
 			var6 = -1;
 		}
 
-		push3.m_h5 = (u16)var3;
-		push3.m_h6 = (u16)var5;
+		push3.m_h5 = static_cast<u16>(var3);
+		push3.m_h6 = static_cast<u16>(var5);
 
 		if (queue->push2.compare_and_swap_test(old, push2))
 		{
@@ -1093,7 +1093,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 			{
 				verify(HERE), (queue->push3.compare_and_swap_test(old2, push3));
 				verify(HERE), (fpSendSignal);
-				return not_an_error(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
+				return not_an_error(fpSendSignal(ppu, queue->m_eaSignal.addr(), var6));
 			}
 			else
 			{
@@ -1164,7 +1164,7 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 	const s32 depth = queue->m_depth;
 	const s32 size = queue->m_size;
 	const s32 pos = *position;
-	const u32 addr = vm::cast((u64)((queue->m_buffer.addr() & ~1ull) + size * (pos >= depth ? pos - depth : pos)), HERE);
+	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1ull) + size * (pos >= depth ? pos - depth : pos), HERE);
 	std::memcpy(vm::base(addr), buffer.get_ptr(), size);
 
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1201,20 +1201,20 @@ error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueu
 			{
 				pop.m_h3 = 0;
 			}
-			if (isBlocking && useEventQueue && *(u32*)queue->m_bs == -1)
+			if (isBlocking && useEventQueue && std::bit_cast<s32>(queue->m_bs) == -1)
 			{
 				return CELL_SYNC_ERROR_STAT;
 			}
 
-			s32 var2 = (s32)(s16)pop.m_h4;
+			s32 var2 = static_cast<s16>(pop.m_h4);
 			s32 res;
-			if (useEventQueue && ((s32)(u16)pop.m_h1 != var2 || pop.m_h3))
+			if (useEventQueue && (static_cast<s32>(pop.m_h1) != var2 || pop.m_h3))
 			{
 				res = CELL_SYNC_ERROR_BUSY;
 			}
 			else
 			{
-				var2 = (s32)(u16)queue->push1.load().m_h5 - var2;
+				var2 = queue->push1.load().m_h5 - var2;
 				if (var2 < 0)
 				{
 					var2 += depth * 2;
@@ -1222,7 +1222,7 @@ error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueu
 
 				if (var2 > 0)
 				{
-					const s32 _pointer = (s16)pop.m_h4;
+					const s32 _pointer = static_cast<s16>(pop.m_h4);
 					*pointer = _pointer;
 					if (_pointer + 1 >= depth * 2)
 					{
@@ -1297,13 +1297,13 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 		const auto old2 = queue->pop3.load();
 		auto pop3 = old2;
 
-		s32 var1 = pointer - (u16)pop3.m_h1;
+		s32 var1 = pointer - pop3.m_h1;
 		if (var1 < 0)
 		{
 			var1 += depth * 2;
 		}
 
-		s32 var2 = (s32)(s16)queue->push1.load().m_h8 - (s32)(u16)queue->push1.load().m_h5;
+		s32 var2 = static_cast<s16>(queue->push1.load().m_h8) - queue->push1.load().m_h5;
 		if (var2 < 0)
 		{
 			var2 += depth * 2;
@@ -1319,9 +1319,9 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 		{
 			var9_ = 1 << var9_;
 		}
-		s32 var9 = utils::cntlz32((u32)(u16)~(var9_ | (u16)pop3.m_h2)) - 16; // count leading zeros in u16
+		s32 var9 = utils::cntlz32(static_cast<u16>(~(var9_ | pop3.m_h2))) - 16; // count leading zeros in u16
 
-		s32 var5 = (s32)(u16)pop3.m_h2 | var9_;
+		s32 var5 = pop3.m_h2 | var9_;
 		if (var9 & 0x30)
 		{
 			var5 = 0;
@@ -1331,7 +1331,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 			var5 <<= var9;
 		}
 
-		s32 var3 = (u16)pop3.m_h1 + var9;
+		s32 var3 = pop3.m_h1 + var9;
 		if (var3 >= depth * 2)
 		{
 			var3 -= depth * 2;
@@ -1358,7 +1358,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 				var8 += 0x1e;
 			}
 
-			if (var9 > 1 && (u32)var8 > 1)
+			if (var9 > 1 && static_cast<u32>(var8) > 1)
 			{
 				verify(HERE), (16 - var2 <= 1);
 			}
@@ -1380,11 +1380,11 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 			}
 
 			pop2.pack = (pack & 0x83ff) | var12;
-			var6 = (u16)queue->m_hs2[var11];
+			var6 = queue->m_hs2[var11];
 		}
 
-		pop3.m_h1 = (u16)var3;
-		pop3.m_h2 = (u16)var5;
+		pop3.m_h1 = static_cast<u16>(var3);
+		pop3.m_h2 = static_cast<u16>(var5);
 
 		if (queue->pop2.compare_and_swap_test(old, pop2))
 		{
@@ -1392,7 +1392,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 			{
 				verify(HERE), (queue->pop3.compare_and_swap_test(old2, pop3));
 				verify(HERE), (fpSendSignal);
-				return not_an_error(fpSendSignal(ppu, (u32)queue->m_eaSignal.addr(), var6));
+				return not_an_error(fpSendSignal(ppu, queue->m_eaSignal.addr(), var6));
 			}
 			else
 			{
@@ -1463,7 +1463,7 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 	const s32 depth = queue->m_depth;
 	const s32 size = queue->m_size;
 	const s32 pos = *position;
-	const u32 addr = vm::cast((u64)((queue->m_buffer.addr() & ~1) + size * (pos >= depth ? pos - depth : pos)), HERE);
+	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1) + size * (pos >= depth ? pos - depth : pos), HERE);
 	std::memcpy(buffer.get_ptr(), vm::base(addr), size);
 
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1501,16 +1501,16 @@ error_code cellSyncLFQueueClear(vm::ptr<CellSyncLFQueue> queue)
 		s32 var1, var2;
 		if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
 		{
-			var1 = var2 = (u16)queue->pop2.load().pack;
+			var1 = var2 = queue->pop2.load().pack;
 		}
 		else
 		{
-			var1 = (u16)push.m_h7;
-			var2 = (u16)pop.m_h3;
+			var1 = push.m_h7;
+			var2 = pop.m_h3;
 		}
 
-		if ((s32)(s16)pop.m_h4 != (s32)(u16)pop.m_h1 ||
-			(s32)(s16)push.m_h8 != (s32)(u16)push.m_h5 ||
+		if (static_cast<s16>(pop.m_h4) != +pop.m_h1 ||
+			static_cast<s16>(push.m_h8) != +push.m_h5 ||
 			((var2 >> 10) & 0x1f) != (var2 & 0x1f) ||
 			((var1 >> 10) & 0x1f) != (var1 & 0x1f))
 		{
@@ -1547,8 +1547,8 @@ error_code cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> size
 		const auto old = queue->pop3.load();
 
 		// Loads must be in this order
-		u32 var1 = (u16)queue->pop1.load().m_h1;
-		u32 var2 = (u16)queue->push1.load().m_h5;
+		u32 var1 = queue->pop1.load().m_h1;
+		u32 var2 = queue->push1.load().m_h5;
 
 		if (queue->pop3.compare_and_swap_test(old, old))
 		{
@@ -1558,7 +1558,7 @@ error_code cellSyncLFQueueSize(vm::ptr<CellSyncLFQueue> queue, vm::ptr<u32> size
 			}
 			else
 			{
-				*size = var2 - var1 + (u32)queue->m_depth * 2;
+				*size = var2 - var1 + queue->m_depth * 2;
 			}
 
 			return CELL_OK;

@@ -7,15 +7,15 @@ LOG_CHANNEL(cellRtc);
 
 s64 convertToUNIXTime(u16 seconds, u16 minutes, u16 hours, u16 days, s32 years)
 {
-	return (s64)seconds + (s64)minutes * 60 + (s64)hours * 3600 + (s64)days * 86400 +
-		(s64)(years - 70) * 31536000 + (s64)((years - 69) / 4) * 86400 -
-		(s64)((years - 1) / 100) * 86400 + (s64)((years + 299) / 400) * 86400;
+	return s64{seconds} + s64{minutes} * 60 + s64{hours} * 3600 + s64{days} * 86400 +
+		s64{years - 70} * 31536000 + s64{(years - 69) / 4} * 86400 -
+		s64{(years - 1) / 100} * 86400 + s64{(years + 299) / 400} * 86400;
 }
 
 u64 convertToWin32FILETIME(u16 seconds, u16 minutes, u16 hours, u16 days, s32 years)
 {
 	s64 unixtime = convertToUNIXTime(seconds, minutes, hours, days, years);
-	u64 win32time = u64(unixtime) * u64(10000000) + u64(116444736000000000);
+	u64 win32time = static_cast<u64>(unixtime) * 10000000 + 116444736000000000;
 	u64 win32filetime = win32time | win32time >> 32;
 	return win32filetime;
 }

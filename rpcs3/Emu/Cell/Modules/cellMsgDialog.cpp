@@ -554,7 +554,7 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			return dlg->progress_bar_increment(progressBarIndex, (f32)delta);
+			return dlg->progress_bar_increment(progressBarIndex, static_cast<f32>(delta));
 		}
 	}
 

@@ -235,7 +235,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 	if (dst != NULL)
 	{
 		size_t dstLen = *dst_len;
-		size_t ictd = iconv(ict, (char **)&src, &srcLen, (char **)&dst, &dstLen);
+		size_t ictd = iconv(ict, const_cast<char**>(reinterpret_cast<const char**>(&src)), &srcLen, reinterpret_cast<char**>(&dst), &dstLen);
 		*dst_len -= dstLen;
 		if (ictd == -1)
 		{
@@ -260,7 +260,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		{
 			char *bufPtr = buf;
 			size_t bufLeft = sizeof(buf);
-			size_t ictd = iconv(ict, (char **)&src, &srcLen, (char **)&bufPtr, &bufLeft);
+			size_t ictd = iconv(ict, const_cast<char**>(reinterpret_cast<const char**>(&src)), &srcLen, reinterpret_cast<char**>(&dst), &bufLeft);
 			*dst_len += sizeof(buf) - bufLeft;
 			if (ictd == -1 && errno != E2BIG)
 			{

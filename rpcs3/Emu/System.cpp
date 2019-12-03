@@ -1726,7 +1726,7 @@ void Emulator::Resume()
 		{
 			if (vm::check_addr(i))
 			{
-				if (auto& data = *(be_t<u32>*)(vm::g_stat_addr + i))
+				if (auto& data = *reinterpret_cast<be_t<u32>*>(vm::g_stat_addr + i))
 				{
 					dis_asm.dump_pc = i;
 					dis_asm.disasm(i);

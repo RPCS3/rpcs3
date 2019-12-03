@@ -44,13 +44,13 @@ namespace
 	template <typename T>
 	gsl::span<T> as_span_workaround(gsl::span<std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
+		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
 
 	template <typename T>
 	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
+		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
 }
 
@@ -81,8 +81,8 @@ namespace
 			0x4, 0x5, 0x6, 0x7,
 			0x0, 0x1, 0x2, 0x3);
 
-		__m128i* dst_ptr = (__m128i*)dst;
-		__m128i* src_ptr = (__m128i*)src;
+		auto dst_ptr = static_cast<__m128i*>(dst);
+		auto src_ptr = static_cast<const __m128i*>(src);
 
 		const u32 dword_count = (vertex_count * (stride >> 2));
 		const u32 iterations = dword_count >> 2;
@@ -116,8 +116,8 @@ namespace
 
 		if (remaining)
 		{
-			u32 *src_ptr2 = (u32 *)src_ptr;
-			u32 *dst_ptr2 = (u32 *)dst_ptr;
+			auto src_ptr2 = reinterpret_cast<const u32*>(src_ptr);
+			auto dst_ptr2 = reinterpret_cast<u32*>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
 				dst_ptr2[i] = se_storage<u32>::swap(src_ptr2[i]);
@@ -132,8 +132,8 @@ namespace
 			0x6, 0x7, 0x4, 0x5,
 			0x2, 0x3, 0x0, 0x1);
 
-		__m128i* dst_ptr = (__m128i*)dst;
-		__m128i* src_ptr = (__m128i*)src;
+		auto dst_ptr = static_cast<__m128i*>(dst);
+		auto src_ptr = static_cast<const __m128i*>(src);
 
 		const u32 word_count = (vertex_count * (stride >> 1));
 		const u32 iterations = word_count >> 3;
@@ -166,8 +166,8 @@ namespace
 
 		if (remaining)
 		{
-			u16 *src_ptr2 = (u16 *)src_ptr;
-			u16 *dst_ptr2 = (u16 *)dst_ptr;
+			auto src_ptr2 = reinterpret_cast<const u16*>(src_ptr);
+			auto dst_ptr2 = reinterpret_cast<u16*>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
 				dst_ptr2[i] = se_storage<u16>::swap(src_ptr2[i]);
@@ -182,8 +182,8 @@ namespace
 			0x4, 0x5, 0x6, 0x7,
 			0x0, 0x1, 0x2, 0x3);
 
-		char *src_ptr = (char *)src;
-		char *dst_ptr = (char *)dst;
+		auto src_ptr = static_cast<const char*>(src);
+		auto dst_ptr = static_cast<char*>(dst);
 
 		//Count vertices to copy
 		const bool is_128_aligned = !((dst_stride | src_stride) & 15);
@@ -203,9 +203,9 @@ namespace
 		{
 			for (u32 i = 0; i < iterations; ++i)
 			{
-				const __m128i vector = _mm_loadu_si128((__m128i*)src_ptr);
+				const __m128i vector = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
 				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
-				_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), shuffled_vector);
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -215,10 +215,10 @@ namespace
 		{
 			for (u32 i = 0; i < iterations; ++i)
 			{
-				const __m128i vec0 = _mm_loadu_si128((__m128i*)src_ptr);
+				const __m128i vec0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
 				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
 				const __m128i vec2 = _mm_or_si128(_mm_slli_epi32(vec1, 16), _mm_srli_epi32(vec1, 16));
-				_mm_storeu_si128((__m128i*)dst_ptr, vec2);
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), vec2);
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -230,8 +230,11 @@ namespace
 			const u8 attribute_sz = min_block_size >> 2;
 			for (u32 n = 0; n < remainder; ++n)
 			{
-				for (u32 v= 0; v < attribute_sz; ++v)
-					((u32*)dst_ptr)[v] = ((be_t<u32>*)src_ptr)[v];
+				auto src_ptr2 = reinterpret_cast<const be_t<u32>*>(src_ptr);
+				auto dst_ptr2 = reinterpret_cast<u32*>(dst_ptr);
+
+				for (u32 v = 0; v < attribute_sz; ++v)
+					dst_ptr2[v] = src_ptr[v];
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -247,8 +250,8 @@ namespace
 			0x6, 0x7, 0x4, 0x5,
 			0x2, 0x3, 0x0, 0x1);
 
-		char *src_ptr = (char *)src;
-		char *dst_ptr = (char *)dst;
+		auto src_ptr = static_cast<const char*>(src);
+		auto dst_ptr = static_cast<char*>(dst);
 
 		const bool is_128_aligned = !((dst_stride | src_stride) & 15);
 
@@ -267,9 +270,9 @@ namespace
 		{
 			for (u32 i = 0; i < iterations; ++i)
 			{
-				const __m128i vector = _mm_loadu_si128((__m128i*)src_ptr);
+				const __m128i vector = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
 				const __m128i shuffled_vector = ssse3_shuffle_epi8(vector, mask);
-				_mm_storeu_si128((__m128i*)dst_ptr, shuffled_vector);
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), shuffled_vector);
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -279,9 +282,9 @@ namespace
 		{
 			for (u32 i = 0; i < iterations; ++i)
 			{
-				const __m128i vec0 = _mm_loadu_si128((__m128i*)src_ptr);
+				const __m128i vec0 = _mm_loadu_si128(reinterpret_cast<const __m128i*>(src_ptr));
 				const __m128i vec1 = _mm_or_si128(_mm_slli_epi16(vec0, 8), _mm_srli_epi16(vec0, 8));
-				_mm_storeu_si128((__m128i*)dst_ptr, vec1);
+				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst_ptr), vec1);
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -293,8 +296,11 @@ namespace
 			const u8 attribute_sz = min_block_size >> 1;
 			for (u32 n = 0; n < remainder; ++n)
 			{
+				auto src_ptr2 = reinterpret_cast<const be_t<u16>*>(src_ptr);
+				auto dst_ptr2 = reinterpret_cast<u16*>(dst_ptr);
+
 				for (u32 v = 0; v < attribute_sz; ++v)
-					((u16*)dst_ptr)[v] = ((be_t<u16>*)src_ptr)[v];
+					dst_ptr[v] = src_ptr[v];
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -304,8 +310,8 @@ namespace
 
 	inline void stream_data_to_memory_u8_non_continuous(void *dst, const void *src, u32 vertex_count, u8 attribute_size, u8 dst_stride, u8 src_stride)
 	{
-		char *src_ptr = (char *)src;
-		char *dst_ptr = (char *)dst;
+		auto src_ptr = static_cast<const char*>(src);
+		auto dst_ptr = static_cast<char*>(dst);
 
 		switch (attribute_size)
 		{
@@ -314,7 +320,7 @@ namespace
 				//Read one dword every iteration
 				for (u32 vertex = 0; vertex < vertex_count; ++vertex)
 				{
-					*(u32*)dst_ptr = *(u32*)src_ptr;
+					*reinterpret_cast<u32*>(dst_ptr) = *reinterpret_cast<const u32*>(src_ptr);
 
 					dst_ptr += dst_stride;
 					src_ptr += src_stride;
@@ -327,7 +333,7 @@ namespace
 				//Read one word and one byte
 				for (u32 vertex = 0; vertex < vertex_count; ++vertex)
 				{
-					*(u16*)dst_ptr = *(u16*)src_ptr;
+					*reinterpret_cast<u16*>(dst_ptr) = *reinterpret_cast<const u16*>(src_ptr);
 					dst_ptr[2] = src_ptr[2];
 
 					dst_ptr += dst_stride;
@@ -341,7 +347,7 @@ namespace
 				//Copy u16 blocks
 				for (u32 vertex = 0; vertex < vertex_count; ++vertex)
 				{
-					*(u16*)dst_ptr = *(u16*)src_ptr;
+					*reinterpret_cast<u16*>(dst_ptr) = *reinterpret_cast<const u16*>(src_ptr);
 
 					dst_ptr += dst_stride;
 					src_ptr += src_stride;
@@ -365,15 +371,15 @@ namespace
 	}
 
 	template <typename T, typename U, int N>
-	void copy_whole_attribute_array_impl(void *raw_dst, void *raw_src, u8 dst_stride, u32 src_stride, u32 vertex_count)
+	void copy_whole_attribute_array_impl(void* raw_dst, const void* raw_src, u8 dst_stride, u32 src_stride, u32 vertex_count)
 	{
-		char *src_ptr = (char *)raw_src;
-		char *dst_ptr = (char *)raw_dst;
+		auto src_ptr = static_cast<const char*>(raw_src);
+		auto dst_ptr = static_cast<char*>(raw_dst);
 
 		for (u32 vertex = 0; vertex < vertex_count; ++vertex)
 		{
-			T* typed_dst = (T*)dst_ptr;
-			U* typed_src = (U*)src_ptr;
+			auto typed_dst = reinterpret_cast<T*>(dst_ptr);
+			auto typed_src = reinterpret_cast<const U*>(src_ptr);
 
 			for (u32 i = 0; i < N; ++i)
 			{
@@ -390,18 +396,18 @@ namespace
 	 * e.g repeat 2 vertices over a range of 16 verts, so 8 reps
 	 */
 	template <typename T, typename U, int N>
-	void copy_whole_attribute_array_repeating_impl(void *raw_dst, void *raw_src, const u8 dst_stride, const u32 src_stride, const u32 vertex_count, const u32 src_vertex_count)
+	void copy_whole_attribute_array_repeating_impl(void* raw_dst, const void* raw_src, const u8 dst_stride, const u32 src_stride, const u32 vertex_count, const u32 src_vertex_count)
 	{
-		char *src_ptr = (char *)raw_src;
-		char *dst_ptr = (char *)raw_dst;
+		auto src_ptr = static_cast<const char*>(raw_src);
+		auto dst_ptr = static_cast<char*>(raw_dst);
 
 		u32 src_offset = 0;
 		u32 src_limit = src_stride * src_vertex_count;
 
 		for (u32 vertex = 0; vertex < vertex_count; ++vertex)
 		{
-			T* typed_dst = (T*)dst_ptr;
-			U* typed_src = (U*)(src_ptr + src_offset);
+			auto typed_dst = reinterpret_cast<T*>(dst_ptr);
+			auto typed_src = reinterpret_cast<const U*>(src_ptr + src_offset);
 
 			for (u32 i = 0; i < N; ++i)
 			{
@@ -414,7 +420,7 @@ namespace
 	}
 
 	template <typename U, typename T>
-	void copy_whole_attribute_array(void *raw_dst, void *raw_src, const u8 attribute_size, const u8 dst_stride, const u32 src_stride, const u32 vertex_count, const u32 src_vertex_count)
+	void copy_whole_attribute_array(void* raw_dst, const void* raw_src, const u8 attribute_size, const u8 dst_stride, const u32 src_stride, const u32 vertex_count, const u32 src_vertex_count)
 	{
 		//Eliminate the inner loop by templating the inner loop counter N
 
@@ -471,13 +477,13 @@ void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::s
 	//Sometimes, we get a vertex attribute to be repeated. Just copy the supplied vertices only
 	//TODO: Stop these requests from getting here in the first place!
 	//TODO: Check if it is possible to have a repeating array with more than one attribute instance
-	const u32 real_count = (u32)src_ptr.size_bytes() / attribute_src_stride;
+	const u32 real_count = static_cast<u32>(src_ptr.size_bytes()) / attribute_src_stride;
 	if (real_count == 1) attribute_src_stride = 0;	//Always fetch src[0]
 
 	//TODO: Determine favourable vertex threshold where vector setup costs become negligible
 	//Tests show that even with 4 vertices, using traditional bswap is significantly slower over a large number of calls
 
-	const u64 src_address = (u64)src_ptr.data();
+	const u64 src_address = reinterpret_cast<u64>(src_ptr.data());
 	const bool sse_aligned = ((src_address & 15) == 0);
 
 #if !DEBUG_VERTEX_STREAMING
@@ -505,7 +511,7 @@ void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::s
 		else if (use_stream_with_stride)
 			stream_data_to_memory_u8_non_continuous(raw_dst_span.data(), src_ptr.data(), count, vector_element_count, dst_stride, attribute_src_stride);
 		else
-			copy_whole_attribute_array<u8, u8>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+			copy_whole_attribute_array<u8, u8>(raw_dst_span.data(), src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
 		return;
 	}
@@ -518,9 +524,9 @@ void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::s
 		else if (use_stream_with_stride)
 			stream_data_to_memory_swapped_u16_non_continuous(raw_dst_span.data(), src_ptr.data(), count, dst_stride, attribute_src_stride);
 		else if (swap_endianness)
-			copy_whole_attribute_array<be_t<u16>, u16>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+			copy_whole_attribute_array<be_t<u16>, u16>(raw_dst_span.data(), src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 		else
-			copy_whole_attribute_array<u16, u16>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+			copy_whole_attribute_array<u16, u16>(raw_dst_span.data(), src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
 		return;
 	}
@@ -531,9 +537,9 @@ void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::s
 		else if (use_stream_with_stride)
 			stream_data_to_memory_swapped_u32_non_continuous(raw_dst_span.data(), src_ptr.data(), count, dst_stride, attribute_src_stride);
 		else if (swap_endianness)
-			copy_whole_attribute_array<be_t<u32>, u32>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+			copy_whole_attribute_array<be_t<u32>, u32>(raw_dst_span.data(), src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 		else
-			copy_whole_attribute_array<u32, u32>((void *)raw_dst_span.data(), (void *)src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
+			copy_whole_attribute_array<u32, u32>(raw_dst_span.data(), src_ptr.data(), vector_element_count, dst_stride, attribute_src_stride, count, real_count);
 
 		return;
 	}
@@ -590,8 +596,8 @@ namespace
 				0x6, 0x7, 0x4, 0x5,
 				0x2, 0x3, 0x0, 0x1);
 
-			auto src_stream = (const __m128i*)src;
-			auto dst_stream = (__m128i*)dst;
+			auto src_stream = static_cast<const __m128i*>(src);
+			auto dst_stream = static_cast<__m128i*>(dst);
 
 			__m128i min = _mm_set1_epi16(0xFFFF);
 			__m128i max = _mm_set1_epi16(0);
@@ -622,8 +628,8 @@ namespace
 				0x4, 0x5, 0x6, 0x7,
 				0x0, 0x1, 0x2, 0x3);
 
-			auto src_stream = (const __m128i*)src;
-			auto dst_stream = (__m128i*)dst;
+			auto src_stream = static_cast<const __m128i*>(src);
+			auto dst_stream = static_cast<__m128i*>(dst);
 
 			__m128i min = _mm_set1_epi32(~0u);
 			__m128i max = _mm_set1_epi32(0);
@@ -714,8 +720,8 @@ namespace
 				0x6, 0x7, 0x4, 0x5,
 				0x2, 0x3, 0x0, 0x1);
 
-			auto src_stream = (const __m256i*)src;
-			auto dst_stream = (__m256i*)dst;
+			auto src_stream = static_cast<const __m256i*>(src);
+			auto dst_stream = static_cast<__m256i*>(dst);
 
 			__m256i restart = _mm256_set1_epi16(restart_index);
 			__m256i min = _mm256_set1_epi16(0xffff);
@@ -757,8 +763,8 @@ namespace
 				0x6, 0x7, 0x4, 0x5,
 				0x2, 0x3, 0x0, 0x1);
 
-			auto src_stream = (const __m128i*)src;
-			auto dst_stream = (__m128i*)dst;
+			auto src_stream = static_cast<const __m128i*>(src);
+			auto dst_stream = static_cast<__m128i*>(dst);
 
 			__m128i restart = _mm_set1_epi16(restart_index);
 			__m128i min = _mm_set1_epi16(0xffff);
@@ -792,8 +798,8 @@ namespace
 				0x4, 0x5, 0x6, 0x7,
 				0x0, 0x1, 0x2, 0x3);
 
-			auto src_stream = (const __m128i*)src;
-			auto dst_stream = (__m128i*)dst;
+			auto src_stream = static_cast<const __m128i*>(src);
+			auto dst_stream = static_cast<__m128i*>(dst);
 
 			__m128i restart = _mm_set1_epi32(restart_index);
 			__m128i min = _mm_set1_epi32(0xffffffff);
@@ -903,7 +909,7 @@ namespace
 			}
 			else
 			{
-				return primitive_restart_impl::upload_untouched(src, dst, (u16)primitive_restart_index, is_primitive_disjointed(draw_mode));
+				return primitive_restart_impl::upload_untouched(src, dst, static_cast<u16>(primitive_restart_index), is_primitive_disjointed(draw_mode));
 			}
 		}
 		else
@@ -1079,7 +1085,7 @@ u32 get_index_type_size(rsx::index_array_type type)
 
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count)
 {
-	unsigned short *typedDst = (unsigned short *)(dst);
+	auto typedDst = reinterpret_cast<u16*>(dst);
 	switch (draw_mode)
 	{
 	case rsx::primitive_type::line_loop:
@@ -1166,7 +1172,7 @@ namespace
 			return expand_indexed_quads<T>(src, dst, restart_index_enabled, restart_index);
 		}
 		default:
-			fmt::throw_exception("Unknown draw mode (0x%x)" HERE, (u32)draw_mode);
+			fmt::throw_exception("Unknown draw mode (0x%x)" HERE, static_cast<u8>(draw_mode));
 		}
 	}
 }
@@ -1195,8 +1201,8 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<std::byte> 
 
 void stream_vector(void *dst, u32 x, u32 y, u32 z, u32 w)
 {
-	__m128i vector = _mm_set_epi32(w, z, y, x);
-	_mm_stream_si128((__m128i*)dst, vector);
+	const __m128i vector = _mm_set_epi32(w, z, y, x);
+	_mm_stream_si128(reinterpret_cast<__m128i*>(dst), vector);
 }
 
 void stream_vector(void *dst, f32 x, f32 y, f32 z, f32 w)
@@ -1205,6 +1211,6 @@ void stream_vector(void *dst, f32 x, f32 y, f32 z, f32 w)
 }
 void stream_vector_from_memory(void *dst, void *src)
 {
-	const __m128i &vector = _mm_loadu_si128((__m128i*)src);
-	_mm_stream_si128((__m128i*)dst, vector);
+	const __m128i vector = _mm_loadu_si128(reinterpret_cast<__m128i*>(src));
+	_mm_stream_si128(reinterpret_cast<__m128i*>(dst), vector);
 }
