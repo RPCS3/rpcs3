@@ -290,7 +290,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	KbData& current_data = handler->GetData(port_no);
 	data->led = current_data.led;
 	data->mkey = current_data.mkey;
-	data->len = std::min((s32)CELL_KB_MAX_KEYCODES, current_data.len);
+	data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
 
 	for (s32 i = 0; i < current_data.len; i++)
 	{

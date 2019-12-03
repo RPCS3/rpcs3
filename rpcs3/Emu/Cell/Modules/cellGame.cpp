@@ -304,19 +304,18 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 {
 	cellGame.warning("cellGameBootCheck(type=*0x%x, attributes=*0x%x, size=*0x%x, dirName=*0x%x)", type, attributes, size, dirName);
 
-	if (size)
-	{
-		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
-
-		// TODO: Calculate data size for HG and DG games, if necessary.
-		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-		size->sysSizeKB = 0;
-	}
-
-	if (!type)
+	if (!type || !attributes)
 	{
 		return CELL_GAME_ERROR_PARAM;
+	}
+
+	const auto perm = g_fxo->get<content_permission>();
+
+	const auto init = perm->init.init();
+
+	if (!init)
+	{
+		return CELL_GAME_ERROR_BROKEN;
 	}
 
 	std::string dir;
@@ -334,7 +333,6 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
-		if (dirName) strcpy_trunc(*dirName, Emu.GetTitleID()); // ???
 
 		sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
 	}
@@ -342,19 +340,24 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	{
 		*type = CELL_GAME_GAMETYPE_HDD;
 		*attributes = 0; // TODO
-		if (dirName) strcpy_trunc(*dirName, Emu.GetTitleID());
 
 		sfo = psf::load_object(fs::file(vfs::get(Emu.GetDir() + "PARAM.SFO")));
 		dir = Emu.GetTitleID();
 	}
 
-	const auto perm = g_fxo->get<content_permission>();
-
-	const auto init = perm->init.init();
-
-	if (!init)
+	if (size)
 	{
-		return CELL_GAME_ERROR_BUSY;
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+
+		// TODO: Calculate data size for HG and DG games, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 4;
+	}
+
+	if (*type == CELL_GAME_GAMETYPE_HDD && dirName)
+	{
+		strcpy_trunc(*dirName, Emu.GetTitleID());
 	}
 
 	perm->dir = std::move(dir);
@@ -393,7 +396,7 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 
 	if (!init)
 	{
-		return CELL_GAME_ERROR_BUSY;
+		return CELL_GAME_ERROR_BROKEN;
 	}
 
 	perm->dir = Emu.GetTitleID();
@@ -441,7 +444,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	if (!init)
 	{
-		return CELL_GAME_ERROR_BUSY;
+		return CELL_GAME_ERROR_BROKEN;
 	}
 
 	perm->dir = std::move(name);
@@ -467,7 +470,7 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 {
 	cellGame.warning("cellGameContentPermit(contentInfoPath=*0x%x, usrdirPath=*0x%x)", contentInfoPath, usrdirPath);
 
-	if (!contentInfoPath && !usrdirPath)
+	if (!contentInfoPath || !usrdirPath)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
@@ -569,7 +572,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
 
-	switch ((s32)cbResult->result)
+	switch (cbResult->result)
 	{
 	case CELL_GAMEDATA_CBRESULT_OK_CANCEL:
 	{

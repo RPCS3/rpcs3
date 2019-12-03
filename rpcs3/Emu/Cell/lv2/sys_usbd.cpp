@@ -32,7 +32,7 @@ void fmt_class_string<libusb_transfer>::format(std::string& out, u64 arg)
 		datrace += ' ';
 	}
 
-	fmt::append(out, "TR[r:%d][sz:%d] => %s", (u8)transfer.status, transfer.actual_length, datrace);
+	fmt::append(out, "TR[r:%d][sz:%d] => %s", +transfer.status, transfer.actual_length, datrace);
 }
 
 struct UsbLdd
@@ -46,7 +46,8 @@ struct UsbLdd
 struct UsbPipe
 {
 	std::shared_ptr<usb_device> device = nullptr;
-	u8 endpoint                        = 0;
+
+	u8 endpoint = 0;
 };
 
 class usb_handler_thread
@@ -274,11 +275,11 @@ void usb_handler_thread::send_message(u32 message, u32 tr_id)
 
 void usb_handler_thread::transfer_complete(struct libusb_transfer* transfer)
 {
-	UsbTransfer* usbd_transfer = (UsbTransfer*)transfer->user_data;
+	UsbTransfer* usbd_transfer = static_cast<UsbTransfer*>(transfer->user_data);
 
 	if (transfer->status != 0)
 	{
-		sys_usbd.error("Transfer Error: %d", (s32)transfer->status);
+		sys_usbd.error("Transfer Error: %d", +transfer->status);
 	}
 
 	switch (transfer->status)
@@ -324,13 +325,13 @@ u32 usb_handler_thread::add_ldd(vm::ptr<char> s_product, u16 slen_product, u16 i
 {
 	UsbLdd new_ldd;
 	new_ldd.name.resize(slen_product);
-	memcpy(new_ldd.name.data(), s_product.get_ptr(), (u32)slen_product);
+	memcpy(new_ldd.name.data(), s_product.get_ptr(), slen_product);
 	new_ldd.id_vendor      = id_vendor;
 	new_ldd.id_product_min = id_product_min;
 	new_ldd.id_product_max = id_product_max;
 	ldds.push_back(new_ldd);
 
-	return (u32)ldds.size(); // TODO: to check
+	return ::size32(ldds); // TODO: to check
 }
 
 u32 usb_handler_thread::open_pipe(u32 device_handle, u8 endpoint)
@@ -341,7 +342,7 @@ u32 usb_handler_thread::open_pipe(u32 device_handle, u8 endpoint)
 
 bool usb_handler_thread::close_pipe(u32 pipe_id)
 {
-	return (bool)open_pipes.erase(pipe_id);
+	return open_pipes.erase(pipe_id) != 0;
 }
 
 bool usb_handler_thread::is_pipe(u32 pipe_id) const
@@ -482,7 +483,8 @@ s32 sys_usbd_get_device_list(u32 handle, vm::ptr<UsbInternalDevice> device_list,
 	if (!usbh->is_init)
 		return CELL_EINVAL;
 
-	u32 i_tocopy = std::min((s32)max_devices, (s32)usbh->handled_devices.size());
+	// TODO: was std::min<s32>
+	u32 i_tocopy = std::min<u32>(max_devices, ::size32(usbh->handled_devices));
 
 	for (u32 index = 0; index < i_tocopy; index++)
 	{
@@ -538,7 +540,7 @@ s32 sys_usbd_get_descriptor(u32 handle, u32 device_handle, vm::ptr<void> descrip
 		return CELL_EINVAL;
 	}
 
-	u8* ptr = (u8*)descriptor.get_ptr();
+	u8* ptr = static_cast<u8*>(descriptor.get_ptr());
 	usbh->handled_devices[device_handle].second->device.write_data(ptr);
 
 	return CELL_OK;
@@ -572,7 +574,7 @@ s32 sys_usbd_open_pipe(u32 handle, u32 device_handle, u32 unk1, u64 unk2, u64 un
 		return CELL_EINVAL;
 	}
 
-	return usbh->open_pipe(device_handle, (u8)endpoint);
+	return usbh->open_pipe(device_handle, static_cast<u8>(endpoint));
 }
 
 s32 sys_usbd_open_default_pipe(u32 handle, u32 device_handle)
@@ -716,7 +718,7 @@ s32 sys_usbd_transfer_data(u32 handle, u32 id_pipe, vm::ptr<u8> buf, u32 buf_siz
 		// Claiming interface
 		if (request->bmRequestType == 0 && request->bRequest == 0x09)
 		{
-			pipe.device->set_configuration((u8)request->wValue);
+			pipe.device->set_configuration(static_cast<u8>(+request->wValue));
 			pipe.device->set_interface(0);
 		}
 

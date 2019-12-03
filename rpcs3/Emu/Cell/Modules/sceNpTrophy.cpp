@@ -438,15 +438,19 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 			});
 		}
 
-		// If too much time passes just send the rest of the events anyway
-		if (const u32 val = *queued)
-		{
-			queued->wait(val, atomic_wait_timeout{300000});
-		}
+		u64 current = get_system_time();
+		const u64 until = current + 300'000;
 
-		if (ppu.is_stopped())
+		// If too much time passes just send the rest of the events anyway
+		for (u32 old_value; current < until && (old_value = *queued);
+			current = get_system_time())
 		{
-			return 0;
+			queued->wait(old_value, atomic_wait_timeout{std::min<u64>((until - current) * 1000, 300'000'000)});
+
+			if (ppu.is_stopped())
+			{
+				return 0;
+			}
 		}
 	}
 

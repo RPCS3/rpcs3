@@ -14,6 +14,11 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 			return result;
 	}
 
+	if (!Emu.HasGui())
+	{
+		return -2;
+	}
+
 	// Fall back to front-end GUI
 	atomic_t<bool> dlg_result(false);
 	atomic_t<s32> selection;

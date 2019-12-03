@@ -243,7 +243,7 @@ error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
 
 	auto& list = handler->GetDataList(port_no);
-	data->list_num = std::min((u32)CELL_MOUSE_MAX_DATA_LIST_NUM, (u32)list.size());
+	data->list_num = std::min<u32>(CELL_MOUSE_MAX_DATA_LIST_NUM, static_cast<u32>(list.size()));
 
 	int i = 0;
 	for (auto it = list.begin(); it != list.end() && i < CELL_MOUSE_MAX_DATA_LIST_NUM; ++it, ++i)
@@ -324,7 +324,7 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_TABLET_MODE) has any impact
 
 	auto& list = handler->GetTabletDataList(port_no);
-	data->list_num = std::min((u32)CELL_MOUSE_MAX_DATA_LIST_NUM, (u32)list.size());
+	data->list_num = std::min<u32>(CELL_MOUSE_MAX_DATA_LIST_NUM, static_cast<u32>(list.size()));
 
 	int i = 0;
 	for (auto it = list.begin(); it != list.end() && i < CELL_MOUSE_MAX_DATA_LIST_NUM; ++it, ++i)

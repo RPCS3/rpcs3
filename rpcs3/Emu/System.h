@@ -250,6 +250,7 @@ class Emulator final
 	u32 m_usrid{1};
 
 	bool m_force_boot = false;
+	bool m_has_gui = true;
 
 public:
 	Emulator() = default;
@@ -372,6 +373,9 @@ public:
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
 	auto GetStatus() const { return m_state.load(); }
+
+	bool HasGui() const { return m_has_gui; }
+	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
 };
 
 extern Emulator Emu;

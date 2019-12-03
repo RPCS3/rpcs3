@@ -368,7 +368,7 @@ void user_manager_dialog::OnUserLogin()
 	const u32 key = GetUserKey();
 	const std::string new_user = m_user_list[key].GetUserId();
 
-	if (!main_application::InitializeEmulator(new_user, false))
+	if (!main_application::InitializeEmulator(new_user, false, Emu.HasGui()))
 	{
 		LOG_FATAL(GENERAL, "Failed to login user! username=%s key=%d", new_user, key);
 		return;

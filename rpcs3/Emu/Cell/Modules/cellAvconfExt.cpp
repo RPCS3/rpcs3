@@ -213,14 +213,14 @@ error_code cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDevic
 
 	auto av_manager = g_fxo->get<avconf_manager>();
 
-	u32 num_devices_returned = std::min(count, (u32)av_manager->devices.size());
+	u32 num_devices_returned = std::min<u32>(count, ::size32(av_manager->devices));
 
 	for (u32 index = 0; index < num_devices_returned; index++)
 	{
 		av_manager->copy_device_info(index, device_info + index);
 	}
 
-	return not_an_error((s32)num_devices_returned);
+	return not_an_error(num_devices_returned);
 }
 
 error_code cellAudioOutGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioOutDeviceInfo2> info)

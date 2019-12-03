@@ -39,7 +39,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) > size) return false;
 
-		out = vm::_ref<T>(addr);
+		std::memcpy(&out, vm::base(addr), sizeof(T));
 		addr += sizeof(T);
 		size -= sizeof(T);
 
@@ -51,7 +51,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) + shift > size) return false;
 
-		out = vm::_ref<T>(addr + shift);
+		std::memcpy(&out, vm::base(addr + shift), sizeof(T));
 		return true;
 	}
 
@@ -68,12 +68,12 @@ struct DemuxerStream
 
 	u64 get_ts(u8 c)
 	{
-		u8 v[4]; get((u32&)v);
+		u8 v[4]; get(v);
 		return
-			(((u64)c & 0x0e) << 29) |
-			(((u64)v[0]) << 21) |
-			(((u64)v[1] & 0x7e) << 15) |
-			(((u64)v[2]) << 7) | ((u64)v[3] >> 1);
+			((u64{c} & 0x0e) << 29) |
+			((u64{v[0]}) << 21) |
+			((u64{v[1]} & 0x7e) << 15) |
+			((u64{v[2]}) << 7) | (u64{v[3]} >> 1);
 	}
 };
 
@@ -380,10 +380,10 @@ public:
 
 							if (data[0] != 0x0f || data[1] != 0xd0)
 							{
-								fmt::throw_exception("ATX: 0x0fd0 header not found (ats=0x%llx)" HERE, *(be_t<u64>*)data);
+								fmt::throw_exception("ATX: 0x0fd0 header not found (ats=0x%llx)" HERE, *reinterpret_cast<be_t<u64>*>(data));
 							}
 
-							u32 frame_size = ((((u32)data[2] & 0x3) << 8) | (u32)data[3]) * 8 + 8;
+							u32 frame_size = (((u32{data[2]} & 0x3) << 8) | u32{data[3]}) * 8 + 8;
 
 							if (size < frame_size + 8) break; // skip non-complete AU
 
@@ -445,7 +445,7 @@ public:
 					{
 						ElementaryStream& es = *esAVC[ch];
 
-						const u32 old_size = (u32)es.raw_data.size();
+						const u32 old_size = ::size32(es.raw_data);
 						if (es.isfull(old_size))
 						{
 							stream = backup;
@@ -611,7 +611,7 @@ public:
 			{
 				ElementaryStream& es = *task.es.es_ptr;
 
-				const u32 old_size = (u32)es.raw_data.size();
+				const u32 old_size = ::size32(es.raw_data);
 				if (old_size && (es.fidMajor & -0x10) == 0xe0)
 				{
 					// TODO (it's only for AVC, some ATX data may be lost)
@@ -634,7 +634,7 @@ public:
 
 				if (es.raw_data.size())
 				{
-					cellDmux.error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", (u32)es.raw_data.size(), es.id);
+					cellDmux.error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", ::size32(es.raw_data), es.id);
 				}
 
 				// callback
@@ -659,7 +659,7 @@ public:
 
 			default:
 			{
-				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)" HERE, (u32)task.type);
+				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)" HERE, +task.type);
 			}
 			}
 		}
@@ -816,10 +816,10 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		auto info = vm::ptr<CellDmuxAuInfoEx>::make(put);
 		info->auAddr = put + 128;
 		info->auSize = size;
-		info->dts.lower = (u32)(dts);
-		info->dts.upper = (u32)(dts >> 32);
-		info->pts.lower = (u32)(pts);
-		info->pts.upper = (u32)(pts >> 32);
+		info->dts.lower = static_cast<u32>(dts);
+		info->dts.upper = static_cast<u32>(dts >> 32);
+		info->pts.lower = static_cast<u32>(pts);
+		info->pts.upper = static_cast<u32>(pts >> 32);
 		info->isRap = rap;
 		info->reserved = 0;
 		info->userData = userdata;
@@ -830,10 +830,10 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		auto inf = vm::ptr<CellDmuxAuInfo>::make(put + 64);
 		inf->auAddr = put + 128;
 		inf->auSize = size;
-		inf->dtsLower = (u32)(dts);
-		inf->dtsUpper = (u32)(dts >> 32);
-		inf->ptsLower = (u32)(pts);
-		inf->ptsUpper = (u32)(pts >> 32);
+		inf->dtsLower = static_cast<u32>(dts);
+		inf->dtsUpper = static_cast<u32>(dts >> 32);
+		inf->ptsLower = static_cast<u32>(pts);
+		inf->ptsUpper = static_cast<u32>(pts >> 32);
 		inf->auMaxSize = 0; // ?????
 		inf->userData = userdata;
 

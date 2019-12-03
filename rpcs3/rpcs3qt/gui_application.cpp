@@ -37,7 +37,7 @@ void gui_application::Init()
 	m_gui_settings.reset(new gui_settings());
 
 	// Force init the emulator
-	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true);
+	InitializeEmulator(m_gui_settings->GetCurrentUser().toStdString(), true, m_show_gui);
 
 	// Create the main window
 	if (m_show_gui)
@@ -180,8 +180,8 @@ void gui_application::InitializeCallbacks()
 	};
 
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
-	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return std::make_shared<msg_dialog_frame>(); };
-	callbacks.get_osk_dialog  = []() -> std::shared_ptr<OskDialogBase> { return std::make_shared<osk_dialog_frame>(); };
+	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
+	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
