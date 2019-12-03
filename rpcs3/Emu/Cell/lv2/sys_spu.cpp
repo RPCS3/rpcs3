@@ -1023,54 +1023,40 @@ error_code sys_spu_thread_group_connect_event(ppu_thread& ppu, u32 id, u32 eq, u
 	sys_spu.warning("sys_spu_thread_group_connect_event(id=0x%x, eq=0x%x, et=%d)", id, eq, et);
 
 	const auto group = idm::get<lv2_spu_group>(id);
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(eq);
 
-	if (!group || !queue)
+	if (!group)
 	{
 		return CELL_ESRCH;
 	}
 
-	std::lock_guard lock(group->mutex);
+	const auto ep =
+		et == SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE ? &group->ep_sysmodule :
+		et == SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION ? &group->ep_exception :
+		et == SYS_SPU_THREAD_GROUP_EVENT_RUN ? &group->ep_run :
+		nullptr;
 
-	switch (et)
-	{
-	case SYS_SPU_THREAD_GROUP_EVENT_RUN:
-	{
-		if (!group->ep_run.expired())
-		{
-			return CELL_EBUSY;
-		}
-
-		group->ep_run = queue;
-		break;
-	}
-	case SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION:
-	{
-		if (!group->ep_exception.expired())
-		{
-			return CELL_EBUSY;
-		}
-
-		group->ep_exception = queue;
-		break;
-	}
-	case SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE:
-	{
-		if (!group->ep_sysmodule.expired())
-		{
-			return CELL_EBUSY;
-		}
-
-		group->ep_sysmodule = queue;
-		break;
-	}
-	default:
+	if (!ep)
 	{
 		sys_spu.error("sys_spu_thread_group_connect_event(): unknown event type (%d)", et);
 		return CELL_EINVAL;
 	}
+
+	const auto queue = idm::get<lv2_obj, lv2_event_queue>(eq);
+
+	std::lock_guard lock(group->mutex);
+
+	if (!ep->expired())
+	{
+		return CELL_EBUSY;
 	}
 
+	// ESRCH of event queue after EBUSY
+	if (!queue)
+	{
+		return CELL_ESRCH;
+	}
+
+	*ep = queue;
 	return CELL_OK;
 }
 
@@ -1087,47 +1073,26 @@ error_code sys_spu_thread_group_disconnect_event(ppu_thread& ppu, u32 id, u32 et
 		return CELL_ESRCH;
 	}
 
-	std::lock_guard lock(group->mutex);
+	const auto ep =
+		et == SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE ? &group->ep_sysmodule :
+		et == SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION ? &group->ep_exception :
+		et == SYS_SPU_THREAD_GROUP_EVENT_RUN ? &group->ep_run :
+		nullptr;
 
-	switch (et)
-	{
-	case SYS_SPU_THREAD_GROUP_EVENT_RUN:
-	{
-		if (group->ep_run.expired())
-		{
-			return CELL_ENOTCONN;
-		}
-
-		group->ep_run.reset();
-		break;
-	}
-	case SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION:
-	{
-		if (group->ep_exception.expired())
-		{
-			return CELL_ENOTCONN;
-		}
-
-		group->ep_exception.reset();
-		break;
-	}
-	case SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE:
-	{
-		if (group->ep_sysmodule.expired())
-		{
-			return CELL_ENOTCONN;
-		}
-
-		group->ep_sysmodule.reset();
-		break;
-	}
-	default:
+	if (!ep)
 	{
 		sys_spu.error("sys_spu_thread_group_disconnect_event(): unknown event type (%d)", et);
 		return CELL_EINVAL;
 	}
+
+	std::lock_guard lock(group->mutex);
+
+	if (ep->expired())
+	{
+		return CELL_EINVAL;
 	}
 
+	ep->reset();
 	return CELL_OK;
 }
 
