@@ -80,6 +80,7 @@ const bool s_use_ssse3 = utils::has_ssse3();
 extern atomic_t<u64> g_watchdog_hold_ctr;
 
 extern atomic_t<const char*> g_progr;
+extern atomic_t<bool> g_progr_show;
 extern atomic_t<u32> g_progr_ftotal;
 extern atomic_t<u32> g_progr_fdone;
 extern atomic_t<u32> g_progr_ptotal;
@@ -2400,9 +2401,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 		}
 	}
 
-	g_progr = "Compiling PPU modules";
-
+	g_progr = "Compiling PPU modules...";
 	g_progr_ftotal += file_queue.size();
+	g_progr_show = true;
 
 	atomic_t<usz> fnext = 0;
 
@@ -2519,6 +2520,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 	// Join every thread
 	workers.join();
 
+	g_progr_show = false;
+
 	// Revert changes
 
 	if (!had_ovl)
@@ -2542,6 +2545,17 @@ extern void ppu_initialize()
 	{
 		return;
 	}
+
+	g_progr = "Scanning PPU modules...";
+	g_progr_show = true;
+
+	struct scoped_dialog_control
+	{
+		~scoped_dialog_control()
+		{
+			g_progr_show = false;
+		}
+	} dialog_control;
 
 	bool compile_main = false;
 
@@ -2715,8 +2729,12 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	}
 
 #ifdef LLVM_AVAILABLE
-	// Initialize progress dialog
-	g_progr = "Compiling PPU modules...";
+	if (!check_only)
+	{
+		// Initialize progress dialog
+		g_progr = "Loading PPU modules...";
+		g_progr_show = true;
+	}
 
 	struct jit_core_allocator
 	{
@@ -2945,6 +2963,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		if (!check_only)
 		{
+			// Update progress dialog
+			g_progr_ptotal++;
+
 			link_workload.emplace_back(obj_name, false);
 		}
 
@@ -2972,14 +2993,16 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		// Fill workload list for compilation
 		workload.emplace_back(std::move(obj_name), std::move(part));
-
-		// Update progress dialog
-		g_progr_ptotal++;
 	}
 
 	if (check_only)
 	{
 		return false;
+	}
+
+	if (!workload.empty())
+	{
+		g_progr = "Compiling PPU modules...";
 	}
 
 	// Create worker threads for compilation (TODO: how many threads)
@@ -3033,7 +3056,14 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		if (Emu.IsStopped() || !get_current_cpu_thread())
 		{
+			g_progr_show = false;
 			return compiled_new;
+		}
+
+		if (workload.size() < link_workload.size())
+		{
+			// Only show this message if this task is relevant
+			g_progr = "Linking PPU modules...";
 		}
 
 		for (auto [obj_name, is_compiled] : link_workload)
@@ -3048,9 +3078,12 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			if (!is_compiled)
 			{
 				ppu_log.success("LLVM: Loaded module %s", obj_name);
+				g_progr_pdone++;
 			}
 		}
 	}
+
+	g_progr_show = false;
 
 	if (Emu.IsStopped() || !get_current_cpu_thread())
 	{

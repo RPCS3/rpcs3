@@ -209,11 +209,7 @@ namespace rsx
 				btn_cancel.translate(0, offset);
 			}
 
-			text_display.set_text(text);
-
-			u16 text_w, text_h;
-			text_display.measure_text(text_w, text_h);
-			text_display.translate(0, -(text_h - 16));
+			set_text(text);
 
 			switch (type.button_type.unshifted())
 			{
@@ -304,6 +300,15 @@ namespace rsx
 			}
 
 			return CELL_OK;
+		}
+
+		void message_dialog::set_text(const std::string& text)
+		{
+			u16 text_w, text_h;
+			text_display.set_pos(90, 364);
+			text_display.set_text(text);
+			text_display.measure_text(text_w, text_h);
+			text_display.translate(0, -(text_h - 16));
 		}
 
 		u32 message_dialog::progress_bar_count()
