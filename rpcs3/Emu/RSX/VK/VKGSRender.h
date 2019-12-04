@@ -426,7 +426,6 @@ public:
 	~VKGSRender() override;
 
 private:
-	void clear_surface(u32 mask);
 	void prepare_rtts(rsx::framebuffer_creation_context context);
 
 	void open_command_buffer();
@@ -478,13 +477,13 @@ public:
 	void emergency_query_cleanup(vk::command_buffer* commands);
 
 protected:
+	void clear_surface(u32 mask) override;
 	void begin() override;
 	void end() override;
 	void emit_geometry(u32 sub_index) override;
 
 	void on_init_thread() override;
 	void on_exit() override;
-	bool do_method(u32 cmd, u32 arg) override;
 	void flip(const rsx::display_flip_info_t& info) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
