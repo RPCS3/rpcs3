@@ -23,6 +23,7 @@
 #include "util/sysinfo.hpp"
 
 extern atomic_t<const char*> g_progr;
+extern atomic_t<bool> g_progr_show;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 
@@ -426,6 +427,7 @@ void spu_cache::initialize()
 
 		g_progr = "Building SPU cache...";
 		g_progr_ptotal += ::size32(func_list);
+		g_progr_show = true;
 
 		worker_count = Emu.GetMaxThreads();
 	}
@@ -523,6 +525,11 @@ void spu_cache::initialize()
 	for (u32 i = 0; i < workers.size(); i++)
 	{
 		spu_log.notice("SPU Runtime: Worker %u built %u programs.", i + 1, workers[i]);
+	}
+
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
+	{
+		g_progr_show = false;
 	}
 
 	if (Emu.IsStopped())

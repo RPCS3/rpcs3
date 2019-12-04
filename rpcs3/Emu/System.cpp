@@ -25,6 +25,7 @@
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
+#include "Emu/RSX/Overlays/overlay_message_dialog.h"
 
 #include "Loader/PSF.h"
 #include "Loader/ELF.h"
@@ -82,6 +83,7 @@ std::mutex g_tty_mutex;
 
 // Progress display server synchronization variables
 atomic_t<const char*> g_progr{""};
+atomic_t<bool> g_progr_show{false};
 atomic_t<u32> g_progr_ftotal{0};
 atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
@@ -341,7 +343,7 @@ namespace
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
 				// Wait for the start condition
-				while (!g_progr_ftotal && !g_progr_ptotal)
+				while (!g_progr_show)
 				{
 					if (thread_ctrl::state() == thread_state::aborting)
 					{
@@ -357,9 +359,29 @@ namespace
 				}
 
 				// Initialize message dialog
-				std::shared_ptr<MsgDialogBase> dlg = Emu.GetCallbacks().get_msg_dialog();
-				if (dlg)
+				std::shared_ptr<MsgDialogBase> dlg;
+				std::shared_ptr<rsx::overlays::message_dialog> native_dlg;
+
+				if (const auto renderer = rsx::get_current_renderer();
+					renderer && renderer->is_inited)
 				{
+					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+					{
+						MsgDialogType type{};
+						type.se_normal = true;
+						type.bg_invisible = true;
+						type.disable_cancel = true;
+						type.progress_bar_count = 1;
+
+						native_dlg = manager->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
+						native_dlg->show(false, +g_progr, type, nullptr);
+						native_dlg->progress_bar_set_message(0, "Please wait");
+					}
+				}
+
+				if (!native_dlg)
+				{
+					dlg = Emu.GetCallbacks().get_msg_dialog();
 					dlg->type.se_normal = true;
 					dlg->type.bg_invisible = true;
 					dlg->type.progress_bar_count = 1;
@@ -414,7 +436,13 @@ namespace
 							if (ptotal)
 								fmt::append(progr, " module %u of %u", pdone, ptotal);
 
-							if (dlg)
+							if (native_dlg)
+							{
+								native_dlg->set_text(+g_progr);
+								native_dlg->progress_bar_set_message(0, progr);
+								native_dlg->progress_bar_set_value(0, std::floor(value));
+							}
+							else if (dlg)
 							{
 								dlg->SetMsg(+g_progr);
 								dlg->ProgressBarSetMsg(0, progr);
@@ -423,7 +451,7 @@ namespace
 						});
 					}
 
-					if (fdone >= ftotal && pdone >= ptotal)
+					if (!g_progr_show)
 					{
 						// Close dialog
 						break;
@@ -442,14 +470,19 @@ namespace
 				g_progr_fdone  -= fdone;
 				g_progr_ptotal -= ptotal;
 				g_progr_pdone  -= pdone;
+				g_progr_show    = false;
 
-				if (dlg)
+				Emu.CallAfter([=]()
 				{
-					Emu.CallAfter([=]()
+					if (native_dlg)
+					{
+						native_dlg->close(false, false);
+					}
+					else if (dlg)
 					{
 						dlg->Close(true);
-					});
-				}
+					}
+				});
 			}
 		}
 
@@ -459,6 +492,7 @@ namespace
 			g_progr_fdone.release(0);
 			g_progr_ptotal.release(0);
 			g_progr_pdone.release(0);
+			g_progr_show.release(false);
 		}
 
 		static auto constexpr thread_name = "Progress Dialog Server"sv;

@@ -35,6 +35,8 @@ namespace rsx
 
 			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);
 
+			void set_text(const std::string& text);
+
 			u32 progress_bar_count();
 			void progress_bar_set_taskbar_index(s32 index);
 			error_code progress_bar_set_message(u32 index, const std::string& msg);
