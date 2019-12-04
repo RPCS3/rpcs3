@@ -280,10 +280,16 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 
 	if (result->size != 8)
 	{
+		result->result = CELL_NET_CTL_ERROR_INVALID_SIZE;
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
 
-	result->result = CELL_NET_CTL_ERROR_DIALOG_CANCELED;
+	if (g_cfg.net.net_status == CELL_NET_CTL_STATE_Disconnected)
+	{
+		result->result = CELL_NET_CTL_ERROR_NET_NOT_CONNECTED;
+		return CELL_NET_CTL_ERROR_NET_NOT_CONNECTED;
+	}
+
 	sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 
 	return CELL_OK;

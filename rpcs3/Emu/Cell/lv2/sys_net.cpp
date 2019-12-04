@@ -175,13 +175,8 @@ struct network_thread
 	{
 #ifdef _WIN32
 		WSACleanup();
-		CloseHandle(_eventh);
 #endif
 	}
-
-#ifdef _WIN32
-	HANDLE _eventh = CreateEventW(nullptr, false, false, nullptr);
-#endif
 
 	void operator()()
 	{
@@ -190,16 +185,13 @@ struct network_thread
 
 		s_to_awake.clear();
 
-#ifdef _WIN32
-#else
 		::pollfd fds[lv2_socket::id_count]{};
-#endif
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			// Wait with 1ms timeout
 #ifdef _WIN32
-			WaitForSingleObjectEx(_eventh, 1, false);
+			::WSAPoll(fds, socklist.size(), 1);
 #else
 			::poll(fds, socklist.size(), 1);
 #endif
@@ -212,40 +204,12 @@ struct network_thread
 
 				lv2_socket& sock = *socklist[i];
 
-#ifdef _WIN32
-				WSANETWORKEVENTS nwe;
-				if (WSAEnumNetworkEvents(sock.socket, nullptr, &nwe) == 0)
-				{
-					sock.ev_set |= nwe.lNetworkEvents;
-
-					if (sock.ev_set & (FD_READ | FD_ACCEPT | FD_CLOSE) && sock.events.test_and_reset(lv2_socket::poll::read))
-						events += lv2_socket::poll::read;
-					if (sock.ev_set & (FD_WRITE | FD_CONNECT) && sock.events.test_and_reset(lv2_socket::poll::write))
-						events += lv2_socket::poll::write;
-
-					if ((nwe.lNetworkEvents & FD_READ && nwe.iErrorCode[FD_READ_BIT]) ||
-						(nwe.lNetworkEvents & FD_ACCEPT && nwe.iErrorCode[FD_ACCEPT_BIT]) ||
-						(nwe.lNetworkEvents & FD_CLOSE && nwe.iErrorCode[FD_CLOSE_BIT]) ||
-						(nwe.lNetworkEvents & FD_WRITE && nwe.iErrorCode[FD_WRITE_BIT]) ||
-						(nwe.lNetworkEvents & FD_CONNECT && nwe.iErrorCode[FD_CONNECT_BIT]))
-					{
-						// TODO
-						if (sock.events.test_and_reset(lv2_socket::poll::error))
-							events += lv2_socket::poll::error;
-					}
-				}
-				else
-				{
-					sys_net.error("WSAEnumNetworkEvents() failed (s=%d)", i);
-				}
-#else
 				if (fds[i].revents & (POLLIN | POLLHUP) && socklist[i]->events.test_and_reset(lv2_socket::poll::read))
 					events += lv2_socket::poll::read;
 				if (fds[i].revents & POLLOUT && socklist[i]->events.test_and_reset(lv2_socket::poll::write))
 					events += lv2_socket::poll::write;
 				if (fds[i].revents & POLLERR && socklist[i]->events.test_and_reset(lv2_socket::poll::error))
 					events += lv2_socket::poll::error;
-#endif
 
 				if (events)
 				{
@@ -295,16 +259,12 @@ struct network_thread
 			{
 				auto events = socklist[i]->events.load();
 
-#ifdef _WIN32
-				verify(HERE), 0 == WSAEventSelect(socklist[i]->socket, _eventh, FD_READ | FD_ACCEPT | FD_CLOSE | FD_WRITE | FD_CONNECT);
-#else
 				fds[i].fd = events ? socklist[i]->socket : -1;
 				fds[i].events =
 					(events & lv2_socket::poll::read ? POLLIN : 0) |
 					(events & lv2_socket::poll::write ? POLLOUT : 0) |
 					0;
 				fds[i].revents = 0;
-#endif
 			}
 		}
 	}
@@ -1616,15 +1576,11 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 
 		reader_lock lock(id_manager::g_mutex);
 
-#ifndef _WIN32
 		::pollfd _fds[1024]{};
-#endif
 
 		for (s32 i = 0; i < nfds; i++)
 		{
-#ifndef _WIN32
 			_fds[i].fd = -1;
-#endif
 			fds[i].revents = 0;
 
 			if (fds[i].fd < 0)
@@ -1636,23 +1592,11 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 			{
 				if (fds[i].events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT))
 					sys_net.error("sys_net_bnet_poll(fd=%d): events=0x%x", fds[i].fd, fds[i].events);
-#ifdef _WIN32
-				if (fds[i].events & SYS_NET_POLLIN && sock->ev_set & (FD_READ | FD_ACCEPT | FD_CLOSE))
-					fds[i].revents |= SYS_NET_POLLIN;
-				if (fds[i].events & SYS_NET_POLLOUT && sock->ev_set & (FD_WRITE | FD_CONNECT))
-					fds[i].revents |= SYS_NET_POLLOUT;
-
-				if (fds[i].revents)
-				{
-					signaled++;
-				}
-#else
 				_fds[i].fd = sock->socket;
 				if (fds[i].events & SYS_NET_POLLIN)
 					_fds[i].events |= POLLIN;
 				if (fds[i].events & SYS_NET_POLLOUT)
 					_fds[i].events |= POLLOUT;
-#endif
 			}
 			else
 			{
@@ -1661,9 +1605,11 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 			}
 		}
 
-#ifndef _WIN32
+#ifdef _WIN32
+		::WSAPoll(_fds, nfds, 0);
+#else
 		::poll(_fds, nfds, 0);
-
+#endif
 		for (s32 i = 0; i < nfds; i++)
 		{
 			if (_fds[i].revents & (POLLIN | POLLHUP))
@@ -1678,7 +1624,6 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 				signaled++;
 			}
 		}
-#endif
 
 		if (ms == 0 || signaled)
 		{
@@ -1791,15 +1736,11 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 
 		reader_lock lock(id_manager::g_mutex);
 
-#ifndef _WIN32
 		::pollfd _fds[1024]{};
-#endif
 
 		for (s32 i = 0; i < nfds; i++)
 		{
-#ifndef _WIN32
 			_fds[i].fd = -1;
-#endif
 			bs_t<lv2_socket::poll> selected{};
 
 			if (readfds && readfds->bit(i))
@@ -1820,24 +1761,11 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 
 			if (auto sock = idm::check_unlocked<lv2_socket>((lv2_socket::id_base & -1024) + i))
 			{
-#ifdef _WIN32
-				bool sig = false;
-				if (sock->ev_set & (FD_READ | FD_ACCEPT | FD_CLOSE) && selected & lv2_socket::poll::read)
-					sig = true, rread.set(i);
-				if (sock->ev_set & (FD_WRITE | FD_CONNECT) && selected & lv2_socket::poll::write)
-					sig = true, rwrite.set(i);
-
-				if (sig)
-				{
-					signaled++;
-				}
-#else
 				_fds[i].fd = sock->socket;
 				if (selected & lv2_socket::poll::read)
 					_fds[i].events |= POLLIN;
 				if (selected & lv2_socket::poll::write)
 					_fds[i].events |= POLLOUT;
-#endif
 			}
 			else
 			{
@@ -1845,9 +1773,11 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 			}
 		}
 
-#ifndef _WIN32
+#ifdef _WIN32
+		::WSAPoll(_fds, nfds, 0);
+#else
 		::poll(_fds, nfds, 0);
-
+#endif
 		for (s32 i = 0; i < nfds; i++)
 		{
 			bool sig = false;
@@ -1861,7 +1791,6 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 				signaled++;
 			}
 		}
-#endif
 
 		if ((_timeout && !timeout) || signaled)
 		{
