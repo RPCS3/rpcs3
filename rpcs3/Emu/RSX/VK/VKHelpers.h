@@ -810,6 +810,7 @@ private:
 					LOG_FATAL(RSX, "Your GPU driver does not support some required MSAA features. Expect problems.");
 				}
 
+				enabled_features.sampleRateShading = VK_TRUE;
 				enabled_features.alphaToOne = VK_TRUE;
 				enabled_features.shaderStorageImageMultisample = VK_TRUE;
 				// enabled_features.shaderStorageImageReadWithoutFormat = VK_TRUE;  // Unused currently, may be needed soon
@@ -829,6 +830,12 @@ private:
 			{
 				LOG_ERROR(RSX, "Your GPU does not support depth bounds testing. Graphics may not work correctly.");
 				enabled_features.depthBounds = VK_FALSE;
+			}
+
+			if (!pgpu->features.sampleRateShading && enabled_features.sampleRateShading)
+			{
+				LOG_ERROR(RSX, "Your GPU does not support sample rate shading for multisampling. Graphics may be inaccurate when MSAA is enabled.");
+				enabled_features.sampleRateShading = VK_FALSE;
 			}
 
 			if (!pgpu->features.alphaToOne && enabled_features.alphaToOne)
