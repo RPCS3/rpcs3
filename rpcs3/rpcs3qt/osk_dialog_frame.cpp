@@ -110,7 +110,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			const int cursor_pos_old = cursor_pos_new + m_text_old.length() - text.length();
 
 			// Reset to old state if character limit was reached
-			if ((u32)m_text_old.length() >= charlimit && (u32)text.length() > charlimit)
+			if (m_text_old.length() >= static_cast<int>(charlimit) && text.length() > static_cast<int>(charlimit))
 			{
 				input->blockSignals(true);
 				input->setPlainText(m_text_old);
@@ -180,7 +180,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 void osk_dialog_frame::SetOskText(const QString& text)
 {
-	std::memcpy(osk_text, reinterpret_cast<const char16_t*>(text.constData()), ((size_t)text.size() + 1) * sizeof(char16_t));
+	std::memcpy(osk_text, reinterpret_cast<const char16_t*>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
 }
 
 void osk_dialog_frame::Close(bool accepted)

@@ -297,7 +297,7 @@ public:
 		while (num_segs < 16)
 		{
 			auto ptr = ::mmap(nullptr, max_size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_32BIT, -1, 0);
-			if (ptr != MAP_FAILED)
+			if (ptr != reinterpret_cast<void*>(-1))
 				found_segs[num_segs++] = Segment(ptr, static_cast<u32>(max_size));
 			else if (max_size > 0x1000000)
 				max_size -= 0x1000000;

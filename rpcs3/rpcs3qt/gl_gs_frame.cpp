@@ -60,7 +60,8 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 		fmt::throw_exception("Null context handle passed to set_current" HERE);
 	}
 
-	auto context = (GLContext*)(ctx);
+	const auto context = static_cast<GLContext*>(ctx);
+
 	if (!context->handle->makeCurrent(context->surface))
 	{
 		if (!context->owner)
@@ -81,8 +82,8 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 
 void gl_gs_frame::delete_context(draw_context_t ctx)
 {
+	const auto gl_ctx = static_cast<GLContext*>(ctx);
 
-	auto gl_ctx = (GLContext*)ctx;
 	gl_ctx->handle->doneCurrent();
 
 #ifdef _MSC_VER
@@ -115,6 +116,7 @@ void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 	//Do not swap buffers if frame skip is active
 	if (skip_frame) return;
 
-	auto gl_ctx = (GLContext*)context;
+	const auto gl_ctx = static_cast<GLContext*>(context);
+
 	gl_ctx->handle->swapBuffers(gl_ctx->surface);
 }

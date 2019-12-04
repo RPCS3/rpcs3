@@ -342,7 +342,7 @@ void gui_settings::SaveCurrentConfig(const QString& friendly_name)
 
 logs::level gui_settings::GetLogLevel()
 {
-	return (logs::level) GetValue(gui::l_level).toUInt();
+	return logs::level{GetValue(gui::l_level).toUInt()};
 }
 
 bool gui_settings::GetGamelistColVisibility(int col)
@@ -370,7 +370,7 @@ QStringList gui_settings::GetConfigEntries()
 }
 
 void gui_settings::BackupSettingsToTarget(const QString& friendly_name)
-{	
+{
 	QSettings target(ComputeSettingsDir() + friendly_name + ".ini", QSettings::Format::IniFormat);
 
 	for (const QString& key : m_settings.allKeys())
@@ -420,12 +420,12 @@ QString gui_settings::GetCurrentStylesheetPath()
 
 QSize gui_settings::SizeFromSlider(int pos)
 {
-	return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (pos / (float)gui::gl_max_slider_pos);
+	return gui::gl_icon_size_min + (gui::gl_icon_size_max - gui::gl_icon_size_min) * (1.f * pos / gui::gl_max_slider_pos);
 }
 
 gui_save gui_settings::GetGuiSaveForColumn(int col)
 {
 	// hide sound format, parental level, firmware version and path by default
 	bool show = col != gui::column_sound && col != gui::column_parental && col != gui::column_firmware && col != gui::column_path;
-	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name((gui::game_list_columns)col), show };
+	return gui_save{ gui::game_list, "visibility_" + gui::get_game_list_column_name(static_cast<gui::game_list_columns>(col)), show };
 }

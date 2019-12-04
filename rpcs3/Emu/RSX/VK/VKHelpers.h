@@ -679,7 +679,7 @@ private:
 			case driver_vendor::NVIDIA:
 			{
 				// 10 + 8 + 8 + 6
-				const auto major_version = VK_VERSION_MAJOR(props.driverVersion);
+				const auto major_version = props.driverVersion >> 22;
 				const auto minor_version = (props.driverVersion >> 14) & 0xff;
 				const auto patch = (props.driverVersion >> 6) & 0xff;
 				const auto revision = (props.driverVersion & 0x3f);
@@ -690,9 +690,9 @@ private:
 			{
 				// 10 + 10 + 12 (standard vulkan encoding created with VK_MAKE_VERSION)
 				return fmt::format("%u.%u.%u",
-					VK_VERSION_MAJOR(props.driverVersion),
-					VK_VERSION_MINOR(props.driverVersion),
-					VK_VERSION_PATCH(props.driverVersion));
+					(props.driverVersion >> 22),
+					(props.driverVersion >> 12) & 0x3ff,
+					(props.driverVersion) & 0x3ff);
 			}
 			}
 		}
@@ -1385,10 +1385,10 @@ private:
 		u32 encoded_component_map() const
 		{
 #if	(VK_DISABLE_COMPONENT_SWIZZLE)
-			u32 result = (u32)info.components.a - 1;
-			result |= ((u32)info.components.r - 1) << 3;
-			result |= ((u32)info.components.g - 1) << 6;
-			result |= ((u32)info.components.b - 1) << 9;
+			u32 result = static_cast<u32>(info.components.a) - 1;
+			result |= (static_cast<u32>(info.components.r) - 1) << 3;
+			result |= (static_cast<u32>(info.components.g) - 1) << 6;
+			result |= (static_cast<u32>(info.components.b) - 1) << 9;
 
 			return result;
 #else
@@ -2036,7 +2036,7 @@ public:
 
 	class swapchain_MacOS : public native_swapchain_base
 	{
-		void* nsView = NULL;
+		void* nsView = nullptr;
 
 	public:
 		swapchain_MacOS(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
@@ -2082,10 +2082,10 @@ public:
 
 	class swapchain_X11 : public native_swapchain_base
 	{
-		Display *display = NULL;
-		Window window = (Window)NULL;
-		XImage* pixmap = NULL;
-		GC gc = NULL;
+		Display* display = nullptr;
+		Window window = 0;
+		XImage* pixmap = nullptr;
+		GC gc = nullptr;
 		int bit_depth = 24;
 
 	public:
@@ -2118,7 +2118,10 @@ public:
 			}
 
 			XVisualInfo visual{};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 			if (!XMatchVisualInfo(display, DefaultScreen(display), bit_depth, TrueColor, &visual))
+#pragma GCC diagnostic pop
 			{
 				LOG_ERROR(RSX, "Could not find matching visual info!" HERE);
 				return false;
@@ -2147,7 +2150,10 @@ public:
 				return;
 			}
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 			gc = DefaultGC(display, DefaultScreen(display));
+#pragma GCC diagnostic pop
 		}
 
 		void destroy(bool full=true) override

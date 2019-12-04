@@ -57,7 +57,7 @@ void progress_dialog::UpdateProgress(int progress, bool disable)
 	else
 		properties.insert(QStringLiteral("progress-visible"), true);
 	//Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), (double)progress / (double)maximum());
+	properties.insert(QStringLiteral("progress"), 1. * progress / maximum());
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }

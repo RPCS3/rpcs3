@@ -738,8 +738,8 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		{
 			const s16 rawValue = read_s16(&buf[calibOffset]);
 			const s16 calValue = ApplyCalibration(rawValue, device->calibData[i]);
-			buf[calibOffset++] = ((u16)calValue >> 0) & 0xFF;
-			buf[calibOffset++] = ((u16)calValue >> 8) & 0xFF;
+			buf[calibOffset++] = (static_cast<u16>(calValue) >> 0) & 0xFF;
+			buf[calibOffset++] = (static_cast<u16>(calValue) >> 8) & 0xFF;
 		}
 	}
 	memcpy(device->padData.data(), &buf[offset], 64);
@@ -847,9 +847,9 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	// all we need to do is convert to ds3 range
 
 	// accel
-	f32 accelX = (((s16)((u16)(buf[20] << 8) | buf[19])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
-	f32 accelY = (((s16)((u16)(buf[22] << 8) | buf[21])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
-	f32 accelZ = (((s16)((u16)(buf[24] << 8) | buf[23])) / static_cast<f32>(DS4_ACC_RES_PER_G)) * -1;
+	f32 accelX = static_cast<s16>((buf[20] << 8) | buf[19]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	f32 accelY = static_cast<s16>((buf[22] << 8) | buf[21]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
+	f32 accelZ = static_cast<s16>((buf[24] << 8) | buf[23]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;
 
 	// now just use formula from ds3
 	accelX = accelX * 113 + 512;
@@ -861,7 +861,7 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	pad->m_sensors[2].m_value = Clamp0To1023(accelZ);
 
 	// gyroX is yaw, which is all that we need
-	f32 gyroX = (((s16)((u16)(buf[16] << 8) | buf[15])) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S)) * -1;
+	f32 gyroX = static_cast<s16>((buf[16] << 8) | buf[15]) / static_cast<f32>(DS4_GYRO_RES_PER_DEG_S) * -1;
 	//const int gyroY = ((u16)(buf[14] << 8) | buf[13]) / 256;
 	//const int gyroZ = ((u16)(buf[18] << 8) | buf[17]) / 256;
 

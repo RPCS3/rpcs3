@@ -28,6 +28,8 @@ else()
 	add_compile_options(-msse -msse2 -mcx16)
 	add_compile_options(-fno-strict-aliasing)
 
+	add_compile_options(-Werror=old-style-cast)
+
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-unused-variable)
 	add_compile_options(-Wno-reorder)

@@ -18,7 +18,10 @@ enum class cheat_type : u8
 	signed_16_cheat,
 	signed_32_cheat,
 	signed_64_cheat,
+	max
 };
+
+constexpr u8 cheat_type_max = static_cast<u8>(cheat_type::max);
 
 struct cheat_info
 {

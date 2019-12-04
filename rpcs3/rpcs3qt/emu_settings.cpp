@@ -239,7 +239,7 @@ void emu_settings::Microphone_Creator::ParseDevices(std::string list)
 	}
 
 	const auto devices_list = fmt::split(list, { "@@@" });
-	for (u32 index = 0; index < std::min((u32)4, (u32)devices_list.size()); index++)
+	for (u32 index = 0; index < std::min<u32>(4, ::size32(devices_list)); index++)
 	{
 		sel_list[index] = devices_list[index];
 	}

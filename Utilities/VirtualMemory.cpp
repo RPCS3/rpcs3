@@ -65,6 +65,11 @@ namespace utils
 #else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
 
+		if (ptr == reinterpret_cast<void*>(-1))
+		{
+			return nullptr;
+		}
+
 		if (use_addr && ptr != use_addr)
 		{
 			::munmap(ptr, size);
@@ -90,7 +95,7 @@ namespace utils
 #ifdef _WIN32
 		verify(HERE), ::VirtualFree(pointer, size, MEM_DECOMMIT);
 #else
-		verify(HERE), ::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
+		verify(HERE), ::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1);
 #endif
 	}
 
@@ -100,7 +105,7 @@ namespace utils
 		memory_decommit(pointer, size);
 		memory_commit(pointer, size, prot);
 #else
-		verify(HERE), ::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
+		verify(HERE), ::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1);
 #endif
 	}
 

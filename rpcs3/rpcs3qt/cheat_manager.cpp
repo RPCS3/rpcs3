@@ -26,7 +26,8 @@ cheat_manager_dialog* cheat_manager_dialog::inst = nullptr;
 template <>
 void fmt_class_string<cheat_type>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](cheat_type value) {
+	format_enum(out, arg, [](cheat_type value)
+	{
 		switch (value)
 		{
 		case cheat_type::unsigned_8_cheat: return "Unsigned 8 bits";
@@ -37,6 +38,7 @@ void fmt_class_string<cheat_type>::format(std::string& out, u64 arg)
 		case cheat_type::signed_16_cheat: return "Signed 16 bits";
 		case cheat_type::signed_32_cheat: return "Signed 32 bits";
 		case cheat_type::signed_64_cheat: return "Signed 64 bits";
+		case cheat_type::max: break;
 		}
 
 		return unknown;
@@ -59,7 +61,9 @@ namespace YAML
 			u64 type64      = 0;
 			if (!cfg::try_to_enum_value(&type64, &fmt_class_string<cheat_type>::format, node[1].Scalar()))
 				return false;
-			rhs.type       = (cheat_type)type64;
+			if (type64 >= cheat_type_max)
+				return false;
+			rhs.type       = cheat_type{::narrow<u8>(type64)};
 			rhs.red_script = node[2].as<std::string>();
 			return true;
 		}
@@ -68,8 +72,8 @@ namespace YAML
 
 YAML::Emitter& operator<<(YAML::Emitter& out, const cheat_info& rhs)
 {
-	std::string type_formatted{};
-	fmt_class_string<cheat_type>::format(type_formatted, (u64)rhs.type);
+	std::string type_formatted;
+	fmt::append(type_formatted, "%s", rhs.type);
 
 	out << YAML::BeginSeq << rhs.description << type_formatted << rhs.red_script << YAML::EndSeq;
 
@@ -80,7 +84,8 @@ bool cheat_info::from_str(const std::string& cheat_line)
 {
 	auto cheat_vec = fmt::split(cheat_line, {"@@@"}, false);
 
-	if (cheat_vec.size() != 5)
+	s64 val64 = 0;
+	if (cheat_vec.size() != 5 || !cfg::try_to_int64(&val64, cheat_vec[2], 0, cheat_type_max - 1))
 	{
 		log_cheat.fatal("Failed to parse cheat line");
 		return false;
@@ -88,7 +93,7 @@ bool cheat_info::from_str(const std::string& cheat_line)
 
 	game        = cheat_vec[0];
 	description = cheat_vec[1];
-	type        = (cheat_type)std::stoul(cheat_vec[2]);
+	type        = cheat_type{::narrow<u8>(val64)};
 	offset      = std::stoul(cheat_vec[3]);
 	red_script  = cheat_vec[4];
 
@@ -97,7 +102,7 @@ bool cheat_info::from_str(const std::string& cheat_line)
 
 std::string cheat_info::to_str() const
 {
-	std::string cheat_str = game + "@@@" + description + "@@@" + std::to_string((int)type) + "@@@" + std::to_string(offset) + "@@@" + red_script + "@@@";
+	std::string cheat_str = game + "@@@" + description + "@@@" + std::to_string(static_cast<u8>(type)) + "@@@" + std::to_string(offset) + "@@@" + red_script + "@@@";
 	return cheat_str;
 }
 
@@ -498,13 +503,13 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 	edt_cheat_search_value = new QLineEdit();
 	cbx_cheat_search_type  = new QComboBox();
 
-	for (u64 i = 0; i <= (u64)cheat_type::signed_64_cheat; i++)
+	for (u64 i = 0; i < cheat_type_max; i++)
 	{
-		std::string type_formatted{};
-		fmt_class_string<cheat_type>::format(type_formatted, i);
+		std::string type_formatted;
+		fmt::append(type_formatted, "%s", static_cast<cheat_type>(i));
 		cbx_cheat_search_type->insertItem(i, QString::fromStdString(type_formatted));
 	}
-	cbx_cheat_search_type->setCurrentIndex((int)cheat_type::signed_32_cheat);
+	cbx_cheat_search_type->setCurrentIndex(static_cast<u8>(cheat_type::signed_32_cheat));
 	grp_add_cheat_sub_layout->addWidget(btn_new_search);
 	grp_add_cheat_sub_layout->addWidget(btn_filter_results);
 	grp_add_cheat_sub_layout->addWidget(edt_cheat_search_value);
@@ -565,7 +570,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 			if (success)
 			{
 				if (cheat->type >= cheat_type::signed_8_cheat && cheat->type <= cheat_type::signed_64_cheat)
-					cur_value = tr("%1").arg((s64)result_value);
+					cur_value = tr("%1").arg(static_cast<s64>(result_value));
 				else
 					cur_value = tr("%1").arg(result_value);
 
@@ -714,7 +719,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		}
 
 		// TODO: better way to do this?
-		switch ((cheat_type)cbx_cheat_search_type->currentIndex())
+		switch (static_cast<cheat_type>(cbx_cheat_search_type->currentIndex()))
 		{
 		case cheat_type::unsigned_8_cheat: results = convert_and_set<u8>(final_offset); break;
 		case cheat_type::unsigned_16_cheat: results = convert_and_set<u16>(final_offset); break;
@@ -759,7 +764,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 		QAction* add_to_cheat_list = new QAction(tr("Add to cheat list"), menu);
 
 		u32 offset       = offsets_found[lst_search->currentRow()];
-		cheat_type type  = (cheat_type)cbx_cheat_search_type->currentIndex();
+		cheat_type type  = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
 		std::string name = Emu.GetTitle();
 
 		connect(add_to_cheat_list, &QAction::triggered, [=]() {
@@ -879,7 +884,7 @@ void cheat_manager_dialog::do_the_search()
 	QString qstr_to_search = edt_cheat_search_value->text();
 
 	// TODO: better way to do this?
-	switch ((cheat_type)cbx_cheat_search_type->currentIndex())
+	switch (static_cast<cheat_type>(cbx_cheat_search_type->currentIndex()))
 	{
 	case cheat_type::unsigned_8_cheat: res_conv = convert_and_search<u8>(); break;
 	case cheat_type::unsigned_16_cheat: res_conv = convert_and_search<u16>(); break;
@@ -928,7 +933,7 @@ void cheat_manager_dialog::update_cheat_list()
 				tbl_cheats->setItem(row, 1, new QTableWidgetItem(QString::fromStdString(offset.second.description)));
 
 				std::string type_formatted;
-				fmt_class_string<cheat_type>::format(type_formatted, (u64)offset.second.type);
+				fmt::append(type_formatted, "%s", offset.second.type);
 				QTableWidgetItem* item_type = new QTableWidgetItem(QString::fromStdString(type_formatted));
 				item_type->setFlags(item_type->flags() & ~Qt::ItemIsEditable);
 				tbl_cheats->setItem(row, 2, item_type);

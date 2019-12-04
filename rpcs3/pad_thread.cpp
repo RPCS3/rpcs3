@@ -92,8 +92,8 @@ void pad_thread::Init()
 			{
 			case pad_handler::keyboard:
 				keyptr = std::make_shared<keyboard_pad_handler>();
-				keyptr->moveToThread((QThread *)curthread);
-				keyptr->SetTargetWindow((QWindow *)curwindow);
+				keyptr->moveToThread(static_cast<QThread*>(curthread));
+				keyptr->SetTargetWindow(static_cast<QWindow*>(curwindow));
 				cur_pad_handler = keyptr;
 				break;
 			case pad_handler::ds3:

@@ -185,8 +185,8 @@ namespace gui
 	const gui_save gl_iconSizeGrid = gui_save(game_list, "iconSizeGrid", get_Index(gl_icon_size_small));
 	const gui_save gl_iconColor    = gui_save(game_list, "iconColor",    gl_icon_color);
 	const gui_save gl_listMode     = gui_save(game_list, "listMode",     true);
-	const gui_save gl_textFactor   = gui_save(game_list, "textFactor",   (qreal) 2.0);
-	const gui_save gl_marginFactor = gui_save(game_list, "marginFactor", (qreal) 0.09);
+	const gui_save gl_textFactor   = gui_save(game_list, "textFactor",   qreal{2.0});
+	const gui_save gl_marginFactor = gui_save(game_list, "marginFactor", qreal{0.09});
 	const gui_save gl_show_hidden  = gui_save(game_list, "show_hidden",  false);
 	const gui_save gl_hidden_list  = gui_save(game_list, "hidden_list",  QStringList());
 	const gui_save gl_draw_compat  = gui_save(game_list, "draw_compat",  false);
@@ -198,7 +198,7 @@ namespace gui
 	const gui_save fs_dev_usb000_list   = gui_save(fs, "dev_usb000_list",   QStringList());
 
 	const gui_save l_tty       = gui_save(logger, "TTY",       true);
-	const gui_save l_level     = gui_save(logger, "level",     (uint)(logs::level::success));
+	const gui_save l_level     = gui_save(logger, "level",     static_cast<uint>(logs::level::success));
 	const gui_save l_stack     = gui_save(logger, "stack",     true);
 	const gui_save l_stack_tty = gui_save(logger, "TTY stack", false);
 

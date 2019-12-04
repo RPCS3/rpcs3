@@ -74,7 +74,7 @@ void kernel_explorer::Update()
 	const u32 total_memory_usage = dct->used;
 
 	QTreeWidgetItem* root = new QTreeWidgetItem();
-	root->setText(0, qstr(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, (float)total_memory_usage / (1024 * 1024))));
+	root->setText(0, qstr(fmt::format("Process, ID = 0x00000001, Total Memory Usage = 0x%x (%0.2f MB)", total_memory_usage, 1.f * total_memory_usage / (1024 * 1024))));
 	m_tree->addTopLevelItem(root);
 
 	union name64

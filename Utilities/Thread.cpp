@@ -766,9 +766,9 @@ uint64_t* darwin_x64reg(x64_context *context, int reg)
 
 #define X64REG(context, reg) (freebsd_x64reg(context, reg))
 #ifdef __DragonFly__
-#  define XMMREG(context, reg) (reinterpret_cast<v128*>(((union savefpu*)(context)->uc_mcontext.mc_fpregs)->sv_xmm.sv_xmm[reg]))
+#  define XMMREG(context, reg) (reinterpret_cast<v128*>((reinterpret_cast<union savefpu*>(context)->uc_mcontext.mc_fpregs)->sv_xmm.sv_xmm[reg]))
 #else
-#  define XMMREG(context, reg) (reinterpret_cast<v128*>(((struct savefpu*)(context)->uc_mcontext.mc_fpstate)->sv_xmm[reg]))
+#  define XMMREG(context, reg) (reinterpret_cast<v128*>((reinterpret_cast<struct savefpu*>(context)->uc_mcontext.mc_fpstate)->sv_xmm[reg]))
 #endif
 #define EFLAGS(context) ((context)->uc_mcontext.mc_rflags)
 
@@ -1714,7 +1714,7 @@ void thread_base::initialize(bool(*wait_cb)(const void*))
 #elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 	pthread_set_name_np(pthread_self(), m_name.get().c_str());
 #elif defined(__NetBSD__)
-	pthread_setname_np(pthread_self(), "%s", (void*)m_name.get().c_str());
+	pthread_setname_np(pthread_self(), "%s", const_cast<void*>(static_cast<void*>(m_name.get().c_str())));
 #elif !defined(_WIN32)
 	pthread_setname_np(pthread_self(), m_name.get().substr(0, 15).c_str());
 #endif
@@ -1902,7 +1902,7 @@ u64 thread_base::get_cycles()
 	mach_port_name_t port = pthread_mach_thread_np(reinterpret_cast<pthread_t>(m_thread.load()));
 	mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
 	thread_basic_info_data_t info;
-	kern_return_t ret = thread_info(port, THREAD_BASIC_INFO, (thread_info_t)&info, &count);
+	kern_return_t ret = thread_info(port, THREAD_BASIC_INFO, reinterpret_cast<thread_info_t>(&info), &count);
 	if (ret == KERN_SUCCESS)
 	{
 		cycles = static_cast<u64>(info.user_time.seconds + info.system_time.seconds) * 1'000'000'000 +
@@ -2187,7 +2187,7 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 	// Supports only one core
 	thread_affinity_policy_data_t policy = { static_cast<integer_t>(utils::cnttz64(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
-	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, (thread_policy_t)&policy, 1);
+	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), 1);
 #elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
