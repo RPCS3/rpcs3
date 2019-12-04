@@ -2485,24 +2485,6 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 	}
 }
 
-bool VKGSRender::do_method(u32 cmd, u32 arg)
-{
-	switch (cmd)
-	{
-	case NV4097_CLEAR_SURFACE:
-		clear_surface(arg);
-		return true;
-	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-		// Texture barrier, seemingly not very useful
-		return true;
-	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-		//sync_at_semaphore_release();
-		return true;
-	default:
-		return false;
-	}
-}
-
 bool VKGSRender::load_program()
 {
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)

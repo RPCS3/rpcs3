@@ -1100,13 +1100,21 @@ void GLGSRender::on_exit()
 
 void GLGSRender::clear_surface(u32 arg)
 {
-	if (skip_current_frame || !framebuffer_status_valid) return;
+	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!rsx::method_registers.stencil_mask()) arg &= ~0x2u;
 
 	// Ignore invalid clear flags
 	if ((arg & 0xf3) == 0) return;
+
+	u8 ctx = rsx::framebuffer_creation_context::context_draw;
+	if (arg & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+	if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
+
+	init_buffers((rsx::framebuffer_creation_context)ctx, true);
+
+	if (!framebuffer_status_valid) return;
 
 	GLbitfield mask = 0;
 
@@ -1221,46 +1229,6 @@ void GLGSRender::clear_surface(u32 arg)
 	}
 
 	glClear(mask);
-}
-
-bool GLGSRender::do_method(u32 cmd, u32 arg)
-{
-	switch (cmd)
-	{
-	case NV4097_CLEAR_SURFACE:
-	{
-		if (arg & 0xF3)
-		{
-			//Only do all this if we have actual work to do
-			u8 ctx = rsx::framebuffer_creation_context::context_draw;
-			if (arg & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
-			if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
-
-			init_buffers(rsx::framebuffer_creation_context{ctx}, true);
-			clear_surface(arg);
-		}
-
-		return true;
-	}
-	case NV4097_CLEAR_ZCULL_SURFACE:
-	{
-		// NOP
-		// Clearing zcull memory does not modify depth/stencil buffers 'bound' to the zcull region
-		return true;
-	}
-	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-	{
-		// Texture barrier, seemingly not very useful
-		return true;
-	}
-	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-	{
-		//flush_draw_buffers = true;
-		return true;
-	}
-	}
-
-	return false;
 }
 
 bool GLGSRender::load_program()

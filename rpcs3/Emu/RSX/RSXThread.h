@@ -687,13 +687,13 @@ namespace rsx
 		void run_FIFO();
 
 	public:
+		virtual void clear_surface(u32 arg) {};
 		virtual void begin();
 		virtual void end();
 		virtual void execute_nop_draw();
 
 		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
-		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
 		virtual void on_frame_end(u32 buffer, bool forced = false);
 		virtual void flip(const display_flip_info_t& info) = 0;
 		virtual u64 timestamp();

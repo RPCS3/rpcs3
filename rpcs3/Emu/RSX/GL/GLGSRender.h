@@ -137,7 +137,6 @@ private:
 	gl::vertex_upload_info set_vertex_buffer();
 	rsx::vertex_input_layout m_vertex_layout = {};
 
-	void clear_surface(u32 arg);
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
 
 	bool load_program();
@@ -162,12 +161,12 @@ public:
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
 protected:
+	void clear_surface(u32 arg) override;
 	void begin() override;
 	void end() override;
 
 	void on_init_thread() override;
 	void on_exit() override;
-	bool do_method(u32 cmd, u32 arg) override;
 	void flip(const rsx::display_flip_info_t& info) override;
 
 	void do_local_task(rsx::FIFO_state state) override;

@@ -8,6 +8,5 @@ public:
 	NullGSRender();
 
 private:
-	bool do_method(u32 cmd, u32 value) final;
 	void end() override;
 };
