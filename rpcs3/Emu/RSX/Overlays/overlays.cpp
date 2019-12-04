@@ -66,7 +66,7 @@ std::string utf8_to_ascii8(const std::string& utf8_string)
 	{
 		const u8 code = static_cast<u8>(utf8_string[index]);
 
-		if (code == 0)
+		if (!code)
 		{
 			break;
 		}
