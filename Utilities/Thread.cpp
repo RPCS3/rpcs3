@@ -1714,7 +1714,7 @@ void thread_base::initialize(bool(*wait_cb)(const void*))
 #elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 	pthread_set_name_np(pthread_self(), m_name.get().c_str());
 #elif defined(__NetBSD__)
-	pthread_setname_np(pthread_self(), "%s", const_cast<void*>(static_cast<void*>(m_name.get().c_str())));
+	pthread_setname_np(pthread_self(), "%s", const_cast<void*>(static_cast<const void*>(m_name.get().c_str())));
 #elif !defined(_WIN32)
 	pthread_setname_np(pthread_self(), m_name.get().substr(0, 15).c_str());
 #endif
