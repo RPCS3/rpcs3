@@ -15,7 +15,7 @@ namespace
 	template <typename T>
 	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
 	{
-		return{ (T*)unformated_span.data(), unformated_span.size_bytes() / sizeof(T) };
+		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
 }
 
@@ -241,7 +241,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	// Restore header states
 	QVariantMap states = m_gui_settings->GetValue(gui::rsx_states).toMap();
 	for (int i = 0; i < m_tw_rsx->count(); i++)
-		((QTableWidget*)m_tw_rsx->widget(i))->horizontalHeader()->restoreState(states[QString::number(i)].toByteArray());
+		(static_cast<QTableWidget*>(m_tw_rsx->widget(i)))->horizontalHeader()->restoreState(states[QString::number(i)].toByteArray());
 
 	// Fill the frame
 	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
@@ -261,7 +261,7 @@ void rsx_debugger::closeEvent(QCloseEvent* event)
 	// Save header states and window geometry
 	QVariantMap states;
 	for (int i = 0; i < m_tw_rsx->count(); i++)
-		states[QString::number(i)] = ((QTableWidget*)m_tw_rsx->widget(i))->horizontalHeader()->saveState();
+		states[QString::number(i)] = (static_cast<QTableWidget*>(m_tw_rsx->widget(i)))->horizontalHeader()->saveState();
 
 	m_gui_settings->SetValue(gui::rsx_states, states);
 	m_gui_settings->SetValue(gui::rsx_geometry, saveGeometry());
@@ -461,7 +461,7 @@ namespace
 	 */
 	u8* convert_to_QImage_buffer(rsx::surface_color_format format, gsl::span<const std::byte> orig_buffer, size_t width, size_t height) noexcept
 	{
-		unsigned char* buffer = (unsigned char*)malloc(width * height * 4);
+		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
 		for (u32 i = 0; i < width * height; i++)
 		{
 			// depending on original buffer, the colors may need to be reversed
@@ -497,7 +497,7 @@ void rsx_debugger::OnClickDrawCalls()
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{
 			unsigned char* buffer = convert_to_QImage_buffer(draw_call.state.surface_color(), draw_call.color_buffer[i], width, height);
-			buffers[i]->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
+			buffers[i]->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
 		}
 	}
 
@@ -506,7 +506,7 @@ void rsx_debugger::OnClickDrawCalls()
 		if (width && height && !draw_call.depth_stencil[0].empty())
 		{
 			gsl::span<const std::byte> orig_buffer = draw_call.depth_stencil[0];
-			unsigned char *buffer = (unsigned char *)malloc(width * height * 4);
+			u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
 
 			if (draw_call.state.surface_depth_fmt() == rsx::surface_depth_format::z24s8)
 			{
@@ -538,7 +538,7 @@ void rsx_debugger::OnClickDrawCalls()
 					}
 				}
 			}
-			m_buffer_depth->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
+			m_buffer_depth->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
 		}
 	}
 
@@ -547,7 +547,7 @@ void rsx_debugger::OnClickDrawCalls()
 		if (width && height && !draw_call.depth_stencil[1].empty())
 		{
 			gsl::span<const std::byte> orig_buffer = draw_call.depth_stencil[1];
-			unsigned char *buffer = (unsigned char *)malloc(width * height * 4);
+			u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
 
 			for (u32 row = 0; row < height; row++)
 			{
@@ -560,7 +560,7 @@ void rsx_debugger::OnClickDrawCalls()
 					buffer[4 * col + 3 + width * row * 4] = 255;
 				}
 			}
-			m_buffer_stencil->showImage(QImage(buffer, (int)width, (int)height, QImage::Format_RGB32));
+			m_buffer_stencil->showImage(QImage(buffer, static_cast<int>(width), static_cast<int>(height), QImage::Format_RGB32));
 		}
 	}
 
@@ -574,7 +574,7 @@ void rsx_debugger::OnClickDrawCalls()
 	//m_list_index_buffer->insertColumn(0, "Index", 0, 700);
 	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u16)
 	{
-		u16 *index_buffer = (u16*)frame_debug.draw_calls[draw_id].index.data();
+		u16 *index_buffer = reinterpret_cast<u16*>(frame_debug.draw_calls[draw_id].index.data());
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
 			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
@@ -582,7 +582,7 @@ void rsx_debugger::OnClickDrawCalls()
 	}
 	if (frame_debug.draw_calls[draw_id].state.index_type() == rsx::index_array_type::u32)
 	{
-		u32 *index_buffer = (u32*)frame_debug.draw_calls[draw_id].index.data();
+		u32 *index_buffer = reinterpret_cast<u32*>(frame_debug.draw_calls[draw_id].index.data());
 		for (u32 i = 0; i < frame_debug.draw_calls[draw_id].vertex_count; ++i)
 		{
 			m_list_index_buffer->insertItem(i, qstr(std::to_string(index_buffer[i])));
@@ -668,7 +668,7 @@ void rsx_debugger::GetBuffers()
 
 		u32 width  = buffers[bufferId].width;
 		u32 height = buffers[bufferId].height;
-		unsigned char* buffer = (unsigned char*)malloc(width * height * 4);
+		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
 
 		// ABGR to ARGB and flip vertically
 		for (u32 y=0; y<height; y++)
@@ -853,11 +853,11 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		switch((cmd & 0x3ffff) >> 2)
 		{
 		case 0x3fead:
-			DISASM("Flip and change current buffer: %d", (u32)args[0]);
+			DISASM("Flip and change current buffer: %d", args[0]);
 		break;
 
 		case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
-			DISASM("Texture Offset[%d]: %07x", index, (u32)args[0]);
+			DISASM("Texture Offset[%d]: %07x", index, args[0]);
 			switch ((args[1] & 0x3) - 1)
 			{
 			case CELL_GCM_LOCATION_LOCAL: DISASM("(Local memory);");  break;
@@ -876,7 +876,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		break;
 		default:
 		{
-			std::string str = rsx::get_pretty_printing_function((cmd & 0x3ffff) >> 2)((u32)args[0]);
+			std::string str = rsx::get_pretty_printing_function((cmd & 0x3ffff) >> 2)(args[0]);
 			DISASM("%s", str.c_str());
 		}
 		}
@@ -891,7 +891,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 		for(uint i=0; i<count; ++i)
 		{
 			if(i != 0) disasm += ", ";
-			disasm += fmt::format("0x%x", (u32)args[i]);
+			disasm += fmt::format("0x%x", args[i]);
 		}
 
 		disasm += ")";

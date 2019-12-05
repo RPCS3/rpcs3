@@ -54,7 +54,7 @@ namespace vk
 		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
 		default:
-			fmt::throw_exception("Unknown compare op: 0x%x" HERE, (u32)op);
+			fmt::throw_exception("Unknown compare op: 0x%x" HERE, static_cast<u32>(op));
 		}
 	}
 
@@ -117,7 +117,7 @@ namespace vk
 			return std::make_pair(VK_FORMAT_R32_SFLOAT, vk::default_component_map());
 
 		default:
-			LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", (u32)color_format);
+			LOG_ERROR(RSX, "Surface color buffer: Unsupported surface color format (0x%x)", static_cast<u32>(color_format));
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
 		}
 	}
@@ -143,7 +143,7 @@ namespace vk
 		case rsx::logic_op::logic_nand: return VK_LOGIC_OP_NAND;
 		case rsx::logic_op::logic_set: return VK_LOGIC_OP_SET;
 		default:
-			fmt::throw_exception("Unknown logic op 0x%x" HERE, (u32)op);
+			fmt::throw_exception("Unknown logic op 0x%x" HERE, static_cast<u32>(op));
 		}
 	}
 
@@ -167,7 +167,7 @@ namespace vk
 		case rsx::blend_factor::one_minus_constant_color: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
 		case rsx::blend_factor::src_alpha_saturate: return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
 		default:
-			fmt::throw_exception("Unknown blend factor 0x%x" HERE, (u32)factor);
+			fmt::throw_exception("Unknown blend factor 0x%x" HERE, static_cast<u32>(factor));
 		}
 	}
 
@@ -186,7 +186,7 @@ namespace vk
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
 		case rsx::blend_equation::max: return VK_BLEND_OP_MAX;
 		default:
-			fmt::throw_exception("Unknown blend op: 0x%x" HERE, (u32)op);
+			fmt::throw_exception("Unknown blend op: 0x%x" HERE, static_cast<u32>(op));
 		}
 	}
 
@@ -204,7 +204,7 @@ namespace vk
 		case rsx::stencil_op::incr_wrap: return VK_STENCIL_OP_INCREMENT_AND_WRAP;
 		case rsx::stencil_op::decr_wrap: return VK_STENCIL_OP_DECREMENT_AND_WRAP;
 		default:
-			fmt::throw_exception("Unknown stencil op: 0x%x" HERE, (u32)op);
+			fmt::throw_exception("Unknown stencil op: 0x%x" HERE, static_cast<u32>(op));
 		}
 	}
 
@@ -215,7 +215,7 @@ namespace vk
 		case rsx::front_face::cw: return VK_FRONT_FACE_CLOCKWISE;
 		case rsx::front_face::ccw: return VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		default:
-			fmt::throw_exception("Unknown front face value: 0x%x" HERE, (u32)ffv);
+			fmt::throw_exception("Unknown front face value: 0x%x" HERE, static_cast<u32>(ffv));
 		}
 	}
 
@@ -227,7 +227,7 @@ namespace vk
 		case rsx::cull_face::front: return VK_CULL_MODE_FRONT_BIT;
 		case rsx::cull_face::front_and_back: return VK_CULL_MODE_FRONT_AND_BACK;
 		default:
-			fmt::throw_exception("Unknown cull face value: 0x%x" HERE, (u32)cfv);
+			fmt::throw_exception("Unknown cull face value: 0x%x" HERE, static_cast<u32>(cfv));
 		}
 	}
 }
@@ -398,7 +398,7 @@ VKGSRender::VKGSRender() : GSRender()
 		return;
 	}
 
-	m_device = (vk::render_device*)(&m_swapchain->get_device());
+	m_device = const_cast<vk::render_device*>(&m_swapchain->get_device());
 
 	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swapchain->get_device());
@@ -1381,12 +1381,12 @@ void VKGSRender::end()
 						f32 actual_mipmaps;
 						if (sampler_state->upload_context == rsx::texture_upload_context::shader_read)
 						{
-							actual_mipmaps = (f32)mipmap_count;
+							actual_mipmaps = static_cast<f32>(mipmap_count);
 						}
 						else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
 						{
 							// Clamp min and max lod
-							actual_mipmaps = (f32)sampler_state->external_subresource_desc.sections_to_copy.size();
+							actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.sections_to_copy.size());
 						}
 						else
 						{
@@ -1856,7 +1856,7 @@ void VKGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 2;
 
-				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
+				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
 				dlg->progress_bar_set_taskbar_index(-1);
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{
@@ -1874,7 +1874,7 @@ void VKGSRender::on_init_thread()
 
 			void inc_value(u32 index, u32 value) override
 			{
-				dlg->progress_bar_increment(index, (f32)value);
+				dlg->progress_bar_increment(index, static_cast<f32>(value));
 				owner->flip({});
 			}
 
@@ -1921,7 +1921,7 @@ void VKGSRender::clear_surface(u32 mask)
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
 	if (mask & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
 	if (mask & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
-	init_buffers((rsx::framebuffer_creation_context)ctx);
+	init_buffers(rsx::framebuffer_creation_context{ctx});
 
 	if (!framebuffer_status_valid) return;
 
@@ -1932,10 +1932,10 @@ void VKGSRender::clear_surface(u32 mask)
 	std::vector<VkClearAttachment> clear_descriptors;
 	VkClearValue depth_stencil_clear_values = {}, color_clear_values = {};
 
-	u16 scissor_x = (u16)m_scissor.offset.x;
-	u16 scissor_w = (u16)m_scissor.extent.width;
-	u16 scissor_y = (u16)m_scissor.offset.y;
-	u16 scissor_h = (u16)m_scissor.extent.height;
+	u16 scissor_x = static_cast<u16>(m_scissor.offset.x);
+	u16 scissor_w = static_cast<u16>(m_scissor.extent.width);
+	u16 scissor_y = static_cast<u16>(m_scissor.offset.y);
+	u16 scissor_h = static_cast<u16>(m_scissor.extent.height);
 
 	const u16 fb_width = m_draw_fbo->width();
 	const u16 fb_height = m_draw_fbo->height();
@@ -1955,7 +1955,7 @@ void VKGSRender::clear_surface(u32 mask)
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
 			u32 clear_depth = rsx::method_registers.z_clear_value(surface_depth_format == rsx::surface_depth_format::z24s8);
-			float depth_clear = (float)clear_depth / max_depth_value;
+			float depth_clear = static_cast<float>(clear_depth) / max_depth_value;
 
 			depth_stencil_clear_values.depthStencil.depth = depth_clear;
 			depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
@@ -2039,10 +2039,10 @@ void VKGSRender::clear_surface(u32 mask)
 				u8 clear_g = rsx::method_registers.clear_color_g();
 				u8 clear_b = rsx::method_registers.clear_color_b();
 
-				color_clear_values.color.float32[0] = (float)clear_r / 255;
-				color_clear_values.color.float32[1] = (float)clear_g / 255;
-				color_clear_values.color.float32[2] = (float)clear_b / 255;
-				color_clear_values.color.float32[3] = (float)clear_a / 255;
+				color_clear_values.color.float32[0] = static_cast<float>(clear_r) / 255;
+				color_clear_values.color.float32[1] = static_cast<float>(clear_g) / 255;
+				color_clear_values.color.float32[2] = static_cast<float>(clear_b) / 255;
+				color_clear_values.color.float32[3] = static_cast<float>(clear_a) / 255;
 
 				if (use_fast_clear)
 				{
@@ -2109,7 +2109,7 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			if (require_mem_load) m_rtts.m_bound_depth_stencil.second->write_barrier(*m_current_command_buffer);
 
-			clear_descriptors.push_back({ (VkImageAspectFlags)depth_stencil_mask, 0, depth_stencil_clear_values });
+			clear_descriptors.push_back({ static_cast<VkImageAspectFlags>(depth_stencil_mask), 0, depth_stencil_clear_values });
 			update_z = true;
 		}
 	}
@@ -2123,7 +2123,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (!clear_descriptors.empty())
 	{
 		begin_render_pass();
-		vkCmdClearAttachments(*m_current_command_buffer, (u32)clear_descriptors.size(), clear_descriptors.data(), 1, &region);
+		vkCmdClearAttachments(*m_current_command_buffer, ::size32(clear_descriptors), clear_descriptors.data(), 1, &region);
 		close_render_pass();
 	}
 }
@@ -2530,7 +2530,7 @@ bool VKGSRender::load_program()
 		properties.state.enable_primitive_restart();
 
 	// Rasterizer state
-	properties.state.set_attachment_count((u32)m_draw_buffers.size());
+	properties.state.set_attachment_count(::size32(m_draw_buffers));
 	properties.state.set_front_face(vk::get_front_face(rsx::method_registers.front_face_mode()));
 	properties.state.enable_depth_clamp(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled());
 	properties.state.enable_depth_bias(true);
@@ -2711,7 +2711,7 @@ void VKGSRender::load_program_env()
 
 		// Vertex state
 		const auto mem = m_vertex_env_ring_info.alloc<256>(256);
-		auto buf = (u8*)m_vertex_env_ring_info.map(mem, 144);
+		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 144));
 
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
@@ -2827,7 +2827,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	const size_t data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
 
-	fill_vertex_layout_state(m_vertex_layout, vertex_info.first_vertex, vertex_info.allocated_vertex_count, (s32*)dst,
+	fill_vertex_layout_state(m_vertex_layout, vertex_info.first_vertex, vertex_info.allocated_vertex_count, static_cast<s32*>(dst),
 		vertex_info.persistent_window_offset, vertex_info.volatile_window_offset);
 
 	m_vertex_layout_ring_info.unmap();
@@ -3279,18 +3279,18 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (!g_cfg.video.stretch_to_display_area)
 	{
-		const double aq = (double)buffer_width / buffer_height;
-		const double rq = (double)new_size.width / new_size.height;
+		const double aq = 1. * buffer_width / buffer_height;
+		const double rq = 1. * new_size.width / new_size.height;
 		const double q = aq / rq;
 
 		if (q > 1.0)
 		{
-			new_size.height = int(new_size.height / q);
+			new_size.height = static_cast<int>(new_size.height / q);
 			aspect_ratio.y = (csize.height - new_size.height) / 2;
 		}
 		else if (q < 1.0)
 		{
-			new_size.width = int(new_size.width * q);
+			new_size.width = static_cast<int>(new_size.width * q);
 			aspect_ratio.x = (csize.width - new_size.width) / 2;
 		}
 	}
@@ -3340,7 +3340,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	//Blit contents to screen..
 	vk::image* image_to_flip = nullptr;
 
-	if ((u32)info.buffer < display_buffers_count && buffer_width && buffer_height)
+	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		const u32 absolute_address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
@@ -3442,7 +3442,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (LIKELY(!calibration_src))
 		{
 			vk::copy_scaled_image(*m_current_command_buffer, image_to_flip->value, target_image, image_to_flip->current_layout, target_layout,
-				{ 0, 0, (s32)buffer_width, (s32)buffer_height }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
+				{ 0, 0, static_cast<s32>(buffer_width), static_cast<s32>(buffer_height) }, aspect_ratio, 1, VK_IMAGE_ASPECT_COLOR_BIT, false);
 		}
 		else
 		{
@@ -3572,7 +3572,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto num_speculate = m_texture_cache.get_num_cache_speculative_writes();
 			const auto num_misses = m_texture_cache.get_num_cache_misses();
 			const auto num_unavoidable = m_texture_cache.get_num_unavoidable_hard_faults();
-			const auto cache_miss_ratio = (u32)ceil(m_texture_cache.get_cache_miss_ratio() * 100);
+			const auto cache_miss_ratio = static_cast<u32>(ceil(m_texture_cache.get_cache_miss_ratio() * 100));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), fmt::format("Unreleased textures: %8d", num_dirty_textures));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), fmt::format("Texture cache memory: %7dM", texture_memory_size));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 180, direct_fbo->width(), direct_fbo->height(), fmt::format("Temporary texture memory: %3dM", tmp_texture_memory_size));

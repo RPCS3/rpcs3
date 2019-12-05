@@ -41,7 +41,7 @@ namespace vk
 				layout_offset += 3;
 				break;
 			default:
-				fmt::throw_exception("Unsupported image layout 0x%x", (u32)layout);
+				fmt::throw_exception("Unsupported image layout 0x%x", static_cast<u32>(layout));
 			}
 		}
 
@@ -68,7 +68,7 @@ namespace vk
 				layout_offset += 3;
 				break;
 			default:
-				fmt::throw_exception("Unsupported image layout 0x%x", (u32)layout);
+				fmt::throw_exception("Unsupported image layout 0x%x", static_cast<u32>(layout));
 			}
 		}
 

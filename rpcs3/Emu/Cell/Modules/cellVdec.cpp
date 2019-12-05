@@ -6,12 +6,25 @@
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
 #include "sysPrxForUser.h"
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 extern "C"
 {
 #include "libavcodec/avcodec.h"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #include "cellPamf.h"
 #include "cellVdec.h"
@@ -214,8 +227,8 @@ struct vdec_context final
 
 					packet.data = vm::_ptr<u8>(au_addr);
 					packet.size = au_size;
-					packet.pts = au_pts != -1 ? au_pts : AV_NOPTS_VALUE;
-					packet.dts = au_dts != -1 ? au_dts : AV_NOPTS_VALUE;
+					packet.pts = au_pts != -1 ? au_pts : INT64_MIN;
+					packet.dts = au_dts != -1 ? au_dts : INT64_MIN;
 
 					if (next_pts == 0 && au_pts != -1)
 					{
@@ -235,8 +248,8 @@ struct vdec_context final
 				}
 				else
 				{
-					packet.pts = AV_NOPTS_VALUE;
-					packet.dts = AV_NOPTS_VALUE;
+					packet.pts = INT64_MIN;
+					packet.dts = INT64_MIN;
 					cellVdec.trace("End sequence...");
 				}
 
@@ -289,12 +302,12 @@ struct vdec_context final
 							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
 						}
 
-						if (frame->pkt_pts != AV_NOPTS_VALUE)
+						if (frame->pkt_pts != INT64_MIN)
 						{
 							next_pts = frame->pkt_pts;
 						}
 
-						if (frame->pkt_dts != AV_NOPTS_VALUE)
+						if (frame->pkt_dts != INT64_MIN)
 						{
 							next_dts = frame->pkt_dts;
 						}

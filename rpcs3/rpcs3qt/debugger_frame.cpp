@@ -331,7 +331,7 @@ void debugger_frame::UpdateUnitList()
 
 	const auto on_select = [&](u32, cpu_thread& cpu)
 	{
-		QVariant var_cpu = qVariantFromValue((void *)&cpu);
+		QVariant var_cpu = qVariantFromValue<void*>(&cpu);
 		m_choice_units->addItem(qstr(cpu.get_name()), var_cpu);
 		if (old_cpu == var_cpu) m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
 	};
@@ -363,7 +363,7 @@ void debugger_frame::OnSelectUnit()
 	{
 		const auto on_select = [&](u32, cpu_thread& cpu)
 		{
-			cpu_thread* data = (cpu_thread *)m_choice_units->currentData().value<void *>();
+			cpu_thread* data = static_cast<cpu_thread*>(m_choice_units->currentData().value<void*>());
 			return data == &cpu;
 		};
 
@@ -526,14 +526,14 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 
 		for (int i = 0; i < 32; ++i)
 		{
-			scriptEngine.globalObject().setProperty(QString("r%1hi").arg(i), QJSValue((u32)(ppu->gpr[i] >> 32)));
-			scriptEngine.globalObject().setProperty(QString("r%1").arg(i), QJSValue((u32)(ppu->gpr[i])));
+			scriptEngine.globalObject().setProperty(QString("r%1hi").arg(i), QJSValue(static_cast<u32>(ppu->gpr[i] >> 32)));
+			scriptEngine.globalObject().setProperty(QString("r%1").arg(i), QJSValue(static_cast<u32>(ppu->gpr[i])));
 		}
 
-		scriptEngine.globalObject().setProperty("lrhi", QJSValue((u32)(ppu->lr >> 32 )));
-		scriptEngine.globalObject().setProperty("lr", QJSValue((u32)(ppu->lr)));
-		scriptEngine.globalObject().setProperty("ctrhi", QJSValue((u32)(ppu->ctr >> 32)));
-		scriptEngine.globalObject().setProperty("ctr", QJSValue((u32)(ppu->ctr)));
+		scriptEngine.globalObject().setProperty("lrhi", QJSValue(static_cast<u32>(ppu->lr >> 32)));
+		scriptEngine.globalObject().setProperty("lr", QJSValue(static_cast<u32>(ppu->lr)));
+		scriptEngine.globalObject().setProperty("ctrhi", QJSValue(static_cast<u32>(ppu->ctr >> 32)));
+		scriptEngine.globalObject().setProperty("ctr", QJSValue(static_cast<u32>(ppu->ctr)));
 		scriptEngine.globalObject().setProperty("cia", QJSValue(ppu->cia));
 	}
 	else

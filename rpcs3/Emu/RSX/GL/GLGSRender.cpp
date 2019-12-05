@@ -59,7 +59,7 @@ namespace
 		case rsx::comparison_function::greater_or_equal: return GL_GEQUAL;
 		case rsx::comparison_function::always: return GL_ALWAYS;
 		}
-		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, (u32)op);
+		fmt::throw_exception("Unsupported comparison op 0x%X" HERE, static_cast<u32>(op));
 	}
 
 	GLenum stencil_op(rsx::stencil_op op)
@@ -75,7 +75,7 @@ namespace
 		case rsx::stencil_op::incr_wrap: return GL_INCR_WRAP;
 		case rsx::stencil_op::decr_wrap: return GL_DECR_WRAP;
 		}
-		fmt::throw_exception("Unsupported stencil op 0x%X" HERE, (u32)op);
+		fmt::throw_exception("Unsupported stencil op 0x%X" HERE, static_cast<u32>(op));
 	}
 
 	GLenum blend_equation(rsx::blend_equation op)
@@ -94,7 +94,7 @@ namespace
 		case rsx::blend_equation::reverse_substract: return GL_FUNC_REVERSE_SUBTRACT;
 		case rsx::blend_equation::reverse_add_signed:
 		default:
-			LOG_ERROR(RSX, "Blend equation 0x%X is unimplemented!", (u32)op);
+			LOG_ERROR(RSX, "Blend equation 0x%X is unimplemented!", static_cast<u32>(op));
 			return GL_FUNC_ADD;
 		}
 	}
@@ -119,7 +119,7 @@ namespace
 		case rsx::blend_factor::constant_alpha: return GL_CONSTANT_ALPHA;
 		case rsx::blend_factor::one_minus_constant_alpha: return GL_ONE_MINUS_CONSTANT_ALPHA;
 		}
-		fmt::throw_exception("Unsupported blend factor 0x%X" HERE, (u32)op);
+		fmt::throw_exception("Unsupported blend factor 0x%X" HERE, static_cast<u32>(op));
 	}
 
 	GLenum logic_op(rsx::logic_op op)
@@ -143,7 +143,7 @@ namespace
 		case rsx::logic_op::logic_nand: return GL_NAND;
 		case rsx::logic_op::logic_set: return GL_SET;
 		}
-		fmt::throw_exception("Unsupported logic op 0x%X" HERE, (u32)op);
+		fmt::throw_exception("Unsupported logic op 0x%X" HERE, static_cast<u32>(op));
 	}
 
 	GLenum front_face(rsx::front_face op)
@@ -157,7 +157,7 @@ namespace
 		case rsx::front_face::cw: return GL_CCW;
 		case rsx::front_face::ccw: return GL_CW;
 		}
-		fmt::throw_exception("Unsupported front face 0x%X" HERE, (u32)op);
+		fmt::throw_exception("Unsupported front face 0x%X" HERE, static_cast<u32>(op));
 	}
 
 	GLenum cull_face(rsx::cull_face op)
@@ -168,7 +168,7 @@ namespace
 		case rsx::cull_face::back: return GL_BACK;
 		case rsx::cull_face::front_and_back: return GL_FRONT_AND_BACK;
 		}
-		fmt::throw_exception("Unsupported cull face 0x%X" HERE, (u32)op);
+		fmt::throw_exception("Unsupported cull face 0x%X" HERE, static_cast<u32>(op));
 	}
 }
 
@@ -543,9 +543,9 @@ void GLGSRender::end()
 				bool use_draw_arrays_fallback = false;
 
 				m_scratch_buffer.resize(draw_count * 24);
-				GLint* firsts = (GLint*)m_scratch_buffer.data();
-				GLsizei* counts = (GLsizei*)(firsts + draw_count);
-				const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+				GLint* firsts = reinterpret_cast<GLint*>(m_scratch_buffer.data());
+				GLsizei* counts = (firsts + draw_count);
+				const GLvoid** offsets = reinterpret_cast<const GLvoid**>(counts + draw_count);
 
 				u32 first = 0;
 				u32 dst_index = 0;
@@ -553,7 +553,7 @@ void GLGSRender::end()
 				{
 					firsts[dst_index] = first;
 					counts[dst_index] = range.count;
-					offsets[dst_index++] = (const GLvoid*)(u64(first << 2));
+					offsets[dst_index++] = reinterpret_cast<const GLvoid*>(u64{first << 2});
 
 					if (driver_caps.vendor_AMD && (first + range.count) > (0x100000 >> 2))
 					{
@@ -577,12 +577,12 @@ void GLGSRender::end()
 				{
 					//Use identity index buffer to fix broken vertexID on AMD
 					m_identity_index_buffer->bind();
-					glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, (GLsizei)draw_count);
+					glMultiDrawElements(draw_mode, counts, GL_UNSIGNED_INT, offsets, static_cast<GLsizei>(draw_count));
 				}
 				else
 				{
 					//Normal render
-					glMultiDrawArrays(draw_mode, firsts, counts, (GLsizei)draw_count);
+					glMultiDrawArrays(draw_mode, firsts, counts, static_cast<GLsizei>(draw_count));
 				}
 			}
 		}
@@ -601,7 +601,7 @@ void GLGSRender::end()
 
 			if (rsx::method_registers.current_draw_clause.is_single_draw())
 			{
-				glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, (GLvoid *)(uintptr_t)index_offset);
+				glDrawElements(draw_mode, upload_info.vertex_draw_count, index_type, reinterpret_cast<GLvoid*>(u64{index_offset}));
 			}
 			else
 			{
@@ -611,20 +611,20 @@ void GLGSRender::end()
 				uintptr_t index_ptr = index_offset;
 				m_scratch_buffer.resize(draw_count * 16);
 
-				GLsizei *counts = (GLsizei*)m_scratch_buffer.data();
-				const GLvoid** offsets = (const GLvoid**)(counts + draw_count);
+				GLsizei *counts = reinterpret_cast<GLsizei*>(m_scratch_buffer.data());
+				const GLvoid** offsets = reinterpret_cast<const GLvoid**>(counts + draw_count);
 				int dst_index = 0;
 
 				for (const auto &range : subranges)
 				{
 					const auto index_size = get_index_count(rsx::method_registers.current_draw_clause.primitive, range.count);
 					counts[dst_index] = index_size;
-					offsets[dst_index++] = (const GLvoid*)index_ptr;
+					offsets[dst_index++] = reinterpret_cast<const GLvoid*>(index_ptr);
 
 					index_ptr += (index_size << type_scale);
 				}
 
-				glMultiDrawElements(draw_mode, counts, index_type, offsets, (GLsizei)draw_count);
+				glMultiDrawElements(draw_mode, counts, index_type, offsets, static_cast<GLsizei>(draw_count));
 			}
 		}
 	} while (rsx::method_registers.current_draw_clause.next());
@@ -691,9 +691,9 @@ void GLGSRender::on_init_thread()
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
 
-	LOG_NOTICE(RSX, "GL RENDERER: %s (%s)", (const char*)glGetString(GL_RENDERER), (const char*)glGetString(GL_VENDOR));
-	LOG_NOTICE(RSX, "GL VERSION: %s", (const char*)glGetString(GL_VERSION));
-	LOG_NOTICE(RSX, "GLSL VERSION: %s", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+	LOG_NOTICE(RSX, "GL RENDERER: %s (%s)", reinterpret_cast<const char*>(glGetString(GL_RENDERER)), reinterpret_cast<const char*>(glGetString(GL_VENDOR)));
+	LOG_NOTICE(RSX, "GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
+	LOG_NOTICE(RSX, "GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
 
 	auto& gl_caps = gl::get_driver_caps();
 
@@ -827,7 +827,7 @@ void GLGSRender::on_init_thread()
 		m_identity_index_buffer->create(gl::buffer::target::element_array, 1 * 0x100000, nullptr, gl::buffer::memory_type::host_visible);
 
 		// Initialize with 256k identity entries
-		auto* dst = (u32*)m_identity_index_buffer->map(gl::buffer::access::write);
+		auto* dst = reinterpret_cast<u32*>(m_identity_index_buffer->map(gl::buffer::access::write));
 		for (u32 n = 0; n < (0x100000 >> 2); ++n)
 		{
 			dst[n] = n;
@@ -842,8 +842,8 @@ void GLGSRender::on_init_thread()
 		backend_config.supports_hw_renormalization = true;
 	}
 
-	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
-	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>((u32)m_attrib_ring_buffer->size(), m_max_texbuffer_size));
+	m_persistent_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>(static_cast<u32>(m_attrib_ring_buffer->size()), m_max_texbuffer_size));
+	m_volatile_stream_view.update(m_attrib_ring_buffer.get(), 0, std::min<u32>(static_cast<u32>(m_attrib_ring_buffer->size()), m_max_texbuffer_size));
 	m_gl_persistent_stream_buffer->copy_from(m_persistent_stream_view);
 	m_gl_volatile_stream_buffer->copy_from(m_volatile_stream_view);
 
@@ -885,7 +885,7 @@ void GLGSRender::on_init_thread()
 		auto &query = m_occlusion_query_data[i];
 		glGenQueries(1, &handle);
 
-		query.driver_handle = (u64)handle;
+		query.driver_handle = handle;
 		query.pending = false;
 		query.active = false;
 		query.result = 0;
@@ -927,7 +927,7 @@ void GLGSRender::on_init_thread()
 				type.disable_cancel = true;
 				type.progress_bar_count = 2;
 
-				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>((bool)g_cfg.video.shader_preloading_dialog.use_custom_background);
+				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
 				dlg->progress_bar_set_taskbar_index(-1);
 				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
 				{
@@ -945,7 +945,7 @@ void GLGSRender::on_init_thread()
 
 			void inc_value(u32 index, u32 value) override
 			{
-				dlg->progress_bar_increment(index, (f32)value);
+				dlg->progress_bar_increment(index, static_cast<f32>(value));
 				owner->flip({});
 			}
 
@@ -1087,7 +1087,7 @@ void GLGSRender::on_exit()
 		query.active = false;
 		query.pending = false;
 
-		GLuint handle = (GLuint)query.driver_handle;
+		GLuint handle = query.driver_handle;
 		glDeleteQueries(1, &handle);
 		query.driver_handle = 0;
 	}
@@ -1236,7 +1236,7 @@ bool GLGSRender::do_method(u32 cmd, u32 arg)
 			if (arg & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
 			if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 
-			init_buffers((rsx::framebuffer_creation_context)ctx, true);
+			init_buffers(rsx::framebuffer_creation_context{ctx}, true);
 			clear_surface(arg);
 		}
 
@@ -1426,7 +1426,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 	buf[1] = upload_info.vertex_index_offset;
 	buf += 4;
 
-	fill_vertex_layout_state(m_vertex_layout, upload_info.first_vertex, upload_info.allocated_vertex_count, (s32*)buf, upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
+	fill_vertex_layout_state(m_vertex_layout, upload_info.first_vertex, upload_info.allocated_vertex_count, reinterpret_cast<s32*>(buf), upload_info.persistent_mapping_offset, upload_info.volatile_mapping_offset);
 
 	m_vertex_layout_buffer->bind_range(GL_VERTEX_LAYOUT_BIND_SLOT, mapping.second, 128 + 16);
 
@@ -1615,25 +1615,25 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (!g_cfg.video.stretch_to_display_area)
 	{
-		const double aq = (double)buffer_width / buffer_height;
-		const double rq = (double)new_size.width / new_size.height;
+		const double aq = 1. * buffer_width / buffer_height;
+		const double rq = 1. * new_size.width / new_size.height;
 		const double q = aq / rq;
 
 		if (q > 1.0)
 		{
-			new_size.height = int(new_size.height / q);
+			new_size.height = static_cast<int>(new_size.height / q);
 			aspect_ratio.y = (csize.height - new_size.height) / 2;
 		}
 		else if (q < 1.0)
 		{
-			new_size.width = int(new_size.width * q);
+			new_size.width = static_cast<int>(new_size.width * q);
 			aspect_ratio.x = (csize.width - new_size.width) / 2;
 		}
 	}
 
 	aspect_ratio.size = new_size;
 
-	if ((u32)info.buffer < display_buffers_count && buffer_width && buffer_height)
+	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		// Find the source image
 		const u32 absolute_address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
@@ -1690,7 +1690,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 			gl::pixel_unpack_settings unpack_settings;
 			unpack_settings.alignment(1).row_length(buffer_pitch / 4);
 
-			if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ (int)buffer_width, (int)buffer_height })
+			if (!m_flip_tex_color || m_flip_tex_color->size2D() != sizei{ static_cast<int>(buffer_width), static_cast<int>(buffer_height) })
 			{
 				m_flip_tex_color = std::make_unique<gl::texture>(GL_TEXTURE_2D, buffer_width, buffer_height, 1, 1, GL_RGBA8);
 			}
@@ -1723,7 +1723,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height);
 		}
 
-		areai screen_area = coordi({}, { (int)buffer_width, (int)buffer_height });
+		areai screen_area = coordi({}, { static_cast<int>(buffer_width), static_cast<int>(buffer_height) });
 
 		if (g_cfg.video.full_rgb_range_output && rsx::fcmp(avconfig->gamma, 1.f))
 		{
@@ -1797,7 +1797,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto num_speculate = m_gl_texture_cache.get_num_cache_speculative_writes();
 		const auto num_misses = m_gl_texture_cache.get_num_cache_misses();
 		const auto num_unavoidable = m_gl_texture_cache.get_num_unavoidable_hard_faults();
-		const auto cache_miss_ratio = (u32)ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100);
+		const auto cache_miss_ratio = static_cast<u32>(ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100));
 		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), fmt::format("Unreleased textures: %7d", num_dirty_textures));
 		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), fmt::format("Texture memory: %12dM", texture_memory_size));
 		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
@@ -1967,7 +1967,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	query->result = 0;
-	glBeginQuery(GL_ANY_SAMPLES_PASSED, (GLuint)query->driver_handle);
+	glBeginQuery(GL_ANY_SAMPLES_PASSED, query->driver_handle);
 }
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
@@ -1982,7 +1982,7 @@ bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 		return true;
 
 	GLint status = GL_TRUE;
-	glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT_AVAILABLE, &status);
+	glGetQueryObjectiv(query->driver_handle, GL_QUERY_RESULT_AVAILABLE, &status);
 
 	return status != GL_FALSE;
 }
@@ -1992,7 +1992,7 @@ void GLGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 	if (query->num_draws)
 	{
 		GLint result = 0;
-		glGetQueryObjectiv((GLuint)query->driver_handle, GL_QUERY_RESULT, &result);
+		glGetQueryObjectiv(query->driver_handle, GL_QUERY_RESULT, &result);
 
 		query->result += result;
 	}

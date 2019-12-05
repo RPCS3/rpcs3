@@ -31,7 +31,7 @@ namespace rsx
 			m_value = std::clamp(value, 0.f, m_limit);
 
 			f32 indicator_width = (w * m_value) / m_limit;
-			indicator.set_size((u16)indicator_width, h);
+			indicator.set_size(static_cast<u16>(indicator_width), h);
 			is_compiled = false;
 		}
 

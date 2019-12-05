@@ -496,7 +496,7 @@ namespace rsx
 				if (Traits::surface_is_pitch_compatible(aliased_surface->second, pitch))
 				{
 					auto surface = Traits::get(aliased_surface->second);
-					split_surface_region<!depth>(command_list, address, surface, (u16)width, (u16)height, bpp, antialias);
+					split_surface_region<!depth>(command_list, address, surface, static_cast<u16>(width), static_cast<u16>(height), bpp, antialias);
 
 					if (!old_surface || old_surface->last_use_tag < surface->last_use_tag)
 					{

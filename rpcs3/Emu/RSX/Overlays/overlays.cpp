@@ -58,13 +58,19 @@ static auto s_ascii_lowering_map = []()
 
 std::string utf8_to_ascii8(const std::string& utf8_string)
 {
-	std::vector<u8> out;
-	out.reserve(utf8_string.length() + 1);
+	std::string out;
+	out.reserve(utf8_string.length());
 
 	const auto end = utf8_string.length();
 	for (u32 index = 0; index < end; ++index)
 	{
-		const auto code = (u8)utf8_string[index];
+		const u8 code = static_cast<u8>(utf8_string[index]);
+
+		if (!code)
+		{
+			break;
+		}
+
 		if (code <= 0x7F)
 		{
 			out.push_back(code);
@@ -103,7 +109,7 @@ std::string utf8_to_ascii8(const std::string& utf8_string)
 		if (u_code <= 0xFF)
 		{
 			// Latin-1 supplement block
-			out.push_back(u8(u_code));
+			out.push_back(static_cast<u8>(u_code));
 			continue;
 		}
 
@@ -117,37 +123,40 @@ std::string utf8_to_ascii8(const std::string& utf8_string)
 		out.push_back(replace->second);
 	}
 
-	out.push_back(0);
-	return { reinterpret_cast<char*>(out.data()) };
+	return out;
 }
 
 std::string utf16_to_ascii8(const std::u16string& utf16_string)
 {
 	// Strip extended codes, map to '#' instead (placeholder)
-	std::vector<u8> out;
-	out.reserve(utf16_string.length() + 1);
+	std::string out;
+	out.reserve(utf16_string.length());
 
 	for (const auto& code : utf16_string)
 	{
-		out.push_back(code > 0xFF ? '#': (u8)code);
+		if (!code)
+			break;
+
+		out.push_back(code > 0xFF ? '#': static_cast<char>(code));
 	}
 
-	out.push_back(0);
-	return { reinterpret_cast<char*>(out.data()) };
+	return out;
 }
 
 std::u16string ascii8_to_utf16(const std::string& ascii_string)
 {
-	std::vector<char16_t> out;
-	out.reserve(ascii_string.length() + 1);
+	std::u16string out;
+	out.reserve(ascii_string.length());
 
 	for (const auto& code : ascii_string)
 	{
-		out.push_back((char16_t)code);
+		if (!code)
+			break;
+
+		out.push_back(static_cast<char16_t>(code));
 	}
 
-	out.push_back(0);
-	return { out.data() };
+	return out;
 }
 
 namespace rsx

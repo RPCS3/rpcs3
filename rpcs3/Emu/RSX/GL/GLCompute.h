@@ -37,7 +37,7 @@ namespace gl
 				optimal_group_size = 128;
 			}
 
-			glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, (GLint*)&max_invocations_x);
+			glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, reinterpret_cast<GLint*>(&max_invocations_x));
 		}
 
         void create()
@@ -79,7 +79,7 @@ namespace gl
             m_program.use();
             glDispatchCompute(invocations_x, invocations_y, 1);
 
-            glUseProgram((GLuint)old_program);
+            glUseProgram(old_program);
         }
 
         void run(u32 num_invocations)
@@ -93,7 +93,7 @@ namespace gl
 			else
 			{
 				// Since all the invocations will run, the optimal distribution is sqrt(count)
-				const auto optimal_length = (u32)floor(std::sqrt(num_invocations));
+				const u32 optimal_length = static_cast<u32>(floor(std::sqrt(num_invocations)));
 				invocations_x = optimal_length;
 				invocations_y = invocations_x;
 

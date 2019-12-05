@@ -372,9 +372,9 @@ namespace vk
 			VkImageCopy copy_rgn;
 			copy_rgn.srcOffset = { src_rect.x1, src_rect.y1, 0 };
 			copy_rgn.dstOffset = { dst_rect.x1, dst_rect.y1, 0 };
-			copy_rgn.dstSubresource = { (VkImageAspectFlags)aspect, 0, 0, 1 };
-			copy_rgn.srcSubresource = { (VkImageAspectFlags)aspect, 0, 0, 1 };
-			copy_rgn.extent = { (u32)src_rect.width(), (u32)src_rect.height(), 1 };
+			copy_rgn.dstSubresource = { static_cast<VkImageAspectFlags>(aspect), 0, 0, 1 };
+			copy_rgn.srcSubresource = { static_cast<VkImageAspectFlags>(aspect), 0, 0, 1 };
+			copy_rgn.extent = { static_cast<u32>(src_rect.width()), static_cast<u32>(src_rect.height()), 1 };
 
 			vkCmdCopyImage(cmd, src, preferred_src_format, dst, preferred_dst_format, 1, &copy_rgn);
 		}
@@ -383,7 +383,7 @@ namespace vk
 			//Most depth/stencil formats cannot be scaled using hw blit
 			if (src_format == VK_FORMAT_UNDEFINED)
 			{
-				LOG_ERROR(RSX, "Could not blit depth/stencil image. src_fmt=0x%x", (u32)src_format);
+				LOG_ERROR(RSX, "Could not blit depth/stencil image. src_fmt=0x%x", static_cast<u32>(src_format));
 			}
 			else
 			{
@@ -427,7 +427,7 @@ namespace vk
 					//1. Copy unscaled to typeless surface
 					VkBufferImageCopy info{};
 					info.imageOffset = { std::min(src_rect.x1, src_rect.x2), std::min(src_rect.y1, src_rect.y2), 0 };
-					info.imageExtent = { (u32)src_w, (u32)src_h, 1 };
+					info.imageExtent = { static_cast<u32>(src_w), static_cast<u32>(src_h), 1 };
 					info.imageSubresource = { aspect & transfer_flags, 0, 0, 1 };
 
 					vkCmdCopyImageToBuffer(cmd, src, preferred_src_format, scratch_buf->value, 1, &info);
@@ -446,7 +446,7 @@ namespace vk
 						src_rect2, { 0, src_h, dst_w, (src_h + dst_h) }, 1, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_ASPECT_COLOR_BIT, filter);
 
 					//3. Copy back the aspect bits
-					info.imageExtent = { (u32)dst_w, (u32)dst_h, 1 };
+					info.imageExtent = { static_cast<u32>(dst_w), static_cast<u32>(dst_h), 1 };
 					info.imageOffset = { 0, src_h, 0 };
 
 					vkCmdCopyImageToBuffer(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL, scratch_buf->value, 1, &info);
@@ -712,7 +712,7 @@ namespace vk
 
 			// Map with extra padding bytes in case of realignment
 			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
-			void *mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
+			void* mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
 
 			// Only do GPU-side conversion if occupancy is good
 			if (check_caps)
@@ -722,7 +722,7 @@ namespace vk
 				check_caps = false;
 			}
 
-			gsl::span<std::byte> mapped{ (std::byte*)mapped_buffer, image_linear_size };
+			gsl::span<std::byte> mapped{ static_cast<std::byte*>(mapped_buffer), image_linear_size };
 			opt = upload_texture_subresource(mapped, layout, format, is_swizzled, caps);
 			upload_heap.unmap();
 
@@ -770,7 +770,7 @@ namespace vk
 		if (opt.require_swap || opt.require_deswizzle || dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT)
 		{
 			verify(HERE), scratch_buf;
-			vkCmdCopyBuffer(cmd, upload_heap.heap->value, scratch_buf->value, (u32)buffer_copies.size(), buffer_copies.data());
+			vkCmdCopyBuffer(cmd, upload_heap.heap->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
 
 			insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
@@ -814,11 +814,11 @@ namespace vk
 			insert_buffer_memory_barrier(cmd, scratch_buf->value, block_start, scratch_offset, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (u32)copy_regions.size(), copy_regions.data());
+			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
 		else
 		{
-			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (u32)copy_regions.size(), copy_regions.data());
+			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
 	}
 
@@ -864,14 +864,14 @@ namespace vk
 				const auto aspect = vk::get_aspect_flags(format);
 
 				// Transfer bits from src to typeless src
-				real_src = vk::get_typeless_helper(format, (u32)internal_width, src->height());
+				real_src = vk::get_typeless_helper(format, static_cast<u32>(internal_width), src->height());
 				vk::change_image_layout(cmd, real_src, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect, 0, 1, 0, 1 });
 
-				vk::copy_image_typeless(cmd, src, real_src, { 0, 0, (s32)src->width(), (s32)src->height() }, { 0, 0, (s32)internal_width, (s32)src->height() }, 1,
+				vk::copy_image_typeless(cmd, src, real_src, { 0, 0, static_cast<s32>(src->width()), static_cast<s32>(src->height()) }, { 0, 0, static_cast<s32>(internal_width), static_cast<s32>(src->height()) }, 1,
 					vk::get_aspect_flags(src->info.format), aspect);
 
-				src_area.x1 = (u16)(src_area.x1 * xfer_info.src_scaling_hint);
-				src_area.x2 = (u16)(src_area.x2 * xfer_info.src_scaling_hint);
+				src_area.x1 = static_cast<u16>(src_area.x1 * xfer_info.src_scaling_hint);
+				src_area.x2 = static_cast<u16>(src_area.x2 * xfer_info.src_scaling_hint);
 			}
 		}
 
@@ -887,14 +887,14 @@ namespace vk
 				const auto aspect = vk::get_aspect_flags(format);
 
 				// Transfer bits from dst to typeless dst
-				real_dst = vk::get_typeless_helper(format, (u32)internal_width, dst->height());
+				real_dst = vk::get_typeless_helper(format, static_cast<u32>(internal_width), dst->height());
 				vk::change_image_layout(cmd, real_dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect, 0, 1, 0, 1 });
 
-				vk::copy_image_typeless(cmd, dst, real_dst, { 0, 0, (s32)dst->width(), (s32)dst->height() }, { 0, 0, (s32)internal_width, (s32)dst->height() }, 1,
+				vk::copy_image_typeless(cmd, dst, real_dst, { 0, 0, static_cast<s32>(dst->width()), static_cast<s32>(dst->height()) }, { 0, 0, static_cast<s32>(internal_width), static_cast<s32>(dst->height()) }, 1,
 					vk::get_aspect_flags(dst->info.format), aspect);
 
-				dst_area.x1 = (u16)(dst_area.x1 * xfer_info.dst_scaling_hint);
-				dst_area.x2 = (u16)(dst_area.x2 * xfer_info.dst_scaling_hint);
+				dst_area.x1 = static_cast<u16>(dst_area.x1 * xfer_info.dst_scaling_hint);
+				dst_area.x2 = static_cast<u16>(dst_area.x2 * xfer_info.dst_scaling_hint);
 			}
 		}
 
@@ -905,13 +905,13 @@ namespace vk
 			return;
 		}
 
-		if (src_area.x1 < 0 || src_area.x2 >(s32)real_src->width() || src_area.y1 < 0 || src_area.y2 >(s32)real_src->height())
+		if (src_area.x1 < 0 || src_area.x2 > static_cast<s32>(real_src->width()) || src_area.y1 < 0 || src_area.y2 > static_cast<s32>(real_src->height()))
 		{
 			LOG_ERROR(RSX, "Blit request denied because the source region does not fit!");
 			return;
 		}
 
-		if (dst_area.x1 < 0 || dst_area.x2 >(s32)real_dst->width() || dst_area.y1 < 0 || dst_area.y2 >(s32)real_dst->height())
+		if (dst_area.x1 < 0 || dst_area.x2 > static_cast<s32>(real_dst->width()) || dst_area.y1 < 0 || dst_area.y2 > static_cast<s32>(real_dst->height()))
 		{
 			LOG_ERROR(RSX, "Blit request denied because the destination region does not fit!");
 			return;
@@ -936,7 +936,7 @@ namespace vk
 		if (real_dst != dst)
 		{
 			auto internal_width = dst->width() * xfer_info.dst_scaling_hint;
-			vk::copy_image_typeless(cmd, real_dst, dst, { 0, 0, (s32)internal_width, (s32)dst->height() }, { 0, 0, (s32)dst->width(), (s32)dst->height() }, 1,
+			vk::copy_image_typeless(cmd, real_dst, dst, { 0, 0, static_cast<s32>(internal_width), static_cast<s32>(dst->height()) }, { 0, 0, static_cast<s32>(dst->width()), static_cast<s32>(dst->height()) }, 1,
 				vk::get_aspect_flags(real_dst->info.format), vk::get_aspect_flags(dst->info.format));
 		}
 	}

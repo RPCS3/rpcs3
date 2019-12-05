@@ -240,12 +240,12 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 
 	if (index == 0 && m_gauge1)
 	{
-		m_gauge1->setValue(std::min(m_gauge1->value() + (int)delta, m_gauge1->maximum()));
+		m_gauge1->setValue(std::min(m_gauge1->value() + static_cast<int>(delta), m_gauge1->maximum()));
 	}
 
 	if (index == 1 && m_gauge2)
 	{
-		m_gauge2->setValue(std::min(m_gauge2->value() + (int)delta, m_gauge2->maximum()));
+		m_gauge2->setValue(std::min(m_gauge2->value() + static_cast<int>(delta), m_gauge2->maximum()));
 	}
 
 	if (index == taskbar_index || taskbar_index == -1)
@@ -253,10 +253,10 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 #ifdef _WIN32
 		if (m_tb_progress)
 		{
-			m_tb_progress->setValue(std::min(m_tb_progress->value() + (int)delta, m_tb_progress->maximum()));
+			m_tb_progress->setValue(std::min(m_tb_progress->value() + static_cast<int>(delta), m_tb_progress->maximum()));
 		}
 #elif HAVE_QTDBUS
-		m_progress_value = std::min(m_progress_value + (int)delta, m_gauge_max);
+		m_progress_value = std::min(m_progress_value + static_cast<int>(delta), m_gauge_max);
 		UpdateProgress(m_progress_value);
 #endif
 	}
@@ -315,7 +315,7 @@ void msg_dialog_frame::UpdateProgress(int progress, bool disable)
 	else
 		properties.insert(QStringLiteral("progress-visible"), true);
 	// Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), (double)progress/(double)m_gauge_max);
+	properties.insert(QStringLiteral("progress"), 1.* progress / m_gauge_max);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }

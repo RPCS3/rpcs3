@@ -59,12 +59,12 @@ namespace vk
 			}
 
 			// Reserve descriptor pools
-			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes.data(), (u32)descriptor_pool_sizes.size(), VK_MAX_COMPUTE_TASKS, 2);
+			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_MAX_COMPUTE_TASKS, 2);
 
 			VkDescriptorSetLayoutCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			infos.pBindings = bindings.data();
-			infos.bindingCount = (u32)bindings.size();
+			infos.bindingCount = ::size32(bindings);
 
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*get_current_renderer(), &infos, nullptr, &m_descriptor_layout));
 
@@ -212,7 +212,7 @@ namespace vk
 			{
 				// AMD hw reports an annoyingly small maximum number of invocations in the X dimension
 				// Split the 1D job into 2 dimensions to accomodate this
-				invocations_x = (u32)floor(std::sqrt(num_invocations));
+				invocations_x = static_cast<u32>(floor(std::sqrt(num_invocations)));
 				invocations_y = invocations_x;
 
 				if (num_invocations % invocations_x) invocations_y++;
@@ -584,7 +584,7 @@ namespace vk
 		u32 in_offset = 0;
 		u32 out_offset = 0;
 		u32 block_length = 0;
-		
+
 		cs_deswizzle_3d()
 		{
 			verify("Unsupported block type" HERE), (sizeof(_BlockType) & 3) == 0;

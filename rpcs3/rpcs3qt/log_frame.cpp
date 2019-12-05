@@ -648,13 +648,13 @@ bool log_frame::eventFilter(QObject* object, QEvent* event)
 
 	if (event->type() == QEvent::KeyPress)
 	{
-		QKeyEvent* e = (QKeyEvent*)event;
+		QKeyEvent* e = static_cast<QKeyEvent*>(event);
 		if (e->modifiers() == Qt::ControlModifier && e->key() == Qt::Key_F)
 		{
 			if (m_find_dialog && m_find_dialog->isVisible())
 				m_find_dialog->close();
 
-			m_find_dialog = std::make_unique<find_dialog>((QTextEdit*)object, this);
+			m_find_dialog = std::make_unique<find_dialog>(static_cast<QTextEdit*>(object), this);
 		}
 	}
 

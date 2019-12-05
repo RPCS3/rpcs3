@@ -197,9 +197,9 @@ void gui_application::InitializeCallbacks()
 		{
 			switch (type)
 			{
-			case 0: ((gs_frame*)m_game_window)->progress_reset(value); break;
-			case 1: ((gs_frame*)m_game_window)->progress_increment(value); break;
-			case 2: ((gs_frame*)m_game_window)->progress_set_limit(value); break;
+			case 0: static_cast<gs_frame*>(m_game_window)->progress_reset(value); break;
+			case 1: static_cast<gs_frame*>(m_game_window)->progress_increment(value); break;
+			case 2: static_cast<gs_frame*>(m_game_window)->progress_set_limit(value); break;
 			default: LOG_FATAL(GENERAL, "Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}

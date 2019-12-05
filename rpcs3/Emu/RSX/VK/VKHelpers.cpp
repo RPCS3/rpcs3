@@ -311,7 +311,7 @@ namespace vk
 				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
 		};
 
-		auto &ptr = g_typeless_textures[(u32)format];
+		auto& ptr = g_typeless_textures[+format];
 		if (!ptr || ptr->width() < requested_width || ptr->height() < requested_height)
 		{
 			if (ptr)

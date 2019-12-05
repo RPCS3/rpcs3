@@ -5,7 +5,7 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-memory_viewer_panel::memory_viewer_panel(QWidget* parent) 
+memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	: QDialog(parent)
 {
 	setWindowTitle(tr("Memory Viewer"));
@@ -220,7 +220,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 		int sizey = sb_img_size_y->value();
 		ShowImage(this, m_addr, mode, sizex, sizey, false);
 	});
-	
+
 	//Fill the QTextEdits
 	ShowMemory();
 	setFixedSize(sizeHint());
@@ -240,7 +240,7 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 
 	QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 	m_addr -= stepSize * m_colcount * numSteps.y();
-	
+
 	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
 }
@@ -261,7 +261,7 @@ void memory_viewer_panel::ShowMemory()
 	{
 		for (u32 col = 0; col < m_colcount; col++)
 		{
-			u32 addr = m_addr + row * m_colcount + col;	
+			u32 addr = m_addr + row * m_colcount + col;
 
 			if (vm::check_addr(addr))
 			{
@@ -306,8 +306,9 @@ void memory_viewer_panel::SetPC(const uint pc)
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
 {
-	unsigned char* originalBuffer  = (unsigned char*)vm::base(addr);
-	unsigned char* convertedBuffer = (unsigned char*)malloc(width * height * 4);
+	uchar* originalBuffer  = static_cast<uchar*>(vm::base(addr));
+	uchar* convertedBuffer = static_cast<uchar*>(std::malloc(width * height * 4));
+
 	switch(mode)
 	{
 	case(0): // RGB
@@ -322,7 +323,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 			}
 		}
 	break;
-	
+
 	case(1): // ARGB
 		for (u32 y = 0; y < height; y++)
 		{
@@ -335,7 +336,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 			}
 		}
 	break;
-	
+
 	case(2): // RGBA
 		for (u32 y = 0; y < height; y++)
 		{
@@ -348,7 +349,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 			}
 		}
 	break;
-	
+
 	case(3): // ABGR
 		for (u32 y = 0; y < height; y++)
 		{
@@ -362,7 +363,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 		}
 	break;
 	}
-	
+
 	// Flip vertically
 	if (flipv)
 	{

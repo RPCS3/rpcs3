@@ -42,7 +42,7 @@ namespace rsx
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
 		const u32 cmd = rsx->get_fifo_cmd();
-		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg, 
+		LOG_ERROR(RSX, "Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->invalid_command_interrupt_raised = true;
 	}
@@ -86,7 +86,7 @@ namespace rsx
 				if (Emu.IsStopped())
 					return;
 
-				if (const auto tdr = (u64)g_cfg.video.driver_recovery_timeout)
+				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
 					if (Emu.IsPaused())
 					{
@@ -834,7 +834,7 @@ namespace rsx
 					vm::write32(address, color);
 					break;
 				case 2:
-					vm::write16(address, (u16)(color));
+					vm::write16(address, static_cast<u16>(color));
 					break;
 				default:
 					fmt::throw_exception("Unreachable" HERE);
@@ -868,8 +868,8 @@ namespace rsx
 
 			// NOTE: Do not round these value up!
 			// Sub-pixel offsets are used to signify pixel centers and do not mean to read from the next block (fill convention)
-			auto in_x = (u16)std::floor(method_registers.blit_engine_in_x());
-			auto in_y = (u16)std::floor(method_registers.blit_engine_in_y());
+			auto in_x = static_cast<u16>(std::floor(method_registers.blit_engine_in_x()));
+			auto in_y = static_cast<u16>(std::floor(method_registers.blit_engine_in_y()));
 
 			// Clipping
 			// Validate that clipping rect will fit onto both src and dst regions
@@ -904,12 +904,12 @@ namespace rsx
 			case blit_engine::transfer_origin::center:
 				break;
 			default:
-				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", (u8)in_origin);
+				LOG_WARNING(RSX, "NV3089_IMAGE_IN_SIZE: unknown origin (%d)", static_cast<u8>(in_origin));
 			}
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)" HERE, (u8)operation);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)" HERE, static_cast<u8>(operation));
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -942,7 +942,7 @@ namespace rsx
 				break;
 			}
 			default:
-				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", (u8)method_registers.blit_engine_context_surface());
+				LOG_ERROR(RSX, "NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(method_registers.blit_engine_context_surface()));
 				return;
 			}
 
@@ -1008,7 +1008,7 @@ namespace rsx
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)" HERE, (u8)dst_color_format);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)" HERE, static_cast<u8>(dst_color_format));
 			}
 
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
@@ -1022,12 +1022,12 @@ namespace rsx
 				else
 				{
 					// TODO: Support more formats
-					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, (u8)src_color_format);
+					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, static_cast<u8>(src_color_format));
 				}
 			}
 
-			u32 convert_w = (u32)(std::abs(scale_x) * in_w);
-			u32 convert_h = (u32)(std::abs(scale_y) * in_h);
+			u32 convert_w = static_cast<u32>(std::abs(scale_x) * in_w);
+			u32 convert_h = static_cast<u32>(std::abs(scale_y) * in_h);
 
 			if (convert_w == 0 || convert_h == 0)
 			{
@@ -1078,12 +1078,12 @@ namespace rsx
 				const u32 packed_pitch = in_w * in_bpp;
 				temp1.resize(packed_pitch * in_h);
 
-				const s32 stride_y = (scale_y < 0 ? -1 : 1) * (s32)in_pitch;
+				const s32 stride_y = (scale_y < 0 ? -1 : 1) * s32{in_pitch};
 
 				for (u32 y = 0; y < in_h; ++y)
 				{
 					u8 *dst = temp1.data() + (packed_pitch * y);
-					u8 *src = pixels_src + ((s32)y * stride_y);
+					u8 *src = pixels_src + (static_cast<s32>(y) * stride_y);
 
 					if (scale_x < 0)
 					{
@@ -1194,7 +1194,7 @@ namespace rsx
 				{
 					if (need_clip)
 					{
-						temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
+						temp2.resize(out_pitch * std::max<u32>(convert_h, clip_h));
 
 						convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
 							pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);
@@ -1218,7 +1218,7 @@ namespace rsx
 
 						if (need_convert)
 						{
-							temp2.resize(out_pitch * std::max(convert_h, (u32)clip_h));
+							temp2.resize(out_pitch * std::max<u32>(convert_h, clip_h));
 
 							convert_scale_image(temp2.data(), out_format, convert_w, convert_h, out_pitch,
 								pixels_src, in_format, in_w, in_h, in_pitch, slice_h, in_inter == blit_engine::transfer_interpolator::foh);

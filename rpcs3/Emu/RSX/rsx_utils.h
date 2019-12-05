@@ -337,8 +337,8 @@ namespace rsx
 	*    Restriction: It has mixed results if the height or width is not a power of 2
 	*    Restriction: Only works with 2D surfaces
 	*/
-	template<typename T, bool input_is_swizzled>
-	void convert_linear_swizzle(void* input_pixels, void* output_pixels, u16 width, u16 height, u32 pitch)
+	template <typename T, bool input_is_swizzled>
+	void convert_linear_swizzle(const void* input_pixels, void* output_pixels, u16 width, u16 height, u32 pitch)
 	{
 		u32 log2width = ceil_log2(width);
 		u32 log2height = ceil_log2(height);
@@ -368,8 +368,8 @@ namespace rsx
 		{
 			for (int y = 0; y < height; ++y)
 			{
-				T* src = static_cast<T*>(input_pixels) + y * adv;
-				T *dst = static_cast<T*>(output_pixels) + offs_y;
+				auto src = static_cast<const T*>(input_pixels) + y * adv;
+				auto dst = static_cast<T*>(output_pixels) + offs_y;
 				offs_x = offs_x0;
 
 				for (int x = 0; x < width; ++x)
@@ -390,8 +390,8 @@ namespace rsx
 		{
 			for (int y = 0; y < height; ++y)
 			{
-				T *src = static_cast<T*>(input_pixels) + offs_y;
-				T* dst = static_cast<T*>(output_pixels) + y * adv;
+				auto src = static_cast<const T*>(input_pixels) + offs_y;
+				auto dst = static_cast<T*>(output_pixels) + y * adv;
 				offs_x = offs_x0;
 
 				for (int x = 0; x < width; ++x)
@@ -417,7 +417,7 @@ namespace rsx
 	 * i.e 32 texels per "unit"
 	 */
 	template <typename T>
-	void convert_linear_swizzle_3d(void *input_pixels, void *output_pixels, u16 width, u16 height, u16 depth)
+	void convert_linear_swizzle_3d(const void* input_pixels, void* output_pixels, u16 width, u16 height, u16 depth)
 	{
 		if (depth == 1)
 		{
@@ -425,8 +425,8 @@ namespace rsx
 			return;
 		}
 
-		T *src = static_cast<T*>(input_pixels);
-		T *dst = static_cast<T*>(output_pixels);
+		auto src = static_cast<const T*>(input_pixels);
+		auto dst = static_cast<T*>(output_pixels);
 
 		const u32 log2_w = ceil_log2(width);
 		const u32 log2_h = ceil_log2(height);

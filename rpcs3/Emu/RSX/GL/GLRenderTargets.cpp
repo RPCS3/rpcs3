@@ -62,7 +62,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::a, ::gl::texture::channel::b, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	default:
-		fmt::throw_exception("Unsupported surface color format 0x%x" HERE, (u32)color_format);
+		fmt::throw_exception("Unsupported surface color format 0x%x" HERE, static_cast<u32>(color_format));
 	}
 }
 
@@ -78,9 +78,9 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 		else
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
-			
+
 	default:
-		fmt::throw_exception("Unsupported depth format 0x%x" HERE, (u32)depth_format);
+		fmt::throw_exception("Unsupported depth format 0x%x" HERE, static_cast<u32>(depth_format));
 	}
 }
 
@@ -252,7 +252,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 
 			m_draw_fbo = &fbo;
 			m_draw_fbo->bind();
-			m_draw_fbo->set_extents({ (int)m_framebuffer_layout.width, (int)m_framebuffer_layout.height });
+			m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
 
 			framebuffer_status_valid = true;
 			break;
@@ -267,7 +267,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		m_draw_fbo = &m_framebuffer_cache.back();
 		m_draw_fbo->create();
 		m_draw_fbo->bind();
-		m_draw_fbo->set_extents({ (int)m_framebuffer_layout.width, (int)m_framebuffer_layout.height });
+		m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
 
 		for (int i = 0; i < 4; ++i)
 		{
@@ -479,13 +479,13 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, bool force_init
 		else
 		{
 			// Mem cast, generate typeless xfer info
-			if (!formats_are_bitcast_compatible((GLenum)get_internal_format(), (GLenum)src_texture->get_internal_format()) ||
+			if (!formats_are_bitcast_compatible(static_cast<GLenum>(get_internal_format()), static_cast<GLenum>(src_texture->get_internal_format())) ||
 				aspect() != src_texture->aspect())
 			{
 				typeless_info.src_is_typeless = true;
 				typeless_info.src_context = rsx::texture_upload_context::framebuffer_storage;
-				typeless_info.src_native_format_override = (u32)get_internal_format();
-				typeless_info.src_scaling_hint = f32(src_bpp) / dst_bpp;
+				typeless_info.src_native_format_override = static_cast<u32>(get_internal_format());
+				typeless_info.src_scaling_hint = static_cast<f32>(src_bpp) / dst_bpp;
 			}
 		}
 

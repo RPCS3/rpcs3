@@ -832,12 +832,12 @@ void trophy_manager_dialog::PopulateTrophyTable()
 			if (n2->GetName() == "name")
 			{
 				std::string name = n2->GetNodeContent();
-				memcpy(details.name, name.c_str(), std::min((size_t)SCE_NP_TROPHY_NAME_MAX_SIZE, name.length() + 1));
+				strcpy_trunc(details.name, name);
 			}
 			if (n2->GetName() == "detail")
 			{
 				std::string detail = n2->GetNodeContent();
-				memcpy(details.description, detail.c_str(), std::min((size_t)SCE_NP_TROPHY_DESCR_MAX_SIZE, detail.length() + 1));
+				strcpy_trunc(details.description, detail);
 			}
 		}
 

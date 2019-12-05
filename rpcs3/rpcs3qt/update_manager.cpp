@@ -227,7 +227,7 @@ bool update_manager::handle_json(const QByteArray& data, bool automatic)
 			time_t cur_time = mktime(&cur_tm);
 			time_t lts_time = mktime(&lts_tm);
 
-			s64 u_timediff = (s64)std::difftime(lts_time, cur_time);
+			s64 u_timediff = static_cast<s64>(std::difftime(lts_time, cur_time));
 			timediff       = tr("Your version is %1 day(s), %2 hour(s) and %3 minute(s) old.").arg(u_timediff / (60 * 60 * 24)).arg((u_timediff / (60 * 60)) % 24).arg((u_timediff / 60) % 60);
 		}
 
@@ -282,7 +282,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 	mbedtls_sha256_context ctx;
 	mbedtls_sha256_init(&ctx);
 	mbedtls_sha256_starts_ret(&ctx, 0);
-	mbedtls_sha256_update_ret(&ctx, (const unsigned char*)rpcs3_data.data(), rpcs3_data.size());
+	mbedtls_sha256_update_ret(&ctx, reinterpret_cast<const unsigned char*>(rpcs3_data.data()), rpcs3_data.size());
 	mbedtls_sha256_finish_ret(&ctx, res_hash);
 
 	std::string res_hash_string("0000000000000000000000000000000000000000000000000000000000000000");
@@ -432,7 +432,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 		case SZ_ERROR_UNSUPPORTED: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder doesn't support this archive"); break;
 		case SZ_ERROR_MEM: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder failed to allocate memory"); break;
 		case SZ_ERROR_CRC: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder CRC error"); break;
-		default: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: %d", (u64)res); break;
+		default: LOG_ERROR(GENERAL, "[Auto-updater] 7z decoder error: %d", static_cast<u64>(res)); break;
 		}
 	};
 
@@ -484,7 +484,7 @@ bool update_manager::handle_rpcs3(const QByteArray& rpcs3_data, bool /*automatic
 				return false;
 			}
 
-			temp_u8[index] = (u8)temp_u16[index];
+			temp_u8[index] = static_cast<u8>(temp_u16[index]);
 		}
 		temp_u8[len] = 0;
 		std::string name((char*)temp_u8);

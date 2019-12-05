@@ -154,7 +154,7 @@ namespace rsx
 		default:
 			break;
 		}
-		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!" HERE, (u8)type);
+		fmt::throw_exception("RSXVertexData::GetTypeSize: Bad vertex data type (%d)!" HERE, static_cast<u8>(type));
 	}
 
 	void tiled_region::write(const void *src, u32 width, u32 height, u32 pitch)
@@ -174,7 +174,7 @@ namespace rsx
 		case CELL_GCM_COMPMODE_DISABLED:
 			for (u32 y = 0; y < height; ++y)
 			{
-				memcpy(ptr + (offset_y + y) * tile->pitch + offset_x, (u8*)src + pitch * y, pitch);
+				memcpy(ptr + (offset_y + y) * tile->pitch + offset_x, static_cast<const u8*>(src) + pitch * y, pitch);
 			}
 			break;
 			/*
@@ -196,12 +196,12 @@ namespace rsx
 			{
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *(u32*)((u8*)src + pitch * y + x * sizeof(u32));
+					u32 value = *reinterpret_cast<const u32*>(static_cast<const u8*>(src) + pitch * y + x * sizeof(u32));
 
-					*(u32*)(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
-					*(u32*)(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
-					*(u32*)(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
-					*(u32*)(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
+					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
+					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32)) = value;
+					*reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 1) * tile->pitch + offset_x + (x * 2 + 1) * sizeof(u32)) = value;
 				}
 			}
 			break;
@@ -227,7 +227,7 @@ namespace rsx
 		case CELL_GCM_COMPMODE_DISABLED:
 			for (u32 y = 0; y < height; ++y)
 			{
-				memcpy((u8*)dst + pitch * y, ptr + (offset_y + y) * tile->pitch + offset_x, pitch);
+				memcpy(static_cast<u8*>(dst) + pitch * y, ptr + (offset_y + y) * tile->pitch + offset_x, pitch);
 			}
 			break;
 			/*
@@ -248,9 +248,9 @@ namespace rsx
 			{
 				for (u32 x = 0; x < width; ++x)
 				{
-					u32 value = *(u32*)(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32));
+					u32 value = *reinterpret_cast<u32*>(ptr + (offset_y + y * 2 + 0) * tile->pitch + offset_x + (x * 2 + 0) * sizeof(u32));
 
-					*(u32*)((u8*)dst + pitch * y + x * sizeof(u32)) = value;
+					*reinterpret_cast<u32*>(static_cast<u8*>(dst) + pitch * y + x * sizeof(u32)) = value;
 				}
 			}
 			break;
@@ -342,7 +342,7 @@ namespace rsx
 
 	u32 thread::get_push_buffer_index_count() const
 	{
-		return (u32)element_push_buffer.size();
+		return ::size32(element_push_buffer);
 	}
 
 	void thread::end()
@@ -497,7 +497,7 @@ namespace rsx
 				{
 					// Save the difference before pause
 					start_time = get_system_time() - start_time;
-					
+
 					while (Emu.IsPaused() && !m_rsx_thread_exiting)
 					{
 						thread_ctrl::wait_for(wait_sleep);
@@ -631,9 +631,9 @@ namespace rsx
 		float one = 1.f;
 
 		stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
-		stream_vector((char*)buffer + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
-		stream_vector((char*)buffer + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
-		stream_vector((char*)buffer + 48, 0, 0, 0, std::bit_cast<u32>(one));
+		stream_vector(static_cast<char*>(buffer) + 16, 0, std::bit_cast<u32>(scale_y), 0, std::bit_cast<u32>(offset_y));
+		stream_vector(static_cast<char*>(buffer) + 32, 0, 0, std::bit_cast<u32>(scale_z), std::bit_cast<u32>(offset_z));
+		stream_vector(static_cast<char*>(buffer) + 48, 0, 0, 0, std::bit_cast<u32>(one));
 	}
 
 	void thread::fill_user_clip_data(void *buffer) const
@@ -657,7 +657,7 @@ namespace rsx
 			switch (clip_plane_control[index])
 			{
 			default:
-				LOG_ERROR(RSX, "bad clip plane control (0x%x)", (u8)clip_plane_control[index]);
+				LOG_ERROR(RSX, "bad clip plane control (0x%x)", static_cast<u8>(clip_plane_control[index]));
 
 			case rsx::user_clip_plane_op::disable:
 				clip_enabled_flags[index] = 0;
@@ -749,7 +749,7 @@ namespace rsx
 
 		const auto window_origin = rsx::method_registers.shader_window_origin();
 		const u32 window_height = rsx::method_registers.shader_window_height();
-		const f32 resolution_scale = (window_height <= (u32)g_cfg.video.min_scalable_dimension)? 1.f : rsx::get_resolution_scale();
+		const f32 resolution_scale = (window_height <= static_cast<u32>(g_cfg.video.min_scalable_dimension)) ? 1.f : rsx::get_resolution_scale();
 		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
 
@@ -783,7 +783,7 @@ namespace rsx
 		if (!element_push_buffer.empty())
 		{
 			//Indices provided via immediate mode
-			return{(const std::byte*)element_push_buffer.data(), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
+			return{reinterpret_cast<const std::byte*>(element_push_buffer.data()), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
 		}
 
 		const rsx::index_array_type type = rsx::method_registers.index_type();
@@ -1019,7 +1019,7 @@ namespace rsx
 			m_framebuffer_state_contested = color_buffer_unused || depth_buffer_unused;
 			break;
 		default:
-			fmt::throw_exception("Unknown framebuffer context 0x%x" HERE, (u32)context);
+			fmt::throw_exception("Unknown framebuffer context 0x%x" HERE, static_cast<u32>(context));
 		}
 
 		// Swizzled render does tight packing of bytes
@@ -1030,7 +1030,7 @@ namespace rsx
 		switch (const auto mode = rsx::method_registers.surface_type())
 		{
 		default:
-			LOG_ERROR(RSX, "Unknown raster mode 0x%x", (u32)mode);
+			LOG_ERROR(RSX, "Unknown raster mode 0x%x", static_cast<u32>(mode));
 			[[fallthrough]];
 		case rsx::surface_raster_type::linear:
 			break;
@@ -1085,7 +1085,7 @@ namespace rsx
 				// Unlike the depth buffer, when given a color target we know it is intended to be rendered to
 				LOG_ERROR(RSX, "Framebuffer setup error: Color target failed pitch check, Pitch=[%d, %d, %d, %d] + %d, target=%d, context=%d",
 					layout.color_pitch[0], layout.color_pitch[1], layout.color_pitch[2], layout.color_pitch[3],
-					layout.zeta_pitch, (u32)layout.target, (u32)context);
+					layout.zeta_pitch, static_cast<u32>(layout.target), static_cast<u32>(context));
 
 				// Do not remove this buffer for now as it implies something went horribly wrong anyway
 				break;
@@ -1094,7 +1094,7 @@ namespace rsx
 			if (layout.color_addresses[index] == layout.zeta_address)
 			{
 				LOG_WARNING(RSX, "Framebuffer at 0x%X has aliasing color/depth targets, color_index=%d, zeta_pitch = %d, color_pitch=%d, context=%d",
-					layout.zeta_address, index, layout.zeta_pitch, layout.color_pitch[index], (u32)context);
+					layout.zeta_address, index, layout.zeta_pitch, layout.color_pitch[index], static_cast<u32>(context));
 
 				m_framebuffer_state_contested = true;
 
@@ -1316,7 +1316,7 @@ namespace rsx
 				const auto &tex = rsx::method_registers.vertex_textures[i];
 				if (tex.enabled() && (current_vp_metadata.referenced_textures_mask & (1 << i)))
 				{
-					current_vertex_program.texture_dimensions |= ((u32)sampler_descriptors[i]->image_type << (i << 1));
+					current_vertex_program.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
 				}
 			}
 		}
@@ -1548,7 +1548,7 @@ namespace rsx
 		result.addr = vm::base(rsx::get_address(program_offset, program_location));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(result.addr);
 
-		result.addr = ((u8*)result.addr + current_fp_metadata.program_start_offset);
+		result.addr = (static_cast<u8*>(result.addr) + current_fp_metadata.program_start_offset);
 		result.offset = program_offset + current_fp_metadata.program_start_offset;
 		result.ucode_length = current_fp_metadata.program_ucode_length;
 		result.valid = true;
@@ -1578,7 +1578,7 @@ namespace rsx
 			if (tex.enabled() && (current_fp_metadata.referenced_textures_mask & (1 << i)))
 			{
 				u32 texture_control = 0;
-				result.texture_dimensions |= ((u32)sampler_descriptors[i]->image_type << (i << 1));
+				result.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
 
 				if (tex.alpha_kill_enabled())
 				{
@@ -1747,7 +1747,7 @@ namespace rsx
 		u32 persistent_memory_size = 0;
 		u32 volatile_memory_size = 0;
 
-		volatile_memory_size += (u32)layout.referenced_registers.size() * 16u;
+		volatile_memory_size += ::size32(layout.referenced_registers) * 16u;
 
 		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
@@ -1847,7 +1847,7 @@ namespace rsx
 		{
 			if (layout.attribute_placement[index] == attribute_buffer_placement::none)
 			{
-				((u64*)buffer)[index] = 0ull;
+				reinterpret_cast<u64*>(buffer)[index] = 0;
 				continue;
 			}
 
@@ -1988,8 +1988,8 @@ namespace rsx
 
 	void thread::write_vertex_data_to_memory(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, void *persistent_data, void *volatile_data)
 	{
-		char *transient = (char *)volatile_data;
-		char *persistent = (char *)persistent_data;
+		auto transient = static_cast<char*>(volatile_data);
+		auto persistent = static_cast<char*>(persistent_data);
 
 		auto &draw_call = rsx::method_registers.current_draw_clause;
 
@@ -2035,7 +2035,7 @@ namespace rsx
 				const u32 data_size = range.second * block.attribute_stride;
 				const u32 vertex_base = range.first * block.attribute_stride;
 
-				g_dma_manager.copy(persistent, (char*)vm::base(block.real_offset_address) + vertex_base, data_size);
+				g_dma_manager.copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}
 		}
@@ -2312,7 +2312,7 @@ namespace rsx
 			const auto elapsed = timestamp - performance_counters.last_update_timestamp;
 
 			if (elapsed > idle)
-				performance_counters.approximate_load = (u32)((elapsed - idle) * 100 / elapsed);
+				performance_counters.approximate_load = static_cast<u32>((elapsed - idle) * 100 / elapsed);
 			else
 				performance_counters.approximate_load = 0u;
 

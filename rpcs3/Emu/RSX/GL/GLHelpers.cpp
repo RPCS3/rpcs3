@@ -94,12 +94,12 @@ namespace gl
 		glBlitFramebuffer(
 			src_area.x1, src_area.y1, src_area.x2, src_area.y2,
 			dst_area.x1, dst_area.y1, dst_area.x2, dst_area.y2,
-			(GLbitfield)buffers_, (GLenum)filter_);
+			static_cast<GLbitfield>(buffers_), static_cast<GLenum>(filter_));
 	}
 
 	void fbo::bind_as(target target_) const
 	{
-		glBindFramebuffer((int)target_, id());
+		glBindFramebuffer(static_cast<int>(target_), id());
 	}
 
 	void fbo::remove()
@@ -151,7 +151,7 @@ namespace gl
 		for (auto &index : indexes)
 			ids.push_back(index.id());
 
-		glDrawBuffers((GLsizei)ids.size(), ids.data());
+		glDrawBuffers(::narrow<GLsizei>(ids.size()), ids.data());
 	}
 
 	void fbo::read_buffer(const attachment& buffer) const
@@ -183,19 +183,19 @@ namespace gl
 	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const
 	{
 		save_binding_state save(*this);
-		glDrawElements(draw_mode(mode), count, (GLenum)type, indices);
+		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), indices);
 	}
 
 	void fbo::draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const
 	{
 		buffer.bind(buffer::target::array);
-		glDrawElements(draw_mode(mode), count, (GLenum)type, indices);
+		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), indices);
 	}
 
 	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
 	{
 		indices.bind(buffer::target::element_array);
-		glDrawElements(draw_mode(mode), count, (GLenum)type, (GLvoid*)indices_buffer_offset);
+		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), reinterpret_cast<GLvoid*>(indices_buffer_offset));
 	}
 
 	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
@@ -237,7 +237,7 @@ namespace gl
 	void fbo::clear(buffers buffers_) const
 	{
 		save_binding_state save(*this);
-		glClear((GLbitfield)buffers_);
+		glClear(static_cast<GLbitfield>(buffers_));
 	}
 
 	void fbo::clear(buffers buffers_, color4f color_value, double depth_value, u8 stencil_value) const
@@ -253,7 +253,7 @@ namespace gl
 	{
 		save_binding_state save(*this);
 		pixel_settings.apply();
-		glDrawPixels(size.width, size.height, (GLenum)format_, (GLenum)type_, pixels);
+		glDrawPixels(size.width, size.height, static_cast<GLenum>(format_), static_cast<GLenum>(type_), pixels);
 	}
 
 	void fbo::copy_from(const buffer& buf, const sizei& size, gl::texture::format format_, gl::texture::type type_, class pixel_unpack_settings pixel_settings) const
@@ -261,14 +261,14 @@ namespace gl
 		save_binding_state save(*this);
 		buffer::save_binding_state save_buffer(buffer::target::pixel_unpack, buf);
 		pixel_settings.apply();
-		glDrawPixels(size.width, size.height, (GLenum)format_, (GLenum)type_, nullptr);
+		glDrawPixels(size.width, size.height, static_cast<GLenum>(format_), static_cast<GLenum>(type_), nullptr);
 	}
 
 	void fbo::copy_to(void* pixels, coordi coord, gl::texture::format format_, gl::texture::type type_, class pixel_pack_settings pixel_settings) const
 	{
 		save_binding_state save(*this);
 		pixel_settings.apply();
-		glReadPixels(coord.x, coord.y, coord.width, coord.height, (GLenum)format_, (GLenum)type_, pixels);
+		glReadPixels(coord.x, coord.y, coord.width, coord.height, static_cast<GLenum>(format_), static_cast<GLenum>(type_), pixels);
 	}
 
 	void fbo::copy_to(const buffer& buf, coordi coord, gl::texture::format format_, gl::texture::type type_, class pixel_pack_settings pixel_settings) const
@@ -276,7 +276,7 @@ namespace gl
 		save_binding_state save(*this);
 		buffer::save_binding_state save_buffer(buffer::target::pixel_pack, buf);
 		pixel_settings.apply();
-		glReadPixels(coord.x, coord.y, coord.width, coord.height, (GLenum)format_, (GLenum)type_, nullptr);
+		glReadPixels(coord.x, coord.y, coord.width, coord.height, static_cast<GLenum>(format_), static_cast<GLenum>(type_), nullptr);
 	}
 
 	fbo fbo::get_binded_draw_buffer()
@@ -284,7 +284,7 @@ namespace gl
 		GLint value;
 		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &value);
 
-		return{ (GLuint)value };
+		return{ static_cast<GLuint>(value) };
 	}
 
 	fbo fbo::get_binded_read_buffer()
@@ -292,7 +292,7 @@ namespace gl
 		GLint value;
 		glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &value);
 
-		return{ (GLuint)value };
+		return{ static_cast<GLuint>(value) };
 	}
 
 	fbo fbo::get_binded_buffer()
@@ -300,7 +300,7 @@ namespace gl
 		GLint value;
 		glGetIntegerv(GL_FRAMEBUFFER_BINDING, &value);
 
-		return{ (GLuint)value };
+		return{ static_cast<GLuint>(value) };
 	}
 
 	GLuint fbo::id() const
@@ -390,13 +390,13 @@ namespace gl
 
 			if (static_cast<gl::texture::internal_format>(internal_fmt) != src->get_internal_format())
 			{
-				const auto internal_width = (u16)(src->width() * xfer_info.src_scaling_hint);
+				const u16 internal_width = static_cast<u16>(src->width() * xfer_info.src_scaling_hint);
 				typeless_src = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, src->height(), 1, 1, internal_fmt);
 				copy_typeless(typeless_src.get(), src);
 
 				real_src = typeless_src.get();
-				src_rect.x1 = (u16)(src_rect.x1 * xfer_info.src_scaling_hint);
-				src_rect.x2 = (u16)(src_rect.x2 * xfer_info.src_scaling_hint);
+				src_rect.x1 = static_cast<u16>(src_rect.x1 * xfer_info.src_scaling_hint);
+				src_rect.x2 = static_cast<u16>(src_rect.x2 * xfer_info.src_scaling_hint);
 			}
 		}
 
@@ -408,13 +408,13 @@ namespace gl
 
 			if (static_cast<gl::texture::internal_format>(internal_fmt) != dst->get_internal_format())
 			{
-				const auto internal_width = (u16)(dst->width() * xfer_info.dst_scaling_hint);
+				const auto internal_width = static_cast<u16>(dst->width() * xfer_info.dst_scaling_hint);
 				typeless_dst = std::make_unique<texture>(GL_TEXTURE_2D, internal_width, dst->height(), 1, 1, internal_fmt);
 				copy_typeless(typeless_dst.get(), dst);
 
 				real_dst = typeless_dst.get();
-				dst_rect.x1 = (u16)(dst_rect.x1 * xfer_info.dst_scaling_hint);
-				dst_rect.x2 = (u16)(dst_rect.x2 * xfer_info.dst_scaling_hint);
+				dst_rect.x1 = static_cast<u16>(dst_rect.x1 * xfer_info.dst_scaling_hint);
+				dst_rect.x2 = static_cast<u16>(dst_rect.x2 * xfer_info.dst_scaling_hint);
 			}
 		}
 
@@ -466,7 +466,7 @@ namespace gl
 
 		glBlitFramebuffer(src_rect.x1, src_rect.y1, src_rect.x2, src_rect.y2,
 			dst_rect.x1, dst_rect.y1, dst_rect.x2, dst_rect.y2,
-			(GLbitfield)target, (GLenum)interp);
+			static_cast<GLbitfield>(target), static_cast<GLenum>(interp));
 
 		if (xfer_info.dst_is_typeless)
 		{
@@ -513,7 +513,7 @@ namespace gl
 			attachment = GL_DEPTH_STENCIL_ATTACHMENT;
 			break;
 		default:
-			fmt::throw_exception("Invalid texture passed to clear depth function, format=0x%x", (u32)fmt);
+			fmt::throw_exception("Invalid texture passed to clear depth function, format=0x%x", static_cast<u32>(fmt));
 		}
 
 		save_binding_state saved;

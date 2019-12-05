@@ -146,7 +146,7 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				if (reg.compare(0, 3, "GPR") == 0 || reg.compare(0, 3, "FPR") == 0)
 				{
 					const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-					if (reg.compare(0, 3, "GPR") == 0) ppu.gpr[reg_index] = (u64)reg_value;
+					if (reg.compare(0, 3, "GPR") == 0) ppu.gpr[reg_index] = static_cast<u64>(reg_value);
 					if (reg.compare(0, 3, "FPR") == 0) ppu.fpr[reg_index] = std::bit_cast<f64>(reg_value);
 					return;
 				}
@@ -154,22 +154,22 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				{
 					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
-					ppu.vr[reg_index]._u64[0] = (u64)reg_value0;
-					ppu.vr[reg_index]._u64[1] = (u64)reg_value1;
+					ppu.vr[reg_index]._u64[0] = static_cast<u64>(reg_value0);
+					ppu.vr[reg_index]._u64[1] = static_cast<u64>(reg_value1);
 					return;
 				}
 			}
 			if (reg == "LR" || reg == "CTR")
 			{
 				const ullong reg_value = std::stoull(value.substr(16, 31), 0, 16);
-				if (reg == "LR") ppu.lr = (u64)reg_value;
-				if (reg == "CTR") ppu.ctr = (u64)reg_value;
+				if (reg == "LR") ppu.lr = static_cast<u64>(reg_value);
+				if (reg == "CTR") ppu.ctr = static_cast<u64>(reg_value);
 				return;
 			}
 			if (reg == "CR")
 			{
 				const ullong reg_value = std::stoull(value.substr(24, 31), 0, 16);
-				if (reg == "CR") ppu.cr.unpack((u32)reg_value);
+				if (reg == "CR") ppu.cr.unpack(static_cast<u32>(reg_value));
 				return;
 			}
 		}
@@ -192,8 +192,8 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 				{
 					const ullong reg_value0 = std::stoull(value.substr(16, 31), 0, 16);
 					const ullong reg_value1 = std::stoull(value.substr(0, 15), 0, 16);
-					spu.gpr[reg_index]._u64[0] = (u64)reg_value0;
-					spu.gpr[reg_index]._u64[1] = (u64)reg_value1;
+					spu.gpr[reg_index]._u64[0] = static_cast<u64>(reg_value0);
+					spu.gpr[reg_index]._u64[1] = static_cast<u64>(reg_value1);
 					return;
 				}
 			}

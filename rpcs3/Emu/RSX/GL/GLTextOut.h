@@ -73,7 +73,7 @@ namespace gl
 			m_program.use();
 
 			m_program.uniforms["draw_color"] = color;
-			glProgramUniform2fv(m_program.id(), m_program.uniforms["offsets"].location(), (GLsizei)nb_offsets, offsets);
+			glProgramUniform2fv(m_program.id(), m_program.uniforms["offsets"].location(), static_cast<GLsizei>(nb_offsets), offsets);
 			glProgramUniform2fv(m_program.id(), m_program.uniforms["scale"].location(), 1, scale);
 		}
 
@@ -141,9 +141,8 @@ namespace gl
 			float base_offset = 0.f;
 			shader_offsets.reserve(text.length() * 2);
 
-			while (*s)
+			while (u8 offset = static_cast<u8>(*s))
 			{
-				u8 offset = (u8)*s;
 				bool to_draw = false;	//Can be false for space or unsupported characters
 
 				auto o = m_offsets.find(offset);
@@ -183,7 +182,7 @@ namespace gl
 
 			m_vao.bind();
 
-			glMultiDrawArrays(GL_POINTS, (const GLint*)offsets.data(), (const GLsizei*)counts.data(), (GLsizei)counts.size());
+			glMultiDrawArrays(GL_POINTS, offsets.data(), counts.data(), static_cast<GLsizei>(counts.size()));
 			glBindVertexArray(old_vao);
 		}
 

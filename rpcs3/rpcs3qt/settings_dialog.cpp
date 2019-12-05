@@ -240,9 +240,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->ppu_llvm, json_cpu_ppu["LLVM"].toString());
 
 	QButtonGroup *ppuBG = new QButtonGroup(this);
-	ppuBG->addButton(ui->ppu_precise, (int)ppu_decoder_type::precise);
-	ppuBG->addButton(ui->ppu_fast,    (int)ppu_decoder_type::fast);
-	ppuBG->addButton(ui->ppu_llvm,    (int)ppu_decoder_type::llvm);
+	ppuBG->addButton(ui->ppu_precise, static_cast<int>(ppu_decoder_type::precise));
+	ppuBG->addButton(ui->ppu_fast,    static_cast<int>(ppu_decoder_type::fast));
+	ppuBG->addButton(ui->ppu_llvm,    static_cast<int>(ppu_decoder_type::llvm));
 
 	{ // PPU Stuff
 		QString selectedPPU = qstr(xemu_settings->GetSetting(emu_settings::PPUDecoder));
@@ -269,10 +269,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	SubscribeTooltip(ui->spu_llvm,    json_cpu_spu["LLVM"].toString());
 
 	QButtonGroup *spuBG = new QButtonGroup(this);
-	spuBG->addButton(ui->spu_precise, (int)spu_decoder_type::precise);
-	spuBG->addButton(ui->spu_fast,    (int)spu_decoder_type::fast);
-	spuBG->addButton(ui->spu_asmjit,  (int)spu_decoder_type::asmjit);
-	spuBG->addButton(ui->spu_llvm,    (int)spu_decoder_type::llvm);
+	spuBG->addButton(ui->spu_precise, static_cast<int>(spu_decoder_type::precise));
+	spuBG->addButton(ui->spu_fast,    static_cast<int>(spu_decoder_type::fast));
+	spuBG->addButton(ui->spu_asmjit,  static_cast<int>(spu_decoder_type::asmjit));
+	spuBG->addButton(ui->spu_llvm,    static_cast<int>(spu_decoder_type::llvm));
 
 	{ // Spu stuff
 		QString selectedSPU = qstr(xemu_settings->GetSetting(emu_settings::SPUDecoder));
@@ -318,11 +318,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	// creating this in ui file keeps scrambling the order...
 	QButtonGroup *libModeBG = new QButtonGroup(this);
-	libModeBG->addButton(ui->lib_manu, (int)lib_loading_type::manual);
-	libModeBG->addButton(ui->lib_both, (int)lib_loading_type::hybrid);
-	libModeBG->addButton(ui->lib_lv2,  (int)lib_loading_type::liblv2only);
-	libModeBG->addButton(ui->lib_lv2b, (int)lib_loading_type::liblv2both);
-	libModeBG->addButton(ui->lib_lv2l, (int)lib_loading_type::liblv2list);
+	libModeBG->addButton(ui->lib_manu, static_cast<int>(lib_loading_type::manual));
+	libModeBG->addButton(ui->lib_both, static_cast<int>(lib_loading_type::hybrid));
+	libModeBG->addButton(ui->lib_lv2,  static_cast<int>(lib_loading_type::liblv2only));
+	libModeBG->addButton(ui->lib_lv2b, static_cast<int>(lib_loading_type::liblv2both));
+	libModeBG->addButton(ui->lib_lv2l, static_cast<int>(lib_loading_type::liblv2list));
 
 	{// Handle lib loading options
 		QString selectedLib = qstr(xemu_settings->GetSetting(emu_settings::LibLoadOptions));
@@ -394,7 +394,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 
 	auto l_OnLibButtonClicked = [=](int ind)
 	{
-		if (ind != (int)lib_loading_type::liblv2only)
+		if (ind != static_cast<int>(lib_loading_type::liblv2only))
 		{
 			ui->searchBox->setEnabled(true);
 			ui->lleList->setEnabled(true);
