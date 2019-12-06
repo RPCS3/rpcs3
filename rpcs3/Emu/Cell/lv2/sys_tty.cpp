@@ -100,12 +100,19 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 		}
 	}
 
-	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x(%s), len=%d, pwritelen=*0x%x)", ch, buf, msg, len, pwritelen);
+	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x (“%s”), len=%d, pwritelen=*0x%x)", ch, buf, msg, len, pwritelen);
 
 	// Hack: write to tty even on CEX mode, but disable all error checks
-	if ((ch < 0 || ch > 15) && g_cfg.core.debug_console_mode)
+	if (ch < 0 || ch > 15)
 	{
-		return CELL_EINVAL;
+		if (g_cfg.core.debug_console_mode)
+		{
+			return CELL_EINVAL;
+		}
+		else
+		{
+			msg.clear();
+		}
 	}
 
 	if (g_cfg.core.debug_console_mode)
@@ -128,13 +135,13 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 		}
 		else if (g_cfg.core.debug_console_mode)
 		{
-			return CELL_EFAULT;
+			return {CELL_EFAULT, buf.addr()};
 		}
 	}
 
 	if (!pwritelen.try_write(len))
 	{
-		return CELL_EFAULT;
+		return {CELL_EFAULT, pwritelen};
 	}
 
 	return CELL_OK;
