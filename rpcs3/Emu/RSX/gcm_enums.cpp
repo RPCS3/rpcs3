@@ -21,19 +21,18 @@ rsx::primitive_type rsx::to_primitive_type(u8 in)
 {
 	switch (in)
 	{
-	case 0: return rsx::primitive_type::invalid;
-	case 1: return rsx::primitive_type::points;
-	case 2: return rsx::primitive_type::lines;
-	case 3: return rsx::primitive_type::line_loop;
-	case 4: return rsx::primitive_type::line_strip;
-	case 5: return rsx::primitive_type::triangles;
-	case 6: return rsx::primitive_type::triangle_strip;
-	case 7: return rsx::primitive_type::triangle_fan;
-	case 8: return rsx::primitive_type::quads;
-	case 9: return rsx::primitive_type::quad_strip;
-	case 10: return rsx::primitive_type::polygon;
+	case CELL_GCM_PRIMITIVE_POINTS: return rsx::primitive_type::points;
+	case CELL_GCM_PRIMITIVE_LINES: return rsx::primitive_type::lines;
+	case CELL_GCM_PRIMITIVE_LINE_LOOP: return rsx::primitive_type::line_loop;
+	case CELL_GCM_PRIMITIVE_LINE_STRIP: return rsx::primitive_type::line_strip;
+	case CELL_GCM_PRIMITIVE_TRIANGLES: return rsx::primitive_type::triangles;
+	case CELL_GCM_PRIMITIVE_TRIANGLE_STRIP: return rsx::primitive_type::triangle_strip;
+	case CELL_GCM_PRIMITIVE_TRIANGLE_FAN: return rsx::primitive_type::triangle_fan;
+	case CELL_GCM_PRIMITIVE_QUADS: return rsx::primitive_type::quads;
+	case CELL_GCM_PRIMITIVE_QUAD_STRIP: return rsx::primitive_type::quad_strip;
+	case CELL_GCM_PRIMITIVE_POLYGON: return rsx::primitive_type::polygon;
+	default: return rsx::primitive_type::invalid;
 	}
-	fmt::throw_exception("Unknown primitive type %d" HERE, in);
 }
 
 enum
