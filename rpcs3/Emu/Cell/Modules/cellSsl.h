@@ -19,7 +19,8 @@ enum CellSslError : u32
 	CELL_SSL_ERROR_UNKNOWN_LOAD_CERT     = 0x80740037
 };
 
-enum // Certificate load flags
+// Certificate load flags
+enum : u64
 {
 	CELL_SSL_LOAD_CERT_SCE01               = 0x0000000000000001ULL,
 	CELL_SSL_LOAD_CERT_SCE02               = 0x0000000000000002ULL,
