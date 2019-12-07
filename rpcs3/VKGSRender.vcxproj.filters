@@ -1,112 +1,42 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
+    <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFragmentProgram.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Emu\RSX\VK\VKGSRender.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKHelpers.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKTextureCache.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VulkanAPI.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKFormats.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKTextOut.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKOverlays.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKCompute.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKRenderPass.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKResolveHelper.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKResourceManager.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKFramebuffer.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\VKDMA.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKFragmentProgram.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKTexture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKFormats.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\VKDMA.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDMA.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFormats.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFramebuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKGSRender.h" />
+    <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
+    <ClInclude Include="Emu\RSX\VK\VKOverlays.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKRenderPass.h" />
+    <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\VK\VKResolveHelper.h" />
+    <ClInclude Include="Emu\RSX\VK\VKResourceManager.h" />
+    <ClInclude Include="Emu\RSX\VK\VKTextOut.h" />
+    <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
+    <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
+    <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
   </ItemGroup>
 </Project>

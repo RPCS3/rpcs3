@@ -107,6 +107,11 @@ namespace vk
 		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF     // Special encoding for multisampled images; returns a multisampled image view
 	};
 
+	enum // callback commands
+	{
+		rctrl_queue_submit = 0x80000000
+	};
+
 	class context;
 	class render_device;
 	class swap_chain_image;
@@ -119,6 +124,7 @@ namespace vk
 	class mem_allocator_base;
 	struct memory_type_mapping;
 	struct gpu_formats_support;
+	struct fence;
 
 	const vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -152,9 +158,10 @@ namespace vk
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
 
-	//Sync helpers around vkQueueSubmit
+	// Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
 	void release_global_submit_lock();
+	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush = VK_FALSE);
 
 	template<class T>
 	T* get_compute_task();
@@ -222,8 +229,8 @@ namespace vk
 	const u64 get_last_completed_frame_id();
 
 	// Fence reset with driver workarounds in place
-	void reset_fence(VkFence *pFence);
-	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
+	void reset_fence(fence* pFence);
+	VkResult wait_for_fence(fence* pFence, u64 timeout = 0ull);
 	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
 
 	// Handle unexpected submit with dangling occlusion query
@@ -1022,12 +1029,55 @@ private:
 		}
 	};
 
+	struct fence
+	{
+		volatile bool flushed = false;
+		VkFence handle        = VK_NULL_HANDLE;
+		VkDevice owner        = VK_NULL_HANDLE;
+
+		fence(VkDevice dev)
+		{
+			owner = dev;
+			VkFenceCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			CHECK_RESULT(vkCreateFence(dev, &info, nullptr, &handle));
+		}
+
+		~fence()
+		{
+			if (handle)
+			{
+				vkDestroyFence(owner, handle, nullptr);
+				handle = VK_NULL_HANDLE;
+			}
+		}
+
+		void reset()
+		{
+			vkResetFences(owner, 1, &handle);
+			flushed = false;
+		}
+
+		void wait_flush()
+		{
+			while (!flushed)
+			{
+				_mm_pause();
+			}
+		}
+
+		operator bool() const
+		{
+			return (handle != VK_NULL_HANDLE);
+		}
+	};
+
 	class command_buffer
 	{
 	private:
 		bool is_open = false;
 		bool is_pending = false;
-		VkFence m_submit_fence = VK_NULL_HANDLE;
+		fence* m_submit_fence = nullptr;
 
 	protected:
 		vk::command_pool *pool = nullptr;
@@ -1066,9 +1116,7 @@ private:
 
 			if (auto_reset)
 			{
-				VkFenceCreateInfo info = {};
-				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
+				m_submit_fence = new fence(cmd_pool.get_owner());
 			}
 
 			pool = &cmd_pool;
@@ -1080,7 +1128,9 @@ private:
 
 			if (m_submit_fence)
 			{
-				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+				//vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+				delete m_submit_fence;
+				m_submit_fence = nullptr;
 			}
 		}
 
@@ -1116,7 +1166,8 @@ private:
 				wait_for_fence(m_submit_fence);
 				is_pending = false;
 
-				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				//CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				reset_fence(m_submit_fence);
 				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
 			}
 
@@ -1146,7 +1197,7 @@ private:
 			is_open = false;
 		}
 
-		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, fence* pfence, VkPipelineStageFlags pipeline_stage_flags)
 		{
 			if (is_open)
 			{
@@ -1157,10 +1208,10 @@ private:
 			// Check for hanging queries to avoid driver hang
 			verify("close and submit of commandbuffer with a hanging query!" HERE), (flags & cb_has_open_query) == 0;
 
-			if (!fence)
+			if (!pfence)
 			{
-				fence = m_submit_fence;
-				is_pending = (fence != VK_NULL_HANDLE);
+				pfence = m_submit_fence;
+				is_pending = bool(pfence);
 			}
 
 			VkSubmitInfo infos = {};
@@ -1181,10 +1232,7 @@ private:
 				infos.pSignalSemaphores = &signal_semaphore;
 			}
 
-			acquire_global_submit_lock();
-			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
-			release_global_submit_lock();
-
+			queue_submit(queue, &infos, pfence);
 			clear_flags();
 		}
 	};

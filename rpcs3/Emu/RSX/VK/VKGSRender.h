@@ -67,7 +67,7 @@ enum
 
 struct command_buffer_chunk: public vk::command_buffer
 {
-	VkFence submit_fence = VK_NULL_HANDLE;
+	vk::fence* submit_fence = nullptr;
 	VkDevice m_device = VK_NULL_HANDLE;
 
 	std::atomic_bool pending = { false };
@@ -79,18 +79,13 @@ struct command_buffer_chunk: public vk::command_buffer
 	void init_fence(VkDevice dev)
 	{
 		m_device = dev;
-
-		VkFenceCreateInfo info = {};
-		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		CHECK_RESULT(vkCreateFence(m_device, &info, nullptr, &submit_fence));
+		submit_fence = new vk::fence(dev);
 	}
 
 	void destroy()
 	{
 		vk::command_buffer::destroy();
-
-		if (submit_fence != VK_NULL_HANDLE)
-			vkDestroyFence(m_device, submit_fence, nullptr);
+		delete submit_fence;
 	}
 
 	void tag()
@@ -116,13 +111,16 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (!pending)
 			return true;
 
-		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
+		if (!submit_fence->flushed)
+			return false;
+
+		if (vkGetFenceStatus(m_device, submit_fence->handle) == VK_SUCCESS)
 		{
 			lock.upgrade();
 
 			if (pending)
 			{
-				vk::reset_fence(&submit_fence);
+				vk::reset_fence(submit_fence);
 				vk::on_event_completed(eid_tag);
 
 				pending = false;
@@ -146,7 +144,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 		if (pending)
 		{
-			vk::reset_fence(&submit_fence);
+			vk::reset_fence(submit_fence);
 			vk::on_event_completed(eid_tag);
 
 			pending = false;
@@ -154,6 +152,11 @@ struct command_buffer_chunk: public vk::command_buffer
 		}
 
 		return ret;
+	}
+
+	void flush() const
+	{
+		submit_fence->wait_flush();
 	}
 };
 
@@ -430,7 +433,7 @@ private:
 
 	void open_command_buffer();
 	void close_and_submit_command_buffer(
-		VkFence fence = VK_NULL_HANDLE,
+		vk::fence* fence = nullptr,
 		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
 		VkSemaphore signal_semaphore = VK_NULL_HANDLE,
 		VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
@@ -485,6 +488,8 @@ protected:
 	void on_init_thread() override;
 	void on_exit() override;
 	void flip(const rsx::display_flip_info_t& info) override;
+
+	void renderctl(u32 request_code, void* args) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;

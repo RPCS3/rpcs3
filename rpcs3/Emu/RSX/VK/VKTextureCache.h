@@ -1336,15 +1336,10 @@ namespace vk
 			if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
 			{
 				// Primary access command queue, must restart it after
-				VkFence submit_fence;
-				VkFenceCreateInfo info{};
-				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				vkCreateFence(*m_device, &info, nullptr, &submit_fence);
+				vk::fence submit_fence(*m_device);
+				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, &submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 
-				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-
-				vk::wait_for_fence(submit_fence, GENERAL_WAIT_TIMEOUT);
-				vkDestroyFence(*m_device, submit_fence, nullptr);
+				vk::wait_for_fence(&submit_fence, GENERAL_WAIT_TIMEOUT);
 
 				CHECK_RESULT(vkResetCommandBuffer(cmd, 0));
 				cmd.begin();

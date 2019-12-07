@@ -9,6 +9,7 @@
 #include "VKCommonDecompiler.h"
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
+#include "VKCommandStream.h"
 
 namespace
 {
@@ -2157,23 +2158,24 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 	}
 	else
 	{
-		// Mark this queue as pending
+		// Mark this queue as pending and proceed
 		m_current_command_buffer->pending = true;
-
-		// Grab next cb in line and make it usable
-		m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
-		m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
-
-		if (!m_current_command_buffer->poke())
-		{
-			LOG_ERROR(RSX, "CB chain has run out of free entries!");
-		}
-
-		m_current_command_buffer->reset();
-
-		// Just in case a queued frame holds a ref to this cb, drain the present queue
-		check_present_status();
 	}
+
+	// Grab next cb in line and make it usable
+	// NOTE: Even in the case of a hard sync, this is required to free any waiters on the CB (ZCULL)
+	m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
+	m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
+
+	if (!m_current_command_buffer->poke())
+	{
+		LOG_ERROR(RSX, "CB chain has run out of free entries!");
+	}
+
+	m_current_command_buffer->reset();
+
+	// Just in case a queued frame holds a ref to this cb, drain the present queue
+	check_present_status();
 
 	if (m_occlusion_query_active)
 	{
@@ -2277,6 +2279,9 @@ void VKGSRender::advance_queued_frames()
 void VKGSRender::present(frame_context_t *ctx)
 {
 	verify(HERE), ctx->present_image != UINT32_MAX;
+
+	// Partial CS flush
+	ctx->swap_command_buffer->flush();
 
 	if (!swapchain_unavailable)
 	{
@@ -2824,11 +2829,9 @@ void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
 	prepare_rtts(context);
 }
 
-void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
+void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
 {
-	// Wait before sync block below
-	rsx::g_dma_manager.sync();
-
+	// NOTE: There is no need to wait for dma sync. When MTRSX is enabled, the commands are submitted in order anyway due to CSMT
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
 		if (m_attrib_ring_info.dirty() ||
@@ -2881,7 +2884,7 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 	m_current_command_buffer->tag();
 
 	m_current_command_buffer->submit(m_swapchain->get_graphics_queue(),
-		wait_semaphore, signal_semaphore, fence, pipeline_stage_flags);
+		wait_semaphore, signal_semaphore, pFence, pipeline_stage_flags);
 }
 
 void VKGSRender::open_command_buffer()
@@ -3155,16 +3158,11 @@ void VKGSRender::reinitialize_swapchain()
 	}
 
 	//Will have to block until rendering is completed
-	VkFence resize_fence = VK_NULL_HANDLE;
-	VkFenceCreateInfo infos = {};
-	infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-	vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
+	vk::fence resize_fence(*m_device);
 
 	//Flush the command buffer
-	close_and_submit_command_buffer(resize_fence);
-	vk::wait_for_fence(resize_fence);
-	vkDestroyFence((*m_device), resize_fence, nullptr);
+	close_and_submit_command_buffer(&resize_fence);
+	vk::wait_for_fence(&resize_fence);
 
 	m_current_command_buffer->reset();
 	open_command_buffer();
@@ -3581,6 +3579,22 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	rsx::thread::flip(info);
 }
 
+void VKGSRender::renderctl(u32 request_code, void* args)
+{
+	switch (request_code)
+	{
+	case vk::rctrl_queue_submit:
+	{
+		auto packet = reinterpret_cast<vk::submit_packet*>(args);
+		vk::queue_submit(packet->queue, &packet->submit_info, packet->pfence, VK_TRUE);
+		free(packet);
+		break;
+	}
+	default:
+		fmt::throw_exception("Unhandled request code 0x%x" HERE, request_code);
+	}
+}
+
 bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
 	if (swapchain_unavailable)
@@ -3674,6 +3688,8 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 			LOG_ERROR(RSX, "[Performance warning] Unexpected ZCULL read caused a hard sync");
 			busy_wait();
 		}
+
+		data.command_buffer_to_wait->wait();
 
 		// Gather data
 		for (const auto occlusion_id : data.indices)

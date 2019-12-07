@@ -753,6 +753,9 @@ namespace rsx
 		virtual void on_invalidate_memory_range(const address_range & /*range*/, rsx::invalidation_cause) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
+		// control
+		virtual void renderctl(u32 request_code, void* args) {}
+
 		// zcull
 		void notify_zcull_info_changed();
 		void clear_zcull_stats(u32 type);
