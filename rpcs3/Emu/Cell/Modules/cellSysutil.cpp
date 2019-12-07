@@ -159,7 +159,7 @@ s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen)
 		return -1;
 	}
 
-	for (u32 index = 0;; cur = src[++index])
+	for (s32 index = 0;; cur = src[++index])
 	{
 		if (cur == '\0' || index == maxlen)
 		{
