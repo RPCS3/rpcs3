@@ -1138,6 +1138,11 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+	}
+
 	return CELL_OK;
 }
 
