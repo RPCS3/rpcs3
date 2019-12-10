@@ -643,6 +643,7 @@ VKGSRender::~VKGSRender()
 
 	//Queries
 	m_occlusion_query_pool.destroy();
+	m_cond_render_buffer.reset();
 
 	//Command buffer
 	for (auto &cb : m_primary_cb_list)
@@ -1151,6 +1152,18 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 		update_draw_state();
 		begin_render_pass();
+
+		if (cond_render_ctrl.hw_cond_active)
+		{
+			// It is inconvenient that conditional rendering breaks other things like compute dispatch
+			// TODO: If this is heavy, add refactor the resources into global and add checks around compute dispatch
+			VkConditionalRenderingBeginInfoEXT info{};
+			info.sType = VK_STRUCTURE_TYPE_CONDITIONAL_RENDERING_BEGIN_INFO_EXT;
+			info.buffer = m_cond_render_buffer->value;
+
+			m_device->cmdBeginConditionalRenderingEXT(*m_current_command_buffer, &info);
+			m_current_command_buffer->flags |= vk::command_buffer::cb_has_conditional_render;
+		}
 	}
 
 	// Bind the new set of descriptors for use with this draw call
@@ -1786,6 +1799,12 @@ void VKGSRender::end()
 		emit_geometry(sub_index++);
 	}
 	while (rsx::method_registers.current_draw_clause.next());
+
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
+	{
+		m_device->cmdEndConditionalRenderingEXT(*m_current_command_buffer);
+		m_current_command_buffer->flags &= ~(vk::command_buffer::cb_has_conditional_render);
+	}
 
 	// Close any open passes unconditionally
 	close_render_pass();
@@ -2702,7 +2721,7 @@ void VKGSRender::load_program_env()
 
 		// Vertex state
 		const auto mem = m_vertex_env_ring_info.alloc<256>(256);
-		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 144));
+		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 148));
 
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
@@ -2865,6 +2884,14 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 		vk::clear_status_interrupt(vk::heap_dirty);
 	}
+
+#if 0 // Currently unreachable
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
+	{
+		verify(HERE), m_render_pass_open;
+		m_device->cmdEndConditionalRenderingEXT(*m_current_command_buffer);
+	}
+#endif
 
 	// End any active renderpasses; the caller should handle reopening
 	if (m_render_pass_open)
@@ -3689,7 +3716,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 			busy_wait();
 		}
 
-		data.command_buffer_to_wait->wait();
+		data.command_buffer_to_wait->flush();
 
 		// Gather data
 		for (const auto occlusion_id : data.indices)
@@ -3732,6 +3759,124 @@ void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
 		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
+}
+
+void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources)
+{
+	verify(HERE), !sources.empty();
+
+	// Flag check whether to calculate all entries or only one
+	bool partial_eval;
+
+	// Try and avoid regenerating the data if its a repeat/spam
+	// NOTE: The incoming list is reversed with the first entry being the newest
+	if (m_cond_render_sync_tag == sources.front()->sync_tag)
+	{
+		// Already synched, check subdraw which is possible if last sync happened while query was active
+		if (!m_active_query_info || m_active_query_info != sources.front())
+		{
+			rsx::thread::begin_conditional_rendering(sources);
+			return;
+		}
+
+		// Partial evaluation only
+		partial_eval = true;
+	}
+	else
+	{
+		m_cond_render_sync_tag = sources.front()->sync_tag;
+		partial_eval = false;
+	}
+
+	// Time to aggregate
+	if (!m_cond_render_buffer)
+	{
+		auto& memory_props = m_device->get_memory_mapping();
+		m_cond_render_buffer = std::make_unique<vk::buffer>(
+			*m_device, 4,
+			memory_props.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+	}
+
+	if (sources.size() == 1)
+	{
+		const auto query = sources.front();
+		const auto& query_info = m_occlusion_map[query->driver_handle];
+
+		if (query_info.indices.size() == 1)
+		{
+			const auto& index = query_info.indices.front();
+			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
+
+			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT);
+
+			rsx::thread::begin_conditional_rendering(sources);
+			return;
+		}
+	}
+
+	auto scratch = vk::get_scratch_buffer();
+	u32 dst_offset = 0;
+	size_t first = 0;
+	size_t last;
+
+	if (LIKELY(!partial_eval))
+	{
+		last = sources.size();
+	}
+	else
+	{
+		last = 1;
+	}
+
+	for (size_t i = first; i < last; ++i)
+	{
+		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
+		for (const auto& index : query_info.indices)
+		{
+			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
+			dst_offset += 4;
+		}
+	}
+
+	if (dst_offset)
+	{
+		// Fast path should have been caught above
+		verify(HERE), dst_offset > 4;
+
+		if (!partial_eval)
+		{
+			// Clear result to zero
+			vkCmdFillBuffer(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4, 0);
+
+			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
+		}
+
+		vk::insert_buffer_memory_barrier(*m_current_command_buffer, scratch->value, 0, dst_offset,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+		vk::get_compute_task<vk::cs_aggregator>()->run(*m_current_command_buffer, m_cond_render_buffer.get(), scratch, dst_offset / 4);
+
+		vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT,
+			VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT);
+	}
+	else
+	{
+		LOG_ERROR(RSX, "Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
+	}
+
+	rsx::thread::begin_conditional_rendering(sources);
+}
+
+void VKGSRender::end_conditional_rendering()
+{
+	thread::end_conditional_rendering();
 }
 
 bool VKGSRender::on_decompiler_task()

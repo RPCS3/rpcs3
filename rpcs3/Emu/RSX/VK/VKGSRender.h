@@ -321,6 +321,9 @@ private:
 	std::unique_ptr<vk::attachment_clear_pass> m_attachment_clear_pass;
 	std::unique_ptr<vk::video_out_calibration_pass> m_video_output_pass;
 
+	std::unique_ptr<vk::buffer> m_cond_render_buffer;
+	u64 m_cond_render_sync_tag = 0;
+
 	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
 	std::atomic_bool m_samplers_dirty = { true };
@@ -478,6 +481,10 @@ public:
 
 	// External callback in case we need to suddenly submit a commandlist unexpectedly, e.g in a violation handler
 	void emergency_query_cleanup(vk::command_buffer* commands);
+
+	// Conditional rendering
+	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
+	void end_conditional_rendering() override;
 
 protected:
 	void clear_surface(u32 mask) override;

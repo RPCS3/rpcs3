@@ -362,7 +362,7 @@ namespace rsx
 		{
 			bool found;
 			u32  raw_zpass_result;
-			occlusion_query_info* query;
+			std::vector<occlusion_query_info*> queries;
 		};
 
 		enum sync_control
@@ -443,7 +443,7 @@ namespace rsx
 			bool has_pending() const { return !m_pending_writes.empty(); }
 
 			// Search for query synchronized at address
-			query_search_result find_query(vm::addr_t sink_address);
+			query_search_result find_query(vm::addr_t sink_address, bool all);
 
 			// Copies queries in range rebased from source range to destination range
 			u32 copy_reports_to(u32 start, u32 range, u32 dest);
@@ -463,8 +463,13 @@ namespace rsx
 			bool eval_failed = false;
 			bool hw_cond_active = false;
 			bool reserved = false;
-			u32  eval_address = 0;
-			u64  sync_tag = 0;
+
+			std::vector<occlusion_query_info*> eval_sources;
+			u32 eval_sync_tag = 0;
+			u32 eval_address = 0;
+
+			// Resets common data
+			void reset();
 
 			// Returns true if rendering is disabled as per conditional render test
 			bool disable_rendering() const;
@@ -478,8 +483,8 @@ namespace rsx
 			// Disable conditional rendering
 			void disable_conditional_render(thread* pthr);
 
-			// Sets up the zcull sync tag
-			void set_sync_tag(u64 value);
+			// Sets data sources for predicate evaluation
+			void set_eval_sources(std::vector<occlusion_query_info*>& sources);
 
 			// Sets evaluation result. Result is true if conditional evaluation failed
 			void set_eval_result(thread* pthr, bool failed);
@@ -765,7 +770,7 @@ namespace rsx
 
 		void enable_conditional_rendering(vm::addr_t ref);
 		void disable_conditional_rendering();
-		virtual void begin_conditional_rendering();
+		virtual void begin_conditional_rendering(const std::vector<reports::occlusion_query_info*>& sources);
 		virtual void end_conditional_rendering();
 
 		// sync
