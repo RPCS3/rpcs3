@@ -545,6 +545,8 @@ namespace vk
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
 		bool stencil_export_support = false;
+		bool conditional_render_support = false;
+		bool host_query_reset_support = false;
 
 		friend class render_device;
 private:
@@ -594,6 +596,8 @@ private:
 			}
 
 			stencil_export_support = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
+			conditional_render_support = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+			host_query_reset_support = device_extensions.is_supported(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
 		}
 
 	public:
@@ -765,6 +769,12 @@ private:
 		VkDevice dev = VK_NULL_HANDLE;
 
 	public:
+		// Exported device endpoints
+		PFN_vkCmdBeginConditionalRenderingEXT cmdBeginConditionalRenderingEXT = nullptr;
+		PFN_vkCmdEndConditionalRenderingEXT cmdEndConditionalRenderingEXT = nullptr;
+		PFN_vkResetQueryPoolEXT resetQueryPoolEXT = nullptr;
+
+	public:
 		render_device() = default;
 		~render_device() = default;
 
@@ -795,6 +805,16 @@ private:
 			if (pgpu->shader_types_support.allow_float16)
 			{
 				requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
+			}
+
+			if (pgpu->conditional_render_support)
+			{
+				requested_extensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+			}
+
+			if (pgpu->host_query_reset_support)
+			{
+				requested_extensions.push_back(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
 			}
 
 			enabled_features.robustBufferAccess = VK_TRUE;
@@ -879,6 +899,18 @@ private:
 			}
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+
+			// Import optional function endpoints
+			if (pgpu->conditional_render_support)
+			{
+				cmdBeginConditionalRenderingEXT = (PFN_vkCmdBeginConditionalRenderingEXT)vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT");
+				cmdEndConditionalRenderingEXT = (PFN_vkCmdEndConditionalRenderingEXT)vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT");
+			}
+
+			if (pgpu->host_query_reset_support)
+			{
+				resetQueryPoolEXT = (PFN_vkResetQueryPoolEXT)vkGetDeviceProcAddr(dev, "vkResetQueryPoolEXT");
+			}
 
 			memory_map = vk::get_memory_mapping(pdev);
 			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
@@ -977,6 +1009,16 @@ private:
 		bool get_alpha_to_one_support() const
 		{
 			return pgpu->features.alphaToOne != VK_FALSE;
+		}
+
+		bool get_conditional_render_support() const
+		{
+			return pgpu->conditional_render_support;
+		}
+
+		bool get_host_query_reset_support() const
+		{
+			return pgpu->host_query_reset_support;
 		}
 
 		mem_allocator_base* get_allocator() const
@@ -1097,7 +1139,8 @@ private:
 			cb_has_blit_transfer = 2,
 			cb_has_dma_transfer = 4,
 			cb_has_open_query = 8,
-			cb_load_occluson_task = 16
+			cb_load_occluson_task = 16,
+			cb_has_conditional_render = 32
 		};
 		u32 flags = 0;
 
@@ -3043,6 +3086,11 @@ public:
 				}
 			}
 			while (true);
+		}
+
+		void get_query_result_indirect(vk::command_buffer &cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset)
+		{
+			vkCmdCopyQueryPoolResults(cmd, query_pool, index, 1, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
 		}
 
 		void reset_query(vk::command_buffer &cmd, u32 index)

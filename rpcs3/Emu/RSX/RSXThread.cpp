@@ -314,7 +314,7 @@ namespace rsx
 				verify(HERE), !cond_render_ctrl.hw_cond_active;
 
 				// Pending evaluation, use hardware test
-				begin_conditional_rendering();
+				begin_conditional_rendering(cond_render_ctrl.eval_sources);
 			}
 			else
 			{
@@ -2158,13 +2158,13 @@ namespace rsx
 	{
 		cond_render_ctrl.enable_conditional_render(this, ref);
 
-		auto result = zcull_ctrl->find_query(ref);
+		auto result = zcull_ctrl->find_query(ref, true);
 		if (result.found)
 		{
-			if (result.query)
+			if (!result.queries.empty())
 			{
-				cond_render_ctrl.set_sync_tag(result.query->sync_tag);
-				sync_hint(FIFO_hint::hint_conditional_render_eval, result.query);
+				cond_render_ctrl.set_eval_sources(result.queries);
+				sync_hint(FIFO_hint::hint_conditional_render_eval, cond_render_ctrl.eval_sources.front());
 			}
 			else
 			{
@@ -2183,9 +2183,10 @@ namespace rsx
 		cond_render_ctrl.disable_conditional_render(this);
 	}
 
-	void thread::begin_conditional_rendering()
+	void thread::begin_conditional_rendering(const std::vector<reports::occlusion_query_info*>& /*sources*/)
 	{
 		cond_render_ctrl.hw_cond_active = true;
+		cond_render_ctrl.eval_sources.clear();
 	}
 
 	void thread::end_conditional_rendering()
@@ -2709,6 +2710,12 @@ namespace rsx
 			}
 
 			ptimer->async_tasks_pending++;
+
+			if (m_statistics_map[m_statistics_tag_id] != 0)
+			{
+				// Flush guaranteed results; only one positive is needed
+				update(ptimer);
+			}
 		}
 
 		void ZCULL_control::allocate_new_query(::rsx::thread* ptimer)
@@ -2888,7 +2895,7 @@ namespace rsx
 						// No other queries in the chain, write result
 						write(&writer, ptimer->timestamp(), result);
 
-						if (query && ptimer->cond_render_ctrl.sync_tag == query->sync_tag)
+						if (query && query->sync_tag == ptimer->cond_render_ctrl.eval_sync_tag)
 						{
 							const bool eval_failed = (result == 0);
 							ptimer->cond_render_ctrl.set_eval_result(ptimer, eval_failed);
@@ -3083,7 +3090,7 @@ namespace rsx
 					// No other queries in the chain, write result
 					write(&writer, ptimer->timestamp(), result);
 
-					if (query && ptimer->cond_render_ctrl.sync_tag == query->sync_tag)
+					if (query && query->sync_tag == ptimer->cond_render_ctrl.eval_sync_tag)
 					{
 						const bool eval_failed = (result == 0);
 						ptimer->cond_render_ctrl.set_eval_result(ptimer, eval_failed);
@@ -3175,36 +3182,56 @@ namespace rsx
 			return result_zcull_intr;
 		}
 
-		query_search_result ZCULL_control::find_query(vm::addr_t sink_address)
+		query_search_result ZCULL_control::find_query(vm::addr_t sink_address, bool all)
 		{
+			query_search_result result{};
 			u32 stat_id = 0;
+
 			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
 				if (UNLIKELY(stat_id))
 				{
 					if (It->counter_tag != stat_id)
 					{
-						// Zcull stats were cleared between this query and the required one
-						return { true, 0, nullptr };
+						if (result.found)
+						{
+							// Some result was found, return it instead
+							break;
+						}
+
+						// Zcull stats were cleared between this query and the required stats, result can only be 0
+						return { true, 0, {} };
 					}
 
-					if (It->query)
+					if (It->query && It->query->num_draws)
 					{
-						return { true, 0, It->query };
+						result.found = true;
+						result.queries.push_back(It->query);
+
+						if (!all)
+						{
+							break;
+						}
 					}
 				}
 				else if (It->sink == sink_address)
 				{
-					if (It->query)
+					if (It->query && It->query->num_draws)
 					{
-						return { true, 0, It->query };
+						result.found = true;
+						result.queries.push_back(It->query);
+
+						if (!all)
+						{
+							break;
+						}
 					}
 
 					stat_id = It->counter_tag;
 				}
 			}
 
-			return {};
+			return result;
 		}
 
 		u32 ZCULL_control::copy_reports_to(u32 start, u32 range, u32 dest)
@@ -3228,6 +3255,15 @@ namespace rsx
 
 
 		// Conditional rendering helpers
+		void conditional_render_eval::reset()
+		{
+			eval_address = 0;
+			eval_sync_tag = 0;
+			eval_sources.clear();
+
+			eval_failed = false;
+		}
+
 		bool conditional_render_eval::disable_rendering() const
 		{
 			return (enabled && eval_failed);
@@ -3246,10 +3282,10 @@ namespace rsx
 				pthr->end_conditional_rendering();
 			}
 
+			reset();
+
 			enabled = true;
-			eval_failed = false;
 			eval_address = address;
-			sync_tag = 0;
 		}
 
 		void conditional_render_eval::disable_conditional_render(::rsx::thread* pthr)
@@ -3260,15 +3296,14 @@ namespace rsx
 				pthr->end_conditional_rendering();
 			}
 
+			reset();
 			enabled = false;
-			eval_failed = false;
-			eval_address = 0;
-			sync_tag = 0;
 		}
 
-		void conditional_render_eval::set_sync_tag(u64 value)
+		void conditional_render_eval::set_eval_sources(std::vector<occlusion_query_info*>& sources)
 		{
-			sync_tag = value;
+			eval_sources = std::move(sources);
+			eval_sync_tag = eval_sources.front()->sync_tag;
 		}
 
 		void conditional_render_eval::set_eval_result(::rsx::thread* pthr, bool failed)
@@ -3279,9 +3314,8 @@ namespace rsx
 				pthr->end_conditional_rendering();
 			}
 
+			reset();
 			eval_failed = failed;
-			eval_address = 0;
-			sync_tag = 0;
 		}
 
 		void conditional_render_eval::eval_result(::rsx::thread* pthr)
