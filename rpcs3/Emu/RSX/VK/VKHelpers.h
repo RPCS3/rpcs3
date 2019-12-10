@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <variant>
 #include <stack>
+#include <deque>
 
 #ifdef HAVE_X11
 #include <X11/Xutil.h>
@@ -2993,7 +2994,7 @@ public:
 		VkQueryPool query_pool = VK_NULL_HANDLE;
 		vk::render_device* owner = nullptr;
 
-		std::stack<u32> available_slots;
+		std::deque<u32> available_slots;
 		std::vector<bool> query_active_status;
 	public:
 
@@ -3031,7 +3032,7 @@ public:
 
 			for (u32 n = 0; n < count; ++n)
 			{
-				available_slots.push(n);
+				available_slots.push_back(n);
 			}
 		}
 
@@ -3102,7 +3103,7 @@ public:
 				vkCmdResetQueryPool(cmd, query_pool, index, 1);
 
 				query_active_status[index] = false;
-				available_slots.push(index);
+				available_slots.push_back(index);
 			}
 		}
 
@@ -3129,8 +3130,8 @@ public:
 				return ~0u;
 			}
 
-			u32 result = available_slots.top();
-			available_slots.pop();
+			u32 result = available_slots.front();
+			available_slots.pop_front();
 
 			verify(HERE), !query_active_status[result];
 			return result;

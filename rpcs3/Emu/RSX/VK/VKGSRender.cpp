@@ -3745,6 +3745,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 			busy_wait();
 		}
 
+		// Allocation stack is FIFO and very long so no need to actually wait for fence signal
 		data.command_buffer_to_wait->flush();
 
 		// Gather data
