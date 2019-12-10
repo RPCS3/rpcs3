@@ -192,7 +192,7 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 
 	for (Button& button : pad->m_buttons)
 	{
-		//here we check btns, and set pad accordingly,
+		// here we check btns, and set pad accordingly
 		if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
 		{
 			if (button.m_pressed) pad->m_digital_2 |= button.m_outKeyCode;
@@ -258,8 +258,8 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 
 /**
  * \brief Maps external Move controller data to DS3 input
- *	      Implementation detail: CellGemExtPortData's digital/analog fields map the same way as
- *	      libPad, so no translation is needed.
+ *        Implementation detail: CellGemExtPortData's digital/analog fields map the same way as
+ *        libPad, so no translation is needed.
  * \param port_no DS3 port number to use
  * \param ext External data to modify
  * \return true on success, false if port_no controller is invalid
@@ -334,32 +334,32 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 
 static bool mouse_pos_to_gem_image_state(const u32 mouse_no, vm::ptr<CellGemImageState>& gem_image_state)
 {
-		const auto handler = g_fxo->get<MouseHandlerBase>();
+	const auto handler = g_fxo->get<MouseHandlerBase>();
 
-		std::scoped_lock lock(handler->mutex);
+	std::scoped_lock lock(handler->mutex);
 
-		if (!gem_image_state || !handler || mouse_no >= handler->GetMice().size())
-		{
-			return false;
-		}
+	if (!gem_image_state || !handler || mouse_no >= handler->GetMice().size())
+	{
+		return false;
+	}
 
-		const auto& mouse = handler->GetMice().at(0);
+	const auto& mouse = handler->GetMice().at(0);
 
-		const auto renderer = static_cast<GSRender*>(rsx::get_current_renderer());
-		const auto width = renderer->get_frame()->client_width();
-		const auto hight = renderer->get_frame()->client_height();
-		const f32 scaling_width = width / 640.f;
-		const f32 scaling_hight = hight / 480.f;
+	const auto renderer = static_cast<GSRender*>(rsx::get_current_renderer());
+	const auto width = renderer->get_frame()->client_width();
+	const auto hight = renderer->get_frame()->client_height();
+	const f32 scaling_width = width / 640.f;
+	const f32 scaling_hight = hight / 480.f;
 
-		const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
-		const f32 y = static_cast<f32>(mouse.y_pos) / scaling_hight;
+	const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
+	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_hight;
 
-		gem_image_state->u = 133.f + (x / 1.50f);
-		gem_image_state->v = 160.f + (y / 1.67f);
-		gem_image_state->projectionx = x - 320.f;
-		gem_image_state->projectiony = 240.f - y;
+	gem_image_state->u = 133.f + (x / 1.50f);
+	gem_image_state->v = 160.f + (y / 1.67f);
+	gem_image_state->projectionx = x - 320.f;
+	gem_image_state->projectiony = 240.f - y;
 
-		return true;
+	return true;
 }
 
 static bool mouse_pos_to_gem_state(const u32 mouse_no, vm::ptr<CellGemState>& gem_state)
@@ -384,7 +384,7 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, vm::ptr<CellGemState>& ge
 	const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
 	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_hight;
 
-	gem_state->pos[0] = x; 
+	gem_state->pos[0] = x;
 	gem_state->pos[1] = -y;
 	gem_state->pos[2] = 1500.f;
 	gem_state->pos[3] = 0.f;
@@ -392,7 +392,7 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, vm::ptr<CellGemState>& ge
 	gem_state->quat[0] = 320.f - x;
 	gem_state->quat[1] = (mouse.y_pos / scaling_width) - 180.f;
 	gem_state->quat[2] = 1200.f;
-	
+
 	gem_state->handle_pos[0] = x;
 	gem_state->handle_pos[1] = y;
 	gem_state->handle_pos[2] = 1500.f;

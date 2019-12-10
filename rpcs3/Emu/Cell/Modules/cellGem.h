@@ -147,7 +147,7 @@ struct CellGemImageState
 	be_t<f32> projectionx;
 	be_t<f32> projectiony;
 	be_t<f32> distance;        // Move sphere distance from camera (probably)
-	u8 visible;	               // whether the sphere is visible in the current frame
+	u8 visible;                // whether the sphere is visible in the current frame
 	u8 r_valid;                // whether `r` contains valid size
 };
 
