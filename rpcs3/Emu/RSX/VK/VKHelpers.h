@@ -39,8 +39,9 @@
 #define FRAGMENT_STATE_BIND_SLOT 3
 #define FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 4
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 5
-#define TEXTURES_FIRST_BIND_SLOT 8
-#define VERTEX_TEXTURES_FIRST_BIND_SLOT 24 //8+16
+#define CONDITIONAL_RENDER_PREDICATE_SLOT 8
+#define TEXTURES_FIRST_BIND_SLOT 9
+#define VERTEX_TEXTURES_FIRST_BIND_SLOT (TEXTURES_FIRST_BIND_SLOT + 16)
 
 #define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
 
@@ -138,6 +139,7 @@ namespace vk
 	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
+	bool emulate_conditional_rendering();
 	VkFlags get_heap_compatible_buffer_types();
 	driver_vendor get_driver_vendor();
 	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id);
