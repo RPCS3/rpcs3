@@ -129,6 +129,10 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_MAGNETOMETER: return "ID_MAGNETOMETER";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME: return "ID_NICKNAME";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME: return "ID_CURRENT_USERNAME";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1008: return "ID_x1008";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1011: return "ID_x1011";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1012: return "ID_x1012";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1024: return "ID_x1024";
 		}
 
 		return unknown;
@@ -143,7 +147,7 @@ s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen)
 	if (g_ps3_process_info.sdk_ver > 0x36FFFF)
 	{
 		// Limit null terminator boundary to before buffer max size
-		lastpos = std::max(maxlen - 1, 0); 
+		lastpos = std::max(maxlen - 1, 0);
 	}
 	else
 	{
@@ -307,7 +311,7 @@ error_code cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
 	{
 		const fs::file username(vfs::get(fmt::format("/dev_hdd0/home/%08u/localusername", Emu.GetUsrId())));
-	
+
 		if (!username)
 		{
 			cellSysutil.error("cellSysutilGetSystemParamString(): Username for user %08u doesn't exist. Did you delete the username file?", Emu.GetUsrId());

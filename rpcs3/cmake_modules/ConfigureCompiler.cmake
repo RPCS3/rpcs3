@@ -39,8 +39,6 @@ else()
 	add_compile_options(-Wno-attributes)
 	add_compile_options(-Wno-enum-compare)
 	add_compile_options(-Wno-comment)
-	add_compile_options(-Wno-overloaded-virtual)
-	add_compile_options(-Wno-missing-braces)
 	add_compile_options(-Wno-sign-compare)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")

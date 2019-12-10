@@ -1323,8 +1323,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context)
 			{
 				const auto& spu = static_cast<spu_thread&>(*cpu);
 
-				const u64 type = spu.offset < RAW_SPU_BASE_ADDR ? 
-					SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD : 
+				const u64 type = spu.offset < RAW_SPU_BASE_ADDR ?
+					SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD :
 					SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU;
 
 				data2 = (type << 32) | spu.lv2_id;
@@ -1807,7 +1807,8 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 		timeout.it_interval.tv_sec = 0;
 		timeout.it_interval.tv_nsec = 0;
 		timerfd_settime(_this->m_timer, 0, &timeout, NULL);
-		read(_this->m_timer, &missed, sizeof(missed));
+		if (read(_this->m_timer, &missed, sizeof(missed)) != sizeof(missed))
+			LOG_ERROR(GENERAL, "timerfd: read() failed");
 		return;
 	}
 #endif
