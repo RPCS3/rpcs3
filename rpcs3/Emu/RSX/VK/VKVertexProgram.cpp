@@ -43,12 +43,26 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "	float z_far;\n";
 	OS << "};\n\n";
 
+	if (m_device_props.emulate_conditional_rendering)
+	{
+		OS << "layout(std430, set = 0, binding = 8) readonly buffer EXT_Conditional_Rendering\n";
+		OS << "{\n";
+		OS << "	uint conditional_rendering_predicate;\n";
+		OS << "};\n\n";
+	}
+
 	OS << "layout(push_constant) uniform VertexLayoutBuffer\n";
 	OS << "{\n";
 	OS << "	uint vertex_base_index;\n";
 	OS << "	uint vertex_index_offset;\n";
 	OS << "	uint draw_id;\n";
 	OS << "	uint layout_ptr_offset;\n";
+
+	if (m_device_props.emulate_conditional_rendering)
+	{
+		OS << "	uint conditional_rendering_enabled;\n";
+	}
+
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
@@ -238,9 +252,18 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "}\n\n";
 
 	OS << "void main ()\n";
-	OS << "{\n";
+	OS << "{\n\n";
 
-	OS << "\n" << "	vs_main();\n\n";
+	if (m_device_props.emulate_conditional_rendering)
+	{
+		OS << "	if (conditional_rendering_enabled != 0 && conditional_rendering_predicate == 0)\n";
+		OS << "	{\n";
+		OS << "		gl_Position = vec4(0.);\n";
+		OS << "		return;\n";
+		OS << "}\n\n";
+	}
+
+	OS << "	vs_main();\n\n";
 
 	for (auto &i : reg_table)
 	{
@@ -286,6 +309,8 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 void VKVertexDecompilerThread::Task()
 {
+	m_device_props.emulate_conditional_rendering = vk::emulate_conditional_rendering();
+
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);
 }

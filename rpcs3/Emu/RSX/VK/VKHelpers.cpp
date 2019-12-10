@@ -90,6 +90,7 @@ namespace vk
 	bool g_drv_no_primitive_restart_flag = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
+	bool g_drv_emulate_cond_render = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
@@ -425,6 +426,7 @@ namespace vk
 		g_drv_no_primitive_restart_flag = false;
 		g_drv_sanitize_fp_values = false;
 		g_drv_disable_fence_reset = false;
+		g_drv_emulate_cond_render = (g_cfg.video.relaxed_zcull_sync && !g_current_renderer->get_conditional_render_support());
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
 		g_heap_compatible_buffer_types = 0;
@@ -531,6 +533,11 @@ namespace vk
 	bool fence_reset_disabled()
 	{
 		return g_drv_disable_fence_reset;
+	}
+
+	bool emulate_conditional_rendering()
+	{
+		return g_drv_emulate_cond_render;
 	}
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)

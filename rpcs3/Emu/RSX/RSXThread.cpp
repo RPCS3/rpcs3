@@ -319,7 +319,7 @@ namespace rsx
 			else
 			{
 				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, 4, reports::sync_no_notify);
-				cond_render_ctrl.eval_result(this);
+				verify(HERE), !cond_render_ctrl.eval_pending();
 			}
 		}
 
@@ -2959,8 +2959,6 @@ namespace rsx
 			{
 				if (hint || ptimer->async_tasks_pending >= max_safe_queue_depth)
 				{
-					verify(HERE), !active || !hint;
-
 					// Prepare the whole queue for reading. This happens when zcull activity is disabled or queue is too long
 					for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
 					{

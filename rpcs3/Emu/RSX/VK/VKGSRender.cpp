@@ -286,6 +286,13 @@ namespace
 
 		idx++;
 
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		bindings[idx].binding = CONDITIONAL_RENDER_PREDICATE_SLOT;
+
+		idx++;
+
 		for (int i = 0; i < rsx::limits::fragment_textures_count; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -310,6 +317,12 @@ namespace
 		push_constants[0].offset = 0;
 		push_constants[0].size = 16;
 		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		if (vk::emulate_conditional_rendering())
+		{
+			// Conditional render toggle
+			push_constants[0].size = 20;
+		}
 
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -439,11 +452,13 @@ VKGSRender::VKGSRender() : GSRender()
 		m_occlusion_query_data[n].driver_handle = n;
 
 	//Generate frame contexts
-	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS };
-	VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS };
-	VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 20 * DESCRIPTOR_MAX_DRAW_CALLS };
+	std::vector<VkDescriptorPoolSize> sizes;
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 20 * DESCRIPTOR_MAX_DRAW_CALLS });
 
-	std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
+	// Conditional rendering predicate slot; refactor to allow skipping this when not needed
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 * DESCRIPTOR_MAX_DRAW_CALLS });
 
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -1153,7 +1168,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		update_draw_state();
 		begin_render_pass();
 
-		if (cond_render_ctrl.hw_cond_active)
+		if (cond_render_ctrl.hw_cond_active && m_device->get_conditional_render_support())
 		{
 			// It is inconvenient that conditional rendering breaks other things like compute dispatch
 			// TODO: If this is heavy, add refactor the resources into global and add checks around compute dispatch
@@ -2802,6 +2817,12 @@ void VKGSRender::load_program_env()
 		m_program->bind_uniform(m_fragment_texture_params_buffer_info, FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, m_current_frame->descriptor_set);
 	}
 
+	if (vk::emulate_conditional_rendering())
+	{
+		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer()->value;
+		m_program->bind_buffer({ predicate, 0, 4 }, CONDITIONAL_RENDER_PREDICATE_SLOT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
+	}
+
 	//Clear flags
 	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty | rsx::pipeline_state::fragment_constants_dirty | rsx::pipeline_state::fragment_texture_state_dirty);
 	m_graphics_state &= ~handled_flags;
@@ -2826,13 +2847,21 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		base_offset = 0;
 	}
 
-	u32 draw_info[4];
+	u8 data_size = 16;
+	u32 draw_info[5];
+
 	draw_info[0] = vertex_info.vertex_index_base;
 	draw_info[1] = vertex_info.vertex_index_offset;
 	draw_info[2] = id;
 	draw_info[3] = (id * 16) + (base_offset / 8);
 
-	vkCmdPushConstants(*m_current_command_buffer, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 16, draw_info);
+	if (vk::emulate_conditional_rendering())
+	{
+		draw_info[4] = cond_render_ctrl.hw_cond_active ? 1 : 0;
+		data_size = 20;
+	}
+
+	vkCmdPushConstants(*m_current_command_buffer, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, data_size, draw_info);
 
 	const size_t data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
@@ -3792,10 +3821,31 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	if (!m_cond_render_buffer)
 	{
 		auto& memory_props = m_device->get_memory_mapping();
+		auto usage_flags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+		if (m_device->get_conditional_render_support())
+		{
+			usage_flags |= VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT;
+		}
+
 		m_cond_render_buffer = std::make_unique<vk::buffer>(
 			*m_device, 4,
 			memory_props.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+			usage_flags, 0);
+	}
+
+	VkPipelineStageFlags dst_stage;
+	VkAccessFlags dst_access;
+
+	if (m_device->get_conditional_render_support())
+	{
+		dst_stage = VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
+		dst_access = VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
+	}
+	else
+	{
+		dst_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		dst_access = VK_ACCESS_SHADER_READ_BIT;
 	}
 
 	if (sources.size() == 1)
@@ -3809,8 +3859,8 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
 
 			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT);
+				VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
+				VK_ACCESS_TRANSFER_WRITE_BIT, dst_access);
 
 			rsx::thread::begin_conditional_rendering(sources);
 			return;
@@ -3863,8 +3913,8 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		vk::get_compute_task<vk::cs_aggregator>()->run(*m_current_command_buffer, m_cond_render_buffer.get(), scratch, dst_offset / 4);
 
 		vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
-			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT,
-			VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT);
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dst_stage,
+			VK_ACCESS_SHADER_WRITE_BIT, dst_access);
 	}
 	else
 	{
