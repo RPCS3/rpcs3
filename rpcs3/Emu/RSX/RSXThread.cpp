@@ -2196,7 +2196,18 @@ namespace rsx
 
 	void thread::sync()
 	{
-		zcull_ctrl->sync(this);
+		if (zcull_ctrl->has_pending())
+		{
+			if (g_cfg.video.relaxed_zcull_sync)
+			{
+				// Emit zcull sync hint and update; guarantees results to be written shortly after this event
+				zcull_ctrl->update(this, 0, true);
+			}
+			else
+			{
+				zcull_ctrl->sync(this);
+			}
+		}
 
 		// Fragment constants may have been updated
 		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
@@ -2433,15 +2444,11 @@ namespace rsx
 			Emu.Pause();
 		}
 
-		// Reset zcull ctrl
+		// Reset ZCULL ctrl
+		// NOTE: A semaphore release is part of RSX flip control and will handle ZCULL sync
+		// TODO: These routines belong in the state reset routines controlled by sys_rsx and cellGcmSetFlip
 		zcull_ctrl->set_active(this, false, true);
 		zcull_ctrl->clear(this);
-
-		if (zcull_ctrl->has_pending())
-		{
-			LOG_TRACE(RSX, "Dangling reports found, discarding...");
-			zcull_ctrl->sync(this);
-		}
 
 		// Save current state
 		m_queued_flip.stats = m_frame_stats;
