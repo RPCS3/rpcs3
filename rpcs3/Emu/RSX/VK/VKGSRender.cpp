@@ -1784,7 +1784,7 @@ void VKGSRender::end()
 
 		auto &data = m_occlusion_map[m_active_query_info->driver_handle];
 		data.indices.push_back(occlusion_id);
-		data.command_buffer_to_wait = m_current_command_buffer;
+		data.set_sync_command_buffer(m_current_command_buffer);
 
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_load_occluson_task;
 		m_current_command_buffer->flags |= (vk::command_buffer::cb_has_occlusion_task | vk::command_buffer::cb_has_open_query);
@@ -2232,7 +2232,9 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 	auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
 	auto& data = m_occlusion_map[occlusion_info->driver_handle];
 
-	if (data.command_buffer_to_wait != m_current_command_buffer || data.indices.empty())
+	// NOTE: Currently, a special condition exists where the indices can be empty even with active draw count.
+	// This is caused by async compiler and should be removed when ubershaders are added in
+	if (!data.is_current(m_current_command_buffer) || data.indices.empty())
 		return;
 
 	// Occlusion test result evaluation is coming up, avoid a hard sync
@@ -3707,7 +3709,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 	if (data.indices.empty())
 		return true;
 
-	if (data.command_buffer_to_wait == m_current_command_buffer)
+	if (data.is_current(m_current_command_buffer))
 		return false;
 
 	u32 oldest = data.indices.front();
@@ -3722,7 +3724,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 
 	if (query->num_draws)
 	{
-		if (data.command_buffer_to_wait == m_current_command_buffer)
+		if (data.is_current(m_current_command_buffer))
 		{
 			std::lock_guard lock(m_flush_queue_mutex);
 			flush_command_queue();
@@ -3736,8 +3738,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 			busy_wait();
 		}
 
-		// Allocation stack is FIFO and very long so no need to actually wait for fence signal
-		data.command_buffer_to_wait->flush();
+		data.sync();
 
 		// Gather data
 		for (const auto occlusion_id : data.indices)

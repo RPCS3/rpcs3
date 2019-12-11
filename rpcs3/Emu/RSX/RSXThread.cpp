@@ -2220,9 +2220,9 @@ namespace rsx
 		//verify (HERE), async_tasks_pending.load() == 0;
 	}
 
-	void thread::sync_hint(FIFO_hint /*hint*/, void* /*args*/)
+	void thread::sync_hint(FIFO_hint /*hint*/, void* args)
 	{
-		zcull_ctrl->on_sync_hint();
+		zcull_ctrl->on_sync_hint(args);
 	}
 
 	void thread::flush_fifo()
@@ -2639,7 +2639,7 @@ namespace rsx
 						end_occlusion_query(m_current_task);
 						m_current_task->active = false;
 						m_current_task->pending = true;
-						m_current_task->sync_tag = ++m_timer;
+						m_current_task->sync_tag = m_timer++;
 						m_current_task->timestamp = m_tsc;
 
 						m_pending_writes.push_back({});
@@ -2670,7 +2670,7 @@ namespace rsx
 				m_current_task->active = false;
 				m_current_task->pending = true;
 				m_current_task->timestamp = m_tsc;
-				m_current_task->sync_tag = ++m_timer;
+				m_current_task->sync_tag = m_timer++;
 				m_pending_writes.back().query = m_current_task;
 
 				allocate_new_query(ptimer);
@@ -2800,12 +2800,16 @@ namespace rsx
 		void ZCULL_control::on_draw()
 		{
 			if (m_current_task)
+			{
 				m_current_task->num_draws++;
+				m_current_task->sync_tag = m_timer++;
+			}
 		}
 
-		void ZCULL_control::on_sync_hint()
+		void ZCULL_control::on_sync_hint(void* args)
 		{
-			m_sync_tag = ++m_timer;
+			auto query = static_cast<occlusion_query_info*>(args);
+			m_sync_tag = std::max(m_sync_tag, query->sync_tag);
 		}
 
 		void ZCULL_control::write(vm::addr_t sink, u64 timestamp, u32 type, u32 value)
@@ -2974,7 +2978,7 @@ namespace rsx
 							if (It->query->num_draws && It->query->sync_tag > m_sync_tag)
 							{
 								ptimer->sync_hint(FIFO_hint::hint_zcull_sync, It->query);
-								verify(HERE), It->query->sync_tag < m_sync_tag;
+								verify(HERE), It->query->sync_tag <= m_sync_tag;
 							}
 
 							break;
@@ -2991,20 +2995,19 @@ namespace rsx
 					// Schedule ahead
 					m_next_tsc = m_tsc + min_zcull_tick_us;
 
-#if 0
 					// Schedule a queue flush if needed
-					if (front.query && front.query->num_draws && front.query->sync_tag > m_sync_tag)
+					if (!g_cfg.video.relaxed_zcull_sync &&
+						front.query && front.query->num_draws && front.query->sync_tag > m_sync_tag)
 					{
 						const auto elapsed = m_tsc - front.query->timestamp;
 						if (elapsed > max_zcull_delay_us)
 						{
-							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, reinterpret_cast<uintptr_t>(front.query));
-							verify(HERE), front.query->sync_tag < m_sync_tag;
+							ptimer->sync_hint(FIFO_hint::hint_zcull_sync, front.query);
+							verify(HERE), front.query->sync_tag <= m_sync_tag;
 						}
 
 						return;
 					}
-#endif
 				}
 			}
 
@@ -3176,7 +3179,7 @@ namespace rsx
 					if (UNLIKELY(query->sync_tag > m_sync_tag))
 					{
 						ptimer->sync_hint(FIFO_hint::hint_zcull_sync, query);
-						verify(HERE), m_sync_tag > query->sync_tag;
+						verify(HERE), m_sync_tag >= query->sync_tag;
 					}
 				}
 
