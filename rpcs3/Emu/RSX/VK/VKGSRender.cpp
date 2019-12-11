@@ -2224,52 +2224,43 @@ void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 	verify(HERE), args;
 	rsx::thread::sync_hint(hint, args);
 
+	// Occlusion queries not enabled, do nothing
+	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
+		return;
+
+	// Check if the required report is synced to this CB
+	auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
+	auto& data = m_occlusion_map[occlusion_info->driver_handle];
+
+	if (data.command_buffer_to_wait != m_current_command_buffer || data.indices.empty())
+		return;
+
 	// Occlusion test result evaluation is coming up, avoid a hard sync
 	switch (hint)
 	{
 	case rsx::FIFO_hint::hint_conditional_render_eval:
 	{
-		// Occlusion queries not enabled, do nothing
-		if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
-			return;
-
 		// If a flush request is already enqueued, do nothing
 		if (m_flush_requests.pending())
 			return;
 
-		// Check if the required report is synced to this CB
-		auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
-		auto& data = m_occlusion_map[occlusion_info->driver_handle];
-
-		if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
-		{
-			// Confirmed hard sync coming up, post a sync request
-			m_flush_requests.post(false);
-			m_flush_requests.remove_one();
-		}
-
+		// Schedule a sync on the next loop iteration
+		m_flush_requests.post(false);
+		m_flush_requests.remove_one();
 		break;
 	}
 	case rsx::FIFO_hint::hint_zcull_sync:
 	{
-		if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
-			return;
+		// Unavoidable hard sync coming up, flush immediately
+		// This heavyweight hint should be used with caution
+		std::lock_guard lock(m_flush_queue_mutex);
+		flush_command_queue();
 
-		auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
-		auto& data = m_occlusion_map[occlusion_info->driver_handle];
-
-		if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
+		if (m_flush_requests.pending())
 		{
-			std::lock_guard lock(m_flush_queue_mutex);
-			flush_command_queue();
-
-			if (m_flush_requests.pending())
-			{
-				// Clear without wait
-				m_flush_requests.clear_pending_flag();
-			}
+			// Clear without wait
+			m_flush_requests.clear_pending_flag();
 		}
-
 		break;
 	}
 	}

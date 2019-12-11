@@ -2991,11 +2991,62 @@ public:
 
 	class occlusion_query_pool
 	{
+		struct query_slot_info
+		{
+			bool any_passed;
+			bool active;
+			bool ready;
+		};
+
 		VkQueryPool query_pool = VK_NULL_HANDLE;
 		vk::render_device* owner = nullptr;
 
 		std::deque<u32> available_slots;
-		std::vector<bool> query_active_status;
+		std::vector<query_slot_info> query_slot_status;
+
+		inline bool poke_query(query_slot_info& query, u32 index)
+		{
+			// Query is ready if:
+			// 1. Any sample has been determined to have passed the Z test
+			// 2. The backend has fully processed the query and found no hits
+
+			u32 result[2] = { 0, 0 };
+			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
+			{
+			case VK_SUCCESS:
+			{
+				if (result[0])
+				{
+					query.any_passed = true;
+					query.ready = true;
+					return true;
+				}
+				else if (result[1])
+				{
+					query.any_passed = false;
+					query.ready = true;
+					return true;
+				}
+
+				return false;
+			}
+			case VK_NOT_READY:
+			{
+				if (result[0])
+				{
+					query.any_passed = true;
+					query.ready = true;
+					return true;
+				}
+
+				return false;
+			}
+			default:
+				die_with_error(HERE, error);
+				return false;
+			}
+		}
+
 	public:
 
 		void create(vk::render_device &dev, u32 num_entries)
@@ -3009,7 +3060,7 @@ public:
 			owner = &dev;
 
 			// From spec: "After query pool creation, each query must be reset before it is used."
-			query_active_status.resize(num_entries, true);
+			query_slot_status.resize(num_entries, {});
 		}
 
 		void destroy()
@@ -3025,10 +3076,11 @@ public:
 
 		void initialize(vk::command_buffer &cmd)
 		{
-			const u32 count = ::size32(query_active_status);
+			const u32 count = ::size32(query_slot_status);
 			vkCmdResetQueryPool(cmd, query_pool, 0, count);
 
-			std::fill(query_active_status.begin(), query_active_status.end(), false);
+			query_slot_info value{};
+			std::fill(query_slot_status.begin(), query_slot_status.end(), value);
 
 			for (u32 n = 0; n < count; ++n)
 			{
@@ -3038,14 +3090,15 @@ public:
 
 		void begin_query(vk::command_buffer &cmd, u32 index)
 		{
-			if (query_active_status[index])
+			if (query_slot_status[index].active)
 			{
 				//Synchronization must be done externally
 				vkCmdResetQueryPool(cmd, query_pool, index, 1);
+				query_slot_status[index] = {};
 			}
 
 			vkCmdBeginQuery(cmd, query_pool, index, 0);//VK_QUERY_CONTROL_PRECISE_BIT);
-			query_active_status[index] = true;
+			query_slot_status[index].active = true;
 		}
 
 		void end_query(vk::command_buffer &cmd, u32 index)
@@ -3055,40 +3108,20 @@ public:
 
 		bool check_query_status(u32 index)
 		{
-			u32 result[2] = {0, 0};
-			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
-			{
-			case VK_SUCCESS:
-				return (result[0] || result[1]);
-			case VK_NOT_READY:
-				return false;
-			default:
-				die_with_error(HERE, error);
-				return false;
-			}
+			return poke_query(query_slot_status[index], index);
 		}
 
 		u32 get_query_result(u32 index)
 		{
-			u32 result[2] = { 0, 0 };
+			// Check for cached result
+			auto& query_info = query_slot_status[index];
 
-			do
+			while (!query_info.ready)
 			{
-				switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
-				{
-				case VK_SUCCESS:
-					if (result[0]) return 1u;
-					if (result[1]) return 0u;  // Partial result can return SUCCESS when unavailable
-					continue;
-				case VK_NOT_READY:
-					if (result[0]) return 1u;  // Partial result can return NOT_READY when unavailable
-					continue;
-				default:
-					die_with_error(HERE, error);
-					return false;
-				}
+				poke_query(query_info, index);
 			}
-			while (true);
+
+			return query_info.any_passed ? 1 : 0;
 		}
 
 		void get_query_result_indirect(vk::command_buffer &cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset)
@@ -3098,11 +3131,11 @@ public:
 
 		void reset_query(vk::command_buffer &cmd, u32 index)
 		{
-			if (query_active_status[index])
+			if (query_slot_status[index].active)
 			{
 				vkCmdResetQueryPool(cmd, query_pool, index, 1);
 
-				query_active_status[index] = false;
+				query_slot_status[index] = {};
 				available_slots.push_back(index);
 			}
 		}
@@ -3116,9 +3149,9 @@ public:
 
 		void reset_all(vk::command_buffer &cmd)
 		{
-			for (u32 n = 0; n < query_active_status.size(); n++)
+			for (u32 n = 0; n < query_slot_status.size(); n++)
 			{
-				if (query_active_status[n])
+				if (query_slot_status[n].active)
 					reset_query(cmd, n);
 			}
 		}
@@ -3133,7 +3166,7 @@ public:
 			u32 result = available_slots.front();
 			available_slots.pop_front();
 
-			verify(HERE), !query_active_status[result];
+			verify(HERE), !query_slot_status[result].active;
 			return result;
 		}
 	};
