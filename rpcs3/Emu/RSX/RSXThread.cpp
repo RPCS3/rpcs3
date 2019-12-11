@@ -566,7 +566,7 @@ namespace rsx
 			}
 
 			// Note a possible rollback address
-			if (sync_point_request)
+			if (sync_point_request && !in_begin_end)
 			{
 				restore_point = ctrl->get;
 				saved_fifo_ret = fifo_ret_addr;
