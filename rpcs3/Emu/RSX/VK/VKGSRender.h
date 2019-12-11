@@ -72,6 +72,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 	std::atomic_bool pending = { false };
 	u64 eid_tag = 0;
+	u64 reset_id = 0;
 	shared_mutex guard_mutex;
 
 	command_buffer_chunk() = default;
@@ -101,6 +102,7 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (pending)
 			wait(FRAME_PRESENT_TIMEOUT);
 
+		++reset_id;
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
 	}
 
@@ -164,6 +166,27 @@ struct occlusion_data
 {
 	rsx::simple_array<u32> indices;
 	command_buffer_chunk* command_buffer_to_wait = nullptr;
+	u64 command_buffer_sync_id = 0;
+
+	bool is_current(command_buffer_chunk* cmd) const
+	{
+		return (command_buffer_to_wait == cmd && command_buffer_sync_id == cmd->reset_id);
+	}
+
+	void set_sync_command_buffer(command_buffer_chunk* cmd)
+	{
+		command_buffer_to_wait = cmd;
+		command_buffer_sync_id = cmd->reset_id;
+	}
+
+	void sync()
+	{
+		if (command_buffer_to_wait->reset_id == command_buffer_sync_id)
+		{
+			// Allocation stack is FIFO and very long so no need to actually wait for fence signal
+			command_buffer_to_wait->flush();
+		}
+	}
 };
 
 enum frame_context_state : u32

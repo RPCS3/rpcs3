@@ -375,9 +375,8 @@ namespace rsx
 		struct ZCULL_control
 		{
 			// Delay before a report update operation is forced to retire
-			const u32 max_zcull_delay_us = 4000;
-			const u32 min_zcull_delay_us = 50;
-			const u32 min_zcull_tick_us = 500;
+			const u32 max_zcull_delay_us = 300;
+			const u32 min_zcull_tick_us = 100;
 
 			// Number of occlusion query slots available. Real hardware actually has far fewer units before choking
 			const u32 occlusion_query_count = 1024;
@@ -437,7 +436,7 @@ namespace rsx
 			void on_draw();
 
 			// Sync hint notification
-			void on_sync_hint();
+			void on_sync_hint(void* args);
 
 			// Check for pending writes
 			bool has_pending() const { return !m_pending_writes.empty(); }
