@@ -70,7 +70,7 @@ namespace rsx
 
 		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
-			if (!rsx->in_begin_end) rsx->sync_point_request = true;
+			rsx->sync_point_request = true;
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
 			const auto& sema = vm::_ref<atomic_be_t<u32>>(addr);
@@ -126,7 +126,7 @@ namespace rsx
 			// By avoiding doing this on flip's semaphore release
 			// We allow last gcm's registers reset to occur in case of a crash
 			if (const bool is_flip_sema = (offset == 0x10 && ctxt == CELL_GCM_CONTEXT_DMA_SEMAPHORE_R);
-				!is_flip_sema && !rsx->in_begin_end)
+				!is_flip_sema)
 			{
 				rsx->sync_point_request = true;
 			}
