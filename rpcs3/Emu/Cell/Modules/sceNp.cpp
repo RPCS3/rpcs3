@@ -1026,7 +1026,7 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (strlen(description.get_ptr()) > SCE_NP_BASIC_DESCRIPTION_CHARACTER_MAX)
+	if (description && strlen(description.get_ptr()) > SCE_NP_BASIC_DESCRIPTION_CHARACTER_MAX)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
@@ -1034,7 +1034,7 @@ error_code sceNpBasicAddPlayersHistory(vm::cptr<SceNpId> npid, vm::ptr<char> des
 	return CELL_OK;
 }
 
-error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u64 count, vm::ptr<char> description, vm::ptr<u32> reqId)
+error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u32 count, vm::ptr<char> description, vm::ptr<u32> reqId)
 {
 	sceNp.todo("sceNpBasicAddPlayersHistoryAsync(npids=*0x%x, count=%d, description=*0x%x, reqId=*0x%x)", npids, count, description, reqId);
 
@@ -1043,12 +1043,30 @@ error_code sceNpBasicAddPlayersHistoryAsync(vm::cptr<SceNpId> npids, u64 count, 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npids || npids->handle.data[0] == '\0')
+	if (!count)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (count > SCE_NP_BASIC_PLAYER_HISTORY_MAX_PLAYERS || strlen(description.get_ptr()) > SCE_NP_BASIC_DESCRIPTION_CHARACTER_MAX)
+	if (count > SCE_NP_BASIC_PLAYER_HISTORY_MAX_PLAYERS)
+	{
+		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
+	}
+
+	if (!npids)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	for (u32 i = 0; i < count; i++)
+	{
+		if (npids[i].handle.data[0] == '\0')
+		{
+			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+		}
+	}
+
+	if (description && strlen(description.get_ptr()) > SCE_NP_BASIC_DESCRIPTION_CHARACTER_MAX)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
@@ -1118,6 +1136,11 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 	if (!npid || npid->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
 	}
 
 	return CELL_OK;
@@ -2570,7 +2593,7 @@ error_code sceNpManagerGetPsHandle()
 	return CELL_OK;
 }
 
-error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serviceId, vm::cptr<void> cookie, u64 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
+error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serviceId, vm::cptr<void> cookie, u32 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
 {
 	sceNp.todo("sceNpManagerRequestTicket(npId=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)",
 		npId, serviceId, cookie, cookieSize, entitlementId, consumedCount);
@@ -2599,7 +2622,7 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 }
 
 error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTicketVersion> version, vm::cptr<char> serviceId,
-	vm::cptr<void> cookie, u64 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
+	vm::cptr<void> cookie, u32 cookieSize, vm::cptr<char> entitlementId, u32 consumedCount)
 {
 	sceNp.todo("sceNpManagerRequestTicket2(npId=*0x%x, version=*0x%x, serviceId=%s, cookie=*0x%x, cookieSize=%d, entitlementId=%s, consumedCount=%d)",
 		npId, version, serviceId, cookie, cookieSize, entitlementId, consumedCount);
@@ -2627,7 +2650,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u64> bufferSize)
+error_code sceNpManagerGetTicket(vm::ptr<void> buffer, vm::ptr<u32> bufferSize)
 {
 	sceNp.todo("sceNpManagerGetTicket(buffer=*0x%x, bufferSize=*0x%x)", buffer, bufferSize);
 
@@ -2662,7 +2685,7 @@ error_code sceNpManagerGetTicketParam(s32 paramId, vm::ptr<SceNpTicketParam> par
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdList, u64 entIdListNum)
+error_code sceNpManagerGetEntitlementIdList(vm::ptr<SceNpEntitlementId> entIdList, u32 entIdListNum)
 {
 	sceNp.todo("sceNpManagerGetEntitlementIdList(entIdList=*0x%x, entIdListNum=%d)", entIdList, entIdListNum);
 

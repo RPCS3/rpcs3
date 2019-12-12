@@ -566,7 +566,7 @@ namespace rsx
 			}
 
 			// Note a possible rollback address
-			if (sync_point_request)
+			if (sync_point_request && !in_begin_end)
 			{
 				restore_point = ctrl->get;
 				saved_fifo_ret = fifo_ret_addr;
@@ -2162,6 +2162,12 @@ namespace rsx
 		fifo_ret_addr = saved_fifo_ret;
 		std::this_thread::sleep_for(1ms);
 		invalid_command_interrupt_raised = false;
+
+		if (std::exchange(in_begin_end, false) && !rsx::method_registers.current_draw_clause.empty())
+		{
+			execute_nop_draw();
+			rsx::thread::end();
+		}
 	}
 
 	u32 thread::get_fifo_cmd()

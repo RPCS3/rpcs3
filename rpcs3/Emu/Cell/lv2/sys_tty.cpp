@@ -22,7 +22,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 		return CELL_EIO;
 	}
 
-	if (ch > 15 || !buf)
+	if (ch > 15 || ch < 0 || !buf)
 	{
 		return CELL_EINVAL;
 	}
@@ -88,29 +88,61 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 
 error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 {
-	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
+	std::string msg;
 
-	if (ch > 15)
+	if (static_cast<s32>(len) > 0 && vm::check_addr(buf.addr(), len))
 	{
-		return CELL_EINVAL;
+		msg.resize(len);
+
+		if (!vm::try_access(buf.addr(), msg.data(), len, false))
+		{
+			msg.clear();
+		}
 	}
 
-	const u32 written_len = static_cast<s32>(len) > 0 ? len : 0;
+	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x (“%s”), len=%d, pwritelen=*0x%x)", ch, buf, msg, len, pwritelen);
 
-	if (written_len > 0 && g_tty)
+	// Hack: write to tty even on CEX mode, but disable all error checks
+	if (ch < 0 || ch > 15)
 	{
-		// Lock size by making it negative
-		g_tty_size -= (1ll << 48);
-		g_tty.write(buf.get_ptr(), len);
-		g_tty_size += (1ll << 48) + len;
+		if (g_cfg.core.debug_console_mode)
+		{
+			return CELL_EINVAL;
+		}
+		else
+		{
+			msg.clear();
+		}
 	}
 
-	if (!pwritelen)
+	if (g_cfg.core.debug_console_mode)
 	{
-		return CELL_EFAULT;
+		// Don't modify it in CEX mode
+		len = static_cast<s32>(len) > 0 ? len : 0;
 	}
 
-	*pwritelen = written_len;
+	if (static_cast<s32>(len) > 0)
+	{
+		if (!msg.empty())
+		{
+			if (g_tty)
+			{
+				// Lock size by making it negative
+				g_tty_size -= (1ll << 48);
+				g_tty.write(msg);
+				g_tty_size += (1ll << 48) + len;
+			}
+		}
+		else if (g_cfg.core.debug_console_mode)
+		{
+			return {CELL_EFAULT, buf.addr()};
+		}
+	}
+
+	if (!pwritelen.try_write(len))
+	{
+		return {CELL_EFAULT, pwritelen};
+	}
 
 	return CELL_OK;
 }

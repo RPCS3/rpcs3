@@ -4787,7 +4787,7 @@ bool ppu_interpreter::MTFSFI(ppu_thread& ppu, ppu_opcode_t op)
 		{
 			std::array<u32, 16> values{};
 
-			for (size_t i = 0; i < values.size(); i++)
+			for (u32 i = 0; i < values.size(); i++)
 			{
 				u32 value = 0, im = i;
 				value |= (im & 1) << (8 * 3); im >>= 1;

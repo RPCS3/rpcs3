@@ -315,7 +315,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 	if (!init)
 	{
-		return CELL_GAME_ERROR_BROKEN;
+		return CELL_GAME_ERROR_BUSY;
 	}
 
 	std::string dir;
@@ -373,16 +373,6 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 {
 	cellGame.warning("cellGamePatchCheck(size=*0x%x, reserved=*0x%x)", size, reserved);
 
-	if (size)
-	{
-		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
-
-		// TODO: Calculate data size for patch data, if necessary.
-		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-		size->sysSizeKB = 0;
-	}
-
 	if (Emu.GetCat() != "GD")
 	{
 		return CELL_GAME_ERROR_NOTPATCH;
@@ -396,7 +386,17 @@ error_code cellGamePatchCheck(vm::ptr<CellGameContentSize> size, vm::ptr<void> r
 
 	if (!init)
 	{
-		return CELL_GAME_ERROR_BROKEN;
+		return CELL_GAME_ERROR_BUSY;
+	}
+
+	if (size)
+	{
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+
+		// TODO: Calculate data size for patch data, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 0; // TODO
 	}
 
 	perm->dir = Emu.GetTitleID();
@@ -417,16 +417,6 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return {CELL_GAME_ERROR_PARAM, type};
 	}
 
-	if (size)
-	{
-		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
-		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
-
-		// TODO: Calculate data size for game data, if necessary.
-		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
-		size->sysSizeKB = 0;
-	}
-
 	std::string name;
 
 	if (type != CELL_GAME_GAMETYPE_DISC)
@@ -444,7 +434,17 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	if (!init)
 	{
-		return CELL_GAME_ERROR_BROKEN;
+		return CELL_GAME_ERROR_BUSY;
+	}
+
+	if (size)
+	{
+		// TODO: Use the free space of the computer's HDD where RPCS3 is being run.
+		size->hddFreeSizeKB = 40 * 1024 * 1024 - 1; // Read explanation in cellHddGameCheck
+
+		// TODO: Calculate data size for game data, if necessary.
+		size->sizeKB = CELL_GAME_SIZEKB_NOTCALC;
+		size->sysSizeKB = 0; // TODO
 	}
 
 	perm->dir = std::move(name);
@@ -552,7 +552,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	// TODO: calculate data size, if necessary
 	cbGet->sizeKB = CELL_GAMEDATA_SIZEKB_NOTCALC;
-	cbGet->sysSizeKB = 0;
+	cbGet->sysSizeKB = 0; // TODO
 
 	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
 
