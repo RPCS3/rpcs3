@@ -1735,58 +1735,9 @@ private:
 		VkDevice m_device;
 	};
 
-	class swapchain_image_WSI
+	struct swapchain_image_WSI
 	{
-		VkImageView view = nullptr;
-		VkImage image = nullptr;
-		VkFormat internal_format;
-		vk::render_device *owner = nullptr;
-
-	public:
-		swapchain_image_WSI() = default;
-
-		void create(vk::render_device &dev, VkImage &swap_image, VkFormat format)
-		{
-			VkImageViewCreateInfo color_image_view = {};
-
-			color_image_view.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			color_image_view.format = format;
-
-			color_image_view.components.r = VK_COMPONENT_SWIZZLE_R;
-			color_image_view.components.g = VK_COMPONENT_SWIZZLE_G;
-			color_image_view.components.b = VK_COMPONENT_SWIZZLE_B;
-			color_image_view.components.a = VK_COMPONENT_SWIZZLE_A;
-
-			color_image_view.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			color_image_view.subresourceRange.baseMipLevel = 0;
-			color_image_view.subresourceRange.levelCount = 1;
-			color_image_view.subresourceRange.baseArrayLayer = 0;
-			color_image_view.subresourceRange.layerCount = 1;
-
-			color_image_view.viewType = VK_IMAGE_VIEW_TYPE_2D;
-
-			color_image_view.image = swap_image;
-			vkCreateImageView(dev, &color_image_view, nullptr, &view);
-
-			image = swap_image;
-			internal_format = format;
-			owner = &dev;
-		}
-
-		void discard(vk::render_device &dev)
-		{
-			vkDestroyImageView(dev, view, nullptr);
-		}
-
-		operator VkImage&()
-		{
-			return image;
-		}
-
-		operator VkImageView&()
-		{
-			return view;
-		}
+		VkImage value = VK_NULL_HANDLE;
 	};
 
 	class swapchain_image_RPCS3 : public image
@@ -1878,7 +1829,7 @@ public:
 		virtual bool init() = 0;
 
 		virtual u32 get_swap_image_count() const = 0;
-		virtual VkImage& get_image(u32 index) = 0;
+		virtual VkImage get_image(u32 index) = 0;
 		virtual VkResult acquire_next_swapchain_image(VkSemaphore semaphore, u64 timeout, u32* result) = 0;
 		virtual void end_frame(command_buffer& cmd, u32 index) = 0;
 		virtual VkResult present(VkSemaphore semaphore, u32 index) = 0;
@@ -2210,7 +2161,7 @@ public:
 			swapchain_images[index].second->do_dma_transfer(cmd);
 		}
 
-		VkImage& get_image(u32 index) override
+		VkImage get_image(u32 index) override
 		{
 			return swapchain_images[index].second->value;
 		}
@@ -2261,7 +2212,7 @@ public:
 			swapchain_images.resize(nb_swap_images);
 			for (u32 i = 0; i < nb_swap_images; ++i)
 			{
-				swapchain_images[i].create(dev, vk_images[i], m_surface_format);
+				swapchain_images[i].value = vk_images[i];
 			}
 		}
 
@@ -2309,9 +2260,6 @@ public:
 			{
 				if (m_vk_swapchain)
 				{
-					for (auto &img : swapchain_images)
-						img.discard(dev);
-
 					destroySwapchainKHR(pdev, m_vk_swapchain, nullptr);
 				}
 
@@ -2444,9 +2392,6 @@ public:
 			{
 				if (!swapchain_images.empty())
 				{
-					for (auto &img : swapchain_images)
-						img.discard(dev);
-
 					swapchain_images.clear();
 				}
 
@@ -2485,9 +2430,9 @@ public:
 			return queuePresentKHR(vk_present_queue, &present);
 		}
 
-		VkImage& get_image(u32 index) override
+		VkImage get_image(u32 index) override
 		{
-			return static_cast<VkImage&>(swapchain_images[index]);
+			return swapchain_images[index].value;
 		}
 
 		VkImageLayout get_optimal_present_layout() override
