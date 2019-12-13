@@ -765,7 +765,7 @@ void _spurs::event_helper_entry(ppu_thread& ppu, vm::ptr<CellSpurs> spurs)
 
 s32 _spurs::create_event_helper(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 ppuPriority)
 {
-	if (s32 rc = _spurs::create_lv2_eq(ppu, spurs, spurs.ptr(&CellSpurs::eventQueue), spurs.ptr(&CellSpurs::spuPort), 0x2A, sys_event_queue_attribute_t{ SYS_SYNC_PRIORITY, SYS_PPU_QUEUE, "_spuPrv\0"_u64 }))
+	if (s32 rc = _spurs::create_lv2_eq(ppu, spurs, spurs.ptr(&CellSpurs::eventQueue), spurs.ptr(&CellSpurs::spuPort), 0x2A, sys_event_queue_attribute_t{SYS_SYNC_PRIORITY, SYS_PPU_QUEUE, {"_spuPrv\0"_u64}}))
 	{
 		return rc;
 	}
@@ -1142,14 +1142,14 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	const auto lwCond  = spurs.ptr(&CellSpurs::cond);
 
 	// Create a mutex to protect access to SPURS handler thread data
-	if (s32 rc = sys_lwmutex_create(ppu, lwMutex, vm::make_var(sys_lwmutex_attribute_t{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, "_spuPrv\0"_u64 })))
+	if (s32 rc = sys_lwmutex_create(ppu, lwMutex, vm::make_var(sys_lwmutex_attribute_t{SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, {"_spuPrv\0"_u64}})))
 	{
 		_spurs::finalize_spu(ppu, spurs);
 		return rollback(), rc;
 	}
 
 	// Create condition variable to signal the SPURS handler thread
-	if (s32 rc = sys_lwcond_create(ppu, lwCond, lwMutex, vm::make_var(sys_lwcond_attribute_t{ "_spuPrv\0"_u64 })))
+	if (s32 rc = sys_lwcond_create(ppu, lwCond, lwMutex, vm::make_var(sys_lwcond_attribute_t{"_spuPrv\0"_u64})))
 	{
 		sys_lwmutex_destroy(ppu, lwMutex);
 		_spurs::finalize_spu(ppu, spurs);
@@ -3046,7 +3046,7 @@ s32 cellSpursEventFlagAttachLv2EventQueue(ppu_thread& ppu, vm::ptr<CellSpursEven
 		return (rc & 0x0FFF0000) == 0x00410000 ? rc : (0x80410900 | (rc & 0xFF));
 	};
 
-	if (s32 rc = _spurs::create_lv2_eq(ppu, spurs, eventQueueId, port, 1, sys_event_queue_attribute_t{ SYS_SYNC_PRIORITY, SYS_PPU_QUEUE, "_spuEvF\0"_u64 }))
+	if (s32 rc = _spurs::create_lv2_eq(ppu, spurs, eventQueueId, port, 1, sys_event_queue_attribute_t{SYS_SYNC_PRIORITY, SYS_PPU_QUEUE, {"_spuEvF\0"_u64}}))
 	{
 		return failure(rc);
 	}

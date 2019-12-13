@@ -208,7 +208,7 @@ namespace vk
 			VkImageSubresourceRange range{ surface->aspect(), 0, 1, 0, 1 };
 			if (surface->aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
 			{
-				VkClearColorValue color = { 0.f, 0.f, 0.f, 1.f };
+				VkClearColorValue color = {{0.f, 0.f, 0.f, 1.f}};
 				vkCmdClearColorImage(cmd, surface->value, surface->current_layout, &color, 1, &range);
 			}
 			else

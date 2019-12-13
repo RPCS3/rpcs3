@@ -448,7 +448,7 @@ error_code cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buf
 	}
 
 	// clear sync var, write size, depth, buffer addr and sync
-	queue->ctrl.store({ 0, 0 });
+	queue->ctrl.store({});
 	queue->size = size;
 	queue->depth = depth;
 	queue->buffer = buffer;
@@ -722,8 +722,7 @@ error_code cellSyncQueueClear(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue)
 		}
 	}
 
-	queue->ctrl.exchange({ 0, 0 });
-
+	queue->ctrl.store({});
 	return CELL_OK;
 }
 
