@@ -33,7 +33,7 @@ namespace id_manager
 		static const u32 invalid = -+!base;
 
 		// Note: full 32 bits range cannot be used at current implementation
-		static_assert(count > 0 && step > 0 && u64{step} * count + base < u64{UINT32_MAX} + (base != 0 ? 1 : 0), "ID traits: invalid object range");
+		static_assert(count && step && u64{step} * (count - 1) + base < u64{UINT32_MAX} + (base != 0 ? 1 : 0), "ID traits: invalid object range");
 	};
 
 	// Correct usage testing
