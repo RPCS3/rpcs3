@@ -644,18 +644,29 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 		return error;
 	}
 
+	u64 space = 0;
+
 	if (!fs::is_dir(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name)))
 	{
 		TRPLoader trp(ctxt->trp_stream);
 
 		if (trp.LoadHeader())
 		{
-			*reqspace = trp.GetRequiredSpace();
-			return CELL_OK;
+			space = trp.GetRequiredSpace();
+		}
+		else
+		{
+			sceNpTrophy.error("sceNpTrophyGetRequiredDiskSpace(): Failed to load trophy header! (trp_name=%s)", ctxt->trp_name);
 		}
 	}
+	else
+	{
+		sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace(): Trophy config is already installed (trp_name=%s)", ctxt->trp_name);
+	}
+	
+	sceNpTrophy.warning("sceNpTrophyGetRequiredDiskSpace(): reqspace is 0x%llx", space);
 
-	*reqspace = 0;
+	*reqspace = space;
 	return CELL_OK;
 }
 
