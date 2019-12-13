@@ -982,10 +982,6 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			{
 				m_cpu = "skylake";
 			}
-			else
-			{
-				m_cpu = "skylake-avx512";
-			}
 		}
 
 		if (m_cpu == "znver1" && utils::has_clwb())
