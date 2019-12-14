@@ -144,7 +144,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 	if (use_high_dpi)
 	{
 		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to RoundPreferFloor.
-		auto rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::RoundPreferFloor;
+		auto rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::PassThrough;
 		auto rounding_str = std::to_string(static_cast<int>(rounding_val));
 		const auto i_rounding = find_arg(arg_rounding, argc, argv);
 		if (i_rounding)
