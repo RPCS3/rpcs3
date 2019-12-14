@@ -135,7 +135,14 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 #else
 		// Set QT_ENABLE_HIGHDPI_SCALING from environment. Defaults to cli argument, which defaults to 1.
 		use_high_dpi = "1" == qEnvironmentVariable("QT_ENABLE_HIGHDPI_SCALING", high_dpi_setting);
+#endif
+	}
 
+	// AA_EnableHighDpiScaling has to be set before creating a QApplication
+	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
+
+	if (use_high_dpi)
+	{
 		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to RoundPreferFloor.
 		auto rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::RoundPreferFloor;
 		auto rounding_str = std::to_string(static_cast<int>(rounding_val));
@@ -156,7 +163,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 					}
 					else
 					{
-						throw;
+						throw std::exception();
 					}
 				}
 				catch (const std::exception&)
@@ -176,7 +183,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 			}
 			else
 			{
-				throw;
+				throw std::exception();
 			}
 		}
 		catch (const std::exception&)
@@ -184,11 +191,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 			std::cout << "The value " << rounding_str << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
 		}
 		QApplication::setHighDpiScaleFactorRoundingPolicy(rounding_val);
-#endif
 	}
-
-	// AA_EnableHighDpiScaling has to be set before creating a QApplication
-	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 
 	return new gui_application(argc, argv);
 }
