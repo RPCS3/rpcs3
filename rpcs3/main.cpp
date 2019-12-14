@@ -141,6 +141,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 	// AA_EnableHighDpiScaling has to be set before creating a QApplication
 	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5,14,0))
 	if (use_high_dpi)
 	{
 		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to RoundPreferFloor.
@@ -192,6 +193,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 		}
 		QApplication::setHighDpiScaleFactorRoundingPolicy(rounding_val);
 	}
+#endif
 
 	return new gui_application(argc, argv);
 }
