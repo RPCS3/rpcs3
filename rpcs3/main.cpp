@@ -127,9 +127,14 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 		const std::string cmp_str = "0";
 		const auto i_hdpi_2 = (argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
 		const auto high_dpi_setting = (i_hdpi_2 && !strcmp(cmp_str.c_str(), argv[i_hdpi_2])) ? "0" : "1";
-		
+
+#if (QT_VERSION < QT_VERSION_CHECK(5,14,0))
 		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
 		use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", high_dpi_setting);
+#else
+		// Set QT_ENABLE_HIGHDPI_SCALING from environment. Defaults to cli argument, which defaults to 1.
+		use_high_dpi = "1" == qEnvironmentVariable("QT_ENABLE_HIGHDPI_SCALING", high_dpi_setting);
+#endif
 	}
 
 	// AA_EnableHighDpiScaling has to be set before creating a QApplication
