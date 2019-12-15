@@ -132,7 +132,7 @@ namespace gl
 			glBindVertexArray(old_vao);
 		}
 
-		virtual void run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false)
+		void run(const areau& region, GLuint target_texture, bool depth_target, bool use_blending = false)
 		{
 			if (!compiled)
 			{

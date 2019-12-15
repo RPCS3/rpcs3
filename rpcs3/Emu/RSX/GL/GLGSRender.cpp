@@ -1110,7 +1110,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if (arg & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
 	if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 
-	init_buffers((rsx::framebuffer_creation_context)ctx, true);
+	init_buffers(static_cast<rsx::framebuffer_creation_context>(ctx), true);
 
 	if (!framebuffer_status_valid) return;
 

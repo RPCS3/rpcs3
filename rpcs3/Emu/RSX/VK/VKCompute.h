@@ -199,13 +199,13 @@ namespace vk
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 		}
 
-		virtual void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
+		void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
 		{
 			load_program(cmd);
 			vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
 		}
 
-		virtual void run(VkCommandBuffer cmd, u32 num_invocations)
+		void run(VkCommandBuffer cmd, u32 num_invocations)
 		{
 			u32 invocations_x, invocations_y;
 			if (num_invocations > max_invocations_x)
