@@ -906,13 +906,13 @@ private:
 			// Import optional function endpoints
 			if (pgpu->conditional_render_support)
 			{
-				cmdBeginConditionalRenderingEXT = (PFN_vkCmdBeginConditionalRenderingEXT)vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT");
-				cmdEndConditionalRenderingEXT = (PFN_vkCmdEndConditionalRenderingEXT)vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT");
+				cmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
+				cmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
 			}
 
 			if (pgpu->host_query_reset_support)
 			{
-				resetQueryPoolEXT = (PFN_vkResetQueryPoolEXT)vkGetDeviceProcAddr(dev, "vkResetQueryPoolEXT");
+				resetQueryPoolEXT = reinterpret_cast<PFN_vkResetQueryPoolEXT>(vkGetDeviceProcAddr(dev, "vkResetQueryPoolEXT"));
 			}
 
 			memory_map = vk::get_memory_mapping(pdev);
