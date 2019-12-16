@@ -779,7 +779,7 @@ namespace vk
 			set_parameters(cmd);
 
 			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
-			const u32 linear_invocations = rsx::aligned_div(data_length, num_bytes_per_invocation);
+			const u32 linear_invocations = aligned_div(data_length, num_bytes_per_invocation);
 			compute_task::run(cmd, linear_invocations);
 		}
 	};

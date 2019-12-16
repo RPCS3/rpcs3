@@ -769,7 +769,9 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 
 	info->codecType = vdec->type;
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
-	info->size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
+	const int buffer_size = av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1);
+	verify(HERE), (buffer_size >= 0);
+	info->size = align<u32>(buffer_size, 128);
 	info->auNum = 1;
 	info->auPts[0].lower = static_cast<u32>(pts);
 	info->auPts[0].upper = static_cast<u32>(pts >> 32);
