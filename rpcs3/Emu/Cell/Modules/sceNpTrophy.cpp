@@ -924,19 +924,11 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	u32 unlocked = 0;
+	const u32 unlocked = ctxt->tropusr->GetUnlockedTrophiesCount()
 	const u32 trp_count = ctxt->tropusr->GetTrophiesCount();
 
 	verify(HERE), trp_count > 0 && trp_count <= 128;
 	
-	for (u32 i = 0; i < trp_count; i++)
-	{
-		if (ctxt->tropusr->GetTrophyUnlockState(i))
-		{
-			unlocked++;
-		}
-	}
-
 	*percentage = static_cast<s32>(std::lround((unlocked * 100.) / trp_count));
 
 	return CELL_OK;
