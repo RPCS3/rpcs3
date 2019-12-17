@@ -336,6 +336,8 @@ struct lv2_socket final
 #ifdef _WIN32
 	// Remember events (WSAEnumNetworkEvents)
 	u32 ev_set = 0;
+	// Tracks connect for WSAPoll workaround
+	bool is_connecting = false;
 #endif
 
 	// Native socket (must be non-blocking)
