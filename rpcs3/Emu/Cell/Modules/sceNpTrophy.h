@@ -122,7 +122,7 @@ struct SceNpTrophyData
 
 struct SceNpTrophyFlagArray
 {
-	u32 flag_bits[SCE_NP_TROPHY_FLAG_SETSIZE >> SCE_NP_TROPHY_FLAG_BITS_SHIFT];
+	be_t<u32> flag_bits[SCE_NP_TROPHY_FLAG_SETSIZE >> SCE_NP_TROPHY_FLAG_BITS_SHIFT];
 };
 
 enum
