@@ -30,7 +30,7 @@ struct trophy_context_t
 {
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
-	static const u32 id_count = 1023;
+	static const u32 id_count = 4;
 
 	std::string trp_name;
 	fs::file trp_stream;
@@ -41,7 +41,60 @@ struct trophy_handle_t
 {
 	static const u32 id_base = 1;
 	static const u32 id_step = 1;
-	static const u32 id_count = 1023;
+	static const u32 id_count = 4;
+
+	bool is_aborted = false;
+};
+
+struct sce_np_trophy_manager
+{
+	shared_mutex mtx;
+	std::atomic<bool> is_initialized = false;
+
+	// Get context + check handle given
+	static std::pair<trophy_context_t*, SceNpTrophyError> get_context_ex(u32 context, u32 handle)
+	{
+		decltype(get_context_ex(0, 0)) res{};
+		auto& [ctxt, error] = res;
+
+		if (context < trophy_context_t::id_base ||
+			context >= trophy_context_t::id_base + trophy_context_t::id_count)
+		{
+			// Id was not in range of valid ids
+			error = SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+			return res;
+		}
+
+		ctxt = idm::check<trophy_context_t>(context);
+
+		if (!ctxt)
+		{
+			error = SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
+			return res;
+		}
+
+		if (handle < trophy_handle_t::id_base ||
+			handle >= trophy_handle_t::id_base + trophy_handle_t::id_count)
+		{
+			error = SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+			return res;
+		}
+
+		const auto hndl = idm::check<trophy_handle_t>(handle);
+
+		if (!hndl)
+		{
+			error = SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+			return res;
+		}
+		else if (hndl->is_aborted)
+		{
+			error = SCE_NP_TROPHY_ERROR_ABORT;
+			return res;
+		}	
+
+		return res;
+	}
 };
 
 template<>
@@ -108,6 +161,8 @@ error_code sceNpTrophyInit(vm::ptr<void> pool, u32 poolSize, u32 containerId, u6
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
+	std::scoped_lock lock(trophy_manager->mtx);
+
 	if (trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED;
@@ -129,9 +184,40 @@ error_code sceNpTrophyTerm()
 
 	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
+	std::scoped_lock lock(trophy_manager->mtx);
+
 	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
+	}
+
+	u32 it = 0;
+	u32 ids[std::max(trophy_context_t::id_count, trophy_handle_t::id_count)];
+
+	const auto get_handles = [&](u32 id, trophy_handle_t&)
+	{
+		ids[it++] = id;
+	};
+
+	const auto get_contexts = [&](u32 id, trophy_context_t&)
+	{
+		ids[it++] = id;
+	};
+
+	// This functionality could be implemented in idm instead 
+	idm::select<trophy_handle_t>(get_handles);
+
+	while (it)
+	{
+		idm::remove<trophy_handle_t>(ids[--it]);
+	}
+
+	it = 0;
+	idm::select<trophy_context_t>(get_contexts);
+
+	while (it)
+	{
+		idm::remove<trophy_context_t>(ids[--it]);
 	}
 
 	trophy_manager->is_initialized = false;
@@ -143,7 +229,11 @@ error_code sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 {
 	sceNpTrophy.warning("sceNpTrophyCreateHandle(handle=*0x%x)", handle);
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::scoped_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
@@ -153,8 +243,14 @@ error_code sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	*handle = idm::make<trophy_handle_t>();
+	const u32 id = idm::make<trophy_handle_t>();
 
+	if (!id)
+	{
+		return SCE_NP_TROPHY_ERROR_EXCEEDS_MAX;
+	}
+
+	*handle = id;
 	return CELL_OK;
 }
 
@@ -162,20 +258,26 @@ error_code sceNpTrophyDestroyHandle(u32 handle)
 {
 	sceNpTrophy.warning("sceNpTrophyDestroyHandle(handle=0x%x)", handle);
 
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::scoped_lock lock(trophy_manager->mtx);
+
 	// TODO: find out if this is checked
-	//if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	//if (!trophy_manager->is_initialized)
 	//{
 	//	return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	//}
 
-	const auto hndl = idm::get<trophy_handle_t>(handle);
+	if (handle < trophy_handle_t::id_base ||
+		handle >= trophy_handle_t::id_base + trophy_handle_t::id_count)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
 
-	if (!hndl)
+	if (!idm::remove<trophy_handle_t>(handle))
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
-
-	idm::remove<trophy_handle_t>(handle);
 
 	return CELL_OK;
 }
@@ -190,19 +292,32 @@ error_code sceNpTrophyAbortHandle(u32 handle)
 {
 	sceNpTrophy.todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
 
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::scoped_lock lock(trophy_manager->mtx);
+
 	// TODO: find out if this is checked
-	//if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	//if (!trophy_manager->is_initialized)
 	//{
 	//	return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	//}
 
-	const auto hndl = idm::get<trophy_handle_t>(handle);
+	if (handle < trophy_handle_t::id_base ||
+		handle >= trophy_handle_t::id_base + trophy_handle_t::id_count)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto hndl = idm::check<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
+	// Once it is aborted it cannot be used anymore
+	// TODO: Implement function abortion process maybe? (depends if its actually make sense for some functions)
+	hndl->is_aborted = true;
 	return CELL_OK;
 }
 
@@ -228,7 +343,11 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::scoped_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
@@ -281,6 +400,11 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	// create trophy context
 	const auto ctxt = idm::make_ptr<trophy_context_t>();
 
+	if (!ctxt)
+	{
+		return SCE_NP_TROPHY_ERROR_EXCEEDS_MAX;
+	}
+
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = std::move(name);
 	ctxt->trp_stream = std::move(stream);
@@ -293,19 +417,25 @@ error_code sceNpTrophyDestroyContext(u32 context)
 {
 	sceNpTrophy.warning("sceNpTrophyDestroyContext(context=0x%x)", context);
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::scoped_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	if (context < trophy_context_t::id_base	||
+		context >= trophy_context_t::id_base + trophy_context_t::id_count)
+	{
+		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
+	}
 
-	if (!ctxt)
+	if (!idm::remove<trophy_context_t>(context))
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
-
-	idm::remove<trophy_context_t>(context);
 
 	return CELL_OK;
 }
@@ -314,23 +444,20 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 {
 	sceNpTrophy.error("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb=*0x%x, arg=*0x%x, options=0x%llx)", context, handle, statusCb, arg, options);
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	if (!statusCb)
@@ -473,23 +600,20 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	}
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	if (!fs::is_dir(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name)))
@@ -511,7 +635,7 @@ error_code sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 opti
 {
 	sceNpTrophy.todo("sceNpTrophySetSoundLevel(context=0x%x, handle=0x%x, level=%d, options=0x%llx)", context, handle, level, options);
 
-	if (level > 100 || level < 19) // is < 19 really checked here?
+	if (level > 100 || level < 20)
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
@@ -521,23 +645,20 @@ error_code sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 opti
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	}
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	return CELL_OK;
@@ -547,23 +668,20 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 {
 	sceNpTrophy.error("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details=*0x%x, data=*0x%x)", context, handle, details, data);
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	if (!details && !data)
@@ -656,23 +774,20 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 {
 	sceNpTrophy.error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	if (trophyId < 0 || trophyId >= static_cast<s32>(ctxt->tropusr->GetTrophiesCount()))
@@ -726,23 +841,20 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	const u32 count_ = ctxt->tropusr->GetTrophiesCount();
@@ -775,28 +887,25 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyInfo(context=0x%x, handle=0x%x, trophyId=%d, details=*0x%x, data=*0x%x)", context, handle, trophyId, details, data);
 
-	if (trophyId > 127) // max 128 trophies
+	if (trophyId < 0 || trophyId > 127) // max 128 trophies
 	{
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
 	}
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	if (!details && !data)
@@ -895,23 +1004,20 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	const u32 unlocked = ctxt->tropusr->GetUnlockedTrophiesCount();
@@ -929,23 +1035,20 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 {
 	sceNpTrophy.warning("sceNpTrophyGetGameIcon(context=0x%x, handle=0x%x, buffer=*0x%x, size=*0x%x)", context, handle, buffer, size);
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	if (!size)
@@ -982,23 +1085,20 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
 
-	if (!g_fxo->get<sce_np_trophy_manager>()->is_initialized)
+	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+
+	std::shared_lock lock(trophy_manager->mtx);
+
+	if (!trophy_manager->is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto ctxt = idm::get<trophy_context_t>(context);
+	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
 
-	if (!ctxt)
+	if (error)
 	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
-	}
-
-	const auto hndl = idm::get<trophy_handle_t>(handle);
-
-	if (!hndl)
-	{
-		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
+		return error;
 	}
 
 	if (!size)

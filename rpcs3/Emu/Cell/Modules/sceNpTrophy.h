@@ -154,10 +154,3 @@ public:
 
 	virtual s32 ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophyIconBfr) = 0;
 };
-
-// fxm objects
-
-struct sce_np_trophy_manager
-{
-	std::atomic<bool> is_initialized = false;
-};
