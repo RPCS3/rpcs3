@@ -924,7 +924,7 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	const u32 unlocked = ctxt->tropusr->GetUnlockedTrophiesCount()
+	const u32 unlocked = ctxt->tropusr->GetUnlockedTrophiesCount();
 	const u32 trp_count = ctxt->tropusr->GetTrophiesCount();
 
 	verify(HERE), trp_count > 0 && trp_count <= 128;
