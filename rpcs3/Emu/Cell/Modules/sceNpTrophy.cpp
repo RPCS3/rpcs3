@@ -18,6 +18,8 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
 
+#include <cmath>
+
 LOG_CHANNEL(sceNpTrophy);
 
 TrophyNotificationBase::~TrophyNotificationBase()
@@ -935,7 +937,7 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 		}
 	}
 
-	*percentage = static_cast<s32>(std::roundl((unlocked * 100.) / trp_count));
+	*percentage = static_cast<s32>(std::lround((unlocked * 100.) / trp_count));
 
 	return CELL_OK;
 }
