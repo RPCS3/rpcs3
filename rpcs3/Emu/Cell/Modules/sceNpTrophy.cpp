@@ -935,7 +935,7 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 		}
 	}
 
-	*percentage = static_cast<s32>((unlocked * 100.) / trp_count);
+	*percentage = static_cast<s32>(std::roundl((unlocked * 100.) / trp_count));
 
 	return CELL_OK;
 }
