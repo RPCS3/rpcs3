@@ -32,6 +32,7 @@ enum TrophyColumns
 	Type = 3,
 	IsUnlocked = 4,
 	Id = 5,
+	PlatinumLink = 6,
 
 	Count
 };

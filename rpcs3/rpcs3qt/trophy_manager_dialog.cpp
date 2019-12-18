@@ -107,7 +107,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_table->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_trophy_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	m_trophy_table->setColumnCount(TrophyColumns::Count);
-	m_trophy_table->setHorizontalHeaderLabels(QStringList{ tr("Icon"), tr("Name"), tr("Description"), tr("Type"), tr("Status"), tr("ID") });
+	m_trophy_table->setHorizontalHeaderLabels(QStringList{ tr("Icon"), tr("Name"), tr("Description"), tr("Type"), tr("Status"), tr("ID"), tr("Platinum Relevant") });
 	m_trophy_table->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_trophy_table->horizontalHeader()->setStretchLastSection(true);
 	m_trophy_table->verticalHeader()->setVisible(false);
@@ -824,6 +824,10 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		const s32 trophy_id = atoi(n->GetAttribute("id").c_str());
 		details.trophyId = trophy_id;
 
+		// Get platinum link id (we assume there only exists one platinum trophy per game for now)
+		const s32 platinum_link_id = atoi(n->GetAttribute("pid").c_str());
+		const QString platinum_relevant = platinum_link_id < 0 ? tr("No") : tr("Yes");
+
 		// Get trophy type
 		QString trophy_type = "";
 
@@ -868,6 +872,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		m_trophy_table->setItem(i, TrophyColumns::Type, type_item);
 		m_trophy_table->setItem(i, TrophyColumns::IsUnlocked, new custom_table_widget_item(unlockstate));
 		m_trophy_table->setItem(i, TrophyColumns::Id, new custom_table_widget_item(QString::number(trophy_id), Qt::UserRole, trophy_id));
+		m_trophy_table->setItem(i, TrophyColumns::PlatinumLink, new custom_table_widget_item(platinum_relevant, Qt::UserRole, platinum_link_id));
 
 		++i;
 	}
