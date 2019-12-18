@@ -1,27 +1,10 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "cellSysutil.h"
+#include "cellStorage.h"
 
 
 extern logs::channel cellSysutil;
-
-enum CellStorageError : u32
-{
-	CELL_STORAGEDATA_ERROR_BUSY         = 0x8002be01,
-	CELL_STORAGEDATA_ERROR_INTERNAL     = 0x8002be02,
-	CELL_STORAGEDATA_ERROR_PARAM        = 0x8002be03,
-	CELL_STORAGEDATA_ERROR_ACCESS_ERROR = 0x8002be04,
-	CELL_STORAGEDATA_ERROR_FAILURE      = 0x8002be05
-};
-
-struct CellStorageDataSetParam
-{
-	be_t<u32> fileSizeMax;
-	vm::bptr<char> title;
-	vm::bptr<void> reserved;
-};
-
-using CellStorageDataFinishCallback = void(s32 result, vm::ptr<void> userdata);
 
 template <>
 void fmt_class_string<CellStorageError>::format(std::string& out, u64 arg)
