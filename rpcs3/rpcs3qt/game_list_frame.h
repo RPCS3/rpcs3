@@ -245,7 +245,7 @@ private:
 	void SortGameList();
 
 	int PopulateGameList();
-	bool SearchMatchesApp(const std::string& name, const std::string& serial);
+	bool SearchMatchesApp(const QString& name, const QString& serial) const;
 
 	bool RemoveCustomConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
 	bool RemoveCustomPadConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
