@@ -1,51 +1,72 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellRemotePlay.h"
 
 LOG_CHANNEL(cellRemotePlay);
 
-s32 cellRemotePlayGetStatus()
+template <>
+void fmt_class_string<CellRemotePlayError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellRemotePlayError value)
+	{
+		switch (value)
+		{
+		STR_CASE(CELL_REMOTEPLAY_ERROR_INTERNAL);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellRemotePlayGetStatus()
 {
 	cellRemotePlay.todo("cellRemotePlayGetStatus()");
 	return CELL_OK;
 }
 
-s32 cellRemotePlaySetComparativeVolume()
+error_code cellRemotePlaySetComparativeVolume(f32 comparativeAudioVolume)
 {
-	cellRemotePlay.todo("cellRemotePlaySetComparativeVolume()");
+	cellRemotePlay.todo("cellRemotePlaySetComparativeVolume(comparativeAudioVolume=%f)", comparativeAudioVolume);
 	return CELL_OK;
 }
 
-s32 cellRemotePlayGetPeerInfo()
+error_code cellRemotePlayGetPeerInfo()
 {
 	cellRemotePlay.todo("cellRemotePlayGetPeerInfo()");
 	return CELL_OK;
 }
 
-s32 cellRemotePlayGetSharedMemory()
+error_code cellRemotePlayGetSharedMemory()
 {
 	cellRemotePlay.todo("cellRemotePlayGetSharedMemory()");
 	return CELL_OK;
 }
 
-s32 cellRemotePlayEncryptAllData()
+error_code cellRemotePlayEncryptAllData()
 {
 	cellRemotePlay.todo("cellRemotePlayEncryptAllData()");
 	return CELL_OK;
 }
 
-s32 cellRemotePlayStopPeerVideoOut()
+error_code cellRemotePlayStopPeerVideoOut()
 {
 	cellRemotePlay.todo("cellRemotePlayStopPeerVideoOut()");
 	return CELL_OK;
 }
 
-s32 cellRemotePlayGetComparativeVolume()
+error_code cellRemotePlayGetComparativeVolume(vm::ptr<f32> pComparativeAudioVolume)
 {
-	cellRemotePlay.todo("cellRemotePlayGetComparativeVolume()");
+	cellRemotePlay.todo("cellRemotePlayGetComparativeVolume(pComparativeAudioVolume=*0x%x)", pComparativeAudioVolume);
+
+	if (pComparativeAudioVolume)
+	{
+		*pComparativeAudioVolume = 1.f;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellRemotePlayBreak()
+error_code cellRemotePlayBreak()
 {
 	cellRemotePlay.todo("cellRemotePlayBreak()");
 	return CELL_OK;
