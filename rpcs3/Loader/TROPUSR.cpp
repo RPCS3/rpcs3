@@ -158,7 +158,8 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	{
 		if (n->GetName() == "trophy")
 		{
-			u32 trophy_id = std::atoi(n->GetAttribute("id").c_str());
+			const u32 trophy_id = std::atoi(n->GetAttribute("id").c_str());
+
 			u32 trophy_grade;
 			switch (n->GetAttribute("ttype")[0])
 			{
@@ -219,7 +220,7 @@ u32 TROPUSRLoader::GetTrophyUnlockState(u32 id)
 {
 	if (id >= m_table6.size())
 	{
-		LOG_WARNING(LOADER, "TROPUSRLoader::GetUnlockState: Invalid id=%d", id);
+		LOG_WARNING(LOADER, "TROPUSRLoader::GetTrophyUnlockState: Invalid id=%d", id);
 		return 0;
 	}
 
