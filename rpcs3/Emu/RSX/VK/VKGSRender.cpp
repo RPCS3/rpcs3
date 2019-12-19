@@ -2349,10 +2349,11 @@ void VKGSRender::queue_swap_request()
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
 	}
 
+	// Signal pending state as the command queue is now closed
+	m_current_frame->swap_command_buffer->pending = true;
+
 	// Set up a present request for this frame as well
 	present(m_current_frame);
-
-	m_current_frame->swap_command_buffer->pending = true;
 
 	// Grab next cb in line and make it usable
 	m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;

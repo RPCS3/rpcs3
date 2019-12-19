@@ -156,8 +156,13 @@ struct command_buffer_chunk: public vk::command_buffer
 		return ret;
 	}
 
-	void flush() const
+	void flush()
 	{
+		reader_lock lock(guard_mutex);
+
+		if (!pending)
+			return;
+
 		submit_fence->wait_flush();
 	}
 };
