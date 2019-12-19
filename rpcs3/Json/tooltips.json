@@ -1,5 +1,12 @@
 ﻿{
 	"advanced": {
+		"libraries": {
+			"manual": "Allows the user to manually choose the LLE libraries to load.\nIf unsure, don't use this option. Nothing will work if you use this.",
+			"both": "Load libsysmodule.sprx and chosen list of libraries. Option for backward compatibility.\nIf unsure, don't use this option.",
+			"liblv2both": "Loads liblv2.sprx and chosen list of libraries.\nIf unsure, don't use this option.",
+			"liblv2list": "Loads liblv2.sprx and nothing but selected libraries.\nDon't use this option.",
+			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
+		},
 		"debugConsoleMode": "Increases the amount of usable system memory to match a DECR console and more.\nCauses some software to behave differently than on retail hardware.",
 		"readColor": "Initializes render target memory using vm memory.",
 		"readDepth": "Initializes render target memory using vm memory.",
@@ -35,13 +42,6 @@
 			"fast": "This is slower than the SPU Recompiler but significantly faster than the precise interpreter.\nGames rarely need this however.",
 			"ASMJIT": "This is the fast option with very good compatibility.\nIf unsure, use this option.",
 			"LLVM": "This is the fastest option with very good compatibility.\nRecompiles the game's SPU LLVM cache before running which adds extra start-up time.\nIf you experience issues, use the ASMJIT Recompiler."
-		},
-		"libraries": {
-			"manual": "Allows the user to manually choose the LLE libraries to load.\nIf unsure, don't use this option. Nothing will work if you use this.",
-			"both": "Load libsysmodule.sprx and chosen list of libraries. Option for backward compatibility.\nIf unsure, don't use this option.",
-			"liblv2both": "Loads liblv2.sprx and chosen list of libraries.\nIf unsure, don't use this option.",
-			"liblv2list": "Loads liblv2.sprx and nothing but selected libraries.\nDon't use this option.",
-			"liblv2": "This closely emulates how games can load and unload system module files on a real PlayStation 3.\nSome games require this.\nThis is the preferred option."
 		},
 		"checkboxes": {
 			"accurateXFloat": "Fixes bugs in various games at the cost of performance.\nThis setting is only applied when SPU LLVM is active.",

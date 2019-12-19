@@ -101,6 +101,7 @@ static semaphore<> s_qt_mutex{};
 const char* arg_headless   = "headless";
 const char* arg_no_gui     = "no-gui";
 const char* arg_high_dpi   = "hidpi";
+const char* arg_rounding   = "dpi-rounding";
 const char* arg_styles     = "styles";
 const char* arg_style      = "style";
 const char* arg_stylesheet = "stylesheet";
@@ -127,13 +128,72 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 		const std::string cmp_str = "0";
 		const auto i_hdpi_2 = (argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
 		const auto high_dpi_setting = (i_hdpi_2 && !strcmp(cmp_str.c_str(), argv[i_hdpi_2])) ? "0" : "1";
-		
+
+#if (QT_VERSION < QT_VERSION_CHECK(5,14,0))
 		// Set QT_AUTO_SCREEN_SCALE_FACTOR from environment. Defaults to cli argument, which defaults to 1.
 		use_high_dpi = "1" == qEnvironmentVariable("QT_AUTO_SCREEN_SCALE_FACTOR", high_dpi_setting);
+#else
+		// Set QT_ENABLE_HIGHDPI_SCALING from environment. Defaults to cli argument, which defaults to 1.
+		use_high_dpi = "1" == qEnvironmentVariable("QT_ENABLE_HIGHDPI_SCALING", high_dpi_setting);
+#endif
 	}
 
 	// AA_EnableHighDpiScaling has to be set before creating a QApplication
 	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
+
+#if (QT_VERSION >= QT_VERSION_CHECK(5,14,0))
+	if (use_high_dpi)
+	{
+		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to RoundPreferFloor.
+		auto rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::PassThrough;
+		auto rounding_str = std::to_string(static_cast<int>(rounding_val));
+		const auto i_rounding = find_arg(arg_rounding, argc, argv);
+		if (i_rounding)
+		{
+			const auto i_rounding_2 = (argc > (i_rounding + 1)) ? (i_rounding + 1) : 0;
+			if (i_rounding_2)
+			{
+				const auto arg_val = argv[i_rounding_2];
+				try
+				{
+					const auto rounding_val_cli = std::stoi(arg_val);
+					if (rounding_val_cli >= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset) && rounding_val_cli <= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough))
+					{
+						rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(rounding_val_cli);
+						rounding_str = std::to_string(static_cast<int>(rounding_val));
+					}
+					else
+					{
+						throw std::exception();
+					}
+				}
+				catch (const std::exception&)
+				{
+					std::cout << "The value " << arg_val << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
+				}
+			}
+		}
+		try
+		{
+			rounding_str = qEnvironmentVariable("QT_SCALE_FACTOR_ROUNDING_POLICY", rounding_str.c_str()).toStdString();
+			const auto rounding_val_final = std::stoi(rounding_str);
+			if (rounding_val_final >= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset) && rounding_val_final <= static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough))
+			{
+				rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(rounding_val_final);
+				rounding_str = std::to_string(static_cast<int>(rounding_val));
+			}
+			else
+			{
+				throw std::exception();
+			}
+		}
+		catch (const std::exception&)
+		{
+			std::cout << "The value " << rounding_str << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
+		}
+		QApplication::setHighDpiScaleFactorRoundingPolicy(rounding_val);
+	}
+#endif
 
 	return new gui_application(argc, argv);
 }
@@ -175,6 +235,9 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
+#if (QT_VERSION >= QT_VERSION_CHECK(5,14,0))
+	parser.addOption(QCommandLineOption(arg_rounding, "Sets the Qt::HighDpiScaleFactorRoundingPolicy for values like 150% zoom.", "rounding", "4"));
+#endif
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));

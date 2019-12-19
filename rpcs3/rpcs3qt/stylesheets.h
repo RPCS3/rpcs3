@@ -44,13 +44,8 @@ namespace gui
 			"QTableView#game_grid::item:hover:selected { background-color: #007fff; color: #fff; }"
 
 			// table headers
-#if (QT_VERSION < QT_VERSION_CHECK(5,11,0))
-			"QHeaderView::section { padding: .5em; border: 0.063em solid #ffffff; }"
-			"QHeaderView::section:hover { background: #e3e3e3; padding: .5em; border: 0.063em solid #ffffff; }"
-#else
 			"QHeaderView::section { padding-left: .5em; padding-right: .5em; padding-top: .4em; padding-bottom: -.1em; border: 0.063em solid #ffffff; }"
 			"QHeaderView::section:hover { background: #e3e3e3; padding-left: .5em; padding-right: .5em; padding-top: .4em; padding-bottom: -.1em; border: 0.063em solid #ffffff; }"
-#endif
 
 			// dock widget
 			"QDockWidget{ background: transparent; color: black; }"

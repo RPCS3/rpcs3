@@ -18,6 +18,8 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
 
+#include <cmath>
+
 LOG_CHANNEL(sceNpTrophy);
 
 TrophyNotificationBase::~TrophyNotificationBase()
@@ -755,10 +757,13 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	u32 count_ = ctxt->tropusr->GetTrophiesCount();
+	const u32 count_ = ctxt->tropusr->GetTrophiesCount();
 	*count = count_;
 	if (count_ > 128)
 		sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
+
+	// Needs hw testing
+	*flags = {};
 
 	// Pack up to 128 bools in u32 flag_bits[4]
 	for (u32 id = 0; id < count_; id++)
@@ -922,16 +927,12 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
 
-	double accuratePercentage = 0;
-	for (int i = ctxt->tropusr->GetTrophiesCount() - 1; i >= 0; i--)
-	{
-		if (ctxt->tropusr->GetTrophyUnlockState(i))
-		{
-			accuratePercentage++;
-		}
-	}
+	const u32 unlocked = ctxt->tropusr->GetUnlockedTrophiesCount();
+	const u32 trp_count = ctxt->tropusr->GetTrophiesCount();
 
-	*percentage = static_cast<s32>(accuratePercentage / ctxt->tropusr->GetTrophiesCount());
+	verify(HERE), trp_count > 0 && trp_count <= 128;
+	
+	*percentage = static_cast<s32>(std::lround((unlocked * 100.) / trp_count));
 
 	return CELL_OK;
 }
