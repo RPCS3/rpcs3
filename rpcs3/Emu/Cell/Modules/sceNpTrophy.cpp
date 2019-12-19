@@ -378,7 +378,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		}
 	}
 
-	std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name;
+	const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name;
 	if (!trp.Install(trophyPath))
 	{
 		sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to install trophy context '%s' (%s)", trophyPath, fs::g_tls_error);
@@ -386,8 +386,8 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	}
 
 	TROPUSRLoader* tropusr = new TROPUSRLoader();
-	std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
-	std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
+	const std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
+	const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
 	tropusr->Load(trophyUsrPath, trophyConfPath);
 	ctxt->tropusr.reset(tropusr);
 
@@ -612,8 +612,6 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 
 		if (n_name == "trophy")
 		{
-			u32 trophy_id = atoi(n->GetAttribute("id").c_str());
-
 			if (details)
 			{
 				details->numTrophies++;
@@ -628,6 +626,8 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 
 			if (data)
 			{
+				const u32 trophy_id = atoi(n->GetAttribute("id").c_str());
+
 				if (ctxt->tropusr->GetTrophyUnlockState(trophy_id))
 				{
 					data->unlockedTrophies++;
@@ -691,7 +691,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 
 	if (g_cfg.misc.show_trophy_popups)
 	{
-		// Figure out how many zeros are needed for padding.  (either 0, 1, or 2)
+		// Figure out how many zeros are needed for padding. (either 0, 1, or 2)
 		std::string padding = "";
 		if (trophyId < 10)
 		{
@@ -703,17 +703,16 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 		}
 
 		// Get icon for the notification.
-		std::string paddedTrophyId = padding + std::to_string(trophyId);
-		std::string trophyIconPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROP" + paddedTrophyId + ".PNG";
-		fs::file trophyIconFile = fs::file(vfs::get(trophyIconPath));
-		size_t iconSize = trophyIconFile.size();
-		std::vector<uchar> trophyIconData;
-		trophyIconFile.read(trophyIconData, iconSize);
+		const std::string padded_trophy_id = padding + std::to_string(trophyId);
+		const std::string trophy_icon_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROP" + padded_trophy_id + ".PNG";
+		fs::file trophy_icon_file = fs::file(vfs::get(trophy_icon_path));
+		std::vector<uchar> trophy_icon_data;
+		trophy_icon_file.read(trophy_icon_data, trophy_icon_file.size());
 
 		vm::var<SceNpTrophyDetails> details({0});
 		vm::var<SceNpTrophyData> _({0});
 
-		s32 ret = sceNpTrophyGetTrophyInfo(context, handle, trophyId, details, _);
+		const s32 ret = sceNpTrophyGetTrophyInfo(context, handle, trophyId, details, _);
 		if (ret != CELL_OK)
 		{
 			sceNpTrophy.error("Failed to get info for trophy dialog. Error code %x", ret);
@@ -722,7 +721,7 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 
 		if (auto trophy_notification_dialog = Emu.GetCallbacks().get_trophy_notification_dialog())
 		{
-			trophy_notification_dialog->ShowTrophyNotification(*details, trophyIconData);
+			trophy_notification_dialog->ShowTrophyNotification(*details, trophy_icon_data);
 		}
 	}
 
@@ -844,7 +843,10 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 		{
 			found = true;
 
-			if (n->GetAttribute("hidden")[0] == 'y' && !ctxt->tropusr->GetTrophyUnlockState(trophyId)) // Trophy is hidden
+			const bool hidden = n->GetAttribute("hidden")[0] == 'y';
+			const bool unlocked = !!ctxt->tropusr->GetTrophyUnlockState(trophyId);
+
+			if (hidden && !unlocked) // Trophy is hidden
 			{
 				return SCE_NP_TROPHY_ERROR_HIDDEN;
 			}
@@ -852,18 +854,14 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 			if (details)
 			{
 				details->trophyId = trophyId;
+				details->hidden = hidden;
+
 				switch (n->GetAttribute("ttype")[0])
 				{
 				case 'B': details->trophyGrade = SCE_NP_TROPHY_GRADE_BRONZE;   break;
 				case 'S': details->trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
 				case 'G': details->trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
 				case 'P': details->trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
-				}
-
-				switch (n->GetAttribute("hidden")[0])
-				{
-				case 'y': details->hidden = true;  break;
-				case 'n': details->hidden = false; break;
 				}
 
 				for (std::shared_ptr<rXmlNode> n2 = n->GetChildren(); n2; n2 = n2->GetNext())
@@ -884,7 +882,7 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 			if (data)
 			{
 				data->trophyId = trophyId;
-				data->unlocked = ctxt->tropusr->GetTrophyUnlockState(trophyId) != 0; // ???
+				data->unlocked = unlocked;
 				data->timestamp = ctxt->tropusr->GetTrophyTimestamp(trophyId);
 			}
 			break;
