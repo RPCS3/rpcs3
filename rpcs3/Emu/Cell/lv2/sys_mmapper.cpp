@@ -130,7 +130,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 {
 	vm::temporary_unlock(ppu);
 
-	sys_mmapper.error("sys_mmapper_allocate_shared_memory_from_container(0x%llx, size=0x%x, cid=0x%x, flags=0x%llx, mem_id=*0x%x)", unk, size, cid, flags, mem_id);
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory_from_container(0x%llx, size=0x%x, cid=0x%x, flags=0x%llx, mem_id=*0x%x)", unk, size, cid, flags, mem_id);
 
 	// Check page granularity.
 	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)

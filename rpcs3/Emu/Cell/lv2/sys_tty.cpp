@@ -88,6 +88,8 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 
 error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 {
+	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
+
 	std::string msg;
 
 	if (static_cast<s32>(len) > 0 && vm::check_addr(buf.addr(), len))
@@ -99,8 +101,6 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 			msg.clear();
 		}
 	}
-
-	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x (“%s”), len=%d, pwritelen=*0x%x)", ch, buf, msg, len, pwritelen);
 
 	// Hack: write to tty even on CEX mode, but disable all error checks
 	if (ch < 0 || ch > 15)
@@ -125,6 +125,8 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 	{
 		if (!msg.empty())
 		{
+			sys_tty.notice("sys_tty_write(): “%s”", msg);
+
 			if (g_tty)
 			{
 				// Lock size by making it negative

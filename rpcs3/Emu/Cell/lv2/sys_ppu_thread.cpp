@@ -134,7 +134,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 	if (!vptr)
 	{
-		return CELL_EFAULT;
+		return not_an_error(CELL_EFAULT);
 	}
 
 	// Get the exit status from the register

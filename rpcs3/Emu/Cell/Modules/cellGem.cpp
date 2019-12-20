@@ -732,7 +732,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 
 error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, vm::ptr<CellGemInertialState> inertial_state)
 {
-	cellGem.todo("cellGemGetInertialState(gem_num=%d, state_flag=%d, timestamp=0x%x, inertial_state=0x%x)", gem_num, state_flag, timestamp, inertial_state);
+	cellGem.warning("cellGemGetInertialState(gem_num=%d, state_flag=%d, timestamp=0x%x, inertial_state=0x%x)", gem_num, state_flag, timestamp, inertial_state);
 
 	const auto gem = g_fxo->get<gem_config>();
 
@@ -767,7 +767,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 error_code cellGemGetInfo(vm::ptr<CellGemInfo> info)
 {
-	cellGem.todo("cellGemGetInfo(info=*0x%x)", info);
+	cellGem.warning("cellGemGetInfo(info=*0x%x)", info);
 
 	const auto gem = g_fxo->get<gem_config>();
 
@@ -864,7 +864,7 @@ error_code cellGemGetRumble(u32 gem_num, vm::ptr<u8> rumble)
 
 error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<CellGemState> gem_state)
 {
-	cellGem.todo("cellGemGetState(gem_num=%d, flag=0x%x, time=0x%llx, gem_state=*0x%x)", gem_num, flag, time_parameter, gem_state);
+	cellGem.warning("cellGemGetState(gem_num=%d, flag=0x%x, time=0x%llx, gem_state=*0x%x)", gem_num, flag, time_parameter, gem_state);
 
 	const auto gem = g_fxo->get<gem_config>();
 
@@ -1247,7 +1247,7 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 error_code cellGemUpdateFinish()
 {
-	cellGem.todo("cellGemUpdateFinish()");
+	cellGem.warning("cellGemUpdateFinish()");
 
 	const auto gem = g_fxo->get<gem_config>();
 
@@ -1265,7 +1265,7 @@ error_code cellGemUpdateFinish()
 
 	if (!gem->camera_frame)
 	{
-		return CELL_GEM_NO_VIDEO;
+		return not_an_error(CELL_GEM_NO_VIDEO);
 	}
 
 	return CELL_OK;
@@ -1273,7 +1273,7 @@ error_code cellGemUpdateFinish()
 
 error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 {
-	cellGem.todo("cellGemUpdateStart(camera_frame=*0x%x, timestamp=%d)", camera_frame, timestamp);
+	cellGem.warning("cellGemUpdateStart(camera_frame=*0x%x, timestamp=%d)", camera_frame, timestamp);
 
 	const auto gem = g_fxo->get<gem_config>();
 
@@ -1293,7 +1293,7 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 	gem->camera_frame = camera_frame.addr();
 	if (!camera_frame)
 	{
-		return CELL_GEM_NO_VIDEO;
+		return not_an_error(CELL_GEM_NO_VIDEO);
 	}
 
 	return CELL_OK;
