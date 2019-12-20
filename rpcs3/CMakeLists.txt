@@ -18,6 +18,14 @@ elseif(NOT MSVC AND NOT CMAKE_CXX_FLAGS MATCHES "LIBICONV_PLUG")
 	set(ADDITIONAL_LIBS ${ADDITIONAL_LIBS} "iconv")
 endif()
 
+if(UNIX AND NOT APPLE)
+	# Optionally enable X11 for window management
+	find_package(X11)
+	if(X11_FOUND)
+		add_definitions(-DHAVE_X11)
+	endif()
+endif()
+
 if(NOT RPCS3_SRC_DIR)
 	set(RPCS3_SRC_DIR ${CMAKE_CURRENT_LIST_DIR})
 	message("-- Initializing RPCS3_SRC_DIR=${RPCS3_SRC_DIR}")
@@ -80,16 +88,13 @@ if (WIN32)
 	target_sources(rpcs3 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.rc")
 endif()
 
-if(UNIX AND NOT APPLE)
-	find_package(X11)
-	if(X11_FOUND)
-		target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
-		target_link_libraries(rpcs3 ${X11_LIBRARIES})
-		target_compile_definitions(rpcs3 INTERFACE -DHAVE_X11)
-	# This has been checked in 3rdparty/CMakeLists.txt already.
-	elseif(NOT WAYLAND_FOUND)
-		message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
-	endif()
+# Unix display manager
+if(X11_FOUND)
+	target_include_directories(rpcs3 PUBLIC ${X11_INCLUDE_DIR})
+	target_link_libraries(rpcs3 ${X11_LIBRARIES})
+elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE)
+	# Wayland has been checked in 3rdparty/CMakeLists.txt already.
+	message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
 endif()
 
 if(UNIX)
