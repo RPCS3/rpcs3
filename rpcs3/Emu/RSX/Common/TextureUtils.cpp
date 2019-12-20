@@ -364,8 +364,8 @@ namespace
 				}
 				else
 				{
-					current_subresource_layout.width_in_block = rsx::aligned_div(miplevel_width_in_texel, block_edge_in_texel);
-					current_subresource_layout.height_in_block = rsx::aligned_div(miplevel_height_in_texel, block_edge_in_texel);
+					current_subresource_layout.width_in_block = aligned_div(miplevel_width_in_texel, block_edge_in_texel);
+					current_subresource_layout.height_in_block = aligned_div(miplevel_height_in_texel, block_edge_in_texel);
 				}
 
 				if (padded_row)

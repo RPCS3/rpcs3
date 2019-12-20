@@ -929,8 +929,9 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 	const u32 trp_count = ctxt->tropusr->GetTrophiesCount();
 
 	verify(HERE), trp_count > 0 && trp_count <= 128;
-	
-	*percentage = static_cast<s32>(std::lround((unlocked * 100.) / trp_count));
+
+	// Round result to nearest
+	*percentage = rounded_div(unlocked * 100, trp_count);
 
 	return CELL_OK;
 }
