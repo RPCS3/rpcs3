@@ -220,9 +220,7 @@ usb_handler_thread::~usb_handler_thread()
 
 void usb_handler_thread::operator()()
 {
-	timeval lusb_tv;
-	memset(&lusb_tv, 0, sizeof(timeval));
-	lusb_tv.tv_usec = 200;
+	timeval lusb_tv{0, 200};
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{

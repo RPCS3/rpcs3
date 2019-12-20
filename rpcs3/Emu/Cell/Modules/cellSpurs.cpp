@@ -3691,7 +3691,7 @@ s32 _cellSpursTasksetAttribute2Initialize(vm::ptr<CellSpursTasksetAttribute2> at
 {
 	cellSpurs.warning("_cellSpursTasksetAttribute2Initialize(attribute=*0x%x, revision=%d)", attribute, revision);
 
-	memset(attribute.get_ptr(), 0, sizeof(CellSpursTasksetAttribute2));
+	std::memset(attribute.get_ptr(), 0, attribute.size());
 	attribute->revision = revision;
 	attribute->name = vm::null;
 	attribute->args = 0;
@@ -3960,11 +3960,11 @@ s32 _cellSpursTasksetAttributeInitialize(vm::ptr<CellSpursTasksetAttribute> attr
 		}
 	}
 
-	memset(attribute.get_ptr(), 0, sizeof(CellSpursTasksetAttribute));
+	std::memset(attribute.get_ptr(), 0, attribute.size());
 	attribute->revision = revision;
 	attribute->sdk_version = sdk_version;
 	attribute->args = args;
-	memcpy(attribute->priority, priority.get_ptr(), 8);
+	std::memcpy(attribute->priority, priority.get_ptr(), 8);
 	attribute->taskset_size = 6400/*CellSpursTaskset::size*/;
 	attribute->max_contention = max_contention;
 	return CELL_OK;

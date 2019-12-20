@@ -251,6 +251,8 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 	if (!info)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
+	std::memset(info.get_ptr(), 0, info.size());
+
 	std::lock_guard<std::mutex> lock(handler->m_mutex);
 
 	const KbInfo& current_info = handler->GetInfo();

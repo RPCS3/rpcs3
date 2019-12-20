@@ -229,7 +229,7 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 		}
 	}
 
-	memset(&digital_buttons, 0, sizeof(digital_buttons));
+	digital_buttons = 0;
 
 	// map the Move key to R1 and the Trigger to R2
 
@@ -310,9 +310,9 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 		return false;
 	}
 
-	memset(&digital_buttons, 0, sizeof(digital_buttons));
-
 	const auto& mouse_data = handler->GetMice().at(0);
+
+	digital_buttons = 0;
 
 	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_1) && (mouse_data.buttons & CELL_MOUSE_BUTTON_2))
 		digital_buttons |= CELL_GEM_CTRL_CIRCLE;

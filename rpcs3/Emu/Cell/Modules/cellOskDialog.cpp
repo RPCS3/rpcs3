@@ -113,7 +113,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	std::memset(osk->osk_text, 0, sizeof(osk->osk_text));
 	std::memset(osk->osk_text_old, 0, sizeof(osk->osk_text_old));
 
-	if (inputFieldInfo->init_text.addr() != 0)
+	if (inputFieldInfo->init_text)
 	{
 		for (u32 i = 0; (i < maxLength) && (inputFieldInfo->init_text[i] != 0); i++)
 		{
@@ -124,10 +124,9 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	// Get message to display above the input field
 	// Guarantees 0 terminated (+1). In praxis only 128 but for now lets display all of it
-	char16_t message[CELL_OSKDIALOG_STRING_SIZE + 1];
-	std::memset(message, 0, sizeof(message));
+	char16_t message[CELL_OSKDIALOG_STRING_SIZE + 1]{};
 
-	if (inputFieldInfo->message.addr() != 0)
+	if (inputFieldInfo->message)
 	{
 		for (u32 i = 0; (i < CELL_OSKDIALOG_STRING_SIZE) && (inputFieldInfo->message[i] != 0); i++)
 		{

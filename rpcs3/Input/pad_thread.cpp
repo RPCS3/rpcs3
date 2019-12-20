@@ -60,11 +60,7 @@ void pad_thread::Init()
 		}
 	}
 
-	const PadInfo pad_info(m_info);
-	std::memset(&m_info, 0, sizeof(m_info));
 	m_info.now_connect = 0;
-	m_info.system_info |= pad_info.system_info;
-	m_info.ignore_input = pad_info.ignore_input;
 
 	handlers.clear();
 

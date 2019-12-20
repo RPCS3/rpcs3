@@ -918,7 +918,7 @@ namespace rsx
 
 	void thread::get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout)
 	{
-		memset(&layout, 0, sizeof(layout));
+		layout = {};
 
 		layout.ignore_change = true;
 		layout.width = rsx::method_registers.surface_clip_width();

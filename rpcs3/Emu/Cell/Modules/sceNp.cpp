@@ -458,7 +458,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 	if (magic == "SCE\0"_u32)
 	{
-		if (k_licensee_addr == vm::null)
+		if (!k_licensee_addr)
 			k_licensee = get_default_self_klic();
 
 		if (verify_npdrm_self_headers(enc_file, k_licensee.data()))
