@@ -9,9 +9,9 @@ environment:
   LLVMLIBS: https://github.com/RPCS3/llvm/releases/download/continuous-master/llvmlibs.7z
   GLSLANG: https://dl.dropboxusercontent.com/s/ku2qgwmtfptzbvx/glslang.7z
   COMPATDB: https://rpcs3.net/compatibility?api=v1&export
-  VULKAN_SDK: "C:\\VulkanSDK\\1.1.106.0"
-  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.106.0/windows/VulkanSDK-1.1.106.0-Installer.exe
-  VULKAN_SDK_SHA: 24b5c9d415912c0fb07f973f10f671a488b0e33ca991409bcabf1d4bebf0b804
+  VULKAN_SDK: "C:\\VulkanSDK\\1.1.126.0"
+  VULKAN_SDK_URL: https://sdk.lunarg.com/sdk/download/1.1.126.0/windows/VulkanSDK-1.1.126.0-Installer.exe
+  VULKAN_SDK_SHA: ee86f25580b550390ce46508415e744d62e87e9c0de6cd299998058253a2a4ba
 
 cache:
 - glslang.7z -> appveyor.yml
