@@ -290,8 +290,9 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 		return category::CategoryInMap(game->info.category, category::cat_boot);
 	};
 
-	bool is_visible = m_show_hidden || !m_hidden_list.contains(qstr(game->info.serial));
-	return is_visible && matches_category() && SearchMatchesApp(game->info.name, game->info.serial);
+	const QString serial = qstr(game->info.serial);
+	bool is_visible = m_show_hidden || !m_hidden_list.contains(serial);
+	return is_visible && matches_category() && SearchMatchesApp(qstr(game->info.name), serial);
 }
 
 void game_list_frame::SortGameList()
@@ -2057,12 +2058,17 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 /**
 * Returns false if the game should be hidden because it doesn't match search term in toolbar.
 */
-bool game_list_frame::SearchMatchesApp(const std::string& name, const std::string& serial)
+bool game_list_frame::SearchMatchesApp(const QString& name, const QString& serial) const
 {
 	if (!m_search_text.isEmpty())
 	{
-		QString searchText = m_search_text.toLower();
-		return qstr(name).toLower().contains(searchText) || qstr(serial).toLower().contains(searchText);
+		const QString searchText = m_search_text.toLower();
+		QString gameName = m_titles[serial];
+		if (gameName.isEmpty())
+		{
+			gameName = name;
+		}
+		return gameName.toLower().contains(searchText) || serial.toLower().contains(searchText);
 	}
 	return true;
 }
