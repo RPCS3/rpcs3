@@ -204,11 +204,11 @@ error_code sys_ppu_thread_register_atexit(ppu_thread& ppu, vm::ptr<void()> func)
 		}
 	}
 
-	for (auto& pp : *g_ppu_atexit)
+	for (auto& pf : *g_ppu_atexit)
 	{
-		if (pp == vm::null)
+		if (!pf)
 		{
-			pp = func;
+			pf = func;
 			return CELL_OK;
 		}
 	}

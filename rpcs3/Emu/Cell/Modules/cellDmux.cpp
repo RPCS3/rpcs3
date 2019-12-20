@@ -210,7 +210,7 @@ public:
 	{
 		DemuxerTask task;
 		DemuxerStream stream = {};
-		ElementaryStream* esALL[96]; memset(esALL, 0, sizeof(esALL));
+		ElementaryStream* esALL[96]{};
 		ElementaryStream** esAVC = &esALL[0]; // AVC (max 16 minus M2V count)
 		ElementaryStream** esM2V = &esALL[16]; // M2V (max 16 minus AVC count)
 		ElementaryStream** esDATA = &esALL[32]; // user data (max 16)

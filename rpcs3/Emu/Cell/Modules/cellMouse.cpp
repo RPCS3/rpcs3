@@ -119,6 +119,8 @@ error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
+	std::memset(info.get_ptr(), 0, info.size());
+
 	const MouseInfo& current_info = handler->GetInfo();
 	info->max_connect = current_info.max_connect;
 	info->now_connect = current_info.now_connect;
@@ -192,13 +194,14 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	}
 
+	std::memset(data.get_ptr(), 0, data.size());
+
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
 
 	MouseDataList& data_list = handler->GetDataList(port_no);
 
 	if (data_list.empty())
 	{
-		*data = {};
 		return CELL_OK;
 	}
 

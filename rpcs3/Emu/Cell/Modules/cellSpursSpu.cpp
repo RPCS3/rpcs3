@@ -903,16 +903,14 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 		spursSysServiceCleanupAfterSystemWorkload(spu, ctxt);
 
 		// Trace - SERVICE: INIT
-		CellSpursTracePacket pkt;
-		memset(&pkt, 0, sizeof(pkt));
+		CellSpursTracePacket pkt{};
 		pkt.header.tag = CELL_SPURS_TRACE_TAG_SERVICE;
 		pkt.data.service.incident = CELL_SPURS_TRACE_SERVICE_INIT;
 		cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
 	}
 
 	// Trace - START: Module='SYS '
-	CellSpursTracePacket pkt;
-	memset(&pkt, 0, sizeof(pkt));
+	CellSpursTracePacket pkt{};
 	pkt.header.tag = CELL_SPURS_TRACE_TAG_START;
 	memcpy(pkt.data.start.module, "SYS ", 4);
 	pkt.data.start.level = 1; // Policy module
@@ -928,14 +926,13 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 		if (cellSpursModulePollStatus(spu, nullptr))
 		{
 			// Trace - SERVICE: EXIT
-			CellSpursTracePacket pkt;
-			memset(&pkt, 0, sizeof(pkt));
+			CellSpursTracePacket pkt{};
 			pkt.header.tag = CELL_SPURS_TRACE_TAG_SERVICE;
 			pkt.data.service.incident = CELL_SPURS_TRACE_SERVICE_EXIT;
 			cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
 
 			// Trace - STOP: GUID
-			memset(&pkt, 0, sizeof(pkt));
+			pkt = {};
 			pkt.header.tag = CELL_SPURS_TRACE_TAG_STOP;
 			pkt.data.stop = SPURS_GUID_SYS_WKL;
 			cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
@@ -956,8 +953,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 		// If we reach here it means that the SPU is idling
 
 		// Trace - SERVICE: WAIT
-		CellSpursTracePacket pkt;
-		memset(&pkt, 0, sizeof(pkt));
+		CellSpursTracePacket pkt{};
 		pkt.header.tag = CELL_SPURS_TRACE_TAG_SERVICE;
 		pkt.data.service.incident = CELL_SPURS_TRACE_SERVICE_WAIT;
 		cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
@@ -1287,8 +1283,7 @@ void spursSysServiceCleanupAfterSystemWorkload(spu_thread& spu, SpursKernelConte
 	ctxt->wklCurrentId = wklId;
 
 	// Trace - STOP: GUID
-	CellSpursTracePacket pkt;
-	memset(&pkt, 0, sizeof(pkt));
+	CellSpursTracePacket pkt{};
 	pkt.header.tag = CELL_SPURS_TRACE_TAG_STOP;
 	pkt.data.stop = SPURS_GUID_SYS_WKL;
 	cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
@@ -1638,8 +1633,7 @@ void spursTasksetExit(spu_thread& spu)
 	auto ctxt = vm::_ptr<SpursTasksetContext>(spu.offset + 0x2700);
 
 	// Trace - STOP
-	CellSpursTracePacket pkt;
-	memset(&pkt, 0, sizeof(pkt));
+	CellSpursTracePacket pkt{};
 	pkt.header.tag = 0x54; // Its not clear what this tag means exactly but it seems similar to CELL_SPURS_TRACE_TAG_STOP
 	pkt.data.stop = SPURS_GUID_TASKSET_PM;
 	cellSpursModulePutTrace(&pkt, ctxt->dmaTagId);
@@ -1755,8 +1749,7 @@ void spursTasksetDispatch(spu_thread& spu)
 	taskInfo->elf.set(taskInfo->elf.addr() & 0xFFFFFFFFFFFFFFF8);
 
 	// Trace - Task: Incident=dispatch
-	CellSpursTracePacket pkt;
-	memset(&pkt, 0, sizeof(pkt));
+	CellSpursTracePacket pkt{};
 	pkt.header.tag = CELL_SPURS_TRACE_TAG_TASK;
 	pkt.data.task.incident = CELL_SPURS_TRACE_TASK_DISPATCH;
 	pkt.data.task.taskId = taskId;
@@ -1791,7 +1784,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		}
 
 		// Trace - GUID
-		memset(&pkt, 0, sizeof(pkt));
+		pkt = {};
 		pkt.header.tag = CELL_SPURS_TRACE_TAG_GUID;
 		pkt.data.guid = 0; // TODO: Put GUID of taskId here
 		cellSpursModulePutTrace(&pkt, 0x1F);
@@ -1845,7 +1838,7 @@ void spursTasksetDispatch(spu_thread& spu)
 		spu.set_ch_value(SPU_WrEventMask, ctxt->savedSpuWriteEventMask);
 
 		// Trace - GUID
-		memset(&pkt, 0, sizeof(pkt));
+		pkt = {};
 		pkt.header.tag = CELL_SPURS_TRACE_TAG_GUID;
 		pkt.data.guid = 0; // TODO: Put GUID of taskId here
 		cellSpursModulePutTrace(&pkt, 0x1F);
@@ -1949,8 +1942,7 @@ s32 spursTasksetProcessSyscall(spu_thread& spu, u32 syscallNum, u32 args)
 	if (incident)
 	{
 		// Trace - TASK
-		CellSpursTracePacket pkt;
-		memset(&pkt, 0, sizeof(pkt));
+		CellSpursTracePacket pkt{};
 		pkt.header.tag = CELL_SPURS_TRACE_TAG_TASK;
 		pkt.data.task.incident = incident;
 		pkt.data.task.taskId = ctxt->taskId;
@@ -1982,8 +1974,7 @@ void spursTasksetInit(spu_thread& spu, u32 pollStatus)
 	kernelCtxt->moduleId[1] = 'K';
 
 	// Trace - START: Module='TKST'
-	CellSpursTracePacket pkt;
-	memset(&pkt, 0, sizeof(pkt));
+	CellSpursTracePacket pkt{};
 	pkt.header.tag = 0x52; // Its not clear what this tag means exactly but it seems similar to CELL_SPURS_TRACE_TAG_START
 	memcpy(pkt.data.start.module, "TKST", 4);
 	pkt.data.start.level = 2;

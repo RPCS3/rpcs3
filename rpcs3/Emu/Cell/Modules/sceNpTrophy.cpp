@@ -588,9 +588,9 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 	}
 
 	if (details)
-		memset(details.get_ptr(), 0, sizeof(SceNpTrophyGameDetails));
+		*details = {};
 	if (data)
-		memset(data.get_ptr(), 0, sizeof(SceNpTrophyGameData));
+		*data = {};
 
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
@@ -691,19 +691,8 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 
 	if (g_cfg.misc.show_trophy_popups)
 	{
-		// Figure out how many zeros are needed for padding. (either 0, 1, or 2)
-		std::string padding = "";
-		if (trophyId < 10)
-		{
-			padding = "00";
-		}
-		else if (trophyId < 100)
-		{
-			padding = "0";
-		}
-
 		// Get icon for the notification.
-		const std::string padded_trophy_id = padding + std::to_string(trophyId);
+		const std::string padded_trophy_id = fmt::format("%03u", trophyId);
 		const std::string trophy_icon_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + ctxt->trp_name + "/TROP" + padded_trophy_id + ".PNG";
 		fs::file trophy_icon_file = fs::file(vfs::get(trophy_icon_path));
 		std::vector<uchar> trophy_icon_data;
@@ -823,9 +812,9 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 	}
 
 	if (details)
-		memset(details.get_ptr(), 0, sizeof(SceNpTrophyDetails));
+		*details = {};
 	if (data)
-		memset(data.get_ptr(), 0, sizeof(SceNpTrophyData));
+		*data = {};
 
 	rXmlDocument doc;
 	doc.Read(config.to_string());

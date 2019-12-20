@@ -568,7 +568,7 @@ s32 pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, P
 	// This shouldnt ever happen, but not sure what to do if it does, just want it logged for now
 	if (stream->info.bitDepth != 16 && in_param->outputBitDepth == 16)
 		cellPngDec.error("Output depth of 16 with non input depth of 16 specified!");
-	if (in_param->commandPtr != vm::null)
+	if (in_param->commandPtr)
 		cellPngDec.warning("Ignoring CommandPtr.");
 
 	if (stream->info.colorSpace != in_param->outputColorSpace)

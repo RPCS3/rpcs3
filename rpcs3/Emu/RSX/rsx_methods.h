@@ -543,7 +543,7 @@ namespace rsx
 			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 		{
 			//NOTE: Transform constants persist through a context reset (NPEB00913)
-			memset(transform_constants.data(), 0, 512 * 4 * sizeof(u32));
+			transform_constants = {};
 		}
 
 		~rsx_state() = default;

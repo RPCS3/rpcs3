@@ -285,7 +285,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 s32 _L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::cptr<s32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
 	s32 dstLen = *dst_len;
-	s32 result = _ConvertStr(src_code, src.get_ptr(), *src_len, dst_code, dst == vm::null ? NULL : dst.get_ptr(), &dstLen, false);
+	s32 result = _ConvertStr(src_code, src.get_ptr(), *src_len, dst_code, dst ? dst.get_ptr() : nullptr, &dstLen, false);
 	*dst_len = dstLen;
 	return result;
 }
@@ -413,7 +413,7 @@ s32 jstrnchk(vm::cptr<u8> src, s32 src_len)
 
 	for (s32 len = 0; len < src_len; len++)
 	{
-		if (src != vm::null)
+		if (src)
 		{
 			if (*src >= 0xa1 && *src <= 0xfe)
 			{
@@ -1274,7 +1274,7 @@ s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8,
 		//	return SRCIllegal;
 		//}
 
-		if (utf8 != vm::null)
+		if (utf8)
 		{
 			if (len > max_len)
 			{
