@@ -310,7 +310,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	if (u32 option = attr->option)
 	{
-		sys_spu.todo("Unimplemented SPU Thread options (0x%x)", option);
+		sys_spu.warning("Unimplemented SPU Thread options (0x%x)", option);
 	}
 
 	const vm::addr_t ls_addr{verify("SPU LS" HERE, vm::alloc(0x80000, vm::main))};
@@ -416,7 +416,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	if (attr->type)
 	{
-		sys_spu.todo("Unsupported SPU Thread Group type (0x%x)", attr->type);
+		sys_spu.warning("sys_spu_thread_group_create(): SPU Thread Group type (0x%x)", attr->type);
 	}
 
 	*id = idm::make<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max<u32>(attr->nsize, 1) - 1), num, prio, attr->type, attr->ct);
@@ -782,14 +782,20 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 
 	if (!cause)
 	{
-		return CELL_EFAULT;
+		if (status)
+		{
+			// Report unwritten data
+			return CELL_EFAULT;
+		}
+
+		return not_an_error(CELL_EFAULT);
 	}
 
 	*cause = static_cast<u32>(ppu.gpr[4]);
 
 	if (!status)
 	{
-		return CELL_EFAULT;
+		return not_an_error(CELL_EFAULT);
 	}
 
 	*status = static_cast<s32>(ppu.gpr[5]);

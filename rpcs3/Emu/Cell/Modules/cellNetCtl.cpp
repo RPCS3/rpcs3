@@ -300,7 +300,7 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 
 error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
-	cellNetCtl.todo("cellNetCtlGetNatInfo(natInfo=*0x%x)", natInfo);
+	cellNetCtl.warning("cellNetCtlGetNatInfo(natInfo=*0x%x)", natInfo);
 
 	if (!g_fxo->get<cell_net_ctl_manager>()->is_initialized)
 	{

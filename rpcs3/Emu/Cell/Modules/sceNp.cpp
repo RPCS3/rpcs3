@@ -750,7 +750,7 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
 	return CELL_OK;
@@ -777,7 +777,7 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
 	return CELL_OK;
@@ -884,7 +884,7 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
 	return CELL_OK;
@@ -1102,7 +1102,7 @@ error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count
 
 error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceNpId> npid)
 {
-	sceNp.todo("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
+	sceNp.warning("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1126,7 +1126,7 @@ error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceN
 
 error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 {
-	sceNp.todo("sceNpBasicAddBlockListEntry(npid=*0x%x)", npid);
+	sceNp.warning("sceNpBasicAddBlockListEntry(npid=*0x%x)", npid);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1140,7 +1140,7 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 
 	if (g_psn_connection_status != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
+		return not_an_error(SCE_NP_BASIC_ERROR_NOT_CONNECTED);
 	}
 
 	return CELL_OK;
@@ -1148,7 +1148,7 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 
 error_code sceNpBasicGetBlockListEntryCount(vm::ptr<u32> count)
 {
-	sceNp.todo("sceNpBasicGetBlockListEntryCount(count=*0x%x)", count);
+	sceNp.warning("sceNpBasicGetBlockListEntryCount(count=*0x%x)", count);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1438,7 +1438,7 @@ error_code sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo>
 
 error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, vm::ptr<s32> data, vm::ptr<u32> size)
 {
-	sceNp.todo("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
+	sceNp.warning("sceNpBasicGetEvent(event=*0x%x, from=*0x%x, data=*0x%x, size=*0x%x)", event, from, data, size);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1453,7 +1453,7 @@ error_code sceNpBasicGetEvent(vm::ptr<s32> event, vm::ptr<SceNpUserInfo> from, v
 	// TODO: Check for other error and pass other events
 	//*event = SCE_NP_BASIC_EVENT_OFFLINE; // This event only indicates a contact is offline, not the current status of the connection
 
-	return SCE_NP_BASIC_ERROR_NO_EVENT;
+	return not_an_error(SCE_NP_BASIC_ERROR_NO_EVENT);
 }
 
 error_code sceNpCommerceCreateCtx(u32 version, vm::ptr<SceNpId> npId, vm::ptr<SceNpCommerceHandler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
@@ -1729,7 +1729,7 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 
 error_code sceNpFriendlist(vm::ptr<SceNpFriendlistResultHandler> resultHandler, vm::ptr<void> userArg, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpFriendlist(resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", resultHandler, userArg, containerId);
+	sceNp.warning("sceNpFriendlist(resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", resultHandler, userArg, containerId);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -1746,7 +1746,7 @@ error_code sceNpFriendlist(vm::ptr<SceNpFriendlistResultHandler> resultHandler, 
 
 error_code sceNpFriendlistCustom(SceNpFriendlistCustomOptions options, vm::ptr<SceNpFriendlistResultHandler> resultHandler, vm::ptr<void> userArg, sys_memory_container_t containerId)
 {
-	sceNp.todo("sceNpFriendlistCustom(options=0x%x, resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", options, resultHandler, userArg, containerId);
+	sceNp.warning("sceNpFriendlistCustom(options=0x%x, resultHandler=*0x%x, userArg=*0x%x, containerId=%d)", options, resultHandler, userArg, containerId);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2272,7 +2272,7 @@ error_code sceNpManagerUnregisterCallback()
 
 error_code sceNpManagerGetStatus(vm::ptr<s32> status)
 {
-	sceNp.todo("sceNpManagerGetStatus(status=*0x%x)", status);
+	sceNp.warning("sceNpManagerGetStatus(status=*0x%x)", status);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2376,7 +2376,7 @@ error_code sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
 
 error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 {
-	sceNp.todo("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
+	sceNp.warning("sceNpManagerGetOnlineName(onlineName=*0x%x)", onlineName);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2403,7 +2403,7 @@ error_code sceNpManagerGetOnlineName(vm::ptr<SceNpOnlineName> onlineName)
 
 error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 {
-	sceNp.todo("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
+	sceNp.warning("sceNpManagerGetAvatarUrl(avatarUrl=*0x%x)", avatarUrl);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2430,7 +2430,7 @@ error_code sceNpManagerGetAvatarUrl(vm::ptr<SceNpAvatarUrl> avatarUrl)
 
 error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 {
-	sceNp.todo("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
+	sceNp.warning("sceNpManagerGetMyLanguages(myLanguages=*0x%x)", myLanguages);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2457,7 +2457,7 @@ error_code sceNpManagerGetMyLanguages(vm::ptr<SceNpMyLanguages> myLanguages)
 
 error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, vm::ptr<s32> language)
 {
-	sceNp.todo("sceNpManagerGetAccountRegion(countryCode=*0x%x, language=*0x%x)", countryCode, language);
+	sceNp.warning("sceNpManagerGetAccountRegion(countryCode=*0x%x, language=*0x%x)", countryCode, language);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2484,7 +2484,7 @@ error_code sceNpManagerGetAccountRegion(vm::ptr<SceNpCountryCode> countryCode, v
 
 error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 {
-	sceNp.todo("sceNpManagerGetAccountAge(age=*0x%x)", age);
+	sceNp.warning("sceNpManagerGetAccountAge(age=*0x%x)", age);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2511,7 +2511,7 @@ error_code sceNpManagerGetAccountAge(vm::ptr<s32> age)
 
 error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s32> age)
 {
-	sceNp.todo("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
+	sceNp.warning("sceNpManagerGetContentRatingFlag(isRestricted=*0x%x, age=*0x%x)", isRestricted, age);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -2542,7 +2542,7 @@ error_code sceNpManagerGetContentRatingFlag(vm::ptr<s32> isRestricted, vm::ptr<s
 
 error_code sceNpManagerGetChatRestrictionFlag(vm::ptr<s32> isRestricted)
 {
-	sceNp.todo("sceNpManagerGetChatRestrictionFlag(isRestricted=*0x%x)", isRestricted);
+	sceNp.warning("sceNpManagerGetChatRestrictionFlag(isRestricted=*0x%x)", isRestricted);
 
 	if (!g_fxo->get<sce_np_manager>()->is_initialized)
 	{
@@ -4285,7 +4285,7 @@ error_code sceNpUtilCmpNpId(vm::ptr<SceNpId> id1, vm::ptr<SceNpId> id2)
 
 error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2, vm::ptr<s32> order)
 {
-	sceNp.todo("sceNpUtilCmpNpIdInOrder(id1=*0x%x, id2=*0x%x, order=*0x%x)", id1, id2, order);
+	sceNp.warning("sceNpUtilCmpNpIdInOrder(id1=*0x%x, id2=*0x%x, order=*0x%x)", id1, id2, order);
 
 	if (!id1 || !id2)
 	{
@@ -4332,7 +4332,7 @@ error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2,
 
 error_code sceNpUtilCmpOnlineId(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2)
 {
-	sceNp.todo("sceNpUtilCmpOnlineId(id1=*0x%x, id2=*0x%x)", id1, id2);
+	sceNp.warning("sceNpUtilCmpOnlineId(id1=*0x%x, id2=*0x%x)", id1, id2);
 
 	if (!id1 || !id2)
 	{
@@ -4354,7 +4354,7 @@ error_code sceNpUtilCmpOnlineId(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2)
 
 error_code sceNpUtilGetPlatformType(vm::cptr<SceNpId> npId)
 {
-	sceNp.todo("sceNpUtilGetPlatformType(npId=*0x%x)", npId);
+	sceNp.warning("sceNpUtilGetPlatformType(npId=*0x%x)", npId);
 
 	if (!npId)
 	{
@@ -4380,7 +4380,7 @@ error_code sceNpUtilGetPlatformType(vm::cptr<SceNpId> npId)
 
 error_code sceNpUtilSetPlatformType(vm::ptr<SceNpId> npId, SceNpPlatformType platformType)
 {
-	sceNp.todo("sceNpUtilSetPlatformType(npId=*0x%x, platformType=%d)", npId, platformType);
+	sceNp.warning("sceNpUtilSetPlatformType(npId=*0x%x, platformType=%d)", npId, platformType);
 
 	if (!npId)
 	{
