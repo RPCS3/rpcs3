@@ -1256,6 +1256,7 @@ void main_window::CreateConnects()
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
 		connect(&dlg, &settings_dialog::accepted, this, &main_window::NotifyEmuSettingsChange);
+		connect(&dlg, &settings_dialog::accepted, m_logFrame, &log_frame::LoadSettings);
 		dlg.exec();
 	};
 

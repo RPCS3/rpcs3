@@ -1338,6 +1338,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 			m_discord_state = ui->discordState->text();
 		});
 
+		// Log and TTY:
+		SubscribeTooltip(ui->log_limit, json_gui["log_limit"].toString());
+		SubscribeTooltip(ui->tty_limit, json_gui["tty_limit"].toString());
+
+		ui->spinbox_log_limit->setValue(xgui_settings->GetValue(gui::l_limit).toInt());
+		connect(ui->spinbox_log_limit, &QSpinBox::editingFinished, [=]()
+		{
+			xgui_settings->SetValue(gui::l_limit, ui->spinbox_log_limit->value());
+		});
+
+		ui->spinbox_tty_limit->setValue(xgui_settings->GetValue(gui::l_limit_tty).toInt());
+		connect(ui->spinbox_tty_limit, &QSpinBox::editingFinished, [=]()
+		{
+			xgui_settings->SetValue(gui::l_limit_tty, ui->spinbox_tty_limit->value());
+		});
+
 		// colorize preview icons
 		auto addColoredIcon = [&](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
 		{

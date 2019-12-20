@@ -134,6 +134,8 @@
 		}
 	},
 	"gui": {
+		"log_limit": "Sets the maximum amount of blocks that the log can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.",
+		"tty_limit": "Sets the maximum amount of blocks that the tty can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.",
 		"configs": "Only useful to developers.\nIf unsure, don't use this option.",
 		"stylesheets": "Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.",
 		"show_welcome": "Shows the initial welcome screen upon starting RPCS3.",

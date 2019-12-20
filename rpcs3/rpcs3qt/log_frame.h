@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Utilities/File.h"
 #include "Utilities/Log.h"
@@ -10,7 +10,7 @@
 #include <memory>
 
 #include <QTabWidget>
-#include <QTextEdit>
+#include <QPlainTextEdit>
 #include <QActionGroup>
 #include <QTimer>
 #include <QKeyEvent>
@@ -22,11 +22,12 @@ class log_frame : public custom_dock_widget
 public:
 	explicit log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent = nullptr);
 
-	/** Loads from settings. Public so that main_window can call this easily. */
-	void LoadSettings();
-
 	/** Repaint log colors after new stylesheet was applied */
 	void RepaintTextColors();
+
+public Q_SLOTS:
+	/** Loads from settings. Public so that main_window can call this easily. */
+	void LoadSettings();
 
 Q_SIGNALS:
 	void LogFrameClosed();
@@ -42,45 +43,45 @@ private:
 
 	void CreateAndConnectActions();
 
-	QTabWidget* m_tabWidget;
+	QTabWidget* m_tabWidget = nullptr;
 
 	std::unique_ptr<find_dialog> m_find_dialog;
 
 	QList<QColor> m_color;
 	QColor m_color_stack;
-	QTextEdit* m_log;
+	QPlainTextEdit* m_log = nullptr;
 	QString m_old_log_text;
 	QString m_old_tty_text;
-	ullong m_log_counter;
-	ullong m_tty_counter;
-	bool m_stack_log;
-	bool m_stack_tty;
+	ullong m_log_counter{};
+	ullong m_tty_counter{};
+	bool m_stack_log{};
+	bool m_stack_tty{};
 
 	fs::file m_tty_file;
-	QWidget* m_tty_container;
-	QTextEdit* m_tty;
-	QLineEdit* m_tty_input;
+	QWidget* m_tty_container = nullptr;
+	QPlainTextEdit* m_tty = nullptr;
+	QLineEdit* m_tty_input = nullptr;
 	int m_tty_channel = -1;
 
-	QAction* m_clearAct;
-	QAction* m_clearTTYAct;
+	QAction* m_clearAct = nullptr;
+	QAction* m_clearTTYAct = nullptr;
 
-	QActionGroup* m_logLevels;
-	QAction* m_nothingAct;
-	QAction* m_fatalAct;
-	QAction* m_errorAct;
-	QAction* m_todoAct;
-	QAction* m_successAct;
-	QAction* m_warningAct;
-	QAction* m_noticeAct;
-	QAction* m_traceAct;
+	QActionGroup* m_logLevels = nullptr;
+	QAction* m_nothingAct = nullptr;
+	QAction* m_fatalAct = nullptr;
+	QAction* m_errorAct = nullptr;
+	QAction* m_todoAct = nullptr;
+	QAction* m_successAct = nullptr;
+	QAction* m_warningAct = nullptr;
+	QAction* m_noticeAct = nullptr;
+	QAction* m_traceAct = nullptr;
 
-	QAction* m_stackAct_log;
-	QAction* m_stackAct_tty;
+	QAction* m_stackAct_log = nullptr;
+	QAction* m_stackAct_tty = nullptr;
 
-	QAction* m_TTYAct;
+	QAction* m_TTYAct = nullptr;
 
-	QActionGroup* m_tty_channel_acts;
+	QActionGroup* m_tty_channel_acts = nullptr;
 
-	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<gui_settings> m_gui_settings;
 };
