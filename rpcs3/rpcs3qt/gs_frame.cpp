@@ -26,7 +26,9 @@
 #include <QGuiApplication>
 #include <qpa/qplatformnativeinterface.h>
 #endif
+#ifdef HAVE_X11
 #include <X11/Xlib.h>
+#endif
 #endif
 
 constexpr auto qstr = QString::fromStdString;
@@ -235,7 +237,11 @@ display_handle_t gs_frame::handle() const
 	else
 	{
 #endif
+#ifdef HAVE_X11
 		return std::make_pair(XOpenDisplay(0), static_cast<ulong>(this->winId()));
+#else
+		fmt::throw_exception("Vulkan X11 support disabled at compile-time.");
+#endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 	}
 #endif

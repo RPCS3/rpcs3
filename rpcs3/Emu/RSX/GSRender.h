@@ -8,7 +8,7 @@
 #include <windows.h>
 #elif defined(__APPLE__)
 // nothing
-#else
+#elif defined(HAVE_X11)
 // Cannot include Xlib.h before Qt5
 // and we don't need all of Xlib anyway
 using Display = struct _XDisplay;
@@ -57,9 +57,12 @@ using display_handle_t = HWND;
 using display_handle_t = void*; // NSView
 #else
 using display_handle_t = std::variant<
+#if defined(HAVE_X11) && defined(VK_USE_PLATFORM_WAYLAND_KHR)
+	std::pair<Display*, Window>, std::pair<wl_display*, wl_surface*>
+#elif defined(HAVE_X11)
 	std::pair<Display*, Window>
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-	, std::pair<wl_display*, wl_surface*>
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+	std::pair<wl_display*, wl_surface*>
 #endif
 >;
 #endif

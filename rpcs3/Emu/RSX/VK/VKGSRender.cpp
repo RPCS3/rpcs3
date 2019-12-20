@@ -366,7 +366,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	display_handle_t display = m_frame->handle();
 
-#if !defined(_WIN32) && !defined(__APPLE__)
+#ifdef HAVE_X11
 	std::visit([this](auto&& p) {
 		using T = std::decay_t<decltype(p)>;
 		if constexpr (std::is_same_v<T, std::pair<Display*, Window>>)
@@ -653,7 +653,7 @@ VKGSRender::~VKGSRender()
 	m_swapchain->destroy();
 	m_thread_context.close();
 
-#if !defined(_WIN32) && !defined(__APPLE__) && defined(HAVE_VULKAN)
+#if defined(HAVE_X11) && defined(HAVE_VULKAN)
 	if (m_display_handle)
 		XCloseDisplay(m_display_handle);
 #endif
