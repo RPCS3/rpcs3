@@ -576,12 +576,22 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 					return;
 				}
 
-				QString serial = qstr(game.serial);
-				m_notes[serial] = m_gui_settings->GetValue(gui::notes, serial, "").toString();
-				m_titles[serial] = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
+				const QString serial = qstr(game.serial);
+				const QString note = m_gui_settings->GetValue(gui::notes, serial, "").toString();
+				const QString title = m_gui_settings->GetValue(gui::titles, serial, "").toString().simplified();
 				m_gui_settings->SetLastPlayed(serial, m_gui_settings->GetValue(gui::last_played, serial, "").toString());
 				m_gui_settings->SetPlaytime(serial, m_gui_settings->GetValue(gui::playtime, serial, 0).toInt());
 				serials.insert(serial);
+
+				if (!note.isEmpty())
+				{
+					m_notes.insert(serial, note);
+				}
+
+				if (!title.isEmpty())
+				{
+					m_titles.insert(serial, title);
+				}
 
 				auto cat = category::cat_boot.find(game.category);
 				if (cat != category::cat_boot.end())
@@ -683,10 +693,8 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 		// Sort by name at the very least.
 		std::sort(m_game_data.begin(), m_game_data.end(), [&](const game_info& game1, const game_info& game2)
 		{
-			const QString custom_title1 = m_titles[qstr(game1->info.serial)];
-			const QString custom_title2 = m_titles[qstr(game2->info.serial)];
-			const QString title1 = custom_title1.isEmpty() ? qstr(game1->info.name) : custom_title1;
-			const QString title2 = custom_title2.isEmpty() ? qstr(game2->info.name) : custom_title2;
+			const QString title1 = m_titles.value(qstr(game1->info.serial), qstr(game1->info.name));
+			const QString title2 = m_titles.value(qstr(game2->info.serial), qstr(game2->info.name));
 			return title1.toLower() < title2.toLower();
 		});
 
@@ -1079,7 +1087,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 			else
 			{
-				m_titles[serial] = new_title;
+				m_titles.insert(serial, new_title);
 				m_gui_settings->SetValue(gui::titles, serial, new_title);
 			}
 			Refresh(true); // full refresh in order to reliably sort the list
@@ -1100,7 +1108,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 			else
 			{
-				m_notes[serial] = new_notes;
+				m_notes.insert(serial, new_notes);
 				m_gui_settings->SetValue(gui::notes, serial, new_notes);
 			}
 			Refresh();
@@ -1670,8 +1678,7 @@ void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
 
 	if (!m_isListLayout)
 	{
-		const QString custom_title = m_titles[QString::fromStdString(game->info.serial)];
-		const QString title = custom_title.isEmpty() ? qstr(game->info.name) : custom_title;
+		const QString title = m_titles.value(qstr(game->info.serial), qstr(game->info.name));
 		const QColor color = getGridCompatibilityColor(game->compat.color);
 
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
@@ -1872,9 +1879,8 @@ int game_list_frame::PopulateGameList()
 			continue;
 
 		const QString serial = qstr(game->info.serial);
-		const QString custom_title = m_titles[serial];
-		const QString title = custom_title.isEmpty() ? qstr(game->info.name) : custom_title;
-		const QString notes = m_notes[serial];
+		const QString title = m_titles.value(serial, qstr(game->info.name));
+		const QString notes = m_notes.value(serial);
 
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
@@ -2011,9 +2017,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	for (const auto& app : matching_apps)
 	{
 		const QString serial = qstr(app->info.serial);
-		const QString custom_title = m_titles[serial];
-		const QString title = custom_title.isEmpty() ? qstr(app->info.name) : custom_title;
-		const QString notes = m_notes[serial];
+		const QString title = m_titles.value(serial, qstr(app->info.name));
+		const QString notes = m_notes.value(serial);
 
 		m_xgrid->addItem(app->pxmap, title, r, c);
 		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(app));
@@ -2063,12 +2068,7 @@ bool game_list_frame::SearchMatchesApp(const QString& name, const QString& seria
 	if (!m_search_text.isEmpty())
 	{
 		const QString searchText = m_search_text.toLower();
-		QString gameName = m_titles[serial];
-		if (gameName.isEmpty())
-		{
-			gameName = name;
-		}
-		return gameName.toLower().contains(searchText) || serial.toLower().contains(searchText);
+		return m_titles.value(serial, name).toLower().contains(searchText) || serial.toLower().contains(searchText);
 	}
 	return true;
 }
