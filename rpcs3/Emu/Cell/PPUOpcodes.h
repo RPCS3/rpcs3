@@ -64,7 +64,7 @@ union ppu_opcode_t
 
 inline u64 ppu_rotate_mask(u32 mb, u32 me)
 {
-	return utils::ror64(~0ull << (63 ^ (me - mb)), mb);
+	return utils::ror64(~0ull << (~(me - mb) & 63), mb);
 }
 
 inline u32 ppu_decode(u32 inst)
