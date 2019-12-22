@@ -3,7 +3,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/RSX/Overlays/overlays.h"
-#include "pad_thread.h"
+#include "Input/pad_thread.h"
 
 #include "cellSysutil.h"
 #include "cellOskDialog.h"
