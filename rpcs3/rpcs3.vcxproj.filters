@@ -656,7 +656,7 @@
     <ClCompile Include="rpcs3qt\_discord_utils.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
-    <ClCompile Include="keyboard_pad_handler.cpp">
+    <ClCompile Include="Input/keyboard_pad_handler.cpp">
       <Filter>Io\Keyboard</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_trophy_manager_dialog.cpp">
@@ -716,7 +716,7 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_osk_dialog_frame.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="ds3_pad_handler.cpp">
+    <ClCompile Include="Input/ds3_pad_handler.cpp">
       <Filter>Io\DS3</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\gui_application.cpp">
@@ -868,10 +868,10 @@
     <ClInclude Include="rpcs3qt\_discord_utils.h">
       <Filter>Gui\utils</Filter>
     </ClInclude>
-    <ClInclude Include="keyboard_pad_handler.h">
+    <ClInclude Include="Input/keyboard_pad_handler.h">
       <Filter>Io\Keyboard</Filter>
     </ClInclude>
-    <ClInclude Include="ds3_pad_handler.h">
+    <ClInclude Include="Input/ds3_pad_handler.h">
       <Filter>Io\DS3</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\stylesheets.h">

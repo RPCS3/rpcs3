@@ -1426,7 +1426,7 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
       </Command>
     </CustomBuild>
-    <ClInclude Include="mm_joystick_handler.h" />
+    <ClInclude Include="Input/mm_joystick_handler.h" />
     <CustomBuild Include="rpcs3qt\cg_disasm_window.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing cg_disasm_window.h...</Message>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">Moc%27ing cg_disasm_window.h...</Message>
