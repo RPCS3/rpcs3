@@ -4,7 +4,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
 
-#include "pad_thread.h"
+#include "Input/pad_thread.h"
 #include "cellPad.h"
 
 extern logs::channel sys_io;

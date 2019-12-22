@@ -6,7 +6,7 @@
 #include "../../Io/PadHandler.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
-#include "pad_thread.h"
+#include "Input/pad_thread.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
