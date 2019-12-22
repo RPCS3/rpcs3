@@ -44,22 +44,23 @@ add_subdirectory(Emu)
 add_subdirectory(rpcs3qt)
 
 set(RPCS3_SRC
-	basic_keyboard_handler.cpp
-	basic_mouse_handler.cpp
 	display_sleep_control.cpp
-	ds3_pad_handler.cpp
-	ds4_pad_handler.cpp
-	evdev_joystick_handler.cpp
 	headless_application.cpp
-	keyboard_pad_handler.cpp
 	main.cpp
 	main_application.cpp
-	mm_joystick_handler.cpp
-	pad_thread.cpp
 	rpcs3_version.cpp
 	stb_image.cpp
 	stdafx.cpp
-	xinput_pad_handler.cpp
+
+	Input/basic_keyboard_handler.cpp
+	Input/basic_mouse_handler.cpp
+	Input/ds3_pad_handler.cpp
+	Input/ds4_pad_handler.cpp
+	Input/evdev_joystick_handler.cpp
+	Input/keyboard_pad_handler.cpp
+	Input/mm_joystick_handler.cpp
+	Input/pad_thread.cpp
+	Input/xinput_pad_handler.cpp
 )
 
 if(WIN32)

@@ -296,7 +296,7 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_settings_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="basic_keyboard_handler.cpp">
+    <ClCompile Include="Input\basic_keyboard_handler.cpp">
       <Filter>Io\Basic</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_basic_keyboard_handler.cpp">
@@ -323,16 +323,16 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_basic_mouse_handler.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="basic_mouse_handler.cpp">
+    <ClCompile Include="Input\basic_mouse_handler.cpp">
       <Filter>Io\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="ds4_pad_handler.cpp">
+    <ClCompile Include="Input\ds4_pad_handler.cpp">
       <Filter>Io\DS4</Filter>
     </ClCompile>
-    <ClCompile Include="mm_joystick_handler.cpp">
+    <ClCompile Include="Input\mm_joystick_handler.cpp">
       <Filter>Io\MMJoystick</Filter>
     </ClCompile>
-    <ClCompile Include="xinput_pad_handler.cpp">
+    <ClCompile Include="Input\xinput_pad_handler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_msg_dialog_frame.cpp">
@@ -461,7 +461,7 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_manager_dialog.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="pad_thread.cpp">
+    <ClCompile Include="Input\pad_thread.cpp">
       <Filter>Io</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\about_dialog.cpp">
@@ -554,7 +554,7 @@
     <ClCompile Include="rpcs3qt\msg_dialog_frame.cpp">
       <Filter>Gui\message dialog</Filter>
     </ClCompile>
-    <ClCompile Include="evdev_joystick_handler.cpp">
+    <ClCompile Include="Input\evdev_joystick_handler.cpp">
       <Filter>Io\evdev</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\save_manager_dialog.cpp">
@@ -656,7 +656,7 @@
     <ClCompile Include="rpcs3qt\_discord_utils.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
-    <ClCompile Include="keyboard_pad_handler.cpp">
+    <ClCompile Include="Input/keyboard_pad_handler.cpp">
       <Filter>Io\Keyboard</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_trophy_manager_dialog.cpp">
@@ -716,7 +716,7 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_osk_dialog_frame.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
-    <ClCompile Include="ds3_pad_handler.cpp">
+    <ClCompile Include="Input/ds3_pad_handler.cpp">
       <Filter>Io\DS3</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\gui_application.cpp">
@@ -793,13 +793,13 @@
     <ClInclude Include="\rpcs3qt\*.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ds4_pad_handler.h">
+    <ClInclude Include="Input\ds4_pad_handler.h">
       <Filter>Io\DS4</Filter>
     </ClInclude>
-    <ClInclude Include="mm_joystick_handler.h">
+    <ClInclude Include="Input\mm_joystick_handler.h">
       <Filter>Io\MMJoystick</Filter>
     </ClInclude>
-    <ClInclude Include="xinput_pad_handler.h">
+    <ClInclude Include="Input\xinput_pad_handler.h">
       <Filter>Io\XInput</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_about_dialog.h">
@@ -826,7 +826,7 @@
     <ClInclude Include="rpcs3qt\trophy_notification_frame.h">
       <Filter>Gui\trophy</Filter>
     </ClInclude>
-    <ClInclude Include="pad_thread.h">
+    <ClInclude Include="Input\pad_thread.h">
       <Filter>Io</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\gl_gs_frame.h">
@@ -847,7 +847,7 @@
     <ClInclude Include="rpcs3qt\instruction_editor_dialog.h">
       <Filter>Gui\debugger</Filter>
     </ClInclude>
-    <ClInclude Include="evdev_joystick_handler.h">
+    <ClInclude Include="Input\evdev_joystick_handler.h">
       <Filter>Io\evdev</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\find_dialog.h">
@@ -868,10 +868,10 @@
     <ClInclude Include="rpcs3qt\_discord_utils.h">
       <Filter>Gui\utils</Filter>
     </ClInclude>
-    <ClInclude Include="keyboard_pad_handler.h">
+    <ClInclude Include="Input/keyboard_pad_handler.h">
       <Filter>Io\Keyboard</Filter>
     </ClInclude>
-    <ClInclude Include="ds3_pad_handler.h">
+    <ClInclude Include="Input/ds3_pad_handler.h">
       <Filter>Io\DS3</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\stylesheets.h">
@@ -891,10 +891,10 @@
     <CustomBuild Include="release\moc_predefs.h.cbt">
       <Filter>Generated Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="basic_keyboard_handler.h">
+    <CustomBuild Include="Input\basic_keyboard_handler.h">
       <Filter>Io\Basic</Filter>
     </CustomBuild>
-    <CustomBuild Include="basic_mouse_handler.h">
+    <CustomBuild Include="Input\basic_mouse_handler.h">
       <Filter>Io\Basic</Filter>
     </CustomBuild>
     <ClInclude Include="resource.h">

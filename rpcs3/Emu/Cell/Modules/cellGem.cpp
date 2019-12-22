@@ -5,7 +5,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
-#include "pad_thread.h"
+#include "Input/pad_thread.h"
 #include "Emu/Io/MouseHandler.h"
 #include "Emu/RSX/GSRender.h"
 #include "Utilities/Timer.h"
