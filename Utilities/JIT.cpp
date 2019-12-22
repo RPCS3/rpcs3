@@ -958,10 +958,12 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			m_cpu == "skylake" ||
 			m_cpu == "skylake-avx512" ||
 			m_cpu == "cascadelake" ||
+			m_cpu == "cooperlake" ||
 			m_cpu == "cannonlake" ||
 			m_cpu == "icelake" ||
 			m_cpu == "icelake-client" ||
-			m_cpu == "icelake-server")
+			m_cpu == "icelake-server" ||
+			m_cpu == "tigerlake")
 		{
 			// Downgrade if AVX is not supported by some chips
 			if (!utils::has_avx())
@@ -972,10 +974,12 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 
 		if (m_cpu == "skylake-avx512" ||
 			m_cpu == "cascadelake" ||
+			m_cpu == "cooperlake" ||
 			m_cpu == "cannonlake" ||
 			m_cpu == "icelake" ||
 			m_cpu == "icelake-client" ||
-			m_cpu == "icelake-server")
+			m_cpu == "icelake-server" ||
+			m_cpu == "tigerlake")
 		{
 			// Downgrade if AVX-512 is disabled or not supported
 			if (!utils::has_512())

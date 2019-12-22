@@ -18,8 +18,6 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 
 	const auto cpu = m_engine->getTargetMachine()->getTargetCPU();
 
-	m_use_ssse3 = true;
-
 	// Test SSSE3 feature (TODO)
 	if (cpu == "generic" ||
 		cpu == "k8" ||
@@ -33,6 +31,31 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "barcelona")
 	{
 		m_use_ssse3 = false;
+	}
+
+	// Test FMA feature (TODO)
+	if (cpu == "haswell" ||
+		cpu == "broadwell" ||
+		cpu == "skylake" ||
+		cpu == "bdver2" ||
+		cpu == "bdver3" ||
+		cpu == "bdver4" ||
+		cpu.substr(0, 5) == "znver")
+	{
+		m_use_fma = true;
+	}
+
+	// Test AVX-512 feature (TODO)
+	if (cpu == "skylake-avx512" ||
+		cpu == "cascadelake" ||
+		cpu == "cannonlake" ||
+		cpu == "cooperlake" ||
+		cpu == "icelake" ||
+		cpu == "icelake-client" ||
+		cpu == "icelake-server" ||
+		cpu == "tigerlake")
+	{
+		m_use_fma = true;
 	}
 }
 

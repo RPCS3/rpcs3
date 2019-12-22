@@ -2404,7 +2404,10 @@ protected:
 	bool m_is_be;
 
 	// Allow PSHUFB intrinsic
-	bool m_use_ssse3;
+	bool m_use_ssse3 = true;
+
+	// Allow FMA
+	bool m_use_fma = false;
 
 	// IR builder
 	llvm::IRBuilder<>* m_ir;
