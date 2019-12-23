@@ -334,8 +334,6 @@ struct lv2_socket final
 	shared_mutex mutex;
 
 #ifdef _WIN32
-	// Remember events (WSAEnumNetworkEvents)
-	u32 ev_set = 0;
 	// Tracks connect for WSAPoll workaround
 	bool is_connecting = false;
 #endif
