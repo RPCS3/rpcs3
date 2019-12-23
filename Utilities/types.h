@@ -529,7 +529,7 @@ struct offset32_detail<T3 T4::*>
 };
 
 // Helper function, used by ""_u16, ""_u32, ""_u64
-constexpr u8 to_u8(char c)
+constexpr u32 to_u8(char c)
 {
 	return static_cast<u8>(c);
 }
@@ -539,7 +539,7 @@ constexpr u16 operator""_u16(const char* s, std::size_t length)
 {
 	return
 #if IS_LE_MACHINE == 1
-		to_u8(s[1]) << 8 | to_u8(s[0]);
+		static_cast<u16>(to_u8(s[1]) << 8 | to_u8(s[0]));
 #endif
 }
 
