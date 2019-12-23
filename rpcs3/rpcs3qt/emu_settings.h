@@ -83,6 +83,7 @@ public:
 		DisableAsyncShaderCompiler,
 		MultithreadedRSX,
 		VBlankRate,
+		RelaxedZCULL,
 
 		// Performance Overlay
 		PerfOverlayEnabled,
@@ -307,6 +308,7 @@ private:
 		{ DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
 		{ DisableAsyncShaderCompiler, { "Video", "Disable Asynchronous Shader Compiler"}},
 		{ MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
+		{ RelaxedZCULL,               { "Video", "Relaxed ZCULL Sync"}},
 		{ AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
 		{ ResolutionScale,            { "Video", "Resolution Scale"}},
 		{ MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
