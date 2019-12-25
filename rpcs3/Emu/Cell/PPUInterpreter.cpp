@@ -6534,10 +6534,13 @@ auto FRSQRTE()
 	if constexpr (Build == 0xf1a6)
 		return ppu_exec_select<Flags...>::template select<set_fpcc>();
 
-	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
-	ppu.fpr[op.frd] = 1.0 / std::sqrt(ppu.fpr[op.frb]);
-	ppu_set_fpcc<Flags...>(ppu, ppu.fpr[op.frd], 0.);
+	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op)
+	{
+		const u64 b = std::bit_cast<u64>(ppu.fpr[op.frb]);
+		ppu.fpr[op.frd] = std::bit_cast<f64>(u64{ppu_frqrte_lut.data[b >> 49]} << 32);
+		ppu_set_fpcc<Flags...>(ppu, ppu.fpr[op.frd], 0.);
 	};
+
 	RETURN_(ppu, op);
 }
 

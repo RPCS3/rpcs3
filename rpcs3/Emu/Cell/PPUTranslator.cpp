@@ -1,6 +1,7 @@
 #ifdef LLVM_AVAILABLE
 
 #include "Emu/system_config.h"
+#include "Emu/Cell/Common.h"
 #include "PPUTranslator.h"
 #include "PPUThread.h"
 
@@ -4344,8 +4345,14 @@ void PPUTranslator::FMUL(ppu_opcode_t op)
 
 void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 {
-	const auto b = GetFpr(op.frb, 32);
-	const auto result = m_ir->CreateFDiv(ConstantFP::get(GetType<f32>(), 1.0), Call(GetType<f32>(), "llvm.sqrt.f32", b));
+	if (!m_frsqrte_table)
+	{
+		m_frsqrte_table = new GlobalVariable(*m_module, ArrayType::get(GetType<u32>(), 0x8000), true, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, ppu_frqrte_lut.data));
+	}
+
+	const auto b = m_ir->CreateBitCast(GetFpr(op.frb), GetType<u64>());
+	const auto v = m_ir->CreateLoad(m_ir->CreateGEP(m_frsqrte_table, {m_ir->getInt64(0), m_ir->CreateLShr(b, 49)}));
+	const auto result = m_ir->CreateBitCast(m_ir->CreateShl(ZExt(v), 32), GetType<f64>());
 	SetFpr(op.frd, result);
 
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
