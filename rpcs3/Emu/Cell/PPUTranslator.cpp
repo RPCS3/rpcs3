@@ -3833,7 +3833,21 @@ void PPUTranslator::FMADDS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b), GetType<f32>());
+
+	llvm::Value* result;
+	if(m_use_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f32>(llvm::Intrinsic::fma), {
+			m_ir->CreateFPTrunc(a, GetType<f32>()),
+			m_ir->CreateFPTrunc(c, GetType<f32>()),
+			m_ir->CreateFPTrunc(b, GetType<f32>())
+		});
+	}
+	else
+	{
+		result = m_ir->CreateFPTrunc(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b), GetType<f32>());
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c));
@@ -3851,7 +3865,21 @@ void PPUTranslator::FMSUBS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b), GetType<f32>());
+
+	llvm::Value* result;
+	if(m_use_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f32>(llvm::Intrinsic::fma), {
+			m_ir->CreateFPTrunc(a, GetType<f32>()),
+			m_ir->CreateFPTrunc(c, GetType<f32>()),
+			m_ir->CreateFNeg(m_ir->CreateFPTrunc(b, GetType<f32>()))
+		});
+	}
+	else
+	{
+		result = m_ir->CreateFPTrunc(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b), GetType<f32>());
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
@@ -3869,7 +3897,21 @@ void PPUTranslator::FNMSUBS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b)), GetType<f32>());
+
+	llvm::Value* result;
+	if(m_use_fma)
+	{
+		result = m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32>(llvm::Intrinsic::fma), {
+			m_ir->CreateFPTrunc(a, GetType<f32>()),
+			m_ir->CreateFPTrunc(c, GetType<f32>()),
+			m_ir->CreateFNeg(m_ir->CreateFPTrunc(b, GetType<f32>()))
+		}));
+	}
+	else
+	{
+		result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b)), GetType<f32>());
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
@@ -3887,7 +3929,21 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b)), GetType<f32>());
+
+	llvm::Value* result;
+	if(m_use_fma)
+	{
+		result = m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32>(llvm::Intrinsic::fma), {
+			m_ir->CreateFPTrunc(a, GetType<f32>()),
+			m_ir->CreateFPTrunc(c, GetType<f32>()),
+			m_ir->CreateFPTrunc(b, GetType<f32>())
+		}));
+	}
+	else
+	{
+		result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b)), GetType<f32>());
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
@@ -4117,8 +4173,37 @@ void PPUTranslator::FMUL(ppu_opcode_t op)
 
 void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 {
-	const auto b = GetFpr(op.frb, 32);
-	const auto result = m_ir->CreateFDiv(ConstantFP::get(GetType<f32>(), 1.0), Call(GetType<f32>(), "llvm.sqrt.f32", b));
+	static const u64 s_mantissas[16] = {
+		0x000F100000000000ull, 0x000D800000000000ull, 0x000C000000000000ull, 0x000A800000000000ull,
+		0x0009800000000000ull, 0x0008800000000000ull, 0x0008000000000000ull, 0x0007000000000000ull,
+		0x0006000000000000ull, 0x0004C00000000000ull, 0x0003C00000000000ull, 0x0003000000000000ull,
+		0x0002000000000000ull, 0x0001800000000000ull, 0x0001000000000000ull, 0x0000800000000000ull
+	};
+
+	if(!m_frsqrte_table)
+	{
+		m_frsqrte_table = new GlobalVariable(*m_module, ArrayType::get(GetType<u64>(), 16), true, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, s_mantissas));
+	}
+
+	// Cast to integral type so as to allow for bit manipulation
+	const auto b = m_ir->CreateBitCast(GetFpr(op.frb), GetType<u64>());
+
+	// Equivalent to:
+	// (0x3FF - (((EXP_BITS(b) - 0x3FF) >> 1) + 1)) << 52
+	const auto exponent = m_ir->CreateShl(m_ir->CreateLShr(m_ir->CreateAdd(m_ir->CreateAnd(m_ir->CreateLShr(b, 52), 0xFFF), m_ir->getInt64(0x1C01), "", true, true), 1), 52);
+
+	// Equivalent to:
+	// ((MAN_BITS(b) >> 49) & 7ull) + (!(EXP_BITS(b) & 1) << 3)
+	const auto mantissa_idx = m_ir->CreateXor(m_ir->CreateAnd(m_ir->CreateLShr(b, 49), 0xF), 8);
+
+	// Do a little more math
+	const auto new_exponent = m_ir->CreateOr(m_ir->CreateAnd(b, 0x8000'0000'0000'0000), m_ir->CreateSub(ConstantInt::get(GetType<u64>(), 0x3FE0'0000'0000'0000), exponent));
+
+	// Get mantissa from the constant array
+	const auto mantissa = m_ir->CreateLoad(m_ir->CreateGEP(m_frsqrte_table, { m_ir->getInt64(0), mantissa_idx }));
+
+	// Or together, and cast back to f64
+	const auto result = m_ir->CreateBitCast(m_ir->CreateOr(new_exponent, mantissa), GetType<f64>());
 	SetFpr(op.frd, result);
 
 	//m_ir->CreateStore(GetUndef<bool>(), m_fpscr_fr);
@@ -4135,7 +4220,17 @@ void PPUTranslator::FMSUB(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+
+	llvm::Value* result;
+	if(m_use_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, m_ir->CreateFNeg(b) });
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
@@ -4153,7 +4248,17 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+
+	llvm::Value* result;
+	if(m_use_fma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b });
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c));
@@ -4171,7 +4276,17 @@ void PPUTranslator::FNMSUB(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b));
+
+	llvm::Value* result;
+	if(m_use_fma)
+	{
+		result = m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, m_ir->CreateFNeg(b) }));
+	}
+	else
+	{
+		result = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b));
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
@@ -4189,7 +4304,17 @@ void PPUTranslator::FNMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b));
+
+	llvm::Value* result;
+	if(m_use_fma)
+	{
+		result = m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b }));
+	}
+	else
+	{
+		result = m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b));
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
