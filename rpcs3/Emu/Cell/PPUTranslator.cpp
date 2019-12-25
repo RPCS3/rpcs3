@@ -3835,7 +3835,7 @@ void PPUTranslator::FMADDS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if(m_use_fma)
+	if (m_use_fma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f32>(llvm::Intrinsic::fma), {
 			m_ir->CreateFPTrunc(a, GetType<f32>()),
@@ -3867,7 +3867,7 @@ void PPUTranslator::FMSUBS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if(m_use_fma)
+	if (m_use_fma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f32>(llvm::Intrinsic::fma), {
 			m_ir->CreateFPTrunc(a, GetType<f32>()),
@@ -3899,7 +3899,7 @@ void PPUTranslator::FNMSUBS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if(m_use_fma)
+	if (m_use_fma)
 	{
 		result = m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32>(llvm::Intrinsic::fma), {
 			m_ir->CreateFPTrunc(a, GetType<f32>()),
@@ -3931,7 +3931,7 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if(m_use_fma)
+	if (m_use_fma)
 	{
 		result = m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f32>(llvm::Intrinsic::fma), {
 			m_ir->CreateFPTrunc(a, GetType<f32>()),
@@ -4180,7 +4180,7 @@ void PPUTranslator::FRSQRTE(ppu_opcode_t op)
 		0x0002000000000000ull, 0x0001800000000000ull, 0x0001000000000000ull, 0x0000800000000000ull
 	};
 
-	if(!m_frsqrte_table)
+	if (!m_frsqrte_table)
 	{
 		m_frsqrte_table = new GlobalVariable(*m_module, ArrayType::get(GetType<u64>(), 16), true, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, s_mantissas));
 	}
@@ -4222,7 +4222,7 @@ void PPUTranslator::FMSUB(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if(m_use_fma)
+	if (m_use_fma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, m_ir->CreateFNeg(b) });
 	}
@@ -4250,7 +4250,7 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if(m_use_fma)
+	if (m_use_fma)
 	{
 		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b });
 	}
@@ -4278,7 +4278,7 @@ void PPUTranslator::FNMSUB(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if(m_use_fma)
+	if (m_use_fma)
 	{
 		result = m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, m_ir->CreateFNeg(b) }));
 	}
@@ -4306,7 +4306,7 @@ void PPUTranslator::FNMADD(ppu_opcode_t op)
 	const auto c = GetFpr(op.frc);
 
 	llvm::Value* result;
-	if(m_use_fma)
+	if (m_use_fma)
 	{
 		result = m_ir->CreateFNeg(m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b }));
 	}
