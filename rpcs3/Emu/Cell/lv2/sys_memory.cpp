@@ -15,7 +15,7 @@ lv2_memory_alloca::lv2_memory_alloca(u32 size, u32 align, u64 flags, const std::
 	, align(align)
 	, flags(flags)
 	, ct(ct)
-	, shm(std::make_shared<utils::shm>(size))
+	, shm(std::make_shared<vm::shm>(size))
 {
 }
 
@@ -179,7 +179,7 @@ error_code sys_memory_free(u32 addr)
 		}
 
 		// Return "physical memory" to the default container
-		g_fxo->get<lv2_memory_container>()->used -= shm.second->size();
+		g_fxo->get<lv2_memory_container>()->used -= shm.second->main.size();
 
 		return CELL_OK;
 	}

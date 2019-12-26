@@ -237,7 +237,7 @@ const auto spu_putllc_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, const
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0], -128);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -514,7 +514,7 @@ const auto spu_getll_tx = build_function_asm<u64(*)(u32 raddr, void* rdata)>([](
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0], -128);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -626,7 +626,7 @@ const auto spu_getll_inexact = build_function_asm<u64(*)(u32 raddr, void* rdata)
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0], -128);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);
@@ -793,7 +793,7 @@ const auto spu_putlluc_tx = build_function_asm<u32(*)(u32 raddr, const void* rda
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::rbp, x86::qword_ptr(x86::rax));
 	c.lea(x86::rbp, x86::qword_ptr(x86::rbp, args[0]));
-	c.shr(args[0], 4);
+	c.and_(args[0], -128);
 	c.lea(x86::rbx, x86::qword_ptr(x86::rbx, args[0]));
 	c.xor_(x86::r12d, x86::r12d);
 	c.mov(x86::r13, args[1]);

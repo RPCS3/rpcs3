@@ -16,7 +16,7 @@ struct lv2_memory : lv2_obj
 	const u32 align; // Alignment required
 	const u64 flags;
 	lv2_memory_container* const ct; // Associated memory container
-	const std::shared_ptr<utils::shm> shm;
+	const std::shared_ptr<vm::shm> shm;
 
 	atomic_t<u32> counter{0};
 

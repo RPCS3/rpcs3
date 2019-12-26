@@ -1067,8 +1067,8 @@ const auto ppu_stwcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 7);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.and_(args[0], -128);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.xor_(args[0].r32(), args[0].r32());
 	c.bswap(args[2].r32());
 	c.bswap(args[3].r32());
@@ -1183,8 +1183,8 @@ const auto ppu_stdcx_tx = build_function_asm<u32(*)(u32 raddr, u64 rtime, u64 rd
 	c.mov(x86::rax, imm_ptr(&vm::g_base_addr));
 	c.mov(x86::r11, x86::qword_ptr(x86::rax));
 	c.lea(x86::r11, x86::qword_ptr(x86::r11, args[0]));
-	c.shr(args[0], 7);
-	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0], 3));
+	c.and_(args[0], -128);
+	c.lea(x86::r10, x86::qword_ptr(x86::r10, args[0]));
 	c.xor_(args[0].r32(), args[0].r32());
 	c.bswap(args[2]);
 	c.bswap(args[3]);

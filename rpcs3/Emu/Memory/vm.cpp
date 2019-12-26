@@ -328,7 +328,7 @@ namespace vm
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages{};
 
-	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm)
+	static void _page_map(u32 addr, u8 flags, u32 size, vm::shm* shm)
 	{
 		if (!size || (size | addr) % 4096 || flags & page_allocated)
 		{
@@ -356,7 +356,9 @@ namespace vm
 			utils::memory_protect(g_base_addr + addr, size, utils::protection::rw);
 			std::memset(g_base_addr + addr, 0, size);
 		}
-		else if (shm->map_critical(g_base_addr + addr) != g_base_addr + addr || shm->map_critical(g_sudo_addr + addr) != g_sudo_addr + addr)
+		else if (shm->main.map_critical(g_base_addr + addr) != g_base_addr + addr ||
+			shm->main.map_critical(g_sudo_addr + addr) != g_sudo_addr + addr ||
+			shm->rsrv.map_critical(g_reservations + addr) != g_reservations + addr)
 		{
 			fmt::throw_exception("Memory mapping failed - blame Windows (addr=0x%x, size=0x%x, flags=0x%x)", addr, size, flags);
 		}
@@ -441,7 +443,7 @@ namespace vm
 		return true;
 	}
 
-	static u32 _page_unmap(u32 addr, u32 max_size, utils::shm* shm)
+	static u32 _page_unmap(u32 addr, u32 max_size, vm::shm* shm)
 	{
 		if (!max_size || (max_size | addr) % 4096)
 		{
@@ -495,8 +497,9 @@ namespace vm
 		}
 		else
 		{
-			shm->unmap_critical(g_base_addr + addr);
-			shm->unmap_critical(g_sudo_addr + addr);
+			shm->main.unmap_critical(g_base_addr + addr);
+			shm->main.unmap_critical(g_sudo_addr + addr);
+			shm->rsrv.unmap_critical(g_reservations + addr);
 		}
 
 		if (is_exec)
@@ -587,7 +590,13 @@ namespace vm
 		}
 	}
 
-	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&& shm)
+	shm::shm(u32 size)
+		: main(size)
+		, rsrv(size)
+	{
+	}
+
+	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<vm::shm>&& shm)
 	{
 		// Check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
@@ -628,29 +637,28 @@ namespace vm
 			// Beginning of the address space
 			if (addr == 0x10000)
 			{
-				utils::memory_commit(g_reservations, 0x1000);
+				utils::memory_commit(g_reservations, 0x10000);
 			}
-
-			utils::memory_commit(g_reservations + addr / 16, size / 16);
 		}
 		else
 		{
 			// RawSPU LS
 			for (u32 i = 0; i < 6; i++)
 			{
-				utils::memory_commit(g_reservations + addr / 16 + i * 0x10000, 0x4000);
+				utils::memory_commit(g_reservations + addr + i * 0x100000, 0x40000);
 			}
 
 			// End of the address space
-			utils::memory_commit(g_reservations + 0xfff0000, 0x10000);
+			utils::memory_commit(g_reservations + 0xfff00000, 0x100000);
 		}
 
 		if (flags & 0x100)
 		{
 			// Special path for 4k-aligned pages
-			m_common = std::make_shared<utils::shm>(size);
-			verify(HERE), m_common->map_critical(vm::base(addr), utils::protection::no) == vm::base(addr);
-			verify(HERE), m_common->map_critical(vm::get_super_ptr(addr), utils::protection::rw) == vm::get_super_ptr(addr);
+			m_common = std::make_shared<vm::shm>(size);
+			verify(HERE), m_common->main.map_critical(vm::base(addr), utils::protection::no) == vm::base(addr);
+			verify(HERE), m_common->main.map_critical(vm::get_super_ptr(addr)) == vm::get_super_ptr(addr);
+			verify(HERE), m_common->rsrv.map_critical(g_reservations + addr) == g_reservations + addr;
 		}
 	}
 
@@ -671,13 +679,14 @@ namespace vm
 			// Special path for 4k-aligned pages
 			if (m_common)
 			{
-				m_common->unmap_critical(vm::base(addr));
-				m_common->unmap_critical(vm::get_super_ptr(addr));
+				m_common->main.unmap_critical(vm::base(addr));
+				m_common->main.unmap_critical(vm::get_super_ptr(addr));
+				m_common->rsrv.unmap_critical(g_reservations + addr);
 			}
 		}
 	}
 
-	u32 block_t::alloc(const u32 orig_size, u32 align, const std::shared_ptr<utils::shm>* src, u64 flags)
+	u32 block_t::alloc(const u32 orig_size, u32 align, const std::shared_ptr<vm::shm>* src, u64 flags)
 	{
 		if (!src)
 		{
@@ -717,14 +726,14 @@ namespace vm
 		}
 
 		// Create or import shared memory object
-		std::shared_ptr<utils::shm> shm;
+		std::shared_ptr<vm::shm> shm;
 
 		if (m_common)
 			verify(HERE), !src;
 		else if (src)
 			shm = *src;
 		else
-			shm = std::make_shared<utils::shm>(size);
+			shm = std::make_shared<vm::shm>(size);
 
 		// Search for an appropriate place (unoptimized)
 		for (u32 addr = ::align(this->addr, align); u64{addr} + size <= u64{this->addr} + this->size; addr += align)
@@ -738,7 +747,7 @@ namespace vm
 		return 0;
 	}
 
-	u32 block_t::falloc(u32 addr, const u32 orig_size, const std::shared_ptr<utils::shm>* src, u64 flags)
+	u32 block_t::falloc(u32 addr, const u32 orig_size, const std::shared_ptr<vm::shm>* src, u64 flags)
 	{
 		if (!src)
 		{
@@ -772,14 +781,14 @@ namespace vm
 		}
 
 		// Create or import shared memory object
-		std::shared_ptr<utils::shm> shm;
+		std::shared_ptr<vm::shm> shm;
 
 		if (m_common)
 			verify(HERE), !src;
 		else if (src)
 			shm = *src;
 		else
-			shm = std::make_shared<utils::shm>(size);
+			shm = std::make_shared<vm::shm>(size);
 
 		if (!try_alloc(addr, pflags, size, std::move(shm)))
 		{
@@ -789,7 +798,7 @@ namespace vm
 		return addr;
 	}
 
-	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src)
+	u32 block_t::dealloc(u32 addr, const std::shared_ptr<vm::shm>* src)
 	{
 		{
 			vm::writer_lock lock(0);
@@ -826,7 +835,7 @@ namespace vm
 		}
 	}
 
-	std::pair<u32, std::shared_ptr<utils::shm>> block_t::get(u32 addr, u32 size)
+	std::pair<u32, std::shared_ptr<vm::shm>> block_t::get(u32 addr, u32 size)
 	{
 		if (addr < this->addr || addr + u64{size} > this->addr + u64{this->size})
 		{
@@ -857,7 +866,7 @@ namespace vm
 		}
 
 		// Range check
-		if (addr + u64{size} > found->first + u64{found->second.second->size()})
+		if (addr + u64{size} > found->first + u64{found->second.second->main.size()})
 		{
 			return {addr, nullptr};
 		}

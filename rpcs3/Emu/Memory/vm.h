@@ -66,16 +66,24 @@ namespace vm
 	// dealloc() with no return value and no exceptions
 	void dealloc_verbose_nothrow(u32 addr, memory_location_t location = any) noexcept;
 
+	struct shm final
+	{
+		utils::shm main;
+		utils::shm rsrv;
+
+		shm(u32 size);
+	};
+
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
 		// Mapped regions: addr -> shm handle
-		std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>> m_map;
+		std::map<u32, std::pair<u32, std::shared_ptr<vm::shm>>> m_map;
 
 		// Common mapped region for special cases
-		std::shared_ptr<utils::shm> m_common;
+		std::shared_ptr<vm::shm> m_common;
 
-		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&);
+		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<vm::shm>&&);
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags = 0);
@@ -88,16 +96,16 @@ namespace vm
 		const u64 flags; // Currently unused
 
 		// Search and map memory (min alignment is 0x10000)
-		u32 alloc(u32 size, u32 align = 0x10000, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
+		u32 alloc(u32 size, u32 align = 0x10000, const std::shared_ptr<vm::shm>* = nullptr, u64 flags = 0);
 
 		// Try to map memory at fixed location
-		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
+		u32 falloc(u32 addr, u32 size, const std::shared_ptr<vm::shm>* = nullptr, u64 flags = 0);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
-		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr);
+		u32 dealloc(u32 addr, const std::shared_ptr<vm::shm>* = nullptr);
 
 		// Get memory at specified address (if size = 0, addr assumed exact)
-		std::pair<u32, std::shared_ptr<utils::shm>> get(u32 addr, u32 size = 0);
+		std::pair<u32, std::shared_ptr<vm::shm>> get(u32 addr, u32 size = 0);
 
 		// Get allocated memory count
 		u32 used();
