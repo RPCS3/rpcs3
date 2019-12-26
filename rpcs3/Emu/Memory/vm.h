@@ -149,7 +149,7 @@ namespace vm
 	template<>
 	struct cast_impl<u32>
 	{
-		static vm::addr_t cast(u32 addr, const char* loc)
+		static vm::addr_t cast(u32 addr, const char* /*loc*/)
 		{
 			return static_cast<vm::addr_t>(addr);
 		}
@@ -163,7 +163,7 @@ namespace vm
 	template<>
 	struct cast_impl<u64>
 	{
-		static vm::addr_t cast(u64 addr, const char* loc)
+		static vm::addr_t cast(u64 addr, const char* /*loc*/)
 		{
 			return static_cast<vm::addr_t>(static_cast<u32>(addr));
 		}

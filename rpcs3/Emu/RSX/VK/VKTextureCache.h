@@ -1025,7 +1025,7 @@ namespace vk
 			return result;
 		}
 
-		vk::image_view* generate_2d_mipmaps_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height,
+		vk::image_view* generate_2d_mipmaps_from_images(vk::command_buffer& cmd, u32 /*gcm_format*/, u16 width, u16 height,
 			const std::vector<copy_region_descriptor>& sections_to_copy, const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			const auto _template = sections_to_copy.front().src;

@@ -1,4 +1,4 @@
-
+﻿
 #include "rsx_debugger.h"
 #include "qt_utils.h"
 
@@ -369,18 +369,15 @@ void Buffer::ShowWindowed()
 	if (!render)
 		return;
 
-	const auto buffers = render->display_buffers;
-
 	// TODO: Is there any better way to choose the color buffers
-#define SHOW_BUFFER(id) \
-	{ \
-		u32 addr = rsx::constants::local_mem_base + buffers[id].offset; \
-		if (vm::check_addr(addr) && buffers[id].width && buffers[id].height) \
-			memory_viewer_panel::ShowImage(this, addr, 3, buffers[id].width, buffers[id].height, true); \
-		return; \
-	} \
-
-	//if (0 <= m_id && m_id < 4) SHOW_BUFFER(m_id);
+	//if (0 <= m_id && m_id < 4)
+	//{
+	//	const auto buffers = render->display_buffers;
+	//	u32 addr = rsx::constants::local_mem_base + buffers[m_id].offset;
+	//	if (vm::check_addr(addr) && buffers[m_id].width && buffers[m_id].height)
+	//		memory_viewer_panel::ShowImage(this, addr, 3, buffers[m_id].width, buffers[m_id].height, true);
+	//	return;
+	//}
 
 	gui::utils::show_windowed_image(m_image, title());
 
@@ -394,7 +391,6 @@ void Buffer::ShowWindowed()
 					render->textures[m_cur_texture].width(),
 					render->textures[m_cur_texture].height(), false);*/
 	}
-#undef SHOW_BUFFER
 	return;
 }
 

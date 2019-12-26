@@ -45,7 +45,7 @@ protected:
 	}
 
     // Grow the buffer to hold at least size bytes
-	virtual bool grow(size_t size)
+	virtual bool grow(size_t /*size*/)
 	{
 		// Stub
 		return false;

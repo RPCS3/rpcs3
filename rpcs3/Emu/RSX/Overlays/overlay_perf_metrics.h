@@ -32,7 +32,7 @@ namespace rsx
 			u32 m_update_interval{}; // in ms
 			u32 m_frames{};
 			std::string m_font{};
-			u32 m_font_size{};
+			u16 m_font_size{};
 			u32 m_margin_x{}; // horizontal distance to the screen border relative to the screen_quadrant in px
 			u32 m_margin_y{}; // vertical distance to the screen border relative to the screen_quadrant in px
 			f32 m_opacity{};  // 0..1
@@ -68,7 +68,7 @@ namespace rsx
 			void set_position(screen_quadrant quadrant);
 			void set_update_interval(u32 update_interval);
 			void set_font(std::string font);
-			void set_font_size(u32 font_size);
+			void set_font_size(u16 font_size);
 			void set_margins(u32 margin_x, u32 margin_y, bool center_x, bool center_y);
 			void set_opacity(f32 opacity);
 			void set_body_colors(std::string color, std::string background);
