@@ -28,21 +28,31 @@ void fmt_class_string<CellImeJpError>::format(std::string& out, u64 arg)
 
 using sys_memory_container_t = u32;
 
-ime_jp_manager::ime_jp_manager()
+ime_jp_container::ime_jp_container()
 {
-	if ((s32)g_ps3_process_info.sdk_ver < 0x360000) // firmware < 3.6.0
+	if (static_cast<s32>(g_ps3_process_info.sdk_ver) < 0x360000) // firmware < 3.6.0
 		allowed_extensions = CELL_IMEJP_EXTENSIONCH_UD85TO94 | CELL_IMEJP_EXTENSIONCH_OUTJIS;
 	else
 		allowed_extensions = CELL_IMEJP_EXTENSIONCH_UD09TO15 | CELL_IMEJP_EXTENSIONCH_UD85TO94 | CELL_IMEJP_EXTENSIONCH_OUTJIS;
 }
 
-bool ime_jp_manager::check_handle(CellImeJpHandle handle)
+u32 ime_jp_manager::get_container(CellImeJpHandle handle)
 {
-	// TODO
-	return !!handle;
+	if (handle)
+	{
+		if (const auto idm_handle = idm::check<ime_jp_handle>(handle.addr()))
+		{
+			if (containers.find(idm_handle->container_id) != containers.end())
+			{
+				return idm_handle->container_id;
+			}
+		}
+	}
+
+	return 0;
 }
 
-bool ime_jp_manager::addChar(u16 c)
+bool ime_jp_container::addChar(u16 c)
 {
 	if (!c || cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1) || cursor > input_string.length())
 		return false;
@@ -55,7 +65,7 @@ bool ime_jp_manager::addChar(u16 c)
 	return true;
 }
 
-bool ime_jp_manager::addString(vm::cptr<u16> str)
+bool ime_jp_container::addString(vm::cptr<u16> str)
 {
 	if (!str)
 		return false;
@@ -69,7 +79,7 @@ bool ime_jp_manager::addString(vm::cptr<u16> str)
 	return true;
 }
 
-bool ime_jp_manager::backspaceWord()
+bool ime_jp_container::backspaceWord()
 {
 	if (!cursor || cursor > CELL_IMEJP_STRING_MAXLENGTH || cursor > input_string.length())
 		return false;
@@ -83,7 +93,7 @@ bool ime_jp_manager::backspaceWord()
 	return true;
 }
 
-bool ime_jp_manager::deleteWord()
+bool ime_jp_container::deleteWord()
 {
 	if (cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1) || cursor > (input_string.length() - 1))
 		return false;
@@ -97,7 +107,7 @@ bool ime_jp_manager::deleteWord()
 	return true;
 }
 
-void ime_jp_manager::moveCursor(s8 amount)
+void ime_jp_container::moveCursor(s8 amount)
 {
 	if (amount > 0)
 	{
@@ -106,20 +116,20 @@ void ime_jp_manager::moveCursor(s8 amount)
 	}
 	else if (amount < 0)
 	{
-		cursor = std::max(0, (s32)cursor + amount);
-		cursor_end = std::max((s32)cursor, (s32)cursor_end + amount);
+		cursor = std::max(0, static_cast<s32>(cursor) + amount);
+		cursor_end = std::max(static_cast<s32>(cursor), static_cast<s32>(cursor_end) + amount);
 	}
 }
 
-void ime_jp_manager::moveCursorEnd(s8 amount)
+void ime_jp_container::moveCursorEnd(s8 amount)
 {
 	if (amount > 0)
 	{
-		cursor_end = std::max((s32)cursor, (s32)std::min(cursor_end + amount, input_string.length() - 1));
+		cursor_end = std::max(static_cast<s32>(cursor), std::min<s32>(cursor_end + amount, input_string.length() - 1));
 	}
 	else if (amount < 0)
 	{
-		cursor_end = std::max((s32)cursor, (s32)cursor_end + amount);
+		cursor_end = std::max(static_cast<s32>(cursor), static_cast<s32>(cursor_end) + amount);
 	}
 }
 
@@ -133,21 +143,23 @@ error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpH
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (container_id == manager->container_id)
+	const auto [context, success] = manager->containers.try_emplace(container_id, ime_jp_container());
+
+	if (!success)
 	{
 		return CELL_IMEJP_ERROR_ALREADY_OPEN;
 	}
 
-	if (addDicPath && addDicPath->path)
+	if (addDicPath && addDicPath->path[0])
 	{
 		cellImeJp.warning("cellImeJpOpen dictionary path = %s", addDicPath->path);
-		manager->dictionary_paths.push_back(std::string(addDicPath->path));
+
+		context->second.dictionary_paths.push_back(std::string(addDicPath->path));
 	}
 
-	manager->container_id = container_id;
-
-	*hImeJpHandle = vm::var<u32>(container_id);
+	*hImeJpHandle = vm::cast(idm::make<ime_jp_handle>(container_id));
 
 	return CELL_OK;
 }
@@ -162,21 +174,23 @@ error_code cellImeJpOpen2(sys_memory_container_t container_id, vm::ptr<CellImeJp
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (container_id == manager->container_id)
+	const auto [context, success] = manager->containers.try_emplace(container_id, ime_jp_container());
+
+	if (!success)
 	{
 		return CELL_IMEJP_ERROR_ALREADY_OPEN;
 	}
 
-	if (addDicPath && addDicPath->path)
+	if (addDicPath && addDicPath->path[0])
 	{
 		cellImeJp.warning("cellImeJpOpen2 dictionary path = %s", addDicPath->path);
-		manager->dictionary_paths.push_back(std::string(addDicPath->path));
+
+		context->second.dictionary_paths.push_back(std::string(addDicPath->path));
 	}
 
-	manager->container_id = container_id;
-
-	*hImeJpHandle = vm::var<u32>(container_id);
+	*hImeJpHandle = vm::cast(idm::make<ime_jp_handle>(container_id));
 
 	return CELL_OK;
 }
@@ -191,8 +205,11 @@ error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJp
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (container_id == manager->container_id)
+	const auto [context, success] = manager->containers.try_emplace(container_id, ime_jp_container());
+
+	if (!success)
 	{
 		return CELL_IMEJP_ERROR_ALREADY_OPEN;
 	}
@@ -201,17 +218,16 @@ error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJp
 	{
 		for (size_t i = 0; i < 4; i++)
 		{
-			if (addDicPath[i] && addDicPath[i]->path)
+			if (addDicPath[i] && addDicPath[i]->path[0])
 			{
 				cellImeJp.warning("cellImeJpOpen3 dictionary %d path = %s", i, addDicPath[i]->path);
-				manager->dictionary_paths.push_back(std::string(addDicPath[i]->path));
+
+				context->second.dictionary_paths.push_back(std::string(addDicPath[i]->path));
 			}
 		}
 	}
 
-	manager->container_id = container_id;
-
-	*hImeJpHandle = vm::var<u32>(container_id);
+	*hImeJpHandle = vm::cast(idm::make<ime_jp_handle>(container_id));
 
 	return CELL_OK;
 }
@@ -227,13 +243,19 @@ error_code cellImeJpClose(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpClose(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	*manager = {};
+	if (!idm::remove<ime_jp_handle>(container_id) || manager->containers.erase(container_id) != 1)
+	{
+		cellImeJp.error("cellImeJpClose: could not remove container. container_id=%d", container_id);
+	}
 
 	return CELL_OK;
 }
@@ -243,18 +265,23 @@ error_code cellImeJpSetKanaInputMode(CellImeJpHandle hImeJpHandle, s16 inputOpti
 	cellImeJp.todo("cellImeJpSetKanaInputMode(hImeJpHandle=*0x%x, inputOption=%d)", hImeJpHandle, inputOption);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_INPUT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->kana_input_mode = inputOption;
+	container.kana_input_mode = inputOption;
 
 	return CELL_OK;
 }
@@ -264,13 +291,18 @@ error_code cellImeJpSetInputCharType(CellImeJpHandle hImeJpHandle, s16 charTypeO
 	cellImeJp.todo("cellImeJpSetInputCharType(hImeJpHandle=*0x%x, charTypeOption=%d)", hImeJpHandle, charTypeOption);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	manager->input_char_type = charTypeOption;
+	auto& container = manager->containers[container_id];
+
+	container.input_char_type = charTypeOption;
 
 	return CELL_OK;
 }
@@ -280,13 +312,18 @@ error_code cellImeJpSetFixInputMode(CellImeJpHandle hImeJpHandle, s16 fixInputMo
 	cellImeJp.todo("cellImeJpSetFixInputMode(hImeJpHandle=*0x%x, fixInputMode=%d)", hImeJpHandle, fixInputMode);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	manager->fix_input_mode = fixInputMode;
+	auto& container = manager->containers[container_id];
+
+	container.fix_input_mode = fixInputMode;
 
 	return CELL_OK;
 }
@@ -296,13 +333,23 @@ error_code cellImeJpAllowExtensionCharacters(CellImeJpHandle hImeJpHandle, s16 e
 	cellImeJp.todo("cellImeJpSetFixInputMode(hImeJpHandle=*0x%x, extensionCharacters=%d)", hImeJpHandle, extensionCharacters);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	manager->allowed_extensions = extensionCharacters;
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_BEFORE_INPUT)
+	{
+		return CELL_IMEJP_ERROR_ERR;
+	}
+
+	container.allowed_extensions = extensionCharacters;
 
 	return CELL_OK;
 }
@@ -312,18 +359,23 @@ error_code cellImeJpReset(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpReset(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	manager->input_state = CELL_IMEJP_BEFORE_INPUT;
-	manager->input_string.clear();
-	manager->converted_string.clear();
-	manager->confirmed_string.clear();
-	manager->cursor = 0;
-	manager->cursor_end = 0;
+	auto& container = manager->containers[container_id];
+
+	container.input_state = CELL_IMEJP_BEFORE_INPUT;
+	container.input_string.clear();
+	container.converted_string.clear();
+	container.confirmed_string.clear();
+	container.cursor = 0;
+	container.cursor_end = 0;
 
 	return CELL_OK;
 }
@@ -338,13 +390,18 @@ error_code cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pInputS
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	*pInputStatus = manager->input_state;
+	auto& container = manager->containers[container_id];
+
+	*pInputStatus = container.input_state;
 
 	return CELL_OK;
 }
@@ -359,18 +416,23 @@ error_code cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::p
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->addChar(inputChar);
+	container.addChar(inputChar);
 
 	*pOutputStatus = CELL_IMEJP_RET_CONFIRMED;
 
@@ -393,18 +455,23 @@ error_code cellImeJpEnterString(CellImeJpHandle hImeJpHandle, vm::cptr<u16> pInp
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->addString(pInputString);
+	container.addString(pInputString);
 	*pOutputStatus = CELL_IMEJP_RET_CONFIRMED;
 	return CELL_OK;
 }
@@ -420,18 +487,23 @@ error_code cellImeJpModeCaretRight(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpModeCaretRight(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_CONVERT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->moveCursor(1);
+	container.moveCursor(1);
 
 	return CELL_OK;
 }
@@ -441,18 +513,23 @@ error_code cellImeJpModeCaretLeft(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpModeCaretLeft(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_CONVERT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->moveCursor(-1);
+	container.moveCursor(-1);
 
 	return CELL_OK;
 }
@@ -462,18 +539,23 @@ error_code cellImeJpBackspaceWord(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpBackspaceWord(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_CONVERT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->backspaceWord();
+	container.backspaceWord();
 
 	return CELL_OK;
 }
@@ -483,18 +565,23 @@ error_code cellImeJpDeleteWord(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpDeleteWord(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_CONVERT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->deleteWord();
+	container.deleteWord();
 
 	return CELL_OK;
 }
@@ -504,22 +591,27 @@ error_code cellImeJpAllDeleteConvertString(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpAllDeleteConvertString(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->cursor = 0;
-	manager->cursor_end = 0;
-	manager->input_string.clear();
-	manager->converted_string.clear();
-	manager->input_state = CELL_IMEJP_BEFORE_INPUT;
+	container.cursor = 0;
+	container.cursor_end = 0;
+	container.input_string.clear();
+	container.converted_string.clear();
+	container.input_state = CELL_IMEJP_BEFORE_INPUT;
 
 	return CELL_OK;
 }
@@ -529,18 +621,23 @@ error_code cellImeJpConvertForward(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpConvertForward(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->input_state = CELL_IMEJP_CANDIDATES;
+	container.input_state = CELL_IMEJP_CANDIDATES;
 
 	return CELL_OK;
 }
@@ -550,18 +647,23 @@ error_code cellImeJpConvertBackward(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpConvertBackward(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->input_state = CELL_IMEJP_CANDIDATES;
+	container.input_state = CELL_IMEJP_CANDIDATES;
 
 	return CELL_OK;
 }
@@ -571,13 +673,18 @@ error_code cellImeJpCurrentPartConfirm(CellImeJpHandle hImeJpHandle, s16 listIte
 	cellImeJp.todo("cellImeJpCurrentPartConfirm(hImeJpHandle=*0x%x, listItem=%d)", hImeJpHandle, listItem);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	const auto container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -590,24 +697,29 @@ error_code cellImeJpAllConfirm(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpAllConfirm(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
 	// Use input_string for now
-	manager->confirmed_string = manager->input_string;
-	manager->cursor = 0;
-	manager->cursor_end = 0;
-	manager->input_string.clear();
-	manager->converted_string.clear();
-	manager->input_state = CELL_IMEJP_BEFORE_INPUT;
+	container.confirmed_string = container.input_string;
+	container.cursor = 0;
+	container.cursor_end = 0;
+	container.input_string.clear();
+	container.converted_string.clear();
+	container.input_state = CELL_IMEJP_BEFORE_INPUT;
 
 	return CELL_OK;
 }
@@ -617,19 +729,24 @@ error_code cellImeJpAllConvertCancel(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpAllConvertCancel(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT || container.input_state == CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->converted_string.clear();
-	manager->input_state = CELL_IMEJP_BEFORE_CONVERT;
+	container.converted_string.clear();
+	container.input_state = CELL_IMEJP_BEFORE_CONVERT;
 
 	return CELL_OK;
 }
@@ -639,13 +756,18 @@ error_code cellImeJpConvertCancel(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpConvertCancel(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT)
+	const auto container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT || container.input_state == CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -659,18 +781,23 @@ error_code cellImeJpExtendConvertArea(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpExtendConvertArea(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT || container.input_state == CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->moveCursorEnd(1);
+	container.moveCursorEnd(1);
 
 	return CELL_OK;
 }
@@ -680,18 +807,23 @@ error_code cellImeJpShortenConvertArea(CellImeJpHandle hImeJpHandle)
 	cellImeJp.todo("cellImeJpShortenConvertArea(hImeJpHandle=*0x%x)", hImeJpHandle);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT || container.input_state == CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->moveCursorEnd(-1);
+	container.moveCursorEnd(-1);
 
 	return CELL_OK;
 }
@@ -701,13 +833,18 @@ error_code cellImeJpTemporalConfirm(CellImeJpHandle hImeJpHandle, s16 selectInde
 	cellImeJp.todo("cellImeJpTemporalConfirm(hImeJpHandle=*0x%x, selectIndex=%d)", hImeJpHandle, selectIndex);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_CANDIDATES)
+	const auto container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_CANDIDATES)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -720,13 +857,18 @@ error_code cellImeJpPostConvert(CellImeJpHandle hImeJpHandle, s16 postType)
 	cellImeJp.todo("cellImeJpPostConvert(hImeJpHandle=*0x%x, postType=%d)", hImeJpHandle, postType);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	const auto container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -739,13 +881,18 @@ error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 	cellImeJp.todo("cellImeJpMoveFocusClause(hImeJpHandle=*0x%x, moveType=%d)", hImeJpHandle, moveType);
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT || manager->input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
+	auto& container = manager->containers[container_id];
+
+	if (container.input_state == CELL_IMEJP_BEFORE_INPUT || container.input_state == CELL_IMEJP_BEFORE_CONVERT || container.input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -753,23 +900,23 @@ error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 	switch (moveType)
 	{
 	case CELL_IMEJP_FOCUS_NEXT:
-		manager->moveCursor(1);
+		container.moveCursor(1);
 		break;
 	case CELL_IMEJP_FOCUS_BEFORE:
-		manager->moveCursor(-1);
+		container.moveCursor(-1);
 		break;
 	case CELL_IMEJP_FOCUS_TOP:
-		manager->moveCursor((-1) * manager->input_string.length());
+		container.moveCursor((-1) * container.input_string.length());
 		break;
 	case CELL_IMEJP_FOCUS_END:
-		manager->moveCursor(manager->input_string.length());
-		manager->moveCursor(-1);
+		container.moveCursor(container.input_string.length());
+		container.moveCursor(-1);
 		break;
 	default:
 		break;
 	}
 
-	manager->input_state = CELL_IMEJP_CONVERTING;
+	container.input_state = CELL_IMEJP_CONVERTING;
 
 	return CELL_OK;
 }
@@ -784,13 +931,18 @@ error_code cellImeJpGetFocusTop(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pFocu
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	*pFocusTop = manager->cursor * 2; // offset in bytes
+	const auto container = manager->containers[container_id];
+
+	*pFocusTop = container.cursor * 2; // offset in bytes
 
 	return CELL_OK;
 }
@@ -805,19 +957,24 @@ error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pF
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1))
+	const auto container = manager->containers[container_id];
+
+	if (container.cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1))
 	{
 		*pFocusLength = 0;
 	}
 	else
 	{
-		*pFocusLength = (manager->cursor_end - manager->cursor + 1) * 2; // offset in bytes
+		*pFocusLength = (container.cursor_end - container.cursor + 1) * 2; // offset in bytes
 	}
 
 	return CELL_OK;
@@ -833,8 +990,11 @@ error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -844,11 +1004,13 @@ error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		pYomiString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
+	const auto container = manager->containers[container_id];
+
+	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, container.confirmed_string.length());
 
 	for (size_t i = 0; i < max_len; i++)
 	{
-		pYomiString[i] = manager->confirmed_string[i];
+		pYomiString[i] = container.confirmed_string[i];
 	}
 
 	return CELL_OK;
@@ -864,8 +1026,11 @@ error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -875,11 +1040,13 @@ error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		pConfirmString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
+	const auto container = manager->containers[container_id];
+
+	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, container.confirmed_string.length());
 
 	for (size_t i = 0; i < max_len; i++)
 	{
-		pConfirmString[i] = manager->confirmed_string[i];
+		pConfirmString[i] = container.confirmed_string[i];
 	}
 
 	return CELL_OK;
@@ -895,8 +1062,11 @@ error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -906,11 +1076,13 @@ error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		pYomiString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
+	const auto container = manager->containers[container_id];
+
+	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, container.input_string.length());
 
 	for (size_t i = 0; i < max_len; i++)
 	{
-		pYomiString[i] = manager->input_string[i];
+		pYomiString[i] = container.input_string[i];
 	}
 
 	return CELL_OK;
@@ -926,8 +1098,11 @@ error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -937,11 +1112,13 @@ error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		pConvertString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
+	const auto container = manager->containers[container_id];
+
+	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, container.input_string.length());
 
 	for (size_t i = 0; i < max_len; i++)
 	{
-		pConvertString[i] = manager->input_string[i];
+		pConvertString[i] = container.input_string[i];
 	}
 
 	return CELL_OK;
@@ -957,13 +1134,18 @@ error_code cellImeJpGetCandidateListSize(CellImeJpHandle hImeJpHandle, vm::ptr<s
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_CANDIDATES)
+	const auto container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_CANDIDATES)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -983,13 +1165,18 @@ error_code cellImeJpGetCandidateList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> 
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_CANDIDATES)
+	const auto container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_CANDIDATES)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -1009,13 +1196,18 @@ error_code cellImeJpGetCandidateSelect(CellImeJpHandle hImeJpHandle, vm::ptr<s16
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_CANDIDATES)
+	const auto container = manager->containers[container_id];
+
+	if (container.input_state != CELL_IMEJP_CANDIDATES)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -1035,8 +1227,11 @@ error_code cellImeJpGetPredictList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pY
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -1056,8 +1251,11 @@ error_code cellImeJpConfirmPrediction(CellImeJpHandle hImeJpHandle, vm::ptr<Cell
 	}
 
 	const auto manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager->mutex);
 
-	if (!manager->check_handle(hImeJpHandle))
+	const u32 container_id = manager->get_container(hImeJpHandle);
+
+	if (!container_id)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
