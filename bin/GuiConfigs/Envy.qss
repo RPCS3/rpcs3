@@ -504,7 +504,7 @@ QLabel#color_button {
 	background: transparent;
 }
 
-/* Seachbar on main toolbar */
+/* Search bar on main toolbar */
 QLineEdit#mw_searchbar { 
 	color: #ecf0f1;
 	background-color: #2d3038;
