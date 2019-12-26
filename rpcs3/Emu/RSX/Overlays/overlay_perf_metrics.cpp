@@ -278,7 +278,7 @@ namespace rsx
 			m_force_repaint = true;
 		}
 
-		void perf_metrics_overlay::set_font_size(u32 font_size)
+		void perf_metrics_overlay::set_font_size(u16 font_size)
 		{
 			if (m_font_size == font_size)
 				return;

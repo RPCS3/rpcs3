@@ -144,7 +144,7 @@ namespace gl
 			}
 		}
 
-		void dma_transfer(gl::command_context& cmd, gl::texture* src, const areai& /*src_area*/, const utils::address_range& /*valid_range*/, u32 pitch)
+		void dma_transfer(gl::command_context& /*cmd*/, gl::texture* src, const areai& /*src_area*/, const utils::address_range& /*valid_range*/, u32 pitch)
 		{
 			init_buffer(src);
 
@@ -760,7 +760,7 @@ namespace gl
 			return result;
 		}
 
-		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
+		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, u32 /*gcm_format*/, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy,
 			const rsx::texture_channel_remap_t& remap_vector) override
 		{
 			const auto _template = sections_to_copy.front().src;
@@ -873,7 +873,7 @@ namespace gl
 			return &cached;
 		}
 
-		cached_texture_section* create_nul_section(gl::command_context& cmd, const utils::address_range& rsx_range, bool memory_load) override
+		cached_texture_section* create_nul_section(gl::command_context& /*cmd*/, const utils::address_range& rsx_range, bool /*memory_load*/) override
 		{
 			auto& cached = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, false);
 			ASSERT(!cached.is_locked());

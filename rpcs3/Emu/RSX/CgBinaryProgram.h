@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <sstream>
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
@@ -232,7 +232,7 @@ public:
 		return name;
 	}
 
-	std::string GetCgParamRes(u32 offset) const
+	std::string GetCgParamRes(u32 /*offset*/) const
 	{
 		// LOG_WARNING(GENERAL, "GetCgParamRes offset 0x%x", offset);
 		// TODO
