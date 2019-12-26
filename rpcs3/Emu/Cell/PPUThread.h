@@ -163,6 +163,7 @@ public:
 	bool nj = false;
 
 	u32 raddr{0}; // Reservation addr
+	u64 runiq{0};
 	u64 rtime{0};
 	u64 rdata{0}; // Reservation data
 

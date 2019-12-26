@@ -42,7 +42,7 @@ namespace vm
 	{
 		writer_lock(const writer_lock&) = delete;
 		writer_lock& operator=(const writer_lock&) = delete;
-		writer_lock(u32 addr = 0);
+		writer_lock(u64 uniq_tag = 0);
 		~writer_lock();
 	};
 } // namespace vm

@@ -536,6 +536,7 @@ public:
 
 	// Reservation Data
 	u64 rtime = 0;
+	u64 runiq = 0;
 	std::array<v128, 8> rdata{};
 	u32 raddr = 0;
 

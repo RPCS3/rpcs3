@@ -58,7 +58,7 @@ namespace vm
 	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
 
 	// Currently locked cache line
-	atomic_t<u32> g_addr_lock = 0;
+	atomic_t<u64> g_addr_tag = 0;
 
 	// Memory mutex: passive locks
 	std::array<atomic_t<cpu_thread*>, g_cfg.core.ppu_threads.max> g_locks{};
@@ -118,19 +118,36 @@ namespace vm
 
 	atomic_t<u64>* passive_lock(const u32 addr, const u32 end)
 	{
-		static const auto test_addr = [](const u32 target, const u32 addr, const u32 end)
+		static const auto test_addr = [](u64 uniq_tag, u32 start, u32 _end)
 		{
-			return addr > target || end <= target;
+			for (u32 i = start; i < _end; i = ::align(i + 1, 4096))
+			{
+				// Check whether uniq_tag belongs to the memory page
+				if (UNLIKELY(vm::reservation_tag(i, 128) / 32 == uniq_tag / 32))
+				{
+					// Convert uniq_tag to the address within the page
+					const u32 addr = (i & -4096) | ((uniq_tag % 32) * 128);
+					const u32 _min = std::max<u32>(start, i);
+					const u32 _max = std::min<u32>(_end, i + 4096);
+
+					if (addr >= _min && addr < _max)
+					{
+						return false;
+					}
+				}
+			}
+
+			return true;
 		};
 
 		atomic_t<u64>* _ret;
 
-		if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
+		if (LIKELY(test_addr(g_addr_tag.load(), addr, end)))
 		{
 			// Optimistic path (hope that address range is not locked)
 			_ret = _register_range_lock(u64{end} << 32 | addr);
 
-			if (LIKELY(test_addr(g_addr_lock.load(), addr, end)))
+			if (LIKELY(test_addr(g_addr_tag.load(), addr, end)))
 			{
 				return _ret;
 			}
@@ -231,7 +248,7 @@ namespace vm
 		m_upgraded = true;
 	}
 
-	writer_lock::writer_lock(u32 addr)
+	writer_lock::writer_lock(u64 uniq_tag)
 	{
 		auto cpu = get_current_cpu_thread();
 
@@ -242,7 +259,7 @@ namespace vm
 
 		g_mutex.lock();
 
-		if (addr)
+		if (uniq_tag)
 		{
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
 			{
@@ -252,22 +269,37 @@ namespace vm
 				}
 			}
 
-			g_addr_lock = addr;
+			g_addr_tag = uniq_tag;
 
 			for (auto& lock : g_range_locks)
 			{
 				while (true)
 				{
 					const u64 value = lock;
+					const u32 start = static_cast<u32>(value);
+					const u32 _end  = static_cast<u32>(value >> 32);
 
-					// Test beginning address
-					if (static_cast<u32>(value) > addr)
+					bool found = false;
+
+					for (u32 i = start; i < _end; i = ::align(i + 1, 4096))
 					{
-						break;
+						// Check whether uniq_tag belongs to the memory page
+						if (UNLIKELY(vm::reservation_tag(i, 128) / 32 == uniq_tag / 32))
+						{
+							// Convert uniq_tag to the address within the page
+							const u32 addr = (i & -4096) | ((uniq_tag % 32) * 128);
+							const u32 _min = std::max<u32>(start, i);
+							const u32 _max = std::min<u32>(_end, i + 4096);
+
+							if (addr >= _min && addr < _max)
+							{
+								found = true;
+								break;
+							}
+						}
 					}
 
-					// Test end address
-					if (static_cast<u32>(value >> 32) <= addr)
+					if (!found)
 					{
 						break;
 					}
@@ -294,7 +326,7 @@ namespace vm
 
 	writer_lock::~writer_lock()
 	{
-		g_addr_lock.release(0);
+		g_addr_tag.release(0);
 		g_mutex.unlock();
 	}
 
@@ -594,6 +626,21 @@ namespace vm
 		: main(size)
 		, rsrv(size)
 	{
+		// Global tag allocator
+		static atomic_t<u64> g_uniq = 4096 / 128;
+
+		// Allocate a range of tags, also make sure that tags within each page are consecutive
+		const u64 uniq_base = g_uniq.fetch_add(size / 128);
+
+		const auto tmp = rsrv.map(nullptr);
+
+		for (u32 i = 0; i < size; i += 128)
+		{
+			// Create unique tags
+			*reinterpret_cast<u64*>(tmp + i + 8) = uniq_base + i;
+		}
+
+		rsrv.unmap(tmp);
 	}
 
 	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<vm::shm>&& shm)

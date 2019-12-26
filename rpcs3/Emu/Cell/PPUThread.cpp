@@ -978,6 +978,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 	const u64 data_off = (addr & 7) * 8;
 
 	ppu.raddr = addr;
+	ppu.runiq = vm::reservation_tag(addr, sizeof(T));
 
 	u64 count = 0;
 
@@ -1105,9 +1106,10 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	auto& data = vm::_ref<atomic_be_t<u32>>(addr & -4);
 	const u32 old_data = static_cast<u32>(ppu.rdata << ((addr & 7) * 8) >> 32);
 
-	if (ppu.raddr != addr || addr & 3 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & -128))
+	if (ppu.runiq != vm::reservation_tag(addr, sizeof(u32)) || addr & 3 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u32)) & -128))
 	{
 		ppu.raddr = 0;
+		ppu.runiq = 0;
 		return false;
 	}
 
@@ -1119,12 +1121,14 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		{
 			// Reservation lost
 			ppu.raddr = 0;
+			ppu.runiq = 0;
 			return false;
 		}
 		case 1:
 		{
 			vm::reservation_notifier(addr, sizeof(u32)).notify_all();
 			ppu.raddr = 0;
+			ppu.runiq = 0;
 			return true;
 		}
 		}
@@ -1132,6 +1136,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		auto& res = vm::reservation_acquire(addr, sizeof(u32));
 
 		ppu.raddr = 0;
+		ppu.runiq = 0;
 
 		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
@@ -1167,6 +1172,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 
 	vm::passive_lock(ppu);
 	ppu.raddr = 0;
+	ppu.runiq = 0;
 	return result;
 }
 
@@ -1221,9 +1227,10 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
 	const u64 old_data = ppu.rdata << ((addr & 7) * 8);
 
-	if (ppu.raddr != addr || addr & 7 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & -128))
+	if (ppu.runiq != vm::reservation_tag(addr, sizeof(u64)) || addr & 7 || old_data != data.load() || ppu.rtime != (vm::reservation_acquire(addr, sizeof(u64)) & -128))
 	{
 		ppu.raddr = 0;
+		ppu.runiq = 0;
 		return false;
 	}
 
@@ -1235,12 +1242,14 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		{
 			// Reservation lost
 			ppu.raddr = 0;
+			ppu.runiq = 0;
 			return false;
 		}
 		case 1:
 		{
 			vm::reservation_notifier(addr, sizeof(u64)).notify_all();
 			ppu.raddr = 0;
+			ppu.runiq = 0;
 			return true;
 		}
 		}
@@ -1248,6 +1257,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		auto& res = vm::reservation_acquire(addr, sizeof(u64));
 
 		ppu.raddr = 0;
+		ppu.runiq = 0;
 
 		if (res == ppu.rtime && res.compare_and_swap_test(ppu.rtime, ppu.rtime | 1))
 		{
@@ -1283,6 +1293,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 
 	vm::passive_lock(ppu);
 	ppu.raddr = 0;
+	ppu.runiq = 0;
 	return result;
 }
 

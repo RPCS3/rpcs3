@@ -26,6 +26,11 @@ namespace vm
 		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & -128));
 	}
 
+	inline u64 reservation_tag(u32 addr, u32 size)
+	{
+		return *reinterpret_cast<u64*>(g_reservations + (addr & -128) + 8);
+	}
+
 	void reservation_lock_internal(atomic_t<u64>&);
 
 	inline atomic_t<u64>& reservation_lock(u32 addr, u32 size)
