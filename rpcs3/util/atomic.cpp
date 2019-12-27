@@ -147,6 +147,33 @@ static sync_var* slot_get(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
 	return slot_get(iptr, s_slot_list[(value & s_slot_mask) / one_v<s_slot_mask>].branch + eq_bits, eq_bits + 1);
 }
 
+static void slot_broadcast(std::uintptr_t iptr, sync_var* loc, u64 lv = 0)
+{
+	if (!loc || lv >= 64)
+	{
+		return;
+	}
+
+	const u64 value = loc->addr_ref.load();
+
+	if ((value & s_waiter_mask) == 0)
+	{
+		return;
+	}
+
+	atomic_storage_futex::raw_notify(reinterpret_cast<const void*>((iptr % s_hashtable_size) | (value & s_pointer_mask)));
+
+	if ((value & s_collision_bit) == 0)
+	{
+		return;
+	}
+
+	for (auto& x : s_slot_list[(value & s_slot_mask) / one_v<s_slot_mask>].branch)
+	{
+		slot_broadcast(iptr, &x, lv + 1);
+	}
+}
+
 static void slot_free(u64 id)
 {
 	// Reset allocation bit
@@ -717,6 +744,12 @@ void atomic_storage_futex::raw_notify(const void* data)
 	{
 		notify_all(data);
 	}
+}
+
+void atomic_storage_futex::raw_notify_ex(u64 iptr)
+{
+	// Execute notify_all for all waiters sharing this slot
+	slot_broadcast(iptr, &s_hashtable[iptr % s_hashtable_size]);
 }
 
 void atomic_storage_futex::notify_one(const void* data)

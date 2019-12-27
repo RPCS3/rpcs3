@@ -1662,7 +1662,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 		}
 	}
 
-	vm::reservation_notifier(addr, 128).notify_all();
+	vm::reservation_notify(addr, 128);
 }
 
 void spu_thread::do_mfc(bool wait)
@@ -1988,7 +1988,7 @@ bool spu_thread::process_mfc_cmd()
 
 		if (result)
 		{
-			vm::reservation_notifier(addr, 128).notify_all();
+			vm::reservation_notify(addr, 128);
 			ch_atomic_stat.set_value(MFC_PUTLLC_SUCCESS);
 		}
 		else

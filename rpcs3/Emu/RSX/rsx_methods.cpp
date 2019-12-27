@@ -144,7 +144,7 @@ namespace rsx
 				res &= -128;
 			}
 
-			vm::reservation_notifier(addr, 4).notify_all();
+			vm::reservation_notify(addr, 4);
 		}
 	}
 

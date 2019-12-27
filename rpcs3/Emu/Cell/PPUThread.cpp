@@ -1126,7 +1126,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 		}
 		case 1:
 		{
-			vm::reservation_notifier(addr, sizeof(u32)).notify_all();
+			vm::reservation_notify(addr, sizeof(u32));
 			ppu.raddr = 0;
 			ppu.runiq = 0;
 			return true;
@@ -1143,7 +1143,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
 				res += 127;
-				vm::reservation_notifier(addr, sizeof(u32)).notify_all();
+				vm::reservation_notify(addr, sizeof(u32));
 				return true;
 			}
 
@@ -1163,7 +1163,7 @@ extern bool ppu_stwcx(ppu_thread& ppu, u32 addr, u32 reg_value)
 	if (result)
 	{
 		res.release(old_time + 128);
-		vm::reservation_notifier(addr, sizeof(u32)).notify_all();
+		vm::reservation_notify(addr, sizeof(u32));
 	}
 	else
 	{
@@ -1247,7 +1247,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 		}
 		case 1:
 		{
-			vm::reservation_notifier(addr, sizeof(u64)).notify_all();
+			vm::reservation_notify(addr, sizeof(u64));
 			ppu.raddr = 0;
 			ppu.runiq = 0;
 			return true;
@@ -1264,7 +1264,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 			if (data.compare_and_swap_test(old_data, reg_value))
 			{
 				res += 127;
-				vm::reservation_notifier(addr, sizeof(u64)).notify_all();
+				vm::reservation_notify(addr, sizeof(u64));
 				return true;
 			}
 
@@ -1284,7 +1284,7 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	if (result)
 	{
 		res.release(old_time + 128);
-		vm::reservation_notifier(addr, sizeof(u64)).notify_all();
+		vm::reservation_notify(addr, sizeof(u64));
 	}
 	else
 	{

@@ -27,6 +27,7 @@ private:
 public:
 	static void set_wait_callback(bool(*)(const void* data));
 	static void raw_notify(const void* data);
+	static void raw_notify_ex(u64 iptr);
 };
 
 // Helper class, provides access to compiler-specific atomic intrinsics

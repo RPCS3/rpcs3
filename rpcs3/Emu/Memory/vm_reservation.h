@@ -26,6 +26,11 @@ namespace vm
 		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & -128));
 	}
 
+	inline void reservation_notify(u32 addr, u32 size)
+	{
+		atomic_storage_futex::raw_notify_ex(reinterpret_cast<u64>(g_reservations + (addr & -128)));
+	}
+
 	inline u64 reservation_tag(u32 addr, u32 size)
 	{
 		return *reinterpret_cast<u64*>(g_reservations + (addr & -128) + 8);
