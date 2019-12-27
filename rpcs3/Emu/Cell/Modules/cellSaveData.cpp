@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
@@ -913,6 +913,35 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				{
 					selected = i;
 					break;
+				}
+			}
+
+			if (fixedSet->option != CELL_SAVEDATA_OPTION_NOCONFIRM)
+			{
+				std::string message;
+
+				if (selected == -1)
+				{
+					message = "Create new Save Data?";
+				}
+				else
+				{
+					// Get information from the selected entry
+					SaveDataEntry entry = save_entries[selected];
+					message = get_confirmation_message(operation) + "\n\n" + entry.title + "\n" + entry.subtitle + "\n" + entry.details;
+				}
+
+				// Get user confirmation
+				error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message));
+
+				if (res != CELL_OK)
+				{
+					return CELL_SAVEDATA_ERROR_INTERNAL;
+				}
+
+				if (g_last_user_response != CELL_MSGDIALOG_BUTTON_YES)
+				{
+					return CELL_CANCEL;
 				}
 			}
 
