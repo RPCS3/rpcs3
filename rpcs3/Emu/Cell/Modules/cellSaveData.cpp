@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_process.h"
@@ -225,6 +225,24 @@ static error_code select_and_delete(ppu_thread& ppu)
 	}
 
 	return CELL_CANCEL;
+}
+
+static std::string get_confirmation_message(u32 operation)
+{
+	if (operation == SAVEDATA_OP_LIST_DELETE || operation == SAVEDATA_OP_FIXED_DELETE)
+	{
+		return "Delete this entry?";
+	}
+	else if (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD)
+	{
+		return "Load this entry?";
+	}
+	else if (operation == SAVEDATA_OP_LIST_SAVE || operation == SAVEDATA_OP_FIXED_SAVE)
+	{
+		return "Overwrite this entry?";
+	}
+
+	return "";
 }
 
 static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirName,
@@ -759,17 +777,39 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return 0;
 			}
 
-			// UI returns -1 for new save games
-			if (selected == -1)
-			{
-				save_entry.dirName = listSet->newData->dirName.get_ptr();
-				save_entry.escaped = vfs::escape(save_entry.dirName);
-			}
-
 			// Cancel selected in UI
 			if (selected == -2)
 			{
 				return CELL_CANCEL;
+			}
+
+			std::string message;
+
+			// UI returns -1 for new save games
+			if (selected == -1)
+			{
+				message = "Create new Save Data?";
+				save_entry.dirName = listSet->newData->dirName.get_ptr();
+				save_entry.escaped = vfs::escape(save_entry.dirName);
+			}
+			else
+			{
+				// Get information from the selected entry
+				SaveDataEntry entry = save_entries[selected];
+				message = get_confirmation_message(operation) + "\n\n" + entry.title + "\n" + entry.subtitle + "\n" + entry.details;
+			}
+
+			// Get user confirmation
+			error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message));
+
+			if (res != CELL_OK)
+			{
+				return CELL_SAVEDATA_ERROR_INTERNAL;
+			}
+
+			if (g_last_user_response != CELL_MSGDIALOG_BUTTON_YES)
+			{
+				continue;
 			}
 
 			if (operation == SAVEDATA_OP_LIST_DELETE)
