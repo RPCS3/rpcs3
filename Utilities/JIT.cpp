@@ -7,6 +7,7 @@
 #include "sysinfo.h"
 #include "VirtualMemory.h"
 #include <immintrin.h>
+#include <zlib.h>
 
 #ifdef __linux__
 #include <sys/mman.h>
@@ -912,12 +913,92 @@ public:
 	{
 		std::string name = m_path;
 		name.append(module->getName());
-		fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
+		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
+		name.append(".gz");
+
+		z_stream zs{};
+		uLong zsz = compressBound(obj.getBufferSize()) + 256;
+		auto zbuf = std::make_unique<uchar[]>(zsz);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+		deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY);
+#pragma GCC diagnostic pop
+		zs.avail_in  = static_cast<uInt>(obj.getBufferSize());
+		zs.next_in   = reinterpret_cast<uchar*>(const_cast<char*>(obj.getBufferStart()));
+		zs.avail_out = static_cast<uInt>(zsz);
+		zs.next_out  = zbuf.get();
+
+		switch (deflate(&zs, Z_FINISH))
+		{
+		case Z_OK:
+		case Z_STREAM_END:
+		{
+			deflateEnd(&zs);
+			break;
+		}
+		default:
+		{
+			LOG_ERROR(GENERAL, "LLVM: Failed to compress module: %s", module->getName().data());
+			deflateEnd(&zs);
+			return;
+		}
+		}
+
+		fs::file(name, fs::rewrite).write(zbuf.get(), zsz - zs.avail_out);
 		LOG_NOTICE(GENERAL, "LLVM: Created module: %s", module->getName().data());
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
 	{
+		if (fs::file cached{path + ".gz", fs::read})
+		{
+			std::vector<uchar> gz = cached.to_vector<uchar>();
+			std::vector<uchar> out;
+			z_stream zs{};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+			inflateInit2(&zs, 16 + 15);
+#pragma GCC diagnostic pop
+			zs.avail_in = static_cast<uInt>(gz.size());
+			zs.next_in  = gz.data();
+			out.resize(gz.size() * 6);
+			zs.avail_out = static_cast<uInt>(out.size());
+			zs.next_out  = out.data();
+
+			while (zs.avail_in)
+			{
+				switch (inflate(&zs, Z_FINISH))
+				{
+				case Z_OK: break;
+				case Z_STREAM_END: break;
+				case Z_BUF_ERROR:
+				{
+					if (zs.avail_in)
+						break;
+					[[fallthrough]];
+				}
+				default:
+					inflateEnd(&zs);
+					return nullptr;
+				}
+
+				if (zs.avail_in)
+				{
+					auto cur_size = zs.next_out - out.data();
+					out.resize(out.size() + 65536);
+					zs.avail_out = static_cast<uInt>(out.size() - cur_size);
+					zs.next_out = out.data() + cur_size;
+				}
+			}
+
+			out.resize(zs.next_out - out.data());
+			inflateEnd(&zs);
+
+			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(out.size());
+			std::memcpy(buf->getBufferStart(), out.data(), out.size());
+			return buf;
+		}
+
 		if (fs::file cached{path, fs::read})
 		{
 			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(cached.size());
