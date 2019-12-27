@@ -227,6 +227,39 @@ static error_code select_and_delete(ppu_thread& ppu)
 	return CELL_CANCEL;
 }
 
+// Displays a savedata error message. error_code is not returned since the caller errored already.
+static void display_error_message(vm::ptr<CellSaveDataCBResult> result)
+{
+	if (!result)
+		return;
+
+	std::string msg;
+
+	switch (result->result)
+	{
+	case CELL_SAVEDATA_CBRESULT_ERR_NOSPACE:
+		msg = fmt::format("Error - Insufficient free space\n\nSpace needed: %d KB", result->errNeedSizeKB);
+		break;
+	case CELL_SAVEDATA_CBRESULT_ERR_FAILURE:
+		msg = "Error - Failed to save or load";
+		break;
+	case CELL_SAVEDATA_CBRESULT_ERR_BROKEN:
+		msg = "Error - Save data corrupted";
+		break;
+	case CELL_SAVEDATA_CBRESULT_ERR_NODATA:
+		msg = "Error - Save data cannot be found";
+		break;
+	case CELL_SAVEDATA_CBRESULT_ERR_INVALID:
+		if (result->invalidMsg)
+			error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, result->invalidMsg);
+		return;
+	default:
+		return;
+	}
+
+	error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(msg));
+}
+
 static std::string get_confirmation_message(u32 operation)
 {
 	if (operation == SAVEDATA_OP_LIST_DELETE || operation == SAVEDATA_OP_FIXED_DELETE)
@@ -616,7 +649,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (result->result < 0)
 			{
-				//TODO: display dialog
+				display_error_message(result);
+
 				cellSaveData.warning("savedata_op(): funcList returned result=%d.", result->result);
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
@@ -818,6 +852,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				if (result->result < 0)
 				{
+					display_error_message(result);
+
 					cellSaveData.warning("savedata_op(): funcDone returned result=%d.", result->result);
 					return CELL_SAVEDATA_ERROR_CBRESULT;
 				}
@@ -859,10 +895,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (result->result < 0)
 			{
-				//TODO: Show msgDialog if required
-				// depends on fixedSet->option
-				// 0 = none
-				// 1 = skip confirmation dialog
+				display_error_message(result);
 
 				cellSaveData.warning("savedata_op(): funcFixed returned result=%d.", result->result);
 				return CELL_SAVEDATA_ERROR_CBRESULT;
@@ -895,6 +928,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				if (result->result < 0)
 				{
+					display_error_message(result);
+
 					cellSaveData.warning("savedata_op(): funcDone_ returned result=%d.", result->result);
 					return CELL_SAVEDATA_ERROR_CBRESULT;
 				}
@@ -1075,6 +1110,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (result->result < CELL_SAVEDATA_CBRESULT_OK_NEXT)
 			{
+				display_error_message(result);
+
 				return CELL_SAVEDATA_ERROR_CBRESULT;
 			}
 
@@ -1258,31 +1295,26 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			break;
 		}
-
 		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON0:
 		{
 			file_path = "ICON0.PNG";
 			break;
 		}
-
 		case CELL_SAVEDATA_FILETYPE_CONTENT_ICON1:
 		{
 			file_path = "ICON1.PAM";
 			break;
 		}
-
 		case CELL_SAVEDATA_FILETYPE_CONTENT_PIC1:
 		{
 			file_path = "PIC1.PNG";
 			break;
 		}
-
 		case CELL_SAVEDATA_FILETYPE_CONTENT_SND0:
 		{
 			file_path = "SND0.AT3";
 			break;
 		}
-
 		default:
 		{
 			// ****** sysutil savedata parameter error : 61 ******
@@ -1477,6 +1509,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		// Remove backup again (TODO: may be changed to persistent backup implementation)
 		fs::remove_all(old_path);
+	}
+
+	if (savedata_result == CELL_SAVEDATA_ERROR_CBRESULT)
+	{
+		display_error_message(result);
 	}
 
 	return savedata_result;
