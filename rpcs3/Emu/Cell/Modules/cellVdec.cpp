@@ -82,10 +82,10 @@ struct vdec_frame
 	};
 
 	std::unique_ptr<AVFrame, frame_dtor> avf;
-	u64 dts;
-	u64 pts;
-	u64 userdata;
-	u32 frc;
+	u64 dts{};
+	u64 pts{};
+	u64 userdata{};
+	u32 frc{};
 	bool PicItemRecieved = false;
 
 	AVFrame* operator ->() const

@@ -535,7 +535,7 @@ constexpr u32 to_u8(char c)
 }
 
 // Convert 2-byte string to u16 value like reinterpret_cast does
-constexpr u16 operator""_u16(const char* s, std::size_t length)
+constexpr u16 operator""_u16(const char* s, std::size_t /*length*/)
 {
 	return
 #if IS_LE_MACHINE == 1
@@ -544,7 +544,7 @@ constexpr u16 operator""_u16(const char* s, std::size_t length)
 }
 
 // Convert 4-byte string to u32 value like reinterpret_cast does
-constexpr u32 operator""_u32(const char* s, std::size_t length)
+constexpr u32 operator""_u32(const char* s, std::size_t /*length*/)
 {
 	return
 #if IS_LE_MACHINE == 1
@@ -553,7 +553,7 @@ constexpr u32 operator""_u32(const char* s, std::size_t length)
 }
 
 // Convert 8-byte string to u64 value like reinterpret_cast does
-constexpr u64 operator""_u64(const char* s, std::size_t length)
+constexpr u64 operator""_u64(const char* s, std::size_t /*length*/)
 {
 	return
 #if IS_LE_MACHINE == 1

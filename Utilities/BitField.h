@@ -222,7 +222,7 @@ struct cf_t<void>
 	}
 
 	template<typename T>
-	static constexpr T insert(T value)
+	static constexpr T insert(T /*value*/)
 	{
 		return 0;
 	}

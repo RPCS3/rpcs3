@@ -251,7 +251,7 @@ int main(int argc, char** argv)
 	{
 #ifdef _WIN32
 		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
-			const auto con_out = freopen("CONOUT$", "w", stdout);
+			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
 #endif
 		for (const auto& style : QStyleFactory::keys())
 			std::cout << "\n" << style.toStdString();

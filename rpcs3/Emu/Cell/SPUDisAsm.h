@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "PPCDisAsm.h"
 #include "SPUOpcodes.h"
@@ -163,7 +163,7 @@ public:
 	{
 		op.rb ? UNK(op) : DisAsm("stop", op.opcode & 0x3fff);
 	}
-	void LNOP(spu_opcode_t op)
+	void LNOP(spu_opcode_t /*op*/)
 	{
 		DisAsm("lnop");
 	}
@@ -171,7 +171,7 @@ public:
 	{
 		DisAsm(op.c ? "syncc" : "sync");
 	}
-	void DSYNC(spu_opcode_t op)
+	void DSYNC(spu_opcode_t /*op*/)
 	{
 		DisAsm("dsync");
 	}

@@ -1617,7 +1617,7 @@ extern void ppu_initialize(const ppu_module& info)
 		}
 
 		// Check object file
-		if (fs::is_file(cache_path + obj_name))
+		if (fs::is_file(cache_path + obj_name + ".gz") || fs::is_file(cache_path + obj_name))
 		{
 			if (!jit)
 			{
@@ -1657,7 +1657,7 @@ extern void ppu_initialize(const ppu_module& info)
 				g_progr_pdone++;
 			}
 
-			if (Emu.IsStopped() || !jit || !fs::is_file(cache_path + obj_name))
+			if (Emu.IsStopped() || !jit || !fs::is_file(cache_path + obj_name + ".gz"))
 			{
 				return;
 			}
