@@ -360,7 +360,7 @@ QLabel#color_button {
 }
 
 
-/* Searchbar on main Toolbar */
+/* Search bar on main Toolbar */
 QLineEdit#mw_searchbar {
 	margin-left: 0.7em;
 	color: #4d4940;
