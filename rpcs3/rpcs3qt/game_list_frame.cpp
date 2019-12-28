@@ -1248,7 +1248,10 @@ bool game_list_frame::RemoveShadersCache(const std::string& base_dir, bool is_in
 	u32 caches_removed = 0;
 	u32 caches_total   = 0;
 
-	QDirIterator dir_iter(qstr(base_dir), QStringList() << QStringLiteral("shaders_cache"), QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	const QStringList filter{ QStringLiteral("shaders_cache") };
+
+	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+
 	while (dir_iter.hasNext())
 	{
 		const QString filepath = dir_iter.next();
@@ -1287,7 +1290,10 @@ bool game_list_frame::RemovePPUCache(const std::string& base_dir, bool is_intera
 	u32 files_removed = 0;
 	u32 files_total = 0;
 
-	QDirIterator dir_iter(qstr(base_dir), QStringList() << QStringLiteral("*.obj") << QStringLiteral("*.obj.gz"), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	const QStringList filter{ QStringLiteral("v*.obj"), QStringLiteral("v*.obj.gz") };
+
+	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+
 	while (dir_iter.hasNext())
 	{
 		const QString filepath = dir_iter.next();
@@ -1326,7 +1332,10 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 	u32 files_removed = 0;
 	u32 files_total = 0;
 
-	QDirIterator dir_iter(qstr(base_dir), QStringList() << QStringLiteral("*.dat") << QStringLiteral("*.dat.gz"), QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+	const QStringList filter{ QStringLiteral("spu*.dat"), QStringLiteral("spu*.dat.gz"), QStringLiteral("spu*.obj"), QStringLiteral("spu*.obj.gz") };
+
+	QDirIterator dir_iter(qstr(base_dir), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+
 	while (dir_iter.hasNext())
 	{
 		const QString filepath = dir_iter.next();
