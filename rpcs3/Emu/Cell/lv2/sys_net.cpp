@@ -83,7 +83,25 @@ void fmt_class_string<sys_net_error>::format(std::string& out, u64 arg)
 // Workaround function for WSAPoll not reporting failed connections
 void windows_poll(pollfd* fds, unsigned long nfds, int timeout, bool* connecting)
 {
+	// Don't call WSAPoll with zero nfds (errors 10022 or 10038)
+	if (std::none_of(fds, fds + nfds, [](pollfd& pfd) { return pfd.fd != INVALID_SOCKET; }))
+	{
+		if (timeout > 0)
+		{
+			Sleep(timeout);
+		}
+
+		return;
+	}
+
 	int r = ::WSAPoll(fds, nfds, timeout);
+
+	if (r == SOCKET_ERROR)
+	{
+		sys_net.error("WSAPoll failed: %u", WSAGetLastError());
+		return;
+	}
+
 	for (unsigned long i = 0; i < nfds; i++)
 	{
 		if (connecting[i])
