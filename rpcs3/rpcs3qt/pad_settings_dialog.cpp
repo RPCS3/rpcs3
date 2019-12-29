@@ -692,6 +692,61 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 	ReactivateButtons();
 }
 
+void pad_settings_dialog::wheelEvent(QWheelEvent *event)
+{
+	if (m_handler->m_type != pad_handler::keyboard)
+	{
+		return;
+	}
+
+	if (m_button_id == button_ids::id_pad_begin)
+	{
+		return;
+	}
+
+	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
+	{
+		LOG_NOTICE(HLE, "Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
+		return;
+	}
+
+	QPoint direction = event->angleDelta();
+	if (direction.isNull())
+	{
+		// Scrolling started/ended event, no direction given
+		return;
+	}
+
+	u32 key;
+	if (const int x = direction.x())
+	{
+		bool to_left = event->inverted() ? x < 0 : x > 0;
+		if (to_left)
+		{
+			key = mouse::wheel_left;
+		}
+		else
+		{
+			key = mouse::wheel_right;
+		}
+	}
+	if (const int y = direction.y())
+	{
+		bool to_up = event->inverted() ? y < 0 : y > 0;
+		if (to_up)
+		{
+			key = mouse::wheel_up;
+		}
+		else
+		{
+			key = mouse::wheel_down;
+		}
+	}
+	m_cfg_entries[m_button_id].key = (static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key);
+	m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
+	ReactivateButtons();
+}
+
 void pad_settings_dialog::mouseMoveEvent(QMouseEvent* /*event*/)
 {
 	if (m_handler->m_type != pad_handler::keyboard)

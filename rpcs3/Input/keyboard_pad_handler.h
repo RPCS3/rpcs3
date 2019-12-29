@@ -8,10 +8,14 @@
 
 enum mouse
 {
-	move_left  = 0x05555550,
-	move_right = 0x05555551,
-	move_up    = 0x05555552,
-	move_down  = 0x05555553
+	move_left   = 0x05555550,
+	move_right  = 0x05555551,
+	move_up     = 0x05555552,
+	move_down   = 0x05555553,
+	wheel_up    = 0x05555554,
+	wheel_down  = 0x05555555,
+	wheel_left  = 0x05555556,
+	wheel_right = 0x05555557
 };
 
 class keyboard_pad_handler final : public QObject, public PadHandlerBase
@@ -52,6 +56,11 @@ class keyboard_pad_handler final : public QObject, public PadHandlerBase
 		{ mouse::move_right  , "Mouse MRight" },
 		{ mouse::move_up     , "Mouse MUp"    },
 		{ mouse::move_down   , "Mouse MDown"  },
+
+		{ mouse::wheel_up    , "Wheel Up"     },
+		{ mouse::wheel_down  , "Wheel Down"   },
+		{ mouse::wheel_left  , "Wheel Left"   },
+		{ mouse::wheel_right , "Wheel Right"  },
 	};
 
 public:
@@ -66,6 +75,7 @@ public:
 	void mousePressEvent(QMouseEvent* event);
 	void mouseReleaseEvent(QMouseEvent* event);
 	void mouseMoveEvent(QMouseEvent* event);
+	void mouseWheelEvent(QWheelEvent* event);
 
 	bool eventFilter(QObject* obj, QEvent* ev) override;
 
@@ -108,4 +118,10 @@ private:
 	int m_deadzone_y = 60;
 	double m_multi_x = 2;
 	double m_multi_y = 2.5;
+
+	// Mousewheel
+	std::chrono::steady_clock::time_point m_last_wheel_move_up;
+	std::chrono::steady_clock::time_point m_last_wheel_move_down;
+	std::chrono::steady_clock::time_point m_last_wheel_move_left;
+	std::chrono::steady_clock::time_point m_last_wheel_move_right;
 };
