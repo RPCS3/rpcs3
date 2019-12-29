@@ -23,6 +23,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
     <ClInclude Include="Emu\RSX\VK\VKDMA.h" />
@@ -43,6 +44,7 @@
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />

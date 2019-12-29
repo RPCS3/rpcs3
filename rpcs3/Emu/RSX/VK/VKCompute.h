@@ -199,13 +199,13 @@ namespace vk
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
 		}
 
-		virtual void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
+		void run(VkCommandBuffer cmd, u32 invocations_x, u32 invocations_y, u32 invocations_z)
 		{
 			load_program(cmd);
 			vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
 		}
 
-		virtual void run(VkCommandBuffer cmd, u32 num_invocations)
+		void run(VkCommandBuffer cmd, u32 num_invocations)
 		{
 			u32 invocations_x, invocations_y;
 			if (num_invocations > max_invocations_x)
@@ -780,6 +780,60 @@ namespace vk
 
 			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
 			const u32 linear_invocations = aligned_div(data_length, num_bytes_per_invocation);
+			compute_task::run(cmd, linear_invocations);
+		}
+	};
+
+	struct cs_aggregator : compute_task
+	{
+		const buffer* src = nullptr;
+		const buffer* dst = nullptr;
+		u32 block_length = 0;
+		u32 word_count = 0;
+
+		cs_aggregator()
+		{
+			ssbo_count = 2;
+
+			create();
+
+			m_src =
+				"#version 450\n"
+				"layout(local_size_x = %ws, local_size_y = 1, local_size_z = 1) in;\n\n"
+
+				"layout(set=0, binding=0, std430) readonly buffer ssbo0{ uint src[]; };\n"
+				"layout(set=0, binding=1, std430) writeonly buffer ssbo1{ uint result; };\n\n"
+
+				"void main()\n"
+				"{\n"
+				"	if (gl_GlobalInvocationID.x < src.length())\n"
+				"	{\n"
+				"		atomicAdd(result, src[gl_GlobalInvocationID.x]);\n"
+				"	}\n"
+				"}\n";
+
+			const std::pair<std::string, std::string> syntax_replace[] =
+			{
+				{ "%ws", std::to_string(optimal_group_size) },
+			};
+
+			m_src = fmt::replace_all(m_src, syntax_replace);
+		}
+
+		void bind_resources() override
+		{
+			m_program->bind_buffer({ src->value, 0, block_length }, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+			m_program->bind_buffer({ dst->value, 0, 4 }, 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_descriptor_set);
+		}
+
+		void run(VkCommandBuffer cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)
+		{
+			this->dst = dst;
+			this->src = src;
+			word_count = num_words;
+			block_length = num_words * 4;
+
+			const u32 linear_invocations = aligned_div(word_count, optimal_group_size);
 			compute_task::run(cmd, linear_invocations);
 		}
 	};

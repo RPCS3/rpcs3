@@ -9,6 +9,7 @@
 #include "VKCommonDecompiler.h"
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
+#include "VKCommandStream.h"
 
 namespace
 {
@@ -285,6 +286,13 @@ namespace
 
 		idx++;
 
+		bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		bindings[idx].descriptorCount = 1;
+		bindings[idx].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		bindings[idx].binding = CONDITIONAL_RENDER_PREDICATE_SLOT;
+
+		idx++;
+
 		for (int i = 0; i < rsx::limits::fragment_textures_count; i++)
 		{
 			bindings[idx].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -309,6 +317,12 @@ namespace
 		push_constants[0].offset = 0;
 		push_constants[0].size = 16;
 		push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		if (vk::emulate_conditional_rendering())
+		{
+			// Conditional render toggle
+			push_constants[0].size = 20;
+		}
 
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -438,11 +452,13 @@ VKGSRender::VKGSRender() : GSRender()
 		m_occlusion_query_data[n].driver_handle = n;
 
 	//Generate frame contexts
-	VkDescriptorPoolSize uniform_buffer_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS };
-	VkDescriptorPoolSize uniform_texel_pool = { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS };
-	VkDescriptorPoolSize texture_pool = { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 20 * DESCRIPTOR_MAX_DRAW_CALLS };
+	std::vector<VkDescriptorPoolSize> sizes;
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS });
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 20 * DESCRIPTOR_MAX_DRAW_CALLS });
 
-	std::vector<VkDescriptorPoolSize> sizes{ uniform_buffer_pool, uniform_texel_pool, texture_pool };
+	// Conditional rendering predicate slot; refactor to allow skipping this when not needed
+	sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1 * DESCRIPTOR_MAX_DRAW_CALLS });
 
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -543,6 +559,9 @@ VKGSRender::VKGSRender() : GSRender()
 	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
 	backend_config.supports_hw_renormalization = (vk::get_driver_vendor() == vk::driver_vendor::NVIDIA);
+
+	// Relaxed query synchronization
+	backend_config.supports_hw_conditional_render = !!g_cfg.video.relaxed_zcull_sync;
 }
 
 VKGSRender::~VKGSRender()
@@ -639,6 +658,7 @@ VKGSRender::~VKGSRender()
 
 	//Queries
 	m_occlusion_query_pool.destroy();
+	m_cond_render_buffer.reset();
 
 	//Command buffer
 	for (auto &cb : m_primary_cb_list)
@@ -935,8 +955,7 @@ void VKGSRender::begin()
 {
 	rsx::thread::begin();
 
-	if (skip_current_frame || swapchain_unavailable ||
-		(conditional_render_enabled && conditional_render_test_failed))
+	if (skip_current_frame || swapchain_unavailable || cond_render_ctrl.disable_rendering())
 		return;
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
@@ -1148,6 +1167,18 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 		update_draw_state();
 		begin_render_pass();
+
+		if (cond_render_ctrl.hw_cond_active && m_device->get_conditional_render_support())
+		{
+			// It is inconvenient that conditional rendering breaks other things like compute dispatch
+			// TODO: If this is heavy, add refactor the resources into global and add checks around compute dispatch
+			VkConditionalRenderingBeginInfoEXT info{};
+			info.sType = VK_STRUCTURE_TYPE_CONDITIONAL_RENDERING_BEGIN_INFO_EXT;
+			info.buffer = m_cond_render_buffer->value;
+
+			m_device->cmdBeginConditionalRenderingEXT(*m_current_command_buffer, &info);
+			m_current_command_buffer->flags |= vk::command_buffer::cb_has_conditional_render;
+		}
 	}
 
 	// Bind the new set of descriptors for use with this draw call
@@ -1202,8 +1233,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 void VKGSRender::end()
 {
-	if (skip_current_frame || !framebuffer_status_valid || swapchain_unavailable ||
-		(conditional_render_enabled && conditional_render_test_failed))
+	if (skip_current_frame || !framebuffer_status_valid || swapchain_unavailable || cond_render_ctrl.disable_rendering())
 	{
 		execute_nop_draw();
 		rsx::thread::end();
@@ -1737,8 +1767,9 @@ void VKGSRender::end()
 		u32 occlusion_id = m_occlusion_query_pool.find_free_slot();
 		if (occlusion_id == UINT32_MAX)
 		{
-			m_tsc += 100;
-			update(this);
+			// Force flush
+			LOG_ERROR(RSX, "[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
+			ZCULL_control::sync(this);
 
 			occlusion_id = m_occlusion_query_pool.find_free_slot();
 			if (occlusion_id == UINT32_MAX)
@@ -1753,7 +1784,7 @@ void VKGSRender::end()
 
 		auto &data = m_occlusion_map[m_active_query_info->driver_handle];
 		data.indices.push_back(occlusion_id);
-		data.command_buffer_to_wait = m_current_command_buffer;
+		data.set_sync_command_buffer(m_current_command_buffer);
 
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_load_occluson_task;
 		m_current_command_buffer->flags |= (vk::command_buffer::cb_has_occlusion_task | vk::command_buffer::cb_has_open_query);
@@ -1783,6 +1814,12 @@ void VKGSRender::end()
 		emit_geometry(sub_index++);
 	}
 	while (rsx::method_registers.current_draw_clause.next());
+
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
+	{
+		m_device->cmdEndConditionalRenderingEXT(*m_current_command_buffer);
+		m_current_command_buffer->flags &= ~(vk::command_buffer::cb_has_conditional_render);
+	}
 
 	// Close any open passes unconditionally
 	close_render_pass();
@@ -2155,23 +2192,24 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 	}
 	else
 	{
-		// Mark this queue as pending
+		// Mark this queue as pending and proceed
 		m_current_command_buffer->pending = true;
-
-		// Grab next cb in line and make it usable
-		m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
-		m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
-
-		if (!m_current_command_buffer->poke())
-		{
-			LOG_ERROR(RSX, "CB chain has run out of free entries!");
-		}
-
-		m_current_command_buffer->reset();
-
-		// Just in case a queued frame holds a ref to this cb, drain the present queue
-		check_present_status();
 	}
+
+	// Grab next cb in line and make it usable
+	// NOTE: Even in the case of a hard sync, this is required to free any waiters on the CB (ZCULL)
+	m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
+	m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
+
+	if (!m_current_command_buffer->poke())
+	{
+		LOG_ERROR(RSX, "CB chain has run out of free entries!");
+	}
+
+	m_current_command_buffer->reset();
+
+	// Just in case a queued frame holds a ref to this cb, drain the present queue
+	check_present_status();
 
 	if (m_occlusion_query_active)
 	{
@@ -2181,55 +2219,50 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 	open_command_buffer();
 }
 
-void VKGSRender::sync_hint(rsx::FIFO_hint hint, u64 arg)
+void VKGSRender::sync_hint(rsx::FIFO_hint hint, void* args)
 {
+	verify(HERE), args;
+	rsx::thread::sync_hint(hint, args);
+
+	// Occlusion queries not enabled, do nothing
+	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
+		return;
+
+	// Check if the required report is synced to this CB
+	auto occlusion_info = static_cast<rsx::reports::occlusion_query_info*>(args);
+	auto& data = m_occlusion_map[occlusion_info->driver_handle];
+
+	// NOTE: Currently, a special condition exists where the indices can be empty even with active draw count.
+	// This is caused by async compiler and should be removed when ubershaders are added in
+	if (!data.is_current(m_current_command_buffer) || data.indices.empty())
+		return;
+
 	// Occlusion test result evaluation is coming up, avoid a hard sync
 	switch (hint)
 	{
 	case rsx::FIFO_hint::hint_conditional_render_eval:
 	{
-		// Occlusion queries not enabled, do nothing
-		if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
-			return;
-
 		// If a flush request is already enqueued, do nothing
 		if (m_flush_requests.pending())
 			return;
 
-		// Check if the required report is synced to this CB
-		if (auto occlusion_info = zcull_ctrl->find_query(vm::cast(arg)))
-		{
-			auto& data = m_occlusion_map[occlusion_info->driver_handle];
-			if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
-			{
-				// Confirmed hard sync coming up, post a sync request
-				m_flush_requests.post(false);
-				m_flush_requests.remove_one();
-			}
-		}
-
+		// Schedule a sync on the next loop iteration
+		m_flush_requests.post(false);
+		m_flush_requests.remove_one();
 		break;
 	}
 	case rsx::FIFO_hint::hint_zcull_sync:
 	{
-		if (!(m_current_command_buffer->flags & vk::command_buffer::cb_has_occlusion_task))
-			return;
+		// Unavoidable hard sync coming up, flush immediately
+		// This heavyweight hint should be used with caution
+		std::lock_guard lock(m_flush_queue_mutex);
+		flush_command_queue();
 
-		auto occlusion_info = reinterpret_cast<rsx::reports::occlusion_query_info*>(arg);
-		auto& data = m_occlusion_map[occlusion_info->driver_handle];
-
-		if (data.command_buffer_to_wait == m_current_command_buffer && !data.indices.empty())
+		if (m_flush_requests.pending())
 		{
-			std::lock_guard lock(m_flush_queue_mutex);
-			flush_command_queue();
-
-			if (m_flush_requests.pending())
-			{
-				// Clear without wait
-				m_flush_requests.clear_pending_flag();
-			}
+			// Clear without wait
+			m_flush_requests.clear_pending_flag();
 		}
-
 		break;
 	}
 	}
@@ -2274,6 +2307,9 @@ void VKGSRender::present(frame_context_t *ctx)
 {
 	verify(HERE), ctx->present_image != UINT32_MAX;
 
+	// Partial CS flush
+	ctx->swap_command_buffer->flush();
+
 	if (!swapchain_unavailable)
 	{
 		switch (VkResult error = m_swapchain->present(ctx->present_wait_semaphore, ctx->present_image))
@@ -2313,10 +2349,11 @@ void VKGSRender::queue_swap_request()
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
 	}
 
+	// Signal pending state as the command queue is now closed
+	m_current_frame->swap_command_buffer->pending = true;
+
 	// Set up a present request for this frame as well
 	present(m_current_frame);
-
-	m_current_frame->swap_command_buffer->pending = true;
 
 	// Grab next cb in line and make it usable
 	m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
@@ -2482,24 +2519,6 @@ void VKGSRender::do_local_task(rsx::FIFO_state state)
 			info.buffer = current_display_buffer;
 			flip(info);
 		}
-	}
-}
-
-bool VKGSRender::do_method(u32 cmd, u32 arg)
-{
-	switch (cmd)
-	{
-	case NV4097_CLEAR_SURFACE:
-		clear_surface(arg);
-		return true;
-	case NV4097_TEXTURE_READ_SEMAPHORE_RELEASE:
-		// Texture barrier, seemingly not very useful
-		return true;
-	case NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE:
-		//sync_at_semaphore_release();
-		return true;
-	default:
-		return false;
 	}
 }
 
@@ -2711,7 +2730,7 @@ void VKGSRender::load_program_env()
 
 		// Vertex state
 		const auto mem = m_vertex_env_ring_info.alloc<256>(256);
-		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 144));
+		auto buf = static_cast<u8*>(m_vertex_env_ring_info.map(mem, 148));
 
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
@@ -2792,6 +2811,12 @@ void VKGSRender::load_program_env()
 		m_program->bind_uniform(m_fragment_texture_params_buffer_info, FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, m_current_frame->descriptor_set);
 	}
 
+	if (vk::emulate_conditional_rendering())
+	{
+		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer()->value;
+		m_program->bind_buffer({ predicate, 0, 4 }, CONDITIONAL_RENDER_PREDICATE_SLOT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
+	}
+
 	//Clear flags
 	const u32 handled_flags = (rsx::pipeline_state::fragment_state_dirty | rsx::pipeline_state::vertex_state_dirty | rsx::pipeline_state::transform_constants_dirty | rsx::pipeline_state::fragment_constants_dirty | rsx::pipeline_state::fragment_texture_state_dirty);
 	m_graphics_state &= ~handled_flags;
@@ -2816,13 +2841,21 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		base_offset = 0;
 	}
 
-	u32 draw_info[4];
+	u8 data_size = 16;
+	u32 draw_info[5];
+
 	draw_info[0] = vertex_info.vertex_index_base;
 	draw_info[1] = vertex_info.vertex_index_offset;
 	draw_info[2] = id;
 	draw_info[3] = (id * 16) + (base_offset / 8);
 
-	vkCmdPushConstants(*m_current_command_buffer, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 16, draw_info);
+	if (vk::emulate_conditional_rendering())
+	{
+		draw_info[4] = cond_render_ctrl.hw_cond_active ? 1 : 0;
+		data_size = 20;
+	}
+
+	vkCmdPushConstants(*m_current_command_buffer, pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, data_size, draw_info);
 
 	const size_t data_offset = (id * 128) + m_vertex_layout_stream_info.offset;
 	auto dst = m_vertex_layout_ring_info.map(data_offset, 128);
@@ -2838,11 +2871,9 @@ void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
 	prepare_rtts(context);
 }
 
-void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
+void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
 {
-	// Wait before sync block below
-	rsx::g_dma_manager.sync();
-
+	// NOTE: There is no need to wait for dma sync. When MTRSX is enabled, the commands are submitted in order anyway due to CSMT
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
 		if (m_attrib_ring_info.dirty() ||
@@ -2877,6 +2908,14 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 		vk::clear_status_interrupt(vk::heap_dirty);
 	}
 
+#if 0 // Currently unreachable
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
+	{
+		verify(HERE), m_render_pass_open;
+		m_device->cmdEndConditionalRenderingEXT(*m_current_command_buffer);
+	}
+#endif
+
 	// End any active renderpasses; the caller should handle reopening
 	if (m_render_pass_open)
 	{
@@ -2895,7 +2934,7 @@ void VKGSRender::close_and_submit_command_buffer(VkFence fence, VkSemaphore wait
 	m_current_command_buffer->tag();
 
 	m_current_command_buffer->submit(m_swapchain->get_graphics_queue(),
-		wait_semaphore, signal_semaphore, fence, pipeline_stage_flags);
+		wait_semaphore, signal_semaphore, pFence, pipeline_stage_flags);
 }
 
 void VKGSRender::open_command_buffer()
@@ -3169,16 +3208,11 @@ void VKGSRender::reinitialize_swapchain()
 	}
 
 	//Will have to block until rendering is completed
-	VkFence resize_fence = VK_NULL_HANDLE;
-	VkFenceCreateInfo infos = {};
-	infos.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-	vkCreateFence((*m_device), &infos, nullptr, &resize_fence);
+	vk::fence resize_fence(*m_device);
 
 	//Flush the command buffer
-	close_and_submit_command_buffer(resize_fence);
-	vk::wait_for_fence(resize_fence);
-	vkDestroyFence((*m_device), resize_fence, nullptr);
+	close_and_submit_command_buffer(&resize_fence);
+	vk::wait_for_fence(&resize_fence);
 
 	m_current_command_buffer->reset();
 	open_command_buffer();
@@ -3595,6 +3629,22 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	rsx::thread::flip(info);
 }
 
+void VKGSRender::renderctl(u32 request_code, void* args)
+{
+	switch (request_code)
+	{
+	case vk::rctrl_queue_submit:
+	{
+		auto packet = reinterpret_cast<vk::submit_packet*>(args);
+		vk::queue_submit(packet->queue, &packet->submit_info, packet->pfence, VK_TRUE);
+		free(packet);
+		break;
+	}
+	default:
+		fmt::throw_exception("Unhandled request code 0x%x" HERE, request_code);
+	}
+}
+
 bool VKGSRender::scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate)
 {
 	if (swapchain_unavailable)
@@ -3660,7 +3710,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 	if (data.indices.empty())
 		return true;
 
-	if (data.command_buffer_to_wait == m_current_command_buffer)
+	if (data.is_current(m_current_command_buffer))
 		return false;
 
 	u32 oldest = data.indices.front();
@@ -3675,7 +3725,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 
 	if (query->num_draws)
 	{
-		if (data.command_buffer_to_wait == m_current_command_buffer)
+		if (data.is_current(m_current_command_buffer))
 		{
 			std::lock_guard lock(m_flush_queue_mutex);
 			flush_command_queue();
@@ -3684,18 +3734,12 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 			{
 				m_flush_requests.clear_pending_flag();
 			}
+
+			LOG_ERROR(RSX, "[Performance warning] Unexpected ZCULL read caused a hard sync");
+			busy_wait();
 		}
 
-		// Fast wait. Avoids heavyweight routines
-		while (!data.command_buffer_to_wait->poke())
-		{
-			_mm_pause();
-
-			if (Emu.IsStopped())
-			{
-				return;
-			}
-		}
+		data.sync();
 
 		// Gather data
 		for (const auto occlusion_id : data.indices)
@@ -3738,6 +3782,145 @@ void VKGSRender::emergency_query_cleanup(vk::command_buffer* commands)
 		m_occlusion_query_pool.end_query(*m_current_command_buffer, open_query);
 		m_current_command_buffer->flags &= ~vk::command_buffer::cb_has_open_query;
 	}
+}
+
+void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources)
+{
+	verify(HERE), !sources.empty();
+
+	// Flag check whether to calculate all entries or only one
+	bool partial_eval;
+
+	// Try and avoid regenerating the data if its a repeat/spam
+	// NOTE: The incoming list is reversed with the first entry being the newest
+	if (m_cond_render_sync_tag == sources.front()->sync_tag)
+	{
+		// Already synched, check subdraw which is possible if last sync happened while query was active
+		if (!m_active_query_info || m_active_query_info != sources.front())
+		{
+			rsx::thread::begin_conditional_rendering(sources);
+			return;
+		}
+
+		// Partial evaluation only
+		partial_eval = true;
+	}
+	else
+	{
+		m_cond_render_sync_tag = sources.front()->sync_tag;
+		partial_eval = false;
+	}
+
+	// Time to aggregate
+	if (!m_cond_render_buffer)
+	{
+		auto& memory_props = m_device->get_memory_mapping();
+		auto usage_flags = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+		if (m_device->get_conditional_render_support())
+		{
+			usage_flags |= VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT;
+		}
+
+		m_cond_render_buffer = std::make_unique<vk::buffer>(
+			*m_device, 4,
+			memory_props.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			usage_flags, 0);
+	}
+
+	VkPipelineStageFlags dst_stage;
+	VkAccessFlags dst_access;
+
+	if (m_device->get_conditional_render_support())
+	{
+		dst_stage = VK_PIPELINE_STAGE_CONDITIONAL_RENDERING_BIT_EXT;
+		dst_access = VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT;
+	}
+	else
+	{
+		dst_stage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+		dst_access = VK_ACCESS_SHADER_READ_BIT;
+	}
+
+	if (sources.size() == 1)
+	{
+		const auto query = sources.front();
+		const auto& query_info = m_occlusion_map[query->driver_handle];
+
+		if (query_info.indices.size() == 1)
+		{
+			const auto& index = query_info.indices.front();
+			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, m_cond_render_buffer->value, 0);
+
+			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage,
+				VK_ACCESS_TRANSFER_WRITE_BIT, dst_access);
+
+			rsx::thread::begin_conditional_rendering(sources);
+			return;
+		}
+	}
+
+	auto scratch = vk::get_scratch_buffer();
+	u32 dst_offset = 0;
+	size_t first = 0;
+	size_t last;
+
+	if (LIKELY(!partial_eval))
+	{
+		last = sources.size();
+	}
+	else
+	{
+		last = 1;
+	}
+
+	for (size_t i = first; i < last; ++i)
+	{
+		auto& query_info = m_occlusion_map[sources[i]->driver_handle];
+		for (const auto& index : query_info.indices)
+		{
+			m_occlusion_query_pool.get_query_result_indirect(*m_current_command_buffer, index, scratch->value, dst_offset);
+			dst_offset += 4;
+		}
+	}
+
+	if (dst_offset)
+	{
+		// Fast path should have been caught above
+		verify(HERE), dst_offset > 4;
+
+		if (!partial_eval)
+		{
+			// Clear result to zero
+			vkCmdFillBuffer(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4, 0);
+
+			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_WRITE_BIT);
+		}
+
+		vk::insert_buffer_memory_barrier(*m_current_command_buffer, scratch->value, 0, dst_offset,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+		vk::get_compute_task<vk::cs_aggregator>()->run(*m_current_command_buffer, m_cond_render_buffer.get(), scratch, dst_offset / 4);
+
+		vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dst_stage,
+			VK_ACCESS_SHADER_WRITE_BIT, dst_access);
+	}
+	else
+	{
+		LOG_ERROR(RSX, "Dubious query data pushed to cond render!, Please report to developers(q.pending=%d)", sources.front()->pending);
+	}
+
+	rsx::thread::begin_conditional_rendering(sources);
+}
+
+void VKGSRender::end_conditional_rendering()
+{
+	thread::end_conditional_rendering();
 }
 
 bool VKGSRender::on_decompiler_task()

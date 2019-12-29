@@ -44,7 +44,7 @@ namespace vk
 #define VK_FRAGMENT_CONSTANTS_BUFFER_SIZE_M 16
 #define VK_INDEX_RING_BUFFER_SIZE_M 16
 
-#define VK_MAX_ASYNC_CB_COUNT 64
+#define VK_MAX_ASYNC_CB_COUNT 256
 #define VK_MAX_ASYNC_FRAMES 2
 
 using rsx::flags32_t;
@@ -67,11 +67,12 @@ enum
 
 struct command_buffer_chunk: public vk::command_buffer
 {
-	VkFence submit_fence = VK_NULL_HANDLE;
+	vk::fence* submit_fence = nullptr;
 	VkDevice m_device = VK_NULL_HANDLE;
 
 	std::atomic_bool pending = { false };
 	u64 eid_tag = 0;
+	u64 reset_id = 0;
 	shared_mutex guard_mutex;
 
 	command_buffer_chunk() = default;
@@ -79,18 +80,13 @@ struct command_buffer_chunk: public vk::command_buffer
 	void init_fence(VkDevice dev)
 	{
 		m_device = dev;
-
-		VkFenceCreateInfo info = {};
-		info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		CHECK_RESULT(vkCreateFence(m_device, &info, nullptr, &submit_fence));
+		submit_fence = new vk::fence(dev);
 	}
 
 	void destroy()
 	{
 		vk::command_buffer::destroy();
-
-		if (submit_fence != VK_NULL_HANDLE)
-			vkDestroyFence(m_device, submit_fence, nullptr);
+		delete submit_fence;
 	}
 
 	void tag()
@@ -106,6 +102,7 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (pending)
 			wait(FRAME_PRESENT_TIMEOUT);
 
+		++reset_id;
 		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
 	}
 
@@ -116,13 +113,16 @@ struct command_buffer_chunk: public vk::command_buffer
 		if (!pending)
 			return true;
 
-		if (vkGetFenceStatus(m_device, submit_fence) == VK_SUCCESS)
+		if (!submit_fence->flushed)
+			return false;
+
+		if (vkGetFenceStatus(m_device, submit_fence->handle) == VK_SUCCESS)
 		{
 			lock.upgrade();
 
 			if (pending)
 			{
-				vk::reset_fence(&submit_fence);
+				vk::reset_fence(submit_fence);
 				vk::on_event_completed(eid_tag);
 
 				pending = false;
@@ -146,7 +146,7 @@ struct command_buffer_chunk: public vk::command_buffer
 
 		if (pending)
 		{
-			vk::reset_fence(&submit_fence);
+			vk::reset_fence(submit_fence);
 			vk::on_event_completed(eid_tag);
 
 			pending = false;
@@ -155,12 +155,43 @@ struct command_buffer_chunk: public vk::command_buffer
 
 		return ret;
 	}
+
+	void flush()
+	{
+		reader_lock lock(guard_mutex);
+
+		if (!pending)
+			return;
+
+		submit_fence->wait_flush();
+	}
 };
 
 struct occlusion_data
 {
 	rsx::simple_array<u32> indices;
 	command_buffer_chunk* command_buffer_to_wait = nullptr;
+	u64 command_buffer_sync_id = 0;
+
+	bool is_current(command_buffer_chunk* cmd) const
+	{
+		return (command_buffer_to_wait == cmd && command_buffer_sync_id == cmd->reset_id);
+	}
+
+	void set_sync_command_buffer(command_buffer_chunk* cmd)
+	{
+		command_buffer_to_wait = cmd;
+		command_buffer_sync_id = cmd->reset_id;
+	}
+
+	void sync()
+	{
+		if (command_buffer_to_wait->reset_id == command_buffer_sync_id)
+		{
+			// Allocation stack is FIFO and very long so no need to actually wait for fence signal
+			command_buffer_to_wait->flush();
+		}
+	}
 };
 
 enum frame_context_state : u32
@@ -318,6 +349,9 @@ private:
 	std::unique_ptr<vk::attachment_clear_pass> m_attachment_clear_pass;
 	std::unique_ptr<vk::video_out_calibration_pass> m_video_output_pass;
 
+	std::unique_ptr<vk::buffer> m_cond_render_buffer;
+	u64 m_cond_render_sync_tag = 0;
+
 	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
 	std::atomic_bool m_samplers_dirty = { true };
@@ -426,12 +460,11 @@ public:
 	~VKGSRender() override;
 
 private:
-	void clear_surface(u32 mask);
 	void prepare_rtts(rsx::framebuffer_creation_context context);
 
 	void open_command_buffer();
 	void close_and_submit_command_buffer(
-		VkFence fence = VK_NULL_HANDLE,
+		vk::fence* fence = nullptr,
 		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
 		VkSemaphore signal_semaphore = VK_NULL_HANDLE,
 		VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
@@ -466,7 +499,7 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
-	void sync_hint(rsx::FIFO_hint hint, u64 arg) override;
+	void sync_hint(rsx::FIFO_hint hint, void* args) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -477,15 +510,21 @@ public:
 	// External callback in case we need to suddenly submit a commandlist unexpectedly, e.g in a violation handler
 	void emergency_query_cleanup(vk::command_buffer* commands);
 
+	// Conditional rendering
+	void begin_conditional_rendering(const std::vector<rsx::reports::occlusion_query_info*>& sources) override;
+	void end_conditional_rendering() override;
+
 protected:
+	void clear_surface(u32 mask) override;
 	void begin() override;
 	void end() override;
 	void emit_geometry(u32 sub_index) override;
 
 	void on_init_thread() override;
 	void on_exit() override;
-	bool do_method(u32 cmd, u32 arg) override;
 	void flip(const rsx::display_flip_info_t& info) override;
+
+	void renderctl(u32 request_code, void* args) override;
 
 	void do_local_task(rsx::FIFO_state state) override;
 	bool scaled_image_from_memory(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate) override;

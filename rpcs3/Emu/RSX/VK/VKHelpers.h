@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <variant>
 #include <stack>
+#include <deque>
 
 #ifdef HAVE_X11
 #include <X11/Xutil.h>
@@ -39,8 +40,9 @@
 #define FRAGMENT_STATE_BIND_SLOT 3
 #define FRAGMENT_TEXTURE_PARAMS_BIND_SLOT 4
 #define VERTEX_BUFFERS_FIRST_BIND_SLOT 5
-#define TEXTURES_FIRST_BIND_SLOT 8
-#define VERTEX_TEXTURES_FIRST_BIND_SLOT 24 //8+16
+#define CONDITIONAL_RENDER_PREDICATE_SLOT 8
+#define TEXTURES_FIRST_BIND_SLOT 9
+#define VERTEX_TEXTURES_FIRST_BIND_SLOT (TEXTURES_FIRST_BIND_SLOT + 16)
 
 #define VK_NUM_DESCRIPTOR_BINDINGS (VERTEX_TEXTURES_FIRST_BIND_SLOT + 4)
 
@@ -107,6 +109,11 @@ namespace vk
 		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF     // Special encoding for multisampled images; returns a multisampled image view
 	};
 
+	enum // callback commands
+	{
+		rctrl_queue_submit = 0x80000000
+	};
+
 	class context;
 	class render_device;
 	class swap_chain_image;
@@ -119,6 +126,7 @@ namespace vk
 	class mem_allocator_base;
 	struct memory_type_mapping;
 	struct gpu_formats_support;
+	struct fence;
 
 	const vk::context *get_current_thread_ctx();
 	void set_current_thread_ctx(const vk::context &ctx);
@@ -132,6 +140,7 @@ namespace vk
 	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
+	bool emulate_conditional_rendering();
 	VkFlags get_heap_compatible_buffer_types();
 	driver_vendor get_driver_vendor();
 	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id);
@@ -152,9 +161,10 @@ namespace vk
 	memory_type_mapping get_memory_mapping(const physical_device& dev);
 	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev);
 
-	//Sync helpers around vkQueueSubmit
+	// Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
 	void release_global_submit_lock();
+	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush = VK_FALSE);
 
 	template<class T>
 	T* get_compute_task();
@@ -222,8 +232,8 @@ namespace vk
 	const u64 get_last_completed_frame_id();
 
 	// Fence reset with driver workarounds in place
-	void reset_fence(VkFence *pFence);
-	VkResult wait_for_fence(VkFence pFence, u64 timeout = 0ull);
+	void reset_fence(fence* pFence);
+	VkResult wait_for_fence(fence* pFence, u64 timeout = 0ull);
 	VkResult wait_for_event(VkEvent pEvent, u64 timeout = 0ull);
 
 	// Handle unexpected submit with dangling occlusion query
@@ -538,6 +548,8 @@ namespace vk
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
 		bool stencil_export_support = false;
+		bool conditional_render_support = false;
+		bool host_query_reset_support = false;
 
 		friend class render_device;
 private:
@@ -587,6 +599,8 @@ private:
 			}
 
 			stencil_export_support = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
+			conditional_render_support = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+			host_query_reset_support = device_extensions.is_supported(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
 		}
 
 	public:
@@ -758,6 +772,12 @@ private:
 		VkDevice dev = VK_NULL_HANDLE;
 
 	public:
+		// Exported device endpoints
+		PFN_vkCmdBeginConditionalRenderingEXT cmdBeginConditionalRenderingEXT = nullptr;
+		PFN_vkCmdEndConditionalRenderingEXT cmdEndConditionalRenderingEXT = nullptr;
+		PFN_vkResetQueryPoolEXT resetQueryPoolEXT = nullptr;
+
+	public:
 		render_device() = default;
 		~render_device() = default;
 
@@ -788,6 +808,16 @@ private:
 			if (pgpu->shader_types_support.allow_float16)
 			{
 				requested_extensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
+			}
+
+			if (pgpu->conditional_render_support)
+			{
+				requested_extensions.push_back(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+			}
+
+			if (pgpu->host_query_reset_support)
+			{
+				requested_extensions.push_back(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
 			}
 
 			enabled_features.robustBufferAccess = VK_TRUE;
@@ -872,6 +902,18 @@ private:
 			}
 
 			CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+
+			// Import optional function endpoints
+			if (pgpu->conditional_render_support)
+			{
+				cmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
+				cmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
+			}
+
+			if (pgpu->host_query_reset_support)
+			{
+				resetQueryPoolEXT = reinterpret_cast<PFN_vkResetQueryPoolEXT>(vkGetDeviceProcAddr(dev, "vkResetQueryPoolEXT"));
+			}
 
 			memory_map = vk::get_memory_mapping(pdev);
 			m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
@@ -972,6 +1014,16 @@ private:
 			return pgpu->features.alphaToOne != VK_FALSE;
 		}
 
+		bool get_conditional_render_support() const
+		{
+			return pgpu->conditional_render_support;
+		}
+
+		bool get_host_query_reset_support() const
+		{
+			return pgpu->host_query_reset_support;
+		}
+
 		mem_allocator_base* get_allocator() const
 		{
 			return m_allocator.get();
@@ -1022,12 +1074,55 @@ private:
 		}
 	};
 
+	struct fence
+	{
+		volatile bool flushed = false;
+		VkFence handle        = VK_NULL_HANDLE;
+		VkDevice owner        = VK_NULL_HANDLE;
+
+		fence(VkDevice dev)
+		{
+			owner = dev;
+			VkFenceCreateInfo info = {};
+			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+			CHECK_RESULT(vkCreateFence(dev, &info, nullptr, &handle));
+		}
+
+		~fence()
+		{
+			if (handle)
+			{
+				vkDestroyFence(owner, handle, nullptr);
+				handle = VK_NULL_HANDLE;
+			}
+		}
+
+		void reset()
+		{
+			vkResetFences(owner, 1, &handle);
+			flushed = false;
+		}
+
+		void wait_flush()
+		{
+			while (!flushed)
+			{
+				_mm_pause();
+			}
+		}
+
+		operator bool() const
+		{
+			return (handle != VK_NULL_HANDLE);
+		}
+	};
+
 	class command_buffer
 	{
 	private:
 		bool is_open = false;
 		bool is_pending = false;
-		VkFence m_submit_fence = VK_NULL_HANDLE;
+		fence* m_submit_fence = nullptr;
 
 	protected:
 		vk::command_pool *pool = nullptr;
@@ -1047,7 +1142,8 @@ private:
 			cb_has_blit_transfer = 2,
 			cb_has_dma_transfer = 4,
 			cb_has_open_query = 8,
-			cb_load_occluson_task = 16
+			cb_load_occluson_task = 16,
+			cb_has_conditional_render = 32
 		};
 		u32 flags = 0;
 
@@ -1066,9 +1162,7 @@ private:
 
 			if (auto_reset)
 			{
-				VkFenceCreateInfo info = {};
-				info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-				CHECK_RESULT(vkCreateFence(cmd_pool.get_owner(), &info, nullptr, &m_submit_fence));
+				m_submit_fence = new fence(cmd_pool.get_owner());
 			}
 
 			pool = &cmd_pool;
@@ -1080,7 +1174,9 @@ private:
 
 			if (m_submit_fence)
 			{
-				vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+				//vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+				delete m_submit_fence;
+				m_submit_fence = nullptr;
 			}
 		}
 
@@ -1116,7 +1212,8 @@ private:
 				wait_for_fence(m_submit_fence);
 				is_pending = false;
 
-				CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				//CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+				reset_fence(m_submit_fence);
 				CHECK_RESULT(vkResetCommandBuffer(commands, 0));
 			}
 
@@ -1146,7 +1243,7 @@ private:
 			is_open = false;
 		}
 
-		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkFence fence, VkPipelineStageFlags pipeline_stage_flags)
+		void submit(VkQueue queue, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, fence* pfence, VkPipelineStageFlags pipeline_stage_flags)
 		{
 			if (is_open)
 			{
@@ -1157,10 +1254,10 @@ private:
 			// Check for hanging queries to avoid driver hang
 			verify("close and submit of commandbuffer with a hanging query!" HERE), (flags & cb_has_open_query) == 0;
 
-			if (!fence)
+			if (!pfence)
 			{
-				fence = m_submit_fence;
-				is_pending = (fence != VK_NULL_HANDLE);
+				pfence = m_submit_fence;
+				is_pending = bool(pfence);
 			}
 
 			VkSubmitInfo infos = {};
@@ -1181,10 +1278,7 @@ private:
 				infos.pSignalSemaphores = &signal_semaphore;
 			}
 
-			acquire_global_submit_lock();
-			CHECK_RESULT(vkQueueSubmit(queue, 1, &infos, fence));
-			release_global_submit_lock();
-
+			queue_submit(queue, &infos, pfence);
 			clear_flags();
 		}
 	};
@@ -2897,11 +2991,62 @@ public:
 
 	class occlusion_query_pool
 	{
+		struct query_slot_info
+		{
+			bool any_passed;
+			bool active;
+			bool ready;
+		};
+
 		VkQueryPool query_pool = VK_NULL_HANDLE;
 		vk::render_device* owner = nullptr;
 
-		std::stack<u32> available_slots;
-		std::vector<bool> query_active_status;
+		std::deque<u32> available_slots;
+		std::vector<query_slot_info> query_slot_status;
+
+		inline bool poke_query(query_slot_info& query, u32 index)
+		{
+			// Query is ready if:
+			// 1. Any sample has been determined to have passed the Z test
+			// 2. The backend has fully processed the query and found no hits
+
+			u32 result[2] = { 0, 0 };
+			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
+			{
+			case VK_SUCCESS:
+			{
+				if (result[0])
+				{
+					query.any_passed = true;
+					query.ready = true;
+					return true;
+				}
+				else if (result[1])
+				{
+					query.any_passed = false;
+					query.ready = true;
+					return true;
+				}
+
+				return false;
+			}
+			case VK_NOT_READY:
+			{
+				if (result[0])
+				{
+					query.any_passed = true;
+					query.ready = true;
+					return true;
+				}
+
+				return false;
+			}
+			default:
+				die_with_error(HERE, error);
+				return false;
+			}
+		}
+
 	public:
 
 		void create(vk::render_device &dev, u32 num_entries)
@@ -2915,7 +3060,7 @@ public:
 			owner = &dev;
 
 			// From spec: "After query pool creation, each query must be reset before it is used."
-			query_active_status.resize(num_entries, true);
+			query_slot_status.resize(num_entries, {});
 		}
 
 		void destroy()
@@ -2931,27 +3076,29 @@ public:
 
 		void initialize(vk::command_buffer &cmd)
 		{
-			const u32 count = ::size32(query_active_status);
+			const u32 count = ::size32(query_slot_status);
 			vkCmdResetQueryPool(cmd, query_pool, 0, count);
 
-			std::fill(query_active_status.begin(), query_active_status.end(), false);
+			query_slot_info value{};
+			std::fill(query_slot_status.begin(), query_slot_status.end(), value);
 
 			for (u32 n = 0; n < count; ++n)
 			{
-				available_slots.push(n);
+				available_slots.push_back(n);
 			}
 		}
 
 		void begin_query(vk::command_buffer &cmd, u32 index)
 		{
-			if (query_active_status[index])
+			if (query_slot_status[index].active)
 			{
 				//Synchronization must be done externally
 				vkCmdResetQueryPool(cmd, query_pool, index, 1);
+				query_slot_status[index] = {};
 			}
 
 			vkCmdBeginQuery(cmd, query_pool, index, 0);//VK_QUERY_CONTROL_PRECISE_BIT);
-			query_active_status[index] = true;
+			query_slot_status[index].active = true;
 		}
 
 		void end_query(vk::command_buffer &cmd, u32 index)
@@ -2961,50 +3108,35 @@ public:
 
 		bool check_query_status(u32 index)
 		{
-			u32 result[2] = {0, 0};
-			switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
-			{
-			case VK_SUCCESS:
-				return (result[0] || result[1]);
-			case VK_NOT_READY:
-				return false;
-			default:
-				die_with_error(HERE, error);
-				return false;
-			}
+			return poke_query(query_slot_status[index], index);
 		}
 
 		u32 get_query_result(u32 index)
 		{
-			u32 result[2] = { 0, 0 };
+			// Check for cached result
+			auto& query_info = query_slot_status[index];
 
-			do
+			while (!query_info.ready)
 			{
-				switch (const auto error = vkGetQueryPoolResults(*owner, query_pool, index, 1, 8, result, 8, VK_QUERY_RESULT_PARTIAL_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT))
-				{
-				case VK_SUCCESS:
-					if (result[0]) return 1u;
-					if (result[1]) return 0u;  // Partial result can return SUCCESS when unavailable
-					continue;
-				case VK_NOT_READY:
-					if (result[0]) return 1u;  // Partial result can return NOT_READY when unavailable
-					continue;
-				default:
-					die_with_error(HERE, error);
-					return false;
-				}
+				poke_query(query_info, index);
 			}
-			while (true);
+
+			return query_info.any_passed ? 1 : 0;
+		}
+
+		void get_query_result_indirect(vk::command_buffer &cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset)
+		{
+			vkCmdCopyQueryPoolResults(cmd, query_pool, index, 1, dst, dst_offset, 4, VK_QUERY_RESULT_WAIT_BIT);
 		}
 
 		void reset_query(vk::command_buffer &cmd, u32 index)
 		{
-			if (query_active_status[index])
+			if (query_slot_status[index].active)
 			{
 				vkCmdResetQueryPool(cmd, query_pool, index, 1);
 
-				query_active_status[index] = false;
-				available_slots.push(index);
+				query_slot_status[index] = {};
+				available_slots.push_back(index);
 			}
 		}
 
@@ -3017,9 +3149,9 @@ public:
 
 		void reset_all(vk::command_buffer &cmd)
 		{
-			for (u32 n = 0; n < query_active_status.size(); n++)
+			for (u32 n = 0; n < query_slot_status.size(); n++)
 			{
-				if (query_active_status[n])
+				if (query_slot_status[n].active)
 					reset_query(cmd, n);
 			}
 		}
@@ -3031,10 +3163,10 @@ public:
 				return ~0u;
 			}
 
-			u32 result = available_slots.top();
-			available_slots.pop();
+			u32 result = available_slots.front();
+			available_slots.pop_front();
 
-			verify(HERE), !query_active_status[result];
+			verify(HERE), !query_slot_status[result].active;
 			return result;
 		}
 	};

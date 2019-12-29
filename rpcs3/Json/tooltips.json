@@ -12,6 +12,7 @@
 		"readDepth": "Initializes render target memory using vm memory.",
 		"dumpDepth": "Writes depth buffer values to vm memory.",
 		"disableOnDiskShaderCache": "Disables the loading and saving of shaders from and to the shader cache in the data directory.",
+		"relaxedZCULL": "Changes ZCULL report synchronization behaviour to be more forgiving to PC architecture.\nCan improve performance in some games but can also cause stability issues or drastically reduced performance in others.\nUse with caution and if performance or stability is compromised, keep this disabled.",
 		"maxSPURSThreads": "Limits the maximum number of SPURS threads in each thread group.\nMay improve performance in some cases, especially on systems with limited number of hardware threads.\nLimiting the number of threads is likely to cause crashes; it's recommended to keep this at default value.",
 		"sleepTimersAccuracy": "Changes the sleep period accuracy.\n'As Host' uses default accuracy of the underlying operating system, while 'All Timers' attempts to improve it.\n'Usleep Only' limits the adjustments to usleep syscall only.\nCan affect perfomance in unexpected ways.",
 		"vblankRate": "Adjusts the frequency of vertical blanking signals that the emulator sends.\nAffects timing of events which rely on these signals.",

@@ -152,11 +152,7 @@ namespace rsx
 	{
 		void clear(thread* rsx, u32 _reg, u32 arg)
 		{
-			// TODO: every backend must override method table to insert its own handlers
-			if (!rsx->do_method(NV4097_CLEAR_SURFACE, arg))
-			{
-				//
-			}
+			rsx->clear_surface(arg);
 
 			if (capture_current_frame)
 			{
@@ -166,8 +162,6 @@ namespace rsx
 
 		void clear_zcull(thread* rsx, u32 _reg, u32 arg)
 		{
-			rsx->do_method(NV4097_CLEAR_ZCULL_SURFACE, arg);
-
 			if (capture_current_frame)
 			{
 				rsx->capture_frame("clear zcull memory");
@@ -212,11 +206,6 @@ namespace rsx
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
 			const u32 offset = method_registers.semaphore_offset_4097() & -16;
-			if (offset > 63 * 4 && !rsx->do_method(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, arg))
-			{
-				//
-			}
-
 			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
 			{
 				arg,
@@ -228,14 +217,10 @@ namespace rsx
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Full pipeline barrier
-			const u32 offset = method_registers.semaphore_offset_4097() & -16;
-			if (offset > 63 * 4 && !rsx->do_method(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, arg))
-			{
-				//
-			}
-
 			rsx->sync();
-			u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
+
+			const u32 offset = method_registers.semaphore_offset_4097() & -16;
+			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
 			vm::_ref<atomic_t<RsxSemaphore>>(get_address(offset, method_registers.semaphore_context_dma_4097())).store(
 			{
 				val,
@@ -595,14 +580,11 @@ namespace rsx
 			switch (mode)
 			{
 			case 1:
-				rsx->conditional_render_enabled = false;
-				rsx->conditional_render_test_failed = false;
+				rsx->disable_conditional_rendering();
 				return;
 			case 2:
-				rsx->conditional_render_enabled = true;
 				break;
 			default:
-				rsx->conditional_render_enabled = false;
 				LOG_ERROR(RSX, "Unknown render mode %d", mode);
 				return;
 			}
@@ -612,15 +594,12 @@ namespace rsx
 
 			if (!address_ptr)
 			{
-				rsx->conditional_render_test_failed = false;
 				LOG_ERROR(RSX, "Bad argument passed to NV4097_SET_RENDER_ENABLE, arg=0x%X", arg);
 				return;
 			}
 
 			// Defer conditional render evaluation
-			rsx->sync_hint(FIFO_hint::hint_conditional_render_eval, address_ptr);
-			rsx->conditional_render_test_address = address_ptr;
-			rsx->conditional_render_test_failed = false;
+			rsx->enable_conditional_rendering(address_ptr);
 		}
 
 		void set_zcull_render_enable(thread* rsx, u32, u32 arg)

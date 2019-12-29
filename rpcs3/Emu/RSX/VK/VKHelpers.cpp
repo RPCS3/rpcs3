@@ -7,7 +7,10 @@
 #include "VKResolveHelper.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
+#include "VKCommandStream.h"
+
 #include "Utilities/mutex.h"
+#include "Utilities/lockless.h"
 
 namespace vk
 {
@@ -87,12 +90,10 @@ namespace vk
 	bool g_drv_no_primitive_restart_flag = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
+	bool g_drv_emulate_cond_render = false;
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
-
-	// global submit guard to prevent race condition on queue submit
-	shared_mutex g_submit_mutex;
 
 	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
@@ -349,16 +350,6 @@ namespace vk
 		return &g_upload_heap;
 	}
 
-	void acquire_global_submit_lock()
-	{
-		g_submit_mutex.lock();
-	}
-
-	void release_global_submit_lock()
-	{
-		g_submit_mutex.unlock();
-	}
-
 	void reset_compute_tasks()
 	{
 		for (const auto &p : g_compute_tasks)
@@ -435,6 +426,7 @@ namespace vk
 		g_drv_no_primitive_restart_flag = false;
 		g_drv_sanitize_fp_values = false;
 		g_drv_disable_fence_reset = false;
+		g_drv_emulate_cond_render = (g_cfg.video.relaxed_zcull_sync && !g_current_renderer->get_conditional_render_support());
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
 		g_heap_compatible_buffer_types = 0;
@@ -541,6 +533,11 @@ namespace vk
 	bool fence_reset_disabled()
 	{
 		return g_drv_disable_fence_reset;
+	}
+
+	bool emulate_conditional_rendering()
+	{
+		return g_drv_emulate_cond_render;
 	}
 
 	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
@@ -836,31 +833,30 @@ namespace vk
 		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
 	}
 
-	void reset_fence(VkFence *pFence)
+	void reset_fence(fence *pFence)
 	{
 		if (g_drv_disable_fence_reset)
 		{
-			vkDestroyFence(*g_current_renderer, *pFence, nullptr);
-
-			VkFenceCreateInfo info = {};
-			info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-			CHECK_RESULT(vkCreateFence(*g_current_renderer, &info, nullptr, pFence));
+			delete pFence;
+			pFence = new fence(*g_current_renderer);
 		}
 		else
 		{
-			CHECK_RESULT(vkResetFences(*g_current_renderer, 1, pFence));
+			pFence->reset();
 		}
 	}
 
-	VkResult wait_for_fence(VkFence fence, u64 timeout)
+	VkResult wait_for_fence(fence* pFence, u64 timeout)
 	{
+		pFence->wait_flush();
+
 		if (timeout)
 		{
-			return vkWaitForFences(*g_current_renderer, 1, &fence, VK_FALSE, timeout * 1000ull);
+			return vkWaitForFences(*g_current_renderer, 1, &pFence->handle, VK_FALSE, timeout * 1000ull);
 		}
 		else
 		{
-			while (auto status = vkGetFenceStatus(*g_current_renderer, fence))
+			while (auto status = vkGetFenceStatus(*g_current_renderer, pFence->handle))
 			{
 				switch (status)
 				{

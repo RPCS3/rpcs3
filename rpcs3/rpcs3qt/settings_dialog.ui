@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>753</width>
-    <height>597</height>
+    <height>620</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -36,7 +36,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>6</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -1746,6 +1746,13 @@
                <widget class="QCheckBox" name="disableOnDiskShaderCache">
                 <property name="text">
                  <string>Disable On-Disk Shader Cache</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="relaxedZCULL">
+                <property name="text">
+                 <string>Relaxed ZCULL Sync</string>
                 </property>
                </widget>
               </item>

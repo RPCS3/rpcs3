@@ -923,6 +923,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> guiSettings, std:
 	xemu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, json_advanced["disableOnDiskShaderCache"].toString());
 
+	xemu_settings->EnhanceCheckBox(ui->relaxedZCULL, emu_settings::RelaxedZCULL);
+	SubscribeTooltip(ui->relaxedZCULL, json_advanced["relaxedZCULL"].toString());
+
 	// Comboboxes
 
 	xemu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings::MaxSPURSThreads, true);
