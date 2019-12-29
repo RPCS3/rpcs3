@@ -173,15 +173,14 @@ static error_code select_and_delete(ppu_thread& ppu)
 			selected = save_dialog->ShowSaveDataList(save_entries, focused, SAVEDATA_OP_LIST_DELETE, vm::null);
 		}
 
-		// Reschedule
-		if (ppu.check_state())
-		{
-			return 0;
-		}
-
 		// Abort if dialog was canceled or selection is invalid in this context
 		if (selected < 0)
 		{
+			// Reschedule
+			if (ppu.check_state())
+			{
+				return 0;
+			}
 			return CELL_CANCEL;
 		}
 
@@ -195,6 +194,12 @@ static error_code select_and_delete(ppu_thread& ppu)
 		// Get user confirmation
 		std::string msg = "Do you really want to delete this entry?\n\n" + info;
 		error_code res  = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(msg));
+
+		// Reschedule
+		if (ppu.check_state())
+		{
+			return 0;
+		}
 
 		if (res != CELL_OK)
 		{
@@ -805,15 +810,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				selected = -2;
 			}
 
-			// Reschedule
-			if (ppu.check_state())
-			{
-				return 0;
-			}
-
 			// Cancel selected in UI
 			if (selected == -2)
 			{
+				// Reschedule
+				if (ppu.check_state())
+				{
+					return 0;
+				}
 				return CELL_CANCEL;
 			}
 
@@ -835,6 +839,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			// Get user confirmation
 			error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message));
+
+			// Reschedule
+			if (ppu.check_state())
+			{
+				return 0;
+			}
 
 			if (res != CELL_OK)
 			{
@@ -918,6 +928,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (fixedSet->option != CELL_SAVEDATA_OPTION_NOCONFIRM)
 			{
+				// Yield
+				lv2_obj::sleep(ppu);
+
 				std::string message;
 
 				if (selected == -1)
@@ -933,6 +946,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				// Get user confirmation
 				error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO, vm::make_str(message));
+
+				// Reschedule
+				if (ppu.check_state())
+				{
+					return 0;
+				}
 
 				if (res != CELL_OK)
 				{

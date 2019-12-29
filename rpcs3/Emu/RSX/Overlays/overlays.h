@@ -485,7 +485,7 @@ namespace rsx
 
 			void on_button_pressed(pad_button button_press) override;
 
-			error_code show(const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);
+			error_code show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close);
 
 			u32 progress_bar_count();
 			void progress_bar_set_taskbar_index(s32 index);
