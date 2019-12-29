@@ -927,7 +927,7 @@ void GLGSRender::on_init_thread()
 
 				dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
 				dlg->progress_bar_set_taskbar_index(-1);
-				dlg->show("Loading precompiled shaders from disk...", type, [](s32 status)
+				dlg->show(false, "Loading precompiled shaders from disk...", type, [](s32 status)
 				{
 					if (status != CELL_OK)
 						Emu.Stop();

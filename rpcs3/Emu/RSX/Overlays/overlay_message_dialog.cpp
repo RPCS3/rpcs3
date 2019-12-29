@@ -57,7 +57,7 @@ namespace rsx
 
 					if (background_image->data)
 					{
-						f32 color                    = (100 - g_cfg.video.shader_preloading_dialog.darkening_strength) / 100.f;
+						const f32 color              = (100 - g_cfg.video.shader_preloading_dialog.darkening_strength) / 100.f;
 						background_poster.fore_color = color4f(color, color, color, 1.);
 						background.back_color.a      = 0.f;
 
@@ -154,7 +154,7 @@ namespace rsx
 			close();
 		}
 
-		error_code message_dialog::show(const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)
+		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)
 		{
 			num_progress_bars = type.progress_bar_count;
 			if (num_progress_bars)
@@ -197,18 +197,34 @@ namespace rsx
 				interactive = true;
 				ok_only     = true;
 				break;
-			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO: interactive = true; break;
+			case CELL_MSGDIALOG_TYPE_BUTTON_TYPE_YESNO:
+				interactive = true;
+				break;
+			default:
+				break;
 			}
 
 			this->on_close = std::move(on_close);
 			if (interactive)
 			{
-				thread_ctrl::spawn("dialog input thread", [&] {
+				if (is_blocking)
+				{
 					if (auto error = run_input_loop())
 					{
 						LOG_ERROR(RSX, "Dialog input loop exited with error code=%d", error);
+						return error;
 					}
-				});
+				}
+				else
+				{
+					thread_ctrl::spawn("dialog input thread", [&]
+					{
+						if (auto error = run_input_loop())
+						{
+							LOG_ERROR(RSX, "Dialog input loop exited with error code=%d", error);
+						}
+					});
+				}
 			}
 
 			return CELL_OK;
