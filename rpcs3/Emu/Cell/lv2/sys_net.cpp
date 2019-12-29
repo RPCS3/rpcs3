@@ -255,11 +255,6 @@ struct network_thread
 
 				lv2_socket& sock = *socklist[i];
 
-#ifdef _WIN32
-				if (was_connecting[i] && !connecting[i])
-					sock.is_connecting = false;
-#endif
-
 				if (fds[i].revents & (POLLIN | POLLHUP) && socklist[i]->events.test_and_reset(lv2_socket::poll::read))
 					events += lv2_socket::poll::read;
 				if (fds[i].revents & POLLOUT && socklist[i]->events.test_and_reset(lv2_socket::poll::write))
@@ -270,6 +265,11 @@ struct network_thread
 				if (events)
 				{
 					std::lock_guard lock(socklist[i]->mutex);
+
+#ifdef _WIN32
+					if (was_connecting[i] && !connecting[i])
+						sock.is_connecting = false;
+#endif
 
 					for (auto it = socklist[i]->queue.begin(); events && it != socklist[i]->queue.end();)
 					{
@@ -313,6 +313,10 @@ struct network_thread
 
 			for (std::size_t i = 0; i < socklist.size(); i++)
 			{
+#ifdef _WIN32
+				std::lock_guard lock(socklist[i]->mutex);
+#endif
+
 				auto events = socklist[i]->events.load();
 
 				fds[i].fd = events ? socklist[i]->socket : -1;
@@ -576,14 +580,14 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		{
 			if (result == SYS_NET_EWOULDBLOCK)
 			{
-#ifdef _WIN32
-				sock.is_connecting = true;
-#endif
 				result = SYS_NET_EINPROGRESS;
 			}
 
 			if (result == SYS_NET_EINPROGRESS)
 			{
+#ifdef _WIN32
+				sock.is_connecting = true;
+#endif
 				sock.events += lv2_socket::poll::write;
 				sock.queue.emplace_back(u32{0}, [&sock](bs_t<lv2_socket::poll> events) -> bool
 				{
@@ -612,6 +616,9 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 			return false;
 		}
 
+#ifdef _WIN32
+		sock.is_connecting = true;
+#endif
 		sock.events += lv2_socket::poll::write;
 		sock.queue.emplace_back(ppu.id, [&](bs_t<lv2_socket::poll> events) -> bool
 		{
