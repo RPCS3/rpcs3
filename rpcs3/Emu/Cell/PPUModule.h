@@ -293,4 +293,4 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 
 #define REG_VAR(module, var) REG_VNID(module, #var, var)
 
-#define UNIMPLEMENTED_FUNC(module) module.todo("%s", __func__)
+#define UNIMPLEMENTED_FUNC(module) module.todo("%s()", __func__)
