@@ -936,13 +936,13 @@ void spu_int_ctrl_t::set(u64 ints)
 	ints &= mask;
 
 	// notify if at least 1 bit was set
-	if (ints && ~stat.fetch_or(ints) & ints && tag)
+	if (ints && ~stat.fetch_or(ints) & ints && !tag.expired())
 	{
 		reader_lock rlock(id_manager::g_mutex);
 
-		if (tag)
+		if (const auto tag_ptr = tag.lock())
 		{
-			if (auto handler = tag->handler.lock())
+			if (auto handler = tag_ptr->handler.lock())
 			{
 				handler->exec();
 			}
@@ -1131,12 +1131,6 @@ void spu_thread::cpu_task()
 	pc &= 0x3fffc;
 
 	std::fesetround(FE_TOWARDZERO);
-
-	if (g_cfg.core.set_daz_and_ftz && g_cfg.core.spu_decoder != spu_decoder_type::precise)
-	{
-		// Set DAZ and FTZ
-		_mm_setcsr(_mm_getcsr() | 0x8840);
-	}
 
 	g_tls_log_prefix = []
 	{
