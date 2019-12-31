@@ -107,22 +107,12 @@ struct CellImeJpPredictItem
 	u16 Hyoki[61];
 };
 
-struct ime_jp_handle
+struct ime_jp_manager
 {
-	static const u32 id_base = 0xf0000000;
-	static const u32 id_count = 0x1000;
-	static const u32 id_step = 0x100;
+	shared_mutex mutex;
 
-	const u32 container_id;
+	atomic_t<bool> is_initialized{ false };
 
-	ime_jp_handle(u32 _container_id)
-		: container_id(_container_id)
-	{
-	};
-};
-
-struct ime_jp_container
-{
 	u32 input_state = CELL_IMEJP_BEFORE_INPUT;
 	std::vector<std::string> dictionary_paths;
 	std::u16string confirmed_string;
@@ -135,7 +125,7 @@ struct ime_jp_container
 	s16 kana_input_mode = CELL_IMEJP_ROMAN_INPUT;
 	s16 allowed_extensions = CELL_IMEJP_EXTENSIONCH_UD09TO15 | CELL_IMEJP_EXTENSIONCH_UD85TO94 | CELL_IMEJP_EXTENSIONCH_OUTJIS;
 
-	ime_jp_container();
+	ime_jp_manager();
 
 	bool addChar(u16 c);
 	bool addString(vm::cptr<u16> str);
@@ -143,13 +133,4 @@ struct ime_jp_container
 	bool deleteWord();
 	void moveCursor(s8 amount);
 	void moveCursorEnd(s8 amount);
-};
-
-struct ime_jp_manager
-{
-	shared_mutex mutex;
-
-	std::unordered_map<u32, ime_jp_container> containers;
-
-	u32 get_container(CellImeJpHandle handle);
 };
