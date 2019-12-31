@@ -185,7 +185,7 @@ struct voice_manager
 	};
 
 	// See cellVoiceCreatePort
-	u32 id_ctr = 0;
+	u8 id_ctr = 0;
 
 	// For cellVoiceSetNotifyEventQueue
 	u32 port_source = 0;

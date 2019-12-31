@@ -168,22 +168,24 @@ error_code cellVoiceCreatePort(vm::ptr<u32> portId, vm::cptr<CellVoicePortParam>
 	// Id: bits [8,15] seem to contain a "random" value
 	// bits [0,7] are based on creation counter modulo 0xa0
 	// The rest are set to zero and ignored.
-	manager->id_ctr = (manager->id_ctr + 1) % 0xa0;
-
-	auto port = manager->ports.begin();
-	bool success = false;
+	manager->id_ctr++; manager->id_ctr %= 0xa0;
 
 	// It isn't known whether bits[8,15] are guaranteed to be non-zero
-	for (u8 ctr2 = 1; !success; ctr2++)
-	{
-		verify(HERE), ctr2 < CELLVOICE_MAX_PORT + 1;
+	constexpr u32 min_value = 1;
 
-		std::tie(port, success) = manager->ports.try_emplace(::narrow<u16>((ctr2 << 8) | manager->id_ctr));
+	for (u32 ctr2 = min_value; ctr2 < CELLVOICE_MAX_PORT + min_value; ctr2++)
+	{
+		const auto [port, success] = manager->ports.try_emplace(static_cast<u16>((ctr2 << 8) | manager->id_ctr));
+
+		if (success)
+		{
+			port->second.info = *pArg;
+			*portId = port->first;
+			return CELL_OK;
+		}
 	}
 
-	port->second.info = *pArg;
-	*portId = port->first;
-	return CELL_OK;
+	fmt::throw_exception("Unreachable" HERE);
 }
 
 error_code cellVoiceDeletePort(u32 portId)
