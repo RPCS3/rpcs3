@@ -55,7 +55,11 @@ namespace vk
 			renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 		}
 
-		~overlay_pass() = default;
+		~overlay_pass()
+		{
+			m_vao.destroy();
+			m_ubo.destroy();
+		}
 
 		u64 get_pipeline_key(VkRenderPass pass)
 		{
