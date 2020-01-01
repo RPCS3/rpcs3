@@ -139,7 +139,7 @@ public:
 		g_to_awake.clear();
 	}
 
-	static inline void awake(cpu_thread* const thread, s32 prio = enqueue_cmd)
+	static inline void awake(cpu_thread* const thread)
 	{
 		std::lock_guard lock(g_mutex);
 		awake_unlocked(thread, prio);
