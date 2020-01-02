@@ -24,10 +24,10 @@ enum CellVdecCodecType : s32
 // Callback Messages
 enum CellVdecMsgType : s32
 {
-	CELL_VDEC_MSG_TYPE_AUDONE, // decoding finished
-	CELL_VDEC_MSG_TYPE_PICOUT, // picture done
-	CELL_VDEC_MSG_TYPE_SEQDONE, // finishing done
-	CELL_VDEC_MSG_TYPE_ERROR,
+	CELL_VDEC_MSG_TYPE_AUDONE  = 0, // decoding finished
+	CELL_VDEC_MSG_TYPE_PICOUT  = 1, // picture done
+	CELL_VDEC_MSG_TYPE_SEQDONE = 2, // finishing done
+	CELL_VDEC_MSG_TYPE_ERROR   = 3, // fatal error
 };
 
 // Decoder Operation Mode
