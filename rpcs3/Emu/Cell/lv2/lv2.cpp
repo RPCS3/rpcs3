@@ -332,7 +332,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_memory_container_destroy),                //325 (0x145)  DBG
 	BIND_FUNC(sys_mmapper_allocate_fixed_address),          //326 (0x146)
 	BIND_FUNC(sys_mmapper_enable_page_fault_notification),  //327 (0x147)
-	null_func,//BIND_FUNC(sys_mmapper_allocate_shared_memory_ext) //328 (0x148)
+	BIND_FUNC(sys_mmapper_allocate_shared_memory_from_container_ext), //328 (0x148)
 	BIND_FUNC(sys_mmapper_free_shared_memory),              //329 (0x149)
 	BIND_FUNC(sys_mmapper_allocate_address),                //330 (0x14A)
 	BIND_FUNC(sys_mmapper_free_address),                    //331 (0x14B)
@@ -343,7 +343,7 @@ const std::array<ppu_function_t, 1024> s_ppu_syscall_table
 	BIND_FUNC(sys_mmapper_change_address_access_right),     //336 (0x150)
 	BIND_FUNC(sys_mmapper_search_and_map),                  //337 (0x151)
 	null_func,//BIND_FUNC(sys_mmapper_get_shared_memory_attribute) //338 (0x152)
-	null_func,//BIND_FUNC(sys_...)                          //339 (0x153)
+	BIND_FUNC(sys_mmapper_allocate_shared_memory_ext),      //339 (0x153)
 	null_func,//BIND_FUNC(sys_...)                          //340 (0x154)
 	BIND_FUNC(sys_memory_container_create),                 //341 (0x155)
 	BIND_FUNC(sys_memory_container_destroy),                //342 (0x156)
