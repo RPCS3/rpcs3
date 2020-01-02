@@ -7279,8 +7279,7 @@ public:
 
 		if (g_cfg.core.spu_approx_xfloat)
 		{
-			const auto ca = eval(clamp_positive_smax(a));
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(ca > b)));
+			set_vr(op.rt, sext<s32[4]>(fcmp_uno(a > b) & (bitcast<s32[4]>(a) > bitcast<s32[4]>(b))));
 		}
 		else
 		{
