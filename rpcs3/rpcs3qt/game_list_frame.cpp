@@ -730,7 +730,7 @@ void game_list_frame::Refresh(const bool fromDrive, const bool scrollAfter)
 			games_per_row = width() / (m_Icon_Size.width() + m_Icon_Size.width() * m_xgrid->getMarginFactor() * 2);
 		}
 
-		int scroll_position = m_xgrid->verticalScrollBar()->value();
+		const int scroll_position = m_xgrid->verticalScrollBar()->value();
 		PopulateGameGrid(games_per_row, m_Icon_Size, m_Icon_Color);
 		connect(m_xgrid, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
 		connect(m_xgrid, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
@@ -888,7 +888,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (RemoveCustomConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item);
+				ShowCustomConfigIcon(gameinfo);
 			}
 		});
 	}
@@ -899,7 +899,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (RemoveCustomPadConfiguration(currGame.serial, gameinfo, true))
 			{
-				ShowCustomConfigIcon(item);
+				ShowCustomConfigIcon(gameinfo);
 			}
 		});
 	}
@@ -981,7 +981,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (!gameinfo->hasCustomConfig)
 			{
 				gameinfo->hasCustomConfig = true;
-				ShowCustomConfigIcon(item);
+				ShowCustomConfigIcon(gameinfo);
 			}
 			Q_EMIT NotifyEmuSettingsChange();
 		}
@@ -1004,7 +1004,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		if (dlg.exec() == QDialog::Accepted && !gameinfo->hasCustomPadConfig)
 		{
 			gameinfo->hasCustomPadConfig = true;
-			ShowCustomConfigIcon(item);
+			ShowCustomConfigIcon(gameinfo);
 		}
 		if (!Emu.IsStopped())
 		{
@@ -1671,32 +1671,27 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 	return canvas.scaled(m_Icon_Size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 }
 
-void game_list_frame::ShowCustomConfigIcon(QTableWidgetItem* item)
+void game_list_frame::ShowCustomConfigIcon(game_info game)
 {
-	auto game = GetGameInfoFromItem(item);
-	if (game == nullptr)
+	if (!game)
 	{
 		return;
 	}
 
-	if (!m_isListLayout)
-	{
-		const QString title = m_titles.value(qstr(game->info.serial), qstr(game->info.name));
-		const QColor color = getGridCompatibilityColor(game->compat.color);
+	const std::string serial      = game->info.serial;
+	const bool hasCustomConfig    = game->hasCustomConfig;
+	const bool hasCustomPadConfig = game->hasCustomPadConfig;
 
-		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
-		int r = m_xgrid->currentItem()->row(), c = m_xgrid->currentItem()->column();
-		m_xgrid->addItem(game->pxmap, title.simplified(), r, c);
-		m_xgrid->item(r, c)->setData(gui::game_role, QVariant::fromValue(game));
+	for (auto other_game : m_game_data)
+	{
+		if (other_game->info.serial == serial)
+		{
+			other_game->hasCustomConfig    = hasCustomConfig;
+			other_game->hasCustomPadConfig = hasCustomPadConfig;
+		}
 	}
-	else if (game->hasCustomConfig && game->hasCustomPadConfig)
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/combo_config_bordered.png"));
-	else if (game->hasCustomConfig)
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/custom_config.png"));
-	else if (game->hasCustomPadConfig)
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon(":/Icons/controllers.png"));
-	else
-		m_gameList->item(item->row(), gui::column_name)->setIcon(QIcon());
+
+	RepaintIcons();
 }
 
 void game_list_frame::ResizeIcons(const int& sliderPos)
@@ -1728,7 +1723,7 @@ void game_list_frame::RepaintIcons(const bool& fromSettings)
 	QtConcurrent::blockingMap(indices, [this](int& i)
 	{
 		auto game = m_game_data[i];
-		QColor color = getGridCompatibilityColor(game->compat.color);
+		const QColor color = getGridCompatibilityColor(game->compat.color);
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 	});
 
@@ -1976,11 +1971,11 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	int r = 0;
 	int c = 0;
 
-	std::string selected_item = CurrentSelectionIconPath();
+	const std::string selected_item = CurrentSelectionIconPath();
 
 	m_xgrid->deleteLater();
 
-	bool showText = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
+	const bool showText = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
 
 	if (m_icon_size_index < gui::gl_max_slider_pos * 2 / 3)
 	{
@@ -2002,7 +1997,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 		}
 	}
 
-	int entries = matching_apps.count();
+	const int entries = matching_apps.count();
 
 	// Edge cases!
 	if (entries == 0)
@@ -2012,8 +2007,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	maxCols = std::clamp(maxCols, 1, entries);
 
-	int needsExtraRow = (entries % maxCols) != 0;
-	int maxRows = needsExtraRow + entries / maxCols;
+	const int needsExtraRow = (entries % maxCols) != 0;
+	const int maxRows = needsExtraRow + entries / maxCols;
 	m_xgrid->setRowCount(maxRows);
 	m_xgrid->setColumnCount(maxCols);
 
