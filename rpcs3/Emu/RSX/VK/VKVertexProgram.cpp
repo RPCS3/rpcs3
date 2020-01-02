@@ -258,7 +258,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 	{
 		OS << "	if (conditional_rendering_enabled != 0 && conditional_rendering_predicate == 0)\n";
 		OS << "	{\n";
-		OS << "		gl_Position = vec4(0.);\n";
+		OS << "		gl_Position = vec4(0., 0., 0., -1.);\n";
 		OS << "		return;\n";
 		OS << "}\n\n";
 	}
