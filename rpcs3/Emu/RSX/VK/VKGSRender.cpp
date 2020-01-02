@@ -2876,6 +2876,8 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	// NOTE: There is no need to wait for dma sync. When MTRSX is enabled, the commands are submitted in order anyway due to CSMT
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
+		rsx::g_dma_manager.sync();
+
 		if (m_attrib_ring_info.dirty() ||
 			m_fragment_env_ring_info.dirty() ||
 			m_vertex_env_ring_info.dirty() ||
